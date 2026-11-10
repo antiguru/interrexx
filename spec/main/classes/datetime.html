@@ -1,0 +1,2530 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>DateTime - The interrexx Language Specification</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../conventions.html"><strong aria-hidden="true">2.</strong> Conventions</a></li><li class="chapter-item expanded "><a href="../lexical/index.html"><strong aria-hidden="true">3.</strong> Lexical structure</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../lexical/characters.html"><strong aria-hidden="true">3.1.</strong> Characters</a></li><li class="chapter-item expanded "><a href="../lexical/comments.html"><strong aria-hidden="true">3.2.</strong> Comments</a></li><li class="chapter-item expanded "><a href="../lexical/literals.html"><strong aria-hidden="true">3.3.</strong> Literals</a></li><li class="chapter-item expanded "><a href="../lexical/symbols.html"><strong aria-hidden="true">3.4.</strong> Symbols</a></li><li class="chapter-item expanded "><a href="../lexical/operators.html"><strong aria-hidden="true">3.5.</strong> Operators and special characters</a></li><li class="chapter-item expanded "><a href="../lexical/clauses.html"><strong aria-hidden="true">3.6.</strong> Clauses</a></li></ol></li><li class="chapter-item expanded "><a href="../numbers/index.html"><strong aria-hidden="true">4.</strong> Numbers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../numbers/formats.html"><strong aria-hidden="true">4.1.</strong> Formats</a></li><li class="chapter-item expanded "><a href="../numbers/limits.html"><strong aria-hidden="true">4.2.</strong> Limits</a></li><li class="chapter-item expanded "><a href="../numbers/arithmetic.html"><strong aria-hidden="true">4.3.</strong> Arithmetic</a></li><li class="chapter-item expanded "><a href="../numbers/settings.html"><strong aria-hidden="true">4.4.</strong> Settings</a></li><li class="chapter-item expanded "><a href="../numbers/comparison.html"><strong aria-hidden="true">4.5.</strong> Comparison</a></li></ol></li><li class="chapter-item expanded "><a href="../expressions/index.html"><strong aria-hidden="true">5.</strong> Expressions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../expressions/terms.html"><strong aria-hidden="true">5.1.</strong> Terms</a></li><li class="chapter-item expanded "><a href="../expressions/variables.html"><strong aria-hidden="true">5.2.</strong> Variables</a></li><li class="chapter-item expanded "><a href="../expressions/concatenation.html"><strong aria-hidden="true">5.3.</strong> Concatenation</a></li><li class="chapter-item expanded "><a href="../expressions/arithmetic.html"><strong aria-hidden="true">5.4.</strong> Arithmetic operators</a></li><li class="chapter-item expanded "><a href="../expressions/comparison.html"><strong aria-hidden="true">5.5.</strong> Comparison operators</a></li><li class="chapter-item expanded "><a href="../expressions/logical.html"><strong aria-hidden="true">5.6.</strong> Logical operators</a></li><li class="chapter-item expanded "><a href="../expressions/messages.html"><strong aria-hidden="true">5.7.</strong> Message operators</a></li></ol></li><li class="chapter-item expanded "><a href="../instructions/index.html"><strong aria-hidden="true">6.</strong> Instructions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../instructions/address.html"><strong aria-hidden="true">6.1.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../instructions/arg.html"><strong aria-hidden="true">6.2.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../instructions/assignment.html"><strong aria-hidden="true">6.3.</strong> Assignments</a></li><li class="chapter-item expanded "><a href="../instructions/call.html"><strong aria-hidden="true">6.4.</strong> CALL</a></li><li class="chapter-item expanded "><a href="../instructions/command.html"><strong aria-hidden="true">6.5.</strong> Commands</a></li><li class="chapter-item expanded "><a href="../instructions/do.html"><strong aria-hidden="true">6.6.</strong> DO</a></li><li class="chapter-item expanded "><a href="../instructions/drop.html"><strong aria-hidden="true">6.7.</strong> DROP</a></li><li class="chapter-item expanded "><a href="../instructions/exit.html"><strong aria-hidden="true">6.8.</strong> EXIT</a></li><li class="chapter-item expanded "><a href="../instructions/expose.html"><strong aria-hidden="true">6.9.</strong> EXPOSE</a></li><li class="chapter-item expanded "><a href="../instructions/forward.html"><strong aria-hidden="true">6.10.</strong> FORWARD</a></li><li class="chapter-item expanded "><a href="../instructions/guard.html"><strong aria-hidden="true">6.11.</strong> GUARD</a></li><li class="chapter-item expanded "><a href="../instructions/if.html"><strong aria-hidden="true">6.12.</strong> IF</a></li><li class="chapter-item expanded "><a href="../instructions/interpret.html"><strong aria-hidden="true">6.13.</strong> INTERPRET</a></li><li class="chapter-item expanded "><a href="../instructions/iterate.html"><strong aria-hidden="true">6.14.</strong> ITERATE</a></li><li class="chapter-item expanded "><a href="../instructions/leave.html"><strong aria-hidden="true">6.15.</strong> LEAVE</a></li><li class="chapter-item expanded "><a href="../instructions/loop.html"><strong aria-hidden="true">6.16.</strong> LOOP</a></li><li class="chapter-item expanded "><a href="../instructions/message.html"><strong aria-hidden="true">6.17.</strong> Message instructions</a></li><li class="chapter-item expanded "><a href="../instructions/nop.html"><strong aria-hidden="true">6.18.</strong> NOP</a></li><li class="chapter-item expanded "><a href="../instructions/numeric.html"><strong aria-hidden="true">6.19.</strong> NUMERIC</a></li><li class="chapter-item expanded "><a href="../instructions/options.html"><strong aria-hidden="true">6.20.</strong> OPTIONS</a></li><li class="chapter-item expanded "><a href="../instructions/parse.html"><strong aria-hidden="true">6.21.</strong> PARSE</a></li><li class="chapter-item expanded "><a href="../instructions/procedure.html"><strong aria-hidden="true">6.22.</strong> PROCEDURE</a></li><li class="chapter-item expanded "><a href="../instructions/pull.html"><strong aria-hidden="true">6.23.</strong> PULL</a></li><li class="chapter-item expanded "><a href="../instructions/push.html"><strong aria-hidden="true">6.24.</strong> PUSH</a></li><li class="chapter-item expanded "><a href="../instructions/queue.html"><strong aria-hidden="true">6.25.</strong> QUEUE</a></li><li class="chapter-item expanded "><a href="../instructions/raise.html"><strong aria-hidden="true">6.26.</strong> RAISE</a></li><li class="chapter-item expanded "><a href="../instructions/reply.html"><strong aria-hidden="true">6.27.</strong> REPLY</a></li><li class="chapter-item expanded "><a href="../instructions/return.html"><strong aria-hidden="true">6.28.</strong> RETURN</a></li><li class="chapter-item expanded "><a href="../instructions/say.html"><strong aria-hidden="true">6.29.</strong> SAY</a></li><li class="chapter-item expanded "><a href="../instructions/select.html"><strong aria-hidden="true">6.30.</strong> SELECT</a></li><li class="chapter-item expanded "><a href="../instructions/signal.html"><strong aria-hidden="true">6.31.</strong> SIGNAL</a></li><li class="chapter-item expanded "><a href="../instructions/trace.html"><strong aria-hidden="true">6.32.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../instructions/use.html"><strong aria-hidden="true">6.33.</strong> USE</a></li></ol></li><li class="chapter-item expanded "><a href="../parsing/index.html"><strong aria-hidden="true">7.</strong> Parsing</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../parsing/templates.html"><strong aria-hidden="true">7.1.</strong> Templates</a></li><li class="chapter-item expanded "><a href="../parsing/patterns.html"><strong aria-hidden="true">7.2.</strong> Patterns</a></li><li class="chapter-item expanded "><a href="../parsing/multiple.html"><strong aria-hidden="true">7.3.</strong> Several strings and case</a></li></ol></li><li class="chapter-item expanded "><a href="../directives/index.html"><strong aria-hidden="true">8.</strong> Directives</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../directives/class.html"><strong aria-hidden="true">8.1.</strong> ::CLASS</a></li><li class="chapter-item expanded "><a href="../directives/method.html"><strong aria-hidden="true">8.2.</strong> ::METHOD</a></li><li class="chapter-item expanded "><a href="../directives/attribute.html"><strong aria-hidden="true">8.3.</strong> ::ATTRIBUTE</a></li><li class="chapter-item expanded "><a href="../directives/constant.html"><strong aria-hidden="true">8.4.</strong> ::CONSTANT</a></li><li class="chapter-item expanded "><a href="../directives/routine.html"><strong aria-hidden="true">8.5.</strong> ::ROUTINE</a></li><li class="chapter-item expanded "><a href="../directives/requires.html"><strong aria-hidden="true">8.6.</strong> ::REQUIRES</a></li><li class="chapter-item expanded "><a href="../directives/options.html"><strong aria-hidden="true">8.7.</strong> ::OPTIONS</a></li><li class="chapter-item expanded "><a href="../directives/resource.html"><strong aria-hidden="true">8.8.</strong> ::RESOURCE</a></li><li class="chapter-item expanded "><a href="../directives/annotate.html"><strong aria-hidden="true">8.9.</strong> ::ANNOTATE</a></li></ol></li><li class="chapter-item expanded "><a href="../conditions/index.html"><strong aria-hidden="true">9.</strong> Conditions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../conditions/traps.html"><strong aria-hidden="true">9.1.</strong> Condition traps</a></li><li class="chapter-item expanded "><a href="../conditions/information.html"><strong aria-hidden="true">9.2.</strong> Condition information</a></li><li class="chapter-item expanded "><a href="../conditions/syntax.html"><strong aria-hidden="true">9.3.</strong> SYNTAX</a></li><li class="chapter-item expanded "><a href="../conditions/error.html"><strong aria-hidden="true">9.4.</strong> ERROR and FAILURE</a></li><li class="chapter-item expanded "><a href="../conditions/halt.html"><strong aria-hidden="true">9.5.</strong> HALT</a></li><li class="chapter-item expanded "><a href="../conditions/novalue.html"><strong aria-hidden="true">9.6.</strong> NOVALUE</a></li><li class="chapter-item expanded "><a href="../conditions/nostring.html"><strong aria-hidden="true">9.7.</strong> NOSTRING</a></li><li class="chapter-item expanded "><a href="../conditions/nomethod.html"><strong aria-hidden="true">9.8.</strong> NOMETHOD</a></li><li class="chapter-item expanded "><a href="../conditions/notready.html"><strong aria-hidden="true">9.9.</strong> NOTREADY</a></li><li class="chapter-item expanded "><a href="../conditions/lostdigits.html"><strong aria-hidden="true">9.10.</strong> LOSTDIGITS</a></li><li class="chapter-item expanded "><a href="../conditions/user.html"><strong aria-hidden="true">9.11.</strong> USER conditions</a></li><li class="chapter-item expanded "><a href="../conditions/errors.html"><strong aria-hidden="true">9.12.</strong> Error numbers</a></li></ol></li><li class="chapter-item expanded "><a href="../classes/index.html"><strong aria-hidden="true">10.</strong> Classes</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../classes/methods.html"><strong aria-hidden="true">10.1.</strong> Method search</a></li><li class="chapter-item expanded "><a href="../classes/object.html"><strong aria-hidden="true">10.2.</strong> Object</a></li><li class="chapter-item expanded "><a href="../classes/class.html"><strong aria-hidden="true">10.3.</strong> Class</a></li><li class="chapter-item expanded "><a href="../classes/string.html"><strong aria-hidden="true">10.4.</strong> String</a></li><li class="chapter-item expanded "><a href="../classes/method.html"><strong aria-hidden="true">10.5.</strong> Method</a></li><li class="chapter-item expanded "><a href="../classes/routine.html"><strong aria-hidden="true">10.6.</strong> Routine</a></li><li class="chapter-item expanded "><a href="../classes/package.html"><strong aria-hidden="true">10.7.</strong> Package</a></li><li class="chapter-item expanded "><a href="../classes/message.html"><strong aria-hidden="true">10.8.</strong> Message</a></li><li class="chapter-item expanded "><a href="../classes/messagenotification.html"><strong aria-hidden="true">10.9.</strong> MessageNotification</a></li><li class="chapter-item expanded "><a href="../classes/alarmnotification.html"><strong aria-hidden="true">10.10.</strong> AlarmNotification</a></li><li class="chapter-item expanded "><a href="../classes/collection.html"><strong aria-hidden="true">10.11.</strong> Collection</a></li><li class="chapter-item expanded "><a href="../classes/mapcollection.html"><strong aria-hidden="true">10.12.</strong> MapCollection</a></li><li class="chapter-item expanded "><a href="../classes/orderedcollection.html"><strong aria-hidden="true">10.13.</strong> OrderedCollection</a></li><li class="chapter-item expanded "><a href="../classes/setcollection.html"><strong aria-hidden="true">10.14.</strong> SetCollection</a></li><li class="chapter-item expanded "><a href="../classes/array.html"><strong aria-hidden="true">10.15.</strong> Array</a></li><li class="chapter-item expanded "><a href="../classes/list.html"><strong aria-hidden="true">10.16.</strong> List</a></li><li class="chapter-item expanded "><a href="../classes/queue.html"><strong aria-hidden="true">10.17.</strong> Queue</a></li><li class="chapter-item expanded "><a href="../classes/circularqueue.html"><strong aria-hidden="true">10.18.</strong> CircularQueue</a></li><li class="chapter-item expanded "><a href="../classes/directory.html"><strong aria-hidden="true">10.19.</strong> Directory</a></li><li class="chapter-item expanded "><a href="../classes/stringtable.html"><strong aria-hidden="true">10.20.</strong> StringTable</a></li><li class="chapter-item expanded "><a href="../classes/properties.html"><strong aria-hidden="true">10.21.</strong> Properties</a></li><li class="chapter-item expanded "><a href="../classes/table.html"><strong aria-hidden="true">10.22.</strong> Table</a></li><li class="chapter-item expanded "><a href="../classes/identitytable.html"><strong aria-hidden="true">10.23.</strong> IdentityTable</a></li><li class="chapter-item expanded "><a href="../classes/relation.html"><strong aria-hidden="true">10.24.</strong> Relation</a></li><li class="chapter-item expanded "><a href="../classes/bag.html"><strong aria-hidden="true">10.25.</strong> Bag</a></li><li class="chapter-item expanded "><a href="../classes/set.html"><strong aria-hidden="true">10.26.</strong> Set</a></li><li class="chapter-item expanded "><a href="../classes/stem.html"><strong aria-hidden="true">10.27.</strong> Stem</a></li><li class="chapter-item expanded "><a href="../classes/datetime.html" class="active"><strong aria-hidden="true">10.28.</strong> DateTime</a></li><li class="chapter-item expanded "><a href="../classes/timespan.html"><strong aria-hidden="true">10.29.</strong> TimeSpan</a></li><li class="chapter-item expanded "><a href="../classes/comparable.html"><strong aria-hidden="true">10.30.</strong> Comparable</a></li><li class="chapter-item expanded "><a href="../classes/orderable.html"><strong aria-hidden="true">10.31.</strong> Orderable</a></li><li class="chapter-item expanded "><a href="../classes/comparators.html"><strong aria-hidden="true">10.32.</strong> Comparators</a></li><li class="chapter-item expanded "><a href="../classes/mutablebuffer.html"><strong aria-hidden="true">10.33.</strong> MutableBuffer</a></li><li class="chapter-item expanded "><a href="../classes/buffer.html"><strong aria-hidden="true">10.34.</strong> Buffer</a></li><li class="chapter-item expanded "><a href="../classes/pointer.html"><strong aria-hidden="true">10.35.</strong> Pointer</a></li><li class="chapter-item expanded "><a href="../classes/weakreference.html"><strong aria-hidden="true">10.36.</strong> WeakReference</a></li><li class="chapter-item expanded "><a href="../classes/variablereference.html"><strong aria-hidden="true">10.37.</strong> VariableReference</a></li><li class="chapter-item expanded "><a href="../classes/file.html"><strong aria-hidden="true">10.38.</strong> File</a></li><li class="chapter-item expanded "><a href="../classes/rexxcontext.html"><strong aria-hidden="true">10.39.</strong> RexxContext</a></li><li class="chapter-item expanded "><a href="../classes/stackframe.html"><strong aria-hidden="true">10.40.</strong> StackFrame</a></li><li class="chapter-item expanded "><a href="../classes/rexxinfo.html"><strong aria-hidden="true">10.41.</strong> RexxInfo</a></li><li class="chapter-item expanded "><a href="../classes/traceobject.html"><strong aria-hidden="true">10.42.</strong> TraceObject</a></li><li class="chapter-item expanded "><a href="../classes/validate.html"><strong aria-hidden="true">10.43.</strong> Validate</a></li><li class="chapter-item expanded "><a href="../classes/singleton.html"><strong aria-hidden="true">10.44.</strong> Singleton</a></li><li class="chapter-item expanded "><a href="../classes/alarm.html"><strong aria-hidden="true">10.45.</strong> Alarm</a></li><li class="chapter-item expanded "><a href="../classes/ticker.html"><strong aria-hidden="true">10.46.</strong> Ticker</a></li><li class="chapter-item expanded "><a href="../classes/monitor.html"><strong aria-hidden="true">10.47.</strong> Monitor</a></li><li class="chapter-item expanded "><a href="../classes/eventsemaphore.html"><strong aria-hidden="true">10.48.</strong> EventSemaphore</a></li><li class="chapter-item expanded "><a href="../classes/mutexsemaphore.html"><strong aria-hidden="true">10.49.</strong> MutexSemaphore</a></li><li class="chapter-item expanded "><a href="../classes/commandhandler.html"><strong aria-hidden="true">10.50.</strong> CommandHandler</a></li><li class="chapter-item expanded "><a href="../classes/nativecommandhandler.html"><strong aria-hidden="true">10.51.</strong> NativeCommandHandler</a></li><li class="chapter-item expanded "><a href="../classes/commandcontext.html"><strong aria-hidden="true">10.52.</strong> CommandContext</a></li><li class="chapter-item expanded "><a href="../classes/commandinput.html"><strong aria-hidden="true">10.53.</strong> CommandInput</a></li><li class="chapter-item expanded "><a href="../classes/commandoutput.html"><strong aria-hidden="true">10.54.</strong> CommandOutput</a></li><li class="chapter-item expanded "><a href="../classes/rexxqueue.html"><strong aria-hidden="true">10.55.</strong> RexxQueue</a></li><li class="chapter-item expanded "><a href="../classes/supplier.html"><strong aria-hidden="true">10.56.</strong> Supplier</a></li><li class="chapter-item expanded "><a href="../classes/streamsupplier.html"><strong aria-hidden="true">10.57.</strong> StreamSupplier</a></li><li class="chapter-item expanded "><a href="../classes/regularexpression.html"><strong aria-hidden="true">10.58.</strong> RegularExpression</a></li></ol></li><li class="chapter-item expanded "><a href="../builtins/index.html"><strong aria-hidden="true">11.</strong> Built-in functions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../builtins/abbrev.html"><strong aria-hidden="true">11.1.</strong> ABBREV</a></li><li class="chapter-item expanded "><a href="../builtins/abs.html"><strong aria-hidden="true">11.2.</strong> ABS</a></li><li class="chapter-item expanded "><a href="../builtins/address.html"><strong aria-hidden="true">11.3.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../builtins/arg.html"><strong aria-hidden="true">11.4.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../builtins/b2x.html"><strong aria-hidden="true">11.5.</strong> B2X</a></li><li class="chapter-item expanded "><a href="../builtins/beep.html"><strong aria-hidden="true">11.6.</strong> BEEP</a></li><li class="chapter-item expanded "><a href="../builtins/bitand.html"><strong aria-hidden="true">11.7.</strong> BITAND</a></li><li class="chapter-item expanded "><a href="../builtins/bitor.html"><strong aria-hidden="true">11.8.</strong> BITOR</a></li><li class="chapter-item expanded "><a href="../builtins/bitxor.html"><strong aria-hidden="true">11.9.</strong> BITXOR</a></li><li class="chapter-item expanded "><a href="../builtins/c2d.html"><strong aria-hidden="true">11.10.</strong> C2D</a></li><li class="chapter-item expanded "><a href="../builtins/c2x.html"><strong aria-hidden="true">11.11.</strong> C2X</a></li><li class="chapter-item expanded "><a href="../builtins/center.html"><strong aria-hidden="true">11.12.</strong> CENTER</a></li><li class="chapter-item expanded "><a href="../builtins/changestr.html"><strong aria-hidden="true">11.13.</strong> CHANGESTR</a></li><li class="chapter-item expanded "><a href="../builtins/charin.html"><strong aria-hidden="true">11.14.</strong> CHARIN</a></li><li class="chapter-item expanded "><a href="../builtins/charout.html"><strong aria-hidden="true">11.15.</strong> CHAROUT</a></li><li class="chapter-item expanded "><a href="../builtins/chars.html"><strong aria-hidden="true">11.16.</strong> CHARS</a></li><li class="chapter-item expanded "><a href="../builtins/compare.html"><strong aria-hidden="true">11.17.</strong> COMPARE</a></li><li class="chapter-item expanded "><a href="../builtins/condition.html"><strong aria-hidden="true">11.18.</strong> CONDITION</a></li><li class="chapter-item expanded "><a href="../builtins/copies.html"><strong aria-hidden="true">11.19.</strong> COPIES</a></li><li class="chapter-item expanded "><a href="../builtins/countstr.html"><strong aria-hidden="true">11.20.</strong> COUNTSTR</a></li><li class="chapter-item expanded "><a href="../builtins/d2c.html"><strong aria-hidden="true">11.21.</strong> D2C</a></li><li class="chapter-item expanded "><a href="../builtins/d2x.html"><strong aria-hidden="true">11.22.</strong> D2X</a></li><li class="chapter-item expanded "><a href="../builtins/datatype.html"><strong aria-hidden="true">11.23.</strong> DATATYPE</a></li><li class="chapter-item expanded "><a href="../builtins/date.html"><strong aria-hidden="true">11.24.</strong> DATE</a></li><li class="chapter-item expanded "><a href="../builtins/delstr.html"><strong aria-hidden="true">11.25.</strong> DELSTR</a></li><li class="chapter-item expanded "><a href="../builtins/delword.html"><strong aria-hidden="true">11.26.</strong> DELWORD</a></li><li class="chapter-item expanded "><a href="../builtins/digits.html"><strong aria-hidden="true">11.27.</strong> DIGITS</a></li><li class="chapter-item expanded "><a href="../builtins/directory.html"><strong aria-hidden="true">11.28.</strong> DIRECTORY</a></li><li class="chapter-item expanded "><a href="../builtins/endlocal.html"><strong aria-hidden="true">11.29.</strong> ENDLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/errortext.html"><strong aria-hidden="true">11.30.</strong> ERRORTEXT</a></li><li class="chapter-item expanded "><a href="../builtins/filespec.html"><strong aria-hidden="true">11.31.</strong> FILESPEC</a></li><li class="chapter-item expanded "><a href="../builtins/form.html"><strong aria-hidden="true">11.32.</strong> FORM</a></li><li class="chapter-item expanded "><a href="../builtins/format.html"><strong aria-hidden="true">11.33.</strong> FORMAT</a></li><li class="chapter-item expanded "><a href="../builtins/fuzz.html"><strong aria-hidden="true">11.34.</strong> FUZZ</a></li><li class="chapter-item expanded "><a href="../builtins/gc.html"><strong aria-hidden="true">11.35.</strong> GC</a></li><li class="chapter-item expanded "><a href="../builtins/insert.html"><strong aria-hidden="true">11.36.</strong> INSERT</a></li><li class="chapter-item expanded "><a href="../builtins/lastpos.html"><strong aria-hidden="true">11.37.</strong> LASTPOS</a></li><li class="chapter-item expanded "><a href="../builtins/left.html"><strong aria-hidden="true">11.38.</strong> LEFT</a></li><li class="chapter-item expanded "><a href="../builtins/length.html"><strong aria-hidden="true">11.39.</strong> LENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/linein.html"><strong aria-hidden="true">11.40.</strong> LINEIN</a></li><li class="chapter-item expanded "><a href="../builtins/lineout.html"><strong aria-hidden="true">11.41.</strong> LINEOUT</a></li><li class="chapter-item expanded "><a href="../builtins/lines.html"><strong aria-hidden="true">11.42.</strong> LINES</a></li><li class="chapter-item expanded "><a href="../builtins/lower.html"><strong aria-hidden="true">11.43.</strong> LOWER</a></li><li class="chapter-item expanded "><a href="../builtins/max.html"><strong aria-hidden="true">11.44.</strong> MAX</a></li><li class="chapter-item expanded "><a href="../builtins/min.html"><strong aria-hidden="true">11.45.</strong> MIN</a></li><li class="chapter-item expanded "><a href="../builtins/overlay.html"><strong aria-hidden="true">11.46.</strong> OVERLAY</a></li><li class="chapter-item expanded "><a href="../builtins/pos.html"><strong aria-hidden="true">11.47.</strong> POS</a></li><li class="chapter-item expanded "><a href="../builtins/qualify.html"><strong aria-hidden="true">11.48.</strong> QUALIFY</a></li><li class="chapter-item expanded "><a href="../builtins/queued.html"><strong aria-hidden="true">11.49.</strong> QUEUED</a></li><li class="chapter-item expanded "><a href="../builtins/random.html"><strong aria-hidden="true">11.50.</strong> RANDOM</a></li><li class="chapter-item expanded "><a href="../builtins/reverse.html"><strong aria-hidden="true">11.51.</strong> REVERSE</a></li><li class="chapter-item expanded "><a href="../builtins/right.html"><strong aria-hidden="true">11.52.</strong> RIGHT</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncadd.html"><strong aria-hidden="true">11.53.</strong> RXFUNCADD</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncdrop.html"><strong aria-hidden="true">11.54.</strong> RXFUNCDROP</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncquery.html"><strong aria-hidden="true">11.55.</strong> RXFUNCQUERY</a></li><li class="chapter-item expanded "><a href="../builtins/rxqueue.html"><strong aria-hidden="true">11.56.</strong> RXQUEUE</a></li><li class="chapter-item expanded "><a href="../builtins/setlocal.html"><strong aria-hidden="true">11.57.</strong> SETLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/sign.html"><strong aria-hidden="true">11.58.</strong> SIGN</a></li><li class="chapter-item expanded "><a href="../builtins/sourceline.html"><strong aria-hidden="true">11.59.</strong> SOURCELINE</a></li><li class="chapter-item expanded "><a href="../builtins/space.html"><strong aria-hidden="true">11.60.</strong> SPACE</a></li><li class="chapter-item expanded "><a href="../builtins/stream.html"><strong aria-hidden="true">11.61.</strong> STREAM</a></li><li class="chapter-item expanded "><a href="../builtins/strip.html"><strong aria-hidden="true">11.62.</strong> STRIP</a></li><li class="chapter-item expanded "><a href="../builtins/substr.html"><strong aria-hidden="true">11.63.</strong> SUBSTR</a></li><li class="chapter-item expanded "><a href="../builtins/subword.html"><strong aria-hidden="true">11.64.</strong> SUBWORD</a></li><li class="chapter-item expanded "><a href="../builtins/symbol.html"><strong aria-hidden="true">11.65.</strong> SYMBOL</a></li><li class="chapter-item expanded "><a href="../builtins/time.html"><strong aria-hidden="true">11.66.</strong> TIME</a></li><li class="chapter-item expanded "><a href="../builtins/trace.html"><strong aria-hidden="true">11.67.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../builtins/translate.html"><strong aria-hidden="true">11.68.</strong> TRANSLATE</a></li><li class="chapter-item expanded "><a href="../builtins/trunc.html"><strong aria-hidden="true">11.69.</strong> TRUNC</a></li><li class="chapter-item expanded "><a href="../builtins/upper.html"><strong aria-hidden="true">11.70.</strong> UPPER</a></li><li class="chapter-item expanded "><a href="../builtins/userid.html"><strong aria-hidden="true">11.71.</strong> USERID</a></li><li class="chapter-item expanded "><a href="../builtins/value.html"><strong aria-hidden="true">11.72.</strong> VALUE</a></li><li class="chapter-item expanded "><a href="../builtins/var.html"><strong aria-hidden="true">11.73.</strong> VAR</a></li><li class="chapter-item expanded "><a href="../builtins/verify.html"><strong aria-hidden="true">11.74.</strong> VERIFY</a></li><li class="chapter-item expanded "><a href="../builtins/word.html"><strong aria-hidden="true">11.75.</strong> WORD</a></li><li class="chapter-item expanded "><a href="../builtins/wordindex.html"><strong aria-hidden="true">11.76.</strong> WORDINDEX</a></li><li class="chapter-item expanded "><a href="../builtins/wordlength.html"><strong aria-hidden="true">11.77.</strong> WORDLENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/wordpos.html"><strong aria-hidden="true">11.78.</strong> WORDPOS</a></li><li class="chapter-item expanded "><a href="../builtins/words.html"><strong aria-hidden="true">11.79.</strong> WORDS</a></li><li class="chapter-item expanded "><a href="../builtins/x2b.html"><strong aria-hidden="true">11.80.</strong> X2B</a></li><li class="chapter-item expanded "><a href="../builtins/x2c.html"><strong aria-hidden="true">11.81.</strong> X2C</a></li><li class="chapter-item expanded "><a href="../builtins/x2d.html"><strong aria-hidden="true">11.82.</strong> X2D</a></li><li class="chapter-item expanded "><a href="../builtins/xrange.html"><strong aria-hidden="true">11.83.</strong> XRANGE</a></li></ol></li><li class="chapter-item expanded "><a href="../deviations.html"><strong aria-hidden="true">12.</strong> Deviations</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The interrexx Language Specification</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="datetime"><a class="header" href="#datetime">DateTime</a></h1>
+<p class="references">rexxref: Builtin Classes &gt; Utility Classes &gt; DateTime Class; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; init; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; fromBaseDate (Class Method); Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; fromCivilTime (Class Method); Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; fromEuropeanDate (Class Method); Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; fromIsoDate (Class Method); Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; fromLongTime (Class Method); Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; fromNormalDate (Class Method); Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; fromNormalTime (Class Method); Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; fromOrderedDate (Class Method); Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; fromOrdinalDate (Class Method); Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; fromStandardDate (Class Method); Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; fromTicks (Class Method); Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; fromUsaDate (Class Method); Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; fromUtcIsoDate (Class Method); Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; fromWeekNumberDate (Class Method); Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; maxDate (Class Method); Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; minDate (Class Method); Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; today (Class Method); Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; Arithmetic Methods; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; addDays; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; addHours; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; addMicroseconds; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; addMinutes; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; addSeconds; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; addWeeks; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; addYears; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; baseDate; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; civilTime; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; compareTo; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; date; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; day; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; dayMicroseconds; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; dayMinutes; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; dayName; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; daySeconds; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; daysInMonth; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; daysInYear; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; elapsed; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; europeanDate; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; fullDate; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; hashCode; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; hours; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; isLeapYear; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; isoDate; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; languageDate; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; longTime; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; makeString; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; microseconds; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; minutes; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; month; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; monthName; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; normalDate; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; normalTime; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; offset; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; orderedDate; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; ordinalDate; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; seconds; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; standardDate; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; string; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; ticks; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; timeOfDay; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; toLocalTime; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; toTimezone; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; toUtcTime; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; usaDate; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; utcDate; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; utcIsoDate; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; weekDay; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; weekNumber; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; weekNumberDate; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; weekNumberYear; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; weeksInYear; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; year; Builtin Classes &gt; Utility Classes &gt; DateTime Class &gt; yearDay</p>
+<p class="deviations">Deviations: D109, D126, D127, D128, D129, D130, D131, D132</p>
+<p>A <code>DateTime</code> is one moment of the Gregorian calendar, from the first
+microsecond of 1 January 0001 to the last of 31 December 9999, that carries
+the offset of the time zone it is read in. Its methods answer the parts of the
+date and the time of day, write the moment in the formats of
+<a href="../builtins/date.html">DATE</a> and <a href="../builtins/time.html">TIME</a> and in ISO 8601
+forms, make the moment that lies a given span away, and convert it to another
+zone. The class inherits <code>Comparable</code> and <code>Orderable</code>, which give it the
+comparison operators on top of its own <code>compareTo</code>; the span of time between
+two moments is a <a href="timespan.html#r-class.timespan.value"><code>TimeSpan</code></a>. The current moment and
+the host's time zone are not specified, so the examples build their instances
+from fixed values and give them an explicit offset wherever a result depends
+on one.</p>
+<h2 id="the-class"><a class="header" href="#the-class">The class</a></h2>
+<div class="rule" id="r-class.datetime.creation"><a href="#r-class.datetime.creation">[class.datetime.creation]</a></div>
+<p><code>DateTime</code> has the instance methods <code>+</code>, <code>-</code>, <code>addDays</code>, <code>addHours</code>,
+<code>addMicroseconds</code>, <code>addMinutes</code>, <code>addSeconds</code>, <code>addWeeks</code>, <code>addYears</code>,
+<code>baseDate</code>, <code>civilTime</code>, <code>compareTo</code>, <code>date</code>, <code>day</code>, <code>dayMicroseconds</code>,
+<code>dayMinutes</code>, <code>dayName</code>, <code>daySeconds</code>, <code>daysInMonth</code>, <code>daysInYear</code>, <code>elapsed</code>,
+<code>europeanDate</code>, <code>fullDate</code>, <code>hashCode</code>, <code>hours</code>, <code>init</code>, <code>isLeapYear</code>,
+<code>isoDate</code>, <code>languageDate</code>, <code>longTime</code>, <code>makeString</code>, <code>microseconds</code>,
+<code>minutes</code>, <code>month</code>, <code>monthName</code>, <code>normalDate</code>, <code>normalTime</code>, <code>offset</code>,
+<code>orderedDate</code>, <code>ordinalDate</code>, <code>seconds</code>, <code>standardDate</code>, <code>string</code>, <code>ticks</code>,
+<code>timeOfDay</code>, <code>toLocalTime</code>, <code>toTimezone</code>, <code>toUtcTime</code>, <code>usaDate</code>, <code>utcDate</code>,
+<code>utcIsoDate</code>, <code>weekDay</code>, <code>weekNumber</code>, <code>weekNumberDate</code>, <code>weekNumberYear</code>,
+<code>weeksInYear</code>, <code>year</code> and <code>yearDay</code>, and the class methods <code>fromBaseDate</code>,
+<code>fromCivilTime</code>, <code>fromEuropeanDate</code>, <code>fromIsoDate</code>, <code>fromLongTime</code>,
+<code>fromNormalDate</code>, <code>fromNormalTime</code>, <code>fromOrderedDate</code>, <code>fromOrdinalDate</code>,
+<code>fromStandardDate</code>, <code>fromTicks</code>, <code>fromUsaDate</code>, <code>fromUtcIsoDate</code>,
+<code>fromWeekNumberDate</code>, <code>maxDate</code>, <code>minDate</code> and <code>today</code>, besides the <code>new</code> that
+every class has. It may have private methods besides these; they are not part
+of this specification. Its superclasses are <code>Object</code>, <code>Comparable</code> and
+<code>Orderable</code>, in that order. The comparison operators of an instance are those
+of <code>Orderable</code>, which send <code>compareTo</code> to the receiver (<a href="#r-class.datetime.compare">the comparison
+rule</a>). An instance has no <code>unknown</code> method, so a
+message that <a href="methods.html#r-class.methods.unknown">the method search</a> does not resolve
+raises <a href="../conditions/nomethod.html#r-cond.nomethod.raise">NOMETHOD</a>, as the error rule of <a href="index.html#r-class.index.errors">the
+chapter</a> says; it is not a string either, so a string
+method such as <code>length</code> raises <code>SYNTAX 97.1</code>.</p>
+<pre><code class="language-rexx">do c over .datetime~superclasses
+  say c~id
+end
+names = '+ - addDays addHours addMicroseconds addMinutes addSeconds addWeeks',
+  'addYears baseDate civilTime compareTo date day dayMicroseconds dayMinutes',
+  'dayName daySeconds daysInMonth daysInYear elapsed europeanDate fullDate',
+  'hashCode hours init isLeapYear isoDate languageDate longTime makeString',
+  'microseconds minutes month monthName normalDate normalTime offset',
+  'orderedDate ordinalDate seconds standardDate string ticks timeOfDay',
+  'toLocalTime toTimezone toUtcTime usaDate utcDate utcIsoDate weekDay',
+  'weekNumber weekNumberDate weekNumberYear weeksInYear year yearDay'
+found = 0
+do n over names~makearray(' ')
+  found += .datetime~method(n)~isA(.method)
+end
+say found 'of' names~words
+cnames = 'fromBaseDate fromCivilTime fromEuropeanDate fromIsoDate',
+  'fromLongTime fromNormalDate fromNormalTime fromOrderedDate',
+  'fromOrdinalDate fromStandardDate fromTicks fromUsaDate fromUtcIsoDate',
+  'fromWeekNumberDate maxDate minDate today new'
+found = 0
+do n over cnames~makearray(' ')
+  found += .datetime~hasMethod(n)
+end
+say found 'of' cnames~words
+say .datetime~new~hasMethod('FROMTICKS') .datetime~new~hasMethod('UNKNOWN')
+signal on syntax name bad
+say .datetime~new~length
+bad: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">Object
+Comparable
+Orderable
+58 of 58
+18 of 18
+0 0
+97.1
+</code></pre>
+<div class="rule" id="r-class.datetime.value"><a href="#r-class.datetime.value">[class.datetime.value]</a></div>
+<p>An instance holds a date and a time of day as the fields year (1 to 9999),
+month, day, hours, minutes, seconds and microseconds (0 to 999999), and an
+<a href="#r-class.datetime.offset">offset</a> from UTC. The fields are the time as the
+people in that zone read it. No method changes an instance: every method that
+answers a different moment answers a new instance. Leap seconds do not exist, so
+a seconds value is at most 59, and a day has exactly 86400 seconds. The string
+value of an instance is its <code>isoDate</code> (<a href="#r-class.datetime.string">the string
+rule</a>); an instance written by <code>say</code> or joined to a
+string by <code>||</code> is that text, as <a href="index.html#r-class.index.string">the string-value rule</a>
+says. An instance on which the <code>init</code> of <code>DateTime</code> never ran, because the
+<code>init</code> of a subclass does not forward to it, has the value of
+<a href="#r-class.datetime.limits"><code>minDate</code></a> (<a href="#r-class.datetime.deviation.131">Deviation
+131</a>).</p>
+<pre><code class="language-rexx">say .datetime~minDate .datetime~maxDate
+d = .datetime~new(2016, 12, 31, 23, 59, 59, 999999, 0)
+say d
+say d~addMicroseconds(1)
+say 'at' d || '!'
+signal on syntax name bad
+say .datetime~new(2016, 12, 31, 23, 59, 60, 0, 0)
+bad: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">0001-01-01T00:00:00.000000 9999-12-31T23:59:59.999999
+2016-12-31T23:59:59.999999
+2017-01-01T00:00:00.000000
+at 2016-12-31T23:59:59.999999!
+88.907
+</code></pre>
+<h2 id="offsets"><a class="header" href="#offsets">Offsets</a></h2>
+<div class="rule" id="r-class.datetime.offset"><a href="#r-class.datetime.offset">[class.datetime.offset]</a></div>
+<p>The offset of an instance is the distance of its zone east of UTC, in whole
+minutes from -900 to 900. The method <code>offset</code> answers it as a
+<a href="timespan.html#r-class.timespan.value"><code>TimeSpan</code></a>, so an instance in a zone 5 hours and 30
+minutes east of UTC answers <code>05:30:00.000000</code> and one in a zone 90 minutes west
+answers <code>-01:30:00.000000</code>. Every place that takes an offset takes the same two
+forms: a number of whole minutes in that range, or a <code>TimeSpan</code> that is a whole
+number of minutes in that range. The argument is sent <code>isA</code> with the class
+<code>TimeSpan</code>; only a <code>TimeSpan</code> is then sent <code>totalMicroseconds</code> and is converted
+to minutes, and any other value is read as a number (<a href="index.html#r-class.index.string">the argument
+rule</a>) and sent the messages that <a href="#r-class.datetime.sends.new">the sends
+rule</a> lists. A value outside the range, a number
+that is not whole as <a href="../conventions.html#r-conv.whole.form">the form rule</a> and <a href="../conventions.html#r-conv.whole.digits">the digits
+rule</a> read it (<a href="#r-class.datetime.deviation.130">Deviation
+130</a>), such as 1.5, and a span that is not whole
+minutes raise <code>SYNTAX 88.907</code> for <code>new</code> and, with a number or a span, for
+<code>toTimezone</code>, and <code>SYNTAX 88.918</code> for <code>today</code> and for the <code>from</code> methods that
+read an offset, which are all but <code>fromWeekNumberDate</code> (it <a href="#r-class.datetime.fromweek">ignores the
+offset</a>) and <code>fromUtcIsoDate</code> (it has none); a value
+that is no number at all gets the same code from <code>new</code>, <code>today</code> and those <code>from</code>
+methods, and what <code>toTimezone</code> raises for it is in <a href="#r-class.datetime.zone">the zone
+rule</a>.</p>
+<pre><code class="language-rexx">d = .datetime~new(2017, 6, 30, 5, 6, 7, 8, 330)
+say d~offset d~addDays(1)~offset d~toTimezone(-90)~offset
+say .datetime~new(2017, 6, 30, 0, 0, 0, 0, .timespan~fromHours(2))~offset
+say .datetime~new(2017, 6, 30, 0, 0, 0, 0, 900)~offset,
+    .datetime~new(2017, 6, 30, 0, 0, 0, 0, -900)~offset
+call try '.datetime~new(2017, 6, 30, 0, 0, 0, 0, 901)'
+call try '.datetime~new(2017, 6, 30, 0, 0, 0, 0, 1.5)'
+call try '.datetime~new(2017, 6, 30, 0, 0, 0, 0, .timespan~fromSeconds(90))'
+call try 'd~toTimezone(-901)'
+call try 'd~toTimezone(.timespan~fromSeconds(90))'
+call try '.datetime~today(901)'
+call try '.datetime~fromBaseDate(5, 901)'
+call try '.datetime~fromTicks(5, 1.5)'
+call try '.datetime~fromTicks(5, "x")'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">05:30:00.000000 05:30:00.000000 -01:30:00.000000
+02:00:00.000000
+15:00:00.000000 -15:00:00.000000
+.datetime~new(2017, 6, 30, 0, 0, 0, 0, 901) =&gt; 88.907
+.datetime~new(2017, 6, 30, 0, 0, 0, 0, 1.5) =&gt; 88.907
+.datetime~new(2017, 6, 30, 0, 0, 0, 0, .timespan~fromSeconds(90)) =&gt; 88.907
+d~toTimezone(-901) =&gt; 88.907
+d~toTimezone(.timespan~fromSeconds(90)) =&gt; 88.907
+.datetime~today(901) =&gt; 88.918
+.datetime~fromBaseDate(5, 901) =&gt; 88.918
+.datetime~fromTicks(5, 1.5) =&gt; 88.918
+.datetime~fromTicks(5, "x") =&gt; 88.918
+</code></pre>
+<div class="rule" id="r-class.datetime.offset.default"><a href="#r-class.datetime.offset.default">[class.datetime.offset.default]</a></div>
+<p>An instance made without an offset gets the offset of the host's zone as it is
+when the instance is made: the number of microseconds that
+<a href="../builtins/time.html#r-bif.time.zone"><code>TIME('O')</code></a> answers, as a span. It is one offset for every
+date: an instance for a date of summer and one for a date of winter get the
+same offset, the one the host has at the moment of the call. Which zone the
+host is in is not specified, so the examples compare with the offset of
+another instance or with <code>TIME('O')</code>. The class methods <code>new</code>, <code>today</code> and
+every <code>from</code> method take it, except <code>fromUtcIsoDate</code>, which takes the offset
+that its string gives, and <code>minDate</code> and <code>maxDate</code>, whose offset is 0. The
+methods that answer a moment of a new zone, <code>toLocalTime</code> and <code>toUtcTime</code>, are
+described with <a href="#r-class.datetime.zone">the zone rule</a>. When the host's offset
+is not a whole number of minutes from -900 to 900, every method that takes the
+default offset fails: <code>new</code> and <code>toLocalTime</code> raise <code>SYNTAX 88.907</code>, and
+<code>today</code> and every <code>from</code> method other than <code>fromUtcIsoDate</code> raise
+<code>SYNTAX 88.918</code>.</p>
+<pre><code class="language-rexx">h = .datetime~new(2017, 1, 5)~offset
+say h~totalMicroseconds == time('O')
+say (.datetime~new(2017, 7, 5)~offset == h),
+    (.datetime~new(1, 1, 1)~offset == h)
+say (.datetime~today~offset == h) (.datetime~fromTicks(0)~offset == h)
+say (.datetime~new~offset == h) (.datetime~fromBaseDate(5)~offset == h)
+say .datetime~fromUtcIsoDate('2017-01-05T01:02:03+00:00')~offset
+say .datetime~minDate~offset .datetime~maxDate~offset
+say (abs(h~totalMinutes) &lt;= 900)
+</code></pre>
+<pre><code class="language-output">1
+1 1
+1 1
+1 1
+00:00:00.000000
+00:00:00.000000 00:00:00.000000
+1
+</code></pre>
+<h2 id="making-an-instance"><a class="header" href="#making-an-instance">Making an instance</a></h2>
+<div class="rule" id="r-class.datetime.new"><a href="#r-class.datetime.new">[class.datetime.new]</a></div>
+<p><code>new</code> makes an instance and sends <code>init</code> to it with the arguments it received
+(<a href="index.html#r-class.index.new">the new rule</a>); the <code>init</code> of <code>DateTime</code> takes up to
+eight arguments, and the number of them that are given, counted as <a href="index.html#r-class.index.args.count">the count
+rule</a> says, picks the form. With no argument the
+moment is that of the host's clock, whose value is not specified. With one
+argument or two, the first is the number of microseconds from 00:00:00.000000
+on 1 January 0001 to the moment, a whole number from 0 to 315537897599999999,
+and the second, if present, is the offset. With three arguments or four they
+are year, month and day, the time of day is 00:00:00.000000, and the fourth,
+if present, is the offset: the four-argument form is not the three-argument
+form with an hour. With from five to eight arguments they are year, month,
+day, hours and minutes, then seconds, microseconds and the offset, where an
+omitted one of these three is 0 (the offset: <a href="#r-class.datetime.offset.default">the
+default</a>). Without an offset argument the
+instance has the default offset. An argument that the form needs and that is
+omitted raises <code>SYNTAX 93.903</code>; more than eight arguments raise
+<code>SYNTAX 93.902</code>.</p>
+<pre><code class="language-rexx">say .datetime~new(2017, 6, 30, 5, 6, 7, 8, 0)
+say .datetime~new(2017, 6, 30, 5, 6, 0)
+say .datetime~new(2017, 6, 30, 5, 6, , , 60)~utcIsoDate
+say .datetime~new(2017, 6, 30, 0)~utcIsoDate
+say .datetime~new(2017, 6, 30, 5)~utcIsoDate
+say .datetime~new(63634417730123456, 0)
+say .datetime~new(63634417730123456, 120)~utcIsoDate
+say .datetime~new(12)~minutes .datetime~new(0)
+say (.datetime~new~year &gt;= 2026) (.datetime~new() &lt; .datetime~maxDate)
+call try '.datetime~new(2017, , 30)'
+call try '.datetime~new(, 2)'
+call try '.datetime~new(2017, 6, 30, , 2)'
+call try '.datetime~new(2017, 6, 30, 5, , 7)'
+call try '.datetime~new(1, 2, 3, 4, 5, 6, 7, 8, 9)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">2017-06-30T05:06:07.000008
+2017-06-30T05:06:00.000000
+2017-06-30T05:06:00.000000+01:00
+2017-06-30T00:00:00.000000Z
+2017-06-30T00:00:00.000000+00:05
+2017-06-30T11:08:50.123456
+2017-06-30T11:08:50.123456+02:00
+0 0001-01-01T00:00:00.000000
+1 1
+.datetime~new(2017, , 30) =&gt; 93.903
+.datetime~new(, 2) =&gt; 93.903
+.datetime~new(2017, 6, 30, , 2) =&gt; 93.903
+.datetime~new(2017, 6, 30, 5, , 7) =&gt; 93.903
+.datetime~new(1, 2, 3, 4, 5, 6, 7, 8, 9) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.datetime.new.checks"><a href="#r-class.datetime.new.checks">[class.datetime.new.checks]</a></div>
+<p>The values are checked in this order, and the first that fails raises its error.
+In the one-argument and two-argument form the number of microseconds must be a
+whole number in its range, or <code>SYNTAX 40.19</code> is raised, and then the offset is
+checked as <a href="#r-class.datetime.offset">the offset rule</a> says. Each whole number,
+here and below, is read as a whole-number argument of a builtin is, by <a href="../conventions.html#r-conv.whole.form">the form
+rule</a> and <a href="../conventions.html#r-conv.whole.digits">the digits rule</a>, with the
+codes of this rule in place of SYNTAX 40.12 (<a href="#r-class.datetime.deviation.130">Deviation
+130</a>). In the other forms year, month and day
+are whole numbers, in the ranges 1 to 9999, 1 to 12 and 1 to 31; one outside its
+range, one that is no number and one that is not whole, such as 1.5, raise
+<code>SYNTAX 88.907</code>. A day that the month does not have, such as 30 February, then
+raises <code>SYNTAX 40.19</code>. Hours (0 to 23), minutes (0 to 59), seconds (0 to 59) and
+microseconds (0 to 999999) are checked last, each a whole number in its range,
+and then the offset, as <a href="#r-class.datetime.offset">the offset rule</a> says; a value
+outside its range, one that is no number and one that is not whole raise <code>SYNTAX 88.907</code>. A day that does not exist is thus reported before an hour that is out
+of range, and a day of 32 before one that does not exist.</p>
+<pre><code class="language-rexx">call try '.datetime~new(2017, 2, 30, 25, 0, 0, 0)'
+call try '.datetime~new(2017, 2, 32)'
+call try '.datetime~new(2017, 2, 30, 0, 0, 0, 0, 901)'
+call try '.datetime~new(2017, 2, 29)'
+call try '.datetime~new(2016, 2, 29)'
+call try '.datetime~new(2017, 6, 30, 24, 0, 0, 0)'
+call try '.datetime~new(2017, 6, 30, 0, 60, 0, 0)'
+call try '.datetime~new(2017, 6, 30, 0, 0, 60, 0)'
+call try '.datetime~new(2017, 6, 30, 0, 0, 0, 1000000)'
+call try '.datetime~new(2017, 6, 30, -1, 0, 0, 0)'
+call try '.datetime~new(10000, 1, 1)'
+call try '.datetime~new(0, 1, 1)'
+call try '.datetime~new(2017, "x", 1)'
+call try '.datetime~new(2017, 6, 30, 1.5, 0, 0, 0)'
+call try '.datetime~new(-1)'
+call try '.datetime~new(315537897600000000)'
+call try '.datetime~new(1.5)'
+call try '.datetime~new("x")'
+call try '.datetime~new(-5, 901)'
+call try '.datetime~new(5, 901)'
+call try '.datetime~new(9999, 12, 31, 23, 59, 59, 999999)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">.datetime~new(2017, 2, 30, 25, 0, 0, 0) =&gt; 40.19
+.datetime~new(2017, 2, 32) =&gt; 88.907
+.datetime~new(2017, 2, 30, 0, 0, 0, 0, 901) =&gt; 40.19
+.datetime~new(2017, 2, 29) =&gt; 40.19
+.datetime~new(2016, 2, 29) =&gt; 2016-02-29T00:00:00.000000
+.datetime~new(2017, 6, 30, 24, 0, 0, 0) =&gt; 88.907
+.datetime~new(2017, 6, 30, 0, 60, 0, 0) =&gt; 88.907
+.datetime~new(2017, 6, 30, 0, 0, 60, 0) =&gt; 88.907
+.datetime~new(2017, 6, 30, 0, 0, 0, 1000000) =&gt; 88.907
+.datetime~new(2017, 6, 30, -1, 0, 0, 0) =&gt; 88.907
+.datetime~new(10000, 1, 1) =&gt; 88.907
+.datetime~new(0, 1, 1) =&gt; 88.907
+.datetime~new(2017, "x", 1) =&gt; 88.907
+.datetime~new(2017, 6, 30, 1.5, 0, 0, 0) =&gt; 88.907
+.datetime~new(-1) =&gt; 40.19
+.datetime~new(315537897600000000) =&gt; 40.19
+.datetime~new(1.5) =&gt; 40.19
+.datetime~new("x") =&gt; 40.19
+.datetime~new(-5, 901) =&gt; 40.19
+.datetime~new(5, 901) =&gt; 88.907
+.datetime~new(9999, 12, 31, 23, 59, 59, 999999) =&gt; 9999-12-31T23:59:59.999999
+</code></pre>
+<h2 id="class-methods"><a class="header" href="#class-methods">Class methods</a></h2>
+<div class="rule" id="r-class.datetime.limits"><a href="#r-class.datetime.limits">[class.datetime.limits]</a></div>
+<p><code>minDate</code> answers the first moment, 1 January 0001 at 00:00:00.000000, and
+<code>maxDate</code> the last, 31 December 9999 at 23:59:59.999999. Both have the offset
+0, so their <code>fullDate</code> is 0 and 315537897599999999. Each takes no argument;
+one raises <code>SYNTAX 93.902</code>. A subclass receiver gets an instance of itself, as
+<a href="#r-class.datetime.sends.new">the sends rule</a> says.</p>
+<pre><code class="language-rexx">say .datetime~minDate .datetime~minDate~utcIsoDate .datetime~minDate~fullDate
+say .datetime~maxDate .datetime~maxDate~utcIsoDate .datetime~maxDate~fullDate
+say .datetime~minDate &lt; .datetime~maxDate
+call try '.datetime~minDate(1)'
+call try '.datetime~maxDate(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">0001-01-01T00:00:00.000000 0001-01-01T00:00:00.000000Z 0
+9999-12-31T23:59:59.999999 9999-12-31T23:59:59.999999Z 315537897599999999
+1
+.datetime~minDate(1) =&gt; 93.902
+.datetime~maxDate(1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.datetime.today"><a href="#r-class.datetime.today">[class.datetime.today]</a></div>
+<p><code>today</code> answers the current day of the host, at 00:00:00.000000, with the
+default offset or the one its optional argument gives (<a href="#r-class.datetime.offset">the offset
+rule</a>). The day is the current one and is not
+specified, so the example checks the time of day and the offset only.</p>
+<pre><code class="language-rexx">t = .datetime~today
+say t~normalTime t~microseconds (t~offset == .datetime~new~offset)
+say .datetime~today(90)~offset .datetime~today(.timespan~fromHours(-3))~offset
+signal on syntax name bad
+say .datetime~today(901)
+bad: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">00:00:00 0 1
+01:30:00.000000 -03:00:00.000000
+88.918
+</code></pre>
+<div class="rule" id="r-class.datetime.fromdate"><a href="#r-class.datetime.fromdate">[class.datetime.fromdate]</a></div>
+<p><code>fromBaseDate</code>, <code>fromEuropeanDate</code>, <code>fromNormalDate</code>, <code>fromOrderedDate</code>,
+<code>fromStandardDate</code> and <code>fromUsaDate</code> read a date that is written in the form
+that the option B (<a href="../builtins/date.html#r-bif.date.out.counts">DATE</a>) or E, N, O, S or U
+(<a href="../builtins/date.html#r-bif.date.out.text">DATE</a>) writes it, and answer that day at 00:00:00.000000.
+<code>fromBaseDate</code> takes a whole number of days from 0 (1 January 0001) to 3652058
+(31 December 9999) as <code>baseDate</code> answers it, read by <a href="../conventions.html#r-conv.whole.form">the form
+rule</a> and <a href="../conventions.html#r-conv.whole.digits">the digits rule</a> (<a href="#r-class.datetime.deviation.130">Deviation
+130</a>), so <code>5.0</code> is day 5 and <code>5.0000001</code> is
+refused. The other five take the forms <code>dd/mm/yy</code>, <code>d mon yyyy</code> (the day has one
+or two digits, the month is the three letters of <a href="../builtins/date.html#r-bif.date.out.text">its name</a>
+with a capital first letter), <code>yy/mm/dd</code>, <code>yyyymmdd</code> and <code>mm/dd/yy</code>. A two-digit
+year is the one that <a href="../builtins/date.html#r-bif.date.in.century">the century rule</a> of <code>DATE</code> gives,
+so it depends on the current year. Each of the other five takes the field
+separator as its optional second argument, in place of the default that <a href="../builtins/date.html#r-bif.date.sep.out">the
+output separator</a> of the option has: the null string or one
+character that is no letter and no digit. The offset (<a href="#r-class.datetime.offset">the offset
+rule</a>) is the last optional argument, the second one of
+<code>fromBaseDate</code> and the third of the others. A string that is not of the form, a
+month or a day that does not exist, a year 0000, and a separator that does not
+fit raise <code>SYNTAX 88.918</code>. Without a string the method raises <code>SYNTAX 93.901</code>,
+and an argument after the offset raises <code>SYNTAX 93.902</code>.</p>
+<pre><code class="language-rexx">say .datetime~fromBaseDate(0) .datetime~fromBaseDate(736509)
+say .datetime~fromBaseDate(' 12 ') .datetime~fromBaseDate('1e1')
+say .datetime~fromEuropeanDate('30/06/17'),
+    .datetime~fromOrderedDate('17/06/30')
+say .datetime~fromUsaDate('06/30/17') .datetime~fromStandardDate('20170630')
+say .datetime~fromNormalDate('30 Jun 2017'),
+    .datetime~fromNormalDate('3 Jun 2017')
+say .datetime~fromEuropeanDate('30-06-17', '-'),
+    .datetime~fromEuropeanDate('300617', '')
+say .datetime~fromStandardDate('2017.06.30', '.'),
+    .datetime~fromNormalDate('30Jun2017', '')
+say .datetime~fromUsaDate('06/30/17', , 90)~utcIsoDate
+say .datetime~fromStandardDate('00010101'),
+    .datetime~fromStandardDate('99991231')
+ok = 1
+do n = 0 to 99
+  y = .datetime~fromEuropeanDate('01/01/' || right(n, 2, 0))~year
+  now = .datetime~new~year
+  ok = ok &amp; (y &gt;= now - 50) &amp; (y &lt;= now + 49) &amp;,
+      (right(y, 2) == right(n, 2, 0))
+end
+say ok
+call try '.datetime~fromBaseDate(-1)'
+call try '.datetime~fromBaseDate(3652059)'
+call try '.datetime~fromBaseDate(1.5)'
+call try '.datetime~fromBaseDate(5.0000001)'
+call try '.datetime~fromEuropeanDate("30/06/17", "")'
+call try '.datetime~fromEuropeanDate("30/06/17", "//")'
+call try '.datetime~fromEuropeanDate("30x06x17", "x")'
+call try '.datetime~fromEuropeanDate("31/06/17")'
+call try '.datetime~fromEuropeanDate("29/02/17")'
+call try '.datetime~fromEuropeanDate("1/6/17")'
+call try '.datetime~fromEuropeanDate("30/06/2017")'
+call try '.datetime~fromNormalDate("30 jun 2017")'
+call try '.datetime~fromNormalDate("30 June 2017")'
+call try '.datetime~fromNormalDate("30 Jun 0000")'
+call try '.datetime~fromStandardDate("2017/06/30")'
+call try '.datetime~fromBaseDate'
+call try '.datetime~fromBaseDate(5, 0, 1)'
+call try '.datetime~fromEuropeanDate("30/06/17", "/", 0, 1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">0001-01-01T00:00:00.000000 2017-06-30T00:00:00.000000
+0001-01-13T00:00:00.000000 0001-01-11T00:00:00.000000
+2017-06-30T00:00:00.000000 2017-06-30T00:00:00.000000
+2017-06-30T00:00:00.000000 2017-06-30T00:00:00.000000
+2017-06-30T00:00:00.000000 2017-06-03T00:00:00.000000
+2017-06-30T00:00:00.000000 2017-06-30T00:00:00.000000
+2017-06-30T00:00:00.000000 2017-06-30T00:00:00.000000
+2017-06-30T00:00:00.000000+01:30
+0001-01-01T00:00:00.000000 9999-12-31T00:00:00.000000
+1
+.datetime~fromBaseDate(-1) =&gt; 88.918
+.datetime~fromBaseDate(3652059) =&gt; 88.918
+.datetime~fromBaseDate(1.5) =&gt; 88.918
+.datetime~fromBaseDate(5.0000001) =&gt; 88.918
+.datetime~fromEuropeanDate("30/06/17", "") =&gt; 88.918
+.datetime~fromEuropeanDate("30/06/17", "//") =&gt; 88.918
+.datetime~fromEuropeanDate("30x06x17", "x") =&gt; 88.918
+.datetime~fromEuropeanDate("31/06/17") =&gt; 88.918
+.datetime~fromEuropeanDate("29/02/17") =&gt; 88.918
+.datetime~fromEuropeanDate("1/6/17") =&gt; 88.918
+.datetime~fromEuropeanDate("30/06/2017") =&gt; 88.918
+.datetime~fromNormalDate("30 jun 2017") =&gt; 88.918
+.datetime~fromNormalDate("30 June 2017") =&gt; 88.918
+.datetime~fromNormalDate("30 Jun 0000") =&gt; 88.918
+.datetime~fromStandardDate("2017/06/30") =&gt; 88.918
+.datetime~fromBaseDate =&gt; 93.901
+.datetime~fromBaseDate(5, 0, 1) =&gt; 93.902
+.datetime~fromEuropeanDate("30/06/17", "/", 0, 1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.datetime.fromordinal"><a href="#r-class.datetime.fromordinal">[class.datetime.fromordinal]</a></div>
+<p><code>fromOrdinalDate</code> reads a year and the number of a day in it, written
+<code>yyyyddd</code> or <code>yyyy-ddd</code>: four digits for the year, from 0001 to 9999, and
+three for the day, from 001 to 365 or, in a leap year, 366. It answers that
+day at 00:00:00.000000, and its optional second argument is the offset. Any
+other string, a day number that the year does not have and a year 0000 raise
+<code>SYNTAX 88.918</code>. Without the string the method raises <code>SYNTAX 93.901</code>, and a
+third argument raises <code>SYNTAX 93.902</code>.</p>
+<pre><code class="language-rexx">say .datetime~fromOrdinalDate('2020-041') .datetime~fromOrdinalDate('2020041')
+say .datetime~fromOrdinalDate('2020-366'),
+    .datetime~fromOrdinalDate('2019-365')
+say .datetime~fromOrdinalDate('0001-001'),
+    .datetime~fromOrdinalDate('9999-365')
+say .datetime~fromOrdinalDate('2020-041', 120)~utcIsoDate
+call try '.datetime~fromOrdinalDate("2019-366")'
+call try '.datetime~fromOrdinalDate("2019-000")'
+call try '.datetime~fromOrdinalDate("2019-41")'
+call try '.datetime~fromOrdinalDate("0000-001")'
+call try '.datetime~fromOrdinalDate("2020/041")'
+call try '.datetime~fromOrdinalDate("2020-041", 901)'
+call try '.datetime~fromOrdinalDate'
+call try '.datetime~fromOrdinalDate("2020-041", 0, 1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">2020-02-10T00:00:00.000000 2020-02-10T00:00:00.000000
+2020-12-31T00:00:00.000000 2019-12-31T00:00:00.000000
+0001-01-01T00:00:00.000000 9999-12-31T00:00:00.000000
+2020-02-10T00:00:00.000000+02:00
+.datetime~fromOrdinalDate("2019-366") =&gt; 88.918
+.datetime~fromOrdinalDate("2019-000") =&gt; 88.918
+.datetime~fromOrdinalDate("2019-41") =&gt; 88.918
+.datetime~fromOrdinalDate("0000-001") =&gt; 88.918
+.datetime~fromOrdinalDate("2020/041") =&gt; 88.918
+.datetime~fromOrdinalDate("2020-041", 901) =&gt; 88.918
+.datetime~fromOrdinalDate =&gt; 93.901
+.datetime~fromOrdinalDate("2020-041", 0, 1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.datetime.fromweek"><a href="#r-class.datetime.fromweek">[class.datetime.fromweek]</a></div>
+<p><code>fromWeekNumberDate</code> reads an ISO week date, <code>yyyyWwwd</code> or <code>yyyy-Www-d</code>: the
+year in four digits, a capital <code>W</code>, the number of the week in two digits and
+the weekday from 1 (Monday) to 7 (Sunday). Week 1 of a year is the week that
+holds its 4 January, and a year has 52 or 53 weeks, as
+<a href="#r-class.datetime.isoweek"><code>weeksInYear</code></a> says; the first week may begin in
+the year before. The method answers that day at 00:00:00.000000. A string that
+is not of the form, a week 00 or a week that the year does not have, a weekday
+0 or 8, and a date outside the range of the class (the year 0000, or the week
+date that would follow 31 December 9999) raise <code>SYNTAX 88.918</code>. The method is
+given an optional second argument, the offset, but ignores it, so a value that
+is no offset raises nothing: the answer always has the default offset (<a href="#r-class.datetime.offset.default">the
+default</a>). Without the string the method
+raises <code>SYNTAX 93.901</code>, and a third argument raises <code>SYNTAX 93.902</code>.</p>
+<pre><code class="language-rexx">say .datetime~fromWeekNumberDate('2020-W07-1'),
+    .datetime~fromWeekNumberDate('2020W071')
+say .datetime~fromWeekNumberDate('2020-W53-7'),
+    .datetime~fromWeekNumberDate('2019-W52-7')
+say .datetime~fromWeekNumberDate('2018-W01-1'),
+    .datetime~fromWeekNumberDate('0001-W01-1')
+say .datetime~fromWeekNumberDate('9999-W52-5')
+say .datetime~fromWeekNumberDate('2017-W01-4', 120)~offset,
+    == .datetime~new~offset
+say .datetime~fromWeekNumberDate('2020-W07-1', 'x'),
+    .datetime~fromWeekNumberDate('2020-W07-1', 901)
+call try '.datetime~fromWeekNumberDate("2019-W53-1")'
+call try '.datetime~fromWeekNumberDate("2020-W00-1")'
+call try '.datetime~fromWeekNumberDate("2020-W01-0")'
+call try '.datetime~fromWeekNumberDate("2020-W01-8")'
+call try '.datetime~fromWeekNumberDate("2020-w07-1")'
+call try '.datetime~fromWeekNumberDate("2020-W7-1")'
+call try '.datetime~fromWeekNumberDate("2020-W07")'
+call try '.datetime~fromWeekNumberDate("9999-W52-7")'
+call try '.datetime~fromWeekNumberDate("0000-W52-7")'
+call try '.datetime~fromWeekNumberDate'
+call try '.datetime~fromWeekNumberDate("2020-W07-1", 0, 1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">2020-02-10T00:00:00.000000 2020-02-10T00:00:00.000000
+2021-01-03T00:00:00.000000 2019-12-29T00:00:00.000000
+2018-01-01T00:00:00.000000 0001-01-01T00:00:00.000000
+9999-12-31T00:00:00.000000
+1
+2020-02-10T00:00:00.000000 2020-02-10T00:00:00.000000
+.datetime~fromWeekNumberDate("2019-W53-1") =&gt; 88.918
+.datetime~fromWeekNumberDate("2020-W00-1") =&gt; 88.918
+.datetime~fromWeekNumberDate("2020-W01-0") =&gt; 88.918
+.datetime~fromWeekNumberDate("2020-W01-8") =&gt; 88.918
+.datetime~fromWeekNumberDate("2020-w07-1") =&gt; 88.918
+.datetime~fromWeekNumberDate("2020-W7-1") =&gt; 88.918
+.datetime~fromWeekNumberDate("2020-W07") =&gt; 88.918
+.datetime~fromWeekNumberDate("9999-W52-7") =&gt; 88.918
+.datetime~fromWeekNumberDate("0000-W52-7") =&gt; 88.918
+.datetime~fromWeekNumberDate =&gt; 93.901
+.datetime~fromWeekNumberDate("2020-W07-1", 0, 1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.datetime.fromtime"><a href="#r-class.datetime.fromtime">[class.datetime.fromtime]</a></div>
+<p><code>fromNormalTime</code>, <code>fromCivilTime</code> and <code>fromLongTime</code> read a time of day that
+is written in the form of the option N, C or L of
+<a href="../builtins/time.html#r-bif.time.out.clock">TIME</a>: <code>hh:mm:ss</code>, <code>h:mmam</code> or <code>h:mmpm</code>, and
+<code>hh:mm:ss.f</code> where <code>f</code> is one to six digits, taken as the leading digits of
+the microseconds. The hour of a civil time has one or two digits and is from 1
+to 12; <code>am</code> and <code>pm</code> are lower case. The answer is that time on 1 January
+0001, and the optional second argument is the offset. A string that is not of
+the form, an hour past 23 (past 12 for the civil form, and 0 is no civil
+hour), and minutes or seconds past 59 raise <code>SYNTAX 88.918</code>. Without the
+string each method raises <code>SYNTAX 93.901</code>, and a third argument raises
+<code>SYNTAX 93.902</code>.</p>
+<pre><code class="language-rexx">say .datetime~fromNormalTime('13:45:09') .datetime~fromNormalTime('00:00:00')
+say .datetime~fromCivilTime('1:45pm') .datetime~fromCivilTime('01:45pm')
+say .datetime~fromCivilTime('12:00am') .datetime~fromCivilTime('12:59pm')
+say .datetime~fromLongTime('13:45:09.123456'),
+    .datetime~fromLongTime('13:45:09.1')
+say .datetime~fromLongTime('13:45:09.0001'),
+    .datetime~fromNormalTime('23:59:59', 60)~utcIsoDate
+call try '.datetime~fromNormalTime("24:00:00")'
+call try '.datetime~fromNormalTime("12:60:00")'
+call try '.datetime~fromNormalTime("1:00:00")'
+call try '.datetime~fromNormalTime("13:45")'
+call try '.datetime~fromCivilTime("0:30am")'
+call try '.datetime~fromCivilTime("13:30pm")'
+call try '.datetime~fromCivilTime("1:45PM")'
+call try '.datetime~fromCivilTime("1:45 pm")'
+call try '.datetime~fromLongTime("13:45:09")'
+call try '.datetime~fromLongTime("13:45:09.1234567")'
+call try '.datetime~fromNormalTime'
+call try '.datetime~fromCivilTime'
+call try '.datetime~fromLongTime'
+call try '.datetime~fromNormalTime("13:45:09", 0, 1)'
+call try '.datetime~fromCivilTime("1:45pm", 0, 1)'
+call try '.datetime~fromLongTime("13:45:09.1", 0, 1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">0001-01-01T13:45:09.000000 0001-01-01T00:00:00.000000
+0001-01-01T13:45:00.000000 0001-01-01T13:45:00.000000
+0001-01-01T00:00:00.000000 0001-01-01T12:59:00.000000
+0001-01-01T13:45:09.123456 0001-01-01T13:45:09.100000
+0001-01-01T13:45:09.000100 0001-01-01T23:59:59.000000+01:00
+.datetime~fromNormalTime("24:00:00") =&gt; 88.918
+.datetime~fromNormalTime("12:60:00") =&gt; 88.918
+.datetime~fromNormalTime("1:00:00") =&gt; 88.918
+.datetime~fromNormalTime("13:45") =&gt; 88.918
+.datetime~fromCivilTime("0:30am") =&gt; 88.918
+.datetime~fromCivilTime("13:30pm") =&gt; 88.918
+.datetime~fromCivilTime("1:45PM") =&gt; 88.918
+.datetime~fromCivilTime("1:45 pm") =&gt; 88.918
+.datetime~fromLongTime("13:45:09") =&gt; 88.918
+.datetime~fromLongTime("13:45:09.1234567") =&gt; 88.918
+.datetime~fromNormalTime =&gt; 93.901
+.datetime~fromCivilTime =&gt; 93.901
+.datetime~fromLongTime =&gt; 93.901
+.datetime~fromNormalTime("13:45:09", 0, 1) =&gt; 93.902
+.datetime~fromCivilTime("1:45pm", 0, 1) =&gt; 93.902
+.datetime~fromLongTime("13:45:09.1", 0, 1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.datetime.fromticks"><a href="#r-class.datetime.fromticks">[class.datetime.fromticks]</a></div>
+<p><code>fromTicks</code> reads a whole number of seconds from 00:00:00 on 1 January 1970,
+negative before it, as <code>ticks</code> answers it, and answers that moment with no
+microseconds. The largest value is 253402300799 and the smallest is
+-62135596800, the first moment of the class; up to 49 seconds below the
+smallest are read as the first moment. Beyond those limits the method raises
+<code>SYNTAX 88.918</code>, as it does for a value that is not a whole number. The
+optional second argument is the offset. Without the value the method raises
+<code>SYNTAX 93.901</code>, and a third argument raises <code>SYNTAX 93.902</code>.</p>
+<pre><code class="language-rexx">say .datetime~fromTicks(0) .datetime~fromTicks(1498820930)
+say .datetime~fromTicks(-1)
+say .datetime~fromTicks(253402300799) .datetime~fromTicks(-62135596800)
+say .datetime~fromTicks(-62135596849)
+say .datetime~fromTicks(5, 0)~utcIsoDate .datetime~fromTicks(5, 90)~utcIsoDate
+call try '.datetime~fromTicks(253402300800)'
+call try '.datetime~fromTicks(-62135596850)'
+call try '.datetime~fromTicks(1.5)'
+call try '.datetime~fromTicks("x")'
+call try '.datetime~fromTicks'
+call try '.datetime~fromTicks(5, 0, 1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">1970-01-01T00:00:00.000000 2017-06-30T11:08:50.000000
+1969-12-31T23:59:59.000000
+9999-12-31T23:59:59.000000 0001-01-01T00:00:00.000000
+0001-01-01T00:00:00.000000
+1970-01-01T00:00:05.000000Z 1970-01-01T00:00:05.000000+01:30
+.datetime~fromTicks(253402300800) =&gt; 88.918
+.datetime~fromTicks(-62135596850) =&gt; 88.918
+.datetime~fromTicks(1.5) =&gt; 88.918
+.datetime~fromTicks("x") =&gt; 88.918
+.datetime~fromTicks =&gt; 93.901
+.datetime~fromTicks(5, 0, 1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.datetime.fromiso"><a href="#r-class.datetime.fromiso">[class.datetime.fromiso]</a></div>
+<p><code>fromIsoDate</code> reads the string that <code>isoDate</code> writes, <code>yyyy-mm-ddThh:mm:ss.f</code>,
+and answers that moment: the fields are the string's, and the offset is the
+optional second argument or the default. The fraction <code>f</code> has one to six
+digits, the leading digits of the microseconds, and is required; the <code>T</code> is a
+capital letter. A string that is not of the form, or names an hour past 23, a
+minute or second past 59 or a day that does not exist, raises <code>SYNTAX 88.918</code>.
+Without the string the method raises <code>SYNTAX 93.901</code>, and a third argument
+raises <code>SYNTAX 93.902</code>.</p>
+<pre><code class="language-rexx">say .datetime~fromIsoDate('2017-06-30T11:08:50.123456')
+say .datetime~fromIsoDate('2017-06-30T11:08:50.12345')
+say .datetime~fromIsoDate('2017-06-30T11:08:50.1', 30)~utcIsoDate
+say .datetime~fromIsoDate('0001-01-01T00:00:00.000000')
+say .datetime~fromIsoDate('9999-12-31T23:59:59.999999')
+call try '.datetime~fromIsoDate("2017-06-30T11:08:50")'
+call try '.datetime~fromIsoDate("2017-06-30")'
+call try '.datetime~fromIsoDate("2017-06-30 11:08:50.123456")'
+call try '.datetime~fromIsoDate("2017-06-30t11:08:50.123456")'
+call try '.datetime~fromIsoDate("2017-06-30T11:08:50.123456Z")'
+call try '.datetime~fromIsoDate("2017-06-30T11:08:50.1234567")'
+call try '.datetime~fromIsoDate("2017-06-30T24:00:00.000000")'
+call try '.datetime~fromIsoDate("2017-02-30T00:00:00.000000")'
+call try '.datetime~fromIsoDate("20170630T110850.123456")'
+call try '.datetime~fromIsoDate'
+call try '.datetime~fromIsoDate("2017-06-30T11:08:50.1", 0, 1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">2017-06-30T11:08:50.123456
+2017-06-30T11:08:50.123450
+2017-06-30T11:08:50.100000+00:30
+0001-01-01T00:00:00.000000
+9999-12-31T23:59:59.999999
+.datetime~fromIsoDate("2017-06-30T11:08:50") =&gt; 88.918
+.datetime~fromIsoDate("2017-06-30") =&gt; 88.918
+.datetime~fromIsoDate("2017-06-30 11:08:50.123456") =&gt; 88.918
+.datetime~fromIsoDate("2017-06-30t11:08:50.123456") =&gt; 88.918
+.datetime~fromIsoDate("2017-06-30T11:08:50.123456Z") =&gt; 88.918
+.datetime~fromIsoDate("2017-06-30T11:08:50.1234567") =&gt; 88.918
+.datetime~fromIsoDate("2017-06-30T24:00:00.000000") =&gt; 88.918
+.datetime~fromIsoDate("2017-02-30T00:00:00.000000") =&gt; 88.918
+.datetime~fromIsoDate("20170630T110850.123456") =&gt; 88.918
+.datetime~fromIsoDate =&gt; 93.901
+.datetime~fromIsoDate("2017-06-30T11:08:50.1", 0, 1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.datetime.fromutciso"><a href="#r-class.datetime.fromutciso">[class.datetime.fromutciso]</a></div>
+<p><code>fromUtcIsoDate</code> reads the string that <code>utcIsoDate</code> writes: the date and time of
+<code>fromIsoDate</code>, with a fraction of one to six digits that may also be left out
+together with its point, followed by the offset of the string, either <code>Z</code>
+(offset 0) or a sign and <code>hh:mm</code>, <code>+02:30</code> and <code>-03:30</code> for instance, up to
+15:00 in either direction. The answer has the fields of the string and that
+offset; <code>+00:00</code> and <code>-00:00</code> are the offset 0. The method takes no second
+argument (<code>SYNTAX 93.902</code>) and, without the string, raises <code>SYNTAX 93.901</code>. The
+string is read strictly (<a href="#r-class.datetime.deviation.132">Deviation 132</a>): it
+has no blank, the hour and the minutes of the offset have two digits each with
+minutes up to 59, and nothing follows the <code>Z</code> or the offset. A string that is
+not of this form raises <code>SYNTAX 88.918</code>: one that ends with no <code>Z</code> or offset,
+that ends in a lower-case <code>z</code>, in an offset in the forms <code>+0200</code>, <code>+02</code>, <code>+02:</code>
+or <code>+:30</code> or in an offset past 15:00, or that ends in a letter other than <code>Z</code>
+after the offset, and the other spellings that the deviation rule shows.</p>
+<pre><code class="language-rexx">say .datetime~fromUtcIsoDate('2017-06-30T11:08:50.123456+02:00')~utcIsoDate
+say .datetime~fromUtcIsoDate('2017-06-30T11:08:50.123456-03:30')~utcIsoDate
+say .datetime~fromUtcIsoDate('2017-06-30T11:08:50.123456Z')~utcIsoDate
+say .datetime~fromUtcIsoDate('2017-06-30T11:08:50.1-00:00')~utcIsoDate
+say .datetime~fromUtcIsoDate('2017-06-30T11:08:50.123456+15:00')~offset
+say .datetime~fromUtcIsoDate('2017-06-30T11:08:50+02:00')~utcIsoDate
+call try '.datetime~fromUtcIsoDate("2017-06-30T11:08:50.123456")'
+call try '.datetime~fromUtcIsoDate("2017-06-30T11:08:50.123456z")'
+call try '.datetime~fromUtcIsoDate("2017-06-30T11:08:50.123456+0200")'
+call try '.datetime~fromUtcIsoDate("2017-06-30T11:08:50.123456+02")'
+call try '.datetime~fromUtcIsoDate("2017-06-30T11:08:50.123456+15:01")'
+call try '.datetime~fromUtcIsoDate("2017-06-30T11:08:50.123456+02:")'
+call try '.datetime~fromUtcIsoDate("2017-06-30T11:08:50.123456+:30")'
+call try '.datetime~fromUtcIsoDate("2017-06-30T11:08:50.123456+16:00")'
+call try '.datetime~fromUtcIsoDate("2017-06-30T11:08:50.123456Zx")'
+call try '.datetime~fromUtcIsoDate'
+call try '.datetime~fromUtcIsoDate("2017-06-30T11:08:50.123456+02:00", 5)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">2017-06-30T11:08:50.123456+02:00
+2017-06-30T11:08:50.123456-03:30
+2017-06-30T11:08:50.123456Z
+2017-06-30T11:08:50.100000Z
+15:00:00.000000
+2017-06-30T11:08:50.000000+02:00
+.datetime~fromUtcIsoDate("2017-06-30T11:08:50.123456") =&gt; 88.918
+.datetime~fromUtcIsoDate("2017-06-30T11:08:50.123456z") =&gt; 88.918
+.datetime~fromUtcIsoDate("2017-06-30T11:08:50.123456+0200") =&gt; 88.918
+.datetime~fromUtcIsoDate("2017-06-30T11:08:50.123456+02") =&gt; 88.918
+.datetime~fromUtcIsoDate("2017-06-30T11:08:50.123456+15:01") =&gt; 88.918
+.datetime~fromUtcIsoDate("2017-06-30T11:08:50.123456+02:") =&gt; 88.918
+.datetime~fromUtcIsoDate("2017-06-30T11:08:50.123456+:30") =&gt; 88.918
+.datetime~fromUtcIsoDate("2017-06-30T11:08:50.123456+16:00") =&gt; 88.918
+.datetime~fromUtcIsoDate("2017-06-30T11:08:50.123456Zx") =&gt; 88.918
+.datetime~fromUtcIsoDate =&gt; 93.901
+.datetime~fromUtcIsoDate("2017-06-30T11:08:50.123456+02:00", 5) =&gt; 93.902
+</code></pre>
+<h2 id="reading-the-fields"><a class="header" href="#reading-the-fields">Reading the fields</a></h2>
+<div class="rule" id="r-class.datetime.fields"><a href="#r-class.datetime.fields">[class.datetime.fields]</a></div>
+<p><code>year</code>, <code>month</code>, <code>day</code>, <code>hours</code>, <code>minutes</code>, <code>seconds</code> and <code>microseconds</code>
+answer the field of that name as a whole number without leading zeros, so the
+microseconds of <code>10:00:00.012345</code> are 12345. <code>dayMinutes</code>, <code>daySeconds</code> and
+<code>dayMicroseconds</code> answer how many whole minutes, whole seconds and
+microseconds the time of day is past 00:00:00.000000. The offset plays no part
+in any of them. Each method takes no argument: one raises <code>SYNTAX 93.902</code>.</p>
+<pre><code class="language-rexx">d = .datetime~new(2016, 2, 29, 9, 8, 7, 12345, 120)
+say d~year d~month d~day d~hours d~minutes d~seconds d~microseconds
+say d~dayMinutes d~daySeconds d~dayMicroseconds
+say .datetime~minDate~dayMicroseconds .datetime~maxDate~dayMicroseconds
+say d~toUtcTime~hours d~toTimezone(-600)~day
+signal on syntax name bad
+say d~year(1)
+bad: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">2016 2 29 9 8 7 12345
+548 32887 32887012345
+0 86399999999
+7 28
+93.902
+</code></pre>
+<div class="rule" id="r-class.datetime.calendar"><a href="#r-class.datetime.calendar">[class.datetime.calendar]</a></div>
+<p><code>weekDay</code> answers the day of the week from 1 for Monday to 7 for Sunday, and
+<code>dayName</code> its English name; <code>monthName</code> answers the English name of the month.
+Both names begin with a capital letter. <code>yearDay</code> answers the number of the
+day in its year, from 1, <code>baseDate</code> the number of days from 1 January 0001
+(day 0) to the day, and <code>isLeapYear</code> answers 1 when the year is divisible by 4
+and not by 100, or is divisible by 400, and 0 otherwise. <code>daysInMonth</code> answers
+the length of the month in days and <code>daysInYear</code> the length of the year, 365
+or 366. They agree with <a href="../builtins/date.html#r-bif.date.out.counts">the options</a> B and D of <code>DATE</code>
+and with <a href="../builtins/date.html#r-bif.date.out.names">the names</a> of M and W. Each takes no argument.</p>
+<pre><code class="language-rexx">d = .datetime~new(2017, 6, 5, 0, 0, 0, 0, 0)
+say d~weekDay d~dayName d~monthName d~yearDay d~baseDate
+say .datetime~new(1, 1, 1)~dayName .datetime~new(9999, 12, 31)~dayName
+do y over .array~of(1900, 2000, 2016, 2100, 2400, 4, 100)
+  x = .datetime~new(y, 2, 1, 0, 0, 0, 0, 0)
+  say y x~isLeapYear x~daysInMonth x~daysInYear .datetime~new(y, 3, 1)~yearDay
+end
+say .datetime~new(2017, 12, 1)~daysInMonth,
+    .datetime~new(2017, 4, 1)~daysInMonth
+say .datetime~new(2017, 6, 5)~baseDate == date('B', '5 Jun 2017')
+say .datetime~new(2017, 6, 5)~yearDay == date('D', '5 Jun 2017')
+call try 'd~weekDay(1)'
+call try 'd~isLeapYear(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">1 Monday June 156 736484
+Monday Friday
+1900 0 28 365 60
+2000 1 29 366 61
+2016 1 29 366 61
+2100 0 28 365 60
+2400 1 29 366 61
+4 1 29 366 61
+100 0 28 365 60
+31 30
+1
+1
+d~weekDay(1) =&gt; 93.902
+d~isLeapYear(1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.datetime.isoweek"><a href="#r-class.datetime.isoweek">[class.datetime.isoweek]</a></div>
+<p>The ISO 8601 week of a day is numbered by the week that holds the Thursday of
+it. <code>weekNumber</code> answers the number of the week, 1 to 53, <code>weekNumberYear</code> the
+year that week belongs to, which is the year before or after the day's own at
+the turn of a year, and <code>weekNumberDate</code> the week date <code>yyyy-Www-d</code>, with the
+weekday from 1 (Monday) to 7 (Sunday) as
+<a href="#r-class.datetime.fromweek"><code>fromWeekNumberDate</code></a> reads it. <code>weeksInYear</code>
+answers 52 or 53, the number of weeks of the day's own calendar year, not of
+the year of its week. <code>ordinalDate</code> answers <code>yyyy-ddd</code>, the year and the day
+of the year in three digits. Each takes no argument.</p>
+<pre><code class="language-rexx">do d over .array~of(.datetime~new(2018, 12, 31), .datetime~new(2019, 1, 1), -
+    .datetime~new(2020, 12, 31), .datetime~new(2021, 1, 1), -
+    .datetime~new(2016, 1, 1))
+  say d~isoDate~left(10) d~weekNumber d~weekNumberYear d~weekNumberDate,
+      d~weeksInYear d~ordinalDate
+end
+say .datetime~new(1, 1, 1)~weekNumberDate,
+    .datetime~new(9999, 12, 31)~weekNumberDate
+say .datetime~new(5, 1, 1)~weekNumberDate .datetime~new(5, 1, 1)~ordinalDate
+do y = 2010 to 2030
+  w = .datetime~new(y, 6, 30)~weeksInYear
+  if w \= 52 then say y w
+end
+call try '.datetime~new(2017, 1, 1)~weekNumber(1)'
+call try '.datetime~new(2017, 1, 1)~ordinalDate(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">2018-12-31 1 2019 2019-W01-1 52 2018-365
+2019-01-01 1 2019 2019-W01-2 52 2019-001
+2020-12-31 53 2020 2020-W53-4 53 2020-366
+2021-01-01 53 2020 2020-W53-5 52 2021-001
+2016-01-01 53 2015 2015-W53-5 52 2016-001
+0001-W01-1 9999-W52-5
+0004-W53-6 0005-001
+2015 53
+2020 53
+2026 53
+.datetime~new(2017, 1, 1)~weekNumber(1) =&gt; 93.902
+.datetime~new(2017, 1, 1)~ordinalDate(1) =&gt; 93.902
+</code></pre>
+<h2 id="writing-a-moment"><a class="header" href="#writing-a-moment">Writing a moment</a></h2>
+<div class="rule" id="r-class.datetime.dateformats"><a href="#r-class.datetime.dateformats">[class.datetime.dateformats]</a></div>
+<p><code>europeanDate</code>, <code>normalDate</code>, <code>orderedDate</code>, <code>standardDate</code> and <code>usaDate</code>
+write the date part in the form that the option E, N, O, S or U of
+<a href="../builtins/date.html#r-bif.date.out.text">DATE</a> writes it: <code>dd/mm/yy</code>, <code>d mon yyyy</code>, <code>yy/mm/dd</code>,
+<code>yyyymmdd</code> and <code>mm/dd/yy</code>. Each takes an optional separator, in place of the
+default of its form (<a href="../builtins/date.html#r-bif.date.sep.out">the output separator</a>), which is the
+null string or one character that is no letter and no digit (<a href="../builtins/date.html#r-bif.date.sep.char">the separator
+rule</a>); any other value raises <code>SYNTAX 40.43</code>.
+<code>languageDate</code> writes the day, the full name of the month and the year, as the
+option L of <code>DATE</code> does, and takes no argument.</p>
+<pre><code class="language-rexx">d = .datetime~new(2017, 6, 5, 9, 8, 7, 12345, 0)
+say d~europeanDate d~normalDate d~orderedDate,
+    d~standardDate d~usaDate d~languageDate
+say d~europeanDate('-') d~normalDate('-'),
+    d~orderedDate('.') d~standardDate('-')
+say d~usaDate('') d~europeanDate(' ') d~normalDate('') d~standardDate('')
+say .datetime~new(5, 1, 1)~europeanDate .datetime~new(2100, 1, 1)~europeanDate
+say .datetime~new(5, 1, 1)~normalDate .datetime~new(5, 1, 1)~languageDate
+call try 'd~europeanDate("x")'
+call try 'd~normalDate("5")'
+call try 'd~usaDate("//")'
+call try 'd~languageDate(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">05/06/17 5 Jun 2017 17/06/05 20170605 06/05/17 5 June 2017
+05-06-17 5-Jun-2017 17.06.05 2017-06-05
+060517 05 06 17 5Jun2017 20170605
+01/01/05 01/01/00
+1 Jan 0005 1 January 0005
+d~europeanDate("x") =&gt; 40.43
+d~normalDate("5") =&gt; 40.43
+d~usaDate("//") =&gt; 40.43
+d~languageDate(1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.datetime.timeformats"><a href="#r-class.datetime.timeformats">[class.datetime.timeformats]</a></div>
+<p><code>civilTime</code>, <code>normalTime</code> and <code>longTime</code> write the time of day in the form
+that the option C, N or L of <a href="../builtins/time.html#r-bif.time.out.clock">TIME</a> writes it: <code>h:mmam</code>
+or <code>h:mmpm</code>, <code>hh:mm:ss</code> and <code>hh:mm:ss.uuuuuu</code>. The seconds of the civil form
+are not written, and the microseconds of the normal form are dropped, not
+rounded. Each takes no argument.</p>
+<pre><code class="language-rexx">say .datetime~new(2017, 6, 30, 0, 0, 0, 0, 0)~civilTime,
+    .datetime~new(2017, 6, 30, 0, 5)~civilTime
+say .datetime~new(2017, 6, 30, 12, 5)~civilTime,
+    .datetime~new(2017, 6, 30, 13, 0)~civilTime
+say .datetime~new(2017, 6, 30, 23, 59, 59, 999999)~civilTime
+say .datetime~new(2017, 6, 30, 23, 59, 59, 999999)~normalTime
+say .datetime~new(2017, 6, 30, 23, 59, 59, 999999)~longTime
+say .datetime~new(2017, 6, 30, 1, 2, 3, 4)~longTime,
+    .datetime~new(2017, 6, 30)~longTime
+call try '.datetime~new(2017, 6, 30)~civilTime(1)'
+call try '.datetime~new(2017, 6, 30)~longTime(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">12:00am 12:05am
+12:05pm 1:00pm
+11:59pm
+23:59:59
+23:59:59.999999
+01:02:03.000004 00:00:00.000000
+.datetime~new(2017, 6, 30)~civilTime(1) =&gt; 93.902
+.datetime~new(2017, 6, 30)~longTime(1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.datetime.counts"><a href="#r-class.datetime.counts">[class.datetime.counts]</a></div>
+<p><code>fullDate</code> answers the number of microseconds from 00:00:00.000000 on 1
+January 0001 to the fields of the instance, as a whole number without a point
+or exponent, and <code>utcDate</code> the same count for the instant in UTC, which is
+<code>fullDate</code> less the offset in microseconds; it can be negative, or larger than
+the count of <code>maxDate</code>, for an instant outside the range of the class. <code>ticks</code>
+answers the whole seconds from 00:00:00 on 1 January 1970 to the fields,
+negative before then and rounded down, so <code>ticks</code> of the last moment of 1969
+is -1. The offset plays no part in <code>fullDate</code> and <code>ticks</code>. No setting of
+NUMERIC DIGITS changes the answers (<a href="#r-class.datetime.numeric">the numeric
+rule</a>). Each takes no argument.</p>
+<pre><code class="language-rexx">d = .datetime~new(2017, 6, 30, 23, 59, 59, 999999, 0)
+say d~fullDate d~utcDate d~ticks
+e = .datetime~new(2017, 6, 30, 23, 59, 59, 999999, 600)
+say e~fullDate e~utcDate e~ticks
+f = .datetime~new(2017, 6, 30, 23, 59, 59, 999999, -600)
+say f~fullDate f~utcDate f~ticks
+say .datetime~new(1969, 12, 31, 23, 59, 59, 500000, 0)~ticks,
+    .datetime~new(1970, 1, 1, 0, 0, 0, 999999, 0)~ticks
+say .datetime~new(1, 1, 1, 0, 0, 0, 0, 60)~utcDate,
+    .datetime~new(9999, 12, 31, 23, 59, 59, 999999, -60)~utcDate
+say .datetime~minDate~ticks
+call try 'd~fullDate(1)'
+call try 'd~ticks(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">63634463999999999 63634463999999999 1498867199
+63634463999999999 63634427999999999 1498867199
+63634463999999999 63634499999999999 1498867199
+-1 0
+-3600000000 315537901199999999
+-62135596800
+d~fullDate(1) =&gt; 93.902
+d~ticks(1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.datetime.string"><a href="#r-class.datetime.string">[class.datetime.string]</a></div>
+<p><code>isoDate</code>, <code>string</code> and <code>makeString</code> answer the fields in the extended ISO
+8601 form <code>yyyy-mm-ddThh:mm:ss.uuuuuu</code>, whose year has four digits and whose
+microseconds have six, so the instance 5 January of year 5 is <code>0005-01-05T</code>
+followed by the time. <code>utcIsoDate</code> answers the same followed by the offset:
+<code>Z</code> for the offset 0, otherwise a sign and <code>hh:mm</code>, <code>+</code> for the east and <code>-</code>
+for the west of UTC. <code>fromIsoDate</code> and <code>fromUtcIsoDate</code> read these strings
+back. Each takes no argument. The string value of an instance is this text.</p>
+<pre><code class="language-rexx">d = .datetime~new(2017, 6, 5, 9, 8, 7, 12345, 330)
+say d~isoDate d~string
+say d~makeString d
+say d~utcIsoDate .datetime~new(2017, 6, 5, 9, 8, 7, 12345, -75)~utcIsoDate
+say .datetime~new(5, 1, 5, 0, 0, 0, 0, 0)~utcIsoDate
+say (.datetime~fromUtcIsoDate(d~utcIsoDate) == d),
+    (.datetime~fromIsoDate(d~isoDate, 330) == d)
+say d~isoDate~length d~utcIsoDate~length d~request('STRING')
+call try 'd~isoDate(1)'
+call try 'd~utcIsoDate(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">2017-06-05T09:08:07.012345 2017-06-05T09:08:07.012345
+2017-06-05T09:08:07.012345 2017-06-05T09:08:07.012345
+2017-06-05T09:08:07.012345+05:30 2017-06-05T09:08:07.012345-01:15
+0005-01-05T00:00:00.000000Z
+1 1
+26 32 2017-06-05T09:08:07.012345
+d~isoDate(1) =&gt; 93.902
+d~utcIsoDate(1) =&gt; 93.902
+</code></pre>
+<h2 id="arithmetic"><a class="header" href="#arithmetic">Arithmetic</a></h2>
+<div class="rule" id="r-class.datetime.add"><a href="#r-class.datetime.add">[class.datetime.add]</a></div>
+<p>Each of <code>addYears</code>, <code>addWeeks</code>, <code>addDays</code>, <code>addHours</code>, <code>addMinutes</code>,
+<code>addSeconds</code> and <code>addMicroseconds</code> answers a new instance, of the class of the
+receiver, that is the receiver moved by its argument; the receiver is not
+changed, and the offset is kept. <code>addYears</code> takes a whole number of years, read
+as <a href="../conventions.html#r-conv.whole.form">the form rule</a> and <a href="../conventions.html#r-conv.whole.digits">the digits rule</a>
+say (<a href="#r-class.datetime.deviation.130">Deviation 130</a>), and keeps month, day and
+time of day, except that 29 February moves to 28 February when the year it lands
+in is no leap year; a year past the range raises <code>SYNTAX 88.907</code>, and a number
+of years of 1000000000 or more in magnitude, or a value such as 1.5 or <code>x</code>,
+raises <code>SYNTAX 88.903</code>. The other six take a number, a
+negative one moves back, and a fraction is allowed: <code>addDays(1.5)</code> is a day and
+twelve hours. The new moment is the receiver's count of microseconds plus the
+amount in microseconds, rounded to 18 significant digits; a part of a
+microsecond that is left is dropped toward the earlier moment. So
+<code>addMicroseconds</code> of 1.5 adds 1 and of -1.5 subtracts 2, and on a date of 2016,
+whose count has 17 digits, of 0.96 adds 1 and of -0.04 adds nothing. A value
+that is no number raises <code>SYNTAX 88.902</code>; a moment outside the range of the
+class raises <code>SYNTAX 40.19</code>. A missing argument raises <code>SYNTAX 93.901</code> and a
+second argument <code>SYNTAX 93.902</code>.</p>
+<pre><code class="language-rexx">d = .datetime~new(2016, 2, 29, 9, 8, 7, 12345, 120)
+say d~addYears(1) d~addYears(4)
+say d~addYears(-1) d~addYears(0)
+say d~addWeeks(1) d~addWeeks(0.5)
+say d~addWeeks(-1)
+say d~addDays(1) d~addDays(1.5)
+say d~addDays(-0.25) d~addDays(-60)
+say d~addDays(365)
+say d~addHours(1) d~addHours(-9.5)
+say d~addHours(24)
+say d~addMinutes(90.5) d~addMinutes(-548)
+say d~addSeconds(0.5) d~addSeconds(86400)
+say d~addMicroseconds(1) d~addMicroseconds(-12346)
+say d~addMicroseconds(1e6)
+say d~addDays(0.0000001)~microseconds d~addSeconds(0.0000015)~microseconds
+e = .datetime~new(2016, 2, 29, 9, 8, 7, 500000, 0)
+say e~addMicroseconds(1.5)~microseconds e~addMicroseconds(-1.5)~microseconds,
+    e~addMicroseconds(-0.5)~microseconds
+say d~addMicroseconds(0.96)~microseconds d~addMicroseconds(0.4)~microseconds
+say .datetime~new(1, 1, 1, 0, 0, 0, 5)~addMicroseconds(0.96)~microseconds
+say d~addSeconds(0.00000096)~microseconds,
+    d~addMicroseconds(-0.04)~microseconds
+say d~addDays(1)~utcIsoDate d~addYears(1)~class~id (d~addDays(1) == d)
+say .datetime~new(2016, 2, 29)~addYears(-4),
+    .datetime~new(2016, 2, 29)~addYears(100)
+call try 'd~addYears(1.5)'
+call try 'd~addYears("x")'
+call try 'd~addYears(7984)'
+call try 'd~addYears(-2016)'
+call try 'd~addDays("x")'
+call try 'd~addDays(.nil)'
+call try 'd~addDays(3000000)'
+call try '.datetime~maxDate~addMicroseconds(1)'
+call try '.datetime~minDate~addMicroseconds(-1)'
+call try 'd~addDays'
+call try 'd~addDays(1, 2)'
+call try 'd~addMonths(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">2017-02-28T09:08:07.012345 2020-02-29T09:08:07.012345
+2015-02-28T09:08:07.012345 2016-02-29T09:08:07.012345
+2016-03-07T09:08:07.012345 2016-03-03T21:08:07.012345
+2016-02-22T09:08:07.012345
+2016-03-01T09:08:07.012345 2016-03-01T21:08:07.012345
+2016-02-29T03:08:07.012345 2015-12-31T09:08:07.012345
+2017-02-28T09:08:07.012345
+2016-02-29T10:08:07.012345 2016-02-28T23:38:07.012345
+2016-03-01T09:08:07.012345
+2016-02-29T10:38:37.012345 2016-02-29T00:00:07.012345
+2016-02-29T09:08:07.512345 2016-03-01T09:08:07.012345
+2016-02-29T09:08:07.012346 2016-02-29T09:08:06.999999
+2016-02-29T09:08:08.012345
+20985 12346
+500001 499998 499999
+12346 12345
+5
+12346 12345
+2016-03-01T09:08:07.012345+02:00 DateTime 0
+2012-02-29T00:00:00.000000 2116-02-29T00:00:00.000000
+d~addYears(1.5) =&gt; 88.903
+d~addYears("x") =&gt; 88.903
+d~addYears(7984) =&gt; 88.907
+d~addYears(-2016) =&gt; 88.907
+d~addDays("x") =&gt; 88.902
+d~addDays(.nil) =&gt; 88.902
+d~addDays(3000000) =&gt; 40.19
+.datetime~maxDate~addMicroseconds(1) =&gt; 40.19
+.datetime~minDate~addMicroseconds(-1) =&gt; 40.19
+d~addDays =&gt; 93.901
+d~addDays(1, 2) =&gt; 93.902
+d~addMonths(1) =&gt; 97.1
+</code></pre>
+<div class="rule" id="r-class.datetime.plus"><a href="#r-class.datetime.plus">[class.datetime.plus]</a></div>
+<p><code>+</code> takes a <a href="timespan.html#r-class.timespan.value"><code>TimeSpan</code></a> and answers a new instance,
+of the class of the receiver, that is the receiver moved forward by the span
+(back for a negative one); the offset is kept. Any other argument raises
+<code>SYNTAX 93.948</code>, and a moment outside the range raises <code>SYNTAX 40.19</code>. The
+prefix <code>+</code> has no argument and answers a new instance with the same fields and
+the same offset.</p>
+<pre><code class="language-rexx">d = .datetime~new(2016, 2, 29, 9, 8, 7, 12345, 330)
+t = .timespan~fromSeconds(90)
+say d + t
+say d + .timespan~fromSeconds(-90)
+say (d + t)~offset (+d)~offset (+d == d)
+say +d d~'+'
+say d + .timespan~fromDays(0.5)
+call try 'd + 5'
+call try 'd + "x"'
+call try 'd + d'
+call try 'd + .nil'
+call try '.datetime~maxDate + t'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">2016-02-29T09:09:37.012345
+2016-02-29T09:06:37.012345
+05:30:00.000000 05:30:00.000000 1
+2016-02-29T09:08:07.012345 2016-02-29T09:08:07.012345
+2016-02-29T21:08:07.012345
+d + 5 =&gt; 93.948
+d + "x" =&gt; 93.948
+d + d =&gt; 93.948
+d + .nil =&gt; 93.948
+.datetime~maxDate + t =&gt; 40.19
+</code></pre>
+<div class="rule" id="r-class.datetime.minus"><a href="#r-class.datetime.minus">[class.datetime.minus]</a></div>
+<p><code>-</code> has three forms. With a <a href="timespan.html#r-class.timespan.value"><code>TimeSpan</code></a> it answers a
+new instance, of the class of the receiver, whose fields are the receiver's
+moved back by the span (forward for a negative one) and whose offset is the
+receiver's (<a href="#r-class.datetime.deviation.127">Deviation 127</a>). With a <code>DateTime</code>
+it answers a <code>TimeSpan</code>, the difference of the two instants in UTC, negative
+when the receiver is the earlier; the offsets of the two instances matter and
+the fields alone do not decide it. With no argument, the prefix <code>-</code> raises
+<code>SYNTAX 93.901</code>. Any other argument raises <code>SYNTAX 88.914</code>. A moment outside the
+range of the class raises <code>SYNTAX 40.19</code>. The argument is sent <code>isA</code> with
+<code>TimeSpan</code> first and then, when that answers false, <code>isA</code> with <code>DateTime</code>.</p>
+<pre><code class="language-rexx">d = .datetime~new(2016, 2, 29, 9, 8, 7, 12345, 120)
+z = .datetime~new(2016, 3, 1, 10, 0, 0, 0, 0)
+t = .timespan~fromSeconds(90)
+say d - t
+say (d + t)~offset == d~offset
+say d - z
+say z - d
+say d - d
+say (z - d)~class~id
+say d + (z - d) == z
+say .datetime~new(2017, 1, 1, 0, 0, 0, 0, 60),
+    - .datetime~new(2017, 1, 1, 0, 0, 0, 0, 0)
+say .datetime~maxDate - .datetime~minDate
+call try 'd - 5'
+call try 'd - "x"'
+call try 'd - .nil'
+call try '-d'
+call try 'd~"-"'
+call try '.datetime~minDate - t'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">2016-02-29T09:06:37.012345
+1
+-1.02:51:52.987655
+1.02:51:52.987655
+00:00:00.000000
+TimeSpan
+1
+-01:00:00.000000
+3652058.23:59:59.999999
+d - 5 =&gt; 88.914
+d - "x" =&gt; 88.914
+d - .nil =&gt; 88.914
+-d =&gt; 93.901
+d~"-" =&gt; 93.901
+.datetime~minDate - t =&gt; 40.19
+</code></pre>
+<h2 id="comparing"><a class="header" href="#comparing">Comparing</a></h2>
+<div class="rule" id="r-class.datetime.compare"><a href="#r-class.datetime.compare">[class.datetime.compare]</a></div>
+<p><code>compareTo</code> takes one argument and answers -1 when the receiver is the earlier
+instant, 0 for the same instant and 1 when it is the later, comparing the
+instants in UTC, so that two instances with different fields and different
+offsets can be equal. The argument is sent <code>isA</code> with <code>DateTime</code>, and a
+<code>DateTime</code> is then sent <code>utcDate</code>; an argument that is no <code>DateTime</code> raises
+<code>SYNTAX 88.914</code> as soon as <code>isA</code> has answered (<a href="#r-class.datetime.deviation.126">Deviation
+126</a>), and the comparison operators raise it for
+such an argument too, except that an operator whose argument is <code>.nil</code> does as
+<a href="orderable.html#r-class.orderable.compare.nil">the <code>.nil</code> rule</a> says, without <code>compareTo</code>. The
+comparison operators <code>=</code>, <code>==</code>, <code>&lt;</code>, <code>&lt;=</code>, <code>&gt;</code>, <code>&gt;=</code>, <code>&lt;&gt;</code>, <code>&gt;&lt;</code>, <code>\=</code>, <code>\==</code>,
+<code>&lt;&lt;</code>, <code>&lt;&lt;=</code>, <code>&gt;&gt;</code>, <code>&gt;&gt;=</code> and <code>\&lt;</code>, <code>\&gt;</code>, <code>\&lt;&lt;</code>, <code>\&gt;&gt;</code> are those of
+<a href="orderable.html#r-class.orderable.compare"><code>Orderable</code></a>, which answer from <code>compareTo</code> of the
+receiver, strict and non-strict ones alike: <code>==</code> is as <code>=</code>. The text of the
+instances plays no part.</p>
+<pre><code class="language-rexx">d = .datetime~new(2016, 2, 29, 9, 8, 7, 12345, 120)
+z = .datetime~new(2016, 3, 1, 10, 0, 0, 0, 0)
+q = .datetime~new(2016, 2, 29, 7, 8, 7, 12345, 0)
+say d~compareTo(z) z~compareTo(d) d~compareTo(q) d~compareTo(d~copy)
+say (d &lt; z) (d &gt; z) (d = q) (d == q) (d \= q) (d &lt;&gt; q) (d &lt;= q) (d &gt;= q)
+say (d &lt;&lt; z) (d &gt;&gt; z) (d &lt;&lt;= q) (d &gt;&gt;= z) (d \== q) (d &gt;&lt; q)
+say (d~string == q~string) (d = q)
+say (d \&lt; z) (d \&gt; z) (d \&lt;&lt; z) (d \&gt;&gt; z)
+call try 'd~compareTo'
+call try 'd~compareTo(z, 1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">-1 1 0 0
+1 0 1 1 0 0 1 1
+1 0 1 0 0 0
+0 1
+0 1 0 1
+d~compareTo =&gt; 93.901
+d~compareTo(z, 1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.datetime.hashcode"><a href="#r-class.datetime.hashcode">[class.datetime.hashcode]</a></div>
+<p><code>hashCode</code> takes no argument and answers a string of 8 bytes that is computed
+from the instant of the instance. Two instances for the same instant, which <code>=</code>
+finds equal, have the same hash code whatever their fields and offsets
+(<a href="#r-class.datetime.deviation.128">Deviation 128</a>); an instance and its copy have
+the same one. The bytes are not specified, nor whether two different instants
+have different ones.</p>
+<pre><code class="language-rexx">d = .datetime~new(2017, 6, 30, 5, 6, 7, 8, 0)
+say (d~hashCode == d~copy~hashCode) d~hashCode~length
+call try 'd~hashCode(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">1 8
+d~hashCode(1) =&gt; 93.902
+</code></pre>
+<h2 id="zones-and-parts"><a class="header" href="#zones-and-parts">Zones and parts</a></h2>
+<div class="rule" id="r-class.datetime.zone"><a href="#r-class.datetime.zone">[class.datetime.zone]</a></div>
+<p><code>toLocalTime</code>, <code>toUtcTime</code> and <code>toTimezone</code> answer a new instance, of the
+class of the receiver, for the same instant with the fields of another zone:
+the fields move by the difference of the offsets. <code>toLocalTime</code> takes the
+default offset (<a href="#r-class.datetime.offset.default">the default</a>), <code>toUtcTime</code>
+the offset 0, and <code>toTimezone</code> the offset that its argument gives (<a href="#r-class.datetime.offset">the offset
+rule</a>), 0 when it has no argument. The instant does
+not change, so <code>utcDate</code> and the comparisons see the same moment. When the new
+fields fall outside the range of the class the methods raise <code>SYNTAX 40.19</code>.
+<code>toLocalTime</code> and <code>toUtcTime</code> take no argument, and <code>toTimezone</code> at most one.
+The argument of <code>toTimezone</code> that is not a
+<a href="timespan.html#r-class.timespan.value"><code>TimeSpan</code></a> is read as a number of minutes by
+multiplying it with 60000000 with <code>*</code>, so a string that is no number raises
+<code>SYNTAX 41.1</code> and <code>.nil</code>, which has no <code>*</code>, <code>SYNTAX 97.1</code>; a number that is
+not a whole number of minutes in the range raises <code>SYNTAX 88.907</code>.</p>
+<pre><code class="language-rexx">d = .datetime~new(2016, 2, 29, 9, 8, 7, 12345, 120)
+say d~toTimezone(0) d~toUtcTime
+say d~toTimezone
+say d~toTimezone(-90)~utcIsoDate d~toTimezone(90)~utcIsoDate
+say d~toTimezone(120)~utcIsoDate d~toTimezone(900)~utcIsoDate
+say d~toTimezone(.timespan~fromHours(-5))~utcIsoDate,
+    d~toTimezone(.timespan~fromMinutes(-61))~utcIsoDate
+say (d~toTimezone(-77) == d),
+    (d~toTimezone(-77)~utcDate == d~utcDate) d~toTimezone(-77)~timeOfDay
+l = d~toLocalTime
+say (l == d) (l~offset == .datetime~new~offset) (l~utcDate == d~utcDate)
+say d~toTimezone(60)~class~id d~toTimezone(60)~toUtcTime~isoDate
+say .datetime~minDate~toTimezone(60) .datetime~maxDate~toTimezone(-60)
+call try 'd~toTimezone(901)'
+call try 'd~toTimezone(1.5)'
+call try 'd~toTimezone(.timespan~fromSeconds(90))'
+call try 'd~toTimezone("x")'
+call try 'd~toTimezone(.nil)'
+call try '.datetime~minDate~toTimezone(-60)'
+call try '.datetime~maxDate~toTimezone(60)'
+call try '.datetime~minDate~toUtcTime'
+call try 'd~toUtcTime(1)'
+call try 'd~toTimezone(1, 2)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">2016-02-29T07:08:07.012345 2016-02-29T07:08:07.012345
+2016-02-29T07:08:07.012345
+2016-02-29T05:38:07.012345-01:30 2016-02-29T08:38:07.012345+01:30
+2016-02-29T09:08:07.012345+02:00 2016-02-29T22:08:07.012345+15:00
+2016-02-29T02:08:07.012345-05:00 2016-02-29T06:07:07.012345-01:01
+1 1 05:51:07.012345
+1 1 1
+DateTime 2016-02-29T07:08:07.012345
+0001-01-01T01:00:00.000000 9999-12-31T22:59:59.999999
+d~toTimezone(901) =&gt; 88.907
+d~toTimezone(1.5) =&gt; 88.907
+d~toTimezone(.timespan~fromSeconds(90)) =&gt; 88.907
+d~toTimezone("x") =&gt; 41.1
+d~toTimezone(.nil) =&gt; 97.1
+.datetime~minDate~toTimezone(-60) =&gt; 40.19
+.datetime~maxDate~toTimezone(60) =&gt; 40.19
+.datetime~minDate~toUtcTime =&gt; 0001-01-01T00:00:00.000000
+d~toUtcTime(1) =&gt; 93.902
+d~toTimezone(1, 2) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.datetime.parts"><a href="#r-class.datetime.parts">[class.datetime.parts]</a></div>
+<p><code>date</code> answers a new instance, of the class of the receiver, for the same day at
+00:00:00.000000 with the same offset. <code>timeOfDay</code> answers the time past
+00:00:00.000000 as a <a href="timespan.html#r-class.timespan.value"><code>TimeSpan</code></a>, the fields of the
+time and not an instant in UTC. <code>elapsed</code> answers a <code>TimeSpan</code>, the current
+instant less the instant of the receiver, so that the offset of the receiver
+does not change it (<a href="#r-class.datetime.deviation.129">Deviation 129</a>); the span
+is negative when the receiver lies ahead of the clock. The current time is not
+specified, so the example uses instants that are far from it. Each takes no
+argument.</p>
+<pre><code class="language-rexx">d = .datetime~new(2016, 2, 29, 9, 8, 7, 12345, 120)
+say d~date d~date~offset d~timeOfDay d~timeOfDay~class~id
+say d~toTimezone(-77)~timeOfDay d~toTimezone(-77)~date
+say .datetime~minDate~elapsed~sign,
+    .datetime~maxDate~elapsed~sign .datetime~minDate~elapsed~class~id
+call try 'd~date(1)'
+call try 'd~timeOfDay(1)'
+call try 'd~elapsed(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">2016-02-29T00:00:00.000000 02:00:00.000000 09:08:07.012345 TimeSpan
+05:51:07.012345 2016-02-29T00:00:00.000000
+1 -1 TimeSpan
+d~date(1) =&gt; 93.902
+d~timeOfDay(1) =&gt; 93.902
+d~elapsed(1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.datetime.copy"><a href="#r-class.datetime.copy">[class.datetime.copy]</a></div>
+<p><code>copy</code> answers a new instance of the class of the receiver with the same
+fields and offset, as <a href="object.html#r-class.object.copy">the copy rule</a> of <code>Object</code> says,
+without sending <code>init</code>. The copy is the same moment: <code>=</code> and <code>==</code> find it
+equal to the original.</p>
+<pre><code class="language-rexx">d = .datetime~new(2016, 2, 29, 9, 8, 7, 12345, 330)
+c = d~copy
+say c c~offset (c == d) (c = d) (c~identityHash == d~identityHash) c~class~id
+</code></pre>
+<pre><code class="language-output">2016-02-29T09:08:07.012345 05:30:00.000000 1 1 0 DateTime
+</code></pre>
+<div class="rule" id="r-class.datetime.numeric"><a href="#r-class.datetime.numeric">[class.datetime.numeric]</a></div>
+<p>The answers of the methods of <code>DateTime</code> do not depend on the setting of
+NUMERIC DIGITS of the caller: a count of microseconds with more digits than
+the setting still has all its digits, and the amount that an <code>add</code> method
+reads is not rounded to the setting.</p>
+<pre><code class="language-rexx">d = .datetime~new(2016, 2, 29, 9, 8, 7, 12345, 0)
+numeric digits 3
+say d~fullDate d~utcDate
+say d~addDays(1.123456789012)~isoDate d~addMicroseconds(123456789012)
+say .datetime~new(315537897599999999)~isoDate,
+    .datetime~fromTicks(253402300799)~isoDate
+numeric digits 20
+say d~fullDate d~addDays(1.123456789012)~isoDate,
+    d~addMicroseconds(123456789012)~isoDate
+say d~fullDate + 1
+</code></pre>
+<pre><code class="language-output">63592333687012345 63592333687012345
+2016-03-01T12:05:53.678915 2016-03-01T19:25:43.801357
+9999-12-31T23:59:59.999999 9999-12-31T23:59:59.000000
+63592333687012345 2016-03-01T12:05:53.678915 2016-03-01T19:25:43.801357
+63592333687012346
+</code></pre>
+<h2 id="messages-that-a-program-can-override"><a class="header" href="#messages-that-a-program-can-override">Messages that a program can override</a></h2>
+<div class="rule" id="r-class.datetime.sends.new"><a href="#r-class.datetime.sends.new">[class.datetime.sends.new]</a></div>
+<p>The class methods send <code>new</code> to the receiver, so a class that overrides its
+<code>new</code> sees them, and <code>new</code> sends <code>init</code> to the new instance with the arguments
+it got (<a href="index.html#r-class.index.new">the new rule</a>); the <code>init</code> of <code>DateTime</code> sends
+nothing. <code>minDate</code> sends <code>new</code> with the four arguments 1, 1, 1 and 0, and
+<code>maxDate</code> with the eight arguments 9999, 12, 31, 23, 59, 59, 999999 and 0.
+<code>today</code> and every <code>from</code> method other than <code>fromOrdinalDate</code> and
+<code>fromWeekNumberDate</code> send <code>new</code> with two arguments: the number of microseconds
+from the start of 0001 to the moment, and the offset argument exactly as the
+caller gave it (a <a href="timespan.html#r-class.timespan.value"><code>TimeSpan</code></a> is not converted), or,
+without one, the default offset in minutes; <code>fromUtcIsoDate</code>, which has no
+offset argument, sends the offset of its string in minutes. <code>fromOrdinalDate</code>
+sends nothing to the receiver and answers a plain <code>DateTime</code>, whatever the
+receiver is. <code>fromWeekNumberDate</code> sends <code>new</code> with the three arguments year, 1
+and 4, then sends that instance <code>weeksInYear</code> (which sends <code>year</code>), <code>weekDay</code>
+and <code>addDays</code>, and the answer of <code>addDays</code> is the result. The first example
+prints, for each call, the messages sent in order, with the number of
+arguments after <code>NEW</code> and <code>INIT</code>. The second example prints the second
+argument that <code>init</code> gets: a <code>TimeSpan</code> or a string that the caller gave
+arrives as it is, the offset of the string of <code>fromUtcIsoDate</code> as a number of
+minutes (150 for <code>+02:30</code>), and, without an offset argument, the default
+offset in minutes. An argument that is read as a number is sent more messages
+than the one that reads its string value (<a href="index.html#r-class.index.string">the argument
+rule</a>). A year, month, day, hours, minutes, seconds or
+microseconds argument of <code>new</code> is sent <code>&gt;=</code> and <code>&lt;=</code> with the limits of its
+range and then <code>right</code> with the width of its field, 4 for the year, 6 for the
+microseconds and 2 for the others. An offset that is not a <code>TimeSpan</code>, the
+argument of <code>new</code>, <code>today</code> or a <code>from</code> method other than <code>fromWeekNumberDate</code>,
+is sent <code>isA</code>, read for its string value, and sent <code>&gt;=</code> with -900, <code>&lt;=</code> with
+900 and <code>*</code> with 60000000. An amount of <code>addDays</code>, <code>addHours</code>, <code>addMinutes</code>,
+<code>addSeconds</code> and <code>addWeeks</code> is sent <code>*</code>, and <code>addYears</code> and <code>addMicroseconds</code>
+read the string value of their amount twice. A number argument of <code>toTimezone</code>
+is sent <code>isA</code> and <code>*</code>, then read for its string value and sent <code>&gt;=</code> and <code>&lt;=</code>;
+the <code>new</code> that <code>toTimezone</code> sends gets the argument itself, which is then
+handled as the offset of <code>new</code> is. A count of <code>new</code> and the argument of
+<code>fromTicks</code> and <code>fromBaseDate</code> are read for their string value only. The third
+example passes an object whose <code>makeString</code> answers a number and whose
+<code>unknown</code> sends every other message to that number, and prints the messages
+the object got.</p>
+<pre><code class="language-rexx">names = 'WEEKSINYEAR YEAR WEEKDAY ADDDAYS OFFSET'
+do n over names~makearray(' ')
+  body = .array~of(".local~log = .local~log '" || n || "'",,
+    'forward class (super)')
+  .spy~define(n, .method~new(n, body))
+end
+call probe 'new', '.spy~new(2016, 2, 29)'
+call probe 'minDate', '.spy~minDate'
+call probe 'maxDate', '.spy~maxDate'
+call probe 'today', '.spy~today'
+call probe 'fromTicks', '.spy~fromTicks(5)'
+call probe 'fromBaseDate', '.spy~fromBaseDate(5, 30)'
+call probe 'fromIsoDate', '.spy~fromIsoDate("2017-01-05T01:02:03.4")'
+call probe 'fromUtcIsoDate',,
+  '.spy~fromUtcIsoDate("2017-01-05T01:02:03.4-02:30")'
+call probe 'fromWeekNumberDate', '.spy~fromWeekNumberDate("2017-W01-4")'
+call probe 'fromOrdinalDate', '.spy~fromOrdinalDate("2017-005")'
+exit
+probe:
+  .local~log = ''
+  interpret 'x =' arg(2)
+  s = arg(1)':' .local~log '=&gt;' x~class~id
+  line = word(s, 1)
+  do i = 2 to words(s)
+    if length(line word(s, i)) &gt; 76 then do
+      say line
+      line = '  'word(s, i)
+    end
+    else line = line word(s, i)
+  end
+  say line
+  return
+::class spy subclass datetime
+::method init
+  .local~log = .local~log 'INIT'arg()
+  forward class (super)
+::method new class
+  .local~log = .local~log 'NEW'arg()
+  forward class (super)
+</code></pre>
+<pre><code class="language-output">new: NEW3 INIT3 =&gt; SPY
+minDate: NEW4 INIT4 =&gt; SPY
+maxDate: NEW8 INIT8 =&gt; SPY
+today: NEW2 INIT2 =&gt; SPY
+fromTicks: NEW2 INIT2 =&gt; SPY
+fromBaseDate: NEW2 INIT2 =&gt; SPY
+fromIsoDate: NEW2 INIT2 =&gt; SPY
+fromUtcIsoDate: NEW2 INIT2 =&gt; SPY
+fromWeekNumberDate: NEW3 INIT3 WEEKSINYEAR YEAR WEEKDAY ADDDAYS OFFSET NEW2
+  INIT2 =&gt; SPY
+fromOrdinalDate: =&gt; DateTime
+</code></pre>
+<pre><code class="language-rexx">call probe 'fromTicks', '.spy~fromTicks(5, .timespan~fromMinutes(30))'
+call probe 'fromTicks', '.spy~fromTicks(5, " 3E1 ")'
+call probe 'fromIsoDate', '.spy~fromIsoDate("2017-01-05T01:02:03.4", 45)'
+call probe 'today', '.spy~today(.timespan~fromMinutes(-90))'
+call probe 'fromUtcIsoDate',,
+  '.spy~fromUtcIsoDate("2017-01-05T01:02:03+02:30")'
+.local~log = ''
+x = .spy~fromTicks(5)
+say 'default' (.local~log~word(3) == '[' || time('O') / 60000000 || ']')
+exit
+probe:
+  .local~log = ''
+  interpret 'x =' arg(2)
+  say arg(1)':' .local~log
+  return
+::class spy subclass datetime
+::method init
+  .local~log = .local~log 'INIT'arg() '['arg(2)']'
+  forward class (super)
+::method new class
+  .local~log = .local~log 'NEW'arg()
+  forward class (super)
+</code></pre>
+<pre><code class="language-output">fromTicks:  NEW2 INIT2 [00:30:00.000000]
+fromTicks:  NEW2 INIT2 [ 3E1 ]
+fromIsoDate:  NEW2 INIT2 [45]
+today:  NEW2 INIT2 [-01:30:00.000000]
+fromUtcIsoDate:  NEW2 INIT2 [150]
+default 1
+</code></pre>
+<pre><code class="language-rexx">n = .num~new(3)
+call probe 'year', '.datetime~new(n, 1, 1)'
+call probe 'offset', '.datetime~new(2017, 1, 1, 0, 0, 0, 0, n)'
+call probe 'count', '.datetime~new(n)'
+call probe 'fromTicks', '.datetime~fromTicks(n)'
+call probe 'addDays', '.datetime~minDate~addDays(n)'
+call probe 'addMicroseconds', '.datetime~minDate~addMicroseconds(n)'
+call probe 'addYears', '.datetime~minDate~addYears(n)'
+call probe 'toTimezone', '.datetime~minDate~toTimezone(n)'
+exit
+probe:
+  .local~log = ''
+  interpret 'x =' arg(2)
+  say arg(1)':'
+  say ' ' strip(.local~log)
+  return
+::class num
+::method init
+  expose v
+  use arg v
+::method isA
+  .local~log = .local~log 'ISA'
+  forward class (super)
+::method makeString
+  expose v
+  .local~log = .local~log 'MAKESTRING'
+  return v
+::method request
+  .local~log = .local~log 'REQUEST:'arg(1)
+  forward class (super)
+::method unknown
+  expose v
+  use arg name, args
+  .local~log = .local~log name
+  forward to (v) message (name) arguments (args)
+</code></pre>
+<pre><code class="language-output defect=#164">year:
+  REQUEST:STRING MAKESTRING &gt;= &lt;= RIGHT
+offset:
+  ISA REQUEST:STRING MAKESTRING &gt;= &lt;= *
+count:
+  REQUEST:STRING MAKESTRING
+fromTicks:
+  REQUEST:STRING MAKESTRING
+addDays:
+  REQUEST:STRING MAKESTRING *
+addMicroseconds:
+  REQUEST:STRING MAKESTRING REQUEST:STRING MAKESTRING
+addYears:
+  REQUEST:STRING MAKESTRING REQUEST:STRING MAKESTRING
+toTimezone:
+  ISA * REQUEST:STRING MAKESTRING &gt;= &lt;= ISA REQUEST:STRING MAKESTRING &gt;= &lt;= *
+</code></pre>
+<div class="rule" id="r-class.datetime.sends.add"><a href="#r-class.datetime.sends.add">[class.datetime.sends.add]</a></div>
+<p><code>addDays</code>, <code>addHours</code>, <code>addMicroseconds</code>, <code>addMinutes</code>, <code>addSeconds</code>, <code>addWeeks</code>
+and <code>+</code> send <code>offset</code> to the receiver, then <code>new</code> with two arguments: the
+microseconds of the new moment and the answer of <code>offset</code>. The prefix <code>+</code> is the
+message <code>+</code> with no argument and sends the same. <code>-</code> with a
+<a href="timespan.html#r-class.timespan.value"><code>TimeSpan</code></a> sends the same two messages (<a href="#r-class.datetime.deviation.127">Deviation
+127</a>), and <code>-</code> with a <code>DateTime</code> sends the
+receiver nothing. The argument of <code>+</code> is sent <code>isA</code> with <code>TimeSpan</code>, and a
+<code>TimeSpan</code> then <code>totalMicroseconds</code>. The argument of <code>-</code> is sent <code>isA</code> with
+<code>TimeSpan</code> and, when that is false, <code>isA</code> with <code>DateTime</code>; a <code>TimeSpan</code> is then
+sent <code>totalMicroseconds</code> and a <code>DateTime</code> <code>utcDate</code>.</p>
+<pre><code class="language-rexx">names = '+ - OFFSET ADDDAYS ADDHOURS ADDMICROSECONDS ADDMINUTES ADDSECONDS',
+  'ADDWEEKS UTCDATE'
+do n over names~makearray(' ')
+  body = .array~of(".local~log = .local~log '" || n || "'",,
+    'forward class (super)')
+  .spy~define(n, .method~new(n, body))
+end
+d = .spy~new(2016, 2, 29, 9, 8, 7, 12345, 330)
+z = .spy~new(2016, 3, 1, 9, 8, 7, 12345, 330)
+t = .timespan~fromSeconds(90)
+.local~log = ''
+call probe 'addDays', 'd~addDays(1)'
+call probe 'addHours', 'd~addHours(1)'
+call probe 'addMicroseconds', 'd~addMicroseconds(1)'
+call probe 'addMinutes', 'd~addMinutes(1)'
+call probe 'addSeconds', 'd~addSeconds(1)'
+call probe 'addWeeks', 'd~addWeeks(1)'
+call probe '+', 'd + t'
+call probe 'prefix +', '+d'
+call probe '- date', 'd - z'
+exit
+probe:
+  .local~log = ''
+  interpret 'x =' arg(2)
+  say arg(1)':' .local~log '=&gt;' x~class~id
+  return
+::class spy subclass datetime
+::method init
+  .local~log = .local~log 'INIT'arg()
+  forward class (super)
+::method new class
+  .local~log = .local~log 'NEW'arg()
+  forward class (super)
+</code></pre>
+<pre><code class="language-output">addDays:  ADDDAYS OFFSET NEW2 INIT2 =&gt; SPY
+addHours:  ADDHOURS OFFSET NEW2 INIT2 =&gt; SPY
+addMicroseconds:  ADDMICROSECONDS OFFSET NEW2 INIT2 =&gt; SPY
+addMinutes:  ADDMINUTES OFFSET NEW2 INIT2 =&gt; SPY
+addSeconds:  ADDSECONDS OFFSET NEW2 INIT2 =&gt; SPY
+addWeeks:  ADDWEEKS OFFSET NEW2 INIT2 =&gt; SPY
++:  + OFFSET NEW2 INIT2 =&gt; SPY
+prefix +:  + OFFSET NEW2 INIT2 =&gt; SPY
+- date:  - UTCDATE =&gt; TimeSpan
+</code></pre>
+<div class="rule" id="r-class.datetime.sends.zone"><a href="#r-class.datetime.sends.zone">[class.datetime.sends.zone]</a></div>
+<p><code>addYears</code> sends the receiver <code>date</code>, <code>timeOfDay</code>, <code>year</code>, <code>month</code>, <code>day</code> and
+<code>offset</code>, and then <code>new</code> with four arguments: the new year, the month, the day
+(28 for a 29 February that the new year does not have) and the offset. It then
+sends the new instance <code>+</code> with the answer of <code>timeOfDay</code>, and <code>+</code> sends what
+it sends. <code>date</code> sends the receiver <code>standardDate</code> and <code>offset</code>, then <code>new</code>
+with two arguments, and <code>timeOfDay</code> sends <code>longTime</code>. <code>toTimezone</code> sends <code>new</code>
+with two arguments, the microseconds and the offset: a
+<a href="timespan.html#r-class.timespan.value"><code>TimeSpan</code></a> argument converted to minutes, any other
+argument as given; <code>toUtcTime</code> and <code>toLocalTime</code> send the receiver
+<code>toTimezone</code>, with 0 and with the default offset in minutes, and so <code>new</code> once
+more. <code>copy</code> sends nothing. The second example prints the argument of
+<code>toTimezone</code> and the offset that <code>init</code> gets.</p>
+<pre><code class="language-rexx">names = 'ADDYEARS DATE STANDARDDATE OFFSET TIMEOFDAY LONGTIME YEAR MONTH DAY',
+  '+ TOLOCALTIME TOTIMEZONE TOUTCTIME COPY'
+do n over names~makearray(' ')
+  body = .array~of(".local~log = .local~log '" || n || "'",,
+    'forward class (super)')
+  .spy~define(n, .method~new(n, body))
+end
+d = .spy~new(2016, 2, 29, 9, 8, 7, 12345, 330)
+z = .spy~new(2016, 3, 1, 9, 8, 7, 12345, 330)
+t = .timespan~fromSeconds(90)
+.local~log = ''
+call probe 'addYears', 'd~addYears(1)'
+call probe 'date', 'd~date'
+call probe 'timeOfDay', 'd~timeOfDay'
+call probe 'toTimezone', 'd~toTimezone(30)'
+call probe 'toUtcTime', 'd~toUtcTime'
+call probe 'toLocalTime', 'd~toLocalTime'
+call probe 'copy', 'd~copy'
+exit
+probe:
+  .local~log = ''
+  interpret 'x =' arg(2)
+  s = arg(1)':' .local~log '=&gt;' x~class~id
+  line = word(s, 1)
+  do i = 2 to words(s)
+    if length(line word(s, i)) &gt; 76 then do
+      say line
+      line = '  'word(s, i)
+    end
+    else line = line word(s, i)
+  end
+  say line
+  return
+::class spy subclass datetime
+::method init
+  .local~log = .local~log 'INIT'arg()
+  forward class (super)
+::method new class
+  .local~log = .local~log 'NEW'arg()
+  forward class (super)
+</code></pre>
+<pre><code class="language-output">addYears: ADDYEARS DATE STANDARDDATE OFFSET NEW2 INIT2 TIMEOFDAY LONGTIME
+  YEAR MONTH DAY OFFSET NEW4 INIT4 + OFFSET NEW2 INIT2 =&gt; SPY
+date: DATE STANDARDDATE OFFSET NEW2 INIT2 =&gt; SPY
+timeOfDay: TIMEOFDAY LONGTIME =&gt; TimeSpan
+toTimezone: TOTIMEZONE NEW2 INIT2 =&gt; SPY
+toUtcTime: TOUTCTIME TOTIMEZONE NEW2 INIT2 =&gt; SPY
+toLocalTime: TOLOCALTIME TOTIMEZONE NEW2 INIT2 =&gt; SPY
+copy: COPY =&gt; SPY
+</code></pre>
+<pre><code class="language-rexx">d = .spy~new(2016, 2, 29, 9, 8, 7, 12345, 330)
+call probe 'span', 'd~toTimezone(.timespan~fromMinutes(30))'
+call probe 'number', 'd~toTimezone(30)'
+call probe 'string', 'd~toTimezone(" 3E1 ")'
+exit
+probe:
+  .local~log = ''
+  interpret 'x =' arg(2)
+  say arg(1)':' .local~log
+  return
+::class spy subclass datetime
+::method init
+  .local~log = .local~log 'INIT'arg() '['arg(2)']'
+  forward class (super)
+::method new class
+  .local~log = .local~log 'NEW'arg()
+  forward class (super)
+::method toTimezone
+  .local~log = .local~log 'TOTIMEZONE['arg(1)']'
+  forward class (super)
+</code></pre>
+<pre><code class="language-output">span:  TOTIMEZONE[00:30:00.000000] NEW2 INIT2 [30]
+number:  TOTIMEZONE[30] NEW2 INIT2 [30]
+string:  TOTIMEZONE[ 3E1 ] NEW2 INIT2 [ 3E1 ]
+</code></pre>
+<div class="rule" id="r-class.datetime.sends.compare"><a href="#r-class.datetime.sends.compare">[class.datetime.sends.compare]</a></div>
+<p><code>compareTo</code> sends its argument <code>isA</code> with <code>DateTime</code> and, for a <code>DateTime</code>,
+<code>utcDate</code>; the receiver is sent nothing, and an argument that is no <code>DateTime</code>
+is sent nothing but <code>isA</code> (<a href="#r-class.datetime.deviation.126">Deviation 126</a>). A
+comparison operator sends the messages that <a href="orderable.html#r-class.orderable.compare.sends">the sends rule of
+<code>Orderable</code></a> states: <code>compareTo</code> to the
+receiver with the argument it got, after another operator for some of them.</p>
+<pre><code class="language-rexx">names = 'COMPARETO UTCDATE = == &lt; &gt; &lt;= &gt;= &lt;&gt; &gt;&lt; &lt;&lt; &gt;&gt; &lt;&lt;= &gt;&gt;= \= \== \&lt; \&gt;',
+  '\&lt;&lt; \&gt;&gt;'
+do n over names~makearray(' ')
+  body = .array~of(".local~log = .local~log '" || n || "'",,
+    'forward class (super)')
+  .spy~define(n, .method~new(n, body))
+end
+d = .spy~new(2016, 2, 29, 9, 8, 7, 12345, 330)
+z = .spy~new(2016, 3, 1, 9, 8, 7, 12345, 330)
+t = .timespan~fromSeconds(90)
+.local~log = ''
+call probe 'compareTo', 'd~compareTo(z)'
+call probe '=', 'd = z'
+call probe '==', 'd == z'
+call probe '&lt;', 'd &lt; z'
+call probe '&lt;&gt;', 'd &lt;&gt; z'
+call probe '&gt;&lt;', 'd &gt;&lt; z'
+call probe '\=', 'd \= z'
+call probe '\==', 'd \== z'
+call probe '\&lt;', 'd \&lt; z'
+call probe '\&gt;', 'd \&gt; z'
+call probe '\&lt;&lt;', 'd \&lt;&lt; z'
+call probe '\&gt;&gt;', 'd \&gt;&gt; z'
+exit
+probe:
+  .local~log = ''
+  interpret 'x =' arg(2)
+  say arg(1)':' .local~log '=&gt;' x~class~id
+  return
+::class spy subclass datetime
+::method init
+  .local~log = .local~log 'INIT'arg()
+  forward class (super)
+::method new class
+  .local~log = .local~log 'NEW'arg()
+  forward class (super)
+</code></pre>
+<pre><code class="language-output">compareTo:  COMPARETO UTCDATE =&gt; String
+=:  = COMPARETO UTCDATE =&gt; String
+==:  == COMPARETO UTCDATE =&gt; String
+&lt;:  &lt; COMPARETO UTCDATE =&gt; String
+&lt;&gt;:  &lt;&gt; \= COMPARETO UTCDATE =&gt; String
+&gt;&lt;:  &gt;&lt; \= COMPARETO UTCDATE =&gt; String
+\=:  \= COMPARETO UTCDATE =&gt; String
+\==:  \== COMPARETO UTCDATE =&gt; String
+\&lt;:  \&lt; &gt;= COMPARETO UTCDATE =&gt; String
+\&gt;:  \&gt; &lt;= COMPARETO UTCDATE =&gt; String
+\&lt;&lt;:  \&lt;&lt; &gt;&gt;= COMPARETO UTCDATE =&gt; String
+\&gt;&gt;:  \&gt;&gt; &lt;&lt;= COMPARETO UTCDATE =&gt; String
+</code></pre>
+<div class="rule" id="r-class.datetime.sends.string"><a href="#r-class.datetime.sends.string">[class.datetime.sends.string]</a></div>
+<p><code>string</code> sends <code>isoDate</code>, and <code>makeString</code> sends <code>string</code>. <code>isLeapYear</code> sends
+<code>year</code>; <code>daysInMonth</code> sends <code>month</code> and <code>isLeapYear</code>; <code>daysInYear</code> sends
+<code>isLeapYear</code>; <code>ordinalDate</code> sends <code>year</code> and <code>yearDay</code>; <code>weekNumber</code> sends
+<code>yearDay</code> and <code>weekDay</code>; <code>weekNumberYear</code> sends <code>year</code>, <code>weekNumber</code> and
+<code>month</code>; <code>weekNumberDate</code> sends <code>weekNumberYear</code>, <code>weekNumber</code> and <code>weekDay</code>,
+and each of these sends what it sends in turn; <code>weeksInYear</code> sends <code>year</code>;
+<code>dayMicroseconds</code> sends <code>daySeconds</code> and <code>microseconds</code>. The other methods
+that answer a field or a format send nothing.</p>
+<pre><code class="language-rexx">names = 'STRING ISODATE MAKESTRING ISLEAPYEAR YEAR MONTH DAYSINMONTH',
+  'DAYSINYEAR ORDINALDATE YEARDAY WEEKNUMBER WEEKDAY WEEKNUMBERYEAR',
+  'WEEKNUMBERDATE WEEKSINYEAR DAYMICROSECONDS DAYSECONDS MICROSECONDS'
+do n over names~makearray(' ')
+  body = .array~of(".local~log = .local~log '" || n || "'",,
+    'forward class (super)')
+  .spy~define(n, .method~new(n, body))
+end
+d = .spy~new(2016, 2, 29, 9, 8, 7, 12345, 330)
+z = .spy~new(2016, 3, 1, 9, 8, 7, 12345, 330)
+t = .timespan~fromSeconds(90)
+.local~log = ''
+call probe 'string', 'd~string'
+call probe 'makeString', 'd~makeString'
+call probe 'isLeapYear', 'd~isLeapYear'
+call probe 'daysInMonth', 'd~daysInMonth'
+call probe 'daysInYear', 'd~daysInYear'
+call probe 'ordinalDate', 'd~ordinalDate'
+call probe 'weekNumber', 'd~weekNumber'
+call probe 'weekNumberYear', 'd~weekNumberYear'
+call probe 'weekNumberDate', 'd~weekNumberDate'
+call probe 'weeksInYear', 'd~weeksInYear'
+call probe 'dayMicroseconds', 'd~dayMicroseconds'
+exit
+probe:
+  .local~log = ''
+  interpret 'x =' arg(2)
+  s = arg(1)':' .local~log '=&gt;' x~class~id
+  line = word(s, 1)
+  do i = 2 to words(s)
+    if length(line word(s, i)) &gt; 76 then do
+      say line
+      line = '  'word(s, i)
+    end
+    else line = line word(s, i)
+  end
+  say line
+  return
+::class spy subclass datetime
+::method init
+  .local~log = .local~log 'INIT'arg()
+  forward class (super)
+::method new class
+  .local~log = .local~log 'NEW'arg()
+  forward class (super)
+</code></pre>
+<pre><code class="language-output">string: STRING ISODATE =&gt; String
+makeString: MAKESTRING STRING ISODATE =&gt; String
+isLeapYear: ISLEAPYEAR YEAR =&gt; String
+daysInMonth: DAYSINMONTH MONTH ISLEAPYEAR YEAR =&gt; String
+daysInYear: DAYSINYEAR ISLEAPYEAR YEAR =&gt; String
+ordinalDate: ORDINALDATE YEAR YEARDAY =&gt; String
+weekNumber: WEEKNUMBER YEARDAY WEEKDAY =&gt; String
+weekNumberYear: WEEKNUMBERYEAR YEAR WEEKNUMBER YEARDAY WEEKDAY MONTH =&gt;
+  String
+weekNumberDate: WEEKNUMBERDATE WEEKNUMBERYEAR YEAR WEEKNUMBER YEARDAY
+  WEEKDAY MONTH WEEKNUMBER YEARDAY WEEKDAY WEEKDAY =&gt; String
+weeksInYear: WEEKSINYEAR YEAR =&gt; String
+dayMicroseconds: DAYMICROSECONDS DAYSECONDS MICROSECONDS =&gt; String
+</code></pre>
+<h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
+<div class="rule" id="r-class.datetime.deviation.109"><a href="#r-class.datetime.deviation.109">[class.datetime.deviation.109]</a></div>
+<p>An instance of a subclass of <code>String</code> that a method takes as a string, a
+number or a separator is read by its own characters, and <code>REQUEST</code>,
+<code>MAKESTRING</code> and <code>STRING</code> are not sent to it (<a href="string.html#r-class.string.deviation.109">Deviation
+109</a>). ooRexx sends such an instance <code>request</code>
+with <code>STRING</code> and then <code>makeString</code>, so an override can change what is read.
+In the example <code>makeString</code> answers a different string, and the instance still
+stands for its own characters.</p>
+<pre><code class="language-rexx">.local~sent = 0
+a = .digits~new('5')
+b = .digits~new('05/01/17')
+c = .digits~new('2017')
+call show '.datetime~fromBaseDate(a) .datetime~fromEuropeanDate(b)'
+call show '.datetime~new(c, 6, 3)'
+call show '.datetime~fromTicks(a)',
+  ".datetime~fromEuropeanDate('05-01-17', .digits~new('-'))"
+say 'sends' .local~sent
+exit
+show:
+  signal on syntax name failed
+  interpret 'say' arg(1)
+  return
+failed: say '=&gt;' condition('o')~code
+  return
+::class digits subclass string
+::method makestring
+  .local~sent = .local~sent + 1
+  return 'zzz'
+::method request
+  .local~sent = .local~sent + 1
+  return 'zzz'
+</code></pre>
+<pre><code class="language-output defect=#140">0001-01-06T00:00:00.000000 2017-01-05T00:00:00.000000
+2017-06-03T00:00:00.000000
+1970-01-01T00:00:05.000000 2017-01-05T00:00:00.000000
+sends 0
+</code></pre>
+<div class="rule" id="r-class.datetime.deviation.126"><a href="#r-class.datetime.deviation.126">[class.datetime.deviation.126]</a></div>
+<p><code>compareTo</code> of a <code>DateTime</code> with an argument that is not a <code>DateTime</code> (an
+instance of a subclass is one), and a comparison operator with such an argument,
+raise <code>SYNTAX 88.914</code>. The error follows the <code>isA</code> that the method sends to the
+argument and precedes <code>utcDate</code> and every other message; an operator whose
+argument is <code>.nil</code> sends no <code>compareTo</code> and does as <a href="orderable.html#r-class.orderable.compare.nil">the <code>.nil</code>
+rule</a> says, and <code>compareTo</code> itself raises for
+<code>.nil</code>. ooRexx answers 1 or -1 for such an argument, whatever the receiver is,
+so the answer says nothing about the two values. In the example the last line is
+a probe that answers false to <code>isA</code> and gets nothing else.</p>
+<pre><code class="language-rexx">d = .datetime~new(2017, 6, 30, 5, 6, 7, 8, 0)
+call try 'd~compareTo(.timespan~fromHours(2))'
+call try 'd~compareTo(.file~new("/t/a"))'
+call try 'd~compareTo("2017-06-30")'
+call try 'd~compareTo(5)'
+call try 'd~compareTo(.nil)'
+call try 'd &lt; .timespan~fromHours(2)'
+call try 'd &lt;&lt;= "x"'
+call try 'd = 5'
+call try 'd \== .object~new'
+call try 'd = .nil'
+call try 'd &lt; .nil'
+call try 'd~compareTo(.sub~new(2017, 6, 30, 5, 6, 7, 8, 0))'
+call try 'd~compareTo(d~copy)'
+.local~log = ''
+call try 'd~compareTo(.probe~new)'
+say 'sent:' .local~log
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class sub subclass datetime
+::class probe
+::method isA
+  .local~log = .local~log 'ISA('arg(1)~id')'
+  return 0
+::method utcDate
+  .local~log = .local~log 'UTCDATE'
+  return 0
+</code></pre>
+<pre><code class="language-output defect=#189">d~compareTo(.timespan~fromHours(2)) =&gt; 88.914
+d~compareTo(.file~new("/t/a")) =&gt; 88.914
+d~compareTo("2017-06-30") =&gt; 88.914
+d~compareTo(5) =&gt; 88.914
+d~compareTo(.nil) =&gt; 88.914
+d &lt; .timespan~fromHours(2) =&gt; 88.914
+d &lt;&lt;= "x" =&gt; 88.914
+d = 5 =&gt; 88.914
+d \== .object~new =&gt; 88.914
+d = .nil =&gt; 0
+d &lt; .nil =&gt; 93.973
+d~compareTo(.sub~new(2017, 6, 30, 5, 6, 7, 8, 0)) =&gt; 0
+d~compareTo(d~copy) =&gt; 0
+d~compareTo(.probe~new) =&gt; 88.914
+sent:  ISA(DateTime)
+</code></pre>
+<div class="rule" id="r-class.datetime.deviation.127"><a href="#r-class.datetime.deviation.127">[class.datetime.deviation.127]</a></div>
+<p><code>+</code> and <code>-</code> with a <a href="timespan.html#r-class.timespan.value"><code>TimeSpan</code></a>, and <code>+</code> of a <code>TimeSpan</code>
+with a <code>DateTime</code>, answer an instance that has the offset of the <code>DateTime</code>
+operand: the fields move by the span and the offset stays, so the instant moves
+by the span. <code>-</code> with a span sends the receiver <code>offset</code> and then <code>new</code> with the
+new microseconds and the answer of <code>offset</code>, as <code>+</code> does, and a <code>TimeSpan</code> plus
+a <code>DateTime</code> sends the argument <code>isA</code> with <code>TimeSpan</code> and <code>isA</code> with <code>DateTime</code>,
+then <code>offset</code>, and then sends the class of the argument <code>new</code> with two
+arguments. ooRexx gives the answer of <code>-</code> with a span, and of a span plus a
+<code>DateTime</code>, the offset of the host's zone, and sends <code>new</code> with one argument.
+The example gives the offsets with explicit values, so that it does not depend
+on the host's zone.</p>
+<pre><code class="language-rexx">d = .datetime~new(2016, 2, 29, 9, 8, 7, 12345, 330)
+t = .timespan~fromSeconds(90)
+say d + t
+say d - t
+say t + d
+say (d + t)~offset (d - t)~offset (t + d)~offset
+say (d - t)~utcIsoDate
+say (t + d)~utcIsoDate
+say (d - .timespan~fromHours(10))~utcIsoDate
+say (.timespan~fromDays(1) + d~toTimezone(-90))~utcIsoDate
+say (d - t)~class~id (t + d)~class~id (t + .sub~new(2016, 2, 29))~class~id
+m = .spy~new(2016, 2, 29, 9, 8, 7, 12345, 330)
+.local~log = ''
+x = m - t
+say 'minus:' .local~log
+.local~log = ''
+x = t + m
+say 'plus:' .local~log
+exit
+::class sub subclass datetime
+::class spy subclass datetime
+::method offset
+  .local~log = .local~log 'OFFSET'
+  forward class (super)
+::method new class
+  .local~log = .local~log 'NEW'arg()
+  forward class (super)
+::method isA
+  .local~log = .local~log 'ISA'
+  forward class (super)
+</code></pre>
+<pre><code class="language-output defect=#190">2016-02-29T09:09:37.012345
+2016-02-29T09:06:37.012345
+2016-02-29T09:09:37.012345
+05:30:00.000000 05:30:00.000000 05:30:00.000000
+2016-02-29T09:06:37.012345+05:30
+2016-02-29T09:09:37.012345+05:30
+2016-02-28T23:08:07.012345+05:30
+2016-03-01T02:08:07.012345-01:30
+DateTime DateTime SUB
+minus:  OFFSET NEW2
+plus:  ISA ISA OFFSET NEW2
+</code></pre>
+<div class="rule" id="r-class.datetime.deviation.128"><a href="#r-class.datetime.deviation.128">[class.datetime.deviation.128]</a></div>
+<p><code>hashCode</code> is computed from the instant, so instances that <code>=</code> finds equal have
+equal hash codes whatever their offsets, and a <code>Set</code> or a <code>Table</code> finds one
+instance by another of the same instant. The hash code of an instance whose
+instant differs may or may not be different, and the example does not compare
+it. ooRexx computes it from the fields: the instances of one instant at two
+offsets have two hash codes, and a <code>Set</code> holds both.</p>
+<pre><code class="language-rexx">d = .datetime~new(2017, 6, 30, 5, 6, 7, 8, 0)
+s = .datetime~new(2017, 6, 30, 6, 6, 7, 8, 60)
+t = .datetime~new(2017, 6, 30, 5, 6, 7, 8, 60)
+say (d = s) (d~hashCode == s~hashCode) (d = t)
+say (d~hashCode == d~copy~hashCode) (d~hashCode == d~toTimezone(-300)~hashCode)
+say d~hashCode~length
+x = .set~new
+x~put(d)
+x~put(s)
+x~put(t)
+say x~items
+y = .table~new
+y[d] = 'found'
+say y[s] y[t]
+</code></pre>
+<pre><code class="language-output defect=#191">1 1 0
+1 1
+8
+2
+found The NIL object
+</code></pre>
+<div class="rule" id="r-class.datetime.deviation.129"><a href="#r-class.datetime.deviation.129">[class.datetime.deviation.129]</a></div>
+<p><code>elapsed</code> answers the span from the instant of the receiver to the current
+instant, so that instances of one instant answer the same span, apart from the
+time between two calls, whatever their offsets and the zone of the host. ooRexx
+subtracts the fields of the receiver from the host's local time, so the answer
+shifts with the offset of the receiver. The example allows five seconds between
+two answers, so it does not depend on the time it runs.</p>
+<pre><code class="language-rexx">d = .datetime~new(2016, 2, 29, 9, 8, 7, 12345, 120)
+say (d == d~toTimezone(-77)) (d == d~toUtcTime)
+say near(d~elapsed, d~toTimezone(-77)~elapsed)
+say near(d~elapsed, d~toUtcTime~elapsed)
+say near(d~elapsed, d~toTimezone(900)~elapsed)
+say near(d~elapsed, .datetime~new - d)
+say d~elapsed~sign .datetime~maxDate~elapsed~sign d~elapsed~class~id
+exit
+near: return abs(arg(1)~totalSeconds - arg(2)~totalSeconds) &lt; 5
+</code></pre>
+<pre><code class="language-output defect=#192">1 1
+1
+1
+1
+1
+1 -1 TimeSpan
+</code></pre>
+<div class="rule" id="r-class.datetime.deviation.130"><a href="#r-class.datetime.deviation.130">[class.datetime.deviation.130]</a></div>
+<p>Every whole-number argument of <code>DateTime</code> is read as a whole-number argument of
+a builtin is: its form by <a href="../conventions.html#r-conv.whole.form">the form rule</a> and its value by
+<a href="../conventions.html#r-conv.whole.digits">the digits rule</a>, so NUMERIC DIGITS of the caller plays no
+part. A value that those rules refuse raises the error that the place gives for
+a number that is not whole, in place of <code>SYNTAX 40.12</code>. So <code>2017.0</code>, <code>2.017E3</code>
+and <code>'2017 '</code> are 2017, <code>2017.0000000001</code> and <code>5.00000000000000001</code> are refused,
+and <code>2017.00000000000000000001</code>, whose fraction lies past the 18th significant
+digit, is 2017. The places are the count of microseconds, the year, the month,
+the day, the hours, the minutes, the seconds, the microseconds and the offset of
+<code>new</code>, the offset of <code>today</code>, of <code>toTimezone</code> and of the <code>from</code> methods that
+read one, the years of <code>addYears</code>, the days of <code>fromBaseDate</code> and the seconds of
+<code>fromTicks</code>. ooRexx refuses some of these forms, <code>2017.0</code> as a year and <code>1.0</code> as
+a number of years among them, reads <code>2017.0000000001</code> as year 1, <code>2.0000000001</code>
+as month 1 and <code>1.0000000001</code> as an hour of 1, and reads the days of
+<code>fromBaseDate</code> rounded to nine digits.</p>
+<pre><code class="language-rexx">call show '.datetime~new(2017.0, 6, 30)~isoDate'
+call show '.datetime~new(2.017E3, 6.0, 30, 1.0, 0, 0, 0, 6E1)~isoDate'
+call show ".datetime~new('2017 ', ' 6', '+3')~isoDate"
+call show ".datetime~new(' 90.0 ')~isoDate"
+call show '.datetime~new(5, 6E1)~utcIsoDate'
+call show '.datetime~fromBaseDate(5.0, 60.0)~utcIsoDate'
+call show ".datetime~fromTicks('5 ', 6E1)~utcIsoDate"
+call show '.datetime~new(2017, 6, 30)~toTimezone(6E1)~offset'
+numeric digits 3
+call show '.datetime~new(2017.0, 6, 30)~isoDate'
+numeric digits 9
+call try '.datetime~new(2017.0000000001, 6, 30)'
+call try '.datetime~new(2017.00000000000000000001, 6, 30)'
+call try '.datetime~new(2017, 6.5E0, 30)'
+call try '.datetime~new(2017, 6, 30, 1.0000000001, 0)'
+call try '.datetime~new(2017, 6, 30, 0, 0, 0, 5.0000000001)'
+call try '.datetime~new(2017, 6, 30, 0, 0, 0, 0, 60.0000000001)'
+call try '.datetime~new(5.0000000001)'
+call try '.datetime~new(5, 60.0000000001)'
+call try '.datetime~today(60.0000000001)'
+call try '.datetime~fromBaseDate(5.0000000001)'
+call try '.datetime~fromBaseDate(5.00000000000000001)'
+call try '.datetime~fromBaseDate(5.000000000000000001)'
+call try '.datetime~fromBaseDate(5, 60.0000000001)'
+call try '.datetime~fromTicks(5.0000000001)'
+call try '.datetime~fromTicks(5, 60.0000000001)'
+call try '.datetime~new(2017, 6, 30)~toTimezone(60.0000000001)'
+call try '.datetime~new(2017, 6, 30)~addYears(1.0)'
+call try '.datetime~new(2017, 6, 30)~addYears(1.0000000001)'
+call try '.datetime~new(2017, 6, 30)~addYears(1000000000)'
+exit
+show:
+  signal on syntax name failed
+  interpret 'say' arg(1)
+  return
+failed: say '=&gt;' condition('o')~code
+  return
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output defect=#193">2017-06-30T00:00:00.000000
+2017-06-30T01:00:00.000000
+2017-06-03T00:00:00.000000
+0001-01-01T00:00:00.000090
+0001-01-01T00:00:00.000005+01:00
+0001-01-06T00:00:00.000000+01:00
+1970-01-01T00:00:05.000000+01:00
+01:00:00.000000
+2017-06-30T00:00:00.000000
+.datetime~new(2017.0000000001, 6, 30) =&gt; 88.907
+.datetime~new(2017.00000000000000000001, 6, 30) =&gt; 2017-06-30T00:00:00.000000
+.datetime~new(2017, 6.5E0, 30) =&gt; 88.907
+.datetime~new(2017, 6, 30, 1.0000000001, 0) =&gt; 88.907
+.datetime~new(2017, 6, 30, 0, 0, 0, 5.0000000001) =&gt; 88.907
+.datetime~new(2017, 6, 30, 0, 0, 0, 0, 60.0000000001) =&gt; 88.907
+.datetime~new(5.0000000001) =&gt; 40.19
+.datetime~new(5, 60.0000000001) =&gt; 88.907
+.datetime~today(60.0000000001) =&gt; 88.918
+.datetime~fromBaseDate(5.0000000001) =&gt; 88.918
+.datetime~fromBaseDate(5.00000000000000001) =&gt; 88.918
+.datetime~fromBaseDate(5.000000000000000001) =&gt; 0001-01-06T00:00:00.000000
+.datetime~fromBaseDate(5, 60.0000000001) =&gt; 88.918
+.datetime~fromTicks(5.0000000001) =&gt; 88.918
+.datetime~fromTicks(5, 60.0000000001) =&gt; 88.918
+.datetime~new(2017, 6, 30)~toTimezone(60.0000000001) =&gt; 88.907
+.datetime~new(2017, 6, 30)~addYears(1.0) =&gt; 2018-06-30T00:00:00.000000
+.datetime~new(2017, 6, 30)~addYears(1.0000000001) =&gt; 88.903
+.datetime~new(2017, 6, 30)~addYears(1000000000) =&gt; 88.903
+</code></pre>
+<div class="rule" id="r-class.datetime.deviation.131"><a href="#r-class.datetime.deviation.131">[class.datetime.deviation.131]</a></div>
+<p>An instance of a subclass of <code>DateTime</code> whose <code>init</code> does not forward to the
+<code>init</code> of <code>DateTime</code> has the value of <code>minDate</code>: 1 January 0001 at
+00:00:00.000000 with the offset 0. Every method works on it as on that value;
+the class of an answer is the class of the receiver where the method says so,
+and a copy of it is one too. ooRexx answers with errors from most methods, or
+with text that is no value.</p>
+<pre><code class="language-rexx">d = .sd~new
+m = .datetime~minDate
+call show 'd d~offset d~fullDate d~isoDate d~utcIsoDate'
+call show '(d = m) (d == m) (d~compareTo(m)) (d~hashCode == m~hashCode)'
+call show 'd~year d~month d~day d~hours d~minutes d~seconds d~microseconds'
+call show 'd~dayName d~weekDay d~yearDay d~ticks d~baseDate d~timeOfDay'
+call show 'd~addDays(1) d~addYears(1) d~toTimezone(60)'
+call show 'd + .timespan~fromHours(1)'
+call show '(d - m) (d - .timespan~new(0))'
+call show 'd~date d~toUtcTime d~copy d~makeString'
+call show 'd~addDays(1)~class~id d~copy~class~id (d~elapsed~sign)'
+exit
+show:
+  signal on syntax name failed
+  interpret 'say' arg(1)
+  return
+failed: say '=&gt;' condition('o')~code
+  return
+::class sd subclass datetime
+::method init
+  nop
+</code></pre>
+<pre><code class="language-output defect=#194">0001-01-01T00:00:00.000000 00:00:00.000000 0 0001-01-01T00:00:00.000000 0001-01-01T00:00:00.000000Z
+1 1 0 1
+0001 1 1 0 0 0 0
+Monday 1 1 -62135596800 0 00:00:00.000000
+0001-01-02T00:00:00.000000 0002-01-01T00:00:00.000000 0001-01-01T01:00:00.000000
+0001-01-01T01:00:00.000000
+00:00:00.000000 0001-01-01T00:00:00.000000
+0001-01-01T00:00:00.000000 0001-01-01T00:00:00.000000 0001-01-01T00:00:00.000000 0001-01-01T00:00:00.000000
+SD SD 1
+</code></pre>
+<div class="rule" id="r-class.datetime.deviation.132"><a href="#r-class.datetime.deviation.132">[class.datetime.deviation.132]</a></div>
+<p><code>fromUtcIsoDate</code> refuses with <code>SYNTAX 88.918</code> every string that is not exactly
+one of the forms that <a href="#r-class.datetime.fromutciso">its rule</a> gives: no blank
+anywhere, a point only with one to six digits after it, an offset of the form
+<code>+hh:mm</code> or <code>-hh:mm</code> with both parts of two digits, minutes up to 59 and the
+whole at most 15:00, and nothing after the <code>Z</code> or the offset. The example shows
+the accepted extremes and, after them, spellings that are refused. ooRexx
+refuses a blank at the start or after a <code>Z</code>, a blank before a <code>Z</code> that follows
+no fraction, and the string that ends in <code> x</code>; it accepts the others, reading
+some in its own way: <code>+02:60</code> as <code>+03:00</code>, a seventh digit of the fraction as
+nothing, and <code>Z</code> after a point as a time with no fraction.</p>
+<pre><code class="language-rexx">base = '2017-06-30T11:08:50'
+say .datetime~fromUtcIsoDate(base'Z')~utcIsoDate
+say .datetime~fromUtcIsoDate(base'.1Z')~utcIsoDate
+say .datetime~fromUtcIsoDate(base'.123456-15:00')~utcIsoDate
+say .datetime~fromUtcIsoDate(base'.5+14:59')~utcIsoDate
+say .datetime~fromUtcIsoDate(base'-00:00')~utcIsoDate
+bad = .array~of(' 'base'Z', base'Z ', base' Z', base'.123456 Z', base'.123456 +02:00',,
+  base'.123456+02:60', base'.123456+14:60', base'.123456+02:00 ', base'.1234567Z',,
+  base'.1234567+01:00', base'.Z', base'.+02:00', base'.123456+2:00',,
+  base'.123456+02:0', base'.123456+02:1', base'.123456+ 02:00',,
+  base'.123456+02 :00', base'.123456+-02:00', base'.123456+0:00',,
+  base'.123456+02:00Z', base'.123456ZZ', base'.123456%Z', base'.123456+02:00 x')
+do s over bad
+  call try s
+end
+exit
+try:
+  signal on syntax name bad
+  r = .datetime~fromUtcIsoDate(arg(1))
+  say '['arg(1)'] =&gt;' r~utcIsoDate
+  return
+bad: say '['arg(1)'] =&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output defect=#195">2017-06-30T11:08:50.000000Z
+2017-06-30T11:08:50.100000Z
+2017-06-30T11:08:50.123456-15:00
+2017-06-30T11:08:50.500000+14:59
+2017-06-30T11:08:50.000000Z
+[ 2017-06-30T11:08:50Z] =&gt; 88.918
+[2017-06-30T11:08:50Z ] =&gt; 88.918
+[2017-06-30T11:08:50 Z] =&gt; 88.918
+[2017-06-30T11:08:50.123456 Z] =&gt; 88.918
+[2017-06-30T11:08:50.123456 +02:00] =&gt; 88.918
+[2017-06-30T11:08:50.123456+02:60] =&gt; 88.918
+[2017-06-30T11:08:50.123456+14:60] =&gt; 88.918
+[2017-06-30T11:08:50.123456+02:00 ] =&gt; 88.918
+[2017-06-30T11:08:50.1234567Z] =&gt; 88.918
+[2017-06-30T11:08:50.1234567+01:00] =&gt; 88.918
+[2017-06-30T11:08:50.Z] =&gt; 88.918
+[2017-06-30T11:08:50.+02:00] =&gt; 88.918
+[2017-06-30T11:08:50.123456+2:00] =&gt; 88.918
+[2017-06-30T11:08:50.123456+02:0] =&gt; 88.918
+[2017-06-30T11:08:50.123456+02:1] =&gt; 88.918
+[2017-06-30T11:08:50.123456+ 02:00] =&gt; 88.918
+[2017-06-30T11:08:50.123456+02 :00] =&gt; 88.918
+[2017-06-30T11:08:50.123456+-02:00] =&gt; 88.918
+[2017-06-30T11:08:50.123456+0:00] =&gt; 88.918
+[2017-06-30T11:08:50.123456+02:00Z] =&gt; 88.918
+[2017-06-30T11:08:50.123456ZZ] =&gt; 88.918
+[2017-06-30T11:08:50.123456%Z] =&gt; 88.918
+[2017-06-30T11:08:50.123456+02:00 x] =&gt; 88.918
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../classes/stem.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../classes/timespan.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../classes/stem.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../classes/timespan.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../assets/version-picker.js"></script>
+
+
+    </div>
+    </body>
+</html>

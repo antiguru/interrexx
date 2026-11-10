@@ -1,0 +1,2069 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>File - The interrexx Language Specification</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../conventions.html"><strong aria-hidden="true">2.</strong> Conventions</a></li><li class="chapter-item expanded "><a href="../lexical/index.html"><strong aria-hidden="true">3.</strong> Lexical structure</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../lexical/characters.html"><strong aria-hidden="true">3.1.</strong> Characters</a></li><li class="chapter-item expanded "><a href="../lexical/comments.html"><strong aria-hidden="true">3.2.</strong> Comments</a></li><li class="chapter-item expanded "><a href="../lexical/literals.html"><strong aria-hidden="true">3.3.</strong> Literals</a></li><li class="chapter-item expanded "><a href="../lexical/symbols.html"><strong aria-hidden="true">3.4.</strong> Symbols</a></li><li class="chapter-item expanded "><a href="../lexical/operators.html"><strong aria-hidden="true">3.5.</strong> Operators and special characters</a></li><li class="chapter-item expanded "><a href="../lexical/clauses.html"><strong aria-hidden="true">3.6.</strong> Clauses</a></li></ol></li><li class="chapter-item expanded "><a href="../numbers/index.html"><strong aria-hidden="true">4.</strong> Numbers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../numbers/formats.html"><strong aria-hidden="true">4.1.</strong> Formats</a></li><li class="chapter-item expanded "><a href="../numbers/limits.html"><strong aria-hidden="true">4.2.</strong> Limits</a></li><li class="chapter-item expanded "><a href="../numbers/arithmetic.html"><strong aria-hidden="true">4.3.</strong> Arithmetic</a></li><li class="chapter-item expanded "><a href="../numbers/settings.html"><strong aria-hidden="true">4.4.</strong> Settings</a></li><li class="chapter-item expanded "><a href="../numbers/comparison.html"><strong aria-hidden="true">4.5.</strong> Comparison</a></li></ol></li><li class="chapter-item expanded "><a href="../expressions/index.html"><strong aria-hidden="true">5.</strong> Expressions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../expressions/terms.html"><strong aria-hidden="true">5.1.</strong> Terms</a></li><li class="chapter-item expanded "><a href="../expressions/variables.html"><strong aria-hidden="true">5.2.</strong> Variables</a></li><li class="chapter-item expanded "><a href="../expressions/concatenation.html"><strong aria-hidden="true">5.3.</strong> Concatenation</a></li><li class="chapter-item expanded "><a href="../expressions/arithmetic.html"><strong aria-hidden="true">5.4.</strong> Arithmetic operators</a></li><li class="chapter-item expanded "><a href="../expressions/comparison.html"><strong aria-hidden="true">5.5.</strong> Comparison operators</a></li><li class="chapter-item expanded "><a href="../expressions/logical.html"><strong aria-hidden="true">5.6.</strong> Logical operators</a></li><li class="chapter-item expanded "><a href="../expressions/messages.html"><strong aria-hidden="true">5.7.</strong> Message operators</a></li></ol></li><li class="chapter-item expanded "><a href="../instructions/index.html"><strong aria-hidden="true">6.</strong> Instructions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../instructions/address.html"><strong aria-hidden="true">6.1.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../instructions/arg.html"><strong aria-hidden="true">6.2.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../instructions/assignment.html"><strong aria-hidden="true">6.3.</strong> Assignments</a></li><li class="chapter-item expanded "><a href="../instructions/call.html"><strong aria-hidden="true">6.4.</strong> CALL</a></li><li class="chapter-item expanded "><a href="../instructions/command.html"><strong aria-hidden="true">6.5.</strong> Commands</a></li><li class="chapter-item expanded "><a href="../instructions/do.html"><strong aria-hidden="true">6.6.</strong> DO</a></li><li class="chapter-item expanded "><a href="../instructions/drop.html"><strong aria-hidden="true">6.7.</strong> DROP</a></li><li class="chapter-item expanded "><a href="../instructions/exit.html"><strong aria-hidden="true">6.8.</strong> EXIT</a></li><li class="chapter-item expanded "><a href="../instructions/expose.html"><strong aria-hidden="true">6.9.</strong> EXPOSE</a></li><li class="chapter-item expanded "><a href="../instructions/forward.html"><strong aria-hidden="true">6.10.</strong> FORWARD</a></li><li class="chapter-item expanded "><a href="../instructions/guard.html"><strong aria-hidden="true">6.11.</strong> GUARD</a></li><li class="chapter-item expanded "><a href="../instructions/if.html"><strong aria-hidden="true">6.12.</strong> IF</a></li><li class="chapter-item expanded "><a href="../instructions/interpret.html"><strong aria-hidden="true">6.13.</strong> INTERPRET</a></li><li class="chapter-item expanded "><a href="../instructions/iterate.html"><strong aria-hidden="true">6.14.</strong> ITERATE</a></li><li class="chapter-item expanded "><a href="../instructions/leave.html"><strong aria-hidden="true">6.15.</strong> LEAVE</a></li><li class="chapter-item expanded "><a href="../instructions/loop.html"><strong aria-hidden="true">6.16.</strong> LOOP</a></li><li class="chapter-item expanded "><a href="../instructions/message.html"><strong aria-hidden="true">6.17.</strong> Message instructions</a></li><li class="chapter-item expanded "><a href="../instructions/nop.html"><strong aria-hidden="true">6.18.</strong> NOP</a></li><li class="chapter-item expanded "><a href="../instructions/numeric.html"><strong aria-hidden="true">6.19.</strong> NUMERIC</a></li><li class="chapter-item expanded "><a href="../instructions/options.html"><strong aria-hidden="true">6.20.</strong> OPTIONS</a></li><li class="chapter-item expanded "><a href="../instructions/parse.html"><strong aria-hidden="true">6.21.</strong> PARSE</a></li><li class="chapter-item expanded "><a href="../instructions/procedure.html"><strong aria-hidden="true">6.22.</strong> PROCEDURE</a></li><li class="chapter-item expanded "><a href="../instructions/pull.html"><strong aria-hidden="true">6.23.</strong> PULL</a></li><li class="chapter-item expanded "><a href="../instructions/push.html"><strong aria-hidden="true">6.24.</strong> PUSH</a></li><li class="chapter-item expanded "><a href="../instructions/queue.html"><strong aria-hidden="true">6.25.</strong> QUEUE</a></li><li class="chapter-item expanded "><a href="../instructions/raise.html"><strong aria-hidden="true">6.26.</strong> RAISE</a></li><li class="chapter-item expanded "><a href="../instructions/reply.html"><strong aria-hidden="true">6.27.</strong> REPLY</a></li><li class="chapter-item expanded "><a href="../instructions/return.html"><strong aria-hidden="true">6.28.</strong> RETURN</a></li><li class="chapter-item expanded "><a href="../instructions/say.html"><strong aria-hidden="true">6.29.</strong> SAY</a></li><li class="chapter-item expanded "><a href="../instructions/select.html"><strong aria-hidden="true">6.30.</strong> SELECT</a></li><li class="chapter-item expanded "><a href="../instructions/signal.html"><strong aria-hidden="true">6.31.</strong> SIGNAL</a></li><li class="chapter-item expanded "><a href="../instructions/trace.html"><strong aria-hidden="true">6.32.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../instructions/use.html"><strong aria-hidden="true">6.33.</strong> USE</a></li></ol></li><li class="chapter-item expanded "><a href="../parsing/index.html"><strong aria-hidden="true">7.</strong> Parsing</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../parsing/templates.html"><strong aria-hidden="true">7.1.</strong> Templates</a></li><li class="chapter-item expanded "><a href="../parsing/patterns.html"><strong aria-hidden="true">7.2.</strong> Patterns</a></li><li class="chapter-item expanded "><a href="../parsing/multiple.html"><strong aria-hidden="true">7.3.</strong> Several strings and case</a></li></ol></li><li class="chapter-item expanded "><a href="../directives/index.html"><strong aria-hidden="true">8.</strong> Directives</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../directives/class.html"><strong aria-hidden="true">8.1.</strong> ::CLASS</a></li><li class="chapter-item expanded "><a href="../directives/method.html"><strong aria-hidden="true">8.2.</strong> ::METHOD</a></li><li class="chapter-item expanded "><a href="../directives/attribute.html"><strong aria-hidden="true">8.3.</strong> ::ATTRIBUTE</a></li><li class="chapter-item expanded "><a href="../directives/constant.html"><strong aria-hidden="true">8.4.</strong> ::CONSTANT</a></li><li class="chapter-item expanded "><a href="../directives/routine.html"><strong aria-hidden="true">8.5.</strong> ::ROUTINE</a></li><li class="chapter-item expanded "><a href="../directives/requires.html"><strong aria-hidden="true">8.6.</strong> ::REQUIRES</a></li><li class="chapter-item expanded "><a href="../directives/options.html"><strong aria-hidden="true">8.7.</strong> ::OPTIONS</a></li><li class="chapter-item expanded "><a href="../directives/resource.html"><strong aria-hidden="true">8.8.</strong> ::RESOURCE</a></li><li class="chapter-item expanded "><a href="../directives/annotate.html"><strong aria-hidden="true">8.9.</strong> ::ANNOTATE</a></li></ol></li><li class="chapter-item expanded "><a href="../conditions/index.html"><strong aria-hidden="true">9.</strong> Conditions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../conditions/traps.html"><strong aria-hidden="true">9.1.</strong> Condition traps</a></li><li class="chapter-item expanded "><a href="../conditions/information.html"><strong aria-hidden="true">9.2.</strong> Condition information</a></li><li class="chapter-item expanded "><a href="../conditions/syntax.html"><strong aria-hidden="true">9.3.</strong> SYNTAX</a></li><li class="chapter-item expanded "><a href="../conditions/error.html"><strong aria-hidden="true">9.4.</strong> ERROR and FAILURE</a></li><li class="chapter-item expanded "><a href="../conditions/halt.html"><strong aria-hidden="true">9.5.</strong> HALT</a></li><li class="chapter-item expanded "><a href="../conditions/novalue.html"><strong aria-hidden="true">9.6.</strong> NOVALUE</a></li><li class="chapter-item expanded "><a href="../conditions/nostring.html"><strong aria-hidden="true">9.7.</strong> NOSTRING</a></li><li class="chapter-item expanded "><a href="../conditions/nomethod.html"><strong aria-hidden="true">9.8.</strong> NOMETHOD</a></li><li class="chapter-item expanded "><a href="../conditions/notready.html"><strong aria-hidden="true">9.9.</strong> NOTREADY</a></li><li class="chapter-item expanded "><a href="../conditions/lostdigits.html"><strong aria-hidden="true">9.10.</strong> LOSTDIGITS</a></li><li class="chapter-item expanded "><a href="../conditions/user.html"><strong aria-hidden="true">9.11.</strong> USER conditions</a></li><li class="chapter-item expanded "><a href="../conditions/errors.html"><strong aria-hidden="true">9.12.</strong> Error numbers</a></li></ol></li><li class="chapter-item expanded "><a href="../classes/index.html"><strong aria-hidden="true">10.</strong> Classes</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../classes/methods.html"><strong aria-hidden="true">10.1.</strong> Method search</a></li><li class="chapter-item expanded "><a href="../classes/object.html"><strong aria-hidden="true">10.2.</strong> Object</a></li><li class="chapter-item expanded "><a href="../classes/class.html"><strong aria-hidden="true">10.3.</strong> Class</a></li><li class="chapter-item expanded "><a href="../classes/string.html"><strong aria-hidden="true">10.4.</strong> String</a></li><li class="chapter-item expanded "><a href="../classes/method.html"><strong aria-hidden="true">10.5.</strong> Method</a></li><li class="chapter-item expanded "><a href="../classes/routine.html"><strong aria-hidden="true">10.6.</strong> Routine</a></li><li class="chapter-item expanded "><a href="../classes/package.html"><strong aria-hidden="true">10.7.</strong> Package</a></li><li class="chapter-item expanded "><a href="../classes/message.html"><strong aria-hidden="true">10.8.</strong> Message</a></li><li class="chapter-item expanded "><a href="../classes/messagenotification.html"><strong aria-hidden="true">10.9.</strong> MessageNotification</a></li><li class="chapter-item expanded "><a href="../classes/alarmnotification.html"><strong aria-hidden="true">10.10.</strong> AlarmNotification</a></li><li class="chapter-item expanded "><a href="../classes/collection.html"><strong aria-hidden="true">10.11.</strong> Collection</a></li><li class="chapter-item expanded "><a href="../classes/mapcollection.html"><strong aria-hidden="true">10.12.</strong> MapCollection</a></li><li class="chapter-item expanded "><a href="../classes/orderedcollection.html"><strong aria-hidden="true">10.13.</strong> OrderedCollection</a></li><li class="chapter-item expanded "><a href="../classes/setcollection.html"><strong aria-hidden="true">10.14.</strong> SetCollection</a></li><li class="chapter-item expanded "><a href="../classes/array.html"><strong aria-hidden="true">10.15.</strong> Array</a></li><li class="chapter-item expanded "><a href="../classes/list.html"><strong aria-hidden="true">10.16.</strong> List</a></li><li class="chapter-item expanded "><a href="../classes/queue.html"><strong aria-hidden="true">10.17.</strong> Queue</a></li><li class="chapter-item expanded "><a href="../classes/circularqueue.html"><strong aria-hidden="true">10.18.</strong> CircularQueue</a></li><li class="chapter-item expanded "><a href="../classes/directory.html"><strong aria-hidden="true">10.19.</strong> Directory</a></li><li class="chapter-item expanded "><a href="../classes/stringtable.html"><strong aria-hidden="true">10.20.</strong> StringTable</a></li><li class="chapter-item expanded "><a href="../classes/properties.html"><strong aria-hidden="true">10.21.</strong> Properties</a></li><li class="chapter-item expanded "><a href="../classes/table.html"><strong aria-hidden="true">10.22.</strong> Table</a></li><li class="chapter-item expanded "><a href="../classes/identitytable.html"><strong aria-hidden="true">10.23.</strong> IdentityTable</a></li><li class="chapter-item expanded "><a href="../classes/relation.html"><strong aria-hidden="true">10.24.</strong> Relation</a></li><li class="chapter-item expanded "><a href="../classes/bag.html"><strong aria-hidden="true">10.25.</strong> Bag</a></li><li class="chapter-item expanded "><a href="../classes/set.html"><strong aria-hidden="true">10.26.</strong> Set</a></li><li class="chapter-item expanded "><a href="../classes/stem.html"><strong aria-hidden="true">10.27.</strong> Stem</a></li><li class="chapter-item expanded "><a href="../classes/datetime.html"><strong aria-hidden="true">10.28.</strong> DateTime</a></li><li class="chapter-item expanded "><a href="../classes/timespan.html"><strong aria-hidden="true">10.29.</strong> TimeSpan</a></li><li class="chapter-item expanded "><a href="../classes/comparable.html"><strong aria-hidden="true">10.30.</strong> Comparable</a></li><li class="chapter-item expanded "><a href="../classes/orderable.html"><strong aria-hidden="true">10.31.</strong> Orderable</a></li><li class="chapter-item expanded "><a href="../classes/comparators.html"><strong aria-hidden="true">10.32.</strong> Comparators</a></li><li class="chapter-item expanded "><a href="../classes/mutablebuffer.html"><strong aria-hidden="true">10.33.</strong> MutableBuffer</a></li><li class="chapter-item expanded "><a href="../classes/buffer.html"><strong aria-hidden="true">10.34.</strong> Buffer</a></li><li class="chapter-item expanded "><a href="../classes/pointer.html"><strong aria-hidden="true">10.35.</strong> Pointer</a></li><li class="chapter-item expanded "><a href="../classes/weakreference.html"><strong aria-hidden="true">10.36.</strong> WeakReference</a></li><li class="chapter-item expanded "><a href="../classes/variablereference.html"><strong aria-hidden="true">10.37.</strong> VariableReference</a></li><li class="chapter-item expanded "><a href="../classes/file.html" class="active"><strong aria-hidden="true">10.38.</strong> File</a></li><li class="chapter-item expanded "><a href="../classes/rexxcontext.html"><strong aria-hidden="true">10.39.</strong> RexxContext</a></li><li class="chapter-item expanded "><a href="../classes/stackframe.html"><strong aria-hidden="true">10.40.</strong> StackFrame</a></li><li class="chapter-item expanded "><a href="../classes/rexxinfo.html"><strong aria-hidden="true">10.41.</strong> RexxInfo</a></li><li class="chapter-item expanded "><a href="../classes/traceobject.html"><strong aria-hidden="true">10.42.</strong> TraceObject</a></li><li class="chapter-item expanded "><a href="../classes/validate.html"><strong aria-hidden="true">10.43.</strong> Validate</a></li><li class="chapter-item expanded "><a href="../classes/singleton.html"><strong aria-hidden="true">10.44.</strong> Singleton</a></li><li class="chapter-item expanded "><a href="../classes/alarm.html"><strong aria-hidden="true">10.45.</strong> Alarm</a></li><li class="chapter-item expanded "><a href="../classes/ticker.html"><strong aria-hidden="true">10.46.</strong> Ticker</a></li><li class="chapter-item expanded "><a href="../classes/monitor.html"><strong aria-hidden="true">10.47.</strong> Monitor</a></li><li class="chapter-item expanded "><a href="../classes/eventsemaphore.html"><strong aria-hidden="true">10.48.</strong> EventSemaphore</a></li><li class="chapter-item expanded "><a href="../classes/mutexsemaphore.html"><strong aria-hidden="true">10.49.</strong> MutexSemaphore</a></li><li class="chapter-item expanded "><a href="../classes/commandhandler.html"><strong aria-hidden="true">10.50.</strong> CommandHandler</a></li><li class="chapter-item expanded "><a href="../classes/nativecommandhandler.html"><strong aria-hidden="true">10.51.</strong> NativeCommandHandler</a></li><li class="chapter-item expanded "><a href="../classes/commandcontext.html"><strong aria-hidden="true">10.52.</strong> CommandContext</a></li><li class="chapter-item expanded "><a href="../classes/commandinput.html"><strong aria-hidden="true">10.53.</strong> CommandInput</a></li><li class="chapter-item expanded "><a href="../classes/commandoutput.html"><strong aria-hidden="true">10.54.</strong> CommandOutput</a></li><li class="chapter-item expanded "><a href="../classes/rexxqueue.html"><strong aria-hidden="true">10.55.</strong> RexxQueue</a></li><li class="chapter-item expanded "><a href="../classes/supplier.html"><strong aria-hidden="true">10.56.</strong> Supplier</a></li><li class="chapter-item expanded "><a href="../classes/streamsupplier.html"><strong aria-hidden="true">10.57.</strong> StreamSupplier</a></li><li class="chapter-item expanded "><a href="../classes/regularexpression.html"><strong aria-hidden="true">10.58.</strong> RegularExpression</a></li></ol></li><li class="chapter-item expanded "><a href="../builtins/index.html"><strong aria-hidden="true">11.</strong> Built-in functions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../builtins/abbrev.html"><strong aria-hidden="true">11.1.</strong> ABBREV</a></li><li class="chapter-item expanded "><a href="../builtins/abs.html"><strong aria-hidden="true">11.2.</strong> ABS</a></li><li class="chapter-item expanded "><a href="../builtins/address.html"><strong aria-hidden="true">11.3.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../builtins/arg.html"><strong aria-hidden="true">11.4.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../builtins/b2x.html"><strong aria-hidden="true">11.5.</strong> B2X</a></li><li class="chapter-item expanded "><a href="../builtins/beep.html"><strong aria-hidden="true">11.6.</strong> BEEP</a></li><li class="chapter-item expanded "><a href="../builtins/bitand.html"><strong aria-hidden="true">11.7.</strong> BITAND</a></li><li class="chapter-item expanded "><a href="../builtins/bitor.html"><strong aria-hidden="true">11.8.</strong> BITOR</a></li><li class="chapter-item expanded "><a href="../builtins/bitxor.html"><strong aria-hidden="true">11.9.</strong> BITXOR</a></li><li class="chapter-item expanded "><a href="../builtins/c2d.html"><strong aria-hidden="true">11.10.</strong> C2D</a></li><li class="chapter-item expanded "><a href="../builtins/c2x.html"><strong aria-hidden="true">11.11.</strong> C2X</a></li><li class="chapter-item expanded "><a href="../builtins/center.html"><strong aria-hidden="true">11.12.</strong> CENTER</a></li><li class="chapter-item expanded "><a href="../builtins/changestr.html"><strong aria-hidden="true">11.13.</strong> CHANGESTR</a></li><li class="chapter-item expanded "><a href="../builtins/charin.html"><strong aria-hidden="true">11.14.</strong> CHARIN</a></li><li class="chapter-item expanded "><a href="../builtins/charout.html"><strong aria-hidden="true">11.15.</strong> CHAROUT</a></li><li class="chapter-item expanded "><a href="../builtins/chars.html"><strong aria-hidden="true">11.16.</strong> CHARS</a></li><li class="chapter-item expanded "><a href="../builtins/compare.html"><strong aria-hidden="true">11.17.</strong> COMPARE</a></li><li class="chapter-item expanded "><a href="../builtins/condition.html"><strong aria-hidden="true">11.18.</strong> CONDITION</a></li><li class="chapter-item expanded "><a href="../builtins/copies.html"><strong aria-hidden="true">11.19.</strong> COPIES</a></li><li class="chapter-item expanded "><a href="../builtins/countstr.html"><strong aria-hidden="true">11.20.</strong> COUNTSTR</a></li><li class="chapter-item expanded "><a href="../builtins/d2c.html"><strong aria-hidden="true">11.21.</strong> D2C</a></li><li class="chapter-item expanded "><a href="../builtins/d2x.html"><strong aria-hidden="true">11.22.</strong> D2X</a></li><li class="chapter-item expanded "><a href="../builtins/datatype.html"><strong aria-hidden="true">11.23.</strong> DATATYPE</a></li><li class="chapter-item expanded "><a href="../builtins/date.html"><strong aria-hidden="true">11.24.</strong> DATE</a></li><li class="chapter-item expanded "><a href="../builtins/delstr.html"><strong aria-hidden="true">11.25.</strong> DELSTR</a></li><li class="chapter-item expanded "><a href="../builtins/delword.html"><strong aria-hidden="true">11.26.</strong> DELWORD</a></li><li class="chapter-item expanded "><a href="../builtins/digits.html"><strong aria-hidden="true">11.27.</strong> DIGITS</a></li><li class="chapter-item expanded "><a href="../builtins/directory.html"><strong aria-hidden="true">11.28.</strong> DIRECTORY</a></li><li class="chapter-item expanded "><a href="../builtins/endlocal.html"><strong aria-hidden="true">11.29.</strong> ENDLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/errortext.html"><strong aria-hidden="true">11.30.</strong> ERRORTEXT</a></li><li class="chapter-item expanded "><a href="../builtins/filespec.html"><strong aria-hidden="true">11.31.</strong> FILESPEC</a></li><li class="chapter-item expanded "><a href="../builtins/form.html"><strong aria-hidden="true">11.32.</strong> FORM</a></li><li class="chapter-item expanded "><a href="../builtins/format.html"><strong aria-hidden="true">11.33.</strong> FORMAT</a></li><li class="chapter-item expanded "><a href="../builtins/fuzz.html"><strong aria-hidden="true">11.34.</strong> FUZZ</a></li><li class="chapter-item expanded "><a href="../builtins/gc.html"><strong aria-hidden="true">11.35.</strong> GC</a></li><li class="chapter-item expanded "><a href="../builtins/insert.html"><strong aria-hidden="true">11.36.</strong> INSERT</a></li><li class="chapter-item expanded "><a href="../builtins/lastpos.html"><strong aria-hidden="true">11.37.</strong> LASTPOS</a></li><li class="chapter-item expanded "><a href="../builtins/left.html"><strong aria-hidden="true">11.38.</strong> LEFT</a></li><li class="chapter-item expanded "><a href="../builtins/length.html"><strong aria-hidden="true">11.39.</strong> LENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/linein.html"><strong aria-hidden="true">11.40.</strong> LINEIN</a></li><li class="chapter-item expanded "><a href="../builtins/lineout.html"><strong aria-hidden="true">11.41.</strong> LINEOUT</a></li><li class="chapter-item expanded "><a href="../builtins/lines.html"><strong aria-hidden="true">11.42.</strong> LINES</a></li><li class="chapter-item expanded "><a href="../builtins/lower.html"><strong aria-hidden="true">11.43.</strong> LOWER</a></li><li class="chapter-item expanded "><a href="../builtins/max.html"><strong aria-hidden="true">11.44.</strong> MAX</a></li><li class="chapter-item expanded "><a href="../builtins/min.html"><strong aria-hidden="true">11.45.</strong> MIN</a></li><li class="chapter-item expanded "><a href="../builtins/overlay.html"><strong aria-hidden="true">11.46.</strong> OVERLAY</a></li><li class="chapter-item expanded "><a href="../builtins/pos.html"><strong aria-hidden="true">11.47.</strong> POS</a></li><li class="chapter-item expanded "><a href="../builtins/qualify.html"><strong aria-hidden="true">11.48.</strong> QUALIFY</a></li><li class="chapter-item expanded "><a href="../builtins/queued.html"><strong aria-hidden="true">11.49.</strong> QUEUED</a></li><li class="chapter-item expanded "><a href="../builtins/random.html"><strong aria-hidden="true">11.50.</strong> RANDOM</a></li><li class="chapter-item expanded "><a href="../builtins/reverse.html"><strong aria-hidden="true">11.51.</strong> REVERSE</a></li><li class="chapter-item expanded "><a href="../builtins/right.html"><strong aria-hidden="true">11.52.</strong> RIGHT</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncadd.html"><strong aria-hidden="true">11.53.</strong> RXFUNCADD</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncdrop.html"><strong aria-hidden="true">11.54.</strong> RXFUNCDROP</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncquery.html"><strong aria-hidden="true">11.55.</strong> RXFUNCQUERY</a></li><li class="chapter-item expanded "><a href="../builtins/rxqueue.html"><strong aria-hidden="true">11.56.</strong> RXQUEUE</a></li><li class="chapter-item expanded "><a href="../builtins/setlocal.html"><strong aria-hidden="true">11.57.</strong> SETLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/sign.html"><strong aria-hidden="true">11.58.</strong> SIGN</a></li><li class="chapter-item expanded "><a href="../builtins/sourceline.html"><strong aria-hidden="true">11.59.</strong> SOURCELINE</a></li><li class="chapter-item expanded "><a href="../builtins/space.html"><strong aria-hidden="true">11.60.</strong> SPACE</a></li><li class="chapter-item expanded "><a href="../builtins/stream.html"><strong aria-hidden="true">11.61.</strong> STREAM</a></li><li class="chapter-item expanded "><a href="../builtins/strip.html"><strong aria-hidden="true">11.62.</strong> STRIP</a></li><li class="chapter-item expanded "><a href="../builtins/substr.html"><strong aria-hidden="true">11.63.</strong> SUBSTR</a></li><li class="chapter-item expanded "><a href="../builtins/subword.html"><strong aria-hidden="true">11.64.</strong> SUBWORD</a></li><li class="chapter-item expanded "><a href="../builtins/symbol.html"><strong aria-hidden="true">11.65.</strong> SYMBOL</a></li><li class="chapter-item expanded "><a href="../builtins/time.html"><strong aria-hidden="true">11.66.</strong> TIME</a></li><li class="chapter-item expanded "><a href="../builtins/trace.html"><strong aria-hidden="true">11.67.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../builtins/translate.html"><strong aria-hidden="true">11.68.</strong> TRANSLATE</a></li><li class="chapter-item expanded "><a href="../builtins/trunc.html"><strong aria-hidden="true">11.69.</strong> TRUNC</a></li><li class="chapter-item expanded "><a href="../builtins/upper.html"><strong aria-hidden="true">11.70.</strong> UPPER</a></li><li class="chapter-item expanded "><a href="../builtins/userid.html"><strong aria-hidden="true">11.71.</strong> USERID</a></li><li class="chapter-item expanded "><a href="../builtins/value.html"><strong aria-hidden="true">11.72.</strong> VALUE</a></li><li class="chapter-item expanded "><a href="../builtins/var.html"><strong aria-hidden="true">11.73.</strong> VAR</a></li><li class="chapter-item expanded "><a href="../builtins/verify.html"><strong aria-hidden="true">11.74.</strong> VERIFY</a></li><li class="chapter-item expanded "><a href="../builtins/word.html"><strong aria-hidden="true">11.75.</strong> WORD</a></li><li class="chapter-item expanded "><a href="../builtins/wordindex.html"><strong aria-hidden="true">11.76.</strong> WORDINDEX</a></li><li class="chapter-item expanded "><a href="../builtins/wordlength.html"><strong aria-hidden="true">11.77.</strong> WORDLENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/wordpos.html"><strong aria-hidden="true">11.78.</strong> WORDPOS</a></li><li class="chapter-item expanded "><a href="../builtins/words.html"><strong aria-hidden="true">11.79.</strong> WORDS</a></li><li class="chapter-item expanded "><a href="../builtins/x2b.html"><strong aria-hidden="true">11.80.</strong> X2B</a></li><li class="chapter-item expanded "><a href="../builtins/x2c.html"><strong aria-hidden="true">11.81.</strong> X2C</a></li><li class="chapter-item expanded "><a href="../builtins/x2d.html"><strong aria-hidden="true">11.82.</strong> X2D</a></li><li class="chapter-item expanded "><a href="../builtins/xrange.html"><strong aria-hidden="true">11.83.</strong> XRANGE</a></li></ol></li><li class="chapter-item expanded "><a href="../deviations.html"><strong aria-hidden="true">12.</strong> Deviations</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The interrexx Language Specification</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="file"><a class="header" href="#file">File</a></h1>
+<p class="references">rexxref: Builtin Classes &gt; Utility Classes &gt; File Class; Builtin Classes &gt; Utility Classes &gt; File Class &gt; isCaseSensitive (Class Method); Builtin Classes &gt; Utility Classes &gt; File Class &gt; listRoots (Class Method); Builtin Classes &gt; Utility Classes &gt; File Class &gt; pathSeparator (Class Method); Builtin Classes &gt; Utility Classes &gt; File Class &gt; readChars (Class Method); Builtin Classes &gt; Utility Classes &gt; File Class &gt; readLines (Class Method); Builtin Classes &gt; Utility Classes &gt; File Class &gt; searchPath (Class Method); Builtin Classes &gt; Utility Classes &gt; File Class &gt; separator (Class Method); Builtin Classes &gt; Utility Classes &gt; File Class &gt; temporaryPath (Class Method); Builtin Classes &gt; Utility Classes &gt; File Class &gt; writeChars (Class Method); Builtin Classes &gt; Utility Classes &gt; File Class &gt; writeLines (Class Method); Builtin Classes &gt; Utility Classes &gt; File Class &gt; absoluteFile; Builtin Classes &gt; Utility Classes &gt; File Class &gt; absolutePath; Builtin Classes &gt; Utility Classes &gt; File Class &gt; canRead; Builtin Classes &gt; Utility Classes &gt; File Class &gt; canWrite; Builtin Classes &gt; Utility Classes &gt; File Class &gt; compareTo; Builtin Classes &gt; Utility Classes &gt; File Class &gt; delete; Builtin Classes &gt; Utility Classes &gt; File Class &gt; exists; Builtin Classes &gt; Utility Classes &gt; File Class &gt; extension; Builtin Classes &gt; Utility Classes &gt; File Class &gt; hashCode; Builtin Classes &gt; Utility Classes &gt; File Class &gt; init; Builtin Classes &gt; Utility Classes &gt; File Class &gt; isCaseSensitive; Builtin Classes &gt; Utility Classes &gt; File Class &gt; isDirectory; Builtin Classes &gt; Utility Classes &gt; File Class &gt; isFile; Builtin Classes &gt; Utility Classes &gt; File Class &gt; isHidden; Builtin Classes &gt; Utility Classes &gt; File Class &gt; lastAccessed (Attribute); Builtin Classes &gt; Utility Classes &gt; File Class &gt; lastModified (Attribute); Builtin Classes &gt; Utility Classes &gt; File Class &gt; length; Builtin Classes &gt; Utility Classes &gt; File Class &gt; list; Builtin Classes &gt; Utility Classes &gt; File Class &gt; listFiles; Builtin Classes &gt; Utility Classes &gt; File Class &gt; makeDir; Builtin Classes &gt; Utility Classes &gt; File Class &gt; makeDirs; Builtin Classes &gt; Utility Classes &gt; File Class &gt; makeString; Builtin Classes &gt; Utility Classes &gt; File Class &gt; name; Builtin Classes &gt; Utility Classes &gt; File Class &gt; parent; Builtin Classes &gt; Utility Classes &gt; File Class &gt; parentFile; Builtin Classes &gt; Utility Classes &gt; File Class &gt; path; Builtin Classes &gt; Utility Classes &gt; File Class &gt; pathSeparator; Builtin Classes &gt; Utility Classes &gt; File Class &gt; renameTo; Builtin Classes &gt; Utility Classes &gt; File Class &gt; separator; Builtin Classes &gt; Utility Classes &gt; File Class &gt; setReadOnly; Builtin Classes &gt; Utility Classes &gt; File Class &gt; setWritable; Builtin Classes &gt; Utility Classes &gt; File Class &gt; string; Builtin Classes &gt; Utility Classes &gt; Orderable Class &gt; Comparison Methods</p>
+<p class="deviations">Deviations: D34, D109, D118, D126, D137</p>
+<p>A <code>File</code> holds a path, and its methods ask about or change the file or
+directory that the path names. The path may name something that does not
+exist: the methods look at the file system when they are called.
+The class also has methods that read and write whole files, search a list of
+directories for a file, and name the places where files live. The rules of this
+page are those of a Unix-like system, where the components of a path are
+separated by slashes, as <a href="../builtins/qualify.html">QUALIFY</a> assumes; the paths of
+other systems are not specified. Nor are the choices of the file system and the
+host: whether names that differ in case are different names, the home directory,
+the temporary directory, the size of a directory, how precisely a file keeps its
+times, and what the user may do with a file that the examples did not make. The
+examples make files and directories under names of their own, derive every
+expected value from what they made, and remove what they made. The class
+inherits <a href="comparable.html#r-class.comparable.creation"><code>Comparable</code></a> and <code>Orderable</code>, and orders
+its instances by their absolute paths; the comparison operators of an instance
+are <a href="orderable.html#r-class.orderable.compare">those of <code>Orderable</code></a>.</p>
+<h2 id="the-class"><a class="header" href="#the-class">The class</a></h2>
+<div class="rule" id="r-class.file.creation"><a href="#r-class.file.creation">[class.file.creation]</a></div>
+<p><code>File</code> has the instance methods <code>absoluteFile</code>, <code>absolutePath</code>, <code>canRead</code>,
+<code>canWrite</code>, <code>compareTo</code>, <code>delete</code>, <code>exists</code>, <code>extension</code>, <code>hashCode</code>, <code>init</code>,
+<code>isCaseSensitive</code>, <code>isDirectory</code>, <code>isFile</code>, <code>isHidden</code>, <code>lastAccessed</code>,
+<code>lastAccessed=</code>, <code>lastModified</code>, <code>lastModified=</code>, <code>length</code>, <code>list</code>,
+<code>listFiles</code>, <code>makeDir</code>, <code>makeDirs</code>, <code>makeString</code>, <code>name</code>, <code>parent</code>,
+<code>parentFile</code>, <code>path</code>, <code>pathSeparator</code>, <code>renameTo</code>, <code>separator</code>, <code>setReadOnly</code>,
+<code>setWritable</code> and <code>string</code>, and the class methods <code>isCaseSensitive</code>,
+<code>listRoots</code>, <code>pathSeparator</code>, <code>readChars</code>, <code>readLines</code>, <code>searchPath</code>,
+<code>separator</code>, <code>temporaryPath</code>, <code>writeChars</code> and <code>writeLines</code>, besides the <code>new</code>
+that every class has. It may have private methods besides these; they are not
+part of this specification. Its superclasses are <code>Object</code>, <code>Comparable</code> and
+<code>Orderable</code>, in that order. An instance has no <code>unknown</code> method, so a message
+that <a href="methods.html#r-class.methods.unknown">the method search</a> does not resolve raises
+<a href="../conditions/nomethod.html#r-cond.nomethod.raise">NOMETHOD</a>, as <a href="index.html#r-class.index.errors">the error rule of the
+chapter</a> says. It is not a string either, so a string
+method such as <code>left</code> raises <code>SYNTAX 97.1</code>.</p>
+<pre><code class="language-rexx">do c over .file~superclasses
+  say c~id
+end
+names = 'absoluteFile absolutePath canRead canWrite compareTo delete exists',
+  'extension hashCode init isCaseSensitive isDirectory isFile isHidden',
+  'lastAccessed lastAccessed= lastModified lastModified= length list',
+  'listFiles makeDir makeDirs makeString name parent parentFile path',
+  'pathSeparator renameTo separator setReadOnly setWritable string'
+found = 0
+do n over names~makearray(' ')
+  found += .file~method(n)~isA(.method)
+end
+say found 'of' names~words
+cnames = 'isCaseSensitive listRoots pathSeparator readChars readLines',
+  'searchPath separator temporaryPath writeChars writeLines new'
+found = 0
+do n over cnames~makearray(' ')
+  found += .file~hasMethod(n)
+end
+say found 'of' cnames~words
+say .file~new('x')~hasMethod('UNKNOWN')
+signal on syntax name bad
+say .file~new('x')~left(1)
+bad: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">Object
+Comparable
+Orderable
+34 of 34
+11 of 11
+0
+97.1
+</code></pre>
+<h2 id="making-a-file"><a class="header" href="#making-a-file">Making a File</a></h2>
+<div class="rule" id="r-class.file.new"><a href="#r-class.file.new">[class.file.new]</a></div>
+<p><code>new</code> sends <code>init</code> (<a href="index.html#r-class.index.new">the new rule</a>). <code>init</code> takes a <code>path</code>
+and an optional <code>dir</code>. The <code>path</code> is read as <a href="index.html#r-class.index.string">a string
+argument</a>: a <code>File</code> given as <code>path</code> is read by its
+<code>makeString</code>, which is its absolute path, and an argument with no string value
+raises <code>SYNTAX 88.909</code>. A call with no argument raises <code>SYNTAX 93.901</code>, one
+with a third argument <code>93.902</code>, and one with <code>dir</code> and no <code>path</code> <code>93.903</code>
+(<a href="index.html#r-class.index.args.count">the argument rules</a>). The path that the instance
+holds is made in these steps. First <code>path</code> and <code>dir</code> each lose their trailing
+slashes, but a lone slash keeps its slash: <code>a//b///</code> is <code>a//b</code>, <code>///</code> is <code>/</code>,
+and the empty string stays empty; slashes anywhere else are kept. Then, when
+<code>dir</code> is omitted or <code>.nil</code>, the path is the <code>path</code> that is left. Otherwise it
+is <code>dir</code>, a slash and <code>path</code>, where the slash is left out when <code>dir</code> ends in
+one or <code>path</code> begins with one, and where both supply one a single slash
+stands. A <code>dir</code> that is the empty string counts as a <code>dir</code>, so <code>a</code> with an
+empty <code>dir</code> is <code>/a</code>. A <code>dir</code> that is a <code>File</code> is read as its absolute path,
+and any other <code>dir</code> as a <a href="index.html#r-class.index.string">string argument</a>, with the
+error that a <code>path</code> has. The text of the path is kept as it was written, apart
+from these steps: <code>path</code> (<a href="#r-class.file.path">the path rule</a>) answers it, and
+a <code>File</code> made with a relative <code>path</code> or <code>dir</code> is relative to the current
+directory when it is made (<a href="#r-class.file.absolute">the absolute rule</a>). <code>init</code>
+sent to an instance again changes that instance as <code>new</code> made it, and answers
+nothing.</p>
+<pre><code class="language-rexx">say .file~new('a//b///')~path .file~new('///')~path '['.file~new('')~path']'
+say .file~new('a', 'd')~path .file~new('a/', 'd//')~path,
+    .file~new('/a', 'd')~path
+say .file~new('a', '/d/')~path .file~new('', 'd')~path .file~new('a', '')~path
+say .file~new('a', .nil)~path .file~new('a', )~path .file~new('/a', '/')~path
+say .file~new('a', .file~new('/x/y'))~path
+say (.file~new('a', .file~new('q'))~path == directory() || '/q/a')
+say .file~new(12)~path .file~new('a b', 'c d')~path .file~new('a\b')~path
+signal on syntax name b1
+say .file~new
+b1: say condition('o')~code
+signal on syntax name b2
+say .file~new('a', 'b', 'c')
+b2: say condition('o')~code
+signal on syntax name b3
+say .file~new(, 'd')
+b3: say condition('o')~code
+signal on syntax name b4
+say .file~new(.nil)
+b4: say condition('o')~code
+signal on syntax name b5
+say .file~new('a', .object~new)
+b5: say condition('o')~code
+f = .file~new('first')
+f~init('second', 'dir')
+say f~path
+signal on syntax name b6
+x = f~init('third')
+b6: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">a//b / []
+d/a d/a d/a
+/d/a d/ /a
+a a /a
+/x/y/a
+1
+12 c d/a b a\b
+93.901
+93.902
+93.903
+88.909
+88.909
+dir/second
+91.999
+</code></pre>
+<div class="rule" id="r-class.file.new.sends"><a href="#r-class.file.new.sends">[class.file.new.sends]</a></div>
+<p><code>init</code> sends the receiver <code>separator</code> before it forms the path, and the answer
+is the separator that it removes at the end of <code>path</code> and <code>dir</code> and puts between
+them; it is sent once when <code>dir</code> is omitted or <code>.nil</code> and three times when a
+<code>dir</code> is given. A <code>File</code> given as <code>dir</code> is sent <code>isA</code> with the argument <code>.File</code>
+and, when that answers true, <code>absolutePath</code>, before the first <code>separator</code>; any
+other <code>dir</code> is read as a string. A <code>File</code> given as <code>path</code> is read by its
+<code>makeString</code>, after the first <code>separator</code>, and <code>path</code> is sent no <code>isA</code>. A <code>File</code>
+that a method of <code>File</code> makes, such as the answer of <code>absoluteFile</code>, is made by
+<code>new</code> sent to the class of the receiver, so these messages are sent to it too,
+and a subclass of <code>File</code> gets instances of itself. The answer of <code>separator</code>
+plays no part in the absolute path, which is made as <a href="#r-class.file.absolute">the absolute
+rule</a> says.</p>
+<pre><code class="language-rexx">.environment~log = .array~new
+f = .logfile~new('a')
+call show 'new path'
+g = .logfile~new('b', f)
+call show 'new path, File dir'
+h = .logfile~new(f)
+call show 'new File path'
+i = .logfile~new('b', 'dd')
+call show 'new path, string dir'
+x = f~absoluteFile
+call show 'absoluteFile'
+say .sharp~new('a##')~path .sharp~new('a/b', 'd#')~path
+exit
+show:
+  line = ''
+  last = ''
+  do w over .environment~log
+    if w \== last then line = line w
+    last = w
+  end
+  say arg(1)':' line
+  .environment~log~empty
+  return
+::class logfile subclass file
+::method separator
+  .environment~log~append('separator')
+  forward class (super)
+::method absolutePath
+  .environment~log~append('absolutePath')
+  forward class (super)
+::method makeString
+  .environment~log~append('makeString')
+  forward class (super)
+::method isA
+  .environment~log~append('isA' arg(1)~id)
+  forward class (super)
+::class sharp subclass file
+::method separator
+  return '#'
+</code></pre>
+<pre><code class="language-output">new path:  separator
+new path, File dir:  isA File absolutePath separator
+new File path:  separator makeString
+new path, string dir:  separator
+absoluteFile:  separator
+a d#a/b
+</code></pre>
+<h2 id="the-path-and-its-text"><a class="header" href="#the-path-and-its-text">The path and its text</a></h2>
+<div class="rule" id="r-class.file.path"><a href="#r-class.file.path">[class.file.path]</a></div>
+<p><code>path</code> answers the path as <code>init</code> made it (<a href="#r-class.file.new">the new rule</a>):
+a string that is not changed when the current directory changes and that need
+not be an absolute path. <code>string</code> answers the same string, and <code>makeString</code>
+answers the absolute path (<a href="#r-class.file.absolute">the absolute rule</a>). Each
+takes no argument; one raises <code>SYNTAX 93.902</code>. A <code>File</code> that is written by
+<code>say</code>, joined to a string or given where a string argument is read has its
+<code>makeString</code> as its text, since <code>makeString</code> is what <a href="index.html#r-class.index.string">the string
+rule</a> finds first, so those show the absolute path; the
+answer of <code>string</code> is the path. <code>objectName</code>, <code>defaultName</code> and <code>objectName=</code>
+are those of <code>Object</code>: the name of an instance is <code>a File</code> unless it was set,
+and setting it changes neither <code>path</code> nor <code>string</code>.</p>
+<pre><code class="language-rexx">f = .file~new('p/q')
+say f~path f~string (f~makeString == directory() || '/p/q')
+say (f == .file~new('p/q')) (f~string == 'p/q')
+say (('['f']') == '['directory() || '/p/q]') (f 'x' == f~makeString 'x')
+say f~objectName '|' f~defaultName
+f~objectName = 'nm'
+say f~objectName f~string f~path
+signal on syntax name b1
+say f~path(1)
+b1: say condition('o')~code
+signal on syntax name b2
+say f~string(1)
+b2: say condition('o')~code
+signal on syntax name b3
+say f~makeString(1)
+b3: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">p/q p/q 1
+1 1
+1 1
+a File | a File
+nm p/q p/q
+93.902
+93.902
+93.902
+</code></pre>
+<div class="rule" id="r-class.file.absolute"><a href="#r-class.file.absolute">[class.file.absolute]</a></div>
+<p><code>absolutePath</code> answers the absolute path, a string, and <code>absoluteFile</code> a new
+<code>File</code> that holds it as its path. Both take no argument. The absolute path is
+worked out when the instance is made, from the current directory at that moment,
+and a later change of the current directory does not change it. It is what
+<a href="../builtins/qualify.html#r-bif.qualify.relative">QUALIFY</a> answers for the path at that moment: an
+absolute path is <a href="../builtins/qualify.html#r-bif.qualify.normal">cleaned up</a> and a relative one is
+qualified against the current directory, the empty path has the empty string as
+its absolute path (<a href="../builtins/qualify.html#r-bif.qualify.null">the null rule</a>), and <code>..</code> follows
+<a href="#r-class.file.deviation.34">Deviation 34</a>. <code>absoluteFile</code> of an absolute <code>File</code>
+holds the same path.</p>
+<pre><code class="language-rexx">here = directory()
+say .file~new('/a/./b//c/../d')~absolutePath .file~new('/a/b/')~absolutePath
+say .file~new('/..')~absolutePath .file~new('/x/y/../..')~absolutePath
+say (.file~new('p/q')~absolutePath == here || '/p/q')
+say (.file~new('./p/../q')~absolutePath == here || '/q')
+say (.file~new('.')~absolutePath == here) (.file~new('')~absolutePath == '')
+say (.file~new('~/x')~absolutePath \== here || '/~/x')
+say (.file~new('x~')~absolutePath == here || '/x~')
+f = .file~new('p/q')
+g = f~absoluteFile
+say g~class~id (g~path == f~absolutePath) (g~absoluteFile~path == g~path)
+d = 'spec-file-abs.tmp'
+junk = .file~new(d)~makeDirs
+before = .file~new('x')
+call directory d
+after = .file~new('x')
+say (before~absolutePath == here || '/x'),
+    (after~absolutePath == here || '/' || d || '/x')
+call directory here
+say (after~absolutePath == here || '/' || d || '/x') after~path
+junk = .file~new(d)~delete
+signal on syntax name bad
+say f~absolutePath(1)
+bad: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">/a/b/d /a/b
+/ /
+1
+1
+1 1
+1
+1
+File 1 1
+1 1
+1 x
+93.902
+</code></pre>
+<div class="rule" id="r-class.file.separators"><a href="#r-class.file.separators">[class.file.separators]</a></div>
+<p><code>separator</code> answers the string that separates the components of a path, and
+<code>pathSeparator</code> the string that separates the directories of a search path. On
+a Unix-like system they are <code>/</code> and <code>:</code>. Each is an instance method and a
+class method, and answers the same on both sides, a string. They take no
+argument; one raises <code>SYNTAX 93.902</code>. The class methods are the ones of <a href="#r-class.file.separators.class-side">the
+class-side rule</a>.</p>
+<pre><code class="language-rexx">f = .file~new('x')
+say f~separator f~pathSeparator f~separator~class~id
+signal on syntax name b1
+say f~separator(1)
+b1: say condition('o')~code
+signal on syntax name b2
+say f~pathSeparator(1)
+b2: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">/ : String
+93.902
+93.902
+</code></pre>
+<div class="rule" id="r-class.file.separators.class-side"><a href="#r-class.file.separators.class-side">[class.file.separators.class-side]</a></div>
+<p>The class methods <code>separator</code> and <code>pathSeparator</code> answer the same strings as
+the instance methods (<a href="#r-class.file.separators">the separators rule</a>). They
+take no argument; one raises <code>SYNTAX 93.902</code>.</p>
+<pre><code class="language-rexx">say .file~separator .file~pathSeparator
+say (.file~separator == .file~new('x')~separator)
+say (.file~pathSeparator == .file~new('x')~pathSeparator)
+signal on syntax name b1
+say .file~separator(1)
+b1: say condition('o')~code
+signal on syntax name b2
+say .file~pathSeparator(1)
+b2: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">/ :
+1
+1
+93.902
+93.902
+</code></pre>
+<div class="rule" id="r-class.file.iscasesensitive"><a href="#r-class.file.iscasesensitive">[class.file.iscasesensitive]</a></div>
+<p><code>isCaseSensitive</code> answers 1 when the file system that holds the path tells
+names apart by their case, and 0 when it does not; for a path that does not
+exist it answers for the deepest directory of the path that does. Which it is
+depends on the host and is not specified. It takes no argument; one raises
+<code>SYNTAX 93.902</code>. The answer decides how <a href="#r-class.file.compareto"><code>compareTo</code></a>
+compares paths. The example derives what it prints from the answer.</p>
+<pre><code class="language-rexx">d = .file~new('spec-file-case.tmp')
+junk = d~makeDir
+n = .file~new('spec-file-case.tmp/no/such/place')
+say (n~isCaseSensitive == d~isCaseSensitive)
+a = .file~new('spec-file-case.tmp/A')
+b = .file~new('spec-file-case.tmp/a')
+if a~isCaseSensitive then want = -1
+else want = 0
+say (a~compareTo(b) == want)
+say (.file~new('/')~isCaseSensitive == .file~isCaseSensitive)
+signal on syntax name bad
+say a~isCaseSensitive(1)
+bad: say condition('o')~code
+junk = d~delete
+</code></pre>
+<pre><code class="language-output">1
+1
+1
+93.902
+</code></pre>
+<h2 id="the-parts-of-a-path"><a class="header" href="#the-parts-of-a-path">The parts of a path</a></h2>
+<div class="rule" id="r-class.file.name"><a href="#r-class.file.name">[class.file.name]</a></div>
+<p><code>name</code> answers the last component of the absolute path, and the empty string
+for the root. <code>extension</code> answers what follows the last period of that name,
+and the empty string when the name has no period, when its period is its last
+character, or when its only period is its first character, as in a name such
+as <code>.rc</code>; a name such as <code>.b.c</code> has the extension <code>c</code>. A period in a
+directory of the path plays no part. Both take no argument; one raises
+<code>SYNTAX 93.902</code>. As they work on the absolute path, the name of <code>a/..</code> is
+the name of the directory that holds <code>a</code>, and the name of <code>.</code> is the name of
+the current directory. The messages that they send are those of <a href="#r-class.file.name.sends">the next
+rule</a>.</p>
+<pre><code class="language-rexx">f = .file~new('/p/q/x.tar.gz')
+say f~name f~extension
+say '['.file~new('/a/.rc')~extension']' '['.file~new('/a/.b.c')~extension']'
+say '['.file~new('/a/z.')~extension']' '['.file~new('/a.b/z')~extension']'
+say '['.file~new('/a/z')~extension']' '['.file~new('/')~name']'
+say .file~new('/a/b/')~name .file~new('/a/b/../c')~name,
+    .file~new('/a/b/.')~name
+say .file~new('rel')~name (.file~new('.')~name == .file~new(directory())~name)
+signal on syntax name b1
+say .file~new('x')~name(1)
+b1: say condition('o')~code
+signal on syntax name b2
+say .file~new('x')~extension(1)
+b2: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">x.tar.gz gz
+[] [c]
+[] []
+[] []
+b c b
+rel 1
+93.902
+93.902
+</code></pre>
+<div class="rule" id="r-class.file.name.sends"><a href="#r-class.file.name.sends">[class.file.name.sends]</a></div>
+<p><code>name</code> sends the receiver <code>separator</code>, and <code>extension</code> sends it <code>separator</code>
+and then <code>name</code>, which sends <code>separator</code> once more. The answer of <code>separator</code>
+is the string that is looked for in the absolute path, so that a receiver
+whose <code>separator</code> answers <code>#</code> has as its name what follows the last <code>#</code> of its
+absolute path.</p>
+<pre><code class="language-rexx">.environment~log = .array~new
+f = .logfile~new('/p/q.txt')
+.environment~log~empty
+x = f~name
+call show 'name'
+x = f~extension
+call show 'extension'
+say .sharp~new('a#b#')~name .sharp~new('a#b.c')~extension
+exit
+show:
+  say arg(1)':' .environment~log~toString(,' ')
+  .environment~log~empty
+  return
+::class logfile subclass file
+::method separator
+  .environment~log~append('separator')
+  forward class (super)
+::method name
+  .environment~log~append('name')
+  forward class (super)
+::class sharp subclass file
+::method separator
+  return '#'
+</code></pre>
+<pre><code class="language-output">name: name separator
+extension: separator name separator
+b c
+</code></pre>
+<div class="rule" id="r-class.file.parent"><a href="#r-class.file.parent">[class.file.parent]</a></div>
+<p><code>parent</code> answers the absolute path without its last component, a string,
+and <code>.nil</code> when the absolute path is the root or is empty; the parent of <code>/a</code>
+is <code>/</code>. <code>parentFile</code> answers a new <code>File</code> with that string as its path, made
+by <code>new</code> sent to the class of the receiver, and <code>.nil</code> when <code>parent</code> answers
+<code>.nil</code>. Both take no argument; one raises <code>SYNTAX 93.902</code>. The messages that
+they send are those of <a href="#r-class.file.parent.sends">the rule after the next</a>.</p>
+<pre><code class="language-rexx">here = directory()
+say .file~new('/a/b/c')~parent .file~new('/a')~parent,
+    .file~new('/a/b/../c')~parent
+say (.file~new('/')~parent == .nil) (.file~new('')~parent == .nil)
+say (.file~new('/')~parentFile == .nil),
+    (.file~new('/a')~parentFile~parentFile == .nil)
+say .file~new('/a/b/c')~parentFile~class~id,
+    .file~new('/a/b/c')~parentFile~path
+say (.file~new('rel')~parent == here),
+    (.file~new('rel')~parentFile~path == here)
+say .sub~new('/a/b')~parentFile~class~id
+signal on syntax name b1
+say .file~new('x')~parent(1)
+b1: say condition('o')~code
+signal on syntax name b2
+say .file~new('x')~parentFile(1)
+b2: say condition('o')~code
+::class sub subclass file
+</code></pre>
+<pre><code class="language-output">/a/b / /a
+1 1
+1 1
+File /a/b
+1 1
+SUB
+93.902
+93.902
+</code></pre>
+<div class="rule" id="r-class.file.parent.sends"><a href="#r-class.file.parent.sends">[class.file.parent.sends]</a></div>
+<p><code>parent</code> sends the receiver <code>separator</code>, and <code>parentFile</code> sends it <code>parent</code>
+and then <code>new</code> to its class, whose <code>init</code> sends <code>separator</code> as <a href="#r-class.file.new.sends">the new
+rule</a> says.</p>
+<pre><code class="language-rexx">.environment~log = .array~new
+f = .logfile~new('/p/q.txt')
+.environment~log~empty
+x = f~parent
+say .environment~log~toString(,' ')
+.environment~log~empty
+x = f~parentFile
+line = ''
+last = ''
+do w over .environment~log
+  if w \== last then line = line w
+  last = w
+end
+say line~strip
+::class logfile subclass file
+::method separator
+  .environment~log~append('separator')
+  forward class (super)
+::method parent
+  .environment~log~append('parent')
+  forward class (super)
+</code></pre>
+<pre><code class="language-output">parent separator
+parent separator
+</code></pre>
+<h2 id="asking-about-a-file"><a class="header" href="#asking-about-a-file">Asking about a file</a></h2>
+<div class="rule" id="r-class.file.exists"><a href="#r-class.file.exists">[class.file.exists]</a></div>
+<p><code>exists</code> answers 1 when something, a file or a directory, is at the absolute
+path, and 0 otherwise, also for the empty path. <code>isFile</code> answers 1 when that is
+a file and <code>isDirectory</code> when it is a directory, and each answers 0 where
+nothing is. <code>length</code> answers the size of a file in bytes, and 0 where nothing
+is; the size of a directory is not specified. <code>canRead</code> and <code>canWrite</code> answer 1
+when the file exists and the process may read it or write to it, and 0
+otherwise. <code>isHidden</code> answers 1 for an existing file or directory when its name
+or the name of any directory above it in its absolute path starts with a period,
+so for a relative path the directories of the current directory count, and 0
+otherwise, so 0 where nothing is. None of them takes an argument; one raises
+<code>SYNTAX 93.902</code>.</p>
+<blockquote>
+<p><strong>Note.</strong> The example assumes that no directory above the examples' current
+directory has a name that starts with a period, and that the user is not the
+superuser, for whom <code>canWrite</code> would not follow the permissions.</p>
+</blockquote>
+<pre><code class="language-rexx">d = .file~new('spec-file-query.tmp')
+f = .file~new('spec-file-query.tmp/data.txt')
+n = .file~new('spec-file-query.tmp/none')
+say d~exists d~isDirectory d~isFile f~exists n~exists
+junk = d~makeDir
+call lineout f~path, 'abc'
+call lineout f~path
+say f~exists f~isFile f~isDirectory f~length
+say d~exists d~isDirectory d~isFile
+say n~exists n~isFile n~isDirectory n~length n~canRead n~canWrite n~isHidden
+say f~canRead f~canWrite d~canRead d~canWrite (d~length &gt;= 0)
+h = .file~new('spec-file-query.tmp/.dot')
+say h~isHidden
+call lineout h~path, 'x'
+call lineout h~path
+say h~isHidden f~isHidden d~isHidden
+k = .file~new('spec-file-query.tmp/.hd/sub')
+say k~isHidden
+junk = k~makeDirs
+say k~isHidden k~parentFile~isHidden
+say .file~new('/')~exists .file~new('/')~isDirectory .file~new('')~exists
+line = ''
+names = 'exists isFile isDirectory length canRead canWrite isHidden'
+do m over names~makearray(' ')
+  line = line try(m)
+end
+say line~strip
+junk = h~delete
+junk = k~delete
+junk = k~parentFile~delete
+junk = f~delete
+junk = d~delete
+exit
+try:
+  signal on syntax name bad
+  interpret 'r = f~' || arg(1) || '(1)'
+  return 'none'
+bad: return condition('o')~code
+</code></pre>
+<pre><code class="language-output">0 0 0 0 0
+1 1 0 4
+1 1 0
+0 0 0 0 0 0 0
+1 1 1 1 1
+0
+1 0 0
+0
+1 1
+1 1 0
+93.902 93.902 93.902 93.902 93.902 93.902 93.902
+</code></pre>
+<h2 id="changing-files-and-directories"><a class="header" href="#changing-files-and-directories">Changing files and directories</a></h2>
+<div class="rule" id="r-class.file.delete"><a href="#r-class.file.delete">[class.file.delete]</a></div>
+<p><code>delete</code> removes the file or the empty directory at the absolute path and
+answers 1, and answers 0 when there is nothing there, when the directory is not
+empty, when it cannot remove it, and when it is a file that the process may not
+write to, a read-only one as <code>setReadOnly</code> makes: the permissions of a directory
+do not keep it from being removed. It takes no argument; one raises
+<code>SYNTAX 93.902</code>. It sends the receiver <code>isDirectory</code>, and <a href="#r-class.file.delete.isdirectory">the next
+rule</a> says what its answer decides.</p>
+<pre><code class="language-rexx">d = .file~new('spec-file-delete.tmp')
+f = .file~new('spec-file-delete.tmp/f')
+say d~delete
+junk = d~makeDir
+call lineout f~path, 'x'
+call lineout f~path
+say d~delete d~exists
+f~setReadOnly
+say f~delete f~exists
+f~setWritable
+say f~delete f~exists f~delete
+d~setReadOnly
+say d~delete d~exists
+signal on syntax name bad
+say d~delete(1)
+bad: say condition('o')~code
+.environment~log = .array~new
+junk = .logfile~new('spec-file-delete.tmp')~delete
+say .environment~log~toString(,' ')
+::class logfile subclass file
+::method isDirectory
+  .environment~log~append('isDirectory')
+  forward class (super)
+</code></pre>
+<pre><code class="language-output">0
+0 1
+0 1
+1 0 0
+1 0
+93.902
+isDirectory
+</code></pre>
+<div class="rule" id="r-class.file.makedir"><a href="#r-class.file.makedir">[class.file.makedir]</a></div>
+<p><code>makeDir</code> makes the directory that the last component of the absolute path
+names, and answers 1. It makes no directory above it: it answers 0 when a
+parent is missing, when something is at the path already, a file or a
+directory, and when it cannot make it. <code>makeDirs</code> answers 0 without making
+anything when something is at the path. Otherwise it sends the receiver
+<code>makeDir</code>, and answers 1 when that answers 1. When it does not, it sends the
+receiver <code>parentFile</code> and <code>makeDirs</code> to what that answers, and then sends
+<code>makeDir</code> to the receiver again and answers what that answers; so it makes
+every directory that is missing from the top down, and answers 0 when one of
+them cannot be made. Neither takes an argument; one raises <code>SYNTAX 93.902</code>.</p>
+<pre><code class="language-rexx">a = .file~new('spec-file-mk.tmp')
+b = .file~new('spec-file-mk.tmp/b/c')
+say b~makeDir b~exists
+say a~makeDir a~makeDir a~makeDirs
+say b~makeDirs b~isDirectory b~makeDirs b~parentFile~makeDir
+f = .file~new('spec-file-mk.tmp/file')
+call lineout f~path, 'x'
+call lineout f~path
+say f~makeDir f~makeDirs .file~new('spec-file-mk.tmp/file/sub')~makeDirs
+say f~isFile
+signal on syntax name b1
+say a~makeDir(1)
+b1: say condition('o')~code
+signal on syntax name b2
+say a~makeDirs(1)
+b2: say condition('o')~code
+.environment~log = .array~new
+x = .logfile~new('spec-file-mk.tmp/p/q')~makeDirs
+say .environment~log~section(1, 4)~toString(,' ')
+say .environment~log~section(5)~toString(,' ')
+junk = f~delete
+junk = .file~new('spec-file-mk.tmp/p/q')~delete
+junk = .file~new('spec-file-mk.tmp/p')~delete
+junk = b~delete
+junk = b~parentFile~delete
+junk = a~delete
+::class logfile subclass file
+::method makeDir
+  .environment~log~append(self~name 'makeDir')
+  forward class (super)
+::method makeDirs
+  .environment~log~append(self~name 'makeDirs')
+  forward class (super)
+::method exists
+  .environment~log~append(self~name 'exists')
+  forward class (super)
+::method parentFile
+  .environment~log~append(self~name 'parentFile')
+  forward class (super)
+</code></pre>
+<pre><code class="language-output">0 0
+1 0 0
+1 1 0 0
+0 0 0
+1
+93.902
+93.902
+q makeDirs q exists q makeDir q parentFile
+p makeDirs p exists p makeDir q makeDir
+</code></pre>
+<div class="rule" id="r-class.file.delete.isdirectory"><a href="#r-class.file.delete.isdirectory">[class.file.delete.isdirectory]</a></div>
+<p>When the answer of <code>isDirectory</code> that <code>delete</code> is sent is false, <code>delete</code>
+removes only a file, and a directory at the path is left, answering 0. When it
+is true, <code>delete</code> removes an empty directory or a file.</p>
+<pre><code class="language-rexx">d = 'spec-file-del-dir.tmp'
+junk = .file~new(d'/one')~makeDirs
+say .no~new(d'/one')~delete .file~new(d'/one')~exists
+call lineout d'/f', 'x'
+call lineout d'/f'
+say .yes~new(d'/f')~delete .file~new(d'/f')~exists
+junk = .file~new(d'/f')~delete
+junk = .file~new(d'/one')~delete
+junk = .file~new(d)~delete
+::class no subclass file
+::method isDirectory
+  return 0
+::class yes subclass file
+::method isDirectory
+  return 1
+</code></pre>
+<pre><code class="language-output defect=#179">0 1
+1 0
+</code></pre>
+<div class="rule" id="r-class.file.renameto"><a href="#r-class.file.renameto">[class.file.renameto]</a></div>
+<p><code>renameTo</code> takes one argument, the <code>File</code> that is to take the place of the
+receiver, and moves the file or directory at the absolute path of the receiver
+to the absolute path of the argument. It answers 1 when that was done, and 0
+when it was not: when nothing is at the receiver's path, when the argument's
+parent directory is missing, or when a file is at the argument's path already,
+the receiver's own path included, or a directory as <a href="#r-class.file.renameto.directory">the next
+rule</a> says. The receiver keeps its own path, so
+its <code>exists</code> answers 0 afterwards and the argument's answers 1; a directory
+takes its contents along. The argument is sent <code>isA</code> with <code>.File</code>; one that
+answers false raises <code>SYNTAX 88.914</code>, as does a string or <code>.nil</code>, and no
+argument raises <code>SYNTAX 93.901</code>, a second one <code>93.902</code>. What happens when a
+directory is at the argument's path is the subject of <a href="#r-class.file.renameto.directory">the next
+rule</a>.</p>
+<pre><code class="language-rexx">d = 'spec-file-ren.tmp'
+junk = .file~new(d'/in')~makeDirs
+call lineout d'/a.txt', 'one'
+call lineout d'/a.txt'
+call lineout d'/b.txt', 'two!'
+call lineout d'/b.txt'
+a = .file~new(d'/a.txt')
+b = .file~new(d'/b.txt')
+c = .file~new(d'/c.txt')
+say a~renameTo(b) a~exists b~length
+say a~renameTo(c) a~exists c~exists a~path
+say c~renameTo(c) c~renameTo(.file~new(d'/nodir/c.txt')) c~exists
+m = .file~new(d'/in/moved.txt')
+say c~renameTo(m) c~exists m~length
+call lineout d'/in/x', 'x'
+call lineout d'/in/x'
+say .file~new(d'/in')~renameTo(.file~new(d'/out'))
+say .file~new(d'/in')~exists .file~new(d'/out/x')~exists
+call try 'a~renameTo("text")'
+call try 'a~renameTo(.nil)'
+call try 'a~renameTo'
+call try 'a~renameTo(b, b)'
+.environment~log = .array~new
+call try 'a~renameTo(.spy~new)'
+say .environment~log~toString(,' ')
+junk = .file~new(d'/out/x')~delete
+junk = .file~new(d'/out/moved.txt')~delete
+junk = .file~new(d'/out')~delete
+junk = b~delete
+junk = .file~new(d)~delete
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt; no error' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class spy
+::method isA
+  .environment~log~append('isA' arg(1)~id)
+  return 0
+</code></pre>
+<pre><code class="language-output">0 1 5
+1 0 1 spec-file-ren.tmp/a.txt
+0 0 1
+1 0 4
+1
+0 1
+a~renameTo("text") =&gt; 88.914
+a~renameTo(.nil) =&gt; 88.914
+a~renameTo =&gt; 93.901
+a~renameTo(b, b) =&gt; 93.902
+a~renameTo(.spy~new) =&gt; 88.914
+isA File
+</code></pre>
+<div class="rule" id="r-class.file.renameto.directory"><a href="#r-class.file.renameto.directory">[class.file.renameto.directory]</a></div>
+<p>A directory takes the place of an empty directory that is at the argument's
+path: <code>renameTo</code> replaces it and answers 1. It answers 0, and moves nothing,
+when the directory at the argument's path is not empty, when a file is to take
+the place of a directory or a directory the place of a file, and when the
+argument's path is the receiver's own path or lies inside the receiver's
+directory.</p>
+<pre><code class="language-rexx">d = 'spec-file-ren-dir.tmp'
+junk = .file~new(d'/from/inner')~makeDirs
+junk = .file~new(d'/empty')~makeDirs
+junk = .file~new(d'/full/x')~makeDirs
+call lineout d'/f', 'x'
+call lineout d'/f'
+say .file~new(d'/from')~renameTo(.file~new(d'/empty')),
+    .file~new(d'/from')~exists .file~new(d'/empty/inner')~exists
+say .file~new(d'/empty')~renameTo(.file~new(d'/full')),
+    .file~new(d'/f')~renameTo(.file~new(d'/full/x')),
+    .file~new(d'/full')~renameTo(.file~new(d'/f')),
+    .file~new(d'/full')~renameTo(.file~new(d'/full/x/in')),
+    .file~new(d'/full/x')~renameTo(.file~new(d'/full/x'))
+junk = .file~new(d'/f')~delete
+junk = .file~new(d'/full/x')~delete
+junk = .file~new(d'/full')~delete
+junk = .file~new(d'/empty/inner')~delete
+junk = .file~new(d'/empty')~delete
+junk = .file~new(d'/from/inner')~delete
+junk = .file~new(d'/from')~delete
+junk = .file~new(d)~delete
+</code></pre>
+<pre><code class="language-output defect=#177">1 0 1
+0 0 0 0 0
+</code></pre>
+<div class="rule" id="r-class.file.permissions"><a href="#r-class.file.permissions">[class.file.permissions]</a></div>
+<p><code>setReadOnly</code> clears the write permission of the file or directory at the
+absolute path for its owner, its group and everybody else, and <code>setWritable</code>
+sets it for all three; neither changes the other permissions, and neither
+does anything where nothing is. Neither answers anything, so a program that
+uses what one answers raises <code>SYNTAX 91.999</code>, and neither takes an argument;
+one raises <code>SYNTAX 93.902</code>. For a user other than the superuser, <code>canWrite</code>
+answers 0 after <code>setReadOnly</code> and 1 after <code>setWritable</code>.</p>
+<pre><code class="language-rexx">f = .file~new('spec-file-perm.tmp')
+call lineout f~path, 'x'
+call lineout f~path
+address system 'chmod 600' f~path
+call mode 'start'
+f~setReadOnly
+call mode 'read only'
+say f~canRead f~canWrite
+f~setWritable
+call mode 'writable'
+say f~canRead f~canWrite
+address system 'chmod 644' f~path
+f~setReadOnly
+call mode 'from 644'
+f~setWritable
+call mode 'again'
+.file~new('spec-file-perm-none.tmp')~setReadOnly
+.file~new('spec-file-perm-none.tmp')~setWritable
+say .file~new('spec-file-perm-none.tmp')~exists
+signal on syntax name b1
+x = f~setReadOnly
+b1: say condition('o')~code
+signal on syntax name b2
+f~setWritable(1)
+b2: say condition('o')~code
+f~setWritable
+junk = f~delete
+exit
+mode:
+  address system 'ls -ld' f~path with output stem o.
+  say arg(1)':' o.1~left(10)
+  return
+</code></pre>
+<pre><code class="language-output">start: -rw-------
+read only: -r--------
+1 0
+writable: -rw--w--w-
+1 1
+from 644: -r--r--r--
+again: -rw-rw-rw-
+0
+91.999
+93.902
+</code></pre>
+<h2 id="times"><a class="header" href="#times">Times</a></h2>
+<div class="rule" id="r-class.file.lastmodified"><a href="#r-class.file.lastmodified">[class.file.lastmodified]</a></div>
+<p><code>lastModified</code> answers when the file or directory at the absolute path was
+last changed, as a <a href="datetime.html#r-class.datetime.creation"><code>DateTime</code></a> in the time zone of
+the host, with the host's offset, which is not specified; it answers <code>.nil</code>
+where nothing is. It takes no argument; one raises <code>SYNTAX 93.902</code>. A file
+system may keep a time with less precision than a microsecond, so the examples
+use whole seconds. The answer after <a href="#r-class.file.lastmodified-set">the set
+rule</a> has the date and the time of day that
+were set.</p>
+<pre><code class="language-rexx">f = .file~new('spec-file-time.tmp')
+say (f~lastModified == .nil) (f~lastAccessed == .nil)
+call lineout f~path, 'x'
+call lineout f~path
+f~lastModified = .datetime~new(2003, 1, 15, 12, 5, 6, 0, 0)
+m = f~lastModified
+say m~class~id m~isoDate
+signal on syntax name bad
+say f~lastModified(1)
+bad: say condition('o')~code
+junk = f~delete
+</code></pre>
+<pre><code class="language-output">1 1
+DateTime 2003-01-15T12:05:06.000000
+93.902
+</code></pre>
+<div class="rule" id="r-class.file.lastmodified-set"><a href="#r-class.file.lastmodified-set">[class.file.lastmodified-set]</a></div>
+<p><code>lastModified=</code> takes a <code>DateTime</code> and sets the time at which the file or
+directory at the absolute path was last changed to the date and the time of
+day of its fields, as read in the host's time zone: the offset of the argument
+plays no part. It does nothing where nothing is, and makes no file. The
+argument is sent <code>isA</code> with <code>.DateTime</code>; one that answers false raises
+<code>SYNTAX 88.914</code>, and so does a string, a number, <code>.nil</code> or a <code>TimeSpan</code>. Sent
+as a message, <code>lastModified=</code> takes exactly one argument: none raises
+<code>SYNTAX 93.901</code> and a second one <code>93.902</code>.</p>
+<pre><code class="language-rexx">f = .file~new('spec-file-time.tmp')
+call lineout f~path, 'x'
+call lineout f~path
+d = .datetime~new(2003, 1, 15, 12, 5, 6, 0, 0)
+e = .datetime~new(2004, 2, 16, 7, 8, 9, 0, 120)
+f~lastModified = d
+say f~lastModified~isoDate
+f~lastModified = e
+say f~lastModified~isoDate
+n = .file~new('spec-file-time-none.tmp')
+n~lastModified = d
+say n~exists
+call try 'f~"LASTMODIFIED="("text")'
+call try 'f~"LASTMODIFIED="(.nil)'
+call try 'f~"LASTMODIFIED="(5)'
+call try 'f~"LASTMODIFIED="(.timespan~new(1))'
+call try 'f~"LASTMODIFIED="'
+.environment~log = .array~new
+call try 'f~"LASTMODIFIED="(.spy~new)'
+say .environment~log~toString(,' ')
+call try 'f~"LASTMODIFIED="(d, d)'
+say f~lastModified~isoDate
+junk = f~delete
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt; no error'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class spy
+::method isA
+  .environment~log~append('isA' arg(1)~id)
+  return 0
+</code></pre>
+<pre><code class="language-output">2003-01-15T12:05:06.000000
+2004-02-16T07:08:09.000000
+0
+f~"LASTMODIFIED="("text") =&gt; 88.914
+f~"LASTMODIFIED="(.nil) =&gt; 88.914
+f~"LASTMODIFIED="(5) =&gt; 88.914
+f~"LASTMODIFIED="(.timespan~new(1)) =&gt; 88.914
+f~"LASTMODIFIED=" =&gt; 93.901
+f~"LASTMODIFIED="(.spy~new) =&gt; 88.914
+isA DateTime
+f~"LASTMODIFIED="(d, d) =&gt; 93.902
+2004-02-16T07:08:09.000000
+</code></pre>
+<div class="rule" id="r-class.file.lastaccessed"><a href="#r-class.file.lastaccessed">[class.file.lastaccessed]</a></div>
+<p><code>lastAccessed</code> answers when the file or directory at the absolute path was
+last used, as a <a href="datetime.html#r-class.datetime.creation"><code>DateTime</code></a> as <a href="#r-class.file.lastmodified"><code>lastModified</code>
+does</a>, and <code>.nil</code> where nothing is. Not every file
+system keeps the time of last use, and some do not update it when a file is
+read; an example can rely on the answer only after the time was set. It takes
+no argument; one raises <code>SYNTAX 93.902</code>.</p>
+<pre><code class="language-rexx">f = .file~new('spec-file-access.tmp')
+say (f~lastAccessed == .nil)
+call lineout f~path, 'x'
+call lineout f~path
+f~lastAccessed = .datetime~new(2002, 3, 4, 5, 6, 7, 0, 0)
+a = f~lastAccessed
+say a~class~id a~isoDate
+signal on syntax name bad
+say f~lastAccessed(1)
+bad: say condition('o')~code
+junk = f~delete
+</code></pre>
+<pre><code class="language-output">1
+DateTime 2002-03-04T05:06:07.000000
+93.902
+</code></pre>
+<div class="rule" id="r-class.file.lastaccessed-set"><a href="#r-class.file.lastaccessed-set">[class.file.lastaccessed-set]</a></div>
+<p><code>lastAccessed=</code> takes a <code>DateTime</code> and sets the time of last use of the file
+or directory at the absolute path as <a href="#r-class.file.lastmodified-set"><code>lastModified=</code>
+does</a>, with the same checks and errors, and
+does nothing where nothing is.</p>
+<pre><code class="language-rexx">f = .file~new('spec-file-access.tmp')
+call lineout f~path, 'x'
+call lineout f~path
+f~lastAccessed = .datetime~new(2002, 3, 4, 5, 6, 7, 0, 120)
+say f~lastAccessed~isoDate
+n = .file~new('spec-file-access-none.tmp')
+n~lastAccessed = .datetime~new(2002, 3, 4, 5, 6, 7, 0, 0)
+say n~exists
+signal on syntax name b1
+f~"LASTACCESSED="("text")
+b1: say condition('o')~code
+signal on syntax name b2
+f~"LASTACCESSED="
+b2: say condition('o')~code
+signal on syntax name b3
+f~"LASTACCESSED="(1, 2)
+b3: say condition('o')~code
+junk = f~delete
+</code></pre>
+<pre><code class="language-output">2002-03-04T05:06:07.000000
+0
+88.914
+93.901
+93.902
+</code></pre>
+<h2 id="the-contents-of-a-directory"><a class="header" href="#the-contents-of-a-directory">The contents of a directory</a></h2>
+<div class="rule" id="r-class.file.list"><a href="#r-class.file.list">[class.file.list]</a></div>
+<p><code>list</code> answers an <code>Array</code> of the names of the entries of the directory at the
+absolute path, as strings, without the entries <code>.</code> and <code>..</code>; hidden entries are
+included. The names are in no order that is specified. An empty directory
+answers an empty array, and a path that is no directory, a file or nothing,
+answers <code>.nil</code>. <code>listFiles</code> answers an <code>Array</code> of <code>File</code> objects for the same
+entries, in the same order, and <code>.nil</code> where <code>list</code> does. It sends the receiver
+<code>list</code>, and makes each <code>File</code> by sending <code>new</code> to the class of the receiver,
+with the name of the entry as <code>path</code> and the receiver itself as <code>dir</code>, which
+<code>init</code> sends <code>isA</code> and <code>absolutePath</code> (<a href="#r-class.file.new.sends">the sends
+rule</a>), so the path of each is the absolute path of the
+directory, a slash and the name. Neither takes an argument; one raises
+<code>SYNTAX 93.902</code>.</p>
+<pre><code class="language-rexx">d = .file~new('spec-file-list.tmp')
+junk = .file~new('spec-file-list.tmp/sub')~makeDirs
+do n over '.hid b.txt a.txt'~makearray(' ')
+  call lineout d~path'/'n, 'x'
+  call lineout d~path'/'n
+end
+l = d~list
+say l~class~id l~items l~sort~toString(,' ')
+f = d~listFiles
+say f~class~id f~items f[1]~class~id
+p = .array~new
+do e over f
+  p~append(e~path)
+end
+q = d~absolutePath
+say (p~sort~toString(,' ') == q'/.hid' q'/a.txt' q'/b.txt' q'/sub')
+l2 = d~list
+f2 = d~listFiles
+same = 1
+do i = 1 to l2~items
+  if f2[i]~name \== l2[i] then same = 0
+end
+say same
+say (.file~new('spec-file-list.tmp/a.txt')~list == .nil),
+    (.file~new('spec-file-list.tmp/none')~list == .nil)
+say (.file~new('spec-file-list.tmp/none')~listFiles == .nil)
+e = .file~new('spec-file-list.tmp/sub')~list
+say e~class~id e~items
+say .file~new('spec-file-list.tmp/sub')~listFiles~items
+signal on syntax name b1
+say d~list(1)
+b1: say condition('o')~code
+signal on syntax name b2
+say d~listFiles(1)
+b2: say condition('o')~code
+.environment~log = .array~new
+x = .logfile~new('spec-file-list.tmp')~listFiles
+say .environment~log~toString(,' ') x~items x[1]~class~id
+do n over '.hid b.txt a.txt'~makearray(' ')
+  junk = .file~new(d~path'/'n)~delete
+end
+junk = .file~new('spec-file-list.tmp/sub')~delete
+junk = d~delete
+::class logfile subclass file
+::method list
+  .environment~log~append('list')
+  forward class (super)
+</code></pre>
+<pre><code class="language-output">Array 4 .hid a.txt b.txt sub
+Array 4 File
+1
+1
+1 1
+1
+Array 0
+0
+93.902
+93.902
+list 4 LOGFILE
+</code></pre>
+<h2 id="comparing-files"><a class="header" href="#comparing-files">Comparing files</a></h2>
+<div class="rule" id="r-class.file.compareto"><a href="#r-class.file.compareto">[class.file.compareto]</a></div>
+<p><code>compareTo</code>, which takes the place of <a href="comparable.html#r-class.comparable.compareto">the <code>compareTo</code> of
+<code>Comparable</code></a>, takes one argument and answers -1,
+0 or 1 as the absolute path of the receiver is less than, equal to or greater
+than the absolute path of the argument. The paths are compared character by
+character, so that a path is less than a longer path that it is the start of.
+The argument is sent <code>isA</code> with <code>.File</code> first; an argument that is no <code>File</code> (an
+instance of a subclass is one) raises <code>SYNTAX 88.914</code> then, and nothing more is
+sent (<a href="#r-class.file.deviation.126">Deviation 126</a>). Otherwise the receiver is
+sent <code>isCaseSensitive</code>, and then <code>absolutePath</code> is sent to the receiver and to
+the argument, in that order. When <code>isCaseSensitive</code> answers true the comparison
+tells upper and lower case letters apart. When it answers false two paths whose
+letters differ only in case are equal, and the order of the others is that of
+the paths with their letters from <code>a</code> to <code>z</code> written as capitals. No argument
+raises <code>SYNTAX 93.901</code>, and a second one <code>93.902</code>. The comparison operators of a
+<code>File</code> answer from <code>compareTo</code> as <a href="orderable.html#r-class.orderable.compare">those of
+<code>Orderable</code></a> say.</p>
+<pre><code class="language-rexx">a = .file~new('/t/a'); b = .file~new('/t/b')
+say a~compareTo(b) b~compareTo(a) a~compareTo(.file~new('/t//a/')),
+    a~compareTo(a)
+say .file~new('/t/ab')~compareTo(.file~new('/t/a/b')),
+    .file~new('/t')~compareTo(a)
+say .cs~new('/t/a')~compareTo(.file~new('/t/A')),
+    .cs~new('/t/A')~compareTo(.cs~new('/t/a'))
+say .ci~new('/t/a')~compareTo(.file~new('/t/A')),
+    .ci~new('/t/A')~compareTo(.file~new('/t/a'))
+say .ci~new('/t/B')~compareTo(a) .ci~new('/t/_')~compareTo(a),
+    .ci~new('/t/a')~compareTo(.cs~new('/t/_'))
+say .cs~new('/t/B')~compareTo(a) .cs~new('/t/_')~compareTo(a)
+signal on syntax name b1
+say a~compareTo
+b1: say condition('o')~code
+signal on syntax name b2
+say a~compareTo(b, b)
+b2: say condition('o')~code
+.environment~log = .array~new
+x = .spy~new('/s')~compareTo(.spy~new('/z'))
+say .environment~log~toString(,' ')
+::class cs subclass file
+::method isCaseSensitive
+  return 1
+::class ci subclass file
+::method isCaseSensitive
+  return 0
+::class spy subclass file
+::method isCaseSensitive
+  .environment~log~append(self~path 'isCaseSensitive')
+  forward class (super)
+::method absolutePath
+  .environment~log~append(self~path 'absolutePath')
+  forward class (super)
+::method isA
+  .environment~log~append(self~path 'isA' arg(1)~id)
+  forward class (super)
+</code></pre>
+<pre><code class="language-output">-1 1 0 0
+1 -1
+1 -1
+0 0
+1 1 -1
+-1 -1
+93.901
+93.902
+/z isA File /s isCaseSensitive /s absolutePath /z absolutePath
+</code></pre>
+<div class="rule" id="r-class.file.hashcode"><a href="#r-class.file.hashcode">[class.file.hashcode]</a></div>
+<p><code>hashCode</code> answers the same string that <a href="string.html#r-class.string.hashcode"><code>hashCode</code></a> of
+the absolute path answers, so that two files with the same absolute path have
+the same hash code, whatever the spelling of their paths. The hash code does not
+depend on <code>isCaseSensitive</code>, so two files that <code>=</code> finds equal when the file
+system ignores case can have different hash codes. It sends the receiver none of
+<code>absolutePath</code>, <code>makeString</code>, <code>path</code> and <code>string</code>, and it takes no argument; one
+raises <code>SYNTAX 93.902</code>. A <code>File</code> is found in a collection that looks for its
+index by <code>==</code> and <code>hashCode</code>.</p>
+<pre><code class="language-rexx">a = .file~new('/t/a')
+b = .file~new('/t//a/')
+c = .file~new('/t/b')
+say (a~hashCode == b~hashCode)
+say (a~hashCode == a~absolutePath~hashCode)
+x = .ci~new('/t/a')
+y = .ci~new('/t/A')
+say (x = y) (y~hashCode == y~absolutePath~hashCode)
+s = .set~new
+s~put(a); s~put(b); s~put(c)
+say s~items
+t = .table~new
+t[a] = 'found'
+say t[b] t[c]
+signal on syntax name bad
+say a~hashCode(1)
+bad: say condition('o')~code
+.environment~log = .array~new
+x = .logfile~new('/t/a')~hashCode
+say '['.environment~log~toString(,' ')']'
+::class ci subclass file
+::method isCaseSensitive
+  return 0
+::class logfile subclass file
+::method absolutePath
+  .environment~log~append('absolutePath')
+  forward class (super)
+::method makeString
+  .environment~log~append('makeString')
+  forward class (super)
+::method path
+  .environment~log~append('path')
+  forward class (super)
+::method string
+  .environment~log~append('string')
+  forward class (super)
+</code></pre>
+<pre><code class="language-output">1
+1
+1 1
+2
+found The NIL object
+93.902
+[]
+</code></pre>
+<div class="rule" id="r-class.file.operators"><a href="#r-class.file.operators">[class.file.operators]</a></div>
+<p>The eighteen comparison methods <code>=</code>, <code>==</code>, <code>&lt;</code>, <code>&lt;=</code>, <code>&lt;&lt;</code>, <code>&lt;&lt;=</code>, <code>&lt;&gt;</code>, <code>&gt;</code>,
+<code>&gt;=</code>, <code>&gt;&lt;</code>, <code>&gt;&gt;</code>, <code>&gt;&gt;=</code>, <code>\=</code>, <code>\==</code>, <code>\&lt;</code>, <code>\&lt;&lt;</code>, <code>\&gt;</code> and <code>\&gt;&gt;</code> are those of
+<a href="orderable.html#r-class.orderable.compare"><code>Orderable</code></a>: each sends <code>compareTo</code> to the receiver
+and answers from its answer, so for a <code>File</code> they compare absolute paths as <a href="#r-class.file.compareto">the
+compare rule</a> says, and a strict operator is not strict.</p>
+<pre><code class="language-rexx">a = .file~new('/t/a')
+b = .file~new('/t/b')
+say (a = .file~new('/t/./a')) (a == .file~new('/t/./a')) (a \= b) (a \== b)
+say (a &lt; b) (a &lt;= b) (a &lt;&lt; b) (a &lt;&lt;= b) (a &lt;&gt; b) (a &gt;&lt; b)
+say (a &gt; b) (a &gt;= b) (a &gt;&gt; b) (a &gt;&gt;= b) (a \&lt; b) (a \&gt; b)
+say (a \&lt;&lt; b) (a \&gt;&gt; b)
+</code></pre>
+<pre><code class="language-output">1 1 1 1
+1 1 1 1 1 1
+0 0 0 0 0 1
+0 1
+</code></pre>
+<h2 id="places-and-searching"><a class="header" href="#places-and-searching">Places and searching</a></h2>
+<div class="rule" id="r-class.file.iscasesensitive.class-side"><a href="#r-class.file.iscasesensitive.class-side">[class.file.iscasesensitive.class-side]</a></div>
+<p>The class method <code>isCaseSensitive</code> answers what the instance method answers
+for the root of the file system, <code>/</code> (<a href="#r-class.file.iscasesensitive">the instance
+rule</a>). It takes no argument; an argument,
+whatever it is, raises <code>SYNTAX 88.922</code>.</p>
+<pre><code class="language-rexx">say (.file~isCaseSensitive == .file~new('/')~isCaseSensitive)
+call try '.file~isCaseSensitive(1)'
+call try '.file~isCaseSensitive(.nil)'
+call try '.file~isCaseSensitive(1, 2)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt; no error'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">1
+.file~isCaseSensitive(1) =&gt; 88.922
+.file~isCaseSensitive(.nil) =&gt; 88.922
+.file~isCaseSensitive(1, 2) =&gt; 88.922
+</code></pre>
+<div class="rule" id="r-class.file.listroots"><a href="#r-class.file.listroots">[class.file.listroots]</a></div>
+<p><code>listRoots</code> answers an <code>Array</code> of strings, one for each root of the file
+system. On a Unix-like system that is one string, <code>/</code>. It takes no argument;
+an argument, whatever it is, raises <code>SYNTAX 88.922</code>.</p>
+<pre><code class="language-rexx">r = .file~listRoots
+say r~class~id r~items r[1] r~dimension
+call try '.file~listRoots(1)'
+call try '.file~listRoots(.nil)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt; no error'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">Array 1 / 1
+.file~listRoots(1) =&gt; 88.922
+.file~listRoots(.nil) =&gt; 88.922
+</code></pre>
+<div class="rule" id="r-class.file.temporarypath"><a href="#r-class.file.temporarypath">[class.file.temporarypath]</a></div>
+<p><code>temporaryPath</code> answers a new <code>File</code>, made by <code>new</code> sent to the receiver, for
+the directory in which temporary files are to be put: the value of the
+environment variable <code>TMPDIR</code> when that is set to something, and <code>/tmp</code> when it
+is not set or is set to the null string (<a href="#r-class.file.deviation.137">Deviation
+137</a>). It takes no argument; one raises <code>SYNTAX 93.902</code>. The example sets <code>TMPDIR</code> between <a href="../builtins/setlocal.html">SETLOCAL</a>
+and ENDLOCAL, which put it back.</p>
+<pre><code class="language-rexx">call setlocal
+call value 'TMPDIR', 'spec-file-tmpdir.tmp', 'ENVIRONMENT'
+t = .file~temporaryPath
+say t~class~id t~path,
+    (t~absolutePath == directory() || '/spec-file-tmpdir.tmp')
+call value 'TMPDIR', '/spec-file/tmp//', 'ENVIRONMENT'
+say .file~temporaryPath~path
+say .sub~temporaryPath~class~id
+call value 'TMPDIR', .nil, 'ENVIRONMENT'
+say .file~temporaryPath~path
+call endlocal
+signal on syntax name bad
+say .file~temporaryPath(1)
+bad: say condition('o')~code
+::class sub subclass file
+</code></pre>
+<pre><code class="language-output">File spec-file-tmpdir.tmp 1
+/spec-file/tmp
+SUB
+/tmp
+93.902
+</code></pre>
+<div class="rule" id="r-class.file.searchpath"><a href="#r-class.file.searchpath">[class.file.searchpath]</a></div>
+<p><code>searchPath</code> takes a file <code>name</code> and an optional <code>path</code>, and answers a new
+<code>File</code>, or <code>.nil</code> when nothing is found. The <code>path</code> lists directories. A string
+<code>path</code> is cut at every <code>:</code>, the class is sent <code>pathSeparator</code>, whose answer
+plays no part, and the empty pieces are dropped. Any other <code>path</code> is sent
+<code>request</code> with the argument <code>ARRAY</code>, and the items of the array it answers are
+the directories, each read as <a href="index.html#r-class.index.string">a string argument</a>, so a
+<code>.nil</code> item raises <code>SYNTAX 88.909</code>; an answer that is not an array raises
+<code>SYNTAX 98.913</code>. An omitted <code>path</code> stands for the directories of the environment
+variable <code>PATH</code>. The directories are tried in order, and the answer is the first
+one that holds a file of that name, as <code>new</code> of <code>File</code> with <code>name</code> as <code>path</code> and
+the directory as <code>dir</code> would make it: the class of the answer is <code>File</code>,
+whatever the class that received <code>searchPath</code>. The <code>name</code> may name a file below
+the directory, as <code>sub/c.txt</code>. A directory that holds a directory of that name
+does not count, and a <code>name</code> that has a wildcard character <code>*</code> or <code>?</code> finds
+nothing, nor does an empty <code>name</code>. No argument raises <code>SYNTAX 93.901</code> and a
+third one <code>93.902</code>. The <code>name</code> is read as <a href="index.html#r-class.index.string">a string
+argument</a>, so an object whose <code>makeString</code> answers a name
+is searched for by that name and <code>.nil</code> raises <code>SYNTAX 88.909</code>. A <code>name</code> that
+begins with a slash is the absolute path of the file: the answer is a <code>File</code> for
+it when the file exists, whatever the directories. A relative directory is
+relative to the current directory, and the answer holds the absolute path of the
+file it finds, as <a href="#r-class.file.searchpath.relative">the next rule</a> shows.
+Whether a <code>name</code> that has a <code>.</code> or a <code>..</code> as one of its parts, such as
+<code>./a.txt</code>, <code>x/../a.txt</code> or <code>/tmp/./a.txt</code>, or that ends with a slash, finds a
+file, and what <code>path</code> the answer then has, is not specified, for an absolute
+<code>name</code> as for a relative one.</p>
+<pre><code class="language-rexx">here = directory()
+d1 = here'/spec-file-search.tmp/d1'
+d2 = here'/spec-file-search.tmp/d2'
+junk = .file~new(d1'/sub')~makeDirs
+junk = .file~new(d2)~makeDirs
+list = 'd1/a.txt d1/sub/c.txt d2/a.txt d2/b.txt'~makearray(' ')
+do n over list
+  call lineout 'spec-file-search.tmp/'n, 'x'
+  call lineout 'spec-file-search.tmp/'n
+end
+call show 'a.txt', d1':'d2
+call show 'a.txt', d2':'d1
+call show 'b.txt', d1':'d2
+call show 'b.txt', d1
+call show 'a.txt', d1'::'d2':'
+call show 'a.txt', .array~of(d2, d1)
+call show 'b.txt', .list~of(d1, d2)
+call show 'sub/c.txt', d1':'d2
+call show 'sub', d1':'d2
+call show 'a.*', d1
+call show 'a.t?t', d1
+call show '', d1
+call show 'a.txt', ''
+call show 'a.txt', .array~new
+call show 'a.txt', 5
+call show 'a.txt', .nil
+call show 'a.txt', .array~of(.nil)
+call show 'a.txt', .object~new
+call setlocal
+call value 'PATH', d2':'d1, 'ENVIRONMENT'
+r = .file~searchPath('a.txt')
+say r~class~id (r~path == d2'/a.txt')
+r = .sub~searchPath('b.txt', )
+say r~class~id (r~path == d2'/b.txt')
+call endlocal
+call try '.file~searchPath'
+call try '.file~searchPath("a", "b", "c")'
+do n over list
+  junk = .file~new('spec-file-search.tmp/'n)~delete
+end
+junk = .file~new(d1'/sub')~delete
+junk = .file~new(d1)~delete
+junk = .file~new(d2)~delete
+junk = .file~new('spec-file-search.tmp')~delete
+exit
+show:
+  signal on syntax name bad
+  r = .file~searchPath(arg(1), arg(2))
+  if r == .nil then say '['arg(1)'] nil'
+  else say '['arg(1)']' r~path~changestr(here, '.')
+  return
+bad: say '['arg(1)']' condition('o')~code
+  return
+try:
+  signal on syntax name bad2
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt; no error'
+  return
+bad2: say arg(1) '=&gt;' condition('o')~code
+  return
+::class sub subclass file
+</code></pre>
+<pre><code class="language-output">[a.txt] ./spec-file-search.tmp/d1/a.txt
+[a.txt] ./spec-file-search.tmp/d2/a.txt
+[b.txt] ./spec-file-search.tmp/d2/b.txt
+[b.txt] nil
+[a.txt] ./spec-file-search.tmp/d1/a.txt
+[a.txt] ./spec-file-search.tmp/d2/a.txt
+[b.txt] ./spec-file-search.tmp/d2/b.txt
+[sub/c.txt] ./spec-file-search.tmp/d1/sub/c.txt
+[sub] nil
+[a.*] nil
+[a.t?t] nil
+[] nil
+[a.txt] nil
+[a.txt] nil
+[a.txt] nil
+[a.txt] 98.913
+[a.txt] 88.909
+[a.txt] 98.913
+File 1
+File 1
+.file~searchPath =&gt; 93.901
+.file~searchPath("a", "b", "c") =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.file.searchpath.relative"><a href="#r-class.file.searchpath.relative">[class.file.searchpath.relative]</a></div>
+<p>A directory of <code>path</code> that is relative is the current directory, a slash and
+the directory, and the path of the answer is then absolute. An absolute
+<code>name</code> is found whatever the directories, and a <code>name</code> that is an object is
+read by its <code>makeString</code>.</p>
+<pre><code class="language-rexx">here = directory()
+d = 'spec-file-search-rel.tmp'
+junk = .file~new(d'/sub')~makeDirs
+call lineout d'/a.txt', 'x'
+call lineout d'/a.txt'
+call show .file~searchPath('a.txt', d)
+call show .file~searchPath(here'/'d'/a.txt', here'/'d'/sub')
+call show .file~searchPath(.named~new, here'/'d)
+signal on syntax name bad
+r = .file~searchPath(.nil, here'/'d)
+say 'no error'
+signal cleanup
+bad: say condition('o')~code
+cleanup:
+junk = .file~new(d'/a.txt')~delete
+junk = .file~new(d'/sub')~delete
+junk = .file~new(d)~delete
+exit
+show:
+  if arg(1) == .nil then say 'nil'
+  else say (arg(1)~path == here'/'d'/a.txt')
+  return
+::class named
+::method makeString
+  return 'a.txt'
+</code></pre>
+<pre><code class="language-output defect=#178">1
+1
+1
+88.909
+</code></pre>
+<div class="rule" id="r-class.file.readchars"><a href="#r-class.file.readchars">[class.file.readchars]</a></div>
+<p><code>readChars</code> takes the name of a file, and answers the whole content of the
+file as a string, bytes unchanged, line ends included. The name is a <code>File</code>
+or a string: an argument that is sent <code>isA</code> with <code>.File</code> and answers true is
+read by its <code>absolutePath</code>, and any other is read as a <a href="index.html#r-class.index.string">string
+argument</a>. An argument that has no string value, as
+<code>.nil</code> has none, raises <code>SYNTAX 93.938</code>. A file that cannot be read, as one
+that does not exist or a directory, answers the empty string. No argument
+raises <code>SYNTAX 93.901</code> and a second one <code>93.902</code>.</p>
+<pre><code class="language-rexx">f = 'spec-file-readchars.tmp'
+.file~writeChars(f, 'ab' || '0d0a'x || 'cd' || '0a1a'x || 'ef', 'Replace')
+x = .file~readChars(f)
+say x~class~id x~length c2x(x)
+say (.file~readChars(.file~new(f)) == x),
+    (.file~readChars(.file~new(f)~absolutePath) == x)
+say '['.file~readChars('spec-file-readchars-none.tmp')']'
+say '['.file~readChars('.')~length']' .file~readChars('')~length
+call try '.file~readChars'
+call try '.file~readChars(f, 1)'
+call try '.file~readChars(.nil)'
+call try '.file~readChars(.object~new)'
+.environment~log = .array~new
+say (.file~readChars(.logfile~new(f)) == x)
+say .environment~log~toString(,' ')
+junk = .file~new(f)~delete
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt; no error'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class logfile subclass file
+::method isA
+  .environment~log~append('isA' arg(1)~id)
+  forward class (super)
+::method absolutePath
+  .environment~log~append('absolutePath')
+  forward class (super)
+</code></pre>
+<pre><code class="language-output">String 10 61620D0A63640A1A6566
+1 1
+[]
+[0] 0
+.file~readChars =&gt; 93.901
+.file~readChars(f, 1) =&gt; 93.902
+.file~readChars(.nil) =&gt; 93.938
+.file~readChars(.object~new) =&gt; 93.938
+1
+isA File absolutePath
+</code></pre>
+<div class="rule" id="r-class.file.readlines"><a href="#r-class.file.readlines">[class.file.readlines]</a></div>
+<p><code>readLines</code> takes the name of a file as <a href="#r-class.file.readchars"><code>readChars</code></a>
+does, with the same errors, and answers an <code>Array</code> of the lines of the file,
+each a string without its line end. A line ends at a line feed, and one
+carriage return just before the line feed is dropped with it; a carriage
+return anywhere else is part of the line. The last line need not end in a line
+feed, and no empty line is added after one that does. A file that is empty,
+cannot be read or is a directory answers an empty array.</p>
+<pre><code class="language-rexx">f = 'spec-file-readlines.tmp'
+text = 'a' || '0d0a'x || 'b' || '0d'x || 'c' || '0a0a'x,
+    || 'd' || '0d0d0a'x || 'e'
+.file~writeChars(f, text, 'Replace')
+x = .file~readLines(f)
+say x~class~id x~items x~dimension
+do i = 1 to x~items
+  say i c2x(x[i])
+end
+.file~writeChars(f, 'z' || '0a'x, 'Replace')
+y = .file~readLines(f)
+say y~items c2x(y[y~items])
+say .file~readLines('spec-file-readlines-none.tmp')~items,
+    .file~readLines('.')~items
+.file~writeChars(f, '', 'Replace')
+say .file~readLines(f)~items
+.file~writeChars(f, '0a'x, 'Replace')
+z = .file~readLines(f)
+say z~items '['z[1]']'
+junk = .file~new(f)~delete
+</code></pre>
+<pre><code class="language-output">Array 5 1
+1 61
+2 620D63
+3 
+4 640D
+5 65
+1 7A
+0 0
+0
+1 []
+</code></pre>
+<div class="rule" id="r-class.file.writechars"><a href="#r-class.file.writechars">[class.file.writechars]</a></div>
+<p><code>writeChars</code> takes the name of a file, a string and an optional <code>mode</code>, and
+writes the string to the file, bytes unchanged, creating the file when it does
+not exist. It answers nothing, so a program that uses what it answers raises
+<code>SYNTAX 91.999</code>. The <code>mode</code> is sent <code>strip</code>, and the first character of the
+string that answers, in upper or lower case, decides: <code>A</code> appends the string
+to the content of the file and <code>R</code> replaces the content, whatever follows the
+letter, so <code>Replace</code>, <code>r</code> and <code>repl!</code> replace. An omitted <code>mode</code> appends. Any
+other <code>mode</code>, the empty string among them, raises <code>SYNTAX 88.916</code>, and one
+that does not understand <code>strip</code>, <code>.nil</code> for one, raises <code>SYNTAX 97.1</code>. The
+name is read as <a href="#r-class.file.readchars"><code>readChars</code></a> reads it, with the same
+error, after the <code>mode</code> has been checked. The string is read as the string
+value of an argument (<a href="index.html#r-class.index.string">the string rule</a>), so <code>.nil</code> is
+written as <code>The NIL object</code> and no object is refused. A file that cannot be
+opened is not written, and nothing is reported. No argument raises
+<code>SYNTAX 93.901</code>, a call with only the name <code>93.901</code> as well, and a fourth
+argument <code>93.902</code>.</p>
+<pre><code class="language-rexx">f = 'spec-file-writechars.tmp'
+.file~writeChars(f, 'abc')
+.file~writeChars(f, 'def')
+say .file~readChars(f)
+.file~writeChars(f, 'X', 'Replace')
+say .file~readChars(f)
+.file~writeChars(f, 'Y', )
+.file~writeChars(f, 'Z', 'a')
+say .file~readChars(f)
+.file~writeChars(f, 'W', 'r')
+.file~writeChars(f, 'V', ' repl!')
+say .file~readChars(f)
+.file~writeChars(.file~new(f), '', 'Replace')
+say .file~new(f)~length
+.file~writeChars(f, .nil)
+.file~writeChars(f, 12, 'append')
+say .file~readChars(f)
+.file~writeChars('spec-file-writechars-none.tmp/x', 'q')
+say .file~new('spec-file-writechars-none.tmp')~exists
+call try '.file~writeChars(f, "x", "")'
+call try '.file~writeChars(f, "x", "Q")'
+call try '.file~writeChars(f, "x", .nil)'
+call try '.file~writeChars(.nil, "x", "Q")'
+call try '.file~writeChars(.nil, "x")'
+call try '.file~writeChars'
+call try '.file~writeChars(f)'
+call try '.file~writeChars(f, "x", "A", 1)'
+call try 'f2 = .file~writeChars(f, "x")'
+junk = .file~new(f)~delete
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  say arg(1) '=&gt; no error'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">abcdef
+X
+XYZ
+V
+0
+The NIL object12
+0
+.file~writeChars(f, "x", "") =&gt; 88.916
+.file~writeChars(f, "x", "Q") =&gt; 88.916
+.file~writeChars(f, "x", .nil) =&gt; 97.1
+.file~writeChars(.nil, "x", "Q") =&gt; 88.916
+.file~writeChars(.nil, "x") =&gt; 93.938
+.file~writeChars =&gt; 93.901
+.file~writeChars(f) =&gt; 93.901
+.file~writeChars(f, "x", "A", 1) =&gt; 93.902
+f2 = .file~writeChars(f, "x") =&gt; 91.999
+</code></pre>
+<div class="rule" id="r-class.file.writelines"><a href="#r-class.file.writelines">[class.file.writelines]</a></div>
+<p><code>writeLines</code> takes the name of a file, an ordered collection and an optional
+<code>mode</code>, and writes each item of the collection to the file followed by a line
+feed, creating the file when it does not exist. It answers nothing, as
+<a href="#r-class.file.writechars"><code>writeChars</code></a> does, reads the <code>mode</code> as it does,
+with the same error, and appends when <code>mode</code> is omitted. The collection is
+sent <code>isA</code> with <code>.OrderedCollection</code>; one that answers false raises
+<code>SYNTAX 88.914</code>, as do a string, <code>.nil</code>, a <code>Set</code>, a <code>Bag</code>, a <code>Directory</code>, a
+<code>Table</code>, a <code>Stem</code> and a <code>MutableBuffer</code>. The checks are made in this order:
+the collection, the <code>mode</code>, the name, with the error of
+<a href="#r-class.file.readchars"><code>readChars</code></a> for the name. The collection is then
+sent <code>request</code> with the argument <code>ARRAY</code>, a <code>List</code> subclass among them
+(<a href="#r-class.file.deviation.118">Deviation 118</a>), and the items of the array that
+answers are written in order, each as its string value (<a href="index.html#r-class.index.string">the string
+rule</a>); a position with no item is left out, and an
+answer that is not an array raises <code>SYNTAX 98.913</code>. An <code>Array</code>, a <code>List</code> and a
+<code>Queue</code> are ordered collections. With <code>Replace</code> an empty collection empties
+the file, and with <code>Append</code> it leaves it as it was. No argument raises
+<code>SYNTAX 93.901</code>, one with only the name <code>93.901</code> too, and a fourth argument
+<code>93.902</code>.</p>
+<pre><code class="language-rexx">f = 'spec-file-writelines.tmp'
+.file~writeLines(f, .array~of('one', 'two'))
+.file~writeLines(f, .list~of('three'), 'Append')
+.file~writeLines(f, .queue~of('four'), 'a')
+say c2x(.file~readChars(f))
+.file~writeLines(f, .array~of('a' || '0a'x || 'b', 1, 2.50), 'Replace')
+say c2x(.file~readChars(f))
+.file~writeLines(f, .array~of('x', , 'z'), 'r')
+say c2x(.file~readChars(f))
+.file~writeLines(f, .array~new, 'Append')
+say c2x(.file~readChars(f))
+.file~writeLines(f, .array~new, 'Replace')
+say .file~new(f)~length
+.file~writeLines(f, .array~of('x', .nil, .object~new), 'R')
+say .file~readChars(f)
+.file~writeLines(.file~new(f), .array~of('k'), 'R')
+say c2x(.file~readChars(f))
+.file~writeLines(f, .mk~new, 'R')
+say c2x(.file~readChars(f))
+call try '.file~writeLines(f, "text")'
+call try '.file~writeLines(f, .nil)'
+call try '.file~writeLines(f, .set~of("s"))'
+call try '.file~writeLines(f, .bag~of("s"))'
+call try '.file~writeLines(f, .table~new)'
+call try '.file~writeLines(f, .stem~new)'
+call try '.file~writeLines(f, .mutablebuffer~new("abc"))'
+call try '.file~writeLines(.nil, "text", "Q")'
+call try '.file~writeLines(.nil, .array~of("a"), "Q")'
+call try '.file~writeLines(.nil, .array~of("a"))'
+call try '.file~writeLines(f, .array~of("a"), "")'
+call try '.file~writeLines(f, .array~of("a"), .nil)'
+call try '.file~writeLines(f, .bad~new)'
+call try '.file~writeLines'
+call try '.file~writeLines(f)'
+call try '.file~writeLines(f, .array~of("a"), "A", 1)'
+.environment~log = .array~new
+call try '.file~writeLines(f, .spy~new)'
+say .environment~log~toString(,' ')
+junk = .file~new(f)~delete
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  say arg(1) '=&gt; no error'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class mk subclass array
+::method makeArray
+  return .array~of('MK1', 'MK2')
+::class bad inherit orderedcollection
+::method makeArray
+  return 'not an array'
+::class spy
+::method isA
+  .environment~log~append('isA' arg(1)~id)
+  return 0
+</code></pre>
+<pre><code class="language-output">6F6E650A74776F0A74687265650A666F75720A
+610A620A310A322E35300A
+780A7A0A
+780A7A0A
+0
+x
+The NIL object
+an Object
+
+6B0A
+4D4B310A4D4B320A
+.file~writeLines(f, "text") =&gt; 88.914
+.file~writeLines(f, .nil) =&gt; 88.914
+.file~writeLines(f, .set~of("s")) =&gt; 88.914
+.file~writeLines(f, .bag~of("s")) =&gt; 88.914
+.file~writeLines(f, .table~new) =&gt; 88.914
+.file~writeLines(f, .stem~new) =&gt; 88.914
+.file~writeLines(f, .mutablebuffer~new("abc")) =&gt; 88.914
+.file~writeLines(.nil, "text", "Q") =&gt; 88.914
+.file~writeLines(.nil, .array~of("a"), "Q") =&gt; 88.916
+.file~writeLines(.nil, .array~of("a")) =&gt; 93.938
+.file~writeLines(f, .array~of("a"), "") =&gt; 88.916
+.file~writeLines(f, .array~of("a"), .nil) =&gt; 97.1
+.file~writeLines(f, .bad~new) =&gt; 98.913
+.file~writeLines =&gt; 93.901
+.file~writeLines(f) =&gt; 93.901
+.file~writeLines(f, .array~of("a"), "A", 1) =&gt; 93.902
+.file~writeLines(f, .spy~new) =&gt; 88.914
+isA OrderedCollection
+</code></pre>
+<h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
+<div class="rule" id="r-class.file.deviation.34"><a href="#r-class.file.deviation.34">[class.file.deviation.34]</a></div>
+<p>In a path that holds <code>..</code>, interrexx removes the component before each one, as
+<a href="#r-class.file.absolute">the absolute rule</a> says, however that component was
+written. ooRexx removes no component after a doubled slash and two after one
+that starts with a period, so the absolute path, the name and the parent it
+answers can name another place than the path says (<a href="../builtins/qualify.html#r-bif.qualify.deviation.34">Deviation
+34</a>).</p>
+<pre><code class="language-rexx">say .file~new('/a/.b/../c')~absolutePath .file~new('/a/.b/../c')~name
+say .file~new('/a/.b/../c')~parent .file~new('/a//../b')~absolutePath
+</code></pre>
+<pre><code class="language-output">/a/c c
+/a /b
+</code></pre>
+<div class="rule" id="r-class.file.deviation.109"><a href="#r-class.file.deviation.109">[class.file.deviation.109]</a></div>
+<p>An instance of a subclass of <code>String</code> that is given as a path, a directory, a
+mode or any other string argument of <code>File</code> is read by its own characters (a
+<code>mode</code> is first sent <code>strip</code>, as <a href="#r-class.file.writechars">the writeChars rule</a>
+says, and its answer is read so), and <code>request</code>, <code>makeString</code> and <code>string</code> are
+not sent to it (<a href="string.html#r-class.string.deviation.109">Deviation 109</a>). ooRexx sends
+such an instance <code>request</code> with <code>STRING</code>, so an override can change what is
+read.</p>
+<pre><code class="language-rexx">.environment~sent = 0
+p = .digits~new('p/q')
+say .file~new(p)~path .file~new('a', p)~path
+.file~writeChars('spec-file-dev109.tmp', .digits~new('abc'), 'Replace')
+say .file~readChars(.digits~new('spec-file-dev109.tmp'))
+junk = .file~new('spec-file-dev109.tmp')~delete
+say 'sends' .environment~sent
+::class digits subclass string
+::method makestring
+  .environment~sent = .environment~sent + 1
+  return 'zzz'
+::method request
+  .environment~sent = .environment~sent + 1
+  return 'zzz'
+</code></pre>
+<pre><code class="language-output defect=#140">p/q p/q/a
+abc
+sends 0
+</code></pre>
+<div class="rule" id="r-class.file.deviation.118"><a href="#r-class.file.deviation.118">[class.file.deviation.118]</a></div>
+<p>An instance of a subclass of <code>List</code> that is given to <code>writeLines</code> is sent
+<code>request</code> with <code>ARRAY</code>, as <a href="#r-class.file.writelines">the writeLines rule</a> says
+of any collection, so an override of <code>makeArray</code> or <code>request</code> decides what is
+written (<a href="../deviations.html">Deviation 118</a>). ooRexx sends such an instance
+neither message and writes the items it holds, so the first example prints
+<code>one two</code> there. A <code>path</code> of <code>searchPath</code> that is an instance of a subclass of
+<code>List</code> is sent <code>request</code> with <code>ARRAY</code> too, as <a href="#r-class.file.searchpath">the searchPath
+rule</a> says of any <code>path</code> that is no string, so the
+second example finds nothing, because the array that the <code>request</code> of <code>ml</code>
+answers holds a directory that does not exist, and prints <code>1</code> on ooRexx, which
+searches the directories held in the list and finds the file.</p>
+<pre><code class="language-rexx">f = 'spec-file-dev118.tmp'
+.file~writeLines(f, .mine~of('one', 'two'), 'Replace')
+say .file~readLines(f)~toString(,' ')
+junk = .file~new(f)~delete
+::class mine subclass list
+::method makeArray
+  return .array~of('three')
+</code></pre>
+<pre><code class="language-output">three
+</code></pre>
+<pre><code class="language-rexx">f = 'spec-file-s118.tmp'
+call lineout f, 'x'
+call lineout f
+say .file~searchPath(f, .ml~of(directory()))~isA(.file)
+junk = .file~new(f)~delete
+::class ml subclass list
+::method request
+  say 'request' arg(1)
+  return .array~of('/spec-no-such-dir')
+</code></pre>
+<pre><code class="language-output">request ARRAY
+0
+</code></pre>
+<div class="rule" id="r-class.file.deviation.126"><a href="#r-class.file.deviation.126">[class.file.deviation.126]</a></div>
+<p><code>compareTo</code> of a <code>File</code> with an argument that is not a <code>File</code> (an instance of a
+subclass is one), and a comparison operator with such an argument, raise <code>SYNTAX 88.914</code>. The error follows the <code>isA</code> that the method sends to the argument and
+precedes <code>isCaseSensitive</code>, <code>absolutePath</code> and every other message; an operator
+whose argument is <code>.nil</code> sends no <code>compareTo</code> and does as <a href="orderable.html#r-class.orderable.compare.nil">the <code>.nil</code>
+rule</a> says, and <code>compareTo</code> itself raises for
+<code>.nil</code>. ooRexx answers 1 or -1 for such an argument, whatever the receiver is,
+so the answer says nothing about the two values. In the example the last line is
+a probe that answers false to <code>isA</code> and gets nothing else.</p>
+<pre><code class="language-rexx">a = .file~new('/t/a')
+call try 'a~compareTo(.datetime~new(2017, 6, 30, 5, 6, 7, 8, 0))'
+call try 'a~compareTo(.timespan~fromHours(2))'
+call try 'a~compareTo("/t/a")'
+call try 'a~compareTo(5)'
+call try 'a~compareTo(.nil)'
+call try 'a &lt; .timespan~fromHours(2)'
+call try 'a &gt;&gt;= "/t/a"'
+call try 'a = 5'
+call try 'a \== .object~new'
+call try 'a = .nil'
+call try 'a &lt; .nil'
+call try 'a~compareTo(.sub~new("/t/a"))'
+call try 'a~compareTo(a~copy)'
+.local~log = ''
+call try '.spy~new("/s")~compareTo(.probe~new)'
+say 'sent:' .local~log
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class sub subclass file
+::class spy subclass file
+::method isCaseSensitive
+  .local~log = .local~log 'ISCASESENSITIVE'
+  forward class (super)
+::method absolutePath
+  .local~log = .local~log 'ABSOLUTEPATH'
+  forward class (super)
+::class probe
+::method isA
+  .local~log = .local~log 'ISA('arg(1)~id')'
+  return 0
+::method absolutePath
+  .local~log = .local~log 'ARG:ABSOLUTEPATH'
+  return '/z'
+</code></pre>
+<pre><code class="language-output defect=#189">a~compareTo(.datetime~new(2017, 6, 30, 5, 6, 7, 8, 0)) =&gt; 88.914
+a~compareTo(.timespan~fromHours(2)) =&gt; 88.914
+a~compareTo("/t/a") =&gt; 88.914
+a~compareTo(5) =&gt; 88.914
+a~compareTo(.nil) =&gt; 88.914
+a &lt; .timespan~fromHours(2) =&gt; 88.914
+a &gt;&gt;= "/t/a" =&gt; 88.914
+a = 5 =&gt; 88.914
+a \== .object~new =&gt; 88.914
+a = .nil =&gt; 0
+a &lt; .nil =&gt; 93.973
+a~compareTo(.sub~new("/t/a")) =&gt; 0
+a~compareTo(a~copy) =&gt; 0
+.spy~new("/s")~compareTo(.probe~new) =&gt; 88.914
+sent:  ISA(File)
+</code></pre>
+<div class="rule" id="r-class.file.deviation.137"><a href="#r-class.file.deviation.137">[class.file.deviation.137]</a></div>
+<p><code>temporaryPath</code> answers a <code>File</code> for <code>/tmp</code> when <code>TMPDIR</code> is set to the null
+string, as it does when <code>TMPDIR</code> is not set. A <code>TMPDIR</code> of any other string, one
+of blanks included, is the path. ooRexx answers a <code>File</code> for the null string,
+whose <code>path</code> is the null string.</p>
+<pre><code class="language-rexx">call setlocal
+call value 'TMPDIR', '', 'ENVIRONMENT'
+say '&lt;'value('TMPDIR', , 'ENVIRONMENT')'&gt;'
+t = .file~temporaryPath
+say t~class~id '&lt;'t~path'&gt;'
+call value 'TMPDIR', ' ', 'ENVIRONMENT'
+say '&lt;'.file~temporaryPath~path'&gt;'
+call value 'TMPDIR', '/spec-file/tmp', 'ENVIRONMENT'
+say '&lt;'.file~temporaryPath~path'&gt;'
+call endlocal
+</code></pre>
+<pre><code class="language-output">&lt;&gt;
+File &lt;/tmp&gt;
+&lt; &gt;
+&lt;/spec-file/tmp&gt;
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../classes/variablereference.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../classes/rexxcontext.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../classes/variablereference.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../classes/rexxcontext.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../assets/version-picker.js"></script>
+
+
+    </div>
+    </body>
+</html>

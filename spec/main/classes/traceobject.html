@@ -1,0 +1,1313 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>TraceObject - The interrexx Language Specification</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../conventions.html"><strong aria-hidden="true">2.</strong> Conventions</a></li><li class="chapter-item expanded "><a href="../lexical/index.html"><strong aria-hidden="true">3.</strong> Lexical structure</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../lexical/characters.html"><strong aria-hidden="true">3.1.</strong> Characters</a></li><li class="chapter-item expanded "><a href="../lexical/comments.html"><strong aria-hidden="true">3.2.</strong> Comments</a></li><li class="chapter-item expanded "><a href="../lexical/literals.html"><strong aria-hidden="true">3.3.</strong> Literals</a></li><li class="chapter-item expanded "><a href="../lexical/symbols.html"><strong aria-hidden="true">3.4.</strong> Symbols</a></li><li class="chapter-item expanded "><a href="../lexical/operators.html"><strong aria-hidden="true">3.5.</strong> Operators and special characters</a></li><li class="chapter-item expanded "><a href="../lexical/clauses.html"><strong aria-hidden="true">3.6.</strong> Clauses</a></li></ol></li><li class="chapter-item expanded "><a href="../numbers/index.html"><strong aria-hidden="true">4.</strong> Numbers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../numbers/formats.html"><strong aria-hidden="true">4.1.</strong> Formats</a></li><li class="chapter-item expanded "><a href="../numbers/limits.html"><strong aria-hidden="true">4.2.</strong> Limits</a></li><li class="chapter-item expanded "><a href="../numbers/arithmetic.html"><strong aria-hidden="true">4.3.</strong> Arithmetic</a></li><li class="chapter-item expanded "><a href="../numbers/settings.html"><strong aria-hidden="true">4.4.</strong> Settings</a></li><li class="chapter-item expanded "><a href="../numbers/comparison.html"><strong aria-hidden="true">4.5.</strong> Comparison</a></li></ol></li><li class="chapter-item expanded "><a href="../expressions/index.html"><strong aria-hidden="true">5.</strong> Expressions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../expressions/terms.html"><strong aria-hidden="true">5.1.</strong> Terms</a></li><li class="chapter-item expanded "><a href="../expressions/variables.html"><strong aria-hidden="true">5.2.</strong> Variables</a></li><li class="chapter-item expanded "><a href="../expressions/concatenation.html"><strong aria-hidden="true">5.3.</strong> Concatenation</a></li><li class="chapter-item expanded "><a href="../expressions/arithmetic.html"><strong aria-hidden="true">5.4.</strong> Arithmetic operators</a></li><li class="chapter-item expanded "><a href="../expressions/comparison.html"><strong aria-hidden="true">5.5.</strong> Comparison operators</a></li><li class="chapter-item expanded "><a href="../expressions/logical.html"><strong aria-hidden="true">5.6.</strong> Logical operators</a></li><li class="chapter-item expanded "><a href="../expressions/messages.html"><strong aria-hidden="true">5.7.</strong> Message operators</a></li></ol></li><li class="chapter-item expanded "><a href="../instructions/index.html"><strong aria-hidden="true">6.</strong> Instructions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../instructions/address.html"><strong aria-hidden="true">6.1.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../instructions/arg.html"><strong aria-hidden="true">6.2.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../instructions/assignment.html"><strong aria-hidden="true">6.3.</strong> Assignments</a></li><li class="chapter-item expanded "><a href="../instructions/call.html"><strong aria-hidden="true">6.4.</strong> CALL</a></li><li class="chapter-item expanded "><a href="../instructions/command.html"><strong aria-hidden="true">6.5.</strong> Commands</a></li><li class="chapter-item expanded "><a href="../instructions/do.html"><strong aria-hidden="true">6.6.</strong> DO</a></li><li class="chapter-item expanded "><a href="../instructions/drop.html"><strong aria-hidden="true">6.7.</strong> DROP</a></li><li class="chapter-item expanded "><a href="../instructions/exit.html"><strong aria-hidden="true">6.8.</strong> EXIT</a></li><li class="chapter-item expanded "><a href="../instructions/expose.html"><strong aria-hidden="true">6.9.</strong> EXPOSE</a></li><li class="chapter-item expanded "><a href="../instructions/forward.html"><strong aria-hidden="true">6.10.</strong> FORWARD</a></li><li class="chapter-item expanded "><a href="../instructions/guard.html"><strong aria-hidden="true">6.11.</strong> GUARD</a></li><li class="chapter-item expanded "><a href="../instructions/if.html"><strong aria-hidden="true">6.12.</strong> IF</a></li><li class="chapter-item expanded "><a href="../instructions/interpret.html"><strong aria-hidden="true">6.13.</strong> INTERPRET</a></li><li class="chapter-item expanded "><a href="../instructions/iterate.html"><strong aria-hidden="true">6.14.</strong> ITERATE</a></li><li class="chapter-item expanded "><a href="../instructions/leave.html"><strong aria-hidden="true">6.15.</strong> LEAVE</a></li><li class="chapter-item expanded "><a href="../instructions/loop.html"><strong aria-hidden="true">6.16.</strong> LOOP</a></li><li class="chapter-item expanded "><a href="../instructions/message.html"><strong aria-hidden="true">6.17.</strong> Message instructions</a></li><li class="chapter-item expanded "><a href="../instructions/nop.html"><strong aria-hidden="true">6.18.</strong> NOP</a></li><li class="chapter-item expanded "><a href="../instructions/numeric.html"><strong aria-hidden="true">6.19.</strong> NUMERIC</a></li><li class="chapter-item expanded "><a href="../instructions/options.html"><strong aria-hidden="true">6.20.</strong> OPTIONS</a></li><li class="chapter-item expanded "><a href="../instructions/parse.html"><strong aria-hidden="true">6.21.</strong> PARSE</a></li><li class="chapter-item expanded "><a href="../instructions/procedure.html"><strong aria-hidden="true">6.22.</strong> PROCEDURE</a></li><li class="chapter-item expanded "><a href="../instructions/pull.html"><strong aria-hidden="true">6.23.</strong> PULL</a></li><li class="chapter-item expanded "><a href="../instructions/push.html"><strong aria-hidden="true">6.24.</strong> PUSH</a></li><li class="chapter-item expanded "><a href="../instructions/queue.html"><strong aria-hidden="true">6.25.</strong> QUEUE</a></li><li class="chapter-item expanded "><a href="../instructions/raise.html"><strong aria-hidden="true">6.26.</strong> RAISE</a></li><li class="chapter-item expanded "><a href="../instructions/reply.html"><strong aria-hidden="true">6.27.</strong> REPLY</a></li><li class="chapter-item expanded "><a href="../instructions/return.html"><strong aria-hidden="true">6.28.</strong> RETURN</a></li><li class="chapter-item expanded "><a href="../instructions/say.html"><strong aria-hidden="true">6.29.</strong> SAY</a></li><li class="chapter-item expanded "><a href="../instructions/select.html"><strong aria-hidden="true">6.30.</strong> SELECT</a></li><li class="chapter-item expanded "><a href="../instructions/signal.html"><strong aria-hidden="true">6.31.</strong> SIGNAL</a></li><li class="chapter-item expanded "><a href="../instructions/trace.html"><strong aria-hidden="true">6.32.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../instructions/use.html"><strong aria-hidden="true">6.33.</strong> USE</a></li></ol></li><li class="chapter-item expanded "><a href="../parsing/index.html"><strong aria-hidden="true">7.</strong> Parsing</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../parsing/templates.html"><strong aria-hidden="true">7.1.</strong> Templates</a></li><li class="chapter-item expanded "><a href="../parsing/patterns.html"><strong aria-hidden="true">7.2.</strong> Patterns</a></li><li class="chapter-item expanded "><a href="../parsing/multiple.html"><strong aria-hidden="true">7.3.</strong> Several strings and case</a></li></ol></li><li class="chapter-item expanded "><a href="../directives/index.html"><strong aria-hidden="true">8.</strong> Directives</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../directives/class.html"><strong aria-hidden="true">8.1.</strong> ::CLASS</a></li><li class="chapter-item expanded "><a href="../directives/method.html"><strong aria-hidden="true">8.2.</strong> ::METHOD</a></li><li class="chapter-item expanded "><a href="../directives/attribute.html"><strong aria-hidden="true">8.3.</strong> ::ATTRIBUTE</a></li><li class="chapter-item expanded "><a href="../directives/constant.html"><strong aria-hidden="true">8.4.</strong> ::CONSTANT</a></li><li class="chapter-item expanded "><a href="../directives/routine.html"><strong aria-hidden="true">8.5.</strong> ::ROUTINE</a></li><li class="chapter-item expanded "><a href="../directives/requires.html"><strong aria-hidden="true">8.6.</strong> ::REQUIRES</a></li><li class="chapter-item expanded "><a href="../directives/options.html"><strong aria-hidden="true">8.7.</strong> ::OPTIONS</a></li><li class="chapter-item expanded "><a href="../directives/resource.html"><strong aria-hidden="true">8.8.</strong> ::RESOURCE</a></li><li class="chapter-item expanded "><a href="../directives/annotate.html"><strong aria-hidden="true">8.9.</strong> ::ANNOTATE</a></li></ol></li><li class="chapter-item expanded "><a href="../conditions/index.html"><strong aria-hidden="true">9.</strong> Conditions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../conditions/traps.html"><strong aria-hidden="true">9.1.</strong> Condition traps</a></li><li class="chapter-item expanded "><a href="../conditions/information.html"><strong aria-hidden="true">9.2.</strong> Condition information</a></li><li class="chapter-item expanded "><a href="../conditions/syntax.html"><strong aria-hidden="true">9.3.</strong> SYNTAX</a></li><li class="chapter-item expanded "><a href="../conditions/error.html"><strong aria-hidden="true">9.4.</strong> ERROR and FAILURE</a></li><li class="chapter-item expanded "><a href="../conditions/halt.html"><strong aria-hidden="true">9.5.</strong> HALT</a></li><li class="chapter-item expanded "><a href="../conditions/novalue.html"><strong aria-hidden="true">9.6.</strong> NOVALUE</a></li><li class="chapter-item expanded "><a href="../conditions/nostring.html"><strong aria-hidden="true">9.7.</strong> NOSTRING</a></li><li class="chapter-item expanded "><a href="../conditions/nomethod.html"><strong aria-hidden="true">9.8.</strong> NOMETHOD</a></li><li class="chapter-item expanded "><a href="../conditions/notready.html"><strong aria-hidden="true">9.9.</strong> NOTREADY</a></li><li class="chapter-item expanded "><a href="../conditions/lostdigits.html"><strong aria-hidden="true">9.10.</strong> LOSTDIGITS</a></li><li class="chapter-item expanded "><a href="../conditions/user.html"><strong aria-hidden="true">9.11.</strong> USER conditions</a></li><li class="chapter-item expanded "><a href="../conditions/errors.html"><strong aria-hidden="true">9.12.</strong> Error numbers</a></li></ol></li><li class="chapter-item expanded "><a href="../classes/index.html"><strong aria-hidden="true">10.</strong> Classes</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../classes/methods.html"><strong aria-hidden="true">10.1.</strong> Method search</a></li><li class="chapter-item expanded "><a href="../classes/object.html"><strong aria-hidden="true">10.2.</strong> Object</a></li><li class="chapter-item expanded "><a href="../classes/class.html"><strong aria-hidden="true">10.3.</strong> Class</a></li><li class="chapter-item expanded "><a href="../classes/string.html"><strong aria-hidden="true">10.4.</strong> String</a></li><li class="chapter-item expanded "><a href="../classes/method.html"><strong aria-hidden="true">10.5.</strong> Method</a></li><li class="chapter-item expanded "><a href="../classes/routine.html"><strong aria-hidden="true">10.6.</strong> Routine</a></li><li class="chapter-item expanded "><a href="../classes/package.html"><strong aria-hidden="true">10.7.</strong> Package</a></li><li class="chapter-item expanded "><a href="../classes/message.html"><strong aria-hidden="true">10.8.</strong> Message</a></li><li class="chapter-item expanded "><a href="../classes/messagenotification.html"><strong aria-hidden="true">10.9.</strong> MessageNotification</a></li><li class="chapter-item expanded "><a href="../classes/alarmnotification.html"><strong aria-hidden="true">10.10.</strong> AlarmNotification</a></li><li class="chapter-item expanded "><a href="../classes/collection.html"><strong aria-hidden="true">10.11.</strong> Collection</a></li><li class="chapter-item expanded "><a href="../classes/mapcollection.html"><strong aria-hidden="true">10.12.</strong> MapCollection</a></li><li class="chapter-item expanded "><a href="../classes/orderedcollection.html"><strong aria-hidden="true">10.13.</strong> OrderedCollection</a></li><li class="chapter-item expanded "><a href="../classes/setcollection.html"><strong aria-hidden="true">10.14.</strong> SetCollection</a></li><li class="chapter-item expanded "><a href="../classes/array.html"><strong aria-hidden="true">10.15.</strong> Array</a></li><li class="chapter-item expanded "><a href="../classes/list.html"><strong aria-hidden="true">10.16.</strong> List</a></li><li class="chapter-item expanded "><a href="../classes/queue.html"><strong aria-hidden="true">10.17.</strong> Queue</a></li><li class="chapter-item expanded "><a href="../classes/circularqueue.html"><strong aria-hidden="true">10.18.</strong> CircularQueue</a></li><li class="chapter-item expanded "><a href="../classes/directory.html"><strong aria-hidden="true">10.19.</strong> Directory</a></li><li class="chapter-item expanded "><a href="../classes/stringtable.html"><strong aria-hidden="true">10.20.</strong> StringTable</a></li><li class="chapter-item expanded "><a href="../classes/properties.html"><strong aria-hidden="true">10.21.</strong> Properties</a></li><li class="chapter-item expanded "><a href="../classes/table.html"><strong aria-hidden="true">10.22.</strong> Table</a></li><li class="chapter-item expanded "><a href="../classes/identitytable.html"><strong aria-hidden="true">10.23.</strong> IdentityTable</a></li><li class="chapter-item expanded "><a href="../classes/relation.html"><strong aria-hidden="true">10.24.</strong> Relation</a></li><li class="chapter-item expanded "><a href="../classes/bag.html"><strong aria-hidden="true">10.25.</strong> Bag</a></li><li class="chapter-item expanded "><a href="../classes/set.html"><strong aria-hidden="true">10.26.</strong> Set</a></li><li class="chapter-item expanded "><a href="../classes/stem.html"><strong aria-hidden="true">10.27.</strong> Stem</a></li><li class="chapter-item expanded "><a href="../classes/datetime.html"><strong aria-hidden="true">10.28.</strong> DateTime</a></li><li class="chapter-item expanded "><a href="../classes/timespan.html"><strong aria-hidden="true">10.29.</strong> TimeSpan</a></li><li class="chapter-item expanded "><a href="../classes/comparable.html"><strong aria-hidden="true">10.30.</strong> Comparable</a></li><li class="chapter-item expanded "><a href="../classes/orderable.html"><strong aria-hidden="true">10.31.</strong> Orderable</a></li><li class="chapter-item expanded "><a href="../classes/comparators.html"><strong aria-hidden="true">10.32.</strong> Comparators</a></li><li class="chapter-item expanded "><a href="../classes/mutablebuffer.html"><strong aria-hidden="true">10.33.</strong> MutableBuffer</a></li><li class="chapter-item expanded "><a href="../classes/buffer.html"><strong aria-hidden="true">10.34.</strong> Buffer</a></li><li class="chapter-item expanded "><a href="../classes/pointer.html"><strong aria-hidden="true">10.35.</strong> Pointer</a></li><li class="chapter-item expanded "><a href="../classes/weakreference.html"><strong aria-hidden="true">10.36.</strong> WeakReference</a></li><li class="chapter-item expanded "><a href="../classes/variablereference.html"><strong aria-hidden="true">10.37.</strong> VariableReference</a></li><li class="chapter-item expanded "><a href="../classes/file.html"><strong aria-hidden="true">10.38.</strong> File</a></li><li class="chapter-item expanded "><a href="../classes/rexxcontext.html"><strong aria-hidden="true">10.39.</strong> RexxContext</a></li><li class="chapter-item expanded "><a href="../classes/stackframe.html"><strong aria-hidden="true">10.40.</strong> StackFrame</a></li><li class="chapter-item expanded "><a href="../classes/rexxinfo.html"><strong aria-hidden="true">10.41.</strong> RexxInfo</a></li><li class="chapter-item expanded "><a href="../classes/traceobject.html" class="active"><strong aria-hidden="true">10.42.</strong> TraceObject</a></li><li class="chapter-item expanded "><a href="../classes/validate.html"><strong aria-hidden="true">10.43.</strong> Validate</a></li><li class="chapter-item expanded "><a href="../classes/singleton.html"><strong aria-hidden="true">10.44.</strong> Singleton</a></li><li class="chapter-item expanded "><a href="../classes/alarm.html"><strong aria-hidden="true">10.45.</strong> Alarm</a></li><li class="chapter-item expanded "><a href="../classes/ticker.html"><strong aria-hidden="true">10.46.</strong> Ticker</a></li><li class="chapter-item expanded "><a href="../classes/monitor.html"><strong aria-hidden="true">10.47.</strong> Monitor</a></li><li class="chapter-item expanded "><a href="../classes/eventsemaphore.html"><strong aria-hidden="true">10.48.</strong> EventSemaphore</a></li><li class="chapter-item expanded "><a href="../classes/mutexsemaphore.html"><strong aria-hidden="true">10.49.</strong> MutexSemaphore</a></li><li class="chapter-item expanded "><a href="../classes/commandhandler.html"><strong aria-hidden="true">10.50.</strong> CommandHandler</a></li><li class="chapter-item expanded "><a href="../classes/nativecommandhandler.html"><strong aria-hidden="true">10.51.</strong> NativeCommandHandler</a></li><li class="chapter-item expanded "><a href="../classes/commandcontext.html"><strong aria-hidden="true">10.52.</strong> CommandContext</a></li><li class="chapter-item expanded "><a href="../classes/commandinput.html"><strong aria-hidden="true">10.53.</strong> CommandInput</a></li><li class="chapter-item expanded "><a href="../classes/commandoutput.html"><strong aria-hidden="true">10.54.</strong> CommandOutput</a></li><li class="chapter-item expanded "><a href="../classes/rexxqueue.html"><strong aria-hidden="true">10.55.</strong> RexxQueue</a></li><li class="chapter-item expanded "><a href="../classes/supplier.html"><strong aria-hidden="true">10.56.</strong> Supplier</a></li><li class="chapter-item expanded "><a href="../classes/streamsupplier.html"><strong aria-hidden="true">10.57.</strong> StreamSupplier</a></li><li class="chapter-item expanded "><a href="../classes/regularexpression.html"><strong aria-hidden="true">10.58.</strong> RegularExpression</a></li></ol></li><li class="chapter-item expanded "><a href="../builtins/index.html"><strong aria-hidden="true">11.</strong> Built-in functions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../builtins/abbrev.html"><strong aria-hidden="true">11.1.</strong> ABBREV</a></li><li class="chapter-item expanded "><a href="../builtins/abs.html"><strong aria-hidden="true">11.2.</strong> ABS</a></li><li class="chapter-item expanded "><a href="../builtins/address.html"><strong aria-hidden="true">11.3.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../builtins/arg.html"><strong aria-hidden="true">11.4.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../builtins/b2x.html"><strong aria-hidden="true">11.5.</strong> B2X</a></li><li class="chapter-item expanded "><a href="../builtins/beep.html"><strong aria-hidden="true">11.6.</strong> BEEP</a></li><li class="chapter-item expanded "><a href="../builtins/bitand.html"><strong aria-hidden="true">11.7.</strong> BITAND</a></li><li class="chapter-item expanded "><a href="../builtins/bitor.html"><strong aria-hidden="true">11.8.</strong> BITOR</a></li><li class="chapter-item expanded "><a href="../builtins/bitxor.html"><strong aria-hidden="true">11.9.</strong> BITXOR</a></li><li class="chapter-item expanded "><a href="../builtins/c2d.html"><strong aria-hidden="true">11.10.</strong> C2D</a></li><li class="chapter-item expanded "><a href="../builtins/c2x.html"><strong aria-hidden="true">11.11.</strong> C2X</a></li><li class="chapter-item expanded "><a href="../builtins/center.html"><strong aria-hidden="true">11.12.</strong> CENTER</a></li><li class="chapter-item expanded "><a href="../builtins/changestr.html"><strong aria-hidden="true">11.13.</strong> CHANGESTR</a></li><li class="chapter-item expanded "><a href="../builtins/charin.html"><strong aria-hidden="true">11.14.</strong> CHARIN</a></li><li class="chapter-item expanded "><a href="../builtins/charout.html"><strong aria-hidden="true">11.15.</strong> CHAROUT</a></li><li class="chapter-item expanded "><a href="../builtins/chars.html"><strong aria-hidden="true">11.16.</strong> CHARS</a></li><li class="chapter-item expanded "><a href="../builtins/compare.html"><strong aria-hidden="true">11.17.</strong> COMPARE</a></li><li class="chapter-item expanded "><a href="../builtins/condition.html"><strong aria-hidden="true">11.18.</strong> CONDITION</a></li><li class="chapter-item expanded "><a href="../builtins/copies.html"><strong aria-hidden="true">11.19.</strong> COPIES</a></li><li class="chapter-item expanded "><a href="../builtins/countstr.html"><strong aria-hidden="true">11.20.</strong> COUNTSTR</a></li><li class="chapter-item expanded "><a href="../builtins/d2c.html"><strong aria-hidden="true">11.21.</strong> D2C</a></li><li class="chapter-item expanded "><a href="../builtins/d2x.html"><strong aria-hidden="true">11.22.</strong> D2X</a></li><li class="chapter-item expanded "><a href="../builtins/datatype.html"><strong aria-hidden="true">11.23.</strong> DATATYPE</a></li><li class="chapter-item expanded "><a href="../builtins/date.html"><strong aria-hidden="true">11.24.</strong> DATE</a></li><li class="chapter-item expanded "><a href="../builtins/delstr.html"><strong aria-hidden="true">11.25.</strong> DELSTR</a></li><li class="chapter-item expanded "><a href="../builtins/delword.html"><strong aria-hidden="true">11.26.</strong> DELWORD</a></li><li class="chapter-item expanded "><a href="../builtins/digits.html"><strong aria-hidden="true">11.27.</strong> DIGITS</a></li><li class="chapter-item expanded "><a href="../builtins/directory.html"><strong aria-hidden="true">11.28.</strong> DIRECTORY</a></li><li class="chapter-item expanded "><a href="../builtins/endlocal.html"><strong aria-hidden="true">11.29.</strong> ENDLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/errortext.html"><strong aria-hidden="true">11.30.</strong> ERRORTEXT</a></li><li class="chapter-item expanded "><a href="../builtins/filespec.html"><strong aria-hidden="true">11.31.</strong> FILESPEC</a></li><li class="chapter-item expanded "><a href="../builtins/form.html"><strong aria-hidden="true">11.32.</strong> FORM</a></li><li class="chapter-item expanded "><a href="../builtins/format.html"><strong aria-hidden="true">11.33.</strong> FORMAT</a></li><li class="chapter-item expanded "><a href="../builtins/fuzz.html"><strong aria-hidden="true">11.34.</strong> FUZZ</a></li><li class="chapter-item expanded "><a href="../builtins/gc.html"><strong aria-hidden="true">11.35.</strong> GC</a></li><li class="chapter-item expanded "><a href="../builtins/insert.html"><strong aria-hidden="true">11.36.</strong> INSERT</a></li><li class="chapter-item expanded "><a href="../builtins/lastpos.html"><strong aria-hidden="true">11.37.</strong> LASTPOS</a></li><li class="chapter-item expanded "><a href="../builtins/left.html"><strong aria-hidden="true">11.38.</strong> LEFT</a></li><li class="chapter-item expanded "><a href="../builtins/length.html"><strong aria-hidden="true">11.39.</strong> LENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/linein.html"><strong aria-hidden="true">11.40.</strong> LINEIN</a></li><li class="chapter-item expanded "><a href="../builtins/lineout.html"><strong aria-hidden="true">11.41.</strong> LINEOUT</a></li><li class="chapter-item expanded "><a href="../builtins/lines.html"><strong aria-hidden="true">11.42.</strong> LINES</a></li><li class="chapter-item expanded "><a href="../builtins/lower.html"><strong aria-hidden="true">11.43.</strong> LOWER</a></li><li class="chapter-item expanded "><a href="../builtins/max.html"><strong aria-hidden="true">11.44.</strong> MAX</a></li><li class="chapter-item expanded "><a href="../builtins/min.html"><strong aria-hidden="true">11.45.</strong> MIN</a></li><li class="chapter-item expanded "><a href="../builtins/overlay.html"><strong aria-hidden="true">11.46.</strong> OVERLAY</a></li><li class="chapter-item expanded "><a href="../builtins/pos.html"><strong aria-hidden="true">11.47.</strong> POS</a></li><li class="chapter-item expanded "><a href="../builtins/qualify.html"><strong aria-hidden="true">11.48.</strong> QUALIFY</a></li><li class="chapter-item expanded "><a href="../builtins/queued.html"><strong aria-hidden="true">11.49.</strong> QUEUED</a></li><li class="chapter-item expanded "><a href="../builtins/random.html"><strong aria-hidden="true">11.50.</strong> RANDOM</a></li><li class="chapter-item expanded "><a href="../builtins/reverse.html"><strong aria-hidden="true">11.51.</strong> REVERSE</a></li><li class="chapter-item expanded "><a href="../builtins/right.html"><strong aria-hidden="true">11.52.</strong> RIGHT</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncadd.html"><strong aria-hidden="true">11.53.</strong> RXFUNCADD</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncdrop.html"><strong aria-hidden="true">11.54.</strong> RXFUNCDROP</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncquery.html"><strong aria-hidden="true">11.55.</strong> RXFUNCQUERY</a></li><li class="chapter-item expanded "><a href="../builtins/rxqueue.html"><strong aria-hidden="true">11.56.</strong> RXQUEUE</a></li><li class="chapter-item expanded "><a href="../builtins/setlocal.html"><strong aria-hidden="true">11.57.</strong> SETLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/sign.html"><strong aria-hidden="true">11.58.</strong> SIGN</a></li><li class="chapter-item expanded "><a href="../builtins/sourceline.html"><strong aria-hidden="true">11.59.</strong> SOURCELINE</a></li><li class="chapter-item expanded "><a href="../builtins/space.html"><strong aria-hidden="true">11.60.</strong> SPACE</a></li><li class="chapter-item expanded "><a href="../builtins/stream.html"><strong aria-hidden="true">11.61.</strong> STREAM</a></li><li class="chapter-item expanded "><a href="../builtins/strip.html"><strong aria-hidden="true">11.62.</strong> STRIP</a></li><li class="chapter-item expanded "><a href="../builtins/substr.html"><strong aria-hidden="true">11.63.</strong> SUBSTR</a></li><li class="chapter-item expanded "><a href="../builtins/subword.html"><strong aria-hidden="true">11.64.</strong> SUBWORD</a></li><li class="chapter-item expanded "><a href="../builtins/symbol.html"><strong aria-hidden="true">11.65.</strong> SYMBOL</a></li><li class="chapter-item expanded "><a href="../builtins/time.html"><strong aria-hidden="true">11.66.</strong> TIME</a></li><li class="chapter-item expanded "><a href="../builtins/trace.html"><strong aria-hidden="true">11.67.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../builtins/translate.html"><strong aria-hidden="true">11.68.</strong> TRANSLATE</a></li><li class="chapter-item expanded "><a href="../builtins/trunc.html"><strong aria-hidden="true">11.69.</strong> TRUNC</a></li><li class="chapter-item expanded "><a href="../builtins/upper.html"><strong aria-hidden="true">11.70.</strong> UPPER</a></li><li class="chapter-item expanded "><a href="../builtins/userid.html"><strong aria-hidden="true">11.71.</strong> USERID</a></li><li class="chapter-item expanded "><a href="../builtins/value.html"><strong aria-hidden="true">11.72.</strong> VALUE</a></li><li class="chapter-item expanded "><a href="../builtins/var.html"><strong aria-hidden="true">11.73.</strong> VAR</a></li><li class="chapter-item expanded "><a href="../builtins/verify.html"><strong aria-hidden="true">11.74.</strong> VERIFY</a></li><li class="chapter-item expanded "><a href="../builtins/word.html"><strong aria-hidden="true">11.75.</strong> WORD</a></li><li class="chapter-item expanded "><a href="../builtins/wordindex.html"><strong aria-hidden="true">11.76.</strong> WORDINDEX</a></li><li class="chapter-item expanded "><a href="../builtins/wordlength.html"><strong aria-hidden="true">11.77.</strong> WORDLENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/wordpos.html"><strong aria-hidden="true">11.78.</strong> WORDPOS</a></li><li class="chapter-item expanded "><a href="../builtins/words.html"><strong aria-hidden="true">11.79.</strong> WORDS</a></li><li class="chapter-item expanded "><a href="../builtins/x2b.html"><strong aria-hidden="true">11.80.</strong> X2B</a></li><li class="chapter-item expanded "><a href="../builtins/x2c.html"><strong aria-hidden="true">11.81.</strong> X2C</a></li><li class="chapter-item expanded "><a href="../builtins/x2d.html"><strong aria-hidden="true">11.82.</strong> X2D</a></li><li class="chapter-item expanded "><a href="../builtins/xrange.html"><strong aria-hidden="true">11.83.</strong> XRANGE</a></li></ol></li><li class="chapter-item expanded "><a href="../deviations.html"><strong aria-hidden="true">12.</strong> Deviations</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The interrexx Language Specification</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="traceobject"><a class="header" href="#traceobject">TraceObject</a></h1>
+<p class="references">rexxref: Builtin Classes &gt; Utility Classes &gt; TraceObject Class; Builtin Classes &gt; Utility Classes &gt; TraceObject Class &gt; activate (Class Method); Builtin Classes &gt; Utility Classes &gt; TraceObject Class &gt; collector (Class Method); Builtin Classes &gt; Utility Classes &gt; TraceObject Class &gt; collector= (Class Method); Builtin Classes &gt; Utility Classes &gt; TraceObject Class &gt; counter (Class Method); Builtin Classes &gt; Utility Classes &gt; TraceObject Class &gt; makeStringImpl (Class Method); Builtin Classes &gt; Utility Classes &gt; TraceObject Class &gt; new (Class Method); Builtin Classes &gt; Utility Classes &gt; TraceObject Class &gt; notify (Class Method); Builtin Classes &gt; Utility Classes &gt; TraceObject Class &gt; notify= (Class Method); Builtin Classes &gt; Utility Classes &gt; TraceObject Class &gt; option (Class Method); Builtin Classes &gt; Utility Classes &gt; TraceObject Class &gt; option= (Class Method); Builtin Classes &gt; Utility Classes &gt; TraceObject Class &gt; setMakeString (Class Method); Builtin Classes &gt; Utility Classes &gt; TraceObject Class &gt; unsetMakeString (Class Method); Builtin Classes &gt; Utility Classes &gt; TraceObject Class &gt; compareTo; Builtin Classes &gt; Utility Classes &gt; TraceObject Class &gt; makeString</p>
+<p class="deviations">Deviations: D7, D50, D109</p>
+<p>Every line that <a href="../instructions/trace.html#r-instr.trace.destination">TRACE</a> writes is first an object,
+a <code>TraceObject</code>: a <a href="stringtable.html"><code>StringTable</code></a> whose entries describe the
+line, the code that produced it and the moment, and whose string value is the
+text of the line. The object, and not its text, is what the trace destination
+receives. The class lets a program choose how the text is formatted (the
+<code>option</code>), see every line as an object while the program runs (<code>notify</code>) or
+afterwards (<code>collector</code>), and replace the formatting altogether
+(<code>setMakeString</code>).</p>
+<p>The class methods live on the class object, as the attributes of a singleton
+do: <code>.traceobject~option = 'S'</code> sets one. The instance methods are
+<code>makeString</code> and <code>compareTo</code>; everything else an instance answers is that of
+<code>StringTable</code> and its entries. This page links the rules of <a href="../instructions/trace.html#r-instr.trace.line">the TRACE
+instruction</a> for what a trace line says and for where it
+goes. <a href="../instructions/trace.html#r-instr.trace.deviation.7">Deviation 7</a> covers the order in which
+concurrent activities' lines arrive, and <a href="../instructions/trace.html#r-instr.trace.deviation.50">Deviation
+50</a> a line the destination refuses.
+<a href="index.html#r-class.index.deviation.109">Deviation 109</a> applies to every argument below
+that is read as a string.</p>
+<h2 id="the-class"><a class="header" href="#the-class">The class</a></h2>
+<div class="rule" id="r-class.traceobject.creation"><a href="#r-class.traceobject.creation">[class.traceobject.creation]</a></div>
+<p><code>TraceObject</code> is a class whose only superclass is <code>StringTable</code>; it inherits no
+mixin class of its own (<a href="index.html#r-class.index.hierarchy">the hierarchy rule</a>), and no
+class of the library is its subclass. Its instance side defines <code>compareTo</code> and
+<code>makeString</code>. The class side answers <code>activate</code>, <code>collector</code>, <code>collector=</code>,
+<code>counter</code>, <code>makeStringImpl</code>, <code>new</code>, <code>notify</code>, <code>notify=</code>, <code>option</code>, <code>option=</code>,
+<code>setMakeString</code> and <code>unsetMakeString</code>. A subclass of <code>TraceObject</code> has class
+attributes of its own: its <code>new</code> counts with its own <code>counter</code>, from <code>0</code>, sends
+<code>append</code> to its own <code>collector</code>, and its instances' <code>makeString</code> follows its own
+<code>option</code> and <code>setMakeString</code>. The interpreter makes the objects for trace lines
+with <code>TraceObject</code> itself, so the attributes of a subclass do not affect them.</p>
+<pre><code class="language-rexx">t = .traceobject
+say t~superclasses~items t~superclass~id t~subclasses~items
+say t~isSubclassOf(.stringtable) t~isSubclassOf(.directory)
+s = t~methods(.nil)
+names = .array~new
+do while s~available
+  names~append(s~index)
+  s~next
+end
+say names~sort~makeString('l', ' ')
+list = 'ACTIVATE COLLECTOR COLLECTOR= COUNTER MAKESTRINGIMPL NEW NOTIFY',
+  'NOTIFY= OPTION OPTION= SETMAKESTRING UNSETMAKESTRING NOSUCH'
+do n over list~makearray(' ')
+  say n t~hasMethod(n)
+end
+</code></pre>
+<pre><code class="language-output">1 StringTable 0
+1 0
+COMPARETO MAKESTRING
+ACTIVATE 1
+COLLECTOR 1
+COLLECTOR= 1
+COUNTER 1
+MAKESTRINGIMPL 1
+NEW 1
+NOTIFY 1
+NOTIFY= 1
+OPTION 1
+OPTION= 1
+SETMAKESTRING 1
+UNSETMAKESTRING 1
+NOSUCH 0
+</code></pre>
+<pre><code class="language-rexx">t = .traceobject
+c = .array~new
+t~collector = c
+s = .sub~new
+say s~class~id s~items t~counter c~items .sub~counter .sub~option
+t~collector = .nil
+.sub~option = 'S'
+s~traceline = 'abc'; s~thread = 1; s~invocation = 2
+say '['s~makeString']' t~option
+n = .array~new
+.sub~notify = n
+.traceoutput~destination(.output)
+trace r
+x = 1
+trace off
+say .sub~counter t~counter n~items
+.sub~notify = .nil
+.sub~option = 'N'
+::class sub subclass traceobject
+</code></pre>
+<pre><code class="language-output">SUB 3 0 0 1 N
+[[T1  I2 ]               abc] N
+    14 *-* x = 1
+       &gt;&gt;&gt;   "1"
+    15 *-* trace off
+1 3 0
+</code></pre>
+<div class="rule" id="r-class.traceobject.new"><a href="#r-class.traceobject.new">[class.traceobject.new]</a></div>
+<p><code>new</code> makes a <code>TraceObject</code> with three entries: <code>NUMBER</code>, the number of the
+object, which is the <code>counter</code> after the count has gone up by one, <code>OPTION</code>, the
+<code>option</code> at that moment, and <code>TIMESTAMP</code>, a <code>DateTime</code>. The interpreter makes
+the objects for trace lines in the same way and then adds more entries, as <a href="#r-class.traceobject.entries">the
+entries rule</a> says. When a <code>collector</code> is set,
+<code>new</code> sends it <code>append</code> with the new object. <code>new</code> takes at most one argument,
+the size hint that <a href="stringtable.html#r-class.stringtable.new"><code>new</code> of <code>StringTable</code></a> takes, with
+the same check: a value that is not a whole number of at least <code>0</code> raises
+<code>SYNTAX 93.923</code>, and two arguments raise <code>SYNTAX 93.902</code>. A <code>new</code> that raises
+makes no object: the <code>counter</code> does not go up and no collector receives
+<code>append</code>.</p>
+<pre><code class="language-rexx">t = .traceobject
+say t~counter
+n = t~new
+say n~class~id n~items t~counter n~allIndexes~sort~makeString('l', ' ')
+say n~number n~option n~timestamp~class~id
+m = t~new(7)
+say m~number t~counter
+a = .array~new
+t~collector = a
+x = t~new
+say a~items (a[1] == x) t~counter
+t~collector = .nil
+signal on syntax name bad
+y = t~new(1, 2)
+say 'not reached'
+bad: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">0
+TraceObject 3 1 NUMBER OPTION TIMESTAMP
+1 N DateTime
+2 2
+1 1 3
+93.902
+</code></pre>
+<pre><code class="language-rexx">t = .traceobject
+c = .array~new
+t~collector = c
+do a over .array~of(-1, 1.5, 'x', 4)
+  call one a
+end
+t~collector = .nil
+say c~items t~counter
+exit
+one: procedure
+  use arg a
+  signal on syntax name bad
+  x = .traceobject~new(a)
+  say '['a'] =&gt;' x~number
+  return
+bad: say '['a'] =&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">[-1] =&gt; 93.923
+[1.5] =&gt; 93.923
+[x] =&gt; 93.923
+[4] =&gt; 1
+1 1
+</code></pre>
+<div class="rule" id="r-class.traceobject.lines"><a href="#r-class.traceobject.lines">[class.traceobject.lines]</a></div>
+<p>A line of trace output is made like this. The interpreter makes the object
+with <code>new</code>, so that a <code>collector</code> sees it first, with only the three entries
+of <code>new</code>; it adds the other entries; a <code>notify</code> object then receives the
+complete object with <code>append</code>; and last the object is sent to the trace
+destination with <code>lineout</code>. The destination reads the line through
+<code>makeString</code>, which is what the string value of the object means for every
+use that needs a string. The same <code>TraceObject</code> is delivered to all three.</p>
+<pre><code class="language-rexx">.traceoutput~destination(.sink~new)
+a = .array~new
+b = .array~new
+.environment['COLLECTED'] = a
+.environment['NOTIFIED'] = b
+.traceobject~collector = .rec~new('collect', 'COLLECTED')
+.traceobject~notify = .rec~new('notify', 'NOTIFIED')
+trace r
+x = 1
+trace off
+.traceobject~collector = .nil
+.traceobject~notify = .nil
+n = .traceobject~new
+say 'say gives' '['n~~put('shown', 'TRACELINE')']' '['n~string']'
+::class rec
+::method init
+  expose name key
+  use arg name, key
+::method append
+  expose name key
+  use arg o
+  .environment[key]~append(o)
+  .output~lineout(name 'append' o~items o~number)
+::class sink
+::method lineout
+  use arg line
+  a = .environment['COLLECTED']
+  b = .environment['NOTIFIED']
+  .output~lineout('destination' line~class~id '['line~makeString']',
+    (line == a~lastItem) (line == b~lastItem))
+  return 0
+</code></pre>
+<pre><code class="language-output">collect append 3 1
+notify append 8 1
+destination TraceObject [     9 *-* x = 1] 1 1
+collect append 3 2
+notify append 8 2
+destination TraceObject [       &gt;&gt;&gt;   "1"] 1 1
+collect append 3 3
+notify append 8 3
+destination TraceObject [    10 *-* trace off] 1 1
+say gives [shown] [a TraceObject]
+</code></pre>
+<div class="rule" id="r-class.traceobject.entries"><a href="#r-class.traceobject.entries">[class.traceobject.entries]</a></div>
+<p>A traced line has the entries <code>INTERPRETER</code>, <code>INVOCATION</code> and <code>THREAD</code>, the
+numbers of the interpreter, the invocation and the activity of the traced code
+as <a href="rexxcontext.html#r-class.rexxcontext.numbers"><code>RexxContext</code></a> gives them, <code>NUMBER</code>, <code>OPTION</code>
+and <code>TIMESTAMP</code> as <a href="#r-class.traceobject.new"><code>new</code></a> makes them, <code>TRACELINE</code>, the
+text of the line in the <code>N</code> format, and <code>STACKFRAME</code>, a <code>StringTable</code> that
+describes the level that produced the line with the entries <code>ARGUMENTS</code>,
+<code>EXECUTABLE</code>, <code>INVOCATION</code>, <code>LINE</code>, <code>NAME</code>, <code>TARGET</code>, <code>TRACELINE</code> and <code>TYPE</code>,
+which answer what the <a href="stackframe.html"><code>StackFrame</code></a> methods of the same names
+answer. A line traced in a method adds <code>ATTRIBUTEPOOL</code>, <code>HASSCOPELOCK</code>,
+<code>ISGUARDED</code>, <code>RECEIVER</code> and <code>SCOPELOCKCOUNT</code>, and the line that announces the
+method, flagged <code>&gt;I&gt;</code>, adds <code>CALLERSTACKFRAME</code>, the frame of the code that
+called it. A line that shows a variable being read or assigned adds <code>VARIABLE</code>,
+a <code>StringTable</code> with the entries <code>NAME</code>, <code>VALUE</code> and <code>ASSIGNMENT</code>, which is <code>1</code>
+for an assignment and <code>0</code> for a read. Which clause the <code>STACKFRAME</code> of the <code>&gt;I&gt;</code>
+line shows, in its <code>LINE</code> and its <code>TRACELINE</code>, and the values of <code>HASSCOPELOCK</code>
+and <code>SCOPELOCKCOUNT</code> of the lines that follow an <code>EXPOSE</code> in a method, are not
+specified. The example shows each set of entries once, with the first word of
+the line that has it.</p>
+<pre><code class="language-rexx">.traceoutput~destination(.sink~new)
+.traceobject~notify = .rec~new
+trace i
+x = 1
+y = x + 1
+call plain
+z = .o~new~m
+trace off
+.traceobject~notify = .nil
+exit
+::routine plain
+  trace i
+  q = 2
+::class o
+::method m
+  trace i
+  w = 3
+  return 1
+::class sink
+::method lineout
+  return 0
+::class rec
+::method init
+  expose seen
+  seen = .stringtable~new
+::method append
+  expose seen
+  use arg o
+  key = o~allIndexes~sort~makeString('l', ' ')
+  if seen~hasIndex(key) then return
+  seen[key] = 1
+  say o~traceline~word(1)
+  line = '  '
+  do w over key~makearray(' ')
+    if line~length + w~length &gt; 60 then do
+      say line
+      line = '  '
+    end
+    line = line w
+  end
+  say line
+  sf = o~stackframe
+  say '  STACKFRAME' sf~class~id sf~type
+  if o~traceline~word(1) \= '&gt;I&gt;' then say '  line' sf~line
+  if o~hasIndex('VARIABLE') then do
+    v = o~variable
+    say '  VARIABLE' v~allIndexes~sort~makeString('l', ' '),
+        v~name v~assignment
+  end
+  if o~hasIndex('CALLERSTACKFRAME') then do
+    c = o~callerstackframe
+    say '  CALLERSTACKFRAME' c~class~id c~type c~line
+  end
+</code></pre>
+<pre><code class="language-output">4
+   INTERPRETER INVOCATION NUMBER OPTION STACKFRAME THREAD
+   TIMESTAMP TRACELINE
+  STACKFRAME StringTable PROGRAM
+  line 4
+&gt;=&gt;
+   INTERPRETER INVOCATION NUMBER OPTION STACKFRAME THREAD
+   TIMESTAMP TRACELINE VARIABLE
+  STACKFRAME StringTable PROGRAM
+  line 4
+  VARIABLE ASSIGNMENT NAME VALUE X 1
+&gt;I&gt;
+   CALLERSTACKFRAME INTERPRETER INVOCATION NUMBER OPTION
+   STACKFRAME THREAD TIMESTAMP TRACELINE
+  STACKFRAME StringTable ROUTINE
+  CALLERSTACKFRAME StringTable PROGRAM 6
+&gt;I&gt;
+   ATTRIBUTEPOOL CALLERSTACKFRAME HASSCOPELOCK INTERPRETER
+   INVOCATION ISGUARDED NUMBER OPTION RECEIVER SCOPELOCKCOUNT
+   STACKFRAME THREAD TIMESTAMP TRACELINE
+  STACKFRAME StringTable METHOD
+  CALLERSTACKFRAME StringTable PROGRAM 7
+17
+   ATTRIBUTEPOOL HASSCOPELOCK INTERPRETER INVOCATION
+   ISGUARDED NUMBER OPTION RECEIVER SCOPELOCKCOUNT STACKFRAME
+   THREAD TIMESTAMP TRACELINE
+  STACKFRAME StringTable METHOD
+  line 17
+&gt;=&gt;
+   ATTRIBUTEPOOL HASSCOPELOCK INTERPRETER INVOCATION
+   ISGUARDED NUMBER OPTION RECEIVER SCOPELOCKCOUNT STACKFRAME
+   THREAD TIMESTAMP TRACELINE VARIABLE
+  STACKFRAME StringTable METHOD
+  line 17
+  VARIABLE ASSIGNMENT NAME VALUE W 1
+</code></pre>
+<h2 id="class-attributes"><a class="header" href="#class-attributes">Class attributes</a></h2>
+<div class="rule" id="r-class.traceobject.collector"><a href="#r-class.traceobject.collector">[class.traceobject.collector]</a></div>
+<p><code>collector</code> answers the object that is sent <code>append</code> with each <code>TraceObject</code>
+at the moment it is made, <code>.nil</code> when there is none, which is the setting at
+the start. <code>collector=</code> takes that object, any object, or <code>.nil</code> to stop the
+collecting. It takes exactly one argument: none raises <code>SYNTAX 93.903</code> and two
+<code>93.902</code>. A collector sees the object with the three entries of <code>new</code> only;
+the others are added afterwards and are there when the program reads the
+object later.</p>
+<pre><code class="language-rexx">t = .traceobject
+say t~collector~isNil
+a = .array~new
+t~collector = a
+.traceoutput~destination(.output)
+trace r
+x = 1
+trace off
+t~collector = .nil
+say a~items (t~collector == .nil) a[1]~items
+do o over a
+  say '['o~traceline']' o~option
+end
+call try 't~collector(1)'
+call try 't~"COLLECTOR="'
+call try 't~"COLLECTOR="(1, 2)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'rr =' arg(1)
+  say arg(1) '=&gt; no error'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">1
+     7 *-* x = 1
+       &gt;&gt;&gt;   "1"
+     8 *-* trace off
+3 1 8
+[     7 *-* x = 1] N
+[       &gt;&gt;&gt;   "1"] N
+[     8 *-* trace off] N
+t~collector(1) =&gt; 93.902
+t~"COLLECTOR=" =&gt; 93.903
+t~"COLLECTOR="(1, 2) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.traceobject.notify"><a href="#r-class.traceobject.notify">[class.traceobject.notify]</a></div>
+<p><code>notify</code> and <code>notify=</code> work like <code>collector</code> and <code>collector=</code>, with the
+difference that the object is sent <code>append</code> when the <code>TraceObject</code> is
+complete, after any collector and before the line goes to the destination, as
+<a href="#r-class.traceobject.lines">the lines rule</a> says. Its default is <code>.nil</code>.</p>
+<pre><code class="language-rexx">t = .traceobject
+say t~notify~isNil
+b = .array~new
+t~notify = b
+.traceoutput~destination(.output)
+trace r
+x = 1
+trace off
+t~notify = .nil
+say b~items (t~notify == .nil) b[1]~items
+call try 't~"NOTIFY="'
+call try 't~"NOTIFY="(1, 2)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'rr =' arg(1)
+  say arg(1) '=&gt; no error'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">1
+     7 *-* x = 1
+       &gt;&gt;&gt;   "1"
+     8 *-* trace off
+3 1 8
+t~"NOTIFY=" =&gt; 93.903
+t~"NOTIFY="(1, 2) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.traceobject.counter"><a href="#r-class.traceobject.counter">[class.traceobject.counter]</a></div>
+<p><code>counter</code> answers how many <code>TraceObject</code> objects have been made, those that
+<code>new</code> makes and those made for the lines of trace output, and is <code>0</code> before the
+first. It takes no argument. <code>activate</code> answers no value: it sets the <code>counter</code>
+to <code>0</code>, the <code>option</code> to <code>N</code> and the <code>collector</code> and <code>notify</code> to <code>.nil</code>, and
+takes away a method that <code>setMakeString</code> gave, as <code>unsetMakeString</code> does. It
+accepts any arguments and does not use them.</p>
+<pre><code class="language-rexx">t = .traceobject
+say t~counter
+.traceoutput~destination(.output)
+trace r
+x = 1
+trace off
+say t~counter
+n = t~new
+say t~counter n~number
+t~option = 'S'
+t~collector = .array~new
+t~activate
+say t~option t~counter t~collector~isNil t~notify~isNil
+call try 't~counter(1)'
+call try 'r = t~activate'
+exit
+try:
+  signal on syntax name bad
+  interpret 'rr =' arg(1)
+  say arg(1) '=&gt; no error'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">0
+     5 *-* x = 1
+       &gt;&gt;&gt;   "1"
+     6 *-* trace off
+3
+4 4
+N 0 1 1
+t~counter(1) =&gt; 93.902
+r = t~activate =&gt; 91.999
+</code></pre>
+<pre><code class="language-rexx">t = .traceobject
+t~setMakeString('return "custom"')
+t~activate
+n = t~new~~put('line', 'TRACELINE')
+say '['n~makeString']' t~counter
+t~activate(1, 2)
+say t~counter
+</code></pre>
+<pre><code class="language-output">[line] 1
+0
+</code></pre>
+<div class="rule" id="r-class.traceobject.option"><a href="#r-class.traceobject.option">[class.traceobject.option]</a></div>
+<p><code>option</code> answers the setting that chooses the format of the trace lines, one
+of <code>N</code>, <code>T</code>, <code>S</code>, <code>F</code> and <code>P</code>, and <code>N</code> at the start. <code>option=</code> reads its
+argument as a string and keeps the first character in upper case if it is one
+of <code>n</code>, <code>t</code>, <code>s</code>, <code>f</code> or <code>p</code>, so that <code>Normal</code>, <code>Thread</code>, <code>Standard</code>, <code>Full</code>
+and <code>Profiling</code> or <code>Probing</code> can be written as words; the rest of the string
+is not examined. A string that does not begin with one of the five letters,
+the null string included, raises <code>SYNTAX 93.914</code>. <code>option=</code> takes no more
+than its first argument into account.</p>
+<pre><code class="language-rexx">t = .traceobject
+say t~option
+do v over 'n Normal thread Standard FULL profiling probing tx'~makearray(' ')
+  t~option = v
+  say v '=&gt;' t~option
+end
+call try '"x"'
+call try '""'
+call try '5'
+call try '" s"'
+say t~option
+t~option = 'N'
+exit
+try:
+  signal on syntax name bad
+  interpret '.traceobject~option =' arg(1)
+  say arg(1) '=&gt; no error'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">N
+n =&gt; N
+Normal =&gt; N
+thread =&gt; T
+Standard =&gt; S
+FULL =&gt; F
+profiling =&gt; P
+probing =&gt; P
+tx =&gt; T
+"x" =&gt; 93.914
+"" =&gt; 93.914
+5 =&gt; 93.914
+" s" =&gt; 93.914
+T
+</code></pre>
+<div class="rule" id="r-class.traceobject.makestringimpl"><a href="#r-class.traceobject.makestringimpl">[class.traceobject.makestringimpl]</a></div>
+<p><code>makeStringImpl</code> answers the text of one <code>TraceObject</code>, which it takes as its
+one argument, in the format that the <code>option</code> names. With <code>N</code> it is the
+<code>TRACELINE</code> entry, or <code>?</code> when the object has none. With <code>T</code> the number of the
+thread is put inside the flag of the trace line: after the first two characters
+of <code>*-*</code>, so that it reads <code>*-1*</code>, and likewise <code>&gt;&gt;1&gt;</code>; this describes the lines
+that the interpreter makes, and where the number goes in any other text that a
+program sets as <code>TRACELINE</code> is not specified here. With <code>S</code> the line is preceded
+by <code>[T</code>, the thread number padded to three columns and at least one blank, <code>I</code>
+and the invocation number padded to two columns, <code>]</code> and fifteen blanks. With
+<code>F</code> the prefix is <code>[R</code>, the interpreter number padded to four columns and at
+least one blank, <code>T</code>, the thread number in the same way, <code>I</code>, the invocation
+number padded to four columns, <code>]</code> and eighteen blanks. With <code>P</code> the entry
+<code>OPTION</code> of the object chooses the format: a value equal, as the <code>=</code> operator
+compares, to <code>N</code> or <code>P</code> gives that of <code>N</code>, <code>T</code> that of <code>T</code> and <code>S</code> that of <code>S</code>,
+and any other value, the lower-case letters and the null string included, that
+of <code>F</code>; an object without an <code>OPTION</code> entry is formatted like <code>N</code>. <a href="#r-class.traceobject.makestringimpl.method">The line of
+a method</a> carries more fields in the
+prefix. <code>makeStringImpl</code> raises <code>SYNTAX 93.901</code> with no argument, <code>93.902</code> with
+two and <code>93.924</code> for a string argument; <a href="#r-class.traceobject.makestringimpl.sends">the next
+rule</a> gives the reading of the
+argument. A <code>StringTable</code> without entries gives <code>?</code>.</p>
+<pre><code class="language-rexx">t = .traceobject
+do o over 'N T S F P'~makearray(' ')
+  t~option = o
+  say 'option' o
+  do th over '1 12 123 1234'~makearray(' ')
+    do line over '    11 *-* x = 1', '       &gt;&gt;&gt;   "1"'
+      n = t~new
+      n~traceline = line
+      n~thread = th; n~invocation = th; n~interpreter = th
+      say '['t~makeStringImpl(n)']'
+    end
+  end
+end
+t~option = 'N'
+n = t~new
+say '['t~makeStringImpl(n)']' '['t~makeStringImpl(.stringtable~new)']'
+call try 't~makeStringImpl'
+call try 't~makeStringImpl(n, n)'
+call try 't~makeStringImpl(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'rr =' arg(1)
+  say arg(1) '=&gt; no error'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">option N
+[    11 *-* x = 1]
+[       &gt;&gt;&gt;   "1"]
+[    11 *-* x = 1]
+[       &gt;&gt;&gt;   "1"]
+[    11 *-* x = 1]
+[       &gt;&gt;&gt;   "1"]
+[    11 *-* x = 1]
+[       &gt;&gt;&gt;   "1"]
+option T
+[    11 *-1* x = 1]
+[       &gt;&gt;1&gt;   "1"]
+[    11 *-12* x = 1]
+[       &gt;&gt;12&gt;   "1"]
+[    11 *-123* x = 1]
+[       &gt;&gt;123&gt;   "1"]
+[    11 *-1234* x = 1]
+[       &gt;&gt;1234&gt;   "1"]
+option S
+[[T1  I1 ]                   11 *-* x = 1]
+[[T1  I1 ]                      &gt;&gt;&gt;   "1"]
+[[T12 I12]                   11 *-* x = 1]
+[[T12 I12]                      &gt;&gt;&gt;   "1"]
+[[T123 I123]                   11 *-* x = 1]
+[[T123 I123]                      &gt;&gt;&gt;   "1"]
+[[T1234 I1234]                   11 *-* x = 1]
+[[T1234 I1234]                      &gt;&gt;&gt;   "1"]
+option F
+[[R1   T1   I1   ]                      11 *-* x = 1]
+[[R1   T1   I1   ]                         &gt;&gt;&gt;   "1"]
+[[R12  T12  I12  ]                      11 *-* x = 1]
+[[R12  T12  I12  ]                         &gt;&gt;&gt;   "1"]
+[[R123 T123 I123 ]                      11 *-* x = 1]
+[[R123 T123 I123 ]                         &gt;&gt;&gt;   "1"]
+[[R1234 T1234 I1234]                      11 *-* x = 1]
+[[R1234 T1234 I1234]                         &gt;&gt;&gt;   "1"]
+option P
+[    11 *-* x = 1]
+[       &gt;&gt;&gt;   "1"]
+[    11 *-* x = 1]
+[       &gt;&gt;&gt;   "1"]
+[    11 *-* x = 1]
+[       &gt;&gt;&gt;   "1"]
+[    11 *-* x = 1]
+[       &gt;&gt;&gt;   "1"]
+[?] [?]
+t~makeStringImpl =&gt; 93.901
+t~makeStringImpl(n, n) =&gt; 93.902
+t~makeStringImpl(1) =&gt; 93.924
+</code></pre>
+<blockquote>
+<p><strong>Note.</strong> The option applies to the lines a program traces, as the next
+example shows for each setting, with the numbers of the first level of the
+program.</p>
+</blockquote>
+<pre><code class="language-rexx">.traceoutput~destination(.output)
+do o over 'N T S F P'~makearray(' ')
+  .traceobject~option = o
+  say 'option' o
+  trace r
+  x = 1
+  trace off
+end
+.traceobject~option = 'N'
+</code></pre>
+<pre><code class="language-output">option N
+     6 *-*   x = 1
+       &gt;&gt;&gt;     "1"
+     7 *-*   trace off
+option T
+     6 *-1*   x = 1
+       &gt;&gt;1&gt;     "1"
+     7 *-1*   trace off
+option S
+[T1  I1 ]                    6 *-*   x = 1
+[T1  I1 ]                      &gt;&gt;&gt;     "1"
+[T1  I1 ]                    7 *-*   trace off
+option F
+[R1   T1   I1   ]                       6 *-*   x = 1
+[R1   T1   I1   ]                         &gt;&gt;&gt;     "1"
+[R1   T1   I1   ]                       7 *-*   trace off
+option P
+</code></pre>
+<blockquote>
+<p><strong>Note.</strong> The <code>P</code> setting writes no line to the destination, but the objects
+are still made, collected and notified, as the next example shows.</p>
+</blockquote>
+<pre><code class="language-rexx">.traceoutput~destination(.output)
+a = .array~new
+.traceobject~collector = a
+.traceobject~notify = .array~new
+.traceobject~option = 'P'
+trace r
+x = 1
+trace off
+.traceobject~option = 'N'
+.traceobject~collector = .nil
+n = .traceobject~notify
+.traceobject~notify = .nil
+say a~items n~items .traceobject~counter
+do o over a
+  say '['o~traceline']' o~option '['o~makeString']'
+end
+</code></pre>
+<pre><code class="language-output">3 3 3
+[     7 *-* x = 1] P [     7 *-* x = 1]
+[       &gt;&gt;&gt;   "1"] P [       &gt;&gt;&gt;   "1"]
+[     8 *-* trace off] P [     8 *-* trace off]
+</code></pre>
+<div class="rule" id="r-class.traceobject.makestringimpl.method"><a href="#r-class.traceobject.makestringimpl.method">[class.traceobject.makestringimpl.method]</a></div>
+<p>When the object has an <code>ATTRIBUTEPOOL</code> entry, as every line traced in a method
+has, <code>S</code> and <code>F</code> write four more fields between the invocation number and the
+<code>]</code>. The invocation number is then padded to two columns (<code>S</code>) or four (<code>F</code>) and
+followed by a blank. The first field is <code>G</code> when <code>ISGUARDED</code> is <code>1</code> and <code>U</code> when
+it is <code>0</code>, then <code>u</code> when the method is guarded and <code>HASSCOPELOCK</code> is <code>0</code>, <code>g</code>
+when it is unguarded and <code>HASSCOPELOCK</code> is <code>1</code>, and a blank otherwise, then a
+blank. Next come <code>A</code> and the <code>ATTRIBUTEPOOL</code> value, padded to two columns (<code>S</code>)
+or four (<code>F</code>), and a blank; then <code>L</code> and the <code>SCOPELOCKCOUNT</code> value, padded to
+two columns (<code>S</code>) or three (<code>F</code>), and a blank; then <code>*</code> when <code>HASSCOPELOCK</code> is
+<code>1</code> and a blank otherwise, and a blank. One blank follows the <code>]</code>. A missing
+<code>ISGUARDED</code> shows <code>?</code> as the first field, and a missing <code>SCOPELOCKCOUNT</code> <code>?</code> as
+its value; a missing <code>HASSCOPELOCK</code> shows <code>?</code> in the place of the <code>*</code> and of the
+blank after it. An <code>ISGUARDED</code> or <code>HASSCOPELOCK</code> entry that is neither <code>0</code> nor
+<code>1</code> raises <code>SYNTAX 34.901</code>; the other two values are written as they are,
+whatever they hold.</p>
+<pre><code class="language-rexx">t = .traceobject
+do o over 'S', 'F'
+  t~option = o
+  say 'option' o
+  call show 1, 1, 1, 3
+  call show 1, 0, 0, 12
+  call show 0, 0, 0, 5
+  call show 0, 1, 2, 1234
+end
+t~option = 'N'
+exit
+show:
+  n = t~new
+  n~traceline = '     9 *-* v = 1'
+  n~thread = 2; n~invocation = 6; n~interpreter = 1
+  n~isGuarded = arg(1); n~hasScopeLock = arg(2)
+  n~scopeLockCount = arg(3); n~attributePool = arg(4)
+  say '['t~makeStringImpl(n)']'
+  return
+</code></pre>
+<pre><code class="language-output">option S
+[[T2  I6  G  A3  L1  * ]      9 *-* v = 1]
+[[T2  I6  Gu A12 L0    ]      9 *-* v = 1]
+[[T2  I6  U  A5  L0    ]      9 *-* v = 1]
+[[T2  I6  Ug A1234 L2  * ]      9 *-* v = 1]
+option F
+[[R1   T2   I6    G  A3    L1   * ]      9 *-* v = 1]
+[[R1   T2   I6    Gu A12   L0     ]      9 *-* v = 1]
+[[R1   T2   I6    U  A5    L0     ]      9 *-* v = 1]
+[[R1   T2   I6    Ug A1234 L2   * ]      9 *-* v = 1]
+</code></pre>
+<pre><code class="language-rexx">t = .traceobject
+t~option = 'S'
+call one 'ISGUARDED', 'yes'
+call one 'HASSCOPELOCK', ''
+call one 'SCOPELOCKCOUNT', 'abc'
+call one 'ATTRIBUTEPOOL', 'abcdef'
+t~option = 'N'
+exit
+one: procedure expose t
+  n = .stringtable~new
+  n~traceline = 'x'
+  n~thread = 2; n~invocation = 6
+  n~isGuarded = 1; n~hasScopeLock = 0; n~scopeLockCount = 0
+  n~attributePool = 1
+  n[arg(1)] = arg(2)
+  signal on syntax name bad
+  say arg(1) '['arg(2)']' '['t~makeStringImpl(n)']'
+  return
+bad: say arg(1) '['arg(2)'] =&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">ISGUARDED [yes] =&gt; 34.901
+HASSCOPELOCK [] =&gt; 34.901
+SCOPELOCKCOUNT [abc] [[T2  I6  Gu A1  Labc   ] x]
+ATTRIBUTEPOOL [abcdef] [[T2  I6  Gu Aabcdef L0    ] x]
+</code></pre>
+<div class="rule" id="r-class.traceobject.makestringimpl.sends"><a href="#r-class.traceobject.makestringimpl.sends">[class.traceobject.makestringimpl.sends]</a></div>
+<p><code>makeStringImpl</code> reads the entries of its argument by sending it <code>[]</code> with the
+entry's name, in this order. For <code>N</code> it reads <code>TRACELINE</code>. For <code>T</code> it sends the
+message <code>TRACELINE</code> and then <code>[]</code> with <code>THREAD</code>. For <code>S</code> it reads <code>THREAD</code>,
+<code>INVOCATION</code> and <code>ATTRIBUTEPOOL</code>, then, when <code>ATTRIBUTEPOOL</code> has a value,
+<code>ISGUARDED</code>, <code>HASSCOPELOCK</code> and <code>SCOPELOCKCOUNT</code>, and last <code>TRACELINE</code>. For <code>F</code>
+it reads <code>INTERPRETER</code> first and then what <code>S</code> reads. For <code>P</code> it reads <code>OPTION</code>
+and then what the format that the value chooses reads. An argument that is a
+string raises <code>SYNTAX 93.924</code>; any other object that does not answer these
+messages raises their error, such as <code>93.907</code> for an <code>Array</code> and <code>97.1</code> for
+<code>.nil</code>.</p>
+<pre><code class="language-rexx">t = .traceobject
+s = .spy~new
+s['TRACELINE'] = '    11 *-* x = 1'
+s['THREAD'] = 3; s['INVOCATION'] = 4; s['INTERPRETER'] = 5
+do o over 'N', 'T', 'S', 'F'
+  t~option = o
+  say 'option' o
+  say '['t~makeStringImpl(s)']'
+end
+s['ATTRIBUTEPOOL'] = 7; s['ISGUARDED'] = 1
+s['HASSCOPELOCK'] = 0; s['SCOPELOCKCOUNT'] = 2
+t~option = 'S'
+say 'option S with the method fields'
+say '['t~makeStringImpl(s)']'
+t~option = 'N'
+call try '.array~new'
+call try '.nil'
+call try '"text"'
+exit
+try:
+  signal on syntax name bad
+  interpret 'rr = t~makeStringImpl('arg(1)')'
+  say arg(1) '=&gt; no error'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class spy subclass stringtable
+::method '[]'
+  say '  []' arg(1)
+  forward class (super)
+::method traceline
+  say '  traceline'
+  forward class (super)
+</code></pre>
+<pre><code class="language-output">option N
+  [] TRACELINE
+[    11 *-* x = 1]
+option T
+  traceline
+  [] THREAD
+[    11 *-3* x = 1]
+option S
+  [] THREAD
+  [] INVOCATION
+  [] ATTRIBUTEPOOL
+  [] TRACELINE
+[[T3  I4 ]                   11 *-* x = 1]
+option F
+  [] INTERPRETER
+  [] THREAD
+  [] INVOCATION
+  [] ATTRIBUTEPOOL
+  [] TRACELINE
+[[R5   T3   I4   ]                      11 *-* x = 1]
+option S with the method fields
+  [] THREAD
+  [] INVOCATION
+  [] ATTRIBUTEPOOL
+  [] ISGUARDED
+  [] HASSCOPELOCK
+  [] SCOPELOCKCOUNT
+  [] TRACELINE
+[[T3  I4  Gu A7  L2    ]     11 *-* x = 1]
+.array~new =&gt; 93.907
+.nil =&gt; 97.1
+"text" =&gt; 93.924
+</code></pre>
+<pre><code class="language-rexx">t = .traceobject
+t~option = 'P'
+s = .stringtable~new
+s['TRACELINE'] = '    11 *-* x = 1'
+s['THREAD'] = 3; s['INVOCATION'] = 4; s['INTERPRETER'] = 5
+say '['t~makeStringImpl(s)']'
+do o over 'N', ' T', 'S ', 'P', 'f', 'Full'
+  s['OPTION'] = o
+  say '['o']' '['t~makeStringImpl(s)']'
+end
+t~option = 'N'
+</code></pre>
+<pre><code class="language-output">[    11 *-* x = 1]
+[N] [    11 *-* x = 1]
+[ T] [    11 *-3* x = 1]
+[S ] [[T3  I4 ]                   11 *-* x = 1]
+[P] [    11 *-* x = 1]
+[f] [[R5   T3   I4   ]                      11 *-* x = 1]
+[Full] [[R5   T3   I4   ]                      11 *-* x = 1]
+</code></pre>
+<div class="rule" id="r-class.traceobject.makestring"><a href="#r-class.traceobject.makestring">[class.traceobject.makestring]</a></div>
+<p><code>makeString</code> answers what <code>makeStringImpl</code> of the class answers for the
+object, so it follows the <code>option</code> at the time it is asked and not the option
+that the object was made with. That string is the value of the object wherever
+a string is needed, such as SAY, the concatenation operators and the trace
+destination; the <code>string</code> method of the object is the default one. An
+argument of <code>makeString</code> is not used.</p>
+<pre><code class="language-rexx">t = .traceobject
+n = t~new
+say '['n~makeString']' '['n']'
+n~traceline = 'hello'
+say '['n~makeString']' '['n']' '['n~string']' length(n) (n || '!'),
+    '['n~makeString(1)']'
+t~option = 'S'
+n~thread = 4; n~invocation = 5
+say '['n~makeString']'
+t~option = 'N'
+say '['n~makeString']'
+n~traceline = .nil
+say '['n~makeString']'
+</code></pre>
+<pre><code class="language-output">[?] [?]
+[hello] [hello] [a TraceObject] 5 hello! [hello]
+[[T4  I5 ]               hello]
+[hello]
+[?]
+</code></pre>
+<h2 id="replacing-the-format"><a class="header" href="#replacing-the-format">Replacing the format</a></h2>
+<div class="rule" id="r-class.traceobject.setmakestring"><a href="#r-class.traceobject.setmakestring">[class.traceobject.setmakestring]</a></div>
+<p><code>setMakeString</code> replaces <code>makeStringImpl</code> with a method of the program: the
+argument is a <code>Method</code> object, a string that holds the source of a method or an
+array of strings that hold its lines. The method receives the <code>TraceObject</code> and
+answers the text. From then on it supplies <code>makeStringImpl</code>, and with it
+<code>makeString</code>, whatever the <code>option</code> is, until <code>unsetMakeString</code> takes it away; a
+second <code>setMakeString</code> replaces the first. It answers no value. A source that
+does not translate raises the error that <code>Method~new</code> raises for it, an argument
+that is neither a string, a <code>Method</code> nor an array raises <code>SYNTAX 93.961</code>, <code>.nil</code>
+included, an array item that is not a string <code>93.952</code>, no argument <code>93.901</code> and
+a second one <code>93.902</code>. <code>unsetMakeString</code> takes no argument and answers no value.</p>
+<pre><code class="language-rexx">.traceoutput~destination(.output)
+t = .traceobject
+m = .method~new('mk', 'use arg o; return "&lt;&lt;" || o~traceline~strip || "&gt;&gt;"')
+t~setMakeString(m)
+trace r
+x = 1
+trace off
+t~setMakeString('use arg o; return "S:" || o~number')
+trace r
+x = 1
+trace off
+t~setMakeString(.array~of('use arg o', 'return "A:" || o~option'))
+trace r
+x = 1
+trace off
+t~option = 'S'
+n = t~new
+n~traceline = 'abc'
+say t~makeStringImpl(n) n~makeString
+t~unsetMakeString
+say '['t~makeStringImpl(n)']'
+t~option = 'N'
+say '['t~makeStringImpl(n)']'
+call try 't~setMakeString(.nil)'
+call try 't~setMakeString(.object~new)'
+call try 't~setMakeString(.array~of("return 1", .object~new))'
+call try 't~setMakeString'
+call try 't~setMakeString("x", "y")'
+call try 't~setMakeString("not rexx )(")'
+call try '.method~new("m", "not rexx )(")'
+call try 't~unsetMakeString(1)'
+call try 'x = t~setMakeString("return 1")'
+call try 'x = t~unsetMakeString'
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  say arg(1) '=&gt; no error'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">&lt;&lt;6 *-* x = 1&gt;&gt;
+&lt;&lt;&gt;&gt;&gt;   "1"&gt;&gt;
+&lt;&lt;7 *-* trace off&gt;&gt;
+S:4
+S:5
+S:6
+A:N
+A:N
+A:N
+A:S A:S
+[[T?  I? ]               abc]
+[abc]
+t~setMakeString(.nil) =&gt; 93.961
+t~setMakeString(.object~new) =&gt; 93.961
+t~setMakeString(.array~of("return 1", .object~new)) =&gt; 93.952
+t~setMakeString =&gt; 93.901
+t~setMakeString("x", "y") =&gt; 93.902
+t~setMakeString("not rexx )(") =&gt; 37.2
+.method~new("m", "not rexx )(") =&gt; 37.2
+t~unsetMakeString(1) =&gt; 93.902
+x = t~setMakeString("return 1") =&gt; 91.999
+x = t~unsetMakeString =&gt; 91.999
+</code></pre>
+<h2 id="instance-methods"><a class="header" href="#instance-methods">Instance methods</a></h2>
+<div class="rule" id="r-class.traceobject.compareto"><a href="#r-class.traceobject.compareto">[class.traceobject.compareto]</a></div>
+<p><code>compareTo</code> compares the receiver with its argument, usually another
+<code>TraceObject</code>, by their <code>NUMBER</code> entries and answers <code>-1</code> when the receiver's is
+smaller, <code>0</code> when they are equal and <code>1</code> when it is larger. It so sorts the
+objects in the order they were made. It reads the argument's entry by sending it
+<code>[]</code> with <code>NUMBER</code>, so any collection indexed by strings will do, and it
+compares the two numbers under NUMERIC DIGITS 9, whatever the caller's setting.
+A missing entry, the receiver's or the argument's, counts as smaller than any
+number, and two missing entries are equal. An entry that is not a number raises
+<code>SYNTAX 41.1</code>. A string argument, and a missing one, raises <code>SYNTAX 93.924</code>;
+another object raises the error of <code>[]</code>, such as <code>93.907</code> for an <code>Array</code> and
+<code>97.1</code> for <code>.nil</code>.</p>
+<pre><code class="language-rexx">t = .traceobject
+a = t~new
+b = t~new
+say a~number b~number a~compareTo(b) b~compareTo(a) a~compareTo(a)
+say a~compareTo(.stringtable~new)
+say a~compareTo(.stringtable~new~~put(5, 'NUMBER'))
+say a~compareTo(.stringtable~new~~put(2, 'NUMBER'))
+call try 'a~compareTo(.stringtable~new~~put("x", "NUMBER"))'
+call try 'a~compareTo(1)'
+call try 'a~compareTo'
+y = .array~of(b, a)~sort
+say y[1]~number y[2]~number
+exit
+try:
+  signal on syntax name bad
+  interpret 'rr =' arg(1)
+  say arg(1) '=&gt;' rr
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">1 2 -1 1 0
+1
+-1
+-1
+a~compareTo(.stringtable~new~~put("x", "NUMBER")) =&gt; 41.1
+a~compareTo(1) =&gt; 93.924
+a~compareTo =&gt; 93.924
+1 2
+</code></pre>
+<pre><code class="language-rexx">t = .traceobject
+a = t~new
+s = .spy~new~~put(5, 'NUMBER')
+say a~compareTo(s)
+say a~compareTo(.directory~new~~put(5, 'NUMBER'))
+numeric digits 20
+say a~compareTo(.stringtable~new~~put(a~number || '.0000000001', 'NUMBER'))
+numeric digits 9
+b = t~new
+b~remove('NUMBER')
+say b~compareTo(a) b~compareTo(.stringtable~new)
+call try 'a~compareTo(.array~new)'
+call try 'a~compareTo(.nil)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'rr =' arg(1)
+  say arg(1) '=&gt;' rr
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class spy subclass stringtable
+::method '[]'
+  say '  []' arg(1)
+  forward class (super)
+</code></pre>
+<pre><code class="language-output">  [] NUMBER
+-1
+-1
+0
+-1 0
+a~compareTo(.array~new) =&gt; 93.907
+a~compareTo(.nil) =&gt; 97.1
+</code></pre>
+<h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
+<div class="rule" id="r-class.traceobject.deviation.7"><a href="#r-class.traceobject.deviation.7">[class.traceobject.deviation.7]</a></div>
+<p>When two activities trace at once, the order in which the <code>TraceObject</code> objects
+of their lines are made is not specified, and with it the <code>NUMBER</code> each one gets
+and the order in which a <code>collector</code> or <code>notify</code> receives them; <a href="../instructions/trace.html#r-instr.trace.deviation.7">Deviation
+7</a> states this for the lines that reach the
+destination. ooRexx's order varies from run to run. The count of the objects
+does not depend on the order: in the example each activity traces two clauses
+and the started method's entry, and the collector receives seven objects.</p>
+<pre><code class="language-rexx">c = .array~new
+.traceobject~collector = c
+m = .worker~new~start('run')
+trace r
+a1 = 1
+trace n
+m~result
+.traceobject~collector = .nil
+n = 0
+do o over c
+  if pos('*-*', o~traceline) &gt; 0 then n = n + 1
+end
+say n 'clause lines' c~items 'objects' .traceobject~counter
+::class worker
+::method run
+  trace r
+  b1 = 1
+  trace n
+  return 1
+</code></pre>
+<pre><code class="language-output">4 clause lines 7 objects 7
+</code></pre>
+<div class="rule" id="r-class.traceobject.deviation.50"><a href="#r-class.traceobject.deviation.50">[class.traceobject.deviation.50]</a></div>
+<p>A line that the destination refuses is a <code>TraceObject</code> like any other: it is
+made and given to the <code>collector</code> before the destination receives it, as <a href="#r-class.traceobject.lines">the
+lines rule</a> says. When the destination refuses it by
+raising a condition, the clause may have done its own work before the line is
+written, as <a href="../instructions/trace.html#r-instr.trace.deviation.50">Deviation 50</a> states; ooRexx raises
+the condition before the clause does anything. In the example the destination
+refuses the second line, the value line of <code>say 'a'</code>: interrexx has written <code>a</code>
+by then and ooRexx has not, and on both the collector holds that line.</p>
+<pre><code class="language-rexx">c = .array~new
+.traceobject~collector = c
+.traceoutput~destination(.sink~new)
+signal on syntax name e
+trace o
+trace r
+say 'a'
+exit
+e: trace o
+.traceoutput~destination(.output)
+.traceobject~collector = .nil
+say 'caught' condition('o')~code '['c[2]~traceline']'
+::class sink
+::method init
+  expose n
+  n = 0
+::method lineout
+  expose n
+  n = n + 1
+  if n = 2 then raise syntax 93.900
+  return 0
+</code></pre>
+<pre><code class="language-output">a
+caught 93.900 [       &gt;&gt;&gt;   "a"]
+</code></pre>
+<div class="rule" id="r-class.traceobject.deviation.109"><a href="#r-class.traceobject.deviation.109">[class.traceobject.deviation.109]</a></div>
+<p>The argument of <code>option=</code> is read by its own characters when it is an instance
+of a subclass of <code>String</code>, and <code>REQUEST</code> and <code>MAKESTRING</code> are not sent to it
+(<a href="string.html#r-class.string.deviation.109">Deviation 109</a>). ooRexx sends such an instance
+<code>request</code> with <code>STRING</code> or <code>MAKESTRING</code>, so an override of either can change
+the option. In the example both methods answer <code>Full</code>, and the characters are
+<code>Standard</code>.</p>
+<pre><code class="language-rexx">.traceobject~option = .opt~new('Standard')
+say .traceobject~option
+.traceobject~option = 'N'
+::class opt subclass string
+::method makestring
+  return 'Full'
+::method request
+  use arg c
+  return 'Full'
+</code></pre>
+<pre><code class="language-output defect=#140">S
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../classes/rexxinfo.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../classes/validate.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../classes/rexxinfo.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../classes/validate.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../assets/version-picker.js"></script>
+
+
+    </div>
+    </body>
+</html>

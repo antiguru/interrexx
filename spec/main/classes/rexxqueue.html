@@ -1,0 +1,1297 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>RexxQueue - The interrexx Language Specification</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../conventions.html"><strong aria-hidden="true">2.</strong> Conventions</a></li><li class="chapter-item expanded "><a href="../lexical/index.html"><strong aria-hidden="true">3.</strong> Lexical structure</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../lexical/characters.html"><strong aria-hidden="true">3.1.</strong> Characters</a></li><li class="chapter-item expanded "><a href="../lexical/comments.html"><strong aria-hidden="true">3.2.</strong> Comments</a></li><li class="chapter-item expanded "><a href="../lexical/literals.html"><strong aria-hidden="true">3.3.</strong> Literals</a></li><li class="chapter-item expanded "><a href="../lexical/symbols.html"><strong aria-hidden="true">3.4.</strong> Symbols</a></li><li class="chapter-item expanded "><a href="../lexical/operators.html"><strong aria-hidden="true">3.5.</strong> Operators and special characters</a></li><li class="chapter-item expanded "><a href="../lexical/clauses.html"><strong aria-hidden="true">3.6.</strong> Clauses</a></li></ol></li><li class="chapter-item expanded "><a href="../numbers/index.html"><strong aria-hidden="true">4.</strong> Numbers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../numbers/formats.html"><strong aria-hidden="true">4.1.</strong> Formats</a></li><li class="chapter-item expanded "><a href="../numbers/limits.html"><strong aria-hidden="true">4.2.</strong> Limits</a></li><li class="chapter-item expanded "><a href="../numbers/arithmetic.html"><strong aria-hidden="true">4.3.</strong> Arithmetic</a></li><li class="chapter-item expanded "><a href="../numbers/settings.html"><strong aria-hidden="true">4.4.</strong> Settings</a></li><li class="chapter-item expanded "><a href="../numbers/comparison.html"><strong aria-hidden="true">4.5.</strong> Comparison</a></li></ol></li><li class="chapter-item expanded "><a href="../expressions/index.html"><strong aria-hidden="true">5.</strong> Expressions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../expressions/terms.html"><strong aria-hidden="true">5.1.</strong> Terms</a></li><li class="chapter-item expanded "><a href="../expressions/variables.html"><strong aria-hidden="true">5.2.</strong> Variables</a></li><li class="chapter-item expanded "><a href="../expressions/concatenation.html"><strong aria-hidden="true">5.3.</strong> Concatenation</a></li><li class="chapter-item expanded "><a href="../expressions/arithmetic.html"><strong aria-hidden="true">5.4.</strong> Arithmetic operators</a></li><li class="chapter-item expanded "><a href="../expressions/comparison.html"><strong aria-hidden="true">5.5.</strong> Comparison operators</a></li><li class="chapter-item expanded "><a href="../expressions/logical.html"><strong aria-hidden="true">5.6.</strong> Logical operators</a></li><li class="chapter-item expanded "><a href="../expressions/messages.html"><strong aria-hidden="true">5.7.</strong> Message operators</a></li></ol></li><li class="chapter-item expanded "><a href="../instructions/index.html"><strong aria-hidden="true">6.</strong> Instructions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../instructions/address.html"><strong aria-hidden="true">6.1.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../instructions/arg.html"><strong aria-hidden="true">6.2.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../instructions/assignment.html"><strong aria-hidden="true">6.3.</strong> Assignments</a></li><li class="chapter-item expanded "><a href="../instructions/call.html"><strong aria-hidden="true">6.4.</strong> CALL</a></li><li class="chapter-item expanded "><a href="../instructions/command.html"><strong aria-hidden="true">6.5.</strong> Commands</a></li><li class="chapter-item expanded "><a href="../instructions/do.html"><strong aria-hidden="true">6.6.</strong> DO</a></li><li class="chapter-item expanded "><a href="../instructions/drop.html"><strong aria-hidden="true">6.7.</strong> DROP</a></li><li class="chapter-item expanded "><a href="../instructions/exit.html"><strong aria-hidden="true">6.8.</strong> EXIT</a></li><li class="chapter-item expanded "><a href="../instructions/expose.html"><strong aria-hidden="true">6.9.</strong> EXPOSE</a></li><li class="chapter-item expanded "><a href="../instructions/forward.html"><strong aria-hidden="true">6.10.</strong> FORWARD</a></li><li class="chapter-item expanded "><a href="../instructions/guard.html"><strong aria-hidden="true">6.11.</strong> GUARD</a></li><li class="chapter-item expanded "><a href="../instructions/if.html"><strong aria-hidden="true">6.12.</strong> IF</a></li><li class="chapter-item expanded "><a href="../instructions/interpret.html"><strong aria-hidden="true">6.13.</strong> INTERPRET</a></li><li class="chapter-item expanded "><a href="../instructions/iterate.html"><strong aria-hidden="true">6.14.</strong> ITERATE</a></li><li class="chapter-item expanded "><a href="../instructions/leave.html"><strong aria-hidden="true">6.15.</strong> LEAVE</a></li><li class="chapter-item expanded "><a href="../instructions/loop.html"><strong aria-hidden="true">6.16.</strong> LOOP</a></li><li class="chapter-item expanded "><a href="../instructions/message.html"><strong aria-hidden="true">6.17.</strong> Message instructions</a></li><li class="chapter-item expanded "><a href="../instructions/nop.html"><strong aria-hidden="true">6.18.</strong> NOP</a></li><li class="chapter-item expanded "><a href="../instructions/numeric.html"><strong aria-hidden="true">6.19.</strong> NUMERIC</a></li><li class="chapter-item expanded "><a href="../instructions/options.html"><strong aria-hidden="true">6.20.</strong> OPTIONS</a></li><li class="chapter-item expanded "><a href="../instructions/parse.html"><strong aria-hidden="true">6.21.</strong> PARSE</a></li><li class="chapter-item expanded "><a href="../instructions/procedure.html"><strong aria-hidden="true">6.22.</strong> PROCEDURE</a></li><li class="chapter-item expanded "><a href="../instructions/pull.html"><strong aria-hidden="true">6.23.</strong> PULL</a></li><li class="chapter-item expanded "><a href="../instructions/push.html"><strong aria-hidden="true">6.24.</strong> PUSH</a></li><li class="chapter-item expanded "><a href="../instructions/queue.html"><strong aria-hidden="true">6.25.</strong> QUEUE</a></li><li class="chapter-item expanded "><a href="../instructions/raise.html"><strong aria-hidden="true">6.26.</strong> RAISE</a></li><li class="chapter-item expanded "><a href="../instructions/reply.html"><strong aria-hidden="true">6.27.</strong> REPLY</a></li><li class="chapter-item expanded "><a href="../instructions/return.html"><strong aria-hidden="true">6.28.</strong> RETURN</a></li><li class="chapter-item expanded "><a href="../instructions/say.html"><strong aria-hidden="true">6.29.</strong> SAY</a></li><li class="chapter-item expanded "><a href="../instructions/select.html"><strong aria-hidden="true">6.30.</strong> SELECT</a></li><li class="chapter-item expanded "><a href="../instructions/signal.html"><strong aria-hidden="true">6.31.</strong> SIGNAL</a></li><li class="chapter-item expanded "><a href="../instructions/trace.html"><strong aria-hidden="true">6.32.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../instructions/use.html"><strong aria-hidden="true">6.33.</strong> USE</a></li></ol></li><li class="chapter-item expanded "><a href="../parsing/index.html"><strong aria-hidden="true">7.</strong> Parsing</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../parsing/templates.html"><strong aria-hidden="true">7.1.</strong> Templates</a></li><li class="chapter-item expanded "><a href="../parsing/patterns.html"><strong aria-hidden="true">7.2.</strong> Patterns</a></li><li class="chapter-item expanded "><a href="../parsing/multiple.html"><strong aria-hidden="true">7.3.</strong> Several strings and case</a></li></ol></li><li class="chapter-item expanded "><a href="../directives/index.html"><strong aria-hidden="true">8.</strong> Directives</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../directives/class.html"><strong aria-hidden="true">8.1.</strong> ::CLASS</a></li><li class="chapter-item expanded "><a href="../directives/method.html"><strong aria-hidden="true">8.2.</strong> ::METHOD</a></li><li class="chapter-item expanded "><a href="../directives/attribute.html"><strong aria-hidden="true">8.3.</strong> ::ATTRIBUTE</a></li><li class="chapter-item expanded "><a href="../directives/constant.html"><strong aria-hidden="true">8.4.</strong> ::CONSTANT</a></li><li class="chapter-item expanded "><a href="../directives/routine.html"><strong aria-hidden="true">8.5.</strong> ::ROUTINE</a></li><li class="chapter-item expanded "><a href="../directives/requires.html"><strong aria-hidden="true">8.6.</strong> ::REQUIRES</a></li><li class="chapter-item expanded "><a href="../directives/options.html"><strong aria-hidden="true">8.7.</strong> ::OPTIONS</a></li><li class="chapter-item expanded "><a href="../directives/resource.html"><strong aria-hidden="true">8.8.</strong> ::RESOURCE</a></li><li class="chapter-item expanded "><a href="../directives/annotate.html"><strong aria-hidden="true">8.9.</strong> ::ANNOTATE</a></li></ol></li><li class="chapter-item expanded "><a href="../conditions/index.html"><strong aria-hidden="true">9.</strong> Conditions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../conditions/traps.html"><strong aria-hidden="true">9.1.</strong> Condition traps</a></li><li class="chapter-item expanded "><a href="../conditions/information.html"><strong aria-hidden="true">9.2.</strong> Condition information</a></li><li class="chapter-item expanded "><a href="../conditions/syntax.html"><strong aria-hidden="true">9.3.</strong> SYNTAX</a></li><li class="chapter-item expanded "><a href="../conditions/error.html"><strong aria-hidden="true">9.4.</strong> ERROR and FAILURE</a></li><li class="chapter-item expanded "><a href="../conditions/halt.html"><strong aria-hidden="true">9.5.</strong> HALT</a></li><li class="chapter-item expanded "><a href="../conditions/novalue.html"><strong aria-hidden="true">9.6.</strong> NOVALUE</a></li><li class="chapter-item expanded "><a href="../conditions/nostring.html"><strong aria-hidden="true">9.7.</strong> NOSTRING</a></li><li class="chapter-item expanded "><a href="../conditions/nomethod.html"><strong aria-hidden="true">9.8.</strong> NOMETHOD</a></li><li class="chapter-item expanded "><a href="../conditions/notready.html"><strong aria-hidden="true">9.9.</strong> NOTREADY</a></li><li class="chapter-item expanded "><a href="../conditions/lostdigits.html"><strong aria-hidden="true">9.10.</strong> LOSTDIGITS</a></li><li class="chapter-item expanded "><a href="../conditions/user.html"><strong aria-hidden="true">9.11.</strong> USER conditions</a></li><li class="chapter-item expanded "><a href="../conditions/errors.html"><strong aria-hidden="true">9.12.</strong> Error numbers</a></li></ol></li><li class="chapter-item expanded "><a href="../classes/index.html"><strong aria-hidden="true">10.</strong> Classes</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../classes/methods.html"><strong aria-hidden="true">10.1.</strong> Method search</a></li><li class="chapter-item expanded "><a href="../classes/object.html"><strong aria-hidden="true">10.2.</strong> Object</a></li><li class="chapter-item expanded "><a href="../classes/class.html"><strong aria-hidden="true">10.3.</strong> Class</a></li><li class="chapter-item expanded "><a href="../classes/string.html"><strong aria-hidden="true">10.4.</strong> String</a></li><li class="chapter-item expanded "><a href="../classes/method.html"><strong aria-hidden="true">10.5.</strong> Method</a></li><li class="chapter-item expanded "><a href="../classes/routine.html"><strong aria-hidden="true">10.6.</strong> Routine</a></li><li class="chapter-item expanded "><a href="../classes/package.html"><strong aria-hidden="true">10.7.</strong> Package</a></li><li class="chapter-item expanded "><a href="../classes/message.html"><strong aria-hidden="true">10.8.</strong> Message</a></li><li class="chapter-item expanded "><a href="../classes/messagenotification.html"><strong aria-hidden="true">10.9.</strong> MessageNotification</a></li><li class="chapter-item expanded "><a href="../classes/alarmnotification.html"><strong aria-hidden="true">10.10.</strong> AlarmNotification</a></li><li class="chapter-item expanded "><a href="../classes/collection.html"><strong aria-hidden="true">10.11.</strong> Collection</a></li><li class="chapter-item expanded "><a href="../classes/mapcollection.html"><strong aria-hidden="true">10.12.</strong> MapCollection</a></li><li class="chapter-item expanded "><a href="../classes/orderedcollection.html"><strong aria-hidden="true">10.13.</strong> OrderedCollection</a></li><li class="chapter-item expanded "><a href="../classes/setcollection.html"><strong aria-hidden="true">10.14.</strong> SetCollection</a></li><li class="chapter-item expanded "><a href="../classes/array.html"><strong aria-hidden="true">10.15.</strong> Array</a></li><li class="chapter-item expanded "><a href="../classes/list.html"><strong aria-hidden="true">10.16.</strong> List</a></li><li class="chapter-item expanded "><a href="../classes/queue.html"><strong aria-hidden="true">10.17.</strong> Queue</a></li><li class="chapter-item expanded "><a href="../classes/circularqueue.html"><strong aria-hidden="true">10.18.</strong> CircularQueue</a></li><li class="chapter-item expanded "><a href="../classes/directory.html"><strong aria-hidden="true">10.19.</strong> Directory</a></li><li class="chapter-item expanded "><a href="../classes/stringtable.html"><strong aria-hidden="true">10.20.</strong> StringTable</a></li><li class="chapter-item expanded "><a href="../classes/properties.html"><strong aria-hidden="true">10.21.</strong> Properties</a></li><li class="chapter-item expanded "><a href="../classes/table.html"><strong aria-hidden="true">10.22.</strong> Table</a></li><li class="chapter-item expanded "><a href="../classes/identitytable.html"><strong aria-hidden="true">10.23.</strong> IdentityTable</a></li><li class="chapter-item expanded "><a href="../classes/relation.html"><strong aria-hidden="true">10.24.</strong> Relation</a></li><li class="chapter-item expanded "><a href="../classes/bag.html"><strong aria-hidden="true">10.25.</strong> Bag</a></li><li class="chapter-item expanded "><a href="../classes/set.html"><strong aria-hidden="true">10.26.</strong> Set</a></li><li class="chapter-item expanded "><a href="../classes/stem.html"><strong aria-hidden="true">10.27.</strong> Stem</a></li><li class="chapter-item expanded "><a href="../classes/datetime.html"><strong aria-hidden="true">10.28.</strong> DateTime</a></li><li class="chapter-item expanded "><a href="../classes/timespan.html"><strong aria-hidden="true">10.29.</strong> TimeSpan</a></li><li class="chapter-item expanded "><a href="../classes/comparable.html"><strong aria-hidden="true">10.30.</strong> Comparable</a></li><li class="chapter-item expanded "><a href="../classes/orderable.html"><strong aria-hidden="true">10.31.</strong> Orderable</a></li><li class="chapter-item expanded "><a href="../classes/comparators.html"><strong aria-hidden="true">10.32.</strong> Comparators</a></li><li class="chapter-item expanded "><a href="../classes/mutablebuffer.html"><strong aria-hidden="true">10.33.</strong> MutableBuffer</a></li><li class="chapter-item expanded "><a href="../classes/buffer.html"><strong aria-hidden="true">10.34.</strong> Buffer</a></li><li class="chapter-item expanded "><a href="../classes/pointer.html"><strong aria-hidden="true">10.35.</strong> Pointer</a></li><li class="chapter-item expanded "><a href="../classes/weakreference.html"><strong aria-hidden="true">10.36.</strong> WeakReference</a></li><li class="chapter-item expanded "><a href="../classes/variablereference.html"><strong aria-hidden="true">10.37.</strong> VariableReference</a></li><li class="chapter-item expanded "><a href="../classes/file.html"><strong aria-hidden="true">10.38.</strong> File</a></li><li class="chapter-item expanded "><a href="../classes/rexxcontext.html"><strong aria-hidden="true">10.39.</strong> RexxContext</a></li><li class="chapter-item expanded "><a href="../classes/stackframe.html"><strong aria-hidden="true">10.40.</strong> StackFrame</a></li><li class="chapter-item expanded "><a href="../classes/rexxinfo.html"><strong aria-hidden="true">10.41.</strong> RexxInfo</a></li><li class="chapter-item expanded "><a href="../classes/traceobject.html"><strong aria-hidden="true">10.42.</strong> TraceObject</a></li><li class="chapter-item expanded "><a href="../classes/validate.html"><strong aria-hidden="true">10.43.</strong> Validate</a></li><li class="chapter-item expanded "><a href="../classes/singleton.html"><strong aria-hidden="true">10.44.</strong> Singleton</a></li><li class="chapter-item expanded "><a href="../classes/alarm.html"><strong aria-hidden="true">10.45.</strong> Alarm</a></li><li class="chapter-item expanded "><a href="../classes/ticker.html"><strong aria-hidden="true">10.46.</strong> Ticker</a></li><li class="chapter-item expanded "><a href="../classes/monitor.html"><strong aria-hidden="true">10.47.</strong> Monitor</a></li><li class="chapter-item expanded "><a href="../classes/eventsemaphore.html"><strong aria-hidden="true">10.48.</strong> EventSemaphore</a></li><li class="chapter-item expanded "><a href="../classes/mutexsemaphore.html"><strong aria-hidden="true">10.49.</strong> MutexSemaphore</a></li><li class="chapter-item expanded "><a href="../classes/commandhandler.html"><strong aria-hidden="true">10.50.</strong> CommandHandler</a></li><li class="chapter-item expanded "><a href="../classes/nativecommandhandler.html"><strong aria-hidden="true">10.51.</strong> NativeCommandHandler</a></li><li class="chapter-item expanded "><a href="../classes/commandcontext.html"><strong aria-hidden="true">10.52.</strong> CommandContext</a></li><li class="chapter-item expanded "><a href="../classes/commandinput.html"><strong aria-hidden="true">10.53.</strong> CommandInput</a></li><li class="chapter-item expanded "><a href="../classes/commandoutput.html"><strong aria-hidden="true">10.54.</strong> CommandOutput</a></li><li class="chapter-item expanded "><a href="../classes/rexxqueue.html" class="active"><strong aria-hidden="true">10.55.</strong> RexxQueue</a></li><li class="chapter-item expanded "><a href="../classes/supplier.html"><strong aria-hidden="true">10.56.</strong> Supplier</a></li><li class="chapter-item expanded "><a href="../classes/streamsupplier.html"><strong aria-hidden="true">10.57.</strong> StreamSupplier</a></li><li class="chapter-item expanded "><a href="../classes/regularexpression.html"><strong aria-hidden="true">10.58.</strong> RegularExpression</a></li></ol></li><li class="chapter-item expanded "><a href="../builtins/index.html"><strong aria-hidden="true">11.</strong> Built-in functions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../builtins/abbrev.html"><strong aria-hidden="true">11.1.</strong> ABBREV</a></li><li class="chapter-item expanded "><a href="../builtins/abs.html"><strong aria-hidden="true">11.2.</strong> ABS</a></li><li class="chapter-item expanded "><a href="../builtins/address.html"><strong aria-hidden="true">11.3.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../builtins/arg.html"><strong aria-hidden="true">11.4.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../builtins/b2x.html"><strong aria-hidden="true">11.5.</strong> B2X</a></li><li class="chapter-item expanded "><a href="../builtins/beep.html"><strong aria-hidden="true">11.6.</strong> BEEP</a></li><li class="chapter-item expanded "><a href="../builtins/bitand.html"><strong aria-hidden="true">11.7.</strong> BITAND</a></li><li class="chapter-item expanded "><a href="../builtins/bitor.html"><strong aria-hidden="true">11.8.</strong> BITOR</a></li><li class="chapter-item expanded "><a href="../builtins/bitxor.html"><strong aria-hidden="true">11.9.</strong> BITXOR</a></li><li class="chapter-item expanded "><a href="../builtins/c2d.html"><strong aria-hidden="true">11.10.</strong> C2D</a></li><li class="chapter-item expanded "><a href="../builtins/c2x.html"><strong aria-hidden="true">11.11.</strong> C2X</a></li><li class="chapter-item expanded "><a href="../builtins/center.html"><strong aria-hidden="true">11.12.</strong> CENTER</a></li><li class="chapter-item expanded "><a href="../builtins/changestr.html"><strong aria-hidden="true">11.13.</strong> CHANGESTR</a></li><li class="chapter-item expanded "><a href="../builtins/charin.html"><strong aria-hidden="true">11.14.</strong> CHARIN</a></li><li class="chapter-item expanded "><a href="../builtins/charout.html"><strong aria-hidden="true">11.15.</strong> CHAROUT</a></li><li class="chapter-item expanded "><a href="../builtins/chars.html"><strong aria-hidden="true">11.16.</strong> CHARS</a></li><li class="chapter-item expanded "><a href="../builtins/compare.html"><strong aria-hidden="true">11.17.</strong> COMPARE</a></li><li class="chapter-item expanded "><a href="../builtins/condition.html"><strong aria-hidden="true">11.18.</strong> CONDITION</a></li><li class="chapter-item expanded "><a href="../builtins/copies.html"><strong aria-hidden="true">11.19.</strong> COPIES</a></li><li class="chapter-item expanded "><a href="../builtins/countstr.html"><strong aria-hidden="true">11.20.</strong> COUNTSTR</a></li><li class="chapter-item expanded "><a href="../builtins/d2c.html"><strong aria-hidden="true">11.21.</strong> D2C</a></li><li class="chapter-item expanded "><a href="../builtins/d2x.html"><strong aria-hidden="true">11.22.</strong> D2X</a></li><li class="chapter-item expanded "><a href="../builtins/datatype.html"><strong aria-hidden="true">11.23.</strong> DATATYPE</a></li><li class="chapter-item expanded "><a href="../builtins/date.html"><strong aria-hidden="true">11.24.</strong> DATE</a></li><li class="chapter-item expanded "><a href="../builtins/delstr.html"><strong aria-hidden="true">11.25.</strong> DELSTR</a></li><li class="chapter-item expanded "><a href="../builtins/delword.html"><strong aria-hidden="true">11.26.</strong> DELWORD</a></li><li class="chapter-item expanded "><a href="../builtins/digits.html"><strong aria-hidden="true">11.27.</strong> DIGITS</a></li><li class="chapter-item expanded "><a href="../builtins/directory.html"><strong aria-hidden="true">11.28.</strong> DIRECTORY</a></li><li class="chapter-item expanded "><a href="../builtins/endlocal.html"><strong aria-hidden="true">11.29.</strong> ENDLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/errortext.html"><strong aria-hidden="true">11.30.</strong> ERRORTEXT</a></li><li class="chapter-item expanded "><a href="../builtins/filespec.html"><strong aria-hidden="true">11.31.</strong> FILESPEC</a></li><li class="chapter-item expanded "><a href="../builtins/form.html"><strong aria-hidden="true">11.32.</strong> FORM</a></li><li class="chapter-item expanded "><a href="../builtins/format.html"><strong aria-hidden="true">11.33.</strong> FORMAT</a></li><li class="chapter-item expanded "><a href="../builtins/fuzz.html"><strong aria-hidden="true">11.34.</strong> FUZZ</a></li><li class="chapter-item expanded "><a href="../builtins/gc.html"><strong aria-hidden="true">11.35.</strong> GC</a></li><li class="chapter-item expanded "><a href="../builtins/insert.html"><strong aria-hidden="true">11.36.</strong> INSERT</a></li><li class="chapter-item expanded "><a href="../builtins/lastpos.html"><strong aria-hidden="true">11.37.</strong> LASTPOS</a></li><li class="chapter-item expanded "><a href="../builtins/left.html"><strong aria-hidden="true">11.38.</strong> LEFT</a></li><li class="chapter-item expanded "><a href="../builtins/length.html"><strong aria-hidden="true">11.39.</strong> LENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/linein.html"><strong aria-hidden="true">11.40.</strong> LINEIN</a></li><li class="chapter-item expanded "><a href="../builtins/lineout.html"><strong aria-hidden="true">11.41.</strong> LINEOUT</a></li><li class="chapter-item expanded "><a href="../builtins/lines.html"><strong aria-hidden="true">11.42.</strong> LINES</a></li><li class="chapter-item expanded "><a href="../builtins/lower.html"><strong aria-hidden="true">11.43.</strong> LOWER</a></li><li class="chapter-item expanded "><a href="../builtins/max.html"><strong aria-hidden="true">11.44.</strong> MAX</a></li><li class="chapter-item expanded "><a href="../builtins/min.html"><strong aria-hidden="true">11.45.</strong> MIN</a></li><li class="chapter-item expanded "><a href="../builtins/overlay.html"><strong aria-hidden="true">11.46.</strong> OVERLAY</a></li><li class="chapter-item expanded "><a href="../builtins/pos.html"><strong aria-hidden="true">11.47.</strong> POS</a></li><li class="chapter-item expanded "><a href="../builtins/qualify.html"><strong aria-hidden="true">11.48.</strong> QUALIFY</a></li><li class="chapter-item expanded "><a href="../builtins/queued.html"><strong aria-hidden="true">11.49.</strong> QUEUED</a></li><li class="chapter-item expanded "><a href="../builtins/random.html"><strong aria-hidden="true">11.50.</strong> RANDOM</a></li><li class="chapter-item expanded "><a href="../builtins/reverse.html"><strong aria-hidden="true">11.51.</strong> REVERSE</a></li><li class="chapter-item expanded "><a href="../builtins/right.html"><strong aria-hidden="true">11.52.</strong> RIGHT</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncadd.html"><strong aria-hidden="true">11.53.</strong> RXFUNCADD</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncdrop.html"><strong aria-hidden="true">11.54.</strong> RXFUNCDROP</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncquery.html"><strong aria-hidden="true">11.55.</strong> RXFUNCQUERY</a></li><li class="chapter-item expanded "><a href="../builtins/rxqueue.html"><strong aria-hidden="true">11.56.</strong> RXQUEUE</a></li><li class="chapter-item expanded "><a href="../builtins/setlocal.html"><strong aria-hidden="true">11.57.</strong> SETLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/sign.html"><strong aria-hidden="true">11.58.</strong> SIGN</a></li><li class="chapter-item expanded "><a href="../builtins/sourceline.html"><strong aria-hidden="true">11.59.</strong> SOURCELINE</a></li><li class="chapter-item expanded "><a href="../builtins/space.html"><strong aria-hidden="true">11.60.</strong> SPACE</a></li><li class="chapter-item expanded "><a href="../builtins/stream.html"><strong aria-hidden="true">11.61.</strong> STREAM</a></li><li class="chapter-item expanded "><a href="../builtins/strip.html"><strong aria-hidden="true">11.62.</strong> STRIP</a></li><li class="chapter-item expanded "><a href="../builtins/substr.html"><strong aria-hidden="true">11.63.</strong> SUBSTR</a></li><li class="chapter-item expanded "><a href="../builtins/subword.html"><strong aria-hidden="true">11.64.</strong> SUBWORD</a></li><li class="chapter-item expanded "><a href="../builtins/symbol.html"><strong aria-hidden="true">11.65.</strong> SYMBOL</a></li><li class="chapter-item expanded "><a href="../builtins/time.html"><strong aria-hidden="true">11.66.</strong> TIME</a></li><li class="chapter-item expanded "><a href="../builtins/trace.html"><strong aria-hidden="true">11.67.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../builtins/translate.html"><strong aria-hidden="true">11.68.</strong> TRANSLATE</a></li><li class="chapter-item expanded "><a href="../builtins/trunc.html"><strong aria-hidden="true">11.69.</strong> TRUNC</a></li><li class="chapter-item expanded "><a href="../builtins/upper.html"><strong aria-hidden="true">11.70.</strong> UPPER</a></li><li class="chapter-item expanded "><a href="../builtins/userid.html"><strong aria-hidden="true">11.71.</strong> USERID</a></li><li class="chapter-item expanded "><a href="../builtins/value.html"><strong aria-hidden="true">11.72.</strong> VALUE</a></li><li class="chapter-item expanded "><a href="../builtins/var.html"><strong aria-hidden="true">11.73.</strong> VAR</a></li><li class="chapter-item expanded "><a href="../builtins/verify.html"><strong aria-hidden="true">11.74.</strong> VERIFY</a></li><li class="chapter-item expanded "><a href="../builtins/word.html"><strong aria-hidden="true">11.75.</strong> WORD</a></li><li class="chapter-item expanded "><a href="../builtins/wordindex.html"><strong aria-hidden="true">11.76.</strong> WORDINDEX</a></li><li class="chapter-item expanded "><a href="../builtins/wordlength.html"><strong aria-hidden="true">11.77.</strong> WORDLENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/wordpos.html"><strong aria-hidden="true">11.78.</strong> WORDPOS</a></li><li class="chapter-item expanded "><a href="../builtins/words.html"><strong aria-hidden="true">11.79.</strong> WORDS</a></li><li class="chapter-item expanded "><a href="../builtins/x2b.html"><strong aria-hidden="true">11.80.</strong> X2B</a></li><li class="chapter-item expanded "><a href="../builtins/x2c.html"><strong aria-hidden="true">11.81.</strong> X2C</a></li><li class="chapter-item expanded "><a href="../builtins/x2d.html"><strong aria-hidden="true">11.82.</strong> X2D</a></li><li class="chapter-item expanded "><a href="../builtins/xrange.html"><strong aria-hidden="true">11.83.</strong> XRANGE</a></li></ol></li><li class="chapter-item expanded "><a href="../deviations.html"><strong aria-hidden="true">12.</strong> Deviations</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The interrexx Language Specification</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="rexxqueue"><a class="header" href="#rexxqueue">RexxQueue</a></h1>
+<p class="references">rexxref: Builtin Classes &gt; Utility Classes &gt; RexxQueue Class; Builtin Classes &gt; Utility Classes &gt; RexxQueue Class &gt; new (Inherited Class Method); Builtin Classes &gt; Utility Classes &gt; RexxQueue Class &gt; create (Class Method); Builtin Classes &gt; Utility Classes &gt; RexxQueue Class &gt; delete (Class Method); Builtin Classes &gt; Utility Classes &gt; RexxQueue Class &gt; exists (Class Method); Builtin Classes &gt; Utility Classes &gt; RexxQueue Class &gt; open (Class Method); Builtin Classes &gt; Utility Classes &gt; RexxQueue Class &gt; delete; Builtin Classes &gt; Utility Classes &gt; RexxQueue Class &gt; empty; Builtin Classes &gt; Utility Classes &gt; RexxQueue Class &gt; get; Builtin Classes &gt; Utility Classes &gt; RexxQueue Class &gt; init; Builtin Classes &gt; Utility Classes &gt; RexxQueue Class &gt; lineIn; Builtin Classes &gt; Utility Classes &gt; RexxQueue Class &gt; lineOut; Builtin Classes &gt; Utility Classes &gt; RexxQueue Class &gt; makeArray; Builtin Classes &gt; Utility Classes &gt; RexxQueue Class &gt; pull; Builtin Classes &gt; Utility Classes &gt; RexxQueue Class &gt; push; Builtin Classes &gt; Utility Classes &gt; RexxQueue Class &gt; queue; Builtin Classes &gt; Utility Classes &gt; RexxQueue Class &gt; queued; Builtin Classes &gt; Utility Classes &gt; RexxQueue Class &gt; say; Builtin Classes &gt; Utility Classes &gt; RexxQueue Class &gt; set</p>
+<p class="deviations">Deviations: D109, D135</p>
+<p>A <code>RexxQueue</code> is an object that works with one of the external data queues,
+the lists of lines that are kept outside the program in a service and that the
+<a href="../instructions/queue.html#r-instr.queue.fifo">QUEUE</a> and <a href="../instructions/push.html#r-instr.push.lifo">PUSH</a> instructions fill
+and the <a href="../instructions/pull.html#r-instr.pull.source">PULL</a> instruction empties. The object holds the
+name of a queue, adds lines to the queue and takes them out, and asks how many
+there are. Besides the instance methods the class has methods that make, open,
+delete and ask after a queue by its name. They are the same queues as those of
+<a href="../builtins/rxqueue.html">the RXQUEUE function</a>, and the rules that function
+states for the names of queues, for the queue <code>SESSION</code> and for a queue that
+does not exist hold here too. A program has a current queue that the
+instructions use; the object has a queue of its own, and the two are the same
+queue only when they have the same name. How programs and sessions share the
+queues is specified in the environment chapter.</p>
+<blockquote>
+<p><strong>Note.</strong> The examples create a queue under a name that no other example
+uses and delete it when they are done, so they leave nothing behind. An
+example never waits for a line that nothing will add, because a program that
+does that does not end.</p>
+</blockquote>
+<h2 id="the-class"><a class="header" href="#the-class">The class</a></h2>
+<div class="rule" id="r-class.rexxqueue.creation"><a href="#r-class.rexxqueue.creation">[class.rexxqueue.creation]</a></div>
+<p><code>RexxQueue</code> has the class methods <code>create</code>, <code>delete</code>, <code>exists</code> and <code>open</code>, and
+the instance methods <code>delete</code>, <code>empty</code>, <code>get</code>, <code>init</code>, <code>lineIn</code>, <code>lineOut</code>,
+<code>makeArray</code>, <code>pull</code>, <code>push</code>, <code>queue</code>, <code>queued</code>, <code>say</code> and <code>set</code>, besides the
+methods that every class has, <code>new</code> among them. A class method is not an
+instance method and an instance method is not a class method, so the two
+<code>delete</code> methods do not meet. The class may have private methods besides
+these; they are not part of this specification. Its only superclass is
+<code>Object</code> and it inherits no mixin class (<a href="index.html#r-class.index.hierarchy">the hierarchy
+rule</a>).</p>
+<pre><code class="language-rexx">say .rexxqueue~id .rexxqueue~superclasses~items,
+  .rexxqueue~superclass~id .rexxqueue~queryMixinClass
+have = .set~new
+s = .rexxqueue~methods(.nil)
+do while s~available
+  have~put(s~index)
+  s~next
+end
+names = ('delete empty get init lineIn lineOut makeArray pull push queue',
+  'queued say set')~makeArray(' ')
+count = 0
+do name over names
+  if have~hasItem(name~upper) then count = count + 1
+end
+say count 'of' names~items
+say .rexxqueue~hasMethod('CREATE') .rexxqueue~hasMethod('DELETE'),
+  .rexxqueue~hasMethod('EXISTS') .rexxqueue~hasMethod('OPEN')
+q = .rexxqueue~new('spec_rq_creation')
+say q~hasMethod('CREATE') q~hasMethod('OPEN') q~hasMethod('EXISTS'),
+  q~hasMethod('NEW') q~hasMethod('DELETE')
+say q~delete
+</code></pre>
+<pre><code class="language-output">RexxQueue 1 Object 0
+13 of 13
+1 1 1 1
+0 0 0 0 1
+0
+</code></pre>
+<div class="rule" id="r-class.rexxqueue.string"><a href="#r-class.rexxqueue.string">[class.rexxqueue.string]</a></div>
+<p>The string value of a <code>RexxQueue</code> is the name of its queue in upper case: the
+class has no <code>string</code> method of its own, and the <code>string</code> of <code>Object</code> answers
+the <code>objectName</code>, which <a href="#r-class.rexxqueue.init">the <code>init</code> rule</a> sets to the
+queue name and <a href="#r-class.rexxqueue.set">the <code>set</code> rule</a> sets again to the name
+of the queue it switches to. The default name of the object stays
+<code>a RexxQueue</code>. A program may give the object another name with <code>objectName=</code>
+(<a href="index.html#r-class.index.objectname">the name rule</a>); that changes the string value and
+nothing else, for the name of the queue that the object works with is <code>get</code>'s
+answer.</p>
+<pre><code class="language-rexx">q = .rexxqueue~new('spec_rq_Mixed_Case')
+say q~string q~get q~defaultName
+q~objectName = 'a nickname'
+say q~string '|' q~get '|' q~objectName
+say q~set('spec_rq_string_other') q~string q~get
+say q~set('spec_rq_Mixed_Case') q~string
+say q~delete
+</code></pre>
+<pre><code class="language-output">SPEC_RQ_MIXED_CASE SPEC_RQ_MIXED_CASE a RexxQueue
+a nickname | SPEC_RQ_MIXED_CASE | a nickname
+SPEC_RQ_MIXED_CASE SPEC_RQ_STRING_OTHER SPEC_RQ_STRING_OTHER
+SPEC_RQ_STRING_OTHER SPEC_RQ_MIXED_CASE
+0
+</code></pre>
+<h2 id="making-a-queue-object"><a class="header" href="#making-a-queue-object">Making a queue object</a></h2>
+<div class="rule" id="r-class.rexxqueue.new"><a href="#r-class.rexxqueue.new">[class.rexxqueue.new]</a></div>
+<p><code>new</code> is the <code>new</code> that <code>Class</code> supplies (<a href="index.html#r-class.index.new">the new rule</a>): it
+makes an object of the class that received the message, so a subclass makes
+instances of itself, and sends it <code>init</code> with the arguments of <code>new</code>, in order.
+The queue that the object works with is therefore the business of <code>init</code>, and
+<code>new</code> with more than one argument raises <code>SYNTAX 93.902</code>, because <code>init</code> takes
+at most one. A subclass whose <code>init</code> does not reach the <code>init</code> of <code>RexxQueue</code>,
+by <code>forward</code> or by <code>self~init:super</code>, makes an object that is not connected to a
+queue (<a href="#r-class.rexxqueue.deviation.135">Deviation 135</a>).</p>
+<pre><code class="language-rexx">q = .rexxqueue~new('spec_rq_new')
+say q~class~id q~get
+s = .tagged~new('spec_rq_new_sub', 'my tag')
+say s~class~id s~get s~tag
+say q~delete s~delete
+signal on syntax name bad
+x = .rexxqueue~new('spec_rq_new_x', 'y')
+bad: say condition('o')~code
+::class tagged subclass rexxqueue
+::method init
+  expose tag
+  use arg name, tag
+  self~init:super(name)
+::method tag
+  expose tag
+  return tag
+</code></pre>
+<pre><code class="language-output">RexxQueue SPEC_RQ_NEW
+TAGGED SPEC_RQ_NEW_SUB my tag
+0 0
+93.902
+</code></pre>
+<div class="rule" id="r-class.rexxqueue.init"><a href="#r-class.rexxqueue.init">[class.rexxqueue.init]</a></div>
+<p><code>init(name)</code> connects the object to a queue and takes at most one argument
+(<code>SYNTAX 93.902</code>). It decides the name in one of three ways. With no argument
+the name is <code>SESSION</code>. With <code>.nil</code> it makes a queue whose name the service
+picks, as the class method <code>create</code> does with no argument, and uses that name;
+no program can know the name beforehand. With any other argument it sends the
+argument the message <code>upper</code>, and the answer is the name: a string in upper
+case, a number such as <code>12</code> or a <code>MutableBuffer</code> gives its upper-case string,
+and an object that does not understand <code>upper</code>, an <code>Object</code> or an <code>Array</code> for
+one, raises <code>SYNTAX 97.1</code>. For a name that was given, <code>init</code> then sends the
+class of the receiver the message <code>open</code> with the name, as <a href="#r-class.rexxqueue.open.class-side">the class
+method</a> says: a queue of that name is kept
+as it is with its lines, or made when there is none. An <code>init</code> does not look
+at the answer of <code>open</code>, so a name that no queue can have raises no error
+here: the object is made, and the methods that need the queue fail later, as
+<a href="#r-class.rexxqueue.missing">the missing queue rule</a> says. At last <code>init</code> sets
+the <code>objectName</code> of the object to the name, as <a href="#r-class.rexxqueue.string">the string
+rule</a> says. The messages that <code>init</code> sends are
+stated in <a href="#r-class.rexxqueue.init.sends">the next rule</a>.</p>
+<pre><code class="language-rexx">a = .rexxqueue~new
+b = .rexxqueue~new(.nil)
+say a~get '|' (b~get~length &gt; 0) (b~get \== 'SESSION')
+say .rexxqueue~exists(b~get) b~delete .rexxqueue~exists(b~get)
+c = .rexxqueue~new('spec_rq_init_Kept')
+c~queue('kept line')
+d = .rexxqueue~new('SPEC_RQ_INIT_KEPT')
+say d~get d~queued d~pull
+say .rexxqueue~new(12)~get '|' .rexxqueue~new(.mutablebuffer~new('mb'))~get
+say .rexxqueue~exists(12) .rexxqueue~exists('MB') .rexxqueue~delete(12),
+  .rexxqueue~delete('mb')
+say c~delete
+e = .rexxqueue~new('not a valid name')
+say e~get '|' .rexxqueue~exists(e~get)
+call try .object~new
+call try .array~new
+exit
+try:
+  signal on syntax name bad
+  x = .rexxqueue~new(arg(1))
+  say 'no error'
+  return
+bad: say condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">SESSION | 1 1
+1 0 0
+SPEC_RQ_INIT_KEPT 1 kept line
+12 | MB
+1 1 0 0
+0
+NOT A VALID NAME | 0
+97.1
+97.1
+</code></pre>
+<div class="rule" id="r-class.rexxqueue.init.sends"><a href="#r-class.rexxqueue.init.sends">[class.rexxqueue.init.sends]</a></div>
+<p><code>init</code> sends messages in this order. With a name given, <code>upper</code> goes to the
+argument, once and before anything else. With <code>.nil</code>, <code>create</code> goes to the
+class of the receiver with no argument, and then <code>open</code> with the name that
+<code>create</code> answered. With a name given, <code>open</code> goes to the class of the
+receiver, with the upper-case name. With no argument, nothing is sent to the
+class. Then <code>objectName=</code> goes to the receiver itself with the name. A
+subclass of <code>RexxQueue</code> therefore sees its own class-side <code>create</code> and <code>open</code>
+and its own <code>objectName=</code>. In the example the subclass overrides them and
+writes what they receive.</p>
+<pre><code class="language-rexx">.environment~made = ''
+say '-- named'
+q = .spy~new('spec_rq_sends_init')
+say '-- nil'
+r = .spy~new(.nil)
+say '-- none'
+s = .spy~new
+say '-- upper'
+t = .spy~new(.shout~new)
+say q~delete r~delete t~delete
+::class spy subclass rexxqueue
+::method create class
+  say 'create' arg()
+  .environment~made = self~create:super
+  return .environment~made
+::method open class
+  if arg(1) == .environment~made~upper then
+    say 'open the name that create answered'
+  else say 'open' arg(1)
+  forward class (super)
+::method 'objectName='
+  if arg(1) == .environment~made~upper then
+    say 'objectName= the name that create answered'
+  else say 'objectName=' arg(1)
+  forward class (super)
+::class shout
+::method upper
+  say 'upper'
+  return 'SPEC_RQ_SENDS_UPPER'
+</code></pre>
+<pre><code class="language-output">-- named
+open SPEC_RQ_SENDS_INIT
+objectName= SPEC_RQ_SENDS_INIT
+-- nil
+create 0
+open the name that create answered
+objectName= the name that create answered
+-- none
+objectName= SESSION
+-- upper
+upper
+open SPEC_RQ_SENDS_UPPER
+objectName= SPEC_RQ_SENDS_UPPER
+0 0 0
+</code></pre>
+<h2 id="class-methods"><a class="header" href="#class-methods">Class methods</a></h2>
+<div class="rule" id="r-class.rexxqueue.create.class-side"><a href="#r-class.rexxqueue.create.class-side">[class.rexxqueue.create.class-side]</a></div>
+<p><code>create(name)</code> makes a queue and answers its name. It takes at most one argument
+(<code>SYNTAX 88.922</code>). With a name that no queue has, the queue gets that name and
+the answer is the name as it was given, in the case it was given in. When a
+queue of that name exists, or with no argument, the queue is made under a name
+that the service picks, which the answer reports, so the answer is a name of a
+new queue: <a href="../builtins/rxqueue.html#r-bif.rxqueue.create">the <code>Create</code> function</a> states that. The name
+<code>SESSION</code> and a name that no queue can have (<a href="../builtins/rxqueue.html#r-bif.rxqueue.name">the queue name
+rule</a>), the null string, a name with a blank or a <code>-</code>, and a
+name of more than 250 characters among them, make no queue and answer the null
+string, without an error. The name is read as <a href="#r-class.rexxqueue.name">the name
+rule</a> says.</p>
+<pre><code class="language-rexx">a = .rexxqueue~create('spec_rq_Create')
+b = .rexxqueue~create('SPEC_RQ_CREATE')
+c = .rexxqueue~create
+say a (b \== 'SPEC_RQ_CREATE') (c \== a) (c \== b)
+say .rexxqueue~exists(a) .rexxqueue~exists(b) .rexxqueue~exists(c)
+say .rexxqueue~delete(a) .rexxqueue~delete(b) .rexxqueue~delete(c)
+say '['.rexxqueue~create('session')']' '['.rexxqueue~create('a b')']',
+  '['.rexxqueue~create('a-b')']' '['.rexxqueue~create('')']',
+  '['.rexxqueue~create(copies('z', 251))']'
+signal on syntax name bad
+x = .rexxqueue~create('spec_rq_create_x', 'y')
+bad: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">spec_rq_Create 1 1 1
+1 1 1
+0 0 0
+[] [] [] [] []
+88.922
+</code></pre>
+<div class="rule" id="r-class.rexxqueue.open.class-side"><a href="#r-class.rexxqueue.open.class-side">[class.rexxqueue.open.class-side]</a></div>
+<p><code>open(name)</code> makes sure that a queue of the name exists and answers <code>0</code>: it
+keeps an existing queue with its lines, and makes the queue when there is none,
+as <a href="../builtins/rxqueue.html#r-bif.rxqueue.open">the <code>Open</code> function</a> does. The queue <code>SESSION</code> answers
+<code>0</code> too. A name that no queue can have (<a href="../builtins/rxqueue.html#r-bif.rxqueue.name">the queue name
+rule</a>), as for <code>create</code>, makes nothing and answers <code>5</code>. The
+name is required (<code>SYNTAX 88.901</code>) and the method takes no other argument
+(<code>SYNTAX 88.922</code>).</p>
+<pre><code class="language-rexx">say .rexxqueue~exists('spec_rq_open')
+say .rexxqueue~open('spec_rq_open') .rexxqueue~exists('spec_rq_open')
+q = .rexxqueue~new('spec_rq_open')
+q~queue('stays')
+say .rexxqueue~open('SPEC_RQ_OPEN') q~queued
+say .rexxqueue~open('session') .rexxqueue~open('a b') .rexxqueue~open('')
+say q~delete
+call try 'open'
+call try 'open("x", "y")'
+exit
+try:
+  signal on syntax name bad
+  interpret 'x = .rexxqueue~' || arg(1)
+  say arg(1) 'no error'
+  return
+bad: say arg(1) condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">0
+0 1
+0 1
+0 5 5
+0
+open 88.901
+open("x", "y") 88.922
+</code></pre>
+<div class="rule" id="r-class.rexxqueue.exists.class-side"><a href="#r-class.rexxqueue.exists.class-side">[class.rexxqueue.exists.class-side]</a></div>
+<p><code>exists(name)</code> answers <code>1</code> when a queue of the name exists and <code>0</code> when it
+does not. The case of the name plays no part, the queue <code>SESSION</code> always
+exists, and a name that no queue can have answers <code>0</code> and raises no error. The
+name is required (<code>SYNTAX 88.901</code>) and the method takes no other argument
+(<code>SYNTAX 88.922</code>).</p>
+<pre><code class="language-rexx">q = .rexxqueue~new('spec_rq_Exists')
+say .rexxqueue~exists('spec_rq_exists') .rexxqueue~exists('SPEC_RQ_EXISTS'),
+  .rexxqueue~exists('session')
+say .rexxqueue~exists('spec_rq_exists_none') .rexxqueue~exists('a b'),
+  .rexxqueue~exists('')
+say q~delete .rexxqueue~exists('spec_rq_exists')
+call try 'exists'
+call try 'exists("x", "y")'
+exit
+try:
+  signal on syntax name bad
+  interpret 'x = .rexxqueue~' || arg(1)
+  say arg(1) 'no error'
+  return
+bad: say arg(1) condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">1 1 1
+0 0 0
+0 0
+exists 88.901
+exists("x", "y") 88.922
+</code></pre>
+<div class="rule" id="r-class.rexxqueue.delete.class-side"><a href="#r-class.rexxqueue.delete.class-side">[class.rexxqueue.delete.class-side]</a></div>
+<p><code>delete(name)</code> removes the queue of the name with its lines, as <a href="../builtins/rxqueue.html#r-bif.rxqueue.delete">the <code>Delete</code>
+function</a> does, and answers a number. The answer is <code>0</code>
+when the queue was deleted and <code>9</code> when no queue has the name. The queue
+<code>SESSION</code> is not deleted, and the answer is <code>5</code>; <code>5</code> is also the answer for a
+name that no queue can have. The name is required (<code>SYNTAX 88.901</code>) and the
+method takes no other argument (<code>SYNTAX 88.922</code>). An object that works with
+the queue goes on holding its name, and <a href="#r-class.rexxqueue.missing">the missing queue
+rule</a> says what its methods do.</p>
+<pre><code class="language-rexx">q = .rexxqueue~new('spec_rq_delete_cls')
+q~queue('lost')
+say .rexxqueue~delete('spec_rq_delete_CLS'),
+  .rexxqueue~exists('spec_rq_delete_cls')
+say .rexxqueue~delete('spec_rq_delete_cls') .rexxqueue~delete('spec_rq_none')
+say .rexxqueue~delete('session') .rexxqueue~delete('a b'),
+  .rexxqueue~exists('session')
+say q~get q~queued
+call try 'delete'
+call try 'delete("x", "y")'
+exit
+try:
+  signal on syntax name bad
+  interpret 'x = .rexxqueue~' || arg(1)
+  say arg(1) 'no error'
+  return
+bad: say arg(1) condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">0 0
+9 9
+5 5 1
+SPEC_RQ_DELETE_CLS 0
+delete 88.901
+delete("x", "y") 88.922
+</code></pre>
+<div class="rule" id="r-class.rexxqueue.name"><a href="#r-class.rexxqueue.name">[class.rexxqueue.name]</a></div>
+<p>The <code>name</code> that <code>create</code>, <code>open</code>, <code>exists</code> and <code>delete</code> take, and the <code>line</code>
+that <code>queue</code> and <code>push</code> take, are read in the same way, as a string. It is a
+string, an instance of a subclass of <code>String</code> included, or an object that
+answers a string to the message <code>request</code> with the argument <code>STRING</code>, which an
+object with a <code>makeString</code> method does by the rule of <code>Object</code> (<a href="../conventions.html#r-conv.string.object">the
+conversion rule</a>); the answer is used as the name or the
+line. Any other object, <code>.nil</code> and an <code>Object</code> among them, raises
+<code>SYNTAX 88.909</code>, and the object is read before the number of arguments is
+checked, so a call with two arguments whose first is <code>.nil</code> raises <code>88.909</code>
+and not <code>88.922</code>. A number is read as the string that it is, and an <code>Array</code> is
+read as the string that its <code>makeString</code> gives: its items, one to a line.</p>
+<pre><code class="language-rexx">q = .rexxqueue~new('spec_rq_name')
+n = .named~new('SPEC_RQ_NAME')
+say .rexxqueue~exists(n) .rexxqueue~exists(12),
+  .rexxqueue~exists(.array~of('spec_rq_name'))
+q~queue(.named~new('from request'))
+q~queue(.array~of('a', 'b'))
+say '&lt;'q~pull'&gt;' '&lt;'q~pull~changestr('0a'x, '|')'&gt;'
+say .rexxqueue~open(n) .rexxqueue~delete(n) .rexxqueue~exists(n)
+call try '.rexxqueue~exists(.nil)'
+call try '.rexxqueue~open(.object~new)'
+call try '.rexxqueue~delete(.nil, 2)'
+call try '.rexxqueue~create(.nil)'
+q = .rexxqueue~new('spec_rq_name')
+call try 'q~queue(.nil)'
+call try 'q~push(.object~new)'
+call try 'q~queue(.nil, 2)'
+say q~delete
+exit
+try:
+  signal on syntax name bad
+  interpret 'x =' arg(1)
+  say arg(1) 'no error'
+  return
+bad: say arg(1) condition('o')~code
+  return
+::class named
+::method init
+  expose name
+  use arg name
+::method request
+  expose name
+  return name
+</code></pre>
+<pre><code class="language-output defect=#164">1 0 1
+&lt;from request&gt; &lt;a|b&gt;
+0 0 0
+.rexxqueue~exists(.nil) 88.909
+.rexxqueue~open(.object~new) 88.909
+.rexxqueue~delete(.nil, 2) 88.909
+.rexxqueue~create(.nil) 88.909
+q~queue(.nil) 88.909
+q~push(.object~new) 88.909
+q~queue(.nil, 2) 88.909
+0
+</code></pre>
+<h2 id="adding-lines"><a class="header" href="#adding-lines">Adding lines</a></h2>
+<div class="rule" id="r-class.rexxqueue.queue"><a href="#r-class.rexxqueue.queue">[class.rexxqueue.queue]</a></div>
+<p><code>queue(line)</code> adds one line at the end of the queue, so that it is taken after
+the lines that are there, and answers <code>0</code>. <code>line</code> is the line, read as a
+string by <a href="#r-class.rexxqueue.name">the name rule</a>; without it, or with an
+omitted place, the line is the null string. The method takes no other argument
+(<code>SYNTAX 88.922</code>). A line is kept as it is, with its case, its blanks and any
+characters it holds, a line end among them: one call adds one line, and a line
+end inside it does not split it. A queue that does not exist, the queue of a
+name that no queue can have included, cannot take the line: <code>SYNTAX 48.1</code> is
+raised and the queue stays as it was. <a href="../instructions/queue.html#r-instr.queue.fifo">The <code>QUEUE</code>
+instruction</a> adds a line to the queue of the program in
+the same order.</p>
+<pre><code class="language-rexx">q = .rexxqueue~new('spec_rq_queue')
+say q~queue('first') q~queue('Second  line') q~queue q~queue(,)
+say q~queue(12.50) q~queue(.mutablebuffer~new('mb')) q~queue('a'||'0a'x||'b')
+say q~queued
+do while q~queued &gt; 0
+  say '&lt;'q~pull~changestr('0a'x, '\n')'&gt;'
+end
+signal on syntax name bad
+x = q~queue('a', 'b')
+bad: say condition('o')~code
+q~delete
+signal on syntax name gone
+x = q~queue('lost')
+gone: say condition('o')~code q~queued
+</code></pre>
+<pre><code class="language-output">0 0 0 0
+0 0 0
+7
+&lt;first&gt;
+&lt;Second  line&gt;
+&lt;&gt;
+&lt;&gt;
+&lt;12.50&gt;
+&lt;mb&gt;
+&lt;a\nb&gt;
+88.922
+48.1 0
+</code></pre>
+<div class="rule" id="r-class.rexxqueue.push"><a href="#r-class.rexxqueue.push">[class.rexxqueue.push]</a></div>
+<p><code>push(line)</code> adds one line at the front of the queue, so that it is the next
+line taken, and answers <code>0</code>. The line, its default, its errors and the
+behaviour for a missing queue are those of <a href="#r-class.rexxqueue.queue"><code>queue</code></a>.
+<a href="../instructions/push.html#r-instr.push.lifo">The <code>PUSH</code> instruction</a> does the same for the queue of the
+program.</p>
+<pre><code class="language-rexx">q = .rexxqueue~new('spec_rq_push')
+say q~queue('b') q~push('a') q~push q~queue('c')
+do while q~queued &gt; 0
+  say '&lt;'q~pull'&gt;'
+end
+signal on syntax name bad
+x = q~push('a', 'b')
+bad: say condition('o')~code
+q~delete
+signal on syntax name gone
+x = q~push('lost')
+gone: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">0 0 0 0
+&lt;&gt;
+&lt;a&gt;
+&lt;b&gt;
+&lt;c&gt;
+88.922
+48.1
+</code></pre>
+<div class="rule" id="r-class.rexxqueue.lineout"><a href="#r-class.rexxqueue.lineout">[class.rexxqueue.lineout]</a></div>
+<p><code>lineOut(line)</code> adds a line at the end of the queue exactly as
+<a href="#r-class.rexxqueue.queue"><code>queue</code></a> does and answers what <code>queue</code> answers: it
+sends <code>queue</code> to the receiver with the argument it was given, the way <a href="#r-class.rexxqueue.lineout.sends">the
+<code>lineOut.sends</code> rule</a> states. A <code>lineOut</code>
+with no argument adds the null string.</p>
+<pre><code class="language-rexx">q = .rexxqueue~new('spec_rq_lineout')
+say q~lineOut('one') q~lineOut q~lineOut('') q~lineOut(3)
+say q~queued '&lt;'q~pull'&gt;&lt;'q~pull'&gt;&lt;'q~pull'&gt;&lt;'q~pull'&gt;'
+signal on syntax name bad
+x = q~lineOut('a', 'b')
+bad: say condition('o')~code
+q~delete
+</code></pre>
+<pre><code class="language-output">0 0 0 0
+4 &lt;one&gt;&lt;&gt;&lt;&gt;&lt;3&gt;
+88.922
+</code></pre>
+<div class="rule" id="r-class.rexxqueue.say"><a href="#r-class.rexxqueue.say">[class.rexxqueue.say]</a></div>
+<p><code>say(line)</code> adds a line at the end of the queue exactly as
+<a href="#r-class.rexxqueue.queue"><code>queue</code></a> does and answers what <code>queue</code> answers: it
+sends <code>queue</code> to the receiver with the argument it was given, as <a href="#r-class.rexxqueue.say.sends">the
+<code>say.sends</code> rule</a> states. It writes nothing to
+the output of the program; the name is that of the method that <a href="../instructions/say.html#r-instr.say.write">the SAY
+instruction</a> uses to write to an output stream.</p>
+<pre><code class="language-rexx">q = .rexxqueue~new('spec_rq_say')
+say q~say('x y') q~say
+say q~queued '&lt;'q~pull'&gt;&lt;'q~pull'&gt;'
+signal on syntax name bad
+x = q~say('a', 'b')
+bad: say condition('o')~code
+q~delete
+</code></pre>
+<pre><code class="language-output">0 0
+2 &lt;x y&gt;&lt;&gt;
+88.922
+</code></pre>
+<div class="rule" id="r-class.rexxqueue.lineout.sends"><a href="#r-class.rexxqueue.lineout.sends">[class.rexxqueue.lineout.sends]</a></div>
+<p><code>lineOut</code> sends the receiver the message <code>queue</code> with its own arguments, as
+many as it got: none when it got none, and the argument unchanged, not read as
+a string, otherwise. It sends nothing else, and what <code>lineOut</code> answers is what
+that <code>queue</code> answers, so an override of <code>queue</code> that answers another value
+changes the answer of <code>lineOut</code>, and one that stores nothing leaves the queue
+as it was. The example overrides <code>queue</code>.</p>
+<pre><code class="language-rexx">q = .spy~new('spec_rq_lineout_sends')
+say q~lineOut
+say q~lineOut('text')
+say q~lineOut(.mutablebuffer~new('buf'))
+say q~lineOut(,)
+say q~queued
+say q~delete
+::class spy subclass rexxqueue
+::method queue
+  say 'queue' arg() arg(1)~class~id
+  return 'answered by queue'
+</code></pre>
+<pre><code class="language-output">queue 0 String
+answered by queue
+queue 1 String
+answered by queue
+queue 1 MutableBuffer
+answered by queue
+queue 0 String
+answered by queue
+0
+0
+</code></pre>
+<div class="rule" id="r-class.rexxqueue.say.sends"><a href="#r-class.rexxqueue.say.sends">[class.rexxqueue.say.sends]</a></div>
+<p><code>say</code> sends the receiver the message <code>queue</code> with its own arguments, exactly
+as <a href="#r-class.rexxqueue.lineout.sends"><code>lineOut</code> does</a>, sends nothing else, and
+answers what that <code>queue</code> answers.</p>
+<pre><code class="language-rexx">q = .spy~new('spec_rq_say_sends')
+say q~say
+say q~say(12.50)
+say q~say(.mutablebuffer~new('buf'))
+say q~queued
+say q~delete
+::class spy subclass rexxqueue
+::method queue
+  say 'queue' arg() arg(1)~class~id
+  return 'answered by queue'
+</code></pre>
+<pre><code class="language-output">queue 0 String
+answered by queue
+queue 1 String
+answered by queue
+queue 1 MutableBuffer
+answered by queue
+0
+0
+</code></pre>
+<h2 id="taking-lines"><a class="header" href="#taking-lines">Taking lines</a></h2>
+<div class="rule" id="r-class.rexxqueue.pull"><a href="#r-class.rexxqueue.pull">[class.rexxqueue.pull]</a></div>
+<p><code>pull</code> takes the first line of the queue away and answers it as a string, or
+answers <code>.nil</code> when the queue holds no line, at once and without waiting. The
+line is as it was added, in the same case: nothing is changed to upper case as
+the <a href="../instructions/pull.html#r-instr.pull.source"><code>PULL</code> instruction</a> does. The method takes no
+argument (<code>SYNTAX 88.922</code>). A queue that does not exist has no lines, so it
+answers <code>.nil</code>.</p>
+<pre><code class="language-rexx">q = .rexxqueue~new('spec_rq_pull')
+say q~pull~isNil
+q~queue('Mixed Case')
+q~queue('')
+say '&lt;'q~pull'&gt;' '&lt;'q~pull'&gt;' q~pull~isNil q~queued
+q~delete
+say q~pull~isNil
+signal on syntax name bad
+x = q~pull(1)
+bad: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">1
+&lt;Mixed Case&gt; &lt;&gt; 1 0
+1
+88.922
+</code></pre>
+<div class="rule" id="r-class.rexxqueue.linein"><a href="#r-class.rexxqueue.linein">[class.rexxqueue.linein]</a></div>
+<p><code>lineIn</code> takes the first line of the queue away and answers it, as
+<a href="#r-class.rexxqueue.pull"><code>pull</code></a> does, when the queue holds a line. When the
+queue exists and holds no line, <code>lineIn</code> does not answer at once: it waits
+until some activity adds a line, and answers that. Which of several activities
+that wait gets a line is specified in the environment chapter. A queue that
+does not exist makes <code>lineIn</code> answer <code>.nil</code> at once, as <code>pull</code> does. The
+method takes no argument (<code>SYNTAX 88.922</code>). In the example a message that the
+program starts waits on an empty queue, and the program adds the line from the
+other activity; whichever of the two comes first, the line goes to the waiting
+call.</p>
+<pre><code class="language-rexx">q = .rexxqueue~new('spec_rq_linein')
+q~queue('ready')
+say q~lineIn q~queued
+m = .message~new(q, 'lineIn')
+m~start
+say q~queue('late')
+say m~result
+say q~queued
+q2 = .rexxqueue~new('spec_rq_linein_other')
+w = .message~new(q2, 'lineIn')~~start
+say q2~push('pushed')
+say w~result
+say q~delete q2~delete
+say q~lineIn~isNil
+signal on syntax name bad
+x = q~lineIn(1)
+bad: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">ready 0
+0
+late
+0
+0
+pushed
+0 0
+1
+88.922
+</code></pre>
+<div class="rule" id="r-class.rexxqueue.queued"><a href="#r-class.rexxqueue.queued">[class.rexxqueue.queued]</a></div>
+<p><code>queued</code> answers the number of lines in the queue, and <code>0</code> for a queue that
+does not exist. It takes no argument (<code>SYNTAX 88.922</code>). <a href="../builtins/queued.html#r-bif.queued.count">The <code>QUEUED</code>
+function</a> counts the lines of the queue of the program in
+the same way.</p>
+<pre><code class="language-rexx">q = .rexxqueue~new('spec_rq_queued')
+say q~queued
+q~queue('a'); q~push('b'); q~queue('')
+say q~queued
+x = q~pull
+say q~queued
+say q~delete q~queued
+signal on syntax name bad
+x = q~queued(1)
+bad: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">0
+3
+2
+0 0
+88.922
+</code></pre>
+<div class="rule" id="r-class.rexxqueue.makearray"><a href="#r-class.rexxqueue.makearray">[class.rexxqueue.makearray]</a></div>
+<p><code>makeArray</code> takes all the lines out of the queue and answers them as a new
+<code>Array</code> of strings, the first line of the queue at index 1, in the order in
+which <code>pull</code> would have answered them; the queue is empty afterwards. A queue
+with no lines, or one that does not exist, gives an empty array. The method
+takes no argument (<code>SYNTAX 93.902</code>), and the messages it sends are stated in
+<a href="#r-class.rexxqueue.makearray.sends">the next rule</a>.</p>
+<pre><code class="language-rexx">q = .rexxqueue~new('spec_rq_makearray')
+say q~makearray~items
+q~queue('b'); q~queue(''); q~push('a'); q~queue('c')
+a = q~makearray
+say a~class~id a~items q~queued
+do i = 1 to a~items
+  say i '&lt;'a[i]'&gt;'
+end
+say (q~makearray == q~makearray)
+q~delete
+say q~makearray~items
+signal on syntax name bad
+x = q~makearray(1)
+bad: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">0
+Array 4 0
+1 &lt;a&gt;
+2 &lt;b&gt;
+3 &lt;&gt;
+4 &lt;c&gt;
+0
+0
+93.902
+</code></pre>
+<div class="rule" id="r-class.rexxqueue.makearray.sends"><a href="#r-class.rexxqueue.makearray.sends">[class.rexxqueue.makearray.sends]</a></div>
+<p><code>makeArray</code> sends the receiver <code>queued</code>, once, and then sends it <code>pull</code>, with
+no argument, as often as <code>queued</code> answered, but it stops after the first
+<code>pull</code> that answers <code>.nil</code>, and that answer is not put in the array. It sends
+nothing else. An override of <code>queued</code> that answers a number larger than the
+number of lines gives all the lines, and one that answers a smaller number
+leaves the lines that it does not count in the queue; an override of <code>pull</code>
+that answers <code>.nil</code> ends the array there. The example logs the messages.</p>
+<pre><code class="language-rexx">.environment~log = ''
+.environment~nilpull = 0
+q = .spy~new('spec_rq_makearray_sends')
+p = .rexxqueue~new('spec_rq_makearray_sends')
+q~queue('a'); q~queue('b'); q~queue('c')
+.environment~count = 2
+a = q~makearray
+say a~items p~queued 'sent' .environment~log
+.environment~log = ''
+.environment~count = 9
+a = q~makearray
+say a~items p~queued 'sent' .environment~log
+p~queue('x'); p~queue('y')
+.environment~log = ''
+.environment~count = 5
+.environment~nilpull = 1
+a = q~makearray
+say a~items p~queued 'sent' .environment~log
+.environment~nilpull = 0
+say q~delete
+::class spy subclass rexxqueue
+::method queued
+  .environment~log = .environment~log 'queued'
+  return .environment~count
+::method pull
+  .environment~log = .environment~log 'pull'
+  if .environment~nilpull then return .nil
+  forward class (super)
+</code></pre>
+<pre><code class="language-output">2 1 sent  queued pull pull
+1 0 sent  queued pull pull
+0 2 sent  queued pull
+0
+</code></pre>
+<div class="rule" id="r-class.rexxqueue.empty"><a href="#r-class.rexxqueue.empty">[class.rexxqueue.empty]</a></div>
+<p><code>empty</code> removes every line from the queue and answers <code>0</code>; the queue stays,
+with no line. The answer is <code>9</code> for a queue that does not exist and <code>5</code> for a
+name that no queue can have. The method takes no argument (<code>SYNTAX 88.922</code>).</p>
+<pre><code class="language-rexx">q = .rexxqueue~new('spec_rq_empty')
+say q~empty q~queued
+q~queue('a'); q~queue('b')
+say q~empty q~queued .rexxqueue~exists('spec_rq_empty')
+say q~delete q~empty
+signal on syntax name bad
+x = q~empty(1)
+bad: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">0 0
+0 0 1
+0 9
+88.922
+</code></pre>
+<h2 id="the-name-and-the-switch"><a class="header" href="#the-name-and-the-switch">The name and the switch</a></h2>
+<div class="rule" id="r-class.rexxqueue.get"><a href="#r-class.rexxqueue.get">[class.rexxqueue.get]</a></div>
+<p><code>get</code> answers the name of the queue that the object works with, in upper case.
+It is the name that <code>init</code> or the last <code>set</code> fixed, whether or not a queue by
+that name exists; deleting the queue does not change it. The method takes no
+argument (<code>SYNTAX 93.902</code>).</p>
+<pre><code class="language-rexx">q = .rexxqueue~new('spec_rq_Get')
+say q~get
+say .rexxqueue~delete('spec_rq_get') q~get
+say .rexxqueue~new~get
+signal on syntax name bad
+x = q~get(1)
+bad: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">SPEC_RQ_GET
+0 SPEC_RQ_GET
+SESSION
+93.902
+</code></pre>
+<div class="rule" id="r-class.rexxqueue.set"><a href="#r-class.rexxqueue.set">[class.rexxqueue.set]</a></div>
+<p><code>set(name)</code> switches the object to the queue of that name and answers the name
+of the queue it worked with before, in upper case. <code>name</code> is required
+(<code>SYNTAX 93.901</code>) and the method takes no other argument (<code>SYNTAX 93.902</code>),
+both checked before anything else. <code>set</code> does not look for the queue: a name
+of a queue that does not exist is taken, and <a href="#r-class.rexxqueue.missing">the missing queue
+rule</a> says what the object then does. The name is
+decided as <code>init</code> does: the argument is sent <code>upper</code>, and an object without
+that method raises <code>SYNTAX 97.1</code>, <code>.nil</code> and an <code>Object</code> among them. Then
+<code>objectName=</code> is sent to the receiver with the upper-case name (<a href="#r-class.rexxqueue.set.sends">the sends
+rule</a>). Only the object changes: the queue that
+the program uses with its instructions is not switched, and another object
+that holds the same name is not changed.</p>
+<pre><code class="language-rexx">q = .rexxqueue~new('spec_rq_set_a')
+b = .rexxqueue~new('spec_rq_set_b')
+q~queue('in a')
+b~queue('in b')
+say q~set('spec_rq_Set_B') q~get q~queued '&lt;'q~pull'&gt;'
+say q~set('spec_rq_set_a') q~queued
+say q~set('spec_rq_set_none') q~get q~queued
+say q~set('spec_rq_set_a') b~get
+say q~delete b~delete
+call try 'set'
+call try 'set("x", "y")'
+call try 'set(.nil)'
+call try 'set(.object~new)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'x = q~' || arg(1)
+  say arg(1) 'no error'
+  return
+bad: say arg(1) condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">SPEC_RQ_SET_A SPEC_RQ_SET_B 1 &lt;in b&gt;
+SPEC_RQ_SET_B 1
+SPEC_RQ_SET_A SPEC_RQ_SET_NONE 0
+SPEC_RQ_SET_NONE SPEC_RQ_SET_B
+0 0
+set 93.901
+set("x", "y") 93.902
+set(.nil) 97.1
+set(.object~new) 97.1
+</code></pre>
+<div class="rule" id="r-class.rexxqueue.set.sends"><a href="#r-class.rexxqueue.set.sends">[class.rexxqueue.set.sends]</a></div>
+<p><code>set</code> sends the argument the message <code>upper</code>, once, and then sends the
+receiver <code>objectName=</code> with the upper-case name, whether or not the name
+changes, and answers the name that <code>get</code> answered before; it sends nothing
+else. <code>get</code> is not sent. The example overrides <code>objectName=</code> and gives an
+argument that has its own <code>upper</code>.</p>
+<pre><code class="language-rexx">q = .spy~new('spec_rq_set_sends')
+say '-- string'
+say q~set('spec_rq_set_sends_b')
+say '-- object'
+say q~set(.shout~new)
+say '-- same name'
+say q~set('SPEC_RQ_SET_SENDS_Z')
+say .rexxqueue~delete('spec_rq_set_sends')
+::class spy subclass rexxqueue
+::method 'objectName='
+  say 'objectName=' arg(1)
+  forward class (super)
+::class shout
+::method upper
+  say 'upper'
+  return 'SPEC_RQ_SET_SENDS_Z'
+</code></pre>
+<pre><code class="language-output">objectName= SPEC_RQ_SET_SENDS
+-- string
+objectName= SPEC_RQ_SET_SENDS_B
+SPEC_RQ_SET_SENDS
+-- object
+upper
+objectName= SPEC_RQ_SET_SENDS_Z
+SPEC_RQ_SET_SENDS_B
+-- same name
+objectName= SPEC_RQ_SET_SENDS_Z
+SPEC_RQ_SET_SENDS_Z
+0
+</code></pre>
+<h2 id="deleting"><a class="header" href="#deleting">Deleting</a></h2>
+<div class="rule" id="r-class.rexxqueue.delete"><a href="#r-class.rexxqueue.delete">[class.rexxqueue.delete]</a></div>
+<p><code>delete</code> deletes the queue that the object works with, with its lines, and
+answers the number that the class method <code>delete</code> answers for its name: <code>0</code>
+when the queue was deleted, <code>9</code> when it did not exist, and <code>5</code> for <code>SESSION</code>
+and for a name that no queue can have. It takes no argument (<code>SYNTAX 93.902</code>),
+and <a href="#r-class.rexxqueue.delete.sends">the next rule</a> states what it sends. The
+object keeps its name, so that the queue is made again by any object that is
+made for that name; until then <a href="#r-class.rexxqueue.missing">the missing queue
+rule</a> holds for it.</p>
+<pre><code class="language-rexx">q = .rexxqueue~new('spec_rq_delete')
+q~queue('gone')
+say q~delete .rexxqueue~exists('spec_rq_delete') q~get
+say q~delete
+say .rexxqueue~new~delete .rexxqueue~exists('session')
+r = .rexxqueue~new('spec_rq_delete')
+say r~queued .rexxqueue~exists('spec_rq_delete')
+say r~delete
+signal on syntax name bad
+x = r~delete(1)
+bad: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">0 0 SPEC_RQ_DELETE
+9
+5 1
+0 1
+0
+93.902
+</code></pre>
+<div class="rule" id="r-class.rexxqueue.delete.sends"><a href="#r-class.rexxqueue.delete.sends">[class.rexxqueue.delete.sends]</a></div>
+<p><code>delete</code> sends the class of the receiver the message <code>delete</code>, with the name
+that <code>get</code> would answer, in upper case, and answers what that class method
+answers; it sends nothing else, <code>get</code> not among them. A subclass sees its own
+class-side <code>delete</code>.</p>
+<pre><code class="language-rexx">q = .spy~new('spec_rq_delete_sends')
+q~objectName = 'another name'
+say q~delete
+say q~delete
+::class spy subclass rexxqueue
+::method delete class
+  say 'delete' arg()  arg(1)
+  forward class (super)
+</code></pre>
+<pre><code class="language-output">delete 1 SPEC_RQ_DELETE_SENDS
+0
+delete 1 SPEC_RQ_DELETE_SENDS
+9
+</code></pre>
+<h2 id="a-queue-that-is-not-there"><a class="header" href="#a-queue-that-is-not-there">A queue that is not there</a></h2>
+<div class="rule" id="r-class.rexxqueue.missing"><a href="#r-class.rexxqueue.missing">[class.rexxqueue.missing]</a></div>
+<p>The methods of an object whose queue does not exist, because it was deleted,
+because the name was never made or because no queue can have the name, behave
+as follows. <code>queue</code>, <code>push</code>, <code>lineOut</code> and <code>say</code> raise <code>SYNTAX 48.1</code>, and the
+queue is not made. <code>pull</code> and <code>lineIn</code> answer <code>.nil</code> at once, <code>queued</code> answers
+<code>0</code>, <code>makeArray</code> answers an empty array, and <code>empty</code> and <code>delete</code> answer <code>9</code>
+for a queue that is gone and <code>5</code> for a name that no queue can have. <code>get</code> and
+<code>set</code> work as usual. The queue exists again as soon as any object or class
+method makes it, by <code>new</code> with the name, <code>open</code> or <code>create</code>.</p>
+<pre><code class="language-rexx">q = .rexxqueue~new('spec_rq_missing')
+say q~delete
+call show 'deleted'
+q = .rexxqueue~new('spec_rq_not valid')
+say q~get
+call show 'invalid'
+exit
+show:
+  say arg(1) q~pull~isNil q~lineIn~isNil q~queued q~makearray~items,
+    q~empty q~delete
+  do m over 'queue push lineout say'~makearray(' ')
+    call try m
+  end
+  return
+try:
+  signal on syntax name e
+  x = q~send(arg(1), 'text')
+  say arg(1) 'no error'
+  return
+e: say arg(1) condition('o')~code q~queued
+  return
+</code></pre>
+<pre><code class="language-output">0
+deleted 1 1 0 0 9 9
+queue 48.1 0
+push 48.1 0
+lineout 48.1 0
+say 48.1 0
+SPEC_RQ_NOT VALID
+invalid 1 1 0 0 5 5
+queue 48.1 0
+push 48.1 0
+lineout 48.1 0
+say 48.1 0
+</code></pre>
+<h2 id="copying"><a class="header" href="#copying">Copying</a></h2>
+<div class="rule" id="r-class.rexxqueue.copy"><a href="#r-class.rexxqueue.copy">[class.rexxqueue.copy]</a></div>
+<p><code>copy</code> answers a new object of the same class that holds the same queue name
+and has the same <code>objectName</code>; no message is sent to the receiver. The queue
+itself is not copied, for the two objects work with the one queue, so a line
+that one adds is a line the other takes. From then on the two objects are
+separate: <code>set</code> or <code>objectName=</code> on one does not change the other.</p>
+<pre><code class="language-rexx">q = .rexxqueue~new('spec_rq_copy')
+q~objectName = 'nick'
+c = q~copy
+say c~class~id c~get c~string (c \== q)
+say q~queue('via q') c~queued '&lt;'c~pull'&gt;' q~queued
+say c~set('spec_rq_copy_other') c~get q~get
+c~objectName = 'changed'
+say q~string c~string
+say q~delete
+</code></pre>
+<pre><code class="language-output">RexxQueue SPEC_RQ_COPY nick 1
+0 1 &lt;via q&gt; 0
+SPEC_RQ_COPY SPEC_RQ_COPY_OTHER SPEC_RQ_COPY
+nick changed
+0
+</code></pre>
+<h2 id="the-queue-of-the-program"><a class="header" href="#the-queue-of-the-program">The queue of the program</a></h2>
+<div class="rule" id="r-class.rexxqueue.program"><a href="#r-class.rexxqueue.program">[class.rexxqueue.program]</a></div>
+<p>An object and the instructions of the program meet when they use the same
+name. The queue that <a href="../instructions/push.html#r-instr.push.lifo"><code>PUSH</code></a>,
+<a href="../instructions/queue.html#r-instr.queue.fifo"><code>QUEUE</code></a> and <a href="../instructions/pull.html#r-instr.pull.source"><code>PULL</code></a> use, and that
+<a href="../builtins/queued.html#r-bif.queued.count"><code>QUEUED</code></a> counts, is the current queue that
+<a href="../builtins/rxqueue.html#r-bif.rxqueue.set"><code>RXQUEUE('Set', name)</code></a> chooses, and an object whose queue
+has that name sees the same lines in the same order. Switching one of them,
+the current queue by <code>RXQUEUE</code> or the object by <code>set</code>, does not switch the
+other.</p>
+<pre><code class="language-rexx">q = .rexxqueue~new('spec_rq_program')
+before = rxqueue('Set', 'spec_rq_program')
+queue 'by queue'
+push 'by push'
+say q~queued queued()
+say q~pull '|' q~lineIn
+q~queue('from object')
+pull line
+say line queued()
+say q~set('session') rxqueue('Get') q~get
+call rxqueue 'Set', before
+say .rexxqueue~delete('spec_rq_program')
+</code></pre>
+<pre><code class="language-output">2 2
+by push | by queue
+FROM OBJECT 0
+SPEC_RQ_PROGRAM SPEC_RQ_PROGRAM SESSION
+0
+</code></pre>
+<h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
+<div class="rule" id="r-class.rexxqueue.deviation.109"><a href="#r-class.rexxqueue.deviation.109">[class.rexxqueue.deviation.109]</a></div>
+<p>A name or a line that is an instance of a subclass of <code>String</code> is read by its
+own characters, and <code>request</code>, <code>makeString</code> and <code>string</code> are not sent to it
+(<a href="string.html#r-class.string.deviation.109">Deviation 109</a>). ooRexx sends such an instance
+<code>request</code> with <code>STRING</code>, so an override can change what is read. In the
+example the overrides would change the line and the name; they count their
+sends and the string is read as it is without one. The <code>upper</code> that <code>init</code> and
+<code>set</code> send to a name is sent in either case, because it is an ordinary message
+to an ordinary object (<a href="#r-class.rexxqueue.init">the <code>init</code> rule</a>).</p>
+<pre><code class="language-rexx">.environment~sent = 0
+q = .rexxqueue~new('spec_rq_dev109')
+q~queue(.digits~new('own text'))
+say q~pull .environment~sent
+say .rexxqueue~exists(.digits~new('spec_rq_dev109')) .environment~sent
+say q~delete
+::class digits subclass string
+::method makestring
+  .environment~sent = .environment~sent + 1
+  return 'other'
+::method request
+  .environment~sent = .environment~sent + 1
+  return 'other'
+</code></pre>
+<pre><code class="language-output">own text 0
+1 0
+0
+</code></pre>
+<div class="rule" id="r-class.rexxqueue.deviation.135"><a href="#r-class.rexxqueue.deviation.135">[class.rexxqueue.deviation.135]</a></div>
+<p>A subclass of <code>RexxQueue</code> whose <code>init</code> does not send <code>init</code> to its superclass,
+by <code>self~init:super</code> or <code>FORWARD</code>, makes an object that is not connected to a
+queue, and every instance method of the class other than <code>init</code> sent to it
+raises <code>SYNTAX 98.901</code>: <code>delete</code>, <code>empty</code>, <code>get</code>, <code>lineIn</code>, <code>lineOut</code>,
+<code>makeArray</code>, <code>pull</code>, <code>push</code>, <code>queue</code>, <code>queued</code>, <code>say</code> and <code>set</code>. The example
+gives each method the arguments it takes. The class methods do not depend on an
+object and are not affected. ooRexx ends the interpreter with a segmentation
+fault from <code>empty</code>, so the example is not run against it.</p>
+<pre><code class="language-rexx">o = .lazy~new
+call try "o~delete"
+call try "o~empty"
+call try "o~get"
+call try "o~lineIn"
+call try "o~lineOut('x')"
+call try "o~makeArray"
+call try "o~pull"
+call try "o~push('x')"
+call try "o~queue('x')"
+call try "o~queued"
+call try "o~say('x')"
+call try "o~set('x')"
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  say arg(1) '=&gt; no error'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class lazy subclass rexxqueue
+::method init
+  nop
+</code></pre>
+<pre><code class="language-output defect=#197">o~delete =&gt; 98.901
+o~empty =&gt; 98.901
+o~get =&gt; 98.901
+o~lineIn =&gt; 98.901
+o~lineOut('x') =&gt; 98.901
+o~makeArray =&gt; 98.901
+o~pull =&gt; 98.901
+o~push('x') =&gt; 98.901
+o~queue('x') =&gt; 98.901
+o~queued =&gt; 98.901
+o~say('x') =&gt; 98.901
+o~set('x') =&gt; 98.901
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../classes/commandoutput.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../classes/supplier.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../classes/commandoutput.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../classes/supplier.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../assets/version-picker.js"></script>
+
+
+    </div>
+    </body>
+</html>

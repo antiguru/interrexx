@@ -1,0 +1,645 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>EventSemaphore - The interrexx Language Specification</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../conventions.html"><strong aria-hidden="true">2.</strong> Conventions</a></li><li class="chapter-item expanded "><a href="../lexical/index.html"><strong aria-hidden="true">3.</strong> Lexical structure</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../lexical/characters.html"><strong aria-hidden="true">3.1.</strong> Characters</a></li><li class="chapter-item expanded "><a href="../lexical/comments.html"><strong aria-hidden="true">3.2.</strong> Comments</a></li><li class="chapter-item expanded "><a href="../lexical/literals.html"><strong aria-hidden="true">3.3.</strong> Literals</a></li><li class="chapter-item expanded "><a href="../lexical/symbols.html"><strong aria-hidden="true">3.4.</strong> Symbols</a></li><li class="chapter-item expanded "><a href="../lexical/operators.html"><strong aria-hidden="true">3.5.</strong> Operators and special characters</a></li><li class="chapter-item expanded "><a href="../lexical/clauses.html"><strong aria-hidden="true">3.6.</strong> Clauses</a></li></ol></li><li class="chapter-item expanded "><a href="../numbers/index.html"><strong aria-hidden="true">4.</strong> Numbers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../numbers/formats.html"><strong aria-hidden="true">4.1.</strong> Formats</a></li><li class="chapter-item expanded "><a href="../numbers/limits.html"><strong aria-hidden="true">4.2.</strong> Limits</a></li><li class="chapter-item expanded "><a href="../numbers/arithmetic.html"><strong aria-hidden="true">4.3.</strong> Arithmetic</a></li><li class="chapter-item expanded "><a href="../numbers/settings.html"><strong aria-hidden="true">4.4.</strong> Settings</a></li><li class="chapter-item expanded "><a href="../numbers/comparison.html"><strong aria-hidden="true">4.5.</strong> Comparison</a></li></ol></li><li class="chapter-item expanded "><a href="../expressions/index.html"><strong aria-hidden="true">5.</strong> Expressions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../expressions/terms.html"><strong aria-hidden="true">5.1.</strong> Terms</a></li><li class="chapter-item expanded "><a href="../expressions/variables.html"><strong aria-hidden="true">5.2.</strong> Variables</a></li><li class="chapter-item expanded "><a href="../expressions/concatenation.html"><strong aria-hidden="true">5.3.</strong> Concatenation</a></li><li class="chapter-item expanded "><a href="../expressions/arithmetic.html"><strong aria-hidden="true">5.4.</strong> Arithmetic operators</a></li><li class="chapter-item expanded "><a href="../expressions/comparison.html"><strong aria-hidden="true">5.5.</strong> Comparison operators</a></li><li class="chapter-item expanded "><a href="../expressions/logical.html"><strong aria-hidden="true">5.6.</strong> Logical operators</a></li><li class="chapter-item expanded "><a href="../expressions/messages.html"><strong aria-hidden="true">5.7.</strong> Message operators</a></li></ol></li><li class="chapter-item expanded "><a href="../instructions/index.html"><strong aria-hidden="true">6.</strong> Instructions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../instructions/address.html"><strong aria-hidden="true">6.1.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../instructions/arg.html"><strong aria-hidden="true">6.2.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../instructions/assignment.html"><strong aria-hidden="true">6.3.</strong> Assignments</a></li><li class="chapter-item expanded "><a href="../instructions/call.html"><strong aria-hidden="true">6.4.</strong> CALL</a></li><li class="chapter-item expanded "><a href="../instructions/command.html"><strong aria-hidden="true">6.5.</strong> Commands</a></li><li class="chapter-item expanded "><a href="../instructions/do.html"><strong aria-hidden="true">6.6.</strong> DO</a></li><li class="chapter-item expanded "><a href="../instructions/drop.html"><strong aria-hidden="true">6.7.</strong> DROP</a></li><li class="chapter-item expanded "><a href="../instructions/exit.html"><strong aria-hidden="true">6.8.</strong> EXIT</a></li><li class="chapter-item expanded "><a href="../instructions/expose.html"><strong aria-hidden="true">6.9.</strong> EXPOSE</a></li><li class="chapter-item expanded "><a href="../instructions/forward.html"><strong aria-hidden="true">6.10.</strong> FORWARD</a></li><li class="chapter-item expanded "><a href="../instructions/guard.html"><strong aria-hidden="true">6.11.</strong> GUARD</a></li><li class="chapter-item expanded "><a href="../instructions/if.html"><strong aria-hidden="true">6.12.</strong> IF</a></li><li class="chapter-item expanded "><a href="../instructions/interpret.html"><strong aria-hidden="true">6.13.</strong> INTERPRET</a></li><li class="chapter-item expanded "><a href="../instructions/iterate.html"><strong aria-hidden="true">6.14.</strong> ITERATE</a></li><li class="chapter-item expanded "><a href="../instructions/leave.html"><strong aria-hidden="true">6.15.</strong> LEAVE</a></li><li class="chapter-item expanded "><a href="../instructions/loop.html"><strong aria-hidden="true">6.16.</strong> LOOP</a></li><li class="chapter-item expanded "><a href="../instructions/message.html"><strong aria-hidden="true">6.17.</strong> Message instructions</a></li><li class="chapter-item expanded "><a href="../instructions/nop.html"><strong aria-hidden="true">6.18.</strong> NOP</a></li><li class="chapter-item expanded "><a href="../instructions/numeric.html"><strong aria-hidden="true">6.19.</strong> NUMERIC</a></li><li class="chapter-item expanded "><a href="../instructions/options.html"><strong aria-hidden="true">6.20.</strong> OPTIONS</a></li><li class="chapter-item expanded "><a href="../instructions/parse.html"><strong aria-hidden="true">6.21.</strong> PARSE</a></li><li class="chapter-item expanded "><a href="../instructions/procedure.html"><strong aria-hidden="true">6.22.</strong> PROCEDURE</a></li><li class="chapter-item expanded "><a href="../instructions/pull.html"><strong aria-hidden="true">6.23.</strong> PULL</a></li><li class="chapter-item expanded "><a href="../instructions/push.html"><strong aria-hidden="true">6.24.</strong> PUSH</a></li><li class="chapter-item expanded "><a href="../instructions/queue.html"><strong aria-hidden="true">6.25.</strong> QUEUE</a></li><li class="chapter-item expanded "><a href="../instructions/raise.html"><strong aria-hidden="true">6.26.</strong> RAISE</a></li><li class="chapter-item expanded "><a href="../instructions/reply.html"><strong aria-hidden="true">6.27.</strong> REPLY</a></li><li class="chapter-item expanded "><a href="../instructions/return.html"><strong aria-hidden="true">6.28.</strong> RETURN</a></li><li class="chapter-item expanded "><a href="../instructions/say.html"><strong aria-hidden="true">6.29.</strong> SAY</a></li><li class="chapter-item expanded "><a href="../instructions/select.html"><strong aria-hidden="true">6.30.</strong> SELECT</a></li><li class="chapter-item expanded "><a href="../instructions/signal.html"><strong aria-hidden="true">6.31.</strong> SIGNAL</a></li><li class="chapter-item expanded "><a href="../instructions/trace.html"><strong aria-hidden="true">6.32.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../instructions/use.html"><strong aria-hidden="true">6.33.</strong> USE</a></li></ol></li><li class="chapter-item expanded "><a href="../parsing/index.html"><strong aria-hidden="true">7.</strong> Parsing</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../parsing/templates.html"><strong aria-hidden="true">7.1.</strong> Templates</a></li><li class="chapter-item expanded "><a href="../parsing/patterns.html"><strong aria-hidden="true">7.2.</strong> Patterns</a></li><li class="chapter-item expanded "><a href="../parsing/multiple.html"><strong aria-hidden="true">7.3.</strong> Several strings and case</a></li></ol></li><li class="chapter-item expanded "><a href="../directives/index.html"><strong aria-hidden="true">8.</strong> Directives</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../directives/class.html"><strong aria-hidden="true">8.1.</strong> ::CLASS</a></li><li class="chapter-item expanded "><a href="../directives/method.html"><strong aria-hidden="true">8.2.</strong> ::METHOD</a></li><li class="chapter-item expanded "><a href="../directives/attribute.html"><strong aria-hidden="true">8.3.</strong> ::ATTRIBUTE</a></li><li class="chapter-item expanded "><a href="../directives/constant.html"><strong aria-hidden="true">8.4.</strong> ::CONSTANT</a></li><li class="chapter-item expanded "><a href="../directives/routine.html"><strong aria-hidden="true">8.5.</strong> ::ROUTINE</a></li><li class="chapter-item expanded "><a href="../directives/requires.html"><strong aria-hidden="true">8.6.</strong> ::REQUIRES</a></li><li class="chapter-item expanded "><a href="../directives/options.html"><strong aria-hidden="true">8.7.</strong> ::OPTIONS</a></li><li class="chapter-item expanded "><a href="../directives/resource.html"><strong aria-hidden="true">8.8.</strong> ::RESOURCE</a></li><li class="chapter-item expanded "><a href="../directives/annotate.html"><strong aria-hidden="true">8.9.</strong> ::ANNOTATE</a></li></ol></li><li class="chapter-item expanded "><a href="../conditions/index.html"><strong aria-hidden="true">9.</strong> Conditions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../conditions/traps.html"><strong aria-hidden="true">9.1.</strong> Condition traps</a></li><li class="chapter-item expanded "><a href="../conditions/information.html"><strong aria-hidden="true">9.2.</strong> Condition information</a></li><li class="chapter-item expanded "><a href="../conditions/syntax.html"><strong aria-hidden="true">9.3.</strong> SYNTAX</a></li><li class="chapter-item expanded "><a href="../conditions/error.html"><strong aria-hidden="true">9.4.</strong> ERROR and FAILURE</a></li><li class="chapter-item expanded "><a href="../conditions/halt.html"><strong aria-hidden="true">9.5.</strong> HALT</a></li><li class="chapter-item expanded "><a href="../conditions/novalue.html"><strong aria-hidden="true">9.6.</strong> NOVALUE</a></li><li class="chapter-item expanded "><a href="../conditions/nostring.html"><strong aria-hidden="true">9.7.</strong> NOSTRING</a></li><li class="chapter-item expanded "><a href="../conditions/nomethod.html"><strong aria-hidden="true">9.8.</strong> NOMETHOD</a></li><li class="chapter-item expanded "><a href="../conditions/notready.html"><strong aria-hidden="true">9.9.</strong> NOTREADY</a></li><li class="chapter-item expanded "><a href="../conditions/lostdigits.html"><strong aria-hidden="true">9.10.</strong> LOSTDIGITS</a></li><li class="chapter-item expanded "><a href="../conditions/user.html"><strong aria-hidden="true">9.11.</strong> USER conditions</a></li><li class="chapter-item expanded "><a href="../conditions/errors.html"><strong aria-hidden="true">9.12.</strong> Error numbers</a></li></ol></li><li class="chapter-item expanded "><a href="../classes/index.html"><strong aria-hidden="true">10.</strong> Classes</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../classes/methods.html"><strong aria-hidden="true">10.1.</strong> Method search</a></li><li class="chapter-item expanded "><a href="../classes/object.html"><strong aria-hidden="true">10.2.</strong> Object</a></li><li class="chapter-item expanded "><a href="../classes/class.html"><strong aria-hidden="true">10.3.</strong> Class</a></li><li class="chapter-item expanded "><a href="../classes/string.html"><strong aria-hidden="true">10.4.</strong> String</a></li><li class="chapter-item expanded "><a href="../classes/method.html"><strong aria-hidden="true">10.5.</strong> Method</a></li><li class="chapter-item expanded "><a href="../classes/routine.html"><strong aria-hidden="true">10.6.</strong> Routine</a></li><li class="chapter-item expanded "><a href="../classes/package.html"><strong aria-hidden="true">10.7.</strong> Package</a></li><li class="chapter-item expanded "><a href="../classes/message.html"><strong aria-hidden="true">10.8.</strong> Message</a></li><li class="chapter-item expanded "><a href="../classes/messagenotification.html"><strong aria-hidden="true">10.9.</strong> MessageNotification</a></li><li class="chapter-item expanded "><a href="../classes/alarmnotification.html"><strong aria-hidden="true">10.10.</strong> AlarmNotification</a></li><li class="chapter-item expanded "><a href="../classes/collection.html"><strong aria-hidden="true">10.11.</strong> Collection</a></li><li class="chapter-item expanded "><a href="../classes/mapcollection.html"><strong aria-hidden="true">10.12.</strong> MapCollection</a></li><li class="chapter-item expanded "><a href="../classes/orderedcollection.html"><strong aria-hidden="true">10.13.</strong> OrderedCollection</a></li><li class="chapter-item expanded "><a href="../classes/setcollection.html"><strong aria-hidden="true">10.14.</strong> SetCollection</a></li><li class="chapter-item expanded "><a href="../classes/array.html"><strong aria-hidden="true">10.15.</strong> Array</a></li><li class="chapter-item expanded "><a href="../classes/list.html"><strong aria-hidden="true">10.16.</strong> List</a></li><li class="chapter-item expanded "><a href="../classes/queue.html"><strong aria-hidden="true">10.17.</strong> Queue</a></li><li class="chapter-item expanded "><a href="../classes/circularqueue.html"><strong aria-hidden="true">10.18.</strong> CircularQueue</a></li><li class="chapter-item expanded "><a href="../classes/directory.html"><strong aria-hidden="true">10.19.</strong> Directory</a></li><li class="chapter-item expanded "><a href="../classes/stringtable.html"><strong aria-hidden="true">10.20.</strong> StringTable</a></li><li class="chapter-item expanded "><a href="../classes/properties.html"><strong aria-hidden="true">10.21.</strong> Properties</a></li><li class="chapter-item expanded "><a href="../classes/table.html"><strong aria-hidden="true">10.22.</strong> Table</a></li><li class="chapter-item expanded "><a href="../classes/identitytable.html"><strong aria-hidden="true">10.23.</strong> IdentityTable</a></li><li class="chapter-item expanded "><a href="../classes/relation.html"><strong aria-hidden="true">10.24.</strong> Relation</a></li><li class="chapter-item expanded "><a href="../classes/bag.html"><strong aria-hidden="true">10.25.</strong> Bag</a></li><li class="chapter-item expanded "><a href="../classes/set.html"><strong aria-hidden="true">10.26.</strong> Set</a></li><li class="chapter-item expanded "><a href="../classes/stem.html"><strong aria-hidden="true">10.27.</strong> Stem</a></li><li class="chapter-item expanded "><a href="../classes/datetime.html"><strong aria-hidden="true">10.28.</strong> DateTime</a></li><li class="chapter-item expanded "><a href="../classes/timespan.html"><strong aria-hidden="true">10.29.</strong> TimeSpan</a></li><li class="chapter-item expanded "><a href="../classes/comparable.html"><strong aria-hidden="true">10.30.</strong> Comparable</a></li><li class="chapter-item expanded "><a href="../classes/orderable.html"><strong aria-hidden="true">10.31.</strong> Orderable</a></li><li class="chapter-item expanded "><a href="../classes/comparators.html"><strong aria-hidden="true">10.32.</strong> Comparators</a></li><li class="chapter-item expanded "><a href="../classes/mutablebuffer.html"><strong aria-hidden="true">10.33.</strong> MutableBuffer</a></li><li class="chapter-item expanded "><a href="../classes/buffer.html"><strong aria-hidden="true">10.34.</strong> Buffer</a></li><li class="chapter-item expanded "><a href="../classes/pointer.html"><strong aria-hidden="true">10.35.</strong> Pointer</a></li><li class="chapter-item expanded "><a href="../classes/weakreference.html"><strong aria-hidden="true">10.36.</strong> WeakReference</a></li><li class="chapter-item expanded "><a href="../classes/variablereference.html"><strong aria-hidden="true">10.37.</strong> VariableReference</a></li><li class="chapter-item expanded "><a href="../classes/file.html"><strong aria-hidden="true">10.38.</strong> File</a></li><li class="chapter-item expanded "><a href="../classes/rexxcontext.html"><strong aria-hidden="true">10.39.</strong> RexxContext</a></li><li class="chapter-item expanded "><a href="../classes/stackframe.html"><strong aria-hidden="true">10.40.</strong> StackFrame</a></li><li class="chapter-item expanded "><a href="../classes/rexxinfo.html"><strong aria-hidden="true">10.41.</strong> RexxInfo</a></li><li class="chapter-item expanded "><a href="../classes/traceobject.html"><strong aria-hidden="true">10.42.</strong> TraceObject</a></li><li class="chapter-item expanded "><a href="../classes/validate.html"><strong aria-hidden="true">10.43.</strong> Validate</a></li><li class="chapter-item expanded "><a href="../classes/singleton.html"><strong aria-hidden="true">10.44.</strong> Singleton</a></li><li class="chapter-item expanded "><a href="../classes/alarm.html"><strong aria-hidden="true">10.45.</strong> Alarm</a></li><li class="chapter-item expanded "><a href="../classes/ticker.html"><strong aria-hidden="true">10.46.</strong> Ticker</a></li><li class="chapter-item expanded "><a href="../classes/monitor.html"><strong aria-hidden="true">10.47.</strong> Monitor</a></li><li class="chapter-item expanded "><a href="../classes/eventsemaphore.html" class="active"><strong aria-hidden="true">10.48.</strong> EventSemaphore</a></li><li class="chapter-item expanded "><a href="../classes/mutexsemaphore.html"><strong aria-hidden="true">10.49.</strong> MutexSemaphore</a></li><li class="chapter-item expanded "><a href="../classes/commandhandler.html"><strong aria-hidden="true">10.50.</strong> CommandHandler</a></li><li class="chapter-item expanded "><a href="../classes/nativecommandhandler.html"><strong aria-hidden="true">10.51.</strong> NativeCommandHandler</a></li><li class="chapter-item expanded "><a href="../classes/commandcontext.html"><strong aria-hidden="true">10.52.</strong> CommandContext</a></li><li class="chapter-item expanded "><a href="../classes/commandinput.html"><strong aria-hidden="true">10.53.</strong> CommandInput</a></li><li class="chapter-item expanded "><a href="../classes/commandoutput.html"><strong aria-hidden="true">10.54.</strong> CommandOutput</a></li><li class="chapter-item expanded "><a href="../classes/rexxqueue.html"><strong aria-hidden="true">10.55.</strong> RexxQueue</a></li><li class="chapter-item expanded "><a href="../classes/supplier.html"><strong aria-hidden="true">10.56.</strong> Supplier</a></li><li class="chapter-item expanded "><a href="../classes/streamsupplier.html"><strong aria-hidden="true">10.57.</strong> StreamSupplier</a></li><li class="chapter-item expanded "><a href="../classes/regularexpression.html"><strong aria-hidden="true">10.58.</strong> RegularExpression</a></li></ol></li><li class="chapter-item expanded "><a href="../builtins/index.html"><strong aria-hidden="true">11.</strong> Built-in functions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../builtins/abbrev.html"><strong aria-hidden="true">11.1.</strong> ABBREV</a></li><li class="chapter-item expanded "><a href="../builtins/abs.html"><strong aria-hidden="true">11.2.</strong> ABS</a></li><li class="chapter-item expanded "><a href="../builtins/address.html"><strong aria-hidden="true">11.3.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../builtins/arg.html"><strong aria-hidden="true">11.4.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../builtins/b2x.html"><strong aria-hidden="true">11.5.</strong> B2X</a></li><li class="chapter-item expanded "><a href="../builtins/beep.html"><strong aria-hidden="true">11.6.</strong> BEEP</a></li><li class="chapter-item expanded "><a href="../builtins/bitand.html"><strong aria-hidden="true">11.7.</strong> BITAND</a></li><li class="chapter-item expanded "><a href="../builtins/bitor.html"><strong aria-hidden="true">11.8.</strong> BITOR</a></li><li class="chapter-item expanded "><a href="../builtins/bitxor.html"><strong aria-hidden="true">11.9.</strong> BITXOR</a></li><li class="chapter-item expanded "><a href="../builtins/c2d.html"><strong aria-hidden="true">11.10.</strong> C2D</a></li><li class="chapter-item expanded "><a href="../builtins/c2x.html"><strong aria-hidden="true">11.11.</strong> C2X</a></li><li class="chapter-item expanded "><a href="../builtins/center.html"><strong aria-hidden="true">11.12.</strong> CENTER</a></li><li class="chapter-item expanded "><a href="../builtins/changestr.html"><strong aria-hidden="true">11.13.</strong> CHANGESTR</a></li><li class="chapter-item expanded "><a href="../builtins/charin.html"><strong aria-hidden="true">11.14.</strong> CHARIN</a></li><li class="chapter-item expanded "><a href="../builtins/charout.html"><strong aria-hidden="true">11.15.</strong> CHAROUT</a></li><li class="chapter-item expanded "><a href="../builtins/chars.html"><strong aria-hidden="true">11.16.</strong> CHARS</a></li><li class="chapter-item expanded "><a href="../builtins/compare.html"><strong aria-hidden="true">11.17.</strong> COMPARE</a></li><li class="chapter-item expanded "><a href="../builtins/condition.html"><strong aria-hidden="true">11.18.</strong> CONDITION</a></li><li class="chapter-item expanded "><a href="../builtins/copies.html"><strong aria-hidden="true">11.19.</strong> COPIES</a></li><li class="chapter-item expanded "><a href="../builtins/countstr.html"><strong aria-hidden="true">11.20.</strong> COUNTSTR</a></li><li class="chapter-item expanded "><a href="../builtins/d2c.html"><strong aria-hidden="true">11.21.</strong> D2C</a></li><li class="chapter-item expanded "><a href="../builtins/d2x.html"><strong aria-hidden="true">11.22.</strong> D2X</a></li><li class="chapter-item expanded "><a href="../builtins/datatype.html"><strong aria-hidden="true">11.23.</strong> DATATYPE</a></li><li class="chapter-item expanded "><a href="../builtins/date.html"><strong aria-hidden="true">11.24.</strong> DATE</a></li><li class="chapter-item expanded "><a href="../builtins/delstr.html"><strong aria-hidden="true">11.25.</strong> DELSTR</a></li><li class="chapter-item expanded "><a href="../builtins/delword.html"><strong aria-hidden="true">11.26.</strong> DELWORD</a></li><li class="chapter-item expanded "><a href="../builtins/digits.html"><strong aria-hidden="true">11.27.</strong> DIGITS</a></li><li class="chapter-item expanded "><a href="../builtins/directory.html"><strong aria-hidden="true">11.28.</strong> DIRECTORY</a></li><li class="chapter-item expanded "><a href="../builtins/endlocal.html"><strong aria-hidden="true">11.29.</strong> ENDLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/errortext.html"><strong aria-hidden="true">11.30.</strong> ERRORTEXT</a></li><li class="chapter-item expanded "><a href="../builtins/filespec.html"><strong aria-hidden="true">11.31.</strong> FILESPEC</a></li><li class="chapter-item expanded "><a href="../builtins/form.html"><strong aria-hidden="true">11.32.</strong> FORM</a></li><li class="chapter-item expanded "><a href="../builtins/format.html"><strong aria-hidden="true">11.33.</strong> FORMAT</a></li><li class="chapter-item expanded "><a href="../builtins/fuzz.html"><strong aria-hidden="true">11.34.</strong> FUZZ</a></li><li class="chapter-item expanded "><a href="../builtins/gc.html"><strong aria-hidden="true">11.35.</strong> GC</a></li><li class="chapter-item expanded "><a href="../builtins/insert.html"><strong aria-hidden="true">11.36.</strong> INSERT</a></li><li class="chapter-item expanded "><a href="../builtins/lastpos.html"><strong aria-hidden="true">11.37.</strong> LASTPOS</a></li><li class="chapter-item expanded "><a href="../builtins/left.html"><strong aria-hidden="true">11.38.</strong> LEFT</a></li><li class="chapter-item expanded "><a href="../builtins/length.html"><strong aria-hidden="true">11.39.</strong> LENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/linein.html"><strong aria-hidden="true">11.40.</strong> LINEIN</a></li><li class="chapter-item expanded "><a href="../builtins/lineout.html"><strong aria-hidden="true">11.41.</strong> LINEOUT</a></li><li class="chapter-item expanded "><a href="../builtins/lines.html"><strong aria-hidden="true">11.42.</strong> LINES</a></li><li class="chapter-item expanded "><a href="../builtins/lower.html"><strong aria-hidden="true">11.43.</strong> LOWER</a></li><li class="chapter-item expanded "><a href="../builtins/max.html"><strong aria-hidden="true">11.44.</strong> MAX</a></li><li class="chapter-item expanded "><a href="../builtins/min.html"><strong aria-hidden="true">11.45.</strong> MIN</a></li><li class="chapter-item expanded "><a href="../builtins/overlay.html"><strong aria-hidden="true">11.46.</strong> OVERLAY</a></li><li class="chapter-item expanded "><a href="../builtins/pos.html"><strong aria-hidden="true">11.47.</strong> POS</a></li><li class="chapter-item expanded "><a href="../builtins/qualify.html"><strong aria-hidden="true">11.48.</strong> QUALIFY</a></li><li class="chapter-item expanded "><a href="../builtins/queued.html"><strong aria-hidden="true">11.49.</strong> QUEUED</a></li><li class="chapter-item expanded "><a href="../builtins/random.html"><strong aria-hidden="true">11.50.</strong> RANDOM</a></li><li class="chapter-item expanded "><a href="../builtins/reverse.html"><strong aria-hidden="true">11.51.</strong> REVERSE</a></li><li class="chapter-item expanded "><a href="../builtins/right.html"><strong aria-hidden="true">11.52.</strong> RIGHT</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncadd.html"><strong aria-hidden="true">11.53.</strong> RXFUNCADD</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncdrop.html"><strong aria-hidden="true">11.54.</strong> RXFUNCDROP</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncquery.html"><strong aria-hidden="true">11.55.</strong> RXFUNCQUERY</a></li><li class="chapter-item expanded "><a href="../builtins/rxqueue.html"><strong aria-hidden="true">11.56.</strong> RXQUEUE</a></li><li class="chapter-item expanded "><a href="../builtins/setlocal.html"><strong aria-hidden="true">11.57.</strong> SETLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/sign.html"><strong aria-hidden="true">11.58.</strong> SIGN</a></li><li class="chapter-item expanded "><a href="../builtins/sourceline.html"><strong aria-hidden="true">11.59.</strong> SOURCELINE</a></li><li class="chapter-item expanded "><a href="../builtins/space.html"><strong aria-hidden="true">11.60.</strong> SPACE</a></li><li class="chapter-item expanded "><a href="../builtins/stream.html"><strong aria-hidden="true">11.61.</strong> STREAM</a></li><li class="chapter-item expanded "><a href="../builtins/strip.html"><strong aria-hidden="true">11.62.</strong> STRIP</a></li><li class="chapter-item expanded "><a href="../builtins/substr.html"><strong aria-hidden="true">11.63.</strong> SUBSTR</a></li><li class="chapter-item expanded "><a href="../builtins/subword.html"><strong aria-hidden="true">11.64.</strong> SUBWORD</a></li><li class="chapter-item expanded "><a href="../builtins/symbol.html"><strong aria-hidden="true">11.65.</strong> SYMBOL</a></li><li class="chapter-item expanded "><a href="../builtins/time.html"><strong aria-hidden="true">11.66.</strong> TIME</a></li><li class="chapter-item expanded "><a href="../builtins/trace.html"><strong aria-hidden="true">11.67.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../builtins/translate.html"><strong aria-hidden="true">11.68.</strong> TRANSLATE</a></li><li class="chapter-item expanded "><a href="../builtins/trunc.html"><strong aria-hidden="true">11.69.</strong> TRUNC</a></li><li class="chapter-item expanded "><a href="../builtins/upper.html"><strong aria-hidden="true">11.70.</strong> UPPER</a></li><li class="chapter-item expanded "><a href="../builtins/userid.html"><strong aria-hidden="true">11.71.</strong> USERID</a></li><li class="chapter-item expanded "><a href="../builtins/value.html"><strong aria-hidden="true">11.72.</strong> VALUE</a></li><li class="chapter-item expanded "><a href="../builtins/var.html"><strong aria-hidden="true">11.73.</strong> VAR</a></li><li class="chapter-item expanded "><a href="../builtins/verify.html"><strong aria-hidden="true">11.74.</strong> VERIFY</a></li><li class="chapter-item expanded "><a href="../builtins/word.html"><strong aria-hidden="true">11.75.</strong> WORD</a></li><li class="chapter-item expanded "><a href="../builtins/wordindex.html"><strong aria-hidden="true">11.76.</strong> WORDINDEX</a></li><li class="chapter-item expanded "><a href="../builtins/wordlength.html"><strong aria-hidden="true">11.77.</strong> WORDLENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/wordpos.html"><strong aria-hidden="true">11.78.</strong> WORDPOS</a></li><li class="chapter-item expanded "><a href="../builtins/words.html"><strong aria-hidden="true">11.79.</strong> WORDS</a></li><li class="chapter-item expanded "><a href="../builtins/x2b.html"><strong aria-hidden="true">11.80.</strong> X2B</a></li><li class="chapter-item expanded "><a href="../builtins/x2c.html"><strong aria-hidden="true">11.81.</strong> X2C</a></li><li class="chapter-item expanded "><a href="../builtins/x2d.html"><strong aria-hidden="true">11.82.</strong> X2D</a></li><li class="chapter-item expanded "><a href="../builtins/xrange.html"><strong aria-hidden="true">11.83.</strong> XRANGE</a></li></ol></li><li class="chapter-item expanded "><a href="../deviations.html"><strong aria-hidden="true">12.</strong> Deviations</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The interrexx Language Specification</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="eventsemaphore"><a class="header" href="#eventsemaphore">EventSemaphore</a></h1>
+<p class="references">rexxref: Builtin Classes &gt; Utility Classes &gt; EventSemaphore Class; Builtin Classes &gt; Utility Classes &gt; EventSemaphore Class &gt; new (Class Method); Builtin Classes &gt; Utility Classes &gt; EventSemaphore Class &gt; isPosted; Builtin Classes &gt; Utility Classes &gt; EventSemaphore Class &gt; post; Builtin Classes &gt; Utility Classes &gt; EventSemaphore Class &gt; reset; Builtin Classes &gt; Utility Classes &gt; EventSemaphore Class &gt; uninit; Builtin Classes &gt; Utility Classes &gt; EventSemaphore Class &gt; wait</p>
+<p class="deviations">Deviations: D109</p>
+<p>An <code>EventSemaphore</code> is a flag that activities can wait for. It is either
+posted or cleared. An activity that has to wait for something another activity
+does calls <code>wait</code>; the activity that does it calls <code>post</code>, and every activity
+that waits goes on. A semaphore that is posted lets <code>wait</code> return at once,
+until it is cleared again with <code>reset</code>. This page states what each method
+answers and checks, and what a timeout may be. How activities are scheduled,
+and so which of several waiters runs first after a <code>post</code>, is specified in the
+environment chapter. The examples that use two activities start a message and
+wait on the semaphore from the program; the order of their output is forced by
+the semaphore itself.</p>
+<h2 id="the-class"><a class="header" href="#the-class">The class</a></h2>
+<div class="rule" id="r-class.eventsemaphore.creation"><a href="#r-class.eventsemaphore.creation">[class.eventsemaphore.creation]</a></div>
+<p><code>EventSemaphore</code> has the instance methods <code>isPosted</code>, <code>post</code>, <code>reset</code>,
+<code>uninit</code> and <code>wait</code>, and the class method <code>new</code>, besides the methods that
+every class has. It may have private methods besides these; they are not part
+of this specification. Its only superclass is <code>Object</code> and it inherits no
+mixin class (<a href="index.html#r-class.index.hierarchy">the hierarchy rule</a>).</p>
+<pre><code class="language-rexx">say .eventsemaphore~id .eventsemaphore~superclasses~items,
+  .eventsemaphore~superclass~id .eventsemaphore~queryMixinClass
+have = .set~new
+s = .eventsemaphore~methods(.nil)
+do while s~available
+  have~put(s~index)
+  s~next
+end
+names = 'isPosted post reset uninit wait'~makeArray(' ')
+count = 0
+do name over names
+  if have~hasItem(name~upper) then count = count + 1
+end
+say count 'of 5'
+</code></pre>
+<pre><code class="language-output">EventSemaphore 1 Object 0
+5 of 5
+</code></pre>
+<div class="rule" id="r-class.eventsemaphore.new"><a href="#r-class.eventsemaphore.new">[class.eventsemaphore.new]</a></div>
+<p><code>new</code> makes a semaphore that is cleared, and answers an instance of the class
+that received it, so a subclass makes instances of itself. It makes the
+semaphore itself and then sends <code>init</code> the arguments of <code>new</code>, as <a href="index.html#r-class.index.new">the new
+rule</a> says, so the semaphore works whatever the <code>init</code> of a
+subclass does, even when it does not send <code>init</code> to its superclass, and <code>new</code>
+with an argument raises <code>SYNTAX 93.902</code> for the class itself, where <code>init</code> is
+that of <code>Object</code>, and not for a subclass whose <code>init</code> takes it.</p>
+<pre><code class="language-rexx">say .eventsemaphore~new~isPosted
+s = .count~new(5)
+say s~tag s~isPosted s~wait(0)
+s~post
+say s~isPosted s~wait(0)
+t = .lazy~new
+say t~class~id t~isPosted t~wait(0)
+t~post
+say t~isPosted t~wait(0)
+signal on syntax name bad
+x = .eventsemaphore~new(1)
+bad: say condition('o')~code
+::class count subclass eventsemaphore
+::method init
+  expose tag
+  use arg tag
+  self~init:super
+::method tag
+  expose tag
+  return tag
+::class lazy subclass eventsemaphore
+::method init
+  nop
+</code></pre>
+<pre><code class="language-output">0
+5 0 0
+1 1
+LAZY 0 0
+1 1
+93.902
+</code></pre>
+<h2 id="states"><a class="header" href="#states">States</a></h2>
+<div class="rule" id="r-class.eventsemaphore.isposted"><a href="#r-class.eventsemaphore.isposted">[class.eventsemaphore.isposted]</a></div>
+<p><code>isPosted</code> answers 1 when the semaphore is posted and 0 when it is cleared. It
+takes no argument (<code>SYNTAX 93.902</code>) and sends no message.</p>
+<pre><code class="language-rexx">e = .eventsemaphore~new
+say e~isPosted
+e~post
+say e~isPosted
+e~reset
+say e~isPosted
+signal on syntax name bad
+say e~isPosted(1)
+bad: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">0
+1
+0
+93.902
+</code></pre>
+<div class="rule" id="r-class.eventsemaphore.post"><a href="#r-class.eventsemaphore.post">[class.eventsemaphore.post]</a></div>
+<p><code>post</code> makes the semaphore posted and releases every activity that waits for
+it; a call of <code>wait</code> that comes after it, while the semaphore is posted,
+returns without waiting. Posting a semaphore that is posted changes nothing.
+<code>post</code> answers nothing, so using its answer as a value raises <code>SYNTAX 91.999</code>,
+and takes no argument (<code>SYNTAX 93.902</code>).</p>
+<pre><code class="language-rexx">e = .eventsemaphore~new
+e~post
+say e~isPosted e~wait(0)
+e~post
+say e~isPosted e~wait(0)
+signal on syntax name bad
+x = e~post
+bad: say condition('o')~code
+signal on syntax name bad2
+e~post(1)
+bad2: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">1 1
+1 1
+91.999
+93.902
+</code></pre>
+<div class="rule" id="r-class.eventsemaphore.reset"><a href="#r-class.eventsemaphore.reset">[class.eventsemaphore.reset]</a></div>
+<p><code>reset</code> makes the semaphore cleared; a call of <code>wait</code> after it waits for the
+next <code>post</code>. Resetting a semaphore that is cleared changes nothing. <code>reset</code>
+answers nothing, so using its answer as a value raises <code>SYNTAX 91.999</code>, and
+takes no argument (<code>SYNTAX 93.902</code>).</p>
+<pre><code class="language-rexx">e = .eventsemaphore~new
+e~reset
+say e~isPosted e~wait(0)
+e~post
+e~reset
+say e~isPosted e~wait(0.05)
+e~reset
+say e~isPosted
+signal on syntax name bad
+x = e~reset
+bad: say condition('o')~code
+signal on syntax name bad2
+e~reset(1)
+bad2: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">0 0
+0 0
+0
+91.999
+93.902
+</code></pre>
+<div class="rule" id="r-class.eventsemaphore.copy"><a href="#r-class.eventsemaphore.copy">[class.eventsemaphore.copy]</a></div>
+<p><code>copy</code> answers a new semaphore in the state the original is in: posted when it
+is posted, cleared when it is cleared. From then on the two are separate: a
+<code>post</code> or <code>reset</code> of one does not change the other, and a <code>wait</code> on one is not
+ended by a <code>post</code> of the other.</p>
+<pre><code class="language-rexx">e = .eventsemaphore~new
+e~post
+k = e~copy
+say k~isPosted k~wait(0)
+e~reset
+say k~isPosted e~isPosted
+k~reset
+e~post
+say k~isPosted e~isPosted k~wait(0.05)
+c = .eventsemaphore~new~copy
+say c~isPosted c~wait(0)
+</code></pre>
+<pre><code class="language-output defect=#182">1 1
+1 0
+0 1 0
+0 0
+</code></pre>
+<h2 id="waiting"><a class="header" href="#waiting">Waiting</a></h2>
+<div class="rule" id="r-class.eventsemaphore.wait"><a href="#r-class.eventsemaphore.wait">[class.eventsemaphore.wait]</a></div>
+<p><code>wait(timeout)</code> answers 1 when the semaphore is posted, at the call or before
+the timeout ends, and 0 when the timeout ended with the semaphore still cleared.
+The timeout says how long the caller is prepared to wait. Omitted or below zero,
+there is no limit, so the answer can only be 1. Zero is no wait at all, and the
+answer is the state at the call, as <code>isPosted</code> gives it. Above zero it is a
+limit in seconds. One <code>post</code> ends the wait of every caller that is waiting,
+however many there are; which of them runs on first is not specified. A call of
+<code>wait</code> that is released by <code>post</code> and one that finds the semaphore posted answer
+alike. The timeout is read before the semaphore is looked at, as
+<a href="#r-class.eventsemaphore.wait.timeout">the next rule</a> says, so an invalid one
+raises its error even for a posted semaphore. In the example a message that the
+program starts posts after a short pause, and a second starts two waiters, one
+without a timeout and one with a long one that never ends before the post; the
+program waits for the post too, and prints what each answered, which the post
+forces to be 1 for all, and what <code>wait(0)</code> and a short timeout answer on a
+cleared semaphore.</p>
+<pre><code class="language-rexx">e = .eventsemaphore~new
+say e~wait(0) e~wait(0.05)
+w1 = .message~new(e, 'wait')~~start
+w2 = .message~new(e, 'wait', 'I', 30)~~start
+w3 = .message~new(.poster, 'later', 'I', e)~~start
+say 'blocking wait:' e~wait
+say w1~result w2~result w3~result
+say e~isPosted
+say e~wait e~wait(0) e~wait(-1) e~wait(5)
+e~reset
+say e~isPosted e~wait(0.05)
+p = .message~new(.poster, 'later', 'I', e)~~start
+say p~result e~wait(30)
+::class poster
+::method later class
+  use arg sem
+  call syssleep 0.05
+  sem~post
+  return 'posted'
+</code></pre>
+<pre><code class="language-output">0 0
+blocking wait: 1
+1 1 posted
+1
+1 1 1 1
+0 0
+posted 1
+</code></pre>
+<div class="rule" id="r-class.eventsemaphore.wait.timeout"><a href="#r-class.eventsemaphore.wait.timeout">[class.eventsemaphore.wait.timeout]</a></div>
+<p>The timeout is a number of seconds or a <code>TimeSpan</code>, and it is read before
+anything else is done, so an invalid one raises <code>SYNTAX 88.902</code> whatever the
+state of the semaphore. A string is a valid timeout when it is a number as
+<a href="../builtins/datatype.html#r-bif.datatype.number">the DATATYPE <code>N</code> rule</a> reads it, so blanks at either
+end, a sign, a decimal point and an exponent are allowed; the empty string, a
+string of blanks and a string that is no number raise <code>SYNTAX 88.902</code>. An object
+that is neither a string nor a <code>TimeSpan</code> is replaced by its string value, as
+<a href="../conventions.html#r-conv.string.object">the conversion rule</a> says, and that string is read in the
+same way; <code>.nil</code>, a <code>DateTime</code> and an object whose string value is no number,
+such as an instance of <code>Object</code>, raise <code>SYNTAX 88.902</code>. A <code>TimeSpan</code> is read
+through its <code>totalSeconds</code>, which is sent to it once, and a span that is
+negative means the same as a negative number. More than one argument raises
+<code>SYNTAX 93.902</code>. The first example gives each form to a cleared semaphore with a
+short timeout, and to a posted one. In the second, a <code>TimeSpan</code> that is negative
+waits as long as a negative number does, until the post, which comes from
+another activity.</p>
+<pre><code class="language-rexx">e = .eventsemaphore~new
+say e~wait(' 0.05 ') e~wait('+.05') e~wait('5e-2'),
+  e~wait(.timespan~fromMicroseconds(50000)) e~wait(.mutablebuffer~new('0.05'))
+say e~wait(.timespan~new(0)) e~wait(0) e~wait('0')
+call try "e~wait('')"
+call try "e~wait(' ')"
+call try "e~wait('abc')"
+call try "e~wait('0.05x')"
+call try "e~wait(.nil)"
+call try "e~wait(.object~new)"
+call try "e~wait(.datetime~new)"
+call try "e~wait(1, 2)"
+call try "e~wait(, 1)"
+e~post
+call try "e~wait('')"
+call try "e~wait(.nil)"
+call try "e~wait(1, 2)"
+call try "e~wait"
+call try "e~wait(-5)"
+call try "e~wait(.timespan~fromSeconds(-5))"
+call try "e~wait(.timespan~fromSeconds(5))"
+call try "e~wait('1e5')"
+exit
+try:
+  signal on syntax name bad
+  interpret 'x =' arg(1)
+  say arg(1) '=&gt;' x
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">0 0 0 0 0
+0 0 0
+e~wait('') =&gt; 88.902
+e~wait(' ') =&gt; 88.902
+e~wait('abc') =&gt; 88.902
+e~wait('0.05x') =&gt; 88.902
+e~wait(.nil) =&gt; 88.902
+e~wait(.object~new) =&gt; 88.902
+e~wait(.datetime~new) =&gt; 88.902
+e~wait(1, 2) =&gt; 93.902
+e~wait(, 1) =&gt; 93.902
+e~wait('') =&gt; 88.902
+e~wait(.nil) =&gt; 88.902
+e~wait(1, 2) =&gt; 93.902
+e~wait =&gt; 1
+e~wait(-5) =&gt; 1
+e~wait(.timespan~fromSeconds(-5)) =&gt; 1
+e~wait(.timespan~fromSeconds(5)) =&gt; 1
+e~wait('1e5') =&gt; 1
+</code></pre>
+<pre><code class="language-rexx">e = .eventsemaphore~new
+p = .message~new(.poster, 'later', 'I', e)~~start
+say e~wait(.timespan~fromSeconds(-5)) p~result
+::class poster
+::method later class
+  use arg sem
+  call syssleep 0.05
+  sem~post
+  return 'posted'
+</code></pre>
+<pre><code class="language-output">1 posted
+</code></pre>
+<div class="rule" id="r-class.eventsemaphore.wait.sends"><a href="#r-class.eventsemaphore.wait.sends">[class.eventsemaphore.wait.sends]</a></div>
+<p><code>wait</code> sends the message <code>totalSeconds</code> to a timeout that is a <code>TimeSpan</code>, once
+and before it looks at the semaphore, and no other message to a <code>TimeSpan</code>; an
+object that is neither a string nor a <code>TimeSpan</code> is sent what
+<a href="../conventions.html#r-conv.string.object">the conversion rule</a> says
+(<a href="string.html#r-class.string.deviation.109">Deviation 109</a> says that a string that is an
+instance of a subclass of <code>String</code> is read by its own characters). No method of
+the class sends a message to the semaphore itself: an override of <code>post</code>,
+<code>reset</code>, <code>isPosted</code> or <code>wait</code> runs when the program sends that message and not
+because another of them was. The first example overrides each method and
+<code>totalSeconds</code> of a subclass of <code>TimeSpan</code> and shows what runs; the second gives
+a timeout whose class has its own <code>request</code> and <code>makeString</code>, and only <code>request</code>
+is sent.</p>
+<pre><code class="language-rexx">.environment~log = .list~new
+e = .watch~new
+span = .span~fromMicroseconds(20000)
+.environment~log~empty
+x = e~wait(span)
+say 'wait cleared:' x .environment~log~makeArray~makeString('l', ' ')
+.environment~log~empty
+e~post
+say 'post:' .environment~log~makeArray~makeString('l', ' ')
+.environment~log~empty
+x = e~wait(span)
+say 'wait posted:' x .environment~log~makeArray~makeString('l', ' ')
+.environment~log~empty
+x = e~wait('0.01')
+say 'wait string:' x .environment~log~makeArray~makeString('l', ' ')
+.environment~log~empty
+e~reset
+say 'reset:' .environment~log~makeArray~makeString('l', ' ')
+.environment~log~empty
+x = e~isPosted
+say 'isPosted:' x .environment~log~makeArray~makeString('l', ' ')
+::class watch subclass eventsemaphore
+::method wait
+  .environment~log~append('wait')
+  forward class (super)
+::method post
+  .environment~log~append('post')
+  forward class (super)
+::method reset
+  .environment~log~append('reset')
+  forward class (super)
+::method isPosted
+  .environment~log~append('isPosted')
+  forward class (super)
+::class span subclass timespan
+::method totalSeconds
+  .environment~log~append('totalSeconds')
+  forward class (super)
+</code></pre>
+<pre><code class="language-output">wait cleared: 0 wait totalSeconds
+post: post
+wait posted: 1 wait totalSeconds
+wait string: 1 wait
+reset: reset
+isPosted: 0 isPosted
+</code></pre>
+<pre><code class="language-rexx">e = .eventsemaphore~new
+e~post
+.environment~log = 'sent:'
+say e~wait(.timeout~new) .log
+::class timeout
+::method request
+  .environment~log = .log 'request' arg(1)
+  return '0.05'
+::method makestring
+  .environment~log = .log 'makeString'
+  return '0.05'
+</code></pre>
+<pre><code class="language-output defect=#164">1 sent: request STRING
+</code></pre>
+<h2 id="cleaning-up"><a class="header" href="#cleaning-up">Cleaning up</a></h2>
+<div class="rule" id="r-class.eventsemaphore.uninit"><a href="#r-class.eventsemaphore.uninit">[class.eventsemaphore.uninit]</a></div>
+<p><code>uninit</code> frees what the semaphore holds. The library sends it when the semaphore
+is reclaimed, at a time that a program does not control, which is not specified.
+An <code>uninit</code> of a subclass replaces this one, so it frees the semaphore only by
+sending <code>self~uninit:super</code>. <code>uninit</code> takes no argument (<code>SYNTAX 93.902</code>) and
+answers nothing, so using its answer as a value raises <code>SYNTAX 91.999</code>. What a
+semaphore does for a message that a program sends it after a direct <code>uninit</code>, a
+second <code>uninit</code> included, is not specified.</p>
+<pre><code class="language-rexx">.environment~log = .list~new
+s = .tidy~new
+s~uninit
+say .environment~log~makeArray~makeString('l', ' ')
+signal on syntax name bad
+s2 = .eventsemaphore~new
+x = s2~uninit
+bad: say condition('o')~code
+signal on syntax name bad2
+s3 = .eventsemaphore~new
+s3~uninit(1)
+bad2: say condition('o')~code
+::class tidy subclass eventsemaphore
+::method uninit
+  .environment~log~append('tidy-uninit')
+  self~uninit:super
+</code></pre>
+<pre><code class="language-output">tidy-uninit
+91.999
+93.902
+</code></pre>
+<h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
+<div class="rule" id="r-class.eventsemaphore.deviation.109"><a href="#r-class.eventsemaphore.deviation.109">[class.eventsemaphore.deviation.109]</a></div>
+<p>A timeout that is an instance of a subclass of <code>String</code> is read by its own
+characters, and <code>request</code>, <code>makeString</code> and <code>string</code> are not sent to it
+(<a href="string.html#r-class.string.deviation.109">Deviation 109</a>). ooRexx sends such an instance
+<code>request</code> with <code>STRING</code>, so an override can change what is read. In the
+example the overrides answer a timeout of 0; they count their sends, and the
+string is read as 0.01 seconds without one.</p>
+<pre><code class="language-rexx">.environment~sent = 0
+e = .eventsemaphore~new
+say e~wait(.digits~new('0.01')) 'sends' .environment~sent
+::class digits subclass string
+::method makestring
+  .environment~sent = .environment~sent + 1
+  return '0'
+::method request
+  .environment~sent = .environment~sent + 1
+  return '0'
+</code></pre>
+<pre><code class="language-output defect=#140">0 sends 0
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../classes/monitor.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../classes/mutexsemaphore.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../classes/monitor.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../classes/mutexsemaphore.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../assets/version-picker.js"></script>
+
+
+    </div>
+    </body>
+</html>

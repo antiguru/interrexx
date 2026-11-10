@@ -1,0 +1,1564 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>CommandContext - The interrexx Language Specification</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../conventions.html"><strong aria-hidden="true">2.</strong> Conventions</a></li><li class="chapter-item expanded "><a href="../lexical/index.html"><strong aria-hidden="true">3.</strong> Lexical structure</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../lexical/characters.html"><strong aria-hidden="true">3.1.</strong> Characters</a></li><li class="chapter-item expanded "><a href="../lexical/comments.html"><strong aria-hidden="true">3.2.</strong> Comments</a></li><li class="chapter-item expanded "><a href="../lexical/literals.html"><strong aria-hidden="true">3.3.</strong> Literals</a></li><li class="chapter-item expanded "><a href="../lexical/symbols.html"><strong aria-hidden="true">3.4.</strong> Symbols</a></li><li class="chapter-item expanded "><a href="../lexical/operators.html"><strong aria-hidden="true">3.5.</strong> Operators and special characters</a></li><li class="chapter-item expanded "><a href="../lexical/clauses.html"><strong aria-hidden="true">3.6.</strong> Clauses</a></li></ol></li><li class="chapter-item expanded "><a href="../numbers/index.html"><strong aria-hidden="true">4.</strong> Numbers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../numbers/formats.html"><strong aria-hidden="true">4.1.</strong> Formats</a></li><li class="chapter-item expanded "><a href="../numbers/limits.html"><strong aria-hidden="true">4.2.</strong> Limits</a></li><li class="chapter-item expanded "><a href="../numbers/arithmetic.html"><strong aria-hidden="true">4.3.</strong> Arithmetic</a></li><li class="chapter-item expanded "><a href="../numbers/settings.html"><strong aria-hidden="true">4.4.</strong> Settings</a></li><li class="chapter-item expanded "><a href="../numbers/comparison.html"><strong aria-hidden="true">4.5.</strong> Comparison</a></li></ol></li><li class="chapter-item expanded "><a href="../expressions/index.html"><strong aria-hidden="true">5.</strong> Expressions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../expressions/terms.html"><strong aria-hidden="true">5.1.</strong> Terms</a></li><li class="chapter-item expanded "><a href="../expressions/variables.html"><strong aria-hidden="true">5.2.</strong> Variables</a></li><li class="chapter-item expanded "><a href="../expressions/concatenation.html"><strong aria-hidden="true">5.3.</strong> Concatenation</a></li><li class="chapter-item expanded "><a href="../expressions/arithmetic.html"><strong aria-hidden="true">5.4.</strong> Arithmetic operators</a></li><li class="chapter-item expanded "><a href="../expressions/comparison.html"><strong aria-hidden="true">5.5.</strong> Comparison operators</a></li><li class="chapter-item expanded "><a href="../expressions/logical.html"><strong aria-hidden="true">5.6.</strong> Logical operators</a></li><li class="chapter-item expanded "><a href="../expressions/messages.html"><strong aria-hidden="true">5.7.</strong> Message operators</a></li></ol></li><li class="chapter-item expanded "><a href="../instructions/index.html"><strong aria-hidden="true">6.</strong> Instructions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../instructions/address.html"><strong aria-hidden="true">6.1.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../instructions/arg.html"><strong aria-hidden="true">6.2.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../instructions/assignment.html"><strong aria-hidden="true">6.3.</strong> Assignments</a></li><li class="chapter-item expanded "><a href="../instructions/call.html"><strong aria-hidden="true">6.4.</strong> CALL</a></li><li class="chapter-item expanded "><a href="../instructions/command.html"><strong aria-hidden="true">6.5.</strong> Commands</a></li><li class="chapter-item expanded "><a href="../instructions/do.html"><strong aria-hidden="true">6.6.</strong> DO</a></li><li class="chapter-item expanded "><a href="../instructions/drop.html"><strong aria-hidden="true">6.7.</strong> DROP</a></li><li class="chapter-item expanded "><a href="../instructions/exit.html"><strong aria-hidden="true">6.8.</strong> EXIT</a></li><li class="chapter-item expanded "><a href="../instructions/expose.html"><strong aria-hidden="true">6.9.</strong> EXPOSE</a></li><li class="chapter-item expanded "><a href="../instructions/forward.html"><strong aria-hidden="true">6.10.</strong> FORWARD</a></li><li class="chapter-item expanded "><a href="../instructions/guard.html"><strong aria-hidden="true">6.11.</strong> GUARD</a></li><li class="chapter-item expanded "><a href="../instructions/if.html"><strong aria-hidden="true">6.12.</strong> IF</a></li><li class="chapter-item expanded "><a href="../instructions/interpret.html"><strong aria-hidden="true">6.13.</strong> INTERPRET</a></li><li class="chapter-item expanded "><a href="../instructions/iterate.html"><strong aria-hidden="true">6.14.</strong> ITERATE</a></li><li class="chapter-item expanded "><a href="../instructions/leave.html"><strong aria-hidden="true">6.15.</strong> LEAVE</a></li><li class="chapter-item expanded "><a href="../instructions/loop.html"><strong aria-hidden="true">6.16.</strong> LOOP</a></li><li class="chapter-item expanded "><a href="../instructions/message.html"><strong aria-hidden="true">6.17.</strong> Message instructions</a></li><li class="chapter-item expanded "><a href="../instructions/nop.html"><strong aria-hidden="true">6.18.</strong> NOP</a></li><li class="chapter-item expanded "><a href="../instructions/numeric.html"><strong aria-hidden="true">6.19.</strong> NUMERIC</a></li><li class="chapter-item expanded "><a href="../instructions/options.html"><strong aria-hidden="true">6.20.</strong> OPTIONS</a></li><li class="chapter-item expanded "><a href="../instructions/parse.html"><strong aria-hidden="true">6.21.</strong> PARSE</a></li><li class="chapter-item expanded "><a href="../instructions/procedure.html"><strong aria-hidden="true">6.22.</strong> PROCEDURE</a></li><li class="chapter-item expanded "><a href="../instructions/pull.html"><strong aria-hidden="true">6.23.</strong> PULL</a></li><li class="chapter-item expanded "><a href="../instructions/push.html"><strong aria-hidden="true">6.24.</strong> PUSH</a></li><li class="chapter-item expanded "><a href="../instructions/queue.html"><strong aria-hidden="true">6.25.</strong> QUEUE</a></li><li class="chapter-item expanded "><a href="../instructions/raise.html"><strong aria-hidden="true">6.26.</strong> RAISE</a></li><li class="chapter-item expanded "><a href="../instructions/reply.html"><strong aria-hidden="true">6.27.</strong> REPLY</a></li><li class="chapter-item expanded "><a href="../instructions/return.html"><strong aria-hidden="true">6.28.</strong> RETURN</a></li><li class="chapter-item expanded "><a href="../instructions/say.html"><strong aria-hidden="true">6.29.</strong> SAY</a></li><li class="chapter-item expanded "><a href="../instructions/select.html"><strong aria-hidden="true">6.30.</strong> SELECT</a></li><li class="chapter-item expanded "><a href="../instructions/signal.html"><strong aria-hidden="true">6.31.</strong> SIGNAL</a></li><li class="chapter-item expanded "><a href="../instructions/trace.html"><strong aria-hidden="true">6.32.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../instructions/use.html"><strong aria-hidden="true">6.33.</strong> USE</a></li></ol></li><li class="chapter-item expanded "><a href="../parsing/index.html"><strong aria-hidden="true">7.</strong> Parsing</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../parsing/templates.html"><strong aria-hidden="true">7.1.</strong> Templates</a></li><li class="chapter-item expanded "><a href="../parsing/patterns.html"><strong aria-hidden="true">7.2.</strong> Patterns</a></li><li class="chapter-item expanded "><a href="../parsing/multiple.html"><strong aria-hidden="true">7.3.</strong> Several strings and case</a></li></ol></li><li class="chapter-item expanded "><a href="../directives/index.html"><strong aria-hidden="true">8.</strong> Directives</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../directives/class.html"><strong aria-hidden="true">8.1.</strong> ::CLASS</a></li><li class="chapter-item expanded "><a href="../directives/method.html"><strong aria-hidden="true">8.2.</strong> ::METHOD</a></li><li class="chapter-item expanded "><a href="../directives/attribute.html"><strong aria-hidden="true">8.3.</strong> ::ATTRIBUTE</a></li><li class="chapter-item expanded "><a href="../directives/constant.html"><strong aria-hidden="true">8.4.</strong> ::CONSTANT</a></li><li class="chapter-item expanded "><a href="../directives/routine.html"><strong aria-hidden="true">8.5.</strong> ::ROUTINE</a></li><li class="chapter-item expanded "><a href="../directives/requires.html"><strong aria-hidden="true">8.6.</strong> ::REQUIRES</a></li><li class="chapter-item expanded "><a href="../directives/options.html"><strong aria-hidden="true">8.7.</strong> ::OPTIONS</a></li><li class="chapter-item expanded "><a href="../directives/resource.html"><strong aria-hidden="true">8.8.</strong> ::RESOURCE</a></li><li class="chapter-item expanded "><a href="../directives/annotate.html"><strong aria-hidden="true">8.9.</strong> ::ANNOTATE</a></li></ol></li><li class="chapter-item expanded "><a href="../conditions/index.html"><strong aria-hidden="true">9.</strong> Conditions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../conditions/traps.html"><strong aria-hidden="true">9.1.</strong> Condition traps</a></li><li class="chapter-item expanded "><a href="../conditions/information.html"><strong aria-hidden="true">9.2.</strong> Condition information</a></li><li class="chapter-item expanded "><a href="../conditions/syntax.html"><strong aria-hidden="true">9.3.</strong> SYNTAX</a></li><li class="chapter-item expanded "><a href="../conditions/error.html"><strong aria-hidden="true">9.4.</strong> ERROR and FAILURE</a></li><li class="chapter-item expanded "><a href="../conditions/halt.html"><strong aria-hidden="true">9.5.</strong> HALT</a></li><li class="chapter-item expanded "><a href="../conditions/novalue.html"><strong aria-hidden="true">9.6.</strong> NOVALUE</a></li><li class="chapter-item expanded "><a href="../conditions/nostring.html"><strong aria-hidden="true">9.7.</strong> NOSTRING</a></li><li class="chapter-item expanded "><a href="../conditions/nomethod.html"><strong aria-hidden="true">9.8.</strong> NOMETHOD</a></li><li class="chapter-item expanded "><a href="../conditions/notready.html"><strong aria-hidden="true">9.9.</strong> NOTREADY</a></li><li class="chapter-item expanded "><a href="../conditions/lostdigits.html"><strong aria-hidden="true">9.10.</strong> LOSTDIGITS</a></li><li class="chapter-item expanded "><a href="../conditions/user.html"><strong aria-hidden="true">9.11.</strong> USER conditions</a></li><li class="chapter-item expanded "><a href="../conditions/errors.html"><strong aria-hidden="true">9.12.</strong> Error numbers</a></li></ol></li><li class="chapter-item expanded "><a href="../classes/index.html"><strong aria-hidden="true">10.</strong> Classes</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../classes/methods.html"><strong aria-hidden="true">10.1.</strong> Method search</a></li><li class="chapter-item expanded "><a href="../classes/object.html"><strong aria-hidden="true">10.2.</strong> Object</a></li><li class="chapter-item expanded "><a href="../classes/class.html"><strong aria-hidden="true">10.3.</strong> Class</a></li><li class="chapter-item expanded "><a href="../classes/string.html"><strong aria-hidden="true">10.4.</strong> String</a></li><li class="chapter-item expanded "><a href="../classes/method.html"><strong aria-hidden="true">10.5.</strong> Method</a></li><li class="chapter-item expanded "><a href="../classes/routine.html"><strong aria-hidden="true">10.6.</strong> Routine</a></li><li class="chapter-item expanded "><a href="../classes/package.html"><strong aria-hidden="true">10.7.</strong> Package</a></li><li class="chapter-item expanded "><a href="../classes/message.html"><strong aria-hidden="true">10.8.</strong> Message</a></li><li class="chapter-item expanded "><a href="../classes/messagenotification.html"><strong aria-hidden="true">10.9.</strong> MessageNotification</a></li><li class="chapter-item expanded "><a href="../classes/alarmnotification.html"><strong aria-hidden="true">10.10.</strong> AlarmNotification</a></li><li class="chapter-item expanded "><a href="../classes/collection.html"><strong aria-hidden="true">10.11.</strong> Collection</a></li><li class="chapter-item expanded "><a href="../classes/mapcollection.html"><strong aria-hidden="true">10.12.</strong> MapCollection</a></li><li class="chapter-item expanded "><a href="../classes/orderedcollection.html"><strong aria-hidden="true">10.13.</strong> OrderedCollection</a></li><li class="chapter-item expanded "><a href="../classes/setcollection.html"><strong aria-hidden="true">10.14.</strong> SetCollection</a></li><li class="chapter-item expanded "><a href="../classes/array.html"><strong aria-hidden="true">10.15.</strong> Array</a></li><li class="chapter-item expanded "><a href="../classes/list.html"><strong aria-hidden="true">10.16.</strong> List</a></li><li class="chapter-item expanded "><a href="../classes/queue.html"><strong aria-hidden="true">10.17.</strong> Queue</a></li><li class="chapter-item expanded "><a href="../classes/circularqueue.html"><strong aria-hidden="true">10.18.</strong> CircularQueue</a></li><li class="chapter-item expanded "><a href="../classes/directory.html"><strong aria-hidden="true">10.19.</strong> Directory</a></li><li class="chapter-item expanded "><a href="../classes/stringtable.html"><strong aria-hidden="true">10.20.</strong> StringTable</a></li><li class="chapter-item expanded "><a href="../classes/properties.html"><strong aria-hidden="true">10.21.</strong> Properties</a></li><li class="chapter-item expanded "><a href="../classes/table.html"><strong aria-hidden="true">10.22.</strong> Table</a></li><li class="chapter-item expanded "><a href="../classes/identitytable.html"><strong aria-hidden="true">10.23.</strong> IdentityTable</a></li><li class="chapter-item expanded "><a href="../classes/relation.html"><strong aria-hidden="true">10.24.</strong> Relation</a></li><li class="chapter-item expanded "><a href="../classes/bag.html"><strong aria-hidden="true">10.25.</strong> Bag</a></li><li class="chapter-item expanded "><a href="../classes/set.html"><strong aria-hidden="true">10.26.</strong> Set</a></li><li class="chapter-item expanded "><a href="../classes/stem.html"><strong aria-hidden="true">10.27.</strong> Stem</a></li><li class="chapter-item expanded "><a href="../classes/datetime.html"><strong aria-hidden="true">10.28.</strong> DateTime</a></li><li class="chapter-item expanded "><a href="../classes/timespan.html"><strong aria-hidden="true">10.29.</strong> TimeSpan</a></li><li class="chapter-item expanded "><a href="../classes/comparable.html"><strong aria-hidden="true">10.30.</strong> Comparable</a></li><li class="chapter-item expanded "><a href="../classes/orderable.html"><strong aria-hidden="true">10.31.</strong> Orderable</a></li><li class="chapter-item expanded "><a href="../classes/comparators.html"><strong aria-hidden="true">10.32.</strong> Comparators</a></li><li class="chapter-item expanded "><a href="../classes/mutablebuffer.html"><strong aria-hidden="true">10.33.</strong> MutableBuffer</a></li><li class="chapter-item expanded "><a href="../classes/buffer.html"><strong aria-hidden="true">10.34.</strong> Buffer</a></li><li class="chapter-item expanded "><a href="../classes/pointer.html"><strong aria-hidden="true">10.35.</strong> Pointer</a></li><li class="chapter-item expanded "><a href="../classes/weakreference.html"><strong aria-hidden="true">10.36.</strong> WeakReference</a></li><li class="chapter-item expanded "><a href="../classes/variablereference.html"><strong aria-hidden="true">10.37.</strong> VariableReference</a></li><li class="chapter-item expanded "><a href="../classes/file.html"><strong aria-hidden="true">10.38.</strong> File</a></li><li class="chapter-item expanded "><a href="../classes/rexxcontext.html"><strong aria-hidden="true">10.39.</strong> RexxContext</a></li><li class="chapter-item expanded "><a href="../classes/stackframe.html"><strong aria-hidden="true">10.40.</strong> StackFrame</a></li><li class="chapter-item expanded "><a href="../classes/rexxinfo.html"><strong aria-hidden="true">10.41.</strong> RexxInfo</a></li><li class="chapter-item expanded "><a href="../classes/traceobject.html"><strong aria-hidden="true">10.42.</strong> TraceObject</a></li><li class="chapter-item expanded "><a href="../classes/validate.html"><strong aria-hidden="true">10.43.</strong> Validate</a></li><li class="chapter-item expanded "><a href="../classes/singleton.html"><strong aria-hidden="true">10.44.</strong> Singleton</a></li><li class="chapter-item expanded "><a href="../classes/alarm.html"><strong aria-hidden="true">10.45.</strong> Alarm</a></li><li class="chapter-item expanded "><a href="../classes/ticker.html"><strong aria-hidden="true">10.46.</strong> Ticker</a></li><li class="chapter-item expanded "><a href="../classes/monitor.html"><strong aria-hidden="true">10.47.</strong> Monitor</a></li><li class="chapter-item expanded "><a href="../classes/eventsemaphore.html"><strong aria-hidden="true">10.48.</strong> EventSemaphore</a></li><li class="chapter-item expanded "><a href="../classes/mutexsemaphore.html"><strong aria-hidden="true">10.49.</strong> MutexSemaphore</a></li><li class="chapter-item expanded "><a href="../classes/commandhandler.html"><strong aria-hidden="true">10.50.</strong> CommandHandler</a></li><li class="chapter-item expanded "><a href="../classes/nativecommandhandler.html"><strong aria-hidden="true">10.51.</strong> NativeCommandHandler</a></li><li class="chapter-item expanded "><a href="../classes/commandcontext.html" class="active"><strong aria-hidden="true">10.52.</strong> CommandContext</a></li><li class="chapter-item expanded "><a href="../classes/commandinput.html"><strong aria-hidden="true">10.53.</strong> CommandInput</a></li><li class="chapter-item expanded "><a href="../classes/commandoutput.html"><strong aria-hidden="true">10.54.</strong> CommandOutput</a></li><li class="chapter-item expanded "><a href="../classes/rexxqueue.html"><strong aria-hidden="true">10.55.</strong> RexxQueue</a></li><li class="chapter-item expanded "><a href="../classes/supplier.html"><strong aria-hidden="true">10.56.</strong> Supplier</a></li><li class="chapter-item expanded "><a href="../classes/streamsupplier.html"><strong aria-hidden="true">10.57.</strong> StreamSupplier</a></li><li class="chapter-item expanded "><a href="../classes/regularexpression.html"><strong aria-hidden="true">10.58.</strong> RegularExpression</a></li></ol></li><li class="chapter-item expanded "><a href="../builtins/index.html"><strong aria-hidden="true">11.</strong> Built-in functions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../builtins/abbrev.html"><strong aria-hidden="true">11.1.</strong> ABBREV</a></li><li class="chapter-item expanded "><a href="../builtins/abs.html"><strong aria-hidden="true">11.2.</strong> ABS</a></li><li class="chapter-item expanded "><a href="../builtins/address.html"><strong aria-hidden="true">11.3.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../builtins/arg.html"><strong aria-hidden="true">11.4.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../builtins/b2x.html"><strong aria-hidden="true">11.5.</strong> B2X</a></li><li class="chapter-item expanded "><a href="../builtins/beep.html"><strong aria-hidden="true">11.6.</strong> BEEP</a></li><li class="chapter-item expanded "><a href="../builtins/bitand.html"><strong aria-hidden="true">11.7.</strong> BITAND</a></li><li class="chapter-item expanded "><a href="../builtins/bitor.html"><strong aria-hidden="true">11.8.</strong> BITOR</a></li><li class="chapter-item expanded "><a href="../builtins/bitxor.html"><strong aria-hidden="true">11.9.</strong> BITXOR</a></li><li class="chapter-item expanded "><a href="../builtins/c2d.html"><strong aria-hidden="true">11.10.</strong> C2D</a></li><li class="chapter-item expanded "><a href="../builtins/c2x.html"><strong aria-hidden="true">11.11.</strong> C2X</a></li><li class="chapter-item expanded "><a href="../builtins/center.html"><strong aria-hidden="true">11.12.</strong> CENTER</a></li><li class="chapter-item expanded "><a href="../builtins/changestr.html"><strong aria-hidden="true">11.13.</strong> CHANGESTR</a></li><li class="chapter-item expanded "><a href="../builtins/charin.html"><strong aria-hidden="true">11.14.</strong> CHARIN</a></li><li class="chapter-item expanded "><a href="../builtins/charout.html"><strong aria-hidden="true">11.15.</strong> CHAROUT</a></li><li class="chapter-item expanded "><a href="../builtins/chars.html"><strong aria-hidden="true">11.16.</strong> CHARS</a></li><li class="chapter-item expanded "><a href="../builtins/compare.html"><strong aria-hidden="true">11.17.</strong> COMPARE</a></li><li class="chapter-item expanded "><a href="../builtins/condition.html"><strong aria-hidden="true">11.18.</strong> CONDITION</a></li><li class="chapter-item expanded "><a href="../builtins/copies.html"><strong aria-hidden="true">11.19.</strong> COPIES</a></li><li class="chapter-item expanded "><a href="../builtins/countstr.html"><strong aria-hidden="true">11.20.</strong> COUNTSTR</a></li><li class="chapter-item expanded "><a href="../builtins/d2c.html"><strong aria-hidden="true">11.21.</strong> D2C</a></li><li class="chapter-item expanded "><a href="../builtins/d2x.html"><strong aria-hidden="true">11.22.</strong> D2X</a></li><li class="chapter-item expanded "><a href="../builtins/datatype.html"><strong aria-hidden="true">11.23.</strong> DATATYPE</a></li><li class="chapter-item expanded "><a href="../builtins/date.html"><strong aria-hidden="true">11.24.</strong> DATE</a></li><li class="chapter-item expanded "><a href="../builtins/delstr.html"><strong aria-hidden="true">11.25.</strong> DELSTR</a></li><li class="chapter-item expanded "><a href="../builtins/delword.html"><strong aria-hidden="true">11.26.</strong> DELWORD</a></li><li class="chapter-item expanded "><a href="../builtins/digits.html"><strong aria-hidden="true">11.27.</strong> DIGITS</a></li><li class="chapter-item expanded "><a href="../builtins/directory.html"><strong aria-hidden="true">11.28.</strong> DIRECTORY</a></li><li class="chapter-item expanded "><a href="../builtins/endlocal.html"><strong aria-hidden="true">11.29.</strong> ENDLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/errortext.html"><strong aria-hidden="true">11.30.</strong> ERRORTEXT</a></li><li class="chapter-item expanded "><a href="../builtins/filespec.html"><strong aria-hidden="true">11.31.</strong> FILESPEC</a></li><li class="chapter-item expanded "><a href="../builtins/form.html"><strong aria-hidden="true">11.32.</strong> FORM</a></li><li class="chapter-item expanded "><a href="../builtins/format.html"><strong aria-hidden="true">11.33.</strong> FORMAT</a></li><li class="chapter-item expanded "><a href="../builtins/fuzz.html"><strong aria-hidden="true">11.34.</strong> FUZZ</a></li><li class="chapter-item expanded "><a href="../builtins/gc.html"><strong aria-hidden="true">11.35.</strong> GC</a></li><li class="chapter-item expanded "><a href="../builtins/insert.html"><strong aria-hidden="true">11.36.</strong> INSERT</a></li><li class="chapter-item expanded "><a href="../builtins/lastpos.html"><strong aria-hidden="true">11.37.</strong> LASTPOS</a></li><li class="chapter-item expanded "><a href="../builtins/left.html"><strong aria-hidden="true">11.38.</strong> LEFT</a></li><li class="chapter-item expanded "><a href="../builtins/length.html"><strong aria-hidden="true">11.39.</strong> LENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/linein.html"><strong aria-hidden="true">11.40.</strong> LINEIN</a></li><li class="chapter-item expanded "><a href="../builtins/lineout.html"><strong aria-hidden="true">11.41.</strong> LINEOUT</a></li><li class="chapter-item expanded "><a href="../builtins/lines.html"><strong aria-hidden="true">11.42.</strong> LINES</a></li><li class="chapter-item expanded "><a href="../builtins/lower.html"><strong aria-hidden="true">11.43.</strong> LOWER</a></li><li class="chapter-item expanded "><a href="../builtins/max.html"><strong aria-hidden="true">11.44.</strong> MAX</a></li><li class="chapter-item expanded "><a href="../builtins/min.html"><strong aria-hidden="true">11.45.</strong> MIN</a></li><li class="chapter-item expanded "><a href="../builtins/overlay.html"><strong aria-hidden="true">11.46.</strong> OVERLAY</a></li><li class="chapter-item expanded "><a href="../builtins/pos.html"><strong aria-hidden="true">11.47.</strong> POS</a></li><li class="chapter-item expanded "><a href="../builtins/qualify.html"><strong aria-hidden="true">11.48.</strong> QUALIFY</a></li><li class="chapter-item expanded "><a href="../builtins/queued.html"><strong aria-hidden="true">11.49.</strong> QUEUED</a></li><li class="chapter-item expanded "><a href="../builtins/random.html"><strong aria-hidden="true">11.50.</strong> RANDOM</a></li><li class="chapter-item expanded "><a href="../builtins/reverse.html"><strong aria-hidden="true">11.51.</strong> REVERSE</a></li><li class="chapter-item expanded "><a href="../builtins/right.html"><strong aria-hidden="true">11.52.</strong> RIGHT</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncadd.html"><strong aria-hidden="true">11.53.</strong> RXFUNCADD</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncdrop.html"><strong aria-hidden="true">11.54.</strong> RXFUNCDROP</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncquery.html"><strong aria-hidden="true">11.55.</strong> RXFUNCQUERY</a></li><li class="chapter-item expanded "><a href="../builtins/rxqueue.html"><strong aria-hidden="true">11.56.</strong> RXQUEUE</a></li><li class="chapter-item expanded "><a href="../builtins/setlocal.html"><strong aria-hidden="true">11.57.</strong> SETLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/sign.html"><strong aria-hidden="true">11.58.</strong> SIGN</a></li><li class="chapter-item expanded "><a href="../builtins/sourceline.html"><strong aria-hidden="true">11.59.</strong> SOURCELINE</a></li><li class="chapter-item expanded "><a href="../builtins/space.html"><strong aria-hidden="true">11.60.</strong> SPACE</a></li><li class="chapter-item expanded "><a href="../builtins/stream.html"><strong aria-hidden="true">11.61.</strong> STREAM</a></li><li class="chapter-item expanded "><a href="../builtins/strip.html"><strong aria-hidden="true">11.62.</strong> STRIP</a></li><li class="chapter-item expanded "><a href="../builtins/substr.html"><strong aria-hidden="true">11.63.</strong> SUBSTR</a></li><li class="chapter-item expanded "><a href="../builtins/subword.html"><strong aria-hidden="true">11.64.</strong> SUBWORD</a></li><li class="chapter-item expanded "><a href="../builtins/symbol.html"><strong aria-hidden="true">11.65.</strong> SYMBOL</a></li><li class="chapter-item expanded "><a href="../builtins/time.html"><strong aria-hidden="true">11.66.</strong> TIME</a></li><li class="chapter-item expanded "><a href="../builtins/trace.html"><strong aria-hidden="true">11.67.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../builtins/translate.html"><strong aria-hidden="true">11.68.</strong> TRANSLATE</a></li><li class="chapter-item expanded "><a href="../builtins/trunc.html"><strong aria-hidden="true">11.69.</strong> TRUNC</a></li><li class="chapter-item expanded "><a href="../builtins/upper.html"><strong aria-hidden="true">11.70.</strong> UPPER</a></li><li class="chapter-item expanded "><a href="../builtins/userid.html"><strong aria-hidden="true">11.71.</strong> USERID</a></li><li class="chapter-item expanded "><a href="../builtins/value.html"><strong aria-hidden="true">11.72.</strong> VALUE</a></li><li class="chapter-item expanded "><a href="../builtins/var.html"><strong aria-hidden="true">11.73.</strong> VAR</a></li><li class="chapter-item expanded "><a href="../builtins/verify.html"><strong aria-hidden="true">11.74.</strong> VERIFY</a></li><li class="chapter-item expanded "><a href="../builtins/word.html"><strong aria-hidden="true">11.75.</strong> WORD</a></li><li class="chapter-item expanded "><a href="../builtins/wordindex.html"><strong aria-hidden="true">11.76.</strong> WORDINDEX</a></li><li class="chapter-item expanded "><a href="../builtins/wordlength.html"><strong aria-hidden="true">11.77.</strong> WORDLENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/wordpos.html"><strong aria-hidden="true">11.78.</strong> WORDPOS</a></li><li class="chapter-item expanded "><a href="../builtins/words.html"><strong aria-hidden="true">11.79.</strong> WORDS</a></li><li class="chapter-item expanded "><a href="../builtins/x2b.html"><strong aria-hidden="true">11.80.</strong> X2B</a></li><li class="chapter-item expanded "><a href="../builtins/x2c.html"><strong aria-hidden="true">11.81.</strong> X2C</a></li><li class="chapter-item expanded "><a href="../builtins/x2d.html"><strong aria-hidden="true">11.82.</strong> X2D</a></li><li class="chapter-item expanded "><a href="../builtins/xrange.html"><strong aria-hidden="true">11.83.</strong> XRANGE</a></li></ol></li><li class="chapter-item expanded "><a href="../deviations.html"><strong aria-hidden="true">12.</strong> Deviations</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The interrexx Language Specification</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="commandcontext"><a class="header" href="#commandcontext">CommandContext</a></h1>
+<p class="references">rexxref: Builtin Classes &gt; Utility Classes &gt; CommandContext Class; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; [ ]; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; [ ]=; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; dropVar; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; environment; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; error; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; getVar; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; hasVar; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; input; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; isRedirected; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; isValid; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; output; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; raise; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; raiseError; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; raiseFailure; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; setVar; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; variables</p>
+<p class="deviations">Deviations: D109</p>
+<p>When a command reaches a handler written in Rexx, the interpreter makes a
+<code>CommandContext</code> for that one command and passes it to the method <code>command</code> of
+the <a href="commandhandler.html"><code>CommandHandler</code></a> as the second argument. The context is
+the handler's view of the command's surroundings: the variables of the code that
+sent the command, the <code>ADDRESS ... WITH</code> redirections of its input, output and
+error, and the one condition that the command may raise when the handler is
+done. The streams that a context hands out are <a href="commandinput.html"><code>CommandInput</code></a>
+and <a href="commandoutput.html"><code>CommandOutput</code></a> objects. The redirections themselves,
+<code>ADDRESS ... WITH</code>, are specified with <a href="../instructions/address.html">the ADDRESS
+instruction</a>. Which activity runs the handler, and
+how commands to the environments of a host work, is specified in the environment
+chapter; the examples here register environments of their own under names that
+no host has, so that nothing depends on the host.</p>
+<h2 id="the-class"><a class="header" href="#the-class">The class</a></h2>
+<div class="rule" id="r-class.commandcontext.creation"><a href="#r-class.commandcontext.creation">[class.commandcontext.creation]</a></div>
+<p><code>CommandContext</code> has the instance methods <code>[]</code>, <code>[]=</code>, <code>dropVar</code>, <code>environment</code>,
+<code>error</code>, <code>getVar</code>, <code>hasVar</code>, <code>input</code>, <code>isRedirected</code>, <code>isValid</code>, <code>output</code>,
+<code>raise</code>, <code>raiseError</code>, <code>raiseFailure</code>, <code>setVar</code> and <code>variables</code>, besides the
+methods that every class has. Its only superclass is <code>Object</code> and it inherits no
+mixin class (<a href="index.html#r-class.index.hierarchy">the hierarchy rule</a>). The interpreter
+makes one for each command that is sent to a handler written in Rexx, and a
+program receives it as the second argument of <code>command</code>; a program does not make
+one. The <code>new</code> of a program raises <code>SYNTAX 93.901</code> with fewer than two arguments
+and <code>SYNTAX 93.902</code> with more than two, and what an object made with two
+arguments is good for is not specified: it belongs to no command, so its methods
+have nothing to work with. The class has other methods, <code>finish</code> and <code>pending</code>
+among them, that the interpreter uses; they are not part of this specification.</p>
+<pre><code class="language-rexx">say .commandcontext~id .commandcontext~superclasses~items,
+  .commandcontext~superclass~id .commandcontext~queryMixinClass
+have = .set~new
+s = .commandcontext~methods(.nil)
+do while s~available
+  have~put(s~index)
+  s~next
+end
+names = ('[] []= dropVar environment error getVar hasVar input isRedirected',
+  'isValid output raise raiseError raiseFailure setVar',
+  'variables')~makeArray(' ')
+count = 0
+do name over names
+  if have~hasItem(name~upper) then count = count + 1
+end
+say count 'of' names~items
+call try '.commandcontext~new'
+call try '.commandcontext~new(1)'
+call try '.commandcontext~new(1, 2, 3)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'x =' arg(1)
+  say arg(1) 'no error'
+  return
+bad: say arg(1) condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">CommandContext 1 Object 0
+16 of 16
+.commandcontext~new 93.901
+.commandcontext~new(1) 93.901
+.commandcontext~new(1, 2, 3) 93.902
+</code></pre>
+<div class="rule" id="r-class.commandcontext.valid"><a href="#r-class.commandcontext.valid">[class.commandcontext.valid]</a></div>
+<p>A context is good for the command that it stands for, on the activity that is
+running the handler, and for as long as that command runs. <code>isValid</code> answers <code>1</code>
+while the command runs, and <code>0</code> once the handler has returned. It takes no
+argument (<code>SYNTAX 88.922</code>). After the command, every method that works with the
+code that sent it, <code>[]</code>, <code>getVar</code>, <code>hasVar</code>, <code>setVar</code>, <code>[]=</code>, <code>dropVar</code>,
+<code>variables</code>, <code>isRedirected</code>, <code>raise</code>, <code>raiseError</code> and <code>raiseFailure</code>, raises
+<code>SYNTAX 98.900</code>, and so do the methods that read from the stream that <code>input</code>
+answered and <code>lineOut</code> with a string, of the streams that <code>output</code> and <code>error</code>
+answered, and <code>input</code>, <code>output</code> and <code>error</code> themselves when they were not asked
+during the command; one that was asked answers the same object again.
+<code>environment</code> and <code>isValid</code> work after the command, and they work on another
+activity too, where the methods of the first list raise <code>SYNTAX 98.900</code> also
+while the command runs, and <code>input</code>, <code>output</code> and <code>error</code> behave as they do
+after the command; <code>copy</code> works in both cases. The example keeps the context,
+asks it from another activity that a message starts, and asks it again after the
+command.</p>
+<pre><code class="language-rexx">x = .commandhandler~register('spec_cc_valid', .keeper~new)
+address spec_cc_valid 'go' with input using (.array~of('l')),
+  output stem o. error stem e.
+c = .environment~kept
+say 'after the command:' c~isValid c~environment
+do m over ('hasVar getVar variables isRedirected input output error',
+    'raiseError copy')~makeArray(' ')
+  call try m
+end
+say 'streams:'
+call tryStream 'linein'
+call tryStream 'lines'
+call tryStream 'chars'
+call tryStream 'charin'
+signal on syntax name bad
+x = c~isValid(1)
+bad: say condition('o')~code
+x = .commandhandler~deregister('spec_cc_valid')
+exit
+try:
+  signal on syntax name e
+  if arg(1) = 'hasVar' | arg(1) = 'getVar' then x = c~send(arg(1), 'a')
+  else if arg(1) = 'isRedirected' then x = c~send(arg(1), 'I')
+  else if arg(1) = 'raiseError' then x = c~send(arg(1), 1)
+  else x = c~send(arg(1))
+  say arg(1) 'answered' x~class~id
+  return
+e: say arg(1) condition('o')~code
+  return
+tryStream:
+  signal on syntax name e2
+  x = .environment~input~send(arg(1))
+  say arg(1) 'answered'
+  return
+e2: say arg(1) condition('o')~code
+  return
+::class keeper inherit CommandHandler
+::method command
+  use arg command, caller
+  .environment~kept = caller
+  .environment~input = caller~input
+  .environment~output = caller~output
+  .environment~error = caller~error
+  say 'running:' caller~isValid
+  m = .message~new(.other~new, 'ask', 'I', caller)
+  m~start
+  say 'other activity:' m~result
+  return 0
+::class other
+::method ask unguarded
+  use arg c
+  r = c~isValid c~environment c~copy~isValid c~input~class~id
+  signal on syntax name e
+  x = c~hasVar('a')
+  return r 'hasVar answered'
+e: return r 'hasVar' condition('o')~code
+</code></pre>
+<pre><code class="language-output">running: 1
+other activity: 1 SPEC_CC_VALID 1 CommandInput hasVar 98.900
+after the command: 0 SPEC_CC_VALID
+hasVar 98.900
+getVar 98.900
+variables 98.900
+isRedirected 98.900
+input answered CommandInput
+output answered CommandOutput
+error answered CommandOutput
+raiseError 98.900
+copy answered CommandContext
+streams:
+linein 98.900
+lines 98.900
+chars 98.900
+charin 98.900
+88.922
+</code></pre>
+<div class="rule" id="r-class.commandcontext.environment"><a href="#r-class.commandcontext.environment">[class.commandcontext.environment]</a></div>
+<p><code>environment</code> answers the name of the environment that the command was sent to,
+as the instruction that sent it gave it: a symbol is in upper case, as symbols
+are, and a string is as it was written, so the case of the environment name that
+a command used shows. This is how a handler that serves several names learns
+which of them the command used. The method takes no argument (<code>SYNTAX 93.902</code>)
+and, as <a href="#r-class.commandcontext.valid">the validity rule</a> says, works after the
+command too.</p>
+<pre><code class="language-rexx">h = .who~new
+x = .commandhandler~register('spec_cc_one', h)
+x = .commandhandler~register('Spec_Cc_Two', h)
+address spec_cc_one 'a'
+address SPEC_CC_TWO 'b'
+address 'spec_cc_two' 'c'
+address spec_cc_two
+'d'
+x = .commandhandler~deregister('spec_cc_one')
+x = .commandhandler~deregister('spec_cc_two')
+::class who inherit CommandHandler
+::method command
+  use arg command, caller
+  say command 'sent to' caller~environment
+  signal on syntax name bad
+  x = caller~environment(1)
+bad: say '  environment(1)' condition('o')~code
+  return 0
+</code></pre>
+<pre><code class="language-output">a sent to SPEC_CC_ONE
+  environment(1) 93.902
+b sent to SPEC_CC_TWO
+  environment(1) 93.902
+c sent to spec_cc_two
+  environment(1) 93.902
+d sent to SPEC_CC_TWO
+  environment(1) 93.902
+</code></pre>
+<h2 id="variables-of-the-code-that-sent-the-command"><a class="header" href="#variables-of-the-code-that-sent-the-command">Variables of the code that sent the command</a></h2>
+<div class="rule" id="r-class.commandcontext.name"><a href="#r-class.commandcontext.name">[class.commandcontext.name]</a></div>
+<p>The <code>name</code> that <code>[]</code>, <code>getVar</code>, <code>[]=</code>, <code>setVar</code>, <code>hasVar</code> and <code>dropVar</code> take
+names a variable of the code that sent the command, a simple variable, a stem or
+a compound variable, as <a href="../lexical/symbols.html#r-lex.symbols.variable">a variable symbol</a> does, and
+its case plays no part. A string is the name as it is; another object, an
+instance of a subclass of <code>String</code> apart (<a href="#r-class.commandcontext.deviation.109">the deviation
+rule</a>), is replaced by what it answers to
+the message <code>request</code> with the argument <code>String</code>. The <code>request</code> of <code>Object</code>
+answers what <code>makeString</code> answers, so an object with a <code>makeString</code>, an <code>Array</code>
+or a <code>MutableBuffer</code> is read through it. A name is refused with <code>SYNTAX 93.900</code>
+when it is no variable name: the null string, a string that starts with a digit
+or with a period, a string with a blank or with a character that no symbol can
+have, a number, and an object that does not answer a string. A name of a
+compound variable has its tail resolved in the code that sent the command, as
+<a href="../expressions/variables.html#r-expr.variables.tail">the tail rule</a> says for a program; the example sets
+<code>c.i</code> while <code>i</code> holds <code>3</code>, and reads the variable back as <code>c.3</code>. Special names
+such as <code>RC</code>, <code>RESULT</code> and <code>SIGL</code> are names of variables like the others.</p>
+<pre><code class="language-rexx">x = .commandhandler~register('spec_cc_name', .namer~new)
+i = 3; word = 'abc'; rc = 'my rc'
+address spec_cc_name 'go'
+x = .commandhandler~deregister('spec_cc_name')
+::class namer inherit CommandHandler
+::method command
+  use arg command, caller
+  caller['c.i'] = 'compound'
+  caller['Plain'] = 'simple'
+  say caller['C.3'] caller['c.3'] caller['PLAIN'] caller['word'] caller['rc']
+  say caller[.logger~new] caller[.array~of('word')],
+    caller[.mutablebuffer~new('word')]
+  say '&lt;'caller['absent']'&gt;' '&lt;'caller['stem.']'&gt;' '&lt;'caller['stem.a.b']'&gt;'
+  do n over .array~of('', '1x', '.x', 'a b', 'a-b', ' ', '3', 'a+', '.nil')
+    self~try(caller, n)
+  end
+  self~try(caller, 12)
+  self~try(caller, .nil)
+  self~try(caller, .object~new)
+  say caller['c.3'] caller['!x?_'] caller['x..y']
+  return 0
+::method try
+  use arg caller, n
+  signal on syntax name bad
+  x = caller[n]
+  say '&lt;'n'&gt; no error'
+  return
+bad: say '&lt;'n'&gt;' condition('o')~code
+  return
+::class logger
+::method request
+  say 'request' arg(1)
+  return 'plain'
+</code></pre>
+<pre><code class="language-output">compound compound simple abc my rc
+request String
+simple abc abc
+&lt;ABSENT&gt; &lt;STEM.&gt; &lt;STEM.A.B&gt;
+&lt;&gt; 93.900
+&lt;1x&gt; 93.900
+&lt;.x&gt; 93.900
+&lt;a b&gt; 93.900
+&lt;a-b&gt; 93.900
+&lt; &gt; 93.900
+&lt;3&gt; 93.900
+&lt;a+&gt; 93.900
+&lt;.nil&gt; 93.900
+&lt;12&gt; 93.900
+&lt;The NIL object&gt; 93.900
+&lt;an Object&gt; 93.900
+compound !X?_ X..Y
+</code></pre>
+<div class="rule" id="r-class.commandcontext.getvar"><a href="#r-class.commandcontext.getvar">[class.commandcontext.getvar]</a></div>
+<p><code>getVar(name)</code> and <code>[name]</code> answer the value of the variable, as the program
+would read it: a simple variable's value, the value of a compound variable with
+the tail resolved, and for a stem its default value. A read never raises
+<code>NOVALUE</code>: a variable that has no value answers its name in upper case, with the
+tail of a compound name resolved (<code>ABSENT</code>, <code>STEM.A</code>), the text that a program
+sees for it, and <a href="#r-class.commandcontext.hasvar"><code>hasVar</code></a> tells that answer
+from the value of a variable that holds the same text. The two methods are the
+same method, and <code>name</code> is required: <code>SYNTAX 93.901</code> for <code>getVar</code> and for <code>[]</code>
+without it, and <code>SYNTAX 93.902</code> for more arguments. The value is the object that
+the variable holds, not a string made of it: the same object each time, so that
+a change the handler makes to it, such as an item appended to an array, is a
+change to the variable.</p>
+<pre><code class="language-rexx">x = .commandhandler~register('spec_cc_getvar', .getter~new)
+a = 'one'; arr = .array~of(1, 2); s. = 'stem default'; s.2 = 'two'; k = 2
+nilvar = .nil
+address spec_cc_getvar 'go'
+say arr~items
+x = .commandhandler~deregister('spec_cc_getvar')
+::class getter inherit CommandHandler
+::method command
+  use arg command, caller
+  say caller~getVar('a') caller['A'] caller~getVar('arr')~class~id,
+    (caller['arr'] == caller['arr'])
+  caller['arr']~append(3)
+  say caller['s.'] caller['s.2'] caller['s.k'] caller['s.3'],
+    caller['nosuch.1']
+  say caller['nilvar']~isNil caller['nothing'] caller['nothing.k']
+  do x over .array~of("caller~getVar", "caller~'[]'",,
+      "caller~getVar('a', 'b')", "caller~'[]'('a', 'b')")
+    self~try(caller, x)
+  end
+  return 0
+::method try
+  use arg caller, x
+  signal on syntax name bad
+  interpret 'y =' x
+  say x 'no error'
+  return
+bad: say x condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">one one Array 1
+stem default two two stem default NOSUCH.1
+1 NOTHING NOTHING.2
+caller~getVar 93.901
+caller~'[]' 93.901
+caller~getVar('a', 'b') 93.902
+caller~'[]'('a', 'b') 93.902
+3
+</code></pre>
+<div class="rule" id="r-class.commandcontext.hasvar"><a href="#r-class.commandcontext.hasvar">[class.commandcontext.hasvar]</a></div>
+<p><code>hasVar(name)</code> answers <code>1</code> when the variable has a value in the code that sent
+the command, and <code>0</code> when it has none. A variable that was never set, or was
+dropped, has none; a compound variable has one when it was set or when its
+stem has a default value; the name of a stem has a value whatever the stem
+holds. A variable that holds <code>.nil</code> has a value. <code>name</code> is required
+(<code>SYNTAX 93.901</code>) and one more argument raises <code>SYNTAX 93.902</code>. The name is
+read as <a href="#r-class.commandcontext.name">the name rule</a> says.</p>
+<pre><code class="language-rexx">x = .commandhandler~register('spec_cc_hasvar', .asker~new)
+a = 'one'; empty = ''; nilvar = .nil; k = 7
+d. = 'default'; e.1 = 'one'
+gone = 'will go'; drop gone
+address spec_cc_hasvar 'go'
+x = .commandhandler~deregister('spec_cc_hasvar')
+::class asker inherit CommandHandler
+::method command
+  use arg command, caller
+  say caller~hasVar('a') caller~hasVar('A') caller~hasVar('empty'),
+    caller~hasVar('nilvar')
+  say caller~hasVar('nosuch') caller~hasVar('gone') caller~hasVar('rc'),
+    caller~hasVar('result')
+  say caller~hasVar('d.') caller~hasVar('d.5') caller~hasVar('e.'),
+    caller~hasVar('e.1') caller~hasVar('e.2') caller~hasVar('e.k')
+  say caller~hasVar('unset.') caller~hasVar('unset.1')
+  do x over .array~of("caller~hasVar", "caller~hasVar('a', 'b')",,
+      "caller~hasVar('a b')")
+    self~try(caller, x)
+  end
+  return 0
+::method try
+  use arg caller, x
+  signal on syntax name bad
+  interpret 'y =' x
+  say x 'no error'
+  return
+bad: say x condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">1 1 1 1
+0 0 0 0
+1 1 1 1 0 0
+1 0
+caller~hasVar 93.901
+caller~hasVar('a', 'b') 93.902
+caller~hasVar('a b') 93.900
+</code></pre>
+<div class="rule" id="r-class.commandcontext.setvar"><a href="#r-class.commandcontext.setvar">[class.commandcontext.setvar]</a></div>
+<p><code>[]=(value, name)</code> and <code>setVar(name, value)</code> store <code>value</code> in the variable
+<code>name</code> of the code that sent the command, under the rules of an assignment
+there: a simple variable gets the value, a compound variable is set with its
+tail resolved (<a href="../instructions/assignment.html#r-instr.assignment.compound">the compound rule</a>), and a stem
+gets the value as the default of every element, and all the elements it had are
+gone (<a href="../instructions/assignment.html#r-instr.assignment.stem">the stem rule</a>). The value is stored as the
+object it is: a string, <code>.nil</code> or any other object, not a string made from it.
+The two methods are not two spellings of one: <strong>the order of the arguments
+differs</strong>, the value first for the bracket form, which is what the assignment
+<code>c[name] = value</code> sends, and the name first for <code>setVar</code>. Both need two
+arguments (<code>SYNTAX 93.901</code>), and a third raises <code>SYNTAX 93.902</code>. The name is
+read as <a href="#r-class.commandcontext.name">the name rule</a> says, and the value is not
+read at all. Both answer nothing, so that using the answer as a value raises
+<code>SYNTAX 91.999</code>. A name that is no variable name raises <code>SYNTAX 93.900</code>, and
+nothing is assigned. The program sees the new values when the command is over,
+and the handler at once.</p>
+<pre><code class="language-rexx">x = .commandhandler~register('spec_cc_setvar', .setter~new)
+i = 4; old. = 'old'; old.1 = 'one'; old.2 = 'two'
+address spec_cc_setvar 'go'
+say a '|' b '|' c.4 '|' old. old.1 old.9
+say s. s.5 '|' nilvar~isNil '|' obj~class~id
+x = .commandhandler~deregister('spec_cc_setvar')
+::class setter inherit CommandHandler
+::method command
+  use arg command, caller
+  caller~setVar('a', 'by setVar')
+  caller~'[]='('by bracket', 'b')
+  caller~setVar('c.i', 'compound')
+  caller['old.'] = 'cleared'
+  caller~setVar('s.', 'stem default')
+  caller~setVar('nilvar', .nil)
+  caller~setVar('obj', .array~new)
+  say 'in the handler:' caller['a'] caller['b'] caller['old.1']
+  do x over .array~of("caller~setVar('a')", "caller~'[]='('a')",,
+      "caller~setVar", "caller~setVar('a', 1, 2)", "caller~setVar('1x', 1)",,
+      "caller~'[]='(1, '1x')", "caller~setVar('', 1)",,
+      "x = caller~setVar('zz', 1)", "x = caller~'[]='(1, 'zz')")
+    self~try(caller, x)
+  end
+  return 0
+::method try
+  use arg caller, x
+  signal on syntax name bad
+  interpret x
+  say x 'no error'
+  return
+bad: say x condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">in the handler: by setVar by bracket cleared
+caller~setVar('a') 93.901
+caller~'[]='('a') 93.901
+caller~setVar 93.901
+caller~setVar('a', 1, 2) 93.902
+caller~setVar('1x', 1) 93.900
+caller~'[]='(1, '1x') 93.900
+caller~setVar('', 1) 93.900
+x = caller~setVar('zz', 1) 91.999
+x = caller~'[]='(1, 'zz') 91.999
+by setVar | by bracket | compound | cleared cleared cleared
+stem default stem default | 1 | Array
+</code></pre>
+<div class="rule" id="r-class.commandcontext.dropvar"><a href="#r-class.commandcontext.dropvar">[class.commandcontext.dropvar]</a></div>
+<p><code>dropVar(name)</code> drops the variable <code>name</code> of the code that sent the command,
+under the rules of the DROP instruction: a simple variable has no value
+afterwards, a compound variable has its derived name as value, even when its
+stem has a default value (<a href="../instructions/drop.html#r-instr.drop.compound">the compound rule</a>), and a
+stem is dropped with all its elements (<a href="../instructions/drop.html#r-instr.drop.stem">the stem rule</a>).
+Dropping a variable that has no value is not an error. <code>name</code> is required
+(<code>SYNTAX 93.901</code>) and one more argument raises <code>SYNTAX 93.902</code>; it is read as
+<a href="#r-class.commandcontext.name">the name rule</a> says. The method answers nothing,
+so using its answer as a value raises <code>SYNTAX 91.999</code>.</p>
+<pre><code class="language-rexx">x = .commandhandler~register('spec_cc_dropvar', .dropper~new)
+a = 'one'; b = 'two'; k = 1
+s. = 'default'; s.1 = 'one'; s.2 = 'two'
+t. = 'tdef'; t.1 = 't1'
+address spec_cc_dropvar 'go'
+say symbol('a') symbol('b') symbol('k') symbol('s.1') s.1 s.2 symbol('t.'),
+  t.1 t.9
+x = .commandhandler~deregister('spec_cc_dropvar')
+::class dropper inherit CommandHandler
+::method command
+  use arg command, caller
+  caller~dropVar('a')
+  caller~dropVar('nosuch')
+  caller~dropVar('s.k')
+  caller~dropVar('t.')
+  say caller~hasVar('a') caller['a'] caller~hasVar('s.1') caller['s.1'],
+    caller['s.2'] caller~hasVar('t.1')
+  do x over .array~of("caller~dropVar", "caller~dropVar('a', 'b')",,
+      "caller~dropVar('1x')", "x = caller~dropVar('b')")
+    self~try(caller, x)
+  end
+  return 0
+::method try
+  use arg caller, x
+  signal on syntax name bad
+  interpret 'y =' x
+  say x 'no error'
+  return
+bad: say x condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">0 A 0 S.1 two 0
+caller~dropVar 93.901
+caller~dropVar('a', 'b') 93.902
+caller~dropVar('1x') 93.900
+x = caller~dropVar('b') 91.999
+LIT LIT VAR LIT S.1 two VAR T.1 T.9
+</code></pre>
+<div class="rule" id="r-class.commandcontext.variables"><a href="#r-class.commandcontext.variables">[class.commandcontext.variables]</a></div>
+<p><code>variables</code> answers a new <code>Directory</code> of the variables of the code that sent
+the command, in the form that
+<a href="rexxcontext.html#r-class.rexxcontext.variables"><code>.context~variables</code></a> answers for a piece of
+code: each simple variable that has a value under its name in upper case with
+its value, and each stem under its name in upper case with a period at the
+end, with the stem object as its value; a compound variable is reached through
+its stem. The directory is a snapshot: a change to it assigns nothing, and a
+variable that the handler sets later is not in it, though a stem in it is the
+stem of the code. The method takes no argument (<code>SYNTAX 88.922</code>).</p>
+<pre><code class="language-rexx">x = .commandhandler~register('spec_cc_variables', .lister~new)
+plain = 'p'; num = 12; nothing = .nil; s. = 'dflt'; s.1 = 'one'; k = 1
+gone = 'x'; drop gone
+address spec_cc_variables 'go'
+say s.7 late symbol('added')
+x = .commandhandler~deregister('spec_cc_variables')
+::class lister inherit CommandHandler
+::method command
+  use arg command, caller
+  v = caller~variables
+  say v~class~id v~hasIndex('PLAIN') v~hasIndex('plain') v~hasIndex('GONE'),
+    v~hasIndex('S.1') v~hasIndex('UNSET')
+  say v['PLAIN'] v['NUM'] v['NOTHING']~isNil v['S.']~class~id v['S.']['1'],
+    v['S.']['7']
+  caller['late'] = 'set later'
+  say v~hasIndex('LATE') (v == caller~variables)
+  v['ADDED'] = 'put in the snapshot'
+  say caller~hasVar('added')
+  v['S.']['7'] = 'seen by the program'
+  signal on syntax name bad
+  x = caller~variables(1)
+bad: say condition('o')~code
+  return 0
+</code></pre>
+<pre><code class="language-output">Directory 1 0 0 0 0
+p 12 1 Stem one dflt
+0 0
+0
+88.922
+seen by the program set later LIT
+</code></pre>
+<h2 id="redirection"><a class="header" href="#redirection">Redirection</a></h2>
+<div class="rule" id="r-class.commandcontext.isredirected"><a href="#r-class.commandcontext.isredirected">[class.commandcontext.isredirected]</a></div>
+<p><code>isRedirected(which)</code> answers <code>1</code> when the command was sent with the
+redirection that the first letter of <code>which</code> names, and <code>0</code> when it was not.
+The letter is <code>I</code> for <code>WITH INPUT</code>, <code>O</code> for <code>WITH OUTPUT</code>, <code>E</code> for
+<code>WITH ERROR</code> and <code>S</code> for output and error that go to the same target, and it
+may be in either case; only the first letter is read, so <code>Input</code>, <code>Ixyz</code> and
+<code>I</code> are the same. A redirection that names a stem, a stream or an object to
+<a href="../instructions/address.html#r-instr.address.with.using"><code>USING</code></a> is a redirection, and <code>NORMAL</code> is none.
+The target is the same when both redirections name the same stem, the same
+stream, or the same object, whether either appends or replaces. <code>S</code> is <code>0</code>
+when only one of them is redirected. <code>which</code> is required (<code>SYNTAX 88.901</code>) and
+one more argument raises <code>SYNTAX 88.922</code>. A <code>which</code> that starts with another
+letter or has none, the null string and a number among them, raises
+<code>SYNTAX 93.900</code>. An object that is not a string and answers no string to
+<code>request</code> with <code>STRING</code>, <code>.nil</code> and an <code>Object</code> among them, raises
+<code>SYNTAX 88.909</code>.</p>
+<pre><code class="language-rexx">x = .commandhandler~register('spec_cc_redir', .asker~new)
+a = .array~new; b = .array~new
+f = 'spec_cc_redir.tmp'
+address spec_cc_redir 'none'
+address spec_cc_redir 'normal' with input normal output normal error normal
+address spec_cc_redir 'input' with input using (a)
+address spec_cc_redir 'output' with output stem o.
+address spec_cc_redir 'error' with error stem e.
+address spec_cc_redir 'both' with output stem o. error stem e.
+address spec_cc_redir 'same stem' with output stem o. error stem o.
+address spec_cc_redir 'same stem, append',
+  with output append stem o. error replace stem o.
+address spec_cc_redir 'same stream' with output stream (f) error stream (f)
+address spec_cc_redir 'same object' with output using (a) error using (a)
+address spec_cc_redir 'two objects' with output using (a) error using (b)
+address spec_cc_redir 'all' with input using (a) output stem o. error stem e.
+x = .commandhandler~deregister('spec_cc_redir')
+x = .file~new(f)~delete
+::class asker inherit CommandHandler
+::method command
+  use arg command, caller
+  say command~left(18) 'I' caller~isRedirected('I'),
+    'O' caller~isRedirected('O'),
+    'E' caller~isRedirected('E') 'S' caller~isRedirected('S'),
+    'words' caller~isRedirected('Input') caller~isRedirected('output'),
+    caller~isRedirected('e') caller~isRedirected('Samex'),
+    caller~isRedirected('Ixyz')
+  if command = 'all' then do
+    do x over .array~of("caller~isRedirected",,
+        "caller~isRedirected('I', 1)", "caller~isRedirected('')",,
+        "caller~isRedirected('X')", "caller~isRedirected(1)",,
+        "caller~isRedirected(.mutablebuffer~new('output'))")
+      self~try(caller, x)
+    end
+  end
+  return 0
+::method try
+  use arg caller, x
+  signal on syntax name bad
+  interpret 'y =' x
+  say x '=&gt;' y
+  return
+bad: say x '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">none               I 0 O 0 E 0 S 0 words 0 0 0 0 0
+normal             I 0 O 0 E 0 S 0 words 0 0 0 0 0
+input              I 1 O 0 E 0 S 0 words 1 0 0 0 1
+output             I 0 O 1 E 0 S 0 words 0 1 0 0 0
+error              I 0 O 0 E 1 S 0 words 0 0 1 0 0
+both               I 0 O 1 E 1 S 0 words 0 1 1 0 0
+same stem          I 0 O 1 E 1 S 1 words 0 1 1 1 0
+same stem, append  I 0 O 1 E 1 S 1 words 0 1 1 1 0
+same stream        I 0 O 1 E 1 S 1 words 0 1 1 1 0
+same object        I 0 O 1 E 1 S 1 words 0 1 1 1 0
+two objects        I 0 O 1 E 1 S 0 words 0 1 1 0 0
+all                I 1 O 1 E 1 S 0 words 1 1 1 0 1
+caller~isRedirected =&gt; 88.901
+caller~isRedirected('I', 1) =&gt; 88.922
+caller~isRedirected('') =&gt; 93.900
+caller~isRedirected('X') =&gt; 93.900
+caller~isRedirected(1) =&gt; 93.900
+caller~isRedirected(.mutablebuffer~new('output')) =&gt; 1
+</code></pre>
+<pre><code class="language-rexx">x = .commandhandler~register('spec_cc_redir_obj', .asker~new)
+address spec_cc_redir_obj 'go'
+x = .commandhandler~deregister('spec_cc_redir_obj')
+::class asker inherit CommandHandler
+::method command
+  use arg command, caller
+  do x over .array~of("caller~isRedirected(.nil)",,
+      "caller~isRedirected(.object~new)", "caller~isRedirected(.named~new)")
+    self~try(caller, x)
+  end
+  return 0
+::method try
+  use arg caller, x
+  signal on syntax name bad
+  interpret 'y =' x
+  say x '=&gt;' y
+  return
+bad: say x '=&gt;' condition('o')~code
+  return
+::class named
+::method request
+  return 'Input'
+</code></pre>
+<pre><code class="language-output defect=#164">caller~isRedirected(.nil) =&gt; 88.909
+caller~isRedirected(.object~new) =&gt; 88.909
+caller~isRedirected(.named~new) =&gt; 0
+</code></pre>
+<div class="rule" id="r-class.commandcontext.input"><a href="#r-class.commandcontext.input">[class.commandcontext.input]</a></div>
+<p><code>input</code> answers the <a href="commandinput.html"><code>CommandInput</code></a> that reads the source of
+<code>WITH INPUT</code>, the same object each time it is asked during the command. A
+command that was sent without <code>WITH INPUT</code> has no such stream, and <code>input</code>
+raises <code>SYNTAX 98.900</code>, which
+<a href="#r-class.commandcontext.isredirected"><code>isRedirected('Input')</code></a> tells beforehand.
+Arguments to the method are ignored. The source is read line by line, as <a href="commandinput.html">the
+page of the stream</a> says; the example reads what <code>USING</code> gave.</p>
+<pre><code class="language-rexx">x = .commandhandler~register('spec_cc_input', .reader~new)
+address spec_cc_input 'with input',
+  with input using (.array~of('first', 'second'))
+address spec_cc_input 'without input'
+address spec_cc_input 'only output' with output stem o.
+x = .commandhandler~deregister('spec_cc_input')
+::class reader inherit CommandHandler
+::method command
+  use arg command, caller
+  if caller~isRedirected('Input') then do
+    in = caller~input
+    say command ':' in~class~id (in == caller~input) in~linein in~linein,
+      in~lines
+  end
+  else self~refused(caller, command)
+  return 0
+::method refused
+  use arg caller, command
+  signal on syntax name bad
+  x = caller~input
+bad: say command ':' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">with input : CommandInput 1 first second 0
+without input : 98.900
+only output : 98.900
+</code></pre>
+<div class="rule" id="r-class.commandcontext.output"><a href="#r-class.commandcontext.output">[class.commandcontext.output]</a></div>
+<p><code>output</code> answers the <a href="commandoutput.html"><code>CommandOutput</code></a> that writes to the
+target of <code>WITH OUTPUT</code>, the same object each time it is asked during the
+command. A command that was sent without <code>WITH OUTPUT</code> has no such stream, and
+<code>output</code> raises <code>SYNTAX 98.900</code>, and a handler that is to write anyway uses
+<code>SAY</code> or a stream of its own. Arguments to the method are ignored.</p>
+<pre><code class="language-rexx">x = .commandhandler~register('spec_cc_output', .writer~new)
+address spec_cc_output 'a' with output stem o.
+say o.0 o.1 o.2
+address spec_cc_output 'b' with error stem e.
+say e.0 symbol('o.3')
+x = .commandhandler~deregister('spec_cc_output')
+::class writer inherit CommandHandler
+::method command
+  use arg command, caller
+  if command = 'a' then do
+    out = caller~output
+    out~lineout('from' command)
+    say 'same object' (out == caller~output) out~class~id
+    caller~output~lineout('second line')
+  end
+  else self~refused(caller, command)
+  return 0
+::method refused
+  use arg caller, command
+  signal on syntax name bad
+  x = caller~output
+bad: say command ':' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">same object 1 CommandOutput
+2 from a second line
+b : 98.900
+0 LIT
+</code></pre>
+<div class="rule" id="r-class.commandcontext.error"><a href="#r-class.commandcontext.error">[class.commandcontext.error]</a></div>
+<p><code>error</code> answers the <a href="commandoutput.html"><code>CommandOutput</code></a> that writes to the
+target of <code>WITH ERROR</code>, the same object each time it is asked during the
+command, and raises <code>SYNTAX 98.900</code> for a command that was sent without
+<code>WITH ERROR</code>. It is a different object from the one that <code>output</code> answers also
+when both go to the same target; the lines that a handler writes through the
+two go to the target in the order in which it wrote them. Arguments to the
+method are ignored.</p>
+<pre><code class="language-rexx">x = .commandhandler~register('spec_cc_error', .writer~new)
+address spec_cc_error 'a' with output stem both. error stem both.
+say both.0 both.1 both.2 both.3
+address spec_cc_error 'b' with output stem o.
+x = .commandhandler~deregister('spec_cc_error')
+::class writer inherit CommandHandler
+::method command
+  use arg command, caller
+  if command = 'a' then do
+    o = caller~output; e = caller~error
+    say (o == e) (e == caller~error) e~class~id
+    o~lineout('one'); e~lineout('two'); o~lineout('three')
+  end
+  else self~refused(caller, command)
+  return 0
+::method refused
+  use arg caller, command
+  signal on syntax name bad
+  x = caller~error
+bad: say command ':' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">0 1 CommandOutput
+3 one two three
+b : 98.900
+</code></pre>
+<h2 id="raising-conditions"><a class="header" href="#raising-conditions">Raising conditions</a></h2>
+<div class="rule" id="r-class.commandcontext.raise"><a href="#r-class.commandcontext.raise">[class.commandcontext.raise]</a></div>
+<p><code>raise(condition, rc, description, additional)</code> makes the command raise a
+condition. The condition is raised in the code that sent the command, when the
+handler's method <code>command</code> returns, as if the command itself had raised it: a
+<code>SIGNAL ON</code> or <code>CALL ON</code> trap for it answers it as for any condition, though a
+CALL ON ANY trap does not see the conditions that only SIGNAL can trap (<a href="../instructions/call.html#r-instr.call.on">the
+CALL ON rule</a>); the handler goes on running after the call. A
+condition that no trap answers is treated as <a href="../conditions/index.html">the page of that
+condition</a> says. The method answers <code>rc</code>. What
+<code>command</code> answers is not used when a condition was raised: <code>RC</code> holds <code>rc</code> as
+it is, whatever object it is, the number or the text, <code>.nil</code> too, so a handler
+may return the answer of the call or anything else. A HALT is delayed like any
+HALT (<a href="../conditions/halt.html#r-cond.halt.raise">the HALT rule</a>), so the clause after the command is
+run before a trap for it. <code>condition</code> is a string: <code>ERROR</code>, <code>FAILURE</code>, <code>HALT</code>,
+<code>LOSTDIGITS</code>, <code>NOMETHOD</code>, <code>NOSTRING</code>, <code>NOTREADY</code>, <code>NOVALUE</code>, or <code>USER</code>
+followed by a name of one word, in either case; <code>SYNTAX</code> is the other form,
+which <a href="#r-class.commandcontext.raise.syntax">the next rule</a> states. The string
+is read as words separated by <a href="../conventions.html#r-conv.string.whitespace">whitespace</a>, so the
+blanks and tabs around and between the words play no part, and the name after
+<code>USER</code> may be any word; the condition is named in upper case (<code>USER 1X</code>). A
+command that raises ERROR or FAILURE has the status <code>.RS</code> of the <a href="../instructions/command.html#r-instr.command.status">status
+rule</a>. <code>description</code> is what <code>CONDITION('D')</code> answers
+and the <code>DESCRIPTION</code> entry of the condition object holds; when it is omitted
+or <code>.nil</code>, it is the command, and the null string is a description like
+another. Another object is replaced by its string value as <a href="../conventions.html#r-conv.string.object">the conversion
+rule</a> finds it: <code>request</code> with <code>STRING</code> is sent to it
+first, and its <code>string</code> method when that answers no string, so that a class
+with its own <code>request</code> decides the description. The condition holds that
+string; an instance of a subclass of <code>String</code> is a string here (<a href="#r-class.commandcontext.deviation.109">the deviation
+rule</a>). <code>additional</code> is the <code>ADDITIONAL</code>
+entry of the condition object, the object as it was given, and when it is
+omitted or <code>.nil</code> the condition object has no such entry. The condition object
+has <code>RC</code>, holding the <code>rc</code> object. <code>condition</code> and <code>rc</code> are required: <code>SYNTAX 93.901</code> when they are fewer than two, <code>SYNTAX 93.903</code> when an omitted place
+stands for one of them, and <code>SYNTAX 93.902</code> for more than four arguments. A
+<code>condition</code> that is none of the forms above, <code>ANY</code>, <code>NONE</code>, <code>PROPAGATE</code>,
+<code>USER</code> with no name or with more than one, any other text, the null string and
+<code>.nil</code> among them, raises <code>SYNTAX 93.900</code>. A call that raises an error does
+not use up the command's one condition, which <a href="#r-class.commandcontext.raise.once">the second
+rule</a> says.</p>
+<pre><code class="language-rexx">x = .commandhandler~register('spec_cc_raise', .raiser~new)
+call on error name trap
+call on failure name trap
+call on notready name trap
+call on user spec name trap
+do word over 'ERROR FAILURE NOTREADY USER DEFAULTS NILS'~makearray(' ')
+  address spec_cc_raise word
+  say word 'returned, rc' '&lt;'rc'&gt;' .rs
+end
+x = .commandhandler~deregister('spec_cc_raise')
+exit
+trap:
+  o = condition('o')
+  if o~hasIndex('ADDITIONAL') then add = o~additional~class~id
+  else add = 'none'
+  say '  trap' condition('c') '&lt;'condition('d')'&gt;' 'rc' rc 'entry' o~rc add
+  return
+::class raiser inherit CommandHandler
+::method command
+  use arg command, caller
+  select
+    when command = 'ERROR' then return,
+      caller~raise('ERROR', 5, 'about error', 'more')
+    when command = 'FAILURE' then return caller~raise('failure', 'six')
+    when command = 'NOTREADY' then return caller~raise('NotReady', 7.5, '')
+    when command = 'USER' then return,
+      caller~raise('USER Spec', 8, 'user text', .array~of('x'))
+    when command = 'DEFAULTS' then return caller~raise('ERROR', 9)
+    when command = 'NILS' then return caller~raise('ERROR', 10, .nil, .nil)
+  end
+</code></pre>
+<pre><code class="language-output">  trap ERROR &lt;about error&gt; rc 5 entry 5 String
+ERROR returned, rc &lt;5&gt; 1
+  trap FAILURE &lt;FAILURE&gt; rc six entry six none
+FAILURE returned, rc &lt;six&gt; -1
+  trap NOTREADY &lt;&gt; rc 7.5 entry 7.5 none
+NOTREADY returned, rc &lt;7.5&gt; 0
+  trap USER SPEC &lt;user text&gt; rc 8 entry 8 Array
+USER returned, rc &lt;8&gt; 0
+  trap ERROR &lt;DEFAULTS&gt; rc 9 entry 9 none
+DEFAULTS returned, rc &lt;9&gt; 1
+  trap ERROR &lt;NILS&gt; rc 10 entry 10 none
+NILS returned, rc &lt;10&gt; 1
+</code></pre>
+<pre><code class="language-rexx">x = .commandhandler~register('spec_cc_halt', .halter~new)
+call on halt name stopped
+address spec_cc_halt 'go'
+say 'clause after the command, rc' rc
+say 'one more clause'
+x = .commandhandler~deregister('spec_cc_halt')
+exit
+stopped: say 'halt trap' condition('c') '&lt;'condition('d')'&gt;' rc
+  return
+::class halter inherit CommandHandler
+::method command
+  use arg command, caller
+  return caller~raise('Halt', 7, 'asked to stop')
+</code></pre>
+<pre><code class="language-output">clause after the command, rc 7
+halt trap HALT &lt;asked to stop&gt; 7
+one more clause
+</code></pre>
+<pre><code class="language-rexx">x = .commandhandler~register('spec_cc_raise_args', .tries~new)
+address spec_cc_raise_args 'go'
+x = .commandhandler~deregister('spec_cc_raise_args')
+::class tries inherit CommandHandler
+::method command
+  use arg command, caller
+  do x over .array~of("raise", "raise('ERROR')", "raise(, 1)",,
+      "raise('ERROR', , 'text')", "raise('ERROR', 1, 'd', 'a', 'x')",,
+      "raise('FOO', 1)", "raise('ANY', 1)", "raise('NONE', 1)",,
+      "raise('PROPAGATE', 1)", "raise('USER', 1)", "raise('USER a b', 1)",,
+      "raise('', 1)", "raise(.nil, 1)", "raise('SYNTAX', 98.900, 1, 2)",,
+      "raiseError", "raiseFailure", "raiseError(1, 2)")
+    self~try(caller, x)
+  end
+  return 0
+::method try
+  use arg caller, x
+  signal on syntax name bad
+  interpret 'y = caller~' || x
+  say x '=&gt; no error'
+  return
+bad: say x condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">raise 93.901
+raise('ERROR') 93.901
+raise(, 1) 93.903
+raise('ERROR', , 'text') 93.903
+raise('ERROR', 1, 'd', 'a', 'x') 93.902
+raise('FOO', 1) 93.900
+raise('ANY', 1) 93.900
+raise('NONE', 1) 93.900
+raise('PROPAGATE', 1) 93.900
+raise('USER', 1) 93.900
+raise('USER a b', 1) 93.900
+raise('', 1) 93.900
+raise(.nil, 1) 93.900
+raise('SYNTAX', 98.900, 1, 2) 93.900
+raiseError 93.901
+raiseFailure 93.901
+raiseError(1, 2) 93.902
+</code></pre>
+<pre><code class="language-rexx">x = .commandhandler~register('spec_cc_words', .t~new)
+call on any name trap
+do w over .array~of(' ERROR', 'USER  two', 'user x', 'USER 1x', 'USER a.b',,
+    'USER error', 'USER a-b', 'USER' || '09'x || 'tab')
+  .environment~w = w
+  address spec_cc_words 'go'
+end
+x = .commandhandler~deregister('spec_cc_words')
+exit
+trap: say '  trapped' condition('c')
+  return
+::class t inherit CommandHandler
+::method command
+  use arg command, caller
+  w = .environment~w
+  say '['changestr('09'x, w, '&lt;tab&gt;')']' caller~raise(w, 1)
+  return 0
+</code></pre>
+<pre><code class="language-output">[ ERROR] 1
+  trapped ERROR
+[USER  two] 1
+  trapped USER TWO
+[user x] 1
+  trapped USER X
+[USER 1x] 1
+  trapped USER 1X
+[USER a.b] 1
+  trapped USER A.B
+[USER error] 1
+  trapped USER ERROR
+[USER a-b] 1
+  trapped USER A-B
+[USER&lt;tab&gt;tab] 1
+  trapped USER TAB
+</code></pre>
+<pre><code class="language-rexx">x = .commandhandler~register('spec_cc_desc', .raiser~new)
+call on error name trap
+address spec_cc_desc 'a'
+address spec_cc_desc 'b'
+address spec_cc_desc 'c'
+address spec_cc_desc 'd'
+x = .commandhandler~deregister('spec_cc_desc')
+exit
+trap:
+  say '  trap &lt;'condition('d')'&gt;' condition('o')~description~class~id
+  return
+::class raiser inherit CommandHandler
+::method command
+  use arg command, caller
+  if command = 'a' then return caller~raise('ERROR', 1, .lg~new)
+  if command = 'b' then return caller~raise('ERROR', 1, .ms~new)
+  if command = 'c' then
+    return caller~raise('ERROR', 1, .mutablebuffer~new('mb'))
+  return caller~raise('ERROR', 1, .rq~new)
+::class lg
+::method string
+  say '  lg string'
+  return 'lgtext'
+::class ms
+::method makestring
+  say '  ms makestring'
+  return 'mstext'
+::class rq
+::method request
+  say '  rq request' arg(1)
+  return 'rqtext'
+::method makestring
+  say '  rq makestring'
+  return 'mstext'
+</code></pre>
+<pre><code class="language-output defect=#184">  lg string
+  trap &lt;lgtext&gt; String
+  ms makestring
+  trap &lt;mstext&gt; String
+  trap &lt;mb&gt; String
+  rq request STRING
+  trap &lt;rqtext&gt; String
+</code></pre>
+<pre><code class="language-rexx">x = .commandhandler~register('spec_cc_any', .h~new)
+call on any name trap
+address spec_cc_any 'NOVALUE'
+say 'went on' rc
+x = .commandhandler~deregister('spec_cc_any')
+exit
+trap: say 'trap' condition('c'); return
+::class h inherit CommandHandler
+::method command
+  use arg cmd, ctx
+  r = ctx~raise(cmd, 2, 'nv')
+  return 0
+</code></pre>
+<pre><code class="language-output defect=#203">went on 2
+</code></pre>
+<div class="rule" id="r-class.commandcontext.raise.syntax"><a href="#r-class.commandcontext.raise.syntax">[class.commandcontext.raise.syntax]</a></div>
+<p><code>raise('SYNTAX', code, additional)</code> makes the command raise a <code>SYNTAX</code> error
+instead of the conditions of <a href="#r-class.commandcontext.raise">the first form</a>, and
+it takes at most three arguments, so that a fourth makes the call the first
+form, which refuses <code>SYNTAX</code> with <code>SYNTAX 93.900</code>. The error is raised in the
+code that sent the command, at the clause that sent it, when <code>command</code> returns,
+as an error of a built-in function would be: the error number is <code>code</code>, the
+clause is the one that holds the position of the error, and no frame of the
+handler is among the frames of the error. The handler goes on running after the
+call, the method answers <code>code</code> as it was given, and what <code>command</code> answers is
+ignored. A <code>SYNTAX</code> trap in the code that sent the command answers the error as
+for any <code>SYNTAX</code> condition. <code>code</code> is the number of the error as <a href="../instructions/raise.html#r-instr.raise.number">a
+<code>RAISE SYNTAX</code></a> reads it, a number such as <code>40.3</code> whose
+digits after the point are one whole number, so <code>40.003</code> and <code>40.03</code> are the
+error <code>40.3</code>, with these differences: the point and a subcode from 1 to 999 are
+required, and the major number is from 1 to 99. A <code>code</code> of any other form, <code>98</code>
+and <code>40.0</code> and <code>100.1</code> and <code>40.1000</code> and <code>x</code> among them, raises <code>SYNTAX 93.900</code>
+in the handler and raises nothing in the command. A well formed <code>code</code> for which
+no error has a message raises <code>SYNTAX 98.941</code> at the clause. <code>additional</code> is for
+the message of the error: an <code>Array</code> gives the values for its places in order,
+and any other object is the one value, so that the <code>ADDITIONAL</code> entry of the
+condition is always an <code>Array</code>, empty when <code>additional</code> is omitted or <code>.nil</code>.
+The text of the message is not specified. <code>code</code> is required (<code>SYNTAX 93.901</code>).</p>
+<pre><code class="language-rexx">x = .commandhandler~register('spec_cc_syntax', .failer~new)
+do code over ('40.3 40.003 040.03 99.999 5.5 98.900 98 40.0 40.1000',
+    '100.1 x')~makeArray(' ')
+  call try code
+end
+x = .commandhandler~deregister('spec_cc_syntax')
+exit
+try: procedure
+  signal on syntax name raised
+  address spec_cc_syntax arg(1)
+  say arg(1)~left(8) 'went through, rc' rc
+  return
+raised:
+  o = condition('o')
+  say arg(1)~left(8) 'raised' o~code o~rc 'at line' sigl,
+    'handler in the traceback:',
+    (o~traceback~makeArray~makeString('l', '|')~pos('caller~raise') &gt; 0)
+  return
+::class failer inherit CommandHandler
+::method command
+  use arg command, caller
+  signal on syntax name refused
+  x = caller~raise('SYNTAX', command, .array~of('a', 'b'))
+  say '  after raise, the handler goes on:' x
+  return 'ignored'
+refused:
+  say '  refused' command~left(7) condition('o')~code
+  return 0
+</code></pre>
+<pre><code class="language-output">  after raise, the handler goes on: 40.3
+40.3     raised 40.3 40 at line 10 handler in the traceback: 0
+  after raise, the handler goes on: 40.003
+40.003   raised 40.3 40 at line 10 handler in the traceback: 0
+  after raise, the handler goes on: 040.03
+040.03   raised 40.3 40 at line 10 handler in the traceback: 0
+  after raise, the handler goes on: 99.999
+99.999   raised 98.941 98 at line 10 handler in the traceback: 0
+  after raise, the handler goes on: 5.5
+5.5      raised 98.941 98 at line 10 handler in the traceback: 0
+  after raise, the handler goes on: 98.900
+98.900   raised 98.900 98 at line 10 handler in the traceback: 0
+  refused 98      93.900
+98       went through, rc 0
+  refused 40.0    93.900
+40.0     went through, rc 0
+  refused 40.1000 93.900
+40.1000  went through, rc 0
+  refused 100.1   93.900
+100.1    went through, rc 0
+  refused x       93.900
+x        went through, rc 0
+</code></pre>
+<pre><code class="language-rexx">x = .commandhandler~register('spec_cc_addl', .w~new)
+do w over 'text none nil array two'~makeArray(' ')
+  call try w
+end
+x = .commandhandler~deregister('spec_cc_addl')
+exit
+try: procedure
+  signal on syntax name raised
+  address spec_cc_addl arg(1)
+  return
+raised:
+  a = condition('o')~additional
+  say arg(1)~left(5) condition('o')~code a~class~id a~items,
+    a~makeString('l', '|')
+  return
+::class w inherit CommandHandler
+::method command
+  use arg command, caller
+  select
+    when command = 'text' then x = caller~raise('SYNTAX', 98.900, 'some text')
+    when command = 'none' then x = caller~raise('SYNTAX', 98.900)
+    when command = 'nil' then x = caller~raise('SYNTAX', 98.900, .nil)
+    when command = 'array' then x = caller~raise('SYNTAX', 98.900,,
+      .array~of('in array'))
+    when command = 'two' then x = caller~raise('SYNTAX', 98.900,,
+      .array~of('a', 'b'))
+  end
+  return 0
+</code></pre>
+<pre><code class="language-output">text  98.900 Array 1 some text
+none  98.900 Array 0 
+nil   98.900 Array 0 
+array 98.900 Array 1 in array
+two   98.900 Array 2 a|b
+</code></pre>
+<div class="rule" id="r-class.commandcontext.raise.once"><a href="#r-class.commandcontext.raise.once">[class.commandcontext.raise.once]</a></div>
+<p>A command raises at most one condition. After a call of <code>raise</code>, <code>raiseError</code>
+or <code>raiseFailure</code> that was accepted, in either form of <code>raise</code>, another call
+of any of them for the same command raises <code>SYNTAX 93.900</code>, and the first
+condition stays as it was asked for. A call that raised an error, because its
+arguments were wrong or its condition unknown, asked for nothing, and a good
+call may follow it. The condition is raised in the code that sent the command
+only when the handler returns, so the handler sees no trap run in between.</p>
+<pre><code class="language-rexx">x = .commandhandler~register('spec_cc_once', .once~new)
+call on error name trap
+address spec_cc_once 'go'
+say 'rc' rc .rs
+x = .commandhandler~deregister('spec_cc_once')
+exit
+trap: say 'trap' condition('c') '&lt;'condition('d')'&gt;' rc
+  return
+::class once inherit CommandHandler
+::method command
+  use arg command, caller
+  self~try(caller, "raise('FOO', 3)")
+  self~try(caller, "raise('ERROR')")
+  self~try(caller, "raise('ERROR', 4, 'the first')")
+  self~try(caller, "raise('ERROR', 5, 'the second')")
+  self~try(caller, "raiseError(6)")
+  self~try(caller, "raiseFailure(7)")
+  self~try(caller, "raise('SYNTAX', 98.900)")
+  say 'handler ends'
+  return 0
+::method try
+  use arg caller, x
+  signal on syntax name bad
+  interpret 'y = caller~' || x
+  say x '=&gt; answered' y
+  return
+bad: say x '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">raise('FOO', 3) =&gt; 93.900
+raise('ERROR') =&gt; 93.901
+raise('ERROR', 4, 'the first') =&gt; answered 4
+raise('ERROR', 5, 'the second') =&gt; 93.900
+raiseError(6) =&gt; 93.900
+raiseFailure(7) =&gt; 93.900
+raise('SYNTAX', 98.900) =&gt; 93.900
+handler ends
+trap ERROR &lt;the first&gt; 4
+rc 4 1
+</code></pre>
+<div class="rule" id="r-class.commandcontext.raiseerror"><a href="#r-class.commandcontext.raiseerror">[class.commandcontext.raiseerror]</a></div>
+<p><code>raiseError(rc)</code> is <code>raise('ERROR', rc)</code>: the command raises the condition
+ERROR with the return code <code>rc</code>, answers <code>rc</code>, and its description is the
+command. <code>rc</code> is required (<code>SYNTAX 93.901</code>) and one more argument raises
+<code>SYNTAX 93.902</code>. It does what <a href="#r-class.commandcontext.raise">the first form of
+<code>raise</code></a> does for these two arguments, and <a href="#r-class.commandcontext.raise.once">the
+once rule</a> holds for it. A program cannot
+add methods to a context or to its class, so no program can see which message
+does it.</p>
+<pre><code class="language-rexx">x = .commandhandler~register('spec_cc_raiseerror', .errors~new)
+signal on error name trap
+address spec_cc_raiseerror 'first command'
+say 'not reached'
+trap: say 'trap' condition('c') '&lt;'condition('d')'&gt;' rc .rs
+x = .commandhandler~deregister('spec_cc_raiseerror')
+::class errors inherit CommandHandler
+::method command
+  use arg command, caller
+  return caller~raiseError(12)
+</code></pre>
+<pre><code class="language-output">trap ERROR &lt;first command&gt; 12 1
+</code></pre>
+<div class="rule" id="r-class.commandcontext.raisefailure"><a href="#r-class.commandcontext.raisefailure">[class.commandcontext.raisefailure]</a></div>
+<p><code>raiseFailure(rc)</code> is <code>raise('FAILURE', rc)</code>: the command raises the condition
+FAILURE with the return code <code>rc</code>, answers <code>rc</code>, and its description is the
+command. <code>rc</code> is required (<code>SYNTAX 93.901</code>) and one more argument raises
+<code>SYNTAX 93.902</code>. A command that raises FAILURE has the status <code>.RS</code> of <code>-1</code>
+(<a href="../instructions/command.html#r-instr.command.status">the status rule</a>). <a href="#r-class.commandcontext.raise.once">The once
+rule</a> holds for it.</p>
+<pre><code class="language-rexx">x = .commandhandler~register('spec_cc_raisefailure', .failures~new)
+signal on failure name trap
+address spec_cc_raisefailure 'first command'
+say 'not reached'
+trap: say 'trap' condition('c') '&lt;'condition('d')'&gt;' rc .rs
+x = .commandhandler~deregister('spec_cc_raisefailure')
+::class failures inherit CommandHandler
+::method command
+  use arg command, caller
+  return caller~raiseFailure(13)
+</code></pre>
+<pre><code class="language-output">trap FAILURE &lt;first command&gt; 13 -1
+</code></pre>
+<h2 id="copying"><a class="header" href="#copying">Copying</a></h2>
+<div class="rule" id="r-class.commandcontext.copy"><a href="#r-class.commandcontext.copy">[class.commandcontext.copy]</a></div>
+<p><code>copy</code> answers a new object that stands for the same command: it works with the
+same variables and the same redirections as the original, and is valid while the
+command runs, as the original is. A variable that one sets, the other reads. The
+same holds for the streams that <code>input</code>, <code>output</code> and <code>error</code> answer: a copy of
+a stream reads from the same source and writes to the same target, so that a
+line that one reads is not read by the other. A copy keeps its own record of the
+one condition. The record starts as the record of the object that was copied, as
+it is at that time, so that a copy made after the original asked for a condition
+refuses one with <code>SYNTAX 93.900</code>. From then on the two are apart: a copy answers
+<code>raise</code>, <code>raiseError</code> and <code>raiseFailure</code> as the original does, refuses a second
+one with <code>SYNTAX 93.900</code>, and does not count against the original, but the
+condition that a copy asks for is never raised, and the command raises only what
+the original asked for. When only a copy asked, what <code>command</code> answers is the
+return code. The second example asks for a condition through the copy and
+through the original in each order, through the copy twice, and through a copy
+made after the original asked.</p>
+<pre><code class="language-rexx">x = .commandhandler~register('spec_cc_copy', .copier~new)
+shared = 'program value'
+address spec_cc_copy 'go' with input using (.array~of('i1', 'i2')),
+  output stem o.
+say 'after:' symbol('copied') copied
+say o.0 o.1 o.2
+x = .commandhandler~deregister('spec_cc_copy')
+::class copier inherit CommandHandler
+::method command
+  use arg command, caller
+  c = caller~copy
+  say c~class~id (c == caller) c~isValid c~environment caller['shared'],
+    c['shared']
+  c['copied'] = 'by the copy'
+  say 'original sees' caller['copied']
+  in = caller~input; copyIn = in~copy
+  say copyIn~class~id (copyIn == in) copyIn~linein in~linein in~lines
+  out = caller~output; copyOut = out~copy
+  copyOut~lineout('through the copy')
+  out~lineout('through the original')
+  say copyOut~class~id (copyOut == out)
+  return 0
+</code></pre>
+<pre><code class="language-output">CommandContext 0 1 SPEC_CC_COPY program value program value
+original sees by the copy
+CommandInput 0 i1 i2 0
+CommandOutput 0
+after: VAR by the copy
+2 through the copy through the original
+</code></pre>
+<pre><code class="language-rexx">x = .commandhandler~register('spec_cc_copy_once', .twice~new)
+call on error name trap
+call on failure name trap
+do w over 'copy-first original-first copy-twice copy-later'~makeArray(' ')
+  address spec_cc_copy_once w
+  say w': rc' rc .rs
+end
+x = .commandhandler~deregister('spec_cc_copy_once')
+exit
+trap: say '  trap' condition('c') '&lt;'condition('d')'&gt;' rc
+  return
+::class twice inherit CommandHandler
+::method command
+  use arg command, caller
+  c = caller~copy
+  if command = 'copy-first' then do; first = c; second = caller; end
+  if command = 'original-first' then do; first = caller; second = c; end
+  if command = 'copy-twice' then do; first = c; second = c; end
+  if command = 'copy-later' then do; first = caller; second = .nil; end
+  say '  first' first~raiseError(1)
+  if second == .nil then second = caller~copy
+  self~try(second)
+  return 0
+::method try
+  use arg o
+  signal on syntax name bad
+  say '  second' o~raiseFailure(2)
+  return
+bad: say '  second refused' condition('o')~code
+</code></pre>
+<pre><code class="language-output">  first 1
+  second 2
+  trap FAILURE &lt;copy-first&gt; 2
+copy-first: rc 2 -1
+  first 1
+  second 2
+  trap ERROR &lt;original-first&gt; 1
+original-first: rc 1 1
+  first 1
+  second refused 93.900
+copy-twice: rc 0 0
+  first 1
+  second refused 93.900
+  trap ERROR &lt;copy-later&gt; 1
+copy-later: rc 1 1
+</code></pre>
+<h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
+<div class="rule" id="r-class.commandcontext.deviation.109"><a href="#r-class.commandcontext.deviation.109">[class.commandcontext.deviation.109]</a></div>
+<p>A <code>name</code> of <code>[]</code>, <code>getVar</code>, <code>[]=</code>, <code>setVar</code>, <code>hasVar</code> or <code>dropVar</code>, the <code>which</code>
+of <code>isRedirected</code> and the <code>description</code> of <code>raise</code>, that is an instance of a
+subclass of <code>String</code> is read by its own characters, and <code>request</code>, <code>makeString</code>
+and <code>string</code> are not sent to it (<a href="string.html#r-class.string.deviation.109">Deviation 109</a>).
+ooRexx sends such an instance <code>request</code>, with <code>String</code> for a variable name and
+with <code>STRING</code> for <code>which</code> and <code>description</code>, so an override can change what is
+read. In the examples the overrides would change what is read; they count their
+sends, and the string is read as it is without one.</p>
+<pre><code class="language-rexx">x = .commandhandler~register('spec_cc_dev109', .reader~new)
+a = 'avalue'
+.environment~sent = 0
+address spec_cc_dev109 'go'
+say a
+x = .commandhandler~deregister('spec_cc_dev109')
+::class reader inherit CommandHandler
+::method command
+  use arg command, caller
+  n = .digits~new('a')
+  say caller[n] caller~hasVar(n) .environment~sent
+  caller[n] = 'changed'
+  say caller['a'] caller~hasVar('other') .environment~sent
+  return 0
+::class digits subclass string
+::method makestring
+  .environment~sent = .environment~sent + 1
+  return 'other'
+::method request
+  .environment~sent = .environment~sent + 1
+  return 'other'
+</code></pre>
+<pre><code class="language-output defect=#140">avalue 1 0
+changed 0 0
+changed
+</code></pre>
+<pre><code class="language-rexx">x = .commandhandler~register('spec_cc_dev109_redir', .asker~new)
+.environment~sent = 0
+address spec_cc_dev109_redir 'go' with output stem o.
+x = .commandhandler~deregister('spec_cc_dev109_redir')
+::class asker inherit CommandHandler
+::method command
+  use arg command, caller
+  w = .digits~new('Output')
+  say caller~isRedirected(w) .environment~sent
+  return 0
+::class digits subclass string
+::method makestring
+  .environment~sent = .environment~sent + 1
+  return 'Error'
+::method request
+  .environment~sent = .environment~sent + 1
+  return 'Error'
+</code></pre>
+<pre><code class="language-output">1 0
+</code></pre>
+<pre><code class="language-rexx">x = .commandhandler~register('spec_cc_dev109_desc', .raiser~new)
+.environment~sent = 0
+call on error name trap
+address spec_cc_dev109_desc 'go'
+x = .commandhandler~deregister('spec_cc_dev109_desc')
+exit
+trap: say condition('d') .environment~sent
+  return
+::class raiser inherit CommandHandler
+::method command
+  use arg command, caller
+  return caller~raise('ERROR', 1, .digits~new('own'))
+::class digits subclass string
+::method makestring
+  .environment~sent = .environment~sent + 1
+  return 'other'
+::method request
+  .environment~sent = .environment~sent + 1
+  return 'other'
+::method string
+  .environment~sent = .environment~sent + 1
+  return 'other'
+</code></pre>
+<pre><code class="language-output">own 0
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../classes/nativecommandhandler.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../classes/commandinput.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../classes/nativecommandhandler.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../classes/commandinput.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../assets/version-picker.js"></script>
+
+
+    </div>
+    </body>
+</html>

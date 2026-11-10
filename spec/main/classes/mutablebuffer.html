@@ -1,0 +1,1585 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>MutableBuffer - The interrexx Language Specification</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../conventions.html"><strong aria-hidden="true">2.</strong> Conventions</a></li><li class="chapter-item expanded "><a href="../lexical/index.html"><strong aria-hidden="true">3.</strong> Lexical structure</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../lexical/characters.html"><strong aria-hidden="true">3.1.</strong> Characters</a></li><li class="chapter-item expanded "><a href="../lexical/comments.html"><strong aria-hidden="true">3.2.</strong> Comments</a></li><li class="chapter-item expanded "><a href="../lexical/literals.html"><strong aria-hidden="true">3.3.</strong> Literals</a></li><li class="chapter-item expanded "><a href="../lexical/symbols.html"><strong aria-hidden="true">3.4.</strong> Symbols</a></li><li class="chapter-item expanded "><a href="../lexical/operators.html"><strong aria-hidden="true">3.5.</strong> Operators and special characters</a></li><li class="chapter-item expanded "><a href="../lexical/clauses.html"><strong aria-hidden="true">3.6.</strong> Clauses</a></li></ol></li><li class="chapter-item expanded "><a href="../numbers/index.html"><strong aria-hidden="true">4.</strong> Numbers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../numbers/formats.html"><strong aria-hidden="true">4.1.</strong> Formats</a></li><li class="chapter-item expanded "><a href="../numbers/limits.html"><strong aria-hidden="true">4.2.</strong> Limits</a></li><li class="chapter-item expanded "><a href="../numbers/arithmetic.html"><strong aria-hidden="true">4.3.</strong> Arithmetic</a></li><li class="chapter-item expanded "><a href="../numbers/settings.html"><strong aria-hidden="true">4.4.</strong> Settings</a></li><li class="chapter-item expanded "><a href="../numbers/comparison.html"><strong aria-hidden="true">4.5.</strong> Comparison</a></li></ol></li><li class="chapter-item expanded "><a href="../expressions/index.html"><strong aria-hidden="true">5.</strong> Expressions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../expressions/terms.html"><strong aria-hidden="true">5.1.</strong> Terms</a></li><li class="chapter-item expanded "><a href="../expressions/variables.html"><strong aria-hidden="true">5.2.</strong> Variables</a></li><li class="chapter-item expanded "><a href="../expressions/concatenation.html"><strong aria-hidden="true">5.3.</strong> Concatenation</a></li><li class="chapter-item expanded "><a href="../expressions/arithmetic.html"><strong aria-hidden="true">5.4.</strong> Arithmetic operators</a></li><li class="chapter-item expanded "><a href="../expressions/comparison.html"><strong aria-hidden="true">5.5.</strong> Comparison operators</a></li><li class="chapter-item expanded "><a href="../expressions/logical.html"><strong aria-hidden="true">5.6.</strong> Logical operators</a></li><li class="chapter-item expanded "><a href="../expressions/messages.html"><strong aria-hidden="true">5.7.</strong> Message operators</a></li></ol></li><li class="chapter-item expanded "><a href="../instructions/index.html"><strong aria-hidden="true">6.</strong> Instructions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../instructions/address.html"><strong aria-hidden="true">6.1.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../instructions/arg.html"><strong aria-hidden="true">6.2.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../instructions/assignment.html"><strong aria-hidden="true">6.3.</strong> Assignments</a></li><li class="chapter-item expanded "><a href="../instructions/call.html"><strong aria-hidden="true">6.4.</strong> CALL</a></li><li class="chapter-item expanded "><a href="../instructions/command.html"><strong aria-hidden="true">6.5.</strong> Commands</a></li><li class="chapter-item expanded "><a href="../instructions/do.html"><strong aria-hidden="true">6.6.</strong> DO</a></li><li class="chapter-item expanded "><a href="../instructions/drop.html"><strong aria-hidden="true">6.7.</strong> DROP</a></li><li class="chapter-item expanded "><a href="../instructions/exit.html"><strong aria-hidden="true">6.8.</strong> EXIT</a></li><li class="chapter-item expanded "><a href="../instructions/expose.html"><strong aria-hidden="true">6.9.</strong> EXPOSE</a></li><li class="chapter-item expanded "><a href="../instructions/forward.html"><strong aria-hidden="true">6.10.</strong> FORWARD</a></li><li class="chapter-item expanded "><a href="../instructions/guard.html"><strong aria-hidden="true">6.11.</strong> GUARD</a></li><li class="chapter-item expanded "><a href="../instructions/if.html"><strong aria-hidden="true">6.12.</strong> IF</a></li><li class="chapter-item expanded "><a href="../instructions/interpret.html"><strong aria-hidden="true">6.13.</strong> INTERPRET</a></li><li class="chapter-item expanded "><a href="../instructions/iterate.html"><strong aria-hidden="true">6.14.</strong> ITERATE</a></li><li class="chapter-item expanded "><a href="../instructions/leave.html"><strong aria-hidden="true">6.15.</strong> LEAVE</a></li><li class="chapter-item expanded "><a href="../instructions/loop.html"><strong aria-hidden="true">6.16.</strong> LOOP</a></li><li class="chapter-item expanded "><a href="../instructions/message.html"><strong aria-hidden="true">6.17.</strong> Message instructions</a></li><li class="chapter-item expanded "><a href="../instructions/nop.html"><strong aria-hidden="true">6.18.</strong> NOP</a></li><li class="chapter-item expanded "><a href="../instructions/numeric.html"><strong aria-hidden="true">6.19.</strong> NUMERIC</a></li><li class="chapter-item expanded "><a href="../instructions/options.html"><strong aria-hidden="true">6.20.</strong> OPTIONS</a></li><li class="chapter-item expanded "><a href="../instructions/parse.html"><strong aria-hidden="true">6.21.</strong> PARSE</a></li><li class="chapter-item expanded "><a href="../instructions/procedure.html"><strong aria-hidden="true">6.22.</strong> PROCEDURE</a></li><li class="chapter-item expanded "><a href="../instructions/pull.html"><strong aria-hidden="true">6.23.</strong> PULL</a></li><li class="chapter-item expanded "><a href="../instructions/push.html"><strong aria-hidden="true">6.24.</strong> PUSH</a></li><li class="chapter-item expanded "><a href="../instructions/queue.html"><strong aria-hidden="true">6.25.</strong> QUEUE</a></li><li class="chapter-item expanded "><a href="../instructions/raise.html"><strong aria-hidden="true">6.26.</strong> RAISE</a></li><li class="chapter-item expanded "><a href="../instructions/reply.html"><strong aria-hidden="true">6.27.</strong> REPLY</a></li><li class="chapter-item expanded "><a href="../instructions/return.html"><strong aria-hidden="true">6.28.</strong> RETURN</a></li><li class="chapter-item expanded "><a href="../instructions/say.html"><strong aria-hidden="true">6.29.</strong> SAY</a></li><li class="chapter-item expanded "><a href="../instructions/select.html"><strong aria-hidden="true">6.30.</strong> SELECT</a></li><li class="chapter-item expanded "><a href="../instructions/signal.html"><strong aria-hidden="true">6.31.</strong> SIGNAL</a></li><li class="chapter-item expanded "><a href="../instructions/trace.html"><strong aria-hidden="true">6.32.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../instructions/use.html"><strong aria-hidden="true">6.33.</strong> USE</a></li></ol></li><li class="chapter-item expanded "><a href="../parsing/index.html"><strong aria-hidden="true">7.</strong> Parsing</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../parsing/templates.html"><strong aria-hidden="true">7.1.</strong> Templates</a></li><li class="chapter-item expanded "><a href="../parsing/patterns.html"><strong aria-hidden="true">7.2.</strong> Patterns</a></li><li class="chapter-item expanded "><a href="../parsing/multiple.html"><strong aria-hidden="true">7.3.</strong> Several strings and case</a></li></ol></li><li class="chapter-item expanded "><a href="../directives/index.html"><strong aria-hidden="true">8.</strong> Directives</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../directives/class.html"><strong aria-hidden="true">8.1.</strong> ::CLASS</a></li><li class="chapter-item expanded "><a href="../directives/method.html"><strong aria-hidden="true">8.2.</strong> ::METHOD</a></li><li class="chapter-item expanded "><a href="../directives/attribute.html"><strong aria-hidden="true">8.3.</strong> ::ATTRIBUTE</a></li><li class="chapter-item expanded "><a href="../directives/constant.html"><strong aria-hidden="true">8.4.</strong> ::CONSTANT</a></li><li class="chapter-item expanded "><a href="../directives/routine.html"><strong aria-hidden="true">8.5.</strong> ::ROUTINE</a></li><li class="chapter-item expanded "><a href="../directives/requires.html"><strong aria-hidden="true">8.6.</strong> ::REQUIRES</a></li><li class="chapter-item expanded "><a href="../directives/options.html"><strong aria-hidden="true">8.7.</strong> ::OPTIONS</a></li><li class="chapter-item expanded "><a href="../directives/resource.html"><strong aria-hidden="true">8.8.</strong> ::RESOURCE</a></li><li class="chapter-item expanded "><a href="../directives/annotate.html"><strong aria-hidden="true">8.9.</strong> ::ANNOTATE</a></li></ol></li><li class="chapter-item expanded "><a href="../conditions/index.html"><strong aria-hidden="true">9.</strong> Conditions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../conditions/traps.html"><strong aria-hidden="true">9.1.</strong> Condition traps</a></li><li class="chapter-item expanded "><a href="../conditions/information.html"><strong aria-hidden="true">9.2.</strong> Condition information</a></li><li class="chapter-item expanded "><a href="../conditions/syntax.html"><strong aria-hidden="true">9.3.</strong> SYNTAX</a></li><li class="chapter-item expanded "><a href="../conditions/error.html"><strong aria-hidden="true">9.4.</strong> ERROR and FAILURE</a></li><li class="chapter-item expanded "><a href="../conditions/halt.html"><strong aria-hidden="true">9.5.</strong> HALT</a></li><li class="chapter-item expanded "><a href="../conditions/novalue.html"><strong aria-hidden="true">9.6.</strong> NOVALUE</a></li><li class="chapter-item expanded "><a href="../conditions/nostring.html"><strong aria-hidden="true">9.7.</strong> NOSTRING</a></li><li class="chapter-item expanded "><a href="../conditions/nomethod.html"><strong aria-hidden="true">9.8.</strong> NOMETHOD</a></li><li class="chapter-item expanded "><a href="../conditions/notready.html"><strong aria-hidden="true">9.9.</strong> NOTREADY</a></li><li class="chapter-item expanded "><a href="../conditions/lostdigits.html"><strong aria-hidden="true">9.10.</strong> LOSTDIGITS</a></li><li class="chapter-item expanded "><a href="../conditions/user.html"><strong aria-hidden="true">9.11.</strong> USER conditions</a></li><li class="chapter-item expanded "><a href="../conditions/errors.html"><strong aria-hidden="true">9.12.</strong> Error numbers</a></li></ol></li><li class="chapter-item expanded "><a href="../classes/index.html"><strong aria-hidden="true">10.</strong> Classes</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../classes/methods.html"><strong aria-hidden="true">10.1.</strong> Method search</a></li><li class="chapter-item expanded "><a href="../classes/object.html"><strong aria-hidden="true">10.2.</strong> Object</a></li><li class="chapter-item expanded "><a href="../classes/class.html"><strong aria-hidden="true">10.3.</strong> Class</a></li><li class="chapter-item expanded "><a href="../classes/string.html"><strong aria-hidden="true">10.4.</strong> String</a></li><li class="chapter-item expanded "><a href="../classes/method.html"><strong aria-hidden="true">10.5.</strong> Method</a></li><li class="chapter-item expanded "><a href="../classes/routine.html"><strong aria-hidden="true">10.6.</strong> Routine</a></li><li class="chapter-item expanded "><a href="../classes/package.html"><strong aria-hidden="true">10.7.</strong> Package</a></li><li class="chapter-item expanded "><a href="../classes/message.html"><strong aria-hidden="true">10.8.</strong> Message</a></li><li class="chapter-item expanded "><a href="../classes/messagenotification.html"><strong aria-hidden="true">10.9.</strong> MessageNotification</a></li><li class="chapter-item expanded "><a href="../classes/alarmnotification.html"><strong aria-hidden="true">10.10.</strong> AlarmNotification</a></li><li class="chapter-item expanded "><a href="../classes/collection.html"><strong aria-hidden="true">10.11.</strong> Collection</a></li><li class="chapter-item expanded "><a href="../classes/mapcollection.html"><strong aria-hidden="true">10.12.</strong> MapCollection</a></li><li class="chapter-item expanded "><a href="../classes/orderedcollection.html"><strong aria-hidden="true">10.13.</strong> OrderedCollection</a></li><li class="chapter-item expanded "><a href="../classes/setcollection.html"><strong aria-hidden="true">10.14.</strong> SetCollection</a></li><li class="chapter-item expanded "><a href="../classes/array.html"><strong aria-hidden="true">10.15.</strong> Array</a></li><li class="chapter-item expanded "><a href="../classes/list.html"><strong aria-hidden="true">10.16.</strong> List</a></li><li class="chapter-item expanded "><a href="../classes/queue.html"><strong aria-hidden="true">10.17.</strong> Queue</a></li><li class="chapter-item expanded "><a href="../classes/circularqueue.html"><strong aria-hidden="true">10.18.</strong> CircularQueue</a></li><li class="chapter-item expanded "><a href="../classes/directory.html"><strong aria-hidden="true">10.19.</strong> Directory</a></li><li class="chapter-item expanded "><a href="../classes/stringtable.html"><strong aria-hidden="true">10.20.</strong> StringTable</a></li><li class="chapter-item expanded "><a href="../classes/properties.html"><strong aria-hidden="true">10.21.</strong> Properties</a></li><li class="chapter-item expanded "><a href="../classes/table.html"><strong aria-hidden="true">10.22.</strong> Table</a></li><li class="chapter-item expanded "><a href="../classes/identitytable.html"><strong aria-hidden="true">10.23.</strong> IdentityTable</a></li><li class="chapter-item expanded "><a href="../classes/relation.html"><strong aria-hidden="true">10.24.</strong> Relation</a></li><li class="chapter-item expanded "><a href="../classes/bag.html"><strong aria-hidden="true">10.25.</strong> Bag</a></li><li class="chapter-item expanded "><a href="../classes/set.html"><strong aria-hidden="true">10.26.</strong> Set</a></li><li class="chapter-item expanded "><a href="../classes/stem.html"><strong aria-hidden="true">10.27.</strong> Stem</a></li><li class="chapter-item expanded "><a href="../classes/datetime.html"><strong aria-hidden="true">10.28.</strong> DateTime</a></li><li class="chapter-item expanded "><a href="../classes/timespan.html"><strong aria-hidden="true">10.29.</strong> TimeSpan</a></li><li class="chapter-item expanded "><a href="../classes/comparable.html"><strong aria-hidden="true">10.30.</strong> Comparable</a></li><li class="chapter-item expanded "><a href="../classes/orderable.html"><strong aria-hidden="true">10.31.</strong> Orderable</a></li><li class="chapter-item expanded "><a href="../classes/comparators.html"><strong aria-hidden="true">10.32.</strong> Comparators</a></li><li class="chapter-item expanded "><a href="../classes/mutablebuffer.html" class="active"><strong aria-hidden="true">10.33.</strong> MutableBuffer</a></li><li class="chapter-item expanded "><a href="../classes/buffer.html"><strong aria-hidden="true">10.34.</strong> Buffer</a></li><li class="chapter-item expanded "><a href="../classes/pointer.html"><strong aria-hidden="true">10.35.</strong> Pointer</a></li><li class="chapter-item expanded "><a href="../classes/weakreference.html"><strong aria-hidden="true">10.36.</strong> WeakReference</a></li><li class="chapter-item expanded "><a href="../classes/variablereference.html"><strong aria-hidden="true">10.37.</strong> VariableReference</a></li><li class="chapter-item expanded "><a href="../classes/file.html"><strong aria-hidden="true">10.38.</strong> File</a></li><li class="chapter-item expanded "><a href="../classes/rexxcontext.html"><strong aria-hidden="true">10.39.</strong> RexxContext</a></li><li class="chapter-item expanded "><a href="../classes/stackframe.html"><strong aria-hidden="true">10.40.</strong> StackFrame</a></li><li class="chapter-item expanded "><a href="../classes/rexxinfo.html"><strong aria-hidden="true">10.41.</strong> RexxInfo</a></li><li class="chapter-item expanded "><a href="../classes/traceobject.html"><strong aria-hidden="true">10.42.</strong> TraceObject</a></li><li class="chapter-item expanded "><a href="../classes/validate.html"><strong aria-hidden="true">10.43.</strong> Validate</a></li><li class="chapter-item expanded "><a href="../classes/singleton.html"><strong aria-hidden="true">10.44.</strong> Singleton</a></li><li class="chapter-item expanded "><a href="../classes/alarm.html"><strong aria-hidden="true">10.45.</strong> Alarm</a></li><li class="chapter-item expanded "><a href="../classes/ticker.html"><strong aria-hidden="true">10.46.</strong> Ticker</a></li><li class="chapter-item expanded "><a href="../classes/monitor.html"><strong aria-hidden="true">10.47.</strong> Monitor</a></li><li class="chapter-item expanded "><a href="../classes/eventsemaphore.html"><strong aria-hidden="true">10.48.</strong> EventSemaphore</a></li><li class="chapter-item expanded "><a href="../classes/mutexsemaphore.html"><strong aria-hidden="true">10.49.</strong> MutexSemaphore</a></li><li class="chapter-item expanded "><a href="../classes/commandhandler.html"><strong aria-hidden="true">10.50.</strong> CommandHandler</a></li><li class="chapter-item expanded "><a href="../classes/nativecommandhandler.html"><strong aria-hidden="true">10.51.</strong> NativeCommandHandler</a></li><li class="chapter-item expanded "><a href="../classes/commandcontext.html"><strong aria-hidden="true">10.52.</strong> CommandContext</a></li><li class="chapter-item expanded "><a href="../classes/commandinput.html"><strong aria-hidden="true">10.53.</strong> CommandInput</a></li><li class="chapter-item expanded "><a href="../classes/commandoutput.html"><strong aria-hidden="true">10.54.</strong> CommandOutput</a></li><li class="chapter-item expanded "><a href="../classes/rexxqueue.html"><strong aria-hidden="true">10.55.</strong> RexxQueue</a></li><li class="chapter-item expanded "><a href="../classes/supplier.html"><strong aria-hidden="true">10.56.</strong> Supplier</a></li><li class="chapter-item expanded "><a href="../classes/streamsupplier.html"><strong aria-hidden="true">10.57.</strong> StreamSupplier</a></li><li class="chapter-item expanded "><a href="../classes/regularexpression.html"><strong aria-hidden="true">10.58.</strong> RegularExpression</a></li></ol></li><li class="chapter-item expanded "><a href="../builtins/index.html"><strong aria-hidden="true">11.</strong> Built-in functions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../builtins/abbrev.html"><strong aria-hidden="true">11.1.</strong> ABBREV</a></li><li class="chapter-item expanded "><a href="../builtins/abs.html"><strong aria-hidden="true">11.2.</strong> ABS</a></li><li class="chapter-item expanded "><a href="../builtins/address.html"><strong aria-hidden="true">11.3.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../builtins/arg.html"><strong aria-hidden="true">11.4.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../builtins/b2x.html"><strong aria-hidden="true">11.5.</strong> B2X</a></li><li class="chapter-item expanded "><a href="../builtins/beep.html"><strong aria-hidden="true">11.6.</strong> BEEP</a></li><li class="chapter-item expanded "><a href="../builtins/bitand.html"><strong aria-hidden="true">11.7.</strong> BITAND</a></li><li class="chapter-item expanded "><a href="../builtins/bitor.html"><strong aria-hidden="true">11.8.</strong> BITOR</a></li><li class="chapter-item expanded "><a href="../builtins/bitxor.html"><strong aria-hidden="true">11.9.</strong> BITXOR</a></li><li class="chapter-item expanded "><a href="../builtins/c2d.html"><strong aria-hidden="true">11.10.</strong> C2D</a></li><li class="chapter-item expanded "><a href="../builtins/c2x.html"><strong aria-hidden="true">11.11.</strong> C2X</a></li><li class="chapter-item expanded "><a href="../builtins/center.html"><strong aria-hidden="true">11.12.</strong> CENTER</a></li><li class="chapter-item expanded "><a href="../builtins/changestr.html"><strong aria-hidden="true">11.13.</strong> CHANGESTR</a></li><li class="chapter-item expanded "><a href="../builtins/charin.html"><strong aria-hidden="true">11.14.</strong> CHARIN</a></li><li class="chapter-item expanded "><a href="../builtins/charout.html"><strong aria-hidden="true">11.15.</strong> CHAROUT</a></li><li class="chapter-item expanded "><a href="../builtins/chars.html"><strong aria-hidden="true">11.16.</strong> CHARS</a></li><li class="chapter-item expanded "><a href="../builtins/compare.html"><strong aria-hidden="true">11.17.</strong> COMPARE</a></li><li class="chapter-item expanded "><a href="../builtins/condition.html"><strong aria-hidden="true">11.18.</strong> CONDITION</a></li><li class="chapter-item expanded "><a href="../builtins/copies.html"><strong aria-hidden="true">11.19.</strong> COPIES</a></li><li class="chapter-item expanded "><a href="../builtins/countstr.html"><strong aria-hidden="true">11.20.</strong> COUNTSTR</a></li><li class="chapter-item expanded "><a href="../builtins/d2c.html"><strong aria-hidden="true">11.21.</strong> D2C</a></li><li class="chapter-item expanded "><a href="../builtins/d2x.html"><strong aria-hidden="true">11.22.</strong> D2X</a></li><li class="chapter-item expanded "><a href="../builtins/datatype.html"><strong aria-hidden="true">11.23.</strong> DATATYPE</a></li><li class="chapter-item expanded "><a href="../builtins/date.html"><strong aria-hidden="true">11.24.</strong> DATE</a></li><li class="chapter-item expanded "><a href="../builtins/delstr.html"><strong aria-hidden="true">11.25.</strong> DELSTR</a></li><li class="chapter-item expanded "><a href="../builtins/delword.html"><strong aria-hidden="true">11.26.</strong> DELWORD</a></li><li class="chapter-item expanded "><a href="../builtins/digits.html"><strong aria-hidden="true">11.27.</strong> DIGITS</a></li><li class="chapter-item expanded "><a href="../builtins/directory.html"><strong aria-hidden="true">11.28.</strong> DIRECTORY</a></li><li class="chapter-item expanded "><a href="../builtins/endlocal.html"><strong aria-hidden="true">11.29.</strong> ENDLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/errortext.html"><strong aria-hidden="true">11.30.</strong> ERRORTEXT</a></li><li class="chapter-item expanded "><a href="../builtins/filespec.html"><strong aria-hidden="true">11.31.</strong> FILESPEC</a></li><li class="chapter-item expanded "><a href="../builtins/form.html"><strong aria-hidden="true">11.32.</strong> FORM</a></li><li class="chapter-item expanded "><a href="../builtins/format.html"><strong aria-hidden="true">11.33.</strong> FORMAT</a></li><li class="chapter-item expanded "><a href="../builtins/fuzz.html"><strong aria-hidden="true">11.34.</strong> FUZZ</a></li><li class="chapter-item expanded "><a href="../builtins/gc.html"><strong aria-hidden="true">11.35.</strong> GC</a></li><li class="chapter-item expanded "><a href="../builtins/insert.html"><strong aria-hidden="true">11.36.</strong> INSERT</a></li><li class="chapter-item expanded "><a href="../builtins/lastpos.html"><strong aria-hidden="true">11.37.</strong> LASTPOS</a></li><li class="chapter-item expanded "><a href="../builtins/left.html"><strong aria-hidden="true">11.38.</strong> LEFT</a></li><li class="chapter-item expanded "><a href="../builtins/length.html"><strong aria-hidden="true">11.39.</strong> LENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/linein.html"><strong aria-hidden="true">11.40.</strong> LINEIN</a></li><li class="chapter-item expanded "><a href="../builtins/lineout.html"><strong aria-hidden="true">11.41.</strong> LINEOUT</a></li><li class="chapter-item expanded "><a href="../builtins/lines.html"><strong aria-hidden="true">11.42.</strong> LINES</a></li><li class="chapter-item expanded "><a href="../builtins/lower.html"><strong aria-hidden="true">11.43.</strong> LOWER</a></li><li class="chapter-item expanded "><a href="../builtins/max.html"><strong aria-hidden="true">11.44.</strong> MAX</a></li><li class="chapter-item expanded "><a href="../builtins/min.html"><strong aria-hidden="true">11.45.</strong> MIN</a></li><li class="chapter-item expanded "><a href="../builtins/overlay.html"><strong aria-hidden="true">11.46.</strong> OVERLAY</a></li><li class="chapter-item expanded "><a href="../builtins/pos.html"><strong aria-hidden="true">11.47.</strong> POS</a></li><li class="chapter-item expanded "><a href="../builtins/qualify.html"><strong aria-hidden="true">11.48.</strong> QUALIFY</a></li><li class="chapter-item expanded "><a href="../builtins/queued.html"><strong aria-hidden="true">11.49.</strong> QUEUED</a></li><li class="chapter-item expanded "><a href="../builtins/random.html"><strong aria-hidden="true">11.50.</strong> RANDOM</a></li><li class="chapter-item expanded "><a href="../builtins/reverse.html"><strong aria-hidden="true">11.51.</strong> REVERSE</a></li><li class="chapter-item expanded "><a href="../builtins/right.html"><strong aria-hidden="true">11.52.</strong> RIGHT</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncadd.html"><strong aria-hidden="true">11.53.</strong> RXFUNCADD</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncdrop.html"><strong aria-hidden="true">11.54.</strong> RXFUNCDROP</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncquery.html"><strong aria-hidden="true">11.55.</strong> RXFUNCQUERY</a></li><li class="chapter-item expanded "><a href="../builtins/rxqueue.html"><strong aria-hidden="true">11.56.</strong> RXQUEUE</a></li><li class="chapter-item expanded "><a href="../builtins/setlocal.html"><strong aria-hidden="true">11.57.</strong> SETLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/sign.html"><strong aria-hidden="true">11.58.</strong> SIGN</a></li><li class="chapter-item expanded "><a href="../builtins/sourceline.html"><strong aria-hidden="true">11.59.</strong> SOURCELINE</a></li><li class="chapter-item expanded "><a href="../builtins/space.html"><strong aria-hidden="true">11.60.</strong> SPACE</a></li><li class="chapter-item expanded "><a href="../builtins/stream.html"><strong aria-hidden="true">11.61.</strong> STREAM</a></li><li class="chapter-item expanded "><a href="../builtins/strip.html"><strong aria-hidden="true">11.62.</strong> STRIP</a></li><li class="chapter-item expanded "><a href="../builtins/substr.html"><strong aria-hidden="true">11.63.</strong> SUBSTR</a></li><li class="chapter-item expanded "><a href="../builtins/subword.html"><strong aria-hidden="true">11.64.</strong> SUBWORD</a></li><li class="chapter-item expanded "><a href="../builtins/symbol.html"><strong aria-hidden="true">11.65.</strong> SYMBOL</a></li><li class="chapter-item expanded "><a href="../builtins/time.html"><strong aria-hidden="true">11.66.</strong> TIME</a></li><li class="chapter-item expanded "><a href="../builtins/trace.html"><strong aria-hidden="true">11.67.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../builtins/translate.html"><strong aria-hidden="true">11.68.</strong> TRANSLATE</a></li><li class="chapter-item expanded "><a href="../builtins/trunc.html"><strong aria-hidden="true">11.69.</strong> TRUNC</a></li><li class="chapter-item expanded "><a href="../builtins/upper.html"><strong aria-hidden="true">11.70.</strong> UPPER</a></li><li class="chapter-item expanded "><a href="../builtins/userid.html"><strong aria-hidden="true">11.71.</strong> USERID</a></li><li class="chapter-item expanded "><a href="../builtins/value.html"><strong aria-hidden="true">11.72.</strong> VALUE</a></li><li class="chapter-item expanded "><a href="../builtins/var.html"><strong aria-hidden="true">11.73.</strong> VAR</a></li><li class="chapter-item expanded "><a href="../builtins/verify.html"><strong aria-hidden="true">11.74.</strong> VERIFY</a></li><li class="chapter-item expanded "><a href="../builtins/word.html"><strong aria-hidden="true">11.75.</strong> WORD</a></li><li class="chapter-item expanded "><a href="../builtins/wordindex.html"><strong aria-hidden="true">11.76.</strong> WORDINDEX</a></li><li class="chapter-item expanded "><a href="../builtins/wordlength.html"><strong aria-hidden="true">11.77.</strong> WORDLENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/wordpos.html"><strong aria-hidden="true">11.78.</strong> WORDPOS</a></li><li class="chapter-item expanded "><a href="../builtins/words.html"><strong aria-hidden="true">11.79.</strong> WORDS</a></li><li class="chapter-item expanded "><a href="../builtins/x2b.html"><strong aria-hidden="true">11.80.</strong> X2B</a></li><li class="chapter-item expanded "><a href="../builtins/x2c.html"><strong aria-hidden="true">11.81.</strong> X2C</a></li><li class="chapter-item expanded "><a href="../builtins/x2d.html"><strong aria-hidden="true">11.82.</strong> X2D</a></li><li class="chapter-item expanded "><a href="../builtins/xrange.html"><strong aria-hidden="true">11.83.</strong> XRANGE</a></li></ol></li><li class="chapter-item expanded "><a href="../deviations.html"><strong aria-hidden="true">12.</strong> Deviations</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The interrexx Language Specification</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="mutablebuffer"><a class="header" href="#mutablebuffer">MutableBuffer</a></h1>
+<p class="references">rexxref: Builtin Classes &gt; Utility Classes &gt; MutableBuffer Class; Builtin Classes &gt; Utility Classes &gt; MutableBuffer Class &gt; new (Class Method); Builtin Classes &gt; Utility Classes &gt; MutableBuffer Class &gt; []; Builtin Classes &gt; Utility Classes &gt; MutableBuffer Class &gt; []=; Builtin Classes &gt; Utility Classes &gt; MutableBuffer Class &gt; append; Builtin Classes &gt; Utility Classes &gt; MutableBuffer Class &gt; caselessChangeStr; Builtin Classes &gt; Utility Classes &gt; MutableBuffer Class &gt; caselessContains; Builtin Classes &gt; Utility Classes &gt; MutableBuffer Class &gt; caselessContainsWord; Builtin Classes &gt; Utility Classes &gt; MutableBuffer Class &gt; caselessCountStr; Builtin Classes &gt; Utility Classes &gt; MutableBuffer Class &gt; caselessEndsWith; Builtin Classes &gt; Utility Classes &gt; MutableBuffer Class &gt; caselessLastPos; Builtin Classes &gt; Utility Classes &gt; MutableBuffer Class &gt; caselessMatch; Builtin Classes &gt; Utility Classes &gt; MutableBuffer Class &gt; caselessMatchChar; Builtin Classes &gt; Utility Classes &gt; MutableBuffer Class &gt; caselessPos; Builtin Classes &gt; Utility Classes &gt; MutableBuffer Class &gt; caselessStartsWith; Builtin Classes &gt; Utility Classes &gt; MutableBuffer Class &gt; caselessWordPos; Builtin Classes &gt; Utility Classes &gt; MutableBuffer Class &gt; changeStr; Builtin Classes &gt; Utility Classes &gt; MutableBuffer Class &gt; contains; Builtin Classes &gt; Utility Classes &gt; MutableBuffer Class &gt; containsWord; Builtin Classes &gt; Utility Classes &gt; MutableBuffer Class &gt; countStr; Builtin Classes &gt; Utility Classes &gt; MutableBuffer Class &gt; delete / delStr; Builtin Classes &gt; Utility Classes &gt; MutableBuffer Class &gt; delWord; Builtin Classes &gt; Utility Classes &gt; MutableBuffer Class &gt; endsWith; Builtin Classes &gt; Utility Classes &gt; MutableBuffer Class &gt; getBufferSize; Builtin Classes &gt; Utility Classes &gt; MutableBuffer Class &gt; insert; Builtin Classes &gt; Utility Classes &gt; MutableBuffer Class &gt; lastPos; Builtin Classes &gt; Utility Classes &gt; MutableBuffer Class &gt; length; Builtin Classes &gt; Utility Classes &gt; MutableBuffer Class &gt; lower; Builtin Classes &gt; Utility Classes &gt; MutableBuffer Class &gt; makeArray; Builtin Classes &gt; Utility Classes &gt; MutableBuffer Class &gt; match; Builtin Classes &gt; Utility Classes &gt; MutableBuffer Class &gt; matchChar; Builtin Classes &gt; Utility Classes &gt; MutableBuffer Class &gt; overlay; Builtin Classes &gt; Utility Classes &gt; MutableBuffer Class &gt; pos; Builtin Classes &gt; Utility Classes &gt; MutableBuffer Class &gt; replaceAt; Builtin Classes &gt; Utility Classes &gt; MutableBuffer Class &gt; setBufferSize; Builtin Classes &gt; Utility Classes &gt; MutableBuffer Class &gt; setText; Builtin Classes &gt; Utility Classes &gt; MutableBuffer Class &gt; space; Builtin Classes &gt; Utility Classes &gt; MutableBuffer Class &gt; startsWith; Builtin Classes &gt; Utility Classes &gt; MutableBuffer Class &gt; string; Builtin Classes &gt; Utility Classes &gt; MutableBuffer Class &gt; subChar; Builtin Classes &gt; Utility Classes &gt; MutableBuffer Class &gt; substr; Builtin Classes &gt; Utility Classes &gt; MutableBuffer Class &gt; subWord; Builtin Classes &gt; Utility Classes &gt; MutableBuffer Class &gt; subWords; Builtin Classes &gt; Utility Classes &gt; MutableBuffer Class &gt; translate; Builtin Classes &gt; Utility Classes &gt; MutableBuffer Class &gt; upper; Builtin Classes &gt; Utility Classes &gt; MutableBuffer Class &gt; verify; Builtin Classes &gt; Utility Classes &gt; MutableBuffer Class &gt; word; Builtin Classes &gt; Utility Classes &gt; MutableBuffer Class &gt; wordIndex; Builtin Classes &gt; Utility Classes &gt; MutableBuffer Class &gt; wordLength; Builtin Classes &gt; Utility Classes &gt; MutableBuffer Class &gt; wordPos; Builtin Classes &gt; Utility Classes &gt; MutableBuffer Class &gt; words</p>
+<p class="deviations">Deviations: D4, D9, D109</p>
+<p>A <code>MutableBuffer</code> holds a string of characters that a program changes in
+place. Where a <code>String</code> is a value, so that every operation answers a new
+string, a buffer is an object with an identity: <code>append</code>, <code>insert</code>, <code>upper</code>
+and the other changing methods alter the characters it holds and answer the
+buffer itself. Beside the characters a buffer has a size, the number of
+characters it can hold before it has to grow, which a program can read and
+set. A buffer is no <code>String</code>: it understands a part of the <code>String</code> methods,
+and for those it states only what differs, the rest being linked to the page
+that owns it.</p>
+<h2 id="the-class"><a class="header" href="#the-class">The class</a></h2>
+<div class="rule" id="r-class.mutablebuffer.creation"><a href="#r-class.mutablebuffer.creation">[class.mutablebuffer.creation]</a></div>
+<p><code>MutableBuffer</code> is a class whose only superclass is <code>Object</code>; it inherits no
+mixin class (<a href="index.html#r-class.index.hierarchy">the hierarchy rule</a>), and it is not a
+subclass of <a href="string.html"><code>String</code></a>. It defines the instance methods of this
+page, and <code>new</code> is <a href="#r-class.mutablebuffer.new">stated below</a>. A message that
+names a <code>String</code> method the buffer does not define, such as <code>left</code> or
+<code>abbrev</code>, and an arithmetic operator sent to a buffer, raise <code>SYNTAX 97.1</code>
+(<a href="index.html#r-class.index.errors">the error rule</a>). The comparison operators and the
+joining operators are covered by <a href="#r-class.mutablebuffer.comparison">the comparison
+rule</a> and <a href="#r-class.mutablebuffer.string">the string value
+rule</a>.</p>
+<pre><code class="language-rexx">b = .mutablebuffer~new('abc')
+say b~class~id b~isA(.string) b~isInstanceOf(.mutablebuffer)
+do c over .mutablebuffer~superclasses
+  say c~id
+end
+say b~hasMethod('APPEND') b~hasMethod('LEFT') b~hasMethod('ABBREV')
+call try 'b~left(2)'
+call try 'b + 1'
+call try 'b~abbrev("a")'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">MutableBuffer 0 1
+Object
+1 0 0
+b~left(2) =&gt; 97.1
+b + 1 =&gt; 97.1
+b~abbrev("a") =&gt; 97.1
+</code></pre>
+<div class="rule" id="r-class.mutablebuffer.new"><a href="#r-class.mutablebuffer.new">[class.mutablebuffer.new]</a></div>
+<p><code>new</code> makes a buffer from at most two arguments, and sends the new buffer
+<code>init</code> with the arguments after them (<a href="index.html#r-class.index.new">the new rule</a>). The
+first argument, the text, is read for its string value as <a href="index.html#r-class.index.string">the argument
+rule</a> says, and defaults to the null string; an object
+with no string value, <code>.nil</code> included, raises <code>SYNTAX 88.909</code>. The second
+argument, the size, is read after the first and must be a non-negative whole
+number, or the call raises <code>SYNTAX 93.923</code>; it defaults to 256 when it is
+omitted. A whole-number argument of a method of this class is read as that of
+a builtin is (<a href="../conventions.html#r-conv.whole.form">the form rule</a>, <a href="../conventions.html#r-conv.whole.digits">the digits
+rule</a>), so NUMERIC DIGITS plays no part, and only the
+error code differs. The buffer holds the text and has the size given, except
+that a size smaller than the length of the text is raised to that length. A
+subclass receiver gets an instance of itself. Both arguments are checked
+before <code>init</code> is sent, so a failing <code>new</code> runs no <code>init</code>, and the reading of
+the first argument comes before the check of the second.</p>
+<pre><code class="language-rexx">call show .mutablebuffer~new
+call show .mutablebuffer~new('hello')
+call show .mutablebuffer~new('hello', 10)
+call show .mutablebuffer~new(, 40)
+call show .mutablebuffer~new('hello', 2)
+call show .mutablebuffer~new('hello', 0)
+call show .mutablebuffer~new(copies('x', 300))
+call try ".mutablebuffer~new('a', 'x')"
+call try ".mutablebuffer~new('a', -1)"
+call try ".mutablebuffer~new('a', 1.5)"
+call try ".mutablebuffer~new(.nil)"
+call try ".mutablebuffer~new(.nil, 'x')"
+call try ".mutablebuffer~new('a', 1, 2)"
+exit
+show: procedure
+  b = arg(1)
+  say '&lt;' || left(b~string, 8) || '&gt;' b~length b~getBufferSize
+  return
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">&lt;        &gt; 0 256
+&lt;hello   &gt; 5 256
+&lt;hello   &gt; 5 10
+&lt;        &gt; 0 40
+&lt;hello   &gt; 5 5
+&lt;hello   &gt; 5 5
+&lt;xxxxxxxx&gt; 300 300
+.mutablebuffer~new('a', 'x') =&gt; 93.923
+.mutablebuffer~new('a', -1) =&gt; 93.923
+.mutablebuffer~new('a', 1.5) =&gt; 93.923
+.mutablebuffer~new(.nil) =&gt; 88.909
+.mutablebuffer~new(.nil, 'x') =&gt; 88.909
+.mutablebuffer~new('a', 1, 2) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.mutablebuffer.new.init"><a href="#r-class.mutablebuffer.new.init">[class.mutablebuffer.new.init]</a></div>
+<p>The buffer already holds its text and has its size when <code>init</code> is sent, and
+<code>init</code> gets no argument unless <code>new</code> had more than two: it gets those after
+the second, in order. The <code>init</code> of <code>Object</code> takes no argument, so a call of
+<code>new</code> with a third argument raises <code>SYNTAX 93.902</code> unless a subclass declares
+an <code>init</code> that takes it. An <code>init</code> of a subclass need not call its superclass:
+the buffer is complete without it. <code>init</code> sent to a buffer that exists accepts
+no argument either, and leaves it as it was.</p>
+<pre><code class="language-rexx">call try ".keep~new('abc', 40)"
+call try ".keep~new('abc', 40, 'x', 'y')"
+call try ".skip~new('abc')~string"
+call try ".keep~new('abc', 'x')"
+call try ".mutablebuffer~new('abc', 5, 'x')"
+b = .mutablebuffer~new('abc', 9)
+b~init
+say b~string b~getBufferSize
+call try 'b~init(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r~class~id r~string
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class keep subclass mutablebuffer
+::method init
+  say 'init got' arg() 'content' self~string 'size' self~getBufferSize
+::class skip subclass mutablebuffer
+::method init
+  say 'init does not call its superclass'
+</code></pre>
+<pre><code class="language-output">init got 0 content abc size 40
+.keep~new('abc', 40) =&gt; KEEP abc
+init got 2 content abc size 40
+.keep~new('abc', 40, 'x', 'y') =&gt; KEEP abc
+init does not call its superclass
+.skip~new('abc')~string =&gt; String abc
+.keep~new('abc', 'x') =&gt; 93.923
+.mutablebuffer~new('abc', 5, 'x') =&gt; 93.902
+abc 9
+b~init(1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.mutablebuffer.string"><a href="#r-class.mutablebuffer.string">[class.mutablebuffer.string]</a></div>
+<p><code>string</code> answers a <code>String</code> with the characters the buffer holds at that
+moment, and takes no argument: one raises <code>SYNTAX 93.902</code>. A string taken
+earlier does not follow later changes to the buffer. The string value of the
+buffer, which <code>say</code>, the joining operators and the arguments of the other
+methods use, is found as <a href="index.html#r-class.index.string">the string-value rule</a> says,
+and is the same text, since a buffer answers <code>makeString</code> with its characters.</p>
+<pre><code class="language-rexx">b = .mutablebuffer~new('abc')
+say b b~string b~makeString b~length
+s = b~string
+b~append('def')
+say s b~string
+say b || '!' '&lt;' || b || '&gt;' length(b) left(b, 2)
+say b~string~class~id b~makeString~class~id
+say ('abcdef' = b) (b = 'abcdef') (b = b) (b == b~copy) (b \== b~copy)
+call try 'b~string(1)'
+call try 'b~makeString(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">abc abc abc 3
+abc abcdef
+abcdef! &lt;abcdef&gt; 6 ab
+String String
+1 0 1 0 1
+b~string(1) =&gt; 93.902
+b~makeString(1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.mutablebuffer.makestring"><a href="#r-class.mutablebuffer.makestring">[class.mutablebuffer.makestring]</a></div>
+<p><code>makeString</code> answers a <code>String</code> with the characters of the buffer, as
+<code>string</code> does, and takes no argument (<code>SYNTAX 93.902</code>). The <code>request</code> of
+<code>Object</code> answers it for <code>STRING</code>, so a subclass that declares its own
+<code>makeString</code> decides what <code>say b</code>, <code>b || x</code> and a buffer given as an argument
+read, and an override of <code>string</code> changes only what <code>string</code> answers.
+<code>request('ARRAY')</code> answers an array, that of
+<a href="#r-class.mutablebuffer.makearray"><code>makeArray</code></a>. Whether two calls answer one
+string object or two is not specified (<a href="#r-class.mutablebuffer.deviation.4">Deviation
+4</a>).</p>
+<pre><code class="language-rexx">b = .shown~new('abc')
+say b '|' b~string '|' b~makeString '|' 'xMADEx'~pos(b)
+say b || '!' length(b) b~length
+a = .mutablebuffer~new('abc')
+say a~request('STRING') a~request('ARRAY')~class~id
+::class shown subclass mutablebuffer
+::method makestring
+  return 'MADE'
+::method string
+  return 'STR'
+</code></pre>
+<pre><code class="language-output">MADE | STR | MADE | 2
+MADE! 4 3
+abc Array
+</code></pre>
+<div class="rule" id="r-class.mutablebuffer.comparison"><a href="#r-class.mutablebuffer.comparison">[class.mutablebuffer.comparison]</a></div>
+<p>A buffer compares as an object: <code>=</code>, <code>==</code>, <code>\=</code>, <code>\==</code>, <code>&lt;&gt;</code> and <code>&gt;&lt;</code> are the
+methods of <code>Object</code> (<a href="object.html#r-class.object.eq">the equality rule</a>), which find two
+buffers equal only when they are the same buffer, however alike their
+characters are, and a buffer is never equal to a string when the buffer is the
+receiver. The other comparison methods, <code>&lt;</code>, <code>&gt;</code>, <code>&lt;=</code>, <code>&gt;=</code>, <code>&lt;&lt;</code> and <code>&gt;&gt;</code>
+with their negations, are not defined, and raise <code>SYNTAX 97.1</code>. A string that
+is the receiver reads the string value of its argument, so <code>'abc' = b</code> and
+<code>'abc' == b</code> are true when the buffer holds <code>abc</code> (<a href="string.html#r-class.string.operators">the string
+rules</a>).</p>
+<pre><code class="language-rexx">a = .mutablebuffer~new('abc')
+b = .mutablebuffer~new('abc')
+say (a = a) (a == a) (a = b) (a == b) (a \= b) (a &lt;&gt; b) (a \== b) (a &gt;&lt; b)
+say ('abc' = a) ('abc' == a) (a = 'abc') (a == 'abc')
+say ('abd' &gt; a) ('abd' &lt;&lt; a) ('abd' &gt;&gt; a)
+call try 'rr = a &lt; b'
+call try "rr = a &lt; 'abd'"
+call try 'rr = a &gt; b'
+call try 'rr = a &lt;&lt; b'
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  say arg(1) '=&gt; no error'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">1 1 0 0 1 1 1 1
+1 1 0 0
+1 0 1
+rr = a &lt; b =&gt; 97.1
+rr = a &lt; 'abd' =&gt; 97.1
+rr = a &gt; b =&gt; 97.1
+rr = a &lt;&lt; b =&gt; 97.1
+</code></pre>
+<div class="rule" id="r-class.mutablebuffer.copy"><a href="#r-class.mutablebuffer.copy">[class.mutablebuffer.copy]</a></div>
+<p><code>copy</code> answers a new buffer of the same class, holding the same characters and
+having the same size, with the object variables of the receiver copied as <a href="object.html#r-class.object.copy">the
+copy rule</a> says. The copy is independent: a change to
+either buffer does not reach the other, and the size of each grows by itself.
+<code>copy</code> sends no <code>init</code> and no other message, takes no argument
+(<code>SYNTAX 93.902</code>), and answers an instance of the class of the receiver, a
+subclass included.</p>
+<pre><code class="language-rexx">b = .tagged~new('abc', 30)
+b~tag = 'T1'
+c = b~copy
+say c~class~id c~string c~tag c~length c~getBufferSize
+c~append('d')
+c~tag = 'T2'
+say b~string b~tag '|' c~string c~tag
+say (b == c) (c~copy~class~id)
+call try 'b~copy(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class tagged subclass mutablebuffer
+::attribute tag
+::method init
+  say 'init'
+  self~tag = 'none'
+</code></pre>
+<pre><code class="language-output">init
+TAGGED abc T1 3 30
+abc T1 | abcd T2
+0 TAGGED
+b~copy(1) =&gt; 93.902
+</code></pre>
+<h2 id="size"><a class="header" href="#size">Size</a></h2>
+<div class="rule" id="r-class.mutablebuffer.size"><a href="#r-class.mutablebuffer.size">[class.mutablebuffer.size]</a></div>
+<p>A buffer has a length, the number of characters it holds, and a size, the number
+of characters it can hold; the size is never smaller than the length. Every
+change that makes the buffer longer than its size raises the size to the larger
+of the new length and twice the old size; <code>append</code> makes one such change for
+each argument, in turn. No other method changes the size but
+<a href="#r-class.mutablebuffer.setbuffersize"><code>setBufferSize</code></a>, so deleting characters
+leaves it as it was. <code>copy</code> gives the copy the size of the original.</p>
+<pre><code class="language-rexx">b = .mutablebuffer~new('abc', 5)
+say b~length b~getBufferSize
+b~append('de')
+say b~length b~getBufferSize
+b~append('f')
+say b~length b~getBufferSize
+b~append(copies('x', 20))
+say b~length b~getBufferSize
+b~delete(1, 20)
+say b~length b~getBufferSize
+b = .mutablebuffer~new
+b~setText(copies('y', 300))
+say b~length b~getBufferSize
+b = .mutablebuffer~new('abcdefgh', 12)
+b~setBufferSize(5)
+say b~string b~length b~getBufferSize
+b~setBufferSize(30)
+say b~string b~length b~getBufferSize
+b~setBufferSize(0)
+say '&lt;' || b~string || '&gt;' b~length b~getBufferSize
+b = .mutablebuffer~new('abc', 10)
+c = b~copy
+c~append(copies('z', 11))
+say b~getBufferSize c~getBufferSize
+b = .mutablebuffer~new('a', 1)
+b~append('bc', 'de')
+say b~length b~getBufferSize
+c = .mutablebuffer~new('a', 1)
+c~append('bcde')
+say c~length c~getBufferSize
+</code></pre>
+<pre><code class="language-output">3 5
+5 5
+6 10
+26 26
+6 26
+300 512
+abcde 5 5
+abcde 5 30
+&lt;&gt; 0 12
+10 20
+5 6
+5 5
+</code></pre>
+<div class="rule" id="r-class.mutablebuffer.getbuffersize"><a href="#r-class.mutablebuffer.getbuffersize">[class.mutablebuffer.getbuffersize]</a></div>
+<p><code>getBufferSize</code> answers the size of the buffer as a whole number, and takes no
+argument (<code>SYNTAX 93.902</code>). The size of a new buffer is given by
+<a href="#r-class.mutablebuffer.new"><code>new</code></a>, and later changed as <a href="#r-class.mutablebuffer.size">the size
+rule</a> says.</p>
+<pre><code class="language-rexx">say .mutablebuffer~new~getBufferSize,
+  .mutablebuffer~new('abc', 7)~getBufferSize,
+  .mutablebuffer~new('abc', 2)~getBufferSize
+b = .mutablebuffer~new('abc', 7)
+say b~getBufferSize~class~id
+call try 'b~getBufferSize(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'rr =' arg(1)
+  say arg(1) '=&gt; no error'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">256 7 3
+String
+b~getBufferSize(1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.mutablebuffer.setbuffersize"><a href="#r-class.mutablebuffer.setbuffersize">[class.mutablebuffer.setbuffersize]</a></div>
+<p><code>setBufferSize</code> sets the size to its argument, a non-negative whole number
+that is required: none raises <code>SYNTAX 93.903</code>, and a value that is not one
+raises <code>SYNTAX 93.923</code>, a second argument <code>SYNTAX 93.902</code>. The argument is
+read for its string value (<a href="index.html#r-class.index.string">the argument rule</a>). A size
+smaller than the length cuts the text to that many characters, and a larger
+one keeps it. The size 0 empties the buffer and leaves the size as it was. The
+method answers the buffer itself.</p>
+<pre><code class="language-rexx">b = .mutablebuffer~new('abcdef', 20)
+r = b~setBufferSize(4)
+say (r~identityHash == b~identityHash) b~string b~length b~getBufferSize
+b~setBufferSize(9)
+say b~string b~length b~getBufferSize
+b~setBufferSize(1)
+say b~string b~length b~getBufferSize
+call try 'b~setBufferSize'
+call try "b~setBufferSize('x')"
+call try 'b~setBufferSize(-1)'
+call try 'b~setBufferSize(1.5)'
+call try 'b~setBufferSize(1, 2)'
+call try 'b~getBufferSize(1)'
+call try 'b~length(1)'
+say b~string b~length b~getBufferSize
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt; no error'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">1 abcd 4 4
+abcd 4 9
+a 1 1
+b~setBufferSize =&gt; 93.903
+b~setBufferSize('x') =&gt; 93.923
+b~setBufferSize(-1) =&gt; 93.923
+b~setBufferSize(1.5) =&gt; 93.923
+b~setBufferSize(1, 2) =&gt; 93.902
+b~getBufferSize(1) =&gt; 93.902
+b~length(1) =&gt; 93.902
+a 1 1
+</code></pre>
+<div class="rule" id="r-class.mutablebuffer.length"><a href="#r-class.mutablebuffer.length">[class.mutablebuffer.length]</a></div>
+<p><code>length</code> answers the number of characters of the buffer, and takes no argument
+(<code>SYNTAX 93.902</code>); <a href="../builtins/length.html#r-bif.length.method">the builtin rule</a> states what it
+counts.</p>
+<pre><code class="language-rexx">b = .mutablebuffer~new('abc de')
+say b~length b~length~class~id
+b~append('f ')
+say b~length
+b~delete(1, 2)
+say b~length
+call try 'b~length(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'rr =' arg(1)
+  say arg(1) '=&gt; no error'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">6 String
+8
+6
+b~length(1) =&gt; 93.902
+</code></pre>
+<h2 id="changing-the-text"><a class="header" href="#changing-the-text">Changing the text</a></h2>
+<div class="rule" id="r-class.mutablebuffer.append"><a href="#r-class.mutablebuffer.append">[class.mutablebuffer.append]</a></div>
+<p><code>append</code> appends the string value of each of its arguments, from left to
+right, and answers the buffer itself. At least one argument is required
+(<code>SYNTAX 93.903</code>), and an argument that is omitted before the last one present
+raises <code>SYNTAX 93.903</code> too; trailing omitted arguments are ignored. An
+argument is read just before it is appended, so the buffer itself as the
+second argument is appended as it then is, with the first argument already in
+it, and an argument that is omitted, or has no string value (<code>SYNTAX 88.909</code>,
+<code>.nil</code> included), ends the call after the arguments before it were appended
+and before those after it are read. The size grows as <a href="#r-class.mutablebuffer.size">the size
+rule</a> says.</p>
+<pre><code class="language-rexx">b = .mutablebuffer~new('ab')
+r = b~append('c', 'd', 'e')
+say b~string (r~identityHash == b~identityHash)
+b~append(12, 3.50, 1e3)
+say b~string
+b~append('')
+b~append('x', )
+say b~string b~length
+b~append(b)
+say b~string
+-- the second b is read after the first was appended: 30 + 30 + 60
+b~append(b, b)
+say b~length
+call try 'b~append'
+call try "b~append(, 'd')"
+call try "b~append('c', , 'e')"
+call try 'b~append(.nil)'
+say b~length
+call try "b~append('!', .nil)"
+say b~length
+call try 'b~append(.object~new)'
+say b~length
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt; no error'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">abcde 1
+abcde123.501E3
+abcde123.501E3x 15
+abcde123.501E3xabcde123.501E3x
+120
+b~append =&gt; 93.903
+b~append(, 'd') =&gt; 93.903
+b~append('c', , 'e') =&gt; 93.903
+b~append(.nil) =&gt; 88.909
+121
+b~append('!', .nil) =&gt; 88.909
+122
+b~append(.object~new) =&gt; 88.909
+122
+</code></pre>
+<div class="rule" id="r-class.mutablebuffer.settext"><a href="#r-class.mutablebuffer.settext">[class.mutablebuffer.settext]</a></div>
+<p><code>setText</code> replaces the characters of the buffer with the string value of its
+argument, which is required (<code>SYNTAX 93.903</code>; two arguments raise
+<code>SYNTAX 93.902</code>), and answers the buffer itself. The buffer itself as the
+argument leaves it unchanged. An argument without a string value raises
+<code>SYNTAX 88.909</code> and leaves the buffer as it was. The size is not reduced, and
+grows as <a href="#r-class.mutablebuffer.size">the size rule</a> says.</p>
+<pre><code class="language-rexx">b = .mutablebuffer~new('hello', 50)
+r = b~setText('xyz')
+say b~string b~length b~getBufferSize (r~identityHash == b~identityHash)
+b~setText('')
+say '&lt;' || b~string || '&gt;' b~length
+b~setText(copies('q', 60))
+say b~length b~getBufferSize
+b~setText('abc')
+b~setText(b)
+say b~string
+call try 'b~setText'
+call try "b~setText('x', 'y')"
+call try 'b~setText(.nil)'
+say b~string
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt; no error'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">xyz 3 50 1
+&lt;&gt; 0
+60 100
+abc
+b~setText =&gt; 93.903
+b~setText('x', 'y') =&gt; 93.902
+b~setText(.nil) =&gt; 88.909
+abc
+</code></pre>
+<div class="rule" id="r-class.mutablebuffer.brackets"><a href="#r-class.mutablebuffer.brackets">[class.mutablebuffer.brackets]</a></div>
+<p><code>[]</code> answers a <code>String</code> with a part of the buffer: the characters from the
+position given as the first argument, a positive whole number that is
+required, for as many characters as the second argument, a non-negative whole
+number that defaults to 1. It is the method <a href="string.html#r-class.string.brackets"><code>[]</code> of
+<code>String</code></a> applied to the characters of the buffer,
+with its answers and its errors, and leaves the buffer as it was. The brackets
+of a message term <code>b[3, 4]</code> and the method named <code>'[]'</code> are the same.</p>
+<pre><code class="language-rexx">b = .mutablebuffer~new('abcdefghij')
+say b[3] b[3, 4] '&lt;' || b[11] || '&gt;' b[8, 10] '&lt;' || b[2, 0] || '&gt;'
+say b[1.0] b[' 2 ', ' 3 '] b[3]~class~id
+call try 'b[0]'
+call try 'b[-1]'
+call try "b['x']"
+call try 'b[2, -1]'
+call try "b[2, 'x']"
+call try "b~'[]'"
+call try 'b[, 2]'
+call try "b~'[]'(2, 1, 1)"
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">c cdef &lt;&gt; hij &lt;&gt;
+a bcd String
+b[0] =&gt; 93.924
+b[-1] =&gt; 93.924
+b['x'] =&gt; 93.924
+b[2, -1] =&gt; 93.923
+b[2, 'x'] =&gt; 93.923
+b~'[]' =&gt; 93.903
+b[, 2] =&gt; 93.903
+b~'[]'(2, 1, 1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.mutablebuffer.brackets-set"><a href="#r-class.mutablebuffer.brackets-set">[class.mutablebuffer.brackets-set]</a></div>
+<p><code>[]=</code> is the method that an assignment <code>b[n, length] = text</code> sends, with the
+text first: <code>'[]='(text, n, length)</code>. It replaces <code>length</code> characters from the
+position <code>n</code> by the string value of <code>text</code>, and answers the buffer itself. <code>n</code>
+is a positive whole number, and <code>length</code> a non-negative whole number that
+defaults to the length of the text, so that the replacement is as long as the
+text; a <code>length</code> of 0 inserts the text before the position. A replacement that
+reaches past the end of the buffer cuts the buffer there. A position past the
+end of the buffer first fills the gap with blanks. Too many arguments raise
+<code>SYNTAX 93.902</code>. The other checks are made in the order of the arguments, each
+argument being read just before its check: the text, which is required
+(<code>SYNTAX 88.901</code>) and must have a string value (<code>88.909</code>); the position, which
+is required (<code>88.901</code>) and must be a positive whole number (<code>88.912</code>); and the
+length, which must be a non-negative whole number (<code>88.911</code>). A failing call
+leaves the buffer as it was.</p>
+<pre><code class="language-rexx">t = 'abcdefghij'
+call put "b[3] = 'XY'"
+call put "b[3, 1] = 'XY'"
+call put "b[3, 4] = 'X'"
+call put "b[3, 0] = 'X'"
+call put "b[3, 99] = 'X'"
+call put "b[3] = ''"
+call put "b[11] = 'X'"
+call put "b[14] = 'X'"
+call put "b[2, 3] = 5"
+call put "b[0] = 'X'"
+call put "b[-2] = 'X'"
+call put "b['x'] = 'X'"
+call put "b[2, -1] = 'X'"
+call put "b[2, 'x'] = 'X'"
+call put "b[, 1] = 'X'"
+call put "b[2] = .nil"
+call put "b~'[]='('X')"
+call put "b~'[]='"
+call put "b~'[]='('X', 2, 1, 1)"
+call put "b~'[]='('Q', 2)"
+b = .mutablebuffer~new(t)
+r = b~'[]='('Q', 2)
+say r~class~id (r~identityHash == b~identityHash) b~string
+exit
+put:
+  signal on syntax name bad
+  b = .mutablebuffer~new(t)
+  interpret arg(1)
+  say arg(1) '=&gt; &lt;' || b~string || '&gt;'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">b[3] = 'XY' =&gt; &lt;abXYefghij&gt;
+b[3, 1] = 'XY' =&gt; &lt;abXYdefghij&gt;
+b[3, 4] = 'X' =&gt; &lt;abXghij&gt;
+b[3, 0] = 'X' =&gt; &lt;abXcdefghij&gt;
+b[3, 99] = 'X' =&gt; &lt;abX&gt;
+b[3] = '' =&gt; &lt;abcdefghij&gt;
+b[11] = 'X' =&gt; &lt;abcdefghijX&gt;
+b[14] = 'X' =&gt; &lt;abcdefghij   X&gt;
+b[2, 3] = 5 =&gt; &lt;a5efghij&gt;
+b[0] = 'X' =&gt; 88.912
+b[-2] = 'X' =&gt; 88.912
+b['x'] = 'X' =&gt; 88.912
+b[2, -1] = 'X' =&gt; 88.911
+b[2, 'x'] = 'X' =&gt; 88.911
+b[, 1] = 'X' =&gt; 88.901
+b[2] = .nil =&gt; 88.909
+b~'[]='('X') =&gt; 88.901
+b~'[]=' =&gt; 88.901
+b~'[]='('X', 2, 1, 1) =&gt; 93.902
+b~'[]='('Q', 2) =&gt; &lt;aQcdefghij&gt;
+MutableBuffer 1 aQcdefghij
+</code></pre>
+<div class="rule" id="r-class.mutablebuffer.replaceat"><a href="#r-class.mutablebuffer.replaceat">[class.mutablebuffer.replaceat]</a></div>
+<p><code>replaceAt</code> replaces the characters of the buffer from a position, and answers
+the buffer itself. Its arguments are the new text, the position, the length
+and a pad character, and it is the same method as <code>[]=</code> with the arguments in
+the order of <a href="string.html#r-class.string.replaceat">the <code>replaceAt</code> of <code>String</code></a> and with
+a pad: the characters from the position, as many as the length, are replaced
+by the text, the length defaults to the length of the text, a position past
+the end of the buffer first fills the gap with the pad, which defaults to a
+blank, and a length of 0 inserts. Too many arguments raise <code>SYNTAX 93.902</code>.
+The other checks are made as for <code>[]=</code>, in the order of the arguments, with
+the pad last: the text is required (<code>SYNTAX 88.901</code>) and must have a string
+value (<code>88.909</code>), the position is required (<code>88.901</code>) and must be a positive
+whole number (<code>88.912</code>), the length must be a non-negative whole number
+(<code>88.911</code>) and the pad a single character (<code>88.910</code>), the null string
+excluded. A failing call leaves the buffer as it was.</p>
+<pre><code class="language-rexx">t = 'abcdefghij'
+call put "b~replaceAt('XY', 3)"
+call put "b~replaceAt('XY', 3, 1)"
+call put "b~replaceAt('XY', 3, 0)"
+call put "b~replaceAt('XY', 3, 99)"
+call put "b~replaceAt('XY', 3.0, 1.0)"
+call put "b~replaceAt('XY', 11)"
+call put "b~replaceAt('XY', 13)"
+call put "b~replaceAt('XY', 14, 2, '-')"
+call put "b~replaceAt('X', 2, , '*')"
+call put "b~replaceAt('', 2, 3)"
+call put "b~replaceAt"
+call put "b~replaceAt('XY')"
+call put "b~replaceAt(, 2)"
+call put "b~replaceAt('XY', 0)"
+call put "b~replaceAt('XY', 2.5)"
+call put "b~replaceAt('XY', 'x')"
+call put "b~replaceAt('XY', 2, -1)"
+call put "b~replaceAt('XY', 2, 'x')"
+call put "b~replaceAt('XY', 2, 1, '**')"
+call put "b~replaceAt('XY', 2, 1, '')"
+call put "b~replaceAt('XY', 0, -1, '**')"
+call put "b~replaceAt('XY', 2, 1, '*', 5)"
+call put "b~replaceAt(.nil, 0)"
+exit
+put:
+  signal on syntax name bad
+  b = .mutablebuffer~new(t)
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt; &lt;' || b~string || '&gt;' (r~identityHash == b~identityHash)
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">b~replaceAt('XY', 3) =&gt; &lt;abXYefghij&gt; 1
+b~replaceAt('XY', 3, 1) =&gt; &lt;abXYdefghij&gt; 1
+b~replaceAt('XY', 3, 0) =&gt; &lt;abXYcdefghij&gt; 1
+b~replaceAt('XY', 3, 99) =&gt; &lt;abXY&gt; 1
+b~replaceAt('XY', 3.0, 1.0) =&gt; &lt;abXYdefghij&gt; 1
+b~replaceAt('XY', 11) =&gt; &lt;abcdefghijXY&gt; 1
+b~replaceAt('XY', 13) =&gt; &lt;abcdefghij  XY&gt; 1
+b~replaceAt('XY', 14, 2, '-') =&gt; &lt;abcdefghij---XY&gt; 1
+b~replaceAt('X', 2, , '*') =&gt; &lt;aXcdefghij&gt; 1
+b~replaceAt('', 2, 3) =&gt; &lt;aefghij&gt; 1
+b~replaceAt =&gt; 88.901
+b~replaceAt('XY') =&gt; 88.901
+b~replaceAt(, 2) =&gt; 88.901
+b~replaceAt('XY', 0) =&gt; 88.912
+b~replaceAt('XY', 2.5) =&gt; 88.912
+b~replaceAt('XY', 'x') =&gt; 88.912
+b~replaceAt('XY', 2, -1) =&gt; 88.911
+b~replaceAt('XY', 2, 'x') =&gt; 88.911
+b~replaceAt('XY', 2, 1, '**') =&gt; 88.910
+b~replaceAt('XY', 2, 1, '') =&gt; 88.910
+b~replaceAt('XY', 0, -1, '**') =&gt; 88.912
+b~replaceAt('XY', 2, 1, '*', 5) =&gt; 93.902
+b~replaceAt(.nil, 0) =&gt; 88.909
+</code></pre>
+<div class="rule" id="r-class.mutablebuffer.delete"><a href="#r-class.mutablebuffer.delete">[class.mutablebuffer.delete]</a></div>
+<p><code>delete</code> is <code>delStr</code> under another name: it takes the same arguments, gives
+the same answers and errors, deletes the same characters from the buffer and
+answers the buffer itself (<a href="../builtins/delstr.html#r-bif.delstr.method"><code>delStr</code></a> is stated with the
+other changing methods).</p>
+<pre><code class="language-rexx">t = 'abcdefghij'
+do a over .array~of('', '(1)', '(3)', '(3, 2)', '(3, 0)', '(20)', '(2, 20)',,
+    '(0)', '(2, -1)', '(2, 1, 1)', "('x')")
+  call two a
+end
+exit
+two:
+  b1 = .mutablebuffer~new(t)
+  b2 = .mutablebuffer~new(t)
+  r1 = ev('b1~delete' || arg(1))
+  r2 = ev('b2~delStr' || arg(1))
+  say left('delete' || arg(1), 18) r1 (r1 == r2)
+  return
+ev: procedure expose b1 b2
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  if r~identityHash == b1~identityHash | r~identityHash == b2~identityHash,
+    then return '&lt;' || r~string || '&gt; self'
+  return '&lt;' || r~string || '&gt;'
+bad: return 'E' || condition('o')~code
+</code></pre>
+<pre><code class="language-output">delete             &lt;&gt; self 1
+delete(1)          &lt;&gt; self 1
+delete(3)          &lt;ab&gt; self 1
+delete(3, 2)       &lt;abefghij&gt; self 1
+delete(3, 0)       &lt;abcdefghij&gt; self 1
+delete(20)         &lt;abcdefghij&gt; self 1
+delete(2, 20)      &lt;a&gt; self 1
+delete(0)          E93.924 1
+delete(2, -1)      E93.923 1
+delete(2, 1, 1)    E93.902 1
+delete('x')        E93.924 1
+</code></pre>
+<div class="rule" id="r-class.mutablebuffer.changing"><a href="#r-class.mutablebuffer.changing">[class.mutablebuffer.changing]</a></div>
+<p><code>changeStr</code>, <code>caselessChangeStr</code>, <code>delStr</code>, <code>delWord</code>, <code>insert</code>, <code>lower</code>,
+<code>overlay</code>, <code>space</code>, <code>translate</code> and <code>upper</code> do what the function or the method
+of that name of <code>String</code> does (<a href="../builtins/changestr.html#r-bif.changestr.method"><code>changeStr</code></a>,
+<a href="string.html#r-class.string.caselesschangestr"><code>caselessChangeStr</code></a>,
+<a href="../builtins/delstr.html#r-bif.delstr.method"><code>delStr</code></a>, <a href="../builtins/delword.html#r-bif.delword.method"><code>delWord</code></a>,
+<a href="../builtins/insert.html#r-bif.insert.method"><code>insert</code></a>, <a href="../builtins/lower.html#r-bif.lower.method"><code>lower</code></a>,
+<a href="../builtins/overlay.html#r-bif.overlay.method"><code>overlay</code></a>, <a href="../builtins/space.html#r-bif.space.method"><code>space</code></a>,
+<a href="../builtins/translate.html#r-bif.translate.method"><code>translate</code></a>, <a href="../builtins/upper.html#r-bif.upper.method"><code>upper</code></a>), with the
+same arguments, defaults, checks and errors, in the same order. The difference
+is the answer: the buffer takes the characters that the string method would
+answer for its characters as its new text, and the method answers the buffer
+itself, not a new string. A call that raises an error leaves the buffer as it
+was. The size grows as <a href="#r-class.mutablebuffer.size">the size rule</a> says. A
+<code>tablei</code> of <code>translate</code> that is the null string is the exception: <a href="#r-class.mutablebuffer.translate.null">the next
+rule</a> says what the buffer does with it.</p>
+<pre><code class="language-rexx">t = 'Alpha beta  GAMMA delta'
+call chg "changeStr('a', 'AA')"
+call chg "caselessChangeStr('a', '-', 2)"
+call chg "delStr(7, 5)"
+call chg "delWord(2, 1)"
+call chg "insert('&lt;&gt;', 5, 4, '.')"
+call chg "lower(7)"
+call chg "upper(1, 3)"
+call chg "overlay('XYZ', 3, 5, '*')"
+call chg "space(2)"
+call chg "translate('ab', 'AL')"
+call chg "insert('x', -1)"
+call chg "delWord(0)"
+call chg "overlay('x', 0)"
+call chg "space(1, '**')"
+call chg "changeStr('a')"
+call chg "upper(1, 2, 3)"
+call chg "lower('x')"
+exit
+chg:
+  b = .mutablebuffer~new(t)
+  signal on syntax name bad
+  interpret 'r = b~' || arg(1)
+  interpret 's = t~' || arg(1)
+  say arg(1) '=&gt; &lt;' || b~string || '&gt;' (b~string == s),
+    (r~identityHash == b~identityHash)
+  return
+bad: say arg(1) '=&gt;' condition('o')~code '&lt;' || b~string || '&gt;',
+    (b~string == t)
+  return
+</code></pre>
+<pre><code class="language-output">changeStr('a', 'AA') =&gt; &lt;AlphAA betAA  GAMMA deltAA&gt; 1 1
+caselessChangeStr('a', '-', 2) =&gt; &lt;-lph- beta  GAMMA delta&gt; 1 1
+delStr(7, 5) =&gt; &lt;Alpha  GAMMA delta&gt; 1 1
+delWord(2, 1) =&gt; &lt;Alpha GAMMA delta&gt; 1 1
+insert('&lt;&gt;', 5, 4, '.') =&gt; &lt;Alpha&lt;&gt;.. beta  GAMMA delta&gt; 1 1
+lower(7) =&gt; &lt;Alpha beta  gamma delta&gt; 1 1
+upper(1, 3) =&gt; &lt;ALPha beta  GAMMA delta&gt; 1 1
+overlay('XYZ', 3, 5, '*') =&gt; &lt;AlXYZ**eta  GAMMA delta&gt; 1 1
+space(2) =&gt; &lt;Alpha  beta  GAMMA  delta&gt; 1 1
+translate('ab', 'AL') =&gt; &lt;alpha beta  GaMMa delta&gt; 1 1
+insert('x', -1) =&gt; 93.906 &lt;Alpha beta  GAMMA delta&gt; 1
+delWord(0) =&gt; 93.924 &lt;Alpha beta  GAMMA delta&gt; 1
+overlay('x', 0) =&gt; 93.924 &lt;Alpha beta  GAMMA delta&gt; 1
+space(1, '**') =&gt; 93.922 &lt;Alpha beta  GAMMA delta&gt; 1
+changeStr('a') =&gt; 93.903 &lt;Alpha beta  GAMMA delta&gt; 1
+upper(1, 2, 3) =&gt; 93.902 &lt;Alpha beta  GAMMA delta&gt; 1
+lower('x') =&gt; 93.924 &lt;Alpha beta  GAMMA delta&gt; 1
+</code></pre>
+<div class="rule" id="r-class.mutablebuffer.translate.null"><a href="#r-class.mutablebuffer.translate.null">[class.mutablebuffer.translate.null]</a></div>
+<p><code>translate</code> with a <code>tablei</code> that is the null string reads it as if <code>tablei</code> were
+omitted, so that every character of the buffer is looked up in <a href="../builtins/translate.html#r-bif.translate.tablei.default">the default
+table</a>: a character is replaced by the character
+of <code>tableo</code> at the position of its byte value plus one, or by the pad when
+<code>tableo</code> has no character there. This holds however the null string was made,
+and <code>pad</code>, <code>start</code> and <code>length</code> work as they do for any other table. The
+<code>translate</code> of <code>String</code> leaves its string as it was for the same arguments (<a href="../builtins/translate.html#r-bif.translate.tablei.empty">the
+empty table rule</a>), so the two answer differently;
+the last line of the example shows it. The buffer is changed and answered as
+<a href="#r-class.mutablebuffer.changing">the changing rule</a> says.</p>
+<pre><code class="language-rexx">call chg "translate('xy', '')"
+call chg "translate('xy', '', '*')"
+call chg "translate('xy', left('abc', 0), '*')"
+call chg "translate(xrange(), '')"
+call chg "translate(xrange('00'x, '40'x) || 'Z' || xrange('42'x, 'ff'x), '')"
+call chg "translate(, '', '*', 3)"
+call chg "translate('xy', '', '*', 3, 4)"
+call chg "translate('xy', '', '*', 30)"
+call chg "translate('xy', '', 'ab')"
+say '&lt;' || 'Alpha beta'~translate('xy', '', '*') || '&gt;'
+exit
+chg:
+  b = .mutablebuffer~new('Alpha beta')
+  signal on syntax name bad
+  interpret 'r = b~' || arg(1)
+  say arg(1) '=&gt; &lt;' || b~string || '&gt;' (r~identityHash == b~identityHash)
+  return
+bad: say arg(1) '=&gt;' condition('o')~code '&lt;' || b~string || '&gt;'
+  return
+</code></pre>
+<pre><code class="language-output">translate('xy', '') =&gt; &lt;          &gt; 1
+translate('xy', '', '*') =&gt; &lt;**********&gt; 1
+translate('xy', left('abc', 0), '*') =&gt; &lt;**********&gt; 1
+translate(xrange(), '') =&gt; &lt;Alpha beta&gt; 1
+translate(xrange('00'x, '40'x) || 'Z' || xrange('42'x, 'ff'x), '') =&gt; &lt;Zlpha beta&gt; 1
+translate(, '', '*', 3) =&gt; &lt;Al********&gt; 1
+translate('xy', '', '*', 3, 4) =&gt; &lt;Al****beta&gt; 1
+translate('xy', '', '*', 30) =&gt; &lt;Alpha beta&gt; 1
+translate('xy', '', 'ab') =&gt; 93.922 &lt;Alpha beta&gt;
+&lt;Alpha beta&gt;
+</code></pre>
+<h2 id="reading-the-text"><a class="header" href="#reading-the-text">Reading the text</a></h2>
+<div class="rule" id="r-class.mutablebuffer.builtins"><a href="#r-class.mutablebuffer.builtins">[class.mutablebuffer.builtins]</a></div>
+<p><code>countStr</code>, <code>lastPos</code>, <code>pos</code>, <code>subWord</code>, <code>substr</code>, <code>verify</code>, <code>word</code>,
+<code>wordIndex</code>, <code>wordLength</code>, <code>wordPos</code> and <code>words</code> answer what the function of
+that name answers for the characters of the buffer, with the same arguments,
+defaults, checks and errors, as <a href="string.html#r-class.string.builtins">the builtin rule</a>
+lists them: <a href="../builtins/countstr.html#r-bif.countstr.method"><code>countStr</code></a>,
+<a href="../builtins/lastpos.html#r-bif.lastpos.method"><code>lastPos</code></a>, <a href="../builtins/pos.html#r-bif.pos.method"><code>pos</code></a>,
+<a href="../builtins/subword.html#r-bif.subword.method"><code>subWord</code></a>, <a href="../builtins/substr.html#r-bif.substr.method"><code>substr</code></a>,
+<a href="../builtins/verify.html#r-bif.verify.method"><code>verify</code></a>, <a href="../builtins/word.html#r-bif.word.method"><code>word</code></a>,
+<a href="../builtins/wordindex.html#r-bif.wordindex.method"><code>wordIndex</code></a>,
+<a href="../builtins/wordlength.html#r-bif.wordlength.method"><code>wordLength</code></a>, <a href="../builtins/wordpos.html#r-bif.wordpos.method"><code>wordPos</code></a> and
+<a href="../builtins/words.html#r-bif.words.method"><code>words</code></a>. They leave the buffer as it was, and, when the
+function answers a string, answer a <code>String</code>. The errors are those of the
+message form of the string methods, as <a href="string.html#r-class.string.builtins.errors">the message
+rule</a> says.</p>
+<pre><code class="language-rexx">t = 'Alpha beta  GAMMA delta'
+b = .mutablebuffer~new(t)
+call cmp "pos('ta', 3)"
+call cmp "lastPos('a')"
+call cmp "countStr('a')"
+call cmp "substr(8, 4)"
+call cmp "subWord(3, 1)"
+call cmp "word(4)"
+call cmp "wordIndex(3)"
+call cmp "wordLength(2)"
+call cmp "wordPos('GAMMA delta')"
+call cmp "words"
+call cmp "verify('abAL', 'N')"
+call cmp "substr(0)"
+call cmp "pos"
+call cmp "word(2, 3)"
+call cmp "wordPos('x', 'y')"
+call cmp "verify('a', 'Q')"
+say b~string
+exit
+cmp:
+  r1 = ev('b~' || arg(1))
+  r2 = ev('t~' || arg(1))
+  say arg(1) '=&gt;' r1 (r1 == r2)
+  return
+ev: procedure expose b t
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  if r~isA(.array) then return r~makeString('l', '|')
+  return r
+bad: return 'E' || condition('o')~code
+</code></pre>
+<pre><code class="language-output">pos('ta', 3) =&gt; 9 1
+lastPos('a') =&gt; 23 1
+countStr('a') =&gt; 3 1
+substr(8, 4) =&gt; eta  1
+subWord(3, 1) =&gt; GAMMA 1
+word(4) =&gt; delta 1
+wordIndex(3) =&gt; 13 1
+wordLength(2) =&gt; 4 1
+wordPos('GAMMA delta') =&gt; 3 1
+words =&gt; 4 1
+verify('abAL', 'N') =&gt; 2 1
+substr(0) =&gt; E93.924 1
+pos =&gt; E93.903 1
+word(2, 3) =&gt; E93.902 1
+wordPos('x', 'y') =&gt; E93.924 1
+verify('a', 'Q') =&gt; E93.915 1
+Alpha beta  GAMMA delta
+</code></pre>
+<div class="rule" id="r-class.mutablebuffer.stringmethods"><a href="#r-class.mutablebuffer.stringmethods">[class.mutablebuffer.stringmethods]</a></div>
+<p><code>caselessChangeStr</code> is a changing method, stated above; the others that
+<code>String</code> has beside the builtin functions read the buffer and answer as the
+<code>String</code> method does, with the same arguments, defaults, checks and errors:
+<a href="string.html#r-class.string.caselesscontains"><code>caselessContains</code></a>,
+<a href="string.html#r-class.string.caselesscontainsword"><code>caselessContainsWord</code></a>,
+<a href="string.html#r-class.string.caselesscountstr"><code>caselessCountStr</code></a>,
+<a href="string.html#r-class.string.caselessendswith"><code>caselessEndsWith</code></a>,
+<a href="string.html#r-class.string.caselesslastpos"><code>caselessLastPos</code></a>,
+<a href="string.html#r-class.string.caselessmatch"><code>caselessMatch</code></a>,
+<a href="string.html#r-class.string.caselessmatchchar"><code>caselessMatchChar</code></a>,
+<a href="string.html#r-class.string.caselesspos"><code>caselessPos</code></a>,
+<a href="string.html#r-class.string.caselessstartswith"><code>caselessStartsWith</code></a>,
+<a href="string.html#r-class.string.caselesswordpos"><code>caselessWordPos</code></a>,
+<a href="string.html#r-class.string.contains"><code>contains</code></a>,
+<a href="string.html#r-class.string.containsword"><code>containsWord</code></a>,
+<a href="string.html#r-class.string.endswith"><code>endsWith</code></a>, <a href="string.html#r-class.string.match"><code>match</code></a>,
+<a href="string.html#r-class.string.matchchar"><code>matchChar</code></a>,
+<a href="string.html#r-class.string.startswith"><code>startsWith</code></a>, <a href="string.html#r-class.string.subchar"><code>subChar</code></a>
+and <a href="string.html#r-class.string.subwords"><code>subWords</code></a>. They leave the buffer as it was,
+and answer a <code>String</code>, or a new <code>Array</code> for <code>subWords</code>.</p>
+<pre><code class="language-rexx">t = 'Alpha beta  GAMMA delta'
+b = .mutablebuffer~new(t)
+call cmp "caselessPos('GA')"
+call cmp "caselessLastPos('A')"
+call cmp "caselessContains('HA B')"
+call cmp "caselessContainsWord('BETA')"
+call cmp "caselessStartsWith('alp')"
+call cmp "caselessEndsWith('TA')"
+call cmp "caselessMatch(7, 'BE')"
+call cmp "caselessMatchChar(7, 'BX')"
+call cmp "caselessWordPos('Gamma')"
+call cmp "caselessCountStr('A')"
+call cmp "contains('ha b')"
+call cmp "contains('HA B')"
+call cmp "containsWord('beta')"
+call cmp "startsWith('Alp')"
+call cmp "endsWith('ta')"
+call cmp "match(7, 'be')"
+call cmp "matchChar(7, 'bx')"
+call cmp "subChar(3)"
+call cmp "subWords(2, 2)"
+call cmp "contains"
+call cmp "match(1)"
+call cmp "subChar(0)"
+call cmp "startsWith('a', 'b')"
+say b~string
+exit
+cmp:
+  r1 = ev('b~' || arg(1))
+  r2 = ev('t~' || arg(1))
+  say arg(1) '=&gt;' r1 (r1 == r2)
+  return
+ev: procedure expose b t
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  if r~isA(.array) then return r~makeString('l', '|')
+  return r
+bad: return 'E' || condition('o')~code
+</code></pre>
+<pre><code class="language-output">caselessPos('GA') =&gt; 13 1
+caselessLastPos('A') =&gt; 23 1
+caselessContains('HA B') =&gt; 1 1
+caselessContainsWord('BETA') =&gt; 1 1
+caselessStartsWith('alp') =&gt; 1 1
+caselessEndsWith('TA') =&gt; 1 1
+caselessMatch(7, 'BE') =&gt; 1 1
+caselessMatchChar(7, 'BX') =&gt; 1 1
+caselessWordPos('Gamma') =&gt; 3 1
+caselessCountStr('A') =&gt; 6 1
+contains('ha b') =&gt; 1 1
+contains('HA B') =&gt; 0 1
+containsWord('beta') =&gt; 1 1
+startsWith('Alp') =&gt; 1 1
+endsWith('ta') =&gt; 1 1
+match(7, 'be') =&gt; 1 1
+matchChar(7, 'bx') =&gt; 1 1
+subChar(3) =&gt; p 1
+subWords(2, 2) =&gt; beta|GAMMA 1
+contains =&gt; E93.903 1
+match(1) =&gt; E93.903 1
+subChar(0) =&gt; E93.924 1
+startsWith('a', 'b') =&gt; E93.902 1
+Alpha beta  GAMMA delta
+</code></pre>
+<div class="rule" id="r-class.mutablebuffer.makearray"><a href="#r-class.mutablebuffer.makearray">[class.mutablebuffer.makearray]</a></div>
+<p><code>makeArray</code> answers a new array of strings, the lines of the buffer or, with a
+separator, the parts between its occurrences, exactly as <a href="string.html#r-class.string.makearray">the <code>makeArray</code> of
+<code>String</code></a> does for a string with the same
+characters: the same optional separator, the same cuts and the same errors.
+The array does not change when the buffer does, and <code>DO OVER</code> a buffer visits
+the elements of this array (<a href="../instructions/do.html#r-instr.do.over">the DO OVER rule</a>).</p>
+<pre><code class="language-rexx">b = .mutablebuffer~new('one' || '0A'x || 'two' || '0D0A'x || 'three' || '0D'x)
+a = b~makeArray
+say a~class~id a~items a~at(1) a~at(2) a~at(3)~c2x
+c = .mutablebuffer~new('abXYcdXYef')~makeArray('XY')
+say c~items c~at(1) c~at(2) c~at(3)
+say .mutablebuffer~new('a b')~makeArray(' ')~items,
+  .mutablebuffer~new('')~makeArray~items
+b~append('!' || '0A'x || 'four')
+say a~items b~makeArray~items
+do line over .mutablebuffer~new('x' || '0A'x || 'y')
+  say 'line' line
+end
+call try "b~makeArray(',', 1)"
+call try 'b~makeArray(.nil)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt; no error'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">Array 3 one two 74687265650D
+3 ab cd ef
+2 0
+3 4
+line x
+line y
+b~makeArray(',', 1) =&gt; 93.902
+b~makeArray(.nil) =&gt; 88.909
+</code></pre>
+<h2 id="messages-that-a-program-can-override"><a class="header" href="#messages-that-a-program-can-override">Messages that a program can override</a></h2>
+<div class="rule" id="r-class.mutablebuffer.sends"><a href="#r-class.mutablebuffer.sends">[class.mutablebuffer.sends]</a></div>
+<p>No method of the class sends a message to the buffer it works on: not <code>length</code>,
+<code>string</code>, <code>makeString</code>, <code>append</code>, <code>insert</code>, <code>setText</code>, <code>substr</code>, <code>delStr</code>,
+<code>getBufferSize</code>, <code>setBufferSize</code> or any other, so that a subclass that overrides
+one of these changes only the calls that name it. <code>new</code> sends <code>init</code> as <a href="#r-class.mutablebuffer.new.init">the
+init rule</a> says and <code>copy</code> sends nothing. What a
+method sends to its arguments is the reading of their string values, once for
+each argument that is present and in the order of the arguments, each reading
+followed at once by the check of that argument: the first argument that fails
+raises its error and the arguments after it are not read. The reading is <a href="index.html#r-class.index.string">the
+string-value rule</a>'s: the argument is sent <code>request</code> with
+<code>STRING</code>, and the <code>request</code> of <code>Object</code> sends it <code>makeString</code>, so an argument
+that is a buffer of a subclass is sent both. <code>append</code> reads and appends one
+argument at a time. A call with too many arguments reads none. Nothing but that
+reading is sent to an argument. The first example prints, for each call, the
+messages that the subclass saw; the second passes objects that answer a string
+and log the reading, named by their first argument, and would log <code>isA</code>,
+<code>string</code> and <code>class</code> too; their <code>request</code> is that of <code>Object</code>. It prints the log
+in order, with the error that ended the call. The third example shows the
+<code>request</code> that comes before each <code>makeString</code>.</p>
+<pre><code class="language-rexx">b = .spy~new('Hello world', 40)
+call run "b~append('x', 'y')"
+call run "b~setText('Hello world')"
+call run "b~insert('Q', 1)"
+call run "b~overlay('Q', 2)"
+call run "b~replaceAt('Q', 2)"
+call run "b~'[]='('Q', 2)"
+call run "b~delete(1, 1)"
+call run "b~delStr(1, 1)"
+call run "b~upper"
+call run "b~changeStr('l', 'L')"
+call run "b~setBufferSize(100)"
+call run "b~substr(2, 3)"
+call run "b~pos('o')"
+call run "b~word(1)"
+call run "b~words"
+call run "b~contains('o')"
+call run "b~makeArray"
+call run "b~copy"
+call run "b[2]"
+call run "b~length"
+call run "b~string"
+call run "b~makeString"
+call run "b || '!'"
+call run ".spy~new('abc')~append(b)"
+exit
+run:
+  .local~log = ''
+  interpret 'r =' arg(1)
+  say left(arg(1), 28) '=&gt;' .local~log
+  return
+::class spy subclass mutablebuffer
+::method new class
+  .local~log = .local~log 'NEW'arg()
+  forward class (super)
+::method init
+  .local~log = .local~log 'INIT'arg()
+  forward class (super)
+::method length
+  .local~log = .local~log 'length'
+  forward class (super)
+::method string
+  .local~log = .local~log 'string'
+  forward class (super)
+::method makestring
+  .local~log = .local~log 'makestring'
+  forward class (super)
+::method makearray
+  .local~log = .local~log 'makearray'
+  forward class (super)
+::method append
+  .local~log = .local~log 'append'
+  forward class (super)
+::method insert
+  .local~log = .local~log 'insert'
+  forward class (super)
+::method settext
+  .local~log = .local~log 'setText'
+  forward class (super)
+::method getbuffersize
+  .local~log = .local~log 'getBufferSize'
+  forward class (super)
+::method setbuffersize
+  .local~log = .local~log 'setBufferSize'
+  forward class (super)
+::method '[]'
+  .local~log = .local~log 'at'
+  forward class (super)
+::method '[]='
+  .local~log = .local~log 'put'
+  forward class (super)
+::method replaceat
+  .local~log = .local~log 'replaceAt'
+  forward class (super)
+::method delstr
+  .local~log = .local~log 'delStr'
+  forward class (super)
+::method delete
+  .local~log = .local~log 'delete'
+  forward class (super)
+::method substr
+  .local~log = .local~log 'substr'
+  forward class (super)
+::method pos
+  .local~log = .local~log 'pos'
+  forward class (super)
+::method copy
+  .local~log = .local~log 'copy'
+  forward class (super)
+::method overlay
+  .local~log = .local~log 'overlay'
+  forward class (super)
+::method upper
+  .local~log = .local~log 'upper'
+  forward class (super)
+::method changestr
+  .local~log = .local~log 'changeStr'
+  forward class (super)
+::method word
+  .local~log = .local~log 'word'
+  forward class (super)
+::method words
+  .local~log = .local~log 'words'
+  forward class (super)
+::method contains
+  .local~log = .local~log 'contains'
+  forward class (super)
+</code></pre>
+<pre><code class="language-output">b~append('x', 'y')           =&gt;  append
+b~setText('Hello world')     =&gt;  setText
+b~insert('Q', 1)             =&gt;  insert
+b~overlay('Q', 2)            =&gt;  overlay
+b~replaceAt('Q', 2)          =&gt;  replaceAt
+b~'[]='('Q', 2)              =&gt;  put
+b~delete(1, 1)               =&gt;  delete
+b~delStr(1, 1)               =&gt;  delStr
+b~upper                      =&gt;  upper
+b~changeStr('l', 'L')        =&gt;  changeStr
+b~setBufferSize(100)         =&gt;  setBufferSize
+b~substr(2, 3)               =&gt;  substr
+b~pos('o')                   =&gt;  pos
+b~word(1)                    =&gt;  word
+b~words                      =&gt;  words
+b~contains('o')              =&gt;  contains
+b~makeArray                  =&gt;  makearray
+b~copy                       =&gt;  copy
+b[2]                         =&gt;  at
+b~length                     =&gt;  length
+b~string                     =&gt;  string
+b~makeString                 =&gt;  makestring
+b || '!'                     =&gt;  makestring
+.spy~new('abc')~append(b)    =&gt;  NEW1 INIT0 append makestring
+</code></pre>
+<pre><code class="language-rexx">call run 'replaceAt all', "bb~replaceAt(a('Q'), b(2), c(1), d('*'))"
+call run 'replaceAt pos 0', "bb~replaceAt(a('Q'), b(0), c(1), d('*'))"
+call run 'replaceAt len -1', "bb~replaceAt(a('Q'), b(2), c(-1), d('*'))"
+call run 'replaceAt pad **', "bb~replaceAt(a('Q'), b(2), c(1), d('**'))"
+call run 'replaceAt no pos', "bb~replaceAt(a('Q'))"
+call run 'replaceAt count', "bb~replaceAt(a('Q'), 2, 1, '*', e(5))"
+call run '[]= pos 0', "bb~'[]='(a('Q'), b(0), c(1))"
+call run '[] len -1', "bb[b(2), c(-1)]"
+call run 'insert pos -2', "bb~insert(a('Q'), b(-2), c(1), d('*'))"
+call run 'insert all', "bb~insert(a('Q'), b(2), c(1), d('*'))"
+call run 'append 3', "bb~append(a('x'), b('y'), c('z'))"
+call run 'append nil', "bb~append(a('x'), .nil, c('z'))"
+call run 'changeStr count -1', "bb~changeStr(a('b'), b('Q'), c(-1))"
+call run 'pos start 0', "bb~pos(a('b'), b(0), c(5))"
+call run 'setBufferSize', "bb~setBufferSize(a(9))"
+call run 'makeArray', "bb~makeArray(a(' '))"
+call run 'new size -1', ".mutablebuffer~new(a('z'), b(-1))"
+call run 'new', ".mutablebuffer~new(a('z'), b(9))"
+exit
+run:
+  .local~log = ''
+  bb = .mutablebuffer~new('abc def')
+  signal on syntax name bad
+  interpret 'r =' arg(2)
+  say left(arg(1), 20) '=&gt;' .local~log
+  return
+bad: say left(arg(1), 20) '=&gt;' .local~log 'SYNTAX' condition('o')~code
+  return
+a: return .probe~new('a', arg(1))
+b: return .probe~new('b', arg(1))
+c: return .probe~new('c', arg(1))
+d: return .probe~new('d', arg(1))
+e: return .probe~new('e', arg(1))
+::class probe
+::method init
+  expose n v
+  use arg n, v
+::method makestring
+  expose n v
+  .local~log = .local~log n
+  return v
+::method string
+  expose n v
+  .local~log = .local~log n'-string'
+  return v
+::method isA
+  .local~log = .local~log 'isA'
+  return 0
+::method class
+  .local~log = .local~log 'class'
+  return .object
+</code></pre>
+<pre><code class="language-output">replaceAt all        =&gt;  a b c d
+replaceAt pos 0      =&gt;  a b SYNTAX 88.912
+replaceAt len -1     =&gt;  a b c SYNTAX 88.911
+replaceAt pad **     =&gt;  a b c d SYNTAX 88.910
+replaceAt no pos     =&gt;  a SYNTAX 88.901
+replaceAt count      =&gt;  SYNTAX 93.902
+[]= pos 0            =&gt;  a b SYNTAX 88.912
+[] len -1            =&gt;  b c SYNTAX 93.923
+insert pos -2        =&gt;  a b SYNTAX 93.906
+insert all           =&gt;  a b c d
+append 3             =&gt;  a b c
+append nil           =&gt;  a SYNTAX 88.909
+changeStr count -1   =&gt;  a b c SYNTAX 93.906
+pos start 0          =&gt;  a b SYNTAX 93.924
+setBufferSize        =&gt;  a
+makeArray            =&gt;  a
+new size -1          =&gt;  a b SYNTAX 93.923
+new                  =&gt;  a b
+</code></pre>
+<pre><code class="language-rexx">.local~log = ''
+b = .mutablebuffer~new('abc')
+b~insert(.probe~new('t', 'X'), .probe~new('n', 1))
+say b~string '|' .local~log
+::class probe
+::method init
+  expose n v
+  use arg n, v
+::method request
+  expose n
+  .local~log = .local~log n'-request:'arg(1)
+  forward class (super)
+::method makestring
+  expose n v
+  .local~log = .local~log n'-makeString'
+  return v
+</code></pre>
+<pre><code class="language-output defect=#164">aXbc |  t-request:STRING t-makeString n-request:STRING n-makeString
+</code></pre>
+<h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
+<div class="rule" id="r-class.mutablebuffer.deviation.4"><a href="#r-class.mutablebuffer.deviation.4">[class.mutablebuffer.deviation.4]</a></div>
+<p>Whether two calls of <code>string</code> or of <code>makeString</code> answer one string object or
+two is not specified, and shows only through <code>identityHash</code> and the identity
+collections (<a href="../deviations.html">Deviation 4</a>). The characters are specified,
+and a string taken from a buffer never follows the buffer's later changes.
+ooRexx answers a new string at each call of <code>makeString</code>, where interrexx
+answers the same one.</p>
+<pre><code class="language-rexx">b = .mutablebuffer~new('abc')
+x = b~makeString
+y = b~string
+say (x == y) (x == 'abc') (x~hashCode == y~hashCode)
+b~append('d')
+say x b~makeString
+</code></pre>
+<pre><code class="language-output">1 1 1
+abc abcd
+</code></pre>
+<div class="rule" id="r-class.mutablebuffer.deviation.9"><a href="#r-class.mutablebuffer.deviation.9">[class.mutablebuffer.deviation.9]</a></div>
+<p>A native routine that holds the address of the characters of a buffer keeps
+reading valid storage when the buffer grows, even across a collection
+(<a href="../deviations.html">Deviation 9</a>). In ooRexx a collection after the growth
+reclaims the old storage, and the routine then reads garbage. A program in Rexx
+sees only that the characters survive the growth, which the example shows: the
+buffer grows several times and still holds what was appended before.</p>
+<pre><code class="language-rexx">b = .mutablebuffer~new('abc', 3)
+do 5
+  b~append(copies('x', 200))
+end
+say b~length b~substr(1, 6) b~substr(1001)
+say b~string~length
+</code></pre>
+<pre><code class="language-output">1003 abcxxx xxx
+1003
+</code></pre>
+<div class="rule" id="r-class.mutablebuffer.deviation.109"><a href="#r-class.mutablebuffer.deviation.109">[class.mutablebuffer.deviation.109]</a></div>
+<p>An instance of a subclass of <code>String</code> that is given to a method of the buffer
+as a string, a number or a whole number, for the text of <code>new</code>, the size, a
+position, a length or the pad of the methods above, is read by its own
+characters, and <code>REQUEST</code>, <code>MAKESTRING</code> and <code>STRING</code> are not sent to it
+(<a href="string.html#r-class.string.deviation.109">Deviation 109</a>). ooRexx sends such an instance
+<code>request</code> with <code>STRING</code> and reads the answer, so an override can change what
+the method reads. In the example the subclass answers other strings from all
+three methods and counts the sends, and the instance <code>n</code> is the number 2, <code>s</code>
+the string <code>ab</code>, so the buffer is made from the characters <code>ab</code>, with size 2.</p>
+<pre><code class="language-rexx">.local~sent = 0
+s = .shout~new('ab')
+n = .shout~new('2')
+b = .mutablebuffer~new(s, n)
+say b~string b~length b~getBufferSize
+b~append(s)
+b~insert(s, n)
+b[n] = s
+say b~string b~length
+say b[n] b~pos(s) b~substr(n, n)
+say 'sends' .local~sent
+::class shout subclass string
+::method makestring
+  .local~sent = .local~sent + 1
+  return 'MADE'
+::method string
+  .local~sent = .local~sent + 1
+  return 'STR'
+::method request
+  .local~sent = .local~sent + 1
+  return 'REQ'
+</code></pre>
+<pre><code class="language-output defect=#140">ab 2 2
+aabbab 6
+a 2 ab
+sends 0
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../classes/comparators.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../classes/buffer.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../classes/comparators.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../classes/buffer.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../assets/version-picker.js"></script>
+
+
+    </div>
+    </body>
+</html>

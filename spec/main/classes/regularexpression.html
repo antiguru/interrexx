@@ -1,0 +1,1012 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>RegularExpression - The interrexx Language Specification</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../conventions.html"><strong aria-hidden="true">2.</strong> Conventions</a></li><li class="chapter-item expanded "><a href="../lexical/index.html"><strong aria-hidden="true">3.</strong> Lexical structure</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../lexical/characters.html"><strong aria-hidden="true">3.1.</strong> Characters</a></li><li class="chapter-item expanded "><a href="../lexical/comments.html"><strong aria-hidden="true">3.2.</strong> Comments</a></li><li class="chapter-item expanded "><a href="../lexical/literals.html"><strong aria-hidden="true">3.3.</strong> Literals</a></li><li class="chapter-item expanded "><a href="../lexical/symbols.html"><strong aria-hidden="true">3.4.</strong> Symbols</a></li><li class="chapter-item expanded "><a href="../lexical/operators.html"><strong aria-hidden="true">3.5.</strong> Operators and special characters</a></li><li class="chapter-item expanded "><a href="../lexical/clauses.html"><strong aria-hidden="true">3.6.</strong> Clauses</a></li></ol></li><li class="chapter-item expanded "><a href="../numbers/index.html"><strong aria-hidden="true">4.</strong> Numbers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../numbers/formats.html"><strong aria-hidden="true">4.1.</strong> Formats</a></li><li class="chapter-item expanded "><a href="../numbers/limits.html"><strong aria-hidden="true">4.2.</strong> Limits</a></li><li class="chapter-item expanded "><a href="../numbers/arithmetic.html"><strong aria-hidden="true">4.3.</strong> Arithmetic</a></li><li class="chapter-item expanded "><a href="../numbers/settings.html"><strong aria-hidden="true">4.4.</strong> Settings</a></li><li class="chapter-item expanded "><a href="../numbers/comparison.html"><strong aria-hidden="true">4.5.</strong> Comparison</a></li></ol></li><li class="chapter-item expanded "><a href="../expressions/index.html"><strong aria-hidden="true">5.</strong> Expressions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../expressions/terms.html"><strong aria-hidden="true">5.1.</strong> Terms</a></li><li class="chapter-item expanded "><a href="../expressions/variables.html"><strong aria-hidden="true">5.2.</strong> Variables</a></li><li class="chapter-item expanded "><a href="../expressions/concatenation.html"><strong aria-hidden="true">5.3.</strong> Concatenation</a></li><li class="chapter-item expanded "><a href="../expressions/arithmetic.html"><strong aria-hidden="true">5.4.</strong> Arithmetic operators</a></li><li class="chapter-item expanded "><a href="../expressions/comparison.html"><strong aria-hidden="true">5.5.</strong> Comparison operators</a></li><li class="chapter-item expanded "><a href="../expressions/logical.html"><strong aria-hidden="true">5.6.</strong> Logical operators</a></li><li class="chapter-item expanded "><a href="../expressions/messages.html"><strong aria-hidden="true">5.7.</strong> Message operators</a></li></ol></li><li class="chapter-item expanded "><a href="../instructions/index.html"><strong aria-hidden="true">6.</strong> Instructions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../instructions/address.html"><strong aria-hidden="true">6.1.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../instructions/arg.html"><strong aria-hidden="true">6.2.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../instructions/assignment.html"><strong aria-hidden="true">6.3.</strong> Assignments</a></li><li class="chapter-item expanded "><a href="../instructions/call.html"><strong aria-hidden="true">6.4.</strong> CALL</a></li><li class="chapter-item expanded "><a href="../instructions/command.html"><strong aria-hidden="true">6.5.</strong> Commands</a></li><li class="chapter-item expanded "><a href="../instructions/do.html"><strong aria-hidden="true">6.6.</strong> DO</a></li><li class="chapter-item expanded "><a href="../instructions/drop.html"><strong aria-hidden="true">6.7.</strong> DROP</a></li><li class="chapter-item expanded "><a href="../instructions/exit.html"><strong aria-hidden="true">6.8.</strong> EXIT</a></li><li class="chapter-item expanded "><a href="../instructions/expose.html"><strong aria-hidden="true">6.9.</strong> EXPOSE</a></li><li class="chapter-item expanded "><a href="../instructions/forward.html"><strong aria-hidden="true">6.10.</strong> FORWARD</a></li><li class="chapter-item expanded "><a href="../instructions/guard.html"><strong aria-hidden="true">6.11.</strong> GUARD</a></li><li class="chapter-item expanded "><a href="../instructions/if.html"><strong aria-hidden="true">6.12.</strong> IF</a></li><li class="chapter-item expanded "><a href="../instructions/interpret.html"><strong aria-hidden="true">6.13.</strong> INTERPRET</a></li><li class="chapter-item expanded "><a href="../instructions/iterate.html"><strong aria-hidden="true">6.14.</strong> ITERATE</a></li><li class="chapter-item expanded "><a href="../instructions/leave.html"><strong aria-hidden="true">6.15.</strong> LEAVE</a></li><li class="chapter-item expanded "><a href="../instructions/loop.html"><strong aria-hidden="true">6.16.</strong> LOOP</a></li><li class="chapter-item expanded "><a href="../instructions/message.html"><strong aria-hidden="true">6.17.</strong> Message instructions</a></li><li class="chapter-item expanded "><a href="../instructions/nop.html"><strong aria-hidden="true">6.18.</strong> NOP</a></li><li class="chapter-item expanded "><a href="../instructions/numeric.html"><strong aria-hidden="true">6.19.</strong> NUMERIC</a></li><li class="chapter-item expanded "><a href="../instructions/options.html"><strong aria-hidden="true">6.20.</strong> OPTIONS</a></li><li class="chapter-item expanded "><a href="../instructions/parse.html"><strong aria-hidden="true">6.21.</strong> PARSE</a></li><li class="chapter-item expanded "><a href="../instructions/procedure.html"><strong aria-hidden="true">6.22.</strong> PROCEDURE</a></li><li class="chapter-item expanded "><a href="../instructions/pull.html"><strong aria-hidden="true">6.23.</strong> PULL</a></li><li class="chapter-item expanded "><a href="../instructions/push.html"><strong aria-hidden="true">6.24.</strong> PUSH</a></li><li class="chapter-item expanded "><a href="../instructions/queue.html"><strong aria-hidden="true">6.25.</strong> QUEUE</a></li><li class="chapter-item expanded "><a href="../instructions/raise.html"><strong aria-hidden="true">6.26.</strong> RAISE</a></li><li class="chapter-item expanded "><a href="../instructions/reply.html"><strong aria-hidden="true">6.27.</strong> REPLY</a></li><li class="chapter-item expanded "><a href="../instructions/return.html"><strong aria-hidden="true">6.28.</strong> RETURN</a></li><li class="chapter-item expanded "><a href="../instructions/say.html"><strong aria-hidden="true">6.29.</strong> SAY</a></li><li class="chapter-item expanded "><a href="../instructions/select.html"><strong aria-hidden="true">6.30.</strong> SELECT</a></li><li class="chapter-item expanded "><a href="../instructions/signal.html"><strong aria-hidden="true">6.31.</strong> SIGNAL</a></li><li class="chapter-item expanded "><a href="../instructions/trace.html"><strong aria-hidden="true">6.32.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../instructions/use.html"><strong aria-hidden="true">6.33.</strong> USE</a></li></ol></li><li class="chapter-item expanded "><a href="../parsing/index.html"><strong aria-hidden="true">7.</strong> Parsing</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../parsing/templates.html"><strong aria-hidden="true">7.1.</strong> Templates</a></li><li class="chapter-item expanded "><a href="../parsing/patterns.html"><strong aria-hidden="true">7.2.</strong> Patterns</a></li><li class="chapter-item expanded "><a href="../parsing/multiple.html"><strong aria-hidden="true">7.3.</strong> Several strings and case</a></li></ol></li><li class="chapter-item expanded "><a href="../directives/index.html"><strong aria-hidden="true">8.</strong> Directives</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../directives/class.html"><strong aria-hidden="true">8.1.</strong> ::CLASS</a></li><li class="chapter-item expanded "><a href="../directives/method.html"><strong aria-hidden="true">8.2.</strong> ::METHOD</a></li><li class="chapter-item expanded "><a href="../directives/attribute.html"><strong aria-hidden="true">8.3.</strong> ::ATTRIBUTE</a></li><li class="chapter-item expanded "><a href="../directives/constant.html"><strong aria-hidden="true">8.4.</strong> ::CONSTANT</a></li><li class="chapter-item expanded "><a href="../directives/routine.html"><strong aria-hidden="true">8.5.</strong> ::ROUTINE</a></li><li class="chapter-item expanded "><a href="../directives/requires.html"><strong aria-hidden="true">8.6.</strong> ::REQUIRES</a></li><li class="chapter-item expanded "><a href="../directives/options.html"><strong aria-hidden="true">8.7.</strong> ::OPTIONS</a></li><li class="chapter-item expanded "><a href="../directives/resource.html"><strong aria-hidden="true">8.8.</strong> ::RESOURCE</a></li><li class="chapter-item expanded "><a href="../directives/annotate.html"><strong aria-hidden="true">8.9.</strong> ::ANNOTATE</a></li></ol></li><li class="chapter-item expanded "><a href="../conditions/index.html"><strong aria-hidden="true">9.</strong> Conditions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../conditions/traps.html"><strong aria-hidden="true">9.1.</strong> Condition traps</a></li><li class="chapter-item expanded "><a href="../conditions/information.html"><strong aria-hidden="true">9.2.</strong> Condition information</a></li><li class="chapter-item expanded "><a href="../conditions/syntax.html"><strong aria-hidden="true">9.3.</strong> SYNTAX</a></li><li class="chapter-item expanded "><a href="../conditions/error.html"><strong aria-hidden="true">9.4.</strong> ERROR and FAILURE</a></li><li class="chapter-item expanded "><a href="../conditions/halt.html"><strong aria-hidden="true">9.5.</strong> HALT</a></li><li class="chapter-item expanded "><a href="../conditions/novalue.html"><strong aria-hidden="true">9.6.</strong> NOVALUE</a></li><li class="chapter-item expanded "><a href="../conditions/nostring.html"><strong aria-hidden="true">9.7.</strong> NOSTRING</a></li><li class="chapter-item expanded "><a href="../conditions/nomethod.html"><strong aria-hidden="true">9.8.</strong> NOMETHOD</a></li><li class="chapter-item expanded "><a href="../conditions/notready.html"><strong aria-hidden="true">9.9.</strong> NOTREADY</a></li><li class="chapter-item expanded "><a href="../conditions/lostdigits.html"><strong aria-hidden="true">9.10.</strong> LOSTDIGITS</a></li><li class="chapter-item expanded "><a href="../conditions/user.html"><strong aria-hidden="true">9.11.</strong> USER conditions</a></li><li class="chapter-item expanded "><a href="../conditions/errors.html"><strong aria-hidden="true">9.12.</strong> Error numbers</a></li></ol></li><li class="chapter-item expanded "><a href="../classes/index.html"><strong aria-hidden="true">10.</strong> Classes</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../classes/methods.html"><strong aria-hidden="true">10.1.</strong> Method search</a></li><li class="chapter-item expanded "><a href="../classes/object.html"><strong aria-hidden="true">10.2.</strong> Object</a></li><li class="chapter-item expanded "><a href="../classes/class.html"><strong aria-hidden="true">10.3.</strong> Class</a></li><li class="chapter-item expanded "><a href="../classes/string.html"><strong aria-hidden="true">10.4.</strong> String</a></li><li class="chapter-item expanded "><a href="../classes/method.html"><strong aria-hidden="true">10.5.</strong> Method</a></li><li class="chapter-item expanded "><a href="../classes/routine.html"><strong aria-hidden="true">10.6.</strong> Routine</a></li><li class="chapter-item expanded "><a href="../classes/package.html"><strong aria-hidden="true">10.7.</strong> Package</a></li><li class="chapter-item expanded "><a href="../classes/message.html"><strong aria-hidden="true">10.8.</strong> Message</a></li><li class="chapter-item expanded "><a href="../classes/messagenotification.html"><strong aria-hidden="true">10.9.</strong> MessageNotification</a></li><li class="chapter-item expanded "><a href="../classes/alarmnotification.html"><strong aria-hidden="true">10.10.</strong> AlarmNotification</a></li><li class="chapter-item expanded "><a href="../classes/collection.html"><strong aria-hidden="true">10.11.</strong> Collection</a></li><li class="chapter-item expanded "><a href="../classes/mapcollection.html"><strong aria-hidden="true">10.12.</strong> MapCollection</a></li><li class="chapter-item expanded "><a href="../classes/orderedcollection.html"><strong aria-hidden="true">10.13.</strong> OrderedCollection</a></li><li class="chapter-item expanded "><a href="../classes/setcollection.html"><strong aria-hidden="true">10.14.</strong> SetCollection</a></li><li class="chapter-item expanded "><a href="../classes/array.html"><strong aria-hidden="true">10.15.</strong> Array</a></li><li class="chapter-item expanded "><a href="../classes/list.html"><strong aria-hidden="true">10.16.</strong> List</a></li><li class="chapter-item expanded "><a href="../classes/queue.html"><strong aria-hidden="true">10.17.</strong> Queue</a></li><li class="chapter-item expanded "><a href="../classes/circularqueue.html"><strong aria-hidden="true">10.18.</strong> CircularQueue</a></li><li class="chapter-item expanded "><a href="../classes/directory.html"><strong aria-hidden="true">10.19.</strong> Directory</a></li><li class="chapter-item expanded "><a href="../classes/stringtable.html"><strong aria-hidden="true">10.20.</strong> StringTable</a></li><li class="chapter-item expanded "><a href="../classes/properties.html"><strong aria-hidden="true">10.21.</strong> Properties</a></li><li class="chapter-item expanded "><a href="../classes/table.html"><strong aria-hidden="true">10.22.</strong> Table</a></li><li class="chapter-item expanded "><a href="../classes/identitytable.html"><strong aria-hidden="true">10.23.</strong> IdentityTable</a></li><li class="chapter-item expanded "><a href="../classes/relation.html"><strong aria-hidden="true">10.24.</strong> Relation</a></li><li class="chapter-item expanded "><a href="../classes/bag.html"><strong aria-hidden="true">10.25.</strong> Bag</a></li><li class="chapter-item expanded "><a href="../classes/set.html"><strong aria-hidden="true">10.26.</strong> Set</a></li><li class="chapter-item expanded "><a href="../classes/stem.html"><strong aria-hidden="true">10.27.</strong> Stem</a></li><li class="chapter-item expanded "><a href="../classes/datetime.html"><strong aria-hidden="true">10.28.</strong> DateTime</a></li><li class="chapter-item expanded "><a href="../classes/timespan.html"><strong aria-hidden="true">10.29.</strong> TimeSpan</a></li><li class="chapter-item expanded "><a href="../classes/comparable.html"><strong aria-hidden="true">10.30.</strong> Comparable</a></li><li class="chapter-item expanded "><a href="../classes/orderable.html"><strong aria-hidden="true">10.31.</strong> Orderable</a></li><li class="chapter-item expanded "><a href="../classes/comparators.html"><strong aria-hidden="true">10.32.</strong> Comparators</a></li><li class="chapter-item expanded "><a href="../classes/mutablebuffer.html"><strong aria-hidden="true">10.33.</strong> MutableBuffer</a></li><li class="chapter-item expanded "><a href="../classes/buffer.html"><strong aria-hidden="true">10.34.</strong> Buffer</a></li><li class="chapter-item expanded "><a href="../classes/pointer.html"><strong aria-hidden="true">10.35.</strong> Pointer</a></li><li class="chapter-item expanded "><a href="../classes/weakreference.html"><strong aria-hidden="true">10.36.</strong> WeakReference</a></li><li class="chapter-item expanded "><a href="../classes/variablereference.html"><strong aria-hidden="true">10.37.</strong> VariableReference</a></li><li class="chapter-item expanded "><a href="../classes/file.html"><strong aria-hidden="true">10.38.</strong> File</a></li><li class="chapter-item expanded "><a href="../classes/rexxcontext.html"><strong aria-hidden="true">10.39.</strong> RexxContext</a></li><li class="chapter-item expanded "><a href="../classes/stackframe.html"><strong aria-hidden="true">10.40.</strong> StackFrame</a></li><li class="chapter-item expanded "><a href="../classes/rexxinfo.html"><strong aria-hidden="true">10.41.</strong> RexxInfo</a></li><li class="chapter-item expanded "><a href="../classes/traceobject.html"><strong aria-hidden="true">10.42.</strong> TraceObject</a></li><li class="chapter-item expanded "><a href="../classes/validate.html"><strong aria-hidden="true">10.43.</strong> Validate</a></li><li class="chapter-item expanded "><a href="../classes/singleton.html"><strong aria-hidden="true">10.44.</strong> Singleton</a></li><li class="chapter-item expanded "><a href="../classes/alarm.html"><strong aria-hidden="true">10.45.</strong> Alarm</a></li><li class="chapter-item expanded "><a href="../classes/ticker.html"><strong aria-hidden="true">10.46.</strong> Ticker</a></li><li class="chapter-item expanded "><a href="../classes/monitor.html"><strong aria-hidden="true">10.47.</strong> Monitor</a></li><li class="chapter-item expanded "><a href="../classes/eventsemaphore.html"><strong aria-hidden="true">10.48.</strong> EventSemaphore</a></li><li class="chapter-item expanded "><a href="../classes/mutexsemaphore.html"><strong aria-hidden="true">10.49.</strong> MutexSemaphore</a></li><li class="chapter-item expanded "><a href="../classes/commandhandler.html"><strong aria-hidden="true">10.50.</strong> CommandHandler</a></li><li class="chapter-item expanded "><a href="../classes/nativecommandhandler.html"><strong aria-hidden="true">10.51.</strong> NativeCommandHandler</a></li><li class="chapter-item expanded "><a href="../classes/commandcontext.html"><strong aria-hidden="true">10.52.</strong> CommandContext</a></li><li class="chapter-item expanded "><a href="../classes/commandinput.html"><strong aria-hidden="true">10.53.</strong> CommandInput</a></li><li class="chapter-item expanded "><a href="../classes/commandoutput.html"><strong aria-hidden="true">10.54.</strong> CommandOutput</a></li><li class="chapter-item expanded "><a href="../classes/rexxqueue.html"><strong aria-hidden="true">10.55.</strong> RexxQueue</a></li><li class="chapter-item expanded "><a href="../classes/supplier.html"><strong aria-hidden="true">10.56.</strong> Supplier</a></li><li class="chapter-item expanded "><a href="../classes/streamsupplier.html"><strong aria-hidden="true">10.57.</strong> StreamSupplier</a></li><li class="chapter-item expanded "><a href="../classes/regularexpression.html" class="active"><strong aria-hidden="true">10.58.</strong> RegularExpression</a></li></ol></li><li class="chapter-item expanded "><a href="../builtins/index.html"><strong aria-hidden="true">11.</strong> Built-in functions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../builtins/abbrev.html"><strong aria-hidden="true">11.1.</strong> ABBREV</a></li><li class="chapter-item expanded "><a href="../builtins/abs.html"><strong aria-hidden="true">11.2.</strong> ABS</a></li><li class="chapter-item expanded "><a href="../builtins/address.html"><strong aria-hidden="true">11.3.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../builtins/arg.html"><strong aria-hidden="true">11.4.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../builtins/b2x.html"><strong aria-hidden="true">11.5.</strong> B2X</a></li><li class="chapter-item expanded "><a href="../builtins/beep.html"><strong aria-hidden="true">11.6.</strong> BEEP</a></li><li class="chapter-item expanded "><a href="../builtins/bitand.html"><strong aria-hidden="true">11.7.</strong> BITAND</a></li><li class="chapter-item expanded "><a href="../builtins/bitor.html"><strong aria-hidden="true">11.8.</strong> BITOR</a></li><li class="chapter-item expanded "><a href="../builtins/bitxor.html"><strong aria-hidden="true">11.9.</strong> BITXOR</a></li><li class="chapter-item expanded "><a href="../builtins/c2d.html"><strong aria-hidden="true">11.10.</strong> C2D</a></li><li class="chapter-item expanded "><a href="../builtins/c2x.html"><strong aria-hidden="true">11.11.</strong> C2X</a></li><li class="chapter-item expanded "><a href="../builtins/center.html"><strong aria-hidden="true">11.12.</strong> CENTER</a></li><li class="chapter-item expanded "><a href="../builtins/changestr.html"><strong aria-hidden="true">11.13.</strong> CHANGESTR</a></li><li class="chapter-item expanded "><a href="../builtins/charin.html"><strong aria-hidden="true">11.14.</strong> CHARIN</a></li><li class="chapter-item expanded "><a href="../builtins/charout.html"><strong aria-hidden="true">11.15.</strong> CHAROUT</a></li><li class="chapter-item expanded "><a href="../builtins/chars.html"><strong aria-hidden="true">11.16.</strong> CHARS</a></li><li class="chapter-item expanded "><a href="../builtins/compare.html"><strong aria-hidden="true">11.17.</strong> COMPARE</a></li><li class="chapter-item expanded "><a href="../builtins/condition.html"><strong aria-hidden="true">11.18.</strong> CONDITION</a></li><li class="chapter-item expanded "><a href="../builtins/copies.html"><strong aria-hidden="true">11.19.</strong> COPIES</a></li><li class="chapter-item expanded "><a href="../builtins/countstr.html"><strong aria-hidden="true">11.20.</strong> COUNTSTR</a></li><li class="chapter-item expanded "><a href="../builtins/d2c.html"><strong aria-hidden="true">11.21.</strong> D2C</a></li><li class="chapter-item expanded "><a href="../builtins/d2x.html"><strong aria-hidden="true">11.22.</strong> D2X</a></li><li class="chapter-item expanded "><a href="../builtins/datatype.html"><strong aria-hidden="true">11.23.</strong> DATATYPE</a></li><li class="chapter-item expanded "><a href="../builtins/date.html"><strong aria-hidden="true">11.24.</strong> DATE</a></li><li class="chapter-item expanded "><a href="../builtins/delstr.html"><strong aria-hidden="true">11.25.</strong> DELSTR</a></li><li class="chapter-item expanded "><a href="../builtins/delword.html"><strong aria-hidden="true">11.26.</strong> DELWORD</a></li><li class="chapter-item expanded "><a href="../builtins/digits.html"><strong aria-hidden="true">11.27.</strong> DIGITS</a></li><li class="chapter-item expanded "><a href="../builtins/directory.html"><strong aria-hidden="true">11.28.</strong> DIRECTORY</a></li><li class="chapter-item expanded "><a href="../builtins/endlocal.html"><strong aria-hidden="true">11.29.</strong> ENDLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/errortext.html"><strong aria-hidden="true">11.30.</strong> ERRORTEXT</a></li><li class="chapter-item expanded "><a href="../builtins/filespec.html"><strong aria-hidden="true">11.31.</strong> FILESPEC</a></li><li class="chapter-item expanded "><a href="../builtins/form.html"><strong aria-hidden="true">11.32.</strong> FORM</a></li><li class="chapter-item expanded "><a href="../builtins/format.html"><strong aria-hidden="true">11.33.</strong> FORMAT</a></li><li class="chapter-item expanded "><a href="../builtins/fuzz.html"><strong aria-hidden="true">11.34.</strong> FUZZ</a></li><li class="chapter-item expanded "><a href="../builtins/gc.html"><strong aria-hidden="true">11.35.</strong> GC</a></li><li class="chapter-item expanded "><a href="../builtins/insert.html"><strong aria-hidden="true">11.36.</strong> INSERT</a></li><li class="chapter-item expanded "><a href="../builtins/lastpos.html"><strong aria-hidden="true">11.37.</strong> LASTPOS</a></li><li class="chapter-item expanded "><a href="../builtins/left.html"><strong aria-hidden="true">11.38.</strong> LEFT</a></li><li class="chapter-item expanded "><a href="../builtins/length.html"><strong aria-hidden="true">11.39.</strong> LENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/linein.html"><strong aria-hidden="true">11.40.</strong> LINEIN</a></li><li class="chapter-item expanded "><a href="../builtins/lineout.html"><strong aria-hidden="true">11.41.</strong> LINEOUT</a></li><li class="chapter-item expanded "><a href="../builtins/lines.html"><strong aria-hidden="true">11.42.</strong> LINES</a></li><li class="chapter-item expanded "><a href="../builtins/lower.html"><strong aria-hidden="true">11.43.</strong> LOWER</a></li><li class="chapter-item expanded "><a href="../builtins/max.html"><strong aria-hidden="true">11.44.</strong> MAX</a></li><li class="chapter-item expanded "><a href="../builtins/min.html"><strong aria-hidden="true">11.45.</strong> MIN</a></li><li class="chapter-item expanded "><a href="../builtins/overlay.html"><strong aria-hidden="true">11.46.</strong> OVERLAY</a></li><li class="chapter-item expanded "><a href="../builtins/pos.html"><strong aria-hidden="true">11.47.</strong> POS</a></li><li class="chapter-item expanded "><a href="../builtins/qualify.html"><strong aria-hidden="true">11.48.</strong> QUALIFY</a></li><li class="chapter-item expanded "><a href="../builtins/queued.html"><strong aria-hidden="true">11.49.</strong> QUEUED</a></li><li class="chapter-item expanded "><a href="../builtins/random.html"><strong aria-hidden="true">11.50.</strong> RANDOM</a></li><li class="chapter-item expanded "><a href="../builtins/reverse.html"><strong aria-hidden="true">11.51.</strong> REVERSE</a></li><li class="chapter-item expanded "><a href="../builtins/right.html"><strong aria-hidden="true">11.52.</strong> RIGHT</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncadd.html"><strong aria-hidden="true">11.53.</strong> RXFUNCADD</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncdrop.html"><strong aria-hidden="true">11.54.</strong> RXFUNCDROP</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncquery.html"><strong aria-hidden="true">11.55.</strong> RXFUNCQUERY</a></li><li class="chapter-item expanded "><a href="../builtins/rxqueue.html"><strong aria-hidden="true">11.56.</strong> RXQUEUE</a></li><li class="chapter-item expanded "><a href="../builtins/setlocal.html"><strong aria-hidden="true">11.57.</strong> SETLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/sign.html"><strong aria-hidden="true">11.58.</strong> SIGN</a></li><li class="chapter-item expanded "><a href="../builtins/sourceline.html"><strong aria-hidden="true">11.59.</strong> SOURCELINE</a></li><li class="chapter-item expanded "><a href="../builtins/space.html"><strong aria-hidden="true">11.60.</strong> SPACE</a></li><li class="chapter-item expanded "><a href="../builtins/stream.html"><strong aria-hidden="true">11.61.</strong> STREAM</a></li><li class="chapter-item expanded "><a href="../builtins/strip.html"><strong aria-hidden="true">11.62.</strong> STRIP</a></li><li class="chapter-item expanded "><a href="../builtins/substr.html"><strong aria-hidden="true">11.63.</strong> SUBSTR</a></li><li class="chapter-item expanded "><a href="../builtins/subword.html"><strong aria-hidden="true">11.64.</strong> SUBWORD</a></li><li class="chapter-item expanded "><a href="../builtins/symbol.html"><strong aria-hidden="true">11.65.</strong> SYMBOL</a></li><li class="chapter-item expanded "><a href="../builtins/time.html"><strong aria-hidden="true">11.66.</strong> TIME</a></li><li class="chapter-item expanded "><a href="../builtins/trace.html"><strong aria-hidden="true">11.67.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../builtins/translate.html"><strong aria-hidden="true">11.68.</strong> TRANSLATE</a></li><li class="chapter-item expanded "><a href="../builtins/trunc.html"><strong aria-hidden="true">11.69.</strong> TRUNC</a></li><li class="chapter-item expanded "><a href="../builtins/upper.html"><strong aria-hidden="true">11.70.</strong> UPPER</a></li><li class="chapter-item expanded "><a href="../builtins/userid.html"><strong aria-hidden="true">11.71.</strong> USERID</a></li><li class="chapter-item expanded "><a href="../builtins/value.html"><strong aria-hidden="true">11.72.</strong> VALUE</a></li><li class="chapter-item expanded "><a href="../builtins/var.html"><strong aria-hidden="true">11.73.</strong> VAR</a></li><li class="chapter-item expanded "><a href="../builtins/verify.html"><strong aria-hidden="true">11.74.</strong> VERIFY</a></li><li class="chapter-item expanded "><a href="../builtins/word.html"><strong aria-hidden="true">11.75.</strong> WORD</a></li><li class="chapter-item expanded "><a href="../builtins/wordindex.html"><strong aria-hidden="true">11.76.</strong> WORDINDEX</a></li><li class="chapter-item expanded "><a href="../builtins/wordlength.html"><strong aria-hidden="true">11.77.</strong> WORDLENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/wordpos.html"><strong aria-hidden="true">11.78.</strong> WORDPOS</a></li><li class="chapter-item expanded "><a href="../builtins/words.html"><strong aria-hidden="true">11.79.</strong> WORDS</a></li><li class="chapter-item expanded "><a href="../builtins/x2b.html"><strong aria-hidden="true">11.80.</strong> X2B</a></li><li class="chapter-item expanded "><a href="../builtins/x2c.html"><strong aria-hidden="true">11.81.</strong> X2C</a></li><li class="chapter-item expanded "><a href="../builtins/x2d.html"><strong aria-hidden="true">11.82.</strong> X2D</a></li><li class="chapter-item expanded "><a href="../builtins/xrange.html"><strong aria-hidden="true">11.83.</strong> XRANGE</a></li></ol></li><li class="chapter-item expanded "><a href="../deviations.html"><strong aria-hidden="true">12.</strong> Deviations</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The interrexx Language Specification</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="regularexpression"><a class="header" href="#regularexpression">RegularExpression</a></h1>
+<p class="references">rexxref: Builtin Classes &gt; Utility Classes &gt; RegularExpression Class; Builtin Classes &gt; Utility Classes &gt; RegularExpression Class &gt; new (Class Method); Builtin Classes &gt; Utility Classes &gt; RegularExpression Class &gt; match; Builtin Classes &gt; Utility Classes &gt; RegularExpression Class &gt; parse; Builtin Classes &gt; Utility Classes &gt; RegularExpression Class &gt; pos; Builtin Classes &gt; Utility Classes &gt; RegularExpression Class &gt; position</p>
+<p class="deviations">Deviations: D87, D88, D89</p>
+<p>A <code>RegularExpression</code> holds a pattern and tells whether a string matches it,
+and where in a string it is found. The pattern language is small: literal
+characters, a single-character wildcard, repetition, alternatives, groups and
+sets of characters. The class is not preloaded. A program makes it available
+with <code>::requires "rxregexp.cls"</code>, and the package that file names is part of
+every installation; every example on this page does so. A traceback that runs
+through that file shows interrexx's own lines of it, their numbers and their
+text, not ooRexx's, and an error the package raises may be reported from
+another clause of it or from the caller (<a href="#r-class.regularexpression.deviation.89">Deviation
+89</a>).</p>
+<p>The page first states the class and how a pattern is read, then the grammar
+and what it matches, and last the matching calls. Characters are bytes: the
+pattern and the string are compared byte by byte, and no case is folded. A
+<code>'00'x</code> ends a pattern, and what <code>match</code> and <code>pos</code> answer for a string that
+contains one is not specified (<a href="#r-class.regularexpression.grammar">the grammar
+rule</a> gives the first).</p>
+<h2 id="the-class"><a class="header" href="#the-class">The class</a></h2>
+<div class="rule" id="r-class.regularexpression.creation"><a href="#r-class.regularexpression.creation">[class.regularexpression.creation]</a></div>
+<p><code>RegularExpression</code> has the class method <code>new</code> and the instance methods
+<code>init</code>, <code>uninit</code>, <code>parse</code>, <code>match</code>, <code>pos</code> and <code>position</code>, besides the methods
+that every class has. <code>uninit</code> is public (<code>hasMethod('uninit')</code> answers 1),
+but what it does is not part of this specification, except for the calls that
+follow it (<a href="#r-class.regularexpression.deviation.88">Deviation 88</a>). The class
+may have private and undocumented methods besides these; they are not part of
+this specification either. Its only superclass is <code>Object</code> and it inherits no
+mixin class (<a href="index.html#r-class.index.hierarchy">the hierarchy rule</a>). <code>new</code> makes an
+instance of the class that received it, so a subclass makes instances of
+itself, and sends <code>init</code> the arguments of <code>new</code> (<a href="index.html#r-class.index.new">the new
+rule</a>). A subclass that declares its own <code>init</code> forwards to
+this one, which holds the pattern. Until <code>parse</code>, <code>match</code> or <code>pos</code> has run,
+<code>position</code> answers the string <code>!POS</code>, also after a pattern was given to <code>new</code>.</p>
+<pre><code class="language-rexx">re = .RegularExpression~new('ab')
+say re~class~id re~class~superclass~id .RegularExpression~queryMixinClass
+say re~hasMethod('uninit') re~hasMethod('position')
+say re~position
+re~match('ab')
+say re~position
+t = .tagged~new('x*', 'first')
+say t~class~id t~tag t~match('xxx') t~position
+::class tagged subclass RegularExpression
+::method init
+  expose tag
+  use arg pattern, tag
+  self~init:super(pattern)
+::method tag
+  expose tag
+  return tag
+::requires "rxregexp.cls"
+</code></pre>
+<pre><code class="language-output">RegularExpression Object 0
+1 1
+!POS
+2
+TAGGED first 1 3
+</code></pre>
+<div class="rule" id="r-class.regularexpression.new"><a href="#r-class.regularexpression.new">[class.regularexpression.new]</a></div>
+<p><code>new(pattern, mode)</code> makes an expression. Both arguments are optional. A
+<code>pattern</code> that is omitted, or an omitted argument in its place as in
+<code>new(, 'MINIMAL')</code>, leaves the expression without a pattern; a pattern that is
+given is parsed as <a href="#r-class.regularexpression.parse"><code>parse</code></a> parses it, and
+an error in it raises <code>SYNTAX 38.0</code> instead of an answer code, also for the
+empty pattern. The <code>mode</code> is <code>MAXIMAL</code> or <code>MINIMAL</code> in any case and nothing
+else: any other string, an abbreviation, a string with a blank around it and
+the empty string, raise <code>SYNTAX 93.0</code>. It chooses <a href="#r-class.regularexpression.mode">how a match is
+read</a>; omitted, it is <code>MAXIMAL</code>. The arguments
+are read and checked as <a href="#r-class.regularexpression.args">the argument rule</a>
+says.</p>
+<pre><code class="language-rexx">say .RegularExpression~new('a', 'minimal')~match('ab')
+say .RegularExpression~new('a', 'Maximal')~match('ab')
+say .RegularExpression~new(12)~match(12)
+say .RegularExpression~new(, 'MINIMAL')~parse('a')
+call try ".RegularExpression~new('[')"
+call try ".RegularExpression~new('(a')"
+call try ".RegularExpression~new('')"
+call try ".RegularExpression~new('a', 'MIN')"
+call try ".RegularExpression~new('a', 'bogus')"
+call try ".RegularExpression~new('a', '')"
+call try ".RegularExpression~new('a', 1)"
+call try ".RegularExpression~new('a', 'MAXIMAL', 3)"
+call try ".RegularExpression~new(.nil)"
+call try ".RegularExpression~new('a', .object~new)"
+exit
+try:
+  signal on syntax name bad
+  interpret 'x =' arg(1)
+  say arg(1) '=&gt; made'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::requires "rxregexp.cls"
+</code></pre>
+<pre><code class="language-output">1
+0
+1
+0
+.RegularExpression~new('[') =&gt; 38.0
+.RegularExpression~new('(a') =&gt; 38.0
+.RegularExpression~new('') =&gt; 38.0
+.RegularExpression~new('a', 'MIN') =&gt; 93.0
+.RegularExpression~new('a', 'bogus') =&gt; 93.0
+.RegularExpression~new('a', '') =&gt; 93.0
+.RegularExpression~new('a', 1) =&gt; 93.0
+.RegularExpression~new('a', 'MAXIMAL', 3) =&gt; 88.922
+.RegularExpression~new(.nil) =&gt; 88.909
+.RegularExpression~new('a', .object~new) =&gt; 88.909
+</code></pre>
+<div class="rule" id="r-class.regularexpression.args"><a href="#r-class.regularexpression.args">[class.regularexpression.args]</a></div>
+<p><code>new</code>, <code>parse</code>, <code>match</code> and <code>pos</code> check their arguments in one order, which is
+not the order of <a href="index.html#r-class.index.args.count">the count rule</a>. First each
+argument that the method takes is checked from the left (the pattern and the
+mode of <code>new</code> and <code>parse</code>, the string of <code>match</code> and <code>pos</code>): a required one
+that is missing raises <code>SYNTAX 88.901</code>, and one that cannot be read as a
+string <code>88.909</code>. Then the number of arguments is checked, one too many raising
+<code>88.922</code>; an argument beyond the last one the method takes is not read. Then
+the mode is checked, <code>93.0</code>, and only then the pattern, so that a bad pattern
+given to <code>new</code> raises <code>38.0</code> last. An argument that is not a string is
+converted by sending it <code>request</code> with <code>STRING</code> (<a href="object.html#r-class.object.request">the request
+rule</a>); the <code>request</code> of <code>Object</code> answers what the
+object's <code>makeString</code> answers, and <code>.nil</code> when it has none. A string answer is
+used. An <code>Array</code> answer is read as its <code>makeString</code> answer, its items joined
+by line feeds. Any other answer, <code>.nil</code> included, raises <code>SYNTAX 88.909</code>, and
+the argument's <code>string</code> method is not used, unlike <a href="../conventions.html#r-conv.string.object">the
+builtins</a>. So a number is its digits, and an <code>Array</code>
+argument is its items joined by line feeds.</p>
+<pre><code class="language-rexx">re = .RegularExpression~new('xy')
+call try "re~match('a', .nil)"
+call try "re~parse('a', 'bogus', 3)"
+call try ".RegularExpression~new('[', 'MAXIMAL', 3)"
+call try ".RegularExpression~new('[', 'bogus')"
+call try "re~parse('[', 'bogus')"
+call try "re~match(.str~new)"
+call try "re~match(.object~new)"
+call try "re~match(.mk~new)"
+say .RegularExpression~new(.array~of('a', 'b'))~match('a'||'0a'x||'b')
+say .RegularExpression~new(.mka~new)~match('a'||'0a'x||'b')
+call try "re~match(.mko~new)"
+exit
+try:
+  signal on syntax name bad
+  interpret 'x =' arg(1)
+  say arg(1) '=&gt;' x
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class str
+::method string
+  return 'xy'
+::class mk
+::method makeString
+  return 'xy'
+::class mka
+::method makeString
+  return .array~of('a', 'b')
+::class mko
+::method makeString
+  return .object~new
+::requires "rxregexp.cls"
+</code></pre>
+<pre><code class="language-output">re~match('a', .nil) =&gt; 88.922
+re~parse('a', 'bogus', 3) =&gt; 88.922
+.RegularExpression~new('[', 'MAXIMAL', 3) =&gt; 88.922
+.RegularExpression~new('[', 'bogus') =&gt; 38.0
+re~parse('[', 'bogus') =&gt; 93.0
+re~match(.str~new) =&gt; 88.909
+re~match(.object~new) =&gt; 88.909
+re~match(.mk~new) =&gt; 1
+1
+1
+re~match(.mko~new) =&gt; 88.909
+</code></pre>
+<pre><code class="language-rexx">re = .RegularExpression~new('xy')
+call try ".RegularExpression~new(.nil, , 3)"
+call try "re~parse(.nil, , 1)"
+call try "re~match(.nil, 1)"
+call try "re~match(, 1)"
+call try "re~pos(, 1)"
+call try "re~parse(.nil, 'bogus')"
+call try ".RegularExpression~new('a', .nil, 1)"
+exit
+try:
+  signal on syntax name bad
+  interpret 'x =' arg(1)
+  say arg(1) '=&gt; done'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::requires "rxregexp.cls"
+</code></pre>
+<pre><code class="language-output defect=#202">.RegularExpression~new(.nil, , 3) =&gt; 88.909
+re~parse(.nil, , 1) =&gt; 88.909
+re~match(.nil, 1) =&gt; 88.909
+re~match(, 1) =&gt; 88.901
+re~pos(, 1) =&gt; 88.901
+re~parse(.nil, 'bogus') =&gt; 88.909
+.RegularExpression~new('a', .nil, 1) =&gt; 88.909
+</code></pre>
+<pre><code class="language-rexx">re = .RegularExpression~new('xy')
+say re~match(.rq~new) re~position
+::class rq
+::method request
+  return 'xy'
+::requires "rxregexp.cls"
+</code></pre>
+<pre><code class="language-output defect=#164">1 2
+</code></pre>
+<div class="rule" id="r-class.regularexpression.mode"><a href="#r-class.regularexpression.mode">[class.regularexpression.mode]</a></div>
+<p>The mode decides what a match is when several are possible. In <code>MAXIMAL</code> mode
+a match is as long as it can be: <a href="#r-class.regularexpression.match"><code>match</code></a>
+answers 1 only when the whole string matches the pattern, and
+<a href="#r-class.regularexpression.pos"><code>pos</code></a> finds the longest match at the leftmost
+place where there is one. In <code>MINIMAL</code> mode a match is as short as it can be:
+<code>match</code> answers 1 when the pattern matches a leading part of the string, the
+shortest one, and <code>pos</code> finds the shortest match at the leftmost place. The
+mode of an expression is the one given to <code>new</code> or the last one given to
+<code>parse</code>, and <code>MAXIMAL</code> before any was given.</p>
+<pre><code class="language-rexx">text = '&lt;p&gt;one&lt;/p&gt;&lt;p&gt;two&lt;/p&gt;'
+big = .RegularExpression~new('&lt;p&gt;?*&lt;/p&gt;')
+small = .RegularExpression~new('&lt;p&gt;?*&lt;/p&gt;', 'MINIMAL')
+say big~match(text) big~position small~match(text) small~position
+say big~pos(text) big~position small~pos(text) small~position
+say big~pos('x'text'y') big~position
+exit
+::requires "rxregexp.cls"
+</code></pre>
+<pre><code class="language-output">1 20 1 10
+1 20 1 10
+2 21
+</code></pre>
+<h2 id="reading-a-pattern"><a class="header" href="#reading-a-pattern">Reading a pattern</a></h2>
+<div class="rule" id="r-class.regularexpression.parse"><a href="#r-class.regularexpression.parse">[class.regularexpression.parse]</a></div>
+<p><code>parse(pattern, mode)</code> replaces the pattern of the expression and, when <code>mode</code>
+is given, its mode; without it the mode stays what it was. It answers a code:
+0 when the pattern was read, and otherwise one of 1 to 6 that <a href="#r-class.regularexpression.parse.codes">the next
+rule</a> lists. The pattern is required.
+The arguments are checked as <a href="#r-class.regularexpression.args">the argument
+rule</a> says, and a <code>mode</code> that is not <code>MAXIMAL</code>
+or <code>MINIMAL</code>, in any case, raises <code>SYNTAX 93.0</code>. <code>position</code> answers how many
+characters of the pattern were read. When the code is 0 that is the length of
+the pattern, unless the text after a complete pattern was left unread, as the
+<a href="#r-class.regularexpression.grammar">grammar rule</a> says. When the code is not 0
+the old pattern is gone and the expression matches every string: a later
+<code>match</code> answers 1 and <code>pos</code> answers 1, both with position 0.</p>
+<pre><code class="language-rexx">re = .RegularExpression~new('ab', 'MINIMAL')
+say re~match('abc') re~position
+say re~parse('abc') re~position re~match('abc') re~position
+say re~parse('abc', 'MAXIMAL') re~match('abcd') re~position
+say re~parse('[') re~position
+say re~match('zzz') re~position re~match('') re~position
+say re~pos('zzz') re~position
+call try 're~parse'
+call try 're~parse("a", "MAXIMAL", 1)'
+call try 're~parse(.nil)'
+call try 're~parse("a", "bogus")'
+exit
+try:
+  signal on syntax name bad
+  interpret 'x =' arg(1)
+  say arg(1) '=&gt; done'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::requires "rxregexp.cls"
+</code></pre>
+<pre><code class="language-output">1 2
+0 3 1 3
+0 0 3
+3 1
+1 0 1 0
+1 0
+re~parse =&gt; 88.901
+re~parse("a", "MAXIMAL", 1) =&gt; 88.922
+re~parse(.nil) =&gt; 88.909
+re~parse("a", "bogus") =&gt; 93.0
+</code></pre>
+<div class="rule" id="r-class.regularexpression.parse.codes"><a href="#r-class.regularexpression.parse.codes">[class.regularexpression.parse.codes]</a></div>
+<p>The code of <code>parse</code> says what was wrong with the pattern. Code 1 is a symbol
+where none is allowed, or a pattern that ends where something has to follow: a
+pattern that is empty or starts with <code>*</code>, <code>+</code>, <code>|</code>, <code>)</code>, <code>]</code>, <code>{</code> or <code>}</code>, an
+empty group <code>()</code>, and an alternative with nothing in it, as in <code>a|</code>, <code>a||b</code>
+and <code>(a|)</code>. Code 2 is a group that is not closed, as in <code>(a</code>. Code 3 is a set
+that is not valid or not closed: <code>[</code>, <code>[a</code>, <code>[]</code>, <code>[a-</code> and <code>[a-]</code>, a range
+that has no end, and a <code>\</code> that ends the pattern inside a set, as in <code>[a\</code>.
+Code 4 is a pattern that ends after an escape outside a set, as in <code>a\</code>, or
+inside a count: <code>a{</code> and <code>a{3</code>. Code 5 is a count that is not a number or is
+below 2, as in <code>a{}</code>, <code>a{x}</code> and <code>a{1}</code>, and a number too large for the
+pattern to be built. Code 6 is a symbolic name in a set that is not one of the
+<a href="#r-class.regularexpression.grammar.names">defined names</a>, or has no closing
+colon: <code>[:foo:]</code> and <code>[:alpha]</code>. <code>position</code> answers the number of characters
+before the one at fault, so 0 when the first character is at fault (<code>*</code>), 1
+for <code>()</code> and 2 for <code>a|*</code>, and the length of the pattern when it ends where
+something has to follow (<code>(a</code>, <code>a|</code>, <code>a\</code>, <code>[</code>, <code>[a</code>, <code>[a-c</code>). Two kinds of
+error count differently. An error in a set other than a missing <code>]</code>, which is
+codes 3 and 6 and a <code>\</code> that ends the pattern inside a set, counts the
+characters up to and including the <code>[</code> (<code>[]</code> 1, <code>xy[a-]</code> 3, <code>[a\</code> 1,
+<code>xy[:foo:]</code> 3), and so does a set that the pattern ends before its first
+member (<code>q[^</code> 2). An error in a count, codes 4 and 5, counts those before its
+<code>{</code> (<code>a{</code> 1, <code>xyz{3</code> 3, <code>xyz{x}</code> 3). The example shows it for a pattern of
+each kind.</p>
+<pre><code class="language-rexx">re = .RegularExpression~new
+patterns = .array~of('', '*', ')', '()', 'a|', '(a|)', '(a', '[', '[a', '[]')
+patterns~appendAll(.array~of('[a-]', 'a\', 'a{', 'a{3', 'a{}', 'a{1}'))
+patterns~append('a{x}')
+patterns~appendAll(.array~of('[:foo:]', '[:alpha]', 'a|*', '[a-c', 'xy[a-]'))
+patterns~appendAll(.array~of('[a\', 'xyz{3', 'xyz{x}', 'xy[:foo:]', 'q[^'))
+do p over patterns
+  say p~left(9) re~parse(p) re~position
+end
+exit
+::requires "rxregexp.cls"
+</code></pre>
+<pre><code class="language-output">          1 0
+*         1 0
+)         1 0
+()        1 1
+a|        1 2
+(a|)      1 3
+(a        2 2
+[         3 1
+[a        3 2
+[]        3 1
+[a-]      3 1
+a\        4 2
+a{        4 1
+a{3       4 1
+a{}       5 1
+a{1}      5 1
+a{x}      5 1
+[:foo:]   6 1
+[:alpha]  6 1
+a|*       1 2
+[a-c      3 4
+xy[a-]    3 3
+[a\       3 1
+xyz{3     4 3
+xyz{x}    5 3
+xy[:foo:] 6 3
+q[^       3 2
+</code></pre>
+<h2 id="the-pattern-language"><a class="header" href="#the-pattern-language">The pattern language</a></h2>
+<div class="rule" id="r-class.regularexpression.grammar"><a href="#r-class.regularexpression.grammar">[class.regularexpression.grammar]</a></div>
+<p>A pattern is one or more alternatives separated by <code>|</code>, and an alternative is
+one or more elements. An element is a character that stands for itself, the
+wildcard <code>?</code>, a set in square brackets, or a group in parentheses, and it may
+be followed by one quantifier. Any character that is not special stands for
+itself, a blank, <code>.</code>, <code>^</code>, <code>$</code>, <code>-</code>, <code>:</code> and <code>,</code> among them; case counts. <code>?</code>
+stands for any one character. <code>\</code> makes the character after it stand for
+itself, whatever it is; a <code>\</code> that ends the pattern is error 4. An alternative
+may not be empty, and neither may a group. <code>|</code> separates whole alternatives:
+it ranks below joining elements, so <code>ab|cd</code> is <code>ab</code> or <code>cd</code>, and a group is
+how the choice is limited to part of a pattern. A <code>*</code> or <code>+</code> or <code>{n}</code> applies
+to the element before it. Reading stops, without an error, at a symbol that
+cannot continue a pattern that is complete: a <code>)</code> with no group open, a second
+quantifier after a quantifier (<code>a**</code>, <code>a+*</code>, <code>a{2}+</code>), a <code>]</code>, or a <code>}</code> after
+an element; <code>parse</code> answers 0 and <code>position</code> says how many characters were
+read, so the rest is not part of the pattern and has no effect. Where an
+element is needed, such a symbol is error 1. A <code>'00'x</code> in the pattern ends it
+in the same way: what follows is not read, and <code>position</code> counts the
+characters before it.</p>
+<pre><code class="language-rexx">re = .RegularExpression~new
+say 'literals' re~parse('a b.c') re~match('a b.c') re~match('a bxc')
+say 'case' re~parse('abc') re~match('ABC')
+say 'wildcard' re~parse('a?c') re~match('abc') re~match('a-c') re~match('ac')
+say 'escape' re~parse('a\?c\\') re~match('a?c\') re~match('abc\')
+say 'colon' re~parse('a:b-c') re~match('a:b-c')
+say 'plain' re~parse('a^b$c,d') re~match('a^b$c,d')
+say 'alternatives' re~parse('ab|cd|e') re~match('ab') re~match('cd'),
+  re~match('e') re~match('abcd')
+say 'groups' re~parse('(a|b)(c|d)') re~match('ad') re~match('bc'),
+  re~match('ab')
+say 'nested' re~parse('((a)(b|(c)))') re~match('ab') re~match('ac')
+say 'one char' re~match('a')
+say 'stops' re~parse('ab)cd') re~position re~match('ab')
+say 'stops' re~parse('a**') re~position re~match('aaa') re~match('a')
+say 'stops' re~parse('a]b') re~position re~match('a')
+say 'bytes' re~parse('?') re~match('é') re~parse('??') re~match('é')
+say 'nul' re~parse('a'||'00'x||'b') re~position re~match('a')
+say 'nul' re~parse('['||'a'||'00'x||']') re~position
+say 'nul' re~parse('00'x) re~position
+exit
+::requires "rxregexp.cls"
+</code></pre>
+<pre><code class="language-output">literals 0 1 0
+case 0 0
+wildcard 0 1 1 0
+escape 0 1 0
+colon 0 1
+plain 0 1
+alternatives 0 1 1 1 0
+groups 0 1 1 0
+nested 0 1 1
+one char 0
+stops 0 2 1
+stops 0 2 1 1
+stops 0 1 1
+bytes 0 0 0 1
+nul 0 1 1
+nul 3 2
+nul 1 0
+</code></pre>
+<div class="rule" id="r-class.regularexpression.grammar.repeat"><a href="#r-class.regularexpression.grammar.repeat">[class.regularexpression.grammar.repeat]</a></div>
+<p><code>*</code> after an element matches it any number of times, none included, <code>+</code> one or
+more times and <code>{n}</code> exactly <code>n</code> times. The count is read as a whole number
+from the text between the braces: blanks and the characters <code>'09'x</code> to <code>'0d'x</code>
+before it, and a sign, are allowed, it ends at the first character that is not
+a digit, and the text after it up to the <code>}</code> is ignored, so <code>a{2,3}</code> is
+<code>a{2}</code>. A count with no digit, or one below 2, is error 5, and so is one too
+large for the pattern to be built; how large that is is not specified. The
+element may be a character, <code>?</code>, a set or a group, so <code>?*</code> matches any string,
+the empty one included, and <code>(ab){2}</code> matches <code>abab</code>. A group that can match
+the empty string, as in <code>(a*)</code>, may itself be repeated; <a href="#r-class.regularexpression.deviation.87">Deviation
+87</a> gives examples.</p>
+<pre><code class="language-rexx">re = .RegularExpression~new
+say 'star' re~parse('ab*c') re~match('ac') re~match('abbbc') re~match('abd')
+say 'plus' re~parse('ab+c') re~match('ac') re~match('abc') re~match('abbbc')
+say 'count' re~parse('ab{3}c') re~match('abbbc') re~match('abbc'),
+  re~match('abbbbc')
+say 'group' re~parse('(ab){2}') re~match('abab') re~match('ab'),
+  re~match('ababab')
+say 'any' re~parse('?*') re~match('') re~match('anything at all')
+say 'mixed' re~parse('x?*y') re~match('xy') re~match('xaby') re~match('xab')
+say 'set' re~parse('[ab]+') re~match('abba') re~match('abca')
+say 'braces' re~parse('a{ 3}') re~match('aaa') re~parse('a{2,3}'),
+  re~match('aa') re~match('aaa') re~parse('a{+2}') re~match('aa')
+say 'start' re~parse('a{0}') re~parse('a{1}') re~parse('a{2}'),
+  re~parse('a{-2}')
+exit
+::requires "rxregexp.cls"
+</code></pre>
+<pre><code class="language-output">star 0 1 1 0
+plus 0 0 1 1
+count 0 1 0 0
+group 0 1 0 0
+any 0 1 1
+mixed 0 1 1 0
+set 0 1 0
+braces 0 1 0 1 0 0 1
+start 5 5 0 5
+</code></pre>
+<div class="rule" id="r-class.regularexpression.grammar.set"><a href="#r-class.regularexpression.grammar.set">[class.regularexpression.grammar.set]</a></div>
+<p>A set in square brackets matches one character that is one of its members. The
+members are characters, ranges and <a href="#r-class.regularexpression.grammar.names">symbolic
+names</a>. A <code>^</code> right after the opening
+bracket negates the set: it matches one character that is not a member; a <code>^</code>
+anywhere else is an ordinary member. A <code>-</code> between two characters makes a
+range. For a range the bytes count as numbers from -128 for <code>'80'x</code> up to 127
+for <code>'7f'x</code>, so <code>'80'x</code> to <code>'ff'x</code> come before <code>'00'x</code>. When the first
+character is not above the second, the range is all characters from the first
+to the second; when it is above, it is the characters above the second up to
+the first, so <code>[d-a]</code> is <code>b</code>, <code>c</code> and <code>d</code>. In a chain such as <code>[a-c-e]</code> the
+character that ends a range also starts the next one, so that set is <code>a</code> to
+<code>e</code>. A <code>\</code> right after the <code>-</code> of a range is the end of the range and not an
+escape, and a <code>-</code> after a symbolic name starts a range at the closing colon of
+the name, which is left out when the end is above it: <code>[:digit:-z]</code> is the
+digits and the characters from <code>;</code> to <code>z</code>. A <code>[</code> inside a set is an ordinary
+member. A <code>-</code> that opens the set, or follows the <code>^</code> that opens it, is an
+ordinary member, and a <code>-</code> that ends the set is error 3. Inside a set the
+characters <code>?</code>, <code>*</code>, <code>+</code>, <code>|</code>, <code>(</code>, <code>)</code>, <code>{</code>, <code>}</code> and <code>.</code> stand for
+themselves; <code>\</code> makes the next character an ordinary member, which is how <code>]</code>,
+<code>-</code> and <code>\</code> itself are members, and a <code>:</code> that is not preceded by <code>\</code> begins a
+symbolic name. A set must have a member, and its closing bracket must be
+present: error 3.</p>
+<pre><code class="language-rexx">re = .RegularExpression~new
+say 'members' re~parse('[xyz]') re~match('y') re~match('w')
+say 'range' re~parse('[a-d]') re~match('c') re~match('e')
+say 'backward' re~parse('[d-a]') re~match('b') re~match('e') re~match('a')
+say 'signed' re~parse('[a-'||'c3'x||']') re~match('ff'x) re~match('c3'x),
+  re~match('b')
+say 'high' re~parse('['||'80'x||'-'||'ff'x||']') re~match('90'x) re~match('a')
+say 'chain' re~parse('[a-c-e]') re~match('d') re~match('b') re~match('f')
+say 'late end' re~parse('[a-\c]') re~match('a') re~match(']') re~match('b'),
+  re~match('\') re~match('c')
+say 'after name' re~parse('[:digit:-z]') re~match(';') re~match(':'),
+  re~match('5') re~match('{')
+say 'bracket' re~parse('[[]') re~match('[') re~match('a')
+say 'ranges' re~parse('[a-cx-z]') re~match('b') re~match('y') re~match('m')
+say 'negated' re~parse('[^a-c]') re~match('d') re~match('b')
+say 'caret' re~parse('[a^]') re~match('^') re~parse('[^^]') re~match('^'),
+  re~match('a')
+say 'dash' re~parse('[-a]') re~match('-') re~match('b')
+say 'after caret' re~parse('[^-a]') re~match('-') re~match('b')
+say 'plain' re~parse('[?*+|(){}.]') re~match('?') re~match('(') re~match('.'),
+  re~match('x')
+say 'escaped' re~parse('[\]\-\\]') re~match(']') re~match('-'),
+  re~match('\') re~match('a')
+say 'colon' re~parse('[\:a]') re~match(':') re~match('a')
+say 'errors' re~parse('[a-]') re~parse('[]') re~parse('[abc')
+exit
+::requires "rxregexp.cls"
+</code></pre>
+<pre><code class="language-output">members 0 1 0
+range 0 1 0
+backward 0 1 0 0
+signed 0 1 0 0
+high 0 1 0
+chain 0 1 1 0
+late end 0 1 1 0 0 1
+after name 0 1 0 1 0
+bracket 0 1 0
+ranges 0 1 1 0
+negated 0 1 0
+caret 0 1 0 0 1
+dash 0 1 0
+after caret 0 0 1
+plain 0 1 1 1 0
+escaped 0 1 1 1 0
+colon 0 1 1
+errors 3 3 3
+</code></pre>
+<div class="rule" id="r-class.regularexpression.grammar.names"><a href="#r-class.regularexpression.grammar.names">[class.regularexpression.grammar.names]</a></div>
+<p>A symbolic name in a set stands for a group of characters. A name is written
+between two colons and is read without regard to case; it may be mixed with
+other members, and <code>[^:digit:]</code> negates it. The names and what they stand for:
+<code>alpha</code> is the letters <code>A</code> to <code>Z</code> and <code>a</code> to <code>z</code>, <code>lower</code> is <code>a</code> to <code>z</code>,
+<code>upper</code> is <code>A</code> to <code>Z</code>, <code>digit</code> is <code>0</code> to <code>9</code>, <code>alnum</code> is <code>alpha</code> and <code>digit</code>,
+<code>xdigit</code> is <code>digit</code>, <code>A</code> to <code>F</code> and <code>a</code> to <code>f</code>, <code>blank</code> is space and tab,
+<code>space</code> is <code>'09'x</code> to <code>'0d'x</code> and space, <code>cntrl</code> is <code>'00'x</code> to <code>'1f'x</code> and
+<code>'7f'x</code>, <code>print</code> is <code>'20'x</code> to <code>'7e'x</code>, <code>graph</code> is <code>print</code> without the space,
+and <code>punct</code> is <code>print</code> without the space, the letters and the digits. A <code>:</code> in
+a set that does not begin a name this way, such as the colon in <code>[a:b]</code>, is
+error 6. A name outside a set is plain text: <code>:alpha:</code> is the seven
+characters.</p>
+<pre><code class="language-rexx">re = .RegularExpression~new
+names = 'alpha lower upper digit alnum xdigit blank space cntrl print'
+names = names 'graph punct'
+do name over names~makeArray(' ')
+  re~parse('[:'name':]')
+  hits = ''
+  chars = .array~of('a', 'Z', '7', 'f', 'g', ' ', '09'x, '0a'x, '1f'x, '7f'x)
+  chars~append('!')
+  do ch over chars
+    hits = hits re~match(ch)
+  end
+  say name~left(6) hits
+end
+say 'mixed' re~parse('[:digit:x]') re~match('x') re~match('5') re~match('y')
+say 'negated' re~parse('[^:digit:]') re~match('x') re~match('5')
+say 'case' re~parse('[:ALPHA:]') re~match('q')
+say 'outside' re~parse(':alpha:') re~match(':alpha:') re~match('a')
+say 'errors' re~parse('[a:b]') re~parse('[:]') re~parse('[:alpha'),
+  re~parse('[:abc:]')
+exit
+::requires "rxregexp.cls"
+</code></pre>
+<pre><code class="language-output">alpha   1 1 0 1 1 0 0 0 0 0 0
+lower   1 0 0 1 1 0 0 0 0 0 0
+upper   0 1 0 0 0 0 0 0 0 0 0
+digit   0 0 1 0 0 0 0 0 0 0 0
+alnum   1 1 1 1 1 0 0 0 0 0 0
+xdigit  1 0 1 1 0 0 0 0 0 0 0
+blank   0 0 0 0 0 1 1 0 0 0 0
+space   0 0 0 0 0 1 1 1 0 0 0
+cntrl   0 0 0 0 0 0 1 1 1 1 0
+print   1 1 1 1 1 1 0 0 0 0 1
+graph   1 1 1 1 1 0 0 0 0 0 1
+punct   0 0 0 0 0 0 0 0 0 0 1
+mixed 0 1 1 0
+negated 0 1 0
+case 0 1
+outside 0 1 0
+errors 6 6 6 6
+</code></pre>
+<h2 id="matching"><a class="header" href="#matching">Matching</a></h2>
+<div class="rule" id="r-class.regularexpression.match"><a href="#r-class.regularexpression.match">[class.regularexpression.match]</a></div>
+<p><code>match(string)</code> answers 1 when the pattern matches the string as <a href="#r-class.regularexpression.mode">the
+mode</a> says, and 0 when it does not, and
+<code>position</code> answers a number. When the answer is 1 the number is the length of
+the part of the string that matched: the whole string in <code>MAXIMAL</code> mode, the
+shortest leading part in <code>MINIMAL</code> mode. When it is 0 the number is the length
+of the longest leading part of the string that can still be the beginning of a
+match of the pattern, which is 0 when the first character already fails, and
+the length of the string when the string ended too early. The string argument
+is required; it is read and checked as <a href="#r-class.regularexpression.args">the argument
+rule</a> says.</p>
+<pre><code class="language-rexx">re = .RegularExpression~new('ab?d')
+say re~match('abcd') re~position
+say re~match('abc') re~position
+say re~match('abcde') re~position
+say re~match('xbcd') re~position
+say re~match('') re~position
+say re~match('ab') re~position
+mi = .RegularExpression~new('a?*d', 'MINIMAL')
+say mi~match('abdcd') mi~position mi~match('ab') mi~position
+call try 're~match'
+call try 're~match("a", 1)'
+call try 're~match(.nil)'
+call try 're~match(.object~new)'
+say re~match(12) re~position
+exit
+try:
+  signal on syntax name bad
+  interpret 'x =' arg(1)
+  say arg(1) '=&gt; done'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::requires "rxregexp.cls"
+</code></pre>
+<pre><code class="language-output">1 4
+0 3
+0 4
+0 0
+0 0
+0 2
+1 3 0 2
+re~match =&gt; 88.901
+re~match("a", 1) =&gt; 88.922
+re~match(.nil) =&gt; 88.909
+re~match(.object~new) =&gt; 88.909
+0 0
+</code></pre>
+<div class="rule" id="r-class.regularexpression.pos"><a href="#r-class.regularexpression.pos">[class.regularexpression.pos]</a></div>
+<p><code>pos(string)</code> looks for the pattern in the string, and answers the position of
+the first character of the leftmost place where it matches, counting from 1,
+or 0 when there is none. <code>position</code> then answers the position of the last
+character of that match, so a match of <code>n</code> characters from position <code>p</code> ends
+at <code>p+n-1</code>, and an empty match, which a pattern that can match the empty
+string has at position 1, ends at 0. When there is no match both are 0. The
+match is the longest in <code>MAXIMAL</code> mode and the shortest in <code>MINIMAL</code> mode, and
+among matches that begin at one place only that place counts: the leftmost
+place wins over the length. The argument is checked as for <code>match</code>.</p>
+<pre><code class="language-rexx">text = 'in 2016, 42 and 7'
+re = .RegularExpression~new('[0-9]+')
+b = re~pos(text)
+say b re~position text~substr(b, re~position - b + 1)
+mi = .RegularExpression~new('[0-9]+', 'MINIMAL')
+b = mi~pos(text)
+say b mi~position text~substr(b, mi~position - b + 1)
+say re~pos('none') re~position
+nul = .RegularExpression~new('b*')
+say nul~pos('abb') nul~position nul~pos('') nul~position
+alt = .RegularExpression~new('ab|abcd')
+say alt~pos('xabcd') alt~position
+call try 're~pos'
+call try 're~pos("a", 1)'
+call try 're~pos(.nil)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'x =' arg(1)
+  say arg(1) '=&gt; done'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::requires "rxregexp.cls"
+</code></pre>
+<pre><code class="language-output">4 7 2016
+4 4 2
+0 0
+1 0 1 0
+2 5
+re~pos =&gt; 88.901
+re~pos("a", 1) =&gt; 88.922
+re~pos(.nil) =&gt; 88.909
+</code></pre>
+<div class="rule" id="r-class.regularexpression.position"><a href="#r-class.regularexpression.position">[class.regularexpression.position]</a></div>
+<p><code>position</code> answers the position that the last <code>parse</code>, <code>match</code> or <code>pos</code> left
+behind, as those rules say, and the string <code>!POS</code> before any of them ran. It
+takes no argument: any argument raises <code>SYNTAX 93.902</code>. Sending it does not
+change the position; each of the three methods replaces it. <code>uninit</code> does not
+change what <code>position</code> answers.</p>
+<pre><code class="language-rexx">re = .RegularExpression~new('ab')
+say re~position
+say re~parse('abc') re~position
+say re~match('abd') re~position
+say re~pos('xabcd') re~position re~position
+call try 're~position(5)'
+gone = .RegularExpression~new('ab')
+gone~uninit
+say gone~position
+exit
+try:
+  signal on syntax name bad
+  interpret 'x =' arg(1)
+  say arg(1) '=&gt; done'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::requires "rxregexp.cls"
+</code></pre>
+<pre><code class="language-output">!POS
+0 3
+0 2
+2 4 4
+re~position(5) =&gt; 93.902
+!POS
+</code></pre>
+<h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
+<div class="rule" id="r-class.regularexpression.deviation.87"><a href="#r-class.regularexpression.deviation.87">[class.regularexpression.deviation.87]</a></div>
+<p>The pattern language is the one this
+page gives, and every call ends. ooRexx differs in many patterns; among them,
+it answers wrongly when a <code>+</code> is followed by a repeated element, as <code>c+a*</code>,
+which it does not match against <code>cca</code>, and when an alternative that begins
+with a repeated element is followed by another one, at the top or in a group:
+<code>b*c|a</code> is <code>b*c</code> or <code>a</code>, but ooRexx reads the second alternative as following
+the repeated element, so it finds <code>ba</code>. It does not end for a pattern that
+repeats a group that can match the empty string, such as <code>(a*)*</code>, for one that
+begins with a group whose first alternative can match the empty string and is
+followed by <code>|</code>, such as <code>(c*|b)|d</code>, and for a set with a range whose highest
+character, in the order of <a href="#r-class.regularexpression.grammar.set">the set
+rule</a>, is <code>'7f'x</code>, as in <code>[a-'7f'x]</code>
+and <code>['7f'x-'81'x]</code>, and it crashes on others, such as <code>(c*|b)c|d</code>. And for a
+count it cannot build, as in <code>a{99999999999}</code>, it uses memory until it is
+stopped, where interrexx answers code 5 from <code>parse</code>. None of the examples is
+run on ooRexx.</p>
+<pre><code class="language-rexx">re = .RegularExpression~new('b*c|a')
+say re~match('ba') re~position re~pos('ba') re~position
+say re~match('bc') re~position re~match('a') re~position
+re~parse('c+a*')
+say re~match('cca') re~position
+re~parse('x(b*c|a)')
+say re~match('xba') re~position
+re~parse('(a*)*')
+say re~match('aaa') re~position re~pos('baa') re~position
+re~parse('((ab)*|c)*')
+say re~match('ababcab') re~position
+say re~parse('a{99999999999}')
+exit
+::requires "rxregexp.cls"
+</code></pre>
+<pre><code class="language-output">0 1 2 2
+1 2 1 1
+1 3
+0 2
+1 3 1 0
+1 7
+5
+</code></pre>
+<div class="rule" id="r-class.regularexpression.deviation.88"><a href="#r-class.regularexpression.deviation.88">[class.regularexpression.deviation.88]</a></div>
+<p><code>match</code> or <code>pos</code> on an expression that
+has never been given a pattern raises <code>SYNTAX 93.900</code>, and so do <code>match</code>,
+<code>pos</code> and <code>parse</code> sent to an expression after <code>uninit</code> has been sent to it; a
+second <code>uninit</code> answers no value. ooRexx crashes on <code>match</code>, <code>pos</code> and <code>parse</code>
+after <code>uninit</code>. The example is not run on ooRexx.</p>
+<pre><code class="language-rexx">re = .RegularExpression~new
+call try "re~match('abc')"
+call try "re~pos('abc')"
+gone = .RegularExpression~new('ab')
+gone~uninit
+call try "gone~match('ab')"
+call try "gone~pos('ab')"
+call try "gone~parse('ab')"
+call try "gone~uninit"
+exit
+try:
+  signal on syntax name bad
+  interpret 'x =' arg(1)
+  say arg(1) '=&gt;' x
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::requires "rxregexp.cls"
+</code></pre>
+<pre><code class="language-output">re~match('abc') =&gt; 93.900
+re~pos('abc') =&gt; 93.900
+gone~match('ab') =&gt; 93.900
+gone~pos('ab') =&gt; 93.900
+gone~parse('ab') =&gt; 93.900
+gone~uninit =&gt; 91.999
+</code></pre>
+<div class="rule" id="r-class.regularexpression.deviation.89"><a href="#r-class.regularexpression.deviation.89">[class.regularexpression.deviation.89]</a></div>
+<p><code>rxregexp.cls</code> is written for
+interrexx, so a traceback that runs through it names interrexx's line numbers
+and shows interrexx's text of those lines: the <code>position</code> method raises its
+error from a line that interrexx numbers 20 and ooRexx numbers 56. An error
+that the package raises may be reported from another clause of it or from the
+caller, so that the program and position of the condition differ; its code and
+every result match ooRexx. The example is not run on ooRexx.</p>
+<pre><code class="language-rexx">re = .RegularExpression~new('xy')
+signal on syntax name bad
+re~position(1)
+bad:
+say condition('o')~traceback~firstItem~word(1)
+signal on syntax name bad2
+.RegularExpression~new('[')
+bad2:
+say condition('o')~code
+::requires "rxregexp.cls"
+</code></pre>
+<pre><code class="language-output">20
+38.0
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../classes/streamsupplier.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../builtins/index.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../classes/streamsupplier.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../builtins/index.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../assets/version-picker.js"></script>
+
+
+    </div>
+    </body>
+</html>

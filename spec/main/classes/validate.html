@@ -1,0 +1,817 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Validate - The interrexx Language Specification</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../conventions.html"><strong aria-hidden="true">2.</strong> Conventions</a></li><li class="chapter-item expanded "><a href="../lexical/index.html"><strong aria-hidden="true">3.</strong> Lexical structure</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../lexical/characters.html"><strong aria-hidden="true">3.1.</strong> Characters</a></li><li class="chapter-item expanded "><a href="../lexical/comments.html"><strong aria-hidden="true">3.2.</strong> Comments</a></li><li class="chapter-item expanded "><a href="../lexical/literals.html"><strong aria-hidden="true">3.3.</strong> Literals</a></li><li class="chapter-item expanded "><a href="../lexical/symbols.html"><strong aria-hidden="true">3.4.</strong> Symbols</a></li><li class="chapter-item expanded "><a href="../lexical/operators.html"><strong aria-hidden="true">3.5.</strong> Operators and special characters</a></li><li class="chapter-item expanded "><a href="../lexical/clauses.html"><strong aria-hidden="true">3.6.</strong> Clauses</a></li></ol></li><li class="chapter-item expanded "><a href="../numbers/index.html"><strong aria-hidden="true">4.</strong> Numbers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../numbers/formats.html"><strong aria-hidden="true">4.1.</strong> Formats</a></li><li class="chapter-item expanded "><a href="../numbers/limits.html"><strong aria-hidden="true">4.2.</strong> Limits</a></li><li class="chapter-item expanded "><a href="../numbers/arithmetic.html"><strong aria-hidden="true">4.3.</strong> Arithmetic</a></li><li class="chapter-item expanded "><a href="../numbers/settings.html"><strong aria-hidden="true">4.4.</strong> Settings</a></li><li class="chapter-item expanded "><a href="../numbers/comparison.html"><strong aria-hidden="true">4.5.</strong> Comparison</a></li></ol></li><li class="chapter-item expanded "><a href="../expressions/index.html"><strong aria-hidden="true">5.</strong> Expressions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../expressions/terms.html"><strong aria-hidden="true">5.1.</strong> Terms</a></li><li class="chapter-item expanded "><a href="../expressions/variables.html"><strong aria-hidden="true">5.2.</strong> Variables</a></li><li class="chapter-item expanded "><a href="../expressions/concatenation.html"><strong aria-hidden="true">5.3.</strong> Concatenation</a></li><li class="chapter-item expanded "><a href="../expressions/arithmetic.html"><strong aria-hidden="true">5.4.</strong> Arithmetic operators</a></li><li class="chapter-item expanded "><a href="../expressions/comparison.html"><strong aria-hidden="true">5.5.</strong> Comparison operators</a></li><li class="chapter-item expanded "><a href="../expressions/logical.html"><strong aria-hidden="true">5.6.</strong> Logical operators</a></li><li class="chapter-item expanded "><a href="../expressions/messages.html"><strong aria-hidden="true">5.7.</strong> Message operators</a></li></ol></li><li class="chapter-item expanded "><a href="../instructions/index.html"><strong aria-hidden="true">6.</strong> Instructions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../instructions/address.html"><strong aria-hidden="true">6.1.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../instructions/arg.html"><strong aria-hidden="true">6.2.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../instructions/assignment.html"><strong aria-hidden="true">6.3.</strong> Assignments</a></li><li class="chapter-item expanded "><a href="../instructions/call.html"><strong aria-hidden="true">6.4.</strong> CALL</a></li><li class="chapter-item expanded "><a href="../instructions/command.html"><strong aria-hidden="true">6.5.</strong> Commands</a></li><li class="chapter-item expanded "><a href="../instructions/do.html"><strong aria-hidden="true">6.6.</strong> DO</a></li><li class="chapter-item expanded "><a href="../instructions/drop.html"><strong aria-hidden="true">6.7.</strong> DROP</a></li><li class="chapter-item expanded "><a href="../instructions/exit.html"><strong aria-hidden="true">6.8.</strong> EXIT</a></li><li class="chapter-item expanded "><a href="../instructions/expose.html"><strong aria-hidden="true">6.9.</strong> EXPOSE</a></li><li class="chapter-item expanded "><a href="../instructions/forward.html"><strong aria-hidden="true">6.10.</strong> FORWARD</a></li><li class="chapter-item expanded "><a href="../instructions/guard.html"><strong aria-hidden="true">6.11.</strong> GUARD</a></li><li class="chapter-item expanded "><a href="../instructions/if.html"><strong aria-hidden="true">6.12.</strong> IF</a></li><li class="chapter-item expanded "><a href="../instructions/interpret.html"><strong aria-hidden="true">6.13.</strong> INTERPRET</a></li><li class="chapter-item expanded "><a href="../instructions/iterate.html"><strong aria-hidden="true">6.14.</strong> ITERATE</a></li><li class="chapter-item expanded "><a href="../instructions/leave.html"><strong aria-hidden="true">6.15.</strong> LEAVE</a></li><li class="chapter-item expanded "><a href="../instructions/loop.html"><strong aria-hidden="true">6.16.</strong> LOOP</a></li><li class="chapter-item expanded "><a href="../instructions/message.html"><strong aria-hidden="true">6.17.</strong> Message instructions</a></li><li class="chapter-item expanded "><a href="../instructions/nop.html"><strong aria-hidden="true">6.18.</strong> NOP</a></li><li class="chapter-item expanded "><a href="../instructions/numeric.html"><strong aria-hidden="true">6.19.</strong> NUMERIC</a></li><li class="chapter-item expanded "><a href="../instructions/options.html"><strong aria-hidden="true">6.20.</strong> OPTIONS</a></li><li class="chapter-item expanded "><a href="../instructions/parse.html"><strong aria-hidden="true">6.21.</strong> PARSE</a></li><li class="chapter-item expanded "><a href="../instructions/procedure.html"><strong aria-hidden="true">6.22.</strong> PROCEDURE</a></li><li class="chapter-item expanded "><a href="../instructions/pull.html"><strong aria-hidden="true">6.23.</strong> PULL</a></li><li class="chapter-item expanded "><a href="../instructions/push.html"><strong aria-hidden="true">6.24.</strong> PUSH</a></li><li class="chapter-item expanded "><a href="../instructions/queue.html"><strong aria-hidden="true">6.25.</strong> QUEUE</a></li><li class="chapter-item expanded "><a href="../instructions/raise.html"><strong aria-hidden="true">6.26.</strong> RAISE</a></li><li class="chapter-item expanded "><a href="../instructions/reply.html"><strong aria-hidden="true">6.27.</strong> REPLY</a></li><li class="chapter-item expanded "><a href="../instructions/return.html"><strong aria-hidden="true">6.28.</strong> RETURN</a></li><li class="chapter-item expanded "><a href="../instructions/say.html"><strong aria-hidden="true">6.29.</strong> SAY</a></li><li class="chapter-item expanded "><a href="../instructions/select.html"><strong aria-hidden="true">6.30.</strong> SELECT</a></li><li class="chapter-item expanded "><a href="../instructions/signal.html"><strong aria-hidden="true">6.31.</strong> SIGNAL</a></li><li class="chapter-item expanded "><a href="../instructions/trace.html"><strong aria-hidden="true">6.32.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../instructions/use.html"><strong aria-hidden="true">6.33.</strong> USE</a></li></ol></li><li class="chapter-item expanded "><a href="../parsing/index.html"><strong aria-hidden="true">7.</strong> Parsing</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../parsing/templates.html"><strong aria-hidden="true">7.1.</strong> Templates</a></li><li class="chapter-item expanded "><a href="../parsing/patterns.html"><strong aria-hidden="true">7.2.</strong> Patterns</a></li><li class="chapter-item expanded "><a href="../parsing/multiple.html"><strong aria-hidden="true">7.3.</strong> Several strings and case</a></li></ol></li><li class="chapter-item expanded "><a href="../directives/index.html"><strong aria-hidden="true">8.</strong> Directives</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../directives/class.html"><strong aria-hidden="true">8.1.</strong> ::CLASS</a></li><li class="chapter-item expanded "><a href="../directives/method.html"><strong aria-hidden="true">8.2.</strong> ::METHOD</a></li><li class="chapter-item expanded "><a href="../directives/attribute.html"><strong aria-hidden="true">8.3.</strong> ::ATTRIBUTE</a></li><li class="chapter-item expanded "><a href="../directives/constant.html"><strong aria-hidden="true">8.4.</strong> ::CONSTANT</a></li><li class="chapter-item expanded "><a href="../directives/routine.html"><strong aria-hidden="true">8.5.</strong> ::ROUTINE</a></li><li class="chapter-item expanded "><a href="../directives/requires.html"><strong aria-hidden="true">8.6.</strong> ::REQUIRES</a></li><li class="chapter-item expanded "><a href="../directives/options.html"><strong aria-hidden="true">8.7.</strong> ::OPTIONS</a></li><li class="chapter-item expanded "><a href="../directives/resource.html"><strong aria-hidden="true">8.8.</strong> ::RESOURCE</a></li><li class="chapter-item expanded "><a href="../directives/annotate.html"><strong aria-hidden="true">8.9.</strong> ::ANNOTATE</a></li></ol></li><li class="chapter-item expanded "><a href="../conditions/index.html"><strong aria-hidden="true">9.</strong> Conditions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../conditions/traps.html"><strong aria-hidden="true">9.1.</strong> Condition traps</a></li><li class="chapter-item expanded "><a href="../conditions/information.html"><strong aria-hidden="true">9.2.</strong> Condition information</a></li><li class="chapter-item expanded "><a href="../conditions/syntax.html"><strong aria-hidden="true">9.3.</strong> SYNTAX</a></li><li class="chapter-item expanded "><a href="../conditions/error.html"><strong aria-hidden="true">9.4.</strong> ERROR and FAILURE</a></li><li class="chapter-item expanded "><a href="../conditions/halt.html"><strong aria-hidden="true">9.5.</strong> HALT</a></li><li class="chapter-item expanded "><a href="../conditions/novalue.html"><strong aria-hidden="true">9.6.</strong> NOVALUE</a></li><li class="chapter-item expanded "><a href="../conditions/nostring.html"><strong aria-hidden="true">9.7.</strong> NOSTRING</a></li><li class="chapter-item expanded "><a href="../conditions/nomethod.html"><strong aria-hidden="true">9.8.</strong> NOMETHOD</a></li><li class="chapter-item expanded "><a href="../conditions/notready.html"><strong aria-hidden="true">9.9.</strong> NOTREADY</a></li><li class="chapter-item expanded "><a href="../conditions/lostdigits.html"><strong aria-hidden="true">9.10.</strong> LOSTDIGITS</a></li><li class="chapter-item expanded "><a href="../conditions/user.html"><strong aria-hidden="true">9.11.</strong> USER conditions</a></li><li class="chapter-item expanded "><a href="../conditions/errors.html"><strong aria-hidden="true">9.12.</strong> Error numbers</a></li></ol></li><li class="chapter-item expanded "><a href="../classes/index.html"><strong aria-hidden="true">10.</strong> Classes</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../classes/methods.html"><strong aria-hidden="true">10.1.</strong> Method search</a></li><li class="chapter-item expanded "><a href="../classes/object.html"><strong aria-hidden="true">10.2.</strong> Object</a></li><li class="chapter-item expanded "><a href="../classes/class.html"><strong aria-hidden="true">10.3.</strong> Class</a></li><li class="chapter-item expanded "><a href="../classes/string.html"><strong aria-hidden="true">10.4.</strong> String</a></li><li class="chapter-item expanded "><a href="../classes/method.html"><strong aria-hidden="true">10.5.</strong> Method</a></li><li class="chapter-item expanded "><a href="../classes/routine.html"><strong aria-hidden="true">10.6.</strong> Routine</a></li><li class="chapter-item expanded "><a href="../classes/package.html"><strong aria-hidden="true">10.7.</strong> Package</a></li><li class="chapter-item expanded "><a href="../classes/message.html"><strong aria-hidden="true">10.8.</strong> Message</a></li><li class="chapter-item expanded "><a href="../classes/messagenotification.html"><strong aria-hidden="true">10.9.</strong> MessageNotification</a></li><li class="chapter-item expanded "><a href="../classes/alarmnotification.html"><strong aria-hidden="true">10.10.</strong> AlarmNotification</a></li><li class="chapter-item expanded "><a href="../classes/collection.html"><strong aria-hidden="true">10.11.</strong> Collection</a></li><li class="chapter-item expanded "><a href="../classes/mapcollection.html"><strong aria-hidden="true">10.12.</strong> MapCollection</a></li><li class="chapter-item expanded "><a href="../classes/orderedcollection.html"><strong aria-hidden="true">10.13.</strong> OrderedCollection</a></li><li class="chapter-item expanded "><a href="../classes/setcollection.html"><strong aria-hidden="true">10.14.</strong> SetCollection</a></li><li class="chapter-item expanded "><a href="../classes/array.html"><strong aria-hidden="true">10.15.</strong> Array</a></li><li class="chapter-item expanded "><a href="../classes/list.html"><strong aria-hidden="true">10.16.</strong> List</a></li><li class="chapter-item expanded "><a href="../classes/queue.html"><strong aria-hidden="true">10.17.</strong> Queue</a></li><li class="chapter-item expanded "><a href="../classes/circularqueue.html"><strong aria-hidden="true">10.18.</strong> CircularQueue</a></li><li class="chapter-item expanded "><a href="../classes/directory.html"><strong aria-hidden="true">10.19.</strong> Directory</a></li><li class="chapter-item expanded "><a href="../classes/stringtable.html"><strong aria-hidden="true">10.20.</strong> StringTable</a></li><li class="chapter-item expanded "><a href="../classes/properties.html"><strong aria-hidden="true">10.21.</strong> Properties</a></li><li class="chapter-item expanded "><a href="../classes/table.html"><strong aria-hidden="true">10.22.</strong> Table</a></li><li class="chapter-item expanded "><a href="../classes/identitytable.html"><strong aria-hidden="true">10.23.</strong> IdentityTable</a></li><li class="chapter-item expanded "><a href="../classes/relation.html"><strong aria-hidden="true">10.24.</strong> Relation</a></li><li class="chapter-item expanded "><a href="../classes/bag.html"><strong aria-hidden="true">10.25.</strong> Bag</a></li><li class="chapter-item expanded "><a href="../classes/set.html"><strong aria-hidden="true">10.26.</strong> Set</a></li><li class="chapter-item expanded "><a href="../classes/stem.html"><strong aria-hidden="true">10.27.</strong> Stem</a></li><li class="chapter-item expanded "><a href="../classes/datetime.html"><strong aria-hidden="true">10.28.</strong> DateTime</a></li><li class="chapter-item expanded "><a href="../classes/timespan.html"><strong aria-hidden="true">10.29.</strong> TimeSpan</a></li><li class="chapter-item expanded "><a href="../classes/comparable.html"><strong aria-hidden="true">10.30.</strong> Comparable</a></li><li class="chapter-item expanded "><a href="../classes/orderable.html"><strong aria-hidden="true">10.31.</strong> Orderable</a></li><li class="chapter-item expanded "><a href="../classes/comparators.html"><strong aria-hidden="true">10.32.</strong> Comparators</a></li><li class="chapter-item expanded "><a href="../classes/mutablebuffer.html"><strong aria-hidden="true">10.33.</strong> MutableBuffer</a></li><li class="chapter-item expanded "><a href="../classes/buffer.html"><strong aria-hidden="true">10.34.</strong> Buffer</a></li><li class="chapter-item expanded "><a href="../classes/pointer.html"><strong aria-hidden="true">10.35.</strong> Pointer</a></li><li class="chapter-item expanded "><a href="../classes/weakreference.html"><strong aria-hidden="true">10.36.</strong> WeakReference</a></li><li class="chapter-item expanded "><a href="../classes/variablereference.html"><strong aria-hidden="true">10.37.</strong> VariableReference</a></li><li class="chapter-item expanded "><a href="../classes/file.html"><strong aria-hidden="true">10.38.</strong> File</a></li><li class="chapter-item expanded "><a href="../classes/rexxcontext.html"><strong aria-hidden="true">10.39.</strong> RexxContext</a></li><li class="chapter-item expanded "><a href="../classes/stackframe.html"><strong aria-hidden="true">10.40.</strong> StackFrame</a></li><li class="chapter-item expanded "><a href="../classes/rexxinfo.html"><strong aria-hidden="true">10.41.</strong> RexxInfo</a></li><li class="chapter-item expanded "><a href="../classes/traceobject.html"><strong aria-hidden="true">10.42.</strong> TraceObject</a></li><li class="chapter-item expanded "><a href="../classes/validate.html" class="active"><strong aria-hidden="true">10.43.</strong> Validate</a></li><li class="chapter-item expanded "><a href="../classes/singleton.html"><strong aria-hidden="true">10.44.</strong> Singleton</a></li><li class="chapter-item expanded "><a href="../classes/alarm.html"><strong aria-hidden="true">10.45.</strong> Alarm</a></li><li class="chapter-item expanded "><a href="../classes/ticker.html"><strong aria-hidden="true">10.46.</strong> Ticker</a></li><li class="chapter-item expanded "><a href="../classes/monitor.html"><strong aria-hidden="true">10.47.</strong> Monitor</a></li><li class="chapter-item expanded "><a href="../classes/eventsemaphore.html"><strong aria-hidden="true">10.48.</strong> EventSemaphore</a></li><li class="chapter-item expanded "><a href="../classes/mutexsemaphore.html"><strong aria-hidden="true">10.49.</strong> MutexSemaphore</a></li><li class="chapter-item expanded "><a href="../classes/commandhandler.html"><strong aria-hidden="true">10.50.</strong> CommandHandler</a></li><li class="chapter-item expanded "><a href="../classes/nativecommandhandler.html"><strong aria-hidden="true">10.51.</strong> NativeCommandHandler</a></li><li class="chapter-item expanded "><a href="../classes/commandcontext.html"><strong aria-hidden="true">10.52.</strong> CommandContext</a></li><li class="chapter-item expanded "><a href="../classes/commandinput.html"><strong aria-hidden="true">10.53.</strong> CommandInput</a></li><li class="chapter-item expanded "><a href="../classes/commandoutput.html"><strong aria-hidden="true">10.54.</strong> CommandOutput</a></li><li class="chapter-item expanded "><a href="../classes/rexxqueue.html"><strong aria-hidden="true">10.55.</strong> RexxQueue</a></li><li class="chapter-item expanded "><a href="../classes/supplier.html"><strong aria-hidden="true">10.56.</strong> Supplier</a></li><li class="chapter-item expanded "><a href="../classes/streamsupplier.html"><strong aria-hidden="true">10.57.</strong> StreamSupplier</a></li><li class="chapter-item expanded "><a href="../classes/regularexpression.html"><strong aria-hidden="true">10.58.</strong> RegularExpression</a></li></ol></li><li class="chapter-item expanded "><a href="../builtins/index.html"><strong aria-hidden="true">11.</strong> Built-in functions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../builtins/abbrev.html"><strong aria-hidden="true">11.1.</strong> ABBREV</a></li><li class="chapter-item expanded "><a href="../builtins/abs.html"><strong aria-hidden="true">11.2.</strong> ABS</a></li><li class="chapter-item expanded "><a href="../builtins/address.html"><strong aria-hidden="true">11.3.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../builtins/arg.html"><strong aria-hidden="true">11.4.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../builtins/b2x.html"><strong aria-hidden="true">11.5.</strong> B2X</a></li><li class="chapter-item expanded "><a href="../builtins/beep.html"><strong aria-hidden="true">11.6.</strong> BEEP</a></li><li class="chapter-item expanded "><a href="../builtins/bitand.html"><strong aria-hidden="true">11.7.</strong> BITAND</a></li><li class="chapter-item expanded "><a href="../builtins/bitor.html"><strong aria-hidden="true">11.8.</strong> BITOR</a></li><li class="chapter-item expanded "><a href="../builtins/bitxor.html"><strong aria-hidden="true">11.9.</strong> BITXOR</a></li><li class="chapter-item expanded "><a href="../builtins/c2d.html"><strong aria-hidden="true">11.10.</strong> C2D</a></li><li class="chapter-item expanded "><a href="../builtins/c2x.html"><strong aria-hidden="true">11.11.</strong> C2X</a></li><li class="chapter-item expanded "><a href="../builtins/center.html"><strong aria-hidden="true">11.12.</strong> CENTER</a></li><li class="chapter-item expanded "><a href="../builtins/changestr.html"><strong aria-hidden="true">11.13.</strong> CHANGESTR</a></li><li class="chapter-item expanded "><a href="../builtins/charin.html"><strong aria-hidden="true">11.14.</strong> CHARIN</a></li><li class="chapter-item expanded "><a href="../builtins/charout.html"><strong aria-hidden="true">11.15.</strong> CHAROUT</a></li><li class="chapter-item expanded "><a href="../builtins/chars.html"><strong aria-hidden="true">11.16.</strong> CHARS</a></li><li class="chapter-item expanded "><a href="../builtins/compare.html"><strong aria-hidden="true">11.17.</strong> COMPARE</a></li><li class="chapter-item expanded "><a href="../builtins/condition.html"><strong aria-hidden="true">11.18.</strong> CONDITION</a></li><li class="chapter-item expanded "><a href="../builtins/copies.html"><strong aria-hidden="true">11.19.</strong> COPIES</a></li><li class="chapter-item expanded "><a href="../builtins/countstr.html"><strong aria-hidden="true">11.20.</strong> COUNTSTR</a></li><li class="chapter-item expanded "><a href="../builtins/d2c.html"><strong aria-hidden="true">11.21.</strong> D2C</a></li><li class="chapter-item expanded "><a href="../builtins/d2x.html"><strong aria-hidden="true">11.22.</strong> D2X</a></li><li class="chapter-item expanded "><a href="../builtins/datatype.html"><strong aria-hidden="true">11.23.</strong> DATATYPE</a></li><li class="chapter-item expanded "><a href="../builtins/date.html"><strong aria-hidden="true">11.24.</strong> DATE</a></li><li class="chapter-item expanded "><a href="../builtins/delstr.html"><strong aria-hidden="true">11.25.</strong> DELSTR</a></li><li class="chapter-item expanded "><a href="../builtins/delword.html"><strong aria-hidden="true">11.26.</strong> DELWORD</a></li><li class="chapter-item expanded "><a href="../builtins/digits.html"><strong aria-hidden="true">11.27.</strong> DIGITS</a></li><li class="chapter-item expanded "><a href="../builtins/directory.html"><strong aria-hidden="true">11.28.</strong> DIRECTORY</a></li><li class="chapter-item expanded "><a href="../builtins/endlocal.html"><strong aria-hidden="true">11.29.</strong> ENDLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/errortext.html"><strong aria-hidden="true">11.30.</strong> ERRORTEXT</a></li><li class="chapter-item expanded "><a href="../builtins/filespec.html"><strong aria-hidden="true">11.31.</strong> FILESPEC</a></li><li class="chapter-item expanded "><a href="../builtins/form.html"><strong aria-hidden="true">11.32.</strong> FORM</a></li><li class="chapter-item expanded "><a href="../builtins/format.html"><strong aria-hidden="true">11.33.</strong> FORMAT</a></li><li class="chapter-item expanded "><a href="../builtins/fuzz.html"><strong aria-hidden="true">11.34.</strong> FUZZ</a></li><li class="chapter-item expanded "><a href="../builtins/gc.html"><strong aria-hidden="true">11.35.</strong> GC</a></li><li class="chapter-item expanded "><a href="../builtins/insert.html"><strong aria-hidden="true">11.36.</strong> INSERT</a></li><li class="chapter-item expanded "><a href="../builtins/lastpos.html"><strong aria-hidden="true">11.37.</strong> LASTPOS</a></li><li class="chapter-item expanded "><a href="../builtins/left.html"><strong aria-hidden="true">11.38.</strong> LEFT</a></li><li class="chapter-item expanded "><a href="../builtins/length.html"><strong aria-hidden="true">11.39.</strong> LENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/linein.html"><strong aria-hidden="true">11.40.</strong> LINEIN</a></li><li class="chapter-item expanded "><a href="../builtins/lineout.html"><strong aria-hidden="true">11.41.</strong> LINEOUT</a></li><li class="chapter-item expanded "><a href="../builtins/lines.html"><strong aria-hidden="true">11.42.</strong> LINES</a></li><li class="chapter-item expanded "><a href="../builtins/lower.html"><strong aria-hidden="true">11.43.</strong> LOWER</a></li><li class="chapter-item expanded "><a href="../builtins/max.html"><strong aria-hidden="true">11.44.</strong> MAX</a></li><li class="chapter-item expanded "><a href="../builtins/min.html"><strong aria-hidden="true">11.45.</strong> MIN</a></li><li class="chapter-item expanded "><a href="../builtins/overlay.html"><strong aria-hidden="true">11.46.</strong> OVERLAY</a></li><li class="chapter-item expanded "><a href="../builtins/pos.html"><strong aria-hidden="true">11.47.</strong> POS</a></li><li class="chapter-item expanded "><a href="../builtins/qualify.html"><strong aria-hidden="true">11.48.</strong> QUALIFY</a></li><li class="chapter-item expanded "><a href="../builtins/queued.html"><strong aria-hidden="true">11.49.</strong> QUEUED</a></li><li class="chapter-item expanded "><a href="../builtins/random.html"><strong aria-hidden="true">11.50.</strong> RANDOM</a></li><li class="chapter-item expanded "><a href="../builtins/reverse.html"><strong aria-hidden="true">11.51.</strong> REVERSE</a></li><li class="chapter-item expanded "><a href="../builtins/right.html"><strong aria-hidden="true">11.52.</strong> RIGHT</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncadd.html"><strong aria-hidden="true">11.53.</strong> RXFUNCADD</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncdrop.html"><strong aria-hidden="true">11.54.</strong> RXFUNCDROP</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncquery.html"><strong aria-hidden="true">11.55.</strong> RXFUNCQUERY</a></li><li class="chapter-item expanded "><a href="../builtins/rxqueue.html"><strong aria-hidden="true">11.56.</strong> RXQUEUE</a></li><li class="chapter-item expanded "><a href="../builtins/setlocal.html"><strong aria-hidden="true">11.57.</strong> SETLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/sign.html"><strong aria-hidden="true">11.58.</strong> SIGN</a></li><li class="chapter-item expanded "><a href="../builtins/sourceline.html"><strong aria-hidden="true">11.59.</strong> SOURCELINE</a></li><li class="chapter-item expanded "><a href="../builtins/space.html"><strong aria-hidden="true">11.60.</strong> SPACE</a></li><li class="chapter-item expanded "><a href="../builtins/stream.html"><strong aria-hidden="true">11.61.</strong> STREAM</a></li><li class="chapter-item expanded "><a href="../builtins/strip.html"><strong aria-hidden="true">11.62.</strong> STRIP</a></li><li class="chapter-item expanded "><a href="../builtins/substr.html"><strong aria-hidden="true">11.63.</strong> SUBSTR</a></li><li class="chapter-item expanded "><a href="../builtins/subword.html"><strong aria-hidden="true">11.64.</strong> SUBWORD</a></li><li class="chapter-item expanded "><a href="../builtins/symbol.html"><strong aria-hidden="true">11.65.</strong> SYMBOL</a></li><li class="chapter-item expanded "><a href="../builtins/time.html"><strong aria-hidden="true">11.66.</strong> TIME</a></li><li class="chapter-item expanded "><a href="../builtins/trace.html"><strong aria-hidden="true">11.67.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../builtins/translate.html"><strong aria-hidden="true">11.68.</strong> TRANSLATE</a></li><li class="chapter-item expanded "><a href="../builtins/trunc.html"><strong aria-hidden="true">11.69.</strong> TRUNC</a></li><li class="chapter-item expanded "><a href="../builtins/upper.html"><strong aria-hidden="true">11.70.</strong> UPPER</a></li><li class="chapter-item expanded "><a href="../builtins/userid.html"><strong aria-hidden="true">11.71.</strong> USERID</a></li><li class="chapter-item expanded "><a href="../builtins/value.html"><strong aria-hidden="true">11.72.</strong> VALUE</a></li><li class="chapter-item expanded "><a href="../builtins/var.html"><strong aria-hidden="true">11.73.</strong> VAR</a></li><li class="chapter-item expanded "><a href="../builtins/verify.html"><strong aria-hidden="true">11.74.</strong> VERIFY</a></li><li class="chapter-item expanded "><a href="../builtins/word.html"><strong aria-hidden="true">11.75.</strong> WORD</a></li><li class="chapter-item expanded "><a href="../builtins/wordindex.html"><strong aria-hidden="true">11.76.</strong> WORDINDEX</a></li><li class="chapter-item expanded "><a href="../builtins/wordlength.html"><strong aria-hidden="true">11.77.</strong> WORDLENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/wordpos.html"><strong aria-hidden="true">11.78.</strong> WORDPOS</a></li><li class="chapter-item expanded "><a href="../builtins/words.html"><strong aria-hidden="true">11.79.</strong> WORDS</a></li><li class="chapter-item expanded "><a href="../builtins/x2b.html"><strong aria-hidden="true">11.80.</strong> X2B</a></li><li class="chapter-item expanded "><a href="../builtins/x2c.html"><strong aria-hidden="true">11.81.</strong> X2C</a></li><li class="chapter-item expanded "><a href="../builtins/x2d.html"><strong aria-hidden="true">11.82.</strong> X2D</a></li><li class="chapter-item expanded "><a href="../builtins/xrange.html"><strong aria-hidden="true">11.83.</strong> XRANGE</a></li></ol></li><li class="chapter-item expanded "><a href="../deviations.html"><strong aria-hidden="true">12.</strong> Deviations</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The interrexx Language Specification</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="validate"><a class="header" href="#validate">Validate</a></h1>
+<p class="references">rexxref: Builtin Classes &gt; Utility Classes &gt; Validate Class; Builtin Classes &gt; Utility Classes &gt; Validate Class &gt; classType (Class Method); Builtin Classes &gt; Utility Classes &gt; Validate Class &gt; length (Class Method); Builtin Classes &gt; Utility Classes &gt; Validate Class &gt; logical (Class Method); Builtin Classes &gt; Utility Classes &gt; Validate Class &gt; nonNegativeNumber (Class Method); Builtin Classes &gt; Utility Classes &gt; Validate Class &gt; nonNegativeWholeNumber (Class Method); Builtin Classes &gt; Utility Classes &gt; Validate Class &gt; number (Class Method); Builtin Classes &gt; Utility Classes &gt; Validate Class &gt; numberRange (Class Method); Builtin Classes &gt; Utility Classes &gt; Validate Class &gt; position (Class Method); Builtin Classes &gt; Utility Classes &gt; Validate Class &gt; positiveNumber (Class Method); Builtin Classes &gt; Utility Classes &gt; Validate Class &gt; positiveWholeNumber (Class Method); Builtin Classes &gt; Utility Classes &gt; Validate Class &gt; requestClassType (Class Method); Builtin Classes &gt; Utility Classes &gt; Validate Class &gt; wholeNumber (Class Method); Builtin Classes &gt; Utility Classes &gt; Validate Class &gt; wholeNumberRange (Class Method)</p>
+<p class="deviations">Deviations: D109</p>
+<p><code>Validate</code> is a set of class methods that check the arguments of a method
+written in Rexx: that an argument is a number, a whole number in a range, a
+position, a logical value or an instance of a class. A check that fails raises
+the <code>SYNTAX</code> condition that the interpreter itself raises for such a
+mistake, naming the argument, so that a method of the program refuses a bad
+argument the way the methods of the library do. A check that passes answers
+no value, except <code>requestClassType</code>, which answers the converted object.</p>
+<p><a href="index.html#r-class.index.deviation.109">Deviation 109</a> applies to every argument below
+that is read as a string or as a number.</p>
+<h2 id="the-class"><a class="header" href="#the-class">The class</a></h2>
+<div class="rule" id="r-class.validate.creation"><a href="#r-class.validate.creation">[class.validate.creation]</a></div>
+<p><code>Validate</code> is a class whose only superclass is <code>Object</code>, and it inherits no
+mixin class (<a href="index.html#r-class.index.hierarchy">the hierarchy rule</a>). Its instance side
+defines no method, and its class side answers <code>classType</code>, <code>length</code>,
+<code>logical</code>, <code>nonNegativeNumber</code>, <code>nonNegativeWholeNumber</code>, <code>number</code>,
+<code>numberRange</code>, <code>position</code>, <code>positiveNumber</code>, <code>positiveWholeNumber</code>,
+<code>requestClassType</code>, <code>wholeNumber</code> and <code>wholeNumberRange</code>. <code>new</code> makes an
+object, which answers none of them: the methods are sent to the class.</p>
+<pre><code class="language-rexx">v = .validate
+say v~superclasses~items v~superclass~id v~class~id
+list = 'classType length logical nonNegativeNumber nonNegativeWholeNumber',
+  'number numberRange position positiveNumber positiveWholeNumber',
+  'requestClassType wholeNumber wholeNumberRange nosuchcheck'
+do n over list~makearray(' ')
+  say n~upper v~hasMethod(n)
+end
+s = v~methods(.nil)
+say s~available
+o = v~new
+say o~class~id
+signal on syntax name bad
+o~number('x', 5)
+bad: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">1 Object Class
+CLASSTYPE 1
+LENGTH 1
+LOGICAL 1
+NONNEGATIVENUMBER 1
+NONNEGATIVEWHOLENUMBER 1
+NUMBER 1
+NUMBERRANGE 1
+POSITION 1
+POSITIVENUMBER 1
+POSITIVEWHOLENUMBER 1
+REQUESTCLASSTYPE 1
+WHOLENUMBER 1
+WHOLENUMBERRANGE 1
+NOSUCHCHECK 0
+0
+Validate
+97.1
+</code></pre>
+<h2 id="arguments"><a class="header" href="#arguments">Arguments</a></h2>
+<div class="rule" id="r-class.validate.arguments"><a href="#r-class.validate.arguments">[class.validate.arguments]</a></div>
+<p>Every check takes the name of the argument as its first argument, the value as
+its second, and then its own further arguments. The name is only used in the
+error: it may be any string, a name or a text, and it is the first entry of the
+condition's <code>ADDITIONAL</code> array, whose other entries each rule below gives. The
+counts are fixed: two arguments for <code>number</code> and <code>logical</code>, two and an optional
+<code>digits</code> for the other number checks, three for <code>classType</code> and
+<code>requestClassType</code>, and four and an optional <code>digits</code> for the range checks. A
+call with fewer raises <code>SYNTAX 93.901</code>, one with more <code>93.902</code>, and one that
+leaves out a required argument before the last one given <code>93.903</code>; omitted
+arguments at the end count as not given. The <code>ADDITIONAL</code> array of the first
+holds the least number of arguments, that of the second the most, and that of
+the third the position of the first argument left out. The argument count is
+checked first, then <code>digits</code>, and the value last. Every value and bound is read
+as a string as <a href="../conventions.html#r-conv.string.object">the conversion rule</a> says. A check that
+fails raises the <code>SYNTAX</code> error of its method, which the rules below give.</p>
+<pre><code class="language-rexx">call t 'number', 'N', 'x'
+call t 'number', 'my arg', 'x'
+call t 'number', 'N'
+call t 'number', 'N', 5, 6
+call t 'number', , 5
+call t 'positiveNumber', 'N', , 9
+call t 'numberRange', 'N', 5, , 9
+call t 'classType', 'N', , .string
+call t 'numberRange', 'N', 5, 1
+call t 'numberRange', 'N', 5, 1, 9, 9, 9
+call t 'wholeNumber', 'N', 'x', 0
+call t 'wholeNumber', 'N', 'x', 5, 6
+call t 'classType', 'N', 1
+call u 'number("N", )'
+call u 'numberRange("N", 5, 1, )'
+exit
+t: procedure
+  use arg m
+  signal on syntax name bad
+  args = arg(2, 'A')
+  .validate~sendWith(m, args~section(1, args~size))
+  say m 'ok'
+  return
+bad: c = condition('o')
+  say m c~code c~additional~items c~additional[1]
+  return
+u: procedure
+  m = arg(1)
+  signal on syntax name bad2
+  interpret '.validate~'m
+  say m 'ok'
+  return
+bad2: c = condition('o')
+  say m c~code c~additional~items c~additional[1]
+  return
+</code></pre>
+<pre><code class="language-output">number 88.902 2 N
+number 88.902 2 my arg
+number 93.901 1 2
+number 93.902 1 2
+number 93.903 1 1
+positiveNumber 93.903 1 2
+numberRange 93.903 1 3
+classType 93.903 1 2
+numberRange 93.901 1 4
+numberRange 93.902 1 5
+wholeNumber 26.5 1 0
+wholeNumber 93.902 1 3
+classType 93.901 1 3
+number("N", ) 93.901 1 2
+numberRange("N", 5, 1, ) 93.901 1 4
+</code></pre>
+<div class="rule" id="r-class.validate.digits"><a href="#r-class.validate.digits">[class.validate.digits]</a></div>
+<p>The checks that take <code>digits</code> compare and round under that many digits and not
+under the NUMERIC DIGITS of the running code. <code>digits</code> is a whole number of at
+least 1 and at most 999999999 and defaults to <code>9</code>, except for <code>length</code> and
+<code>position</code>, whose default is <a href="rexxinfo.html#r-class.rexxinfo.limits">the number of digits that whole numbers have
+internally</a>. Any other value, a string that is no
+number included, raises <code>SYNTAX 26.5</code> before the value is read; its <code>ADDITIONAL</code>
+array holds the value of <code>digits</code>.</p>
+<pre><code class="language-rexx">numeric digits 20
+call t 'wholeNumber', '1234567890'
+call t 'wholeNumber', '1234567890', 9
+call t 'wholeNumber', '1234567890', 10
+call t 'wholeNumber', '12345678901234567890123', 25
+call t 'wholeNumber', '1e12', 12
+call t 'wholeNumber', '1e12', 13
+call t 'wholeNumber', '5', 0
+call t 'wholeNumber', '5', -1
+call t 'wholeNumber', '5', 'x'
+call t 'wholeNumber', '5', ''
+call t 'wholeNumber', '5', 1.5
+call t 'wholeNumber', '5', 999999999
+call t 'wholeNumber', '5', 1000000000
+call t 'wholeNumber', 'abc', 0
+n = .rexxinfo~internalDigits
+say chk('position', copies(9, n)) chk('position', copies(9, n + 1)),
+    chk('position', copies(9, n + 1), n + 1)
+exit
+t: procedure
+  use arg m, v, d
+  signal on syntax name bad
+  if arg(3, 'E') then .validate~send(m, 'N', v, d)
+  else .validate~send(m, 'N', v)
+  say m v '['arg(3)'] =&gt; ok'
+  return
+bad: say m v '['arg(3)'] =&gt;' condition('o')~code
+  return
+chk: procedure
+  use arg m, v, d
+  signal on syntax name bad2
+  if arg(3, 'E') then .validate~send(m, 'N', v, d)
+  else .validate~send(m, 'N', v)
+  return 'ok'
+bad2: return condition('o')~code
+</code></pre>
+<pre><code class="language-output">wholeNumber 1234567890 [] =&gt; 88.903
+wholeNumber 1234567890 [9] =&gt; 88.903
+wholeNumber 1234567890 [10] =&gt; ok
+wholeNumber 12345678901234567890123 [25] =&gt; ok
+wholeNumber 1e12 [12] =&gt; 88.903
+wholeNumber 1e12 [13] =&gt; ok
+wholeNumber 5 [0] =&gt; 26.5
+wholeNumber 5 [-1] =&gt; 26.5
+wholeNumber 5 [x] =&gt; 26.5
+wholeNumber 5 [] =&gt; 26.5
+wholeNumber 5 [1.5] =&gt; 26.5
+wholeNumber 5 [999999999] =&gt; ok
+wholeNumber 5 [1000000000] =&gt; 26.5
+wholeNumber abc [0] =&gt; 26.5
+ok 88.912 ok
+</code></pre>
+<pre><code class="language-rexx">call t 0
+call t 'y'
+exit
+t: procedure
+  signal on syntax name bad
+  .validate~wholeNumber('N', 5, arg(1))
+  return
+bad: c = condition('o')
+  say c~code c~additional~items c~additional[1]
+  return
+</code></pre>
+<pre><code class="language-output">26.5 1 0
+26.5 1 y
+</code></pre>
+<h2 id="numbers"><a class="header" href="#numbers">Numbers</a></h2>
+<div class="rule" id="r-class.validate.number"><a href="#r-class.validate.number">[class.validate.number]</a></div>
+<p><code>number</code> accepts a string that is a number as <a href="../builtins/datatype.html#r-bif.datatype.number">DATATYPE with the option
+<code>N</code></a> says, and raises <code>SYNTAX 88.902</code> for any other
+value, an object whose string value, read as <a href="../conventions.html#r-conv.string.object">the conversion
+rule</a> says, is not a number included. <code>positiveNumber</code>
+also needs the value to be greater than zero (<code>SYNTAX 88.926</code>) and
+<code>nonNegativeNumber</code> to be zero or greater (<code>SYNTAX 88.925</code>); a value that is no
+number raises the error of the method asked, so <code>88.926</code> or <code>88.925</code>. Both take
+<code>digits</code>, and negative zero and <code>0.00</code> count as zero. The <code>ADDITIONAL</code> array of
+every error holds the name and the value.</p>
+<pre><code class="language-rexx">vals = '5 -5 0 -0 0.00 5.5 1e3 1e-3 +7 abc 1E 2e+'
+meths = 'number positiveNumber nonNegativeNumber'
+do v over vals~makearray(' ')
+  s = v~left(5)
+  do m over meths~makearray(' ')
+    s = s t(m, v)~left(7)
+  end
+  say s~strip('T')
+end
+say t('number', ' + 2 ') t('number', '2 E1') t('number', ''),
+    t('number', .object~new)
+signal on syntax name done
+.validate~positiveNumber('my argument', '-3')
+done: say condition('o')~code condition('o')~additional~makeString('l', ' ; ')
+exit
+t: procedure
+  use arg m, v
+  signal on syntax name bad
+  .validate~send(m, 'N', v)
+  return 'ok'
+bad: return condition('o')~code
+</code></pre>
+<pre><code class="language-output">5     ok      ok      ok
+-5    ok      88.926  88.925
+0     ok      88.926  ok
+-0    ok      88.926  ok
+0.00  ok      88.926  ok
+5.5   ok      ok      ok
+1e3   ok      ok      ok
+1e-3  ok      ok      ok
++7    ok      ok      ok
+abc   88.902  88.926  88.925
+1E    88.902  88.926  88.925
+2e+   88.902  88.926  88.925
+ok 88.902 88.902 88.902
+88.926 my argument ; -3
+</code></pre>
+<pre><code class="language-rexx">call t .withstr~new
+call t .withms~new
+call t .withreq~new
+exit
+t: procedure
+  use arg o
+  signal on syntax name bad
+  .validate~number('N', o)
+  say o~class~id 'ok'
+  return
+bad: say o~class~id condition('o')~code
+  return
+::class withstr
+::method string
+  say '  string'
+  return '5'
+::class withms
+::method makestring
+  say '  makestring'
+  return '5'
+::class withreq
+::method request
+  say '  request' arg(1)
+  return '5'
+</code></pre>
+<pre><code class="language-output defect=#164">  string
+WITHSTR ok
+  makestring
+WITHMS ok
+  request STRING
+WITHREQ ok
+</code></pre>
+<div class="rule" id="r-class.validate.wholenumber"><a href="#r-class.validate.wholenumber">[class.validate.wholenumber]</a></div>
+<p><code>wholeNumber</code> accepts a number whose value, under <code>digits</code>, is a whole number
+and raises <code>SYNTAX 88.903</code> for any other value: one with a fraction, one with
+more integer digits than <code>digits</code> allows, and a string that is no number.
+<code>positiveWholeNumber</code> also needs the value to be greater than zero (<code>88.905</code>),
+<code>nonNegativeWholeNumber</code> to be zero or greater (<code>88.904</code>), <code>position</code> to be
+greater than zero (<code>88.912</code>) and <code>length</code> to be zero or greater (<code>88.911</code>).
+All take <code>digits</code>, whose default <a href="#r-class.validate.digits">differs for <code>position</code> and
+<code>length</code></a>. A value with a trailing period or zeros
+after the point, such as <code>5.</code> or <code>5.00</code>, and a value written with an exponent
+that makes it whole, such as <code>1e3</code>, count as whole; negative zero counts as
+zero. The <code>ADDITIONAL</code> array of every error holds the name and the value.</p>
+<pre><code class="language-rexx">vals = '5 -5 0 -0 5. 5.00 5.5 1e3 1e-3 +7 abc 1234567890 1.0e9'~makearray(' ')
+vals~append('')
+meths = 'wholeNumber positiveWholeNumber nonNegativeWholeNumber position',
+  'length'
+do v over vals
+  s = ('['v']')~left(14)
+  do m over meths~makearray(' ')
+    s = s t(m, v)~left(7)
+  end
+  say s~strip('T')
+end
+exit
+t: procedure
+  use arg m, v
+  signal on syntax name bad
+  .validate~send(m, 'N', v)
+  return 'ok'
+bad: return condition('o')~code
+</code></pre>
+<pre><code class="language-output">[5]            ok      ok      ok      ok      ok
+[-5]           ok      88.905  88.904  88.912  88.911
+[0]            ok      88.905  ok      88.912  ok
+[-0]           ok      88.905  ok      88.912  ok
+[5.]           ok      ok      ok      ok      ok
+[5.00]         ok      ok      ok      ok      ok
+[5.5]          88.903  88.905  88.904  88.912  88.911
+[1e3]          ok      ok      ok      ok      ok
+[1e-3]         88.903  88.905  88.904  88.912  88.911
+[+7]           ok      ok      ok      ok      ok
+[abc]          88.903  88.905  88.904  88.912  88.911
+[1234567890]   88.903  88.905  88.904  ok      ok
+[1.0e9]        88.903  88.905  88.904  ok      ok
+[]             88.903  88.905  88.904  88.912  88.911
+</code></pre>
+<div class="rule" id="r-class.validate.range"><a href="#r-class.validate.range">[class.validate.range]</a></div>
+<p><code>numberRange(name, number, min, max, digits)</code> accepts a number from <code>min</code> up to
+and including <code>max</code>, compared under <code>digits</code>, and raises <code>SYNTAX 88.907</code> for one
+that is no number and for a value that compares below <code>min</code> or above <code>max</code> as
+the <code>&lt;</code> and <code>&gt;</code> operators compare them. A <code>min</code> above <code>max</code> so refuses every
+value, and needs no check of its own. A bound is read as <a href="../conventions.html#r-conv.string.object">the conversion
+rule</a> says and need not be a number: a bound that is not a
+number takes part in the comparison as a string, so that <code>5</code> is below <code>x</code> and
+above <code>4x</code>, and a bound that is <code>.nil</code> raises <code>88.907</code>. <code>wholeNumberRange</code> has
+the same arguments and also needs the value to be a whole number as
+<code>wholeNumber</code> does; its bounds may have a fraction. The <code>ADDITIONAL</code> array of
+the error holds the name, <code>min</code>, <code>max</code> and the value.</p>
+<pre><code class="language-rexx">call t 'numberRange', 5, 1, 10
+call t 'numberRange', 1, 1, 10
+call t 'numberRange', 10, 1, 10
+call t 'numberRange', 0, 1, 10
+call t 'numberRange', 11, 1, 10
+call t 'numberRange', 5.5, 1, 10
+call t 'numberRange', 'x', 1, 10
+call t 'numberRange', 5, 10, 1
+call t 'numberRange', 5, 5, 5
+call t 'wholeNumberRange', 5, 1, 10
+call t 'wholeNumberRange', 5.5, 1, 10
+call t 'wholeNumberRange', 11, 1, 10
+call t 'wholeNumberRange', 'x', 1, 10
+call t 'wholeNumberRange', 5, 10, 1
+call t 'numberRange', 1234567891, 1234567890, 1234567890, 9
+call t 'numberRange', 1234567891, 1234567890, 1234567890, 12
+call t 'numberRange', 5, 1, 'x'
+call t 'numberRange', 5, 'x', 9
+call t 'numberRange', 5, 1, '4x'
+call t 'numberRange', 5, 1, .nil
+call t 'wholeNumberRange', 5, 1.5, 9.5
+exit
+t: procedure
+  use arg m, v, lo, hi, d
+  signal on syntax name bad
+  if arg(5, 'E') then .validate~send(m, 'N', v, lo, hi, d)
+  else do
+    d = '-'
+    .validate~send(m, 'N', v, lo, hi)
+  end
+  say m v lo hi d '=&gt; ok'
+  return
+bad: c = condition('o')
+  if arg(5, 'E') then say m v lo hi d '=&gt;' c~code
+  else say m v lo hi '- =&gt;' c~code c~additional~makeString('l', ' ; ')
+  return
+</code></pre>
+<pre><code class="language-output">numberRange 5 1 10 - =&gt; ok
+numberRange 1 1 10 - =&gt; ok
+numberRange 10 1 10 - =&gt; ok
+numberRange 0 1 10 - =&gt; 88.907 N ; 1 ; 10 ; 0
+numberRange 11 1 10 - =&gt; 88.907 N ; 1 ; 10 ; 11
+numberRange 5.5 1 10 - =&gt; ok
+numberRange x 1 10 - =&gt; 88.907 N ; 1 ; 10 ; x
+numberRange 5 10 1 - =&gt; 88.907 N ; 10 ; 1 ; 5
+numberRange 5 5 5 - =&gt; ok
+wholeNumberRange 5 1 10 - =&gt; ok
+wholeNumberRange 5.5 1 10 - =&gt; 88.907 N ; 1 ; 10 ; 5.5
+wholeNumberRange 11 1 10 - =&gt; 88.907 N ; 1 ; 10 ; 11
+wholeNumberRange x 1 10 - =&gt; 88.907 N ; 1 ; 10 ; x
+wholeNumberRange 5 10 1 - =&gt; 88.907 N ; 10 ; 1 ; 5
+numberRange 1234567891 1234567890 1234567890 9 =&gt; ok
+numberRange 1234567891 1234567890 1234567890 12 =&gt; 88.907
+numberRange 5 1 x - =&gt; ok
+numberRange 5 x 9 - =&gt; 88.907 N ; x ; 9 ; 5
+numberRange 5 1 4x - =&gt; 88.907 N ; 1 ; 4x ; 5
+numberRange 5 1 The NIL object - =&gt; 88.907 N ; 1 ; The NIL object ; 5
+wholeNumberRange 5 1.5 9.5 - =&gt; ok
+</code></pre>
+<h2 id="logical-values-and-classes"><a class="header" href="#logical-values-and-classes">Logical values and classes</a></h2>
+<div class="rule" id="r-class.validate.logical"><a href="#r-class.validate.logical">[class.validate.logical]</a></div>
+<p><code>logical</code> accepts exactly the strings <code>0</code> and <code>1</code>, or the objects <code>.true</code> and
+<code>.false</code>, and raises <code>SYNTAX 88.927</code> for any other value, such as <code>2</code>, a
+number written otherwise such as <code>1.0</code> or <code>01</code>, a string with blanks and the
+null string; the <code>ADDITIONAL</code> array holds the name and the value.</p>
+<pre><code class="language-rexx">call show .array~of('0', '1', .true, .false, '2')
+call show .array~of('1.0', '01', ' 1', 'yes', '', .nil)
+exit
+show:
+  do v over arg(1)
+    say '['v~string']' t(v)
+  end
+  return
+t: procedure
+  use arg v
+  signal on syntax name bad
+  .validate~logical('flag', v)
+  return 'ok'
+bad: return condition('o')~code
+</code></pre>
+<pre><code class="language-output">[0] ok
+[1] ok
+[1] ok
+[0] ok
+[2] 88.927
+[1.0] 88.927
+[01] 88.927
+[ 1] 88.927
+[yes] 88.927
+[] 88.927
+[The NIL object] 88.927
+</code></pre>
+<div class="rule" id="r-class.validate.classtype"><a href="#r-class.validate.classtype">[class.validate.classtype]</a></div>
+<p><code>classType(name, object, class)</code> accepts an object that is an instance of
+<code>class</code>, a subclass or a class it inherits from included, as <code>isA</code> says, and
+raises <code>SYNTAX 88.914</code> otherwise, with <code>ADDITIONAL</code> holding the name and the id
+of the class. An argument <code>class</code> that is not a class raises <code>88.914</code> too,
+naming the argument <code>class</code>; <a href="#r-class.validate.classtype.sends">the sends rule</a>
+says where that error comes from. <code>requestClassType(name, object, class)</code> sends
+the object the message <code>request</code> with the id of the class as its argument, and
+answers the object that <code>request</code> answers when that is an instance of the class,
+and raises <code>SYNTAX 93.978</code> for an answer that is not, <code>.nil</code> being an instance
+of <code>Object</code> only; <code>ADDITIONAL</code> then holds the name, the id of the class and the
+object.</p>
+<pre><code class="language-rexx">call c 'classType', 'abc', .string
+call c 'classType', 'abc', .array
+call c 'classType', .array~new, .collection
+call c 'classType', .base~new, .mix
+call c 'classType', .withmix~new, .mix
+call c 'classType', .sub~new, .base
+call c 'classType', .base~new, .sub
+call c 'classType', .nil, .object
+call c 'classType', 1, 'string'
+call c 'requestClassType', 'abc', .string
+call c 'requestClassType', .conv~new, .array
+call c 'requestClassType', .conv~new, .string
+call c 'requestClassType', .conv~new, .list
+call c 'requestClassType', .conv~new, .object
+call c 'requestClassType', 'abc', .array
+call c 'requestClassType', .object~new, .string
+exit
+c: procedure
+  use arg m, o, k
+  signal on syntax name bad
+  if m == 'classType' then do
+    .validate~classType('N', o, k)
+    say m k~string 'ok'
+  end
+  else do
+    r = .validate~requestClassType('N', o, k)
+    say m k~string 'answers' r~class~id
+  end
+  return
+bad: cd = condition('o')
+  say m k~string '=&gt;' cd~code cd~additional~items cd~additional[1],
+      cd~additional[2]~string
+  return
+::class base
+::class sub subclass base
+::class mix mixinclass object
+::class withmix inherit mix
+::class conv
+::method request
+  use arg c
+  .output~lineout('  request' c)
+  if c == 'Array' then return .array~of('converted')
+  if c == 'String' then return 'convstr'
+  return .nil
+</code></pre>
+<pre><code class="language-output">classType The String class ok
+classType The Array class =&gt; 88.914 2 N Array
+classType The Collection class ok
+classType The MIX class =&gt; 88.914 2 N MIX
+classType The MIX class ok
+classType The BASE class ok
+classType The SUB class =&gt; 88.914 2 N SUB
+classType The Object class ok
+classType string =&gt; 88.914 2 class Class
+requestClassType The String class answers String
+  request Array
+requestClassType The Array class answers Array
+  request String
+requestClassType The String class answers String
+  request List
+requestClassType The List class =&gt; 93.978 3 N List
+  request Object
+requestClassType The Object class answers Object
+requestClassType The Array class answers Array
+requestClassType The String class =&gt; 93.978 3 N String
+</code></pre>
+<div class="rule" id="r-class.validate.classtype.sends"><a href="#r-class.validate.classtype.sends">[class.validate.classtype.sends]</a></div>
+<p><code>classType</code> sends the object <code>isA</code> with <code>class</code> and accepts it when the answer
+is <code>1</code>. So the <code>88.914</code> that a <code>class</code> that is not a class raises, naming the
+argument <code>class</code>, is that of <code>isA</code> of <code>Object</code>, and an object whose own <code>isA</code>
+answers <code>1</code> is accepted whatever <code>class</code> is. For any other answer it sends
+<code>class</code> the message <code>id</code> for the error, so that a <code>class</code> that is not a class
+raises the error of that message, <code>97.1</code> for a string and for <code>.nil</code>.
+<code>requestClassType</code> sends <code>class</code> the message <code>id</code> first, then sends the object
+<code>request</code> with that id, and last sends the answer <code>isA</code> with <code>class</code>, accepting
+it when that answers <code>1</code>.</p>
+<pre><code class="language-rexx">call c 'classType', .liar~new, .array
+call c 'classType', .liar~new, .liar
+call c 'classType', .liar~new, 'string'
+call c 'requestClassType', .conv~new, .array
+call c 'requestClassType', .conv~new, 'string'
+call c 'requestClassType', .conv~new, .nil
+call c 'classType', .nolie~new, 'string'
+call c 'classType', 'x', 'string'
+exit
+c: procedure
+  use arg m, o, k
+  signal on syntax name bad
+  .validate~send(m, 'N', o, k)
+  say m 'ok'
+  return
+bad: say m '=&gt;' condition('o')~code
+  return
+::class liar
+::method isA
+  say '  isA' arg(1)~string
+  return 1
+::class nolie
+::method isA
+  return 0
+::class conv
+::method request
+  use arg c
+  say '  request' c
+  return .liar~new
+</code></pre>
+<pre><code class="language-output">  isA The Array class
+classType ok
+  isA The LIAR class
+classType ok
+  isA string
+classType ok
+  request Array
+  isA The Array class
+requestClassType ok
+requestClassType =&gt; 97.1
+requestClassType =&gt; 97.1
+classType =&gt; 97.1
+classType =&gt; 88.914
+</code></pre>
+<h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
+<div class="rule" id="r-class.validate.deviation.109"><a href="#r-class.validate.deviation.109">[class.validate.deviation.109]</a></div>
+<p>A value, a <code>digits</code> or a bound that is an instance of a subclass of <code>String</code>
+is read by its own characters, and <code>REQUEST</code> and <code>MAKESTRING</code> are not sent to
+it (<a href="string.html#r-class.string.deviation.109">Deviation 109</a>). ooRexx sends such an
+instance <code>request</code> with <code>STRING</code> or <code>MAKESTRING</code>, so an override of either can
+change what is checked. In the example both methods answer <code>7</code>, which every
+check accepts, and the characters of the last value are no number.</p>
+<pre><code class="language-rexx">signal on syntax name bad
+.validate~wholeNumber('N', .num~new('5'))
+say 'accepted'
+.validate~numberRange('N', .num~new('5'), 1, 10)
+say 'in range'
+.validate~number('N', .num~new('abc'))
+say 'not reached'
+exit
+bad: say condition('o')~code
+::class num subclass string
+::method makestring
+  return '7'
+::method request
+  use arg c
+  return '7'
+</code></pre>
+<pre><code class="language-output defect=#140">accepted
+in range
+88.902
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../classes/traceobject.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../classes/singleton.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../classes/traceobject.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../classes/singleton.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../assets/version-picker.js"></script>
+
+
+    </div>
+    </body>
+</html>

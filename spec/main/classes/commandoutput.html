@@ -1,0 +1,648 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>CommandOutput - The interrexx Language Specification</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../conventions.html"><strong aria-hidden="true">2.</strong> Conventions</a></li><li class="chapter-item expanded "><a href="../lexical/index.html"><strong aria-hidden="true">3.</strong> Lexical structure</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../lexical/characters.html"><strong aria-hidden="true">3.1.</strong> Characters</a></li><li class="chapter-item expanded "><a href="../lexical/comments.html"><strong aria-hidden="true">3.2.</strong> Comments</a></li><li class="chapter-item expanded "><a href="../lexical/literals.html"><strong aria-hidden="true">3.3.</strong> Literals</a></li><li class="chapter-item expanded "><a href="../lexical/symbols.html"><strong aria-hidden="true">3.4.</strong> Symbols</a></li><li class="chapter-item expanded "><a href="../lexical/operators.html"><strong aria-hidden="true">3.5.</strong> Operators and special characters</a></li><li class="chapter-item expanded "><a href="../lexical/clauses.html"><strong aria-hidden="true">3.6.</strong> Clauses</a></li></ol></li><li class="chapter-item expanded "><a href="../numbers/index.html"><strong aria-hidden="true">4.</strong> Numbers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../numbers/formats.html"><strong aria-hidden="true">4.1.</strong> Formats</a></li><li class="chapter-item expanded "><a href="../numbers/limits.html"><strong aria-hidden="true">4.2.</strong> Limits</a></li><li class="chapter-item expanded "><a href="../numbers/arithmetic.html"><strong aria-hidden="true">4.3.</strong> Arithmetic</a></li><li class="chapter-item expanded "><a href="../numbers/settings.html"><strong aria-hidden="true">4.4.</strong> Settings</a></li><li class="chapter-item expanded "><a href="../numbers/comparison.html"><strong aria-hidden="true">4.5.</strong> Comparison</a></li></ol></li><li class="chapter-item expanded "><a href="../expressions/index.html"><strong aria-hidden="true">5.</strong> Expressions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../expressions/terms.html"><strong aria-hidden="true">5.1.</strong> Terms</a></li><li class="chapter-item expanded "><a href="../expressions/variables.html"><strong aria-hidden="true">5.2.</strong> Variables</a></li><li class="chapter-item expanded "><a href="../expressions/concatenation.html"><strong aria-hidden="true">5.3.</strong> Concatenation</a></li><li class="chapter-item expanded "><a href="../expressions/arithmetic.html"><strong aria-hidden="true">5.4.</strong> Arithmetic operators</a></li><li class="chapter-item expanded "><a href="../expressions/comparison.html"><strong aria-hidden="true">5.5.</strong> Comparison operators</a></li><li class="chapter-item expanded "><a href="../expressions/logical.html"><strong aria-hidden="true">5.6.</strong> Logical operators</a></li><li class="chapter-item expanded "><a href="../expressions/messages.html"><strong aria-hidden="true">5.7.</strong> Message operators</a></li></ol></li><li class="chapter-item expanded "><a href="../instructions/index.html"><strong aria-hidden="true">6.</strong> Instructions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../instructions/address.html"><strong aria-hidden="true">6.1.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../instructions/arg.html"><strong aria-hidden="true">6.2.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../instructions/assignment.html"><strong aria-hidden="true">6.3.</strong> Assignments</a></li><li class="chapter-item expanded "><a href="../instructions/call.html"><strong aria-hidden="true">6.4.</strong> CALL</a></li><li class="chapter-item expanded "><a href="../instructions/command.html"><strong aria-hidden="true">6.5.</strong> Commands</a></li><li class="chapter-item expanded "><a href="../instructions/do.html"><strong aria-hidden="true">6.6.</strong> DO</a></li><li class="chapter-item expanded "><a href="../instructions/drop.html"><strong aria-hidden="true">6.7.</strong> DROP</a></li><li class="chapter-item expanded "><a href="../instructions/exit.html"><strong aria-hidden="true">6.8.</strong> EXIT</a></li><li class="chapter-item expanded "><a href="../instructions/expose.html"><strong aria-hidden="true">6.9.</strong> EXPOSE</a></li><li class="chapter-item expanded "><a href="../instructions/forward.html"><strong aria-hidden="true">6.10.</strong> FORWARD</a></li><li class="chapter-item expanded "><a href="../instructions/guard.html"><strong aria-hidden="true">6.11.</strong> GUARD</a></li><li class="chapter-item expanded "><a href="../instructions/if.html"><strong aria-hidden="true">6.12.</strong> IF</a></li><li class="chapter-item expanded "><a href="../instructions/interpret.html"><strong aria-hidden="true">6.13.</strong> INTERPRET</a></li><li class="chapter-item expanded "><a href="../instructions/iterate.html"><strong aria-hidden="true">6.14.</strong> ITERATE</a></li><li class="chapter-item expanded "><a href="../instructions/leave.html"><strong aria-hidden="true">6.15.</strong> LEAVE</a></li><li class="chapter-item expanded "><a href="../instructions/loop.html"><strong aria-hidden="true">6.16.</strong> LOOP</a></li><li class="chapter-item expanded "><a href="../instructions/message.html"><strong aria-hidden="true">6.17.</strong> Message instructions</a></li><li class="chapter-item expanded "><a href="../instructions/nop.html"><strong aria-hidden="true">6.18.</strong> NOP</a></li><li class="chapter-item expanded "><a href="../instructions/numeric.html"><strong aria-hidden="true">6.19.</strong> NUMERIC</a></li><li class="chapter-item expanded "><a href="../instructions/options.html"><strong aria-hidden="true">6.20.</strong> OPTIONS</a></li><li class="chapter-item expanded "><a href="../instructions/parse.html"><strong aria-hidden="true">6.21.</strong> PARSE</a></li><li class="chapter-item expanded "><a href="../instructions/procedure.html"><strong aria-hidden="true">6.22.</strong> PROCEDURE</a></li><li class="chapter-item expanded "><a href="../instructions/pull.html"><strong aria-hidden="true">6.23.</strong> PULL</a></li><li class="chapter-item expanded "><a href="../instructions/push.html"><strong aria-hidden="true">6.24.</strong> PUSH</a></li><li class="chapter-item expanded "><a href="../instructions/queue.html"><strong aria-hidden="true">6.25.</strong> QUEUE</a></li><li class="chapter-item expanded "><a href="../instructions/raise.html"><strong aria-hidden="true">6.26.</strong> RAISE</a></li><li class="chapter-item expanded "><a href="../instructions/reply.html"><strong aria-hidden="true">6.27.</strong> REPLY</a></li><li class="chapter-item expanded "><a href="../instructions/return.html"><strong aria-hidden="true">6.28.</strong> RETURN</a></li><li class="chapter-item expanded "><a href="../instructions/say.html"><strong aria-hidden="true">6.29.</strong> SAY</a></li><li class="chapter-item expanded "><a href="../instructions/select.html"><strong aria-hidden="true">6.30.</strong> SELECT</a></li><li class="chapter-item expanded "><a href="../instructions/signal.html"><strong aria-hidden="true">6.31.</strong> SIGNAL</a></li><li class="chapter-item expanded "><a href="../instructions/trace.html"><strong aria-hidden="true">6.32.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../instructions/use.html"><strong aria-hidden="true">6.33.</strong> USE</a></li></ol></li><li class="chapter-item expanded "><a href="../parsing/index.html"><strong aria-hidden="true">7.</strong> Parsing</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../parsing/templates.html"><strong aria-hidden="true">7.1.</strong> Templates</a></li><li class="chapter-item expanded "><a href="../parsing/patterns.html"><strong aria-hidden="true">7.2.</strong> Patterns</a></li><li class="chapter-item expanded "><a href="../parsing/multiple.html"><strong aria-hidden="true">7.3.</strong> Several strings and case</a></li></ol></li><li class="chapter-item expanded "><a href="../directives/index.html"><strong aria-hidden="true">8.</strong> Directives</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../directives/class.html"><strong aria-hidden="true">8.1.</strong> ::CLASS</a></li><li class="chapter-item expanded "><a href="../directives/method.html"><strong aria-hidden="true">8.2.</strong> ::METHOD</a></li><li class="chapter-item expanded "><a href="../directives/attribute.html"><strong aria-hidden="true">8.3.</strong> ::ATTRIBUTE</a></li><li class="chapter-item expanded "><a href="../directives/constant.html"><strong aria-hidden="true">8.4.</strong> ::CONSTANT</a></li><li class="chapter-item expanded "><a href="../directives/routine.html"><strong aria-hidden="true">8.5.</strong> ::ROUTINE</a></li><li class="chapter-item expanded "><a href="../directives/requires.html"><strong aria-hidden="true">8.6.</strong> ::REQUIRES</a></li><li class="chapter-item expanded "><a href="../directives/options.html"><strong aria-hidden="true">8.7.</strong> ::OPTIONS</a></li><li class="chapter-item expanded "><a href="../directives/resource.html"><strong aria-hidden="true">8.8.</strong> ::RESOURCE</a></li><li class="chapter-item expanded "><a href="../directives/annotate.html"><strong aria-hidden="true">8.9.</strong> ::ANNOTATE</a></li></ol></li><li class="chapter-item expanded "><a href="../conditions/index.html"><strong aria-hidden="true">9.</strong> Conditions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../conditions/traps.html"><strong aria-hidden="true">9.1.</strong> Condition traps</a></li><li class="chapter-item expanded "><a href="../conditions/information.html"><strong aria-hidden="true">9.2.</strong> Condition information</a></li><li class="chapter-item expanded "><a href="../conditions/syntax.html"><strong aria-hidden="true">9.3.</strong> SYNTAX</a></li><li class="chapter-item expanded "><a href="../conditions/error.html"><strong aria-hidden="true">9.4.</strong> ERROR and FAILURE</a></li><li class="chapter-item expanded "><a href="../conditions/halt.html"><strong aria-hidden="true">9.5.</strong> HALT</a></li><li class="chapter-item expanded "><a href="../conditions/novalue.html"><strong aria-hidden="true">9.6.</strong> NOVALUE</a></li><li class="chapter-item expanded "><a href="../conditions/nostring.html"><strong aria-hidden="true">9.7.</strong> NOSTRING</a></li><li class="chapter-item expanded "><a href="../conditions/nomethod.html"><strong aria-hidden="true">9.8.</strong> NOMETHOD</a></li><li class="chapter-item expanded "><a href="../conditions/notready.html"><strong aria-hidden="true">9.9.</strong> NOTREADY</a></li><li class="chapter-item expanded "><a href="../conditions/lostdigits.html"><strong aria-hidden="true">9.10.</strong> LOSTDIGITS</a></li><li class="chapter-item expanded "><a href="../conditions/user.html"><strong aria-hidden="true">9.11.</strong> USER conditions</a></li><li class="chapter-item expanded "><a href="../conditions/errors.html"><strong aria-hidden="true">9.12.</strong> Error numbers</a></li></ol></li><li class="chapter-item expanded "><a href="../classes/index.html"><strong aria-hidden="true">10.</strong> Classes</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../classes/methods.html"><strong aria-hidden="true">10.1.</strong> Method search</a></li><li class="chapter-item expanded "><a href="../classes/object.html"><strong aria-hidden="true">10.2.</strong> Object</a></li><li class="chapter-item expanded "><a href="../classes/class.html"><strong aria-hidden="true">10.3.</strong> Class</a></li><li class="chapter-item expanded "><a href="../classes/string.html"><strong aria-hidden="true">10.4.</strong> String</a></li><li class="chapter-item expanded "><a href="../classes/method.html"><strong aria-hidden="true">10.5.</strong> Method</a></li><li class="chapter-item expanded "><a href="../classes/routine.html"><strong aria-hidden="true">10.6.</strong> Routine</a></li><li class="chapter-item expanded "><a href="../classes/package.html"><strong aria-hidden="true">10.7.</strong> Package</a></li><li class="chapter-item expanded "><a href="../classes/message.html"><strong aria-hidden="true">10.8.</strong> Message</a></li><li class="chapter-item expanded "><a href="../classes/messagenotification.html"><strong aria-hidden="true">10.9.</strong> MessageNotification</a></li><li class="chapter-item expanded "><a href="../classes/alarmnotification.html"><strong aria-hidden="true">10.10.</strong> AlarmNotification</a></li><li class="chapter-item expanded "><a href="../classes/collection.html"><strong aria-hidden="true">10.11.</strong> Collection</a></li><li class="chapter-item expanded "><a href="../classes/mapcollection.html"><strong aria-hidden="true">10.12.</strong> MapCollection</a></li><li class="chapter-item expanded "><a href="../classes/orderedcollection.html"><strong aria-hidden="true">10.13.</strong> OrderedCollection</a></li><li class="chapter-item expanded "><a href="../classes/setcollection.html"><strong aria-hidden="true">10.14.</strong> SetCollection</a></li><li class="chapter-item expanded "><a href="../classes/array.html"><strong aria-hidden="true">10.15.</strong> Array</a></li><li class="chapter-item expanded "><a href="../classes/list.html"><strong aria-hidden="true">10.16.</strong> List</a></li><li class="chapter-item expanded "><a href="../classes/queue.html"><strong aria-hidden="true">10.17.</strong> Queue</a></li><li class="chapter-item expanded "><a href="../classes/circularqueue.html"><strong aria-hidden="true">10.18.</strong> CircularQueue</a></li><li class="chapter-item expanded "><a href="../classes/directory.html"><strong aria-hidden="true">10.19.</strong> Directory</a></li><li class="chapter-item expanded "><a href="../classes/stringtable.html"><strong aria-hidden="true">10.20.</strong> StringTable</a></li><li class="chapter-item expanded "><a href="../classes/properties.html"><strong aria-hidden="true">10.21.</strong> Properties</a></li><li class="chapter-item expanded "><a href="../classes/table.html"><strong aria-hidden="true">10.22.</strong> Table</a></li><li class="chapter-item expanded "><a href="../classes/identitytable.html"><strong aria-hidden="true">10.23.</strong> IdentityTable</a></li><li class="chapter-item expanded "><a href="../classes/relation.html"><strong aria-hidden="true">10.24.</strong> Relation</a></li><li class="chapter-item expanded "><a href="../classes/bag.html"><strong aria-hidden="true">10.25.</strong> Bag</a></li><li class="chapter-item expanded "><a href="../classes/set.html"><strong aria-hidden="true">10.26.</strong> Set</a></li><li class="chapter-item expanded "><a href="../classes/stem.html"><strong aria-hidden="true">10.27.</strong> Stem</a></li><li class="chapter-item expanded "><a href="../classes/datetime.html"><strong aria-hidden="true">10.28.</strong> DateTime</a></li><li class="chapter-item expanded "><a href="../classes/timespan.html"><strong aria-hidden="true">10.29.</strong> TimeSpan</a></li><li class="chapter-item expanded "><a href="../classes/comparable.html"><strong aria-hidden="true">10.30.</strong> Comparable</a></li><li class="chapter-item expanded "><a href="../classes/orderable.html"><strong aria-hidden="true">10.31.</strong> Orderable</a></li><li class="chapter-item expanded "><a href="../classes/comparators.html"><strong aria-hidden="true">10.32.</strong> Comparators</a></li><li class="chapter-item expanded "><a href="../classes/mutablebuffer.html"><strong aria-hidden="true">10.33.</strong> MutableBuffer</a></li><li class="chapter-item expanded "><a href="../classes/buffer.html"><strong aria-hidden="true">10.34.</strong> Buffer</a></li><li class="chapter-item expanded "><a href="../classes/pointer.html"><strong aria-hidden="true">10.35.</strong> Pointer</a></li><li class="chapter-item expanded "><a href="../classes/weakreference.html"><strong aria-hidden="true">10.36.</strong> WeakReference</a></li><li class="chapter-item expanded "><a href="../classes/variablereference.html"><strong aria-hidden="true">10.37.</strong> VariableReference</a></li><li class="chapter-item expanded "><a href="../classes/file.html"><strong aria-hidden="true">10.38.</strong> File</a></li><li class="chapter-item expanded "><a href="../classes/rexxcontext.html"><strong aria-hidden="true">10.39.</strong> RexxContext</a></li><li class="chapter-item expanded "><a href="../classes/stackframe.html"><strong aria-hidden="true">10.40.</strong> StackFrame</a></li><li class="chapter-item expanded "><a href="../classes/rexxinfo.html"><strong aria-hidden="true">10.41.</strong> RexxInfo</a></li><li class="chapter-item expanded "><a href="../classes/traceobject.html"><strong aria-hidden="true">10.42.</strong> TraceObject</a></li><li class="chapter-item expanded "><a href="../classes/validate.html"><strong aria-hidden="true">10.43.</strong> Validate</a></li><li class="chapter-item expanded "><a href="../classes/singleton.html"><strong aria-hidden="true">10.44.</strong> Singleton</a></li><li class="chapter-item expanded "><a href="../classes/alarm.html"><strong aria-hidden="true">10.45.</strong> Alarm</a></li><li class="chapter-item expanded "><a href="../classes/ticker.html"><strong aria-hidden="true">10.46.</strong> Ticker</a></li><li class="chapter-item expanded "><a href="../classes/monitor.html"><strong aria-hidden="true">10.47.</strong> Monitor</a></li><li class="chapter-item expanded "><a href="../classes/eventsemaphore.html"><strong aria-hidden="true">10.48.</strong> EventSemaphore</a></li><li class="chapter-item expanded "><a href="../classes/mutexsemaphore.html"><strong aria-hidden="true">10.49.</strong> MutexSemaphore</a></li><li class="chapter-item expanded "><a href="../classes/commandhandler.html"><strong aria-hidden="true">10.50.</strong> CommandHandler</a></li><li class="chapter-item expanded "><a href="../classes/nativecommandhandler.html"><strong aria-hidden="true">10.51.</strong> NativeCommandHandler</a></li><li class="chapter-item expanded "><a href="../classes/commandcontext.html"><strong aria-hidden="true">10.52.</strong> CommandContext</a></li><li class="chapter-item expanded "><a href="../classes/commandinput.html"><strong aria-hidden="true">10.53.</strong> CommandInput</a></li><li class="chapter-item expanded "><a href="../classes/commandoutput.html" class="active"><strong aria-hidden="true">10.54.</strong> CommandOutput</a></li><li class="chapter-item expanded "><a href="../classes/rexxqueue.html"><strong aria-hidden="true">10.55.</strong> RexxQueue</a></li><li class="chapter-item expanded "><a href="../classes/supplier.html"><strong aria-hidden="true">10.56.</strong> Supplier</a></li><li class="chapter-item expanded "><a href="../classes/streamsupplier.html"><strong aria-hidden="true">10.57.</strong> StreamSupplier</a></li><li class="chapter-item expanded "><a href="../classes/regularexpression.html"><strong aria-hidden="true">10.58.</strong> RegularExpression</a></li></ol></li><li class="chapter-item expanded "><a href="../builtins/index.html"><strong aria-hidden="true">11.</strong> Built-in functions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../builtins/abbrev.html"><strong aria-hidden="true">11.1.</strong> ABBREV</a></li><li class="chapter-item expanded "><a href="../builtins/abs.html"><strong aria-hidden="true">11.2.</strong> ABS</a></li><li class="chapter-item expanded "><a href="../builtins/address.html"><strong aria-hidden="true">11.3.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../builtins/arg.html"><strong aria-hidden="true">11.4.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../builtins/b2x.html"><strong aria-hidden="true">11.5.</strong> B2X</a></li><li class="chapter-item expanded "><a href="../builtins/beep.html"><strong aria-hidden="true">11.6.</strong> BEEP</a></li><li class="chapter-item expanded "><a href="../builtins/bitand.html"><strong aria-hidden="true">11.7.</strong> BITAND</a></li><li class="chapter-item expanded "><a href="../builtins/bitor.html"><strong aria-hidden="true">11.8.</strong> BITOR</a></li><li class="chapter-item expanded "><a href="../builtins/bitxor.html"><strong aria-hidden="true">11.9.</strong> BITXOR</a></li><li class="chapter-item expanded "><a href="../builtins/c2d.html"><strong aria-hidden="true">11.10.</strong> C2D</a></li><li class="chapter-item expanded "><a href="../builtins/c2x.html"><strong aria-hidden="true">11.11.</strong> C2X</a></li><li class="chapter-item expanded "><a href="../builtins/center.html"><strong aria-hidden="true">11.12.</strong> CENTER</a></li><li class="chapter-item expanded "><a href="../builtins/changestr.html"><strong aria-hidden="true">11.13.</strong> CHANGESTR</a></li><li class="chapter-item expanded "><a href="../builtins/charin.html"><strong aria-hidden="true">11.14.</strong> CHARIN</a></li><li class="chapter-item expanded "><a href="../builtins/charout.html"><strong aria-hidden="true">11.15.</strong> CHAROUT</a></li><li class="chapter-item expanded "><a href="../builtins/chars.html"><strong aria-hidden="true">11.16.</strong> CHARS</a></li><li class="chapter-item expanded "><a href="../builtins/compare.html"><strong aria-hidden="true">11.17.</strong> COMPARE</a></li><li class="chapter-item expanded "><a href="../builtins/condition.html"><strong aria-hidden="true">11.18.</strong> CONDITION</a></li><li class="chapter-item expanded "><a href="../builtins/copies.html"><strong aria-hidden="true">11.19.</strong> COPIES</a></li><li class="chapter-item expanded "><a href="../builtins/countstr.html"><strong aria-hidden="true">11.20.</strong> COUNTSTR</a></li><li class="chapter-item expanded "><a href="../builtins/d2c.html"><strong aria-hidden="true">11.21.</strong> D2C</a></li><li class="chapter-item expanded "><a href="../builtins/d2x.html"><strong aria-hidden="true">11.22.</strong> D2X</a></li><li class="chapter-item expanded "><a href="../builtins/datatype.html"><strong aria-hidden="true">11.23.</strong> DATATYPE</a></li><li class="chapter-item expanded "><a href="../builtins/date.html"><strong aria-hidden="true">11.24.</strong> DATE</a></li><li class="chapter-item expanded "><a href="../builtins/delstr.html"><strong aria-hidden="true">11.25.</strong> DELSTR</a></li><li class="chapter-item expanded "><a href="../builtins/delword.html"><strong aria-hidden="true">11.26.</strong> DELWORD</a></li><li class="chapter-item expanded "><a href="../builtins/digits.html"><strong aria-hidden="true">11.27.</strong> DIGITS</a></li><li class="chapter-item expanded "><a href="../builtins/directory.html"><strong aria-hidden="true">11.28.</strong> DIRECTORY</a></li><li class="chapter-item expanded "><a href="../builtins/endlocal.html"><strong aria-hidden="true">11.29.</strong> ENDLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/errortext.html"><strong aria-hidden="true">11.30.</strong> ERRORTEXT</a></li><li class="chapter-item expanded "><a href="../builtins/filespec.html"><strong aria-hidden="true">11.31.</strong> FILESPEC</a></li><li class="chapter-item expanded "><a href="../builtins/form.html"><strong aria-hidden="true">11.32.</strong> FORM</a></li><li class="chapter-item expanded "><a href="../builtins/format.html"><strong aria-hidden="true">11.33.</strong> FORMAT</a></li><li class="chapter-item expanded "><a href="../builtins/fuzz.html"><strong aria-hidden="true">11.34.</strong> FUZZ</a></li><li class="chapter-item expanded "><a href="../builtins/gc.html"><strong aria-hidden="true">11.35.</strong> GC</a></li><li class="chapter-item expanded "><a href="../builtins/insert.html"><strong aria-hidden="true">11.36.</strong> INSERT</a></li><li class="chapter-item expanded "><a href="../builtins/lastpos.html"><strong aria-hidden="true">11.37.</strong> LASTPOS</a></li><li class="chapter-item expanded "><a href="../builtins/left.html"><strong aria-hidden="true">11.38.</strong> LEFT</a></li><li class="chapter-item expanded "><a href="../builtins/length.html"><strong aria-hidden="true">11.39.</strong> LENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/linein.html"><strong aria-hidden="true">11.40.</strong> LINEIN</a></li><li class="chapter-item expanded "><a href="../builtins/lineout.html"><strong aria-hidden="true">11.41.</strong> LINEOUT</a></li><li class="chapter-item expanded "><a href="../builtins/lines.html"><strong aria-hidden="true">11.42.</strong> LINES</a></li><li class="chapter-item expanded "><a href="../builtins/lower.html"><strong aria-hidden="true">11.43.</strong> LOWER</a></li><li class="chapter-item expanded "><a href="../builtins/max.html"><strong aria-hidden="true">11.44.</strong> MAX</a></li><li class="chapter-item expanded "><a href="../builtins/min.html"><strong aria-hidden="true">11.45.</strong> MIN</a></li><li class="chapter-item expanded "><a href="../builtins/overlay.html"><strong aria-hidden="true">11.46.</strong> OVERLAY</a></li><li class="chapter-item expanded "><a href="../builtins/pos.html"><strong aria-hidden="true">11.47.</strong> POS</a></li><li class="chapter-item expanded "><a href="../builtins/qualify.html"><strong aria-hidden="true">11.48.</strong> QUALIFY</a></li><li class="chapter-item expanded "><a href="../builtins/queued.html"><strong aria-hidden="true">11.49.</strong> QUEUED</a></li><li class="chapter-item expanded "><a href="../builtins/random.html"><strong aria-hidden="true">11.50.</strong> RANDOM</a></li><li class="chapter-item expanded "><a href="../builtins/reverse.html"><strong aria-hidden="true">11.51.</strong> REVERSE</a></li><li class="chapter-item expanded "><a href="../builtins/right.html"><strong aria-hidden="true">11.52.</strong> RIGHT</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncadd.html"><strong aria-hidden="true">11.53.</strong> RXFUNCADD</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncdrop.html"><strong aria-hidden="true">11.54.</strong> RXFUNCDROP</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncquery.html"><strong aria-hidden="true">11.55.</strong> RXFUNCQUERY</a></li><li class="chapter-item expanded "><a href="../builtins/rxqueue.html"><strong aria-hidden="true">11.56.</strong> RXQUEUE</a></li><li class="chapter-item expanded "><a href="../builtins/setlocal.html"><strong aria-hidden="true">11.57.</strong> SETLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/sign.html"><strong aria-hidden="true">11.58.</strong> SIGN</a></li><li class="chapter-item expanded "><a href="../builtins/sourceline.html"><strong aria-hidden="true">11.59.</strong> SOURCELINE</a></li><li class="chapter-item expanded "><a href="../builtins/space.html"><strong aria-hidden="true">11.60.</strong> SPACE</a></li><li class="chapter-item expanded "><a href="../builtins/stream.html"><strong aria-hidden="true">11.61.</strong> STREAM</a></li><li class="chapter-item expanded "><a href="../builtins/strip.html"><strong aria-hidden="true">11.62.</strong> STRIP</a></li><li class="chapter-item expanded "><a href="../builtins/substr.html"><strong aria-hidden="true">11.63.</strong> SUBSTR</a></li><li class="chapter-item expanded "><a href="../builtins/subword.html"><strong aria-hidden="true">11.64.</strong> SUBWORD</a></li><li class="chapter-item expanded "><a href="../builtins/symbol.html"><strong aria-hidden="true">11.65.</strong> SYMBOL</a></li><li class="chapter-item expanded "><a href="../builtins/time.html"><strong aria-hidden="true">11.66.</strong> TIME</a></li><li class="chapter-item expanded "><a href="../builtins/trace.html"><strong aria-hidden="true">11.67.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../builtins/translate.html"><strong aria-hidden="true">11.68.</strong> TRANSLATE</a></li><li class="chapter-item expanded "><a href="../builtins/trunc.html"><strong aria-hidden="true">11.69.</strong> TRUNC</a></li><li class="chapter-item expanded "><a href="../builtins/upper.html"><strong aria-hidden="true">11.70.</strong> UPPER</a></li><li class="chapter-item expanded "><a href="../builtins/userid.html"><strong aria-hidden="true">11.71.</strong> USERID</a></li><li class="chapter-item expanded "><a href="../builtins/value.html"><strong aria-hidden="true">11.72.</strong> VALUE</a></li><li class="chapter-item expanded "><a href="../builtins/var.html"><strong aria-hidden="true">11.73.</strong> VAR</a></li><li class="chapter-item expanded "><a href="../builtins/verify.html"><strong aria-hidden="true">11.74.</strong> VERIFY</a></li><li class="chapter-item expanded "><a href="../builtins/word.html"><strong aria-hidden="true">11.75.</strong> WORD</a></li><li class="chapter-item expanded "><a href="../builtins/wordindex.html"><strong aria-hidden="true">11.76.</strong> WORDINDEX</a></li><li class="chapter-item expanded "><a href="../builtins/wordlength.html"><strong aria-hidden="true">11.77.</strong> WORDLENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/wordpos.html"><strong aria-hidden="true">11.78.</strong> WORDPOS</a></li><li class="chapter-item expanded "><a href="../builtins/words.html"><strong aria-hidden="true">11.79.</strong> WORDS</a></li><li class="chapter-item expanded "><a href="../builtins/x2b.html"><strong aria-hidden="true">11.80.</strong> X2B</a></li><li class="chapter-item expanded "><a href="../builtins/x2c.html"><strong aria-hidden="true">11.81.</strong> X2C</a></li><li class="chapter-item expanded "><a href="../builtins/x2d.html"><strong aria-hidden="true">11.82.</strong> X2D</a></li><li class="chapter-item expanded "><a href="../builtins/xrange.html"><strong aria-hidden="true">11.83.</strong> XRANGE</a></li></ol></li><li class="chapter-item expanded "><a href="../deviations.html"><strong aria-hidden="true">12.</strong> Deviations</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The interrexx Language Specification</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="commandoutput"><a class="header" href="#commandoutput">CommandOutput</a></h1>
+<p class="references">rexxref: Builtin Classes &gt; Utility Classes &gt; CommandOutput Class</p>
+<p class="deviations">Deviations: D109</p>
+<p>A <code>CommandOutput</code> is the stream to which a handler written in Rexx writes the
+output or the error output of a command that was sent with
+<code>ADDRESS ... WITH OUTPUT</code> or <code>WITH ERROR</code>. The handler gets it from
+<a href="commandcontext.html#r-class.commandcontext.output"><code>output</code></a> or
+<a href="commandcontext.html#r-class.commandcontext.error"><code>error</code></a> of the
+<a href="commandcontext.html"><code>CommandContext</code></a> of the command. What it is given goes to
+the target of the redirection, a stem, a stream or the object of a <code>USING</code>, as
+lines, in the way that <a href="../instructions/address.html#r-instr.address.with.syntax">the redirection rules</a> say
+for any command. A command that is sent without a redirection has no such
+stream; a handler that is to write then uses <code>SAY</code> or a stream of its own. The
+class inherits the mixin class <code>OutputStream</code>, whose other methods, <code>arrayOut</code>
+among them, are specified with the stream classes. This page states the four
+methods that the class defines, how text becomes lines, and when a line that is
+not finished is written.</p>
+<h2 id="the-class"><a class="header" href="#the-class">The class</a></h2>
+<div class="rule" id="r-class.commandoutput.creation"><a href="#r-class.commandoutput.creation">[class.commandoutput.creation]</a></div>
+<p><code>CommandOutput</code> has the instance methods <code>charOut</code>, <code>close</code>, <code>flush</code> and
+<code>lineOut</code> besides those that it inherits. Its superclass is <code>Object</code>, and it
+inherits the mixin class <code>OutputStream</code>: its <code>superClasses</code> are <code>Object</code> and
+<code>OutputStream</code> in that order (<a href="index.html#r-class.index.hierarchy">the hierarchy rule</a>).
+The interpreter makes the objects for a command and hands them out, one for the
+output and one for the error output; a program does not make one. The <code>new</code> of a
+program with no arguments, or with one, raises <code>SYNTAX 93.901</code>, with more than
+two <code>SYNTAX 93.902</code>, and what an object made with two arguments is good for is
+not specified, since it belongs to no command. The class has other methods,
+<code>init</code> among them, that the interpreter uses; they are not part of this
+specification.</p>
+<pre><code class="language-rexx">s = ''
+do c over .commandoutput~superclasses
+  s = s c~id
+end
+say .commandoutput~id .commandoutput~superclasses~items s~strip
+have = .set~new
+m = .commandoutput~methods(.commandoutput)
+do while m~available
+  have~put(m~index)
+  m~next
+end
+names = 'charOut close flush lineOut'~makeArray(' ')
+count = 0
+do name over names
+  if have~hasItem(name~upper) then count = count + 1
+end
+say count 'of' names~items
+call try '.commandoutput~new'
+call try '.commandoutput~new("x")'
+call try '.commandoutput~new("x", "y", "z")'
+exit
+try:
+  signal on syntax name bad
+  interpret 'x =' arg(1)
+  say arg(1) 'no error'
+  return
+bad: say arg(1) condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">CommandOutput 2 Object OutputStream
+4 of 4
+.commandoutput~new 93.901
+.commandoutput~new("x") 93.901
+.commandoutput~new("x", "y", "z") 93.902
+</code></pre>
+<h2 id="writing"><a class="header" href="#writing">Writing</a></h2>
+<div class="rule" id="r-class.commandoutput.lineout"><a href="#r-class.commandoutput.lineout">[class.commandoutput.lineout]</a></div>
+<p><code>lineOut(string)</code> finishes a line and answers <code>0</code>. The line is the text that
+<code>charOut</code> has written since the last line ended, followed by <code>string</code>; with no
+<code>string</code>, or with an omitted place, the line is that text alone and nothing more
+is added, so that <code>lineOut</code> alone ends a line that <code>charOut</code> began, and writes
+nothing when no line is begun. A <code>string</code> that is not a string is replaced by
+the answer of its <code>string</code> method, and not of its <code>makeString</code> or its <code>request</code>;
+an instance of a subclass of <code>String</code> is a string here (<a href="#r-class.commandoutput.deviation.109">the deviation
+rule</a>); <code>.nil</code> is <code>The NIL object</code>. A line
+end inside <code>string</code> does not split the line: it is written as one line, with the
+line end in it. <code>lineOut</code> takes one argument (<code>SYNTAX 93.902</code>). The example
+gives the lines to a stem.</p>
+<pre><code class="language-rexx">x = .commandhandler~register('spec_co_lineout', .writer~new)
+address spec_co_lineout 'go' with output stem o.
+do i = 1 to o.0
+  say i '&lt;'o.i~changestr('0a'x, '\n')~changestr('0d'x, '\r')'&gt;'
+end
+signal on syntax name bad
+address spec_co_lineout 'bad' with output stem o.
+bad: say condition('o')~code
+x = .commandhandler~deregister('spec_co_lineout')
+::class writer inherit CommandHandler
+::method command
+  use arg command, caller
+  o = caller~output
+  if command = 'bad' then return o~lineout('a', 'b')
+  say o~lineout('first') o~lineout('') o~lineout o~lineout()
+  o~charout('begun')
+  say o~lineout
+  o~charout('begun and ')
+  say o~lineout('finished')
+  say o~lineout('two' || '0a'x || 'lines') o~lineout('crlf' || '0d0a'x)
+  say o~lineout(12.50) o~lineout(.nil) o~lineout(.both~new),
+    o~lineout(.made~new)
+  return 0
+::class both
+::method makestring
+  return 'from makestring'
+::method string
+  return 'from string'
+::class made
+::method makestring
+  return 'only makestring'
+</code></pre>
+<pre><code class="language-output">0 0 0 0
+0
+0
+0 0
+0 0 0 0
+1 &lt;first&gt;
+2 &lt;&gt;
+3 &lt;begun&gt;
+4 &lt;begun and finished&gt;
+5 &lt;two\nlines&gt;
+6 &lt;crlf\r\n&gt;
+7 &lt;12.50&gt;
+8 &lt;The NIL object&gt;
+9 &lt;from string&gt;
+10 &lt;a MADE&gt;
+93.902
+</code></pre>
+<div class="rule" id="r-class.commandoutput.charout"><a href="#r-class.commandoutput.charout">[class.commandoutput.charout]</a></div>
+<p><code>charOut(string)</code> writes text that need not be a whole line, and answers <code>0</code>.
+A line end in the text, the character <code>'0A'x</code>, ends the line before it, and
+the text after the last line end, which may be none, is kept as the beginning
+of the next line, so that a line is made of what several calls of <code>charOut</code>
+wrote and of the <code>lineOut</code> that ends it. A <code>'0D'x</code> is a character of the text
+like another. Without <code>string</code>, with an omitted place, or with the null
+string, <code>charOut</code> writes nothing. A <code>string</code> that is not a string is replaced
+by its string value as for <a href="#r-class.commandoutput.lineout"><code>lineOut</code></a>. The
+position that the stream method has as its second argument must be omitted
+(<code>SYNTAX 93.963</code>), and a third argument raises <code>SYNTAX 93.902</code>. What is kept
+is written when <a href="#r-class.commandoutput.pending">the pending text rule</a> says.</p>
+<pre><code class="language-rexx">x = .commandhandler~register('spec_co_charout', .writer~new)
+address spec_co_charout 'go' with output stem o.
+do i = 1 to o.0
+  say i '&lt;'o.i~changestr('0a'x, '\n')~changestr('0d'x, '\r')'&gt;'
+end
+x = .commandhandler~deregister('spec_co_charout')
+::class writer inherit CommandHandler
+::method command
+  use arg command, caller
+  o = caller~output
+  say o~charout('ab') o~charout o~charout('') o~charout('cd')
+  say o~charout('0a'x),
+    o~charout('ef' || '0a'x || 'gh' || '0a'x || '0a'x || 'ij')
+  say o~charout('a' || '0d0a'x || 'b' || '0d'x || 'c')
+  say o~charout(12.50) o~charout(.nil)
+  do e over .array~of("o~charout('a', 1)", "o~charout(, 1)",,
+      "o~charout('a', , 3)")
+    self~try(o, e)
+  end
+  return 0
+::method try
+  use arg o, e
+  signal on syntax name bad
+  interpret 'x =' e
+  say e 'no error'
+  return
+bad: say e condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">0 0 0 0
+0 0
+0
+0 0
+o~charout('a', 1) 93.963
+o~charout(, 1) 93.963
+o~charout('a', , 3) 93.902
+1 &lt;abcd&gt;
+2 &lt;ef&gt;
+3 &lt;gh&gt;
+4 &lt;&gt;
+5 &lt;ija\r&gt;
+6 &lt;b\rc12.50The NIL object&gt;
+</code></pre>
+<div class="rule" id="r-class.commandoutput.pending"><a href="#r-class.commandoutput.pending">[class.commandoutput.pending]</a></div>
+<p>The text that <code>charOut</code> has written after the last line end is not yet a line,
+and it is kept. It is written as a line by the next <code>lineOut</code>, which appends
+to it its own string, by <a href="#r-class.commandoutput.flush"><code>flush</code></a>, by
+<a href="#r-class.commandoutput.close"><code>close</code></a> and when the method <code>command</code> of the
+handler returns, so that nothing is lost at the end of a command. The text
+that was kept is written once, and it ends a line each time: after <code>flush</code> or
+<code>close</code> a later <code>charOut</code> begins a new line.</p>
+<pre><code class="language-rexx">x = .commandhandler~register('spec_co_pending', .writer~new)
+address spec_co_pending 'a' with output stem a.
+address spec_co_pending 'b' with output stem b.
+address spec_co_pending 'c' with output stem c.
+address spec_co_pending 'd' with output stem d.
+x = .commandhandler~deregister('spec_co_pending')
+say a.0 '&lt;'a.1'&gt;' b.0 '&lt;'b.1'&gt;' '&lt;'b.2'&gt;'
+say c.0 '&lt;'c.1'&gt;' '&lt;'c.2'&gt;' d.0 '&lt;'d.1'&gt;' '&lt;'d.2'&gt;'
+::class writer inherit CommandHandler
+::method command
+  use arg command, caller
+  o = caller~output
+  select
+    when command = 'a' then o~charout('left over')
+    when command = 'b' then do
+      o~charout('one '); x = o~lineout('two'); o~charout('three')
+    end
+    when command = 'c' then do
+      o~charout('flushed'); o~flush; o~charout('then more')
+    end
+    when command = 'd' then do
+      o~charout('closed'); o~close; o~charout('after close')
+    end
+  end
+  return 0
+</code></pre>
+<pre><code class="language-output">1 &lt;left over&gt; 2 &lt;one two&gt; &lt;three&gt;
+2 &lt;flushed&gt; &lt;then more&gt; 2 &lt;closed&gt; &lt;after close&gt;
+</code></pre>
+<div class="rule" id="r-class.commandoutput.flush"><a href="#r-class.commandoutput.flush">[class.commandoutput.flush]</a></div>
+<p><code>flush</code> writes the text that <code>charOut</code> has kept as a line, as <a href="#r-class.commandoutput.pending">the pending
+text rule</a> says, and does nothing when none is
+kept. It answers nothing, so that using its answer as a value raises
+<code>SYNTAX 91.999</code>. Arguments are ignored.</p>
+<pre><code class="language-rexx">x = .commandhandler~register('spec_co_flush', .writer~new)
+address spec_co_flush 'go' with output stem o.
+say o.0 '&lt;'o.1'&gt;' '&lt;'o.2'&gt;'
+x = .commandhandler~deregister('spec_co_flush')
+::class writer inherit CommandHandler
+::method command
+  use arg command, caller
+  o = caller~output
+  o~flush
+  o~charout('kept')
+  o~flush
+  o~flush
+  o~charout('kept again')
+  o~flush(1)
+  signal on syntax name bad
+  x = o~flush
+bad: say condition('o')~code
+  return 0
+</code></pre>
+<pre><code class="language-output">91.999
+2 &lt;kept&gt; &lt;kept again&gt;
+</code></pre>
+<div class="rule" id="r-class.commandoutput.close"><a href="#r-class.commandoutput.close">[class.commandoutput.close]</a></div>
+<p><code>close</code> writes the text that <code>charOut</code> has kept as a line, as <a href="#r-class.commandoutput.pending">the pending
+text rule</a> says, and does nothing when none is
+kept. It answers nothing, and arguments are ignored. It does not end the
+stream: the lines that the handler writes afterwards are written like the
+earlier ones.</p>
+<pre><code class="language-rexx">x = .commandhandler~register('spec_co_close', .writer~new)
+address spec_co_close 'go' with output stem o.
+say o.0 '&lt;'o.1'&gt;' '&lt;'o.2'&gt;'
+x = .commandhandler~deregister('spec_co_close')
+::class writer inherit CommandHandler
+::method command
+  use arg command, caller
+  o = caller~output
+  o~close
+  o~charout('kept')
+  o~close
+  o~lineout('written after close')
+  o~close(1)
+  signal on syntax name bad
+  x = o~close
+bad: say condition('o')~code
+  return 0
+</code></pre>
+<pre><code class="language-output">91.999
+2 &lt;kept&gt; &lt;written after close&gt;
+</code></pre>
+<h2 id="copying-and-the-end-of-the-command"><a class="header" href="#copying-and-the-end-of-the-command">Copying and the end of the command</a></h2>
+<div class="rule" id="r-class.commandoutput.copy"><a href="#r-class.commandoutput.copy">[class.commandoutput.copy]</a></div>
+<p><code>copy</code> answers a new <code>CommandOutput</code> that writes to the same target as the
+original. The lines of the two go to the target in the order in which they are
+written. Each of them keeps its own text that <code>charOut</code> wrote and that is not
+yet a line: the <code>lineOut</code> of the copy does not finish what the original began,
+and each is written, as <a href="#r-class.commandoutput.pending">the pending text rule</a>
+says, when its own line ends or when the command is over. The command that the
+original belongs to is the command of the copy too.</p>
+<pre><code class="language-rexx">x = .commandhandler~register('spec_co_copy', .writer~new)
+address spec_co_copy 'go' with output stem o.
+say o.0 '&lt;'o.1'&gt;' '&lt;'o.2'&gt;'
+say '&lt;'o.3'&gt;' '&lt;'o.4'&gt;'
+x = .commandhandler~deregister('spec_co_copy')
+::class writer inherit CommandHandler
+::method command
+  use arg command, caller
+  o = caller~output
+  c = o~copy
+  say c~class~id (c == o)
+  o~lineout('from the original')
+  c~lineout('from the copy')
+  o~charout('begun by the original')
+  c~charout('begun by the copy')
+  c~lineout(', ended by the copy')
+  return 0
+</code></pre>
+<pre><code class="language-output">CommandOutput 0
+4 &lt;from the original&gt; &lt;from the copy&gt;
+&lt;begun by the copy, ended by the copy&gt; &lt;begun by the original&gt;
+</code></pre>
+<div class="rule" id="r-class.commandoutput.valid"><a href="#r-class.commandoutput.valid">[class.commandoutput.valid]</a></div>
+<p>A <code>CommandOutput</code> belongs to the command it was made for, as its
+<a href="commandcontext.html#r-class.commandcontext.valid">context</a> does. When the command is over, or on
+another activity, <code>lineOut</code> with a string raises <code>SYNTAX 98.900</code> and writes
+nothing. The other methods depend on the text that <code>charOut</code> has kept (<a href="#r-class.commandoutput.pending">the
+pending text rule</a>). <code>charOut</code> of a text without
+a line end answers <code>0</code> and keeps the text, and <code>flush</code>, <code>close</code> and <code>lineOut</code>
+without a string do nothing when no text is kept. When text is kept they raise
+<code>SYNTAX 98.900</code>, and the text stays kept. <code>charOut</code> of a text with a line end
+raises <code>SYNTAX 98.900</code> too and writes nothing; it keeps the text after its last
+line end in place of what was kept before. Text kept on another activity while
+the command runs stays kept, and the next line that the handler writes begins
+with it. The second example shows these calls after the command, and the text
+from another activity.</p>
+<pre><code class="language-rexx">x = .commandhandler~register('spec_co_valid', .writer~new)
+address spec_co_valid 'go' with output stem o.
+say 'written:' o.0 '&lt;'o.1'&gt;'
+out = .environment~output
+x = .commandhandler~deregister('spec_co_valid')
+signal on syntax name bad
+x = out~lineOut('late')
+bad: say 'after the end:' condition('o')~code
+::class writer inherit CommandHandler
+::method command
+  use arg command, caller
+  .environment~output = caller~output
+  m = .message~new(.other~new, 'ask', 'I', caller~output)
+  m~start
+  say 'other activity:' m~result
+  caller~output~lineout('from the handler')
+  return 0
+::class other
+::method ask unguarded
+  use arg out
+  signal on syntax name bad
+  x = out~lineout('from another activity')
+  return 'no error'
+bad: return condition('o')~code
+</code></pre>
+<pre><code class="language-output">other activity: 98.900
+written: 1 &lt;from the handler&gt;
+after the end: 98.900
+</code></pre>
+<pre><code class="language-rexx">x = .commandhandler~register('spec_co_late', .writer~new)
+address spec_co_late 'go' with output stem o.
+say 'written:' o.0 '&lt;'o.1'&gt;'
+out = .environment~output
+x = .commandhandler~deregister('spec_co_late')
+say 'nothing kept:' check('flush') check('close') check('lineOut')
+say 'kept:' check('charOut', 'abc') check('flush') check('lineOut'),
+  check('lineOut', 'text')
+say 'line end:' check('charOut', 'x' || '0a'x || 'y') check('lineOut'),
+  check('charOut', 'z' || '0a'x) check('lineOut')
+say 'stem' o.0
+exit
+check: procedure expose out
+  signal on syntax name bad
+  if arg() = 2 then out~send(arg(1), arg(2))
+  else out~send(arg(1))
+  return 'ok'
+bad: return condition('o')~code
+::class writer inherit CommandHandler
+::method command
+  use arg command, caller
+  .environment~output = caller~output
+  m = .message~new(.other~new, 'ask', 'I', caller~output)
+  m~start
+  x = m~result
+  caller~output~lineout('own')
+  return 0
+::class other
+::method ask unguarded
+  use arg out
+  return out~charout('t')
+</code></pre>
+<pre><code class="language-output">written: 1 &lt;town&gt;
+nothing kept: ok ok ok
+kept: ok 98.900 98.900 98.900
+line end: 98.900 98.900 98.900 ok
+stem 1
+</code></pre>
+<h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
+<div class="rule" id="r-class.commandoutput.deviation.109"><a href="#r-class.commandoutput.deviation.109">[class.commandoutput.deviation.109]</a></div>
+<p>A <code>string</code> of <code>lineOut</code> or <code>charOut</code> that is an instance of a subclass of
+<code>String</code> is written by its own characters, and <code>string</code>, <code>makeString</code> and
+<code>request</code> are not sent to it (<a href="string.html#r-class.string.deviation.109">Deviation 109</a>).
+ooRexx sends it <code>string</code>, so an override changes what is written. In the example
+the overrides would change what is written; they count their sends, and the
+string is written as it is without one.</p>
+<pre><code class="language-rexx">x = .commandhandler~register('spec_co_dev109', .writer~new)
+.environment~sent = 0
+address spec_co_dev109 'go' with output stem o.
+say o.0 '&lt;'o.1'&gt;' '&lt;'o.2'&gt;' .environment~sent
+x = .commandhandler~deregister('spec_co_dev109')
+::class writer inherit CommandHandler
+::method command
+  use arg command, caller
+  o = caller~output
+  s = .digits~new('own')
+  x = o~lineOut(s)
+  x = o~charOut(s)
+  x = o~lineOut
+  return 0
+::class digits subclass string
+::method string
+  .environment~sent = .environment~sent + 1
+  return 'other'
+::method makestring
+  .environment~sent = .environment~sent + 1
+  return 'other'
+::method request
+  .environment~sent = .environment~sent + 1
+  return 'other'
+</code></pre>
+<pre><code class="language-output defect=#140">2 &lt;own&gt; &lt;own&gt; 0
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../classes/commandinput.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../classes/rexxqueue.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../classes/commandinput.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../classes/rexxqueue.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../assets/version-picker.js"></script>
+
+
+    </div>
+    </body>
+</html>

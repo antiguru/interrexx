@@ -1,0 +1,792 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Ticker - The interrexx Language Specification</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../conventions.html"><strong aria-hidden="true">2.</strong> Conventions</a></li><li class="chapter-item expanded "><a href="../lexical/index.html"><strong aria-hidden="true">3.</strong> Lexical structure</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../lexical/characters.html"><strong aria-hidden="true">3.1.</strong> Characters</a></li><li class="chapter-item expanded "><a href="../lexical/comments.html"><strong aria-hidden="true">3.2.</strong> Comments</a></li><li class="chapter-item expanded "><a href="../lexical/literals.html"><strong aria-hidden="true">3.3.</strong> Literals</a></li><li class="chapter-item expanded "><a href="../lexical/symbols.html"><strong aria-hidden="true">3.4.</strong> Symbols</a></li><li class="chapter-item expanded "><a href="../lexical/operators.html"><strong aria-hidden="true">3.5.</strong> Operators and special characters</a></li><li class="chapter-item expanded "><a href="../lexical/clauses.html"><strong aria-hidden="true">3.6.</strong> Clauses</a></li></ol></li><li class="chapter-item expanded "><a href="../numbers/index.html"><strong aria-hidden="true">4.</strong> Numbers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../numbers/formats.html"><strong aria-hidden="true">4.1.</strong> Formats</a></li><li class="chapter-item expanded "><a href="../numbers/limits.html"><strong aria-hidden="true">4.2.</strong> Limits</a></li><li class="chapter-item expanded "><a href="../numbers/arithmetic.html"><strong aria-hidden="true">4.3.</strong> Arithmetic</a></li><li class="chapter-item expanded "><a href="../numbers/settings.html"><strong aria-hidden="true">4.4.</strong> Settings</a></li><li class="chapter-item expanded "><a href="../numbers/comparison.html"><strong aria-hidden="true">4.5.</strong> Comparison</a></li></ol></li><li class="chapter-item expanded "><a href="../expressions/index.html"><strong aria-hidden="true">5.</strong> Expressions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../expressions/terms.html"><strong aria-hidden="true">5.1.</strong> Terms</a></li><li class="chapter-item expanded "><a href="../expressions/variables.html"><strong aria-hidden="true">5.2.</strong> Variables</a></li><li class="chapter-item expanded "><a href="../expressions/concatenation.html"><strong aria-hidden="true">5.3.</strong> Concatenation</a></li><li class="chapter-item expanded "><a href="../expressions/arithmetic.html"><strong aria-hidden="true">5.4.</strong> Arithmetic operators</a></li><li class="chapter-item expanded "><a href="../expressions/comparison.html"><strong aria-hidden="true">5.5.</strong> Comparison operators</a></li><li class="chapter-item expanded "><a href="../expressions/logical.html"><strong aria-hidden="true">5.6.</strong> Logical operators</a></li><li class="chapter-item expanded "><a href="../expressions/messages.html"><strong aria-hidden="true">5.7.</strong> Message operators</a></li></ol></li><li class="chapter-item expanded "><a href="../instructions/index.html"><strong aria-hidden="true">6.</strong> Instructions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../instructions/address.html"><strong aria-hidden="true">6.1.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../instructions/arg.html"><strong aria-hidden="true">6.2.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../instructions/assignment.html"><strong aria-hidden="true">6.3.</strong> Assignments</a></li><li class="chapter-item expanded "><a href="../instructions/call.html"><strong aria-hidden="true">6.4.</strong> CALL</a></li><li class="chapter-item expanded "><a href="../instructions/command.html"><strong aria-hidden="true">6.5.</strong> Commands</a></li><li class="chapter-item expanded "><a href="../instructions/do.html"><strong aria-hidden="true">6.6.</strong> DO</a></li><li class="chapter-item expanded "><a href="../instructions/drop.html"><strong aria-hidden="true">6.7.</strong> DROP</a></li><li class="chapter-item expanded "><a href="../instructions/exit.html"><strong aria-hidden="true">6.8.</strong> EXIT</a></li><li class="chapter-item expanded "><a href="../instructions/expose.html"><strong aria-hidden="true">6.9.</strong> EXPOSE</a></li><li class="chapter-item expanded "><a href="../instructions/forward.html"><strong aria-hidden="true">6.10.</strong> FORWARD</a></li><li class="chapter-item expanded "><a href="../instructions/guard.html"><strong aria-hidden="true">6.11.</strong> GUARD</a></li><li class="chapter-item expanded "><a href="../instructions/if.html"><strong aria-hidden="true">6.12.</strong> IF</a></li><li class="chapter-item expanded "><a href="../instructions/interpret.html"><strong aria-hidden="true">6.13.</strong> INTERPRET</a></li><li class="chapter-item expanded "><a href="../instructions/iterate.html"><strong aria-hidden="true">6.14.</strong> ITERATE</a></li><li class="chapter-item expanded "><a href="../instructions/leave.html"><strong aria-hidden="true">6.15.</strong> LEAVE</a></li><li class="chapter-item expanded "><a href="../instructions/loop.html"><strong aria-hidden="true">6.16.</strong> LOOP</a></li><li class="chapter-item expanded "><a href="../instructions/message.html"><strong aria-hidden="true">6.17.</strong> Message instructions</a></li><li class="chapter-item expanded "><a href="../instructions/nop.html"><strong aria-hidden="true">6.18.</strong> NOP</a></li><li class="chapter-item expanded "><a href="../instructions/numeric.html"><strong aria-hidden="true">6.19.</strong> NUMERIC</a></li><li class="chapter-item expanded "><a href="../instructions/options.html"><strong aria-hidden="true">6.20.</strong> OPTIONS</a></li><li class="chapter-item expanded "><a href="../instructions/parse.html"><strong aria-hidden="true">6.21.</strong> PARSE</a></li><li class="chapter-item expanded "><a href="../instructions/procedure.html"><strong aria-hidden="true">6.22.</strong> PROCEDURE</a></li><li class="chapter-item expanded "><a href="../instructions/pull.html"><strong aria-hidden="true">6.23.</strong> PULL</a></li><li class="chapter-item expanded "><a href="../instructions/push.html"><strong aria-hidden="true">6.24.</strong> PUSH</a></li><li class="chapter-item expanded "><a href="../instructions/queue.html"><strong aria-hidden="true">6.25.</strong> QUEUE</a></li><li class="chapter-item expanded "><a href="../instructions/raise.html"><strong aria-hidden="true">6.26.</strong> RAISE</a></li><li class="chapter-item expanded "><a href="../instructions/reply.html"><strong aria-hidden="true">6.27.</strong> REPLY</a></li><li class="chapter-item expanded "><a href="../instructions/return.html"><strong aria-hidden="true">6.28.</strong> RETURN</a></li><li class="chapter-item expanded "><a href="../instructions/say.html"><strong aria-hidden="true">6.29.</strong> SAY</a></li><li class="chapter-item expanded "><a href="../instructions/select.html"><strong aria-hidden="true">6.30.</strong> SELECT</a></li><li class="chapter-item expanded "><a href="../instructions/signal.html"><strong aria-hidden="true">6.31.</strong> SIGNAL</a></li><li class="chapter-item expanded "><a href="../instructions/trace.html"><strong aria-hidden="true">6.32.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../instructions/use.html"><strong aria-hidden="true">6.33.</strong> USE</a></li></ol></li><li class="chapter-item expanded "><a href="../parsing/index.html"><strong aria-hidden="true">7.</strong> Parsing</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../parsing/templates.html"><strong aria-hidden="true">7.1.</strong> Templates</a></li><li class="chapter-item expanded "><a href="../parsing/patterns.html"><strong aria-hidden="true">7.2.</strong> Patterns</a></li><li class="chapter-item expanded "><a href="../parsing/multiple.html"><strong aria-hidden="true">7.3.</strong> Several strings and case</a></li></ol></li><li class="chapter-item expanded "><a href="../directives/index.html"><strong aria-hidden="true">8.</strong> Directives</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../directives/class.html"><strong aria-hidden="true">8.1.</strong> ::CLASS</a></li><li class="chapter-item expanded "><a href="../directives/method.html"><strong aria-hidden="true">8.2.</strong> ::METHOD</a></li><li class="chapter-item expanded "><a href="../directives/attribute.html"><strong aria-hidden="true">8.3.</strong> ::ATTRIBUTE</a></li><li class="chapter-item expanded "><a href="../directives/constant.html"><strong aria-hidden="true">8.4.</strong> ::CONSTANT</a></li><li class="chapter-item expanded "><a href="../directives/routine.html"><strong aria-hidden="true">8.5.</strong> ::ROUTINE</a></li><li class="chapter-item expanded "><a href="../directives/requires.html"><strong aria-hidden="true">8.6.</strong> ::REQUIRES</a></li><li class="chapter-item expanded "><a href="../directives/options.html"><strong aria-hidden="true">8.7.</strong> ::OPTIONS</a></li><li class="chapter-item expanded "><a href="../directives/resource.html"><strong aria-hidden="true">8.8.</strong> ::RESOURCE</a></li><li class="chapter-item expanded "><a href="../directives/annotate.html"><strong aria-hidden="true">8.9.</strong> ::ANNOTATE</a></li></ol></li><li class="chapter-item expanded "><a href="../conditions/index.html"><strong aria-hidden="true">9.</strong> Conditions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../conditions/traps.html"><strong aria-hidden="true">9.1.</strong> Condition traps</a></li><li class="chapter-item expanded "><a href="../conditions/information.html"><strong aria-hidden="true">9.2.</strong> Condition information</a></li><li class="chapter-item expanded "><a href="../conditions/syntax.html"><strong aria-hidden="true">9.3.</strong> SYNTAX</a></li><li class="chapter-item expanded "><a href="../conditions/error.html"><strong aria-hidden="true">9.4.</strong> ERROR and FAILURE</a></li><li class="chapter-item expanded "><a href="../conditions/halt.html"><strong aria-hidden="true">9.5.</strong> HALT</a></li><li class="chapter-item expanded "><a href="../conditions/novalue.html"><strong aria-hidden="true">9.6.</strong> NOVALUE</a></li><li class="chapter-item expanded "><a href="../conditions/nostring.html"><strong aria-hidden="true">9.7.</strong> NOSTRING</a></li><li class="chapter-item expanded "><a href="../conditions/nomethod.html"><strong aria-hidden="true">9.8.</strong> NOMETHOD</a></li><li class="chapter-item expanded "><a href="../conditions/notready.html"><strong aria-hidden="true">9.9.</strong> NOTREADY</a></li><li class="chapter-item expanded "><a href="../conditions/lostdigits.html"><strong aria-hidden="true">9.10.</strong> LOSTDIGITS</a></li><li class="chapter-item expanded "><a href="../conditions/user.html"><strong aria-hidden="true">9.11.</strong> USER conditions</a></li><li class="chapter-item expanded "><a href="../conditions/errors.html"><strong aria-hidden="true">9.12.</strong> Error numbers</a></li></ol></li><li class="chapter-item expanded "><a href="../classes/index.html"><strong aria-hidden="true">10.</strong> Classes</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../classes/methods.html"><strong aria-hidden="true">10.1.</strong> Method search</a></li><li class="chapter-item expanded "><a href="../classes/object.html"><strong aria-hidden="true">10.2.</strong> Object</a></li><li class="chapter-item expanded "><a href="../classes/class.html"><strong aria-hidden="true">10.3.</strong> Class</a></li><li class="chapter-item expanded "><a href="../classes/string.html"><strong aria-hidden="true">10.4.</strong> String</a></li><li class="chapter-item expanded "><a href="../classes/method.html"><strong aria-hidden="true">10.5.</strong> Method</a></li><li class="chapter-item expanded "><a href="../classes/routine.html"><strong aria-hidden="true">10.6.</strong> Routine</a></li><li class="chapter-item expanded "><a href="../classes/package.html"><strong aria-hidden="true">10.7.</strong> Package</a></li><li class="chapter-item expanded "><a href="../classes/message.html"><strong aria-hidden="true">10.8.</strong> Message</a></li><li class="chapter-item expanded "><a href="../classes/messagenotification.html"><strong aria-hidden="true">10.9.</strong> MessageNotification</a></li><li class="chapter-item expanded "><a href="../classes/alarmnotification.html"><strong aria-hidden="true">10.10.</strong> AlarmNotification</a></li><li class="chapter-item expanded "><a href="../classes/collection.html"><strong aria-hidden="true">10.11.</strong> Collection</a></li><li class="chapter-item expanded "><a href="../classes/mapcollection.html"><strong aria-hidden="true">10.12.</strong> MapCollection</a></li><li class="chapter-item expanded "><a href="../classes/orderedcollection.html"><strong aria-hidden="true">10.13.</strong> OrderedCollection</a></li><li class="chapter-item expanded "><a href="../classes/setcollection.html"><strong aria-hidden="true">10.14.</strong> SetCollection</a></li><li class="chapter-item expanded "><a href="../classes/array.html"><strong aria-hidden="true">10.15.</strong> Array</a></li><li class="chapter-item expanded "><a href="../classes/list.html"><strong aria-hidden="true">10.16.</strong> List</a></li><li class="chapter-item expanded "><a href="../classes/queue.html"><strong aria-hidden="true">10.17.</strong> Queue</a></li><li class="chapter-item expanded "><a href="../classes/circularqueue.html"><strong aria-hidden="true">10.18.</strong> CircularQueue</a></li><li class="chapter-item expanded "><a href="../classes/directory.html"><strong aria-hidden="true">10.19.</strong> Directory</a></li><li class="chapter-item expanded "><a href="../classes/stringtable.html"><strong aria-hidden="true">10.20.</strong> StringTable</a></li><li class="chapter-item expanded "><a href="../classes/properties.html"><strong aria-hidden="true">10.21.</strong> Properties</a></li><li class="chapter-item expanded "><a href="../classes/table.html"><strong aria-hidden="true">10.22.</strong> Table</a></li><li class="chapter-item expanded "><a href="../classes/identitytable.html"><strong aria-hidden="true">10.23.</strong> IdentityTable</a></li><li class="chapter-item expanded "><a href="../classes/relation.html"><strong aria-hidden="true">10.24.</strong> Relation</a></li><li class="chapter-item expanded "><a href="../classes/bag.html"><strong aria-hidden="true">10.25.</strong> Bag</a></li><li class="chapter-item expanded "><a href="../classes/set.html"><strong aria-hidden="true">10.26.</strong> Set</a></li><li class="chapter-item expanded "><a href="../classes/stem.html"><strong aria-hidden="true">10.27.</strong> Stem</a></li><li class="chapter-item expanded "><a href="../classes/datetime.html"><strong aria-hidden="true">10.28.</strong> DateTime</a></li><li class="chapter-item expanded "><a href="../classes/timespan.html"><strong aria-hidden="true">10.29.</strong> TimeSpan</a></li><li class="chapter-item expanded "><a href="../classes/comparable.html"><strong aria-hidden="true">10.30.</strong> Comparable</a></li><li class="chapter-item expanded "><a href="../classes/orderable.html"><strong aria-hidden="true">10.31.</strong> Orderable</a></li><li class="chapter-item expanded "><a href="../classes/comparators.html"><strong aria-hidden="true">10.32.</strong> Comparators</a></li><li class="chapter-item expanded "><a href="../classes/mutablebuffer.html"><strong aria-hidden="true">10.33.</strong> MutableBuffer</a></li><li class="chapter-item expanded "><a href="../classes/buffer.html"><strong aria-hidden="true">10.34.</strong> Buffer</a></li><li class="chapter-item expanded "><a href="../classes/pointer.html"><strong aria-hidden="true">10.35.</strong> Pointer</a></li><li class="chapter-item expanded "><a href="../classes/weakreference.html"><strong aria-hidden="true">10.36.</strong> WeakReference</a></li><li class="chapter-item expanded "><a href="../classes/variablereference.html"><strong aria-hidden="true">10.37.</strong> VariableReference</a></li><li class="chapter-item expanded "><a href="../classes/file.html"><strong aria-hidden="true">10.38.</strong> File</a></li><li class="chapter-item expanded "><a href="../classes/rexxcontext.html"><strong aria-hidden="true">10.39.</strong> RexxContext</a></li><li class="chapter-item expanded "><a href="../classes/stackframe.html"><strong aria-hidden="true">10.40.</strong> StackFrame</a></li><li class="chapter-item expanded "><a href="../classes/rexxinfo.html"><strong aria-hidden="true">10.41.</strong> RexxInfo</a></li><li class="chapter-item expanded "><a href="../classes/traceobject.html"><strong aria-hidden="true">10.42.</strong> TraceObject</a></li><li class="chapter-item expanded "><a href="../classes/validate.html"><strong aria-hidden="true">10.43.</strong> Validate</a></li><li class="chapter-item expanded "><a href="../classes/singleton.html"><strong aria-hidden="true">10.44.</strong> Singleton</a></li><li class="chapter-item expanded "><a href="../classes/alarm.html"><strong aria-hidden="true">10.45.</strong> Alarm</a></li><li class="chapter-item expanded "><a href="../classes/ticker.html" class="active"><strong aria-hidden="true">10.46.</strong> Ticker</a></li><li class="chapter-item expanded "><a href="../classes/monitor.html"><strong aria-hidden="true">10.47.</strong> Monitor</a></li><li class="chapter-item expanded "><a href="../classes/eventsemaphore.html"><strong aria-hidden="true">10.48.</strong> EventSemaphore</a></li><li class="chapter-item expanded "><a href="../classes/mutexsemaphore.html"><strong aria-hidden="true">10.49.</strong> MutexSemaphore</a></li><li class="chapter-item expanded "><a href="../classes/commandhandler.html"><strong aria-hidden="true">10.50.</strong> CommandHandler</a></li><li class="chapter-item expanded "><a href="../classes/nativecommandhandler.html"><strong aria-hidden="true">10.51.</strong> NativeCommandHandler</a></li><li class="chapter-item expanded "><a href="../classes/commandcontext.html"><strong aria-hidden="true">10.52.</strong> CommandContext</a></li><li class="chapter-item expanded "><a href="../classes/commandinput.html"><strong aria-hidden="true">10.53.</strong> CommandInput</a></li><li class="chapter-item expanded "><a href="../classes/commandoutput.html"><strong aria-hidden="true">10.54.</strong> CommandOutput</a></li><li class="chapter-item expanded "><a href="../classes/rexxqueue.html"><strong aria-hidden="true">10.55.</strong> RexxQueue</a></li><li class="chapter-item expanded "><a href="../classes/supplier.html"><strong aria-hidden="true">10.56.</strong> Supplier</a></li><li class="chapter-item expanded "><a href="../classes/streamsupplier.html"><strong aria-hidden="true">10.57.</strong> StreamSupplier</a></li><li class="chapter-item expanded "><a href="../classes/regularexpression.html"><strong aria-hidden="true">10.58.</strong> RegularExpression</a></li></ol></li><li class="chapter-item expanded "><a href="../builtins/index.html"><strong aria-hidden="true">11.</strong> Built-in functions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../builtins/abbrev.html"><strong aria-hidden="true">11.1.</strong> ABBREV</a></li><li class="chapter-item expanded "><a href="../builtins/abs.html"><strong aria-hidden="true">11.2.</strong> ABS</a></li><li class="chapter-item expanded "><a href="../builtins/address.html"><strong aria-hidden="true">11.3.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../builtins/arg.html"><strong aria-hidden="true">11.4.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../builtins/b2x.html"><strong aria-hidden="true">11.5.</strong> B2X</a></li><li class="chapter-item expanded "><a href="../builtins/beep.html"><strong aria-hidden="true">11.6.</strong> BEEP</a></li><li class="chapter-item expanded "><a href="../builtins/bitand.html"><strong aria-hidden="true">11.7.</strong> BITAND</a></li><li class="chapter-item expanded "><a href="../builtins/bitor.html"><strong aria-hidden="true">11.8.</strong> BITOR</a></li><li class="chapter-item expanded "><a href="../builtins/bitxor.html"><strong aria-hidden="true">11.9.</strong> BITXOR</a></li><li class="chapter-item expanded "><a href="../builtins/c2d.html"><strong aria-hidden="true">11.10.</strong> C2D</a></li><li class="chapter-item expanded "><a href="../builtins/c2x.html"><strong aria-hidden="true">11.11.</strong> C2X</a></li><li class="chapter-item expanded "><a href="../builtins/center.html"><strong aria-hidden="true">11.12.</strong> CENTER</a></li><li class="chapter-item expanded "><a href="../builtins/changestr.html"><strong aria-hidden="true">11.13.</strong> CHANGESTR</a></li><li class="chapter-item expanded "><a href="../builtins/charin.html"><strong aria-hidden="true">11.14.</strong> CHARIN</a></li><li class="chapter-item expanded "><a href="../builtins/charout.html"><strong aria-hidden="true">11.15.</strong> CHAROUT</a></li><li class="chapter-item expanded "><a href="../builtins/chars.html"><strong aria-hidden="true">11.16.</strong> CHARS</a></li><li class="chapter-item expanded "><a href="../builtins/compare.html"><strong aria-hidden="true">11.17.</strong> COMPARE</a></li><li class="chapter-item expanded "><a href="../builtins/condition.html"><strong aria-hidden="true">11.18.</strong> CONDITION</a></li><li class="chapter-item expanded "><a href="../builtins/copies.html"><strong aria-hidden="true">11.19.</strong> COPIES</a></li><li class="chapter-item expanded "><a href="../builtins/countstr.html"><strong aria-hidden="true">11.20.</strong> COUNTSTR</a></li><li class="chapter-item expanded "><a href="../builtins/d2c.html"><strong aria-hidden="true">11.21.</strong> D2C</a></li><li class="chapter-item expanded "><a href="../builtins/d2x.html"><strong aria-hidden="true">11.22.</strong> D2X</a></li><li class="chapter-item expanded "><a href="../builtins/datatype.html"><strong aria-hidden="true">11.23.</strong> DATATYPE</a></li><li class="chapter-item expanded "><a href="../builtins/date.html"><strong aria-hidden="true">11.24.</strong> DATE</a></li><li class="chapter-item expanded "><a href="../builtins/delstr.html"><strong aria-hidden="true">11.25.</strong> DELSTR</a></li><li class="chapter-item expanded "><a href="../builtins/delword.html"><strong aria-hidden="true">11.26.</strong> DELWORD</a></li><li class="chapter-item expanded "><a href="../builtins/digits.html"><strong aria-hidden="true">11.27.</strong> DIGITS</a></li><li class="chapter-item expanded "><a href="../builtins/directory.html"><strong aria-hidden="true">11.28.</strong> DIRECTORY</a></li><li class="chapter-item expanded "><a href="../builtins/endlocal.html"><strong aria-hidden="true">11.29.</strong> ENDLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/errortext.html"><strong aria-hidden="true">11.30.</strong> ERRORTEXT</a></li><li class="chapter-item expanded "><a href="../builtins/filespec.html"><strong aria-hidden="true">11.31.</strong> FILESPEC</a></li><li class="chapter-item expanded "><a href="../builtins/form.html"><strong aria-hidden="true">11.32.</strong> FORM</a></li><li class="chapter-item expanded "><a href="../builtins/format.html"><strong aria-hidden="true">11.33.</strong> FORMAT</a></li><li class="chapter-item expanded "><a href="../builtins/fuzz.html"><strong aria-hidden="true">11.34.</strong> FUZZ</a></li><li class="chapter-item expanded "><a href="../builtins/gc.html"><strong aria-hidden="true">11.35.</strong> GC</a></li><li class="chapter-item expanded "><a href="../builtins/insert.html"><strong aria-hidden="true">11.36.</strong> INSERT</a></li><li class="chapter-item expanded "><a href="../builtins/lastpos.html"><strong aria-hidden="true">11.37.</strong> LASTPOS</a></li><li class="chapter-item expanded "><a href="../builtins/left.html"><strong aria-hidden="true">11.38.</strong> LEFT</a></li><li class="chapter-item expanded "><a href="../builtins/length.html"><strong aria-hidden="true">11.39.</strong> LENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/linein.html"><strong aria-hidden="true">11.40.</strong> LINEIN</a></li><li class="chapter-item expanded "><a href="../builtins/lineout.html"><strong aria-hidden="true">11.41.</strong> LINEOUT</a></li><li class="chapter-item expanded "><a href="../builtins/lines.html"><strong aria-hidden="true">11.42.</strong> LINES</a></li><li class="chapter-item expanded "><a href="../builtins/lower.html"><strong aria-hidden="true">11.43.</strong> LOWER</a></li><li class="chapter-item expanded "><a href="../builtins/max.html"><strong aria-hidden="true">11.44.</strong> MAX</a></li><li class="chapter-item expanded "><a href="../builtins/min.html"><strong aria-hidden="true">11.45.</strong> MIN</a></li><li class="chapter-item expanded "><a href="../builtins/overlay.html"><strong aria-hidden="true">11.46.</strong> OVERLAY</a></li><li class="chapter-item expanded "><a href="../builtins/pos.html"><strong aria-hidden="true">11.47.</strong> POS</a></li><li class="chapter-item expanded "><a href="../builtins/qualify.html"><strong aria-hidden="true">11.48.</strong> QUALIFY</a></li><li class="chapter-item expanded "><a href="../builtins/queued.html"><strong aria-hidden="true">11.49.</strong> QUEUED</a></li><li class="chapter-item expanded "><a href="../builtins/random.html"><strong aria-hidden="true">11.50.</strong> RANDOM</a></li><li class="chapter-item expanded "><a href="../builtins/reverse.html"><strong aria-hidden="true">11.51.</strong> REVERSE</a></li><li class="chapter-item expanded "><a href="../builtins/right.html"><strong aria-hidden="true">11.52.</strong> RIGHT</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncadd.html"><strong aria-hidden="true">11.53.</strong> RXFUNCADD</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncdrop.html"><strong aria-hidden="true">11.54.</strong> RXFUNCDROP</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncquery.html"><strong aria-hidden="true">11.55.</strong> RXFUNCQUERY</a></li><li class="chapter-item expanded "><a href="../builtins/rxqueue.html"><strong aria-hidden="true">11.56.</strong> RXQUEUE</a></li><li class="chapter-item expanded "><a href="../builtins/setlocal.html"><strong aria-hidden="true">11.57.</strong> SETLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/sign.html"><strong aria-hidden="true">11.58.</strong> SIGN</a></li><li class="chapter-item expanded "><a href="../builtins/sourceline.html"><strong aria-hidden="true">11.59.</strong> SOURCELINE</a></li><li class="chapter-item expanded "><a href="../builtins/space.html"><strong aria-hidden="true">11.60.</strong> SPACE</a></li><li class="chapter-item expanded "><a href="../builtins/stream.html"><strong aria-hidden="true">11.61.</strong> STREAM</a></li><li class="chapter-item expanded "><a href="../builtins/strip.html"><strong aria-hidden="true">11.62.</strong> STRIP</a></li><li class="chapter-item expanded "><a href="../builtins/substr.html"><strong aria-hidden="true">11.63.</strong> SUBSTR</a></li><li class="chapter-item expanded "><a href="../builtins/subword.html"><strong aria-hidden="true">11.64.</strong> SUBWORD</a></li><li class="chapter-item expanded "><a href="../builtins/symbol.html"><strong aria-hidden="true">11.65.</strong> SYMBOL</a></li><li class="chapter-item expanded "><a href="../builtins/time.html"><strong aria-hidden="true">11.66.</strong> TIME</a></li><li class="chapter-item expanded "><a href="../builtins/trace.html"><strong aria-hidden="true">11.67.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../builtins/translate.html"><strong aria-hidden="true">11.68.</strong> TRANSLATE</a></li><li class="chapter-item expanded "><a href="../builtins/trunc.html"><strong aria-hidden="true">11.69.</strong> TRUNC</a></li><li class="chapter-item expanded "><a href="../builtins/upper.html"><strong aria-hidden="true">11.70.</strong> UPPER</a></li><li class="chapter-item expanded "><a href="../builtins/userid.html"><strong aria-hidden="true">11.71.</strong> USERID</a></li><li class="chapter-item expanded "><a href="../builtins/value.html"><strong aria-hidden="true">11.72.</strong> VALUE</a></li><li class="chapter-item expanded "><a href="../builtins/var.html"><strong aria-hidden="true">11.73.</strong> VAR</a></li><li class="chapter-item expanded "><a href="../builtins/verify.html"><strong aria-hidden="true">11.74.</strong> VERIFY</a></li><li class="chapter-item expanded "><a href="../builtins/word.html"><strong aria-hidden="true">11.75.</strong> WORD</a></li><li class="chapter-item expanded "><a href="../builtins/wordindex.html"><strong aria-hidden="true">11.76.</strong> WORDINDEX</a></li><li class="chapter-item expanded "><a href="../builtins/wordlength.html"><strong aria-hidden="true">11.77.</strong> WORDLENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/wordpos.html"><strong aria-hidden="true">11.78.</strong> WORDPOS</a></li><li class="chapter-item expanded "><a href="../builtins/words.html"><strong aria-hidden="true">11.79.</strong> WORDS</a></li><li class="chapter-item expanded "><a href="../builtins/x2b.html"><strong aria-hidden="true">11.80.</strong> X2B</a></li><li class="chapter-item expanded "><a href="../builtins/x2c.html"><strong aria-hidden="true">11.81.</strong> X2C</a></li><li class="chapter-item expanded "><a href="../builtins/x2d.html"><strong aria-hidden="true">11.82.</strong> X2D</a></li><li class="chapter-item expanded "><a href="../builtins/xrange.html"><strong aria-hidden="true">11.83.</strong> XRANGE</a></li></ol></li><li class="chapter-item expanded "><a href="../deviations.html"><strong aria-hidden="true">12.</strong> Deviations</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The interrexx Language Specification</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="ticker"><a class="header" href="#ticker">Ticker</a></h1>
+<p class="references">rexxref: Builtin Classes &gt; Utility Classes &gt; Ticker Class; Builtin Classes &gt; Utility Classes &gt; Ticker Class &gt; attachment; Builtin Classes &gt; Utility Classes &gt; Ticker Class &gt; cancel; Builtin Classes &gt; Utility Classes &gt; Ticker Class &gt; canceled/cancelled; Builtin Classes &gt; Utility Classes &gt; Ticker Class &gt; init; Builtin Classes &gt; Utility Classes &gt; Ticker Class &gt; interval</p>
+<p class="deviations">Deviations: D109, D119, D135</p>
+<p>A <code>Ticker</code> is a repeating timer. It is made for an interval, a target that
+wants to hear of it and, if the program likes, an object to attach; at the end
+of every interval it sends its target <code>triggered</code>, until it is cancelled, and
+when it is cancelled it sends the target <code>cancel</code>. The target is an
+implementation of <a href="alarmnotification.html"><code>AlarmNotification</code></a>, which states
+what the target is sent and when. A ticker is made as an <a href="alarm.html"><code>Alarm</code></a>
+is, with an interval in place of a time; it has no <code>scheduledTime</code> and no
+<code>triggered</code> of its own, and it asks for the target and the attachment as an
+alarm does. This page states how a ticker is made, what its interval may be
+and what its own methods answer. How the library runs a ticker beside the
+program, so at which times the target is reached and by which activity, is
+specified in the environment chapter, and so is whether a <code>triggered</code> that is
+still running delays the next one. The examples that wait use a guard that the
+target opens, and print nothing that varies with the clock.</p>
+<h2 id="the-class"><a class="header" href="#the-class">The class</a></h2>
+<div class="rule" id="r-class.ticker.creation"><a href="#r-class.ticker.creation">[class.ticker.creation]</a></div>
+<p><code>Ticker</code> has the instance methods <code>attachment</code>, <code>cancel</code>, <code>canceled</code>,
+<code>cancelled</code>, <code>init</code> and <code>interval</code>, besides the <code>new</code> that every class has. It
+may have private methods besides these; they are not part of this
+specification. Its only superclass is <code>Object</code>, it inherits no mixin class and
+is not itself a mixin class (<a href="index.html#r-class.index.hierarchy">the hierarchy rule</a>),
+and so it is no implementation of <code>AlarmNotification</code> and cannot be the target
+of an alarm. <code>new</code> is the one <a href="index.html#r-class.index.new">that <code>Class</code> supplies</a>: it
+sends <code>init</code> the arguments of <code>new</code>, which <a href="#r-class.ticker.init">the next
+rule</a> states, and answers an instance of the class that
+received it, so a subclass of <code>Ticker</code> makes instances of itself.</p>
+<pre><code class="language-rexx">say .ticker~superclasses~items .ticker~superclass~id .ticker~queryMixinClass
+have = .set~new
+s = .ticker~methods(.nil)
+do while s~available
+  have~put(s~index)
+  s~next
+end
+names = 'attachment cancel canceled cancelled'
+names = (names 'init interval')~makeArray(' ')
+count = 0
+do name over names
+  if have~hasItem(name~upper) then count = count + 1
+end
+say count 'of 6' have~hasItem('TRIGGERED') have~hasItem('SCHEDULEDTIME')
+n = .note~new
+a = .ticker~new(60, n)
+b = .sub~new(60, n)
+say (a~class == .ticker) (b~class == .sub) a~isInstanceOf(.alarmnotification)
+signal on syntax name bad
+c = .alarm~new(60, a)
+bad: say condition('o')~code
+a~cancel
+b~cancel
+::class note inherit AlarmNotification
+::method triggered
+  nop
+::class sub subclass ticker
+</code></pre>
+<pre><code class="language-output">1 Object 0
+6 of 6 0 0
+1 1 0
+88.914
+</code></pre>
+<h2 id="making-a-ticker"><a class="header" href="#making-a-ticker">Making a ticker</a></h2>
+<div class="rule" id="r-class.ticker.init"><a href="#r-class.ticker.init">[class.ticker.init]</a></div>
+<p><code>new</code> sends <code>init(interval, target, attachment)</code>, and <code>init</code> sets the ticker up.
+It needs the first two arguments, so <code>new</code> with none or only the first raises
+<code>SYNTAX 93.901</code> and an omitted first or second argument raises <code>SYNTAX 93.903</code>;
+a fourth argument raises <code>SYNTAX 93.902</code>. The checks of the arguments that are
+present are made in this order: first the target, which must be an
+implementation of <a href="alarmnotification.html#r-class.alarmnotification.creation"><code>AlarmNotification</code></a> or
+<code>SYNTAX 88.914</code> is raised, and then the interval, which raises <code>SYNTAX 93.951</code>
+for every value that <a href="#r-class.ticker.init.interval">the rule below</a> does not
+accept, except the very large ones for which it names other errors. So a target
+that is no implementation is reported even when the interval is wrong too, and a
+refused ticker is not set. <code>attachment</code> can be any object, and is <code>.nil</code> when it
+is omitted. The ticker is set when <code>init</code> ends normally. A subclass whose <code>init</code>
+does not send <code>init</code> to its superclass makes a ticker that is not set
+(<a href="#r-class.ticker.deviation.135">Deviation 135</a>).</p>
+<pre><code class="language-rexx">n = .note~new
+call try ".ticker~new"
+call try ".ticker~new(60)"
+call try ".ticker~new(, n)"
+call try ".ticker~new(60, , 'x')"
+call try ".ticker~new(60, n, 'x', 'y')"
+call try ".ticker~new('abc', .nil)"
+call try ".ticker~new('abc', n)"
+call try ".ticker~new(60, n)"
+call try ".ticker~new(60, n, .nil)"
+call try ".ticker~new(60, n, .array~new)"
+exit
+try:
+  signal on syntax name bad
+  interpret 'x =' arg(1)
+  say arg(1) '=&gt; ok'
+  x~cancel
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class note inherit AlarmNotification
+::method triggered
+  nop
+</code></pre>
+<pre><code class="language-output">.ticker~new =&gt; 93.901
+.ticker~new(60) =&gt; 93.901
+.ticker~new(, n) =&gt; 93.903
+.ticker~new(60, , 'x') =&gt; 93.903
+.ticker~new(60, n, 'x', 'y') =&gt; 93.902
+.ticker~new('abc', .nil) =&gt; 88.914
+.ticker~new('abc', n) =&gt; 93.951
+.ticker~new(60, n) =&gt; ok
+.ticker~new(60, n, .nil) =&gt; ok
+.ticker~new(60, n, .array~new) =&gt; ok
+</code></pre>
+<div class="rule" id="r-class.ticker.init.interval"><a href="#r-class.ticker.init.interval">[class.ticker.init.interval]</a></div>
+<p>An interval that is a string is a number of seconds. It is read as a number as
+<a href="../builtins/datatype.html#r-bif.datatype.number">the DATATYPE <code>N</code> rule</a> reads it, so blanks at either end
+are allowed and a decimal point or an exponent is too, and it has to be zero or
+more: a string that is no number, the empty string and a negative number raise
+<code>SYNTAX 93.951</code>. An interval that is a <code>TimeSpan</code> is that length, and must not
+be negative. An interval longer than the longest <code>TimeSpan</code>, 315537897599.999999
+seconds, raises <code>SYNTAX 40.19</code>, whether it is positive or negative. A number of
+<code>10**12</code> or more, or of <code>-10**12</code> or less, once it is rounded as said below,
+raises <code>SYNTAX 88.903</code>. Nothing else is an interval, so
+<code>SYNTAX 93.951</code> is raised for a <code>DateTime</code>, for a string with a time of day such
+as <code>12:00:00</code>, for <code>.nil</code>, for an array and for an instance of <code>Object</code>. The
+interval is kept to the microsecond: a longer fraction is cut off and not
+rounded, and the number is cut before its sign is checked, so <code>-0.0000001</code> is an
+interval of zero; a number with more than 18 significant digits is first rounded
+to 18, so <code>1.999999999999999999</code> is 2 seconds. The number is read in full
+whatever the NUMERIC DIGITS setting. <code>interval</code> answers the interval, as
+<a href="#r-class.ticker.interval">the next rule</a> says. The example makes tickers whose
+intervals are too long to end before they are cancelled.</p>
+<pre><code class="language-rexx">n = .note~new
+call try 'string " 90 "', ' 90 '
+call try 'string 1.5e2', '1.5e2'
+call try 'string +.5e3', '+.5e3'
+call try 'empty string', ''
+call try 'string 1x', '1x'
+call try 'string -1', '-1'
+call try 'string -0.0000001', '-0.0000001'
+call try 'string 1.999999999999999999', '1.999999999999999999'
+call try 'string 315537897600', '315537897600'
+call try 'string -315537897600', '-315537897600'
+call try 'string 1e12', '1e12'
+call try 'string -1e12', '-1e12'
+call try 'string 12:00:00', '12:00:00'
+call try 'span of 600 s', .timespan~fromSeconds(600)
+call try 'span of -600 s', .timespan~fromSeconds(-600)
+call try 'DateTime', .datetime~new~addSeconds(600)
+call try '.nil', .nil
+call try 'array', .array~new
+call try 'object', .object~new
+numeric digits 3
+call try 'digits 3', '123456.789'
+exit
+try:
+  signal on syntax name bad
+  t = .ticker~new(arg(2), n)
+  say arg(1) '=&gt; ok' t~interval
+  t~cancel
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class note inherit AlarmNotification
+::method triggered
+  nop
+</code></pre>
+<pre><code class="language-output">string " 90 " =&gt; ok 00:01:30.000000
+string 1.5e2 =&gt; ok 00:02:30.000000
+string +.5e3 =&gt; ok 00:08:20.000000
+empty string =&gt; 93.951
+string 1x =&gt; 93.951
+string -1 =&gt; 93.951
+string -0.0000001 =&gt; ok 00:00:00.000000
+string 1.999999999999999999 =&gt; ok 00:00:02.000000
+string 315537897600 =&gt; 40.19
+string -315537897600 =&gt; 40.19
+string 1e12 =&gt; 88.903
+string -1e12 =&gt; 88.903
+string 12:00:00 =&gt; 93.951
+span of 600 s =&gt; ok 00:10:00.000000
+span of -600 s =&gt; 93.951
+DateTime =&gt; 93.951
+.nil =&gt; 93.951
+array =&gt; 93.951
+object =&gt; 93.951
+digits 3 =&gt; ok 1.10:17:36.789000
+</code></pre>
+<div class="rule" id="r-class.ticker.init.sends"><a href="#r-class.ticker.init.sends">[class.ticker.init.sends]</a></div>
+<p><code>init</code> sends messages that a program can override, in this order: first <code>isA</code>
+to the target, with <code>AlarmNotification</code> as its one argument, once; the answer
+decides whether the target is an implementation. Then, for an interval that is
+a <code>TimeSpan</code>, the span is sent <code>sign</code>, <code>days</code> and <code>totalMicroseconds</code>, once
+each and in that order, and for an interval that is a string nothing is sent
+(<a href="#r-class.ticker.deviation.109">Deviation 109</a> covers a subclass of <code>String</code>).
+When the span is negative <code>init</code> stops after <code>sign</code>; the further messages that
+build the text of the error are not specified. A ticker that is refused for
+its target sends the interval nothing. <code>init</code> sends no message to the
+attachment, and none to the ticker itself, so an override of <code>attachment</code> or
+<code>interval</code> does not run. The example logs the sends of an override of each
+message in a subclass of <code>TimeSpan</code>.</p>
+<pre><code class="language-rexx">.environment~log = .list~new
+n = .note~new
+ts = .span~fromSeconds(600)
+.environment~log~empty
+a = .ticker~new(ts, n)
+say 'span:' .environment~log~makeArray~makeString('l', ' ')
+.environment~log~empty
+c = .ticker~new(600, n, .tracked~new)
+say 'seconds:' .environment~log~makeArray~makeString('l', ' ')
+.environment~log~empty
+signal on syntax name bad
+d = .ticker~new(.span~fromSeconds(-600), n)
+bad: say 'negative:' condition('o')~code,
+  .environment~log~makeArray~makeString('l', ' ')~subword(1, 3)
+.environment~log~empty
+signal on syntax name bad2
+e = .ticker~new(ts, .object~new)
+bad2: say 'refused:' condition('o')~code .environment~log~items
+a~cancel
+c~cancel
+::class note inherit AlarmNotification
+::method triggered
+  nop
+::method isA
+  .environment~log~append('isA' arg(1)~id)
+  forward class (super)
+::class span subclass timespan
+::method totalMicroseconds
+  .environment~log~append('totalMicroseconds')
+  forward class (super)
+::method sign
+  .environment~log~append('sign')
+  forward class (super)
+::method days
+  .environment~log~append('days')
+  forward class (super)
+::class tracked
+::method string
+  .environment~log~append('string')
+  return 'tracked'
+</code></pre>
+<pre><code class="language-output">span: isA AlarmNotification sign days totalMicroseconds
+seconds: isA AlarmNotification
+negative: 93.951 isA AlarmNotification sign
+refused: 88.914 0
+</code></pre>
+<h2 id="what-the-ticker-answers"><a class="header" href="#what-the-ticker-answers">What the ticker answers</a></h2>
+<div class="rule" id="r-class.ticker.interval"><a href="#r-class.ticker.interval">[class.ticker.interval]</a></div>
+<p><code>interval</code> answers a <code>TimeSpan</code>, the length of the interval that was set, and
+it takes no argument (<code>SYNTAX 93.902</code>). For an interval that was a <code>TimeSpan</code>
+it is a span equal to it (<a href="timespan.html#r-class.timespan.compare">the compare rule</a>); for a
+string it is that number of seconds, cut off to the microsecond. It does not
+change when the ticker is cancelled, and it sends no message.</p>
+<pre><code class="language-rexx">n = .note~new
+say .ticker~new(1.5e2, n)~~cancel~interval
+say .ticker~new('86400', n)~~cancel~interval
+say .ticker~new('100000.5', n)~~cancel~interval
+say .ticker~new('1.9999999', n)~~cancel~interval
+say .ticker~new('60.0000009', n)~~cancel~interval
+ts = .timespan~fromSeconds(7200)
+t = .ticker~new(ts, n)
+say t~interval~class~id (t~interval == ts) t~interval
+t~cancel
+say t~interval
+signal on syntax name bad
+say t~interval(1)
+bad: say condition('o')~code
+::class note inherit AlarmNotification
+::method triggered
+  nop
+</code></pre>
+<pre><code class="language-output">00:02:30.000000
+1.00:00:00.000000
+1.03:46:40.500000
+00:00:01.999999
+00:01:00.000000
+TimeSpan 1 02:00:00.000000
+02:00:00.000000
+93.902
+</code></pre>
+<div class="rule" id="r-class.ticker.attachment"><a href="#r-class.ticker.attachment">[class.ticker.attachment]</a></div>
+<p><code>attachment</code> answers the object that <code>new</code> was given as the third argument,
+the very object, and <code>.nil</code> when there was none. It takes no argument
+(<code>SYNTAX 93.902</code>) and sends no message. It answers the same after the ticker
+has been cancelled.</p>
+<pre><code class="language-rexx">n = .note~new
+o = .object~new
+a = .ticker~new(60, n, o)
+b = .ticker~new(60, n)
+c = .ticker~new(60, n, 'text')
+say (a~attachment == o) (b~attachment == .nil) c~attachment
+a~cancel
+say (a~attachment == o)
+signal on syntax name bad
+say a~attachment(1)
+bad: say condition('o')~code
+b~cancel
+c~cancel
+::class note inherit AlarmNotification
+::method triggered
+  nop
+</code></pre>
+<pre><code class="language-output">1 1 text
+1
+93.902
+</code></pre>
+<div class="rule" id="r-class.ticker.triggered"><a href="#r-class.ticker.triggered">[class.ticker.triggered]</a></div>
+<p>The ticker sends its target <code>triggered</code> with itself as the argument at the end
+of each interval, until it is cancelled; the target's method is the one of
+<a href="alarmnotification.html#r-class.alarmnotification.triggered">the notification rule</a>. How many times it
+is sent before a program cancels the ticker is not something the program can
+count on, as it depends on the times that the environment chapter specifies, so
+the example cancels from the method itself after the third, and shows that the
+ticker stops: the target is sent <code>cancel</code> once and nothing after it, even though
+the program waits for several more intervals. Unlike an alarm, a ticker has no
+method <code>triggered</code> of its own.</p>
+<pre><code class="language-rexx">n = .note~new(3)
+t = .ticker~new(0.02, n, 'tick')
+n~awaitCancel
+call syssleep 0.2
+say n~log~strip
+say t~canceled t~hasMethod('triggered')
+::class note inherit AlarmNotification
+::method init
+  expose log count cdone limit
+  use arg limit
+  log = ''
+  count = 0
+  cdone = .false
+::method triggered unguarded
+  expose log count limit
+  use arg src
+  count = count + 1
+  log = log 'triggered' src~attachment
+  if count = limit then src~cancel
+::method cancel unguarded
+  expose log cdone
+  use arg src
+  log = log 'cancel' src~attachment
+  cdone = .true
+::method awaitCancel unguarded
+  expose cdone
+  guard on when cdone
+::method log unguarded
+  expose log
+  return log
+</code></pre>
+<pre><code class="language-output">triggered tick triggered tick triggered tick cancel tick
+1 0
+</code></pre>
+<h2 id="cancelling"><a class="header" href="#cancelling">Cancelling</a></h2>
+<div class="rule" id="r-class.ticker.cancel"><a href="#r-class.ticker.cancel">[class.ticker.cancel]</a></div>
+<p><code>cancel</code> takes no argument (<code>SYNTAX 93.902</code>) and answers nothing, so using its
+answer as a value raises <code>SYNTAX 91.999</code>. Sent to a ticker that has not been
+cancelled it stops the ticker: no <code>triggered</code> is sent from then on, <code>canceled</code>
+answers 1, and the target is sent <code>cancel</code> with the ticker as its argument, as
+<a href="alarmnotification.html#r-class.alarmnotification.cancel">the notification rule</a> says. The flag is
+already 1 when the target receives <code>cancel</code>. A second <code>cancel</code> of a ticker
+sends the target nothing (<a href="#r-class.ticker.deviation.119">Deviation 119</a>). A
+ticker that is cancelled from the <code>triggered</code> of its own target stops in the
+same way.</p>
+<pre><code class="language-rexx">n = .note~new
+a = .ticker~new(60, n, 'waiting')
+a~cancel
+n~awaitCancel
+say n~log~strip
+say a~canceled a~cancelled
+n2 = .quiet~new
+z = .ticker~new(60, n2)
+y = .ticker~new(60, n2)
+signal on syntax name e1
+x = z~cancel
+e1: say condition('o')~code
+signal on syntax name e2
+y~cancel(1)
+e2: say condition('o')~code
+y~cancel
+::class quiet inherit AlarmNotification
+::method triggered
+  nop
+::class note inherit AlarmNotification
+::method init
+  expose log cdone
+  log = ''
+  cdone = .false
+::method triggered unguarded
+  nop
+::method cancel unguarded
+  expose log cdone
+  use arg src
+  log = log 'cancel' src~attachment src~canceled
+  cdone = .true
+::method awaitCancel unguarded
+  expose cdone
+  guard on when cdone
+::method log unguarded
+  expose log
+  return log
+</code></pre>
+<pre><code class="language-output">cancel waiting 1
+1 1
+91.999
+93.902
+</code></pre>
+<div class="rule" id="r-class.ticker.canceled"><a href="#r-class.ticker.canceled">[class.ticker.canceled]</a></div>
+<p><code>canceled</code> and <code>cancelled</code> answer 1 when the ticker has been cancelled and 0
+otherwise. The two names have one meaning and are two methods: neither sends
+the other, and a subclass that overrides one leaves the other as it was. Each
+takes no argument (<code>SYNTAX 93.902</code>).</p>
+<pre><code class="language-rexx">n = .note~new
+a = .ticker~new(60, n)
+b = .ticker~new(60, n)
+say a~canceled a~cancelled
+a~cancel
+say a~canceled a~cancelled b~canceled
+s = .sub~new(60, n)
+say s~cancelled s~canceled
+s~cancel
+say s~cancelled s~canceled
+b~cancel
+signal on syntax name bad
+say a~canceled(1)
+bad: say condition('o')~code
+::class note inherit AlarmNotification
+::method triggered
+  nop
+::class sub subclass ticker
+::method canceled
+  return 'override'
+</code></pre>
+<pre><code class="language-output">0 0
+1 1 0
+0 override
+1 override
+93.902
+</code></pre>
+<div class="rule" id="r-class.ticker.cancel.sends"><a href="#r-class.ticker.cancel.sends">[class.ticker.cancel.sends]</a></div>
+<p><code>cancel</code> sends the target <code>cancel</code> with the ticker as the argument, once and
+only when the ticker was not cancelled before. It sends no message to the
+ticker itself and none to the attachment, so overrides of <code>canceled</code>,
+<code>cancelled</code>, <code>attachment</code> and <code>interval</code> do not run when the ticker is
+cancelled. The reading methods <code>attachment</code>, <code>canceled</code>, <code>cancelled</code> and
+<code>interval</code> send no message at all. The example overrides each of them in a
+subclass, cancels the ticker, waits until the target has been sent <code>cancel</code>,
+calls the readers and shows that the log holds the <code>cancel</code> of the target and
+each reader once, from the call of the program.</p>
+<pre><code class="language-rexx">.environment~log = .list~new
+n = .note~new
+a = .sub~new(60, n, 'att')
+a~cancel
+n~awaitCancel
+say 'cancelled'
+x = a~attachment
+x = a~canceled
+x = a~cancelled
+x = a~interval
+say .environment~log~makeArray~makeString('l', ' ')
+::class note inherit AlarmNotification
+::method init
+  expose cdone
+  cdone = .false
+::method triggered
+  nop
+::method cancel unguarded
+  expose cdone
+  .environment~log~append('target-cancel')
+  cdone = .true
+::method awaitCancel unguarded
+  expose cdone
+  guard on when cdone
+::class sub subclass ticker
+::method attachment
+  .environment~log~append('attachment')
+  forward class (super)
+::method canceled
+  .environment~log~append('canceled')
+  forward class (super)
+::method cancelled
+  .environment~log~append('cancelled')
+  forward class (super)
+::method interval
+  .environment~log~append('interval')
+  forward class (super)
+</code></pre>
+<pre><code class="language-output">cancelled
+target-cancel attachment canceled cancelled interval
+</code></pre>
+<h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
+<div class="rule" id="r-class.ticker.deviation.109"><a href="#r-class.ticker.deviation.109">[class.ticker.deviation.109]</a></div>
+<p>A string interval that is an instance of a subclass of <code>String</code> is read by its
+own characters, and <code>request</code>, <code>makeString</code> and <code>string</code> are not sent to it
+(<a href="string.html#r-class.string.deviation.109">Deviation 109</a>). ooRexx sends such an instance
+<code>request</code> with <code>STRING</code>, so an override can change what is read. In the
+example the overrides would make the interval <code>-1</code>; they count their sends,
+and the string is read as 60 seconds without one.</p>
+<pre><code class="language-rexx">.environment~sent = 0
+n = .note~new
+t = .ticker~new(.digits~new('60'), n)
+say t~interval 'sends' .environment~sent
+t~cancel
+::class note inherit AlarmNotification
+::method triggered
+  nop
+::class digits subclass string
+::method makestring
+  .environment~sent = .environment~sent + 1
+  return '-1'
+::method request
+  .environment~sent = .environment~sent + 1
+  return '-1'
+</code></pre>
+<pre><code class="language-output defect=#140">00:01:00.000000 sends 0
+</code></pre>
+<div class="rule" id="r-class.ticker.deviation.119"><a href="#r-class.ticker.deviation.119">[class.ticker.deviation.119]</a></div>
+<p>A second <code>cancel</code> of a ticker that was cancelled sends its target nothing, as
+the notification page states (<a href="alarmnotification.html#r-class.alarmnotification.deviation.119">Deviation
+119</a>). ooRexx sends the target
+<code>cancel</code> once or twice for it, depending on timing, so the example is not run
+against it; the target prints a line for each <code>cancel</code> it is sent.</p>
+<pre><code class="language-rexx">n = .n~new
+t = .ticker~new(60, n)
+t~cancel
+t~cancel
+call syssleep 0.3
+say 'done'
+exit
+::class n inherit alarmnotification
+::method cancel unguarded
+  say 'cancel sent'
+</code></pre>
+<pre><code class="language-output">cancel sent
+done
+</code></pre>
+<div class="rule" id="r-class.ticker.deviation.135"><a href="#r-class.ticker.deviation.135">[class.ticker.deviation.135]</a></div>
+<p>A subclass of <code>Ticker</code> whose <code>init</code> does not send <code>init</code> to its superclass, by
+<code>self~init:super</code> or <code>FORWARD</code>, makes a ticker that is not set, and every
+instance method of the class other than <code>init</code> sent to it raises <code>SYNTAX 98.901</code>: <code>attachment</code>, <code>cancel</code>, <code>canceled</code>, <code>cancelled</code> and <code>interval</code>.
+ooRexx answers <code>attachment</code>, <code>canceled</code>, <code>cancelled</code> and <code>interval</code> of such a
+ticker without an error and raises <code>SYNTAX 88.914</code> from its <code>cancel</code>.</p>
+<pre><code class="language-rexx">o = .lazy~new
+call try "o~attachment"
+call try "o~cancel"
+call try "o~canceled"
+call try "o~cancelled"
+call try "o~interval"
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  say arg(1) '=&gt; no error'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class lazy subclass ticker
+::method init
+  nop
+</code></pre>
+<pre><code class="language-output defect=#197">o~attachment =&gt; 98.901
+o~cancel =&gt; 98.901
+o~canceled =&gt; 98.901
+o~cancelled =&gt; 98.901
+o~interval =&gt; 98.901
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../classes/alarm.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../classes/monitor.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../classes/alarm.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../classes/monitor.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../assets/version-picker.js"></script>
+
+
+    </div>
+    </body>
+</html>

@@ -1,0 +1,2020 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>TimeSpan - The interrexx Language Specification</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../conventions.html"><strong aria-hidden="true">2.</strong> Conventions</a></li><li class="chapter-item expanded "><a href="../lexical/index.html"><strong aria-hidden="true">3.</strong> Lexical structure</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../lexical/characters.html"><strong aria-hidden="true">3.1.</strong> Characters</a></li><li class="chapter-item expanded "><a href="../lexical/comments.html"><strong aria-hidden="true">3.2.</strong> Comments</a></li><li class="chapter-item expanded "><a href="../lexical/literals.html"><strong aria-hidden="true">3.3.</strong> Literals</a></li><li class="chapter-item expanded "><a href="../lexical/symbols.html"><strong aria-hidden="true">3.4.</strong> Symbols</a></li><li class="chapter-item expanded "><a href="../lexical/operators.html"><strong aria-hidden="true">3.5.</strong> Operators and special characters</a></li><li class="chapter-item expanded "><a href="../lexical/clauses.html"><strong aria-hidden="true">3.6.</strong> Clauses</a></li></ol></li><li class="chapter-item expanded "><a href="../numbers/index.html"><strong aria-hidden="true">4.</strong> Numbers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../numbers/formats.html"><strong aria-hidden="true">4.1.</strong> Formats</a></li><li class="chapter-item expanded "><a href="../numbers/limits.html"><strong aria-hidden="true">4.2.</strong> Limits</a></li><li class="chapter-item expanded "><a href="../numbers/arithmetic.html"><strong aria-hidden="true">4.3.</strong> Arithmetic</a></li><li class="chapter-item expanded "><a href="../numbers/settings.html"><strong aria-hidden="true">4.4.</strong> Settings</a></li><li class="chapter-item expanded "><a href="../numbers/comparison.html"><strong aria-hidden="true">4.5.</strong> Comparison</a></li></ol></li><li class="chapter-item expanded "><a href="../expressions/index.html"><strong aria-hidden="true">5.</strong> Expressions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../expressions/terms.html"><strong aria-hidden="true">5.1.</strong> Terms</a></li><li class="chapter-item expanded "><a href="../expressions/variables.html"><strong aria-hidden="true">5.2.</strong> Variables</a></li><li class="chapter-item expanded "><a href="../expressions/concatenation.html"><strong aria-hidden="true">5.3.</strong> Concatenation</a></li><li class="chapter-item expanded "><a href="../expressions/arithmetic.html"><strong aria-hidden="true">5.4.</strong> Arithmetic operators</a></li><li class="chapter-item expanded "><a href="../expressions/comparison.html"><strong aria-hidden="true">5.5.</strong> Comparison operators</a></li><li class="chapter-item expanded "><a href="../expressions/logical.html"><strong aria-hidden="true">5.6.</strong> Logical operators</a></li><li class="chapter-item expanded "><a href="../expressions/messages.html"><strong aria-hidden="true">5.7.</strong> Message operators</a></li></ol></li><li class="chapter-item expanded "><a href="../instructions/index.html"><strong aria-hidden="true">6.</strong> Instructions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../instructions/address.html"><strong aria-hidden="true">6.1.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../instructions/arg.html"><strong aria-hidden="true">6.2.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../instructions/assignment.html"><strong aria-hidden="true">6.3.</strong> Assignments</a></li><li class="chapter-item expanded "><a href="../instructions/call.html"><strong aria-hidden="true">6.4.</strong> CALL</a></li><li class="chapter-item expanded "><a href="../instructions/command.html"><strong aria-hidden="true">6.5.</strong> Commands</a></li><li class="chapter-item expanded "><a href="../instructions/do.html"><strong aria-hidden="true">6.6.</strong> DO</a></li><li class="chapter-item expanded "><a href="../instructions/drop.html"><strong aria-hidden="true">6.7.</strong> DROP</a></li><li class="chapter-item expanded "><a href="../instructions/exit.html"><strong aria-hidden="true">6.8.</strong> EXIT</a></li><li class="chapter-item expanded "><a href="../instructions/expose.html"><strong aria-hidden="true">6.9.</strong> EXPOSE</a></li><li class="chapter-item expanded "><a href="../instructions/forward.html"><strong aria-hidden="true">6.10.</strong> FORWARD</a></li><li class="chapter-item expanded "><a href="../instructions/guard.html"><strong aria-hidden="true">6.11.</strong> GUARD</a></li><li class="chapter-item expanded "><a href="../instructions/if.html"><strong aria-hidden="true">6.12.</strong> IF</a></li><li class="chapter-item expanded "><a href="../instructions/interpret.html"><strong aria-hidden="true">6.13.</strong> INTERPRET</a></li><li class="chapter-item expanded "><a href="../instructions/iterate.html"><strong aria-hidden="true">6.14.</strong> ITERATE</a></li><li class="chapter-item expanded "><a href="../instructions/leave.html"><strong aria-hidden="true">6.15.</strong> LEAVE</a></li><li class="chapter-item expanded "><a href="../instructions/loop.html"><strong aria-hidden="true">6.16.</strong> LOOP</a></li><li class="chapter-item expanded "><a href="../instructions/message.html"><strong aria-hidden="true">6.17.</strong> Message instructions</a></li><li class="chapter-item expanded "><a href="../instructions/nop.html"><strong aria-hidden="true">6.18.</strong> NOP</a></li><li class="chapter-item expanded "><a href="../instructions/numeric.html"><strong aria-hidden="true">6.19.</strong> NUMERIC</a></li><li class="chapter-item expanded "><a href="../instructions/options.html"><strong aria-hidden="true">6.20.</strong> OPTIONS</a></li><li class="chapter-item expanded "><a href="../instructions/parse.html"><strong aria-hidden="true">6.21.</strong> PARSE</a></li><li class="chapter-item expanded "><a href="../instructions/procedure.html"><strong aria-hidden="true">6.22.</strong> PROCEDURE</a></li><li class="chapter-item expanded "><a href="../instructions/pull.html"><strong aria-hidden="true">6.23.</strong> PULL</a></li><li class="chapter-item expanded "><a href="../instructions/push.html"><strong aria-hidden="true">6.24.</strong> PUSH</a></li><li class="chapter-item expanded "><a href="../instructions/queue.html"><strong aria-hidden="true">6.25.</strong> QUEUE</a></li><li class="chapter-item expanded "><a href="../instructions/raise.html"><strong aria-hidden="true">6.26.</strong> RAISE</a></li><li class="chapter-item expanded "><a href="../instructions/reply.html"><strong aria-hidden="true">6.27.</strong> REPLY</a></li><li class="chapter-item expanded "><a href="../instructions/return.html"><strong aria-hidden="true">6.28.</strong> RETURN</a></li><li class="chapter-item expanded "><a href="../instructions/say.html"><strong aria-hidden="true">6.29.</strong> SAY</a></li><li class="chapter-item expanded "><a href="../instructions/select.html"><strong aria-hidden="true">6.30.</strong> SELECT</a></li><li class="chapter-item expanded "><a href="../instructions/signal.html"><strong aria-hidden="true">6.31.</strong> SIGNAL</a></li><li class="chapter-item expanded "><a href="../instructions/trace.html"><strong aria-hidden="true">6.32.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../instructions/use.html"><strong aria-hidden="true">6.33.</strong> USE</a></li></ol></li><li class="chapter-item expanded "><a href="../parsing/index.html"><strong aria-hidden="true">7.</strong> Parsing</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../parsing/templates.html"><strong aria-hidden="true">7.1.</strong> Templates</a></li><li class="chapter-item expanded "><a href="../parsing/patterns.html"><strong aria-hidden="true">7.2.</strong> Patterns</a></li><li class="chapter-item expanded "><a href="../parsing/multiple.html"><strong aria-hidden="true">7.3.</strong> Several strings and case</a></li></ol></li><li class="chapter-item expanded "><a href="../directives/index.html"><strong aria-hidden="true">8.</strong> Directives</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../directives/class.html"><strong aria-hidden="true">8.1.</strong> ::CLASS</a></li><li class="chapter-item expanded "><a href="../directives/method.html"><strong aria-hidden="true">8.2.</strong> ::METHOD</a></li><li class="chapter-item expanded "><a href="../directives/attribute.html"><strong aria-hidden="true">8.3.</strong> ::ATTRIBUTE</a></li><li class="chapter-item expanded "><a href="../directives/constant.html"><strong aria-hidden="true">8.4.</strong> ::CONSTANT</a></li><li class="chapter-item expanded "><a href="../directives/routine.html"><strong aria-hidden="true">8.5.</strong> ::ROUTINE</a></li><li class="chapter-item expanded "><a href="../directives/requires.html"><strong aria-hidden="true">8.6.</strong> ::REQUIRES</a></li><li class="chapter-item expanded "><a href="../directives/options.html"><strong aria-hidden="true">8.7.</strong> ::OPTIONS</a></li><li class="chapter-item expanded "><a href="../directives/resource.html"><strong aria-hidden="true">8.8.</strong> ::RESOURCE</a></li><li class="chapter-item expanded "><a href="../directives/annotate.html"><strong aria-hidden="true">8.9.</strong> ::ANNOTATE</a></li></ol></li><li class="chapter-item expanded "><a href="../conditions/index.html"><strong aria-hidden="true">9.</strong> Conditions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../conditions/traps.html"><strong aria-hidden="true">9.1.</strong> Condition traps</a></li><li class="chapter-item expanded "><a href="../conditions/information.html"><strong aria-hidden="true">9.2.</strong> Condition information</a></li><li class="chapter-item expanded "><a href="../conditions/syntax.html"><strong aria-hidden="true">9.3.</strong> SYNTAX</a></li><li class="chapter-item expanded "><a href="../conditions/error.html"><strong aria-hidden="true">9.4.</strong> ERROR and FAILURE</a></li><li class="chapter-item expanded "><a href="../conditions/halt.html"><strong aria-hidden="true">9.5.</strong> HALT</a></li><li class="chapter-item expanded "><a href="../conditions/novalue.html"><strong aria-hidden="true">9.6.</strong> NOVALUE</a></li><li class="chapter-item expanded "><a href="../conditions/nostring.html"><strong aria-hidden="true">9.7.</strong> NOSTRING</a></li><li class="chapter-item expanded "><a href="../conditions/nomethod.html"><strong aria-hidden="true">9.8.</strong> NOMETHOD</a></li><li class="chapter-item expanded "><a href="../conditions/notready.html"><strong aria-hidden="true">9.9.</strong> NOTREADY</a></li><li class="chapter-item expanded "><a href="../conditions/lostdigits.html"><strong aria-hidden="true">9.10.</strong> LOSTDIGITS</a></li><li class="chapter-item expanded "><a href="../conditions/user.html"><strong aria-hidden="true">9.11.</strong> USER conditions</a></li><li class="chapter-item expanded "><a href="../conditions/errors.html"><strong aria-hidden="true">9.12.</strong> Error numbers</a></li></ol></li><li class="chapter-item expanded "><a href="../classes/index.html"><strong aria-hidden="true">10.</strong> Classes</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../classes/methods.html"><strong aria-hidden="true">10.1.</strong> Method search</a></li><li class="chapter-item expanded "><a href="../classes/object.html"><strong aria-hidden="true">10.2.</strong> Object</a></li><li class="chapter-item expanded "><a href="../classes/class.html"><strong aria-hidden="true">10.3.</strong> Class</a></li><li class="chapter-item expanded "><a href="../classes/string.html"><strong aria-hidden="true">10.4.</strong> String</a></li><li class="chapter-item expanded "><a href="../classes/method.html"><strong aria-hidden="true">10.5.</strong> Method</a></li><li class="chapter-item expanded "><a href="../classes/routine.html"><strong aria-hidden="true">10.6.</strong> Routine</a></li><li class="chapter-item expanded "><a href="../classes/package.html"><strong aria-hidden="true">10.7.</strong> Package</a></li><li class="chapter-item expanded "><a href="../classes/message.html"><strong aria-hidden="true">10.8.</strong> Message</a></li><li class="chapter-item expanded "><a href="../classes/messagenotification.html"><strong aria-hidden="true">10.9.</strong> MessageNotification</a></li><li class="chapter-item expanded "><a href="../classes/alarmnotification.html"><strong aria-hidden="true">10.10.</strong> AlarmNotification</a></li><li class="chapter-item expanded "><a href="../classes/collection.html"><strong aria-hidden="true">10.11.</strong> Collection</a></li><li class="chapter-item expanded "><a href="../classes/mapcollection.html"><strong aria-hidden="true">10.12.</strong> MapCollection</a></li><li class="chapter-item expanded "><a href="../classes/orderedcollection.html"><strong aria-hidden="true">10.13.</strong> OrderedCollection</a></li><li class="chapter-item expanded "><a href="../classes/setcollection.html"><strong aria-hidden="true">10.14.</strong> SetCollection</a></li><li class="chapter-item expanded "><a href="../classes/array.html"><strong aria-hidden="true">10.15.</strong> Array</a></li><li class="chapter-item expanded "><a href="../classes/list.html"><strong aria-hidden="true">10.16.</strong> List</a></li><li class="chapter-item expanded "><a href="../classes/queue.html"><strong aria-hidden="true">10.17.</strong> Queue</a></li><li class="chapter-item expanded "><a href="../classes/circularqueue.html"><strong aria-hidden="true">10.18.</strong> CircularQueue</a></li><li class="chapter-item expanded "><a href="../classes/directory.html"><strong aria-hidden="true">10.19.</strong> Directory</a></li><li class="chapter-item expanded "><a href="../classes/stringtable.html"><strong aria-hidden="true">10.20.</strong> StringTable</a></li><li class="chapter-item expanded "><a href="../classes/properties.html"><strong aria-hidden="true">10.21.</strong> Properties</a></li><li class="chapter-item expanded "><a href="../classes/table.html"><strong aria-hidden="true">10.22.</strong> Table</a></li><li class="chapter-item expanded "><a href="../classes/identitytable.html"><strong aria-hidden="true">10.23.</strong> IdentityTable</a></li><li class="chapter-item expanded "><a href="../classes/relation.html"><strong aria-hidden="true">10.24.</strong> Relation</a></li><li class="chapter-item expanded "><a href="../classes/bag.html"><strong aria-hidden="true">10.25.</strong> Bag</a></li><li class="chapter-item expanded "><a href="../classes/set.html"><strong aria-hidden="true">10.26.</strong> Set</a></li><li class="chapter-item expanded "><a href="../classes/stem.html"><strong aria-hidden="true">10.27.</strong> Stem</a></li><li class="chapter-item expanded "><a href="../classes/datetime.html"><strong aria-hidden="true">10.28.</strong> DateTime</a></li><li class="chapter-item expanded "><a href="../classes/timespan.html" class="active"><strong aria-hidden="true">10.29.</strong> TimeSpan</a></li><li class="chapter-item expanded "><a href="../classes/comparable.html"><strong aria-hidden="true">10.30.</strong> Comparable</a></li><li class="chapter-item expanded "><a href="../classes/orderable.html"><strong aria-hidden="true">10.31.</strong> Orderable</a></li><li class="chapter-item expanded "><a href="../classes/comparators.html"><strong aria-hidden="true">10.32.</strong> Comparators</a></li><li class="chapter-item expanded "><a href="../classes/mutablebuffer.html"><strong aria-hidden="true">10.33.</strong> MutableBuffer</a></li><li class="chapter-item expanded "><a href="../classes/buffer.html"><strong aria-hidden="true">10.34.</strong> Buffer</a></li><li class="chapter-item expanded "><a href="../classes/pointer.html"><strong aria-hidden="true">10.35.</strong> Pointer</a></li><li class="chapter-item expanded "><a href="../classes/weakreference.html"><strong aria-hidden="true">10.36.</strong> WeakReference</a></li><li class="chapter-item expanded "><a href="../classes/variablereference.html"><strong aria-hidden="true">10.37.</strong> VariableReference</a></li><li class="chapter-item expanded "><a href="../classes/file.html"><strong aria-hidden="true">10.38.</strong> File</a></li><li class="chapter-item expanded "><a href="../classes/rexxcontext.html"><strong aria-hidden="true">10.39.</strong> RexxContext</a></li><li class="chapter-item expanded "><a href="../classes/stackframe.html"><strong aria-hidden="true">10.40.</strong> StackFrame</a></li><li class="chapter-item expanded "><a href="../classes/rexxinfo.html"><strong aria-hidden="true">10.41.</strong> RexxInfo</a></li><li class="chapter-item expanded "><a href="../classes/traceobject.html"><strong aria-hidden="true">10.42.</strong> TraceObject</a></li><li class="chapter-item expanded "><a href="../classes/validate.html"><strong aria-hidden="true">10.43.</strong> Validate</a></li><li class="chapter-item expanded "><a href="../classes/singleton.html"><strong aria-hidden="true">10.44.</strong> Singleton</a></li><li class="chapter-item expanded "><a href="../classes/alarm.html"><strong aria-hidden="true">10.45.</strong> Alarm</a></li><li class="chapter-item expanded "><a href="../classes/ticker.html"><strong aria-hidden="true">10.46.</strong> Ticker</a></li><li class="chapter-item expanded "><a href="../classes/monitor.html"><strong aria-hidden="true">10.47.</strong> Monitor</a></li><li class="chapter-item expanded "><a href="../classes/eventsemaphore.html"><strong aria-hidden="true">10.48.</strong> EventSemaphore</a></li><li class="chapter-item expanded "><a href="../classes/mutexsemaphore.html"><strong aria-hidden="true">10.49.</strong> MutexSemaphore</a></li><li class="chapter-item expanded "><a href="../classes/commandhandler.html"><strong aria-hidden="true">10.50.</strong> CommandHandler</a></li><li class="chapter-item expanded "><a href="../classes/nativecommandhandler.html"><strong aria-hidden="true">10.51.</strong> NativeCommandHandler</a></li><li class="chapter-item expanded "><a href="../classes/commandcontext.html"><strong aria-hidden="true">10.52.</strong> CommandContext</a></li><li class="chapter-item expanded "><a href="../classes/commandinput.html"><strong aria-hidden="true">10.53.</strong> CommandInput</a></li><li class="chapter-item expanded "><a href="../classes/commandoutput.html"><strong aria-hidden="true">10.54.</strong> CommandOutput</a></li><li class="chapter-item expanded "><a href="../classes/rexxqueue.html"><strong aria-hidden="true">10.55.</strong> RexxQueue</a></li><li class="chapter-item expanded "><a href="../classes/supplier.html"><strong aria-hidden="true">10.56.</strong> Supplier</a></li><li class="chapter-item expanded "><a href="../classes/streamsupplier.html"><strong aria-hidden="true">10.57.</strong> StreamSupplier</a></li><li class="chapter-item expanded "><a href="../classes/regularexpression.html"><strong aria-hidden="true">10.58.</strong> RegularExpression</a></li></ol></li><li class="chapter-item expanded "><a href="../builtins/index.html"><strong aria-hidden="true">11.</strong> Built-in functions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../builtins/abbrev.html"><strong aria-hidden="true">11.1.</strong> ABBREV</a></li><li class="chapter-item expanded "><a href="../builtins/abs.html"><strong aria-hidden="true">11.2.</strong> ABS</a></li><li class="chapter-item expanded "><a href="../builtins/address.html"><strong aria-hidden="true">11.3.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../builtins/arg.html"><strong aria-hidden="true">11.4.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../builtins/b2x.html"><strong aria-hidden="true">11.5.</strong> B2X</a></li><li class="chapter-item expanded "><a href="../builtins/beep.html"><strong aria-hidden="true">11.6.</strong> BEEP</a></li><li class="chapter-item expanded "><a href="../builtins/bitand.html"><strong aria-hidden="true">11.7.</strong> BITAND</a></li><li class="chapter-item expanded "><a href="../builtins/bitor.html"><strong aria-hidden="true">11.8.</strong> BITOR</a></li><li class="chapter-item expanded "><a href="../builtins/bitxor.html"><strong aria-hidden="true">11.9.</strong> BITXOR</a></li><li class="chapter-item expanded "><a href="../builtins/c2d.html"><strong aria-hidden="true">11.10.</strong> C2D</a></li><li class="chapter-item expanded "><a href="../builtins/c2x.html"><strong aria-hidden="true">11.11.</strong> C2X</a></li><li class="chapter-item expanded "><a href="../builtins/center.html"><strong aria-hidden="true">11.12.</strong> CENTER</a></li><li class="chapter-item expanded "><a href="../builtins/changestr.html"><strong aria-hidden="true">11.13.</strong> CHANGESTR</a></li><li class="chapter-item expanded "><a href="../builtins/charin.html"><strong aria-hidden="true">11.14.</strong> CHARIN</a></li><li class="chapter-item expanded "><a href="../builtins/charout.html"><strong aria-hidden="true">11.15.</strong> CHAROUT</a></li><li class="chapter-item expanded "><a href="../builtins/chars.html"><strong aria-hidden="true">11.16.</strong> CHARS</a></li><li class="chapter-item expanded "><a href="../builtins/compare.html"><strong aria-hidden="true">11.17.</strong> COMPARE</a></li><li class="chapter-item expanded "><a href="../builtins/condition.html"><strong aria-hidden="true">11.18.</strong> CONDITION</a></li><li class="chapter-item expanded "><a href="../builtins/copies.html"><strong aria-hidden="true">11.19.</strong> COPIES</a></li><li class="chapter-item expanded "><a href="../builtins/countstr.html"><strong aria-hidden="true">11.20.</strong> COUNTSTR</a></li><li class="chapter-item expanded "><a href="../builtins/d2c.html"><strong aria-hidden="true">11.21.</strong> D2C</a></li><li class="chapter-item expanded "><a href="../builtins/d2x.html"><strong aria-hidden="true">11.22.</strong> D2X</a></li><li class="chapter-item expanded "><a href="../builtins/datatype.html"><strong aria-hidden="true">11.23.</strong> DATATYPE</a></li><li class="chapter-item expanded "><a href="../builtins/date.html"><strong aria-hidden="true">11.24.</strong> DATE</a></li><li class="chapter-item expanded "><a href="../builtins/delstr.html"><strong aria-hidden="true">11.25.</strong> DELSTR</a></li><li class="chapter-item expanded "><a href="../builtins/delword.html"><strong aria-hidden="true">11.26.</strong> DELWORD</a></li><li class="chapter-item expanded "><a href="../builtins/digits.html"><strong aria-hidden="true">11.27.</strong> DIGITS</a></li><li class="chapter-item expanded "><a href="../builtins/directory.html"><strong aria-hidden="true">11.28.</strong> DIRECTORY</a></li><li class="chapter-item expanded "><a href="../builtins/endlocal.html"><strong aria-hidden="true">11.29.</strong> ENDLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/errortext.html"><strong aria-hidden="true">11.30.</strong> ERRORTEXT</a></li><li class="chapter-item expanded "><a href="../builtins/filespec.html"><strong aria-hidden="true">11.31.</strong> FILESPEC</a></li><li class="chapter-item expanded "><a href="../builtins/form.html"><strong aria-hidden="true">11.32.</strong> FORM</a></li><li class="chapter-item expanded "><a href="../builtins/format.html"><strong aria-hidden="true">11.33.</strong> FORMAT</a></li><li class="chapter-item expanded "><a href="../builtins/fuzz.html"><strong aria-hidden="true">11.34.</strong> FUZZ</a></li><li class="chapter-item expanded "><a href="../builtins/gc.html"><strong aria-hidden="true">11.35.</strong> GC</a></li><li class="chapter-item expanded "><a href="../builtins/insert.html"><strong aria-hidden="true">11.36.</strong> INSERT</a></li><li class="chapter-item expanded "><a href="../builtins/lastpos.html"><strong aria-hidden="true">11.37.</strong> LASTPOS</a></li><li class="chapter-item expanded "><a href="../builtins/left.html"><strong aria-hidden="true">11.38.</strong> LEFT</a></li><li class="chapter-item expanded "><a href="../builtins/length.html"><strong aria-hidden="true">11.39.</strong> LENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/linein.html"><strong aria-hidden="true">11.40.</strong> LINEIN</a></li><li class="chapter-item expanded "><a href="../builtins/lineout.html"><strong aria-hidden="true">11.41.</strong> LINEOUT</a></li><li class="chapter-item expanded "><a href="../builtins/lines.html"><strong aria-hidden="true">11.42.</strong> LINES</a></li><li class="chapter-item expanded "><a href="../builtins/lower.html"><strong aria-hidden="true">11.43.</strong> LOWER</a></li><li class="chapter-item expanded "><a href="../builtins/max.html"><strong aria-hidden="true">11.44.</strong> MAX</a></li><li class="chapter-item expanded "><a href="../builtins/min.html"><strong aria-hidden="true">11.45.</strong> MIN</a></li><li class="chapter-item expanded "><a href="../builtins/overlay.html"><strong aria-hidden="true">11.46.</strong> OVERLAY</a></li><li class="chapter-item expanded "><a href="../builtins/pos.html"><strong aria-hidden="true">11.47.</strong> POS</a></li><li class="chapter-item expanded "><a href="../builtins/qualify.html"><strong aria-hidden="true">11.48.</strong> QUALIFY</a></li><li class="chapter-item expanded "><a href="../builtins/queued.html"><strong aria-hidden="true">11.49.</strong> QUEUED</a></li><li class="chapter-item expanded "><a href="../builtins/random.html"><strong aria-hidden="true">11.50.</strong> RANDOM</a></li><li class="chapter-item expanded "><a href="../builtins/reverse.html"><strong aria-hidden="true">11.51.</strong> REVERSE</a></li><li class="chapter-item expanded "><a href="../builtins/right.html"><strong aria-hidden="true">11.52.</strong> RIGHT</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncadd.html"><strong aria-hidden="true">11.53.</strong> RXFUNCADD</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncdrop.html"><strong aria-hidden="true">11.54.</strong> RXFUNCDROP</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncquery.html"><strong aria-hidden="true">11.55.</strong> RXFUNCQUERY</a></li><li class="chapter-item expanded "><a href="../builtins/rxqueue.html"><strong aria-hidden="true">11.56.</strong> RXQUEUE</a></li><li class="chapter-item expanded "><a href="../builtins/setlocal.html"><strong aria-hidden="true">11.57.</strong> SETLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/sign.html"><strong aria-hidden="true">11.58.</strong> SIGN</a></li><li class="chapter-item expanded "><a href="../builtins/sourceline.html"><strong aria-hidden="true">11.59.</strong> SOURCELINE</a></li><li class="chapter-item expanded "><a href="../builtins/space.html"><strong aria-hidden="true">11.60.</strong> SPACE</a></li><li class="chapter-item expanded "><a href="../builtins/stream.html"><strong aria-hidden="true">11.61.</strong> STREAM</a></li><li class="chapter-item expanded "><a href="../builtins/strip.html"><strong aria-hidden="true">11.62.</strong> STRIP</a></li><li class="chapter-item expanded "><a href="../builtins/substr.html"><strong aria-hidden="true">11.63.</strong> SUBSTR</a></li><li class="chapter-item expanded "><a href="../builtins/subword.html"><strong aria-hidden="true">11.64.</strong> SUBWORD</a></li><li class="chapter-item expanded "><a href="../builtins/symbol.html"><strong aria-hidden="true">11.65.</strong> SYMBOL</a></li><li class="chapter-item expanded "><a href="../builtins/time.html"><strong aria-hidden="true">11.66.</strong> TIME</a></li><li class="chapter-item expanded "><a href="../builtins/trace.html"><strong aria-hidden="true">11.67.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../builtins/translate.html"><strong aria-hidden="true">11.68.</strong> TRANSLATE</a></li><li class="chapter-item expanded "><a href="../builtins/trunc.html"><strong aria-hidden="true">11.69.</strong> TRUNC</a></li><li class="chapter-item expanded "><a href="../builtins/upper.html"><strong aria-hidden="true">11.70.</strong> UPPER</a></li><li class="chapter-item expanded "><a href="../builtins/userid.html"><strong aria-hidden="true">11.71.</strong> USERID</a></li><li class="chapter-item expanded "><a href="../builtins/value.html"><strong aria-hidden="true">11.72.</strong> VALUE</a></li><li class="chapter-item expanded "><a href="../builtins/var.html"><strong aria-hidden="true">11.73.</strong> VAR</a></li><li class="chapter-item expanded "><a href="../builtins/verify.html"><strong aria-hidden="true">11.74.</strong> VERIFY</a></li><li class="chapter-item expanded "><a href="../builtins/word.html"><strong aria-hidden="true">11.75.</strong> WORD</a></li><li class="chapter-item expanded "><a href="../builtins/wordindex.html"><strong aria-hidden="true">11.76.</strong> WORDINDEX</a></li><li class="chapter-item expanded "><a href="../builtins/wordlength.html"><strong aria-hidden="true">11.77.</strong> WORDLENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/wordpos.html"><strong aria-hidden="true">11.78.</strong> WORDPOS</a></li><li class="chapter-item expanded "><a href="../builtins/words.html"><strong aria-hidden="true">11.79.</strong> WORDS</a></li><li class="chapter-item expanded "><a href="../builtins/x2b.html"><strong aria-hidden="true">11.80.</strong> X2B</a></li><li class="chapter-item expanded "><a href="../builtins/x2c.html"><strong aria-hidden="true">11.81.</strong> X2C</a></li><li class="chapter-item expanded "><a href="../builtins/x2d.html"><strong aria-hidden="true">11.82.</strong> X2D</a></li><li class="chapter-item expanded "><a href="../builtins/xrange.html"><strong aria-hidden="true">11.83.</strong> XRANGE</a></li></ol></li><li class="chapter-item expanded "><a href="../deviations.html"><strong aria-hidden="true">12.</strong> Deviations</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The interrexx Language Specification</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="timespan"><a class="header" href="#timespan">TimeSpan</a></h1>
+<p class="references">rexxref: Builtin Classes &gt; Utility Classes &gt; TimeSpan Class; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; init; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; fromCivilTime (Class Method); Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; fromDays (Class Method); Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; fromHours (Class Method); Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; fromLongTime (Class Method); Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; fromMicroseconds (Class Method); Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; fromMinutes (Class Method); Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; fromNormalTime (Class Method); Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; fromSeconds (Class Method); Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; fromStringFormat (Class Method); Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; Arithmetic Methods; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; addDays; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; addHours; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; addMicroseconds; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; addMinutes; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; addSeconds; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; addWeeks; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; compareTo; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; days; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; duration; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; hashCode; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; hours; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; makeString; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; microseconds; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; minutes; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; seconds; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; sign; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; string; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; totalDays; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; totalHours; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; totalMicroseconds; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; totalMinutes; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; totalSeconds</p>
+<p class="deviations">Deviations: D109, D126, D127, D130, D131, D132, D133</p>
+<p>A <code>TimeSpan</code> is a length of time: a signed count of microseconds, at most
+3652058 days and 23:59:59.999999 either way, read as days, hours, minutes,
+seconds and microseconds. It is the difference of two <a href="datetime.html#r-class.datetime.minus"><code>DateTime</code>
+moments</a> and what is added to one (<a href="datetime.html#r-class.datetime.plus">the <code>+</code>
+rule</a>), and it can stand for the offset of a time zone
+(<a href="datetime.html#r-class.datetime.offset">the offset rule</a>). Its methods answer the parts and
+the totals of the span, write it as text, make another span from it by
+addition, multiplication and division, and compare it with another. The class
+inherits <code>Comparable</code> and <code>Orderable</code>, which give it the comparison operators
+on top of its own <code>compareTo</code>. Every method that
+answers another span answers a new instance; only <code>init</code>, sent again, changes
+one (<a href="#r-class.timespan.new">the <code>new</code> rule</a>). The examples build their spans
+from fixed values.</p>
+<h2 id="the-class"><a class="header" href="#the-class">The class</a></h2>
+<div class="rule" id="r-class.timespan.creation"><a href="#r-class.timespan.creation">[class.timespan.creation]</a></div>
+<p><code>TimeSpan</code> has the instance methods <code>+</code>, <code>-</code>, <code>*</code>, <code>/</code>, <code>//</code>, <code>%</code>, <code>addDays</code>,
+<code>addHours</code>, <code>addMicroseconds</code>, <code>addMinutes</code>, <code>addSeconds</code>, <code>addWeeks</code>,
+<code>compareTo</code>, <code>days</code>, <code>duration</code>, <code>hashCode</code>, <code>hours</code>, <code>init</code>, <code>makeString</code>,
+<code>microseconds</code>, <code>minutes</code>, <code>seconds</code>, <code>sign</code>, <code>string</code>, <code>totalDays</code>,
+<code>totalHours</code>, <code>totalMicroseconds</code>, <code>totalMinutes</code> and <code>totalSeconds</code>, and the
+class methods <code>fromCivilTime</code>, <code>fromDays</code>, <code>fromHours</code>, <code>fromLongTime</code>,
+<code>fromMicroseconds</code>, <code>fromMinutes</code>, <code>fromNormalTime</code>, <code>fromSeconds</code> and
+<code>fromStringFormat</code>, besides the <code>new</code> that every class has. It may have
+private methods besides these; they are not part of this specification. Its
+superclasses are <code>Object</code>, <code>Comparable</code> and <code>Orderable</code>, in that order. The
+comparison operators of an instance are those of <code>Orderable</code>, which send
+<code>compareTo</code> to the receiver (<a href="#r-class.timespan.compare">the comparison rule</a>).
+An instance has no <code>unknown</code> method, so a message that <a href="methods.html#r-class.methods.unknown">the method
+search</a> does not resolve raises
+<a href="../conditions/nomethod.html#r-cond.nomethod.raise">NOMETHOD</a>, as the error rule of <a href="index.html#r-class.index.errors">the
+chapter</a> says; it is not a string either, so a string
+method such as <code>length</code> raises <code>SYNTAX 97.1</code>.</p>
+<pre><code class="language-rexx">do c over .timespan~superclasses
+  say c~id
+end
+names = '+ - * / // % addDays addHours addMicroseconds addMinutes addSeconds',
+  'addWeeks compareTo days duration hashCode hours init makeString',
+  'microseconds minutes seconds sign string totalDays totalHours',
+  'totalMicroseconds totalMinutes totalSeconds'
+found = 0
+do n over names~makearray(' ')
+  found += (.timespan~method(n)~scope == .timespan)
+end
+say found 'of' names~words
+cnames = 'fromCivilTime fromDays fromHours fromLongTime fromMicroseconds',
+  'fromMinutes fromNormalTime fromSeconds fromStringFormat new'
+found = 0
+do n over cnames~makearray(' ')
+  found += .timespan~hasMethod(n)
+end
+say found 'of' cnames~words
+t = .timespan~new(1)
+say t~hasMethod('FROMDAYS') t~hasMethod('UNKNOWN')
+signal on syntax name bad
+say .timespan~new(1)~length
+bad: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">Object
+Comparable
+Orderable
+29 of 29
+10 of 10
+0 0
+97.1
+</code></pre>
+<div class="rule" id="r-class.timespan.value"><a href="#r-class.timespan.value">[class.timespan.value]</a></div>
+<p>An instance holds a count of microseconds, a whole number from
+-315537897599999999 to 315537897599999999, which is the span from the first to
+the last microsecond of the years that <code>DateTime</code> covers; no span is outside
+this range, and a method that would make one raises <code>SYNTAX 40.19</code> unless its
+rule gives another error. The count is read as days, hours, minutes, seconds and
+microseconds by <a href="#r-class.timespan.parts">the parts rule</a>, and a negative count
+is a negative span in all of them. The arithmetic of the class is done in 18
+significant digits, whatever <code>NUMERIC DIGITS</code> the program that sends the message
+has set (<a href="#r-class.timespan.total">the total rule</a> and the rules of the
+arithmetic methods say where it shows). The string value of an instance is <a href="#r-class.timespan.string">its
+<code>string</code> text</a>: an instance written by <code>say</code>, or joined
+to a string by <code>||</code>, is that text, as <a href="index.html#r-class.index.string">the string-value
+rule</a> says. An instance on which the <code>init</code> of <code>TimeSpan</code>
+never ran, because the <code>init</code> of a subclass does not forward to it, is the span
+of 0 (<a href="#r-class.timespan.deviation.131">Deviation 131</a>).</p>
+<pre><code class="language-rexx">say .timespan~new(0)
+say .timespan~new(315537897599999999) .timespan~new('-315537897599999999')
+t = .timespan~new(1, 2, 3, 4, 5)
+say t
+say 'at' t || '!'
+signal on syntax name bad
+say .timespan~new(315537897600000000)
+bad: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">00:00:00.000000
+3652058.23:59:59.999999 -3652058.23:59:59.999999
+1.02:03:04.000005
+at 1.02:03:04.000005!
+40.19
+</code></pre>
+<h2 id="making-an-instance"><a class="header" href="#making-an-instance">Making an instance</a></h2>
+<div class="rule" id="r-class.timespan.new"><a href="#r-class.timespan.new">[class.timespan.new]</a></div>
+<p><code>new</code> makes an instance and sends <code>init</code> to it with the arguments it received
+(<a href="index.html#r-class.index.new">the new rule</a>); the <code>init</code> of <code>TimeSpan</code> takes from one
+argument to five, and the number of them that are given, counted as <a href="index.html#r-class.index.args.count">the count
+rule</a> says, picks the form. With one argument it is
+the number of microseconds of the span, a whole number as <a href="../conventions.html#r-conv.whole.form">the form
+rule</a> and <a href="../conventions.html#r-conv.whole.digits">the digits rule</a> read it
+(<a href="#r-class.timespan.deviation.130">Deviation 130</a>), positive or negative. With
+two arguments they are hours and minutes, with three hours, minutes and seconds,
+with four days, hours, minutes and seconds, and with five days, hours, minutes,
+seconds and microseconds; a part that the form does not name is 0. The parts of
+the multi-part forms are never negative: a span below zero is made by the
+one-argument form or by <a href="#r-class.timespan.minus">negating</a> a span. No argument
+raises <code>SYNTAX 93.901</code>, and more than five <code>SYNTAX 93.902</code>. An omitted argument
+inside the list, before a given one, raises <code>SYNTAX 93.903</code>. <code>init</code> is an
+ordinary message that can be sent again (<a href="index.html#r-class.index.new.init-again">the init
+rule</a>): it gives the instance the span that <code>new</code>
+with the same arguments would make, after the same checks.</p>
+<pre><code class="language-rexx">say .timespan~new(1234567)
+say .timespan~new('-1234567')
+say .timespan~new(1, 2)
+say .timespan~new(1, 2, 3)
+say .timespan~new(1, 2, 3, 4)
+say .timespan~new(1, 2, 3, 4, 5)
+say .timespan~new(3, 7, 41, 52, 250)
+say .timespan~new(0)
+say .timespan~new(1, 2, )
+t = .timespan~new(1, 2)
+t~init(7)
+say t
+call try '.timespan~new'
+call try '.timespan~new(1, 2, 3, 4, 5, 6)'
+call try '.timespan~new(, 2)'
+call try '.timespan~new(1, , 3)'
+call try '.timespan~new(1, 2, 3, , 5)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">00:00:01.234567
+-00:00:01.234567
+01:02:00.000000
+01:02:03.000000
+1.02:03:04.000000
+1.02:03:04.000005
+3.07:41:52.000250
+00:00:00.000000
+01:02:00.000000
+00:00:00.000007
+.timespan~new =&gt; 93.901
+.timespan~new(1, 2, 3, 4, 5, 6) =&gt; 93.902
+.timespan~new(, 2) =&gt; 93.903
+.timespan~new(1, , 3) =&gt; 93.903
+.timespan~new(1, 2, 3, , 5) =&gt; 93.903
+</code></pre>
+<div class="rule" id="r-class.timespan.new.checks"><a href="#r-class.timespan.new.checks">[class.timespan.new.checks]</a></div>
+<p>The values are checked in this order, and the first that fails raises its error.
+With one argument it must be a whole number, read here and below by <a href="../conventions.html#r-conv.whole.form">the form
+rule</a> and <a href="../conventions.html#r-conv.whole.digits">the digits rule</a> with the
+codes of this rule in place of SYNTAX 40.12 (<a href="#r-class.timespan.deviation.130">Deviation
+130</a>): another value raises <code>SYNTAX 88.903</code>, and
+so does a count of 1000000000000000000 or more, or of that size below zero; a
+count of a smaller size that is outside the range of <a href="#r-class.timespan.value">the value
+rule</a> raises <code>SYNTAX 40.19</code>. In the forms of two to five
+arguments the days, when given, are checked first: they must be a whole number
+from 0 to 999999999, or <code>SYNTAX 88.904</code> is raised. Hours (0 to 23), minutes (0
+to 59), seconds (0 to 59) and microseconds (0 to 999999) are checked next, in
+the order of the arguments, each a whole number in its range; a value outside
+it, one that is no number and one that is not whole, such as 1.5, raise <code>SYNTAX 88.907</code>. Last, a total outside the range of the class raises <code>SYNTAX 40.19</code>:
+3652059 days with every other part in range is refused so, and the same days
+with an hour of 99 are refused for the hour.</p>
+<pre><code class="language-rexx">call try '.timespan~new(3652058, 23, 59, 59, 999999)'
+call try '.timespan~new(3652059, 0, 0, 0, 0)'
+call try '.timespan~new(3652059, 99, 0, 0, 0)'
+call try '.timespan~new(x, 99, 0, 0, 0)'
+call try '.timespan~new(-1, 0, 0, 0, 0)'
+call try '.timespan~new(1.5, 0, 0, 0, 0)'
+call try '.timespan~new(999999999, 0, 0, 0)'
+call try '.timespan~new(1000000000, 0, 0, 0)'
+call try '.timespan~new(0, 24, 0, 0, 0)'
+call try '.timespan~new(0, 0, 60, 0, 0)'
+call try '.timespan~new(0, 0, 0, 60, 0)'
+call try '.timespan~new(0, 0, 0, 0, 1000000)'
+call try '.timespan~new(0, 0, 0, 0, -1)'
+call try '.timespan~new(24, 0, 0)'
+call try '.timespan~new(1, "x", 0)'
+call try '.timespan~new(1, 1.5)'
+call try '.timespan~new(315537897599999999)'
+call try '.timespan~new(315537897600000000)'
+call try '.timespan~new("-315537897600000000")'
+call try '.timespan~new(999999999999999999)'
+call try '.timespan~new(1000000000000000000)'
+call try '.timespan~new(1.5)'
+call try '.timespan~new("x")'
+call try '.timespan~new("")'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">.timespan~new(3652058, 23, 59, 59, 999999) =&gt; 3652058.23:59:59.999999
+.timespan~new(3652059, 0, 0, 0, 0) =&gt; 40.19
+.timespan~new(3652059, 99, 0, 0, 0) =&gt; 88.907
+.timespan~new(x, 99, 0, 0, 0) =&gt; 88.904
+.timespan~new(-1, 0, 0, 0, 0) =&gt; 88.904
+.timespan~new(1.5, 0, 0, 0, 0) =&gt; 88.904
+.timespan~new(999999999, 0, 0, 0) =&gt; 40.19
+.timespan~new(1000000000, 0, 0, 0) =&gt; 88.904
+.timespan~new(0, 24, 0, 0, 0) =&gt; 88.907
+.timespan~new(0, 0, 60, 0, 0) =&gt; 88.907
+.timespan~new(0, 0, 0, 60, 0) =&gt; 88.907
+.timespan~new(0, 0, 0, 0, 1000000) =&gt; 88.907
+.timespan~new(0, 0, 0, 0, -1) =&gt; 88.907
+.timespan~new(24, 0, 0) =&gt; 88.907
+.timespan~new(1, "x", 0) =&gt; 88.907
+.timespan~new(1, 1.5) =&gt; 88.907
+.timespan~new(315537897599999999) =&gt; 3652058.23:59:59.999999
+.timespan~new(315537897600000000) =&gt; 40.19
+.timespan~new("-315537897600000000") =&gt; 40.19
+.timespan~new(999999999999999999) =&gt; 40.19
+.timespan~new(1000000000000000000) =&gt; 88.903
+.timespan~new(1.5) =&gt; 88.903
+.timespan~new("x") =&gt; 88.903
+.timespan~new("") =&gt; 88.903
+</code></pre>
+<div class="rule" id="r-class.timespan.from"><a href="#r-class.timespan.from">[class.timespan.from]</a></div>
+<p><code>fromDays</code>, <code>fromHours</code>, <code>fromMinutes</code>, <code>fromSeconds</code> and <code>fromMicroseconds</code>
+take one number, which may have a fraction and a sign, and answer the span of
+that many days, hours, minutes, seconds or microseconds. The count of
+microseconds is the number multiplied by the microseconds of the unit, rounded
+to 18 significant digits whatever <code>NUMERIC DIGITS</code> the program has set, and
+with a part of a microsecond that is left dropped toward zero: <code>fromSeconds</code>
+of 0.0000019 is 1 microsecond and of -0.0000019 is -1. Each method sends <code>new</code>
+to the receiver with that count as its only argument (<a href="#r-class.timespan.sends.new">the sends
+rule</a>), so that a count outside the range raises
+<code>SYNTAX 40.19</code> and one of 1000000000000000000 or more in size raises
+<code>SYNTAX 88.903</code>, as <a href="#r-class.timespan.new.checks">the checks of <code>new</code></a> say. A
+value that is no number raises <code>SYNTAX 88.902</code>; a missing argument raises
+<code>SYNTAX 93.901</code> and a second one <code>SYNTAX 93.902</code>.</p>
+<pre><code class="language-rexx">say .timespan~fromDays(1.5) .timespan~fromDays('-1.5')
+say .timespan~fromHours(1.5) .timespan~fromMinutes(0.5),
+  .timespan~fromSeconds(90)
+say .timespan~fromMicroseconds(1234567) .timespan~fromMicroseconds(1.6),
+  .timespan~fromMicroseconds('-1.6')
+say .timespan~fromSeconds(0.0000019) .timespan~fromSeconds('-0.0000019')
+say .timespan~fromMinutes(0.00000099) .timespan~fromDays(0.0000001)
+say .timespan~fromSeconds(123456789012.1234567)
+say .timespan~fromMicroseconds(123456789012345678.9)
+say .timespan~fromSeconds(1e3) .timespan~fromDays(' 2 ') .timespan~fromDays(0)
+numeric digits 4
+say .timespan~fromSeconds(1234567.1234567) .timespan~fromHours(0.00123456)
+numeric digits 9
+call try '.timespan~fromDays(3652058)'
+call try '.timespan~fromDays(3652059)'
+call try '.timespan~fromDays("-3652059")'
+call try '.timespan~fromDays(11574074)'
+call try '.timespan~fromDays(11574075)'
+call try '.timespan~fromSeconds(999999999999)'
+call try '.timespan~fromSeconds(1000000000000)'
+call try '.timespan~fromDays("x")'
+call try '.timespan~fromHours("")'
+call try '.timespan~fromMinutes(.nil)'
+call try '.timespan~fromSeconds'
+call try '.timespan~fromMicroseconds(1, 2)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">1.12:00:00.000000 -1.12:00:00.000000
+01:30:00.000000 00:00:30.000000 00:01:30.000000
+00:00:01.234567 00:00:00.000001 -00:00:00.000001
+00:00:00.000001 -00:00:00.000001
+00:00:00.000059 00:00:00.008640
+1428898.00:30:12.123457
+1428898.00:30:12.345679
+00:16:40.000000 2.00:00:00.000000 00:00:00.000000
+14.06:56:07.123456 00:00:04.444416
+.timespan~fromDays(3652058) =&gt; 3652058.00:00:00.000000
+.timespan~fromDays(3652059) =&gt; 40.19
+.timespan~fromDays("-3652059") =&gt; 40.19
+.timespan~fromDays(11574074) =&gt; 40.19
+.timespan~fromDays(11574075) =&gt; 88.903
+.timespan~fromSeconds(999999999999) =&gt; 40.19
+.timespan~fromSeconds(1000000000000) =&gt; 88.903
+.timespan~fromDays("x") =&gt; 88.902
+.timespan~fromHours("") =&gt; 88.902
+.timespan~fromMinutes(.nil) =&gt; 88.902
+.timespan~fromSeconds =&gt; 93.901
+.timespan~fromMicroseconds(1, 2) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.timespan.fromtime"><a href="#r-class.timespan.fromtime">[class.timespan.fromtime]</a></div>
+<p><code>fromNormalTime</code>, <code>fromCivilTime</code> and <code>fromLongTime</code> read a time of day that
+is written in the form of the option N, C or L of
+<a href="../builtins/time.html#r-bif.time.out.clock">TIME</a>: <code>hh:mm:ss</code>, <code>h:mmam</code> or <code>h:mmpm</code>, and
+<code>hh:mm:ss.f</code> where <code>f</code> is one to six digits, taken as the leading digits of
+the microseconds. The hour of a civil time has one or two digits and is from 1
+to 12; <code>am</code> and <code>pm</code> are lower case. The answer is the span from midnight to
+that time of day, so it is never negative and less than a day. Unlike the
+methods of <code>DateTime</code> they take no offset. A string that is not of the form,
+an hour past 23 (past 12 for the civil form, and 0 is no civil hour), and
+minutes or seconds past 59 raise <code>SYNTAX 88.918</code>. Without the string each
+method raises <code>SYNTAX 93.901</code>, and a second argument raises <code>SYNTAX 93.902</code>.
+Each sends <code>new</code> to the receiver with the count of microseconds as its only
+argument (<a href="#r-class.timespan.sends.new">the sends rule</a>).</p>
+<pre><code class="language-rexx">say .timespan~fromNormalTime('13:45:09') .timespan~fromNormalTime('00:00:00')
+say .timespan~fromCivilTime('1:45pm') .timespan~fromCivilTime('01:45pm')
+say .timespan~fromCivilTime('12:00am') .timespan~fromCivilTime('12:59pm')
+say .timespan~fromLongTime('13:45:09.123456'),
+    .timespan~fromLongTime('13:45:09.1'),
+    .timespan~fromLongTime('13:45:09.0001')
+call try '.timespan~fromNormalTime("24:00:00")'
+call try '.timespan~fromNormalTime("12:60:00")'
+call try '.timespan~fromNormalTime("1:00:00")'
+call try '.timespan~fromNormalTime("13:45")'
+call try '.timespan~fromCivilTime("0:30am")'
+call try '.timespan~fromCivilTime("13:30pm")'
+call try '.timespan~fromCivilTime("1:45PM")'
+call try '.timespan~fromCivilTime("1:45 pm")'
+call try '.timespan~fromLongTime("13:45:09")'
+call try '.timespan~fromLongTime("13:45:09.1234567")'
+call try '.timespan~fromNormalTime("")'
+call try '.timespan~fromNormalTime'
+call try '.timespan~fromCivilTime'
+call try '.timespan~fromLongTime'
+call try '.timespan~fromNormalTime("13:45:09", 0)'
+call try '.timespan~fromCivilTime("1:45pm", 0)'
+call try '.timespan~fromLongTime("13:45:09.1", 0)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">13:45:09.000000 00:00:00.000000
+13:45:00.000000 13:45:00.000000
+00:00:00.000000 12:59:00.000000
+13:45:09.123456 13:45:09.100000 13:45:09.000100
+.timespan~fromNormalTime("24:00:00") =&gt; 88.918
+.timespan~fromNormalTime("12:60:00") =&gt; 88.918
+.timespan~fromNormalTime("1:00:00") =&gt; 88.918
+.timespan~fromNormalTime("13:45") =&gt; 88.918
+.timespan~fromCivilTime("0:30am") =&gt; 88.918
+.timespan~fromCivilTime("13:30pm") =&gt; 88.918
+.timespan~fromCivilTime("1:45PM") =&gt; 88.918
+.timespan~fromCivilTime("1:45 pm") =&gt; 88.918
+.timespan~fromLongTime("13:45:09") =&gt; 88.918
+.timespan~fromLongTime("13:45:09.1234567") =&gt; 88.918
+.timespan~fromNormalTime("") =&gt; 88.918
+.timespan~fromNormalTime =&gt; 93.901
+.timespan~fromCivilTime =&gt; 93.901
+.timespan~fromLongTime =&gt; 93.901
+.timespan~fromNormalTime("13:45:09", 0) =&gt; 93.902
+.timespan~fromCivilTime("1:45pm", 0) =&gt; 93.902
+.timespan~fromLongTime("13:45:09.1", 0) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.timespan.fromstringformat"><a href="#r-class.timespan.fromstringformat">[class.timespan.fromstringformat]</a></div>
+<p><code>fromStringFormat</code> reads a span written in the form of <a href="#r-class.timespan.string">the string
+rule</a>: an optional minus sign, an optional count of
+days and a period, hours, minutes and seconds with colons between them, a
+period, and microseconds, as in <code>1.02:03:04.000005</code> or <code>-23:59:59.500000</code>. The
+text that <code>string</code> answers for a span is read back as the same span, a negative
+span under an hour included (<a href="#r-class.timespan.deviation.133">Deviation 133</a>).
+The text is read strictly (<a href="#r-class.timespan.deviation.132">Deviation 132</a>):
+only a text that <code>string</code> can answer is accepted, so that a string without the
+microseconds, as <code>01:02:03</code>, one that is not of the form at all, such as <code>x</code> or
+the empty string, one with a blank, a plus sign or a value out of range, and one
+for a span outside the range of <a href="#r-class.timespan.value">the value rule</a> raise
+<code>SYNTAX 88.918</code>. The method sends no <code>new</code>, and answers a plain <code>TimeSpan</code>
+whatever its receiver is. A missing argument raises <code>SYNTAX 93.901</code> and a second
+one <code>SYNTAX 93.902</code>.</p>
+<pre><code class="language-rexx">say .timespan~fromStringFormat('1.02:03:04.000005')
+say .timespan~fromStringFormat('-1.02:03:04.000005')
+say .timespan~fromStringFormat('01:02:03.000005')
+say .timespan~fromStringFormat('-23:59:59.500000')
+say .timespan~fromStringFormat('00:00:00.000000')
+say .timespan~fromStringFormat('3652058.23:59:59.999999')
+say .timespan~fromStringFormat('-3652058.23:59:59.999999')
+do s over .array~of(0, 1, 90000000, 86400000000, '-86400000000',,
+    '-3600000000', '-5400000001', 1234567890123)
+  t = .timespan~new(s)
+  say t~string (.timespan~fromStringFormat(t~string) = t)
+end
+call try '.timespan~fromStringFormat("01:02:03")'
+call try '.timespan~fromStringFormat("1.02:03")'
+call try '.timespan~fromStringFormat("x")'
+call try '.timespan~fromStringFormat("")'
+call try '.timespan~fromStringFormat("3652059.00:00:00.000000")'
+call try '.timespan~fromStringFormat'
+call try '.timespan~fromStringFormat("01:02:03.000005", 1)'
+call try '.sub~fromStringFormat("1.02:03:04.000005")~class~id'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class sub subclass timespan
+</code></pre>
+<pre><code class="language-output">1.02:03:04.000005
+-1.02:03:04.000005
+01:02:03.000005
+-23:59:59.500000
+00:00:00.000000
+3652058.23:59:59.999999
+-3652058.23:59:59.999999
+00:00:00.000000 1
+00:00:00.000001 1
+00:01:30.000000 1
+1.00:00:00.000000 1
+-1.00:00:00.000000 1
+-01:00:00.000000 1
+-01:30:00.000001 1
+14.06:56:07.890123 1
+.timespan~fromStringFormat("01:02:03") =&gt; 88.918
+.timespan~fromStringFormat("1.02:03") =&gt; 88.918
+.timespan~fromStringFormat("x") =&gt; 88.918
+.timespan~fromStringFormat("") =&gt; 88.918
+.timespan~fromStringFormat("3652059.00:00:00.000000") =&gt; 88.918
+.timespan~fromStringFormat =&gt; 93.901
+.timespan~fromStringFormat("01:02:03.000005", 1) =&gt; 93.902
+.sub~fromStringFormat("1.02:03:04.000005")~class~id =&gt; TimeSpan
+</code></pre>
+<h2 id="reading-a-span"><a class="header" href="#reading-a-span">Reading a span</a></h2>
+<div class="rule" id="r-class.timespan.parts"><a href="#r-class.timespan.parts">[class.timespan.parts]</a></div>
+<p><code>days</code>, <code>hours</code>, <code>minutes</code>, <code>seconds</code> and <code>microseconds</code> take no argument and
+answer the parts of the span as whole numbers that are never negative: they
+describe its size, not its sign. <code>hours</code> is from 0 to 23, <code>minutes</code> and
+<code>seconds</code> from 0 to 59, <code>microseconds</code> from 0 to 999999, and <code>days</code> the whole
+days. A span of 90 seconds has 0 days, 0 hours, 1 minute and 30 seconds, and
+the span of -90 seconds has the same parts. <code>sign</code> answers -1, 0 or 1 as the
+span is below, at or above zero. <code>duration</code> answers a new span that is not
+below zero and has the size of the receiver; this is stated for a span shorter
+than 1000 seconds, one whose count has at most nine digits, and what
+<code>duration</code> answers for a longer one is not stated here. It makes its answer by
+sending <code>new</code> to the class of the receiver (<a href="#r-class.timespan.sends.parts">the sends
+rule</a>). Any argument raises <code>SYNTAX 93.902</code> for
+each of these methods.</p>
+<pre><code class="language-rexx">t = .timespan~new(3, 7, 41, 52, 250)
+n = .timespan~new('-286912000250')
+z = .timespan~new(0)
+do s over .array~of(t, n, z)
+  say s~days s~hours s~minutes s~seconds s~microseconds '|' s~sign
+end
+say t~days~class~id t~sign~class~id t~duration~class~id
+do s over .array~of('325000100', '-325000100', 0, '-1', 1, '-86400000')
+  say .timespan~new(s)~duration .timespan~new(s)~sign
+end
+say .timespan~new('-90000000')~minutes .timespan~new('-90000000')~seconds
+say .timespan~new('-86400000000')~days .timespan~new('-86399999999')~days
+say .timespan~new(315537897599999999)~days,
+  .timespan~new('-315537897599999999')~hours
+call try 't~days(1)'
+call try 't~hours(1)'
+call try 't~minutes(1)'
+call try 't~seconds(1)'
+call try 't~microseconds(1)'
+call try 't~sign(1)'
+call try 't~duration(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">3 7 41 52 250 | 1
+3 7 41 52 250 | -1
+0 0 0 0 0 | 0
+String String TimeSpan
+00:05:25.000100 1
+00:05:25.000100 -1
+00:00:00.000000 0
+00:00:00.000001 -1
+00:00:00.000001 1
+00:01:26.400000 -1
+1 30
+1 0
+3652058 23
+t~days(1) =&gt; 93.902
+t~hours(1) =&gt; 93.902
+t~minutes(1) =&gt; 93.902
+t~seconds(1) =&gt; 93.902
+t~microseconds(1) =&gt; 93.902
+t~sign(1) =&gt; 93.902
+t~duration(1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.timespan.total"><a href="#r-class.timespan.total">[class.timespan.total]</a></div>
+<p><code>totalDays</code>, <code>totalHours</code>, <code>totalMinutes</code>, <code>totalSeconds</code> and
+<code>totalMicroseconds</code> answer the whole span in that unit, with a fraction when
+it does not come out even and with the sign of the span; <code>totalMicroseconds</code>,
+the count itself, is always a whole number. The others are the count divided
+by the microseconds of the unit, in 18 significant digits, rounded, whatever
+<code>NUMERIC DIGITS</code> the program has set, so that a long span has fewer decimals
+and a short one more, and the same figure is written without an exponent and
+without trailing zeros. Any argument raises <code>SYNTAX 93.902</code>.</p>
+<pre><code class="language-rexx">t = .timespan~new(3, 7, 41, 52, 250)
+n = .timespan~new('-286912000250')
+do s over .array~of(t, n, .timespan~new(0), .timespan~new(1))
+  say s~totalDays s~totalHours
+  say s~totalMinutes s~totalSeconds s~totalMicroseconds
+end
+numeric digits 4
+say t~totalDays t~totalSeconds
+numeric digits 9
+m = .timespan~new(315537897599999999)
+say m~totalDays m~totalHours m~totalSeconds
+say .timespan~fromDays(1.5)~totalDays .timespan~fromHours(36)~totalDays
+say .timespan~fromSeconds(1)~totalMinutes,
+  .timespan~fromSeconds(100)~totalHours
+call try 't~totalDays(1)'
+call try 't~totalHours(1)'
+call try 't~totalMinutes(1)'
+call try 't~totalSeconds(1)'
+call try 't~totalMicroseconds(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">3.32074074363425926 79.6977778472222222
+4781.86667083333333 286912.00025 286912000250
+-3.32074074363425926 -79.6977778472222222
+-4781.86667083333333 -286912.00025 -286912000250
+0 0
+0 0 0
+0.0000000000115740740740740741 0.000000000277777777777777778
+0.0000000166666666666666667 0.000001 1
+3.32074074363425926 286912.00025
+3652058.99999999999 87649415.9999999997 315537897599.999999
+1.5 1.5
+0.0166666666666666667 0.0277777777777777778
+t~totalDays(1) =&gt; 93.902
+t~totalHours(1) =&gt; 93.902
+t~totalMinutes(1) =&gt; 93.902
+t~totalSeconds(1) =&gt; 93.902
+t~totalMicroseconds(1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.timespan.string"><a href="#r-class.timespan.string">[class.timespan.string]</a></div>
+<p><code>string</code> and <code>makeString</code> take no argument and answer the span as text in the
+form <code>-ddddd.hh:mm:ss.uuuuuu</code>: a minus sign when the span is below zero, the
+days and a period only when the span has days, with no leading zeros, then
+hours, minutes and seconds with two digits each, and the microseconds with
+six. So a span of no days and no minus sign is 15 characters long, and the
+string value of a span is this text (<a href="index.html#r-class.index.string">the string-value
+rule</a>). <code>makeString</code> answers what <code>string</code> answers, and
+both answer a <code>String</code>. Any argument raises <code>SYNTAX 93.902</code>. The messages that
+they send are in <a href="#r-class.timespan.sends.parts">the sends rule</a>.</p>
+<pre><code class="language-rexx">do s over .array~of(0, 1, 90000000, '-90000000', 86400000000,,
+    '-86400000000', 93784000005, 1234567890123, 315537897599999999)
+  t = .timespan~new(s)
+  say t~string t~makeString t~string~class~id (t~string == t~makeString)
+end
+say .timespan~new(0)~string~length .timespan~new(1, 2, 3, 4, 5)~string~length
+say .timespan~new(10, 2, 3)~string .timespan~new(0, 2, 3)~makeString
+call try '.timespan~new(1)~string(1)'
+call try '.timespan~new(1)~makeString(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">00:00:00.000000 00:00:00.000000 String 1
+00:00:00.000001 00:00:00.000001 String 1
+00:01:30.000000 00:01:30.000000 String 1
+-00:01:30.000000 -00:01:30.000000 String 1
+1.00:00:00.000000 1.00:00:00.000000 String 1
+-1.00:00:00.000000 -1.00:00:00.000000 String 1
+1.02:03:04.000005 1.02:03:04.000005 String 1
+14.06:56:07.890123 14.06:56:07.890123 String 1
+3652058.23:59:59.999999 3652058.23:59:59.999999 String 1
+15 17
+10:02:03.000000 00:02:03.000000
+.timespan~new(1)~string(1) =&gt; 93.902
+.timespan~new(1)~makeString(1) =&gt; 93.902
+</code></pre>
+<h2 id="arithmetic"><a class="header" href="#arithmetic">Arithmetic</a></h2>
+<div class="rule" id="r-class.timespan.add"><a href="#r-class.timespan.add">[class.timespan.add]</a></div>
+<p>Each of <code>addWeeks</code>, <code>addDays</code>, <code>addHours</code>, <code>addMinutes</code>, <code>addSeconds</code> and
+<code>addMicroseconds</code> takes one number and answers a new span, of the class of the
+receiver, that is the receiver lengthened by that many weeks, days, hours,
+minutes, seconds or microseconds, and shortened by a negative number; the
+receiver is not changed. A fraction is allowed: <code>addDays(1.5)</code> is a day and
+twelve hours. The new count of microseconds is the receiver's count plus the
+amount in microseconds, the sum rounded to 18 significant digits, and a part
+of a microsecond that is left is dropped toward zero, whatever the sign of the
+sum (a span of -5 microseconds that is given 0.5 microseconds becomes -4, and
+one of 5 given -5.5 becomes 0). A value that is no number raises
+<code>SYNTAX 88.902</code>, a sum outside the range of <a href="#r-class.timespan.value">the value
+rule</a> raises <code>SYNTAX 40.19</code>, and an amount of
+1000000000000000000 microseconds or more in size raises <code>SYNTAX 88.903</code>. A
+missing argument raises <code>SYNTAX 93.901</code> and a second <code>SYNTAX 93.902</code>.</p>
+<pre><code class="language-rexx">t = .timespan~new(1, 2, 3, 4, 5)
+say t~addDays(1) t~addDays(-1) t~addDays(0.5) t~addDays(0)
+say t~addWeeks(1) t~addWeeks(-1) t~addWeeks(0.5)
+say t~addHours(1) t~addHours(-26) t~addHours(0.5)
+say t~addMinutes(1) t~addMinutes(-1500) t~addMinutes(0.5)
+say t~addSeconds(1) t~addSeconds(-0.5) t~addSeconds(0.0000015)
+say t~addMicroseconds(1) t~addMicroseconds(-6) t~addMicroseconds(1.5),
+  t~addMicroseconds(-1.5)
+say t~addMicroseconds(0.96) t~addMicroseconds(-0.96)
+say .timespan~new(-5)~addMicroseconds(0.5),
+  .timespan~new(-5)~addMicroseconds(-0.5)
+say .timespan~new(5)~addMicroseconds(-5.5),
+  .timespan~new(0)~addMicroseconds(-1.5)
+say .timespan~new(0)~addDays(-1.5) .timespan~new(0)~addDays(1.5)
+say t~addDays(1)~class~id (t~addDays(0) = t) (t~addDays(1) = t)
+u = .timespan~new(0)~addMicroseconds(1e17)
+say u~addMicroseconds(1e17)~addMicroseconds(1e17)
+call try 't~addDays(3652058)'
+call try 't~addDays("-3652059")'
+call try 't~addDays(1e9)'
+call try 't~addHours(1e8)'
+call try 't~addMicroseconds(1e18)'
+call try 't~addDays("x")'
+call try 't~addWeeks("")'
+call try 't~addMicroseconds(.nil)'
+call try 't~addDays'
+call try 't~addSeconds(1, 2)'
+call try 't~addMonths(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">2.02:03:04.000005 02:03:04.000005 1.14:03:04.000005 1.02:03:04.000005
+8.02:03:04.000005 -5.21:56:55.999995 4.14:03:04.000005
+1.03:03:04.000005 00:03:04.000005 1.02:33:04.000005
+1.02:04:04.000005 01:03:04.000005 1.02:03:34.000005
+1.02:03:05.000005 1.02:03:03.500005 1.02:03:04.000006
+1.02:03:04.000006 1.02:03:03.999999 1.02:03:04.000006 1.02:03:04.000003
+1.02:03:04.000005 1.02:03:04.000004
+-00:00:00.000004 -00:00:00.000005
+00:00:00.000000 -00:00:00.000001
+-1.12:00:00.000000 1.12:00:00.000000
+TimeSpan 1 0
+3472222.05:20:00.000000
+t~addDays(3652058) =&gt; 40.19
+t~addDays("-3652059") =&gt; -3652057.21:56:55.999995
+t~addDays(1e9) =&gt; 88.903
+t~addHours(1e8) =&gt; 40.19
+t~addMicroseconds(1e18) =&gt; 88.903
+t~addDays("x") =&gt; 88.902
+t~addWeeks("") =&gt; 88.902
+t~addMicroseconds(.nil) =&gt; 88.902
+t~addDays =&gt; 93.901
+t~addSeconds(1, 2) =&gt; 93.902
+t~addMonths(1) =&gt; 97.1
+</code></pre>
+<div class="rule" id="r-class.timespan.plus"><a href="#r-class.timespan.plus">[class.timespan.plus]</a></div>
+<p><code>+</code> takes a <code>TimeSpan</code> or a <code>DateTime</code>. With a <code>TimeSpan</code> it answers a new span,
+of the class of the receiver, whose count is the sum of the two counts. With a
+<code>DateTime</code> it answers a new instance of the class of that argument: the moment
+that is the argument's fields moved forward by the span (back for a negative
+span), with the offset of the argument (<a href="#r-class.timespan.deviation.127">Deviation
+127</a>), so that <code>span + moment</code> and <a href="datetime.html#r-class.datetime.plus"><code>moment + span</code></a> are equal, with the same fields and offset. Any
+other argument raises <code>SYNTAX 88.914</code>; a result outside the range of <a href="#r-class.timespan.value">the value
+rule</a> or of the moments of <code>DateTime</code> raises <code>SYNTAX 40.19</code>. The prefix <code>+</code> has no argument and answers a new span of the class of
+the receiver with the same count. A second argument raises <code>SYNTAX 93.902</code>; the
+message <code>+</code> with no argument is the prefix form.</p>
+<pre><code class="language-rexx">a = .timespan~new(1, 2, 3, 4, 5)
+b = .timespan~fromSeconds(90)
+say a + b a + a~copy a + .timespan~new(0)
+say (a + b)~class~id (a + b = b + a) (+a) (+a)~class~id (+a == a)
+say b + .timespan~new('-90000000') .timespan~new('-5') + .timespan~new('-5')
+d = .datetime~new(2016, 2, 29, 9, 8, 7, 12345, 120)
+say a + d
+say ((a + d)~string == (d + a)~string)
+say (a + d)~class~id (a + .sub~new(2016, 1, 1))~class~id
+say .timespan~fromDays(1) + .datetime~minDate
+say .timespan~new('-86400000000') + .datetime~new(2016, 1, 1)
+say a~'+'
+call try 'a + 5'
+call try 'a + "x"'
+call try 'a + .nil'
+call try 'a + a~class'
+call try 'a + .timespan~new(315537897599999999)'
+call try '.timespan~new(315537897599999999) + a'
+call try 'a + .datetime~maxDate'
+call try 'a~"+"(b, 1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class sub subclass datetime
+</code></pre>
+<pre><code class="language-output">1.02:04:34.000005 2.04:06:08.000010 1.02:03:04.000005
+TimeSpan 1 1.02:03:04.000005 TimeSpan 1
+00:00:00.000000 -00:00:00.000010
+2016-03-01T11:11:11.012350
+1
+DateTime SUB
+0001-01-02T00:00:00.000000
+2015-12-31T00:00:00.000000
+1.02:03:04.000005
+a + 5 =&gt; 88.914
+a + "x" =&gt; 88.914
+a + .nil =&gt; 88.914
+a + a~class =&gt; 88.914
+a + .timespan~new(315537897599999999) =&gt; 40.19
+.timespan~new(315537897599999999) + a =&gt; 40.19
+a + .datetime~maxDate =&gt; 40.19
+a~"+"(b, 1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.timespan.minus"><a href="#r-class.timespan.minus">[class.timespan.minus]</a></div>
+<p><code>-</code> has two forms. With a <code>TimeSpan</code> as its argument it answers a new span, of
+the class of the receiver, whose count is the receiver's less the argument's.
+With no argument, as the prefix <code>-</code>, it answers a new span of the class of the
+receiver with the negated count; the negation of a span of 0 is 0. Any other
+argument, a <code>DateTime</code> included, raises <code>SYNTAX 93.948</code>, and a result outside
+the range of <a href="#r-class.timespan.value">the value rule</a> raises <code>SYNTAX 40.19</code>. A
+second argument raises <code>SYNTAX 93.902</code>; the message <code>-</code> with no argument is
+the prefix form.</p>
+<pre><code class="language-rexx">a = .timespan~new(1, 2, 3, 4, 5)
+b = .timespan~fromSeconds(90)
+say a - b b - a a - a
+say (-a) (-b) (-.timespan~new(0))
+say (-a)~class~id (a - b)~class~id (a - b + b = a) (- -a == a)
+say .timespan~new(315537897599999999) - .timespan~new(1)
+say -.timespan~new(315537897599999999)
+say .timespan~new('-315537897599999999') - .timespan~new(0)
+call try 'a - 5'
+call try 'a - "x"'
+call try 'a - .nil'
+call try 'a - .datetime~new(2016, 1, 1)'
+call try '.timespan~new(315537897599999999) - -a'
+call try '.timespan~new("-315537897599999999") - a'
+call try 'a~"-"(b, 1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">1.02:01:34.000005 -1.02:01:34.000005 00:00:00.000000
+-1.02:03:04.000005 -00:01:30.000000 00:00:00.000000
+TimeSpan TimeSpan 1 1
+3652058.23:59:59.999998
+-3652058.23:59:59.999999
+-3652058.23:59:59.999999
+a - 5 =&gt; 93.948
+a - "x" =&gt; 93.948
+a - .nil =&gt; 93.948
+a - .datetime~new(2016, 1, 1) =&gt; 93.948
+.timespan~new(315537897599999999) - -a =&gt; 40.19
+.timespan~new("-315537897599999999") - a =&gt; 40.19
+a~"-"(b, 1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.timespan.times"><a href="#r-class.timespan.times">[class.timespan.times]</a></div>
+<p><code>*</code> takes one number, which may have a fraction and a sign, and answers a new
+span, of the class of the receiver, whose count is the receiver's count
+multiplied by the number: the product is rounded to 18 significant digits,
+whatever <code>NUMERIC DIGITS</code> the program has set, and a part of a microsecond
+that is left is dropped toward zero. The argument is read as a number: a
+string that is no number, <code>.nil</code> and another span raise <code>SYNTAX 41.1</code>. A
+product outside the range of <a href="#r-class.timespan.value">the value rule</a> raises
+<code>SYNTAX 40.19</code>, and one of 1000000000000000000 microseconds or more in size
+raises <code>SYNTAX 88.903</code>. A missing argument raises <code>SYNTAX 93.901</code> and a second
+one <code>SYNTAX 93.902</code>.</p>
+<pre><code class="language-rexx">a = .timespan~new(1, 2, 3, 4, 5)
+b = .timespan~fromSeconds(90)
+say a * 2 a * 0.5 a * -1
+say a * 0 a * ' 2 ' a * '2e1'
+say b * 1.5 b * 1.0000005 b * 0.0000005 b * -0.0000005
+say .timespan~new(10) * 0.25 .timespan~new(10) * -0.25 .timespan~new(-7) * 0.9
+say .timespan~new(100) * 1.005 .timespan~new(10) * 1e16
+m = .timespan~new(315537897599999999)
+say m * 0.5 m * 0.3 m * 0.99999999999999
+say m * 1e-10 m * 1e-18
+numeric digits 4
+say .timespan~new(10000000000) * 1.23456789 b * 1.5
+numeric digits 9
+say (a * 2)~class~id (a * 2 * 2)
+call try 'a * "x"'
+call try 'a * ""'
+call try 'a * b'
+call try 'a * .nil'
+call try 'm * 1.0000000000000001'
+call try 'm * 2'
+call try '.timespan~new(10) * 1e17'
+call try 'a~"*"'
+call try 'a~"*"(2, 3)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">2.04:06:08.000010 13:01:32.000002 -1.02:03:04.000005
+00:00:00.000000 2.04:06:08.000010 21.17:01:20.000100
+00:02:15.000000 00:01:30.000045 00:00:00.000045 -00:00:00.000045
+00:00:00.000002 -00:00:00.000002 -00:00:00.000006
+00:00:00.000100 1157407.09:46:40.000000
+1826029.12:00:00.000000 1095617.16:47:59.999999 3652058.23:59:59.996844
+00:00:31.553789 00:00:00.000000
+03:25:45.678900 00:02:15.000000
+TimeSpan 4.08:12:16.000020
+a * "x" =&gt; 41.1
+a * "" =&gt; 41.1
+a * b =&gt; 41.1
+a * .nil =&gt; 41.1
+m * 1.0000000000000001 =&gt; 40.19
+m * 2 =&gt; 40.19
+.timespan~new(10) * 1e17 =&gt; 88.903
+a~"*" =&gt; 93.901
+a~"*"(2, 3) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.timespan.divide"><a href="#r-class.timespan.divide">[class.timespan.divide]</a></div>
+<p><code>/</code> and <code>%</code> take one number and answer the same new span, of the class of the
+receiver, whose count is the integer part of the receiver's count divided by
+the number: the quotient is cut off toward zero, not rounded. That is the
+whole number that the operator <code>%</code> gives to the count, so it has at most 18
+digits; a quotient with more raises <code>SYNTAX 26.11</code>. A number of 0 raises
+<code>SYNTAX 42.3</code>, and a string that is no number, <code>.nil</code> or another span raises
+<code>SYNTAX 41.1</code>. A quotient outside the range of <a href="#r-class.timespan.value">the value
+rule</a> raises <code>SYNTAX 40.19</code>. A missing argument raises
+<code>SYNTAX 93.901</code> and a second one <code>SYNTAX 93.902</code>. A subclass that overrides
+<code>%</code> changes <code>/</code> too (<a href="#r-class.timespan.sends.arithmetic">the sends rule</a>).</p>
+<pre><code class="language-rexx">a = .timespan~new(1, 2, 3, 4, 5)
+b = .timespan~fromSeconds(90)
+say a / 2 a % 2 a / 0.5
+say a / 3 a / 1000000
+say b / 7 b % 7 (-b) / 7 (-b) % 7
+say .timespan~new(10) / 4 .timespan~new(-7) / 2 .timespan~new(9) / 0.4
+say a / ' 2 ' a / '2e0' (a / 2)~class~id (a / 2 = a % 2)
+m = .timespan~new(315537897599999999)
+say m / 3 m / 7 m / 1.00000000000001
+say m / 1e17 m / 1e20
+call try 'a / 0'
+call try 'a % 0'
+call try 'a / "x"'
+call try 'a % .nil'
+call try 'a / b'
+call try 'm / 0.3'
+call try 'm % 0.3'
+call try 'm / 0.5'
+call try 'a~"/"'
+call try 'a~"%"(2, 3)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">13:01:32.000002 13:01:32.000002 2.04:06:08.000010
+08:41:01.333335 00:00:00.093784
+00:00:12.857142 00:00:12.857142 -00:00:12.857142 -00:00:12.857142
+00:00:00.000002 -00:00:00.000003 00:00:00.000022
+13:01:32.000002 13:01:32.000002 TimeSpan 1
+1217352.23:59:59.999999 521722.17:08:34.285714 3652058.23:59:59.996843
+00:00:00.000003 00:00:00.000000
+a / 0 =&gt; 42.3
+a % 0 =&gt; 42.3
+a / "x" =&gt; 41.1
+a % .nil =&gt; 41.1
+a / b =&gt; 41.1
+m / 0.3 =&gt; 26.11
+m % 0.3 =&gt; 26.11
+m / 0.5 =&gt; 40.19
+a~"/" =&gt; 93.901
+a~"%"(2, 3) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.timespan.remainder"><a href="#r-class.timespan.remainder">[class.timespan.remainder]</a></div>
+<p><code>//</code> takes one number and answers a new span, of the class of the receiver,
+whose count is the remainder of the receiver's count divided by the number, as
+the operator <code>//</code> gives it: the remainder has the sign of the receiver's
+count, whatever the sign of the number. It must be a whole number of
+microseconds: a divisor with a fraction that leaves another remainder raises
+<code>SYNTAX 88.903</code>, and a quotient with more than 18 digits raises
+<code>SYNTAX 26.12</code>. A number of 0 raises <code>SYNTAX 42.3</code>, and a string that is no
+number, <code>.nil</code> or another span raises <code>SYNTAX 41.1</code>. A missing argument raises
+<code>SYNTAX 93.901</code> and a second one <code>SYNTAX 93.902</code>.</p>
+<pre><code class="language-rexx">a = .timespan~new(1, 2, 3, 4, 5)
+b = .timespan~fromSeconds(90)
+say a // 7 a // -7 (-a) // 7 (-a) // -7
+say b // 7 .timespan~new(7) // 2 .timespan~new(-7) // 2
+say a // 1000000 a // 86400000000 (a // 7)~class~id
+say .timespan~new(9) // 0.5 .timespan~new(9) // 4.5
+m = .timespan~new(315537897599999999)
+say m // 7 m // 1e18 m // 0.5
+call try '.timespan~new(9) // 2.5'
+call try '.timespan~new(9) // 0.4'
+call try 'm // 0.3'
+call try 'a // 0'
+call try 'a // "x"'
+call try 'a // .nil'
+call try 'a // b'
+call try 'a~"//"'
+call try 'a~"//"(2, 3)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">00:00:00.000003 00:00:00.000003 -00:00:00.000003 -00:00:00.000003
+00:00:00.000006 00:00:00.000001 -00:00:00.000001
+00:00:00.000005 02:03:04.000005 TimeSpan
+00:00:00.000000 00:00:00.000000
+00:00:00.000001 3652058.23:59:59.999999 00:00:00.000000
+.timespan~new(9) // 2.5 =&gt; 88.903
+.timespan~new(9) // 0.4 =&gt; 88.903
+m // 0.3 =&gt; 26.12
+a // 0 =&gt; 42.3
+a // "x" =&gt; 41.1
+a // .nil =&gt; 41.1
+a // b =&gt; 41.1
+a~"//" =&gt; 93.901
+a~"//"(2, 3) =&gt; 93.902
+</code></pre>
+<h2 id="comparing"><a class="header" href="#comparing">Comparing</a></h2>
+<div class="rule" id="r-class.timespan.compare"><a href="#r-class.timespan.compare">[class.timespan.compare]</a></div>
+<p><code>compareTo</code> takes one argument and answers -1 when the receiver is the shorter
+(the lesser) of the two spans, 0 for two spans of the same count and 1 when it
+is the longer, comparing the signed counts, so that a negative span is less than
+any that is not. The argument is sent <code>isA</code> with <code>TimeSpan</code>, and a <code>TimeSpan</code> is
+then sent <code>totalMicroseconds</code>; the receiver is sent nothing. An argument that is
+no <code>TimeSpan</code> raises <code>SYNTAX 88.914</code> as soon as <code>isA</code> has answered (<a href="#r-class.timespan.deviation.126">Deviation
+126</a>), and the comparison operators raise it for
+such an argument too, <code>.nil</code> excepted (see below). The comparison operators <code>=</code>,
+<code>==</code>, <code>&lt;</code>, <code>&lt;=</code>, <code>&gt;</code>, <code>&gt;=</code>, <code>&lt;&gt;</code>, <code>&gt;&lt;</code>, <code>\=</code>, <code>\==</code>, <code>&lt;&lt;</code>, <code>&lt;&lt;=</code>, <code>&gt;&gt;</code>, <code>&gt;&gt;=</code>,
+<code>\&lt;</code>, <code>\&gt;</code>, <code>\&lt;&lt;</code> and <code>\&gt;&gt;</code> are those of
+<a href="orderable.html#r-class.orderable.compare"><code>Orderable</code></a>, which answer from <code>compareTo</code> of the
+receiver, strict and non-strict ones alike: <code>==</code> is as <code>=</code>, and two spans of the
+same count are equal however they were made. The text of the instances plays no
+part. A missing argument raises <code>SYNTAX 93.901</code> and a second one <code>SYNTAX 93.902</code>; an operator whose argument is <code>.nil</code> does as <a href="orderable.html#r-class.orderable.compare.nil">the <code>.nil</code>
+rule</a> of <code>Orderable</code> says, and <code>compareTo(.nil)</code>
+raises <code>SYNTAX 88.914</code>. The sort methods order spans by this method (<a href="array.html#r-class.array.sort">the sort
+rule</a>).</p>
+<pre><code class="language-rexx">a = .timespan~new(1, 2, 3, 4, 5)
+b = .timespan~fromMicroseconds(a~totalMicroseconds)
+c = .timespan~new(1, 2, 3, 4, 6)
+n = .timespan~new('-5')
+z = .timespan~new(0)
+say a~compareTo(c) c~compareTo(a) a~compareTo(b) a~compareTo(a)
+say n~compareTo(z) z~compareTo(n) n~compareTo(.timespan~new('-6'))
+say (a = b) (a == b) (a \= b) (a &lt; c) (a &gt; c) (a &lt;= b) (a &gt;= c) (a &lt;&gt; c)
+say (a &gt;&lt; b) (a &lt;&lt; c) (a &gt;&gt; c) (a &lt;&lt;= b) (a &gt;&gt;= c) (a \== c)
+say (a \&lt; c) (a \&gt; c) (a \&lt;&lt; b) (a \&gt;&gt; b)
+say (n &lt; z) (n &lt;&lt; z) (z &gt; n) (n = z) (z = .timespan~fromMicroseconds(0))
+say (a = .nil) (a \= .nil) (a == .nil) (a &lt;&gt; .nil)
+l = .array~of(c, a, z, n, .timespan~fromDays(1))
+say show(l~copy~~sort)
+say show(l~copy~~sortWith(.descendingComparator~new))
+say show(l~copy~~sortWith(.comparator~new))
+call try 'a~compareTo'
+call try 'a~compareTo(b, c)'
+call try 'a &lt; .nil'
+call try 'a \&gt;&gt; .nil'
+exit
+show: procedure
+  s = ''
+  do i over arg(1)
+    s = s i~totalMicroseconds
+  end
+  return s~strip
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">-1 1 0 0
+-1 1 1
+1 1 0 1 0 1 0 1
+0 1 0 1 0 1
+0 1 1 1
+1 1 1 0 1
+0 1 0 1
+-5 0 86400000000 93784000005 93784000006
+93784000006 93784000005 86400000000 0 -5
+-5 0 86400000000 93784000005 93784000006
+a~compareTo =&gt; 93.901
+a~compareTo(b, c) =&gt; 93.902
+a &lt; .nil =&gt; 93.973
+a \&gt;&gt; .nil =&gt; 93.973
+</code></pre>
+<div class="rule" id="r-class.timespan.hashcode"><a href="#r-class.timespan.hashcode">[class.timespan.hashcode]</a></div>
+<p><code>hashCode</code> takes no argument and answers a string of 8 bytes that is computed
+from the count of the span. Two spans of the same count have the same hash
+code, so that equal spans are the same entry of a <code>Set</code> or <code>Table</code>, and an
+instance has the hash code of its copy; spans of different counts may have
+different ones. The bytes are not specified. Any argument raises
+<code>SYNTAX 93.902</code>.</p>
+<pre><code class="language-rexx">a = .timespan~new(1, 2, 3, 4, 5)
+b = .timespan~fromMicroseconds(a~totalMicroseconds)
+c = .timespan~new(1, 2, 3, 4, 6)
+say (a~hashCode == b~hashCode) (a~hashCode == a~copy~hashCode)
+say a~hashCode~length .timespan~new(0)~hashCode~length
+s = .set~new
+s~put(a)
+s~put(b)
+s~put(c)
+say s~items
+t = .table~new
+t[a] = 'x'
+say t[b] t~items
+call try 'a~hashCode(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">1 1
+8 8
+2
+x 1
+a~hashCode(1) =&gt; 93.902
+</code></pre>
+<h2 id="messages-that-a-program-can-override"><a class="header" href="#messages-that-a-program-can-override">Messages that a program can override</a></h2>
+<div class="rule" id="r-class.timespan.sends.new"><a href="#r-class.timespan.sends.new">[class.timespan.sends.new]</a></div>
+<p>The class methods <code>fromDays</code>, <code>fromHours</code>, <code>fromMinutes</code>, <code>fromSeconds</code>,
+<code>fromMicroseconds</code>, <code>fromNormalTime</code>, <code>fromCivilTime</code> and <code>fromLongTime</code> send
+<code>new</code> to the receiver with one argument, the count of microseconds, so that a
+class that overrides its <code>new</code> sees them, and <code>new</code> sends <code>init</code> to the new
+instance with the arguments it got (<a href="index.html#r-class.index.new">the new rule</a>); the
+<code>init</code> of <code>TimeSpan</code> sends nothing to the instance. <code>fromStringFormat</code> sends
+nothing to the receiver and answers a plain <code>TimeSpan</code>. The count is checked by
+<code>init</code> (<a href="#r-class.timespan.new.checks">the checks of <code>new</code></a>), so a count outside
+the range raises its error after <code>new</code> and <code>init</code> were sent. The first example
+prints, for each call, the messages sent in order, with the number of arguments
+after <code>NEW</code> and <code>INIT</code>. The numbers that a program passes are read for their
+string value, and are sent further messages (<a href="index.html#r-class.index.string">the argument
+rule</a>). The one-argument form of <code>new</code> and
+<code>fromMicroseconds</code> read the string value of their argument three times and
+twice. In the other forms of <code>new</code> each argument is read, in the order of the
+arguments, and sent <code>&gt;=</code> with 0 and, but for the days, <code>&lt;=</code> with the greatest
+value of its range (23, 59, 59 and 999999), after which the days are sent <code>*</code>
+with 24, the minutes <code>*</code> with 60 and, in the form of two or three arguments, the
+hours <code>*</code> with 3600; the hours of the forms with days, the seconds and the
+microseconds are read for their string value once more. A value that is not a
+whole number, or a value for the days with more than nine digits, is refused
+after it is read and before <code>&gt;=</code> is sent; a count of the one-argument form is
+refused after its first reading when it is no whole number or
+1000000000000000000 or more in size, and after its second when it is outside the
+range. <code>fromDays</code>, <code>fromHours</code>, <code>fromMinutes</code> and <code>fromSeconds</code> read their
+argument and send it <code>*</code> with 24, 3600, 60 and 1000000. <code>fromNormalTime</code>,
+<code>fromCivilTime</code> and <code>fromLongTime</code> read the string once, and <code>fromStringFormat</code>
+once, and twice when it is refused. The second example passes objects whose
+<code>makeString</code> answers a number, and whose <code>unknown</code> sends every other message to
+that number, and prints the messages each object got.</p>
+<pre><code class="language-rexx">call probe 'new', '.spy~new(1, 2, 3)'
+call probe 'new 1', '.spy~new(5)'
+call probe 'new 5', '.spy~new(1, 2, 3, 4, 5)'
+call probe 'fromDays', '.spy~fromDays(1.5)'
+call probe 'fromHours', '.spy~fromHours(1.5)'
+call probe 'fromMinutes', '.spy~fromMinutes(1.5)'
+call probe 'fromSeconds', '.spy~fromSeconds(1.5)'
+call probe 'fromMicroseconds', '.spy~fromMicroseconds(15)'
+call probe 'fromNormalTime', '.spy~fromNormalTime("01:02:03")'
+call probe 'fromCivilTime', '.spy~fromCivilTime("1:02pm")'
+call probe 'fromLongTime', '.spy~fromLongTime("01:02:03.4")'
+call probe 'fromStringFormat', '.spy~fromStringFormat("1.01:02:03.000004")'
+call probe 'fromDays big', '.spy~fromDays(4000000)'
+call probe 'fromDays x', '.spy~fromDays("x")'
+exit
+probe:
+  .local~log = ''
+  signal on syntax name bad
+  interpret 'x =' arg(2)
+  say arg(1)':' .local~log '=&gt;' x~class~id
+  return
+bad: say arg(1)':' .local~log '=&gt;' condition('o')~code
+  return
+::class spy subclass timespan
+::method init
+  .local~log = .local~log 'INIT'arg()
+  forward class (super)
+::method new class
+  .local~log = .local~log 'NEW'arg()
+  forward class (super)
+</code></pre>
+<pre><code class="language-output">new:  NEW3 INIT3 =&gt; SPY
+new 1:  NEW1 INIT1 =&gt; SPY
+new 5:  NEW5 INIT5 =&gt; SPY
+fromDays:  NEW1 INIT1 =&gt; SPY
+fromHours:  NEW1 INIT1 =&gt; SPY
+fromMinutes:  NEW1 INIT1 =&gt; SPY
+fromSeconds:  NEW1 INIT1 =&gt; SPY
+fromMicroseconds:  NEW1 INIT1 =&gt; SPY
+fromNormalTime:  NEW1 INIT1 =&gt; SPY
+fromCivilTime:  NEW1 INIT1 =&gt; SPY
+fromLongTime:  NEW1 INIT1 =&gt; SPY
+fromStringFormat:  =&gt; TimeSpan
+fromDays big:  NEW1 INIT1 =&gt; 40.19
+fromDays x:  =&gt; 88.902
+</code></pre>
+<pre><code class="language-rexx">d = .num~new('d', 3)
+h = .num~new('h', 3)
+m = .num~new('m', 3)
+s = .num~new('s', 3)
+u = .num~new('u', 3)
+call probe '2 args', '.timespan~new(h, m)'
+call probe '3 args', '.timespan~new(h, m, s)'
+call probe '4 args', '.timespan~new(d, h, m, s)'
+call probe '5 args', '.timespan~new(d, h, m, s, u)'
+call probe '1 arg', '.timespan~new(u)'
+call probe 'big days', '.timespan~new(.num~new("d", 99999999999), h, m, s)'
+call probe 'neg days', '.timespan~new(.num~new("d", -1), h, m, s)'
+call probe 'big hours', '.timespan~new(d, .num~new("h", 99), m, s)'
+n = .num~new('n', 3)
+call probe 'fromDays', '.timespan~fromDays(n)'
+call probe 'fromHours', '.timespan~fromHours(n)'
+call probe 'fromMinutes', '.timespan~fromMinutes(n)'
+call probe 'fromSeconds', '.timespan~fromSeconds(n)'
+call probe 'fromMicroseconds', '.timespan~fromMicroseconds(n)'
+call probe 'fromNormalTime',,
+  '.timespan~fromNormalTime(.num~new("n", "01:02:03"))'
+call probe 'fromStringFormat',,
+  '.timespan~fromStringFormat(.num~new("n", "1.01:02:03.000004"))'
+call probe 'fromStringFormat x',,
+  '.timespan~fromStringFormat(.num~new("n", "x"))'
+exit
+probe:
+  .local~log = ''
+  signal on syntax name bad
+  interpret 'x =' arg(2)
+  call wrap arg(1)':' strip(.local~log)
+  return
+bad: call wrap arg(1)':' strip(.local~log) '=&gt;' condition('o')~code
+  return
+wrap:
+  line = word(arg(1), 1)
+  do i = 2 to words(arg(1))
+    if length(line word(arg(1), i)) &gt; 76 then do
+      say line
+      line = '  'word(arg(1), i)
+    end
+    else line = line word(arg(1), i)
+  end
+  say line
+  return
+::class num
+::method init
+  expose v t
+  use arg t, v
+::method makeString
+  expose v t
+  .local~log = .local~log t':MAKESTRING'
+  return v
+::method request
+  expose t
+  .local~log = .local~log t':REQUEST'
+  forward class (super)
+::method unknown
+  expose v t
+  use arg name, args
+  .local~log = .local~log t':'name'/'args[1]
+  forward to (v) message (name) arguments (args)
+</code></pre>
+<pre><code class="language-output defect=#164">2 args: h:REQUEST h:MAKESTRING h:&gt;=/0 h:&lt;=/23 m:REQUEST m:MAKESTRING m:&gt;=/0
+  m:&lt;=/59 h:*/3600 m:*/60
+3 args: h:REQUEST h:MAKESTRING h:&gt;=/0 h:&lt;=/23 m:REQUEST m:MAKESTRING m:&gt;=/0
+  m:&lt;=/59 s:REQUEST s:MAKESTRING s:&gt;=/0 s:&lt;=/59 h:*/3600 m:*/60 s:REQUEST
+  s:MAKESTRING
+4 args: d:REQUEST d:MAKESTRING d:&gt;=/0 h:REQUEST h:MAKESTRING h:&gt;=/0 h:&lt;=/23
+  m:REQUEST m:MAKESTRING m:&gt;=/0 m:&lt;=/59 s:REQUEST s:MAKESTRING s:&gt;=/0
+  s:&lt;=/59 d:*/24 h:REQUEST h:MAKESTRING m:*/60 s:REQUEST s:MAKESTRING
+5 args: d:REQUEST d:MAKESTRING d:&gt;=/0 h:REQUEST h:MAKESTRING h:&gt;=/0 h:&lt;=/23
+  m:REQUEST m:MAKESTRING m:&gt;=/0 m:&lt;=/59 s:REQUEST s:MAKESTRING s:&gt;=/0
+  s:&lt;=/59 u:REQUEST u:MAKESTRING u:&gt;=/0 u:&lt;=/999999 d:*/24 h:REQUEST
+  h:MAKESTRING m:*/60 s:REQUEST s:MAKESTRING u:REQUEST u:MAKESTRING
+1 arg: u:REQUEST u:MAKESTRING u:REQUEST u:MAKESTRING u:REQUEST u:MAKESTRING
+big days: d:REQUEST d:MAKESTRING =&gt; 88.904
+neg days: d:REQUEST d:MAKESTRING d:&gt;=/0 =&gt; 88.904
+big hours: d:REQUEST d:MAKESTRING d:&gt;=/0 h:REQUEST h:MAKESTRING h:&gt;=/0
+  h:&lt;=/23 =&gt; 88.907
+fromDays: n:REQUEST n:MAKESTRING n:*/24
+fromHours: n:REQUEST n:MAKESTRING n:*/3600
+fromMinutes: n:REQUEST n:MAKESTRING n:*/60
+fromSeconds: n:REQUEST n:MAKESTRING n:*/1000000
+fromMicroseconds: n:REQUEST n:MAKESTRING n:REQUEST n:MAKESTRING
+fromNormalTime: n:REQUEST n:MAKESTRING
+fromStringFormat: n:REQUEST n:MAKESTRING
+fromStringFormat x: n:REQUEST n:MAKESTRING n:REQUEST n:MAKESTRING =&gt; 88.918
+</code></pre>
+<div class="rule" id="r-class.timespan.sends.parts"><a href="#r-class.timespan.sends.parts">[class.timespan.sends.parts]</a></div>
+<p><code>string</code> sends the receiver <code>days</code>, <code>hours</code>, <code>minutes</code>, <code>seconds</code> and
+<code>microseconds</code>, in this order, and <code>makeString</code> sends <code>string</code>. <code>duration</code>
+sends <code>new</code> to the class of the receiver with one argument, the count of
+microseconds, and no other message. <code>days</code>, <code>hours</code>, <code>minutes</code>, <code>seconds</code>,
+<code>microseconds</code>, <code>sign</code>, <code>totalDays</code>, <code>totalHours</code>, <code>totalMinutes</code>,
+<code>totalSeconds</code>, <code>totalMicroseconds</code> and <code>hashCode</code> send nothing. The example
+gives a subclass a method for every one of these messages that logs it, and
+prints what each call logged: the message itself first, then what it sent.</p>
+<pre><code class="language-rexx">names = 'DAYS HOURS MINUTES SECONDS MICROSECONDS SIGN DURATION TOTALDAYS',
+  'TOTALHOURS TOTALMINUTES TOTALSECONDS TOTALMICROSECONDS STRING MAKESTRING',
+  'HASHCODE'
+do n over names~makearray(' ')
+  body = .array~of(".local~log = .local~log '" || n || "'",,
+    'forward class (super)')
+  .spy~define(n, .method~new(n, body))
+end
+a = .spy~new(1, 2, 3, 4, 5)
+calls = 'string makeString hashCode days hours minutes seconds',
+  'microseconds sign duration totalDays totalHours totalMinutes',
+  'totalSeconds totalMicroseconds'
+do n over calls~makearray(' ')
+  .local~log = ''
+  interpret 'x = a~'n
+  say n':' .local~log
+end
+say a~duration~class~id a~string~class~id
+exit
+::class spy subclass timespan
+::method init
+  .local~log = .local~log 'INIT'arg()
+  forward class (super)
+::method new class
+  .local~log = .local~log 'NEW'arg()
+  forward class (super)
+</code></pre>
+<pre><code class="language-output">string:  STRING DAYS HOURS MINUTES SECONDS MICROSECONDS
+makeString:  MAKESTRING STRING DAYS HOURS MINUTES SECONDS MICROSECONDS
+hashCode:  HASHCODE
+days:  DAYS
+hours:  HOURS
+minutes:  MINUTES
+seconds:  SECONDS
+microseconds:  MICROSECONDS
+sign:  SIGN
+duration:  DURATION NEW1 INIT1
+totalDays:  TOTALDAYS
+totalHours:  TOTALHOURS
+totalMinutes:  TOTALMINUTES
+totalSeconds:  TOTALSECONDS
+totalMicroseconds:  TOTALMICROSECONDS
+SPY String
+</code></pre>
+<div class="rule" id="r-class.timespan.sends.arithmetic"><a href="#r-class.timespan.sends.arithmetic">[class.timespan.sends.arithmetic]</a></div>
+<p><code>addDays</code>, <code>addHours</code>, <code>addMicroseconds</code>, <code>addMinutes</code>, <code>addSeconds</code>,
+<code>addWeeks</code>, <code>*</code>, <code>%</code>, <code>//</code>, <code>+</code> and <code>-</code> with one argument, and the prefix <code>+</code>
+and <code>-</code>, send <code>new</code> to the class of the receiver with one argument, the count of
+microseconds of the answer, and nothing else to the receiver; <code>/</code> sends <code>%</code> to
+the receiver with the argument it got and answers what that answers, so that a
+subclass that overrides <code>%</code> changes <code>/</code>. The argument of <code>+</code> and <code>-</code> is sent
+<code>isA</code> with <code>TimeSpan</code>, and a <code>TimeSpan</code> is then sent <code>totalMicroseconds</code>; when
+the answer of <code>isA</code> is false, <code>-</code> raises its error, and <code>+</code> sends <code>isA</code> with
+<code>DateTime</code> to the argument, and when that answers true sends it <code>offset</code> and
+then sends <code>new</code> to the class of the argument with two arguments, the count of
+microseconds of the moment and the answer of <code>offset</code> (<a href="#r-class.timespan.deviation.127">Deviation
+127</a>); when it answers false <code>+</code> raises its
+error. The number that the other methods take is read for its string value: once
+by <code>*</code>, <code>/</code>, <code>%</code> and <code>//</code>, and twice by <code>addMicroseconds</code>; <code>addDays</code>,
+<code>addHours</code>, <code>addMinutes</code>, <code>addSeconds</code> and <code>addWeeks</code> read it once and send it
+<code>*</code> with the microseconds of a day, an hour, a minute, a second and a week,
+86400000000, 3600000000, 60000000, 1000000 and 604800000000. The first example
+gives a receiver and the span that it is added to methods that log every
+message, and prints what each call logged: the message itself first, then what
+it sent; the second passes an object that logs the messages that it got in the
+place of a number.</p>
+<pre><code class="language-rexx">names = 'ADDDAYS ADDHOURS ADDMINUTES ADDSECONDS ADDMICROSECONDS ADDWEEKS',
+  '+ - * / // % TOTALMICROSECONDS'
+do n over names~makearray(' ')
+  body = .array~of(".local~log = .local~log '" || n || "'",,
+    'forward class (super)')
+  .spy~define(n, .method~new(n, body))
+end
+a = .spy~new(1, 2, 3, 4, 5)
+b = .arg~new(0, 0, 0, 1, 0)
+d = .dt~new(2016, 2, 29, 9, 8, 7, 12345, 120)
+o = .obj~new
+call probe 'a + b', 'a + b'
+call probe 'a - b', 'a - b'
+call probe 'a + o', 'a + o'
+call probe 'a - o', 'a - o'
+call probe 'a - d', 'a - d'
+call probe '+a', '+a'
+call probe '-a', '-a'
+call probe 'a * 2', 'a * 2'
+call probe 'a / 2', 'a / 2'
+call probe 'a % 2', 'a % 2'
+call probe 'a // 2', 'a // 2'
+call probe 'addDays', 'a~addDays(1)'
+call probe 'addHours', 'a~addHours(1)'
+call probe 'addMinutes', 'a~addMinutes(1)'
+call probe 'addSeconds', 'a~addSeconds(1)'
+call probe 'addMicroseconds', 'a~addMicroseconds(1)'
+call probe 'addWeeks', 'a~addWeeks(1)'
+exit
+probe:
+  .local~log = ''
+  signal on syntax name bad
+  interpret 'x =' arg(2)
+  say arg(1)':' .local~log '=&gt;' x~class~id
+  return
+bad: say arg(1)':' .local~log '=&gt;' condition('o')~code
+  return
+::class spy subclass timespan
+::method init
+  .local~log = .local~log 'INIT'arg()
+  forward class (super)
+::method new class
+  .local~log = .local~log 'NEW'arg()
+  forward class (super)
+::class arg subclass timespan
+::method totalMicroseconds
+  .local~log = .local~log 'ARG:TOTALMICROSECONDS'
+  forward class (super)
+::class dt subclass datetime
+::method isA
+  .local~log = .local~log 'dt:ISA('arg(1)~id')'
+  forward class (super)
+::method new class
+  .local~log = .local~log 'dt:NEW'arg()
+  forward class (super)
+::class obj
+::method isA
+  .local~log = .local~log 'obj:ISA('arg(1)~id')'
+  return 0
+</code></pre>
+<pre><code class="language-output">a + b:  + ARG:TOTALMICROSECONDS NEW1 INIT1 =&gt; SPY
+a - b:  - ARG:TOTALMICROSECONDS NEW1 INIT1 =&gt; SPY
+a + o:  + obj:ISA(TimeSpan) obj:ISA(DateTime) =&gt; 88.914
+a - o:  - obj:ISA(TimeSpan) =&gt; 93.948
+a - d:  - dt:ISA(TimeSpan) =&gt; 93.948
++a:  + NEW1 INIT1 =&gt; SPY
+-a:  - NEW1 INIT1 =&gt; SPY
+a * 2:  * NEW1 INIT1 =&gt; SPY
+a / 2:  / % NEW1 INIT1 =&gt; SPY
+a % 2:  % NEW1 INIT1 =&gt; SPY
+a // 2:  // NEW1 INIT1 =&gt; SPY
+addDays:  ADDDAYS NEW1 INIT1 =&gt; SPY
+addHours:  ADDHOURS NEW1 INIT1 =&gt; SPY
+addMinutes:  ADDMINUTES NEW1 INIT1 =&gt; SPY
+addSeconds:  ADDSECONDS NEW1 INIT1 =&gt; SPY
+addMicroseconds:  ADDMICROSECONDS NEW1 INIT1 =&gt; SPY
+addWeeks:  ADDWEEKS NEW1 INIT1 =&gt; SPY
+</code></pre>
+<pre><code class="language-rexx">n = .num~new(3)
+t = .timespan~new(1, 2, 3)
+call probe 'addDays', 't~addDays(n)'
+call probe 'addWeeks', 't~addWeeks(n)'
+call probe 'addHours', 't~addHours(n)'
+call probe 'addMinutes', 't~addMinutes(n)'
+call probe 'addSeconds', 't~addSeconds(n)'
+call probe 'addMicroseconds', 't~addMicroseconds(n)'
+call probe '*', 't * n'
+call probe '/', 't / n'
+call probe '%', 't % n'
+call probe '//', 't // n'
+exit
+probe:
+  .local~log = ''
+  interpret 'x =' arg(2)
+  say arg(1)':' strip(.local~log)
+  return
+::class num
+::method init
+  expose v
+  use arg v
+::method makeString
+  expose v
+  .local~log = .local~log 'MAKESTRING'
+  return v
+::method request
+  .local~log = .local~log 'REQUEST:'arg(1)
+  forward class (super)
+::method unknown
+  expose v
+  use arg name, args
+  .local~log = .local~log name'/'args[1]
+  forward to (v) message (name) arguments (args)
+</code></pre>
+<pre><code class="language-output defect=#164">addDays: REQUEST:STRING MAKESTRING */86400000000
+addWeeks: REQUEST:STRING MAKESTRING */604800000000
+addHours: REQUEST:STRING MAKESTRING */3600000000
+addMinutes: REQUEST:STRING MAKESTRING */60000000
+addSeconds: REQUEST:STRING MAKESTRING */1000000
+addMicroseconds: REQUEST:STRING MAKESTRING REQUEST:STRING MAKESTRING
+*: REQUEST:STRING MAKESTRING
+/: REQUEST:STRING MAKESTRING
+%: REQUEST:STRING MAKESTRING
+//: REQUEST:STRING MAKESTRING
+</code></pre>
+<div class="rule" id="r-class.timespan.sends.compare"><a href="#r-class.timespan.sends.compare">[class.timespan.sends.compare]</a></div>
+<p><code>compareTo</code> sends its argument <code>isA</code> with <code>TimeSpan</code> and, for a <code>TimeSpan</code>,
+<code>totalMicroseconds</code>; the receiver is sent nothing, and an argument that is no
+<code>TimeSpan</code> is sent nothing but <code>isA</code> (<a href="#r-class.timespan.deviation.126">Deviation
+126</a>). A comparison operator sends <code>compareTo</code>
+to the receiver with the argument it got, as <a href="orderable.html#r-class.orderable.compare.sends">the sends rule of
+<code>Orderable</code></a> says in full; <code>&lt;&gt;</code>, <code>&gt;&lt;</code>, <code>\&lt;</code>,
+<code>\&gt;</code>, <code>\&lt;&lt;</code> and <code>\&gt;&gt;</code> send another operator first.</p>
+<pre><code class="language-rexx">names = 'COMPARETO = == &lt; &gt; &lt;= &gt;= &lt;&gt; &gt;&lt; &lt;&lt; &gt;&gt; &lt;&lt;= &gt;&gt;= \= \== \&lt; \&gt; \&lt;&lt;',
+  '\&gt;&gt;'
+do n over names~makearray(' ')
+  body = .array~of(".local~log = .local~log '" || n || "'",,
+    'forward class (super)')
+  .spy~define(n, .method~new(n, body))
+end
+a = .spy~new(1, 2, 3, 4, 5)
+b = .arg~new(1, 2, 3, 4, 6)
+do n over names~makearray(' ')
+  .local~log = ''
+  if n = 'COMPARETO' then x = a~compareTo(b)
+  else interpret 'x = a' n 'b'
+  say n':' .local~log '=&gt;' x
+end
+exit
+::class spy subclass timespan
+::class arg subclass timespan
+::method isA
+  .local~log = .local~log 'ARG:ISA('arg(1)~id')'
+  forward class (super)
+::method totalMicroseconds
+  .local~log = .local~log 'ARG:TOTALMICROSECONDS'
+  forward class (super)
+</code></pre>
+<pre><code class="language-output">COMPARETO:  COMPARETO ARG:ISA(TimeSpan) ARG:TOTALMICROSECONDS =&gt; -1
+=:  = COMPARETO ARG:ISA(TimeSpan) ARG:TOTALMICROSECONDS =&gt; 0
+==:  == COMPARETO ARG:ISA(TimeSpan) ARG:TOTALMICROSECONDS =&gt; 0
+&lt;:  &lt; COMPARETO ARG:ISA(TimeSpan) ARG:TOTALMICROSECONDS =&gt; 1
+&gt;:  &gt; COMPARETO ARG:ISA(TimeSpan) ARG:TOTALMICROSECONDS =&gt; 0
+&lt;=:  &lt;= COMPARETO ARG:ISA(TimeSpan) ARG:TOTALMICROSECONDS =&gt; 1
+&gt;=:  &gt;= COMPARETO ARG:ISA(TimeSpan) ARG:TOTALMICROSECONDS =&gt; 0
+&lt;&gt;:  &lt;&gt; \= COMPARETO ARG:ISA(TimeSpan) ARG:TOTALMICROSECONDS =&gt; 1
+&gt;&lt;:  &gt;&lt; \= COMPARETO ARG:ISA(TimeSpan) ARG:TOTALMICROSECONDS =&gt; 1
+&lt;&lt;:  &lt;&lt; COMPARETO ARG:ISA(TimeSpan) ARG:TOTALMICROSECONDS =&gt; 1
+&gt;&gt;:  &gt;&gt; COMPARETO ARG:ISA(TimeSpan) ARG:TOTALMICROSECONDS =&gt; 0
+&lt;&lt;=:  &lt;&lt;= COMPARETO ARG:ISA(TimeSpan) ARG:TOTALMICROSECONDS =&gt; 1
+&gt;&gt;=:  &gt;&gt;= COMPARETO ARG:ISA(TimeSpan) ARG:TOTALMICROSECONDS =&gt; 0
+\=:  \= COMPARETO ARG:ISA(TimeSpan) ARG:TOTALMICROSECONDS =&gt; 1
+\==:  \== COMPARETO ARG:ISA(TimeSpan) ARG:TOTALMICROSECONDS =&gt; 1
+\&lt;:  \&lt; &gt;= COMPARETO ARG:ISA(TimeSpan) ARG:TOTALMICROSECONDS =&gt; 0
+\&gt;:  \&gt; &lt;= COMPARETO ARG:ISA(TimeSpan) ARG:TOTALMICROSECONDS =&gt; 1
+\&lt;&lt;:  \&lt;&lt; &gt;&gt;= COMPARETO ARG:ISA(TimeSpan) ARG:TOTALMICROSECONDS =&gt; 0
+\&gt;&gt;:  \&gt;&gt; &lt;&lt;= COMPARETO ARG:ISA(TimeSpan) ARG:TOTALMICROSECONDS =&gt; 1
+</code></pre>
+<h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
+<div class="rule" id="r-class.timespan.deviation.109"><a href="#r-class.timespan.deviation.109">[class.timespan.deviation.109]</a></div>
+<p>An instance of a subclass of <code>String</code> that a method takes as a string or a
+number is read by its own characters, and <code>REQUEST</code>, <code>MAKESTRING</code> and <code>STRING</code>
+are not sent to it (<a href="string.html#r-class.string.deviation.109">Deviation 109</a>). ooRexx
+sends such an instance <code>request</code> with <code>STRING</code> and then <code>makeString</code>, so an
+override can change what is read. In the example <code>makeString</code> and <code>request</code>
+answer a different string, and the instances still stand for their own
+characters.</p>
+<pre><code class="language-rexx">.local~sent = 0
+a = .digits~new('5')
+b = .digits~new('01:02:03')
+c = .digits~new('2')
+call show '.timespan~fromDays(a) .timespan~new(a)'
+call show '.timespan~fromNormalTime(b) .timespan~new(c, c, c)'
+call show '.timespan~fromHours(c) * a .timespan~new(1, 2, 3)~addDays(c)'
+call show ".timespan~fromStringFormat(.digits~new('1.02:03:04.000005'))"
+say 'sends' .local~sent
+exit
+show:
+  signal on syntax name failed
+  interpret 'say' arg(1)
+  return
+failed: say '=&gt;' condition('o')~code
+  return
+::class digits subclass string
+::method makestring
+  .local~sent = .local~sent + 1
+  return 'zzz'
+::method request
+  .local~sent = .local~sent + 1
+  return 'zzz'
+</code></pre>
+<pre><code class="language-output defect=#140">5.00:00:00.000000 00:00:00.000005
+01:02:03.000000 02:02:02.000000
+10:00:00.000000 2.01:02:03.000000
+1.02:03:04.000005
+sends 0
+</code></pre>
+<div class="rule" id="r-class.timespan.deviation.126"><a href="#r-class.timespan.deviation.126">[class.timespan.deviation.126]</a></div>
+<p><code>compareTo</code> of a <code>TimeSpan</code> with an argument that is not a <code>TimeSpan</code> (an
+instance of a subclass is one), and a comparison operator with such an argument,
+raise <code>SYNTAX 88.914</code>. The error follows the <code>isA</code> that the method sends to the
+argument and precedes <code>totalMicroseconds</code> and every other message; an operator
+whose argument is <code>.nil</code> sends no <code>compareTo</code> and does as <a href="orderable.html#r-class.orderable.compare.nil">the <code>.nil</code>
+rule</a> says, and <code>compareTo</code> itself raises for
+<code>.nil</code>. ooRexx answers 1 or -1 for such an argument, whatever the receiver is,
+so the answer says nothing about the two values. In the example the last line is
+a probe that answers false to <code>isA</code> and gets nothing else.</p>
+<pre><code class="language-rexx">a = .timespan~new(1, 2, 3)
+call try 'a~compareTo(.datetime~new(2017, 6, 30, 5, 6, 7, 8, 0))'
+call try 'a~compareTo(.file~new("/t/a"))'
+call try 'a~compareTo("01:02:03.000000")'
+call try 'a~compareTo(5)'
+call try 'a~compareTo(.nil)'
+call try 'a &lt; .datetime~minDate'
+call try 'a &gt;&gt;= "x"'
+call try 'a = 3723000000'
+call try 'a \== .object~new'
+call try 'a = .nil'
+call try 'a &lt; .nil'
+call try 'a~compareTo(.sub~new(1, 2, 3))'
+call try 'a~compareTo(a~copy)'
+.local~log = ''
+call try 'a~compareTo(.probe~new)'
+say 'sent:' .local~log
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class sub subclass timespan
+::class probe
+::method isA
+  .local~log = .local~log 'ISA('arg(1)~id')'
+  return 0
+::method totalMicroseconds
+  .local~log = .local~log 'TOTALMICROSECONDS'
+  return 0
+</code></pre>
+<pre><code class="language-output defect=#189">a~compareTo(.datetime~new(2017, 6, 30, 5, 6, 7, 8, 0)) =&gt; 88.914
+a~compareTo(.file~new("/t/a")) =&gt; 88.914
+a~compareTo("01:02:03.000000") =&gt; 88.914
+a~compareTo(5) =&gt; 88.914
+a~compareTo(.nil) =&gt; 88.914
+a &lt; .datetime~minDate =&gt; 88.914
+a &gt;&gt;= "x" =&gt; 88.914
+a = 3723000000 =&gt; 88.914
+a \== .object~new =&gt; 88.914
+a = .nil =&gt; 0
+a &lt; .nil =&gt; 93.973
+a~compareTo(.sub~new(1, 2, 3)) =&gt; 0
+a~compareTo(a~copy) =&gt; 0
+a~compareTo(.probe~new) =&gt; 88.914
+sent:  ISA(TimeSpan)
+</code></pre>
+<div class="rule" id="r-class.timespan.deviation.127"><a href="#r-class.timespan.deviation.127">[class.timespan.deviation.127]</a></div>
+<p><code>+</code> of a <code>TimeSpan</code> with a <code>DateTime</code> answers an instance of the class of the
+argument that has the offset of the argument, as <a href="datetime.html#r-class.datetime.plus"><code>+</code> of
+<code>DateTime</code></a> does, so that <code>span + moment</code> and <code>moment + span</code> are equal, with the same fields and offset. The method sends the argument
+<code>isA</code> with <code>TimeSpan</code> and <code>isA</code> with <code>DateTime</code>, then <code>offset</code>, and then sends
+the class of the argument <code>new</code> with two arguments, the microseconds of the
+moment and the answer of <code>offset</code>. ooRexx gives the answer the offset of the
+host's zone and sends <code>new</code> with one argument; see <a href="datetime.html#r-class.datetime.deviation.127">Deviation
+127</a> for <code>-</code> of a <code>DateTime</code>. The example gives
+the offsets explicitly, so that it does not depend on the zone of the host.</p>
+<pre><code class="language-rexx">d = .datetime~new(2016, 2, 29, 9, 8, 7, 12345, 330)
+t = .timespan~fromSeconds(90)
+x = t + d
+say x
+say x~offset (x == d + t)
+say (.timespan~fromDays(1) + d~toTimezone(-90))~utcIsoDate
+say (t + .sub~new(2016, 2, 29))~class~id
+m = .spy~new(2016, 2, 29, 9, 8, 7, 12345, 330)
+.local~log = ''
+x = t + m
+say .local~log
+exit
+::class sub subclass datetime
+::class spy subclass datetime
+::method offset
+  .local~log = .local~log 'OFFSET'
+  forward class (super)
+::method new class
+  .local~log = .local~log 'NEW'arg()
+  forward class (super)
+::method isA
+  .local~log = .local~log 'ISA('arg(1)~id')'
+  forward class (super)
+</code></pre>
+<pre><code class="language-output defect=#190">2016-02-29T09:09:37.012345
+05:30:00.000000 1
+2016-03-01T02:08:07.012345-01:30
+SUB
+ ISA(TimeSpan) ISA(DateTime) OFFSET NEW2
+</code></pre>
+<div class="rule" id="r-class.timespan.deviation.130"><a href="#r-class.timespan.deviation.130">[class.timespan.deviation.130]</a></div>
+<p>Every whole-number argument of <code>TimeSpan</code> is read as a whole-number argument of
+a builtin is: its form by <a href="../conventions.html#r-conv.whole.form">the form rule</a> and its value by
+<a href="../conventions.html#r-conv.whole.digits">the digits rule</a>, so NUMERIC DIGITS of the caller plays no
+part. A value that those rules refuse raises the error that the place gives for
+a number that is not whole, in place of <code>SYNTAX 40.12</code>: <code>1.0000000001</code> and
+<code>5.00000000000000001</code> are refused, and <code>2017.00000000000000000001</code> is 2017. The
+places are the count of microseconds of the one-argument <code>new</code>, and its days,
+hours, minutes, seconds and microseconds. ooRexx raises <code>SYNTAX 40.19</code> for a
+fraction in the days, the hours, the minutes or the seconds that leaves a
+fraction of a microsecond, such as <code>1.0000000001</code> days. It accepts a smaller
+one, such as <code>4.00000000000001</code> seconds, and any fraction in the microseconds.
+It reads the count as this rule does.</p>
+<pre><code class="language-rexx">say .timespan~new(1.0, 2E0, 3, 4.00, ' 5 ')
+say .timespan~new(2E1) .timespan~new(' +7 ')
+numeric digits 3
+say .timespan~new(1234.0)
+numeric digits 9
+call try '.timespan~new(1.0000000001, 2, 3, 4, 5)'
+call try '.timespan~new(1, 2.0000000001, 3, 4, 5)'
+call try '.timespan~new(1, 2, 3, 4, 5.0000000001)'
+call try '.timespan~new(1, 2, 3, 4.00000000000001, 5)'
+call try '.timespan~new(5.0000000001)'
+call try '.timespan~new(2017.00000000000000000001)'
+call try '.timespan~new(5.00000000000000001)'
+call try '.timespan~new(5.000000000000000001)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output defect=#193">1.02:03:04.000005
+00:00:00.000020 00:00:00.000007
+00:00:00.001234
+.timespan~new(1.0000000001, 2, 3, 4, 5) =&gt; 88.904
+.timespan~new(1, 2.0000000001, 3, 4, 5) =&gt; 88.907
+.timespan~new(1, 2, 3, 4, 5.0000000001) =&gt; 88.907
+.timespan~new(1, 2, 3, 4.00000000000001, 5) =&gt; 88.907
+.timespan~new(5.0000000001) =&gt; 88.903
+.timespan~new(2017.00000000000000000001) =&gt; 00:00:00.002017
+.timespan~new(5.00000000000000001) =&gt; 88.903
+.timespan~new(5.000000000000000001) =&gt; 00:00:00.000005
+</code></pre>
+<div class="rule" id="r-class.timespan.deviation.131"><a href="#r-class.timespan.deviation.131">[class.timespan.deviation.131]</a></div>
+<p>An instance of a subclass of <code>TimeSpan</code> whose <code>init</code> does not forward to the
+<code>init</code> of <code>TimeSpan</code> is the span of 0, and every method works on it as on that
+value; the class of an answer is the class of the receiver where the method says
+so, and a copy of it is one too. ooRexx answers with errors from most methods,
+or with text that is no value.</p>
+<pre><code class="language-rexx">t = .st~new
+z = .timespan~new(0)
+h = .timespan~fromHours(1)
+call show 't t~totalMicroseconds t~sign t~string t~days t~hours t~duration'
+call show '(t = z) (t == z) (t~compareTo(z)) (t~hashCode == z~hashCode)'
+call show '(t + h) (t - h) (-t) (t * 3) (t / 3) (t // 3)'
+call show '(t + .datetime~minDate) t~addDays(1) t~copy t~copy~class~id'
+exit
+show:
+  signal on syntax name failed
+  interpret 'say' arg(1)
+  return
+failed: say '=&gt;' condition('o')~code
+  return
+::class st subclass timespan
+::method init
+  nop
+</code></pre>
+<pre><code class="language-output defect=#194">00:00:00.000000 0 0 00:00:00.000000 0 0 00:00:00.000000
+1 1 0 1
+01:00:00.000000 -01:00:00.000000 00:00:00.000000 00:00:00.000000 00:00:00.000000 00:00:00.000000
+0001-01-01T00:00:00.000000 1.00:00:00.000000 00:00:00.000000 ST
+</code></pre>
+<div class="rule" id="r-class.timespan.deviation.132"><a href="#r-class.timespan.deviation.132">[class.timespan.deviation.132]</a></div>
+<p><code>fromStringFormat</code> refuses with <code>SYNTAX 88.918</code> every string that <a href="#r-class.timespan.string">the string
+rule</a> cannot have written: no blank anywhere and no
+plus sign; the days only when the span has days, written without leading zeros
+and not as 0, and at most 3652058; hours (00 to 23), minutes and seconds (00 to
+59) with two digits each, exactly six digits of microseconds, and no minus sign
+before a span of 0. The first lines of the example show the accepted forms and
+the rest the refused ones. ooRexx refuses a doubled minus sign, a point with no
+digits after it, another separator between the parts or a fourth part and a span
+past the last one; it accepts the others, reading some in its own way:
+<code>00:61:30.000000</code> as one hour and 1 minute and 30 seconds, <code>24:00:00.000000</code> as
+one day, and <code>00:01:30.5</code> as 5 microseconds.</p>
+<pre><code class="language-rexx">good = .array~of('1.02:03:04.000005', '-1.02:03:04.000005', '23:59:59.999999',,
+  '-00:00:00.000001', '3652058.23:59:59.999999', '10.00:00:00.000000')
+do s over good
+  say s '=&gt;' .timespan~fromStringFormat(s)~totalMicroseconds
+end
+bad = .array~of('+1.02:03:04.000005', ' 01:02:03.000005', '01:02:03.000005 ',,
+  '- 01:02:03.000005', '--01:02:03.000005', '-00:00:00.000000',,
+  '1.2:03:04.000005', '1.02:3:04.000005', '1.02:03:4.000005',,
+  '1:02:03.000005', '00:01:30.0000005', '00:01:30.5', '00:01:30.',,
+  '00:61:30.000000', '00:00:60.000000', '24:00:00.000000',,
+  '1.24:00:00.000000', '1.02:03:04.000005.', '1. 02:03:04.000005',,
+  '00001.02:03:04.000005', '0.02:03:04.000005', '-0.00:01:30.000000',,
+  '1.02-03-04.000005', '01:02:03:04.000005', '3652058.24:00:00.000000')
+do s over bad
+  call try s
+end
+exit
+try:
+  signal on syntax name bad
+  r = .timespan~fromStringFormat(arg(1))
+  say '['arg(1)'] =&gt;' r
+  return
+bad: say '['arg(1)'] =&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output defect=#195">1.02:03:04.000005 =&gt; 93784000005
+-1.02:03:04.000005 =&gt; -93784000005
+23:59:59.999999 =&gt; 86399999999
+-00:00:00.000001 =&gt; -1
+3652058.23:59:59.999999 =&gt; 315537897599999999
+10.00:00:00.000000 =&gt; 864000000000
+[+1.02:03:04.000005] =&gt; 88.918
+[ 01:02:03.000005] =&gt; 88.918
+[01:02:03.000005 ] =&gt; 88.918
+[- 01:02:03.000005] =&gt; 88.918
+[--01:02:03.000005] =&gt; 88.918
+[-00:00:00.000000] =&gt; 88.918
+[1.2:03:04.000005] =&gt; 88.918
+[1.02:3:04.000005] =&gt; 88.918
+[1.02:03:4.000005] =&gt; 88.918
+[1:02:03.000005] =&gt; 88.918
+[00:01:30.0000005] =&gt; 88.918
+[00:01:30.5] =&gt; 88.918
+[00:01:30.] =&gt; 88.918
+[00:61:30.000000] =&gt; 88.918
+[00:00:60.000000] =&gt; 88.918
+[24:00:00.000000] =&gt; 88.918
+[1.24:00:00.000000] =&gt; 88.918
+[1.02:03:04.000005.] =&gt; 88.918
+[1. 02:03:04.000005] =&gt; 88.918
+[00001.02:03:04.000005] =&gt; 88.918
+[0.02:03:04.000005] =&gt; 88.918
+[-0.00:01:30.000000] =&gt; 88.918
+[1.02-03-04.000005] =&gt; 88.918
+[01:02:03:04.000005] =&gt; 88.918
+[3652058.24:00:00.000000] =&gt; 88.918
+</code></pre>
+<div class="rule" id="r-class.timespan.deviation.133"><a href="#r-class.timespan.deviation.133">[class.timespan.deviation.133]</a></div>
+<p><code>fromStringFormat</code> of the text of a negative span answers a negative span
+whatever its size; one under an hour, which has no days and no hours, keeps its
+sign too, and <code>sign</code> of the answer is -1. ooRexx answers the positive span for
+such a text.</p>
+<pre><code class="language-rexx">do s over .array~of('-1', '-90000000', '-3599999999', '-3600000000',,
+    '-5400000001', '-86400000000', '-86400000001')
+  t = .timespan~new(s)
+  r = .timespan~fromStringFormat(t~string)
+  say t~string r~string r~sign (r = t)
+end
+say .timespan~fromStringFormat('-00:00:30.000000')~totalSeconds
+say .timespan~fromStringFormat('-00:59:59.999999')~seconds
+say .timespan~fromStringFormat('00:00:30.000000')~totalSeconds
+</code></pre>
+<pre><code class="language-output defect=#196">-00:00:00.000001 -00:00:00.000001 -1 1
+-00:01:30.000000 -00:01:30.000000 -1 1
+-00:59:59.999999 -00:59:59.999999 -1 1
+-01:00:00.000000 -01:00:00.000000 -1 1
+-01:30:00.000001 -01:30:00.000001 -1 1
+-1.00:00:00.000000 -1.00:00:00.000000 -1 1
+-1.00:00:00.000001 -1.00:00:00.000001 -1 1
+-30
+59
+30
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../classes/datetime.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../classes/comparable.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../classes/datetime.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../classes/comparable.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../assets/version-picker.js"></script>
+
+
+    </div>
+    </body>
+</html>

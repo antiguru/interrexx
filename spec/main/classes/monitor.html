@@ -1,0 +1,705 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Monitor - The interrexx Language Specification</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../conventions.html"><strong aria-hidden="true">2.</strong> Conventions</a></li><li class="chapter-item expanded "><a href="../lexical/index.html"><strong aria-hidden="true">3.</strong> Lexical structure</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../lexical/characters.html"><strong aria-hidden="true">3.1.</strong> Characters</a></li><li class="chapter-item expanded "><a href="../lexical/comments.html"><strong aria-hidden="true">3.2.</strong> Comments</a></li><li class="chapter-item expanded "><a href="../lexical/literals.html"><strong aria-hidden="true">3.3.</strong> Literals</a></li><li class="chapter-item expanded "><a href="../lexical/symbols.html"><strong aria-hidden="true">3.4.</strong> Symbols</a></li><li class="chapter-item expanded "><a href="../lexical/operators.html"><strong aria-hidden="true">3.5.</strong> Operators and special characters</a></li><li class="chapter-item expanded "><a href="../lexical/clauses.html"><strong aria-hidden="true">3.6.</strong> Clauses</a></li></ol></li><li class="chapter-item expanded "><a href="../numbers/index.html"><strong aria-hidden="true">4.</strong> Numbers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../numbers/formats.html"><strong aria-hidden="true">4.1.</strong> Formats</a></li><li class="chapter-item expanded "><a href="../numbers/limits.html"><strong aria-hidden="true">4.2.</strong> Limits</a></li><li class="chapter-item expanded "><a href="../numbers/arithmetic.html"><strong aria-hidden="true">4.3.</strong> Arithmetic</a></li><li class="chapter-item expanded "><a href="../numbers/settings.html"><strong aria-hidden="true">4.4.</strong> Settings</a></li><li class="chapter-item expanded "><a href="../numbers/comparison.html"><strong aria-hidden="true">4.5.</strong> Comparison</a></li></ol></li><li class="chapter-item expanded "><a href="../expressions/index.html"><strong aria-hidden="true">5.</strong> Expressions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../expressions/terms.html"><strong aria-hidden="true">5.1.</strong> Terms</a></li><li class="chapter-item expanded "><a href="../expressions/variables.html"><strong aria-hidden="true">5.2.</strong> Variables</a></li><li class="chapter-item expanded "><a href="../expressions/concatenation.html"><strong aria-hidden="true">5.3.</strong> Concatenation</a></li><li class="chapter-item expanded "><a href="../expressions/arithmetic.html"><strong aria-hidden="true">5.4.</strong> Arithmetic operators</a></li><li class="chapter-item expanded "><a href="../expressions/comparison.html"><strong aria-hidden="true">5.5.</strong> Comparison operators</a></li><li class="chapter-item expanded "><a href="../expressions/logical.html"><strong aria-hidden="true">5.6.</strong> Logical operators</a></li><li class="chapter-item expanded "><a href="../expressions/messages.html"><strong aria-hidden="true">5.7.</strong> Message operators</a></li></ol></li><li class="chapter-item expanded "><a href="../instructions/index.html"><strong aria-hidden="true">6.</strong> Instructions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../instructions/address.html"><strong aria-hidden="true">6.1.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../instructions/arg.html"><strong aria-hidden="true">6.2.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../instructions/assignment.html"><strong aria-hidden="true">6.3.</strong> Assignments</a></li><li class="chapter-item expanded "><a href="../instructions/call.html"><strong aria-hidden="true">6.4.</strong> CALL</a></li><li class="chapter-item expanded "><a href="../instructions/command.html"><strong aria-hidden="true">6.5.</strong> Commands</a></li><li class="chapter-item expanded "><a href="../instructions/do.html"><strong aria-hidden="true">6.6.</strong> DO</a></li><li class="chapter-item expanded "><a href="../instructions/drop.html"><strong aria-hidden="true">6.7.</strong> DROP</a></li><li class="chapter-item expanded "><a href="../instructions/exit.html"><strong aria-hidden="true">6.8.</strong> EXIT</a></li><li class="chapter-item expanded "><a href="../instructions/expose.html"><strong aria-hidden="true">6.9.</strong> EXPOSE</a></li><li class="chapter-item expanded "><a href="../instructions/forward.html"><strong aria-hidden="true">6.10.</strong> FORWARD</a></li><li class="chapter-item expanded "><a href="../instructions/guard.html"><strong aria-hidden="true">6.11.</strong> GUARD</a></li><li class="chapter-item expanded "><a href="../instructions/if.html"><strong aria-hidden="true">6.12.</strong> IF</a></li><li class="chapter-item expanded "><a href="../instructions/interpret.html"><strong aria-hidden="true">6.13.</strong> INTERPRET</a></li><li class="chapter-item expanded "><a href="../instructions/iterate.html"><strong aria-hidden="true">6.14.</strong> ITERATE</a></li><li class="chapter-item expanded "><a href="../instructions/leave.html"><strong aria-hidden="true">6.15.</strong> LEAVE</a></li><li class="chapter-item expanded "><a href="../instructions/loop.html"><strong aria-hidden="true">6.16.</strong> LOOP</a></li><li class="chapter-item expanded "><a href="../instructions/message.html"><strong aria-hidden="true">6.17.</strong> Message instructions</a></li><li class="chapter-item expanded "><a href="../instructions/nop.html"><strong aria-hidden="true">6.18.</strong> NOP</a></li><li class="chapter-item expanded "><a href="../instructions/numeric.html"><strong aria-hidden="true">6.19.</strong> NUMERIC</a></li><li class="chapter-item expanded "><a href="../instructions/options.html"><strong aria-hidden="true">6.20.</strong> OPTIONS</a></li><li class="chapter-item expanded "><a href="../instructions/parse.html"><strong aria-hidden="true">6.21.</strong> PARSE</a></li><li class="chapter-item expanded "><a href="../instructions/procedure.html"><strong aria-hidden="true">6.22.</strong> PROCEDURE</a></li><li class="chapter-item expanded "><a href="../instructions/pull.html"><strong aria-hidden="true">6.23.</strong> PULL</a></li><li class="chapter-item expanded "><a href="../instructions/push.html"><strong aria-hidden="true">6.24.</strong> PUSH</a></li><li class="chapter-item expanded "><a href="../instructions/queue.html"><strong aria-hidden="true">6.25.</strong> QUEUE</a></li><li class="chapter-item expanded "><a href="../instructions/raise.html"><strong aria-hidden="true">6.26.</strong> RAISE</a></li><li class="chapter-item expanded "><a href="../instructions/reply.html"><strong aria-hidden="true">6.27.</strong> REPLY</a></li><li class="chapter-item expanded "><a href="../instructions/return.html"><strong aria-hidden="true">6.28.</strong> RETURN</a></li><li class="chapter-item expanded "><a href="../instructions/say.html"><strong aria-hidden="true">6.29.</strong> SAY</a></li><li class="chapter-item expanded "><a href="../instructions/select.html"><strong aria-hidden="true">6.30.</strong> SELECT</a></li><li class="chapter-item expanded "><a href="../instructions/signal.html"><strong aria-hidden="true">6.31.</strong> SIGNAL</a></li><li class="chapter-item expanded "><a href="../instructions/trace.html"><strong aria-hidden="true">6.32.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../instructions/use.html"><strong aria-hidden="true">6.33.</strong> USE</a></li></ol></li><li class="chapter-item expanded "><a href="../parsing/index.html"><strong aria-hidden="true">7.</strong> Parsing</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../parsing/templates.html"><strong aria-hidden="true">7.1.</strong> Templates</a></li><li class="chapter-item expanded "><a href="../parsing/patterns.html"><strong aria-hidden="true">7.2.</strong> Patterns</a></li><li class="chapter-item expanded "><a href="../parsing/multiple.html"><strong aria-hidden="true">7.3.</strong> Several strings and case</a></li></ol></li><li class="chapter-item expanded "><a href="../directives/index.html"><strong aria-hidden="true">8.</strong> Directives</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../directives/class.html"><strong aria-hidden="true">8.1.</strong> ::CLASS</a></li><li class="chapter-item expanded "><a href="../directives/method.html"><strong aria-hidden="true">8.2.</strong> ::METHOD</a></li><li class="chapter-item expanded "><a href="../directives/attribute.html"><strong aria-hidden="true">8.3.</strong> ::ATTRIBUTE</a></li><li class="chapter-item expanded "><a href="../directives/constant.html"><strong aria-hidden="true">8.4.</strong> ::CONSTANT</a></li><li class="chapter-item expanded "><a href="../directives/routine.html"><strong aria-hidden="true">8.5.</strong> ::ROUTINE</a></li><li class="chapter-item expanded "><a href="../directives/requires.html"><strong aria-hidden="true">8.6.</strong> ::REQUIRES</a></li><li class="chapter-item expanded "><a href="../directives/options.html"><strong aria-hidden="true">8.7.</strong> ::OPTIONS</a></li><li class="chapter-item expanded "><a href="../directives/resource.html"><strong aria-hidden="true">8.8.</strong> ::RESOURCE</a></li><li class="chapter-item expanded "><a href="../directives/annotate.html"><strong aria-hidden="true">8.9.</strong> ::ANNOTATE</a></li></ol></li><li class="chapter-item expanded "><a href="../conditions/index.html"><strong aria-hidden="true">9.</strong> Conditions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../conditions/traps.html"><strong aria-hidden="true">9.1.</strong> Condition traps</a></li><li class="chapter-item expanded "><a href="../conditions/information.html"><strong aria-hidden="true">9.2.</strong> Condition information</a></li><li class="chapter-item expanded "><a href="../conditions/syntax.html"><strong aria-hidden="true">9.3.</strong> SYNTAX</a></li><li class="chapter-item expanded "><a href="../conditions/error.html"><strong aria-hidden="true">9.4.</strong> ERROR and FAILURE</a></li><li class="chapter-item expanded "><a href="../conditions/halt.html"><strong aria-hidden="true">9.5.</strong> HALT</a></li><li class="chapter-item expanded "><a href="../conditions/novalue.html"><strong aria-hidden="true">9.6.</strong> NOVALUE</a></li><li class="chapter-item expanded "><a href="../conditions/nostring.html"><strong aria-hidden="true">9.7.</strong> NOSTRING</a></li><li class="chapter-item expanded "><a href="../conditions/nomethod.html"><strong aria-hidden="true">9.8.</strong> NOMETHOD</a></li><li class="chapter-item expanded "><a href="../conditions/notready.html"><strong aria-hidden="true">9.9.</strong> NOTREADY</a></li><li class="chapter-item expanded "><a href="../conditions/lostdigits.html"><strong aria-hidden="true">9.10.</strong> LOSTDIGITS</a></li><li class="chapter-item expanded "><a href="../conditions/user.html"><strong aria-hidden="true">9.11.</strong> USER conditions</a></li><li class="chapter-item expanded "><a href="../conditions/errors.html"><strong aria-hidden="true">9.12.</strong> Error numbers</a></li></ol></li><li class="chapter-item expanded "><a href="../classes/index.html"><strong aria-hidden="true">10.</strong> Classes</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../classes/methods.html"><strong aria-hidden="true">10.1.</strong> Method search</a></li><li class="chapter-item expanded "><a href="../classes/object.html"><strong aria-hidden="true">10.2.</strong> Object</a></li><li class="chapter-item expanded "><a href="../classes/class.html"><strong aria-hidden="true">10.3.</strong> Class</a></li><li class="chapter-item expanded "><a href="../classes/string.html"><strong aria-hidden="true">10.4.</strong> String</a></li><li class="chapter-item expanded "><a href="../classes/method.html"><strong aria-hidden="true">10.5.</strong> Method</a></li><li class="chapter-item expanded "><a href="../classes/routine.html"><strong aria-hidden="true">10.6.</strong> Routine</a></li><li class="chapter-item expanded "><a href="../classes/package.html"><strong aria-hidden="true">10.7.</strong> Package</a></li><li class="chapter-item expanded "><a href="../classes/message.html"><strong aria-hidden="true">10.8.</strong> Message</a></li><li class="chapter-item expanded "><a href="../classes/messagenotification.html"><strong aria-hidden="true">10.9.</strong> MessageNotification</a></li><li class="chapter-item expanded "><a href="../classes/alarmnotification.html"><strong aria-hidden="true">10.10.</strong> AlarmNotification</a></li><li class="chapter-item expanded "><a href="../classes/collection.html"><strong aria-hidden="true">10.11.</strong> Collection</a></li><li class="chapter-item expanded "><a href="../classes/mapcollection.html"><strong aria-hidden="true">10.12.</strong> MapCollection</a></li><li class="chapter-item expanded "><a href="../classes/orderedcollection.html"><strong aria-hidden="true">10.13.</strong> OrderedCollection</a></li><li class="chapter-item expanded "><a href="../classes/setcollection.html"><strong aria-hidden="true">10.14.</strong> SetCollection</a></li><li class="chapter-item expanded "><a href="../classes/array.html"><strong aria-hidden="true">10.15.</strong> Array</a></li><li class="chapter-item expanded "><a href="../classes/list.html"><strong aria-hidden="true">10.16.</strong> List</a></li><li class="chapter-item expanded "><a href="../classes/queue.html"><strong aria-hidden="true">10.17.</strong> Queue</a></li><li class="chapter-item expanded "><a href="../classes/circularqueue.html"><strong aria-hidden="true">10.18.</strong> CircularQueue</a></li><li class="chapter-item expanded "><a href="../classes/directory.html"><strong aria-hidden="true">10.19.</strong> Directory</a></li><li class="chapter-item expanded "><a href="../classes/stringtable.html"><strong aria-hidden="true">10.20.</strong> StringTable</a></li><li class="chapter-item expanded "><a href="../classes/properties.html"><strong aria-hidden="true">10.21.</strong> Properties</a></li><li class="chapter-item expanded "><a href="../classes/table.html"><strong aria-hidden="true">10.22.</strong> Table</a></li><li class="chapter-item expanded "><a href="../classes/identitytable.html"><strong aria-hidden="true">10.23.</strong> IdentityTable</a></li><li class="chapter-item expanded "><a href="../classes/relation.html"><strong aria-hidden="true">10.24.</strong> Relation</a></li><li class="chapter-item expanded "><a href="../classes/bag.html"><strong aria-hidden="true">10.25.</strong> Bag</a></li><li class="chapter-item expanded "><a href="../classes/set.html"><strong aria-hidden="true">10.26.</strong> Set</a></li><li class="chapter-item expanded "><a href="../classes/stem.html"><strong aria-hidden="true">10.27.</strong> Stem</a></li><li class="chapter-item expanded "><a href="../classes/datetime.html"><strong aria-hidden="true">10.28.</strong> DateTime</a></li><li class="chapter-item expanded "><a href="../classes/timespan.html"><strong aria-hidden="true">10.29.</strong> TimeSpan</a></li><li class="chapter-item expanded "><a href="../classes/comparable.html"><strong aria-hidden="true">10.30.</strong> Comparable</a></li><li class="chapter-item expanded "><a href="../classes/orderable.html"><strong aria-hidden="true">10.31.</strong> Orderable</a></li><li class="chapter-item expanded "><a href="../classes/comparators.html"><strong aria-hidden="true">10.32.</strong> Comparators</a></li><li class="chapter-item expanded "><a href="../classes/mutablebuffer.html"><strong aria-hidden="true">10.33.</strong> MutableBuffer</a></li><li class="chapter-item expanded "><a href="../classes/buffer.html"><strong aria-hidden="true">10.34.</strong> Buffer</a></li><li class="chapter-item expanded "><a href="../classes/pointer.html"><strong aria-hidden="true">10.35.</strong> Pointer</a></li><li class="chapter-item expanded "><a href="../classes/weakreference.html"><strong aria-hidden="true">10.36.</strong> WeakReference</a></li><li class="chapter-item expanded "><a href="../classes/variablereference.html"><strong aria-hidden="true">10.37.</strong> VariableReference</a></li><li class="chapter-item expanded "><a href="../classes/file.html"><strong aria-hidden="true">10.38.</strong> File</a></li><li class="chapter-item expanded "><a href="../classes/rexxcontext.html"><strong aria-hidden="true">10.39.</strong> RexxContext</a></li><li class="chapter-item expanded "><a href="../classes/stackframe.html"><strong aria-hidden="true">10.40.</strong> StackFrame</a></li><li class="chapter-item expanded "><a href="../classes/rexxinfo.html"><strong aria-hidden="true">10.41.</strong> RexxInfo</a></li><li class="chapter-item expanded "><a href="../classes/traceobject.html"><strong aria-hidden="true">10.42.</strong> TraceObject</a></li><li class="chapter-item expanded "><a href="../classes/validate.html"><strong aria-hidden="true">10.43.</strong> Validate</a></li><li class="chapter-item expanded "><a href="../classes/singleton.html"><strong aria-hidden="true">10.44.</strong> Singleton</a></li><li class="chapter-item expanded "><a href="../classes/alarm.html"><strong aria-hidden="true">10.45.</strong> Alarm</a></li><li class="chapter-item expanded "><a href="../classes/ticker.html"><strong aria-hidden="true">10.46.</strong> Ticker</a></li><li class="chapter-item expanded "><a href="../classes/monitor.html" class="active"><strong aria-hidden="true">10.47.</strong> Monitor</a></li><li class="chapter-item expanded "><a href="../classes/eventsemaphore.html"><strong aria-hidden="true">10.48.</strong> EventSemaphore</a></li><li class="chapter-item expanded "><a href="../classes/mutexsemaphore.html"><strong aria-hidden="true">10.49.</strong> MutexSemaphore</a></li><li class="chapter-item expanded "><a href="../classes/commandhandler.html"><strong aria-hidden="true">10.50.</strong> CommandHandler</a></li><li class="chapter-item expanded "><a href="../classes/nativecommandhandler.html"><strong aria-hidden="true">10.51.</strong> NativeCommandHandler</a></li><li class="chapter-item expanded "><a href="../classes/commandcontext.html"><strong aria-hidden="true">10.52.</strong> CommandContext</a></li><li class="chapter-item expanded "><a href="../classes/commandinput.html"><strong aria-hidden="true">10.53.</strong> CommandInput</a></li><li class="chapter-item expanded "><a href="../classes/commandoutput.html"><strong aria-hidden="true">10.54.</strong> CommandOutput</a></li><li class="chapter-item expanded "><a href="../classes/rexxqueue.html"><strong aria-hidden="true">10.55.</strong> RexxQueue</a></li><li class="chapter-item expanded "><a href="../classes/supplier.html"><strong aria-hidden="true">10.56.</strong> Supplier</a></li><li class="chapter-item expanded "><a href="../classes/streamsupplier.html"><strong aria-hidden="true">10.57.</strong> StreamSupplier</a></li><li class="chapter-item expanded "><a href="../classes/regularexpression.html"><strong aria-hidden="true">10.58.</strong> RegularExpression</a></li></ol></li><li class="chapter-item expanded "><a href="../builtins/index.html"><strong aria-hidden="true">11.</strong> Built-in functions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../builtins/abbrev.html"><strong aria-hidden="true">11.1.</strong> ABBREV</a></li><li class="chapter-item expanded "><a href="../builtins/abs.html"><strong aria-hidden="true">11.2.</strong> ABS</a></li><li class="chapter-item expanded "><a href="../builtins/address.html"><strong aria-hidden="true">11.3.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../builtins/arg.html"><strong aria-hidden="true">11.4.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../builtins/b2x.html"><strong aria-hidden="true">11.5.</strong> B2X</a></li><li class="chapter-item expanded "><a href="../builtins/beep.html"><strong aria-hidden="true">11.6.</strong> BEEP</a></li><li class="chapter-item expanded "><a href="../builtins/bitand.html"><strong aria-hidden="true">11.7.</strong> BITAND</a></li><li class="chapter-item expanded "><a href="../builtins/bitor.html"><strong aria-hidden="true">11.8.</strong> BITOR</a></li><li class="chapter-item expanded "><a href="../builtins/bitxor.html"><strong aria-hidden="true">11.9.</strong> BITXOR</a></li><li class="chapter-item expanded "><a href="../builtins/c2d.html"><strong aria-hidden="true">11.10.</strong> C2D</a></li><li class="chapter-item expanded "><a href="../builtins/c2x.html"><strong aria-hidden="true">11.11.</strong> C2X</a></li><li class="chapter-item expanded "><a href="../builtins/center.html"><strong aria-hidden="true">11.12.</strong> CENTER</a></li><li class="chapter-item expanded "><a href="../builtins/changestr.html"><strong aria-hidden="true">11.13.</strong> CHANGESTR</a></li><li class="chapter-item expanded "><a href="../builtins/charin.html"><strong aria-hidden="true">11.14.</strong> CHARIN</a></li><li class="chapter-item expanded "><a href="../builtins/charout.html"><strong aria-hidden="true">11.15.</strong> CHAROUT</a></li><li class="chapter-item expanded "><a href="../builtins/chars.html"><strong aria-hidden="true">11.16.</strong> CHARS</a></li><li class="chapter-item expanded "><a href="../builtins/compare.html"><strong aria-hidden="true">11.17.</strong> COMPARE</a></li><li class="chapter-item expanded "><a href="../builtins/condition.html"><strong aria-hidden="true">11.18.</strong> CONDITION</a></li><li class="chapter-item expanded "><a href="../builtins/copies.html"><strong aria-hidden="true">11.19.</strong> COPIES</a></li><li class="chapter-item expanded "><a href="../builtins/countstr.html"><strong aria-hidden="true">11.20.</strong> COUNTSTR</a></li><li class="chapter-item expanded "><a href="../builtins/d2c.html"><strong aria-hidden="true">11.21.</strong> D2C</a></li><li class="chapter-item expanded "><a href="../builtins/d2x.html"><strong aria-hidden="true">11.22.</strong> D2X</a></li><li class="chapter-item expanded "><a href="../builtins/datatype.html"><strong aria-hidden="true">11.23.</strong> DATATYPE</a></li><li class="chapter-item expanded "><a href="../builtins/date.html"><strong aria-hidden="true">11.24.</strong> DATE</a></li><li class="chapter-item expanded "><a href="../builtins/delstr.html"><strong aria-hidden="true">11.25.</strong> DELSTR</a></li><li class="chapter-item expanded "><a href="../builtins/delword.html"><strong aria-hidden="true">11.26.</strong> DELWORD</a></li><li class="chapter-item expanded "><a href="../builtins/digits.html"><strong aria-hidden="true">11.27.</strong> DIGITS</a></li><li class="chapter-item expanded "><a href="../builtins/directory.html"><strong aria-hidden="true">11.28.</strong> DIRECTORY</a></li><li class="chapter-item expanded "><a href="../builtins/endlocal.html"><strong aria-hidden="true">11.29.</strong> ENDLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/errortext.html"><strong aria-hidden="true">11.30.</strong> ERRORTEXT</a></li><li class="chapter-item expanded "><a href="../builtins/filespec.html"><strong aria-hidden="true">11.31.</strong> FILESPEC</a></li><li class="chapter-item expanded "><a href="../builtins/form.html"><strong aria-hidden="true">11.32.</strong> FORM</a></li><li class="chapter-item expanded "><a href="../builtins/format.html"><strong aria-hidden="true">11.33.</strong> FORMAT</a></li><li class="chapter-item expanded "><a href="../builtins/fuzz.html"><strong aria-hidden="true">11.34.</strong> FUZZ</a></li><li class="chapter-item expanded "><a href="../builtins/gc.html"><strong aria-hidden="true">11.35.</strong> GC</a></li><li class="chapter-item expanded "><a href="../builtins/insert.html"><strong aria-hidden="true">11.36.</strong> INSERT</a></li><li class="chapter-item expanded "><a href="../builtins/lastpos.html"><strong aria-hidden="true">11.37.</strong> LASTPOS</a></li><li class="chapter-item expanded "><a href="../builtins/left.html"><strong aria-hidden="true">11.38.</strong> LEFT</a></li><li class="chapter-item expanded "><a href="../builtins/length.html"><strong aria-hidden="true">11.39.</strong> LENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/linein.html"><strong aria-hidden="true">11.40.</strong> LINEIN</a></li><li class="chapter-item expanded "><a href="../builtins/lineout.html"><strong aria-hidden="true">11.41.</strong> LINEOUT</a></li><li class="chapter-item expanded "><a href="../builtins/lines.html"><strong aria-hidden="true">11.42.</strong> LINES</a></li><li class="chapter-item expanded "><a href="../builtins/lower.html"><strong aria-hidden="true">11.43.</strong> LOWER</a></li><li class="chapter-item expanded "><a href="../builtins/max.html"><strong aria-hidden="true">11.44.</strong> MAX</a></li><li class="chapter-item expanded "><a href="../builtins/min.html"><strong aria-hidden="true">11.45.</strong> MIN</a></li><li class="chapter-item expanded "><a href="../builtins/overlay.html"><strong aria-hidden="true">11.46.</strong> OVERLAY</a></li><li class="chapter-item expanded "><a href="../builtins/pos.html"><strong aria-hidden="true">11.47.</strong> POS</a></li><li class="chapter-item expanded "><a href="../builtins/qualify.html"><strong aria-hidden="true">11.48.</strong> QUALIFY</a></li><li class="chapter-item expanded "><a href="../builtins/queued.html"><strong aria-hidden="true">11.49.</strong> QUEUED</a></li><li class="chapter-item expanded "><a href="../builtins/random.html"><strong aria-hidden="true">11.50.</strong> RANDOM</a></li><li class="chapter-item expanded "><a href="../builtins/reverse.html"><strong aria-hidden="true">11.51.</strong> REVERSE</a></li><li class="chapter-item expanded "><a href="../builtins/right.html"><strong aria-hidden="true">11.52.</strong> RIGHT</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncadd.html"><strong aria-hidden="true">11.53.</strong> RXFUNCADD</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncdrop.html"><strong aria-hidden="true">11.54.</strong> RXFUNCDROP</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncquery.html"><strong aria-hidden="true">11.55.</strong> RXFUNCQUERY</a></li><li class="chapter-item expanded "><a href="../builtins/rxqueue.html"><strong aria-hidden="true">11.56.</strong> RXQUEUE</a></li><li class="chapter-item expanded "><a href="../builtins/setlocal.html"><strong aria-hidden="true">11.57.</strong> SETLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/sign.html"><strong aria-hidden="true">11.58.</strong> SIGN</a></li><li class="chapter-item expanded "><a href="../builtins/sourceline.html"><strong aria-hidden="true">11.59.</strong> SOURCELINE</a></li><li class="chapter-item expanded "><a href="../builtins/space.html"><strong aria-hidden="true">11.60.</strong> SPACE</a></li><li class="chapter-item expanded "><a href="../builtins/stream.html"><strong aria-hidden="true">11.61.</strong> STREAM</a></li><li class="chapter-item expanded "><a href="../builtins/strip.html"><strong aria-hidden="true">11.62.</strong> STRIP</a></li><li class="chapter-item expanded "><a href="../builtins/substr.html"><strong aria-hidden="true">11.63.</strong> SUBSTR</a></li><li class="chapter-item expanded "><a href="../builtins/subword.html"><strong aria-hidden="true">11.64.</strong> SUBWORD</a></li><li class="chapter-item expanded "><a href="../builtins/symbol.html"><strong aria-hidden="true">11.65.</strong> SYMBOL</a></li><li class="chapter-item expanded "><a href="../builtins/time.html"><strong aria-hidden="true">11.66.</strong> TIME</a></li><li class="chapter-item expanded "><a href="../builtins/trace.html"><strong aria-hidden="true">11.67.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../builtins/translate.html"><strong aria-hidden="true">11.68.</strong> TRANSLATE</a></li><li class="chapter-item expanded "><a href="../builtins/trunc.html"><strong aria-hidden="true">11.69.</strong> TRUNC</a></li><li class="chapter-item expanded "><a href="../builtins/upper.html"><strong aria-hidden="true">11.70.</strong> UPPER</a></li><li class="chapter-item expanded "><a href="../builtins/userid.html"><strong aria-hidden="true">11.71.</strong> USERID</a></li><li class="chapter-item expanded "><a href="../builtins/value.html"><strong aria-hidden="true">11.72.</strong> VALUE</a></li><li class="chapter-item expanded "><a href="../builtins/var.html"><strong aria-hidden="true">11.73.</strong> VAR</a></li><li class="chapter-item expanded "><a href="../builtins/verify.html"><strong aria-hidden="true">11.74.</strong> VERIFY</a></li><li class="chapter-item expanded "><a href="../builtins/word.html"><strong aria-hidden="true">11.75.</strong> WORD</a></li><li class="chapter-item expanded "><a href="../builtins/wordindex.html"><strong aria-hidden="true">11.76.</strong> WORDINDEX</a></li><li class="chapter-item expanded "><a href="../builtins/wordlength.html"><strong aria-hidden="true">11.77.</strong> WORDLENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/wordpos.html"><strong aria-hidden="true">11.78.</strong> WORDPOS</a></li><li class="chapter-item expanded "><a href="../builtins/words.html"><strong aria-hidden="true">11.79.</strong> WORDS</a></li><li class="chapter-item expanded "><a href="../builtins/x2b.html"><strong aria-hidden="true">11.80.</strong> X2B</a></li><li class="chapter-item expanded "><a href="../builtins/x2c.html"><strong aria-hidden="true">11.81.</strong> X2C</a></li><li class="chapter-item expanded "><a href="../builtins/x2d.html"><strong aria-hidden="true">11.82.</strong> X2D</a></li><li class="chapter-item expanded "><a href="../builtins/xrange.html"><strong aria-hidden="true">11.83.</strong> XRANGE</a></li></ol></li><li class="chapter-item expanded "><a href="../deviations.html"><strong aria-hidden="true">12.</strong> Deviations</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The interrexx Language Specification</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="monitor"><a class="header" href="#monitor">Monitor</a></h1>
+<p class="references">rexxref: Builtin Classes &gt; Utility Classes &gt; Monitor Class; Builtin Classes &gt; Utility Classes &gt; Monitor Class &gt; current; Builtin Classes &gt; Utility Classes &gt; Monitor Class &gt; destination; Builtin Classes &gt; Utility Classes &gt; Monitor Class &gt; init; Builtin Classes &gt; Utility Classes &gt; Monitor Class &gt; unknown</p>
+<p class="deviations">Deviations: D118, D124</p>
+<p>A <code>Monitor</code> stands in for another object. A message that the monitor does not
+have a method for is sent on to the object that is the monitor's current
+destination, with the same name and the same arguments, and what that answers
+is what the monitor answers. The destination can be changed while the program
+runs, and put back to the one before: a program that holds a monitor, or that
+has made one the value of a name such as <code>.output</code> that other code reads,
+changes where the messages go without that code noticing. A monitor is
+transparent only for messages that it does not itself understand: the methods
+of <code>Object</code> are the monitor's own, and <a href="#r-class.monitor.object">the rule on
+them</a> says which messages are not forwarded. The
+forwarding is the <code>unknown</code> method, which <a href="methods.html#r-class.methods.unknown">the method
+search</a> runs when it finds no method.</p>
+<h2 id="the-class"><a class="header" href="#the-class">The class</a></h2>
+<div class="rule" id="r-class.monitor.creation"><a href="#r-class.monitor.creation">[class.monitor.creation]</a></div>
+<p><code>Monitor</code> has the instance methods <code>current</code>, <code>destination</code>, <code>init</code> and
+<code>unknown</code>, besides the <code>new</code> that every class has. It may have private methods
+besides these; they are not part of this specification. Its only superclass is
+<code>Object</code> and it inherits no mixin class (<a href="index.html#r-class.index.hierarchy">the hierarchy
+rule</a>). <code>new</code> is the one <a href="index.html#r-class.index.new">that <code>Class</code>
+supplies</a>: it sends <code>init</code> the arguments of <code>new</code>, and
+answers an instance of the class that received it, so a subclass of <code>Monitor</code>
+makes instances of itself; methods that a subclass declares are found before
+<code>unknown</code>, so a message for which it has a method is not forwarded.</p>
+<pre><code class="language-rexx">say .monitor~id .monitor~superclasses~items .monitor~superclass~id,
+  .monitor~queryMixinClass
+have = .set~new
+s = .monitor~methods(.nil)
+do while s~available
+  have~put(s~index)
+  s~next
+end
+names = 'current destination init unknown'~makeArray(' ')
+count = 0
+do name over names
+  if have~hasItem(name~upper) then count = count + 1
+end
+say count 'of 4'
+t = .target~new('T')
+m = .monitor~new(t)
+x = .sub~new(t)
+say m~class~id x~class~id
+say m~hello x~hello x~own
+::class target
+::method init
+  expose name
+  use arg name
+::method hello
+  expose name
+  return name 'hello'
+::class sub subclass monitor
+::method hello
+  return 'own hello'
+::method own
+  return 'own'
+</code></pre>
+<pre><code class="language-output">Monitor 1 Object 0
+4 of 4
+Monitor SUB
+T hello own hello own
+</code></pre>
+<h2 id="the-destination"><a class="header" href="#the-destination">The destination</a></h2>
+<div class="rule" id="r-class.monitor.init"><a href="#r-class.monitor.init">[class.monitor.init]</a></div>
+<p><code>init</code> sets the destination to its argument. It takes at most one argument
+(<code>SYNTAX 93.902</code>); the argument can be any object, strings, the empty string
+and <code>.nil</code> among them, and when it is omitted the destination is <code>.nil</code>. It
+replaces every destination that was set before, including those that
+<a href="#r-class.monitor.destination"><code>destination</code></a> put on top of the first, so that
+the destination that comes back after the last one has been dropped is <code>.nil</code>.
+<code>init</code> answers nothing. Because <code>new</code> sends <code>init</code> the arguments of <code>new</code>,
+<code>new</code> takes the same argument and raises the same error, and an instance made
+by <code>new</code> with no argument has no destination until one is set. A message that
+is forwarded while the destination is <code>.nil</code> raises <code>SYNTAX 97.1</code>, as <a href="index.html#r-class.index.errors">the
+NOMETHOD rule</a> says of a message that nothing
+understands.</p>
+<pre><code class="language-rexx">a = .target~new('A')
+b = .target~new('B')
+m = .monitor~new
+say (m~current == .nil) .monitor~new(a)~current~id
+call try "m~hello"
+call try ".monitor~new(a, b)"
+call try "m~init(a, b)"
+call try "m~init"
+call try "m~init(.nil)"
+say (m~current == .nil)
+call try "m~init(a)"
+say m~hello m~current~id
+call try "m~init('')"
+say '['m~current']' m~current~class~id
+call try "m~init(a)"
+r = m~destination(b)
+call try "m~init(a)"
+r = m~destination
+say (r == .nil) (m~current == .nil)
+exit
+try:
+  signal on syntax name bad
+  interpret 'x =' arg(1)
+  say arg(1) '=&gt;' x
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class target
+::method init
+  expose name
+  use arg name
+::method id
+  expose name
+  return name
+::method hello
+  expose name
+  return name 'hello'
+</code></pre>
+<pre><code class="language-output">1 A
+m~hello =&gt; 97.1
+.monitor~new(a, b) =&gt; 93.902
+m~init(a, b) =&gt; 93.902
+m~init =&gt; 91.999
+m~init(.nil) =&gt; 91.999
+1
+m~init(a) =&gt; 91.999
+A hello A
+m~init('') =&gt; 91.999
+[] String
+m~init(a) =&gt; 91.999
+m~init(a) =&gt; 91.999
+1 1
+</code></pre>
+<div class="rule" id="r-class.monitor.current"><a href="#r-class.monitor.current">[class.monitor.current]</a></div>
+<p><code>current</code> answers the destination that messages are forwarded to now: the
+object <code>init</code> was given, or the object that the last
+<a href="#r-class.monitor.destination"><code>destination</code></a> put on top, or <code>.nil</code> when there
+is none. It takes no argument (<code>SYNTAX 93.902</code>), changes nothing and sends no
+message.</p>
+<pre><code class="language-rexx">a = .target~new('A')
+m = .monitor~new(a)
+say m~current~id (m~current == a)
+signal on syntax name bad
+say m~current(1)
+bad: say condition('o')~code
+::class target
+::method init
+  expose name
+  use arg name
+::method id
+  expose name
+  return name
+</code></pre>
+<pre><code class="language-output">A 1
+93.902
+</code></pre>
+<div class="rule" id="r-class.monitor.destination"><a href="#r-class.monitor.destination">[class.monitor.destination]</a></div>
+<p><code>destination</code> changes the destination, and answers the one that is current
+afterwards. The destinations form a stack, with the one that <code>init</code> set at the
+bottom. With an argument, <code>destination</code> puts that object on top: from then on
+messages go to it, and the earlier destinations are kept below it. The
+argument can be any object, <code>.nil</code> and the empty string among them, and what
+<code>destination</code> answers is that same object. Without an argument it takes the
+top one off, so that the destination that was current before the last change
+is current again, and answers that one; when no destination is left under the
+one it took off it answers <code>.nil</code>, and the destination is <code>.nil</code> and stays so,
+for a further <code>destination</code> without an argument takes nothing more off and
+answers <code>.nil</code> again. A destination put on top after that is the only one.
+More than one argument raises <code>SYNTAX 93.902</code>. <code>destination</code> sends no message,
+not <code>current</code> and not <code>init</code>.</p>
+<pre><code class="language-rexx">a = .target~new('A')
+b = .target~new('B')
+c = .target~new('C')
+m = .monitor~new(a)
+say m~destination(b)~id m~destination(c)~id m~hello
+say m~destination~id m~hello
+say m~destination~id m~hello
+r = m~destination
+say (r == .nil) (m~current == .nil)
+r = m~destination
+say (r == .nil) (m~current == .nil)
+say m~destination(c)~id m~hello
+r = m~destination
+say (r == .nil)
+n = .monitor~new
+say (n~destination == .nil) (n~destination(a) == a) n~current~id
+say '['n~destination('')']' n~length
+signal on syntax name bad
+r = n~destination(a, b)
+bad: say condition('o')~code
+::class target
+::method init
+  expose name
+  use arg name
+::method id
+  expose name
+  return name
+::method hello
+  expose name
+  return name 'hello'
+</code></pre>
+<pre><code class="language-output">B C C hello
+B B hello
+A A hello
+1 1
+1 1
+C C hello
+1
+1 1 A
+[] 0
+93.902
+</code></pre>
+<h2 id="forwarding"><a class="header" href="#forwarding">Forwarding</a></h2>
+<div class="rule" id="r-class.monitor.unknown"><a href="#r-class.monitor.unknown">[class.monitor.unknown]</a></div>
+<p><code>unknown(name, arguments)</code> forwards a message. It is run by <a href="methods.html#r-class.methods.unknown">the method
+search</a> for a message the monitor has no method for,
+with the name in upper case and the array of the arguments that the search
+builds, and it can be sent directly with the same two arguments. It sends the
+current destination a message with that name and the items of the array as its
+arguments, and answers what that message answers; when the message answers
+nothing, <code>unknown</code> answers nothing. The arguments are passed on as they were
+sent: an omitted argument stays omitted, so that the destination counts the
+arguments by the last one present, and a trailing omitted argument is not
+counted. A condition that the destination's method raises is raised for the
+message to the monitor in the same way, an error number and subcode included.
+When the destination does not understand the name, or is <code>.nil</code>, <code>SYNTAX 97.1</code>
+is raised; and a method of the destination that is <code>PRIVATE</code> or <code>PACKAGE</code> is
+not available to the monitor, which is not the destination and has not the
+destination's package: the message raises <code>SYNTAX 97.2</code> or <code>97.3</code> as it would
+for any other sender (<a href="../directives/method.html#r-dir.method.access">the access rule</a>). A method that
+the destination has on its class side is not reached. A destination that has
+an <code>unknown</code> method of its own gets that message in turn, with the name in
+upper case. Called directly, <code>unknown</code> needs both arguments (<code>SYNTAX 93.901</code>),
+takes no more (<code>SYNTAX 93.902</code>), and needs the name to be present
+(<code>SYNTAX 93.903</code>).</p>
+<pre><code class="language-rexx">a = .target~new('A')
+m = .monitor~new(a)
+say m~hello(1, 2)
+say m~hello(, 2)
+say m~hello(1, , 3, )
+say m~hello
+say m~Hello(1) m~'hello'(1)
+say m~unknown('hello', .array~of(7, 8))
+call try "m~fail"
+call try "m~priv"
+call try "m~pk"
+call try "m~classside"
+call try "m~nosuchzz"
+call try "m~silent"
+call try "m~unknown('hello')"
+call try "m~unknown"
+call try "m~unknown('hello', .array~of(1), 'x')"
+call try "m~unknown(, .array~of(1))"
+call try ".monitor~new~hello"
+t = .monitor~new(.catcher~new)
+say t~whatsoever(4, 5) t~Mixed(6)
+exit
+try:
+  signal on syntax name bad
+  interpret 'x =' arg(1)
+  say arg(1) '=&gt;' x
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class target
+::method init
+  expose name
+  use arg name
+::method hello
+  expose name
+  return name 'hello' arg() arg(1, 'E') arg(2, 'E') arg(3, 'E')
+::method fail
+  raise syntax 40.900 array('boom')
+::method priv private
+  return 'private'
+::method pk package
+  return 'package'
+::method classside class
+  return 'class side'
+::method silent
+  return
+::class catcher
+::method unknown
+  use arg name, args
+  return 'caught' name args~items
+</code></pre>
+<pre><code class="language-output">A hello 2 1 1 0
+A hello 2 0 1 0
+A hello 3 1 0 1
+A hello 0 0 0 0
+A hello 1 1 0 0 A hello 1 1 0 0
+A hello 2 1 1 0
+m~fail =&gt; 40.900
+m~priv =&gt; 97.2
+m~pk =&gt; 97.3
+m~classside =&gt; 97.1
+m~nosuchzz =&gt; 97.1
+m~silent =&gt; 91.999
+m~unknown('hello') =&gt; 93.901
+m~unknown =&gt; 93.901
+m~unknown('hello', .array~of(1), 'x') =&gt; 93.902
+m~unknown(, .array~of(1)) =&gt; 93.903
+.monitor~new~hello =&gt; 97.1
+caught WHATSOEVER 2 caught MIXED 1
+</code></pre>
+<div class="rule" id="r-class.monitor.object"><a href="#r-class.monitor.object">[class.monitor.object]</a></div>
+<p>Every instance method that <code>Object</code> defines (<a href="object.html">the Object page</a>) is
+the monitor's own, so a message with the name of one is not forwarded: it
+answers as it would for any object, about the monitor and not about the
+destination. That includes <code>class</code>, <code>copy</code>, <code>defaultName</code>, <code>hasMethod</code>, <code>isA</code>,
+<code>isInstanceOf</code>, <code>objectName</code> and <code>objectName=</code>, <code>send</code> and <code>sendWith</code>,
+<code>string</code> and the comparison operators. A program that wants the destination's
+own answer to one of them sends it to <code>current</code>. <code>send</code> and <code>sendWith</code> send
+the message to the monitor itself, so they reach <code>unknown</code> for a name that the
+monitor has no method for. Which names a subclass or an enhanced monitor has
+methods for, besides these, is found by <a href="methods.html#r-class.methods.search">the method
+search</a> in the usual way.</p>
+<pre><code class="language-rexx">a = .target~new('A')
+m = .monitor~new(a)
+say m~class~id m~string m~isA(.monitor) m~isA(.target) m~isInstanceOf(.target)
+say m~hasMethod('hello') m~hasMethod('unknown') a~hasMethod('hello')
+say (m = m) (m == m) (m = a) (m == a) (m \= a)
+say m~objectName '/' a~objectName
+m~objectName = 'the monitor'
+say m~objectName '/' a~objectName '/' m~current~objectName
+say m~send('hello') '/' m~sendWith('hello', .array~new)
+say m~copy~class~id (m~copy~current == a) (m~copy == m)
+say m~defaultName a~defaultName
+say m~id
+::class target
+::method init
+  expose name
+  use arg name
+::method id
+  expose name
+  return name
+::method hello
+  expose name
+  return name 'hello'
+</code></pre>
+<pre><code class="language-output">Monitor a Monitor 1 0 0
+0 1 1
+1 1 0 0 1
+a Monitor / a TARGET
+the monitor / a TARGET / a TARGET
+A hello / A hello
+Monitor 1 0
+a Monitor a TARGET
+A
+</code></pre>
+<div class="rule" id="r-class.monitor.copy"><a href="#r-class.monitor.copy">[class.monitor.copy]</a></div>
+<p><code>copy</code> answers a monitor that shares the stack of destinations with the
+original, also when that stack holds only <code>.nil</code>: a <code>destination</code> sent to either
+one, with an argument or without, changes where both forward. <code>init</code> gives the
+monitor that receives it a stack of its own, and from then on the two are
+independent.</p>
+<pre><code class="language-rexx">a = .target~new('A'); b = .target~new('B'); c = .target~new('C')
+m = .monitor~new(a)
+k = m~copy
+x = k~destination(b)
+say m~current~id k~current~id
+x = m~destination
+say m~current~id k~current~id
+x = k~destination(b)
+k~init(c)
+say m~current~id k~current~id
+x = k~destination(a)
+say m~current~id k~current~id
+x = m~destination(b)
+say m~current~id k~current~id
+n = .monitor~new
+j = n~copy
+x = j~destination(a)
+say (n~current == .nil) j~current~id
+::class target
+::method init
+  expose name
+  use arg name
+::method id
+  expose name
+  return name
+</code></pre>
+<pre><code class="language-output">B B
+A A
+B C
+B A
+B A
+0 A
+</code></pre>
+<div class="rule" id="r-class.monitor.sends"><a href="#r-class.monitor.sends">[class.monitor.sends]</a></div>
+<p>The messages that a monitor sends are the one that <code>unknown</code> sends to the
+destination, which <a href="#r-class.monitor.unknown">the forwarding rule</a> states, and
+that destination's <code>unknown</code> when it has to answer for a name. The monitor
+sends none to itself: <code>unknown</code> does not ask <code>current</code> for the destination,
+<code>init</code> and <code>destination</code> do not send each other, and a subclass that overrides
+<code>current</code> or <code>destination</code> sees them run only when the program sends them. The
+method <code>unknown</code> of a subclass that forwards with
+<code>self~unknown:super(name, arguments)</code> is found by <a href="methods.html#r-class.methods.unknown">the method
+search</a> before the one of <code>Monitor</code>. The example
+overrides each message of a subclass and shows them from a forwarded message,
+<code>destination</code> and <code>current</code>.</p>
+<pre><code class="language-rexx">.environment~log = .list~new
+a = .target~new('A')
+m = .logging~new(a)
+say 'init:' .environment~log~makeArray~makeString('l', ' ')
+.environment~log~empty
+say m~hello
+say 'forward:' .environment~log~makeArray~makeString('l', ' ')
+.environment~log~empty
+x = m~destination(a)
+x = m~destination
+x = m~current
+say 'direct:' .environment~log~makeArray~makeString('l', ' ')
+::class target
+::method init
+  expose name
+  use arg name
+::method hello
+  expose name
+  return name 'hello'
+::class logging subclass monitor
+::method init
+  .environment~log~append('init')
+  forward class (super)
+::method unknown
+  .environment~log~append('unknown' arg(1))
+  forward class (super)
+::method current
+  .environment~log~append('current')
+  forward class (super)
+::method destination
+  .environment~log~append('destination')
+  forward class (super)
+</code></pre>
+<pre><code class="language-output">init: init
+A hello
+forward: unknown HELLO
+direct: destination destination current
+</code></pre>
+<div class="rule" id="r-class.monitor.deviation.118"><a href="#r-class.monitor.deviation.118">[class.monitor.deviation.118]</a></div>
+<p>An instance of a subclass of <code>List</code> that is given to <code>unknown</code> as the array of
+arguments is sent <code>request</code> with <code>ARRAY</code>, as <a href="#r-class.monitor.unknown">the unknown
+rule</a> says of any other object, so that an override
+is used. See <a href="../deviations.html">Deviation 118</a>. ooRexx sends the instance no
+<code>request</code> and passes the items it holds, so the example answers <code>hello 2 a</code> on
+ooRexx. The <code>request</code> of the class <code>ml</code> answers one item.</p>
+<pre><code class="language-rexx">m = .monitor~new(.target~new)
+say m~unknown('HELLO', .ml~of('a', 'b'))
+::class target
+::method hello
+  return 'hello' arg() arg(1)
+::class ml subclass list
+::method request
+  say 'request' arg(1)
+  return .array~of('R')
+</code></pre>
+<pre><code class="language-output">request ARRAY
+hello 1 R
+</code></pre>
+<div class="rule" id="r-class.monitor.deviation.124"><a href="#r-class.monitor.deviation.124">[class.monitor.deviation.124]</a></div>
+<p>An answer of <code>request</code> with <code>ARRAY</code> that is not an <code>Array</code> or an instance of a
+subclass of <code>Array</code> is refused as the array of arguments of <code>unknown</code>, which
+raises <code>SYNTAX 98.946</code>, whatever collection the answer is. ooRexx accepts a
+<code>Queue</code> or a <code>CircularQueue</code> as such an answer and uses its items, and crashes
+for a <code>List</code>, a <code>Bag</code>, a <code>Table</code> or a <code>Directory</code>, among others. In the example
+the answer is a queue.</p>
+<pre><code class="language-rexx">m = .monitor~new(.target~new)
+signal on syntax name bad
+say m~unknown('HELLO', .ans~new)
+exit
+bad: say condition('o')~code
+::class target
+::method hello
+  return 'hello' arg()
+::class ans
+::method request
+  return .queue~of('x')
+</code></pre>
+<pre><code class="language-output">98.946
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../classes/ticker.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../classes/eventsemaphore.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../classes/ticker.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../classes/eventsemaphore.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../assets/version-picker.js"></script>
+
+
+    </div>
+    </body>
+</html>
