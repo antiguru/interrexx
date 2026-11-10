@@ -229,7 +229,7 @@ class in place.
 The order in which a hash collection yields its entries, and the order of
 anything that lists one, is not specified, and may differ from ooRexx's.
 Which entries are yielded, and how often, is specified. Which stored indexes
-or items a search sends `==` or `hashCode` to, beyond those the search must
+or items a search compares, by `==` or `hashCode`, beyond those it must
 compare, and how often, is not specified either.
 
 ## 34. `..` in a file name
@@ -515,8 +515,9 @@ there.
 
 A lookup or PUT with the very index object already stored sends that
 object's `==`, and so does a search for an item (`hasItem`, `index`,
-`removeItem`) with the very item object stored. ooRexx compares identity
-first and sends nothing.
+`removeItem`) with the very item object stored, and so does a Relation's
+`uniqueIndexes` for an index object stored more than once. ooRexx compares
+identity first and sends nothing.
 
 ## 79. APPEND write positions
 
@@ -549,8 +550,10 @@ that fails fails at RAISE. ooRexx converts at every `CONDITION('D')`.
 
 ## 84. Emptying a Table during REMOVE
 
-When an index's equality method empties its Table during REMOVE, ITEMS stays
-0. ooRexx answers -1.
+When an index's equality method empties its Table or Relation during REMOVE
+or a Relation's REMOVEALL, the search ends and ITEMS stays 0. ooRexx answers
+-1 for REMOVE, and its REMOVEALL goes on comparing with an object that is no
+stored index.
 
 ## 85. `.environment` per interpreter
 
