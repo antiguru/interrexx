@@ -664,10 +664,10 @@ DIRECTORY, FILESPEC, BEEP and the RexxUtil file functions, such as
 SysFileDelete, check their arguments in the order that every other builtin
 follows, the ANSI order: the count of arguments first, so that an argument
 past the last one raises `SYNTAX 88.922` before an omitted or wrong argument
-is reported. ooRexx reports an omitted argument, an object with no
-`MAKESTRING` method and an argument that is not a whole number before the
-count, and the count before an argument's value: an option it does not allow
-or a number out of range.
+is reported. ooRexx reports an omitted argument, an object whose `request`
+with the argument `STRING` answers no string and an argument that is not a
+whole number before the count, and the count before an argument's value: an
+option it does not allow or a number out of range.
 
 ## 102. LOSTDIGITS before the right operand's errors
 
@@ -741,14 +741,14 @@ one.
 An instance of a subclass of `String` is read by its own characters wherever a
 string, a number, a logical value or a whole number is needed, as receiver and
 as argument; `MAKESTRING` and `STRING` are not sent to it for that. ooRexx
-reads such an instance through its `MAKESTRING` method when it is an argument,
-of a method, an operator or a builtin function, and when it is the receiver of
-the numeric methods and operators, the logical operators, `dataType` and `?`,
-and in `new`; as the receiver of the other methods, of the strict comparisons
-and of the joining operators it reads the instance's own characters, so one
-instance can answer differently to `=` and to `==`. As the message name of
-`send`, `sendWith`, `start`, `startWith` or `Message~new`, ooRexx sends it
-`request('ARRAY')` instead and raises `SYNTAX 93.946`.
+sends such an instance `request` with `STRING` or `MAKESTRING` in many of these
+places, as an argument of a method, an operator or a builtin
+function, as the receiver of the numeric and logical methods and operators,
+`dataType`, `?` and the joining operators, and in `new`, so an override of
+either method can change what is read; elsewhere it reads the instance's own
+characters, so one instance can answer differently to `=` and to `==`. As the
+message name of `send`, `sendWith`, `start`, `startWith` or `Message~new`,
+ooRexx sends it `request('ARRAY')` instead and raises `SYNTAX 93.946`.
 
 ## 110. Instances follow every change to their class
 
@@ -778,16 +778,16 @@ first message only to look for a package that is already loaded under that
 name; otherwise it sends the second message with the full name of the file
 the program asked for, and loads that file.
 
-## 112. Array items of a loadPackage source are read through makeString
+## 112. Array items of a loadPackage source are read through request
 
 An item of the source array of `loadPackage` that is not a string is read as
-`Method~new` and `Package~new` read one, through `makeString`; an answer that
-is not a string raises the same error as there, and a hole followed by an
-item raises the error that the source rule of `new` gives for it. ooRexx reads
-an instance of a subclass of `String` and a `MutableBuffer` by their text as
-well. Any other item it sends `objectName`, not `makeString`, and uses the
-answer as the line, so an item with no `makeString` method raises no error;
-it crashes on a hole followed by an item.
+`Method~new` and `Package~new` read one, by sending it `request` with the
+argument `STRING`; an answer that is not a string raises the same error as
+there, and a hole followed by an item raises the error that the source rule of
+`new` gives for it. ooRexx reads an instance of a subclass of `String` and a
+`MutableBuffer` by their text as well. Any other item it sends `objectName`,
+not `request`, and uses the answer as the line, so an item whose `request`
+answers no string raises no error; it crashes on a hole followed by an item.
 
 ## 113. A message keeps a copy of its argument array
 
