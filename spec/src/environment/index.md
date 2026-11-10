@@ -17,10 +17,12 @@ The pages of this chapter so far are:
   bound to when a program starts, the order in which an environment symbol is
   looked up, and what a program may change in them and where the change is
   seen.
+* [Invocation](invocation.md): the `rexx` command, its words and options, how
+  the arguments reach the program, the status it ends with, what a program
+  sees at its start, and what is sent to its objects when it ends.
 
-Pages on how a program is started and ended, how external routines and
-programs are found, commands and their environments, the security manager and
-interactive debugging follow. Until they exist, the rules of the other
+Pages on how external routines and programs are found, commands and their
+environments, the security manager and interactive debugging follow. Until they exist, the rules of the other
 chapters that mention those subjects in plain text are the rules there are.
 
 An example in this chapter changes the objects that its own program reads, as

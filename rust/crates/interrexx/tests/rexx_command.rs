@@ -275,6 +275,13 @@ fn remove(dir: &Path) {
     std::fs::remove_dir_all(dir).expect("the fixture is removed");
 }
 
+// The cases cover the rules of the invocation page, each by the group of
+// cases under its heading in `rexx_command/cases`.
+// spec: env.invocation.forms, env.invocation.words, env.invocation.version
+// spec: env.invocation.expression, env.invocation.optstring
+// spec: env.invocation.program, env.invocation.notfound
+// spec: env.invocation.arguments, env.invocation.syscargs
+// spec: env.invocation.status
 #[test]
 fn the_command_line_answers_as_the_oracles_does() {
     let oracle = Path::new(ORACLE_ROOT).join("bin/rexx");

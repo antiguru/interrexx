@@ -1096,3 +1096,69 @@ a\xffb
 rc> 0
 out> 61FF62
 out> 61FF62
+
+# empty words: leading ones add nothing to the string, later ones keep
+# their blank
+run
+showargs.rex
+<empty>
+<empty>
+x
+----
+rc> 0
+out> arg()=1 arg(1)=[x]
+out> items=3 size=3 last=3
+out> 1=[]
+out> 2=[]
+out> 3=[x]
+out> [, , x]
+
+run
+showargs.rex
+a
+<empty>
+b
+----
+rc> 0
+out> arg()=1 arg(1)=[a  b]
+out> items=3 size=3 last=3
+out> 1=[a]
+out> 2=[]
+out> 3=[b]
+out> [a, , b]
+
+run
+showargs.rex
+a
+<empty>
+----
+rc> 0
+out> arg()=1 arg(1)=[a ]
+out> items=2 size=2 last=2
+out> 1=[a]
+out> 2=[]
+out> [a, ]
+
+run
+showargs.rex
+<empty>
+<empty>
+----
+rc> 0
+out> arg()=1 arg(1)=[]
+out> items=2 size=2 last=2
+out> 1=[]
+out> 2=[]
+out> [, ]
+
+run
+showargs.rex
+<empty>
+ x
+----
+rc> 0
+out> arg()=1 arg(1)=[ x]
+out> items=2 size=2 last=2
+out> 1=[]
+out> 2=[ x]
+out> [,  x]
