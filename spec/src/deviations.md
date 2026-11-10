@@ -847,9 +847,9 @@ collection through `makeArray` send it `makeArray`, and the methods and
 instructions that read an argument array or a source through `request` with
 `ARRAY` (`sendWith`, `startWith`, `Message~new` with the option `A`,
 `Message~replyWith`, FORWARD with ARGUMENTS, `Method~new`, `Routine~new`,
-`Package~new`, `loadPackage` and a `Stem`'s `unknown`) send it `request`, so an override is used.
-ooRexx sends such an instance neither message and uses the items it holds,
-unlike the subclasses of the other collection classes.
+`Package~new`, `loadPackage` and a `Stem`'s `unknown`) send it `request`, so
+an override is used. ooRexx sends such an instance neither message and uses
+the items it holds, unlike the subclasses of the other collection classes.
 
 ## 119. A second cancel of an Alarm sends nothing
 
