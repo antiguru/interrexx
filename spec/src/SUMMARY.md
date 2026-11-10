@@ -147,6 +147,8 @@
   - [InputStream](classes/inputstream.md)
   - [OutputStream](classes/outputstream.md)
   - [InputOutputStream](classes/inputoutputstream.md)
+- [Environment](environment/index.md)
+  - [Environment objects](environment/objects.md)
 - [Built-in functions](builtins/index.md)
   - [ABBREV](builtins/abbrev.md)
   - [ABS](builtins/abs.md)
