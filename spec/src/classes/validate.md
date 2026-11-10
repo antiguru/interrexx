@@ -642,6 +642,7 @@ say 'accepted'
 say 'in range'
 .validate~number('N', .num~new('abc'))
 say 'not reached'
+exit
 bad: say condition('o')~code
 ::class num subclass string
 ::method makestring
