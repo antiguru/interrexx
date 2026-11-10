@@ -1,0 +1,2410 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Collection - The interrexx Language Specification</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../conventions.html"><strong aria-hidden="true">2.</strong> Conventions</a></li><li class="chapter-item expanded "><a href="../lexical/index.html"><strong aria-hidden="true">3.</strong> Lexical structure</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../lexical/characters.html"><strong aria-hidden="true">3.1.</strong> Characters</a></li><li class="chapter-item expanded "><a href="../lexical/comments.html"><strong aria-hidden="true">3.2.</strong> Comments</a></li><li class="chapter-item expanded "><a href="../lexical/literals.html"><strong aria-hidden="true">3.3.</strong> Literals</a></li><li class="chapter-item expanded "><a href="../lexical/symbols.html"><strong aria-hidden="true">3.4.</strong> Symbols</a></li><li class="chapter-item expanded "><a href="../lexical/operators.html"><strong aria-hidden="true">3.5.</strong> Operators and special characters</a></li><li class="chapter-item expanded "><a href="../lexical/clauses.html"><strong aria-hidden="true">3.6.</strong> Clauses</a></li></ol></li><li class="chapter-item expanded "><a href="../numbers/index.html"><strong aria-hidden="true">4.</strong> Numbers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../numbers/formats.html"><strong aria-hidden="true">4.1.</strong> Formats</a></li><li class="chapter-item expanded "><a href="../numbers/limits.html"><strong aria-hidden="true">4.2.</strong> Limits</a></li><li class="chapter-item expanded "><a href="../numbers/arithmetic.html"><strong aria-hidden="true">4.3.</strong> Arithmetic</a></li><li class="chapter-item expanded "><a href="../numbers/settings.html"><strong aria-hidden="true">4.4.</strong> Settings</a></li><li class="chapter-item expanded "><a href="../numbers/comparison.html"><strong aria-hidden="true">4.5.</strong> Comparison</a></li></ol></li><li class="chapter-item expanded "><a href="../expressions/index.html"><strong aria-hidden="true">5.</strong> Expressions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../expressions/terms.html"><strong aria-hidden="true">5.1.</strong> Terms</a></li><li class="chapter-item expanded "><a href="../expressions/variables.html"><strong aria-hidden="true">5.2.</strong> Variables</a></li><li class="chapter-item expanded "><a href="../expressions/concatenation.html"><strong aria-hidden="true">5.3.</strong> Concatenation</a></li><li class="chapter-item expanded "><a href="../expressions/arithmetic.html"><strong aria-hidden="true">5.4.</strong> Arithmetic operators</a></li><li class="chapter-item expanded "><a href="../expressions/comparison.html"><strong aria-hidden="true">5.5.</strong> Comparison operators</a></li><li class="chapter-item expanded "><a href="../expressions/logical.html"><strong aria-hidden="true">5.6.</strong> Logical operators</a></li><li class="chapter-item expanded "><a href="../expressions/messages.html"><strong aria-hidden="true">5.7.</strong> Message operators</a></li></ol></li><li class="chapter-item expanded "><a href="../instructions/index.html"><strong aria-hidden="true">6.</strong> Instructions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../instructions/address.html"><strong aria-hidden="true">6.1.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../instructions/arg.html"><strong aria-hidden="true">6.2.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../instructions/assignment.html"><strong aria-hidden="true">6.3.</strong> Assignments</a></li><li class="chapter-item expanded "><a href="../instructions/call.html"><strong aria-hidden="true">6.4.</strong> CALL</a></li><li class="chapter-item expanded "><a href="../instructions/command.html"><strong aria-hidden="true">6.5.</strong> Commands</a></li><li class="chapter-item expanded "><a href="../instructions/do.html"><strong aria-hidden="true">6.6.</strong> DO</a></li><li class="chapter-item expanded "><a href="../instructions/drop.html"><strong aria-hidden="true">6.7.</strong> DROP</a></li><li class="chapter-item expanded "><a href="../instructions/exit.html"><strong aria-hidden="true">6.8.</strong> EXIT</a></li><li class="chapter-item expanded "><a href="../instructions/expose.html"><strong aria-hidden="true">6.9.</strong> EXPOSE</a></li><li class="chapter-item expanded "><a href="../instructions/forward.html"><strong aria-hidden="true">6.10.</strong> FORWARD</a></li><li class="chapter-item expanded "><a href="../instructions/guard.html"><strong aria-hidden="true">6.11.</strong> GUARD</a></li><li class="chapter-item expanded "><a href="../instructions/if.html"><strong aria-hidden="true">6.12.</strong> IF</a></li><li class="chapter-item expanded "><a href="../instructions/interpret.html"><strong aria-hidden="true">6.13.</strong> INTERPRET</a></li><li class="chapter-item expanded "><a href="../instructions/iterate.html"><strong aria-hidden="true">6.14.</strong> ITERATE</a></li><li class="chapter-item expanded "><a href="../instructions/leave.html"><strong aria-hidden="true">6.15.</strong> LEAVE</a></li><li class="chapter-item expanded "><a href="../instructions/loop.html"><strong aria-hidden="true">6.16.</strong> LOOP</a></li><li class="chapter-item expanded "><a href="../instructions/message.html"><strong aria-hidden="true">6.17.</strong> Message instructions</a></li><li class="chapter-item expanded "><a href="../instructions/nop.html"><strong aria-hidden="true">6.18.</strong> NOP</a></li><li class="chapter-item expanded "><a href="../instructions/numeric.html"><strong aria-hidden="true">6.19.</strong> NUMERIC</a></li><li class="chapter-item expanded "><a href="../instructions/options.html"><strong aria-hidden="true">6.20.</strong> OPTIONS</a></li><li class="chapter-item expanded "><a href="../instructions/parse.html"><strong aria-hidden="true">6.21.</strong> PARSE</a></li><li class="chapter-item expanded "><a href="../instructions/procedure.html"><strong aria-hidden="true">6.22.</strong> PROCEDURE</a></li><li class="chapter-item expanded "><a href="../instructions/pull.html"><strong aria-hidden="true">6.23.</strong> PULL</a></li><li class="chapter-item expanded "><a href="../instructions/push.html"><strong aria-hidden="true">6.24.</strong> PUSH</a></li><li class="chapter-item expanded "><a href="../instructions/queue.html"><strong aria-hidden="true">6.25.</strong> QUEUE</a></li><li class="chapter-item expanded "><a href="../instructions/raise.html"><strong aria-hidden="true">6.26.</strong> RAISE</a></li><li class="chapter-item expanded "><a href="../instructions/reply.html"><strong aria-hidden="true">6.27.</strong> REPLY</a></li><li class="chapter-item expanded "><a href="../instructions/return.html"><strong aria-hidden="true">6.28.</strong> RETURN</a></li><li class="chapter-item expanded "><a href="../instructions/say.html"><strong aria-hidden="true">6.29.</strong> SAY</a></li><li class="chapter-item expanded "><a href="../instructions/select.html"><strong aria-hidden="true">6.30.</strong> SELECT</a></li><li class="chapter-item expanded "><a href="../instructions/signal.html"><strong aria-hidden="true">6.31.</strong> SIGNAL</a></li><li class="chapter-item expanded "><a href="../instructions/trace.html"><strong aria-hidden="true">6.32.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../instructions/use.html"><strong aria-hidden="true">6.33.</strong> USE</a></li></ol></li><li class="chapter-item expanded "><a href="../parsing/index.html"><strong aria-hidden="true">7.</strong> Parsing</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../parsing/templates.html"><strong aria-hidden="true">7.1.</strong> Templates</a></li><li class="chapter-item expanded "><a href="../parsing/patterns.html"><strong aria-hidden="true">7.2.</strong> Patterns</a></li><li class="chapter-item expanded "><a href="../parsing/multiple.html"><strong aria-hidden="true">7.3.</strong> Several strings and case</a></li></ol></li><li class="chapter-item expanded "><a href="../directives/index.html"><strong aria-hidden="true">8.</strong> Directives</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../directives/class.html"><strong aria-hidden="true">8.1.</strong> ::CLASS</a></li><li class="chapter-item expanded "><a href="../directives/method.html"><strong aria-hidden="true">8.2.</strong> ::METHOD</a></li><li class="chapter-item expanded "><a href="../directives/attribute.html"><strong aria-hidden="true">8.3.</strong> ::ATTRIBUTE</a></li><li class="chapter-item expanded "><a href="../directives/constant.html"><strong aria-hidden="true">8.4.</strong> ::CONSTANT</a></li><li class="chapter-item expanded "><a href="../directives/routine.html"><strong aria-hidden="true">8.5.</strong> ::ROUTINE</a></li><li class="chapter-item expanded "><a href="../directives/requires.html"><strong aria-hidden="true">8.6.</strong> ::REQUIRES</a></li><li class="chapter-item expanded "><a href="../directives/options.html"><strong aria-hidden="true">8.7.</strong> ::OPTIONS</a></li><li class="chapter-item expanded "><a href="../directives/resource.html"><strong aria-hidden="true">8.8.</strong> ::RESOURCE</a></li><li class="chapter-item expanded "><a href="../directives/annotate.html"><strong aria-hidden="true">8.9.</strong> ::ANNOTATE</a></li></ol></li><li class="chapter-item expanded "><a href="../conditions/index.html"><strong aria-hidden="true">9.</strong> Conditions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../conditions/traps.html"><strong aria-hidden="true">9.1.</strong> Condition traps</a></li><li class="chapter-item expanded "><a href="../conditions/information.html"><strong aria-hidden="true">9.2.</strong> Condition information</a></li><li class="chapter-item expanded "><a href="../conditions/syntax.html"><strong aria-hidden="true">9.3.</strong> SYNTAX</a></li><li class="chapter-item expanded "><a href="../conditions/error.html"><strong aria-hidden="true">9.4.</strong> ERROR and FAILURE</a></li><li class="chapter-item expanded "><a href="../conditions/halt.html"><strong aria-hidden="true">9.5.</strong> HALT</a></li><li class="chapter-item expanded "><a href="../conditions/novalue.html"><strong aria-hidden="true">9.6.</strong> NOVALUE</a></li><li class="chapter-item expanded "><a href="../conditions/nostring.html"><strong aria-hidden="true">9.7.</strong> NOSTRING</a></li><li class="chapter-item expanded "><a href="../conditions/nomethod.html"><strong aria-hidden="true">9.8.</strong> NOMETHOD</a></li><li class="chapter-item expanded "><a href="../conditions/notready.html"><strong aria-hidden="true">9.9.</strong> NOTREADY</a></li><li class="chapter-item expanded "><a href="../conditions/lostdigits.html"><strong aria-hidden="true">9.10.</strong> LOSTDIGITS</a></li><li class="chapter-item expanded "><a href="../conditions/user.html"><strong aria-hidden="true">9.11.</strong> USER conditions</a></li><li class="chapter-item expanded "><a href="../conditions/errors.html"><strong aria-hidden="true">9.12.</strong> Error numbers</a></li></ol></li><li class="chapter-item expanded "><a href="../classes/index.html"><strong aria-hidden="true">10.</strong> Classes</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../classes/methods.html"><strong aria-hidden="true">10.1.</strong> Method search</a></li><li class="chapter-item expanded "><a href="../classes/object.html"><strong aria-hidden="true">10.2.</strong> Object</a></li><li class="chapter-item expanded "><a href="../classes/class.html"><strong aria-hidden="true">10.3.</strong> Class</a></li><li class="chapter-item expanded "><a href="../classes/string.html"><strong aria-hidden="true">10.4.</strong> String</a></li><li class="chapter-item expanded "><a href="../classes/method.html"><strong aria-hidden="true">10.5.</strong> Method</a></li><li class="chapter-item expanded "><a href="../classes/routine.html"><strong aria-hidden="true">10.6.</strong> Routine</a></li><li class="chapter-item expanded "><a href="../classes/package.html"><strong aria-hidden="true">10.7.</strong> Package</a></li><li class="chapter-item expanded "><a href="../classes/message.html"><strong aria-hidden="true">10.8.</strong> Message</a></li><li class="chapter-item expanded "><a href="../classes/messagenotification.html"><strong aria-hidden="true">10.9.</strong> MessageNotification</a></li><li class="chapter-item expanded "><a href="../classes/alarmnotification.html"><strong aria-hidden="true">10.10.</strong> AlarmNotification</a></li><li class="chapter-item expanded "><a href="../classes/collection.html" class="active"><strong aria-hidden="true">10.11.</strong> Collection</a></li><li class="chapter-item expanded "><a href="../classes/mapcollection.html"><strong aria-hidden="true">10.12.</strong> MapCollection</a></li><li class="chapter-item expanded "><a href="../classes/orderedcollection.html"><strong aria-hidden="true">10.13.</strong> OrderedCollection</a></li><li class="chapter-item expanded "><a href="../classes/setcollection.html"><strong aria-hidden="true">10.14.</strong> SetCollection</a></li><li class="chapter-item expanded "><a href="../classes/array.html"><strong aria-hidden="true">10.15.</strong> Array</a></li><li class="chapter-item expanded "><a href="../classes/list.html"><strong aria-hidden="true">10.16.</strong> List</a></li><li class="chapter-item expanded "><a href="../classes/queue.html"><strong aria-hidden="true">10.17.</strong> Queue</a></li><li class="chapter-item expanded "><a href="../classes/circularqueue.html"><strong aria-hidden="true">10.18.</strong> CircularQueue</a></li><li class="chapter-item expanded "><a href="../classes/directory.html"><strong aria-hidden="true">10.19.</strong> Directory</a></li><li class="chapter-item expanded "><a href="../classes/stringtable.html"><strong aria-hidden="true">10.20.</strong> StringTable</a></li><li class="chapter-item expanded "><a href="../classes/properties.html"><strong aria-hidden="true">10.21.</strong> Properties</a></li><li class="chapter-item expanded "><a href="../classes/table.html"><strong aria-hidden="true">10.22.</strong> Table</a></li><li class="chapter-item expanded "><a href="../classes/identitytable.html"><strong aria-hidden="true">10.23.</strong> IdentityTable</a></li><li class="chapter-item expanded "><a href="../classes/relation.html"><strong aria-hidden="true">10.24.</strong> Relation</a></li><li class="chapter-item expanded "><a href="../classes/bag.html"><strong aria-hidden="true">10.25.</strong> Bag</a></li><li class="chapter-item expanded "><a href="../classes/set.html"><strong aria-hidden="true">10.26.</strong> Set</a></li><li class="chapter-item expanded "><a href="../classes/stem.html"><strong aria-hidden="true">10.27.</strong> Stem</a></li></ol></li><li class="chapter-item expanded "><a href="../builtins/index.html"><strong aria-hidden="true">11.</strong> Built-in functions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../builtins/abbrev.html"><strong aria-hidden="true">11.1.</strong> ABBREV</a></li><li class="chapter-item expanded "><a href="../builtins/abs.html"><strong aria-hidden="true">11.2.</strong> ABS</a></li><li class="chapter-item expanded "><a href="../builtins/address.html"><strong aria-hidden="true">11.3.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../builtins/arg.html"><strong aria-hidden="true">11.4.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../builtins/b2x.html"><strong aria-hidden="true">11.5.</strong> B2X</a></li><li class="chapter-item expanded "><a href="../builtins/beep.html"><strong aria-hidden="true">11.6.</strong> BEEP</a></li><li class="chapter-item expanded "><a href="../builtins/bitand.html"><strong aria-hidden="true">11.7.</strong> BITAND</a></li><li class="chapter-item expanded "><a href="../builtins/bitor.html"><strong aria-hidden="true">11.8.</strong> BITOR</a></li><li class="chapter-item expanded "><a href="../builtins/bitxor.html"><strong aria-hidden="true">11.9.</strong> BITXOR</a></li><li class="chapter-item expanded "><a href="../builtins/c2d.html"><strong aria-hidden="true">11.10.</strong> C2D</a></li><li class="chapter-item expanded "><a href="../builtins/c2x.html"><strong aria-hidden="true">11.11.</strong> C2X</a></li><li class="chapter-item expanded "><a href="../builtins/center.html"><strong aria-hidden="true">11.12.</strong> CENTER</a></li><li class="chapter-item expanded "><a href="../builtins/changestr.html"><strong aria-hidden="true">11.13.</strong> CHANGESTR</a></li><li class="chapter-item expanded "><a href="../builtins/charin.html"><strong aria-hidden="true">11.14.</strong> CHARIN</a></li><li class="chapter-item expanded "><a href="../builtins/charout.html"><strong aria-hidden="true">11.15.</strong> CHAROUT</a></li><li class="chapter-item expanded "><a href="../builtins/chars.html"><strong aria-hidden="true">11.16.</strong> CHARS</a></li><li class="chapter-item expanded "><a href="../builtins/compare.html"><strong aria-hidden="true">11.17.</strong> COMPARE</a></li><li class="chapter-item expanded "><a href="../builtins/condition.html"><strong aria-hidden="true">11.18.</strong> CONDITION</a></li><li class="chapter-item expanded "><a href="../builtins/copies.html"><strong aria-hidden="true">11.19.</strong> COPIES</a></li><li class="chapter-item expanded "><a href="../builtins/countstr.html"><strong aria-hidden="true">11.20.</strong> COUNTSTR</a></li><li class="chapter-item expanded "><a href="../builtins/d2c.html"><strong aria-hidden="true">11.21.</strong> D2C</a></li><li class="chapter-item expanded "><a href="../builtins/d2x.html"><strong aria-hidden="true">11.22.</strong> D2X</a></li><li class="chapter-item expanded "><a href="../builtins/datatype.html"><strong aria-hidden="true">11.23.</strong> DATATYPE</a></li><li class="chapter-item expanded "><a href="../builtins/date.html"><strong aria-hidden="true">11.24.</strong> DATE</a></li><li class="chapter-item expanded "><a href="../builtins/delstr.html"><strong aria-hidden="true">11.25.</strong> DELSTR</a></li><li class="chapter-item expanded "><a href="../builtins/delword.html"><strong aria-hidden="true">11.26.</strong> DELWORD</a></li><li class="chapter-item expanded "><a href="../builtins/digits.html"><strong aria-hidden="true">11.27.</strong> DIGITS</a></li><li class="chapter-item expanded "><a href="../builtins/directory.html"><strong aria-hidden="true">11.28.</strong> DIRECTORY</a></li><li class="chapter-item expanded "><a href="../builtins/endlocal.html"><strong aria-hidden="true">11.29.</strong> ENDLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/errortext.html"><strong aria-hidden="true">11.30.</strong> ERRORTEXT</a></li><li class="chapter-item expanded "><a href="../builtins/filespec.html"><strong aria-hidden="true">11.31.</strong> FILESPEC</a></li><li class="chapter-item expanded "><a href="../builtins/form.html"><strong aria-hidden="true">11.32.</strong> FORM</a></li><li class="chapter-item expanded "><a href="../builtins/format.html"><strong aria-hidden="true">11.33.</strong> FORMAT</a></li><li class="chapter-item expanded "><a href="../builtins/fuzz.html"><strong aria-hidden="true">11.34.</strong> FUZZ</a></li><li class="chapter-item expanded "><a href="../builtins/gc.html"><strong aria-hidden="true">11.35.</strong> GC</a></li><li class="chapter-item expanded "><a href="../builtins/insert.html"><strong aria-hidden="true">11.36.</strong> INSERT</a></li><li class="chapter-item expanded "><a href="../builtins/lastpos.html"><strong aria-hidden="true">11.37.</strong> LASTPOS</a></li><li class="chapter-item expanded "><a href="../builtins/left.html"><strong aria-hidden="true">11.38.</strong> LEFT</a></li><li class="chapter-item expanded "><a href="../builtins/length.html"><strong aria-hidden="true">11.39.</strong> LENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/linein.html"><strong aria-hidden="true">11.40.</strong> LINEIN</a></li><li class="chapter-item expanded "><a href="../builtins/lineout.html"><strong aria-hidden="true">11.41.</strong> LINEOUT</a></li><li class="chapter-item expanded "><a href="../builtins/lines.html"><strong aria-hidden="true">11.42.</strong> LINES</a></li><li class="chapter-item expanded "><a href="../builtins/lower.html"><strong aria-hidden="true">11.43.</strong> LOWER</a></li><li class="chapter-item expanded "><a href="../builtins/max.html"><strong aria-hidden="true">11.44.</strong> MAX</a></li><li class="chapter-item expanded "><a href="../builtins/min.html"><strong aria-hidden="true">11.45.</strong> MIN</a></li><li class="chapter-item expanded "><a href="../builtins/overlay.html"><strong aria-hidden="true">11.46.</strong> OVERLAY</a></li><li class="chapter-item expanded "><a href="../builtins/pos.html"><strong aria-hidden="true">11.47.</strong> POS</a></li><li class="chapter-item expanded "><a href="../builtins/qualify.html"><strong aria-hidden="true">11.48.</strong> QUALIFY</a></li><li class="chapter-item expanded "><a href="../builtins/queued.html"><strong aria-hidden="true">11.49.</strong> QUEUED</a></li><li class="chapter-item expanded "><a href="../builtins/random.html"><strong aria-hidden="true">11.50.</strong> RANDOM</a></li><li class="chapter-item expanded "><a href="../builtins/reverse.html"><strong aria-hidden="true">11.51.</strong> REVERSE</a></li><li class="chapter-item expanded "><a href="../builtins/right.html"><strong aria-hidden="true">11.52.</strong> RIGHT</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncadd.html"><strong aria-hidden="true">11.53.</strong> RXFUNCADD</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncdrop.html"><strong aria-hidden="true">11.54.</strong> RXFUNCDROP</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncquery.html"><strong aria-hidden="true">11.55.</strong> RXFUNCQUERY</a></li><li class="chapter-item expanded "><a href="../builtins/rxqueue.html"><strong aria-hidden="true">11.56.</strong> RXQUEUE</a></li><li class="chapter-item expanded "><a href="../builtins/setlocal.html"><strong aria-hidden="true">11.57.</strong> SETLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/sign.html"><strong aria-hidden="true">11.58.</strong> SIGN</a></li><li class="chapter-item expanded "><a href="../builtins/sourceline.html"><strong aria-hidden="true">11.59.</strong> SOURCELINE</a></li><li class="chapter-item expanded "><a href="../builtins/space.html"><strong aria-hidden="true">11.60.</strong> SPACE</a></li><li class="chapter-item expanded "><a href="../builtins/stream.html"><strong aria-hidden="true">11.61.</strong> STREAM</a></li><li class="chapter-item expanded "><a href="../builtins/strip.html"><strong aria-hidden="true">11.62.</strong> STRIP</a></li><li class="chapter-item expanded "><a href="../builtins/substr.html"><strong aria-hidden="true">11.63.</strong> SUBSTR</a></li><li class="chapter-item expanded "><a href="../builtins/subword.html"><strong aria-hidden="true">11.64.</strong> SUBWORD</a></li><li class="chapter-item expanded "><a href="../builtins/symbol.html"><strong aria-hidden="true">11.65.</strong> SYMBOL</a></li><li class="chapter-item expanded "><a href="../builtins/time.html"><strong aria-hidden="true">11.66.</strong> TIME</a></li><li class="chapter-item expanded "><a href="../builtins/trace.html"><strong aria-hidden="true">11.67.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../builtins/translate.html"><strong aria-hidden="true">11.68.</strong> TRANSLATE</a></li><li class="chapter-item expanded "><a href="../builtins/trunc.html"><strong aria-hidden="true">11.69.</strong> TRUNC</a></li><li class="chapter-item expanded "><a href="../builtins/upper.html"><strong aria-hidden="true">11.70.</strong> UPPER</a></li><li class="chapter-item expanded "><a href="../builtins/userid.html"><strong aria-hidden="true">11.71.</strong> USERID</a></li><li class="chapter-item expanded "><a href="../builtins/value.html"><strong aria-hidden="true">11.72.</strong> VALUE</a></li><li class="chapter-item expanded "><a href="../builtins/var.html"><strong aria-hidden="true">11.73.</strong> VAR</a></li><li class="chapter-item expanded "><a href="../builtins/verify.html"><strong aria-hidden="true">11.74.</strong> VERIFY</a></li><li class="chapter-item expanded "><a href="../builtins/word.html"><strong aria-hidden="true">11.75.</strong> WORD</a></li><li class="chapter-item expanded "><a href="../builtins/wordindex.html"><strong aria-hidden="true">11.76.</strong> WORDINDEX</a></li><li class="chapter-item expanded "><a href="../builtins/wordlength.html"><strong aria-hidden="true">11.77.</strong> WORDLENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/wordpos.html"><strong aria-hidden="true">11.78.</strong> WORDPOS</a></li><li class="chapter-item expanded "><a href="../builtins/words.html"><strong aria-hidden="true">11.79.</strong> WORDS</a></li><li class="chapter-item expanded "><a href="../builtins/x2b.html"><strong aria-hidden="true">11.80.</strong> X2B</a></li><li class="chapter-item expanded "><a href="../builtins/x2c.html"><strong aria-hidden="true">11.81.</strong> X2C</a></li><li class="chapter-item expanded "><a href="../builtins/x2d.html"><strong aria-hidden="true">11.82.</strong> X2D</a></li><li class="chapter-item expanded "><a href="../builtins/xrange.html"><strong aria-hidden="true">11.83.</strong> XRANGE</a></li></ol></li><li class="chapter-item expanded "><a href="../deviations.html"><strong aria-hidden="true">12.</strong> Deviations</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The interrexx Language Specification</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="collection"><a class="header" href="#collection">Collection</a></h1>
+<p class="references">rexxref: Builtin Classes &gt; Collection Classes &gt; Collection Class; Builtin Classes &gt; Collection Classes &gt; Collection Class &gt; [] (Abstract Method); Builtin Classes &gt; Collection Classes &gt; Collection Class &gt; []= (Abstract Method); Builtin Classes &gt; Collection Classes &gt; Collection Class &gt; allIndexes (Abstract Method); Builtin Classes &gt; Collection Classes &gt; Collection Class &gt; allItems (Abstract Method); Builtin Classes &gt; Collection Classes &gt; Collection Class &gt; at (Abstract Method); Builtin Classes &gt; Collection Classes &gt; Collection Class &gt; difference; Builtin Classes &gt; Collection Classes &gt; Collection Class &gt; disjoint; Builtin Classes &gt; Collection Classes &gt; Collection Class &gt; equivalent; Builtin Classes &gt; Collection Classes &gt; Collection Class &gt; hasIndex; Builtin Classes &gt; Collection Classes &gt; Collection Class &gt; hasItem; Builtin Classes &gt; Collection Classes &gt; Collection Class &gt; index (Abstract Method); Builtin Classes &gt; Collection Classes &gt; Collection Class &gt; intersection; Builtin Classes &gt; Collection Classes &gt; Collection Class &gt; items; Builtin Classes &gt; Collection Classes &gt; Collection Class &gt; makeArray; Builtin Classes &gt; Collection Classes &gt; Collection Class &gt; put (Abstract Method); Builtin Classes &gt; Collection Classes &gt; Collection Class &gt; subset; Builtin Classes &gt; Collection Classes &gt; Collection Class &gt; supplier; Builtin Classes &gt; Collection Classes &gt; Collection Class &gt; union; Builtin Classes &gt; Collection Classes &gt; Collection Class &gt; xor</p>
+<p class="deviations">Deviations: D78, D109, D118</p>
+<p><code>Collection</code> is the mixin class that all the collection classes have in
+common. It defines nineteen methods. Seven of them are abstract: they name
+what a collection has to be able to do, reading and writing an entry by its
+index and listing its indexes and items, and a class that inherits
+<code>Collection</code> declares them. The other twelve are written in terms of those
+seven and of the messages a collection answers for itself. They are the
+questions about an index, an item, the count and a supplier, and the set
+operations that combine two collections. A class that inherits only
+<code>Collection</code> gets all twelve working as the rules below say; a concrete class
+of the library may declare a method of the same name instead, and its page
+says what that method does.</p>
+<p>The page specifies the methods in that order. Where a method sends a message
+that a program can override, its <code>.sends</code> rule gives the message, the
+receiver and the order, as <a href="index.html#r-class.index.sends">the sends rule</a> asks. The
+argument of a set operation is read by a rule of its own, shared by the seven
+operations. <a href="orderedcollection.html"><code>OrderedCollection</code></a> declares its own
+versions of five of the set operations, and
+<a href="mapcollection.html"><code>MapCollection</code></a> its own <code>makeArray</code>; the pages of
+the concrete collections link to this page for what they do not declare.</p>
+<p>The examples use the class <code>box</code>, a collection of strings in which the item
+and the index of an entry are the same string. It keeps its entries in a
+directory, answers the indexes and the items in sorted order, and declares
+<code>put</code>, <code>remove</code> and <code>copy</code> for the set operations; the rest it gets from
+<code>Collection</code>.</p>
+<h2 id="the-class"><a class="header" href="#the-class">The class</a></h2>
+<div class="rule" id="r-class.collection.creation"><a href="#r-class.collection.creation">[class.collection.creation]</a></div>
+<p><code>Collection</code> is a mixin class whose superclass is <code>Object</code>, and
+<code>queryMixinClass</code> answers 1 for it (<a href="index.html#r-class.index.mixins">the mixin rule</a>).
+<code>new</code> is not refused: it makes an object of the class that received it, as
+<a href="index.html#r-class.index.new">the new rule</a> says, and that object understands the
+nineteen methods of the class and no others beyond those of <code>Object</code>. A class
+that inherits <code>Collection</code>, or a subclass of such a class, understands them
+all and gets each from this page unless it or a class between it and
+<code>Collection</code> declares a method of the same name.</p>
+<pre><code class="language-rexx">c = .collection~new
+say c~class~id .collection~queryMixinClass .collection~superclass~id
+names = 'allIndexes allItems at difference disjoint equivalent hasIndex',
+    'hasItem index intersection items makeArray put subset supplier union',
+    'xor [] []='
+n = 0
+do m over names~makearray(' ')
+  if c~hasMethod(m) then n += 1
+end
+say n c~hasMethod('OF') c~hasMethod('APPEND') c~hasMethod('PUTALL')
+say .box~new~hasMethod('UNION') .box~new~hasMethod('FIRST')
+::class box inherit collection
+</code></pre>
+<pre><code class="language-output">Collection 1 Object
+19 0 0 0
+1 0
+</code></pre>
+<h2 id="the-abstract-methods"><a class="header" href="#the-abstract-methods">The abstract methods</a></h2>
+<div class="rule" id="r-class.collection.abstract"><a href="#r-class.collection.abstract">[class.collection.abstract]</a></div>
+<p>The methods <code>[]</code>, <code>[]=</code>, <code>at</code>, <code>put</code>, <code>allIndexes</code>, <code>allItems</code> and <code>index</code> are
+abstract. Sent to an object whose class has none of its own, each raises
+<code>SYNTAX 93.965</code> whatever arguments the message has, none or too many
+included, and the raising comes before any check of the arguments, so that
+<code>at</code> with no argument raises 93.965 and not a missing-argument error
+(<a href="../directives/method.html#r-dir.method.abstract">the abstract rule</a>). The assignment <code>c[i] = v</code> is
+the message <code>[]=</code>. A class that declares one of them answers the message
+itself. The methods that this page defines build on these: <code>allIndexes</code> and
+<code>allItems</code> are what <code>hasIndex</code>, <code>hasItem</code>, <code>items</code>, <code>makeArray</code> and
+<code>supplier</code> use, and <code>put</code> is what the set operations use to store.</p>
+<pre><code class="language-rexx">c = .collection~new
+call try 'c~at'
+call try 'c~at(1, 2, 3)'
+call try 'c~put(1, 2)'
+call try 'c~allIndexes'
+call try 'c~allItems(7)'
+call try 'c~index("x")'
+call try 'c[1]'
+call try 'c[1] = "x"'
+say .part~new~at(5)
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  say arg(1) '=&gt; ok'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class part inherit collection
+::method at
+  return 'at' arg(1)
+</code></pre>
+<pre><code class="language-output">c~at =&gt; 93.965
+c~at(1, 2, 3) =&gt; 93.965
+c~put(1, 2) =&gt; 93.965
+c~allIndexes =&gt; 93.965
+c~allItems(7) =&gt; 93.965
+c~index("x") =&gt; 93.965
+c[1] =&gt; 93.965
+c[1] = "x" =&gt; 93.965
+at 5
+</code></pre>
+<h2 id="questions-about-the-contents"><a class="header" href="#questions-about-the-contents">Questions about the contents</a></h2>
+<div class="rule" id="r-class.collection.hasindex"><a href="#r-class.collection.hasindex">[class.collection.hasindex]</a></div>
+<p><code>hasIndex(index)</code> answers what the answer of <code>allIndexes</code> answers to
+<code>hasItem</code> for the same argument, unchanged. It takes exactly one argument:
+none raises <code>SYNTAX 93.901</code> and a second raises <code>SYNTAX 93.902</code>, in both
+cases before <code>allIndexes</code> is sent, so that a collection that leaves
+<code>allIndexes</code> abstract raises 93.965 only for a call with one argument. A
+<code>.nil</code> index is a valid argument.</p>
+<pre><code class="language-rexx">c = .collection~new
+call try 'c~hasIndex'
+call try 'c~hasIndex(1, 2)'
+call try 'c~hasIndex(1)'
+b = .box~new(.array~of('x', 'y'))
+say b~hasIndex('x') b~hasIndex('z') b~hasIndex(.nil)
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  say arg(1) '=&gt; ok'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class box inherit collection
+::method init
+  expose d
+  use arg list
+  d = .directory~new
+  do i over list; d[i] = i; end
+::method allindexes
+  expose d
+  return d~allindexes~sort
+</code></pre>
+<pre><code class="language-output">c~hasIndex =&gt; 93.901
+c~hasIndex(1, 2) =&gt; 93.902
+c~hasIndex(1) =&gt; 93.965
+1 0 0
+</code></pre>
+<div class="rule" id="r-class.collection.hasindex.sends"><a href="#r-class.collection.hasindex.sends">[class.collection.hasindex.sends]</a></div>
+<p><code>hasIndex</code> sends <code>allIndexes</code> to the receiver, with no argument, and then
+sends <code>hasItem</code> with the index to the object that <code>allIndexes</code> answered, and
+answers what that answers. That object need not be an array: any object that
+understands <code>hasItem</code> does. Nothing else is sent, to the receiver or to the
+answer.</p>
+<pre><code class="language-rexx">c = .spy~new
+say c~hasIndex('k')
+::class spy inherit collection
+::method allindexes
+  say 'allIndexes' arg()
+  return .answer~new
+::class answer
+::method hasitem
+  say 'hasItem' arg(1)
+  return 'any object'
+::method isa
+  say 'isA'
+  return 0
+::method items
+  say 'items'
+  return 0
+::method makearray
+  say 'makeArray'
+  return .array~new
+::method '[]'
+  say '[]'
+  return 0
+</code></pre>
+<pre><code class="language-output">allIndexes 0
+hasItem k
+any object
+</code></pre>
+<div class="rule" id="r-class.collection.hasitem"><a href="#r-class.collection.hasitem">[class.collection.hasitem]</a></div>
+<p><code>hasItem(item)</code> answers what the answer of <code>allItems</code> answers to <code>hasItem</code> for
+the same argument, unchanged, and takes exactly one argument, as <code>hasIndex</code>
+does: none raises <code>SYNTAX 93.901</code> and a second raises <code>SYNTAX 93.902</code>, in
+both cases before <code>allItems</code> is sent. Whether two items count as the same is
+decided by the object <code>allItems</code> answers: for an array that is the strict
+equality of <code>==</code>, under which <code>1</code> and <code>1.0</code> are different items (for the very
+object that is stored, see <a href="array.html#r-class.array.deviation.78">the Array deviation
+rule</a>).</p>
+<pre><code class="language-rexx">b = .box~new(.array~of('1', 'Ab', 'x'))
+say b~hasItem(1) b~hasItem(1.0) b~hasItem('ab') b~hasItem('Ab')
+signal on syntax name bad
+say b~hasItem
+bad: say condition('o')~code
+::class box inherit collection
+::method init
+  expose items
+  use arg items
+::method allitems
+  expose items
+  return items
+</code></pre>
+<pre><code class="language-output">1 0 0 1
+93.901
+</code></pre>
+<div class="rule" id="r-class.collection.hasitem.sends"><a href="#r-class.collection.hasitem.sends">[class.collection.hasitem.sends]</a></div>
+<p><code>hasItem</code> sends <code>allItems</code> to the receiver, with no argument, and then sends
+<code>hasItem</code> with the item to the object that <code>allItems</code> answered, and answers
+what that answers. Nothing else is sent, to the receiver or to the answer.</p>
+<pre><code class="language-rexx">c = .spy~new
+say c~hasItem('v')
+::class spy inherit collection
+::method allitems
+  say 'allItems' arg()
+  return .answer~new
+::class answer
+::method hasitem
+  say 'hasItem' arg(1)
+  return 'any object'
+::method isa
+  say 'isA'
+  return 0
+::method items
+  say 'items'
+  return 0
+::method makearray
+  say 'makeArray'
+  return .array~new
+::method '[]'
+  say '[]'
+  return 0
+</code></pre>
+<pre><code class="language-output">allItems 0
+hasItem v
+any object
+</code></pre>
+<div class="rule" id="r-class.collection.items"><a href="#r-class.collection.items">[class.collection.items]</a></div>
+<p><code>items</code> answers what the answer of <code>allIndexes</code> answers to <code>items</code>,
+unchanged. It does not check its arguments: any arguments are ignored, so
+that <code>items(1, 2)</code> answers like <code>items</code>.</p>
+<pre><code class="language-rexx">b = .box~new(.array~of('p', 'q', 'r'))
+say b~items b~items(1, 2)
+::class box inherit collection
+::method init
+  expose list
+  use arg list
+::method allindexes
+  expose list
+  return list
+</code></pre>
+<pre><code class="language-output">3 3
+</code></pre>
+<div class="rule" id="r-class.collection.items.sends"><a href="#r-class.collection.items.sends">[class.collection.items.sends]</a></div>
+<p><code>items</code> sends <code>allIndexes</code> to the receiver, with no argument, and then sends
+<code>items</code> to the object that <code>allIndexes</code> answered, and answers what that
+answers. Nothing else is sent; in particular <code>allItems</code> is not, and the answer
+is sent nothing but <code>items</code>.</p>
+<pre><code class="language-rexx">c = .spy~new
+say c~items
+::class spy inherit collection
+::method allindexes
+  say 'allIndexes' arg()
+  return .answer~new
+::method allitems
+  say 'allItems'
+  return .array~new
+::class answer
+::method items
+  say 'items' arg()
+  return 'a count'
+::method isa
+  say 'isA'
+  return 0
+::method makearray
+  say 'makeArray'
+  return .array~new
+::method hasitem
+  say 'hasItem'
+  return 0
+</code></pre>
+<pre><code class="language-output">allIndexes 0
+items 0
+a count
+</code></pre>
+<div class="rule" id="r-class.collection.makearray"><a href="#r-class.collection.makearray">[class.collection.makearray]</a></div>
+<p><code>makeArray</code> answers what <code>allItems</code> answers, and the very object: it is not
+copied, and what it is is not checked. Arguments are ignored. A collection
+that wants <code>makeArray</code> to answer something other than its items declares it;
+the <a href="mapcollection.html"><code>MapCollection</code></a> mixin answers the indexes instead.</p>
+<pre><code class="language-rexx">mine = .array~of('u', 'v')
+b = .box~new(mine)
+r = b~makeArray
+say r~class~id r~items (r == mine)
+say b~makeArray(1, 2, 3)~items
+::class box inherit collection
+::method init
+  expose list
+  use arg list
+::method allitems
+  expose list
+  return list
+</code></pre>
+<pre><code class="language-output">Array 2 1
+2
+</code></pre>
+<div class="rule" id="r-class.collection.makearray.sends"><a href="#r-class.collection.makearray.sends">[class.collection.makearray.sends]</a></div>
+<p><code>makeArray</code> sends <code>allItems</code> to the receiver, with no argument, and answers
+what it answers. Nothing else is sent, to the receiver or to the answer.</p>
+<pre><code class="language-rexx">c = .spy~new
+say c~makeArray~class~id
+::class spy inherit collection
+::method allitems
+  say 'allItems' arg()
+  return .answer~new
+::method allindexes
+  say 'allIndexes'
+  return .array~new
+::class answer
+::method isa
+  say 'isA'
+  return 0
+::method makearray
+  say 'makeArray'
+  return .array~new
+::method items
+  say 'items'
+  return 0
+::method '[]'
+  say '[]'
+  return 0
+</code></pre>
+<pre><code class="language-output">allItems 0
+ANSWER
+</code></pre>
+<div class="rule" id="r-class.collection.supplier"><a href="#r-class.collection.supplier">[class.collection.supplier]</a></div>
+<p><code>supplier</code> answers a <code>Supplier</code> whose items are the objects that <code>allItems</code>
+answered and whose indexes are the objects that <code>allIndexes</code> answered, the
+entry at the same position of the two being a pair. It takes its arguments as
+<code>items</code> does, that is, ignores them. The two answers are taken once, when
+<code>supplier</code> is sent: the supplier is not a view on the collection. The
+<code>Supplier</code> class has its own page.</p>
+<pre><code class="language-rexx">b = .box~new
+s = b~supplier
+b~put('late', 'k3')
+do while s~available
+  say s~index '=&gt;' s~item
+  s~next
+end
+say b~supplier(1)~class~id
+::class box inherit collection
+::method init
+  expose d
+  d = .directory~new
+  d['k1'] = 'one'
+  d['k2'] = 'two'
+::method put
+  expose d
+  use arg item, index
+  d[index] = item
+::method allindexes
+  expose d
+  return d~allindexes~sort
+::method allitems
+  expose d
+  return d~allitems~sort
+</code></pre>
+<pre><code class="language-output">k1 =&gt; one
+k2 =&gt; two
+Supplier
+</code></pre>
+<div class="rule" id="r-class.collection.supplier.sends"><a href="#r-class.collection.supplier.sends">[class.collection.supplier.sends]</a></div>
+<p><code>supplier</code> sends <code>allItems</code> to the receiver, then <code>allIndexes</code>, both with no
+argument, in that order, and makes the supplier from the two answers. The
+supplier is made by <code>new</code> of the <code>Supplier</code> class, which sends <code>makeArray</code>
+once to the answer of <code>allItems</code> and then once to the answer of <code>allIndexes</code>.
+Nothing else is sent.</p>
+<pre><code class="language-rexx">c = .spy~new
+s = c~supplier
+say s~index s~item
+::class spy inherit collection
+::method allitems
+  say 'allItems' arg()
+  return .answer~new('items')
+::method allindexes
+  say 'allIndexes' arg()
+  return .answer~new('indexes')
+::class answer
+::method init
+  expose kind
+  use arg kind
+::method makearray
+  expose kind
+  say kind 'answer: makeArray'
+  return .array~of('the' kind)
+::method isa
+  say 'isA'
+  return 0
+::method items
+  say 'items'
+  return 0
+</code></pre>
+<pre><code class="language-output">allItems 0
+allIndexes 0
+items answer: makeArray
+indexes answer: makeArray
+the indexes the items
+</code></pre>
+<h2 id="the-set-operations"><a class="header" href="#the-set-operations">The set operations</a></h2>
+<div class="rule" id="r-class.collection.operand"><a href="#r-class.collection.operand">[class.collection.operand]</a></div>
+<p>The argument of <code>union</code>, <code>difference</code>, <code>intersection</code>, <code>xor</code>, <code>subset</code>,
+<code>disjoint</code> and <code>equivalent</code> is read as a list of entries, and what is sent to
+it depends on what it is, which the object itself decides by its answers to
+<code>isA</code> (<a href="#r-class.collection.operand.isa">the isA rule</a>). An ordered argument,
+one for which <code>isA</code> says it is an <a href="orderedcollection.html"><code>OrderedCollection</code></a>,
+is sent <code>allItems</code>. Any other object for which <code>isA</code> says it is a
+<a href="mapcollection.html"><code>MapCollection</code></a> is sent <code>supplier</code> by <code>union</code>,
+<code>intersection</code>, <code>xor</code> and <code>disjoint</code>, and <code>allIndexes</code> by <code>difference</code> and
+<code>subset</code>. Every other object is sent <code>makeArray</code>. An object that is both
+counts as ordered. An element of an ordered or plain list is an index and an
+item at once; an entry of a map is its own index with its own item. <code>disjoint</code>
+reads its argument through <code>intersection</code>, and <code>equivalent</code> through <code>subset</code>.
+What is done with the answer is the subject of <a href="#r-class.collection.operand.list">the list
+rule</a>, <a href="#r-class.collection.operand.map">the map
+rule</a> and <a href="#r-class.collection.operand.answer">the answer
+rule</a>.</p>
+<pre><code class="language-rexx">a = .box~new('a b')
+do k over .array~of(.ordered~new, .mapped~new, .plain~new, .both~new)
+  say '==' k~class~id
+  r = a~union(k)
+  r = a~difference(k)
+  r = a~subset(k)
+end
+::class box inherit collection
+::method init
+  expose d
+  d = .directory~new
+  if arg(1, 'E') then do w over arg(1)~makearray(' '); d[w] = w; end
+::method copy
+  return self~class~new
+::method allitems
+  return .array~new
+::method allindexes
+  return .array~new
+::class ordered inherit orderedcollection
+::method allitems
+  say '  allItems'
+  return .array~new
+::method makearray
+  say '  makeArray'
+  return .array~new
+::method items
+  return 0
+::class mapped inherit mapcollection
+::method supplier
+  say '  supplier'
+  return .supplier~new(.array~new, .array~new)
+::method allindexes
+  say '  allIndexes'
+  return .array~new
+::method makearray
+  say '  makeArray'
+  return .array~new
+::method items
+  return 0
+::class both inherit mapcollection orderedcollection
+::method allitems
+  say '  allItems'
+  return .array~new
+::method supplier
+  say '  supplier'
+  return .supplier~new(.array~new, .array~new)
+::method items
+  return 0
+::class plain inherit collection
+::method makearray
+  say '  makeArray'
+  return .array~new
+::method items
+  return 0
+</code></pre>
+<pre><code class="language-output">== ORDERED
+  allItems
+  allItems
+  allItems
+== MAPPED
+  supplier
+  allIndexes
+  allIndexes
+== PLAIN
+  makeArray
+  makeArray
+  makeArray
+== BOTH
+  allItems
+  allItems
+  allItems
+</code></pre>
+<div class="rule" id="r-class.collection.operand.isa"><a href="#r-class.collection.operand.isa">[class.collection.operand.isa]</a></div>
+<p>Each of the seven operations asks the argument what it is by sending
+<a href="object.html#r-class.object.isa"><code>isA</code></a> with the class <code>OrderedCollection</code> and, when the
+answer is not 1, <code>isA</code> with the class <code>MapCollection</code>. An answer of 1 to the
+first question ends the questions. The answers are used as logical values, so
+what an object answers to <code>isA</code> is what decides, not the classes it inherits:
+an object that inherits no mixin and answers 1 is read as an ordered argument,
+and an instance of a class that inherits <code>OrderedCollection</code> and answers 0 to
+both is read as a plain one. An answer that is neither 0 nor 1 raises
+<code>SYNTAX 34.1</code>, and so does <code>.nil</code>. <code>equivalent</code> asks after its two <code>items</code>
+messages, as part of the <code>subset</code> it sends, and <code>subset</code> asks once more, with
+the class <code>Set</code>, as <a href="#r-class.collection.subset">its rule</a> says.</p>
+<pre><code class="language-rexx">a = .box~new('a')
+say a~union(.liar~new)
+say a~union(.shy~new)
+signal on syntax name bad
+say a~union(.odd~new)
+bad: say condition('o')~code
+::class box inherit collection
+::method init
+  expose d
+  d = .directory~new
+  if arg(1, 'E') then do w over arg(1)~makearray(' '); d[w] = w; end
+::method copy
+  expose d
+  c = self~class~new
+  do i over d~allindexes; c~put(d[i], i); end
+  return c
+::method string
+  expose d
+  return d~allitems~sort~makestring('L', ' ')
+::method put
+  expose d
+  d[arg(2)] = arg(1)
+::method allindexes
+  expose d
+  return d~allindexes~sort
+::class liar
+::method isa
+  say '  isA' arg(1)~id
+  return 1
+::method allitems
+  say '  allItems'
+  return .array~of('from allItems')
+::method makearray
+  say '  makeArray'
+  return .array~of('from makeArray')
+::class shy inherit orderedcollection
+::method isa
+  say '  isA' arg(1)~id
+  return 0
+::method allitems
+  say '  allItems'
+  return .array~of('from allItems')
+::method makearray
+  say '  makeArray'
+  return .array~of('from makeArray')
+::class odd
+::method isa
+  return 2
+</code></pre>
+<pre><code class="language-output">  isA OrderedCollection
+  allItems
+a from allItems
+  isA OrderedCollection
+  isA MapCollection
+  makeArray
+a from makeArray
+34.1
+</code></pre>
+<div class="rule" id="r-class.collection.operand.list"><a href="#r-class.collection.operand.list">[class.collection.operand.list]</a></div>
+<p>The answer of <code>allItems</code> or <code>makeArray</code> is read as two arrays, the items and the
+indexes, and the operation takes the entries from position 1 of the items up to
+its size, an entry being the item at the position and the index at the same
+position, <code>.nil</code> when there is none. An answer that is an <code>Array</code> of that class
+itself is both arrays: it is read position by position, so an element is its own
+index, and a position that holds nothing is an entry whose item and index are
+<code>.nil</code>. Any other answer, an instance of a subclass of <code>Array</code> included, is sent
+<code>makeArray</code> twice, and the first answer is the items and the second the indexes;
+for a <code>List</code>, a <code>Queue</code>, a <code>Set</code> or a string the two are the same. An instance
+of a subclass of <code>List</code> is such an answer, and is sent <code>makeArray</code> like the
+instance of any other class that is not <code>Array</code> itself (<a href="#r-class.collection.deviation.118">Deviation
+118</a>). Messages that the operation sends to
+the entries are those of its own rule.</p>
+<pre><code class="language-rexx">h = .array~new(3)
+h[2] = 'two'
+r = .nb~new~union(.pk~new(h))
+say '--'
+r = .nb~new~union(.pk~new(.twice~new(2, 2)))
+say '--'
+r = .nb~new~union(.pk~new(.twice~new(3, 2)))
+say '--'
+r = .nb~new~union(.pk~new(.sub~of('s1', 's2')))
+say '--'
+r = .nb~new~union(.pk~new(.twice~new(1, 3)))
+::class nb inherit collection
+::method copy
+  return self
+::method hasindex
+  say 'hasIndex' arg(1)
+  return 0
+::method put
+  say 'put' arg(1) arg(2)
+::class pk inherit collection
+::method init
+  expose answer
+  use arg answer
+::method makearray
+  expose answer
+  return answer
+::class twice
+::method init
+  expose n m k
+  use arg n, m
+  k = 0
+::method makearray
+  expose n m k
+  k += 1
+  a = .array~new
+  if k = 1 then do i = 1 to n; a~append('item' i); end
+  else do i = 1 to m; a~append('index' i); end
+  return a
+::class sub subclass array
+::method makearray
+  say 'makeArray of the subclass'
+  return .array~of('&lt;'self[1]'&gt;')
+</code></pre>
+<pre><code class="language-output">hasIndex The NIL object
+put The NIL object The NIL object
+hasIndex two
+put two two
+hasIndex The NIL object
+put The NIL object The NIL object
+--
+hasIndex index 1
+put item 1 index 1
+hasIndex index 2
+put item 2 index 2
+--
+hasIndex index 1
+put item 1 index 1
+hasIndex index 2
+put item 2 index 2
+hasIndex The NIL object
+put item 3 The NIL object
+--
+makeArray of the subclass
+makeArray of the subclass
+hasIndex &lt;s1&gt;
+put &lt;s1&gt; &lt;s1&gt;
+--
+hasIndex index 1
+put item 1 index 1
+</code></pre>
+<div class="rule" id="r-class.collection.operand.list.subclass"><a href="#r-class.collection.operand.list.subclass">[class.collection.operand.list.subclass]</a></div>
+<p>Each of the two answers of <code>makeArray</code> that <a href="#r-class.collection.operand.list">the list
+rule</a> reads is used as it is when it is an
+<code>Array</code> or an instance of a subclass of <code>Array</code>: it is read position by position
+and is sent nothing, so a subclass's own <code>makeArray</code>, <code>[]</code> or <code>items</code> is not
+used.</p>
+<pre><code class="language-rexx">r = .nb~new~union(.pk~new(.twoans~new))
+::class nb inherit collection
+::method copy
+  return self
+::method hasindex
+  say 'hasIndex' arg(1)
+  return 0
+::method put
+  say 'put' arg(1) arg(2)
+::class pk inherit collection
+::method init
+  expose answer
+  use arg answer
+::method makearray
+  expose answer
+  return answer
+::class twoans
+::method makearray
+  expose k
+  if var('k') then return .lsub~of('i1', 'i2')
+  k = 1
+  return .lsub~of('c', 'q')
+::class lsub subclass array
+::method makearray
+  say 'makeArray of the subclass'
+  forward class (super)
+::method '[]'
+  say '[] of the subclass'
+  forward class (super)
+::method items
+  say 'items of the subclass'
+  forward class (super)
+</code></pre>
+<pre><code class="language-output defect=#153">hasIndex i1
+put c i1
+hasIndex i2
+put q i2
+</code></pre>
+<div class="rule" id="r-class.collection.operand.map"><a href="#r-class.collection.operand.map">[class.collection.operand.map]</a></div>
+<p>A map argument of <code>union</code>, <code>intersection</code>, <code>xor</code> and <code>disjoint</code> is read from
+the answer of <code>supplier</code>, and the operation does not need that to be a
+<code>Supplier</code>: it sends <code>available</code>, and while the answer is true sends <code>index</code>,
+then the operation's own message to the receiver or the copy with the index,
+then <code>item</code> only when the operation has an item to store, then <code>next</code>, and
+asks <code>available</code> again. An object that answers those four messages is read as
+a supplier is. An answer that does not understand one of them raises
+<code>SYNTAX 93.948</code> when the message is sent, so after the entries before it have
+been handled.</p>
+<pre><code class="language-rexx">s = .sp~new(.array~of('v1', 'v2', 'v3'), .array~of('a', 'b', 'c'))
+r = .nb~new~union(.mp~new(s))
+::class nb inherit collection
+::method copy
+  return self
+::method hasindex
+  say 'hasIndex' arg(1)
+  return arg(1) == 'b'
+::method put
+  say 'put' arg(1) arg(2)
+::class mp inherit mapcollection
+::method init
+  expose answer
+  use arg answer
+::method supplier
+  expose answer
+  return answer
+::class sp subclass supplier
+::method available
+  say '  available'
+  forward class (super)
+::method index
+  say '  index'
+  forward class (super)
+::method item
+  say '  item'
+  forward class (super)
+::method next
+  say '  next'
+  forward class (super)
+</code></pre>
+<pre><code class="language-output">  available
+  index
+hasIndex a
+  item
+put v1 a
+  next
+  available
+  index
+hasIndex b
+  next
+  available
+  index
+hasIndex c
+  item
+put v3 c
+  next
+  available
+</code></pre>
+<div class="rule" id="r-class.collection.operand.answer"><a href="#r-class.collection.operand.answer">[class.collection.operand.answer]</a></div>
+<p>The object that <code>makeArray</code>, <code>allItems</code> or <code>allIndexes</code> answered is not
+required to be a collection, only to understand the messages the operation
+sends it, and what it lacks is found out when the message is due. The four
+operations that read a list send <code>makeArray</code> to an answer that is not an
+<code>Array</code> of that class itself, and one that has no <code>makeArray</code> method raises
+<code>SYNTAX 98.913</code>; an <code>UNKNOWN</code> method does not count as one. <code>difference</code> sends
+<code>[]</code> to the answer and <code>subset</code> sends <code>hasItem</code>, and an answer that does not
+understand one raises <code>SYNTAX 93.948</code>, an <code>UNKNOWN</code> method that answers the
+message counting as understanding it. <code>difference</code> and <code>subset</code> also send
+<code>items</code> to the argument itself, after <code>copy</code>, and what that answers is how
+many positions <code>difference</code> takes: an answer that is not a number raises
+<code>SYNTAX 41.1</code>, and <code>.nil</code> raises <code>SYNTAX 93.948</code>, and a position beyond the
+end of the answer reads <code>.nil</code>.</p>
+<pre><code class="language-rexx">a = .box~new('a b')
+call try 'union', .pk~new(.object~new), 'plain object'
+call try 'union', .pk~new(.unk~new), 'UNKNOWN only'
+call try 'union', .mp~new(.nil), 'supplier .nil'
+call try 'union', .mp~new(.noindex~new), 'no index'
+call try 'difference', .pk~new(.object~new), 'plain object'
+call try 'difference', .pk~new(.unk~new), 'UNKNOWN only'
+call try 'subset', .pk~new(.object~new), 'plain object'
+call try 'subset', .pk~new(.unk~new), 'UNKNOWN only'
+call try 'difference', .counted~new('abc'), 'items abc'
+call try 'difference', .counted~new(.nil), 'items .nil'
+call try 'difference', .counted~new(3), 'items 3'
+exit
+try:
+  signal on syntax name bad
+  r = .message~new(a, arg(1), 'I', arg(2))~send
+  say arg(1) arg(3) '-&gt;' r~class~id
+  return
+bad: say arg(1) arg(3) '=&gt;' condition('o')~code
+  return
+::class box inherit collection
+::method init
+  expose d
+  d = .directory~new
+  if arg(1, 'E') then do w over arg(1)~makearray(' '); d[w] = w; end
+::method copy
+  expose d
+  c = self~class~new
+  do i over d~allindexes; c~put(d[i], i); end
+  return c
+::method put
+  expose d
+  d[arg(2)] = arg(1)
+::method remove
+  expose d
+  if arg(1) == .nil then return .nil
+  return d~remove(arg(1))
+::method allindexes
+  expose d
+  return d~allindexes
+::method makearray
+  return .array~of('a')
+::method items
+  return 2
+::class pk inherit collection
+::method init
+  expose answer
+  use arg answer
+::method makearray
+  expose answer
+  return answer
+::method items
+  return 1
+::class mp inherit mapcollection
+::method init
+  expose answer
+  use arg answer
+::method supplier
+  expose answer
+  return answer
+::class unk
+::method unknown
+  return 0
+::class noindex
+::method available
+  return 1
+::method item
+  return 'v'
+::method next
+  nop
+::class counted inherit collection
+::method init
+  expose n
+  use arg n
+::method makearray
+  return .array~of('b', 'a')
+::method items
+  expose n
+  return n
+</code></pre>
+<pre><code class="language-output">union plain object =&gt; 98.913
+union UNKNOWN only =&gt; 98.913
+union supplier .nil =&gt; 93.948
+union no index =&gt; 93.948
+difference plain object =&gt; 93.948
+difference UNKNOWN only -&gt; BOX
+subset plain object =&gt; 93.948
+subset UNKNOWN only -&gt; String
+difference items abc =&gt; 41.1
+difference items .nil =&gt; 93.948
+difference items 3 -&gt; BOX
+</code></pre>
+<div class="rule" id="r-class.collection.operand.logical"><a href="#r-class.collection.operand.logical">[class.collection.operand.logical]</a></div>
+<p><code>union</code>, <code>intersection</code> and <code>xor</code> use what <code>hasIndex</code> answers as a logical
+value. <code>union</code> refuses an answer that is not a string, <code>.nil</code> included, with
+<code>SYNTAX 93.948</code> whatever its string value, and a string that is neither 0 nor 1
+with <code>SYNTAX 34.901</code>. <code>intersection</code> and <code>xor</code> read an answer that is not a
+string by its string value, and an answer whose value is neither 0 nor 1, <code>.nil</code>
+included, raises <code>SYNTAX 34.1</code> there, and so from <code>disjoint</code>, which reads its
+argument through <code>intersection</code>. The answer of <code>isA</code> is used in the same way, as
+<a href="#r-class.collection.operand.isa">the isA rule</a> says.</p>
+<pre><code class="language-rexx">do v over .array~of('maybe', .nil, .yes~new)
+  do op over 'union intersection xor disjoint'~makearray(' ')
+    call try op, v
+  end
+end
+exit
+try:
+  signal on syntax name bad
+  r = .message~new(.hb~new(arg(2)), arg(1), 'I', .array~of('p'))~send
+  say arg(1) arg(2)~string '=&gt; ok'
+  return
+bad: say arg(1) arg(2)~string '=&gt;' condition('o')~code
+  return
+::class hb inherit collection
+::method init
+  expose v
+  use arg v
+::method copy
+  return self
+::method hasindex
+  expose v
+  return v
+::method put
+  nop
+::method remove
+  nop
+::method isempty
+  return 1
+::class yes
+::method makestring
+  return 1
+</code></pre>
+<pre><code class="language-output">union maybe =&gt; 34.901
+intersection maybe =&gt; 34.1
+xor maybe =&gt; 34.1
+disjoint maybe =&gt; 34.1
+union The NIL object =&gt; 93.948
+intersection The NIL object =&gt; 34.1
+xor The NIL object =&gt; 34.1
+disjoint The NIL object =&gt; 34.1
+union a YES =&gt; 93.948
+intersection a YES =&gt; ok
+xor a YES =&gt; ok
+disjoint a YES =&gt; ok
+</code></pre>
+<div class="rule" id="r-class.collection.operand.error"><a href="#r-class.collection.operand.error">[class.collection.operand.error]</a></div>
+<p>Each of the seven operations takes exactly one argument: none raises
+<code>SYNTAX 93.901</code> and a second raises <code>SYNTAX 93.902</code>. An argument that <code>isA</code>
+does not report as ordered or as a map and that has no <code>makeArray</code> method,
+<code>.nil</code> and an object of a class with no such method included, raises
+<code>SYNTAX 93.948</code> from <code>union</code>, <code>difference</code>, <code>intersection</code>, <code>xor</code>, <code>subset</code>
+and <code>disjoint</code>. <code>equivalent</code> sends <code>items</code> to the argument first, and raises
+<code>SYNTAX 97.1</code> for the same objects. A string is read by its <code>makeArray</code>, so
+<code>union</code>, <code>intersection</code>, <code>xor</code> and <code>disjoint</code> read a string without line ends
+as a list of one element. A string has no <code>items</code> method, which <code>difference</code>
+and <code>subset</code> need after they have read the argument and <code>equivalent</code> needs
+first: a string raises <code>SYNTAX 93.948</code> from the first two and <code>SYNTAX 97.1</code>
+from <code>equivalent</code>.</p>
+<pre><code class="language-rexx">a = .box~new('a b')
+ops = 'union difference intersection xor subset disjoint equivalent'
+do op over ops~makearray(' ')
+  call try 'a~'op'(.nil)'
+  call try 'a~'op
+end
+call try 'a~union(a, a)'
+call try 'a~difference("b c")'
+call try 'a~subset("b")'
+call try 'a~equivalent("b")'
+say a~union('x y')~allitems~items
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt; ok'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class box inherit collection
+::method init
+  expose d
+  d = .directory~new
+  if arg(1, 'E') then do w over arg(1)~makearray(' '); d[w] = w; end
+::method copy
+  return self~class~new(self~string)
+::method string
+  expose d
+  return d~allitems~sort~makestring('L', ' ')
+::method put
+  expose d
+  d[arg(2)] = arg(1)
+::method allindexes
+  expose d
+  return d~allindexes~sort
+::method allitems
+  expose d
+  return d~allitems~sort
+</code></pre>
+<pre><code class="language-output">a~union(.nil) =&gt; 93.948
+a~union =&gt; 93.901
+a~difference(.nil) =&gt; 93.948
+a~difference =&gt; 93.901
+a~intersection(.nil) =&gt; 93.948
+a~intersection =&gt; 93.901
+a~xor(.nil) =&gt; 93.948
+a~xor =&gt; 93.901
+a~subset(.nil) =&gt; 93.948
+a~subset =&gt; 93.901
+a~disjoint(.nil) =&gt; 93.948
+a~disjoint =&gt; 93.901
+a~equivalent(.nil) =&gt; 97.1
+a~equivalent =&gt; 93.901
+a~union(a, a) =&gt; 93.902
+a~difference("b c") =&gt; 93.948
+a~subset("b") =&gt; 93.948
+a~equivalent("b") =&gt; 97.1
+3
+</code></pre>
+<div class="rule" id="r-class.collection.union"><a href="#r-class.collection.union">[class.collection.union]</a></div>
+<p><code>union(other)</code> answers a new collection: the object that the receiver's <code>copy</code>
+answers, with the entries of the argument added whose index it lacks. An
+argument that is read as a list (<a href="#r-class.collection.operand">the operand
+rule</a>) adds each element as an item stored at an
+index equal to it; an argument that is a map adds each of its entries, with
+its own item, at its own index. An entry whose index the copy has is not
+added, and the receiver is not changed.</p>
+<pre><code class="language-rexx">a = .box~new('a b c')
+b = .box~new('b c d')
+u = a~union(b)
+say u '|' a '|' (u == a)
+d = .directory~new
+d['b'] = 'B'
+d['z'] = 'Z'
+say a~union(d)
+::class box inherit collection
+::method init
+  expose d
+  d = .directory~new
+  if arg(1, 'E') then do w over arg(1)~makearray(' '); d[w] = w; end
+::method copy
+  expose d
+  c = self~class~new
+  do i over d~allindexes; c~put(d[i], i); end
+  return c
+::method string
+  expose d
+  return d~allitems~sort~makestring('L', ' ')
+::method put
+  expose d
+  d[arg(2)] = arg(1)
+::method remove
+  expose d
+  if arg(1) == .nil then return .nil
+  return d~remove(arg(1))
+::method allindexes
+  expose d
+  return d~allindexes~sort
+::method allitems
+  expose d
+  return d~allitems~sort
+::method isempty
+  expose d
+  return d~items = 0
+::method '[]'
+  expose d
+  return d[arg(1)]
+</code></pre>
+<pre><code class="language-output">a b c d | a b c | 0
+Z a b c
+</code></pre>
+<div class="rule" id="r-class.collection.union.sends"><a href="#r-class.collection.union.sends">[class.collection.union.sends]</a></div>
+<p><code>union</code> sends <code>copy</code> to the receiver, with no argument, and then reads the
+argument: it sends <code>isA</code> with <code>OrderedCollection</code> and, when that does not
+answer 1, <code>isA</code> with <code>MapCollection</code>, then <code>allItems</code>, <code>supplier</code> or
+<code>makeArray</code> as <a href="#r-class.collection.operand">the operand rule</a> says, and reads
+the answer by <a href="#r-class.collection.operand.list">the list rule</a> or <a href="#r-class.collection.operand.map">the map
+rule</a>. For each entry in the order the
+argument gives them it sends <code>hasIndex</code> to the copy with the index, and, when
+that answers 0, <code>put</code> to the copy with the item and then the index. The answer
+of <code>hasIndex</code> is used as <a href="#r-class.collection.operand.logical">a logical
+value</a>. Nothing else is sent. The copy is
+made before the argument is read, so an argument that cannot be read leaves
+the <code>copy</code> already sent.</p>
+<pre><code class="language-rexx">a = .lbox~new('a b')
+say 'start'
+r = a~union(.tr~new)
+say r
+signal on syntax name bad
+r = a~union(.nil)
+bad: say condition('o')~code
+::class box inherit collection
+::method init
+  expose d
+  d = .directory~new
+  if arg(1, 'E') then do w over arg(1)~makearray(' '); d[w] = w; end
+::method copy
+  expose d
+  c = self~class~new
+  do i over d~allindexes; c~put(d[i], i); end
+  return c
+::method string
+  expose d
+  return d~allitems~sort~makestring('L', ' ')
+::method put
+  expose d
+  d[arg(2)] = arg(1)
+::method remove
+  expose d
+  if arg(1) == .nil then return .nil
+  return d~remove(arg(1))
+::method allindexes
+  expose d
+  return d~allindexes~sort
+::method allitems
+  expose d
+  return d~allitems~sort
+::method isempty
+  expose d
+  return d~items = 0
+::method '[]'
+  expose d
+  return d[arg(1)]
+::class lbox subclass box
+::method copy
+  say 'copy'
+  return self~class~new(self~string)
+::method hasindex
+  say 'hasIndex' arg(1)
+  forward class (super)
+::method put
+  say 'put' arg(1) arg(2)
+  forward class (super)
+::method remove
+  say 'remove' arg(1)
+  forward class (super)
+::class tr
+::method isa
+  say 'isA' arg(1)~id
+  return 0
+::method makearray
+  say 'makeArray'
+  return .array~of('b', 'x')
+</code></pre>
+<pre><code class="language-output">start
+copy
+isA OrderedCollection
+isA MapCollection
+makeArray
+hasIndex b
+hasIndex x
+put x x
+a b x
+copy
+93.948
+</code></pre>
+<div class="rule" id="r-class.collection.difference"><a href="#r-class.collection.difference">[class.collection.difference]</a></div>
+<p><code>difference(other)</code> answers a new collection: the object that the receiver's
+<code>copy</code> answers, from which the entry at each index the argument lists has
+been removed. For an argument read as a list (<a href="#r-class.collection.operand">the operand
+rule</a>) an element names the index to remove, and
+for a map the indexes of its entries do. Indexes that the copy lacks are
+skipped, and the receiver is not changed.</p>
+<pre><code class="language-rexx">a = .box~new('a b c')
+say a~difference(.box~new('b c d')) '|' a
+d = .directory~new
+d['a'] = 'unrelated item'
+say a~difference(d)
+::class box inherit collection
+::method init
+  expose d
+  d = .directory~new
+  if arg(1, 'E') then do w over arg(1)~makearray(' '); d[w] = w; end
+::method copy
+  expose d
+  c = self~class~new
+  do i over d~allindexes; c~put(d[i], i); end
+  return c
+::method string
+  expose d
+  return d~allitems~sort~makestring('L', ' ')
+::method put
+  expose d
+  d[arg(2)] = arg(1)
+::method remove
+  expose d
+  if arg(1) == .nil then return .nil
+  return d~remove(arg(1))
+::method allindexes
+  expose d
+  return d~allindexes~sort
+::method allitems
+  expose d
+  return d~allitems~sort
+::method isempty
+  expose d
+  return d~items = 0
+::method '[]'
+  expose d
+  return d[arg(1)]
+</code></pre>
+<pre><code class="language-output">a | a b c
+b c
+</code></pre>
+<div class="rule" id="r-class.collection.difference.sends"><a href="#r-class.collection.difference.sends">[class.collection.difference.sends]</a></div>
+<p><code>difference</code> first reads the argument: it sends <code>isA</code> with <code>OrderedCollection</code>
+and, when that does not answer 1, <code>isA</code> with <code>MapCollection</code>, then <code>allItems</code>,
+<code>allIndexes</code> or <code>makeArray</code> as <a href="#r-class.collection.operand">the operand rule</a>
+says. It then sends <code>copy</code> to the receiver and <code>items</code> to the argument, with
+no argument. It then does the following for each of the positions from 1 up to
+the number that <code>items</code> answered: it sends <code>[]</code> with the position to the
+answer that the first step gave, and <code>remove</code> to the copy with what <code>[]</code>
+answered. A position beyond the end of the answer reads <code>.nil</code>, and the answer
+of <code>remove</code> is not used. Nothing else is sent. <code>remove</code> is not defined by
+<code>Collection</code>, so a copy that lacks it raises <code>SYNTAX 93.948</code> at the first
+position, and an argument whose <code>items</code> answers 0 never sends it.</p>
+<pre><code class="language-rexx">a = .lbox~new('a b')
+r = a~difference(.tr~new)
+say r
+r = .bare~new~difference(.tr~new('none'))
+say 'no position'
+signal on syntax name bad
+say .bare~new~difference(.tr~new)
+bad: say condition('o')~code
+::class box inherit collection
+::method init
+  expose d
+  d = .directory~new
+  if arg(1, 'E') then do w over arg(1)~makearray(' '); d[w] = w; end
+::method copy
+  expose d
+  c = self~class~new
+  do i over d~allindexes; c~put(d[i], i); end
+  return c
+::method string
+  expose d
+  return d~allitems~sort~makestring('L', ' ')
+::method put
+  expose d
+  d[arg(2)] = arg(1)
+::method remove
+  expose d
+  if arg(1) == .nil then return .nil
+  return d~remove(arg(1))
+::method allindexes
+  expose d
+  return d~allindexes~sort
+::method allitems
+  expose d
+  return d~allitems~sort
+::method isempty
+  expose d
+  return d~items = 0
+::method '[]'
+  expose d
+  return d[arg(1)]
+::class lbox subclass box
+::method copy
+  say 'copy'
+  return self~class~new(self~string)
+::method hasindex
+  say 'hasIndex' arg(1)
+  forward class (super)
+::method put
+  say 'put' arg(1) arg(2)
+  forward class (super)
+::method remove
+  say 'remove' arg(1)
+  forward class (super)
+::class bare inherit collection
+::method copy
+  return self
+::method put
+  nop
+::class tr
+::method init
+  expose kind
+  if arg(1, 'E') then kind = 'none'
+  else kind = 'some'
+::method isa
+  say 'isA' arg(1)~id
+  return 0
+::method makearray
+  say 'makeArray'
+  return .ans~new
+::method items
+  expose kind
+  say 'items'
+  if kind = 'none' then return 0
+  return 2
+::class ans
+::method '[]'
+  say '[]' arg(1)
+  return .array~of('b', 'x')[arg(1)]
+</code></pre>
+<pre><code class="language-output">isA OrderedCollection
+isA MapCollection
+makeArray
+copy
+items
+[] 1
+remove b
+[] 2
+remove x
+a
+isA OrderedCollection
+isA MapCollection
+makeArray
+items
+no position
+isA OrderedCollection
+isA MapCollection
+makeArray
+items
+[] 1
+93.948
+</code></pre>
+<div class="rule" id="r-class.collection.intersection"><a href="#r-class.collection.intersection">[class.collection.intersection]</a></div>
+<p><code>intersection(other)</code> answers a new, empty collection that <code>new</code> of the
+receiver's class makes, and stores into it, for each element of the argument
+that the receiver has as an index, that element as item and as index; for a
+map argument the argument's own item is stored at the entry's index. Nothing
+is stored for an index the receiver lacks, and the receiver is not changed.</p>
+<pre><code class="language-rexx">a = .box~new('a b c')
+say a~intersection(.box~new('b c d'))
+d = .directory~new
+d['b'] = 'item from the map'
+d['q'] = 'never stored'
+say a~intersection(d)
+::class box inherit collection
+::method init
+  expose d
+  d = .directory~new
+  if arg(1, 'E') then do w over arg(1)~makearray(' '); d[w] = w; end
+::method copy
+  expose d
+  c = self~class~new
+  do i over d~allindexes; c~put(d[i], i); end
+  return c
+::method string
+  expose d
+  return d~allitems~sort~makestring('L', ' ')
+::method put
+  expose d
+  d[arg(2)] = arg(1)
+::method remove
+  expose d
+  if arg(1) == .nil then return .nil
+  return d~remove(arg(1))
+::method allindexes
+  expose d
+  return d~allindexes~sort
+::method allitems
+  expose d
+  return d~allitems~sort
+::method isempty
+  expose d
+  return d~items = 0
+::method '[]'
+  expose d
+  return d[arg(1)]
+</code></pre>
+<pre><code class="language-output">b c
+item from the map
+</code></pre>
+<div class="rule" id="r-class.collection.intersection.sends"><a href="#r-class.collection.intersection.sends">[class.collection.intersection.sends]</a></div>
+<p><code>intersection</code> sends <code>new</code> to the class of the receiver, with no argument,
+which makes the result. It then reads the argument: it sends <code>isA</code> with
+<code>OrderedCollection</code> and, when that does not answer 1, <code>isA</code> with
+<code>MapCollection</code>, then <code>allItems</code>, <code>supplier</code> or <code>makeArray</code> as <a href="#r-class.collection.operand">the operand
+rule</a> says, and reads the answer by <a href="#r-class.collection.operand.list">the list
+rule</a> or <a href="#r-class.collection.operand.map">the map
+rule</a>. For each entry in order it sends
+<code>hasIndex</code> to the receiver, not to the result, with the index, and when that
+answers 1 sends <code>put</code> to the result with the item and then the index. The
+answer of <code>hasIndex</code> is used as <a href="#r-class.collection.operand.logical">a logical
+value</a>. No <code>copy</code> is sent.</p>
+<pre><code class="language-rexx">a = .nbox~new('a b')
+say 'start'
+r = a~intersection(.tr~new)
+say r
+::class box inherit collection
+::method init
+  expose d
+  d = .directory~new
+  if arg(1, 'E') then do w over arg(1)~makearray(' '); d[w] = w; end
+::method copy
+  expose d
+  c = self~class~new
+  do i over d~allindexes; c~put(d[i], i); end
+  return c
+::method string
+  expose d
+  return d~allitems~sort~makestring('L', ' ')
+::method put
+  expose d
+  d[arg(2)] = arg(1)
+::method remove
+  expose d
+  if arg(1) == .nil then return .nil
+  return d~remove(arg(1))
+::method allindexes
+  expose d
+  return d~allindexes~sort
+::method allitems
+  expose d
+  return d~allitems~sort
+::method isempty
+  expose d
+  return d~items = 0
+::method '[]'
+  expose d
+  return d[arg(1)]
+::class nbox subclass box
+::method new class
+  say 'new' arg()
+  forward class (super)
+::method hasindex
+  say 'hasIndex' arg(1)
+  forward class (super)
+::method put
+  say 'put' arg(1) arg(2)
+  forward class (super)
+::class tr
+::method isa
+  say 'isA' arg(1)~id
+  return 0
+::method makearray
+  say 'makeArray'
+  return .array~of('b', 'x')
+</code></pre>
+<pre><code class="language-output">new 1
+start
+new 0
+isA OrderedCollection
+isA MapCollection
+makeArray
+hasIndex b
+put b b
+hasIndex x
+b
+</code></pre>
+<div class="rule" id="r-class.collection.xor"><a href="#r-class.collection.xor">[class.collection.xor]</a></div>
+<p><code>xor(other)</code> answers a new collection: the object that the receiver's <code>copy</code>
+answers, in which each entry of the argument toggles: an entry whose index the
+copy has is removed, and one it lacks is added with its item. What remains is
+the entries that exactly one of the two collections has. The receiver is not
+changed.</p>
+<pre><code class="language-rexx">a = .box~new('a b c')
+say a~xor(.box~new('b c d'))
+say '['a~xor(a)']' a
+::class box inherit collection
+::method init
+  expose d
+  d = .directory~new
+  if arg(1, 'E') then do w over arg(1)~makearray(' '); d[w] = w; end
+::method copy
+  expose d
+  c = self~class~new
+  do i over d~allindexes; c~put(d[i], i); end
+  return c
+::method string
+  expose d
+  return d~allitems~sort~makestring('L', ' ')
+::method put
+  expose d
+  d[arg(2)] = arg(1)
+::method remove
+  expose d
+  if arg(1) == .nil then return .nil
+  return d~remove(arg(1))
+::method allindexes
+  expose d
+  return d~allindexes~sort
+::method allitems
+  expose d
+  return d~allitems~sort
+::method isempty
+  expose d
+  return d~items = 0
+::method '[]'
+  expose d
+  return d[arg(1)]
+</code></pre>
+<pre><code class="language-output">a d
+[] a b c
+</code></pre>
+<div class="rule" id="r-class.collection.xor.sends"><a href="#r-class.collection.xor.sends">[class.collection.xor.sends]</a></div>
+<p><code>xor</code> sends <code>copy</code> to the receiver, then reads the argument: it sends <code>isA</code>
+with <code>OrderedCollection</code> and, when that does not answer 1, <code>isA</code> with
+<code>MapCollection</code>, then <code>allItems</code>, <code>supplier</code> or <code>makeArray</code> as <a href="#r-class.collection.operand">the operand
+rule</a> says, and reads the answer by <a href="#r-class.collection.operand.list">the list
+rule</a> or <a href="#r-class.collection.operand.map">the map
+rule</a>. For each entry in order it sends
+<code>hasIndex</code> to the copy with the index. When that answers 1 it sends <code>remove</code>
+to the copy with the index, and otherwise <code>put</code> with the item and then the
+index. The answer of <code>hasIndex</code> is used as <a href="#r-class.collection.operand.logical">a logical
+value</a>. An index that occurs twice in the
+argument is toggled twice, and a copy that lacks <code>remove</code> raises
+<code>SYNTAX 93.948</code> at the first index that is already present.</p>
+<pre><code class="language-rexx">a = .lbox~new('a b')
+r = a~xor(.tr~new)
+say r
+signal on syntax name bad
+r = .bare~new~xor(.tr~new)
+bad: say condition('o')~code
+::class box inherit collection
+::method init
+  expose d
+  d = .directory~new
+  if arg(1, 'E') then do w over arg(1)~makearray(' '); d[w] = w; end
+::method copy
+  expose d
+  c = self~class~new
+  do i over d~allindexes; c~put(d[i], i); end
+  return c
+::method string
+  expose d
+  return d~allitems~sort~makestring('L', ' ')
+::method put
+  expose d
+  d[arg(2)] = arg(1)
+::method remove
+  expose d
+  if arg(1) == .nil then return .nil
+  return d~remove(arg(1))
+::method allindexes
+  expose d
+  return d~allindexes~sort
+::method allitems
+  expose d
+  return d~allitems~sort
+::method isempty
+  expose d
+  return d~items = 0
+::method '[]'
+  expose d
+  return d[arg(1)]
+::class lbox subclass box
+::method copy
+  say 'copy'
+  return self~class~new(self~string)
+::method hasindex
+  say 'hasIndex' arg(1)
+  forward class (super)
+::method put
+  say 'put' arg(1) arg(2)
+  forward class (super)
+::method remove
+  say 'remove' arg(1)
+  forward class (super)
+::class bare inherit collection
+::method copy
+  return self
+::method hasindex
+  return 1
+::class tr
+::method isa
+  say 'isA' arg(1)~id
+  return 0
+::method makearray
+  say 'makeArray'
+  return .array~of('b', 'x', 'x')
+</code></pre>
+<pre><code class="language-output">copy
+isA OrderedCollection
+isA MapCollection
+makeArray
+hasIndex b
+remove b
+hasIndex x
+put x x
+hasIndex x
+remove x
+a
+isA OrderedCollection
+isA MapCollection
+makeArray
+93.948
+</code></pre>
+<div class="rule" id="r-class.collection.subset"><a href="#r-class.collection.subset">[class.collection.subset]</a></div>
+<p><code>subset(other)</code> answers 1 when each item that the receiver's <code>makeArray</code> answers
+is equal to an element that the argument supplies, and 0 otherwise. The argument
+is read as <a href="#r-class.collection.operand">the operand rule</a> says, so for a plain
+or ordered argument the elements are its items, and a receiver with no items is
+a subset of every collection. An item and an element are equal as <code>==</code> compares
+strings: <code>1</code> and <code>1.0</code> differ, and so do <code>a</code> and <code>A</code>. For an argument that is
+read through <code>allIndexes</code>, the elements are its indexes, and an item of the
+receiver that is one of them must also have a matching entry: the receiver's
+entry at that index is sent <code>\=</code> with the argument's entry at that index, and an
+answer of 1 makes the result 0, so a receiver whose entries do not override <code>\=</code>
+compares them as <code>=</code> does, where <code>1</code> and <code>1.0</code> are equal and <code>a</code> and <code>A</code> are
+not. When <code>isA</code> says that the argument is a <code>Set</code>, its entries are not compared,
+because an index and its item are the same there. The answer of that <code>isA</code> is
+used as a logical value: a string that is neither 0 nor 1 raises
+<code>SYNTAX 34.901</code>, and an answer that is not a string, <code>.nil</code> included, raises
+<code>SYNTAX 93.948</code> whatever its string value. The answer of <code>\=</code> is used as a
+logical value: what is neither 0 nor 1 raises <code>SYNTAX 34.6</code>.</p>
+<pre><code class="language-rexx">a = .box~new('a b')
+say a~subset(.box~new('a b c')) a~subset(.box~new('a')) a~subset(a)
+say .box~new~subset(.box~new)
+say .box~new('a')~subset(.array~of('A')) .box~new('1')~subset(.array~of(1.0))
+x = .map~new('k', 1, 'm', 'a')
+say x~subset(.map~new('k', 1.0, 'm', 'a', 'n', 5))
+say x~subset(.map~new('k', 1, 'm', 'A'))
+say x~subset(.map~new('k', 1))
+say x~subset(.set~of('k', 'm'))
+t = .table~new
+t['k'] = 'k'
+t['m'] = 'm'
+say x~subset(t)
+signal on syntax name bad
+say x~subset(.setliar~new(2))
+bad: say condition('o')~code
+signal on syntax name bad2
+say x~subset(.setliar~new(.nil))
+bad2: say condition('o')~code
+signal on syntax name bad3
+say x~subset(.setliar~new(.yes~new))
+bad3: say condition('o')~code
+exit
+::class yes
+::method makestring
+  return 1
+::class setliar inherit mapcollection
+::method init
+  expose answer
+  use arg answer
+::method isa
+  expose answer
+  if arg(1) == .set then return answer
+  forward class (super)
+::method allindexes
+  return .array~of('k')
+::method items
+  return 1
+::class map inherit mapcollection
+::method init
+  expose d
+  d = .directory~new
+  do i = 1 to arg() by 2; d[arg(i)] = arg(i + 1); end
+::method allindexes
+  expose d
+  return d~allindexes~sort
+::method '[]'
+  expose d
+  return d[arg(1)]
+::method copy
+  return self
+::method items
+  expose d
+  return d~items
+::class box inherit collection
+::method init
+  expose d
+  d = .directory~new
+  if arg(1, 'E') then do w over arg(1)~makearray(' '); d[w] = w; end
+::method copy
+  expose d
+  c = self~class~new
+  do i over d~allindexes; c~put(d[i], i); end
+  return c
+::method string
+  expose d
+  return d~allitems~sort~makestring('L', ' ')
+::method put
+  expose d
+  d[arg(2)] = arg(1)
+::method remove
+  expose d
+  if arg(1) == .nil then return .nil
+  return d~remove(arg(1))
+::method allindexes
+  expose d
+  return d~allindexes~sort
+::method allitems
+  expose d
+  return d~allitems~sort
+::method isempty
+  expose d
+  return d~items = 0
+::method '[]'
+  expose d
+  return d[arg(1)]
+</code></pre>
+<pre><code class="language-output">1 0 1
+1
+0 0
+1
+0
+0
+1
+0
+34.901
+93.948
+93.948
+</code></pre>
+<div class="rule" id="r-class.collection.subset.sends"><a href="#r-class.collection.subset.sends">[class.collection.subset.sends]</a></div>
+<p><code>subset</code> first reads the argument: it sends <code>isA</code> with <code>OrderedCollection</code> and,
+when that does not answer 1, <code>isA</code> with <code>MapCollection</code>, then <code>allItems</code>,
+<code>allIndexes</code> or <code>makeArray</code> as <a href="#r-class.collection.operand">the operand rule</a>
+says. For a map it then sends <code>isA</code> with <code>Set</code>. Then it sends <code>copy</code> to the
+receiver, <code>items</code> to the argument and <code>makeArray</code> to the receiver, each with no
+argument, and uses none of the first two answers. A <code>copy</code> that answers anything
+and an <code>items</code> that answers anything do not matter, but an argument that does
+not understand <code>items</code> raises <code>SYNTAX 93.948</code>. The answer of the receiver's
+<code>makeArray</code> has to be an <code>Array</code> of that class itself: an instance of a subclass
+of <code>Array</code> raises <code>SYNTAX 98.913</code>, and nothing is sent to it. <code>subset</code> reads its
+positions from 1 up to its <code>last</code>, a position that holds nothing giving the item
+<code>.nil</code>, and for each item, in order, <code>subset</code> sends <code>hasItem</code> with the item to
+the answer of the first step, and answers 0 at the first item for which that
+answers 0, sending nothing more. For a map that is not a <code>Set</code>, when <code>hasItem</code>
+answers 1 it sends <code>[]</code> with the item to the receiver and then <code>[]</code> with the
+item to the argument itself, and then <code>\=</code> to the receiver's entry with the
+argument's entry as the argument. An answer of 1 ends the operation with 0. When
+every item has passed the answer is 1.</p>
+<pre><code class="language-rexx">a = .lmap~new('me', 'k', .e~new('one'), 'm', .e~new('two'))
+b = .lmap~new('arg', 'k', .e~new('one'), 'm', .e~new('two'), 'n', .e~new('x'))
+say a~subset(b)
+say a~subset(.lmap~new('arg', 'k', .e~new('one'), 'm', .e~new('2')))
+::class lmap inherit mapcollection
+::method init
+  expose d name
+  name = arg(1)
+  d = .directory~new
+  do i = 2 to arg() by 2; d[arg(i)] = arg(i + 1); end
+::method allindexes
+  expose d name
+  say name'.allIndexes'
+  return d~allindexes~sort
+::method makearray
+  expose name
+  say name'.makeArray'
+  forward class (.mapcollection)
+::method copy
+  expose name
+  say name'.copy'
+  return self
+::method items
+  expose d name
+  say name'.items'
+  return d~items
+::method isa
+  expose name
+  say name'.isA' arg(1)~id
+  forward class (super)
+::method '[]'
+  expose d name
+  say name'.[]' arg(1)
+  return d[arg(1)]
+::class e
+::method init
+  expose s
+  use arg s
+::method '\='
+  expose s
+  say '  \=' s arg(1)~string
+  return s \= arg(1)~string
+::method string
+  expose s
+  return s
+</code></pre>
+<pre><code class="language-output">arg.isA OrderedCollection
+arg.isA MapCollection
+arg.allIndexes
+arg.isA Set
+me.copy
+arg.items
+me.makeArray
+me.allIndexes
+me.[] k
+arg.[] k
+  \= one one
+me.[] m
+arg.[] m
+  \= two two
+1
+arg.isA OrderedCollection
+arg.isA MapCollection
+arg.allIndexes
+arg.isA Set
+me.copy
+arg.items
+me.makeArray
+me.allIndexes
+me.[] k
+arg.[] k
+  \= one one
+me.[] m
+arg.[] m
+  \= two 2
+0
+</code></pre>
+<div class="rule" id="r-class.collection.subset.receiver"><a href="#r-class.collection.subset.receiver">[class.collection.subset.receiver]</a></div>
+<p>The array that the receiver's <code>makeArray</code> answers is read by position, as <a href="#r-class.collection.subset.sends">the
+sends rule</a> says: an empty position before the
+last item is the item <code>.nil</code>, and <code>hasItem</code> is sent with it; an instance of a
+subclass of <code>Array</code> is refused with <code>SYNTAX 98.913</code> before anything is sent to
+it.</p>
+<pre><code class="language-rexx">say .hole~new~subset(.pa~new)
+signal on syntax name bad
+say .sub~new~subset(.pa~new)
+bad: say condition('o')~code
+::class hole inherit collection
+::method copy
+  return self
+::method makearray
+  h = .array~new(4)
+  h[1] = 'a'
+  h[3] = 'b'
+  return h
+::class sub subclass hole
+::method makearray
+  return .larr~of('a')
+::class larr subclass array
+::method makearray
+  say 'makeArray of the subclass'
+  forward class (super)
+::class pa
+::method isa
+  return 0
+::method items
+  return 0
+::method makearray
+  return .ans~new
+::class ans
+::method hasitem
+  say 'hasItem' arg(1)~string
+  return 1
+</code></pre>
+<pre><code class="language-output defect=#154">hasItem a
+hasItem The NIL object
+hasItem b
+1
+98.913
+</code></pre>
+<div class="rule" id="r-class.collection.disjoint"><a href="#r-class.collection.disjoint">[class.collection.disjoint]</a></div>
+<p><code>disjoint(other)</code> answers 1 when the receiver and the argument have no entry
+in common and 0 when they have one. It is the answer of <code>isEmpty</code> for what
+<code>intersection</code> answers, so what the two have in common is what
+<a href="#r-class.collection.intersection"><code>intersection</code></a> selects. <code>isEmpty</code> is not
+defined by <code>Collection</code>: a result that does not understand it raises
+<code>SYNTAX 97.1</code>.</p>
+<pre><code class="language-rexx">a = .box~new('a b')
+say a~disjoint(.box~new('x y')) a~disjoint(.box~new('b y'))
+say a~disjoint(.array~new)
+r = .noempty~new
+signal on syntax name bad
+say r~disjoint(.array~of('q'))
+bad: say condition('o')~code
+::class noempty inherit collection
+::method hasindex
+  return 1
+::method put
+  nop
+::class box inherit collection
+::method init
+  expose d
+  d = .directory~new
+  if arg(1, 'E') then do w over arg(1)~makearray(' '); d[w] = w; end
+::method copy
+  expose d
+  c = self~class~new
+  do i over d~allindexes; c~put(d[i], i); end
+  return c
+::method string
+  expose d
+  return d~allitems~sort~makestring('L', ' ')
+::method put
+  expose d
+  d[arg(2)] = arg(1)
+::method remove
+  expose d
+  if arg(1) == .nil then return .nil
+  return d~remove(arg(1))
+::method allindexes
+  expose d
+  return d~allindexes~sort
+::method allitems
+  expose d
+  return d~allitems~sort
+::method isempty
+  expose d
+  return d~items = 0
+::method '[]'
+  expose d
+  return d[arg(1)]
+</code></pre>
+<pre><code class="language-output">1 0
+1
+97.1
+</code></pre>
+<div class="rule" id="r-class.collection.disjoint.sends"><a href="#r-class.collection.disjoint.sends">[class.collection.disjoint.sends]</a></div>
+<p><code>disjoint</code> sends <code>intersection</code> to the receiver with the argument, and then
+<code>isEmpty</code> to the object <code>intersection</code> answered, with no argument. It sends
+nothing else itself: the <code>new</code>, <code>isA</code>, <code>hasIndex</code> and <code>put</code> messages are those
+of <a href="#r-class.collection.intersection.sends">the intersection rule</a>, and an
+answer of <code>isEmpty</code> is returned as it is.</p>
+<pre><code class="language-rexx">a = .lbox2~new('a b')
+say a~disjoint(.array~of('b'))
+::class box inherit collection
+::method init
+  expose d
+  d = .directory~new
+  if arg(1, 'E') then do w over arg(1)~makearray(' '); d[w] = w; end
+::method copy
+  expose d
+  c = self~class~new
+  do i over d~allindexes; c~put(d[i], i); end
+  return c
+::method string
+  expose d
+  return d~allitems~sort~makestring('L', ' ')
+::method put
+  expose d
+  d[arg(2)] = arg(1)
+::method remove
+  expose d
+  if arg(1) == .nil then return .nil
+  return d~remove(arg(1))
+::method allindexes
+  expose d
+  return d~allindexes~sort
+::method allitems
+  expose d
+  return d~allitems~sort
+::method isempty
+  expose d
+  return d~items = 0
+::method '[]'
+  expose d
+  return d[arg(1)]
+::class lbox subclass box
+::method copy
+  say 'copy'
+  return self~class~new(self~string)
+::method hasindex
+  say 'hasIndex' arg(1)
+  forward class (super)
+::method put
+  say 'put' arg(1) arg(2)
+  forward class (super)
+::method remove
+  say 'remove' arg(1)
+  forward class (super)
+::class lbox2 subclass lbox
+::method intersection
+  say 'intersection' arg(1)~class~id
+  forward class (super)
+::method isempty
+  say 'isEmpty'
+  forward class (super)
+</code></pre>
+<pre><code class="language-output">intersection Array
+hasIndex b
+put b b
+isEmpty
+0
+</code></pre>
+<div class="rule" id="r-class.collection.equivalent"><a href="#r-class.collection.equivalent">[class.collection.equivalent]</a></div>
+<p><code>equivalent(other)</code> answers 1 when the receiver and the argument have the same
+number of items and the receiver is a <a href="#r-class.collection.subset">subset</a> of
+the argument, so that two collections that have the same entries are
+equivalent, and 0 otherwise. The two counts are compared by <code>=</code>, so <code>3</code> and
+<code>3.0</code> are the same count. A receiver and an argument with different counts
+are not equivalent whatever they hold.</p>
+<pre><code class="language-rexx">a = .box~new('a b c')
+say a~equivalent(.box~new('c b a')) a~equivalent(.box~new('a b d'))
+say a~equivalent(.box~new('a b')) a~equivalent(.array~of('a', 'b', 'c'))
+::class box inherit collection
+::method init
+  expose d
+  d = .directory~new
+  if arg(1, 'E') then do w over arg(1)~makearray(' '); d[w] = w; end
+::method copy
+  expose d
+  c = self~class~new
+  do i over d~allindexes; c~put(d[i], i); end
+  return c
+::method string
+  expose d
+  return d~allitems~sort~makestring('L', ' ')
+::method put
+  expose d
+  d[arg(2)] = arg(1)
+::method remove
+  expose d
+  if arg(1) == .nil then return .nil
+  return d~remove(arg(1))
+::method allindexes
+  expose d
+  return d~allindexes~sort
+::method allitems
+  expose d
+  return d~allitems~sort
+::method isempty
+  expose d
+  return d~items = 0
+::method '[]'
+  expose d
+  return d[arg(1)]
+</code></pre>
+<pre><code class="language-output">1 0
+0 1
+</code></pre>
+<div class="rule" id="r-class.collection.equivalent.sends"><a href="#r-class.collection.equivalent.sends">[class.collection.equivalent.sends]</a></div>
+<p><code>equivalent</code> sends <code>items</code> to the receiver and then <code>items</code> to the argument,
+each with no argument. It then sends <code>=</code> to the answer of the receiver's
+<code>items</code>, with the answer of the argument's as the argument, and uses what that
+answers as a logical value. When it is 0 <code>equivalent</code> answers 0 and sends
+nothing more. Otherwise it sends <code>subset</code> to the receiver with the argument,
+which sends what <a href="#r-class.collection.subset.sends">its rule</a> says, and answers
+what that answers, which is a logical value as well. An answer of <code>=</code> or of
+<code>subset</code> that is neither 0 nor 1 raises <code>SYNTAX 34.6</code>.</p>
+<pre><code class="language-rexx">a = .lbox2~new('a b')
+say a~equivalent(.other~new(3))
+say a~equivalent(.other~new(2))
+call try .odd~new(2, 'maybe')
+call try .odd~new('maybe', 1)
+exit
+try:
+  signal on syntax name bad
+  say arg(1)~equivalent(.other~new(2))
+  return
+bad: say condition('o')~code
+  return
+::class box inherit collection
+::method init
+  expose d
+  d = .directory~new
+  if arg(1, 'E') then do w over arg(1)~makearray(' '); d[w] = w; end
+::method copy
+  expose d
+  c = self~class~new
+  do i over d~allindexes; c~put(d[i], i); end
+  return c
+::method string
+  expose d
+  return d~allitems~sort~makestring('L', ' ')
+::method put
+  expose d
+  d[arg(2)] = arg(1)
+::method remove
+  expose d
+  if arg(1) == .nil then return .nil
+  return d~remove(arg(1))
+::method allindexes
+  expose d
+  return d~allindexes~sort
+::method allitems
+  expose d
+  return d~allitems~sort
+::method isempty
+  expose d
+  return d~items = 0
+::method '[]'
+  expose d
+  return d[arg(1)]
+::class lbox subclass box
+::method copy
+  say 'copy'
+  return self~class~new(self~string)
+::method hasindex
+  say 'hasIndex' arg(1)
+  forward class (super)
+::method put
+  say 'put' arg(1) arg(2)
+  forward class (super)
+::method remove
+  say 'remove' arg(1)
+  forward class (super)
+::class lbox2 subclass lbox
+::method items
+  say 'items'
+  forward class (super)
+::method subset
+  say 'subset'
+  forward class (super)
+::class other inherit collection
+::method init
+  expose n
+  use arg n
+::method items
+  expose n
+  say 'other items'
+  return n
+::method makearray
+  return .array~of('a', 'b')
+::class odd inherit collection
+::method init
+  expose count answer
+  use arg count, answer
+::method items
+  expose count
+  return .count~new(count)
+::method subset
+  expose answer
+  return answer
+::class count
+::method init
+  expose n
+  use arg n
+::method '='
+  expose n
+  say 'count =' arg(1)
+  if n == 'maybe' then return n
+  return n = arg(1)
+</code></pre>
+<pre><code class="language-output">items
+other items
+0
+items
+other items
+subset
+copy
+other items
+1
+other items
+count = 2
+34.6
+other items
+count = 2
+34.6
+</code></pre>
+<h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
+<div class="rule" id="r-class.collection.deviation.78"><a href="#r-class.collection.deviation.78">[class.collection.deviation.78]</a></div>
+<p><code>hasItem</code> forwards the argument to the answer of <code>allItems</code>, so a search for
+the very object that is stored in that answer follows <a href="array.html#r-class.array.deviation.78">the Array
+rule</a>: the object's <code>==</code> is sent as for any other
+item, and an object whose <code>==</code> answers false is not found. ooRexx finds the
+very object without sending it <code>==</code>. See <a href="../deviations.html">Deviation 78</a>.</p>
+<pre><code class="language-rexx">x = .liar~new
+b = .box~new(.array~of('a', x, 'b'))
+.local~n = 0
+say b~hasItem(x) .local~n
+::class box inherit collection
+::method init
+  expose a
+  use arg a
+::method allItems
+  expose a
+  return a
+::class liar
+::method '=='
+  .local~n += 1
+  return 0
+</code></pre>
+<pre><code class="language-output">0 3
+</code></pre>
+<div class="rule" id="r-class.collection.deviation.109"><a href="#r-class.collection.deviation.109">[class.collection.deviation.109]</a></div>
+<p>An instance of a subclass of <code>String</code> that is compared by <code>subset</code> or
+<code>equivalent</code> is read by its own characters, and <code>REQUEST</code> and <code>MAKESTRING</code> are
+not sent to it (<a href="string.html#r-class.string.deviation.109">Deviation 109</a>). That reaches the
+entry of the argument that <code>subset</code> gives to <code>\=</code> and the count of the argument
+that <code>equivalent</code> gives to <code>=</code>. ooRexx sends such an instance <code>request</code> with
+<code>STRING</code> or <code>MAKESTRING</code>, so an override of either can change what is read. In
+the example <code>MAKESTRING</code> answers other characters.</p>
+<pre><code class="language-rexx">n = .name~new('9')
+say .cnt~new('3')~equivalent(.cnt~new(n))
+x = .map~new('k', 'a')
+say x~subset(.map~new('k', .name~new('b')))
+::class name subclass string
+::method makestring
+  if self == '9' then return '3'
+  return 'a'
+::class cnt inherit collection
+::method init
+  expose c
+  use arg c
+::method items
+  expose c
+  return c
+::method subset
+  return 1
+::class map inherit mapcollection
+::method init
+  expose d
+  d = .directory~new
+  do i = 1 to arg() by 2; d[arg(i)] = arg(i + 1); end
+::method allindexes
+  expose d
+  return d~allindexes~sort
+::method '[]'
+  expose d
+  return d[arg(1)]
+::method copy
+  return self
+::method items
+  expose d
+  return d~items
+</code></pre>
+<pre><code class="language-output defect=#140">0
+0
+</code></pre>
+<div class="rule" id="r-class.collection.deviation.118"><a href="#r-class.collection.deviation.118">[class.collection.deviation.118]</a></div>
+<p>An instance of a subclass of <code>List</code> that <code>makeArray</code> answers to <code>union</code>,
+<code>intersection</code>, <code>xor</code> or <code>disjoint</code> is sent <code>makeArray</code>, twice, so that the
+<code>makeArray</code> of the subclass is used, as <a href="#r-class.collection.operand.list">the list
+rule</a> says. ooRexx uses the items such an
+instance holds and sends it no <code>makeArray</code>. In the example the subclass answers
+other items than it holds.</p>
+<pre><code class="language-rexx">r = .nb~new~union(.pk~new(.llist~of('held')))
+::class llist subclass list
+::method makearray
+  say 'makearray sent'
+  return .array~of('answered')
+::class nb inherit collection
+::method copy
+  return self
+::method hasindex
+  say 'hasIndex' arg(1)
+  return 0
+::method put
+  say 'put' arg(1) arg(2)
+::class pk inherit collection
+::method init
+  expose answer
+  use arg answer
+::method makearray
+  expose answer
+  return answer
+</code></pre>
+<pre><code class="language-output">makearray sent
+makearray sent
+hasIndex answered
+put answered answered
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../classes/alarmnotification.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../classes/mapcollection.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../classes/alarmnotification.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../classes/mapcollection.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../assets/version-picker.js"></script>
+
+
+    </div>
+    </body>
+</html>

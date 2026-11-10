@@ -1,0 +1,1212 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Properties - The interrexx Language Specification</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../conventions.html"><strong aria-hidden="true">2.</strong> Conventions</a></li><li class="chapter-item expanded "><a href="../lexical/index.html"><strong aria-hidden="true">3.</strong> Lexical structure</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../lexical/characters.html"><strong aria-hidden="true">3.1.</strong> Characters</a></li><li class="chapter-item expanded "><a href="../lexical/comments.html"><strong aria-hidden="true">3.2.</strong> Comments</a></li><li class="chapter-item expanded "><a href="../lexical/literals.html"><strong aria-hidden="true">3.3.</strong> Literals</a></li><li class="chapter-item expanded "><a href="../lexical/symbols.html"><strong aria-hidden="true">3.4.</strong> Symbols</a></li><li class="chapter-item expanded "><a href="../lexical/operators.html"><strong aria-hidden="true">3.5.</strong> Operators and special characters</a></li><li class="chapter-item expanded "><a href="../lexical/clauses.html"><strong aria-hidden="true">3.6.</strong> Clauses</a></li></ol></li><li class="chapter-item expanded "><a href="../numbers/index.html"><strong aria-hidden="true">4.</strong> Numbers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../numbers/formats.html"><strong aria-hidden="true">4.1.</strong> Formats</a></li><li class="chapter-item expanded "><a href="../numbers/limits.html"><strong aria-hidden="true">4.2.</strong> Limits</a></li><li class="chapter-item expanded "><a href="../numbers/arithmetic.html"><strong aria-hidden="true">4.3.</strong> Arithmetic</a></li><li class="chapter-item expanded "><a href="../numbers/settings.html"><strong aria-hidden="true">4.4.</strong> Settings</a></li><li class="chapter-item expanded "><a href="../numbers/comparison.html"><strong aria-hidden="true">4.5.</strong> Comparison</a></li></ol></li><li class="chapter-item expanded "><a href="../expressions/index.html"><strong aria-hidden="true">5.</strong> Expressions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../expressions/terms.html"><strong aria-hidden="true">5.1.</strong> Terms</a></li><li class="chapter-item expanded "><a href="../expressions/variables.html"><strong aria-hidden="true">5.2.</strong> Variables</a></li><li class="chapter-item expanded "><a href="../expressions/concatenation.html"><strong aria-hidden="true">5.3.</strong> Concatenation</a></li><li class="chapter-item expanded "><a href="../expressions/arithmetic.html"><strong aria-hidden="true">5.4.</strong> Arithmetic operators</a></li><li class="chapter-item expanded "><a href="../expressions/comparison.html"><strong aria-hidden="true">5.5.</strong> Comparison operators</a></li><li class="chapter-item expanded "><a href="../expressions/logical.html"><strong aria-hidden="true">5.6.</strong> Logical operators</a></li><li class="chapter-item expanded "><a href="../expressions/messages.html"><strong aria-hidden="true">5.7.</strong> Message operators</a></li></ol></li><li class="chapter-item expanded "><a href="../instructions/index.html"><strong aria-hidden="true">6.</strong> Instructions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../instructions/address.html"><strong aria-hidden="true">6.1.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../instructions/arg.html"><strong aria-hidden="true">6.2.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../instructions/assignment.html"><strong aria-hidden="true">6.3.</strong> Assignments</a></li><li class="chapter-item expanded "><a href="../instructions/call.html"><strong aria-hidden="true">6.4.</strong> CALL</a></li><li class="chapter-item expanded "><a href="../instructions/command.html"><strong aria-hidden="true">6.5.</strong> Commands</a></li><li class="chapter-item expanded "><a href="../instructions/do.html"><strong aria-hidden="true">6.6.</strong> DO</a></li><li class="chapter-item expanded "><a href="../instructions/drop.html"><strong aria-hidden="true">6.7.</strong> DROP</a></li><li class="chapter-item expanded "><a href="../instructions/exit.html"><strong aria-hidden="true">6.8.</strong> EXIT</a></li><li class="chapter-item expanded "><a href="../instructions/expose.html"><strong aria-hidden="true">6.9.</strong> EXPOSE</a></li><li class="chapter-item expanded "><a href="../instructions/forward.html"><strong aria-hidden="true">6.10.</strong> FORWARD</a></li><li class="chapter-item expanded "><a href="../instructions/guard.html"><strong aria-hidden="true">6.11.</strong> GUARD</a></li><li class="chapter-item expanded "><a href="../instructions/if.html"><strong aria-hidden="true">6.12.</strong> IF</a></li><li class="chapter-item expanded "><a href="../instructions/interpret.html"><strong aria-hidden="true">6.13.</strong> INTERPRET</a></li><li class="chapter-item expanded "><a href="../instructions/iterate.html"><strong aria-hidden="true">6.14.</strong> ITERATE</a></li><li class="chapter-item expanded "><a href="../instructions/leave.html"><strong aria-hidden="true">6.15.</strong> LEAVE</a></li><li class="chapter-item expanded "><a href="../instructions/loop.html"><strong aria-hidden="true">6.16.</strong> LOOP</a></li><li class="chapter-item expanded "><a href="../instructions/message.html"><strong aria-hidden="true">6.17.</strong> Message instructions</a></li><li class="chapter-item expanded "><a href="../instructions/nop.html"><strong aria-hidden="true">6.18.</strong> NOP</a></li><li class="chapter-item expanded "><a href="../instructions/numeric.html"><strong aria-hidden="true">6.19.</strong> NUMERIC</a></li><li class="chapter-item expanded "><a href="../instructions/options.html"><strong aria-hidden="true">6.20.</strong> OPTIONS</a></li><li class="chapter-item expanded "><a href="../instructions/parse.html"><strong aria-hidden="true">6.21.</strong> PARSE</a></li><li class="chapter-item expanded "><a href="../instructions/procedure.html"><strong aria-hidden="true">6.22.</strong> PROCEDURE</a></li><li class="chapter-item expanded "><a href="../instructions/pull.html"><strong aria-hidden="true">6.23.</strong> PULL</a></li><li class="chapter-item expanded "><a href="../instructions/push.html"><strong aria-hidden="true">6.24.</strong> PUSH</a></li><li class="chapter-item expanded "><a href="../instructions/queue.html"><strong aria-hidden="true">6.25.</strong> QUEUE</a></li><li class="chapter-item expanded "><a href="../instructions/raise.html"><strong aria-hidden="true">6.26.</strong> RAISE</a></li><li class="chapter-item expanded "><a href="../instructions/reply.html"><strong aria-hidden="true">6.27.</strong> REPLY</a></li><li class="chapter-item expanded "><a href="../instructions/return.html"><strong aria-hidden="true">6.28.</strong> RETURN</a></li><li class="chapter-item expanded "><a href="../instructions/say.html"><strong aria-hidden="true">6.29.</strong> SAY</a></li><li class="chapter-item expanded "><a href="../instructions/select.html"><strong aria-hidden="true">6.30.</strong> SELECT</a></li><li class="chapter-item expanded "><a href="../instructions/signal.html"><strong aria-hidden="true">6.31.</strong> SIGNAL</a></li><li class="chapter-item expanded "><a href="../instructions/trace.html"><strong aria-hidden="true">6.32.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../instructions/use.html"><strong aria-hidden="true">6.33.</strong> USE</a></li></ol></li><li class="chapter-item expanded "><a href="../parsing/index.html"><strong aria-hidden="true">7.</strong> Parsing</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../parsing/templates.html"><strong aria-hidden="true">7.1.</strong> Templates</a></li><li class="chapter-item expanded "><a href="../parsing/patterns.html"><strong aria-hidden="true">7.2.</strong> Patterns</a></li><li class="chapter-item expanded "><a href="../parsing/multiple.html"><strong aria-hidden="true">7.3.</strong> Several strings and case</a></li></ol></li><li class="chapter-item expanded "><a href="../directives/index.html"><strong aria-hidden="true">8.</strong> Directives</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../directives/class.html"><strong aria-hidden="true">8.1.</strong> ::CLASS</a></li><li class="chapter-item expanded "><a href="../directives/method.html"><strong aria-hidden="true">8.2.</strong> ::METHOD</a></li><li class="chapter-item expanded "><a href="../directives/attribute.html"><strong aria-hidden="true">8.3.</strong> ::ATTRIBUTE</a></li><li class="chapter-item expanded "><a href="../directives/constant.html"><strong aria-hidden="true">8.4.</strong> ::CONSTANT</a></li><li class="chapter-item expanded "><a href="../directives/routine.html"><strong aria-hidden="true">8.5.</strong> ::ROUTINE</a></li><li class="chapter-item expanded "><a href="../directives/requires.html"><strong aria-hidden="true">8.6.</strong> ::REQUIRES</a></li><li class="chapter-item expanded "><a href="../directives/options.html"><strong aria-hidden="true">8.7.</strong> ::OPTIONS</a></li><li class="chapter-item expanded "><a href="../directives/resource.html"><strong aria-hidden="true">8.8.</strong> ::RESOURCE</a></li><li class="chapter-item expanded "><a href="../directives/annotate.html"><strong aria-hidden="true">8.9.</strong> ::ANNOTATE</a></li></ol></li><li class="chapter-item expanded "><a href="../conditions/index.html"><strong aria-hidden="true">9.</strong> Conditions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../conditions/traps.html"><strong aria-hidden="true">9.1.</strong> Condition traps</a></li><li class="chapter-item expanded "><a href="../conditions/information.html"><strong aria-hidden="true">9.2.</strong> Condition information</a></li><li class="chapter-item expanded "><a href="../conditions/syntax.html"><strong aria-hidden="true">9.3.</strong> SYNTAX</a></li><li class="chapter-item expanded "><a href="../conditions/error.html"><strong aria-hidden="true">9.4.</strong> ERROR and FAILURE</a></li><li class="chapter-item expanded "><a href="../conditions/halt.html"><strong aria-hidden="true">9.5.</strong> HALT</a></li><li class="chapter-item expanded "><a href="../conditions/novalue.html"><strong aria-hidden="true">9.6.</strong> NOVALUE</a></li><li class="chapter-item expanded "><a href="../conditions/nostring.html"><strong aria-hidden="true">9.7.</strong> NOSTRING</a></li><li class="chapter-item expanded "><a href="../conditions/nomethod.html"><strong aria-hidden="true">9.8.</strong> NOMETHOD</a></li><li class="chapter-item expanded "><a href="../conditions/notready.html"><strong aria-hidden="true">9.9.</strong> NOTREADY</a></li><li class="chapter-item expanded "><a href="../conditions/lostdigits.html"><strong aria-hidden="true">9.10.</strong> LOSTDIGITS</a></li><li class="chapter-item expanded "><a href="../conditions/user.html"><strong aria-hidden="true">9.11.</strong> USER conditions</a></li><li class="chapter-item expanded "><a href="../conditions/errors.html"><strong aria-hidden="true">9.12.</strong> Error numbers</a></li></ol></li><li class="chapter-item expanded "><a href="../classes/index.html"><strong aria-hidden="true">10.</strong> Classes</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../classes/methods.html"><strong aria-hidden="true">10.1.</strong> Method search</a></li><li class="chapter-item expanded "><a href="../classes/object.html"><strong aria-hidden="true">10.2.</strong> Object</a></li><li class="chapter-item expanded "><a href="../classes/class.html"><strong aria-hidden="true">10.3.</strong> Class</a></li><li class="chapter-item expanded "><a href="../classes/string.html"><strong aria-hidden="true">10.4.</strong> String</a></li><li class="chapter-item expanded "><a href="../classes/method.html"><strong aria-hidden="true">10.5.</strong> Method</a></li><li class="chapter-item expanded "><a href="../classes/routine.html"><strong aria-hidden="true">10.6.</strong> Routine</a></li><li class="chapter-item expanded "><a href="../classes/package.html"><strong aria-hidden="true">10.7.</strong> Package</a></li><li class="chapter-item expanded "><a href="../classes/message.html"><strong aria-hidden="true">10.8.</strong> Message</a></li><li class="chapter-item expanded "><a href="../classes/messagenotification.html"><strong aria-hidden="true">10.9.</strong> MessageNotification</a></li><li class="chapter-item expanded "><a href="../classes/alarmnotification.html"><strong aria-hidden="true">10.10.</strong> AlarmNotification</a></li><li class="chapter-item expanded "><a href="../classes/collection.html"><strong aria-hidden="true">10.11.</strong> Collection</a></li><li class="chapter-item expanded "><a href="../classes/mapcollection.html"><strong aria-hidden="true">10.12.</strong> MapCollection</a></li><li class="chapter-item expanded "><a href="../classes/orderedcollection.html"><strong aria-hidden="true">10.13.</strong> OrderedCollection</a></li><li class="chapter-item expanded "><a href="../classes/setcollection.html"><strong aria-hidden="true">10.14.</strong> SetCollection</a></li><li class="chapter-item expanded "><a href="../classes/array.html"><strong aria-hidden="true">10.15.</strong> Array</a></li><li class="chapter-item expanded "><a href="../classes/list.html"><strong aria-hidden="true">10.16.</strong> List</a></li><li class="chapter-item expanded "><a href="../classes/queue.html"><strong aria-hidden="true">10.17.</strong> Queue</a></li><li class="chapter-item expanded "><a href="../classes/circularqueue.html"><strong aria-hidden="true">10.18.</strong> CircularQueue</a></li><li class="chapter-item expanded "><a href="../classes/directory.html"><strong aria-hidden="true">10.19.</strong> Directory</a></li><li class="chapter-item expanded "><a href="../classes/stringtable.html"><strong aria-hidden="true">10.20.</strong> StringTable</a></li><li class="chapter-item expanded "><a href="../classes/properties.html" class="active"><strong aria-hidden="true">10.21.</strong> Properties</a></li><li class="chapter-item expanded "><a href="../classes/table.html"><strong aria-hidden="true">10.22.</strong> Table</a></li><li class="chapter-item expanded "><a href="../classes/identitytable.html"><strong aria-hidden="true">10.23.</strong> IdentityTable</a></li><li class="chapter-item expanded "><a href="../classes/relation.html"><strong aria-hidden="true">10.24.</strong> Relation</a></li><li class="chapter-item expanded "><a href="../classes/bag.html"><strong aria-hidden="true">10.25.</strong> Bag</a></li><li class="chapter-item expanded "><a href="../classes/set.html"><strong aria-hidden="true">10.26.</strong> Set</a></li><li class="chapter-item expanded "><a href="../classes/stem.html"><strong aria-hidden="true">10.27.</strong> Stem</a></li></ol></li><li class="chapter-item expanded "><a href="../builtins/index.html"><strong aria-hidden="true">11.</strong> Built-in functions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../builtins/abbrev.html"><strong aria-hidden="true">11.1.</strong> ABBREV</a></li><li class="chapter-item expanded "><a href="../builtins/abs.html"><strong aria-hidden="true">11.2.</strong> ABS</a></li><li class="chapter-item expanded "><a href="../builtins/address.html"><strong aria-hidden="true">11.3.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../builtins/arg.html"><strong aria-hidden="true">11.4.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../builtins/b2x.html"><strong aria-hidden="true">11.5.</strong> B2X</a></li><li class="chapter-item expanded "><a href="../builtins/beep.html"><strong aria-hidden="true">11.6.</strong> BEEP</a></li><li class="chapter-item expanded "><a href="../builtins/bitand.html"><strong aria-hidden="true">11.7.</strong> BITAND</a></li><li class="chapter-item expanded "><a href="../builtins/bitor.html"><strong aria-hidden="true">11.8.</strong> BITOR</a></li><li class="chapter-item expanded "><a href="../builtins/bitxor.html"><strong aria-hidden="true">11.9.</strong> BITXOR</a></li><li class="chapter-item expanded "><a href="../builtins/c2d.html"><strong aria-hidden="true">11.10.</strong> C2D</a></li><li class="chapter-item expanded "><a href="../builtins/c2x.html"><strong aria-hidden="true">11.11.</strong> C2X</a></li><li class="chapter-item expanded "><a href="../builtins/center.html"><strong aria-hidden="true">11.12.</strong> CENTER</a></li><li class="chapter-item expanded "><a href="../builtins/changestr.html"><strong aria-hidden="true">11.13.</strong> CHANGESTR</a></li><li class="chapter-item expanded "><a href="../builtins/charin.html"><strong aria-hidden="true">11.14.</strong> CHARIN</a></li><li class="chapter-item expanded "><a href="../builtins/charout.html"><strong aria-hidden="true">11.15.</strong> CHAROUT</a></li><li class="chapter-item expanded "><a href="../builtins/chars.html"><strong aria-hidden="true">11.16.</strong> CHARS</a></li><li class="chapter-item expanded "><a href="../builtins/compare.html"><strong aria-hidden="true">11.17.</strong> COMPARE</a></li><li class="chapter-item expanded "><a href="../builtins/condition.html"><strong aria-hidden="true">11.18.</strong> CONDITION</a></li><li class="chapter-item expanded "><a href="../builtins/copies.html"><strong aria-hidden="true">11.19.</strong> COPIES</a></li><li class="chapter-item expanded "><a href="../builtins/countstr.html"><strong aria-hidden="true">11.20.</strong> COUNTSTR</a></li><li class="chapter-item expanded "><a href="../builtins/d2c.html"><strong aria-hidden="true">11.21.</strong> D2C</a></li><li class="chapter-item expanded "><a href="../builtins/d2x.html"><strong aria-hidden="true">11.22.</strong> D2X</a></li><li class="chapter-item expanded "><a href="../builtins/datatype.html"><strong aria-hidden="true">11.23.</strong> DATATYPE</a></li><li class="chapter-item expanded "><a href="../builtins/date.html"><strong aria-hidden="true">11.24.</strong> DATE</a></li><li class="chapter-item expanded "><a href="../builtins/delstr.html"><strong aria-hidden="true">11.25.</strong> DELSTR</a></li><li class="chapter-item expanded "><a href="../builtins/delword.html"><strong aria-hidden="true">11.26.</strong> DELWORD</a></li><li class="chapter-item expanded "><a href="../builtins/digits.html"><strong aria-hidden="true">11.27.</strong> DIGITS</a></li><li class="chapter-item expanded "><a href="../builtins/directory.html"><strong aria-hidden="true">11.28.</strong> DIRECTORY</a></li><li class="chapter-item expanded "><a href="../builtins/endlocal.html"><strong aria-hidden="true">11.29.</strong> ENDLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/errortext.html"><strong aria-hidden="true">11.30.</strong> ERRORTEXT</a></li><li class="chapter-item expanded "><a href="../builtins/filespec.html"><strong aria-hidden="true">11.31.</strong> FILESPEC</a></li><li class="chapter-item expanded "><a href="../builtins/form.html"><strong aria-hidden="true">11.32.</strong> FORM</a></li><li class="chapter-item expanded "><a href="../builtins/format.html"><strong aria-hidden="true">11.33.</strong> FORMAT</a></li><li class="chapter-item expanded "><a href="../builtins/fuzz.html"><strong aria-hidden="true">11.34.</strong> FUZZ</a></li><li class="chapter-item expanded "><a href="../builtins/gc.html"><strong aria-hidden="true">11.35.</strong> GC</a></li><li class="chapter-item expanded "><a href="../builtins/insert.html"><strong aria-hidden="true">11.36.</strong> INSERT</a></li><li class="chapter-item expanded "><a href="../builtins/lastpos.html"><strong aria-hidden="true">11.37.</strong> LASTPOS</a></li><li class="chapter-item expanded "><a href="../builtins/left.html"><strong aria-hidden="true">11.38.</strong> LEFT</a></li><li class="chapter-item expanded "><a href="../builtins/length.html"><strong aria-hidden="true">11.39.</strong> LENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/linein.html"><strong aria-hidden="true">11.40.</strong> LINEIN</a></li><li class="chapter-item expanded "><a href="../builtins/lineout.html"><strong aria-hidden="true">11.41.</strong> LINEOUT</a></li><li class="chapter-item expanded "><a href="../builtins/lines.html"><strong aria-hidden="true">11.42.</strong> LINES</a></li><li class="chapter-item expanded "><a href="../builtins/lower.html"><strong aria-hidden="true">11.43.</strong> LOWER</a></li><li class="chapter-item expanded "><a href="../builtins/max.html"><strong aria-hidden="true">11.44.</strong> MAX</a></li><li class="chapter-item expanded "><a href="../builtins/min.html"><strong aria-hidden="true">11.45.</strong> MIN</a></li><li class="chapter-item expanded "><a href="../builtins/overlay.html"><strong aria-hidden="true">11.46.</strong> OVERLAY</a></li><li class="chapter-item expanded "><a href="../builtins/pos.html"><strong aria-hidden="true">11.47.</strong> POS</a></li><li class="chapter-item expanded "><a href="../builtins/qualify.html"><strong aria-hidden="true">11.48.</strong> QUALIFY</a></li><li class="chapter-item expanded "><a href="../builtins/queued.html"><strong aria-hidden="true">11.49.</strong> QUEUED</a></li><li class="chapter-item expanded "><a href="../builtins/random.html"><strong aria-hidden="true">11.50.</strong> RANDOM</a></li><li class="chapter-item expanded "><a href="../builtins/reverse.html"><strong aria-hidden="true">11.51.</strong> REVERSE</a></li><li class="chapter-item expanded "><a href="../builtins/right.html"><strong aria-hidden="true">11.52.</strong> RIGHT</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncadd.html"><strong aria-hidden="true">11.53.</strong> RXFUNCADD</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncdrop.html"><strong aria-hidden="true">11.54.</strong> RXFUNCDROP</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncquery.html"><strong aria-hidden="true">11.55.</strong> RXFUNCQUERY</a></li><li class="chapter-item expanded "><a href="../builtins/rxqueue.html"><strong aria-hidden="true">11.56.</strong> RXQUEUE</a></li><li class="chapter-item expanded "><a href="../builtins/setlocal.html"><strong aria-hidden="true">11.57.</strong> SETLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/sign.html"><strong aria-hidden="true">11.58.</strong> SIGN</a></li><li class="chapter-item expanded "><a href="../builtins/sourceline.html"><strong aria-hidden="true">11.59.</strong> SOURCELINE</a></li><li class="chapter-item expanded "><a href="../builtins/space.html"><strong aria-hidden="true">11.60.</strong> SPACE</a></li><li class="chapter-item expanded "><a href="../builtins/stream.html"><strong aria-hidden="true">11.61.</strong> STREAM</a></li><li class="chapter-item expanded "><a href="../builtins/strip.html"><strong aria-hidden="true">11.62.</strong> STRIP</a></li><li class="chapter-item expanded "><a href="../builtins/substr.html"><strong aria-hidden="true">11.63.</strong> SUBSTR</a></li><li class="chapter-item expanded "><a href="../builtins/subword.html"><strong aria-hidden="true">11.64.</strong> SUBWORD</a></li><li class="chapter-item expanded "><a href="../builtins/symbol.html"><strong aria-hidden="true">11.65.</strong> SYMBOL</a></li><li class="chapter-item expanded "><a href="../builtins/time.html"><strong aria-hidden="true">11.66.</strong> TIME</a></li><li class="chapter-item expanded "><a href="../builtins/trace.html"><strong aria-hidden="true">11.67.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../builtins/translate.html"><strong aria-hidden="true">11.68.</strong> TRANSLATE</a></li><li class="chapter-item expanded "><a href="../builtins/trunc.html"><strong aria-hidden="true">11.69.</strong> TRUNC</a></li><li class="chapter-item expanded "><a href="../builtins/upper.html"><strong aria-hidden="true">11.70.</strong> UPPER</a></li><li class="chapter-item expanded "><a href="../builtins/userid.html"><strong aria-hidden="true">11.71.</strong> USERID</a></li><li class="chapter-item expanded "><a href="../builtins/value.html"><strong aria-hidden="true">11.72.</strong> VALUE</a></li><li class="chapter-item expanded "><a href="../builtins/var.html"><strong aria-hidden="true">11.73.</strong> VAR</a></li><li class="chapter-item expanded "><a href="../builtins/verify.html"><strong aria-hidden="true">11.74.</strong> VERIFY</a></li><li class="chapter-item expanded "><a href="../builtins/word.html"><strong aria-hidden="true">11.75.</strong> WORD</a></li><li class="chapter-item expanded "><a href="../builtins/wordindex.html"><strong aria-hidden="true">11.76.</strong> WORDINDEX</a></li><li class="chapter-item expanded "><a href="../builtins/wordlength.html"><strong aria-hidden="true">11.77.</strong> WORDLENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/wordpos.html"><strong aria-hidden="true">11.78.</strong> WORDPOS</a></li><li class="chapter-item expanded "><a href="../builtins/words.html"><strong aria-hidden="true">11.79.</strong> WORDS</a></li><li class="chapter-item expanded "><a href="../builtins/x2b.html"><strong aria-hidden="true">11.80.</strong> X2B</a></li><li class="chapter-item expanded "><a href="../builtins/x2c.html"><strong aria-hidden="true">11.81.</strong> X2C</a></li><li class="chapter-item expanded "><a href="../builtins/x2d.html"><strong aria-hidden="true">11.82.</strong> X2D</a></li><li class="chapter-item expanded "><a href="../builtins/xrange.html"><strong aria-hidden="true">11.83.</strong> XRANGE</a></li></ol></li><li class="chapter-item expanded "><a href="../deviations.html"><strong aria-hidden="true">12.</strong> Deviations</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The interrexx Language Specification</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="properties"><a class="header" href="#properties">Properties</a></h1>
+<p class="references">rexxref: Builtin Classes &gt; Collection Classes &gt; Properties Class; Builtin Classes &gt; Collection Classes &gt; Properties Class &gt; load (Class method); Builtin Classes &gt; Collection Classes &gt; Properties Class &gt; new (Class method); Builtin Classes &gt; Collection Classes &gt; Properties Class &gt; []=; Builtin Classes &gt; Collection Classes &gt; Properties Class &gt; getLogical; Builtin Classes &gt; Collection Classes &gt; Properties Class &gt; getProperty; Builtin Classes &gt; Collection Classes &gt; Properties Class &gt; getWhole; Builtin Classes &gt; Collection Classes &gt; Properties Class &gt; load; Builtin Classes &gt; Collection Classes &gt; Properties Class &gt; put; Builtin Classes &gt; Collection Classes &gt; Properties Class &gt; save; Builtin Classes &gt; Collection Classes &gt; Properties Class &gt; setLogical; Builtin Classes &gt; Collection Classes &gt; Properties Class &gt; setProperty; Builtin Classes &gt; Collection Classes &gt; Properties Class &gt; setWhole</p>
+<p class="deviations">Deviations: D29, D33, D78, D109</p>
+<p>A <code>Properties</code> is a <a href="directory.html"><code>Directory</code></a> whose items are strings, with
+methods to read and write them as text, as logical values and as whole
+numbers, and to load and save them as lines of a file. It inherits
+<code>Directory</code>, and through it <a href="mapcollection.html"><code>MapCollection</code></a> and
+<a href="collection.html"><code>Collection</code></a>; <a href="index.html#r-class.index.hierarchy">the hierarchy rule</a>
+lists what it inherits. Everything that the page of <code>Directory</code> says holds for
+a <code>Properties</code>, the entries read by upper-case name, the methods associated
+with names, <code>unknown</code> and the lists of the entries included; this page gives
+what differs and what is added.</p>
+<p>The page follows the order of the rexxref entry. Examples that show an error
+use a small routine <code>try</code>, as the builtin pages do. Names and values of the
+examples are strings, and the examples that use files create them under a
+distinctive name and delete them. The page says nothing about what <code>load</code> does
+with a file that cannot be read, other than one that does not exist.</p>
+<h2 id="the-class"><a class="header" href="#the-class">The class</a></h2>
+<div class="rule" id="r-class.properties.creation"><a href="#r-class.properties.creation">[class.properties.creation]</a></div>
+<p><code>Properties</code> declares the instance methods <code>[]=</code>, <code>getLogical</code>, <code>getProperty</code>,
+<code>getWhole</code>, <code>load</code>, <code>put</code>, <code>save</code>, <code>setLogical</code>, <code>setProperty</code> and <code>setWhole</code>,
+and the class method <code>load</code>; its <code>new</code> is that of <code>Directory</code> (<a href="#r-class.properties.new">the new
+rule</a>). The class method <code>of</code> and the other
+instance methods are those of <code>Directory</code> and the mixins. A properties object
+answers the same <code>of</code> and set operations, <code>hasEntry</code>, <code>setMethod</code> and
+<code>unsetMethod</code> as a directory (<a href="#r-class.properties.inherited">the inheritance
+rule</a>).</p>
+<pre><code class="language-rexx">p = .properties~new
+own = '[]= GETLOGICAL GETPROPERTY GETWHOLE LOAD PUT SAVE SETLOGICAL',
+  'SETPROPERTY SETWHOLE'
+n = 0
+do m over own~makearray(' ')
+  if p~hasMethod(m) then n += 1
+end
+say p~class~id n p~class~superclass~id .properties~hasMethod('LOAD')
+say p~hasMethod('HASENTRY') p~hasMethod('SETMETHOD') p~hasMethod('UNION')
+</code></pre>
+<pre><code class="language-output">Properties 10 Directory 1
+1 1 1
+</code></pre>
+<h2 id="making-a-properties-object"><a class="header" href="#making-a-properties-object">Making a properties object</a></h2>
+<div class="rule" id="r-class.properties.new"><a href="#r-class.properties.new">[class.properties.new]</a></div>
+<p><code>new</code> makes an empty properties object and takes the optional size hint of
+<a href="directory.html#r-class.directory.new">the <code>new</code> of <code>Directory</code></a>: a whole number that is not
+negative, or <code>SYNTAX 93.923</code>; a second argument raises <code>SYNTAX 93.902</code>; <code>init</code>
+is sent with the arguments, and the checks come after the <code>init</code> of a
+subclass.</p>
+<pre><code class="language-rexx">say .properties~new~items .properties~new(10)~items
+call try '.properties~new(-1)'
+call try '.properties~new("x")'
+call try '.properties~new(1, 2)'
+x = .watch~new(7)
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class watch subclass properties
+::method init
+  say 'init' arg()
+  forward class (super)
+</code></pre>
+<pre><code class="language-output">0 0
+.properties~new(-1) =&gt; 93.923
+.properties~new("x") =&gt; 93.923
+.properties~new(1, 2) =&gt; 93.902
+init 1
+</code></pre>
+<h2 id="writing-values"><a class="header" href="#writing-values">Writing values</a></h2>
+<div class="rule" id="r-class.properties.put"><a href="#r-class.properties.put">[class.properties.put]</a></div>
+<p><code>put(value, name)</code>, <code>[name] = value</code> and <code>setProperty(name, value)</code> store a
+string at the name. A value that is not a string is replaced by its string
+value as <a href="../conventions.html#r-conv.string.object">the string-value rule</a> says, which sends it
+<code>request</code> with <code>STRING</code>, so a number is stored as its digits, an object whose
+<code>makeString</code> answers a string is stored as that answer, and an array as the
+text that its <code>makeString</code> gives; <code>.nil</code> and an object with no <code>makeString</code>
+raise <code>SYNTAX 93.938</code>. An instance of a subclass of <code>String</code> is stored as its
+own characters (<a href="#r-class.properties.deviation.109">the deviation rule</a>). The
+name is read as a string as for a directory (<a href="directory.html#r-class.directory.indexes">the
+index rule</a>), and <code>.nil</code> as the name raises
+<code>SYNTAX 88.909</code>. The three answer nothing, and none of them sends <code>put</code>, <code>[]=</code>
+or <code>setProperty</code> to the receiver. <code>put</code> and <code>setProperty</code> take exactly two
+arguments and <code>[]=</code> is the assignment <code>[name] = value</code>: fewer raises
+<code>SYNTAX 93.901</code>, an omitted place before the last argument given raises
+<code>SYNTAX 93.903</code>, and a third argument raises <code>SYNTAX 93.902</code>. The count is
+checked first, then the value, then the name.</p>
+<pre><code class="language-rexx">p = .properties~new
+p~put('v1', 'a')
+p['b'] = 7
+p~setProperty('c', .made~new)
+p~put(.array~of(1, 2), 'd')
+do i over p~allIndexes~sort
+  say i p[i]~class~id '['p[i]~changeStr('0a'x, '/')']'
+end
+call try 'p~put(.nil, "k")'
+call try 'p~put(.plain~new, "k")'
+call try 'p["k"] = .nil'
+call try 'p~setProperty("k", .plain~new)'
+call try 'p~put("x", .nil)'
+call try 'p~put("x")'
+call try 'p~put(, "x")'
+call try 'p~setProperty("x")'
+call try 'p~setProperty(, "x")'
+call try 'p~put("x", "y", "z")'
+call try 'p~put(.nil, .nil)'
+call try 'p~setProperty(.nil, .nil)'
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  say arg(1) '=&gt; ok'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class made
+::method makestring
+  return 'made'
+::class plain
+</code></pre>
+<pre><code class="language-output">a String [v1]
+b String [7]
+c String [made]
+d String [1/2]
+p~put(.nil, "k") =&gt; 93.938
+p~put(.plain~new, "k") =&gt; 93.938
+p["k"] = .nil =&gt; 93.938
+p~setProperty("k", .plain~new) =&gt; 93.938
+p~put("x", .nil) =&gt; 88.909
+p~put("x") =&gt; 93.901
+p~put(, "x") =&gt; 93.903
+p~setProperty("x") =&gt; 93.901
+p~setProperty(, "x") =&gt; 93.903
+p~put("x", "y", "z") =&gt; 93.902
+p~put(.nil, .nil) =&gt; 93.938
+p~setProperty(.nil, .nil) =&gt; 93.938
+</code></pre>
+<div class="rule" id="r-class.properties.unchecked"><a href="#r-class.properties.unchecked">[class.properties.unchecked]</a></div>
+<p><code>setEntry</code>, the assignment through <code>unknown</code> (<code>p~name = x</code>) and the methods
+that <code>setMethod</code> associates do not check the value: an item stored by
+<code>setEntry</code> or through <code>unknown</code> keeps its class and may be <code>.nil</code>. <code>putAll</code>
+and <code>of</code> store with <code>put</code>, so they check.</p>
+<pre><code class="language-rexx">p = .properties~new
+p~setEntry('e1', 5)
+p~setEntry('e2', .nil)
+p~setEntry('e3', .array~of(1))
+p~name = .array~of(2)
+say p~entry('E1')~class~id (p~entry('E2') == .nil) p~entry('E3')~class~id
+say p~name~class~id p~items
+call try 'p~putAll(.directory~of(.array~of("k", .nil)))'
+call try '.properties~of(.array~of("k", .nil))'
+x = .properties~of(.array~of('k', 5))
+say x['k']~class~id
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  say arg(1) '=&gt; ok'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">String 1 Array
+Array 4
+p~putAll(.directory~of(.array~of("k", .nil))) =&gt; 93.938
+.properties~of(.array~of("k", .nil)) =&gt; 93.938
+String
+</code></pre>
+<h2 id="reading-values"><a class="header" href="#reading-values">Reading values</a></h2>
+<div class="rule" id="r-class.properties.getproperty"><a href="#r-class.properties.getproperty">[class.properties.getproperty]</a></div>
+<p><code>getProperty(name, default)</code> answers the item at the name, read with <code>at</code>
+(<a href="directory.html#r-class.directory.at">the <code>at</code> rule</a>), and when the directory has none the
+default, or <code>.nil</code> when the default is omitted. The default is any object and
+is not converted. It sends <code>at</code> to the receiver with the name. It takes one or
+two arguments: none raises <code>SYNTAX 93.901</code>, an omitted name before a default
+raises <code>SYNTAX 93.903</code> and a third raises <code>SYNTAX 93.902</code>.</p>
+<pre><code class="language-rexx">p = .properties~new
+p~setProperty('a', 'x')
+say p~getProperty('a') p~getProperty('A', 'dflt') p~getProperty('a', 'dflt')
+say (p~getProperty('zz') == .nil) (p~getProperty('zz', ) == .nil)
+say p~getProperty('zz', 5)~class~id p~getProperty('zz', .array~new)~class~id
+call try 'p~getProperty'
+call try 'p~getProperty(, 1)'
+call try 'p~getProperty("a", "b", "c")'
+call try 'p~getProperty(.nil)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">x dflt x
+1 1
+String Array
+p~getProperty =&gt; 93.901
+p~getProperty(, 1) =&gt; 93.903
+p~getProperty("a", "b", "c") =&gt; 93.902
+p~getProperty(.nil) =&gt; 88.909
+</code></pre>
+<div class="rule" id="r-class.properties.getlogical"><a href="#r-class.properties.getlogical">[class.properties.getlogical]</a></div>
+<p><code>getLogical(name, default)</code> reads the value as
+<a href="#r-class.properties.getproperty"><code>getProperty</code></a> does, with the same arguments,
+which it sends to the receiver, and answers 1 for the value <code>1</code> or <code>true</code> and
+0 for <code>0</code> or <code>false</code>. Case counts, and no other text is accepted:
+<code>SYNTAX 34.904</code> is raised. The default is used when the name has no value and
+is checked in the same way, so it must be one of those four strings (or a
+logical value), or the error is raised; when the name has a value, the default
+is not looked at. A missing name with no default raises <code>SYNTAX 34.904</code> too.
+A value that is not a string is not converted and raises <code>SYNTAX 34.904</code>. The
+arguments are counted as for <code>getProperty</code>.</p>
+<pre><code class="language-rexx">p = .properties~new
+do v over .array~of('1', '0', 'true', 'false')
+  p~setProperty('k', v)
+  call charout , p~getLogical('k') ''
+end
+say
+p~setProperty('k', 'true')
+say p~getLogical('k', 'junk') p~getLogical('zz', 1)
+say p~getLogical('zz', 'false')
+say p~getLogical('zz', .true) p~getLogical('zz', .false)
+do v over .array~of('TRUE', 'False', 'yes', '2', '-1', '00', '', ' 1')
+  p~setProperty('k', v)
+  call try 'p~getLogical("k")', '['v']'
+end
+p~setEntry('k', .text~new('true'))
+call try 'p~getLogical("K")', 'object'
+call try 'p~getLogical("zz")', 'missing'
+call try 'p~getLogical("zz", "junk")', 'default junk'
+call try 'p~getLogical("zz", .nil)', 'default nil'
+call try 'p~getLogical', 'no name'
+call try 'p~getLogical("a", 1, 2)', 'three'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(2) '=&gt;' r
+  return
+bad: say arg(2) '=&gt;' condition('o')~code
+  return
+::class text
+::method init
+  expose v
+  use arg v
+::method makestring
+  expose v
+  return v
+::method request
+  expose v
+  if arg(1) = 'STRING' then return v
+  return .nil
+</code></pre>
+<pre><code class="language-output">1 0 1 0 
+1 1
+0
+1 0
+[TRUE] =&gt; 34.904
+[False] =&gt; 34.904
+[yes] =&gt; 34.904
+[2] =&gt; 34.904
+[-1] =&gt; 34.904
+[00] =&gt; 34.904
+[] =&gt; 34.904
+[ 1] =&gt; 34.904
+object =&gt; 34.904
+missing =&gt; 34.904
+default junk =&gt; 34.904
+default nil =&gt; 34.904
+no name =&gt; 93.901
+three =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.properties.getwhole"><a href="#r-class.properties.getwhole">[class.properties.getwhole]</a></div>
+<p><code>getWhole(name, default)</code> reads the value as <code>getProperty</code> does, with the same
+arguments, which it sends to the receiver, and answers it as it is stored, not
+reformatted, when it is a whole number, and raises <code>SYNTAX 26.901</code> when it is
+not. A whole number is judged at <code>NUMERIC DIGITS</code> 9 whatever the caller's
+setting: blanks around it are allowed, a sign, an exponent and a point
+followed by zeros are allowed, and a value that needs more than nine digits is
+not. The default is used when the name has no value and is checked in the same
+way, and is not looked at when the name has a value. A missing name with no
+default raises <code>SYNTAX 26.901</code> too. A value that is not a string is read
+through <a href="../conventions.html#r-conv.string.object">the string-value rule</a>.</p>
+<pre><code class="language-rexx">p = .properties~new
+do v over .array~of('0', '12', '-5', '+7', '007', '1.0', '1e2', '3.', ' 8 ')
+  p~setProperty('k', v)
+  say '['v']' '['p~getWhole('k')']'
+end
+do v over .array~of('1.5', 'abc', '1000000000', '99999999999', '0.5', '')
+  p~setProperty('k', v)
+  call try 'p~getWhole("k")', '['v']'
+end
+p~setProperty('w', '12')
+say p~getWhole('w', 'junk') p~getWhole('zz', 5) p~getWhole('zz', '2.0')
+numeric digits 20
+call try 'p~getWhole("zz", "12345678901")', 'digits 20'
+numeric digits 3
+say p~getWhole('zz', '123456')
+call try 'p~getWhole("zz")', 'missing'
+call try 'p~getWhole("zz", 1.5)', 'default 1.5'
+call try 'p~getWhole("zz", .nil)', 'default nil'
+call try 'p~getWhole', 'no name'
+call try 'p~getWhole("a", 1, 2)', 'three'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(2) '=&gt;' r
+  return
+bad: say arg(2) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">[0] [0]
+[12] [12]
+[-5] [-5]
+[+7] [+7]
+[007] [007]
+[1.0] [1.0]
+[1e2] [1e2]
+[3.] [3.]
+[ 8 ] [ 8 ]
+[1.5] =&gt; 26.901
+[abc] =&gt; 26.901
+[1000000000] =&gt; 26.901
+[99999999999] =&gt; 26.901
+[0.5] =&gt; 26.901
+[] =&gt; 26.901
+12 5 2.0
+digits 20 =&gt; 26.901
+123456
+missing =&gt; 26.901
+default 1.5 =&gt; 26.901
+default nil =&gt; 26.901
+no name =&gt; 93.901
+three =&gt; 93.902
+</code></pre>
+<pre><code class="language-rexx">p = .properties~new
+p~setEntry('b', .text~new('12'))
+say p~getWhole('B')
+::class text
+::method init
+  expose v
+  use arg v
+::method makestring
+  return 'not read'
+::method request
+  expose v
+  if arg(1) = 'STRING' then return v
+  return .nil
+</code></pre>
+<pre><code class="language-output defect=#164">12
+</code></pre>
+<h2 id="setting-logical-and-whole-values"><a class="header" href="#setting-logical-and-whole-values">Setting logical and whole values</a></h2>
+<div class="rule" id="r-class.properties.setlogical"><a href="#r-class.properties.setlogical">[class.properties.setlogical]</a></div>
+<p><code>setLogical(name, value)</code> sends <code>datatype</code> with the argument <code>O</code> to the value
+and, when that answers true, stores <code>true</code> for the value 1 and <code>false</code> for 0
+with <code>setProperty</code>, which it sends to the receiver with the name and the new
+text. A string is accepted only as <code>0</code> or <code>1</code>, and a logical value <code>.true</code> or
+<code>.false</code> too: <code>true</code>, <code>2</code>, <code>00</code>, a blank around the digit and the null string
+raise <code>SYNTAX 34.901</code>. A value that has no <code>datatype</code> method, <code>.nil</code> and an
+instance of a class that does not understand the message among them, raises
+<code>SYNTAX 97.1</code>; one whose <code>datatype</code> answers 1 but that is not a logical value
+raises <code>SYNTAX 34.1</code>, and one that answers 0 raises <code>SYNTAX 34.901</code>. The
+method answers nothing and takes exactly two arguments, counted as for <code>put</code>:
+fewer raises <code>SYNTAX 93.901</code>, an omitted name before the value <code>SYNTAX 93.903</code>
+and a third <code>SYNTAX 93.902</code>; the value is checked before the name.</p>
+<pre><code class="language-rexx">p = .properties~new
+do v over .array~of('0', '1', .true, .false)
+  p~setLogical('k', v)
+  call charout , p['k'] ''
+end
+say
+do v over .array~of('true', '2', '00', 'yes', '1.0', '', ' 1')
+  call try 'p~setLogical("k", v)', '['v']'
+end
+call try 'p~setLogical("k", .nil)', 'nil'
+call try 'p~setLogical("k", .object~new)', 'object'
+call try 'p~setLogical("k", .answers~new(1))', 'answers 1'
+call try 'p~setLogical("k", .answers~new(0))', 'answers 0'
+call try 'p~setLogical("k")', 'one argument'
+call try 'p~setLogical("k", 1, 2)', 'three'
+call try 'p~setLogical(, 1)', 'omitted name'
+call try 'p~setLogical(.nil, .nil)', 'both nil'
+call try 'p~setLogical(.nil, 1)', 'name nil'
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  say arg(2) '=&gt; ok'
+  return
+bad: say arg(2) '=&gt;' condition('o')~code
+  return
+::class answers
+::method init
+  expose r
+  use arg r
+::method datatype
+  expose r
+  say '  datatype' arg(1)
+  return r
+</code></pre>
+<pre><code class="language-output">false true true false 
+[true] =&gt; 34.901
+[2] =&gt; 34.901
+[00] =&gt; 34.901
+[yes] =&gt; 34.901
+[1.0] =&gt; 34.901
+[] =&gt; 34.901
+[ 1] =&gt; 34.901
+nil =&gt; 97.1
+object =&gt; 97.1
+  datatype O
+answers 1 =&gt; 34.1
+  datatype O
+answers 0 =&gt; 34.901
+one argument =&gt; 93.901
+three =&gt; 93.902
+omitted name =&gt; 93.903
+both nil =&gt; 97.1
+name nil =&gt; 88.909
+</code></pre>
+<div class="rule" id="r-class.properties.setwhole"><a href="#r-class.properties.setwhole">[class.properties.setwhole]</a></div>
+<p><code>setWhole(name, value)</code> sends <code>datatype</code> with the argument <code>W</code> to the value
+and, when that answers true, stores the value as its string with
+<code>setProperty</code>, which it sends to the receiver with the name and the text, as
+it is, not reformatted. A string that is a whole number at <code>NUMERIC DIGITS</code> 9
+is accepted: <code>12</code>, <code>+7</code>, <code>007</code>, <code>1.0</code>, <code>1e2</code>, <code>3.</code> and a blank around the
+number. Anything else that answers a string, such as <code>1.5</code>, <code>abc</code>, the null
+string or a number of more than nine digits, raises <code>SYNTAX 93.905</code>. A value
+that has no <code>datatype</code> method raises <code>SYNTAX 97.1</code>; one whose <code>datatype</code>
+answers 1 but that is not a string raises <code>SYNTAX 93.938</code>, and one that
+answers 0 raises <code>SYNTAX 93.905</code>. The method answers nothing and takes exactly
+two arguments, counted and checked as for <code>setLogical</code>.</p>
+<pre><code class="language-rexx">p = .properties~new
+do v over .array~of('0', '12', '-5', '+7', '007', '1.0', '1e2', '3.', ' 8 ')
+  p~setWhole('k', v)
+  call charout , '['p['k']'] '
+end
+say
+do v over .array~of('1.5', 'abc', '1000000000', '99999999999', '1e9', '')
+  call try 'p~setWhole("k", v)', '['v']'
+end
+call try 'p~setWhole("k", .nil)', 'nil'
+call try 'p~setWhole("k", .answers~new(1))', 'answers 1'
+call try 'p~setWhole("k", .answers~new(0))', 'answers 0'
+call try 'p~setWhole("k")', 'one argument'
+call try 'p~setWhole("k", 1, 2)', 'three'
+call try 'p~setWhole(, 1)', 'omitted name'
+call try 'p~setWhole(.nil, .nil)', 'both nil'
+call try 'p~setWhole(.nil, 1)', 'name nil'
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  say arg(2) '=&gt; ok'
+  return
+bad: say arg(2) '=&gt;' condition('o')~code
+  return
+::class answers
+::method init
+  expose r
+  use arg r
+::method datatype
+  expose r
+  say '  datatype' arg(1)
+  return r
+</code></pre>
+<pre><code class="language-output">[0] [12] [-5] [+7] [007] [1.0] [1e2] [3.] [ 8 ] 
+[1.5] =&gt; 93.905
+[abc] =&gt; 93.905
+[1000000000] =&gt; 93.905
+[99999999999] =&gt; 93.905
+[1e9] =&gt; 93.905
+[] =&gt; 93.905
+nil =&gt; 97.1
+  datatype W
+answers 1 =&gt; 93.938
+  datatype W
+answers 0 =&gt; 93.905
+one argument =&gt; 93.901
+three =&gt; 93.902
+omitted name =&gt; 93.903
+both nil =&gt; 97.1
+name nil =&gt; 88.909
+</code></pre>
+<h2 id="loading-and-saving"><a class="header" href="#loading-and-saving">Loading and saving</a></h2>
+<div class="rule" id="r-class.properties.load.format"><a href="#r-class.properties.load.format">[class.properties.load.format]</a></div>
+<p><code>load</code> reads its source line by line as <code>linein</code> does (<a href="../builtins/linein.html#r-bif.linein.result">the line
+rule</a>) and enters one property for each line that carries
+one. A line that is empty or holds only blanks and tab characters is skipped,
+and so is a line whose first characters after blanks and tab characters are
+<code>--</code>; a <code>--</code> anywhere else is text. Any other line is split at its first <code>=</code>:
+the name is the text before it with the blanks and tab characters removed from
+both ends, and the value is all the text after it, blanks included. A line
+with no <code>=</code> is a name with the null string as its value, and a line that
+starts with <code>=</code> has the null string as its name. A later line with a name that
+an earlier line or the properties object already has replaces the value.</p>
+<pre><code class="language-rexx">f = 'spec-properties-format.tmp'
+call sysfiledelete f
+t = '09'x
+n = '0a'x
+text = 'alpha=1'||n||'  beta = two words  '||n||'-- comment'||n,
+  || t||'  -- indented comment'||n||n||' '||t||' '||n||'gamma'||n,
+  || 'delta=x=y=z'||n||'=nokey'||n||'empty='||n||'alpha=3'||n,
+  || 'Mixed=Case'||n||'k -- c=v'||n||'-'||n,
+  || t||t||'tab'||t||'='||t||'v'||t||n||'last=noeol'
+call charout f, text
+call stream f, 'c', 'close'
+p = .properties~load(f)
+say p~items
+do i over p~allIndexes~sort
+  say '['i']' '=' '['p[i]']'
+end
+call sysfiledelete f
+</code></pre>
+<pre><code class="language-output">11
+[] = [nokey]
+[-] = []
+[Mixed] = [Case]
+[alpha] = [3]
+[beta] = [ two words  ]
+[delta] = [x=y=z]
+[empty] = []
+[gamma] = []
+[k -- c] = [v]
+[last] = [noeol]
+[tab] = [	v	]
+</code></pre>
+<div class="rule" id="r-class.properties.load.class"><a href="#r-class.properties.load.class">[class.properties.load.class]</a></div>
+<p>The class method <code>load(source)</code> answers a new <code>Properties</code> that holds what the
+source gives, an instance of <code>Properties</code> whatever class received the message,
+and <code>new</code> is not sent. <code>source</code> is the name of a file or a <code>File</code> object,
+which is read through a <code>Stream</code> made for it, or any other object, a <code>Stream</code>
+included, which is sent <code>linein</code> with no argument until it raises the NOTREADY
+condition, so a stream is read from its read position to its end, is opened by
+its first <code>linein</code> when it was not open, and is not closed (<a href="#r-class.properties.load">the instance
+rule</a>). A file that does not exist gives an empty
+object and no error, and an object that does not understand <code>linein</code> raises
+<code>SYNTAX 97.1</code>. The method takes exactly one argument: none raises <code>SYNTAX 93.901</code>, a second raises <code>SYNTAX 93.902</code>.</p>
+<pre><code class="language-rexx">f = 'spec-properties-load.tmp'
+call sysfiledelete f
+call lineout f, 'a=1'
+call lineout f, 'b=2'
+call lineout f
+p = .properties~load(f)
+say p~class~id p~items p['a']
+p = .properties~load(.file~new(f))
+say p~items p['b']
+s = .stream~new(f)
+s~open('read')
+say s~linein
+p = .properties~load(s)
+say p~items p['a'] p['b']
+s~close
+q = .sub~load(f)
+s2 = .stream~new(f)
+say .properties~load(s2)~items s2~state
+s2~close
+say q~class~id q~items
+say .properties~load('spec-properties-nothing-here.tmp')~items
+p = .properties~load(.lines~new)
+say p~items p['x'] p['y']
+.local~k = 0
+.local~a = 0
+s3 = .counting~new(f)
+say .properties~load(s3)~items .local~k .local~a s3~state
+s3~close
+call try '.properties~load(.nil)'
+call try '.properties~load'
+call try '.properties~load(f, 1)'
+call sysfiledelete f
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  say arg(1) '=&gt; ok'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class sub subclass properties
+::method new class
+  say 'new'
+  forward class (super)
+::class lines
+::method init
+  expose n
+  n = 0
+::method linein
+  expose n
+  n += 1
+  if n = 1 then return 'x=1'
+  if n = 2 then return 'y=2'
+  raise notready
+::class counting subclass stream
+::method linein
+  .local~k += 1
+  .local~a += arg()
+  forward class (super)
+</code></pre>
+<pre><code class="language-output">Properties 2 1
+2 2
+a=1
+1 The NIL object 2
+2 NOTREADY
+Properties 2
+0
+2 1 2
+2 3 0 NOTREADY
+.properties~load(.nil) =&gt; 97.1
+.properties~load =&gt; 93.901
+.properties~load(f, 1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.properties.load"><a href="#r-class.properties.load">[class.properties.load]</a></div>
+<p>The instance method <code>load(source)</code> reads the source as <a href="#r-class.properties.load.class">the class
+method</a> does and adds what it reads to the
+receiver, replacing the values of names that it already has and leaving the
+others; it answers nothing. When the source is a name or a <code>File</code>, it first
+sends <code>load</code> to the receiver with a <code>Stream</code> made for it, and that message
+does the reading, so an override of <code>load</code> sees the message twice. For each
+line that carries a property it then sends <code>put</code> to the receiver with the
+value and the name, in the order of the lines, so an override of <code>put</code> sees
+them and its checks apply. It takes exactly one argument, as the class method
+does.</p>
+<pre><code class="language-rexx">f = 'spec-properties-iload.tmp'
+g = 'spec-properties-isave.tmp'
+call sysfiledelete f
+call sysfiledelete g
+call lineout f, 'n=1'
+call lineout f, 'm=2'
+call lineout f
+.local~on = 0
+p = .spy~new
+p~put('keep', 'k')
+p~put('old', 'n')
+.local~on = 1
+say 'by name'
+p~load(f)
+say p~items p['k'] p['n'] p['m']
+say 'by stream'
+p~load(.stream~new(f))
+say 'save by name'
+p~save(g)
+.local~on = 0
+call sysfiledelete f
+call sysfiledelete g
+call try 'p~load'
+call try 'p~load(f, 1)'
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  say arg(1) '=&gt; ok'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class spy subclass properties
+::method load
+  if .local~on then say 'load' arg(1)~class~id
+  forward class (super)
+::method put
+  if .local~on then say 'put' arg(1) arg(2)
+  forward class (super)
+::method save
+  if .local~on then say 'save' arg(1)~class~id
+  forward class (super)
+</code></pre>
+<pre><code class="language-output">by name
+load String
+load Stream
+put 1 n
+put 2 m
+3 keep 1 2
+by stream
+load Stream
+put 1 n
+put 2 m
+save by name
+save String
+save Stream
+p~load =&gt; 93.901
+p~load(f, 1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.properties.save"><a href="#r-class.properties.save">[class.properties.save]</a></div>
+<p><code>save(target)</code> writes one line <code>name=value</code> for each entry, each ended by a
+line feed, in an order that is not specified (<a href="#r-class.properties.deviation.33">the hash order
+rule</a>); the name and the value are written as
+they are, a value that is not a string through <a href="../conventions.html#r-conv.string.object">the string-value
+rule</a>, with no escaping, so a name that holds <code>=</code> or a
+value that holds a line feed does not load back as it was. <code>target</code> is the name
+of a file, whose old contents are replaced, a <code>File</code> object, treated the same,
+or an object that understands <code>lineout</code>, such as a <code>Stream</code>, which is written at
+its write position and is not closed. When the target is a name or a <code>File</code>,
+<code>save</code> first sends <code>save</code> to the receiver with a <code>Stream</code> made for it, and that
+message does the writing. The writing sends <code>supplier</code> to the receiver, and
+<code>lineout</code> with the line as the only argument to the target for each entry. The
+answer is nothing, and an object that does not understand <code>lineout</code> raises
+<code>SYNTAX 97.1</code>. It takes exactly one argument: none raises <code>SYNTAX 93.901</code>, a
+second raises <code>SYNTAX 93.902</code>.</p>
+<pre><code class="language-rexx">f = 'spec-properties-save.tmp'
+call sysfiledelete f
+p = .properties~new
+p~put('a much longer value', 'k')
+p~save(f)
+say c2x(charin(f, 1, chars(f)))
+call stream f, 'c', 'close'
+p~put('x', 'k')
+p~save(f)
+say c2x(charin(f, 1, chars(f)))
+call stream f, 'c', 'close'
+p~save(.file~new(f))
+say chars(f)
+call stream f, 'c', 'close'
+s = .stream~new(f)
+s~open('write append')
+p~save(s)
+say s~state
+s~close
+say chars(f)
+call stream f, 'c', 'close'
+p~put('two', 'k2')
+t = .recorder~new
+p~save(t)
+say t~lines~sort~makeString('L', '|')
+q = .properties~new
+q~put('', 'k=eq')
+q~put('v', '')
+q~save(f)
+r = .properties~load(f)
+say (r~at('k=eq') == .nil) r~at('k') r~items
+call sysfiledelete f
+call try 'p~save'
+call try 'p~save(f, 1)'
+call try 'p~save(.nil)'
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  say arg(1) '=&gt; ok'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class recorder
+::method init
+  expose lines
+  lines = .array~new
+::method lineout
+  expose lines
+  lines~append(arg(1))
+  return 0
+::method lines
+  expose lines
+  return lines
+</code></pre>
+<pre><code class="language-output">6B3D61206D756368206C6F6E6765722076616C75650A
+6B3D780A
+4
+READY
+8
+k2=two|k=x
+1 eq= 2
+p~save =&gt; 93.901
+p~save(f, 1) =&gt; 93.902
+p~save(.nil) =&gt; 97.1
+</code></pre>
+<pre><code class="language-rexx">p = .properties~new
+p~setEntry('o', .text~new('val'))
+t = .recorder~new
+p~save(t)
+say t~lines~makeString('L', '|')
+::class text
+::method init
+  expose v
+  use arg v
+::method makestring
+  return 'not read'
+::method request
+  expose v
+  if arg(1) = 'STRING' then return v
+  return .nil
+::class recorder
+::method init
+  expose lines
+  lines = .array~new
+::method lineout
+  expose lines
+  lines~append(arg(1))
+  return 0
+::method lines
+  expose lines
+  return lines
+</code></pre>
+<pre><code class="language-output defect=#164">O=val
+</code></pre>
+<h2 id="what-a-properties-object-inherits"><a class="header" href="#what-a-properties-object-inherits">What a properties object inherits</a></h2>
+<div class="rule" id="r-class.properties.inherited"><a href="#r-class.properties.inherited">[class.properties.inherited]</a></div>
+<p>The methods that <code>Properties</code> does not declare are those of <code>Directory</code>: the
+entries read by upper-case name (<code>entry</code>, <code>hasEntry</code>, <code>setEntry</code>,
+<code>removeEntry</code>), <code>at</code>, <code>remove</code>, <code>removeItem</code>, <code>hasIndex</code>, <code>hasItem</code>, <code>index</code>,
+<code>items</code>, <code>isEmpty</code>, <code>empty</code>, <code>copy</code>, <code>supplier</code>, <code>allIndexes</code>, <code>allItems</code>,
+<code>makeArray</code>, <code>unknown</code> and <code>setMethod</code> and <code>unsetMethod</code>, and those of the
+mixins, <code>of</code>, <code>putAll</code> and the set operations, and each behaves as the page of
+<code>Directory</code> says, of a properties object and of an instance of a subclass of
+it. The copy is a <code>Properties</code>. The <code>unknown</code> that reads and sets the entries
+by message name does not check the value (<a href="#r-class.properties.unchecked">the unchecked
+rule</a>). A search for the very item stored sends
+its <code>==</code> as for any other item (<a href="#r-class.properties.deviation.78">the Properties
+rule</a>). Its string value is <code>a Properties</code>.</p>
+<pre><code class="language-rexx">p = .many~new
+p~put('v', 'k')
+p~setMethod('m', 'return "computed"')
+p~title = 'x'
+c = p~copy
+say c~class~id c~items c~at('M') c~entry('TITLE') p~hasEntry('title')
+say p p~string (p~request('STRING') == .nil)
+say p~removeEntry('title') p~items p~union(c)~class~id
+say .properties~new~isEmpty
+::class many subclass properties
+</code></pre>
+<pre><code class="language-output">MANY 3 computed x 1
+a MANY a MANY 1
+x 2 MANY
+1
+</code></pre>
+<h2 id="messages-the-methods-send"><a class="header" href="#messages-the-methods-send">Messages the methods send</a></h2>
+<div class="rule" id="r-class.properties.sends"><a href="#r-class.properties.sends">[class.properties.sends]</a></div>
+<p>The messages that <code>Properties</code> methods send to the receiver, to the values and
+to the source or target, are these. <code>getProperty</code> sends <code>at</code> with the name;
+<code>getLogical</code> and <code>getWhole</code> send <code>getProperty</code> with their own arguments;
+<code>setLogical</code> and <code>setWhole</code> send <code>datatype</code> to the value, and <code>setProperty</code>
+with the name and the text; <code>setProperty</code>, <code>put</code> and <code>[]=</code> send nothing to the
+receiver; <code>load</code> and <code>save</code> send what <a href="#r-class.properties.load">the load rule</a>
+and <a href="#r-class.properties.save">the save rule</a> say, <code>linein</code> with no argument to
+a source that is not a name or a <code>File</code> and <code>lineout</code> with the line to a
+target that is not a name or a <code>File</code>. The methods <code>put</code>, <code>setProperty</code>, <code>[]=</code>
+and the setters read a value that is not a string with <code>request</code> and the
+argument <code>STRING</code> (<a href="#r-class.properties.put">the put rule</a>), and <code>getWhole</code> and
+<code>save</code> send <code>request</code> with <code>STRING</code> to a stored value that is not a string
+(<a href="#r-class.properties.getwhole">the getWhole rule</a> and <a href="#r-class.properties.save">the save
+rule</a>).
+In the example each method of a subclass records its name, the number of its
+arguments and its first argument, and each call shows the records it caused.</p>
+<pre><code class="language-rexx">f = 'spec-properties-sends.tmp'
+own = '[]= put at getProperty setProperty getLogical getWhole setLogical',
+  'setWhole unknown'
+.local~log = .array~new
+.local~on = 0
+do m over own~makeArray(' ')
+  src = "if .local~on then .local~log~append('"m"' arg()':'arg(1));",
+    "forward class (super)"
+  .spy~define(m, src)
+end
+a = .spy~new
+a~put('1', 'n')
+a~put('true', 't')
+calls = 'a~setProperty("k", "v")|x = a~getProperty("k")',
+  '|x = a~getProperty("zz", 1)',
+  '|x = a~getLogical("t")|x = a~getLogical("zz", 1)|x = a~getWhole("n")',
+  '|x = a~getWhole("zz", 5)|a~setLogical("k", 1)|a~setWhole("k", 3)',
+  '|a["k"] = "v"|a~put("v", "k")|a~name = "v"|x = a~name'
+do c over calls~makeArray('|')
+  .local~log~empty
+  .local~on = 1
+  interpret c
+  .local~on = 0
+  say c '=&gt;' .local~log~makeString('L', ' ')
+end
+::class spy subclass properties
+</code></pre>
+<pre><code class="language-output">a~setProperty("k", "v") =&gt; setProperty 2:k
+x = a~getProperty("k")  =&gt; getProperty 1:k at 1:k
+x = a~getProperty("zz", 1)  =&gt; getProperty 2:zz at 1:zz
+x = a~getLogical("t") =&gt; getLogical 1:t getProperty 1:t at 1:t
+x = a~getLogical("zz", 1) =&gt; getLogical 2:zz getProperty 2:zz at 1:zz
+x = a~getWhole("n")  =&gt; getWhole 1:n getProperty 1:n at 1:n
+x = a~getWhole("zz", 5) =&gt; getWhole 2:zz getProperty 2:zz at 1:zz
+a~setLogical("k", 1) =&gt; setLogical 2:k setProperty 2:k
+a~setWhole("k", 3)  =&gt; setWhole 2:k setProperty 2:k
+a["k"] = "v" =&gt; []= 2:v
+a~put("v", "k") =&gt; put 2:v
+a~name = "v" =&gt; unknown 2:NAME=
+x = a~name =&gt; unknown 2:NAME
+</code></pre>
+<h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
+<div class="rule" id="r-class.properties.deviation.29"><a href="#r-class.properties.deviation.29">[class.properties.deviation.29]</a></div>
+<p>An assignment through <code>unknown</code> that gives no value, by message or by a direct
+call, is refused as it is for a directory (<a href="directory.html#r-class.directory.deviation.29">the Directory
+rule</a>): interrexx ends the program with exit
+code 120, and ooRexx stores an unrelated leftover object for the message and
+removes the entry for the direct call. See <a href="../deviations.html">Deviation 29</a>.</p>
+<pre><code class="language-rexx">say 'before'
+p = .properties~new
+p~"A="()
+say 'after'
+</code></pre>
+<pre><code class="language-output rc=120">before
+</code></pre>
+<div class="rule" id="r-class.properties.deviation.33"><a href="#r-class.properties.deviation.33">[class.properties.deviation.33]</a></div>
+<p>The order of the lines that <code>save</code> writes, and the order of the lists and
+searches that <code>Properties</code> inherits from <code>Directory</code>, is not specified, and
+may differ from ooRexx's (<a href="directory.html#r-class.directory.deviation.33">the Directory
+rule</a>). Which lines are written, and how
+often, is specified. In the example the lines are sorted.</p>
+<pre><code class="language-rexx">p = .properties~new
+p~put('1', 'one')
+p~put('2', 'two')
+p~put('3', 'three')
+t = .recorder~new
+p~save(t)
+say t~lines~sort~makeString('L', '|')
+::class recorder
+::method init
+  expose lines
+  lines = .array~new
+::method lineout
+  expose lines
+  lines~append(arg(1))
+  return 0
+::method lines
+  expose lines
+  return lines
+</code></pre>
+<pre><code class="language-output">one=1|three=3|two=2
+</code></pre>
+<div class="rule" id="r-class.properties.deviation.78"><a href="#r-class.properties.deviation.78">[class.properties.deviation.78]</a></div>
+<p>A search for an item that was stored by <code>setEntry</code> or through <code>unknown</code>, a
+string or not, with the very object that is stored, by <code>hasItem</code>, <code>index</code> or
+<code>removeItem</code>, sends that object's <code>==</code> as for any other item, so an object
+whose <code>==</code> answers false is not found even at its own entry (<a href="directory.html#r-class.directory.deviation.78">the Directory
+rule</a>). ooRexx compares identity first, finds
+it and sends nothing. <code>put</code> stores a string of the value's characters, so the
+object given to <code>put</code> is not the object stored. See <a href="../deviations.html">Deviation
+78</a>.</p>
+<pre><code class="language-rexx">.local~n = 0
+p = .properties~new
+q = .thing~new
+p~setEntry('k', q)
+say p~hasItem(q) .local~n
+say (p~index(q) == .nil) .local~n
+say (.nil == p~removeItem(q)) .local~n p~items
+::class thing
+::method '=='
+  .local~n += 1
+  return 0
+</code></pre>
+<pre><code class="language-output">0 1
+1 2
+1 3 1
+</code></pre>
+<pre><code class="language-rexx">.local~n = 0
+p = .properties~new
+s = .ls~new('v')
+p~setEntry('k', s)
+say p~hasItem(s) .local~n
+::class ls subclass string
+::method '=='
+  .local~n += 1
+  return 0
+</code></pre>
+<pre><code class="language-output">0 1
+</code></pre>
+<div class="rule" id="r-class.properties.deviation.109"><a href="#r-class.properties.deviation.109">[class.properties.deviation.109]</a></div>
+<p>A value that is an instance of a subclass of <code>String</code> is read by its own
+characters by <code>put</code>, <code>[]=</code>, <code>setProperty</code>, <code>setLogical</code> and <code>setWhole</code>, and
+<code>REQUEST</code> and <code>MAKESTRING</code> are not sent to it (<a href="string.html#r-class.string.deviation.109">Deviation
+109</a>); a name is read as <a href="directory.html#r-class.directory.deviation.109">a directory reads
+it</a>. ooRexx sends such a value <code>request</code>
+with <code>STRING</code> or <code>MAKESTRING</code>, so an override of either changes the text that
+is stored, and can make <code>setLogical</code> raise <code>SYNTAX 34.1</code> and <code>setWhole</code> raise
+<code>SYNTAX 93.905</code>. In the example <code>MAKESTRING</code> answers another text.</p>
+<pre><code class="language-rexx">p = .properties~new
+p~put(.sub~new('abc'), 'k')
+p~setProperty('k2', .sub~new('def'))
+p~setWhole('w', .sub~new('12'))
+p~setLogical('l', .sub~new('1'))
+say p['k'] p['k2'] p['w'] p['l']
+::class sub subclass string
+::method makestring
+  return 'other'
+</code></pre>
+<pre><code class="language-output defect=#140">abc def 12 true
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../classes/stringtable.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../classes/table.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../classes/stringtable.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../classes/table.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../assets/version-picker.js"></script>
+
+
+    </div>
+    </body>
+</html>

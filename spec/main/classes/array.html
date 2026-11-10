@@ -1,0 +1,1711 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Array - The interrexx Language Specification</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../conventions.html"><strong aria-hidden="true">2.</strong> Conventions</a></li><li class="chapter-item expanded "><a href="../lexical/index.html"><strong aria-hidden="true">3.</strong> Lexical structure</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../lexical/characters.html"><strong aria-hidden="true">3.1.</strong> Characters</a></li><li class="chapter-item expanded "><a href="../lexical/comments.html"><strong aria-hidden="true">3.2.</strong> Comments</a></li><li class="chapter-item expanded "><a href="../lexical/literals.html"><strong aria-hidden="true">3.3.</strong> Literals</a></li><li class="chapter-item expanded "><a href="../lexical/symbols.html"><strong aria-hidden="true">3.4.</strong> Symbols</a></li><li class="chapter-item expanded "><a href="../lexical/operators.html"><strong aria-hidden="true">3.5.</strong> Operators and special characters</a></li><li class="chapter-item expanded "><a href="../lexical/clauses.html"><strong aria-hidden="true">3.6.</strong> Clauses</a></li></ol></li><li class="chapter-item expanded "><a href="../numbers/index.html"><strong aria-hidden="true">4.</strong> Numbers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../numbers/formats.html"><strong aria-hidden="true">4.1.</strong> Formats</a></li><li class="chapter-item expanded "><a href="../numbers/limits.html"><strong aria-hidden="true">4.2.</strong> Limits</a></li><li class="chapter-item expanded "><a href="../numbers/arithmetic.html"><strong aria-hidden="true">4.3.</strong> Arithmetic</a></li><li class="chapter-item expanded "><a href="../numbers/settings.html"><strong aria-hidden="true">4.4.</strong> Settings</a></li><li class="chapter-item expanded "><a href="../numbers/comparison.html"><strong aria-hidden="true">4.5.</strong> Comparison</a></li></ol></li><li class="chapter-item expanded "><a href="../expressions/index.html"><strong aria-hidden="true">5.</strong> Expressions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../expressions/terms.html"><strong aria-hidden="true">5.1.</strong> Terms</a></li><li class="chapter-item expanded "><a href="../expressions/variables.html"><strong aria-hidden="true">5.2.</strong> Variables</a></li><li class="chapter-item expanded "><a href="../expressions/concatenation.html"><strong aria-hidden="true">5.3.</strong> Concatenation</a></li><li class="chapter-item expanded "><a href="../expressions/arithmetic.html"><strong aria-hidden="true">5.4.</strong> Arithmetic operators</a></li><li class="chapter-item expanded "><a href="../expressions/comparison.html"><strong aria-hidden="true">5.5.</strong> Comparison operators</a></li><li class="chapter-item expanded "><a href="../expressions/logical.html"><strong aria-hidden="true">5.6.</strong> Logical operators</a></li><li class="chapter-item expanded "><a href="../expressions/messages.html"><strong aria-hidden="true">5.7.</strong> Message operators</a></li></ol></li><li class="chapter-item expanded "><a href="../instructions/index.html"><strong aria-hidden="true">6.</strong> Instructions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../instructions/address.html"><strong aria-hidden="true">6.1.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../instructions/arg.html"><strong aria-hidden="true">6.2.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../instructions/assignment.html"><strong aria-hidden="true">6.3.</strong> Assignments</a></li><li class="chapter-item expanded "><a href="../instructions/call.html"><strong aria-hidden="true">6.4.</strong> CALL</a></li><li class="chapter-item expanded "><a href="../instructions/command.html"><strong aria-hidden="true">6.5.</strong> Commands</a></li><li class="chapter-item expanded "><a href="../instructions/do.html"><strong aria-hidden="true">6.6.</strong> DO</a></li><li class="chapter-item expanded "><a href="../instructions/drop.html"><strong aria-hidden="true">6.7.</strong> DROP</a></li><li class="chapter-item expanded "><a href="../instructions/exit.html"><strong aria-hidden="true">6.8.</strong> EXIT</a></li><li class="chapter-item expanded "><a href="../instructions/expose.html"><strong aria-hidden="true">6.9.</strong> EXPOSE</a></li><li class="chapter-item expanded "><a href="../instructions/forward.html"><strong aria-hidden="true">6.10.</strong> FORWARD</a></li><li class="chapter-item expanded "><a href="../instructions/guard.html"><strong aria-hidden="true">6.11.</strong> GUARD</a></li><li class="chapter-item expanded "><a href="../instructions/if.html"><strong aria-hidden="true">6.12.</strong> IF</a></li><li class="chapter-item expanded "><a href="../instructions/interpret.html"><strong aria-hidden="true">6.13.</strong> INTERPRET</a></li><li class="chapter-item expanded "><a href="../instructions/iterate.html"><strong aria-hidden="true">6.14.</strong> ITERATE</a></li><li class="chapter-item expanded "><a href="../instructions/leave.html"><strong aria-hidden="true">6.15.</strong> LEAVE</a></li><li class="chapter-item expanded "><a href="../instructions/loop.html"><strong aria-hidden="true">6.16.</strong> LOOP</a></li><li class="chapter-item expanded "><a href="../instructions/message.html"><strong aria-hidden="true">6.17.</strong> Message instructions</a></li><li class="chapter-item expanded "><a href="../instructions/nop.html"><strong aria-hidden="true">6.18.</strong> NOP</a></li><li class="chapter-item expanded "><a href="../instructions/numeric.html"><strong aria-hidden="true">6.19.</strong> NUMERIC</a></li><li class="chapter-item expanded "><a href="../instructions/options.html"><strong aria-hidden="true">6.20.</strong> OPTIONS</a></li><li class="chapter-item expanded "><a href="../instructions/parse.html"><strong aria-hidden="true">6.21.</strong> PARSE</a></li><li class="chapter-item expanded "><a href="../instructions/procedure.html"><strong aria-hidden="true">6.22.</strong> PROCEDURE</a></li><li class="chapter-item expanded "><a href="../instructions/pull.html"><strong aria-hidden="true">6.23.</strong> PULL</a></li><li class="chapter-item expanded "><a href="../instructions/push.html"><strong aria-hidden="true">6.24.</strong> PUSH</a></li><li class="chapter-item expanded "><a href="../instructions/queue.html"><strong aria-hidden="true">6.25.</strong> QUEUE</a></li><li class="chapter-item expanded "><a href="../instructions/raise.html"><strong aria-hidden="true">6.26.</strong> RAISE</a></li><li class="chapter-item expanded "><a href="../instructions/reply.html"><strong aria-hidden="true">6.27.</strong> REPLY</a></li><li class="chapter-item expanded "><a href="../instructions/return.html"><strong aria-hidden="true">6.28.</strong> RETURN</a></li><li class="chapter-item expanded "><a href="../instructions/say.html"><strong aria-hidden="true">6.29.</strong> SAY</a></li><li class="chapter-item expanded "><a href="../instructions/select.html"><strong aria-hidden="true">6.30.</strong> SELECT</a></li><li class="chapter-item expanded "><a href="../instructions/signal.html"><strong aria-hidden="true">6.31.</strong> SIGNAL</a></li><li class="chapter-item expanded "><a href="../instructions/trace.html"><strong aria-hidden="true">6.32.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../instructions/use.html"><strong aria-hidden="true">6.33.</strong> USE</a></li></ol></li><li class="chapter-item expanded "><a href="../parsing/index.html"><strong aria-hidden="true">7.</strong> Parsing</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../parsing/templates.html"><strong aria-hidden="true">7.1.</strong> Templates</a></li><li class="chapter-item expanded "><a href="../parsing/patterns.html"><strong aria-hidden="true">7.2.</strong> Patterns</a></li><li class="chapter-item expanded "><a href="../parsing/multiple.html"><strong aria-hidden="true">7.3.</strong> Several strings and case</a></li></ol></li><li class="chapter-item expanded "><a href="../directives/index.html"><strong aria-hidden="true">8.</strong> Directives</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../directives/class.html"><strong aria-hidden="true">8.1.</strong> ::CLASS</a></li><li class="chapter-item expanded "><a href="../directives/method.html"><strong aria-hidden="true">8.2.</strong> ::METHOD</a></li><li class="chapter-item expanded "><a href="../directives/attribute.html"><strong aria-hidden="true">8.3.</strong> ::ATTRIBUTE</a></li><li class="chapter-item expanded "><a href="../directives/constant.html"><strong aria-hidden="true">8.4.</strong> ::CONSTANT</a></li><li class="chapter-item expanded "><a href="../directives/routine.html"><strong aria-hidden="true">8.5.</strong> ::ROUTINE</a></li><li class="chapter-item expanded "><a href="../directives/requires.html"><strong aria-hidden="true">8.6.</strong> ::REQUIRES</a></li><li class="chapter-item expanded "><a href="../directives/options.html"><strong aria-hidden="true">8.7.</strong> ::OPTIONS</a></li><li class="chapter-item expanded "><a href="../directives/resource.html"><strong aria-hidden="true">8.8.</strong> ::RESOURCE</a></li><li class="chapter-item expanded "><a href="../directives/annotate.html"><strong aria-hidden="true">8.9.</strong> ::ANNOTATE</a></li></ol></li><li class="chapter-item expanded "><a href="../conditions/index.html"><strong aria-hidden="true">9.</strong> Conditions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../conditions/traps.html"><strong aria-hidden="true">9.1.</strong> Condition traps</a></li><li class="chapter-item expanded "><a href="../conditions/information.html"><strong aria-hidden="true">9.2.</strong> Condition information</a></li><li class="chapter-item expanded "><a href="../conditions/syntax.html"><strong aria-hidden="true">9.3.</strong> SYNTAX</a></li><li class="chapter-item expanded "><a href="../conditions/error.html"><strong aria-hidden="true">9.4.</strong> ERROR and FAILURE</a></li><li class="chapter-item expanded "><a href="../conditions/halt.html"><strong aria-hidden="true">9.5.</strong> HALT</a></li><li class="chapter-item expanded "><a href="../conditions/novalue.html"><strong aria-hidden="true">9.6.</strong> NOVALUE</a></li><li class="chapter-item expanded "><a href="../conditions/nostring.html"><strong aria-hidden="true">9.7.</strong> NOSTRING</a></li><li class="chapter-item expanded "><a href="../conditions/nomethod.html"><strong aria-hidden="true">9.8.</strong> NOMETHOD</a></li><li class="chapter-item expanded "><a href="../conditions/notready.html"><strong aria-hidden="true">9.9.</strong> NOTREADY</a></li><li class="chapter-item expanded "><a href="../conditions/lostdigits.html"><strong aria-hidden="true">9.10.</strong> LOSTDIGITS</a></li><li class="chapter-item expanded "><a href="../conditions/user.html"><strong aria-hidden="true">9.11.</strong> USER conditions</a></li><li class="chapter-item expanded "><a href="../conditions/errors.html"><strong aria-hidden="true">9.12.</strong> Error numbers</a></li></ol></li><li class="chapter-item expanded "><a href="../classes/index.html"><strong aria-hidden="true">10.</strong> Classes</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../classes/methods.html"><strong aria-hidden="true">10.1.</strong> Method search</a></li><li class="chapter-item expanded "><a href="../classes/object.html"><strong aria-hidden="true">10.2.</strong> Object</a></li><li class="chapter-item expanded "><a href="../classes/class.html"><strong aria-hidden="true">10.3.</strong> Class</a></li><li class="chapter-item expanded "><a href="../classes/string.html"><strong aria-hidden="true">10.4.</strong> String</a></li><li class="chapter-item expanded "><a href="../classes/method.html"><strong aria-hidden="true">10.5.</strong> Method</a></li><li class="chapter-item expanded "><a href="../classes/routine.html"><strong aria-hidden="true">10.6.</strong> Routine</a></li><li class="chapter-item expanded "><a href="../classes/package.html"><strong aria-hidden="true">10.7.</strong> Package</a></li><li class="chapter-item expanded "><a href="../classes/message.html"><strong aria-hidden="true">10.8.</strong> Message</a></li><li class="chapter-item expanded "><a href="../classes/messagenotification.html"><strong aria-hidden="true">10.9.</strong> MessageNotification</a></li><li class="chapter-item expanded "><a href="../classes/alarmnotification.html"><strong aria-hidden="true">10.10.</strong> AlarmNotification</a></li><li class="chapter-item expanded "><a href="../classes/collection.html"><strong aria-hidden="true">10.11.</strong> Collection</a></li><li class="chapter-item expanded "><a href="../classes/mapcollection.html"><strong aria-hidden="true">10.12.</strong> MapCollection</a></li><li class="chapter-item expanded "><a href="../classes/orderedcollection.html"><strong aria-hidden="true">10.13.</strong> OrderedCollection</a></li><li class="chapter-item expanded "><a href="../classes/setcollection.html"><strong aria-hidden="true">10.14.</strong> SetCollection</a></li><li class="chapter-item expanded "><a href="../classes/array.html" class="active"><strong aria-hidden="true">10.15.</strong> Array</a></li><li class="chapter-item expanded "><a href="../classes/list.html"><strong aria-hidden="true">10.16.</strong> List</a></li><li class="chapter-item expanded "><a href="../classes/queue.html"><strong aria-hidden="true">10.17.</strong> Queue</a></li><li class="chapter-item expanded "><a href="../classes/circularqueue.html"><strong aria-hidden="true">10.18.</strong> CircularQueue</a></li><li class="chapter-item expanded "><a href="../classes/directory.html"><strong aria-hidden="true">10.19.</strong> Directory</a></li><li class="chapter-item expanded "><a href="../classes/stringtable.html"><strong aria-hidden="true">10.20.</strong> StringTable</a></li><li class="chapter-item expanded "><a href="../classes/properties.html"><strong aria-hidden="true">10.21.</strong> Properties</a></li><li class="chapter-item expanded "><a href="../classes/table.html"><strong aria-hidden="true">10.22.</strong> Table</a></li><li class="chapter-item expanded "><a href="../classes/identitytable.html"><strong aria-hidden="true">10.23.</strong> IdentityTable</a></li><li class="chapter-item expanded "><a href="../classes/relation.html"><strong aria-hidden="true">10.24.</strong> Relation</a></li><li class="chapter-item expanded "><a href="../classes/bag.html"><strong aria-hidden="true">10.25.</strong> Bag</a></li><li class="chapter-item expanded "><a href="../classes/set.html"><strong aria-hidden="true">10.26.</strong> Set</a></li><li class="chapter-item expanded "><a href="../classes/stem.html"><strong aria-hidden="true">10.27.</strong> Stem</a></li></ol></li><li class="chapter-item expanded "><a href="../builtins/index.html"><strong aria-hidden="true">11.</strong> Built-in functions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../builtins/abbrev.html"><strong aria-hidden="true">11.1.</strong> ABBREV</a></li><li class="chapter-item expanded "><a href="../builtins/abs.html"><strong aria-hidden="true">11.2.</strong> ABS</a></li><li class="chapter-item expanded "><a href="../builtins/address.html"><strong aria-hidden="true">11.3.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../builtins/arg.html"><strong aria-hidden="true">11.4.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../builtins/b2x.html"><strong aria-hidden="true">11.5.</strong> B2X</a></li><li class="chapter-item expanded "><a href="../builtins/beep.html"><strong aria-hidden="true">11.6.</strong> BEEP</a></li><li class="chapter-item expanded "><a href="../builtins/bitand.html"><strong aria-hidden="true">11.7.</strong> BITAND</a></li><li class="chapter-item expanded "><a href="../builtins/bitor.html"><strong aria-hidden="true">11.8.</strong> BITOR</a></li><li class="chapter-item expanded "><a href="../builtins/bitxor.html"><strong aria-hidden="true">11.9.</strong> BITXOR</a></li><li class="chapter-item expanded "><a href="../builtins/c2d.html"><strong aria-hidden="true">11.10.</strong> C2D</a></li><li class="chapter-item expanded "><a href="../builtins/c2x.html"><strong aria-hidden="true">11.11.</strong> C2X</a></li><li class="chapter-item expanded "><a href="../builtins/center.html"><strong aria-hidden="true">11.12.</strong> CENTER</a></li><li class="chapter-item expanded "><a href="../builtins/changestr.html"><strong aria-hidden="true">11.13.</strong> CHANGESTR</a></li><li class="chapter-item expanded "><a href="../builtins/charin.html"><strong aria-hidden="true">11.14.</strong> CHARIN</a></li><li class="chapter-item expanded "><a href="../builtins/charout.html"><strong aria-hidden="true">11.15.</strong> CHAROUT</a></li><li class="chapter-item expanded "><a href="../builtins/chars.html"><strong aria-hidden="true">11.16.</strong> CHARS</a></li><li class="chapter-item expanded "><a href="../builtins/compare.html"><strong aria-hidden="true">11.17.</strong> COMPARE</a></li><li class="chapter-item expanded "><a href="../builtins/condition.html"><strong aria-hidden="true">11.18.</strong> CONDITION</a></li><li class="chapter-item expanded "><a href="../builtins/copies.html"><strong aria-hidden="true">11.19.</strong> COPIES</a></li><li class="chapter-item expanded "><a href="../builtins/countstr.html"><strong aria-hidden="true">11.20.</strong> COUNTSTR</a></li><li class="chapter-item expanded "><a href="../builtins/d2c.html"><strong aria-hidden="true">11.21.</strong> D2C</a></li><li class="chapter-item expanded "><a href="../builtins/d2x.html"><strong aria-hidden="true">11.22.</strong> D2X</a></li><li class="chapter-item expanded "><a href="../builtins/datatype.html"><strong aria-hidden="true">11.23.</strong> DATATYPE</a></li><li class="chapter-item expanded "><a href="../builtins/date.html"><strong aria-hidden="true">11.24.</strong> DATE</a></li><li class="chapter-item expanded "><a href="../builtins/delstr.html"><strong aria-hidden="true">11.25.</strong> DELSTR</a></li><li class="chapter-item expanded "><a href="../builtins/delword.html"><strong aria-hidden="true">11.26.</strong> DELWORD</a></li><li class="chapter-item expanded "><a href="../builtins/digits.html"><strong aria-hidden="true">11.27.</strong> DIGITS</a></li><li class="chapter-item expanded "><a href="../builtins/directory.html"><strong aria-hidden="true">11.28.</strong> DIRECTORY</a></li><li class="chapter-item expanded "><a href="../builtins/endlocal.html"><strong aria-hidden="true">11.29.</strong> ENDLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/errortext.html"><strong aria-hidden="true">11.30.</strong> ERRORTEXT</a></li><li class="chapter-item expanded "><a href="../builtins/filespec.html"><strong aria-hidden="true">11.31.</strong> FILESPEC</a></li><li class="chapter-item expanded "><a href="../builtins/form.html"><strong aria-hidden="true">11.32.</strong> FORM</a></li><li class="chapter-item expanded "><a href="../builtins/format.html"><strong aria-hidden="true">11.33.</strong> FORMAT</a></li><li class="chapter-item expanded "><a href="../builtins/fuzz.html"><strong aria-hidden="true">11.34.</strong> FUZZ</a></li><li class="chapter-item expanded "><a href="../builtins/gc.html"><strong aria-hidden="true">11.35.</strong> GC</a></li><li class="chapter-item expanded "><a href="../builtins/insert.html"><strong aria-hidden="true">11.36.</strong> INSERT</a></li><li class="chapter-item expanded "><a href="../builtins/lastpos.html"><strong aria-hidden="true">11.37.</strong> LASTPOS</a></li><li class="chapter-item expanded "><a href="../builtins/left.html"><strong aria-hidden="true">11.38.</strong> LEFT</a></li><li class="chapter-item expanded "><a href="../builtins/length.html"><strong aria-hidden="true">11.39.</strong> LENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/linein.html"><strong aria-hidden="true">11.40.</strong> LINEIN</a></li><li class="chapter-item expanded "><a href="../builtins/lineout.html"><strong aria-hidden="true">11.41.</strong> LINEOUT</a></li><li class="chapter-item expanded "><a href="../builtins/lines.html"><strong aria-hidden="true">11.42.</strong> LINES</a></li><li class="chapter-item expanded "><a href="../builtins/lower.html"><strong aria-hidden="true">11.43.</strong> LOWER</a></li><li class="chapter-item expanded "><a href="../builtins/max.html"><strong aria-hidden="true">11.44.</strong> MAX</a></li><li class="chapter-item expanded "><a href="../builtins/min.html"><strong aria-hidden="true">11.45.</strong> MIN</a></li><li class="chapter-item expanded "><a href="../builtins/overlay.html"><strong aria-hidden="true">11.46.</strong> OVERLAY</a></li><li class="chapter-item expanded "><a href="../builtins/pos.html"><strong aria-hidden="true">11.47.</strong> POS</a></li><li class="chapter-item expanded "><a href="../builtins/qualify.html"><strong aria-hidden="true">11.48.</strong> QUALIFY</a></li><li class="chapter-item expanded "><a href="../builtins/queued.html"><strong aria-hidden="true">11.49.</strong> QUEUED</a></li><li class="chapter-item expanded "><a href="../builtins/random.html"><strong aria-hidden="true">11.50.</strong> RANDOM</a></li><li class="chapter-item expanded "><a href="../builtins/reverse.html"><strong aria-hidden="true">11.51.</strong> REVERSE</a></li><li class="chapter-item expanded "><a href="../builtins/right.html"><strong aria-hidden="true">11.52.</strong> RIGHT</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncadd.html"><strong aria-hidden="true">11.53.</strong> RXFUNCADD</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncdrop.html"><strong aria-hidden="true">11.54.</strong> RXFUNCDROP</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncquery.html"><strong aria-hidden="true">11.55.</strong> RXFUNCQUERY</a></li><li class="chapter-item expanded "><a href="../builtins/rxqueue.html"><strong aria-hidden="true">11.56.</strong> RXQUEUE</a></li><li class="chapter-item expanded "><a href="../builtins/setlocal.html"><strong aria-hidden="true">11.57.</strong> SETLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/sign.html"><strong aria-hidden="true">11.58.</strong> SIGN</a></li><li class="chapter-item expanded "><a href="../builtins/sourceline.html"><strong aria-hidden="true">11.59.</strong> SOURCELINE</a></li><li class="chapter-item expanded "><a href="../builtins/space.html"><strong aria-hidden="true">11.60.</strong> SPACE</a></li><li class="chapter-item expanded "><a href="../builtins/stream.html"><strong aria-hidden="true">11.61.</strong> STREAM</a></li><li class="chapter-item expanded "><a href="../builtins/strip.html"><strong aria-hidden="true">11.62.</strong> STRIP</a></li><li class="chapter-item expanded "><a href="../builtins/substr.html"><strong aria-hidden="true">11.63.</strong> SUBSTR</a></li><li class="chapter-item expanded "><a href="../builtins/subword.html"><strong aria-hidden="true">11.64.</strong> SUBWORD</a></li><li class="chapter-item expanded "><a href="../builtins/symbol.html"><strong aria-hidden="true">11.65.</strong> SYMBOL</a></li><li class="chapter-item expanded "><a href="../builtins/time.html"><strong aria-hidden="true">11.66.</strong> TIME</a></li><li class="chapter-item expanded "><a href="../builtins/trace.html"><strong aria-hidden="true">11.67.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../builtins/translate.html"><strong aria-hidden="true">11.68.</strong> TRANSLATE</a></li><li class="chapter-item expanded "><a href="../builtins/trunc.html"><strong aria-hidden="true">11.69.</strong> TRUNC</a></li><li class="chapter-item expanded "><a href="../builtins/upper.html"><strong aria-hidden="true">11.70.</strong> UPPER</a></li><li class="chapter-item expanded "><a href="../builtins/userid.html"><strong aria-hidden="true">11.71.</strong> USERID</a></li><li class="chapter-item expanded "><a href="../builtins/value.html"><strong aria-hidden="true">11.72.</strong> VALUE</a></li><li class="chapter-item expanded "><a href="../builtins/var.html"><strong aria-hidden="true">11.73.</strong> VAR</a></li><li class="chapter-item expanded "><a href="../builtins/verify.html"><strong aria-hidden="true">11.74.</strong> VERIFY</a></li><li class="chapter-item expanded "><a href="../builtins/word.html"><strong aria-hidden="true">11.75.</strong> WORD</a></li><li class="chapter-item expanded "><a href="../builtins/wordindex.html"><strong aria-hidden="true">11.76.</strong> WORDINDEX</a></li><li class="chapter-item expanded "><a href="../builtins/wordlength.html"><strong aria-hidden="true">11.77.</strong> WORDLENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/wordpos.html"><strong aria-hidden="true">11.78.</strong> WORDPOS</a></li><li class="chapter-item expanded "><a href="../builtins/words.html"><strong aria-hidden="true">11.79.</strong> WORDS</a></li><li class="chapter-item expanded "><a href="../builtins/x2b.html"><strong aria-hidden="true">11.80.</strong> X2B</a></li><li class="chapter-item expanded "><a href="../builtins/x2c.html"><strong aria-hidden="true">11.81.</strong> X2C</a></li><li class="chapter-item expanded "><a href="../builtins/x2d.html"><strong aria-hidden="true">11.82.</strong> X2D</a></li><li class="chapter-item expanded "><a href="../builtins/xrange.html"><strong aria-hidden="true">11.83.</strong> XRANGE</a></li></ol></li><li class="chapter-item expanded "><a href="../deviations.html"><strong aria-hidden="true">12.</strong> Deviations</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The interrexx Language Specification</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="array"><a class="header" href="#array">Array</a></h1>
+<p class="references">rexxref: Builtin Classes &gt; Collection Classes &gt; Array Class; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; new (Class Method); Builtin Classes &gt; Collection Classes &gt; Array Class &gt; of (Class Method); Builtin Classes &gt; Collection Classes &gt; Array Class &gt; []; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; []=; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; allIndexes; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; allItems; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; append; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; at; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; delete; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; dimension; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; dimensions; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; empty; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; fill; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; first; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; firstItem; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; hasIndex; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; hasItem; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; index; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; insert; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; isEmpty; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; items; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; last; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; lastItem; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; makeArray; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; makeString; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; next; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; previous; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; put; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; remove; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; removeItem; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; section; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; size; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; sort; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; sortWith; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; stableSort; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; stableSortWith; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; supplier; Builtin Classes &gt; Collection Classes &gt; Array Class &gt; toString</p>
+<p class="deviations">Deviations: D78, D107, D109</p>
+<p>An <code>Array</code> is an ordered collection whose entries are addressed by positive
+whole numbers. Its indexes may have gaps, so an array can hold items at 1 and
+5 and nothing between, and it may have more than one dimension, in which case
+an entry is addressed by one whole number for each dimension. The class
+inherits <a href="orderedcollection.html"><code>OrderedCollection</code></a>, and through it
+<a href="collection.html"><code>Collection</code></a>, and declares most of their methods itself; <a href="index.html#r-class.index.hierarchy">the
+hierarchy rule</a> lists what it inherits.</p>
+<p>The page follows the order of the rexxref entry: the class, the way indexes
+are read, the methods that read and write entries, the questions about the
+contents, the methods that make other collections, and the ones that sort or
+print. Examples that show an error use a small routine <code>try</code>, as the builtin
+pages do. No method that the class declares sends another message to its
+receiver; <a href="#r-class.array.sends">the sends rule</a> lists the messages that
+methods do send, and to whom.</p>
+<h2 id="the-class"><a class="header" href="#the-class">The class</a></h2>
+<div class="rule" id="r-class.array.creation"><a href="#r-class.array.creation">[class.array.creation]</a></div>
+<p><code>Array</code> declares thirty-six instance methods and two class methods, <code>new</code> and
+<code>of</code>. The instance methods are <code>[]</code>, <code>[]=</code>, <code>allIndexes</code>, <code>allItems</code>,
+<code>append</code>, <code>at</code>, <code>delete</code>, <code>dimension</code>, <code>dimensions</code>, <code>empty</code>, <code>fill</code>, <code>first</code>,
+<code>firstItem</code>, <code>hasIndex</code>, <code>hasItem</code>, <code>index</code>, <code>insert</code>, <code>isEmpty</code>, <code>items</code>,
+<code>last</code>, <code>lastItem</code>, <code>makeArray</code>, <code>makeString</code>, <code>next</code>, <code>previous</code>, <code>put</code>,
+<code>remove</code>, <code>removeItem</code>, <code>section</code>, <code>size</code>, <code>sort</code>, <code>sortWith</code>, <code>stableSort</code>,
+<code>stableSortWith</code>, <code>supplier</code> and <code>toString</code>, and a <code>copy</code> that this page
+specifies (<a href="#r-class.array.copy">the copy rule</a>). The set operations <code>union</code>,
+<code>difference</code>, <code>intersection</code>, <code>xor</code>, <code>subset</code>, <code>disjoint</code> and <code>equivalent</code> and
+the method <code>appendAll</code> are those of the mixins, and <a href="#r-class.array.inherited">one
+rule</a> lists them. A program subclasses <code>Array</code> as it
+does any class; the rules below say what each method answers for an instance
+of a subclass.</p>
+<pre><code class="language-rexx">a = .array~new
+own = 'AT PUT APPEND INSERT SECTION SORT TOSTRING SUPPLIER DIMENSIONS'
+n = 0
+do m over own~makearray(' ')
+  if a~hasMethod(m) then n += 1
+end
+say a~class~id n .array~hasMethod('OF') a~hasMethod('OF')
+say a~hasMethod('UNION') a~hasMethod('APPENDALL') a~hasMethod('SIZE')
+</code></pre>
+<pre><code class="language-output">Array 9 1 0
+1 1 1
+</code></pre>
+<h2 id="making-an-array"><a class="header" href="#making-an-array">Making an array</a></h2>
+<div class="rule" id="r-class.array.new"><a href="#r-class.array.new">[class.array.new]</a></div>
+<p><code>new</code> makes an empty array. The arguments say how large the dimensions are
+expected to be, and they are hints only: the array grows as entries are put
+into it. With no argument the array has no dimension yet; its <code>dimension</code> is 0
+and its <code>size</code> is 0, and the first <code>put</code> gives it as many dimensions as the
+put has indexes. With one or more arguments, each a whole number that is not
+negative, the array has one dimension for each argument, of that size, and its
+<code>size</code> is the product of them, though it holds no item (<code>items</code> is 0). One
+argument that is an <code>Array</code> of such numbers gives the same dimensions as
+arguments would; an instance of a subclass is not such an array. An argument
+that is not a whole number that is not negative raises <code>SYNTAX 93.906</code>, and so
+does an array of sizes that holds one, or an instance of a subclass; an
+omitted argument followed by a given one raises <code>SYNTAX 93.903</code>, while omitted
+arguments at the end count for nothing. A size of 0 is allowed and makes a
+dimension with no room: <code>new(0)</code> has <code>dimension</code> 1 and <code>size</code> 0. A size is
+read as <a href="#r-class.array.indexes">the index rule</a> reads an index.</p>
+<pre><code class="language-rexx">a = .array~new
+say a~dimension a~size a~items
+b = .array~new(3)
+say b~dimension b~size b~items
+c = .array~new(2, 3)
+say c~dimension c~size c~items c~dimensions~makeString('L', 'x')
+d = .array~new(.array~of(2, 3, 4))
+say d~dimension d~size
+say .array~new(0)~dimension .array~new(0)~size .array~new(2, )~dimension
+call try '.array~new(-1)'
+call try '.array~new("x")'
+call try '.array~new(1.5)'
+call try '.array~new(.nil)'
+call try '.array~new(.array~of(2, "x"))'
+call try '.array~new(, 2)'
+call try '.array~new(.pair~of(2, 3))'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt; no error'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class pair subclass array
+</code></pre>
+<pre><code class="language-output">0 0 0
+1 3 0
+2 6 0 2x3
+3 24
+1 0 1
+.array~new(-1) =&gt; 93.906
+.array~new("x") =&gt; 93.906
+.array~new(1.5) =&gt; 93.906
+.array~new(.nil) =&gt; 93.906
+.array~new(.array~of(2, "x")) =&gt; 93.906
+.array~new(, 2) =&gt; 93.903
+.array~new(.pair~of(2, 3)) =&gt; 93.906
+</code></pre>
+<div class="rule" id="r-class.array.new.sends"><a href="#r-class.array.new.sends">[class.array.new.sends]</a></div>
+<p><code>new</code> sends <code>init</code> to the new object with no argument, whatever arguments the
+<code>new</code> message had: the sizes are read by <code>new</code> itself and <code>init</code> never sees
+them. A subclass that overrides the class method <code>new</code> is sent it with the
+arguments as given, as for any class (<a href="index.html#r-class.index.new">the new rule</a>). <code>of</code>
+is a class method that does not send <code>new</code>; it sends <code>init</code> with no argument
+and then places the items itself, so that <code>put</code> and <code>append</code> of a subclass are
+not sent for them.</p>
+<pre><code class="language-rexx">a = .watch~new(5)
+b = .watch~of(1, 2)
+say b~items
+::class watch subclass array
+::method new class
+  say 'new' arg()
+  forward class (super)
+::method init
+  say 'init' arg()
+  forward class (super)
+::method put
+  say 'put'
+  forward class (super)
+::method append
+  say 'append'
+  forward class (super)
+</code></pre>
+<pre><code class="language-output">new 1
+init 0
+init 0
+2
+</code></pre>
+<div class="rule" id="r-class.array.of"><a href="#r-class.array.of">[class.array.of]</a></div>
+<p><code>of</code> makes a one-dimensional array that holds its arguments, the first at
+index 1, the second at index 2 and so on. An argument left out leaves its
+index without an item, and arguments left out at the end count for nothing, so
+<code>of(1, , 3, )</code> has three indexes. <code>of</code> with no argument makes an empty array
+that has one dimension, unlike <code>new</code>. An argument that is <code>.nil</code> is an item
+like any other. The result is an instance of the class that received the
+message.</p>
+<pre><code class="language-rexx">a = .array~of('x', , 'z', )
+say a~size a~items a~dimension a~hasIndex(2)
+b = .array~of
+say b~size b~dimension
+c = .array~of(.nil, .nil)
+say c~items (c~at(1) == .nil)
+say .array~of(, 'b')~first .array~of(, 'b')~size
+</code></pre>
+<pre><code class="language-output">3 2 1 0
+0 1
+2 1
+2 2
+</code></pre>
+<h2 id="indexes"><a class="header" href="#indexes">Indexes</a></h2>
+<div class="rule" id="r-class.array.indexes"><a href="#r-class.array.indexes">[class.array.indexes]</a></div>
+<p>A method that takes an index takes it as one argument for each dimension, or
+as one <code>Array</code> that holds them all; <code>at(2, 3)</code> and <code>at(.array~of(2, 3))</code> name
+the same entry. Only an instance of <code>Array</code> itself is such a list: an instance
+of a subclass is one argument like any other object. Each index is a whole
+number of at least 1, read from the string value of the argument (<a href="../conventions.html#r-conv.string.object">the
+conversion rule</a>) as a whole-number argument of a builtin
+is (<a href="../conventions.html#r-conv.whole.form">the form rule</a>, <a href="../conventions.html#r-conv.whole.digits">the digits
+rule</a>), so <code>"2"</code>, <code>' + 2 '</code> and <code>2.0</code> are as good as <code>2</code>
+and NUMERIC DIGITS plays no part; an argument those rules refuse raises the
+error this rule names, not <code>SYNTAX 40.12</code>. The number of indexes must be the
+number of dimensions of the array: too
+few raise <code>SYNTAX 93.925</code> and too many <code>SYNTAX 93.926</code>. An index that is not a
+whole number of at least 1 raises <code>SYNTAX 93.907</code> when the array has one
+dimension, and <code>SYNTAX 93.924</code> when it has more. No index at all, or an empty
+array of indexes, raises <code>SYNTAX 93.901</code>. An array that has no dimension yet
+(one made by <code>new</code> without arguments and not yet put into) has no entries, and
+a message that reads, with two or more indexes, answers as for an index that
+has no entry without checking them; with one index it is checked as for a
+one-dimensional array. The sections below say where a method checks fewer or
+more than this.</p>
+<pre><code class="language-rexx">a = .array~new(2, 2)
+a[2, 1] = 'x'
+say a[2, 1] a[.array~of(2, 1)] a~at('2', 1.0)
+call try 'a~at(1)'
+call try 'a~at(1, 1, 1)'
+call try 'a~at(0, 1)'
+call try 'a~at(1, "q")'
+call try '.array~of(7)~at(0)'
+call try '.array~of(7)~at(.nil)'
+call try '.array~of(7)~at(1, 1)'
+call try '.array~of(7)~at'
+call try '.array~of(7)~at(.array~of)'
+call try '.array~of(7)~at(1000000000000000000)'
+say .array~new~at(0, 0) .array~new~at(5, 5, 5)
+call try 'a~at(.pair~of(2, 1))'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class pair subclass array
+</code></pre>
+<pre><code class="language-output">x x x
+a~at(1) =&gt; 93.925
+a~at(1, 1, 1) =&gt; 93.926
+a~at(0, 1) =&gt; 93.924
+a~at(1, "q") =&gt; 93.924
+.array~of(7)~at(0) =&gt; 93.907
+.array~of(7)~at(.nil) =&gt; 93.907
+.array~of(7)~at(1, 1) =&gt; 93.926
+.array~of(7)~at =&gt; 93.901
+.array~of(7)~at(.array~of) =&gt; 93.901
+.array~of(7)~at(1000000000000000000) =&gt; 93.907
+The NIL object The NIL object
+a~at(.pair~of(2, 1)) =&gt; 93.925
+</code></pre>
+<h2 id="reading-and-writing-entries"><a class="header" href="#reading-and-writing-entries">Reading and writing entries</a></h2>
+<div class="rule" id="r-class.array.at"><a href="#r-class.array.at">[class.array.at]</a></div>
+<p><code>at(index)</code> answers the item at the index, and <code>.nil</code> when the index has no
+item, whether the slot lies beyond the array or inside it. The indexes are
+read as <a href="#r-class.array.indexes">the index rule</a> says. <code>[]</code> is the same method
+under another name: <code>a[i]</code> is the message <code>[]</code> with the indexes as arguments,
+and <code>a~"[]"(i)</code> the same message written out. A subclass that overrides <code>at</code>
+is not asked when <code>[]</code> is sent, nor the other way round.</p>
+<pre><code class="language-rexx">a = .array~of('a', , 'c')
+say a~at(1) a[3] (a~at(2) == .nil) (a[9] == .nil)
+b = .twin~new
+b~put('p', 1)
+say b~at(1) b[1]
+::class twin subclass array
+::method at
+  return 'at override'
+::method '[]'
+  return 'bracket override'
+</code></pre>
+<pre><code class="language-output">a c 1 1
+at override bracket override
+</code></pre>
+<div class="rule" id="r-class.array.put"><a href="#r-class.array.put">[class.array.put]</a></div>
+<p><code>put(item, index)</code> makes the item the entry at the index, replacing any item
+there, and answers no value. <code>a[i] = v</code> is the message <code>[]=</code> with the item
+first and the indexes after, and it is <code>put</code> under another name. The method
+needs at least the item and one index: fewer arguments raise <code>SYNTAX 93.901</code>,
+and an omitted item raises <code>SYNTAX 93.903</code>; both come before any check of the
+indexes. The indexes are read as <a href="#r-class.array.indexes">the index rule</a> says.
+A put beyond the present size of a dimension makes the dimension as large as
+the index, and the array grows. The first put into an array that has no
+dimension yet gives it as many dimensions as it has indexes, each as large as
+its index. <code>.nil</code> is an item like any other. A subclass's own <code>put</code> is not
+asked for <code>[]=</code>, nor the other way round.</p>
+<pre><code class="language-rexx">a = .array~new
+a~put('x', 3)
+say a~dimension a~size a~items
+b = .array~new
+b[2, 3] = 'y'
+say b~dimension b~dimensions~makeString('L', 'x') b~items b[2, 3]
+b~put('z', 4, 1)
+say b~dimensions~makeString('L', 'x') b~items
+c = .array~of(1, 2)
+c~put(.nil, 1)
+say c~items (c[1] == .nil)
+c~put(9, 2)
+say c[2]
+call try 'c~put'
+call try 'c~put(1)'
+call try 'c~put(, 1)'
+call try 'c~put(, 0)'
+call try 'c~put(1, 0)'
+call try 'c~put(1, 1, 1)'
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  say arg(1) '=&gt; no error'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">1 3 1
+2 2x3 1 y
+4x3 2
+2 1
+9
+c~put =&gt; 93.901
+c~put(1) =&gt; 93.901
+c~put(, 1) =&gt; 93.903
+c~put(, 0) =&gt; 93.903
+c~put(1, 0) =&gt; 93.907
+c~put(1, 1, 1) =&gt; 93.926
+</code></pre>
+<h2 id="adding-and-removing-items"><a class="header" href="#adding-and-removing-items">Adding and removing items</a></h2>
+<div class="rule" id="r-class.array.append"><a href="#r-class.array.append">[class.array.append]</a></div>
+<p><code>append(item)</code> puts the item at the index after the highest index that holds
+an item, and answers that index. In an array with no item the index is 1, and
+an array that has no dimension yet becomes one-dimensional. The size grows
+when the index is beyond it. The method takes exactly one argument: none, or
+an omitted one, raises <code>SYNTAX 93.903</code> and a second argument raises
+<code>SYNTAX 93.902</code>; an array of more than one dimension raises <code>SYNTAX 93.954</code>,
+after the argument count has been checked. <code>.nil</code> is an item like any other.</p>
+<pre><code class="language-rexx">a = .array~of('a', 'b', , )
+say a~append('c') a~size
+a~remove(3)
+say a~append('d') a~allItems~makeString('L', ',')
+b = .array~new(5)
+say b~append('x') b~size b~dimension
+c = .array~new
+say c~append(.nil) c~dimension c~items
+call try '.array~new~append'
+call try '.array~new~append(1, 2)'
+call try '.array~new(2, 2)~append(1)'
+call try '.array~new(2, 2)~append'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">3 3
+3 a,b,d
+1 5 1
+1 1 1
+.array~new~append =&gt; 93.903
+.array~new~append(1, 2) =&gt; 93.902
+.array~new(2, 2)~append(1) =&gt; 93.954
+.array~new(2, 2)~append =&gt; 93.903
+</code></pre>
+<div class="rule" id="r-class.array.insert"><a href="#r-class.array.insert">[class.array.insert]</a></div>
+<p><code>insert(item, index)</code> puts the item at the index after <code>index</code>: it takes the
+place after the entry at <code>index</code>, every entry after that moves up by one
+index, and the method answers the index of the new item. An <code>index</code> of <code>.nil</code>
+puts the item first, at index 1, and an omitted <code>index</code> puts it after the
+highest index that holds an item. An <code>index</code> beyond the highest index of the
+array is allowed: the item goes to the index after it. The size of the array
+becomes the larger of what it was and the highest index the insert uses, the
+new one's or that of an entry it moved, so it grows only when an entry is
+pushed past its last place. An omitted item, or no argument at all, makes the
+new slot empty, and the answer, the size and the moving of the entries after
+it are as for an item (<a href="#r-class.array.insert.omitted">the omitted item rule</a>).
+The index is read as <a href="#r-class.array.indexes">the index rule</a> says, so an array
+of one index is accepted. The
+method takes one or two arguments: a third raises <code>SYNTAX 93.902</code>; an array of
+more than one dimension raises <code>SYNTAX 93.954</code> whatever the index is, after
+the argument count has been checked. An index that is not a whole number of at
+least 1 and is not <code>.nil</code> raises <code>SYNTAX 93.907</code>.</p>
+<pre><code class="language-rexx">a = .array~of('a', 'b', 'c')
+say a~insert('x', 1) a~allItems~makeString('L', ',')
+say a~insert('y', .nil) a~allItems~makeString('L', ',')
+say a~insert('z') a~allItems~makeString('L', ',')
+say a~insert('w', 9) a~size a~allIndexes~makeString('L', ',')
+b = .array~new(5)
+b[1] = 'p'
+b[2] = 'q'
+say b~insert('r', 1) b~size b~allItems~makeString('L', ',')
+c = .array~new
+say c~insert('s', 1) c~size c~dimension
+call try '.array~of(1)~insert(1, 0)'
+call try '.array~of(1)~insert(1, "x")'
+call try '.array~of(1)~insert(1, 1, 1)'
+call try '.array~new(2, 2)~insert(1, 0)'
+call try '.array~new(2, 2)~insert(1, 1, 1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">2 a,x,b,c
+1 y,a,x,b,c
+6 y,a,x,b,c,z
+10 10 1,2,3,4,5,6,10
+2 5 p,r,q
+2 2 1
+.array~of(1)~insert(1, 0) =&gt; 93.907
+.array~of(1)~insert(1, "x") =&gt; 93.907
+.array~of(1)~insert(1, 1, 1) =&gt; 93.902
+.array~new(2, 2)~insert(1, 0) =&gt; 93.954
+.array~new(2, 2)~insert(1, 1, 1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.array.insert.omitted"><a href="#r-class.array.insert.omitted">[class.array.insert.omitted]</a></div>
+<p>An <code>insert</code> whose item is omitted makes an empty slot where the item would
+go: the entries after it move up, the answer is the index of the empty slot,
+and the size grows to that index when it lies beyond the size.</p>
+<pre><code class="language-rexx">a = .array~of('a')
+say a~insert(, 2) a~size a~items a~hasIndex(3)
+b = .array~of('a', 'b')
+say b~insert(, 1) b~size b~items b~hasIndex(2) b[3]
+c = .array~of('a')
+say c~insert() c~size c~items c~hasIndex(2)
+</code></pre>
+<pre><code class="language-output defect=#161">3 3 1 0
+2 3 2 0 b
+2 2 1 0
+</code></pre>
+<div class="rule" id="r-class.array.delete"><a href="#r-class.array.delete">[class.array.delete]</a></div>
+<p><code>delete(index)</code> takes the entry at the index out of the array and answers its
+item; every entry after it moves down by one index and the size drops by one.
+When the slot at the index is empty the answer is <code>.nil</code> and the slot is still
+taken out. An index above the size answers <code>.nil</code> and changes nothing. The
+method takes one argument, which may be an array of one index: none, or an
+omitted one, raises <code>SYNTAX 93.903</code> and a second raises <code>SYNTAX 93.902</code>. An
+array of more than one dimension raises <code>SYNTAX 93.954</code> whatever the index is,
+after the argument count has been checked; otherwise the index is read as <a href="#r-class.array.indexes">the
+index rule</a> says, with <code>SYNTAX 93.907</code> for an index
+that is not a whole number of at least 1 and <code>SYNTAX 93.926</code> for an array of
+two.</p>
+<pre><code class="language-rexx">a = .array~of('a', 'b', 'c', 'd')
+say a~delete(2) a~size a~allItems~makeString('L', ',')
+say a~delete(9) a~size
+b = .array~of('p', , 'r')
+say (b~delete(2) == .nil) b~size b~items
+c = .array~new(5)
+say (c~delete(2) == .nil) c~size (c~delete(6) == .nil) c~size
+say a~delete(.array~of(1)) a~allItems~makeString('L', ',')
+call try 'a~delete'
+call try 'a~delete(1, 2)'
+call try 'a~delete(0)'
+call try 'a~delete("x")'
+call try 'a~delete(.array~of(1, 2))'
+call try '.array~new(2, 2)~delete(1)'
+call try '.array~new(2, 2)~delete(1, 2)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">b 3 a,c,d
+The NIL object 3
+1 2 2
+1 4 1 4
+a c,d
+a~delete =&gt; 93.903
+a~delete(1, 2) =&gt; 93.902
+a~delete(0) =&gt; 93.907
+a~delete("x") =&gt; 93.907
+a~delete(.array~of(1, 2)) =&gt; 93.926
+.array~new(2, 2)~delete(1) =&gt; 93.954
+.array~new(2, 2)~delete(1, 2) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.array.remove"><a href="#r-class.array.remove">[class.array.remove]</a></div>
+<p><code>remove(index)</code> takes the item at the index out of its slot and answers it,
+and leaves the slot empty: no other index changes and the size does not. When
+the index has no item, because the slot is empty or lies beyond the array, the
+answer is <code>.nil</code> and nothing changes. It works on arrays of any number of
+dimensions, so the indexes are read as <a href="#r-class.array.indexes">the index rule</a>
+says, and it checks no argument count of its own: no argument raises
+<code>SYNTAX 93.901</code>, and two on a one-dimensional array raise <code>SYNTAX 93.926</code>.</p>
+<pre><code class="language-rexx">a = .array~of('a', 'b', 'c')
+say a~remove(2) a~size a~items a~hasIndex(2) (a~remove(2) == .nil)
+say a~remove(9) a~size
+b = .array~new(2, 2)
+b[2, 1] = 'x'
+say b~remove(.array~of(2, 1)) b~items b~size
+call try 'a~remove'
+call try 'a~remove(1, 2)'
+call try 'a~remove(0)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">b 3 2 0 1
+The NIL object 3
+x 0 4
+a~remove =&gt; 93.901
+a~remove(1, 2) =&gt; 93.926
+a~remove(0) =&gt; 93.907
+</code></pre>
+<div class="rule" id="r-class.array.removeitem"><a href="#r-class.array.removeitem">[class.array.removeitem]</a></div>
+<p><code>removeItem(item)</code> takes out the first item that is equal to the argument, in
+index order, leaves its slot empty as <code>remove</code> does, and answers the item that
+was stored, which is <code>.nil</code> when there is none. Equality is the strict <code>==</code>,
+so <code>1</code> and <code>1.0</code> differ. The method takes one argument: none, or an omitted
+one, raises <code>SYNTAX 93.903</code> and a second raises <code>SYNTAX 93.902</code>; it works on
+arrays of any number of dimensions.</p>
+<pre><code class="language-rexx">a = .array~of('a', 'b', 'a', 1)
+say a~removeItem('a') a~allIndexes~makeString('L', ',')
+say a~removeItem('a') a~allIndexes~makeString('L', ',')
+say (a~removeItem('a') == .nil) a~size
+say (a~removeItem(1.0) == .nil) a~items
+call try 'a~removeItem'
+call try 'a~removeItem(1, 2)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">a 2,3,4
+a 2,4
+1 4
+1 2
+a~removeItem =&gt; 93.903
+a~removeItem(1, 2) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.array.removeitem.sends"><a href="#r-class.array.removeitem.sends">[class.array.removeitem.sends]</a></div>
+<p><code>removeItem</code> sends <code>==</code> to the argument, once for each item in index order,
+with that item as the argument, until one answers true, and sends nothing
+else. <code>hasItem</code> and <code>index</code> make the same search, and their rules say so. For
+the very object that is stored, see <a href="#r-class.array.deviation.78">the deviation
+rule</a>.</p>
+<pre><code class="language-rexx">a = .array~of(.thing~new('p'), .thing~new('q'), .thing~new('r'))
+x = a~removeItem(.thing~new('q'))
+say x~name a~items
+::class thing
+::method init
+  expose name
+  use arg name
+::method name
+  expose name
+  return name
+::method '=='
+  expose name
+  use arg other
+  say name '==' other~name
+  return name = other~name
+</code></pre>
+<pre><code class="language-output">q == p
+q == q
+q 2
+</code></pre>
+<h2 id="questions-about-the-contents"><a class="header" href="#questions-about-the-contents">Questions about the contents</a></h2>
+<div class="rule" id="r-class.array.hasindex"><a href="#r-class.array.hasindex">[class.array.hasindex]</a></div>
+<p><code>hasIndex(index)</code> answers 1 when the index holds an item and 0 when it does
+not, because the slot is empty, lies beyond the array, or the array has no
+dimension yet. A slot that holds <code>.nil</code> holds an item. The indexes are read as
+<a href="#r-class.array.indexes">the index rule</a> says, so the method takes no argument
+count of its own: no argument raises <code>SYNTAX 93.901</code>, and an index that is not
+a whole number of at least 1 raises <code>SYNTAX 93.907</code>, or <code>SYNTAX 93.924</code> in a
+multi-dimensional array.</p>
+<pre><code class="language-rexx">a = .array~of('a', , .nil)
+say a~hasIndex(1) a~hasIndex(2) a~hasIndex(3) a~hasIndex(4)
+say .array~new~hasIndex(1) .array~new(3)~hasIndex(1)
+b = .array~new(2, 3)
+b[2, 3] = 'x'
+say b~hasIndex(2, 3) b~hasIndex(.array~of(2, 3)) b~hasIndex(1, 1)
+call try 'a~hasIndex'
+call try 'a~hasIndex(0)'
+call try 'a~hasIndex(.nil)'
+call try 'b~hasIndex(1)'
+call try 'b~hasIndex(0, 1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">1 0 1 0
+0 0
+1 1 0
+a~hasIndex =&gt; 93.901
+a~hasIndex(0) =&gt; 93.907
+a~hasIndex(.nil) =&gt; 93.907
+b~hasIndex(1) =&gt; 93.925
+b~hasIndex(0, 1) =&gt; 93.924
+</code></pre>
+<div class="rule" id="r-class.array.hasitem"><a href="#r-class.array.hasitem">[class.array.hasitem]</a></div>
+<p><code>hasItem(item)</code> answers 1 when some item of the array is equal to the argument
+by the strict <code>==</code>, as <a href="#r-class.array.removeitem.sends">the search rule</a> says,
+and 0 otherwise. An empty slot is not an item, so <code>.nil</code> is found only where
+it was stored. The method takes exactly one argument: none, or an omitted one,
+raises <code>SYNTAX 93.903</code> and a second raises <code>SYNTAX 93.902</code>.</p>
+<pre><code class="language-rexx">a = .array~of(1, 'x', , .nil)
+say a~hasItem(1) a~hasItem('1') a~hasItem(1.0) a~hasItem('X') a~hasItem(.nil)
+say .array~of(1, , 3)~hasItem(.nil)
+call try 'a~hasItem'
+call try 'a~hasItem(, 1)'
+call try 'a~hasItem(1, 2)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">1 1 0 0 1
+0
+a~hasItem =&gt; 93.903
+a~hasItem(, 1) =&gt; 93.902
+a~hasItem(1, 2) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.array.index"><a href="#r-class.array.index">[class.array.index]</a></div>
+<p><code>index(item)</code> answers the index of the first item that is equal to the
+argument, searching in index order as <code>hasItem</code> does, and <code>.nil</code> when there is
+none. In a multi-dimensional array the answer is an array that holds one index
+for each dimension. The method takes exactly one argument: none, or an omitted
+one, raises <code>SYNTAX 93.903</code> and a second raises <code>SYNTAX 93.902</code>.</p>
+<pre><code class="language-rexx">a = .array~of('p', 'q', 'q', .nil)
+say a~index('q') a~index(.nil) (a~index('z') == .nil)
+b = .array~new(2, 3)
+b[2, 3] = 'x'
+say b~index('x')~class~id b~index('x')~makeString('L', ',')
+call try 'a~index'
+call try 'a~index(1, 2)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">2 4 1
+Array 2,3
+a~index =&gt; 93.903
+a~index(1, 2) =&gt; 93.902
+</code></pre>
+<h2 id="walking-the-array"><a class="header" href="#walking-the-array">Walking the array</a></h2>
+<div class="rule" id="r-class.array.order"><a href="#r-class.array.order">[class.array.order]</a></div>
+<p>The entries of an array of more than one dimension have one order: the order
+of their slots with the first dimension changing fastest, so that in a 2 by 2
+array (1,1) comes first, then (2,1), (1,2) and (2,2). Every method that walks
+the entries follows it, for the indexes as for the items: <code>allItems</code>,
+<code>makeArray</code> and <code>allIndexes</code>, <code>supplier</code>, <code>first</code>, <code>last</code>, <code>firstItem</code> and
+<code>lastItem</code>, <code>next</code> and <code>previous</code>, the search of <code>hasItem</code>, <code>index</code> and
+<code>removeItem</code>, <code>makeString</code> and the sorts.</p>
+<pre><code class="language-rexx">a = .array~new(2, 2)
+a[1, 2] = 'r'; a[2, 1] = 'q'
+say a~allItems~makeString('L', ',')
+do i over a~allIndexes
+  say i~makeString('L', ',') a[i]
+end
+s = a~supplier
+say s~index~makeString('L', ',') s~item
+say a~first~makeString('L', ',') a~last~makeString('L', ',')
+say a~next(2, 1)~makeString('L', ',') a~previous(1, 2)~makeString('L', ',')
+b = .array~new(2, 2)
+b[2, 1] = 7; b[1, 2] = 7
+say b~index(7)~makeString('L', ',')
+b~removeItem(7)
+say b~first~makeString('L', ',')
+</code></pre>
+<pre><code class="language-output defect=#159">q,r
+2,1 q
+1,2 r
+2,1 q
+2,1 1,2
+1,2 2,1
+2,1
+1,2
+</code></pre>
+<div class="rule" id="r-class.array.first"><a href="#r-class.array.first">[class.array.first]</a></div>
+<p><code>first</code> answers the lowest index that holds an item and <code>last</code> the highest,
+and <code>firstItem</code> and <code>lastItem</code> answer the items there; all four answer <code>.nil</code>
+for an array without an item. For a multi-dimensional array the indexes are
+arrays that hold one index for each dimension. The four methods take no
+argument: any argument raises <code>SYNTAX 93.902</code>.</p>
+<pre><code class="language-rexx">a = .array~of(, 'b', , 'd', )
+say a~first a~last a~firstItem a~lastItem a~size
+say (.array~new(3)~first == .nil) (.array~new~lastItem == .nil)
+b = .array~new(2, 3)
+b[2, 3] = 'x'
+say b~first~makeString('L', ',') b~last~makeString('L', ',') b~firstItem
+call try 'a~first(1)'
+call try 'a~lastItem(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">2 4 b d 4
+1 1
+2,3 2,3 x
+a~first(1) =&gt; 93.902
+a~lastItem(1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.array.next"><a href="#r-class.array.next">[class.array.next]</a></div>
+<p><code>next(index)</code> answers the index of the first item after the index, passing
+over empty slots, and <code>.nil</code> when there is none; <code>previous(index)</code> answers the
+index of the last item before it. The index need not hold an item, or exist:
+<code>next</code> of an index beyond the array answers <code>.nil</code>, and <code>previous</code> of one
+beyond the array answers as <a href="#r-class.array.next.beyond">the rule for an index beyond
+the array</a> says. The index is
+read as <a href="#r-class.array.indexes">the index rule</a> says, with <code>SYNTAX 93.901</code> for
+no index and <code>SYNTAX 93.907</code> for an index that is not a whole number of at
+least 1; so index 0 is an error, and <code>previous(1)</code> is <code>.nil</code>.</p>
+<pre><code class="language-rexx">a = .array~of('a', , , 'd', 'e')
+say a~next(1) a~next(2) a~next(4) (a~next(5) == .nil) (a~next(9) == .nil)
+say a~previous(5) a~previous(4) (a~previous(1) == .nil) a~previous(3)
+say a~previous(9)
+call try 'a~next'
+call try 'a~next(0)'
+call try 'a~previous(.nil)'
+call try 'a~next(1, 2)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">4 4 5 1 1
+4 1 1 1
+5
+a~next =&gt; 93.901
+a~next(0) =&gt; 93.907
+a~previous(.nil) =&gt; 93.907
+a~next(1, 2) =&gt; 93.926
+</code></pre>
+<div class="rule" id="r-class.array.next.beyond"><a href="#r-class.array.next.beyond">[class.array.next.beyond]</a></div>
+<p><code>previous</code> of an index that has a component beyond its dimension answers the
+index of the last item that lies before a position, or <code>.nil</code> when there is
+none. In an array of one dimension the position is the index, so an index
+beyond the array answers the last item. In an array of more than one
+dimension the slots are numbered with the first dimension running fastest: the
+slot at <code>i, j</code> is number <code>i + (j - 1) * n</code>, where <code>n</code> is the size of the first
+dimension, and likewise for more dimensions. The position is the value of the
+first component, in the order of the dimensions, that is beyond its dimension;
+the other components do not matter.</p>
+<pre><code class="language-rexx">a = .array~new(3, 3)
+do i = 1 to 3; do j = 1 to 3; a[i, j] = i||j; end; end
+say a~previous(4, 1)~makeString('L', ',') a~previous(4, 7)~makeString('L', ',')
+say a~previous(1, 5)~makeString('L', ',') a~previous(10, 1)~makeString('L', ',')
+b = .array~new(2, 2)
+b[2, 2] = 'x'
+say (b~previous(3, 1) == .nil) b~previous(5, 1)~makeString('L', ',')
+say .array~of('x', 'y')~previous(9)
+</code></pre>
+<pre><code class="language-output defect=#160">3,1 3,1
+1,2 3,3
+1 2,2
+2
+</code></pre>
+<h2 id="size-dimensions-and-filling"><a class="header" href="#size-dimensions-and-filling">Size, dimensions and filling</a></h2>
+<div class="rule" id="r-class.array.items"><a href="#r-class.array.items">[class.array.items]</a></div>
+<p><code>items</code> answers the number of items the array holds, <code>size</code> the number of
+places it has, and <code>isEmpty</code> answers 1 when it holds no item and 0 when it
+does. The size of an array only grows when an entry is put beyond it, or an
+item inserted or appended past it, and falls only by one for each <code>delete</code>;
+<code>remove</code> and <code>empty</code> leave it as it is. The size of a multi-dimensional array
+is the product of its dimensions. The three methods take no argument: any
+argument raises <code>SYNTAX 93.902</code>.</p>
+<pre><code class="language-rexx">a = .array~of('a', , 'c')
+say a~items a~size a~isEmpty
+a~remove(3)
+say a~items a~size a~isEmpty
+b = .array~new(4)
+say b~items b~size b~isEmpty
+b[6] = 'x'
+say b~items b~size b~isEmpty
+say .array~new(2, 3)~size .array~new~size
+call try 'a~items(1)'
+call try 'a~size(1)'
+call try 'a~isEmpty(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">2 3 0
+1 3 0
+0 4 1
+1 6 0
+6 0
+a~items(1) =&gt; 93.902
+a~size(1) =&gt; 93.902
+a~isEmpty(1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.array.empty"><a href="#r-class.array.empty">[class.array.empty]</a></div>
+<p><code>empty</code> removes every item and answers the receiver. The size and the
+dimensions stay as they were, so an emptied array of size 3 still has size 3.
+The method takes no argument: one raises <code>SYNTAX 93.902</code>.</p>
+<pre><code class="language-rexx">a = .array~of(1, 2, 3)
+say (a~empty == a) a~items a~size a~dimension
+b = .array~new(2, 2)
+b[1, 1] = 'x'
+b~empty
+say b~items b~dimensions~makeString('L', 'x')
+call try 'a~empty(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">1 0 3 1
+0 2x2
+a~empty(1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.array.fill"><a href="#r-class.array.fill">[class.array.fill]</a></div>
+<p><code>fill(item)</code> puts the item at every index of the array, from 1 to its size in
+each dimension, replacing the items that are there, and answers the receiver.
+An array whose size is 0 stays empty. The method takes exactly one argument:
+none, or an omitted one, raises <code>SYNTAX 93.903</code> and a second raises
+<code>SYNTAX 93.902</code>.</p>
+<pre><code class="language-rexx">a = .array~of('x', , 'z')
+say (a~fill(0) == a) a~items a~allItems~makeString('L', ',')
+b = .array~new(2, 2)~fill('k')
+say b~items b[2, 2]
+say .array~new~fill('q')~items
+call try 'a~fill'
+call try 'a~fill(, 1)'
+call try 'a~fill(1, 2)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">1 3 0,0,0
+4 k
+0
+a~fill =&gt; 93.903
+a~fill(, 1) =&gt; 93.902
+a~fill(1, 2) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.array.dimension"><a href="#r-class.array.dimension">[class.array.dimension]</a></div>
+<p><code>dimension</code> with no argument answers the number of dimensions: 0 for an array
+that has none yet, 1 for a one-dimensional array. <code>dimension(n)</code> answers the
+size of dimension <code>n</code>, and 0 when the array has fewer dimensions than <code>n</code>; <code>n</code>
+is read as <a href="#r-class.array.indexes">the index rule</a> reads an index and must be
+a whole number of at least 1, or <code>SYNTAX 93.907</code> is raised. <code>dimensions</code> answers
+a new <code>Array</code> that holds the
+size of each dimension, in order, and for an array that has no dimension yet
+an array that holds 0. A second argument to <code>dimension</code>, or any argument to
+<code>dimensions</code>, raises <code>SYNTAX 93.902</code>. The size of a dimension is the highest
+index in use or the size it was made with, as for <code>size</code>.</p>
+<pre><code class="language-rexx">a = .array~new(2, 3)
+say a~dimension a~dimension(1) a~dimension(2) a~dimension(3) a~dimension('2')
+say a~dimensions~class~id a~dimensions~makeString('L', ',')
+b = .array~new
+say b~dimension b~dimension(1) b~dimensions~makeString('L', ',')
+c = .array~of(1, 2, 3)
+c~delete(1)
+say c~dimension c~dimension(1) c~dimensions[1]
+call try 'a~dimension(0)'
+call try 'a~dimension(.nil)'
+call try 'a~dimension(1, 2)'
+call try 'a~dimensions(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">2 2 3 0 3
+Array 2,3
+0 0 0
+1 2 2
+a~dimension(0) =&gt; 93.907
+a~dimension(.nil) =&gt; 93.907
+a~dimension(1, 2) =&gt; 93.902
+a~dimensions(1) =&gt; 93.902
+</code></pre>
+<h2 id="taking-part-of-an-array"><a class="header" href="#taking-part-of-an-array">Taking part of an array</a></h2>
+<div class="rule" id="r-class.array.section"><a href="#r-class.array.section">[class.array.section]</a></div>
+<p><code>section(start, count)</code> answers a new array that holds the entries from the
+index <code>start</code> on: <code>count</code> of them, or all of them up to the end of the array
+when <code>count</code> is omitted or runs past the end. The first entry of the section
+is at index 1, and an empty slot of the receiver stays an empty slot. The
+items are the receiver's own objects, and the receiver is not changed. A
+<code>start</code> beyond the size of the receiver, or a <code>count</code> of 0, gives an array
+with no entries and no dimension. The index is read as <a href="#r-class.array.indexes">the index
+rule</a> says, so an array of one index is accepted, and
+<code>SYNTAX 93.907</code> is raised for a <code>start</code> that is not a whole number of at least</p>
+<ol>
+<li>The <code>count</code> is read as <a href="#r-class.array.indexes">the index rule</a> reads an
+index and must be a whole number of 0 or more, or <code>SYNTAX 93.923</code> is raised. No
+<code>start</code>, or an omitted one, raises <code>SYNTAX 93.903</code>, and a third
+argument <code>SYNTAX 93.902</code>; for an array of more than one dimension
+<code>SYNTAX 93.954</code> is raised after the count of arguments has been checked,
+whatever they are. The answer is an instance of the class of the receiver.</li>
+</ol>
+<pre><code class="language-rexx">a = .array~of('a', 'b', , 'd', 'e')
+s = a~section(2)
+say s~size s~items s~allItems~makeString('L', ',')
+s = a~section(2, 3)
+say s~size s~items (s[2] == .nil)
+say a~section(4, 99)~allItems~makeString('L', ',')
+say a~section(.array~of(5))~allItems~makeString('L', ',')
+say a~section(6)~size a~section(6)~dimension a~section(2, 0)~dimension
+say a~items a~size
+call try 'a~section'
+call try 'a~section(0)'
+call try 'a~section(1, -1)'
+call try 'a~section(1, "x")'
+call try 'a~section(1, 2, 3)'
+call try '.array~new(2, 2)~section(1)'
+call try '.array~new(2, 2)~section'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">4 3 b,d,e
+3 2 1
+d,e
+e
+0 0 0
+4 5
+a~section =&gt; 93.903
+a~section(0) =&gt; 93.907
+a~section(1, -1) =&gt; 93.923
+a~section(1, "x") =&gt; 93.923
+a~section(1, 2, 3) =&gt; 93.902
+.array~new(2, 2)~section(1) =&gt; 93.954
+.array~new(2, 2)~section =&gt; 93.954
+</code></pre>
+<div class="rule" id="r-class.array.section.sends"><a href="#r-class.array.section.sends">[class.array.section.sends]</a></div>
+<p><code>section</code> makes its answer by sending <code>new</code> to the class of the receiver with
+one argument, the number of places the section covers, which is 0 for an empty
+section, and then the new object is sent <code>init</code> with no argument, as <a href="#r-class.array.new.sends">the new
+rule</a> says. A subclass that overrides <code>new</code> or <code>init</code>
+therefore sees both, and the answer is an instance of the subclass.</p>
+<pre><code class="language-rexx">a = .many~of('a', 'b', 'c', 'd')
+s = a~section(2, 2)
+say s~class~id s~items s~allItems~makeString('L', ',')
+s = a~section(9)
+say s~items
+::class many subclass array
+::method new class
+  say 'new' arg(1)
+  forward class (super)
+::method init
+  say 'init' arg()
+  forward class (super)
+</code></pre>
+<pre><code class="language-output defect=#128">init 0
+new 2
+init 0
+MANY 2 b,c
+new 0
+init 0
+0
+</code></pre>
+<h2 id="the-items-the-indexes-and-a-supplier"><a class="header" href="#the-items-the-indexes-and-a-supplier">The items, the indexes and a supplier</a></h2>
+<div class="rule" id="r-class.array.makearray"><a href="#r-class.array.makearray">[class.array.makearray]</a></div>
+<p><code>makeArray</code> and <code>allItems</code> answer a new <code>Array</code> that holds the items of the
+receiver in the order of its indexes, without the empty slots; the first is at
+index 1. In an array of more than one dimension that order is the one <a href="#r-class.array.order">the order
+rule</a> gives. <code>allIndexes</code> answers a new
+<code>Array</code> of the indexes that hold an item, in the same order: whole numbers, or
+arrays of indexes in a multi-dimensional array. The three answer an <code>Array</code>
+whatever the class of the receiver is, never the receiver, and do not follow
+later changes to it. They take no argument: any argument raises
+<code>SYNTAX 93.902</code>.</p>
+<pre><code class="language-rexx">a = .array~of('a', , 'c')
+say a~makeArray~makeString('L', ',') a~makeArray~size
+say a~allItems~makeString('L', ',') a~allIndexes~makeString('L', ',')
+b = .array~new(2, 2)
+b[1, 1] = 'p'; b[2, 1] = 'q'; b[1, 2] = 'r'; b[2, 2] = 's'
+say b~allItems~makeString('L', ',') b~makeArray~dimension
+c = .array~new(2, 3)
+c[2, 3] = 'x'
+say c~allIndexes~items c~allIndexes[1]~makeString('L', ',')
+items = a~allItems
+a~append('d')
+say items~items a~items (items == a)
+say .twin~of(1, 2)~makeArray~class~id .twin~of(1, 2)~allIndexes~class~id
+call try 'a~makeArray(1)'
+call try 'a~allItems(1)'
+call try 'a~allIndexes(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class twin subclass array
+</code></pre>
+<pre><code class="language-output">a,c 2
+a,c 1,3
+p,q,r,s 1
+1 2,3
+2 3 0
+Array Array
+a~makeArray(1) =&gt; 93.902
+a~allItems(1) =&gt; 93.902
+a~allIndexes(1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.array.supplier"><a href="#r-class.array.supplier">[class.array.supplier]</a></div>
+<p><code>supplier</code> answers a <code>Supplier</code> whose indexes and items are those of the
+entries that hold an item, in index order. It is a snapshot: entries put,
+removed or deleted afterwards do not change it. An array without an item gives
+a supplier that is not available. The method takes no argument: any argument
+raises <code>SYNTAX 93.902</code>. The <code>Supplier</code> class has its own page; the supplier of
+a multi-dimensional array answers an array of indexes as the <code>allIndexes</code> of
+the array does.</p>
+<pre><code class="language-rexx">a = .array~of('a', , 'c')
+s = a~supplier
+a~put('z', 1)
+a~append('d')
+do while s~available
+  say s~index s~item
+  s~next
+end
+say .array~new(3)~supplier~available
+call try 'a~supplier(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">1 a
+3 c
+0
+a~supplier(1) =&gt; 93.902
+</code></pre>
+<h2 id="the-items-as-text"><a class="header" href="#the-items-as-text">The items as text</a></h2>
+<div class="rule" id="r-class.array.makestring"><a href="#r-class.array.makestring">[class.array.makestring]</a></div>
+<p><code>makeString(mode, separator)</code> answers a string made from the items of the
+array in the order of the slots, with the first dimension changing fastest,
+and <code>toString</code> is the same method under another name. The first letter of
+<code>mode</code>, in either case, chooses the form and nothing after it counts: <code>L</code> puts
+the separator between one item and the next, and is the form when <code>mode</code> is
+omitted, and <code>C</code> joins the items directly. The separator is read from its
+string value and is the line end <code>'0A'x</code> when it is omitted; it may be the
+null string. A <code>mode</code> that does not begin with <code>L</code> or <code>C</code> raises
+<code>SYNTAX 93.915</code>; a separator with <code>C</code>, even a null one, raises
+<code>SYNTAX 93.902</code>, as a third argument does; a mode or a separator that has no
+string value raises <code>SYNTAX 88.909</code>. The mode is checked first, its string
+value and then its letter, and the separator after it. An item that is a string
+is used as it is, and
+any other object, <code>.nil</code> included, gives the answer of its <code>objectName</code>
+message (a whole-number answer is written as its digits, <a href="#r-class.array.deviation.107">Deviation
+107</a>). An empty slot gives nothing, and no
+separator is added for it, but an
+item that is the null string still takes its separator. An array with no item
+answers the null string.</p>
+<pre><code class="language-rexx">a = .array~of(1, 2, 3)
+say a~makeString('L', '-') a~makeString('Char') a~toString(, '+')
+say a~makeString~c2x
+say .array~of('x', , 'y')~makeString('l', '--')
+say '['.array~of('x', '')~makeString('l', '|')']'
+say '['.array~of('x', '', 'y')~makeString('L', '/')']'
+say '['.array~new~makeString']' '['.array~new(3)~makeString('c')']'
+say .array~of(.nil, 'n')~makeString('L', ' ')
+b = .array~new(2, 2)
+b[1, 1] = 'p'; b[2, 1] = 'q'; b[1, 2] = 'r'; b[2, 2] = 's'
+say b~makeString('L', '')
+call try 'a~makeString(.nil)'
+call try 'a~makeString("x")'
+call try 'a~makeString(" l")'
+call try 'a~makeString("c", "-")'
+call try 'a~makeString("l", "-", 1)'
+call try 'a~makeString("l", .object~new)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">1-2-3 123 1+2+3
+310A320A33
+x--y
+[x|]
+[x//y]
+[] []
+The NIL object n
+pqrs
+a~makeString(.nil) =&gt; 88.909
+a~makeString("x") =&gt; 93.915
+a~makeString(" l") =&gt; 93.915
+a~makeString("c", "-") =&gt; 93.902
+a~makeString("l", "-", 1) =&gt; 93.902
+a~makeString("l", .object~new) =&gt; 88.909
+</code></pre>
+<div class="rule" id="r-class.array.makestring.sends"><a href="#r-class.array.makestring.sends">[class.array.makestring.sends]</a></div>
+<p><code>makeString</code> sends <code>objectName</code>, with no argument, to each item that is not a
+string, once, in the order of the slots, and nothing else: an item's own
+<code>makeString</code> and <code>string</code> are not used. A string item is sent nothing.</p>
+<pre><code class="language-rexx">a = .array~of(.item~new('p'), 'plain', .item~new('q'))
+say a~makeString('L', '-')
+::class item
+::method init
+  expose name
+  use arg name
+::method objectName
+  expose name
+  say 'objectName' name
+  return name
+::method makeString
+  say 'makeString'
+  return 'MADE'
+::method string
+  say 'string'
+  return 'STRING'
+</code></pre>
+<pre><code class="language-output">objectName p
+objectName q
+p-plain-q
+</code></pre>
+<div class="rule" id="r-class.array.string"><a href="#r-class.array.string">[class.array.string]</a></div>
+<p>An array has a <code>makeString</code> method, so its string value, the one that <code>say</code>
+and the joining operators use, is what <code>makeString</code> answers with no argument:
+the items one to a line. The <code>string</code> method is the one of <code>Object</code> and
+answers the name of the array, <code>an Array</code>, as <a href="index.html#r-class.index.string">the string
+rule</a> says; <code>request('STRING')</code> answers the string
+value. An array with no item has the null string for a string value.</p>
+<pre><code class="language-rexx">a = .array~of('one', 'two')
+say a
+say a~string
+say 'x' || a~request('STRING')~length
+say '['.array~new']'
+</code></pre>
+<pre><code class="language-output">one
+two
+an Array
+x7
+[]
+</code></pre>
+<h2 id="sorting"><a class="header" href="#sorting">Sorting</a></h2>
+<div class="rule" id="r-class.array.sort"><a href="#r-class.array.sort">[class.array.sort]</a></div>
+<p><code>sort</code> and <code>stableSort</code> put the items of the array in ascending order, in
+place, and answer the receiver; <code>sortWith(comparator)</code> and
+<code>stableSortWith(comparator)</code> do the same by the order the comparator gives.
+Items are compared by <code>compareTo</code>, which for strings is <a href="string.html#r-class.string.compareto">the string
+rule</a>: <code>10</code> sorts before <code>9</code>, and upper case before
+lower case. The comparator is any object that understands <code>compare</code>, and when
+it answers a negative number for two items the first sorts before the second,
+when it answers 0 they are equal, and when it answers a positive number the
+first sorts after. <code>stableSort</code> and <code>stableSortWith</code> keep items that are equal
+in their order; whether <code>sort</code> and <code>sortWith</code> do is not specified. The sorted
+items fill the slots from index 1 on in the order of the slots (in a
+multi-dimensional array the first dimension changing fastest), so an array
+whose items are not in the first slots, with an empty slot before an item,
+raises <code>SYNTAX 98.975</code> before any comparison and stays as it was; empty slots
+after the items stay empty, and the size does not change. An array of fewer
+than two items is not compared; <code>sortWith</code> and <code>stableSortWith</code> then answer at
+once, before the slot check and without looking at the comparator, while <code>sort</code>
+and <code>stableSort</code> still make the slot check, so <code>.array~of(, 5)~sort</code> raises
+<code>SYNTAX 98.975</code> and <code>.array~of(, 5)~sortWith(.nil)</code> does not. <code>sort</code> and
+<code>stableSort</code> take no argument: any raises <code>SYNTAX 93.902</code>. <code>sortWith</code> and
+<code>stableSortWith</code> take exactly one: none, or an omitted one, raises
+<code>SYNTAX 93.903</code> and a second <code>SYNTAX 93.902</code>. An item or comparator that does
+not understand its message raises <code>SYNTAX 97.1</code>. The comparator's answer must
+be a whole number: another answer raises <code>SYNTAX 26.903</code>; the answer of an
+item's <code>compareTo</code> raises <code>SYNTAX 26.902</code> in the same case.</p>
+<pre><code class="language-rexx">a = .array~of('b', 'A', 'a', '10', '9')
+say (a~sort == a) a~allItems~makeString('L', ',')
+a = .array~of(3, 1, 2)
+a~sortWith(.cmp~new)
+say a~allItems~makeString('L', ',')
+a = .array~of('x', 'y', 'z')~~stableSortWith(.firstletter~new)
+say a~allItems~makeString('L', ',')
+b = .array~new(5)
+b[1] = 'q'; b[2] = 'p'
+b~stableSort
+say b~size b~items b[1] b[2]
+c = .array~new(2, 2)
+c[1, 1] = 'd'; c[2, 1] = 'c'; c[1, 2] = 'b'; c[2, 2] = 'a'
+c~sort
+say c[1, 1] c[2, 1] c[1, 2] c[2, 2]
+call try '.array~of(2, , 1)~sort'
+call try '.array~of(, 5)~sort'
+call try '.array~of(2, 1)~sort(1)'
+call try '.array~of(2, 1)~sortWith'
+call try '.array~of(2, 1)~sortWith(.cmp~new, 1)'
+call try '.array~of(2, 1)~sortWith(.nil)'
+call try '.array~of(2, 1)~sortWith(.badcmp~new)'
+call try '.array~of(.badlike~new, .badlike~new)~sort'
+say .array~of(5)~sortWith(.nil)~items
+say .array~of(, 5)~sortWith(.nil)~items
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt; no error'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class cmp
+::method compare
+  use arg x, y
+  return y - x
+::class firstletter
+::method compare
+  return 0
+::class badcmp
+::method compare
+  return 'x'
+::class badlike
+::method compareTo
+  return 'x'
+</code></pre>
+<pre><code class="language-output">1 10,9,A,a,b
+3,2,1
+x,y,z
+5 2 p q
+a b c d
+.array~of(2, , 1)~sort =&gt; 98.975
+.array~of(, 5)~sort =&gt; 98.975
+.array~of(2, 1)~sort(1) =&gt; 93.902
+.array~of(2, 1)~sortWith =&gt; 93.903
+.array~of(2, 1)~sortWith(.cmp~new, 1) =&gt; 93.902
+.array~of(2, 1)~sortWith(.nil) =&gt; 97.1
+.array~of(2, 1)~sortWith(.badcmp~new) =&gt; 26.903
+.array~of(.badlike~new, .badlike~new)~sort =&gt; 26.902
+1
+1
+</code></pre>
+<div class="rule" id="r-class.array.sort.sends"><a href="#r-class.array.sort.sends">[class.array.sort.sends]</a></div>
+<p><code>sort</code> and <code>stableSort</code> send <code>compareTo</code> to items, with another item of the
+array as the argument, and <code>sortWith</code> and <code>stableSortWith</code> send <code>compare</code> to
+the comparator, with two items as the arguments. Which items are compared,
+which of two is the receiver or the first argument, how many comparisons are
+made and in what order is not specified, except that an array of fewer than
+two items is not compared at all, and that nothing but <code>compareTo</code> and
+<code>compare</code> is sent to items or comparator; no argument is asked <code>isA</code>. The
+example checks what is specified, that every argument is an item of the array.</p>
+<pre><code class="language-rexx">items = .array~of(.item~new(3), .item~new(1), .item~new(2), .item~new(5))
+.local~calls = 0
+.local~bad = 0
+items~sort
+say 'compareTo' (.local~calls &gt; 0) .local~bad
+.local~calls = 0
+items~stableSortWith(.cmp~new)
+say 'compare' (.local~calls &gt; 0) .local~bad
+.local~calls = 0
+.array~of(.item~new(1))~sort
+.array~of(.item~new(1))~sortWith(.cmp~new)
+say 'single' .local~calls
+out = ''
+do it over items
+  out = out it~n
+end
+say out~strip
+::class item
+::method init
+  expose n
+  use arg n
+::method n
+  expose n
+  return n
+::method compareTo
+  expose n
+  use arg other
+  .local~calls = .local~calls + 1
+  if \other~isA(.item) then .local~bad = .local~bad + 1
+  return n - other~n
+::class cmp
+::method compare
+  use arg x, y
+  .local~calls = .local~calls + 1
+  if \x~isA(.item) | \y~isA(.item) then .local~bad = .local~bad + 1
+  return x~n - y~n
+</code></pre>
+<pre><code class="language-output">compareTo 1 0
+compare 1 0
+single 0
+1 2 3 5
+</code></pre>
+<h2 id="copies-and-the-methods-of-the-mixins"><a class="header" href="#copies-and-the-methods-of-the-mixins">Copies and the methods of the mixins</a></h2>
+<div class="rule" id="r-class.array.copy"><a href="#r-class.array.copy">[class.array.copy]</a></div>
+<p><code>copy</code> answers a new array of the same class as the receiver, with the same
+dimensions and size, the same items at the same indexes and the same empty
+slots, so that adding to or removing from one does not change the other. The
+items are the same objects: the copy is shallow. As <a href="object.html#r-class.object.copy">the copy
+rule</a> says of every object, the variables of a subclass
+instance are copied as they are and the name stays; <code>init</code> is not sent. The
+method takes no argument: one raises <code>SYNTAX 93.902</code>.</p>
+<pre><code class="language-rexx">a = .many~of('x', , 'z')
+a~tag = 'T'
+b = a~copy
+say b~class~id b~size b~items b~tag (b == a) (b[1] == a[1])
+b~append('w')
+b[1] = 'new'
+say a~items b~items a[1] b[1]
+c = .array~new(2, 2)
+c[2, 2] = 'q'
+d = c~copy
+say d~dimensions~makeString('L', 'x') d[2, 2] d~items
+::class many subclass array
+::attribute tag
+::method init
+  say 'init'
+  forward class (super)
+</code></pre>
+<pre><code class="language-output">init
+MANY 3 2 T 0 1
+2 3 x new
+2x2 q 1
+</code></pre>
+<div class="rule" id="r-class.array.inherited"><a href="#r-class.array.inherited">[class.array.inherited]</a></div>
+<p>The methods <code>union</code>, <code>difference</code>, <code>intersection</code>, <code>xor</code>, <code>subset</code>, <code>disjoint</code>
+and <code>equivalent</code> and <code>appendAll</code> are not declared by <code>Array</code>. The methods
+<code>union</code>, <code>difference</code>, <code>intersection</code>, <code>xor</code>, <code>subset</code> and <code>appendAll</code> are
+those of <a href="orderedcollection.html"><code>OrderedCollection</code></a>, and <code>disjoint</code> and
+<code>equivalent</code> those of <a href="collection.html"><code>Collection</code></a>, as the pages of the
+mixins say, and an
+array is one of the collections they take as an argument, so that
+<code>.array~of(1)~union(.list~of(2))</code> is an array of 1 and 2. <code>union</code>,
+<code>difference</code> and <code>xor</code> send the copy they work on <code>isA</code> with the class <code>Array</code>
+and answer its <code>makeArray</code> when that answers 1, as their rules say, so for an
+array, an instance of a subclass included, the answer is a new <code>Array</code>;
+<code>intersection</code> answers the collection that <code>new</code> of the receiver's class made,
+an instance of that class, and sends it neither message. <code>appendAll</code> answers
+the receiver.</p>
+<pre><code class="language-rexx">a = .many~of(1, 2, 2)
+b = .array~of(2, 3)
+say a~union(b)~class~id a~union(b)~makeString('L', ',')
+say a~difference(b)~class~id a~difference(b)~makeString('L', ',')
+say a~intersection(b)~class~id a~intersection(b)~makeString('L', ',')
+say a~xor(b)~class~id a~xor(b)~makeString('L', ',')
+say a~subset(b) a~disjoint(b) a~equivalent(b) a~equivalent(.list~of(2, 1, 2))
+say (a~appendAll(b) == a) a~makeString('L', ',')
+say .array~of(1)~union(.list~of(2))~makeString('L', ',')
+::class many subclass array
+</code></pre>
+<pre><code class="language-output">Array 1,2,2,2,3
+Array 1,2
+MANY 2
+Array 1,2,3
+0 0 0 1
+1 1,2,2,2,3
+1,2
+</code></pre>
+<h2 id="messages-the-methods-send"><a class="header" href="#messages-the-methods-send">Messages the methods send</a></h2>
+<div class="rule" id="r-class.array.sends"><a href="#r-class.array.sends">[class.array.sends]</a></div>
+<p>No method that <code>Array</code> declares sends a message to its receiver: an override
+of <code>at</code>, <code>put</code>, <code>append</code> or any other of the methods is never asked by another
+method, and <code>[]</code> and <code>[]=</code> do not use <code>at</code> and <code>put</code>. The messages the methods
+do send are to other objects, and each has a rule of its own: <code>new</code> and <code>init</code>
+to the class and the new array by <code>new</code>, <code>of</code> and <code>section</code> (<a href="#r-class.array.new.sends">the new
+rule</a>, <a href="#r-class.array.section.sends">the section
+rule</a>); <code>==</code> to the argument by <code>removeItem</code>,
+<code>hasItem</code> and <code>index</code> (<a href="#r-class.array.removeitem.sends">the search rule</a>);
+<code>objectName</code> to the items by <code>makeString</code> and <code>toString</code> (<a href="#r-class.array.makestring.sends">the text
+rule</a>); and <code>compareTo</code> to the items and
+<code>compare</code> to the comparator by the sorts (<a href="#r-class.array.sort">the sort
+rule</a>). No argument is asked <code>isA</code>; a string value is read
+as <a href="../conventions.html#r-conv.string.object">the conversion rule</a> says. The methods <code>string</code> and
+<code>copy</code> of an instance and the set operations send what the pages that own them
+say. In the example a subclass has every method of <code>Array</code> overridden to
+record its name, and each call records only its own.</p>
+<pre><code class="language-rexx">own = '[] []= allIndexes allItems append at delete dimension dimensions',
+  'empty fill first firstItem hasIndex hasItem index insert isEmpty items',
+  'last lastItem makeArray makeString next previous put remove removeItem',
+  'section',
+  'size sort sortWith stableSort stableSortWith supplier toString copy'
+.local~log = .array~new
+do m over own~makeArray(' ')
+  src = "if .local~on then .local~log~append('"m"'); forward class (super)"
+  .spy~define(m, src)
+end
+a = .spy~of('c', 'b', 'a')
+calls = 'x = a[1]|a[1] = "x"|a~allIndexes|a~allItems|a~append("d")|a~at(1)',
+  '|a~sort|a~sortWith(.cmp~new)|a~stableSort|a~stableSortWith(.cmp~new)',
+  '|a~delete(1)|a~dimension|a~dimensions|a~fill("q")|a~first|a~firstItem',
+  '|a~hasIndex(1)|a~hasItem("q")|a~index("q")|a~insert("e", 1)|a~isEmpty',
+  '|a~items|a~last|a~lastItem|a~makeArray|a~makeString|a~next(1)',
+  '|a~previous(2)|a~put("y", 1)|a~remove(1)|a~removeItem("q")|a~section(1)',
+  '|a~size|a~supplier|a~toString|a~copy|a~empty'
+n = 0
+extra = 0
+do c over calls~makeArray('|')
+  .local~log~empty
+  .local~on = 1
+  interpret c
+  .local~on = 0
+  n += 1
+  if .local~log~items &lt;&gt; 1 then do
+    extra += 1
+    say c '=&gt;' .local~log~makeString('L', ' ')
+  end
+end
+say n 'calls,' extra 'sent more than one message to the receiver'
+::class spy subclass array
+::class cmp
+::method compare
+  return 0
+</code></pre>
+<pre><code class="language-output">37 calls, 0 sent more than one message to the receiver
+</code></pre>
+<h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
+<div class="rule" id="r-class.array.deviation.78"><a href="#r-class.array.deviation.78">[class.array.deviation.78]</a></div>
+<p>A search for an item with the very object that is stored, by <code>hasItem</code>,
+<code>index</code> or <code>removeItem</code>, sends that object's <code>==</code> as for any other item, so
+an object whose <code>==</code> answers false is not found even at its own entry.
+ooRexx finds the very object without sending it <code>==</code>, and sends <code>==</code> only
+for the items before it. See <a href="../deviations.html">Deviation 78</a>.</p>
+<pre><code class="language-rexx">.local~n = 0
+x = .liar~new
+c = .array~new
+c~append('a')
+c~append(x)
+c~append('b')
+say c~hasItem(x) .n
+.local~n = 0
+say (c~index(x) == .nil) .n
+.local~n = 0
+say (.nil == c~removeItem(x)) c~items .n
+::class liar
+::method '=='
+  .local~n += 1
+  return 0
+</code></pre>
+<pre><code class="language-output">0 3
+1 3
+1 3 3
+</code></pre>
+<div class="rule" id="r-class.array.deviation.107"><a href="#r-class.array.deviation.107">[class.array.deviation.107]</a></div>
+<p>An item whose <code>objectName</code> answers a string that names a number is written
+by <code>makeString</code> and <code>toString</code> as the characters of that string, however the
+number was written or computed, as <a href="object.html#r-class.object.deviation.107">the Object
+rule</a> says of every string. ooRexx writes bytes
+of its stored form instead when the answer is a whole-number literal or the
+result of arithmetic (<a href="../deviations.html">Deviation 107</a>).</p>
+<pre><code class="language-rexx">say .array~of(.n3~new, 'x')~makeString('L', '-')
+say .array~of(.n3~new)~toString~c2x
+::class n3
+::method objectName
+  return 3
+</code></pre>
+<pre><code class="language-output">3-x
+33
+</code></pre>
+<div class="rule" id="r-class.array.deviation.109"><a href="#r-class.array.deviation.109">[class.array.deviation.109]</a></div>
+<p>An index, a size, a count, the <code>n</code> of <code>dimension</code>, a mode or a separator that
+is an instance of a subclass of <code>String</code> is read by its own characters, and
+<code>REQUEST</code> and <code>MAKESTRING</code> are not sent to it
+(<a href="string.html#r-class.string.deviation.109">Deviation 109</a>). ooRexx sends such an instance
+<code>request</code> with <code>STRING</code> or <code>MAKESTRING</code>, so an override of either can change
+what is read. In the example <code>MAKESTRING</code> answers another number,
+separator and mode.</p>
+<pre><code class="language-rexx">a = .array~of('first', 'second')
+say a~at(.num~new('2'))
+say a~makeString('L', .sep~new('-'))
+say a~makeString(.mode~new('C'))
+::class num subclass string
+::method makestring
+  return '1'
+::class sep subclass string
+::method makestring
+  return '+'
+::class mode subclass string
+::method makestring
+  return 'L'
+</code></pre>
+<pre><code class="language-output defect=#140">second
+first-second
+firstsecond
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../classes/setcollection.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../classes/list.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../classes/setcollection.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../classes/list.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../assets/version-picker.js"></script>
+
+
+    </div>
+    </body>
+</html>

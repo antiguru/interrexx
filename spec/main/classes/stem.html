@@ -1,0 +1,1163 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Stem - The interrexx Language Specification</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../conventions.html"><strong aria-hidden="true">2.</strong> Conventions</a></li><li class="chapter-item expanded "><a href="../lexical/index.html"><strong aria-hidden="true">3.</strong> Lexical structure</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../lexical/characters.html"><strong aria-hidden="true">3.1.</strong> Characters</a></li><li class="chapter-item expanded "><a href="../lexical/comments.html"><strong aria-hidden="true">3.2.</strong> Comments</a></li><li class="chapter-item expanded "><a href="../lexical/literals.html"><strong aria-hidden="true">3.3.</strong> Literals</a></li><li class="chapter-item expanded "><a href="../lexical/symbols.html"><strong aria-hidden="true">3.4.</strong> Symbols</a></li><li class="chapter-item expanded "><a href="../lexical/operators.html"><strong aria-hidden="true">3.5.</strong> Operators and special characters</a></li><li class="chapter-item expanded "><a href="../lexical/clauses.html"><strong aria-hidden="true">3.6.</strong> Clauses</a></li></ol></li><li class="chapter-item expanded "><a href="../numbers/index.html"><strong aria-hidden="true">4.</strong> Numbers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../numbers/formats.html"><strong aria-hidden="true">4.1.</strong> Formats</a></li><li class="chapter-item expanded "><a href="../numbers/limits.html"><strong aria-hidden="true">4.2.</strong> Limits</a></li><li class="chapter-item expanded "><a href="../numbers/arithmetic.html"><strong aria-hidden="true">4.3.</strong> Arithmetic</a></li><li class="chapter-item expanded "><a href="../numbers/settings.html"><strong aria-hidden="true">4.4.</strong> Settings</a></li><li class="chapter-item expanded "><a href="../numbers/comparison.html"><strong aria-hidden="true">4.5.</strong> Comparison</a></li></ol></li><li class="chapter-item expanded "><a href="../expressions/index.html"><strong aria-hidden="true">5.</strong> Expressions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../expressions/terms.html"><strong aria-hidden="true">5.1.</strong> Terms</a></li><li class="chapter-item expanded "><a href="../expressions/variables.html"><strong aria-hidden="true">5.2.</strong> Variables</a></li><li class="chapter-item expanded "><a href="../expressions/concatenation.html"><strong aria-hidden="true">5.3.</strong> Concatenation</a></li><li class="chapter-item expanded "><a href="../expressions/arithmetic.html"><strong aria-hidden="true">5.4.</strong> Arithmetic operators</a></li><li class="chapter-item expanded "><a href="../expressions/comparison.html"><strong aria-hidden="true">5.5.</strong> Comparison operators</a></li><li class="chapter-item expanded "><a href="../expressions/logical.html"><strong aria-hidden="true">5.6.</strong> Logical operators</a></li><li class="chapter-item expanded "><a href="../expressions/messages.html"><strong aria-hidden="true">5.7.</strong> Message operators</a></li></ol></li><li class="chapter-item expanded "><a href="../instructions/index.html"><strong aria-hidden="true">6.</strong> Instructions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../instructions/address.html"><strong aria-hidden="true">6.1.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../instructions/arg.html"><strong aria-hidden="true">6.2.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../instructions/assignment.html"><strong aria-hidden="true">6.3.</strong> Assignments</a></li><li class="chapter-item expanded "><a href="../instructions/call.html"><strong aria-hidden="true">6.4.</strong> CALL</a></li><li class="chapter-item expanded "><a href="../instructions/command.html"><strong aria-hidden="true">6.5.</strong> Commands</a></li><li class="chapter-item expanded "><a href="../instructions/do.html"><strong aria-hidden="true">6.6.</strong> DO</a></li><li class="chapter-item expanded "><a href="../instructions/drop.html"><strong aria-hidden="true">6.7.</strong> DROP</a></li><li class="chapter-item expanded "><a href="../instructions/exit.html"><strong aria-hidden="true">6.8.</strong> EXIT</a></li><li class="chapter-item expanded "><a href="../instructions/expose.html"><strong aria-hidden="true">6.9.</strong> EXPOSE</a></li><li class="chapter-item expanded "><a href="../instructions/forward.html"><strong aria-hidden="true">6.10.</strong> FORWARD</a></li><li class="chapter-item expanded "><a href="../instructions/guard.html"><strong aria-hidden="true">6.11.</strong> GUARD</a></li><li class="chapter-item expanded "><a href="../instructions/if.html"><strong aria-hidden="true">6.12.</strong> IF</a></li><li class="chapter-item expanded "><a href="../instructions/interpret.html"><strong aria-hidden="true">6.13.</strong> INTERPRET</a></li><li class="chapter-item expanded "><a href="../instructions/iterate.html"><strong aria-hidden="true">6.14.</strong> ITERATE</a></li><li class="chapter-item expanded "><a href="../instructions/leave.html"><strong aria-hidden="true">6.15.</strong> LEAVE</a></li><li class="chapter-item expanded "><a href="../instructions/loop.html"><strong aria-hidden="true">6.16.</strong> LOOP</a></li><li class="chapter-item expanded "><a href="../instructions/message.html"><strong aria-hidden="true">6.17.</strong> Message instructions</a></li><li class="chapter-item expanded "><a href="../instructions/nop.html"><strong aria-hidden="true">6.18.</strong> NOP</a></li><li class="chapter-item expanded "><a href="../instructions/numeric.html"><strong aria-hidden="true">6.19.</strong> NUMERIC</a></li><li class="chapter-item expanded "><a href="../instructions/options.html"><strong aria-hidden="true">6.20.</strong> OPTIONS</a></li><li class="chapter-item expanded "><a href="../instructions/parse.html"><strong aria-hidden="true">6.21.</strong> PARSE</a></li><li class="chapter-item expanded "><a href="../instructions/procedure.html"><strong aria-hidden="true">6.22.</strong> PROCEDURE</a></li><li class="chapter-item expanded "><a href="../instructions/pull.html"><strong aria-hidden="true">6.23.</strong> PULL</a></li><li class="chapter-item expanded "><a href="../instructions/push.html"><strong aria-hidden="true">6.24.</strong> PUSH</a></li><li class="chapter-item expanded "><a href="../instructions/queue.html"><strong aria-hidden="true">6.25.</strong> QUEUE</a></li><li class="chapter-item expanded "><a href="../instructions/raise.html"><strong aria-hidden="true">6.26.</strong> RAISE</a></li><li class="chapter-item expanded "><a href="../instructions/reply.html"><strong aria-hidden="true">6.27.</strong> REPLY</a></li><li class="chapter-item expanded "><a href="../instructions/return.html"><strong aria-hidden="true">6.28.</strong> RETURN</a></li><li class="chapter-item expanded "><a href="../instructions/say.html"><strong aria-hidden="true">6.29.</strong> SAY</a></li><li class="chapter-item expanded "><a href="../instructions/select.html"><strong aria-hidden="true">6.30.</strong> SELECT</a></li><li class="chapter-item expanded "><a href="../instructions/signal.html"><strong aria-hidden="true">6.31.</strong> SIGNAL</a></li><li class="chapter-item expanded "><a href="../instructions/trace.html"><strong aria-hidden="true">6.32.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../instructions/use.html"><strong aria-hidden="true">6.33.</strong> USE</a></li></ol></li><li class="chapter-item expanded "><a href="../parsing/index.html"><strong aria-hidden="true">7.</strong> Parsing</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../parsing/templates.html"><strong aria-hidden="true">7.1.</strong> Templates</a></li><li class="chapter-item expanded "><a href="../parsing/patterns.html"><strong aria-hidden="true">7.2.</strong> Patterns</a></li><li class="chapter-item expanded "><a href="../parsing/multiple.html"><strong aria-hidden="true">7.3.</strong> Several strings and case</a></li></ol></li><li class="chapter-item expanded "><a href="../directives/index.html"><strong aria-hidden="true">8.</strong> Directives</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../directives/class.html"><strong aria-hidden="true">8.1.</strong> ::CLASS</a></li><li class="chapter-item expanded "><a href="../directives/method.html"><strong aria-hidden="true">8.2.</strong> ::METHOD</a></li><li class="chapter-item expanded "><a href="../directives/attribute.html"><strong aria-hidden="true">8.3.</strong> ::ATTRIBUTE</a></li><li class="chapter-item expanded "><a href="../directives/constant.html"><strong aria-hidden="true">8.4.</strong> ::CONSTANT</a></li><li class="chapter-item expanded "><a href="../directives/routine.html"><strong aria-hidden="true">8.5.</strong> ::ROUTINE</a></li><li class="chapter-item expanded "><a href="../directives/requires.html"><strong aria-hidden="true">8.6.</strong> ::REQUIRES</a></li><li class="chapter-item expanded "><a href="../directives/options.html"><strong aria-hidden="true">8.7.</strong> ::OPTIONS</a></li><li class="chapter-item expanded "><a href="../directives/resource.html"><strong aria-hidden="true">8.8.</strong> ::RESOURCE</a></li><li class="chapter-item expanded "><a href="../directives/annotate.html"><strong aria-hidden="true">8.9.</strong> ::ANNOTATE</a></li></ol></li><li class="chapter-item expanded "><a href="../conditions/index.html"><strong aria-hidden="true">9.</strong> Conditions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../conditions/traps.html"><strong aria-hidden="true">9.1.</strong> Condition traps</a></li><li class="chapter-item expanded "><a href="../conditions/information.html"><strong aria-hidden="true">9.2.</strong> Condition information</a></li><li class="chapter-item expanded "><a href="../conditions/syntax.html"><strong aria-hidden="true">9.3.</strong> SYNTAX</a></li><li class="chapter-item expanded "><a href="../conditions/error.html"><strong aria-hidden="true">9.4.</strong> ERROR and FAILURE</a></li><li class="chapter-item expanded "><a href="../conditions/halt.html"><strong aria-hidden="true">9.5.</strong> HALT</a></li><li class="chapter-item expanded "><a href="../conditions/novalue.html"><strong aria-hidden="true">9.6.</strong> NOVALUE</a></li><li class="chapter-item expanded "><a href="../conditions/nostring.html"><strong aria-hidden="true">9.7.</strong> NOSTRING</a></li><li class="chapter-item expanded "><a href="../conditions/nomethod.html"><strong aria-hidden="true">9.8.</strong> NOMETHOD</a></li><li class="chapter-item expanded "><a href="../conditions/notready.html"><strong aria-hidden="true">9.9.</strong> NOTREADY</a></li><li class="chapter-item expanded "><a href="../conditions/lostdigits.html"><strong aria-hidden="true">9.10.</strong> LOSTDIGITS</a></li><li class="chapter-item expanded "><a href="../conditions/user.html"><strong aria-hidden="true">9.11.</strong> USER conditions</a></li><li class="chapter-item expanded "><a href="../conditions/errors.html"><strong aria-hidden="true">9.12.</strong> Error numbers</a></li></ol></li><li class="chapter-item expanded "><a href="../classes/index.html"><strong aria-hidden="true">10.</strong> Classes</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../classes/methods.html"><strong aria-hidden="true">10.1.</strong> Method search</a></li><li class="chapter-item expanded "><a href="../classes/object.html"><strong aria-hidden="true">10.2.</strong> Object</a></li><li class="chapter-item expanded "><a href="../classes/class.html"><strong aria-hidden="true">10.3.</strong> Class</a></li><li class="chapter-item expanded "><a href="../classes/string.html"><strong aria-hidden="true">10.4.</strong> String</a></li><li class="chapter-item expanded "><a href="../classes/method.html"><strong aria-hidden="true">10.5.</strong> Method</a></li><li class="chapter-item expanded "><a href="../classes/routine.html"><strong aria-hidden="true">10.6.</strong> Routine</a></li><li class="chapter-item expanded "><a href="../classes/package.html"><strong aria-hidden="true">10.7.</strong> Package</a></li><li class="chapter-item expanded "><a href="../classes/message.html"><strong aria-hidden="true">10.8.</strong> Message</a></li><li class="chapter-item expanded "><a href="../classes/messagenotification.html"><strong aria-hidden="true">10.9.</strong> MessageNotification</a></li><li class="chapter-item expanded "><a href="../classes/alarmnotification.html"><strong aria-hidden="true">10.10.</strong> AlarmNotification</a></li><li class="chapter-item expanded "><a href="../classes/collection.html"><strong aria-hidden="true">10.11.</strong> Collection</a></li><li class="chapter-item expanded "><a href="../classes/mapcollection.html"><strong aria-hidden="true">10.12.</strong> MapCollection</a></li><li class="chapter-item expanded "><a href="../classes/orderedcollection.html"><strong aria-hidden="true">10.13.</strong> OrderedCollection</a></li><li class="chapter-item expanded "><a href="../classes/setcollection.html"><strong aria-hidden="true">10.14.</strong> SetCollection</a></li><li class="chapter-item expanded "><a href="../classes/array.html"><strong aria-hidden="true">10.15.</strong> Array</a></li><li class="chapter-item expanded "><a href="../classes/list.html"><strong aria-hidden="true">10.16.</strong> List</a></li><li class="chapter-item expanded "><a href="../classes/queue.html"><strong aria-hidden="true">10.17.</strong> Queue</a></li><li class="chapter-item expanded "><a href="../classes/circularqueue.html"><strong aria-hidden="true">10.18.</strong> CircularQueue</a></li><li class="chapter-item expanded "><a href="../classes/directory.html"><strong aria-hidden="true">10.19.</strong> Directory</a></li><li class="chapter-item expanded "><a href="../classes/stringtable.html"><strong aria-hidden="true">10.20.</strong> StringTable</a></li><li class="chapter-item expanded "><a href="../classes/properties.html"><strong aria-hidden="true">10.21.</strong> Properties</a></li><li class="chapter-item expanded "><a href="../classes/table.html"><strong aria-hidden="true">10.22.</strong> Table</a></li><li class="chapter-item expanded "><a href="../classes/identitytable.html"><strong aria-hidden="true">10.23.</strong> IdentityTable</a></li><li class="chapter-item expanded "><a href="../classes/relation.html"><strong aria-hidden="true">10.24.</strong> Relation</a></li><li class="chapter-item expanded "><a href="../classes/bag.html"><strong aria-hidden="true">10.25.</strong> Bag</a></li><li class="chapter-item expanded "><a href="../classes/set.html"><strong aria-hidden="true">10.26.</strong> Set</a></li><li class="chapter-item expanded "><a href="../classes/stem.html" class="active"><strong aria-hidden="true">10.27.</strong> Stem</a></li></ol></li><li class="chapter-item expanded "><a href="../builtins/index.html"><strong aria-hidden="true">11.</strong> Built-in functions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../builtins/abbrev.html"><strong aria-hidden="true">11.1.</strong> ABBREV</a></li><li class="chapter-item expanded "><a href="../builtins/abs.html"><strong aria-hidden="true">11.2.</strong> ABS</a></li><li class="chapter-item expanded "><a href="../builtins/address.html"><strong aria-hidden="true">11.3.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../builtins/arg.html"><strong aria-hidden="true">11.4.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../builtins/b2x.html"><strong aria-hidden="true">11.5.</strong> B2X</a></li><li class="chapter-item expanded "><a href="../builtins/beep.html"><strong aria-hidden="true">11.6.</strong> BEEP</a></li><li class="chapter-item expanded "><a href="../builtins/bitand.html"><strong aria-hidden="true">11.7.</strong> BITAND</a></li><li class="chapter-item expanded "><a href="../builtins/bitor.html"><strong aria-hidden="true">11.8.</strong> BITOR</a></li><li class="chapter-item expanded "><a href="../builtins/bitxor.html"><strong aria-hidden="true">11.9.</strong> BITXOR</a></li><li class="chapter-item expanded "><a href="../builtins/c2d.html"><strong aria-hidden="true">11.10.</strong> C2D</a></li><li class="chapter-item expanded "><a href="../builtins/c2x.html"><strong aria-hidden="true">11.11.</strong> C2X</a></li><li class="chapter-item expanded "><a href="../builtins/center.html"><strong aria-hidden="true">11.12.</strong> CENTER</a></li><li class="chapter-item expanded "><a href="../builtins/changestr.html"><strong aria-hidden="true">11.13.</strong> CHANGESTR</a></li><li class="chapter-item expanded "><a href="../builtins/charin.html"><strong aria-hidden="true">11.14.</strong> CHARIN</a></li><li class="chapter-item expanded "><a href="../builtins/charout.html"><strong aria-hidden="true">11.15.</strong> CHAROUT</a></li><li class="chapter-item expanded "><a href="../builtins/chars.html"><strong aria-hidden="true">11.16.</strong> CHARS</a></li><li class="chapter-item expanded "><a href="../builtins/compare.html"><strong aria-hidden="true">11.17.</strong> COMPARE</a></li><li class="chapter-item expanded "><a href="../builtins/condition.html"><strong aria-hidden="true">11.18.</strong> CONDITION</a></li><li class="chapter-item expanded "><a href="../builtins/copies.html"><strong aria-hidden="true">11.19.</strong> COPIES</a></li><li class="chapter-item expanded "><a href="../builtins/countstr.html"><strong aria-hidden="true">11.20.</strong> COUNTSTR</a></li><li class="chapter-item expanded "><a href="../builtins/d2c.html"><strong aria-hidden="true">11.21.</strong> D2C</a></li><li class="chapter-item expanded "><a href="../builtins/d2x.html"><strong aria-hidden="true">11.22.</strong> D2X</a></li><li class="chapter-item expanded "><a href="../builtins/datatype.html"><strong aria-hidden="true">11.23.</strong> DATATYPE</a></li><li class="chapter-item expanded "><a href="../builtins/date.html"><strong aria-hidden="true">11.24.</strong> DATE</a></li><li class="chapter-item expanded "><a href="../builtins/delstr.html"><strong aria-hidden="true">11.25.</strong> DELSTR</a></li><li class="chapter-item expanded "><a href="../builtins/delword.html"><strong aria-hidden="true">11.26.</strong> DELWORD</a></li><li class="chapter-item expanded "><a href="../builtins/digits.html"><strong aria-hidden="true">11.27.</strong> DIGITS</a></li><li class="chapter-item expanded "><a href="../builtins/directory.html"><strong aria-hidden="true">11.28.</strong> DIRECTORY</a></li><li class="chapter-item expanded "><a href="../builtins/endlocal.html"><strong aria-hidden="true">11.29.</strong> ENDLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/errortext.html"><strong aria-hidden="true">11.30.</strong> ERRORTEXT</a></li><li class="chapter-item expanded "><a href="../builtins/filespec.html"><strong aria-hidden="true">11.31.</strong> FILESPEC</a></li><li class="chapter-item expanded "><a href="../builtins/form.html"><strong aria-hidden="true">11.32.</strong> FORM</a></li><li class="chapter-item expanded "><a href="../builtins/format.html"><strong aria-hidden="true">11.33.</strong> FORMAT</a></li><li class="chapter-item expanded "><a href="../builtins/fuzz.html"><strong aria-hidden="true">11.34.</strong> FUZZ</a></li><li class="chapter-item expanded "><a href="../builtins/gc.html"><strong aria-hidden="true">11.35.</strong> GC</a></li><li class="chapter-item expanded "><a href="../builtins/insert.html"><strong aria-hidden="true">11.36.</strong> INSERT</a></li><li class="chapter-item expanded "><a href="../builtins/lastpos.html"><strong aria-hidden="true">11.37.</strong> LASTPOS</a></li><li class="chapter-item expanded "><a href="../builtins/left.html"><strong aria-hidden="true">11.38.</strong> LEFT</a></li><li class="chapter-item expanded "><a href="../builtins/length.html"><strong aria-hidden="true">11.39.</strong> LENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/linein.html"><strong aria-hidden="true">11.40.</strong> LINEIN</a></li><li class="chapter-item expanded "><a href="../builtins/lineout.html"><strong aria-hidden="true">11.41.</strong> LINEOUT</a></li><li class="chapter-item expanded "><a href="../builtins/lines.html"><strong aria-hidden="true">11.42.</strong> LINES</a></li><li class="chapter-item expanded "><a href="../builtins/lower.html"><strong aria-hidden="true">11.43.</strong> LOWER</a></li><li class="chapter-item expanded "><a href="../builtins/max.html"><strong aria-hidden="true">11.44.</strong> MAX</a></li><li class="chapter-item expanded "><a href="../builtins/min.html"><strong aria-hidden="true">11.45.</strong> MIN</a></li><li class="chapter-item expanded "><a href="../builtins/overlay.html"><strong aria-hidden="true">11.46.</strong> OVERLAY</a></li><li class="chapter-item expanded "><a href="../builtins/pos.html"><strong aria-hidden="true">11.47.</strong> POS</a></li><li class="chapter-item expanded "><a href="../builtins/qualify.html"><strong aria-hidden="true">11.48.</strong> QUALIFY</a></li><li class="chapter-item expanded "><a href="../builtins/queued.html"><strong aria-hidden="true">11.49.</strong> QUEUED</a></li><li class="chapter-item expanded "><a href="../builtins/random.html"><strong aria-hidden="true">11.50.</strong> RANDOM</a></li><li class="chapter-item expanded "><a href="../builtins/reverse.html"><strong aria-hidden="true">11.51.</strong> REVERSE</a></li><li class="chapter-item expanded "><a href="../builtins/right.html"><strong aria-hidden="true">11.52.</strong> RIGHT</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncadd.html"><strong aria-hidden="true">11.53.</strong> RXFUNCADD</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncdrop.html"><strong aria-hidden="true">11.54.</strong> RXFUNCDROP</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncquery.html"><strong aria-hidden="true">11.55.</strong> RXFUNCQUERY</a></li><li class="chapter-item expanded "><a href="../builtins/rxqueue.html"><strong aria-hidden="true">11.56.</strong> RXQUEUE</a></li><li class="chapter-item expanded "><a href="../builtins/setlocal.html"><strong aria-hidden="true">11.57.</strong> SETLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/sign.html"><strong aria-hidden="true">11.58.</strong> SIGN</a></li><li class="chapter-item expanded "><a href="../builtins/sourceline.html"><strong aria-hidden="true">11.59.</strong> SOURCELINE</a></li><li class="chapter-item expanded "><a href="../builtins/space.html"><strong aria-hidden="true">11.60.</strong> SPACE</a></li><li class="chapter-item expanded "><a href="../builtins/stream.html"><strong aria-hidden="true">11.61.</strong> STREAM</a></li><li class="chapter-item expanded "><a href="../builtins/strip.html"><strong aria-hidden="true">11.62.</strong> STRIP</a></li><li class="chapter-item expanded "><a href="../builtins/substr.html"><strong aria-hidden="true">11.63.</strong> SUBSTR</a></li><li class="chapter-item expanded "><a href="../builtins/subword.html"><strong aria-hidden="true">11.64.</strong> SUBWORD</a></li><li class="chapter-item expanded "><a href="../builtins/symbol.html"><strong aria-hidden="true">11.65.</strong> SYMBOL</a></li><li class="chapter-item expanded "><a href="../builtins/time.html"><strong aria-hidden="true">11.66.</strong> TIME</a></li><li class="chapter-item expanded "><a href="../builtins/trace.html"><strong aria-hidden="true">11.67.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../builtins/translate.html"><strong aria-hidden="true">11.68.</strong> TRANSLATE</a></li><li class="chapter-item expanded "><a href="../builtins/trunc.html"><strong aria-hidden="true">11.69.</strong> TRUNC</a></li><li class="chapter-item expanded "><a href="../builtins/upper.html"><strong aria-hidden="true">11.70.</strong> UPPER</a></li><li class="chapter-item expanded "><a href="../builtins/userid.html"><strong aria-hidden="true">11.71.</strong> USERID</a></li><li class="chapter-item expanded "><a href="../builtins/value.html"><strong aria-hidden="true">11.72.</strong> VALUE</a></li><li class="chapter-item expanded "><a href="../builtins/var.html"><strong aria-hidden="true">11.73.</strong> VAR</a></li><li class="chapter-item expanded "><a href="../builtins/verify.html"><strong aria-hidden="true">11.74.</strong> VERIFY</a></li><li class="chapter-item expanded "><a href="../builtins/word.html"><strong aria-hidden="true">11.75.</strong> WORD</a></li><li class="chapter-item expanded "><a href="../builtins/wordindex.html"><strong aria-hidden="true">11.76.</strong> WORDINDEX</a></li><li class="chapter-item expanded "><a href="../builtins/wordlength.html"><strong aria-hidden="true">11.77.</strong> WORDLENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/wordpos.html"><strong aria-hidden="true">11.78.</strong> WORDPOS</a></li><li class="chapter-item expanded "><a href="../builtins/words.html"><strong aria-hidden="true">11.79.</strong> WORDS</a></li><li class="chapter-item expanded "><a href="../builtins/x2b.html"><strong aria-hidden="true">11.80.</strong> X2B</a></li><li class="chapter-item expanded "><a href="../builtins/x2c.html"><strong aria-hidden="true">11.81.</strong> X2C</a></li><li class="chapter-item expanded "><a href="../builtins/x2d.html"><strong aria-hidden="true">11.82.</strong> X2D</a></li><li class="chapter-item expanded "><a href="../builtins/xrange.html"><strong aria-hidden="true">11.83.</strong> XRANGE</a></li></ol></li><li class="chapter-item expanded "><a href="../deviations.html"><strong aria-hidden="true">12.</strong> Deviations</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The interrexx Language Specification</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="stem"><a class="header" href="#stem">Stem</a></h1>
+<p class="references">rexxref: Builtin Classes &gt; Collection Classes &gt; Stem Class; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; new (Class Method); Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; []; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; []=; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; allIndexes; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; allItems; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; at; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; empty; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; hasIndex; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; hasItem; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; index; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; isEmpty; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; items; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; makeArray; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; put; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; remove; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; removeItem; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; request; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; supplier; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; toDirectory; Builtin Classes &gt; Collection Classes &gt; Stem Class &gt; unknown</p>
+<p class="deviations">Deviations: D1, D68, D78, D109, D118</p>
+<p>A <code>Stem</code> is the collection that a stem symbol names: <a href="../expressions/variables.html#r-expr.variables.stem">the value of a stem
+symbol</a> is a <code>Stem</code> object, and the compound variables
+of the stem are its entries. An entry is a tail, a string, and the item stored
+at it; the stem also has a default, the value that every tail without an item
+has, and a name, which is the text that stands for the stem when it has no
+default. A <code>Stem</code> can be made without a variable, by <code>new</code>, and then behaves
+alike: the methods below read and write the same entries that <code>s.tail</code> reads
+and writes (<a href="../expressions/variables.html#r-expr.variables.compound">the compound rule</a>, <a href="../expressions/variables.html#r-expr.variables.default">the default
+rule</a>). The class inherits
+<a href="mapcollection.html"><code>MapCollection</code></a>, and through it
+<a href="collection.html"><code>Collection</code></a>; <a href="index.html#r-class.index.hierarchy">the hierarchy rule</a>
+lists what it inherits.</p>
+<p>A stem has an <code>unknown</code> method, and the page begins with what the other methods
+do; <a href="#r-class.stem.unknown">the unknown rule</a> says what <code>unknown</code> does with the
+messages that no method answers. Examples that show an error use a small routine
+<code>try</code>, as the builtin pages do. The order in which the tails are listed is not
+specified, as <a href="../instructions/do.html#r-instr.do.deviation.1">the DO OVER rule</a> says of a loop, and the
+examples then hold one tail or sort the answers (<a href="#r-class.stem.deviation.1">the order
+rule</a>).</p>
+<h2 id="the-class"><a class="header" href="#the-class">The class</a></h2>
+<div class="rule" id="r-class.stem.creation"><a href="#r-class.stem.creation">[class.stem.creation]</a></div>
+<p><code>Stem</code> declares the instance methods <code>[]</code>, <code>[]=</code>, <code>allIndexes</code>, <code>allItems</code>,
+<code>at</code>, <code>empty</code>, <code>hasIndex</code>, <code>hasItem</code>, <code>index</code>, <code>isEmpty</code>, <code>items</code>,
+<code>makeArray</code>, <code>put</code>, <code>remove</code>, <code>removeItem</code>, <code>request</code>, <code>supplier</code>,
+<code>toDirectory</code> and <code>unknown</code>, and the class method <code>new</code>; the <code>copy</code> of
+<code>Object</code> copies a stem as <a href="#r-class.stem.copy">the copy rule</a> says. It has no
+<code>init</code> of its own: <code>new</code> makes the stem as <a href="#r-class.stem.new">the new rule</a>
+says. The class method <code>of</code> and the instance methods <code>putAll</code>, <code>union</code>,
+<code>difference</code>, <code>intersection</code>, <code>xor</code>, <code>subset</code>, <code>disjoint</code> and <code>equivalent</code> are
+those of the mixins (<a href="#r-class.stem.inherited">one rule</a> lists them). A stem
+has no <code>makeString</code>, and none of the comparison methods <code>=</code>, <code>==</code>, <code>\=</code>,
+<code>\==</code>, <code>&lt;&gt;</code> and <code>&gt;&lt;</code>: a message with one of those names is passed on by <a href="#r-class.stem.unknown">the
+unknown rule</a>. Its superclasses are <code>Object</code> and
+<code>MapCollection</code>, in that order.</p>
+<pre><code class="language-rexx">s = .stem~new
+n = 0
+m = .stem~methods(.nil)
+do while m~available
+  n += 1
+  m~next
+end
+say s~class~id n 'own methods' .stem~hasMethod('OF') s~hasMethod('OF')
+do c over s~class~superclasses
+  say c~id
+end
+say s~hasMethod('UNION') s~hasMethod('PUTALL') s~hasMethod('DISJOINT')
+say s~hasMethod('MAKESTRING') s~hasMethod('UNKNOWN') s~hasMethod('INIT')
+say s~hasMethod('=') s~hasMethod('==') s~hasMethod('\=') s~hasMethod('\==')
+say s~hasMethod('&lt;&gt;') s~hasMethod('&gt;&lt;')
+</code></pre>
+<pre><code class="language-output">Stem 19 own methods 1 0
+Object
+MapCollection
+1 1 1
+0 1 1
+0 0 0 0
+0 0
+</code></pre>
+<h2 id="making-a-stem"><a class="header" href="#making-a-stem">Making a stem</a></h2>
+<div class="rule" id="r-class.stem.new"><a href="#r-class.stem.new">[class.stem.new]</a></div>
+<p><code>new</code> makes an empty stem, with no default. Its first argument is the name:
+the text that the stem has as its value while it has no default, and the
+start of every tail that is read from it with no item. The name is the null
+string when it is omitted, and is not changed to end with a period. It must
+have a string value, found as <a href="../conventions.html#r-conv.string.object">the conversion rule</a>
+says for a <code>request</code> that answers a string; an object whose <code>request</code> with
+<code>STRING</code> does not answer a string, <code>.nil</code> among them, raises <code>SYNTAX 88.909</code>
+before <code>init</code> is sent. <code>new</code> then sends <code>init</code> to the new stem with the
+arguments that follow the name (<a href="index.html#r-class.index.new">the new rule</a>). A stem
+has the <code>init</code> of <a href="object.html#r-class.object.init"><code>Object</code></a>, which takes no argument,
+so a second argument to <code>new</code> raises <code>SYNTAX 93.902</code> when that <code>init</code> runs:
+after the <code>init</code> of a subclass has run, and not at all when the <code>init</code> of a
+subclass does not pass its arguments on.</p>
+<pre><code class="language-rexx">s = .stem~new('abc.')
+say s~string s['x'] s~items
+say '['.stem~new~string']' '['.stem~new('')~string']' .stem~new(7)~string
+say .stem~new('N', )~string .stem~new(.array~new)~string'|'
+say .tracked~new('T.')~string
+call try '.stem~new(.nil)'
+call try '.stem~new(.object~new)'
+call try '.stem~new("a", "b")'
+call try '.tracked~new(.nil)'
+call try '.tracked~new("T.", "x")'
+say .quiet~new('Q.', 'x', 'y')~string .quiet~new(, 'x')~string'|'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class tracked subclass stem
+::method init
+  say 'init' arg()
+  forward class (super) continue
+::class quiet subclass stem
+::method init
+  return
+</code></pre>
+<pre><code class="language-output">abc. abc.x 0
+[] [] 7
+N |
+init 0
+T.
+.stem~new(.nil) =&gt; 88.909
+.stem~new(.object~new) =&gt; 88.909
+.stem~new("a", "b") =&gt; 93.902
+.tracked~new(.nil) =&gt; 88.909
+init 1
+.tracked~new("T.", "x") =&gt; 93.902
+Q. |
+</code></pre>
+<h2 id="tails"><a class="header" href="#tails">Tails</a></h2>
+<div class="rule" id="r-class.stem.tails"><a href="#r-class.stem.tails">[class.stem.tails]</a></div>
+<p>The methods that take indexes take any number of them, and make one tail of
+them: each index argument is replaced by its string value, an omitted argument
+by the null string, and the strings are joined with a period between them,
+trailing omitted arguments being dropped. So <code>s[1, 2]</code> and <code>s['1.2']</code> are the
+same tail, and <code>s[1, , 3]</code> is the tail <code>1..3</code>. The tail is used as written:
+case counts, <code>01</code> and <code>1</code> are two tails, and blanks stay (<a href="../expressions/variables.html#r-expr.variables.tail">the tail
+rule</a>). An index that is not a string is replaced as
+<a href="../conventions.html#r-conv.string.object">the conversion rule</a> says: the answer of its <code>request</code>
+with the argument <code>STRING</code>, and when that is not a string, of its <code>string</code>
+method; so <code>.nil</code> is the tail <code>The NIL object</code>. With no index at all the
+methods name the default of the stem and not a tail.</p>
+<pre><code class="language-rexx">s = .stem~new('N.')
+s['a'] = 1
+s['A'] = 2
+s['01'] = 3
+s[1] = 4
+s[1, 2] = 5
+s[1, , 3] = 6
+s['x.y'] = 7
+s[.mk~new] = 8
+s[.nil] = 9
+say s~items s['a'] s['A'] s['01'] s[1] s['1'] s['1.2'] s[1, 2],
+  s['1..3'] s['x', 'y']
+say s[.mk~new] s['MK'] s[.nil] s['The NIL object']
+say s~allIndexes~sort~makeString('L', ',')
+::class mk
+::method makestring
+  return 'MK'
+</code></pre>
+<pre><code class="language-output">9 1 2 3 4 4 5 5 6 7
+8 8 9 9
+01,1,1..3,1.2,A,MK,The NIL object,a,x.y
+</code></pre>
+<pre><code class="language-rexx">s = .stem~new('N.')
+s[.asker~new] = 'v'
+say s~allIndexes[1] s['REQ']
+::class asker
+::method request
+  return 'REQ'
+</code></pre>
+<pre><code class="language-output defect=#164">REQ v
+</code></pre>
+<pre><code class="language-rexx">s = .stem~new('N.')
+s[] = 'D'
+s[''] = 'null'
+say s[,] s~at(,)
+</code></pre>
+<pre><code class="language-output defect=#174">D D
+</code></pre>
+<h2 id="reading-and-writing-items"><a class="header" href="#reading-and-writing-items">Reading and writing items</a></h2>
+<div class="rule" id="r-class.stem.at"><a href="#r-class.stem.at">[class.stem.at]</a></div>
+<p><code>at(index, ...)</code> and <code>[index, ...]</code> answer the item stored at the tail that
+the indexes make (<a href="#r-class.stem.tails">the tails rule</a>); when no item is
+stored there, the default of the stem; and when the stem has no default, the
+name of the stem followed by the tail, which is what the compound symbol would
+have as its value. With no index they answer the default, or the name when
+there is none. Reading stores nothing.</p>
+<pre><code class="language-rexx">s = .stem~new('N.')
+say s~at s[] s~at(1) s[1, 2] s~items
+s['k'] = 'item'
+say s~at('k') s['k'] s['K']
+s[] = 'dflt'
+say s~at s['K'] s['k'] s[3, 4] s~items
+</code></pre>
+<pre><code class="language-output">N. N. N.1 N.1.2 0
+item item N.K
+dflt dflt dflt dflt 0
+</code></pre>
+<div class="rule" id="r-class.stem.put"><a href="#r-class.stem.put">[class.stem.put]</a></div>
+<p><code>put(item, index, ...)</code> and <code>[index, ...] = item</code> store the item at the tail
+that the indexes make (<a href="#r-class.stem.tails">the tails rule</a>), replacing the item
+that was there, and answer nothing. The item may be any object, <code>.nil</code> included.
+With no index they store the item as the new default of the stem and remove
+every item from that same object, so the variable and every other reference to
+the stem see no entries. The item is required: none, or an omitted one, raises
+<code>SYNTAX 93.903</code> for <code>put</code>.</p>
+<pre><code class="language-rexx">s = .stem~new('N.')
+s~put('one', 1)
+s['two', 2] = 'x'
+s[3] = .nil
+say s~items s[1] s['two.2'] (s[3] == .nil) s~hasIndex(3)
+s~put('d')
+say s~items s[1] s~string
+s[] = 'e'
+say s~string s['zz']
+call try 's~put'
+call try 's~put(, 1)'
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  say arg(1) '=&gt; ok'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">3 one x 1 1
+0 d d
+e e
+s~put =&gt; 93.903
+s~put(, 1) =&gt; 93.903
+</code></pre>
+<h2 id="questions-about-the-contents"><a class="header" href="#questions-about-the-contents">Questions about the contents</a></h2>
+<div class="rule" id="r-class.stem.hasindex"><a href="#r-class.stem.hasindex">[class.stem.hasindex]</a></div>
+<p><code>hasIndex(index, ...)</code> answers 1 when an item is stored at the tail that the
+indexes make (<a href="#r-class.stem.tails">the tails rule</a>) and 0 otherwise; a tail
+that has only the default, or that was dropped, has none. With no index it
+answers 1 whatever the stem holds.</p>
+<pre><code class="language-rexx">s = .stem~new('N.')
+s['a', 'b'] = 'x'
+say s~hasIndex('a.b') s~hasIndex('a', 'b') s~hasIndex('a'),
+  s~hasIndex('A', 'b')
+say s~hasIndex s~hasIndex() .stem~new~hasIndex
+s[] = 'dflt'
+say s~hasIndex('a', 'b') s~hasIndex(5) s~hasIndex
+</code></pre>
+<pre><code class="language-output">1 1 0 0
+1 1 1
+0 0 1
+</code></pre>
+<div class="rule" id="r-class.stem.hasitem"><a href="#r-class.stem.hasitem">[class.stem.hasitem]</a></div>
+<p><code>hasItem(item)</code> answers 1 when an item stored at some tail is equal to the
+argument, and <code>index(item)</code> answers the tail of such an item, as a string, and
+<code>.nil</code> when there is none. The default of the stem is not an item. Both take
+exactly one argument: a second raises <code>SYNTAX 93.902</code>. Which tail <code>index</code>
+answers when several items qualify is not specified (<a href="#r-class.stem.deviation.1">the order
+rule</a>).</p>
+<pre><code class="language-rexx">s = .stem~new('N.')
+s['k1'] = 'x'
+s['k2'] = 'y'
+say s~hasItem('x') s~hasItem('X') s~hasItem('zz') s~hasItem('N.')
+say s~index('x') s~index('y') (s~index('q') == .nil)
+s[] = 'dflt'
+say s~hasItem('dflt') s~hasItem('x')
+t = .stem~new
+t['p'] = 'v'
+say t~hasItem('v') t~index('v')
+call try 't~hasItem("a", "b")'
+call try 't~index(1, 2)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">1 0 0 0
+k1 k2 1
+0 0
+1 p
+t~hasItem("a", "b") =&gt; 93.902
+t~index(1, 2) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.stem.items"><a href="#r-class.stem.items">[class.stem.items]</a></div>
+<p><code>items</code> answers the number of tails that have an item, the default not
+counted, and <code>isEmpty</code> answers 1 when there is none and 0 otherwise. Neither
+takes an argument: one raises <code>SYNTAX 93.902</code>.</p>
+<pre><code class="language-rexx">s = .stem~new('N.')
+say s~items s~isEmpty
+s[1] = 'a'
+s[2] = .nil
+s[1] = 'b'
+say s~items s~isEmpty
+s[] = 'dflt'
+say s~items s~isEmpty
+call try 's~items(1)'
+call try 's~isEmpty(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">0 1
+2 0
+0 1
+s~items(1) =&gt; 93.902
+s~isEmpty(1) =&gt; 93.902
+</code></pre>
+<h2 id="removing-items"><a class="header" href="#removing-items">Removing items</a></h2>
+<div class="rule" id="r-class.stem.remove"><a href="#r-class.stem.remove">[class.stem.remove]</a></div>
+<p><code>remove(index, ...)</code> removes the item at the tail that the indexes make (<a href="#r-class.stem.tails">the
+tails rule</a>) and answers it, and answers <code>.nil</code> when no
+item is stored there; the tail then has the default again, or the derived
+name. With no index it removes the default and answers it, and answers the
+name of the stem when there is none, so that a second call answers the name.
+The other items stay.</p>
+<pre><code class="language-rexx">s = .stem~new('N.')
+s['a'] = 1
+s['b', 'c'] = 2
+say s~remove('a') (s~remove('a') == .nil) s~remove('b', 'c') s~items s['a']
+s[] = 'd'
+s['k'] = 'v'
+say (s~remove('zz') == .nil) s~items
+say s~remove s~remove s['k'] s~items
+</code></pre>
+<pre><code class="language-output">1 1 2 0 N.a
+1 1
+d N. v 1
+</code></pre>
+<div class="rule" id="r-class.stem.removeitem"><a href="#r-class.stem.removeitem">[class.stem.removeitem]</a></div>
+<p><code>removeItem(item)</code> removes one item that is equal to the argument and answers
+it, and answers <code>.nil</code> when there is none; when several tails hold an equal
+item, which one is removed is not specified (<a href="#r-class.stem.deviation.1">the order
+rule</a>). The default is not an item. It takes
+exactly one argument: none raises <code>SYNTAX 93.903</code>, and a second raises
+<code>SYNTAX 93.902</code>.</p>
+<pre><code class="language-rexx">s = .stem~new('N.')
+s['a'] = 'x'
+s['b'] = 'x'
+s['c'] = 'y'
+say s~removeItem('x') s~items s~removeItem('y') s~items
+say (s~removeItem('zz') == .nil) s~items
+call try 's~removeItem'
+call try 's~removeItem(1, 2)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">x 2 y 1
+1 1
+s~removeItem =&gt; 93.903
+s~removeItem(1, 2) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.stem.empty"><a href="#r-class.stem.empty">[class.stem.empty]</a></div>
+<p><code>empty</code> removes every item and answers the stem itself; the default and the
+name stay. It takes no argument: one raises <code>SYNTAX 93.902</code>.</p>
+<pre><code class="language-rexx">s = .stem~new('N.')
+s['a'] = 1
+s[] = 'd'
+s['a'] = 2
+e = s~empty
+say (e == s) s~items s~isEmpty s~string s['a']
+call try 's~empty(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  say arg(1) '=&gt; ok'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">1 0 1 d d
+s~empty(1) =&gt; 93.902
+</code></pre>
+<h2 id="lists-of-the-items"><a class="header" href="#lists-of-the-items">Lists of the items</a></h2>
+<div class="rule" id="r-class.stem.makearray"><a href="#r-class.stem.makearray">[class.stem.makearray]</a></div>
+<p><code>allIndexes</code> and <code>makeArray</code> answer a new <code>Array</code> of the tails that have an
+item, as strings, and <code>allItems</code> a new <code>Array</code> of the items. The default is in
+neither. They are instances of <code>Array</code> for a subclass receiver too, never the
+receiver, and do not follow later changes. They take no argument: one raises
+<code>SYNTAX 93.902</code>. The order is not specified (<a href="#r-class.stem.deviation.1">the order
+rule</a>), and is the same for the three answers and
+for the supplier of one unchanged stem, so the item at a position belongs to
+the tail at the same position. The methods send no message to the stem,
+<code>makeArray</code> excepted when it is asked through
+<a href="#r-class.stem.request"><code>request</code></a>, or to the items.</p>
+<pre><code class="language-rexx">t = .many~new('N.')
+do i = 1 to 40
+  t['item'i] = .array~of(i)
+end
+t[] = 'dflt'
+t['x', 'y'] = 'xy'
+ix = t~allIndexes
+it = t~allItems
+bad = 0
+do i = 1 to ix~items
+  if t~at(ix[i]) \== it[i] then bad += 1
+  if t~makeArray[i] \== ix[i] then bad += 1
+end
+say ix~class~id it~class~id t~makeArray~class~id ix~items it~items bad
+a = t~allItems
+t['extra'] = 'e'
+say a~items t~items (ix == t~allIndexes)
+call try 't~allIndexes(1)'
+call try 't~allItems(1)'
+call try 't~makeArray(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class many subclass stem
+</code></pre>
+<pre><code class="language-output">Array Array Array 1 1 0
+1 2 0
+t~allIndexes(1) =&gt; 93.902
+t~allItems(1) =&gt; 93.902
+t~makeArray(1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.stem.supplier"><a href="#r-class.stem.supplier">[class.stem.supplier]</a></div>
+<p><code>supplier</code> answers a <code>Supplier</code> over the tails that have an item, the tail as
+the index and the item as the item. It is a snapshot: later changes do not
+reach it. Its order is that of <code>allIndexes</code> (<a href="#r-class.stem.makearray">the order
+rule</a>). A stem with no item gives a supplier that is
+not available. It takes no argument: one raises <code>SYNTAX 93.902</code>.</p>
+<pre><code class="language-rexx">s = .stem~new('N.')
+s['a', 'b'] = 'ab'
+p = s~supplier
+s['c'] = 'x'
+s~remove('a', 'b')
+n = 0
+do while p~available
+  say p~index p~item
+  n += 1
+  p~next
+end
+say n .stem~new~supplier~available
+call try 's~supplier(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">a.b ab
+1 0
+s~supplier(1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.stem.todirectory"><a href="#r-class.stem.todirectory">[class.stem.todirectory]</a></div>
+<p><code>toDirectory</code> answers a new <code>Directory</code> with an entry for every tail that has
+an item, the tail as the index and the item as the item; the default is not in
+it. Later changes to either object do not reach the other. It takes no
+argument: one raises <code>SYNTAX 93.902</code>.</p>
+<pre><code class="language-rexx">s = .stem~new('N.')
+s['a'] = 1
+s['b', 'c'] = 2
+s[] = 'dflt'
+s['k'] = 'v'
+d = s~toDirectory
+say d~class~id d~items d['k'] (d['zz'] == .nil)
+s['m'] = 'later'
+d['n'] = 'other'
+say d~items s~items (d~at('m') == .nil) (s['n'])
+t = .stem~new('N.')
+t['a'] = 1
+t['b', 'c'] = 2
+say t~toDirectory~allIndexes~sort~makeString('L', ',') t~toDirectory['b.c']
+call try 't~toDirectory(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">Directory 1 v 1
+2 2 1 dflt
+a,b.c 2
+t~toDirectory(1) =&gt; 93.902
+</code></pre>
+<h2 id="conversions-and-unknown-messages"><a class="header" href="#conversions-and-unknown-messages">Conversions and unknown messages</a></h2>
+<div class="rule" id="r-class.stem.request"><a href="#r-class.stem.request">[class.stem.request]</a></div>
+<p><code>request(class)</code> with the argument <code>ARRAY</code>, in any case, answers what
+<code>makeArray</code> answers, after sending <code>makeArray</code> to the stem, so an override of
+<code>makeArray</code> in a subclass answers. Any other class name is passed on: <code>request</code>
+is sent to the default of the stem with the same argument, or to the name when
+there is no default, and its answer is the answer. It takes exactly one
+argument: none raises <code>SYNTAX 93.903</code> and a second raises <code>SYNTAX 93.902</code>. The
+argument must have a string value: <code>.nil</code> raises <code>SYNTAX 88.909</code>.</p>
+<pre><code class="language-rexx">s = .stem~new('N.')
+s['a'] = 'x'
+s[] = 'dflt'
+s['b'] = 'y'
+say s~request('ARRAY')~items s~request('array')~class~id s~request('Array')[1]
+say s~request('STRING') s~request('string')
+say (s~request('INTEGER') == .nil) (s~request('STEM') == .nil)
+say .stem~new('M.')~request('STRING')
+t = .stem~new
+t[] = .directory~new
+say t~request('DIRECTORY')~class~id
+call try 's~request'
+call try 's~request("a", "b")'
+call try 's~request(.nil)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">1 Array b
+dflt dflt
+1 1
+M.
+Directory
+s~request =&gt; 93.903
+s~request("a", "b") =&gt; 93.902
+s~request(.nil) =&gt; 88.909
+</code></pre>
+<div class="rule" id="r-class.stem.unknown"><a href="#r-class.stem.unknown">[class.stem.unknown]</a></div>
+<p>A message that the stem does not understand, <code>makeString</code> and the comparison
+methods among them, is sent to the default of the stem with the same arguments,
+or to the name of the stem when there is no default, and what that answers is
+the answer. So a stem stands for its default in an expression: <code>s~length</code>,
+<code>s + 1</code> and <code>s = 'abc'</code> are the messages <code>length</code>, <code>+</code> and <code>=</code> sent to the
+default (<a href="../instructions/assignment.html#r-instr.assignment.extended.stem">the extended assignment rule</a> shows
+the operators); a default that does not understand the message is sent
+<code>unknown</code> by <a href="methods.html#r-class.methods.unknown">the method search</a>, and one with no
+<code>unknown</code> method raises <code>SYNTAX 97.1</code>, as does <code>.nil</code>. The message
+<code>unknown(name, arguments)</code> does the same for the message <code>name</code> and the
+arguments that <code>arguments</code> holds: <code>arguments</code> is sent <code>request</code> with <code>ARRAY</code>,
+and an answer that is an instance of <code>Array</code>, or of a subclass of it, with one
+dimension is the array of arguments, while <code>.nil</code> and an object that is no
+collection raise <code>SYNTAX 98.913</code>; a position that holds nothing is an omitted
+argument. <code>name</code> must have a string value (<code>.nil</code> raises <code>SYNTAX 88.909</code>), and
+the message name is used as written: a name that is not in upper case names no
+method of the default, which handles it as a message it does not understand.
+An instance of a subclass of <code>List</code> given as <code>arguments</code> is sent <code>request</code> as
+any other object is (<a href="#r-class.stem.deviation.118">Deviation 118</a>).
+It takes exactly two arguments: fewer raises <code>SYNTAX 93.903</code> and more
+<code>SYNTAX 93.902</code>.</p>
+<pre><code class="language-rexx">s = .stem~new('N.')
+say s~length s~left(1) (s = 'N.') (s == 'N.') (s \= 'N.')
+s[] = 'abc'
+say s~length s~substr(2) s~makeString (s = 'abc') (s &lt;&gt; 'abc') s || 'x'
+t = .stem~new('M.')
+t[] = 'abc'
+say (s == t) (s = t) (s == s)
+n = .stem~new('N.')
+n[] = 5
+say n + 2 (n &gt; 4) n~unknown('+', .array~of(1)) n~unknown('ABS', .array~new)
+say s~unknown('SUBSTR', .array~of(2, 1)) s~unknown('LENGTH', .list~new)
+say s~unknown('SUBSTR', .ask~new) s~unknown('LENGTH', .array~new(3))
+call try 's~foo'
+call try 's~unknown'
+call try 's~unknown("LENGTH")'
+call try 's~unknown("LENGTH", .array~new, 1)'
+call try 's~unknown(.nil, .array~new)'
+call try 's~unknown("LENGTH", .nil)'
+call try 's~unknown("LENGTH", .array~new(2, 2))'
+u = .stem~new
+u[] = .nil
+call try 'u~length'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class ask
+::method request
+  say 'request' arg(1)
+  return .array~of(2, 1)
+</code></pre>
+<pre><code class="language-output">2 N 1 1 0
+3 bc abc 1 0 abcx
+1 1 1
+7 1 6 5
+b 3
+request ARRAY
+b 3
+s~foo =&gt; 97.1
+s~unknown =&gt; 93.903
+s~unknown("LENGTH") =&gt; 93.903
+s~unknown("LENGTH", .array~new, 1) =&gt; 93.902
+s~unknown(.nil, .array~new) =&gt; 88.909
+s~unknown("LENGTH", .nil) =&gt; 98.913
+s~unknown("LENGTH", .array~new(2, 2)) =&gt; 98.913
+u~length =&gt; 97.1
+</code></pre>
+<pre><code class="language-rexx">s = .stem~new('N.')
+s[] = 'abc'
+signal on syntax name bad
+say s~unknown('SUBSTR', .ans~new)
+say s~unknown('SUBSTR', .object~new)
+exit
+bad: say condition('o')~code
+::class mya subclass array
+::class ans
+::method request
+  return .mya~of(2, 1)
+</code></pre>
+<pre><code class="language-output defect=#173">b
+98.913
+</code></pre>
+<pre><code class="language-rexx">s = .stem~new('N.')
+s[] = 'abc'
+signal on syntax name bad
+say s~unknown('LENGTH', .array~new)
+say s~unknown('length', .array~new)
+exit
+bad: say condition('o')~code
+</code></pre>
+<pre><code class="language-output defect=#171">3
+97.1
+</code></pre>
+<h2 id="copies-and-the-string-value"><a class="header" href="#copies-and-the-string-value">Copies and the string value</a></h2>
+<div class="rule" id="r-class.stem.copy"><a href="#r-class.stem.copy">[class.stem.copy]</a></div>
+<p><code>copy</code> answers a new stem of the class of the receiver with the same name, the
+same default and the same items. The items are the same objects, and the two
+stems do not see each other's changes. As <a href="object.html#r-class.object.copy">the copy rule</a>
+says of every object, the variables of a subclass instance are copied as they
+are, and <code>init</code> is not sent. It takes no argument: one raises <code>SYNTAX 93.902</code>.</p>
+<pre><code class="language-rexx">t = .many~new('N.')
+t[] = 'dflt'
+t['k'] = 'v'
+t~tag = 'T'
+c = t~copy
+say c~class~id c~string c~items c~tag c['k'],
+  (c~identityHash == t~identityHash)
+c['j'] = 'w'
+c['k'] = 'z'
+c[] = 'other'
+say t~string t~items t['k'] t['j'] c~string c~items
+u = .stem~new('M.')
+say u~copy~string u~copy~items
+call try 't~copy(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class many subclass stem
+::attribute tag
+</code></pre>
+<pre><code class="language-output">MANY dflt 1 T v 0
+dflt 1 v dflt other 0
+M. 0
+t~copy(1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.stem.string"><a href="#r-class.stem.string">[class.stem.string]</a></div>
+<p>The string value of a stem is the string value of its default, and its name
+when it has no default (<a href="../expressions/variables.html#r-expr.variables.stem">the stem rule</a>); <code>string</code> and
+<code>say</code> use it, and a stem has no <code>makeString</code> of its own, so <code>makeString</code> is
+passed on by <a href="#r-class.stem.unknown">the unknown rule</a> with the same answer.
+<code>objectName</code> is that of <code>Object</code>, <code>a Stem</code>, and is not the string value.</p>
+<pre><code class="language-rexx">s = .stem~new('N.')
+say s '|' s~string '|' s~objectName
+s[] = 'abc'
+say s '|' s~string '|' s~makeString '|' s~objectName
+s[] = 12
+say s + 1 s~class~id s~hasMethod('MAKESTRING')
+</code></pre>
+<pre><code class="language-output">N. | N. | a Stem
+abc | abc | abc | a Stem
+13 Stem 0
+</code></pre>
+<h2 id="the-stem-variable-and-the-object"><a class="header" href="#the-stem-variable-and-the-object">The stem variable and the object</a></h2>
+<div class="rule" id="r-class.stem.variable"><a href="#r-class.stem.variable">[class.stem.variable]</a></div>
+<p>The value of a stem symbol is a <code>Stem</code> object, so <code>a.</code> answers the object and
+the methods of this page work on the compound variables of the stem: an item
+put with <code>put</code> is the value of the compound variable, a compound variable that
+is assigned is an item, and a variable that is dropped has none. The name of
+such a stem is its symbol in upper case, with the period, and is the name that
+an unset compound variable has as its value. Assigning the stem symbol
+replaces the object (<a href="../expressions/variables.html#r-expr.variables.stem">the stem rule</a>), so an earlier
+value of the symbol is no longer the stem.</p>
+<pre><code class="language-rexx">a.1 = 'one'
+a.x = 'ex'
+say a.~items a.~string a.~hasIndex(1) a.~at('X') a.~class~id
+a.~put('two', 2)
+say a.2 a.~items
+b.1 = 'kay'
+b.2 = 'jay'
+drop b.1
+say b.~items b.~allIndexes b.1 b.~at(1)
+old = b.
+b. = 'new'
+say old~items old[2] b.~items b.~string
+a.~put('d')
+say a.2 a.~items a.1
+</code></pre>
+<pre><code class="language-output">2 A. 1 ex Stem
+two 3
+1 2 B.1 B.1
+1 jay 0 new
+d 0 d
+</code></pre>
+<h2 id="the-methods-of-the-mixins"><a class="header" href="#the-methods-of-the-mixins">The methods of the mixins</a></h2>
+<div class="rule" id="r-class.stem.inherited"><a href="#r-class.stem.inherited">[class.stem.inherited]</a></div>
+<p>The class method <code>of</code> and the instance methods <code>putAll</code>, <code>union</code>,
+<code>difference</code>, <code>intersection</code>, <code>xor</code>, <code>subset</code>, <code>disjoint</code> and <code>equivalent</code> are
+not declared by <code>Stem</code>. <code>of</code> and <code>putAll</code> are those of
+<a href="mapcollection.html"><code>MapCollection</code></a>, and the others those of
+<a href="collection.html"><code>Collection</code></a>: a stem is one of the collections they take as
+an argument and as a receiver, and its tails are the indexes they work with.
+<code>of</code> and <code>putAll</code> store with <code>put(item, index)</code>, and the answers of <code>union</code>,
+<code>difference</code> and <code>xor</code> are the object that <code>copy</code> of the stem answers, so they
+keep its name and default, and the answer of <code>intersection</code> is a new stem that
+<code>new</code> of the class makes, with no name and no default. <code>union</code> adds only the
+tails that the copy has no item at. In the example the arguments are stems.</p>
+<pre><code class="language-rexx">a = .stem~new('A.')
+a['p'] = 'P1'
+a['q'] = 'Q1'
+b = .stem~new('B.')
+b['q'] = 'Q2'
+b['r'] = 'R2'
+do op over 'union difference intersection xor'~makeArray(' ')
+  r = a~send(op, b)
+  say op r~class~id r~items listed(r) '['r~string']'
+end
+say a~subset(b) b~subset(b) a~disjoint(b) a~equivalent(b) a~equivalent(a~copy)
+s = .stem~of(.array~of('k1', 'x'), .array~of('k2', 'y'))
+say s~items s['k1'] s['k2']
+c = .stem~new('C.')
+say (c~putAll(.array~of('m', 'n')) == c) c~items c[1] c[2]
+exit
+listed: procedure
+  use arg r
+  s = ''
+  do i over r~allIndexes~sort
+    s = s i'='r[i]
+  end
+  return s~strip
+</code></pre>
+<pre><code class="language-output">union Stem 3 p=P1 q=Q1 r=R2 [A.]
+difference Stem 1 p=P1 [A.]
+intersection Stem 1 q=Q2 []
+xor Stem 2 p=P1 r=R2 [A.]
+0 1 0 0 1
+2 x y
+1 2 m n
+</code></pre>
+<h2 id="messages-the-methods-send"><a class="header" href="#messages-the-methods-send">Messages the methods send</a></h2>
+<div class="rule" id="r-class.stem.sends"><a href="#r-class.stem.sends">[class.stem.sends]</a></div>
+<p>No method that <code>Stem</code> declares sends a message to its receiver, except
+<code>request</code>, which sends <code>makeArray</code> (<a href="#r-class.stem.request">the request rule</a>).
+The set operations and <code>putAll</code> send what the pages of the mixins say, so
+<code>union</code>, <code>difference</code>, <code>xor</code> and <code>subset</code> send <code>copy</code> to the receiver,
+<code>intersection</code> sends <code>hasIndex</code> to it, <code>disjoint</code> sends <code>intersection</code>,
+<code>equivalent</code> sends <code>items</code> and <code>putAll</code> sends <code>put</code>. An index argument that is
+not a string is sent <code>request</code> with <code>STRING</code> (<a href="#r-class.stem.tails">the tails
+rule</a>), and <code>hasItem</code>, <code>index</code> and <code>removeItem</code> send <code>==</code>
+to the argument with the stored items as the argument (<a href="#r-class.stem.hasitem.sends">the item
+rule</a>). The other methods send nothing to indexes
+or items. In the example a subclass has every method overridden to record its
+name, and each call records only its own.</p>
+<pre><code class="language-rexx">own = '[] []= allIndexes allItems at empty hasIndex hasItem index isEmpty',
+  'items makeArray put remove removeItem supplier toDirectory copy string'
+.local~log = .array~new
+.local~on = 0
+do m over own~makeArray(' ')
+  src = "if .local~on then .local~log~append('"m"'); forward class (super)"
+  .spy~define(m, src)
+end
+a = .spy~new('N.')
+calls = 'x = a[1]|a["k1"] = "x"|x = a~allIndexes|x = a~allItems',
+  '|x = a~at("k1")',
+  '|x = a~hasIndex("k1")|x = a~hasItem("q")|x = a~index("q")|x = a~isEmpty',
+  '|x = a~items|x = a~makeArray|a~put(1, "k9")|x = a~remove("k9")',
+  '|x = a~removeItem("q")|x = a~supplier|x = a~toDirectory|x = a~copy',
+  '|x = a~string|a~empty'
+n = 0
+extra = 0
+do c over calls~makeArray('|')
+  .local~log~empty
+  .local~on = 1
+  interpret c
+  .local~on = 0
+  n += 1
+  if .local~log~items &lt;&gt; 1 then do
+    extra += 1
+    say c '=&gt;' .local~log~makeString('L', ' ')
+  end
+end
+say n 'calls,' extra 'sent more than one message to the receiver'
+::class spy subclass stem
+</code></pre>
+<pre><code class="language-output">19 calls, 0 sent more than one message to the receiver
+</code></pre>
+<div class="rule" id="r-class.stem.hasitem.sends"><a href="#r-class.stem.hasitem.sends">[class.stem.hasitem.sends]</a></div>
+<p><code>hasItem(item)</code>, <code>index(item)</code> and <code>removeItem(item)</code> send <code>==</code> to the argument
+with a stored item as the argument, once for each item, until one answers true,
+and send nothing else, <code>hashCode</code> included; when none matches, every item is
+compared. The order in which the items are compared is not specified (<a href="#r-class.stem.deviation.1">the
+order rule</a>). The search with the very object that
+is stored is no exception: its <code>==</code> is sent as for any other item (<a href="#r-class.stem.deviation.78">the
+deviation rule</a>). The messages sent to an index are
+those of <a href="#r-class.stem.tails">the tails rule</a>.</p>
+<pre><code class="language-rexx">.local~n = 0
+s = .stem~new('N.')
+s['a'] = 's'
+s['b'] = 't'
+s['c'] = 'u'
+q = .thing~new
+say s~hasItem(q) .local~n
+.local~n = 0
+say (s~index(q) == .nil) .local~n
+.local~n = 0
+say (s~removeItem(q) == .nil) .local~n s~items
+::class thing
+::method '=='
+  .local~n += 1
+  return 0
+::method hashCode
+  .local~h += 1
+  return 1
+</code></pre>
+<pre><code class="language-output">0 3
+1 3
+1 3 3
+</code></pre>
+<h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
+<div class="rule" id="r-class.stem.deviation.1"><a href="#r-class.stem.deviation.1">[class.stem.deviation.1]</a></div>
+<p>The order of the answers of <code>allIndexes</code>, <code>allItems</code>, <code>makeArray</code> and
+<code>supplier</code>, the order in which <code>hasItem</code>, <code>index</code> and <code>removeItem</code> compare
+the items, and so which tail <code>index</code> and <code>removeItem</code> choose among equal
+items, are not specified, and may differ from ooRexx's, which follows its
+storage. Which tails are produced, and how often, is specified. <a href="../instructions/do.html#r-instr.do.deviation.1">The DO OVER
+rule</a> says the same of a loop. See <a href="../deviations.html">Deviation
+1</a>. In the example the answers are sorted.</p>
+<pre><code class="language-rexx">s = .stem~new
+s['a'] = 3
+s['b'] = 1
+s['c'] = 2
+say s~allIndexes~sort~makeString('L', ',')
+say s~allItems~sort~makeString('L', ',')
+say s~items s~makeArray~items
+</code></pre>
+<pre><code class="language-output">a,b,c
+1,2,3
+3 3
+</code></pre>
+<div class="rule" id="r-class.stem.deviation.68"><a href="#r-class.stem.deviation.68">[class.stem.deviation.68]</a></div>
+<p>The <code>UNKNOWN</code> method that a subclass of <code>Stem</code> declares runs for a message
+that the subclass does not understand, in place of <a href="#r-class.stem.unknown">the unknown
+rule</a> of the class. ooRexx forwards such a message to
+the default of the stem and raises <code>SYNTAX 97.1</code> when that does not understand
+it. See <a href="../deviations.html">Deviation 68</a>.</p>
+<pre><code class="language-rexx">s = .talker~new('N.')
+s[] = 'abc'
+say s~length s~foo(1, 2)
+::class talker subclass stem
+::method unknown
+  use arg name, args
+  return 'asked for' name args~items
+</code></pre>
+<pre><code class="language-output">asked for LENGTH 0 asked for FOO 2
+</code></pre>
+<div class="rule" id="r-class.stem.deviation.78"><a href="#r-class.stem.deviation.78">[class.stem.deviation.78]</a></div>
+<p>A search for an item with the very object that is stored, by <code>hasItem</code>,
+<code>index</code> or <code>removeItem</code>, sends that object's <code>==</code> as for any other item, so an
+object whose <code>==</code> answers false is not found even at its own tail. ooRexx
+compares identity first, finds it and sends nothing. See <a href="../deviations.html">Deviation
+78</a>.</p>
+<pre><code class="language-rexx">.local~n = 0
+s = .stem~new('N.')
+q = .thing~new
+s['k'] = q
+say s~hasItem(q) .local~n
+say (s~index(q) == .nil) .local~n
+say (s~removeItem(q) == .nil) .local~n s~items
+::class thing
+::method '=='
+  .local~n += 1
+  return 0
+</code></pre>
+<pre><code class="language-output">0 1
+1 2
+1 3 1
+</code></pre>
+<div class="rule" id="r-class.stem.deviation.109"><a href="#r-class.stem.deviation.109">[class.stem.deviation.109]</a></div>
+<p>A name given to <code>new</code> and an index that are instances of a subclass of
+<code>String</code> are read by their own characters, and <code>REQUEST</code> and <code>MAKESTRING</code> are
+not sent to them (<a href="string.html#r-class.string.deviation.109">Deviation 109</a>). ooRexx sends
+the name <code>request</code> with <code>STRING</code>, so an override of <code>request</code> changes the
+name; it reads an index by its characters. In the example <code>MAKESTRING</code> answers
+another text.</p>
+<pre><code class="language-rexx">s = .stem~new(.sub~new('N.'))
+say s~string
+s[.sub~new('i')] = 5
+say s~allIndexes[1] s['i'] s['other']
+::class sub subclass string
+::method makestring
+  return 'other'
+</code></pre>
+<pre><code class="language-output defect=#140">N.
+i 5 N.other
+</code></pre>
+<div class="rule" id="r-class.stem.deviation.118"><a href="#r-class.stem.deviation.118">[class.stem.deviation.118]</a></div>
+<p>An instance of a subclass of <code>List</code> that is given to <code>unknown</code> as the array of
+arguments is sent <code>request</code> with <code>ARRAY</code>, as <a href="#r-class.stem.unknown">the unknown
+rule</a> says of any other object, so that an override is
+used. See <a href="../deviations.html">Deviation 118</a>. ooRexx sends the instance no
+<code>request</code> and uses the items it holds, so the example answers <code>c</code> on ooRexx. The
+<code>request</code> of the class <code>ll</code> answers two items.</p>
+<pre><code class="language-rexx">l = .ll~new
+l~append(3)
+l~append(1)
+s = .stem~new
+s[] = 'abc'
+say s~unknown('SUBSTR', l)
+::class ll subclass list
+::method request
+  say 'request' arg(1)
+  return .array~of(2, 1)
+</code></pre>
+<pre><code class="language-output">request ARRAY
+b
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../classes/set.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../builtins/index.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../classes/set.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../builtins/index.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../assets/version-picker.js"></script>
+
+
+    </div>
+    </body>
+</html>
