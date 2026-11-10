@@ -180,11 +180,11 @@ back in nest 2 rc 2
 r[class.commandhandler.rc]
 What `command` answers is the return code of the command: the object itself is
 the value of `RC` after the clause, a string, a number, any object or `.nil`,
-and a method that answers nothing leaves `RC` at `0`. No answer, a negative
-number included, makes the clause raise a condition, so a return code other than
-`0` from a handler is neither ERROR nor FAILURE, and `.RS` holds `0` after the
-command ([the status rule](r:instr.command.status)); the answer is no more than
-a value. Only the methods of the context
+and a method that answers nothing leaves `RC` at `0`. Whatever object `command`
+answers, a negative number included, the clause raises no condition for it, so a
+return code other than `0` from a handler is neither ERROR nor FAILURE, and
+`.RS` holds `0` after the command ([the status rule](r:instr.command.status));
+the answer is no more than a value. Only the methods of the context
 ([`raise`](r:class.commandcontext.raise) and the rest) make a command raise one.
 How `RC` is assigned otherwise is stated in [the return code
 rule](r:instr.command.rc).

@@ -419,8 +419,8 @@ and the handler at once.
 x = .commandhandler~register('spec_cc_setvar', .setter~new)
 i = 4; old. = 'old'; old.1 = 'one'; old.2 = 'two'
 address spec_cc_setvar 'go'
-say a '|' b '|' c.4 '|' old. old.1 old.9 '|' s. s.5 '|' nilvar~isNil '|',
-  obj~class~id
+say a '|' b '|' c.4 '|' old. old.1 old.9
+say s. s.5 '|' nilvar~isNil '|' obj~class~id
 x = .commandhandler~deregister('spec_cc_setvar')
 ::class setter inherit CommandHandler
 ::method command
@@ -461,7 +461,8 @@ caller~'[]='(1, '1x') 93.900
 caller~setVar('', 1) 93.900
 x = caller~setVar('zz', 1) 91.999
 x = caller~'[]='(1, 'zz') 91.999
-by setVar | by bracket | compound | cleared cleared cleared | stem default stem default | 1 | Array
+by setVar | by bracket | compound | cleared cleared cleared
+stem default stem default | 1 | Array
 ```
 
 r[class.commandcontext.dropvar]
@@ -817,24 +818,28 @@ the command is run before a trap for it. `condition` is a string: `ERROR`,
 `FAILURE`, `HALT`, `LOSTDIGITS`, `NOMETHOD`, `NOSTRING`, `NOTREADY`, `NOVALUE`,
 or `USER` followed by a name of one word, in either case; `SYNTAX` is the other
 form, which [the next rule](r:class.commandcontext.raise.syntax) states. The
-string is read as blank-separated words, so blanks around and between the words
-play no part, and the name after `USER` may be any word; the condition is named
-in upper case (`USER 1X`). A command that raises ERROR or FAILURE has the status
-`.RS` of the [status rule](r:instr.command.status). `description` is what
-`CONDITION('D')` answers and the `DESCRIPTION` entry of the condition object
-holds; when it is omitted or `.nil`, it is the command, and the null string is a
-description like another. Another object is read as its string value, as [the
-conversion rule](r:conv.string.object) says, so a `makeString` or a `string`
-that it has is sent to it, and the condition holds that string. `additional` is
-the `ADDITIONAL` entry of the condition object, the object as it was given, and
-when it is omitted or `.nil` the condition object has no such entry. The
-condition object has `RC`, holding the `rc` object. `condition` and `rc` are
-required: `SYNTAX 93.901` when they are fewer than two, `SYNTAX 93.903` when an
-omitted place stands for one of them, and `SYNTAX 93.902` for more than four
-arguments. A `condition` that is none of the forms above, `ANY`, `NONE`,
-`PROPAGATE`, `USER` with no name or with more than one, any other text, the null
-string and `.nil` among them, raises `SYNTAX 93.900`. A call that raises an
-error does not use up the command's one condition, which [the second
+string is read as words separated by [whitespace](r:conv.string.whitespace), so
+the blanks and tabs around and between the words play no part, and the name
+after `USER` may be any word; the condition is named in upper case (`USER 1X`).
+A command that raises ERROR or FAILURE has the status `.RS` of the [status
+rule](r:instr.command.status). `description` is what `CONDITION('D')` answers
+and the `DESCRIPTION` entry of the condition object holds; when it is omitted or
+`.nil`, it is the command, and the null string is a description like another.
+Another object is replaced by its string value as [the conversion
+rule](r:conv.string.object) finds it: `request` with `STRING` is sent to it
+first, and its `string` method when that answers no string, so that a class with
+its own `request` decides the description. The condition holds that string; an
+instance of a subclass of `String` is a string here ([the deviation
+rule](r:class.commandcontext.deviation.109)). `additional` is the `ADDITIONAL`
+entry of the condition object, the object as it was given, and when it is
+omitted or `.nil` the condition object has no such entry. The condition object
+has `RC`, holding the `rc` object. `condition` and `rc` are required: `SYNTAX
+93.901` when they are fewer than two, `SYNTAX 93.903` when an omitted place
+stands for one of them, and `SYNTAX 93.902` for more than four arguments. A
+`condition` that is none of the forms above, `ANY`, `NONE`, `PROPAGATE`, `USER`
+with no name or with more than one, any other text, the null string and `.nil`
+among them, raises `SYNTAX 93.900`. A call that raises an error does not use up
+the command's one condition, which [the second
 rule](r:class.commandcontext.raise.once) says.
 
 ```rexx
@@ -957,7 +962,7 @@ raiseError(1, 2) 93.902
 x = .commandhandler~register('spec_cc_words', .t~new)
 call on any name trap
 do w over .array~of(' ERROR', 'USER  two', 'user x', 'USER 1x', 'USER a.b',,
-    'USER error', 'USER a-b')
+    'USER error', 'USER a-b', 'USER' || '09'x || 'tab')
   .environment~w = w
   address spec_cc_words 'go'
 end
@@ -968,7 +973,8 @@ trap: say '  trapped' condition('c')
 ::class t inherit CommandHandler
 ::method command
   use arg command, caller
-  say '['.environment~w']' caller~raise(.environment~w, 1)
+  w = .environment~w
+  say '['changestr('09'x, w, '<tab>')']' caller~raise(w, 1)
   return 0
 ```
 
@@ -987,6 +993,8 @@ trap: say '  trapped' condition('c')
   trapped USER ERROR
 [USER a-b] 1
   trapped USER A-B
+[USER<tab>tab] 1
+  trapped USER TAB
 ```
 
 ```rexx
@@ -995,6 +1003,7 @@ call on error name trap
 address spec_cc_desc 'a'
 address spec_cc_desc 'b'
 address spec_cc_desc 'c'
+address spec_cc_desc 'd'
 x = .commandhandler~deregister('spec_cc_desc')
 exit
 trap:
@@ -1005,7 +1014,9 @@ trap:
   use arg command, caller
   if command = 'a' then return caller~raise('ERROR', 1, .lg~new)
   if command = 'b' then return caller~raise('ERROR', 1, .ms~new)
-  return caller~raise('ERROR', 1, .mutablebuffer~new('mb'))
+  if command = 'c' then
+    return caller~raise('ERROR', 1, .mutablebuffer~new('mb'))
+  return caller~raise('ERROR', 1, .rq~new)
 ::class lg
 ::method string
   say '  lg string'
@@ -1013,6 +1024,13 @@ trap:
 ::class ms
 ::method makestring
   say '  ms makestring'
+  return 'mstext'
+::class rq
+::method request
+  say '  rq request' arg(1)
+  return 'rqtext'
+::method makestring
+  say '  rq makestring'
   return 'mstext'
 ```
 
@@ -1022,6 +1040,8 @@ trap:
   ms makestring
   trap <mstext> String
   trap <mb> String
+  rq request STRING
+  trap <rqtext> String
 ```
 
 r[class.commandcontext.raise.syntax]
@@ -1257,12 +1277,16 @@ command runs, as the original is. A variable that one sets, the other reads. The
 same holds for the streams that `input`, `output` and `error` answer: a copy of
 a stream reads from the same source and writes to the same target, so that a
 line that one reads is not read by the other. A copy keeps its own record of the
-one condition: it answers `raise`, `raiseError` and `raiseFailure` as the
-original does, refuses a second one with `SYNTAX 93.900`, and does not count
-against the original, but the condition that a copy asks for is never raised,
-and the command raises only what the original asked for. The second example asks
-for a condition through the copy and through the original in each order, and
-through the copy twice.
+one condition. The record starts as the record of the object that was copied, as
+it is at that time, so that a copy made after the original asked for a condition
+refuses one with `SYNTAX 93.900`. From then on the two are apart: a copy answers
+`raise`, `raiseError` and `raiseFailure` as the original does, refuses a second
+one with `SYNTAX 93.900`, and does not count against the original, but the
+condition that a copy asks for is never raised, and the command raises only what
+the original asked for. When only a copy asked, what `command` answers is the
+return code. The second example asks for a condition through the copy and
+through the original in each order, through the copy twice, and through a copy
+made after the original asked.
 
 ```rexx
 x = .commandhandler~register('spec_cc_copy', .copier~new)
@@ -1302,7 +1326,7 @@ after: VAR by the copy
 x = .commandhandler~register('spec_cc_copy_once', .twice~new)
 call on error name trap
 call on failure name trap
-do w over 'copy-first original-first copy-twice'~makeArray(' ')
+do w over 'copy-first original-first copy-twice copy-later'~makeArray(' ')
   address spec_cc_copy_once w
   say w': rc' rc .rs
 end
@@ -1317,7 +1341,9 @@ trap: say '  trap' condition('c') '<'condition('d')'>' rc
   if command = 'copy-first' then do; first = c; second = caller; end
   if command = 'original-first' then do; first = caller; second = c; end
   if command = 'copy-twice' then do; first = c; second = c; end
+  if command = 'copy-later' then do; first = caller; second = .nil; end
   say '  first' first~raiseError(1)
+  if second == .nil then second = caller~copy
   self~try(second)
   return 0
 ::method try
@@ -1340,19 +1366,23 @@ original-first: rc 1 1
   first 1
   second refused 93.900
 copy-twice: rc 0 0
+  first 1
+  second refused 93.900
+  trap ERROR <copy-later> 1
+copy-later: rc 1 1
 ```
 
 ## Deviations
 
 r[class.commandcontext.deviation.109]
-A `name` of `[]`, `getVar`, `[]=`, `setVar`, `hasVar` or `dropVar`, and the
-`which` of `isRedirected`, that is an instance of a subclass of `String` is read
-by its own characters, and `request`, `makeString` and `string` are not sent to
-it ([Deviation 109](r:class.string.deviation.109)). ooRexx sends such an
-instance `request`, with `String` for a variable name and with `STRING` for
-`which`, so an override can change what is read. In the examples the overrides
-would change what is read; they count their sends, and the string is read as it
-is without one.
+A `name` of `[]`, `getVar`, `[]=`, `setVar`, `hasVar` or `dropVar`, the `which`
+of `isRedirected` and the `description` of `raise`, that is an instance of a
+subclass of `String` is read by its own characters, and `request`, `makeString`
+and `string` are not sent to it ([Deviation 109](r:class.string.deviation.109)).
+ooRexx sends such an instance `request`, with `String` for a variable name and
+with `STRING` for `which` and `description`, so an override can change what is
+read. In the examples the overrides would change what is read; they count their
+sends, and the string is read as it is without one.
 
 ```rexx
 x = .commandhandler~register('spec_cc_dev109', .reader~new)
@@ -1406,4 +1436,33 @@ x = .commandhandler~deregister('spec_cc_dev109_redir')
 
 ```output
 1 0
+```
+
+```rexx
+x = .commandhandler~register('spec_cc_dev109_desc', .raiser~new)
+.environment~sent = 0
+call on error name trap
+address spec_cc_dev109_desc 'go'
+x = .commandhandler~deregister('spec_cc_dev109_desc')
+exit
+trap: say condition('d') .environment~sent
+  return
+::class raiser inherit CommandHandler
+::method command
+  use arg command, caller
+  return caller~raise('ERROR', 1, .digits~new('own'))
+::class digits subclass string
+::method makestring
+  .environment~sent = .environment~sent + 1
+  return 'other'
+::method request
+  .environment~sent = .environment~sent + 1
+  return 'other'
+::method string
+  .environment~sent = .environment~sent + 1
+  return 'other'
+```
+
+```output
+own 0
 ```

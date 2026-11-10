@@ -220,8 +220,8 @@ address spec_co_pending 'b' with output stem b.
 address spec_co_pending 'c' with output stem c.
 address spec_co_pending 'd' with output stem d.
 x = .commandhandler~deregister('spec_co_pending')
-say a.0 '<'a.1'>' b.0 '<'b.1'>' '<'b.2'>' c.0 '<'c.1'>' '<'c.2'>',
-  d.0 '<'d.1'>' '<'d.2'>'
+say a.0 '<'a.1'>' b.0 '<'b.1'>' '<'b.2'>'
+say c.0 '<'c.1'>' '<'c.2'>' d.0 '<'d.1'>' '<'d.2'>'
 ::class writer inherit CommandHandler
 ::method command
   use arg command, caller
@@ -242,7 +242,8 @@ say a.0 '<'a.1'>' b.0 '<'b.1'>' '<'b.2'>' c.0 '<'c.1'>' '<'c.2'>',
 ```
 
 ```output
-1 <left over> 2 <one two> <three> 2 <flushed> <then more> 2 <closed> <after close>
+1 <left over> 2 <one two> <three>
+2 <flushed> <then more> 2 <closed> <after close>
 ```
 
 r[class.commandoutput.flush]
@@ -323,7 +324,8 @@ original belongs to is the command of the copy too.
 ```rexx
 x = .commandhandler~register('spec_co_copy', .writer~new)
 address spec_co_copy 'go' with output stem o.
-say o.0 '<'o.1'>' '<'o.2'>' '<'o.3'>' '<'o.4'>'
+say o.0 '<'o.1'>' '<'o.2'>'
+say '<'o.3'>' '<'o.4'>'
 x = .commandhandler~deregister('spec_co_copy')
 ::class writer inherit CommandHandler
 ::method command
@@ -341,7 +343,8 @@ x = .commandhandler~deregister('spec_co_copy')
 
 ```output
 CommandOutput 0
-4 <from the original> <from the copy> <begun by the copy, ended by the copy> <begun by the original>
+4 <from the original> <from the copy>
+<begun by the copy, ended by the copy> <begun by the original>
 ```
 
 r[class.commandoutput.valid]
