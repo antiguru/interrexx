@@ -10,28 +10,28 @@ rexxref: "Builtin Classes > Stream Classes > InputStream Class; Builtin Classes 
 is read: the ones that read, and the ones that a stream of that kind does not
 have. A class that inherits it, or a subclass of it, writes the methods that
 read, `charIn`, `chars`, `lineIn` and `lines`; the rest the mixin answers in a
-way a program can rely on: an error for the methods that make no sense, a method
-that does nothing for `open` and `close`, and `arrayIn`, which reads with the
-`lineIn` of the class. The classes of the library that inherit it are
+way a program can rely on: an error for the methods that make no sense, a
+method that does nothing for `open` and `close`, and `arrayIn`, which reads
+with the `lineIn` of the class. The classes of the library that inherit it are
 [`CommandInput`](commandinput.md), [`InputOutputStream`](inputoutputstream.md)
 and, through that, [`Stream`](stream.md). What the standard input is, and what
-the `.input` of a program is bound to, is specified in the environment chapter.
-The examples define their own classes.
+the `.input` of a program is bound to, is specified in the environment
+chapter. The examples define their own classes.
 
 ## The class
 
 r[class.inputstream.creation]
-`InputStream` has the instance methods `arrayIn`, `charIn`, `charOut`, `chars`,
-`close`, `lineIn`, `lineOut`, `lines`, `open` and `position`, and no class
-method besides the `new` that every class has. It may have private methods
-besides these; they are not part of this specification. Its only superclass is
-`Object`. It is a mixin class (see [the mixin rule](r:class.index.mixins)), and
-a class that inherits it has it among its superclasses, in the place that the
-`INHERIT` of its directive gives it ([the hierarchy
-rule](r:class.index.hierarchy)). `new` makes an instance, an object with these
-methods and no state, whose string value is `an InputStream`; the `init` of
-`Object` accepts no argument, so `new` with one raises `SYNTAX 93.902` ([the new
-rule](r:class.index.new)).
+`InputStream` has the instance methods `arrayIn`, `charIn`, `charOut`,
+`chars`, `close`, `lineIn`, `lineOut`, `lines`, `open` and `position`, and no
+class method besides the `new` that every class has. It may have private
+methods besides these; they are not part of this specification. Its only
+superclass is `Object`. It is a mixin class (see [the mixin
+rule](r:class.index.mixins)), and a class that inherits it has it among its
+superclasses, in the place that the `INHERIT` of its directive gives it ([the
+hierarchy rule](r:class.index.hierarchy)). `new` makes an instance, an object
+with these methods and no state, whose string value is `an InputStream`; the
+`init` of `Object` accepts no argument, so `new` with one raises `SYNTAX
+93.902` ([the new rule](r:class.index.new)).
 
 ```rexx
 say .inputstream~superclasses~items .inputstream~superclass~id,
@@ -68,8 +68,8 @@ r[class.inputstream.abstract]
 `charIn`, `chars`, `lineIn` and `lines` are abstract: sent to an instance of
 `InputStream`, or to an instance of a class that inherits it and does not
 override them, each raises `SYNTAX 93.965`. They take any number of arguments
-and read none of them; the error is the same whatever they are. A class that has
-them overrides them.
+and read none of them; the error is the same whatever they are. A class that
+has them overrides them.
 
 ```rexx
 o = .reader~new
@@ -187,14 +187,14 @@ x = o~close(1, 2) => 91.999
 ```
 
 r[class.inputstream.arrayin]
-`arrayIn` answers a new `Array` of what `lineIn` answers: each answer is an item
-as it is, an object that is not a string included, in the order of the answers,
-until the NOTREADY condition ends the reading ([the rule of the
+`arrayIn` answers a new `Array` of what `lineIn` answers: each answer is an
+item as it is, an object that is not a string included, in the order of the
+answers, until the NOTREADY condition ends the reading ([the rule of the
 messages](r:class.inputstream.arrayin.sends) has the detail). `arrayIn` takes
 any number of arguments and reads none; there is no option for characters. A
-`lineIn` that answers no value raises `SYNTAX 91.999`, and the abstract `lineIn`
-raises `SYNTAX 93.965`, so a class that is to use `arrayIn` overrides `lineIn`
-and raises NOTREADY at the end of what it has.
+`lineIn` that answers no value raises `SYNTAX 91.999`, and the abstract
+`lineIn` raises `SYNTAX 93.965`, so a class that is to use `arrayIn` overrides
+`lineIn` and raises NOTREADY at the end of what it has.
 
 ```rexx
 r = .reader~new
@@ -257,8 +257,8 @@ r[class.inputstream.arrayin.sends]
 `arrayIn` sends `lineIn` to the receiver, with no argument, once for each item
 and once more: it stops when a `lineIn` raises the NOTREADY condition, and the
 answer of that one, if it has one, is not an item. It sends no other message,
-`lines` and `chars` included, and none to the answers. A `lineIn` that does not
-raise NOTREADY is sent again, and again, so that a class must raise it.
+`lines` and `chars` included, and none to the answers. A `lineIn` that does
+not raise NOTREADY is sent again, and again, so that a class must raise it.
 
 ```rexx
 r = .reader~new

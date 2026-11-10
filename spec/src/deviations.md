@@ -1011,14 +1011,15 @@ a line that is not in the source. `source` of a `Routine` does the same.
 ## 135. An object whose init never ran raises an error
 
 A class that a program declares as a subclass of `Alarm`, `Ticker`,
-`RexxQueue`, `Supplier` or `StreamSupplier`, whose `init` does not send `init`
-to its superclass, makes an object that is not set up, and every instance
-method of the class other than `init` that the object is sent raises `SYNTAX
-98.901`. ooRexx answers `triggered` of such an alarm with the string
+`RexxQueue`, `Supplier`, `StreamSupplier` or `Stream`, whose `init` does not
+send `init` to its superclass, makes an object that is not set up, and every
+instance method of the class other than `init` that the object is sent raises
+`SYNTAX 98.901`. ooRexx answers `triggered` of such an alarm with the string
 `TRIGGERED` and raises `SYNTAX 34.902` from its `cancel`, answers the readers
 of such a ticker without an error and raises `SYNTAX 88.914` from its
 `cancel`, and its `empty` of such a `RexxQueue` and its `available` of such a
-`Supplier` end the interpreter with a segmentation fault.
+`Supplier` end the interpreter with a segmentation fault, as do the `state`,
+`description`, `qualify` and `query` of such a `Stream`.
 
 ## 136. A copy of a MutexSemaphore is free
 

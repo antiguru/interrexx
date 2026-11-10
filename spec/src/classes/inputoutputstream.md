@@ -6,8 +6,8 @@ rexxref: "Builtin Classes > Stream Classes > InputOutputStream Class; Builtin Cl
 
 # InputOutputStream
 
-`InputOutputStream` is a mixin class for a stream that is both read and written.
-It defines no method of its own: it inherits the mixin classes
+`InputOutputStream` is a mixin class for a stream that is both read and
+written. It defines no method of its own: it inherits the mixin classes
 [`InputStream`](inputstream.md) and [`OutputStream`](outputstream.md), in that
 order, and so has the methods of both, and the stream classes of the library
 that read and write, [`Stream`](stream.md) among them, are built on it. This
@@ -66,21 +66,21 @@ Object InputOutputStream
 ```
 
 r[class.inputoutputstream.methods]
-A message to an instance of `InputOutputStream`, or of a class that inherits it
-and does not override the method, reaches the method of `InputStream` when
-`InputStream` has one of that name, and only then the method of `OutputStream`,
-because `InputStream` comes first. So `charIn`, `chars`, `lineIn` and `lines`
-raise `SYNTAX 93.965`, as [the abstract methods of
+A message to an instance of `InputOutputStream`, or of a class that inherits
+it and does not override the method, reaches the method of `InputStream` when
+`InputStream` has one of that name, and only then the method of
+`OutputStream`, because `InputStream` comes first. So `charIn`, `chars`,
+`lineIn` and `lines` raise `SYNTAX 93.965`, as [the abstract methods of
 `InputStream`](r:class.inputstream.abstract) do; `charOut`, `lineOut` and
-`position` raise `SYNTAX 93.963`, as [the methods of `InputStream` that make no
-sense](r:class.inputstream.unsupported) do, not `93.965`, which the abstract
-`charOut` and `lineOut` of `OutputStream` would raise; `open` and `close` do
-nothing, as [those of `InputStream`](r:class.inputstream.nop) do; `arrayIn` is
-[the `arrayIn` of `InputStream`](r:class.inputstream.arrayin) and `arrayOut`
-[the `arrayOut` of `OutputStream`](r:class.outputstream.arrayout). A class that
-inherits `InputOutputStream` therefore overrides the six methods that read and
-write, `charIn`, `charOut`, `chars`, `lineIn`, `lineOut` and `lines`, and
-`position` where it can be positioned.
+`position` raise `SYNTAX 93.963`, as [the methods of `InputStream` that make
+no sense](r:class.inputstream.unsupported) do, not `93.965`, which the
+abstract `charOut` and `lineOut` of `OutputStream` would raise; `open` and
+`close` do nothing, as [those of `InputStream`](r:class.inputstream.nop) do;
+`arrayIn` is [the `arrayIn` of `InputStream`](r:class.inputstream.arrayin) and
+`arrayOut` [the `arrayOut` of `OutputStream`](r:class.outputstream.arrayout).
+A class that inherits `InputOutputStream` therefore overrides the six methods
+that read and write, `charIn`, `charOut`, `chars`, `lineIn`, `lineOut` and
+`lines`, and `position` where it can be positioned.
 
 ```rexx
 o = .duplex~new
@@ -117,9 +117,9 @@ o~position => 93.963
 
 r[class.inputoutputstream.complete]
 A class that inherits `InputOutputStream` and overrides `lineIn` and `lineOut`
-has working `arrayIn` and `arrayOut`: `arrayIn` reads with its `lineIn` as [the
-rule of `InputStream`](r:class.inputstream.arrayin.sends) says, and `arrayOut`
-writes with its `lineOut` as [the rule of
+has working `arrayIn` and `arrayOut`: `arrayIn` reads with its `lineIn` as
+[the rule of `InputStream`](r:class.inputstream.arrayin.sends) says, and
+`arrayOut` writes with its `lineOut` as [the rule of
 `OutputStream`](r:class.outputstream.arrayout.sends) says. The two methods do
 not know of each other.
 

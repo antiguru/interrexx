@@ -6,32 +6,33 @@ rexxref: "Builtin Classes > Stream Classes > OutputStream Class; Builtin Classes
 
 # OutputStream
 
-`OutputStream` is a mixin class that gives a class the methods of a stream that
-is written: the ones that write, and the ones that a stream of that kind does
-not have. A class that inherits it, or a subclass of it, writes the methods that
-write, `charOut` and `lineOut`; the rest the mixin answers in a way a program
-can rely on: an error for the methods that make no sense, a method that does
-nothing for `open` and `close`, and `arrayOut`, which writes with the `lineOut`
-of the class. The classes of the library that inherit it are
-[`CommandOutput`](commandoutput.md), [`InputOutputStream`](inputoutputstream.md)
-and, through that, [`Stream`](stream.md). What the standard output and error
-are, and what the `.output` and `.error` of a program are bound to, is specified
-in the environment chapter. The examples define their own classes.
+`OutputStream` is a mixin class that gives a class the methods of a stream
+that is written: the ones that write, and the ones that a stream of that kind
+does not have. A class that inherits it, or a subclass of it, writes the
+methods that write, `charOut` and `lineOut`; the rest the mixin answers in a
+way a program can rely on: an error for the methods that make no sense, a
+method that does nothing for `open` and `close`, and `arrayOut`, which writes
+with the `lineOut` of the class. The classes of the library that inherit it
+are [`CommandOutput`](commandoutput.md),
+[`InputOutputStream`](inputoutputstream.md) and, through that,
+[`Stream`](stream.md). What the standard output and error are, and what the
+`.output` and `.error` of a program are bound to, is specified in the
+environment chapter. The examples define their own classes.
 
 ## The class
 
 r[class.outputstream.creation]
 `OutputStream` has the instance methods `arrayOut`, `charIn`, `charOut`,
 `chars`, `close`, `lineIn`, `lineOut`, `lines`, `open` and `position`, and no
-class method besides the `new` that every class has. It may have private methods
-besides these; they are not part of this specification. Its only superclass is
-`Object`. It is a mixin class (see [the mixin rule](r:class.index.mixins)), and
-a class that inherits it has it among its superclasses, in the place that the
-`INHERIT` of its directive gives it ([the hierarchy
-rule](r:class.index.hierarchy)). `new` makes an instance, an object with these
-methods and no state, whose string value is `an OutputStream`; the `init` of
-`Object` accepts no argument, so `new` with one raises `SYNTAX 93.902` ([the new
-rule](r:class.index.new)).
+class method besides the `new` that every class has. It may have private
+methods besides these; they are not part of this specification. Its only
+superclass is `Object`. It is a mixin class (see [the mixin
+rule](r:class.index.mixins)), and a class that inherits it has it among its
+superclasses, in the place that the `INHERIT` of its directive gives it ([the
+hierarchy rule](r:class.index.hierarchy)). `new` makes an instance, an object
+with these methods and no state, whose string value is `an OutputStream`; the
+`init` of `Object` accepts no argument, so `new` with one raises `SYNTAX
+93.902` ([the new rule](r:class.index.new)).
 
 ```rexx
 say .outputstream~superclasses~items .outputstream~superclass~id,
@@ -65,10 +66,11 @@ The Object class The OutputStream class 1
 ## What the methods do
 
 r[class.outputstream.abstract]
-`charOut` and `lineOut` are abstract: sent to an instance of `OutputStream`, or
-to an instance of a class that inherits it and does not override them, each
-raises `SYNTAX 93.965`. They take any number of arguments and read none of them;
-the error is the same whatever they are. A class that has them overrides them.
+`charOut` and `lineOut` are abstract: sent to an instance of `OutputStream`,
+or to an instance of a class that inherits it and does not override them, each
+raises `SYNTAX 93.965`. They take any number of arguments and read none of
+them; the error is the same whatever they are. A class that has them overrides
+them.
 
 ```rexx
 o = .writer~new
@@ -191,17 +193,17 @@ x = o~close(1, 2) => 91.999
 ```
 
 r[class.outputstream.arrayout]
-`arrayOut` writes the items of its one argument, a collection, one `lineOut` for
-each item, and answers no value. The argument is sent `request` with the
-argument `ARRAY`, which an `Array`, a `List` and a `Set` answer with an array of
-their items, and the items are written in the order of that array, an empty slot
-giving none; an argument whose answer is not an array, `.nil` among them, raises
-`SYNTAX 98.913`. An item is sent to `lineOut` as it is, an object that is not a
-string included, and what `lineOut` does with it is the business of the class. A
-missing argument raises `SYNTAX 93.901` and more than one `SYNTAX 93.902`; there
-is no option for characters. An empty array writes nothing and sends nothing, so
-it raises no error even where `lineOut` is abstract, and the abstract `lineOut`
-raises `SYNTAX 93.965` for the first item otherwise.
+`arrayOut` writes the items of its one argument, a collection, one `lineOut`
+for each item, and answers no value. The argument is sent `request` with the
+argument `ARRAY`, which an `Array`, a `List` and a `Set` answer with an array
+of their items, and the items are written in the order of that array, an empty
+slot giving none; an argument whose answer is not an array, `.nil` among them,
+raises `SYNTAX 98.913`. An item is sent to `lineOut` as it is, an object that
+is not a string included, and what `lineOut` does with it is the business of
+the class. A missing argument raises `SYNTAX 93.901` and more than one `SYNTAX
+93.902`; there is no option for characters. An empty array writes nothing and
+sends nothing, so it raises no error even where `lineOut` is abstract, and the
+abstract `lineOut` raises `SYNTAX 93.965` for the first item otherwise.
 
 ```rexx
 o = .sink~new
@@ -218,6 +220,7 @@ call try 'o~arrayout(.nil)'
 call try 'o~arrayout(.object~new)'
 call try 'o~arrayout'
 call try 'o~arrayout(.array~of(1), "C")'
+call try 'x = o~arrayout(.array~of("a"))'
 exit
 try:
   signal on syntax name bad
@@ -245,14 +248,15 @@ o~arrayout(.nil) => 98.913
 o~arrayout(.object~new) => 98.913
 o~arrayout => 93.901
 o~arrayout(.array~of(1), "C") => 93.902
+x = o~arrayout(.array~of("a")) => 91.999
 ```
 
 r[class.outputstream.arrayout.sends]
 `arrayOut` sends `request('ARRAY')` to its argument and then `lineOut` to the
-receiver for each item, in order, with the item as the one argument and nothing
-else. It sends no other message to the receiver, to the array or to an item. The
-answer of a `lineOut` is not looked at, and neither is the NOTREADY condition
-that a `lineOut` raises: the writing goes on with the next item.
+receiver for each item, in order, with the item as the one argument and
+nothing else. It sends no other message to the receiver, to the array or to an
+item. The answer of a `lineOut` is not looked at, and neither is the NOTREADY
+condition that a `lineOut` raises: the writing goes on with the next item.
 
 ```rexx
 o = .sink~new
