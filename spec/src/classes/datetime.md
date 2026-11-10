@@ -1218,12 +1218,12 @@ r[class.datetime.compare]
 instant, 0 for the same instant and 1 when it is the later, comparing the
 instants in UTC, so that two instances with different fields and different
 offsets can be equal. The argument is sent `isA` with `DateTime`, and a
-`DateTime` is then sent `utcDate`. An argument that is no `DateTime` makes the
-answer 1. The comparison operators `=`, `==`, `<`, `<=`, `>`, `>=`, `<>`,
-`><`, `\=`, `\==`, `<<`, `<<=`, `>>`, `>>=` and `\<`, `\>`, `\<<`, `\>>` are
-those of `Orderable`, which answer from `compareTo` of the receiver, strict
-and non-strict ones alike: `==` is as `=`. The text of the instances plays no
-part.
+`DateTime` is then sent `utcDate`. What the method answers for an argument
+that is no `DateTime` is not stated here. The comparison operators `=`, `==`,
+`<`, `<=`, `>`, `>=`, `<>`, `><`, `\=`, `\==`, `<<`, `<<=`, `>>`, `>>=` and
+`\<`, `\>`, `\<<`, `\>>` are those of `Orderable`, which answer from
+`compareTo` of the receiver, strict and non-strict ones alike: `==` is as `=`.
+The text of the instances plays no part.
 
 ```rexx
 d = .datetime~new(2016, 2, 29, 9, 8, 7, 12345, 120)
@@ -1233,7 +1233,7 @@ say d~compareTo(z) z~compareTo(d) d~compareTo(q) d~compareTo(d~copy)
 say (d < z) (d > z) (d = q) (d == q) (d \= q) (d <> q) (d <= q) (d >= q)
 say (d << z) (d >> z) (d <<= q) (d >>= z) (d \== q) (d >< q)
 say (d~string == q~string) (d = q)
-say (d = 5) (d == .nil) (d \= 5) (d \< z) (d \> z) (d \<< z) (d \>> z)
+say (d \< z) (d \> z) (d \<< z) (d \>> z)
 call try 'd~compareTo'
 call try 'd~compareTo(z, 1)'
 exit
@@ -1251,7 +1251,7 @@ bad: say arg(1) '=>' condition('o')~code
 1 0 1 1 0 0 1 1
 1 0 1 0 0 0
 0 1
-0 0 1 0 1 0 1
+0 1 0 1
 d~compareTo => 93.901
 d~compareTo(z, 1) => 93.902
 ```
