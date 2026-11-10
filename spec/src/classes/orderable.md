@@ -11,12 +11,13 @@ operators as methods, all of them answered from one method, `compareTo`. A class
 that inherits it and overrides `compareTo` with its own ordering can then be
 written on both sides of `<`, `=`, `>>=` and the rest, and sorted by
 [`sort`](r:class.array.sort). `DateTime`, `TimeSpan` and `File` are such
-classes; the [comparison rule of `DateTime`](r:class.datetime.compare), [the
-one of `TimeSpan`](r:class.timespan.compare) and [the one of
+classes; the [comparison rule of `DateTime`](r:class.datetime.compare), [the one
+of `TimeSpan`](r:class.timespan.compare) and [the one of
 `File`](r:class.file.compareto) say what their `compareTo` answers, and that it
 raises `SYNTAX 88.914` for an argument of another class ([Deviation
-126](r:class.datetime.deviation.126)), which the operators then raise too.
-The page of [`Comparable`](r:class.comparable.creation) describes the class that
+126](r:class.datetime.deviation.126)), which the operators then raise too, but
+for a `.nil` argument ([the `.nil` rule](r:class.orderable.compare.nil)). The
+page of [`Comparable`](r:class.comparable.creation) describes the class that
 holds the `compareTo` alone.
 
 ## The class

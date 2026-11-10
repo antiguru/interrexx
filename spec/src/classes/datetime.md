@@ -138,14 +138,16 @@ number of minutes in that range. The argument is sent `isA` with the class
 to minutes, and any other value is read as a number ([the argument
 rule](r:class.index.string)) and sent the messages that [the sends
 rule](r:class.datetime.sends.new) lists. A value outside the range, a number
-that is not whole ([Deviation 130](r:class.datetime.deviation.130)), such as
-1.5, and a span that is not whole minutes raise `SYNTAX 88.907` for `new` and,
-with a number or a span, for `toTimezone`, and `SYNTAX 88.918` for `today` and
-for the `from` methods that read an offset, which are all but
-`fromWeekNumberDate` (it [ignores the offset](r:class.datetime.fromweek)) and
-`fromUtcIsoDate` (it has none); a value that is no number at all gets the same
-code from `new`, `today` and those `from` methods, and what `toTimezone` raises
-for it is in [the zone rule](r:class.datetime.zone).
+that is not whole as [the form rule](r:conv.whole.form) and [the digits
+rule](r:conv.whole.digits) read it ([Deviation
+130](r:class.datetime.deviation.130)), such as 1.5, and a span that is not whole
+minutes raise `SYNTAX 88.907` for `new` and, with a number or a span, for
+`toTimezone`, and `SYNTAX 88.918` for `today` and for the `from` methods that
+read an offset, which are all but `fromWeekNumberDate` (it [ignores the
+offset](r:class.datetime.fromweek)) and `fromUtcIsoDate` (it has none); a value
+that is no number at all gets the same code from `new`, `today` and those `from`
+methods, and what `toTimezone` raises for it is in [the zone
+rule](r:class.datetime.zone).
 
 ```rexx
 d = .datetime~new(2017, 6, 30, 5, 6, 7, 8, 330)
@@ -293,18 +295,20 @@ r[class.datetime.new.checks]
 The values are checked in this order, and the first that fails raises its error.
 In the one-argument and two-argument form the number of microseconds must be a
 whole number in its range, or `SYNTAX 40.19` is raised, and then the offset is
-checked as [the offset rule](r:class.datetime.offset) says. A whole number is
-one that [Deviation 130](r:class.datetime.deviation.130) describes, here and
-below. In the other forms year, month and day are whole numbers, in the ranges 1
-to 9999, 1 to 12 and 1 to 31; one outside its range, one that is no number and
-one that is not whole, such as 1.5, raise `SYNTAX 88.907`. A day that the month
-does not have, such as 30 February, then raises `SYNTAX 40.19`. Hours (0 to 23),
-minutes (0 to 59), seconds (0 to 59) and microseconds (0 to 999999) are checked
-last, each a whole number in its range, and then the offset, as [the offset
-rule](r:class.datetime.offset) says; a value outside its range, one that is no
-number and one that is not whole raise `SYNTAX 88.907`. A day that does not
-exist is thus reported before an hour that is out of range, and a day of 32
-before one that does not exist.
+checked as [the offset rule](r:class.datetime.offset) says. Each whole number,
+here and below, is read as a whole-number argument of a builtin is, by [the form
+rule](r:conv.whole.form) and [the digits rule](r:conv.whole.digits), with the
+codes of this rule in place of SYNTAX 40.12 ([Deviation
+130](r:class.datetime.deviation.130)). In the other forms year, month and day
+are whole numbers, in the ranges 1 to 9999, 1 to 12 and 1 to 31; one outside its
+range, one that is no number and one that is not whole, such as 1.5, raise
+`SYNTAX 88.907`. A day that the month does not have, such as 30 February, then
+raises `SYNTAX 40.19`. Hours (0 to 23), minutes (0 to 59), seconds (0 to 59) and
+microseconds (0 to 999999) are checked last, each a whole number in its range,
+and then the offset, as [the offset rule](r:class.datetime.offset) says; a value
+outside its range, one that is no number and one that is not whole raise `SYNTAX
+88.907`. A day that does not exist is thus reported before an hour that is out
+of range, and a day of 32 before one that does not exist.
 
 ```rexx
 call try '.datetime~new(2017, 2, 30, 25, 0, 0, 0)'
@@ -422,8 +426,9 @@ r[class.datetime.fromdate]
 that the option B ([DATE](r:bif.date.out.counts)) or E, N, O, S or U
 ([DATE](r:bif.date.out.text)) writes it, and answer that day at 00:00:00.000000.
 `fromBaseDate` takes a whole number of days from 0 (1 January 0001) to 3652058
-(31 December 9999) as `baseDate` answers it, a whole number as [Deviation
-130](r:class.datetime.deviation.130) says, so `5.0` is day 5 and `5.0000001` is
+(31 December 9999) as `baseDate` answers it, read by [the form
+rule](r:conv.whole.form) and [the digits rule](r:conv.whole.digits) ([Deviation
+130](r:class.datetime.deviation.130)), so `5.0` is day 5 and `5.0000001` is
 refused. The other five take the forms `dd/mm/yy`, `d mon yyyy` (the day has one
 or two digits, the month is the three letters of [its name](r:bif.date.out.text)
 with a capital first letter), `yy/mm/dd`, `yyyymmdd` and `mm/dd/yy`. A two-digit
@@ -1189,20 +1194,21 @@ r[class.datetime.add]
 Each of `addYears`, `addWeeks`, `addDays`, `addHours`, `addMinutes`,
 `addSeconds` and `addMicroseconds` answers a new instance, of the class of the
 receiver, that is the receiver moved by its argument; the receiver is not
-changed, and the offset is kept. `addYears` takes a whole number of years,
-written as digits with an optional sign and leading blanks, and keeps month,
-day and time of day, except that 29 February moves to 28 February when the
-year it lands in is no leap year; a year past the range raises
-`SYNTAX 88.907`, and a value such as 1.5 or `x` raises `SYNTAX 88.903`. The
-other six take a number, a negative one moves back, and a fraction is allowed:
-`addDays(1.5)` is a day and twelve hours. The new moment is the receiver's
-count of microseconds plus the amount in microseconds, rounded to 18
-significant digits; a part of a microsecond that is left is dropped toward the
-earlier moment. So `addMicroseconds` of 1.5 adds 1 and of -1.5 subtracts 2,
-and on a date of 2016, whose count has 17 digits, of 0.96 adds 1 and of -0.04
-adds nothing. A value that is no number raises `SYNTAX 88.902`; a moment
-outside the range of the class raises `SYNTAX 40.19`. A missing argument
-raises `SYNTAX 93.901` and a second argument `SYNTAX 93.902`.
+changed, and the offset is kept. `addYears` takes a whole number of years, read
+as [the form rule](r:conv.whole.form) and [the digits rule](r:conv.whole.digits)
+say ([Deviation 130](r:class.datetime.deviation.130)), and keeps month, day and
+time of day, except that 29 February moves to 28 February when the year it lands
+in is no leap year; a year past the range raises `SYNTAX 88.907`, and a value
+such as 1.5 or `x` raises `SYNTAX 88.903`. The other six take a number, a
+negative one moves back, and a fraction is allowed: `addDays(1.5)` is a day and
+twelve hours. The new moment is the receiver's count of microseconds plus the
+amount in microseconds, rounded to 18 significant digits; a part of a
+microsecond that is left is dropped toward the earlier moment. So
+`addMicroseconds` of 1.5 adds 1 and of -1.5 subtracts 2, and on a date of 2016,
+whose count has 17 digits, of 0.96 adds 1 and of -0.04 adds nothing. A value
+that is no number raises `SYNTAX 88.902`; a moment outside the range of the
+class raises `SYNTAX 40.19`. A missing argument raises `SYNTAX 93.901` and a
+second argument `SYNTAX 93.902`.
 
 ```rexx
 d = .datetime~new(2016, 2, 29, 9, 8, 7, 12345, 120)
@@ -1401,8 +1407,8 @@ offsets can be equal. The argument is sent `isA` with `DateTime`, and a
 `DateTime` is then sent `utcDate`; an argument that is no `DateTime` raises
 `SYNTAX 88.914` as soon as `isA` has answered ([Deviation
 126](r:class.datetime.deviation.126)), and the comparison operators raise it for
-such an argument too, except that `=`, `==`, `\=`, `\==`, `<>` and `><` answer
-for `.nil` as [the `.nil` rule](r:class.orderable.compare.nil) says. The
+such an argument too, except that an operator whose argument is `.nil` does as
+[the `.nil` rule](r:class.orderable.compare.nil) says, without `compareTo`. The
 comparison operators `=`, `==`, `<`, `<=`, `>`, `>=`, `<>`, `><`, `\=`, `\==`,
 `<<`, `<<=`, `>>`, `>>=` and `\<`, `\>`, `\<<`, `\>>` are those of
 [`Orderable`](r:class.orderable.compare), which answer from `compareTo` of the
@@ -2146,12 +2152,12 @@ r[class.datetime.deviation.126]
 `compareTo` of a `DateTime` with an argument that is not a `DateTime` (an
 instance of a subclass is one), and a comparison operator with such an argument,
 raise `SYNTAX 88.914`. The error follows the `isA` that the method sends to the
-argument and precedes `utcDate` and every other message; `=`, `==`, `\=`, `\==`,
-`<>` and `><` with `.nil` answer without `compareTo`, as [the `.nil`
+argument and precedes `utcDate` and every other message; an operator whose
+argument is `.nil` sends no `compareTo` and does as [the `.nil`
 rule](r:class.orderable.compare.nil) says, and `compareTo` itself raises for
-`.nil`. ooRexx reads the argument as a `DateTime` and answers -1, 0 or 1 from
-what it finds; the answer is not the same in two programs. In the example the
-last line is a probe that answers false to `isA` and gets nothing else.
+`.nil`. ooRexx answers 1 or -1 for such an argument, whatever the receiver is,
+so the answer says nothing about the two values. In the example the last line is
+a probe that answers false to `isA` and gets nothing else.
 
 ```rexx
 d = .datetime~new(2017, 6, 30, 5, 6, 7, 8, 0)
@@ -2165,6 +2171,7 @@ call try 'd <<= "x"'
 call try 'd = 5'
 call try 'd \== .object~new'
 call try 'd = .nil'
+call try 'd < .nil'
 call try 'd~compareTo(.sub~new(2017, 6, 30, 5, 6, 7, 8, 0))'
 call try 'd~compareTo(d~copy)'
 .local~log = ''
@@ -2199,6 +2206,7 @@ d <<= "x" => 88.914
 d = 5 => 88.914
 d \== .object~new => 88.914
 d = .nil => 0
+d < .nil => 93.973
 d~compareTo(.sub~new(2017, 6, 30, 5, 6, 7, 8, 0)) => 0
 d~compareTo(d~copy) => 0
 d~compareTo(.probe~new) => 88.914
@@ -2328,18 +2336,21 @@ near: return abs(arg(1)~totalSeconds - arg(2)~totalSeconds) < 5
 ```
 
 r[class.datetime.deviation.130]
-A number that is whole in value is accepted wherever `DateTime` takes a whole
-number, however it is written: with blanks around it, a sign, a point followed
-by zeros, or an exponent, as `2017.0`, `2.017E3` and `'2017 '` are; any other
-value is refused with the error that the place gives for a number that is not
-whole, `2017.0000000001` and `2017.00000000000000000001` included. The value is
-read as it is written, so NUMERIC DIGITS of the caller does not round a fraction
-away. The places are the count of microseconds, the year, the month, the day,
-the hours, the minutes, the seconds, the microseconds and the offset of `new`,
-the offset of `today`, of `toTimezone` and of the `from` methods that read one,
-the days of `fromBaseDate` and the seconds of `fromTicks`. ooRexx refuses some
-of these forms, `2017.0` as a year among them, and reads `2017.0000000001` as
-year 1, `2.0000000001` as month 1 and `1.0000000001` as an hour of 1.
+Every whole-number argument of `DateTime` is read as a whole-number argument of
+a builtin is: its form by [the form rule](r:conv.whole.form) and its value by
+[the digits rule](r:conv.whole.digits), so NUMERIC DIGITS of the caller plays no
+part. A value that those rules refuse raises the error that the place gives for
+a number that is not whole, in place of `SYNTAX 40.12`. So `2017.0`, `2.017E3`
+and `'2017 '` are 2017, `2017.0000000001` and `5.00000000000000001` are refused,
+and `2017.00000000000000000001`, whose fraction lies past the 18th significant
+digit, is 2017. The places are the count of microseconds, the year, the month,
+the day, the hours, the minutes, the seconds, the microseconds and the offset of
+`new`, the offset of `today`, of `toTimezone` and of the `from` methods that
+read one, the years of `addYears`, the days of `fromBaseDate` and the seconds of
+`fromTicks`. ooRexx refuses some of these forms, `2017.0` as a year and `1.0` as
+a number of years among them, reads `2017.0000000001` as year 1, `2.0000000001`
+as month 1 and `1.0000000001` as an hour of 1, and reads the days of
+`fromBaseDate` rounded to nine digits.
 
 ```rexx
 say .datetime~new(2017.0, 6, 30)~isoDate
@@ -2356,17 +2367,21 @@ numeric digits 9
 call try '.datetime~new(2017.0000000001, 6, 30)'
 call try '.datetime~new(2017.00000000000000000001, 6, 30)'
 call try '.datetime~new(2017, 6.5E0, 30)'
-call try '.datetime~new(2017, 6, 30, 1.0000000001)'
+call try '.datetime~new(2017, 6, 30, 1.0000000001, 0)'
 call try '.datetime~new(2017, 6, 30, 0, 0, 0, 5.0000000001)'
 call try '.datetime~new(2017, 6, 30, 0, 0, 0, 0, 60.0000000001)'
 call try '.datetime~new(5.0000000001)'
 call try '.datetime~new(5, 60.0000000001)'
 call try '.datetime~today(60.0000000001)'
 call try '.datetime~fromBaseDate(5.0000000001)'
+call try '.datetime~fromBaseDate(5.00000000000000001)'
+call try '.datetime~fromBaseDate(5.000000000000000001)'
 call try '.datetime~fromBaseDate(5, 60.0000000001)'
 call try '.datetime~fromTicks(5.0000000001)'
 call try '.datetime~fromTicks(5, 60.0000000001)'
 call try '.datetime~new(2017, 6, 30)~toTimezone(60.0000000001)'
+call try '.datetime~new(2017, 6, 30)~addYears(1.0)'
+call try '.datetime~new(2017, 6, 30)~addYears(1.0000000001)'
 exit
 try:
   signal on syntax name bad
@@ -2388,19 +2403,23 @@ bad: say arg(1) '=>' condition('o')~code
 01:00:00.000000
 2017-06-30T00:00:00.000000
 .datetime~new(2017.0000000001, 6, 30) => 88.907
-.datetime~new(2017.00000000000000000001, 6, 30) => 88.907
+.datetime~new(2017.00000000000000000001, 6, 30) => 2017-06-30T00:00:00.000000
 .datetime~new(2017, 6.5E0, 30) => 88.907
-.datetime~new(2017, 6, 30, 1.0000000001) => 88.907
+.datetime~new(2017, 6, 30, 1.0000000001, 0) => 88.907
 .datetime~new(2017, 6, 30, 0, 0, 0, 5.0000000001) => 88.907
 .datetime~new(2017, 6, 30, 0, 0, 0, 0, 60.0000000001) => 88.907
 .datetime~new(5.0000000001) => 40.19
 .datetime~new(5, 60.0000000001) => 88.907
 .datetime~today(60.0000000001) => 88.918
 .datetime~fromBaseDate(5.0000000001) => 88.918
+.datetime~fromBaseDate(5.00000000000000001) => 88.918
+.datetime~fromBaseDate(5.000000000000000001) => 0001-01-06T00:00:00.000000
 .datetime~fromBaseDate(5, 60.0000000001) => 88.918
 .datetime~fromTicks(5.0000000001) => 88.918
 .datetime~fromTicks(5, 60.0000000001) => 88.918
 .datetime~new(2017, 6, 30)~toTimezone(60.0000000001) => 88.907
+.datetime~new(2017, 6, 30)~addYears(1.0) => 2018-06-30T00:00:00.000000
+.datetime~new(2017, 6, 30)~addYears(1.0000000001) => 88.903
 ```
 
 r[class.datetime.deviation.131]
@@ -2448,9 +2467,9 @@ anywhere, a point only with one to six digits after it, an offset of the form
 `+hh:mm` or `-hh:mm` with both parts of two digits, minutes up to 59 and the
 whole at most 15:00, and nothing after the `Z` or the offset. The example shows
 the accepted extremes and, after them, spellings that are refused. ooRexx
-refuses a blank at the start or at the end, a blank before a `Z` that follows no
-fraction, and the string that ends in ` x`; it accepts the others, reading some
-in its own way: `+02:60` as `+03:00`, a seventh digit of the fraction as
+refuses a blank at the start or after a `Z`, a blank before a `Z` that follows
+no fraction, and the string that ends in ` x`; it accepts the others, reading
+some in its own way: `+02:60` as `+03:00`, a seventh digit of the fraction as
 nothing, and `Z` after a point as a time with no fraction.
 
 ```rexx

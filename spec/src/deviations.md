@@ -921,8 +921,8 @@ for those values rather than the items of the list: an item can be missed and
 operator that sends it, raises `SYNTAX 88.914` when the argument is not an
 instance of `DateTime`, `TimeSpan` or `File` respectively (an instance of a
 subclass is one). The error follows the `isA` that is sent to the argument and
-precedes every other message. ooRexx reads an argument of another class as if
-it were one of the class and answers -1, 0 or 1 from whatever it finds.
+precedes every other message. ooRexx answers 1 or -1 for an argument of another
+class, whatever the receiver is.
 
 ## 127. Adding a span to a DateTime keeps the offset of the DateTime
 
@@ -949,19 +949,19 @@ between the two calls. ooRexx subtracts the fields of the receiver from the
 host's current local time, so the answer moves by the difference between the
 offset of the receiver and the host's.
 
-## 130. A whole-number argument is any number with a whole value
+## 130. Whole-number arguments of DateTime and TimeSpan are read as a builtin's are
 
 A method of `DateTime` or `TimeSpan` that reads a whole number (the fields and
-the offset of `new`, the offset of `today` and of the `from` methods and of
-`toTimezone`, the days of `fromBaseDate`, the seconds of `fromTicks`, and the
-count and the parts of `TimeSpan` `new`) accepts every number whose value is
-whole however it is written, with blanks around it, a sign, a point and zeros
-after it or an exponent, as `2017.0`, `2.017E3` and `'2017 '`, and refuses
-every other value with the error that the method gives for a value that is not
-a whole number, a fraction as small as 1E-10 included. The test is on the value as
-written, not on the value rounded to NUMERIC DIGITS. ooRexx reads some of
-these forms as an error, `2017.0` for a year among them, and reads
-`2017.0000000001` as year 1 and accepts `1.0000000001` for an hour.
+the offset of `new`, the offset of `today`, of the `from` methods and of
+`toTimezone`, the years of `addYears`, the days of `fromBaseDate`, the seconds
+of `fromTicks`, and the count and the parts of `TimeSpan` `new`) reads it as a
+whole-number argument of a builtin is read ([the form rule](r:conv.whole.form),
+[the digits rule](r:conv.whole.digits)), with the method's own error for a value
+those rules refuse: `2017.0`, `2.017E3` and `'2017 '` are 2017,
+`2017.0000000001` is refused, and `2017.00000000000000000001` is 2017. ooRexx
+reads some of these forms as an error, `2017.0` for a year among them, reads
+`2017.0000000001` as year 1, accepts `1.0000000001` for an hour, and rounds the
+days of `fromBaseDate` to nine digits.
 
 ## 131. An instance whose init never ran is zero
 
@@ -975,15 +975,15 @@ most of its methods, or answers text that is no value.
 
 `fromUtcIsoDate` and `fromStringFormat` of `TimeSpan` refuse with `SYNTAX
 88.918` every string that is not exactly one the writing methods can produce
-(for `fromUtcIsoDate`, the forms that `utcIsoDate` gives, with the optional
-fraction and the offset `-00:00` that its rule allows in addition). A blank
-anywhere, an offset whose minutes are above 59 or whose hour or minutes have
-one digit, a fraction of seven digits, a point with no digits after it, and a
-`Z` or an offset followed by anything are refused; so are, for a span, an
-hour, minute or second that is out of range or written with one digit, days
-with a leading zero or the days `0.`, a plus sign, and a minus sign before a
-span of 0. ooRexx accepts most of these spellings and reads them in its own
-way, `+02:60` as `+03:00` and `24:00:00.000000` as one day.
+(for `fromUtcIsoDate`, the forms that `utcIsoDate` gives, and in addition a
+fraction of one to six digits or none and the offsets `+00:00` and `-00:00`). A
+blank anywhere, an offset whose minutes are above 59 or whose hour or minutes
+have one digit, a fraction of seven digits, a point with no digits after it, and
+a `Z` or an offset followed by anything are refused; so are, for a span, an
+hour, minute or second that is out of range or written with one digit, days with
+a leading zero or the days `0.`, a plus sign, and a minus sign before a span of
+0. ooRexx accepts most of these spellings and reads them in its own way,
+`+02:60` as `+03:00` and `24:00:00.000000` as one day.
 
 ## 133. A negative span under an hour keeps its sign
 

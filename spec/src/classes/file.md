@@ -1945,12 +1945,12 @@ r[class.file.deviation.126]
 `compareTo` of a `File` with an argument that is not a `File` (an instance of a
 subclass is one), and a comparison operator with such an argument, raise `SYNTAX
 88.914`. The error follows the `isA` that the method sends to the argument and
-precedes `isCaseSensitive`, `absolutePath` and every other message; `=`, `==`,
-`\=`, `\==`, `<>` and `><` with `.nil` answer without `compareTo`, as [the
-`.nil` rule](r:class.orderable.compare.nil) says, and `compareTo` itself raises
-for `.nil`. ooRexx reads the argument as a `File` and answers -1 or 1 from what
-it finds; the answer is not the same in two programs. In the example the last
-line is a probe that answers false to `isA` and gets nothing else.
+precedes `isCaseSensitive`, `absolutePath` and every other message; an operator
+whose argument is `.nil` sends no `compareTo` and does as [the `.nil`
+rule](r:class.orderable.compare.nil) says, and `compareTo` itself raises for
+`.nil`. ooRexx answers 1 or -1 for such an argument, whatever the receiver is,
+so the answer says nothing about the two values. In the example the last line is
+a probe that answers false to `isA` and gets nothing else.
 
 ```rexx
 a = .file~new('/t/a')
@@ -1964,6 +1964,7 @@ call try 'a >>= "/t/a"'
 call try 'a = 5'
 call try 'a \== .object~new'
 call try 'a = .nil'
+call try 'a < .nil'
 call try 'a~compareTo(.sub~new("/t/a"))'
 call try 'a~compareTo(a~copy)'
 .local~log = ''
@@ -2005,6 +2006,7 @@ a >>= "/t/a" => 88.914
 a = 5 => 88.914
 a \== .object~new => 88.914
 a = .nil => 0
+a < .nil => 93.973
 a~compareTo(.sub~new("/t/a")) => 0
 a~compareTo(a~copy) => 0
 .spy~new("/s")~compareTo(.probe~new) => 88.914
