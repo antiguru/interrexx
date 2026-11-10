@@ -1,7 +1,7 @@
 ---
 element: "DateTime"
 kind: class
-rexxref: "Builtin Classes > Utility Classes > DateTime Class; Builtin Classes > Utility Classes > DateTime Class > init; Builtin Classes > Utility Classes > DateTime Class > new (Class Method); Builtin Classes > Utility Classes > DateTime Class > fromBaseDate (Class Method); Builtin Classes > Utility Classes > DateTime Class > fromCivilTime (Class Method); Builtin Classes > Utility Classes > DateTime Class > fromEuropeanDate (Class Method); Builtin Classes > Utility Classes > DateTime Class > fromIsoDate (Class Method); Builtin Classes > Utility Classes > DateTime Class > fromLongTime (Class Method); Builtin Classes > Utility Classes > DateTime Class > fromNormalDate (Class Method); Builtin Classes > Utility Classes > DateTime Class > fromNormalTime (Class Method); Builtin Classes > Utility Classes > DateTime Class > fromOrderedDate (Class Method); Builtin Classes > Utility Classes > DateTime Class > fromOrdinalDate (Class Method); Builtin Classes > Utility Classes > DateTime Class > fromStandardDate (Class Method); Builtin Classes > Utility Classes > DateTime Class > fromTicks (Class Method); Builtin Classes > Utility Classes > DateTime Class > fromUsaDate (Class Method); Builtin Classes > Utility Classes > DateTime Class > fromUtcIsoDate (Class Method); Builtin Classes > Utility Classes > DateTime Class > fromWeekNumberDate (Class Method); Builtin Classes > Utility Classes > DateTime Class > maxDate (Class Method); Builtin Classes > Utility Classes > DateTime Class > minDate (Class Method); Builtin Classes > Utility Classes > DateTime Class > today (Class Method); Builtin Classes > Utility Classes > DateTime Class > Arithmetic Methods; Builtin Classes > Utility Classes > DateTime Class > addDays; Builtin Classes > Utility Classes > DateTime Class > addHours; Builtin Classes > Utility Classes > DateTime Class > addMicroseconds; Builtin Classes > Utility Classes > DateTime Class > addMinutes; Builtin Classes > Utility Classes > DateTime Class > addSeconds; Builtin Classes > Utility Classes > DateTime Class > addWeeks; Builtin Classes > Utility Classes > DateTime Class > addYears; Builtin Classes > Utility Classes > DateTime Class > baseDate; Builtin Classes > Utility Classes > DateTime Class > civilTime; Builtin Classes > Utility Classes > DateTime Class > compareTo; Builtin Classes > Utility Classes > DateTime Class > date; Builtin Classes > Utility Classes > DateTime Class > day; Builtin Classes > Utility Classes > DateTime Class > dayMicroseconds; Builtin Classes > Utility Classes > DateTime Class > dayMinutes; Builtin Classes > Utility Classes > DateTime Class > dayName; Builtin Classes > Utility Classes > DateTime Class > daySeconds; Builtin Classes > Utility Classes > DateTime Class > daysInMonth; Builtin Classes > Utility Classes > DateTime Class > daysInYear; Builtin Classes > Utility Classes > DateTime Class > elapsed; Builtin Classes > Utility Classes > DateTime Class > europeanDate; Builtin Classes > Utility Classes > DateTime Class > fullDate; Builtin Classes > Utility Classes > DateTime Class > hashCode; Builtin Classes > Utility Classes > DateTime Class > hours; Builtin Classes > Utility Classes > DateTime Class > isLeapYear; Builtin Classes > Utility Classes > DateTime Class > isoDate; Builtin Classes > Utility Classes > DateTime Class > languageDate; Builtin Classes > Utility Classes > DateTime Class > longTime; Builtin Classes > Utility Classes > DateTime Class > makeString; Builtin Classes > Utility Classes > DateTime Class > microseconds; Builtin Classes > Utility Classes > DateTime Class > minutes; Builtin Classes > Utility Classes > DateTime Class > month; Builtin Classes > Utility Classes > DateTime Class > monthName; Builtin Classes > Utility Classes > DateTime Class > normalDate; Builtin Classes > Utility Classes > DateTime Class > normalTime; Builtin Classes > Utility Classes > DateTime Class > offset; Builtin Classes > Utility Classes > DateTime Class > orderedDate; Builtin Classes > Utility Classes > DateTime Class > ordinalDate; Builtin Classes > Utility Classes > DateTime Class > seconds; Builtin Classes > Utility Classes > DateTime Class > standardDate; Builtin Classes > Utility Classes > DateTime Class > string; Builtin Classes > Utility Classes > DateTime Class > ticks; Builtin Classes > Utility Classes > DateTime Class > timeOfDay; Builtin Classes > Utility Classes > DateTime Class > toLocalTime; Builtin Classes > Utility Classes > DateTime Class > toTimezone; Builtin Classes > Utility Classes > DateTime Class > toUtcTime; Builtin Classes > Utility Classes > DateTime Class > usaDate; Builtin Classes > Utility Classes > DateTime Class > utcDate; Builtin Classes > Utility Classes > DateTime Class > utcIsoDate; Builtin Classes > Utility Classes > DateTime Class > weekDay; Builtin Classes > Utility Classes > DateTime Class > weekNumber; Builtin Classes > Utility Classes > DateTime Class > weekNumberDate; Builtin Classes > Utility Classes > DateTime Class > weekNumberYear; Builtin Classes > Utility Classes > DateTime Class > weeksInYear; Builtin Classes > Utility Classes > DateTime Class > year; Builtin Classes > Utility Classes > DateTime Class > yearDay"
+rexxref: "Builtin Classes > Utility Classes > DateTime Class; Builtin Classes > Utility Classes > DateTime Class > init; Builtin Classes > Utility Classes > DateTime Class > fromBaseDate (Class Method); Builtin Classes > Utility Classes > DateTime Class > fromCivilTime (Class Method); Builtin Classes > Utility Classes > DateTime Class > fromEuropeanDate (Class Method); Builtin Classes > Utility Classes > DateTime Class > fromIsoDate (Class Method); Builtin Classes > Utility Classes > DateTime Class > fromLongTime (Class Method); Builtin Classes > Utility Classes > DateTime Class > fromNormalDate (Class Method); Builtin Classes > Utility Classes > DateTime Class > fromNormalTime (Class Method); Builtin Classes > Utility Classes > DateTime Class > fromOrderedDate (Class Method); Builtin Classes > Utility Classes > DateTime Class > fromOrdinalDate (Class Method); Builtin Classes > Utility Classes > DateTime Class > fromStandardDate (Class Method); Builtin Classes > Utility Classes > DateTime Class > fromTicks (Class Method); Builtin Classes > Utility Classes > DateTime Class > fromUsaDate (Class Method); Builtin Classes > Utility Classes > DateTime Class > fromUtcIsoDate (Class Method); Builtin Classes > Utility Classes > DateTime Class > fromWeekNumberDate (Class Method); Builtin Classes > Utility Classes > DateTime Class > maxDate (Class Method); Builtin Classes > Utility Classes > DateTime Class > minDate (Class Method); Builtin Classes > Utility Classes > DateTime Class > today (Class Method); Builtin Classes > Utility Classes > DateTime Class > Arithmetic Methods; Builtin Classes > Utility Classes > DateTime Class > addDays; Builtin Classes > Utility Classes > DateTime Class > addHours; Builtin Classes > Utility Classes > DateTime Class > addMicroseconds; Builtin Classes > Utility Classes > DateTime Class > addMinutes; Builtin Classes > Utility Classes > DateTime Class > addSeconds; Builtin Classes > Utility Classes > DateTime Class > addWeeks; Builtin Classes > Utility Classes > DateTime Class > addYears; Builtin Classes > Utility Classes > DateTime Class > baseDate; Builtin Classes > Utility Classes > DateTime Class > civilTime; Builtin Classes > Utility Classes > DateTime Class > compareTo; Builtin Classes > Utility Classes > DateTime Class > date; Builtin Classes > Utility Classes > DateTime Class > day; Builtin Classes > Utility Classes > DateTime Class > dayMicroseconds; Builtin Classes > Utility Classes > DateTime Class > dayMinutes; Builtin Classes > Utility Classes > DateTime Class > dayName; Builtin Classes > Utility Classes > DateTime Class > daySeconds; Builtin Classes > Utility Classes > DateTime Class > daysInMonth; Builtin Classes > Utility Classes > DateTime Class > daysInYear; Builtin Classes > Utility Classes > DateTime Class > elapsed; Builtin Classes > Utility Classes > DateTime Class > europeanDate; Builtin Classes > Utility Classes > DateTime Class > fullDate; Builtin Classes > Utility Classes > DateTime Class > hashCode; Builtin Classes > Utility Classes > DateTime Class > hours; Builtin Classes > Utility Classes > DateTime Class > isLeapYear; Builtin Classes > Utility Classes > DateTime Class > isoDate; Builtin Classes > Utility Classes > DateTime Class > languageDate; Builtin Classes > Utility Classes > DateTime Class > longTime; Builtin Classes > Utility Classes > DateTime Class > makeString; Builtin Classes > Utility Classes > DateTime Class > microseconds; Builtin Classes > Utility Classes > DateTime Class > minutes; Builtin Classes > Utility Classes > DateTime Class > month; Builtin Classes > Utility Classes > DateTime Class > monthName; Builtin Classes > Utility Classes > DateTime Class > normalDate; Builtin Classes > Utility Classes > DateTime Class > normalTime; Builtin Classes > Utility Classes > DateTime Class > offset; Builtin Classes > Utility Classes > DateTime Class > orderedDate; Builtin Classes > Utility Classes > DateTime Class > ordinalDate; Builtin Classes > Utility Classes > DateTime Class > seconds; Builtin Classes > Utility Classes > DateTime Class > standardDate; Builtin Classes > Utility Classes > DateTime Class > string; Builtin Classes > Utility Classes > DateTime Class > ticks; Builtin Classes > Utility Classes > DateTime Class > timeOfDay; Builtin Classes > Utility Classes > DateTime Class > toLocalTime; Builtin Classes > Utility Classes > DateTime Class > toTimezone; Builtin Classes > Utility Classes > DateTime Class > toUtcTime; Builtin Classes > Utility Classes > DateTime Class > usaDate; Builtin Classes > Utility Classes > DateTime Class > utcDate; Builtin Classes > Utility Classes > DateTime Class > utcIsoDate; Builtin Classes > Utility Classes > DateTime Class > weekDay; Builtin Classes > Utility Classes > DateTime Class > weekNumber; Builtin Classes > Utility Classes > DateTime Class > weekNumberDate; Builtin Classes > Utility Classes > DateTime Class > weekNumberYear; Builtin Classes > Utility Classes > DateTime Class > weeksInYear; Builtin Classes > Utility Classes > DateTime Class > year; Builtin Classes > Utility Classes > DateTime Class > yearDay"
 deviations: [109]
 ---
 
@@ -15,10 +15,9 @@ date and the time of day, write the moment in the formats of
 forms, make the moment that lies a given span away, and convert it to another
 zone. The class inherits `Comparable` and `Orderable`, which give it the
 comparison operators on top of its own `compareTo`; the span of time between
-two moments is a `TimeSpan`, which has a page of its own in this chapter. The
-current moment and the host's time zone are not specified, so the examples
-build their instances from fixed values and give them an explicit offset
-wherever a result depends on one.
+two moments is a `TimeSpan`. The current moment and the host's time zone are
+not specified, so the examples build their instances from fixed values and
+give them an explicit offset wherever a result depends on one.
 
 ## The class
 
@@ -38,9 +37,10 @@ r[class.datetime.creation]
 `fromNormalDate`, `fromNormalTime`, `fromOrderedDate`, `fromOrdinalDate`,
 `fromStandardDate`, `fromTicks`, `fromUsaDate`, `fromUtcIsoDate`,
 `fromWeekNumberDate`, `maxDate`, `minDate` and `today`, besides the `new` that
-every class has. Its superclasses are `Object`, `Comparable` and `Orderable`,
-in that order. The comparison operators of an instance are those of
-`Orderable`, which send `compareTo` to the receiver ([the comparison
+every class has. It may have private methods besides these; they are not part
+of this specification. Its superclasses are `Object`, `Comparable` and
+`Orderable`, in that order. The comparison operators of an instance are those
+of `Orderable`, which send `compareTo` to the receiver ([the comparison
 rule](r:class.datetime.compare)). An instance has no `unknown` method, so a
 message that [the method search](r:class.methods.unknown) does not resolve
 raises [NOMETHOD](r:cond.nomethod.raise), as the error rule of [the
@@ -64,10 +64,10 @@ do n over names~makearray(' ')
   found += .datetime~method(n)~isA(.method)
 end
 say found 'of' names~words
-cnames = 'fromBaseDate fromCivilTime fromEuropeanDate fromIsoDate fromLongTime',
-  'fromNormalDate fromNormalTime fromOrderedDate fromOrdinalDate',
-  'fromStandardDate fromTicks fromUsaDate fromUtcIsoDate fromWeekNumberDate',
-  'maxDate minDate today new'
+cnames = 'fromBaseDate fromCivilTime fromEuropeanDate fromIsoDate',
+  'fromLongTime fromNormalDate fromNormalTime fromOrderedDate',
+  'fromOrdinalDate fromStandardDate fromTicks fromUsaDate fromUtcIsoDate',
+  'fromWeekNumberDate maxDate minDate today new'
 found = 0
 do n over cnames~makearray(' ')
   found += .datetime~hasMethod(n)
@@ -104,7 +104,9 @@ says.
 ```rexx
 say .datetime~minDate .datetime~maxDate
 d = .datetime~new(2016, 12, 31, 23, 59, 59, 999999, 0)
-say d '|' d~addMicroseconds(1) '|' 'at' d || '!'
+say d
+say d~addMicroseconds(1)
+say 'at' d || '!'
 signal on syntax name bad
 say .datetime~new(2016, 12, 31, 23, 59, 60, 0, 0)
 bad: say condition('o')~code
@@ -112,7 +114,9 @@ bad: say condition('o')~code
 
 ```output
 0001-01-01T00:00:00.000000 9999-12-31T23:59:59.999999
-2016-12-31T23:59:59.999999 | 2017-01-01T00:00:00.000000 | at 2016-12-31T23:59:59.999999!
+2016-12-31T23:59:59.999999
+2017-01-01T00:00:00.000000
+at 2016-12-31T23:59:59.999999!
 88.907
 ```
 
@@ -128,11 +132,15 @@ a number of whole minutes in that range, or a `TimeSpan` that is a whole
 number of minutes in that range. The argument is sent `isA` with the class
 `TimeSpan`; only a `TimeSpan` is then sent `totalMicroseconds` and is
 converted to minutes, and any other value is read as a number ([the argument
-rule](r:class.index.string)). A value outside the range, a number that is not
-whole, and a span that is not whole minutes raise `SYNTAX 88.907` for `new`
-and, with a number or a span, for `toTimezone`, and `SYNTAX 88.918` for the
-`from` methods; a value that is no number at all gets the same code from `new`
-and the `from` methods, and what `toTimezone` raises for it is in [the zone
+rule](r:class.index.string)) and sent the messages that [the sends
+rule](r:class.datetime.sends.new) lists. A value outside the range, a number
+with a fraction such as 1.5, and a span that is not whole minutes raise
+`SYNTAX 88.907` for `new` and, with a number or a span, for `toTimezone`, and
+`SYNTAX 88.918` for `today` and for the `from` methods that read an offset,
+which are all but `fromWeekNumberDate` (it [ignores the
+offset](r:class.datetime.fromweek)) and `fromUtcIsoDate` (it has none); a
+value that is no number at all gets the same code from `new`, `today` and
+those `from` methods, and what `toTimezone` raises for it is in [the zone
 rule](r:class.datetime.zone).
 
 ```rexx
@@ -146,6 +154,7 @@ call try '.datetime~new(2017, 6, 30, 0, 0, 0, 0, 1.5)'
 call try '.datetime~new(2017, 6, 30, 0, 0, 0, 0, .timespan~fromSeconds(90))'
 call try 'd~toTimezone(-901)'
 call try 'd~toTimezone(.timespan~fromSeconds(90))'
+call try '.datetime~today(901)'
 call try '.datetime~fromBaseDate(5, 901)'
 call try '.datetime~fromTicks(5, 1.5)'
 call try '.datetime~fromTicks(5, "x")'
@@ -168,6 +177,7 @@ bad: say arg(1) '=>' condition('o')~code
 .datetime~new(2017, 6, 30, 0, 0, 0, 0, .timespan~fromSeconds(90)) => 88.907
 d~toTimezone(-901) => 88.907
 d~toTimezone(.timespan~fromSeconds(90)) => 88.907
+.datetime~today(901) => 88.918
 .datetime~fromBaseDate(5, 901) => 88.918
 .datetime~fromTicks(5, 1.5) => 88.918
 .datetime~fromTicks(5, "x") => 88.918
@@ -184,12 +194,16 @@ another instance or with `TIME('O')`. The class methods `new`, `today` and
 every `from` method take it, except `fromUtcIsoDate`, which takes the offset
 that its string gives, and `minDate` and `maxDate`, whose offset is 0. The
 methods that answer a moment of a new zone, `toLocalTime` and `toUtcTime`, are
-described with [the zone rule](r:class.datetime.zone).
+described with [the zone rule](r:class.datetime.zone). When the host's offset
+is not a whole number of minutes from -900 to 900, every method that takes the
+default offset raises the error that [the offset
+rule](r:class.datetime.offset) gives for such an offset argument.
 
 ```rexx
 h = .datetime~new(2017, 1, 5)~offset
 say h~totalMicroseconds == time('O')
-say (.datetime~new(2017, 7, 5)~offset == h) (.datetime~new(1, 1, 1)~offset == h)
+say (.datetime~new(2017, 7, 5)~offset == h),
+    (.datetime~new(1, 1, 1)~offset == h)
 say (.datetime~today~offset == h) (.datetime~fromTicks(0)~offset == h)
 say (.datetime~new~offset == h) (.datetime~fromBaseDate(5)~offset == h)
 say .datetime~fromUtcIsoDate('2017-01-05T01:02:03+00:00')~offset
@@ -275,11 +289,14 @@ The values are checked in this order, and the first that fails raises its
 error. In the one-argument and two-argument form the number of microseconds
 must be a whole number in its range, or `SYNTAX 40.19` is raised, and then the
 offset is checked as [the offset rule](r:class.datetime.offset) says. In the
-other forms year, month and day must be whole numbers in the ranges 1 to 9999,
-1 to 12 and 1 to 31, or `SYNTAX 88.907` is raised; a day that the month does
-not have, such as 30 February, then raises `SYNTAX 40.19`; hours (0 to 23),
-minutes (0 to 59), seconds (0 to 59), microseconds (0 to 999999) and the
-offset are checked last, each as a whole number in its range, with
+other forms year, month and day are whole numbers written as digits, in the
+ranges 1 to 9999, 1 to 12 and 1 to 31; one outside its range, one that is no
+number and one with a fraction, such as 1.5, raise `SYNTAX 88.907`. A day that
+the month does not have, such as 30 February, then raises `SYNTAX 40.19`.
+Hours (0 to 23), minutes (0 to 59), seconds (0 to 59) and microseconds (0 to
+999999) are checked last, each a whole number written as digits in its range,
+and then the offset, as [the offset rule](r:class.datetime.offset) says; a
+value outside its range, one that is no number and one with a fraction raise
 `SYNTAX 88.907`. A day that does not exist is thus reported before an hour
 that is out of range, and a day of 32 before one that does not exist.
 
@@ -304,7 +321,7 @@ call try '.datetime~new(1.5)'
 call try '.datetime~new("x")'
 call try '.datetime~new(-5, 901)'
 call try '.datetime~new(5, 901)'
-call try '.datetime~new(9999, 12, 31, 23, 59, 59, 999999, 0)'
+call try '.datetime~new(9999, 12, 31, 23, 59, 59, 999999)'
 exit
 try:
   signal on syntax name bad
@@ -336,28 +353,7 @@ bad: say arg(1) '=>' condition('o')~code
 .datetime~new("x") => 40.19
 .datetime~new(-5, 901) => 40.19
 .datetime~new(5, 901) => 88.907
-.datetime~new(9999, 12, 31, 23, 59, 59, 999999, 0) => 9999-12-31T23:59:59.999999
-```
-
-r[class.datetime.new.uninitialized]
-A subclass whose `init` does not run the `init` of `DateTime` makes an
-instance that has no moment: every method that needs one raises
-`SYNTAX 40.19`.
-
-```rexx
-x = .blank~new
-say x~class~id
-signal on syntax name bad
-say x~year
-bad: say condition('o')~code
-::class blank subclass datetime
-::method init
-  return
-```
-
-```output
-BLANK
-40.19
+.datetime~new(9999, 12, 31, 23, 59, 59, 999999) => 9999-12-31T23:59:59.999999
 ```
 
 ## Class methods
@@ -417,11 +413,13 @@ bad: say condition('o')~code
 r[class.datetime.fromdate]
 `fromBaseDate`, `fromEuropeanDate`, `fromNormalDate`, `fromOrderedDate`,
 `fromStandardDate` and `fromUsaDate` read a date that is written in the form
-that the option B, E, N, O, S or U of [DATE](r:bif.date.out.counts) writes it,
-and answer that day at 00:00:00.000000. `fromBaseDate` takes a whole number of
-days from 0 (1 January 0001) to 3652058 (31 December 9999) as `baseDate`
-answers it. The other five take the forms `dd/mm/yy`, `d mon yyyy` (the day
-has one or two digits, the month is the three letters of [its
+that the option B ([DATE](r:bif.date.out.counts)) or E, N, O, S or U
+([DATE](r:bif.date.out.text)) writes it, and answer that day at
+00:00:00.000000. `fromBaseDate` takes a whole number of days from 0 (1 January
+0001) to 3652058 (31 December 9999) as `baseDate` answers it, rounded to nine
+significant digits first, so `5.000000001` is day 5 and `5.0000001` is
+refused. The other five take the forms `dd/mm/yy`, `d mon yyyy` (the day has
+one or two digits, the month is the three letters of [its
 name](r:bif.date.out.text) with a capital first letter), `yy/mm/dd`,
 `yyyymmdd` and `mm/dd/yy`. A two-digit year is the one that [the century
 rule](r:bif.date.in.century) of `DATE` gives, so it depends on the current
@@ -433,23 +431,29 @@ rule](r:class.datetime.offset)) is the last optional argument, the second one
 of `fromBaseDate` and the third of the others. A string that is not of the
 form, a month or a day that does not exist, a year 0000, and a separator that
 does not fit raise `SYNTAX 88.918`. Without a string the method raises
-`SYNTAX 93.901`.
+`SYNTAX 93.901`, and an argument after the offset raises `SYNTAX 93.902`.
 
 ```rexx
 say .datetime~fromBaseDate(0) .datetime~fromBaseDate(736509)
 say .datetime~fromBaseDate(' 12 ') .datetime~fromBaseDate('1e1')
-say .datetime~fromEuropeanDate('30/06/17') .datetime~fromOrderedDate('17/06/30')
+say .datetime~fromEuropeanDate('30/06/17'),
+    .datetime~fromOrderedDate('17/06/30')
 say .datetime~fromUsaDate('06/30/17') .datetime~fromStandardDate('20170630')
-say .datetime~fromNormalDate('30 Jun 2017') .datetime~fromNormalDate('3 Jun 2017')
-say .datetime~fromEuropeanDate('30-06-17', '-') .datetime~fromEuropeanDate('300617', '')
-say .datetime~fromStandardDate('2017.06.30', '.') .datetime~fromNormalDate('30Jun2017', '')
+say .datetime~fromNormalDate('30 Jun 2017'),
+    .datetime~fromNormalDate('3 Jun 2017')
+say .datetime~fromEuropeanDate('30-06-17', '-'),
+    .datetime~fromEuropeanDate('300617', '')
+say .datetime~fromStandardDate('2017.06.30', '.'),
+    .datetime~fromNormalDate('30Jun2017', '')
 say .datetime~fromUsaDate('06/30/17', , 90)~utcIsoDate
-say .datetime~fromStandardDate('00010101') .datetime~fromStandardDate('99991231')
+say .datetime~fromStandardDate('00010101'),
+    .datetime~fromStandardDate('99991231')
 ok = 1
 do n = 0 to 99
   y = .datetime~fromEuropeanDate('01/01/' || right(n, 2, 0))~year
   now = .datetime~new~year
-  ok = ok & (y >= now - 50) & (y <= now + 49) & (right(y, 2) == right(n, 2, 0))
+  ok = ok & (y >= now - 50) & (y <= now + 49) &,
+      (right(y, 2) == right(n, 2, 0))
 end
 say ok
 call try '.datetime~fromBaseDate(-1)'
@@ -467,6 +471,8 @@ call try '.datetime~fromNormalDate("30 June 2017")'
 call try '.datetime~fromNormalDate("30 Jun 0000")'
 call try '.datetime~fromStandardDate("2017/06/30")'
 call try '.datetime~fromBaseDate'
+call try '.datetime~fromBaseDate(5, 0, 1)'
+call try '.datetime~fromEuropeanDate("30/06/17", "/", 0, 1)'
 exit
 try:
   signal on syntax name bad
@@ -503,6 +509,20 @@ bad: say arg(1) '=>' condition('o')~code
 .datetime~fromNormalDate("30 Jun 0000") => 88.918
 .datetime~fromStandardDate("2017/06/30") => 88.918
 .datetime~fromBaseDate => 93.901
+.datetime~fromBaseDate(5, 0, 1) => 93.902
+.datetime~fromEuropeanDate("30/06/17", "/", 0, 1) => 93.902
+```
+
+```rexx
+signal on syntax name bad
+say .datetime~fromBaseDate(5.000000001)
+say .datetime~fromBaseDate(5.0000001)
+bad: say condition('o')~code
+```
+
+```output defect=#176
+0001-01-06T00:00:00.000000
+88.918
 ```
 
 r[class.datetime.fromordinal]
@@ -511,12 +531,15 @@ r[class.datetime.fromordinal]
 three for the day, from 001 to 365 or, in a leap year, 366. It answers that
 day at 00:00:00.000000, and its optional second argument is the offset. Any
 other string, a day number that the year does not have and a year 0000 raise
-`SYNTAX 88.918`.
+`SYNTAX 88.918`. Without the string the method raises `SYNTAX 93.901`, and a
+third argument raises `SYNTAX 93.902`.
 
 ```rexx
 say .datetime~fromOrdinalDate('2020-041') .datetime~fromOrdinalDate('2020041')
-say .datetime~fromOrdinalDate('2020-366') .datetime~fromOrdinalDate('2019-365')
-say .datetime~fromOrdinalDate('0001-001') .datetime~fromOrdinalDate('9999-365')
+say .datetime~fromOrdinalDate('2020-366'),
+    .datetime~fromOrdinalDate('2019-365')
+say .datetime~fromOrdinalDate('0001-001'),
+    .datetime~fromOrdinalDate('9999-365')
 say .datetime~fromOrdinalDate('2020-041', 120)~utcIsoDate
 call try '.datetime~fromOrdinalDate("2019-366")'
 call try '.datetime~fromOrdinalDate("2019-000")'
@@ -524,6 +547,8 @@ call try '.datetime~fromOrdinalDate("2019-41")'
 call try '.datetime~fromOrdinalDate("0000-001")'
 call try '.datetime~fromOrdinalDate("2020/041")'
 call try '.datetime~fromOrdinalDate("2020-041", 901)'
+call try '.datetime~fromOrdinalDate'
+call try '.datetime~fromOrdinalDate("2020-041", 0, 1)'
 exit
 try:
   signal on syntax name bad
@@ -545,6 +570,8 @@ bad: say arg(1) '=>' condition('o')~code
 .datetime~fromOrdinalDate("0000-001") => 88.918
 .datetime~fromOrdinalDate("2020/041") => 88.918
 .datetime~fromOrdinalDate("2020-041", 901) => 88.918
+.datetime~fromOrdinalDate => 93.901
+.datetime~fromOrdinalDate("2020-041", 0, 1) => 93.902
 ```
 
 r[class.datetime.fromweek]
@@ -557,16 +584,23 @@ the year before. The method answers that day at 00:00:00.000000. A string that
 is not of the form, a week 00 or a week that the year does not have, a weekday
 0 or 8, and a date outside the range of the class (the year 0000, or the week
 date that would follow 31 December 9999) raise `SYNTAX 88.918`. The method is
-given an optional second argument, the offset, but ignores it: the answer
-always has the default offset ([the
-default](r:class.datetime.offset.default)).
+given an optional second argument, the offset, but ignores it, so a value that
+is no offset raises nothing: the answer always has the default offset ([the
+default](r:class.datetime.offset.default)). Without the string the method
+raises `SYNTAX 93.901`, and a third argument raises `SYNTAX 93.902`.
 
 ```rexx
-say .datetime~fromWeekNumberDate('2020-W07-1') .datetime~fromWeekNumberDate('2020W071')
-say .datetime~fromWeekNumberDate('2020-W53-7') .datetime~fromWeekNumberDate('2019-W52-7')
-say .datetime~fromWeekNumberDate('2018-W01-1') .datetime~fromWeekNumberDate('0001-W01-1')
+say .datetime~fromWeekNumberDate('2020-W07-1'),
+    .datetime~fromWeekNumberDate('2020W071')
+say .datetime~fromWeekNumberDate('2020-W53-7'),
+    .datetime~fromWeekNumberDate('2019-W52-7')
+say .datetime~fromWeekNumberDate('2018-W01-1'),
+    .datetime~fromWeekNumberDate('0001-W01-1')
 say .datetime~fromWeekNumberDate('9999-W52-5')
-say .datetime~fromWeekNumberDate('2017-W01-4', 120)~offset == .datetime~new~offset
+say .datetime~fromWeekNumberDate('2017-W01-4', 120)~offset,
+    == .datetime~new~offset
+say .datetime~fromWeekNumberDate('2020-W07-1', 'x'),
+    .datetime~fromWeekNumberDate('2020-W07-1', 901)
 call try '.datetime~fromWeekNumberDate("2019-W53-1")'
 call try '.datetime~fromWeekNumberDate("2020-W00-1")'
 call try '.datetime~fromWeekNumberDate("2020-W01-0")'
@@ -576,6 +610,8 @@ call try '.datetime~fromWeekNumberDate("2020-W7-1")'
 call try '.datetime~fromWeekNumberDate("2020-W07")'
 call try '.datetime~fromWeekNumberDate("9999-W52-7")'
 call try '.datetime~fromWeekNumberDate("0000-W52-7")'
+call try '.datetime~fromWeekNumberDate'
+call try '.datetime~fromWeekNumberDate("2020-W07-1", 0, 1)'
 exit
 try:
   signal on syntax name bad
@@ -592,6 +628,7 @@ bad: say arg(1) '=>' condition('o')~code
 2018-01-01T00:00:00.000000 0001-01-01T00:00:00.000000
 9999-12-31T00:00:00.000000
 1
+2020-02-10T00:00:00.000000 2020-02-10T00:00:00.000000
 .datetime~fromWeekNumberDate("2019-W53-1") => 88.918
 .datetime~fromWeekNumberDate("2020-W00-1") => 88.918
 .datetime~fromWeekNumberDate("2020-W01-0") => 88.918
@@ -601,6 +638,8 @@ bad: say arg(1) '=>' condition('o')~code
 .datetime~fromWeekNumberDate("2020-W07") => 88.918
 .datetime~fromWeekNumberDate("9999-W52-7") => 88.918
 .datetime~fromWeekNumberDate("0000-W52-7") => 88.918
+.datetime~fromWeekNumberDate => 93.901
+.datetime~fromWeekNumberDate("2020-W07-1", 0, 1) => 93.902
 ```
 
 r[class.datetime.fromtime]
@@ -612,14 +651,18 @@ the microseconds. The hour of a civil time has one or two digits and is from 1
 to 12; `am` and `pm` are lower case. The answer is that time on 1 January
 0001, and the optional second argument is the offset. A string that is not of
 the form, an hour past 23 (past 12 for the civil form, and 0 is no civil
-hour), and minutes or seconds past 59 raise `SYNTAX 88.918`.
+hour), and minutes or seconds past 59 raise `SYNTAX 88.918`. Without the
+string each method raises `SYNTAX 93.901`, and a third argument raises
+`SYNTAX 93.902`.
 
 ```rexx
 say .datetime~fromNormalTime('13:45:09') .datetime~fromNormalTime('00:00:00')
 say .datetime~fromCivilTime('1:45pm') .datetime~fromCivilTime('01:45pm')
 say .datetime~fromCivilTime('12:00am') .datetime~fromCivilTime('12:59pm')
-say .datetime~fromLongTime('13:45:09.123456') .datetime~fromLongTime('13:45:09.1')
-say .datetime~fromLongTime('13:45:09.0001') .datetime~fromNormalTime('23:59:59', 60)~utcIsoDate
+say .datetime~fromLongTime('13:45:09.123456'),
+    .datetime~fromLongTime('13:45:09.1')
+say .datetime~fromLongTime('13:45:09.0001'),
+    .datetime~fromNormalTime('23:59:59', 60)~utcIsoDate
 call try '.datetime~fromNormalTime("24:00:00")'
 call try '.datetime~fromNormalTime("12:60:00")'
 call try '.datetime~fromNormalTime("1:00:00")'
@@ -630,6 +673,12 @@ call try '.datetime~fromCivilTime("1:45PM")'
 call try '.datetime~fromCivilTime("1:45 pm")'
 call try '.datetime~fromLongTime("13:45:09")'
 call try '.datetime~fromLongTime("13:45:09.1234567")'
+call try '.datetime~fromNormalTime'
+call try '.datetime~fromCivilTime'
+call try '.datetime~fromLongTime'
+call try '.datetime~fromNormalTime("13:45:09", 0, 1)'
+call try '.datetime~fromCivilTime("1:45pm", 0, 1)'
+call try '.datetime~fromLongTime("13:45:09.1", 0, 1)'
 exit
 try:
   signal on syntax name bad
@@ -656,6 +705,12 @@ bad: say arg(1) '=>' condition('o')~code
 .datetime~fromCivilTime("1:45 pm") => 88.918
 .datetime~fromLongTime("13:45:09") => 88.918
 .datetime~fromLongTime("13:45:09.1234567") => 88.918
+.datetime~fromNormalTime => 93.901
+.datetime~fromCivilTime => 93.901
+.datetime~fromLongTime => 93.901
+.datetime~fromNormalTime("13:45:09", 0, 1) => 93.902
+.datetime~fromCivilTime("1:45pm", 0, 1) => 93.902
+.datetime~fromLongTime("13:45:09.1", 0, 1) => 93.902
 ```
 
 r[class.datetime.fromticks]
@@ -665,10 +720,12 @@ microseconds. The largest value is 253402300799 and the smallest is
 -62135596800, the first moment of the class; up to 49 seconds below the
 smallest are read as the first moment. Beyond those limits the method raises
 `SYNTAX 88.918`, as it does for a value that is not a whole number. The
-optional second argument is the offset.
+optional second argument is the offset. Without the value the method raises
+`SYNTAX 93.901`, and a third argument raises `SYNTAX 93.902`.
 
 ```rexx
-say .datetime~fromTicks(0) .datetime~fromTicks(1498820930) .datetime~fromTicks(-1)
+say .datetime~fromTicks(0) .datetime~fromTicks(1498820930)
+say .datetime~fromTicks(-1)
 say .datetime~fromTicks(253402300799) .datetime~fromTicks(-62135596800)
 say .datetime~fromTicks(-62135596849)
 say .datetime~fromTicks(5, 0)~utcIsoDate .datetime~fromTicks(5, 90)~utcIsoDate
@@ -676,6 +733,8 @@ call try '.datetime~fromTicks(253402300800)'
 call try '.datetime~fromTicks(-62135596850)'
 call try '.datetime~fromTicks(1.5)'
 call try '.datetime~fromTicks("x")'
+call try '.datetime~fromTicks'
+call try '.datetime~fromTicks(5, 0, 1)'
 exit
 try:
   signal on syntax name bad
@@ -687,7 +746,8 @@ bad: say arg(1) '=>' condition('o')~code
 ```
 
 ```output
-1970-01-01T00:00:00.000000 2017-06-30T11:08:50.000000 1969-12-31T23:59:59.000000
+1970-01-01T00:00:00.000000 2017-06-30T11:08:50.000000
+1969-12-31T23:59:59.000000
 9999-12-31T23:59:59.000000 0001-01-01T00:00:00.000000
 0001-01-01T00:00:00.000000
 1970-01-01T00:00:05.000000Z 1970-01-01T00:00:05.000000+01:30
@@ -695,6 +755,8 @@ bad: say arg(1) '=>' condition('o')~code
 .datetime~fromTicks(-62135596850) => 88.918
 .datetime~fromTicks(1.5) => 88.918
 .datetime~fromTicks("x") => 88.918
+.datetime~fromTicks => 93.901
+.datetime~fromTicks(5, 0, 1) => 93.902
 ```
 
 r[class.datetime.fromiso]
@@ -704,6 +766,8 @@ optional second argument or the default. The fraction `f` has one to six
 digits, the leading digits of the microseconds, and is required; the `T` is a
 capital letter. A string that is not of the form, or names an hour past 23, a
 minute or second past 59 or a day that does not exist, raises `SYNTAX 88.918`.
+Without the string the method raises `SYNTAX 93.901`, and a third argument
+raises `SYNTAX 93.902`.
 
 ```rexx
 say .datetime~fromIsoDate('2017-06-30T11:08:50.123456')
@@ -720,6 +784,8 @@ call try '.datetime~fromIsoDate("2017-06-30T11:08:50.1234567")'
 call try '.datetime~fromIsoDate("2017-06-30T24:00:00.000000")'
 call try '.datetime~fromIsoDate("2017-02-30T00:00:00.000000")'
 call try '.datetime~fromIsoDate("20170630T110850.123456")'
+call try '.datetime~fromIsoDate'
+call try '.datetime~fromIsoDate("2017-06-30T11:08:50.1", 0, 1)'
 exit
 try:
   signal on syntax name bad
@@ -745,17 +811,21 @@ bad: say arg(1) '=>' condition('o')~code
 .datetime~fromIsoDate("2017-06-30T24:00:00.000000") => 88.918
 .datetime~fromIsoDate("2017-02-30T00:00:00.000000") => 88.918
 .datetime~fromIsoDate("20170630T110850.123456") => 88.918
+.datetime~fromIsoDate => 93.901
+.datetime~fromIsoDate("2017-06-30T11:08:50.1", 0, 1) => 93.902
 ```
 
 r[class.datetime.fromutciso]
-`fromUtcIsoDate` reads the string that `utcIsoDate` writes: the form of
-`fromIsoDate`, whose fraction may be left out here, followed by the offset of
-the string, either `Z` (offset 0) or a sign and `hh:mm`, `+02:30` and `-03:30`
-for instance, up to 15:00 in either direction. The answer has the fields of
-the string and that offset; `+00:00` and `-00:00` are the offset 0. The method
-takes no second argument (`SYNTAX 93.902`). A string with no `Z` or sign, a
-lower-case `z`, an offset in the forms `+0200` and `+02`, and an offset past
-15:00 raise `SYNTAX 88.918`.
+`fromUtcIsoDate` reads the string that `utcIsoDate` writes: the date and time
+of `fromIsoDate`, with a fraction of one to six digits that may also be left
+out together with its point, followed by the offset of the string, either `Z`
+(offset 0) or a sign and `hh:mm`, `+02:30` and `-03:30` for instance, up to
+15:00 in either direction. The answer has the fields of the string and that
+offset; `+00:00` and `-00:00` are the offset 0. The method takes no second
+argument (`SYNTAX 93.902`) and, without the string, raises `SYNTAX 93.901`. A
+string with no `Z` or sign, a lower-case `z`, an offset in the forms `+0200`,
+`+02`, `+02:` and `+:30`, an offset past 15:00 and a letter after the offset
+raise `SYNTAX 88.918`.
 
 ```rexx
 say .datetime~fromUtcIsoDate('2017-06-30T11:08:50.123456+02:00')~utcIsoDate
@@ -769,6 +839,11 @@ call try '.datetime~fromUtcIsoDate("2017-06-30T11:08:50.123456z")'
 call try '.datetime~fromUtcIsoDate("2017-06-30T11:08:50.123456+0200")'
 call try '.datetime~fromUtcIsoDate("2017-06-30T11:08:50.123456+02")'
 call try '.datetime~fromUtcIsoDate("2017-06-30T11:08:50.123456+15:01")'
+call try '.datetime~fromUtcIsoDate("2017-06-30T11:08:50.123456+02:")'
+call try '.datetime~fromUtcIsoDate("2017-06-30T11:08:50.123456+:30")'
+call try '.datetime~fromUtcIsoDate("2017-06-30T11:08:50.123456+16:00")'
+call try '.datetime~fromUtcIsoDate("2017-06-30T11:08:50.123456Zx")'
+call try '.datetime~fromUtcIsoDate'
 call try '.datetime~fromUtcIsoDate("2017-06-30T11:08:50.123456+02:00", 5)'
 exit
 try:
@@ -792,6 +867,11 @@ bad: say arg(1) '=>' condition('o')~code
 .datetime~fromUtcIsoDate("2017-06-30T11:08:50.123456+0200") => 88.918
 .datetime~fromUtcIsoDate("2017-06-30T11:08:50.123456+02") => 88.918
 .datetime~fromUtcIsoDate("2017-06-30T11:08:50.123456+15:01") => 88.918
+.datetime~fromUtcIsoDate("2017-06-30T11:08:50.123456+02:") => 88.918
+.datetime~fromUtcIsoDate("2017-06-30T11:08:50.123456+:30") => 88.918
+.datetime~fromUtcIsoDate("2017-06-30T11:08:50.123456+16:00") => 88.918
+.datetime~fromUtcIsoDate("2017-06-30T11:08:50.123456Zx") => 88.918
+.datetime~fromUtcIsoDate => 93.901
 .datetime~fromUtcIsoDate("2017-06-30T11:08:50.123456+02:00", 5) => 93.902
 ```
 
@@ -843,9 +923,20 @@ do y over .array~of(1900, 2000, 2016, 2100, 2400, 4, 100)
   x = .datetime~new(y, 2, 1, 0, 0, 0, 0, 0)
   say y x~isLeapYear x~daysInMonth x~daysInYear .datetime~new(y, 3, 1)~yearDay
 end
-say .datetime~new(2017, 12, 1)~daysInMonth .datetime~new(2017, 4, 1)~daysInMonth
+say .datetime~new(2017, 12, 1)~daysInMonth,
+    .datetime~new(2017, 4, 1)~daysInMonth
 say .datetime~new(2017, 6, 5)~baseDate == date('B', '5 Jun 2017')
 say .datetime~new(2017, 6, 5)~yearDay == date('D', '5 Jun 2017')
+call try 'd~weekDay(1)'
+call try 'd~isLeapYear(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=>' r
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
 ```
 
 ```output
@@ -861,6 +952,8 @@ Monday Friday
 31 30
 1
 1
+d~weekDay(1) => 93.902
+d~isLeapYear(1) => 93.902
 ```
 
 r[class.datetime.isoweek]
@@ -876,14 +969,28 @@ of the year in three digits. Each takes no argument.
 
 ```rexx
 do d over .array~of(.datetime~new(2018, 12, 31), .datetime~new(2019, 1, 1), -
-    .datetime~new(2020, 12, 31), .datetime~new(2021, 1, 1), .datetime~new(2016, 1, 1))
-  say d~isoDate~left(10) d~weekNumber d~weekNumberYear d~weekNumberDate d~weeksInYear d~ordinalDate
+    .datetime~new(2020, 12, 31), .datetime~new(2021, 1, 1), -
+    .datetime~new(2016, 1, 1))
+  say d~isoDate~left(10) d~weekNumber d~weekNumberYear d~weekNumberDate,
+      d~weeksInYear d~ordinalDate
 end
-say .datetime~new(1, 1, 1)~weekNumberDate .datetime~new(9999, 12, 31)~weekNumberDate
+say .datetime~new(1, 1, 1)~weekNumberDate,
+    .datetime~new(9999, 12, 31)~weekNumberDate
 say .datetime~new(5, 1, 1)~weekNumberDate .datetime~new(5, 1, 1)~ordinalDate
 do y = 2010 to 2030
-  if .datetime~new(y, 6, 30)~weeksInYear \= 52 then say y .datetime~new(y, 6, 30)~weeksInYear
+  w = .datetime~new(y, 6, 30)~weeksInYear
+  if w \= 52 then say y w
 end
+call try '.datetime~new(2017, 1, 1)~weekNumber(1)'
+call try '.datetime~new(2017, 1, 1)~ordinalDate(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=>' r
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
 ```
 
 ```output
@@ -897,6 +1004,8 @@ end
 2015 53
 2020 53
 2026 53
+.datetime~new(2017, 1, 1)~weekNumber(1) => 93.902
+.datetime~new(2017, 1, 1)~ordinalDate(1) => 93.902
 ```
 
 ## Writing a moment
@@ -914,8 +1023,10 @@ option L of `DATE` does, and takes no argument.
 
 ```rexx
 d = .datetime~new(2017, 6, 5, 9, 8, 7, 12345, 0)
-say d~europeanDate d~normalDate d~orderedDate d~standardDate d~usaDate d~languageDate
-say d~europeanDate('-') d~normalDate('-') d~orderedDate('.') d~standardDate('-')
+say d~europeanDate d~normalDate d~orderedDate,
+    d~standardDate d~usaDate d~languageDate
+say d~europeanDate('-') d~normalDate('-'),
+    d~orderedDate('.') d~standardDate('-')
 say d~usaDate('') d~europeanDate(' ') d~normalDate('') d~standardDate('')
 say .datetime~new(5, 1, 1)~europeanDate .datetime~new(2100, 1, 1)~europeanDate
 say .datetime~new(5, 1, 1)~normalDate .datetime~new(5, 1, 1)~languageDate
@@ -953,12 +1064,25 @@ are not written, and the microseconds of the normal form are dropped, not
 rounded. Each takes no argument.
 
 ```rexx
-say .datetime~new(2017, 6, 30, 0, 0, 0, 0, 0)~civilTime .datetime~new(2017, 6, 30, 0, 5)~civilTime
-say .datetime~new(2017, 6, 30, 12, 5)~civilTime .datetime~new(2017, 6, 30, 13, 0)~civilTime
+say .datetime~new(2017, 6, 30, 0, 0, 0, 0, 0)~civilTime,
+    .datetime~new(2017, 6, 30, 0, 5)~civilTime
+say .datetime~new(2017, 6, 30, 12, 5)~civilTime,
+    .datetime~new(2017, 6, 30, 13, 0)~civilTime
 say .datetime~new(2017, 6, 30, 23, 59, 59, 999999)~civilTime
 say .datetime~new(2017, 6, 30, 23, 59, 59, 999999)~normalTime
 say .datetime~new(2017, 6, 30, 23, 59, 59, 999999)~longTime
-say .datetime~new(2017, 6, 30, 1, 2, 3, 4)~longTime .datetime~new(2017, 6, 30)~longTime
+say .datetime~new(2017, 6, 30, 1, 2, 3, 4)~longTime,
+    .datetime~new(2017, 6, 30)~longTime
+call try '.datetime~new(2017, 6, 30)~civilTime(1)'
+call try '.datetime~new(2017, 6, 30)~longTime(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=>' r
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
 ```
 
 ```output
@@ -968,6 +1092,8 @@ say .datetime~new(2017, 6, 30, 1, 2, 3, 4)~longTime .datetime~new(2017, 6, 30)~l
 23:59:59
 23:59:59.999999
 01:02:03.000004 00:00:00.000000
+.datetime~new(2017, 6, 30)~civilTime(1) => 93.902
+.datetime~new(2017, 6, 30)~longTime(1) => 93.902
 ```
 
 r[class.datetime.counts]
@@ -989,9 +1115,21 @@ e = .datetime~new(2017, 6, 30, 23, 59, 59, 999999, 600)
 say e~fullDate e~utcDate e~ticks
 f = .datetime~new(2017, 6, 30, 23, 59, 59, 999999, -600)
 say f~fullDate f~utcDate f~ticks
-say .datetime~new(1969, 12, 31, 23, 59, 59, 500000, 0)~ticks .datetime~new(1970, 1, 1, 0, 0, 0, 999999, 0)~ticks
-say .datetime~new(1, 1, 1, 0, 0, 0, 0, 60)~utcDate .datetime~new(9999, 12, 31, 23, 59, 59, 999999, -60)~utcDate
+say .datetime~new(1969, 12, 31, 23, 59, 59, 500000, 0)~ticks,
+    .datetime~new(1970, 1, 1, 0, 0, 0, 999999, 0)~ticks
+say .datetime~new(1, 1, 1, 0, 0, 0, 0, 60)~utcDate,
+    .datetime~new(9999, 12, 31, 23, 59, 59, 999999, -60)~utcDate
 say .datetime~minDate~ticks
+call try 'd~fullDate(1)'
+call try 'd~ticks(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=>' r
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
 ```
 
 ```output
@@ -1001,6 +1139,8 @@ say .datetime~minDate~ticks
 -1 0
 -3600000000 315537901199999999
 -62135596800
+d~fullDate(1) => 93.902
+d~ticks(1) => 93.902
 ```
 
 r[class.datetime.string]
@@ -1014,19 +1154,34 @@ back. Each takes no argument. The string value of an instance is this text.
 
 ```rexx
 d = .datetime~new(2017, 6, 5, 9, 8, 7, 12345, 330)
-say d~isoDate d~string d~makeString d
+say d~isoDate d~string
+say d~makeString d
 say d~utcIsoDate .datetime~new(2017, 6, 5, 9, 8, 7, 12345, -75)~utcIsoDate
 say .datetime~new(5, 1, 5, 0, 0, 0, 0, 0)~utcIsoDate
-say (.datetime~fromUtcIsoDate(d~utcIsoDate) == d) (.datetime~fromIsoDate(d~isoDate, 330) == d)
+say (.datetime~fromUtcIsoDate(d~utcIsoDate) == d),
+    (.datetime~fromIsoDate(d~isoDate, 330) == d)
 say d~isoDate~length d~utcIsoDate~length d~request('STRING')
+call try 'd~isoDate(1)'
+call try 'd~utcIsoDate(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=>' r
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
 ```
 
 ```output
-2017-06-05T09:08:07.012345 2017-06-05T09:08:07.012345 2017-06-05T09:08:07.012345 2017-06-05T09:08:07.012345
+2017-06-05T09:08:07.012345 2017-06-05T09:08:07.012345
+2017-06-05T09:08:07.012345 2017-06-05T09:08:07.012345
 2017-06-05T09:08:07.012345+05:30 2017-06-05T09:08:07.012345-01:15
 0005-01-05T00:00:00.000000Z
 1 1
 26 32 2017-06-05T09:08:07.012345
+d~isoDate(1) => 93.902
+d~utcIsoDate(1) => 93.902
 ```
 
 ## Arithmetic
@@ -1035,32 +1190,47 @@ r[class.datetime.add]
 Each of `addYears`, `addWeeks`, `addDays`, `addHours`, `addMinutes`,
 `addSeconds` and `addMicroseconds` answers a new instance, of the class of the
 receiver, that is the receiver moved by its argument; the receiver is not
-changed, and the offset is kept. `addYears` takes a whole number of years
-(`SYNTAX 88.903` for any other value) and keeps month, day and time of day,
-except that 29 February moves to 28 February when the year it lands in is no
-leap year; a year past the range raises `SYNTAX 88.907`. The other six take a
-number, a negative one moves back, and a fraction is allowed: `addDays(1.5)`
-is a day and twelve hours. The amount is exact down to the microsecond, and a
-part of a microsecond is dropped toward the earlier moment, so
-`addMicroseconds` of 1.5 adds 1 and of -1.5 subtracts 2. A value that is no
-number raises `SYNTAX 88.902`; a moment outside the range of the class raises
-`SYNTAX 40.19`. A missing argument raises `SYNTAX 93.901` and a second
-argument `SYNTAX 93.902`.
+changed, and the offset is kept. `addYears` takes a whole number of years,
+written as digits with an optional sign and leading blanks, and keeps month,
+day and time of day, except that 29 February moves to 28 February when the
+year it lands in is no leap year; a year past the range raises
+`SYNTAX 88.907`, and a value such as 1.5 or `x` raises `SYNTAX 88.903`. The
+other six take a number, a negative one moves back, and a fraction is allowed:
+`addDays(1.5)` is a day and twelve hours. The new moment is the receiver's
+count of microseconds plus the amount in microseconds, rounded to 18
+significant digits; a part of a microsecond that is left is dropped toward the
+earlier moment. So `addMicroseconds` of 1.5 adds 1 and of -1.5 subtracts 2,
+and on a date of 2016, whose count has 17 digits, of 0.96 adds 1 and of -0.04
+adds nothing. A value that is no number raises `SYNTAX 88.902`; a moment
+outside the range of the class raises `SYNTAX 40.19`. A missing argument
+raises `SYNTAX 93.901` and a second argument `SYNTAX 93.902`.
 
 ```rexx
 d = .datetime~new(2016, 2, 29, 9, 8, 7, 12345, 120)
-say d~addYears(1) d~addYears(4) d~addYears(-1) d~addYears(0)
-say d~addWeeks(1) d~addWeeks(0.5) d~addWeeks(-1)
-say d~addDays(1) d~addDays(1.5) d~addDays(-0.25) d~addDays(-60) d~addDays(365)
-say d~addHours(1) d~addHours(-9.5) d~addHours(24)
+say d~addYears(1) d~addYears(4)
+say d~addYears(-1) d~addYears(0)
+say d~addWeeks(1) d~addWeeks(0.5)
+say d~addWeeks(-1)
+say d~addDays(1) d~addDays(1.5)
+say d~addDays(-0.25) d~addDays(-60)
+say d~addDays(365)
+say d~addHours(1) d~addHours(-9.5)
+say d~addHours(24)
 say d~addMinutes(90.5) d~addMinutes(-548)
 say d~addSeconds(0.5) d~addSeconds(86400)
-say d~addMicroseconds(1) d~addMicroseconds(-12346) d~addMicroseconds(1e6)
+say d~addMicroseconds(1) d~addMicroseconds(-12346)
+say d~addMicroseconds(1e6)
 say d~addDays(0.0000001)~microseconds d~addSeconds(0.0000015)~microseconds
 e = .datetime~new(2016, 2, 29, 9, 8, 7, 500000, 0)
-say e~addMicroseconds(1.5)~microseconds e~addMicroseconds(-1.5)~microseconds e~addMicroseconds(-0.5)~microseconds
+say e~addMicroseconds(1.5)~microseconds e~addMicroseconds(-1.5)~microseconds,
+    e~addMicroseconds(-0.5)~microseconds
+say d~addMicroseconds(0.96)~microseconds d~addMicroseconds(0.4)~microseconds
+say .datetime~new(1, 1, 1, 0, 0, 0, 5)~addMicroseconds(0.96)~microseconds
+say d~addSeconds(0.00000096)~microseconds,
+    d~addMicroseconds(-0.04)~microseconds
 say d~addDays(1)~utcIsoDate d~addYears(1)~class~id (d~addDays(1) == d)
-say .datetime~new(2016, 2, 29)~addYears(-4) .datetime~new(2016, 2, 29)~addYears(100)
+say .datetime~new(2016, 2, 29)~addYears(-4),
+    .datetime~new(2016, 2, 29)~addYears(100)
 call try 'd~addYears(1.5)'
 call try 'd~addYears("x")'
 call try 'd~addYears(7984)'
@@ -1084,15 +1254,24 @@ bad: say arg(1) '=>' condition('o')~code
 ```
 
 ```output
-2017-02-28T09:08:07.012345 2020-02-29T09:08:07.012345 2015-02-28T09:08:07.012345 2016-02-29T09:08:07.012345
-2016-03-07T09:08:07.012345 2016-03-03T21:08:07.012345 2016-02-22T09:08:07.012345
-2016-03-01T09:08:07.012345 2016-03-01T21:08:07.012345 2016-02-29T03:08:07.012345 2015-12-31T09:08:07.012345 2017-02-28T09:08:07.012345
-2016-02-29T10:08:07.012345 2016-02-28T23:38:07.012345 2016-03-01T09:08:07.012345
+2017-02-28T09:08:07.012345 2020-02-29T09:08:07.012345
+2015-02-28T09:08:07.012345 2016-02-29T09:08:07.012345
+2016-03-07T09:08:07.012345 2016-03-03T21:08:07.012345
+2016-02-22T09:08:07.012345
+2016-03-01T09:08:07.012345 2016-03-01T21:08:07.012345
+2016-02-29T03:08:07.012345 2015-12-31T09:08:07.012345
+2017-02-28T09:08:07.012345
+2016-02-29T10:08:07.012345 2016-02-28T23:38:07.012345
+2016-03-01T09:08:07.012345
 2016-02-29T10:38:37.012345 2016-02-29T00:00:07.012345
 2016-02-29T09:08:07.512345 2016-03-01T09:08:07.012345
-2016-02-29T09:08:07.012346 2016-02-29T09:08:06.999999 2016-02-29T09:08:08.012345
+2016-02-29T09:08:07.012346 2016-02-29T09:08:06.999999
+2016-02-29T09:08:08.012345
 20985 12346
 500001 499998 499999
+12346 12345
+5
+12346 12345
 2016-03-01T09:08:07.012345+02:00 DateTime 0
 2012-02-29T00:00:00.000000 2116-02-29T00:00:00.000000
 d~addYears(1.5) => 88.903
@@ -1175,7 +1354,8 @@ say z - d
 say d - d
 say (z - d)~class~id
 say d + (z - d) == z
-say .datetime~new(2017, 1, 1, 0, 0, 0, 0, 60) - .datetime~new(2017, 1, 1, 0, 0, 0, 0, 0)
+say .datetime~new(2017, 1, 1, 0, 0, 0, 0, 60),
+    - .datetime~new(2017, 1, 1, 0, 0, 0, 0, 0)
 say .datetime~maxDate - .datetime~minDate
 call try 'd - 5'
 call try 'd - "x"'
@@ -1266,15 +1446,27 @@ codes. The bytes are not specified.
 
 ```rexx
 d = .datetime~new(2017, 6, 30, 5, 6, 7, 8, 0)
-say (d~hashCode == d~copy~hashCode) (d~hashCode == .datetime~new(2017, 6, 30, 5, 6, 7, 8, 60)~hashCode)
-say (d~hashCode == .datetime~new(2017, 6, 30, 6, 6, 7, 8, 60)~hashCode) (d = .datetime~new(2017, 6, 30, 6, 6, 7, 8, 60))
+s = .datetime~new(2017, 6, 30, 5, 6, 7, 8, 60)
+t = .datetime~new(2017, 6, 30, 6, 6, 7, 8, 60)
+say (d~hashCode == d~copy~hashCode) (d~hashCode == s~hashCode)
+say (d~hashCode == t~hashCode) (d = t)
 say d~hashCode~length (.datetime~minDate~hashCode == d~hashCode)
+call try 'd~hashCode(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=>' r
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
 ```
 
 ```output
 1 1
 0 1
 8 0
+d~hashCode(1) => 93.902
 ```
 
 ## Zones and parts
@@ -1297,11 +1489,14 @@ number that is not a whole number of minutes in the range raises
 
 ```rexx
 d = .datetime~new(2016, 2, 29, 9, 8, 7, 12345, 120)
-say d~toTimezone(0) d~toUtcTime d~toTimezone
+say d~toTimezone(0) d~toUtcTime
+say d~toTimezone
 say d~toTimezone(-90)~utcIsoDate d~toTimezone(90)~utcIsoDate
 say d~toTimezone(120)~utcIsoDate d~toTimezone(900)~utcIsoDate
-say d~toTimezone(.timespan~fromHours(-5))~utcIsoDate d~toTimezone(.timespan~fromMinutes(-61))~utcIsoDate
-say (d~toTimezone(-77) == d) (d~toTimezone(-77)~utcDate == d~utcDate) d~toTimezone(-77)~timeOfDay
+say d~toTimezone(.timespan~fromHours(-5))~utcIsoDate,
+    d~toTimezone(.timespan~fromMinutes(-61))~utcIsoDate
+say (d~toTimezone(-77) == d),
+    (d~toTimezone(-77)~utcDate == d~utcDate) d~toTimezone(-77)~timeOfDay
 l = d~toLocalTime
 say (l == d) (l~offset == .datetime~new~offset) (l~utcDate == d~utcDate)
 say d~toTimezone(60)~class~id d~toTimezone(60)~toUtcTime~isoDate
@@ -1327,7 +1522,8 @@ bad: say arg(1) '=>' condition('o')~code
 ```
 
 ```output
-2016-02-29T07:08:07.012345 2016-02-29T07:08:07.012345 2016-02-29T07:08:07.012345
+2016-02-29T07:08:07.012345 2016-02-29T07:08:07.012345
+2016-02-29T07:08:07.012345
 2016-02-29T05:38:07.012345-01:30 2016-02-29T08:38:07.012345+01:30
 2016-02-29T09:08:07.012345+02:00 2016-02-29T22:08:07.012345+15:00
 2016-02-29T02:08:07.012345-05:00 2016-02-29T06:07:07.012345-01:01
@@ -1361,13 +1557,24 @@ no argument.
 d = .datetime~new(2016, 2, 29, 9, 8, 7, 12345, 120)
 say d~date d~date~offset d~timeOfDay d~timeOfDay~class~id
 say d~toTimezone(-77)~timeOfDay d~toTimezone(-77)~date
-say .datetime~minDate~elapsed~sign .datetime~maxDate~elapsed~sign .datetime~minDate~elapsed~class~id
+say .datetime~minDate~elapsed~sign,
+    .datetime~maxDate~elapsed~sign .datetime~minDate~elapsed~class~id
 n = .datetime~new
-m = .datetime~new(n~year, n~month, n~day, n~hours, n~minutes, n~seconds, n~microseconds, -600)
-say (m~elapsed < .timespan~fromMinutes(1)) (m~toUtcTime~elapsed < .timespan~fromHours(-9))
-signal on syntax name bad
-say d~date(1)
-bad: say condition('o')~code
+m = .datetime~new(n~year, n~month, n~day, n~hours, n~minutes, n~seconds,,
+    n~microseconds, -600)
+say (m~elapsed < .timespan~fromMinutes(1)),
+    (m~toUtcTime~elapsed < .timespan~fromHours(-9))
+call try 'd~date(1)'
+call try 'd~timeOfDay(1)'
+call try 'd~elapsed(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=>' r
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
 ```
 
 ```output
@@ -1375,7 +1582,9 @@ bad: say condition('o')~code
 05:51:07.012345 2016-02-29T00:00:00.000000
 1 -1 TimeSpan
 1 1
-93.902
+d~date(1) => 93.902
+d~timeOfDay(1) => 93.902
+d~elapsed(1) => 93.902
 ```
 
 r[class.datetime.copy]
@@ -1403,15 +1612,19 @@ reads is not rounded to the setting.
 ```rexx
 d = .datetime~new(2016, 2, 29, 9, 8, 7, 12345, 0)
 numeric digits 3
-say d~fullDate d~utcDate d~addDays(1.123456789012)~isoDate d~addMicroseconds(123456789012)
-say .datetime~new(315537897599999999)~isoDate .datetime~fromTicks(253402300799)~isoDate
+say d~fullDate d~utcDate
+say d~addDays(1.123456789012)~isoDate d~addMicroseconds(123456789012)
+say .datetime~new(315537897599999999)~isoDate,
+    .datetime~fromTicks(253402300799)~isoDate
 numeric digits 20
-say d~fullDate d~addDays(1.123456789012)~isoDate d~addMicroseconds(123456789012)~isoDate
+say d~fullDate d~addDays(1.123456789012)~isoDate,
+    d~addMicroseconds(123456789012)~isoDate
 say d~fullDate + 1
 ```
 
 ```output
-63592333687012345 63592333687012345 2016-03-01T12:05:53.678915 2016-03-01T19:25:43.801357
+63592333687012345 63592333687012345
+2016-03-01T12:05:53.678915 2016-03-01T19:25:43.801357
 9999-12-31T23:59:59.999999 9999-12-31T23:59:59.000000
 63592333687012345 2016-03-01T12:05:53.678915 2016-03-01T19:25:43.801357
 63592333687012346
@@ -1425,20 +1638,44 @@ The class methods send `new` to the receiver, so a class that overrides its
 it got ([the new rule](r:class.index.new)); the `init` of `DateTime` sends
 nothing. `minDate` sends `new` with the four arguments 1, 1, 1 and 0, and
 `maxDate` with the eight arguments 9999, 12, 31, 23, 59, 59, 999999 and 0.
-`today` and every `from` method except two send `new` with two arguments: the
-number of microseconds from the start of 0001 to the moment, and the offset in
-minutes; `fromUtcIsoDate` sends the offset of its string, in minutes.
-`fromOrdinalDate` sends nothing to the receiver and answers a plain
-`DateTime`, whatever the receiver is. `fromWeekNumberDate` sends `new` with
-the three arguments year, 1 and 4, then sends that instance `weeksInYear`
-(which sends `year`), `weekDay` and `addDays`, and the answer of `addDays` is
-the result. The example prints, for each call, the messages sent in order,
-with the number of arguments after `NEW` and `INIT`.
+`today` and every `from` method other than `fromOrdinalDate` and
+`fromWeekNumberDate` send `new` with two arguments: the number of microseconds
+from the start of 0001 to the moment, and the offset argument exactly as the
+caller gave it (a `TimeSpan` is not converted), or, without one, the default
+offset in minutes; `fromUtcIsoDate`, which has no offset argument, sends the
+offset of its string in minutes. `fromOrdinalDate` sends nothing to the
+receiver and answers a plain `DateTime`, whatever the receiver is.
+`fromWeekNumberDate` sends `new` with the three arguments year, 1 and 4, then
+sends that instance `weeksInYear` (which sends `year`), `weekDay` and
+`addDays`, and the answer of `addDays` is the result. The first example
+prints, for each call, the messages sent in order, with the number of
+arguments after `NEW` and `INIT`. The second example prints the second
+argument that `init` gets: a `TimeSpan` or a string that the caller gave
+arrives as it is, the offset of the string of `fromUtcIsoDate` as a number of
+minutes (150 for `+02:30`), and, without an offset argument, the default
+offset in minutes. An argument that is read as a number is sent more messages
+than the one that reads its string value ([the argument
+rule](r:class.index.string)). A year, month, day, hours, minutes, seconds or
+microseconds argument of `new` is sent `>=` and `<=` with the limits of its
+range and then `right`. An offset that is not a `TimeSpan`, the argument of
+`new`, `today` or `fromTicks`, is sent `isA`, read for its string value, and
+sent `>=`, `<=` and `*`. An amount of `addDays`, `addHours`, `addMinutes`,
+`addSeconds` and `addWeeks` is sent `*`, and `addYears` and `addMicroseconds`
+read the string value of their amount twice. A number argument of `toTimezone`
+is sent `isA` and `*`, then read for its string value and sent `>=` and `<=`;
+the `new` that `toTimezone` sends gets the argument itself, which is then
+handled as the offset of `new` is. A count of `new` and the argument of
+`fromTicks` and `fromBaseDate` are read for their string value only. The third
+example passes an object whose `makeString` answers a number and whose
+`unknown` sends every other message to that number, and prints the messages
+the object got.
 
 ```rexx
 names = 'WEEKSINYEAR YEAR WEEKDAY ADDDAYS OFFSET'
 do n over names~makearray(' ')
-  .spy~define(n, .method~new(n, .array~of(".local~log = .local~log '" || n || "'", 'forward class (super)')))
+  body = .array~of(".local~log = .local~log '" || n || "'",,
+    'forward class (super)')
+  .spy~define(n, .method~new(n, body))
 end
 call probe 'new', '.spy~new(2016, 2, 29)'
 call probe 'minDate', '.spy~minDate'
@@ -1447,14 +1684,24 @@ call probe 'today', '.spy~today'
 call probe 'fromTicks', '.spy~fromTicks(5)'
 call probe 'fromBaseDate', '.spy~fromBaseDate(5, 30)'
 call probe 'fromIsoDate', '.spy~fromIsoDate("2017-01-05T01:02:03.4")'
-call probe 'fromUtcIsoDate', '.spy~fromUtcIsoDate("2017-01-05T01:02:03.4-02:30")'
+call probe 'fromUtcIsoDate',,
+  '.spy~fromUtcIsoDate("2017-01-05T01:02:03.4-02:30")'
 call probe 'fromWeekNumberDate', '.spy~fromWeekNumberDate("2017-W01-4")'
 call probe 'fromOrdinalDate', '.spy~fromOrdinalDate("2017-005")'
 exit
 probe:
   .local~log = ''
   interpret 'x =' arg(2)
-  say arg(1)':' .local~log '=>' x~class~id
+  s = arg(1)':' .local~log '=>' x~class~id
+  line = word(s, 1)
+  do i = 2 to words(s)
+    if length(line word(s, i)) > 76 then do
+      say line
+      line = '  'word(s, i)
+    end
+    else line = line word(s, i)
+  end
+  say line
   return
 ::class spy subclass datetime
 ::method init
@@ -1466,16 +1713,108 @@ probe:
 ```
 
 ```output
-new:  NEW3 INIT3 => SPY
-minDate:  NEW4 INIT4 => SPY
-maxDate:  NEW8 INIT8 => SPY
-today:  NEW2 INIT2 => SPY
-fromTicks:  NEW2 INIT2 => SPY
-fromBaseDate:  NEW2 INIT2 => SPY
-fromIsoDate:  NEW2 INIT2 => SPY
-fromUtcIsoDate:  NEW2 INIT2 => SPY
-fromWeekNumberDate:  NEW3 INIT3 WEEKSINYEAR YEAR WEEKDAY ADDDAYS OFFSET NEW2 INIT2 => SPY
-fromOrdinalDate:  => DateTime
+new: NEW3 INIT3 => SPY
+minDate: NEW4 INIT4 => SPY
+maxDate: NEW8 INIT8 => SPY
+today: NEW2 INIT2 => SPY
+fromTicks: NEW2 INIT2 => SPY
+fromBaseDate: NEW2 INIT2 => SPY
+fromIsoDate: NEW2 INIT2 => SPY
+fromUtcIsoDate: NEW2 INIT2 => SPY
+fromWeekNumberDate: NEW3 INIT3 WEEKSINYEAR YEAR WEEKDAY ADDDAYS OFFSET NEW2
+  INIT2 => SPY
+fromOrdinalDate: => DateTime
+```
+
+```rexx
+call probe 'fromTicks', '.spy~fromTicks(5, .timespan~fromMinutes(30))'
+call probe 'fromTicks', '.spy~fromTicks(5, " 3E1 ")'
+call probe 'fromIsoDate', '.spy~fromIsoDate("2017-01-05T01:02:03.4", 45)'
+call probe 'today', '.spy~today(.timespan~fromMinutes(-90))'
+call probe 'fromUtcIsoDate',,
+  '.spy~fromUtcIsoDate("2017-01-05T01:02:03+02:30")'
+.local~log = ''
+x = .spy~fromTicks(5)
+say 'default' (.local~log~word(3) == '[' || time('O') / 60000000 || ']')
+exit
+probe:
+  .local~log = ''
+  interpret 'x =' arg(2)
+  say arg(1)':' .local~log
+  return
+::class spy subclass datetime
+::method init
+  .local~log = .local~log 'INIT'arg() '['arg(2)']'
+  forward class (super)
+::method new class
+  .local~log = .local~log 'NEW'arg()
+  forward class (super)
+```
+
+```output
+fromTicks:  NEW2 INIT2 [00:30:00.000000]
+fromTicks:  NEW2 INIT2 [ 3E1 ]
+fromIsoDate:  NEW2 INIT2 [45]
+today:  NEW2 INIT2 [-01:30:00.000000]
+fromUtcIsoDate:  NEW2 INIT2 [150]
+default 1
+```
+
+```rexx
+n = .num~new(3)
+call probe 'year', '.datetime~new(n, 1, 1)'
+call probe 'offset', '.datetime~new(2017, 1, 1, 0, 0, 0, 0, n)'
+call probe 'count', '.datetime~new(n)'
+call probe 'fromTicks', '.datetime~fromTicks(n)'
+call probe 'addDays', '.datetime~minDate~addDays(n)'
+call probe 'addMicroseconds', '.datetime~minDate~addMicroseconds(n)'
+call probe 'addYears', '.datetime~minDate~addYears(n)'
+call probe 'toTimezone', '.datetime~minDate~toTimezone(n)'
+exit
+probe:
+  .local~log = ''
+  interpret 'x =' arg(2)
+  say arg(1)':'
+  say ' ' strip(.local~log)
+  return
+::class num
+::method init
+  expose v
+  use arg v
+::method isA
+  .local~log = .local~log 'ISA'
+  forward class (super)
+::method makeString
+  expose v
+  .local~log = .local~log 'MAKESTRING'
+  return v
+::method request
+  .local~log = .local~log 'REQUEST:'arg(1)
+  forward class (super)
+::method unknown
+  expose v
+  use arg name, args
+  .local~log = .local~log name
+  forward to (v) message (name) arguments (args)
+```
+
+```output defect=#164
+year:
+  REQUEST:STRING MAKESTRING >= <= RIGHT
+offset:
+  ISA REQUEST:STRING MAKESTRING >= <= *
+count:
+  REQUEST:STRING MAKESTRING
+fromTicks:
+  REQUEST:STRING MAKESTRING
+addDays:
+  REQUEST:STRING MAKESTRING *
+addMicroseconds:
+  REQUEST:STRING MAKESTRING REQUEST:STRING MAKESTRING
+addYears:
+  REQUEST:STRING MAKESTRING REQUEST:STRING MAKESTRING
+toTimezone:
+  ISA * REQUEST:STRING MAKESTRING >= <= ISA REQUEST:STRING MAKESTRING >= <= *
 ```
 
 r[class.datetime.sends.add]
@@ -1494,7 +1833,9 @@ and, when that is false, `isA` with `DateTime`; a `TimeSpan` is then sent
 names = '+ - OFFSET ADDDAYS ADDHOURS ADDMICROSECONDS ADDMINUTES ADDSECONDS',
   'ADDWEEKS UTCDATE'
 do n over names~makearray(' ')
-  .spy~define(n, .method~new(n, .array~of(".local~log = .local~log '" || n || "'", 'forward class (super)')))
+  body = .array~of(".local~log = .local~log '" || n || "'",,
+    'forward class (super)')
+  .spy~define(n, .method~new(n, body))
 end
 d = .spy~new(2016, 2, 29, 9, 8, 7, 12345, 330)
 z = .spy~new(2016, 3, 1, 9, 8, 7, 12345, 330)
@@ -1545,15 +1886,19 @@ r[class.datetime.sends.zone]
 sends the new instance `+` with the answer of `timeOfDay`, and `+` sends what
 it sends. `date` sends the receiver `standardDate` and `offset`, then `new`
 with two arguments, and `timeOfDay` sends `longTime`. `toTimezone` sends `new`
-with two arguments, the microseconds and the offset in minutes; `toUtcTime`
-and `toLocalTime` send the receiver `toTimezone`, with 0 and with the default
-offset in minutes, and so `new` once more. `copy` sends nothing.
+with two arguments, the microseconds and the offset: a `TimeSpan` argument
+converted to minutes, any other argument as given; `toUtcTime` and
+`toLocalTime` send the receiver `toTimezone`, with 0 and with the default
+offset in minutes, and so `new` once more. `copy` sends nothing. The second
+example prints the argument of `toTimezone` and the offset that `init` gets.
 
 ```rexx
-names = 'ADDYEARS DATE STANDARDDATE OFFSET TIMEOFDAY LONGTIME YEAR MONTH DAY +',
-  'TOLOCALTIME TOTIMEZONE TOUTCTIME COPY'
+names = 'ADDYEARS DATE STANDARDDATE OFFSET TIMEOFDAY LONGTIME YEAR MONTH DAY',
+  '+ TOLOCALTIME TOTIMEZONE TOUTCTIME COPY'
 do n over names~makearray(' ')
-  .spy~define(n, .method~new(n, .array~of(".local~log = .local~log '" || n || "'", 'forward class (super)')))
+  body = .array~of(".local~log = .local~log '" || n || "'",,
+    'forward class (super)')
+  .spy~define(n, .method~new(n, body))
 end
 d = .spy~new(2016, 2, 29, 9, 8, 7, 12345, 330)
 z = .spy~new(2016, 3, 1, 9, 8, 7, 12345, 330)
@@ -1570,7 +1915,16 @@ exit
 probe:
   .local~log = ''
   interpret 'x =' arg(2)
-  say arg(1)':' .local~log '=>' x~class~id
+  s = arg(1)':' .local~log '=>' x~class~id
+  line = word(s, 1)
+  do i = 2 to words(s)
+    if length(line word(s, i)) > 76 then do
+      say line
+      line = '  'word(s, i)
+    end
+    else line = line word(s, i)
+  end
+  say line
   return
 ::class spy subclass datetime
 ::method init
@@ -1582,13 +1936,43 @@ probe:
 ```
 
 ```output
-addYears:  ADDYEARS DATE STANDARDDATE OFFSET NEW2 INIT2 TIMEOFDAY LONGTIME YEAR MONTH DAY OFFSET NEW4 INIT4 + OFFSET NEW2 INIT2 => SPY
-date:  DATE STANDARDDATE OFFSET NEW2 INIT2 => SPY
-timeOfDay:  TIMEOFDAY LONGTIME => TimeSpan
-toTimezone:  TOTIMEZONE NEW2 INIT2 => SPY
-toUtcTime:  TOUTCTIME TOTIMEZONE NEW2 INIT2 => SPY
-toLocalTime:  TOLOCALTIME TOTIMEZONE NEW2 INIT2 => SPY
-copy:  COPY => SPY
+addYears: ADDYEARS DATE STANDARDDATE OFFSET NEW2 INIT2 TIMEOFDAY LONGTIME
+  YEAR MONTH DAY OFFSET NEW4 INIT4 + OFFSET NEW2 INIT2 => SPY
+date: DATE STANDARDDATE OFFSET NEW2 INIT2 => SPY
+timeOfDay: TIMEOFDAY LONGTIME => TimeSpan
+toTimezone: TOTIMEZONE NEW2 INIT2 => SPY
+toUtcTime: TOUTCTIME TOTIMEZONE NEW2 INIT2 => SPY
+toLocalTime: TOLOCALTIME TOTIMEZONE NEW2 INIT2 => SPY
+copy: COPY => SPY
+```
+
+```rexx
+d = .spy~new(2016, 2, 29, 9, 8, 7, 12345, 330)
+call probe 'span', 'd~toTimezone(.timespan~fromMinutes(30))'
+call probe 'number', 'd~toTimezone(30)'
+call probe 'string', 'd~toTimezone(" 3E1 ")'
+exit
+probe:
+  .local~log = ''
+  interpret 'x =' arg(2)
+  say arg(1)':' .local~log
+  return
+::class spy subclass datetime
+::method init
+  .local~log = .local~log 'INIT'arg() '['arg(2)']'
+  forward class (super)
+::method new class
+  .local~log = .local~log 'NEW'arg()
+  forward class (super)
+::method toTimezone
+  .local~log = .local~log 'TOTIMEZONE['arg(1)']'
+  forward class (super)
+```
+
+```output
+span:  TOTIMEZONE[00:30:00.000000] NEW2 INIT2 [30]
+number:  TOTIMEZONE[30] NEW2 INIT2 [30]
+string:  TOTIMEZONE[ 3E1 ] NEW2 INIT2 [ 3E1 ]
 ```
 
 r[class.datetime.sends.compare]
@@ -1600,10 +1984,12 @@ r[class.datetime.sends.compare]
 and `\>>`.
 
 ```rexx
-names = 'COMPARETO UTCDATE = == < > <= >= <> >< << >> <<= >>= \= \== \< \> \<<',
-  '\>>'
+names = 'COMPARETO UTCDATE = == < > <= >= <> >< << >> <<= >>= \= \== \< \>',
+  '\<< \>>'
 do n over names~makearray(' ')
-  .spy~define(n, .method~new(n, .array~of(".local~log = .local~log '" || n || "'", 'forward class (super)')))
+  body = .array~of(".local~log = .local~log '" || n || "'",,
+    'forward class (super)')
+  .spy~define(n, .method~new(n, body))
 end
 d = .spy~new(2016, 2, 29, 9, 8, 7, 12345, 330)
 z = .spy~new(2016, 3, 1, 9, 8, 7, 12345, 330)
@@ -1666,7 +2052,9 @@ names = 'STRING ISODATE MAKESTRING ISLEAPYEAR YEAR MONTH DAYSINMONTH',
   'DAYSINYEAR ORDINALDATE YEARDAY WEEKNUMBER WEEKDAY WEEKNUMBERYEAR',
   'WEEKNUMBERDATE WEEKSINYEAR DAYMICROSECONDS DAYSECONDS MICROSECONDS'
 do n over names~makearray(' ')
-  .spy~define(n, .method~new(n, .array~of(".local~log = .local~log '" || n || "'", 'forward class (super)')))
+  body = .array~of(".local~log = .local~log '" || n || "'",,
+    'forward class (super)')
+  .spy~define(n, .method~new(n, body))
 end
 d = .spy~new(2016, 2, 29, 9, 8, 7, 12345, 330)
 z = .spy~new(2016, 3, 1, 9, 8, 7, 12345, 330)
@@ -1687,7 +2075,16 @@ exit
 probe:
   .local~log = ''
   interpret 'x =' arg(2)
-  say arg(1)':' .local~log '=>' x~class~id
+  s = arg(1)':' .local~log '=>' x~class~id
+  line = word(s, 1)
+  do i = 2 to words(s)
+    if length(line word(s, i)) > 76 then do
+      say line
+      line = '  'word(s, i)
+    end
+    else line = line word(s, i)
+  end
+  say line
   return
 ::class spy subclass datetime
 ::method init
@@ -1699,17 +2096,19 @@ probe:
 ```
 
 ```output
-string:  STRING ISODATE => String
-makeString:  MAKESTRING STRING ISODATE => String
-isLeapYear:  ISLEAPYEAR YEAR => String
-daysInMonth:  DAYSINMONTH MONTH ISLEAPYEAR YEAR => String
-daysInYear:  DAYSINYEAR ISLEAPYEAR YEAR => String
-ordinalDate:  ORDINALDATE YEAR YEARDAY => String
-weekNumber:  WEEKNUMBER YEARDAY WEEKDAY => String
-weekNumberYear:  WEEKNUMBERYEAR YEAR WEEKNUMBER YEARDAY WEEKDAY MONTH => String
-weekNumberDate:  WEEKNUMBERDATE WEEKNUMBERYEAR YEAR WEEKNUMBER YEARDAY WEEKDAY MONTH WEEKNUMBER YEARDAY WEEKDAY WEEKDAY => String
-weeksInYear:  WEEKSINYEAR YEAR => String
-dayMicroseconds:  DAYMICROSECONDS DAYSECONDS MICROSECONDS => String
+string: STRING ISODATE => String
+makeString: MAKESTRING STRING ISODATE => String
+isLeapYear: ISLEAPYEAR YEAR => String
+daysInMonth: DAYSINMONTH MONTH ISLEAPYEAR YEAR => String
+daysInYear: DAYSINYEAR ISLEAPYEAR YEAR => String
+ordinalDate: ORDINALDATE YEAR YEARDAY => String
+weekNumber: WEEKNUMBER YEARDAY WEEKDAY => String
+weekNumberYear: WEEKNUMBERYEAR YEAR WEEKNUMBER YEARDAY WEEKDAY MONTH =>
+  String
+weekNumberDate: WEEKNUMBERDATE WEEKNUMBERYEAR YEAR WEEKNUMBER YEARDAY
+  WEEKDAY MONTH WEEKNUMBER YEARDAY WEEKDAY WEEKDAY => String
+weeksInYear: WEEKSINYEAR YEAR => String
+dayMicroseconds: DAYMICROSECONDS DAYSECONDS MICROSECONDS => String
 ```
 
 ## Deviations
@@ -1728,8 +2127,10 @@ stands for its own characters.
 a = .digits~new('5')
 b = .digits~new('05/01/17')
 c = .digits~new('2017')
-say .datetime~fromBaseDate(a) .datetime~fromEuropeanDate(b) .datetime~new(c, 6, 3)
-say .datetime~fromTicks(a) .datetime~fromEuropeanDate('05-01-17', .digits~new('-'))
+say .datetime~fromBaseDate(a) .datetime~fromEuropeanDate(b)
+say .datetime~new(c, 6, 3)
+say .datetime~fromTicks(a),
+    .datetime~fromEuropeanDate('05-01-17', .digits~new('-'))
 say 'sends' .local~sent
 ::class digits subclass string
 ::method makestring
@@ -1741,7 +2142,8 @@ say 'sends' .local~sent
 ```
 
 ```output defect=#140
-0001-01-06T00:00:00.000000 2017-01-05T00:00:00.000000 2017-06-03T00:00:00.000000
+0001-01-06T00:00:00.000000 2017-01-05T00:00:00.000000
+2017-06-03T00:00:00.000000
 1970-01-01T00:00:05.000000 2017-01-05T00:00:00.000000
 sends 0
 ```
