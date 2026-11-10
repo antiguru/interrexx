@@ -154,6 +154,12 @@ impl Oracle {
         &self.lib_dir
     }
 
+    /// The directory holding the oracle binary, where its bundled `.cls`
+    /// libraries (`rxregexp.cls` among them) are found.
+    pub fn bin_dir(&self) -> &Path {
+        self.binary.parent().unwrap_or(Path::new("."))
+    }
+
     /// Runs `path` through the oracle under the memory limit, from `path`'s
     /// own directory. See the module doc for the mechanism and how it was
     /// verified.

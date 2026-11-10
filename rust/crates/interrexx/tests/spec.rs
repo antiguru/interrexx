@@ -912,6 +912,16 @@ fn exempt_from_the_oracle(page: &interrexx_spec::Page, example: &interrexx_spec:
         .is_some_and(|n| page.front.deviations.contains(&n))
 }
 
+/// `PATH` with the oracle's `bin` directory in front, so that a spec example's
+/// `::requires "rxregexp.cls"` finds the library the way a real program does.
+fn path_with_oracle_bin(oracle: &Oracle) -> std::ffi::OsString {
+    let mut dirs = vec![oracle.bin_dir().to_path_buf()];
+    if let Some(path) = std::env::var_os("PATH") {
+        dirs.extend(std::env::split_paths(&path));
+    }
+    std::env::join_paths(dirs).expect("joining PATH")
+}
+
 /// Runs every example under `spec_root` on the oracle, with empty standard
 /// input, and reports each whose stdout is not exactly the output block or
 /// whose exit code is not `rc`. An example under a rule `….deviation.N`
@@ -935,7 +945,13 @@ fn oracle_disagreements(spec_root: &Path, oracle: &Oracle) -> Vec<Problem> {
             n += 1;
             let file = dir.join(format!("example-{n}.rex"));
             fs::write(&file, &example.program).expect("writing an example program");
-            let outcome = oracle.run_with(&file, &[], None);
+            let outcome = oracle.run_within_env(
+                &file,
+                &[],
+                None,
+                support::oracle::ORACLE_DEADLINE,
+                &[("PATH", path_with_oracle_bin(oracle))],
+            );
             let message = match outcome.termination {
                 Termination::Exited(code) => {
                     let mut message = String::new();

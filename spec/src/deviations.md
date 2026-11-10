@@ -577,7 +577,7 @@ own messages. ooRexx starts it with every interpreter.
 
 rxregexp matches the documented pattern language and always terminates; a
 pattern too large to compile is compile error 5. ooRexx answers some patterns
-wrongly and never terminates on others.
+wrongly, never terminates on some and crashes on others.
 
 ## 88. Extension calls that crash ooRexx
 
@@ -1004,12 +1004,13 @@ a line that is not in the source. `source` of a `Routine` does the same.
 
 ## 135. An object whose init never ran raises an error
 
-A subclass of `Alarm`, `Ticker` or `RexxQueue` whose `init` does not send
-`init` to its superclass makes an object that is not set up, and every instance
-method of the class other than `init` that the object is sent raises `SYNTAX
-98.901`. ooRexx answers `triggered` of such an alarm with the string `TRIGGERED`
-and raises `SYNTAX 34.902` from its `cancel`, and its `empty` of such a
-`RexxQueue` ends the interpreter with a segmentation fault.
+A subclass of `Alarm`, `Ticker`, `RexxQueue` or `Supplier` whose `init` does
+not send `init` to its superclass makes an object that is not set up, and every
+instance method of the class other than `init` that the object is sent raises
+`SYNTAX 98.901`. ooRexx answers `triggered` of such an alarm with the string
+`TRIGGERED` and raises `SYNTAX 34.902` from its `cancel`, and its `empty` of
+such a `RexxQueue` and its `available` of such a `Supplier` end the
+interpreter with a segmentation fault.
 
 ## 136. A copy of a MutexSemaphore is free
 
