@@ -507,10 +507,12 @@ default value's, and NOSTRING is raised, with the default's description, only
 when the default has no string value. ooRexx raises NOSTRING for every stem
 there.
 
-## 78. Hash lookup of the identical index
+## 78. Hash lookup of the identical index or item
 
 A lookup or PUT with the very index object already stored sends that
-object's `==`. ooRexx compares identity first and sends nothing.
+object's `==`, and so does a search for an item (`hasItem`, `index`,
+`removeItem`) with the very item object stored. ooRexx compares identity
+first and sends nothing.
 
 ## 79. APPEND write positions
 
