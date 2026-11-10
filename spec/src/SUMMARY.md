@@ -112,6 +112,7 @@
   - [Bag](classes/bag.md)
   - [Set](classes/set.md)
   - [Stem](classes/stem.md)
+  - [DateTime](classes/datetime.md)
 - [Built-in functions](builtins/index.md)
   - [ABBREV](builtins/abbrev.md)
   - [ABS](builtins/abs.md)
