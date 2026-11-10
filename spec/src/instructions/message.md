@@ -275,7 +275,7 @@ x= got 11
 
 r[instr.message.error]
 A message instruction whose receiver [does not understand the
-message](r:class.methods.unknown) raises `SYNTAX 97.1`, and so does a message
+message](r:expr.messages.name) raises `SYNTAX 97.1`, and so does a message
 assignment, since it needs a method whose name ends in an equal sign. A
 message assignment with no expression after the `=` raises `SYNTAX 35.1`, not
 the `35.918` of an assignment to a variable. A message operator with no name

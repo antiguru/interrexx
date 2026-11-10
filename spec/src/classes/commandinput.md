@@ -14,11 +14,11 @@ the redirection, a stem, a stream or the object of a `USING` ([the redirection
 rules](r:instr.address.with.syntax)), as a list of lines, one after the other
 and once. It is a stream of the input kind: its class inherits the mixin class
 `InputStream`, whose other methods, `arrayIn` among them, are specified with
-the stream classes. This page states the four methods that the class defines
-for itself, the text that they read, and what they do at the end of the input.
-The input of a command is read by the handler, or by nobody; which commands of
-the host read their standard input from it is the business of the environment
-chapter.
+the [stream classes](inputstream.md). This page states the four methods that
+the class defines for itself, the text that they read, and what they do at the
+end of the input. The input of a command is read by the handler, or by nobody;
+which commands of the host read their standard input from it is the business
+of the environment chapter.
 
 ## The class
 

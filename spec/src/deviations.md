@@ -1047,7 +1047,8 @@ entries of the new arrays. ooRexx answers the arrays collected before the
 A `Stream` answers `query('size')`, `chars` and `lines` for the file as it is
 when it is asked, also after data that another stream on the same file wrote
 and flushed. ooRexx answers the size that the stream found when it first read
-or was first asked, so that the data written since is not counted.
+or was first asked, so that its size and `chars` do not count the data written
+since, and its `lines` can miss it.
 
 ## 140. A supplier of a stream read part of the way into a line
 

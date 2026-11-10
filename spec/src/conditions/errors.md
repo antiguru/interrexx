@@ -460,7 +460,7 @@ directives.
   93.927, [`x = .array~new('x')`](r:class.array.new) 93.906,
   `x = stream('nofile_zz', 'c', 'bogus')` 93.914;
   [rule](r:conv.position.check).
-* 97, message that is not answered: [`x = 'a'~foo`](r:class.methods.unknown)
+* 97, message that is not answered: [`x = 'a'~foo`](r:expr.messages.name)
   97.1, `x = .nil~foo` 97.1, `.m~new~p` 97.2; [rule](r:expr.messages.name),
   [rule](r:conv.string.object).
 * 98, fault of a running clause or directive: `raise propagate` 98.918,

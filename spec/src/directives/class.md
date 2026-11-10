@@ -14,7 +14,7 @@ directives after it declare belong to it until the next ::CLASS. This page
 specifies the name of the class, the options that place it in a hierarchy and
 make it visible to other packages, and the order in which the classes of a
 package are made. What a class object does once it exists, the methods of
-[`Class`](../classes/class.md) such as [`new`](r:class.class.new),
+[`Class`](../classes/class.md) such as [`new`](r:class.index.new),
 [`id`](r:class.class.id) and [`superclass`](r:class.class.superclass) among
 them, is specified in the classes chapter; the examples here use those methods
 only to show what the directive made.
@@ -499,7 +499,7 @@ init k
 
 r[dir.class.abstract]
 ABSTRACT marks the class as one that has no instances of its own: the [NEW
-method](r:class.class.new) that `Class` supplies raises `SYNTAX 98.989` for
+method](r:class.index.new) that `Class` supplies raises `SYNTAX 98.989` for
 it, before any INIT runs, and a class method NEW that the abstract class
 declares itself runs instead. A class that has the abstract class as a
 superclass, or that inherits it, is not abstract unless it says so, and makes

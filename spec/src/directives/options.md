@@ -734,11 +734,11 @@ skipped, so that a package of routines and classes can be required without its
 start-up code. The last of the two in text order is used. The installation of
 the package is not affected, so its routines and classes exist all the same.
 The program that was started runs its prolog whatever the option says. Loading
-the text of a package with the [`Package` class](r:class.package.new) follows
-the same rule as a requirement, as the first example shows. The option acts on
-a package that is required or loaded as a package only: a file that a program
-calls as an external routine runs its code from the start, whatever the option
-says, as the third example shows.
+the text of a package with the [`Package` class](r:class.package.new.install)
+follows the same rule as a requirement, as the first example shows. The option
+acts on a package that is required or loaded as a package only: a file that a
+program calls as an external routine runs its code from the start, whatever
+the option says, as the third example shows.
 
 ```rexx
 f = 'spec-dir-options-pro1.tmp'

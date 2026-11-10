@@ -477,8 +477,8 @@ READY: UNKNOWN
 
 r[bif.stream.flush]
 `FLUSH` answers `READY:`. A file can be asked about, or read back, by the
-program as it is, whether `FLUSH` was used or not, so that `FLUSH` has no
-other effect that a program can see.
+program through the stream functions as it is, whether `FLUSH` was used or
+not, so that `FLUSH` has no other effect that a program can see.
 
 ```rexx
 f = 'spec-stream-flush.tmp'

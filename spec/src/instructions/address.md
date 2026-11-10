@@ -346,8 +346,10 @@ when the redirection is a replace. A [RexxQueue](r:class.rexxqueue.queue)
 object gets each line by the message `QUEUE`. A Stem object, an object of the
 Stem class itself and not of a subclass, is written as `STEM` writes a stem: a
 replace clears it and sets the tails `1` and up and `0`, and an append numbers
-the lines after its `0` tail. A stream object, an object of an OutputStream or
-InputOutputStream class (a `.Stream` among them), gets each line by `LINEOUT`;
+the lines after its `0` tail. A stream object, an object of an
+[OutputStream](../classes/outputstream.md) or
+[InputOutputStream](../classes/inputoutputstream.md) class (a
+[`.Stream`](r:class.stream.creation) among them), gets each line by `LINEOUT`;
 it takes neither `REPLACE` nor `APPEND`, and either raises `SYNTAX 98.997`.
 Any other object, a string, `.nil`, a Set, a Directory, a Bag, a
 MutableBuffer, an object of a subclass of Stem, an object of an InputStream
@@ -454,7 +456,9 @@ r[instr.address.with.using.input]
 For input, `USING` names the source of the lines. A string is one line, and so
 is a MutableBuffer, by its string value. A Stem object, of the Stem class
 itself, is read as `STEM` reads a stem. A stream object, an object of an
-InputStream or InputOutputStream class (a `.Stream` among them), is read line
+[InputStream](../classes/inputstream.md) or
+[InputOutputStream](../classes/inputoutputstream.md) class (a
+[`.Stream`](r:class.stream.creation) among them), is read line
 by line until its end. Any other object that has a `MAKEARRAY` method, among
 them a List, a Queue, a Set, a Directory, a Bag, a RexxQueue and an object of
 a class of the program with such a method, gives one line for each item of the

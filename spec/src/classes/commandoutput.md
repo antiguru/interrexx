@@ -8,19 +8,19 @@ rexxref: "Builtin Classes > Utility Classes > CommandOutput Class"
 # CommandOutput
 
 A `CommandOutput` is the stream to which a handler written in Rexx writes the
-output or the error output of a command that was sent with
-`ADDRESS ... WITH OUTPUT` or `WITH ERROR`. The handler gets it from
+output or the error output of a command that was sent with `ADDRESS ... WITH
+OUTPUT` or `WITH ERROR`. The handler gets it from
 [`output`](r:class.commandcontext.output) or
 [`error`](r:class.commandcontext.error) of the
 [`CommandContext`](commandcontext.md) of the command. What it is given goes to
 the target of the redirection, a stem, a stream or the object of a `USING`, as
-lines, in the way that [the redirection rules](r:instr.address.with.syntax) say
-for any command. A command that is sent without a redirection has no such
+lines, in the way that [the redirection rules](r:instr.address.with.syntax)
+say for any command. A command that is sent without a redirection has no such
 stream; a handler that is to write then uses `SAY` or a stream of its own. The
 class inherits the mixin class `OutputStream`, whose other methods, `arrayOut`
-among them, are specified with the stream classes. This page states the four
-methods that the class defines, how text becomes lines, and when a line that is
-not finished is written.
+among them, are specified with the [stream classes](outputstream.md). This
+page states the four methods that the class defines, how text becomes lines,
+and when a line that is not finished is written.
 
 ## The class
 

@@ -272,7 +272,7 @@ the receiver is an instance of: the class of the receiver itself, one of its
 superclasses or a mixin class that it inherits. A class of the program that
 the receiver does not belong to raises `SYNTAX 93.957`, and a value that is
 not a class raises `SYNTAX 88.914`. A common use is
-[`forward class (super)`](r:class.methods.super) to run the method that the
+[`forward class (super)`](r:class.methods.forward) to run the method that the
 running one overrides.
 
 ```rexx
