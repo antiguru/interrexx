@@ -854,9 +854,9 @@ it `request`, so an override is used. ooRexx sends such an instance neither
 message and uses the items it holds, unlike the subclasses of the other
 collection classes.
 
-## 119. A second cancel of an Alarm sends nothing
+## 119. A second cancel of an Alarm or a Ticker sends nothing
 
-A notification target of an `Alarm` is sent `cancel` once, when the alarm is
-cancelled while it is waiting; a second `cancel` of the same alarm sends it
-nothing, as for a `Ticker`. ooRexx sends the target `cancel` once or twice for
-a second `cancel` of an `Alarm`, depending on timing.
+A notification target of an `Alarm` or a `Ticker` is sent `cancel` once, when
+the alarm or ticker is cancelled while it is waiting; a second `cancel` of the
+same alarm or ticker sends it nothing. ooRexx sends the target `cancel` once or
+twice for a second `cancel`, depending on timing.
