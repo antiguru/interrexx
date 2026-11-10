@@ -55,11 +55,12 @@ Directory Directory 1 1
 r[env.objects.entries]
 `.environment` holds the class objects of the [classes
 chapter](../classes/index.md), each under its class name in upper case, with
-two differences: `RegularExpression` is not among them, because it belongs to
-a package that a program [requires](../classes/regularexpression.md), and
-`ArgUtil` is ([the rule on it](r:class.index.argutil)). The entries that are
-not classes are `NIL`, `TRUE`, `FALSE`, `ENDOFLINE`, `REXXINFO`, `LOCAL` and
-`ENVIRONMENT`, and there are no others. `.true` is the string `1`, `.false`
+three differences: `RegularExpression` is not among them, because it belongs
+to a package that a program [requires](../classes/regularexpression.md); the
+class `RexxInfo` is not, because its name is the index of the one `RexxInfo`
+object; and `ArgUtil` is ([the rule on it](r:class.index.argutil)). The
+entries that are not classes are `NIL`, `TRUE`, `FALSE`, `ENDOFLINE`,
+`REXXINFO`, `LOCAL` and `ENVIRONMENT`, and there are no others. `.true` is the string `1`, `.false`
 the string `0`, and `.endofline` the string of the one character `'0A'x`, the
 line end of the platform. `.nil` is the object that stands for the absence of
 an object (`isNil` [answers 1 for it](r:class.object.isnil)). `.rexxinfo` is
@@ -86,6 +87,7 @@ say row~strip
 say others~makeString('l', ' ')
 say .true .false c2x(.endofline) .nil~isNil .rexxinfo~class~id
 say .environment~hasIndex('REGULAREXPRESSION')
+say .environment~at('REXXINFO')~isA(.class)
 ```
 
 ```output
@@ -102,6 +104,7 @@ STACKFRAME STEM STREAM STREAMSUPPLIER STRING STRINGTABLE SUPPLIER TABLE
 TICKER TIMESPAN TRACEOBJECT VALIDATE VARIABLEREFERENCE WEAKREFERENCE
 ENDOFLINE ENVIRONMENT FALSE LOCAL NIL REXXINFO TRUE
 1 0 0A 1 RexxInfo
+0
 0
 ```
 
@@ -146,21 +149,22 @@ destination of `.output` is `.stdout`, that of `.error` is `.stderr`, that of
 `.input` is `.stdin`, that of `.traceoutput` is the monitor `.error` and that
 of `.debuginput` is the monitor `.input`, each the same object and not a copy
 ([the rule on `current`](r:class.monitor.current)). A message that a monitor
-does not understand goes to its current destination, so a destination that a
+has no method for goes to its current destination ([the forwarding
+rule](r:class.monitor.unknown)), so a destination that a
 program sets on `.error` is also where the trace lines go, as the [trace
 rule](r:instr.trace.destination) says for `.traceoutput`. `.stdque` is the
-queue `SESSION`, which holds no line.
+`RexxQueue` of the queue `SESSION`.
 
 ```rexx
 say (.output~current == .stdout) (.error~current == .stderr),
     (.input~current == .stdin) (.traceoutput~current == .error),
     (.debuginput~current == .input)
-say .stdque~class~id .stdque~get .stdque~queued
+say .stdque~class~id .stdque~get
 ```
 
 ```output
 1 1 1 1 1
-RexxQueue SESSION 0
+RexxQueue SESSION
 ```
 
 ## The order of the lookup
@@ -387,8 +391,8 @@ eol
 
 r[env.objects.change.scope]
 An entry that a program adds or changes is seen by everything that runs in the
-same interpreter instance afterwards: by the code of other packages, a and by
-the other activities. The `local` directory of a package is not shared ([its
+same interpreter instance afterwards: by the code of other packages and by the
+other activities. The `local` directory of a package is not shared ([its
 rule](r:class.package.local)). In the example, a package that the program
 makes reads `.zqenv` and `.zqloc` and sets `.zqfrom`, which the main program
 reads, and the method of a started message reads `.zqenv` and sets `.zqact`.
@@ -428,11 +432,110 @@ set by an activity
 > examples use a spy, an object that logs the name of each message it is sent
 > and answers a value of its own.
 
+r[env.objects.streams]
+A stream builtin whose name [denotes](r:bif.index.stream.std) the standard
+output, error or input stream does not use the stream: it sends a message to
+the `OUTPUT`, `ERROR` or `INPUT` entry of `.local`, whichever the name
+denotes, whatever the builtin does. CHAROUT, LINEOUT, CHARIN, LINEIN, CHARS
+and LINES send the message of their own name with the builtin's arguments
+after the name, as given, so a call with none sends none; LINES sends its
+option, and `NORMAL` when the call gives none. STREAM sends `STATE` for the
+option `S` or none, `DESCRIPTION` for `D`, and `COMMAND` with the command for
+`C`. The builtin answers what the object answers, except LINES: for a numeric
+answer it answers 0 when the answer is 0 and 1 for any other number, unless
+its option is `C`, and then it answers what the object answers. A message
+that a program sends to `.stdout`, `.stderr` or `.stdin` itself is not
+redirected. In the example, one spy answers 3 to every message, and the log
+shows the name of each message with the number of its arguments and the
+arguments themselves.
+
+```rexx
+s = .spy~new
+.output~destination(s)
+.error~destination(s)
+.input~destination(s)
+call lineout
+call charout
+a = lineout(, 'x', 1)
+b = charout('STDOUT', 'y', 2)
+c = lines('STDERR')
+d = chars('stderr:')
+e = linein('STDERR')
+f = charin('STDERR')
+g = lineout('STDIN', 'z')
+h = charout('stdin:', 'w')
+i = stream('STDOUT', 'c', 'query exists')
+j = stream('STDIN')
+k = stream('STDERR', 'd')
+.output~destination
+.error~destination
+.input~destination
+say s~log~makeString('l', '0a'x)
+say a b c d e f g h i j k
+::class spy
+::method init
+  expose log
+  log = .array~new
+::attribute log get
+::method unknown
+  expose log
+  use arg name, args
+  log~append(name'('args~items':'args~makeString('l', ',')')')
+  return 3
+```
+
+```output
+LINEOUT(0:)
+CHAROUT(0:)
+LINEOUT(2:x,1)
+CHAROUT(2:y,2)
+LINES(1:NORMAL)
+CHARS(0:)
+LINEIN(0:)
+CHARIN(0:)
+LINEOUT(1:z)
+CHAROUT(1:w)
+COMMAND(1:query exists)
+STATE(0:)
+DESCRIPTION(0:)
+3 3 1 3 3 3 3 3 3 3 3
+```
+
+r[env.objects.streams.lines]
+The option `N` of LINES is sent as it was given. The option `C` shows that
+the answer is the object's own.
+
+```rexx
+s = .spy~new
+.input~destination(s)
+a = lines()
+b = lines(, 'N')
+c = lines(, 'C')
+.input~destination
+say s~log~makeString('l', ' ')
+say a b c
+::class spy
+::method init
+  expose log
+  log = .array~new
+::attribute log get
+::method unknown
+  expose log
+  use arg name, args
+  log~append(name'('args~makeString('l', ',')')')
+  return 7
+```
+
+```output defect=#213
+LINES(NORMAL) LINES(N) LINES(C)
+1 1 7
+```
+
 r[env.objects.output]
-SAY sends the message `SAY` to the object that `.output` finds, with the text
+SAY sends the message `SAY` to the `OUTPUT` entry of `.local`, with the text
 it writes. The builtins CHAROUT and LINEOUT, when their stream name is null,
-omitted or one of `STDOUT` and `STDOUT:` in any case ([the
-rule](r:bif.index.stream.std)), send it `CHAROUT` and `LINEOUT` instead, and
+omitted or one of `STDOUT` and `STDOUT:` in any case, send it `CHAROUT` and
+`LINEOUT` instead ([the rule on stream builtins](r:env.objects.streams)), and
 the builtin answers what the object answers. A message that a program sends to
 `.stdout` itself is not redirected: it writes to the stream whatever `.output`
 holds. The monitor sends all of these on to its current destination, which is
@@ -470,8 +573,8 @@ SAY | CHAROUT | LINEOUT | LINEOUT | CHAROUT 7
 
 r[env.objects.error]
 The builtins CHAROUT and LINEOUT, when their stream name is `STDERR` or
-`STDERR:` in any case, send `CHAROUT` and `LINEOUT` to the object that
-`.error` finds. The lines of a trace go to `.traceoutput` ([the trace
+`STDERR:` in any case, send `CHAROUT` and `LINEOUT` to the `ERROR` entry of
+`.local`. The lines of a trace go to `.traceoutput` ([the trace
 rule](r:instr.trace.destination)), whose monitor passes them on to `.error`,
 so a destination that a program sets on `.error` receives them as `LINEOUT`
 messages whose argument is a `TraceObject`. A message sent to `.stderr`
@@ -508,10 +611,40 @@ say u~makeArray~sort~makeString('l', ' | ')
 CHAROUT String | LINEOUT String | LINEOUT TraceObject
 ```
 
+r[env.objects.error.report]
+The report that a program writes when an error ends it ([the rule on
+it](r:cond.index.syntax)) goes the same way: each of its lines is sent as
+`LINEOUT` with a `TraceObject` to `.traceoutput`, so a destination set on
+`.error` receives it, and an object stored in `.local` under `ERROR` does
+not, because `.traceoutput` passes the lines on to the monitor it was given at
+the start. In the example, the first line shows that the monitor
+`.traceoutput` is connected to `.error`, and the spy receives the lines of the
+report of the division by zero.
+
+```rexx
+.error~destination(.spy~new)
+say 'before'
+.stdout~lineout(.traceoutput~current == .error)
+x = 1 / 0
+::class spy
+::method unknown
+  use arg n, a
+  .stdout~lineout('spy' n a~items a[1]~class~id)
+  return 0
+```
+
+```output rc=214
+before
+1
+spy LINEOUT 1 TraceObject
+spy LINEOUT 1 TraceObject
+spy LINEOUT 1 TraceObject
+```
+
 r[env.objects.input]
 The builtins LINEIN, CHARIN, LINES and CHARS, when their stream name is null,
 omitted or one of `STDIN` and `STDIN:` in any case, send `LINEIN`, `CHARIN`,
-`LINES` and `CHARS` to the object that `.input` finds. LINEIN and CHARIN
+`LINES` and `CHARS` to the `INPUT` entry of `.local`. LINEIN and CHARIN
 answer what the object answers. PARSE LINEIN does the same as LINEIN with no
 name, and a message that a program sends to `.stdin` itself is not redirected.
 The example is run with an empty standard input, which the last read, of
@@ -547,13 +680,16 @@ LINEIN LINEIN CHARIN CHARS LINES LINEIN LINEIN 7 7 7 7
 ```
 
 r[env.objects.queue]
-PUSH and QUEUE send `PUSH` and `QUEUE` with the line to the object that
-`.stdque` finds, and the builtin QUEUED sends it `QUEUED`. The builtin RXQUEUE
-sends `GET` for its option `GET` and `SET` for its option `SET`. PULL and
-PARSE PULL send `PULL`; when the answer is `.nil`, they send `LINEIN` to the
-object that `.input` finds and use its answer as the line; otherwise the
-answer is the line ([the pull rule](r:instr.pull.source)). The example
-restores `.stdque` and the destination of `.input` before it prints.
+PUSH and QUEUE send `PUSH` and `QUEUE` with the line to the `STDQUE` entry of
+`.local`. The builtin QUEUED sends it `QUEUED`, and the builtin RXQUEUE sends
+`GET` for its option `GET` and `SET`, with the name, for its option `SET`;
+each answers what the object answers. The other options of RXQUEUE send
+nothing to it. PULL and PARSE PULL send `PULL`; when the answer is `.nil`,
+they send `LINEIN` to the `INPUT` entry of `.local` and use its answer as the
+line; otherwise the answer is the line ([the pull rule](r:instr.pull.source)).
+The example restores `.stdque` and the destination of `.input` before it
+prints, and shows the answers of the builtins on the second line and, on the
+third, those of the options of RXQUEUE that send nothing.
 
 ```rexx
 old = .stdque
@@ -563,13 +699,18 @@ i = .spy~new('I', 'from input')
 .input~destination(i)
 push 'a'
 queue 'b'
-x = queued()
-x = rxqueue('get')
-x = rxqueue('set', 'zq')
+a = queued()
+b = rxqueue('get')
+c = rxqueue('set', 'zq')
+d = rxqueue('create', 'ZQA1R')
+e = rxqueue('exists', 'ZQA1R')
+f = rxqueue('delete', 'ZQA1R')
 pull v
 .local~stdque = old
 .input~destination
 say q~log~makeString('l', ' ') '|' i~log~makeString('l', ' ') '|' v
+say a b c
+say d e f
 ::class spy
 ::method init
   expose log answer
@@ -581,24 +722,29 @@ say q~log~makeString('l', ' ') '|' i~log~makeString('l', ' ') '|' v
   use arg name
   log~append(name)
   if name == 'PULL' | name == 'LINEIN' then return answer
-  return 0
+  return 'x'name
 ```
 
 ```output
 PUSH QUEUE QUEUED GET SET PULL | LINEIN | FROM INPUT
+xQUEUED xGET xSET
+ZQA1R 1 0
 ```
 
 r[env.objects.replace]
-The language finds `.output`, `.error`, `.input`, `.traceoutput` and `.stdque`
-each time it needs one, as the lookup of this page does, so a program that
-stores another object under one of those names in `.local` makes that object
-the one that the rules above send their messages to, from then on. An entry
-that `.environment` holds under the same name is hidden by the one in
-`.local`. In the example, the object that replaces `.output` is sent `SAY`,
-`LINEOUT` and `CHAROUT`, the one that replaces `.input` is sent `LINEIN`, the
-one that replaces `.error` is sent `LINEOUT`, the one that replaces
-`.traceoutput` is sent the trace lines, and the one that replaces `.stdque` is
-sent `PUSH`.
+The language does not read these objects through the lookup of this page.
+Each time SAY, PARSE LINEIN, PULL, PUSH, QUEUE, a stream builtin or a trace
+line needs one, it takes the entry `OUTPUT`, `ERROR`, `INPUT`, `TRACEOUTPUT`
+or `STDQUE` of `.local`, so a program that stores another object there makes
+that object the one that the rules above send their messages to, from then
+on, for every package and activity. A class of the same name and an entry of a
+package's `local` directory change what the symbol finds, and not where the
+language writes or reads; an entry of `.environment` under the same name is
+not used while `.local` holds one. In the example, the object that replaces
+`.output` is sent `SAY`, `LINEOUT` and `CHAROUT`, the one that replaces
+`.input` is sent `LINEIN`, the one that replaces `.error` is sent `LINEOUT`,
+the one that replaces `.traceoutput` is sent the trace lines, and the one that
+replaces `.stdque` is sent `PUSH`.
 
 ```rexx
 old = .local~output
@@ -665,4 +811,80 @@ trace lineout TraceObject
 trace lineout TraceObject
 trace lineout TraceObject
 que push six
+```
+
+r[env.objects.replace.answer]
+When the object that replaces `.output` answers nothing to the message that
+LINEOUT or CHAROUT sends it, the builtin has no answer: a CALL leaves
+`RESULT` dropped, and the function form raises `SYNTAX 44.1`.
+
+```rexx
+old = .local~output
+.local~output = .quiet~new
+call lineout , 'x'
+r1 = symbol('RESULT')
+signal on syntax name failed
+y = lineout(, 'y')
+failed:
+code = condition('O')~code
+.local~output = old
+say 'after call' r1
+say code
+::class quiet
+::method lineout
+  .stdout~lineout('got' arg(1))
+```
+
+```output defect=#211
+got x
+got y
+after call LIT
+44.1
+```
+
+r[env.objects.replace.symbol]
+A class named `OUTPUT`, or an entry `OUTPUT` in the `local` directory of the
+package, is what the symbol `.output` finds, and SAY and LINEOUT still reach
+the entry of `.local`. The first example shows the class and the second the
+entry.
+
+```rexx
+say 'symbol:' .output~class~id
+say 'one'
+call lineout , 'two'
+::class output
+::method say class
+  .stdout~lineout('class say' arg(1))
+  return 0
+::method lineout class
+  .stdout~lineout('class lineout' arg(1))
+  return 0
+```
+
+```output defect=#212
+symbol: Class
+one
+two
+```
+
+```rexx
+.context~package~local~output = .cap~new
+say .output~class~id
+say 'one'
+call lineout , 'two'
+x = lineout(, 'three')
+::class cap
+::method say
+  .stdout~lineout('cap say' arg(1))
+  return 0
+::method lineout
+  .stdout~lineout('cap lineout' arg(1))
+  return 0
+```
+
+```output defect=#212
+CAP
+one
+two
+three
 ```

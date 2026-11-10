@@ -156,8 +156,8 @@ required package does not hide a public class of the same name that the
 package makes visible. When none of these has the name, the lookup goes on as
 [the environment rule](r:lex.symbols.environment) says, which finds the
 built-in classes and any class object that the program has stored in
-`.environment` under the name.
-This book does not specify which other directories that lookup searches. The
+`.environment` under the name. The places that lookup searches, and their
+order, are [the rule of the environment chapter](r:env.objects.search). The
 same lookup finds the class that SUBCLASS, MIXINCLASS, METACLASS and INHERIT
 name. A name that no step finds is the environment symbol's own text, and the
 options that need a class raise the error that their rule gives.
