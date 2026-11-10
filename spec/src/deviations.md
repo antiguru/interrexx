@@ -517,7 +517,7 @@ there.
 
 A lookup or PUT with the very index object already stored sends that
 object's `==`, and so does a search for an item (`hasItem`, `index`,
-`removeItem`) with the very item object stored, and so does a Relation's
+`removeItem`, `allIndex`) with the very item object stored, and so does a Relation's
 `uniqueIndexes` for an index object stored more than once, and the check of a
 Set's or Bag's `put` and `[]=` that the index equals the item when both are
 the very same object. ooRexx compares
@@ -847,7 +847,7 @@ collection through `makeArray` send it `makeArray`, and the methods and
 instructions that read an argument array or a source through `request` with
 `ARRAY` (`sendWith`, `startWith`, `Message~new` with the option `A`,
 `Message~replyWith`, FORWARD with ARGUMENTS, `Method~new`, `Routine~new`,
-`Package~new` and `loadPackage`) send it `request`, so an override is used.
+`Package~new`, `loadPackage` and a `Stem`'s `unknown`) send it `request`, so an override is used.
 ooRexx sends such an instance neither message and uses the items it holds,
 unlike the subclasses of the other collection classes.
 
