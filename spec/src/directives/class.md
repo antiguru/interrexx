@@ -14,9 +14,10 @@ directives after it declare belong to it until the next ::CLASS. This page
 specifies the name of the class, the options that place it in a hierarchy and
 make it visible to other packages, and the order in which the classes of a
 package are made. What a class object does once it exists, the methods of
-`Class` such as `new`, `id` and `superclass` among them, is specified in the
-classes chapter; the examples here use those methods only to show what the
-directive made.
+[`Class`](../classes/class.md) such as [`new`](r:class.class.new),
+[`id`](r:class.class.id) and [`superclass`](r:class.class.superclass) among
+them, is specified in the classes chapter; the examples here use those methods
+only to show what the directive made.
 
 ## The class and its name
 
@@ -370,19 +371,18 @@ e: say src~makestring('l', ' / ') '=>' condition('o')~code
 r[dir.class.search]
 A message sent to an instance finds its method by looking first at the methods
 the class itself declares and then at those of the classes it descends from
-through SUBCLASS and INHERIT, in the order that
-[the order rule](r:class.methods.order) of the
-[method search](../classes/methods.md) gives; the first method found runs.
-When the superclass and its ancestors inherit no mixin classes and each class
-that INHERIT names is a mixin class whose MIXINCLASS option names `Object` and
-that inherits none itself, as in the example, that order is the class, its
-superclass and the superclass's ancestors other than `Object`, the mixin
-classes in the order written, and `Object` last. A superclass then hides a
-method of a mixin class that the subclass inherits, and an earlier mixin class
-hides a later one. A mixin class with another base class, and a class that
-more than one listed class reaches, stand where
-[the base rule](r:class.methods.order.base) and
-[the shared-class rule](r:class.methods.order.shared) say.
+through SUBCLASS and INHERIT, in the order that [the order
+rule](r:class.methods.order) of the [method search](r:class.methods.search)
+gives; the first method found runs. When the superclass and its ancestors
+inherit no mixin classes and each class that INHERIT names is a mixin class
+whose MIXINCLASS option names `Object` and that inherits none itself, as in
+the example, that order is the class, its superclass and the superclass's
+ancestors other than `Object`, the mixin classes in the order written, and
+`Object` last. A superclass then hides a method of a mixin class that the
+subclass inherits, and an earlier mixin class hides a later one. A mixin class
+with another base class, and a class that more than one listed class reaches,
+stand where [the base rule](r:class.methods.order.base) and [the shared-class
+rule](r:class.methods.order.shared) say.
 
 ```rexx
 o = .c~new
@@ -418,18 +418,19 @@ s who s only1 m1 only2 s0 deep c own
 
 r[dir.class.metaclass]
 METACLASS names a class that is a subclass of `Class`, and the instance
-methods of that class become class methods of the new class, so that they
-answer messages sent to the class itself. A class method that the new class
-declares with the CLASS option hides a metaclass method of the same name, and
-both hide a class method that the new class inherits. A subclass has its
-superclass's metaclass unless it names its own. A metaclass name that is found
-nowhere raises `SYNTAX 98.908`, where SUBCLASS, MIXINCLASS and INHERIT raise
-`98.909`. A name that is found and is not a subclass of `Class` raises
-`SYNTAX 99.927` when the package is installed, after the classes created
-before it have received INIT as [the failure rule](r:dir.index.failure) says,
-and a metaclass that is the class itself raises `98.911`. A `new` of the
-METACLASS that answers an object that is not a class raises `SYNTAX 98.900`
-when the package is installed ([Deviation 114](r:dir.class.deviation.114)).
+methods of that class become [class methods](r:class.methods.class-side) of
+the new class, so that they answer messages sent to the class itself. A class
+method that the new class declares with the CLASS option hides a metaclass
+method of the same name, and both hide a class method that the new class
+inherits. A subclass has its superclass's metaclass unless it names its own. A
+metaclass name that is found nowhere raises `SYNTAX 98.908`, where SUBCLASS,
+MIXINCLASS and INHERIT raise `98.909`. A name that is found and is not a
+subclass of `Class` raises `SYNTAX 99.927` when the package is installed,
+after the classes created before it have received INIT as [the failure
+rule](r:dir.index.failure) says, and a metaclass that is the class itself
+raises `98.911`. A `new` of the METACLASS that answers an object that is not a
+class raises `SYNTAX 98.900` when the package is installed ([Deviation
+114](r:dir.class.deviation.114)).
 
 ```rexx
 say .k~hello .k~both
@@ -497,10 +498,10 @@ init k
 ```
 
 r[dir.class.abstract]
-ABSTRACT marks the class as one that has no instances of its own: the NEW
-method that `Class` supplies raises `SYNTAX 98.989` for it, before any INIT
-runs, and a class method NEW that the abstract class declares itself runs
-instead. A class that has the abstract class as a
+ABSTRACT marks the class as one that has no instances of its own: the [NEW
+method](r:class.class.new) that `Class` supplies raises `SYNTAX 98.989` for
+it, before any INIT runs, and a class method NEW that the abstract class
+declares itself runs instead. A class that has the abstract class as a
 superclass, or that inherits it, is not abstract unless it says so, and makes
 instances. A class can be abstract and a mixin class at once.
 

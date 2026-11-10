@@ -17,11 +17,12 @@ number the way arithmetic would.
 ## Arguments
 
 r[bif.format.method]
-FORMAT is a builtin that runs as a String method, and `number`, its first
-argument, is the receiver; `before`, `after`, `expp` and `expt` become the
-message's arguments. `number` is a [number](r:bif.index.num.arg), and each of
-the others is a [whole-number](r:conv.whole.form) argument that is a count of
-character places. The argument count is checked by the [builtin call
+FORMAT is a builtin that runs as a [String method](r:class.string.builtins),
+and `number`, its first argument, is the receiver; `before`, `after`, `expp`
+and `expt` become the message's arguments. `number` is a
+[number](r:bif.index.num.arg), and each of the others is a
+[whole-number](r:conv.whole.form) argument that is a count of character
+places. The argument count is checked by the [builtin call
 rules](r:bif.index.call.count): one is required and five is the most.
 
 ```rexx

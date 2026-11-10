@@ -21,8 +21,8 @@ r[bif.value.args]
 `name` and `selector` are [strings](r:conv.string.null) and `newvalue` can be
 any object. The argument count is checked by the [builtin call
 rules](r:bif.index.call.count): one argument is required and three is the
-most. VALUE does not run as a String method: sending the message `VALUE` to a
-string raises `SYNTAX 97.1`.
+most. VALUE does not run as a [String method](r:class.string.builtins):
+sending the message `VALUE` to a string raises `SYNTAX 97.1`.
 
 ```rexx
 x = 'a'

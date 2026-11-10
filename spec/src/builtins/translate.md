@@ -17,15 +17,15 @@ replaced by the character at the same position in the output table
 ## Arguments
 
 r[bif.translate.method]
-TRANSLATE is a builtin that runs as a String method, and `string`, its
-first argument, is the receiver; the other five become the message's
-arguments, in their order. `string`, `tableo` and `tablei` are
-[strings](r:conv.string.null), `pad` is a [pad](r:conv.pad), `pos` is a
-[position](r:conv.position.check), and `length` is a
-[length](r:conv.length.check). The arguments are checked in the
+TRANSLATE is a builtin that runs as a [String
+method](r:class.string.builtins), and `string`, its first argument, is the
+receiver; the other five become the message's arguments, in their order.
+`string`, `tableo` and `tablei` are [strings](r:conv.string.null), `pad` is a
+[pad](r:conv.pad), `pos` is a [position](r:conv.position.check), and `length`
+is a [length](r:conv.length.check). The arguments are checked in the
 [order](r:conv.check.order) the conventions give, and the argument count by
-the [builtin call rules](r:bif.index.call.count): one is required and six is the
-most.
+the [builtin call rules](r:bif.index.call.count): one is required and six is
+the most.
 
 ```rexx
 say translate('tab', 'TB', 'tb') 'tab'~translate('TB', 'tb', , 2)

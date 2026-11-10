@@ -22,11 +22,11 @@ the program, so no rule fixes a value.
 ## Arguments
 
 r[bif.userid.args]
-USERID takes no argument. A call with an argument raises `SYNTAX 40.4`, by
-the [call rules](r:bif.index.call.too-many). A trailing omitted place adds
-nothing to the count, so `USERID(,)` is a call without an argument. USERID
-does not run as a String method: sending the message `USERID` to a string
-raises `SYNTAX 97.1`.
+USERID takes no argument. A call with an argument raises `SYNTAX 40.4`, by the
+[call rules](r:bif.index.call.too-many). A trailing omitted place adds nothing
+to the count, so `USERID(,)` is a call without an argument. USERID does not
+run as a [String method](r:class.string.builtins): sending the message
+`USERID` to a string raises `SYNTAX 97.1`.
 
 ```rexx
 signal on syntax name a

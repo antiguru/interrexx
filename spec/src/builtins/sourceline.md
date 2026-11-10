@@ -17,9 +17,10 @@ r[bif.sourceline.args]
 SOURCELINE takes at most one argument, `n`, which is optional. The argument
 count is checked by the [builtin call rules](r:bif.index.call.count): none is
 required and one is the most, so a call with two arguments raises
-`SYNTAX 40.4`, whatever they are, and a call with only omitted places counts as
-a call with no arguments. SOURCELINE does not run as a String method: sending
-the message `SOURCELINE` to a string raises `SYNTAX 97.1`.
+`SYNTAX 40.4`, whatever they are, and a call with only omitted places counts
+as a call with no arguments. SOURCELINE does not run as a [String
+method](r:class.string.builtins): sending the message `SOURCELINE` to a string
+raises `SYNTAX 97.1`.
 
 ```rexx
 say sourceline() sourceline( ) sourceline(,)

@@ -15,10 +15,10 @@ hexadecimal digits writes: one character for each two digits.
 ## Arguments
 
 r[bif.x2c.method]
-X2C is a builtin that runs as a String method, and `hex_string`, its only
-argument, is the receiver. The argument count is checked by the
-[builtin call rules](r:bif.index.call.count): one is required and one is the
-most.
+X2C is a builtin that runs as a [String method](r:class.string.builtins), and
+`hex_string`, its only argument, is the receiver. The argument count is
+checked by the [builtin call rules](r:bif.index.call.count): one is required
+and one is the most.
 
 ```rexx
 say x2c('41') '41'~x2c

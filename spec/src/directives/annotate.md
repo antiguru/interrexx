@@ -306,15 +306,18 @@ class attribute THREE THREE
 
 r[dir.annotate.read]
 The annotations of an element are kept with its object. The `ANNOTATION`
-message of the object of a package, class, method or routine, with an
-annotation name, returns the value as a string, or `.nil` when the element has
-no annotation of that name, and the name is looked up in upper case. The
-`ANNOTATIONS` message returns a table of all of them indexed by name. The
-annotation of an attribute is found on both of its methods, and that of a
-constant on the method of the constant. An annotation is not inherited: a
-class that names an annotated class as its superclass has none of its
-annotations, and the same name on a class and on its method are two separate
-annotations. A copy of an annotated routine or method keeps its annotations.
+message of the object of a [package](r:class.package.annotation),
+[class](r:class.class.annotation), [method](r:class.method.annotation) or
+[routine](r:class.routine.annotation), with an annotation name, returns the
+value as a string, or `.nil` when the element has no annotation of that name,
+and the name is looked up in upper case. The
+[`ANNOTATIONS`](r:class.package.annotations) message returns a table of all of
+them indexed by name. The annotation of an attribute is found on both of its
+methods, and that of a constant on the method of the constant. An annotation
+is not inherited: a class that names an annotated class as its superclass has
+none of its annotations, and the same name on a class and on its method are
+two separate annotations. A copy of an annotated routine or method keeps its
+annotations.
 
 ```rexx
 p = .context~package

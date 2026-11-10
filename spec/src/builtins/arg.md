@@ -18,8 +18,8 @@ r[bif.arg.args]
 ARG takes at most two arguments, `n` and `option`, and both are optional. The
 argument count is checked by the [builtin call rules](r:bif.index.call.count):
 none is required and two is the most, so a call with three raises
-`SYNTAX 40.4`. ARG does not run as a String method: sending the message `ARG`
-to a string raises `SYNTAX 97.1`.
+`SYNTAX 40.4`. ARG does not run as a [String method](r:class.string.builtins):
+sending the message `ARG` to a string raises `SYNTAX 97.1`.
 
 ```rexx
 call show 'a'

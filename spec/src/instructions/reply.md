@@ -26,12 +26,12 @@ REPLY evaluates its expression and hands the value to whoever sent the
 message, as RETURN does, and the caller continues with it. A REPLY with no
 expression hands over no value, and the caller sees what it sees after a
 RETURN with none, as [the message rule](r:instr.message.result) says. The
-method does not end. The clause after the REPLY runs next, on a new
-activity, with the variables of the method as they were, its arguments, and
-its object variables. For a message sent with `~start`, the value of the
-REPLY is the `~result` of the message object. The method call that sent the
-message is over for the caller, so the method's later `RETURN` or `EXIT` has
-no value to hand over.
+method does not end. The clause after the REPLY runs next, on a new activity,
+with the variables of the method as they were, its arguments, and its object
+variables. For a message sent with [`~start`](r:class.object.start), the value
+of the REPLY is the [`~result`](r:class.message.result) of the message object.
+The method call that sent the message is over for the caller, so the method's
+later `RETURN` or `EXIT` has no value to hand over.
 
 ```rexx
 log = .array~new

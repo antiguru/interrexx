@@ -348,13 +348,13 @@ say (verify(v, '', 'N', n) == n) (verify(copies('a', 1200) || 'b', 'a') == '1201
 
 r[bif.index.bit.args]
 BITAND, BITOR and BITXOR take the same arguments: `string1`, `string2` and
-`pad`. Each runs as a String method, and `string1`, its first argument, is
-the receiver; `string2` and `pad` become the message's arguments, in that
-order. `string1` and `string2` are [strings](r:conv.string.null) and `pad` is
-a [pad](r:conv.pad). Only `string1` is required, `string2` and `pad` are
-optional, and the argument count is checked by the
-[builtin call rules](r:bif.index.call.count): one is required and three is the
-most.
+`pad`. Each runs as a [String method](r:class.string.builtins), and `string1`,
+its first argument, is the receiver; `string2` and `pad` become the message's
+arguments, in that order. `string1` and `string2` are
+[strings](r:conv.string.null) and `pad` is a [pad](r:conv.pad). Only `string1`
+is required, `string2` and `pad` are optional, and the argument count is
+checked by the [builtin call rules](r:bif.index.call.count): one is required
+and three is the most.
 
 ```rexx
 say c2x(bitor('a0'x)) c2x('a0'x~bitxor('01'x)) c2x('a0'x~bitand('f0'x, '00'x))

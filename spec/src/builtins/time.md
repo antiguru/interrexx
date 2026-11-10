@@ -21,11 +21,11 @@ pauses and not against figures.
 r[bif.time.args]
 TIME takes up to three arguments and requires none: `option`, `string` and
 `informat`. The argument count is checked by the [builtin call
-rules](r:bif.index.call.count): a call with more than three arguments
-raises `SYNTAX 40.4`, and a call with only omitted places counts as a call
-with no arguments. TIME does not run as a String method: sending the
-message `TIME` to a string raises `SYNTAX 97.1`. `option` and `informat` name
-formats by [their first letter](r:bif.index.dt.letter).
+rules](r:bif.index.call.count): a call with more than three arguments raises
+`SYNTAX 40.4`, and a call with only omitted places counts as a call with no
+arguments. TIME does not run as a [String method](r:class.string.builtins):
+sending the message `TIME` to a string raises `SYNTAX 97.1`. `option` and
+`informat` name formats by [their first letter](r:bif.index.dt.letter).
 
 ```rexx
 say time('C', '13:05:09') time(, '13:05:09') time('N', '13:05:09', 'N') time('N', '13:05:09', )

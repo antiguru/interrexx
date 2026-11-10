@@ -16,13 +16,12 @@ default that set is the whitespace.
 ## Arguments
 
 r[bif.strip.method]
-STRIP is a builtin that runs as a String method, and `string`, its first
-argument, is the receiver; `option` and `chars` become the message's
-arguments, in that order. `string` and `chars` are
+STRIP is a builtin that runs as a [String method](r:class.string.builtins),
+and `string`, its first argument, is the receiver; `option` and `chars` become
+the message's arguments, in that order. `string` and `chars` are
 [strings](r:conv.string.null), and `option` is an
-[option](r:bif.strip.option). The argument count is checked by the
-[builtin call rules](r:bif.index.call.count): one is required and three is
-the most.
+[option](r:bif.strip.option). The argument count is checked by the [builtin
+call rules](r:bif.index.call.count): one is required and three is the most.
 
 ```rexx
 x = ' pq '~strip('t')

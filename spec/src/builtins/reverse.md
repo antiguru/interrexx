@@ -15,11 +15,11 @@ order.
 ## Arguments
 
 r[bif.reverse.method]
-REVERSE is a builtin that runs as a String method, and `string`, its only
-argument, is the receiver; the message takes no other argument. `string` is
-a [string](r:conv.string.null), so no string raises an error. The
-argument count is checked by the [builtin call rules](r:bif.index.call.count):
-one is required and one is the most.
+REVERSE is a builtin that runs as a [String method](r:class.string.builtins),
+and `string`, its only argument, is the receiver; the message takes no other
+argument. `string` is a [string](r:conv.string.null), so no string raises an
+error. The argument count is checked by the [builtin call
+rules](r:bif.index.call.count): one is required and one is the most.
 
 ```rexx
 say reverse('Xyz!') 'Xyz!'~reverse

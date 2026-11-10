@@ -24,8 +24,9 @@ CONDITION takes at most one argument, `option`, which is optional. The
 argument count is checked by the [builtin call rules](r:bif.index.call.count):
 none is required and one is the most, so a call with two arguments raises
 `SYNTAX 40.4`, whatever they are, and a call with only omitted places counts
-as a call with no arguments. CONDITION does not run as a String method:
-sending the message `CONDITION` to a string raises `SYNTAX 97.1`.
+as a call with no arguments. CONDITION does not run as a [String
+method](r:class.string.builtins): sending the message `CONDITION` to a string
+raises `SYNTAX 97.1`.
 
 ```rexx
 say '['condition()']' '['condition( )']' '['condition(,)']'
@@ -310,20 +311,21 @@ OFF
 ```
 
 r[bif.condition.object]
-After a trap has caught a condition, the option `O` answers a directory that
-holds the information of the condition, the same information as the other
-options answer, and more. Its entries `CONDITION`, `DESCRIPTION` and
-`INSTRUCTION` equal what `C`, `D` and `I` answer, and so does `ADDITIONAL`
-when the condition carries additional information. When it carries none, as
-with NOVALUE, the directory has no `ADDITIONAL` entry, and `~additional`
-answers `.nil` as for any absent entry, which is also what `A` answers. The
-directory is a new copy of the condition's entries on each call, so two calls
-answer two objects. A copy holds the same objects as the condition: adding,
-removing or replacing an entry of a copy changes nothing that CONDITION
-answers, while a change to an object that an entry holds, such as the array of
-`ADDITIONAL`, shows wherever that object is held. The condition itself is the
-object that a CALL trap's routine gets as its argument, as
-[the argument rule](r:cond.information.argument) says.
+After a trap has caught a condition, the option `O` answers a
+[directory](r:class.directory.creation) that holds the information of the
+condition, the same information as the other options answer, and more. Its
+entries `CONDITION`, `DESCRIPTION` and `INSTRUCTION` equal what `C`, `D` and
+`I` answer, and so does `ADDITIONAL` when the condition carries additional
+information. When it carries none, as with NOVALUE, the directory has no
+`ADDITIONAL` entry, and [`~additional`](r:class.directory.unknown) answers
+`.nil` as for any absent entry, which is also what `A` answers. The directory
+is a new copy of the condition's entries on each call, so two calls answer two
+objects. A copy holds the same objects as the condition: adding, removing or
+replacing an entry of a copy changes nothing that CONDITION answers, while a
+change to an object that an entry holds, such as the array of `ADDITIONAL`,
+shows wherever that object is held. The condition itself is the object that a
+CALL trap's routine gets as its argument, as [the argument
+rule](r:cond.information.argument) says.
 
 ```rexx
 signal on syntax name s

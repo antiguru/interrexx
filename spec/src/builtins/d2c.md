@@ -17,12 +17,12 @@ characters, and can write a negative number.
 ## Arguments
 
 r[bif.d2c.method]
-D2C is a builtin that runs as a String method, and `wholenumber`, its first
-argument, is the receiver; `n` becomes the message's argument. `wholenumber`
-is a [decimal number](r:bif.index.conv.decimal) and `n` is a
-[length](r:bif.index.conv.length). The argument count is checked by the
-[builtin call rules](r:bif.index.call.count): one is required and two is the
-most.
+D2C is a builtin that runs as a [String method](r:class.string.builtins), and
+`wholenumber`, its first argument, is the receiver; `n` becomes the message's
+argument. `wholenumber` is a [decimal number](r:bif.index.conv.decimal) and
+`n` is a [length](r:bif.index.conv.length). The argument count is checked by
+the [builtin call rules](r:bif.index.call.count): one is required and two is
+the most.
 
 ```rexx
 say d2c(72) 72~d2c c2x(72~d2c(2))

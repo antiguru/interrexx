@@ -20,31 +20,30 @@ which traps answer it and what a clause does when nothing does.
 
 r[cond.nostring.raise]
 NOSTRING is raised when a clause needs the string value of an object that is
-not a string, and `request` with the argument `STRING`, sent to the object,
-answers no string: an object with no `MAKESTRING` method does so, and so does
-one whose `MAKESTRING` or own `request` answers `.nil` or another object that is
-not a string, whatever its `STRING` method answers. An object whose `request`
-is private, or whose `MAKESTRING` or
-`STRING` method is private and would be sent, raises no NOSTRING at the uses
-listed below: the
-message is refused, as [the conventions](r:conv.string.object) say for
-builtin arguments, and the clause raises `SYNTAX 97.2`. A string, a number
-and an instance of a subclass of `String` never raise it, and neither does an
-object whose `request` answers a string, as `Object` does with the answer of
-`MAKESTRING`. The uses that raise it include
-the three concatenation operators (the explicit `||`, the abuttal and the
-blank), the operand of SAY, the source of `PARSE VALUE`, the text that
+not a string, and [`request`](r:class.object.request) with the argument
+`STRING`, sent to the object, answers no string: an object with no
+`MAKESTRING` method does so, and so does one whose `MAKESTRING` or own
+`request` answers `.nil` or another object that is not a string, whatever its
+`STRING` method answers. An object whose `request` is private, or whose
+`MAKESTRING` or `STRING` method is private and would be sent, raises no
+NOSTRING at the uses listed below: the message is refused, as [the
+conventions](r:conv.string.object) say for builtin arguments, and the clause
+raises `SYNTAX 97.2`. A string, a number and an instance of a subclass of
+`String` never raise it, and neither does an object whose `request` answers a
+string, as `Object` does with the answer of `MAKESTRING`. The uses that raise
+it include the three concatenation operators (the explicit `||`, the abuttal
+and the blank), the operand of SAY, the source of `PARSE VALUE`, the text that
 INTERPRET runs, an operand of an arithmetic or comparison operator whose left
 operand is a string, the tail of a compound variable, and an argument of a
 builtin function that is to be a string, except for the builtins that link
 [the native call rule](r:bif.index.call.native), which raise `SYNTAX 88.909`
-for it. Sending the message
-`STRING` to the object raises nothing, because the object is then not
-converted. Which other positions convert, such as the arguments of method
-calls, is not specified. What a builtin does with such an argument when no
-trap answers is [the object rule of the conventions](r:conv.string.object).
-The table below has one row for each object and one column for each of six
-uses, `N` where NOSTRING is raised and `-` where it is not.
+for it. Sending the message `STRING` to the object raises nothing, because the
+object is then not converted. Which other positions convert, such as the
+arguments of method calls, is not specified. What a builtin does with such an
+argument when no trap answers is [the object rule of the
+conventions](r:conv.string.object). The table below has one row for each
+object and one column for each of six uses, `N` where NOSTRING is raised and
+`-` where it is not.
 
 ```rexx
 objs = .array~of(.object~new, .made~new, .string.sub~new('xy'), 42)
@@ -176,16 +175,16 @@ n: return 'N' condition('d')
 ```
 
 r[cond.nostring.information]
-The description of a NOSTRING condition is the text that the `STRING` method
-of the object answers when that is a string, and its `ADDITIONAL` entry is the
-object. When the answer is an object that is not a string but has a string
-value, such as an array, the description is that value. When the answer has no
-string value, [Deviation 30](r:cond.nostring.deviation.30) applies. The
-condition object has the entries that every condition has, `ADDITIONAL` and
-`POSITION`, and neither `RC` nor `CODE`, as [the entries
-rule](r:cond.information.object) lists them. The text is the one that the
-object would have as its string value when no trap answers, as [the untrapped
-rule](r:cond.nostring.untrapped) says.
+The description of a NOSTRING condition is the text that the [`STRING`
+method](r:class.object.string) of the object answers when that is a string,
+and its `ADDITIONAL` entry is the object. When the answer is an object that is
+not a string but has a string value, such as an array, the description is that
+value. When the answer has no string value, [Deviation
+30](r:cond.nostring.deviation.30) applies. The condition object has the
+entries that every condition has, `ADDITIONAL` and `POSITION`, and neither
+`RC` nor `CODE`, as [the entries rule](r:cond.information.object) lists them.
+The text is the one that the object would have as its string value when no
+trap answers, as [the untrapped rule](r:cond.nostring.untrapped) says.
 
 ```rexx
 signal on nostring name n

@@ -33,13 +33,13 @@ Which libraries a program can name beyond `rxmath` is not specified.
 
 r[bif.rxfuncadd.args]
 `name` and `module` are required [strings](r:conv.string.null), and
-`procedure` is an optional string. RXFUNCADD does not run as a String method:
-sending the message `RXFUNCADD` to a string raises `SYNTAX 97.1`. The
-[call rules](r:bif.index.call.count) for the number of arguments hold: fewer
-than two raise `SYNTAX 40.3`, more than three raise `SYNTAX 40.4`, and an
-omitted `name` or `module` raises `SYNTAX 40.5`. The count is checked before
-the omissions, so a call with a fourth argument and no `name` raises
-`SYNTAX 40.4`.
+`procedure` is an optional string. RXFUNCADD does not run as a [String
+method](r:class.string.builtins): sending the message `RXFUNCADD` to a string
+raises `SYNTAX 97.1`. The [call rules](r:bif.index.call.count) for the number
+of arguments hold: fewer than two raise `SYNTAX 40.3`, more than three raise
+`SYNTAX 40.4`, and an omitted `name` or `module` raises `SYNTAX 40.5`. The
+count is checked before the omissions, so a call with a fourth argument and no
+`name` raises `SYNTAX 40.4`.
 
 ```rexx
 signal on syntax name a

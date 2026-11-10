@@ -16,11 +16,12 @@ length `n` it reads the string as a signed number of `n` characters.
 ## Arguments
 
 r[bif.c2d.method]
-C2D is a builtin that runs as a String method, and `string`, its first
-argument, is the receiver; `n` becomes the message's argument. `string` is a
-[string](r:conv.string.null), and `n` is a [length](r:bif.index.conv.length).
-The argument count is checked by the [builtin call
-rules](r:bif.index.call.count): one is required and two is the most.
+C2D is a builtin that runs as a [String method](r:class.string.builtins), and
+`string`, its first argument, is the receiver; `n` becomes the message's
+argument. `string` is a [string](r:conv.string.null), and `n` is a
+[length](r:bif.index.conv.length). The argument count is checked by the
+[builtin call rules](r:bif.index.call.count): one is required and two is the
+most.
 
 ```rexx
 say c2d('ff'x) 'ff'x~c2d 'ff'x~c2d(1)

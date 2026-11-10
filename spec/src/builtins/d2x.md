@@ -16,12 +16,12 @@ exactly `n` hexadecimal digits, and can write a negative number.
 ## Arguments
 
 r[bif.d2x.method]
-D2X is a builtin that runs as a String method, and `wholenumber`, its first
-argument, is the receiver; `n` becomes the message's argument.
-`wholenumber` is a [decimal number](r:bif.index.conv.decimal) and `n` is a
-[length](r:bif.index.conv.length). The argument count is checked by the
-[builtin call rules](r:bif.index.call.count): one is required and two is the
-most.
+D2X is a builtin that runs as a [String method](r:class.string.builtins), and
+`wholenumber`, its first argument, is the receiver; `n` becomes the message's
+argument. `wholenumber` is a [decimal number](r:bif.index.conv.decimal) and
+`n` is a [length](r:bif.index.conv.length). The argument count is checked by
+the [builtin call rules](r:bif.index.call.count): one is required and two is
+the most.
 
 ```rexx
 say d2x(65) 65~d2x 65~d2x(4)

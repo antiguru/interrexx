@@ -16,14 +16,15 @@ with another. Occurrences that overlap are not both replaced, and a
 ## Arguments
 
 r[bif.changestr.method]
-CHANGESTR is a builtin that runs as a String method, and `haystack`, its
-second argument, is the receiver; `needle`, `newneedle` and `count` become
-the message's arguments, in that order. `needle`, `haystack` and
-`newneedle` are [strings](r:conv.string.null), and the function form takes
-`needle` first. `count` is a whole number, described by
-[its own rule](r:bif.changestr.count). The argument count is checked by the
-[builtin call rules](r:bif.index.call.count): three arguments are required
-and four is the most.
+CHANGESTR is a builtin that runs as a [String
+method](r:class.string.builtins), and `haystack`, its second argument, is the
+receiver; `needle`, `newneedle` and `count` become the message's arguments, in
+that order. `needle`, `haystack` and `newneedle` are
+[strings](r:conv.string.null), and the function form takes `needle` first.
+`count` is a whole number, described by [its own rule](r:bif.changestr.count).
+The argument count is checked by the [builtin call
+rules](r:bif.index.call.count): three arguments are required and four is the
+most.
 
 ```rexx
 say changestr('an', 'banana', '__') 'banana'~changestr('an', '__') 'banana'~changestr('an', '__', 1)

@@ -17,8 +17,9 @@ to read. It reads nothing and moves nothing.
 r[bif.chars.args]
 `name` is a [string](r:conv.string.null) that names the stream; when it is
 omitted or null, the [standard input](r:bif.index.stream.std) is asked. CHARS
-is not a String method. It takes one argument at the most, by the
-[call rules](r:bif.index.call.too-many), and none is required.
+is not a [String method](r:class.string.builtins). It takes one argument at
+the most, by the [call rules](r:bif.index.call.too-many), and none is
+required.
 
 ```rexx
 f = 'spec-chars-args.tmp'

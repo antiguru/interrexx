@@ -19,11 +19,11 @@ digits, a symbol, or a logical value.
 ## Arguments
 
 r[bif.datatype.method]
-DATATYPE is a builtin that runs as a String method, and `string`, its first
-argument, is the receiver; `type` becomes the message's argument. `string` is
-a [string](r:conv.string.null) and may be the null string. The argument count
-is checked by the [builtin call rules](r:bif.index.call.count): one argument
-is required and two is the most.
+DATATYPE is a builtin that runs as a [String method](r:class.string.builtins),
+and `string`, its first argument, is the receiver; `type` becomes the
+message's argument. `string` is a [string](r:conv.string.null) and may be the
+null string. The argument count is checked by the [builtin call
+rules](r:bif.index.call.count): one argument is required and two is the most.
 
 ```rexx
 say datatype('12') '12'~datatype '12'~datatype('W') datatype('', 'X')

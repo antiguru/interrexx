@@ -8,13 +8,13 @@ rexxref: "Keyword Instructions > GUARD"
 # GUARD
 
 A method of an object can run on several activities at once, for instance when
-it was started with `~start`. GUARD controls whether a running method has
-exclusive use of its object's variables, and it can make the method wait until
-an object variable has a given value. This page specifies the exclusion, the
-WHEN form and its conditions, the places where GUARD may stand, and the
-errors. Which methods start guarded or unguarded is the matter of the
-`::METHOD` directive. The EXPOSE of the variables that a WHEN expression reads
-is [the EXPOSE instruction](expose.md).
+it was started with [`~start`](r:class.object.start). GUARD controls whether a
+running method has exclusive use of its object's variables, and it can make
+the method wait until an object variable has a given value. This page
+specifies the exclusion, the WHEN form and its conditions, the places where
+GUARD may stand, and the errors. Which methods start guarded or unguarded is
+the matter of the `::METHOD` directive. The EXPOSE of the variables that a
+WHEN expression reads is [the EXPOSE instruction](expose.md).
 
 The page says only what the instruction guarantees. The order in which
 activities that are not held apart by a guard or by a wait make progress is

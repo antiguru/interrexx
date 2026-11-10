@@ -18,12 +18,12 @@ BITOR and BITXOR.
 ## Arguments
 
 r[bif.bitand.method]
-BITAND is a builtin that runs as a String method, and `string1`, its first
-argument, is the receiver; `string2` and `pad` become the message's
-arguments, in that order. Its arguments, their checks and their defaults are
-those of [the bit-by-bit functions](r:bif.index.bit.args): `string1` is
-required, `string2` defaults to the null string, and `pad` has [its own
-check](r:bif.index.bit.pad.check) and no default.
+BITAND is a builtin that runs as a [String method](r:class.string.builtins),
+and `string1`, its first argument, is the receiver; `string2` and `pad` become
+the message's arguments, in that order. Its arguments, their checks and their
+defaults are those of [the bit-by-bit functions](r:bif.index.bit.args):
+`string1` is required, `string2` defaults to the null string, and `pad` has
+[its own check](r:bif.index.bit.pad.check) and no default.
 
 ```rexx
 say c2x(bitand('f0'x, '3c'x)) c2x('f0'x~bitand('3c'x)) c2x('f0'x~bitand('3c'x, '00'x))

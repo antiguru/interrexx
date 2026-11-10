@@ -25,12 +25,12 @@ specified.
 
 r[bif.directory.args]
 `newdirectory` is a [string](r:conv.string.null), and it is optional.
-DIRECTORY does not run as a String method: sending the message `DIRECTORY` to
-a string raises `SYNTAX 97.1`. It follows [the native call
-rule](r:bif.index.call.native), both for the number of arguments, so that
-`DIRECTORY(,)` is a call without an argument and `DIRECTORY(, 'x')` raises
-`SYNTAX 88.922`, and for an argument that is an object other than a string,
-such as `.nil` or `.object~new`.
+DIRECTORY does not run as a [String method](r:class.string.builtins): sending
+the message `DIRECTORY` to a string raises `SYNTAX 97.1`. It follows [the
+native call rule](r:bif.index.call.native), both for the number of arguments,
+so that `DIRECTORY(,)` is a call without an argument and `DIRECTORY(, 'x')`
+raises `SYNTAX 88.922`, and for an argument that is an object other than a
+string, such as `.nil` or `.object~new`.
 
 ```rexx
 here = directory()

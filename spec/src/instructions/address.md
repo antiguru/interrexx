@@ -342,18 +342,19 @@ r[instr.address.with.using]
 For output and error, `USING` names the object that receives the lines. An
 ordered collection, an Array, a List, a Queue or a subclass of one, gets each
 line by the message `APPEND`, after it is emptied, by the message `EMPTY`,
-when the redirection is a replace. A RexxQueue object gets each line by the
-message `QUEUE`. A Stem object, an object of the Stem class itself and not of
-a subclass, is written as `STEM` writes a stem: a replace clears it and sets
-the tails `1` and up and `0`, and an append numbers the lines after its `0`
-tail. A stream object, an object of an OutputStream or InputOutputStream
-class (a `.Stream` among them), gets each line by `LINEOUT`; it takes neither
-`REPLACE` nor `APPEND`, and either raises `SYNTAX 98.997`. Any other object, a
-string, `.nil`, a Set, a Directory, a Bag, a MutableBuffer, an object of a
-subclass of Stem, an object of an InputStream class that is not also an
-OutputStream, and an object of a class of the program that has an `APPEND`
-method of its own, raises `SYNTAX 98.996` when the command is about to be
-sent, whether or not the command would have written anything.
+when the redirection is a replace. A [RexxQueue](r:class.rexxqueue.queue)
+object gets each line by the message `QUEUE`. A Stem object, an object of the
+Stem class itself and not of a subclass, is written as `STEM` writes a stem: a
+replace clears it and sets the tails `1` and up and `0`, and an append numbers
+the lines after its `0` tail. A stream object, an object of an OutputStream or
+InputOutputStream class (a `.Stream` among them), gets each line by `LINEOUT`;
+it takes neither `REPLACE` nor `APPEND`, and either raises `SYNTAX 98.997`.
+Any other object, a string, `.nil`, a Set, a Directory, a Bag, a
+MutableBuffer, an object of a subclass of Stem, an object of an InputStream
+class that is not also an OutputStream, and an object of a class of the
+program that has an `APPEND` method of its own, raises `SYNTAX 98.996` when
+the command is about to be sent, whether or not the command would have written
+anything.
 
 ```rexx
 a = .array~new
@@ -457,11 +458,12 @@ InputStream or InputOutputStream class (a `.Stream` among them), is read line
 by line until its end. Any other object that has a `MAKEARRAY` method, among
 them a List, a Queue, a Set, a Directory, a Bag, a RexxQueue and an object of
 a class of the program with such a method, gives one line for each item of the
-array that the method answers; the lines of a RexxQueue are taken from it. An
-item that is not a string is replaced by a string as [the string
-argument rule](r:conv.string.object) says. A `MAKEARRAY` that answers no
-array, any other object, and `.nil`, raise `SYNTAX 98.924` when the command is
-about to be sent.
+array that the method answers; the lines of a
+[RexxQueue](r:class.rexxqueue.makearray) are taken from it. An item that is
+not a string is replaced by a string as [the string argument
+rule](r:conv.string.object) says. A `MAKEARRAY` that answers no array, any
+other object, and `.nil`, raise `SYNTAX 98.924` when the command is about to
+be sent.
 
 ```rexx
 address system 'cat' with input using ('one') output stem o.

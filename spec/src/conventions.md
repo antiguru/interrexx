@@ -51,34 +51,34 @@ r[conv.string.object]
 An argument that a page calls a string and that is an object other than a
 string is replaced by a string, and the builtin works on that string. The
 replacement is found by sending the object the message `REQUEST` with the
-argument `STRING`, and nothing else is sent first. When the
-answer is a string, it is the replacement. When the answer is `.nil` or another
-object that is not a string, the replacement
-is the answer of the object's public `STRING` method, and when that answer is
-not a string either, see [Deviation 30](r:conv.string.deviation.30). The
-`REQUEST` of `Object` sends the object `MAKESTRING` when it has one and answers
-what that answers, and answers `.nil` when it has none. So an object with a
-`MAKESTRING` method is replaced by its answer, as for an `Array` or a
-`MutableBuffer`, and an object with only a `STRING` method by the answer of that
-method. A class that declares its own `REQUEST` method decides the answer
-itself: its `MAKESTRING` method is not used unless its `REQUEST` sends it, and a
-`REQUEST` that answers a string is used even when the class has a `STRING`
-method. A `MAKESTRING` that answers `.nil` or an object that is not a string is
-like a `REQUEST` that does. An instance of a
-subclass of `String` is a string here, whether it is passed directly or is
-what `REQUEST` answers: the builtin works on its own characters, and no
-message is sent to it for that
-([Deviation 109](r:class.string.deviation.109)). A builtin that reads several
-such arguments reads them from left to right, after it has checked the number of
-its arguments. An argument that a builtin reads as a whole number or as a number
-is read this way too, and the replacement must then be a number. A builtin whose
-page links
-[the native call rule](r:bif.index.call.native) has no fallback to
-`STRING`, as that rule says, and the same holds for the string arguments of
-methods ([the method argument rule](r:class.index.string)). A `REQUEST`,
-`MAKESTRING` or `STRING` method that is private and would be sent
-is not one the replacement can use: the call raises `SYNTAX 97.2`. A comparison
-operator converts its right operand once, as [the comparison
+argument `STRING`, and nothing else is sent first. When the answer is a
+string, it is the replacement. When the answer is `.nil` or another object
+that is not a string, the replacement is the answer of the object's public
+[`STRING`](r:class.object.string) method, and when that answer is not a string
+either, see [Deviation 30](r:conv.string.deviation.30). The
+[`REQUEST`](r:class.object.request) of `Object` sends the object `MAKESTRING`
+when it has one and answers what that answers, and answers `.nil` when it has
+none. So an object with a `MAKESTRING` method is replaced by its answer, as
+for an [`Array`](r:class.array.makestring) or a
+[`MutableBuffer`](r:class.mutablebuffer.makestring), and an object with only a
+`STRING` method by the answer of that method. A class that declares its own
+`REQUEST` method decides the answer itself: its `MAKESTRING` method is not
+used unless its `REQUEST` sends it, and a `REQUEST` that answers a string is
+used even when the class has a `STRING` method. A `MAKESTRING` that answers
+`.nil` or an object that is not a string is like a `REQUEST` that does. An
+instance of a subclass of `String` is a string here, whether it is passed
+directly or is what `REQUEST` answers: the builtin works on its own
+characters, and no message is sent to it for that ([Deviation
+109](r:class.string.deviation.109)). A builtin that reads several such
+arguments reads them from left to right, after it has checked the number of
+its arguments. An argument that a builtin reads as a whole number or as a
+number is read this way too, and the replacement must then be a number. A
+builtin whose page links [the native call rule](r:bif.index.call.native) has
+no fallback to `STRING`, as that rule says, and the same holds for the string
+arguments of methods ([the method argument rule](r:class.index.string)). A
+`REQUEST`, `MAKESTRING` or `STRING` method that is private and would be sent
+is not one the replacement can use: the call raises `SYNTAX 97.2`. A
+comparison operator converts its right operand once, as [the comparison
 rule](r:expr.comparison.object) says.
 
 ```rexx
@@ -304,13 +304,13 @@ b a
 
 r[conv.method]
 A builtin that runs as a String method does its work by sending the
-`String` message of the same name. One of its arguments, usually the first
-and for a few builtins the second, is the receiver; the others become the
-message's arguments, in their order. The builtin and the message then give
-the same result for the same arguments. A builtin page says when its
-builtin is one of these. The range checks below, and the
-[order of the checks](r:conv.check.order), are rules for these builtins
-only; any other builtin's page states its own range checks.
+[`String`](r:class.string.builtins) message of the same name. One of its
+arguments, usually the first and for a few builtins the second, is the
+receiver; the others become the message's arguments, in their order. The
+builtin and the message then give the same result for the same arguments. A
+builtin page says when its builtin is one of these. The range checks below,
+and the [order of the checks](r:conv.check.order), are rules for these
+builtins only; any other builtin's page states its own range checks.
 
 ```rexx
 say substr('abcd', 2, 2) 'abcd'~substr(2, 2) upper('ab', 2) 'ab'~upper(2)

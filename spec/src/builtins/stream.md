@@ -23,17 +23,17 @@ STREAM offers does not call it.
 
 r[bif.stream.args]
 `name` is a [string](r:conv.string.null) that names the stream, and is
-required: it must be neither omitted nor null. `operation` is a string
-that chooses what STREAM does, and `command` is a string, the command that
-the operation `C` carries out. STREAM is not a String method. It takes
-three arguments at the most, by the [call rules](r:bif.index.call.too-many).
-The call is checked in this order. The count of arguments comes first,
-by the [call rules](r:bif.index.call.count). An omitted `name` then raises
-`SYNTAX 40.5` and a null one `SYNTAX 40.27`; an `operation` that
-is [none of those of the next rule](r:bif.stream.operation) raises
-`SYNTAX 40.904`. Last, a `command` that is missing for the operation `C`
-raises `SYNTAX 40.3`, and a `command` given for any other operation raises
-`SYNTAX 40.4`.
+required: it must be neither omitted nor null. `operation` is a string that
+chooses what STREAM does, and `command` is a string, the command that the
+operation `C` carries out. STREAM is not a [String
+method](r:class.string.builtins). It takes three arguments at the most, by the
+[call rules](r:bif.index.call.too-many). The call is checked in this order.
+The count of arguments comes first, by the [call
+rules](r:bif.index.call.count). An omitted `name` then raises `SYNTAX 40.5`
+and a null one `SYNTAX 40.27`; an `operation` that is [none of those of the
+next rule](r:bif.stream.operation) raises `SYNTAX 40.904`. Last, a `command`
+that is missing for the operation `C` raises `SYNTAX 40.3`, and a `command`
+given for any other operation raises `SYNTAX 40.4`.
 
 ```rexx
 f = 'spec-stream-args.tmp'

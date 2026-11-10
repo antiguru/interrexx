@@ -17,11 +17,11 @@ builtin.
 ## Arguments
 
 r[bif.center.method]
-CENTER is a builtin that runs as a String method, and `string`, its first
-argument, is the receiver; `length` and `pad` become the message's
-arguments, in that order. `string` is a [string](r:conv.string.null),
-`length` is a [length](r:conv.length.check), and `pad` is a
-[pad](r:conv.pad). The arguments are checked in the
+CENTER is a builtin that runs as a [String method](r:class.string.builtins),
+and `string`, its first argument, is the receiver; `length` and `pad` become
+the message's arguments, in that order. `string` is a
+[string](r:conv.string.null), `length` is a [length](r:conv.length.check), and
+`pad` is a [pad](r:conv.pad). The arguments are checked in the
 [order](r:conv.check.order) the conventions give, and the argument count by
 the [builtin call rules](r:bif.index.call.count): two are required and three
 is the most.

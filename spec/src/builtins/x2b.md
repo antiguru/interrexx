@@ -15,10 +15,10 @@ digits: four binary digits for each hexadecimal digit.
 ## Arguments
 
 r[bif.x2b.method]
-X2B is a builtin that runs as a String method, and `hex_string`, its only
-argument, is the receiver. The argument count is checked by the
-[builtin call rules](r:bif.index.call.count): one is required and one is the
-most.
+X2B is a builtin that runs as a [String method](r:class.string.builtins), and
+`hex_string`, its only argument, is the receiver. The argument count is
+checked by the [builtin call rules](r:bif.index.call.count): one is required
+and one is the most.
 
 ```rexx
 say x2b('A') 'A'~x2b

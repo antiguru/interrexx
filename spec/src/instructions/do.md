@@ -421,20 +421,24 @@ r[instr.do.over]
 `DO name OVER expression` runs the block once for each item that a collection
 yields, and assigns the item to `name` before the pass. The expression is
 evaluated once, before `name` is assigned, and the loop sends it the message
-`MAKEARRAY`, whatever the class of the object is: an instance of a subclass of
-`List` is sent it as any other collection is ([Deviation
-118](r:instr.do.deviation.118)). The items are those of the Array that comes
-back, in its order, and they are taken when the loop starts, so a change to the
-collection during the loop does not add, remove or alter an item that the loop
-visits. An Array yields its items in index order and skips an index that holds
-none, and a List and a Queue yield theirs from first to last. A String yields
-its lines, so a null string yields none. A Stem, a Directory and a Table yield
-their indexes, which for a Stem are the tails of the existing compound
-variables, and a Set yields its members. The order of those four is not
-specified, as [Deviation 1](r:instr.do.deviation.1) says for a Stem and
-[Deviation 33](../deviations.md#33-hash-iteration-order) for the others. A
-collection that yields nothing leaves `name` as it was, and otherwise `name`
-holds the last item after the loop.
+[`MAKEARRAY`](r:class.collection.makearray), whatever the class of the object
+is: an instance of a subclass of `List` is sent it as any other collection is
+([Deviation 118](r:instr.do.deviation.118)). The items are those of the Array
+that comes back, in its order, and they are taken when the loop starts, so a
+change to the collection during the loop does not add, remove or alter an item
+that the loop visits. An [Array](r:class.array.makearray) yields its items in
+index order and skips an index that holds none, and a
+[List](r:class.list.makearray) and a [Queue](r:class.queue.makearray) yield
+theirs from first to last. A [String](r:class.string.makearray) yields its
+lines, so a null string yields none. A [Stem](r:class.stem.makearray), a
+[Directory](r:class.directory.makearray) and a
+[Table](r:class.table.makearray) yield their indexes, which for a Stem are the
+tails of the existing compound variables, and a [Set](r:class.set.makearray)
+yields its members. The order of those four is not specified, as [Deviation
+1](r:instr.do.deviation.1) says for a Stem and [Deviation
+33](../deviations.md#33-hash-iteration-order) for the others. A collection
+that yields nothing leaves `name` as it was, and otherwise `name` holds the
+last item after the loop.
 
 ```rexx
 a = .array~of('x', 'y', 'z')
@@ -518,11 +522,12 @@ m n
 ```
 
 r[instr.do.over.error]
-The expression must answer a message `MAKEARRAY` with an Array. An object that
-has no such method, or whose method answers something else, raises
-`SYNTAX 98.913`. A FOR phrase may follow the expression, and its count is
-checked as for a count loop, with `SYNTAX 26.3`. A TO or a BY phrase after the
-FOR raises `SYNTAX 25.927`, as [Deviation 38](r:instr.do.deviation.38) says.
+The expression must answer a message `MAKEARRAY` with an
+[Array](r:class.array.creation). An object that has no such method, or whose
+method answers something else, raises `SYNTAX 98.913`. A FOR phrase may follow
+the expression, and its count is checked as for a count loop, with
+`SYNTAX 26.3`. A TO or a BY phrase after the FOR raises `SYNTAX 25.927`, as
+[Deviation 38](r:instr.do.deviation.38) says.
 
 ```rexx
 a = .array~of(1, 2, 3)
@@ -562,14 +567,15 @@ two phrases come in either order, and one or both may be left out. With
 neither, the loop is an OVER loop that assigns nothing: it behaves as [the
 OVER rules](r:instr.do.over) say, and the sentences below about `SUPPLIER` do
 not apply to it. With INDEX or ITEM, the loop sends the value of the
-expression the message `SUPPLIER` and walks the Supplier that comes back,
-assigning the index first and the item after it, so that a variable named by
-both ends up holding the item. The entries are taken when the loop starts. A
-FOR phrase limits the number of entries as it does in an OVER loop. A phrase
-repeated raises `SYNTAX 27.902`. WITH starts this form only when INDEX, ITEM
-or OVER follows it, and such a clause with no OVER raises `SYNTAX 27.904`. An
-object that does not answer `SUPPLIER` raises `SYNTAX 97.1`, and an answer
-that is not a Supplier raises `SYNTAX 98.994`.
+expression the message [`SUPPLIER`](r:class.collection.supplier) and walks the
+[Supplier](r:class.supplier.next) that comes back, assigning the index first
+and the item after it, so that a variable named by both ends up holding the
+item. The entries are taken when the loop starts. A FOR phrase limits the
+number of entries as it does in an OVER loop. A phrase repeated raises
+`SYNTAX 27.902`. WITH starts this form only when INDEX, ITEM or OVER follows
+it, and such a clause with no OVER raises `SYNTAX 27.904`. An object that does
+not answer `SUPPLIER` raises `SYNTAX 97.1`, and an answer that is not a
+Supplier raises `SYNTAX 98.994`.
 
 ```rexx
 a = .array~of('x', 'y', 'z')

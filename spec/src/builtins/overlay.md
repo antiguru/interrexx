@@ -16,15 +16,14 @@ answers the changed string.
 ## Arguments
 
 r[bif.overlay.method]
-OVERLAY is a builtin that runs as a String method, and `target`, its
-second argument, is the receiver; `new`, `n`, `length` and `pad` become
-the message's arguments, in that order. `new` and `target` are
+OVERLAY is a builtin that runs as a [String method](r:class.string.builtins),
+and `target`, its second argument, is the receiver; `new`, `n`, `length` and
+`pad` become the message's arguments, in that order. `new` and `target` are
 [strings](r:conv.string.null), `n` is a [position](r:conv.position.check),
-`length` is a [length](r:conv.length.check), and `pad` is a
-[pad](r:conv.pad). The arguments are checked in the
-[order](r:conv.check.order) the conventions give, and the argument count by
-the [builtin call rules](r:bif.index.call.count): two are required and five
-is the most.
+`length` is a [length](r:conv.length.check), and `pad` is a [pad](r:conv.pad).
+The arguments are checked in the [order](r:conv.check.order) the conventions
+give, and the argument count by the [builtin call
+rules](r:bif.index.call.count): two are required and five is the most.
 
 ```rexx
 say overlay('XY', 'abcd', 2) 'abcd'~overlay('XY', 2) '|' 'abcd'~overlay('XY', 2, 3, '.')

@@ -446,8 +446,8 @@ r[cond.errors.objects]
 The numbers from 88 up usually name faults of messages, of objects and of
 directives.
 * 88, argument value refused: `x = filespec('N')` 88.901,
-  `x = .directory~new~put(1)` 88.901, `x = charin(, 0, -1)` 88.907;
-  [rule](r:bif.index.call.native).
+  [`x = .directory~new~put(1)`](r:class.directory.put) 88.901,
+  `x = charin(, 0, -1)` 88.907; [rule](r:bif.index.call.native).
 * 89, USE target of the wrong kind: `use arg a, 'b'` 89.1, `use arg (a)` 89.1;
   [rule](r:instr.use.syntax).
 * 90, EXTERNAL entry that is not there:
@@ -457,11 +457,12 @@ directives.
   [rule](r:expr.messages.cascade).
 * 93, argument value refused: `x = left('abc', -2)` 93.923,
   `x = copies('ab', -2)` 93.906, `x = 'abc'~substr(0)` 93.924, `x = d2c(-1)`
-  93.927, `x = .array~new('x')` 93.906,
+  93.927, [`x = .array~new('x')`](r:class.array.new) 93.906,
   `x = stream('nofile_zz', 'c', 'bogus')` 93.914;
   [rule](r:conv.position.check).
-* 97, message that is not answered: `x = 'a'~foo` 97.1, `x = .nil~foo` 97.1,
-  `.m~new~p` 97.2; [rule](r:expr.messages.name), [rule](r:conv.string.object).
+* 97, message that is not answered: [`x = 'a'~foo`](r:class.methods.unknown)
+  97.1, `x = .nil~foo` 97.1, `.m~new~p` 97.2; [rule](r:expr.messages.name),
+  [rule](r:conv.string.object).
 * 98, fault of a running clause or directive: `raise propagate` 98.918,
   `::class a subclass nosuchzzclass` 98.909,
   `::routine r external 'library nonezz'` 98.903;

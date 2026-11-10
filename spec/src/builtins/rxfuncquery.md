@@ -23,12 +23,13 @@ an available function and `1` otherwise, and it changes nothing.
 ## Arguments
 
 r[bif.rxfuncquery.args]
-`name` is a required [string](r:conv.string.null). RXFUNCQUERY does not run
-as a String method: sending the message `RXFUNCQUERY` to a string raises
-`SYNTAX 97.1`. The [call rules](r:bif.index.call.count) for the number of
-arguments hold: a call without an argument raises `SYNTAX 40.3`, and a call
-with a second argument raises `SYNTAX 40.4`. A trailing omitted place adds
-nothing to the count, so `RXFUNCQUERY(,)` is a call without an argument.
+`name` is a required [string](r:conv.string.null). RXFUNCQUERY does not run as
+a [String method](r:class.string.builtins): sending the message `RXFUNCQUERY`
+to a string raises `SYNTAX 97.1`. The [call rules](r:bif.index.call.count) for
+the number of arguments hold: a call without an argument raises `SYNTAX 40.3`,
+and a call with a second argument raises `SYNTAX 40.4`. A trailing omitted
+place adds nothing to the count, so `RXFUNCQUERY(,)` is a call without an
+argument.
 
 ```rexx
 signal on syntax name a

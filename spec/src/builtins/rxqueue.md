@@ -26,18 +26,19 @@ deleted.
 ## Arguments
 
 r[bif.rxqueue.args]
-`option` is a string and is required. RXQUEUE does not run as a String method:
-sending the message `RXQUEUE` to a string raises `SYNTAX 97.1`. The [call
-rules](r:bif.index.call.count) hold for the number of arguments, with the
-fewest and the most depending on the option, which the rules below give: a
-call with no argument, or with only omitted places, raises `SYNTAX 40.3`; a
-call of at most two arguments whose first is omitted but whose second is
-present raises `SYNTAX 40.5`. The checks come in this order. First the number
-of arguments is checked against the bounds that hold for every function: at
-most two arguments, so that `rxqueue(, 'a', 'b')` raises `SYNTAX 40.4`, and
-then an `option`. Then the [first character of `option`](r:bif.rxqueue.option)
-is checked, then the number of arguments against the bounds of the function it
-picks, and last [`queuename`](r:bif.rxqueue.name).
+`option` is a string and is required. RXQUEUE does not run as a [String
+method](r:class.string.builtins): sending the message `RXQUEUE` to a string
+raises `SYNTAX 97.1`. The [call rules](r:bif.index.call.count) hold for the
+number of arguments, with the fewest and the most depending on the option,
+which the rules below give: a call with no argument, or with only omitted
+places, raises `SYNTAX 40.3`; a call of at most two arguments whose first is
+omitted but whose second is present raises `SYNTAX 40.5`. The checks come in
+this order. First the number of arguments is checked against the bounds that
+hold for every function: at most two arguments, so that `rxqueue(, 'a', 'b')`
+raises `SYNTAX 40.4`, and then an `option`. Then the [first character of
+`option`](r:bif.rxqueue.option) is checked, then the number of arguments
+against the bounds of the function it picks, and last
+[`queuename`](r:bif.rxqueue.name).
 
 ```rexx
 signal on syntax name a

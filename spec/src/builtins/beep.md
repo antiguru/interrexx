@@ -23,12 +23,12 @@ standard output when no tone can be sounded.
 ## Arguments
 
 r[bif.beep.args]
-Both arguments are required. BEEP does not run as a String method: sending the
-message `BEEP` to a string raises `SYNTAX 97.1`. For the number of arguments
-it follows [the native call rule](r:bif.index.call.native), so
-`BEEP(100, 0, )` is a call with two arguments. The null string is not an
-omitted argument; it is a value that [fails the checks
-below](r:bif.beep.range).
+Both arguments are required. BEEP does not run as a [String
+method](r:class.string.builtins): sending the message `BEEP` to a string
+raises `SYNTAX 97.1`. For the number of arguments it follows [the native call
+rule](r:bif.index.call.native), so `BEEP(100, 0, )` is a call with two
+arguments. The null string is not an omitted argument; it is a value that
+[fails the checks below](r:bif.beep.range).
 
 ```rexx
 signal on syntax name a

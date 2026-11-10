@@ -23,11 +23,12 @@ whether a name is available afterwards.
 
 r[bif.rxfuncdrop.args]
 `name` is a required [string](r:conv.string.null). RXFUNCDROP does not run as
-a String method: sending the message `RXFUNCDROP` to a string raises `SYNTAX
-97.1`. The [call rules](r:bif.index.call.count) for the number of arguments
-hold: a call without an argument raises `SYNTAX 40.3`, and a call with a
-second argument raises `SYNTAX 40.4`. A trailing omitted place adds nothing to
-the count, so `RXFUNCDROP(,)` is a call without an argument.
+a [String method](r:class.string.builtins): sending the message `RXFUNCDROP`
+to a string raises `SYNTAX 97.1`. The [call rules](r:bif.index.call.count) for
+the number of arguments hold: a call without an argument raises `SYNTAX 40.3`,
+and a call with a second argument raises `SYNTAX 40.4`. A trailing omitted
+place adds nothing to the count, so `RXFUNCDROP(,)` is a call without an
+argument.
 
 ```rexx
 signal on syntax name a

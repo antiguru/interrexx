@@ -286,13 +286,13 @@ The List class The List class
 ```
 
 r[cond.information.context]
-In a trapped condition's code, `.CONTEXT~CONDITION` answers a new directory
-that holds the same entries as `CONDITION('O')`, and `.nil` when the code
-holds no record. Every call answers a new directory, so two answers are not
-identical and a change to one is seen by neither the other nor the builtin.
-The method reads the record that [the scope rule](r:bif.condition.scope) of
-CONDITION describes, so the option `R` of CONDITION clears what the method
-reads.
+In a trapped condition's code, `.CONTEXT~CONDITION` answers a new
+[directory](r:class.directory.creation) that holds the same entries as
+`CONDITION('O')`, and `.nil` when the code holds no record. Every call answers
+a new directory, so two answers are not identical and a change to one is seen
+by neither the other nor the builtin. The method reads the record that [the
+scope rule](r:bif.condition.scope) of CONDITION describes, so the option `R`
+of CONDITION clears what the method reads.
 
 ```rexx
 say '[' || .context~condition || ']' (.context~condition == .nil)

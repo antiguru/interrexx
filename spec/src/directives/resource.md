@@ -9,12 +9,12 @@ rexxref: "Directives > ::RESOURCE"
 
 ::RESOURCE puts lines of text into a package. The lines are not code: the
 interpreter does not read them as clauses, and a program reads them back as
-data by the name of the resource. A resource is the way to carry a template,
-a table or a message text inside the file of a program. This page specifies
-the directive and where the data ends, the lines as they are kept, and the
-way that a program reaches them. The methods of the collection that holds the
-resources belong to the classes chapter, and the examples use only those that
-are needed to read an item.
+data by the name of the resource. A resource is the way to carry a template, a
+table or a message text inside the file of a program. This page specifies the
+directive and where the data ends, the lines as they are kept, and the way
+that a program reaches them. The methods of [the collection that holds the
+resources](r:class.package.resources) belong to the classes chapter, and the
+examples use only those that are needed to read an item.
 
 ## The directive
 
