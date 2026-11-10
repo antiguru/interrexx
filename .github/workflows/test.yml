@@ -10,19 +10,95 @@ defaults:
   run:
     working-directory: rust
 
+env:
+  # One archive name and one cache key shape shared by every job below.
+  ARCHIVE: nextest-archive.tar.zst
+
 jobs:
-  test:
-    name: cargo test # the name branch protection requires; keep it
+  # The unmodified third-party trees the tests compare against. Built once per script or
+  # submodule revision and restored from the cache by every job that runs tests.
+  third-party:
+    name: third-party trees
+    runs-on: ubuntu-latest
+    outputs:
+      key: ${{ steps.key.outputs.key }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+      - id: key
+        working-directory: .
+        run: echo "key=third-party-${{ runner.os }}-$(git rev-parse HEAD:third_party/ooRexx)-${{ hashFiles('scripts/setup-third-party.sh') }}" >> "$GITHUB_OUTPUT"
+      - id: cache
+        uses: actions/cache@v6
+        with:
+          path: |
+            third_party/oracle
+            build
+            ootest
+            oodocs
+          key: ${{ steps.key.outputs.key }}
+      - name: Install oracle build dependencies
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: sudo apt-get update && sudo apt-get install -y cmake subversion libxml2-dev libncurses-dev
+      - name: Build third-party trees
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: ../scripts/setup-third-party.sh
+
+  # Compiles every test binary once and packs them for the shards.
+  build:
+    name: build test archive
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
         with:
           submodules: true
       - uses: actions-rust-lang/setup-rust-toolchain@v2
-      - name: Install oracle build dependencies
-        run: sudo apt-get update && sudo apt-get install -y cmake subversion libxml2-dev libncurses-dev
-      - name: Build third-party trees
-        run: ../scripts/setup-third-party.sh
+        with:
+          cache-workspaces: rust
+      - name: Install nextest
+        uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
+        with:
+          tool: nextest@0.9.150
+      - name: Archive the test binaries
+        run: cargo nextest archive --locked --workspace --archive-file "$ARCHIVE"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: nextest-archive
+          path: rust/${{ env.ARCHIVE }}
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+
+  # Each shard runs a hash-selected slice of every test the workspace has.
+  shard:
+    name: nextest shard ${{ matrix.shard }}/4
+    needs: [third-party, build]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+      - uses: actions-rust-lang/setup-rust-toolchain@v2
+        with:
+          cache: false
+      - uses: actions/cache/restore@v6
+        with:
+          path: |
+            third_party/oracle
+            build
+            ootest
+            oodocs
+          key: ${{ needs.third-party.outputs.key }}
+          fail-on-cache-miss: true
+      - uses: actions/download-artifact@v8
+        with:
+          name: nextest-archive
+          path: rust
       - name: Provide memcap
         run: |
           mkdir -p "$HOME/.local/bin"
@@ -34,15 +110,78 @@ jobs:
         with:
           tool: nextest@0.9.150
       - name: Cargo nextest
-        run: cargo nextest run --locked --workspace --profile ci
+        run: >
+          cargo nextest run --archive-file "$ARCHIVE" --workspace-remap .
+          --partition hash:${{ matrix.shard }}/4 --profile ci
+
+  # The specification's examples on the oracle, from the same archive.
+  spec-oracle:
+    name: spec examples against the oracle
+    needs: [third-party, build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+      - uses: actions-rust-lang/setup-rust-toolchain@v2
+        with:
+          cache: false
+      - uses: actions/cache/restore@v6
+        with:
+          path: |
+            third_party/oracle
+            build
+            ootest
+            oodocs
+          key: ${{ needs.third-party.outputs.key }}
+          fail-on-cache-miss: true
+      - uses: actions/download-artifact@v8
+        with:
+          name: nextest-archive
+          path: rust
+      - name: Provide memcap
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          printf '#!/bin/sh\nshift\nexec "$@"\n' > "$HOME/.local/bin/memcap"
+          chmod +x "$HOME/.local/bin/memcap"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: Install nextest
+        uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
+        with:
+          tool: nextest@0.9.150
       - name: Spec examples against the oracle
-        if: success() || failure()
         env:
           REXX_SPEC_ORACLE: "1"
-        run: cargo nextest run --locked -p interrexx --test spec --profile ci
-      - name: Cargo doc tests
-        if: success() || failure()
-        run: cargo test --locked --workspace --doc
+        run: >
+          cargo nextest run --archive-file "$ARCHIVE" --workspace-remap .
+          -E 'package(interrexx) & binary(spec)' --profile ci
+
+  doctest:
+    name: cargo doc tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+      - uses: actions-rust-lang/setup-rust-toolchain@v2
+        with:
+          cache-workspaces: rust
+      - run: cargo test --locked --workspace --doc
+
+  # The check branch protection requires; it passes when every job above did.
+  test:
+    name: cargo test # the name branch protection requires; keep it
+    if: always()
+    needs: [shard, spec-oracle, doctest]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Every test job succeeded
+        working-directory: .
+        run: |
+          echo "shards: ${{ needs.shard.result }}, spec oracle: ${{ needs.spec-oracle.result }}, doc tests: ${{ needs.doctest.result }}"
+          test "${{ needs.shard.result }}" = success
+          test "${{ needs.spec-oracle.result }}" = success
+          test "${{ needs.doctest.result }}" = success
 
   fmt:
     name: Cargo fmt
