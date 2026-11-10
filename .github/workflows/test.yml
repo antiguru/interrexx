@@ -109,6 +109,9 @@ jobs:
         uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
         with:
           tool: nextest@0.9.150
+      - name: Install svn
+        # The extractor tests ask the oodocs working copy for its revision.
+        run: sudo apt-get update && sudo apt-get install -y subversion
       - name: Cargo nextest
         run: >
           cargo nextest run --archive-file "$ARCHIVE" --extract-to . --extract-overwrite --workspace-remap .
