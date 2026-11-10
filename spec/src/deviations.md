@@ -998,7 +998,9 @@ sent, however often it was read before: an empty last line of the source, of a
 `::METHOD` section or of what `new` or `newFile` is given, is left out once,
 when the method is made, and no read drops another. ooRexx drops one more
 trailing empty line after each read, until the last line is not empty, so the
-answers get shorter. `source` of a `Routine` does the same.
+answers get shorter; when every line of the source is empty, the number of lines
+it answers changes from read to read, up as well as down, and a read can answer
+a line that is not in the source. `source` of a `Routine` does the same.
 
 ## 135. An object whose init never ran raises an error
 

@@ -613,7 +613,8 @@ Method
 
 r[class.method.source]
 `source` answers a new array that holds the lines of the method's source, one
-string for each line, so changing the array changes nothing in the method. A method made by `new` has the lines of its source argument, one made by
+string for each line, so changing the array changes nothing in the method. A
+method made by `new` has the lines of its source argument, one made by
 `newFile` the lines of its file before the first directive, without a first
 line that begins with `#!`, and one that a `::METHOD` directive makes has the
 lines of its section. Text that follows the `;` of the directive on its line is
