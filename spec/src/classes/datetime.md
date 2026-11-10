@@ -124,24 +124,23 @@ at 2016-12-31T23:59:59.999999!
 
 r[class.datetime.offset]
 The offset of an instance is the distance of its zone east of UTC, in whole
-minutes from -900 to 900. The method `offset` answers it as a `TimeSpan`, so
-an instance in a zone 5 hours and 30 minutes east of UTC answers
-`05:30:00.000000` and one in a zone 90 minutes west answers
-`-01:30:00.000000`. Every place that takes an offset takes the same two forms:
-a number of whole minutes in that range, or a `TimeSpan` that is a whole
-number of minutes in that range. The argument is sent `isA` with the class
-`TimeSpan`; only a `TimeSpan` is then sent `totalMicroseconds` and is
-converted to minutes, and any other value is read as a number ([the argument
-rule](r:class.index.string)) and sent the messages that [the sends
-rule](r:class.datetime.sends.new) lists. A value outside the range, a number
-with a fraction such as 1.5, and a span that is not whole minutes raise
-`SYNTAX 88.907` for `new` and, with a number or a span, for `toTimezone`, and
-`SYNTAX 88.918` for `today` and for the `from` methods that read an offset,
-which are all but `fromWeekNumberDate` (it [ignores the
-offset](r:class.datetime.fromweek)) and `fromUtcIsoDate` (it has none); a
-value that is no number at all gets the same code from `new`, `today` and
-those `from` methods, and what `toTimezone` raises for it is in [the zone
-rule](r:class.datetime.zone).
+minutes from -900 to 900. The method `offset` answers it as a `TimeSpan`, so an
+instance in a zone 5 hours and 30 minutes east of UTC answers `05:30:00.000000`
+and one in a zone 90 minutes west answers `-01:30:00.000000`. Every place that
+takes an offset takes the same two forms: a number of whole minutes in that
+range, or a `TimeSpan` that is a whole number of minutes in that range. The
+argument is sent `isA` with the class `TimeSpan`; only a `TimeSpan` is then sent
+`totalMicroseconds` and is converted to minutes, and any other value is read as
+a number ([the argument rule](r:class.index.string)) and sent the messages that
+[the sends rule](r:class.datetime.sends.new) lists. A value outside the range, a
+number with a fraction that is left when it is rounded to nine significant
+digits, such as 1.5, and a span that is not whole minutes raise `SYNTAX 88.907`
+for `new` and, with a number or a span, for `toTimezone`, and `SYNTAX 88.918`
+for `today` and for the `from` methods that read an offset, which are all but
+`fromWeekNumberDate` (it [ignores the offset](r:class.datetime.fromweek)) and
+`fromUtcIsoDate` (it has none); a value that is no number at all gets the same
+code from `new`, `today` and those `from` methods, and what `toTimezone` raises
+for it is in [the zone rule](r:class.datetime.zone).
 
 ```rexx
 d = .datetime~new(2017, 6, 30, 5, 6, 7, 8, 330)
@@ -187,17 +186,18 @@ r[class.datetime.offset.default]
 An instance made without an offset gets the offset of the host's zone as it is
 when the instance is made: the number of microseconds that
 [`TIME('O')`](r:bif.time.zone) answers, as a span. It is one offset for every
-date: an instance for a date of summer and one for a date of winter get the
-same offset, the one the host has at the moment of the call. Which zone the
-host is in is not specified, so the examples compare with the offset of
-another instance or with `TIME('O')`. The class methods `new`, `today` and
-every `from` method take it, except `fromUtcIsoDate`, which takes the offset
-that its string gives, and `minDate` and `maxDate`, whose offset is 0. The
-methods that answer a moment of a new zone, `toLocalTime` and `toUtcTime`, are
-described with [the zone rule](r:class.datetime.zone). When the host's offset
-is not a whole number of minutes from -900 to 900, every method that takes the
-default offset raises the error that [the offset
-rule](r:class.datetime.offset) gives for such an offset argument.
+date: an instance for a date of summer and one for a date of winter get the same
+offset, the one the host has at the moment of the call. Which zone the host is
+in is not specified, so the examples compare with the offset of another instance
+or with `TIME('O')`. The class methods `new`, `today` and every `from` method
+take it, except `fromUtcIsoDate`, which takes the offset that its string gives,
+and `minDate` and `maxDate`, whose offset is 0. The methods that answer a moment
+of a new zone, `toLocalTime` and `toUtcTime`, are described with [the zone
+rule](r:class.datetime.zone). When the host's offset is not a whole number of
+minutes from -900 to 900, every method that takes the default offset fails:
+`new`, `toLocalTime` and `-` with a `TimeSpan` raise `SYNTAX 88.907`, and
+`today` and every `from` method other than `fromUtcIsoDate` raise `SYNTAX
+88.918`.
 
 ```rexx
 h = .datetime~new(2017, 1, 5)~offset
@@ -285,20 +285,21 @@ bad: say arg(1) '=>' condition('o')~code
 ```
 
 r[class.datetime.new.checks]
-The values are checked in this order, and the first that fails raises its
-error. In the one-argument and two-argument form the number of microseconds
-must be a whole number in its range, or `SYNTAX 40.19` is raised, and then the
-offset is checked as [the offset rule](r:class.datetime.offset) says. In the
-other forms year, month and day are whole numbers written as digits, in the
-ranges 1 to 9999, 1 to 12 and 1 to 31; one outside its range, one that is no
-number and one with a fraction, such as 1.5, raise `SYNTAX 88.907`. A day that
-the month does not have, such as 30 February, then raises `SYNTAX 40.19`.
-Hours (0 to 23), minutes (0 to 59), seconds (0 to 59) and microseconds (0 to
-999999) are checked last, each a whole number written as digits in its range,
-and then the offset, as [the offset rule](r:class.datetime.offset) says; a
-value outside its range, one that is no number and one with a fraction raise
-`SYNTAX 88.907`. A day that does not exist is thus reported before an hour
-that is out of range, and a day of 32 before one that does not exist.
+The values are checked in this order, and the first that fails raises its error.
+In the one-argument and two-argument form the number of microseconds must be a
+whole number in its range, or `SYNTAX 40.19` is raised, and then the offset is
+checked as [the offset rule](r:class.datetime.offset) says. In the other forms
+year, month and day are whole numbers written as digits, in the ranges 1 to
+9999, 1 to 12 and 1 to 31; one outside its range, one that is no number and one
+with a fraction that is left when it is rounded to nine significant digits, such
+as 1.5, raise `SYNTAX 88.907`. A day that the month does not have, such as 30
+February, then raises `SYNTAX 40.19`. Hours (0 to 23), minutes (0 to 59),
+seconds (0 to 59) and microseconds (0 to 999999) are checked last, each a whole
+number written as digits in its range, and then the offset, as [the offset
+rule](r:class.datetime.offset) says; a value outside its range, one that is no
+number and one with such a fraction raise `SYNTAX 88.907`. A day that does not
+exist is thus reported before an hour that is out of range, and a day of 32
+before one that does not exist.
 
 ```rexx
 call try '.datetime~new(2017, 2, 30, 25, 0, 0, 0)'
@@ -816,16 +817,16 @@ bad: say arg(1) '=>' condition('o')~code
 ```
 
 r[class.datetime.fromutciso]
-`fromUtcIsoDate` reads the string that `utcIsoDate` writes: the date and time
-of `fromIsoDate`, with a fraction of one to six digits that may also be left
-out together with its point, followed by the offset of the string, either `Z`
+`fromUtcIsoDate` reads the string that `utcIsoDate` writes: the date and time of
+`fromIsoDate`, with a fraction of one to six digits that may also be left out
+together with its point, followed by the offset of the string, either `Z`
 (offset 0) or a sign and `hh:mm`, `+02:30` and `-03:30` for instance, up to
 15:00 in either direction. The answer has the fields of the string and that
 offset; `+00:00` and `-00:00` are the offset 0. The method takes no second
 argument (`SYNTAX 93.902`) and, without the string, raises `SYNTAX 93.901`. A
-string with no `Z` or sign, a lower-case `z`, an offset in the forms `+0200`,
-`+02`, `+02:` and `+:30`, an offset past 15:00 and a letter after the offset
-raise `SYNTAX 88.918`.
+string that ends with no `Z` or offset, that ends in a lower-case `z`, in an
+offset in the forms `+0200`, `+02`, `+02:` or `+:30` or in an offset past 15:00,
+or that ends in a letter other than `Z` after the offset raises `SYNTAX 88.918`.
 
 ```rexx
 say .datetime~fromUtcIsoDate('2017-06-30T11:08:50.123456+02:00')~utcIsoDate
@@ -1643,32 +1644,33 @@ nothing. `minDate` sends `new` with the four arguments 1, 1, 1 and 0, and
 from the start of 0001 to the moment, and the offset argument exactly as the
 caller gave it (a `TimeSpan` is not converted), or, without one, the default
 offset in minutes; `fromUtcIsoDate`, which has no offset argument, sends the
-offset of its string in minutes. `fromOrdinalDate` sends nothing to the
-receiver and answers a plain `DateTime`, whatever the receiver is.
-`fromWeekNumberDate` sends `new` with the three arguments year, 1 and 4, then
-sends that instance `weeksInYear` (which sends `year`), `weekDay` and
-`addDays`, and the answer of `addDays` is the result. The first example
-prints, for each call, the messages sent in order, with the number of
-arguments after `NEW` and `INIT`. The second example prints the second
-argument that `init` gets: a `TimeSpan` or a string that the caller gave
-arrives as it is, the offset of the string of `fromUtcIsoDate` as a number of
-minutes (150 for `+02:30`), and, without an offset argument, the default
-offset in minutes. An argument that is read as a number is sent more messages
-than the one that reads its string value ([the argument
-rule](r:class.index.string)). A year, month, day, hours, minutes, seconds or
-microseconds argument of `new` is sent `>=` and `<=` with the limits of its
-range and then `right`. An offset that is not a `TimeSpan`, the argument of
-`new`, `today` or `fromTicks`, is sent `isA`, read for its string value, and
-sent `>=`, `<=` and `*`. An amount of `addDays`, `addHours`, `addMinutes`,
+offset of its string in minutes. `fromOrdinalDate` sends nothing to the receiver
+and answers a plain `DateTime`, whatever the receiver is. `fromWeekNumberDate`
+sends `new` with the three arguments year, 1 and 4, then sends that instance
+`weeksInYear` (which sends `year`), `weekDay` and `addDays`, and the answer of
+`addDays` is the result. The first example prints, for each call, the messages
+sent in order, with the number of arguments after `NEW` and `INIT`. The second
+example prints the second argument that `init` gets: a `TimeSpan` or a string
+that the caller gave arrives as it is, the offset of the string of
+`fromUtcIsoDate` as a number of minutes (150 for `+02:30`), and, without an
+offset argument, the default offset in minutes. An argument that is read as a
+number is sent more messages than the one that reads its string value ([the
+argument rule](r:class.index.string)). A year, month, day, hours, minutes,
+seconds or microseconds argument of `new` is sent `>=` and `<=` with the limits
+of its range and then `right` with the width of its field, 4 for the year, 6 for
+the microseconds and 2 for the others. An offset that is not a `TimeSpan`, the
+argument of `new`, `today` or a `from` method other than `fromWeekNumberDate`,
+is sent `isA`, read for its string value, and sent `>=` with -900, `<=` with 900
+and `*` with 60000000. An amount of `addDays`, `addHours`, `addMinutes`,
 `addSeconds` and `addWeeks` is sent `*`, and `addYears` and `addMicroseconds`
 read the string value of their amount twice. A number argument of `toTimezone`
 is sent `isA` and `*`, then read for its string value and sent `>=` and `<=`;
 the `new` that `toTimezone` sends gets the argument itself, which is then
 handled as the offset of `new` is. A count of `new` and the argument of
 `fromTicks` and `fromBaseDate` are read for their string value only. The third
-example passes an object whose `makeString` answers a number and whose
-`unknown` sends every other message to that number, and prints the messages
-the object got.
+example passes an object whose `makeString` answers a number and whose `unknown`
+sends every other message to that number, and prints the messages the object
+got.
 
 ```rexx
 names = 'WEEKSINYEAR YEAR WEEKDAY ADDDAYS OFFSET'
