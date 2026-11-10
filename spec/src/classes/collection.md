@@ -2,7 +2,7 @@
 element: "Collection"
 kind: class
 rexxref: "Builtin Classes > Collection Classes > Collection Class; Builtin Classes > Collection Classes > Collection Class > [] (Abstract Method); Builtin Classes > Collection Classes > Collection Class > []= (Abstract Method); Builtin Classes > Collection Classes > Collection Class > allIndexes (Abstract Method); Builtin Classes > Collection Classes > Collection Class > allItems (Abstract Method); Builtin Classes > Collection Classes > Collection Class > at (Abstract Method); Builtin Classes > Collection Classes > Collection Class > difference; Builtin Classes > Collection Classes > Collection Class > disjoint; Builtin Classes > Collection Classes > Collection Class > equivalent; Builtin Classes > Collection Classes > Collection Class > hasIndex; Builtin Classes > Collection Classes > Collection Class > hasItem; Builtin Classes > Collection Classes > Collection Class > index (Abstract Method); Builtin Classes > Collection Classes > Collection Class > intersection; Builtin Classes > Collection Classes > Collection Class > items; Builtin Classes > Collection Classes > Collection Class > makeArray; Builtin Classes > Collection Classes > Collection Class > put (Abstract Method); Builtin Classes > Collection Classes > Collection Class > subset; Builtin Classes > Collection Classes > Collection Class > supplier; Builtin Classes > Collection Classes > Collection Class > union; Builtin Classes > Collection Classes > Collection Class > xor"
-deviations: [109, 118]
+deviations: [78, 109, 118]
 ---
 
 # Collection
@@ -2266,6 +2266,35 @@ count = 2
 ```
 
 ## Deviations
+
+r[class.collection.deviation.78]
+`hasItem` forwards the argument to the answer of `allItems`, so a search for
+the very object that is stored in that answer follows [the Array
+rule](r:class.array.deviation.78): the object's `==` is sent as for any other
+item, and an object whose `==` answers false is not found. ooRexx finds the
+very object without sending it `==`. See [Deviation 78](../deviations.md).
+
+```rexx
+x = .liar~new
+b = .box~new(.array~of('a', x, 'b'))
+.local~n = 0
+say b~hasItem(x) .local~n
+::class box inherit collection
+::method init
+  expose a
+  use arg a
+::method allItems
+  expose a
+  return a
+::class liar
+::method '=='
+  .local~n += 1
+  return 0
+```
+
+```output
+0 3
+```
 
 r[class.collection.deviation.109]
 An instance of a subclass of `String` that is compared by `subset` or

@@ -1036,12 +1036,14 @@ one=1|three=3|two=2
 ```
 
 r[class.properties.deviation.78]
-A search for an item that was stored by `setEntry` or through `unknown` and is
-not a string, with the very object that is stored, by `hasItem`, `index` or
+A search for an item that was stored by `setEntry` or through `unknown`, a
+string or not, with the very object that is stored, by `hasItem`, `index` or
 `removeItem`, sends that object's `==` as for any other item, so an object
 whose `==` answers false is not found even at its own entry ([the Directory
 rule](r:class.directory.deviation.78)). ooRexx compares identity first, finds
-it and sends nothing. See [Deviation 78](../deviations.md).
+it and sends nothing. `put` stores a string of the value's characters, so the
+object given to `put` is not the object stored. See [Deviation
+78](../deviations.md).
 
 ```rexx
 .local~n = 0
@@ -1050,7 +1052,7 @@ q = .thing~new
 p~setEntry('k', q)
 say p~hasItem(q) .local~n
 say (p~index(q) == .nil) .local~n
-say (p~removeItem(q) == .nil) .local~n p~items
+say (.nil == p~removeItem(q)) .local~n p~items
 ::class thing
 ::method '=='
   .local~n += 1
@@ -1061,6 +1063,22 @@ say (p~removeItem(q) == .nil) .local~n p~items
 0 1
 1 2
 1 3 1
+```
+
+```rexx
+.local~n = 0
+p = .properties~new
+s = .ls~new('v')
+p~setEntry('k', s)
+say p~hasItem(s) .local~n
+::class ls subclass string
+::method '=='
+  .local~n += 1
+  return 0
+```
+
+```output
+0 1
 ```
 
 r[class.properties.deviation.109]

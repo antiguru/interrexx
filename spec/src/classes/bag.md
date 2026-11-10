@@ -1605,11 +1605,12 @@ The NIL object 1
 ```
 
 r[class.bag.deviation.84]
-When the `==` that `remove`, `removeItem`, `removeAll` or `allAt` sends to a
-member empties the bag, the search ends and `items` answers 0 afterwards;
-`remove` and `removeItem` answer `.nil`. ooRexx's `items` answers -1 after
-`remove` and `removeItem`, and its `removeAll` and `allAt` go on comparing with
-an object that is no stored member. See [Deviation 84](../deviations.md).
+When the `==` that `remove` or `removeItem` sends to its argument, or that
+`removeAll` or `allAt` sends, empties the bag, the search ends and `items`
+answers 0 afterwards; `remove` and `removeItem` answer `.nil`. ooRexx's `items`
+answers -1 after `remove` and `removeItem`, and its `removeAll` and `allAt` go
+on comparing with an object that is no stored member. See [Deviation
+84](../deviations.md).
 
 ```rexx
 b = .bag~new

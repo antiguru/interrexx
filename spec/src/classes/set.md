@@ -1344,9 +1344,10 @@ The NIL object 1
 ```
 
 r[class.set.deviation.84]
-When the `==` that `remove` or `removeItem` sends to a member empties the set,
-the search ends: the method answers `.nil` and `items` answers 0 afterwards.
-ooRexx answers -1 for `items`. See [Deviation 84](../deviations.md).
+When the `==` that `remove` or `removeItem` sends to its argument empties the
+set, the search ends: the method answers `.nil` and `items` answers 0
+afterwards. ooRexx answers -1 for `items`. See [Deviation
+84](../deviations.md).
 
 ```rexx
 s = .set~new

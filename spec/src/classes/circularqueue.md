@@ -1756,7 +1756,7 @@ say c~hasItem(x) .n
 .local~n = 0
 say (c~index(x) == .nil) .n
 .local~n = 0
-say (c~removeItem(x) == .nil) c~items .n
+say (.nil == c~removeItem(x)) c~items .n
 ::class liar
 ::method '=='
   .local~n += 1
