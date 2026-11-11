@@ -18,15 +18,15 @@ the message functions, [SysGetMessage](sysgetmessage.md) and
 
 r[util.sysformatmessage.args]
 `message` and `substitutions` are required arguments. A call with either
-missing or omitted raises `SYNTAX 88.901`, and a third argument raises
-`SYNTAX 88.922`; an omitted place at the end of the call adds nothing to the
-count ([the argument rule](r:util.index.args), and for the order of the checks
+missing or omitted raises `SYNTAX 88.901`, and a third argument raises `SYNTAX
+88.922`; an omitted place at the end of the call adds nothing to the count
+([the argument rule](r:util.index.args), and for the order of the checks
 [Deviation 101](r:util.index.deviation.101)). `message` is checked before
-`substitutions`. `message` is read as a string as
-[the argument rule](r:util.index.args) says: `.nil`, and an object that has
-no `MAKESTRING` method, raise `SYNTAX 88.909`, and an object with only a
-`STRING` method is such an object. A mutable buffer is read as the string that
-it holds.
+`substitutions`, and a third argument is reported before either. `message` is
+read as a string as [the argument rule](r:util.index.args) says: `.nil`, and
+an object that has no `MAKESTRING` method, raise `SYNTAX 88.909`, and an
+object with only a `STRING` method is such an object. A mutable buffer is read
+as the string that it holds.
 
 ```rexx
 call try "SysFormatMessage()"
@@ -82,16 +82,26 @@ UNSETVARIABLE
 ## The substitutions
 
 r[util.sysformatmessage.substitutions]
-`substitutions` gives the strings that fill the places `&1` to `&9`. A string
-is one insert, the one for `&1`. Any other object is asked for an array with
-its `MAKEARRAY` method, and the items of the array, in order, are the inserts:
-the first item is for `&1`, the second for `&2`, and so on. An object that has
-no `MAKEARRAY` method, `.nil` included, raises `SYNTAX 98.913`. An item is
-read as a string: an object that is not a string is replaced by what its
-`STRING` method answers, as the text of a message does with an insert, so
-`.nil` is `The NIL object`. An item that the array does not have, an empty
-array and a place with no item all give the null string. More than nine items
-raise `SYNTAX 40.1`, and nine items do not.
+`substitutions` gives the strings that fill the places `&1` to `&9`. It is
+sent `MAKEARRAY`, and the items of the array that it answers, in order, are
+the inserts: the first item is for `&1`, the second for `&2`, and so on. A
+string is split at its line ends, as [its
+`makeArray`](r:class.string.makearray) splits it. So a string with no line end
+is one insert, the one for `&1`, and `'a' || '0a'x || 'b'` gives two. A
+subclass whose `MAKEARRAY` is overridden, of String or of Array, gives the
+items of the override. An object that has no `MAKEARRAY` method, `.nil`
+included, raises `SYNTAX 98.913`, and so does an array of more than one
+dimension. What an object answers when its `MAKEARRAY` answers something that
+is not an array is not specified. An item that is not a string is replaced by
+the string that its `request` with the argument `STRING` answers. When that
+answer is not a string, the item is replaced by the answer of its `STRING`
+method, as with an insert of [SysGetMessage](r:util.sysgetmessage.args). So
+`.nil` is `The NIL object`, and an array that holds `1` is `1`. A place for
+which the array has no item gives the null string, and so does every place
+when the array is empty. An array whose size is more than nine raises `SYNTAX
+40.1`, even when fewer than ten of its places hold an item, and one of size
+nine does not. The size is the array's own, so an override of `SIZE` in a
+subclass of Array does not change it.
 
 ```rexx
 call try "SysFormatMessage('[&1][&2]', 'X')"
@@ -111,6 +121,13 @@ call try "SysFormatMessage('[&1]', .object~new)"
 call try "SysFormatMessage('[&1][&9]', .array~of(1, 2, 3, 4, 5, 6, 7, 8, 9))"
 call try "SysFormatMessage('[&1]', .array~of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10))"
 call try "SysFormatMessage('[&1]', .array~of(1, 2, 3, 4, 5, 6, 7, 8, 9)~~put(10, 10))"
+call try "SysFormatMessage('[&1][&2]', 'a' || '0a'x || 'b')"
+call try "SysFormatMessage('[&1][&2]', .c6zqo~new('zz'))"
+call try "SysFormatMessage('[&1]', .array~of(.c6zqm~new))"
+call try "SysFormatMessage('[&1]', .array~of(.array~of(1)))"
+call try "SysFormatMessage('[&1]', .array~new(9))"
+call try "SysFormatMessage('[&1]', .array~new(10))"
+call try "SysFormatMessage('[&1]', .array~new(2, 2)~~put('m', 1, 1))"
 exit
 try:
   signal on syntax name e
@@ -124,6 +141,14 @@ e: say condition('o')~code
 ::class c6zqu
 ::method makearray
   return .array~of('u1', 'u2')
+::class c6zqo subclass string
+::method makearray
+  return .array~of('o1', 'o2')
+::class c6zqm
+::method makestring
+  return 'M'
+::method string
+  return 'S'
 ```
 
 ```output
@@ -144,6 +169,13 @@ e: say condition('o')~code
 [1][9]
 40.1
 40.1
+[a][b]
+[o1][o2]
+[M]
+[1]
+[]
+40.1
+98.913
 ```
 
 ## The answer

@@ -42,9 +42,10 @@ is read from an object that is not a string as
 answers no string raises `SYNTAX 88.909`. `num` and the inserts have a
 fallback. An object that is not a string is replaced by the string that its
 `request` with the argument `STRING` answers. When that answer is not a
-string, the object is replaced by the answer of its `STRING` method. So an
-object with no `MAKESTRING` raises `SYNTAX 88.905` as `num` and does not raise
-anything as an insert.
+string, the object is replaced by the answer of its `STRING` method. So
+`.object~new`, whose `STRING` answers `an Object`, raises `SYNTAX 88.905` as
+`num` and is put in as `an Object` as an insert, and an object whose only
+method is a `STRING` that answers `2` names message `2`.
 
 ```rexx
 call try "SysGetMessage()"
@@ -57,6 +58,7 @@ call try "SysGetMessage('')"
 call try "SysGetMessage(.nil)"
 call try "SysGetMessage(.object~new)"
 call try "SysGetMessage(100, .object~new)"
+call try "SysGetMessage(.c6zqs~new, 'rexx.cat') == SysGetMessage(2, 'rexx.cat')"
 call try "SysGetMessage(100, .nil)"
 call try "SysGetMessage('x', .nil)"
 call try "SysGetMessage(1, .nil, 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j')"
@@ -76,6 +78,9 @@ try:
   return
 e: say condition('o')~code
   return
+::class c6zqs
+::method string
+  return '2'
 ```
 
 ```output
@@ -89,6 +94,7 @@ e: say condition('o')~code
 88.905
 88.905
 88.909
+1
 88.909
 88.905
 88.909

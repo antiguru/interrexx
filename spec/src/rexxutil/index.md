@@ -433,7 +433,8 @@ follows: the number of arguments first, so that an argument past the last one
 raises `SYNTAX 88.922` before an omitted or wrong argument is reported
 ([Deviation 101](r:bif.index.call.native.deviation.101)).
 ooRexx reports an omitted argument, an object whose `request` answers no
-string, an argument that is not a whole number, and a `mode` of SysMkDir that
+string, an argument that is not a whole number, a `substitutions` of
+SysFormatMessage that has no `MAKEARRAY` method, and a `mode` of SysMkDir that
 fails any of its checks before the count, and the count before a `filler` or
 an `option` that it does not allow.
 
@@ -465,10 +466,17 @@ i: say condition('o')~code
 signal on syntax name j
 say SysFormatMessage(.nil, 'x', 'y')
 j: say condition('o')~code
+signal on syntax name k
+say SysFormatMessage('a', .c6zqm~new, 'c')
+k: say condition('o')~code
 say SysIsFileDirectory('c1zqidxdm')
+::class c6zqm
+::method makestring
+  return 'M'
 ```
 
 ```output
+88.922
 88.922
 88.922
 88.922
