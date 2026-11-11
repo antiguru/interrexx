@@ -678,14 +678,15 @@ because a transient stream has no position. ooRexx answers 1.
 
 ## 101. Argument checks of the native builtins
 
-DIRECTORY, FILESPEC, BEEP and the RexxUtil file functions, such as
-SysFileDelete, check their arguments in the order that every other builtin
-follows, the ANSI order: the count of arguments first, so that an argument
-past the last one raises `SYNTAX 88.922` before an omitted or wrong argument
-is reported. ooRexx reports an omitted argument, an object whose `request`
-with the argument `STRING` answers no string and an argument that is not a
-whole number before the count, and the count before an argument's value: an
-option it does not allow or a number out of range.
+DIRECTORY, FILESPEC, BEEP and the RexxUtil file and stem functions, such as
+SysFileDelete and SysStemSort, check their arguments in the order that every
+other builtin follows, the ANSI order: the count of arguments first, so that
+an argument past the last one raises `SYNTAX 88.922` before an omitted or
+wrong argument is reported. ooRexx reports an omitted argument, an object
+whose `request` with the argument `STRING` answers no string, a stem name that
+fails its check and an argument that is not a whole number before the count,
+and the count before an argument's value: an option it does not allow or a
+number out of range.
 
 ## 102. LOSTDIGITS before the right operand's errors
 

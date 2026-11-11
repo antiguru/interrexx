@@ -64,9 +64,11 @@ Each variable that has a value in the scope of the call is written as the
 text `Name=`, the name of the variable in upper case, the text `, Value='`,
 the string value of the variable exactly as it is, without any change to the
 quote marks, line ends or other characters it holds, and the text `'`, and
-then a line end. A variable that has been dropped is not written. Nothing is
-written when there is no variable, and a file is then made and is empty. The
-order of the lines is not specified.
+then a line end. A simple or compound variable that has been dropped is not
+written. A stem is written as [the stem rule](r:util.sysdumpvariables.stem)
+says, even when it has been dropped. Nothing is written when there is no
+variable, and a file is then made and is empty. The order of the lines is not
+specified.
 
 ```rexx
 call p
@@ -205,17 +207,19 @@ r[util.sysdumpvariables.scope]
 The variables are those of the code that makes the call: in a procedure its
 own variables and the ones that it has exposed, not the variables of its
 caller; in a method the variables that the method exposes and its own,
-together with `SELF` and `SUPER`; in the main program its variables. `RC`,
-`RESULT` and `SIGL` are variables like the others, and are written when the
-program or a call has set them.
+together with `SELF` and `SUPER`; in the main program its variables. A
+compound variable that a procedure exposes by itself, as `expose s.2` does, is
+not written, and only its stem has a line. `RC`, `RESULT` and `SIGL` are
+variables like the others, and are written when the program or a call has set
+them.
 
 ```rexx
-g = 'gg'; h = 'hh'
+g = 'gg'; h = 'hh'; s.1 = 'one'; s.2 = 'two'
 call p
 say '--'
 call SysFileDelete 'c3zqdv4.txt'
 call q
-say '--'
+say '--'; call r; say '--'
 .thing~new~m
 exit
 p: procedure expose g
@@ -229,6 +233,10 @@ q: procedure
   call show 'c3zqdv4.txt'
   return
 q2: return 'ret'
+r: procedure expose s.2
+  call SysDumpVariables 'c3zqdv4.txt'
+  call show 'c3zqdv4.txt'
+  return
 ::class thing
 ::method init
   expose iv
@@ -259,6 +267,8 @@ Name=LOC, Value='l'
 Name=RESULT, Value='ret'
 Name=SIGL, Value='15'
 --
+Name=S., Value='S.'
+--
 Name=IV, Value='ivalue'
 Name=LOCAL, Value='x'
 Name=SELF, Value='a THING'
@@ -266,21 +276,38 @@ Name=SUPER, Value='The Object class'
 ```
 
 r[util.sysdumpvariables.stem]
-A stem that has a variable of its own, or any tail, is written with a line for
-the stem itself, whose name is the name of the stem with its period and whose
-value is the default value of the stem: the name of the stem, when no default
-was assigned. A variable with a tail is written with the name of the stem in
-upper case, a period and the tail as it is after its symbols were replaced by
-their values, so that a tail that was written with a variable that holds `key`
-is written as `key`, and a tail that was written as a symbol is in upper case.
-A line of such a variable, with a tail, ends with a carriage return before its
-line end, which the line of any other variable does not have.
+Every stem that the code has used is written with a line for the stem itself.
+Using a stem means assigning, reading or dropping the stem or one of its
+tails, or naming it in a `SYMBOL` call. The line is written whether or not the
+stem has a value of its own or any tail now. Its name is the name of the stem
+with its period, and its value is the default value of the stem, or the name
+of the stem when no default was assigned. A variable with a tail is written
+with the name of the stem in upper case, a period and the tail as it is after
+its symbols were replaced by their values, so that a tail that was written
+with a variable that holds `key` is written as `key`, and a tail that was
+written as a symbol is in upper case. A line of such a variable, with a tail,
+ends with a carriage return before its line end, which the line of any other
+variable does not have.
 
 ```rexx
 call p
+say '--'
+call q
+say '--'
+call r
 exit
 p: procedure
   s.1 = 'x'; s.abc = 'q'; t. = 'dflt'; k = 'key'; v.k = 'kv'
+  call SysDumpVariables 'c3zqdv5.txt'
+  call show 'c3zqdv5.txt'
+  return
+q: procedure
+  x = u.1 symbol('w.2')
+  call SysDumpVariables 'c3zqdv5.txt'
+  call show 'c3zqdv5.txt'
+  return
+r: procedure
+  drop u.
   call SysDumpVariables 'c3zqdv5.txt'
   call show 'c3zqdv5.txt'
   return
@@ -309,6 +336,12 @@ Name=S.ABC, Value='q'<CR>
 Name=T., Value='dflt'
 Name=V., Value='V.'
 Name=V.key, Value='kv'<CR>
+--
+Name=U., Value='U.'
+Name=W., Value='W.'
+Name=X, Value='U.1 LIT'
+--
+Name=U., Value='U.'
 ```
 
 r[util.sysdumpvariables.value]

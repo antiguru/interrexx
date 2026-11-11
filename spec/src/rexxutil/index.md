@@ -332,16 +332,20 @@ call SysFileDelete 'c1zqidxs2'
 r[util.index.stemname]
 The name of a stem that SysStemCopy, SysStemDelete and SysStemInsert take is
 a string, read as [the conventions](r:conv.string.object) read any string
-argument, so that a MutableBuffer that holds `s.` names the stem `s.`. The
-name is a symbol of letters, digits and the characters `!`, `?` and `_` that
-does not start with a digit, with one period after it or without, in any case.
-Any other name raises `SYNTAX 40.919`: the null string, a name that starts
-with a digit or a period, a name with a period before its last character, one
-that holds a blank, a character that no symbol has or the text of `.nil`. The
-stem is the one of that name among the variables of the code that makes the
-call, so that in a procedure it is the procedure's own stem unless the
-procedure exposes it. [SysStemSort](r:util.sysstemsort.name) reads a name that
-has more after its first period differently.
+argument, so that a MutableBuffer that holds `s.` names the stem `s.`, and an
+object that has only a `STRING` method names the stem that the method
+answers. The name is a symbol of letters, digits and the characters `!`, `?`
+and `_` that does not start with a digit, with one period after it or
+without, in any case. The name, with the period that a name without one is
+given, has at most 250 characters. Any other name raises `SYNTAX 40.919`: the
+null string, a name that starts with a digit or a period, a name with a
+period before its last character, one that holds a blank, a character that no
+symbol has, a name that is too long, or the text of `.nil`. The stem is the
+one of that name among the variables of the code that makes the call, so that
+in a procedure it is the procedure's own stem unless the procedure exposes it.
+[SysStemSort](r:util.sysstemsort.name) reads a name that has more after its
+first period differently, and reads an object that is not a string
+differently too.
 
 ```rexx
 call p
@@ -354,6 +358,10 @@ p: procedure
   say s.0 s.1 s.2 ab_1.0 ab_1.1 q?.0 q?.1
   call SysStemInsert .mutablebuffer~new('s.'), 1, 'm'
   say s.0 s.1
+  call SysStemInsert .sonly~new, 1, 'z'
+  call SysStemDelete .sonly~new, 2
+  call SysStemCopy .sonly~new, 'u.', 1, 1, 1
+  say s.0 s.1 s.2 u.0 u.1
   call try "SysStemInsert('', 1, 'x')"
   call try "SysStemInsert('1s.', 1, 'x')"
   call try "SysStemInsert('.s', 1, 'x')"
@@ -362,6 +370,12 @@ p: procedure
   call try "SysStemInsert('s t.', 1, 'x')"
   call try "SysStemInsert('s-.', 1, 'x')"
   call try "SysStemInsert(.nil, 1, 'x')"
+  call SysStemCopy 's.', copies('a', 249), 1, 1, 1
+  call try "SysStemInsert(copies('a', 249), 1, 'x')"
+  call try "SysStemInsert(copies('a', 249) || '.', 1, 'x')"
+  call try "SysStemInsert(copies('a', 250), 1, 'x')"
+  call try "SysStemInsert(copies('a', 250) || '.', 1, 'x')"
+  call try "SysStemInsert(copies('a', 251) || '.', 1, 'x')"
   return
 try:
   signal on syntax name e
@@ -369,17 +383,26 @@ try:
   return
 e: say condition('o')~code
   return
+::class sonly
+::method string
+  return 's.'
 ```
 
 ```output
 0 0 0 0
 2 b a 1 c 1 d
 3 m
+3 z b 1 z
 40.919
 40.919
 40.919
 40.919
 40.919
+40.919
+40.919
+40.919
+0
+0
 40.919
 40.919
 40.919
@@ -388,15 +411,21 @@ S.0 S.1
 
 r[util.index.stemarray]
 A stem array is a stem whose tail `0` holds the number of items, `n`, and
-whose tails `1` to `n` hold the items. A function that reads a stem array
-reads the tail `0` first. It is `n` when it is a whole number, written as
-`4`, ` 4 `, `04`, `4.0`, `4e0` or `+4`. A stem without that tail, a tail that
-is not a whole number, such as `1.5` or a word, and a stem that has only a
+whose tails `1` to `n` hold the items, written as plain whole numbers, so that
+`s.01` is not an item. A function that reads a stem array reads the tail `0`
+first. It is `n` when it is a whole number, written as `4`, ` 4 `, `04`,
+`4.0`, `4e0` or `+4`. SysStemCopy, SysStemDelete and SysStemInsert read it
+rounded to 18 significant digits and need a magnitude below 10\*\*18.
+SysStemSort reads it rounded to 9 significant digits and needs a magnitude
+below 10\*\*9. The NUMERIC DIGITS of the caller plays no part. A stem without
+that tail, a tail that is not a whole number after that rounding, such as
+`1.5` or a word, a value at or above that limit, and a stem that has only a
 default value (`s. = 'x'`) raise `SYNTAX 40.922`: the default of a stem is
-never the value of a tail that has none. An item that the function reads, and
-that has no value, because it was never assigned or was dropped, raises
-`SYNTAX 40.924`, and again the stem's default does not stand for it. A
-position or a number of items that is outside the array raises
+never the value of a tail that has none. A count below `0` is read as a
+number, and each function says what it does with it. An item that the
+function reads, and that has no value, because it was never assigned or was
+dropped, raises `SYNTAX 40.924`, and again the stem's default does not stand
+for it. A position or a number of items that is outside the array raises
 `SYNTAX 40.923`. An item can be any object, and a function that moves an
 item moves the object itself, so that the item is still the same object. A
 function that changes the count writes it as a plain whole number.
@@ -416,6 +445,17 @@ call try "SysStemDelete('s.', 1)", "s.0 = '+3'"
 call try "SysStemDelete('s.', 1)", "s.0 = '3.0'"
 call try "SysStemDelete('s.', 1)", "s.0 = '3e0'"
 call try "SysStemDelete('s.', 1)", "s.0 = '03'"
+call try "SysStemDelete('s.', 1)", "s.0 = '1.000000000000000001'"
+call try "SysStemDelete('s.', 1)", "s.0 = '1.00000000000000001'"
+call try "SysStemDelete('s.', 1)", "s.0 = '1e18'"
+call try "SysStemDelete('s.', 1)", "s.0 = -1"
+call try "SysStemSort('s.')", "s.0 = '1.000000001'"
+call try "SysStemSort('s.')", "s.0 = '1.00000001'"
+call try "SysStemSort('s.')", "s.0 = -1"
+numeric digits 30
+call try "SysStemDelete('s.', 1)", "s.0 = '1.000000000000000001'"
+numeric digits 3
+call try "SysStemSort('s.')", "s.0 = '1.0001'"
 exit
 try:
   s.0 = 3; s.1 = 'a'; s.2 = 'b'; s.3 = 'c'
@@ -451,17 +491,26 @@ show: procedure expose s.
 0 [2 b c -]
 0 [2 b c -]
 0 [2 b c -]
+0 [0 - b c]
+40.922 [1.00000000000000001 a b c]
+40.922 [1e18 a b c]
+40.922 [-1 a b c]
+0 [1.000000001 a b c]
+40.922 [1.00000001 a b c]
+40.922 [-1 a b c]
+0 [0 - b c]
+40.922 [1.0001 a b c]
 ```
 
 ```rexx
 o = .array~of(7)
-s.0 = 2; s.1 = 'a'; s.2 = o
+s.0 = 2; s.1 = 'a'; s.2 = o; s.01 = 'zero-one'
 call SysStemDelete 's.', 1
-say s.0 (s.1 == o) s.1~class~id
+say s.0 (s.1 == o) s.1~class~id s.01
 ```
 
 ```output
-1 1 Array
+1 1 Array zero-one
 ```
 
 ## Answers
@@ -573,8 +622,10 @@ follows: the number of arguments first, so that an argument past the last one
 raises `SYNTAX 88.922` before an omitted or wrong argument is reported
 ([Deviation 101](r:bif.index.call.native.deviation.101)).
 ooRexx reports an omitted argument, an object whose `request` answers no
-string, and a `mode` of SysMkDir that fails any of its checks before the
-count, and the count before a `filler` or an `option` that it does not allow.
+string, a stem name that fails its check, a whole-number argument of
+SysStemCopy, SysStemDelete, SysStemInsert or SysStemSort that fails its check,
+and a `mode` of SysMkDir that fails any of its checks before the count, and
+the count before a `filler` or an `option` that it does not allow.
 
 ```rexx
 signal on syntax name a
@@ -592,10 +643,18 @@ d: say condition('o')~code
 signal on syntax name f
 say SysTempFileName('c1zqidx?', .nil, 'y')
 f: say condition('o')~code
+signal on syntax name g
+say SysStemDelete('s.a', 1, 1, 1)
+g: say condition('o')~code
+signal on syntax name h
+say SysStemDelete('s.', 'x', 1, 1)
+h: say condition('o')~code
 say SysIsFileDirectory('c1zqidxdm')
 ```
 
 ```output
+88.922
+88.922
 88.922
 88.922
 88.922

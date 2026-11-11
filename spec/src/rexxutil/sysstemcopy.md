@@ -22,26 +22,33 @@ and the tails `1` and up hold the items.
 ## Arguments
 
 r[util.sysstemcopy.args]
-`fromstem` and `tostem` are required. They name stems as
-[the stem name rule](r:util.index.stemname) says, and may name the same stem.
-`from`, `to`, `count` and `option` are optional, and an omitted one takes its
-default: `from` and `to` are `1`, `count` is the number of items of the source
-from `from` to its end, and `option` is `O`. The call follows
-[the argument rule](r:util.index.args): a missing required argument raises
-`SYNTAX 88.901` and an argument past the sixth raises `SYNTAX 88.922`
-([Deviation 101](r:util.index.deviation.101) is about which of the two
-comes first). `from` and `to` are read as whole numbers that are at least `1`,
-and an argument that is `0`, negative, fractional, text, the null string or
-`.nil` raises `SYNTAX 88.905`. `count` is read as a whole number that is at
-least `0`, and an argument that is negative, fractional, text, the null string
-or `.nil` raises `SYNTAX 88.904`. A number is read with its blanks, a leading
-plus sign, a decimal point and an exponent as any whole number is, so that
-`' 2 '` and `1e0` are numbers. `option` is read by its first character, in
+`fromstem` and `tostem` are required. They name stems as [the stem name
+rule](r:util.index.stemname) says, and may name the same stem. `from`, `to`,
+`count` and `option` are optional, and an omitted one takes its default:
+`from` and `to` are `1`, `count` is the number of items of the source from
+`from` to its end, and `option` is `O`. The call follows [the argument
+rule](r:util.index.args): a missing required argument raises `SYNTAX 88.901`
+and an argument past the sixth raises `SYNTAX 88.922` ([Deviation
+101](r:util.index.deviation.101) is about which of the two comes first).
+`from` and `to` are read as whole numbers that are at least `1`, and an
+argument that is `0`, negative, fractional, text, the null string or too large
+raises `SYNTAX 88.905`. `count` is read as a whole number that is at least
+`0`, and an argument that is negative, fractional, text, the null string or
+too large raises `SYNTAX 88.904`. A number is read with its blanks, a leading
+plus sign, a decimal point and an exponent, so that `' 2 '` and `1e0` are
+numbers. The value is taken exactly, without rounding and whatever the NUMERIC
+DIGITS of the caller are, so that `1.0000000000000000001` is fractional, and
+it must be less than 10\*\*18. An object that is not a string is read by its
+`request('STRING')`, and when that answers no string, by its `STRING` method,
+so that `.nil` is read as `The NIL object` and raises `SYNTAX 88.905`, or
+`SYNTAX 88.904` for `count`. `option` is read by its first character, in
 either case: `I` inserts the items, `O` overwrites the items, and the rest of
-the argument is not read, so `Insert` is `I`. Anything else raises
-`SYNTAX 40.920`: the null string, a blank before the letter, another letter.
-An `option` that is `.nil` raises `SYNTAX 88.909`, and a MutableBuffer that
-holds `I` is `I`.
+the argument is not read, so `Insert` is `I`. Anything else raises `SYNTAX
+40.920`: the null string, a blank before the letter, another letter. An
+`option` that is an object whose `request` answers no string, `.nil` among
+them, raises `SYNTAX 88.909`, and it has no `STRING` fallback either: an
+object that has only a `STRING` method that answers `I` raises `SYNTAX
+88.909`. A MutableBuffer that holds `I` is `I`.
 
 ```rexx
 call try "SysStemCopy()"
@@ -64,6 +71,12 @@ call try "SysStemCopy('s.', 't.', ' 2 ', 1e0, +1)"
 call try "SysStemCopy('s.', 't.', 1, 1, 1, 'insert')"
 call try "SysStemCopy('s.', 't.', 1, 1, 1, .mutablebuffer~new('i'))"
 call try "SysStemCopy('s.', 't.', 1, 1, 1, 'overwrite')"
+call try "SysStemCopy('s.', 't.', .one~new, 100e-2, 1e0)"
+call try "SysStemCopy('s.', 't.', 1, 1, 1e18)"
+call try "SysStemCopy('s.', 't.', 1, 1, 1.0000000000000000001)"
+call try "SysStemCopy('s.', 't.', 1, 1, 1, .ionly~new)"
+numeric digits 3
+call try "SysStemCopy('s.', 't.', 1.0001)"
 exit
 try:
   parse arg ex
@@ -83,6 +96,12 @@ show: procedure expose t.
   out = t.0 ':'
   do i = 1 to t.0; out = out t.i; end
   return out
+::class one
+::method string
+  return '1'
+::class ionly
+::method string
+  return 'I'
 ```
 
 ```output
@@ -106,6 +125,11 @@ show: procedure expose t.
 0 3 : a x y
 0 3 : a x y
 0 2 : a y
+0 2 : a y
+88.904 2 : x y
+88.904 2 : x y
+88.909 2 : x y
+88.905 2 : x y
 ```
 
 ## What is copied
@@ -186,10 +210,17 @@ r[util.sysstemcopy.range]
 The call raises `SYNTAX 40.923`, and changes nothing, when the items it
 would read are not all in the source, that is when `from + count - 1` is
 more than the count of the source, and when `to` is more than one past the
-count of the target: a target of two items can take `to` up to `3`. `from`
-may be one past the count of the source when no item is read, and a `count`
-that is left out then is `0`; any other `from` past that point with a `count`
-given raises the condition too.
+count of the target: a target of two items can take `to` up to `3`. With a
+`count` given, `from` may be one past the count of the source when `count` is
+`0`, and any other `from` past the end of the source raises the condition. A
+source whose count is `0` raises it for every `from` when a `count` is given,
+even `0`. A `count` that is left out is the count of the source less `from`,
+plus one, and is not checked against the source: with `O`, a `from` past the
+end of the source copies nothing and answers `0`, and
+[the insert rule](r:util.sysstemcopy.insert) says what `I` does. A count of
+the source below `0` makes a left-out `count` less than `0`, as the next rule
+says, and a given `count` raises `SYNTAX 40.923`. A count of the target below
+`0` makes every `to` raise it.
 
 ```rexx
 call try "SysStemCopy('s.', 't.', 1, 1, 5)"
@@ -203,7 +234,39 @@ call try "SysStemCopy('s.', 't.', 1, 4)"
 call try "SysStemCopy('s.', 't.', 1, 3, 0)"
 call try "SysStemCopy('s.', 't.', 1, 4, 0)"
 call try "SysStemCopy('s.', 't.', 1, 1, 99999999999)"
+call try2 "SysStemCopy('s.', 't.', 1, 1, 0)"
+call try2 "SysStemCopy('s.', 't.', 2, 1)"
+call try3 "SysStemCopy('s.', 't.', 1, 1, 0)"
+call try3 "SysStemCopy('s.', 't.', 1, 1)"
+call try3 "SysStemCopy('s.', 't.', 1, 1, 1)"
+call try3 "SysStemCopy('s.', 't.', 1, 1, 0, 'I')"
+call try4 "SysStemCopy('s.', 't.', 1, 1, 1)"
+call try4 "SysStemCopy('s.', 't.', 1, 1, 1, 'I')"
 exit
+try4:
+  parse arg ex
+  call reset
+  t.0 = -1
+  signal on syntax name e
+  interpret 'r = ' ex
+  say r show()
+  return
+try2:
+  parse arg ex
+  call reset
+  s.0 = 0
+  signal on syntax name e
+  interpret 'r = ' ex
+  say r show()
+  return
+try3:
+  parse arg ex
+  call reset
+  s.0 = -1
+  signal on syntax name e
+  interpret 'r = ' ex
+  say r show()
+  return
 try:
   parse arg ex
   call reset
@@ -236,6 +299,14 @@ show: procedure expose t.
 0 2 : x y
 40.923 2 : x y
 40.923 2 : x y
+40.923 2 : x y
+0 2 : x y
+40.923 2 : x y
+0 2 : x y
+40.923 2 : x y
+40.923 2 : x y
+40.923 -1 :
+40.923 -1 :
 ```
 
 ## Inserting
@@ -247,7 +318,12 @@ at the tails `to` to `to + count - 1`, the items that were there follow them,
 and the count of the target is its old count plus `count`, written as a plain
 whole number. `to` may be one past the count of the target, which appends the
 items. With `I`, a target that has no tail `0` is given one, even when
-`count` is `0`.
+`count` is `0`. A `count` that is left out is less than `0` when `from` is
+more than one past the end of the source. With `I`, the call then does the
+move all the same. Taking each item of the target from its count down to
+`to`, it stores the item that many places lower, and that can overwrite the
+tail `0`. It copies nothing and sets the tail `0` to the old count plus
+`count`.
 
 ```rexx
 call try "SysStemCopy('s.', 't.', 2, 2, 2, 'I')"
@@ -257,6 +333,8 @@ call try "SysStemCopy('s.', 't.', 1, 1, , 'I')"
 call try "SysStemCopy('s.', 't.', 3, 2, , 'I')"
 call try "SysStemCopy('s.', 't.', 1, 2, 0, 'I')"
 call try "SysStemCopy('s.', 't.', 1, 4, 2, 'I')"
+call try "SysStemCopy('s.', 't.', 6, 1, , 'I')"
+call try "SysStemCopy('s.', 't.', 7, 3, , 'I')"
 t.0 = '02'
 call SysStemCopy 's.', 't.', 1, 1, 1, 'I'
 say t.0
@@ -292,6 +370,8 @@ show: procedure expose t.
 0 4 : x c d y
 0 2 : x y
 40.923 2 : x y
+0 1 : y
+0 0 :
 3
 VAR 0
 ```
@@ -339,16 +419,21 @@ show: procedure expose s.
 
 r[util.sysstemcopy.order]
 When several things are wrong, the call raises the condition of the first of
-these checks that fails. The names of the stems raise `SYNTAX 40.919`; then
-`from`, `to` and `count`, in that order, raise `SYNTAX 88.905` or
-`SYNTAX 88.904`; then `option` raises `SYNTAX 40.920`; then the tail `0` of
-the source raises `SYNTAX 40.922`; then the items to be read raise
-`SYNTAX 40.923` when they are not all in the source; then the tail `0` of the
-target raises `SYNTAX 40.922`; then `to` raises `SYNTAX 40.923` when it is
-more than one past the count of the target; and last the items themselves
-raise `SYNTAX 40.924` when one has no value, as they are copied.
+these checks that fails. `fromstem` and then `tostem` raise `SYNTAX 88.901`
+when missing and `SYNTAX 40.919` when not a name; then `from`, `to` and
+`count`, in that order, raise `SYNTAX 88.905` or `SYNTAX 88.904`; then
+`option` raises `SYNTAX 40.920`; then the tail `0` of the source raises
+`SYNTAX 40.922`; then the items to be read raise `SYNTAX 40.923` when they are
+not all in the source; then the tail `0` of the target raises
+`SYNTAX 40.922`; then `to` raises `SYNTAX 40.923` when it is more than one
+past the count of the target; and last the items themselves raise
+`SYNTAX 40.924` when one has no value: with `I`, first an item of the target
+that the call moves, and then the items of the source as they are copied.
 
 ```rexx
+call try "SysStemCopy('s-.')", ""
+call try "SysStemCopy(, 't-.')", ""
+call try "SysStemCopy('s.', , 0)", ""
 call try "SysStemCopy('s.a', 't.a', 'x')", ""
 call try "SysStemCopy('s.', 't.', 0, 0, -1)", ""
 call try "SysStemCopy('s.', 't.', 1, 'x', 'x')", ""
@@ -360,6 +445,7 @@ call try "SysStemCopy('s.', 't.', 1, 9, 1)", "t.0 = 'x'"
 call try "SysStemCopy('s.', 't.', 1, 9, 4)", "drop s.3"
 call try "SysStemCopy('s.', 't.', 1, 1, 4)", "drop s.3; t.0 = 'x'"
 call try "SysStemCopy('s.', 't.', 1, 1, 4)", "drop s.3"
+call try "SysStemCopy('s.', 't.', 1, 1, 4, 'I')", "drop t.2"
 exit
 try:
   parse arg ex, setup
@@ -376,6 +462,9 @@ e: say condition('o')~code
 
 ```output
 40.919
+88.901
+88.901
+40.919
 88.905
 88.905
 88.904
@@ -386,12 +475,19 @@ e: say condition('o')~code
 40.923
 40.922
 40.924
+40.924
 ```
 
 r[util.sysstemcopy.fail]
-A call that raises `SYNTAX 40.924` has copied the items before the one that
-has no value: they are in the target, but the count of the target has not been
-changed, even where the copy was to make it larger.
+A call that raises `SYNTAX 40.924` stops at the item that has no value. With
+`O`, it has copied the items before that one, and the count of the target has
+not been changed, even where the copy was to make it larger. With `I`, the
+call first moves the items of the target, from the last one down. An item of
+the target that has no value stops the call there: the items above it have
+moved, and the count is unchanged. When they have all moved, the call sets
+the count of the target to its new value and then copies. An item of the
+source that has no value then stops the call with the count already changed
+and the items before it copied.
 
 ```rexx
 s.0 = 4; s.1 = 'a'; s.2 = 'b'; s.4 = 'd'
@@ -399,8 +495,32 @@ t.0 = 2; t.1 = 'x'; t.2 = 'y'
 signal on syntax name e
 call SysStemCopy 's.', 't.', 1, 2, 4
 e: say condition('o')~code t.0 t.1 t.2 t.3
+call try "SysStemCopy('s.', 't.', 1, 1, 3, 'I')", "drop s.2"
+call try "SysStemCopy('s.', 't.', 1, 1, 2, 'I')", "drop t.2"
+exit
+try:
+  parse arg c, setup
+  drop s. t.
+  s.0 = 3; s.1 = 'a'; s.2 = 'b'; s.3 = 'c'
+  t.0 = 3; t.1 = 'x'; t.2 = 'y'; t.3 = 'z'
+  interpret setup
+  signal on syntax name e2
+  interpret 'r = ' c
+  say r show()
+  return
+e2: say condition('o')~code show()
+  return
+show:
+  out = t.0 ':'
+  do i = 1 to 7
+    if symbol('t.' || i) == 'VAR' then out = out t.i
+    else out = out '-'
+  end
+  return out
 ```
 
 ```output
 40.924 2 x a b
+40.924 6 : a y z x y z -
+40.924 3 : x - z - z - -
 ```

@@ -27,10 +27,15 @@ required argument raises `SYNTAX 88.901` and a fourth argument raises
 `SYNTAX 88.922` ([Deviation 101](r:util.index.deviation.101) is about which of
 the two comes first). `start` and `count` are read as whole numbers that are
 at least `1`, with their blanks, a leading plus sign, a decimal point and an
-exponent as any whole number is, so that `' 2 '` and `1e0` are numbers. An
+exponent, so that `' 2 '` and `1e0` are numbers. The value is taken exactly,
+without rounding and whatever the NUMERIC DIGITS of the caller are, so that
+`1.0000000000000000001` is fractional, and it must be less than 10\*\*18. An
 argument that is `0`, negative, fractional, text, the null string, blank or
-`.nil` raises `SYNTAX 88.905`, and a count of `0` is such an argument too: the
-call cannot be used to delete nothing.
+too large raises `SYNTAX 88.905`, and a count of `0` is such an argument too:
+the call cannot be used to delete nothing. An object that is not a string is
+read by its `request('STRING')`, and when that answers no string, by its
+`STRING` method, so that `.nil` is read as `The NIL object` and raises
+`SYNTAX 88.905`.
 
 ```rexx
 call try "SysStemDelete()"
@@ -53,6 +58,11 @@ call try "SysStemDelete('s.', ' 2 ', ' 1 ')"
 call try "SysStemDelete('s.', 1e0, +2)"
 call try "SysStemDelete('s.', 2, )"
 call try "SysStemDelete(.mutablebuffer~new('s.'), .mutablebuffer~new('2'))"
+call try "SysStemDelete('s.', .one~new, 100e-2)"
+call try "SysStemDelete('s.', 2, 1e18)"
+call try "SysStemDelete('s.', 1.0000000000000000001)"
+numeric digits 3
+call try "SysStemDelete('s.', 1.0001)"
 exit
 try:
   parse arg ex
@@ -70,6 +80,9 @@ show: procedure expose s.
   out = s.0 ':'
   do i = 1 to s.0; out = out s.i; end
   return out
+::class one
+::method string
+  return '1'
 ```
 
 ```output
@@ -93,6 +106,10 @@ show: procedure expose s.
 0 2 : c d
 0 3 : a c d
 0 3 : a c d
+0 3 : b c d
+88.905 4 : a b c d
+88.905 4 : a b c d
+88.905 4 : a b c d
 ```
 
 ## What is removed
@@ -156,7 +173,8 @@ r[util.sysstemdelete.range]
 The call raises `SYNTAX 40.923`, and changes nothing, when the items to be
 removed are not all in the stem, that is when `start + count - 1` is more
 than its count. The check is made before any item is moved or read. An empty
-stem has no item to remove, so that every `start` raises it.
+stem has no item to remove, so that every `start` raises it. A count of the
+stem below `0` raises `SYNTAX 40.922`.
 
 ```rexx
 call try "SysStemDelete('s.', 4, 2)"
@@ -167,6 +185,7 @@ call try "SysStemDelete('s.', 99999999999)"
 call try "SysStemDelete('s.', 1, 99999999999)"
 call try "SysStemDelete('s.', 1)", "s.0 = 0"
 call try "SysStemDelete('s.', 4)", "s.0 = 3"
+call try "SysStemDelete('s.', 1)", "s.0 = -1"
 exit
 try:
   parse arg ex, setup
@@ -193,19 +212,24 @@ show: procedure expose s.
 40.923 4 : a b c d
 40.923 0 :
 40.923 3 : a b c
+40.922 -1 :
 ```
 
 ## Order of the checks
 
 r[util.sysstemdelete.order]
 When several things are wrong, the call raises the condition of the first of
-these checks that fails: the name of the stem raises `SYNTAX 40.919`; then
-`start` and `count`, in that order, raise `SYNTAX 88.905`; then the tail `0`
+these checks that fails: the name of the stem raises `SYNTAX 88.901` when it
+is missing and `SYNTAX 40.919` when it is not a name; then `start` raises
+`SYNTAX 88.901` when it is missing and `SYNTAX 88.905` when it is not a whole
+number of at least `1`; then `count` raises `SYNTAX 88.905`; then the tail `0`
 of the stem raises `SYNTAX 40.922`; then the range raises
 `SYNTAX 40.923`; and last an item that has to move and has no value raises
 `SYNTAX 40.924`.
 
 ```rexx
+call try "SysStemDelete('s-.')", ""
+call try "SysStemDelete('s.', , 'x')", ""
 call try "SysStemDelete('s.a', 'x')", ""
 call try "SysStemDelete('s.', 0, -1)", ""
 call try "SysStemDelete('s.', 1, 'x')", ""
@@ -227,6 +251,8 @@ e: say condition('o')~code
 ```
 
 ```output
+40.919
+88.901
 40.919
 88.905
 88.905

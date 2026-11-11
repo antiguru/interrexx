@@ -27,9 +27,14 @@ omitted, raises `SYNTAX 88.901`, and a fourth argument raises
 `SYNTAX 88.922` ([Deviation 101](r:util.index.deviation.101) is about which
 of the two comes first). `position` is read as a whole number that is at
 least `1`, with its blanks, a leading plus sign, a decimal point and an
-exponent as any whole number is, so that `' 2 '` and `1e0` are numbers. A
-`position` that is `0`, negative, fractional, text, the null string or `.nil`
-raises `SYNTAX 88.905`. `value` is any object, and the null string and a
+exponent, so that `' 2 '` and `1e0` are numbers. The value is taken exactly,
+without rounding and whatever the NUMERIC DIGITS of the caller are, so that
+`1.0000000000000000001` is fractional, and it must be less than 10\*\*18. A
+`position` that is `0`, negative, fractional, text, the null string or too
+large raises `SYNTAX 88.905`. An object that is not a string is read by its
+`request('STRING')`, and when that answers no string, by its `STRING` method,
+so that `.nil` is read as `The NIL object` and raises `SYNTAX 88.905`.
+`value` is any object, and the null string and a
 string of blanks are values.
 
 ```rexx
@@ -52,6 +57,12 @@ call try "SysStemInsert('s.', 2, '')"
 call try "SysStemInsert('s.', 2, '  pad  ')"
 call try "SysStemInsert('s.', 2, 12)"
 call try "SysStemInsert(.mutablebuffer~new('s.'), .mutablebuffer~new('2'), 'v')"
+call try "SysStemInsert('s.', .one~new, 'v')"
+call try "SysStemInsert('s.', 100e-2, 'v')"
+call try "SysStemInsert('s.', 1e18, 'v')"
+call try "SysStemInsert('s.', 1.0000000000000000001, 'v')"
+numeric digits 3
+call try "SysStemInsert('s.', 1.0001, 'v')"
 exit
 try:
   parse arg ex
@@ -69,6 +80,9 @@ show: procedure expose s.
   out = s.0 ':'
   do i = 1 to s.0; out = out '[' || s.i || ']'; end
   return out
+::class one
+::method string
+  return '1'
 ```
 
 ```output
@@ -91,6 +105,11 @@ show: procedure expose s.
 0 5 : [a] [  pad  ] [b] [c] [d]
 0 5 : [a] [12] [b] [c] [d]
 0 5 : [a] [v] [b] [c] [d]
+0 5 : [v] [a] [b] [c] [d]
+0 5 : [v] [a] [b] [c] [d]
+88.905 4 : [a] [b] [c] [d]
+88.905 4 : [a] [b] [c] [d]
+88.905 4 : [a] [b] [c] [d]
 ```
 
 ## What is inserted
@@ -157,13 +176,16 @@ show: procedure expose s.
 r[util.syssteminsert.range]
 The call raises `SYNTAX 40.923`, and changes nothing, when `position` is more
 than one past the count of the stem: an array of four items takes the
-positions `1` to `5`, and an empty one takes only `1`.
+positions `1` to `5`, and an empty one takes only `1`. A count below `0` is a
+count, and every `position` is then past it.
 
 ```rexx
 call try "SysStemInsert('s.', 6, 'n')"
 call try "SysStemInsert('s.', 99999999999, 'n')"
 call try "SysStemInsert('s.', 2, 'n')", "s.0 = 0"
 call try "SysStemInsert('s.', 3, 'n')", "s.0 = 1"
+call try "SysStemInsert('s.', 1, 'n')", "s.0 = -1"
+call try "SysStemInsert('s.', 2, 'n')", "s.0 = -1"
 exit
 try:
   parse arg ex, setup
@@ -182,19 +204,44 @@ e: say condition('o')~code s.0
 40.923 4
 40.923 0
 40.923 1
+40.923 -1
+40.923 -1
+```
+
+r[util.syssteminsert.fail]
+A call that raises `SYNTAX 40.924` has moved the items above the one that has
+no value, each up by one place, starting from the last. It has not stored
+`value` and has not changed the count of the stem, so the tail one past the
+count holds the last item.
+
+```rexx
+s.0 = 4; s.1 = 'a'; s.3 = 'c'; s.4 = 'd'
+signal on syntax name e
+call SysStemInsert 's.', 1, 'v'
+e: say condition('o')~code s.0 s.1 symbol('s.2') s.3 s.4 s.5
+```
+
+```output
+40.924 4 a LIT c c d
 ```
 
 ## Order of the checks
 
 r[util.syssteminsert.order]
 When several things are wrong, the call raises the condition of the first of
-these checks that fails: the name of the stem raises `SYNTAX 40.919`; then
-`position` raises `SYNTAX 88.905`; then the tail `0` of the stem raises
+these checks that fails: the name of the stem raises `SYNTAX 88.901` when it
+is missing and `SYNTAX 40.919` when it is not a name; then `position` raises
+`SYNTAX 88.901` when it is missing and `SYNTAX 88.905` when it is not a whole
+number of at least `1`; then a missing `value` raises `SYNTAX 88.901`; then
+the tail `0` of the stem raises
 `SYNTAX 40.922`; then `position` raises `SYNTAX 40.923` when it is past the
 count; and last an item that has to move and has no value raises
 `SYNTAX 40.924`, with the count left as it was.
 
 ```rexx
+call try "SysStemInsert('s-.', 1)", ""
+call try "SysStemInsert('s-.', , 'v')", ""
+call try "SysStemInsert('s.', 'x')", ""
 call try "SysStemInsert('s.a', 'x', 'v')", ""
 call try "SysStemInsert('s.', 0, 'v')", "drop s.0"
 call try "SysStemInsert('s.', 9, 'v')", "drop s.0"
@@ -217,6 +264,9 @@ e: say condition('o')~code s.0
 ```
 
 ```output
+40.919 4
+40.919 4
+88.905 4
 40.919 4
 88.905 S.0
 40.922 S.0
