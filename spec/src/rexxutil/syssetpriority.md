@@ -19,13 +19,13 @@ r[util.syssetpriority.args]
 omitted; its value, and a place that is left empty, make no difference to the
 call ([the next rule](r:util.syssetpriority.answer)). A number is a whole
 number when it has no fraction or only zeros in it, as `1.0` and `1e0` have,
-and it is read whatever `NUMERIC DIGITS` is in force, in the range
-`-2147483648` to `2147483647`. A value that is not a whole number or is out of
-that range raises `SYNTAX 88.907`: a fraction such as `1.5` or `.5`, the null
-string, a word, and the words `IDLE`, `NORMAL`, `LOWEST` and the like, with
-which some descriptions of the function name classes and deltas, are not
-numbers here. A value that is given is checked before the omission of `delta`
-is reported, so that `SysSetPriority('x')` raises `88.907` and
+and it is read as [the whole-number rule](r:util.index.whole) says, in the
+range `-2147483648` to `2147483647`. A value that is not a whole number or is
+out of that range raises `SYNTAX 88.907`: a fraction such as `1.5` or `.5`,
+the null string, a word, and the words `IDLE`, `NORMAL`, `LOWEST` and the
+like, with which some descriptions of the function name classes and deltas,
+are not numbers here. A value that is given is checked before the omission of
+`delta` is reported, so that `SysSetPriority('x')` raises `88.907` and
 `SysSetPriority(1)` raises `SYNTAX 88.901`; three arguments raise `SYNTAX
 88.922`. When an argument past the last one comes with an omitted or wrong
 argument, [Deviation 101](r:util.index.deviation.101) says which error is
@@ -57,6 +57,7 @@ call try "SysSetPriority(2147483648, 1)"
 call try "SysSetPriority(1, '-2147483649')"
 call try "SysSetPriority('-2147483649', 1)"
 call try "SysSetPriority(1, .nil)"
+call try "SysSetPriority(1, '2.0000000000000000001')"
 exit
 try:
   signal on syntax name e
@@ -72,6 +73,7 @@ e: say condition('o')~code
 88.901
 88.901
 88.922
+88.907
 88.907
 88.907
 88.907
@@ -138,7 +140,7 @@ address system 'id -u' with output stem u.
 root = (u.1 == 0)
 base = SysQueryProcess('PPRIO')
 want = min(base + 2, 19)
-do class over .array~of(0, 1, 2, 3, 4, -1, 1.0, '2e0', ' 3 ')
+do class over .array~of(0, 1, 2, 3, 4, -1, 1.0, '2e0', ' 3 ', '2.00000000000000000001')
   call SysSetPriority class, -want
   say '['class']' (SysQueryProcess('PPRIO') == want) (SysSetPriority(class, -want))
 end
@@ -162,6 +164,7 @@ say SysSetPriority(1, -19) SysQueryProcess('PPRIO')
 [1.0] 1 0
 [2e0] 1 0
 [ 3 ] 1 0
+[2.00000000000000000001] 1 0
 0 0
 1
 1 1

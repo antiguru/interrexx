@@ -61,8 +61,7 @@ name `target`, `source` names nothing any more, and the call answers `0`. The
 bytes, the permission bits and the times of the file are those it had; a
 symbolic link is moved as a link and not read through, so a link that points
 to nothing can be moved. A directory can be moved to a name that no entry has
-in the same file system. This book does not specify a move from one file
-system to another. The names are not patterns.
+in the same file system. The names are not patterns.
 
 ```rexx
 call charout 'c1zqmva', 'AAA'
@@ -150,13 +149,14 @@ changes: neither name is changed and the files keep their bytes. It answers
 `17` when `source` names an entry and `target` names the same one, under the
 same name, under another name or through a symbolic link; and when `target`,
 with symbolic links followed, is a regular file, whether `source` exists or
-not, since a move does not replace a file. Otherwise it answers `2` when
-`source` names nothing or the directory of `target` does not exist, `21` when
-a file is moved to a directory, `39` when a directory is moved to a directory
-that has entries, `20` when a directory is moved to a symbolic link or to an
-entry, such as a fifo, that is neither a directory nor a regular file, `22`
-when a directory is moved into itself, and `13` when the system refuses, as it
-does for a directory that may not be changed.
+not, since a move does not replace a file. It answers `20` when a component of
+`target` before the last is a file, whether `source` exists or not. Otherwise
+it answers `2` when `source` names nothing or the directory of `target` does
+not exist, `21` when a file is moved to a directory, `39` when a directory is
+moved to a directory that has entries, `20` when a directory is moved to a
+symbolic link or to an entry, such as a fifo, that is neither a directory nor
+a regular file, `22` when a directory is moved into itself, and `13` when the
+system refuses, as it does for a directory that may not be changed.
 
 ```rexx
 call charout 'c1zqmfa', 'AAA'
@@ -170,6 +170,7 @@ say SysFileMove('c1zqmfa', 'c1zqmfa') SysFileMove('c1zqmfa', './c1zqmfa') chars(
 say SysFileMove('c1zqmfa', 'c1zqmfd') SysIsFile('c1zqmfa') SysIsFileDirectory('c1zqmfd')
 say SysFileMove('c1zqmfa', 'c1zqmfd/') SysFileExists('c1zqmfd/c1zqmfa')
 say SysFileMove('c1zqmfa', 'c1zqmfnone/a') SysIsFile('c1zqmfa')
+say SysFileMove('c1zqmfa', 'c1zqmfb/x') SysFileMove('c1zqmfnone', 'c1zqmfb/x') SysFileMove('c1zqmfd', 'c1zqmfb/x') SysFileMove('c1zqmfd', 'c1zqmfb')
 address system 'chmod 555 c1zqmfd'
 say SysFileMove('c1zqmfa', 'c1zqmfd/a') SysIsFile('c1zqmfa') SysFileExists('c1zqmfd/a')
 address system 'chmod 755 c1zqmfd'
@@ -187,5 +188,6 @@ call SysRmDir 'c1zqmfd'
 21 1 1
 21 0
 2 1
+20 20 20 17
 13 1 0
 ```

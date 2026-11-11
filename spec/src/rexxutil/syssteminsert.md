@@ -20,22 +20,21 @@ that [the chapter page](index.md) describes.
 ## Arguments
 
 r[util.syssteminsert.args]
-`stem`, `position` and `value` are all required. `stem` names a stem as
-[the stem name rule](r:util.index.stemname) says. The call follows
-[the argument rule](r:util.index.args): an argument that is missing, or is
-omitted, raises `SYNTAX 88.901`, and a fourth argument raises
-`SYNTAX 88.922` ([Deviation 101](r:util.index.deviation.101) is about which
-of the two comes first). `position` is read as a whole number that is at
-least `1`, with its blanks, a leading plus sign, a decimal point and an
-exponent, so that `' 2 '` and `1e0` are numbers. The value is taken exactly,
-without rounding and whatever the NUMERIC DIGITS of the caller are, so that
-`1.0000000000000000001` is fractional, and it must be less than 10\*\*18. A
-`position` that is `0`, negative, fractional, text, the null string or too
-large raises `SYNTAX 88.905`. An object that is not a string is read by its
-`request('STRING')`, and when that answers no string, by its `STRING` method,
-so that `.nil` is read as `The NIL object` and raises `SYNTAX 88.905`.
-`value` is any object, and the null string and a
-string of blanks are values.
+`stem`, `position` and `value` are all required. `stem` names a stem as [the
+stem name rule](r:util.index.stemname) says. The call follows [the argument
+rule](r:util.index.args): an argument that is missing, or is omitted, raises
+`SYNTAX 88.901`, and a fourth argument raises `SYNTAX 88.922` ([Deviation
+101](r:util.index.deviation.101) is about which of the two comes first).
+`position` is read as a whole number that is at least `1`, with its blanks, a
+leading plus sign, a decimal point and an exponent, so that `' 2 '` and `1e0`
+are numbers. The value is read as [the whole-number rule](r:util.index.whole)
+says, so that `1.0000000000000000001` is fractional, and it must be less than
+10\*\*18. A `position` that is `0`, negative, fractional, text, the null
+string or too large raises `SYNTAX 88.905`. An object that is not a string is
+read by its `request('STRING')`, and when that answers no string, by its
+`STRING` method, so that `.nil` is read as `The NIL object` and raises `SYNTAX
+88.905`. `value` is any object, and the null string and a string of blanks are
+values.
 
 ```rexx
 call try "SysStemInsert()"
@@ -61,6 +60,7 @@ call try "SysStemInsert('s.', .one~new, 'v')"
 call try "SysStemInsert('s.', 100e-2, 'v')"
 call try "SysStemInsert('s.', 1e18, 'v')"
 call try "SysStemInsert('s.', 1.0000000000000000001, 'v')"
+call try "SysStemInsert('s.', '1.00000000000000000001', 'v')"
 numeric digits 3
 call try "SysStemInsert('s.', 1.0001, 'v')"
 exit
@@ -109,6 +109,7 @@ show: procedure expose s.
 0 5 : [v] [a] [b] [c] [d]
 88.905 4 : [a] [b] [c] [d]
 88.905 4 : [a] [b] [c] [d]
+0 5 : [v] [a] [b] [c] [d]
 88.905 4 : [a] [b] [c] [d]
 ```
 

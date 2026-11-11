@@ -75,14 +75,14 @@ The error number is read as a number in the sense of Rexx: a sign, leading
 zeros, blanks around it, a decimal point and an exponent are allowed, as long
 as its value is a whole number. A string that is not a number, or whose value
 has a fraction, raises `SYNTAX 88.907`, and so does a whole number outside the
-range from -2147483648 to 2147483647. The value is not rounded to
-the `NUMERIC DIGITS` in force: a number with more digits than that is read in
-full, so `2.0001` still has a fraction under `NUMERIC DIGITS 3`, and
-`2147483647` is in range.
+range from -2147483648 to 2147483647. The value is read as [the whole-number
+rule](r:util.index.whole) says, not rounded to the `NUMERIC DIGITS` in force,
+so `2.0001` still has a fraction under `NUMERIC DIGITS 3`, and `2147483647` is
+in range.
 
 ```rexx
 ref = SysGetErrorText(2)
-do n over '2','02','+2','2.0','2e0','20E-1',' 2 ','0.2e1','1.5','2.5e0','two','1 2','0x2','','2147483647','-2147483648','2147483648','-2147483649','99999999999'
+do n over '2','02','+2','2.0','2e0','20E-1',' 2 ','0.2e1','1.5','2.5e0','two','1 2','0x2','','2147483647','-2147483648','2147483648','-2147483649','99999999999','2.0000000000000000001','2.00000000000000000001'
   call try n
 end
 numeric digits 3
@@ -119,6 +119,8 @@ e: say '['arg(1)']' condition('o')~code
 [2147483648] 88.907
 [-2147483649] 88.907
 [99999999999] 88.907
+[2.0000000000000000001] 88.907
+[2.00000000000000000001] 1 1
 [2147483647] 0 1
 [2.0001] 88.907
 [1E3] 0 1

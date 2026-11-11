@@ -128,17 +128,18 @@ checks in this order. First, when `source` names an entry and `target` names
 the same file, under the same name, under another spelling of its name, such
 as `./` before it, through a symbolic link or through a hard link, the call
 answers `17` and changes nothing. Two names are the same file when they are on
-the same device and have the same inode number
-([Deviation 155](r:util.sysfilecopy.deviation.155)). Then `source` is
-checked: the call answers `2` when `source` names nothing and `13` when the
-program may not read it, and a `target` that is not there is not made. Then a
-`source` that is a directory answers `21`, and `target` is neither made nor
-changed ([Deviation 155](r:util.sysfilecopy.deviation.155)). Last, `target`
-is opened to be written, made when no entry has the name and emptied when a
-file has it: the call answers `2` when the directory of `target` does not
-exist, `21` when `target` is a directory, and `13` when `target` is a file
-that may not be written or a name in a directory that may not be changed, and
-a file found at `target` keeps its bytes.
+the same device and have the same inode number ([Deviation
+155](r:util.sysfilecopy.deviation.155)). Then `source` is checked: the call
+answers `2` when `source` names nothing and `13` when the program may not read
+it, and a `target` that is not there is not made. Then a `source` that is a
+directory answers `21`, and `target` is neither made nor changed ([Deviation
+155](r:util.sysfilecopy.deviation.155)). Last, `target` is opened to be
+written, made when no entry has the name and emptied when a file has it: the
+call answers `2` when the directory of `target` does not exist, `20` when a
+component of `target` before the last is a file, `21` when `target` is a
+directory, and `13` when `target` is a file that may not be written or a name
+in a directory that may not be changed, and a file found at `target` keeps its
+bytes.
 
 ```rexx
 call charout 'c1zqcfa', 'AAA'
@@ -158,6 +159,7 @@ say SysFileCopy('c1zqcfa', 'c1zqcfn') SysFileExists('c1zqcfn')
 address system 'chmod 644 c1zqcfa; chmod 444 c1zqcfb'
 say SysFileCopy('c1zqcfa', 'c1zqcfb') chars('c1zqcfb')
 call stream 'c1zqcfb', 'c', 'close'
+say SysFileCopy('c1zqcfa', 'c1zqcfb/n') SysFileCopy('c1zqcfnone', 'c1zqcfb/n')
 address system 'chmod 555 c1zqcfd'
 say SysFileCopy('c1zqcfa', 'c1zqcfd/n') SysFileExists('c1zqcfd/n')
 address system 'chmod 755 c1zqcfd; chmod 644 c1zqcfb; rm -f c1zqcfa c1zqcfb c1zqcfl'
@@ -179,6 +181,7 @@ call SysRmDir 'c1zqcod'
 3
 13 0
 13 6
+20 2
 13 0
 2 13 13
 ```

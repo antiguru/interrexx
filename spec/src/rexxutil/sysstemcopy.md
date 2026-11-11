@@ -36,19 +36,19 @@ raises `SYNTAX 88.905`. `count` is read as a whole number that is at least
 `0`, and an argument that is negative, fractional, text, the null string or
 too large raises `SYNTAX 88.904`. A number is read with its blanks, a leading
 plus sign, a decimal point and an exponent, so that `' 2 '` and `1e0` are
-numbers. The value is taken exactly, without rounding and whatever the NUMERIC
-DIGITS of the caller are, so that `1.0000000000000000001` is fractional, and
-it must be less than 10\*\*18. An object that is not a string is read by its
-`request('STRING')`, and when that answers no string, by its `STRING` method,
-so that `.nil` is read as `The NIL object` and raises `SYNTAX 88.905`, or
-`SYNTAX 88.904` for `count`. `option` is read by its first character, in
-either case: `I` inserts the items, `O` overwrites the items, and the rest of
-the argument is not read, so `Insert` is `I`. Anything else raises `SYNTAX
-40.920`: the null string, a blank before the letter, another letter. An
-`option` that is an object whose `request` answers no string, `.nil` among
-them, raises `SYNTAX 88.909`, and it has no `STRING` fallback either: an
-object that has only a `STRING` method that answers `I` raises `SYNTAX
-88.909`. A MutableBuffer that holds `I` is `I`.
+numbers. The value is read as [the whole-number rule](r:util.index.whole)
+says, so that `1.0000000000000000001` is fractional, and it must be less than
+10\*\*18. An object that is not a string is read by its `request('STRING')`,
+and when that answers no string, by its `STRING` method, so that `.nil` is
+read as `The NIL object` and raises `SYNTAX 88.905`, or `SYNTAX 88.904` for
+`count`. `option` is read by its first character, in either case: `I` inserts
+the items, `O` overwrites the items, and the rest of the argument is not read,
+so `Insert` is `I`. Anything else raises `SYNTAX 40.920`: the null string, a
+blank before the letter, another letter. An `option` that is an object whose
+`request` answers no string, `.nil` among them, raises `SYNTAX 88.909`, and it
+has no `STRING` fallback either: an object that has only a `STRING` method
+that answers `I` raises `SYNTAX 88.909`. A MutableBuffer that holds `I` is
+`I`.
 
 ```rexx
 call try "SysStemCopy()"
@@ -74,6 +74,7 @@ call try "SysStemCopy('s.', 't.', 1, 1, 1, 'overwrite')"
 call try "SysStemCopy('s.', 't.', .one~new, 100e-2, 1e0)"
 call try "SysStemCopy('s.', 't.', 1, 1, 1e18)"
 call try "SysStemCopy('s.', 't.', 1, 1, 1.0000000000000000001)"
+call try "SysStemCopy('s.', 't.', 1, 1, '1.00000000000000000001')"
 call try "SysStemCopy('s.', 't.', 1, 1, 1, .ionly~new)"
 numeric digits 3
 call try "SysStemCopy('s.', 't.', 1.0001)"
@@ -128,6 +129,7 @@ show: procedure expose t.
 0 2 : a y
 88.904 2 : x y
 88.904 2 : x y
+0 2 : a y
 88.909 2 : x y
 88.905 2 : x y
 ```

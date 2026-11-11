@@ -159,16 +159,19 @@ r[util.syssetfiledatetime.form]
 digits separated by hyphens, and `newtime` as an hour, a minute and a second,
 separated by colons. Leading white space (blanks, tabs and the other space
 characters of the C locale) before a number is skipped, but a blank before a
-separator is not allowed. The year has at most four digits
-and each other number at most two, and a separator has to follow a number
-directly for the first two numbers of each; whatever follows the third number
-is not read, so that `2031-01-155` is the fifteenth. A date or time that has
-fewer than three numbers, other separators or a number that is too long for
-its place gives the answer -1, and the file is not changed. The null string is
-such a date or time, not an omitted one. A number may start with `+` or `-`;
-the sign counts toward its length, and a negative number is borrowed from the
-next larger field as [the next rule](r:util.syssetfiledatetime.carry) says.
-How a year below 1000 and a year above 9999 are read is not specified.
+separator is not allowed. The year has at most four digits and each other
+number at most two, and a separator has to follow a number directly for the
+first two numbers of each; whatever follows the third number is not read, so
+that `2031-01-155` is the fifteenth. A date or time that has fewer than three
+numbers, other separators or a number that is too long for its place gives the
+answer -1, and the file is not changed. The null string is such a date or
+time, not an omitted one. A number may start with `+` or `-`; the sign counts
+toward its length, and a negative number is borrowed from the next larger
+field as [the next rule](r:util.syssetfiledatetime.carry) says. A time that
+the file system cannot hold, such as one before 1901-12-14 or after the year
+2445 on a file system with 34-bit times, is not specified: the call may answer
+0 and set another time. How a year below 1000 and a year above 9999 are read
+is not specified either.
 
 ```rexx
 d = 'c2zqst03'

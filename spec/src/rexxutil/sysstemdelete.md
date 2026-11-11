@@ -23,19 +23,18 @@ r[util.sysstemdelete.args]
 `stem` and `start` are required, and `count` is optional and is `1` when it is
 left out. `stem` names a stem as [the stem name rule](r:util.index.stemname)
 says. The call follows [the argument rule](r:util.index.args): a missing
-required argument raises `SYNTAX 88.901` and a fourth argument raises
-`SYNTAX 88.922` ([Deviation 101](r:util.index.deviation.101) is about which of
-the two comes first). `start` and `count` are read as whole numbers that are
-at least `1`, with their blanks, a leading plus sign, a decimal point and an
-exponent, so that `' 2 '` and `1e0` are numbers. The value is taken exactly,
-without rounding and whatever the NUMERIC DIGITS of the caller are, so that
-`1.0000000000000000001` is fractional, and it must be less than 10\*\*18. An
-argument that is `0`, negative, fractional, text, the null string, blank or
-too large raises `SYNTAX 88.905`, and a count of `0` is such an argument too:
-the call cannot be used to delete nothing. An object that is not a string is
-read by its `request('STRING')`, and when that answers no string, by its
-`STRING` method, so that `.nil` is read as `The NIL object` and raises
-`SYNTAX 88.905`.
+required argument raises `SYNTAX 88.901` and a fourth argument raises `SYNTAX
+88.922` ([Deviation 101](r:util.index.deviation.101) is about which of the two
+comes first). `start` and `count` are read as whole numbers that are at least
+`1`, with their blanks, a leading plus sign, a decimal point and an exponent,
+so that `' 2 '` and `1e0` are numbers. The value is read as [the whole-number
+rule](r:util.index.whole) says, so that `1.0000000000000000001` is fractional,
+and it must be less than 10\*\*18. An argument that is `0`, negative,
+fractional, text, the null string, blank or too large raises `SYNTAX 88.905`,
+and a count of `0` is such an argument too: the call cannot be used to delete
+nothing. An object that is not a string is read by its `request('STRING')`,
+and when that answers no string, by its `STRING` method, so that `.nil` is
+read as `The NIL object` and raises `SYNTAX 88.905`.
 
 ```rexx
 call try "SysStemDelete()"
@@ -61,6 +60,7 @@ call try "SysStemDelete(.mutablebuffer~new('s.'), .mutablebuffer~new('2'))"
 call try "SysStemDelete('s.', .one~new, 100e-2)"
 call try "SysStemDelete('s.', 2, 1e18)"
 call try "SysStemDelete('s.', 1.0000000000000000001)"
+call try "SysStemDelete('s.', '1.00000000000000000001')"
 numeric digits 3
 call try "SysStemDelete('s.', 1.0001)"
 exit
@@ -109,6 +109,7 @@ show: procedure expose s.
 0 3 : b c d
 88.905 4 : a b c d
 88.905 4 : a b c d
+0 3 : b c d
 88.905 4 : a b c d
 ```
 

@@ -691,10 +691,10 @@ reports these before the count: the stem name of SysStemCopy, SysStemDelete
 and SysStemInsert when it fails its check, and a whole-number argument of
 SysStemCopy, SysStemDelete, SysStemInsert or SysStemSort that fails its check,
 a number out of range among them. It reports the count before an argument's
-value: an option it does not allow, or any other number out of range.
-SysOpenEventSem and SysOpenMutexSem are the exception: in both engines they
-report an omitted name and an object that has no string value before the
-count.
+value: an option it does not allow, or any other number out of range, except a
+negative semaphore handle, which it reports before the count. SysOpenEventSem
+and SysOpenMutexSem are the exception: in both engines they report an omitted
+name and an object that has no string value before the count.
 
 ## 102. LOSTDIGITS before the right operand's errors
 
@@ -1202,9 +1202,11 @@ A RexxUtil semaphore function called with a whole number that is not the
 handle of an open semaphore, such as the handle of a closed semaphore, a
 handle that arithmetic has rounded, a number that no call answered or the
 handle of an open semaphore of the other kind, answers `6` and changes no
-semaphore (interrexx accepts a handle of the other kind today: issue #247). ooRexx uses the number as an address and crashes for a closed handle, in
-every function but a second SysCloseEventSem or SysCloseMutexSem, which
-answers `6`, and for a rounded one, as SysPostEventSem shows.
+semaphore (interrexx accepts a handle of the other kind today: issue #247).
+ooRexx uses the number as an address and crashes for a closed handle, in every
+function but a second SysCloseEventSem or SysCloseMutexSem, which answers `6`,
+for a rounded one, as SysPostEventSem shows, and for a number that no call
+answered; SysRequestMutexSem with an event semaphore's handle hangs.
 
 ## 159. A save onto a file that may not be written
 

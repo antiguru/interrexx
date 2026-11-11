@@ -120,9 +120,9 @@ that range, and an object whose string fails these checks, `.nil` among them,
 raise `SYNTAX 88.907`. An object other than a string is first replaced by the
 string that its `request` with the argument `STRING` answers, and when that
 answer is not a string, by the answer of its `STRING` method; an object with a
-`STRING` method that answers `'0'` is therefore the mode `0`. This differs from
-`name`, which has no such fallback ([the argument rule](r:util.sysmkdir.args)).
-When `mode` is omitted it is `511`.
+`STRING` method that answers `'0'` is therefore the mode `0`. This differs
+from `name`, which has no such fallback ([the argument
+rule](r:util.sysmkdir.args)). When `mode` is omitted it is `511`.
 
 ```rexx
 say try('x') try('') try(1.5) try(.nil) try(.object~new)

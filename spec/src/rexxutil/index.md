@@ -14,7 +14,7 @@ function. This page holds what every function shares: how the functions are
 made available, how their arguments are read, what a name of a file is, and
 what the numbers they answer mean.
 
-The pages of this chapter so far are:
+The pages of this chapter are:
 
 * [SysFileDelete](sysfiledelete.md), [SysFileExists](sysfileexists.md),
   [SysIsFile](sysisfile.md), [SysIsFileDirectory](sysisfiledirectory.md) and
@@ -41,9 +41,25 @@ The pages of this chapter so far are:
   [SysLoadRexxMacroSpace](sysloadrexxmacrospace.md): the routines that the
   service keeps for every program, and how they are added, found, moved,
   saved and loaded.
+* [SysFileTree](sysfiletree.md) and [SysFileSearch](sysfilesearch.md):
+  finding files by a pattern and lines of a file by a string, and
+  [SysGetFileDateTime](sysgetfiledatetime.md) and
+  [SysSetFileDateTime](syssetfiledatetime.md): the times of a file.
+* [SysSleep](syssleep.md), [SysWait](syswait.md), [SysFork](sysfork.md),
+  [SysCreatePipe](syscreatepipe.md), [SysQueryProcess](sysqueryprocess.md)
+  and [SysSetPriority](syssetpriority.md): time and processes, and [the event
+  semaphore](syseventsem.md) and [the mutex semaphore](sysmutexsem.md)
+  functions.
+* [SysCls](syscls.md), [SysGetKey](sysgetkey.md),
+  [SysGetErrorText](sysgeterrortext.md),
+  [SysGetMessage](sysgetmessage.md), [SysGetMessageX](sysgetmessagex.md),
+  [SysFormatMessage](sysformatmessage.md), [SysLinVer](syslinver.md),
+  [SysUtilVersion](sysutilversion.md) and [SysVersion](sysversion.md): the
+  terminal, messages and versions; and [the Windows-only
+  functions](windows.md).
 
 The rules state the behavior of a Unix-like system. The examples make their
-own files and directories, whose names start with `c1zq`, `c2zq` or `c4zq`,
+own files and directories, whose names start with `c` and a digit and `zq`,
 and remove them again. What a function answers for a failure is what
 [the answer rule](r:util.index.codes) gives: an error number of Linux for the
 functions that change files, and a fixed value for the functions that the rule
@@ -52,21 +68,22 @@ names.
 ## Availability
 
 r[util.index.available]
-Every RexxUtil function is provided by the interpreter from the start of a
-program: it needs no registration, no library directive and no file. It is
-called like any other function, as `name(arguments)` or by CALL, and its name
-is read in any case. It is not a method of `String`: sending its name to a
-string as a message raises `SYNTAX 97.1`. A label of the code that makes the
-call, and a routine of the program, are found before it as
-[the search rule](r:instr.call.search) says, and so a name written as a
-string reaches the function and not the label; a file of the name of the
-function in the current directory is not run in its place. Among the routines
-that are not labels, the RexxUtil functions are where
-[the search order](r:env.search.order) puts the functions that RXFUNCADD made
-callable. A routine of the program, a public routine of a package that it
-requires, and a macro added with the order `B` are found before a RexxUtil
-function of the same name. A file and a macro added with the order `A` are
-not.
+Every RexxUtil function that exists on a Unix-like system is provided by the
+interpreter from the start of a program, except SysPulseEventSem, which [its
+rule](r:util.syseventsem.pulse) says is not provided: it needs no
+registration, no library directive and no file. It is called like any other
+function, as `name(arguments)` or by CALL, and its name is read in any case.
+It is not a method of `String`: sending its name to a string as a message
+raises `SYNTAX 97.1`. A label of the code that makes the call, and a routine
+of the program, are found before it as [the search rule](r:instr.call.search)
+says, and so a name written as a string reaches the function and not the
+label; a file of the name of the function in the current directory is not run
+in its place. Among the routines that are not labels, the RexxUtil functions
+are where [the search order](r:env.search.order) puts the functions that
+RXFUNCADD made callable. A routine of the program, a public routine of a
+package that it requires, and a macro added with the order `B` are found
+before a RexxUtil function of the same name. A file and a macro added with the
+order `A` are not.
 
 ```rexx
 say SysIsFileLink('/') sysisfilelink('/') 'SYSISFILELINK'('/')
@@ -150,18 +167,25 @@ b: say condition('o')~code
 ## Arguments
 
 r[util.index.args]
-The RexxUtil functions follow [the native call
-rule](r:bif.index.call.native), not the rules for the number of arguments of
-the other builtins: a required argument that is not given, or is omitted,
-raises `SYNTAX 88.901`; an argument past the last one of the function raises
-`SYNTAX 88.922`; an argument that is an object other than a string is
-replaced by the string that its `request` with the argument `STRING` answers,
-and an object that has none raises `SYNTAX 88.909`. An omitted place at the
-end of the call adds nothing to the count, and an optional argument that is
-omitted takes the default that the function's page states. Each page says
-what its function reads as a string and what it reads as a number, and which
-other error codes it raises. The order of these checks is the subject of
-[Deviation 101](r:util.index.deviation.101).
+The RexxUtil functions follow [the native call rule](r:bif.index.call.native),
+not the rules for the number of arguments of the other builtins: a required
+argument that is not given, or is omitted, raises `SYNTAX 88.901`; an argument
+past the last one of the function raises `SYNTAX 88.922`; an argument that is
+an object other than a string is replaced by the string that its `request`
+with the argument `STRING` answers, and an object that has none raises `SYNTAX
+88.909`, whatever its `STRING` method answers. Some arguments fall back to the
+`STRING` method when `request` answers no string: the stem name of
+SysStemCopy, SysStemDelete and SysStemInsert, the whole numbers of
+SysStemCopy, SysStemDelete, SysStemInsert and SysStemSort, the `mode` of
+SysMkDir, the number of SysGetErrorText, the `num` and the inserts of
+SysGetMessage and SysGetMessageX, the arguments of SysSetPriority, a semaphore
+handle and a timeout, and the items of the `substitutions` of
+SysFormatMessage. The page of each says so. An omitted place at the end of the
+call adds nothing to the count, and an optional argument that is omitted takes
+the default that the function's page states. Each page says what its function
+reads as a string and what it reads as a number, and which other error codes
+it raises. The order of these checks is the subject of [Deviation
+101](r:util.index.deviation.101).
 
 ```rexx
 call try "SysFileExists()"
@@ -190,6 +214,42 @@ e: say condition('o')~code
 1
 1
 88.901
+```
+
+r[util.index.whole]
+A whole-number argument of a RexxUtil function is read as [BEEP reads its
+arguments](r:bif.beep.range): its number is rounded to 20 significant digits,
+half up, whatever the NUMERIC DIGITS of the caller, and the value after that
+rounding must have no fractional part. So `1.0000000000000000001` (20 digits)
+has a fraction and `1.00000000000000000001` (21 digits) is `1`. The range that
+a function allows is checked on the rounded value and is stated on its page.
+
+```rexx
+s.0 = 2
+s.1 = 'a'
+s.2 = 'b'
+call try "SysStemDelete('s.', '1.00000000000000000001')"
+say s.0 s.1
+call try "SysStemDelete('s.', '1.0000000000000000001')"
+call try "SysStemDelete('s.', '1.00000000000000000005')"
+call try "SysGetErrorText('2.00000000000000000001') == SysGetErrorText(2)"
+call try "SysGetErrorText('2.0000000000000000001')"
+exit
+try:
+  signal on syntax name e
+  interpret 'say' arg(1)
+  return
+e: say condition('o')~code
+  return
+```
+
+```output
+0
+1 b
+88.905
+88.905
+1
+88.907
 ```
 
 r[util.index.names]
@@ -307,12 +367,14 @@ call SysFileDelete 'c1zqidxo'
 
 r[util.index.stems]
 A function that is given a stem takes the name of a stem variable, with the
-period at its end or without it, in any case. A function that fills a stem
-sets the tail `0` to the number of entries and the tails `1` to that number to
-the entries, and leaves every other tail of the stem as it was. A function
-that reads the items of a stem needs the tail `0` to hold a count, and raises
-`SYNTAX 40.922` when the stem has none. The functions of this chapter that
-take a stem say which of the two they do.
+period at its end or without it, in any case. SysFileTree and SysFileSearch
+also take a stem object, which they fill in the same way, or an array object,
+which they fill as their pages say. A function that fills a stem sets the tail
+`0` to the number of entries and the tails `1` to that number to the entries,
+and leaves every other tail of the stem as it was. A function that reads the
+items of a stem needs the tail `0` to hold a count, and raises `SYNTAX 40.922`
+when the stem has none. The functions of this chapter that take a stem say
+which of the two they do.
 
 ```rexx
 call lineout 'c1zqidxs1', 'x'
@@ -534,26 +596,26 @@ r[util.index.codes]
 A function that works on the system answers what it did, and a failure of the
 system is an answer, never a `SYNTAX` condition. A missing file, a directory
 in place of a file, a refused permission and a name that is already taken
-leave the program running. What a function raises is limited to bad
-arguments, which the page of each function lists. SysFileDelete, SysMkDir,
-SysRmDir, SysFileCopy and SysFileMove answer `0` when they did it. Otherwise
-they answer the system's error number for the failure: `2` for a name that
-nothing has or a directory in it that does not exist, `13` for a permission
-that the system refuses, `17` for a name that is taken, `20` for a name that
-must be a directory and is not (a component before the last, or the target
-of a directory that is moved), `21` for a directory where a file is needed,
-`22` for a directory moved into itself, and `39` for a directory that is not
-empty. Other failures answer the system's other numbers, such as `36` for a
-name that is too long. The page of each of these five functions gives the
-number of every failure it lists, and says where the function departs from
-the system's number. The other functions answer fixed values, which their
-pages state. SysFileTree answers `0` whether or not it could read what it was
-asked for. SysFileSearch answers `0`, or `3` for a file that it cannot read.
-SysSetFileDateTime answers `0`, or `-1` for every failure.
-SysGetFileDateTime answers a time, or `-1`. SysTempFileName and
-SysSearchPath answer a name, or the null string. A function that answers a
-state, such as `SysFileExists`, answers `0` or `1` and has no failure to
-report.
+leave the program running. What a function raises is limited to bad arguments,
+which the page of each function lists. SysFileDelete, SysMkDir, SysRmDir,
+SysFileCopy and SysFileMove answer `0` when they did it. Otherwise they answer
+the system's error number for the failure: `2` for a name that nothing has or
+a directory in it that does not exist, `13` for a permission that the system
+refuses, `17` for a name that is taken, `20` for a name that must be a
+directory and is not (a component before the last, or the target of a
+directory that is moved when that is a fifo or a symbolic link to something
+that is not a regular file), `21` for a directory where a file is needed, `22`
+for a directory moved into itself, and `39` for a directory that is not empty.
+Other failures answer the system's other numbers, such as `36` for a name that
+is too long. The page of each of these five functions gives the number of
+every failure it lists, and says where the function departs from the system's
+number. The other functions answer fixed values, which their pages state.
+SysFileTree answers `0` whether or not it could read what it was asked for.
+SysFileSearch answers `0`, or `3` for a file that it cannot read.
+SysSetFileDateTime answers `0`, or `-1` for every failure. SysGetFileDateTime
+answers a time, or `-1`. SysTempFileName and SysSearchPath answer a name, or
+the null string. A function that answers a state, such as `SysFileExists`,
+answers `0` or `1` and has no failure to report.
 
 ```rexx
 say SysFileDelete('c1zqidxnone') SysMkDir('c1zqidxnone/sub') SysRmDir('c1zqidxnone')
@@ -636,15 +698,15 @@ r[util.index.deviation.101]
 The functions check their arguments in the order that every other builtin
 follows: the number of arguments first, so that an argument past the last one
 raises `SYNTAX 88.922` before an omitted or wrong argument is reported
-([Deviation 101](r:bif.index.call.native.deviation.101)).
-ooRexx reports an omitted argument, an object whose `request` answers no
-string, a stem name of SysStemCopy, SysStemDelete or SysStemInsert that
-fails its check (SysStemSort checks its stem after the count, as interrexx
-does), a whole-number argument of SysStemCopy, SysStemDelete, SysStemInsert
-or SysStemSort that fails its check, an argument that is not a whole number, a
-`substitutions` of SysFormatMessage that has no `MAKEARRAY` method, and a
-`mode` of SysMkDir that fails any of its checks before the count, and the
-count before a `filler` or an `option` that it does not allow.
+([Deviation 101](r:bif.index.call.native.deviation.101)). ooRexx reports an
+omitted argument, an object whose `request` answers no string, a stem name of
+SysStemCopy, SysStemDelete or SysStemInsert that fails its check (SysStemSort
+checks its stem after the count, as interrexx does), a whole-number argument
+of SysStemCopy, SysStemDelete, SysStemInsert or SysStemSort that fails its
+check, an argument that is not a whole number, a semaphore handle that is
+negative, a `substitutions` of SysFormatMessage that has no `MAKEARRAY`
+method, and a `mode` of SysMkDir that fails any of its checks before the
+count, and the count before a `filler` or an `option` that it does not allow.
 SysOpenEventSem and SysOpenMutexSem are the exception: in both engines they
 report an omitted name (`SYNTAX 88.901`) and an object that has no string
 value (`SYNTAX 88.909`) before the count, as [the event
@@ -691,6 +753,9 @@ m: say condition('o')~code
 signal on syntax name n
 say SysFormatMessage('a', .c6zqm~new, 'c')
 n: say condition('o')~code
+signal on syntax name o
+say SysPostEventSem('-1', 'y')
+o: say condition('o')~code
 say SysIsFileDirectory('c1zqidxdm')
 ::class c6zqm
 ::method makestring
@@ -698,6 +763,7 @@ say SysIsFileDirectory('c1zqidxdm')
 ```
 
 ```output
+88.922
 88.922
 88.922
 88.922

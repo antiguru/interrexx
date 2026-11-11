@@ -14,12 +14,12 @@ fraction, and then answers `0`.
 ## Arguments
 
 r[util.syssleep.args]
-`delay` is a required number of seconds. The count and
-the omission of the argument follow [the argument rule](r:util.index.args): a
-call with no argument raises `SYNTAX 88.901` and a second argument raises
-`SYNTAX 88.922`. The value is read as a 64-bit binary floating-point number,
-whatever `NUMERIC DIGITS` is in force: a fraction of more digits than `NUMERIC
-DIGITS` counts, but digits past the precision of that format do not, so that
+`delay` is a required number of seconds. The count and the omission of the
+argument follow [the argument rule](r:util.index.args): a call with no
+argument raises `SYNTAX 88.901` and a second argument raises `SYNTAX 88.922`.
+The value is read as a 64-bit binary floating-point number, whatever `NUMERIC
+DIGITS` is in force: a fraction of more digits than `NUMERIC DIGITS` counts,
+but digits past the precision of that format do not, so that
 `2147483.0000000001` is the delay `2147483`. Blanks before and after it, a
 plus sign and an exponent are allowed. A value that is not a number, as `x`,
 the null string and `0.01x` are, raises `SYNTAX 88.902`; so does a string with
@@ -28,13 +28,13 @@ a blank between two of its digits, as `1 0`, and a number written in the form
 and with or without a sign, and a number too large in size for a 64-bit binary
 floating-point number, one of `1.797693134862316E+308` or more, or of
 `-1.797693134862316E+308` or less, as `1e400`, `1e1000` and `-1e400` are; the
-third example shows these. Whitespace after a sign is the subject of [Deviation
-161](r:util.syssleep.deviation.161). Any other number below `0`, and any other
-number above `2147483`, raises `SYNTAX 88.907`, and so does `2147483.4`: the
-largest delay is `2147483`. A delay of `0`, or of a fraction too small to
-count, is allowed, and so is a negative number too small in size for that
-format, as `-1e-400`, which is the delay `0`. When an argument past the last
-one comes with an omitted or wrong argument, [Deviation
+third example shows these. Whitespace after a sign is the subject of
+[Deviation 161](r:util.syssleep.deviation.161). Any other number below `0`,
+and any other number above `2147483`, raises `SYNTAX 88.907`, and so does
+`2147483.4`: the largest delay is `2147483`. A delay of `0`, or of a fraction
+too small to count, is allowed, and so is a negative number too small in size
+for that format, as `-1e-400`, which is the delay `0`. When an argument past
+the last one comes with an omitted or wrong argument, [Deviation
 101](r:util.index.deviation.101) says which error is raised. An object that
 has no string value, as `.nil` is, raises `SYNTAX 88.909`, and so does an
 object that has only a `STRING` method, and no `MAKESTRING` method; the second
@@ -206,7 +206,8 @@ the checks of its range. In the example the first call pauses for at least
 
 ```rexx
 call time 'R'
-say SysSleep('+ 0.3') (time('E') >= 0.3)
+call try "SysSleep('+ 0.3')"
+say (time('E') >= 0.3)
 call try "SysSleep('- 1')"
 call try "SysSleep('- 0.5')"
 call try "SysSleep(' - 2147484')"
@@ -222,7 +223,8 @@ e: say condition('o')~code
 ```
 
 ```output defect=#241
-0 1
+0
+1
 88.907
 88.907
 88.907

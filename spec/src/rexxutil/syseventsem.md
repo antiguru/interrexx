@@ -152,15 +152,15 @@ call SysCloseEventSem h
 r[util.syseventsem.wait]
 SysWaitEventSem uses up one post and answers `0`, or answers `121` when the
 `timeout` passed without a post to use. `timeout` is a number of milliseconds,
-a whole number from `-2147483648` to `2147483647`, read whatever `NUMERIC
-DIGITS` is in force; a value that is not a number or is outside that range
-raises `SYNTAX 88.907`, as does a fraction. An object that is not a string is
-read by the string that its `STRING` method answers, as for a handle. A
-`timeout` that is `0` or omitted sets no limit: the wait ends only when a post
-is there. A `timeout` above `0` is a limit, and the call does not answer `121`
-before at least that long has gone by; how much longer it takes is not
-specified. A `timeout` below `0` makes the call answer `0` at once, without a
-wait and without using a post, whether the semaphore has one or not.
+a whole number from `-2147483648` to `2147483647`, read as [the whole-number
+rule](r:util.index.whole) says; a value that is not a number or is outside
+that range raises `SYNTAX 88.907`, as does a fraction. An object that is not a
+string is read by the string that its `STRING` method answers, as for a
+handle. A `timeout` that is `0` or omitted sets no limit: the wait ends only
+when a post is there. A `timeout` above `0` is a limit, and the call does not
+answer `121` before at least that long has gone by; how much longer it takes
+is not specified. A `timeout` below `0` makes the call answer `0` at once,
+without a wait and without using a post, whether the semaphore has one or not.
 
 ```rexx
 numeric digits 20
@@ -173,11 +173,13 @@ say SysWaitEventSem(h, -1) SysWaitEventSem(h, 20) SysWaitEventSem(h, 20)
 call SysPostEventSem h
 call SysPostEventSem h
 say SysWaitEventSem(h, 0) SysWaitEventSem(h, 2147483647) SysWaitEventSem(h, 20)
+say SysWaitEventSem(h, '1.00000000000000000001')
 call try "SysWaitEventSem(h, 'x')"
 call try "SysWaitEventSem(h, '')"
 call try "SysWaitEventSem(h, 1.5)"
 call try "SysWaitEventSem(h, 2147483648)"
 call try "SysWaitEventSem(h, -2147483649)"
+call try "SysWaitEventSem(h, '1.0000000000000000001')"
 call try "SysWaitEventSem(h, .nil)"
 numeric digits 3
 call try "SysWaitEventSem(h, 1000.4)"
@@ -198,6 +200,8 @@ e: say condition('o')~code
 0 0 0
 0 0 121
 0 0 121
+121
+88.907
 88.907
 88.907
 88.907
@@ -260,19 +264,20 @@ zeros 2 timeouts 1
 ## The handle
 
 r[util.syseventsem.handle]
-The functions that take a handle read it as a whole
-number from `0` to `18446744073709551615`, in the form the creating call
-answered it. Blanks around it, a plus sign and a fraction of only zeros do no
-harm. A handle that is missing raises `SYNTAX 88.901`, and one argument too
-many raises `SYNTAX 88.922`. A value that is not a whole number or is out of
-that range raises `SYNTAX 88.907`: a word, the null string, a negative number,
-a number with a fraction and `.nil`. An object that is not a string is read by
-the string that its `STRING` method answers, as for `.nil`, so that an object
-whose `STRING` answers an open handle names that semaphore; the last example
-shows it. When an argument past the last one comes with an omitted or wrong
-argument, [Deviation 101](r:util.index.deviation.101) says which error is
-raised. A whole number that is not the handle of an open semaphore is answered
-as [Deviation 158](r:util.syseventsem.deviation.158) says.
+The functions that take a handle read it as a whole number from `0` to
+`18446744073709551615`, in the form the creating call answered it. Blanks
+around it, a plus sign and a fraction of only zeros do no harm, and the number
+is read as [the whole-number rule](r:util.index.whole) says. A handle that is
+missing raises `SYNTAX 88.901`, and one argument too many raises `SYNTAX
+88.922`. A value that is not a whole number or is out of that range raises
+`SYNTAX 88.907`: a word, the null string, a negative number, a number with a
+fraction and `.nil`. An object that is not a string is read by the string that
+its `STRING` method answers, as for `.nil`, so that an object whose `STRING`
+answers an open handle names that semaphore; the last example shows it. When
+an argument past the last one comes with an omitted or wrong argument,
+[Deviation 101](r:util.index.deviation.101) says which error is raised. A
+whole number that is not the handle of an open semaphore is answered as
+[Deviation 158](r:util.syseventsem.deviation.158) says.
 
 ```rexx
 h = SysCreateEventSem()
@@ -294,8 +299,9 @@ call try "SysResetEventSem(-1)"
 call try "SysCloseEventSem()"
 call try "SysCloseEventSem(h, 1)"
 call try "SysCloseEventSem('x')"
+call try "SysPostEventSem('1.0000000000000000001')"
 say SysPostEventSem(' ' || h || ' ') SysPostEventSem('+' || h) SysPostEventSem(h || '.0')
-say SysPostEventSem(.mutablebuffer~new(h)) SysPostEventSem(h || '.00')
+say SysPostEventSem(.mutablebuffer~new(h)) SysPostEventSem(h || '.00') SysPostEventSem(h || '.00000000000000000001')
 say SysWaitEventSem(' ' || h || ' ', 20) SysWaitEventSem('+' || h, 20)
 say SysResetEventSem(' ' || h || ' ') SysResetEventSem('+' || h)
 say SysCloseEventSem(' ' || h || ' ')
@@ -327,8 +333,9 @@ e: say condition('o')~code
 88.901
 88.922
 88.907
+88.907
 0 0 0
-0 0
+0 0 0
 0 0
 0 0
 0
@@ -505,22 +512,23 @@ before
 ```
 
 r[util.syseventsem.deviation.158]
-A whole number that is not the handle of an
-open semaphore makes every function of this page and of [the mutex semaphore
-functions](sysmutexsem.md) that takes a handle answer `6`, and use no
-semaphore: the handle of a semaphore that is closed, a handle that arithmetic
-has rounded, as the sum `h + 0` of a handle of thirteen digits is under
-`NUMERIC DIGITS 9`, and a number that no call answered. ooRexx uses the number
-as the address of the semaphore and crashes, with a signal that ends the
-program, for a closed handle (all calls but SysCloseEventSem, which answers
-`6`) and, as SysPostEventSem shows, for a rounded one. The first example is a
-rounded handle and a closed one, the second a number that no call answered.
-SysResetEventSem answers `0` in interrexx for such a handle, where it should
-answer `6` like the others, as the third example shows. The handle of an open
-semaphore of the other kind, a mutex semaphore's handle given to an event
-function or an event semaphore's handle given to a mutex function, is such a
-number too: the call answers `6` and changes neither semaphore. interrexx
-accepts it today (issue #247), as the fourth example shows.
+A whole number that is not the handle of an open semaphore makes every
+function of this page and of [the mutex semaphore functions](sysmutexsem.md)
+that takes a handle answer `6`, and use no semaphore: the handle of a
+semaphore that is closed, a handle that arithmetic has rounded, as the sum `h
++ 0` of a handle of thirteen digits is under `NUMERIC DIGITS 9`, and a number
+that no call answered. ooRexx uses the number as the address of the semaphore
+and crashes, with a signal that ends the program, for a closed handle (all
+calls but SysCloseEventSem, which answers `6`), for a rounded one, as
+SysPostEventSem shows, and for a number that no call answered;
+SysRequestMutexSem with an event semaphore's handle hangs. The first example
+is a rounded handle and a closed one, the second a number that no call
+answered. SysResetEventSem answers `0` in interrexx for such a handle, where
+it should answer `6` like the others, as the third example shows. The handle
+of an open semaphore of the other kind, a mutex semaphore's handle given to an
+event function or an event semaphore's handle given to a mutex function, is
+such a number too: the call answers `6` and changes neither semaphore.
+interrexx accepts it today (issue #247), as the fourth example shows.
 
 ```rexx
 h = SysCreateEventSem()

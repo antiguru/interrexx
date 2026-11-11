@@ -28,22 +28,20 @@ argument takes its default: `order` is `A`, `type` is `C`, `start` is `1`,
 each item. `stem` names a stem as [the stem name rule](r:util.index.stemname)
 says, with the addition of [the next rule](r:util.sysstemsort.name). The call
 follows [the argument rule](r:util.index.args): a missing `stem` raises
-`SYNTAX 88.901` and an eighth argument raises `SYNTAX 88.922`
-([Deviation 101](r:util.index.deviation.101) is about which of the two comes
-first). `start`, `end`, `firstcol` and `lastcol` are read as whole numbers
-that are at least `1`, with their blanks, a leading plus sign, a decimal point
-and an exponent. The value is taken exactly, without rounding and whatever
-the NUMERIC DIGITS of the caller are, so that `1.0000000000000000001` is
-fractional, and it must be less than 10\*\*18. An argument that is `0`,
-negative, fractional, text, the null string or too large raises
-`SYNTAX 88.905`. An object that is not a string is read by its
-`request('STRING')`, and when that answers no string, by its `STRING` method,
-so that `.nil` is read as `The NIL object` and raises `SYNTAX 88.905`.
-`order` is
-read by its first character, in either case: `A` is ascending and `D` is
-descending, and the rest of the argument is not read, so `Descending` is `D`.
-`type` is read the same way: `C` respects the case of letters and `I` ignores
-it, and `Ignore` is `I`. Anything else in `order` or `type` raises
+`SYNTAX 88.901` and an eighth argument raises `SYNTAX 88.922` ([Deviation
+101](r:util.index.deviation.101) is about which of the two comes first).
+`start`, `end`, `firstcol` and `lastcol` are read as whole numbers that are at
+least `1`, with their blanks, a leading plus sign, a decimal point and an
+exponent. The value is read as [the whole-number rule](r:util.index.whole)
+says, so that `1.0000000000000000001` is fractional, and it must be less than
+10\*\*18. An argument that is `0`, negative, fractional, text, the null string
+or too large raises `SYNTAX 88.905`. An object that is not a string is read by
+its `request('STRING')`, and when that answers no string, by its `STRING`
+method, so that `.nil` is read as `The NIL object` and raises `SYNTAX 88.905`.
+`order` is read by its first character, in either case: `A` is ascending and
+`D` is descending, and the rest of the argument is not read, so `Descending`
+is `D`. `type` is read the same way: `C` respects the case of letters and `I`
+ignores it, and `Ignore` is `I`. Anything else in `order` or `type` raises
 `SYNTAX 40.920`: the null string, a blank before the letter, another letter.
 An `order` or `type` that is an object whose `request` answers no string,
 `.nil` among them, raises `SYNTAX 88.909`, and it has no `STRING` fallback
@@ -77,6 +75,7 @@ call try "SysStemSort('s.', , , , , , , )"
 call try "SysStemSort('s.', , , .one~new, 300e-2)"
 call try "SysStemSort('s.', , , 1e18)"
 call try "SysStemSort('s.', , , 1.0000000000000000001)"
+call try "SysStemSort('s.', , , '1.00000000000000000001')"
 call try "SysStemSort('s.', , .ionly~new)"
 numeric digits 3
 call try "SysStemSort('s.', , , 1.0001)"
@@ -125,6 +124,7 @@ e: say condition('o')~code
 0 a b c
 88.905
 88.905
+0 a b c
 88.909
 88.905
 ```
@@ -365,9 +365,11 @@ range, as with `start` equal to `end`, is still read. The call raises `SYNTAX
 the stem. An `end` of `999999999999999999`, the largest that is allowed, is
 taken as an `end` that is left out, the count of the stem. A stem with the
 count `0` has no item, and then no range is checked: the call answers `0` and
-does nothing, for every `start` and `end` that are allowed. The tail `0` is
-never changed, and the tails above the count are not touched. A count below
-`0` raises `SYNTAX 40.922`.
+does nothing, for every `start` and `end` that pass the checks before the tail
+`0` ([the order rule](r:util.sysstemsort.order)), so that a `start` above a
+given `end` still raises `SYNTAX 40.921`. The tail `0` is never changed, and
+the tails above the count are not touched. A count below `0` raises `SYNTAX
+40.922`.
 
 ```rexx
 call fill 'f', 'e', 'd', 'c', 'b', 'a'
@@ -385,6 +387,7 @@ call try "SysStemSort('s.', , , 7, 7)"
 s.0 = 0
 call try "SysStemSort('s.', , , 2)"
 call try "SysStemSort('s.', , , 2, 9)"
+call try "SysStemSort('s.', , , 3, 2)"
 s.0 = 3; s.1 = 'c'; s.2 = 'b'; s.3 = 'a'; s.4 = 'beyond'
 call SysStemSort 's.'
 say dump() s.4
@@ -432,6 +435,7 @@ e: say condition('o')~code
 40.923
 0
 0
+40.921
 [a] [b] [c] beyond
 LIT a b
 0

@@ -25,26 +25,25 @@ r[util.sysgetmessage.args]
 arguments after it are optional strings, the inserts. A call with no `num`, or
 an omitted `num`, raises `SYNTAX 88.901`. `num` is read as a number, and a
 string that is not a number, a number that is not whole, a whole number that
-is not above zero and a whole number of more than 18 digits raise
-`SYNTAX 88.905`. A sign, leading zeros, blanks around the number and an
-exponent are allowed when the value is a whole number above zero. The value is
-read in full, whatever the `NUMERIC DIGITS`. The number of the message is the
+is not above zero and a whole number of more than 18 digits raise `SYNTAX
+88.905`. A sign, leading zeros, blanks around the number and an exponent are
+allowed when the value is a whole number above zero. The value is read as [the
+whole-number rule](r:util.index.whole) says. The number of the message is the
 remainder of `num` divided by 4294967296. So `4294967297` names message `1`,
-and a multiple of 4294967296 names no message, which
-[the answer rule](r:util.sysgetmessage.answer) covers. A `filename` of `.nil`
-raises `SYNTAX 88.909`. A call with more than nine inserts raises
-`SYNTAX 40.1`. The checks go from left to right, each argument in full before
-the next: `num`, then `filename`, then the count of inserts. So a bad `num` is
-reported before a `.nil` `filename`, and either one before too many inserts.
-An omitted place at the end of the call adds nothing to the count. `filename`
-is read from an object that is not a string as
-[the argument rule](r:util.index.args) says, so an object whose `request`
-answers no string raises `SYNTAX 88.909`. `num` and the inserts have a
-fallback. An object that is not a string is replaced by the string that its
-`request` with the argument `STRING` answers. When that answer is not a
-string, the object is replaced by the answer of its `STRING` method. So
-`.object~new`, whose `STRING` answers `an Object`, raises `SYNTAX 88.905` as
-`num` and is put in as `an Object` as an insert, and an object whose only
+and a multiple of 4294967296 names no message, which [the answer
+rule](r:util.sysgetmessage.answer) covers. A `filename` of `.nil` raises
+`SYNTAX 88.909`. A call with more than nine inserts raises `SYNTAX 40.1`. The
+checks go from left to right, each argument in full before the next: `num`,
+then `filename`, then the count of inserts. So a bad `num` is reported before
+a `.nil` `filename`, and either one before too many inserts. An omitted place
+at the end of the call adds nothing to the count. `filename` is read from an
+object that is not a string as [the argument rule](r:util.index.args) says, so
+an object whose `request` answers no string raises `SYNTAX 88.909`. `num` and
+the inserts have a fallback. An object that is not a string is replaced by the
+string that its `request` with the argument `STRING` answers. When that answer
+is not a string, the object is replaced by the answer of its `STRING` method.
+So `.object~new`, whose `STRING` answers `an Object`, raises `SYNTAX 88.905`
+as `num` and is put in as `an Object` as an insert, and an object whose only
 method is a `STRING` that answers `2` names message `2`.
 
 ```rexx
@@ -71,6 +70,8 @@ call try "SysGetMessage(100, 'rexx.cat', 'a', 'b', 'c') == SysGetMessage('100.0'
 call try "SysGetMessage(100, 'rexx.cat', 'a', 'b', 'c') == SysGetMessage(' +0100 ', , 'a', 'b', 'c')"
 call try "SysGetMessage(100, 'rexx.cat', 'a', 'b', 'c') == SysGetMessage('1e2', , 'a', 'b', 'c')"
 call try "SysGetMessage(100, 'rexx.cat', 'a', 'b', 'c') == SysGetMessage(.mutablebuffer~new(100), .mutablebuffer~new('rexx.cat'), 'a', 'b', 'c')"
+call try "SysGetMessage(100, 'rexx.cat', 'a', 'b', 'c') == SysGetMessage('100.00000000000000000001', , 'a', 'b', 'c')"
+call try "SysGetMessage('1.0000000000000000001')"
 exit
 try:
   signal on syntax name e
@@ -107,6 +108,8 @@ e: say condition('o')~code
 1
 1
 1
+1
+88.905
 ```
 
 ## The catalog

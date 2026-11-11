@@ -246,8 +246,10 @@ call try "SysRequestMutexSem('x', 1)"
 call try "SysCloseMutexSem()"
 call try "SysCloseMutexSem(h, 1)"
 call try "SysCloseMutexSem('x')"
+call try "SysReleaseMutexSem('1.0000000000000000001')"
 say SysRequestMutexSem(' ' || h || ' ', 20) SysReleaseMutexSem('+' || h)
 say SysRequestMutexSem(h || '.0', 20) SysReleaseMutexSem(.mutablebuffer~new(h))
+say SysRequestMutexSem(h || '.00000000000000000001', 20) SysReleaseMutexSem(h)
 say SysCloseMutexSem(' ' || h || ' ')
 exit
 try:
@@ -271,6 +273,8 @@ e: say condition('o')~code
 88.901
 88.922
 88.907
+88.907
+0 0
 0 0
 0 0
 0
@@ -425,12 +429,13 @@ that is closed, a handle that arithmetic has rounded, as the sum `h + 0` of a
 handle of thirteen digits is under `NUMERIC DIGITS 9`, and a number that no
 call answered. ooRexx uses the number as the address of the semaphore and
 crashes, with a signal that ends the program, for a closed handle
-(SysRequestMutexSem and SysReleaseMutexSem) and, as it does for
-SysPostEventSem, for a rounded one. The handle of an open event semaphore is
-such a number too: these calls answer `6` for it and change neither semaphore
-(issue #247 for interrexx, which accepts it today; [the event semaphore
-rule](r:util.syseventsem.deviation.158) has the example). The first example
-is a rounded handle and a closed one, the second a number that no call
+(SysRequestMutexSem and SysReleaseMutexSem), for a rounded one, as it does for
+SysPostEventSem, and for a number that no call answered; SysRequestMutexSem
+with an event semaphore's handle hangs. The handle of an open event semaphore
+is such a number too: these calls answer `6` for it and change neither
+semaphore (issue #247 for interrexx, which accepts it today; [the event
+semaphore rule](r:util.syseventsem.deviation.158) has the example). The first
+example is a rounded handle and a closed one, the second a number that no call
 answered.
 
 ```rexx
