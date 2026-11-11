@@ -491,3 +491,97 @@ out> in fail
 out>      2 *-* Routine DIR/fail.rex in package "fail.rxo" (no source available).
 out>        *-* Compiled method "CALL" with scope "Routine".
 out>      6 *-* .Routine~newFile('fail.rxo')~call
+
+# The string of -o goes to the first program translated from source: an image
+# takes none of it. (env.invocation.rexxc.options)
+compile
+optmain.rex
+optmain.rxo
+-s
+----
+rc> 0
+
+compile
+optonly.rex
+optonly.rxo
+-s
+----
+rc> 0
+
+rexx
+-o
+digits 5
+optmain.rxo
+----
+rc> 0
+out> ra 5
+out> rb 9
+out> main 9
+out> ext 9
+out> back
+
+rexx
+-od
+digits 5
+optmain.rxo
+----
+rc> 0
+out> ra 5
+out> rb 5
+out> main 9
+out> ext 5
+out> back
+
+rexx
+-o
+digits 5
+optonly.rxo
+----
+rc> 0
+out> only 9
+out> ext 5
+
+rexx
+-od
+digits 5
+optonly.rxo
+----
+rc> 0
+out> only 9
+out> ext 5
+
+# A name without an ending does not find an image whose name ends in .rxo.
+# (env.invocation.rexxc.run)
+compile
+fail.rex
+solo.rxo
+-s
+----
+rc> 0
+
+rexx
+solo
+----
+rc> 253
+err> Error 3:  Failure during initialization.
+err> Error 3.901:  Failure during initialization: Program "solo" was not found.
+
+# What a program can still read from its image: the source of the routines
+# and methods and of the package is empty, but the data of a ::RESOURCE and
+# the values of ::ANNOTATE directives are kept. (env.invocation.rexxc.source)
+compile
+data.rex
+data.rxo
+-s
+----
+rc> 0
+
+rexx
+data.rxo
+----
+rc> 0
+out> psl []
+out> rs 1 line one -- not a comment
+out> pa 1
+out> ra 1 0
+out> ca 1 0

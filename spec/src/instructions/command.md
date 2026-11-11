@@ -8,20 +8,20 @@ deviations: [40]
 
 # Commands
 
-A command hands work to something outside the program. The clause is a
-bare expression, and the interpreter works out its value as a string and
-sends that string to an environment, which runs it and answers with a return
-code. This page specifies what is sent, where the return code
-goes and what else a command leaves behind. Which clauses are commands is
-decided by [the lexical rules](r:lex.clauses.command). Which environment is
-current, how the ADDRESS instruction changes it and what the environments are
-belong to the ADDRESS instruction and to the environment chapter, so
-the examples here use the environment named `system`, which runs its
-commands in the host's shell, and the name that [the ADDRESS
-function](r:bif.address.name) reports is the one the ADDRESS instruction set.
-What a command does is the business of the environment, and the examples need
-of it only that `exit n` for a small `n` answers the return code `n` and that
-`echo` writes its arguments.
+A command hands work to something outside the program. The clause is a bare
+expression, and the interpreter works out its value as a string and sends that
+string to an environment, which runs it and answers with a return code. This
+page specifies what is sent, where the return code goes and what else a
+command leaves behind. Which clauses are commands is decided by [the lexical
+rules](r:lex.clauses.command). Which environment is current, how the ADDRESS
+instruction changes it and [what the environments are](r:env.commands.names)
+belong to the ADDRESS instruction and to the environment chapter, so the
+examples here use the environment named `system`, which runs its commands in
+the host's shell, and the name that [the ADDRESS function](r:bif.address.name)
+reports is the one the ADDRESS instruction set. What a command does is the
+business of the environment, and the examples need of it only that `exit n`
+for a small `n` answers the return code `n` and that `echo` writes its
+arguments.
 
 ## What is sent
 
@@ -191,8 +191,9 @@ command has run, and before that it is an [environment
 symbol](r:lex.symbols.environment) that finds no object, so its value is its
 own characters. Which return codes and which environments raise the two
 conditions is part of [the conditions chapter](../conditions/index.md) and of
-the environment chapter. For the environment `system`, `exit 3` is an error
-and a command that is not sent to an existing environment is a failure.
+[the return code rule](r:env.commands.rc). For the environment `system`,
+`exit 3` is an error and a command that is not sent to an existing environment
+is a failure.
 
 ```rexx
 say .rs

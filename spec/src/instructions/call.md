@@ -16,8 +16,8 @@ which the CALL leaves in the variable `RESULT`. The ON and OFF forms do not
 call anything: they switch the trap of a condition. This page specifies the
 arguments, the search order as far as it separates internal routines from
 built-in ones, `RESULT` and `SIGL`, and the errors. How a routine is found
-outside the program belongs to the environment chapter, and what a trap does
-when its condition occurs to [the chapter on
+outside the program belongs to [the order rule](r:env.search.order), and what
+a trap does when its condition occurs to [the chapter on
 conditions](../conditions/traps.md).
 
 ## Running a routine
@@ -99,9 +99,9 @@ to the external routines. A string that is not in capitals therefore never
 reaches a built-in function, and a label of the same text is not found by it
 either: with the labels `'myLab':` and `mylab:`, the string `'myLab'` finds
 neither. The labels of a method are the ones that a CALL in it finds, as the
-second example shows. How
-external routines are found is the subject of the environment chapter. A name
-that nothing answers to raises `SYNTAX 43.1` when the CALL runs.
+second example shows. How external routines are found is the subject of [the
+order rule](r:env.search.order). A name that nothing answers to raises
+`SYNTAX 43.1` when the CALL runs.
 
 ```rexx
 call length 'abc'

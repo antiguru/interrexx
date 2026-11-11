@@ -158,11 +158,12 @@ blank 0
 r[env.commands.deviation.146]
 A command string that holds a NUL character is not run in any native
 environment: the command raises FAILURE with the return code `127`, and
-nothing of the string runs. This is [Deviation 146](../deviations.md): ooRexx
-cuts the string at the NUL and runs the part before it, so that there the
-shell gets only `echo ran; echo "a` from the first command of the example,
-refuses it as a syntax error and answers 2 (ERROR, nothing printed), and the
-second command runs `printf ran`.
+nothing of the string runs. This is [Deviation
+146](../deviations.md#146-a-command-string-with-a-nul-character): ooRexx cuts
+the string at the NUL and runs the part before it, so that there the shell
+gets only `echo ran; echo "a` from the first command of the example, refuses
+it as a syntax error and answers 2 (ERROR, nothing printed), and the second
+command runs `printf ran`.
 
 ```rexx
 signal on failure name f
@@ -265,8 +266,10 @@ is run by `PATH` with the program `/bin/sh`, which reads it as a script, given
 the file's path and the other words of the command as its arguments, as a
 shell runs such a file. The same file named with a slash is not run
 this way: the command raises FAILURE with the return code `127`. This is
-[Deviation 147](../deviations.md): ooRexx raises FAILURE with the return code
-`127` for the file that the search finds as well, and runs nothing.
+[Deviation
+147](../deviations.md#147-a-file-without-a--line-that-a-path-search-finds):
+ooRexx raises FAILURE with the return code `127` for the file that the search
+finds as well, and runs nothing.
 
 ```rexx
 e = 'ENVIRONMENT'
@@ -394,8 +397,9 @@ r[env.commands.rc.deviation.11]
 A command starts with `SIGPIPE` at its default action, so a shell that
 raises `SIGPIPE` is ended by it, with the return code `-13` and ERROR,
 [as the rule above](r:env.commands.rc.signal) says for any signal. This is
-[Deviation 11](../deviations.md): ooRexx starts the command with `SIGPIPE`
-ignored, and the shell that raises it goes on and answers 0.
+[Deviation 11](../deviations.md#11-sigpipe-in-a-commands-child): ooRexx starts
+the command with `SIGPIPE` ignored, and the shell that raises it goes on and
+answers 0.
 
 ```rexx
 address system
@@ -407,12 +411,12 @@ say rc .rs
 -13 1
 ```
 
-> **Note.** [Deviation 10](../deviations.md) says what the return code is
-> when a halt interrupts the wait for a command, and [Deviation
-> 91](../deviations.md) what it is for a command whose process was gone
-> before the wait. A command that a program sends to an environment that
-> does not exist answers `30`, as [the first rule](r:env.commands.names)
-> says.
+> **Note.** [Deviation 10](../deviations.md#10-signals-halt-and-wake) says
+> what the return code is when a halt interrupts the wait for a command, and
+> [Deviation 91](../deviations.md#91-a-command-whose-child-was-already-reaped)
+> what it is for a command whose process was gone before the wait. A command
+> that a program sends to an environment that does not exist answers `30`, as
+> [the first rule](r:env.commands.names) says.
 
 ## What a command starts with
 
@@ -460,8 +464,10 @@ descriptors 0, 1 and 2. No descriptor that the interpreter opens for its own
 work is open in it. One that the interpreter was started with is passed on as
 the host passes it, so that the example, whose second interpreter is started
 with none, lists only these three and the `3` that `ls` opens to list them.
-This is [Deviation 148](../deviations.md): ooRexx leaves two descriptors of
-its own open in the command, so that the example lists two more there.
+This is [Deviation
+148](../deviations.md#148-the-descriptors-that-a-command-inherits): ooRexx
+leaves two descriptors of its own open in the command, so that the example
+lists two more there.
 
 ```rexx
 f = 'a4zq_fd.rex'
@@ -576,30 +582,32 @@ r[env.commands.cd]
 `cd` makes the directory its argument names the current directory of the
 program, as [DIRECTORY](r:bif.directory.effect) does, and answers 0. The
 argument is the rest of the string after the blanks that follow `cd`; with no
-argument the directory is the value of the environment variable `HOME` ([the
-home rule](r:bif.directory.home)). When the argument as written begins with
-`~`, the tilde is read before anything else. A `~` alone, or followed by a
-slash or a blank, stands for the value of `HOME`. After a slash the rest of
-the argument follows as usual; after a blank the rest is not read. A `~`
-followed by a name, which runs to the first slash or to the end of the
-argument, stands for the home directory of the user of that name in the
-host's user database. When there is no such user, the command is not done by
-the interpreter: the string goes to the shell, as any other string does. A
-`~` that is not the first character of the argument as written, and one that
-a quote or backslash comes before, is an ordinary character. In the rest of
-the argument every double quote is dropped, even one that nothing closes, and
-so is a backslash, the character after it being kept. Nothing else is read: a
+argument the directory is the value of the environment variable `HOME`, read
+as any other argument is: unlike [DIRECTORY with `~`](r:bif.directory.home), a
+value that does not start with a slash is taken from the current directory.
+When the argument as written begins with `~`, the tilde is read before
+anything else. A `~` alone, or followed by a slash or a blank, stands for the
+value of `HOME`, which is then read as the rest of the argument is, its double
+quotes and backslashes dropped, but not read again for a `~`. After a slash
+the rest of the argument follows as usual; after a blank the rest is not read.
+A `~` followed by a name, which runs to the first slash or to the end of the
+argument, stands for the home directory of the user of that name in the host's
+user database. When there is no such user, the command is not done by the
+interpreter: the string goes to the shell, as any other string does. A `~`
+that is not the first character of the argument as written, and one that a
+quote or backslash comes before, is an ordinary character. In the rest of the
+argument every double quote is dropped, even one that nothing closes, and so
+is a backslash, the character after it being kept. Nothing else is read: a
 blank at the end is part of the name, as is a `-`, a single quote, a dollar
 sign or a star. A name that does not start with a slash is taken from the
-current directory. When `HOME` is the null string, `cd` with no argument
-fails as below, and a `~` that stands for `HOME` stands for nothing, so that
-`cd ~` and `cd ~/` make `/` current and `cd ~/x` makes `/x` current. What `cd`
-does when `HOME` has no value is not specified. When the directory cannot be
-made current, the command answers the number that the host gives the error,
-as Linux numbers them: `2` when there is no such directory, `20` when a part
-of the name is not a directory, `13` when permission is refused. It raises
-[ERROR](r:cond.error.raise) as every nonzero return code does, and leaves the
-current directory as it was.
+current directory. When `HOME` is the null string, `cd` with no argument fails
+as below, and a `~` that stands for `HOME` stands for nothing, so that `cd ~`
+and `cd ~/` make `/` current and `cd ~/x` makes `/x` current. When the
+directory cannot be made current, the command answers the number that the host
+gives the error, as Linux numbers them: `2` when there is no such directory,
+`20` when a part of the name is not a directory, `13` when permission is
+refused. It raises [ERROR](r:cond.error.raise) as every nonzero return code
+does, and leaves the current directory as it was.
 
 ```rexx
 e = 'ENVIRONMENT'
@@ -764,12 +772,13 @@ Every value that VALUE sets in the `ENVIRONMENT` is the value of the variable
 afterwards and is what a command sees, whatever `export` and `unset` the
 interpreter did before, the one that gives a variable the null string and
 the repeated `unset` of a name included. An `export` with an empty name
-changes nothing and answers 0. This is [Deviation 149](../deviations.md):
+changes nothing and answers 0. This is [Deviation
+149](../deviations.md#149-environment-variables-set-after-export-and-unset):
 ooRexx loses some of these sets, which ones depending on the in-process
-`export` and `unset` commands that the program ran before for any variable,
-so that the second line of the example is empty there. And `export =3` stores
-an entry whose name is empty, which a `$` with no name after it then refers
-to, so that the last line is `[a3]` there.
+`export` and `unset` commands that the program ran before for any variable, so
+that the second line of the example is empty there. And `export =3` stores an
+entry whose name is empty, which a `$` with no name after it then refers to,
+so that the last line is `[a3]` there.
 
 ```rexx
 e = 'ENVIRONMENT'
@@ -1127,11 +1136,12 @@ r[env.commands.rxqueue.deviation.93]
 A `rxqueue` that does not run for a program, so that it has no session queue
 of a program to use, and that is to work on the `SESSION` queue, whether by
 default or by name, writes a message and answers the status 9, and puts
-nothing anywhere. This is [Deviation 93](../deviations.md): ooRexx answers the
-status 0 and puts the lines on a queue that no program reaches. A command
-leaves that state when it takes away the variable `RXQUEUESESSION` ([the
-session rule](r:env.commands.rxqueue.session)), which the example does for
-the shell that runs it.
+nothing anywhere. This is [Deviation
+93](../deviations.md#93-rxqueue-with-no-session): ooRexx answers the status 0
+and puts the lines on a queue that no program reaches. A command leaves that
+state when it takes away the variable `RXQUEUESESSION` ([the session
+rule](r:env.commands.rxqueue.session)), which the example does for the shell
+that runs it.
 
 ```rexx
 address system

@@ -1,8 +1,8 @@
 ---
 element: "Invocation"
 kind: concept
-rexxref: "Rexx Runtime Objects > The SYSCARGS Array (.SYSCARGS); Rexx Runtime Objects > The Local Directory (.LOCAL)"
-deviations: [96, 141]
+rexxref: "Rexx Runtime Objects > The SYSCARGS Array (.SYSCARGS); Rexx Runtime Objects > The Local Directory (.LOCAL); Useful Services > Distributing Programs without Source"
+deviations: [41, 96, 141, 153]
 ---
 
 # Invocation
@@ -16,7 +16,8 @@ shell has quoted and split them, and a word may be empty.
 
 The command has three forms. `rexx` with a program name and any arguments runs
 a file. `rexx -e` with a string runs the string as a program. `rexx -v` prints
-a version banner.
+a version banner. A second command, `rexxc`, [translates a program into a file
+that holds no source](#programs-without-source), which `rexx` then runs.
 
 > **Note.** The test harness starts each example's program without any words
 > of its own, so an example cannot show the words of the command. The rules
@@ -89,27 +90,27 @@ string followed by a word that begins with a colon is refused with `SYNTAX
 93.900`; followed by any other word, it sets nothing. A directive other than
 `::OPTIONS` is read too, but what it defines does not reach the program. A
 second `-o` replaces the first: its string, and whether the letter `d` follows
-the `o`. The options apply to the main
-program only, and `-od`, with the letter `d` after the `o`, makes them apply
-to every program that a [`::REQUIRES`](r:dir.requires.create) directive loads
-as well. An `::OPTIONS` directive of the program itself comes after them and
-replaces what it sets. A string that is refused ends the command before the
-program is looked for, with [the status of an error](r:env.invocation.status)
-for the error it raises, as an `::OPTIONS` directive in the program would: 231
-for `bogus 9` (`SYNTAX 25.924`), 230 for `digits x` (`SYNTAX 26.5`), and 163
-for a string that is no directive (`SYNTAX 93.900`).
+the `o`. The options apply to the main program only, and `-od`, with the
+letter `d` after the `o`, makes them apply to every program that is translated
+during the run as well, one that a [`::REQUIRES`](r:dir.requires.create)
+directive loads or one that is called by name. An `::OPTIONS` directive of the
+program itself comes after them and replaces what it sets. A string that is
+refused ends the command before the program is looked for, with [the status of
+an error](r:env.invocation.status) for the error it raises, as an `::OPTIONS`
+directive in the program would: 231 for `bogus 9` (`SYNTAX 25.924`), 230 for
+`digits x` (`SYNTAX 26.5`), and 163 for a string that is no directive (`SYNTAX
+93.900`).
 
 ## The program
 
 r[env.invocation.program]
-The program name is a file that the command finds in the way a program called
-by name is found; the pages that follow in this chapter state that search. The
-name that the program reads from `PARSE SOURCE` ([the
-rule](r:instr.parse.source)), and the one that its error reports give, is the
-absolute path of the file that was found, with every `.` and `..` of the path
-resolved, and with a link in the path left as it is. A word that is not valid
-text is a name all the same: names and arguments are the bytes that the host
-gave.
+The program name is a file that the command finds as [the program
+rule](r:env.search.program) of the search page states. The name that the
+program reads from `PARSE SOURCE` ([the rule](r:instr.parse.source)), and the
+one that its error reports give, is the absolute path of the file that was
+found, with every `.` and `..` of the path resolved, and with a link in the
+path left as it is. A word that is not valid text is a name all the same:
+names and arguments are the bytes that the host gave.
 
 r[env.invocation.notfound]
 A program name that no file answers to, or that names a directory, runs
@@ -347,6 +348,220 @@ main
 > is the business of the concurrency chapter, and this page states nothing of
 > it.
 
+## Programs without source
+
+> **Note.** The command `rexxc` translates a program and writes the result to
+> a file, the image, so that the program can be handed on without its source;
+> `rexx` runs an image as it runs the program it came from ([the run
+> rule](r:env.invocation.rexxc.run)). The rules below state what `rexxc` takes
+> and writes, what an image is to a reader, what a run of one shows, and what
+> it is refused for.
+>
+> A program that the test harness starts cannot run `rexxc`, so the
+> rules of this section have no examples. Each is tested by recorded runs of
+> `rexxc` and of `rexx` on both interpreters, in
+> `rust/crates/interrexx/tests/rexxc/cases` and
+> `rust/crates/interrexx/tests/compiled/cases`, and by the tests of `rexxc.rs`
+> and `compiled.rs`, which run both interpreters on copies of their images
+> whose base64 text is laid out anew or holds a character that is not base64,
+> and interrexx alone on images that are cut, extended or changed ([Deviation
+> 153](r:env.invocation.deviation.153)); each rule is cited there.
+
+### What rexxc takes
+
+r[env.invocation.rexxc.words]
+`rexxc` reads its words in order. The first is the name of the program,
+whatever it looks like, so that `rexxc -x` looks for a program called `-x`. A
+second word that does not begin with a minus sign is the name of the output
+file. Every word after those is a flag, and so is a second word that begins
+with a minus sign. A flag begins with a minus sign, and only the letter after
+it counts, in either case: `s` and `e` are the two flags that exist ([the
+banner rule](r:env.invocation.rexxc.banner) and [the image
+rule](r:env.invocation.rexxc.image)), and a later letter of the word is
+ignored, so `-S` and `-sx` are the flag `s`. A flag may stand more than once
+and the flags may come in any order. A flag that is neither, a minus sign
+alone, and a word after the flags that does not begin with a minus sign are
+errors, and so is a name after the first flag, as in `rexxc a.rex -s b.rxo`.
+The command then writes a line that says its parameters are incorrect and the
+usage text, to its standard output stream, and ends with the status 255,
+before it looks for the program. With no words at all it writes the usage text
+alone, with the same status.
+
+r[env.invocation.rexxc.check]
+Without an output name `rexxc` only translates the program and keeps nothing
+of the result: it ends with the status 0 when the program translates, and
+reports the error when it does not. The flag `e` changes nothing then, and the
+flag `s` only [leaves out the banner](r:env.invocation.rexxc.banner).
+
+r[env.invocation.rexxc.banner]
+Unless the flag `s` is given, `rexxc` writes the version banner of [the `-v`
+option](r:env.invocation.version) to its standard output stream once its words
+are accepted, and before anything else it writes, so that a command that ends
+with an error writes it too. A command that ends with the usage text writes no
+banner. The banner is as [the version rule](r:env.invocation.deviation.96)
+states.
+
+r[env.invocation.rexxc.names]
+When the output name and the program name are the same string of bytes, the
+command ends with the status 254 and the line `Output file name must be
+different from input file name.` on its standard output stream, before it
+looks for the program, so that it ends so even when no such program exists.
+Words that are in error ([the words rule](r:env.invocation.rexxc.words)) are
+reported before this check, so that `rexxc a a -x` ends with 255. The check
+compares the two words and not the files they name: for it `a` and `a.rex`, or
+`a.rex` and `./a.rex`, differ, and the translation of `a.rex` is then written
+over the file `a.rex`.
+
+r[env.invocation.rexxc.output]
+The program is found as [`rexx` finds a program](r:env.invocation.program),
+and a name that no file answers to, a directory, and a file that cannot be
+read give the errors [of that rule](r:env.invocation.notfound), with the same
+status. The output file is written after the program has translated, with the
+name as it was given and no ending added. An existing file of that name has
+its content replaced. A program that does not translate writes nothing and
+leaves an existing file as it was. An output file that cannot be written gives
+the error `3.902`, with the status 253, and leaves an existing file as it was.
+
+r[env.invocation.rexxc.translation]
+`rexxc` translates a program as it is translated before a run, and a run finds
+the same errors in it, with the same report: the line of the clause, the error
+numbers and the status of [the error rule](r:env.invocation.status), so that
+`say (` ends the command with 221 (`SYNTAX 35.1`). The `EXTERNAL` option of a
+`::ROUTINE`, `::METHOD` or `::ATTRIBUTE` directive is bound then, so that a
+library that cannot be loaded (`SYNTAX 98.903`), a method entry of the `REXX`
+library that does not exist (`SYNTAX 90.998`) and a `REGISTERED` routine that
+cannot be found (`SYNTAX 90.999`) end the translation. Nothing else is looked
+up: [a required file](r:dir.requires.create), a library that `::REQUIRES`
+names with `LIBRARY`, and the superclass of a class are looked for when the
+image runs, so a program that requires a file or a library that does not
+exist, or whose class has a superclass that does not exist, translates.
+
+r[env.invocation.rexxc.status]
+`rexxc` ends with the status 0 when the program translated and, with an output
+name, the file is written. Every other end has one of the statuses already
+given: 255 for [the words](r:env.invocation.rexxc.words), 254 for [equal
+names](r:env.invocation.rexxc.names), 253 for a program that cannot be found
+or read and a file that cannot be written ([the output
+rule](r:env.invocation.rexxc.output)), and for an error of the program, 256
+minus its major number as [the status rule](r:env.invocation.status) gives it.
+
+### What an image is
+
+r[env.invocation.rexxc.image]
+An image is the program in its translated form. Only its opening is specified,
+and it is the same for both interpreters. The first line is `#!/usr/bin/env
+rexx` and a line feed. The nine characters `/**/@REXX` follow, and then either
+two bytes of 0, for the binary form that `rexxc` writes by default, or the
+character `@` and a line feed, for the form that the flag `e` asks for. The
+binary form is not text: it goes on with a header and the translated program,
+which include the byte 0, and what they hold is not specified. In the encoded
+form what follows is lines of base64 text, each of 72 characters and each
+ended by a line feed, except the last, which may be shorter. Decoded, they
+give bytes that begin with `/**/@REXX` and the same two bytes of 0, as the
+binary form does after its first line.
+
+### Running an image
+
+r[env.invocation.rexxc.run]
+`rexx` runs an image as it runs the program that it was made from: the words
+are its arguments, a `RETURN` or `EXIT` gives [its
+status](r:env.invocation.status), and a program it calls or requires is looked
+for as for any program, beside the image first ([the caller
+rule](r:env.search.caller)). A file is an image when its bytes begin, after a
+first line that begins with `#!` or with no first line, with the characters
+`/**/@REXX` and the two tag bytes of [the image
+rule](r:env.invocation.rexxc.image). Nothing else about the file counts: its
+name has no part in it, and the first line may say anything after the `#!`.
+The ending `.rxo` is not among those that [the search
+adds](r:env.search.extension), so `rexx name` does not find a file `name.rxo`,
+while `rexx name.rxo` runs it, and `rexx name` runs an image that is called
+`name`. A file that begins like an image but has another letter in place of
+one of the four letters of `REXX`, or another byte in place of the byte that
+follows them (the first byte of 0, or the `@`), or, in the encoded form,
+another byte in place of the line feed after the `@`, is not an image: it is
+source, and its `@` is the character that `SYNTAX 13.1` reports. A file that
+is given to `rexxc` is always translated as source, an image too, so that it
+ends with the same error.
+
+r[env.invocation.rexxc.source]
+A program that runs from an image has no source. `SOURCELINE()` answers 0, and
+a call with a whole number `n` of 1 or more raises `SYNTAX 40.34`, as [the
+past-the-end rule](r:bif.sourceline.past-end) says for a number above the
+count. `.context~package~source` has no lines and `sourceSize` is 0 ([the
+package rule](r:class.package.sourcesize)). The `source` of every routine and
+method that the image defines has no lines either, and the package's
+`sourceLine` answers the null string for every line, but the data of a
+`::RESOURCE` directive and the values of `::ANNOTATE` directives are kept.
+`PARSE SOURCE` gives the same three words as it does for a file ([the
+rule](r:instr.parse.source)), and the name is the path of the image. A line
+number is still the number of the clause's line in the program that was
+translated: an error that ends the run, and the traceback of a condition, show
+it, and show in place of the text of the clause a line that says no source is
+available. The text of an `INTERPRET` string is source and is shown as it is
+for any program.
+
+r[env.invocation.rexxc.trace]
+`TRACE` in an image is accepted and changes the setting that `TRACE()`
+answers, but a clause of the image itself traces nothing: [the clause
+lines](r:instr.trace.line) and the results and values that go with them are
+not written, whatever [the setting](r:instr.trace.setting.clauses) is. The
+`>I>` and `<I<` lines that [the tags rule](r:instr.trace.tags) gives to the
+entry and the exit of a routine or method are shown, and the clauses that an
+`INTERPRET` string holds trace as they do in any program, with the line number
+of the `INTERPRET` clause. A pause of the [interactive
+trace](r:instr.trace.form.interactive) happens only before such a clause.
+
+r[env.invocation.rexxc.options]
+An image takes no options from [the `-o` option](r:env.invocation.optstring):
+it runs with what it was translated with, an `::OPTIONS` directive that was in
+the program included, and the string is not spent on it. A string without the
+letter `d` goes to the first program of the run that is translated from
+source: for an image that requires two source files, the first of them, and
+for one that calls a source file by name and requires none, that file; a
+program translated after it takes none. With the letter `d` every program that
+is translated from source takes the string.
+
+r[env.invocation.rexxc.routes]
+Besides the command, [a call by name](r:env.search.program), `::REQUIRES` and
+`newFile` of `Routine` and `Method` restore an image from a file. The lines of
+an encoded image, read as an array of lines, are restored by `new` of
+`Routine`, `Method` and `Package` and by `loadPackage`; one string that holds
+them is source, and so are the lines of a binary image, so that `new` of
+`Routine` with them stops at the first `@` with `SYNTAX 13.1`. A routine or
+method restored from lines sees nothing of the program whose `new` or
+`loadPackage` restored it: a routine of that program that its code calls by
+name is not found (`SYNTAX 43.1`), where the same code given to `new` as
+source finds it. A routine that `newFile` or `new` restores is named by the
+path of the file that `rexxc` translated, and its package by the name that the
+call gave; a routine that a call by name restores is named by the name of the
+call, and its package by the path of the image.
+
+### Images that are refused
+
+r[env.invocation.rexxc.foreign]
+An image that the other interpreter wrote is refused when it is run, before
+any of its code runs, with the error `3.903` and the status 253, although its
+opening is that of any image. Which versions of an interpreter accept each
+other's images is not specified.
+
+r[env.invocation.rexxc.damaged]
+In an encoded image a carriage return and a line feed are skipped between the
+groups of four base64 characters, so that the lines may have any length that
+is a multiple of four and may end with a carriage return as well. One that
+stands inside a group makes the image refused with the error `3.905` and the
+status 253, as does any other character that is not a base64 character, a
+blank or a tab included, before any of its code runs. The skipping holds for
+the base64 lines only: the line feed after the `@` stands alone, so a copy in
+which that line too ends with a carriage return is source
+([the run rule](r:env.invocation.rexxc.run)) and stops at its `@` with `SYNTAX
+13.1`. An encoded image whose decoded bytes lack the binary tag is the case of
+[Deviation 41](r:env.invocation.deviation.41). Otherwise an image that ends
+too early, one that has a changed byte in its header or a changed second byte
+of 0 in the binary form, one that has a changed byte anywhere after its
+header, and one that has bytes after its end, an encoded one once its text is
+decoded, are refused with the error `3.903` and the status 253, before any of
+its code runs ([Deviation 153](r:env.invocation.deviation.153)).
+
 ## Deviations
 
 r[env.invocation.deviation.96]
@@ -364,3 +579,28 @@ so that the words `' '` and `x` after the text give the string of two blanks
 and `x`. ooRexx drops one leading blank of the string when it is longer than
 one character, and gives `' x'` ([Deviation
 141](../deviations.md#141-the-argument-string-of-a-program-that-rexx--e-runs)).
+
+r[env.invocation.deviation.41]
+An encoded image whose decoded bytes lack the tag of an image, as the base64
+of `say 'decoded'` does, is refused with the error `3.903` and the status
+253, as [the damaged-image rule](r:env.invocation.rexxc.damaged) refuses other
+damage. ooRexx translates the partly decoded bytes as source with
+unpredictable results ([Deviation
+41](../deviations.md#41-a-damaged-compiled-image)). The rule of
+[`Method`](r:class.method.deviation.41) states the same for a program made by
+`new`.
+
+r[env.invocation.deviation.153]
+An image that ends too early, one that has bytes after its end, and one that
+has a changed byte in its header, the second byte of 0 of the binary form
+included, are refused with the error `3.903` and the status 253, before any of
+its code runs. So is an image with any other byte changed: `rexxc` writes a
+SHA-256 digest of the image into it, and `rexx` refuses an image whose bytes
+do not give that digest. interrexx does not check the digest yet (issue #235),
+and no test covers that part. An encoded image whose base64 text does not decode whole,
+because characters follow the `=` that closes it, an `=` stands inside it, or
+it ends with a group of fewer than four characters, is refused with the error
+`3.905` and the status 253. ooRexx runs an image that has bytes after its end,
+ignores some changed header bytes and crashes on others, and crashes on an
+image that ends too early ([Deviation
+153](../deviations.md#153-a-damaged-compiled-image-is-refused)).

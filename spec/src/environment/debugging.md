@@ -508,16 +508,18 @@ r[env.debugging.pause.skipped]
 Some traced clauses are not followed by a stop, because they cannot be run
 again safely: a DO or LOOP clause on its second and later turns, which
 includes the turn that finds the loop at its end, an END, a THEN, an ELSE, an
-OTHERWISE, an ITERATE, a SIGNAL of any kind, a CALL ON or a CALL OFF, and a
-clause that raises a syntax error. A label that [SIGNAL
-ON](r:cond.traps.signal) transfers to after an error is followed by a stop
-like any label, and so is a command whose return code raises ERROR or FAILURE,
-a stop that comes before a trap for the condition runs. The example prints a
-number at each stop. It shows each clause of the rule without a stop: the
-second and third turns of the loop header, the two `end` clauses, `then`,
-`else` and `otherwise`, `iterate`, the CALL ON, the SIGNAL ON and the plain
-SIGNAL, and `x = 1 / 0`, after which the label `oops` is the next thing that
-is shown and stopped at.
+OTHERWISE, an ITERATE, a SIGNAL of any kind, a CALL ON or a CALL OFF, a
+RETURN, whose stop is the one that follows the clause that made the call,
+whether a CALL, a function call or a message in an expression, and there is
+none when that clause has no stop, an EXIT, and a clause that raises a syntax
+error. A label that [SIGNAL ON](r:cond.traps.signal) transfers to after an
+error is followed by a stop like any label, and so is a command whose return
+code raises ERROR or FAILURE, a stop that comes before a trap for the
+condition runs. The example prints a number at each stop. It shows each clause
+of the rule without a stop: the second and third turns of the loop header, the
+two `end` clauses, `then`, `else` and `otherwise`, `iterate`, the CALL ON, the
+SIGNAL ON and the plain SIGNAL, and `x = 1 / 0`, after which the label `oops`
+is the next thing that is shown and stopped at.
 
 ```rexx
 .debuginput~destination(.in~new(.array~of('', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '')))
@@ -1697,7 +1699,8 @@ When the interpreter starts, it reads the environment variable `RXTRACE`
 once. If its value is `ON`, in any combination of upper and lower case
 and with nothing else in it, the program starts as if its first clause were
 `TRACE ?R`, and so does each program that it calls by name and each routine
-that a `::ROUTINE` directive defines: [`trace()`](r:bif.trace.setting)
+object, whether a `::ROUTINE` directive defines it or `new` or `newFile` of
+`Routine` makes it: [`trace()`](r:bif.trace.setting)
 answers `?R` in it and its first clause is shown. A method starts with `N` as
 without the variable, and an internal routine starts with its caller's
 setting, as [the scope rule](r:bif.trace.scope) says. Any other value, among
@@ -1708,7 +1711,8 @@ command-line tests, which set it and show the main program and a program
 called by name starting with `?R`, a method with `N`, and every other value
 ignored. The example shows the later change: a program called by name before
 and after the variable is set to `ON` starts with `N` both times. The
-`::ROUTINE` part is not tested.
+part on routines is not tested; interrexx starts them with `N` (interrexx
+defect #218).
 
 ```rexx
 .traceoutput~destination(.quiet~new)

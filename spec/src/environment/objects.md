@@ -121,8 +121,9 @@ r[env.objects.local]
 symbols `.input`, `.output`, `.error`, `.traceoutput`, `.debuginput`,
 `.stdin`, `.stdout`, `.stderr`, `.stdque` and `.syscargs` are found there.
 `.syscargs` is the array of the command line arguments that follow the program
-name; a program started without any has none, as the example shows, and how a
-command line becomes those arguments is part of starting a program.
+name; a program started without any has none, as the example shows, and [the
+syscargs rule](r:env.invocation.syscargs) says how a command line becomes
+those arguments.
 
 ```rexx
 do i over .local~allIndexes~sort
@@ -746,8 +747,9 @@ ZQA1R 1 0
 r[env.objects.replace]
 The language does not read these objects through the lookup of this page. Each
 time SAY, PARSE LINEIN, PULL, PUSH, QUEUE, QUEUED, RXQUEUE, a stream builtin,
-a trace line or the report of an error needs one, it takes the entry `OUTPUT`,
-`ERROR`, `INPUT`, `TRACEOUTPUT` or `STDQUE` of `.local`, so a program that
+a trace line, an interactive trace stop or the report of an error needs one,
+it takes the entry `OUTPUT`, `ERROR`, `INPUT`, `TRACEOUTPUT`, `DEBUGINPUT` or
+`STDQUE` of `.local`, so a program that
 stores another object there makes that object the one that the rules above
 send their messages to, from then on, for every package and activity. A class
 of the same name and an entry of a package's `local` directory change what the

@@ -20,10 +20,11 @@ it.
 
 This page states the class, how a command reaches the method `command` of the
 handler and what the handler answers, and the class methods. The environment
-chapter specifies the environments of the interpreter, how a command to a name
-that no environment has fails and what the native environments do; this page
-says only where the class takes part. The examples register environments under
-names of their own, and use no environment that runs commands in the host.
+chapter specifies [the environments of the interpreter](r:env.commands.names),
+how a command to a name that no environment has fails and [what the native
+environments do](r:env.commands.shell); this page says only where the class
+takes part. The examples register environments under names of their own, and
+use no environment that runs commands in the host.
 
 ## The class
 

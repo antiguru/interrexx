@@ -31,10 +31,12 @@ repeating them. A package's source is the source of a method or routine made
 in the way [the Method page](method.md) describes, and its rules for the
 source apply here where this page says so. The search for a file or a library
 that `new`, `loadPackage`, `loadLibrary` and `findProgram` start is specified
-in the environment chapter; the examples here name files that they create
-themselves, or a library that every installation has. The message a package
-sends to a security manager is specified on [the Routine page](routine.md),
-which also specifies the checkpoints.
+by [the required-file rule](r:env.search.required), [the library
+rule](r:env.search.library) and [the program rule](r:env.search.kinds); the
+examples here name files that they create themselves, or a library that every
+installation has. The message a package sends to a security manager is
+specified on [the Routine page](routine.md), which also specifies the
+checkpoints.
 
 The examples that show an error use a routine `try` that sends the message in
 its argument and prints the answer, or the error code when the message raises
@@ -381,7 +383,7 @@ name that resolves to the same file. A package that `new` made from a source
 is never found that way, even when it has the name of a file; a package that
 [`loadPackage`](r:class.package.loadpackage) installed from a source is found
 by its name, as the rule of `loadPackage` says. How a file is searched for is
-specified in the environment chapter.
+specified by [the required-file rule](r:env.search.required).
 
 ```rexx
 f = 'class_package_file_zq.tmp'
@@ -1699,10 +1701,10 @@ r[class.package.findprogram]
 named finds, in the absolute form that `new` gives a package for the file, or
 `.nil` when the file is not found. The name is required (`SYNTAX 88.901`), an
 object that [gives no string](r:class.index.string), `.nil` among them, raises
-`88.909`, and a
-second argument raises `93.902`. The search is specified in the environment
-chapter; it starts from the directory of the receiver's file, so packages that
-were loaded from different directories can answer differently.
+`88.909`, and a second argument raises `93.902`. The search is that of [a
+routine call](r:env.search.kinds); it starts from the directory of the
+receiver's file, so packages that were loaded from different directories can
+answer differently.
 
 ```rexx
 f = 'class_package_find_zq.tmp'
@@ -2062,9 +2064,10 @@ that name and a `::REQUIRES` of it answer that package and run nothing. A
 `loadPackage` with a source for a name that was already loaded, from a file or
 from a source, answers the package that was loaded first: the new source is not
 read, translated or run, and no class or routine of it is added. A third
-argument raises `93.902`. How the file is searched for is specified in the
-environment chapter. The checkpoint that a security manager sees is that of [the
-`REQUIRES` rule](r:class.routine.setsecuritymanager.requires).
+argument raises `93.902`. How the file is searched for is specified by [the
+required-file rule](r:env.search.required). The checkpoint that a security
+manager sees is that of [the `REQUIRES`
+rule](r:class.routine.setsecuritymanager.requires).
 
 ```rexx
 f = 'class_package_load_zq.tmp'
@@ -2248,7 +2251,7 @@ library that cannot be loaded does not raise an error. The name is required
 raises `88.909`, and a second argument raises `93.902`. The library is loaded
 for the interpreter, not for the package, and adds no routine to
 `importedRoutines`. Where libraries are searched for, and whether the name is
-case sensitive, is specified in the environment chapter.
+case sensitive, is specified by [the library rule](r:env.search.library).
 
 ```rexx
 p = .package~new('n', 'return 1')

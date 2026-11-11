@@ -145,10 +145,12 @@ N
 r[instr.trace.form.interactive]
 A question mark before the setting, or alone, turns interactive tracing on or
 off in the way of [the prefix rule](r:bif.trace.prefix): `TRACE ?` alone flips
-it and leaves the letter. The instruction cannot turn interactive tracing off,
-which the function can. What a stop reads and what each kind of line does is
-specified in [the debugging chapter](r:env.debugging.read); a program run with
-no input at all goes on after each stop.
+it and leaves the letter. In the program the instruction cannot turn
+interactive tracing off, which the function can; in a line typed at a stop it
+can ([the rule there](r:env.debugging.input.trace)). What a stop reads and
+what each kind of line does is specified in [the debugging
+chapter](r:env.debugging.read); a program run with no input at all goes on
+after each stop.
 
 ```rexx
 trace ?r
