@@ -63,8 +63,9 @@ it is at the moment of the call, so a program that sets `PATH` with
 to the standard output and the standard error of the interpreter's own
 process: it does not write to `.output` or `.error`, even when the program has
 redirected them. What the program wrote earlier to its standard output is
-already written when the command starts, so it comes first. SysCls sets no
-variable, `RC` included.
+already written when the command starts, so it comes first. The command reads
+the standard input of the interpreter's process, so what it reads is no longer
+there for the program. SysCls sets no variable, `RC` included.
 
 ```rexx
 call SysMkDir 'c6zqcls'
@@ -103,6 +104,31 @@ from-clear
 file:
 > to the file
 > also to the file 77
+```
+
+```rexx
+call SysMkDir 'c6zqcls'
+call lineout 'c6zqcls/clear', '#!/bin/sh'
+call lineout 'c6zqcls/clear', 'read line'
+call lineout 'c6zqcls/clear', 'echo "clear read [$line]"'
+call lineout 'c6zqcls/clear'
+address system 'chmod +x c6zqcls/clear'
+call lineout 'c6zqcls/child.rex', "call value 'PATH', directory() || '/c6zqcls:' || value('PATH', , 'ENVIRONMENT'), 'ENVIRONMENT'"
+call lineout 'c6zqcls/child.rex', 'call SysCls'
+call lineout 'c6zqcls/child.rex', "say 'program read [' || linein() || ']'"
+call lineout 'c6zqcls/child.rex'
+address system 'printf "ab\ncd\n" | rexx c6zqcls/child.rex' with output stem out.
+do i = 1 to out.0
+  say out.i
+end
+call SysFileDelete 'c6zqcls/child.rex'
+call SysFileDelete 'c6zqcls/clear'
+call SysRmDir 'c6zqcls'
+```
+
+```output defect=#231
+clear read [ab]
+program read [cd]
 ```
 
 ## The answer

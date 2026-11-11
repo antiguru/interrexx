@@ -13,7 +13,7 @@ interrexx does not provide them on a Unix-like system, and this page lists
 them and says what a call of one of them does there. Support for them on
 Windows is tracked in issue #215.
 
-The Windows-only functions are these thirty-two:
+The Windows-only functions are these:
 
 * `RxMessageBox`, `RxWinExec`, `SysBootDrive`, `SysDriveInfo`, `SysDriveMap`,
   `SysFileSystemType`, `SysVolumeLabel`, `SysSystemDirectory`, `SysWinVer`:
@@ -32,7 +32,7 @@ The Windows-only functions are these thirty-two:
   printers.
 
 r[util.windows.list]
-None of the thirty-two Windows-only functions that the list above names is a
+None of the functions that the list above names is a
 function of the interpreter on a Unix-like system, and a name in the list is
 not different from the name of a routine that does not exist. A call of one,
 as a function or by `CALL`, with any arguments and in any case, raises `SYNTAX
@@ -64,7 +64,7 @@ do name over names~makeArray(' ')
 end
 say names~words calls calls2 queries adds drops
 say tryit("SysWinVer(1 / 0)", .true)
-say tryit("SysWinVer(nosuchroutinec6zq())", .true)
+say tryit("SysWinVer(SysCls('x'))", .true)
 say rxfuncquery('SysCls') rxfuncquery('SysVersion') rxfuncquery('SysGetKey') rxfuncquery('SysGetMessage')
 exit
 tryit: procedure
@@ -78,6 +78,6 @@ e: if arg(2, 'E') then return condition('o')~code
 ```output
 32 32 64 32 32 32
 42.3
-43.1
+88.922
 0 0 0 0
 ```

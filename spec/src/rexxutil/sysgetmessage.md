@@ -24,13 +24,27 @@ r[util.sysgetmessage.args]
 `num` is a required argument. `filename` is an optional string, and the
 arguments after it are optional strings, the inserts. A call with no `num`, or
 an omitted `num`, raises `SYNTAX 88.901`. `num` is read as a number, and a
-string that is not a number, a number that is not whole and a whole number
-that is not above zero raise `SYNTAX 88.905`; a sign, leading zeros, blanks
-around the number and an exponent are allowed when the value is a whole number
-above zero. A `filename` of `.nil` raises `SYNTAX 88.909`. A call with more
-than nine inserts raises `SYNTAX 40.1`. An omitted place at the end of the
-call adds nothing to the count. A string is read from an object that is not a
-string as [the argument rule](r:util.index.args) says.
+string that is not a number, a number that is not whole, a whole number that
+is not above zero and a whole number of more than 18 digits raise
+`SYNTAX 88.905`. A sign, leading zeros, blanks around the number and an
+exponent are allowed when the value is a whole number above zero. The value is
+read in full, whatever the `NUMERIC DIGITS`. The number of the message is the
+remainder of `num` divided by 4294967296. So `4294967297` names message `1`,
+and a multiple of 4294967296 names no message, which
+[the answer rule](r:util.sysgetmessage.answer) covers. A `filename` of `.nil`
+raises `SYNTAX 88.909`. A call with more than nine inserts raises
+`SYNTAX 40.1`. The checks go from left to right, each argument in full before
+the next: `num`, then `filename`, then the count of inserts. So a bad `num` is
+reported before a `.nil` `filename`, and either one before too many inserts.
+An omitted place at the end of the call adds nothing to the count. `filename`
+is read from an object that is not a string as
+[the argument rule](r:util.index.args) says, so an object whose `request`
+answers no string raises `SYNTAX 88.909`. `num` and the inserts have a
+fallback. An object that is not a string is replaced by the string that its
+`request` with the argument `STRING` answers. When that answer is not a
+string, the object is replaced by the answer of its `STRING` method. So an
+object with no `MAKESTRING` raises `SYNTAX 88.905` as `num` and does not raise
+anything as an insert.
 
 ```rexx
 call try "SysGetMessage()"
@@ -41,9 +55,15 @@ call try "SysGetMessage(1.5)"
 call try "SysGetMessage('x')"
 call try "SysGetMessage('')"
 call try "SysGetMessage(.nil)"
+call try "SysGetMessage(.object~new)"
+call try "SysGetMessage(100, .object~new)"
 call try "SysGetMessage(100, .nil)"
+call try "SysGetMessage('x', .nil)"
+call try "SysGetMessage(1, .nil, 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j')"
+call try "SysGetMessage('x', 'rexx.cat', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j')"
+call try "SysGetMessage('1000000000000000000')"
 call try "SysGetMessage(100, 'rexx.cat', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j')"
-call try "SysGetMessage(100, 'rexx.cat', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', , )"
+call try "SysGetMessage(100, 'rexx.cat', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', , ) == SysGetMessage(100, 'rexx.cat', 'a', 'b', 'c')"
 call try "SysGetMessage(100, 'rexx.cat', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i') == SysGetMessage(100, 'rexx.cat', 'a', 'b', 'c')"
 call try "SysGetMessage(100, 'rexx.cat', 'a', 'b', 'c') == SysGetMessage('100.0', , 'a', 'b', 'c')"
 call try "SysGetMessage(100, 'rexx.cat', 'a', 'b', 'c') == SysGetMessage(' +0100 ', , 'a', 'b', 'c')"
@@ -67,9 +87,15 @@ e: say condition('o')~code
 88.905
 88.905
 88.905
+88.905
 88.909
+88.909
+88.905
+88.909
+88.905
+88.905
 40.1
-Error a running b, line c:.
+1
 1
 1
 1
@@ -84,12 +110,14 @@ A `filename` that is omitted, or is `rexx.cat` exactly as written, names the
 interpreter's own catalog. Any other `filename` names a Unix message catalog,
 as `gencat` makes it. A name with a slash in it is the path of the file, taken
 from the current directory when it does not start with a slash. A name with no
-slash is searched for along the environment variable `NLSPATH`, in which `%N`
-stands for the name; when `NLSPATH` does not name it, no catalog is found. Any
-other name, `REXX.CAT`, `./rexx.cat` and the null string included, is looked
-for as the name of a Unix catalog. A catalog that is not found, and a message
-that the catalog does not have, are not errors: the call answers [a text for
-each](r:util.sysgetmessage.answer).
+slash is searched for along the environment variable `NLSPATH`, a list of
+patterns separated by colons, in which `%N` stands for the name, and `%L` and
+`%l` stand for the locale that `LANG` names when the call is made, and for its
+language part. Which other places the system searches when no pattern names a
+file is not specified. Any other name, `REXX.CAT`, `./rexx.cat` and the null
+string included, is looked for as the name of a Unix catalog. A catalog that
+is not found, and a message that the catalog does not have, are not errors:
+the call answers [a text for each](r:util.sysgetmessage.answer).
 
 ```rexx
 say (SysGetMessage(100, 'rexx.cat', 'c6zqa', 'c6zqb', 'c6zqc') == SysGetMessage(100, , 'c6zqa', 'c6zqb', 'c6zqc'))
@@ -143,9 +171,9 @@ say '['result']'
 r[util.sysgetmessage.inserts]
 In the text of a message, a place for an insert is an `&` and a digit from `1`
 to `9`: the place `&n` is replaced by the `n`th string after `filename`. A
-place whose string was not given, or is omitted, is replaced by the null
-string, and a string that no place uses is ignored. An insert is put in as it
-is: a `&` in it is not read as a place. Every other character of the text
+place whose string the call does not give, or leaves empty, becomes the null
+string, and a string that no place names has no effect. An insert is put in as
+it is: a `&` in it is not read as a place. Every other character of the text
 stays as it is: a `%` and a letter, an `&` with a `0` after it, an `&` at the
 end, and an `&` that is followed by another `&`. A digit after a place is a
 character of the text, so that `&10` is the first insert and a `0`. The
@@ -168,10 +196,13 @@ say SysGetMessage(1, './c6zqcat.cat', 'A', 'B', 'C', 'D')
 say SysGetMessage(1, './c6zqcat.cat', , 'B')
 say SysGetMessage(1, './c6zqcat.cat', '&2', 'B')
 say SysGetMessage(1, './c6zqcat.cat', '', '')
+say SysGetMessage(1, './c6zqcat.cat', .c6zqs~new, .mutablebuffer~new('M'))
 say SysGetMessage(7, './c6zqcat.cat', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I')
 say SysGetMessage(3, './c6zqcat.cat')
 say SysGetMessage(2, './c6zqcat.cat')
 say SysGetMessage(1, directory() || '/c6zqcat.cat', 'A')
+say SysGetMessage(4294967297, './c6zqcat.cat', 'A')
+say SysGetMessage(4294967296, './c6zqcat.cat', 'A')
 say SysGetMessage(1, 'c6zqcat.cat', 'A')
 saved = value('NLSPATH', directory() || '/%N', 'ENVIRONMENT')
 say SysGetMessage(1, 'c6zqcat.cat', 'A')
@@ -181,6 +212,10 @@ else call value 'NLSPATH', saved, 'ENVIRONMENT'
 say SysGetMessage(1, 'c6zqcat.cat', 'A')
 call SysFileDelete 'c6zqcat.msg'
 call SysFileDelete 'c6zqcat.cat'
+exit
+::class c6zqs
+::method string
+  return '2'
 ```
 
 ```output
@@ -191,10 +226,13 @@ first [A] [B] %s
 first [] [B] %s
 first [&2] [B] %s
 first [] [] %s
+first [2] [M] %s
 seven I A0 &0 &A &
 Error: Message not found
 Error: Message not found
 first [A] [] %s
+first [A] [] %s
+Error: Message not found
 Error: Message catalog not found
 first [A] [] %s
 Error: Message catalog not found

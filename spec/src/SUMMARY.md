@@ -171,6 +171,7 @@
   - [SysGetFileDateTime](rexxutil/sysgetfiledatetime.md)
   - [SysSetFileDateTime](rexxutil/syssetfiledatetime.md)
   - [SysCls](rexxutil/syscls.md)
+  - [SysFormatMessage](rexxutil/sysformatmessage.md)
   - [SysGetErrorText](rexxutil/sysgeterrortext.md)
   - [SysGetKey](rexxutil/sysgetkey.md)
   - [SysGetMessage](rexxutil/sysgetmessage.md)

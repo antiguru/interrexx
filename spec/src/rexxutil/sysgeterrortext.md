@@ -21,10 +21,12 @@ argument omitted, raises `SYNTAX 88.901`, and a second argument raises
 `SYNTAX 88.922`; an omitted place at the end of the call adds nothing to the
 count ([the argument rule](r:util.index.args), and for the order of the checks
 [Deviation 101](r:util.index.deviation.101)). An object other than a string is
-replaced by the string that its `request` with the argument `STRING` answers,
-and then read as a number, so that a mutable buffer that holds `2` is read as
-`2`; an object whose string is not a number raises `SYNTAX 88.907`, `.nil`
-included.
+replaced by the string that its `request` with the argument `STRING` answers.
+When that answer is not a string, the object is replaced by the answer of its
+`STRING` method. The replacement is then read as a number, so a mutable buffer
+that holds `2` is read as `2`. An object whose replacement is not a number
+raises `SYNTAX 88.907`, not the 88.909 of the argument rule. That includes
+`.nil` and an object with neither `MAKESTRING` nor its own `STRING`.
 
 ```rexx
 call try "SysGetErrorText()"
@@ -57,15 +59,26 @@ e: say condition('o')~code
 88.907
 ```
 
+```rexx
+say SysGetErrorText(.c6zqs~new) == SysGetErrorText(2)
+::class c6zqs
+::method string
+  return '2'
+```
+
+```output defect=#230
+1
+```
+
 r[util.sysgeterrortext.number]
 The error number is read as a number in the sense of Rexx: a sign, leading
 zeros, blanks around it, a decimal point and an exponent are allowed, as long
 as its value is a whole number. A string that is not a number, or whose value
 has a fraction, raises `SYNTAX 88.907`, and so does a whole number outside the
-range from -2147483648 to 2147483647. The value is not rounded to the
-`NUMERIC DIGITS` in force: a number with more digits than that is read in
-full, so `2.0001` still has a fraction under `NUMERIC DIGITS 3`, and `1234`
-is the number `1234`.
+range from -2147483648 to 2147483647. The value is not rounded to
+the `NUMERIC DIGITS` in force: a number with more digits than that is read in
+full, so `2.0001` still has a fraction under `NUMERIC DIGITS 3`, and
+`2147483647` is in range.
 
 ```rexx
 ref = SysGetErrorText(2)
@@ -73,7 +86,7 @@ do n over '2','02','+2','2.0','2e0','20E-1',' 2 ','0.2e1','1.5','2.5e0','two','1
   call try n
 end
 numeric digits 3
-call try '1234'
+call try '2147483647'
 call try '2.0001'
 call try '1E3'
 exit
@@ -106,7 +119,7 @@ e: say '['arg(1)']' condition('o')~code
 [2147483648] 88.907
 [-2147483649] 88.907
 [99999999999] 88.907
-[1234] 0 1
+[2147483647] 0 1
 [2.0001] 88.907
 [1E3] 0 1
 ```

@@ -7,8 +7,8 @@ rexxref: "Rexx Utilities (RexxUtil) > SysGetKey"
 
 # SysGetKey
 
-SysGetKey reads one key from the keyboard without waiting for the Enter key,
-and answers it. This page states what the call does when the standard input of
+SysGetKey is meant to read one key from a terminal without waiting for the
+Enter key. This page states what the call does when the standard input of
 the program is not a terminal, which is the case that its examples can run: a
 file, a pipe or the null device. The examples that read from a file or a pipe
 start a second interpreter with `rexx` on a program of their own and give it
@@ -20,7 +20,9 @@ r[util.sysgetkey.args]
 `option` is an optional string. Read in any case, it is `ECHO` or `NOECHO`;
 any other string, the null string and a string with a blank around the word
 included, raises `SYNTAX 40.920`. An omitted `option` is the same as `ECHO`.
-A second argument raises `SYNTAX 88.922` before the option is read; `.nil` and
+A second argument raises `SYNTAX 88.922` before `option` is read at all, so
+before a `.nil` or a wrong option is reported
+([Deviation 101](r:util.index.deviation.101)); `.nil` and
 an object with no string value raise `SYNTAX 88.909`; any other object is
 replaced by its string ([the argument rule](r:util.index.args)). An omitted
 place at the end of the call adds nothing to the count.

@@ -433,8 +433,9 @@ follows: the number of arguments first, so that an argument past the last one
 raises `SYNTAX 88.922` before an omitted or wrong argument is reported
 ([Deviation 101](r:bif.index.call.native.deviation.101)).
 ooRexx reports an omitted argument, an object whose `request` answers no
-string, and a `mode` of SysMkDir that fails any of its checks before the
-count, and the count before a `filler` or an `option` that it does not allow.
+string, an argument that is not a whole number, and a `mode` of SysMkDir that
+fails any of its checks before the count, and the count before a `filler` or
+an `option` that it does not allow.
 
 ```rexx
 signal on syntax name a
@@ -452,10 +453,26 @@ d: say condition('o')~code
 signal on syntax name f
 say SysTempFileName('c1zqidx?', .nil, 'y')
 f: say condition('o')~code
+signal on syntax name g
+say SysGetErrorText('abc', 3)
+g: say condition('o')~code
+signal on syntax name h
+say SysGetKey(.nil, 'x')
+h: say condition('o')~code
+signal on syntax name i
+say SysGetErrorText('99999999999', 3)
+i: say condition('o')~code
+signal on syntax name j
+say SysFormatMessage(.nil, 'x', 'y')
+j: say condition('o')~code
 say SysIsFileDirectory('c1zqidxdm')
 ```
 
 ```output
+88.922
+88.922
+88.922
+88.922
 88.922
 88.922
 88.922

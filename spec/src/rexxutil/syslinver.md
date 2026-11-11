@@ -2,7 +2,7 @@
 element: "SysLinVer"
 kind: function
 syntax: "SysLinVer()"
-rexxref: "Rexx Utilities (RexxUtil) > SysLinVer"
+rexxref: "Rexx Utilities (RexxUtil) > SysLinVer (Linux Only)"
 ---
 
 # SysLinVer
