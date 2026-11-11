@@ -1370,6 +1370,12 @@ ordx
 rc> 0
 out> ordx rex in the current directory
 
+run
+ordn
+----
+rc> 0
+out> ordn rex
+
 # the places: the current directory, REXX_PATH, then PATH, and an ending in
 # every place before the next ending (env.search.program, env.search.places)
 run rexx_path=rp path=pp
@@ -1383,12 +1389,6 @@ ordy
 ----
 rc> 0
 out> ordy in PATH
-
-run
-ordn
-----
-rc> 0
-out> ordn rex
 
 run rexx_path=sub
 t

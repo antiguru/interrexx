@@ -383,13 +383,17 @@ e: say arg(1) '=>' condition('o')~code
 ::frob => 99.916
 ```
 
+## Deviations
+
 r[dir.routine.deviation.143]
 A REGISTERED declaration whose library loads, and whose entry is not a
 function that the library registers through the classic interface, raises
 `SYNTAX 90.999` when the section of the directive ends, as every REGISTERED
 declaration that finds no routine does. The entry `RxCalcTan` of the library
-`rxmath` is such an entry. ooRexx accepts the directive and raises nothing
-when the package is loaded; the process ends when the routine is called.
+`rxmath` is such an entry. ooRexx accepts the directive for that entry and
+raises nothing when the package is loaded; the process ends when the routine
+is called. For other such entries, `SysSleep` of `rexxutil` among them,
+ooRexx raises the same error.
 interrexx raises the error where the directive is, so a package with the
 declaration never loads. The example is not run against ooRexx, whose process
 would end.

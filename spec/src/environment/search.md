@@ -381,10 +381,11 @@ joined to the directory of the file that makes the call. In the example, the
 file `a3zqcdm.rex` stands in a directory that is not the current directory,
 and finds a file beside itself that the current directory lacks. A file
 `a3zqtwo.rex` stands both beside it and in the current directory, and it finds
-the one beside it, while the program of the example finds the other. It calls
-a file in a directory below its own, and that file finds the files of its own
-directory and not the files beside its caller. The program of the example,
-which stands in the current directory, does not find the file of `a3zqsib`.
+the one beside it, while the program of the example finds the other. The file
+`a3zqcdm.rex` calls a file in a directory below its own, and that file finds
+the files of its own directory and not the files beside its caller. The
+program of the example, which stands in the current directory, does not find
+the file of `a3zqsib`.
 
 ```rexx
 call sysmkdir 'a3zqcd'
@@ -514,10 +515,11 @@ next ending is tried, so that `name.REX` of `REXX_PATH` is run before
 when no file with an ending is found. A name that finds a directory only, or
 nothing, is [the not-found error](r:env.invocation.notfound). The program is
 named as [the program rule](r:env.invocation.program) says. The cases in the
-test of the command show each of these with a file of the kind in each place;
-the string of `rexx -e` has no file and so no directory of a caller, and a
-program that the command runs searches the directory of its own file first for
-the routines that it calls.
+test of the command show the order of the places and of the endings, the
+missing `.cls` and the not-found error, each with a file of one name in two
+places or with two endings; the string of `rexx -e` has no file and so no
+directory of a caller, and a program that the command runs searches the
+directory of its own file first for the routines that it calls.
 
 ## A file that is taken as it is
 
@@ -773,12 +775,11 @@ name is the entry when the descriptor has none. A library that cannot be
 loaded is the fault of [the directive](r:dir.requires.library) or the answer
 of the method that loads it. The first example shows the names that the host
 has and those that it has not. In the second, a file of the library of the
-host is copied into the current directory under four names, in which the name
-goes between `lib` and `.so` unchanged: a name with a `lib` prefix, one with
-the ending `.so`, one with a period, and one in upper case. Each of those
-names finds its copy, and the lower-case form of the last one does not.
-interrexx does not yet look in the current directory (defect #214), so the
-second example is marked with that defect.
+host is copied under four names into a directory that the example then makes
+the current directory, in which the name goes between `lib` and `.so`
+unchanged: a name with a `lib` prefix, one with the ending `.so`, one with a
+period, and one in upper case. Each of those names finds its copy, and the
+lower-case form of the last one does not.
 
 ```rexx
 p = .package~new('a3zqlib', 'return 1')
@@ -825,22 +826,30 @@ do d over path~changeStr(':', ' ')~makeArray(' ')
   if stream(d'/librxmath.so', 'c', 'query exists') <> '' then
     src = d'/librxmath.so'
 end
-if src = '' then exit
+if src = '' then do
+  say 'librxmath.so is not on the loader path'
+  exit
+end
 data = charin(src, 1, chars(src))
 call stream src, 'c', 'close'
+call sysmkdir 'a3zqlcd'
 files = .array~of('liblibzq1.so', 'libzq2.so.so', 'libzq.c3.so', 'libZQ4.so')
 do f over files
-  call sysfiledelete f
-  call charout f, data
-  call stream f, 'c', 'close'
+  call sysfiledelete 'a3zqlcd/'f
+  call charout 'a3zqlcd/'f, data
+  call stream 'a3zqlcd/'f, 'c', 'close'
 end
+home = directory()
+call directory 'a3zqlcd'
 p = .package~new('a3zqlcwd', 'return 1')
 do n over .array~of('libzq1', 'zq2.so', 'zq.c3', 'ZQ4', 'zq4')
   say n p~loadLibrary(n)
 end
+call directory home
 do f over files
-  call sysfiledelete f
+  call sysfiledelete 'a3zqlcd/'f
 end
+call sysrmdir 'a3zqlcd'
 ```
 
 ```output defect=#214

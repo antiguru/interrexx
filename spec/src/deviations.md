@@ -1064,5 +1064,7 @@ argument.
 A `::ROUTINE` directive with `EXTERNAL "REGISTERED library entry"`, whose
 library loads and whose entry is not a function that the library registers
 through the classic interface, is refused with `SYNTAX 90.999` when the
-directive ends. ooRexx accepts the directive, and the process ends when the
-routine is called.
+directive ends. ooRexx accepts the directive for some such entries,
+`RxCalcTan` of `rxmath` among them, and the process ends when the routine is
+called; for others, `SysSleep` of `rexxutil` among them, it raises the same
+error.
