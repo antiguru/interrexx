@@ -215,7 +215,7 @@ bad: say arg(1) '=>' condition('o')~code
 ::requires "rxregexp.cls"
 ```
 
-```output defect=#202
+```output
 .RegularExpression~new(.nil, , 3) => 88.909
 re~parse(.nil, , 1) => 88.909
 re~match(.nil, 1) => 88.909

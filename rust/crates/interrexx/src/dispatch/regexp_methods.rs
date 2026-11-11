@@ -111,6 +111,29 @@ fn check_arity(args: &[Option<ObjRef>], arity: usize) -> Result<(), Failure> {
     Ok(())
 }
 
+/// The arguments a method takes, read from the left as the native boundary
+/// reads them: a required one that is missing is 88.901 and one with no
+/// string value 88.909, and only then are too many arguments 88.922, so an
+/// argument beyond the last the method takes is not read. `required` leading
+/// arguments must be present.
+fn read_arguments(
+    interp: &mut Interp,
+    args: &[Option<ObjRef>],
+    arity: usize,
+    required: usize,
+) -> Result<Vec<Option<Vec<u8>>>, Failure> {
+    let mut texts = Vec::with_capacity(arity);
+    for at in 0..arity {
+        match args.get(at).copied().flatten() {
+            Some(value) => texts.push(Some(text_argument(interp, value, at + 1)?)),
+            None if at < required => return Err(Raised::missing_native_argument(at + 1).into()),
+            None => texts.push(None),
+        }
+    }
+    check_arity(args, arity)?;
+    Ok(texts)
+}
+
 /// A match type: `Some(minimal)` for `MINIMAL` or `MAXIMAL`, `Some(None)`
 /// for `CURRENT` where `current` allows it, `None` for anything else.
 fn match_type(text: &[u8], current: bool) -> Option<Option<bool>> {
@@ -136,16 +159,14 @@ pub(crate) fn init(
     _scope: ObjRef,
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
-    check_arity(args, 2)?;
+    let texts = read_arguments(interp, args, 2, 0)?;
     let mut minimal = Some(false);
-    if let Some(value) = args.get(1).copied().flatten() {
-        let text = text_argument(interp, value, 2)?;
-        minimal = match_type(&text, false).map(|kind| kind.unwrap_or(false));
+    if let Some(text) = &texts[1] {
+        minimal = match_type(text, false).map(|kind| kind.unwrap_or(false));
     }
     let mut compiled = Compiled::Absent;
-    if let Some(value) = args.first().copied().flatten() {
-        let pattern = text_argument(interp, value, 1)?;
-        match regexp::compile(&pattern) {
+    if let Some(pattern) = &texts[0] {
+        match regexp::compile(pattern) {
             Ok((regex, _)) => compiled = Compiled::Pattern(Rc::new(regex)),
             Err(_) => return Err(Raised::syntax(38, 0, Vec::new()).into()),
         }
@@ -194,10 +215,7 @@ pub(crate) fn parse(
     scope: ObjRef,
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
-    check_arity(args, 2)?;
-    let Some(pattern) = args.first().copied().flatten() else {
-        return Err(Raised::missing_native_argument(1).into());
-    };
+    let texts = read_arguments(interp, args, 2, 1)?;
     let held = state(interp, receiver).cloned();
     if matches!(
         held.as_ref().map(|held| &held.compiled),
@@ -206,16 +224,17 @@ pub(crate) fn parse(
         return Err(Raised::method_user_defined(UNINITIALIZED).into());
     }
     let mut minimal = held.as_ref().is_some_and(|held| held.minimal);
-    if let Some(value) = args.get(1).copied().flatten() {
-        let text = text_argument(interp, value, 2)?;
-        match match_type(&text, true) {
+    if let Some(text) = &texts[1] {
+        match match_type(text, true) {
             Some(Some(kind)) => minimal = kind,
             Some(None) => {}
             None => return Err(incorrect_call()),
         }
     }
-    let pattern = text_argument(interp, pattern, 1)?;
-    let (compiled, code, position) = match regexp::compile(&pattern) {
+    let Some(pattern) = &texts[0] else {
+        unreachable!("the pattern is required")
+    };
+    let (compiled, code, position) = match regexp::compile(pattern) {
         Ok((regex, consumed)) => (Compiled::Pattern(Rc::new(regex)), 0, consumed),
         Err(error) => (Compiled::Failed, usize::from(error.code), error.position),
     };
@@ -239,11 +258,8 @@ fn pattern_of(interp: &Interp, receiver: ObjRef) -> Result<(Option<Rc<Regex>>, b
 
 /// The subject argument of `match` and `pos`, 88.901 where it is omitted.
 fn subject(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<Vec<u8>, Failure> {
-    check_arity(args, 1)?;
-    let Some(value) = args.first().copied().flatten() else {
-        return Err(Raised::missing_native_argument(1).into());
-    };
-    text_argument(interp, value, 1)
+    let mut texts = read_arguments(interp, args, 1, 1)?;
+    Ok(texts.swap_remove(0).expect("the subject is required"))
 }
 
 /// `RegExp_Match(string)`: 1 or 0, with `!POS` set.
