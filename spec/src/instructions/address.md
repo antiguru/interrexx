@@ -18,7 +18,8 @@ current and the previous environment and the scope of both across calls are
 specified with that function, and the page links them. What a command is, how
 it is evaluated and sent and what its return code is belong to [the commands
 page](r:instr.command.send). The environments that exist, other than the one
-that runs commands in the host's shell, belong to the environment chapter.
+that runs commands in the host's shell, belong to [the names
+rule](r:env.commands.names).
 
 The examples use the name `system` for that shell and, in a few, names of
 environments that do not exist, because the result of the instruction shows in

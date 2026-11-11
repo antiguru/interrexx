@@ -19,9 +19,9 @@ override them. The rules of the functions are linked, never repeated. A name
 that is one of the standard names denotes that standard stream, [as for the
 functions](r:bif.index.stream.std); what the standard streams of a program are
 bound to when it starts, and the objects `.input`, `.output` and `.error`, are
-specified in the environment chapter. The examples create the files they use
-under names of their own, close every stream they open, and remove the files
-at the end.
+specified in [the bindings rule](r:env.objects.bindings). The examples create
+the files they use under names of their own, close every stream they open, and
+remove the files at the end.
 
 ## The class
 

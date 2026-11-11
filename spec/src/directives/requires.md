@@ -13,9 +13,10 @@ and whose prolog it runs before the requiring package goes on, or a native
 library that it loads. A NAMESPACE option gives the required package a name
 that can qualify the classes and routines it supplies. This page specifies the
 directive, what a required package makes visible, the faults that requiring
-can raise and the two options. How a name is searched for as a file or as a
-library is the subject of the environment chapter, and the examples here name
-files that the program writes into the current directory.
+can raise and the two options. How a name is searched for as a
+[file](r:env.search.required) or as a [library](r:env.search.library) is the
+subject of the environment chapter, and the examples here name files that the
+program writes into the current directory.
 
 ## Requiring a package
 

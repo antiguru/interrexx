@@ -9,17 +9,18 @@ rexxref: "Builtin Classes > Utility Classes > CommandContext Class; Builtin Clas
 
 When a command reaches a handler written in Rexx, the interpreter makes a
 `CommandContext` for that one command and passes it to the method `command` of
-the [`CommandHandler`](commandhandler.md) as the second argument. The context is
-the handler's view of the command's surroundings: the variables of the code that
-sent the command, the `ADDRESS ... WITH` redirections of its input, output and
-error, and the one condition that the command may raise when the handler is
-done. The streams that a context hands out are [`CommandInput`](commandinput.md)
-and [`CommandOutput`](commandoutput.md) objects. The redirections themselves,
-`ADDRESS ... WITH`, are specified with [the ADDRESS
-instruction](../instructions/address.md). Which activity runs the handler, and
-how commands to the environments of a host work, is specified in the environment
-chapter; the examples here register environments of their own under names that
-no host has, so that nothing depends on the host.
+the [`CommandHandler`](commandhandler.md) as the second argument. The context
+is the handler's view of the command's surroundings: the variables of the code
+that sent the command, the `ADDRESS ... WITH` redirections of its input,
+output and error, and the one condition that the command may raise when the
+handler is done. The streams that a context hands out are
+[`CommandInput`](commandinput.md) and [`CommandOutput`](commandoutput.md)
+objects. The redirections themselves, `ADDRESS ... WITH`, are specified with
+[the ADDRESS instruction](../instructions/address.md). Which activity runs the
+handler, and how commands to the environments of a host work, is specified in
+the environment chapter ([how a native environment runs a
+command](r:env.commands.shell)); the examples here register environments of
+their own under names that no host has, so that nothing depends on the host.
 
 ## The class
 

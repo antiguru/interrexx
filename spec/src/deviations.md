@@ -1150,6 +1150,15 @@ An empty line that follows a line that failed as it was read, such as
 parsed, goes on to the next stop. ooRexx ends interactive tracing at that empty
 line.
 
+## 153. A damaged compiled image is refused
+
+An image that ends too early, one that has bytes after its end, and one that
+has any changed byte are refused with `3.903`, rc 253 (the image carries a
+SHA-256 digest of itself; interrexx issue #235), and an encoded
+image whose base64 text does not decode whole is refused with `3.905`, rc 253.
+ooRexx runs an image with bytes after its end and ignores some changed header
+bytes; it crashes on a truncated image and on other changed header bytes.
+
 ## 154. An entry that SysFileTree cannot examine
 
 An entry of a directory that the program may read but not search is left out

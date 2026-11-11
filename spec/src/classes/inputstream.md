@@ -15,8 +15,8 @@ method that does nothing for `open` and `close`, and `arrayIn`, which reads
 with the `lineIn` of the class. The classes of the library that inherit it are
 [`CommandInput`](commandinput.md), [`InputOutputStream`](inputoutputstream.md)
 and, through that, [`Stream`](stream.md). What the standard input is, and what
-the `.input` of a program is bound to, is specified in the environment
-chapter. The examples define their own classes.
+the `.input` of a program is bound to, is specified in [the bindings
+rule](r:env.objects.bindings). The examples define their own classes.
 
 ## The class
 
