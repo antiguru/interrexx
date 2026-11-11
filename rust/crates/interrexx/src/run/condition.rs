@@ -901,7 +901,8 @@ impl Interp {
             // silently running a `SIGNAL` handler as a call.
             return Ok((None, Vec::new()));
         }
-        self.set_sigl(self.activity.clause_state.line());
+        // No `SIGL` here: a handler that is a label sets it when the call
+        // enters it, and one that is a `::ROUTINE` or a builtin leaves it.
         if let Some(rc) = &pending.rc {
             let value = self.text(rc);
             self.assign_by_name(b"RC", value);
