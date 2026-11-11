@@ -366,8 +366,8 @@ the stem. An `end` of `999999999999999999`, the largest that is allowed, is
 taken as an `end` that is left out, the count of the stem. A stem with the
 count `0` has no item, and then no range is checked: the call answers `0` and
 does nothing, for every `start` and `end` that are allowed. The tail `0` is
-never changed, and the tails above the count are not touched. A count below `0` raises
-`SYNTAX 40.922`.
+never changed, and the tails above the count are not touched. A count below
+`0` raises `SYNTAX 40.922`.
 
 ```rexx
 call fill 'f', 'e', 'd', 'c', 'b', 'a'

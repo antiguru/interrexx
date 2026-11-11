@@ -282,15 +282,15 @@ tails, whether in a clause or through a function such as VALUE, VAR or one of
 the stem functions; naming one of its tails in a `SYMBOL` call; or calling a
 procedure that exposes the stem or one of its tails. Naming the stem itself in
 a `SYMBOL` call, as `symbol('u.')` does, is not a use. The line is written
-whether or not the stem has a value of its own or any tail now. Its name is the name of the stem
-with its period, and its value is the default value of the stem, or the name
-of the stem when no default was assigned. A variable with a tail is written
-with the name of the stem in upper case, a period and the tail as it is after
-its symbols were replaced by their values, so that a tail that was written
-with a variable that holds `key` is written as `key`, and a tail that was
-written as a symbol is in upper case. A line of such a variable, with a tail,
-ends with a carriage return before its line end, which the line of any other
-variable does not have.
+whether or not the stem has a value of its own or any tail now. Its name is
+the name of the stem with its period, and its value is the default value of
+the stem, or the name of the stem when no default was assigned. A variable
+with a tail is written with the name of the stem in upper case, a period and
+the tail as it is after its symbols were replaced by their values, so that a
+tail that was written with a variable that holds `key` is written as `key`,
+and a tail that was written as a symbol is in upper case. A line of such a
+variable, with a tail, ends with a carriage return before its line end, which
+the line of any other variable does not have.
 
 ```rexx
 call p
