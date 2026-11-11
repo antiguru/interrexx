@@ -2953,10 +2953,7 @@ impl Interp {
         // one, which has nothing to announce, prints the debug banner
         // instead.
         if external_trace {
-            self.set_trace_mode(crate::trace::TraceMode {
-                debug: true,
-                ..crate::trace::TraceMode::RESULTS
-            });
+            self.begin_external_trace();
             self.trace_invocation_entry();
         }
 
@@ -3165,6 +3162,24 @@ impl Interp {
     /// leaves tracing alone.
     fn external_trace_enabled(&self) -> bool {
         self.external_trace
+    }
+
+    /// Puts the running activation under `TRACE ?R`, which is what `RXTRACE=ON` starts a
+    /// program and each called routine with.
+    fn begin_external_trace(&mut self) {
+        self.set_trace_mode(crate::trace::TraceMode {
+            debug: true,
+            ..crate::trace::TraceMode::RESULTS
+        });
+    }
+
+    /// `RXTRACE=ON` starts the `::ROUTINE` just entered under `TRACE ?R` and announces it
+    /// with `>I>` as a `TRACE` setting of its package would. Not the library bootstrap's.
+    pub(crate) fn start_external_trace(&mut self) {
+        if !self.library_bootstrap && self.external_trace_enabled() {
+            self.begin_external_trace();
+            self.trace_package_invocation_entry();
+        }
     }
 
     // `plan_for` and `activation`/`activation_mut` live in `plan.rs`/
