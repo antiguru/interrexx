@@ -3843,6 +3843,10 @@ fn is_symbol_byte(b: u8) -> bool {
     matches!(b, b'!' | b'.' | b'?' | b'_' | b'0'..=b'9' | b'A'..=b'Z' | b'a'..=b'z')
 }
 
+/// The longest name a subsidiary-list word may have, counted over the whole
+/// compound symbol with its periods.
+const MAX_SYMBOL_LENGTH: usize = 250;
+
 /// Validates one word of an indirect subsidiary list and answers its upcased
 /// name, or the condition the oracle raises for it.
 fn validate_indirect_word(word: &[u8]) -> Result<Vec<u8>, Failure> {
@@ -3853,6 +3857,9 @@ fn validate_indirect_word(word: &[u8]) -> Result<Vec<u8>, Failure> {
         b'0'..=b'9' => return Err(raised_digit_led(word).into()),
         b'.' => return Err(raised_dot_led(word).into()),
         _ => {}
+    }
+    if word.len() > MAX_SYMBOL_LENGTH {
+        return Err(raised_symbol_expected(word).into());
     }
     Ok(word.to_ascii_uppercase())
 }
