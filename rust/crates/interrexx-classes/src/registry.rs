@@ -153,6 +153,11 @@ impl ClassRegistry {
         self.graph.reparent(id, superclass, kind, metaclass);
     }
 
+    /// See [`ClassGraph::unlist_subclass`].
+    pub fn unlist_subclass(&mut self, id: ObjRef) {
+        self.graph.unlist_subclass(id);
+    }
+
     /// See [`ClassGraph::enhance_instance_methods`].
     pub fn enhance_instance_methods(
         &mut self,

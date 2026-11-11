@@ -1662,8 +1662,26 @@ d: say condition('o')~code .k~subclasses~items
 ::class k
 ```
 
-```output defect=#134
+```output
 93.974 0
+```
+
+r[class.class.subclass.failed.supplier]
+A `subclass` whose third argument's `supplier` raises leaves the receiver with
+no new subclass either.
+
+```rexx
+signal on syntax name d
+x = .k~subclass('X', , .sp~new)
+d: say condition('o')~code .k~subclasses~items
+::class k
+::class sp
+::method supplier
+  raise syntax 93.900 array('boom')
+```
+
+```output
+93.900 0
 ```
 
 r[class.class.subclass.sends]

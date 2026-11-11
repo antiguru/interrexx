@@ -737,7 +737,11 @@ fn class_factory(
     charge_class(interp, id);
     interp.record_packageless_class(id);
     if let Some(enhancing) = args.get(2).copied().flatten() {
-        enhance_class_methods(interp, id, enhancing)?;
+        // The receiver lists the class only once its class methods are in.
+        if let Err(failure) = enhance_class_methods(interp, id, enhancing) {
+            interp.classes().unlist_subclass(id);
+            return Err(failure);
+        }
     }
     finish_subclass(interp, id)?;
     Ok(Some(id))
