@@ -5390,7 +5390,7 @@ m.0 = 1.0
 address system 'echo z' with output append stem m.
 say m.0 m.2
 </code></pre>
-<pre><code class="language-output defect=#104">a
+<pre><code class="language-output">a
 2 z
 </code></pre>
 <div class="rule" id="r-instr.address.with.stream"><a href="instructions/address.html#r-instr.address.with.stream">[instr.address.with.stream]</a></div>
@@ -5512,7 +5512,7 @@ e: say arg(1) condition('o')~code
 ::method lineout
   return 0
 </code></pre>
-<pre><code class="language-output defect=#106">.insub~new 98.996
+<pre><code class="language-output">.insub~new 98.996
 .outsub~new ok
 .iosub~new ok
 </code></pre>
@@ -5596,7 +5596,7 @@ say o.0 o.1
 ::method makearray
   return .array~of('oa')
 </code></pre>
-<pre><code class="language-output defect=#106">1 oa
+<pre><code class="language-output">1 oa
 </code></pre>
 <pre><code class="language-rexx">a = .array~of(.array~of('q', 'r'), 5, .mk~new)
 address system 'cat' with input using (a) output stem o.
@@ -89094,7 +89094,7 @@ exit
 ::method command
   return 1
 </code></pre>
-<pre><code class="language-output defect=#226">not read
+<pre><code class="language-output">not read
 </code></pre>
 <div class="rule" id="r-env.security.names"><a href="environment/security.html#r-env.security.names">[env.security.names]</a></div>
 <p>The checkpoints <code>LOCAL</code> and <code>ENVIRONMENT</code> are sent as <a href="environment/../classes/routine.html#r-class.routine.setsecuritymanager.local">the class
