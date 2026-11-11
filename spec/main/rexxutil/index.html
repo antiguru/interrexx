@@ -1,0 +1,923 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>RexxUtil - The interrexx Language Specification</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../conventions.html"><strong aria-hidden="true">2.</strong> Conventions</a></li><li class="chapter-item expanded "><a href="../lexical/index.html"><strong aria-hidden="true">3.</strong> Lexical structure</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../lexical/characters.html"><strong aria-hidden="true">3.1.</strong> Characters</a></li><li class="chapter-item expanded "><a href="../lexical/comments.html"><strong aria-hidden="true">3.2.</strong> Comments</a></li><li class="chapter-item expanded "><a href="../lexical/literals.html"><strong aria-hidden="true">3.3.</strong> Literals</a></li><li class="chapter-item expanded "><a href="../lexical/symbols.html"><strong aria-hidden="true">3.4.</strong> Symbols</a></li><li class="chapter-item expanded "><a href="../lexical/operators.html"><strong aria-hidden="true">3.5.</strong> Operators and special characters</a></li><li class="chapter-item expanded "><a href="../lexical/clauses.html"><strong aria-hidden="true">3.6.</strong> Clauses</a></li></ol></li><li class="chapter-item expanded "><a href="../numbers/index.html"><strong aria-hidden="true">4.</strong> Numbers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../numbers/formats.html"><strong aria-hidden="true">4.1.</strong> Formats</a></li><li class="chapter-item expanded "><a href="../numbers/limits.html"><strong aria-hidden="true">4.2.</strong> Limits</a></li><li class="chapter-item expanded "><a href="../numbers/arithmetic.html"><strong aria-hidden="true">4.3.</strong> Arithmetic</a></li><li class="chapter-item expanded "><a href="../numbers/settings.html"><strong aria-hidden="true">4.4.</strong> Settings</a></li><li class="chapter-item expanded "><a href="../numbers/comparison.html"><strong aria-hidden="true">4.5.</strong> Comparison</a></li></ol></li><li class="chapter-item expanded "><a href="../expressions/index.html"><strong aria-hidden="true">5.</strong> Expressions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../expressions/terms.html"><strong aria-hidden="true">5.1.</strong> Terms</a></li><li class="chapter-item expanded "><a href="../expressions/variables.html"><strong aria-hidden="true">5.2.</strong> Variables</a></li><li class="chapter-item expanded "><a href="../expressions/concatenation.html"><strong aria-hidden="true">5.3.</strong> Concatenation</a></li><li class="chapter-item expanded "><a href="../expressions/arithmetic.html"><strong aria-hidden="true">5.4.</strong> Arithmetic operators</a></li><li class="chapter-item expanded "><a href="../expressions/comparison.html"><strong aria-hidden="true">5.5.</strong> Comparison operators</a></li><li class="chapter-item expanded "><a href="../expressions/logical.html"><strong aria-hidden="true">5.6.</strong> Logical operators</a></li><li class="chapter-item expanded "><a href="../expressions/messages.html"><strong aria-hidden="true">5.7.</strong> Message operators</a></li></ol></li><li class="chapter-item expanded "><a href="../instructions/index.html"><strong aria-hidden="true">6.</strong> Instructions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../instructions/address.html"><strong aria-hidden="true">6.1.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../instructions/arg.html"><strong aria-hidden="true">6.2.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../instructions/assignment.html"><strong aria-hidden="true">6.3.</strong> Assignments</a></li><li class="chapter-item expanded "><a href="../instructions/call.html"><strong aria-hidden="true">6.4.</strong> CALL</a></li><li class="chapter-item expanded "><a href="../instructions/command.html"><strong aria-hidden="true">6.5.</strong> Commands</a></li><li class="chapter-item expanded "><a href="../instructions/do.html"><strong aria-hidden="true">6.6.</strong> DO</a></li><li class="chapter-item expanded "><a href="../instructions/drop.html"><strong aria-hidden="true">6.7.</strong> DROP</a></li><li class="chapter-item expanded "><a href="../instructions/exit.html"><strong aria-hidden="true">6.8.</strong> EXIT</a></li><li class="chapter-item expanded "><a href="../instructions/expose.html"><strong aria-hidden="true">6.9.</strong> EXPOSE</a></li><li class="chapter-item expanded "><a href="../instructions/forward.html"><strong aria-hidden="true">6.10.</strong> FORWARD</a></li><li class="chapter-item expanded "><a href="../instructions/guard.html"><strong aria-hidden="true">6.11.</strong> GUARD</a></li><li class="chapter-item expanded "><a href="../instructions/if.html"><strong aria-hidden="true">6.12.</strong> IF</a></li><li class="chapter-item expanded "><a href="../instructions/interpret.html"><strong aria-hidden="true">6.13.</strong> INTERPRET</a></li><li class="chapter-item expanded "><a href="../instructions/iterate.html"><strong aria-hidden="true">6.14.</strong> ITERATE</a></li><li class="chapter-item expanded "><a href="../instructions/leave.html"><strong aria-hidden="true">6.15.</strong> LEAVE</a></li><li class="chapter-item expanded "><a href="../instructions/loop.html"><strong aria-hidden="true">6.16.</strong> LOOP</a></li><li class="chapter-item expanded "><a href="../instructions/message.html"><strong aria-hidden="true">6.17.</strong> Message instructions</a></li><li class="chapter-item expanded "><a href="../instructions/nop.html"><strong aria-hidden="true">6.18.</strong> NOP</a></li><li class="chapter-item expanded "><a href="../instructions/numeric.html"><strong aria-hidden="true">6.19.</strong> NUMERIC</a></li><li class="chapter-item expanded "><a href="../instructions/options.html"><strong aria-hidden="true">6.20.</strong> OPTIONS</a></li><li class="chapter-item expanded "><a href="../instructions/parse.html"><strong aria-hidden="true">6.21.</strong> PARSE</a></li><li class="chapter-item expanded "><a href="../instructions/procedure.html"><strong aria-hidden="true">6.22.</strong> PROCEDURE</a></li><li class="chapter-item expanded "><a href="../instructions/pull.html"><strong aria-hidden="true">6.23.</strong> PULL</a></li><li class="chapter-item expanded "><a href="../instructions/push.html"><strong aria-hidden="true">6.24.</strong> PUSH</a></li><li class="chapter-item expanded "><a href="../instructions/queue.html"><strong aria-hidden="true">6.25.</strong> QUEUE</a></li><li class="chapter-item expanded "><a href="../instructions/raise.html"><strong aria-hidden="true">6.26.</strong> RAISE</a></li><li class="chapter-item expanded "><a href="../instructions/reply.html"><strong aria-hidden="true">6.27.</strong> REPLY</a></li><li class="chapter-item expanded "><a href="../instructions/return.html"><strong aria-hidden="true">6.28.</strong> RETURN</a></li><li class="chapter-item expanded "><a href="../instructions/say.html"><strong aria-hidden="true">6.29.</strong> SAY</a></li><li class="chapter-item expanded "><a href="../instructions/select.html"><strong aria-hidden="true">6.30.</strong> SELECT</a></li><li class="chapter-item expanded "><a href="../instructions/signal.html"><strong aria-hidden="true">6.31.</strong> SIGNAL</a></li><li class="chapter-item expanded "><a href="../instructions/trace.html"><strong aria-hidden="true">6.32.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../instructions/use.html"><strong aria-hidden="true">6.33.</strong> USE</a></li></ol></li><li class="chapter-item expanded "><a href="../parsing/index.html"><strong aria-hidden="true">7.</strong> Parsing</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../parsing/templates.html"><strong aria-hidden="true">7.1.</strong> Templates</a></li><li class="chapter-item expanded "><a href="../parsing/patterns.html"><strong aria-hidden="true">7.2.</strong> Patterns</a></li><li class="chapter-item expanded "><a href="../parsing/multiple.html"><strong aria-hidden="true">7.3.</strong> Several strings and case</a></li></ol></li><li class="chapter-item expanded "><a href="../directives/index.html"><strong aria-hidden="true">8.</strong> Directives</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../directives/class.html"><strong aria-hidden="true">8.1.</strong> ::CLASS</a></li><li class="chapter-item expanded "><a href="../directives/method.html"><strong aria-hidden="true">8.2.</strong> ::METHOD</a></li><li class="chapter-item expanded "><a href="../directives/attribute.html"><strong aria-hidden="true">8.3.</strong> ::ATTRIBUTE</a></li><li class="chapter-item expanded "><a href="../directives/constant.html"><strong aria-hidden="true">8.4.</strong> ::CONSTANT</a></li><li class="chapter-item expanded "><a href="../directives/routine.html"><strong aria-hidden="true">8.5.</strong> ::ROUTINE</a></li><li class="chapter-item expanded "><a href="../directives/requires.html"><strong aria-hidden="true">8.6.</strong> ::REQUIRES</a></li><li class="chapter-item expanded "><a href="../directives/options.html"><strong aria-hidden="true">8.7.</strong> ::OPTIONS</a></li><li class="chapter-item expanded "><a href="../directives/resource.html"><strong aria-hidden="true">8.8.</strong> ::RESOURCE</a></li><li class="chapter-item expanded "><a href="../directives/annotate.html"><strong aria-hidden="true">8.9.</strong> ::ANNOTATE</a></li></ol></li><li class="chapter-item expanded "><a href="../conditions/index.html"><strong aria-hidden="true">9.</strong> Conditions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../conditions/traps.html"><strong aria-hidden="true">9.1.</strong> Condition traps</a></li><li class="chapter-item expanded "><a href="../conditions/information.html"><strong aria-hidden="true">9.2.</strong> Condition information</a></li><li class="chapter-item expanded "><a href="../conditions/syntax.html"><strong aria-hidden="true">9.3.</strong> SYNTAX</a></li><li class="chapter-item expanded "><a href="../conditions/error.html"><strong aria-hidden="true">9.4.</strong> ERROR and FAILURE</a></li><li class="chapter-item expanded "><a href="../conditions/halt.html"><strong aria-hidden="true">9.5.</strong> HALT</a></li><li class="chapter-item expanded "><a href="../conditions/novalue.html"><strong aria-hidden="true">9.6.</strong> NOVALUE</a></li><li class="chapter-item expanded "><a href="../conditions/nostring.html"><strong aria-hidden="true">9.7.</strong> NOSTRING</a></li><li class="chapter-item expanded "><a href="../conditions/nomethod.html"><strong aria-hidden="true">9.8.</strong> NOMETHOD</a></li><li class="chapter-item expanded "><a href="../conditions/notready.html"><strong aria-hidden="true">9.9.</strong> NOTREADY</a></li><li class="chapter-item expanded "><a href="../conditions/lostdigits.html"><strong aria-hidden="true">9.10.</strong> LOSTDIGITS</a></li><li class="chapter-item expanded "><a href="../conditions/user.html"><strong aria-hidden="true">9.11.</strong> USER conditions</a></li><li class="chapter-item expanded "><a href="../conditions/errors.html"><strong aria-hidden="true">9.12.</strong> Error numbers</a></li></ol></li><li class="chapter-item expanded "><a href="../classes/index.html"><strong aria-hidden="true">10.</strong> Classes</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../classes/methods.html"><strong aria-hidden="true">10.1.</strong> Method search</a></li><li class="chapter-item expanded "><a href="../classes/object.html"><strong aria-hidden="true">10.2.</strong> Object</a></li><li class="chapter-item expanded "><a href="../classes/class.html"><strong aria-hidden="true">10.3.</strong> Class</a></li><li class="chapter-item expanded "><a href="../classes/string.html"><strong aria-hidden="true">10.4.</strong> String</a></li><li class="chapter-item expanded "><a href="../classes/method.html"><strong aria-hidden="true">10.5.</strong> Method</a></li><li class="chapter-item expanded "><a href="../classes/routine.html"><strong aria-hidden="true">10.6.</strong> Routine</a></li><li class="chapter-item expanded "><a href="../classes/package.html"><strong aria-hidden="true">10.7.</strong> Package</a></li><li class="chapter-item expanded "><a href="../classes/message.html"><strong aria-hidden="true">10.8.</strong> Message</a></li><li class="chapter-item expanded "><a href="../classes/messagenotification.html"><strong aria-hidden="true">10.9.</strong> MessageNotification</a></li><li class="chapter-item expanded "><a href="../classes/alarmnotification.html"><strong aria-hidden="true">10.10.</strong> AlarmNotification</a></li><li class="chapter-item expanded "><a href="../classes/collection.html"><strong aria-hidden="true">10.11.</strong> Collection</a></li><li class="chapter-item expanded "><a href="../classes/mapcollection.html"><strong aria-hidden="true">10.12.</strong> MapCollection</a></li><li class="chapter-item expanded "><a href="../classes/orderedcollection.html"><strong aria-hidden="true">10.13.</strong> OrderedCollection</a></li><li class="chapter-item expanded "><a href="../classes/setcollection.html"><strong aria-hidden="true">10.14.</strong> SetCollection</a></li><li class="chapter-item expanded "><a href="../classes/array.html"><strong aria-hidden="true">10.15.</strong> Array</a></li><li class="chapter-item expanded "><a href="../classes/list.html"><strong aria-hidden="true">10.16.</strong> List</a></li><li class="chapter-item expanded "><a href="../classes/queue.html"><strong aria-hidden="true">10.17.</strong> Queue</a></li><li class="chapter-item expanded "><a href="../classes/circularqueue.html"><strong aria-hidden="true">10.18.</strong> CircularQueue</a></li><li class="chapter-item expanded "><a href="../classes/directory.html"><strong aria-hidden="true">10.19.</strong> Directory</a></li><li class="chapter-item expanded "><a href="../classes/stringtable.html"><strong aria-hidden="true">10.20.</strong> StringTable</a></li><li class="chapter-item expanded "><a href="../classes/properties.html"><strong aria-hidden="true">10.21.</strong> Properties</a></li><li class="chapter-item expanded "><a href="../classes/table.html"><strong aria-hidden="true">10.22.</strong> Table</a></li><li class="chapter-item expanded "><a href="../classes/identitytable.html"><strong aria-hidden="true">10.23.</strong> IdentityTable</a></li><li class="chapter-item expanded "><a href="../classes/relation.html"><strong aria-hidden="true">10.24.</strong> Relation</a></li><li class="chapter-item expanded "><a href="../classes/bag.html"><strong aria-hidden="true">10.25.</strong> Bag</a></li><li class="chapter-item expanded "><a href="../classes/set.html"><strong aria-hidden="true">10.26.</strong> Set</a></li><li class="chapter-item expanded "><a href="../classes/stem.html"><strong aria-hidden="true">10.27.</strong> Stem</a></li><li class="chapter-item expanded "><a href="../classes/datetime.html"><strong aria-hidden="true">10.28.</strong> DateTime</a></li><li class="chapter-item expanded "><a href="../classes/timespan.html"><strong aria-hidden="true">10.29.</strong> TimeSpan</a></li><li class="chapter-item expanded "><a href="../classes/comparable.html"><strong aria-hidden="true">10.30.</strong> Comparable</a></li><li class="chapter-item expanded "><a href="../classes/orderable.html"><strong aria-hidden="true">10.31.</strong> Orderable</a></li><li class="chapter-item expanded "><a href="../classes/comparators.html"><strong aria-hidden="true">10.32.</strong> Comparators</a></li><li class="chapter-item expanded "><a href="../classes/mutablebuffer.html"><strong aria-hidden="true">10.33.</strong> MutableBuffer</a></li><li class="chapter-item expanded "><a href="../classes/buffer.html"><strong aria-hidden="true">10.34.</strong> Buffer</a></li><li class="chapter-item expanded "><a href="../classes/pointer.html"><strong aria-hidden="true">10.35.</strong> Pointer</a></li><li class="chapter-item expanded "><a href="../classes/weakreference.html"><strong aria-hidden="true">10.36.</strong> WeakReference</a></li><li class="chapter-item expanded "><a href="../classes/variablereference.html"><strong aria-hidden="true">10.37.</strong> VariableReference</a></li><li class="chapter-item expanded "><a href="../classes/file.html"><strong aria-hidden="true">10.38.</strong> File</a></li><li class="chapter-item expanded "><a href="../classes/rexxcontext.html"><strong aria-hidden="true">10.39.</strong> RexxContext</a></li><li class="chapter-item expanded "><a href="../classes/stackframe.html"><strong aria-hidden="true">10.40.</strong> StackFrame</a></li><li class="chapter-item expanded "><a href="../classes/rexxinfo.html"><strong aria-hidden="true">10.41.</strong> RexxInfo</a></li><li class="chapter-item expanded "><a href="../classes/traceobject.html"><strong aria-hidden="true">10.42.</strong> TraceObject</a></li><li class="chapter-item expanded "><a href="../classes/validate.html"><strong aria-hidden="true">10.43.</strong> Validate</a></li><li class="chapter-item expanded "><a href="../classes/singleton.html"><strong aria-hidden="true">10.44.</strong> Singleton</a></li><li class="chapter-item expanded "><a href="../classes/alarm.html"><strong aria-hidden="true">10.45.</strong> Alarm</a></li><li class="chapter-item expanded "><a href="../classes/ticker.html"><strong aria-hidden="true">10.46.</strong> Ticker</a></li><li class="chapter-item expanded "><a href="../classes/monitor.html"><strong aria-hidden="true">10.47.</strong> Monitor</a></li><li class="chapter-item expanded "><a href="../classes/eventsemaphore.html"><strong aria-hidden="true">10.48.</strong> EventSemaphore</a></li><li class="chapter-item expanded "><a href="../classes/mutexsemaphore.html"><strong aria-hidden="true">10.49.</strong> MutexSemaphore</a></li><li class="chapter-item expanded "><a href="../classes/commandhandler.html"><strong aria-hidden="true">10.50.</strong> CommandHandler</a></li><li class="chapter-item expanded "><a href="../classes/nativecommandhandler.html"><strong aria-hidden="true">10.51.</strong> NativeCommandHandler</a></li><li class="chapter-item expanded "><a href="../classes/commandcontext.html"><strong aria-hidden="true">10.52.</strong> CommandContext</a></li><li class="chapter-item expanded "><a href="../classes/commandinput.html"><strong aria-hidden="true">10.53.</strong> CommandInput</a></li><li class="chapter-item expanded "><a href="../classes/commandoutput.html"><strong aria-hidden="true">10.54.</strong> CommandOutput</a></li><li class="chapter-item expanded "><a href="../classes/rexxqueue.html"><strong aria-hidden="true">10.55.</strong> RexxQueue</a></li><li class="chapter-item expanded "><a href="../classes/supplier.html"><strong aria-hidden="true">10.56.</strong> Supplier</a></li><li class="chapter-item expanded "><a href="../classes/streamsupplier.html"><strong aria-hidden="true">10.57.</strong> StreamSupplier</a></li><li class="chapter-item expanded "><a href="../classes/regularexpression.html"><strong aria-hidden="true">10.58.</strong> RegularExpression</a></li><li class="chapter-item expanded "><a href="../classes/stream.html"><strong aria-hidden="true">10.59.</strong> Stream</a></li><li class="chapter-item expanded "><a href="../classes/inputstream.html"><strong aria-hidden="true">10.60.</strong> InputStream</a></li><li class="chapter-item expanded "><a href="../classes/outputstream.html"><strong aria-hidden="true">10.61.</strong> OutputStream</a></li><li class="chapter-item expanded "><a href="../classes/inputoutputstream.html"><strong aria-hidden="true">10.62.</strong> InputOutputStream</a></li></ol></li><li class="chapter-item expanded "><a href="../environment/index.html"><strong aria-hidden="true">11.</strong> Environment</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../environment/objects.html"><strong aria-hidden="true">11.1.</strong> Environment objects</a></li><li class="chapter-item expanded "><a href="../environment/invocation.html"><strong aria-hidden="true">11.2.</strong> Invocation</a></li><li class="chapter-item expanded "><a href="../environment/search.html"><strong aria-hidden="true">11.3.</strong> Search</a></li><li class="chapter-item expanded "><a href="../environment/commands.html"><strong aria-hidden="true">11.4.</strong> Command environments</a></li><li class="chapter-item expanded "><a href="../environment/security.html"><strong aria-hidden="true">11.5.</strong> Security manager</a></li><li class="chapter-item expanded "><a href="../environment/debugging.html"><strong aria-hidden="true">11.6.</strong> Debugging</a></li></ol></li><li class="chapter-item expanded "><a href="../rexxutil/index.html" class="active"><strong aria-hidden="true">12.</strong> RexxUtil</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../rexxutil/sysfiledelete.html"><strong aria-hidden="true">12.1.</strong> SysFileDelete</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysfileexists.html"><strong aria-hidden="true">12.2.</strong> SysFileExists</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysisfile.html"><strong aria-hidden="true">12.3.</strong> SysIsFile</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysisfiledirectory.html"><strong aria-hidden="true">12.4.</strong> SysIsFileDirectory</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysisfilelink.html"><strong aria-hidden="true">12.5.</strong> SysIsFileLink</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysmkdir.html"><strong aria-hidden="true">12.6.</strong> SysMkDir</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysrmdir.html"><strong aria-hidden="true">12.7.</strong> SysRmDir</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysfilecopy.html"><strong aria-hidden="true">12.8.</strong> SysFileCopy</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysfilemove.html"><strong aria-hidden="true">12.9.</strong> SysFileMove</a></li><li class="chapter-item expanded "><a href="../rexxutil/systempfilename.html"><strong aria-hidden="true">12.10.</strong> SysTempFileName</a></li><li class="chapter-item expanded "><a href="../rexxutil/syssearchpath.html"><strong aria-hidden="true">12.11.</strong> SysSearchPath</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysfiletree.html"><strong aria-hidden="true">12.12.</strong> SysFileTree</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysfilesearch.html"><strong aria-hidden="true">12.13.</strong> SysFileSearch</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysgetfiledatetime.html"><strong aria-hidden="true">12.14.</strong> SysGetFileDateTime</a></li><li class="chapter-item expanded "><a href="../rexxutil/syssetfiledatetime.html"><strong aria-hidden="true">12.15.</strong> SysSetFileDateTime</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysdumpvariables.html"><strong aria-hidden="true">12.16.</strong> SysDumpVariables</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysstemcopy.html"><strong aria-hidden="true">12.17.</strong> SysStemCopy</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysstemdelete.html"><strong aria-hidden="true">12.18.</strong> SysStemDelete</a></li><li class="chapter-item expanded "><a href="../rexxutil/syssteminsert.html"><strong aria-hidden="true">12.19.</strong> SysStemInsert</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysstemsort.html"><strong aria-hidden="true">12.20.</strong> SysStemSort</a></li><li class="chapter-item expanded "><a href="../rexxutil/macrospace.html"><strong aria-hidden="true">12.21.</strong> The macrospace</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysaddrexxmacro.html"><strong aria-hidden="true">12.22.</strong> SysAddRexxMacro</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysdroprexxmacro.html"><strong aria-hidden="true">12.23.</strong> SysDropRexxMacro</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysqueryrexxmacro.html"><strong aria-hidden="true">12.24.</strong> SysQueryRexxMacro</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysreorderrexxmacro.html"><strong aria-hidden="true">12.25.</strong> SysReorderRexxMacro</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysclearrexxmacrospace.html"><strong aria-hidden="true">12.26.</strong> SysClearRexxMacroSpace</a></li><li class="chapter-item expanded "><a href="../rexxutil/syssaverexxmacrospace.html"><strong aria-hidden="true">12.27.</strong> SysSaveRexxMacroSpace</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysloadrexxmacrospace.html"><strong aria-hidden="true">12.28.</strong> SysLoadRexxMacroSpace</a></li><li class="chapter-item expanded "><a href="../rexxutil/syscreatepipe.html"><strong aria-hidden="true">12.29.</strong> SysCreatePipe</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysfork.html"><strong aria-hidden="true">12.30.</strong> SysFork</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysqueryprocess.html"><strong aria-hidden="true">12.31.</strong> SysQueryProcess</a></li><li class="chapter-item expanded "><a href="../rexxutil/syssetpriority.html"><strong aria-hidden="true">12.32.</strong> SysSetPriority</a></li><li class="chapter-item expanded "><a href="../rexxutil/syssleep.html"><strong aria-hidden="true">12.33.</strong> SysSleep</a></li><li class="chapter-item expanded "><a href="../rexxutil/syswait.html"><strong aria-hidden="true">12.34.</strong> SysWait</a></li><li class="chapter-item expanded "><a href="../rexxutil/syseventsem.html"><strong aria-hidden="true">12.35.</strong> Event semaphore functions</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysmutexsem.html"><strong aria-hidden="true">12.36.</strong> Mutex semaphore functions</a></li><li class="chapter-item expanded "><a href="../rexxutil/syscls.html"><strong aria-hidden="true">12.37.</strong> SysCls</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysformatmessage.html"><strong aria-hidden="true">12.38.</strong> SysFormatMessage</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysgeterrortext.html"><strong aria-hidden="true">12.39.</strong> SysGetErrorText</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysgetkey.html"><strong aria-hidden="true">12.40.</strong> SysGetKey</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysgetmessage.html"><strong aria-hidden="true">12.41.</strong> SysGetMessage</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysgetmessagex.html"><strong aria-hidden="true">12.42.</strong> SysGetMessageX</a></li><li class="chapter-item expanded "><a href="../rexxutil/syslinver.html"><strong aria-hidden="true">12.43.</strong> SysLinVer</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysutilversion.html"><strong aria-hidden="true">12.44.</strong> SysUtilVersion</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysversion.html"><strong aria-hidden="true">12.45.</strong> SysVersion</a></li><li class="chapter-item expanded "><a href="../rexxutil/windows.html"><strong aria-hidden="true">12.46.</strong> Windows-only functions</a></li></ol></li><li class="chapter-item expanded "><a href="../builtins/index.html"><strong aria-hidden="true">13.</strong> Built-in functions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../builtins/abbrev.html"><strong aria-hidden="true">13.1.</strong> ABBREV</a></li><li class="chapter-item expanded "><a href="../builtins/abs.html"><strong aria-hidden="true">13.2.</strong> ABS</a></li><li class="chapter-item expanded "><a href="../builtins/address.html"><strong aria-hidden="true">13.3.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../builtins/arg.html"><strong aria-hidden="true">13.4.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../builtins/b2x.html"><strong aria-hidden="true">13.5.</strong> B2X</a></li><li class="chapter-item expanded "><a href="../builtins/beep.html"><strong aria-hidden="true">13.6.</strong> BEEP</a></li><li class="chapter-item expanded "><a href="../builtins/bitand.html"><strong aria-hidden="true">13.7.</strong> BITAND</a></li><li class="chapter-item expanded "><a href="../builtins/bitor.html"><strong aria-hidden="true">13.8.</strong> BITOR</a></li><li class="chapter-item expanded "><a href="../builtins/bitxor.html"><strong aria-hidden="true">13.9.</strong> BITXOR</a></li><li class="chapter-item expanded "><a href="../builtins/c2d.html"><strong aria-hidden="true">13.10.</strong> C2D</a></li><li class="chapter-item expanded "><a href="../builtins/c2x.html"><strong aria-hidden="true">13.11.</strong> C2X</a></li><li class="chapter-item expanded "><a href="../builtins/center.html"><strong aria-hidden="true">13.12.</strong> CENTER</a></li><li class="chapter-item expanded "><a href="../builtins/changestr.html"><strong aria-hidden="true">13.13.</strong> CHANGESTR</a></li><li class="chapter-item expanded "><a href="../builtins/charin.html"><strong aria-hidden="true">13.14.</strong> CHARIN</a></li><li class="chapter-item expanded "><a href="../builtins/charout.html"><strong aria-hidden="true">13.15.</strong> CHAROUT</a></li><li class="chapter-item expanded "><a href="../builtins/chars.html"><strong aria-hidden="true">13.16.</strong> CHARS</a></li><li class="chapter-item expanded "><a href="../builtins/compare.html"><strong aria-hidden="true">13.17.</strong> COMPARE</a></li><li class="chapter-item expanded "><a href="../builtins/condition.html"><strong aria-hidden="true">13.18.</strong> CONDITION</a></li><li class="chapter-item expanded "><a href="../builtins/copies.html"><strong aria-hidden="true">13.19.</strong> COPIES</a></li><li class="chapter-item expanded "><a href="../builtins/countstr.html"><strong aria-hidden="true">13.20.</strong> COUNTSTR</a></li><li class="chapter-item expanded "><a href="../builtins/d2c.html"><strong aria-hidden="true">13.21.</strong> D2C</a></li><li class="chapter-item expanded "><a href="../builtins/d2x.html"><strong aria-hidden="true">13.22.</strong> D2X</a></li><li class="chapter-item expanded "><a href="../builtins/datatype.html"><strong aria-hidden="true">13.23.</strong> DATATYPE</a></li><li class="chapter-item expanded "><a href="../builtins/date.html"><strong aria-hidden="true">13.24.</strong> DATE</a></li><li class="chapter-item expanded "><a href="../builtins/delstr.html"><strong aria-hidden="true">13.25.</strong> DELSTR</a></li><li class="chapter-item expanded "><a href="../builtins/delword.html"><strong aria-hidden="true">13.26.</strong> DELWORD</a></li><li class="chapter-item expanded "><a href="../builtins/digits.html"><strong aria-hidden="true">13.27.</strong> DIGITS</a></li><li class="chapter-item expanded "><a href="../builtins/directory.html"><strong aria-hidden="true">13.28.</strong> DIRECTORY</a></li><li class="chapter-item expanded "><a href="../builtins/endlocal.html"><strong aria-hidden="true">13.29.</strong> ENDLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/errortext.html"><strong aria-hidden="true">13.30.</strong> ERRORTEXT</a></li><li class="chapter-item expanded "><a href="../builtins/filespec.html"><strong aria-hidden="true">13.31.</strong> FILESPEC</a></li><li class="chapter-item expanded "><a href="../builtins/form.html"><strong aria-hidden="true">13.32.</strong> FORM</a></li><li class="chapter-item expanded "><a href="../builtins/format.html"><strong aria-hidden="true">13.33.</strong> FORMAT</a></li><li class="chapter-item expanded "><a href="../builtins/fuzz.html"><strong aria-hidden="true">13.34.</strong> FUZZ</a></li><li class="chapter-item expanded "><a href="../builtins/gc.html"><strong aria-hidden="true">13.35.</strong> GC</a></li><li class="chapter-item expanded "><a href="../builtins/insert.html"><strong aria-hidden="true">13.36.</strong> INSERT</a></li><li class="chapter-item expanded "><a href="../builtins/lastpos.html"><strong aria-hidden="true">13.37.</strong> LASTPOS</a></li><li class="chapter-item expanded "><a href="../builtins/left.html"><strong aria-hidden="true">13.38.</strong> LEFT</a></li><li class="chapter-item expanded "><a href="../builtins/length.html"><strong aria-hidden="true">13.39.</strong> LENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/linein.html"><strong aria-hidden="true">13.40.</strong> LINEIN</a></li><li class="chapter-item expanded "><a href="../builtins/lineout.html"><strong aria-hidden="true">13.41.</strong> LINEOUT</a></li><li class="chapter-item expanded "><a href="../builtins/lines.html"><strong aria-hidden="true">13.42.</strong> LINES</a></li><li class="chapter-item expanded "><a href="../builtins/lower.html"><strong aria-hidden="true">13.43.</strong> LOWER</a></li><li class="chapter-item expanded "><a href="../builtins/max.html"><strong aria-hidden="true">13.44.</strong> MAX</a></li><li class="chapter-item expanded "><a href="../builtins/min.html"><strong aria-hidden="true">13.45.</strong> MIN</a></li><li class="chapter-item expanded "><a href="../builtins/overlay.html"><strong aria-hidden="true">13.46.</strong> OVERLAY</a></li><li class="chapter-item expanded "><a href="../builtins/pos.html"><strong aria-hidden="true">13.47.</strong> POS</a></li><li class="chapter-item expanded "><a href="../builtins/qualify.html"><strong aria-hidden="true">13.48.</strong> QUALIFY</a></li><li class="chapter-item expanded "><a href="../builtins/queued.html"><strong aria-hidden="true">13.49.</strong> QUEUED</a></li><li class="chapter-item expanded "><a href="../builtins/random.html"><strong aria-hidden="true">13.50.</strong> RANDOM</a></li><li class="chapter-item expanded "><a href="../builtins/reverse.html"><strong aria-hidden="true">13.51.</strong> REVERSE</a></li><li class="chapter-item expanded "><a href="../builtins/right.html"><strong aria-hidden="true">13.52.</strong> RIGHT</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncadd.html"><strong aria-hidden="true">13.53.</strong> RXFUNCADD</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncdrop.html"><strong aria-hidden="true">13.54.</strong> RXFUNCDROP</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncquery.html"><strong aria-hidden="true">13.55.</strong> RXFUNCQUERY</a></li><li class="chapter-item expanded "><a href="../builtins/rxqueue.html"><strong aria-hidden="true">13.56.</strong> RXQUEUE</a></li><li class="chapter-item expanded "><a href="../builtins/setlocal.html"><strong aria-hidden="true">13.57.</strong> SETLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/sign.html"><strong aria-hidden="true">13.58.</strong> SIGN</a></li><li class="chapter-item expanded "><a href="../builtins/sourceline.html"><strong aria-hidden="true">13.59.</strong> SOURCELINE</a></li><li class="chapter-item expanded "><a href="../builtins/space.html"><strong aria-hidden="true">13.60.</strong> SPACE</a></li><li class="chapter-item expanded "><a href="../builtins/stream.html"><strong aria-hidden="true">13.61.</strong> STREAM</a></li><li class="chapter-item expanded "><a href="../builtins/strip.html"><strong aria-hidden="true">13.62.</strong> STRIP</a></li><li class="chapter-item expanded "><a href="../builtins/substr.html"><strong aria-hidden="true">13.63.</strong> SUBSTR</a></li><li class="chapter-item expanded "><a href="../builtins/subword.html"><strong aria-hidden="true">13.64.</strong> SUBWORD</a></li><li class="chapter-item expanded "><a href="../builtins/symbol.html"><strong aria-hidden="true">13.65.</strong> SYMBOL</a></li><li class="chapter-item expanded "><a href="../builtins/time.html"><strong aria-hidden="true">13.66.</strong> TIME</a></li><li class="chapter-item expanded "><a href="../builtins/trace.html"><strong aria-hidden="true">13.67.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../builtins/translate.html"><strong aria-hidden="true">13.68.</strong> TRANSLATE</a></li><li class="chapter-item expanded "><a href="../builtins/trunc.html"><strong aria-hidden="true">13.69.</strong> TRUNC</a></li><li class="chapter-item expanded "><a href="../builtins/upper.html"><strong aria-hidden="true">13.70.</strong> UPPER</a></li><li class="chapter-item expanded "><a href="../builtins/userid.html"><strong aria-hidden="true">13.71.</strong> USERID</a></li><li class="chapter-item expanded "><a href="../builtins/value.html"><strong aria-hidden="true">13.72.</strong> VALUE</a></li><li class="chapter-item expanded "><a href="../builtins/var.html"><strong aria-hidden="true">13.73.</strong> VAR</a></li><li class="chapter-item expanded "><a href="../builtins/verify.html"><strong aria-hidden="true">13.74.</strong> VERIFY</a></li><li class="chapter-item expanded "><a href="../builtins/word.html"><strong aria-hidden="true">13.75.</strong> WORD</a></li><li class="chapter-item expanded "><a href="../builtins/wordindex.html"><strong aria-hidden="true">13.76.</strong> WORDINDEX</a></li><li class="chapter-item expanded "><a href="../builtins/wordlength.html"><strong aria-hidden="true">13.77.</strong> WORDLENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/wordpos.html"><strong aria-hidden="true">13.78.</strong> WORDPOS</a></li><li class="chapter-item expanded "><a href="../builtins/words.html"><strong aria-hidden="true">13.79.</strong> WORDS</a></li><li class="chapter-item expanded "><a href="../builtins/x2b.html"><strong aria-hidden="true">13.80.</strong> X2B</a></li><li class="chapter-item expanded "><a href="../builtins/x2c.html"><strong aria-hidden="true">13.81.</strong> X2C</a></li><li class="chapter-item expanded "><a href="../builtins/x2d.html"><strong aria-hidden="true">13.82.</strong> X2D</a></li><li class="chapter-item expanded "><a href="../builtins/xrange.html"><strong aria-hidden="true">13.83.</strong> XRANGE</a></li></ol></li><li class="chapter-item expanded "><a href="../deviations.html"><strong aria-hidden="true">14.</strong> Deviations</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The interrexx Language Specification</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="rexxutil"><a class="header" href="#rexxutil">RexxUtil</a></h1>
+<p class="references">rexxref: Rexx Utilities (RexxUtil); Rexx Utilities (RexxUtil) &gt; A Note on Error Codes</p>
+<p class="deviations">Deviations: D34, D101</p>
+<p>RexxUtil is the set of functions that a program calls to work with files,
+directories, stems, the macrospace, processes, time and the terminal. This
+chapter specifies the functions that exist on a Unix-like system, one page per
+function. This page holds what every function shares: how the functions are
+made available, how their arguments are read, what a name of a file is, and
+what the numbers they answer mean.</p>
+<p>The pages of this chapter are:</p>
+<ul>
+<li><a href="sysfiledelete.html">SysFileDelete</a>, <a href="sysfileexists.html">SysFileExists</a>,
+<a href="sysisfile.html">SysIsFile</a>, <a href="sysisfiledirectory.html">SysIsFileDirectory</a> and
+<a href="sysisfilelink.html">SysIsFileLink</a>: removing a file and asking what a name
+is.</li>
+<li><a href="sysmkdir.html">SysMkDir</a> and <a href="sysrmdir.html">SysRmDir</a>: making and removing a
+directory.</li>
+<li><a href="sysfilecopy.html">SysFileCopy</a> and <a href="sysfilemove.html">SysFileMove</a>: copying and
+moving a file.</li>
+<li><a href="systempfilename.html">SysTempFileName</a> and
+<a href="syssearchpath.html">SysSearchPath</a>: inventing a name that is not in use, and
+finding a file along a list of directories.</li>
+<li><a href="sysstemcopy.html">SysStemCopy</a>, <a href="sysstemdelete.html">SysStemDelete</a>,
+<a href="syssteminsert.html">SysStemInsert</a> and <a href="sysstemsort.html">SysStemSort</a>: working
+on a stem array, and <a href="sysdumpvariables.html">SysDumpVariables</a>: writing the
+variables of the current scope.</li>
+<li><a href="macrospace.html">The macrospace</a> and its functions
+<a href="sysaddrexxmacro.html">SysAddRexxMacro</a>,
+<a href="sysdroprexxmacro.html">SysDropRexxMacro</a>,
+<a href="sysqueryrexxmacro.html">SysQueryRexxMacro</a>,
+<a href="sysreorderrexxmacro.html">SysReorderRexxMacro</a>,
+<a href="sysclearrexxmacrospace.html">SysClearRexxMacroSpace</a>,
+<a href="syssaverexxmacrospace.html">SysSaveRexxMacroSpace</a> and
+<a href="sysloadrexxmacrospace.html">SysLoadRexxMacroSpace</a>: the routines that the
+service keeps for every program, and how they are added, found, moved,
+saved and loaded.</li>
+<li><a href="sysfiletree.html">SysFileTree</a> and <a href="sysfilesearch.html">SysFileSearch</a>:
+finding files by a pattern and lines of a file by a string, and
+<a href="sysgetfiledatetime.html">SysGetFileDateTime</a> and
+<a href="syssetfiledatetime.html">SysSetFileDateTime</a>: the times of a file.</li>
+<li><a href="syssleep.html">SysSleep</a>, <a href="syswait.html">SysWait</a>, <a href="sysfork.html">SysFork</a>,
+<a href="syscreatepipe.html">SysCreatePipe</a>, <a href="sysqueryprocess.html">SysQueryProcess</a>
+and <a href="syssetpriority.html">SysSetPriority</a>: time and processes, and <a href="syseventsem.html">the event
+semaphore</a> and <a href="sysmutexsem.html">the mutex semaphore</a>
+functions.</li>
+<li><a href="syscls.html">SysCls</a>, <a href="sysgetkey.html">SysGetKey</a>,
+<a href="sysgeterrortext.html">SysGetErrorText</a>,
+<a href="sysgetmessage.html">SysGetMessage</a>, <a href="sysgetmessagex.html">SysGetMessageX</a>,
+<a href="sysformatmessage.html">SysFormatMessage</a>, <a href="syslinver.html">SysLinVer</a>,
+<a href="sysutilversion.html">SysUtilVersion</a> and <a href="sysversion.html">SysVersion</a>: the
+terminal, messages and versions; and <a href="windows.html">the Windows-only
+functions</a>.</li>
+</ul>
+<p>The rules state the behavior of a Unix-like system. The examples make their
+own files and directories, whose names start with <code>c</code>, a digit and <code>zq</code>,
+apart from one named after a function in <a href="#r-util.index.available">the availability
+rule</a> and the names that start with <code>~</code> before that
+prefix, and remove them again. What a function answers for a failure is what
+<a href="#r-util.index.codes">the answer rule</a> gives: an error number of Linux for the
+functions that change files, and a fixed value for the functions that the rule
+names.</p>
+<h2 id="availability"><a class="header" href="#availability">Availability</a></h2>
+<div class="rule" id="r-util.index.available"><a href="#r-util.index.available">[util.index.available]</a></div>
+<p>Every RexxUtil function that exists on a Unix-like system is provided by the
+interpreter from the start of a program, except SysPulseEventSem, which <a href="syseventsem.html#r-util.syseventsem.pulse">its
+rule</a> says is not provided: it needs no
+registration, no library directive and no file. It is called like any other
+function, as <code>name(arguments)</code> or by CALL, and its name is read in any case.
+It is not a method of <code>String</code>: sending its name to a string as a message
+raises <code>SYNTAX 97.1</code>. A label of the code that makes the call, and a routine
+of the program, are found before it as <a href="../instructions/call.html#r-instr.call.search">the search rule</a>
+says, and so a name written as a string reaches the function and not the
+label; a file of the name of the function in the current directory is not run
+in its place. Among the routines that are not labels, the RexxUtil functions
+are where <a href="../environment/search.html#r-env.search.order">the search order</a> puts the functions that
+RXFUNCADD made callable. A routine of the program, a public routine of a
+package that it requires, and a macro added with the order <code>B</code> are found
+before a RexxUtil function of the same name. A file and a macro added with the
+order <code>A</code> are not.</p>
+<pre><code class="language-rexx">say SysIsFileLink('/') sysisfilelink('/') 'SYSISFILELINK'('/')
+call SysIsFileDirectory '/'
+say result
+signal on syntax name e
+say '/'~SysIsFileDirectory
+e: say condition('o')~code
+signal off syntax
+call lineout 'sysfileexists.rex', 'return "file"'
+call lineout 'sysfileexists.rex'
+say SysFileExists('/') SysIsFile('/') SysIsFileLink('/')
+call SysFileDelete 'sysfileexists.rex'
+exit
+SYSISFILELINK: return 'label'
+::routine SysIsFile
+return 'routine'
+</code></pre>
+<pre><code class="language-output">label label 0
+1
+97.1
+1 routine label
+</code></pre>
+<pre><code class="language-rexx">call lineout 'c1zqidxm.rex', 'return "macro"'
+call lineout 'c1zqidxm.rex'
+call SysAddRexxMacro 'SYSISFILE', 'c1zqidxm.rex', 'B'
+call SysAddRexxMacro 'SYSISFILELINK', 'c1zqidxm.rex', 'A'
+say SysIsFile('/') SysIsFileLink('/') 'SysIsFile'('/')
+call SysDropRexxMacro 'SYSISFILE'
+call SysDropRexxMacro 'SYSISFILELINK'
+say SysIsFile('/') SysIsFileLink('/')
+call SysFileDelete 'c1zqidxm.rex'
+</code></pre>
+<pre><code class="language-output">macro 0 macro
+0 0
+</code></pre>
+<div class="rule" id="r-util.index.load"><a href="#r-util.index.load">[util.index.load]</a></div>
+<p><code>SysLoadFuncs</code> and <code>SysDropFuncs</code> take no argument, and each answers <code>0</code> and
+changes nothing: the functions are callable before the first call of either,
+and after any number of calls. They exist for programs that were written for
+a system where the functions had to be loaded. Such a program may also ask
+for them with <a href="../builtins/rxfuncadd.html#r-bif.rxfuncadd.provided">RXFUNCADD</a>, which answers <code>0</code>
+whatever its module and procedure are, and RXFUNCDROP does not remove them
+(<a href="../builtins/rxfuncdrop.html#r-bif.rxfuncdrop.provided">RXFUNCDROP</a>). More than no argument raises
+<code>SYNTAX 88.922</code>.</p>
+<pre><code class="language-rexx">say rxfuncquery('SysFileExists') rxfuncquery('SysLoadFuncs')
+say rxfuncadd('SysLoadFuncs', 'rexxutil', 'SysLoadFuncs')
+call SysLoadFuncs
+say result
+say SysDropFuncs() SysDropFuncs()
+say SysFileExists('/') rxfuncquery('SysFileExists')
+say rxfuncdrop('SysFileExists') SysFileExists('/')
+signal on syntax name a
+call SysLoadFuncs 'x'
+a: say condition('o')~code
+signal on syntax name b
+say SysDropFuncs(,'x')
+b: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">0 0
+0
+0
+0 0
+1 0
+1 1
+88.922
+88.922
+</code></pre>
+<h2 id="arguments"><a class="header" href="#arguments">Arguments</a></h2>
+<div class="rule" id="r-util.index.args"><a href="#r-util.index.args">[util.index.args]</a></div>
+<p>The RexxUtil functions follow <a href="../builtins/index.html#r-bif.index.call.native">the native call rule</a>,
+not the rules for the number of arguments of the other builtins: a required
+argument that is not given, or is omitted, raises <code>SYNTAX 88.901</code>; an argument
+past the last one of the function raises <code>SYNTAX 88.922</code>; an argument that is
+an object other than a string is replaced by the string that its <code>request</code>
+with the argument <code>STRING</code> answers, and an object that has none raises <code>SYNTAX 88.909</code>, whatever its <code>STRING</code> method answers. Some arguments fall back to the
+<code>STRING</code> method when <code>request</code> answers no string: the stem name of
+SysStemCopy, SysStemDelete and SysStemInsert, the whole numbers of
+SysStemCopy, SysStemDelete, SysStemInsert and SysStemSort, the <code>mode</code> of
+SysMkDir, the number of SysGetErrorText, the <code>num</code> and the inserts of
+SysGetMessage, the <code>set</code>, the <code>num</code> and the inserts of SysGetMessageX, the
+arguments of SysSetPriority, a semaphore handle and a timeout, and the items
+of the <code>substitutions</code> of SysFormatMessage. The page of each says so. An
+omitted place at the end of the call adds nothing to the count, and an
+optional argument that is omitted takes the default that the function's page
+states. Each page says what its function reads as a string and what it reads
+as a number, and which other error codes it raises. The order of these checks
+is the subject of <a href="#r-util.index.deviation.101">Deviation 101</a>.</p>
+<pre><code class="language-rexx">call try "SysFileExists()"
+call try "SysFileExists(,)"
+call try "SysFileExists('/', 'x')"
+call try "SysFileExists(.nil)"
+call try "SysFileExists(.object~new)"
+call try "SysFileExists('/', )"
+call try "SysFileExists(.mutablebuffer~new('/'))"
+call try "SysFileCopy('c1zqidxa')"
+exit
+try:
+  signal on syntax name e
+  interpret 'say' arg(1)
+  return
+e: say condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">88.901
+88.901
+88.922
+88.909
+88.909
+1
+1
+88.901
+</code></pre>
+<div class="rule" id="r-util.index.whole"><a href="#r-util.index.whole">[util.index.whole]</a></div>
+<p>A whole-number argument of a RexxUtil function is read as <a href="../builtins/beep.html#r-bif.beep.range">BEEP reads its
+arguments</a>: its number is rounded to 20 significant digits,
+half up, whatever the NUMERIC DIGITS of the caller, and the value after that
+rounding must have no fractional part. So <code>1.0000000000000000001</code> (20 digits)
+has a fraction and <code>1.00000000000000000001</code> (21 digits) is <code>1</code>. BEEP's limit
+of 10**18 is not part of this rule: the range that a function allows is
+checked on the rounded value and is stated on its page, and for a semaphore
+handle it reaches 18446744073709551615.</p>
+<pre><code class="language-rexx">s.0 = 2
+s.1 = 'a'
+s.2 = 'b'
+call try "SysStemDelete('s.', '1.00000000000000000001')"
+say s.0 s.1
+call try "SysStemDelete('s.', '1.0000000000000000001')"
+call try "SysStemDelete('s.', '1.00000000000000000005')"
+call try "SysGetErrorText('2.00000000000000000001') == SysGetErrorText(2)"
+call try "SysGetErrorText('2.0000000000000000001')"
+exit
+try:
+  signal on syntax name e
+  interpret 'say' arg(1)
+  return
+e: say condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">0
+1 b
+88.905
+88.905
+1
+88.907
+</code></pre>
+<div class="rule" id="r-util.index.names"><a href="#r-util.index.names">[util.index.names]</a></div>
+<p>A name of a file or a directory is a string. A name that does not start with
+a slash is taken from the current directory. The function cleans the name up
+before it uses it, in the way <a href="../builtins/qualify.html#r-bif.qualify.normal">QUALIFY</a> does: a run of
+slashes is one slash, a component that is a single period is dropped, a slash
+at the end is dropped, and a component of two periods is dropped together with
+the component before it, so that the name <code>c1zqidxd/../c1zqidxn</code> is the name
+<code>c1zqidxn</code> even when <code>c1zqidxd</code> does not exist. The characters <code>*</code> and <code>?</code> are
+characters of the name: no function except SysFileTree expands a pattern, so
+a name that holds one names a file that has them or no file. A name of the
+null string names nothing. SysFileTree has exceptions to this rule, which
+<a href="sysfiletree.html#r-util.sysfiletree.spec">its rule for the <code>filespec</code></a> states. The <code>file</code> of
+SysAddRexxMacro, SysSaveRexxMacroSpace and SysLoadRexxMacroSpace is not
+cleaned: <a href="sysaddrexxmacro.html#r-util.sysaddrexxmacro.answer">the rule of SysAddRexxMacro</a> says how
+those functions read it.</p>
+<pre><code class="language-rexx">call lineout 'c1zqidxn', 'x'
+call lineout 'c1zqidxn'
+call SysMkDir 'c1zqidxd'
+say SysIsFile('./c1zqidxn') SysIsFile('c1zqidxd/../c1zqidxn')
+say SysIsFile('c1zqidxn/') SysIsFile('c1zqidxnone/../c1zqidxn')
+say SysIsFile('c1zqidxd/./../c1zqidxn') SysFileExists('./')
+say SysFileExists('c1zqidx*') SysFileExists('c1zqidxn?') SysFileExists('')
+say SysFileTree('c1zqidx?', 's.', 'FO') s.0 SysGetFileDateTime('c1zqidx?') SysFileTree('c1zqidxd/', 's.') s.0
+signal on syntax name e
+say SysFileTree('', 's.')
+e: say condition('o')~code
+signal off syntax
+call SysFileDelete 'c1zqidx*'
+say SysFileExists('c1zqidxn') SysIsFileDirectory('c1zqidxd')
+call SysFileDelete 'c1zqidxn'
+call SysRmDir 'c1zqidxd'
+</code></pre>
+<pre><code class="language-output">1 1
+1 1
+1 1
+0 0 0
+0 1 -1 0 0
+40.21
+1 1
+</code></pre>
+<div class="rule" id="r-util.index.home"><a href="#r-util.index.home">[util.index.home]</a></div>
+<p>A name that is <code>~</code> alone, or that starts with <code>~/</code>, has the <code>~</code> replaced by
+the value of the environment variable <code>HOME</code> as it is. When <code>HOME</code> is the null
+string, <code>~</code> alone names nothing and <code>~/</code> is replaced by <code>/</code>. When it is any
+other value that does not start with a slash, no name that starts with <code>~/</code>,
+or is <code>~</code> alone, names an entry. A name that starts with <code>~</code> and a user's
+name, up to the first slash or the end, stands for the home directory of that
+user, as <a href="../builtins/directory.html#r-bif.directory.user">it does for DIRECTORY</a>; when there is no such
+user, no file has that name, and the name is never read as the name of a file
+of the current directory, which <code>./~name</code> reaches. SysFileTree has exceptions
+to this rule, which <a href="sysfiletree.html#r-util.sysfiletree.spec.dir">its rule for the <code>filespec</code></a>
+states, and the <code>file</code> of SysAddRexxMacro, SysSaveRexxMacroSpace and
+SysLoadRexxMacroSpace does not follow it: a <code>~</code> there is a character of the
+name (<a href="sysaddrexxmacro.html#r-util.sysaddrexxmacro.answer">the rule of SysAddRexxMacro</a>).</p>
+<pre><code class="language-rexx">here = directory()
+call SysMkDir 'c1zqidxh'
+call lineout 'c1zqidxh/f', 'x'
+call lineout 'c1zqidxh/f'
+call lineout './~c1zqidxu', 'x'
+call lineout './~c1zqidxu'
+old = value('HOME', here || '/c1zqidxh', 'ENVIRONMENT')
+say SysIsFile('~/f') SysIsFileDirectory('~') SysIsFileDirectory('~/')
+say SysIsFile('~//f') SysIsFile('~/../c1zqidxh/f') SysIsFile('~/g')
+say SysIsFile('~c1zqidxu') SysIsFile('./~c1zqidxu')
+call value 'HOME', '', 'ENVIRONMENT'
+say SysIsFileDirectory('~') SysIsFileDirectory('~/')
+call value 'HOME', 'c1zqidxh', 'ENVIRONMENT'
+say SysIsFile('~/f') SysIsFileDirectory('~')
+call value 'HOME', old, 'ENVIRONMENT'
+call SysMkDir './~c1zqidxv'
+say SysFileTree('~c1zqidxv', 's.', 'DO') s.0 SysIsFileDirectory('~c1zqidxv')
+call SysRmDir './~c1zqidxv'
+call SysFileDelete './~c1zqidxu'
+call SysFileDelete 'c1zqidxh/f'
+call SysRmDir 'c1zqidxh'
+</code></pre>
+<pre><code class="language-output">1 1 1
+1 1 0
+0 1
+0 1
+0 0
+0 1 0
+</code></pre>
+<div class="rule" id="r-util.index.options"><a href="#r-util.index.options">[util.index.options]</a></div>
+<p>A function that takes option letters reads each letter in upper or in lower
+case, as the page of the function says which letters it knows and what an
+option that it does not know raises.</p>
+<pre><code class="language-rexx">call lineout 'c1zqidxo', 'x'
+call lineout 'c1zqidxo'
+say '[' || SysSearchPath('c1zqidxnone', 'c1zqidxo', 'n') || ']'
+say (SysSearchPath('c1zqidxnone', 'c1zqidxo', 'c') == directory() || '/c1zqidxo')
+say (SysSearchPath('c1zqidxnone', 'c1zqidxo', 'C') == directory() || '/c1zqidxo')
+call SysFileDelete 'c1zqidxo'
+</code></pre>
+<pre><code class="language-output">[]
+1
+1
+</code></pre>
+<div class="rule" id="r-util.index.stems"><a href="#r-util.index.stems">[util.index.stems]</a></div>
+<p>A function that is given a stem takes the name of a stem variable, with the
+period at its end or without it, in any case. SysFileTree and SysFileSearch
+also take a stem object, which they fill in the same way, or an array object,
+which they fill as their pages say. A function that fills a stem sets the tail
+<code>0</code> to the number of entries and the tails <code>1</code> to that number to the entries,
+and leaves every other tail of the stem as it was. A function that reads the
+items of a stem needs the tail <code>0</code> to hold a count, and raises <code>SYNTAX 40.922</code>
+when the stem has none. The functions of this chapter that take a stem say
+which of the two they do.</p>
+<pre><code class="language-rexx">call lineout 'c1zqidxs1', 'x'
+call lineout 'c1zqidxs1'
+call lineout 'c1zqidxs2', 'x'
+call lineout 'c1zqidxs2'
+f.99 = 'old'
+say SysFileTree('c1zqidxs*', 'f.', 'FO') f.0 (f.1 == f.2) f.99
+drop f.
+say SysFileTree('c1zqidxs*', 'F', 'FO') f.0 (f.1 == f.2) symbol('f.99')
+s.0 = 2
+s.1 = 'b'
+s.2 = 'a'
+say SysStemSort('S') s.1 s.2
+signal on syntax name e
+n.1 = 'x'
+say SysStemSort('n.')
+e: say condition('o')~code
+call SysFileDelete 'c1zqidxs1'
+call SysFileDelete 'c1zqidxs2'
+</code></pre>
+<pre><code class="language-output">0 2 0 old
+0 2 0 LIT
+0 a b
+40.922
+</code></pre>
+<h2 id="stem-arrays"><a class="header" href="#stem-arrays">Stem arrays</a></h2>
+<div class="rule" id="r-util.index.stemname"><a href="#r-util.index.stemname">[util.index.stemname]</a></div>
+<p>The name of a stem that SysStemCopy, SysStemDelete and SysStemInsert take is
+a string, read as <a href="../conventions.html#r-conv.string.object">the conventions</a> read any string
+argument, so that a MutableBuffer that holds <code>s.</code> names the stem <code>s.</code>, and an
+object that has only a <code>STRING</code> method names the stem that the method
+answers. The name is a symbol of letters, digits and the characters <code>!</code>, <code>?</code>
+and <code>_</code> that does not start with a digit, with one period after it or
+without, in any case. The name, with the period that a name without one is
+given, has at most 250 characters. Any other name raises <code>SYNTAX 40.919</code>: the
+null string, a name that starts with a digit or a period, a name with a
+period before its last character, one that holds a blank, a character that no
+symbol has, a name that is too long, or the text of <code>.nil</code>. The stem is the
+one of that name among the variables of the code that makes the call, so that
+in a procedure it is the procedure's own stem unless the procedure exposes it.
+<a href="sysstemsort.html#r-util.sysstemsort.name">SysStemSort</a> reads a name that has more after its
+first period differently, and reads an object that is not a string
+differently too.</p>
+<pre><code class="language-rexx">call p
+say s.0 s.1
+exit
+p: procedure
+  s.0 = 0; ab_1.0 = 0; q?.0 = 0
+  say SysStemInsert('s', 1, 'a') SysStemInsert('S.', 1, 'b'),
+    SysStemInsert('Ab_1.', 1, 'c') SysStemInsert('q?', 1, 'd')
+  say s.0 s.1 s.2 ab_1.0 ab_1.1 q?.0 q?.1
+  call SysStemInsert .mutablebuffer~new('s.'), 1, 'm'
+  say s.0 s.1
+  call SysStemInsert .sonly~new, 1, 'z'
+  call SysStemDelete .sonly~new, 2
+  call SysStemCopy .sonly~new, 'u.', 1, 1, 1
+  say s.0 s.1 s.2 u.0 u.1
+  call try "SysStemInsert('', 1, 'x')"
+  call try "SysStemInsert('1s.', 1, 'x')"
+  call try "SysStemInsert('.s', 1, 'x')"
+  call try "SysStemInsert('s.a', 1, 'x')"
+  call try "SysStemInsert('s..', 1, 'x')"
+  call try "SysStemInsert('s t.', 1, 'x')"
+  call try "SysStemInsert('s-.', 1, 'x')"
+  call try "SysStemInsert(.nil, 1, 'x')"
+  call SysStemCopy 's.', copies('a', 249), 1, 1, 1
+  call try "SysStemInsert(copies('a', 249), 1, 'x')"
+  call try "SysStemInsert(copies('a', 249) || '.', 1, 'x')"
+  call try "SysStemInsert(copies('a', 250), 1, 'x')"
+  call try "SysStemInsert(copies('a', 250) || '.', 1, 'x')"
+  call try "SysStemInsert(copies('a', 251) || '.', 1, 'x')"
+  return
+try:
+  signal on syntax name e
+  interpret 'say' arg(1)
+  return
+e: say condition('o')~code
+  return
+::class sonly
+::method string
+  return 's.'
+</code></pre>
+<pre><code class="language-output">0 0 0 0
+2 b a 1 c 1 d
+3 m
+3 z b 1 z
+40.919
+40.919
+40.919
+40.919
+40.919
+40.919
+40.919
+40.919
+0
+0
+40.919
+40.919
+40.919
+S.0 S.1
+</code></pre>
+<div class="rule" id="r-util.index.stemarray"><a href="#r-util.index.stemarray">[util.index.stemarray]</a></div>
+<p>A stem array is a stem whose tail <code>0</code> holds the number of items, <code>n</code>, and
+whose tails <code>1</code> to <code>n</code> hold the items, written as plain whole numbers, so that
+<code>s.01</code> is not an item. A function that reads a stem array reads the tail <code>0</code>
+first. It is <code>n</code> when it is a whole number, written as <code>4</code>, <code>4</code>, <code>04</code>,
+<code>4.0</code>, <code>4e0</code> or <code>+4</code>. SysStemCopy, SysStemDelete and SysStemInsert read it
+rounded to 18 significant digits and need a magnitude below 10**18.
+SysStemSort reads it rounded to 9 significant digits and needs a magnitude
+below 10**9. The NUMERIC DIGITS of the caller plays no part. A stem without
+that tail, a tail that is not a whole number after that rounding, such as
+<code>1.5</code> or a word, a value at or above that limit, and a stem that has only a
+default value (<code>s. = 'x'</code>) raise <code>SYNTAX 40.922</code>: the default of a stem is
+never the value of a tail that has none. A count below <code>0</code> is read as a
+number, and each function says what it does with it. An item that the
+function reads, and that has no value, because it was never assigned or was
+dropped, raises <code>SYNTAX 40.924</code>, and again the stem's default does not stand
+for it. A position or a number of items that is outside the array raises
+<code>SYNTAX 40.923</code>. An item can be any object, and a function that moves an
+item moves the object itself, so that the item is still the same object. A
+function that changes the count writes it as a plain whole number.</p>
+<pre><code class="language-rexx">call try "SysStemDelete('s.', 1)", "drop s.0"
+call try "SysStemDelete('s.', 1)", "s.0 = 'x'"
+call try "SysStemDelete('s.', 1)", "s.0 = 1.5"
+call try "SysStemDelete('s.', 1)", "s. = 'dflt'"
+call try "SysStemDelete('s.', 1)", "s. = 'dflt'; s.0 = 3"
+call try "SysStemDelete('s.', 1)", "drop s.2"
+call try "SysStemDelete('s.', 1)", "s.2 = .array~of(7)"
+call try "SysStemDelete('s.', 3)", "drop s.2"
+call try "SysStemDelete('s.', 4)"
+call try "SysStemDelete('s.', 1)", "s.0 = ' 3 '"
+call try "SysStemDelete('s.', 1)", "s.0 = '+3'"
+call try "SysStemDelete('s.', 1)", "s.0 = '3.0'"
+call try "SysStemDelete('s.', 1)", "s.0 = '3e0'"
+call try "SysStemDelete('s.', 1)", "s.0 = '03'"
+call try "SysStemDelete('s.', 1)", "s.0 = '1.000000000000000001'"
+call try "SysStemDelete('s.', 1)", "s.0 = '1.00000000000000001'"
+call try "SysStemDelete('s.', 1)", "s.0 = '1e18'"
+call try "SysStemDelete('s.', 1)", "s.0 = -1"
+call try "SysStemSort('s.')", "s.0 = '1.000000001'"
+call try "SysStemSort('s.')", "s.0 = '1.00000001'"
+call try "SysStemSort('s.')", "s.0 = -1"
+numeric digits 30
+call try "SysStemDelete('s.', 1)", "s.0 = '1.000000000000000001'"
+numeric digits 3
+call try "SysStemSort('s.')", "s.0 = '1.0001'"
+exit
+try:
+  s.0 = 3; s.1 = 'a'; s.2 = 'b'; s.3 = 'c'
+  interpret arg(2)
+  signal on syntax name e
+  interpret 'r = ' arg(1)
+  signal off syntax
+  say r show()
+  return
+e: say condition('o')~code show()
+  return
+show: procedure expose s.
+  out = ''
+  do i = 0 to 3
+    if symbol('s.' || i) == 'VAR' then out = out s.i
+    else out = out '-'
+  end
+  return '[' || strip(out) || ']'
+</code></pre>
+<pre><code class="language-output">40.922 [- a b c]
+40.922 [x a b c]
+40.922 [1.5 a b c]
+40.922 [dflt dflt dflt dflt]
+40.924 [3 dflt dflt dflt]
+40.924 [3 a - c]
+0 [2 7 c -]
+0 [2 a - -]
+40.923 [3 a b c]
+0 [2 b c -]
+0 [2 b c -]
+0 [2 b c -]
+0 [2 b c -]
+0 [2 b c -]
+0 [0 - b c]
+40.922 [1.00000000000000001 a b c]
+40.922 [1e18 a b c]
+40.922 [-1 a b c]
+0 [1.000000001 a b c]
+40.922 [1.00000001 a b c]
+40.922 [-1 a b c]
+0 [0 - b c]
+40.922 [1.0001 a b c]
+</code></pre>
+<pre><code class="language-rexx">o = .array~of(7)
+s.0 = 2; s.1 = 'a'; s.2 = o; s.01 = 'zero-one'
+call SysStemDelete 's.', 1
+say s.0 (s.1 == o) s.1~class~id s.01
+</code></pre>
+<pre><code class="language-output">1 1 Array zero-one
+</code></pre>
+<h2 id="answers"><a class="header" href="#answers">Answers</a></h2>
+<div class="rule" id="r-util.index.codes"><a href="#r-util.index.codes">[util.index.codes]</a></div>
+<p>A function that works on the system answers what it did, and a failure of the
+system is an answer, never a <code>SYNTAX</code> condition. A missing file, a directory
+in place of a file, a refused permission and a name that is already taken
+leave the program running. What a function raises is limited to bad arguments,
+which the page of each function lists. SysFileDelete, SysMkDir, SysRmDir,
+SysFileCopy and SysFileMove answer <code>0</code> when they did it. Otherwise they answer
+the system's error number for the failure: <code>2</code> for a name that nothing has or
+a directory in it that does not exist, <code>13</code> for a permission that the system
+refuses, <code>17</code> for a name that is taken, <code>20</code> for a name that must be a
+directory and is not (a component before the last, or the target of a
+directory that is moved when that is an entry other than a directory or a
+regular file, such as a fifo, and not a symbolic link that leads to a regular
+file), <code>21</code> for a directory where a file is needed, <code>22</code>
+for a directory moved into itself, and <code>39</code> for a directory that is not empty.
+Other failures answer the system's other numbers, such as <code>36</code> for a name that
+is too long. The page of each of these five functions gives the number of
+every failure it lists, and says where the function departs from the system's
+number. The other functions answer fixed values, which their pages state.
+SysFileTree answers <code>0</code> whether or not it could read what it was asked for.
+SysFileSearch answers <code>0</code>, or <code>3</code> for a file that it cannot read.
+SysSetFileDateTime answers <code>0</code>, or <code>-1</code> for every failure. SysGetFileDateTime
+answers a time, or <code>-1</code>. SysTempFileName and SysSearchPath answer a name, or
+the null string. A function that answers a state, such as <code>SysFileExists</code>,
+answers <code>0</code> or <code>1</code> and has no failure to report.</p>
+<pre><code class="language-rexx">say SysFileDelete('c1zqidxnone') SysMkDir('c1zqidxnone/sub') SysRmDir('c1zqidxnone')
+say SysFileCopy('c1zqidxnone', 'c1zqidxcopy') SysFileMove('c1zqidxnone', 'c1zqidxmoved')
+say SysFileExists('c1zqidxcopy') SysFileExists('c1zqidxmoved')
+call SysMkDir 'c1zqidxd'
+say SysMkDir('c1zqidxd') SysFileDelete('c1zqidxd') SysRmDir('c1zqidxd')
+say SysFileTree('c1zqidxnone/*', 's.') SysFileSearch('x', 'c1zqidxnone', 's.') SysGetFileDateTime('c1zqidxnone') SysSetFileDateTime('c1zqidxnone')
+</code></pre>
+<pre><code class="language-output">13 2 2
+2 2
+0 0
+17 21 0
+0 3 -1 -1
+</code></pre>
+<h2 id="functions-that-exist-only-on-windows"><a class="header" href="#functions-that-exist-only-on-windows">Functions that exist only on Windows</a></h2>
+<div class="rule" id="r-util.index.windows"><a href="#r-util.index.windows">[util.index.windows]</a></div>
+<p>A RexxUtil function that exists only on Windows, such as <code>SysWinVer</code>,
+<code>SysDriveMap</code> or <code>RxMessageBox</code>, is not provided on a Unix-like system.
+Calling one raises <code>SYNTAX 43.1</code>, as a call of any name that no routine has
+does, and <a href="../builtins/rxfuncquery.html#r-bif.rxfuncquery.answer">RXFUNCQUERY</a> and
+<a href="../builtins/rxfuncadd.html#r-bif.rxfuncadd.module">RXFUNCADD</a> answer <code>1</code> for it. <a href="windows.html">The page on the
+Windows-only functions</a> lists them.</p>
+<blockquote>
+<p><strong>Note.</strong> Support for the Windows-only functions on Windows is tracked in
+issue #215.</p>
+</blockquote>
+<pre><code class="language-rexx">call try "SysWinVer()"
+call try "SysDriveMap()"
+call try "RxMessageBox('text')"
+say rxfuncquery('SysWinVer') rxfuncquery('SysDriveMap')
+say rxfuncadd('SysWinVer', 'rexxutil', 'SysWinVer')
+say rxfuncadd('RxMessageBox', 'rexxutil', 'RxMessageBox')
+exit
+try:
+  signal on syntax name e
+  interpret 'say' arg(1)
+  return
+e: say condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">43.1
+43.1
+43.1
+1 1
+1
+1
+</code></pre>
+<h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
+<div class="rule" id="r-util.index.deviation.34"><a href="#r-util.index.deviation.34">[util.index.deviation.34]</a></div>
+<p>In every name that a RexxUtil function takes, each <code>..</code> removes exactly the
+one component before it, however the component was written (<a href="../builtins/qualify.html#r-bif.qualify.deviation.34">Deviation
+34</a>). ooRexx removes none after a doubled slash
+and two after a component that starts with a period, so a function can work on
+a different file there.</p>
+<pre><code class="language-rexx">call lineout 'c1zqidxdv', 'x'
+call lineout 'c1zqidxdv'
+call SysMkDir 'c1zqidxdd'
+say SysIsFile('c1zqidxdd//..//c1zqidxdv') SysIsFile('c1zqidxdd/.d/../../c1zqidxdv')
+call SysFileDelete 'c1zqidxdv'
+call SysRmDir 'c1zqidxdd'
+</code></pre>
+<pre><code class="language-output">1 1
+</code></pre>
+<div class="rule" id="r-util.index.deviation.101"><a href="#r-util.index.deviation.101">[util.index.deviation.101]</a></div>
+<p>The functions check their arguments in the order that every other builtin
+follows: the number of arguments first, so that an argument past the last one
+raises <code>SYNTAX 88.922</code> before an omitted or wrong argument is reported
+(<a href="../builtins/index.html#r-bif.index.call.native.deviation.101">Deviation 101</a>). ooRexx reports an
+omitted argument, an object whose <code>request</code> answers no string, a stem name of
+SysStemCopy, SysStemDelete or SysStemInsert that fails its check (SysStemSort
+checks its stem after the count, as interrexx does), a whole-number argument
+of SysStemCopy, SysStemDelete, SysStemInsert or SysStemSort that fails its
+check, an argument that is not a whole number, a semaphore handle that is
+negative, a <code>substitutions</code> of SysFormatMessage that has no <code>MAKEARRAY</code>
+method, and a <code>mode</code> of SysMkDir that fails any of its checks before the
+count, and the count before a <code>filler</code> or an <code>option</code> that it does not allow.
+SysOpenEventSem and SysOpenMutexSem are the exception: in both engines they
+report an omitted name (<code>SYNTAX 88.901</code>) and an object that has no string
+value (<code>SYNTAX 88.909</code>) before the count, as <a href="syseventsem.html">the event
+semaphore</a> and <a href="sysmutexsem.html">the mutex semaphore</a> pages
+show.</p>
+<pre><code class="language-rexx">signal on syntax name a
+say SysFileExists(, 'x')
+a: say condition('o')~code
+signal on syntax name b
+say SysFileExists(.nil, 'x')
+b: say condition('o')~code
+signal on syntax name c
+say SysFileCopy(, 'x', 'y')
+c: say condition('o')~code
+signal on syntax name d
+say SysMkDir('c1zqidxdm', 'x', 'y')
+d: say condition('o')~code
+signal on syntax name f
+say SysTempFileName('c1zqidx?', .nil, 'y')
+f: say condition('o')~code
+signal on syntax name g
+say SysStemDelete('s.a', 1, 1, 1)
+g: say condition('o')~code
+signal on syntax name h
+say SysStemDelete('s.', 'x', 1, 1)
+h: say condition('o')~code
+signal on syntax name i
+say SysStemDelete('s.', 0, 1, 1)
+i: say condition('o')~code
+signal on syntax name j
+say SysGetErrorText('abc', 3)
+j: say condition('o')~code
+signal on syntax name k
+say SysGetKey(.nil, 'x')
+k: say condition('o')~code
+signal on syntax name l
+say SysGetErrorText('99999999999', 3)
+l: say condition('o')~code
+signal on syntax name m
+say SysFormatMessage(.nil, 'x', 'y')
+m: say condition('o')~code
+signal on syntax name n
+say SysFormatMessage('a', .c6zqm~new, 'c')
+n: say condition('o')~code
+signal on syntax name o
+say SysPostEventSem('-1', 'y')
+o: say condition('o')~code
+say SysIsFileDirectory('c1zqidxdm')
+::class c6zqm
+::method makestring
+  return 'M'
+</code></pre>
+<pre><code class="language-output">88.922
+88.922
+88.922
+88.922
+88.922
+88.922
+88.922
+88.922
+88.922
+88.922
+88.922
+88.922
+88.922
+88.922
+0
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../environment/debugging.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../rexxutil/sysfiledelete.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../environment/debugging.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../rexxutil/sysfiledelete.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../assets/version-picker.js"></script>
+
+
+    </div>
+    </body>
+</html>
