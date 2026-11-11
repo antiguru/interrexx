@@ -322,7 +322,7 @@ e: say 'init b self' condition('o')~code
   return 'r'
 ```
 
-```output defect=#112
+```output
 init a sees .B r
 init a self 97.1
 init b sees A
