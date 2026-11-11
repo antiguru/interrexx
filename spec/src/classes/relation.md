@@ -885,7 +885,7 @@ bad: say arg(1) '=>' condition('o')~code
   return h
 ```
 
-```output defect=#167
+```output
 3 Array 5 4
 j,k,m 0
 2
