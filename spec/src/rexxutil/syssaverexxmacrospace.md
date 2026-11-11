@@ -59,8 +59,9 @@ e: say condition('o')~code
 r[util.syssaverexxmacrospace.answer]
 When the macrospace holds at least one macro and the file can be written, the
 call writes every macro to it, with its order, and answers `0`. A relative
-`file` is taken from the current directory, and the name is cleaned as [the
-name rule](r:util.index.names) says. A file that is already there is replaced,
+`file` is taken from the current directory, and the name is read as [the rule
+of SysAddRexxMacro](r:util.sysaddrexxmacro.answer) reads its `file`: it goes
+to the system as it is written. A file that is already there is replaced,
 whole: what it held before does not come back with a later load. The
 macrospace itself is not changed, and the saved macros are the programs as
 they were added, so the files they were made from are not needed to load them.
@@ -100,9 +101,13 @@ The call answers `5`, and writes nothing, when the macrospace holds no macro:
 there is then no file to load, and a file of that name that was there is left
 as it was. It also answers `5` when the file cannot be written: when a
 directory in its name is not there, when a component before the last is a
-file, and when the name is that of a directory.
+file, and when the name is that of a directory. A new file in a directory
+that may not be written is not made, and the call answers `5`; a file that is
+already there and may be written is replaced as above, also in such a
+directory.
 
 ```rexx
+call SysClearRexxMacroSpace
 call lineout 'c4zqsfail.rex', 'return "x"'
 call lineout 'c4zqsfail.rex'
 call SysMkDir 'c4zqsfdir'
@@ -124,4 +129,33 @@ call SysRmDir 'c4zqsfdir'
 5 text
 5 5 5
 0 0
+```
+
+> **Note.** The next example shows the two cases of a directory that may not
+> be written.
+
+```rexx
+address system 'id -u' with output stem u.
+root = (u.1 == 0)
+call lineout 'c4zqsp.rex', 'return "x"'
+call lineout 'c4zqsp.rex'
+call SysMkDir 'c4zqspdir'
+call lineout 'c4zqspdir/old', 'old'
+call lineout 'c4zqspdir/old'
+call SysAddRexxMacro 'C4ZQSP', 'c4zqsp.rex'
+address system 'chmod 555 c4zqspdir'
+say (SysSaveRexxMacroSpace('c4zqspdir/new') == 5 | root) (SysFileExists('c4zqspdir/new') == 0 | root)
+say SysSaveRexxMacroSpace('c4zqspdir/old') (charin('c4zqspdir/old', 1, 3) \== 'old')
+call stream 'c4zqspdir/old', 'c', 'close'
+address system 'chmod 755 c4zqspdir'
+call SysDropRexxMacro 'C4ZQSP'
+call SysFileDelete 'c4zqspdir/old'
+call SysFileDelete 'c4zqspdir/new'
+call SysRmDir 'c4zqspdir'
+call SysFileDelete 'c4zqsp.rex'
+```
+
+```output
+1 1
+0 1
 ```

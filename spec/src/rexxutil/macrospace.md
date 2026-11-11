@@ -25,8 +25,9 @@ what it answers:
   keeping it in a file or bringing it back.
 
 > **Note.** The examples add only macros of their own, whose names start with
-> `C4ZQ`, and drop each one again, so that a macro that an example leaves does
-> not change what a later one finds.
+> `C4ZQ` (and, to show a point, `LEFT` and the null string), and drop each one
+> again, so that a macro that an example leaves does not change what a later
+> one finds.
 
 ## What a macro is
 
@@ -96,7 +97,6 @@ B []
 0 []
 ```
 
-
 r[util.macrospace.run]
 A call of the name of a macro, whether as a function or by CALL, runs the
 program that the macro was made from, as a routine of the code that makes the
@@ -110,32 +110,33 @@ CALL sets no `RESULT`. An `EXIT` ends only the macro, and the caller goes on:
 the value of the `EXIT` is the answer, and an `EXIT` without a value leaves
 the call without one. A `SYNTAX` condition that the macro raises is raised in
 the caller, with the same code. For `PARSE SOURCE`, the second word is
-`FUNCTION` or `SUBROUTINE` as for any routine, and the third is the name of
-the macro in capitals, whatever case it was added in. A macro is run the same
-way from a routine, from a method and from another macro, and it can call
-itself.
+`FUNCTION` or `SUBROUTINE` as for any routine, and the third is the name as
+the call wrote it, whatever case the macro was added in: in capitals for a
+name written as a symbol, and as written for a name written as a string. A
+macro is run the same way from a routine, from a method and from another
+macro, and it can call itself.
 
 ```rexx
-call lineout 'c4zqrun.rex', 'parse arg a, b'
-call lineout 'c4zqrun.rex', 'if var("count") then count = count + 1; else count = 1'
-call lineout 'c4zqrun.rex', 'return arg() "[" || a || "][" || b || "] count=" || count || " x=" || symbol("x")'
-call lineout 'c4zqrun.rex'
-call lineout 'c4zqsrc.rex', 'parse source . kind name .; return kind name'
-call lineout 'c4zqsrc.rex'
-call lineout 'c4zqnone.rex', 'say "ran"'
-call lineout 'c4zqnone.rex'
-call lineout 'c4zqexit.rex', 'exit arg(1)'
-call lineout 'c4zqexit.rex'
-call lineout 'c4zqexit0.rex', 'exit'
-call lineout 'c4zqexit0.rex'
-call lineout 'c4zqdiv.rex', 'return 1 / 0'
-call lineout 'c4zqdiv.rex'
-call lineout 'c4zqrec.rex', 'if arg(1) = 0 then return 0; return arg(1) + C4ZQREC(arg(1) - 1)'
-call lineout 'c4zqrec.rex'
+call lineout 'c4zqrunf.rex', 'parse arg a, b'
+call lineout 'c4zqrunf.rex', 'if var("count") then count = count + 1; else count = 1'
+call lineout 'c4zqrunf.rex', 'return arg() "[" || a || "][" || b || "] count=" || count || " x=" || symbol("x")'
+call lineout 'c4zqrunf.rex'
+call lineout 'c4zqsrcf.rex', 'parse source . kind name .; return kind name'
+call lineout 'c4zqsrcf.rex'
+call lineout 'c4zqnonef.rex', 'say "ran"'
+call lineout 'c4zqnonef.rex'
+call lineout 'c4zqexitf.rex', 'exit arg(1)'
+call lineout 'c4zqexitf.rex'
+call lineout 'c4zqexit0f.rex', 'exit'
+call lineout 'c4zqexit0f.rex'
+call lineout 'c4zqdivf.rex', 'return 1 / 0'
+call lineout 'c4zqdivf.rex'
+call lineout 'c4zqrecf.rex', 'if arg(1) = 0 then return 0; return arg(1) + C4ZQREC(arg(1) - 1)'
+call lineout 'c4zqrecf.rex'
 names = .array~of('C4ZQRUN', 'c4zqsrc', 'C4ZQNONE', 'C4ZQEXIT', 'C4ZQEXIT0', 'C4ZQDIV', 'C4ZQREC')
 files = .array~of('run', 'src', 'none', 'exit', 'exit0', 'div', 'rec')
 do i = 1 to names~items
-  call SysAddRexxMacro names[i], 'c4zq' || files[i] || '.rex'
+  call SysAddRexxMacro names[i], 'c4zq' || files[i] || 'f.rex'
 end
 x = 5
 say C4ZQRUN('p', 'q')
@@ -146,6 +147,7 @@ say result
 say C4ZQSRC()
 call C4ZQSRC
 say result
+say 'c4zqsrc'()
 signal on syntax name none
 say C4ZQNONE()
 none: say condition('o')~code
@@ -168,7 +170,7 @@ do n over names
   call SysDropRexxMacro n
 end
 do f over files
-  call SysFileDelete 'c4zq' || f || '.rex'
+  call SysFileDelete 'c4zq' || f || 'f.rex'
 end
 exit
 fromroutine: return C4ZQRUN('r')
@@ -184,6 +186,7 @@ return C4ZQRUN('m')
 3 [1][2] count=1 x=LIT
 FUNCTION C4ZQSRC
 SUBROUTINE C4ZQSRC
+FUNCTION c4zqsrc
 ran
 44.1
 ran
@@ -199,11 +202,14 @@ r[util.macrospace.source]
 The program of a macro is read once, when the macro is added, and what is kept
 is that program as it was then: a later change to the file, or its removal,
 does not change the macro. The directives of the program work as they do in
-any program, but only for the macro: a routine that its `::ROUTINE` directive
-defines is called by the code of the macro and by nothing else, and the caller
-of the macro does not find it. A `::REQUIRES` directive is not looked at until
-the macro runs, so a macro whose directive names a file that is not there is
-added without a fault, and a call of it raises `SYNTAX 43.901`.
+any program. A routine that its `::ROUTINE` directive defines without
+`PUBLIC` is called by the code of the macro and by nothing else. Its public
+routines and public classes are not found by a program before that program
+first calls the macro; after the call, the program finds them by name, and
+they stay found when the macro is dropped. A `::REQUIRES` directive is not
+looked at until the macro runs, so a macro whose directive names a file that
+is not there is added without a fault, and a call of it raises
+`SYNTAX 43.901`.
 
 ```rexx
 call lineout 'c4zqsrc1.rex', 'return "first"'
@@ -211,6 +217,8 @@ call lineout 'c4zqsrc1.rex'
 call lineout 'c4zqsrc2.rex', 'return inner(arg(1))'
 call lineout 'c4zqsrc2.rex', '::routine inner'
 call lineout 'c4zqsrc2.rex', 'return "inner of macro:" arg(1)'
+call lineout 'c4zqsrc2.rex', '::routine c4zqpub public'
+call lineout 'c4zqsrc2.rex', 'return "public of macro"'
 call lineout 'c4zqsrc2.rex'
 call lineout 'c4zqsrc3.rex', 'return "never"'
 call lineout 'c4zqsrc3.rex', '::requires "c4zqnofile.rex"'
@@ -222,7 +230,14 @@ call lineout 'c4zqsrc1.rex', 'return "second"'
 call lineout 'c4zqsrc1.rex'
 say C4ZQS1()
 call SysFileDelete 'c4zqsrc1.rex'
-say SysAddRexxMacro('C4ZQS2', 'c4zqsrc2.rex') C4ZQS2('x')
+say SysAddRexxMacro('C4ZQS2', 'c4zqsrc2.rex')
+signal on syntax name e0
+say c4zqpub()
+e0: say condition('o')~code
+signal off syntax
+say C4ZQS2('x') c4zqpub()
+call SysDropRexxMacro 'C4ZQS2'
+say c4zqpub()
 say SysAddRexxMacro('C4ZQS3', 'c4zqsrc3.rex')
 signal on syntax name e1
 say inner('y')
@@ -232,7 +247,6 @@ say C4ZQS3()
 e2: say condition('o')~code
 signal off syntax
 call SysDropRexxMacro 'C4ZQS1'
-call SysDropRexxMacro 'C4ZQS2'
 call SysDropRexxMacro 'C4ZQS3'
 call SysFileDelete 'c4zqsrc2.rex'
 call SysFileDelete 'c4zqsrc3.rex'
@@ -241,7 +255,10 @@ call SysFileDelete 'c4zqsrc3.rex'
 ```output
 first
 first
-0 inner of macro: x
+0
+43.1
+inner of macro: x public of macro
+public of macro
 0
 43.1
 43.901
@@ -258,13 +275,13 @@ function. [The macro rule](r:env.search.macro) of the environment chapter
 gives the rest.
 
 ```rexx
-call lineout 'c4zqleft.rex', 'return "macro"'
-call lineout 'c4zqleft.rex'
-say SysAddRexxMacro('LEFT', 'c4zqleft.rex', 'B') SysAddRexxMacro('C4ZQLEFT', 'c4zqleft.rex', 'B')
+call lineout 'c4zqleftf.rex', 'return "macro"'
+call lineout 'c4zqleftf.rex'
+say SysAddRexxMacro('LEFT', 'c4zqleftf.rex', 'B') SysAddRexxMacro('C4ZQLEFT', 'c4zqleftf.rex', 'B')
 say left('abcdef', 3) 'LEFT'('abcdef', 3) C4ZQLEFT()
 call SysDropRexxMacro 'LEFT'
 call SysDropRexxMacro 'C4ZQLEFT'
-call SysFileDelete 'c4zqleft.rex'
+call SysFileDelete 'c4zqleftf.rex'
 ```
 
 ```output

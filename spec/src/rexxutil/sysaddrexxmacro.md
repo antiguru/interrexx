@@ -133,8 +133,14 @@ r[util.sysaddrexxmacro.answer]
 When the file can be read and holds a Rexx program, the call answers `0`. The
 program is read at that moment, and what the macro keeps is the program as it
 was read ([the source rule](r:util.macrospace.source)). A relative `file` is
-taken from the current directory at the moment of the call, and the name is
-cleaned as [the name rule](r:util.index.names) says. When a macro of the same
+taken from the current directory at the moment of the call. The name goes to
+the system as it is written, with none of the changes of [the name
+rule](r:util.index.names) or [the home rule](r:util.index.home): a `~` at its
+start is a character of the name, a component of two periods is the parent of
+the directory that the components before it reach, so that those must name a
+directory that exists (and the parent of a symbolic link is that of its
+target), and a slash at the end names no file. SysSaveRexxMacroSpace and
+SysLoadRexxMacroSpace read their `file` the same way. When a macro of the same
 name (in any case) is there, the new one replaces it. The new macro takes the
 `order` of the call, and not that of the macro it replaces.
 
@@ -165,12 +171,46 @@ call SysFileDelete 'c4zqadd1.rex'
 A second B first
 ```
 
+> **Note.** In the next example, `HOME` names a directory that holds a program
+> of its own. A name that starts with `~/`, one with a `..` after a directory
+> that is not there, and one with a slash at the end are not found, and the
+> `~` of a name for a file to save is a directory of the name, which is not
+> there.
+
+```rexx
+call SysMkDir 'c4zqhome'
+call lineout 'c4zqhome/c4zqh.rex', 'return "home"'
+call lineout 'c4zqhome/c4zqh.rex'
+call lineout 'c4zqh.rex', 'return "here"'
+call lineout 'c4zqh.rex'
+old = value('HOME', directory() || '/c4zqhome', 'ENVIRONMENT')
+say SysAddRexxMacro('C4ZQH', '~/c4zqh.rex') SysAddRexxMacro('C4ZQH', 'c4zqnone/../c4zqh.rex') SysAddRexxMacro('C4ZQH', 'c4zqh.rex/')
+say SysAddRexxMacro('C4ZQH', 'c4zqh.rex') SysSaveRexxMacroSpace('~/c4zqhs') SysSaveRexxMacroSpace('c4zqnone/../c4zqhs')
+say SysFileExists('c4zqhome/c4zqhs') SysFileExists('c4zqhs')
+say SysSaveRexxMacroSpace('c4zqhome/c4zqhs') SysLoadRexxMacroSpace('~/c4zqhs') SysLoadRexxMacroSpace('c4zqhome/c4zqhs/')
+call value 'HOME', old, 'ENVIRONMENT'
+call SysDropRexxMacro 'C4ZQH'
+call SysFileDelete 'c4zqhome/c4zqhs'
+call SysFileDelete 'c4zqhome/c4zqh.rex'
+call SysRmDir 'c4zqhome'
+call SysFileDelete 'c4zqhs'
+call SysFileDelete 'c4zqh.rex'
+```
+
+```output defect=#232
+7 7 7
+0 5 5
+0 0
+0 5 5
+```
+
 r[util.sysaddrexxmacro.fail]
 The call answers `7`, and changes nothing, when it cannot make a macro of the
 file. That is so when no file has the name, when the name is that of a
-directory, when the file cannot be read (the permission is refused), and when
-the file is not a valid Rexx program: an error in its text, or in one of its
-directives, that is found while it is read. A macro of the same name that was
+directory, when the file cannot be read (the permission is refused), when the
+file is empty (has no bytes at all; a file of one empty line is a program that
+does nothing), and when the file is not a valid Rexx program: an error in its
+text, or in one of its directives, that is found while it is read. A macro of the same name that was
 there is left as it was, with its order and its program. Faults that appear
 only when the program runs are not found here: a call to a routine that
 nothing has, and a `::REQUIRES` for a file that is not there, add a macro
@@ -197,6 +237,7 @@ call lineout 'c4zqf6.rex'
 call lineout 'c4zqf7.rex', 'return "unreadable"'
 call lineout 'c4zqf7.rex'
 call SysMkDir 'c4zqfdir'
+address system 'touch c4zqf8.rex'
 address system 'id -u' with output stem u.
 root = (u.1 == 0)
 address system 'chmod 000 c4zqf7.rex'
@@ -204,7 +245,7 @@ say SysAddRexxMacro('C4ZQF', 'c4zqf0.rex', 'A')
 say SysAddRexxMacro('C4ZQF', 'c4zqfnone.rex', 'B') SysAddRexxMacro('C4ZQF', 'c4zqfdir', 'B')
 say SysAddRexxMacro('C4ZQF', 'c4zqf1.rex', 'B') SysAddRexxMacro('C4ZQF', 'c4zqf2.rex', 'B')
 say SysAddRexxMacro('C4ZQF', 'c4zqf3.rex', 'B') SysAddRexxMacro('C4ZQF', 'c4zqf4.rex', 'B')
-say (SysAddRexxMacro('C4ZQF', 'c4zqf7.rex', 'B') == 7 | root)
+say (SysAddRexxMacro('C4ZQF', 'c4zqf7.rex', 'B') == 7 | root) SysAddRexxMacro('C4ZQF', 'c4zqf8.rex', 'B')
 say SysQueryRexxMacro('C4ZQF') C4ZQF()
 say SysAddRexxMacro('C4ZQF5', 'c4zqf5.rex') SysAddRexxMacro('C4ZQF6', 'c4zqf6.rex')
 say SysQueryRexxMacro('C4ZQF5') SysQueryRexxMacro('C4ZQF6')
@@ -212,7 +253,7 @@ call SysDropRexxMacro 'C4ZQF'
 call SysDropRexxMacro 'C4ZQF5'
 call SysDropRexxMacro 'C4ZQF6'
 address system 'chmod 644 c4zqf7.rex'
-do n = 0 to 7
+do n = 0 to 8
   call SysFileDelete 'c4zqf' || n || '.rex'
 end
 call SysRmDir 'c4zqfdir'
@@ -223,7 +264,7 @@ call SysRmDir 'c4zqfdir'
 7 7
 7 7
 7 7
-1
+1 7
 A kept
 0 0
 B B

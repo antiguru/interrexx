@@ -22,9 +22,8 @@ rule](r:util.index.args): a call with either one missing or omitted raises
 `SYNTAX 88.909`. An object that is not a string but has a string value is read
 by that value. `order` is read as [the order rule of
 SysAddRexxMacro](r:util.sysaddrexxmacro.order) reads it, with this difference:
-it has no default, and a null string for it raises `SYNTAX 40.920` as any
-other value that does not start with `A` or `B` does. The order is checked
-before the name is looked for, so a bad `order` raises `SYNTAX 40.920` for a
+it has no default, so that omitting it raises `SYNTAX 88.901`. The order is
+checked before the name is looked for, so a bad `order` raises `SYNTAX 40.920` for a
 name that no macro has.
 
 ```rexx

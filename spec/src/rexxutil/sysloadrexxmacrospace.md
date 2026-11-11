@@ -53,8 +53,9 @@ r[util.sysloadrexxmacrospace.answer]
 When the file is one that SysSaveRexxMacroSpace wrote, the call answers `0`
 and every macro that the file holds is in the macrospace, with the order and
 the program that it had when it was saved. A relative `file` is taken from the
-current directory, and the name is cleaned as [the name
-rule](r:util.index.names) says. The macros that the file does not hold stay as
+current directory, and the name is read as [the rule of
+SysAddRexxMacro](r:util.sysaddrexxmacro.answer) reads its `file`: it goes to
+the system as it is written. The macros that the file does not hold stay as
 they were; a macro of the same name (in any case) as one of the file is
 replaced by the one of the file, with its order. A macro that was loaded is a
 macro like any other ([the macrospace page](r:util.macrospace.run)), and it
@@ -98,11 +99,16 @@ B A B three
 ```
 
 r[util.sysloadrexxmacrospace.fail]
-The call answers `5`, and adds nothing, when the file is not one that can be
-used: when no file has the name, when the name is that of a directory, when
-the file is empty, and when the file is not one that SysSaveRexxMacroSpace
-wrote, as a text file is not. How a file that was saved and later damaged is
-read is not specified.
+The call answers `5`, and adds nothing, when no file has the name, when the
+name is that of a directory, when the file is empty, and when a file that
+SysSaveRexxMacroSpace did not write is shorter than 32 bytes. Such a file of
+32 bytes or more, and a saved file whose first bytes were changed, answer `6`,
+and nothing is added. A saved file with bytes added after its end loads as if
+they were not there. A saved file that was cut short answers `5`: when it
+held one macro nothing is added, and when it held several, the macros that the
+cut left whole may have been added; which ones is not specified, as the form
+of the file is not. A call that answers `5` or `6` leaves the macros that were
+already in the macrospace as they were.
 
 ```rexx
 call lineout 'c4zqlf.rex', 'return "x"'
@@ -126,4 +132,44 @@ call SysRmDir 'c4zqlfdir'
 5 5 5
 5 5 5 0
 5 B x
+```
+
+> **Note.** The next example damages a saved file of two macros in three ways,
+> changes its first byte, and loads a file of 31 bytes and one of 32. Each
+> load leaves macro `B` as it was.
+
+```rexx
+call lineout 'c4zqdm1.rex', 'return "one"'
+call lineout 'c4zqdm1.rex'
+call SysAddRexxMacro 'C4ZQDM', 'c4zqdm1.rex', 'A'
+call SysSaveRexxMacroSpace 'c4zqdmsaved'
+call SysAddRexxMacro 'C4ZQDM', 'c4zqdm1.rex', 'B'
+whole = charin('c4zqdmsaved', 1, chars('c4zqdmsaved'))
+call stream 'c4zqdmsaved', 'c', 'close'
+call try left(whole, length(whole) - 1)
+call try left(whole, length(whole) % 2)
+call try whole || 'more'
+call try 'X' || substr(whole, 2)
+call try copies('a', 31)
+call try copies('a', 32)
+call SysDropRexxMacro 'C4ZQDM'
+call SysFileDelete 'c4zqdmsaved'
+call SysFileDelete 'c4zqdm1.rex'
+exit
+try:
+  call charout 'c4zqdm', arg(1)
+  call stream 'c4zqdm', 'c', 'close'
+  say SysLoadRexxMacroSpace('c4zqdm') SysQueryRexxMacro('C4ZQDM')
+  call SysAddRexxMacro 'C4ZQDM', 'c4zqdm1.rex', 'B'
+  call SysFileDelete 'c4zqdm'
+  return
+```
+
+```output
+5 B
+5 B
+0 A
+6 B
+5 B
+6 B
 ```
