@@ -2224,7 +2224,8 @@ impl Interp {
 
     /// Replaces the environment this interpreter starts with, and the library
     /// search taken from it.
-    pub(crate) fn adopt_environment(&mut self, environment: Vec<(Vec<u8>, Vec<u8>)>) {
+    pub(crate) fn adopt_environment(&mut self, mut environment: Vec<(Vec<u8>, Vec<u8>)>) {
+        crate::with_session_variable(&mut environment);
         self.library_search = library_search_of(&environment);
         self.external_trace = external_trace_of(&environment);
         self.env = environment;

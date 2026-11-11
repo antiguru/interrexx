@@ -377,13 +377,21 @@ fn an_orphan_rxqueue_refuses_the_session_queue() {
 }
 
 /// Without a service, a command still runs when the session queue is empty, and its child gets
-/// no handle; with lines to hand over, the command raises 48.1 as any queue operation does.
+/// the handle the program has had since it started; with lines to hand over, the command raises 48.1 as any queue operation does.
 #[test]
 fn a_command_without_a_service() {
     let service = Service::new();
     std::fs::write(service.api(), "not a directory").expect("a file in the way");
     let empty = service.run("'echo [$RXQUEUESESSION]'\nsay rc\n");
-    assert_eq!(stdout(&empty), "[]\n0\n", "{}", stderr(&empty));
+    let out = stdout(&empty);
+    let handle = out
+        .strip_prefix("[0x")
+        .and_then(|rest| rest.strip_suffix("]\n0\n"));
+    assert!(
+        handle.is_some_and(|digits| u64::from_str_radix(digits, 16).is_ok()),
+        "{out:?} {}",
+        stderr(&empty)
+    );
     assert_eq!(empty.status.code(), Some(0));
     let held = service.run(
         "signal on syntax\nqueue 'line'\n'true'\nsay 'ran'\nexit\n\
