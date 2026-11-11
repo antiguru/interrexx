@@ -4,8 +4,12 @@
 //! own directory, and each side's `rexx` runs the cases of
 //! `tests/compiled/cases` there. The three descriptors must agree, and the
 //! recorded block is the oracle's. A case's input is its words, one per
-//! line. Images this crate refuses are pinned against this crate alone: the
-//! oracle crashes on a truncated image.
+//! line. Images this crate refuses are pinned against this crate alone:
+//! Deviation 153 (defects `compiled-image-truncated-crash` and
+//! `compiled-image-trailing-bytes-accepted`). The oracle crashes on a
+//! truncated image and on some changed header bytes, and runs an image with
+//! bytes after its end, so no test here hands it an image that was cut,
+//! extended or changed in its header.
 
 #[path = "support/oracle_runtime.rs"]
 mod oracle_runtime;
@@ -346,10 +350,36 @@ fn digit(byte: u8) -> u32 {
 fn decode(text: &[u8]) -> Vec<u8> {
     text.chunks(4)
         .flat_map(|quartet| {
-            let value = quartet.iter().fold(0u32, |all, &byte| all << 6 | digit(byte));
+            let value = quartet
+                .iter()
+                .fold(0u32, |all, &byte| all << 6 | digit(byte));
             [(value >> 16) as u8, (value >> 8) as u8, value as u8]
         })
         .collect()
+}
+
+/// The base64 text of `bytes`, in lines of 72 characters.
+fn encode(bytes: &[u8]) -> Vec<u8> {
+    const DIGITS: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut text = Vec::new();
+    for group in bytes.chunks(3) {
+        let value = group.iter().enumerate().fold(0u32, |all, (at, &byte)| {
+            all | u32::from(byte) << (16 - 8 * at)
+        });
+        for at in 0..4 {
+            text.push(if at <= group.len() {
+                DIGITS[(value >> (18 - 6 * at) & 63) as usize]
+            } else {
+                b'='
+            });
+        }
+    }
+    let mut lines = Vec::new();
+    for line in text.chunks(72) {
+        lines.extend_from_slice(line);
+        lines.push(b'\n');
+    }
+    lines
 }
 
 /// An image that both interpreters write the same way at its opening, and
@@ -361,13 +391,15 @@ fn both_interpreters_write_an_image_with_the_same_opening() {
         let binary = hello(&side, &[]);
         let opening = b"#!/usr/bin/env rexx\n/**/@REXX\0\0";
         assert!(binary.starts_with(opening), "{}", side.rexx.display());
-        assert!(binary.contains(&0), "{}", side.rexx.display());
+        assert!(binary[31..].contains(&0), "{}", side.rexx.display());
         let encoded = hello(&side, &["-e"]);
         let tag = b"#!/usr/bin/env rexx\n/**/@REXX@\n";
         assert!(encoded.starts_with(tag), "{}", side.rexx.display());
         let text = &encoded[tag.len()..];
         assert_eq!(text.last(), Some(&b'\n'));
-        let lines: Vec<&[u8]> = text[..text.len() - 1].split(|&byte| byte == b'\n').collect();
+        let lines: Vec<&[u8]> = text[..text.len() - 1]
+            .split(|&byte| byte == b'\n')
+            .collect();
         let (last, whole) = lines.split_last().expect("lines");
         assert!(whole.iter().all(|line| line.len() == 72));
         assert!(!last.is_empty() && last.len() <= 72);
@@ -405,6 +437,18 @@ fn an_image_runs_by_its_opening_and_not_by_its_name() {
         }
         let missing = report(&side, "solo2.rxo", &hello(&side, &[]));
         assert_eq!(missing, ran);
+        // In an encoded image a carriage return and a line feed are
+        // skipped wherever they stand: a copy with CR LF line ends runs.
+        let encoded = hello(&side, &["-e"]);
+        let tag = b"#!/usr/bin/env rexx\n/**/@REXX@\n".len();
+        let mut crlf = encoded[..tag].to_vec();
+        for &byte in &encoded[tag..] {
+            if byte == b'\n' {
+                crlf.push(b'\r');
+            }
+            crlf.push(byte);
+        }
+        assert_eq!(report(&side, "crlf.rxo", &crlf), ran, "CR LF");
         let output = side
             .command(&side.rexx)
             .arg("solo2")
@@ -437,9 +481,10 @@ fn an_opening_with_a_changed_byte_is_source() {
     }
 }
 
-/// An image of either interpreter is refused by the other with 3.903, and an
-/// image whose identification has a changed byte is refused by its own;
-/// a line of an encoded image that is not base64 is refused with 3.905.
+/// An image of either interpreter is refused by the other with 3.903, and a
+/// line of an encoded image that is not base64 is refused with 3.905; the
+/// images these two refusals run are unchanged ones or carry a changed byte
+/// in the base64 text of an encoded one, not in a header.
 // spec: env.invocation.rexxc.foreign, env.invocation.rexxc.damaged
 #[test]
 fn both_interpreters_refuse_a_foreign_image_and_an_undecodable_line() {
@@ -455,20 +500,6 @@ fn both_interpreters_refuse_a_foreign_image_and_an_undecodable_line() {
         refused("x.rxo", 903),
         "ours on the oracle's"
     );
-    // The header's identification: each byte of it that is changed gives the
-    // refusal on both sides (measured at these offsets).
-    for (side, image) in [(&theirs, &their_image), (&ours, &our_image)] {
-        for offset in [36, 40, 44, 47] {
-            let mut bytes = image.clone();
-            bytes[offset] ^= 1;
-            assert_eq!(
-                report(side, "x.rxo", &bytes),
-                refused("x.rxo", 903),
-                "{offset} on {}",
-                side.rexx.display()
-            );
-        }
-    }
     let body = b"#!/usr/bin/env rexx\n/**/@REXX@\n".len();
     for side in [&theirs, &ours] {
         let encoded = hello(side, &["-e"]);
@@ -485,4 +516,52 @@ fn both_interpreters_refuse_a_foreign_image_and_an_undecodable_line() {
     }
     std::fs::remove_dir_all(&theirs.dir).expect("the oracle directory is removed");
     std::fs::remove_dir_all(&ours.dir).expect("the crate directory is removed");
+}
+
+// spec: env.invocation.deviation.153, env.invocation.rexxc.damaged
+/// Deviation 153: an image is checked as a whole. These run on this crate
+/// alone: the oracle runs an image with bytes after its end, ignores some
+/// changed header bytes and crashes on others and on a truncated image
+/// (defects `compiled-image-trailing-bytes-accepted` and
+/// `compiled-image-truncated-crash`), so it is never handed one.
+#[test]
+fn an_image_that_is_cut_extended_or_changed_in_its_header_is_refused() {
+    let side = Side::ours("whole");
+    let binary = hello(&side, &[]);
+    let refusal = |name: &str, bytes: &[u8]| report(&side, name, bytes);
+    assert_eq!(refusal("ok.rxo", &binary), "rc> 4\nout> hello x\n");
+    // Bytes after the end, in the binary form and in the encoded one.
+    let mut extended = binary.clone();
+    extended.extend_from_slice(b"JUNK");
+    assert_eq!(refusal("tail.rxo", &extended), refused("tail.rxo", 903));
+    let first = binary.iter().position(|&b| b == b'\n').expect("a line") + 1;
+    let mut encoded = binary[..first].to_vec();
+    encoded.extend_from_slice(b"/**/@REXX@\n");
+    // The binary image without its first line, extended, as base64 text.
+    let mut inner = binary[first..].to_vec();
+    inner.extend_from_slice(b"JUNK");
+    encoded.extend_from_slice(&encode(&inner[..]));
+    assert_eq!(refusal("etail.rxo", &encoded), refused("etail.rxo", 903));
+    // The text of an unextended copy, built the same way, runs.
+    let mut whole = binary[..first].to_vec();
+    whole.extend_from_slice(b"/**/@REXX@\n");
+    whole.extend_from_slice(&encode(&binary[first..]));
+    assert_eq!(refusal("ewhole.rxo", &whole), "rc> 4\nout> hello x\n");
+    // An image that ends too early.
+    for length in [first + 11, first + 40, binary.len() - 1] {
+        let name = format!("cut{length}.rxo");
+        assert_eq!(refusal(&name, &binary[..length]), refused(&name, 903));
+    }
+    // A changed byte of the second byte of 0 of the opening and of each
+    // byte of the header after it.
+    for offset in first + 10..first + 10 + 42 {
+        let mut bytes = binary.clone();
+        bytes[offset] ^= 1;
+        assert_eq!(
+            refusal("hdr.rxo", &bytes),
+            refused("hdr.rxo", 903),
+            "{offset}"
+        );
+    }
+    std::fs::remove_dir_all(&side.dir).expect("the directory is removed");
 }

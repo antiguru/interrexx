@@ -277,7 +277,7 @@ ro.rxo
 rc> 253
 err> Error 3:  Failure during initialization.
 err> Error 3.902:  Error writing output file "ro.rxo".
-file> 
+file> old\n
 
 run
 ok.rex
@@ -512,3 +512,32 @@ locked.rex
 rc> 253
 err> Error 3:  Failure during initialization.
 err> Error 3.1:  Failure during initialization: File "DIR/locked.rex" is unreadable.
+
+# words in error come before the check of the names
+# (env.invocation.rexxc.names)
+run
+ok.rex
+ok.rex
+-x
+----
+rc> 255
+out> The rexxc command parameters are incorrect.
+out> SYNTAX: rexxc inputfile [outputfile] [-s] [-e]
+out> Without outputfile rexxc only performs a syntax check.
+
+# a library that ::REQUIRES names with LIBRARY is not bound; a REGISTERED
+# routine is (env.invocation.rexxc.translation)
+run
+reqlib.rex
+-s
+----
+rc> 0
+
+run
+reg.rex
+-s
+----
+rc> 166
+err>      2 *-* ::routine r external 'REGISTERED nosuchlibzz ent'
+err> Error 90 running DIR/reg.rex line 2:  External name not found.
+err> Error 90.999:  Unable to find external routine "ent".

@@ -565,3 +565,23 @@ solo
 rc> 253
 err> Error 3:  Failure during initialization.
 err> Error 3.901:  Failure during initialization: Program "solo" was not found.
+
+# What a program can still read from its image: the source of the routines
+# and methods and of the package is empty, but the data of a ::RESOURCE and
+# the values of ::ANNOTATE directives are kept. (env.invocation.rexxc.source)
+compile
+data.rex
+data.rxo
+-s
+----
+rc> 0
+
+rexx
+data.rxo
+----
+rc> 0
+out> psl []
+out> rs 1 line one -- not a comment
+out> pa 1
+out> ra 1 0
+out> ca 1 0

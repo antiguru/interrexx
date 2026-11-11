@@ -48,11 +48,16 @@ fn lay_fixture(dir: &Path) {
     );
     file(b"cls.rex", "::class a subclass zzz\n");
     file(b"req.rex", "::requires 'nosuch.rex'\n");
+    file(b"reqlib.rex", "say 'p'\n::requires 'nosuchlibzz' LIBRARY\n");
+    file(
+        b"reg.rex",
+        "say 'p'\n::routine r external 'REGISTERED nosuchlibzz ent'\n",
+    );
     file(
         b"rexxent.rex",
         "::method m external \"LIBRARY REXX nosuchentry\"\n",
     );
-    file(b"ro.rxo", "");
+    file(b"ro.rxo", "old\n");
     file(b"same.rex", "say 1\n");
     file(b"old.rxo", "old\n");
     file(b"old2.rxo", "old\n");
