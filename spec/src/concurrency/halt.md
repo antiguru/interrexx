@@ -46,11 +46,10 @@ description, and an error that no call traps ends the message with `4.1`
 sees HALT with the description that `halt` was given. Which clause of the
 target is the first to see a HALT that is sent while the target runs is not
 specified ([Deviation
-22](../deviations.md#22-one-schedule-for-racing-activities)). When the
-activity is running a nested region, such as a method that a built-in method
-calls back, interrexx takes the HALT only when that region has ended
-([Deviation
-17](../deviations.md#17-halt-of-an-activity-with-a-nested-region)).
+22](../deviations.md#22-one-schedule-for-racing-activities)). [Deviation
+17](../deviations.md#17-halt-of-an-activity-with-a-nested-region) names a case
+in which interrexx takes such a HALT only when a nested region that runs
+beneath the activity has ended; no example here shows it.
 
 ```rexx
 g = .gate~new
@@ -341,26 +340,26 @@ the command ended with rc 0, then stop
 ```
 
 > **Note.** The first example starts six messages that each wait in a
-> different way: for a condition, for the post of an event, for the mutex,
-> for the result of a message, for the end of a message and in `SysSleep`
-> for a second. The clause that waits also marks the message: the `WHEN`
-> condition, the argument of `wait`, `acquire` and `SysSleep`, and the
-> receiver of `result` and `wait` each come from a method whose only clause
-> after `expose` and `use arg` is a `RETURN` that appends the mark to an
-> array (a time out of 60 seconds, which nothing uses up, is only an
-> argument to give). No clause boundary is left between the mark and the
-> wait, so the program knows that each message is in its waiting clause when
-> it sends the HALTs. The program holds the mutex, and the fourth and fifth
-> messages wait for a message that is itself waiting for the program. The
-> 0.3 seconds are a window in which a wait that a HALT ended would show; it
-> ends before the second of the sleep does. In the second example a guarded
-> method holds the lock of the object while it waits for a post. The
-> message asks for the same lock by sending a guarded method, whose argument
-> carries the mark, so that the HALT is sent while the message waits for the
-> lock. It is taken in the guarded method, at its first clause, after the
-> program has let the holder go. The third example makes the command say that
-> it has started by creating a file, so that the HALT is sent while the
-> command runs, and the program ends the command by creating a second file.
+> different way: for a condition, for the post of an event, for the mutex, for
+> the result of a message, for the end of a message and in `SysSleep` for a
+> second. The clause that waits also marks the message: the `WHEN` condition,
+> the argument of `wait`, `acquire` and `SysSleep`, and the receiver of
+> `result` and `wait` each come from a method whose only clause after `expose`
+> and `use arg` is a `RETURN` that appends the mark to an array (a time out of
+> 60 seconds, which nothing uses up, is only an argument to give). No clause
+> boundary is left between the mark and the wait, so the program knows that
+> each message is in its waiting clause when it sends the HALTs. The program
+> holds the mutex, and the fourth and fifth messages wait for a message that
+> is itself waiting for the program. The 0.3 seconds are a window in which a
+> wait that a HALT ended would show; it ends before the second of the sleep
+> does. In the second example a guarded method holds the lock of the object
+> while it waits for a post. The message asks for the same lock by sending a
+> guarded method, whose argument carries the mark, so that the HALT is sent
+> while the message waits for the lock. It is taken in the guarded method,
+> after its first clause, `signal on halt`, after the program has let the
+> holder go. The third example makes the command say that it has started by
+> creating a file, so that the HALT is sent while the command runs, and the
+> program ends the command by creating a second file.
 
 r[conc.halt.reply]
 A message whose method has replied has ended ([the result
@@ -586,13 +585,13 @@ cancelled, and a ticker that an error in its target's `triggered` stopped
 ([the timers rule](r:conc.activities.timers)) do not keep the program, so a
 cancelled alarm or ticker with a delay of a minute does not make the program
 last a minute. An activity that waits for something that nothing can bring
-about any more keeps the program for ever: [Deviation
-20](r:conc.activities.deviation.20) says that interrexx refuses such a wait
-while the main program runs; after the main program has ended it does not yet,
-and the program hangs (#249), which no example here tests. A main program
-that interrexx ends with a refusal does not wait for any of them ([the
-Deviation 21 rule](r:conc.halt.deviation.21)). The status of the command is
-the main program's ([the next rule](r:conc.halt.end.status)).
+about any more keeps the program for ever. interrexx refuses such a wait
+([Deviation 20](r:conc.activities.deviation.20)), but once the main program
+has ended it does not refuse it yet, and the program hangs (#249), which no
+example here tests. A main program that interrexx ends with a refusal does not
+wait for any of them ([the Deviation 21 rule](r:conc.halt.deviation.21)). The
+status of the command is the main program's ([the next
+rule](r:conc.halt.end.status)).
 
 ```rexx
 g = .gate~new
@@ -709,11 +708,12 @@ the program did not last long: 1
 > the gate and ends with the status 3, and the four activities run after it
 > has ended. The ticker is cancelled by its own target at the third call,
 > which ends it. The second example is the text of a `::RESOURCE` that a
-> second interpreter runs, and the first one prints how long that took.
-> Nothing is left to wait for when its program ends: the alarm and the ticker
-> that were made with a delay of a minute were cancelled, the short alarm went
-> off, and the ticker that fails has stopped; so the program ends long before
-> a minute is up, and the example allows it 30 seconds.
+> second interpreter runs, and the first one prints whether that took less
+> than 30 seconds. Nothing is left to wait for when its program ends: the
+> alarm and the ticker that were made with a delay of a minute were cancelled,
+> the short alarm went off, and the ticker that fails has stopped; so the
+> program ends long before a minute is up, and the example allows it 30
+> seconds.
 
 r[conc.halt.end.status]
 The status of the command is the main program's own ([the status
@@ -1026,11 +1026,12 @@ A HALT that a signal asks for ends the wait of an activity that waits for a
 `MutexSemaphore`, or in `SysSleep`. The clause that waited finishes, with
 `wait` and `acquire` answering 0, and the activity takes the HALT at once
 ([Deviation 10](../deviations.md#10-signals-halt-and-wake)). A wait for the
-result of a message is not ended. A `halt` of a message ends no wait ([the
-rule](r:conc.halt.pending)). ooRexx ends none of these waits for a signal.
-The activity goes on waiting until its condition holds, the post or the
-release comes, or the time is up, and then takes the HALT, so that in the
-example, where nothing posts, releases or opens, it waits for ever.
+result or the end of a message, or for the lock of an object, is not ended. A
+`halt` of a message ends no wait ([the rule](r:conc.halt.pending)). ooRexx
+ends none of these waits for a signal. The activity goes on waiting until its
+condition holds, the post or the release comes, or the time is up, and then
+takes the HALT, so that in the example, where nothing posts, releases or
+opens, it waits for ever.
 
 ```rexx
 f = SysTempFileName('conc-halt-????.rex')
@@ -1173,7 +1174,9 @@ above](r:conc.halt.uninit.started) holds for an `UNINIT` sent during the run.
 Nor does interrexx wait for the other activities when the main program ends
 with a refusal of one of the Deviations, exit code 120: they are cut off. In
 the second example a started message waits for a gate that the program opens
-just before the refusal, and never writes its line.
+just before the refusal ([Deviation
+30](../deviations.md#30-a-string-method-answering-a-non-string)), and never
+writes its line.
 
 ```rexx
 x = .keeper~new
@@ -1224,18 +1227,20 @@ main: before the refusal
 
 r[conc.halt.deviation.162]
 An `init` that is sent to an `Alarm` or a `Ticker` after the one that `new`
-sent raises `SYNTAX 98.915`, the error of a message that an object cannot take
-in its state, and leaves the object as it was: an alarm or ticker that is set
-stays set, and one that was cancelled stays cancelled, with its first time,
-interval, target and attachment ([Deviation
-162](../deviations.md#162-a-second-init-of-an-alarm-or-a-ticker)). ooRexx sets
-the object up again without stopping the first setting, and a ticker that
-runs crashes it, so the examples are not run on ooRexx. interrexx does not
-refuse the second `init` yet (#248). The first example sends a second `init`
-to an alarm that is set, cancels it and sends a third; the second does the
-same with a ticker. They print which target hears the `cancel`, and what the
-object still answers. The target of the ticker cancels it when it is called,
-so that the example ends where the second `init` is not refused yet.
+sent ([`Alarm`'s `init`](r:class.alarm.init), [`Ticker`'s
+`init`](r:class.ticker.init)), whatever its arguments, raises `SYNTAX 98.900`,
+the execution error whose text says what was refused, and leaves the object as
+it was: an alarm or ticker that is set stays set, and one that was cancelled
+stays cancelled, with its first time, interval, target and attachment
+([Deviation 162](../deviations.md#162-a-second-init-of-an-alarm-or-a-ticker)).
+ooRexx sets the object up again without stopping the first setting, and
+crashes when a ticker that is running is set up again, so the examples are not
+run on ooRexx. interrexx does not refuse the second `init` yet (#248). The
+first example sends a second `init` to an alarm that is set, cancels it and
+sends a third; the second does the same with a ticker. They print which target
+hears the `cancel`, and what the object still answers. The target of the
+ticker cancels it when it is called, so that the example ends where the second
+`init` is not refused yet.
 
 ```rexx
 n1 = .note~new('first target')
@@ -1268,10 +1273,10 @@ bad: say arg(1) '=>' condition('o')~code
 ```
 
 ```output defect=#248
-a~init(0.01, n2, "second alarm") => 98.915
+a~init(0.01, n2, "second alarm") => 98.900
 first alarm 1 0
 first target was sent cancel for first alarm
-a~init(0.01, n2, "third alarm") => 98.915
+a~init(0.01, n2, "third alarm") => 98.900
 first alarm 1 1
 ```
 
@@ -1306,9 +1311,9 @@ bad: say arg(1) '=>' condition('o')~code
 ```
 
 ```output defect=#248
-t~init(30, n2, "second ticker") => 98.915
+t~init(30, n2, "second ticker") => 98.900
 first ticker 02:00:00.000000 0
 first target was sent cancel for first ticker
-t~init(30, n2, "third ticker") => 98.915
+t~init(30, n2, "third ticker") => 98.900
 first ticker 02:00:00.000000 1
 ```
