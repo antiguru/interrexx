@@ -389,7 +389,7 @@ bad: say arg(1) '=>' condition('o')~code
   return 'asked' arg() || ':' || arg(1) || ':' || arg(1, 'E')
 ```
 
-```output defect=#199
+```output
 asked 1:FOO:1 asked 1:STRING:1
 asked 1::0 asked 1::0
 a b 1 The NIL object

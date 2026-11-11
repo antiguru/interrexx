@@ -4380,6 +4380,9 @@ fn native_reference_request(
 ) -> Result<Option<ObjRef>, Failure> {
     let referenced = referenced_receiver(interp, receiver)?;
     let caller = interp.caller();
+    // A request with no argument still sends the value one omitted argument.
+    let omitted = [None];
+    let args = if args.is_empty() { &omitted[..] } else { args };
     interp.send_message(referenced, b"REQUEST", None, args, caller)
 }
 
