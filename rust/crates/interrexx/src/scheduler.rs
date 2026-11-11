@@ -2049,38 +2049,43 @@ impl Interp {
             _ => None,
         };
         let recorded = self.apply_then(then, sent);
-        let failed = match (untrapped, recorded) {
-            (Some(raised), _) => raised,
+        let (failed, notified) = match (untrapped, recorded) {
+            (Some(raised), _) => (raised, false),
             // A notification of the send's completion failed, which the
-            // message is told of as the send's own failure.
+            // message is told of as the send's own failure. Its targets
+            // have been sent `messageComplete` and are not sent it again
+            // (Deviation 116).
             (None, Err(Failure::Raised(raised))) => {
                 self.yield_after_notifier_failure()?;
                 if let Some(message) = started {
                     self.activity.failed_sends.push(message);
                     self.message_outcomes.insert(message, Some(raised.clone()));
                 }
-                raised
+                (raised, true)
             }
             (None, Err(failure)) => return Err(failure),
             (None, Ok(_)) => return Ok(Stopped::Ended),
         };
-        self.end_failed_started(started, failed)?;
+        self.end_failed_started(started, failed, notified)?;
         Ok(Stopped::Ended)
     }
 
     /// Settles and reports `failed`, the failure a started activity ended
     /// with, as the oracle's `Activity::run` handler and then the thread's own
     /// do (`concurrency/Activity.cpp:3423`, `:233`): the message `started`
-    /// is told of it, and where a notifier fails, that failure replaces it,
-    /// the message is told of the replacement and both are reported, with a
-    /// second notifier failure reported too.
+    /// is told of it, and where a notifier fails, that failure replaces it
+    /// and is reported. A target is sent `messageComplete` once for the
+    /// message (Deviation 116): where `notified` says the failure is that of
+    /// a notifier, the targets are not sent it again, and a replacement is
+    /// not told to them.
     fn end_failed_started(
         &mut self,
         started: Option<ObjRef>,
         failed: Box<Raised>,
+        notified: bool,
     ) -> Result<(), Failure> {
         self.settle_failed_sends(&failed)?;
-        let Some(message) = started else {
+        let Some(message) = started.filter(|_| !notified) else {
             self.report_started_failure(&failed);
             return Ok(());
         };
@@ -2098,14 +2103,7 @@ impl Interp {
             .insert(message, Some(replaced.clone()));
         self.settle_failed_sends(&replaced)?;
         self.report_started_failure(&replaced);
-        match self.notify_failed_send(message, false) {
-            Ok(()) => Ok(()),
-            Err(Failure::Raised(again)) => {
-                self.report_started_failure(&again);
-                Ok(())
-            }
-            Err(failure) => Err(failure),
-        }
+        Ok(())
     }
 
     /// What a root driver's run of the running started activity answers:
