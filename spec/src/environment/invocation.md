@@ -55,11 +55,10 @@ An option word `-v`, in either case, makes the command print the version
 banner to its standard output stream and end with the status 0. It does so
 wherever it stands among the option words, including after the string that
 `-o` takes, and whatever the other words are: no program is looked for or run.
-What the banner says is [stated below](r:env.invocation.deviation.96).
-A `-v` that stands after the
-program name, or is the word after `-e`, is not an option word: the first is
-an argument and the second is the text of the program, and neither prints the
-banner.
+What the banner says is [stated below](r:env.invocation.deviation.96). A `-v`
+that stands after the program name, or is the word after `-e`, is not an
+option word: the first is an argument and the second is the text of the
+program, and neither prints the banner.
 
 ## Running a string
 
@@ -89,7 +88,8 @@ begins, after its blanks, with two colons; otherwise the command puts
 string followed by a word that begins with a colon is refused with `SYNTAX
 93.900`; followed by any other word, it sets nothing. A directive other than
 `::OPTIONS` is read too, but what it defines does not reach the program. A
-second `-o` replaces the string of the first. The options apply to the main
+second `-o` replaces the first: its string, and whether the letter `d` follows
+the `o`. The options apply to the main
 program only, and `-od`, with the letter `d` after the `o`, makes them apply
 to every program that a [`::REQUIRES`](r:dir.requires.create) directive loads
 as well. An `::OPTIONS` directive of the program itself comes after them and
@@ -166,11 +166,13 @@ A program starts with the three standard streams `READY`, with `SESSION` as
 its current queue ([the RXQUEUE rule](r:bif.rxqueue.get)), which holds
 nothing when the program is started from a shell, and, when the command gave
 it no words, with no argument and no entry in `.syscargs`. A program that a
-command of another Rexx program starts shares that program's `SESSION` queue.
+command of another Rexx program starts shares that program's `SESSION` queue,
+as the page on commands will state.
 The monitors that connect the streams to the program are [the
 bindings](r:env.objects.bindings) of the environment objects. With
-`/dev/null` as standard input, what CHARS and LINES answer is [Deviation
-54](r:bif.lines.deviation.54).
+`/dev/null` as standard input, what CHARS and LINES answer is Deviation 54
+([for CHARS](r:bif.chars.deviation.54), [for
+LINES](r:bif.lines.deviation.54)).
 
 ```rexx
 say stream('STDIN', 'S') stream('STDOUT', 'S') stream('STDERR', 'S')
@@ -198,8 +200,8 @@ when is not specified. The messages come after the program's last clause and
 after the output that the program wrote; the status of the command is the
 program's own. The order in which the objects are sent the message is not
 specified, so an example with several such objects prints the same text from
-each. What the objects hold is
-still alive, and `.output` is still the standard output.
+each. What the objects hold is still alive, and `.output` is still the
+standard output.
 
 ```rexx
 keep = .guard~new('kept in a variable')
@@ -323,15 +325,17 @@ uninit: guard
 uninit: guard
 ```
 
+> **Note.** What happens to an activity that is still running when the main
+> program ends, and to the `UNINIT` messages that an `UNINIT` method starts,
+> is the business of the concurrency chapter, and this page states nothing of
+> it.
+
 ## Deviations
 
 r[env.invocation.deviation.96]
 The version banner that `-v` prints names interrexx, its version, the ooRexx
 version it follows and its licence, and none of ooRexx's product, copyright
 or licence lines ([Deviation
-96](../deviations.md#96-version-and-library-banners)).
-
-> **Note.** What happens to an activity that is still running when the main
-> program ends, and to the `UNINIT` messages that an `UNINIT` method starts,
-> is the business of the concurrency chapter, and this page states nothing of
-> it.
+96](../deviations.md#96-version-and-library-banners)). Its other two lines,
+`Build date:` followed by the date of the build, and `Addressing mode:`
+followed by the width of an address in bits, are as ooRexx writes them.

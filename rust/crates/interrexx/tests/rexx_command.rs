@@ -70,6 +70,10 @@ fn lay_fixture(dir: &Path) {
         "::routine libr public\nsay 'lib digits='digits()\n",
     );
     file(b"calllib.rex", "call libr\n");
+    file(
+        b"plib.rex",
+        "say 'prolog ran'\n::routine pr public\nsay 'pr'\n",
+    );
     file(b"err42.rex", "say 1/0\n");
     file(b"err35.rex", "say 'x' +\n");
     for (name, body) in [

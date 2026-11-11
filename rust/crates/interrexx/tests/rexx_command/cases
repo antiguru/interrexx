@@ -547,6 +547,41 @@ rc> 0
 out> main digits=12
 out> lib digits=12
 
+# a second -o replaces the first, and with it the letter d
+# (env.invocation.optstring)
+run
+-od
+digits 12
+-o
+digits 13
+req.rex
+----
+rc> 0
+out> main digits=13
+out> lib digits=9
+
+run
+-o
+digits 12
+-od
+digits 13
+req.rex
+----
+rc> 0
+out> main digits=13
+out> lib digits=13
+
+# a directive other than ::OPTIONS in -o is read (env.invocation.optstring)
+run
+-o
+::requires 'plib.rex'
+opts.rex
+----
+rc> 0
+out> prolog ran
+out> digits=9 form=SCIENTIFIC
+out> trace=N
+
 # -o with no string is the usage text (env.invocation.forms)
 run
 -o
@@ -752,7 +787,7 @@ err> Syntax is "rexx [-o[d] "options"] filename [arguments]"
 err> or        "rexx -e program_string [arguments]"
 err> or        "rexx -v".
 
-# the program search
+# the program search (env.invocation.program, env.invocation.notfound)
 run
 t
 ----
@@ -1188,6 +1223,18 @@ rc> 112
 run
 -e
 exit 33000
+----
+rc> 0
+
+run
+-e
+exit 32767
+----
+rc> 255
+
+run
+-e
+exit -32769
 ----
 rc> 0
 
