@@ -535,7 +535,25 @@ iq: procedure
   x = 1 % 0
 ```
 
-```output defect=#120
+```output
+caller 1 42.3
+```
+
+```rexx
+signal on syntax name v
+call i1
+v: say 'caller' condition('o')~propagated condition('o')~code
+exit
+i1: procedure
+  signal off syntax
+  call i2
+  return
+i2: procedure
+  signal off syntax
+  x = 1 % 0
+```
+
+```output
 caller 1 42.3
 ```
 
