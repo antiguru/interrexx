@@ -431,16 +431,19 @@ impl Interp {
         true
     }
 
-    /// `sem_init(handle, 1, 0)`: the value back to zero.
-    pub(crate) fn reset_counting(&mut self, handle: u64) {
-        if let Some(semaphore) = self
+    /// `sem_init(handle, 1, 0)`: the value back to zero. `false` for an
+    /// unknown handle.
+    pub(crate) fn reset_counting(&mut self, handle: u64) -> bool {
+        let Some(semaphore) = self
             .activities
             .semaphores
             .table
             .get_mut(&SemaphoreKey::Handle(handle))
-        {
-            semaphore.count = 0;
-        }
+        else {
+            return false;
+        };
+        semaphore.count = 0;
+        true
     }
 
     /// `sem_trywait` on `handle`: whether a unit was taken, or `None` for an
