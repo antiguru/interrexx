@@ -154,6 +154,8 @@
   - [Command environments](environment/commands.md)
   - [Security manager](environment/security.md)
   - [Debugging](environment/debugging.md)
+- [Concurrency](concurrency/index.md)
+  - [Activities](concurrency/activities.md)
 - [Built-in functions](builtins/index.md)
   - [ABBREV](builtins/abbrev.md)
   - [ABS](builtins/abs.md)

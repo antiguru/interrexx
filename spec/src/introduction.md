@@ -63,8 +63,8 @@ Markdown finds any rule from its identifier alone. The first word names the
 chapter: `bif` for built-in functions in `builtins/`, `instr` for
 `instructions/`, `expr` for `expressions/`, `parse` for `parsing/`, `cond`
 for `conditions/`, `class` for `classes/`, `lex` for `lexical/`, `num` for
-`numbers/`, `dir` for `directives/`, `util` for `rexxutil/` and `env` for
-`environment/`. The second word is the page's file name: `bif.substr.pad` is
+`numbers/`, `dir` for `directives/`, `util` for `rexxutil/`, `env` for
+`environment/` and `conc` for `concurrency/`. The second word is the page's file name: `bif.substr.pad` is
 in `builtins/substr.md`, and the rules for a whole chapter, such as
 `bif.index.call.count`, are in its `index.md`. The conventions are one page,
 `conventions.md`, and every `conv.` rule is there. The checker rejects a rule
