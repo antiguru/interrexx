@@ -277,6 +277,16 @@ pub(super) fn method_source_lines(
         Some(source)
     } else {
         let converted = interp.request_array_value(source)?;
+        // An instance's `REQUEST('ARRAY')` that answers an object that is
+        // neither an array nor `.nil` is refused here, and no
+        // `REQUEST('STRING')` follows it (Deviation 115).
+        if let Some(answer) = converted
+            && answer != ObjRef::NIL
+            && interp.array_slots_of(answer).is_none()
+            && !interp.is_base_class(source)
+        {
+            return Err(Raised::argument_not_single_dimensional(position).into());
+        }
         converted.filter(|array| interp.array_slots_of(*array).is_some())
     };
     if let Some(array) = array {

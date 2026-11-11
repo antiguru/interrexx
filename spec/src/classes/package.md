@@ -2873,7 +2873,7 @@ bad: say arg(1) '=>' condition('o')~code
   return 'nop'
 ```
 
-```output defect=#157
+```output
 request ARRAY
 .package~new("n", .src~new("nop")) => 88.913
 request ARRAY
