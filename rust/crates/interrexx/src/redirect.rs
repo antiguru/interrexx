@@ -1274,12 +1274,11 @@ fn is_string(interp: &Interp, value: ObjRef) -> bool {
 }
 
 /// `text` as a non-negative whole number, or `None` for anything else --
-/// what a `stem.0` has to be.
+/// what a `stem.0` has to be. Any spelling of a whole number counts (`1.0`,
+/// `1e0`, `+1`, `' 1 '`), bounded by the argument rule's 18 digits whatever
+/// the NUMERIC DIGITS setting.
 fn whole_number(text: &[u8]) -> Option<usize> {
-    let text = std::str::from_utf8(text).ok()?;
-    let trimmed = text.trim_matches(' ');
-    if trimmed.is_empty() || !trimmed.bytes().all(|byte| byte.is_ascii_digit()) {
-        return None;
-    }
-    trimmed.parse().ok()
+    let number = interrexx_num::Number::parse_bytes(text)?;
+    let whole = number.whole_value(interrexx_num::ARGUMENT_DIGITS)?;
+    usize::try_from(whole).ok()
 }
