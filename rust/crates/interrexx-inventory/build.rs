@@ -61,8 +61,8 @@ const ARITY_OVERRIDES: &[((u16, u16), usize)] = &[
     ((20, 926), 1),
     // `:1336`.
     ((20, 935), 1),
-    // `createConstantGetterMethod`, `DirectiveParser.cpp:1926`-`1933`: the
-    // constant's name, in upper case.
+    // A `::CONSTANT` outside a class: the constant's name, in upper case, as
+    // the oracle answers.
     ((99, 906), 1),
 ];
 
