@@ -1064,7 +1064,12 @@ pub(super) fn charin(
         refuse_transient_position(interp, which, start.is_some())?;
         let start = start.map(positive).transpose()?;
         let StandardStream::In = which else {
-            return Ok(Some(interp.text(b"")));
+            // Nothing is read from an output stream: a zero-length ask
+            // answers the null string and any other raises NOTREADY.
+            if length == 0 {
+                return Ok(Some(interp.text(b"")));
+            }
+            return unreadable(interp, receiver);
         };
         if let Some(start) = start {
             match interp.input_seek_char(start) {
@@ -1180,7 +1185,10 @@ pub(super) fn linein(
         refuse_transient_position(interp, which, line.is_some())?;
         let line = line.map(positive).transpose()?;
         let StandardStream::In = which else {
-            return Ok(Some(interp.text(b"")));
+            if count == 0 {
+                return Ok(Some(interp.text(b"")));
+            }
+            return unreadable(interp, receiver);
         };
         if let Some(line) = line
             && !interp.input_seek_line(line)

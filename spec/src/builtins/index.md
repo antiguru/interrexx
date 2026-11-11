@@ -1665,7 +1665,7 @@ std: say condition('c') condition('d')
 return
 ```
 
-```output defect=#82
+```output
 NOTREADY STDOUT
 NOTREADY STDERR
 0 0
@@ -1686,7 +1686,7 @@ std: say condition('d')
 return
 ```
 
-```output defect=#82
+```output
 []
 STDOUT
 []
