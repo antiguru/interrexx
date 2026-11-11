@@ -854,7 +854,7 @@ say (b~next(3, 1) == .nil) (b~next(1, 3) == .nil)
 say (b~next(.array~of(3, 1)) == .nil) (b~next(.array~of(5, 5)) == .nil)
 ```
 
-```output defect=#188
+```output
 3 1 1 1
 1 1
 1 1

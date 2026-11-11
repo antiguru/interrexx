@@ -327,14 +327,25 @@ fn array_step(
     // out-of-range subscript answers `.nil`.
     let position = match position_in(interp, receiver, args, IndexUse::Get)? {
         Some(position) => position,
-        None => match args {
-            [Some(only)] => super::positive_index(interp, *only, 1)?,
-            // **A subscript list with a component past its dimension is
-            // past the array** (Deviation 120): `next` answers `.nil` and
-            // `previous` the last item in `allItems` order.
-            _ if forward => return Ok(Some(ObjRef::NIL)),
-            _ => usize::MAX,
-        },
+        None => {
+            // An `Array` index stands for its items as subscripts.
+            let single = match args {
+                [Some(only)] => match super::index_list(interp, *only, 1)? {
+                    Some(list) if list.len() == 1 => list[0],
+                    Some(_) => None,
+                    None => Some(*only),
+                },
+                _ => None,
+            };
+            match single {
+                Some(only) => super::positive_index(interp, only, 1)?,
+                // **A subscript list with a component past its dimension is
+                // past the array** (Deviation 120): `next` answers `.nil` and
+                // `previous` the last item in `allItems` order.
+                None if forward => return Ok(Some(ObjRef::NIL)),
+                None => usize::MAX,
+            }
+        }
     };
     let offsets = occupied(interp, receiver)?;
     let found = if forward {
