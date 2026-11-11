@@ -3191,7 +3191,9 @@ impl Interp {
     /// status.
     fn exit_code_for(&mut self, value: Option<ObjRef>) -> i32 {
         let Some(value) = value else { return 0 };
-        let Ok(number) = self.to_number(value) else {
+        // A non-string value is read through the required-string protocol,
+        // as an argument is: the exit code is the object's string value.
+        let Ok(Some(number)) = self.requested_number(value) else {
             return 0;
         };
         match number.whole_value(interrexx_num::ARGUMENT_DIGITS) {

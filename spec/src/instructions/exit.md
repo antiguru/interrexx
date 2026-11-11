@@ -206,7 +206,7 @@ exit .apm~new
   return 7
 ```
 
-```output defect=#165 rc=5
+```output rc=5
 ```
 
 ```rexx
@@ -283,7 +283,7 @@ exit 2147483649
 exit .mutablebuffer~new('13')
 ```
 
-```output defect=#102 rc=13
+```output rc=13
 ```
 
 ```rexx
