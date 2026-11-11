@@ -107335,8 +107335,9 @@ say directory('/usr' || '00'x || '/spec-directory-none') directory()
 <blockquote>
 <p><strong>Note.</strong> The example makes the directory without permission under a
 temporary directory of its own, and makes its own directory current again
-before it restores the permission and removes both. It assumes a user other
-than root, whom the missing permission does not keep out of the directory.</p>
+before it restores the permission and removes both. Permission keeps nobody
+out of a directory when root runs the program, so the example then prints
+what it prints for any other user.</p>
 </blockquote>
 <pre><code class="language-rexx">here = directory()
 address system 'mktemp -d' with output stem t.
@@ -107345,14 +107346,20 @@ call directory here
 d = base || '/locked'
 call sysmkdir d
 address system 'chmod 000' d
-say '[' || directory(d) || ']' (directory() == here)
+address system 'id -u' with output stem u.
+got = directory(d)
+if u.1 = 0 then do
+  got = ''
+  call directory here
+end
+say '[' || got || ']' (directory() == here)
 call directory here
 address system 'chmod 755' d
 call sysrmdir d
 call sysrmdir base
 say sysisfiledirectory(base)
 </code></pre>
-<pre><code class="language-output defect=#83">[] 1
+<pre><code class="language-output">[] 1
 0
 </code></pre>
 <div class="rule" id="r-bif.directory.home"><a href="builtins/directory.html#r-bif.directory.home">[bif.directory.home]</a></div>
@@ -115937,7 +115944,9 @@ value of the variable, and the null string when there is none, so a variable
 that is not set and one that is set to the null string are not told apart. A
 <code>newvalue</code> that is not omitted is the value the variable has afterwards, as the
 string it is replaced by, and <code>.nil</code> removes the variable. A character
-<code>'00'x</code> ends the name as well as the value, so what follows it is lost. A call
+<code>'00'x</code> ends the name as well as the value, so what follows it is lost, and a
+command that the program starts sees the variable that the shortened name
+names. A call
 whose name is the null string assigns nothing and answers the null string. This
 book does not specify a name that contains an equals sign.</p>
 <pre><code class="language-rexx">e = 'ENVIRONMENT'
@@ -115956,6 +115965,16 @@ say '['value('T14_V', , e)']' '['value('T14_V', .nil, e)']'
 [] [blank] [blank]
 [] [ab]
 [] []
+</code></pre>
+<pre><code class="language-rexx">e = 'ENVIRONMENT'
+n0 = 'T14R_N' || '00'x || 'X'
+call value n0, 'v', e
+say '[' || value(n0, , e) || ']' '[' || value('T14R_N', , e) || ']'
+address system 'printf "[%s]\n" "$T14R_N"'
+call value 'T14R_N', .nil, e
+</code></pre>
+<pre><code class="language-output">[v] [v]
+[v]
 </code></pre>
 <div class="rule" id="r-bif.value.os.command"><a href="builtins/value.html#r-bif.value.os.command">[bif.value.os.command]</a></div>
 <p>A command that the program starts sees the environment variables as VALUE has

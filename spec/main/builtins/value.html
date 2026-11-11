@@ -428,7 +428,9 @@ value of the variable, and the null string when there is none, so a variable
 that is not set and one that is set to the null string are not told apart. A
 <code>newvalue</code> that is not omitted is the value the variable has afterwards, as the
 string it is replaced by, and <code>.nil</code> removes the variable. A character
-<code>'00'x</code> ends the name as well as the value, so what follows it is lost. A call
+<code>'00'x</code> ends the name as well as the value, so what follows it is lost, and a
+command that the program starts sees the variable that the shortened name
+names. A call
 whose name is the null string assigns nothing and answers the null string. This
 book does not specify a name that contains an equals sign.</p>
 <pre><code class="language-rexx">e = 'ENVIRONMENT'
@@ -447,6 +449,16 @@ say '['value('T14_V', , e)']' '['value('T14_V', .nil, e)']'
 [] [blank] [blank]
 [] [ab]
 [] []
+</code></pre>
+<pre><code class="language-rexx">e = 'ENVIRONMENT'
+n0 = 'T14R_N' || '00'x || 'X'
+call value n0, 'v', e
+say '[' || value(n0, , e) || ']' '[' || value('T14R_N', , e) || ']'
+address system 'printf "[%s]\n" "$T14R_N"'
+call value 'T14R_N', .nil, e
+</code></pre>
+<pre><code class="language-output">[v] [v]
+[v]
 </code></pre>
 <div class="rule" id="r-bif.value.os.command"><a href="#r-bif.value.os.command">[bif.value.os.command]</a></div>
 <p>A command that the program starts sees the environment variables as VALUE has
