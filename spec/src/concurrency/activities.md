@@ -2,7 +2,7 @@
 element: "Activities"
 kind: concept
 rexxref: "Concurrency; Concurrency > Early Reply; Concurrency > Message Objects"
-deviations: [20]
+deviations: [18, 20]
 ---
 
 # Activities
@@ -20,12 +20,13 @@ reaches the program, and what a program may count on about the order in which
 activities do things.
 
 The lock that an object has, the methods that are guarded or unguarded and the
-`GUARD` instruction are specified on the locks page of this chapter, and
-`HALT` and the end of a program that still has activities on the halt page;
-this page uses `GUARD ... WHEN` only as the way a program makes one activity
-wait for another. The methods of `Message`, `Alarm` and `Ticker` and the
-instruction `REPLY` are specified on their own pages, which this page links:
-it states what they do to activities, and not what they check or answer.
+`GUARD` instruction are specified on the [locks page](locks.md) of this
+chapter, and `HALT` and the end of a program that still has activities on the
+halt page; this page uses `GUARD ... WHEN` only as the way a program makes one
+activity wait for another. The methods of `Message`, `Alarm` and `Ticker` and
+the instruction `REPLY` are specified on their own pages, which this page
+links: it states what they do to activities, and not what they check or
+answer.
 
 The examples force the order of everything they print. An activity that has to
 wait for the program does so on a `GUARD ... WHEN` that the program opens when
@@ -631,16 +632,17 @@ it, and a `MutexSemaphore`, which is acquired only after its owner has
 released it: what the other activity did before the post or the release is
 done. The fourth is the guard of an object: an activity that takes it, by
 calling a guarded method or by `GUARD ON`, does so only after the activity
-that held it has given it up, and what that activity did before is done (the
-locks page; [the exclusion rule](r:instr.guard.exclusion)). Anything else is
-not ordered. A clause that does not wait (none of the waits of [the waiting
+that held it has given it up, and what that activity did before is done ([the
+scope rule](r:conc.locks.scope); [the exclusion
+rule](r:instr.guard.exclusion)). Anything else is not ordered. A clause that
+does not wait (none of the waits of [the waiting
 rule](r:conc.activities.waiting)) and that calls no method, routine or
 function of the program, and no library method that runs code of the program,
 is one step: no clause of another activity runs while it is half done. The
-library's own methods are part of the step however they are built. The
-clauses of activities that nothing orders may run in any interleaving that
-keeps the order of each activity's own clauses, and which one runs may differ
-between runs and between implementations ([Deviation
+library's own methods are part of the step however they are built. The clauses
+of activities that nothing orders may run in any interleaving that keeps the
+order of each activity's own clauses, and which one runs may differ between
+runs and between implementations ([Deviation
 22](../deviations.md#22-one-schedule-for-racing-activities), and [Deviation
 7](../deviations.md#7-order-of-concurrent-trace-lines) for trace lines). That
 one message was started before another does not make it run first.
@@ -766,14 +768,15 @@ An activity that waits does not hold up another. The waits are: `result` and
 `EventSemaphore`'s `wait`, a `MutexSemaphore`'s `acquire` that has to wait,
 and `SysSleep`; an activity in one of them goes on to its next clause only
 when what it waits for has happened (a `GUARD ... WHEN` evaluates its
-expression again meanwhile, as the locks page says), and every other activity
+expression again meanwhile, as [the rule on
+WHEN](r:conc.locks.when) says), and every other activity
 that is not itself waiting makes progress meanwhile. How fast each progresses,
 and whether the activities that are not waiting share the time fairly, is not
 specified, and so is how soon an activity whose wait has ended runs again.
 Some blocking operations of the library hold every activity, and some
 busy-waiting code in nested constructs does not end; they are the cases of
 [Deviation 16](../deviations.md#16-blocking-operations-hold-every-activity)
-and [Deviation 18](../deviations.md#18-nested-busy-waiters).
+and [Deviation 18](r:conc.activities.deviation.18).
 
 ```rexx
 g = .gate~new
@@ -805,6 +808,14 @@ waited and passed opened
 > second message ran while it waited.
 
 ## Deviations
+
+r[conc.activities.deviation.18]
+Two activities that each busy-wait inside nested constructs, such as
+`INTERPRET`, for a variable that only the other sets, where the program must
+run the other for either to go on, never end. The program prints nothing of
+what they would return, and neither activity gets past its wait. ooRexx
+preempts both and they complete ([Deviation
+18](../deviations.md#18-nested-busy-waiters)).
 
 r[conc.activities.deviation.20]
 A wait that no other activity, alarm, ticker or call can end is refused, and

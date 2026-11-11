@@ -18,10 +18,12 @@ The pages of this chapter so far are:
   reaches the program, and which things happen in an order that a program can
   count on and which do not.
 
-The locks of objects and methods and the `GUARD` instruction on the one hand,
-and `HALT` and the end of a program that still has activities on the other,
-are specified on pages of this chapter that are not linked here yet: the locks
-page and the halt page.
+* [Locks](locks.md): what a lock belongs to, which methods take one and when,
+  what an activity that holds one may do, how often it is held, and what
+  happens when activities wait for each other in a ring.
+
+`HALT` and the end of a program that still has activities are specified on a
+page of this chapter that is not linked here yet: the halt page.
 
 The methods of the classes [`Message`](../classes/message.md),
 [`Alarm`](../classes/alarm.md), [`Ticker`](../classes/ticker.md),

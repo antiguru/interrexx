@@ -26,8 +26,8 @@ a lock makes the program wait for it: if the method could not run, the example
 would not end. An example that must show that a method cannot run starts it,
 lets the holder end, and shows the order in which the two ended, which the
 rule forces. How activities are started and how they end is the matter of the
-activities page of this chapter; here every activity is one that the program
-starts with `start`.
+[activities page](activities.md) of this chapter; here every activity is one
+that the program starts with `start`.
 
 ## The lock of a scope
 
@@ -1144,9 +1144,9 @@ woke
 ```
 
 > **Note.** Two more deviations touch what activities do while they wait.
-> [Deviation 18](../deviations.md#18-nested-busy-waiters) says that two
-> activities that busy-wait on each other inside nested constructs never end,
-> where ooRexx preempts both; no example of it can end, so it has no rule
-> here. [Deviation 22](../deviations.md#22-one-schedule-for-racing-activities)
-> says that interrexx gives racing activities one fixed order, which ooRexx
-> may give rarely or not at all.
+> [Deviation 18](r:conc.activities.deviation.18) says that two activities
+> that busy-wait on each other inside nested constructs never end, where
+> ooRexx preempts both. [Deviation
+> 22](../deviations.md#22-one-schedule-for-racing-activities) says that
+> interrexx gives racing activities one fixed order, which ooRexx may give
+> rarely or not at all.
