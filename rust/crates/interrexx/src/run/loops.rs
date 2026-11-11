@@ -3053,6 +3053,20 @@ impl Interp {
         let whole = number.whole_value(digits)?;
         u64::try_from(whole).ok()
     }
+
+    /// [`Interp::whole_nonneg`] for a value that is not a string or a number,
+    /// read through its string value first (`Interp::requested_number`).
+    pub(crate) fn whole_nonneg_requested(&mut self, value: ObjRef) -> Result<Option<u64>, Failure> {
+        let Ok(digits) = usize::try_from(self.activation().settings.digits()) else {
+            return Ok(None);
+        };
+        let Some(number) = self.requested_number(value)? else {
+            return Ok(None);
+        };
+        Ok(number
+            .whole_value(digits)
+            .and_then(|whole| u64::try_from(whole).ok()))
+    }
 }
 
 /// The frame slot a loop's control variable writes and re-reads, resolved

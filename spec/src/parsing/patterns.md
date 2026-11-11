@@ -442,12 +442,16 @@ parse value 'abcdefghij' with u >(arr) v
 say u'|'v
 parse value 'abcdefghij' with u =(arr) v
 say u'|'v
+buf = .mutablebuffer~new('3')
+parse value 'abcdef' with u =(buf) v
+say u'|'v
 ```
 
-```output defect=#105
+```output
 ab|cdefghij
 ab|cdefghij
 a|bcdefghij
+ab|cdef
 ```
 
 ## Errors in the template
