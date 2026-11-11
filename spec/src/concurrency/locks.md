@@ -120,7 +120,9 @@ place of a method of the object's class and has the lock of that class. A
 method that it adds with `FLOAT`, which is the default, and a method that
 `enhanced` adds belong to no class: the object has one lock of its own for all
 of them, so that two of them run one after the other, and each runs together
-with a method of any class. The example uses the trials of the rule above.
+with a method of any class. A method that [`run`](r:class.object.run) runs,
+guarded unless it was made unguarded, has that lock as well. The example uses
+the trials of the rule above.
 
 ```rexx
 .sub~define('defHold', holder())
@@ -134,6 +136,8 @@ call trial 'FLOAT holds, FLOAT probes', 'fltHold', 'fltProbe', 'wait'
 call trial 'enhanced holds, own probes', 'enhHold', 'subProbe', 'free', 'enh'
 call trial 'enhanced holds, enhanced probes', 'enhHold', 'enhProbe',,
   'wait', 'enh'
+call trial 'run holds, own probes', 'runHold', 'subProbe', 'free'
+call trial 'run holds, FLOAT probes', 'runHold', 'fltProbe', 'wait'
 exit
 trial: procedure
   use arg title, hold, probe, how, kind = 'plain'
@@ -176,6 +180,9 @@ prober: return .method~new('p', '.local~log~append("probe")')
   .local~inside = .true
   do until .local~go; end
   .local~log~append('hold-end')
+::method runHold unguarded
+  self~run(.method~new('h', .array~of('.local~inside = .true',,
+    'do until .local~go; end', '.local~log~append("hold-end")')))
 ```
 
 ```output
@@ -188,6 +195,8 @@ own holds, FLOAT probes: probe hold-end
 FLOAT holds, FLOAT probes: hold-end probe
 enhanced holds, own probes: probe hold-end
 enhanced holds, enhanced probes: hold-end probe
+run holds, own probes: probe hold-end
+run holds, FLOAT probes: hold-end probe
 ```
 
 ## Guarded and unguarded methods
@@ -368,17 +377,23 @@ An activity holds the lock of a scope as many times as it has entered methods
 of that scope that hold it: a guarded method that starts while the activity
 holds the lock adds one hold to the activity, and a `GUARD ON` in a method
 that does not hold the lock adds one; the end of the method or a `GUARD OFF`
-in it takes away the hold that the method added, and no other. The lock is
-free for the other activities when the activity holds it no more. A method
-that gives up its own hold with `GUARD OFF` therefore lets another activity in
-only when no method below it, on the same activity, still holds the lock. A
-line that [TRACE](r:instr.trace.destination) writes in a method shows the
-count in the entries `HASSCOPELOCK` and `SCOPELOCKCOUNT` of its [trace
+in it takes away the hold that the method added, and no other. A `GUARD ON` in
+a method that holds the lock already, and a `GUARD OFF` in a method that does
+not, change nothing, so repeated ones do not count. The lock is free for the
+other activities when the activity holds it no more. A method that gives up
+its own hold with `GUARD OFF` therefore lets another activity in only when no
+method below it, on the same activity, still holds the lock. A method that
+replies keeps its hold on the new activity, or gives it up there and asks for
+it again, as [the REPLY rule](r:instr.reply.guard) says. A line that
+[TRACE](r:instr.trace.destination) writes in a method shows the count in the
+entries `HASSCOPELOCK` and `SCOPELOCKCOUNT` of its [trace
 object](r:class.traceobject.entries). The first example prints them for the
 lines of three methods that call a method which does a `GUARD OFF`; where an
 outer method holds the lock, the inner one counts two holds and, after its
 `GUARD OFF`, one. The methods have no `EXPOSE`, whose effect on the entries is
-not specified.
+not specified. The second example starts a method that repeats `GUARD ON` or
+`GUARD OFF` and shows with a probe whether the lock was free while the method
+waited: repeated instructions leave the lock as the first one did.
 
 ```rexx
 .traceoutput~destination(.sink~new)
@@ -453,6 +468,55 @@ z = 'released'   holds 0 count 0
 return 1         holds 0 count 0
 ```
 
+```rexx
+call trial 'on on off', 'onOnOff', 'free'
+call trial 'guarded off off on', 'offOffOn', 'wait'
+call trial 'guarded on off', 'gOnOff', 'free'
+exit
+trial: procedure
+  use arg title, m, how
+  .local~log = .array~new
+  .local~inside = .false; .local~go = .false
+  o = .k~new
+  h = o~start(m)
+  do until .local~inside; end
+  p = o~start('probe')
+  if how = 'free' then p~result
+  .local~go = .true
+  h~result; p~result
+  say title':' .local~log~makeString('l', ' ')
+  return
+::class k
+::method onOnOff unguarded
+  guard on
+  guard on
+  guard off
+  .local~inside = .true
+  do until .local~go; end
+  .local~log~append('hold-end')
+::method offOffOn
+  guard off
+  guard off
+  guard on
+  .local~inside = .true
+  do until .local~go; end
+  .local~log~append('hold-end')
+::method gOnOff
+  guard on
+  guard off
+  .local~inside = .true
+  do until .local~go; end
+  .local~log~append('hold-end')
+::method probe
+  .local~log~append('probe')
+```
+
+```output
+on on off: probe hold-end
+guarded off off on: hold-end probe
+guarded on off: probe hold-end
+```
+
 r[conc.locks.count.off]
 A `GUARD OFF` in a method gives up the hold of that method only. When a
 guarded method on the same activity called it, that method still holds the
@@ -503,11 +567,17 @@ outer unguarded: probe inner-end
 ## Waiting inside a method
 
 r[conc.locks.when]
-`GUARD ON WHEN` and `GUARD OFF WHEN` wait without the hold of their own
-method, and take it again before each evaluation of the condition, as [the
-WHEN rule](r:instr.guard.when) says; the condition is evaluated again when
-another activity changes or unsets an object variable that it reads, and the
-rule leaves the other times open. The wait gives up only that one hold. When
+`GUARD ON WHEN` and `GUARD OFF WHEN` give up the hold of their own method
+while the condition is false. `GUARD ON WHEN` takes the lock before each
+evaluation of the condition, so it evaluates it with the lock held and goes on
+holding it, as [the WHEN rule](r:instr.guard.when) says. `GUARD OFF WHEN`
+gives up its method's hold first and evaluates the condition without it each
+time, while another activity may hold the lock. The condition is evaluated
+again when another activity assigns a value to an object variable that the
+condition names, even the value that it had, or drops one, whether or not the
+last evaluation reached that name; a variable that only a method that the
+condition calls reads is not one of them. When the condition is evaluated at
+other times is not specified. The wait gives up only that one hold. When
 the method was called by a guarded method on the same activity, which holds
 the lock too ([the counting rule](r:conc.locks.count)), the other activities
 find the lock held while the condition waits, so that a guarded method of
@@ -517,7 +587,11 @@ a guarded method, to a waiting method that a guarded or an unguarded method
 called. The three trials that end are the ones in which the method that
 changes the variable can run; the fourth, where a guarded method has to wait
 for the lock that its own caller's activity holds, is the case of [Deviation
-20](r:conc.locks.deviation.20), and the example does not run it.
+20](r:conc.locks.deviation.20), and the example does not run it. The second
+example ends only if `GUARD OFF WHEN` evaluates its condition without the
+lock: a guarded method waits in it, a guarded method of another activity then
+takes the lock and keeps it until the waiting method has gone on, and an
+unguarded method makes the condition true.
 
 ```rexx
 call trial 'guarded caller, unguarded setter', 'outerG', 'setU'
@@ -565,6 +639,47 @@ unguarded caller, guarded setter: the condition held
 unguarded caller, unguarded setter: the condition held
 ```
 
+```rexx
+.local~log = .array~new
+o = .k~new
+w = o~start('waiter')
+do until o~waiting; end
+h = o~start('holder')
+do until o~inside; end
+o~open
+say w~result
+say h~result
+::class k
+::method init
+  expose x waiting inside
+  x = 0; waiting = .false; inside = .false
+::method waiting unguarded
+  expose waiting
+  return waiting
+::method inside unguarded
+  expose inside
+  return inside
+::method open unguarded
+  expose x
+  x = 1
+::method holder
+  expose inside
+  inside = .true
+  do until .local~log~items > 0; end
+  return 'holder saw the waiter go on'
+::method waiter
+  expose x waiting
+  waiting = .true
+  guard off when x
+  .local~log~append('w')
+  return 'waiter went on'
+```
+
+```output
+waiter went on
+holder saw the waiter go on
+```
+
 ## Class methods
 
 r[conc.locks.class]
@@ -585,10 +700,14 @@ q = .base~start('probe')
 r = .sub~start('probe')
 say 'subclass:' r~result
 say 'instance:' .base~new~probe
+say 'superclass scope:' .base~tprobe
 .base~go = .true
 h~result; q~result
 say .log~makeString('l', ' ')
-::class base
+::class top
+::method tprobe class
+  return 'ran'
+::class base subclass top
 ::attribute go class unguarded
 ::attribute inside class unguarded
 ::method holder class
@@ -607,6 +726,7 @@ say .log~makeString('l', ' ')
 ```output
 subclass: ran
 instance: ran
+superclass scope: ran
 class-probe instance-probe holder-end class-probe
 ```
 
@@ -617,16 +737,27 @@ A method that ends releases the hold that it still has, as [the end
 rule](r:instr.guard.end) of GUARD says, whether it ends with RETURN or with an
 error that nothing in the method traps, which the sender sees or, for a
 started message, the message keeps. The next activity that waits for the lock
-gets it, and the error holds nothing back.
+gets it, and the error holds nothing back. In the example the first message
+holds the lock when it fails, and the second runs after it.
 
 ```rexx
 o = .k~new
 m1 = o~start('boom')
+do until o~inside; end
 m2 = o~start('after')
 say m2~result
+m1~wait
 say m1~hasError m1~errorCondition~code
 ::class k
+::method init
+  expose inside
+  inside = .false
+::method inside unguarded
+  expose inside
+  return inside
 ::method boom
+  expose inside
+  inside = .true
   return 1/0
 ::method after
   return 'ran'
@@ -641,22 +772,29 @@ ran
 
 r[conc.locks.deadlock]
 An activity waits for another when it asks for a lock that the other holds, or
-when it waits for the result of a message that the other runs. A request for a
-lock that would close a ring of such waits, with the asking activity in it,
-could never end, and it is refused: it raises `SYNTAX 98.905` in the asking
-activity. A guarded method asks for its lock when it starts, so a refused
-guarded method does not run: the sender sees the error, or the message keeps
-it when the message was started, and [`result`](r:class.message.result) raises
-it again. The lock that `GUARD ON` asks for is refused in the same way. When
-the requests of two activities close a ring at once, which of them is refused
-is not specified, and the other goes on when the refused one has ended and let
-go of its locks. In the first example a method holds the lock of its object
-and waits for the result of a message that it started to the same object,
-whose method needs the lock; the error reaches the trap of the main program.
-The second is a ring of two objects, in which each of two activities holds the
+when it waits, with [`result`](r:class.message.result) or
+[`wait`](r:class.message.wait), for a message that the other runs. A wait of
+either kind that would close a ring of such waits, with the waiting activity
+in it, could never end, and it is refused: it raises `SYNTAX 98.905` in the
+activity that was about to wait, at the clause that asked for the lock or at
+the `result` or `wait` of the message. A guarded method asks for its lock when
+it starts, so a refused guarded method does not run: the sender sees the
+error, or the message keeps it when the message was started, and
+[`result`](r:class.message.result) raises it again. The lock that `GUARD ON`
+asks for is refused in the same way. When the waits of two activities close a
+ring at once, which of them is refused is not specified, and the other goes on
+when the refused one has ended and let go of its locks. In the first example a
+method holds the lock of its object and waits for the result of a message that
+it started to the same object, whose method needs the lock. Whichever of the
+two waits closes the ring is refused, the request for the lock or the
+`result`, and either way the error reaches the trap of the main program. The
+second is a ring of two objects, in which each of two activities holds the
 lock of its own object and then asks for the other's; one of them is refused,
 and the method that it asked for does not run. The third asks for the lock
-with `GUARD ON` in an unguarded method.
+with `GUARD ON` in an unguarded method. The fourth has no lock in the ring:
+two started unguarded methods each wait for the result of the other's message;
+the one that closes the ring is refused, and the result of the other raises
+the same error again.
 
 ```rexx
 o = .k~new
@@ -735,6 +873,35 @@ refused: say 'refused' condition('o')~code
 refused 98.905
 ```
 
+```rexx
+.local~ready = .false
+o = .k~new
+m1 = o~start('a')
+m2 = o~start('b')
+.local~m1 = m1; .local~m2 = m2
+.local~ready = .true
+r = .array~new
+r~append(get(m1)); r~append(get(m2))
+do l over r~sort; say l; end
+exit
+get: procedure
+  signal on syntax name bad
+  return 'ok' arg(1)~result
+bad: return 'err' condition('o')~code
+::class k
+::method a unguarded
+  do until .local~ready; end
+  return .local~m2~result
+::method b unguarded
+  do until .local~ready; end
+  return .local~m1~result
+```
+
+```output
+err 98.905
+err 98.905
+```
+
 > **Note.** The refusal is made when a wait is about to begin, so it needs the
 > waits to be known to the interpreter: locks and results of messages are. A
 > wait on a semaphore, on a condition of `GUARD WHEN`, on a message that is
@@ -747,12 +914,16 @@ refused 98.905
 
 r[conc.locks.deviation.14]
 An activity that waits inside a nested construct, such as the code of an
-INTERPRET, for something that only an activity that is suspended beneath it
-can provide is refused, and the program ends with exit code 120. ooRexx runs
-each activity on a thread of its own, so the activity that waits is not in the
-way of the one that must go on, and the program ends normally. In the example
-the first message waits in an INTERPRET until a flag is set; the second sets
-the flag and then waits, in an INTERPRET, for the first one's result.
+INTERPRET or a method that [`run`](r:class.object.run) runs, for something,
+such as a lock, a result or the change of a variable, that only an activity
+that is suspended beneath it can provide is refused, and the program ends with
+exit code 120. ooRexx runs each activity on a thread of its own, so the
+activity that waits is not in the way of the one that must go on, and the
+program ends normally. In the first example the first message waits in an
+INTERPRET until a flag is set; the second sets the flag and then waits, in an
+INTERPRET, for the first one's result. In the second a method that `run` runs
+keeps the lock of the object and waits for a flag; the method that sets the
+flag then asks, in a method that `run` runs, for the same lock.
 
 ```rexx
 say 'start'
@@ -773,6 +944,29 @@ say s~result
   self~done = 1
   interpret "r = a~result"
   return 'S saw' r
+```
+
+```output rc=120
+start
+```
+
+```rexx
+say 'start'
+.local~inside = .false; .local~flag = .false
+o = .k~new
+h = o~start('holder')
+do until .local~inside; end
+s = o~start('asker')
+say s~result
+say h~result
+::class k
+::method holder unguarded
+  self~run(.method~new('h', .array~of('.local~inside = .true',,
+    'do until .local~flag; end', 'return "held"')))
+  return 'H ended'
+::method asker unguarded
+  .local~flag = .true
+  return self~run(.method~new('p', 'return "S ran"'))
 ```
 
 ```output rc=120

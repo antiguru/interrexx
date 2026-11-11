@@ -106,9 +106,10 @@ activity that has not yet started to run.
 
 ## 14. A nested wait only a buried activity can end
 
-An activity waiting inside a nested construct, such as INTERPRET, for
-something only an activity suspended beneath it can provide is refused, exit
-code 120. ooRexx runs each activity on its own thread and completes.
+An activity waiting inside a nested construct, such as INTERPRET or a method
+that `run` runs, for something, such as a lock, a result or the change of a
+variable, that only an activity suspended beneath it can provide is refused,
+exit code 120. ooRexx runs each activity on its own thread and completes.
 
 ## 15. Withdrawn
 
