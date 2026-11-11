@@ -71,7 +71,7 @@ fn query_mixin_class(
 
 /// `Class~subclasses`: `RexxClass::getSubClasses`
 /// (`classes/ClassClass.cpp:470`), the reverse edge `subclass` and `inherit`
-/// maintain.
+/// maintain. The newest subclass comes first.
 fn subclasses(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -79,7 +79,8 @@ fn subclasses(
     _args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
     let class = class_receiver(interp, receiver)?;
-    let items = interp.classes().subclasses(class).to_vec();
+    let mut items = interp.classes().subclasses(class).to_vec();
+    items.reverse();
     Ok(Some(array_of(interp, items)))
 }
 

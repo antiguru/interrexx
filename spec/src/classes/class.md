@@ -454,7 +454,7 @@ say s~strip
 ::class c1 subclass top
 ```
 
-```output defect=#136
+```output
 C1 A1 B1
 D3 D2 D1 C1 A1 B1
 ```
