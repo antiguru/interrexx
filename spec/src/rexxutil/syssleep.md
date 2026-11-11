@@ -110,7 +110,7 @@ e: say condition('o')~code
   return '0'
 ```
 
-```output defect=#230
+```output
 88.909
 ```
 
@@ -132,7 +132,7 @@ e: say condition('o')~code
   return
 ```
 
-```output defect=#245
+```output
 88.909
 88.909
 88.902
