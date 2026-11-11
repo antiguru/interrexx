@@ -30,6 +30,7 @@ pub fn prefix_for(relative: &Path) -> Option<String> {
         "directives" => "dir",
         "rexxutil" => "util",
         "environment" => "env",
+        "concurrency" => "conc",
         _ => return None,
     };
     let stem = file.strip_suffix(".md")?;
