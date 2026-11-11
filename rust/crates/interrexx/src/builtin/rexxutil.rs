@@ -193,9 +193,9 @@ pub(crate) fn rm_dir(
 }
 
 /// `SysMkDir(name [, mode])`: `mkdir(2)` and its raw errno, the mode
-/// defaulting to `0777` before the umask. The mode is **not** range-checked --
-/// measured, `512` and `-1` are both accepted where the documented range ends
-/// at `511`.
+/// defaulting to `0777` before the umask. The mode is a whole number of 32
+/// bits, 88.907 outside that range or where it is no whole number; its
+/// remainder modulo `1024` is the mode `mkdir` is given.
 pub(crate) fn mk_dir(
     interp: &mut Interp,
     _name: &'static [u8],
@@ -206,13 +206,21 @@ pub(crate) fn mk_dir(
     let mode = match args.get(1).copied().flatten() {
         None => 0o777,
         Some(value) => {
-            let text = interp.to_text(value).into_owned();
-            let Some(bits) = whole_number(&text) else {
-                return Err(Raised::native_argument_not_a_number("mode", &text).into());
+            let bits = match stems::whole_value(interp, value, i64::from(i32::MIN))? {
+                Some(bits) if bits <= i64::from(i32::MAX) => bits,
+                _ => {
+                    let found = interp.string_value_text(value)?;
+                    return Err(marshalled(Raised::native_argument_out_of_range(
+                        "mode",
+                        i64::from(i32::MIN),
+                        i64::from(i32::MAX),
+                        &found,
+                    )));
+                }
             };
-            #[allow(clippy::cast_sign_loss, reason = "the oracle passes the bits through")]
+            #[allow(clippy::cast_sign_loss, reason = "rem_euclid is not negative")]
             {
-                (bits as u32) & 0o7777
+                bits.rem_euclid(1024) as u32
             }
         }
     };
@@ -538,9 +546,4 @@ pub(crate) fn version(
     text.push(b' ');
     text.extend_from_slice(info.release().to_bytes());
     Ok(interp.text_built(text))
-}
-
-/// A whole number's value, or `None` for text that is not one.
-fn whole_number(text: &[u8]) -> Option<i64> {
-    String::from_utf8_lossy(text).trim().parse::<i64>().ok()
 }

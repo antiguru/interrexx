@@ -137,7 +137,7 @@ try:
 e: return condition('o')~code
 ```
 
-```output defect=#229
+```output
 88.907 88.907 88.907 88.907 88.907
 88.907 88.907 88.907
 0 0 0 0 0
