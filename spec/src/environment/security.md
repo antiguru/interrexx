@@ -644,7 +644,7 @@ exit
   return 1
 ```
 
-```output defect=#226
+```output
 not read
 ```
 
