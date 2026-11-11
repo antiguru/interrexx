@@ -1,0 +1,2648 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Stream - The interrexx Language Specification</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../conventions.html"><strong aria-hidden="true">2.</strong> Conventions</a></li><li class="chapter-item expanded "><a href="../lexical/index.html"><strong aria-hidden="true">3.</strong> Lexical structure</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../lexical/characters.html"><strong aria-hidden="true">3.1.</strong> Characters</a></li><li class="chapter-item expanded "><a href="../lexical/comments.html"><strong aria-hidden="true">3.2.</strong> Comments</a></li><li class="chapter-item expanded "><a href="../lexical/literals.html"><strong aria-hidden="true">3.3.</strong> Literals</a></li><li class="chapter-item expanded "><a href="../lexical/symbols.html"><strong aria-hidden="true">3.4.</strong> Symbols</a></li><li class="chapter-item expanded "><a href="../lexical/operators.html"><strong aria-hidden="true">3.5.</strong> Operators and special characters</a></li><li class="chapter-item expanded "><a href="../lexical/clauses.html"><strong aria-hidden="true">3.6.</strong> Clauses</a></li></ol></li><li class="chapter-item expanded "><a href="../numbers/index.html"><strong aria-hidden="true">4.</strong> Numbers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../numbers/formats.html"><strong aria-hidden="true">4.1.</strong> Formats</a></li><li class="chapter-item expanded "><a href="../numbers/limits.html"><strong aria-hidden="true">4.2.</strong> Limits</a></li><li class="chapter-item expanded "><a href="../numbers/arithmetic.html"><strong aria-hidden="true">4.3.</strong> Arithmetic</a></li><li class="chapter-item expanded "><a href="../numbers/settings.html"><strong aria-hidden="true">4.4.</strong> Settings</a></li><li class="chapter-item expanded "><a href="../numbers/comparison.html"><strong aria-hidden="true">4.5.</strong> Comparison</a></li></ol></li><li class="chapter-item expanded "><a href="../expressions/index.html"><strong aria-hidden="true">5.</strong> Expressions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../expressions/terms.html"><strong aria-hidden="true">5.1.</strong> Terms</a></li><li class="chapter-item expanded "><a href="../expressions/variables.html"><strong aria-hidden="true">5.2.</strong> Variables</a></li><li class="chapter-item expanded "><a href="../expressions/concatenation.html"><strong aria-hidden="true">5.3.</strong> Concatenation</a></li><li class="chapter-item expanded "><a href="../expressions/arithmetic.html"><strong aria-hidden="true">5.4.</strong> Arithmetic operators</a></li><li class="chapter-item expanded "><a href="../expressions/comparison.html"><strong aria-hidden="true">5.5.</strong> Comparison operators</a></li><li class="chapter-item expanded "><a href="../expressions/logical.html"><strong aria-hidden="true">5.6.</strong> Logical operators</a></li><li class="chapter-item expanded "><a href="../expressions/messages.html"><strong aria-hidden="true">5.7.</strong> Message operators</a></li></ol></li><li class="chapter-item expanded "><a href="../instructions/index.html"><strong aria-hidden="true">6.</strong> Instructions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../instructions/address.html"><strong aria-hidden="true">6.1.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../instructions/arg.html"><strong aria-hidden="true">6.2.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../instructions/assignment.html"><strong aria-hidden="true">6.3.</strong> Assignments</a></li><li class="chapter-item expanded "><a href="../instructions/call.html"><strong aria-hidden="true">6.4.</strong> CALL</a></li><li class="chapter-item expanded "><a href="../instructions/command.html"><strong aria-hidden="true">6.5.</strong> Commands</a></li><li class="chapter-item expanded "><a href="../instructions/do.html"><strong aria-hidden="true">6.6.</strong> DO</a></li><li class="chapter-item expanded "><a href="../instructions/drop.html"><strong aria-hidden="true">6.7.</strong> DROP</a></li><li class="chapter-item expanded "><a href="../instructions/exit.html"><strong aria-hidden="true">6.8.</strong> EXIT</a></li><li class="chapter-item expanded "><a href="../instructions/expose.html"><strong aria-hidden="true">6.9.</strong> EXPOSE</a></li><li class="chapter-item expanded "><a href="../instructions/forward.html"><strong aria-hidden="true">6.10.</strong> FORWARD</a></li><li class="chapter-item expanded "><a href="../instructions/guard.html"><strong aria-hidden="true">6.11.</strong> GUARD</a></li><li class="chapter-item expanded "><a href="../instructions/if.html"><strong aria-hidden="true">6.12.</strong> IF</a></li><li class="chapter-item expanded "><a href="../instructions/interpret.html"><strong aria-hidden="true">6.13.</strong> INTERPRET</a></li><li class="chapter-item expanded "><a href="../instructions/iterate.html"><strong aria-hidden="true">6.14.</strong> ITERATE</a></li><li class="chapter-item expanded "><a href="../instructions/leave.html"><strong aria-hidden="true">6.15.</strong> LEAVE</a></li><li class="chapter-item expanded "><a href="../instructions/loop.html"><strong aria-hidden="true">6.16.</strong> LOOP</a></li><li class="chapter-item expanded "><a href="../instructions/message.html"><strong aria-hidden="true">6.17.</strong> Message instructions</a></li><li class="chapter-item expanded "><a href="../instructions/nop.html"><strong aria-hidden="true">6.18.</strong> NOP</a></li><li class="chapter-item expanded "><a href="../instructions/numeric.html"><strong aria-hidden="true">6.19.</strong> NUMERIC</a></li><li class="chapter-item expanded "><a href="../instructions/options.html"><strong aria-hidden="true">6.20.</strong> OPTIONS</a></li><li class="chapter-item expanded "><a href="../instructions/parse.html"><strong aria-hidden="true">6.21.</strong> PARSE</a></li><li class="chapter-item expanded "><a href="../instructions/procedure.html"><strong aria-hidden="true">6.22.</strong> PROCEDURE</a></li><li class="chapter-item expanded "><a href="../instructions/pull.html"><strong aria-hidden="true">6.23.</strong> PULL</a></li><li class="chapter-item expanded "><a href="../instructions/push.html"><strong aria-hidden="true">6.24.</strong> PUSH</a></li><li class="chapter-item expanded "><a href="../instructions/queue.html"><strong aria-hidden="true">6.25.</strong> QUEUE</a></li><li class="chapter-item expanded "><a href="../instructions/raise.html"><strong aria-hidden="true">6.26.</strong> RAISE</a></li><li class="chapter-item expanded "><a href="../instructions/reply.html"><strong aria-hidden="true">6.27.</strong> REPLY</a></li><li class="chapter-item expanded "><a href="../instructions/return.html"><strong aria-hidden="true">6.28.</strong> RETURN</a></li><li class="chapter-item expanded "><a href="../instructions/say.html"><strong aria-hidden="true">6.29.</strong> SAY</a></li><li class="chapter-item expanded "><a href="../instructions/select.html"><strong aria-hidden="true">6.30.</strong> SELECT</a></li><li class="chapter-item expanded "><a href="../instructions/signal.html"><strong aria-hidden="true">6.31.</strong> SIGNAL</a></li><li class="chapter-item expanded "><a href="../instructions/trace.html"><strong aria-hidden="true">6.32.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../instructions/use.html"><strong aria-hidden="true">6.33.</strong> USE</a></li></ol></li><li class="chapter-item expanded "><a href="../parsing/index.html"><strong aria-hidden="true">7.</strong> Parsing</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../parsing/templates.html"><strong aria-hidden="true">7.1.</strong> Templates</a></li><li class="chapter-item expanded "><a href="../parsing/patterns.html"><strong aria-hidden="true">7.2.</strong> Patterns</a></li><li class="chapter-item expanded "><a href="../parsing/multiple.html"><strong aria-hidden="true">7.3.</strong> Several strings and case</a></li></ol></li><li class="chapter-item expanded "><a href="../directives/index.html"><strong aria-hidden="true">8.</strong> Directives</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../directives/class.html"><strong aria-hidden="true">8.1.</strong> ::CLASS</a></li><li class="chapter-item expanded "><a href="../directives/method.html"><strong aria-hidden="true">8.2.</strong> ::METHOD</a></li><li class="chapter-item expanded "><a href="../directives/attribute.html"><strong aria-hidden="true">8.3.</strong> ::ATTRIBUTE</a></li><li class="chapter-item expanded "><a href="../directives/constant.html"><strong aria-hidden="true">8.4.</strong> ::CONSTANT</a></li><li class="chapter-item expanded "><a href="../directives/routine.html"><strong aria-hidden="true">8.5.</strong> ::ROUTINE</a></li><li class="chapter-item expanded "><a href="../directives/requires.html"><strong aria-hidden="true">8.6.</strong> ::REQUIRES</a></li><li class="chapter-item expanded "><a href="../directives/options.html"><strong aria-hidden="true">8.7.</strong> ::OPTIONS</a></li><li class="chapter-item expanded "><a href="../directives/resource.html"><strong aria-hidden="true">8.8.</strong> ::RESOURCE</a></li><li class="chapter-item expanded "><a href="../directives/annotate.html"><strong aria-hidden="true">8.9.</strong> ::ANNOTATE</a></li></ol></li><li class="chapter-item expanded "><a href="../conditions/index.html"><strong aria-hidden="true">9.</strong> Conditions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../conditions/traps.html"><strong aria-hidden="true">9.1.</strong> Condition traps</a></li><li class="chapter-item expanded "><a href="../conditions/information.html"><strong aria-hidden="true">9.2.</strong> Condition information</a></li><li class="chapter-item expanded "><a href="../conditions/syntax.html"><strong aria-hidden="true">9.3.</strong> SYNTAX</a></li><li class="chapter-item expanded "><a href="../conditions/error.html"><strong aria-hidden="true">9.4.</strong> ERROR and FAILURE</a></li><li class="chapter-item expanded "><a href="../conditions/halt.html"><strong aria-hidden="true">9.5.</strong> HALT</a></li><li class="chapter-item expanded "><a href="../conditions/novalue.html"><strong aria-hidden="true">9.6.</strong> NOVALUE</a></li><li class="chapter-item expanded "><a href="../conditions/nostring.html"><strong aria-hidden="true">9.7.</strong> NOSTRING</a></li><li class="chapter-item expanded "><a href="../conditions/nomethod.html"><strong aria-hidden="true">9.8.</strong> NOMETHOD</a></li><li class="chapter-item expanded "><a href="../conditions/notready.html"><strong aria-hidden="true">9.9.</strong> NOTREADY</a></li><li class="chapter-item expanded "><a href="../conditions/lostdigits.html"><strong aria-hidden="true">9.10.</strong> LOSTDIGITS</a></li><li class="chapter-item expanded "><a href="../conditions/user.html"><strong aria-hidden="true">9.11.</strong> USER conditions</a></li><li class="chapter-item expanded "><a href="../conditions/errors.html"><strong aria-hidden="true">9.12.</strong> Error numbers</a></li></ol></li><li class="chapter-item expanded "><a href="../classes/index.html"><strong aria-hidden="true">10.</strong> Classes</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../classes/methods.html"><strong aria-hidden="true">10.1.</strong> Method search</a></li><li class="chapter-item expanded "><a href="../classes/object.html"><strong aria-hidden="true">10.2.</strong> Object</a></li><li class="chapter-item expanded "><a href="../classes/class.html"><strong aria-hidden="true">10.3.</strong> Class</a></li><li class="chapter-item expanded "><a href="../classes/string.html"><strong aria-hidden="true">10.4.</strong> String</a></li><li class="chapter-item expanded "><a href="../classes/method.html"><strong aria-hidden="true">10.5.</strong> Method</a></li><li class="chapter-item expanded "><a href="../classes/routine.html"><strong aria-hidden="true">10.6.</strong> Routine</a></li><li class="chapter-item expanded "><a href="../classes/package.html"><strong aria-hidden="true">10.7.</strong> Package</a></li><li class="chapter-item expanded "><a href="../classes/message.html"><strong aria-hidden="true">10.8.</strong> Message</a></li><li class="chapter-item expanded "><a href="../classes/messagenotification.html"><strong aria-hidden="true">10.9.</strong> MessageNotification</a></li><li class="chapter-item expanded "><a href="../classes/alarmnotification.html"><strong aria-hidden="true">10.10.</strong> AlarmNotification</a></li><li class="chapter-item expanded "><a href="../classes/collection.html"><strong aria-hidden="true">10.11.</strong> Collection</a></li><li class="chapter-item expanded "><a href="../classes/mapcollection.html"><strong aria-hidden="true">10.12.</strong> MapCollection</a></li><li class="chapter-item expanded "><a href="../classes/orderedcollection.html"><strong aria-hidden="true">10.13.</strong> OrderedCollection</a></li><li class="chapter-item expanded "><a href="../classes/setcollection.html"><strong aria-hidden="true">10.14.</strong> SetCollection</a></li><li class="chapter-item expanded "><a href="../classes/array.html"><strong aria-hidden="true">10.15.</strong> Array</a></li><li class="chapter-item expanded "><a href="../classes/list.html"><strong aria-hidden="true">10.16.</strong> List</a></li><li class="chapter-item expanded "><a href="../classes/queue.html"><strong aria-hidden="true">10.17.</strong> Queue</a></li><li class="chapter-item expanded "><a href="../classes/circularqueue.html"><strong aria-hidden="true">10.18.</strong> CircularQueue</a></li><li class="chapter-item expanded "><a href="../classes/directory.html"><strong aria-hidden="true">10.19.</strong> Directory</a></li><li class="chapter-item expanded "><a href="../classes/stringtable.html"><strong aria-hidden="true">10.20.</strong> StringTable</a></li><li class="chapter-item expanded "><a href="../classes/properties.html"><strong aria-hidden="true">10.21.</strong> Properties</a></li><li class="chapter-item expanded "><a href="../classes/table.html"><strong aria-hidden="true">10.22.</strong> Table</a></li><li class="chapter-item expanded "><a href="../classes/identitytable.html"><strong aria-hidden="true">10.23.</strong> IdentityTable</a></li><li class="chapter-item expanded "><a href="../classes/relation.html"><strong aria-hidden="true">10.24.</strong> Relation</a></li><li class="chapter-item expanded "><a href="../classes/bag.html"><strong aria-hidden="true">10.25.</strong> Bag</a></li><li class="chapter-item expanded "><a href="../classes/set.html"><strong aria-hidden="true">10.26.</strong> Set</a></li><li class="chapter-item expanded "><a href="../classes/stem.html"><strong aria-hidden="true">10.27.</strong> Stem</a></li><li class="chapter-item expanded "><a href="../classes/datetime.html"><strong aria-hidden="true">10.28.</strong> DateTime</a></li><li class="chapter-item expanded "><a href="../classes/timespan.html"><strong aria-hidden="true">10.29.</strong> TimeSpan</a></li><li class="chapter-item expanded "><a href="../classes/comparable.html"><strong aria-hidden="true">10.30.</strong> Comparable</a></li><li class="chapter-item expanded "><a href="../classes/orderable.html"><strong aria-hidden="true">10.31.</strong> Orderable</a></li><li class="chapter-item expanded "><a href="../classes/comparators.html"><strong aria-hidden="true">10.32.</strong> Comparators</a></li><li class="chapter-item expanded "><a href="../classes/mutablebuffer.html"><strong aria-hidden="true">10.33.</strong> MutableBuffer</a></li><li class="chapter-item expanded "><a href="../classes/buffer.html"><strong aria-hidden="true">10.34.</strong> Buffer</a></li><li class="chapter-item expanded "><a href="../classes/pointer.html"><strong aria-hidden="true">10.35.</strong> Pointer</a></li><li class="chapter-item expanded "><a href="../classes/weakreference.html"><strong aria-hidden="true">10.36.</strong> WeakReference</a></li><li class="chapter-item expanded "><a href="../classes/variablereference.html"><strong aria-hidden="true">10.37.</strong> VariableReference</a></li><li class="chapter-item expanded "><a href="../classes/file.html"><strong aria-hidden="true">10.38.</strong> File</a></li><li class="chapter-item expanded "><a href="../classes/rexxcontext.html"><strong aria-hidden="true">10.39.</strong> RexxContext</a></li><li class="chapter-item expanded "><a href="../classes/stackframe.html"><strong aria-hidden="true">10.40.</strong> StackFrame</a></li><li class="chapter-item expanded "><a href="../classes/rexxinfo.html"><strong aria-hidden="true">10.41.</strong> RexxInfo</a></li><li class="chapter-item expanded "><a href="../classes/traceobject.html"><strong aria-hidden="true">10.42.</strong> TraceObject</a></li><li class="chapter-item expanded "><a href="../classes/validate.html"><strong aria-hidden="true">10.43.</strong> Validate</a></li><li class="chapter-item expanded "><a href="../classes/singleton.html"><strong aria-hidden="true">10.44.</strong> Singleton</a></li><li class="chapter-item expanded "><a href="../classes/alarm.html"><strong aria-hidden="true">10.45.</strong> Alarm</a></li><li class="chapter-item expanded "><a href="../classes/ticker.html"><strong aria-hidden="true">10.46.</strong> Ticker</a></li><li class="chapter-item expanded "><a href="../classes/monitor.html"><strong aria-hidden="true">10.47.</strong> Monitor</a></li><li class="chapter-item expanded "><a href="../classes/eventsemaphore.html"><strong aria-hidden="true">10.48.</strong> EventSemaphore</a></li><li class="chapter-item expanded "><a href="../classes/mutexsemaphore.html"><strong aria-hidden="true">10.49.</strong> MutexSemaphore</a></li><li class="chapter-item expanded "><a href="../classes/commandhandler.html"><strong aria-hidden="true">10.50.</strong> CommandHandler</a></li><li class="chapter-item expanded "><a href="../classes/nativecommandhandler.html"><strong aria-hidden="true">10.51.</strong> NativeCommandHandler</a></li><li class="chapter-item expanded "><a href="../classes/commandcontext.html"><strong aria-hidden="true">10.52.</strong> CommandContext</a></li><li class="chapter-item expanded "><a href="../classes/commandinput.html"><strong aria-hidden="true">10.53.</strong> CommandInput</a></li><li class="chapter-item expanded "><a href="../classes/commandoutput.html"><strong aria-hidden="true">10.54.</strong> CommandOutput</a></li><li class="chapter-item expanded "><a href="../classes/rexxqueue.html"><strong aria-hidden="true">10.55.</strong> RexxQueue</a></li><li class="chapter-item expanded "><a href="../classes/supplier.html"><strong aria-hidden="true">10.56.</strong> Supplier</a></li><li class="chapter-item expanded "><a href="../classes/streamsupplier.html"><strong aria-hidden="true">10.57.</strong> StreamSupplier</a></li><li class="chapter-item expanded "><a href="../classes/regularexpression.html"><strong aria-hidden="true">10.58.</strong> RegularExpression</a></li><li class="chapter-item expanded "><a href="../classes/stream.html" class="active"><strong aria-hidden="true">10.59.</strong> Stream</a></li><li class="chapter-item expanded "><a href="../classes/inputstream.html"><strong aria-hidden="true">10.60.</strong> InputStream</a></li><li class="chapter-item expanded "><a href="../classes/outputstream.html"><strong aria-hidden="true">10.61.</strong> OutputStream</a></li><li class="chapter-item expanded "><a href="../classes/inputoutputstream.html"><strong aria-hidden="true">10.62.</strong> InputOutputStream</a></li></ol></li><li class="chapter-item expanded "><a href="../builtins/index.html"><strong aria-hidden="true">11.</strong> Built-in functions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../builtins/abbrev.html"><strong aria-hidden="true">11.1.</strong> ABBREV</a></li><li class="chapter-item expanded "><a href="../builtins/abs.html"><strong aria-hidden="true">11.2.</strong> ABS</a></li><li class="chapter-item expanded "><a href="../builtins/address.html"><strong aria-hidden="true">11.3.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../builtins/arg.html"><strong aria-hidden="true">11.4.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../builtins/b2x.html"><strong aria-hidden="true">11.5.</strong> B2X</a></li><li class="chapter-item expanded "><a href="../builtins/beep.html"><strong aria-hidden="true">11.6.</strong> BEEP</a></li><li class="chapter-item expanded "><a href="../builtins/bitand.html"><strong aria-hidden="true">11.7.</strong> BITAND</a></li><li class="chapter-item expanded "><a href="../builtins/bitor.html"><strong aria-hidden="true">11.8.</strong> BITOR</a></li><li class="chapter-item expanded "><a href="../builtins/bitxor.html"><strong aria-hidden="true">11.9.</strong> BITXOR</a></li><li class="chapter-item expanded "><a href="../builtins/c2d.html"><strong aria-hidden="true">11.10.</strong> C2D</a></li><li class="chapter-item expanded "><a href="../builtins/c2x.html"><strong aria-hidden="true">11.11.</strong> C2X</a></li><li class="chapter-item expanded "><a href="../builtins/center.html"><strong aria-hidden="true">11.12.</strong> CENTER</a></li><li class="chapter-item expanded "><a href="../builtins/changestr.html"><strong aria-hidden="true">11.13.</strong> CHANGESTR</a></li><li class="chapter-item expanded "><a href="../builtins/charin.html"><strong aria-hidden="true">11.14.</strong> CHARIN</a></li><li class="chapter-item expanded "><a href="../builtins/charout.html"><strong aria-hidden="true">11.15.</strong> CHAROUT</a></li><li class="chapter-item expanded "><a href="../builtins/chars.html"><strong aria-hidden="true">11.16.</strong> CHARS</a></li><li class="chapter-item expanded "><a href="../builtins/compare.html"><strong aria-hidden="true">11.17.</strong> COMPARE</a></li><li class="chapter-item expanded "><a href="../builtins/condition.html"><strong aria-hidden="true">11.18.</strong> CONDITION</a></li><li class="chapter-item expanded "><a href="../builtins/copies.html"><strong aria-hidden="true">11.19.</strong> COPIES</a></li><li class="chapter-item expanded "><a href="../builtins/countstr.html"><strong aria-hidden="true">11.20.</strong> COUNTSTR</a></li><li class="chapter-item expanded "><a href="../builtins/d2c.html"><strong aria-hidden="true">11.21.</strong> D2C</a></li><li class="chapter-item expanded "><a href="../builtins/d2x.html"><strong aria-hidden="true">11.22.</strong> D2X</a></li><li class="chapter-item expanded "><a href="../builtins/datatype.html"><strong aria-hidden="true">11.23.</strong> DATATYPE</a></li><li class="chapter-item expanded "><a href="../builtins/date.html"><strong aria-hidden="true">11.24.</strong> DATE</a></li><li class="chapter-item expanded "><a href="../builtins/delstr.html"><strong aria-hidden="true">11.25.</strong> DELSTR</a></li><li class="chapter-item expanded "><a href="../builtins/delword.html"><strong aria-hidden="true">11.26.</strong> DELWORD</a></li><li class="chapter-item expanded "><a href="../builtins/digits.html"><strong aria-hidden="true">11.27.</strong> DIGITS</a></li><li class="chapter-item expanded "><a href="../builtins/directory.html"><strong aria-hidden="true">11.28.</strong> DIRECTORY</a></li><li class="chapter-item expanded "><a href="../builtins/endlocal.html"><strong aria-hidden="true">11.29.</strong> ENDLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/errortext.html"><strong aria-hidden="true">11.30.</strong> ERRORTEXT</a></li><li class="chapter-item expanded "><a href="../builtins/filespec.html"><strong aria-hidden="true">11.31.</strong> FILESPEC</a></li><li class="chapter-item expanded "><a href="../builtins/form.html"><strong aria-hidden="true">11.32.</strong> FORM</a></li><li class="chapter-item expanded "><a href="../builtins/format.html"><strong aria-hidden="true">11.33.</strong> FORMAT</a></li><li class="chapter-item expanded "><a href="../builtins/fuzz.html"><strong aria-hidden="true">11.34.</strong> FUZZ</a></li><li class="chapter-item expanded "><a href="../builtins/gc.html"><strong aria-hidden="true">11.35.</strong> GC</a></li><li class="chapter-item expanded "><a href="../builtins/insert.html"><strong aria-hidden="true">11.36.</strong> INSERT</a></li><li class="chapter-item expanded "><a href="../builtins/lastpos.html"><strong aria-hidden="true">11.37.</strong> LASTPOS</a></li><li class="chapter-item expanded "><a href="../builtins/left.html"><strong aria-hidden="true">11.38.</strong> LEFT</a></li><li class="chapter-item expanded "><a href="../builtins/length.html"><strong aria-hidden="true">11.39.</strong> LENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/linein.html"><strong aria-hidden="true">11.40.</strong> LINEIN</a></li><li class="chapter-item expanded "><a href="../builtins/lineout.html"><strong aria-hidden="true">11.41.</strong> LINEOUT</a></li><li class="chapter-item expanded "><a href="../builtins/lines.html"><strong aria-hidden="true">11.42.</strong> LINES</a></li><li class="chapter-item expanded "><a href="../builtins/lower.html"><strong aria-hidden="true">11.43.</strong> LOWER</a></li><li class="chapter-item expanded "><a href="../builtins/max.html"><strong aria-hidden="true">11.44.</strong> MAX</a></li><li class="chapter-item expanded "><a href="../builtins/min.html"><strong aria-hidden="true">11.45.</strong> MIN</a></li><li class="chapter-item expanded "><a href="../builtins/overlay.html"><strong aria-hidden="true">11.46.</strong> OVERLAY</a></li><li class="chapter-item expanded "><a href="../builtins/pos.html"><strong aria-hidden="true">11.47.</strong> POS</a></li><li class="chapter-item expanded "><a href="../builtins/qualify.html"><strong aria-hidden="true">11.48.</strong> QUALIFY</a></li><li class="chapter-item expanded "><a href="../builtins/queued.html"><strong aria-hidden="true">11.49.</strong> QUEUED</a></li><li class="chapter-item expanded "><a href="../builtins/random.html"><strong aria-hidden="true">11.50.</strong> RANDOM</a></li><li class="chapter-item expanded "><a href="../builtins/reverse.html"><strong aria-hidden="true">11.51.</strong> REVERSE</a></li><li class="chapter-item expanded "><a href="../builtins/right.html"><strong aria-hidden="true">11.52.</strong> RIGHT</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncadd.html"><strong aria-hidden="true">11.53.</strong> RXFUNCADD</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncdrop.html"><strong aria-hidden="true">11.54.</strong> RXFUNCDROP</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncquery.html"><strong aria-hidden="true">11.55.</strong> RXFUNCQUERY</a></li><li class="chapter-item expanded "><a href="../builtins/rxqueue.html"><strong aria-hidden="true">11.56.</strong> RXQUEUE</a></li><li class="chapter-item expanded "><a href="../builtins/setlocal.html"><strong aria-hidden="true">11.57.</strong> SETLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/sign.html"><strong aria-hidden="true">11.58.</strong> SIGN</a></li><li class="chapter-item expanded "><a href="../builtins/sourceline.html"><strong aria-hidden="true">11.59.</strong> SOURCELINE</a></li><li class="chapter-item expanded "><a href="../builtins/space.html"><strong aria-hidden="true">11.60.</strong> SPACE</a></li><li class="chapter-item expanded "><a href="../builtins/stream.html"><strong aria-hidden="true">11.61.</strong> STREAM</a></li><li class="chapter-item expanded "><a href="../builtins/strip.html"><strong aria-hidden="true">11.62.</strong> STRIP</a></li><li class="chapter-item expanded "><a href="../builtins/substr.html"><strong aria-hidden="true">11.63.</strong> SUBSTR</a></li><li class="chapter-item expanded "><a href="../builtins/subword.html"><strong aria-hidden="true">11.64.</strong> SUBWORD</a></li><li class="chapter-item expanded "><a href="../builtins/symbol.html"><strong aria-hidden="true">11.65.</strong> SYMBOL</a></li><li class="chapter-item expanded "><a href="../builtins/time.html"><strong aria-hidden="true">11.66.</strong> TIME</a></li><li class="chapter-item expanded "><a href="../builtins/trace.html"><strong aria-hidden="true">11.67.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../builtins/translate.html"><strong aria-hidden="true">11.68.</strong> TRANSLATE</a></li><li class="chapter-item expanded "><a href="../builtins/trunc.html"><strong aria-hidden="true">11.69.</strong> TRUNC</a></li><li class="chapter-item expanded "><a href="../builtins/upper.html"><strong aria-hidden="true">11.70.</strong> UPPER</a></li><li class="chapter-item expanded "><a href="../builtins/userid.html"><strong aria-hidden="true">11.71.</strong> USERID</a></li><li class="chapter-item expanded "><a href="../builtins/value.html"><strong aria-hidden="true">11.72.</strong> VALUE</a></li><li class="chapter-item expanded "><a href="../builtins/var.html"><strong aria-hidden="true">11.73.</strong> VAR</a></li><li class="chapter-item expanded "><a href="../builtins/verify.html"><strong aria-hidden="true">11.74.</strong> VERIFY</a></li><li class="chapter-item expanded "><a href="../builtins/word.html"><strong aria-hidden="true">11.75.</strong> WORD</a></li><li class="chapter-item expanded "><a href="../builtins/wordindex.html"><strong aria-hidden="true">11.76.</strong> WORDINDEX</a></li><li class="chapter-item expanded "><a href="../builtins/wordlength.html"><strong aria-hidden="true">11.77.</strong> WORDLENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/wordpos.html"><strong aria-hidden="true">11.78.</strong> WORDPOS</a></li><li class="chapter-item expanded "><a href="../builtins/words.html"><strong aria-hidden="true">11.79.</strong> WORDS</a></li><li class="chapter-item expanded "><a href="../builtins/x2b.html"><strong aria-hidden="true">11.80.</strong> X2B</a></li><li class="chapter-item expanded "><a href="../builtins/x2c.html"><strong aria-hidden="true">11.81.</strong> X2C</a></li><li class="chapter-item expanded "><a href="../builtins/x2d.html"><strong aria-hidden="true">11.82.</strong> X2D</a></li><li class="chapter-item expanded "><a href="../builtins/xrange.html"><strong aria-hidden="true">11.83.</strong> XRANGE</a></li></ol></li><li class="chapter-item expanded "><a href="../deviations.html"><strong aria-hidden="true">12.</strong> Deviations</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The interrexx Language Specification</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="stream"><a class="header" href="#stream">Stream</a></h1>
+<p class="references">rexxref: Builtin Classes &gt; Stream Classes &gt; Stream Class; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; new (Inherited Class Method); Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; arrayIn; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; arrayOut; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; charIn; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; charOut; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; chars; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; close; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; command; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; description; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; flush; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; init; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; lineIn; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; lineOut; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; lines; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; makeArray; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; open; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; position; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; qualify; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; query; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; say; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; seek; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; state; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; string; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; supplier; Builtin Classes &gt; Stream Classes &gt; Stream Class &gt; uninit</p>
+<p class="deviations">Deviations: D34, D55, D58, D59, D62, D109, D135, D139, D140</p>
+<p>A <code>Stream</code> is an object that stands for a stream: the file, or the standard
+stream, that its name denotes. Its methods do what the stream built-in
+functions do, with the stream as the receiver in place of a name argument, and
+it has some that the functions have no counterpart for: the lines of a stream
+as an array or as a supplier, and the writing of the items of an array. This
+page states what is the method's own: how an object is made, the argument
+errors and the answers of the methods, and the messages that a method sends to
+its receiver and to its arguments, where a subclass or an argument can
+override them. The rules of the functions are linked, never repeated. A name
+that is one of the standard names denotes that standard stream, <a href="../builtins/index.html#r-bif.index.stream.std">as for the
+functions</a>; what the standard streams of a program are
+bound to when it starts, and the objects <code>.input</code>, <code>.output</code> and <code>.error</code>, are
+specified in the environment chapter. The examples create the files they use
+under names of their own, close every stream they open, and remove the files
+at the end.</p>
+<h2 id="the-class"><a class="header" href="#the-class">The class</a></h2>
+<div class="rule" id="r-class.stream.creation"><a href="#r-class.stream.creation">[class.stream.creation]</a></div>
+<p><code>Stream</code> is a subclass of <code>InputOutputStream</code> and it inherits no other class.
+It is a mixin class: <a href="index.html#r-class.index.mixins"><code>queryMixinClass</code></a> answers 1. It
+has the class method <code>new</code>, which every class has, and the instance methods
+<code>arrayIn</code>, <code>arrayOut</code>, <code>charIn</code>, <code>charOut</code>, <code>chars</code>, <code>close</code>, <code>command</code>,
+<code>description</code>, <code>flush</code>, <code>init</code>, <code>lineIn</code>, <code>lineOut</code>, <code>lines</code>, <code>makeArray</code>,
+<code>open</code>, <code>position</code>, <code>qualify</code>, <code>query</code>, <code>say</code>, <code>seek</code>, <code>state</code>, <code>string</code>,
+<code>supplier</code> and <code>uninit</code>. It may have private methods besides these; they are
+not part of this specification. It has no method <code>makeString</code>. It defines
+every method that <a href="inputstream.html"><code>InputStream</code></a>,
+<a href="outputstream.html"><code>OutputStream</code></a> and
+<a href="inputoutputstream.html"><code>InputOutputStream</code></a> define, so a message to a <code>Stream</code>
+never reaches the methods of those pages. An instance is not a string, so a
+string method such as <code>left</code> raises <code>SYNTAX 97.1</code>. A copy of an instance is
+not specified.</p>
+<pre><code class="language-rexx">say .stream~superclass~id .stream~superclasses~items .stream~queryMixinClass
+names = 'arrayIn arrayOut charIn charOut chars close command description',
+  'flush init lineIn lineOut lines makeArray open position qualify query',
+  'say seek state string supplier uninit'
+found = 0
+do n over names~makearray(' ')
+  found += .stream~method(n)~isA(.method)
+end
+say found 'of' names~words
+f = 'spec-stream-creation-zq.tmp'
+s = .stream~new(f)
+say s~isA(.inputoutputstream) s~isA(.inputstream) s~isA(.outputstream)
+signal on syntax name bad
+say s~makeString
+bad: say condition('o')~code
+signal on syntax name bad2
+say s~left(1)
+bad2: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">InputOutputStream 1 1
+24 of 24
+1 1 1
+97.1
+97.1
+</code></pre>
+<div class="rule" id="r-class.stream.new"><a href="#r-class.stream.new">[class.stream.new]</a></div>
+<p><code>new</code> is the <code>new</code> that <code>Class</code> supplies (<a href="index.html#r-class.index.new">the new rule</a>):
+it makes an instance of the class that received it, a subclass included, and
+sends it <code>init</code> with the arguments of <code>new</code>. The instance is not open, and
+nothing is read or written until a method needs the stream; its state is
+<code>UNKNOWN</code>. <code>init</code> takes the name of the stream as its one argument. A missing
+argument raises <code>SYNTAX 93.901</code> and a second one <code>SYNTAX 93.902</code>. A name that
+is a string is used as it is, with its blanks. The null string is a name too,
+though a stream with that name cannot be opened: opening it gives the <code>ERROR</code>
+state as for any name that is no file. (STREAM refuses a null name with
+<code>SYNTAX 40.27</code>, as <a href="../builtins/stream.html#r-bif.stream.args">its rule</a> says; to the other functions
+the null string names the default stream, as <a href="../builtins/index.html#r-bif.index.stream.std">the rule of the standard
+names</a> says. A <code>Stream</code> with the null name denotes no
+standard stream.) A name that is not a string is read as the string value its
+<code>makeString</code> method answers, which is sent once, when the stream is made, and
+never again, so a later change in what the object answers does not change the
+name. An argument that has no <code>makeString</code> method, <code>.nil</code> among them, raises
+<code>SYNTAX 93.938</code>; a <code>string</code> method alone does not do. A <code>MutableBuffer</code>, an
+<code>Array</code> and a <code>File</code> have a <code>makeString</code> method, and the name of the stream is
+its answer.</p>
+<pre><code class="language-rexx">f = 'spec-stream-new-zq.tmp'
+call try '.stream~new'
+call try '.stream~new(f, f)'
+call try '.stream~new(.nil)'
+call try '.stream~new(.object~new)'
+call try '.stream~new(.only_string~new)'
+call try '.stream~new(f)'
+call try '.stream~new(12)'
+call try '.stream~new("")'
+call try '.stream~new(" a b ")'
+call try '.stream~new(.mutablebuffer~new(f))'
+call try '.stream~new(.array~of(f))'
+call try '.stream~new(.has_makestring~new)'
+call try '.stream~new(.file~new(f))~string~endsWith(f)'
+say .stream~new(f)~state '['.stream~new(f)~description']'
+say '['.stream~new(f)~query('exists')']'
+e = .stream~new('')
+say '['e~linein']' e~state e~open~left(6) e~state
+o = .has_makestring~new
+s = .stream~new(o)
+say s~string s~string o~count
+say s~qualify~endsWith('made-name') o~count
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  if r~isA(.stream) then say arg(1) '=&gt; ['r~string']'
+  else say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class only_string
+::method string
+  return 'from-string'
+::class has_makestring
+::attribute count
+::method init
+  self~count = 0
+::method makestring
+  self~count += 1
+  return 'made-name'
+</code></pre>
+<pre><code class="language-output">.stream~new =&gt; 93.901
+.stream~new(f, f) =&gt; 93.902
+.stream~new(.nil) =&gt; 93.938
+.stream~new(.object~new) =&gt; 93.938
+.stream~new(.only_string~new) =&gt; 93.938
+.stream~new(f) =&gt; [spec-stream-new-zq.tmp]
+.stream~new(12) =&gt; [12]
+.stream~new("") =&gt; []
+.stream~new(" a b ") =&gt; [ a b ]
+.stream~new(.mutablebuffer~new(f)) =&gt; [spec-stream-new-zq.tmp]
+.stream~new(.array~of(f)) =&gt; [spec-stream-new-zq.tmp]
+.stream~new(.has_makestring~new) =&gt; [made-name]
+.stream~new(.file~new(f))~string~endsWith(f) =&gt; 1
+UNKNOWN [UNKNOWN:]
+[]
+[] ERROR ERROR: ERROR
+made-name made-name 1
+1 1
+</code></pre>
+<div class="rule" id="r-class.stream.new.sends"><a href="#r-class.stream.new.sends">[class.stream.new.sends]</a></div>
+<p><code>new</code> sends <code>init</code> to the new instance, with the arguments of <code>new</code> and no
+others, so a subclass that declares <code>init</code> receives them all and decides what
+the superclass <code>init</code> is given. The <code>init</code> of <code>Stream</code> checks the count of its
+arguments, and then sends <code>makeString</code> to the name when it is not a string,
+once, and it sends no other message. A subclass whose <code>init</code> does not send
+<code>init</code> to its superclass has an instance that was never initialized: see
+<a href="#r-class.stream.deviation.135">Deviation 135</a>.</p>
+<pre><code class="language-rexx">f = 'spec-stream-newsends-zq.tmp'
+s = .loud~new(f)
+say 'name' s~string
+o = .counted~new
+t = .stream~new(o)
+say 'first sends' o~log
+t = .loud~new(o)
+say 'second sends' o~log
+call try '.loud~new'
+call try '.loud~new(.nil, 2)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class loud subclass stream
+::method init
+  say 'init gets' arg() 'argument(s)'
+  forward class (super) continue
+::class counted
+::attribute log
+::method init
+  self~log = ''
+::method makestring
+  self~log = self~log 'makestring'
+  return 'counted-name'
+</code></pre>
+<pre><code class="language-output">init gets 1 argument(s)
+name spec-stream-newsends-zq.tmp
+first sends  makestring
+init gets 1 argument(s)
+second sends  makestring makestring
+init gets 0 argument(s)
+.loud~new =&gt; 93.901
+init gets 2 argument(s)
+.loud~new(.nil, 2) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.stream.init"><a href="#r-class.stream.init">[class.stream.init]</a></div>
+<p><code>init</code> may be sent again to a stream that exists. It takes the one argument
+that <a href="#r-class.stream.new"><code>new</code></a> gives it, and checks it as <code>new</code> does. The
+stream then has the new name, no matter what it had, and is not open: its
+state is <code>UNKNOWN</code>, and the first read of the stream starts at the first line
+of the file that the new name denotes. Whether the file that it had open
+before stays open is not specified.</p>
+<pre><code class="language-rexx">a = 'spec-stream-inita-zq.tmp'
+b = 'spec-stream-initb-zq.tmp'
+call lineout a, 'in a'
+call lineout a
+call lineout b, 'in b'
+call lineout b
+s = .stream~new(a)
+say s~linein s~state
+s~init(b)
+say s~string s~state
+say s~linein s~state
+s~init(a)
+say s~linein s~state
+s~close
+signal on syntax name bad
+s~init
+bad: say condition('o')~code
+call sysfiledelete a
+call sysfiledelete b
+</code></pre>
+<pre><code class="language-output">in a READY
+spec-stream-initb-zq.tmp UNKNOWN
+in b READY
+in a READY
+93.901
+</code></pre>
+<h2 id="the-name-and-the-state"><a class="header" href="#the-name-and-the-state">The name and the state</a></h2>
+<div class="rule" id="r-class.stream.string"><a href="#r-class.stream.string">[class.stream.string]</a></div>
+<p><code>string</code> answers the name that <code>init</code> read, as it was given: not qualified,
+and with the blanks it had. It takes no argument: one raises <code>SYNTAX 93.902</code>.
+So <code>say</code> and the joining operators show the name. The name is not the
+<code>objectName</code> of the instance, which stays what <a href="index.html#r-class.index.objectname">the object
+rule</a> says.</p>
+<pre><code class="language-rexx">f = 'spec-stream-string-zq.tmp'
+s = .stream~new('./' || f)
+say s~string '|' s '|' s~objectName
+say 'name:' || s
+s~objectName = 'mine'
+say s~string s~objectName
+signal on syntax name bad
+say s~string(1)
+bad: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">./spec-stream-string-zq.tmp | ./spec-stream-string-zq.tmp | a Stream
+name:./spec-stream-string-zq.tmp
+./spec-stream-string-zq.tmp mine
+93.902
+</code></pre>
+<div class="rule" id="r-class.stream.qualify"><a href="#r-class.stream.qualify">[class.stream.qualify]</a></div>
+<p><code>qualify</code> answers the full name of the stream as
+<a href="../builtins/qualify.html#r-bif.qualify.relative">QUALIFY</a> makes it from the name, taken from the
+current directory when it is not absolute (see <a href="#r-class.stream.deviation.34">Deviation
+34</a>). The stream need not be open and the file
+need not exist, and the state does not change. It takes no argument: one
+raises <code>SYNTAX 88.922</code>. The null name has the null string as its full name.</p>
+<pre><code class="language-rexx">f = 'spec-stream-qualify-zq.tmp'
+s = .stream~new(f)
+say (s~qualify == qualify(f)) s~qualify~endsWith('/' || f) s~state
+s2 = .stream~new('./' || f)
+say (s2~qualify == s~qualify) '[' || .stream~new('')~qualify || ']'
+say .stream~new(f)~query('exists') || '|'
+signal on syntax name bad
+say s~qualify(1)
+bad: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">1 1 UNKNOWN
+1 []
+|
+88.922
+</code></pre>
+<div class="rule" id="r-class.stream.state"><a href="#r-class.stream.state">[class.stream.state]</a></div>
+<p><code>state</code> answers the state of the stream, one of <code>UNKNOWN</code>, <code>READY</code>, <code>NOTREADY</code>
+and <code>ERROR</code>, and <code>description</code> answers the state, a colon and what <a href="../builtins/stream.html#r-bif.stream.description">the
+description rule</a> adds to it. Each takes no
+argument: one raises <code>SYNTAX 88.922</code>. An instance that has just been made is
+<code>UNKNOWN</code>, and what changes the state is what <a href="../builtins/stream.html#r-bif.stream.change">the rule for the state of a
+stream</a> says. The state is that of the one instance: an
+operation on another instance of the same file, or on the stream that a
+function names with the same file name, does not change it.</p>
+<pre><code class="language-rexx">f = 'spec-stream-state-zq.tmp'
+call lineout f, 'only'
+call lineout f
+a = .stream~new(f)
+b = .stream~new(f)
+say a~state '[' || a~description || ']' b~state
+say a~linein a~state '[' || a~description || ']' b~state
+say '[' || a~linein || ']' a~state '[' || a~description || ']' b~state
+say '[' || b~charin(,2) || ']' a~state b~state stream(f)
+a~close
+say a~state b~state '[' || a~description || ']' '[' || b~description || ']'
+b~close
+n = .stream~new('spec-stream-state-none-zq.tmp')
+say '[' || n~linein || ']' n~state n~description~left(6)
+call try 'a~state(1)'
+call try 'a~description("x")'
+call sysfiledelete f
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">UNKNOWN [UNKNOWN:] UNKNOWN
+only READY [READY:] UNKNOWN
+[] NOTREADY [NOTREADY:EOF] UNKNOWN
+[on] NOTREADY READY UNKNOWN
+UNKNOWN READY [UNKNOWN:] [READY:]
+[] ERROR ERROR:
+a~state(1) =&gt; 88.922
+a~description("x") =&gt; 88.922
+</code></pre>
+<div class="rule" id="r-class.stream.separate"><a href="#r-class.stream.separate">[class.stream.separate]</a></div>
+<p>Every instance is a stream of its own, with its own state and its own read and
+write positions, also when two instances, or an instance and a function, name
+the same file. They do not share what is read: each reads the file from its
+own position. What an instance has written is in the file at the latest when
+it is closed or flushed, or sent <code>uninit</code>. Another instance on the file
+answers its size, the number of characters left and the number of lines
+left with that data in them (<a href="#r-class.stream.deviation.139">Deviation 139</a>).</p>
+<pre><code class="language-rexx">f = 'spec-stream-separate-zq.tmp'
+call lineout f, 'one'
+call lineout f, 'two'
+call lineout f, 'three'
+call lineout f
+a = .stream~new(f)
+b = .stream~new(f)
+say a~linein b~linein linein(f)
+say a~linein linein(f) a~query('position') b~query('position')
+call stream f, 'c', 'close'
+say a~linein b~linein b~linein
+a~close
+b~close
+c = .stream~new(f)
+say c~lineout('four') c~state
+c~close
+say .stream~new(f)~arrayin~items
+call sysfiledelete f
+</code></pre>
+<pre><code class="language-output">one one one
+two two 9 5
+three two three
+0 READY
+4
+</code></pre>
+<h2 id="what-the-stream-functions-do"><a class="header" href="#what-the-stream-functions-do">What the stream functions do</a></h2>
+<div class="rule" id="r-class.stream.builtins"><a href="#r-class.stream.builtins">[class.stream.builtins]</a></div>
+<p>These methods do what a stream function does, with the receiver as the stream
+and the other arguments in the places they have after the name: <code>charIn</code>
+(<a href="../builtins/charin.html#r-bif.charin.result">CHARIN</a>), <code>charOut</code> (<a href="../builtins/charout.html#r-bif.charout.result">CHAROUT</a>),
+<code>chars</code> (<a href="../builtins/chars.html#r-bif.chars.result">CHARS</a>), <code>lineIn</code>
+(<a href="../builtins/linein.html#r-bif.linein.result">LINEIN</a>), <code>lineOut</code> (<a href="../builtins/lineout.html#r-bif.lineout.result">LINEOUT</a>),
+<code>lines</code> (<a href="../builtins/lines.html#r-bif.lines.count">LINES</a>), <code>open</code>
+(<a href="../builtins/stream.html#r-bif.stream.open.result">OPEN</a>), <code>close</code> (<a href="../builtins/stream.html#r-bif.stream.close">CLOSE</a>),
+<code>flush</code> (<a href="../builtins/stream.html#r-bif.stream.flush">FLUSH</a>), <code>seek</code> and <code>position</code>
+(<a href="../builtins/stream.html#r-bif.stream.seek">SEEK</a>), <code>query</code> (<a href="../builtins/stream.html#r-bif.stream.query.words">QUERY</a>),
+<code>command</code> (<a href="../builtins/stream.html#r-bif.stream.command">the commands</a>), and <code>state</code> and
+<code>description</code> (<a href="../builtins/stream.html#r-bif.stream.state">the state</a>). The stream opens when a
+method first needs it, <a href="../builtins/index.html#r-bif.index.stream.open">as the functions open it</a>,
+and the answers, the states and the NOTREADY outcomes are the functions'. The
+rules below state what is different for a message: <a href="#r-class.stream.args">the argument
+counts</a>, <a href="#r-class.stream.args.numbers">the arguments</a>,
+<a href="#r-class.stream.lines">the default of <code>lines</code></a>, <a href="#r-class.stream.notready">the condition that a method
+raises</a>, and what the methods send. The answers are
+strings. A method with no counterpart among the functions, or whose messages
+another rule states, has a rule of its own. The Deviations that the rules of
+the functions state hold for the methods that do the same:
+<a href="../builtins/stream.html#r-bif.stream.deviation.35">35</a>, <a href="../builtins/lineout.html#r-bif.lineout.deviation.46">46</a>,
+<a href="../builtins/stream.html#r-bif.stream.deviation.49">49</a>, <a href="../builtins/lines.html#r-bif.lines.deviation.54">54</a>,
+<a href="../builtins/lineout.html#r-bif.lineout.deviation.56">56</a>, <a href="../builtins/stream.html#r-bif.stream.deviation.57">57</a>,
+<a href="../builtins/lineout.html#r-bif.lineout.deviation.60">60</a>, <a href="../builtins/stream.html#r-bif.stream.deviation.74">74</a>,
+<a href="../builtins/stream.html#r-bif.stream.deviation.79">79</a>, <a href="../builtins/stream.html#r-bif.stream.deviation.98">98</a>,
+<a href="../builtins/index.html#r-bif.index.stream.notready.deviation.99">99</a> and
+<a href="../builtins/stream.html#r-bif.stream.deviation.100">100</a>. Those of <code>lines</code> and the invalid <code>seek</code>
+have rules of their own below, <a href="#r-class.stream.deviation.58">58</a> and
+<a href="#r-class.stream.deviation.59">59</a>.</p>
+<pre><code class="language-rexx">fa = 'spec-stream-builtins-a-zq.tmp'
+fb = 'spec-stream-builtins-b-zq.tmp'
+do f over fa, fb
+  call lineout f, 'alpha'
+  call lineout f, 'beta'
+  call lineout f, 'gamma'
+  call lineout f
+end
+s = .stream~new(fb)
+say charin(fa, , 3) s~charin(, 3)
+say linein(fa, 2) s~linein(2)
+say chars(fa) s~chars
+say lines(fa, 'C') s~lines('C')
+say charout(fa, 'X', 1) s~charout('X', 1)
+say lineout(fa, 'delta') s~lineout('delta')
+say stream(fa, 'c', 'query size') s~query('size')
+say stream(fa, 'c', 'seek 3') s~seek(3)
+say stream(fa, 'c', 'query position read') s~position('=3 read')
+say stream(fa) s~state stream(fa, 'd') s~description
+say stream(fa, 'c', 'flush') s~flush
+say stream(fa, 'c', 'close') s~close
+say '['stream(fa, 'c', 'close')']' '['s~close']' s~command('close')
+say stream(fa, 'c', 'open read') s~open('read')
+say stream(fa, 'c', 'close') s~command('close')
+say charin(fa, 1, 40) == charin(fb, 1, 40)
+call sysfiledelete fa
+call sysfiledelete fb
+</code></pre>
+<pre><code class="language-output">alp alp
+beta beta
+6 6
+1 1
+0 0
+0 0
+17 17
+3 3
+3 3
+READY READY READY: READY:
+READY: READY:
+READY: READY:
+[] [] 
+READY: READY:
+READY: READY:
+1
+</code></pre>
+<div class="rule" id="r-class.stream.args"><a href="#r-class.stream.args">[class.stream.args]</a></div>
+<p>The arguments of a message are checked in this order, and the first error is
+the one raised. First comes the form of the arguments that a method reads
+before it counts them: a start, a line number or a count of <code>charIn</code>,
+<code>lineIn</code>, <code>charOut</code> and <code>lineOut</code> that is no whole number in the range that
+<a href="#r-class.stream.args.numbers">the arguments</a> give raises <code>SYNTAX 88.907</code>, and
+a string to write that has no <code>makeString</code> method raises <code>SYNTAX 88.909</code>
+(<a href="#r-class.stream.args.strings">the strings rule</a>); the option of <code>open</code>,
+<code>lines</code>, <code>seek</code> and <code>position</code> is read through <code>makeString</code> too, and one
+without it raises <code>SYNTAX 88.909</code> (<a href="#r-class.stream.args.objects">the objects
+rule</a>). Then comes the count of arguments, as
+<a href="index.html#r-class.index.args.count">the count rule</a> says, and before the stream is
+opened: a message with more arguments than the method takes raises <code>SYNTAX 88.922</code> for <code>chars</code>, <code>charIn</code>, <code>charOut</code>, <code>close</code>, <code>description</code>, <code>flush</code>,
+<code>lineIn</code>, <code>lineOut</code>, <code>lines</code>, <code>open</code>, <code>position</code>, <code>qualify</code>, <code>seek</code>, <code>state</code>
+and <code>uninit</code>, and <code>SYNTAX 93.902</code> for <code>arrayIn</code>, <code>arrayOut</code>, <code>command</code>,
+<code>init</code>, <code>makeArray</code>, <code>query</code>, <code>say</code>, <code>string</code> and <code>supplier</code>; for these
+nothing is read before the count. Last come the values: a <code>lineIn</code> count above
+1 raises <code>SYNTAX 93.0</code>, an option that is not allowed raises <code>SYNTAX 93.0</code> or
+<code>93.915</code> as the rule of the method says, and, once the stream is open, a start
+or a line number below 1 raises <code>SYNTAX 93.907</code>. <code>charIn</code>, <code>charOut</code>,
+<code>lineIn</code>, <code>lineOut</code> and <code>arrayOut</code> take two arguments, <code>lines</code>, <code>open</code>,
+<code>position</code>, <code>seek</code>, <code>arrayIn</code>, <code>makeArray</code>, <code>command</code>, <code>init</code>, <code>query</code> and
+<code>say</code> one, and the others none. <code>arrayOut</code>, <code>command</code>, <code>init</code> and <code>query</code> need
+their argument, and a message without it raises <code>SYNTAX 93.901</code>; <code>position</code>
+and <code>seek</code> raise <code>SYNTAX 88.901</code>. No argument is required by <code>say</code>, <code>lines</code>,
+<code>open</code>, <code>arrayIn</code> or <code>makeArray</code>. In the example the state is still <code>UNKNOWN</code>
+after every message that raised.</p>
+<pre><code class="language-rexx">f = 'spec-stream-args-zq.tmp'
+s = .stream~new(f)
+too = 'chars charIn charOut close description flush lineIn lineOut lines',
+  'open position qualify seek state uninit arrayIn arrayOut command init',
+  'makeArray query say string supplier'
+none = 'chars close description flush qualify state uninit string supplier'
+two = 'charIn charOut lineIn lineOut arrayOut'
+do m over too~makearray(' ')
+  if none~wordpos(m) &gt; 0 then args = '1'
+  else if two~wordpos(m) &gt; 0 then args = '1, 2, 3'
+  else args = '1, 2'
+  call try 's~' || m || '(' || args || ')'
+end
+say '--'
+do m over 'arrayOut command init query position seek'~makearray(' ')
+  call try 's~' || m
+end
+say s~state
+say '--'
+call try 's~charIn("x", 1, 2)'
+call try 's~lineIn(, -1, 3)'
+call try 's~lineOut(.nil, 1, 2)'
+call try 's~charOut(.object~new, 1, 2)'
+call try 's~lineIn(1, 5, 2)'
+call try 's~charIn(0, 1, 2)'
+call try 's~lines("x", 1)'
+call try 's~open("bogus", 1)'
+say s~state
+say '--'
+call try 's~say'
+call try 's~lines'
+call try 's~open(, )'
+call try 's~arrayIn(,)'
+s~close
+call sysfiledelete f
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt; no error'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">s~chars(1) =&gt; 88.922
+s~charIn(1, 2, 3) =&gt; 88.922
+s~charOut(1, 2, 3) =&gt; 88.922
+s~close(1) =&gt; 88.922
+s~description(1) =&gt; 88.922
+s~flush(1) =&gt; 88.922
+s~lineIn(1, 2, 3) =&gt; 88.922
+s~lineOut(1, 2, 3) =&gt; 88.922
+s~lines(1, 2) =&gt; 88.922
+s~open(1, 2) =&gt; 88.922
+s~position(1, 2) =&gt; 88.922
+s~qualify(1) =&gt; 88.922
+s~seek(1, 2) =&gt; 88.922
+s~state(1) =&gt; 88.922
+s~uninit(1) =&gt; 88.922
+s~arrayIn(1, 2) =&gt; 93.902
+s~arrayOut(1, 2, 3) =&gt; 93.902
+s~command(1, 2) =&gt; 93.902
+s~init(1, 2) =&gt; 93.902
+s~makeArray(1, 2) =&gt; 93.902
+s~query(1, 2) =&gt; 93.902
+s~say(1, 2) =&gt; 93.902
+s~string(1) =&gt; 93.902
+s~supplier(1) =&gt; 93.902
+--
+s~arrayOut =&gt; 93.901
+s~command =&gt; 93.901
+s~init =&gt; 93.901
+s~query =&gt; 93.901
+s~position =&gt; 88.901
+s~seek =&gt; 88.901
+UNKNOWN
+--
+s~charIn("x", 1, 2) =&gt; 88.907
+s~lineIn(, -1, 3) =&gt; 88.907
+s~lineOut(.nil, 1, 2) =&gt; 88.909
+s~charOut(.object~new, 1, 2) =&gt; 88.909
+s~lineIn(1, 5, 2) =&gt; 88.922
+s~charIn(0, 1, 2) =&gt; 88.922
+s~lines("x", 1) =&gt; 88.922
+s~open("bogus", 1) =&gt; 88.922
+UNKNOWN
+--
+s~say =&gt; no error
+s~lines =&gt; no error
+s~open(, ) =&gt; no error
+s~arrayIn(,) =&gt; no error
+</code></pre>
+<div class="rule" id="r-class.stream.args.numbers"><a href="#r-class.stream.args.numbers">[class.stream.args.numbers]</a></div>
+<p>A start, a line number and a count are read as <a href="../builtins/index.html#r-bif.index.stream.value">the functions read
+them</a>: the argument's number rounded to 20
+significant digits, whatever <code>NUMERIC DIGITS</code> is in the caller, and it must be
+a whole number from -9223372036854775808 to 9223372036854775807. An argument
+that is outside that range, is not whole, or has a form that is no number,
+raises <code>SYNTAX 88.907</code>; the functions raise <code>SYNTAX 40.12</code> for it. A negative
+count raises <code>SYNTAX 88.907</code> too, and a <code>lineIn</code> count above 1 raises <code>SYNTAX 93.0</code>. The form is checked, from left to right, before the count of arguments
+and before the stream is opened (<a href="#r-class.stream.args">the order</a>). Once the
+stream is open, a start or a line number below 1 raises <code>SYNTAX 93.907</code>, the
+value <code>-0</code> and -9223372036854775808 among them. A stream that cannot be opened
+is not asked: the call has the <a href="../builtins/index.html#r-bif.index.stream.start">NOTREADY outcome</a> of
+a function that finds no stream, whatever the start is. An argument that is an
+object and no string is read as <a href="#r-class.stream.args.objects">the objects
+rule</a> says. What <code>charIn</code> does with a count
+larger than the memory of the host allows is not specified.</p>
+<pre><code class="language-rexx">f = 'spec-stream-numbers-zq.tmp'
+call lineout f, 'abcdef'
+call lineout f
+s = .stream~new(f)
+numeric digits 3
+say '['s~charin('1.99999999999999999999', 1)']' '['s~charin(' 3 ', '1e0')']'
+say '['s~charin('+4', 1.0)']' '['s~charin(5, '+1')']'
+say '['s~charin(9223372036854775807, 1)']' s~state
+numeric digits 40
+call try 's~charin("2.0000000000000000001", 1)'
+call try 's~charin(1, "1.00000000000000000005")'
+call try 's~charin(9223372036854775808, 1)'
+call try 's~charin(1.5)'
+call try 's~charin("1e")'
+call try 's~charin(" ")'
+call try 's~charin(1, -1)'
+call try 's~linein(, -1)'
+call try 's~linein(1, 2)'
+call try 's~charin("-9223372036854775809", 1)'
+say '--'
+t = .stream~new('spec-stream-numbers-none-zq.tmp')
+call try 't~charin(0, "x")'
+say t~state
+call try 't~charin(0, 1, 1)'
+call try 't~linein(, 2)'
+say t~state
+call try 's~charin(0, 1)'
+call try 's~charin(-3, 1)'
+call try 's~charin("-0", 1)'
+call try 's~charin("-9223372036854775808", 1)'
+call try 's~linein(0)'
+call try 's~charout("x", 0)'
+call try 's~lineout("x", 0)'
+call try 's~linein(0, 0)'
+say s~state
+u = .stream~new('spec-stream-numbers-dir-zq/none')
+call try 'u~charin(0, 1)'
+call try 'u~linein(0)'
+call try 'u~charout("x", 0)'
+s~close
+call sysfiledelete f
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt; [' || r || ']'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">[b] [c]
+[d] [e]
+[] NOTREADY
+s~charin("2.0000000000000000001", 1) =&gt; 88.907
+s~charin(1, "1.00000000000000000005") =&gt; 88.907
+s~charin(9223372036854775808, 1) =&gt; 88.907
+s~charin(1.5) =&gt; 88.907
+s~charin("1e") =&gt; 88.907
+s~charin(" ") =&gt; 88.907
+s~charin(1, -1) =&gt; 88.907
+s~linein(, -1) =&gt; 88.907
+s~linein(1, 2) =&gt; 93.0
+s~charin("-9223372036854775809", 1) =&gt; 88.907
+--
+t~charin(0, "x") =&gt; 88.907
+UNKNOWN
+t~charin(0, 1, 1) =&gt; 88.922
+t~linein(, 2) =&gt; 93.0
+UNKNOWN
+s~charin(0, 1) =&gt; 93.907
+s~charin(-3, 1) =&gt; 93.907
+s~charin("-0", 1) =&gt; 93.907
+s~charin("-9223372036854775808", 1) =&gt; 93.907
+s~linein(0) =&gt; 93.907
+s~charout("x", 0) =&gt; 93.907
+s~lineout("x", 0) =&gt; 93.907
+s~linein(0, 0) =&gt; 93.907
+READY
+u~charin(0, 1) =&gt; []
+u~linein(0) =&gt; []
+u~charout("x", 0) =&gt; [1]
+</code></pre>
+<div class="rule" id="r-class.stream.args.objects"><a href="#r-class.stream.args.objects">[class.stream.args.objects]</a></div>
+<p>An argument that is an object and no string is read through its string value,
+as <a href="index.html#r-class.index.string">the string rule</a> says. A start, a line number or a
+count is read through the <code>makeString</code> method of the object, or through its
+<code>string</code> method when it has only that, and then as <a href="#r-class.stream.args.numbers">the rule of the
+arguments</a> says: an object that answers 2 for a
+count is a count of 2, and <code>.nil</code> and an object whose string value is no
+number, such as a plain <code>Object</code>, raise <code>SYNTAX 88.907</code>. The option that
+<code>open</code>, <code>lines</code>, <code>seek</code> and <code>position</code> take is read as a string argument,
+through <code>makeString</code> alone: an object that has no such method, <code>.nil</code> and an
+object that has only <code>string</code> among them, raises <code>SYNTAX 88.909</code>, and it does
+so before the count of arguments is checked, so that <code>open(.nil, 1)</code> raises
+<code>SYNTAX 88.909</code> and not 88.922. The argument of <code>query</code> and of <code>command</code> is
+read through its string value with the fallback to <code>string</code>: an object that
+has only <code>string</code> is read by that answer, and <code>.nil</code> is read as <code>The NIL object</code>, which no word or command starts with.</p>
+<pre><code class="language-rexx">f = 'spec-stream-objects-zq.tmp'
+g = 'spec-stream-objects-w-zq.tmp'
+call lineout f, 'abc'
+call lineout f
+s = .stream~new(f)
+w = .stream~new(g)
+call try 's~charin(1, .ms~new(2))'
+call try 's~linein(.ms~new(1))'
+call try 's~linein(1, .ms~new(1))'
+call try 's~charin(.os~new(2), 1)'
+call try 's~charin(1, .nil)'
+call try 's~charin(.object~new, 1)'
+call try 'w~lineout("x", .ms~new(1))'
+call try 'w~charout("y", .os~new(1))'
+call try 'w~charout("z", .nil)'
+w~close
+say translate(charin(g, 1, 10), '~', '0a'x)
+s~close
+t = .stream~new(f)
+call try 't~open(.ms~new("read"))'
+call try 't~lines(.ms~new("N"))'
+call try 't~seek(.ms~new("1"))'
+call try 't~position(.ms~new("=1 read"))'
+call try 't~open(.nil)'
+call try 't~lines(.os~new("N"))'
+call try 't~seek(.object~new)'
+call try 't~position(.nil)'
+call try 't~open(.nil, 1)'
+call try 't~lines(.nil, 1)'
+call try 't~seek(.nil, 1)'
+call try 't~position(.os~new("=1"), 1)'
+call try 't~query(.os~new("size"))'
+call try 't~query(.nil)'
+call try 't~command(.os~new("query size"))'
+call try 't~command(.nil)'
+t~close
+call sysfiledelete f
+call sysfiledelete g
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt; [' || r || ']'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class ms
+::method init
+  expose v
+  use arg v
+::method makestring
+  expose v
+  return v
+::class os
+::method init
+  expose v
+  use arg v
+::method string
+  expose v
+  return v
+</code></pre>
+<pre><code class="language-output defect=#206">s~charin(1, .ms~new(2)) =&gt; [ab]
+s~linein(.ms~new(1)) =&gt; [abc]
+s~linein(1, .ms~new(1)) =&gt; [abc]
+s~charin(.os~new(2), 1) =&gt; [b]
+s~charin(1, .nil) =&gt; 88.907
+s~charin(.object~new, 1) =&gt; 88.907
+w~lineout("x", .ms~new(1)) =&gt; [0]
+w~charout("y", .os~new(1)) =&gt; [0]
+w~charout("z", .nil) =&gt; 88.907
+y~
+t~open(.ms~new("read")) =&gt; [READY:]
+t~lines(.ms~new("N")) =&gt; [1]
+t~seek(.ms~new("1")) =&gt; [1]
+t~position(.ms~new("=1 read")) =&gt; [1]
+t~open(.nil) =&gt; 88.909
+t~lines(.os~new("N")) =&gt; 88.909
+t~seek(.object~new) =&gt; 88.909
+t~position(.nil) =&gt; 88.909
+t~open(.nil, 1) =&gt; 88.909
+t~lines(.nil, 1) =&gt; 88.909
+t~seek(.nil, 1) =&gt; 88.909
+t~position(.os~new("=1"), 1) =&gt; 88.909
+t~query(.os~new("size")) =&gt; [4]
+t~query(.nil) =&gt; 93.0
+t~command(.os~new("query size")) =&gt; [4]
+t~command(.nil) =&gt; 93.914
+</code></pre>
+<div class="rule" id="r-class.stream.args.strings"><a href="#r-class.stream.args.strings">[class.stream.args.strings]</a></div>
+<p>The string that <code>charOut</code>, <code>lineOut</code> and <code>say</code> write is read as <a href="index.html#r-class.index.string">the string
+value</a> that a method takes from an argument: the
+<code>makeString</code> method of an object that is not a string is sent to it and its
+answer is written. An argument that has no <code>makeString</code> method, <code>.nil</code> and an
+object that has only <code>string</code> among them, raises <code>SYNTAX 88.909</code>; it is
+checked before the stream is opened, and before the start or line number that
+follows it, <a href="#r-class.stream.args">from left to right</a>. An argument that is a
+<code>String</code>, a number or a <code>MutableBuffer</code>, or an object with a <code>makeString</code>
+method, is written as that string. The items that <code>arrayOut</code> writes are read
+in the same way, one at a time, by the <code>lineOut</code> or <code>charOut</code> that <code>arrayOut</code>
+sends; the items before a failing one are written (<a href="#r-class.stream.arrayout">the <code>arrayOut</code>
+rule</a> has the details).</p>
+<pre><code class="language-rexx">f = 'spec-stream-strings-zq.tmp'
+s = .stream~new(f)
+call try 's~lineOut(.nil)'
+call try 's~lineOut(.object~new)'
+call try 's~lineOut(.only_string~new)'
+call try 's~charOut(.nil)'
+call try 's~say(.object~new)'
+call try 's~lineOut(.nil, "x")'
+call try 's~lineOut(.nil, 0)'
+say s~state
+call try 's~lineOut(12)'
+call try 's~lineOut(.has_makestring~new)'
+call try 's~lineOut(.mutablebuffer~new("buffer"))'
+call try 's~charOut(1.50)'
+call try 's~say'
+call try 's~lineOut("")'
+say s~state
+s~close
+say translate(charin(f, 1, 200), '~', '0a'x)
+call sysfiledelete f
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt; [' || r || ']'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class only_string
+::method string
+  return 'only-string'
+::class has_makestring
+::method makestring
+  return 'made-string'
+</code></pre>
+<pre><code class="language-output">s~lineOut(.nil) =&gt; 88.909
+s~lineOut(.object~new) =&gt; 88.909
+s~lineOut(.only_string~new) =&gt; 88.909
+s~charOut(.nil) =&gt; 88.909
+s~say(.object~new) =&gt; 88.909
+s~lineOut(.nil, "x") =&gt; 88.909
+s~lineOut(.nil, 0) =&gt; 88.909
+UNKNOWN
+s~lineOut(12) =&gt; [0]
+s~lineOut(.has_makestring~new) =&gt; [0]
+s~lineOut(.mutablebuffer~new("buffer")) =&gt; [0]
+s~charOut(1.50) =&gt; [0]
+s~say =&gt; [0]
+s~lineOut("") =&gt; [0]
+READY
+12~made-string~buffer~1.50~~
+</code></pre>
+<div class="rule" id="r-class.stream.lines"><a href="#r-class.stream.lines">[class.stream.lines]</a></div>
+<p><code>lines</code> takes an option, as <a href="../builtins/lines.html#r-bif.lines.args">LINES</a> does, but the option
+that a message has when none is given is <code>C</code>: the answer is the number of
+lines left. <code>N</code> answers 1 or 0 as the function does. Only the first character
+of the option counts, in either case. An option that is the null string, a
+number or begins with another character raises <code>SYNTAX 93.915</code>.</p>
+<pre><code class="language-rexx">f = 'spec-stream-lines-zq.tmp'
+call lineout f, 'one'
+call lineout f, 'two'
+call lineout f, 'three'
+call lineout f
+s = .stream~new(f)
+say lines(f) s~lines s~lines('N') s~lines('C') s~lines('normal') s~lines('cx')
+x = s~linein
+say lines(f) s~lines s~lines('N') s~lines('count')
+x = s~charin(, 2)
+say s~lines s~lines('N')
+x = s~linein
+x = s~linein
+say s~lines s~lines('N') s~lines('C')
+call try 's~lines("")'
+call try 's~lines("x")'
+call try 's~lines(1)'
+call try 's~lines("N", 1)'
+s~close
+call sysfiledelete f
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt; [' || r || ']'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">1 3 1 3 1 3
+1 2 1 2
+2 1
+0 0 0
+s~lines("") =&gt; 93.915
+s~lines("x") =&gt; 93.915
+s~lines(1) =&gt; 93.915
+s~lines("N", 1) =&gt; 88.922
+</code></pre>
+<div class="rule" id="r-class.stream.notready"><a href="#r-class.stream.notready">[class.stream.notready]</a></div>
+<p>A method that cannot read or write all that it was asked to raises the
+NOTREADY condition in the code that sent the message, as <a href="../builtins/index.html#r-bif.index.stream.notready">a function
+does</a>: at the end of the data, when the stream
+cannot be opened, and when a write fails. <code>condition('D')</code> is the name of the
+stream as <a href="#r-class.stream.string"><code>string</code></a> answers it, in the spelling that
+<code>new</code> was given, and <code>condition('C')</code> is <code>NOTREADY</code>. The condition is not an
+error: when it is not trapped the method goes on and answers as its rules say.
+Four methods raise nothing in the code that sent the message, at the end of
+the data and for a stream that cannot be opened alike: <code>arrayIn</code> and
+<code>makeArray</code> answer what they read, an empty array for such a stream, and the
+state shows the outcome; <code>supplier</code> raises nothing, and nor does the <code>next</code> of
+the supplier that it answers; <code>say</code> answers what its <code>lineOut</code> answers, <code>1</code>
+when the stream cannot be opened. The second example shows them with the
+methods that do raise.</p>
+<pre><code class="language-rexx">f = 'spec-stream-notready-zq.tmp'
+call lineout f, 'one'
+call lineout f
+s = .stream~new('./' || f)
+n = .stream~new('spec-stream-notready-none-zq.tmp')
+w = .stream~new('spec-stream-notready-nodir-zq/x')
+call on notready name trap
+say s~linein
+say '[' || s~linein || ']'
+say '[' || n~linein || ']' n~state
+say '[' || s~charin(, 3) || ']'
+say '[' || s~charin(9, 1) || ']'
+say w~lineout('x') w~state
+signal on notready name stop
+x = s~linein
+say 'not reached'
+stop: say 'stopped:' condition('c') condition('d')
+s~close
+call sysfiledelete f
+exit
+trap: say '  NOTREADY' condition('d')
+  return
+</code></pre>
+<pre><code class="language-output">one
+[]
+  NOTREADY ./spec-stream-notready-zq.tmp
+[] ERROR
+  NOTREADY spec-stream-notready-none-zq.tmp
+[]
+  NOTREADY ./spec-stream-notready-zq.tmp
+[]
+  NOTREADY ./spec-stream-notready-zq.tmp
+1 ERROR
+  NOTREADY spec-stream-notready-nodir-zq/x
+stopped: NOTREADY ./spec-stream-notready-zq.tmp
+</code></pre>
+<pre><code class="language-rexx">f = 'spec-stream-notready2-zq.tmp'
+call lineout f, 'one'
+call lineout f
+s = .stream~new(f)
+n = .stream~new('spec-stream-notready2-none-zq.tmp')
+w = .stream~new('spec-stream-notready2-nodir-zq/x')
+call on notready name trap
+say 'arrayIn' s~arrayin~items s~state
+say 'again' s~arrayin('C')~items s~arrayin~items
+say 'makeArray' s~makearray~items
+s~close
+p = s~supplier
+say 'made' p~available
+p~next
+say 'moved' p~available
+say 'none' n~arrayin~items n~state n~makearray~items n~supplier~available
+say 'say' w~say('x') w~state
+say '--'
+say 'lines' n~lines n~state
+say 'command' w~command('open')~left(6)
+say 'arrayOut' w~arrayout(.array~of(1, 2))
+s~close
+call sysfiledelete f
+exit
+trap: say '  trap' condition('d')
+  return
+</code></pre>
+<pre><code class="language-output">arrayIn 1 NOTREADY
+again 0 0
+makeArray 0
+made 1
+moved 0
+none 0 ERROR 0 0
+say 1 ERROR
+--
+lines 0 ERROR
+  trap spec-stream-notready2-none-zq.tmp
+command ERROR:
+  trap spec-stream-notready2-nodir-zq/x
+arrayOut 2
+  trap spec-stream-notready2-nodir-zq/x
+</code></pre>
+<h2 id="opening-closing-and-positioning"><a class="header" href="#opening-closing-and-positioning">Opening, closing and positioning</a></h2>
+<div class="rule" id="r-class.stream.open"><a href="#r-class.stream.open">[class.stream.open]</a></div>
+<p><code>open</code> opens the stream as <a href="../builtins/stream.html#r-bif.stream.open.result">OPEN</a> does, with the
+options of <a href="../builtins/stream.html#r-bif.stream.open.mode">the option rule</a> in its one argument, a
+string that may be left out, and answers <code>READY:</code>, or <code>ERROR:</code> with the host's
+number and the NOTREADY condition when it cannot. An option that is not
+allowed, such as a word that no option starts with, raises <code>SYNTAX 93.0</code>, and
+the stream is not open after it, also when it was. The state is that of <a href="#r-class.stream.state">the
+state rule</a>. Opening a stream that is open opens it
+afresh, as <a href="../builtins/stream.html#r-bif.stream.open.again">the function does</a>.</p>
+<pre><code class="language-rexx">f = 'spec-stream-open-zq.tmp'
+call lineout f, 'abc'
+call lineout f
+s = .stream~new(f)
+say s~open('read') s~state
+say s~lineout('x') s~state
+say s~open s~state '['s~charin(, 2)']'
+say s~open('REP') s~query('size')
+say s~close
+say s~open s~state
+signal on syntax name bad
+say s~open('bogus')
+bad: say condition('o')~code s~state
+say s~open s~state
+signal on syntax name bad2
+say s~open('read write')
+bad2: say condition('o')~code s~state
+signal off syntax
+n = .stream~new('spec-stream-open-nodir-zq/x')
+call on notready name trap
+say n~open~left(6) n~state
+call sysfiledelete f
+exit
+trap: say 'NOTREADY' condition('d')
+  return
+</code></pre>
+<pre><code class="language-output">READY: READY
+1 ERROR
+READY: READY [ab]
+READY: 0
+READY:
+READY: READY
+93.0 UNKNOWN
+READY: READY
+93.0 UNKNOWN
+ERROR: ERROR
+NOTREADY spec-stream-open-nodir-zq/x
+</code></pre>
+<div class="rule" id="r-class.stream.close"><a href="#r-class.stream.close">[class.stream.close]</a></div>
+<p><code>close</code> closes the stream and answers <code>READY:</code>, and the stream is then
+<code>UNKNOWN</code>; what was written is in the file, and the next use of the stream
+opens it afresh, as <a href="../builtins/stream.html#r-bif.stream.close">CLOSE</a> says. A stream that is not
+open has nothing to close: <code>close</code> answers the null string and the state is
+<code>UNKNOWN</code>.</p>
+<pre><code class="language-rexx">f = 'spec-stream-close-zq.tmp'
+s = .stream~new(f)
+say '['s~close']' s~state
+say s~lineout('first') s~state
+say s~close s~state
+say '['s~close']' s~state
+say s~linein s~state
+say s~close
+say .stream~new(f)~chars
+call sysfiledelete f
+</code></pre>
+<pre><code class="language-output">[] UNKNOWN
+0 READY
+READY: UNKNOWN
+[] UNKNOWN
+first READY
+READY:
+6
+</code></pre>
+<div class="rule" id="r-class.stream.flush"><a href="#r-class.stream.flush">[class.stream.flush]</a></div>
+<p><code>flush</code> answers <code>READY:</code> and leaves the state as it was, <a href="../builtins/stream.html#r-bif.stream.flush">as FLUSH
+does</a>, also for a stream that is not open. What it forces
+out is in the file afterwards, so a stream that reads the file after the
+writing stream was flushed sees it. An instance may keep what it writes until
+it is flushed or closed, as the stream that a function names may: another
+stream on the same file, an instance or a function, may not see it before
+then, as the second example shows.</p>
+<pre><code class="language-rexx">f = 'spec-stream-flush-zq.tmp'
+s = .stream~new(f)
+say s~flush s~state
+say s~lineout('data') s~flush s~state
+r = .stream~new(f)
+say r~linein r~state
+say r~close s~close
+call sysfiledelete f
+</code></pre>
+<pre><code class="language-output">READY: UNKNOWN
+0 READY: READY
+data READY
+READY: READY:
+</code></pre>
+<pre><code class="language-rexx">f = 'spec-stream-flush-seen-zq.tmp'
+a = .stream~new(f)
+x = a~lineout('one')
+b = .stream~new(f)
+say '[' || b~linein || ']' b~state
+x = b~close
+x = a~flush
+b = .stream~new(f)
+say '[' || b~linein || ']' b~state
+x = b~close
+x = a~close
+call lineout f, 'two'
+b = .stream~new(f)
+say b~lines
+x = b~close
+call lineout f
+call sysfiledelete f
+</code></pre>
+<pre><code class="language-output">[] NOTREADY
+[one] READY
+1
+</code></pre>
+<div class="rule" id="r-class.stream.query"><a href="#r-class.stream.query">[class.stream.query]</a></div>
+<p><code>query</code> answers what <a href="../builtins/stream.html#r-bif.stream.query.words">QUERY</a> answers for the word in
+its one argument, a string: the position, the size, the type, the file name
+that exists, the times and the handle, with the options and the shortenings
+that the rules of QUERY give. A word that is none of those, and words after it
+that the query does not take, raise <code>SYNTAX 93.0</code>; a missing argument raises
+<code>SYNTAX 93.901</code>. The answers are strings, the null string where the function
+answers it. It sends no message.</p>
+<pre><code class="language-rexx">f = 'spec-stream-query-zq.tmp'
+call charout f, 'abcdef' || '0a'x || 'gh'
+call charout f
+s = .stream~new(f)
+say '['s~query('position')']' '['s~query('handle')']' s~query('size')
+say s~query('streamtype') s~query('exists')~endsWith(f) s~state
+x = s~charin(, 3)
+say s~query('position') s~query('position read') s~query('position write')
+say s~query('p w c') s~query('position read line') s~query('streamtype')
+say s~query('size')~class~id s~query('handle')~datatype('W')
+say s~query('timestamp')~length s~query('datetime')~length
+call try 's~query("bogus")'
+call try 's~query("size 1")'
+call try 's~query("position x")'
+call try 's~query'
+call try 's~query("size", 1)'
+s~close
+say '['s~query('position')']' s~query('size') s~query('streamtype')
+call sysfiledelete f
+say '['s~query('size')']' '['s~query('exists')']' s~query('streamtype')
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt; [' || r || ']'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">[] [] 9
+UNKNOWN 1 UNKNOWN
+4 4 10
+10 1 PERSISTENT
+String 1
+19 17
+s~query("bogus") =&gt; 93.0
+s~query("size 1") =&gt; 93.0
+s~query("position x") =&gt; 93.0
+s~query =&gt; 93.901
+s~query("size", 1) =&gt; 93.902
+[] 9 UNKNOWN
+[] [] UNKNOWN
+</code></pre>
+<div class="rule" id="r-class.stream.seek"><a href="#r-class.stream.seek">[class.stream.seek]</a></div>
+<p><code>seek</code> and <code>position</code> do the same: they set a position of the stream and
+answer the new one, as <a href="../builtins/stream.html#r-bif.stream.seek">SEEK</a> does, with the offset and the
+options in their one argument, a string. A missing argument raises <code>SYNTAX 88.901</code>, an offset that is not a whole number or an option that is none of
+those of SEEK <code>SYNTAX 93.0</code>, and an argument that holds no offset, the null
+string for one, <code>SYNTAX 93.903</code>. Neither method sends a message, and neither
+sends the other; <a href="#r-class.stream.command.sends"><code>command</code></a> sends <code>position</code>
+for both of its commands.</p>
+<pre><code class="language-rexx">f = 'spec-stream-seek-zq.tmp'
+call charout f, '0123456789'
+call charout f
+s = .stream~new(f)
+say s~seek(3) s~query('position read') s~query('position write')
+say s~position('=5 read') s~position('+2 read') s~position('-1 read')
+say s~position('&lt;2 read') '[' || s~charin(, 1) || ']'
+say s~seek('4 write') s~seek('8 read') s~query('position')
+say s~position(' 6  read  char ') s~seek('&lt;0 write')
+say s~seek('20 read') '[' || s~charin(, 1) || ']'
+call try 's~seek'
+call try 's~position'
+call try 's~seek("x")'
+call try 's~seek("2 bogus")'
+call try 's~seek("2 read write")'
+call try 's~seek("")'
+call try 's~position(" ")'
+call try 's~seek(1, 2)'
+s~close
+call sysfiledelete f
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt; [' || r || ']'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">3 3 3
+5 7 6
+9 [8]
+4 8 8
+6 11
+20 []
+s~seek =&gt; 88.901
+s~position =&gt; 88.901
+s~seek("x") =&gt; 93.0
+s~seek("2 bogus") =&gt; 93.0
+s~seek("2 read write") =&gt; 93.0
+s~seek("") =&gt; 93.903
+s~position(" ") =&gt; 93.903
+s~seek(1, 2) =&gt; 88.922
+</code></pre>
+<div class="rule" id="r-class.stream.command"><a href="#r-class.stream.command">[class.stream.command]</a></div>
+<p><code>command</code> carries out the command in its one argument, a string, as <a href="../builtins/stream.html#r-bif.stream.command">the
+command of STREAM</a> does: the first word names the
+command and may be shortened, in either case, and the commands are <code>OPEN</code>,
+<code>CLOSE</code>, <code>FLUSH</code>, <code>SEEK</code>, <code>POSITION</code> and <code>QUERY</code>, with the options and the
+answers that their rules give. A first word that no command starts with, and
+so the name of another method, raises <code>SYNTAX 93.914</code>; words after <code>CLOSE</code> or
+<code>FLUSH</code>, an option or a word that the command does not know raise <code>SYNTAX 93.0</code>, and <code>SEEK</code> or <code>POSITION</code> without an offset <code>SYNTAX 93.903</code>. A missing
+argument raises <code>SYNTAX 93.901</code>. The answer is the answer of the method that
+carries the command out, <a href="#r-class.stream.command.sends">which the next rule
+names</a>. What <code>command</code> does with a command that
+is the null string or only blanks is not specified.</p>
+<pre><code class="language-rexx">f = 'spec-stream-command-zq.tmp'
+call charout f, 'abcdef'
+call charout f
+s = .stream~new(f)
+say s~command('open read') s~command('seek 3 read') s~command('query position')
+say s~command('QUERY size') s~command('q st') s~command('f') s~command('c')
+say s~command('o') s~command('p =2') s~command('se &lt;1 read') s~command('cl')
+say '['s~command('close')']' s~state
+call try 's~command("frob")'
+call try 's~command("state")'
+call try 's~command("description")'
+call try 's~command("opened")'
+call try 's~command("close now")'
+call try 's~command("flush now")'
+call try 's~command("seek")'
+call try 's~command("seek x")'
+call try 's~command("open bogus")'
+call try 's~command("query bogus")'
+call try 's~command'
+call try 's~command(1)'
+call try 's~command("query size", 2)'
+s~close
+call sysfiledelete f
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt; [' || r || ']'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">READY: 3 3
+6 PERSISTENT READY: READY:
+READY: 2 6 READY:
+[] UNKNOWN
+s~command("frob") =&gt; 93.914
+s~command("state") =&gt; 93.914
+s~command("description") =&gt; 93.914
+s~command("opened") =&gt; 93.914
+s~command("close now") =&gt; 93.0
+s~command("flush now") =&gt; 93.0
+s~command("seek") =&gt; 93.903
+s~command("seek x") =&gt; 93.0
+s~command("open bogus") =&gt; 93.0
+s~command("query bogus") =&gt; 93.0
+s~command =&gt; 93.901
+s~command(1) =&gt; 93.914
+s~command("query size", 2) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.stream.command.sends"><a href="#r-class.stream.command.sends">[class.stream.command.sends]</a></div>
+<p><code>command</code> sends one message to the receiver for a command that it carries out,
+after it has split the first word from the rest, and none for a command it
+refuses. <code>CLOSE</code> sends <code>close</code> and <code>FLUSH</code> sends <code>flush</code>, with no argument.
+<code>OPEN</code> sends <code>open</code>, <code>SEEK</code> and <code>POSITION</code> send <code>position</code>, and <code>QUERY</code> sends
+<code>query</code>, each with one argument: the rest of the command after the word and
+one blank, in upper case, with the other blanks as they were. <code>SEEK</code> sends
+<code>position</code>, not <code>seek</code>. The answer of the message is the answer of <code>command</code>,
+whatever it is, and an error that the message raises is the error of
+<code>command</code>. A command that has words after <code>CLOSE</code> or <code>FLUSH</code>, or an unknown
+first word, sends nothing. In the example a log lists each message as its
+name, the number of its arguments after a <code>#</code>, and the argument in brackets.</p>
+<pre><code class="language-rexx">f = 'spec-stream-commandsends-zq.tmp'
+call charout f, 'abcdef'
+call charout f
+s = .spy~new(f)
+call show 'open read'
+call show 'OPEN  Read'
+call show 'seek =2 read'
+call show 'SE 3'
+call show 'position &lt;1 write'
+call show 'p'
+call show 'query  size '
+call show 'q st'
+call show 'flush'
+call show 'f'
+call show 'close'
+call show 'c'
+call show 'close now'
+call show 'flush now'
+call show 'frob'
+call show 'state'
+call show 'open bogus'
+s~log = ''
+s~answer = 'made up'
+say '[' || s~command('close') || ']' s~log
+s~log = ''
+s~answer = .nil
+say '[' || s~command('query size') || ']' s~log
+s~answer = 'RANS'
+s~log = ''
+x = s~seek(2)
+say 'seek:' s~log
+s~log = ''
+x = s~query('size')
+say 'query:' s~log
+x = s~open('read')
+s~log = ''
+s~uninit
+say 'uninit: [' || s~log || ']'
+call sysfiledelete f
+exit
+show:
+  s~log = ''
+  signal on syntax name bad
+  r = s~command(arg(1))
+  say left(arg(1), 20) '=&gt; [' || r || ']' s~log
+  s~close
+  return
+bad: say left(arg(1), 20) '=&gt;' condition('o')~code s~log
+  return
+::class spy subclass stream
+::attribute log
+::attribute answer
+::method init
+  expose log answer
+  log = ''
+  answer = 'RANS'
+  forward class (super)
+::method open
+  expose log answer
+  log = log 'open#' || arg() || '[' || arg(1) || ']'
+  if answer \= 'RANS' then return answer
+  forward class (super)
+::method close
+  expose log answer
+  log = log 'close#' || arg()
+  if answer \= 'RANS' then return answer
+  forward class (super)
+::method flush
+  expose log
+  log = log 'flush#' || arg()
+  forward class (super)
+::method position
+  expose log
+  log = log 'position#' || arg() || '[' || arg(1) || ']'
+  forward class (super)
+::method seek
+  expose log
+  log = log 'seek#' || arg() || '[' || arg(1) || ']'
+  forward class (super)
+::method query
+  expose log answer
+  log = log 'query#' || arg() || '[' || arg(1) || ']'
+  if answer \= 'RANS' then return answer
+  forward class (super)
+</code></pre>
+<pre><code class="language-output">open read            =&gt; [READY:]  open#1[READ]
+OPEN  Read           =&gt; [READY:]  open#1[ READ]
+seek =2 read         =&gt; [2]  position#1[=2 READ]
+SE 3                 =&gt; [3]  position#1[3]
+position &lt;1 write    =&gt; [6]  position#1[&lt;1 WRITE]
+p                    =&gt; 93.903  position#1[]
+query  size          =&gt; [6]  query#1[ SIZE ]
+q st                 =&gt; [UNKNOWN]  query#1[ST]
+flush                =&gt; [READY:]  flush#0
+f                    =&gt; [READY:]  flush#0
+close                =&gt; []  close#0
+c                    =&gt; []  close#0
+close now            =&gt; 93.0 
+flush now            =&gt; 93.0 
+frob                 =&gt; 93.914 
+state                =&gt; 93.914 
+open bogus           =&gt; 93.0  open#1[BOGUS]
+[made up]  close#0
+[The NIL object]  query#1[SIZE]
+seek:  seek#1[2]
+query:  query#1[size]
+uninit: []
+</code></pre>
+<h2 id="writing-lines-and-arrays"><a class="header" href="#writing-lines-and-arrays">Writing lines and arrays</a></h2>
+<div class="rule" id="r-class.stream.say"><a href="#r-class.stream.say">[class.stream.say]</a></div>
+<p><code>say</code> writes a line, as <code>lineOut</code> does with one argument: the answer of <code>say</code>
+is the answer of that <code>lineOut</code>, 0 when the line was written, as
+<a href="../builtins/lineout.html#r-bif.lineout.result">LINEOUT</a> answers, and its string is checked <a href="#r-class.stream.args.strings">as the
+string of <code>lineOut</code> is</a>. The argument is
+optional; without it <code>say</code> writes an empty line. It takes at most one
+argument. The messages that <code>say</code> sends are those of <a href="#r-class.stream.say.sends">the next
+rule</a>.</p>
+<pre><code class="language-rexx">f = 'spec-stream-say-zq.tmp'
+s = .stream~new(f)
+say s~say('one') s~state
+say s~say
+say s~say(12)
+say s~say('a b')
+signal on syntax name bad
+say s~say(.nil)
+bad: say condition('o')~code
+signal off syntax
+signal on syntax name bad2
+say s~say('x', 'y')
+bad2: say condition('o')~code
+s~close
+say translate(charin(f, 1, 100), '~', '0a'x)
+call sysfiledelete f
+</code></pre>
+<pre><code class="language-output">0 READY
+0
+0
+0
+88.909
+93.902
+one~~12~a b~
+</code></pre>
+<div class="rule" id="r-class.stream.say.sends"><a href="#r-class.stream.say.sends">[class.stream.say.sends]</a></div>
+<p><code>say</code> sends <code>lineOut</code> to the receiver, with one argument, the argument of
+<code>say</code> itself and not its string value, or the null string when it has none. It
+sends nothing else and reads nothing from its argument: a subclass that
+overrides <code>lineOut</code> sees every <code>say</code>, and it is <code>lineOut</code> that checks the
+string. The answer of <code>say</code> is the answer of that message, whatever it is, or
+no value when the message answers none, so that its answer as a term raises
+<code>SYNTAX 91.999</code>.</p>
+<pre><code class="language-rexx">f = 'spec-stream-saysends-zq.tmp'
+s = .loud~new(f)
+say s~say('one')
+say s~say
+say s~say(12)
+x = s~say(.shown~new)
+signal on syntax name bad0
+x = s~say(.nil)
+bad0: say condition('o')~code
+s~answer = 'zz'
+say s~say('two')
+s~answer = 'NOANSWER'
+signal on syntax name bad
+say s~say('three')
+bad: say condition('o')~code
+signal off syntax
+s~close
+call sysfiledelete f
+exit
+::class shown
+::method makestring
+  return 'made'
+::class loud subclass stream
+::attribute answer
+::method init
+  expose answer
+  answer = 'RANS'
+  forward class (super)
+::method lineout
+  expose answer
+  if arg(1) == .nil then kind = '.nil'
+  else kind = arg(1)~class~id
+  say '  lineout gets' arg() 'argument:' kind
+  if answer = 'NOANSWER' then return
+  if answer \= 'RANS' then return answer
+  forward class (super)
+</code></pre>
+<pre><code class="language-output">  lineout gets 1 argument: String
+0
+  lineout gets 1 argument: String
+0
+  lineout gets 1 argument: String
+0
+  lineout gets 1 argument: SHOWN
+  lineout gets 1 argument: .nil
+88.909
+  lineout gets 1 argument: String
+zz
+  lineout gets 1 argument: String
+91.999
+</code></pre>
+<div class="rule" id="r-class.stream.arrayin"><a href="#r-class.stream.arrayin">[class.stream.arrayin]</a></div>
+<p><code>arrayIn</code> reads the stream from its read position to its end and answers a new
+<code>Array</code> of strings. With no argument, or with an argument whose first
+character is <code>L</code> in either case, the items are the lines, without their <a href="../builtins/index.html#r-bif.index.stream.line-end">line
+ends</a>, the first one a partial line when the
+stream was read part of the way into it; with an argument whose first
+character is <code>C</code> they are the characters, a line end among them, one to an
+item. Any other argument, the null string and a number among them, raises
+<code>SYNTAX 93.915</code>. The stream is read as <a href="../builtins/linein.html#r-bif.linein.result">LINEIN</a> and
+<a href="../builtins/charin.html#r-bif.charin.result">CHARIN</a> read, and the read position is at the end
+afterwards: the state is <code>NOTREADY</code> (see <a href="#r-class.stream.deviation.62">Deviation
+62</a> for the characters). A stream that is at its
+end, and one that cannot be read, give an empty array, and a stream that
+cannot be read is <code>ERROR</code>.</p>
+<pre><code class="language-rexx">f = 'spec-stream-arrayin-zq.tmp'
+call charout f, 'alpha' || '0a'x || 'be' || '0d0a'x || '0a'x || 'gamma' || '0a'x
+call charout f, 'last'
+call charout f
+s = .stream~new(f)
+say s~charin(, 2)
+a = s~arrayin
+say a~class~id a~items '[' || a~makeString('L', '|') || ']' s~state
+say s~arrayin~items s~state '['s~linein']'
+s~close
+a = s~arrayin('chars')
+say a~items a~at(1) a~at(6)~c2x a~at(a~items)
+do o over 'L', 'l', 'lines', 'LX', 'Chars', 'c', 'cats'
+  s~close
+  say o s~arrayin(o)~items
+end
+do o over '', 'x', 1, ' L'
+  call try o
+end
+n = .stream~new('spec-stream-arrayin-none-zq.tmp')
+say n~arrayin~items n~state n~description~left(6)
+s~close
+call sysfiledelete f
+exit
+try:
+  signal on syntax name bad
+  say '[' || arg(1) || ']' s~arrayin(arg(1))~items
+  return
+bad: say '[' || arg(1) || ']' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">al
+Array 5 [pha|be||gamma|last] NOTREADY
+0 NOTREADY []
+21 a 0A t
+L 5
+l 5
+lines 5
+LX 5
+Chars 21
+c 21
+cats 21
+[] 93.915
+[x] 93.915
+[1] 93.915
+[ L] 93.915
+0 ERROR ERROR:
+</code></pre>
+<div class="rule" id="r-class.stream.arrayin.sends"><a href="#r-class.stream.arrayin.sends">[class.stream.arrayin.sends]</a></div>
+<p>When <code>arrayIn</code> has an argument that is not a string, it sends it
+<code>caselessStartsWith('L')</code> and, when that answers false,
+<code>caselessStartsWith('C')</code>, and no other message, to find the option; when both
+answer false the option is wrong and <code>SYNTAX 93.915</code> is raised. Then, for the
+lines, it sends <code>lines</code> with no argument to the receiver once, before it
+reads, and reads that answer as a whole number that is not negative, whatever
+it is used for: another answer raises <code>SYNTAX 93.906</code>, and the array is the
+same whatever the number is. The lines are then read from the stream directly;
+no <code>lineIn</code> is sent. For the characters it sends <code>chars</code> with no argument
+once, with the same check of the answer, and then <code>charIn</code>, with no argument,
+once for each character and once more: it stops when a <code>charIn</code> raises
+NOTREADY, and the answer of that one is not an item. The <code>charIn</code> of <code>Stream</code>
+raises it at the end of the data, and so does one that a subclass writes with
+<code>RAISE NOTREADY</code>. The answer of <code>arrayIn</code> is the array. Where a large <code>lines</code>
+answer starts to be refused is not specified.</p>
+<pre><code class="language-rexx">f = 'spec-stream-arrayinsends-zq.tmp'
+call lineout f, 'one'
+call lineout f, 'two'
+call lineout f
+.local~log = ''
+s = .spy~new(f)
+s~count = 5
+a = s~arrayin
+say a~items a~makeString('L', ',') .local~log
+do n over 0, ' 3 ', '1e1', 2.5, -1, 'x', .nil
+  s~close
+  s~count = n
+  call try n
+end
+s~close
+s~count = 0
+.local~log = ''
+a = s~arrayin('chars')
+say a~items a~makeString('L', ',') .local~log
+do o over .opt~new('1'), .opt~new('0 1'), .opt~new('0 0')
+  .local~log = ''
+  s~close
+  call try2 o
+end
+s~close
+call sysfiledelete f
+exit
+try:
+  signal on syntax name bad
+  .local~log = ''
+  a = s~arrayin
+  say '[' || arg(1) || ']' '-&gt;' a~items .local~log
+  return
+bad: say '[' || arg(1) || ']' '=&gt;' condition('o')~code .local~log
+  return
+try2:
+  signal on syntax name bad2
+  a = s~arrayin(arg(1))
+  say a~items .local~log
+  return
+bad2: say condition('o')~code .local~log
+  return
+::class spy subclass stream
+::attribute count
+::attribute reads
+::method lines
+  .local~log = .local~log 'lines'
+  return self~count
+::method chars
+  .local~log = .local~log 'chars'
+  self~reads = 0
+  return self~count
+::method linein
+  .local~log = .local~log 'linein'
+  forward class (super)
+::method charin
+  .local~log = .local~log 'charin'
+  self~reads = self~reads + 1
+  if self~reads &gt; 3 then raise notready
+  return 'c' || self~reads
+::class opt
+::attribute answers
+::method init
+  expose answers
+  use arg answers
+::method caselessStartsWith
+  expose answers
+  .local~log = .local~log 'caselessStartsWith(' || arg(1) || ')'
+  parse var answers first answers
+  return first
+</code></pre>
+<pre><code class="language-output">2 one,two  lines
+[0] -&gt; 2  lines
+[ 3 ] -&gt; 2  lines
+[1e1] -&gt; 2  lines
+[2.5] =&gt; 93.906  lines
+[-1] =&gt; 93.906  lines
+[x] =&gt; 93.906  lines
+[The NIL object] =&gt; 93.906  lines
+3 c1,c2,c3  chars charin charin charin charin
+2  caselessStartsWith(L) lines
+3  caselessStartsWith(L) caselessStartsWith(C) chars charin charin charin charin
+93.915  caselessStartsWith(L) caselessStartsWith(C)
+</code></pre>
+<div class="rule" id="r-class.stream.makearray"><a href="#r-class.stream.makearray">[class.stream.makearray]</a></div>
+<p><code>makeArray</code> does what <a href="#r-class.stream.arrayin"><code>arrayIn</code></a> does, with the same
+argument: it answers a new <code>Array</code> of the lines of the stream, or of its
+characters, and an argument that <code>arrayIn</code> refuses is refused with the same
+error. It takes at most one argument. The message <code>request</code> with the argument
+<code>ARRAY</code>, sent to a stream, is answered by <code>makeArray</code> too, so the lines of a
+stream are what <code>arrayOut</code> of another stream writes when it is given the
+stream.</p>
+<pre><code class="language-rexx">f = 'spec-stream-makearray-zq.tmp'
+g = 'spec-stream-makearray2-zq.tmp'
+call lineout f, 'one'
+call lineout f, 'two'
+call lineout f
+s = .stream~new(f)
+a = s~makearray
+say a~class~id a~items a~makeString('L', ',') s~state
+s~close
+say s~makearray('chars')~items
+s~close
+say s~makearray('c')~items
+s~close
+call try 's~makearray("x")'
+call try 's~makearray(1)'
+call try 's~makearray("l", 2)'
+call try 's~request("ARRAY")~items'
+s~close
+d = .stream~new(g)
+say d~arrayout(s) d~close
+say .stream~new(g)~makearray~makeString('L', ',')
+s~close
+call sysfiledelete f
+call sysfiledelete g
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">Array 2 one,two NOTREADY
+8
+8
+s~makearray("x") =&gt; 93.915
+s~makearray(1) =&gt; 93.915
+s~makearray("l", 2) =&gt; 93.902
+s~request("ARRAY")~items =&gt; 2
+0 READY:
+one,two
+</code></pre>
+<div class="rule" id="r-class.stream.makearray.sends"><a href="#r-class.stream.makearray.sends">[class.stream.makearray.sends]</a></div>
+<p><code>makeArray</code> sends <code>arrayIn</code> to the receiver, once, with the argument of
+<code>makeArray</code> when it has one and with no argument when it has none, and sends
+nothing else. It answers what <code>arrayIn</code> answers, an object that is no array
+included.</p>
+<pre><code class="language-rexx">f = 'spec-stream-makearraysends-zq.tmp'
+call lineout f, 'one'
+call lineout f, 'two'
+call lineout f
+t = .spy~new(f)
+say t~makearray~items t~log
+t~close
+say t~makearray('c')~items t~log
+t~close
+t~answer = 'zz'
+say t~makearray('l') t~log
+t~answer = .nil
+say (t~makearray == .nil) t~log
+t~answer = 'RANS'
+t~close
+call sysfiledelete f
+exit
+::class spy subclass stream
+::attribute log
+::attribute answer
+::method init
+  self~log = ''
+  self~answer = 'RANS'
+  forward class (super)
+::method arrayin
+  self~log = self~log 'arrayin#' || arg() || '[' || arg(1) || ']'
+  if self~answer \= 'RANS' then return self~answer
+  forward class (super)
+</code></pre>
+<pre><code class="language-output">2  arrayin#0[]
+8  arrayin#0[] arrayin#1[c]
+zz  arrayin#0[] arrayin#1[c] arrayin#1[l]
+1  arrayin#0[] arrayin#1[c] arrayin#1[l] arrayin#0[]
+</code></pre>
+<div class="rule" id="r-class.stream.arrayout"><a href="#r-class.stream.arrayout">[class.stream.arrayout]</a></div>
+<p><code>arrayOut</code> writes the items of the collection in its first argument to the
+stream, one <code>lineOut</code> for each item, or one <code>charOut</code> for each when the second
+argument says characters, and answers the number of items that were not
+written: 0 when all were. The first argument is sent <code>request</code> with the
+argument <code>ARRAY</code>, which an <code>Array</code>, a <code>List</code>, a <code>Set</code>, a <code>Queue</code> and a stream
+answer with an array of their items, and the items are written in the order of
+that array, an empty slot giving none; an argument whose answer is not an
+array, <code>.nil</code> among them, raises <code>SYNTAX 98.913</code>. The second argument is
+optional: it is sent <code>left</code> with the argument 1, and the answer must be <code>L</code>
+for lines or <code>C</code> for characters, in either case, or <code>SYNTAX 93.0</code> is raised;
+the option is checked before the first argument is. An item is written as
+<code>lineOut</code> and <code>charOut</code> read their string, so an item that has no <code>makeString</code>
+method raises <code>SYNTAX 88.909</code> in the write of that item, after the items
+before it were written. When a write raises NOTREADY the writing ends at that
+item, which was not written: the answer is the number of items from it to the
+end. A missing first argument raises <code>SYNTAX 93.901</code> when there is no other
+argument, and <code>SYNTAX 93.903</code> when the option follows it; that check comes
+before the option is read. More than two arguments raise <code>SYNTAX 93.902</code>. An
+empty array writes nothing and does not open the stream.</p>
+<pre><code class="language-rexx">f = 'spec-stream-arrayout-zq.tmp'
+s = .stream~new(f)
+say s~arrayout(.array~of('one', 'two')) s~state
+say s~arrayout(.list~of('three')) s~arrayout(.array~of(4, 5), 'C')
+say s~arrayout(.array~new(3)~~put('six', 1)~~put('eight', 3), 'lines')
+say s~arrayout(.array~new) s~arrayout(.array~new(2))
+say s~arrayout(.array~of('x', 'y'), .opt~new('L'))
+say s~arrayout(.array~of('z'), 'c')
+say s~arrayout(.set~of('set')) s~arrayout(.queue~of('q1', 'q2'))
+e = .stream~new('spec-stream-arrayout-empty-zq.tmp')
+say e~arrayout(.array~new) e~state '[' || e~query('exists') || ']'
+s~close
+say translate(charin(f, 1, 200), '~', '0a'x)
+call try 's~arrayout'
+call try 's~arrayout(, "x")'
+call try 's~arrayout(, "L")'
+call try 's~arrayout(.array~of(1), "x")'
+call try 's~arrayout(.nil, "x")'
+call try 's~arrayout(.nil)'
+call try 's~arrayout(.object~new)'
+call try 's~arrayout(.array~of(1), "L", 3)'
+call try 's~arrayout(.array~of("p", .nil, "q"))'
+call try 's~arrayout(.array~of("a", .object~new), "C")'
+s~close
+say translate(charin(f, 1, 200), '~', '0a'x)
+r = .stream~new(f)
+r~open('read')
+say r~arrayout(.array~of('a', 'b', 'c')) r~state r~arrayout(.array~new)
+r~close
+call sysfiledelete f
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class opt
+::attribute word
+::method init
+  self~word = arg(1)
+::method left
+  return self~word
+</code></pre>
+<pre><code class="language-output">0 READY
+0 0
+0
+0 0
+0
+0
+0 0
+0 UNKNOWN []
+one~two~three~45six~eight~x~y~zset~q1~q2~
+s~arrayout =&gt; 93.901
+s~arrayout(, "x") =&gt; 93.903
+s~arrayout(, "L") =&gt; 93.903
+s~arrayout(.array~of(1), "x") =&gt; 93.0
+s~arrayout(.nil, "x") =&gt; 93.0
+s~arrayout(.nil) =&gt; 98.913
+s~arrayout(.object~new) =&gt; 98.913
+s~arrayout(.array~of(1), "L", 3) =&gt; 93.902
+s~arrayout(.array~of("p", .nil, "q")) =&gt; 88.909
+s~arrayout(.array~of("a", .object~new), "C") =&gt; 88.909
+one~two~three~45six~eight~x~y~zset~q1~q2~p~a
+3 ERROR 0
+</code></pre>
+<div class="rule" id="r-class.stream.arrayout.sends"><a href="#r-class.stream.arrayout.sends">[class.stream.arrayout.sends]</a></div>
+<p><code>arrayOut</code> sends, in this order: <code>left(1)</code> to the second argument when it has
+one and it is not a string, <code>request('ARRAY')</code> to the first argument, and then
+<code>lineOut</code>, or <code>charOut</code> for the characters, to the receiver for each item in
+turn, with the item itself as the one argument. It sends no other message to
+the receiver, the array or an item; what the sends answer is not looked at,
+except that a NOTREADY that a send raises ends the writing, as <a href="#r-class.stream.arrayout">the rule of
+<code>arrayOut</code></a> says. That condition reaches <code>arrayOut</code>
+in two cases: the method that answers the send hands the message on with
+<code>FORWARD</code> and no <code>CONTINUE</code>, and the <code>lineOut</code> of <code>Stream</code> raises it; or that
+method raises it itself with <code>RAISE</code>. The writing then ends at that item, as
+<a href="#r-class.stream.arrayout">the rule of <code>arrayOut</code></a> says. It does not
+reach <code>arrayOut</code> when the method sends the message on and answers afterwards,
+as <code>FORWARD CONTINUE</code> and a message to <code>SUPER</code> do, nor when the <code>RAISE</code> is in
+a routine that the method calls: <code>arrayOut</code> then sends <code>lineOut</code> for every
+item and answers 0. An item is not read by <code>arrayOut</code>.</p>
+<pre><code class="language-rexx">f = 'spec-stream-arrayoutsends-zq.tmp'
+call lineout f, 'orig'
+call lineout f
+items = .array~of('a', .shown~new, 'c')
+do mode over 'record', 'forward', 'continue', 'super', 'raise', 'helper'
+  s = .spy~new(f)
+  s~mode = mode
+  s~open('read')
+  say left(mode, 9) s~arrayout(items) s~state s~log
+  s~close
+end
+.local~log = ''
+s = .spy~new(f)
+s~mode = 'record'
+say s~arrayout(.arr~of('p', 'q'), .opt~new) .local~log s~log
+call sysfiledelete f
+exit
+::routine help
+  raise notready
+  return 0
+::class shown
+::method makestring
+  return 'shown'
+::class spy subclass stream
+::attribute log
+::attribute mode
+::method init
+  self~log = ''
+  forward class (super)
+::method lineout
+  self~log = self~log 'lineOut(' || arg(1)~class~id || ')'
+  .local~log = .local~log 'lineOut'
+  select
+    when self~mode = 'record' then return 0
+    when self~mode = 'forward' then forward class (super)
+    when self~mode = 'continue' then do
+      forward class (super) continue
+      return result
+    end
+    when self~mode = 'super' then return self~lineout:super(arg(1))
+    when self~mode = 'raise' then do
+      raise notready
+      return 0
+    end
+    when self~mode = 'helper' then do
+      call help
+      return 0
+    end
+  end
+::method charout
+  self~log = self~log 'charOut'
+  return 0
+::class opt
+::method left
+  .local~log = .local~log 'left(' || arg(1) || ')'
+  return 'L'
+::class arr subclass array
+::method request
+  .local~log = .local~log 'request(' || arg(1) || ')'
+  forward class (super)
+</code></pre>
+<pre><code class="language-output">record    0 READY  lineOut(String) lineOut(SHOWN) lineOut(String)
+forward   3 ERROR  lineOut(String)
+continue  0 ERROR  lineOut(String) lineOut(SHOWN) lineOut(String)
+super     0 ERROR  lineOut(String) lineOut(SHOWN) lineOut(String)
+raise     3 READY  lineOut(String)
+helper    0 READY  lineOut(String) lineOut(SHOWN) lineOut(String)
+0  left(1) request(ARRAY) lineOut lineOut  lineOut(String) lineOut(String)
+</code></pre>
+<div class="rule" id="r-class.stream.supplier"><a href="#r-class.stream.supplier">[class.stream.supplier]</a></div>
+<p><code>supplier</code> answers a new <a href="streamsupplier.html"><code>StreamSupplier</code></a> that stands for
+the lines of the receiver that are left, as <a href="streamsupplier.html#r-class.streamsupplier.entry">the rule of that
+class</a> says: it is at the line that the stream
+reads next, and making it reads that line. A stream that was read part of the
+way into a line gives a supplier whose first item is the rest of that line, as
+a plain <code>lineIn</code> would answer it there, and whose index is the number of the
+line that the read position is in (<a href="#r-class.stream.deviation.140">Deviation
+140</a>); the items after it are the following
+lines, and the next <code>lineIn</code> answers the line after the first item. It takes
+no argument: one raises <code>SYNTAX 93.902</code>. A stream that has no line left, or
+cannot be read, gives a supplier that is not available; a last line that has
+no line end and was read already is no line left. The messages that the stream
+is sent are those of <a href="#r-class.stream.supplier.sends">the next rule</a>.</p>
+<pre><code class="language-rexx">f = 'spec-stream-supplier-zq.tmp'
+call lineout f, 'one'
+call lineout f, 'two'
+call lineout f, 'three'
+call lineout f
+s = .stream~new(f)
+p = s~supplier
+say p~class~id p~index p~item p~available
+say s~linein
+q = s~supplier
+say q~index q~item
+q~next
+say q~available
+p~next
+say p~index p~item p~available
+s~close
+n = .stream~new('spec-stream-supplier-none-zq.tmp')
+say n~supplier~available n~state
+s = .stream~new(f)
+signal on syntax name bad
+x = s~supplier(1)
+bad: say condition('o')~code
+s~close
+call sysfiledelete f
+</code></pre>
+<pre><code class="language-output">StreamSupplier 1 one 1
+two
+3 three
+0
+2 two 1
+0 UNKNOWN
+93.902
+</code></pre>
+<pre><code class="language-rexx">f = 'spec-stream-supplier-mid-zq.tmp'
+call lineout f, 'one'
+call lineout f, 'two'
+call lineout f, 'three'
+call lineout f
+s = .stream~new(f)
+x = s~charin(, 5)
+p = s~supplier
+say p~index p~item
+p~next
+say p~index p~item
+s~close
+call sysfiledelete f
+</code></pre>
+<pre><code class="language-output defect=#208">2 wo
+3 three
+</code></pre>
+<pre><code class="language-rexx">f = 'spec-stream-supplier-last-zq.tmp'
+call charout f, 'one' || '0a'x || 'two'
+call charout f
+s = .stream~new(f)
+say s~linein s~linein s~state
+p = s~supplier
+say p~available s~state
+s~close
+call sysfiledelete f
+</code></pre>
+<pre><code class="language-output defect=#207">one two READY
+0 NOTREADY
+</code></pre>
+<div class="rule" id="r-class.stream.supplier.sends"><a href="#r-class.stream.supplier.sends">[class.stream.supplier.sends]</a></div>
+<p>The supplier that <code>supplier</code> makes sends the stream, in this order, <code>state</code>
+twice and then one <code>lineIn</code> when it is made: with no argument when the stream
+was read part of the way into a line, so that its answer is the rest of that
+line as <a href="#r-class.stream.deviation.140">Deviation 140</a> says, and otherwise with
+one argument, the number of the line to read. For each <code>next</code> it sends
+<code>lineIn</code> with the number of the next line; the other methods of the supplier
+send nothing. <code>supplier</code> sends nothing else. The first answer of <code>state</code> is
+not used. When the second is <code>READY</code>, the supplier starts at the line that the
+read position is in, which it finds without sending a message, and otherwise
+at line 1; when the second answer is <code>READY</code> for a stream that is not open,
+<code>supplier</code> raises <code>SYNTAX 41.1</code> and sends no <code>lineIn</code>. An entry is the answer
+of a <code>lineIn</code> that does not raise NOTREADY. A <code>lineIn</code> that raises it ends the
+supplier, which is then not available, and what that <code>lineIn</code> answers is not
+an item. A <code>lineIn</code> that answers no value raises <code>SYNTAX 91.999</code>.</p>
+<pre><code class="language-rexx">f = 'spec-stream-suppliersends-zq.tmp'
+call lineout f, 'one'
+call lineout f, 'two'
+call lineout f, 'three'
+call lineout f
+do pre over 0, 1
+  s = .spy~new(f)
+  do pre
+    x = s~linein
+  end
+  s~log = ''
+  p = s~supplier
+  say 'read' pre p~class~id p~index p~item p~available s~log
+  s~log = ''
+  p~next
+  say '  next' p~index p~item s~log
+  s~close
+end
+s = .spy~new('spec-stream-suppliersends-none-zq.tmp')
+p = s~supplier
+l = s~log
+say p~available s~state l
+s~close
+call sysfiledelete f
+exit
+::class spy subclass stream
+::attribute log
+::method init
+  self~log = ''
+  forward class (super)
+::method state
+  self~log = self~log 'state'
+  forward class (super)
+::method linein
+  self~log = self~log 'lineIn(' || arg(1) || ')'
+  forward class (super)
+</code></pre>
+<pre><code class="language-output">read 0 StreamSupplier 1 one 1  state state lineIn(1)
+  next 2 two  lineIn(2)
+read 1 StreamSupplier 2 two 1  state state lineIn(2)
+  next 3 three  lineIn(3)
+0 UNKNOWN  state state lineIn(1)
+</code></pre>
+<pre><code class="language-rexx">f = 'spec-stream-supplierstate-zq.tmp'
+call lineout f, 'one'
+call lineout f, 'two'
+call lineout f
+do w over 'UNKNOWN READY', 'READY NOTREADY'
+  s = .fake~new(f)
+  x = s~linein
+  s~answers = w
+  p = s~supplier
+  say w '-&gt;' p~index p~item
+  s~close
+end
+s = .fake~new(f)
+s~answers = 'READY READY'
+signal on syntax name bad
+p = s~supplier
+bad: say condition('o')~code
+s~close
+call sysfiledelete f
+exit
+::class fake subclass stream
+::attribute answers
+::method init
+  self~answers = ''
+  forward class (super)
+::method state
+  if self~answers == '' then forward class (super)
+  w = self~answers~word(1)
+  self~answers = self~answers~subword(2)
+  return w
+</code></pre>
+<pre><code class="language-output">UNKNOWN READY -&gt; 2 two
+READY NOTREADY -&gt; 1 one
+41.1
+</code></pre>
+<pre><code class="language-rexx">f = 'spec-stream-supplierlinein-zq.tmp'
+call lineout f, 'one'
+call lineout f, 'two'
+call lineout f
+do m over 'FAKE', 'RAISE', 'NOVAL'
+  call walk m
+end
+call sysfiledelete f
+exit
+walk:
+  s = .ov~new(f)
+  s~mode = arg(1)
+  signal on syntax name bad
+  p = s~supplier
+  out = ''
+  do while p~available
+    out = out p~index || '=' || p~item
+    p~next
+  end
+  say arg(1) || ':' || out p~available
+  s~close
+  return
+bad:
+  say arg(1) '=&gt;' condition('o')~code
+  s~close
+  return
+::class ov subclass stream
+::attribute mode
+::method linein
+  use arg n
+  if n &lt; 3 then forward class (super)
+  if n &gt; 4 then raise notready
+  select
+    when self~mode == 'FAKE' then return 'fake' || n
+    when self~mode == 'RAISE' then raise notready
+    otherwise return
+  end
+</code></pre>
+<pre><code class="language-output">FAKE: 1=one 2=two 3=fake3 4=fake4 0
+RAISE: 1=one 2=two 0
+NOVAL =&gt; 91.999
+</code></pre>
+<div class="rule" id="r-class.stream.uninit"><a href="#r-class.stream.uninit">[class.stream.uninit]</a></div>
+<p><code>uninit</code> closes the stream when it is open, as <code>close</code> does, so that what was
+written is in the file. The interpreter sends it to an instance that is no
+longer used; when it does so is not specified. A program may send it too, and
+it answers no value: its answer as a term raises <code>SYNTAX 91.999</code>. It takes no
+argument: one raises <code>SYNTAX 88.922</code>. It sends no message. An instance that
+has been sent <code>uninit</code> is not to be used again: what a method does then is not
+specified.</p>
+<pre><code class="language-rexx">f = 'spec-stream-uninit-zq.tmp'
+s = .stream~new(f)
+x = s~lineout('kept')
+call try 's~uninit(1)'
+s~uninit
+say .stream~new(f)~linein
+t = .stream~new(f)
+x = t~linein
+signal on syntax name bad
+say t~uninit
+bad: say condition('o')~code
+call sysfiledelete f
+exit
+try:
+  signal on syntax name bad2
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt; no error'
+  return
+bad2: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">s~uninit(1) =&gt; 88.922
+kept
+91.999
+</code></pre>
+<h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
+<div class="rule" id="r-class.stream.deviation.34"><a href="#r-class.stream.deviation.34">[class.stream.deviation.34]</a></div>
+<p>In a name that holds <code>..</code>, <code>qualify</code> removes exactly the one component before
+each, however it was written, as <a href="../builtins/qualify.html#r-bif.qualify.deviation.34">QUALIFY</a> does,
+and the stream is the file that this full name denotes. ooRexx removes none
+after a doubled slash and two after a component that starts with a period, so
+its <code>qualify</code> answers another name and the stream can be another file
+(<a href="../builtins/stream.html#r-bif.stream.deviation.34">Deviation 34</a>).</p>
+<pre><code class="language-rexx">say .stream~new('/a/.b/../c')~qualify .stream~new('/a//../b')~qualify
+</code></pre>
+<pre><code class="language-output">/a/c /b
+</code></pre>
+<div class="rule" id="r-class.stream.deviation.55"><a href="#r-class.stream.deviation.55">[class.stream.deviation.55]</a></div>
+<p>A stream opened <code>WRITE</code> reads nothing, as <a href="../builtins/stream.html#r-bif.stream.deviation.55">the
+function</a> says, and so every method that reads
+fails on it: <code>lineIn</code> and <code>charIn</code> answer the null string and the state is
+<code>ERROR</code>, <code>lines</code> and <code>chars</code> answer 0, a supplier of the stream is not
+available, and <code>arrayIn</code> answers an empty array. ooRexx opens such a stream
+for reading and writing, so that these methods read the file.</p>
+<pre><code class="language-rexx">f = 'spec-stream-dev55-zq.tmp'
+call lineout f, 'one'
+call lineout f, 'two'
+call lineout f
+s = .stream~new(f)
+say s~open('write') s~state
+say '[' || s~linein || ']' s~state s~description~left(6)
+say s~lines s~chars s~supplier~available s~arrayin~items
+say '[' || s~charin || ']' s~state
+s~close
+call sysfiledelete f
+</code></pre>
+<pre><code class="language-output">READY: READY
+[] ERROR ERROR:
+0 0 0 0
+[] ERROR
+</code></pre>
+<div class="rule" id="r-class.stream.deviation.58"><a href="#r-class.stream.deviation.58">[class.stream.deviation.58]</a></div>
+<p><code>lines('C')</code> answers the number of lines that remain after the read position,
+also after a read of characters that ends inside a line, which still counts,
+as <a href="../builtins/lines.html#r-bif.lines.deviation.58">the function</a> does. So does <code>lines</code> with no
+argument, whose option is <a href="#r-class.stream.lines"><code>C</code></a>. The count that ooRexx
+answers, for the option <code>C</code> and for no option, can be wrong after a character
+read or a line positioning: in the example it answers 1 where this answers 2
+on the second <code>say</code> line, and 1 for both where this answers 3 on the last.</p>
+<pre><code class="language-rexx">f = 'spec-stream-dev58-zq.tmp'
+call lineout f, 'one'
+call lineout f, 'two'
+call lineout f, 'three'
+call lineout f
+s = .stream~new(f)
+say s~lines s~lines('C')
+x = s~charin(, 5)
+say s~lines s~lines('C') s~lines('N')
+x = s~linein
+say s~lines s~lines('C')
+x = s~charin(1, 0)
+say s~lines s~lines('C')
+s~close
+call sysfiledelete f
+</code></pre>
+<pre><code class="language-output">3 3
+2 2 1
+1 1
+3 3
+</code></pre>
+<div class="rule" id="r-class.stream.deviation.59"><a href="#r-class.stream.deviation.59">[class.stream.deviation.59]</a></div>
+<p><code>seek</code> and <code>position</code> of a position below 1, or of the write position of a
+stream that is open for reading only, answer 0, raise NOTREADY, leave the
+state <code>NOTREADY</code> and move nothing, as <a href="../builtins/stream.html#r-bif.stream.deviation.59">the
+function</a> does. ooRexx answers a position that it
+did not check, with the state <code>READY</code>.</p>
+<pre><code class="language-rexx">f = 'spec-stream-dev59-zq.tmp'
+call lineout f, 'one'
+call lineout f, 'two'
+call lineout f
+call on notready name trap
+s = .stream~new(f)
+say s~open('read') s~state
+say s~seek('0 read') s~state
+say s~open('read') s~state
+say s~position('=1 write') s~state
+s~close
+call sysfiledelete f
+exit
+trap: say 'NOTREADY raised'
+return
+</code></pre>
+<pre><code class="language-output">READY: READY
+0 NOTREADY
+NOTREADY raised
+READY: READY
+0 NOTREADY
+NOTREADY raised
+</code></pre>
+<div class="rule" id="r-class.stream.deviation.62"><a href="#r-class.stream.deviation.62">[class.stream.deviation.62]</a></div>
+<p>A read that finds nothing at the end of the data leaves the stream <code>NOTREADY</code>
+with the description <code>NOTREADY:EOF</code>, <a href="../builtins/stream.html#r-bif.stream.deviation.62">as for the
+functions</a>, and that holds for the <code>charIn</code> that
+<code>arrayIn</code> sends to read the characters, at the end of them. ooRexx leaves
+<code>ERROR:0</code> after a read of characters that finds none.</p>
+<pre><code class="language-rexx">f = 'spec-stream-dev62-zq.tmp'
+call charout f, 'ab'
+call charout f
+s = .stream~new(f)
+say s~arrayin('chars')~items s~state s~description
+s~close
+say s~charin(, 2) s~state '[' || s~charin || ']' s~state s~description
+s~close
+call sysfiledelete f
+</code></pre>
+<pre><code class="language-output">2 NOTREADY NOTREADY:EOF
+ab READY [] NOTREADY NOTREADY:EOF
+</code></pre>
+<div class="rule" id="r-class.stream.deviation.109"><a href="#r-class.stream.deviation.109">[class.stream.deviation.109]</a></div>
+<p>An instance of a subclass of <code>String</code> that is given as a name, a string to
+write, an option, an offset, a start, a count or any other string argument of
+a <code>Stream</code> is read by its own characters, and <code>request</code>, <code>makeString</code> and
+<code>string</code> are not sent to it (<a href="string.html#r-class.string.deviation.109">Deviation 109</a>).
+ooRexx sends such an instance <code>request</code> with <code>STRING</code>, so an override can
+change what is read. The example prints what the own characters of the
+instances give, and the number of messages that were sent to them, which is 0.
+Each line is trapped, so that every line runs also where an override changes
+what is read.</p>
+<pre><code class="language-rexx">f = 'spec-stream-dev109-zq.tmp'
+other = 'spec-stream-dev109-other-zq.tmp'
+.environment~sent = 0
+s = .stream~new(.digits~new(f))
+call try 's~string'
+call try 's~lineout(.digits~new("abc"))'
+call try 's~charout(.digits~new("def"))'
+call try 's~say(.digits~new("ghi"))'
+call try 's~arrayout(.array~of(.digits~new("jkl")))'
+call try 's~close'
+say translate(charin(f, 1, 100), '~', '0a'x)
+call try 's~open(.digits~new("read"))'
+call try 's~seek(.digits~new("2"))'
+call try 's~position(.digits~new("=3 read"))'
+call try 's~lines(.digits~new("c"))'
+call try 's~charin(.digits~new("2"), .digits~new("1"))'
+call try 's~linein(.digits~new("1"), .digits~new("1"))'
+call try 's~query(.digits~new("size"))'
+call try 's~command(.digits~new("query size"))'
+call try 's~close'
+say 'sent' .environment~sent
+call sysfiledelete f
+call sysfiledelete other
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt; [' || r || ']'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class digits subclass string
+::method makestring
+  .environment~sent = .environment~sent + 1
+  return 'spec-stream-dev109-other-zq.tmp'
+::method request
+  .environment~sent = .environment~sent + 1
+  return 'spec-stream-dev109-other-zq.tmp'
+::method string
+  .environment~sent = .environment~sent + 1
+  return 'spec-stream-dev109-other-zq.tmp'
+</code></pre>
+<pre><code class="language-output defect=#140">s~string =&gt; [spec-stream-dev109-zq.tmp]
+s~lineout(.digits~new("abc")) =&gt; [0]
+s~charout(.digits~new("def")) =&gt; [0]
+s~say(.digits~new("ghi")) =&gt; [0]
+s~arrayout(.array~of(.digits~new("jkl"))) =&gt; [0]
+s~close =&gt; [READY:]
+abc~defghi~jkl~
+s~open(.digits~new("read")) =&gt; [READY:]
+s~seek(.digits~new("2")) =&gt; [2]
+s~position(.digits~new("=3 read")) =&gt; [3]
+s~lines(.digits~new("c")) =&gt; [3]
+s~charin(.digits~new("2"), .digits~new("1")) =&gt; [b]
+s~linein(.digits~new("1"), .digits~new("1")) =&gt; [abc]
+s~query(.digits~new("size")) =&gt; [15]
+s~command(.digits~new("query size")) =&gt; [15]
+s~close =&gt; [READY:]
+sent 0
+</code></pre>
+<div class="rule" id="r-class.stream.deviation.135"><a href="#r-class.stream.deviation.135">[class.stream.deviation.135]</a></div>
+<p>A class that a program declares as a subclass of <code>Stream</code>, whose <code>init</code> does
+not send <code>init</code> to its superclass, by <code>self~init:super</code> or <code>FORWARD</code>, makes a
+stream that is not set up, and every instance method of the class other than
+<code>init</code> that it is sent raises <code>SYNTAX 98.901</code>, <code>state</code>, <code>description</code>,
+<code>qualify</code>, <code>string</code>, <code>query</code>, <code>lineIn</code>, <code>lines</code>, <code>close</code> and the others among
+them. ooRexx ends the interpreter with a segmentation fault on <code>state</code>,
+<code>description</code>, <code>qualify</code> and <code>query</code> of such a stream, answers the internal
+name <code>STREAM_NAME</code> from <code>string</code>, raises <code>SYNTAX 48.1</code> from <code>lineIn</code> and
+<code>lines</code>, and answers no value from <code>close</code>; the example is not run against it.
+Each line of the example is trapped, so that every line runs.</p>
+<pre><code class="language-rexx">o = .lazy~new('spec-stream-dev135-zq.tmp')
+call try "o~state"
+call try "o~description"
+call try "o~string"
+call try "o~qualify"
+call try "o~query('size')"
+call try "o~linein"
+call try "o~lines"
+call try "o~lineout('x')"
+call try "o~arrayin"
+call try "o~supplier"
+call try "o~close"
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  say arg(1) '=&gt; no error'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class lazy subclass stream
+::method init
+  nop
+</code></pre>
+<pre><code class="language-output defect=#197">o~state =&gt; 98.901
+o~description =&gt; 98.901
+o~string =&gt; 98.901
+o~qualify =&gt; 98.901
+o~query('size') =&gt; 98.901
+o~linein =&gt; 98.901
+o~lines =&gt; 98.901
+o~lineout('x') =&gt; 98.901
+o~arrayin =&gt; 98.901
+o~supplier =&gt; 98.901
+o~close =&gt; 98.901
+</code></pre>
+<div class="rule" id="r-class.stream.deviation.139"><a href="#r-class.stream.deviation.139">[class.stream.deviation.139]</a></div>
+<p>A stream answers <code>query('size')</code>, <code>chars</code> and <code>lines</code> for the file as it is
+when it is asked, so they include data that another stream on the same file
+has written and flushed since this stream was first read or asked. ooRexx
+keeps the size that the stream found when it first read or was first asked, so
+that its <code>query('size')</code> is out of date from then on, its <code>chars</code> is counted
+from that size, and its <code>lines</code> can miss the lines written since; the example
+is not run against it.</p>
+<pre><code class="language-rexx">f = 'spec-stream-dev139-zq.tmp'
+call lineout f, 'one'
+call lineout f
+a = .stream~new(f)
+b = .stream~new(f)
+say b~linein
+say b~query('size') b~chars b~lines('C')
+x = a~lineout('two')
+a~flush
+say b~query('size') b~chars b~lines('C')
+x = a~lineout('three')
+a~flush
+say b~query('size') b~chars b~lines('C')
+a~close
+b~close
+call sysfiledelete f
+</code></pre>
+<pre><code class="language-output defect=#209">one
+4 0 0
+8 4 1
+14 10 2
+</code></pre>
+<div class="rule" id="r-class.stream.deviation.140"><a href="#r-class.stream.deviation.140">[class.stream.deviation.140]</a></div>
+<p>A supplier starts at the read position of the stream: its first item is what a
+plain <code>lineIn</code> would answer there, which is the rest of the line when the
+stream was read part of the way into it, and its index is the number of the
+line that the read position is in. The items after it are the lines that
+follow. ooRexx answers the whole of the line when the read position is inside
+the first line, as the example shows, and answers as this rule says from the
+second line on, though it gets that answer by sending <code>lineIn</code> with the number
+of the line, where <a href="#r-class.stream.supplier.sends">the rule of the sends</a>
+sends <code>lineIn</code> with no argument, as the second example shows; the examples
+are not run against it.</p>
+<pre><code class="language-rexx">f = 'spec-stream-dev140-zq.tmp'
+call lineout f, 'one'
+call lineout f, 'two'
+call lineout f
+s = .stream~new(f)
+x = s~charin(, 2)
+p = s~supplier
+say p~index p~item '[' || s~linein || ']'
+p~next
+say p~index p~item
+s~close
+call sysfiledelete f
+</code></pre>
+<pre><code class="language-output defect=#208">1 e [two]
+2 two
+</code></pre>
+<pre><code class="language-rexx">f = 'spec-stream-dev140-sends-zq.tmp'
+call lineout f, 'one'
+call lineout f, 'two'
+call lineout f, 'three'
+call lineout f
+s = .spy~new(f)
+x = s~charin(, 5)
+s~log = ''
+p = s~supplier
+say p~index p~item s~log
+s~log = ''
+p~next
+say p~index p~item s~log
+s~close
+call sysfiledelete f
+exit
+::class spy subclass stream
+::attribute log
+::method init
+  self~log = ''
+  forward class (super)
+::method state
+  self~log = self~log 'state'
+  forward class (super)
+::method linein
+  if arg(1, 'e') then self~log = self~log 'lineIn(' || arg(1) || ')'
+  else self~log = self~log 'lineIn()'
+  forward class (super)
+</code></pre>
+<pre><code class="language-output defect=#208">2 wo  state state lineIn()
+3 three  lineIn(3)
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../classes/regularexpression.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../classes/inputstream.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../classes/regularexpression.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../classes/inputstream.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../assets/version-picker.js"></script>
+
+
+    </div>
+    </body>
+</html>
