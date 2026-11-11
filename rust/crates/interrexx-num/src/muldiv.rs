@@ -9,6 +9,26 @@ const FAST_BUFFER: u64 = 48;
 
 impl Number {
     pub fn mul(&self, other: &Number, digits: u64) -> Result<Number, ArithError> {
+        self.mul_checked(other, digits, Number::check_range)
+    }
+
+    /// The product `**` builds its power from. Only a first digit past the
+    /// exponent range is refused, which is `Overflow`; a last digit below the
+    /// range is not, because the power decides on its final result alone.
+    pub(crate) fn mul_intermediate(
+        &self,
+        other: &Number,
+        digits: u64,
+    ) -> Result<Number, ArithError> {
+        self.mul_checked(other, digits, Number::check_overflow)
+    }
+
+    fn mul_checked(
+        &self,
+        other: &Number,
+        digits: u64,
+        check: fn(&Number) -> Result<(), ArithError>,
+    ) -> Result<Number, ArithError> {
         // checkNumber truncates an over-long operand to DIGITS + 1 and does
         // NOT round it. Rounding operands here instead would turn
         // `2 * 1.5` at DIGITS 1 into `2 * 2` = 4, where the answer is 3.
@@ -22,13 +42,18 @@ impl Number {
         if let Some(exact) = exact_integer_product(&left, &right, digits) {
             return Ok(exact);
         }
-        Number::mul_long(&left, &right, digits)
+        Number::mul_long(&left, &right, digits, check)
     }
 
     /// `left * right` by long multiplication over the digit vectors, which is
     /// what [`Number::mul`] runs wherever [`exact_integer_product`] declines.
     #[inline(always)]
-    fn mul_long(left: &Number, right: &Number, digits: u64) -> Result<Number, ArithError> {
+    fn mul_long(
+        left: &Number,
+        right: &Number,
+        digits: u64,
+        check: fn(&Number) -> Result<(), ArithError>,
+    ) -> Result<Number, ArithError> {
         let product = mul_magnitudes(&left.digits, &right.digits);
         // Saturated: a bare `digits` past usize means "keep everything",
         // which the length test below then decides.
@@ -65,7 +90,7 @@ impl Number {
         };
         let rounded = raw.into_round(digits);
         let result = Number::assemble(rounded.negative, rounded.digits, rounded.exponent);
-        result.check_range()?;
+        check(&result)?;
         Ok(result)
     }
 }
@@ -541,7 +566,7 @@ mod mul_shortcut_tests {
                     taken += 1;
                     assert_eq!(
                         shortcut,
-                        Number::mul_long(&left, &right, digits)
+                        Number::mul_long(&left, &right, digits, Number::check_range)
                             .expect("the long path answers for an in-range product"),
                         "{} * {} at DIGITS {digits}",
                         left.format(40),

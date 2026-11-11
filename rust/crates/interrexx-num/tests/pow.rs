@@ -136,3 +136,21 @@ fn a_scaled_integer_exponent_keeps_its_width_limit_and_sign() {
     }
     assert_eq!(pow("0", "999999999999999999", 17), Err(26));
 }
+
+#[test]
+fn an_intermediate_product_below_the_exponent_range_does_not_fail_the_power() {
+    // The base to the positive power has its last digit below the range, but
+    // the reciprocal, which is the result, is inside it.
+    assert_eq!(
+        pow("1.1e-333333333", "-3", 9).unwrap(),
+        "7.51314801E+999999998"
+    );
+    assert_eq!(
+        pow("1.01e-333333333", "-3", 9).unwrap(),
+        "9.70590148E+999999998"
+    );
+    assert_eq!(
+        pow("1.1e-499999999", "-2", 9).unwrap(),
+        "8.26446281E+999999997"
+    );
+}

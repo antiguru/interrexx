@@ -250,8 +250,7 @@ too small: `11 ** -999999999` raises `42.901`, not `42.902`. Only the result
 decides: an intermediate value of the computation that is out of range raises
 nothing when the result is in range. The powers of the second example pass the
 pre-test and have results within the range, although the base to the positive
-exponent has its last digit below the range, and interrexx raises `SYNTAX
-42.902` for that intermediate value.
+exponent has its last digit below the range.
 
 ```rexx
 signal on syntax name a
@@ -292,7 +291,7 @@ say 1.01e-333333333 ** -3
 say 1.1e-499999999 ** -2
 ```
 
-```output defect=#95
+```output
 7.51314801E+999999998
 9.70590148E+999999998
 8.26446281E+999999997

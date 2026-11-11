@@ -674,6 +674,19 @@ impl Number {
         }
     }
 
+    /// [`check_range`](Self::check_range) without its underflow half: fails
+    /// only when the first digit is past the exponent range.
+    #[inline(always)]
+    pub(crate) fn check_overflow(&self) -> Result<(), ArithError> {
+        if !self.is_zero() && self.adjusted_exponent() > MAX_EXPONENT {
+            Err(ArithError::Overflow {
+                adjusted_exponent: self.adjusted_exponent(),
+            })
+        } else {
+            Ok(())
+        }
+    }
+
     /// Strips leading zeros and collapses any zero to the canonical form.
     #[inline(always)]
     pub(crate) fn assemble(negative: bool, mut digits: Digits, exponent: i32) -> Self {

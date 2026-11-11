@@ -115,9 +115,9 @@ impl Number {
         let mut acc = Number::clone(&left);
         let top = 63 - power.leading_zeros();
         for i in (0..top).rev() {
-            acc = acc.mul(&acc, work)?;
+            acc = acc.mul_intermediate(&acc, work)?;
             if (power >> i) & 1 == 1 {
-                acc = acc.mul(&left, work)?;
+                acc = acc.mul_intermediate(&left, work)?;
             }
         }
 
