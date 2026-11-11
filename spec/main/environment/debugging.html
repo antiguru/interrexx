@@ -1726,11 +1726,10 @@ them one with a blank around <code>ON</code>, and the empty value, is ignored. A
 later change of the variable changes nothing. An example cannot start the
 interpreter with the variable set, so the rule is tested by the cases of the
 command-line tests, which set it and show the main program and a program
-called by name starting with <code>?R</code>, a method with <code>N</code>, and every other value
-ignored. The example shows the later change: a program called by name before
-and after the variable is set to <code>ON</code> starts with <code>N</code> both times. The
-part on routines is not tested; interrexx starts them with <code>N</code> (interrexx
-defect #218).</p>
+called by name starting with <code>?R</code>, a routine called by name, as a function
+and as a routine object starting with <code>?R</code>, a method with <code>N</code>, and every
+other value ignored. The example shows the later change: a program called by
+name before and after the variable is set to <code>ON</code> starts with <code>N</code> both times.</p>
 <pre><code class="language-rexx">.traceoutput~destination(.quiet~new)
 call lineout 'a6rrzqrx.rex', 'return trace()'
 call lineout 'a6rrzqrx.rex'
@@ -1744,7 +1743,7 @@ exit
 ::method lineout
   return 0
 </code></pre>
-<pre><code class="language-output defect=#224">before N
+<pre><code class="language-output">before N
 after N
 </code></pre>
 <h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>

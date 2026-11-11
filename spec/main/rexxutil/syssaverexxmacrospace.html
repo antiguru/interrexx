@@ -316,8 +316,7 @@ call SysFileDelete 'c4zqsp.rex'
 the file as it was, with its bytes and its permission. ooRexx also answers
 <code>5</code>, but whether the file is still there afterwards depends on the calls the
 program made earlier: it keeps the file in some histories and removes it in
-others. interrexx removes the file today (issue 237), so the example is marked
-as a defect.</p>
+others. interrexx always keeps it, so the example is not run against ooRexx.</p>
 <blockquote>
 <p><strong>Note.</strong> The example shows that the file is still there, with its bytes,
 after the answer. A program that runs as the superuser may write the file,
@@ -341,7 +340,7 @@ call SysDropRexxMacro 'C4ZQSD'
 call SysFileDelete 'c4zqsdold'
 call SysFileDelete 'c4zqsd.rex'
 </code></pre>
-<pre><code class="language-output defect=#237">1 1 1
+<pre><code class="language-output">1 1 1
 </code></pre>
 
                     </main>

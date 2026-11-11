@@ -8447,7 +8447,7 @@ and <code>'-1073741823'</code> give 1.</p>
 ::method string private
   return 7
 </code></pre>
-<pre><code class="language-output defect=#165 rc=5"></code></pre>
+<pre><code class="language-output rc=5"></code></pre>
 <pre><code class="language-rexx">say 'done'
 exit 5
 </code></pre>
@@ -8484,7 +8484,7 @@ exit 5
 <pre><code class="language-output"></code></pre>
 <pre><code class="language-rexx">exit .mutablebuffer~new('13')
 </code></pre>
-<pre><code class="language-output defect=#102 rc=13"></code></pre>
+<pre><code class="language-output rc=13"></code></pre>
 <pre><code class="language-rexx">exit 4294967297
 </code></pre>
 <pre><code class="language-output"></code></pre>
@@ -91300,11 +91300,10 @@ them one with a blank around <code>ON</code>, and the empty value, is ignored. A
 later change of the variable changes nothing. An example cannot start the
 interpreter with the variable set, so the rule is tested by the cases of the
 command-line tests, which set it and show the main program and a program
-called by name starting with <code>?R</code>, a method with <code>N</code>, and every other value
-ignored. The example shows the later change: a program called by name before
-and after the variable is set to <code>ON</code> starts with <code>N</code> both times. The
-part on routines is not tested; interrexx starts them with <code>N</code> (interrexx
-defect #218).</p>
+called by name starting with <code>?R</code>, a routine called by name, as a function
+and as a routine object starting with <code>?R</code>, a method with <code>N</code>, and every
+other value ignored. The example shows the later change: a program called by
+name before and after the variable is set to <code>ON</code> starts with <code>N</code> both times.</p>
 <pre><code class="language-rexx">.traceoutput~destination(.quiet~new)
 call lineout 'a6rrzqrx.rex', 'return trace()'
 call lineout 'a6rrzqrx.rex'
@@ -91318,7 +91317,7 @@ exit
 ::method lineout
   return 0
 </code></pre>
-<pre><code class="language-output defect=#224">before N
+<pre><code class="language-output">before N
 after N
 </code></pre>
 <h2 id="deviations-76"><a class="header" href="#deviations-76">Deviations</a></h2>
@@ -92588,7 +92587,7 @@ try:
   return r
 e: return condition('o')~code
 </code></pre>
-<pre><code class="language-output defect=#229">88.907 88.907 88.907 88.907 88.907
+<pre><code class="language-output">88.907 88.907 88.907 88.907 88.907
 88.907 88.907 88.907
 0 0 0 0 0
 </code></pre>
@@ -92919,8 +92918,8 @@ whether or not its directory exists. A <code>target</code> that is the same file
 changes nothing, whichever name, hard link or symbolic link reaches it. ooRexx
 opens <code>target</code> and empties it before it finds that <code>source</code> is a directory,
 and makes <code>target</code> when it is not there; for a hard link it does not see the
-same file, so it empties the file and answers <code>0</code>. interrexx does not yet do
-this (issue #234). The example is not run against ooRexx.</p>
+same file, so it empties the file and answers <code>0</code>. The example is not run
+against ooRexx.</p>
 <pre><code class="language-rexx">call SysMkDir 'c1zqcgd'
 call charout 'c1zqcgt', 'TTTTTT'
 call charout 'c1zqcgt'
@@ -92945,7 +92944,7 @@ call stream 'c1zqcgh', 'c', 'close'
 address system 'chmod 644 c1zqcgu; rm -f c1zqcgt c1zqcgu c1zqcga c1zqcgh c1zqcgl c1zqcgn'
 call SysRmDir 'c1zqcgd'
 </code></pre>
-<pre><code class="language-output defect=#234">21 6
+<pre><code class="language-output">21 6
 21 0
 21 2
 21
@@ -98312,8 +98311,7 @@ call SysFileDelete 'c4zqsp.rex'
 the file as it was, with its bytes and its permission. ooRexx also answers
 <code>5</code>, but whether the file is still there afterwards depends on the calls the
 program made earlier: it keeps the file in some histories and removes it in
-others. interrexx removes the file today (issue 237), so the example is marked
-as a defect.</p>
+others. interrexx always keeps it, so the example is not run against ooRexx.</p>
 <blockquote>
 <p><strong>Note.</strong> The example shows that the file is still there, with its bytes,
 after the answer. A program that runs as the superuser may write the file,
@@ -98337,7 +98335,7 @@ call SysDropRexxMacro 'C4ZQSD'
 call SysFileDelete 'c4zqsdold'
 call SysFileDelete 'c4zqsd.rex'
 </code></pre>
-<pre><code class="language-output defect=#237">1 1 1
+<pre><code class="language-output">1 1 1
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="sysloadrexxmacrospace"><a class="header" href="#sysloadrexxmacrospace">SysLoadRexxMacroSpace</a></h1>
 <pre><code>SysLoadRexxMacroSpace(file)
@@ -99077,7 +99075,7 @@ e: say condition('o')~code
 ::method string
   return '0'
 </code></pre>
-<pre><code class="language-output defect=#230">88.909
+<pre><code class="language-output">88.909
 </code></pre>
 <pre><code class="language-rexx">call try "SysSleep(.nil)"
 call try "SysSleep(.object~new)"
@@ -99095,7 +99093,7 @@ try:
 e: say condition('o')~code
   return
 </code></pre>
-<pre><code class="language-output defect=#245">88.909
+<pre><code class="language-output">88.909
 88.909
 88.902
 88.902
@@ -99287,7 +99285,7 @@ end
 say SysCreateEventSem(, .nil)
 e: say condition('o')~code
 </code></pre>
-<pre><code class="language-output defect=#238">88.909
+<pre><code class="language-output">88.909
 </code></pre>
 <pre><code class="language-rexx">call try "SysCreateEventSem(.nil)"
 call try "SysCreateEventSem(.object~new)"
@@ -99300,7 +99298,7 @@ try:
 e: say condition('o')~code
   return
 </code></pre>
-<pre><code class="language-output defect=#246">88.909
+<pre><code class="language-output">88.909
 88.909
 88.909
 </code></pre>
@@ -99754,7 +99752,7 @@ try:
 e: say condition('o')~code
   return
 </code></pre>
-<pre><code class="language-output defect=#246">88.909
+<pre><code class="language-output">88.909
 88.909
 </code></pre>
 <h2 id="requesting-and-releasing"><a class="header" href="#requesting-and-releasing">Requesting and releasing</a></h2>

@@ -345,8 +345,8 @@ whether or not its directory exists. A <code>target</code> that is the same file
 changes nothing, whichever name, hard link or symbolic link reaches it. ooRexx
 opens <code>target</code> and empties it before it finds that <code>source</code> is a directory,
 and makes <code>target</code> when it is not there; for a hard link it does not see the
-same file, so it empties the file and answers <code>0</code>. interrexx does not yet do
-this (issue #234). The example is not run against ooRexx.</p>
+same file, so it empties the file and answers <code>0</code>. The example is not run
+against ooRexx.</p>
 <pre><code class="language-rexx">call SysMkDir 'c1zqcgd'
 call charout 'c1zqcgt', 'TTTTTT'
 call charout 'c1zqcgt'
@@ -371,7 +371,7 @@ call stream 'c1zqcgh', 'c', 'close'
 address system 'chmod 644 c1zqcgu; rm -f c1zqcgt c1zqcgu c1zqcga c1zqcgh c1zqcgl c1zqcgn'
 call SysRmDir 'c1zqcgd'
 </code></pre>
-<pre><code class="language-output defect=#234">21 6
+<pre><code class="language-output">21 6
 21 0
 21 2
 21

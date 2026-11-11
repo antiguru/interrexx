@@ -236,7 +236,7 @@ end
 say SysCreateEventSem(, .nil)
 e: say condition('o')~code
 </code></pre>
-<pre><code class="language-output defect=#238">88.909
+<pre><code class="language-output">88.909
 </code></pre>
 <pre><code class="language-rexx">call try "SysCreateEventSem(.nil)"
 call try "SysCreateEventSem(.object~new)"
@@ -249,7 +249,7 @@ try:
 e: say condition('o')~code
   return
 </code></pre>
-<pre><code class="language-output defect=#246">88.909
+<pre><code class="language-output">88.909
 88.909
 88.909
 </code></pre>
