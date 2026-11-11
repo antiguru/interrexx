@@ -363,13 +363,14 @@ fn environment_directory(
 
 /// The `ENVIRONMENT` selector: the interpreter's own environment. A name it
 /// does not hold reads as the null string; `.nil` removes; any other value is
-/// stored as its string, truncated at the first NUL because `setenv` takes a
-/// C string and the oracle's own read-back stops there.
+/// stored as its string. The name and the value are both cut at the first NUL,
+/// because `setenv` takes C strings and the oracle's own read-back stops there.
 fn process_environment(
     interp: &mut Interp,
     name: &[u8],
     new: Option<ObjRef>,
 ) -> Result<ObjRef, Failure> {
+    let name = name.split(|byte| *byte == 0).next().unwrap_or_default();
     let old = interp.env_get(name).unwrap_or_default().to_vec();
     if let Some(value) = new {
         if value == ObjRef::NIL {
