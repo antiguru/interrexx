@@ -448,7 +448,7 @@ e: say arg(1) condition('o')~code
   return 0
 ```
 
-```output defect=#106
+```output
 .insub~new 98.996
 .outsub~new ok
 .iosub~new ok
@@ -545,7 +545,7 @@ say o.0 o.1
   return .array~of('oa')
 ```
 
-```output defect=#106
+```output
 1 oa
 ```
 
