@@ -304,7 +304,9 @@ value of the variable, and the null string when there is none, so a variable
 that is not set and one that is set to the null string are not told apart. A
 `newvalue` that is not omitted is the value the variable has afterwards, as the
 string it is replaced by, and `.nil` removes the variable. A character
-`'00'x` ends the name as well as the value, so what follows it is lost. A call
+`'00'x` ends the name as well as the value, so what follows it is lost, and a
+command that the program starts sees the variable that the shortened name
+names. A call
 whose name is the null string assigns nothing and answers the null string. This
 book does not specify a name that contains an equals sign.
 
@@ -327,6 +329,20 @@ say '['value('T14_V', , e)']' '['value('T14_V', .nil, e)']'
 [] [blank] [blank]
 [] [ab]
 [] []
+```
+
+```rexx
+e = 'ENVIRONMENT'
+n0 = 'T14R_N' || '00'x || 'X'
+call value n0, 'v', e
+say '[' || value(n0, , e) || ']' '[' || value('T14R_N', , e) || ']'
+address system 'printf "[%s]\n" "$T14R_N"'
+call value 'T14R_N', .nil, e
+```
+
+```output
+[v] [v]
+[v]
 ```
 
 r[bif.value.os.command]
