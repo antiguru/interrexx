@@ -15,10 +15,11 @@ go, or gives up after a timeout. An activity that owns the semaphore can
 acquire it again without waiting, and then has to release it as many times.
 This page states what each method answers and checks, how the count of
 acquisitions works and what a timeout may be. How activities are scheduled,
-and so which of several that wait gets the semaphore next, is specified in the
-environment chapter. The examples that use two activities start a message from
-the program and use event semaphores to force the order of what happens, so
-that nothing in their output depends on speed.
+and so which of several that wait gets the semaphore next, is specified by
+[the waiting rule](r:conc.activities.waiting) of the concurrency chapter. The
+examples that use two activities start a message from the program and use
+event semaphores to force the order of what happens, so that nothing in their
+output depends on speed.
 
 ## The class
 

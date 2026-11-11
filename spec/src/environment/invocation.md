@@ -345,8 +345,9 @@ main
 
 > **Note.** What happens to an activity that is still running when the main
 > program ends, and to the `UNINIT` messages that an `UNINIT` method starts,
-> is the business of the concurrency chapter, and this page states nothing of
-> it.
+> is the business of [the end rule](r:conc.halt.end.alive) and [the started
+> rule](r:conc.halt.uninit.started) of the concurrency chapter, and this page
+> states nothing of it.
 
 ## Programs without source
 

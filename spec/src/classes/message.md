@@ -23,13 +23,14 @@ the class has because it implements the notification interfaces of
 [`MessageNotification`](messagenotification.md) and
 [`AlarmNotification`](alarmnotification.md). How an activity is scheduled,
 when a started message begins to run, and how it interleaves with the activity
-that started it is specified in the environment chapter. The examples on this
-page therefore show only results that no scheduling can change: they wait for
-a message with `result` or `wait`, or park the activity of the message on a
-guard that the example opens, before they print anything that depends on it.
-The methods that an example waits for, or that the waiting activity calls
-meanwhile, are `UNGUARDED`, so that the waiting activity and the activity of
-the message can both use the object ([the guard
+that started it is specified by [the ordering rule](r:conc.activities.order)
+and [the waiting rule](r:conc.activities.waiting) of the concurrency chapter.
+The examples on this page therefore show only results that no scheduling can
+change: they wait for a message with `result` or `wait`, or park the activity
+of the message on a guard that the example opens, before they print anything
+that depends on it. The methods that an example waits for, or that the waiting
+activity calls meanwhile, are `UNGUARDED`, so that the waiting activity and
+the activity of the message can both use the object ([the guard
 rule](r:instr.guard.exclusion)).
 
 The examples that show an error use a routine `try` that interprets the clause

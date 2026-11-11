@@ -20,7 +20,8 @@ implementation declares it only when it wants to hear of cancellations.
 The page specifies what the class is, what an implementation has to answer
 to, and when the library sends to it. The classes `Alarm` and `Ticker` are
 specified apart from this page, and the times at which an alarm goes off and
-how its activity is scheduled are specified in the environment chapter; the
+which activity runs it is specified by [the timer
+rule](r:conc.activities.timers) of the concurrency chapter; the
 examples here wait on a guard that the notification opens before they print
 what it recorded.
 

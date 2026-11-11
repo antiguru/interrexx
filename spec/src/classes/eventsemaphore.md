@@ -13,10 +13,10 @@ does calls `wait`; the activity that does it calls `post`, and every activity
 that waits goes on. A semaphore that is posted lets `wait` return at once,
 until it is cleared again with `reset`. This page states what each method
 answers and checks, and what a timeout may be. How activities are scheduled,
-and so which of several waiters runs first after a `post`, is specified in the
-environment chapter. The examples that use two activities start a message and
-wait on the semaphore from the program; the order of their output is forced by
-the semaphore itself.
+and so which of several waiters runs first after a `post`, is specified by
+[the waiting rule](r:conc.activities.waiting) of the concurrency chapter. The
+examples that use two activities start a message and wait on the semaphore
+from the program; the order of their output is forced by the semaphore itself.
 
 ## The class
 

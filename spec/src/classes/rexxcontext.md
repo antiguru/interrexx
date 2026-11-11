@@ -15,7 +15,8 @@ what it has set (the NUMERIC settings, the status of the last command, the
 variables), where it is (the line, the call stack) and which run it belongs
 to. A program cannot make a `RexxContext`; it only receives them.
 
-Scheduling between activities belongs to the environment chapter, and the
+Scheduling between activities belongs to [the concurrency
+chapter](r:conc.activities.order), and the
 examples here use a second activity only to show that its context is another
 one. The condition object, TRACE and the CALL and SIGNAL instructions are
 specified in their own chapters, and this page links their rules.

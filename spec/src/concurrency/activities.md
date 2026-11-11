@@ -20,13 +20,13 @@ reaches the program, and what a program may count on about the order in which
 activities do things.
 
 The lock that an object has, the methods that are guarded or unguarded and the
-`GUARD` instruction are specified on the [locks page](locks.md) of this
-chapter, and `HALT` and the end of a program that still has activities on the
-halt page; this page uses `GUARD ... WHEN` only as the way a program makes one
-activity wait for another. The methods of `Message`, `Alarm` and `Ticker` and
-the instruction `REPLY` are specified on their own pages, which this page
-links: it states what they do to activities, and not what they check or
-answer.
+`GUARD` instruction are specified on [the locks page](r:conc.locks.scope) of
+this chapter, and `HALT` and the end of a program that still has activities on
+[the halt page](r:conc.halt.sent); this page uses `GUARD ... WHEN` only as the
+way a program makes one activity wait for another. The methods of `Message`,
+`Alarm` and `Ticker` and the instruction `REPLY` are specified on their own
+pages, which this page links: it states what they do to activities, and not
+what they check or answer.
 
 The examples force the order of everything they print. An activity that has to
 wait for the program does so on a `GUARD ... WHEN` that the program opens when
@@ -95,8 +95,8 @@ no trap taken here; the error is the message's: 42.3
 
 r[conc.activities.creation]
 A program makes a new activity by each of the following, and by nothing else
-(the activity that runs the `UNINIT` methods of objects is not one a program
-makes, and belongs to the halt page of this chapter):
+(the `UNINIT` methods of objects are run as [the halt
+page](r:conc.halt.uninit.runs) says):
 [`start`](r:class.object.start) and `startWith` of `Object`, and
 [`start`](r:class.message.start) and `startWith` of a `Message`, which run the
 message on a new activity; [`reply`](r:class.message.reply) and `replyWith` of

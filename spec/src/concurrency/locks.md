@@ -26,8 +26,8 @@ a lock makes the program wait for it: if the method could not run, the example
 would not end. An example that must show that a method cannot run starts it,
 lets the holder end, and shows the order in which the two ended, which the
 rule forces. How activities are started and how they end is the matter of the
-[activities page](activities.md) of this chapter; here every activity is one
-that the program starts with `start`.
+[activities page](r:conc.activities.model) of this chapter; here every
+activity is one that the program starts with `start`.
 
 ## The lock of a scope
 

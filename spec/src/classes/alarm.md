@@ -13,9 +13,10 @@ comes it sends its target `triggered`, and when it is cancelled before that it
 sends the target `cancel`. The target has to be an implementation of
 [`AlarmNotification`](alarmnotification.md), which states what the target is
 sent and when; this page states how an alarm is made, what its time may be and
-what its own methods answer. How the library runs an alarm beside the program,
-and so at which time the target is reached and by which activity, is specified
-in the environment chapter. The examples do not depend on it: they set an
+what its own methods answer. By which activity the library runs the target is
+specified by [the timer rule](r:conc.activities.timers) of the concurrency
+chapter, and at which time it is reached by [the clock
+rule](r:class.alarm.init.clock). The examples do not depend on it: they set an
 alarm for a time that the program does not wait for and cancel it, or they
 wait on a guard that the target opens, and they print nothing that varies with
 the clock.
@@ -91,7 +92,9 @@ no implementation is reported even when the time is wrong too, and a refused
 alarm is not set. `attachment` can be any object, and is `.nil` when it is
 omitted. The alarm is set when `init` ends normally. A subclass whose `init`
 does not send `init` to its superclass makes an alarm that is not set
-([Deviation 135](r:class.alarm.deviation.135)).
+([Deviation 135](r:class.alarm.deviation.135)). A second `init`, sent after
+the one that `new` sent, is refused, as [Deviation
+162](r:conc.halt.deviation.162) says.
 
 ```rexx
 n = .note~new

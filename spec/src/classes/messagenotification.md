@@ -17,8 +17,8 @@ declares `messageComplete`.
 
 The page specifies what the class is, what an implementation has to answer
 to, and when and how the library sends to it. How the activities that run a
-message and its notifications are scheduled is specified in the environment
-chapter.
+message and its notifications are ordered is specified in [the ordering
+rule](r:conc.activities.order) of the concurrency chapter.
 
 ## The class
 
