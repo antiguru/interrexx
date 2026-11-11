@@ -683,6 +683,11 @@ impl ClassRegistry {
         self.graph.hide(class, name);
     }
 
+    /// `~define` with `.nil` as the method -- see [`ClassGraph::withdraw`].
+    pub fn withdraw_instance_method(&mut self, class: ObjRef, name: &str) {
+        self.graph.withdraw(class, name);
+    }
+
     /// `~delete`, and `Setup.cpp`'s `RemoveMethod` -- see
     /// [`ClassGraph::delete`].
     pub fn delete_instance_method(&mut self, class: ObjRef, name: &str) -> bool {

@@ -715,6 +715,18 @@ impl ClassGraph {
         self.update_instance_sub_classes(class, name.eq_ignore_ascii_case("UNINIT"));
     }
 
+    /// `~define` with `.nil` as the method: [`ClassGraph::hide`] with the
+    /// mark [`MethodSlot::Withdrawn`], which `Class~method` does not answer.
+    pub fn withdraw(&mut self, class: ObjRef, name: &str) {
+        self.classes
+            .get_mut(&class)
+            .expect("withdraw: unknown class")
+            .own_instance_methods
+            .withdraw_method(name);
+        self.copy_instance_behaviour(class);
+        self.update_instance_sub_classes(class, name.eq_ignore_ascii_case("UNINIT"));
+    }
+
     /// `~delete`, and `Setup.cpp`'s `RemoveMethod`: take `name` out of
     /// `class`'s own instance dictionary -- `RexxClass::deleteMethod`
     /// (`ClassClass.cpp:952`). Answers whether there was anything to remove,

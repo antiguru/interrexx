@@ -18,6 +18,10 @@ pub enum MethodSlot {
     /// (`:453`), each test for `.nil` and skip it rather than asking it for
     /// one.
     Hidden,
+    /// What `define` with `.nil` as the method leaves: hides the name from
+    /// the search as [`MethodSlot::Hidden`] does, but `Class~method` finds
+    /// no entry under it. `delete` removes it.
+    Withdrawn,
 }
 
 impl MethodSlot {
@@ -25,7 +29,7 @@ impl MethodSlot {
     fn scope(self) -> Option<ObjRef> {
         match self {
             MethodSlot::Defined { scope, .. } => Some(scope),
-            MethodSlot::Hidden => None,
+            MethodSlot::Hidden | MethodSlot::Withdrawn => None,
         }
     }
 }
@@ -134,6 +138,13 @@ impl MethodDict {
         self.entries.insert(key, vec![MethodSlot::Hidden]);
     }
 
+    /// Replace everything under `name` with a [`MethodSlot::Withdrawn`]
+    /// mark.
+    pub fn withdraw_method(&mut self, name: &str) {
+        let key = name.to_ascii_uppercase();
+        self.entries.insert(key, vec![MethodSlot::Withdrawn]);
+    }
+
     /// Take `name` out of the dictionary entirely -- the oracle's
     /// `MethodDictionary::removeMethod`, whose `bool` says whether there was
     /// anything to remove. `RexxClass::deleteMethod` reads that answer: it
@@ -177,7 +188,7 @@ impl MethodDict {
                     MethodSlot::Defined { scope, method } => {
                         self.add_method(name, scope, method);
                     }
-                    MethodSlot::Hidden => self.add_hidden(name),
+                    MethodSlot::Hidden | MethodSlot::Withdrawn => self.add_hidden(name),
                 }
             }
         }
@@ -217,7 +228,7 @@ impl MethodDict {
                         method,
                     } if defined_at == filter => self.add_method(name, scope, method),
                     MethodSlot::Defined { .. } => {}
-                    MethodSlot::Hidden => self.add_hidden(name),
+                    MethodSlot::Hidden | MethodSlot::Withdrawn => self.add_hidden(name),
                 }
             }
         }
@@ -249,7 +260,7 @@ impl MethodDict {
             .flatten()
             .filter_map(|slot| match slot {
                 MethodSlot::Defined { method, .. } => Some(*method),
-                MethodSlot::Hidden => None,
+                MethodSlot::Hidden | MethodSlot::Withdrawn => None,
             })
     }
 
@@ -285,7 +296,7 @@ impl MethodDict {
         self.entries.iter().flat_map(|(name, list)| {
             list.iter().filter_map(move |slot| match *slot {
                 MethodSlot::Defined { scope, method } => Some((name.as_str(), scope, method)),
-                MethodSlot::Hidden => None,
+                MethodSlot::Hidden | MethodSlot::Withdrawn => None,
             })
         })
     }
@@ -295,7 +306,7 @@ impl MethodDict {
     pub fn lookup(&self, name: &str) -> Option<(ObjRef, MethodId)> {
         match self.slot(name) {
             Some(MethodSlot::Defined { scope, method }) => Some((scope, method)),
-            Some(MethodSlot::Hidden) | None => None,
+            Some(MethodSlot::Hidden | MethodSlot::Withdrawn) | None => None,
         }
     }
 
@@ -311,7 +322,7 @@ impl MethodDict {
         list.iter()
             .filter_map(|e| match *e {
                 MethodSlot::Defined { scope, method } => Some((scope, method)),
-                MethodSlot::Hidden => None,
+                MethodSlot::Hidden | MethodSlot::Withdrawn => None,
             })
             .find(|(scope, _)| *scope == start_scope || visible.contains(scope))
     }
