@@ -184,7 +184,10 @@ impl Timestamp {
         if !(0..=MAX_BASE_DATE).contains(&basedays) {
             return false;
         }
+        // The zone offset is not part of the date; it survives the clear.
+        let offset = self.time_zone_offset;
         *self = Timestamp::clear();
+        self.time_zone_offset = offset;
         let mut remaining = basedays + 1;
         self.year = (remaining / OLYMPIAD_DAYS) * 400;
         remaining -= base_days(self.year);
