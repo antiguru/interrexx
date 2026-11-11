@@ -510,16 +510,16 @@ again safely: a DO or LOOP clause on its second and later turns, which
 includes the turn that finds the loop at its end, an END, a THEN, an ELSE, an
 OTHERWISE, an ITERATE, a SIGNAL of any kind, a CALL ON or a CALL OFF, a
 RETURN, whose stop is the one that follows the clause that made the call,
-whether a CALL or a function call in an expression, an EXIT, and a clause
-that raises a syntax error. A label that [SIGNAL
-ON](r:cond.traps.signal) transfers to after an error is followed by a stop
-like any label, and so is a command whose return code raises ERROR or FAILURE,
-a stop that comes before a trap for the condition runs. The example prints a
-number at each stop. It shows each clause of the rule without a stop: the
-second and third turns of the loop header, the two `end` clauses, `then`,
-`else` and `otherwise`, `iterate`, the CALL ON, the SIGNAL ON and the plain
-SIGNAL, and `x = 1 / 0`, after which the label `oops` is the next thing that
-is shown and stopped at.
+whether a CALL, a function call or a message in an expression, and there is
+none when that clause has no stop, an EXIT, and a clause that raises a syntax
+error. A label that [SIGNAL ON](r:cond.traps.signal) transfers to after an
+error is followed by a stop like any label, and so is a command whose return
+code raises ERROR or FAILURE, a stop that comes before a trap for the
+condition runs. The example prints a number at each stop. It shows each clause
+of the rule without a stop: the second and third turns of the loop header, the
+two `end` clauses, `then`, `else` and `otherwise`, `iterate`, the CALL ON, the
+SIGNAL ON and the plain SIGNAL, and `x = 1 / 0`, after which the label `oops`
+is the next thing that is shown and stopped at.
 
 ```rexx
 .debuginput~destination(.in~new(.array~of('', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '')))

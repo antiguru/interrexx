@@ -1701,10 +1701,10 @@ r[class.package.findprogram]
 named finds, in the absolute form that `new` gives a package for the file, or
 `.nil` when the file is not found. The name is required (`SYNTAX 88.901`), an
 object that [gives no string](r:class.index.string), `.nil` among them, raises
-`88.909`, and a
-second argument raises `93.902`. The search is specified in the environment
-chapter; it starts from the directory of the receiver's file, so packages that
-were loaded from different directories can answer differently.
+`88.909`, and a second argument raises `93.902`. The search is that of [a
+routine call](r:env.search.kinds); it starts from the directory of the
+receiver's file, so packages that were loaded from different directories can
+answer differently.
 
 ```rexx
 f = 'class_package_find_zq.tmp'

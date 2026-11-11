@@ -201,20 +201,19 @@ init 0
 
 r[class.routine.newfile]
 `newFile` makes a routine from the lines of a file, with the arguments, the
-checks, their order and the errors of
-[the `newFile` of `Method`](r:class.method.newfile): the file name and an
-optional context, no third argument (`SYNTAX 93.902`), `.nil` or an object
-that [gives no string](r:class.index.string) as the name raises `88.909`, a
-context that does
+checks, their order and the errors of [the `newFile` of
+`Method`](r:class.method.newfile): the file name and an optional context, no
+third argument (`SYNTAX 93.902`), `.nil` or an object that [gives no
+string](r:class.index.string) as the name raises `88.909`, a context that does
 not fit raises `40.904` before the file is looked for, and a file that cannot
 be read raises `SYNTAX 3.1`. The routine's package is named by the file name
 as it was given. Its source is the lines of the file before the first
 directive, except that a first line that begins with `#!` is not part of it,
 and the directives of the file still make the classes and routines of its
 package, which its code can name. `call` runs the lines before the first
-directive. How the file is searched for is specified in the environment
-chapter. `newFile` sends `init` with no argument to the new object, and a
-subclass of `Routine` makes instances of itself.
+directive. The file is not searched for ([the newFile
+rule](r:env.search.newfile)). `newFile` sends `init` with no argument to the
+new object, and a subclass of `Routine` makes instances of itself.
 
 ```rexx
 f = 'class_routine_newfile_zq.tmp'

@@ -104,14 +104,13 @@ directive in the program would: 231 for `bogus 9` (`SYNTAX 25.924`), 230 for
 ## The program
 
 r[env.invocation.program]
-The program name is a file that the command finds in the way a program called
-by name is found; as [the program rule](r:env.search.program) of the search
-page states. The name that the program reads from `PARSE SOURCE` ([the
-rule](r:instr.parse.source)), and the one that its error reports give, is the
-absolute path of the file that was found, with every `.` and `..` of the path
-resolved, and with a link in the path left as it is. A word that is not valid
-text is a name all the same: names and arguments are the bytes that the host
-gave.
+The program name is a file that the command finds as [the program
+rule](r:env.search.program) of the search page states. The name that the
+program reads from `PARSE SOURCE` ([the rule](r:instr.parse.source)), and the
+one that its error reports give, is the absolute path of the file that was
+found, with every `.` and `..` of the path resolved, and with a link in the
+path left as it is. A word that is not valid text is a name all the same:
+names and arguments are the bytes that the host gave.
 
 r[env.invocation.notfound]
 A program name that no file answers to, or that names a directory, runs

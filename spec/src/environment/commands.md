@@ -587,26 +587,27 @@ as any other argument is: unlike [DIRECTORY with `~`](r:bif.directory.home), a
 value that does not start with a slash is taken from the current directory.
 When the argument as written begins with `~`, the tilde is read before
 anything else. A `~` alone, or followed by a slash or a blank, stands for the
-value of `HOME`. After a slash the rest of the argument follows as usual;
-after a blank the rest is not read. A `~` followed by a name, which runs to
-the first slash or to the end of the argument, stands for the home directory
-of the user of that name in the host's user database. When there is no such
-user, the command is not done by the interpreter: the string goes to the
-shell, as any other string does. A `~` that is not the first character of the
-argument as written, and one that a quote or backslash comes before, is an
-ordinary character. In the rest of the argument every double quote is dropped,
-even one that nothing closes, and so is a backslash, the character after it
-being kept. Nothing else is read: a blank at the end is part of the name, as
-is a `-`, a single quote, a dollar sign or a star. A name that does not start
-with a slash is taken from the current directory. When `HOME` is the null
-string, `cd` with no argument fails as below, and a `~` that stands for `HOME`
-stands for nothing, so that `cd ~` and `cd ~/` make `/` current and `cd ~/x`
-makes `/x` current. When the directory cannot be made current, the command
-answers the number that the host gives the error, as Linux numbers them: `2`
-when there is no such directory, `20` when a part of the name is not a
-directory, `13` when permission is refused. It raises
-[ERROR](r:cond.error.raise) as every nonzero return code does, and leaves the
-current directory as it was.
+value of `HOME`, which is then read as the rest of the argument is, its double
+quotes and backslashes dropped, but not read again for a `~`. After a slash
+the rest of the argument follows as usual; after a blank the rest is not read.
+A `~` followed by a name, which runs to the first slash or to the end of the
+argument, stands for the home directory of the user of that name in the host's
+user database. When there is no such user, the command is not done by the
+interpreter: the string goes to the shell, as any other string does. A `~`
+that is not the first character of the argument as written, and one that a
+quote or backslash comes before, is an ordinary character. In the rest of the
+argument every double quote is dropped, even one that nothing closes, and so
+is a backslash, the character after it being kept. Nothing else is read: a
+blank at the end is part of the name, as is a `-`, a single quote, a dollar
+sign or a star. A name that does not start with a slash is taken from the
+current directory. When `HOME` is the null string, `cd` with no argument fails
+as below, and a `~` that stands for `HOME` stands for nothing, so that `cd ~`
+and `cd ~/` make `/` current and `cd ~/x` makes `/x` current. When the
+directory cannot be made current, the command answers the number that the host
+gives the error, as Linux numbers them: `2` when there is no such directory,
+`20` when a part of the name is not a directory, `13` when permission is
+refused. It raises [ERROR](r:cond.error.raise) as every nonzero return code
+does, and leaves the current directory as it was.
 
 ```rexx
 e = 'ENVIRONMENT'
