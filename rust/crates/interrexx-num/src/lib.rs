@@ -858,6 +858,15 @@ impl Number {
         }
     }
 
+    /// [`into_round`] that also refuses a result whose carry took its
+    /// exponent past the limit, the way arithmetic does (`Overflow`, SYNTAX
+    /// 42.901). The builtins that round their target use this.
+    pub fn into_round_checked(self, digits: u64) -> Result<Self, ArithError> {
+        let rounded = self.into_round(digits);
+        rounded.check_range()?;
+        Ok(rounded)
+    }
+
     /// [`round_to`] for a value the caller already owns, where "unchanged"
     /// can hand the value straight back instead of copying it.
     pub fn into_round(self, digits: u64) -> Self {

@@ -85,14 +85,23 @@ pub(crate) fn abs(
     args: Args<'_>,
 ) -> Result<ObjRef, Failure> {
     let value = target_number(interp, name, args)?;
-    Ok(abs_of(interp, &value))
+    abs_of(interp, &value)
 }
 
 /// [`abs`]'s answer once its target is a `Number`, shared with `String~abs`
 /// the way [`sign_of`] is shared with `String~sign`.
-pub(crate) fn abs_of(interp: &mut Interp, value: &Number) -> ObjRef {
+pub(crate) fn abs_of(interp: &mut Interp, value: &Number) -> Result<ObjRef, Failure> {
     let Numeric { digits, form, .. } = current(interp);
-    interp.number(value.abs().into_round(digits), saturate(digits), form)
+    let rounded = rounded_target(value.abs(), digits)?;
+    Ok(interp.number(rounded, saturate(digits), form))
+}
+
+/// The target rounded to DIGITS, or the 42.901 that arithmetic raises when
+/// the rounding carries its exponent past the limit.
+fn rounded_target(value: Number, digits: u64) -> Result<Number, Failure> {
+    value
+        .into_round_checked(digits)
+        .map_err(|error| Failure::from(Raised::from(error)))
 }
 
 /// The `NUMERIC DIGITS` in force, for a caller that needs it to ask a
@@ -138,15 +147,16 @@ pub(crate) fn sign(
     args: Args<'_>,
 ) -> Result<ObjRef, Failure> {
     let value = target_number(interp, name, args)?;
-    Ok(sign_of(interp, &value))
+    sign_of(interp, &value)
 }
 
 /// [`sign`]'s answer once its target is a `Number`, shared with `String~sign`
 /// so the builtin and the method cannot come to disagree.
-pub(crate) fn sign_of(interp: &mut Interp, value: &Number) -> ObjRef {
+pub(crate) fn sign_of(interp: &mut Interp, value: &Number) -> Result<ObjRef, Failure> {
     let Numeric { digits, form, .. } = current(interp);
-    let answer = Number::parse(&value.signum().to_string()).expect("-1, 0 and 1 are all numbers");
-    interp.number(answer, saturate(digits), form)
+    let rounded = rounded_target(value.clone(), digits)?;
+    let answer = Number::parse(&rounded.signum().to_string()).expect("-1, 0 and 1 are all numbers");
+    Ok(interp.number(answer, saturate(digits), form))
 }
 
 // ---- TRUNC and FORMAT ----
@@ -175,6 +185,7 @@ pub(crate) fn trunc_of(
     places: Option<i64>,
 ) -> Result<ObjRef, Failure> {
     let Numeric { digits, .. } = current(interp);
+    let value = rounded_target(value.clone(), digits)?;
     let places = padding_width(places.unwrap_or(0))?;
     Ok(interp.integer_text(value.trunc(digits, places).into_bytes(), digits))
 }
@@ -212,6 +223,7 @@ pub(crate) fn format_over(
     expt: Option<i64>,
 ) -> Result<ObjRef, Failure> {
     let Numeric { digits, form, .. } = current(interp);
+    let value = &rounded_target(value.clone(), digits)?;
     // `before` and `after` are always materialised -- the interpreter's
     // `leadingSpaces` and `trailingDecimalZeros` are computed on every path
     // -- so both are reserved from the allocator before anything is built.
@@ -333,9 +345,9 @@ pub(crate) fn max_min_over(
     message: bool,
 ) -> Result<ObjRef, Failure> {
     let Numeric { digits, fuzz, form } = current(interp);
+    let mut best = rounded_target(target.clone(), digits)?;
     let (converted, quiet) = extreme_arguments(interp, &target_text, rest, digits)?;
     let rest = converted.as_ref();
-    let mut best = target.clone().into_round(digits);
     let mut best_text = target_text;
     for (index, slot) in rest.iter().enumerate() {
         let Some(candidate) = slot else {

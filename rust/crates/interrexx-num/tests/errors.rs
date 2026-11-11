@@ -306,3 +306,21 @@ fn additional_and_message_agree_on_every_placeholder() {
         }
     }
 }
+
+#[test]
+fn rounding_a_carry_past_the_exponent_limit_is_an_overflow() {
+    // `abs('99999e999999995')` at DIGITS 1: the carry makes 1E+1000000000.
+    let err = n("99999e999999995").into_round_checked(1).unwrap_err();
+    assert_eq!(
+        err,
+        ArithError::Overflow {
+            adjusted_exponent: 1_000_000_000
+        }
+    );
+    assert_eq!(err.sub_code(), (42, 901));
+    // A number that stays inside the range is rounded and answered.
+    assert_eq!(
+        n("94e999999998").into_round_checked(1).unwrap(),
+        n("9e999999999")
+    );
+}
