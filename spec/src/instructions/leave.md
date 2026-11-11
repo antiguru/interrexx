@@ -62,6 +62,40 @@ after 2
 out
 ```
 
+r[instr.leave.trap]
+A CALL trap that is waiting when a LEAVE runs is called at the LEAVE, once the
+block has been left. A condition that the routine raises is not answered at
+that point again: its routine is called after the next clause that ends, as
+[the rule for CALL traps](r:cond.traps.call) puts it for any clause. In the
+example the routine `h1` is called after the `RAISE` returns, at the line of
+the call, `h2` is called at the LEAVE, and `h3`, which `h2` raised, is called
+after the clause that follows the loop.
+
+```rexx
+call on user c1 name h1
+call on user c2 name h2
+call on user c3 name h3
+do forever
+  zr = raiser()
+  leave
+end
+say 'after' zr
+say 'end'
+exit
+raiser: raise user c1 return 5
+h1: say 'h1' sigl; raise user c2 return
+h2: say 'h2' sigl; raise user c3 return
+h3: say 'h3' sigl; return
+```
+
+```output
+h1 5
+h2 6
+after 5
+h3 8
+end
+```
+
 ## Which block it selects
 
 r[instr.leave.target]

@@ -2604,10 +2604,11 @@ impl Interp {
             Flow::Iterate(_, origin) | Flow::Leave(_, origin) => Some(origin.index),
             _ => None,
         };
-        // An `ITERATE` owes no boundary of its own before the loop's re-test
-        // (`Interp::leave_stepped_clause`): the re-test's clause delivers what
-        // is queued, and what its handlers queue waits for the next boundary.
-        let iterate = matches!(&arrival, Flow::Iterate(..));
+        // The one boundary of a `LEAVE` or an `ITERATE` clause has run by now
+        // (`Interp::leave_stepped_clause` for a `LEAVE`, the loop's re-test
+        // for an `ITERATE`), so what its handlers queued waits for the next
+        // clause's boundary; only what the debug pause queues is delivered here.
+        let boundary_done = matches!(&arrival, Flow::Iterate(..) | Flow::Leave(..));
         let paused_clause = self.save_clause_state();
         let indents = self
             .activity
@@ -2638,7 +2639,7 @@ impl Interp {
             });
         }
         let exit = if self.activity.pending_traps.is_empty()
-            || (iterate && self.activity.pending_traps.len() == queued_before_pause)
+            || (boundary_done && self.activity.pending_traps.len() == queued_before_pause)
         {
             None
         } else {
