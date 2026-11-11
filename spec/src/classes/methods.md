@@ -1456,7 +1456,7 @@ say .c~new~foo '|' .c~new~foo(1)
   return a~dimension
 ```
 
-```output defect=#130
+```output
 1 | 1
 ```
 
