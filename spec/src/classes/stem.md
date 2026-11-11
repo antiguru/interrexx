@@ -733,8 +733,21 @@ exit
 bad: say condition('o')~code
 ```
 
-```output defect=#171
+```output
 3
+97.1
+```
+
+```rexx
+s = .stem~new('N.')
+s[] = 'abc'
+signal on syntax name bad
+say s~unknown('length', 1)
+exit
+bad: say condition('o')~code
+```
+
+```output
 97.1
 ```
 

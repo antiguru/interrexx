@@ -457,7 +457,7 @@ fn forward_to_value(
     let caller = interp.caller();
     let probe = 0u8;
     interp.forwarded(&raw const probe, receiver, |interp| {
-        interp.send_message(value, message, None, args, caller)
+        interp.send_message_as_given(value, message, args, caller)
     })
 }
 
@@ -538,6 +538,12 @@ pub(in crate::dispatch) fn stem_unknown(
     let Some(arguments) = args.get(1).copied().flatten() else {
         return Err(Raised::missing_method_argument(2).into());
     };
+    if name.iter().any(u8::is_ascii_lowercase) {
+        let value = stem_value(interp, receiver);
+        if let Some(refusal) = interp.unanswered_name_as_given(value, &name) {
+            return Err(refusal);
+        }
+    }
     let forwarded = array_argument(interp, arguments, ArrayArgument::Positional)?;
     forward_to_value(interp, receiver, &name, &forwarded)
 }
