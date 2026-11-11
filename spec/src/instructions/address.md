@@ -558,7 +558,7 @@ say o.0 o.1 o.2 o.3 o.4
   return 'viaMS'
 ```
 
-```output defect=#107
+```output
 4 q r 5 viaMS
 ```
 
