@@ -19,8 +19,8 @@ modification.
 ## Arguments
 
 r[util.sysgetfiledatetime.args]
-`filename` is required and `timesel` is optional. The call follows [the native
-call rule](r:bif.index.call.native): a missing `filename` raises `SYNTAX
+`filename` is required and `timesel` is optional. The call follows the
+argument rule (rule `util.index.args`): a missing `filename` raises `SYNTAX
 88.901`, a third argument raises `SYNTAX 88.922`, and an argument that is an
 object other than a string is read by its string value, or raises `SYNTAX
 88.909` when it has none. A `timesel` whose place is empty, as in
@@ -67,10 +67,12 @@ sysgetfiledatetime(f, .mutablebuffer~new('write')) -> 2031-03-07 14:05:09
 r[util.sysgetfiledatetime.answer]
 The answer for a file or directory that exists is its time in the form
 `YYYY-MM-DD HH:MM:SS`, in local time on a 24-hour clock, with the year in four
-digits and every other field in two. The file may be a regular file, a
-directory or any other kind of entry; a symbolic link is followed, so the
-answer is the time of its target. A name that is `~` or starts with `~/`
-starts at the directory named by the environment variable `HOME`.
+digits and every other field in two; how a year below 1000 is written is not
+specified. The file may be a regular file, a directory or any other kind of
+entry; a symbolic link is followed, so the answer is the time of its target. A
+name is read as every name is (rule `util.index.names`; Deviation 34, rule
+`util.index.deviation.34`, says where ooRexx removes a different component for
+a `..`), and a name that starts with `~` as rule `util.index.home` says.
 
 ```rexx
 d = 'c2zqgt01'
@@ -89,7 +91,7 @@ say sysgetfiledatetime(d'/sub/')
 a = sysgetfiledatetime(f, 'A')
 say translate(a, '##########', '0123456789')
 say (a == sysgetfiledatetime(f, 'a')) (a == sysgetfiledatetime(f, 'ACCESS'))
-call syssetfiledatetime f, '2040-01-02', '03:04:05'
+call syssetfiledatetime f, '2037-01-02', '03:04:05'
 say (sysgetfiledatetime(f, 'A') == a) sysgetfiledatetime(f, 'W')
 call sysfiledelete f
 call sysrmdir d'/sub'
@@ -105,7 +107,7 @@ call sysrmdir d
 1999-12-31 23:59:58
 ####-##-## ##:##:##
 1 1
-1 2040-01-02 03:04:05
+1 2037-01-02 03:04:05
 ```
 
 r[util.sysgetfiledatetime.timesel]
@@ -155,9 +157,9 @@ sysgetfiledatetime(f, 'wX') -> 2031-03-07 14:05:09
 r[util.sysgetfiledatetime.fail]
 The answer is -1 when `filename` names nothing: a name that no file has, a
 path through a file, a path through a directory the program may not search,
-the null string, and a name with wildcards, which is not expanded and is taken
-as a name. Blanks at the start or the end of `filename` are part of the name.
-No error is raised.
+the null string, and a name with wildcards, which no function expands (rule
+`util.index.names`). Blanks at the start or the end of `filename` are part of
+the name. No error is raised.
 
 ```rexx
 d = 'c2zqgt04'
