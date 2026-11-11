@@ -56,7 +56,7 @@ pub(super) fn raised_when_case_not_logical(found: &[u8]) -> Raised {
 
 /// 34.906: a supplier's `AVAILABLE` answer is not exactly `0` or `1`
 /// (`Error_Logical_value_supplier`, `SupplierClass.cpp:158`).
-pub(super) fn raised_available_not_logical(found: &[u8]) -> Raised {
+pub(crate) fn raised_available_not_logical(found: &[u8]) -> Raised {
     Raised::syntax(34, 906, vec![found.to_vec()])
 }
 

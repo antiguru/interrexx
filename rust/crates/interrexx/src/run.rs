@@ -38,7 +38,7 @@ mod indent;
 pub(crate) use indent::{all_indents, static_indent};
 
 // The `Raised` constructors for the conditions the instruction loop raises.
-mod raised;
+pub(crate) mod raised;
 use raised::{
     raise_syntax_condition, raised_available_not_logical, raised_digit_led, raised_dot_led,
     raised_for_count_not_whole, raised_guard_not_logical, raised_iterate_no_loop,
