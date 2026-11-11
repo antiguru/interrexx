@@ -269,11 +269,11 @@ dropped: 1
 .environment~back = .nil
 x = .phoenix~new
 drop x
-do 5
+do 20 until .environment~count > 0
   call gc 'force'
 end
 .environment~back = .nil
-do 5
+do 20
   call gc 'force'
 end
 say 'at most once:' (.environment~count <= 1)

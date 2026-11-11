@@ -1090,9 +1090,10 @@ LINES with a name that denotes the standard input, output or error stream, and
 no option or an option other than `C`, sends the message `LINES` to that entry
 of `.local` and answers 0 when the string value of the answer is a number
 equal to zero and 1 otherwise, whatever the answer is: `abc`, `1.5`, `1E10`
-and a whole number of more than nine digits answer 1, and so does an answer
-that is not a string and whose string value is not zero. ooRexx answers each
-of these as the object answered it, an object that is not a string included.
+and a whole number of more than nine digits answer 1, and so does an object
+that is not a string whose string value is one of these, such as an Array.
+ooRexx answers each of
+these as the object answered it, an object that is not a string included.
 
 ## 145. The state after a failed open with BINARY and no RECLENGTH
 

@@ -909,11 +909,12 @@ r[env.objects.deviation.144]
 LINES in normal mode answers 1 for every answer of the object it sends `LINES`
 to that does not equal zero as a number: one that is not a number, such as
 `abc`, one that is not a whole number, such as `1.5`, one that is a whole
-number of more than nine digits, such as `1E10`, and one that is not a string
-and whose string value is not zero. ooRexx answers each of these as the object
-answered it, an object that is not a string included, and answers 0 or 1 as
-the rule says only for an answer that it reads as a whole number of no more
-than nine digits. The example is not run against it.
+number of more than nine digits, such as `1E10`, and an object that is not a
+string whose string value is one of these, such as an Array, whose string
+value is not a number. ooRexx answers each of these as the object answered
+it, an object that is not a string included, and answers 0 or 1 as the rule
+says only for an answer that it reads as a whole number of no more than nine
+digits. The example is not run against it.
 
 ```rexx
 s = .spy~new
