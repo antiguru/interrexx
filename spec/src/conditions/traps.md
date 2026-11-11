@@ -206,7 +206,7 @@ say 'not reached'
 a: say 'a' condition('c') condition('s')
 ```
 
-```output defect=#110
+```output
 s SYNTAX OFF
 a SYNTAX OFF
 ```
