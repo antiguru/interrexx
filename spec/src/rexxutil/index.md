@@ -643,6 +643,11 @@ does), a whole-number argument of
 SysStemCopy, SysStemDelete, SysStemInsert or SysStemSort that fails its check,
 and a `mode` of SysMkDir that fails any of its checks before the count, and
 the count before a `filler` or an `option` that it does not allow.
+SysOpenEventSem and SysOpenMutexSem are the exception: in both engines they
+report an omitted name (`SYNTAX 88.901`) and an object that has no string
+value (`SYNTAX 88.909`) before the count, as [the event
+semaphore](syseventsem.md) and [the mutex semaphore](sysmutexsem.md) pages
+show.
 
 ```rexx
 signal on syntax name a
