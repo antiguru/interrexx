@@ -15,9 +15,9 @@ the inserted string to a given length, and answers the combined string.
 ## Arguments
 
 r[bif.insert.method]
-INSERT is a builtin that runs as a String method, and `target`, its second
-argument, is the receiver; `new`, `n`, `length` and `pad` become the message's
-arguments, in that order. `new` and `target` are
+INSERT is a builtin that runs as a [String method](r:class.string.builtins),
+and `target`, its second argument, is the receiver; `new`, `n`, `length` and
+`pad` become the message's arguments, in that order. `new` and `target` are
 [strings](r:conv.string.null), `n` is a [whole number](r:conv.whole.form) of
 the kind [the next rule](r:bif.insert.n.check) describes, `length` is a
 [length](r:conv.length.check), and `pad` is a [pad](r:conv.pad). The arguments

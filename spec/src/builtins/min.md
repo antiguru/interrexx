@@ -15,11 +15,11 @@ digits.
 ## Arguments
 
 r[bif.min.method]
-MIN is a builtin that runs as a String method, and its first number is the
-receiver; the other numbers become the message's arguments, in their order.
-The numbers, their checks and the argument count are those of
-[a list of numbers](r:bif.index.num.list): at least one number is required
-and there is no most.
+MIN is a builtin that runs as a [String method](r:class.string.builtins), and
+its first number is the receiver; the other numbers become the message's
+arguments, in their order. The numbers, their checks and the argument count
+are those of [a list of numbers](r:bif.index.num.list): at least one number is
+required and there is no most.
 
 ```rexx
 say min(3, 8, 5) 3~min(8, 5) '3'~min('8', '5') (9)~min

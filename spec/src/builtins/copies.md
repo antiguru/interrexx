@@ -15,13 +15,13 @@ COPIES repeats a string: it answers the string written one after another
 ## Arguments
 
 r[bif.copies.method]
-COPIES is a builtin that runs as a String method, and `string`, its first
-argument, is the receiver; `n` becomes the message's argument. `string` is a
-[string](r:conv.string.null) and `n` is a
-[whole number](r:conv.whole.form) of the kind
-[the next rule](r:bif.copies.n.check) describes. The argument count is
-checked by the [builtin call rules](r:bif.index.call.count): both arguments
-are required and two is the most.
+COPIES is a builtin that runs as a [String method](r:class.string.builtins),
+and `string`, its first argument, is the receiver; `n` becomes the message's
+argument. `string` is a [string](r:conv.string.null) and `n` is a [whole
+number](r:conv.whole.form) of the kind [the next rule](r:bif.copies.n.check)
+describes. The argument count is checked by the [builtin call
+rules](r:bif.index.call.count): both arguments are required and two is the
+most.
 
 ```rexx
 say copies('abc', 2) 'abc'~copies(2)

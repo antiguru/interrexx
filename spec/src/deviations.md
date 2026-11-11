@@ -1011,14 +1011,15 @@ a line that is not in the source. `source` of a `Routine` does the same.
 ## 135. An object whose init never ran raises an error
 
 A class that a program declares as a subclass of `Alarm`, `Ticker`,
-`RexxQueue`, `Supplier` or `StreamSupplier`, whose `init` does not send `init`
-to its superclass, makes an object that is not set up, and every instance
-method of the class other than `init` that the object is sent raises `SYNTAX
-98.901`. ooRexx answers `triggered` of such an alarm with the string
+`RexxQueue`, `Supplier`, `StreamSupplier` or `Stream`, whose `init` does not
+send `init` to its superclass, makes an object that is not set up, and every
+instance method of the class other than `init` that the object is sent raises
+`SYNTAX 98.901`. ooRexx answers `triggered` of such an alarm with the string
 `TRIGGERED` and raises `SYNTAX 34.902` from its `cancel`, answers the readers
 of such a ticker without an error and raises `SYNTAX 88.914` from its
 `cancel`, and its `empty` of such a `RexxQueue` and its `available` of such a
-`Supplier` end the interpreter with a segmentation fault.
+`Supplier` end the interpreter with a segmentation fault, as do the `state`,
+`description`, `qualify` and `query` of such a `Stream`.
 
 ## 136. A copy of a MutexSemaphore is free
 
@@ -1040,3 +1041,20 @@ is set to the null string, as it does when it is not set. ooRexx answers a
 `allItems` or `allIndexes` collected, so the next call of either collects the
 entries of the new arrays. ooRexx answers the arrays collected before the
 `init`.
+
+## 139. The size of a stream that another stream wrote to
+
+A `Stream` answers `query('size')`, `chars` and `lines` for the file as it is
+when it is asked, also after data that another stream on the same file wrote
+and flushed. ooRexx answers the size that the stream found when it first read
+or was first asked, so that its size and `chars` do not count the data written
+since, and its `lines` can miss it.
+
+## 140. A supplier of a stream read part of the way into a line
+
+The `supplier` of a `Stream` that was read part of the way into a line is at
+that line, with the number of the line as its index and the rest of the line,
+as a plain `lineIn` answers it there, as its first item. ooRexx answers the
+whole of the line when the read position is in the first line. It sends
+`lineIn` with the number of the line, where this book sends it with no
+argument.

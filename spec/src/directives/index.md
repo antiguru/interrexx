@@ -38,11 +38,13 @@ directive makes and what the options on it mean.
 A note on the examples. A directive cannot be run by INTERPRET, and a fault in
 one of them ends a program file before it writes anything. Where an example
 shows which condition a directive raises, it builds the text of a package with
-the `Package` class and catches the condition that building it raises. That
-class has its own page in the classes chapter, so the examples use it for one
-thing only: `.package~new(name, lines)` translates the lines as a package,
-installs it as [the installation rule](r:dir.index.install) says and runs its
-instructions before the next clause of the caller.
+the [`Package` class](r:class.package.new) and catches the condition that
+building it raises. That class has [its own page](../classes/package.md) in
+the classes chapter, so the examples use it for one thing only:
+[`.package~new(name, lines)`](r:class.package.new.install) translates the
+lines as a package, installs it as [the installation
+rule](r:dir.index.install) says and runs its instructions before the next
+clause of the caller.
 
 ## What a directive is
 

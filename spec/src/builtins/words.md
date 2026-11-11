@@ -14,11 +14,11 @@ WORDS answers how many words a string has. Words are those of
 ## Arguments
 
 r[bif.words.method]
-WORDS is a builtin that runs as a String method, and `string`, its only
-argument, is the receiver; the message takes no other argument. `string`
-is a [string](r:conv.string.null), so no value of it raises an error. The
-argument count is checked by the [builtin call rules](r:bif.index.call.count):
-one is required and one is the most.
+WORDS is a builtin that runs as a [String method](r:class.string.builtins),
+and `string`, its only argument, is the receiver; the message takes no other
+argument. `string` is a [string](r:conv.string.null), so no value of it raises
+an error. The argument count is checked by the [builtin call
+rules](r:bif.index.call.count): one is required and one is the most.
 
 ```rexx
 say words('abc def') 'abc def'~words

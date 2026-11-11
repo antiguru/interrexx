@@ -9,10 +9,12 @@ rexxref: "Builtin Classes > Utility Classes > StreamSupplier Class; Builtin Clas
 A `StreamSupplier` is a [`Supplier`](supplier.md) over the lines of a stream.
 Its entries are the lines that are left to read, the index of an entry is the
 number of its line in the stream, and the item is the text of the line without
-its line end. The `supplier` method of a stream answers one; what a stream is
-and how it reads and writes is specified in the stream chapter, and this page
-states only what an example on a file that the example writes and deletes
-shows. The examples write a file under a name of their own, and remove it.
+its line end, or the rest of it for the first entry ([Deviation
+140](r:class.stream.deviation.140)). The `supplier` method of a stream answers
+one; what a stream is and how it reads and writes is specified in the stream
+chapter, and this page states only what an example on a file that the example
+writes and deletes shows. The examples write a file under a name of their own,
+and remove it.
 
 ## The class
 
@@ -75,15 +77,17 @@ MINE first
 ## Walking the lines
 
 r[class.streamsupplier.entry]
-A new supplier is at the line that the stream is to read next: line 1 for a
-stream that was not read from yet, and the line after the last one read for
-one that was. `index` answers the number of the line, `item` its text, and
-`available` answers 1. Making the supplier reads that line, so the stream's
-read position is after it. A stream that has no line left, such as an empty
-file, and one that cannot be read, such as a file that does not exist, gives a
-supplier that is not available, and no error. An empty line is an item that is
-the empty string, and the last line is an item whether or not it ends with a
-line end.
+A new supplier is at the read position of the stream: line 1 for a stream that
+was not read from yet, and the line after the last whole line read for one
+that was. A stream that was read part of the way into a line gives a supplier
+that is at that line, whose first item is the rest of it, as a plain `lineIn`
+would answer ([Deviation 140](r:class.stream.deviation.140)). `index` answers
+the number of the line, `item` its text, and `available` answers 1. Making the
+supplier reads that line, so the stream's read position is after it. A stream
+that has no line left, such as an empty file, and one that cannot be read,
+such as a file that does not exist, gives a supplier that is not available,
+and no error. An empty line is an item that is the empty string, and the last
+line is an item whether or not it ends with a line end.
 
 ```rexx
 f = 'spec-streamsupplier-entry-zq.tmp'
@@ -180,9 +184,9 @@ leave the supplier at its end and answer the same arrays whenever they are
 sent again, as [the rule of `Supplier`](r:class.supplier.allitems) says.
 `supplier` answers the supplier itself. `copy` answers another supplier of the
 same class at the same line, over the same stream: each of the two moves on
-its own, and a line is always read by its number, so after the copy has moved
-the original reads the line that follows its own, and not the one after the
-copy's.
+its own, and every line after the first is read by its number, so after the
+copy has moved the original reads the line that follows its own, and not the
+one after the copy's.
 
 ```rexx
 f = 'spec-streamsupplier-rest-zq.tmp'

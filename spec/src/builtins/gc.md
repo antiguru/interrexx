@@ -19,12 +19,12 @@ is the argument and the answer.
 ## Arguments
 
 r[bif.gc.args]
-`force` is optional. GC does not run as a String method: sending the message
-`GC` to a string raises `SYNTAX 97.1`. The [call
-rules](r:bif.index.call.count) for the number of arguments hold: a second
-argument raises `SYNTAX 40.4`, even when the first is omitted. A trailing
-omitted place adds nothing to the count, so `GC(,)` is a call without an
-argument.
+`force` is optional. GC does not run as a [String
+method](r:class.string.builtins): sending the message `GC` to a string raises
+`SYNTAX 97.1`. The [call rules](r:bif.index.call.count) for the number of
+arguments hold: a second argument raises `SYNTAX 40.4`, even when the first is
+omitted. A trailing omitted place adds nothing to the count, so `GC(,)` is a
+call without an argument.
 
 ```rexx
 signal on syntax name a

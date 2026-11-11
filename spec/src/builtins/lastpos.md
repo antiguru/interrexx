@@ -17,14 +17,15 @@ the front.
 ## Arguments
 
 r[bif.lastpos.method]
-LASTPOS is a builtin that runs as a String method, and `haystack`, its second
-argument, is the receiver; `needle`, `start` and `length` become the
-message's arguments, in that order. `needle` and `haystack` are
-[strings](r:conv.string.null), `start` is a [position](r:conv.position.check)
-and `length` is a [length](r:conv.length.check). The arguments are checked in
-the [order](r:conv.check.order) the conventions give, and the argument count
-by the [builtin call rules](r:bif.index.call.count): two are required and
-four is the most.
+LASTPOS is a builtin that runs as a [String method](r:class.string.builtins),
+and `haystack`, its second argument, is the receiver; `needle`, `start` and
+`length` become the message's arguments, in that order. `needle` and
+`haystack` are [strings](r:conv.string.null), `start` is a
+[position](r:conv.position.check) and `length` is a
+[length](r:conv.length.check). The arguments are checked in the
+[order](r:conv.check.order) the conventions give, and the argument count by
+the [builtin call rules](r:bif.index.call.count): two are required and four is
+the most.
 
 ```rexx
 say lastpos('/', 'a/b/c') 'a/b/c'~lastpos('/')

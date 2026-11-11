@@ -292,8 +292,8 @@ and a position inside a DO, an IF or a SELECT is not the first. A misplaced
 EXPOSE raises `SYNTAX 99.907` when the program is read, so no clause of the
 program runs. The text of an INTERPRET raises `SYNTAX 99.908` when the
 INTERPRET runs, whether or not the method started with an EXPOSE. A program
-that reads the same source with `.method~new` shows the code, because the
-error is raised at that call.
+that reads the same source with [`.method~new`](r:class.method.new.source)
+shows the code, because the error is raised at that call.
 
 ```rexx
 say 'before'

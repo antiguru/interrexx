@@ -24,10 +24,10 @@ not specified.
 
 r[bif.qualify.args]
 `name` is a [string](r:conv.string.null), the name of a file or directory.
-QUALIFY is not a String method. It takes one argument, by the
-[call rules](r:bif.index.call.count): a call with none raises `SYNTAX 40.3`,
-and a call with a second one raises `SYNTAX 40.4`. A name that is not a string
-is used by its string value.
+QUALIFY is not a [String method](r:class.string.builtins). It takes one
+argument, by the [call rules](r:bif.index.call.count): a call with none raises
+`SYNTAX 40.3`, and a call with a second one raises `SYNTAX 40.4`. A name that
+is not a string is used by its string value.
 
 ```rexx
 signal on syntax name a

@@ -14,10 +14,10 @@ and `1` above it.
 ## Arguments
 
 r[bif.sign.method]
-SIGN is a builtin that runs as a String method, and `number`, its only
-argument, is the receiver. `number` is a [number](r:bif.index.num.arg). The
-argument count is checked by the [builtin call rules](r:bif.index.call.count):
-one is required and one is the most.
+SIGN is a builtin that runs as a [String method](r:class.string.builtins), and
+`number`, its only argument, is the receiver. `number` is a
+[number](r:bif.index.num.arg). The argument count is checked by the [builtin
+call rules](r:bif.index.call.count): one is required and one is the most.
 
 ```rexx
 say sign(-3) (-3)~sign '-3'~sign

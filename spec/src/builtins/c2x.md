@@ -15,11 +15,11 @@ string: two for each character, in capital letters.
 ## Arguments
 
 r[bif.c2x.method]
-C2X is a builtin that runs as a String method, and `string`, its only
-argument, is the receiver. `string` is a [string](r:conv.string.null), so no
-value of it raises an error. The argument count is checked by the
-[builtin call rules](r:bif.index.call.count): one is required and one is the
-most.
+C2X is a builtin that runs as a [String method](r:class.string.builtins), and
+`string`, its only argument, is the receiver. `string` is a
+[string](r:conv.string.null), so no value of it raises an error. The argument
+count is checked by the [builtin call rules](r:bif.index.call.count): one is
+required and one is the most.
 
 ```rexx
 say c2x('A') 'A'~c2x

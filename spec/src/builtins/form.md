@@ -17,9 +17,9 @@ r[bif.form.args]
 FORM takes no arguments. The argument count is checked by the [builtin call
 rules](r:bif.index.call.count): none is required and none is the most, so a
 call with an argument raises `SYNTAX 40.4`, whatever its value, while a call
-with only omitted places counts as a call with no arguments. FORM does not
-run as a String method: sending the message `FORM` to a string raises
-`SYNTAX 97.1`.
+with only omitted places counts as a call with no arguments. FORM does not run
+as a [String method](r:class.string.builtins): sending the message `FORM` to a
+string raises `SYNTAX 97.1`.
 
 ```rexx
 say form() form( ) form(,)

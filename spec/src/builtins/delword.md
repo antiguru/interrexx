@@ -16,9 +16,10 @@ word count, and answers what is left. Words are those of
 ## Arguments
 
 r[bif.delword.method]
-DELWORD is a builtin that runs as a String method, and `string`, its first
-argument, is the receiver; `n` and `length` become the message's arguments, in
-that order. `string` is a [string](r:conv.string.null), `n` is a [word
+DELWORD is a builtin that runs as a [String method](r:class.string.builtins),
+and `string`, its first argument, is the receiver; `n` and `length` become the
+message's arguments, in that order. `string` is a
+[string](r:conv.string.null), `n` is a [word
 number](r:bif.index.words.number), and `length` is a
 [length](r:conv.length.check) that counts words. The arguments are checked in
 the [order](r:conv.check.order) the conventions give, and the argument count

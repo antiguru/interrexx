@@ -18,13 +18,13 @@ for, one when `length` is omitted.
 
 r[bif.charin.args]
 `name` is a [string](r:conv.string.null) that names the stream; when it is
-omitted or null, the [standard input](r:bif.index.stream.std) is read.
-`start` and `length` are [whole-number arguments](r:bif.index.stream.args)
-whose [value](r:bif.index.stream.value) the stream rules give.
-CHARIN is not a String method. It takes three arguments at the most, by the
-[call rules](r:bif.index.call.too-many), and none is required. `start` is
-checked as the [stream rules](r:bif.index.stream.start) say, and `length` must
-not be negative.
+omitted or null, the [standard input](r:bif.index.stream.std) is read. `start`
+and `length` are [whole-number arguments](r:bif.index.stream.args) whose
+[value](r:bif.index.stream.value) the stream rules give. CHARIN is not a
+[String method](r:class.string.builtins). It takes three arguments at the
+most, by the [call rules](r:bif.index.call.too-many), and none is required.
+`start` is checked as the [stream rules](r:bif.index.stream.start) say, and
+`length` must not be negative.
 
 ```rexx
 f = 'spec-charin-args.tmp'

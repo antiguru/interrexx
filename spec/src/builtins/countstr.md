@@ -14,12 +14,12 @@ two that share a character.
 ## Arguments
 
 r[bif.countstr.method]
-COUNTSTR is a builtin that runs as a String method, and `haystack`, its
-second argument, is the receiver; `needle` becomes the message's argument.
-Both are [strings](r:conv.string.null), and the function form takes `needle`
-first. The argument count is checked by the
-[builtin call rules](r:bif.index.call.count): both arguments are required and
-two is the most.
+COUNTSTR is a builtin that runs as a [String method](r:class.string.builtins),
+and `haystack`, its second argument, is the receiver; `needle` becomes the
+message's argument. Both are [strings](r:conv.string.null), and the function
+form takes `needle` first. The argument count is checked by the [builtin call
+rules](r:bif.index.call.count): both arguments are required and two is the
+most.
 
 ```rexx
 say countstr('an', 'banana') 'banana'~countstr('an')

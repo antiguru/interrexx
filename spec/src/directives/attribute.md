@@ -13,8 +13,9 @@ directive with no code of its own generates both methods, and a directive with
 GET or SET takes the code of that one method from its section. The options
 that set who may send the messages and how they are guarded are the ones of
 [::METHOD](method.md), and this page names them without restating them. What a
-method object does once it exists, and the methods of `Class` that add one to
-a class, belong to the classes chapter.
+[method object](r:class.method.creation) does once it exists, and the methods
+of `Class` that [add one to a class](r:class.class.define), belong to the
+classes chapter.
 
 ## The generated methods
 

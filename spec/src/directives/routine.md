@@ -288,8 +288,8 @@ upper case and whose items are routine objects. It does not hold the routines
 that the package found through its ::REQUIRES. The symbol exists only in a
 package that declares a routine; for any other package it is the symbol's own
 text. Each package has its own table. The example runs a routine through the
-table with the CALL method of the routine object, which the classes chapter
-owns.
+table with the [CALL method](r:class.routine.call) of the routine object,
+which the classes chapter owns.
 
 ```rexx
 say .routines~items

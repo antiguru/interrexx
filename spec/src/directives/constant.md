@@ -14,7 +14,8 @@ expression in parentheses that is evaluated once, when the package is
 installed. The directive has no code section and no setter. This page
 specifies what the directive declares, the forms of the value, when an
 expression runs and what it can see, and the names that a constant takes. What
-a method object does once it exists belongs to the classes chapter.
+a [method object](r:class.method.creation) does once it exists belongs to the
+classes chapter.
 
 ## What a constant is
 

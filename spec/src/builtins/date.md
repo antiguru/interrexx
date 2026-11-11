@@ -23,10 +23,11 @@ DATE takes up to five arguments and requires none: `option`, `string`,
 `informat`, `osep` and `isep`. The argument count is checked by the [builtin
 call rules](r:bif.index.call.count): a call with more than five arguments
 raises `SYNTAX 40.4`, and a call with only omitted places counts as a call
-with no arguments. DATE does not run as a String method: sending the
-message `DATE` to a string raises `SYNTAX 97.1`. `option` and `informat` name
-formats by [their first letter](r:bif.index.dt.letter), and `osep` and `isep`
-are [separators](r:bif.date.sep.char).
+with no arguments. DATE does not run as a [String
+method](r:class.string.builtins): sending the message `DATE` to a string
+raises `SYNTAX 97.1`. `option` and `informat` name formats by [their first
+letter](r:bif.index.dt.letter), and `osep` and `isep` are
+[separators](r:bif.date.sep.char).
 
 ```rexx
 say date('S', '1 Jan 2000') date(, '1 Jan 2000') date('S', '20000101', 'S', , )

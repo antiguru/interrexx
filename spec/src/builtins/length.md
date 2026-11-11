@@ -13,11 +13,11 @@ LENGTH answers the number of characters in a string.
 ## Arguments
 
 r[bif.length.method]
-LENGTH is a builtin that runs as a String method, and `string`, its only
-argument, is the receiver; the message takes no other argument. `string` is
-a [string](r:conv.string.null), so no string raises an error. The
-argument count is checked by the [builtin call rules](r:bif.index.call.count):
-one is required and one is the most.
+LENGTH is a builtin that runs as a [String method](r:class.string.builtins),
+and `string`, its only argument, is the receiver; the message takes no other
+argument. `string` is a [string](r:conv.string.null), so no string raises an
+error. The argument count is checked by the [builtin call
+rules](r:bif.index.call.count): one is required and one is the most.
 
 ```rexx
 say length('abc def') 'abc def'~length

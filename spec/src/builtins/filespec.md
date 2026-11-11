@@ -23,10 +23,10 @@ r[bif.filespec.args]
 `option` is a string whose first character picks the piece, as [the next
 rule](r:bif.filespec.option) says, and `filespec` is a
 [string](r:conv.string.null); both are required. FILESPEC does not run as a
-String method: sending the message `FILESPEC` to a string raises
-`SYNTAX 97.1`. It follows [the native call rule](r:bif.index.call.native),
-both for the number of arguments and for an argument that is an object other
-than a string, such as `.nil`.
+[String method](r:class.string.builtins): sending the message `FILESPEC` to a
+string raises `SYNTAX 97.1`. It follows [the native call
+rule](r:bif.index.call.native), both for the number of arguments and for an
+argument that is an object other than a string, such as `.nil`.
 
 ```rexx
 signal on syntax name a

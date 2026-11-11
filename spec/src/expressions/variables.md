@@ -67,12 +67,13 @@ NOVALUE E.1
 ```
 
 r[expr.variables.stem]
-A stem symbol names one variable, and the value of the symbol is a `Stem`
-object in every state. The string value of that object is the default
-assigned to the stem, and the name of the symbol with its period, in upper
-case, when none was. Assigning a value that is not a `Stem` to a stem symbol
-makes a new `Stem` with that value as its default, which discards the values
-that the compound variables of the stem had until then and sets their
+A stem symbol names one variable, and the value of the symbol is a
+[`Stem`](r:class.stem.creation) object in every state. The [string
+value](r:class.stem.string) of that object is the default assigned to the
+stem, and the name of the symbol with its period, in upper case, when none
+was. Assigning a value that is not a `Stem` to a stem symbol makes a new
+`Stem` with that value as its default, which discards the values that the
+compound variables of the stem had until then and sets their
 [default](r:expr.variables.default). Assigning a `Stem` to a variable keeps
 that object, so a stem symbol assigned to another stem symbol shares the
 compound variables of one `Stem` with it, and the string value of a shared

@@ -16,12 +16,12 @@ that many places.
 ## Arguments
 
 r[bif.trunc.method]
-TRUNC is a builtin that runs as a String method, and `number`, its first
-argument, is the receiver; `n` becomes the message's argument. `number` is a
-[number](r:bif.index.num.arg) and `n` is a [whole-number](r:conv.whole.form)
-argument that is the count of decimal places. The argument count is checked
-by the [builtin call rules](r:bif.index.call.count): one is required and two
-is the most.
+TRUNC is a builtin that runs as a [String method](r:class.string.builtins),
+and `number`, its first argument, is the receiver; `n` becomes the message's
+argument. `number` is a [number](r:bif.index.num.arg) and `n` is a
+[whole-number](r:conv.whole.form) argument that is the count of decimal
+places. The argument count is checked by the [builtin call
+rules](r:bif.index.call.count): one is required and two is the most.
 
 ```rexx
 say trunc(12.37) 12.37~trunc 12.37~trunc(1) trunc(12.37, 1)

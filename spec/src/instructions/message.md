@@ -274,13 +274,13 @@ x= got 11
 ## Errors
 
 r[instr.message.error]
-A message instruction whose receiver does not understand the message raises
-`SYNTAX 97.1`, and so does a message assignment, since it needs a method
-whose name ends in an equal sign. A message assignment with no expression
-after the `=` raises `SYNTAX 35.1`, not the `35.918` of an assignment to a
-variable. A message operator with no name raises `SYNTAX 19.909`, as [the
-expression rules](r:expr.index.syntax) say. A string understands no `[]=`, so
-a subscript assignment on one raises `97.1`.
+A message instruction whose receiver [does not understand the
+message](r:expr.messages.name) raises `SYNTAX 97.1`, and so does a message
+assignment, since it needs a method whose name ends in an equal sign. A
+message assignment with no expression after the `=` raises `SYNTAX 35.1`, not
+the `35.918` of an assignment to a variable. A message operator with no name
+raises `SYNTAX 19.909`, as [the expression rules](r:expr.index.syntax) say. A
+string understands no `[]=`, so a subscript assignment on one raises `97.1`.
 
 ```rexx
 o = .rec~new

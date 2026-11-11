@@ -16,9 +16,10 @@ hexadecimal digits.
 ## Arguments
 
 r[bif.x2d.method]
-X2D is a builtin that runs as a String method, and `hex_string`, its first
-argument, is the receiver; `n` becomes the message's argument. `hex_string`
-is a [string of hexadecimal digits](r:bif.index.conv.digits) and `n` is a
+X2D is a builtin that runs as a [String method](r:class.string.builtins), and
+`hex_string`, its first argument, is the receiver; `n` becomes the message's
+argument. `hex_string` is a [string of hexadecimal
+digits](r:bif.index.conv.digits) and `n` is a
 [length](r:bif.index.conv.length). The argument count is checked by the
 [builtin call rules](r:bif.index.call.count): one is required and two is the
 most.

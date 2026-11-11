@@ -17,11 +17,12 @@ or, when asked, how many. It reads nothing and moves nothing.
 r[bif.lines.args]
 `name` is a [string](r:conv.string.null) that names the stream; when it is
 omitted or null, the [standard input](r:bif.index.stream.std) is asked.
-`option` is a string whose first character, in either case, is `N` or
-`C`; the characters after it are ignored. An omitted `option` is `N`. An
-`option` that is the null string, or begins with any other character, raises
-`SYNTAX 40.904`. LINES is not a String method. It takes two arguments at the
-most, by the [call rules](r:bif.index.call.too-many), and none is required.
+`option` is a string whose first character, in either case, is `N` or `C`; the
+characters after it are ignored. An omitted `option` is `N`. An `option` that
+is the null string, or begins with any other character, raises
+`SYNTAX 40.904`. LINES is not a [String method](r:class.string.builtins). It
+takes two arguments at the most, by the [call
+rules](r:bif.index.call.too-many), and none is required.
 
 ```rexx
 f = 'spec-lines-args.tmp'

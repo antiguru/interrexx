@@ -22,8 +22,8 @@ The argument count is checked by the [builtin call
 rules](r:bif.index.call.count): none is required and one is the most, so a
 call with two raises `SYNTAX 40.4`. A call with no argument, or with only an
 [omitted](r:conv.arg.omitted) one, changes nothing and only answers the
-setting. TRACE does not run as a String method: sending the message `TRACE`
-to a string raises `SYNTAX 97.1`.
+setting. TRACE does not run as a [String method](r:class.string.builtins):
+sending the message `TRACE` to a string raises `SYNTAX 97.1`.
 
 ```rexx
 call show

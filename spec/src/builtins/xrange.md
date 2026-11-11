@@ -17,11 +17,11 @@ be given, and the answer joins what each of them selects.
 ## Arguments
 
 r[bif.xrange.method]
-XRANGE takes any number of arguments, none included, and every argument may
-be omitted. It does not run as a String method: a string has no message
-named `XRANGE`, and sending it raises `SYNTAX 97.1`. Each argument is one
-character, an omitted place or the name of a class, as the rules below read
-them; an argument that is not a string is first converted
+XRANGE takes any number of arguments, none included, and every argument may be
+omitted. It does not run as a [String method](r:class.string.builtins): a
+string has no message named `XRANGE`, and sending it raises `SYNTAX 97.1`.
+Each argument is one character, an omitted place or the name of a class, as
+the rules below read them; an argument that is not a string is first converted
 [as any string argument is](r:bif.xrange.object).
 
 ```rexx

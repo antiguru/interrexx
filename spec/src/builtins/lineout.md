@@ -22,8 +22,9 @@ omitted or null, the [standard output](r:bif.index.stream.std) is written.
 `string` is a string too. `line` is a line number: a [whole-number
 argument](r:bif.index.stream.args) whose [value](r:bif.index.stream.value) the
 stream rules give, and a [valid start](r:bif.index.stream.start). LINEOUT is
-not a String method. It takes three arguments at the most, by the [call
-rules](r:bif.index.call.too-many), and none is required.
+not a [String method](r:class.string.builtins). It takes three arguments at
+the most, by the [call rules](r:bif.index.call.too-many), and none is
+required.
 
 ```rexx
 f = 'spec-lineout-args.tmp'

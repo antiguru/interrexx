@@ -23,17 +23,17 @@ STREAM offers does not call it.
 
 r[bif.stream.args]
 `name` is a [string](r:conv.string.null) that names the stream, and is
-required: it must be neither omitted nor null. `operation` is a string
-that chooses what STREAM does, and `command` is a string, the command that
-the operation `C` carries out. STREAM is not a String method. It takes
-three arguments at the most, by the [call rules](r:bif.index.call.too-many).
-The call is checked in this order. The count of arguments comes first,
-by the [call rules](r:bif.index.call.count). An omitted `name` then raises
-`SYNTAX 40.5` and a null one `SYNTAX 40.27`; an `operation` that
-is [none of those of the next rule](r:bif.stream.operation) raises
-`SYNTAX 40.904`. Last, a `command` that is missing for the operation `C`
-raises `SYNTAX 40.3`, and a `command` given for any other operation raises
-`SYNTAX 40.4`.
+required: it must be neither omitted nor null. `operation` is a string that
+chooses what STREAM does, and `command` is a string, the command that the
+operation `C` carries out. STREAM is not a [String
+method](r:class.string.builtins). It takes three arguments at the most, by the
+[call rules](r:bif.index.call.too-many). The call is checked in this order.
+The count of arguments comes first, by the [call
+rules](r:bif.index.call.count). An omitted `name` then raises `SYNTAX 40.5`
+and a null one `SYNTAX 40.27`; an `operation` that is [none of those of the
+next rule](r:bif.stream.operation) raises `SYNTAX 40.904`. Last, a `command`
+that is missing for the operation `C` raises `SYNTAX 40.3`, and a `command`
+given for any other operation raises `SYNTAX 40.4`.
 
 ```rexx
 f = 'spec-stream-args.tmp'
@@ -477,8 +477,10 @@ READY: UNKNOWN
 
 r[bif.stream.flush]
 `FLUSH` answers `READY:`. A file can be asked about, or read back, by the
-program as it is, whether `FLUSH` was used or not, so that `FLUSH` has no
-other effect that a program can see.
+program through the stream functions as it is, whether `FLUSH` was used or
+not, so that through the functions `FLUSH` has no other effect; a `Stream`
+instance on the same file [may not see](r:class.stream.flush) what was
+written before it.
 
 ```rexx
 f = 'spec-stream-flush.tmp'
@@ -487,6 +489,14 @@ call charout f, 'abc'
 say stream(f, 'c', 'flush') stream(f, 'c', 'query size') stream(f)
 call charout f, 'd'
 say stream(f, 'c', 'flush') stream(f, 'c', 'query size') chars(f)
+call charout f, 'e'
+s = .stream~new(f)
+say s~chars
+x = s~close
+say stream(f, 'c', 'flush')
+s = .stream~new(f)
+say s~chars
+x = s~close
 call charout f
 call sysfiledelete f
 ```
@@ -494,6 +504,9 @@ call sysfiledelete f
 ```output
 READY: 3 READY
 READY: 4 4
+4
+READY:
+5
 ```
 
 ## Positions

@@ -18,16 +18,16 @@ values only for seeded sequences.
 ## Arguments
 
 r[bif.random.args]
-RANDOM takes up to three arguments and requires none: `min`, `max` and
-`seed`, each a [whole-number argument](r:conv.whole.form), and each also
-accepted when written as a number of the form but not as an integer (`3.0`,
-`3e0`, ` 3 `), as long as [its value](r:conv.whole.digits) is a whole
-number. The argument count is checked by the [builtin call
-rules](r:bif.index.call.count): a call with more than three arguments
-raises `SYNTAX 40.4`, and a call with only omitted places counts as a call
-with no arguments. A `min`, `max` or `seed` that is not a whole number, the
-null string included, raises `SYNTAX 40.12`. RANDOM does not run as a String
-method: sending the message `RANDOM` to a string raises `SYNTAX 97.1`.
+RANDOM takes up to three arguments and requires none: `min`, `max` and `seed`,
+each a [whole-number argument](r:conv.whole.form), and each also accepted when
+written as a number of the form but not as an integer (`3.0`, `3e0`, ` 3 `),
+as long as [its value](r:conv.whole.digits) is a whole number. The argument
+count is checked by the [builtin call rules](r:bif.index.call.count): a call
+with more than three arguments raises `SYNTAX 40.4`, and a call with only
+omitted places counts as a call with no arguments. A `min`, `max` or `seed`
+that is not a whole number, the null string included, raises `SYNTAX 40.12`.
+RANDOM does not run as a [String method](r:class.string.builtins): sending the
+message `RANDOM` to a string raises `SYNTAX 97.1`.
 
 ```rexx
 say random(3, 3) random(' 3 ', '3.0') random(3e0, 3e0) random(,0) random(,0,)

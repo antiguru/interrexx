@@ -21,9 +21,9 @@ omitted or null, the [standard input](r:bif.index.stream.std) is read. `line`
 is a line number, and `count` a count: both are [whole-number
 arguments](r:bif.index.stream.args) whose [value](r:bif.index.stream.value)
 the stream rules give, the line number a [valid
-start](r:bif.index.stream.start). LINEIN is not a String method. It takes
-three arguments at the most, by the [call rules](r:bif.index.call.too-many),
-and none is required.
+start](r:bif.index.stream.start). LINEIN is not a [String
+method](r:class.string.builtins). It takes three arguments at the most, by the
+[call rules](r:bif.index.call.too-many), and none is required.
 
 ```rexx
 f = 'spec-linein-args.tmp'

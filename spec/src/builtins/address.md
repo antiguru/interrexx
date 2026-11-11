@@ -19,7 +19,8 @@ ADDRESS takes no argument. The argument count is checked by the [builtin call
 rules](r:bif.index.call.count): none is required and none is the most, so a
 call with any argument, whatever it is, raises `SYNTAX 40.4`, and places that
 are only [omitted](r:conv.arg.omitted) add nothing. ADDRESS does not run as a
-String method: sending the message `ADDRESS` to a string raises `SYNTAX 97.1`.
+[String method](r:class.string.builtins): sending the message `ADDRESS` to a
+string raises `SYNTAX 97.1`.
 
 ```rexx
 d = address()

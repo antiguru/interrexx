@@ -15,14 +15,14 @@ of the word where the sequence begins. Words are those of
 ## Arguments
 
 r[bif.wordpos.method]
-WORDPOS is a builtin that runs as a String method, and `string`, its
-second argument, is the receiver; `phrase` and `start` become the
-message's arguments, in that order. `phrase` and `string` are
-[strings](r:conv.string.null), and `start` is a
-[word number](r:bif.index.words.number). The arguments are checked in the
+WORDPOS is a builtin that runs as a [String method](r:class.string.builtins),
+and `string`, its second argument, is the receiver; `phrase` and `start`
+become the message's arguments, in that order. `phrase` and `string` are
+[strings](r:conv.string.null), and `start` is a [word
+number](r:bif.index.words.number). The arguments are checked in the
 [order](r:conv.check.order) the conventions give, and the argument count by
-the [builtin call rules](r:bif.index.call.count): two are required and three is
-the most.
+the [builtin call rules](r:bif.index.call.count): two are required and three
+is the most.
 
 ```rexx
 say wordpos('b c', 'a b c') 'a b c'~wordpos('b c')

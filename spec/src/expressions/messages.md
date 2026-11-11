@@ -14,17 +14,19 @@ concatenation operator is a message too, sent to its left operand with the
 right operand as its argument. This page gives the rules that make the
 operators and the message terms one mechanism. The syntax of a message term is
 in [the terms page](terms.md), and the classes, their methods and the messages
-every class understands are specified in the chapters about classes. The
-ANSI standard has no message operators.
+every class understands are specified in [the chapters about
+classes](../classes/index.md). The ANSI standard has no message operators.
 
 ## Message terms
 
 r[expr.messages.name]
 The name of a message may be written as a symbol or as a string, and a message
 is understood without regard to the case of its name. A message to an object
-that has no method of that name raises `SYNTAX 97.1`. A string answers the
-messages of the string methods, such as `length` and `left`, and its answers
-are specified with [the builtins that run as these methods](r:conv.method).
+that has no [method](r:class.methods.search) of that name raises
+`SYNTAX 97.1`. A string answers the messages of [the string
+methods](r:class.string.builtins), such as `length` and `left`, and its
+answers are specified with [the builtins that run as these
+methods](r:conv.method).
 
 ```rexx
 say 'abc'~length 'abc'~LENGTH 'abc'~"Length" 'abc'~"left"(2)
@@ -211,12 +213,13 @@ makestring called
 r[expr.messages.default]
 Every object understands the equality messages `=`, `\=`, `==`, `\==`, `<>`
 and `><`, and the messages `||`, one blank and the null string, whatever its
-class. The equality messages answer whether the receiver and the argument are
-the same object by default, though a class may define its own, as the string
-class does. The three joining messages join the string value of the receiver
-to the string value of the argument. Every other operator message, which means
-the arithmetic ones, the logical ones and the ordering ones, normal and
-strict, is understood only by a class that defines it.
+class. [The equality messages](r:class.object.eq) answer whether the receiver
+and the argument are the same object by default, though a class may define its
+own, as [the string class](r:class.string.operators) does. [The three joining
+messages](r:class.object.concat) join the string value of the receiver to the
+string value of the argument. Every other operator message, which means the
+arithmetic ones, the logical ones and the ordering ones, normal and strict, is
+understood only by a class that defines it.
 
 ```rexx
 a = .array~new
@@ -238,12 +241,13 @@ an O1 an O 1 an O1
 ```
 
 r[expr.messages.string]
-A string understands each operator name as a method. The infix names take
-exactly one argument and raise `SYNTAX 93.903` when it is missing and
-`SYNTAX 93.902` when there are more, and `+`, `-` and `\` take none for their
-prefix form. The method does what the operator does, so a string used with an
-operator name behaves as the expression would, including the errors for
-operands that are not numbers or not logical values.
+A string understands each operator name as [a
+method](r:class.string.operators). The infix names take exactly one argument
+and raise `SYNTAX 93.903` when it is missing and `SYNTAX 93.902` when there
+are more, and `+`, `-` and `\` take none for their prefix form. The method
+does what the operator does, so a string used with an operator name behaves as
+the expression would, including the errors for operands that are not numbers
+or not logical values.
 
 ```rexx
 say '3'~"+"(4) '3'~"-"(4) '3'~"-" '3'~"\=="(3) '1'~"\" '1'~"&&"(1)

@@ -22,11 +22,12 @@ which traps answer it and how far it reaches.
 r[cond.notready.information]
 The description of a NOTREADY condition is the name of the stream, spelled as
 [the stream rule](r:bif.index.stream.notready) says, and its `ADDITIONAL`
-entry is the stream object, whose string value is that name. The condition
-object has the entries that every condition has and `ADDITIONAL`, and no
-`POSITION`, `RC` or `CODE`, as [the entries rule](r:cond.information.object)
-lists them. The whole clause that held the call has finished
-by the time a CALL trap runs, as [the CALL trap rule](r:cond.traps.call) says.
+entry is the stream object, whose [string value](r:class.stream.string) is
+that name. The condition object has the entries that every condition has and
+`ADDITIONAL`, and no `POSITION`, `RC` or `CODE`, as [the entries
+rule](r:cond.information.object) lists them. The whole clause that held the
+call has finished by the time a CALL trap runs, as [the CALL trap
+rule](r:cond.traps.call) says.
 
 ```rexx
 f = 'spec-notready-info.tmp'

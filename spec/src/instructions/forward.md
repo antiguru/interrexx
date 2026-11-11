@@ -213,14 +213,16 @@ base name q
 
 r[instr.forward.arguments]
 The value of ARGUMENTS is turned into the list of arguments by sending it the
-message `REQUEST` with the argument `ARRAY` (the `request` of `Object` sends
-`MAKEARRAY`), so an array supplies its items, an empty array no
+message `REQUEST` with the argument `ARRAY` (the
+[`request`](r:class.object.request) of `Object` sends `MAKEARRAY`), so an
+[array](r:class.array.makearray) supplies its items, an empty array no
 argument, and an item that is missing in an array is an argument that is left
 empty. A string that is not null and has no line ends is one argument, the
 null string supplies none, a string of several lines has one argument for each
-line, and a list supplies its items. A value that cannot be made into an array
-raises `SYNTAX 98.946`. An instance of a subclass of `List` is sent `REQUEST`
-as well ([Deviation 118](r:instr.forward.deviation.118)).
+line, and a [list](r:class.list.makearray) supplies its items. A value that
+cannot be made into an array raises `SYNTAX 98.946`. An instance of a subclass
+of `List` is sent `REQUEST` as well ([Deviation
+118](r:instr.forward.deviation.118)).
 
 ```rexx
 t = .target~new
@@ -263,14 +265,15 @@ object => 98.946
 ```
 
 r[instr.forward.class]
-CLASS is the class at which the search for the method starts, so a method
-of the receiver's own class, or of a class between, is passed over when the
-class named is above it. The class must be one that the receiver is an
-instance of: the class of the receiver itself, one of its superclasses or a
-mixin class that it inherits. A class of the program that the receiver does
-not belong to raises `SYNTAX 93.957`,
-and a value that is not a class raises `SYNTAX 88.914`. A common use is
-`forward class (super)` to run the method that the running one overrides.
+CLASS is the class at which [the search](r:class.methods.forward) for the
+method starts, so a method of the receiver's own class, or of a class between,
+is passed over when the class named is above it. The class must be one that
+the receiver is an instance of: the class of the receiver itself, one of its
+superclasses or a mixin class that it inherits. A class of the program that
+the receiver does not belong to raises `SYNTAX 93.957`, and a value that is
+not a class raises `SYNTAX 88.914`. A common use is
+[`forward class (super)`](r:class.methods.forward) to run the method that the
+running one overrides.
 
 ```rexx
 d = .derived~new

@@ -17,8 +17,9 @@ r[bif.errortext.args]
 ERRORTEXT takes one argument, `n`, and nothing else. The argument count is
 checked by the [builtin call rules](r:bif.index.call.count): one argument is
 required and one is the most, so a call with two raises `SYNTAX 40.4`,
-whatever the second is. ERRORTEXT does not run as a String method: sending the
-message `ERRORTEXT` to a string raises `SYNTAX 97.1`.
+whatever the second is. ERRORTEXT does not run as a [String
+method](r:class.string.builtins): sending the message `ERRORTEXT` to a string
+raises `SYNTAX 97.1`.
 
 ```rexx
 signal on syntax name a

@@ -13,8 +13,9 @@ is the method's code, and the method belongs to the class of the most recent
 ::CLASS directive. A ::METHOD before any ::CLASS belongs to no class. This
 page specifies the name of a method, the options that set who may send it and
 how it is guarded, the forms that have no code of their own, and the method
-that belongs to no class. What a method object does once it exists, and the
-methods of `Class` that add one to a class, belong to the classes chapter.
+that belongs to no class. What a [method object](r:class.method.creation) does
+once it exists, and the methods of `Class` that [add one to a
+class](r:class.class.define), belong to the classes chapter.
 
 ## The method and its name
 

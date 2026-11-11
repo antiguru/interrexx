@@ -15,17 +15,17 @@ right when the string runs out.
 ## Arguments
 
 r[bif.left.method]
-LEFT is a builtin that runs as a String method, and `string`, its first
-argument, is the receiver; `length` and `pad` become the message's
-arguments, in that order. `string` is a [string](r:conv.string.null),
-`length` is a [length](r:conv.length.check), and `pad` is a
-[pad](r:conv.pad). The arguments are checked in the
+LEFT is a builtin that runs as a [String method](r:class.string.builtins), and
+`string`, its first argument, is the receiver; `length` and `pad` become the
+message's arguments, in that order. `string` is a
+[string](r:conv.string.null), `length` is a [length](r:conv.length.check), and
+`pad` is a [pad](r:conv.pad). The arguments are checked in the
 [order](r:conv.check.order) the conventions give, and the argument count by
 the [builtin call rules](r:bif.index.call.count): two are required and three
-is the most. Unlike [SUBSTR](substr.md), LEFT does not default `length`: it
-is a required argument, so a call without it fails by the
-call rules, with `SYNTAX 40.3` when nothing follows its place
-([too few](r:bif.index.call.too-few)) and `SYNTAX 40.5` when a pad does
+is the most. Unlike [SUBSTR](substr.md), LEFT does not default `length`: it is
+a required argument, so a call without it fails by the call rules, with
+`SYNTAX 40.3` when nothing follows its place ([too
+few](r:bif.index.call.too-few)) and `SYNTAX 40.5` when a pad does
 ([missing](r:bif.index.call.missing)).
 
 ```rexx

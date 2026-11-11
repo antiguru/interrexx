@@ -15,10 +15,10 @@ digits: four binary digits for each hexadecimal digit, in capital letters.
 ## Arguments
 
 r[bif.b2x.method]
-B2X is a builtin that runs as a String method, and `binary_string`, its
-only argument, is the receiver. The argument count is checked by the
-[builtin call rules](r:bif.index.call.count): one is required and one is the
-most.
+B2X is a builtin that runs as a [String method](r:class.string.builtins), and
+`binary_string`, its only argument, is the receiver. The argument count is
+checked by the [builtin call rules](r:bif.index.call.count): one is required
+and one is the most.
 
 ```rexx
 say b2x('1010') '1010'~b2x

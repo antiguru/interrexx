@@ -18,9 +18,9 @@ r[bif.var.args]
 VAR takes one argument, `name`, which is a [string](r:conv.string.null), and
 nothing else. The argument count is checked by the [builtin call
 rules](r:bif.index.call.count): one argument is required and one is the most.
-VAR does not run as a String method: sending the message `VAR` to a string
-raises `SYNTAX 97.1`. An object other than a string is replaced by a string,
-as [a string argument](r:conv.string.object) says.
+VAR does not run as a [String method](r:class.string.builtins): sending the
+message `VAR` to a string raises `SYNTAX 97.1`. An object other than a string
+is replaced by a string, as [a string argument](r:conv.string.object) says.
 
 ```rexx
 x = 1

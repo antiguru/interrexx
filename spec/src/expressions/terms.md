@@ -168,9 +168,10 @@ receiver answers to the message. Message terms chain, each applying to the
 value of the one before it, and a subscript `[ ]` after a term sends the
 message `[]` to it. A `~~` instead of a `~` discards the answer and has the
 receiver as its value, as [the cascade rule](r:expr.messages.cascade) says.
-The messages that a string answers to are the string methods, such as
-[`length`](r:bif.length.result), and the messages to every other class are
-specified with that class. [The messages page](messages.md) treats the
+The messages that a string answers to are [the string
+methods](r:class.string.builtins), such as [`length`](r:bif.length.result),
+and the messages to every other class are specified with [that
+class](r:class.index.hierarchy). [The messages page](messages.md) treats the
 operators as messages and does not repeat the term syntax.
 
 ```rexx
