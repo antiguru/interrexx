@@ -1515,7 +1515,7 @@ say '17'~modulo(.five~new) '17'~modulo(.six~new)
   return 6
 ```
 
-```output defect=#138
+```output
 2 5
 ```
 

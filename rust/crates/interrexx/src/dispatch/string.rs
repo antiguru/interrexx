@@ -1721,8 +1721,8 @@ fn native_string_modulo(
     let Some(object) = args.first().copied().flatten() else {
         return Err(Raised::missing_method_argument(1).into());
     };
-    let divisor = match interp.to_number(object) {
-        Ok(number) if number.is_integer(digits) && number.signum() == 1 => number,
+    let divisor = match interp.requested_number(object)? {
+        Some(number) if number.is_integer(digits) && number.signum() == 1 => number,
         _ => {
             let found = interp.string_value_text(object)?;
             return Err(Raised::method_argument_not_positive(1, &found).into());
