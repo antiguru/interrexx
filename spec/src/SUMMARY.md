@@ -157,6 +157,7 @@
 - [Concurrency](concurrency/index.md)
   - [Activities](concurrency/activities.md)
   - [Locks](concurrency/locks.md)
+  - [Halt and program end](concurrency/halt.md)
 - [Built-in functions](builtins/index.md)
   - [ABBREV](builtins/abbrev.md)
   - [ABS](builtins/abs.md)
