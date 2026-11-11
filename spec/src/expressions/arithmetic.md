@@ -99,6 +99,32 @@ bad: say arg(1) '=>' condition('o')~code
 2 ** "x" => 26.8
 ```
 
+r[expr.arithmetic.exponent.message]
+The message of the `SYNTAX 26.8` error names the exponent as the program wrote
+it, not as the number it denotes.
+
+```rexx
+signal on syntax name a
+say 2 ** 0.5e0
+a: say condition('o')~message
+signal on syntax name b
+say 2 ** ' 0.50 '
+b: say condition('o')~message
+signal on syntax name c
+say 2 ** 00.5
+c: say condition('o')~message
+signal on syntax name d
+say '3'~'**'(' 0.5E+0')
+d: say condition('o')~message
+```
+
+```output
+Operand to the right of the power operator (**) must be a whole number; found "0.5E0".
+Operand to the right of the power operator (**) must be a whole number; found " 0.50 ".
+Operand to the right of the power operator (**) must be a whole number; found "00.5".
+Operand to the right of the power operator (**) must be a whole number; found " 0.5E+0".
+```
+
 ## Operands that are not numbers
 
 r[expr.arithmetic.number]
