@@ -23,8 +23,8 @@ rule](r:util.index.args): a call with either one missing or omitted raises
 by that value. `order` is read as [the order rule of
 SysAddRexxMacro](r:util.sysaddrexxmacro.order) reads it, with this difference:
 it has no default, so that omitting it raises `SYNTAX 88.901`. The order is
-checked before the name is looked for, so a bad `order` raises `SYNTAX 40.920` for a
-name that no macro has.
+checked before the name is looked for, so a bad `order` raises `SYNTAX 40.920`
+for a name that no macro has.
 
 ```rexx
 call lineout 'c4zqreo.rex', 'return "macro"'

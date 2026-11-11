@@ -202,14 +202,14 @@ r[util.macrospace.source]
 The program of a macro is read once, when the macro is added, and what is kept
 is that program as it was then: a later change to the file, or its removal,
 does not change the macro. The directives of the program work as they do in
-any program. A routine that its `::ROUTINE` directive defines without
-`PUBLIC` is called by the code of the macro and by nothing else. Its public
-routines and public classes are not found by a program before that program
-first calls the macro; after the call, the program finds them by name, and
-they stay found when the macro is dropped. A `::REQUIRES` directive is not
-looked at until the macro runs, so a macro whose directive names a file that
-is not there is added without a fault, and a call of it raises
-`SYNTAX 43.901`.
+any program. A routine that its `::ROUTINE` directive defines without `PUBLIC`
+is called by the code of the macro and by nothing else. The public routines
+and public classes of the macro's program are not found by a program before
+that program first calls the macro; after the call, the program finds them by
+name, and they stay found when the macro is dropped. A `::REQUIRES` directive
+is not looked at until the macro runs, so a macro whose directive names a file
+that is not there is added without a fault, and a call of it raises `SYNTAX
+43.901`.
 
 ```rexx
 call lineout 'c4zqsrc1.rex', 'return "first"'
@@ -219,6 +219,7 @@ call lineout 'c4zqsrc2.rex', '::routine inner'
 call lineout 'c4zqsrc2.rex', 'return "inner of macro:" arg(1)'
 call lineout 'c4zqsrc2.rex', '::routine c4zqpub public'
 call lineout 'c4zqsrc2.rex', 'return "public of macro"'
+call lineout 'c4zqsrc2.rex', '::class c4zqk public'
 call lineout 'c4zqsrc2.rex'
 call lineout 'c4zqsrc3.rex', 'return "never"'
 call lineout 'c4zqsrc3.rex', '::requires "c4zqnofile.rex"'
@@ -237,7 +238,7 @@ e0: say condition('o')~code
 signal off syntax
 say C4ZQS2('x') c4zqpub()
 call SysDropRexxMacro 'C4ZQS2'
-say c4zqpub()
+say c4zqpub() .c4zqk~id
 say SysAddRexxMacro('C4ZQS3', 'c4zqsrc3.rex')
 signal on syntax name e1
 say inner('y')
@@ -258,7 +259,7 @@ first
 0
 43.1
 inner of macro: x public of macro
-public of macro
+public of macro C4ZQK
 0
 43.1
 43.901

@@ -104,11 +104,12 @@ name is that of a directory, when the file is empty, and when a file that
 SysSaveRexxMacroSpace did not write is shorter than 32 bytes. Such a file of
 32 bytes or more, and a saved file whose first bytes were changed, answer `6`,
 and nothing is added. A saved file with bytes added after its end loads as if
-they were not there. A saved file that was cut short answers `5`: when it
-held one macro nothing is added, and when it held several, the macros that the
-cut left whole may have been added; which ones is not specified, as the form
-of the file is not. A call that answers `5` or `6` leaves the macros that were
-already in the macrospace as they were.
+they were not there. A saved file that was cut short answers `5`: when it held
+one macro nothing is added, and when it held several, the macros that the cut
+left whole may have been added; which ones is not specified, as the form of
+the file is not. A call that answers `5` or `6` changes no macro that was
+already in the macrospace, except that a macro it adds from a cut file
+replaces one of the same name, as a load that answers `0` does.
 
 ```rexx
 call lineout 'c4zqlf.rex', 'return "x"'
@@ -134,11 +135,13 @@ call SysRmDir 'c4zqlfdir'
 5 B x
 ```
 
-> **Note.** The next example damages a saved file of two macros in three ways,
-> changes its first byte, and loads a file of 31 bytes and one of 32. Each
-> load leaves macro `B` as it was.
+> **Note.** The next example saves a file of one macro, cuts it short in two
+> ways, adds bytes after its end, changes its first byte, and loads a file of
+> 31 bytes and one of 32. Only the load of the file with bytes added changes
+> macro `C4ZQDM`; after each load, the example adds it again with order `B`.
 
 ```rexx
+call SysClearRexxMacroSpace
 call lineout 'c4zqdm1.rex', 'return "one"'
 call lineout 'c4zqdm1.rex'
 call SysAddRexxMacro 'C4ZQDM', 'c4zqdm1.rex', 'A'

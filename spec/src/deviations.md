@@ -1149,3 +1149,9 @@ An empty line that follows a line that failed as it was read, such as
 `trace 1.5`, whose setting does not exist, or an expression that cannot be
 parsed, goes on to the next stop. ooRexx ends interactive tracing at that empty
 line.
+
+## 159. A save onto a file that may not be written
+
+A save of the macrospace onto a file that is there and may not be written
+answers `5` and leaves the file as it was. ooRexx answers `5` too, and keeps
+or removes the file depending on the calls the program made earlier.

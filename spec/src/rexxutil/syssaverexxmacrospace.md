@@ -1,6 +1,7 @@
 ---
 element: "SysSaveRexxMacroSpace"
 kind: function
+deviations: [159]
 syntax: "SysSaveRexxMacroSpace(file)"
 rexxref: "Rexx Utilities (RexxUtil) > SysSaveRexxMacroSpace"
 ---
@@ -101,10 +102,10 @@ The call answers `5`, and writes nothing, when the macrospace holds no macro:
 there is then no file to load, and a file of that name that was there is left
 as it was. It also answers `5` when the file cannot be written: when a
 directory in its name is not there, when a component before the last is a
-file, and when the name is that of a directory. A new file in a directory
-that may not be written is not made, and the call answers `5`; a file that is
-already there and may be written is replaced as above, also in such a
-directory.
+file, when the name is that of a directory, and when the file is there and may
+not be written. A new file in a directory that may not be written is not
+made, and the call answers `5`; a file that is already there and may be
+written is replaced as above, also in such a directory.
 
 ```rexx
 call SysClearRexxMacroSpace
@@ -158,4 +159,42 @@ call SysFileDelete 'c4zqsp.rex'
 ```output
 1 1
 0 1
+```
+
+## Deviations
+
+r[util.syssaverexxmacrospace.deviation.159]
+A save onto a file that is there and may not be written answers `5` and leaves
+the file as it was, with its bytes and its permission. ooRexx also answers
+`5`, but whether the file is still there afterwards depends on the calls the
+program made earlier: it keeps the file in some histories and removes it in
+others. interrexx removes the file today (issue 237), so the example is marked
+as a defect.
+
+> **Note.** The example shows that the file is still there, with its bytes,
+> after the answer. A program that runs as the superuser may write the file,
+> so its answer and its file are not looked at there.
+
+```rexx
+address system 'id -u' with output stem u.
+root = (u.1 == 0)
+call lineout 'c4zqsd.rex', 'return "x"'
+call lineout 'c4zqsd.rex'
+call lineout 'c4zqsdold', 'old'
+call lineout 'c4zqsdold'
+call SysAddRexxMacro 'C4ZQSD', 'c4zqsd.rex'
+address system 'chmod 444 c4zqsdold'
+answer = SysSaveRexxMacroSpace('c4zqsdold')
+exists = SysFileExists('c4zqsdold')
+kept = (charin('c4zqsdold', 1, 3) == 'old')
+call stream 'c4zqsdold', 'c', 'close'
+say (answer == 5 | root) (exists | root) (kept | root)
+address system 'chmod 644 c4zqsdold'
+call SysDropRexxMacro 'C4ZQSD'
+call SysFileDelete 'c4zqsdold'
+call SysFileDelete 'c4zqsd.rex'
+```
+
+```output defect=#237
+1 1 1
 ```

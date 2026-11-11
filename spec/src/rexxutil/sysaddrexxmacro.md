@@ -210,11 +210,11 @@ file. That is so when no file has the name, when the name is that of a
 directory, when the file cannot be read (the permission is refused), when the
 file is empty (has no bytes at all; a file of one empty line is a program that
 does nothing), and when the file is not a valid Rexx program: an error in its
-text, or in one of its directives, that is found while it is read. A macro of the same name that was
-there is left as it was, with its order and its program. Faults that appear
-only when the program runs are not found here: a call to a routine that
-nothing has, and a `::REQUIRES` for a file that is not there, add a macro
-without a fault.
+text, or in one of its directives, that is found while it is read. A macro of
+the same name that was there is left as it was, with its order and its
+program. Faults that appear only when the program runs are not found here: a
+call to a routine that nothing has, and a `::REQUIRES` for a file that is not
+there, add a macro without a fault.
 
 ```rexx
 call lineout 'c4zqf0.rex', 'return "kept"'
