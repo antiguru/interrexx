@@ -82,9 +82,17 @@ pub(super) fn raised_select_no_when() -> Raised {
 /// raise syntax 0 / 100 / 999 / 'abc' / 40.1000 / '40.'  -> 33.904
 /// ```
 pub(super) fn raise_syntax_condition(text: &[u8], additional: Vec<Vec<u8>>) -> Raised {
+    match syntax_code(text) {
+        Some(code) => raised_for_code(code, additional),
+        None => Raised::syntax(33, 904, Vec::new()),
+    }
+}
+
+/// The error code, `major * 1000 + sub`, that the argument of `RAISE SYNTAX`
+/// names, or `None` where the argument is not a valid error number.
+pub(super) fn syntax_code(text: &[u8]) -> Option<u64> {
     /// One half of the argument as a Rexx number: `numberValue`, then a
-    /// whole-number check. `None` for anything that is not a whole number,
-    /// which the caller turns into 33.904.
+    /// whole-number check. `None` for anything that is not a whole number.
     fn whole(text: &str) -> Option<i64> {
         Number::parse(text)?.whole_value(interrexx_num::DEFAULT_DIGITS as usize)
     }
@@ -93,18 +101,18 @@ pub(super) fn raise_syntax_condition(text: &[u8], additional: Vec<Vec<u8>>) -> R
     let (major, sub) = match text.split_once('.') {
         // A decimal point with an empty tail is rejected rather than read as
         // zero: `'40.'` is 33.904 where `40` is the `(40, 0)` entry.
-        Some((_, "")) => return Raised::syntax(33, 904, Vec::new()),
+        Some((_, "")) => return None,
         Some((major, sub)) => (whole(major), whole(sub)),
         None => (whole(text.as_ref()), Some(0)),
     };
     let (Some(major), Some(sub)) = (major, sub) else {
-        return Raised::syntax(33, 904, Vec::new());
+        return None;
     };
     if !(1..=99).contains(&major) || !(0..=999).contains(&sub) {
-        return Raised::syntax(33, 904, Vec::new());
+        return None;
     }
     // Both bounds are checked above, so neither narrowing can lose anything.
-    raised_for_code(major as u64 * 1000 + sub as u64, additional)
+    Some(major as u64 * 1000 + sub as u64)
 }
 
 /// The `SYNTAX` condition for error `code`, `major * 1000 + sub`, or 98.941

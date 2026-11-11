@@ -387,7 +387,7 @@ inner: say '  inner' sigl condition('o')~code; return 'inner'
 unit: say '  unit' sigl condition('o')~code; return 'unit'
 ```
 
-```output defect=#119
+```output
   inner 8 33.904
 inner
 ```
