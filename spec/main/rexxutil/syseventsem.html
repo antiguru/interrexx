@@ -277,7 +277,8 @@ call SysCloseEventSem h
 </code></pre>
 <div class="rule" id="r-util.syseventsem.reset"><a href="#r-util.syseventsem.reset">[util.syseventsem.reset]</a></div>
 <p>SysResetEventSem discards every post that the semaphore holds and answers <code>0</code>,
-whether it held posts or not. A wait that follows it finds none.</p>
+whether it held posts or not; for a handle that names no open semaphore it
+answers <code>6</code> (<a href="#r-util.syseventsem.deviation.158">Deviation 158</a>). A wait that follows it finds none.</p>
 <pre><code class="language-rexx">h = SysCreateEventSem()
 say SysResetEventSem(h)
 call SysPostEventSem h
@@ -602,7 +603,7 @@ function of this page and of <a href="sysmutexsem.html">the mutex semaphore func
 that takes a handle answer <code>6</code>, and use no semaphore: the handle of a
 semaphore that is closed, a handle that arithmetic has rounded, as the sum `h</p>
 <ul>
-<li>0<code>of a handle of thirteen digits is under</code>NUMERIC DIGITS 9<code>, and a number that no call answered. ooRexx uses the number as the address of the semaphore and crashes, with a signal that ends the program, for a closed handle (all calls but SysCloseEventSem, which answers </code>6<code>), for a rounded one, as SysPostEventSem shows, and for a number that no call answered; SysRequestMutexSem with an event semaphore's handle hangs. The first example is a rounded handle and a closed one, the second a number that no call answered. SysResetEventSem answers </code>0<code>in interrexx for such a handle, where it should answer</code>6<code>like the others, as the third example shows. The handle of an open semaphore of the other kind, a mutex semaphore's handle given to an event function or an event semaphore's handle given to a mutex function, is such a number too: the call answers</code>6` and changes neither semaphore.
+<li>0<code>of a handle of thirteen digits is under</code>NUMERIC DIGITS 9<code>, and a number that no call answered. ooRexx uses the number as the address of the semaphore and crashes, with a signal that ends the program, for a closed handle (all calls but SysCloseEventSem, which answers </code>6<code>), for a rounded one, as SysPostEventSem shows, and for a number that no call answered; SysRequestMutexSem with an event semaphore's handle hangs. The first example is a rounded handle and a closed one, the second a number that no call answered. SysResetEventSem answers </code>6<code>for such a handle like the others, as the third example shows. The handle of an open semaphore of the other kind, a mutex semaphore's handle given to an event function or an event semaphore's handle given to a mutex function, is such a number too: the call answers</code>6` and changes neither semaphore.
 interrexx accepts it today (issue #247), as the fourth example shows.</li>
 </ul>
 <pre><code class="language-rexx">h = SysCreateEventSem()
@@ -622,7 +623,7 @@ say SysPostEventSem(h) SysWaitEventSem(h, 10)
 call SysCloseEventSem h
 say SysResetEventSem(h)
 </code></pre>
-<pre><code class="language-output defect=#236">6
+<pre><code class="language-output">6
 </code></pre>
 <pre><code class="language-rexx">e = SysCreateEventSem()
 m = SysCreateMutexSem('')
