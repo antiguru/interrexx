@@ -101,6 +101,14 @@ impl Interp {
             Trace::Value(expression) => {
                 let value = self.eval(code, expression)?;
                 self.roots.activity_mut().push_temp(value);
+                // `>K>   "VALUE" => text`, naming the object before the
+                // required-string conversion below, like `SIGNAL VALUE`.
+                let shown = self.to_text(value).to_vec();
+                self.trace_keyword(
+                    self.activity.clause_state.current_value_indent,
+                    "VALUE",
+                    &shown,
+                );
                 // `result->requestString()` (`instructions/TraceInstruction
                 // .cpp:172`), and 24.1 names the conversion: measured, oracle
                 // rc 232, `trace value .K` with a class-side `makeString`
