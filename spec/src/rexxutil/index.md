@@ -622,7 +622,9 @@ follows: the number of arguments first, so that an argument past the last one
 raises `SYNTAX 88.922` before an omitted or wrong argument is reported
 ([Deviation 101](r:bif.index.call.native.deviation.101)).
 ooRexx reports an omitted argument, an object whose `request` answers no
-string, a stem name that fails its check, a whole-number argument of
+string, a stem name of SysStemCopy, SysStemDelete or SysStemInsert that
+fails its check (SysStemSort checks its stem after the count, as interrexx
+does), a whole-number argument of
 SysStemCopy, SysStemDelete, SysStemInsert or SysStemSort that fails its check,
 and a `mode` of SysMkDir that fails any of its checks before the count, and
 the count before a `filler` or an `option` that it does not allow.
@@ -649,10 +651,14 @@ g: say condition('o')~code
 signal on syntax name h
 say SysStemDelete('s.', 'x', 1, 1)
 h: say condition('o')~code
+signal on syntax name i
+say SysStemDelete('s.', 0, 1, 1)
+i: say condition('o')~code
 say SysIsFileDirectory('c1zqidxdm')
 ```
 
 ```output
+88.922
 88.922
 88.922
 88.922

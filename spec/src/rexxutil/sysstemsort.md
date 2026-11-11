@@ -362,10 +362,12 @@ r[util.sysstemsort.range]
 and are not read, so they may have no value. An item that is alone in the
 range, as with `start` equal to `end`, is still read. The call raises `SYNTAX
 40.923`, and changes nothing, when `start` or `end` is more than the count of
-the stem. A stem with the count `0` has no item, and then no range is checked:
-the call answers `0` and does nothing, for every `start` and `end` that are
-allowed. The tail `0` is never changed, and the tails above the count are not
-touched. A count below `0` raises `SYNTAX 40.922`.
+the stem. An `end` of `999999999999999999`, the largest that is allowed, is
+taken as an `end` that is left out, the count of the stem. A stem with the
+count `0` has no item, and then no range is checked: the call answers `0` and
+does nothing, for every `start` and `end` that are allowed. The tail `0` is
+never changed, and the tails above the count are not touched. A count below `0` raises
+`SYNTAX 40.922`.
 
 ```rexx
 call fill 'f', 'e', 'd', 'c', 'b', 'a'
@@ -389,6 +391,9 @@ say dump() s.4
 s.0 = 3; s.1 = 'c'; s.2 = 'b'; s.3 = 'a'; drop s.1
 call SysStemSort 's.', , , 2, 3
 say symbol('s.1') s.2 s.3
+s.0 = 3; s.1 = 'c'; s.2 = 'b'; s.3 = 'a'
+call try "SysStemSort('s.', , , 2, 999999999999999999)"
+say dump()
 call tail '1.000000001'
 call tail '1.00000001'
 call tail '-1'
@@ -429,6 +434,8 @@ e: say condition('o')~code
 0
 [a] [b] [c] beyond
 LIT a b
+0
+[c] [a] [b]
 1.000000001 => 0 1.000000001
 1.00000001 => 40.922
 -1 => 40.922

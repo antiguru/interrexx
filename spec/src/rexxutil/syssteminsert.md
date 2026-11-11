@@ -210,19 +210,25 @@ e: say condition('o')~code s.0
 
 r[util.syssteminsert.fail]
 A call that raises `SYNTAX 40.924` has moved the items above the one that has
-no value, each up by one place, starting from the last. It has not stored
-`value` and has not changed the count of the stem, so the tail one past the
-count holds the last item.
+no value, each up by one place, starting from the last, so that the tail one
+past the count holds the last item. When the last item is the one that has no
+value, nothing has moved. The call has not stored `value` and has not changed
+the count of the stem.
 
 ```rexx
 s.0 = 4; s.1 = 'a'; s.3 = 'c'; s.4 = 'd'
 signal on syntax name e
 call SysStemInsert 's.', 1, 'v'
 e: say condition('o')~code s.0 s.1 symbol('s.2') s.3 s.4 s.5
+s.0 = 2; s.1 = 'a'; drop s.2 s.3
+signal on syntax name f
+call SysStemInsert 's.', 1, 'v'
+f: say condition('o')~code s.0 s.1 symbol('s.2') symbol('s.3')
 ```
 
 ```output
 40.924 4 a LIT c c d
+40.924 2 a LIT LIT
 ```
 
 ## Order of the checks

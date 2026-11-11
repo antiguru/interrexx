@@ -278,8 +278,11 @@ Name=SUPER, Value='The Object class'
 r[util.sysdumpvariables.stem]
 Every stem that the code has used is written with a line for the stem itself.
 Using a stem means assigning, reading or dropping the stem or one of its
-tails, or naming it in a `SYMBOL` call. The line is written whether or not the
-stem has a value of its own or any tail now. Its name is the name of the stem
+tails, whether in a clause or through a function such as VALUE, VAR or one of
+the stem functions; naming one of its tails in a `SYMBOL` call; or calling a
+procedure that exposes the stem or one of its tails. Naming the stem itself in
+a `SYMBOL` call, as `symbol('u.')` does, is not a use. The line is written
+whether or not the stem has a value of its own or any tail now. Its name is the name of the stem
 with its period, and its value is the default value of the stem, or the name
 of the stem when no default was assigned. A variable with a tail is written
 with the name of the stem in upper case, a period and the tail as it is after
@@ -295,6 +298,8 @@ say '--'
 call q
 say '--'
 call r
+say '--'
+call s
 exit
 p: procedure
   s.1 = 'x'; s.abc = 'q'; t. = 'dflt'; k = 'key'; v.k = 'kv'
@@ -308,6 +313,11 @@ q: procedure
   return
 r: procedure
   drop u.
+  call SysDumpVariables 'c3zqdv5.txt'
+  call show 'c3zqdv5.txt'
+  return
+s: procedure
+  x = symbol('u.') value('v.1')
   call SysDumpVariables 'c3zqdv5.txt'
   call show 'c3zqdv5.txt'
   return
@@ -342,6 +352,9 @@ Name=W., Value='W.'
 Name=X, Value='U.1 LIT'
 --
 Name=U., Value='U.'
+--
+Name=V., Value='V.'
+Name=X, Value='LIT V.1'
 ```
 
 r[util.sysdumpvariables.value]
