@@ -1708,11 +1708,10 @@ them one with a blank around `ON`, and the empty value, is ignored. A
 later change of the variable changes nothing. An example cannot start the
 interpreter with the variable set, so the rule is tested by the cases of the
 command-line tests, which set it and show the main program and a program
-called by name starting with `?R`, a method with `N`, and every other value
-ignored. The example shows the later change: a program called by name before
-and after the variable is set to `ON` starts with `N` both times. The
-part on routines is not tested; interrexx starts them with `N` (interrexx
-defect #218).
+called by name starting with `?R`, a routine called by name, as a function
+and as a routine object starting with `?R`, a method with `N`, and every
+other value ignored. The example shows the later change: a program called by
+name before and after the variable is set to `ON` starts with `N` both times.
 
 ```rexx
 .traceoutput~destination(.quiet~new)
@@ -1729,7 +1728,7 @@ exit
   return 0
 ```
 
-```output defect=#224
+```output
 before N
 after N
 ```

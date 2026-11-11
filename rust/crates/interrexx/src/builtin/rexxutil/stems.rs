@@ -650,7 +650,12 @@ pub(crate) fn sort(
         };
         let value = interp.required_string_value(value)?;
         interp.roots.activity_mut().push_temp(value);
-        texts.push(interp.to_text(value).into_owned());
+        let text = interp.to_text(value).into_owned();
+        // A `Stem` item (or an instance of a subclass) is its default value
+        // as a string once sorted, whether the sort moved it or not.
+        let value = interp.text_built(text.clone());
+        interp.roots.activity_mut().push_temp(value);
+        texts.push(text);
         values.push(value);
     }
     let columns = (first_column != 1 || last_column != MAX_WHOLENUMBER).then(|| {

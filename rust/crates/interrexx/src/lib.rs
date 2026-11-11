@@ -1248,6 +1248,10 @@ struct Interp {
     /// library into `LD_LIBRARY_PATH` through `VALUE` still loads nothing
     /// from it.
     library_search: Vec<std::path::PathBuf>,
+    /// Whether `RXTRACE` was `ON` in the environment this interpreter started
+    /// with. Taken once, like `library_search`: a later change of the variable
+    /// through `VALUE` starts nothing under `TRACE ?R`.
+    external_trace: bool,
     /// The directory relative paths resolve against, for the same reason:
     /// `std::env::set_current_dir` is process-wide. `DIRECTORY()` moves this
     /// and nothing else.
@@ -1974,6 +1978,14 @@ enum GeneratedKind {
     ConstantExpression,
 }
 
+/// Whether `environment` holds `RXTRACE` as `ON`, in any case and with nothing else.
+fn external_trace_of(environment: &[(Vec<u8>, Vec<u8>)]) -> bool {
+    environment
+        .iter()
+        .find(|(name, _)| name == b"RXTRACE")
+        .is_some_and(|(_, value)| value.eq_ignore_ascii_case(b"ON"))
+}
+
 /// The directories `LD_LIBRARY_PATH` names in `environment`.
 ///
 /// The process loader read that variable before any interpreter existed, so a
@@ -2243,6 +2255,7 @@ impl Interp {
             text_numbers: crate::value::TextNumbers::new(),
             result_buffer: std::cell::Cell::new(Vec::new()),
             library_search: library_search_of(&env),
+            external_trace: external_trace_of(&env),
             env,
             cwd: std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("/")),
             programs: plan::Programs::default(),
@@ -2940,10 +2953,7 @@ impl Interp {
         // one, which has nothing to announce, prints the debug banner
         // instead.
         if external_trace {
-            self.set_trace_mode(crate::trace::TraceMode {
-                debug: true,
-                ..crate::trace::TraceMode::RESULTS
-            });
+            self.begin_external_trace();
             self.trace_invocation_entry();
         }
 
@@ -3151,10 +3161,25 @@ impl Interp {
     /// compares against `ON` with `strCaselessCompare`, so any other value
     /// leaves tracing alone.
     fn external_trace_enabled(&self) -> bool {
-        self.env
-            .iter()
-            .find(|(name, _)| name == b"RXTRACE")
-            .is_some_and(|(_, value)| value.eq_ignore_ascii_case(b"ON"))
+        self.external_trace
+    }
+
+    /// Puts the running activation under `TRACE ?R`, which is what `RXTRACE=ON` starts a
+    /// program and each called routine with.
+    fn begin_external_trace(&mut self) {
+        self.set_trace_mode(crate::trace::TraceMode {
+            debug: true,
+            ..crate::trace::TraceMode::RESULTS
+        });
+    }
+
+    /// `RXTRACE=ON` starts the `::ROUTINE` just entered under `TRACE ?R` and announces it
+    /// with `>I>` as a `TRACE` setting of its package would. Not the library bootstrap's.
+    pub(crate) fn start_external_trace(&mut self) {
+        if !self.library_bootstrap && self.external_trace_enabled() {
+            self.begin_external_trace();
+            self.trace_package_invocation_entry();
+        }
     }
 
     // `plan_for` and `activation`/`activation_mut` live in `plan.rs`/
@@ -3486,6 +3511,7 @@ impl Interp {
             // not the collector's.
             env: _,
             library_search: _,
+            external_trace: _,
             cwd: _,
             // The embedding's own writers, which take bytes and hold nothing
             // of this interpreter's.

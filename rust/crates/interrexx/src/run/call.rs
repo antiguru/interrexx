@@ -1398,6 +1398,12 @@ impl Interp {
             saved_context,
             stack: LentStack::Kept,
         });
+        // `RXTRACE=ON` starts every `::ROUTINE` that is called under `TRACE ?R`, as it
+        // starts the program. Here and not beside the activation's push, because the
+        // `>I>` line it may write takes the margin the level state above has just set.
+        if matches!(entered, Entered::Routine(_)) {
+            self.start_external_trace();
+        }
         // A routine is a program-level call, which runs the initialization exit before its
         // first clause (`RexxActivation::run`); its failure ends the call there.
         if matches!(entered, Entered::Routine(_))

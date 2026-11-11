@@ -193,9 +193,9 @@ pub(crate) fn rm_dir(
 }
 
 /// `SysMkDir(name [, mode])`: `mkdir(2)` and its raw errno, the mode
-/// defaulting to `0777` before the umask. The mode is **not** range-checked --
-/// measured, `512` and `-1` are both accepted where the documented range ends
-/// at `511`.
+/// defaulting to `0777` before the umask. The mode is a whole number of 32
+/// bits, 88.907 outside that range or where it is no whole number; its
+/// remainder modulo `1024` is the mode `mkdir` is given.
 pub(crate) fn mk_dir(
     interp: &mut Interp,
     _name: &'static [u8],
@@ -206,13 +206,21 @@ pub(crate) fn mk_dir(
     let mode = match args.get(1).copied().flatten() {
         None => 0o777,
         Some(value) => {
-            let text = interp.to_text(value).into_owned();
-            let Some(bits) = whole_number(&text) else {
-                return Err(Raised::native_argument_not_a_number("mode", &text).into());
+            let bits = match stems::whole_value(interp, value, i64::from(i32::MIN))? {
+                Some(bits) if bits <= i64::from(i32::MAX) => bits,
+                _ => {
+                    let found = interp.string_value_text(value)?;
+                    return Err(marshalled(Raised::native_argument_out_of_range(
+                        "mode",
+                        i64::from(i32::MIN),
+                        i64::from(i32::MAX),
+                        &found,
+                    )));
+                }
             };
-            #[allow(clippy::cast_sign_loss, reason = "the oracle passes the bits through")]
+            #[allow(clippy::cast_sign_loss, reason = "rem_euclid is not negative")]
             {
-                (bits as u32) & 0o7777
+                bits.rem_euclid(1024) as u32
             }
         }
     };
@@ -246,12 +254,12 @@ pub(crate) fn sleep(
     if args.len() > 1 {
         return Err(Raised::too_many_internal_arguments(1).into());
     }
-    let Some(Some(value)) = args.first().copied() else {
-        return Err(Raised::missing_internal_argument("1").into());
-    };
-    let text = interp.to_text(value).into_owned();
-    let Ok(seconds) = String::from_utf8_lossy(&text).trim().parse::<f64>() else {
-        return Err(Raised::native_argument_not_a_number("delay", &text).into());
+    // An object with no string value is 88.909; `Inf`, `NaN` and a size past
+    // a 64-bit float's range parse as non-finite floats and are 88.902.
+    let text = required_text(interp, args, 1)?;
+    let seconds = match String::from_utf8_lossy(&text).trim().parse::<f64>() {
+        Ok(seconds) if seconds.is_finite() => seconds,
+        _ => return Err(Raised::native_argument_not_a_number("delay", &text).into()),
     };
     if !(0.0..=SLEEP_MAXIMUM).contains(&seconds) {
         return Err(
@@ -294,6 +302,8 @@ pub(crate) fn create_event_sem(
     if args.len() > 2 {
         return Err(Raised::too_many_internal_arguments(2).into());
     }
+    optional_text(interp, args, 1)?;
+    optional_text(interp, args, 2)?;
     if let Some(Some(value)) = args.first().copied() {
         return refuse_name(interp, name, value);
     }
@@ -313,6 +323,7 @@ pub(crate) fn create_mutex_sem(
     if args.len() > 1 {
         return Err(Raised::too_many_internal_arguments(1).into());
     }
+    optional_text(interp, args, 1)?;
     if let Some(Some(value)) = args.first().copied()
         && !interp.to_text(value).is_empty()
     {
@@ -538,9 +549,4 @@ pub(crate) fn version(
     text.push(b' ');
     text.extend_from_slice(info.release().to_bytes());
     Ok(interp.text_built(text))
-}
-
-/// A whole number's value, or `None` for text that is not one.
-fn whole_number(text: &[u8]) -> Option<i64> {
-    String::from_utf8_lossy(text).trim().parse::<i64>().ok()
 }

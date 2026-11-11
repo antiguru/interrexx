@@ -54,11 +54,13 @@ impl Stream {
 
 /// One command's resolved redirection.
 pub(crate) struct IoContext {
-    /// Every line the command reads, gathered **before it starts**.
-    /// `readInputBuffered` does the same, and that is what lets one object be
-    /// a command's input and its output at once: the doc's `sort` example
-    /// reads the array before the target empties it.
-    input: Option<Vec<Vec<u8>>>,
+    /// Every line the command reads, gathered **before it starts** but after
+    /// the security manager's `COMMAND` checkpoint has let it through
+    /// ([`IoContext::gather_input`]). `readInputBuffered` gathers before the
+    /// command starts, and that is what lets one object be a command's input
+    /// and its output at once: the doc's `sort` example reads the array
+    /// before the target empties it.
+    input: RefCell<Input>,
     output: Option<Target>,
     error: Option<Target>,
     /// The output target that is also the input source, which
@@ -71,6 +73,29 @@ pub(crate) struct IoContext {
     next: [Cell<usize>; 2],
     /// Output bytes not yet a whole line, or all of a deferred output.
     carry: RefCell<Vec<u8>>,
+}
+
+/// A command's redirected input: what it names until the lines are read, and
+/// the lines once they are.
+enum Input {
+    /// No input is redirected.
+    None,
+    /// The source's object or name, resolved but not yet read.
+    Pending(Pending),
+    Ready(Vec<Vec<u8>>),
+}
+
+/// An input source resolved at issue time and read later.
+#[derive(Clone)]
+enum Pending {
+    /// Nothing to read: a default or normal source.
+    Empty,
+    /// `WITH INPUT STEM`: the stem object.
+    Stem(ObjRef),
+    /// `WITH INPUT USING`: the object, which decides what it means.
+    Using(ObjRef),
+    /// `WITH INPUT STREAM`: the name, opened and closed around the read.
+    Stream(Vec<u8>),
 }
 
 /// Where an input source reads from, as `OutputRedirector::needsBuffering`
@@ -186,7 +211,10 @@ impl IoContext {
     /// the last one included -- measured, `'cat -A' with input using 'x'`
     /// prints `x$`.
     pub(crate) fn input_bytes(&self) -> Option<Vec<u8>> {
-        let lines = self.input.as_ref()?;
+        let input = self.input.borrow();
+        let Input::Ready(lines) = &*input else {
+            return None;
+        };
         let mut buffer = Vec::new();
         for line in lines {
             buffer.extend_from_slice(line);
@@ -198,13 +226,40 @@ impl IoContext {
     /// Every input line, gathered before the command started, or `None`
     /// with no input redirected.
     pub(crate) fn input_lines(&self) -> Option<Vec<Vec<u8>>> {
-        self.input.clone()
+        match &*self.input.borrow() {
+            Input::Ready(lines) => Some(lines.clone()),
+            _ => None,
+        }
+    }
+
+    /// Reads the input source, once, where the command is about to run. The
+    /// security manager's `COMMAND` checkpoint comes first, and a manager
+    /// that takes the command reads nothing from its source.
+    pub(crate) fn gather_input(&self, interp: &mut Interp) -> Result<(), Failure> {
+        let pending = match &*self.input.borrow() {
+            Input::Pending(pending) => pending.clone(),
+            _ => return Ok(()),
+        };
+        let lines = match pending {
+            Pending::Empty => Vec::new(),
+            Pending::Stem(object) => interp.stem_input_lines(object)?,
+            Pending::Using(object) => interp.using_input_lines(object)?,
+            Pending::Stream(name) => {
+                let stream = interp.open_named_stream(&name, b"READ", true)?;
+                let lines = interp.read_stream_lines(stream)?;
+                let caller = interp.caller();
+                interp.send_message(stream, b"CLOSE", None, &[], caller)?;
+                lines
+            }
+        };
+        *self.input.borrow_mut() = Input::Ready(lines);
+        Ok(())
     }
 
     /// The streams a redirecting command handler reads and writes.
     pub(crate) fn redirector(&self) -> interrexx_api::redirect::Redirector {
         interrexx_api::redirect::Redirector::new(
-            self.input.clone(),
+            self.input_lines(),
             self.output.is_some(),
             self.error.is_some(),
             self.shares_one_target(),
@@ -583,10 +638,10 @@ impl Interp {
         );
         let (input, origin) = match input {
             Some((source, _, local)) => {
-                let (lines, origin) = self.input_lines(code_for(local), source)?;
-                (Some(lines), origin)
+                let (pending, origin) = self.resolve_input(code_for(local), source)?;
+                (Input::Pending(pending), origin)
             }
-            None => (None, Origin::Other),
+            None => (Input::None, Origin::Other),
         };
         let output = match output {
             Some((target, option, local)) => {
@@ -614,7 +669,7 @@ impl Interp {
             None
         };
         Ok(Some(IoContext {
-            input,
+            input: RefCell::new(input),
             output,
             error,
             deferred,
@@ -623,18 +678,19 @@ impl Interp {
         }))
     }
 
-    /// Every line a redirected input reads, and where it read them.
-    fn input_lines(
+    /// What a redirected input reads from, resolved but not read, and where it
+    /// reads.
+    fn resolve_input(
         &mut self,
         code: &Code<'_>,
         source: &Redirection,
-    ) -> Result<(Vec<Vec<u8>>, Origin), Failure> {
+    ) -> Result<(Pending, Origin), Failure> {
         Ok(match source {
             // `merge` answers `None` for both, so neither reaches here.
-            Redirection::Default | Redirection::Normal => (Vec::new(), Origin::Other),
+            Redirection::Default | Redirection::Normal => (Pending::Empty, Origin::Other),
             Redirection::Stem(id) => {
                 let object = self.redirect_stem(code, *id, Stream::Input)?;
-                (self.stem_input_lines(object)?, Origin::Stem(object))
+                (Pending::Stem(object), Origin::Stem(object))
             }
             Redirection::Using(expression) => {
                 let object = self.eval(code, expression)?;
@@ -642,20 +698,16 @@ impl Interp {
                 self.trace_redirect_target(Stream::Input, object)?;
                 let origin = if self.is_stem_object(object) {
                     Origin::Stem(object)
-                } else if self.is_stream_object(object) {
+                } else if self.is_input_stream_object(object) {
                     Origin::Stream(object)
                 } else {
                     Origin::Other
                 };
-                (self.using_input_lines(object)?, origin)
+                (Pending::Using(object), origin)
             }
             Redirection::Stream(expression) => {
                 let name = self.redirect_stream_name(code, expression, Stream::Input)?;
-                let stream = self.open_named_stream(&name, b"READ", true)?;
-                let lines = self.read_stream_lines(stream)?;
-                let caller = self.caller();
-                self.send_message(stream, b"CLOSE", None, &[], caller)?;
-                (lines, Origin::Name(name))
+                (Pending::Stream(name.clone()), Origin::Name(name))
             }
         })
     }
@@ -694,7 +746,7 @@ impl Interp {
         if self.is_stem_object(object) {
             return self.stem_input_lines(object);
         }
-        if self.is_stream_object(object) {
+        if self.is_input_stream_object(object) {
             return self.read_stream_lines(object);
         }
         if let Some(path) = self.file_object_path(object)? {
@@ -789,7 +841,7 @@ impl Interp {
             }
             return Ok(Target::Queue { object });
         }
-        if self.is_stream_object(object) {
+        if self.is_output_stream_object(object) {
             if optioned {
                 return Err(Raised::stream_target_option().into());
             }
@@ -1162,12 +1214,20 @@ impl Interp {
         self.is_instance_of_rexx_class(value, b"REXXQUEUE")
     }
 
-    /// Whether `value` is an object a redirection drives with `LINEIN` and
-    /// `LINEOUT`. A `Monitor` counts, which is the oracle's own rule: it
-    /// treats one as a stream on both sides.
-    fn is_stream_object(&mut self, value: ObjRef) -> bool {
+    /// Whether `value` is an object a redirection reads with `LINEIN`: an
+    /// InputStream or InputOutputStream. A `Monitor` counts, which is the
+    /// oracle's own rule: it treats one as a stream on both sides.
+    fn is_input_stream_object(&mut self, value: ObjRef) -> bool {
         self.is_instance_of_rexx_class(value, b"INPUTSTREAM")
-            || self.is_instance_of_rexx_class(value, b"OUTPUTSTREAM")
+            || self.is_instance_of_rexx_class(value, b"INPUTOUTPUTSTREAM")
+            || self.is_instance_of_rexx_class(value, b"MONITOR")
+    }
+
+    /// Whether `value` is an object a redirection writes with `LINEOUT`: an
+    /// OutputStream or InputOutputStream, or a `Monitor`.
+    fn is_output_stream_object(&mut self, value: ObjRef) -> bool {
+        self.is_instance_of_rexx_class(value, b"OUTPUTSTREAM")
+            || self.is_instance_of_rexx_class(value, b"INPUTOUTPUTSTREAM")
             || self.is_instance_of_rexx_class(value, b"MONITOR")
     }
 
@@ -1222,12 +1282,11 @@ fn is_string(interp: &Interp, value: ObjRef) -> bool {
 }
 
 /// `text` as a non-negative whole number, or `None` for anything else --
-/// what a `stem.0` has to be.
+/// what a `stem.0` has to be. Any spelling of a whole number counts (`1.0`,
+/// `1e0`, `+1`, `' 1 '`), bounded by the argument rule's 18 digits whatever
+/// the NUMERIC DIGITS setting.
 fn whole_number(text: &[u8]) -> Option<usize> {
-    let text = std::str::from_utf8(text).ok()?;
-    let trimmed = text.trim_matches(' ');
-    if trimmed.is_empty() || !trimmed.bytes().all(|byte| byte.is_ascii_digit()) {
-        return None;
-    }
-    trimmed.parse().ok()
+    let number = interrexx_num::Number::parse_bytes(text)?;
+    let whole = number.whole_value(interrexx_num::ARGUMENT_DIGITS)?;
+    usize::try_from(whole).ok()
 }

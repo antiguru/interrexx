@@ -1500,6 +1500,29 @@ out> method N
 err>        +++ "LINUX COMMAND DIR/rxtrace.rex"
 err>      1 *-* .traceoutput~destination(.quiet~new)
 
+# a called `::ROUTINE` starts under the variable too: by name, as a function,
+# and as a routine object
+
+run env=RXTRACE.ON
+rxtraceroutine
+----
+rc> 0
+out> main ?R
+out> function ?R
+out> call ?R
+out> object ?R
+err>        +++ "LINUX COMMAND DIR/rxtraceroutine.rex"
+err>      1 *-* .traceoutput~destination(.quiet~new)
+
+run
+rxtraceroutine
+----
+rc> 0
+out> main N
+out> function N
+out> call N
+out> object N
+
 run env=RXTRACE.OFF
 rxtrace
 ----
