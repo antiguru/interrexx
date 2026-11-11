@@ -168,8 +168,7 @@ A save onto a file that is there and may not be written answers `5` and leaves
 the file as it was, with its bytes and its permission. ooRexx also answers
 `5`, but whether the file is still there afterwards depends on the calls the
 program made earlier: it keeps the file in some histories and removes it in
-others. interrexx removes the file today (issue 237), so the example is marked
-as a defect.
+others. interrexx always keeps it, so the example is not run against ooRexx.
 
 > **Note.** The example shows that the file is still there, with its bytes,
 > after the answer. A program that runs as the superuser may write the file,
@@ -195,6 +194,6 @@ call SysFileDelete 'c4zqsdold'
 call SysFileDelete 'c4zqsd.rex'
 ```
 
-```output defect=#237
+```output
 1 1 1
 ```

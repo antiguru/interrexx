@@ -200,15 +200,19 @@ pub(crate) fn save(
     Ok(code(interp, status))
 }
 
-/// Writes `bytes` to `file`, removing a partial file on failure.
+/// Writes `bytes` to `file`. A file that cannot be opened for writing is left as it was,
+/// with its bytes and its permission; a partial file is removed on a failed write.
 pub(crate) fn write_file(file: &[u8], bytes: &[u8]) -> u64 {
+    use std::io::Write as _;
     let path = crate::paths::os_path(file);
-    match std::fs::write(path, bytes) {
+    let Ok(mut out) = std::fs::File::create(path) else {
+        return MACRO_FILE_ERROR;
+    };
+    match out.write_all(bytes) {
         Ok(()) => OK,
         Err(_) => {
-            if std::fs::metadata(path).is_ok_and(|metadata| metadata.is_file()) {
-                let _ = std::fs::remove_file(path);
-            }
+            drop(out);
+            let _ = std::fs::remove_file(path);
             MACRO_FILE_ERROR
         }
     }
