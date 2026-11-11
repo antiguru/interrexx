@@ -390,3 +390,125 @@ rc> 166
 err>      1 *-* ::method m external "LIBRARY REXX nosuchentry"
 err> Error 90 running DIR/rexxent.rex line 1:  External name not found.
 err> Error 90.998:  Unable to find external method "nosuchentry".
+
+# a name after the first flag is a parameter error (env.invocation.rexxc.words)
+run
+ok.rex
+-s
+o.rxo
+----
+rc> 255
+out> The rexxc command parameters are incorrect.
+out> SYNTAX: rexxc inputfile [outputfile] [-s] [-e]
+out> Without outputfile rexxc only performs a syntax check.
+
+run
+ok.rex
+-s
+-e
+extra
+----
+rc> 255
+out> The rexxc command parameters are incorrect.
+out> SYNTAX: rexxc inputfile [outputfile] [-s] [-e]
+out> Without outputfile rexxc only performs a syntax check.
+
+# the words are checked before the program is looked for, and the two names
+# before that (env.invocation.rexxc.words, env.invocation.rexxc.names)
+run
+nope
+-x
+----
+rc> 255
+out> The rexxc command parameters are incorrect.
+out> SYNTAX: rexxc inputfile [outputfile] [-s] [-e]
+out> Without outputfile rexxc only performs a syntax check.
+
+run
+nope
+o.rxo
+extra
+----
+rc> 255
+out> The rexxc command parameters are incorrect.
+out> SYNTAX: rexxc inputfile [outputfile] [-s] [-e]
+out> Without outputfile rexxc only performs a syntax check.
+
+run
+nope
+nope
+----
+rc> 254
+out> interrexx <version> (Open Object Rexx 5.3.0 compatible)
+out> Build date: <date>
+out> Addressing mode: 64
+out> Licensed under MIT OR Apache-2.0.
+out> Output file name must be different from input file name.
+
+run
+nope
+nope
+-s
+----
+rc> 254
+out> Output file name must be different from input file name.
+
+# flags repeat, in either case and with letters after them
+run out=o.rxo
+ok.rex
+o.rxo
+-s
+-S
+-s
+----
+rc> 0
+file> #!/usr/bin/env rexx\n/**/@REXX\x00\x00
+
+run out=o.rxo
+ok.rex
+o.rxo
+-E
+-s
+-eee
+----
+rc> 0
+file> #!/usr/bin/env rexx\n/**/@REXX@\n
+
+# the check compares the words, not the files (env.invocation.rexxc.names)
+run out=same.rex
+same
+same.rex
+-s
+----
+rc> 0
+file> #!/usr/bin/env rexx\n/**/@REXX\x00\x00
+
+# an existing output is replaced; a program that does not translate leaves
+# it (env.invocation.rexxc.output)
+run out=old.rxo
+ok.rex
+old.rxo
+-s
+----
+rc> 0
+file> #!/usr/bin/env rexx\n/**/@REXX\x00\x00
+
+run out=old2.rxo
+bad.rex
+old2.rxo
+-s
+----
+rc> 221
+err>      1 *-* say (
+err> Error 35 running DIR/bad.rex line 1:  Invalid expression.
+err> Error 35.1:  Incorrect expression detected at "(".
+file> old\n
+
+# a program that cannot be read (env.invocation.rexxc.output)
+run
+locked.rex
+-s
+----
+rc> 253
+err> Error 3:  Failure during initialization.
+err> Error 3.1:  Failure during initialization: File "DIR/locked.rex" is unreadable.
