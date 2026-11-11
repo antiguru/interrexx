@@ -48,7 +48,10 @@ fn alarm_woken(interp: &mut Interp, handle: ObjRef) -> Result<Option<ObjRef>, Fa
 }
 
 /// `alarm_stopTimer(eventSemHandle)` and `ticker_stopTimer(eventSemHandle)`:
-/// posts the timer, each waiter reading its own object's `CANCELED`.
+/// posts the timer, each waiter reading its own object's `CANCELED`. Where
+/// the post woke a waiter, the caller yields once so that the waiter has run
+/// when the call returns: a second `cancel` finds the timer cleared and sends
+/// its target nothing (Deviation 119).
 pub(super) fn stop_timer(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -61,9 +64,19 @@ pub(super) fn stop_timer(
         for (receiver, scope) in interp.timer_waiters(id) {
             cancelled.push(is_cancelled(interp, receiver, scope)?);
         }
+        let waiting = !cancelled.is_empty();
         interp.post_timer(id, &cancelled);
+        if waiting && let Some(handle) = args.first().copied().flatten() {
+            let deadline = interp.now();
+            return interp.park_native(ParkReason::Sleep { deadline }, stopped, handle);
+        }
     }
     Ok(NativeStarted::Ran(Some(interp.counted(0))))
+}
+
+/// A timer's stop is over: the activities it woke have run.
+fn stopped(interp: &mut Interp, _handle: ObjRef) -> Result<Option<ObjRef>, Failure> {
+    Ok(Some(interp.counted(0)))
 }
 
 /// `ticker_createTimer()`: a timer for the ticker's waits, set as
