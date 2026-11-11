@@ -7,4 +7,5 @@ mod descriptors;
 pub mod macro_file;
 pub mod message;
 pub mod reserved;
+mod signals;
 pub mod transport;

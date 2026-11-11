@@ -17,7 +17,7 @@ use rustix::fs::{FlockOperation, flock};
 use crate::core::{ClientId, Core, Outcome};
 use crate::message::wire::{self, Command};
 use crate::message::{Item, Reply, Request, Timestamp};
-use crate::transport::unix::{lock_path, peer_uid, socket_path};
+use crate::transport::unix::{Unix, lock_path, peer_uid, socket_path};
 
 /// How long a silent connector may hold a thread before its handshake.
 const HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(2);
@@ -40,6 +40,10 @@ pub struct Options<'a> {
     /// Close every descriptor above standard error besides the lock file and the listener, once
     /// both are open: only for a daemon that is its own process and has no other thread yet.
     pub close_inherited: bool,
+    /// Stop, as a client's stop request does, on `SIGTERM`, `SIGINT` or `SIGHUP`, whatever their
+    /// mask and disposition were when the process started: only for a daemon that is its own
+    /// process and has no other thread yet.
+    pub stop_on_signal: bool,
     /// Receives each `rxapi: ...` line.
     pub report: &'a dyn Fn(&str),
 }
@@ -228,6 +232,12 @@ pub fn serve(options: &Options<'_>) -> io::Result<Exit> {
             crate::descriptors::close_inherited(&[lock_file.as_fd(), listener.as_fd()]);
         }
         report("rxapi: service successfully started; listening");
+        if options.stop_on_signal {
+            let (dir, version) = (options.dir.to_path_buf(), options.version);
+            crate::signals::stop_on_signal(move || {
+                let _ = Unix::stop_version(&dir, version);
+            })?;
+        }
 
         let (events, incoming) = mpsc::channel();
         let version = options.version;
