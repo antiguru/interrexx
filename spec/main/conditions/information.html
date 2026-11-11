@@ -634,7 +634,21 @@ iq: procedure
   signal off syntax
   x = 1 % 0
 </code></pre>
-<pre><code class="language-output defect=#120">caller 1 42.3
+<pre><code class="language-output">caller 1 42.3
+</code></pre>
+<pre><code class="language-rexx">signal on syntax name v
+call i1
+v: say 'caller' condition('o')~propagated condition('o')~code
+exit
+i1: procedure
+  signal off syntax
+  call i2
+  return
+i2: procedure
+  signal off syntax
+  x = 1 % 0
+</code></pre>
+<pre><code class="language-output">caller 1 42.3
 </code></pre>
 <div class="rule" id="r-cond.information.propagate.only"><a href="#r-cond.information.propagate.only">[cond.information.propagate.only]</a></div>
 <p>Only a SYNTAX condition is passed on. Any other condition is answered or

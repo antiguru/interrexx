@@ -22760,7 +22760,7 @@ y = 1 + 'b'
 say 'not reached'
 a: say 'a' condition('c') condition('s')
 </code></pre>
-<pre><code class="language-output defect=#110">s SYNTAX OFF
+<pre><code class="language-output">s SYNTAX OFF
 a SYNTAX OFF
 </code></pre>
 <div class="rule" id="r-cond.traps.signal.label"><a href="conditions/traps.html#r-cond.traps.signal.label">[cond.traps.signal.label]</a></div>
@@ -22904,7 +22904,7 @@ exit
 ::routine h
   say 'in h' sigl
 </code></pre>
-<pre><code class="language-output defect=#111">before SIGL
+<pre><code class="language-output">before SIGL
 in h SIGL
 after SIGL
 </code></pre>
@@ -22914,7 +22914,7 @@ say 'before' sigl
 'exit 3'
 say 'after' sigl
 </code></pre>
-<pre><code class="language-output defect=#111">before SIGL
+<pre><code class="language-output">before SIGL
 after SIGL
 </code></pre>
 <div class="rule" id="r-cond.traps.call.state"><a href="conditions/traps.html#r-cond.traps.call.state">[cond.traps.call.state]</a></div>
@@ -23704,7 +23704,21 @@ iq: procedure
   signal off syntax
   x = 1 % 0
 </code></pre>
-<pre><code class="language-output defect=#120">caller 1 42.3
+<pre><code class="language-output">caller 1 42.3
+</code></pre>
+<pre><code class="language-rexx">signal on syntax name v
+call i1
+v: say 'caller' condition('o')~propagated condition('o')~code
+exit
+i1: procedure
+  signal off syntax
+  call i2
+  return
+i2: procedure
+  signal off syntax
+  x = 1 % 0
+</code></pre>
+<pre><code class="language-output">caller 1 42.3
 </code></pre>
 <div class="rule" id="r-cond.information.propagate.only"><a href="conditions/information.html#r-cond.information.propagate.only">[cond.information.propagate.only]</a></div>
 <p>Only a SYNTAX condition is passed on. Any other condition is answered or

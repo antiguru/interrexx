@@ -342,7 +342,7 @@ y = 1 + 'b'
 say 'not reached'
 a: say 'a' condition('c') condition('s')
 </code></pre>
-<pre><code class="language-output defect=#110">s SYNTAX OFF
+<pre><code class="language-output">s SYNTAX OFF
 a SYNTAX OFF
 </code></pre>
 <div class="rule" id="r-cond.traps.signal.label"><a href="#r-cond.traps.signal.label">[cond.traps.signal.label]</a></div>
@@ -486,7 +486,7 @@ exit
 ::routine h
   say 'in h' sigl
 </code></pre>
-<pre><code class="language-output defect=#111">before SIGL
+<pre><code class="language-output">before SIGL
 in h SIGL
 after SIGL
 </code></pre>
@@ -496,7 +496,7 @@ say 'before' sigl
 'exit 3'
 say 'after' sigl
 </code></pre>
-<pre><code class="language-output defect=#111">before SIGL
+<pre><code class="language-output">before SIGL
 after SIGL
 </code></pre>
 <div class="rule" id="r-cond.traps.call.state"><a href="#r-cond.traps.call.state">[cond.traps.call.state]</a></div>
