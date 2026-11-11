@@ -495,7 +495,7 @@ call SysStemSort 's.'
 say s.2~class~id s.2
 ```
 
-```output defect=#242
+```output
 String zz
 ```
 
