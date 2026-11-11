@@ -24,11 +24,13 @@ The pages of this chapter so far are:
   called by name and a library are found: the places, the extensions, the
   case of a name, what is read again at every call, and what a program that
   is called by name leaves in its caller.
+* [Debugging](debugging.md): interactive tracing: how it starts and ends, when
+  the interpreter stops, what it reads at a stop and from where, what each kind
+  of line does, where its own lines are written, and the `RXTRACE` variable.
 
-Pages on commands and their environments, the security manager and
-interactive debugging follow. Until
-they exist, the rules of the other chapters that mention those subjects in
-plain text are the rules there are.
+Pages on commands and their environments and the security manager follow.
+Until they exist, the rules of the other chapters that mention those subjects
+in plain text are the rules there are.
 
 An example in this chapter changes the objects that its own program reads, as
 a program does. Each example restores what it changed when a later line of the

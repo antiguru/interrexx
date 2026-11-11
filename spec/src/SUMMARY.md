@@ -151,6 +151,7 @@
   - [Environment objects](environment/objects.md)
   - [Invocation](environment/invocation.md)
   - [Search](environment/search.md)
+  - [Debugging](environment/debugging.md)
 - [Built-in functions](builtins/index.md)
   - [ABBREV](builtins/abbrev.md)
   - [ABS](builtins/abs.md)
