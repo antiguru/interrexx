@@ -1154,9 +1154,9 @@ line.
 ## 156. SysSetPriority changes the priority of the process
 
 SysSetPriority changes the priority of the whole process, whichever activity
-calls it, so that every activity and every command that is started afterwards
-has the new niceness. ooRexx changes the priority of the calling activity
-only.
+calls it, so that every activity, running or started later, and every command
+started afterwards has the new niceness. ooRexx changes the priority of the
+system thread that runs the calling activity.
 
 ## 157. SysWait with no child
 
@@ -1166,14 +1166,16 @@ answers a number that nothing set, which differs from run to run.
 ## 158. A semaphore function with a handle that names no open semaphore
 
 A RexxUtil semaphore function called with a whole number that is not the
-handle of an open semaphore, such as the handle of a closed semaphore or a
-handle that arithmetic has rounded, answers `6`. ooRexx uses the number as an
-address and crashes for such a handle, in every function but a second
-SysCloseEventSem or SysCloseMutexSem of a closed handle, which answers `6`.
+handle of an open semaphore, such as the handle of a closed semaphore, a
+handle that arithmetic has rounded or a number that no call answered, answers
+`6`. ooRexx uses the number as an address and crashes for a closed handle, in
+every function but a second SysCloseEventSem or SysCloseMutexSem, which
+answers `6`, and for a rounded one, as SysPostEventSem shows.
 
-## 161. SysSleep and a blank after the sign
+## 161. SysSleep and whitespace after the sign
 
-SysSleep reads its delay as a Rexx number, so that a blank may follow the
-sign: `'+ 0.5'` pauses for half a second, and `'- 1'` is a negative delay,
-which raises `SYNTAX 88.907`. ooRexx answers `0` at once for any delay with a
-blank after its sign, without a pause and without the range check.
+SysSleep reads its delay as a Rexx number, so that whitespace (a blank or a
+tab) may follow the sign: `'+ 0.5'` pauses for at least half a second, and `'-
+1'` is a negative delay, which raises `SYNTAX 88.907`. ooRexx answers `0` at
+once for any delay with whitespace after its sign, without a pause and without
+the range check.

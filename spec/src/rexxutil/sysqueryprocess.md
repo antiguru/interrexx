@@ -15,13 +15,16 @@ number or a short line of text, as the page says for each `info`.
 ## Arguments
 
 r[util.sysqueryprocess.args]
-`info` is an optional string that says which fact is wanted. When it is
-omitted, as in `SysQueryProcess()` and `SysQueryProcess(,)`, the call answers
-the number of the process, as `PID` does. A second argument raises `SYNTAX
-88.922`, even where the first is omitted or is not one of the words that [the
-next rule](r:util.sysqueryprocess.info) knows. An object that is not a string
-is replaced by its string value as [the argument rule](r:util.index.args)
-says, and one that has none raises `SYNTAX 88.909`.
+`info` is an optional string that says which fact
+is wanted. When it is omitted, as in `SysQueryProcess()` and
+`SysQueryProcess(,)`, the call answers the number of the process, as `PID`
+does. A second argument raises `SYNTAX 88.922`, even where the first is
+omitted or is not one of the words that [the next
+rule](r:util.sysqueryprocess.info) knows. An object that is not a string is
+replaced by its string value as [the argument rule](r:util.index.args) says,
+and one that has none raises `SYNTAX 88.909`. When the first argument is an
+object that has no string value, [Deviation 101](r:util.index.deviation.101)
+says which error is raised with a second argument.
 
 ```rexx
 pid = SysQueryProcess('PID')

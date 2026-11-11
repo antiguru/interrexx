@@ -27,10 +27,13 @@ different from the handle of every other semaphore that is still open. An
 object whose string value is the null string does the same. The name is the
 only argument; a second argument raises `SYNTAX 88.922`, and so does an
 omitted place that is followed by an argument. A name that is a string other
-than the null string asks for a semaphore that other programs can open, which
+than the null string, or an object whose string value is such a string, asks
+for a semaphore that other programs can open, which
 [Deviation 43](r:util.sysmutexsem.deviation.43) says is refused. A name that
 is an object with no string value, as `.nil` is, raises `SYNTAX 88.909`; the
-second example shows it. Which handle a call answers is not specified.
+second example shows it. Which handle a call answers is not specified. When
+an argument past the last one comes with an omitted or wrong argument,
+[Deviation 101](r:util.index.deviation.101) says which error is raised.
 
 ```rexx
 numeric digits 20
@@ -273,6 +276,33 @@ e: say condition('o')~code
 0
 ```
 
+```rexx
+m = SysCreateMutexSem('')
+call try "SysRequestMutexSem(.sv~new(m), 10)"
+call try "SysRequestMutexSem(m, .sv~new('10'))"
+call try "SysReleaseMutexSem(.sv~new(m))"
+exit
+try:
+  signal on syntax name e
+  interpret 'say' arg(1)
+  return
+e: say condition('o')~code
+  return
+::class sv
+::method init
+  expose v
+  use arg v
+::method string
+  expose v
+  return v
+```
+
+```output defect=#230
+0
+121
+0
+```
+
 r[util.sysmutexsem.close]
 SysCloseMutexSem ends the use of a semaphore and answers `0`. It answers `6`
 when the semaphore is closed already, and so a second call with the same
@@ -356,11 +386,11 @@ before
 ```
 
 r[util.sysmutexsem.deviation.43]
-A call of SysCreateMutexSem with a name that is a string other than the null
-string, and a call of SysOpenMutexSem with a name that is a string other than
-the null string, end the program at once, with exit code `120` and a message
-on the error stream: the semaphore is not made or opened, and nothing that
-follows the call runs.
+A call of SysCreateMutexSem with a name that
+is a string other than the null string, or an object whose string value is
+such a string, and a call of SysOpenMutexSem with a name of that kind, end the
+program at once, with exit code `120` and a message on the error stream: the
+semaphore is not made or opened, and nothing that follows the call runs.
 ooRexx makes a semaphore of that name that every program of the system can
 open, and answers its handle; SysOpenMutexSem answers `0` for a name that no
 program has made. The first example is a creating call, the second an opening
@@ -395,7 +425,8 @@ that is closed, a handle that arithmetic has rounded, as the sum `h + 0` of a
 handle of thirteen digits is under `NUMERIC DIGITS 9`, and a number that no
 call answered. ooRexx uses the number as the address of the semaphore and
 crashes, with a signal that ends the program, for a closed handle
-(SysRequestMutexSem and SysReleaseMutexSem) and for a rounded one. The first
+(SysRequestMutexSem and SysReleaseMutexSem) and, as it does for
+SysPostEventSem, for a rounded one. The first
 example is a rounded handle and a closed one, the second a number that no call
 answered.
 

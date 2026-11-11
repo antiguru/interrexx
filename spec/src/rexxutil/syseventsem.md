@@ -25,20 +25,23 @@ that a function answers are listed with it.
 ## Making one
 
 r[util.syseventsem.create]
-SysCreateEventSem makes an event semaphore of its own, with no post, and
-answers its handle: a whole number above 0, different from the handle of every
-other semaphore that is still open. It does so when its first argument is
-omitted, as in `SysCreateEventSem()` and `SysCreateEventSem(,1)`. Its second
-argument is not used: it may be any string, and an object that has no string
-value raises `SYNTAX 88.909`, as [the argument rule](r:util.index.args) says.
-A third argument raises `SYNTAX 88.922`. When the first argument is the null
-string, or an object whose string value it is, no semaphore is made and the
-call answers the null string. A first argument that is a string other than the
-null string is a name, and asks for a semaphore that other programs can open,
-which [Deviation 43](r:util.syseventsem.deviation.43) says is refused. A first
-argument that is an object with no string value, as `.nil` is, raises `SYNTAX
-88.909`; the third example shows it. Which handle a call answers is not
-specified.
+SysCreateEventSem makes an event semaphore of its
+own, with no post, and answers its handle: a whole number above 0, different
+from the handle of every other semaphore that is still open. It does so when
+its first argument is omitted, as in `SysCreateEventSem()` and
+`SysCreateEventSem(,1)`. Its second argument is not used: it may be any
+string, and an object that has no string value raises `SYNTAX 88.909`, as [the
+argument rule](r:util.index.args) says. A third argument raises `SYNTAX
+88.922`. When the first argument is the null string, or an object whose string
+value it is, no semaphore is made and the call answers the null string. A
+first argument that is a string other than the null string, or an object whose
+string value is such a string, is a name, and asks for a semaphore that other
+programs can open, which [Deviation 43](r:util.syseventsem.deviation.43) says
+is refused. A first argument that is an object with no string value, as `.nil`
+is, raises `SYNTAX 88.909`; the third example shows it. Which handle a call
+answers is not specified. When an argument past the last one comes with an
+omitted or wrong argument, [Deviation 101](r:util.index.deviation.101) says
+which error is raised.
 
 ```rexx
 numeric digits 20
@@ -151,7 +154,8 @@ SysWaitEventSem uses up one post and answers `0`, or answers `121` when the
 `timeout` passed without a post to use. `timeout` is a number of milliseconds,
 a whole number from `-2147483648` to `2147483647`, read whatever `NUMERIC
 DIGITS` is in force; a value that is not a number or is outside that range
-raises `SYNTAX 88.907`, as does a fraction. A
+raises `SYNTAX 88.907`, as does a fraction. An object that is not a string is
+read by the string that its `STRING` method answers, as for a handle. A
 `timeout` that is `0` or omitted sets no limit: the wait ends only when a post
 is there. A `timeout` above `0` is a limit, and the call does not answer `121`
 before at least that long has gone by; how much longer it takes is not
@@ -256,16 +260,19 @@ zeros 2 timeouts 1
 ## The handle
 
 r[util.syseventsem.handle]
-The functions that take a handle read it as a whole number from `0` to
-`18446744073709551615`, in the form the creating call answered it. Blanks
-around it, a plus sign and a fraction of only zeros do no harm. A handle that
-is missing raises `SYNTAX 88.901`, and one argument too many raises `SYNTAX
-88.922`. A value that is not a whole number or is out of that range raises
-`SYNTAX 88.907`: a word, the null string, a negative number, a number with a
-fraction and `.nil`. When an argument past the last one comes with an omitted
-or wrong argument, [Deviation 101](r:util.index.deviation.101) says which
-error is raised. A whole number that is not the handle of an open semaphore is
-answered as [Deviation 158](r:util.syseventsem.deviation.158) says.
+The functions that take a handle read it as a whole
+number from `0` to `18446744073709551615`, in the form the creating call
+answered it. Blanks around it, a plus sign and a fraction of only zeros do no
+harm. A handle that is missing raises `SYNTAX 88.901`, and one argument too
+many raises `SYNTAX 88.922`. A value that is not a whole number or is out of
+that range raises `SYNTAX 88.907`: a word, the null string, a negative number,
+a number with a fraction and `.nil`. An object that is not a string is read by
+the string that its `STRING` method answers, as for `.nil`, so that an object
+whose `STRING` answers an open handle names that semaphore; the last example
+shows it. When an argument past the last one comes with an omitted or wrong
+argument, [Deviation 101](r:util.index.deviation.101) says which error is
+raised. A whole number that is not the handle of an open semaphore is answered
+as [Deviation 158](r:util.syseventsem.deviation.158) says.
 
 ```rexx
 h = SysCreateEventSem()
@@ -324,6 +331,33 @@ e: say condition('o')~code
 0 0
 0 0
 0 0
+0
+```
+
+```rexx
+h = SysCreateEventSem()
+call try "SysWaitEventSem(h, .sv~new('10'))"
+call try "SysPostEventSem(.sv~new(h))"
+call try "SysResetEventSem(.sv~new(h))"
+exit
+try:
+  signal on syntax name e
+  interpret 'say' arg(1)
+  return
+e: say condition('o')~code
+  return
+::class sv
+::method init
+  expose v
+  use arg v
+::method string
+  expose v
+  return v
+```
+
+```output defect=#230
+121
+0
 0
 ```
 
@@ -440,15 +474,15 @@ before
 ```
 
 r[util.syseventsem.deviation.43]
-A call of SysCreateEventSem with a first argument that is a string other than
-the null string, and a call of SysOpenEventSem with a name that is a string
-other than the null string, end the program at once, with exit code `120` and
-a message on the error stream: the semaphore is not made or opened, and
-nothing that follows the call runs.
-ooRexx makes a semaphore of that name that every program of the system can
-open, and answers its handle; SysOpenEventSem answers `0` for a name that no
-program has made. The first example is a creating call, the second an opening
-one.
+A call of SysCreateEventSem with a first
+argument that is a string other than the null string, or an object whose
+string value is such a string, and a call of SysOpenEventSem with a name of
+that kind, end the program at once, with exit code `120` and a message on the
+error stream: the semaphore is not made or opened, and nothing that follows
+the call runs. ooRexx makes a semaphore of that name that every program of the
+system can open, and answers its handle; SysOpenEventSem answers `0` for a
+name that no program has made. The first example is a creating call, the
+second an opening one.
 
 ```rexx
 say 'before'
@@ -471,18 +505,18 @@ before
 ```
 
 r[util.syseventsem.deviation.158]
-A whole number that is not the handle of an open semaphore makes every
-function of this page and of [the mutex semaphore functions](sysmutexsem.md)
-that takes a handle answer `6`, and use no semaphore: the handle of a
-semaphore that is closed, a handle that arithmetic has rounded, as the sum
-`h + 0` of a handle of thirteen digits is under `NUMERIC DIGITS 9`, and a
-number that no call answered. ooRexx uses the number as the address of the
-semaphore and crashes, with a signal that ends the program, for a closed
-handle (all calls but SysCloseEventSem, which answers `6`) and for a rounded
-one. The first example is a rounded handle and a closed one, the second a
-number that no call answered. SysResetEventSem answers `0` in interrexx for
-such a handle, where it should answer `6` like the others, as the third
-example shows.
+A whole number that is not the handle of an
+open semaphore makes every function of this page and of [the mutex semaphore
+functions](sysmutexsem.md) that takes a handle answer `6`, and use no
+semaphore: the handle of a semaphore that is closed, a handle that arithmetic
+has rounded, as the sum `h + 0` of a handle of thirteen digits is under
+`NUMERIC DIGITS 9`, and a number that no call answered. ooRexx uses the number
+as the address of the semaphore and crashes, with a signal that ends the
+program, for a closed handle (all calls but SysCloseEventSem, which answers
+`6`) and, as SysPostEventSem shows, for a rounded one. The first example is a
+rounded handle and a closed one, the second a number that no call answered.
+SysResetEventSem answers `0` in interrexx for such a handle, where it should
+answer `6` like the others, as the third example shows.
 
 ```rexx
 h = SysCreateEventSem()

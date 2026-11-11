@@ -29,8 +29,10 @@ is reported, so that `SysSetPriority('x')` raises `88.907` and
 `SysSetPriority(1)` raises `SYNTAX 88.901`; three arguments raise `SYNTAX
 88.922`. When an argument past the last one comes with an omitted or wrong
 argument, [Deviation 101](r:util.index.deviation.101) says which error is
-raised. An object that is not a string is replaced by its string value, as
-[the argument rule](r:util.index.args) says.
+raised. An object that is not a string is read by the string that its `STRING`
+method answers, not by its `request`, so that `.nil` raises `SYNTAX 88.907`
+and an object whose `STRING` answers a whole number is that number; the second
+example shows it.
 
 ```rexx
 call try "SysSetPriority()"
@@ -87,6 +89,31 @@ e: say condition('o')~code
 88.907
 88.907
 88.907
+```
+
+```rexx
+b = -SysQueryProcess('PPRIO')
+call try "SysSetPriority(1, .sv~new(b))"
+call try "SysSetPriority(.sv~new(0), b)"
+exit
+try:
+  signal on syntax name e
+  interpret 'say' arg(1)
+  return
+e: say condition('o')~code
+  return
+::class sv
+::method init
+  expose v
+  use arg v
+::method string
+  expose v
+  return v
+```
+
+```output defect=#230
+0
+0
 ```
 
 ## The answer
@@ -146,13 +173,15 @@ say SysSetPriority(1, -19) SysQueryProcess('PPRIO')
 ## Deviations
 
 r[util.syssetpriority.deviation.156]
-The call changes the priority of the process, whichever activity of the
-program makes it: the number that SysQueryProcess answers for `PPRIO` and the
-niceness of the commands that ADDRESS starts are the new ones in every
-activity. ooRexx changes only the priority of the activity that makes the
-call, so that the other activities, and the commands that they start, keep the
-priority they had. In the example a message that the program started calls
-SysSetPriority, and the program sees the change.
+The call changes the priority of the
+process, whichever activity of the program makes it: the number that
+SysQueryProcess answers for `PPRIO` and the niceness of the commands that
+ADDRESS starts are the new ones in every activity. ooRexx changes the priority
+of the system thread that runs the calling activity: the activities that are
+running on other threads, and the commands that they start, keep the priority
+they had, and an activity started later has the new priority or the old one,
+as the thread that ooRexx runs it on has. In the example a message that the
+program started calls SysSetPriority, and the program sees the change.
 
 ```rexx
 base = SysQueryProcess('PPRIO')
