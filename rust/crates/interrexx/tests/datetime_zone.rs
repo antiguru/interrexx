@@ -27,6 +27,10 @@ const PROBES: &[(&str, &str)] = &[
         "say date('S','2026-08-04','I') time('S','12:34:56','N')",
         "the deterministic conversions, which must not move with the zone",
     ),
+    (
+        "say time('O','1','T') time('O','0','F') time('O','5','H') time('O','1:00pm','C')",
+        "the offset on an input read from a date-bearing informat",
+    ),
 ];
 
 fn probe_dir() -> PathBuf {
