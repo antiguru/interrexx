@@ -645,7 +645,7 @@ say .sub~new~send('m') '|' .base~new~m
   return 'unknown' arg(1)
 ```
 
-```output defect=#129
+```output
 unknown M | base m
 ```
 
@@ -1838,7 +1838,7 @@ t:
   return 'unknown' arg(1)
 ```
 
-```output defect=#129
+```output
 unknown M
 base m
 base m

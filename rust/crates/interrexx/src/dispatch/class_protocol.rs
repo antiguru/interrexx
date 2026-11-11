@@ -189,7 +189,7 @@ pub(super) fn native_method(
         .classes()
         .own_instance_slot(class, &String::from_utf8_lossy(&name))
     {
-        None => {
+        None | Some(MethodSlot::Withdrawn) => {
             let target = interp.class_default_name(class).to_vec();
             Err(Raised::no_method(&target, &name).into())
         }
@@ -543,10 +543,10 @@ pub(super) fn native_define(
             interp.drop_method_object(class, &name);
             interp.charge_retired_behaviours();
         }
-        Some(source) if source == ObjRef::NIL => {
+        Some(ObjRef::NIL) => {
             interp
                 .classes()
-                .delete_instance_method(class, &String::from_utf8_lossy(&name));
+                .withdraw_instance_method(class, &String::from_utf8_lossy(&name));
             interp.drop_method_object(class, &name);
             interp.charge_retired_behaviours();
         }
