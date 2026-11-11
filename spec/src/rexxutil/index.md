@@ -579,7 +579,8 @@ A RexxUtil function that exists only on Windows, such as `SysWinVer`,
 `SysDriveMap` or `RxMessageBox`, is not provided on a Unix-like system.
 Calling one raises `SYNTAX 43.1`, as a call of any name that no routine has
 does, and [RXFUNCQUERY](r:bif.rxfuncquery.answer) and
-[RXFUNCADD](r:bif.rxfuncadd.module) answer `1` for it.
+[RXFUNCADD](r:bif.rxfuncadd.module) answer `1` for it. [The page on the
+Windows-only functions](windows.md) lists them.
 
 > **Note.** Support for the Windows-only functions on Windows is tracked in
 > issue #215.
@@ -639,10 +640,11 @@ raises `SYNTAX 88.922` before an omitted or wrong argument is reported
 ooRexx reports an omitted argument, an object whose `request` answers no
 string, a stem name of SysStemCopy, SysStemDelete or SysStemInsert that
 fails its check (SysStemSort checks its stem after the count, as interrexx
-does), a whole-number argument of
-SysStemCopy, SysStemDelete, SysStemInsert or SysStemSort that fails its check,
-and a `mode` of SysMkDir that fails any of its checks before the count, and
-the count before a `filler` or an `option` that it does not allow.
+does), a whole-number argument of SysStemCopy, SysStemDelete, SysStemInsert
+or SysStemSort that fails its check, an argument that is not a whole number, a
+`substitutions` of SysFormatMessage that has no `MAKEARRAY` method, and a
+`mode` of SysMkDir that fails any of its checks before the count, and the
+count before a `filler` or an `option` that it does not allow.
 SysOpenEventSem and SysOpenMutexSem are the exception: in both engines they
 report an omitted name (`SYNTAX 88.901`) and an object that has no string
 value (`SYNTAX 88.909`) before the count, as [the event
@@ -674,10 +676,33 @@ h: say condition('o')~code
 signal on syntax name i
 say SysStemDelete('s.', 0, 1, 1)
 i: say condition('o')~code
+signal on syntax name j
+say SysGetErrorText('abc', 3)
+j: say condition('o')~code
+signal on syntax name k
+say SysGetKey(.nil, 'x')
+k: say condition('o')~code
+signal on syntax name l
+say SysGetErrorText('99999999999', 3)
+l: say condition('o')~code
+signal on syntax name m
+say SysFormatMessage(.nil, 'x', 'y')
+m: say condition('o')~code
+signal on syntax name n
+say SysFormatMessage('a', .c6zqm~new, 'c')
+n: say condition('o')~code
 say SysIsFileDirectory('c1zqidxdm')
+::class c6zqm
+::method makestring
+  return 'M'
 ```
 
 ```output
+88.922
+88.922
+88.922
+88.922
+88.922
 88.922
 88.922
 88.922
