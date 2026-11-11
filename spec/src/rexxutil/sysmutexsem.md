@@ -26,10 +26,11 @@ its own, which nobody holds, and answers its handle: a whole number above 0,
 different from the handle of every other semaphore that is still open. An
 object whose string value is the null string does the same. The name is the
 only argument; a second argument raises `SYNTAX 88.922`, and so does an
-omitted place that is followed by an argument. A name that is not the null
-string asks for a semaphore that other programs can open, which [Deviation
-43](r:util.sysmutexsem.deviation.43) says is refused. Which handle a call
-answers is not specified.
+omitted place that is followed by an argument. A name that is a string other
+than the null string asks for a semaphore that other programs can open, which
+[Deviation 43](r:util.sysmutexsem.deviation.43) says is refused. A name that
+is an object with no string value, as `.nil` is, raises `SYNTAX 88.909`; the
+second example shows it. Which handle a call answers is not specified.
 
 ```rexx
 numeric digits 20
@@ -63,6 +64,23 @@ e: say condition('o')~code
 88.922
 88.922
 88.922
+```
+
+```rexx
+call try "SysCreateMutexSem(.nil)"
+call try "SysCreateMutexSem(.object~new)"
+exit
+try:
+  signal on syntax name e
+  interpret 'say' arg(1)
+  return
+e: say condition('o')~code
+  return
+```
+
+```output defect=#246
+88.909
+88.909
 ```
 
 ## Requesting and releasing
@@ -338,10 +356,11 @@ before
 ```
 
 r[util.sysmutexsem.deviation.43]
-A call of SysCreateMutexSem with a name that is not the null string, and a
-call of SysOpenMutexSem with a name that is not the null string, end the
-program at once, with exit code `120` and a message on the error stream: the
-semaphore is not made or opened, and nothing that follows the call runs.
+A call of SysCreateMutexSem with a name that is a string other than the null
+string, and a call of SysOpenMutexSem with a name that is a string other than
+the null string, end the program at once, with exit code `120` and a message
+on the error stream: the semaphore is not made or opened, and nothing that
+follows the call runs.
 ooRexx makes a semaphore of that name that every program of the system can
 open, and answers its handle; SysOpenMutexSem answers `0` for a name that no
 program has made. The first example is a creating call, the second an opening

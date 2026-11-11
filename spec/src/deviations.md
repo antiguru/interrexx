@@ -296,8 +296,9 @@ continue the program.
 
 ## 43. Named RexxUtil semaphores are refused
 
-SysCreateEventSem and SysCreateMutexSem with a name, SysOpenEventSem and
-SysOpenMutexSem are refused; unnamed semaphores work. ooRexx shares named
+SysCreateEventSem and SysCreateMutexSem with a name, and SysOpenEventSem and
+SysOpenMutexSem with a name other than the null string, are refused; unnamed
+semaphores work. ooRexx shares named
 semaphores between processes.
 
 ## 44. MAX and MIN round whole numbers
@@ -1169,3 +1170,10 @@ handle of an open semaphore, such as the handle of a closed semaphore or a
 handle that arithmetic has rounded, answers `6`. ooRexx uses the number as an
 address and crashes for such a handle, in every function but a second
 SysCloseEventSem or SysCloseMutexSem of a closed handle, which answers `6`.
+
+## 161. SysSleep and a blank after the sign
+
+SysSleep reads its delay as a Rexx number, so that a blank may follow the
+sign: `'+ 0.5'` pauses for half a second, and `'- 1'` is a negative delay,
+which raises `SYNTAX 88.907`. ooRexx answers `0` at once for any delay with a
+blank after its sign, without a pause and without the range check.

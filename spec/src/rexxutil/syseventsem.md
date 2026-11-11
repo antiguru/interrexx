@@ -33,10 +33,12 @@ argument is not used: it may be any string, and an object that has no string
 value raises `SYNTAX 88.909`, as [the argument rule](r:util.index.args) says.
 A third argument raises `SYNTAX 88.922`. When the first argument is the null
 string, or an object whose string value it is, no semaphore is made and the
-call answers the null string. A name that is not the null string asks for a
-semaphore that other programs can open, which [Deviation
-43](r:util.syseventsem.deviation.43) says is refused. Which handle a call
-answers is not specified.
+call answers the null string. A first argument that is a string other than the
+null string is a name, and asks for a semaphore that other programs can open,
+which [Deviation 43](r:util.syseventsem.deviation.43) says is refused. A first
+argument that is an object with no string value, as `.nil` is, raises `SYNTAX
+88.909`; the third example shows it. Which handle a call answers is not
+specified.
 
 ```rexx
 numeric digits 20
@@ -73,6 +75,25 @@ e: say condition('o')~code
 ```
 
 ```output defect=#238
+88.909
+```
+
+```rexx
+call try "SysCreateEventSem(.nil)"
+call try "SysCreateEventSem(.object~new)"
+call try "SysCreateEventSem(.nil, 1)"
+exit
+try:
+  signal on syntax name e
+  interpret 'say' arg(1)
+  return
+e: say condition('o')~code
+  return
+```
+
+```output defect=#246
+88.909
+88.909
 88.909
 ```
 
@@ -419,10 +440,11 @@ before
 ```
 
 r[util.syseventsem.deviation.43]
-A call of SysCreateEventSem with a first argument that is not the null string,
-and a call of SysOpenEventSem with a name that is not the null string, end the
-program at once, with exit code `120` and a message on the error stream: the
-semaphore is not made or opened, and nothing that follows the call runs.
+A call of SysCreateEventSem with a first argument that is a string other than
+the null string, and a call of SysOpenEventSem with a name that is a string
+other than the null string, end the program at once, with exit code `120` and
+a message on the error stream: the semaphore is not made or opened, and
+nothing that follows the call runs.
 ooRexx makes a semaphore of that name that every program of the system can
 open, and answers its handle; SysOpenEventSem answers `0` for a name that no
 program has made. The first example is a creating call, the second an opening

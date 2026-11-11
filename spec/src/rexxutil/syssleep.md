@@ -2,6 +2,7 @@
 element: "SysSleep"
 kind: function
 syntax: "SysSleep(delay)"
+deviations: [161]
 rexxref: "Rexx Utilities (RexxUtil) > SysSleep"
 ---
 
@@ -21,14 +22,16 @@ fraction of more digits than that is read in full. Blanks before and after it,
 a plus sign and an exponent are allowed. A value that is not a number, as `x`,
 the null string and `0.01x` are, raises `SYNTAX 88.902`; so does a string with
 a blank between two of its digits, as `1 0`, and a number written in the form
-`0x10` or `1_0`. A number below `0`, and a number above `2147483`, raises
-`SYNTAX 88.907`, and so does `2147483.4`: the largest delay is `2147483`. A
-delay of `0`, or of a fraction too small to count, is allowed. When an
-argument past the last one comes with an omitted or wrong argument,
-[Deviation 101](r:util.index.deviation.101) says which error is raised. An
-object that has only a `STRING` method, and no `MAKESTRING` method, raises
-`SYNTAX 88.909`, as an object that has no string value does; the second
-example shows it.
+`0x10` or `1_0`, and so do the words `Inf` and `nan` and the string `1e1000`;
+the third example shows these. A blank after a sign is the subject of
+[Deviation 161](r:util.syssleep.deviation.161). A number below `0`, and a
+number above `2147483`, raises `SYNTAX 88.907`, and so does `2147483.4`: the
+largest delay is `2147483`. A delay of `0`, or of a fraction too small to
+count, is allowed. When an argument past the last one comes with an omitted or
+wrong argument, [Deviation 101](r:util.index.deviation.101) says which error
+is raised. An object that has no string value, as `.nil` is, raises `SYNTAX
+88.909`, and so does an object that has only a `STRING` method, and no
+`MAKESTRING` method; the second and third examples show them.
 
 ```rexx
 call try "SysSleep()"
@@ -102,6 +105,29 @@ e: say condition('o')~code
 88.909
 ```
 
+```rexx
+call try "SysSleep(.nil)"
+call try "SysSleep(.object~new)"
+call try "SysSleep('Inf')"
+call try "SysSleep('nan')"
+call try "SysSleep('1e1000')"
+exit
+try:
+  signal on syntax name e
+  interpret 'say' arg(1)
+  return
+e: say condition('o')~code
+  return
+```
+
+```output defect=#245
+88.909
+88.909
+88.902
+88.902
+88.902
+```
+
 ## The answer
 
 r[util.syssleep.answer]
@@ -150,4 +176,40 @@ say m~result
 ```output
 posted 1
 worker done
+```
+
+## Deviations
+
+r[util.syssleep.deviation.161]
+A delay is read as a Rexx number, in which a blank may follow the sign: `'+
+0.5'` pauses for half a second, and `'- 1'` is a negative delay, which raises
+`SYNTAX 88.907` as `-1` does. ooRexx reads a delay with a blank after its sign
+as no pause at all: the call answers `0` at once, whatever the number is,
+without the checks of its range. In the example the first call pauses for at
+least `0.3` seconds.
+
+```rexx
+call time 'R'
+say SysSleep('+ 0.3') (time('E') >= 0.3)
+call try "SysSleep('- 1')"
+call try "SysSleep('- 0.5')"
+call try "SysSleep(' - 2147484')"
+call try "SysSleep('+ 2147484')"
+call try "SysSleep('- 0')"
+exit
+try:
+  signal on syntax name e
+  interpret 'say' arg(1)
+  return
+e: say condition('o')~code
+  return
+```
+
+```output defect=#241
+0 1
+88.907
+88.907
+88.907
+88.907
+0
 ```
