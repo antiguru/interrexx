@@ -208,7 +208,7 @@ parse var t head n extra
 say head '['extra']' datatype(n, 'W') (n > 0)
 address system "awk '/^VmHWM:/ {print $2}' /proc/$PPID/status" with output stem h.
 say (n * 2 > h.1) (n < h.1 * 2)
-address system "awk 'BEGIN { s = ""x""; for (i = 0; i < 28; i++) s = s s; print length(s) }'" with output stem a.
+address system "dd if=/dev/zero of=/dev/null bs=256M count=1 status=none; echo done" with output stem a.
 parse value SysQueryProcess('PMEM') with . n2
 say a.1 (n2 - n < 150000)
 ```
@@ -216,7 +216,7 @@ say a.1 (n2 - n < 150000)
 ```output
 Max_Memory_RSS: [] 1 1
 1 1
-268435456 1
+done 1
 ```
 
 r[util.sysqueryprocess.prcvdsig]
