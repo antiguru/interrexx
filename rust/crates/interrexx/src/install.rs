@@ -636,17 +636,28 @@ impl Interp {
             self.check_not_installing(loaded)?;
             return Ok(loaded);
         }
+        // **A name replaced at the first message chooses the file**
+        // (Deviation 111): the replacement is resolved as the original was,
+        // and the manager is not asked again about the file it names.
+        let replaced = name != original;
+        let found = match (replaced, from) {
+            (false, _) => found,
+            (true, Some(id)) => self.resolve_requires(id, name),
+            (true, None) => self.resolve_search(None, name, true),
+        };
+        let looked_up = if replaced { name } else { original };
         // **A package this crate ships is found after every route**, so a
         // program's own file of the same name wins, as one beside the
         // oracle's program does over the copy in its `bin` directory.
         let shipped = match &found {
             Some(_) => None,
-            None => crate::packages::lookup(original),
+            None => crate::packages::lookup(looked_up),
         };
         let located = found
             .clone()
             .or_else(|| shipped.map(|package| package.path()));
         let resolved = match located.clone() {
+            Some(resolved) if replaced => Some(resolved),
             Some(resolved) => {
                 let Some(checked) =
                     self.check_requires_access(manager, &resolved, &mut inherited)?
