@@ -300,11 +300,10 @@ expose (lst); guard on when x => 99.913
 expose (lst); guard on when lst => 99.913
 ```
 
-> **Note.** A WHEN condition that stays false, while no other activity is
-> able to change an object variable, never ends. What a program does then is
-> not specified. interrexx ends it with an exit code of 120 and a message,
-> as [Deviation 20](../deviations.md#20-a-wait-nothing-can-end) says, where
-> ooRexx waits for ever.
+> **Note.** A WHEN condition that stays false, while no other activity is able
+> to change an object variable, never ends. interrexx refuses it, and the
+> program ends with exit code 120, as [the Deviation 20
+> rule](r:conc.locks.deviation.20) says; ooRexx waits for ever.
 
 ## Where GUARD may appear
 

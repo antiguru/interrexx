@@ -1025,13 +1025,17 @@ A HALT that a signal asks for ends the wait of an activity that waits for a
 `GUARD ... WHEN` condition, for the post of an `EventSemaphore`, for a
 `MutexSemaphore`, or in `SysSleep`. The clause that waited finishes, with
 `wait` and `acquire` answering 0, and the activity takes the HALT at once
-([Deviation 10](../deviations.md#10-signals-halt-and-wake)). A wait for the
+([Deviation 10](../deviations.md#10-signals-halt-and-wake)). It ends the wait
+for a command too, and RC is then `-4`. SIGINT and SIGTERM halt the program
+with `4.1` even when SIGHUP is ignored, as under `nohup`; ooRexx installs no
+handler then and the signal ends it, and no example tests that. A wait for the
 result or the end of a message, or for the lock of an object, is not ended. A
 `halt` of a message ends no wait ([the rule](r:conc.halt.pending)). ooRexx
 ends none of these waits for a signal. The activity goes on waiting until its
 condition holds, the post or the release comes, or the time is up, and then
 takes the HALT, so that in the example, where nothing posts, releases or
-opens, it waits for ever.
+opens, it waits for ever. ooRexx's RC after a command that a signal
+interrupted is unpredictable.
 
 ```rexx
 f = SysTempFileName('conc-halt-????.rex')
@@ -1161,12 +1165,13 @@ the sleep ended with HALT
 > result of the first message.
 
 r[conc.halt.deviation.21]
-The program does not wait for an activity that an `UNINIT` method starts
-when the interpreter sends it at the end of the main program: a message that
-the method starts, and the rest of a method that replies after `UNINIT`
-called it, are not waited for, and the lines of the example that they would
-write are not written. ooRexx does not cut them off, and often runs them, in
-an order that varies ([Deviation
+The program does not wait for an activity that an `UNINIT` method starts when
+the interpreter sends it at the end of the main program: a message that the
+method starts, and the rest of a method that replies after `UNINIT` called it,
+are not waited for, and the lines of the example that they would write are not
+written. The first example relies on interrexx sending `UNINIT` at that end,
+which the invocation rule does not promise. ooRexx does not cut them off, and
+often runs them, in an order that varies ([Deviation
 21](../deviations.md#21-activities-at-program-end)). The case is that of the
 interpreter's own end of the program, for which `UNINIT` is not specified
 ([the invocation rule](r:env.invocation.end)); [the rule

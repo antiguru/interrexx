@@ -980,8 +980,9 @@ r[class.method.isguarded]
 method is guarded unless `UNGUARDED` was declared, a `::CONSTANT` directive
 made it, or [`setUnguarded`](r:class.method.setunguarded) was sent; a method
 made by `new` is guarded, and so are an attribute method and an abstract
-method. What guarding does when messages run at the same time is specified in
-the environment chapter. The method takes no argument (`SYNTAX 93.902`).
+method. What guarding does when messages run at the same time is specified by
+[the locks page](r:conc.locks.default) of the concurrency chapter. The method
+takes no argument (`SYNTAX 93.902`).
 
 ```rexx
 say .k~method('g')~isGuarded .k~method('u')~isGuarded

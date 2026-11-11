@@ -764,19 +764,23 @@ the reader saw: written before the post
 
 r[conc.activities.waiting]
 An activity that waits does not hold up another. The waits are: `result` and
-`wait` of a message, a `GUARD ... WHEN` whose condition is false, an
-`EventSemaphore`'s `wait`, a `MutexSemaphore`'s `acquire` that has to wait,
-and `SysSleep`; an activity in one of them goes on to its next clause only
-when what it waits for has happened (a `GUARD ... WHEN` evaluates its
-expression again meanwhile, as [the rule on
-WHEN](r:conc.locks.when) says), and every other activity
-that is not itself waiting makes progress meanwhile. How fast each progresses,
-and whether the activities that are not waiting share the time fairly, is not
-specified, and so is how soon an activity whose wait has ended runs again.
-Some blocking operations of the library hold every activity, and some
-busy-waiting code in nested constructs does not end; they are the cases of
-[Deviation 16](../deviations.md#16-blocking-operations-hold-every-activity)
-and [Deviation 18](r:conc.activities.deviation.18).
+`wait` of a message, a `GUARD ... WHEN` whose condition is false, the lock of
+an object that another activity holds, an `EventSemaphore`'s `wait`, a
+`MutexSemaphore`'s `acquire` that has to wait, `lineIn` of a `RexxQueue` that
+holds no line, a command that runs without redirection, and the waits of the
+semaphore functions and `SysSleep` of the RexxUtil library; an activity in one
+of them goes on to its next clause only when what it waits for has happened (a
+`GUARD ... WHEN` evaluates its expression again meanwhile, as [the rule on
+WHEN](r:conc.locks.when) says), and every other activity that is not itself
+waiting makes progress meanwhile. How fast each progresses, and whether the
+activities that are not waiting share the time fairly, is not specified, and
+so is how soon an activity whose wait has ended runs again. When several
+activities wait for the same thing, which of them gets it first, such as a
+line of a queue or a mutex, is not specified. Some blocking operations of the
+library hold every activity, and some busy-waiting code in nested constructs
+does not end; they are the cases of [Deviation
+16](../deviations.md#16-blocking-operations-hold-every-activity) and
+[Deviation 18](r:conc.activities.deviation.18).
 
 ```rexx
 g = .gate~new
@@ -824,7 +828,8 @@ result of a message that has never been sent and that no activity can still
 send, or the original of a `reply`, whose copy ran; the same holds for `wait`.
 ooRexx waits for ever ([Deviation
 20](../deviations.md#20-a-wait-nothing-can-end)). The case of a `GUARD ...
-WHEN` that nothing can make true is the guard rule's.
+WHEN` that nothing can make true is [the locks page's
+rule](r:conc.locks.deviation.20).
 
 ```rexx
 m = .message~new(.object~new, 'string')

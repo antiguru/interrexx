@@ -10,7 +10,7 @@ This chapter specifies how a program does more than one thing at a time: the
 activities that run its code, how they are made, what they share and what they
 keep apart, and what one of them can and cannot know of the others.
 
-The pages of this chapter so far are:
+The pages of this chapter are:
 
 * [Activities](activities.md): what an activity is, which code runs on which
   activity when a program uses `start`, `REPLY`, a message object, an alarm or

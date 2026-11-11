@@ -349,14 +349,18 @@ c~cancel
 
 r[class.ticker.triggered]
 The ticker sends its target `triggered` with itself as the argument at the end
-of each interval, until it is cancelled; the target's method is the one of
-[the notification rule](r:class.alarmnotification.triggered). How many times it
-is sent before a program cancels the ticker is not something the program can
-count on, as [the timer rule](r:conc.activities.timers) leaves it open, so
-the example cancels from the method itself after the third, and shows that the
-ticker stops: the target is sent `cancel` once and nothing after it, even though
-the program waits for several more intervals. Unlike an alarm, a ticker has no
-method `triggered` of its own.
+of each interval, until it is cancelled or an error in the target's
+`triggered` stops it, and not while an earlier call has not returned ([the
+timer rule](r:conc.activities.timers)); the target's method is the one of [the
+notification rule](r:class.alarmnotification.triggered). How many times it is
+sent before a program cancels the ticker is not something the program can
+count on, as it depends on scheduling ([the waiting
+rule](r:conc.activities.waiting)) and on how long the target's calls take
+([the timer rule](r:conc.activities.timers)), so the example cancels from the
+method itself after the third, and shows that the ticker stops: the target is
+sent `cancel` once and nothing after it, even though the program waits for
+several more intervals. Unlike an alarm, a ticker has no method `triggered` of
+its own.
 
 ```rexx
 n = .note~new(3)

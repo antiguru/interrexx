@@ -936,9 +936,10 @@ worked on job
 1 1 42.3
 ```
 
-> **Note.** The error of a started message that nobody asks for is reported on
-> the error stream when the message ends, and the line that the report names
-> is the case of [Deviation
+> **Note.** The error of a started message is reported on the error stream
+> when the message ends, whether or not an activity asks for the result ([the
+> unasked rule](r:conc.activities.unasked)), and the line that the report
+> names is the case of [Deviation
 > 67](../deviations.md#67-the-line-a-started-messages-error-names): ooRexx's
 > report often names the line of the activity that waits for the message, and
 > the report of interrexx names the line that raised the error.

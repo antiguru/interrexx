@@ -1045,30 +1045,26 @@ r[conc.locks.deviation.160]
 A condition of `GUARD ON WHEN` or `GUARD OFF WHEN` that names a compound
 variable or a stem names the whole stem. The condition is evaluated again when
 another activity assigns a value to any tail of that stem or drops one, or
-assigns a value to the whole stem or drops it, for `GUARD ON WHEN` and
-`GUARD OFF WHEN` alike. ooRexx does not evaluate it again for a tail, so the
-wait does not end, and it does not evaluate a `GUARD OFF WHEN` again for an
-assignment to the whole stem. interrexx does not evaluate it again for a tail
-yet (#239). As for a simple symbol, a variable that only a method called by
-the condition reads does not cause it. In the first example four waiting
-methods are ended by the assignment to a tail, by the same for `GUARD OFF
-WHEN`, by the assignment to the whole stem for `GUARD OFF WHEN` and by the
-drop of a tail; the second example is the assignment to the whole stem for
-`GUARD ON WHEN`, which interrexx already ends.
+assigns a value to the whole stem or drops it, for `GUARD ON WHEN` and `GUARD
+OFF WHEN` alike. ooRexx does not evaluate it again for a tail, so the wait
+does not end. interrexx does not evaluate it again for a tail yet (#239). As
+for a simple symbol, a variable that only a method called by the condition
+reads does not cause it. In the first example three waiting methods are ended
+by the assignment to a tail, by the same for `GUARD OFF WHEN` and by the drop
+of a tail; the second example is the assignment to the whole stem, for `GUARD
+ON WHEN` and for `GUARD OFF WHEN`, which both interpreters already end.
 
 ```rexx
 say 'start'
 o1 = .k~new; m1 = o1~start('onTail')
 o2 = .k~new; m2 = o2~start('offTail')
-o3 = .k~new; m3 = o3~start('offStem')
 o4 = .k~new; m4 = o4~start('onDrop')
-do o over .array~of(o1, o2, o3, o4)
+do o over .array~of(o1, o2, o4)
   do until o~ready; end
 end
-o1~assignTail; o2~assignTail; o3~assignStem; o4~dropTail
+o1~assignTail; o2~assignTail; o4~dropTail
 say m1~result
 say m2~result
-say m3~result
 say m4~result
 ::class k
 ::attribute ready unguarded
@@ -1086,11 +1082,6 @@ say m4~result
   ready = .true
   guard off when a.b = 1
   return 'off tail'
-::method offStem unguarded
-  expose a. ready
-  ready = .true
-  guard off when a.b = 1
-  return 'off stem'
 ::method onDrop unguarded
   expose a. ready
   ready = .true
@@ -1111,27 +1102,35 @@ say m4~result
 start
 on tail
 off tail
-off stem
 on drop
 ```
 
 ```rexx
 say 'start'
-o = .k~new
-m = o~start('waitIt')
-do until o~ready; end
-o~assignStem
-say m~result
+do kind over .array~of('onStem', 'offStem')
+  o = .k~new
+  m = o~start(kind)
+  do until o~ready; end
+  o~assignStem
+  say kind':' m~result
+end
 ::class k
 ::attribute ready unguarded
 ::method init
   expose a. ready
   ready = .false
   a.b = 0
-::method waitIt unguarded
-  expose a. ready
+::method mark unguarded
+  expose ready
   ready = .true
-  guard on when a.b = 1
+  return 1
+::method onStem unguarded
+  expose a.
+  guard on when a.b = self~mark
+  return 'woke'
+::method offStem unguarded
+  expose a.
+  guard off when a.b = self~mark
   return 'woke'
 ::method assignStem unguarded
   expose a.
@@ -1140,7 +1139,8 @@ say m~result
 
 ```output
 start
-woke
+onStem: woke
+offStem: woke
 ```
 
 > **Note.** Two more deviations touch what activities do while they wait.

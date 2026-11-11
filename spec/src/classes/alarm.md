@@ -15,11 +15,13 @@ sends the target `cancel`. The target has to be an implementation of
 sent and when; this page states how an alarm is made, what its time may be and
 what its own methods answer. By which activity the library runs the target is
 specified by [the timer rule](r:conc.activities.timers) of the concurrency
-chapter, and at which time it is reached by [the clock
-rule](r:class.alarm.init.clock). The examples do not depend on it: they set an
-alarm for a time that the program does not wait for and cancel it, or they
-wait on a guard that the target opens, and they print nothing that varies with
-the clock.
+chapter, and the moment it is set for by the rules of `init`
+([seconds](r:class.alarm.init.seconds), [time of
+day](r:class.alarm.init.clock), [`DateTime` and
+`TimeSpan`](r:class.alarm.init.moment)). The examples do not depend on it:
+they set an alarm for a time that the program does not wait for and cancel it,
+or they wait on a guard that the target opens, and they print nothing that
+varies with the clock.
 
 ## The class
 

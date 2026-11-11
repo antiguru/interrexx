@@ -1166,8 +1166,7 @@ bytes; it crashes on a truncated image and on other changed header bytes.
 A condition of GUARD ON WHEN or GUARD OFF WHEN that names a compound variable
 or a stem names the whole stem: it is evaluated again when another activity
 assigns to or drops any tail of the stem or the whole stem. ooRexx does not
-evaluate it again for a tail, so the wait does not end, and it evaluates a
-GUARD OFF WHEN again for no assignment to the whole stem. interrexx does not
+evaluate it again for a tail, so the wait does not end. interrexx does not
 evaluate it again for a tail yet (#239).
 
 ## 162. A second init of an Alarm or a Ticker
