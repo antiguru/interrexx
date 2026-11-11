@@ -169,7 +169,7 @@ its current queue ([the RXQUEUE rule](r:bif.rxqueue.get)), which holds
 nothing when the program is started from a shell, and, when the command gave
 it no words, with no argument and no entry in `.syscargs`. A program that a
 command of another Rexx program starts shares that program's `SESSION` queue,
-as the page on commands will state.
+as [the child rule](r:env.commands.rxqueue.child) states.
 The monitors that connect the streams to the program are [the
 bindings](r:env.objects.bindings) of the environment objects. With
 `/dev/null` as standard input, what CHARS and LINES answer is Deviation 54

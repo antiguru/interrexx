@@ -25,10 +25,16 @@ The pages of this chapter so far are:
   case of a name, what is read again at every call, and what a program that
   is called by name leaves in its caller.
 
-Pages on commands and their environments, the security manager and
-interactive debugging follow. Until
-they exist, the rules of the other chapters that mention those subjects in
-plain text are the rules there are.
+* [Command environments](commands.md): the environments that run a command
+  on Linux and the program each runs, how the return code of a command
+  comes out of its exit status or signal, what a command starts with, the
+  commands `cd`, `export`, `set` and `unset` that the interpreter does
+  itself, and the `rxqueue` filter that puts the lines of a command on a
+  queue of the program.
+
+Pages on the security manager and interactive debugging follow. Until they
+exist, the rules of the other chapters that mention those subjects in plain
+text are the rules there are.
 
 An example in this chapter changes the objects that its own program reads, as
 a program does. Each example restores what it changed when a later line of the
