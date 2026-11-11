@@ -124,13 +124,15 @@ address system 'rm -f c1zqcta c1zqctb c1zqctn'
 r[util.sysfilecopy.fail]
 SysFileCopy answers a number that is not zero when it cannot copy. When
 `source` names an entry and `target` names the same one, under the same name,
-under another name or through a symbolic link, the call answers `17` and
-changes nothing. Otherwise it answers `2` when `source` names nothing and `13`
+under another spelling of its name, such as `./` before it, or through a
+symbolic link, the call answers `17` and changes nothing. Otherwise `source`
+is checked first: the call answers `2` when `source` names nothing and `13`
 when the program may not read it, and a `target` that is not there is not made
-then. It answers `21` when `source` is a directory. It answers `2` when the
-directory of `target` does not exist, `21` when `target` is a directory, and
-`13` when `target` is a file that may not be written or a name in a directory
-that may not be changed.
+then. `target` is checked next: the call answers `2` when the directory of
+`target` does not exist, `21` when `target` is a directory, and `13` when
+`target` is a file that may not be written or a name in a directory that may
+not be changed. A `source` that is a directory answers `21` only when none of
+these checks fails.
 
 ```rexx
 call charout 'c1zqcfa', 'AAA'
@@ -154,6 +156,16 @@ address system 'chmod 555 c1zqcfd'
 say SysFileCopy('c1zqcfa', 'c1zqcfd/n') SysFileExists('c1zqcfd/n')
 address system 'chmod 755 c1zqcfd; chmod 644 c1zqcfb; rm -f c1zqcfa c1zqcfb c1zqcfl'
 call SysRmDir 'c1zqcfd'
+call SysMkDir 'c1zqcod'
+call charout 'c1zqcob', 'BBBB'
+call charout 'c1zqcob'
+call charout 'c1zqcou', 'UU'
+call charout 'c1zqcou'
+address system 'chmod 444 c1zqcob; chmod 000 c1zqcou'
+say SysFileCopy('c1zqconone', 'c1zqcod') SysFileCopy('c1zqcou', 'c1zqconone/n') SysFileCopy('c1zqcou', 'c1zqcod')
+say SysFileCopy('c1zqcod', 'c1zqconone/n') SysFileCopy('c1zqcod', 'c1zqcob')
+address system 'chmod 644 c1zqcob c1zqcou; rm -f c1zqcob c1zqcou'
+call SysRmDir 'c1zqcod'
 ```
 
 ```output
@@ -165,4 +177,6 @@ call SysRmDir 'c1zqcfd'
 13 0
 13 6
 13 0
+2 13 13
+2 13
 ```

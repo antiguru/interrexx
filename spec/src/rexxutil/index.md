@@ -30,8 +30,10 @@ The pages of this chapter so far are:
 
 The rules state the behavior of a Unix-like system. The examples make their
 own files and directories, whose names start with `c1zq`, and remove them
-again. A number that a function answers for a failure is the one Linux gives,
-as [the answer rule](r:util.index.codes) says.
+again. What a function answers for a failure is what
+[the answer rule](r:util.index.codes) gives: an error number of Linux for the
+functions that change files, and a fixed value for the functions that the rule
+names.
 
 ## Availability
 
@@ -310,22 +312,29 @@ call SysFileDelete 'c1zqidxs2'
 ## Answers
 
 r[util.index.codes]
-A function that works on the system answers a whole number for what it did:
-`0` when it did it, and another number when it could not. A failure of the
-system is an answer, never a `SYNTAX` condition: a missing file, a directory
-in place of a file, a refused permission and a name that is already taken all
-answer a number that is not zero, and leave the program running. What a
-function raises is limited to bad arguments, which the page of each function
-lists. The number is the system's error number for the failure: `2` for a name
-that nothing has or a directory in it that does not exist, `13` for a
-permission that the system refuses, `17` for a name that is taken, `20` for a
-component before the last that is not a directory, `21` for a directory where
-a file is needed, `22` for a directory moved into itself, `39` for a directory
-that is not empty, and the system's other numbers for other failures, such as
-`36` for a name that is too long. The page of each function gives the number
-of every failure it lists, and says where the function departs from the
-system's number. A function that answers a state, such as `SysFileExists`,
-answers `0` or `1` and has no failure to report.
+A function that works on the system answers what it did, and a failure of the
+system is an answer, never a `SYNTAX` condition. A missing file, a directory
+in place of a file, a refused permission and a name that is already taken
+leave the program running. What a function raises is limited to bad
+arguments, which the page of each function lists. SysFileDelete, SysMkDir,
+SysRmDir, SysFileCopy and SysFileMove answer `0` when they did it. Otherwise
+they answer the system's error number for the failure: `2` for a name that
+nothing has or a directory in it that does not exist, `13` for a permission
+that the system refuses, `17` for a name that is taken, `20` for a name that
+must be a directory and is not (a component before the last, or the target
+of a directory that is moved), `21` for a directory where a file is needed,
+`22` for a directory moved into itself, and `39` for a directory that is not
+empty. Other failures answer the system's other numbers, such as `36` for a
+name that is too long. The page of each of these five functions gives the
+number of every failure it lists, and says where the function departs from
+the system's number. The other functions answer fixed values, which their
+pages state. SysFileTree answers `0` whether or not it could read what it was
+asked for. SysFileSearch answers `0`, or `3` for a file that it cannot read.
+SysSetFileDateTime answers `0`, or `-1` for every failure.
+SysGetFileDateTime answers a time, or `-1`. SysTempFileName and
+SysSearchPath answer a name, or the null string. A function that answers a
+state, such as `SysFileExists`, answers `0` or `1` and has no failure to
+report.
 
 ```rexx
 say SysFileDelete('c1zqidxnone') SysMkDir('c1zqidxnone/sub') SysRmDir('c1zqidxnone')
@@ -333,6 +342,7 @@ say SysFileCopy('c1zqidxnone', 'c1zqidxcopy') SysFileMove('c1zqidxnone', 'c1zqid
 say SysFileExists('c1zqidxcopy') SysFileExists('c1zqidxmoved')
 call SysMkDir 'c1zqidxd'
 say SysMkDir('c1zqidxd') SysFileDelete('c1zqidxd') SysRmDir('c1zqidxd')
+say SysFileTree('c1zqidxnone/*', 's.') SysFileSearch('x', 'c1zqidxnone', 's.') SysGetFileDateTime('c1zqidxnone') SysSetFileDateTime('c1zqidxnone')
 ```
 
 ```output
@@ -340,6 +350,7 @@ say SysMkDir('c1zqidxd') SysFileDelete('c1zqidxd') SysRmDir('c1zqidxd')
 2 2
 0 0
 17 21 0
+0 3 -1 -1
 ```
 
 ## Functions that exist only on Windows

@@ -92,10 +92,12 @@ call SysRmDir 'c1zqmvd2'
 ```
 
 r[util.sysfilemove.replace]
-Some entries at `target` are replaced by the move: a symbolic link that points
-to nothing, or to a directory, when `source` is not a directory, and a
-directory with no entries when `source` is a directory. The link itself, or
-the empty directory, goes, and what a link pointed to is not changed.
+Some entries at `target` are replaced by the move. When `source` is not a
+directory, they are a fifo, and a symbolic link that points to nothing, to a
+directory or to a fifo. When `source` is a directory, it is a directory with
+no entries. This book does not specify a `target` of another kind, such as a
+socket. The link, the fifo or the empty directory goes, and what a link
+pointed to is not changed.
 
 ```rexx
 call charout 'c1zqmra', 'AAA'
@@ -121,6 +123,16 @@ call SysRmDir 'c1zqmre'
 call SysRmDir 'c1zqmrf/in'
 call SysRmDir 'c1zqmrf'
 call SysRmDir 'c1zqmrg'
+call charout 'c1zqmrc', 'CC'
+call charout 'c1zqmrc'
+call SysMkDir 'c1zqmrh'
+address system 'mkfifo c1zqmrp c1zqmrq'
+say SysFileMove('c1zqmrnone', 'c1zqmrp') SysFileMove('c1zqmrh', 'c1zqmrp') SysIsFileDirectory('c1zqmrh')
+say SysFileMove('c1zqmrc', 'c1zqmrq') SysIsFile('c1zqmrq') chars('c1zqmrq') SysFileExists('c1zqmrc')
+call stream 'c1zqmrq', 'c', 'close'
+call SysFileDelete 'c1zqmrq'
+address system 'rm c1zqmrp'
+call SysRmDir 'c1zqmrh'
 ```
 
 ```output
@@ -129,6 +141,8 @@ call SysRmDir 'c1zqmrg'
 0 0 1
 39 17 22
 1 1
+2 20 1
+0 1 2 0
 ```
 
 r[util.sysfilemove.fail]
@@ -136,13 +150,14 @@ SysFileMove answers a number that is not zero when it cannot move, and nothing
 changes: neither name is changed and the files keep their bytes. It answers
 `17` when `source` names an entry and `target` names the same one, under the
 same name, under another name or through a symbolic link; and when `target`,
-with symbolic links followed, names an entry that exists and is not a
-directory, whether `source` exists or not, since a move does not replace a
-file. Otherwise it answers `2` when `source` names nothing or the directory of
-`target` does not exist, `21` when a file is moved to a directory, `39` when a
-directory is moved to a directory that has entries, `20` when a directory is
-moved to a symbolic link, `22` when a directory is moved into itself, and `13`
-when the system refuses, as it does for a directory that may not be changed.
+with symbolic links followed, is a regular file, whether `source` exists or
+not, since a move does not replace a file. Otherwise it answers `2` when
+`source` names nothing or the directory of `target` does not exist, `21` when
+a file is moved to a directory, `39` when a directory is moved to a directory
+that has entries, `20` when a directory is moved to a symbolic link or to an
+entry, such as a fifo, that is neither a directory nor a regular file, `22`
+when a directory is moved into itself, and `13` when the system refuses, as it
+does for a directory that may not be changed.
 
 ```rexx
 call charout 'c1zqmfa', 'AAA'
