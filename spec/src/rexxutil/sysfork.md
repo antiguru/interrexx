@@ -49,9 +49,9 @@ A call of SysFork with no argument ends the program at once, with exit code
 follows the call runs. ooRexx makes a copy of the process, in which both
 programs go on after the call. The call answers `0` in the copy and the number
 of the new process in the original, and [SysWait](syswait.md) in the original
-answers, for a copy that ended with EXIT and a whole number, 256 times that
-number. interrexx can show none of this: the example shows the program that
-the refusal ends.
+answers, for a copy that ended with EXIT and a whole number from `0` to `255`,
+256 times that number. interrexx can show none of this: the example shows the
+program that the refusal ends.
 
 ```rexx
 say 'before'

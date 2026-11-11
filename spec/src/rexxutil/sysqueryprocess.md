@@ -129,10 +129,12 @@ r[util.sysqueryprocess.pprio]
 `PPRIO` answers the priority of the process as a whole number, the niceness
 that Linux gives it: a larger number is a lower priority. A process starts
 with the niceness of the process that started it, normally 0.
-[SysSetPriority](syssetpriority.md) changes it, and a command that ADDRESS
-starts has the niceness that the program has. In the example the program
-lowers its priority by three steps, or by as many as are left below the
-greatest niceness, and the command sees the new number.
+[SysSetPriority](syssetpriority.md) changes it ([Deviation
+156](r:util.syssetpriority.deviation.156) is about the activities of the
+program), and a command that ADDRESS starts has the niceness that the program
+has. In the example the program lowers its priority by three steps, or by as
+many as are left below the greatest niceness, and the command sees the new
+number.
 
 ```rexx
 n = SysQueryProcess('PPRIO')
@@ -154,11 +156,12 @@ r[util.sysqueryprocess.ptime]
 `PTIME` answers a line of text of the form `CPU_Time Summary:  `, a time, `
 Kernel:  `, a time, `  User:  ` and a time, with two blanks after each colon
 and between the times and the words. Each time is written `h:mm:ss:mmm` in
-hours, minutes, seconds and milliseconds, the hours with as many digits as
-they need and the other fields with two, two and three digits. They are the
-processor time the process has used so far in all, in the part of the system
-and in the program itself. The first time is not less than either of the
-others, and no time becomes smaller from one call to the next.
+hours, minutes, seconds and milliseconds, the hours as a whole number and the
+other fields with two, two and three digits. They are the processor time the
+process has used so far in all, in the part of the system and in the program
+itself. The first time is not less than either of the others, and no time
+becomes smaller from one call to the next. The time of a command that ADDRESS
+runs is not counted.
 
 ```rexx
 t1 = SysQueryProcess('PTIME')
@@ -192,7 +195,9 @@ ms: procedure
 r[util.sysqueryprocess.pmem]
 `PMEM` answers a line of text of the form `Max_Memory_RSS: ` and a whole
 number: the most main memory, counted in kilobytes, that the process has held
-at one time so far.
+at one time so far. Memory that a command that ADDRESS runs holds is not
+counted: in the example a command holds 256 megabytes, and the number grows by
+far less.
 
 ```rexx
 t = SysQueryProcess('PMEM')
@@ -200,11 +205,15 @@ parse var t head n extra
 say head '['extra']' datatype(n, 'W') (n > 0)
 address system "awk '/^VmHWM:/ {print $2}' /proc/$PPID/status" with output stem h.
 say (n * 2 > h.1) (n < h.1 * 2)
+address system "awk 'BEGIN { s = ""x""; for (i = 0; i < 28; i++) s = s s; print length(s) }'" with output stem a.
+parse value SysQueryProcess('PMEM') with . n2
+say a.1 (n2 - n < 150000)
 ```
 
 ```output
 Max_Memory_RSS: [] 1 1
 1 1
+268435456 1
 ```
 
 r[util.sysqueryprocess.prcvdsig]

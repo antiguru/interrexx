@@ -20,10 +20,15 @@ The value is read as a number whatever `NUMERIC DIGITS` is in force, so that a
 fraction of more digits than that is read in full. Blanks before and after it,
 a plus sign and an exponent are allowed. A value that is not a number, as `x`,
 the null string and `0.01x` are, raises `SYNTAX 88.902`; so does a string with
-a blank inside it, and a number written in the form `0x10` or `1_0`. A number
-below `0`, and a number above `2147483`, raises `SYNTAX 88.907`, and so does
-`2147483.4`: the largest delay is `2147483`. A delay of `0`, or of a fraction
-too small to count, is allowed.
+a blank between two of its digits, as `1 0`, and a number written in the form
+`0x10` or `1_0`. A number below `0`, and a number above `2147483`, raises
+`SYNTAX 88.907`, and so does `2147483.4`: the largest delay is `2147483`. A
+delay of `0`, or of a fraction too small to count, is allowed. When an
+argument past the last one comes with an omitted or wrong argument,
+[Deviation 101](r:util.index.deviation.101) says which error is raised. An
+object that has only a `STRING` method, and no `MAKESTRING` method, raises
+`SYNTAX 88.909`, as an object that has no string value does; the second
+example shows it.
 
 ```rexx
 call try "SysSleep()"
@@ -45,6 +50,7 @@ call try "SysSleep('1e-2')"
 call try "SysSleep(.mutablebuffer~new('0.01'))"
 call try "SysSleep(0.0000001)"
 numeric digits 3
+call try "SysSleep(2147483.4)"
 call try "SysSleep('0.0123456')"
 exit
 try:
@@ -74,7 +80,26 @@ e: say condition('o')~code
 0
 0
 0
+88.907
 0
+```
+
+```rexx
+call try "SysSleep(.strval~new)"
+exit
+try:
+  signal on syntax name e
+  interpret 'say' arg(1)
+  return
+e: say condition('o')~code
+  return
+::class strval
+::method string
+  return '0'
+```
+
+```output defect=#230
+88.909
 ```
 
 ## The answer
@@ -104,13 +129,14 @@ activities of the program keep running meanwhile, and a message that the
 program has started goes on with its work during the delay (the activities
 page of the concurrency chapter has the rules for an activity that waits). In
 the example the started message posts a semaphore and ends after a pause of
-its own, and the program, sleeping longer, finds the semaphore posted and the
-message's answer ready.
+its own, and the program, after its own pause, waits for the post and the
+message's answer.
 
 ```rexx
 f = .eventsemaphore~new
 m = .w~new~start('run', f)
 call SysSleep 0.3
+f~wait
 say 'posted' f~isPosted
 say m~result
 ::class w

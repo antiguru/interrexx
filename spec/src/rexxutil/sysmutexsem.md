@@ -2,7 +2,7 @@
 element: "SysCreateMutexSem"
 kind: function
 syntax: "SysCreateMutexSem(name); SysOpenMutexSem(name); SysRequestMutexSem(handle, [timeout]); SysReleaseMutexSem(handle); SysCloseMutexSem(handle)"
-deviations: [20, 43]
+deviations: [20, 43, 158]
 rexxref: "Deprecated Rexx features > RexxUtil Semaphore functions"
 ---
 
@@ -127,11 +127,11 @@ e: say condition('o')~code
 r[util.sysmutexsem.release]
 SysReleaseMutexSem makes the lock free and answers `0`. It does so whichever
 activity calls it, the one that holds the lock or another, and also when
-nobody holds it. It frees the lock once, however often the lock was requested,
-since a request that waits does not take it a second time. A request that
-waits for the lock takes it when the lock is free, as [the next
-rule](r:util.sysmutexsem.blocking) shows. In the example another activity
-holds the lock, and the program frees it, then takes it.
+nobody holds it. One release makes the lock free, however many requests were
+made while it was held. A request that waits for the lock takes it when the
+lock is free, as [the next rule](r:util.sysmutexsem.blocking) shows. In the
+example another activity holds the lock, and the program frees it, then takes
+it.
 
 ```rexx
 numeric digits 20
@@ -204,9 +204,11 @@ The functions that take a handle read it as [the handle rule of the event
 semaphore functions](r:util.syseventsem.handle) says, and raise the same
 errors for the same values: a missing handle `SYNTAX 88.901`, a second
 argument of SysReleaseMutexSem or SysCloseMutexSem `SYNTAX 88.922`, and a
-value that is no whole number in range `SYNTAX 88.907`. What a call does with
-the handle of an event semaphore, with a whole number that no call answered,
-or with the handle of a closed semaphore, is not specified.
+value that is no whole number in range `SYNTAX 88.907`. When an argument past
+the last one comes with an omitted or wrong argument, [Deviation
+101](r:util.index.deviation.101) says which error is raised. A whole number
+that is not the handle of an open semaphore is answered as [Deviation
+158](r:util.sysmutexsem.deviation.158) says.
 
 ```rexx
 numeric digits 20
@@ -256,8 +258,8 @@ e: say condition('o')~code
 r[util.sysmutexsem.close]
 SysCloseMutexSem ends the use of a semaphore and answers `0`. It answers `6`
 when the semaphore is closed already, and so a second call with the same
-handle answers `6`. Calls with a closed handle other than SysCloseMutexSem are
-not specified.
+handle answers `6`. The other functions answer a closed handle as [Deviation
+158](r:util.sysmutexsem.deviation.158) says.
 
 ```rexx
 h = SysCreateMutexSem('')
@@ -278,12 +280,17 @@ for a name that it cannot open. The name is required: a call without one
 raises `SYNTAX 88.901`, a second argument `SYNTAX 88.922`, and an object that
 has no string value `SYNTAX 88.909`. The null string is no name of a
 semaphore, so that the call answers `0`. A name that is not the null string is
-refused ([Deviation 43](r:util.sysmutexsem.deviation.43)).
+refused ([Deviation 43](r:util.sysmutexsem.deviation.43)). An omitted name and
+an object that has no string value are reported before an argument that
+follows them: `SysOpenMutexSem(, 1)` raises `SYNTAX 88.901` and
+`SysOpenMutexSem(.nil, 1)` `SYNTAX 88.909`.
 
 ```rexx
 call try "SysOpenMutexSem()"
 call try "SysOpenMutexSem(,)"
 call try "SysOpenMutexSem('', 1)"
+call try "SysOpenMutexSem(, 1)"
+call try "SysOpenMutexSem(.nil, 1)"
 call try "SysOpenMutexSem(.nil)"
 call try "SysOpenMutexSem('')"
 call try "SysOpenMutexSem(.mutablebuffer~new)"
@@ -301,6 +308,8 @@ e: say condition('o')~code
 88.901
 88.901
 88.922
+88.901
+88.909
 88.909
 0
 0
@@ -356,4 +365,38 @@ say 'after'
 
 ```output rc=120
 before
+```
+
+r[util.sysmutexsem.deviation.158]
+A whole number that is not the handle of an open semaphore makes
+SysRequestMutexSem, SysReleaseMutexSem and SysCloseMutexSem answer `6`, and
+use no semaphore, as [the event semaphore
+functions](r:util.syseventsem.deviation.158) do: the handle of a semaphore
+that is closed, a handle that arithmetic has rounded, as the sum `h + 0` of a
+handle of thirteen digits is under `NUMERIC DIGITS 9`, and a number that no
+call answered. ooRexx uses the number as the address of the semaphore and
+crashes, with a signal that ends the program, for a closed handle
+(SysRequestMutexSem and SysReleaseMutexSem) and for a rounded one. The first
+example is a rounded handle and a closed one, the second a number that no call
+answered.
+
+```rexx
+m = SysCreateMutexSem('')
+r = m + 0
+say (r \== m) SysRequestMutexSem(r, 10) SysReleaseMutexSem(r) SysCloseMutexSem(r)
+call SysCloseMutexSem m
+say SysRequestMutexSem(m, 10) SysReleaseMutexSem(m)
+```
+
+```output
+1 6 6 6
+6 6
+```
+
+```rexx
+say SysRequestMutexSem(12345, 10) SysReleaseMutexSem(12345) SysCloseMutexSem(12345)
+```
+
+```output
+6 6 6
 ```

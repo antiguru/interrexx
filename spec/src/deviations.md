@@ -1149,3 +1149,23 @@ An empty line that follows a line that failed as it was read, such as
 `trace 1.5`, whose setting does not exist, or an expression that cannot be
 parsed, goes on to the next stop. ooRexx ends interactive tracing at that empty
 line.
+
+## 156. SysSetPriority changes the priority of the process
+
+SysSetPriority changes the priority of the whole process, whichever activity
+calls it, so that every activity and every command that is started afterwards
+has the new niceness. ooRexx changes the priority of the calling activity
+only.
+
+## 157. SysWait with no child
+
+SysWait answers `-1` when the program has no child process to wait for. ooRexx
+answers a number that nothing set, which differs from run to run.
+
+## 158. A semaphore function with a handle that names no open semaphore
+
+A RexxUtil semaphore function called with a whole number that is not the
+handle of an open semaphore, such as the handle of a closed semaphore or a
+handle that arithmetic has rounded, answers `6`. ooRexx uses the number as an
+address and crashes for such a handle, in every function but a second
+SysCloseEventSem or SysCloseMutexSem of a closed handle, which answers `6`.
