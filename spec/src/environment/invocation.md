@@ -363,8 +363,10 @@ main
 > `rexxc` and of `rexx` on both interpreters, in
 > `rust/crates/interrexx/tests/rexxc/cases` and
 > `rust/crates/interrexx/tests/compiled/cases`, and by the tests of `rexxc.rs`
-> and `compiled.rs` that run both interpreters on images they change; each
-> rule is cited there.
+> and `compiled.rs`, which run both interpreters on copies of their images
+> whose base64 text is laid out anew or holds a character that is not base64,
+> and interrexx alone on images that are cut, extended or changed ([Deviation
+> 153](r:env.invocation.deviation.153)); each rule is cited there.
 
 ### What rexxc takes
 
@@ -544,17 +546,22 @@ opening is that of any image. Which versions of an interpreter accept each
 other's images is not specified.
 
 r[env.invocation.rexxc.damaged]
-In an encoded image a carriage return and a line feed are skipped wherever
-they stand, so that the lines may have any length and may end with a carriage
-return as well. Any other character that is not a base64 character, a blank or
-a tab included, makes the image refused with the error `3.905` and the status
-253, before any of its code runs. An encoded image whose decoded bytes lack
-the binary tag is the case of [Deviation 41](r:env.invocation.deviation.41).
-Otherwise an image is checked as a whole: one that ends too early, one that
-has a changed byte in its header or a changed second byte of 0 in the binary
-form, and one that has bytes after its end, an encoded one once its text is
-decoded, are refused with the error `3.903` and the status 253, before any of
-its code runs ([Deviation 153](r:env.invocation.deviation.153)).
+In an encoded image a carriage return and a line feed are skipped between the
+groups of four base64 characters, so that the lines may have any length that
+is a multiple of four and may end with a carriage return as well. One that
+stands inside a group makes the image refused with the error `3.905` and the
+status 253, as does any other character that is not a base64 character, a
+blank or a tab included, before any of its code runs. The skipping holds for
+the base64 lines only: the line feed after the `@` stands alone, so a copy in
+which that line too ends with a carriage return is source
+([the run rule](r:env.invocation.rexxc.run)) and stops at its `@` with `SYNTAX
+13.1`. An encoded image whose decoded bytes lack the binary tag is the case of
+[Deviation 41](r:env.invocation.deviation.41). Otherwise an image that ends
+too early, one that has a changed byte in its header or a changed second byte
+of 0 in the binary form, and one that has bytes after its end, an encoded one
+once its text is decoded, are refused with the error `3.903` and the status
+253, before any of its code runs
+([Deviation 153](r:env.invocation.deviation.153)).
 
 ## Deviations
 
@@ -585,10 +592,13 @@ unpredictable results ([Deviation
 `new`.
 
 r[env.invocation.deviation.153]
-An image is checked as a whole: one that ends too early, one that has bytes
-after its end, and one that has a changed byte in its header, the second byte
-of 0 of the binary form included, are refused with the error `3.903` and the
-status 253, before any of its code runs. ooRexx runs an image that has bytes
-after its end, ignores some changed header bytes and crashes on others, and
-crashes on an image that ends too early ([Deviation
-153](../deviations.md#153-a-compiled-image-is-checked-as-a-whole)).
+An image that ends too early, one that has bytes after its end, and one that
+has a changed byte in its header, the second byte of 0 of the binary form
+included, are refused with the error `3.903` and the status 253, before any of
+its code runs. An encoded image whose base64 text does not decode whole,
+because characters follow the `=` that closes it, an `=` stands inside it, or
+it ends with a group of fewer than four characters, is refused with the error
+`3.905` and the status 253. ooRexx runs an image that has bytes after its end,
+ignores some changed header bytes and crashes on others, and crashes on an
+image that ends too early ([Deviation
+153](../deviations.md#153-a-damaged-compiled-image-is-refused)).
