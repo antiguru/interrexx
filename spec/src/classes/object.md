@@ -1241,8 +1241,10 @@ arguments and that the second is there, sends `request` to the second
 argument, and then to the name, so an error in the array leaves the name
 unasked. `Message~new` sends `request` to the name after checking the target,
 before the option and its arguments are read. A first argument that is a string
-is sent nothing. The example shows the messages for an instance of an `Array`
-subclass and for an object that is no array but answers one.
+is sent nothing. The first example shows the messages for an instance of an
+`Array` subclass and for an object that is no array but answers one. The second
+shows that a `List`, and an object that answers an array to `makeArray`, name a
+message too.
 
 ```rexx
 o = .w~new
@@ -1282,7 +1284,7 @@ bad: say arg(1) '=>' condition('o')~code
   return .array~of(1, 2)
 ```
 
-```output defect=#149
+```output
 duck request ARRAY
 logged request ARRAY
 o~sendWith(.duck~new, .logged~new) => count got 2
@@ -1296,6 +1298,25 @@ o~send(.wrong~new, 6) => 93.946
 o~send(.none~new, 6) => 93.972
 larr request ARRAY
 o~send(.larr~of("count"), 6) => 93.946
+```
+
+```rexx
+o = .w~new
+say o~send(.list~of('count', .w))
+say o~send(.holder~new)
+say .message~new(o, .list~of('count', .w))~send
+::class w
+::method count
+  return 'w count'
+::class holder
+::method makearray
+  return .array~of('count', .w)
+```
+
+```output
+w count
+w count
+w count
 ```
 
 r[class.object.sendwith]

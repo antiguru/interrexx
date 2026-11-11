@@ -1863,9 +1863,25 @@ pub(super) fn decode_message_name(
     ) {
         return Ok((interp.to_text(message).to_ascii_uppercase(), None));
     }
-    let Some(slots) = interp.array_slots_of(message) else {
+    // A plain `Array` is read as it stands, holes and all. Any other object
+    // is sent `request('ARRAY')`, so an `Array` subclass and an object that
+    // answers an array name a message too. An answer of `.nil` is the 93.972;
+    // an answer that is no array has the wrong shape.
+    let plain_array = interp.object_model().array;
+    let answered = if interp.array_body(message).is_some()
+        && interp.class_of_value(message) == Some(plain_array)
+    {
+        Some(message)
+    } else {
+        interp.request_array_value(message)?
+    };
+    let Some(answered) = answered.filter(|answered| *answered != ObjRef::NIL) else {
         let rendered = interp.string_value_text(message)?;
         return Err(Raised::message_name_shape(&rendered).into());
+    };
+    interp.roots.activity_mut().push_temp(answered);
+    let Some(slots) = interp.array_slots_of(answered) else {
+        return Err(Raised::message_array_shape().into());
     };
     // `messageArgCount() != 2` (`classes/ObjectClass.cpp:2143`), which is
     // `lastItem` (`classes/ArrayClass.hpp:305`) and not the slot count: a
