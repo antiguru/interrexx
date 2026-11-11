@@ -113,16 +113,23 @@ fn native_relation_unique_indexes(
         return Err(not_this_task(interp, receiver, b"UNIQUEINDEXES"));
     }
     let keys = keys_of(interp, receiver);
-    let mut unique: Vec<ObjRef> = Vec::new();
+    // Two indexes are one when they hash alike and `==`, as a lookup sees them.
+    let mut unique: Vec<(ObjRef, u64)> = Vec::new();
     for (index, _) in pairs(interp, receiver)? {
+        let hash = match keys {
+            Keys::Equality => super::hash_of(interp, keys, index)?,
+            Keys::Identity | Keys::StringValue => 0,
+        };
         let mut seen = false;
-        for held in &unique {
+        for &(held, held_hash) in &unique {
             let same = match keys {
-                Keys::Identity => *held == index,
-                Keys::Equality => super::collection::same_item(interp, index, *held)?,
+                Keys::Identity => held == index,
+                Keys::Equality => {
+                    held_hash == hash && super::collection::same_item(interp, index, held)?
+                }
                 Keys::StringValue => {
                     let wanted = interp.to_text(index).into_owned();
-                    let found = interp.to_text(*held).into_owned();
+                    let found = interp.to_text(held).into_owned();
                     wanted == found
                 }
             };
@@ -132,9 +139,10 @@ fn native_relation_unique_indexes(
             }
         }
         if !seen {
-            unique.push(index);
+            unique.push((index, hash));
         }
     }
+    let unique = unique.into_iter().map(|(index, _)| index).collect();
     Ok(Some(super::collection::array_of(interp, unique)))
 }
 
