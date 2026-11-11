@@ -79,9 +79,10 @@ of that scope. The continuation then has exclusive use of the object variables
 of the scope, and a guarded method of the scope that another activity sends to
 the object waits until the continuation has ended, as [the exclusion
 rule](r:instr.guard.exclusion) of GUARD says. When a guarded method of the
-same object has called the replying method on that activity, it still holds
-the guard after the reply, and the continuation takes the guard again before
-its first clause runs, which waits until that method has given it up.
+same scope of that object has called the replying method on that activity, it
+still holds the guard of the scope after the reply, and the continuation
+takes the guard again before its first clause runs, which waits until that
+method has given it up.
 
 ```rexx
 log = .array~new

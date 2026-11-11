@@ -124,15 +124,16 @@ ran after
 ## WHEN
 
 r[instr.guard.when]
-With WHEN the instruction waits until its condition holds. While it waits it
-does not hold the guard, so other activities run methods of the object, and
-the condition is tried again once another activity assigns or drops one of the
-object variables that it names; when it is tried at other times is not
-specified. GUARD ON WHEN takes the guard again before each evaluation; GUARD
-OFF WHEN evaluates the condition without it ([the locks
-page](r:conc.locks.when)). When the condition is true, GUARD ON WHEN goes on
-with the guard held, and GUARD OFF WHEN goes on without it. A condition that
-is true at once does not wait.
+With WHEN the instruction waits until its condition holds. While it waits its
+call does not hold the guard, so other activities can run guarded methods of
+its scope, unless a method below it on the same activity still holds the guard
+([the locks page](r:conc.locks.when)), and the condition is tried again once
+another activity assigns or drops one of the object variables that it names as
+a simple symbol; when it is tried at other times is not specified. GUARD ON
+WHEN takes the guard again before each evaluation; GUARD OFF WHEN evaluates
+the condition without it ([the locks page](r:conc.locks.when)). When the
+condition is true, GUARD ON WHEN goes on with the guard held, and GUARD OFF
+WHEN goes on without it. A condition that is true at once does not wait.
 
 ```rexx
 c = .gate~new

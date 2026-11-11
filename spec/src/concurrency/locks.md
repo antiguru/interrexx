@@ -383,8 +383,10 @@ not, change nothing, so repeated ones do not count. The lock is free for the
 other activities when the activity holds it no more. A method that gives up
 its own hold with `GUARD OFF` therefore lets another activity in only when no
 method below it, on the same activity, still holds the lock. A method that
-replies keeps its hold on the new activity, or gives it up there and asks for
-it again, as [the REPLY rule](r:instr.reply.guard) says. A line that
+replies keeps its hold on the new activity, or, when a guarded method below it
+on the old activity holds the lock as well, gives up its hold on the old
+activity and asks for the lock again on the new one, as [the REPLY
+rule](r:instr.reply.guard) says. A line that
 [TRACE](r:instr.trace.destination) writes in a method shows the count in the
 entries `HASSCOPELOCK` and `SCOPELOCKCOUNT` of its [trace
 object](r:class.traceobject.entries). The first example prints them for the
@@ -574,24 +576,24 @@ holding it, as [the WHEN rule](r:instr.guard.when) says. `GUARD OFF WHEN`
 gives up its method's hold first and evaluates the condition without it each
 time, while another activity may hold the lock. The condition is evaluated
 again when another activity assigns a value to an object variable that the
-condition names, even the value that it had, or drops one, whether or not the
-last evaluation reached that name; a variable that only a method that the
-condition calls reads is not one of them. When the condition is evaluated at
-other times is not specified. The wait gives up only that one hold. When
-the method was called by a guarded method on the same activity, which holds
-the lock too ([the counting rule](r:conc.locks.count)), the other activities
-find the lock held while the condition waits, so that a guarded method of
-another activity cannot change the variable that the condition reads: only an
-unguarded method can. The example sends the change from an unguarded and from
-a guarded method, to a waiting method that a guarded or an unguarded method
-called. The three trials that end are the ones in which the method that
-changes the variable can run; the fourth, where a guarded method has to wait
-for the lock that its own caller's activity holds, is the case of [Deviation
-20](r:conc.locks.deviation.20), and the example does not run it. The second
-example ends only if `GUARD OFF WHEN` evaluates its condition without the
-lock: a guarded method waits in it, a guarded method of another activity then
-takes the lock and keeps it until the waiting method has gone on, and an
-unguarded method makes the condition true.
+condition names as a simple symbol, even the value that it had, or drops one,
+whether or not the last evaluation reached that name; a variable that only a
+method that the condition calls reads is not one of them. When the condition
+is evaluated at other times is not specified. The wait gives up only that one
+hold. When the method was called by a guarded method on the same activity,
+which holds the lock too ([the counting rule](r:conc.locks.count)), the other
+activities find the lock held while the condition waits, so that a guarded
+method of another activity cannot change the variable that the condition
+reads: only an unguarded method can. The example sends the change from an
+unguarded and from a guarded method, to a waiting method that a guarded or an
+unguarded method called. The three trials that end are the ones in which the
+method that changes the variable can run; the fourth, where a guarded method
+has to wait for the lock that its own caller's activity holds, is the case of
+[Deviation 20](r:conc.locks.deviation.20), and the example does not run it.
+The second example ends only if `GUARD OFF WHEN` evaluates its condition
+without the lock: a guarded method waits in it, a guarded method of another
+activity then takes the lock and keeps it until the waiting method has gone
+on, and an unguarded method makes the condition true.
 
 ```rexx
 call trial 'guarded caller, unguarded setter', 'outerG', 'setU'
