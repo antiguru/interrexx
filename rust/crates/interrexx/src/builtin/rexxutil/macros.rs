@@ -212,7 +212,9 @@ pub(crate) fn write_file(file: &[u8], bytes: &[u8]) -> u64 {
         Ok(()) => OK,
         Err(_) => {
             drop(out);
-            let _ = std::fs::remove_file(path);
+            if std::fs::metadata(path).is_ok_and(|metadata| metadata.is_file()) {
+                let _ = std::fs::remove_file(path);
+            }
             MACRO_FILE_ERROR
         }
     }
