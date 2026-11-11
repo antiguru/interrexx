@@ -1115,16 +1115,18 @@ ooRexx cannot run such a file and answers FAILURE with the return code 127.
 
 ## 148. The descriptors that a command inherits
 
-A command inherits the descriptors 0, 1 and 2 of the program and no other
-one. ooRexx also passes two descriptors that the interpreter itself keeps
-open, so that a command sees two more open descriptors than the three of the
-program.
+A command inherits no descriptor that the interpreter opened for its own work;
+descriptors 0, 1 and 2, and any that the interpreter was started with, are
+passed on. ooRexx also passes two descriptors that the interpreter itself
+keeps open, so that a command sees two more open descriptors than the three of
+the program.
 
 ## 149. Environment variables set after `export` and `unset`
 
 Every set that VALUE makes in the `ENVIRONMENT` is kept, whatever `export` and
 `unset` the interpreter did before, and `export` with an empty name changes
-nothing. ooRexx loses a set of VALUE that follows an in-process `export` that
-gives a variable the null string, or the second `unset` of a name, so that the
-variable has no value afterwards, and stores a malformed entry for `export`
-with an empty name.
+nothing. ooRexx loses some sets of VALUE that follow in-process `export` and
+`unset` commands, which ones depending on what the program ran before for
+any variable (the second `unset` of a name among them), so that the variable
+has no value afterwards. For `export` with an empty name it stores an entry
+with no name, which a `$` reference with no name then finds.

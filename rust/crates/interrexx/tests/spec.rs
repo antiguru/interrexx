@@ -440,8 +440,9 @@ fn private_service() {
 
 /// Builds `interrexx-rxapi`'s `rxapi` and `rxqueue` binaries next to `daemon`,
 /// the path of the `rxapi` binary in a profile directory of a target
-/// directory, with that profile and target directory. Cargo's lock on the target directory makes test processes that
-/// build it at the same time wait for each other.
+/// directory, with that profile and target directory. Cargo's lock on the
+/// target directory makes test processes that build it at the same time wait
+/// for each other.
 ///
 /// # Errors
 /// If `daemon` is not in a profile directory of a target directory, cargo

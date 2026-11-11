@@ -532,9 +532,10 @@ environment that a program registered, and a
 environment `SYSTEM`, which runs commands in the host's shell, is among them.
 Which other native environments exist depends on the host: on Linux they
 are the ones that [the names rule](r:env.commands.names) lists. They include
-one under the null string, which `register` and `deregister` refuse. The table is a snapshot: a later `register` or
-`deregister` does not change it, and changing it does not change the
-environments. The method takes no argument (`SYNTAX 88.922`).
+one under the null string, which `register` and `deregister` refuse. The table
+is a snapshot: a later `register` or `deregister` does not change it, and
+changing it does not change the environments. The method takes no argument
+(`SYNTAX 88.922`).
 
 ```rexx
 before = .commandhandler~environments

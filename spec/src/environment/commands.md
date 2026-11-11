@@ -159,8 +159,10 @@ r[env.commands.deviation.146]
 A command string that holds a NUL character is not run in any native
 environment: the command raises FAILURE with the return code `127`, and
 nothing of the string runs. This is [Deviation 146](../deviations.md): ooRexx
-cuts the string at the NUL and runs the part before it, so that the first
-command of the example prints `ran` there.
+cuts the string at the NUL and runs the part before it, so that there the
+shell gets only `echo ran; echo "a` from the first command of the example,
+refuses it as a syntax error and answers 2 (ERROR, nothing printed), and the
+second command runs `printf ran`.
 
 ```rexx
 signal on failure name f
@@ -261,10 +263,10 @@ r[env.commands.deviation.147]
 An executable file that the search of `PATH` finds and that has no `#!` line
 is run by `PATH` with the program `/bin/sh`, which reads it as a script, given
 the file's path and the other words of the command as its arguments, as a
-shell runs such a file. A file named with a slash that cannot be run is
-`127`, as [the search rule](r:env.commands.path) says. This is [Deviation
-147](../deviations.md): ooRexx cannot run the found file either, and raises
-FAILURE with the return code `127`.
+shell runs such a file. The same file named with a slash is not run
+this way: the command raises FAILURE with the return code `127`. This is
+[Deviation 147](../deviations.md): ooRexx raises FAILURE with the return code
+`127` for the file that the search finds as well, and runs nothing.
 
 ```rexx
 e = 'ENVIRONMENT'
@@ -454,19 +456,27 @@ call directory '/'
 
 r[env.commands.deviation.148]
 A command has the standard input, output and error of the program as its
-descriptors 0, 1 and 2, and no other descriptor of the interpreter is open in
-it. This is [Deviation 148](../deviations.md): ooRexx leaves two more
-descriptors of the interpreter open in the command, so that the example lists
-two more there. The `3` of the answer here is the directory that `ls` opens
-to list the descriptors.
+descriptors 0, 1 and 2. No descriptor that the interpreter opens for its own
+work is open in it. One that the interpreter was started with is passed on as
+the host passes it, so that the example, whose second interpreter is started
+with none, lists only these three and the `3` that `ls` opens to list them.
+This is [Deviation 148](../deviations.md): ooRexx leaves two descriptors of
+its own open in the command, so that the example lists two more there.
 
 ```rexx
-address system
-'echo $(ls /proc/self/fd)'
+f = 'a4zq_fd.rex'
+call lineout f, "address system 'echo $(ls /proc/self/fd)'"
+call lineout f
+address bash
+'for d in $(ls /proc/self/fd); do [ "$d" -gt 2 ] && eval "exec $d>&-"; done;',
+  'rexx' f
+say rc
+'rm' f
 ```
 
 ```output
 0 1 2 3
+0
 ```
 
 ## Commands the interpreter does itself
@@ -582,7 +592,8 @@ so is a backslash, the character after it being kept. Nothing else is read: a
 blank at the end is part of the name, as is a `-`, a single quote, a dollar
 sign or a star. A name that does not start with a slash is taken from the
 current directory. When `HOME` is the null string, `cd` with no argument
-fails as below, and a `~` that stands for `HOME` makes `/` current. What `cd`
+fails as below, and a `~` that stands for `HOME` stands for nothing, so that
+`cd ~` and `cd ~/` make `/` current and `cd ~/x` makes `/x` current. What `cd`
 does when `HOME` has no value is not specified. When the directory cannot be
 made current, the command answers the number that the host gives the error,
 as Linux numbers them: `2` when there is no such directory, `20` when a part
@@ -606,9 +617,9 @@ end
 call directory '/'
 'cd ~a4zq_nouser'
 say directory()
-address system 'cd ~bin && pwd -P' with output stem h.
-'cd ~bin'
-say rc (directory() == h.1)
+address system 'cd ~root 2>/dev/null && pwd -P' with output stem h.
+'cd ~root'
+say ((rc = 0) == (h.0 = 1)) (rc \= 0 | directory() == h.1)
 call directory '/'
 call value 'HOME', '', e
 'cd ~'
@@ -638,7 +649,7 @@ call value 'HOME', old, e
 [cd ""] 2 1 /
 [cd /usr lib] 2 1 /
 /
-0 1
+1 1
 0 /
 ```
 
@@ -754,9 +765,11 @@ afterwards and is what a command sees, whatever `export` and `unset` the
 interpreter did before, the one that gives a variable the null string and
 the repeated `unset` of a name included. An `export` with an empty name
 changes nothing and answers 0. This is [Deviation 149](../deviations.md):
-ooRexx loses a set that follows an `export` of a null value or the second
-`unset` of a name, so that the example answers empty values for the first
-two lines, and `export =3` stores an entry whose name is empty.
+ooRexx loses some of these sets, which ones depending on the in-process
+`export` and `unset` commands that the program ran before for any variable,
+so that the second line of the example is empty there. And `export =3` stores
+an entry whose name is empty, which a `$` with no name after it then refers
+to, so that the last line is `[a3]` there.
 
 ```rexx
 e = 'ENVIRONMENT'
@@ -773,14 +786,15 @@ call value 'A4ZQ_Z', 'w2', e
 say '['value('A4ZQ_Z', , e)']'
 'export =3'
 say rc
-'echo $(env | grep -c "^=")'
+'export A4ZQ_R=a$'
+say '['value('A4ZQ_R', , e)']'
 ```
 
 ```output
 [u5]
 [w2]
 0
-0
+[a]
 ```
 
 ## Redirection
@@ -1057,9 +1071,12 @@ value names the program's `SESSION` queue for `rxqueue` and for a Rexx
 program that a command starts. A command inherits it with the other
 variables, as [the start rule](r:env.commands.start) says, and that is how
 the filter and [a child program](r:env.commands.rxqueue.child) reach the
-queue. The interpreter sets it once, at the start. After that it is a
-variable of the program like any other, and a value that the program gives
-it is the value that a command sees. The digits depend on the run.
+queue. The interpreter sets it once, at the start. A value that the program
+was started with is used as the session when it begins with hexadecimal
+digits, with or without `0x` before them, as for [a child
+program](r:env.commands.rxqueue.child), and is replaced otherwise. After that
+it is a variable of the program like any other, and a value that the program
+gives it is the value that a command sees. The digits depend on the run.
 
 ```rexx
 v = value('RXQUEUESESSION', , 'ENVIRONMENT')
