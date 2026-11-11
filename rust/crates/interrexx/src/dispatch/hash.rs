@@ -1271,6 +1271,18 @@ fn native_hash_index(
         return Err(not_this_task(interp, receiver, b"INDEX"));
     }
     let wanted = super::collection::item_argument(args)?;
+    if index_only(interp, receiver) {
+        // `IndexOnlyHashCollection` looks the item up as an index -- one
+        // `hashCode` to it, `==` against the stored indexes of that hash --
+        // and answers the stored object, `.nil` for none.
+        let (store, found) = probe(interp, receiver, wanted)?;
+        let Some(slot) = found.found else {
+            return Ok(Some(ObjRef::NIL));
+        };
+        return Ok(Some(
+            slot_at(interp, store.items, slot)?.unwrap_or(ObjRef::NIL),
+        ));
+    }
     let keys = keys_of(interp, receiver);
     for (index, item) in pairs(interp, receiver)? {
         if same_held_item(interp, keys, wanted, item)? {

@@ -647,7 +647,7 @@ say (.nil == b~index(.k~new('p'))) '|' .local~log~makeString('L', ' | ')
   return 'same'
 ```
 
-```output defect=#169
+```output
 s1 | hash s1 | == s1 s1
 1 | hash p | == p s1
 ```
