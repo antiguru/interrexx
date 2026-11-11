@@ -463,7 +463,7 @@ end
   .local~log~append('hash' tag)
   return 'same'
 </code></pre>
-<pre><code class="language-output defect=#168">removeAll 0 hash s1
+<pre><code class="language-output">removeAll 0 hash s1
 allAt 2 hash s1
 supplier 2 hash s1
 </code></pre>
@@ -743,7 +743,7 @@ say (.nil == b~index(.k~new('p'))) '|' .local~log~makeString('L', ' | ')
   .local~log~append('hash' tag)
   return 'same'
 </code></pre>
-<pre><code class="language-output defect=#169">s1 | hash s1 | == s1 s1
+<pre><code class="language-output">s1 | hash s1 | == s1 s1
 1 | hash p | == p s1
 </code></pre>
 <pre><code class="language-rexx">.local~log = .array~new
