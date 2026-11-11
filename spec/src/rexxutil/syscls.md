@@ -126,7 +126,7 @@ call SysFileDelete 'c6zqcls/clear'
 call SysRmDir 'c6zqcls'
 ```
 
-```output defect=#231
+```output
 clear read [ab]
 program read [cd]
 ```
