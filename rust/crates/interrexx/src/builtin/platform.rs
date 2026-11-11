@@ -176,7 +176,7 @@ pub(crate) fn directory(
     }
     let qualified = qualify_name(interp, &text);
     let candidate = crate::paths::os_path(&qualified);
-    if !std::fs::metadata(candidate).is_ok_and(|meta| meta.is_dir()) {
+    if !std::fs::metadata(candidate).is_ok_and(|meta| meta.is_dir()) || !can_enter(candidate) {
         return Ok(interp.text(b""));
     }
     // `getcwd` answers the symlink-resolved path, so the answer is what the
@@ -185,6 +185,18 @@ pub(crate) fn directory(
     let answer = resolved.as_os_str().as_encoded_bytes().to_vec();
     interp.set_cwd(resolved);
     Ok(interp.text_built(answer))
+}
+
+/// Whether the process may make `directory` its current one, which is what
+/// `chdir` asks: search permission, with the effective ids.
+fn can_enter(directory: &std::path::Path) -> bool {
+    rustix::fs::accessat(
+        rustix::fs::CWD,
+        directory,
+        rustix::fs::Access::EXEC_OK,
+        rustix::fs::AtFlags::EACCESS,
+    )
+    .is_ok()
 }
 
 /// The `FILESPEC` options, in the order the oracle's own message lists them:

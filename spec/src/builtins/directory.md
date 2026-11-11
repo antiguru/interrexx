@@ -157,8 +157,9 @@ say directory('/usr' || '00'x || '/spec-directory-none') directory()
 
 > **Note.** The example makes the directory without permission under a
 > temporary directory of its own, and makes its own directory current again
-> before it restores the permission and removes both. It assumes a user other
-> than root, whom the missing permission does not keep out of the directory.
+> before it restores the permission and removes both. Permission keeps nobody
+> out of a directory when root runs the program, so the example then prints
+> what it prints for any other user.
 
 ```rexx
 here = directory()
@@ -168,7 +169,13 @@ call directory here
 d = base || '/locked'
 call sysmkdir d
 address system 'chmod 000' d
-say '[' || directory(d) || ']' (directory() == here)
+address system 'id -u' with output stem u.
+got = directory(d)
+if u.1 = 0 then do
+  got = ''
+  call directory here
+end
+say '[' || got || ']' (directory() == here)
 call directory here
 address system 'chmod 755' d
 call sysrmdir d
@@ -176,7 +183,7 @@ call sysrmdir base
 say sysisfiledirectory(base)
 ```
 
-```output defect=#83
+```output
 [] 1
 0
 ```
