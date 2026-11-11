@@ -27479,7 +27479,7 @@ say .sub~new~send('m') '|' .base~new~m
 ::method unknown
   return 'unknown' arg(1)
 </code></pre>
-<pre><code class="language-output defect=#129">unknown M | base m
+<pre><code class="language-output">unknown M | base m
 </code></pre>
 <h2 id="the-objects-own-methods"><a class="header" href="#the-objects-own-methods">The object's own methods</a></h2>
 <div class="rule" id="r-class.methods.object"><a href="classes/methods.html#r-class.methods.object">[class.methods.object]</a></div>
@@ -28208,7 +28208,7 @@ from another package: package unknown ZZ base unknown ZZ
   use arg n, a
   return a~dimension
 </code></pre>
-<pre><code class="language-output defect=#130">1 | 1
+<pre><code class="language-output">1 | 1
 </code></pre>
 <h2 id="messages-to-a-class"><a class="header" href="#messages-to-a-class">Messages to a class</a></h2>
 <div class="rule" id="r-class.methods.class-side"><a href="classes/methods.html#r-class.methods.class-side">[class.methods.class-side]</a></div>
@@ -28545,7 +28545,7 @@ t:
 ::method unknown
   return 'unknown' arg(1)
 </code></pre>
-<pre><code class="language-output defect=#129">unknown M
+<pre><code class="language-output">unknown M
 base m
 base m
 </code></pre>
@@ -31000,7 +31000,7 @@ say s~strip
 ::class a1 subclass top
 ::class c1 subclass top
 </code></pre>
-<pre><code class="language-output defect=#136">C1 A1 B1
+<pre><code class="language-output">C1 A1 B1
 D3 D2 D1 C1 A1 B1
 </code></pre>
 <div class="rule" id="r-class.class.baseclass"><a href="classes/class.html#r-class.class.baseclass">[class.class.baseclass]</a></div>
