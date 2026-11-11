@@ -480,7 +480,7 @@ say (s~index(.k~new('miss', 'other')) == .nil) '|',
   return key
 ```
 
-```output defect=#169
+```output
 second | hash probe | == probe first
 1 | hash miss
 ```
