@@ -107335,9 +107335,8 @@ say directory('/usr' || '00'x || '/spec-directory-none') directory()
 <blockquote>
 <p><strong>Note.</strong> The example makes the directory without permission under a
 temporary directory of its own, and makes its own directory current again
-before it restores the permission and removes both. Permission keeps nobody
-out of a directory when root runs the program, so the example then prints
-what it prints for any other user.</p>
+before it restores the permission and removes both. It assumes a user other
+than root, whom the missing permission does not keep out of the directory.</p>
 </blockquote>
 <pre><code class="language-rexx">here = directory()
 address system 'mktemp -d' with output stem t.
@@ -107346,20 +107345,14 @@ call directory here
 d = base || '/locked'
 call sysmkdir d
 address system 'chmod 000' d
-address system 'id -u' with output stem u.
-got = directory(d)
-if u.1 = 0 then do
-  got = ''
-  call directory here
-end
-say '[' || got || ']' (directory() == here)
+say '[' || directory(d) || ']' (directory() == here)
 call directory here
 address system 'chmod 755' d
 call sysrmdir d
 call sysrmdir base
 say sysisfiledirectory(base)
 </code></pre>
-<pre><code class="language-output">[] 1
+<pre><code class="language-output defect=#83">[] 1
 0
 </code></pre>
 <div class="rule" id="r-bif.directory.home"><a href="builtins/directory.html#r-bif.directory.home">[bif.directory.home]</a></div>
