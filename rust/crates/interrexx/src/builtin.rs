@@ -743,6 +743,7 @@ pub(crate) fn run(
         return Err(Loud::unresolved_call(name).into());
     };
     let builtin = &IMPLEMENTED[row as usize];
+    interp.activity.builtin_answered_nothing = false;
     check_arity(builtin, args)?;
     // **The required-string protocol runs here, once, over the argument
     // list** -- after the 40.x count checks and before the builtin body,
@@ -770,6 +771,19 @@ pub(crate) fn run(
     };
     interp.serve_posted_halt();
     answer
+}
+
+/// What a `CALL` makes of [`run`]'s answer: a stream builtin whose message
+/// answered nothing is an answer of none, which leaves `RESULT` dropped,
+/// where the function form keeps the 44.1.
+pub(crate) fn answered_nothing(
+    interp: &mut Interp,
+    answer: Result<ObjRef, Failure>,
+) -> Result<Option<ObjRef>, Failure> {
+    match answer {
+        Err(_) if std::mem::take(&mut interp.activity.builtin_answered_nothing) => Ok(None),
+        other => other.map(Some),
+    }
 }
 
 /// The 1-based argument positions `name` fetches **raw**, which the

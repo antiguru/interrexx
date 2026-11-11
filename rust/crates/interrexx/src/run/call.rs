@@ -465,9 +465,10 @@ impl Interp {
         // reported against the `CALL` clause, at rc 214, and a version that
         // skipped evaluation would run the callee instead.
         if let CallResolution::Settled(Resolved::Builtin(target)) = resolution {
-            return Ok(Begun::Done(Ended::Returned(Some(
-                self.invoke_builtin_call(code, target, name, args)?,
-            ))));
+            let answer = self.invoke_builtin_call(code, target, name, args);
+            return Ok(Begun::Done(Ended::Returned(builtin::answered_nothing(
+                self, answer,
+            )?)));
         }
         // A fresh `Vec` and not a lent one: this path always hands the
         // arguments to the callee, which keeps them, so there is nothing to
@@ -1589,10 +1590,10 @@ impl Interp {
         if let Resolved::Builtin(target) = resolved {
             let mark = self.activity.value_buffer.len();
             self.activity.value_buffer.extend(arguments);
-            let value = self.run_over_pushed_args(mark, |interp, values| {
+            let answer = self.run_over_pushed_args(mark, |interp, values| {
                 builtin::run(interp, name, target, values)
-            })?;
-            return Ok(Ended::Returned(Some(value)));
+            });
+            return Ok(Ended::Returned(builtin::answered_nothing(self, answer)?));
         }
         let begun = self.begin_evaluated_call(resolved, name, arguments, call_type, entry)?;
         self.complete_call(begun)
@@ -1859,8 +1860,11 @@ impl Interp {
             // No activation, no `Argument`s built -- the shortcut
             // `begin_call_over_values` takes, and the reason a `CALL` to a builtin
             // reaches `Ended::Returned(Some(_))` with a value to settle.
-            Resolved::Builtin(target) => builtin::run(self, name, target, &values[mark..])
-                .map(|value| Started::Ran(Ended::Returned(Some(value)))),
+            Resolved::Builtin(target) => {
+                let answer = builtin::run(self, name, target, &values[mark..]);
+                builtin::answered_nothing(self, answer)
+                    .map(|value| Started::Ran(Ended::Returned(value)))
+            }
             // **Named rather than left to the arm below**, which has a
             // catch-all: an internal routine sent into `invoke_call_over`
             // would reach a `match` that has no arm for it.

@@ -40,7 +40,10 @@ fn send_to_stream(
         crate::pinning::PinKind::StreamWrapper,
         interp.send_message(stream, message, None, &rest, caller)
     )?
-    .ok_or_else(|| Failure::from(Raised::no_result(message)))
+    .ok_or_else(|| {
+        interp.activity.builtin_answered_nothing = true;
+        Failure::from(Raised::no_data_returned(message))
+    })
 }
 
 /// The arguments at `positions` that the builtin declares as
