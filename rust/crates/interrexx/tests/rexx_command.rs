@@ -45,6 +45,10 @@ fn lay_fixture(dir: &Path) {
     file(b"rp/ordy.rex", "say 'ordy in REXX_PATH'\n");
     file(b"pp/ordy.rex", "say 'ordy in PATH'\n");
     file(b"rp/sub2/inrp.rex", "say 'inrp'\n");
+    file(b"ordn.rex", "say 'ordn rex'\n");
+    file(b"ordn", "say 'ordn none'\n");
+    file(b"ordm", "say 'ordm none in the current directory'\n");
+    file(b"rp/ordm.rex", "say 'ordm rex in REXX_PATH'\n");
     file(b"lowonly.rex", "say 'lowonly'\n");
     file(b"sub/callsib.rex", "say sibonly()\n");
     file(b"sub/sibonly.rex", "return 'sibling in sub'\n");
@@ -52,6 +56,7 @@ fn lay_fixture(dir: &Path) {
     file(b"rp/viarp.rex", "say 'hi from rp'\nparse source s; say s\n");
     file(b"pp/viapp.rex", "say 'hi from pp'\nparse source s; say s\n");
     file(b"UP.REX", "say 'upper UP.REX'\n");
+    file(b"A3UPONLY.REX", "say 'upper A3UPONLY.REX'\n");
     file(b"noext", "say 'noext file'\nparse source s; say s\n");
     file(b"src.rex", "parse source s; say s\n");
     file(

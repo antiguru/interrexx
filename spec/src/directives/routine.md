@@ -3,6 +3,7 @@ element: "::ROUTINE"
 kind: directive
 syntax: "::ROUTINE name [PUBLIC | PRIVATE] [EXTERNAL spec]"
 rexxref: "Directives > ::ROUTINE"
+deviations: [143]
 ---
 
 # ::ROUTINE
@@ -331,9 +332,10 @@ entry name raises `90.999`. These are raised when the section of the directive
 ends, so a clause in the section is refused first; [the rule for external
 methods](r:dir.method.external) says how that order goes for the faults of
 other directives. The operand of the LIBRARY form is the one that
-[::METHOD](r:dir.method.external) takes. How a library is searched for is [the library
-rule](r:env.search.library); which routine of it the declaration binds is not
-specified here.
+[::METHOD](r:dir.method.external) takes. How a library is searched for is
+[the library rule](r:env.search.library). Which routine of a library the
+declaration binds is not specified here, except for the REGISTERED entry that
+[the rule of Deviation 143](r:dir.routine.deviation.143) refuses.
 
 ```rexx
 call try '::routine r external "library spec_no_such_lib_xyz"'
@@ -379,4 +381,28 @@ e: say arg(1) '=>' condition('o')~code
 ::routine r external "library spec_no_such_lib_xyz" => 99.939
 ::routine r external "library spec_no_such_lib_xyz" => 98.903
 ::frob => 99.916
+```
+
+r[dir.routine.deviation.143]
+A REGISTERED declaration whose library loads, and whose entry is not a
+function that the library registers through the classic interface, raises
+`SYNTAX 90.999` when the section of the directive ends, as every REGISTERED
+declaration that finds no routine does. The entry `RxCalcTan` of the library
+`rxmath` is such an entry. ooRexx accepts the directive and raises nothing
+when the package is loaded; the process ends when the routine is called.
+interrexx raises the error where the directive is, so a package with the
+declaration never loads. The example is not run against ooRexx, whose process
+would end.
+
+```rexx
+signal on syntax name e
+src = .array~of('call tt 0', -
+  '::routine tt external "registered rxmath RxCalcTan"')
+p = .package~new('a3zqregdev', src)
+say 'loaded'
+e: say condition('o')~code
+```
+
+```output
+90.999
 ```

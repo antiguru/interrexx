@@ -1058,3 +1058,11 @@ as a plain `lineIn` answers it there, as its first item. ooRexx answers the
 whole of the line when the read position is in the first line. It sends
 `lineIn` with the number of the line, where this book sends it with no
 argument.
+
+## 143. A REGISTERED routine whose entry is not a classic function
+
+A `::ROUTINE` directive with `EXTERNAL "REGISTERED library entry"`, whose
+library loads and whose entry is not a function that the library registers
+through the classic interface, is refused with `SYNTAX 90.999` when the
+directive ends. ooRexx accepts the directive, and the process ends when the
+routine is called.

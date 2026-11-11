@@ -17,9 +17,12 @@ The page states the behavior of a Linux host. The names of the places depend
 on the host: `/` separates the parts of a path, `:` separates the entries of
 `REXX_PATH` and `PATH`, and a file name is case sensitive.
 
-> **Note.** The test harness runs each example without a program file of its
-> own, from one working directory, so an example that needs a directory builds
-> one, and uses names that no host has. The examples set `REXX_PATH` and
+> **Note.** The test harness runs each example from one working directory.
+> interrexx runs it without a program file. ooRexx runs it as a file with the
+> extension `.rex` in that directory. So no example depends on the directory
+> or the extension of its own program: where one matters, the example writes a
+> calling file of its own. An example that needs a directory builds one, and
+> uses names that no host has. The examples set `REXX_PATH` and
 > `PATH` with `VALUE`, change the current directory with `DIRECTORY`, and put
 > them back. The rules about [the `rexx` command](r:env.search.program) are
 > tested by the recorded runs of the command in
@@ -219,15 +222,18 @@ in some place ends the search: the endings come before the places, so that a
 file that has an earlier ending in a later place is found before a file that
 has a later one in an earlier place. The endings are, in order: `.cls`, only
 for the [required-file search](r:env.search.required); the extension of the
-file that holds the calling code, as that file is named and from its last
-period, when it has one; `.REX`; `.rex`; and no ending at all. A call,
-`findProgram` and the command `rexx` leave the `.cls` out, and the command has
-no calling file. In the example, a file `a3zqxc.xyz` calls a routine, and the
-files of that name are taken away one by one: the routine is found with the
-ending `xyz`, then `REX`, then `rex`, then with none. The file with the ending
-`.cls` stays to the end and is never found by the call. A second caller,
-`a3zqxd`, has no extension, and so has no ending of its own to add: it finds
-`.REX` first, and the file that has the extension `xyz` is not tried for it.
+file that holds the calling code, from the last period of the last part of the
+file's name, when that part has one; `.REX`; `.rex`; and no ending at all. A
+call, `findProgram` and the command `rexx` leave the `.cls` out, and the
+command has no calling file. In the example, a file `a3zqxc.xyz` calls a
+routine, and the files of that name are taken away one by one: the routine is
+found with the ending `xyz`, then `REX`, then `rex`, then with none. The file
+with the ending `.cls` stays to the end and is never found by the call. A
+second caller, `a3zqxd`, has no extension, and so has no ending of its own to
+add: it finds `.REX` first, and the file that has the extension `xyz` is not
+tried for it. A name with a period, `a3zqpd.x`, finds the file of that name
+and not `a3zqpd.x.REX` or `a3zqpd.x.rex`, and finds nothing when that file is
+gone.
 
 ```rexx
 call put 'a3zqex.cls', 'cls'
@@ -252,6 +258,16 @@ call sysfiledelete 'a3zqex'
 signal on syntax name e
 say 'with extension:' a3zqxc.xyz()
 e: say condition('o')~code
+call put 'a3zqpd.x', 'as named'
+call put 'a3zqpd.x.REX', 'with REX'
+call put 'a3zqpd.x.rex', 'with rex'
+say 'period:' 'a3zqpd.x'()
+call sysfiledelete 'a3zqpd.x'
+signal on syntax name e2
+say 'period:' 'a3zqpd.x'()
+e2: say 'period:' condition('o')~code
+call sysfiledelete 'a3zqpd.x.REX'
+call sysfiledelete 'a3zqpd.x.rex'
 call sysfiledelete 'a3zqex.cls'
 call sysfiledelete 'a3zqxc.xyz'
 call sysfiledelete 'a3zqxd'
@@ -270,6 +286,8 @@ without: REX
 with extension: rex
 with extension: none
 43.1
+period: as named
+period: 43.1
 ```
 
 ## Case
@@ -361,19 +379,23 @@ and called as a routine looks first beside itself, a file that it calls looks
 beside that file in turn, and a directory in a name such as `sub/name` is
 joined to the directory of the file that makes the call. In the example, the
 file `a3zqcdm.rex` stands in a directory that is not the current directory,
-and finds a file beside itself that the current directory lacks. It calls a
-file in a directory below its own, and that file finds the files of its own
+and finds a file beside itself that the current directory lacks. A file
+`a3zqtwo.rex` stands both beside it and in the current directory, and it finds
+the one beside it, while the program of the example finds the other. It calls
+a file in a directory below its own, and that file finds the files of its own
 directory and not the files beside its caller. The program of the example,
-which stands in the current directory, does not find the file of `a3zqcd`.
+which stands in the current directory, does not find the file of `a3zqsib`.
 
 ```rexx
 call sysmkdir 'a3zqcd'
 call sysmkdir 'a3zqcd/a3zqsub'
 call put 'a3zqcd/a3zqsib.rex', 'beside the caller'
+call put 'a3zqcd/a3zqtwo.rex', 'the directory of the caller'
+call put 'a3zqtwo.rex', 'the current directory'
 call put 'a3zqcd/a3zqsub/a3zqunder.rex', 'beside the callee'
 f = 'a3zqcd/a3zqcdm.rex'
 call sysfiledelete f
-call lineout f, 'return a3zqsib() "/" "a3zqsub/a3zqdown"()'
+call lineout f, 'return a3zqsib() "/" a3zqtwo() "/" "a3zqsub/a3zqdown"()'
 call lineout f
 f = 'a3zqcd/a3zqsub/a3zqdown.rex'
 call sysfiledelete f
@@ -385,6 +407,7 @@ call lineout f, '  return result'
 call lineout f, 'e: return condition("o")~code'
 call lineout f
 say 'a3zqcd/a3zqcdm.rex'()
+say a3zqtwo()
 signal on syntax name e
 say a3zqsib()
 e: say condition('o')~code
@@ -392,6 +415,8 @@ call sysfiledelete 'a3zqcd/a3zqsub/a3zqdown.rex'
 call sysfiledelete 'a3zqcd/a3zqsub/a3zqunder.rex'
 call sysfiledelete 'a3zqcd/a3zqcdm.rex'
 call sysfiledelete 'a3zqcd/a3zqsib.rex'
+call sysfiledelete 'a3zqcd/a3zqtwo.rex'
+call sysfiledelete 'a3zqtwo.rex'
 call sysrmdir 'a3zqcd/a3zqsub'
 call sysrmdir 'a3zqcd'
 exit
@@ -402,7 +427,8 @@ put: call sysfiledelete arg(1)
 ```
 
 ```output
-beside the caller / beside the callee / 43.1
+beside the caller / the directory of the caller / beside the callee / 43.1
+the current directory
 43.1
 ```
 
@@ -428,7 +454,9 @@ the file `a3zqrd/a3zqrreq.rex` requires the file `a3zqrsib` that stands beside
 it and not in the current directory, where the file is `a3zqrsib.cls` and not
 the file `a3zqrsib.rex`. A package that is made from the file finds the file
 by `loadPackage` and by `findProgram` but not by `new`, and `findProgram` does
-not take the `.cls` file. A source package finds no file beside it.
+not take the `.cls` file. A source package finds no file beside it. A file
+`a3zqpd.x.cls` stands in the current directory without the file `a3zqpd.x`,
+and `new` does not find it for the name `a3zqpd.x`.
 
 ```rexx
 call sysmkdir 'a3zqrd'
@@ -439,9 +467,12 @@ pk = .package~new('a3zqrd/a3zqrreq.rex')
 say base(pk~findProgram('a3zqrsib'))
 say base(pk~loadPackage('a3zqrsib')~name)
 call try '.package~new("a3zqrsib.rex")'
+call put 'a3zqpd.x.cls', 'say "ran"'
+call try '.package~new("a3zqpd.x")'
 call try '.package~new("a3zqsrc", .array~of("::requires ""a3zqrsib.rex"""))'
 call try '.package~new("a3zqsrc", "nop")~loadPackage("a3zqrsib.rex")'
 call sysfiledelete 'a3zqrd/a3zqrsib.cls'
+call sysfiledelete 'a3zqpd.x.cls'
 call sysfiledelete 'a3zqrd/a3zqrsib.rex'
 call sysfiledelete 'a3zqrd/a3zqrreq.rex'
 call sysrmdir 'a3zqrd'
@@ -464,6 +495,7 @@ sibling cls ran
 a3zqrsib.rex
 a3zqrsib.cls
 .package~new("a3zqrsib.rex") => 43.901
+.package~new("a3zqpd.x") => 43.901
 .package~new("a3zqsrc", .array~of("::requires ""a3zqrsib.rex""")) => 43.901
 .package~new("a3zqsrc", "nop")~loadPackage("a3zqrsib.rex") => 43.901
 ```
@@ -597,23 +629,24 @@ r[env.search.import]
 A program that a call found as a file adds its public routines and public
 classes to the package that made the call, as a `::REQUIRES` of that package
 would: the code of that package can use them from then on, the code of other
-packages cannot, and its private routines and classes are not added. The first
-call that finds the file adds them, and a later call of a file that has the
-same names does not replace them: the package keeps the first. In the example
-the file is rewritten between the calls, and the public routine is still the
-first one; a package that is made from source text does not find it, and the
-private routine is not found.
+packages cannot, and its private routines and classes are not added. Every
+call that finds a file adds those of its routines and classes whose names the
+package does not have yet. A name it already has is not replaced, so the
+package keeps the first. In the example the file is rewritten between the
+calls, and gains a public routine: the public routine that both versions have
+is still the first one, and the new one is added; a package that is made from
+source text does not find it, and the private routine is not found.
 
 ```rexx
 f = 'a3zqimp.rex'
 call put 'v1'
 say a3zqimp() a3zqimppub()
 call put 'v2'
-say a3zqimp() a3zqimppub()
+say a3zqimp() a3zqimppub() a3zqimpnew()
 say .context~package~importedRoutines~items .context~package~importedClasses~items
 say .a3zqimpk~id
 call try 'a3zqimppriv()'
-call try '.package~new("a3zqimpo", "return a3zqimppub()")~call'
+call try '.package~new("a3zqimpo", "return a3zqimppub()")~name'
 call sysfiledelete f
 exit
 put: call sysfiledelete f
@@ -622,6 +655,10 @@ put: call sysfiledelete f
   call lineout f, '  return "pub-'arg(1)'"'
   call lineout f, '::routine a3zqimppriv'
   call lineout f, '  return "priv"'
+  if arg(1) = 'v2' then do
+    call lineout f, '::routine a3zqimpnew public'
+    call lineout f, '  return "new-v2"'
+    end
   call lineout f, '::class a3zqimpk public'
   call lineout f
   return
@@ -634,11 +671,11 @@ e: say arg(1) '=>' condition('o')~code
 
 ```output
 main-v1 pub-v1
-main-v2 pub-v1
-1 1
+main-v2 pub-v1 new-v2
+2 1
 A3ZQIMPK
 a3zqimppriv() => 43.1
-.package~new("a3zqimpo", "return a3zqimppub()")~call => 43.1
+.package~new("a3zqimpo", "return a3zqimppub()")~name => 43.1
 ```
 
 ## Macros and registered functions
@@ -723,17 +760,25 @@ macro
 r[env.search.library]
 A native library is named by a bare name: the word after `LIBRARY` in a
 directive or a descriptor, the argument of `loadLibrary`, and the module of
-RXFUNCADD. The library of the name `x` is the file `libx.so`, found by the
-loader of the host in its own search path. The name is case sensitive, and a
-name that has the prefix `lib` or the ending `.so` of the file, a period or a
-slash names no library, so `rexxutil` and `rxmath` are libraries, and
-`REXXUTIL`, `librexxutil`, `rexxutil.so`, `./rexxutil` and the empty name are
-not. Which directories the loader searches besides those that the host gives
-it is not specified. The name of the entry of a library that a descriptor
-gives is matched without regard to case, and a routine's own name is the entry
-when the descriptor has none. A library that cannot be loaded is the fault of
-[the directive](r:dir.requires.library) or the answer of the method that loads
-it.
+RXFUNCADD. The library of the name `x` is the file `libx.so`, made by putting
+`lib` before the name and `.so` after it, with nothing in the name changed.
+The file is looked for in the search path of the loader of the host and in the
+current directory. The name is case sensitive, so `rexxutil` and `rxmath` are
+libraries of the host and `REXXUTIL` is not. A name that already has `lib` or
+`.so` in it gets them again, so that `librexxutil` names the file
+`liblibrexxutil.so` and `rexxutil.so` the file `librexxutil.so.so`, which no
+host has. The empty name finds no library. The name of the entry of a library
+that a descriptor gives is matched without regard to case, and a routine's own
+name is the entry when the descriptor has none. A library that cannot be
+loaded is the fault of [the directive](r:dir.requires.library) or the answer
+of the method that loads it. The first example shows the names that the host
+has and those that it has not. In the second, a file of the library of the
+host is copied into the current directory under four names, in which the name
+goes between `lib` and `.so` unchanged: a name with a `lib` prefix, one with
+the ending `.so`, one with a period, and one in upper case. Each of those
+names finds its copy, and the lower-case form of the last one does not.
+interrexx does not yet look in the current directory (defect #214), so the
+second example is marked with that defect.
 
 ```rexx
 p = .package~new('a3zqlib', 'return 1')
@@ -771,4 +816,37 @@ e: say arg(1) '=>' condition('o')~code
 1
 ::requires "RxMath" library => 98.903
 ::requires "rxmath" library => ok
+```
+
+```rexx
+src = ''
+path = value('LD_LIBRARY_PATH',, 'ENVIRONMENT')
+do d over path~changeStr(':', ' ')~makeArray(' ')
+  if stream(d'/librxmath.so', 'c', 'query exists') <> '' then
+    src = d'/librxmath.so'
+end
+if src = '' then exit
+data = charin(src, 1, chars(src))
+call stream src, 'c', 'close'
+files = .array~of('liblibzq1.so', 'libzq2.so.so', 'libzq.c3.so', 'libZQ4.so')
+do f over files
+  call sysfiledelete f
+  call charout f, data
+  call stream f, 'c', 'close'
+end
+p = .package~new('a3zqlcwd', 'return 1')
+do n over .array~of('libzq1', 'zq2.so', 'zq.c3', 'ZQ4', 'zq4')
+  say n p~loadLibrary(n)
+end
+do f over files
+  call sysfiledelete f
+end
+```
+
+```output defect=#214
+libzq1 1
+zq2.so 1
+zq.c3 1
+ZQ4 1
+zq4 0
 ```
