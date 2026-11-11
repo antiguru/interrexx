@@ -1062,7 +1062,7 @@ trap: say 'trap' condition('c'); return
   return 0
 ```
 
-```output defect=#203
+```output
 went on 2
 ```
 
