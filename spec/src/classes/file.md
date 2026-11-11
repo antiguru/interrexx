@@ -878,7 +878,7 @@ junk = .file~new(d'/from')~delete
 junk = .file~new(d)~delete
 ```
 
-```output defect=#177
+```output
 1 0 1
 0 0 0 0 0
 ```

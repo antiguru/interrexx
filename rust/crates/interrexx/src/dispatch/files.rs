@@ -395,6 +395,9 @@ pub(super) fn delete_directory(
 /// `file_rename`: refuses a same-path rename and an existing target before it
 /// asks the file system, because `rename(2)` would answer success for the
 /// first and replace the second -- measured, the oracle answers `0` to both.
+/// The one target left to the file system is a directory taking the place of
+/// a directory, which `rename(2)` replaces when it is empty and refuses
+/// otherwise, as it does a target inside the receiver.
 pub(super) fn rename(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -406,8 +409,15 @@ pub(super) fn rename(
         return Err(Raised::missing_method_argument(2).into());
     };
     let to = os_path(&interp.to_text(value)).to_path_buf();
-    if from == to || std::fs::symlink_metadata(&to).is_ok() {
+    if from == to {
         return flag(interp, false);
+    }
+    if let Ok(target) = std::fs::symlink_metadata(&to) {
+        let directory_onto_directory =
+            target.is_dir() && std::fs::symlink_metadata(&from).is_ok_and(|source| source.is_dir());
+        if !directory_onto_directory {
+            return flag(interp, false);
+        }
     }
     let moved = std::fs::rename(&from, &to).is_ok();
     flag(interp, moved)
