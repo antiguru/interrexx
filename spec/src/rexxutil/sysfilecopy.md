@@ -19,7 +19,7 @@ arguments, and an object in their place, follow [the argument
 rule](r:util.index.args): a call with fewer than two arguments, or with an
 omitted one, raises `SYNTAX 88.901`; a third argument raises `SYNTAX 88.922`;
 and `.nil` for either raises `SYNTAX 88.909`. A name that is the null string
-names no file, so the call answers a number that is not zero.
+names no file, so the call answers `2`.
 
 ```rexx
 call try "SysFileCopy()"
@@ -29,8 +29,8 @@ call try "SysFileCopy(, 'c1zqcpb')"
 call try "SysFileCopy('c1zqcpa', 'c1zqcpb', 'y')"
 call try "SysFileCopy(.nil, 'c1zqcpb')"
 call try "SysFileCopy('c1zqcpa', .nil)"
-call try "SysFileCopy('', 'c1zqcpb') > 0"
-call try "SysFileCopy('c1zqcpnone', '') > 0"
+call try "SysFileCopy('', 'c1zqcpb')"
+call try "SysFileCopy('c1zqcpnone', '')"
 exit
 try:
   signal on syntax name e
@@ -48,8 +48,8 @@ e: say condition('o')~code
 88.922
 88.909
 88.909
-1
-1
+2
+2
 ```
 
 ## The result
@@ -98,37 +98,39 @@ address system 'rm -f c1zqcp?  c1zqcpnowhere'
 ```
 
 r[util.sysfilecopy.attributes]
-A copy has the modification time of its source, to the second. A `target` that
-the call makes has the permission bits of its source; a `target` that was
-there keeps its own.
+A copy has the modification time of its source in whole seconds: a fraction
+of a second is dropped. A `target` that the call makes has the permission bits
+of its source, whatever the process mask; a `target` that was there keeps its
+own. This book does not specify the access time of the copy.
 
 ```rexx
 call charout 'c1zqcta', 'x'
 call charout 'c1zqcta'
 call charout 'c1zqctb', 'y'
 call charout 'c1zqctb'
-address system 'chmod 640 c1zqcta; chmod 600 c1zqctb; touch -d @1000000000 c1zqcta'
+address system 'chmod 640 c1zqcta; chmod 600 c1zqctb; touch -d @1000000000.5 c1zqcta'
 say SysFileCopy('c1zqcta', 'c1zqctn') SysFileCopy('c1zqcta', 'c1zqctb')
-address system 'stat -c "%a %Y" c1zqcta c1zqctn c1zqctb'
+address system 'stat -c "%a %.1Y" c1zqcta c1zqctn c1zqctb'
 address system 'rm -f c1zqcta c1zqctb c1zqctn'
 ```
 
 ```output
 0 0
-640 1000000000
-640 1000000000
-600 1000000000
+640 1000000000.5
+640 1000000000.0
+600 1000000000.0
 ```
 
 r[util.sysfilecopy.fail]
-SysFileCopy answers a number that is not zero when it cannot copy. That is so
-when `source` does not name a file, when it is a directory, and when the
-program may not read it; and a `target` that is not there is not made when
-`source` names nothing or may not be read. It is also so when the directory of
-`target` does not exist or may not be changed, when `target` is a directory,
-when `target` is a file that may not be written, and when `target` is the same
-file as `source`, under the same name, under another name or through a link.
-A file that a failed copy found at `target` keeps its bytes.
+SysFileCopy answers a number that is not zero when it cannot copy. When
+`source` names an entry and `target` names the same one, under the same name,
+under another name or through a symbolic link, the call answers `17` and
+changes nothing. Otherwise it answers `2` when `source` names nothing and `13`
+when the program may not read it, and a `target` that is not there is not made
+then. It answers `21` when `source` is a directory. It answers `2` when the
+directory of `target` does not exist, `21` when `target` is a directory, and
+`13` when `target` is a file that may not be written or a name in a directory
+that may not be changed.
 
 ```rexx
 call charout 'c1zqcfa', 'AAA'
@@ -137,29 +139,30 @@ call charout 'c1zqcfb', 'BBBBBB'
 call charout 'c1zqcfb'
 call SysMkDir 'c1zqcfd'
 address system 'ln -s c1zqcfa c1zqcfl'
-say (SysFileCopy('c1zqcfnone', 'c1zqcfn') > 0) SysFileExists('c1zqcfn')
-say (SysFileCopy('c1zqcfd', 'c1zqcfd2') > 0)
-say (SysFileCopy('c1zqcfa', 'c1zqcfnone/n') > 0) SysFileExists('c1zqcfnone')
-say (SysFileCopy('c1zqcfa', 'c1zqcfd') > 0) SysIsFileDirectory('c1zqcfd') SysFileExists('c1zqcfd/c1zqcfa')
-say (SysFileCopy('c1zqcfa', 'c1zqcfa') > 0) (SysFileCopy('c1zqcfa', './c1zqcfa') > 0) (SysFileCopy('c1zqcfa', 'c1zqcfl') > 0)
+say SysFileCopy('c1zqcfnone', 'c1zqcfn') SysFileExists('c1zqcfn')
+say SysFileCopy('c1zqcfa', 'c1zqcfnone/n') SysFileExists('c1zqcfnone')
+say SysFileCopy('c1zqcfa', 'c1zqcfd') SysIsFileDirectory('c1zqcfd') SysFileExists('c1zqcfd/c1zqcfa')
+say SysFileCopy('c1zqcfa', 'c1zqcfa') SysFileCopy('c1zqcfa', './c1zqcfa') SysFileCopy('c1zqcfa', 'c1zqcfl') SysFileCopy('c1zqcfnone', 'c1zqcfnone')
 say chars('c1zqcfa')
 call stream 'c1zqcfa', 'c', 'close'
 address system 'chmod 000 c1zqcfa'
-say (SysFileCopy('c1zqcfa', 'c1zqcfn') > 0) SysFileExists('c1zqcfn')
+say SysFileCopy('c1zqcfa', 'c1zqcfn') SysFileExists('c1zqcfn')
 address system 'chmod 644 c1zqcfa; chmod 444 c1zqcfb'
-say (SysFileCopy('c1zqcfa', 'c1zqcfb') > 0) chars('c1zqcfb')
+say SysFileCopy('c1zqcfa', 'c1zqcfb') chars('c1zqcfb')
 call stream 'c1zqcfb', 'c', 'close'
-address system 'chmod 644 c1zqcfb; rm -f c1zqcfa c1zqcfb c1zqcfl c1zqcfd2'
+address system 'chmod 555 c1zqcfd'
+say SysFileCopy('c1zqcfa', 'c1zqcfd/n') SysFileExists('c1zqcfd/n')
+address system 'chmod 755 c1zqcfd; chmod 644 c1zqcfb; rm -f c1zqcfa c1zqcfb c1zqcfl'
 call SysRmDir 'c1zqcfd'
 ```
 
 ```output
-1 0
-1
-1 0
-1 1 0
-1 1 1
+2 0
+2 0
+21 1 0
+17 17 17 2
 3
-1 0
-1 6
+13 0
+13 6
+13 0
 ```

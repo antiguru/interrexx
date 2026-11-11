@@ -18,14 +18,14 @@ r[util.sysfiledelete.args]
 an object in its place, follow [the argument rule](r:util.index.args): a call
 with no argument raises `SYNTAX 88.901`, a second argument raises
 `SYNTAX 88.922`, and `.nil` raises `SYNTAX 88.909`. A name that is the null
-string names no file, so the call answers a number that is not zero.
+string names no file, so the call answers `13`.
 
 ```rexx
 call try "SysFileDelete()"
 call try "SysFileDelete('c1zqfdx', 'y')"
 call try "SysFileDelete(.nil)"
-call try "SysFileDelete('') > 0"
-call try "SysFileDelete(.mutablebuffer~new('c1zqfdnone')) > 0"
+call try "SysFileDelete('')"
+call try "SysFileDelete(.mutablebuffer~new('c1zqfdnone'))"
 exit
 try:
   signal on syntax name e
@@ -39,8 +39,8 @@ e: say condition('o')~code
 88.901
 88.922
 88.909
-1
-1
+13
+13
 ```
 
 ## The result
@@ -72,22 +72,25 @@ say SysFileDelete('c1zqfdg') SysFileExists('c1zqfdg')
 ```
 
 r[util.sysfiledelete.fail]
-The call answers a number that is not zero, and removes nothing, when no file
-has the name, including a name in a directory that does not exist and a
-symbolic link that points to nothing; when the name is that of a directory,
-which SysFileDelete does not remove; and when the system refuses the removal,
-as it does for a file in a directory that the program may not change.
+The call removes nothing and answers `21` when the name is that of a
+directory, `.` included; SysFileDelete does not remove a directory. It answers
+`13` for every other failure, whatever the system's reason: when no entry has
+the name, including a name in a directory that does not exist, a name under a
+file and a symbolic link that points to nothing; and when the system refuses
+the removal, as it does for a file in a directory that the program may not
+change. This `13` departs from the system's number for a name that nothing
+has.
 
 ```rexx
 call SysMkDir 'c1zqfdd'
 call lineout 'c1zqfdd/in', 'x'
 call lineout 'c1zqfdd/in'
 address system 'ln -s c1zqfdnowhere c1zqfdl'
-say (SysFileDelete('c1zqfdnone') > 0) (SysFileDelete('c1zqfdnone/in') > 0)
-say (SysFileDelete('c1zqfdl') > 0) SysIsFileLink('c1zqfdl')
-say (SysFileDelete('c1zqfdd') > 0) SysIsFileDirectory('c1zqfdd')
+say SysFileDelete('c1zqfdnone') SysFileDelete('c1zqfdnone/in') SysFileDelete('c1zqfdd/in/x')
+say SysFileDelete('c1zqfdl') SysIsFileLink('c1zqfdl')
+say SysFileDelete('c1zqfdd') SysFileDelete('c1zqfdd/.') SysIsFileDirectory('c1zqfdd')
 address system 'chmod 555 c1zqfdd'
-say (SysFileDelete('c1zqfdd/in') > 0) SysIsFile('c1zqfdd/in')
+say SysFileDelete('c1zqfdd/in') SysIsFile('c1zqfdd/in')
 address system 'chmod 755 c1zqfdd'
 say SysFileDelete('c1zqfdd/in') SysIsFile('c1zqfdd/in')
 address system 'rm c1zqfdl'
@@ -95,9 +98,9 @@ call SysRmDir 'c1zqfdd'
 ```
 
 ```output
-1 1
-1 1
-1 1
-1 1
+13 13 13
+13 1
+21 21 1
+13 1
 0 0
 ```

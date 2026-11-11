@@ -130,11 +130,13 @@ say (SysTempFileName('QQQQQ/c1zqtfQQQQ', 'Q') \= '') '[' || SysTempFileName('QQQ
 ```
 
 r[util.systempfilename.free]
-The answer is the name of no entry that exists. When the digits that were
-chosen make the name of an entry that exists, other digits are tried, and the
-call answers the null string only when every name that the `template` can make
-is the name of an entry that exists. A name counts when a file or a directory
-has it.
+The answer is a name for which [SysFileExists](r:util.sysfileexists.answer)
+answers `0`. When the digits that were chosen make a name for which it answers
+`1`, other digits are tried, and the call answers the null string only when
+every name that the `template` can make is such a name. A name is taken when a
+file, a directory or any other entry has it, through a symbolic link too. A
+symbolic link that points to nothing does not take its name, so the answer can
+be the name of such a link.
 
 ```rexx
 here = directory()
@@ -162,4 +164,29 @@ call SysRmDir 'c1zqtfd'
 1
 []
 1
+```
+
+```rexx
+here = directory()
+call SysMkDir 'c1zqtfd'
+call SysMkDir 'c1zqtfd/t9'
+do i = 0 to 8
+  address system 'ln -s c1zqtfnowhere c1zqtfd/t' || i
+end
+n = SysTempFileName('c1zqtfd/t?')
+say (left(n, length(here) + 10) == here || '/c1zqtfd/t') SysIsFileLink(n) SysFileExists(n)
+do i = 0 to 8
+  address system 'ln -sfn .. c1zqtfd/t' || i
+end
+say '[' || SysTempFileName('c1zqtfd/t?') || ']'
+do i = 0 to 8
+  call SysFileDelete 'c1zqtfd/t' || i
+end
+call SysRmDir 'c1zqtfd/t9'
+call SysRmDir 'c1zqtfd'
+```
+
+```output
+1 1 0
+[]
 ```
