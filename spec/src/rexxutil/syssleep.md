@@ -222,7 +222,7 @@ e: say condition('o')~code
   return
 ```
 
-```output defect=#241
+```output
 0
 1
 88.907
