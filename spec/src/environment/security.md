@@ -532,10 +532,11 @@ blank string is sent like any other. The directory holds just those two
 entries, also for a command with a [redirection](r:instr.address.with.syntax).
 A manager that answers `1` takes the redirection over with the command:
 nothing is read from an `INPUT` source or written to an `OUTPUT` or `ERROR`
-target (the third example). A clause that only names an environment sends nothing. A command that
-names no environment is sent with the name of the current one, which a program
-starts with as `sh`. What the manager sets
-counts only when it answers `1`. `RC` is stored in the variable `rc` as it is,
+target (the third example). A clause that only names an environment sends
+nothing. A command that names no environment is sent with the name of the
+current one, which a program starts with as [the initial environment
+rule](r:env.commands.initial) says. What the manager sets counts only when it
+answers `1`. `RC` is stored in the variable `rc` as it is,
 whatever it is. `FAILURE` and `ERROR` raise their condition whatever their
 value is (`0` and `.false` included) and whatever `RC` is, so an `ERROR` entry
 with an `RC` of `0` raises ERROR with `rc` `0`; when both are set, only

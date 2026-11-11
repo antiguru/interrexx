@@ -987,7 +987,8 @@ the FAILURE condition for the command, and the entry `ERROR`, when it is set
 alone, raises ERROR; when both are set, FAILURE is raised and ERROR is not.
 The manager answers `0` to let the interpreter run the command. A command that
 names no environment is sent with the name of the environment that is current
-for the clause, which is `sh` until an ADDRESS instruction changes it.
+for the clause: at first the one that [the initial environment
+rule](r:env.commands.initial) names, until an ADDRESS instruction changes it.
 
 ```rexx
 src = 'address system "echo one"; say "rc" rc; signal on failure name fail; '
