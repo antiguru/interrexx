@@ -198,12 +198,25 @@ say time('O')
 say value('TZ', 'UTC-2', 'ENVIRONMENT') time('O')
 ```
 
-```output defect=#90
+```output
 0
 7200000000
 7200000000 UTC-2 7200000000
 0
 UTC 7200000000
+```
+
+```rexx
+numeric digits 20
+-- every informat answers the offset, F and T included
+call value 'TZ', 'Asia/Kolkata', 'ENVIRONMENT'
+say time('O', '1', 'T') time('O', '0', 'F') time('O', time('F'), 'F')
+say time('O', '5', 'H') time('O', '1:00pm', 'C')
+```
+
+```output
+19800000000 19800000000 19800000000
+19800000000 19800000000
 ```
 
 ## Reading a time

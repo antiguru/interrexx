@@ -777,6 +777,12 @@ fn now_base_time(interp: &mut Interp) -> i64 {
         activation.flags.set_elapsed_reset(false);
     }
     let micros = real_clock_base_time(interp);
+    // The zone is the program's own `TZ`, read with the clock, so a
+    // `VALUE('TZ', ..., 'ENVIRONMENT')` takes effect at the next clause.
+    interp.clock_zone = (
+        micros,
+        zone_offset_seconds(&super::rexxutil::files::program_zone(interp), micros),
+    );
     let activation = interp.activation_mut();
     activation.cached_clock = micros;
     activation.clock_stale = false;
@@ -809,11 +815,30 @@ pub(crate) fn local_offset_micros(utc_micros: i64) -> i64 {
     }
 }
 
+/// The seconds `zone` is ahead of UTC at `utc_micros`, as
+/// [`local_offset_micros`] answers for the host's zone.
+fn zone_offset_seconds(zone: &tz::TimeZone, utc_micros: i64) -> i32 {
+    let secs = (utc_micros - UNIX_BASE_TIME).div_euclid(MICROSECONDS);
+    zone.find_local_time_type(secs)
+        .map_or(0, |kind| kind.ut_offset())
+}
+
 /// The clause's own clock reading, decomposed into calendar fields.
 fn now(interp: &mut Interp) -> Timestamp {
     let mut timestamp = Timestamp::clear();
     let utc = now_base_time(interp);
-    let offset = local_offset_micros(utc);
+    // The offset read with this very clock reading; the clock came from
+    // another activation's clause only when a call intervened, and the zone
+    // is then read again.
+    let offset = match interp.clock_zone {
+        (clock, seconds) if clock == utc => i64::from(seconds) * MICROSECONDS,
+        _ => {
+            i64::from(zone_offset_seconds(
+                &super::rexxutil::files::program_zone(interp),
+                utc,
+            )) * MICROSECONDS
+        }
+    };
     // A real wall-clock reading is always within `0..=MAX_BASE_TIME` (the
     // year 1 to 9999 range this crate's own calendar covers), so this
     // always succeeds; the fallback is an inert cleared timestamp for the
