@@ -167,8 +167,8 @@ say SysSleep(0)
 r[util.syssleep.activity]
 The pause is the pause of the activity that makes the call. The other
 activities of the program keep running meanwhile, and a message that the
-program has started goes on with its work during the delay (the activities
-page of the concurrency chapter has the rules for an activity that waits). In
+program has started goes on with its work during the delay (the concurrency
+chapter has [the rules for an activity that waits](r:conc.activities.waiting)). In
 the example the started message posts a semaphore and ends after a pause of
 its own, and the program, after its own pause, waits for the post and the
 message's answer.

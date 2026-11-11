@@ -1184,7 +1184,6 @@ A `source` that is a directory answers `21` before `target` is opened, so
 `source`, found by device and inode number through any name, hard link or
 symbolic link, answers `17` and changes nothing. ooRexx empties `target` in
 both cases, makes it when it is not there, and answers `0` for a hard link.
-interrexx does not do this yet: issue #234.
 
 ## 156. SysSetPriority changes the priority of the process
 
