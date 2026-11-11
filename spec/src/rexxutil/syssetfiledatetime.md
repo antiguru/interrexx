@@ -157,8 +157,9 @@ call sysrmdir d
 r[util.syssetfiledatetime.form]
 `newdate` is read as a year, a month and a day, three whole numbers in decimal
 digits separated by hyphens, and `newtime` as an hour, a minute and a second,
-separated by colons. Leading blanks and tabs before a number are skipped, but
-a blank before a separator is not allowed. The year has at most four digits
+separated by colons. Leading white space (blanks, tabs and the other space
+characters of the C locale) before a number is skipped, but a blank before a
+separator is not allowed. The year has at most four digits
 and each other number at most two, and a separator has to follow a number
 directly for the first two numbers of each; whatever follows the third number
 is not read, so that `2031-01-155` is the fifteenth. A date or time that has

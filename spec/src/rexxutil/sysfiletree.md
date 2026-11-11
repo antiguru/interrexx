@@ -378,14 +378,19 @@ matches the entries in it. A `filespec` whose last component is `.` or `..`
 names a directory and not a pattern: it matches the entries of that directory,
 as the same path with a slash at its end does, so `dir/sub/..` and `dir/.`
 both match the entries of `dir`. A path that has a component that is a file, a
-component that does not exist, or a directory the program may not read, on the
-way to the last component or as the directory whose entries are wanted,
-matches nothing and is not an error; the unreadable directory itself is still
-matched by its own name. A relative path is read as every name is (rule
-`util.index.names`). A `filespec` that starts with `~` is read as every name
-is (rule `util.index.home`), with one exception: a `filespec` that is `~name`
-alone, where no user has that name, is a pattern for the entries of the
-current directory, so it matches a directory `~name` there. Each name stored
+component that does not exist, a directory on the way that the program may
+not search, or a directory that the program may not read whose entries are
+needed (the one the last component is matched in, or the one a `filespec`
+ending in a slash names), matches nothing and is not an error; the unreadable
+directory itself is still matched by its own name. A relative path is read as
+every name is (rule `util.index.names`). A `filespec` that starts with `~` is
+read as every name is (rule `util.index.home`), with these exceptions. A
+`filespec` that is `~name` alone, where no user has that name, is a pattern
+for the entries of the current directory, so it matches a directory `~name`
+there. A `filespec` that starts with `~name/`, where no user has that name,
+starts at `/` when only one component follows the slash, and matches nothing
+when more follow. A `HOME` that does not start with a slash is taken from the
+current directory, as any relative name is. Each name stored
 is the full name of the match, formed as [QUALIFY](r:bif.qualify.normal) forms
 a name: made absolute, with the repeated slashes, the periods and the `..`
 components of the path taken out (Deviation 34, rule
@@ -423,12 +428,30 @@ call t '~', 'DO'
 call t '~/', 'FO'
 call t '~/one.txt', 'FO'
 call t '~/sub/*', 'FO'
+call value 'HOME', d, 'ENVIRONMENT'
+call t '~/one.txt', 'FO'
+call t '~/sub/*', 'FO'
 call value 'HOME', old, 'ENVIRONMENT'
+address system 'id -u' with output stem u.
+root = (u.1 == 0)
+call sysmkdir d'/nr'
+call sysmkdir d'/nr/sub'
+call lineout d'/nr/sub/in.txt', 'x'; call lineout d'/nr/sub/in.txt'
+address system 'chmod 311 'd'/nr'
+call t d'/nr/sub/*', 'FO'
+call t d'/nr/sub/', 'BO'
+call sysfiletree d'/nr/sub', 'f.', 'BO'
+say 'c2zqft06/nr/sub BO empty:' (f.0 == 0 | root)
+call t d'/nr', 'BO'
+address system 'chmod 755 'd'/nr'
+call sysfiledelete d'/nr/sub/in.txt'
+call sysrmdir d'/nr/sub'
+call sysrmdir d'/nr'
 call sysmkdir d'/~c2zqnouser'
 call lineout d'/~c2zqnouser/in.txt', 'x'; call lineout d'/~c2zqnouser/in.txt'
 call directory d
 call t '~c2zqnouser', 'DO'
-call t '~c2zqnouser/*', 'FO'
+call t '~c2zqnouser/tm?', 'DO'
 call t './~c2zqnouser/*', 'FO'
 call directory here
 call sysfiledelete d'/~c2zqnouser/in.txt'
@@ -473,8 +496,14 @@ c2zqft06/s* DO                 1 @/c2zqft06/sub
 ~/ FO                          1 @/c2zqft06/one.txt
 ~/one.txt FO                   1 @/c2zqft06/one.txt
 ~/sub/* FO                     1 @/c2zqft06/sub/in.txt
+~/one.txt FO                   1 @/c2zqft06/one.txt
+~/sub/* FO                     1 @/c2zqft06/sub/in.txt
+c2zqft06/nr/sub/* FO           1 @/c2zqft06/nr/sub/in.txt
+c2zqft06/nr/sub/ BO            1 @/c2zqft06/nr/sub/in.txt
+c2zqft06/nr/sub BO empty: 1
+c2zqft06/nr BO                 1 @/c2zqft06/nr
 ~c2zqnouser DO                 1 @/c2zqft06/~c2zqnouser
-~c2zqnouser/* FO               0 
+~c2zqnouser/tm? DO             1 /tmp
 ./~c2zqnouser/* FO             1 @/c2zqft06/~c2zqnouser/in.txt
 ```
 
