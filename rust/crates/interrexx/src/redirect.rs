@@ -698,7 +698,7 @@ impl Interp {
                 self.trace_redirect_target(Stream::Input, object)?;
                 let origin = if self.is_stem_object(object) {
                     Origin::Stem(object)
-                } else if self.is_stream_object(object) {
+                } else if self.is_input_stream_object(object) {
                     Origin::Stream(object)
                 } else {
                     Origin::Other
@@ -746,7 +746,7 @@ impl Interp {
         if self.is_stem_object(object) {
             return self.stem_input_lines(object);
         }
-        if self.is_stream_object(object) {
+        if self.is_input_stream_object(object) {
             return self.read_stream_lines(object);
         }
         if let Some(path) = self.file_object_path(object)? {
@@ -841,7 +841,7 @@ impl Interp {
             }
             return Ok(Target::Queue { object });
         }
-        if self.is_stream_object(object) {
+        if self.is_output_stream_object(object) {
             if optioned {
                 return Err(Raised::stream_target_option().into());
             }
@@ -1214,12 +1214,20 @@ impl Interp {
         self.is_instance_of_rexx_class(value, b"REXXQUEUE")
     }
 
-    /// Whether `value` is an object a redirection drives with `LINEIN` and
-    /// `LINEOUT`. A `Monitor` counts, which is the oracle's own rule: it
-    /// treats one as a stream on both sides.
-    fn is_stream_object(&mut self, value: ObjRef) -> bool {
+    /// Whether `value` is an object a redirection reads with `LINEIN`: an
+    /// InputStream or InputOutputStream. A `Monitor` counts, which is the
+    /// oracle's own rule: it treats one as a stream on both sides.
+    fn is_input_stream_object(&mut self, value: ObjRef) -> bool {
         self.is_instance_of_rexx_class(value, b"INPUTSTREAM")
-            || self.is_instance_of_rexx_class(value, b"OUTPUTSTREAM")
+            || self.is_instance_of_rexx_class(value, b"INPUTOUTPUTSTREAM")
+            || self.is_instance_of_rexx_class(value, b"MONITOR")
+    }
+
+    /// Whether `value` is an object a redirection writes with `LINEOUT`: an
+    /// OutputStream or InputOutputStream, or a `Monitor`.
+    fn is_output_stream_object(&mut self, value: ObjRef) -> bool {
+        self.is_instance_of_rexx_class(value, b"OUTPUTSTREAM")
+            || self.is_instance_of_rexx_class(value, b"INPUTOUTPUTSTREAM")
             || self.is_instance_of_rexx_class(value, b"MONITOR")
     }
 
