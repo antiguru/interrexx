@@ -448,7 +448,7 @@ c = .array~of('a')
 say c~insert() c~size c~items c~hasIndex(2)
 ```
 
-```output defect=#161
+```output
 3 3 1 0
 2 3 2 0 b
 2 2 1 0

@@ -419,10 +419,6 @@ fn native_array_insert(
         // Omitted: after the last OCCUPIED slot, not the end of the array.
         Some(None) | None => last_item(interp, receiver)?,
     };
-    let length = read_slots(interp, receiver, <[_]>::len)?;
-    if at > length {
-        array_grow(interp, receiver, at)?;
-    }
     splice_absorbing_slack(interp, receiver, at, item)?;
     Ok(Some(interp.counted(at + 1)))
 }
@@ -607,6 +603,11 @@ fn splice_absorbing_slack(
     // `.Array~of('x','y')~insert` -- whose last slot is occupied -- leaves
     // size 3.
     let slack = read_slots(interp, receiver, |slots| slots.last() == Some(&None))?;
+    // Growing to `at` is not slack the array already had.
+    let length = read_slots(interp, receiver, <[_]>::len)?;
+    if at > length {
+        array_grow(interp, receiver, at)?;
+    }
     array_splice_slot(interp, receiver, at, item)?;
     if !slack {
         return Ok(());
