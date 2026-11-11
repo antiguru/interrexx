@@ -1128,13 +1128,13 @@ gives it is the value that a command sees. The digits depend on the run.</p>
 <pre><code class="language-rexx">v = value('RXQUEUESESSION', , 'ENVIRONMENT')
 say left(v, 2) (length(v) &gt; 2) verify(substr(v, 3), '0123456789abcdef')
 </code></pre>
-<pre><code class="language-output defect=#220">0x 1 0
+<pre><code class="language-output">0x 1 0
 </code></pre>
 <pre><code class="language-rexx">call value 'RXQUEUESESSION', 'a4r', 'ENVIRONMENT'
 address system 'echo "$RXQUEUESESSION"' with output stem o.
 say o.1 value('RXQUEUESESSION', , 'ENVIRONMENT')
 </code></pre>
-<pre><code class="language-output defect=#220">a4r a4r
+<pre><code class="language-output">a4r a4r
 </code></pre>
 <div class="rule" id="r-env.commands.rxqueue.child"><a href="#r-env.commands.rxqueue.child">[env.commands.rxqueue.child]</a></div>
 <p>A Rexx program that a command starts, as the command <code>rexx</code> does, has the

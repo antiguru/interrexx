@@ -88463,13 +88463,13 @@ gives it is the value that a command sees. The digits depend on the run.</p>
 <pre><code class="language-rexx">v = value('RXQUEUESESSION', , 'ENVIRONMENT')
 say left(v, 2) (length(v) &gt; 2) verify(substr(v, 3), '0123456789abcdef')
 </code></pre>
-<pre><code class="language-output defect=#220">0x 1 0
+<pre><code class="language-output">0x 1 0
 </code></pre>
 <pre><code class="language-rexx">call value 'RXQUEUESESSION', 'a4r', 'ENVIRONMENT'
 address system 'echo "$RXQUEUESESSION"' with output stem o.
 say o.1 value('RXQUEUESESSION', , 'ENVIRONMENT')
 </code></pre>
-<pre><code class="language-output defect=#220">a4r a4r
+<pre><code class="language-output">a4r a4r
 </code></pre>
 <div class="rule" id="r-env.commands.rxqueue.child"><a href="environment/commands.html#r-env.commands.rxqueue.child">[env.commands.rxqueue.child]</a></div>
 <p>A Rexx program that a command starts, as the command <code>rexx</code> does, has the
@@ -107335,8 +107335,9 @@ say directory('/usr' || '00'x || '/spec-directory-none') directory()
 <blockquote>
 <p><strong>Note.</strong> The example makes the directory without permission under a
 temporary directory of its own, and makes its own directory current again
-before it restores the permission and removes both. It assumes a user other
-than root, whom the missing permission does not keep out of the directory.</p>
+before it restores the permission and removes both. Permission keeps nobody
+out of a directory when root runs the program, so the example then prints
+what it prints for any other user.</p>
 </blockquote>
 <pre><code class="language-rexx">here = directory()
 address system 'mktemp -d' with output stem t.
@@ -107345,14 +107346,20 @@ call directory here
 d = base || '/locked'
 call sysmkdir d
 address system 'chmod 000' d
-say '[' || directory(d) || ']' (directory() == here)
+address system 'id -u' with output stem u.
+got = directory(d)
+if u.1 = 0 then do
+  got = ''
+  call directory here
+end
+say '[' || got || ']' (directory() == here)
 call directory here
 address system 'chmod 755' d
 call sysrmdir d
 call sysrmdir base
 say sysisfiledirectory(base)
 </code></pre>
-<pre><code class="language-output defect=#83">[] 1
+<pre><code class="language-output">[] 1
 0
 </code></pre>
 <div class="rule" id="r-bif.directory.home"><a href="builtins/directory.html#r-bif.directory.home">[bif.directory.home]</a></div>
