@@ -779,10 +779,7 @@ fn now_base_time(interp: &mut Interp) -> i64 {
     let micros = real_clock_base_time(interp);
     // The zone is the program's own `TZ`, read with the clock, so a
     // `VALUE('TZ', ..., 'ENVIRONMENT')` takes effect at the next clause.
-    interp.clock_zone = (
-        micros,
-        zone_offset_seconds(&super::rexxutil::files::program_zone(interp), micros),
-    );
+    interp.clock_zone = (micros, program_zone_offset(interp, micros));
     let activation = interp.activation_mut();
     activation.cached_clock = micros;
     activation.clock_stale = false;
@@ -817,6 +814,24 @@ pub(crate) fn local_offset_micros(utc_micros: i64) -> i64 {
 
 /// The seconds `zone` is ahead of UTC at `utc_micros`, as
 /// [`local_offset_micros`] answers for the host's zone.
+/// Seconds the program's zone is ahead of UTC at `utc_micros`. The zone is
+/// parsed again only when the program's `TZ` differs from the last parse.
+fn program_zone_offset(interp: &mut Interp, utc_micros: i64) -> i32 {
+    let fresh = match &interp.zone_cache {
+        Some((held, _)) => held.as_deref() == interp.env_get(b"TZ"),
+        None => false,
+    };
+    if !fresh {
+        let zone = super::rexxutil::files::program_zone(interp);
+        let held = interp.env_get(b"TZ").map(<[u8]>::to_vec);
+        interp.zone_cache = Some((held, zone));
+    }
+    match &interp.zone_cache {
+        Some((_, zone)) => zone_offset_seconds(zone, utc_micros),
+        None => 0,
+    }
+}
+
 fn zone_offset_seconds(zone: &tz::TimeZone, utc_micros: i64) -> i32 {
     let secs = (utc_micros - UNIX_BASE_TIME).div_euclid(MICROSECONDS);
     zone.find_local_time_type(secs)
@@ -832,12 +847,7 @@ fn now(interp: &mut Interp) -> Timestamp {
     // is then read again.
     let offset = match interp.clock_zone {
         (clock, seconds) if clock == utc => i64::from(seconds) * MICROSECONDS,
-        _ => {
-            i64::from(zone_offset_seconds(
-                &super::rexxutil::files::program_zone(interp),
-                utc,
-            )) * MICROSECONDS
-        }
+        _ => i64::from(program_zone_offset(interp, utc)) * MICROSECONDS,
     };
     // A real wall-clock reading is always within `0..=MAX_BASE_TIME` (the
     // year 1 to 9999 range this crate's own calendar covers), so this
