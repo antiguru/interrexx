@@ -31,10 +31,20 @@ The pages of this chapter so far are:
   [SysStemInsert](syssteminsert.md) and [SysStemSort](sysstemsort.md): working
   on a stem array, and [SysDumpVariables](sysdumpvariables.md): writing the
   variables of the current scope.
+* [The macrospace](macrospace.md) and its functions
+  [SysAddRexxMacro](sysaddrexxmacro.md),
+  [SysDropRexxMacro](sysdroprexxmacro.md),
+  [SysQueryRexxMacro](sysqueryrexxmacro.md),
+  [SysReorderRexxMacro](sysreorderrexxmacro.md),
+  [SysClearRexxMacroSpace](sysclearrexxmacrospace.md),
+  [SysSaveRexxMacroSpace](syssaverexxmacrospace.md) and
+  [SysLoadRexxMacroSpace](sysloadrexxmacrospace.md): the routines that the
+  service keeps for every program, and how they are added, found, moved,
+  saved and loaded.
 
 The rules state the behavior of a Unix-like system. The examples make their
-own files and directories, whose names start with `c1zq`, and remove them
-again. What a function answers for a failure is what
+own files and directories, whose names start with `c1zq`, `c2zq` or `c4zq`,
+and remove them again. What a function answers for a failure is what
 [the answer rule](r:util.index.codes) gives: an error number of Linux for the
 functions that change files, and a fixed value for the functions that the rule
 names.
@@ -193,7 +203,10 @@ the component before it, so that the name `c1zqidxd/../c1zqidxn` is the name
 characters of the name: no function except SysFileTree expands a pattern, so
 a name that holds one names a file that has them or no file. A name of the
 null string names nothing. SysFileTree has exceptions to this rule, which
-[its rule for the `filespec`](r:util.sysfiletree.spec) states.
+[its rule for the `filespec`](r:util.sysfiletree.spec) states. The `file` of
+SysAddRexxMacro, SysSaveRexxMacroSpace and SysLoadRexxMacroSpace is not
+cleaned: [the rule of SysAddRexxMacro](r:util.sysaddrexxmacro.answer) says how
+those functions read it.
 
 ```rexx
 call lineout 'c1zqidxn', 'x'
@@ -235,7 +248,9 @@ user, as [it does for DIRECTORY](r:bif.directory.user); when there is no such
 user, no file has that name, and the name is never read as the name of a file
 of the current directory, which `./~name` reaches. SysFileTree has exceptions
 to this rule, which [its rule for the `filespec`](r:util.sysfiletree.spec.dir)
-states.
+states, and the `file` of SysAddRexxMacro, SysSaveRexxMacroSpace and
+SysLoadRexxMacroSpace does not follow it: a `~` there is a character of the
+name ([the rule of SysAddRexxMacro](r:util.sysaddrexxmacro.answer)).
 
 ```rexx
 here = directory()

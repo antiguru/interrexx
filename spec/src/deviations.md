@@ -1178,3 +1178,9 @@ A `source` that is a directory answers `21` before `target` is opened, so
 symbolic link, answers `17` and changes nothing. ooRexx empties `target` in
 both cases, makes it when it is not there, and answers `0` for a hard link.
 interrexx does not do this yet: issue #234.
+
+## 159. A save onto a file that may not be written
+
+A save of the macrospace onto a file that is there and may not be written
+answers `5` and leaves the file as it was. ooRexx answers `5` too, and keeps
+or removes the file depending on the calls the program made earlier.
