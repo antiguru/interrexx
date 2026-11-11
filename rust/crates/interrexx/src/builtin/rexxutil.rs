@@ -294,6 +294,7 @@ pub(crate) fn create_event_sem(
     if args.len() > 2 {
         return Err(Raised::too_many_internal_arguments(2).into());
     }
+    optional_text(interp, args, 1)?;
     optional_text(interp, args, 2)?;
     if let Some(Some(value)) = args.first().copied() {
         return refuse_name(interp, name, value);
@@ -314,6 +315,7 @@ pub(crate) fn create_mutex_sem(
     if args.len() > 1 {
         return Err(Raised::too_many_internal_arguments(1).into());
     }
+    optional_text(interp, args, 1)?;
     if let Some(Some(value)) = args.first().copied()
         && !interp.to_text(value).is_empty()
     {
