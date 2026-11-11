@@ -374,7 +374,8 @@ A RexxUtil function that exists only on Windows, such as `SysWinVer`,
 `SysDriveMap` or `RxMessageBox`, is not provided on a Unix-like system.
 Calling one raises `SYNTAX 43.1`, as a call of any name that no routine has
 does, and [RXFUNCQUERY](r:bif.rxfuncquery.answer) and
-[RXFUNCADD](r:bif.rxfuncadd.module) answer `1` for it.
+[RXFUNCADD](r:bif.rxfuncadd.module) answer `1` for it. [The page on the
+Windows-only functions](windows.md) lists them.
 
 > **Note.** Support for the Windows-only functions on Windows is tracked in
 > issue #215.
