@@ -244,6 +244,18 @@ const SLEEP_MAXIMUM: f64 = 2_147_483.0;
 /// 0.00000001.
 const SLEEP_FLOOR: std::time::Duration = std::time::Duration::from_micros(1);
 
+/// A delay as a Rexx number reads it: surrounding whitespace goes, and a blank
+/// or tab may follow the sign (`'+ 0.5'`, `'- 1'`).
+fn sleep_number(text: &str) -> String {
+    let text = text.trim();
+    match text.chars().next() {
+        Some(sign @ ('+' | '-')) => {
+            format!("{sign}{}", text[1..].trim_start_matches([' ', '\t']))
+        }
+        _ => text.to_owned(),
+    }
+}
+
 /// `SysSleep(seconds)`: parks the running activity until the delay, at least
 /// [`SLEEP_FLOOR`], has passed, fractional seconds accepted.
 pub(crate) fn sleep(
@@ -257,7 +269,7 @@ pub(crate) fn sleep(
     // An object with no string value is 88.909; `Inf`, `NaN` and a size past
     // a 64-bit float's range parse as non-finite floats and are 88.902.
     let text = required_text(interp, args, 1)?;
-    let seconds = match String::from_utf8_lossy(&text).trim().parse::<f64>() {
+    let seconds = match sleep_number(&String::from_utf8_lossy(&text)).parse::<f64>() {
         Ok(seconds) if seconds.is_finite() => seconds,
         _ => return Err(Raised::native_argument_not_a_number("delay", &text).into()),
     };
