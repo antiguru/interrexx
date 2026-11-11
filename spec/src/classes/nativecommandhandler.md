@@ -286,7 +286,7 @@ x = .commandhandler~deregister('spec_nch_fwd')
   return target~command(command, caller)
 ```
 
-```output defect=#183
+```output
 0 NativeCommandHandler REDIRECTING SYSTEM
 1
 through the name

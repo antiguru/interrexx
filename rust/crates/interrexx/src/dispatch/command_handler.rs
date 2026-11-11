@@ -10,6 +10,7 @@ use interrexx_core::ObjRef;
 use super::{Cleared, class_protocol::new_instance, hash};
 use crate::activation::ActivationId;
 use crate::builtin::datatype::{SymbolKind, classify};
+use crate::command::NATIVE_AT;
 use crate::error::Raised;
 use crate::{Failure, Interp, Loud};
 
@@ -78,7 +79,11 @@ impl Interp {
     /// A `.NativeCommandHandler` with `NAME` set to `name`, made as
     /// `CommandHandler::getRexxObject` makes one: its private `NEW` run
     /// directly, so no `INIT` (`concurrency/CommandHandler.cpp:794-803`).
-    pub(crate) fn native_handler_object(&mut self, name: &[u8]) -> Result<ObjRef, Failure> {
+    pub(crate) fn native_handler_object(
+        &mut self,
+        name: &[u8],
+        at: usize,
+    ) -> Result<ObjRef, Failure> {
         let class = self
             .rexx_package_class(b"NATIVECOMMANDHANDLER")
             .ok_or_else(|| Loud::missing_rexx_class("NativeCommandHandler"))?;
@@ -86,6 +91,11 @@ impl Interp {
         let name = self.text(name);
         self.roots.activity_mut().push_temp(name);
         self.set_pool_variable(object, class, b"NAME", name);
+        // Which native handler it stands for, in a variable of its own so
+        // that a copy, which copies the variables, stands for the same one.
+        let index = self.text(at.to_string().as_bytes());
+        self.roots.activity_mut().push_temp(index);
+        self.set_pool_variable(object, class, NATIVE_AT, index);
         Ok(object)
     }
 
