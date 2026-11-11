@@ -107,6 +107,7 @@ mod files;
 mod command_handler;
 pub(crate) use command_handler::new_identity;
 use files::{native_file_path_separator, native_file_separator};
+pub(crate) use string::subclass_text;
 
 // The collection classes' primitive methods, chained the same way.
 mod collection;
