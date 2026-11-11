@@ -1092,7 +1092,7 @@ v = value('RXQUEUESESSION', , 'ENVIRONMENT')
 say left(v, 2) (length(v) > 2) verify(substr(v, 3), '0123456789abcdef')
 ```
 
-```output defect=#220
+```output
 0x 1 0
 ```
 
@@ -1102,7 +1102,7 @@ address system 'echo "$RXQUEUESESSION"' with output stem o.
 say o.1 value('RXQUEUESESSION', , 'ENVIRONMENT')
 ```
 
-```output defect=#220
+```output
 a4r a4r
 ```
 

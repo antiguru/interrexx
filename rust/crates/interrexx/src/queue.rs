@@ -10,7 +10,7 @@ use interrexx_rxapi::message::{FIFO, LIFO, NO_WAIT, Reply, Request, WAIT};
 use interrexx_rxapi::transport::CancelToken;
 
 use crate::dispatch::queue_methods::queue_failure;
-use crate::rxapi_client::{self, SESSION_VARIABLE};
+use crate::rxapi_client;
 use crate::{Failure, Interp};
 
 /// A `lineIn` waiting for a line of `name`, with the service's pull where the queue is named.
@@ -385,8 +385,6 @@ impl Interp {
                 Err(status) => return Err(queue_failure(status).into()),
             }
         }
-        let value = rxapi_client::session_value(Self::session());
-        self.env_set(SESSION_VARIABLE.as_bytes(), Some(value));
         Ok(())
     }
 }

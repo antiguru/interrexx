@@ -2207,6 +2207,21 @@ impl CallContext {
     }
 }
 
+/// Puts the session handle into `env` as the program's start state: a value that names a
+/// handle stays, any other is replaced.
+pub(crate) fn with_session_variable(env: &mut Vec<(Vec<u8>, Vec<u8>)>) {
+    let name = crate::rxapi_client::SESSION_VARIABLE.as_bytes();
+    let held = env.iter().position(|(held, _)| held == name);
+    if held.is_some_and(|at| interrexx_rxapi::client::parse_session(&env[at].1).is_some()) {
+        return;
+    }
+    let value = crate::rxapi_client::session_value(crate::rxapi_client::session_handle());
+    match held {
+        Some(at) => env[at].1 = value,
+        None => env.push((name.to_vec(), value)),
+    }
+}
+
 impl Interp {
     /// **Every field a caller might want to vary starts at a fixed value
     /// here and is set after construction**, so this signature does not grow
@@ -2215,12 +2230,13 @@ impl Interp {
     /// other caller -- the unit tests throughout this crate, which is nearly
     /// all of them -- gets the value below.
     fn new() -> Interp {
-        let env: Vec<(Vec<u8>, Vec<u8>)> = {
+        let mut env: Vec<(Vec<u8>, Vec<u8>)> = {
             use std::os::unix::ffi::OsStrExt;
             std::env::vars_os()
                 .map(|(name, value)| (name.as_bytes().to_vec(), value.as_bytes().to_vec()))
                 .collect()
         };
+        with_session_variable(&mut env);
         // The creating thread holds the baton until a driver exit releases it.
         let baton = crate::sync::Arc::new(crate::island::InterpBaton::new());
         baton.acquire();
