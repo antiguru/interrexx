@@ -152,6 +152,7 @@
   - [Invocation](environment/invocation.md)
   - [Search](environment/search.md)
   - [Command environments](environment/commands.md)
+  - [Security manager](environment/security.md)
 - [Built-in functions](builtins/index.md)
   - [ABBREV](builtins/abbrev.md)
   - [ABS](builtins/abs.md)

@@ -1253,18 +1253,20 @@ x = m~setProtected => 91.999
 ```
 
 r[class.method.setsecuritymanager]
-`setSecurityManager` gives the method a security manager, or with no argument
-removes the one it has, and answers `1`. It is a protected method. The manager
-is any object, `.nil` as well, and it is not checked when it is set: `.nil` is
-an object like any other, which is sent the checkpoints and does not
-understand them (`SYNTAX 97.1`), so only a call with no argument removes the
-manager. A second argument raises `SYNTAX 93.902`. While the code of the
-method runs, and in the internal routines of that code, the actions that
-[the checkpoint rules](r:class.routine.setsecuritymanager.checkpoints) name
-are offered to the manager first; the code of other packages that the method
-calls is not under the manager. A manager that was set before
-[`define`](r:class.class.define) installed the method stays with the
-installed method, as the example shows.
+`setSecurityManager` gives the package that holds the method's code a security
+manager, or with no argument removes the one that package has, and answers `1`
+([the package rule](r:env.security.set)); a method that `new` or `newFile`
+made has a package of its own. It is a protected method. The manager is any
+object, `.nil` as well, and it is not checked when it is set: `.nil` is an
+object like any other, which is sent the checkpoints and does not understand
+them (`SYNTAX 97.1`), so only a call with no argument removes the manager. A
+second argument raises `SYNTAX 93.902`. While code of that package runs, the
+method and its internal routines among it, the actions that [the checkpoint
+rules](r:class.routine.setsecuritymanager.checkpoints) name are offered to the
+manager first ([which code](r:env.security.scope)); the code of other packages
+that the method calls is not under the manager. A manager that was set before
+[`define`](r:class.class.define) installed the method stays with the installed
+method, as the example shows.
 
 ```rexx
 m = .method~new('n', 'address system "echo not run"; return "ran"')

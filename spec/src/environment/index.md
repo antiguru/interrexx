@@ -24,17 +24,21 @@ The pages of this chapter so far are:
   called by name and a library are found: the places, the extensions, the
   case of a name, what is read again at every call, and what a program that
   is called by name leaves in its caller.
-
 * [Command environments](commands.md): the environments that run a command
   on Linux and the program each runs, how the return code of a command
   comes out of its exit status or signal, what a command starts with, the
   commands `cd`, `export`, `set` and `unset` that the interpreter does
   itself, and the `rxqueue` filter that puts the lines of a command on a
   queue of the program.
+* [Security manager](security.md): the object that is asked before the code
+  it governs calls an external routine, runs a command, loads a file, reads a
+  name from `.local` or `.environment`, names a stream or sends a message to a
+  protected method: what a manager belongs to, which code it governs, what
+  each checkpoint sends and what the answer does.
 
-Pages on the security manager and interactive debugging follow. Until they
-exist, the rules of the other chapters that mention those subjects in plain
-text are the rules there are.
+A page on interactive debugging follows. Until it exists, the rules of the
+other chapters that mention that subject in plain text are the rules there
+are.
 
 An example in this chapter changes the objects that its own program reads, as
 a program does. Each example restores what it changed when a later line of the

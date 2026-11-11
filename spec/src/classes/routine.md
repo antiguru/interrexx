@@ -774,17 +774,22 @@ later
 ### The security manager
 
 r[class.routine.setsecuritymanager]
-`setSecurityManager` gives the routine a security manager, or with no argument
-removes the one it has, and answers `1`. It is a protected method. The manager
+`setSecurityManager` gives the package that holds the routine's code a
+security manager, or with no argument removes the one that package has, and
+answers `1` ([the package rule](r:env.security.set)); a routine that `new` or
+`newFile` made has a package of its own. It is a protected method. The manager
 can be any object, `.nil` as well, and it is not checked when it is set;
 `.nil` is an object like any other and is sent the checkpoints, which it does
 not understand (`SYNTAX 97.1`), so only a call with no argument removes the
-manager. A second argument raises `SYNTAX 93.902`. While the code of the
-routine runs, and in the internal routines of that code, the actions that [the
+manager. A second argument raises `SYNTAX 93.902`. While code of that package
+runs, the routine and its internal routines among it, the actions that [the
 checkpoint rules](r:class.routine.setsecuritymanager.checkpoints) name are
-offered to the manager first. The code of other packages, those of the classes
-and routines that the routine calls, and the packages that it makes, are not
-under the manager. A manager that is removed no longer sees the actions.
+offered to the manager first ([which code](r:env.security.scope)). The code of
+other packages, and of the packages that the code makes, is not under the
+manager. A manager that is set or removed while code of the package runs is
+taken up by the calls that start after the change, except for the name
+checkpoints `LOCAL` and `ENVIRONMENT`, which the run that is going on takes
+up at once ([the run rule](r:env.security.run)).
 
 ```rexx
 src = 'address system "echo hidden"; return "done"'
@@ -890,10 +895,14 @@ GENERIC => ran
 
 r[class.routine.setsecuritymanager.call]
 The `CALL` checkpoint is offered for the call of an external routine: one that
-is not a label in the code, not a built-in function and not a routine that the
+is not a label in the code, not a built-in function other than `BEEP`,
+`DIRECTORY` and `FILESPEC`, which [are offered](r:env.security.call), and not
+a routine that the
 routine's package or its context package finds, its own and those it imports;
 a function of a native library is offered. The directory holds `NAME`, the
-upper case name of the routine, and `ARGUMENTS`, an array of the arguments. A
+name of the routine, in capitals for a symbol and as it is written for a
+string ([the call rule](r:env.security.call)), and `ARGUMENTS`, an array of
+the arguments. A
 manager that answers `1` takes the call over: the entry `RESULT`, when the
 manager set one, is the value of the call, and with no `RESULT` the call
 answers no value, which raises `SYNTAX 44.1` where the value is used. A
@@ -969,14 +978,16 @@ call SYSFILEEXISTS
 r[class.routine.setsecuritymanager.command]
 The `COMMAND` checkpoint is offered for a command that goes to an `ADDRESS`
 environment. The directory holds `COMMAND`, the command string, and `ADDRESS`,
-the name of the environment in upper case. A manager that answers `1` has run
+the name of the environment, in capitals when the clause names it by a symbol
+and as it is written when it names it by a string ([the command
+rule](r:env.security.command)). A manager that answers `1` has run
 the command itself: the entry `RC`, when it is set, is the return code, and
 `0` is used when it is not. The entry `FAILURE`, when it is set alone, raises
 the FAILURE condition for the command, and the entry `ERROR`, when it is set
 alone, raises ERROR; when both are set, FAILURE is raised and ERROR is not.
-The manager answers `0` to let the interpreter run the command. The default
-environment that a command goes to when the code names no `ADDRESS` is that of
-the host and is not specified.
+The manager answers `0` to let the interpreter run the command. A command that
+names no environment is sent with the name of the environment that is current
+for the clause, which is `sh` until an ADDRESS instruction changes it.
 
 ```rexx
 src = 'address system "echo one"; say "rc" rc; signal on failure name fail; '
@@ -1040,8 +1051,9 @@ of its context, of the packages it imports or of the library gives, and not
 for a name in the `local` directory of the package, which is searched first. A
 manager that answers `1` with an entry `RESULT` provides the object; one that
 answers `1` with no `RESULT` is read as the name not being found, and the
-lookup goes on with the `ENVIRONMENT` checkpoint. The code of the routine is
-the code that is under the manager; the program that called it is not.
+lookup goes on with the `ENVIRONMENT` checkpoint. The code of the routine's
+package is the code that is under the manager; the program that called it is
+not.
 
 ```rexx
 .local~zqvalue = 'in local'
@@ -1148,7 +1160,8 @@ in environment | from environment | from local
 r[class.routine.setsecuritymanager.stream]
 The `STREAM` checkpoint is offered when a stream function (`CHARIN`,
 `CHAROUT`, `CHARS`, `LINEIN`, `LINEOUT`, `LINES` or `STREAM`) resolves a
-stream name, the first time that the code of the routine names it in a call.
+stream name that is not in the program's table of streams, which is one table
+for the whole program ([the stream rule](r:env.security.stream)).
 The directory holds `NAME`, the name. A manager that answers `1` has chosen
 the stream: the entry `STREAM` is the object that the function then uses, and
 it must understand the messages of a stream. A manager that answers `0` lets

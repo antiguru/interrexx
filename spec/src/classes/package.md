@@ -2697,9 +2697,11 @@ checkpoints, as [the Routine rule](r:class.routine.setsecuritymanager) says;
 it is not checked when it is set. A second argument raises `SYNTAX 93.902`.
 The checkpoints that [the checkpoint
 rules](r:class.routine.setsecuritymanager.checkpoints) name are offered to the
-manager for the code of the package that runs after the manager was set, the
-routines and methods of the package included, and not for the code of other
-packages.
+manager for the code of the package, the routines and methods of the package
+included, in the runs that start after the manager was set. A run that was
+already going keeps the manager it started with, except for the names ([the
+run rule](r:env.security.run)). The code of other packages is not under the
+manager.
 
 ```rexx
 src = .array~of('return 1', '::routine agent')
