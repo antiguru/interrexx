@@ -70,6 +70,12 @@ fn lay_fixture(dir: &Path) {
         ".traceoutput~destination(.quiet~new)\nsay 'main' trace()\nsay 'external' rxtrace2()\nsay 'method' .t~new~m\nexit\n::class quiet\n::method lineout\n  return 0\n::class t\n::method m\n  return trace()\n",
     );
     file(b"rxtrace2.rex", "return trace()\n");
+    // A `::ROUTINE` is called by name, as a function, and as a routine object: each
+    // starts with the setting the variable gives it.
+    file(
+        b"rxtraceroutine.rex",
+        ".traceoutput~destination(.quiet~new)\nsay 'main' trace()\nsay 'function' rt()\ncall rt2\nsay 'object' .routine~new('o', 'return trace()')~call\nexit\n::class quiet\n::method lineout\n  return 0\n::routine rt\n  return trace()\n::routine rt2\n  say 'call' trace()\n",
+    );
     file(b"src.rex", "parse source s; say s\n");
     file(
         b"showargs.rex",
