@@ -1,0 +1,1233 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Command environments - The interrexx Language Specification</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../conventions.html"><strong aria-hidden="true">2.</strong> Conventions</a></li><li class="chapter-item expanded "><a href="../lexical/index.html"><strong aria-hidden="true">3.</strong> Lexical structure</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../lexical/characters.html"><strong aria-hidden="true">3.1.</strong> Characters</a></li><li class="chapter-item expanded "><a href="../lexical/comments.html"><strong aria-hidden="true">3.2.</strong> Comments</a></li><li class="chapter-item expanded "><a href="../lexical/literals.html"><strong aria-hidden="true">3.3.</strong> Literals</a></li><li class="chapter-item expanded "><a href="../lexical/symbols.html"><strong aria-hidden="true">3.4.</strong> Symbols</a></li><li class="chapter-item expanded "><a href="../lexical/operators.html"><strong aria-hidden="true">3.5.</strong> Operators and special characters</a></li><li class="chapter-item expanded "><a href="../lexical/clauses.html"><strong aria-hidden="true">3.6.</strong> Clauses</a></li></ol></li><li class="chapter-item expanded "><a href="../numbers/index.html"><strong aria-hidden="true">4.</strong> Numbers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../numbers/formats.html"><strong aria-hidden="true">4.1.</strong> Formats</a></li><li class="chapter-item expanded "><a href="../numbers/limits.html"><strong aria-hidden="true">4.2.</strong> Limits</a></li><li class="chapter-item expanded "><a href="../numbers/arithmetic.html"><strong aria-hidden="true">4.3.</strong> Arithmetic</a></li><li class="chapter-item expanded "><a href="../numbers/settings.html"><strong aria-hidden="true">4.4.</strong> Settings</a></li><li class="chapter-item expanded "><a href="../numbers/comparison.html"><strong aria-hidden="true">4.5.</strong> Comparison</a></li></ol></li><li class="chapter-item expanded "><a href="../expressions/index.html"><strong aria-hidden="true">5.</strong> Expressions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../expressions/terms.html"><strong aria-hidden="true">5.1.</strong> Terms</a></li><li class="chapter-item expanded "><a href="../expressions/variables.html"><strong aria-hidden="true">5.2.</strong> Variables</a></li><li class="chapter-item expanded "><a href="../expressions/concatenation.html"><strong aria-hidden="true">5.3.</strong> Concatenation</a></li><li class="chapter-item expanded "><a href="../expressions/arithmetic.html"><strong aria-hidden="true">5.4.</strong> Arithmetic operators</a></li><li class="chapter-item expanded "><a href="../expressions/comparison.html"><strong aria-hidden="true">5.5.</strong> Comparison operators</a></li><li class="chapter-item expanded "><a href="../expressions/logical.html"><strong aria-hidden="true">5.6.</strong> Logical operators</a></li><li class="chapter-item expanded "><a href="../expressions/messages.html"><strong aria-hidden="true">5.7.</strong> Message operators</a></li></ol></li><li class="chapter-item expanded "><a href="../instructions/index.html"><strong aria-hidden="true">6.</strong> Instructions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../instructions/address.html"><strong aria-hidden="true">6.1.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../instructions/arg.html"><strong aria-hidden="true">6.2.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../instructions/assignment.html"><strong aria-hidden="true">6.3.</strong> Assignments</a></li><li class="chapter-item expanded "><a href="../instructions/call.html"><strong aria-hidden="true">6.4.</strong> CALL</a></li><li class="chapter-item expanded "><a href="../instructions/command.html"><strong aria-hidden="true">6.5.</strong> Commands</a></li><li class="chapter-item expanded "><a href="../instructions/do.html"><strong aria-hidden="true">6.6.</strong> DO</a></li><li class="chapter-item expanded "><a href="../instructions/drop.html"><strong aria-hidden="true">6.7.</strong> DROP</a></li><li class="chapter-item expanded "><a href="../instructions/exit.html"><strong aria-hidden="true">6.8.</strong> EXIT</a></li><li class="chapter-item expanded "><a href="../instructions/expose.html"><strong aria-hidden="true">6.9.</strong> EXPOSE</a></li><li class="chapter-item expanded "><a href="../instructions/forward.html"><strong aria-hidden="true">6.10.</strong> FORWARD</a></li><li class="chapter-item expanded "><a href="../instructions/guard.html"><strong aria-hidden="true">6.11.</strong> GUARD</a></li><li class="chapter-item expanded "><a href="../instructions/if.html"><strong aria-hidden="true">6.12.</strong> IF</a></li><li class="chapter-item expanded "><a href="../instructions/interpret.html"><strong aria-hidden="true">6.13.</strong> INTERPRET</a></li><li class="chapter-item expanded "><a href="../instructions/iterate.html"><strong aria-hidden="true">6.14.</strong> ITERATE</a></li><li class="chapter-item expanded "><a href="../instructions/leave.html"><strong aria-hidden="true">6.15.</strong> LEAVE</a></li><li class="chapter-item expanded "><a href="../instructions/loop.html"><strong aria-hidden="true">6.16.</strong> LOOP</a></li><li class="chapter-item expanded "><a href="../instructions/message.html"><strong aria-hidden="true">6.17.</strong> Message instructions</a></li><li class="chapter-item expanded "><a href="../instructions/nop.html"><strong aria-hidden="true">6.18.</strong> NOP</a></li><li class="chapter-item expanded "><a href="../instructions/numeric.html"><strong aria-hidden="true">6.19.</strong> NUMERIC</a></li><li class="chapter-item expanded "><a href="../instructions/options.html"><strong aria-hidden="true">6.20.</strong> OPTIONS</a></li><li class="chapter-item expanded "><a href="../instructions/parse.html"><strong aria-hidden="true">6.21.</strong> PARSE</a></li><li class="chapter-item expanded "><a href="../instructions/procedure.html"><strong aria-hidden="true">6.22.</strong> PROCEDURE</a></li><li class="chapter-item expanded "><a href="../instructions/pull.html"><strong aria-hidden="true">6.23.</strong> PULL</a></li><li class="chapter-item expanded "><a href="../instructions/push.html"><strong aria-hidden="true">6.24.</strong> PUSH</a></li><li class="chapter-item expanded "><a href="../instructions/queue.html"><strong aria-hidden="true">6.25.</strong> QUEUE</a></li><li class="chapter-item expanded "><a href="../instructions/raise.html"><strong aria-hidden="true">6.26.</strong> RAISE</a></li><li class="chapter-item expanded "><a href="../instructions/reply.html"><strong aria-hidden="true">6.27.</strong> REPLY</a></li><li class="chapter-item expanded "><a href="../instructions/return.html"><strong aria-hidden="true">6.28.</strong> RETURN</a></li><li class="chapter-item expanded "><a href="../instructions/say.html"><strong aria-hidden="true">6.29.</strong> SAY</a></li><li class="chapter-item expanded "><a href="../instructions/select.html"><strong aria-hidden="true">6.30.</strong> SELECT</a></li><li class="chapter-item expanded "><a href="../instructions/signal.html"><strong aria-hidden="true">6.31.</strong> SIGNAL</a></li><li class="chapter-item expanded "><a href="../instructions/trace.html"><strong aria-hidden="true">6.32.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../instructions/use.html"><strong aria-hidden="true">6.33.</strong> USE</a></li></ol></li><li class="chapter-item expanded "><a href="../parsing/index.html"><strong aria-hidden="true">7.</strong> Parsing</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../parsing/templates.html"><strong aria-hidden="true">7.1.</strong> Templates</a></li><li class="chapter-item expanded "><a href="../parsing/patterns.html"><strong aria-hidden="true">7.2.</strong> Patterns</a></li><li class="chapter-item expanded "><a href="../parsing/multiple.html"><strong aria-hidden="true">7.3.</strong> Several strings and case</a></li></ol></li><li class="chapter-item expanded "><a href="../directives/index.html"><strong aria-hidden="true">8.</strong> Directives</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../directives/class.html"><strong aria-hidden="true">8.1.</strong> ::CLASS</a></li><li class="chapter-item expanded "><a href="../directives/method.html"><strong aria-hidden="true">8.2.</strong> ::METHOD</a></li><li class="chapter-item expanded "><a href="../directives/attribute.html"><strong aria-hidden="true">8.3.</strong> ::ATTRIBUTE</a></li><li class="chapter-item expanded "><a href="../directives/constant.html"><strong aria-hidden="true">8.4.</strong> ::CONSTANT</a></li><li class="chapter-item expanded "><a href="../directives/routine.html"><strong aria-hidden="true">8.5.</strong> ::ROUTINE</a></li><li class="chapter-item expanded "><a href="../directives/requires.html"><strong aria-hidden="true">8.6.</strong> ::REQUIRES</a></li><li class="chapter-item expanded "><a href="../directives/options.html"><strong aria-hidden="true">8.7.</strong> ::OPTIONS</a></li><li class="chapter-item expanded "><a href="../directives/resource.html"><strong aria-hidden="true">8.8.</strong> ::RESOURCE</a></li><li class="chapter-item expanded "><a href="../directives/annotate.html"><strong aria-hidden="true">8.9.</strong> ::ANNOTATE</a></li></ol></li><li class="chapter-item expanded "><a href="../conditions/index.html"><strong aria-hidden="true">9.</strong> Conditions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../conditions/traps.html"><strong aria-hidden="true">9.1.</strong> Condition traps</a></li><li class="chapter-item expanded "><a href="../conditions/information.html"><strong aria-hidden="true">9.2.</strong> Condition information</a></li><li class="chapter-item expanded "><a href="../conditions/syntax.html"><strong aria-hidden="true">9.3.</strong> SYNTAX</a></li><li class="chapter-item expanded "><a href="../conditions/error.html"><strong aria-hidden="true">9.4.</strong> ERROR and FAILURE</a></li><li class="chapter-item expanded "><a href="../conditions/halt.html"><strong aria-hidden="true">9.5.</strong> HALT</a></li><li class="chapter-item expanded "><a href="../conditions/novalue.html"><strong aria-hidden="true">9.6.</strong> NOVALUE</a></li><li class="chapter-item expanded "><a href="../conditions/nostring.html"><strong aria-hidden="true">9.7.</strong> NOSTRING</a></li><li class="chapter-item expanded "><a href="../conditions/nomethod.html"><strong aria-hidden="true">9.8.</strong> NOMETHOD</a></li><li class="chapter-item expanded "><a href="../conditions/notready.html"><strong aria-hidden="true">9.9.</strong> NOTREADY</a></li><li class="chapter-item expanded "><a href="../conditions/lostdigits.html"><strong aria-hidden="true">9.10.</strong> LOSTDIGITS</a></li><li class="chapter-item expanded "><a href="../conditions/user.html"><strong aria-hidden="true">9.11.</strong> USER conditions</a></li><li class="chapter-item expanded "><a href="../conditions/errors.html"><strong aria-hidden="true">9.12.</strong> Error numbers</a></li></ol></li><li class="chapter-item expanded "><a href="../classes/index.html"><strong aria-hidden="true">10.</strong> Classes</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../classes/methods.html"><strong aria-hidden="true">10.1.</strong> Method search</a></li><li class="chapter-item expanded "><a href="../classes/object.html"><strong aria-hidden="true">10.2.</strong> Object</a></li><li class="chapter-item expanded "><a href="../classes/class.html"><strong aria-hidden="true">10.3.</strong> Class</a></li><li class="chapter-item expanded "><a href="../classes/string.html"><strong aria-hidden="true">10.4.</strong> String</a></li><li class="chapter-item expanded "><a href="../classes/method.html"><strong aria-hidden="true">10.5.</strong> Method</a></li><li class="chapter-item expanded "><a href="../classes/routine.html"><strong aria-hidden="true">10.6.</strong> Routine</a></li><li class="chapter-item expanded "><a href="../classes/package.html"><strong aria-hidden="true">10.7.</strong> Package</a></li><li class="chapter-item expanded "><a href="../classes/message.html"><strong aria-hidden="true">10.8.</strong> Message</a></li><li class="chapter-item expanded "><a href="../classes/messagenotification.html"><strong aria-hidden="true">10.9.</strong> MessageNotification</a></li><li class="chapter-item expanded "><a href="../classes/alarmnotification.html"><strong aria-hidden="true">10.10.</strong> AlarmNotification</a></li><li class="chapter-item expanded "><a href="../classes/collection.html"><strong aria-hidden="true">10.11.</strong> Collection</a></li><li class="chapter-item expanded "><a href="../classes/mapcollection.html"><strong aria-hidden="true">10.12.</strong> MapCollection</a></li><li class="chapter-item expanded "><a href="../classes/orderedcollection.html"><strong aria-hidden="true">10.13.</strong> OrderedCollection</a></li><li class="chapter-item expanded "><a href="../classes/setcollection.html"><strong aria-hidden="true">10.14.</strong> SetCollection</a></li><li class="chapter-item expanded "><a href="../classes/array.html"><strong aria-hidden="true">10.15.</strong> Array</a></li><li class="chapter-item expanded "><a href="../classes/list.html"><strong aria-hidden="true">10.16.</strong> List</a></li><li class="chapter-item expanded "><a href="../classes/queue.html"><strong aria-hidden="true">10.17.</strong> Queue</a></li><li class="chapter-item expanded "><a href="../classes/circularqueue.html"><strong aria-hidden="true">10.18.</strong> CircularQueue</a></li><li class="chapter-item expanded "><a href="../classes/directory.html"><strong aria-hidden="true">10.19.</strong> Directory</a></li><li class="chapter-item expanded "><a href="../classes/stringtable.html"><strong aria-hidden="true">10.20.</strong> StringTable</a></li><li class="chapter-item expanded "><a href="../classes/properties.html"><strong aria-hidden="true">10.21.</strong> Properties</a></li><li class="chapter-item expanded "><a href="../classes/table.html"><strong aria-hidden="true">10.22.</strong> Table</a></li><li class="chapter-item expanded "><a href="../classes/identitytable.html"><strong aria-hidden="true">10.23.</strong> IdentityTable</a></li><li class="chapter-item expanded "><a href="../classes/relation.html"><strong aria-hidden="true">10.24.</strong> Relation</a></li><li class="chapter-item expanded "><a href="../classes/bag.html"><strong aria-hidden="true">10.25.</strong> Bag</a></li><li class="chapter-item expanded "><a href="../classes/set.html"><strong aria-hidden="true">10.26.</strong> Set</a></li><li class="chapter-item expanded "><a href="../classes/stem.html"><strong aria-hidden="true">10.27.</strong> Stem</a></li><li class="chapter-item expanded "><a href="../classes/datetime.html"><strong aria-hidden="true">10.28.</strong> DateTime</a></li><li class="chapter-item expanded "><a href="../classes/timespan.html"><strong aria-hidden="true">10.29.</strong> TimeSpan</a></li><li class="chapter-item expanded "><a href="../classes/comparable.html"><strong aria-hidden="true">10.30.</strong> Comparable</a></li><li class="chapter-item expanded "><a href="../classes/orderable.html"><strong aria-hidden="true">10.31.</strong> Orderable</a></li><li class="chapter-item expanded "><a href="../classes/comparators.html"><strong aria-hidden="true">10.32.</strong> Comparators</a></li><li class="chapter-item expanded "><a href="../classes/mutablebuffer.html"><strong aria-hidden="true">10.33.</strong> MutableBuffer</a></li><li class="chapter-item expanded "><a href="../classes/buffer.html"><strong aria-hidden="true">10.34.</strong> Buffer</a></li><li class="chapter-item expanded "><a href="../classes/pointer.html"><strong aria-hidden="true">10.35.</strong> Pointer</a></li><li class="chapter-item expanded "><a href="../classes/weakreference.html"><strong aria-hidden="true">10.36.</strong> WeakReference</a></li><li class="chapter-item expanded "><a href="../classes/variablereference.html"><strong aria-hidden="true">10.37.</strong> VariableReference</a></li><li class="chapter-item expanded "><a href="../classes/file.html"><strong aria-hidden="true">10.38.</strong> File</a></li><li class="chapter-item expanded "><a href="../classes/rexxcontext.html"><strong aria-hidden="true">10.39.</strong> RexxContext</a></li><li class="chapter-item expanded "><a href="../classes/stackframe.html"><strong aria-hidden="true">10.40.</strong> StackFrame</a></li><li class="chapter-item expanded "><a href="../classes/rexxinfo.html"><strong aria-hidden="true">10.41.</strong> RexxInfo</a></li><li class="chapter-item expanded "><a href="../classes/traceobject.html"><strong aria-hidden="true">10.42.</strong> TraceObject</a></li><li class="chapter-item expanded "><a href="../classes/validate.html"><strong aria-hidden="true">10.43.</strong> Validate</a></li><li class="chapter-item expanded "><a href="../classes/singleton.html"><strong aria-hidden="true">10.44.</strong> Singleton</a></li><li class="chapter-item expanded "><a href="../classes/alarm.html"><strong aria-hidden="true">10.45.</strong> Alarm</a></li><li class="chapter-item expanded "><a href="../classes/ticker.html"><strong aria-hidden="true">10.46.</strong> Ticker</a></li><li class="chapter-item expanded "><a href="../classes/monitor.html"><strong aria-hidden="true">10.47.</strong> Monitor</a></li><li class="chapter-item expanded "><a href="../classes/eventsemaphore.html"><strong aria-hidden="true">10.48.</strong> EventSemaphore</a></li><li class="chapter-item expanded "><a href="../classes/mutexsemaphore.html"><strong aria-hidden="true">10.49.</strong> MutexSemaphore</a></li><li class="chapter-item expanded "><a href="../classes/commandhandler.html"><strong aria-hidden="true">10.50.</strong> CommandHandler</a></li><li class="chapter-item expanded "><a href="../classes/nativecommandhandler.html"><strong aria-hidden="true">10.51.</strong> NativeCommandHandler</a></li><li class="chapter-item expanded "><a href="../classes/commandcontext.html"><strong aria-hidden="true">10.52.</strong> CommandContext</a></li><li class="chapter-item expanded "><a href="../classes/commandinput.html"><strong aria-hidden="true">10.53.</strong> CommandInput</a></li><li class="chapter-item expanded "><a href="../classes/commandoutput.html"><strong aria-hidden="true">10.54.</strong> CommandOutput</a></li><li class="chapter-item expanded "><a href="../classes/rexxqueue.html"><strong aria-hidden="true">10.55.</strong> RexxQueue</a></li><li class="chapter-item expanded "><a href="../classes/supplier.html"><strong aria-hidden="true">10.56.</strong> Supplier</a></li><li class="chapter-item expanded "><a href="../classes/streamsupplier.html"><strong aria-hidden="true">10.57.</strong> StreamSupplier</a></li><li class="chapter-item expanded "><a href="../classes/regularexpression.html"><strong aria-hidden="true">10.58.</strong> RegularExpression</a></li><li class="chapter-item expanded "><a href="../classes/stream.html"><strong aria-hidden="true">10.59.</strong> Stream</a></li><li class="chapter-item expanded "><a href="../classes/inputstream.html"><strong aria-hidden="true">10.60.</strong> InputStream</a></li><li class="chapter-item expanded "><a href="../classes/outputstream.html"><strong aria-hidden="true">10.61.</strong> OutputStream</a></li><li class="chapter-item expanded "><a href="../classes/inputoutputstream.html"><strong aria-hidden="true">10.62.</strong> InputOutputStream</a></li></ol></li><li class="chapter-item expanded "><a href="../environment/index.html"><strong aria-hidden="true">11.</strong> Environment</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../environment/objects.html"><strong aria-hidden="true">11.1.</strong> Environment objects</a></li><li class="chapter-item expanded "><a href="../environment/invocation.html"><strong aria-hidden="true">11.2.</strong> Invocation</a></li><li class="chapter-item expanded "><a href="../environment/search.html"><strong aria-hidden="true">11.3.</strong> Search</a></li><li class="chapter-item expanded "><a href="../environment/commands.html" class="active"><strong aria-hidden="true">11.4.</strong> Command environments</a></li><li class="chapter-item expanded "><a href="../environment/security.html"><strong aria-hidden="true">11.5.</strong> Security manager</a></li><li class="chapter-item expanded "><a href="../environment/debugging.html"><strong aria-hidden="true">11.6.</strong> Debugging</a></li></ol></li><li class="chapter-item expanded "><a href="../builtins/index.html"><strong aria-hidden="true">12.</strong> Built-in functions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../builtins/abbrev.html"><strong aria-hidden="true">12.1.</strong> ABBREV</a></li><li class="chapter-item expanded "><a href="../builtins/abs.html"><strong aria-hidden="true">12.2.</strong> ABS</a></li><li class="chapter-item expanded "><a href="../builtins/address.html"><strong aria-hidden="true">12.3.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../builtins/arg.html"><strong aria-hidden="true">12.4.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../builtins/b2x.html"><strong aria-hidden="true">12.5.</strong> B2X</a></li><li class="chapter-item expanded "><a href="../builtins/beep.html"><strong aria-hidden="true">12.6.</strong> BEEP</a></li><li class="chapter-item expanded "><a href="../builtins/bitand.html"><strong aria-hidden="true">12.7.</strong> BITAND</a></li><li class="chapter-item expanded "><a href="../builtins/bitor.html"><strong aria-hidden="true">12.8.</strong> BITOR</a></li><li class="chapter-item expanded "><a href="../builtins/bitxor.html"><strong aria-hidden="true">12.9.</strong> BITXOR</a></li><li class="chapter-item expanded "><a href="../builtins/c2d.html"><strong aria-hidden="true">12.10.</strong> C2D</a></li><li class="chapter-item expanded "><a href="../builtins/c2x.html"><strong aria-hidden="true">12.11.</strong> C2X</a></li><li class="chapter-item expanded "><a href="../builtins/center.html"><strong aria-hidden="true">12.12.</strong> CENTER</a></li><li class="chapter-item expanded "><a href="../builtins/changestr.html"><strong aria-hidden="true">12.13.</strong> CHANGESTR</a></li><li class="chapter-item expanded "><a href="../builtins/charin.html"><strong aria-hidden="true">12.14.</strong> CHARIN</a></li><li class="chapter-item expanded "><a href="../builtins/charout.html"><strong aria-hidden="true">12.15.</strong> CHAROUT</a></li><li class="chapter-item expanded "><a href="../builtins/chars.html"><strong aria-hidden="true">12.16.</strong> CHARS</a></li><li class="chapter-item expanded "><a href="../builtins/compare.html"><strong aria-hidden="true">12.17.</strong> COMPARE</a></li><li class="chapter-item expanded "><a href="../builtins/condition.html"><strong aria-hidden="true">12.18.</strong> CONDITION</a></li><li class="chapter-item expanded "><a href="../builtins/copies.html"><strong aria-hidden="true">12.19.</strong> COPIES</a></li><li class="chapter-item expanded "><a href="../builtins/countstr.html"><strong aria-hidden="true">12.20.</strong> COUNTSTR</a></li><li class="chapter-item expanded "><a href="../builtins/d2c.html"><strong aria-hidden="true">12.21.</strong> D2C</a></li><li class="chapter-item expanded "><a href="../builtins/d2x.html"><strong aria-hidden="true">12.22.</strong> D2X</a></li><li class="chapter-item expanded "><a href="../builtins/datatype.html"><strong aria-hidden="true">12.23.</strong> DATATYPE</a></li><li class="chapter-item expanded "><a href="../builtins/date.html"><strong aria-hidden="true">12.24.</strong> DATE</a></li><li class="chapter-item expanded "><a href="../builtins/delstr.html"><strong aria-hidden="true">12.25.</strong> DELSTR</a></li><li class="chapter-item expanded "><a href="../builtins/delword.html"><strong aria-hidden="true">12.26.</strong> DELWORD</a></li><li class="chapter-item expanded "><a href="../builtins/digits.html"><strong aria-hidden="true">12.27.</strong> DIGITS</a></li><li class="chapter-item expanded "><a href="../builtins/directory.html"><strong aria-hidden="true">12.28.</strong> DIRECTORY</a></li><li class="chapter-item expanded "><a href="../builtins/endlocal.html"><strong aria-hidden="true">12.29.</strong> ENDLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/errortext.html"><strong aria-hidden="true">12.30.</strong> ERRORTEXT</a></li><li class="chapter-item expanded "><a href="../builtins/filespec.html"><strong aria-hidden="true">12.31.</strong> FILESPEC</a></li><li class="chapter-item expanded "><a href="../builtins/form.html"><strong aria-hidden="true">12.32.</strong> FORM</a></li><li class="chapter-item expanded "><a href="../builtins/format.html"><strong aria-hidden="true">12.33.</strong> FORMAT</a></li><li class="chapter-item expanded "><a href="../builtins/fuzz.html"><strong aria-hidden="true">12.34.</strong> FUZZ</a></li><li class="chapter-item expanded "><a href="../builtins/gc.html"><strong aria-hidden="true">12.35.</strong> GC</a></li><li class="chapter-item expanded "><a href="../builtins/insert.html"><strong aria-hidden="true">12.36.</strong> INSERT</a></li><li class="chapter-item expanded "><a href="../builtins/lastpos.html"><strong aria-hidden="true">12.37.</strong> LASTPOS</a></li><li class="chapter-item expanded "><a href="../builtins/left.html"><strong aria-hidden="true">12.38.</strong> LEFT</a></li><li class="chapter-item expanded "><a href="../builtins/length.html"><strong aria-hidden="true">12.39.</strong> LENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/linein.html"><strong aria-hidden="true">12.40.</strong> LINEIN</a></li><li class="chapter-item expanded "><a href="../builtins/lineout.html"><strong aria-hidden="true">12.41.</strong> LINEOUT</a></li><li class="chapter-item expanded "><a href="../builtins/lines.html"><strong aria-hidden="true">12.42.</strong> LINES</a></li><li class="chapter-item expanded "><a href="../builtins/lower.html"><strong aria-hidden="true">12.43.</strong> LOWER</a></li><li class="chapter-item expanded "><a href="../builtins/max.html"><strong aria-hidden="true">12.44.</strong> MAX</a></li><li class="chapter-item expanded "><a href="../builtins/min.html"><strong aria-hidden="true">12.45.</strong> MIN</a></li><li class="chapter-item expanded "><a href="../builtins/overlay.html"><strong aria-hidden="true">12.46.</strong> OVERLAY</a></li><li class="chapter-item expanded "><a href="../builtins/pos.html"><strong aria-hidden="true">12.47.</strong> POS</a></li><li class="chapter-item expanded "><a href="../builtins/qualify.html"><strong aria-hidden="true">12.48.</strong> QUALIFY</a></li><li class="chapter-item expanded "><a href="../builtins/queued.html"><strong aria-hidden="true">12.49.</strong> QUEUED</a></li><li class="chapter-item expanded "><a href="../builtins/random.html"><strong aria-hidden="true">12.50.</strong> RANDOM</a></li><li class="chapter-item expanded "><a href="../builtins/reverse.html"><strong aria-hidden="true">12.51.</strong> REVERSE</a></li><li class="chapter-item expanded "><a href="../builtins/right.html"><strong aria-hidden="true">12.52.</strong> RIGHT</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncadd.html"><strong aria-hidden="true">12.53.</strong> RXFUNCADD</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncdrop.html"><strong aria-hidden="true">12.54.</strong> RXFUNCDROP</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncquery.html"><strong aria-hidden="true">12.55.</strong> RXFUNCQUERY</a></li><li class="chapter-item expanded "><a href="../builtins/rxqueue.html"><strong aria-hidden="true">12.56.</strong> RXQUEUE</a></li><li class="chapter-item expanded "><a href="../builtins/setlocal.html"><strong aria-hidden="true">12.57.</strong> SETLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/sign.html"><strong aria-hidden="true">12.58.</strong> SIGN</a></li><li class="chapter-item expanded "><a href="../builtins/sourceline.html"><strong aria-hidden="true">12.59.</strong> SOURCELINE</a></li><li class="chapter-item expanded "><a href="../builtins/space.html"><strong aria-hidden="true">12.60.</strong> SPACE</a></li><li class="chapter-item expanded "><a href="../builtins/stream.html"><strong aria-hidden="true">12.61.</strong> STREAM</a></li><li class="chapter-item expanded "><a href="../builtins/strip.html"><strong aria-hidden="true">12.62.</strong> STRIP</a></li><li class="chapter-item expanded "><a href="../builtins/substr.html"><strong aria-hidden="true">12.63.</strong> SUBSTR</a></li><li class="chapter-item expanded "><a href="../builtins/subword.html"><strong aria-hidden="true">12.64.</strong> SUBWORD</a></li><li class="chapter-item expanded "><a href="../builtins/symbol.html"><strong aria-hidden="true">12.65.</strong> SYMBOL</a></li><li class="chapter-item expanded "><a href="../builtins/time.html"><strong aria-hidden="true">12.66.</strong> TIME</a></li><li class="chapter-item expanded "><a href="../builtins/trace.html"><strong aria-hidden="true">12.67.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../builtins/translate.html"><strong aria-hidden="true">12.68.</strong> TRANSLATE</a></li><li class="chapter-item expanded "><a href="../builtins/trunc.html"><strong aria-hidden="true">12.69.</strong> TRUNC</a></li><li class="chapter-item expanded "><a href="../builtins/upper.html"><strong aria-hidden="true">12.70.</strong> UPPER</a></li><li class="chapter-item expanded "><a href="../builtins/userid.html"><strong aria-hidden="true">12.71.</strong> USERID</a></li><li class="chapter-item expanded "><a href="../builtins/value.html"><strong aria-hidden="true">12.72.</strong> VALUE</a></li><li class="chapter-item expanded "><a href="../builtins/var.html"><strong aria-hidden="true">12.73.</strong> VAR</a></li><li class="chapter-item expanded "><a href="../builtins/verify.html"><strong aria-hidden="true">12.74.</strong> VERIFY</a></li><li class="chapter-item expanded "><a href="../builtins/word.html"><strong aria-hidden="true">12.75.</strong> WORD</a></li><li class="chapter-item expanded "><a href="../builtins/wordindex.html"><strong aria-hidden="true">12.76.</strong> WORDINDEX</a></li><li class="chapter-item expanded "><a href="../builtins/wordlength.html"><strong aria-hidden="true">12.77.</strong> WORDLENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/wordpos.html"><strong aria-hidden="true">12.78.</strong> WORDPOS</a></li><li class="chapter-item expanded "><a href="../builtins/words.html"><strong aria-hidden="true">12.79.</strong> WORDS</a></li><li class="chapter-item expanded "><a href="../builtins/x2b.html"><strong aria-hidden="true">12.80.</strong> X2B</a></li><li class="chapter-item expanded "><a href="../builtins/x2c.html"><strong aria-hidden="true">12.81.</strong> X2C</a></li><li class="chapter-item expanded "><a href="../builtins/x2d.html"><strong aria-hidden="true">12.82.</strong> X2D</a></li><li class="chapter-item expanded "><a href="../builtins/xrange.html"><strong aria-hidden="true">12.83.</strong> XRANGE</a></li></ol></li><li class="chapter-item expanded "><a href="../deviations.html"><strong aria-hidden="true">13.</strong> Deviations</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The interrexx Language Specification</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="command-environments"><a class="header" href="#command-environments">Command environments</a></h1>
+<p class="references">rexxref: General Concepts &gt; Commands to External Environments &gt; Environment; Useful Services &gt; The RXQUEUE Filter</p>
+<p class="deviations">Deviations: D11, D93, D146, D147, D148, D149</p>
+<p>A command that a program sends goes to an environment, which runs it and
+answers with a return code. <a href="../instructions/command.html#r-instr.command.send">The commands page</a>
+specifies what is sent and how <code>RC</code> and <code>.RS</code> are set, <a href="../instructions/address.html">the ADDRESS
+instruction</a> chooses the environment and
+redirects its streams, and <a href="../conditions/error.html">the conditions chapter</a>
+specifies ERROR and FAILURE. This page specifies the environments that the
+interpreter has on Linux and what they do with a command: which program runs
+it and with what, the return codes they answer, what the command starts with,
+the commands that the interpreter does itself, and the <code>rxqueue</code> filter
+through which a command puts lines on the program's queue.
+<a href="../classes/commandhandler.html"><code>CommandHandler</code></a> and
+<a href="../classes/nativecommandhandler.html"><code>NativeCommandHandler</code></a> are the classes
+of the environments, and a handler written in Rexx gets
+<a href="../classes/commandcontext.html"><code>CommandContext</code></a>,
+<a href="../classes/commandinput.html"><code>CommandInput</code></a> and
+<a href="../classes/commandoutput.html"><code>CommandOutput</code></a> objects for a command that it
+runs.</p>
+<p>The examples start commands that every Linux host has: the shell's own
+commands, <code>echo</code>, <code>printf</code>, <code>cat</code> and <code>cd</code>. An example that changes the
+current directory, <code>HOME</code>, <code>PATH</code> or the queue puts it back.</p>
+<h2 id="the-environments"><a class="header" href="#the-environments">The environments</a></h2>
+<div class="rule" id="r-env.commands.names"><a href="#r-env.commands.names">[env.commands.names]</a></div>
+<p>A program has eleven command environments, which
+<a href="../classes/commandhandler.html#r-class.commandhandler.environments"><code>CommandHandler~environments</code></a> lists
+under these names: <code>SYSTEM</code>, <code>COMMAND</code>, <code>SH</code>, <code>BASH</code>, <code>BSH</code>, <code>KSH</code>, <code>CSH</code>,
+<code>TCSH</code>, <code>ZSH</code>, <code>PATH</code> and the null string. They are all
+<a href="../classes/nativecommandhandler.html#r-class.nativecommandhandler.creation"><code>NativeCommandHandler</code></a> objects. The
+case of a name plays no part (<a href="../instructions/address.html#r-instr.address.with.set">the setting rule</a>).
+A command sent to any other name raises FAILURE with the return code <code>30</code>
+(<a href="../instructions/command.html#r-instr.command.status">the status rule</a>), and sets nothing that its
+redirections name.</p>
+<pre><code class="language-rexx">do n over .commandhandler~environments~allIndexes~sort
+  say '['n']' .commandhandler~handler(n)~kind
+end
+signal on failure name f
+address value 'a4zq_none'
+'echo not run'
+f: say condition('c') rc .rs
+</code></pre>
+<pre><code class="language-output">[] REDIRECTING
+[BASH] REDIRECTING
+[BSH] REDIRECTING
+[COMMAND] REDIRECTING
+[CSH] REDIRECTING
+[KSH] REDIRECTING
+[PATH] REDIRECTING
+[SH] REDIRECTING
+[SYSTEM] REDIRECTING
+[TCSH] REDIRECTING
+[ZSH] REDIRECTING
+FAILURE 30 -1
+</code></pre>
+<div class="rule" id="r-env.commands.initial"><a href="#r-env.commands.initial">[env.commands.initial]</a></div>
+<p>A program starts with the environment <code>sh</code>, written in lower case, whose
+name is what the function <code>ADDRESS()</code> answers until an ADDRESS instruction
+names another one, which then answers its name as that instruction gave it:
+in upper case for a symbol and as written for a string (<a href="../builtins/address.html#r-bif.address.name">the name
+rule</a>). A command sent before any ADDRESS instruction is
+run as <code>SYSTEM</code> runs it, and the instruction <code>ADDRESS</code> with no operand
+brings the starting environment back (<a href="../builtins/address.html#r-bif.address.initial">the initial
+rule</a>).</p>
+<pre><code class="language-rexx">say address()
+address system
+say address()
+address
+say address()
+'echo "$0"'
+address 'MixEnv'
+say address()
+</code></pre>
+<pre><code class="language-output">sh
+SYSTEM
+sh
+/bin/sh
+MixEnv
+</code></pre>
+<h2 id="running-a-command"><a class="header" href="#running-a-command">Running a command</a></h2>
+<div class="rule" id="r-env.commands.shell"><a href="#r-env.commands.shell">[env.commands.shell]</a></div>
+<p>The environments <code>SYSTEM</code>, <code>COMMAND</code>, <code>SH</code> and the null string run a command
+with the program <code>/bin/sh</code>, given the two arguments <code>-c</code> and the command
+string, so that the string is one argument and the shell reads it. <code>BASH</code>
+does the same with <code>/bin/bash</code>, and <code>BSH</code>, <code>KSH</code>, <code>CSH</code>, <code>TCSH</code> and <code>ZSH</code>
+with the program of that name in <code>/bin</code>, in lower case. The interpreter waits
+for the shell to end and answers its exit status as the return code (<a href="#r-env.commands.rc">the
+return code rule</a>). A shell that the host does not have
+cannot be run, and the command raises FAILURE with the return code <code>127</code>
+(<a href="../conditions/error.html#r-cond.error.failure">the failure rule</a>).</p>
+<pre><code class="language-rexx">do n over .array~of('system', 'command', 'sh', '')
+  address value n
+  'echo "$0"'
+end
+</code></pre>
+<pre><code class="language-output">/bin/sh
+/bin/sh
+/bin/sh
+/bin/sh
+</code></pre>
+<div class="rule" id="r-env.commands.shell.string"><a href="#r-env.commands.shell.string">[env.commands.shell.string]</a></div>
+<p>What the shell does with the string is the shell's business, not the
+interpreter's: it reads blanks, quotes, <code>;</code>, <code>|</code>, <code>&amp;&amp;</code>, variables, <code>$(( ))</code>,
+redirections and a line feed that separates two commands as it does in a
+script, and the return code is that of the last command it ran. The
+variables of the Rexx program are not variables of the shell, which sees
+only the environment variables. The string is not changed, and a string that
+holds nothing but blanks runs nothing and answers 0. Which characters the
+string may hold beyond those that a string argument of a program can hold is
+the host's business, except that <a href="#r-env.commands.deviation.146">a NUL</a> is not
+run.</p>
+<pre><code class="language-rexx">address system
+x = 'rexx'
+'echo "a   b" | cat; x=shell; echo $x $((6 * 7)); printf "[%s]" 1 2 3; echo'
+'echo l1' || '0a'x || 'echo l2'
+'echo ${x:-unset}'
+'   '
+say 'blank' rc
+</code></pre>
+<pre><code class="language-output">a   b
+shell 42
+[1][2][3]
+l1
+l2
+unset
+blank 0
+</code></pre>
+<div class="rule" id="r-env.commands.deviation.146"><a href="#r-env.commands.deviation.146">[env.commands.deviation.146]</a></div>
+<p>A command string that holds a NUL character is not run in any native
+environment: the command raises FAILURE with the return code <code>127</code>, and
+nothing of the string runs. This is <a href="../deviations.html#146-a-command-string-with-a-nul-character">Deviation
+146</a>: ooRexx cuts
+the string at the NUL and runs the part before it, so that there the shell
+gets only <code>echo ran; echo "a</code> from the first command of the example, refuses
+it as a syntax error and answers 2 (ERROR, nothing printed), and the second
+command runs <code>printf ran</code>.</p>
+<pre><code class="language-rexx">signal on failure name f
+address system 'echo ran; echo "a' || '00'x || 'b"'
+f: say condition('c') rc
+signal on failure name g
+address path 'printf ran' || '00'x || 'x'
+g: say condition('c') rc
+</code></pre>
+<pre><code class="language-output">FAILURE 127
+FAILURE 127
+</code></pre>
+<div class="rule" id="r-env.commands.path"><a href="#r-env.commands.path">[env.commands.path]</a></div>
+<p>The environment <code>PATH</code> runs no shell. It cuts the command string into words
+as <a href="#r-env.commands.path.words">the words rule</a> says, looks for the program
+named by the first word and runs it with the other words as its arguments.
+A first word that holds a slash names the program itself; any other is
+searched for in the directories of the environment variable <code>PATH</code>, as the
+variable stands when the command is sent, so that a change by VALUE is seen.
+An empty entry of <code>PATH</code>, and a <code>PATH</code> that is the null string, stand for the
+current directory. When <code>PATH</code> has no value, the host's default list of
+system directories is searched, which does not hold the current directory.
+A file that cannot be run, or a directory, is passed over and the search goes
+on. A string with no word, a program that is not found, and a program named
+with a slash that cannot be run raise FAILURE with the return code <code>127</code>. The
+interpreter answers the exit status of the program as the return code, the
+same way as for a shell.</p>
+<pre><code class="language-rexx">e = 'ENVIRONMENT'
+address path
+'echo one two'
+say rc
+old = value('PATH', '/a4zq_nonexistent_dir', e)
+signal on failure name f
+'echo not found'
+f: say condition('c') rc
+call off failure
+'/bin/sh -c "echo by name; exit 4"'
+say rc
+call value 'PATH', old, e
+'echo found again'
+say rc
+call off failure
+signal on failure name g
+'   '
+g: say condition('c') rc
+</code></pre>
+<pre><code class="language-output">one two
+0
+FAILURE 127
+by name
+4
+found again
+0
+FAILURE 127
+</code></pre>
+<pre><code class="language-rexx">e = 'ENVIRONMENT'
+f = 'a4zq_prog'
+call lineout f, '#!/bin/sh'
+call lineout f, 'echo found'
+call lineout f
+address system 'chmod +x' f
+signal on failure name nf
+address path
+old = value('PATH', '', e)
+f
+call value 'PATH', ':/a4zq_none', e
+f
+call value 'PATH', .nil, e
+'printf "default\n"'
+f
+nf: say condition('c') rc
+call value 'PATH', old, e
+address system 'chmod -x' f
+signal on failure name nx
+'./'f
+nx: say condition('c') rc
+address system 'rm' f
+</code></pre>
+<pre><code class="language-output">found
+found
+default
+FAILURE 127
+FAILURE 127
+</code></pre>
+<div class="rule" id="r-env.commands.deviation.147"><a href="#r-env.commands.deviation.147">[env.commands.deviation.147]</a></div>
+<p>An executable file that the search of <code>PATH</code> finds and that has no <code>#!</code> line
+is run by <code>PATH</code> with the program <code>/bin/sh</code>, which reads it as a script, given
+the file's path and the other words of the command as its arguments, as a
+shell runs such a file. The same file named with a slash is not run
+this way: the command raises FAILURE with the return code <code>127</code>. This is
+<a href="../deviations.html#147-a-file-without-a--line-that-a-path-search-finds">Deviation
+147</a>:
+ooRexx raises FAILURE with the return code <code>127</code> for the file that the search
+finds as well, and runs nothing.</p>
+<pre><code class="language-rexx">e = 'ENVIRONMENT'
+f = 'a4zq_noshebang'
+call lineout f, 'echo "ran with" $#'
+call lineout f
+address system 'chmod +x' f
+old = value('PATH', directory()':'value('PATH', , e), e)
+address path
+f 'x' '"y  z"'
+say rc
+signal on failure name nf
+'./'f
+nf: say condition('c') rc
+call value 'PATH', old, e
+address system 'rm' f
+</code></pre>
+<pre><code class="language-output">ran with 2
+0
+FAILURE 127
+</code></pre>
+<div class="rule" id="r-env.commands.path.words"><a href="#r-env.commands.path.words">[env.commands.path.words]</a></div>
+<p>The words of a command for <code>PATH</code> are separated by blanks and tabs, and any
+number of them separate two words. A word that begins with a double quote
+ends at the first double quote that is followed by a blank, a tab or the end
+of the string, and the two quotes are not part of it; it may hold blanks, any
+other double quote, and line feeds. A word of this kind that is never closed
+ends with the string. Every other character belongs to a word as it is, a
+single quote, a backslash, a dollar sign, a tilde, a star, <code>;</code>, <code>|</code>, <code>&gt;</code> and
+a line feed among them, so that nothing is expanded and no redirection or
+pipe exists. A double quote inside a word that does not begin with one is an
+ordinary character.</p>
+<pre><code class="language-rexx">address path
+q = "'"
+'printf [%s] "a  b" c\ d' q'e f'q 'x;y $HOME * ~ &gt;z'
+say
+'printf [%s] a"b c"d "" "x"y "p q"r" s" "t'
+say
+'printf [%s] "u' || '0a'x || 'v" w' || '0a'x || 'x'
+say
+'printf [%s]' || '09'x || 'a' || '09'x || '09'x || 'b'
+say
+</code></pre>
+<pre><code class="language-output">[a  b][c\][d]['e][f'][x;y][$HOME][*][~][&gt;z]
+[a"b][c"d][][x"y "p q"r][s"][t]
+[u
+v][w
+x]
+[a][b]
+</code></pre>
+<h2 id="the-return-code"><a class="header" href="#the-return-code">The return code</a></h2>
+<div class="rule" id="r-env.commands.rc"><a href="#r-env.commands.rc">[env.commands.rc]</a></div>
+<p>The return code of a command that a shell or a program ran to its end is its
+exit status, a whole number from 0 to 255: an <code>exit</code> with another number
+gives the number modulo 256. It is set in <code>RC</code> as <a href="../instructions/command.html#r-instr.command.rc">the return code
+rule</a> says, and a nonzero one raises
+<a href="../conditions/error.html#r-cond.error.raise">ERROR</a>, <code>127</code> raising
+<a href="../conditions/error.html#r-cond.error.failure">FAILURE</a>. A shell answers the status of the command it
+ran last, so a command that the shell could not find is the <code>127</code> of the
+shell, and which codes other than 127 a shell uses for a command that it
+cannot run is the shell's business.</p>
+<pre><code class="language-rexx">address system
+do c over .array~of('exit 0', 'exit 7', 'exit 255', 'exit 256', 'exit 300',,
+    'true', 'false', 'test -d /a4zq_none', '(exit 4)', 'a4zq_none_cmd')
+  c
+  say c '-&gt;' rc .rs
+end
+</code></pre>
+<pre><code class="language-output">exit 0 -&gt; 0 0
+exit 7 -&gt; 7 1
+exit 255 -&gt; 255 1
+exit 256 -&gt; 0 0
+exit 300 -&gt; 44 1
+true -&gt; 0 0
+false -&gt; 1 1
+test -d /a4zq_none -&gt; 1 1
+(exit 4) -&gt; 4 1
+a4zq_none_cmd -&gt; 127 -1
+</code></pre>
+<div class="rule" id="r-env.commands.rc.signal"><a href="#r-env.commands.rc.signal">[env.commands.rc.signal]</a></div>
+<p>A shell or a program that a signal ended has no exit status, and its return
+code is the number of the signal with a minus sign, <code>-9</code> for the signal
+<code>KILL</code>, <code>-15</code> for <code>TERM</code> and <code>-1</code> for <code>HUP</code>. The command raises
+<a href="../conditions/error.html#r-cond.error.raise">ERROR</a>, and <code>.RS</code> is <code>1</code>. A shell that runs a program
+which a signal ended answers the status <code>128</code> plus the signal number for it,
+as a shell does, and that is an exit status. This is the same for all
+environments.</p>
+<pre><code class="language-rexx">address system with error stem e.
+do c over .array~of('kill -s KILL $$', 'kill -s TERM $$', 'kill -s HUP $$',,
+    'sh -c "kill -s KILL \$\$"', 'sh -c "kill -s TERM \$\$"')
+  c
+  say c '-&gt;' rc .rs
+end
+address path with error stem e.
+'sh -c "kill -s TERM $$"'
+say 'path' rc .rs
+</code></pre>
+<pre><code class="language-output">kill -s KILL $$ -&gt; -9 1
+kill -s TERM $$ -&gt; -15 1
+kill -s HUP $$ -&gt; -1 1
+sh -c "kill -s KILL \$\$" -&gt; 137 1
+sh -c "kill -s TERM \$\$" -&gt; 143 1
+path -15 1
+</code></pre>
+<div class="rule" id="r-env.commands.rc.deviation.11"><a href="#r-env.commands.rc.deviation.11">[env.commands.rc.deviation.11]</a></div>
+<p>A command starts with <code>SIGPIPE</code> at its default action, so a shell that
+raises <code>SIGPIPE</code> is ended by it, with the return code <code>-13</code> and ERROR,
+<a href="#r-env.commands.rc.signal">as the rule above</a> says for any signal. This is
+<a href="../deviations.html#11-sigpipe-in-a-commands-child">Deviation 11</a>: ooRexx starts
+the command with <code>SIGPIPE</code> ignored, and the shell that raises it goes on and
+answers 0.</p>
+<pre><code class="language-rexx">address system
+'kill -s PIPE $$'
+say rc .rs
+</code></pre>
+<pre><code class="language-output">-13 1
+</code></pre>
+<blockquote>
+<p><strong>Note.</strong> <a href="../deviations.html#10-signals-halt-and-wake">Deviation 10</a> says
+what the return code is when a halt interrupts the wait for a command, and
+<a href="../deviations.html#91-a-command-whose-child-was-already-reaped">Deviation 91</a>
+what it is for a command whose process was gone before the wait. A command
+that a program sends to an environment that does not exist answers <code>30</code>, as
+<a href="#r-env.commands.names">the first rule</a> says.</p>
+</blockquote>
+<h2 id="what-a-command-starts-with"><a class="header" href="#what-a-command-starts-with">What a command starts with</a></h2>
+<div class="rule" id="r-env.commands.start"><a href="#r-env.commands.start">[env.commands.start]</a></div>
+<p>A command starts in the current directory of the program as
+<a href="../builtins/directory.html#r-bif.directory.effect">DIRECTORY</a> leaves it, with the environment
+variables of the program as <a href="../builtins/value.html#r-bif.value.os.command">VALUE</a> leaves them, and
+with the standard input, output and error of the program, unless a
+redirection of <a href="../instructions/address.html#r-instr.address.with.normal">the ADDRESS instruction</a>
+replaces them. What the command itself changes, its current
+directory, its variables and what it exports, ends with it and is not seen by
+the program: <a href="#r-env.commands.inprocess">the commands that the interpreter does
+itself</a> are the exception.</p>
+<pre><code class="language-rexx">e = 'ENVIRONMENT'
+address system
+call directory '/'
+'pwd'
+call directory '/usr'
+'pwd'
+call value 'A4ZQ_V', 'set by rexx', e
+'echo "[$A4ZQ_V]"'
+'A4ZQ_V=changed; export A4ZQ_V; echo "[$A4ZQ_V]"'
+say '['value('A4ZQ_V', , e)']'
+'cd /; pwd'
+say directory()
+call value 'A4ZQ_V', .nil, e
+call directory '/'
+</code></pre>
+<pre><code class="language-output">/
+/usr
+[set by rexx]
+[changed]
+[set by rexx]
+/
+/usr
+</code></pre>
+<div class="rule" id="r-env.commands.deviation.148"><a href="#r-env.commands.deviation.148">[env.commands.deviation.148]</a></div>
+<p>A command has the standard input, output and error of the program as its
+descriptors 0, 1 and 2. No descriptor that the interpreter opens for its own
+work is open in it. One that the interpreter was started with is passed on as
+the host passes it, so that the example, whose second interpreter is started
+with none, lists only these three and the <code>3</code> that <code>ls</code> opens to list them.
+This is <a href="../deviations.html#148-the-descriptors-that-a-command-inherits">Deviation
+148</a>: ooRexx
+leaves two descriptors of its own open in the command, so that the example
+lists two more there.</p>
+<pre><code class="language-rexx">f = 'a4zq_fd.rex'
+call lineout f, "address system 'echo $(ls /proc/self/fd)'"
+call lineout f
+address bash
+'for d in $(ls /proc/self/fd); do [ "$d" -gt 2 ] &amp;&amp; eval "exec $d&gt;&amp;-"; done;',
+  'rexx' f
+say rc
+'rm' f
+</code></pre>
+<pre><code class="language-output">0 1 2 3
+0
+</code></pre>
+<h2 id="commands-the-interpreter-does-itself"><a class="header" href="#commands-the-interpreter-does-itself">Commands the interpreter does itself</a></h2>
+<div class="rule" id="r-env.commands.inprocess"><a href="#r-env.commands.inprocess">[env.commands.inprocess]</a></div>
+<p>A command that the shell would run in a process of its own, and whose effect
+would end with that process, is run by the interpreter in the program instead,
+so that its effect is the program's. These are the commands <code>cd</code>, <code>export</code>,
+<code>set</code> and <code>unset</code>, in lower case, when all of the following hold. The string
+begins with the word, directly followed by a blank and an argument, or, for
+<code>cd</code>, by nothing or by blanks only. It has none of the characters <code>;</code>, <code>&amp;</code>,
+<code>|</code>, <code>&lt;</code> and <code>&gt;</code>. It is sent as a command clause or by an ADDRESS instruction
+with a command to a native environment, any of those that <a href="#r-env.commands.names">the first
+rule</a> names, <code>PATH</code> included. Which shell that
+environment runs, and whether the host has that shell, plays no part. The
+environment may also be reached under another name it was registered with, or
+by a handler that forwards the command with
+<a href="../classes/nativecommandhandler.html#r-class.nativecommandhandler.command"><code>command</code></a>. No <code>WITH</code> applies to it:
+its clause has none, and no earlier ADDRESS instruction with <code>WITH</code> and no
+command has given the environment one, even one that names only <code>NORMAL</code>. Any
+other string is run as the environment runs every command, by a shell or, for
+<code>PATH</code>, as a program that is searched for, in a process whose effect on the
+program ends with it, so that a leading blank, a tab for the blank, a capital
+letter, or a <code>;</code> sends the string that way. A command that the interpreter
+does itself writes nothing, and its return code is set as the rules of the
+four commands say.</p>
+<pre><code class="language-rexx">call directory '/'
+address system
+'cd /usr'
+say directory()
+call directory '/'
+'cd /usr; true'
+say directory()
+' cd /usr'
+say directory()
+'cd' || '09'x || '/usr'
+say directory()
+'CD /usr'
+say rc directory()
+address sh 'cd /usr'
+say directory()
+call directory '/'
+address system with output stem o.
+'cd /usr'
+say rc directory() o.0
+address system with output normal
+'cd /usr'
+say rc directory()
+address bash 'cd /usr'
+say directory()
+call directory '/'
+address ksh 'cd /usr'
+say directory()
+call directory '/'
+x = .commandhandler~register('a4zq_alias', .commandhandler~handler('system'))
+address a4zq_alias 'cd /usr'
+say directory()
+x = .commandhandler~deregister('a4zq_alias')
+call directory '/'
+</code></pre>
+<pre><code class="language-output">/usr
+/
+/
+/
+127 /
+/usr
+0 / 0
+0 /
+/usr
+/usr
+/usr
+</code></pre>
+<pre><code class="language-rexx">e = 'ENVIRONMENT'
+call directory '/'
+address path 'cd /usr'
+say rc directory()
+address path 'export A4ZQ_P=1'
+say rc '['value('A4ZQ_P', , e)']'
+address path 'unset A4ZQ_P'
+say rc '['value('A4ZQ_P', , e)']'
+call directory '/'
+</code></pre>
+<pre><code class="language-output defect=#219">0 /usr
+0 [1]
+0 []
+</code></pre>
+<div class="rule" id="r-env.commands.cd"><a href="#r-env.commands.cd">[env.commands.cd]</a></div>
+<p><code>cd</code> makes the directory its argument names the current directory of the
+program, as <a href="../builtins/directory.html#r-bif.directory.effect">DIRECTORY</a> does, and answers 0. The
+argument is the rest of the string after the blanks that follow <code>cd</code>; with no
+argument the directory is the value of the environment variable <code>HOME</code>, read
+as any other argument is: unlike <a href="../builtins/directory.html#r-bif.directory.home">DIRECTORY with <code>~</code></a>, a
+value that does not start with a slash is taken from the current directory.
+When the argument as written begins with <code>~</code>, the tilde is read before
+anything else. A <code>~</code> alone, or followed by a slash or a blank, stands for the
+value of <code>HOME</code>, which is then read as the rest of the argument is, its double
+quotes and backslashes dropped, but not read again for a <code>~</code>. After a slash
+the rest of the argument follows as usual; after a blank the rest is not read.
+A <code>~</code> followed by a name, which runs to the first slash or to the end of the
+argument, stands for the home directory of the user of that name in the host's
+user database. When there is no such user, the command is not done by the
+interpreter: the string goes to the shell, as any other string does. A <code>~</code>
+that is not the first character of the argument as written, and one that a
+quote or backslash comes before, is an ordinary character. In the rest of the
+argument every double quote is dropped, even one that nothing closes, and so
+is a backslash, the character after it being kept. Nothing else is read: a
+blank at the end is part of the name, as is a <code>-</code>, a single quote, a dollar
+sign or a star. A name that does not start with a slash is taken from the
+current directory. When <code>HOME</code> is the null string, <code>cd</code> with no argument fails
+as below, and a <code>~</code> that stands for <code>HOME</code> stands for nothing, so that <code>cd ~</code>
+and <code>cd ~/</code> make <code>/</code> current and <code>cd ~/x</code> makes <code>/x</code> current. When the
+directory cannot be made current, the command answers the number that the host
+gives the error, as Linux numbers them: <code>2</code> when there is no such directory,
+<code>20</code> when a part of the name is not a directory, <code>13</code> when permission is
+refused. It raises <a href="../conditions/error.html#r-cond.error.raise">ERROR</a> as every nonzero return code
+does, and leaves the current directory as it was.</p>
+<pre><code class="language-rexx">e = 'ENVIRONMENT'
+old = value('HOME', '/usr', e)
+call directory '/'
+address system
+do c over .array~of('cd', 'cd /', 'cd ~', 'cd ~/..', 'cd ~ /etc', 'cd  usr',,
+    'cd "/usr"', 'cd /u"s"r', 'cd \/usr', 'cd /usr/', 'cd /usr ',,
+    "cd '/usr'", 'cd $HOME', 'cd -', 'cd "~"', 'cd /a4zq_none',,
+    'cd /dev/null', 'cd ""', 'cd /usr lib')
+  call directory '/'
+  c
+  say '['c']' rc .rs directory()
+end
+call directory '/'
+'cd ~a4zq_nouser'
+say directory()
+address system 'cd ~root 2&gt;/dev/null &amp;&amp; pwd -P' with output stem h.
+'cd ~root'
+say ((rc = 0) == (h.0 = 1)) (rc \= 0 | directory() == h.1)
+call directory '/'
+call value 'HOME', '', e
+'cd ~'
+say rc directory()
+call directory '/'
+call value 'HOME', old, e
+</code></pre>
+<pre><code class="language-output">[cd] 0 0 /usr
+[cd /] 0 0 /
+[cd ~] 0 0 /usr
+[cd ~/..] 0 0 /
+[cd ~ /etc] 0 0 /usr
+[cd  usr] 0 0 /usr
+[cd "/usr"] 0 0 /usr
+[cd /u"s"r] 0 0 /usr
+[cd \/usr] 0 0 /usr
+[cd /usr/] 0 0 /usr
+[cd /usr ] 2 1 /
+[cd '/usr'] 2 1 /
+[cd $HOME] 2 1 /
+[cd -] 2 1 /
+[cd "~"] 2 1 /
+[cd /a4zq_none] 2 1 /
+[cd /dev/null] 20 1 /
+[cd ""] 2 1 /
+[cd /usr lib] 2 1 /
+/
+1 1
+0 /
+</code></pre>
+<div class="rule" id="r-env.commands.export"><a href="#r-env.commands.export">[env.commands.export]</a></div>
+<p><code>export</code> and <code>set</code>, given an argument, set an environment variable of the
+program, as VALUE does (<a href="../builtins/value.html#r-bif.value.os">the variables rule</a>), and answer 0.
+The name is the text from the blanks that follow the word to the first <code>=</code>,
+and the value is all that follows that <code>=</code>, to the end of the string, blanks
+and quotes included. A string without <code>=</code> sets nothing, and neither does one
+whose name is empty, <code>export =3</code> for one, which answers 0 (<a href="#r-env.commands.deviation.149">the deviation
+rule</a>). Within the value each <code>$</code> starts a
+reference: the characters after it up to the next <code>/</code>, <code>:</code> or <code>$</code>, or the end
+of the string, are the name of an environment variable, and the reference is
+replaced by the value of that variable, or by nothing when there is none; the
+character that ended the name stays. Neither the name nor the reference
+follows the rules of the shell, so that <code>${NAME}</code> is a reference to a variable
+whose name has braces in it. A <code>~</code> in the value is an ordinary character.
+<code>export</code> and <code>set</code> with no argument are run by the shell.</p>
+<pre><code class="language-rexx">e = 'ENVIRONMENT'
+address system
+call value 'A4ZQ_H', 'hval', e
+call t 'export A4ZQ_X1=1', 'A4ZQ_X1'
+call t 'set A4ZQ_X2=2', 'A4ZQ_X2'
+call t 'export  A4ZQ_X3=a  b ', 'A4ZQ_X3'
+call t 'export A4ZQ_X4="q r"', 'A4ZQ_X4'
+call t 'export A4ZQ_X5=7 A4ZQ_Y5=8', 'A4ZQ_X5 A4ZQ_Y5'
+call t 'export A4ZQ_X6', 'A4ZQ_X6'
+call t 'export A4ZQ_X8=$A4ZQ_H/s:t', 'A4ZQ_X8'
+call t 'export A4ZQ_X9=&lt;$A4ZQ_H$A4ZQ_H&gt;', 'A4ZQ_X9'
+call t 'export A4ZQ_X10=${A4ZQ_H}', 'A4ZQ_X10'
+call t 'export A4ZQ_X11=u$A4ZQ_nope', 'A4ZQ_X11'
+call t 'export A4ZQ_X12=~/x', 'A4ZQ_X12'
+call t 'export A4ZQ_X13=1;', 'A4ZQ_X13'
+call t 'export A4ZQ_X14=', 'A4ZQ_X14'
+'test "${A4ZQ_X14+set}" = set'
+say 'set but null' rc
+exit
+t: procedure expose e
+  parse arg cmd, names
+  address system
+  cmd
+  s = ''
+  do n over names~makeArray(' ')
+    s = s '['value(n, , e)']'
+  end
+  say '['cmd']' rc s
+  return
+</code></pre>
+<pre><code class="language-output">[export A4ZQ_X1=1] 0  [1]
+[set A4ZQ_X2=2] 0  [2]
+[export  A4ZQ_X3=a  b ] 0  [a  b ]
+[export A4ZQ_X4="q r"] 0  ["q r"]
+[export A4ZQ_X5=7 A4ZQ_Y5=8] 0  [7 A4ZQ_Y5=8] []
+[export A4ZQ_X6] 0  []
+[export A4ZQ_X8=$A4ZQ_H/s:t] 0  [hval/s:t]
+[export A4ZQ_X9=&lt;$A4ZQ_H$A4ZQ_H&gt;] 2  []
+[export A4ZQ_X10=${A4ZQ_H}] 0  []
+[export A4ZQ_X11=u$A4ZQ_nope] 0  [u]
+[export A4ZQ_X12=~/x] 0  [~/x]
+[export A4ZQ_X13=1;] 0  []
+[export A4ZQ_X14=] 0  []
+set but null 0
+</code></pre>
+<div class="rule" id="r-env.commands.unset"><a href="#r-env.commands.unset">[env.commands.unset]</a></div>
+<p><code>unset</code>, given an argument, removes the environment variable that the rest of
+the string after the blanks names, and answers 0. The whole rest is the name,
+so a blank in it or at its end is part of it, and a name that no variable has
+removes nothing. <code>unset</code> with no argument is run by the shell.</p>
+<pre><code class="language-rexx">e = 'ENVIRONMENT'
+address system
+do n over .array~of('A4ZQ_U1', 'A4ZQ_U2', 'A4ZQ_U3', 'A4ZQ_U4', 'A4ZQ_W4',,
+    'A4ZQ_U5', 'A4ZQ_U6')
+  call value n, 'set', e
+end
+call t 'unset A4ZQ_U1', 'A4ZQ_U1'
+call t 'unset  A4ZQ_U2', 'A4ZQ_U2'
+call t 'unset A4ZQ_U3 ', 'A4ZQ_U3'
+call t 'unset A4ZQ_U4 A4ZQ_W4', 'A4ZQ_U4 A4ZQ_W4'
+call t 'unset A4ZQ_nope', 'A4ZQ_U5'
+call t 'unset A4ZQ_U6;', 'A4ZQ_U6'
+exit
+t: procedure expose e
+  parse arg cmd, names
+  address system
+  cmd
+  s = ''
+  do n over names~makeArray(' ')
+    s = s '['value(n, , e)']'
+  end
+  say '['cmd']' rc s
+  return
+</code></pre>
+<pre><code class="language-output">[unset A4ZQ_U1] 0  []
+[unset  A4ZQ_U2] 0  []
+[unset A4ZQ_U3 ] 0  [set]
+[unset A4ZQ_U4 A4ZQ_W4] 0  [set] [set]
+[unset A4ZQ_nope] 0  [set]
+[unset A4ZQ_U6;] 0  [set]
+</code></pre>
+<div class="rule" id="r-env.commands.deviation.149"><a href="#r-env.commands.deviation.149">[env.commands.deviation.149]</a></div>
+<p>Every value that VALUE sets in the <code>ENVIRONMENT</code> is the value of the variable
+afterwards and is what a command sees, whatever <code>export</code> and <code>unset</code> the
+interpreter did before, the one that gives a variable the null string and
+the repeated <code>unset</code> of a name included. An <code>export</code> with an empty name
+changes nothing and answers 0. This is <a href="../deviations.html#149-environment-variables-set-after-export-and-unset">Deviation
+149</a>:
+ooRexx loses some of these sets, which ones depending on the in-process
+<code>export</code> and <code>unset</code> commands that the program ran before for any variable, so
+that the second line of the example is empty there. And <code>export =3</code> stores an
+entry whose name is empty, which a <code>$</code> with no name after it then refers to,
+so that the last line is <code>[a3]</code> there.</p>
+<pre><code class="language-rexx">e = 'ENVIRONMENT'
+address system
+call value 'A4ZQ_U', 'u', e
+'export A4ZQ_U='
+call value 'A4ZQ_U', 'u5', e
+say '['value('A4ZQ_U', , e)']'
+call value 'A4ZQ_Z', 'w', e
+'unset A4ZQ_Z'
+call value 'A4ZQ_Z', 'w', e
+'unset A4ZQ_Z'
+call value 'A4ZQ_Z', 'w2', e
+say '['value('A4ZQ_Z', , e)']'
+'export =3'
+say rc
+'export A4ZQ_R=a$'
+say '['value('A4ZQ_R', , e)']'
+</code></pre>
+<pre><code class="language-output">[u5]
+[w2]
+0
+[a]
+</code></pre>
+<h2 id="redirection"><a class="header" href="#redirection">Redirection</a></h2>
+<div class="rule" id="r-env.commands.redirect"><a href="#r-env.commands.redirect">[env.commands.redirect]</a></div>
+<p>The redirections of <a href="../instructions/address.html#r-instr.address.with.syntax">the ADDRESS instruction</a>
+apply to the commands of every environment that runs a command: the shells
+and <code>PATH</code> give the command the streams that the redirection names for its
+standard input, output and error. A command that fails still fills the stems
+and streams that it wrote: the output and error of a shell that answered 127,
+of a program that exited with a nonzero status and of one that a signal ended
+are all there, and so are the empty ones, as stems with the count 0. A
+command that is sent to an environment that does not exist is not run, and
+its redirections are left as they were.</p>
+<pre><code class="language-rexx">address system
+do c over .array~of('echo out; echo err &gt;&amp;2; exit 3', 'exit 127', ,
+    'echo o; kill -s KILL $$')
+  address system c with output stem o. error stem e.
+  say rc o.0 e.0 o.1 e.1
+end
+o.0 = 'kept'
+e.0 = 'kept'
+address a4zq_none 'echo x' with output stem o. error stem e.
+say rc o.0 e.0
+address path 'printf %s-%s a b' with output stem o. error stem e.
+say rc o.0 e.0 o.1
+address path 'a4zq_none_cmd' with output stem o. error stem e.
+say rc o.0 e.0
+</code></pre>
+<pre><code class="language-output">3 1 1 out err
+127 0 0 O.1 E.1
+-9 1 0 o E.1
+30 kept kept
+0 1 0 a-b
+127 0 0
+</code></pre>
+<h2 id="the-queue-and-the-filter"><a class="header" href="#the-queue-and-the-filter">The queue and the filter</a></h2>
+<div class="rule" id="r-env.commands.rxqueue.filter"><a href="#r-env.commands.rxqueue.filter">[env.commands.rxqueue.filter]</a></div>
+<p><code>rxqueue</code> is a program of the interpreter's installation that a command finds
+by its name, as it finds any program. It reads its standard input and puts the
+lines on a queue of the program that ran the command, which makes it the way
+for a command to hand lines to the program: a command whose output is piped
+into <code>rxqueue</code> leaves its lines in the queue when it ends. That queue is the
+program's <code>SESSION</code> queue, the one that PUSH, QUEUE, QUEUED and PULL work on
+until RXQUEUE sets another (<a href="../builtins/rxqueue.html#r-bif.rxqueue.get">the get rule</a>), and the lines
+are put on it as the rules of its options say. A line of the input ends at a
+line feed, or at a carriage return followed by a line feed; a carriage return
+that no line feed follows also ends a line, and the character after it begins
+the next line and belongs to it whatever it is, so that a second carriage
+return directly after the first is text of the next line, not the end of an
+empty one; text after the last line end is a line, an empty line is a line,
+and input with no character puts none. The text is not changed, so that case,
+blanks, tabs and control characters stay as they are; only PULL changes the
+case, as <a href="../instructions/pull.html#r-instr.pull.source">its rule</a> says. A line is cut after its first
+65472 characters, and the rest of it up to its end is lost. The filter ends
+with the status 0 when it did its work, and the status of a pipeline that ends
+in it is its status, as for any pipeline of a shell. The other statuses are in
+the rules below. The text that it writes when it fails goes to its standard
+output, and this book does not specify it.</p>
+<pre><code class="language-rexx">address system
+queue 'first'
+'printf "second\n\n  Third  \r\nfourth" | rxqueue'
+push 'zero'
+say queued()
+do queued()
+  parse pull l
+  say '['l']'
+end
+'printf "%70000s\nnext\n" x | rxqueue'
+say queued()
+parse pull l
+say length(l) verify(l, ' ')
+parse pull l
+say l
+'printf "" | rxqueue'
+say rc queued()
+</code></pre>
+<pre><code class="language-output">6
+[zero]
+[first]
+[second]
+[]
+[  Third  ]
+[fourth]
+2
+65472 0
+next
+0 0
+</code></pre>
+<pre><code class="language-rexx">address system
+'printf "a\rb\r\rc\r\r\nd\re" | rxqueue'
+do queued()
+  parse pull l
+  say '['l~changeStr('0d'x, '&lt;CR&gt;')']'
+end
+</code></pre>
+<pre><code class="language-output">[a]
+[b]
+[&lt;CR&gt;c]
+[&lt;CR&gt;]
+[d]
+[e]
+</code></pre>
+<div class="rule" id="r-env.commands.rxqueue.options"><a href="#r-env.commands.rxqueue.options">[env.commands.rxqueue.options]</a></div>
+<p><code>rxqueue</code> takes at most one option and at most one queue name, in either
+order. An option is <code>/</code> or <code>-</code> directly followed by <code>FIFO</code>, <code>LIFO</code> or <code>CLEAR</code>,
+in any letter case, and is the whole word; an abbreviation is not an option.
+The option <code>/FIFO</code>, which is the default, puts each line at the end of the
+queue, so that the lines come out in the order of the input after what the
+queue held. <code>/LIFO</code> puts each line at the front as it is read, so that the
+lines come out in the reverse order of the input and before what the queue
+held. <code>/CLEAR</code> removes every line of the queue, reads no input and puts
+nothing on the queue. A word that begins with <code>/</code> or <code>-</code> and is not one of
+these options, a second option, and a second name are errors in the call:
+<code>rxqueue</code> writes a usage text, puts nothing on the queue and answers the
+status 0.</p>
+<pre><code class="language-rexx">address system
+call rxqueue 'create', 'a4zq_opt'
+q = .rexxqueue~new('a4zq_opt')
+call t 'printf "a\nb\n" | rxqueue a4zq_opt'
+call t 'printf "a\nb\n" | rxqueue a4zq_opt /fifo'
+call t 'printf "a\nb\n" | rxqueue -LIFO A4ZQ_OPT'
+call t 'printf "a\nb\n" | rxqueue /lifo a4zq_opt'
+call t 'printf "a\nb\n" | rxqueue a4zq_opt /clear'
+call t 'rxqueue /Clear a4zq_opt &lt;/dev/null'
+call t 'printf "a\nb\n" | rxqueue /li'
+call t 'printf "a\nb\n" | rxqueue a4zq_opt /li'
+call t 'printf "a\nb\n" | rxqueue a4zq_opt /lifo /fifo'
+call t 'printf "a\nb\n" | rxqueue a4zq_opt SESSION'
+call t 'printf "a\nb\n" | rxqueue a4zq_opt lifo'
+call t 'printf "a\nb\n" | rxqueue'
+say 'session' queued()
+do queued()
+  parse pull
+end
+call rxqueue 'delete', 'a4zq_opt'
+exit
+t:
+  parse arg cmd
+  q~empty
+  q~queue('x')
+  q~queue('y')
+  cmd '&gt;/dev/null'
+  say right(rc, 1) '['q~makeArray~makeString('l', ' ')']' cmd~substr(cmd~lastPos('|') + 1)~strip
+  return
+</code></pre>
+<pre><code class="language-output">0 [x y a b] rxqueue a4zq_opt
+0 [x y a b] rxqueue a4zq_opt /fifo
+0 [b a x y] rxqueue -LIFO A4ZQ_OPT
+0 [b a x y] rxqueue /lifo a4zq_opt
+0 [] rxqueue a4zq_opt /clear
+0 [] rxqueue /Clear a4zq_opt &lt;/dev/null
+0 [x y] rxqueue /li
+0 [x y] rxqueue a4zq_opt /li
+0 [x y] rxqueue a4zq_opt /lifo /fifo
+0 [x y] rxqueue a4zq_opt SESSION
+0 [x y] rxqueue a4zq_opt lifo
+0 [x y] rxqueue
+session 2
+</code></pre>
+<div class="rule" id="r-env.commands.rxqueue.name"><a href="#r-env.commands.rxqueue.name">[env.commands.rxqueue.name]</a></div>
+<p>The queue that <code>rxqueue</code> works on is the queue that its name word names, and
+the name need not be written in the case that the queue was created with
+(<a href="../builtins/rxqueue.html#r-bif.rxqueue.case">the case rule</a>). When there is no name word, it is the
+queue that the environment variable <code>RXQUEUE</code> names, when the variable has a
+value, and the <code>SESSION</code> queue otherwise. A name word wins over the
+variable. The queue must exist, and a name that is not one of a queue is
+refused (<a href="../builtins/rxqueue.html#r-bif.rxqueue.name">the name rule</a>): <code>rxqueue</code> writes a message,
+puts nothing on any queue and answers the status 9 when the queue does not
+exist and 5 when the name is not valid; the null string, a value of blanks
+only, and a value with a leading or trailing blank as the value of <code>RXQUEUE</code>
+count as the second. The function RXQUEUE with <code>SET</code> does not set the
+variable, and a program's current queue plays no part in which queue the
+filter uses.</p>
+<pre><code class="language-rexx">address system
+e = 'ENVIRONMENT'
+call rxqueue 'create', 'a4zq_nm'
+call rxqueue 'create', 'a4zq_other'
+n = .rexxqueue~new('a4zq_nm')
+o = .rexxqueue~new('a4zq_other')
+call t 'echo 1 | rxqueue a4zq_nm'
+call t 'echo 2 | rxqueue'
+call value 'RXQUEUE', 'A4ZQ_NM', e
+call t 'echo 3 | rxqueue'
+call t 'echo 4 | rxqueue a4zq_other'
+call t 'echo 5 | rxqueue session'
+call value 'RXQUEUE', 'a4zq_none', e
+call t 'echo 6 | rxqueue'
+call value 'RXQUEUE', '', e
+call t 'echo 7 | rxqueue'
+call value 'RXQUEUE', '  ', e
+call t 'echo 7a | rxqueue'
+call value 'RXQUEUE', ' a4zq_nm', e
+call t 'echo 7b | rxqueue'
+call value 'RXQUEUE', 'a4zq_nm ', e
+call t 'echo 7c | rxqueue'
+call t 'echo 8 | rxqueue "a b"'
+call t 'echo 9 | rxqueue a-b'
+call t 'echo 10 | rxqueue /clear a4zq_none'
+call value 'RXQUEUE', .nil, e
+call t 'echo 11 | rxqueue'
+do queued()
+  parse pull
+end
+call rxqueue 'set', 'a4zq_other'
+'echo 12 | rxqueue &gt;/dev/null'
+say 'other' o~queued
+say rxqueue('set', 'SESSION') queued()
+do queued()
+  parse pull
+end
+call rxqueue 'delete', 'a4zq_nm'
+call rxqueue 'delete', 'a4zq_other'
+exit
+t:
+  parse arg cmd
+  n~empty
+  o~empty
+  do queued()
+    parse pull
+  end
+  cmd '&gt;/dev/null'
+  say right(rc, 1) 'nm['n~makeArray~makeString('l', ' ')']',
+    'other['o~makeArray~makeString('l', ' ')']' 'session['queued()']',
+    cmd~substr(cmd~lastPos('|') + 1)~strip
+  return
+</code></pre>
+<pre><code class="language-output">0 nm[1] other[] session[0] rxqueue a4zq_nm
+0 nm[] other[] session[1] rxqueue
+0 nm[3] other[] session[0] rxqueue
+0 nm[] other[4] session[0] rxqueue a4zq_other
+0 nm[] other[] session[1] rxqueue session
+9 nm[] other[] session[0] rxqueue
+5 nm[] other[] session[0] rxqueue
+5 nm[] other[] session[0] rxqueue
+5 nm[] other[] session[0] rxqueue
+5 nm[] other[] session[0] rxqueue
+5 nm[] other[] session[0] rxqueue "a b"
+5 nm[] other[] session[0] rxqueue a-b
+9 nm[] other[] session[0] rxqueue /clear a4zq_none
+0 nm[] other[] session[1] rxqueue
+other 0
+A4ZQ_OTHER 1
+</code></pre>
+<div class="rule" id="r-env.commands.rxqueue.session"><a href="#r-env.commands.rxqueue.session">[env.commands.rxqueue.session]</a></div>
+<p>A program starts with the environment variable <code>RXQUEUESESSION</code> set, before
+its first clause, to <code>0x</code> followed by lower-case hexadecimal digits. The
+value names the program's <code>SESSION</code> queue for <code>rxqueue</code> and for a Rexx
+program that a command starts. A command inherits it with the other
+variables, as <a href="#r-env.commands.start">the start rule</a> says, and that is how
+the filter and <a href="#r-env.commands.rxqueue.child">a child program</a> reach the
+queue. The interpreter sets it once, at the start. A value that the program
+was started with is used as the session when it begins with hexadecimal
+digits, with or without <code>0x</code> before them, as for <a href="#r-env.commands.rxqueue.child">a child
+program</a>, and is replaced otherwise. After that
+it is a variable of the program like any other, and a value that the program
+gives it is the value that a command sees. The digits depend on the run.</p>
+<pre><code class="language-rexx">v = value('RXQUEUESESSION', , 'ENVIRONMENT')
+say left(v, 2) (length(v) &gt; 2) verify(substr(v, 3), '0123456789abcdef')
+</code></pre>
+<pre><code class="language-output defect=#220">0x 1 0
+</code></pre>
+<pre><code class="language-rexx">call value 'RXQUEUESESSION', 'a4r', 'ENVIRONMENT'
+address system 'echo "$RXQUEUESESSION"' with output stem o.
+say o.1 value('RXQUEUESESSION', , 'ENVIRONMENT')
+</code></pre>
+<pre><code class="language-output defect=#220">a4r a4r
+</code></pre>
+<div class="rule" id="r-env.commands.rxqueue.child"><a href="#r-env.commands.rxqueue.child">[env.commands.rxqueue.child]</a></div>
+<p>A Rexx program that a command starts, as the command <code>rexx</code> does, has the
+queue <code>SESSION</code> of the program that ran the command as its own, and it is its
+current queue when it starts, whatever the current queue of the parent is. The
+lines that the parent put on it are there for the child to pull, and what the
+child leaves on it is there for the parent when the command ends.</p>
+<pre><code class="language-rexx">address system
+queue 'parent'
+'rexx -e "parse pull a; say a; queue ''child''"'
+parse pull b
+say b
+call rxqueue 'create', 'a4zq_ch'
+call rxqueue 'set', 'a4zq_ch'
+'rexx -e "say rxqueue(''get'')"'
+call rxqueue 'set', 'SESSION'
+call rxqueue 'delete', 'a4zq_ch'
+</code></pre>
+<pre><code class="language-output">parent
+child
+SESSION
+</code></pre>
+<div class="rule" id="r-env.commands.rxqueue.deviation.93"><a href="#r-env.commands.rxqueue.deviation.93">[env.commands.rxqueue.deviation.93]</a></div>
+<p>A <code>rxqueue</code> that does not run for a program, so that it has no session queue
+of a program to use, and that is to work on the <code>SESSION</code> queue, whether by
+default or by name, writes a message and answers the status 9, and puts
+nothing anywhere. This is <a href="../deviations.html#93-rxqueue-with-no-session">Deviation
+93</a>: ooRexx answers the status 0
+and puts the lines on a queue that no program reaches. A command leaves that
+state when it takes away the variable <code>RXQUEUESESSION</code> (<a href="#r-env.commands.rxqueue.session">the session
+rule</a>), which the example does for the shell
+that runs it.</p>
+<pre><code class="language-rexx">address system
+'unset RXQUEUESESSION; echo line | rxqueue &gt;/dev/null; echo "[$?]"'
+'unset RXQUEUESESSION; echo line | rxqueue session &gt;/dev/null; echo "[$?]"'
+'unset RXQUEUESESSION; echo line | rxqueue /clear &gt;/dev/null; echo "[$?]"'
+say queued()
+</code></pre>
+<pre><code class="language-output">[9]
+[9]
+[9]
+0
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../environment/search.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../environment/security.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../environment/search.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../environment/security.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../assets/version-picker.js"></script>
+
+
+    </div>
+    </body>
+</html>

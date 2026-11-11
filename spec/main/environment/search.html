@@ -1,0 +1,1000 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Search - The interrexx Language Specification</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../conventions.html"><strong aria-hidden="true">2.</strong> Conventions</a></li><li class="chapter-item expanded "><a href="../lexical/index.html"><strong aria-hidden="true">3.</strong> Lexical structure</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../lexical/characters.html"><strong aria-hidden="true">3.1.</strong> Characters</a></li><li class="chapter-item expanded "><a href="../lexical/comments.html"><strong aria-hidden="true">3.2.</strong> Comments</a></li><li class="chapter-item expanded "><a href="../lexical/literals.html"><strong aria-hidden="true">3.3.</strong> Literals</a></li><li class="chapter-item expanded "><a href="../lexical/symbols.html"><strong aria-hidden="true">3.4.</strong> Symbols</a></li><li class="chapter-item expanded "><a href="../lexical/operators.html"><strong aria-hidden="true">3.5.</strong> Operators and special characters</a></li><li class="chapter-item expanded "><a href="../lexical/clauses.html"><strong aria-hidden="true">3.6.</strong> Clauses</a></li></ol></li><li class="chapter-item expanded "><a href="../numbers/index.html"><strong aria-hidden="true">4.</strong> Numbers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../numbers/formats.html"><strong aria-hidden="true">4.1.</strong> Formats</a></li><li class="chapter-item expanded "><a href="../numbers/limits.html"><strong aria-hidden="true">4.2.</strong> Limits</a></li><li class="chapter-item expanded "><a href="../numbers/arithmetic.html"><strong aria-hidden="true">4.3.</strong> Arithmetic</a></li><li class="chapter-item expanded "><a href="../numbers/settings.html"><strong aria-hidden="true">4.4.</strong> Settings</a></li><li class="chapter-item expanded "><a href="../numbers/comparison.html"><strong aria-hidden="true">4.5.</strong> Comparison</a></li></ol></li><li class="chapter-item expanded "><a href="../expressions/index.html"><strong aria-hidden="true">5.</strong> Expressions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../expressions/terms.html"><strong aria-hidden="true">5.1.</strong> Terms</a></li><li class="chapter-item expanded "><a href="../expressions/variables.html"><strong aria-hidden="true">5.2.</strong> Variables</a></li><li class="chapter-item expanded "><a href="../expressions/concatenation.html"><strong aria-hidden="true">5.3.</strong> Concatenation</a></li><li class="chapter-item expanded "><a href="../expressions/arithmetic.html"><strong aria-hidden="true">5.4.</strong> Arithmetic operators</a></li><li class="chapter-item expanded "><a href="../expressions/comparison.html"><strong aria-hidden="true">5.5.</strong> Comparison operators</a></li><li class="chapter-item expanded "><a href="../expressions/logical.html"><strong aria-hidden="true">5.6.</strong> Logical operators</a></li><li class="chapter-item expanded "><a href="../expressions/messages.html"><strong aria-hidden="true">5.7.</strong> Message operators</a></li></ol></li><li class="chapter-item expanded "><a href="../instructions/index.html"><strong aria-hidden="true">6.</strong> Instructions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../instructions/address.html"><strong aria-hidden="true">6.1.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../instructions/arg.html"><strong aria-hidden="true">6.2.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../instructions/assignment.html"><strong aria-hidden="true">6.3.</strong> Assignments</a></li><li class="chapter-item expanded "><a href="../instructions/call.html"><strong aria-hidden="true">6.4.</strong> CALL</a></li><li class="chapter-item expanded "><a href="../instructions/command.html"><strong aria-hidden="true">6.5.</strong> Commands</a></li><li class="chapter-item expanded "><a href="../instructions/do.html"><strong aria-hidden="true">6.6.</strong> DO</a></li><li class="chapter-item expanded "><a href="../instructions/drop.html"><strong aria-hidden="true">6.7.</strong> DROP</a></li><li class="chapter-item expanded "><a href="../instructions/exit.html"><strong aria-hidden="true">6.8.</strong> EXIT</a></li><li class="chapter-item expanded "><a href="../instructions/expose.html"><strong aria-hidden="true">6.9.</strong> EXPOSE</a></li><li class="chapter-item expanded "><a href="../instructions/forward.html"><strong aria-hidden="true">6.10.</strong> FORWARD</a></li><li class="chapter-item expanded "><a href="../instructions/guard.html"><strong aria-hidden="true">6.11.</strong> GUARD</a></li><li class="chapter-item expanded "><a href="../instructions/if.html"><strong aria-hidden="true">6.12.</strong> IF</a></li><li class="chapter-item expanded "><a href="../instructions/interpret.html"><strong aria-hidden="true">6.13.</strong> INTERPRET</a></li><li class="chapter-item expanded "><a href="../instructions/iterate.html"><strong aria-hidden="true">6.14.</strong> ITERATE</a></li><li class="chapter-item expanded "><a href="../instructions/leave.html"><strong aria-hidden="true">6.15.</strong> LEAVE</a></li><li class="chapter-item expanded "><a href="../instructions/loop.html"><strong aria-hidden="true">6.16.</strong> LOOP</a></li><li class="chapter-item expanded "><a href="../instructions/message.html"><strong aria-hidden="true">6.17.</strong> Message instructions</a></li><li class="chapter-item expanded "><a href="../instructions/nop.html"><strong aria-hidden="true">6.18.</strong> NOP</a></li><li class="chapter-item expanded "><a href="../instructions/numeric.html"><strong aria-hidden="true">6.19.</strong> NUMERIC</a></li><li class="chapter-item expanded "><a href="../instructions/options.html"><strong aria-hidden="true">6.20.</strong> OPTIONS</a></li><li class="chapter-item expanded "><a href="../instructions/parse.html"><strong aria-hidden="true">6.21.</strong> PARSE</a></li><li class="chapter-item expanded "><a href="../instructions/procedure.html"><strong aria-hidden="true">6.22.</strong> PROCEDURE</a></li><li class="chapter-item expanded "><a href="../instructions/pull.html"><strong aria-hidden="true">6.23.</strong> PULL</a></li><li class="chapter-item expanded "><a href="../instructions/push.html"><strong aria-hidden="true">6.24.</strong> PUSH</a></li><li class="chapter-item expanded "><a href="../instructions/queue.html"><strong aria-hidden="true">6.25.</strong> QUEUE</a></li><li class="chapter-item expanded "><a href="../instructions/raise.html"><strong aria-hidden="true">6.26.</strong> RAISE</a></li><li class="chapter-item expanded "><a href="../instructions/reply.html"><strong aria-hidden="true">6.27.</strong> REPLY</a></li><li class="chapter-item expanded "><a href="../instructions/return.html"><strong aria-hidden="true">6.28.</strong> RETURN</a></li><li class="chapter-item expanded "><a href="../instructions/say.html"><strong aria-hidden="true">6.29.</strong> SAY</a></li><li class="chapter-item expanded "><a href="../instructions/select.html"><strong aria-hidden="true">6.30.</strong> SELECT</a></li><li class="chapter-item expanded "><a href="../instructions/signal.html"><strong aria-hidden="true">6.31.</strong> SIGNAL</a></li><li class="chapter-item expanded "><a href="../instructions/trace.html"><strong aria-hidden="true">6.32.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../instructions/use.html"><strong aria-hidden="true">6.33.</strong> USE</a></li></ol></li><li class="chapter-item expanded "><a href="../parsing/index.html"><strong aria-hidden="true">7.</strong> Parsing</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../parsing/templates.html"><strong aria-hidden="true">7.1.</strong> Templates</a></li><li class="chapter-item expanded "><a href="../parsing/patterns.html"><strong aria-hidden="true">7.2.</strong> Patterns</a></li><li class="chapter-item expanded "><a href="../parsing/multiple.html"><strong aria-hidden="true">7.3.</strong> Several strings and case</a></li></ol></li><li class="chapter-item expanded "><a href="../directives/index.html"><strong aria-hidden="true">8.</strong> Directives</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../directives/class.html"><strong aria-hidden="true">8.1.</strong> ::CLASS</a></li><li class="chapter-item expanded "><a href="../directives/method.html"><strong aria-hidden="true">8.2.</strong> ::METHOD</a></li><li class="chapter-item expanded "><a href="../directives/attribute.html"><strong aria-hidden="true">8.3.</strong> ::ATTRIBUTE</a></li><li class="chapter-item expanded "><a href="../directives/constant.html"><strong aria-hidden="true">8.4.</strong> ::CONSTANT</a></li><li class="chapter-item expanded "><a href="../directives/routine.html"><strong aria-hidden="true">8.5.</strong> ::ROUTINE</a></li><li class="chapter-item expanded "><a href="../directives/requires.html"><strong aria-hidden="true">8.6.</strong> ::REQUIRES</a></li><li class="chapter-item expanded "><a href="../directives/options.html"><strong aria-hidden="true">8.7.</strong> ::OPTIONS</a></li><li class="chapter-item expanded "><a href="../directives/resource.html"><strong aria-hidden="true">8.8.</strong> ::RESOURCE</a></li><li class="chapter-item expanded "><a href="../directives/annotate.html"><strong aria-hidden="true">8.9.</strong> ::ANNOTATE</a></li></ol></li><li class="chapter-item expanded "><a href="../conditions/index.html"><strong aria-hidden="true">9.</strong> Conditions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../conditions/traps.html"><strong aria-hidden="true">9.1.</strong> Condition traps</a></li><li class="chapter-item expanded "><a href="../conditions/information.html"><strong aria-hidden="true">9.2.</strong> Condition information</a></li><li class="chapter-item expanded "><a href="../conditions/syntax.html"><strong aria-hidden="true">9.3.</strong> SYNTAX</a></li><li class="chapter-item expanded "><a href="../conditions/error.html"><strong aria-hidden="true">9.4.</strong> ERROR and FAILURE</a></li><li class="chapter-item expanded "><a href="../conditions/halt.html"><strong aria-hidden="true">9.5.</strong> HALT</a></li><li class="chapter-item expanded "><a href="../conditions/novalue.html"><strong aria-hidden="true">9.6.</strong> NOVALUE</a></li><li class="chapter-item expanded "><a href="../conditions/nostring.html"><strong aria-hidden="true">9.7.</strong> NOSTRING</a></li><li class="chapter-item expanded "><a href="../conditions/nomethod.html"><strong aria-hidden="true">9.8.</strong> NOMETHOD</a></li><li class="chapter-item expanded "><a href="../conditions/notready.html"><strong aria-hidden="true">9.9.</strong> NOTREADY</a></li><li class="chapter-item expanded "><a href="../conditions/lostdigits.html"><strong aria-hidden="true">9.10.</strong> LOSTDIGITS</a></li><li class="chapter-item expanded "><a href="../conditions/user.html"><strong aria-hidden="true">9.11.</strong> USER conditions</a></li><li class="chapter-item expanded "><a href="../conditions/errors.html"><strong aria-hidden="true">9.12.</strong> Error numbers</a></li></ol></li><li class="chapter-item expanded "><a href="../classes/index.html"><strong aria-hidden="true">10.</strong> Classes</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../classes/methods.html"><strong aria-hidden="true">10.1.</strong> Method search</a></li><li class="chapter-item expanded "><a href="../classes/object.html"><strong aria-hidden="true">10.2.</strong> Object</a></li><li class="chapter-item expanded "><a href="../classes/class.html"><strong aria-hidden="true">10.3.</strong> Class</a></li><li class="chapter-item expanded "><a href="../classes/string.html"><strong aria-hidden="true">10.4.</strong> String</a></li><li class="chapter-item expanded "><a href="../classes/method.html"><strong aria-hidden="true">10.5.</strong> Method</a></li><li class="chapter-item expanded "><a href="../classes/routine.html"><strong aria-hidden="true">10.6.</strong> Routine</a></li><li class="chapter-item expanded "><a href="../classes/package.html"><strong aria-hidden="true">10.7.</strong> Package</a></li><li class="chapter-item expanded "><a href="../classes/message.html"><strong aria-hidden="true">10.8.</strong> Message</a></li><li class="chapter-item expanded "><a href="../classes/messagenotification.html"><strong aria-hidden="true">10.9.</strong> MessageNotification</a></li><li class="chapter-item expanded "><a href="../classes/alarmnotification.html"><strong aria-hidden="true">10.10.</strong> AlarmNotification</a></li><li class="chapter-item expanded "><a href="../classes/collection.html"><strong aria-hidden="true">10.11.</strong> Collection</a></li><li class="chapter-item expanded "><a href="../classes/mapcollection.html"><strong aria-hidden="true">10.12.</strong> MapCollection</a></li><li class="chapter-item expanded "><a href="../classes/orderedcollection.html"><strong aria-hidden="true">10.13.</strong> OrderedCollection</a></li><li class="chapter-item expanded "><a href="../classes/setcollection.html"><strong aria-hidden="true">10.14.</strong> SetCollection</a></li><li class="chapter-item expanded "><a href="../classes/array.html"><strong aria-hidden="true">10.15.</strong> Array</a></li><li class="chapter-item expanded "><a href="../classes/list.html"><strong aria-hidden="true">10.16.</strong> List</a></li><li class="chapter-item expanded "><a href="../classes/queue.html"><strong aria-hidden="true">10.17.</strong> Queue</a></li><li class="chapter-item expanded "><a href="../classes/circularqueue.html"><strong aria-hidden="true">10.18.</strong> CircularQueue</a></li><li class="chapter-item expanded "><a href="../classes/directory.html"><strong aria-hidden="true">10.19.</strong> Directory</a></li><li class="chapter-item expanded "><a href="../classes/stringtable.html"><strong aria-hidden="true">10.20.</strong> StringTable</a></li><li class="chapter-item expanded "><a href="../classes/properties.html"><strong aria-hidden="true">10.21.</strong> Properties</a></li><li class="chapter-item expanded "><a href="../classes/table.html"><strong aria-hidden="true">10.22.</strong> Table</a></li><li class="chapter-item expanded "><a href="../classes/identitytable.html"><strong aria-hidden="true">10.23.</strong> IdentityTable</a></li><li class="chapter-item expanded "><a href="../classes/relation.html"><strong aria-hidden="true">10.24.</strong> Relation</a></li><li class="chapter-item expanded "><a href="../classes/bag.html"><strong aria-hidden="true">10.25.</strong> Bag</a></li><li class="chapter-item expanded "><a href="../classes/set.html"><strong aria-hidden="true">10.26.</strong> Set</a></li><li class="chapter-item expanded "><a href="../classes/stem.html"><strong aria-hidden="true">10.27.</strong> Stem</a></li><li class="chapter-item expanded "><a href="../classes/datetime.html"><strong aria-hidden="true">10.28.</strong> DateTime</a></li><li class="chapter-item expanded "><a href="../classes/timespan.html"><strong aria-hidden="true">10.29.</strong> TimeSpan</a></li><li class="chapter-item expanded "><a href="../classes/comparable.html"><strong aria-hidden="true">10.30.</strong> Comparable</a></li><li class="chapter-item expanded "><a href="../classes/orderable.html"><strong aria-hidden="true">10.31.</strong> Orderable</a></li><li class="chapter-item expanded "><a href="../classes/comparators.html"><strong aria-hidden="true">10.32.</strong> Comparators</a></li><li class="chapter-item expanded "><a href="../classes/mutablebuffer.html"><strong aria-hidden="true">10.33.</strong> MutableBuffer</a></li><li class="chapter-item expanded "><a href="../classes/buffer.html"><strong aria-hidden="true">10.34.</strong> Buffer</a></li><li class="chapter-item expanded "><a href="../classes/pointer.html"><strong aria-hidden="true">10.35.</strong> Pointer</a></li><li class="chapter-item expanded "><a href="../classes/weakreference.html"><strong aria-hidden="true">10.36.</strong> WeakReference</a></li><li class="chapter-item expanded "><a href="../classes/variablereference.html"><strong aria-hidden="true">10.37.</strong> VariableReference</a></li><li class="chapter-item expanded "><a href="../classes/file.html"><strong aria-hidden="true">10.38.</strong> File</a></li><li class="chapter-item expanded "><a href="../classes/rexxcontext.html"><strong aria-hidden="true">10.39.</strong> RexxContext</a></li><li class="chapter-item expanded "><a href="../classes/stackframe.html"><strong aria-hidden="true">10.40.</strong> StackFrame</a></li><li class="chapter-item expanded "><a href="../classes/rexxinfo.html"><strong aria-hidden="true">10.41.</strong> RexxInfo</a></li><li class="chapter-item expanded "><a href="../classes/traceobject.html"><strong aria-hidden="true">10.42.</strong> TraceObject</a></li><li class="chapter-item expanded "><a href="../classes/validate.html"><strong aria-hidden="true">10.43.</strong> Validate</a></li><li class="chapter-item expanded "><a href="../classes/singleton.html"><strong aria-hidden="true">10.44.</strong> Singleton</a></li><li class="chapter-item expanded "><a href="../classes/alarm.html"><strong aria-hidden="true">10.45.</strong> Alarm</a></li><li class="chapter-item expanded "><a href="../classes/ticker.html"><strong aria-hidden="true">10.46.</strong> Ticker</a></li><li class="chapter-item expanded "><a href="../classes/monitor.html"><strong aria-hidden="true">10.47.</strong> Monitor</a></li><li class="chapter-item expanded "><a href="../classes/eventsemaphore.html"><strong aria-hidden="true">10.48.</strong> EventSemaphore</a></li><li class="chapter-item expanded "><a href="../classes/mutexsemaphore.html"><strong aria-hidden="true">10.49.</strong> MutexSemaphore</a></li><li class="chapter-item expanded "><a href="../classes/commandhandler.html"><strong aria-hidden="true">10.50.</strong> CommandHandler</a></li><li class="chapter-item expanded "><a href="../classes/nativecommandhandler.html"><strong aria-hidden="true">10.51.</strong> NativeCommandHandler</a></li><li class="chapter-item expanded "><a href="../classes/commandcontext.html"><strong aria-hidden="true">10.52.</strong> CommandContext</a></li><li class="chapter-item expanded "><a href="../classes/commandinput.html"><strong aria-hidden="true">10.53.</strong> CommandInput</a></li><li class="chapter-item expanded "><a href="../classes/commandoutput.html"><strong aria-hidden="true">10.54.</strong> CommandOutput</a></li><li class="chapter-item expanded "><a href="../classes/rexxqueue.html"><strong aria-hidden="true">10.55.</strong> RexxQueue</a></li><li class="chapter-item expanded "><a href="../classes/supplier.html"><strong aria-hidden="true">10.56.</strong> Supplier</a></li><li class="chapter-item expanded "><a href="../classes/streamsupplier.html"><strong aria-hidden="true">10.57.</strong> StreamSupplier</a></li><li class="chapter-item expanded "><a href="../classes/regularexpression.html"><strong aria-hidden="true">10.58.</strong> RegularExpression</a></li><li class="chapter-item expanded "><a href="../classes/stream.html"><strong aria-hidden="true">10.59.</strong> Stream</a></li><li class="chapter-item expanded "><a href="../classes/inputstream.html"><strong aria-hidden="true">10.60.</strong> InputStream</a></li><li class="chapter-item expanded "><a href="../classes/outputstream.html"><strong aria-hidden="true">10.61.</strong> OutputStream</a></li><li class="chapter-item expanded "><a href="../classes/inputoutputstream.html"><strong aria-hidden="true">10.62.</strong> InputOutputStream</a></li></ol></li><li class="chapter-item expanded "><a href="../environment/index.html"><strong aria-hidden="true">11.</strong> Environment</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../environment/objects.html"><strong aria-hidden="true">11.1.</strong> Environment objects</a></li><li class="chapter-item expanded "><a href="../environment/invocation.html"><strong aria-hidden="true">11.2.</strong> Invocation</a></li><li class="chapter-item expanded "><a href="../environment/search.html" class="active"><strong aria-hidden="true">11.3.</strong> Search</a></li><li class="chapter-item expanded "><a href="../environment/commands.html"><strong aria-hidden="true">11.4.</strong> Command environments</a></li><li class="chapter-item expanded "><a href="../environment/security.html"><strong aria-hidden="true">11.5.</strong> Security manager</a></li><li class="chapter-item expanded "><a href="../environment/debugging.html"><strong aria-hidden="true">11.6.</strong> Debugging</a></li></ol></li><li class="chapter-item expanded "><a href="../builtins/index.html"><strong aria-hidden="true">12.</strong> Built-in functions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../builtins/abbrev.html"><strong aria-hidden="true">12.1.</strong> ABBREV</a></li><li class="chapter-item expanded "><a href="../builtins/abs.html"><strong aria-hidden="true">12.2.</strong> ABS</a></li><li class="chapter-item expanded "><a href="../builtins/address.html"><strong aria-hidden="true">12.3.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../builtins/arg.html"><strong aria-hidden="true">12.4.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../builtins/b2x.html"><strong aria-hidden="true">12.5.</strong> B2X</a></li><li class="chapter-item expanded "><a href="../builtins/beep.html"><strong aria-hidden="true">12.6.</strong> BEEP</a></li><li class="chapter-item expanded "><a href="../builtins/bitand.html"><strong aria-hidden="true">12.7.</strong> BITAND</a></li><li class="chapter-item expanded "><a href="../builtins/bitor.html"><strong aria-hidden="true">12.8.</strong> BITOR</a></li><li class="chapter-item expanded "><a href="../builtins/bitxor.html"><strong aria-hidden="true">12.9.</strong> BITXOR</a></li><li class="chapter-item expanded "><a href="../builtins/c2d.html"><strong aria-hidden="true">12.10.</strong> C2D</a></li><li class="chapter-item expanded "><a href="../builtins/c2x.html"><strong aria-hidden="true">12.11.</strong> C2X</a></li><li class="chapter-item expanded "><a href="../builtins/center.html"><strong aria-hidden="true">12.12.</strong> CENTER</a></li><li class="chapter-item expanded "><a href="../builtins/changestr.html"><strong aria-hidden="true">12.13.</strong> CHANGESTR</a></li><li class="chapter-item expanded "><a href="../builtins/charin.html"><strong aria-hidden="true">12.14.</strong> CHARIN</a></li><li class="chapter-item expanded "><a href="../builtins/charout.html"><strong aria-hidden="true">12.15.</strong> CHAROUT</a></li><li class="chapter-item expanded "><a href="../builtins/chars.html"><strong aria-hidden="true">12.16.</strong> CHARS</a></li><li class="chapter-item expanded "><a href="../builtins/compare.html"><strong aria-hidden="true">12.17.</strong> COMPARE</a></li><li class="chapter-item expanded "><a href="../builtins/condition.html"><strong aria-hidden="true">12.18.</strong> CONDITION</a></li><li class="chapter-item expanded "><a href="../builtins/copies.html"><strong aria-hidden="true">12.19.</strong> COPIES</a></li><li class="chapter-item expanded "><a href="../builtins/countstr.html"><strong aria-hidden="true">12.20.</strong> COUNTSTR</a></li><li class="chapter-item expanded "><a href="../builtins/d2c.html"><strong aria-hidden="true">12.21.</strong> D2C</a></li><li class="chapter-item expanded "><a href="../builtins/d2x.html"><strong aria-hidden="true">12.22.</strong> D2X</a></li><li class="chapter-item expanded "><a href="../builtins/datatype.html"><strong aria-hidden="true">12.23.</strong> DATATYPE</a></li><li class="chapter-item expanded "><a href="../builtins/date.html"><strong aria-hidden="true">12.24.</strong> DATE</a></li><li class="chapter-item expanded "><a href="../builtins/delstr.html"><strong aria-hidden="true">12.25.</strong> DELSTR</a></li><li class="chapter-item expanded "><a href="../builtins/delword.html"><strong aria-hidden="true">12.26.</strong> DELWORD</a></li><li class="chapter-item expanded "><a href="../builtins/digits.html"><strong aria-hidden="true">12.27.</strong> DIGITS</a></li><li class="chapter-item expanded "><a href="../builtins/directory.html"><strong aria-hidden="true">12.28.</strong> DIRECTORY</a></li><li class="chapter-item expanded "><a href="../builtins/endlocal.html"><strong aria-hidden="true">12.29.</strong> ENDLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/errortext.html"><strong aria-hidden="true">12.30.</strong> ERRORTEXT</a></li><li class="chapter-item expanded "><a href="../builtins/filespec.html"><strong aria-hidden="true">12.31.</strong> FILESPEC</a></li><li class="chapter-item expanded "><a href="../builtins/form.html"><strong aria-hidden="true">12.32.</strong> FORM</a></li><li class="chapter-item expanded "><a href="../builtins/format.html"><strong aria-hidden="true">12.33.</strong> FORMAT</a></li><li class="chapter-item expanded "><a href="../builtins/fuzz.html"><strong aria-hidden="true">12.34.</strong> FUZZ</a></li><li class="chapter-item expanded "><a href="../builtins/gc.html"><strong aria-hidden="true">12.35.</strong> GC</a></li><li class="chapter-item expanded "><a href="../builtins/insert.html"><strong aria-hidden="true">12.36.</strong> INSERT</a></li><li class="chapter-item expanded "><a href="../builtins/lastpos.html"><strong aria-hidden="true">12.37.</strong> LASTPOS</a></li><li class="chapter-item expanded "><a href="../builtins/left.html"><strong aria-hidden="true">12.38.</strong> LEFT</a></li><li class="chapter-item expanded "><a href="../builtins/length.html"><strong aria-hidden="true">12.39.</strong> LENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/linein.html"><strong aria-hidden="true">12.40.</strong> LINEIN</a></li><li class="chapter-item expanded "><a href="../builtins/lineout.html"><strong aria-hidden="true">12.41.</strong> LINEOUT</a></li><li class="chapter-item expanded "><a href="../builtins/lines.html"><strong aria-hidden="true">12.42.</strong> LINES</a></li><li class="chapter-item expanded "><a href="../builtins/lower.html"><strong aria-hidden="true">12.43.</strong> LOWER</a></li><li class="chapter-item expanded "><a href="../builtins/max.html"><strong aria-hidden="true">12.44.</strong> MAX</a></li><li class="chapter-item expanded "><a href="../builtins/min.html"><strong aria-hidden="true">12.45.</strong> MIN</a></li><li class="chapter-item expanded "><a href="../builtins/overlay.html"><strong aria-hidden="true">12.46.</strong> OVERLAY</a></li><li class="chapter-item expanded "><a href="../builtins/pos.html"><strong aria-hidden="true">12.47.</strong> POS</a></li><li class="chapter-item expanded "><a href="../builtins/qualify.html"><strong aria-hidden="true">12.48.</strong> QUALIFY</a></li><li class="chapter-item expanded "><a href="../builtins/queued.html"><strong aria-hidden="true">12.49.</strong> QUEUED</a></li><li class="chapter-item expanded "><a href="../builtins/random.html"><strong aria-hidden="true">12.50.</strong> RANDOM</a></li><li class="chapter-item expanded "><a href="../builtins/reverse.html"><strong aria-hidden="true">12.51.</strong> REVERSE</a></li><li class="chapter-item expanded "><a href="../builtins/right.html"><strong aria-hidden="true">12.52.</strong> RIGHT</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncadd.html"><strong aria-hidden="true">12.53.</strong> RXFUNCADD</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncdrop.html"><strong aria-hidden="true">12.54.</strong> RXFUNCDROP</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncquery.html"><strong aria-hidden="true">12.55.</strong> RXFUNCQUERY</a></li><li class="chapter-item expanded "><a href="../builtins/rxqueue.html"><strong aria-hidden="true">12.56.</strong> RXQUEUE</a></li><li class="chapter-item expanded "><a href="../builtins/setlocal.html"><strong aria-hidden="true">12.57.</strong> SETLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/sign.html"><strong aria-hidden="true">12.58.</strong> SIGN</a></li><li class="chapter-item expanded "><a href="../builtins/sourceline.html"><strong aria-hidden="true">12.59.</strong> SOURCELINE</a></li><li class="chapter-item expanded "><a href="../builtins/space.html"><strong aria-hidden="true">12.60.</strong> SPACE</a></li><li class="chapter-item expanded "><a href="../builtins/stream.html"><strong aria-hidden="true">12.61.</strong> STREAM</a></li><li class="chapter-item expanded "><a href="../builtins/strip.html"><strong aria-hidden="true">12.62.</strong> STRIP</a></li><li class="chapter-item expanded "><a href="../builtins/substr.html"><strong aria-hidden="true">12.63.</strong> SUBSTR</a></li><li class="chapter-item expanded "><a href="../builtins/subword.html"><strong aria-hidden="true">12.64.</strong> SUBWORD</a></li><li class="chapter-item expanded "><a href="../builtins/symbol.html"><strong aria-hidden="true">12.65.</strong> SYMBOL</a></li><li class="chapter-item expanded "><a href="../builtins/time.html"><strong aria-hidden="true">12.66.</strong> TIME</a></li><li class="chapter-item expanded "><a href="../builtins/trace.html"><strong aria-hidden="true">12.67.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../builtins/translate.html"><strong aria-hidden="true">12.68.</strong> TRANSLATE</a></li><li class="chapter-item expanded "><a href="../builtins/trunc.html"><strong aria-hidden="true">12.69.</strong> TRUNC</a></li><li class="chapter-item expanded "><a href="../builtins/upper.html"><strong aria-hidden="true">12.70.</strong> UPPER</a></li><li class="chapter-item expanded "><a href="../builtins/userid.html"><strong aria-hidden="true">12.71.</strong> USERID</a></li><li class="chapter-item expanded "><a href="../builtins/value.html"><strong aria-hidden="true">12.72.</strong> VALUE</a></li><li class="chapter-item expanded "><a href="../builtins/var.html"><strong aria-hidden="true">12.73.</strong> VAR</a></li><li class="chapter-item expanded "><a href="../builtins/verify.html"><strong aria-hidden="true">12.74.</strong> VERIFY</a></li><li class="chapter-item expanded "><a href="../builtins/word.html"><strong aria-hidden="true">12.75.</strong> WORD</a></li><li class="chapter-item expanded "><a href="../builtins/wordindex.html"><strong aria-hidden="true">12.76.</strong> WORDINDEX</a></li><li class="chapter-item expanded "><a href="../builtins/wordlength.html"><strong aria-hidden="true">12.77.</strong> WORDLENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/wordpos.html"><strong aria-hidden="true">12.78.</strong> WORDPOS</a></li><li class="chapter-item expanded "><a href="../builtins/words.html"><strong aria-hidden="true">12.79.</strong> WORDS</a></li><li class="chapter-item expanded "><a href="../builtins/x2b.html"><strong aria-hidden="true">12.80.</strong> X2B</a></li><li class="chapter-item expanded "><a href="../builtins/x2c.html"><strong aria-hidden="true">12.81.</strong> X2C</a></li><li class="chapter-item expanded "><a href="../builtins/x2d.html"><strong aria-hidden="true">12.82.</strong> X2D</a></li><li class="chapter-item expanded "><a href="../builtins/xrange.html"><strong aria-hidden="true">12.83.</strong> XRANGE</a></li></ol></li><li class="chapter-item expanded "><a href="../deviations.html"><strong aria-hidden="true">13.</strong> Deviations</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The interrexx Language Specification</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="search"><a class="header" href="#search">Search</a></h1>
+<p class="references">rexxref: Functions &gt; Search Order; Functions &gt; Search Order &gt; Locating External Rexx Files; Directives &gt; ::REQUIRES</p>
+<p>A program names code that lives outside it in four ways: a call of a routine
+that the program does not define, a <code>::REQUIRES</code> directive, a program name on
+the command line, and a library name. This page specifies how each is found:
+the places that are searched and their order, the extensions that are added to
+a name, how the case of a name matters, what a repeated search finds again,
+and what a program called by name leaves behind in the program that called it.</p>
+<p>The page states the behavior of a Linux host. The names of the places depend
+on the host: <code>/</code> separates the parts of a path, <code>:</code> separates the entries of
+<code>REXX_PATH</code> and <code>PATH</code>, and a file name is case sensitive.</p>
+<blockquote>
+<p><strong>Note.</strong> The test harness runs each example from one working directory.
+interrexx runs it without a program file. ooRexx runs it as a file with the
+extension <code>.rex</code> in that directory. So no example depends on the directory
+or the extension of its own program: where one matters, the example writes a
+calling file of its own. An example that needs a directory builds one, and
+uses names that no host has. The examples set <code>REXX_PATH</code> and
+<code>PATH</code> with <code>VALUE</code>, change the current directory with <code>DIRECTORY</code>, and put
+them back. The rules about <a href="#r-env.search.program">the <code>rexx</code> command</a> are
+tested by the recorded runs of the command in
+<code>rust/crates/interrexx/tests/rexx_command/cases</code>, which run interrexx and
+ooRexx on the same words from a directory of known programs and compare what
+they write and their status; each such rule is cited there.</p>
+</blockquote>
+<h2 id="which-names-are-searched"><a class="header" href="#which-names-are-searched">Which names are searched</a></h2>
+<div class="rule" id="r-env.search.kinds"><a href="#r-env.search.kinds">[env.search.kinds]</a></div>
+<p>These situations search for what a name stands for, and <code>newFile</code> takes a file
+without a search. A call of a routine that nothing in the program, no required
+package and no built-in function answers to searches for a file, a registered
+function and a macro, in the order of <a href="#r-env.search.order">the order rule</a>. A
+<code>::REQUIRES</code> directive without <code>LIBRARY</code>, and the methods <code>new</code> and
+<code>loadPackage</code> of <code>Package</code> when they are given only a name, search for a file
+of Rexx code as <a href="#r-env.search.required">the required-file rule</a> says.
+<code>findProgram</code> of <code>Package</code> searches for a file in the way of a routine call
+(<a href="../classes/package.html#r-class.package.findprogram">its rule</a>). The command <code>rexx</code> searches for the
+program it is told to run, as <a href="#r-env.search.program">the program rule</a> says.
+<code>newFile</code> of <code>Method</code> and of <code>Routine</code> takes the file as it is named and
+searches for nothing (<a href="#r-env.search.newfile">its rule</a>). A library name is
+searched as <a href="#r-env.search.library">the library rule</a> says. A search that finds
+nothing is the error of the situation: <code>SYNTAX 43.1</code> for a call (the name is
+shown in upper case when it was written as a symbol, <a href="../instructions/call.html#r-instr.call.search">as <code>CALL</code>
+says</a>), <code>43.901</code> for a <code>::REQUIRES</code> and for <code>new</code> and
+<code>loadPackage</code> (<a href="../classes/package.html#r-class.package.new.file">the file rule</a>), and <code>3.901</code> for the
+command (<a href="invocation.html#r-env.invocation.notfound">its rule</a>).</p>
+<pre><code class="language-rexx">call try 'call a3zqkindsx'
+call try 'r = a3zqkindsx()'
+call try 'r = .package~new("a3zqkindsx")'
+call try 'r = .package~new("a3zqk1", .array~of("::requires ""a3zqkindsx"""))'
+call try 'r = .package~new("a3zqk2", "nop")~loadPackage("a3zqkindsx")'
+call try 'r = .routine~newFile("a3zqkindsx")'
+say .package~new('a3zqk3', 'nop')~findProgram('a3zqkindsx')~isNil
+say .package~new('a3zqk4', 'nop')~loadLibrary('a3zqkindsx')
+exit
+try: signal on syntax name e
+  interpret arg(1)
+  say arg(1) '=&gt; ok'
+  return
+e: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">call a3zqkindsx =&gt; 43.1
+r = a3zqkindsx() =&gt; 43.1
+r = .package~new("a3zqkindsx") =&gt; 43.901
+r = .package~new("a3zqk1", .array~of("::requires ""a3zqkindsx""")) =&gt; 43.901
+r = .package~new("a3zqk2", "nop")~loadPackage("a3zqkindsx") =&gt; 43.901
+r = .routine~newFile("a3zqkindsx") =&gt; 3.1
+1
+0
+</code></pre>
+<h2 id="the-places"><a class="header" href="#the-places">The places</a></h2>
+<div class="rule" id="r-env.search.places"><a href="#r-env.search.places">[env.search.places]</a></div>
+<p>A name that is not a path, as <a href="#r-env.search.names">the next rule</a> says, is
+looked for in these places, in this order: the directory of the file that
+holds the code that makes the call; the current directory; each directory that
+the environment variable <code>REXX_PATH</code> lists, in its order; and each directory
+that <code>PATH</code> lists, in its order. The directory of a caller is skipped when the
+caller has no file: the code of a package made from source text and the string
+that <code>rexx -e</code> runs have none, and the command <code>rexx</code> has no caller at all.
+The code of a routine of a file has the directory of that file, wherever it is
+called from, so a routine that a required package supplies looks first beside
+the package's own file; <a href="#r-env.search.caller">the caller rule</a> gives an
+example. <code>REXX_PATH</code> and <code>PATH</code> are read at the time of each search, and list
+their directories separated by colons; a directory that does not exist or has
+no such file adds nothing, a directory that is not absolute is read from the
+current directory, and a variable that is not set lists none. In the example,
+the files of the same name stand in the places one after another, and each
+call finds the first place that has a file; the last lines make the entries of
+<code>REXX_PATH</code> relative to the current directory.</p>
+<pre><code class="language-rexx">d = directory()
+do n over .array~of('a3zqpl', 'a3zqpl/rp1', 'a3zqpl/rp2', 'a3zqpl/pp')
+  call sysmkdir n
+end
+oldrp = value('REXX_PATH', d'/a3zqpl/nonesuch:'d'/a3zqpl/rp1:'d'/a3zqpl/rp2', -
+  'ENVIRONMENT')
+oldp = value('PATH', , 'ENVIRONMENT')
+call value 'PATH', d'/a3zqpl/pp:'oldp, 'ENVIRONMENT'
+call show 'none'
+call put 'a3zqpl/pp/a3zqwhere.rex', 'PATH'
+call show 'PATH'
+call put 'a3zqpl/rp2/a3zqwhere.rex', 'REXX_PATH second'
+call show 'REXX_PATH 2'
+call put 'a3zqpl/rp1/a3zqwhere.rex', 'REXX_PATH first'
+call show 'REXX_PATH 1'
+call put 'a3zqwhere.rex', 'current directory'
+call show 'current'
+call sysfiledelete 'a3zqwhere.rex'
+call directory 'a3zqpl'
+call value 'REXX_PATH', 'rp2:rp1', 'ENVIRONMENT'
+call show 'relative'
+call directory d
+call value 'REXX_PATH', oldrp, 'ENVIRONMENT'
+call value 'PATH', oldp, 'ENVIRONMENT'
+do n over .array~of('pp', 'rp1', 'rp2')
+  call sysfiledelete 'a3zqpl/'n'/a3zqwhere.rex'
+  call sysrmdir 'a3zqpl/'n
+end
+call sysrmdir 'a3zqpl'
+exit
+put: call sysfiledelete arg(1)
+  call lineout arg(1), 'return "'arg(2)'"'
+  call lineout arg(1)
+  return
+show: signal on syntax name e
+  call a3zqwhere
+  say arg(1)':' result
+  return
+e: say arg(1)':' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">none: 43.1
+PATH: PATH
+REXX_PATH 2: REXX_PATH second
+REXX_PATH 1: REXX_PATH first
+current: current directory
+relative: REXX_PATH second
+</code></pre>
+<h2 id="names-that-are-paths"><a class="header" href="#names-that-are-paths">Names that are paths</a></h2>
+<div class="rule" id="r-env.search.names"><a href="#r-env.search.names">[env.search.names]</a></div>
+<p>A name that begins with a slash is an absolute path, and is looked for there
+and nowhere else. A name that begins with <code>./</code> or <code>../</code> is a path from the
+current directory, and is looked for there and nowhere else: neither the
+directory of the caller nor <code>REXX_PATH</code> nor <code>PATH</code> is tried for it. Any other
+name, one with slashes inside it such as <code>sub/name</code> included, is joined to
+each place of <a href="#r-env.search.places">the places rule</a> in turn. The extensions
+and the case of <a href="#r-env.search.extension">the following rules</a> apply to the
+name of every kind.</p>
+<pre><code class="language-rexx">d = directory()
+call sysmkdir 'a3zqnm'
+call sysmkdir 'a3zqnm/rp'
+call sysmkdir 'a3zqnm/rp/sub'
+call put 'a3zqnm/rp/a3zqplain.rex', 'plain'
+call put 'a3zqnm/rp/sub/a3zqdeep.rex', 'deep'
+oldrp = value('REXX_PATH', d'/a3zqnm/rp', 'ENVIRONMENT')
+call show 'plain', 'a3zqplain'
+call show 'dot', './a3zqplain'
+call show 'absolute', d'/a3zqnm/rp/a3zqplain'
+call show 'sub', 'sub/a3zqdeep'
+call show 'dot sub', './sub/a3zqdeep'
+call directory 'a3zqnm/rp/sub'
+call show 'dotdot', '../a3zqplain'
+call show 'dotdot sub', '../sub/a3zqdeep'
+call directory d
+call value 'REXX_PATH', oldrp, 'ENVIRONMENT'
+call sysfiledelete 'a3zqnm/rp/sub/a3zqdeep.rex'
+call sysfiledelete 'a3zqnm/rp/a3zqplain.rex'
+call sysrmdir 'a3zqnm/rp/sub'
+call sysrmdir 'a3zqnm/rp'
+call sysrmdir 'a3zqnm'
+exit
+put: call sysfiledelete arg(1)
+  call lineout arg(1), 'return "'arg(2)'"'
+  call lineout arg(1)
+  return
+show: signal on syntax name e
+  call (arg(2))
+  say arg(1)':' result
+  return
+e: say arg(1)':' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">plain: plain
+dot: 43.1
+absolute: plain
+sub: deep
+dot sub: 43.1
+dotdot: plain
+dotdot sub: deep
+</code></pre>
+<h2 id="extensions"><a class="header" href="#extensions">Extensions</a></h2>
+<div class="rule" id="r-env.search.extension"><a href="#r-env.search.extension">[env.search.extension]</a></div>
+<p>A name that has a period in its last part, the part after the last slash,
+names a file, and no extension is added to it. Any other name is tried with
+each of these endings in turn, and the first ending for which a file is found
+in some place ends the search: the endings come before the places, so that a
+file that has an earlier ending in a later place is found before a file that
+has a later one in an earlier place. The endings are, in order: <code>.cls</code>, only
+for the <a href="#r-env.search.required">required-file search</a>; the extension of the
+file that holds the calling code, from the last period of the last part of the
+file's name, when that part has one; <code>.REX</code>; <code>.rex</code>; and no ending at all. A
+call, <code>findProgram</code> and the command <code>rexx</code> leave the <code>.cls</code> out, and the
+command has no calling file. In the example, a file <code>a3zqxc.xyz</code> calls a
+routine, and the files of that name are taken away one by one: the routine is
+found with the ending <code>xyz</code>, then <code>REX</code>, then <code>rex</code>, then with none. The file
+with the ending <code>.cls</code> stays to the end and is never found by the call. A
+second caller, <code>a3zqxd</code>, has no extension, and so has no ending of its own to
+add: it finds <code>.REX</code> first, and the file that has the extension <code>xyz</code> is not
+tried for it. A name with a period, <code>a3zqpd.x</code>, finds the file of that name
+and not <code>a3zqpd.x.REX</code> or <code>a3zqpd.x.rex</code>, and finds nothing when that file is
+gone.</p>
+<pre><code class="language-rexx">call put 'a3zqex.cls', 'cls'
+call put 'a3zqex.xyz', 'xyz'
+call put 'a3zqex.REX', 'REX'
+call put 'a3zqex.rex', 'rex'
+call put 'a3zqex', 'none'
+call lineout 'a3zqxc.xyz', 'return a3zqex()'
+call lineout 'a3zqxc.xyz'
+call lineout 'a3zqxd', 'return a3zqex()'
+call lineout 'a3zqxd'
+say 'with extension:' a3zqxc.xyz()
+say 'without:' a3zqxd()
+call sysfiledelete 'a3zqex.xyz'
+say 'with extension:' a3zqxc.xyz()
+say 'without:' a3zqxd()
+call sysfiledelete 'a3zqex.REX'
+say 'with extension:' a3zqxc.xyz()
+call sysfiledelete 'a3zqex.rex'
+say 'with extension:' a3zqxc.xyz()
+call sysfiledelete 'a3zqex'
+signal on syntax name e
+say 'with extension:' a3zqxc.xyz()
+e: say condition('o')~code
+call put 'a3zqpd.x', 'as named'
+call put 'a3zqpd.x.REX', 'with REX'
+call put 'a3zqpd.x.rex', 'with rex'
+say 'period:' 'a3zqpd.x'()
+call sysfiledelete 'a3zqpd.x'
+signal on syntax name e2
+say 'period:' 'a3zqpd.x'()
+e2: say 'period:' condition('o')~code
+call sysfiledelete 'a3zqpd.x.REX'
+call sysfiledelete 'a3zqpd.x.rex'
+call sysfiledelete 'a3zqex.cls'
+call sysfiledelete 'a3zqxc.xyz'
+call sysfiledelete 'a3zqxd'
+exit
+put: call sysfiledelete arg(1)
+  call lineout arg(1), 'return "'arg(2)'"'
+  call lineout arg(1)
+  return
+</code></pre>
+<pre><code class="language-output">with extension: xyz
+without: REX
+with extension: REX
+without: REX
+with extension: rex
+with extension: none
+43.1
+period: as named
+period: 43.1
+</code></pre>
+<h2 id="case"><a class="header" href="#case">Case</a></h2>
+<div class="rule" id="r-env.search.case"><a href="#r-env.search.case">[env.search.case]</a></div>
+<p>A file name is tried in two forms, the name as it was written and the whole
+name in lower case, directories included; the extension that is added is never
+changed. The two forms come after the extensions and before the places, so
+that for each ending the written form is tried in every place before the
+lower-case form is tried in the first. A call written as a symbol is written
+in upper case (<a href="../instructions/call.html#r-instr.call.search">the call rule</a>), and so finds a file of
+the name in lower case. A name that is spelled in neither form as the file is,
+<code>a3zqmixed</code> for a file <code>A3zqMixed.rex</code> or <code>a3zqUp/A3zqIn</code> for a file
+<code>a3zqUp/a3zqin.rex</code>, finds nothing. In the example, a caller that has no
+extension of its own, so that it adds no ending of its own, calls the names.
+<code>A3ZQCS</code> finds the file of its lower-case form and <code>A3zqMixed</code> the file of its
+own spelling. <code>A3zqOrd</code> finds the file <code>a3zqord.REX</code>, because the ending
+<code>.REX</code> is tried before <code>.rex</code>, although the file <code>A3zqOrd.rex</code> is of the
+written form. A directory is lower-cased with the name. For <code>A3ZQCR</code> the
+written form is found in <code>REXX_PATH</code> although the lower-case form is in the
+current directory, and for <code>A3ZQCW</code> the written form in the current directory
+is found before the lower-case form in <code>REXX_PATH</code>.</p>
+<pre><code class="language-rexx">d = directory()
+call sysmkdir 'a3zqsd'
+call sysmkdir 'a3zqUp'
+call sysmkdir 'a3zqcr'
+call put 'a3zqcs.rex', 'lower'
+call put 'A3zqMixed.rex', 'mixed'
+call put 'a3zqord.REX', 'lower REX'
+call put 'A3zqOrd.rex', 'mixed rex'
+call put 'a3zqsd/a3zqinsd.rex', 'in the lower directory'
+call put 'a3zqUp/a3zqin.rex', 'in a mixed directory'
+call put 'a3zqcr/A3ZQCR.rex', 'upper in REXX_PATH'
+call put 'a3zqcr.rex', 'unused'
+call put 'a3zqcr/a3zqcw.rex', 'lower in REXX_PATH'
+call put 'A3ZQCW.rex', 'upper in the current directory'
+call lineout 'a3zqcl', 'parse arg n'
+call lineout 'a3zqcl', 'signal on syntax name e'
+call lineout 'a3zqcl', 'call (n)'
+call lineout 'a3zqcl', 'return result'
+call lineout 'a3zqcl', 'e: return condition("o")~code'
+call lineout 'a3zqcl'
+old = value('REXX_PATH', d'/a3zqcr', 'ENVIRONMENT')
+say a3zqcl('A3ZQCS')
+say a3zqcl('A3zqMixed')
+say a3zqcl('a3zqmixed')
+say a3zqcl('A3zqOrd')
+say a3zqcl('A3ZQSD/A3ZQINSD')
+say a3zqcl('a3zqUp/A3zqIn')
+say a3zqcl('A3ZQCR')
+say a3zqcl('A3ZQCW')
+call value 'REXX_PATH', old, 'ENVIRONMENT'
+do f over .array~of('a3zqcs.rex', 'A3zqMixed.rex', 'a3zqord.REX', -
+    'A3zqOrd.rex', 'a3zqsd/a3zqinsd.rex', 'a3zqUp/a3zqin.rex', -
+    'a3zqcr/A3ZQCR.rex', 'a3zqcr.rex', -
+    'a3zqcr/a3zqcw.rex', 'A3ZQCW.rex', 'a3zqcl')
+  call sysfiledelete f
+end
+call sysrmdir 'a3zqsd'
+call sysrmdir 'a3zqUp'
+call sysrmdir 'a3zqcr'
+exit
+put: call sysfiledelete arg(1)
+  call lineout arg(1), 'return "'arg(2)'"'
+  call lineout arg(1)
+  return
+</code></pre>
+<pre><code class="language-output">lower
+mixed
+43.1
+lower REX
+in the lower directory
+43.1
+upper in REXX_PATH
+upper in the current directory
+</code></pre>
+<h2 id="the-directory-of-the-caller"><a class="header" href="#the-directory-of-the-caller">The directory of the caller</a></h2>
+<div class="rule" id="r-env.search.caller"><a href="#r-env.search.caller">[env.search.caller]</a></div>
+<p>The directory that comes first in <a href="#r-env.search.places">the places</a> belongs to
+the file that holds the code of the call, and not to the program that started
+the run or to the code that called that file. A file that was found in a place
+and called as a routine looks first beside itself, a file that it calls looks
+beside that file in turn, and a directory in a name such as <code>sub/name</code> is
+joined to the directory of the file that makes the call. In the example, the
+file <code>a3zqcdm.rex</code> stands in a directory that is not the current directory,
+and finds a file beside itself that the current directory lacks. A file
+<code>a3zqtwo.rex</code> stands both beside it and in the current directory, and it finds
+the one beside it, while the program of the example finds the other. The file
+<code>a3zqcdm.rex</code> calls a file in a directory below its own, and that file finds
+the files of its own directory and not the files beside its caller. The
+program of the example, which stands in the current directory, does not find
+the file of <code>a3zqsib</code>.</p>
+<pre><code class="language-rexx">call sysmkdir 'a3zqcd'
+call sysmkdir 'a3zqcd/a3zqsub'
+call put 'a3zqcd/a3zqsib.rex', 'beside the caller'
+call put 'a3zqcd/a3zqtwo.rex', 'the directory of the caller'
+call put 'a3zqtwo.rex', 'the current directory'
+call put 'a3zqcd/a3zqsub/a3zqunder.rex', 'beside the callee'
+f = 'a3zqcd/a3zqcdm.rex'
+call sysfiledelete f
+call lineout f, 'return a3zqsib() "/" a3zqtwo() "/" "a3zqsub/a3zqdown"()'
+call lineout f
+f = 'a3zqcd/a3zqsub/a3zqdown.rex'
+call sysfiledelete f
+call lineout f, 'return a3zqunder() "/" safe("a3zqsib")'
+call lineout f, '::routine safe'
+call lineout f, '  signal on syntax name e'
+call lineout f, '  call (arg(1))'
+call lineout f, '  return result'
+call lineout f, 'e: return condition("o")~code'
+call lineout f
+say 'a3zqcd/a3zqcdm.rex'()
+say a3zqtwo()
+signal on syntax name e
+say a3zqsib()
+e: say condition('o')~code
+call sysfiledelete 'a3zqcd/a3zqsub/a3zqdown.rex'
+call sysfiledelete 'a3zqcd/a3zqsub/a3zqunder.rex'
+call sysfiledelete 'a3zqcd/a3zqcdm.rex'
+call sysfiledelete 'a3zqcd/a3zqsib.rex'
+call sysfiledelete 'a3zqcd/a3zqtwo.rex'
+call sysfiledelete 'a3zqtwo.rex'
+call sysrmdir 'a3zqcd/a3zqsub'
+call sysrmdir 'a3zqcd'
+exit
+put: call sysfiledelete arg(1)
+  call lineout arg(1), 'return "'arg(2)'"'
+  call lineout arg(1)
+  return
+</code></pre>
+<pre><code class="language-output">beside the caller / the directory of the caller / beside the callee / 43.1
+the current directory
+43.1
+</code></pre>
+<h2 id="files-of-rexx-code-that-are-required"><a class="header" href="#files-of-rexx-code-that-are-required">Files of Rexx code that are required</a></h2>
+<div class="rule" id="r-env.search.required"><a href="#r-env.search.required">[env.search.required]</a></div>
+<p>A <code>::REQUIRES</code> directive without <code>LIBRARY</code>, and <code>new</code> and <code>loadPackage</code> of
+<code>Package</code> given only a name, search for a file by <a href="#r-env.search.places">the
+places</a>, <a href="#r-env.search.names">the names</a>, <a href="#r-env.search.extension">the
+extensions</a> and <a href="#r-env.search.case">the case</a> of the
+rules above, with these differences. The first ending is <code>.cls</code>, so that a
+file <code>name.cls</code> is found before every file <code>name.REX</code>, <code>name.rex</code> and <code>name</code>.
+The place that comes first is the directory of the file of the requiring
+package for a <code>::REQUIRES</code>, and of the file of the receiver for <code>loadPackage</code>;
+<code>new</code> of <code>Package</code> has no caller, so it looks in the current directory and
+then in the other places, and <code>findProgram</code>, which has the directory of its
+receiver, has no <code>.cls</code> ending. A package that was made from source text has
+no file, so no directory. A name with a period has no ending, so that
+<code>name.REX</code> finds neither <code>name.REX.cls</code> nor <code>name.REX.rex</code>. The package that
+is found is installed as <a href="../classes/package.html#r-class.package.new.file">the file rule</a> says, and
+is not read again when a file of that name was loaded before. In the example,
+the file <code>a3zqrd/a3zqrreq.rex</code> requires the file <code>a3zqrsib</code> that stands beside
+it and not in the current directory, where the file is <code>a3zqrsib.cls</code> and not
+the file <code>a3zqrsib.rex</code>. A package that is made from the file finds the file
+by <code>loadPackage</code> and by <code>findProgram</code> but not by <code>new</code>, and <code>findProgram</code> does
+not take the <code>.cls</code> file. A source package finds no file beside it. A file
+<code>a3zqpd.x.cls</code> stands in the current directory without the file <code>a3zqpd.x</code>,
+and <code>new</code> does not find it for the name <code>a3zqpd.x</code>.</p>
+<pre><code class="language-rexx">call sysmkdir 'a3zqrd'
+call put 'a3zqrd/a3zqrsib.cls', 'say "sibling cls ran"'
+call put 'a3zqrd/a3zqrsib.rex', 'say "sibling rex ran"'
+call put 'a3zqrd/a3zqrreq.rex', '::requires "a3zqrsib"'
+pk = .package~new('a3zqrd/a3zqrreq.rex')
+say base(pk~findProgram('a3zqrsib'))
+say base(pk~loadPackage('a3zqrsib')~name)
+call try '.package~new("a3zqrsib.rex")'
+call put 'a3zqpd.x.cls', 'say "ran"'
+call try '.package~new("a3zqpd.x")'
+call try '.package~new("a3zqsrc", .array~of("::requires ""a3zqrsib.rex"""))'
+call try '.package~new("a3zqsrc", "nop")~loadPackage("a3zqrsib.rex")'
+call sysfiledelete 'a3zqrd/a3zqrsib.cls'
+call sysfiledelete 'a3zqpd.x.cls'
+call sysfiledelete 'a3zqrd/a3zqrsib.rex'
+call sysfiledelete 'a3zqrd/a3zqrreq.rex'
+call sysrmdir 'a3zqrd'
+exit
+base: return substr(arg(1), lastpos('/', arg(1)) + 1)
+put: call sysfiledelete arg(1)
+  call lineout arg(1), arg(2)
+  call lineout arg(1)
+  return
+try: signal on syntax name e
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt; ok'
+  return
+e: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">sibling cls ran
+a3zqrsib.rex
+a3zqrsib.cls
+.package~new("a3zqrsib.rex") =&gt; 43.901
+.package~new("a3zqpd.x") =&gt; 43.901
+.package~new("a3zqsrc", .array~of("::requires ""a3zqrsib.rex""")) =&gt; 43.901
+.package~new("a3zqsrc", "nop")~loadPackage("a3zqrsib.rex") =&gt; 43.901
+</code></pre>
+<h2 id="the-program-of-the-command"><a class="header" href="#the-program-of-the-command">The program of the command</a></h2>
+<div class="rule" id="r-env.search.program"><a href="#r-env.search.program">[env.search.program]</a></div>
+<p>The program that the command <code>rexx</code> is told to run is looked for in <a href="#r-env.search.places">the
+places</a> with no directory of a caller: the current
+directory, then the directories of <code>REXX_PATH</code>, then those of <code>PATH</code>. The
+names of <a href="#r-env.search.names">the names rule</a> and the case of <a href="#r-env.search.case">the case
+rule</a> hold, and the endings are <code>.REX</code>, <code>.rex</code> and none, in
+that order and with no <code>.cls</code>: an ending is tried in every place before the
+next ending is tried, so that <code>name.REX</code> of <code>REXX_PATH</code> is run before
+<code>name.rex</code> of the current directory, and a file with no ending is run only
+when no file with an ending is found. A name that finds a directory only, or
+nothing, is <a href="invocation.html#r-env.invocation.notfound">the not-found error</a>. The program is
+named as <a href="invocation.html#r-env.invocation.program">the program rule</a> says. The cases in the
+test of the command show the order of the places and of the endings, the
+missing <code>.cls</code> and the not-found error, each with a file of one name in two
+places or with two endings; the string of <code>rexx -e</code> has no file and so no
+directory of a caller, and a program that the command runs searches the
+directory of its own file first for the routines that it calls.</p>
+<h2 id="a-file-that-is-taken-as-it-is"><a class="header" href="#a-file-that-is-taken-as-it-is">A file that is taken as it is</a></h2>
+<div class="rule" id="r-env.search.newfile"><a href="#r-env.search.newfile">[env.search.newfile]</a></div>
+<p><code>newFile</code> of <code>Method</code> and of <code>Routine</code> (<a href="../classes/method.html#r-class.method.newfile">the method
+rule</a>, <a href="../classes/routine.html#r-class.routine.newfile">the routine rule</a>)
+takes the file name as it was given, from the current directory when it is not
+absolute. It adds no ending, it does not try the lower-case form, and it does
+not look in the directory of a caller, in <code>REXX_PATH</code> or in <code>PATH</code>; a file
+that is not found there raises <code>SYNTAX 3.1</code>. In the example, the file
+<code>a3zqnfd/a3zqnf.rex</code> is found by <code>REXX_PATH</code> for <code>new</code> of <code>Package</code>, but
+<code>newFile</code> finds it only by the name that gives its directory and its ending.</p>
+<pre><code class="language-rexx">d = directory()
+call sysmkdir 'a3zqnfd'
+call lineout 'a3zqnfd/a3zqnf.rex', 'nop'
+call lineout 'a3zqnfd/a3zqnf.rex'
+old = value('REXX_PATH', d'/a3zqnfd', 'ENVIRONMENT')
+call try '.package~new("a3zqnf")'
+call try '.routine~newFile("a3zqnf")'
+call try '.method~newFile("a3zqnf.rex")'
+call try '.routine~newFile("a3zqnfd/a3zqnf")'
+call try '.routine~newFile("a3zqnfd/a3zqnf.rex")'
+call try '.method~newFile("A3ZQNFD/A3ZQNF.REX")'
+call try '.method~newFile("a3zqnfd/a3zqnf.rex")'
+call value 'REXX_PATH', old, 'ENVIRONMENT'
+call sysfiledelete 'a3zqnfd/a3zqnf.rex'
+call sysrmdir 'a3zqnfd'
+exit
+try: signal on syntax name e
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt; ok'
+  return
+e: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">.package~new("a3zqnf") =&gt; ok
+.routine~newFile("a3zqnf") =&gt; 3.1
+.method~newFile("a3zqnf.rex") =&gt; 3.1
+.routine~newFile("a3zqnfd/a3zqnf") =&gt; 3.1
+.routine~newFile("a3zqnfd/a3zqnf.rex") =&gt; ok
+.method~newFile("A3ZQNFD/A3ZQNF.REX") =&gt; 3.1
+.method~newFile("a3zqnfd/a3zqnf.rex") =&gt; ok
+</code></pre>
+<h2 id="what-a-search-finds-again"><a class="header" href="#what-a-search-finds-again">What a search finds again</a></h2>
+<div class="rule" id="r-env.search.fresh"><a href="#r-env.search.fresh">[env.search.fresh]</a></div>
+<p>A routine that a call finds in a file is searched for again at every call, and
+the file is read again: a file that was changed is run as it now is, a file
+that was removed is not found, and a file that did not exist is found when it
+appears. The file makes a package of its own for each call, so that two calls
+of one file answer two packages, both with the absolute name of the file (<a href="../classes/package.html#r-class.package.new.file">the
+file rule</a>). A package that the file requires is
+another matter: <a href="../directives/requires.html#r-dir.requires.once">it is installed once</a> for all the
+packages that require it, so that its prolog runs at the first call only. In
+the example, <code>a3zqfrsh.rex</code> is changed between the calls, <code>a3zqfrsp.rex</code>
+returns its package and requires a file with a prolog, and the packages are
+not the same although they have one name.</p>
+<pre><code class="language-rexx">f = 'a3zqfrsh.rex'
+call put f, 'v1'
+say a3zqfrsh()
+call put f, 'v2'
+say a3zqfrsh()
+call sysfiledelete f
+call try
+call put f, 'v3'
+say a3zqfrsh()
+call sysfiledelete f
+call lineout 'a3zqfrsl.rex', 'say "prolog of the required file"'
+call lineout 'a3zqfrsl.rex'
+call lineout 'a3zqfrsp.rex', 'return .context~package'
+call lineout 'a3zqfrsp.rex', '::requires "a3zqfrsl.rex"'
+call lineout 'a3zqfrsp.rex'
+p1 = a3zqfrsp()
+p2 = a3zqfrsp()
+say (p1 == p2) (p1~name == p2~name) (p1~name == qualify('a3zqfrsp.rex'))
+call sysfiledelete 'a3zqfrsl.rex'
+call sysfiledelete 'a3zqfrsp.rex'
+exit
+put: call sysfiledelete arg(1)
+  call lineout arg(1), 'return "'arg(2)'"'
+  call lineout arg(1)
+  return
+try: signal on syntax name e
+  say a3zqfrsh()
+  return
+e: say condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">v1
+v2
+43.1
+v3
+prolog of the required file
+0 1 1
+</code></pre>
+<h2 id="what-a-called-program-leaves-behind"><a class="header" href="#what-a-called-program-leaves-behind">What a called program leaves behind</a></h2>
+<div class="rule" id="r-env.search.import"><a href="#r-env.search.import">[env.search.import]</a></div>
+<p>A program that a call found as a file adds its public routines and public
+classes to the package that made the call, as a <code>::REQUIRES</code> of that package
+would: the code of that package can use them from then on, the code of other
+packages cannot, and its private routines and classes are not added. Every
+call that finds a file adds those of its routines and classes whose names the
+package does not have yet. A name it already has is not replaced, so the
+package keeps the first. In the example the file is rewritten between the
+calls, and gains a public routine: the public routine that both versions have
+is still the first one, and the new one is added; a package that is made from
+source text does not find it, and the private routine is not found.</p>
+<pre><code class="language-rexx">f = 'a3zqimp.rex'
+call put 'v1'
+say a3zqimp() a3zqimppub()
+call put 'v2'
+say a3zqimp() a3zqimppub() a3zqimpnew()
+say .context~package~importedRoutines~items .context~package~importedClasses~items
+say .a3zqimpk~id
+call try 'a3zqimppriv()'
+call try '.package~new("a3zqimpo", "return a3zqimppub()")~name'
+call sysfiledelete f
+exit
+put: call sysfiledelete f
+  call lineout f, 'return "main-'arg(1)'"'
+  call lineout f, '::routine a3zqimppub public'
+  call lineout f, '  return "pub-'arg(1)'"'
+  call lineout f, '::routine a3zqimppriv'
+  call lineout f, '  return "priv"'
+  if arg(1) = 'v2' then do
+    call lineout f, '::routine a3zqimpnew public'
+    call lineout f, '  return "new-v2"'
+    end
+  call lineout f, '::class a3zqimpk public'
+  call lineout f
+  return
+try: signal on syntax name e
+  interpret 'say' arg(1)
+  return
+e: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">main-v1 pub-v1
+main-v2 pub-v1 new-v2
+2 1
+A3ZQIMPK
+a3zqimppriv() =&gt; 43.1
+.package~new("a3zqimpo", "return a3zqimppub()")~name =&gt; 43.1
+</code></pre>
+<h2 id="macros-and-registered-functions"><a class="header" href="#macros-and-registered-functions">Macros and registered functions</a></h2>
+<div class="rule" id="r-env.search.macro"><a href="#r-env.search.macro">[env.search.macro]</a></div>
+<p>A macro is a routine that was added to the macrospace with a name and an
+order, <code>B</code> for before and <code>A</code> for after (the RexxUtil functions
+<code>SysAddRexxMacro</code> and <code>SysDropRexxMacro</code> add and remove one). Its name is
+matched without regard to case. A macro that was added with the order <code>B</code> is
+found after the routines of the package and of the packages it requires, and
+before a registered function and a file; a macro that was added with <code>A</code> is
+found after a file. In the example, a name that has a file and a macro of <code>B</code>
+runs the macro, one that has a file and a macro of <code>A</code> runs the file, and the
+macro of <code>A</code> runs when the file is removed; a routine of the program wins over
+a macro of <code>B</code>, and the macro name is matched in any case.</p>
+<pre><code class="language-rexx">call lineout 'a3zqmacsrc.rex', 'return "macro"'
+call lineout 'a3zqmacsrc.rex'
+call put 'a3zqmb.rex', 'file'
+call put 'a3zqma.rex', 'file'
+call sysaddrexxmacro 'A3ZQMB', 'a3zqmacsrc.rex', 'B'
+call sysaddrexxmacro 'A3ZQMA', 'a3zqmacsrc.rex', 'A'
+call sysaddrexxmacro 'A3ZQMOWN', 'a3zqmacsrc.rex', 'B'
+say a3zqmb() 'a3zqmb'() a3zqma() a3zqmown()
+call sysfiledelete 'a3zqma.rex'
+say a3zqma()
+call sysdroprexxmacro 'A3ZQMB'
+call sysdroprexxmacro 'A3ZQMA'
+call sysdroprexxmacro 'A3ZQMOWN'
+call sysfiledelete 'a3zqmb.rex'
+call sysfiledelete 'a3zqmacsrc.rex'
+exit
+put: call lineout arg(1), 'return "'arg(2)'"'
+  call lineout arg(1)
+  return
+::routine a3zqmown
+  return "own routine"
+</code></pre>
+<pre><code class="language-output">macro macro file own routine
+macro
+</code></pre>
+<div class="rule" id="r-env.search.order"><a href="#r-env.search.order">[env.search.order]</a></div>
+<p>A name that CALL or a function call writes, and that is not found among the
+labels and the built-in functions as <a href="../instructions/call.html#r-instr.call.search">the call rule</a>
+says, is searched for in this order: the routines of the package, public or
+private; the public routines of the packages it requires, in the order of the
+directives, with the routines of the libraries that <code>::REQUIRES ... LIBRARY</code>
+names among them (<a href="../directives/routine.html#r-dir.routine.search">the routine rules</a> and <a href="../directives/routine.html#r-dir.routine.public">the public
+rule</a>); the macros added with the order <code>B</code>; the
+functions that <a href="../builtins/rxfuncadd.html#r-bif.rxfuncadd.module">RXFUNCADD</a> made callable; the files of
+<a href="#r-env.search.places">the places</a>; and the macros added with the order <code>A</code>.
+The first of these that has the name is the routine that runs. In the example,
+a file of the name of a function that <code>RxFuncAdd</code> registered is not run, and a
+macro with <code>B</code> wins over the registered function.</p>
+<pre><code class="language-rexx">call lineout 'rxcalctanh.rex', 'return "file"'
+call lineout 'rxcalctanh.rex'
+call lineout 'a3zqmacsrc.rex', 'return "macro"'
+call lineout 'a3zqmacsrc.rex'
+say rxfuncadd('RxCalcTanh', 'rxmath')
+say 'RxCalcTanh'(0)
+call sysaddrexxmacro 'RXCALCTANH', 'a3zqmacsrc.rex', 'B'
+say 'RxCalcTanh'(0)
+call sysdroprexxmacro 'RXCALCTANH'
+call sysfiledelete 'rxcalctanh.rex'
+call sysfiledelete 'a3zqmacsrc.rex'
+</code></pre>
+<pre><code class="language-output">0
+0
+macro
+</code></pre>
+<h2 id="libraries"><a class="header" href="#libraries">Libraries</a></h2>
+<div class="rule" id="r-env.search.library"><a href="#r-env.search.library">[env.search.library]</a></div>
+<p>A native library is named by a bare name: the word after <code>LIBRARY</code> in a
+directive or a descriptor, the argument of <code>loadLibrary</code>, and the module of
+RXFUNCADD. The library of the name <code>x</code> is the file <code>libx.so</code>, made by putting
+<code>lib</code> before the name and <code>.so</code> after it, with nothing in the name changed.
+The file is looked for in the search path of the loader of the host and in the
+current directory. The name is case sensitive, so <code>rexxutil</code> and <code>rxmath</code> are
+libraries of the host and <code>REXXUTIL</code> is not. A name that already has <code>lib</code> or
+<code>.so</code> in it gets them again, so that <code>librexxutil</code> names the file
+<code>liblibrexxutil.so</code> and <code>rexxutil.so</code> the file <code>librexxutil.so.so</code>, which no
+host has. The empty name finds no library. The name of the entry of a library
+that a descriptor gives is matched without regard to case, and a routine's own
+name is the entry when the descriptor has none. A library that cannot be
+loaded is the fault of <a href="../directives/requires.html#r-dir.requires.library">the directive</a> or the answer
+of the method that loads it. The first example shows the names that the host
+has and those that it has not. In the second, a file of the library of the
+host is copied under four names into a directory that the example then makes
+the current directory, in which the name goes between <code>lib</code> and <code>.so</code>
+unchanged: a name with a <code>lib</code> prefix, one with the ending <code>.so</code>, one with a
+period, and one in upper case. Each of those names finds its copy, and the
+lower-case form of the last one does not.</p>
+<pre><code class="language-rexx">p = .package~new('a3zqlib', 'return 1')
+do n over .array~of('rexxutil', 'rxmath', 'REXXUTIL', 'RxMath', 'librexxutil', -
+    'rexxutil.so', './rexxutil', '', 'a3zqnosuchlibrary')
+  say ('['n']')~left(20) p~loadLibrary(n)
+end
+r = .routine~loadExternalRoutine('a3zqtan', 'LIBRARY rxmath RXCALCTAN')
+say r~call(0)
+r = .routine~loadExternalRoutine('RxCalcCos', 'LIBRARY rxmath')
+say r~call(0)
+call try '::requires "RxMath" library'
+call try '::requires "rxmath" library'
+exit
+try:
+  signal on syntax name e
+  p = .package~new('a3zqlibreq', .array~of(arg(1)))
+  say arg(1) '=&gt; ok'
+  return
+e: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">[rexxutil]           1
+[rxmath]             1
+[REXXUTIL]           0
+[RxMath]             0
+[librexxutil]        0
+[rexxutil.so]        0
+[./rexxutil]         0
+[]                   0
+[a3zqnosuchlibrary]  0
+0
+1
+::requires "RxMath" library =&gt; 98.903
+::requires "rxmath" library =&gt; ok
+</code></pre>
+<pre><code class="language-rexx">src = ''
+path = value('LD_LIBRARY_PATH',, 'ENVIRONMENT')
+do d over path~changeStr(':', ' ')~makeArray(' ')
+  if stream(d'/librxmath.so', 'c', 'query exists') &lt;&gt; '' then
+    src = d'/librxmath.so'
+end
+if src = '' then do
+  say 'librxmath.so is not on the loader path'
+  exit
+end
+data = charin(src, 1, chars(src))
+call stream src, 'c', 'close'
+call sysmkdir 'a3zqlcd'
+files = .array~of('liblibzq1.so', 'libzq2.so.so', 'libzq.c3.so', 'libZQ4.so')
+do f over files
+  call sysfiledelete 'a3zqlcd/'f
+  call charout 'a3zqlcd/'f, data
+  call stream 'a3zqlcd/'f, 'c', 'close'
+end
+home = directory()
+call directory 'a3zqlcd'
+p = .package~new('a3zqlcwd', 'return 1')
+do n over .array~of('libzq1', 'zq2.so', 'zq.c3', 'ZQ4', 'zq4')
+  say n p~loadLibrary(n)
+end
+call directory home
+do f over files
+  call sysfiledelete 'a3zqlcd/'f
+end
+call sysrmdir 'a3zqlcd'
+</code></pre>
+<pre><code class="language-output defect=#214">libzq1 1
+zq2.so 1
+zq.c3 1
+ZQ4 1
+zq4 0
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../environment/invocation.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../environment/commands.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../environment/invocation.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../environment/commands.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../assets/version-picker.js"></script>
+
+
+    </div>
+    </body>
+</html>

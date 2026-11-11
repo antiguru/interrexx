@@ -1,0 +1,1030 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Environment objects - The interrexx Language Specification</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../conventions.html"><strong aria-hidden="true">2.</strong> Conventions</a></li><li class="chapter-item expanded "><a href="../lexical/index.html"><strong aria-hidden="true">3.</strong> Lexical structure</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../lexical/characters.html"><strong aria-hidden="true">3.1.</strong> Characters</a></li><li class="chapter-item expanded "><a href="../lexical/comments.html"><strong aria-hidden="true">3.2.</strong> Comments</a></li><li class="chapter-item expanded "><a href="../lexical/literals.html"><strong aria-hidden="true">3.3.</strong> Literals</a></li><li class="chapter-item expanded "><a href="../lexical/symbols.html"><strong aria-hidden="true">3.4.</strong> Symbols</a></li><li class="chapter-item expanded "><a href="../lexical/operators.html"><strong aria-hidden="true">3.5.</strong> Operators and special characters</a></li><li class="chapter-item expanded "><a href="../lexical/clauses.html"><strong aria-hidden="true">3.6.</strong> Clauses</a></li></ol></li><li class="chapter-item expanded "><a href="../numbers/index.html"><strong aria-hidden="true">4.</strong> Numbers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../numbers/formats.html"><strong aria-hidden="true">4.1.</strong> Formats</a></li><li class="chapter-item expanded "><a href="../numbers/limits.html"><strong aria-hidden="true">4.2.</strong> Limits</a></li><li class="chapter-item expanded "><a href="../numbers/arithmetic.html"><strong aria-hidden="true">4.3.</strong> Arithmetic</a></li><li class="chapter-item expanded "><a href="../numbers/settings.html"><strong aria-hidden="true">4.4.</strong> Settings</a></li><li class="chapter-item expanded "><a href="../numbers/comparison.html"><strong aria-hidden="true">4.5.</strong> Comparison</a></li></ol></li><li class="chapter-item expanded "><a href="../expressions/index.html"><strong aria-hidden="true">5.</strong> Expressions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../expressions/terms.html"><strong aria-hidden="true">5.1.</strong> Terms</a></li><li class="chapter-item expanded "><a href="../expressions/variables.html"><strong aria-hidden="true">5.2.</strong> Variables</a></li><li class="chapter-item expanded "><a href="../expressions/concatenation.html"><strong aria-hidden="true">5.3.</strong> Concatenation</a></li><li class="chapter-item expanded "><a href="../expressions/arithmetic.html"><strong aria-hidden="true">5.4.</strong> Arithmetic operators</a></li><li class="chapter-item expanded "><a href="../expressions/comparison.html"><strong aria-hidden="true">5.5.</strong> Comparison operators</a></li><li class="chapter-item expanded "><a href="../expressions/logical.html"><strong aria-hidden="true">5.6.</strong> Logical operators</a></li><li class="chapter-item expanded "><a href="../expressions/messages.html"><strong aria-hidden="true">5.7.</strong> Message operators</a></li></ol></li><li class="chapter-item expanded "><a href="../instructions/index.html"><strong aria-hidden="true">6.</strong> Instructions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../instructions/address.html"><strong aria-hidden="true">6.1.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../instructions/arg.html"><strong aria-hidden="true">6.2.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../instructions/assignment.html"><strong aria-hidden="true">6.3.</strong> Assignments</a></li><li class="chapter-item expanded "><a href="../instructions/call.html"><strong aria-hidden="true">6.4.</strong> CALL</a></li><li class="chapter-item expanded "><a href="../instructions/command.html"><strong aria-hidden="true">6.5.</strong> Commands</a></li><li class="chapter-item expanded "><a href="../instructions/do.html"><strong aria-hidden="true">6.6.</strong> DO</a></li><li class="chapter-item expanded "><a href="../instructions/drop.html"><strong aria-hidden="true">6.7.</strong> DROP</a></li><li class="chapter-item expanded "><a href="../instructions/exit.html"><strong aria-hidden="true">6.8.</strong> EXIT</a></li><li class="chapter-item expanded "><a href="../instructions/expose.html"><strong aria-hidden="true">6.9.</strong> EXPOSE</a></li><li class="chapter-item expanded "><a href="../instructions/forward.html"><strong aria-hidden="true">6.10.</strong> FORWARD</a></li><li class="chapter-item expanded "><a href="../instructions/guard.html"><strong aria-hidden="true">6.11.</strong> GUARD</a></li><li class="chapter-item expanded "><a href="../instructions/if.html"><strong aria-hidden="true">6.12.</strong> IF</a></li><li class="chapter-item expanded "><a href="../instructions/interpret.html"><strong aria-hidden="true">6.13.</strong> INTERPRET</a></li><li class="chapter-item expanded "><a href="../instructions/iterate.html"><strong aria-hidden="true">6.14.</strong> ITERATE</a></li><li class="chapter-item expanded "><a href="../instructions/leave.html"><strong aria-hidden="true">6.15.</strong> LEAVE</a></li><li class="chapter-item expanded "><a href="../instructions/loop.html"><strong aria-hidden="true">6.16.</strong> LOOP</a></li><li class="chapter-item expanded "><a href="../instructions/message.html"><strong aria-hidden="true">6.17.</strong> Message instructions</a></li><li class="chapter-item expanded "><a href="../instructions/nop.html"><strong aria-hidden="true">6.18.</strong> NOP</a></li><li class="chapter-item expanded "><a href="../instructions/numeric.html"><strong aria-hidden="true">6.19.</strong> NUMERIC</a></li><li class="chapter-item expanded "><a href="../instructions/options.html"><strong aria-hidden="true">6.20.</strong> OPTIONS</a></li><li class="chapter-item expanded "><a href="../instructions/parse.html"><strong aria-hidden="true">6.21.</strong> PARSE</a></li><li class="chapter-item expanded "><a href="../instructions/procedure.html"><strong aria-hidden="true">6.22.</strong> PROCEDURE</a></li><li class="chapter-item expanded "><a href="../instructions/pull.html"><strong aria-hidden="true">6.23.</strong> PULL</a></li><li class="chapter-item expanded "><a href="../instructions/push.html"><strong aria-hidden="true">6.24.</strong> PUSH</a></li><li class="chapter-item expanded "><a href="../instructions/queue.html"><strong aria-hidden="true">6.25.</strong> QUEUE</a></li><li class="chapter-item expanded "><a href="../instructions/raise.html"><strong aria-hidden="true">6.26.</strong> RAISE</a></li><li class="chapter-item expanded "><a href="../instructions/reply.html"><strong aria-hidden="true">6.27.</strong> REPLY</a></li><li class="chapter-item expanded "><a href="../instructions/return.html"><strong aria-hidden="true">6.28.</strong> RETURN</a></li><li class="chapter-item expanded "><a href="../instructions/say.html"><strong aria-hidden="true">6.29.</strong> SAY</a></li><li class="chapter-item expanded "><a href="../instructions/select.html"><strong aria-hidden="true">6.30.</strong> SELECT</a></li><li class="chapter-item expanded "><a href="../instructions/signal.html"><strong aria-hidden="true">6.31.</strong> SIGNAL</a></li><li class="chapter-item expanded "><a href="../instructions/trace.html"><strong aria-hidden="true">6.32.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../instructions/use.html"><strong aria-hidden="true">6.33.</strong> USE</a></li></ol></li><li class="chapter-item expanded "><a href="../parsing/index.html"><strong aria-hidden="true">7.</strong> Parsing</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../parsing/templates.html"><strong aria-hidden="true">7.1.</strong> Templates</a></li><li class="chapter-item expanded "><a href="../parsing/patterns.html"><strong aria-hidden="true">7.2.</strong> Patterns</a></li><li class="chapter-item expanded "><a href="../parsing/multiple.html"><strong aria-hidden="true">7.3.</strong> Several strings and case</a></li></ol></li><li class="chapter-item expanded "><a href="../directives/index.html"><strong aria-hidden="true">8.</strong> Directives</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../directives/class.html"><strong aria-hidden="true">8.1.</strong> ::CLASS</a></li><li class="chapter-item expanded "><a href="../directives/method.html"><strong aria-hidden="true">8.2.</strong> ::METHOD</a></li><li class="chapter-item expanded "><a href="../directives/attribute.html"><strong aria-hidden="true">8.3.</strong> ::ATTRIBUTE</a></li><li class="chapter-item expanded "><a href="../directives/constant.html"><strong aria-hidden="true">8.4.</strong> ::CONSTANT</a></li><li class="chapter-item expanded "><a href="../directives/routine.html"><strong aria-hidden="true">8.5.</strong> ::ROUTINE</a></li><li class="chapter-item expanded "><a href="../directives/requires.html"><strong aria-hidden="true">8.6.</strong> ::REQUIRES</a></li><li class="chapter-item expanded "><a href="../directives/options.html"><strong aria-hidden="true">8.7.</strong> ::OPTIONS</a></li><li class="chapter-item expanded "><a href="../directives/resource.html"><strong aria-hidden="true">8.8.</strong> ::RESOURCE</a></li><li class="chapter-item expanded "><a href="../directives/annotate.html"><strong aria-hidden="true">8.9.</strong> ::ANNOTATE</a></li></ol></li><li class="chapter-item expanded "><a href="../conditions/index.html"><strong aria-hidden="true">9.</strong> Conditions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../conditions/traps.html"><strong aria-hidden="true">9.1.</strong> Condition traps</a></li><li class="chapter-item expanded "><a href="../conditions/information.html"><strong aria-hidden="true">9.2.</strong> Condition information</a></li><li class="chapter-item expanded "><a href="../conditions/syntax.html"><strong aria-hidden="true">9.3.</strong> SYNTAX</a></li><li class="chapter-item expanded "><a href="../conditions/error.html"><strong aria-hidden="true">9.4.</strong> ERROR and FAILURE</a></li><li class="chapter-item expanded "><a href="../conditions/halt.html"><strong aria-hidden="true">9.5.</strong> HALT</a></li><li class="chapter-item expanded "><a href="../conditions/novalue.html"><strong aria-hidden="true">9.6.</strong> NOVALUE</a></li><li class="chapter-item expanded "><a href="../conditions/nostring.html"><strong aria-hidden="true">9.7.</strong> NOSTRING</a></li><li class="chapter-item expanded "><a href="../conditions/nomethod.html"><strong aria-hidden="true">9.8.</strong> NOMETHOD</a></li><li class="chapter-item expanded "><a href="../conditions/notready.html"><strong aria-hidden="true">9.9.</strong> NOTREADY</a></li><li class="chapter-item expanded "><a href="../conditions/lostdigits.html"><strong aria-hidden="true">9.10.</strong> LOSTDIGITS</a></li><li class="chapter-item expanded "><a href="../conditions/user.html"><strong aria-hidden="true">9.11.</strong> USER conditions</a></li><li class="chapter-item expanded "><a href="../conditions/errors.html"><strong aria-hidden="true">9.12.</strong> Error numbers</a></li></ol></li><li class="chapter-item expanded "><a href="../classes/index.html"><strong aria-hidden="true">10.</strong> Classes</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../classes/methods.html"><strong aria-hidden="true">10.1.</strong> Method search</a></li><li class="chapter-item expanded "><a href="../classes/object.html"><strong aria-hidden="true">10.2.</strong> Object</a></li><li class="chapter-item expanded "><a href="../classes/class.html"><strong aria-hidden="true">10.3.</strong> Class</a></li><li class="chapter-item expanded "><a href="../classes/string.html"><strong aria-hidden="true">10.4.</strong> String</a></li><li class="chapter-item expanded "><a href="../classes/method.html"><strong aria-hidden="true">10.5.</strong> Method</a></li><li class="chapter-item expanded "><a href="../classes/routine.html"><strong aria-hidden="true">10.6.</strong> Routine</a></li><li class="chapter-item expanded "><a href="../classes/package.html"><strong aria-hidden="true">10.7.</strong> Package</a></li><li class="chapter-item expanded "><a href="../classes/message.html"><strong aria-hidden="true">10.8.</strong> Message</a></li><li class="chapter-item expanded "><a href="../classes/messagenotification.html"><strong aria-hidden="true">10.9.</strong> MessageNotification</a></li><li class="chapter-item expanded "><a href="../classes/alarmnotification.html"><strong aria-hidden="true">10.10.</strong> AlarmNotification</a></li><li class="chapter-item expanded "><a href="../classes/collection.html"><strong aria-hidden="true">10.11.</strong> Collection</a></li><li class="chapter-item expanded "><a href="../classes/mapcollection.html"><strong aria-hidden="true">10.12.</strong> MapCollection</a></li><li class="chapter-item expanded "><a href="../classes/orderedcollection.html"><strong aria-hidden="true">10.13.</strong> OrderedCollection</a></li><li class="chapter-item expanded "><a href="../classes/setcollection.html"><strong aria-hidden="true">10.14.</strong> SetCollection</a></li><li class="chapter-item expanded "><a href="../classes/array.html"><strong aria-hidden="true">10.15.</strong> Array</a></li><li class="chapter-item expanded "><a href="../classes/list.html"><strong aria-hidden="true">10.16.</strong> List</a></li><li class="chapter-item expanded "><a href="../classes/queue.html"><strong aria-hidden="true">10.17.</strong> Queue</a></li><li class="chapter-item expanded "><a href="../classes/circularqueue.html"><strong aria-hidden="true">10.18.</strong> CircularQueue</a></li><li class="chapter-item expanded "><a href="../classes/directory.html"><strong aria-hidden="true">10.19.</strong> Directory</a></li><li class="chapter-item expanded "><a href="../classes/stringtable.html"><strong aria-hidden="true">10.20.</strong> StringTable</a></li><li class="chapter-item expanded "><a href="../classes/properties.html"><strong aria-hidden="true">10.21.</strong> Properties</a></li><li class="chapter-item expanded "><a href="../classes/table.html"><strong aria-hidden="true">10.22.</strong> Table</a></li><li class="chapter-item expanded "><a href="../classes/identitytable.html"><strong aria-hidden="true">10.23.</strong> IdentityTable</a></li><li class="chapter-item expanded "><a href="../classes/relation.html"><strong aria-hidden="true">10.24.</strong> Relation</a></li><li class="chapter-item expanded "><a href="../classes/bag.html"><strong aria-hidden="true">10.25.</strong> Bag</a></li><li class="chapter-item expanded "><a href="../classes/set.html"><strong aria-hidden="true">10.26.</strong> Set</a></li><li class="chapter-item expanded "><a href="../classes/stem.html"><strong aria-hidden="true">10.27.</strong> Stem</a></li><li class="chapter-item expanded "><a href="../classes/datetime.html"><strong aria-hidden="true">10.28.</strong> DateTime</a></li><li class="chapter-item expanded "><a href="../classes/timespan.html"><strong aria-hidden="true">10.29.</strong> TimeSpan</a></li><li class="chapter-item expanded "><a href="../classes/comparable.html"><strong aria-hidden="true">10.30.</strong> Comparable</a></li><li class="chapter-item expanded "><a href="../classes/orderable.html"><strong aria-hidden="true">10.31.</strong> Orderable</a></li><li class="chapter-item expanded "><a href="../classes/comparators.html"><strong aria-hidden="true">10.32.</strong> Comparators</a></li><li class="chapter-item expanded "><a href="../classes/mutablebuffer.html"><strong aria-hidden="true">10.33.</strong> MutableBuffer</a></li><li class="chapter-item expanded "><a href="../classes/buffer.html"><strong aria-hidden="true">10.34.</strong> Buffer</a></li><li class="chapter-item expanded "><a href="../classes/pointer.html"><strong aria-hidden="true">10.35.</strong> Pointer</a></li><li class="chapter-item expanded "><a href="../classes/weakreference.html"><strong aria-hidden="true">10.36.</strong> WeakReference</a></li><li class="chapter-item expanded "><a href="../classes/variablereference.html"><strong aria-hidden="true">10.37.</strong> VariableReference</a></li><li class="chapter-item expanded "><a href="../classes/file.html"><strong aria-hidden="true">10.38.</strong> File</a></li><li class="chapter-item expanded "><a href="../classes/rexxcontext.html"><strong aria-hidden="true">10.39.</strong> RexxContext</a></li><li class="chapter-item expanded "><a href="../classes/stackframe.html"><strong aria-hidden="true">10.40.</strong> StackFrame</a></li><li class="chapter-item expanded "><a href="../classes/rexxinfo.html"><strong aria-hidden="true">10.41.</strong> RexxInfo</a></li><li class="chapter-item expanded "><a href="../classes/traceobject.html"><strong aria-hidden="true">10.42.</strong> TraceObject</a></li><li class="chapter-item expanded "><a href="../classes/validate.html"><strong aria-hidden="true">10.43.</strong> Validate</a></li><li class="chapter-item expanded "><a href="../classes/singleton.html"><strong aria-hidden="true">10.44.</strong> Singleton</a></li><li class="chapter-item expanded "><a href="../classes/alarm.html"><strong aria-hidden="true">10.45.</strong> Alarm</a></li><li class="chapter-item expanded "><a href="../classes/ticker.html"><strong aria-hidden="true">10.46.</strong> Ticker</a></li><li class="chapter-item expanded "><a href="../classes/monitor.html"><strong aria-hidden="true">10.47.</strong> Monitor</a></li><li class="chapter-item expanded "><a href="../classes/eventsemaphore.html"><strong aria-hidden="true">10.48.</strong> EventSemaphore</a></li><li class="chapter-item expanded "><a href="../classes/mutexsemaphore.html"><strong aria-hidden="true">10.49.</strong> MutexSemaphore</a></li><li class="chapter-item expanded "><a href="../classes/commandhandler.html"><strong aria-hidden="true">10.50.</strong> CommandHandler</a></li><li class="chapter-item expanded "><a href="../classes/nativecommandhandler.html"><strong aria-hidden="true">10.51.</strong> NativeCommandHandler</a></li><li class="chapter-item expanded "><a href="../classes/commandcontext.html"><strong aria-hidden="true">10.52.</strong> CommandContext</a></li><li class="chapter-item expanded "><a href="../classes/commandinput.html"><strong aria-hidden="true">10.53.</strong> CommandInput</a></li><li class="chapter-item expanded "><a href="../classes/commandoutput.html"><strong aria-hidden="true">10.54.</strong> CommandOutput</a></li><li class="chapter-item expanded "><a href="../classes/rexxqueue.html"><strong aria-hidden="true">10.55.</strong> RexxQueue</a></li><li class="chapter-item expanded "><a href="../classes/supplier.html"><strong aria-hidden="true">10.56.</strong> Supplier</a></li><li class="chapter-item expanded "><a href="../classes/streamsupplier.html"><strong aria-hidden="true">10.57.</strong> StreamSupplier</a></li><li class="chapter-item expanded "><a href="../classes/regularexpression.html"><strong aria-hidden="true">10.58.</strong> RegularExpression</a></li><li class="chapter-item expanded "><a href="../classes/stream.html"><strong aria-hidden="true">10.59.</strong> Stream</a></li><li class="chapter-item expanded "><a href="../classes/inputstream.html"><strong aria-hidden="true">10.60.</strong> InputStream</a></li><li class="chapter-item expanded "><a href="../classes/outputstream.html"><strong aria-hidden="true">10.61.</strong> OutputStream</a></li><li class="chapter-item expanded "><a href="../classes/inputoutputstream.html"><strong aria-hidden="true">10.62.</strong> InputOutputStream</a></li></ol></li><li class="chapter-item expanded "><a href="../environment/index.html"><strong aria-hidden="true">11.</strong> Environment</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../environment/objects.html" class="active"><strong aria-hidden="true">11.1.</strong> Environment objects</a></li><li class="chapter-item expanded "><a href="../environment/invocation.html"><strong aria-hidden="true">11.2.</strong> Invocation</a></li><li class="chapter-item expanded "><a href="../environment/search.html"><strong aria-hidden="true">11.3.</strong> Search</a></li><li class="chapter-item expanded "><a href="../environment/commands.html"><strong aria-hidden="true">11.4.</strong> Command environments</a></li><li class="chapter-item expanded "><a href="../environment/security.html"><strong aria-hidden="true">11.5.</strong> Security manager</a></li><li class="chapter-item expanded "><a href="../environment/debugging.html"><strong aria-hidden="true">11.6.</strong> Debugging</a></li></ol></li><li class="chapter-item expanded "><a href="../builtins/index.html"><strong aria-hidden="true">12.</strong> Built-in functions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../builtins/abbrev.html"><strong aria-hidden="true">12.1.</strong> ABBREV</a></li><li class="chapter-item expanded "><a href="../builtins/abs.html"><strong aria-hidden="true">12.2.</strong> ABS</a></li><li class="chapter-item expanded "><a href="../builtins/address.html"><strong aria-hidden="true">12.3.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../builtins/arg.html"><strong aria-hidden="true">12.4.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../builtins/b2x.html"><strong aria-hidden="true">12.5.</strong> B2X</a></li><li class="chapter-item expanded "><a href="../builtins/beep.html"><strong aria-hidden="true">12.6.</strong> BEEP</a></li><li class="chapter-item expanded "><a href="../builtins/bitand.html"><strong aria-hidden="true">12.7.</strong> BITAND</a></li><li class="chapter-item expanded "><a href="../builtins/bitor.html"><strong aria-hidden="true">12.8.</strong> BITOR</a></li><li class="chapter-item expanded "><a href="../builtins/bitxor.html"><strong aria-hidden="true">12.9.</strong> BITXOR</a></li><li class="chapter-item expanded "><a href="../builtins/c2d.html"><strong aria-hidden="true">12.10.</strong> C2D</a></li><li class="chapter-item expanded "><a href="../builtins/c2x.html"><strong aria-hidden="true">12.11.</strong> C2X</a></li><li class="chapter-item expanded "><a href="../builtins/center.html"><strong aria-hidden="true">12.12.</strong> CENTER</a></li><li class="chapter-item expanded "><a href="../builtins/changestr.html"><strong aria-hidden="true">12.13.</strong> CHANGESTR</a></li><li class="chapter-item expanded "><a href="../builtins/charin.html"><strong aria-hidden="true">12.14.</strong> CHARIN</a></li><li class="chapter-item expanded "><a href="../builtins/charout.html"><strong aria-hidden="true">12.15.</strong> CHAROUT</a></li><li class="chapter-item expanded "><a href="../builtins/chars.html"><strong aria-hidden="true">12.16.</strong> CHARS</a></li><li class="chapter-item expanded "><a href="../builtins/compare.html"><strong aria-hidden="true">12.17.</strong> COMPARE</a></li><li class="chapter-item expanded "><a href="../builtins/condition.html"><strong aria-hidden="true">12.18.</strong> CONDITION</a></li><li class="chapter-item expanded "><a href="../builtins/copies.html"><strong aria-hidden="true">12.19.</strong> COPIES</a></li><li class="chapter-item expanded "><a href="../builtins/countstr.html"><strong aria-hidden="true">12.20.</strong> COUNTSTR</a></li><li class="chapter-item expanded "><a href="../builtins/d2c.html"><strong aria-hidden="true">12.21.</strong> D2C</a></li><li class="chapter-item expanded "><a href="../builtins/d2x.html"><strong aria-hidden="true">12.22.</strong> D2X</a></li><li class="chapter-item expanded "><a href="../builtins/datatype.html"><strong aria-hidden="true">12.23.</strong> DATATYPE</a></li><li class="chapter-item expanded "><a href="../builtins/date.html"><strong aria-hidden="true">12.24.</strong> DATE</a></li><li class="chapter-item expanded "><a href="../builtins/delstr.html"><strong aria-hidden="true">12.25.</strong> DELSTR</a></li><li class="chapter-item expanded "><a href="../builtins/delword.html"><strong aria-hidden="true">12.26.</strong> DELWORD</a></li><li class="chapter-item expanded "><a href="../builtins/digits.html"><strong aria-hidden="true">12.27.</strong> DIGITS</a></li><li class="chapter-item expanded "><a href="../builtins/directory.html"><strong aria-hidden="true">12.28.</strong> DIRECTORY</a></li><li class="chapter-item expanded "><a href="../builtins/endlocal.html"><strong aria-hidden="true">12.29.</strong> ENDLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/errortext.html"><strong aria-hidden="true">12.30.</strong> ERRORTEXT</a></li><li class="chapter-item expanded "><a href="../builtins/filespec.html"><strong aria-hidden="true">12.31.</strong> FILESPEC</a></li><li class="chapter-item expanded "><a href="../builtins/form.html"><strong aria-hidden="true">12.32.</strong> FORM</a></li><li class="chapter-item expanded "><a href="../builtins/format.html"><strong aria-hidden="true">12.33.</strong> FORMAT</a></li><li class="chapter-item expanded "><a href="../builtins/fuzz.html"><strong aria-hidden="true">12.34.</strong> FUZZ</a></li><li class="chapter-item expanded "><a href="../builtins/gc.html"><strong aria-hidden="true">12.35.</strong> GC</a></li><li class="chapter-item expanded "><a href="../builtins/insert.html"><strong aria-hidden="true">12.36.</strong> INSERT</a></li><li class="chapter-item expanded "><a href="../builtins/lastpos.html"><strong aria-hidden="true">12.37.</strong> LASTPOS</a></li><li class="chapter-item expanded "><a href="../builtins/left.html"><strong aria-hidden="true">12.38.</strong> LEFT</a></li><li class="chapter-item expanded "><a href="../builtins/length.html"><strong aria-hidden="true">12.39.</strong> LENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/linein.html"><strong aria-hidden="true">12.40.</strong> LINEIN</a></li><li class="chapter-item expanded "><a href="../builtins/lineout.html"><strong aria-hidden="true">12.41.</strong> LINEOUT</a></li><li class="chapter-item expanded "><a href="../builtins/lines.html"><strong aria-hidden="true">12.42.</strong> LINES</a></li><li class="chapter-item expanded "><a href="../builtins/lower.html"><strong aria-hidden="true">12.43.</strong> LOWER</a></li><li class="chapter-item expanded "><a href="../builtins/max.html"><strong aria-hidden="true">12.44.</strong> MAX</a></li><li class="chapter-item expanded "><a href="../builtins/min.html"><strong aria-hidden="true">12.45.</strong> MIN</a></li><li class="chapter-item expanded "><a href="../builtins/overlay.html"><strong aria-hidden="true">12.46.</strong> OVERLAY</a></li><li class="chapter-item expanded "><a href="../builtins/pos.html"><strong aria-hidden="true">12.47.</strong> POS</a></li><li class="chapter-item expanded "><a href="../builtins/qualify.html"><strong aria-hidden="true">12.48.</strong> QUALIFY</a></li><li class="chapter-item expanded "><a href="../builtins/queued.html"><strong aria-hidden="true">12.49.</strong> QUEUED</a></li><li class="chapter-item expanded "><a href="../builtins/random.html"><strong aria-hidden="true">12.50.</strong> RANDOM</a></li><li class="chapter-item expanded "><a href="../builtins/reverse.html"><strong aria-hidden="true">12.51.</strong> REVERSE</a></li><li class="chapter-item expanded "><a href="../builtins/right.html"><strong aria-hidden="true">12.52.</strong> RIGHT</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncadd.html"><strong aria-hidden="true">12.53.</strong> RXFUNCADD</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncdrop.html"><strong aria-hidden="true">12.54.</strong> RXFUNCDROP</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncquery.html"><strong aria-hidden="true">12.55.</strong> RXFUNCQUERY</a></li><li class="chapter-item expanded "><a href="../builtins/rxqueue.html"><strong aria-hidden="true">12.56.</strong> RXQUEUE</a></li><li class="chapter-item expanded "><a href="../builtins/setlocal.html"><strong aria-hidden="true">12.57.</strong> SETLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/sign.html"><strong aria-hidden="true">12.58.</strong> SIGN</a></li><li class="chapter-item expanded "><a href="../builtins/sourceline.html"><strong aria-hidden="true">12.59.</strong> SOURCELINE</a></li><li class="chapter-item expanded "><a href="../builtins/space.html"><strong aria-hidden="true">12.60.</strong> SPACE</a></li><li class="chapter-item expanded "><a href="../builtins/stream.html"><strong aria-hidden="true">12.61.</strong> STREAM</a></li><li class="chapter-item expanded "><a href="../builtins/strip.html"><strong aria-hidden="true">12.62.</strong> STRIP</a></li><li class="chapter-item expanded "><a href="../builtins/substr.html"><strong aria-hidden="true">12.63.</strong> SUBSTR</a></li><li class="chapter-item expanded "><a href="../builtins/subword.html"><strong aria-hidden="true">12.64.</strong> SUBWORD</a></li><li class="chapter-item expanded "><a href="../builtins/symbol.html"><strong aria-hidden="true">12.65.</strong> SYMBOL</a></li><li class="chapter-item expanded "><a href="../builtins/time.html"><strong aria-hidden="true">12.66.</strong> TIME</a></li><li class="chapter-item expanded "><a href="../builtins/trace.html"><strong aria-hidden="true">12.67.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../builtins/translate.html"><strong aria-hidden="true">12.68.</strong> TRANSLATE</a></li><li class="chapter-item expanded "><a href="../builtins/trunc.html"><strong aria-hidden="true">12.69.</strong> TRUNC</a></li><li class="chapter-item expanded "><a href="../builtins/upper.html"><strong aria-hidden="true">12.70.</strong> UPPER</a></li><li class="chapter-item expanded "><a href="../builtins/userid.html"><strong aria-hidden="true">12.71.</strong> USERID</a></li><li class="chapter-item expanded "><a href="../builtins/value.html"><strong aria-hidden="true">12.72.</strong> VALUE</a></li><li class="chapter-item expanded "><a href="../builtins/var.html"><strong aria-hidden="true">12.73.</strong> VAR</a></li><li class="chapter-item expanded "><a href="../builtins/verify.html"><strong aria-hidden="true">12.74.</strong> VERIFY</a></li><li class="chapter-item expanded "><a href="../builtins/word.html"><strong aria-hidden="true">12.75.</strong> WORD</a></li><li class="chapter-item expanded "><a href="../builtins/wordindex.html"><strong aria-hidden="true">12.76.</strong> WORDINDEX</a></li><li class="chapter-item expanded "><a href="../builtins/wordlength.html"><strong aria-hidden="true">12.77.</strong> WORDLENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/wordpos.html"><strong aria-hidden="true">12.78.</strong> WORDPOS</a></li><li class="chapter-item expanded "><a href="../builtins/words.html"><strong aria-hidden="true">12.79.</strong> WORDS</a></li><li class="chapter-item expanded "><a href="../builtins/x2b.html"><strong aria-hidden="true">12.80.</strong> X2B</a></li><li class="chapter-item expanded "><a href="../builtins/x2c.html"><strong aria-hidden="true">12.81.</strong> X2C</a></li><li class="chapter-item expanded "><a href="../builtins/x2d.html"><strong aria-hidden="true">12.82.</strong> X2D</a></li><li class="chapter-item expanded "><a href="../builtins/xrange.html"><strong aria-hidden="true">12.83.</strong> XRANGE</a></li></ol></li><li class="chapter-item expanded "><a href="../deviations.html"><strong aria-hidden="true">13.</strong> Deviations</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The interrexx Language Specification</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="environment-objects"><a class="header" href="#environment-objects">Environment objects</a></h1>
+<p class="references">rexxref: Rexx Runtime Objects; Rexx Runtime Objects &gt; The Environment Directory (.ENVIRONMENT); Rexx Runtime Objects &gt; The Local Directory (.LOCAL); Rexx Runtime Objects &gt; The Input Monitor (.INPUT); Rexx Runtime Objects &gt; The Output Monitor (.OUTPUT); Rexx Runtime Objects &gt; The Error Monitor (.ERROR); Rexx Runtime Objects &gt; The Trace Output Monitor (.TRACEOUTPUT); Rexx Runtime Objects &gt; The Debug Input Monitor (.DEBUGINPUT); Rexx Runtime Objects &gt; The STDIN Stream (.STDIN); Rexx Runtime Objects &gt; The STDOUT Stream (.STDOUT); Rexx Runtime Objects &gt; The STDERR Stream (.STDERR); Rexx Runtime Objects &gt; The STDQUE Queue (.STDQUE); Rexx Runtime Objects &gt; The SYSCARGS Array (.SYSCARGS); Rexx Runtime Objects &gt; The ENDOFLINE Constant (.ENDOFLINE); Rexx Runtime Objects &gt; The NIL Object (.NIL); Rexx Runtime Objects &gt; The TRUE Constant (.TRUE); Rexx Runtime Objects &gt; The FALSE Constant (.FALSE); Rexx Runtime Objects &gt; The RexxInfo Object (.RexxInfo); Rexx Runtime Objects &gt; The Rexx Context (.CONTEXT); Rexx Runtime Objects &gt; The Line Number (.LINE)</p>
+<p class="deviations">Deviations: D144</p>
+<p>A program reaches the objects that the language provides through environment
+symbols: a period followed by a name, such as <code>.output</code>, <code>.true</code> or <code>.array</code>.
+The value of such a symbol is found by a lookup that this page specifies:
+first which objects exist and what they are, then the places the lookup goes
+through and their order, and last what a program may change. The lookup that
+reads the symbol is <a href="../lexical/symbols.html#r-lex.symbols.environment">the environment rule</a> of the
+lexical chapter; the order in which it consults the places is the rule of this
+page.</p>
+<p>Two directories hold most of the objects. <code>.environment</code> holds the objects
+that the whole program can reach, and <code>.local</code> the ones that belong to one
+interpreter instance, such as the standard streams. A program adds its own
+objects to them as it adds entries to any other <code>Directory</code>.</p>
+<blockquote>
+<p><strong>Note.</strong> Each interpreter instance has its own <code>.environment</code>
+(<a href="../deviations.html#85-environment-per-interpreter">Deviation 85</a>). A program
+that <code>rexx</code> runs has one instance, and so has every example in this book.</p>
+</blockquote>
+<h2 id="the-directories"><a class="header" href="#the-directories">The directories</a></h2>
+<div class="rule" id="r-env.objects.directories"><a href="#r-env.objects.directories">[env.objects.directories]</a></div>
+<p><code>.environment</code> and <code>.local</code> are each a <code>Directory</code>, the same object every time
+the symbol is read. <code>.environment</code> holds an entry <code>ENVIRONMENT</code> for itself and
+an entry <code>LOCAL</code> for <code>.local</code>, so that the symbols <code>.environment</code> and <code>.local</code>
+are found in <code>.environment</code> like every other. <code>.local</code> holds neither of those
+entries. An entry is read with the methods of <code>Directory</code>, by its name in
+upper case, and the entries of this page are the ones that exist before the
+program changes anything.</p>
+<pre><code class="language-rexx">say .environment~class~id .local~class~id (.environment == .environment),
+    (.local == .local)
+say (.environment~at('ENVIRONMENT') == .environment)
+say (.environment~at('LOCAL') == .local)
+say .local~hasIndex('LOCAL') .local~hasIndex('ENVIRONMENT')
+</code></pre>
+<pre><code class="language-output">Directory Directory 1 1
+1
+1
+0 0
+</code></pre>
+<h2 id="what-environment-holds"><a class="header" href="#what-environment-holds">What <code>.environment</code> holds</a></h2>
+<div class="rule" id="r-env.objects.entries"><a href="#r-env.objects.entries">[env.objects.entries]</a></div>
+<p><code>.environment</code> holds the class objects of the <a href="../classes/index.html">classes
+chapter</a>, each under its class name in upper case, with
+three differences: <code>RegularExpression</code> is not among them, because it belongs
+to a package that a program <a href="../classes/regularexpression.html">requires</a>; the
+class <code>RexxInfo</code> is not, because its name is the index of the one <code>RexxInfo</code>
+object; and <code>ArgUtil</code> is (<a href="../classes/index.html#r-class.index.argutil">the rule on it</a>). The
+entries that are not classes are <code>NIL</code>, <code>TRUE</code>, <code>FALSE</code>, <code>ENDOFLINE</code>,
+<code>REXXINFO</code>, <code>LOCAL</code> and <code>ENVIRONMENT</code>, and there are no others. <code>.true</code> is the
+string <code>1</code>, <code>.false</code> the string <code>0</code>, and <code>.endofline</code> the string of the one
+character <code>'0A'x</code>, the line end of the platform. <code>.nil</code> is the object that
+stands for the absence of an object (<code>isNil</code> <a href="../classes/object.html#r-class.object.isnil">answers 1 for
+it</a>). <code>.rexxinfo</code> is the one <code>RexxInfo</code> object (<a href="../classes/rexxinfo.html#r-class.rexxinfo.creation">its
+rule</a>). The example prints the class entries in
+rows, after checking that the upper case id of each is its index, and then the
+entries that are none.</p>
+<pre><code class="language-rexx">others = .array~new
+row = ''
+do i over .environment~allIndexes~sort
+  o = .environment~at(i)
+  if \o~isA(.class) then others~append(i)
+  else do
+    if o~id~upper \== i then say 'id differs:' i
+    if length(row i) &gt; 78 then do
+      say row~strip
+      row = ''
+    end
+    row = row i
+  end
+end
+say row~strip
+say others~makeString('l', ' ')
+say .true .false c2x(.endofline) .nil~isNil .rexxinfo~class~id
+say .environment~hasIndex('REGULAREXPRESSION')
+say .environment~at('REXXINFO')~isA(.class)
+</code></pre>
+<pre><code class="language-output">ALARM ALARMNOTIFICATION ARGUTIL ARRAY BAG BUFFER CASELESSCOLUMNCOMPARATOR
+CASELESSCOMPARATOR CASELESSDESCENDINGCOMPARATOR CIRCULARQUEUE CLASS
+COLLECTION COLUMNCOMPARATOR COMMANDCONTEXT COMMANDHANDLER COMMANDINPUT
+COMMANDOUTPUT COMPARABLE COMPARATOR DATETIME DESCENDINGCOMPARATOR DIRECTORY
+EVENTSEMAPHORE FILE IDENTITYTABLE INPUTOUTPUTSTREAM INPUTSTREAM
+INVERTINGCOMPARATOR LIST MAPCOLLECTION MESSAGE MESSAGENOTIFICATION METHOD
+MONITOR MUTABLEBUFFER MUTEXSEMAPHORE NATIVECOMMANDHANDLER NUMERICCOMPARATOR
+OBJECT ORDERABLE ORDEREDCOLLECTION OUTPUTSTREAM PACKAGE POINTER PROPERTIES
+QUEUE RELATION REXXCONTEXT REXXQUEUE ROUTINE SET SETCOLLECTION SINGLETON
+STACKFRAME STEM STREAM STREAMSUPPLIER STRING STRINGTABLE SUPPLIER TABLE
+TICKER TIMESPAN TRACEOBJECT VALIDATE VARIABLEREFERENCE WEAKREFERENCE
+ENDOFLINE ENVIRONMENT FALSE LOCAL NIL REXXINFO TRUE
+1 0 0A 1 RexxInfo
+0
+0
+</code></pre>
+<h2 id="what-local-holds"><a class="header" href="#what-local-holds">What <code>.local</code> holds</a></h2>
+<div class="rule" id="r-env.objects.local"><a href="#r-env.objects.local">[env.objects.local]</a></div>
+<p><code>.local</code> holds, when a program starts, the five monitors <code>INPUT</code>, <code>OUTPUT</code>,
+<code>ERROR</code>, <code>TRACEOUTPUT</code> and <code>DEBUGINPUT</code>, each a
+<a href="../classes/monitor.html"><code>Monitor</code></a>; the three streams <code>STDIN</code>, <code>STDOUT</code> and
+<code>STDERR</code>, each a <a href="../classes/stream.html"><code>Stream</code></a>; <code>STDQUE</code>, a
+<a href="../classes/rexxqueue.html"><code>RexxQueue</code></a>; and <code>SYSCARGS</code>, an <code>Array</code>. The
+symbols <code>.input</code>, <code>.output</code>, <code>.error</code>, <code>.traceoutput</code>, <code>.debuginput</code>,
+<code>.stdin</code>, <code>.stdout</code>, <code>.stderr</code>, <code>.stdque</code> and <code>.syscargs</code> are found there.
+<code>.syscargs</code> is the array of the command line arguments that follow the program
+name; a program started without any has none, as the example shows, and <a href="invocation.html#r-env.invocation.syscargs">the
+syscargs rule</a> says how a command line becomes
+those arguments.</p>
+<pre><code class="language-rexx">do i over .local~allIndexes~sort
+  say i~left(12) .local~at(i)~class~id
+end
+say .syscargs~items
+</code></pre>
+<pre><code class="language-output">DEBUGINPUT   Monitor
+ERROR        Monitor
+INPUT        Monitor
+OUTPUT       Monitor
+STDERR       Stream
+STDIN        Stream
+STDOUT       Stream
+STDQUE       RexxQueue
+SYSCARGS     Array
+TRACEOUTPUT  Monitor
+0
+</code></pre>
+<div class="rule" id="r-env.objects.bindings"><a href="#r-env.objects.bindings">[env.objects.bindings]</a></div>
+<p>The monitors start out connected to each other and to the streams: the current
+destination of <code>.output</code> is <code>.stdout</code>, that of <code>.error</code> is <code>.stderr</code>, that of
+<code>.input</code> is <code>.stdin</code>, that of <code>.traceoutput</code> is the monitor <code>.error</code> and that
+of <code>.debuginput</code> is the monitor <code>.input</code>, each the same object and not a copy
+(<a href="../classes/monitor.html#r-class.monitor.current">the rule on <code>current</code></a>). A message that a monitor
+has no method for goes to its current destination (<a href="../classes/monitor.html#r-class.monitor.unknown">the forwarding
+rule</a>), so a destination that a
+program sets on <code>.error</code> is also where the trace lines go, as the <a href="../instructions/trace.html#r-instr.trace.destination">trace
+rule</a> says for <code>.traceoutput</code>. <code>.stdque</code> is the
+<code>RexxQueue</code> of the queue <code>SESSION</code>.</p>
+<pre><code class="language-rexx">say (.output~current == .stdout) (.error~current == .stderr),
+    (.input~current == .stdin) (.traceoutput~current == .error),
+    (.debuginput~current == .input)
+say .stdque~class~id .stdque~get
+</code></pre>
+<pre><code class="language-output">1 1 1 1 1
+RexxQueue SESSION
+</code></pre>
+<h2 id="the-order-of-the-lookup"><a class="header" href="#the-order-of-the-lookup">The order of the lookup</a></h2>
+<div class="rule" id="r-env.objects.search"><a href="#r-env.objects.search">[env.objects.search]</a></div>
+<p>A program that reads the environment symbol <code>.name</code> gets the first object that
+the following places answer to the name, taken in upper case, and the symbol's
+own text when none does (<a href="#r-env.objects.search.none">the last rule of this
+section</a>). The places, in order, are: the three
+fixed symbols <code>.nil</code>, <code>.true</code> and <code>.false</code>; the classes that the code can see,
+beginning with those its own package declares; the <code>local</code> directory of the
+package that holds the code; <code>.local</code>; <code>.environment</code>; and the symbols
+<code>.line</code>, <code>.context</code>, <code>.methods</code>, <code>.routines</code>, <code>.resources</code> and <code>.rs</code>, which
+the interpreter answers for the code that reads them. The rules that follow
+state each step. In the example, <code>.zqa</code> is found as a class, <code>.zqb</code> in
+<code>.local</code> although <code>.environment</code> has it too, <code>.zqc</code> in <code>.environment</code>, and
+<code>.zqd</code> nowhere.</p>
+<pre><code class="language-rexx">.local~zqa = 'in local'
+.environment~zqa = 'in environment'
+.local~zqb = 'in local'
+.environment~zqb = 'in environment'
+.environment~zqc = 'in environment'
+say .zqa~id '|' .zqb '|' .zqc '|' .zqd
+::class zqa
+</code></pre>
+<pre><code class="language-output">ZQA | in local | in environment | .ZQD
+</code></pre>
+<div class="rule" id="r-env.objects.search.fixed"><a href="#r-env.objects.search.fixed">[env.objects.search.fixed]</a></div>
+<p>The symbols <code>.nil</code>, <code>.true</code> and <code>.false</code> always answer the <code>.nil</code> object, the
+string <code>1</code> and the string <code>0</code>. A program that stores an entry of the same name
+in <code>.local</code> or <code>.environment</code>, or that declares a class of that name, changes
+that entry and that class and nothing else: the entry is still there to read
+with <code>at</code>, and the symbol still answers the fixed object.</p>
+<pre><code class="language-rexx">.environment~nil = 'N'
+.local~true = 'T'
+.environment~false = 'F'
+say .nil~isNil .true .false
+say .environment~nil .local~true .environment~false
+say .environment~at('TRUE') .environment~hasIndex('TRUE')
+::class true
+</code></pre>
+<pre><code class="language-output">1 1 0
+N T F
+1 1
+</code></pre>
+<div class="rule" id="r-env.objects.search.classes"><a href="#r-env.objects.search.classes">[env.objects.search.classes]</a></div>
+<p>A name is looked up among the classes that the code can see before any
+directory is: the classes of its package, the public classes of the packages
+it requires, and the classes of the class library, in the order that <a href="../directives/class.html#r-dir.class.visibility">the
+class rule</a> and
+<a href="../classes/package.html#r-class.package.findclass"><code>findClass</code></a> give. A library class is found
+whatever <code>.local</code> and <code>.environment</code> hold under its name, and it stays found
+when the entry is removed from <code>.environment</code>; a class that the package itself
+declares hides a library class of the same name.</p>
+<pre><code class="language-rexx">.local~object = 'in local'
+.environment~array = 'in environment'
+say .object~id .array~id .string~id
+say .environment~remove('LIST')~id .environment~hasIndex('LIST')
+say .list~id
+say .queue~new~hi
+::class queue
+::method hi
+  return 'the queue of this package'
+</code></pre>
+<pre><code class="language-output">Object Array String
+List 0
+List
+the queue of this package
+</code></pre>
+<div class="rule" id="r-env.objects.search.local"><a href="#r-env.objects.search.local">[env.objects.search.local]</a></div>
+<p>When no class has the name, the <code>local</code> directory of the package that holds
+the code is searched (<a href="../classes/package.html#r-class.package.local">its rule</a>), then <code>.local</code>, then
+<code>.environment</code>. An entry of <code>.local</code> hides an entry of the same name in
+<code>.environment</code>, and removing it from <code>.local</code> makes the other one visible
+again.</p>
+<pre><code class="language-rexx">.environment~zqv = 'environment'
+say .zqv
+.local~zqv = 'local'
+say .zqv '|' .environment~zqv '|' .local~zqv
+.local~remove('ZQV')
+say .zqv
+</code></pre>
+<pre><code class="language-output">environment
+local | environment | local
+environment
+</code></pre>
+<div class="rule" id="r-env.objects.search.symbols"><a href="#r-env.objects.search.symbols">[env.objects.search.symbols]</a></div>
+<p><code>.line</code>, <code>.context</code>, <code>.methods</code>, <code>.routines</code>, <code>.resources</code> and <code>.rs</code> are
+looked up last. An entry of one of those names in the <code>local</code> directory of the
+package, in <code>.local</code> or in <code>.environment</code>, and a class of the name, is the
+value of the symbol, and the interpreter's own answer is given only when none
+exists. The interpreter answers <code>.line</code> with the same number as
+<a href="../classes/rexxcontext.html#r-class.rexxcontext.line"><code>.context~line</code></a> and <code>.context</code> as <a href="../classes/rexxcontext.html#r-class.rexxcontext.symbol">the context
+rule</a> says. The rules for <code>.methods</code> (<a href="../directives/method.html#r-dir.method.floating">the
+floating methods</a>), <code>.routines</code> (<a href="../directives/routine.html#r-dir.routine.table">the table of
+routines</a>), <code>.resources</code> (<a href="../directives/resource.html#r-dir.resource.access">the resource
+rule</a>) and <code>.rs</code> (<a href="../instructions/command.html#r-instr.command.status">the command
+status</a>) say when each exists; when it does not, the
+symbol is not found and has its own text. The first example shows <code>.line</code> and
+<code>.context</code>, and the second a <code>LINE</code> in the <code>local</code> directory of a package and
+a class named <code>rs</code>.</p>
+<pre><code class="language-rexx">say .line .context~line .rs
+.environment~line = 'mine'
+say .line
+.environment~remove('LINE')
+say .line
+.local~context = 'also mine'
+say .context
+.local~remove('CONTEXT')
+say .context~class~id
+</code></pre>
+<pre><code class="language-output">1 1 .RS
+mine
+5
+also mine
+RexxContext
+</code></pre>
+<pre><code class="language-rexx">src = .array~of('::routine r', '  return .line')
+p = .package~new('zq-env-line', src)
+say p~findRoutine('R')~call
+p~local~put('own', 'LINE')
+say p~findRoutine('R')~call
+src = .array~of('::routine r', '  return .rs~id', '::class rs')
+say .package~new('zq-env-rs', src)~findRoutine('R')~call
+</code></pre>
+<pre><code class="language-output">2
+own
+RS
+</code></pre>
+<div class="rule" id="r-env.objects.search.name"><a href="#r-env.objects.search.name">[env.objects.search.name]</a></div>
+<p>The name that is looked up is the characters after the period, in upper case,
+and the lookup is by that exact index: an entry whose index has a lower case
+letter is not found by any symbol, because the symbol's name has none. A
+period inside the name is part of it, so <code>.my.name</code> looks up the index
+<code>MY.NAME</code>, which is also how <code>.environment~my.name</code> reads it. A name that
+nothing holds is not an error and does not raise <code>NOVALUE</code> (<a href="../conditions/novalue.html#r-cond.novalue.raise">the
+rule</a>).</p>
+<pre><code class="language-rexx">.environment['mixed'] = 'lower index'
+.environment['MIXED2'] = 'upper index'
+.environment['MY.NAME'] = 'dotted'
+say .mixed .Mixed2 .my.name .MY.name
+say .environment~at('mixed') '|' .environment~mixed2 '|' .environment~my.name
+</code></pre>
+<pre><code class="language-output">.MIXED upper index dotted dotted
+lower index | upper index | dotted
+</code></pre>
+<div class="rule" id="r-env.objects.search.none"><a href="#r-env.objects.search.none">[env.objects.search.none]</a></div>
+<p>When no place holds the name, the value of the symbol is its own characters in
+upper case, period included (<a href="../lexical/symbols.html#r-lex.symbols.environment">the lexical rule</a>).
+An entry whose value is <code>.nil</code> is held: the symbol answers <code>.nil</code> and not its
+own text.</p>
+<pre><code class="language-rexx">.environment~zqnil = .nil
+say .zqnil~isNil .zqnone .Zq.None .zqnil2
+</code></pre>
+<pre><code class="language-output">1 .ZQNONE .ZQ.NONE .ZQNIL2
+</code></pre>
+<h2 id="what-a-program-may-change"><a class="header" href="#what-a-program-may-change">What a program may change</a></h2>
+<div class="rule" id="r-env.objects.change.entries"><a href="#r-env.objects.change.entries">[env.objects.change.entries]</a></div>
+<p>A program may add to <code>.local</code> and <code>.environment</code> an entry of any name and any
+object, replace an entry, and remove one, with the methods of <code>Directory</code>. The
+symbol then finds the object, the new one after a replacement and the one
+below it, or none, after a removal, as the order above says. The entries that
+the language put there are entries like the others, except where a rule of
+this page says that a symbol does not read them: the classes of the library,
+and <code>.nil</code>, <code>.true</code> and <code>.false</code>.</p>
+<pre><code class="language-rexx">.local~zqx = 'first'
+say .zqx
+.local~zqx = .array~of(1, 2)
+say .zqx~items
+.local~remove('ZQX')
+say .zqx
+.environment~endofline = 'eol'
+say .endofline
+</code></pre>
+<pre><code class="language-output">first
+2
+.ZQX
+eol
+</code></pre>
+<div class="rule" id="r-env.objects.change.scope"><a href="#r-env.objects.change.scope">[env.objects.change.scope]</a></div>
+<p>An entry that a program adds or changes is seen by everything that runs in the
+same interpreter instance afterwards: by the code of other packages and by the
+other activities. The <code>local</code> directory of a package is not shared (<a href="../classes/package.html#r-class.package.local">its
+rule</a>). In the example, a package that the program
+makes reads <code>.zqenv</code> and <code>.zqloc</code> and sets <code>.zqfrom</code>, which the main program
+reads, and the method of a started message reads <code>.zqenv</code> and sets <code>.zqact</code>.</p>
+<pre><code class="language-rexx">.environment~zqenv = 'env'
+.local~zqloc = 'loc'
+src = .array~of('::routine see', '  return .zqenv .zqloc .zqfrom',,
+  '::routine put', '  .environment~zqfrom = "set by the package"',,
+  '  return 0')
+p = .package~new('zq-env-scope', src)
+say p~findRoutine('SEE')~call
+x = p~findRoutine('PUT')~call
+say .zqfrom '|' p~findRoutine('SEE')~call
+say .zqo~new~start('put')~result
+say .zqact
+::class zqo
+::method put
+  .local~zqact = 'set by an activity'
+  return .zqenv .zqfrom
+</code></pre>
+<pre><code class="language-output">env loc .ZQFROM
+set by the package | env loc set by the package
+env set by the package
+set by an activity
+</code></pre>
+<h2 id="where-input-and-output-go"><a class="header" href="#where-input-and-output-go">Where input and output go</a></h2>
+<blockquote>
+<p><strong>Note.</strong> The monitors in <code>.local</code> are the one place through which the
+language reads and writes the standard streams, so a program that gives one
+a new destination, or that puts another object in its place, changes what
+other code reads and writes without that code noticing. The rules below
+state which messages the language sends to each of these objects. The
+examples use a spy, an object that logs the name of each message it is sent
+and answers a value of its own.</p>
+</blockquote>
+<div class="rule" id="r-env.objects.streams"><a href="#r-env.objects.streams">[env.objects.streams]</a></div>
+<p>A stream builtin whose name <a href="../builtins/index.html#r-bif.index.stream.std">denotes</a> the standard
+output, error or input stream does not use the stream: it sends a message to
+the <code>OUTPUT</code>, <code>ERROR</code> or <code>INPUT</code> entry of <code>.local</code>, whichever the name
+denotes, whatever the builtin does. CHAROUT, LINEOUT, CHARIN, LINEIN, CHARS
+and LINES send the message of their own name with the builtin's arguments
+after the name, as given, so a call with none sends none; LINES sends its
+option, and <code>NORMAL</code> when the call gives none. STREAM sends <code>STATE</code> for the
+option <code>S</code> or none, <code>DESCRIPTION</code> for <code>D</code>, and <code>COMMAND</code> with the command for
+<code>C</code>. The builtin answers what the object answers, except LINES: unless its
+option is <code>C</code>, and then it answers what the object answers, it answers 0 when
+the string value of the answer is a number equal to zero and 1 otherwise,
+whether that value is a number or not, and whether the answer is a string or
+another object (<a href="#r-env.objects.deviation.144">Deviation 144</a>). A message that
+a program sends to <code>.stdout</code>, <code>.stderr</code> or <code>.stdin</code> itself is not redirected.
+In the example, one spy answers 3 to every message, and the log shows the name
+of each message with the number of its arguments and the arguments themselves.</p>
+<pre><code class="language-rexx">s = .spy~new
+.output~destination(s)
+.error~destination(s)
+.input~destination(s)
+call lineout
+call charout
+a = lineout(, 'x', 1)
+b = charout('STDOUT', 'y', 2)
+c = lines('STDERR')
+d = chars('stderr:')
+e = linein('STDERR')
+f = charin('STDERR')
+g = lineout('STDIN', 'z')
+h = charout('stdin:', 'w')
+i = stream('STDOUT', 'c', 'query exists')
+j = stream('STDIN')
+k = stream('STDERR', 'd')
+.output~destination
+.error~destination
+.input~destination
+say s~log~makeString('l', '0a'x)
+say a b c d e f g h i j k
+::class spy
+::method init
+  expose log
+  log = .array~new
+::attribute log get
+::method unknown
+  expose log
+  use arg name, args
+  log~append(name'('args~items':'args~makeString('l', ',')')')
+  return 3
+</code></pre>
+<pre><code class="language-output">LINEOUT(0:)
+CHAROUT(0:)
+LINEOUT(2:x,1)
+CHAROUT(2:y,2)
+LINES(1:NORMAL)
+CHARS(0:)
+LINEIN(0:)
+CHARIN(0:)
+LINEOUT(1:z)
+CHAROUT(1:w)
+COMMAND(1:query exists)
+STATE(0:)
+DESCRIPTION(0:)
+3 3 1 3 3 3 3 3 3 3 3
+</code></pre>
+<div class="rule" id="r-env.objects.streams.lines"><a href="#r-env.objects.streams.lines">[env.objects.streams.lines]</a></div>
+<p>The option <code>N</code> of LINES is sent as it was given. The option <code>C</code> shows that
+the answer is the object's own.</p>
+<pre><code class="language-rexx">s = .spy~new
+.input~destination(s)
+a = lines()
+b = lines(, 'N')
+c = lines(, 'C')
+s~answer = '0.0'
+d = lines()
+s~answer = .zero~new
+e = lines()
+.input~destination
+say s~log~makeString('l', ' ')
+say a b c d e
+::class spy
+::method init
+  expose log answer
+  log = .array~new
+  answer = 7
+::attribute log get
+::attribute answer
+::method unknown
+  expose log answer
+  use arg name, args
+  log~append(name'('args~makeString('l', ',')')')
+  return answer
+::class zero
+::method string
+  return '0'
+</code></pre>
+<pre><code class="language-output defect=#213">LINES(NORMAL) LINES(N) LINES(C) LINES(NORMAL) LINES(NORMAL)
+1 1 7 0 0
+</code></pre>
+<div class="rule" id="r-env.objects.output"><a href="#r-env.objects.output">[env.objects.output]</a></div>
+<p>SAY sends the message <code>SAY</code> to the <code>OUTPUT</code> entry of <code>.local</code>, with the text
+it writes. The builtins CHAROUT and LINEOUT, when their stream name is null,
+omitted or one of <code>STDOUT</code> and <code>STDOUT:</code> in any case, send it <code>CHAROUT</code> and
+<code>LINEOUT</code> instead (<a href="#r-env.objects.streams">the rule on stream builtins</a>), and
+the builtin answers what the object answers. A message that a program sends to
+<code>.stdout</code> itself is not redirected: it writes to the stream whatever <code>.output</code>
+holds. The monitor sends all of these on to its current destination, which is
+<code>.stdout</code> until a program sets another.</p>
+<pre><code class="language-rexx">s = .spy~new
+.output~destination(s)
+say 'one'
+call charout , 'two'
+call lineout , 'three'
+x = lineout('STDOUT', 'four')
+call charout 'stdout:', 'five'
+.stdout~lineout('direct')
+.output~destination
+say 'restored'
+say s~log~makeString('l', ' | ') x
+::class spy
+::method init
+  expose log
+  log = .array~new
+::attribute log get
+::method unknown
+  expose log
+  use arg name
+  log~append(name)
+  return 7
+</code></pre>
+<pre><code class="language-output">direct
+restored
+SAY | CHAROUT | LINEOUT | LINEOUT | CHAROUT 7
+</code></pre>
+<div class="rule" id="r-env.objects.error"><a href="#r-env.objects.error">[env.objects.error]</a></div>
+<p>The stream builtins that name <code>STDERR</code> send their messages to the <code>ERROR</code>
+entry of <code>.local</code> (<a href="#r-env.objects.streams">the rule on stream builtins</a>). The
+lines of a trace go to <code>.traceoutput</code> (<a href="../instructions/trace.html#r-instr.trace.destination">the trace
+rule</a>), whose monitor passes them on to <code>.error</code>,
+so a destination that a program sets on <code>.error</code> receives them as <code>LINEOUT</code>
+messages whose argument is a <code>TraceObject</code>. A message sent to <code>.stderr</code>
+directly is not redirected. The example logs the name of each message and the
+class of its argument.</p>
+<pre><code class="language-rexx">s = .spy~new
+.error~destination(s)
+call lineout 'STDERR', 'one'
+call charout 'stderr:', 'two'
+trace r
+x = 1
+trace o
+.error~destination
+u = .set~new
+do e over s~log
+  u~put(e)
+end
+say u~makeArray~sort~makeString('l', ' | ')
+::class spy
+::method init
+  expose log
+  log = .array~new
+::attribute log get
+::method unknown
+  expose log
+  use arg name, args
+  log~append(name args[1]~class~id)
+  return 0
+</code></pre>
+<pre><code class="language-output">CHAROUT String | LINEOUT String | LINEOUT TraceObject
+</code></pre>
+<div class="rule" id="r-env.objects.error.report"><a href="#r-env.objects.error.report">[env.objects.error.report]</a></div>
+<p>The report that a program writes when an error ends it (<a href="../conditions/index.html#r-cond.index.syntax">the rule on
+it</a>) goes the same way: each of its lines is sent as
+<code>LINEOUT</code> with a <code>TraceObject</code> to <code>.traceoutput</code>, so a destination set on
+<code>.error</code> receives it, and an object stored in <code>.local</code> under <code>ERROR</code> does
+not, because <code>.traceoutput</code> passes the lines on to the monitor it was given at
+the start. In the example, the first line shows that the monitor
+<code>.traceoutput</code> is connected to <code>.error</code>, and the spy receives the lines of the
+report of the division by zero.</p>
+<pre><code class="language-rexx">.error~destination(.spy~new)
+say 'before'
+.stdout~lineout(.traceoutput~current == .error)
+x = 1 / 0
+::class spy
+::method unknown
+  use arg n, a
+  .stdout~lineout('spy' n a~items a[1]~class~id)
+  return 0
+</code></pre>
+<pre><code class="language-output rc=214">before
+1
+spy LINEOUT 1 TraceObject
+spy LINEOUT 1 TraceObject
+spy LINEOUT 1 TraceObject
+</code></pre>
+<div class="rule" id="r-env.objects.input"><a href="#r-env.objects.input">[env.objects.input]</a></div>
+<p>The stream builtins that name the standard input send their messages to the
+<code>INPUT</code> entry of <code>.local</code> (<a href="#r-env.objects.streams">the rule on stream
+builtins</a>). LINEIN and CHARIN
+answer what the object answers. PARSE LINEIN does the same as LINEIN with no
+name, and a message that a program sends to <code>.stdin</code> itself is not redirected.
+The example is run with an empty standard input, which the last read, of
+<code>.stdin</code>, then meets.</p>
+<pre><code class="language-rexx">s = .spy~new
+.input~destination(s)
+x = linein()
+y = linein('STDIN')
+z = charin()
+n = chars('stdin:')
+n = lines()
+parse linein v
+n = .input~linein
+.input~destination
+n = .stdin~linein
+say s~log~makeString('l', ' ') x y z v
+::class spy
+::method init
+  expose log
+  log = .array~new
+::attribute log get
+::method unknown
+  expose log
+  use arg name
+  log~append(name)
+  return 7
+</code></pre>
+<pre><code class="language-output">LINEIN LINEIN CHARIN CHARS LINES LINEIN LINEIN 7 7 7 7
+</code></pre>
+<div class="rule" id="r-env.objects.queue"><a href="#r-env.objects.queue">[env.objects.queue]</a></div>
+<p>PUSH and QUEUE send <code>PUSH</code> and <code>QUEUE</code> with the line to the <code>STDQUE</code> entry of
+<code>.local</code>. The builtin QUEUED sends it <code>QUEUED</code>, and the builtin RXQUEUE sends
+<code>GET</code> for its option <code>GET</code> and <code>SET</code>, with the name, for its option <code>SET</code>;
+each answers what the object answers. The other options of RXQUEUE send
+nothing to it. PULL and PARSE PULL send <code>PULL</code>; when the answer is <code>.nil</code>,
+they send <code>LINEIN</code> to the <code>INPUT</code> entry of <code>.local</code> and use its answer as the
+line; otherwise the answer is the line (<a href="../instructions/pull.html#r-instr.pull.source">the pull rule</a>).
+The example restores <code>.stdque</code> and the destination of <code>.input</code> before it
+prints, and shows the answers of the builtins on the second line and, on the
+third, those of the options of RXQUEUE that send nothing.</p>
+<pre><code class="language-rexx">old = .stdque
+q = .spy~new('Q', .nil)
+i = .spy~new('I', 'from input')
+.local~stdque = q
+.input~destination(i)
+push 'a'
+queue 'b'
+a = queued()
+b = rxqueue('get')
+c = rxqueue('set', 'zq')
+d = rxqueue('create', 'ZQA1R')
+e = rxqueue('exists', 'ZQA1R')
+f = rxqueue('delete', 'ZQA1R')
+pull v
+.local~stdque = old
+.input~destination
+say q~log~makeString('l', ' ') '|' i~log~makeString('l', ' ') '|' v
+say a b c
+say d e f
+::class spy
+::method init
+  expose log answer
+  use arg , answer
+  log = .array~new
+::attribute log get
+::method unknown
+  expose log answer
+  use arg name
+  log~append(name)
+  if name == 'PULL' | name == 'LINEIN' then return answer
+  return 'x'name
+</code></pre>
+<pre><code class="language-output">PUSH QUEUE QUEUED GET SET PULL | LINEIN | FROM INPUT
+xQUEUED xGET xSET
+ZQA1R 1 0
+</code></pre>
+<div class="rule" id="r-env.objects.replace"><a href="#r-env.objects.replace">[env.objects.replace]</a></div>
+<p>The language does not read these objects through the lookup of this page. Each
+time SAY, PARSE LINEIN, PULL, PUSH, QUEUE, QUEUED, RXQUEUE, a stream builtin,
+a trace line, an interactive trace stop or the report of an error needs one,
+it takes the entry <code>OUTPUT</code>, <code>ERROR</code>, <code>INPUT</code>, <code>TRACEOUTPUT</code>, <code>DEBUGINPUT</code> or
+<code>STDQUE</code> of <code>.local</code>, so a program that
+stores another object there makes that object the one that the rules above
+send their messages to, from then on, for every package and activity. A class
+of the same name and an entry of a package's <code>local</code> directory change what the
+symbol finds, and not where the language writes or reads; an entry of
+<code>.environment</code> under the same name is not used while <code>.local</code> holds one. In
+the example, the object that replaces <code>.output</code> is sent <code>SAY</code>, <code>LINEOUT</code> and
+<code>CHAROUT</code>, the one that replaces <code>.input</code> is sent <code>LINEIN</code>, the one that
+replaces <code>.error</code> is sent <code>LINEOUT</code>, the one that replaces <code>.traceoutput</code> is
+sent the trace lines, and the one that replaces <code>.stdque</code> is sent <code>PUSH</code>.</p>
+<pre><code class="language-rexx">old = .local~output
+.local~output = .cap~new('out')
+say 'one'
+call lineout , 'two'
+call charout , 'three'
+.environment~output = .cap~new('env')
+say 'four'
+.local~output = old
+.environment~remove('OUTPUT')
+old = .local~input
+.local~input = .cap~new('in')
+parse linein v
+.local~input = old
+say 'read' v
+old = .local~error
+.local~error = .cap~new('err')
+call lineout 'STDERR', 'five'
+.local~error = old
+old = .local~traceoutput
+.local~traceoutput = .cap~new('trace')
+trace r
+x = 1
+trace o
+.local~traceoutput = old
+old = .local~stdque
+.local~stdque = .cap~new('que')
+push 'six'
+.local~stdque = old
+::class cap
+::method init
+  expose tag
+  use arg tag
+::method say
+  expose tag
+  .stdout~lineout(tag 'say' arg(1))
+  return 0
+::method lineout
+  expose tag
+  .stdout~lineout(tag 'lineout' arg(1)~class~id)
+  return 0
+::method charout
+  expose tag
+  .stdout~lineout(tag 'charout' arg(1))
+  return 0
+::method linein
+  expose tag
+  return tag
+::method push
+  expose tag
+  .stdout~lineout(tag 'push' arg(1))
+  return 0
+</code></pre>
+<pre><code class="language-output">out say one
+out lineout String
+out charout three
+out say four
+read in
+err lineout String
+trace lineout TraceObject
+trace lineout TraceObject
+trace lineout TraceObject
+que push six
+</code></pre>
+<div class="rule" id="r-env.objects.replace.answer"><a href="#r-env.objects.replace.answer">[env.objects.replace.answer]</a></div>
+<p>When the object that a CHAROUT or LINEOUT reaches, whether an object stored
+in <code>.local</code> or the destination of a monitor, answers nothing to the message
+the builtin sends it, the builtin has no answer: a CALL drops <code>RESULT</code>, and
+the function form raises <code>SYNTAX 44.1</code>.</p>
+<pre><code class="language-rexx">old = .local~output
+result = 'set'
+.local~output = .quiet~new
+call lineout , 'x'
+r1 = symbol('RESULT')
+signal on syntax name failed
+y = lineout(, 'y')
+failed:
+code = condition('O')~code
+.local~output = old
+say 'after call' r1
+say code
+::class quiet
+::method lineout
+  .stdout~lineout('got' arg(1))
+</code></pre>
+<pre><code class="language-output defect=#211">got x
+got y
+after call LIT
+44.1
+</code></pre>
+<div class="rule" id="r-env.objects.replace.symbol"><a href="#r-env.objects.replace.symbol">[env.objects.replace.symbol]</a></div>
+<p>A class named <code>OUTPUT</code>, or an entry <code>OUTPUT</code> in the <code>local</code> directory of the
+package, is what the symbol <code>.output</code> finds, and SAY and LINEOUT still reach
+the entry of <code>.local</code>. The first example shows the class and the second the
+entry.</p>
+<pre><code class="language-rexx">say 'symbol:' .output~class~id
+say 'one'
+call lineout , 'two'
+::class output
+::method say class
+  .stdout~lineout('class say' arg(1))
+  return 0
+::method lineout class
+  .stdout~lineout('class lineout' arg(1))
+  return 0
+</code></pre>
+<pre><code class="language-output defect=#212">symbol: Class
+one
+two
+</code></pre>
+<pre><code class="language-rexx">.context~package~local~output = .cap~new
+say .output~class~id
+say 'one'
+call lineout , 'two'
+x = lineout(, 'three')
+::class cap
+::method say
+  .stdout~lineout('cap say' arg(1))
+  return 0
+::method lineout
+  .stdout~lineout('cap lineout' arg(1))
+  return 0
+</code></pre>
+<pre><code class="language-output defect=#212">CAP
+one
+two
+three
+</code></pre>
+<h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
+<div class="rule" id="r-env.objects.deviation.144"><a href="#r-env.objects.deviation.144">[env.objects.deviation.144]</a></div>
+<p>LINES in normal mode answers 1 for every answer of the object it sends <code>LINES</code>
+to that does not equal zero as a number: one that is not a number, such as
+<code>abc</code>, one that is not a whole number, such as <code>1.5</code>, one that is a whole
+number of more than nine digits, such as <code>1E10</code>, and an object that is not a
+string whose string value is one of these, such as an Array, whose string
+value is not a number. ooRexx answers each of these as the object answered
+it, an object that is not a string included, and answers 0 or 1 as the rule
+says only for an answer that it reads as a whole number of no more than nine
+digits. The example is not run against it.</p>
+<pre><code class="language-rexx">s = .spy~new
+.input~destination(s)
+do v over 'abc', '1.5', '1E10', '12345678901', '0.1'
+  s~answer = v
+  say v '-&gt;' lines() lines(, 'N') lines(, 'C')
+end
+.input~destination
+::class spy
+::attribute answer
+::method unknown
+  expose answer
+  return answer
+</code></pre>
+<pre><code class="language-output">abc -&gt; 1 1 abc
+1.5 -&gt; 1 1 1.5
+1E10 -&gt; 1 1 1E10
+12345678901 -&gt; 1 1 12345678901
+0.1 -&gt; 1 1 0.1
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../environment/index.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../environment/invocation.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../environment/index.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../environment/invocation.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../assets/version-picker.js"></script>
+
+
+    </div>
+    </body>
+</html>

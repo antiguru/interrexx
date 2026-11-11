@@ -1,0 +1,1462 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Security manager - The interrexx Language Specification</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../conventions.html"><strong aria-hidden="true">2.</strong> Conventions</a></li><li class="chapter-item expanded "><a href="../lexical/index.html"><strong aria-hidden="true">3.</strong> Lexical structure</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../lexical/characters.html"><strong aria-hidden="true">3.1.</strong> Characters</a></li><li class="chapter-item expanded "><a href="../lexical/comments.html"><strong aria-hidden="true">3.2.</strong> Comments</a></li><li class="chapter-item expanded "><a href="../lexical/literals.html"><strong aria-hidden="true">3.3.</strong> Literals</a></li><li class="chapter-item expanded "><a href="../lexical/symbols.html"><strong aria-hidden="true">3.4.</strong> Symbols</a></li><li class="chapter-item expanded "><a href="../lexical/operators.html"><strong aria-hidden="true">3.5.</strong> Operators and special characters</a></li><li class="chapter-item expanded "><a href="../lexical/clauses.html"><strong aria-hidden="true">3.6.</strong> Clauses</a></li></ol></li><li class="chapter-item expanded "><a href="../numbers/index.html"><strong aria-hidden="true">4.</strong> Numbers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../numbers/formats.html"><strong aria-hidden="true">4.1.</strong> Formats</a></li><li class="chapter-item expanded "><a href="../numbers/limits.html"><strong aria-hidden="true">4.2.</strong> Limits</a></li><li class="chapter-item expanded "><a href="../numbers/arithmetic.html"><strong aria-hidden="true">4.3.</strong> Arithmetic</a></li><li class="chapter-item expanded "><a href="../numbers/settings.html"><strong aria-hidden="true">4.4.</strong> Settings</a></li><li class="chapter-item expanded "><a href="../numbers/comparison.html"><strong aria-hidden="true">4.5.</strong> Comparison</a></li></ol></li><li class="chapter-item expanded "><a href="../expressions/index.html"><strong aria-hidden="true">5.</strong> Expressions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../expressions/terms.html"><strong aria-hidden="true">5.1.</strong> Terms</a></li><li class="chapter-item expanded "><a href="../expressions/variables.html"><strong aria-hidden="true">5.2.</strong> Variables</a></li><li class="chapter-item expanded "><a href="../expressions/concatenation.html"><strong aria-hidden="true">5.3.</strong> Concatenation</a></li><li class="chapter-item expanded "><a href="../expressions/arithmetic.html"><strong aria-hidden="true">5.4.</strong> Arithmetic operators</a></li><li class="chapter-item expanded "><a href="../expressions/comparison.html"><strong aria-hidden="true">5.5.</strong> Comparison operators</a></li><li class="chapter-item expanded "><a href="../expressions/logical.html"><strong aria-hidden="true">5.6.</strong> Logical operators</a></li><li class="chapter-item expanded "><a href="../expressions/messages.html"><strong aria-hidden="true">5.7.</strong> Message operators</a></li></ol></li><li class="chapter-item expanded "><a href="../instructions/index.html"><strong aria-hidden="true">6.</strong> Instructions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../instructions/address.html"><strong aria-hidden="true">6.1.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../instructions/arg.html"><strong aria-hidden="true">6.2.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../instructions/assignment.html"><strong aria-hidden="true">6.3.</strong> Assignments</a></li><li class="chapter-item expanded "><a href="../instructions/call.html"><strong aria-hidden="true">6.4.</strong> CALL</a></li><li class="chapter-item expanded "><a href="../instructions/command.html"><strong aria-hidden="true">6.5.</strong> Commands</a></li><li class="chapter-item expanded "><a href="../instructions/do.html"><strong aria-hidden="true">6.6.</strong> DO</a></li><li class="chapter-item expanded "><a href="../instructions/drop.html"><strong aria-hidden="true">6.7.</strong> DROP</a></li><li class="chapter-item expanded "><a href="../instructions/exit.html"><strong aria-hidden="true">6.8.</strong> EXIT</a></li><li class="chapter-item expanded "><a href="../instructions/expose.html"><strong aria-hidden="true">6.9.</strong> EXPOSE</a></li><li class="chapter-item expanded "><a href="../instructions/forward.html"><strong aria-hidden="true">6.10.</strong> FORWARD</a></li><li class="chapter-item expanded "><a href="../instructions/guard.html"><strong aria-hidden="true">6.11.</strong> GUARD</a></li><li class="chapter-item expanded "><a href="../instructions/if.html"><strong aria-hidden="true">6.12.</strong> IF</a></li><li class="chapter-item expanded "><a href="../instructions/interpret.html"><strong aria-hidden="true">6.13.</strong> INTERPRET</a></li><li class="chapter-item expanded "><a href="../instructions/iterate.html"><strong aria-hidden="true">6.14.</strong> ITERATE</a></li><li class="chapter-item expanded "><a href="../instructions/leave.html"><strong aria-hidden="true">6.15.</strong> LEAVE</a></li><li class="chapter-item expanded "><a href="../instructions/loop.html"><strong aria-hidden="true">6.16.</strong> LOOP</a></li><li class="chapter-item expanded "><a href="../instructions/message.html"><strong aria-hidden="true">6.17.</strong> Message instructions</a></li><li class="chapter-item expanded "><a href="../instructions/nop.html"><strong aria-hidden="true">6.18.</strong> NOP</a></li><li class="chapter-item expanded "><a href="../instructions/numeric.html"><strong aria-hidden="true">6.19.</strong> NUMERIC</a></li><li class="chapter-item expanded "><a href="../instructions/options.html"><strong aria-hidden="true">6.20.</strong> OPTIONS</a></li><li class="chapter-item expanded "><a href="../instructions/parse.html"><strong aria-hidden="true">6.21.</strong> PARSE</a></li><li class="chapter-item expanded "><a href="../instructions/procedure.html"><strong aria-hidden="true">6.22.</strong> PROCEDURE</a></li><li class="chapter-item expanded "><a href="../instructions/pull.html"><strong aria-hidden="true">6.23.</strong> PULL</a></li><li class="chapter-item expanded "><a href="../instructions/push.html"><strong aria-hidden="true">6.24.</strong> PUSH</a></li><li class="chapter-item expanded "><a href="../instructions/queue.html"><strong aria-hidden="true">6.25.</strong> QUEUE</a></li><li class="chapter-item expanded "><a href="../instructions/raise.html"><strong aria-hidden="true">6.26.</strong> RAISE</a></li><li class="chapter-item expanded "><a href="../instructions/reply.html"><strong aria-hidden="true">6.27.</strong> REPLY</a></li><li class="chapter-item expanded "><a href="../instructions/return.html"><strong aria-hidden="true">6.28.</strong> RETURN</a></li><li class="chapter-item expanded "><a href="../instructions/say.html"><strong aria-hidden="true">6.29.</strong> SAY</a></li><li class="chapter-item expanded "><a href="../instructions/select.html"><strong aria-hidden="true">6.30.</strong> SELECT</a></li><li class="chapter-item expanded "><a href="../instructions/signal.html"><strong aria-hidden="true">6.31.</strong> SIGNAL</a></li><li class="chapter-item expanded "><a href="../instructions/trace.html"><strong aria-hidden="true">6.32.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../instructions/use.html"><strong aria-hidden="true">6.33.</strong> USE</a></li></ol></li><li class="chapter-item expanded "><a href="../parsing/index.html"><strong aria-hidden="true">7.</strong> Parsing</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../parsing/templates.html"><strong aria-hidden="true">7.1.</strong> Templates</a></li><li class="chapter-item expanded "><a href="../parsing/patterns.html"><strong aria-hidden="true">7.2.</strong> Patterns</a></li><li class="chapter-item expanded "><a href="../parsing/multiple.html"><strong aria-hidden="true">7.3.</strong> Several strings and case</a></li></ol></li><li class="chapter-item expanded "><a href="../directives/index.html"><strong aria-hidden="true">8.</strong> Directives</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../directives/class.html"><strong aria-hidden="true">8.1.</strong> ::CLASS</a></li><li class="chapter-item expanded "><a href="../directives/method.html"><strong aria-hidden="true">8.2.</strong> ::METHOD</a></li><li class="chapter-item expanded "><a href="../directives/attribute.html"><strong aria-hidden="true">8.3.</strong> ::ATTRIBUTE</a></li><li class="chapter-item expanded "><a href="../directives/constant.html"><strong aria-hidden="true">8.4.</strong> ::CONSTANT</a></li><li class="chapter-item expanded "><a href="../directives/routine.html"><strong aria-hidden="true">8.5.</strong> ::ROUTINE</a></li><li class="chapter-item expanded "><a href="../directives/requires.html"><strong aria-hidden="true">8.6.</strong> ::REQUIRES</a></li><li class="chapter-item expanded "><a href="../directives/options.html"><strong aria-hidden="true">8.7.</strong> ::OPTIONS</a></li><li class="chapter-item expanded "><a href="../directives/resource.html"><strong aria-hidden="true">8.8.</strong> ::RESOURCE</a></li><li class="chapter-item expanded "><a href="../directives/annotate.html"><strong aria-hidden="true">8.9.</strong> ::ANNOTATE</a></li></ol></li><li class="chapter-item expanded "><a href="../conditions/index.html"><strong aria-hidden="true">9.</strong> Conditions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../conditions/traps.html"><strong aria-hidden="true">9.1.</strong> Condition traps</a></li><li class="chapter-item expanded "><a href="../conditions/information.html"><strong aria-hidden="true">9.2.</strong> Condition information</a></li><li class="chapter-item expanded "><a href="../conditions/syntax.html"><strong aria-hidden="true">9.3.</strong> SYNTAX</a></li><li class="chapter-item expanded "><a href="../conditions/error.html"><strong aria-hidden="true">9.4.</strong> ERROR and FAILURE</a></li><li class="chapter-item expanded "><a href="../conditions/halt.html"><strong aria-hidden="true">9.5.</strong> HALT</a></li><li class="chapter-item expanded "><a href="../conditions/novalue.html"><strong aria-hidden="true">9.6.</strong> NOVALUE</a></li><li class="chapter-item expanded "><a href="../conditions/nostring.html"><strong aria-hidden="true">9.7.</strong> NOSTRING</a></li><li class="chapter-item expanded "><a href="../conditions/nomethod.html"><strong aria-hidden="true">9.8.</strong> NOMETHOD</a></li><li class="chapter-item expanded "><a href="../conditions/notready.html"><strong aria-hidden="true">9.9.</strong> NOTREADY</a></li><li class="chapter-item expanded "><a href="../conditions/lostdigits.html"><strong aria-hidden="true">9.10.</strong> LOSTDIGITS</a></li><li class="chapter-item expanded "><a href="../conditions/user.html"><strong aria-hidden="true">9.11.</strong> USER conditions</a></li><li class="chapter-item expanded "><a href="../conditions/errors.html"><strong aria-hidden="true">9.12.</strong> Error numbers</a></li></ol></li><li class="chapter-item expanded "><a href="../classes/index.html"><strong aria-hidden="true">10.</strong> Classes</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../classes/methods.html"><strong aria-hidden="true">10.1.</strong> Method search</a></li><li class="chapter-item expanded "><a href="../classes/object.html"><strong aria-hidden="true">10.2.</strong> Object</a></li><li class="chapter-item expanded "><a href="../classes/class.html"><strong aria-hidden="true">10.3.</strong> Class</a></li><li class="chapter-item expanded "><a href="../classes/string.html"><strong aria-hidden="true">10.4.</strong> String</a></li><li class="chapter-item expanded "><a href="../classes/method.html"><strong aria-hidden="true">10.5.</strong> Method</a></li><li class="chapter-item expanded "><a href="../classes/routine.html"><strong aria-hidden="true">10.6.</strong> Routine</a></li><li class="chapter-item expanded "><a href="../classes/package.html"><strong aria-hidden="true">10.7.</strong> Package</a></li><li class="chapter-item expanded "><a href="../classes/message.html"><strong aria-hidden="true">10.8.</strong> Message</a></li><li class="chapter-item expanded "><a href="../classes/messagenotification.html"><strong aria-hidden="true">10.9.</strong> MessageNotification</a></li><li class="chapter-item expanded "><a href="../classes/alarmnotification.html"><strong aria-hidden="true">10.10.</strong> AlarmNotification</a></li><li class="chapter-item expanded "><a href="../classes/collection.html"><strong aria-hidden="true">10.11.</strong> Collection</a></li><li class="chapter-item expanded "><a href="../classes/mapcollection.html"><strong aria-hidden="true">10.12.</strong> MapCollection</a></li><li class="chapter-item expanded "><a href="../classes/orderedcollection.html"><strong aria-hidden="true">10.13.</strong> OrderedCollection</a></li><li class="chapter-item expanded "><a href="../classes/setcollection.html"><strong aria-hidden="true">10.14.</strong> SetCollection</a></li><li class="chapter-item expanded "><a href="../classes/array.html"><strong aria-hidden="true">10.15.</strong> Array</a></li><li class="chapter-item expanded "><a href="../classes/list.html"><strong aria-hidden="true">10.16.</strong> List</a></li><li class="chapter-item expanded "><a href="../classes/queue.html"><strong aria-hidden="true">10.17.</strong> Queue</a></li><li class="chapter-item expanded "><a href="../classes/circularqueue.html"><strong aria-hidden="true">10.18.</strong> CircularQueue</a></li><li class="chapter-item expanded "><a href="../classes/directory.html"><strong aria-hidden="true">10.19.</strong> Directory</a></li><li class="chapter-item expanded "><a href="../classes/stringtable.html"><strong aria-hidden="true">10.20.</strong> StringTable</a></li><li class="chapter-item expanded "><a href="../classes/properties.html"><strong aria-hidden="true">10.21.</strong> Properties</a></li><li class="chapter-item expanded "><a href="../classes/table.html"><strong aria-hidden="true">10.22.</strong> Table</a></li><li class="chapter-item expanded "><a href="../classes/identitytable.html"><strong aria-hidden="true">10.23.</strong> IdentityTable</a></li><li class="chapter-item expanded "><a href="../classes/relation.html"><strong aria-hidden="true">10.24.</strong> Relation</a></li><li class="chapter-item expanded "><a href="../classes/bag.html"><strong aria-hidden="true">10.25.</strong> Bag</a></li><li class="chapter-item expanded "><a href="../classes/set.html"><strong aria-hidden="true">10.26.</strong> Set</a></li><li class="chapter-item expanded "><a href="../classes/stem.html"><strong aria-hidden="true">10.27.</strong> Stem</a></li><li class="chapter-item expanded "><a href="../classes/datetime.html"><strong aria-hidden="true">10.28.</strong> DateTime</a></li><li class="chapter-item expanded "><a href="../classes/timespan.html"><strong aria-hidden="true">10.29.</strong> TimeSpan</a></li><li class="chapter-item expanded "><a href="../classes/comparable.html"><strong aria-hidden="true">10.30.</strong> Comparable</a></li><li class="chapter-item expanded "><a href="../classes/orderable.html"><strong aria-hidden="true">10.31.</strong> Orderable</a></li><li class="chapter-item expanded "><a href="../classes/comparators.html"><strong aria-hidden="true">10.32.</strong> Comparators</a></li><li class="chapter-item expanded "><a href="../classes/mutablebuffer.html"><strong aria-hidden="true">10.33.</strong> MutableBuffer</a></li><li class="chapter-item expanded "><a href="../classes/buffer.html"><strong aria-hidden="true">10.34.</strong> Buffer</a></li><li class="chapter-item expanded "><a href="../classes/pointer.html"><strong aria-hidden="true">10.35.</strong> Pointer</a></li><li class="chapter-item expanded "><a href="../classes/weakreference.html"><strong aria-hidden="true">10.36.</strong> WeakReference</a></li><li class="chapter-item expanded "><a href="../classes/variablereference.html"><strong aria-hidden="true">10.37.</strong> VariableReference</a></li><li class="chapter-item expanded "><a href="../classes/file.html"><strong aria-hidden="true">10.38.</strong> File</a></li><li class="chapter-item expanded "><a href="../classes/rexxcontext.html"><strong aria-hidden="true">10.39.</strong> RexxContext</a></li><li class="chapter-item expanded "><a href="../classes/stackframe.html"><strong aria-hidden="true">10.40.</strong> StackFrame</a></li><li class="chapter-item expanded "><a href="../classes/rexxinfo.html"><strong aria-hidden="true">10.41.</strong> RexxInfo</a></li><li class="chapter-item expanded "><a href="../classes/traceobject.html"><strong aria-hidden="true">10.42.</strong> TraceObject</a></li><li class="chapter-item expanded "><a href="../classes/validate.html"><strong aria-hidden="true">10.43.</strong> Validate</a></li><li class="chapter-item expanded "><a href="../classes/singleton.html"><strong aria-hidden="true">10.44.</strong> Singleton</a></li><li class="chapter-item expanded "><a href="../classes/alarm.html"><strong aria-hidden="true">10.45.</strong> Alarm</a></li><li class="chapter-item expanded "><a href="../classes/ticker.html"><strong aria-hidden="true">10.46.</strong> Ticker</a></li><li class="chapter-item expanded "><a href="../classes/monitor.html"><strong aria-hidden="true">10.47.</strong> Monitor</a></li><li class="chapter-item expanded "><a href="../classes/eventsemaphore.html"><strong aria-hidden="true">10.48.</strong> EventSemaphore</a></li><li class="chapter-item expanded "><a href="../classes/mutexsemaphore.html"><strong aria-hidden="true">10.49.</strong> MutexSemaphore</a></li><li class="chapter-item expanded "><a href="../classes/commandhandler.html"><strong aria-hidden="true">10.50.</strong> CommandHandler</a></li><li class="chapter-item expanded "><a href="../classes/nativecommandhandler.html"><strong aria-hidden="true">10.51.</strong> NativeCommandHandler</a></li><li class="chapter-item expanded "><a href="../classes/commandcontext.html"><strong aria-hidden="true">10.52.</strong> CommandContext</a></li><li class="chapter-item expanded "><a href="../classes/commandinput.html"><strong aria-hidden="true">10.53.</strong> CommandInput</a></li><li class="chapter-item expanded "><a href="../classes/commandoutput.html"><strong aria-hidden="true">10.54.</strong> CommandOutput</a></li><li class="chapter-item expanded "><a href="../classes/rexxqueue.html"><strong aria-hidden="true">10.55.</strong> RexxQueue</a></li><li class="chapter-item expanded "><a href="../classes/supplier.html"><strong aria-hidden="true">10.56.</strong> Supplier</a></li><li class="chapter-item expanded "><a href="../classes/streamsupplier.html"><strong aria-hidden="true">10.57.</strong> StreamSupplier</a></li><li class="chapter-item expanded "><a href="../classes/regularexpression.html"><strong aria-hidden="true">10.58.</strong> RegularExpression</a></li><li class="chapter-item expanded "><a href="../classes/stream.html"><strong aria-hidden="true">10.59.</strong> Stream</a></li><li class="chapter-item expanded "><a href="../classes/inputstream.html"><strong aria-hidden="true">10.60.</strong> InputStream</a></li><li class="chapter-item expanded "><a href="../classes/outputstream.html"><strong aria-hidden="true">10.61.</strong> OutputStream</a></li><li class="chapter-item expanded "><a href="../classes/inputoutputstream.html"><strong aria-hidden="true">10.62.</strong> InputOutputStream</a></li></ol></li><li class="chapter-item expanded "><a href="../environment/index.html"><strong aria-hidden="true">11.</strong> Environment</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../environment/objects.html"><strong aria-hidden="true">11.1.</strong> Environment objects</a></li><li class="chapter-item expanded "><a href="../environment/invocation.html"><strong aria-hidden="true">11.2.</strong> Invocation</a></li><li class="chapter-item expanded "><a href="../environment/search.html"><strong aria-hidden="true">11.3.</strong> Search</a></li><li class="chapter-item expanded "><a href="../environment/commands.html"><strong aria-hidden="true">11.4.</strong> Command environments</a></li><li class="chapter-item expanded "><a href="../environment/security.html" class="active"><strong aria-hidden="true">11.5.</strong> Security manager</a></li><li class="chapter-item expanded "><a href="../environment/debugging.html"><strong aria-hidden="true">11.6.</strong> Debugging</a></li></ol></li><li class="chapter-item expanded "><a href="../builtins/index.html"><strong aria-hidden="true">12.</strong> Built-in functions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../builtins/abbrev.html"><strong aria-hidden="true">12.1.</strong> ABBREV</a></li><li class="chapter-item expanded "><a href="../builtins/abs.html"><strong aria-hidden="true">12.2.</strong> ABS</a></li><li class="chapter-item expanded "><a href="../builtins/address.html"><strong aria-hidden="true">12.3.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../builtins/arg.html"><strong aria-hidden="true">12.4.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../builtins/b2x.html"><strong aria-hidden="true">12.5.</strong> B2X</a></li><li class="chapter-item expanded "><a href="../builtins/beep.html"><strong aria-hidden="true">12.6.</strong> BEEP</a></li><li class="chapter-item expanded "><a href="../builtins/bitand.html"><strong aria-hidden="true">12.7.</strong> BITAND</a></li><li class="chapter-item expanded "><a href="../builtins/bitor.html"><strong aria-hidden="true">12.8.</strong> BITOR</a></li><li class="chapter-item expanded "><a href="../builtins/bitxor.html"><strong aria-hidden="true">12.9.</strong> BITXOR</a></li><li class="chapter-item expanded "><a href="../builtins/c2d.html"><strong aria-hidden="true">12.10.</strong> C2D</a></li><li class="chapter-item expanded "><a href="../builtins/c2x.html"><strong aria-hidden="true">12.11.</strong> C2X</a></li><li class="chapter-item expanded "><a href="../builtins/center.html"><strong aria-hidden="true">12.12.</strong> CENTER</a></li><li class="chapter-item expanded "><a href="../builtins/changestr.html"><strong aria-hidden="true">12.13.</strong> CHANGESTR</a></li><li class="chapter-item expanded "><a href="../builtins/charin.html"><strong aria-hidden="true">12.14.</strong> CHARIN</a></li><li class="chapter-item expanded "><a href="../builtins/charout.html"><strong aria-hidden="true">12.15.</strong> CHAROUT</a></li><li class="chapter-item expanded "><a href="../builtins/chars.html"><strong aria-hidden="true">12.16.</strong> CHARS</a></li><li class="chapter-item expanded "><a href="../builtins/compare.html"><strong aria-hidden="true">12.17.</strong> COMPARE</a></li><li class="chapter-item expanded "><a href="../builtins/condition.html"><strong aria-hidden="true">12.18.</strong> CONDITION</a></li><li class="chapter-item expanded "><a href="../builtins/copies.html"><strong aria-hidden="true">12.19.</strong> COPIES</a></li><li class="chapter-item expanded "><a href="../builtins/countstr.html"><strong aria-hidden="true">12.20.</strong> COUNTSTR</a></li><li class="chapter-item expanded "><a href="../builtins/d2c.html"><strong aria-hidden="true">12.21.</strong> D2C</a></li><li class="chapter-item expanded "><a href="../builtins/d2x.html"><strong aria-hidden="true">12.22.</strong> D2X</a></li><li class="chapter-item expanded "><a href="../builtins/datatype.html"><strong aria-hidden="true">12.23.</strong> DATATYPE</a></li><li class="chapter-item expanded "><a href="../builtins/date.html"><strong aria-hidden="true">12.24.</strong> DATE</a></li><li class="chapter-item expanded "><a href="../builtins/delstr.html"><strong aria-hidden="true">12.25.</strong> DELSTR</a></li><li class="chapter-item expanded "><a href="../builtins/delword.html"><strong aria-hidden="true">12.26.</strong> DELWORD</a></li><li class="chapter-item expanded "><a href="../builtins/digits.html"><strong aria-hidden="true">12.27.</strong> DIGITS</a></li><li class="chapter-item expanded "><a href="../builtins/directory.html"><strong aria-hidden="true">12.28.</strong> DIRECTORY</a></li><li class="chapter-item expanded "><a href="../builtins/endlocal.html"><strong aria-hidden="true">12.29.</strong> ENDLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/errortext.html"><strong aria-hidden="true">12.30.</strong> ERRORTEXT</a></li><li class="chapter-item expanded "><a href="../builtins/filespec.html"><strong aria-hidden="true">12.31.</strong> FILESPEC</a></li><li class="chapter-item expanded "><a href="../builtins/form.html"><strong aria-hidden="true">12.32.</strong> FORM</a></li><li class="chapter-item expanded "><a href="../builtins/format.html"><strong aria-hidden="true">12.33.</strong> FORMAT</a></li><li class="chapter-item expanded "><a href="../builtins/fuzz.html"><strong aria-hidden="true">12.34.</strong> FUZZ</a></li><li class="chapter-item expanded "><a href="../builtins/gc.html"><strong aria-hidden="true">12.35.</strong> GC</a></li><li class="chapter-item expanded "><a href="../builtins/insert.html"><strong aria-hidden="true">12.36.</strong> INSERT</a></li><li class="chapter-item expanded "><a href="../builtins/lastpos.html"><strong aria-hidden="true">12.37.</strong> LASTPOS</a></li><li class="chapter-item expanded "><a href="../builtins/left.html"><strong aria-hidden="true">12.38.</strong> LEFT</a></li><li class="chapter-item expanded "><a href="../builtins/length.html"><strong aria-hidden="true">12.39.</strong> LENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/linein.html"><strong aria-hidden="true">12.40.</strong> LINEIN</a></li><li class="chapter-item expanded "><a href="../builtins/lineout.html"><strong aria-hidden="true">12.41.</strong> LINEOUT</a></li><li class="chapter-item expanded "><a href="../builtins/lines.html"><strong aria-hidden="true">12.42.</strong> LINES</a></li><li class="chapter-item expanded "><a href="../builtins/lower.html"><strong aria-hidden="true">12.43.</strong> LOWER</a></li><li class="chapter-item expanded "><a href="../builtins/max.html"><strong aria-hidden="true">12.44.</strong> MAX</a></li><li class="chapter-item expanded "><a href="../builtins/min.html"><strong aria-hidden="true">12.45.</strong> MIN</a></li><li class="chapter-item expanded "><a href="../builtins/overlay.html"><strong aria-hidden="true">12.46.</strong> OVERLAY</a></li><li class="chapter-item expanded "><a href="../builtins/pos.html"><strong aria-hidden="true">12.47.</strong> POS</a></li><li class="chapter-item expanded "><a href="../builtins/qualify.html"><strong aria-hidden="true">12.48.</strong> QUALIFY</a></li><li class="chapter-item expanded "><a href="../builtins/queued.html"><strong aria-hidden="true">12.49.</strong> QUEUED</a></li><li class="chapter-item expanded "><a href="../builtins/random.html"><strong aria-hidden="true">12.50.</strong> RANDOM</a></li><li class="chapter-item expanded "><a href="../builtins/reverse.html"><strong aria-hidden="true">12.51.</strong> REVERSE</a></li><li class="chapter-item expanded "><a href="../builtins/right.html"><strong aria-hidden="true">12.52.</strong> RIGHT</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncadd.html"><strong aria-hidden="true">12.53.</strong> RXFUNCADD</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncdrop.html"><strong aria-hidden="true">12.54.</strong> RXFUNCDROP</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncquery.html"><strong aria-hidden="true">12.55.</strong> RXFUNCQUERY</a></li><li class="chapter-item expanded "><a href="../builtins/rxqueue.html"><strong aria-hidden="true">12.56.</strong> RXQUEUE</a></li><li class="chapter-item expanded "><a href="../builtins/setlocal.html"><strong aria-hidden="true">12.57.</strong> SETLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/sign.html"><strong aria-hidden="true">12.58.</strong> SIGN</a></li><li class="chapter-item expanded "><a href="../builtins/sourceline.html"><strong aria-hidden="true">12.59.</strong> SOURCELINE</a></li><li class="chapter-item expanded "><a href="../builtins/space.html"><strong aria-hidden="true">12.60.</strong> SPACE</a></li><li class="chapter-item expanded "><a href="../builtins/stream.html"><strong aria-hidden="true">12.61.</strong> STREAM</a></li><li class="chapter-item expanded "><a href="../builtins/strip.html"><strong aria-hidden="true">12.62.</strong> STRIP</a></li><li class="chapter-item expanded "><a href="../builtins/substr.html"><strong aria-hidden="true">12.63.</strong> SUBSTR</a></li><li class="chapter-item expanded "><a href="../builtins/subword.html"><strong aria-hidden="true">12.64.</strong> SUBWORD</a></li><li class="chapter-item expanded "><a href="../builtins/symbol.html"><strong aria-hidden="true">12.65.</strong> SYMBOL</a></li><li class="chapter-item expanded "><a href="../builtins/time.html"><strong aria-hidden="true">12.66.</strong> TIME</a></li><li class="chapter-item expanded "><a href="../builtins/trace.html"><strong aria-hidden="true">12.67.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../builtins/translate.html"><strong aria-hidden="true">12.68.</strong> TRANSLATE</a></li><li class="chapter-item expanded "><a href="../builtins/trunc.html"><strong aria-hidden="true">12.69.</strong> TRUNC</a></li><li class="chapter-item expanded "><a href="../builtins/upper.html"><strong aria-hidden="true">12.70.</strong> UPPER</a></li><li class="chapter-item expanded "><a href="../builtins/userid.html"><strong aria-hidden="true">12.71.</strong> USERID</a></li><li class="chapter-item expanded "><a href="../builtins/value.html"><strong aria-hidden="true">12.72.</strong> VALUE</a></li><li class="chapter-item expanded "><a href="../builtins/var.html"><strong aria-hidden="true">12.73.</strong> VAR</a></li><li class="chapter-item expanded "><a href="../builtins/verify.html"><strong aria-hidden="true">12.74.</strong> VERIFY</a></li><li class="chapter-item expanded "><a href="../builtins/word.html"><strong aria-hidden="true">12.75.</strong> WORD</a></li><li class="chapter-item expanded "><a href="../builtins/wordindex.html"><strong aria-hidden="true">12.76.</strong> WORDINDEX</a></li><li class="chapter-item expanded "><a href="../builtins/wordlength.html"><strong aria-hidden="true">12.77.</strong> WORDLENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/wordpos.html"><strong aria-hidden="true">12.78.</strong> WORDPOS</a></li><li class="chapter-item expanded "><a href="../builtins/words.html"><strong aria-hidden="true">12.79.</strong> WORDS</a></li><li class="chapter-item expanded "><a href="../builtins/x2b.html"><strong aria-hidden="true">12.80.</strong> X2B</a></li><li class="chapter-item expanded "><a href="../builtins/x2c.html"><strong aria-hidden="true">12.81.</strong> X2C</a></li><li class="chapter-item expanded "><a href="../builtins/x2d.html"><strong aria-hidden="true">12.82.</strong> X2D</a></li><li class="chapter-item expanded "><a href="../builtins/xrange.html"><strong aria-hidden="true">12.83.</strong> XRANGE</a></li></ol></li><li class="chapter-item expanded "><a href="../deviations.html"><strong aria-hidden="true">13.</strong> Deviations</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The interrexx Language Specification</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="security-manager"><a class="header" href="#security-manager">Security manager</a></h1>
+<p class="references">rexxref: The Security Manager; The Security Manager &gt; Calls to the Security Manager; Builtin Classes &gt; Fundamental Classes &gt; Routine Class &gt; setSecurityManager; Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; setSecurityManager; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; setSecurityManager</p>
+<p>A program can run code that it does not trust, and a security manager is the
+way to keep that code inside bounds. The manager is an object of the
+program's own. The interpreter asks it before the untrusted code does any of
+a short list of things: calls a routine that lives outside the code, runs a
+command, loads a file of Rexx code, reads a name from <code>.local</code> or
+<code>.environment</code>, names a stream, or sends a message to a protected method. The
+manager can let the action go on, can do it in its place, or can raise an
+error.</p>
+<p>The class pages own the methods that set a manager, and they own the rules of
+each checkpoint that are tied to a class: <a href="../classes/routine.html#r-class.routine.setsecuritymanager"><code>setSecurityManager</code> of
+<code>Routine</code></a>, of
+<a href="../classes/method.html#r-class.method.setsecuritymanager"><code>Method</code></a> and of
+<a href="../classes/package.html#r-class.package.setsecuritymanager"><code>Package</code></a>, and <a href="../classes/routine.html#r-class.routine.setsecuritymanager.checkpoints">the checkpoint
+rules</a> that follow the first
+of them. This page ties those rules into one model: what a manager belongs to
+and which code it governs, when a change of manager takes effect, what each
+checkpoint sends and what its answer does, and what the code that is governed
+sees when a manager answers with something wrong. A rule here links the class
+rule it extends and states only the part that rule leaves out.</p>
+<p>The examples call the code that they govern through <code>Routine</code> objects and
+<code>Package</code> objects that they make from source text, so that the code is
+another package than the example. Where a command is run, it is <code>exit</code> with a
+number, which writes nothing and answers the number in <code>rc</code>.</p>
+<h2 id="the-checkpoints"><a class="header" href="#the-checkpoints">The checkpoints</a></h2>
+<div class="rule" id="r-env.security.model"><a href="#r-env.security.model">[env.security.model]</a></div>
+<p>A security manager is any object. Each checkpoint is a message that the
+interpreter sends to it, named for the checkpoint: <code>CALL</code>, <code>COMMAND</code>,
+<code>REQUIRES</code>, <code>LOCAL</code>, <code>ENVIRONMENT</code>, <code>STREAM</code> and <code>METHOD</code>. The message has one
+argument, a <code>Directory</code> that the interpreter makes for that message and that
+holds the entries that the checkpoint names. The indexes of the entries are in
+upper case, and the interpreter reads only entries stored under those
+spellings: an entry stored under <code>'result'</code> is not the entry <code>RESULT</code> (<a href="#r-env.security.call">the
+example of the call rule</a> shows it). The entries are
+<code>NAME</code> and <code>ARGUMENTS</code> for <code>CALL</code>, and the manager may set <code>RESULT</code>; <code>COMMAND</code>
+and <code>ADDRESS</code> for <code>COMMAND</code>, and the manager may set <code>RC</code>, <code>FAILURE</code> and
+<code>ERROR</code>; <code>NAME</code> for <code>REQUIRES</code>, which the manager may replace, and it may set
+<code>SECURITYMANAGER</code>; <code>NAME</code> for <code>LOCAL</code> and for <code>ENVIRONMENT</code>, and the manager
+may set <code>RESULT</code>; <code>NAME</code> for <code>STREAM</code>, and the manager sets <code>STREAM</code>;
+<code>OBJECT</code>, <code>NAME</code> and <code>ARGUMENTS</code> for <code>METHOD</code>, and the manager may set
+<code>RESULT</code>. The manager answers <code>0</code>, which lets the action go on as if there
+were no manager, or <code>1</code>, which says that it dealt with the action and that the
+interpreter is to take what the action needs from the entries; any other
+answer is an error (<a href="#r-env.security.answer">the answer rule</a>). A manager that
+has no method of the name of the checkpoint is sent <code>UNKNOWN</code> as every object
+is, with the name and an array of the one argument (<a href="../classes/routine.html#r-class.routine.setsecuritymanager.checkpoints">the checkpoint
+rule</a>). The clause of the
+governed code that reached the checkpoint goes on only when the manager has
+answered. In the example, a routine reaches every checkpoint once. The manager
+writes the name of each message it is sent and the indexes of the entries of
+its directory; it answers the first two itself and the others with <code>0</code>.</p>
+<pre><code class="language-rexx">call sysfiledelete 'envsec_m1.tmp'
+call sysfiledelete 'envsec_m2.tmp'
+call lineout 'envsec_m1.tmp', 'first line'
+call lineout 'envsec_m1.tmp'
+call lineout 'envsec_m2.tmp', 'nop'
+call lineout 'envsec_m2.tmp'
+src = 'say envsecfun(1, 2)'
+src = src || '; address system "exit 3"; say rc'
+src = src || '; say .envsecname'
+src = src || '; say linein("envsec_m1.tmp")'
+src = src || '; say .package~new("envsec_m2.tmp")~class~id'
+src = src || '; say .box~new~locked(7)'
+r = .routine~new('agent', src)
+r~setSecurityManager(.mgr~new)
+r~call
+call sysfiledelete 'envsec_m1.tmp'
+call sysfiledelete 'envsec_m2.tmp'
+exit
+::class box
+::method locked protected
+  return 'ran'
+::class mgr
+::method call
+  use arg info
+  say 'CALL' entries(info) info~name info~arguments~items
+  info~result = 'handled'
+  return .true
+::method command
+  use arg info
+  say 'COMMAND' entries(info) info~address info~command
+  info~rc = 5
+  return 1
+::method unknown
+  use arg name, args
+  say name entries(args[1])
+  return .false
+::routine entries
+  return arg(1)~allIndexes~sort~makearray~makestring('l', ',')
+</code></pre>
+<pre><code class="language-output">CALL ARGUMENTS,NAME ENVSECFUN 2
+handled
+COMMAND ADDRESS,COMMAND SYSTEM exit 3
+5
+LOCAL NAME
+ENVIRONMENT NAME
+.ENVSECNAME
+STREAM NAME
+first line
+REQUIRES NAME
+REQUIRES NAME
+Package
+METHOD ARGUMENTS,NAME,OBJECT
+ran
+</code></pre>
+<h2 id="what-a-manager-governs"><a class="header" href="#what-a-manager-governs">What a manager governs</a></h2>
+<div class="rule" id="r-env.security.set"><a href="#r-env.security.set">[env.security.set]</a></div>
+<p>A manager belongs to a package. <code>setSecurityManager</code> of a <code>Package</code> sets the
+manager of that package. <code>setSecurityManager</code> of a <code>Routine</code> or a <code>Method</code>
+sets the manager of the package that holds its code, so a routine or method
+that <code>new</code> or <code>newFile</code> made, which has a package of its own, is governed
+alone, and several routines and methods that one package holds share one
+manager: setting it through one of them replaces what was set through another,
+and a call with no argument through any of them removes the manager from the
+code of all. In the example, the routine and the method of one package are
+governed by the manager of the package, then by the one the routine sets, then
+by the one the method sets, and the call with no argument through the method
+leaves the package with none, so that both run their commands.</p>
+<pre><code class="language-rexx">src = .array~of('::routine zqr public', '  address system "exit 1"', -
+  '  return rc', '::class zqk public', '::method m', -
+  '  address system "exit 2"', '  return rc')
+p = .package~new('envsec_set', src)
+r = p~findRoutine('ZQR')
+m = p~findClass('ZQK')~method('M')
+k = p~findClass('ZQK')~new
+p~setSecurityManager(.mgr~new('package'))
+say 'package:' r~call k~m
+r~setSecurityManager(.mgr~new('routine'))
+say 'by the routine:' r~call k~m
+m~setSecurityManager(.mgr~new('method'))
+say 'by the method:' r~call k~m
+m~setSecurityManager
+say 'removed:' r~call k~m
+exit
+::class mgr
+::method init
+  expose tag
+  use arg tag
+::method command
+  expose tag
+  use arg info
+  say tag 'manager:' info~command
+  info~rc = 7
+  return 1
+</code></pre>
+<pre><code class="language-output">package manager: exit 1
+package manager: exit 2
+package: 7 7
+routine manager: exit 1
+routine manager: exit 2
+by the routine: 7 7
+method manager: exit 1
+method manager: exit 2
+by the method: 7 7
+removed: 1 2
+</code></pre>
+<div class="rule" id="r-env.security.scope"><a href="#r-env.security.scope">[env.security.scope]</a></div>
+<p>The code of a package is governed by the manager of the package, wherever it
+runs: the main code, the routines, the labels that these call, the text that
+<code>INTERPRET</code> runs for them, the methods of the classes, and what these run on
+another activity, which is a method that <code>start</code> or a started <code>Message</code> runs,
+and the rest of a method after <code>REPLY</code>.
+Code of another package is not governed, whoever calls it: a routine of the
+program that made the package, a routine of a package that it requires, an
+external program that it calls. These run under the manager of their own
+package, or under none. A package that the governed code makes with <code>new</code> or
+<code>loadPackage</code> has no manager unless <a href="#r-env.security.requires">the <code>REQUIRES</code>
+rule</a> gives it one. A routine of a governed package
+that other code calls is governed as it runs: what is governed is the code,
+not its caller. In the example, the package has a routine with a label, a
+class whose method runs directly and as two started messages, and a required
+file. The manager answers each command with its number plus 100, so that the
+commands that reach it show as three-digit codes, and the command in the
+required file, which does not reach it, shows its own number.</p>
+<pre><code class="language-rexx">call sysfiledelete 'envsec_other.tmp'
+call lineout 'envsec_other.tmp', '::routine envsecother public'
+call lineout 'envsec_other.tmp', '  address system "exit 6"'
+call lineout 'envsec_other.tmp', '  return rc'
+call lineout 'envsec_other.tmp'
+src = .array~of('::requires "envsec_other.tmp"', -
+  '::routine inpkg public', -
+  '  address system "exit 1"; r = rc', -
+  '  call lab; r = r result', -
+  '  interpret "address system ""exit 3""; r = r rc"', -
+  '  o = .zqk~new; r = r o~run(4)', -
+  '  r = r o~start("run", 5)~result', -
+  '  m = .message~new(o, "run", "i", 6); m~start; r = r m~result', -
+  '  return r envsecother()', -
+  'lab: address system "exit 2"; return rc', -
+  '::class zqk', -
+  '::method run unguarded', -
+  '  use arg n', -
+  '  address system "exit" n', -
+  '  return rc')
+p = .package~new('envsec_scope', src)
+p~setSecurityManager(.mgr~new)
+say p~findRoutine('INPKG')~call
+call sysfiledelete 'envsec_other.tmp'
+exit
+::class mgr
+::method command
+  use arg info
+  info~rc = 100 + word(info~command, 2)
+  return 1
+::method unknown
+  return 0
+</code></pre>
+<pre><code class="language-output">101 102 103 104 105 106 6
+</code></pre>
+<div class="rule" id="r-env.security.run"><a href="#r-env.security.run">[env.security.run]</a></div>
+<p>A manager that is set, replaced or removed while code of the package is
+running does not move the run that is going on, except for the two name
+checkpoints. A run is a call of a routine, a run of a method, or the main code
+of a program, and the labels that it calls and the text that it runs by
+<code>INTERPRET</code> are part of it. It takes the
+manager that its package has when it starts, and sends <code>CALL</code>, <code>COMMAND</code>,
+<code>REQUIRES</code>, <code>STREAM</code> and <code>METHOD</code> to that manager until it ends: a manager
+that the run removes or replaces keeps being asked, and a package that had no
+manager when the run started is not asked about them, whatever the run sets.
+(A run changes its manager by a message to a protected method, which is itself
+a <a href="#r-env.security.method"><code>METHOD</code> checkpoint</a>.) <code>LOCAL</code> and <code>ENVIRONMENT</code>
+look at the manager that the package has when the name is read, so they follow
+a change at once. A run that starts after the change takes the manager that
+the package has by then. In the first example the routine replaces its manager
+<code>old</code> by <code>new</code> after its first command: its second command still goes to <code>old</code>
+and the name goes to <code>new</code>, and a second call of the routine, which starts
+with <code>new</code>, sends everything to <code>new</code>. In the second example the program
+governs itself. Its own run was already going when the manager was set, so its
+commands and its label are not sent to the manager and its name lookups are; a
+routine of the program, which starts after the change, is governed.</p>
+<pre><code class="language-rexx">src = 'address system "exit 1";'
+src = src '.context~package~setSecurityManager(.mgr~new("new"));'
+src = src 'address system "exit 2"; say .envsecname'
+r = .routine~new('agent', src)
+r~setSecurityManager(.mgr~new('old'))
+say 'first run'
+r~call
+say 'second run'
+r~call
+exit
+::class mgr
+::method init
+  expose tag
+  use arg tag
+::method command
+  expose tag
+  use arg info
+  say tag 'COMMAND' info~command
+  info~rc = 0
+  return 1
+::method local
+  expose tag
+  use arg info
+  if info~name = 'ENVSECNAME' then say tag 'LOCAL' info~name
+  return 0
+::method unknown
+  return 0
+</code></pre>
+<pre><code class="language-output">first run
+old COMMAND exit 1
+old COMMAND exit 2
+new LOCAL ENVSECNAME
+.ENVSECNAME
+second run
+new COMMAND exit 1
+new COMMAND exit 2
+new LOCAL ENVSECNAME
+.ENVSECNAME
+</code></pre>
+<pre><code class="language-rexx">.context~package~setSecurityManager(.mgr~new)
+address system 'exit 4'
+say 'no manager yet:' rc
+say .envsecname
+call lab
+call later
+exit
+lab:
+  address system 'exit 5'
+  say 'label:' rc
+  return
+::routine later
+  address system 'exit 6'
+  say 'routine:' rc
+::class mgr
+::method command
+  use arg info
+  say 'manager got' info~command
+  info~rc = 9
+  return 1
+::method local
+  use arg info
+  if info~name = 'ENVSECNAME' then do
+    info~result = 'provided'
+    return 1
+  end
+  return 0
+::method unknown
+  return 0
+</code></pre>
+<pre><code class="language-output">no manager yet: 4
+provided
+label: 5
+manager got exit 6
+routine: 9
+</code></pre>
+<div class="rule" id="r-env.security.own"><a href="#r-env.security.own">[env.security.own]</a></div>
+<p>The methods of a manager are code of the package that defines the manager's
+class. When that package is the governed one, the manager is governed too: a
+command that one of its methods runs is a checkpoint, and the manager is sent
+it. Nothing ends the repetition but the manager itself. In the example the
+<code>command</code> method of the manager counts the commands it is sent and runs one
+more while the count is below three.</p>
+<pre><code class="language-rexx">src = .array~of('::class zqm public', '::attribute depth public', -
+  '::method init', '  self~depth = 0', '::method command', -
+  '  use arg info', '  self~depth = self~depth + 1', -
+  '  say "command" self~depth info~command', -
+  '  if self~depth &lt; 3 then address system "exit" self~depth + 10', -
+  '  info~rc = 0', '  return 1', -
+  '::routine zqgo public', '  address system "exit 1"')
+p = .package~new('envsec_own', src)
+p~setSecurityManager(p~findClass('ZQM')~new)
+p~findRoutine('ZQGO')~call
+</code></pre>
+<pre><code class="language-output">command 1 exit 1
+command 2 exit 11
+command 3 exit 12
+</code></pre>
+<h2 id="the-checkpoints-in-detail"><a class="header" href="#the-checkpoints-in-detail">The checkpoints in detail</a></h2>
+<div class="rule" id="r-env.security.call"><a href="#r-env.security.call">[env.security.call]</a></div>
+<p>The <code>CALL</code> checkpoint is sent as <a href="../classes/routine.html#r-class.routine.setsecuritymanager.call">the class
+rule</a> says, and also for the built-in
+functions <code>BEEP</code>, <code>DIRECTORY</code> and <code>FILESPEC</code>, which are offered like external
+routines. No other built-in function is offered, and the stream functions have
+<a href="#r-env.security.stream">their own checkpoint</a>. A function of RexxUtil is
+offered like one of a library, and so is a program file that the search finds,
+at every call that finds it; the program that then runs is code of another
+package and is not governed. <code>NAME</code> is the name as <a href="../instructions/call.html#r-instr.call.search">the call
+rule</a> reads it: in capitals for a symbol, as it is
+written for a string. <code>ARGUMENTS</code> is an array with one position for each
+argument up to the last one that was written: an argument that was left out in
+the middle is an absent position, and arguments left out at the end are not
+counted, so the call <code>f(1, , "x")</code> has size 3 and two items and <code>f( , )</code> has
+size 0. A manager that answers <code>1</code> takes the call over, and the value of its
+<code>RESULT</code> entry is the value of the call, <code>.nil</code> included. With no entry a
+function call raises <code>SYNTAX 44.1</code>, and a <code>CALL</code> instruction leaves the
+variable <code>RESULT</code> dropped, as <a href="../instructions/call.html#r-instr.call.result">a call that returns no
+value</a> does. A manager that answers <code>0</code> lets the search
+go on, and nothing it set in the directory counts: a name that the search does
+not find raises <code>SYNTAX 43.1</code> although <code>RESULT</code> was set, and a changed <code>NAME</code>
+does not change the routine that is searched for. The first example shows the
+name and the arguments, and each way that a call ends. In the second, each
+built-in function of this book is called once and the manager notes the names
+it is sent; it takes those calls over, so that nothing runs. In the third, a
+program file is offered at each of two calls, and the command in it is not,
+and so is a function of RexxUtil.</p>
+<pre><code class="language-rexx">tests = .array~of('return envsecfun(1, , "x")', -
+  'call "EnvSecMix" 2; return result', -
+  'call envsecnone; return symbol("RESULT")', -
+  'return envsecnil() == .nil', 'return envsecnone()', -
+  'return envsecpoor()', 'return envsecpass()')
+do t over tests
+  src = 'signal on syntax; ' t '; syntax: return "error" condition("o")~code'
+  r = .routine~new('agent', src)
+  r~setSecurityManager(.mgr~new)
+  say t '=&gt;' r~call
+end
+exit
+::class mgr
+::method call
+  use arg info
+  a = info~arguments
+  say '  CALL' info~name a~size a~items
+  select
+    when info~name = 'ENVSECNONE' then return 1
+    when info~name = 'ENVSECNIL' then info~result = .nil
+    when info~name = 'ENVSECPOOR' then info['result'] = 'lower case index'
+    when info~name = 'ENVSECPASS' then do
+      info~result = 'ignored'
+      info~name = 'LENGTH'
+      return 0
+    end
+    otherwise info~result = 'R'
+  end
+  return 1
+</code></pre>
+<pre><code class="language-output">  CALL ENVSECFUN 3 2
+return envsecfun(1, , "x") =&gt; R
+  CALL EnvSecMix 1 1
+call "EnvSecMix" 2; return result =&gt; R
+  CALL ENVSECNONE 0 0
+call envsecnone; return symbol("RESULT") =&gt; LIT
+  CALL ENVSECNIL 0 0
+return envsecnil() == .nil =&gt; 1
+  CALL ENVSECNONE 0 0
+return envsecnone() =&gt; error 44.1
+  CALL ENVSECPOOR 0 0
+return envsecpoor() =&gt; error 44.1
+  CALL ENVSECPASS 0 0
+return envsecpass() =&gt; error 43.1
+</code></pre>
+<pre><code class="language-rexx">names = .array~of('abbrev', 'abs', 'address', 'arg', 'b2x', 'beep', -
+  'bitand', 'bitor', 'bitxor', 'c2d', 'c2x', 'center', 'changestr', -
+  'charin', 'charout', 'chars', 'compare', 'condition', 'copies', -
+  'countstr', 'd2c', 'd2x', 'datatype', 'date', 'delstr', 'delword', -
+  'digits', -
+  'directory', 'endlocal', 'errortext', 'filespec', 'format', 'form', -
+  'fuzz', 'gc', 'insert', 'lastpos', 'left', 'length', 'linein', 'lineout', -
+  'lines', 'lower', 'max', 'min', 'overlay', 'pos', 'qualify', 'queued', -
+  'random', 'reverse', 'right', 'rxfuncadd', 'rxfuncdrop', 'rxfuncquery', -
+  'rxqueue', 'setlocal', 'sign', 'sourceline', 'space', 'stream', 'strip', -
+  'substr', 'subword', 'symbol', 'time', 'trace', 'translate', 'trunc', -
+  'upper', 'userid', 'value', 'var', 'verify', 'wordindex', 'wordlength', -
+  'word', 'wordpos', 'words', 'x2b', 'x2c', 'x2d', 'xrange')
+m = .mgr~new
+do n over names
+  args = '()'
+  if n = 'charout' | n = 'lineout' then args = '("envsecx")'
+  src = 'signal on syntax; x =' n || args'; syntax: return 0'
+  r = .routine~new('agent', src)
+  r~setSecurityManager(m)
+  r~call
+end
+say m~seen~allItems~sort~makearray~makestring('l', ' ')
+exit
+::class mgr
+::attribute seen
+::method init
+  self~seen = .list~new
+::method call
+  use arg info
+  self~seen~append(info~name)
+  info~result = 'R'
+  return 1
+</code></pre>
+<pre><code class="language-output">BEEP DIRECTORY FILESPEC
+</code></pre>
+<pre><code class="language-rexx">call sysfiledelete 'envsecprog.rex'
+prog = 'address system "exit 8"; return "program" arg(1) rc'
+call lineout 'envsecprog.rex', prog
+call lineout 'envsecprog.rex'
+src = 'say envsecprog("x"); call envsecprog "y"; say result;'
+src = src 'address system "exit 9"; say rc;'
+src = src 'say sysfileexists("envsec_nofile")'
+r = .routine~new('agent', src)
+r~setSecurityManager(.mgr~new)
+r~call
+call sysfiledelete 'envsecprog.rex'
+exit
+::class mgr
+::method call
+  use arg info
+  say 'CALL' info~name
+  return 0
+::method command
+  use arg info
+  say 'COMMAND' info~command
+  info~rc = 5
+  return 1
+</code></pre>
+<pre><code class="language-output">CALL ENVSECPROG
+program x 8
+CALL ENVSECPROG
+program y 8
+COMMAND exit 9
+5
+CALL SYSFILEEXISTS
+0
+</code></pre>
+<div class="rule" id="r-env.security.command"><a href="#r-env.security.command">[env.security.command]</a></div>
+<p>The <code>COMMAND</code> checkpoint is sent as <a href="../classes/routine.html#r-class.routine.setsecuritymanager.command">the class
+rule</a> says, for the commands of
+<a href="../instructions/address.html#r-instr.address.command">the <code>ADDRESS</code> instruction</a> and those of a clause
+that is an expression alone. <code>ADDRESS</code> is the name of the environment as the
+clause wrote it: in capitals for a symbol, as it is written for a string.
+<code>COMMAND</code> is the string after its expression is evaluated, and an empty or
+blank string is sent like any other. The directory holds just those two
+entries, also for a command with a <a href="../instructions/address.html#r-instr.address.with.syntax">redirection</a>.
+A manager that answers <code>1</code> takes the redirection over with the command:
+nothing is read from an <code>INPUT</code> source or written to an <code>OUTPUT</code> or <code>ERROR</code>
+target (the third example). A clause that only names an environment sends
+nothing. A command that names no environment is sent with the name of the
+current one, which a program starts with as <a href="commands.html#r-env.commands.initial">the initial environment
+rule</a> says. What the manager sets counts only when it
+answers <code>1</code>. <code>RC</code> is stored in the variable <code>rc</code> as it is,
+whatever it is. <code>FAILURE</code> and <code>ERROR</code> raise their condition whatever their
+value is (<code>0</code> and <code>.false</code> included) and whatever <code>RC</code> is, so an <code>ERROR</code> entry
+with an <code>RC</code> of <code>0</code> raises ERROR with <code>rc</code> <code>0</code>; when both are set, only
+FAILURE is raised. A manager that answers <code>0</code> leaves the command to run as it
+was written, whatever else it set: its <code>RC</code> is not used, and a changed
+<code>COMMAND</code> is not run. In the first example the commands of several clauses are
+shown to the manager. In the second, each line is a manager that answers one
+of the ways above, to a command that would end with <code>rc</code> <code>4</code> and has a handler
+for both conditions.</p>
+<pre><code class="language-rexx">tests = .array~of('address system "exit 1"', 'address "EnvSec" "exit 2"', -
+  'address envsec "exit" 1 + 2', -
+  'address system "exit 4" with output normal', 'address system ""', -
+  'address system "   "', -
+  'o.0 = "untouched"; address system "echo hi" with output stem o.;' -
+  'say o.0', -
+  'address envsec')
+do t over tests
+  say '==' t
+  r = .routine~new('agent', t)
+  r~setSecurityManager(.mgr~new)
+  r~call
+end
+exit
+::class mgr
+::method command
+  use arg info
+  say '  ADDRESS &lt;'info~address'&gt; COMMAND &lt;'info~command'&gt;' -
+    info~allIndexes~sort~makearray~makestring('l', ',')
+  info~rc = 0
+  return 1
+</code></pre>
+<pre><code class="language-output">== address system "exit 1"
+  ADDRESS &lt;SYSTEM&gt; COMMAND &lt;exit 1&gt; ADDRESS,COMMAND
+== address "EnvSec" "exit 2"
+  ADDRESS &lt;EnvSec&gt; COMMAND &lt;exit 2&gt; ADDRESS,COMMAND
+== address envsec "exit" 1 + 2
+  ADDRESS &lt;ENVSEC&gt; COMMAND &lt;exit 3&gt; ADDRESS,COMMAND
+== address system "exit 4" with output normal
+  ADDRESS &lt;SYSTEM&gt; COMMAND &lt;exit 4&gt; ADDRESS,COMMAND
+== address system ""
+  ADDRESS &lt;SYSTEM&gt; COMMAND &lt;&gt; ADDRESS,COMMAND
+== address system "   "
+  ADDRESS &lt;SYSTEM&gt; COMMAND &lt;   &gt; ADDRESS,COMMAND
+== o.0 = "untouched"; address system "echo hi" with output stem o.; say o.0
+  ADDRESS &lt;SYSTEM&gt; COMMAND &lt;echo hi&gt; ADDRESS,COMMAND
+untouched
+== address envsec
+</code></pre>
+<pre><code class="language-rexx">tests = .array~of('RC 7', 'RC text', 'answer 1 only', 'ERROR 0', -
+  'FAILURE and ERROR', 'FAILURE false', 'answer 0 RC', 'answer 0 COMMAND')
+src = 'signal on error name e; signal on failure name f;'
+src = src 'address system "exit 4"; return "rc" rc;'
+src = src 'e: return "error" rc; f: return "failure" rc'
+do i = 1 to tests~items
+  r = .routine~new('agent', src)
+  r~setSecurityManager(.mgr~new(i))
+  say left(tests[i], 20) r~call
+end
+exit
+::class mgr
+::method init
+  expose i
+  use arg i
+::method command
+  expose i
+  use arg info
+  select
+    when i = 1 then info~rc = 7
+    when i = 2 then info~rc = 'abc'
+    when i = 3 then nop
+    when i = 4 then do; info~rc = 0; info~error = 0; end
+    when i = 5 then do; info~rc = 8; info~error = 1; info~failure = 1; end
+    when i = 6 then do; info~rc = 9; info~failure = .false; end
+    when i = 7 then do; info~rc = 3; return 0; end
+    when i = 8 then do; info~command = 'exit 0'; return 0; end
+  end
+  return 1
+</code></pre>
+<pre><code class="language-output">RC 7                 rc 7
+RC text              rc abc
+answer 1 only        rc 0
+ERROR 0              error 0
+FAILURE and ERROR    failure 8
+FAILURE false        failure 9
+answer 0 RC          error 4
+answer 0 COMMAND     error 4
+</code></pre>
+<pre><code class="language-rexx">src = 'i.0 = "bad"; address system "cat" with input stem i.; say "not read"'
+r = .routine~new('agent', src)
+r~setSecurityManager(.mgr~new)
+r~call
+exit
+::class mgr
+::method command
+  return 1
+</code></pre>
+<pre><code class="language-output defect=#226">not read
+</code></pre>
+<div class="rule" id="r-env.security.names"><a href="#r-env.security.names">[env.security.names]</a></div>
+<p>The checkpoints <code>LOCAL</code> and <code>ENVIRONMENT</code> are sent as <a href="../classes/routine.html#r-class.routine.setsecuritymanager.local">the class
+rules</a> say, for every environment
+symbol that gets as far as <code>.local</code>. That includes <code>.environment</code> and
+<code>.local</code>, which are entries of <code>.environment</code> (<a href="objects.html#r-env.objects.directories">the directories
+rule</a>), and the symbols that the interpreter
+answers itself, <code>.context</code>, <code>.methods</code>, <code>.routines</code>, <code>.resources</code>, <code>.rs</code> and
+<code>.line</code>, so a manager can provide <code>.context</code> to the code it governs. A name
+that <code>.local</code> already holds, such as <code>.stdout</code>, is asked of <code>LOCAL</code> only. A
+manager that answers <code>1</code> and sets <code>RESULT</code> provides the object that the symbol
+is, and the lookup stops there; <code>.nil</code> is an object, so a manager can provide
+it, and the symbol is then found and is <code>.nil</code>. A manager that answers <code>1</code> and
+sets no <code>RESULT</code> says that it found nothing, and the lookup goes on to the
+next place. A <code>RESULT</code> that a manager sets while it answers <code>0</code> is not used.
+In the example the manager notes the messages it is sent for each symbol,
+except where it provides the name: it provides <code>.envsecnil</code> and <code>.context</code> at
+<code>LOCAL</code>, finds nothing for <code>.envsecnone</code> at <code>ENVIRONMENT</code>, and sets a <code>RESULT</code>
+for <code>.envsecignored</code> that it does not use. The function <code>VALUE</code> with the
+selector <code>ENVIRONMENT</code> reads a variable of the host, not <code>.environment</code>, and
+sends no checkpoint.</p>
+<pre><code class="language-rexx">tests = .array~of('say (.envsecnil == .nil)', 'say .envsecnone', -
+  'say .envsecignored', 'say .context~class~id', -
+  'say .stdout~class~id')
+do t over tests
+  say '==' t
+  r = .routine~new('agent', t)
+  r~setSecurityManager(.mgr~new)
+  r~call
+end
+exit
+::class mgr
+::method unknown
+  use arg name, args
+  info = args[1]
+  if info~name = 'ENVSECNIL' &amp; name = 'LOCAL' then do
+    info~result = .nil
+    return 1
+  end
+  if info~name = 'ENVSECNONE' &amp; name = 'ENVIRONMENT' then return 1
+  if info~name = 'ENVSECIGNORED' then info~result = 'not used'
+  if info~name = 'CONTEXT' &amp; name = 'LOCAL' then do
+    info~result = 'provided context'
+    return 1
+  end
+  say '  ' name info~name
+  return 0
+</code></pre>
+<pre><code class="language-output">== say (.envsecnil == .nil)
+1
+== say .envsecnone
+   LOCAL ENVSECNONE
+.ENVSECNONE
+== say .envsecignored
+   LOCAL ENVSECIGNORED
+   ENVIRONMENT ENVSECIGNORED
+.ENVSECIGNORED
+== say .context~class~id
+String
+== say .stdout~class~id
+   LOCAL STDOUT
+Stream
+</code></pre>
+<div class="rule" id="r-env.security.stream"><a href="#r-env.security.stream">[env.security.stream]</a></div>
+<p>The <code>STREAM</code> checkpoint is sent when one of the stream functions <code>CHARIN</code>,
+<code>CHAROUT</code>, <code>CHARS</code>, <code>LINEIN</code>, <code>LINEOUT</code>, <code>LINES</code> and <code>STREAM</code>, with any
+arguments, names a stream whose absolute name is not in the program's table of
+streams, except for the standard streams, which <a href="#r-env.security.standard">the next
+rule</a> takes out. <code>NAME</code> is the name that the function
+was given, made absolute as <a href="../builtins/qualify.html#r-bif.qualify.relative"><code>QUALIFY</code> does</a>. The
+table is one for the whole program and is keyed by the absolute name, so <code>x</code>
+and <code>./x</code> are one entry. <code>CHARIN</code>, <code>CHAROUT</code>, <code>CHARS</code>, <code>LINEIN</code>, <code>LINEOUT</code> and
+<code>LINES</code> enter the name that they are given in the table, whether the code is
+governed or not and whether or not the stream can be opened. <code>STREAM</code> enters
+it only with an <code>open</code> command that succeeds; its other operations, such as
+<code>D</code>, <code>S</code> and a <code>query</code> command, are offered each time and leave the table as
+it is. The name is then not offered again, to any manager, until a
+<code>close</code> command of <code>STREAM</code>, or an <code>open</code> command of <code>STREAM</code> that fails,
+takes it out. A <code>close</code> sent to another <code>Stream</code> object of the same file does
+not. A stream that a manager chose is in the table under that name, so the
+code that no manager governs gets it as well. A manager that answers <code>1</code> and
+sets <code>STREAM</code> gives the function that object, which must understand the
+messages of a stream; one that answers <code>1</code> and sets no <code>STREAM</code> leaves the
+function to open the name as a file, as an answer of <code>0</code> does. In the example
+the program has the file open when the first manager is to be asked, so it is
+not asked. After the program closes the stream, the first manager is asked and
+provides a stream of another file; the second manager is not asked about that
+name while the stream is open, and the program gets the same stream. After the
+stream is closed once more the name is the real file again, and the second
+manager is asked. The second example shows the table for a file that does not
+exist: two <code>query exists</code> commands are offered and enter nothing, the first
+<code>lines</code> is offered and enters the name, the second and the
+one that spells the name with <code>./</code> are not, a failing <code>open</code> takes the name
+out, a <code>close</code> sent to a <code>Stream</code> object does not, and the <code>close</code> command
+does.</p>
+<pre><code class="language-rexx">f = 'envsec_real.tmp'
+call sysfiledelete f
+call sysfiledelete 'envsec_repl.tmp'
+call lineout f, 'real text'
+call lineout f
+call lineout 'envsec_repl.tmp', 'replacement text'
+call lineout 'envsec_repl.tmp'
+r1 = .routine~new('agent1', 'return linein("envsec_real.tmp", 1, 1)')
+r1~setSecurityManager(.mgr~new('one'))
+r2 = .routine~new('agent2', 'return charin("envsec_real.tmp", 1, 4)')
+r2~setSecurityManager(.mgr~new('two'))
+say 'the program opens it:' chars(f)
+say 'managed, open:' r1~call
+call stream f, 'c', 'close'
+say 'managed, closed:' r1~call
+say 'second manager:' r2~call
+say 'the program:' charin(f, 1, 4)
+call stream f, 'c', 'close'
+say 'the program, closed:' charin(f, 1, 4)
+call stream f, 'c', 'close'
+say 'second manager:' r2~call
+call stream f, 'c', 'close'
+call sysfiledelete f
+call sysfiledelete 'envsec_repl.tmp'
+exit
+::class mgr
+::method init
+  expose tag
+  use arg tag
+::method stream
+  expose tag
+  use arg info
+  say tag 'asked, name is absolute:' (info~name == qualify(info~name))
+  info~stream = .stream~new('envsec_repl.tmp')
+  return 1
+</code></pre>
+<pre><code class="language-output">the program opens it: 10
+managed, open: real text
+one asked, name is absolute: 1
+managed, closed: replacement text
+second manager: repl
+the program: repl
+the program, closed: real
+two asked, name is absolute: 1
+second manager: repl
+</code></pre>
+<pre><code class="language-rexx">call sysfiledelete 'envsec_tab.tmp'
+steps = .array~of( -
+  'G:stream("envsec_tab.tmp", "c", "query exists")', -
+  'G:stream("envsec_tab.tmp", "c", "query exists")', -
+  'G:lines("envsec_tab.tmp")', 'G:lines("envsec_tab.tmp")', -
+  'G:lines("./envsec_tab.tmp")', -
+  'P:stream("envsec_tab.tmp", "c", "open read")', -
+  'G:lines("envsec_tab.tmp")', 'G:lines("envsec_tab.tmp")', -
+  'P:.stream~new("envsec_tab.tmp")~close', 'G:lines("envsec_tab.tmp")', -
+  'P:stream("envsec_tab.tmp", "c", "close")', 'G:lines("envsec_tab.tmp")')
+do s over steps
+  parse var s who ':' t
+  if who = 'P' then do
+    interpret 'x =' t
+    say 'program:' t
+  end
+  else do
+    say 'governed:' t
+    r = .routine~new('agent', 'x =' t)
+    r~setSecurityManager(.mgr~new)
+    r~call
+  end
+end
+exit
+::class mgr
+::method unknown
+  say '  offered'
+  return 0
+</code></pre>
+<pre><code class="language-output">governed: stream("envsec_tab.tmp", "c", "query exists")
+  offered
+governed: stream("envsec_tab.tmp", "c", "query exists")
+  offered
+governed: lines("envsec_tab.tmp")
+  offered
+governed: lines("envsec_tab.tmp")
+governed: lines("./envsec_tab.tmp")
+program: stream("envsec_tab.tmp", "c", "open read")
+governed: lines("envsec_tab.tmp")
+  offered
+governed: lines("envsec_tab.tmp")
+program: .stream~new("envsec_tab.tmp")~close
+governed: lines("envsec_tab.tmp")
+program: stream("envsec_tab.tmp", "c", "close")
+governed: lines("envsec_tab.tmp")
+  offered
+</code></pre>
+<div class="rule" id="r-env.security.standard"><a href="#r-env.security.standard">[env.security.standard]</a></div>
+<p>A stream function that uses a standard stream sends no checkpoint at all:
+neither <code>STREAM</code> nor <code>LOCAL</code>. This covers a function whose stream name is
+omitted or empty, and one that names <code>STDIN</code>, <code>STDOUT</code> or <code>STDERR</code>, in any
+case and with or without a colon after it. The symbols <code>.output</code>, <code>.input</code>
+and <code>.error</code> send <code>LOCAL</code> when the code writes them, as <a href="#r-env.security.names">the name
+rule</a> says, but the functions that reach those objects
+without a symbol do not. In the example each line reaches a standard stream
+from governed code, and the manager, which writes every message it is sent,
+is sent none.</p>
+<pre><code class="language-rexx">tests = .array~of('call lineout , "one"', -
+  'call charout "", "two" || "0a"x', 'call lineout "stdout:", "three"', -
+  'x = stream("STDIN", "c", "query exists")', 'x = stream("stderr", "s")')
+do t over tests
+  r = .routine~new('agent', t)
+  r~setSecurityManager(.mgr~new)
+  r~call
+end
+say 'no checkpoint'
+exit
+::class mgr
+::method unknown
+  use arg name, args
+  say '  ' name args[1]~name
+  return 0
+</code></pre>
+<pre><code class="language-output defect=#212">one
+two
+three
+no checkpoint
+</code></pre>
+<div class="rule" id="r-env.security.requires"><a href="#r-env.security.requires">[env.security.requires]</a></div>
+<p>The <code>REQUIRES</code> checkpoint is sent as <a href="../classes/routine.html#r-class.routine.setsecuritymanager.requires">the class
+rule</a> says. A manager that
+answers <code>1</code> and sets <code>SECURITYMANAGER</code> to an object gives the package that is
+loaded a manager of its own: the main code of the package and every routine
+and method of it is governed by that object from then on, also when other code
+calls them, and the <code>::REQUIRES</code> directives of the package are sent to that
+object and not to the manager that was asked first. When the file is offered
+twice, a <code>SECURITYMANAGER</code> set in either message that the manager answered
+with <code>1</code> gives the package its manager, whatever the manager answers to the
+other message. A manager that answers
+<code>0</code>, or that sets <code>SECURITYMANAGER</code> to <code>.nil</code>, leaves the package with none,
+and so does a manager that sets nothing; a <code>::REQUIRES</code> of such a package is
+sent to no manager. In the example three files are loaded, each with a command
+in its main code; the first two also have a <code>::REQUIRES</code> of a file that does
+nothing. The manager answers <code>1</code> with an inner manager for the first file, <code>0</code>
+with one for the second and <code>1</code> with <code>.nil</code> for the third. It notes each
+message it is sent, and so does the inner manager, which also answers every
+command with <code>rc</code> <code>5</code>.</p>
+<pre><code class="language-rexx">files = .array~of('envsec_r0', 'envsec_q0', 'envsec_r1', 'envsec_r2', -
+  'envsec_r3')
+do f over files
+  call sysfiledelete f'.tmp'
+  call lineout f'.tmp', 'nop'
+  call lineout f'.tmp'
+end
+do n = 1 to 3
+  f = 'envsec_r'n'.tmp'
+  call lineout f, 'address system "exit 4"; say "loaded' n 'rc" rc'
+  if n &lt; 3 then do
+    call lineout f, '::requires "envsec_'substr('rq', n, 1)'0.tmp"'
+  end
+  call lineout f
+end
+do n = 1 to 3
+  r = .routine~new('agent', 'x = .package~new("envsec_r'n'.tmp")')
+  r~setSecurityManager(.mgr~new(n))
+  r~call
+end
+do f over files
+  call sysfiledelete f'.tmp'
+end
+exit
+::class mgr
+::method init
+  expose n
+  use arg n
+::method requires
+  expose n
+  use arg info
+  say 'manager' n 'asked'
+  if n = 1 then info~securitymanager = .inner~new
+  if n = 2 then info~securitymanager = .inner~new
+  if n = 3 then info~securitymanager = .nil
+  return n \= 2
+::class inner
+::method command
+  use arg info
+  info~rc = 5
+  return 1
+::method unknown
+  use arg name, args
+  say 'inner asked' name
+  return 0
+</code></pre>
+<pre><code class="language-output">manager 1 asked
+manager 1 asked
+inner asked REQUIRES
+inner asked REQUIRES
+loaded 1 rc 5
+manager 2 asked
+manager 2 asked
+loaded 2 rc 4
+manager 3 asked
+manager 3 asked
+loaded 3 rc 4
+</code></pre>
+<div class="rule" id="r-env.security.method"><a href="#r-env.security.method">[env.security.method]</a></div>
+<p>The <code>METHOD</code> checkpoint is sent as <a href="../classes/routine.html#r-class.routine.setsecuritymanager.method">the class
+rule</a> says. A method is protected
+when <a href="../directives/method.html#r-dir.method.protected"><code>PROTECTED</code> was declared</a> or
+<a href="../classes/method.html#r-class.method.setprotected"><code>setProtected</code></a> was sent, and the built-in
+methods that are protected are the ones that the second example prints. What
+is checked is the send, by governed code, to a protected method, in any form
+of a send: <code>send</code>, <code>sendWith</code>, the cascade <code>~~</code>, the <code>send</code> of a <code>Message</code> and
+a send to <code>self</code> are all offered, and for an attribute the setter has the name
+with <code>=</code> after it. The messages that the interpreter and the built-in methods
+send while they carry out a clause of governed code are offered in the same
+way: the <code>INIT</code> that <code>new</code> sends, the <code>MAKESTRING</code> that a string value asks
+for (<code>SAY</code>, concatenation, <code>request</code>), the <code>MAKEARRAY</code> that <code>DO OVER</code> asks
+for, and a message that a built-in method sends to an argument, such as the
+<code>COMPARE</code> that <code>sortWith</code> sends. <code>FORWARD</code>, an operator, a message to the
+superclass (<code>~name:super</code>) and a protected class method are sends like the
+others, and for a class method <code>OBJECT</code> is the class. A message that the
+receiver has no method for, and that goes on to the receiver's <code>UNKNOWN</code>
+method, is not a checkpoint, even when <code>UNKNOWN</code> is protected: the message
+that the code sent names no protected method. A message that is started is not
+offered: the <code>start</code> of an object and of a <code>Message</code> run the method on another
+activity with no checkpoint. A protected method is run without a checkpoint
+when the sender is code with no manager, as the class rule says. The
+<code>setSecurityManager</code> methods are protected, so governed code that changes its
+manager is passed through the manager, which can stop the change by answering
+<code>1</code>; the third example shows that the manager is still in place for the next
+run. In the first example, a package that has a manager sends messages to a
+protected method in the forms above, and the manager answers <code>1</code> with a result
+for those it is sent. The fourth example shows the messages that the
+interpreter and the built-in methods send, and the fifth the fallback to
+<code>UNKNOWN</code>.</p>
+<pre><code class="language-rexx">src = .array~of('::class zqbox public', -
+  '::method locked protected unguarded', '  return "locked ran" arg(1)', -
+  '::attribute att protected', -
+  '::method viaself unguarded', '  return self~locked(1)', -
+  '::method viasend unguarded', '  return self~send("locked", 2)', -
+  '::method viasendwith unguarded', -
+  '  return self~sendWith("locked", .array~of(3))', -
+  '::method viacascade unguarded', '  self~~locked(4); return "cascade"', -
+  '::method viamessage unguarded', -
+  '  return .message~new(self, "locked", "i", 5)~send', -
+  '::method viastart unguarded', '  return self~start("locked", 6)~result', -
+  '::method viamsgstart unguarded', -
+  '  m = .message~new(self, "locked", "i", 7); m~start; return m~result', -
+  '::method setatt unguarded', '  self~att = 8; return "att set"')
+p = .package~new('envsec_method', src)
+p~setSecurityManager(.mgr~new)
+o = p~findClass('ZQBOX')~new
+do m over .array~of('viaself', 'viasend', 'viasendwith', 'viacascade', -
+    'viamessage', 'viastart', 'viamsgstart', 'setatt')
+  say m '=&gt;' o~send(m)
+end
+say 'outside the package:' o~locked(9)
+exit
+::class mgr
+::method method
+  use arg info
+  say '  METHOD' info~name info~object~class~id info~arguments~items
+  info~result = 'replaced'
+  return 1
+</code></pre>
+<pre><code class="language-output">  METHOD LOCKED ZQBOX 1
+viaself =&gt; replaced
+  METHOD LOCKED ZQBOX 1
+viasend =&gt; replaced
+  METHOD LOCKED ZQBOX 1
+viasendwith =&gt; replaced
+  METHOD LOCKED ZQBOX 1
+viacascade =&gt; cascade
+  METHOD LOCKED ZQBOX 1
+viamessage =&gt; replaced
+viastart =&gt; locked ran 6
+viamsgstart =&gt; locked ran 7
+  METHOD ATT= ZQBOX 1
+setatt =&gt; att set
+outside the package: locked ran 9
+</code></pre>
+<pre><code class="language-rexx">seen = .set~new
+list = .set~new
+do name over .environment~allIndexes
+  c = .environment[name]
+  if \c~isA(.class) then iterate
+  if seen~hasItem(c) then iterate
+  seen~put(c)
+  call scan c, c~methods(.nil)
+  call scan c, c~instanceMethods(c)
+end
+do line over list~allItems~sort
+  say line
+end
+exit
+scan: procedure expose list
+  use arg c, ms
+  if ms = .nil then return
+  do while ms~available
+    if ms~item~isProtected then list~put(c~id ms~index)
+    ms~next
+  end
+  return
+</code></pre>
+<pre><code class="language-output">Class BASECLASS
+Class DEFINE
+Class DEFINEMETHODS
+Class DELETE
+Class METACLASS
+Class SUBCLASSES
+Class SUPERCLASS
+Class SUPERCLASSES
+Class UNINHERIT
+Directory SETMETHOD
+Directory UNSETMETHOD
+Method SETPROTECTED
+Method SETSECURITYMANAGER
+Package DEFAULTOPTIONS
+Package OPTIONS
+Package SETSECURITYMANAGER
+Routine SETSECURITYMANAGER
+</code></pre>
+<pre><code class="language-rexx">src = '.context~package~setSecurityManager;'
+src = src 'address system "exit 1"; return rc'
+r = .routine~new('agent', src)
+r~setSecurityManager(.mgr~new)
+say 'first run:' r~call
+say 'second run:' r~call
+exit
+::class mgr
+::method method
+  use arg info
+  say '  METHOD' info~name
+  return 1
+::method command
+  use arg info
+  say '  COMMAND' info~command
+  info~rc = 5
+  return 1
+::method unknown
+  return 0
+</code></pre>
+<pre><code class="language-output">  METHOD SETSECURITYMANAGER
+  COMMAND exit 1
+first run: 5
+  METHOD SETSECURITYMANAGER
+  COMMAND exit 1
+second run: 5
+</code></pre>
+<pre><code class="language-rexx">tests = .array~of('x = .envsecp~new', 'say .envsecq~new', -
+  'say .envsecq~new || "!"', 'do i over .envsecs~new; say i; end', -
+  'say .array~of(2, 1)~sortWith(.envsecc~new)~makestring("l", " ")')
+do t over tests
+  say '==' t
+  r = .routine~new('agent', t)
+  r~setSecurityManager(.mgr~new)
+  r~call
+end
+exit
+::class envsecp
+::method init protected
+  say 'init ran'
+::class envsecq
+::method makestring protected
+  return 'makestring ran'
+::class envsecs
+::method makearray protected
+  return .array~of('makearray ran')
+::class envsecc
+::method compare protected
+  use arg a, b
+  return a - b
+::class mgr
+::method method
+  use arg info
+  say '  METHOD' info~name info~arguments~items
+  return 0
+</code></pre>
+<pre><code class="language-output">== x = .envsecp~new
+  METHOD INIT 0
+init ran
+== say .envsecq~new
+  METHOD MAKESTRING 0
+makestring ran
+== say .envsecq~new || "!"
+  METHOD MAKESTRING 0
+makestring ran!
+== do i over .envsecs~new; say i; end
+  METHOD MAKEARRAY 0
+makearray ran
+== say .array~of(2, 1)~sortWith(.envsecc~new)~makestring("l", " ")
+  METHOD COMPARE 2
+1 2
+</code></pre>
+<pre><code class="language-rexx">src = .array~of('::class zqu public', -
+  '::method unknown protected unguarded', '  return "unknown ran" arg(1)', -
+  '::method try unguarded', '  return self~nosuch')
+p = .package~new('envsec_unknown', src)
+p~setSecurityManager(.mgr~new)
+say p~findClass('ZQU')~new~try
+exit
+::class mgr
+::method method
+  use arg info
+  say '  METHOD' info~name
+  info~result = 'replaced'
+  return 1
+</code></pre>
+<pre><code class="language-output defect=#225">unknown ran NOSUCH
+</code></pre>
+<h2 id="answers-and-errors"><a class="header" href="#answers-and-errors">Answers and errors</a></h2>
+<div class="rule" id="r-env.security.answer"><a href="#r-env.security.answer">[env.security.answer]</a></div>
+<p>Every checkpoint takes the same answers. The answer is <code>0</code> or <code>1</code> and nothing
+else: the strings <code>0</code> and <code>1</code> and the objects <code>.false</code> and <code>.true</code> are
+accepted, and any other value, such as <code>2</code>, <code>01</code>, <code> 1</code>, the empty string or an
+object, raises <code>SYNTAX 34.903</code>. A method that ends without an answer raises
+<code>SYNTAX 91.999</code>, whether it falls off its end or ends with a <code>return</code> or an
+<code>exit</code> that has no value. The error is raised by the clause that reached the
+checkpoint, in the code that the manager governs, so a handler of that code
+receives it as it does any error of the clause. In the example, one manager
+per checkpoint answers each of five ways, and the table shows what the
+governed code gets. The answers <code>0</code> and <code>1</code> are shown by the examples of the
+class rules.</p>
+<pre><code class="language-rexx">names = .array~of('CALL', 'COMMAND', 'LOCAL', 'ENVIRONMENT', 'REQUIRES', -
+  'STREAM', 'METHOD')
+answers = .array~of('2', ' 1', '01', '', 'none')
+n = 0
+do cp over names
+  line = left(cp, 12)
+  do a over answers
+    n = n + 1
+    src = 'signal on syntax;' act(cp, n)
+    src = src || '; return "no error";'
+    src = src 'syntax: return "error" condition("o")~code'
+    r = .routine~new('agent', src)
+    r~setSecurityManager(.mgr~new(cp, a))
+    line = line left(r~call, 12)
+  end
+  say line
+end
+exit
+act: procedure
+  use arg cp, n
+  select
+    when cp = 'CALL' then return 'x = envsecfun()'
+    when cp = 'COMMAND' then return 'address system "exit 1"'
+    when cp = 'LOCAL' | cp = 'ENVIRONMENT' then return 'x = .envsecname'
+    when cp = 'REQUIRES' then return 'x = .package~new("envsec_gone'n'.tmp")'
+    when cp = 'STREAM' then return 'x = lines("envsec_gone'n'.tmp")'
+    otherwise return 'x = .envsecbox~new~locked'
+  end
+::class envsecbox
+::method locked protected
+  return 'ran'
+::class mgr
+::method init
+  expose cp a
+  use arg cp, a
+::method unknown
+  expose cp a
+  use arg name, args
+  if name \= cp then return 0
+  if name = 'LOCAL' | name = 'ENVIRONMENT' then do
+    if args[1]~name \= 'ENVSECNAME' then return 0
+  end
+  if name = 'CALL' then if args[1]~name \= 'ENVSECFUN' then return 0
+  if name = 'METHOD' then if args[1]~name \= 'LOCKED' then return 0
+  if a = 'none' then return
+  return a
+</code></pre>
+<pre><code class="language-output">CALL         error 34.903 error 34.903 error 34.903 error 34.903 error 91.999
+COMMAND      error 34.903 error 34.903 error 34.903 error 34.903 error 91.999
+LOCAL        error 34.903 error 34.903 error 34.903 error 34.903 error 91.999
+ENVIRONMENT  error 34.903 error 34.903 error 34.903 error 34.903 error 91.999
+REQUIRES     error 34.903 error 34.903 error 34.903 error 34.903 error 91.999
+STREAM       error 34.903 error 34.903 error 34.903 error 34.903 error 91.999
+METHOD       error 34.903 error 34.903 error 34.903 error 34.903 error 91.999
+</code></pre>
+<div class="rule" id="r-env.security.raise"><a href="#r-env.security.raise">[env.security.raise]</a></div>
+<p>A manager may raise instead of answering, and the usual way is <code>RAISE SYNTAX 98.948</code>, the error for an action that is not allowed. The condition is raised
+in the governed code, at the clause that reached the checkpoint, and the
+handlers of that code are the ones that see it, as <a href="../classes/routine.html#r-class.routine.setsecuritymanager.checkpoints">the class
+rule</a> says for <code>SYNTAX</code>. This
+holds for the other conditions too: <code>RAISE ERROR</code>, <code>FAILURE</code>, <code>HALT</code>,
+<code>NOTREADY</code> and <code>USER</code> in a manager method are handled by the matching <code>SIGNAL ON</code> of the governed code, with the description that the <code>RAISE</code> gave. An error
+of the manager's own code, such as a division by zero or a message that an
+object does not understand, is raised there in the same way. In the example
+the manager of each line raises one of these when it is asked about a command,
+and the handlers of the governed code write what they got. The condition
+object of a condition that the manager raises, and of an error in the
+manager's code, has the position of the manager's clause that raised it, while
+<code>SIGL</code> in the handler is the line of the governed clause that reached the
+checkpoint. The errors of <a href="#r-env.security.answer">a wrong answer</a> have the
+position of the governed clause. In the second example the manager raises in
+the first run and answers wrongly in the second, and the program also prints
+the line of the <code>RAISE</code>.</p>
+<pre><code class="language-rexx">acts = .array~of('syntax 98.948 array("blocked")', 'error 5', 'failure 6', -
+  'user envsec description("a user condition")', -
+  'halt description("a halt")', 'notready description("not ready")', -
+  'zero', 'missing')
+src = 'signal on syntax name s; signal on error name e;'
+src = src 'signal on failure name f; signal on halt name h;'
+src = src 'signal on notready name n; signal on user envsec name u;'
+src = src 'address system "exit 1"; return "ran";'
+src = src 's: return condition("c")"/"condition("o")~code;'
+src = src 'e: return condition("c")"/"condition("d");'
+src = src 'f: return condition("c")"/"condition("d");'
+src = src 'h: return condition("c")"/"condition("d");'
+src = src 'n: return condition("c")"/"condition("d");'
+src = src 'u: return condition("c")"/"condition("d")'
+do a over acts
+  r = .routine~new('agent', src)
+  r~setSecurityManager(.mgr~new(a))
+  say left(a, 44) r~call
+end
+exit
+::class mgr
+::method init
+  expose a
+  use arg a
+::method command
+  expose a
+  if a = 'zero' then x = 1 / 0
+  if a = 'missing' then self~envsecmissing
+  interpret 'raise' a
+  return 1
+</code></pre>
+<pre><code class="language-output">syntax 98.948 array("blocked")               SYNTAX/98.948
+error 5                                      ERROR/
+failure 6                                    FAILURE/
+user envsec description("a user condition")  USER ENVSEC/a user condition
+halt description("a halt")                   HALT/a halt
+notready description("not ready")            NOTREADY/not ready
+zero                                         SYNTAX/42.3
+missing                                      SYNTAX/97.1
+</code></pre>
+<pre><code class="language-rexx">src = .array~of('signal on syntax', 'address system "exit 1"', -
+  'return "no error"', 'syntax: c = condition("o")', -
+  '  return c~code "at line" c~position "sigl" sigl')
+do mode over .array~of('raise', 'answer')
+  r = .routine~new('agent', src)
+  r~setSecurityManager(.mgr~new(mode))
+  say mode '=&gt;' r~call
+end
+say 'the raise is at line' .envsecline
+exit
+::class mgr
+::method init
+  expose mode
+  use arg mode
+::method command
+  expose mode
+  if mode = 'answer' then return 2
+  .local~envsecline = .line + 1
+  raise syntax 98.948 array('not allowed')
+</code></pre>
+<pre><code class="language-output">raise =&gt; 98.948 at line 19 sigl 2
+answer =&gt; 34.903 at line 2 sigl 2
+the raise is at line 19
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../environment/commands.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../environment/debugging.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../environment/commands.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../environment/debugging.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../assets/version-picker.js"></script>
+
+
+    </div>
+    </body>
+</html>

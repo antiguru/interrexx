@@ -1,0 +1,1961 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Debugging - The interrexx Language Specification</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../conventions.html"><strong aria-hidden="true">2.</strong> Conventions</a></li><li class="chapter-item expanded "><a href="../lexical/index.html"><strong aria-hidden="true">3.</strong> Lexical structure</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../lexical/characters.html"><strong aria-hidden="true">3.1.</strong> Characters</a></li><li class="chapter-item expanded "><a href="../lexical/comments.html"><strong aria-hidden="true">3.2.</strong> Comments</a></li><li class="chapter-item expanded "><a href="../lexical/literals.html"><strong aria-hidden="true">3.3.</strong> Literals</a></li><li class="chapter-item expanded "><a href="../lexical/symbols.html"><strong aria-hidden="true">3.4.</strong> Symbols</a></li><li class="chapter-item expanded "><a href="../lexical/operators.html"><strong aria-hidden="true">3.5.</strong> Operators and special characters</a></li><li class="chapter-item expanded "><a href="../lexical/clauses.html"><strong aria-hidden="true">3.6.</strong> Clauses</a></li></ol></li><li class="chapter-item expanded "><a href="../numbers/index.html"><strong aria-hidden="true">4.</strong> Numbers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../numbers/formats.html"><strong aria-hidden="true">4.1.</strong> Formats</a></li><li class="chapter-item expanded "><a href="../numbers/limits.html"><strong aria-hidden="true">4.2.</strong> Limits</a></li><li class="chapter-item expanded "><a href="../numbers/arithmetic.html"><strong aria-hidden="true">4.3.</strong> Arithmetic</a></li><li class="chapter-item expanded "><a href="../numbers/settings.html"><strong aria-hidden="true">4.4.</strong> Settings</a></li><li class="chapter-item expanded "><a href="../numbers/comparison.html"><strong aria-hidden="true">4.5.</strong> Comparison</a></li></ol></li><li class="chapter-item expanded "><a href="../expressions/index.html"><strong aria-hidden="true">5.</strong> Expressions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../expressions/terms.html"><strong aria-hidden="true">5.1.</strong> Terms</a></li><li class="chapter-item expanded "><a href="../expressions/variables.html"><strong aria-hidden="true">5.2.</strong> Variables</a></li><li class="chapter-item expanded "><a href="../expressions/concatenation.html"><strong aria-hidden="true">5.3.</strong> Concatenation</a></li><li class="chapter-item expanded "><a href="../expressions/arithmetic.html"><strong aria-hidden="true">5.4.</strong> Arithmetic operators</a></li><li class="chapter-item expanded "><a href="../expressions/comparison.html"><strong aria-hidden="true">5.5.</strong> Comparison operators</a></li><li class="chapter-item expanded "><a href="../expressions/logical.html"><strong aria-hidden="true">5.6.</strong> Logical operators</a></li><li class="chapter-item expanded "><a href="../expressions/messages.html"><strong aria-hidden="true">5.7.</strong> Message operators</a></li></ol></li><li class="chapter-item expanded "><a href="../instructions/index.html"><strong aria-hidden="true">6.</strong> Instructions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../instructions/address.html"><strong aria-hidden="true">6.1.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../instructions/arg.html"><strong aria-hidden="true">6.2.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../instructions/assignment.html"><strong aria-hidden="true">6.3.</strong> Assignments</a></li><li class="chapter-item expanded "><a href="../instructions/call.html"><strong aria-hidden="true">6.4.</strong> CALL</a></li><li class="chapter-item expanded "><a href="../instructions/command.html"><strong aria-hidden="true">6.5.</strong> Commands</a></li><li class="chapter-item expanded "><a href="../instructions/do.html"><strong aria-hidden="true">6.6.</strong> DO</a></li><li class="chapter-item expanded "><a href="../instructions/drop.html"><strong aria-hidden="true">6.7.</strong> DROP</a></li><li class="chapter-item expanded "><a href="../instructions/exit.html"><strong aria-hidden="true">6.8.</strong> EXIT</a></li><li class="chapter-item expanded "><a href="../instructions/expose.html"><strong aria-hidden="true">6.9.</strong> EXPOSE</a></li><li class="chapter-item expanded "><a href="../instructions/forward.html"><strong aria-hidden="true">6.10.</strong> FORWARD</a></li><li class="chapter-item expanded "><a href="../instructions/guard.html"><strong aria-hidden="true">6.11.</strong> GUARD</a></li><li class="chapter-item expanded "><a href="../instructions/if.html"><strong aria-hidden="true">6.12.</strong> IF</a></li><li class="chapter-item expanded "><a href="../instructions/interpret.html"><strong aria-hidden="true">6.13.</strong> INTERPRET</a></li><li class="chapter-item expanded "><a href="../instructions/iterate.html"><strong aria-hidden="true">6.14.</strong> ITERATE</a></li><li class="chapter-item expanded "><a href="../instructions/leave.html"><strong aria-hidden="true">6.15.</strong> LEAVE</a></li><li class="chapter-item expanded "><a href="../instructions/loop.html"><strong aria-hidden="true">6.16.</strong> LOOP</a></li><li class="chapter-item expanded "><a href="../instructions/message.html"><strong aria-hidden="true">6.17.</strong> Message instructions</a></li><li class="chapter-item expanded "><a href="../instructions/nop.html"><strong aria-hidden="true">6.18.</strong> NOP</a></li><li class="chapter-item expanded "><a href="../instructions/numeric.html"><strong aria-hidden="true">6.19.</strong> NUMERIC</a></li><li class="chapter-item expanded "><a href="../instructions/options.html"><strong aria-hidden="true">6.20.</strong> OPTIONS</a></li><li class="chapter-item expanded "><a href="../instructions/parse.html"><strong aria-hidden="true">6.21.</strong> PARSE</a></li><li class="chapter-item expanded "><a href="../instructions/procedure.html"><strong aria-hidden="true">6.22.</strong> PROCEDURE</a></li><li class="chapter-item expanded "><a href="../instructions/pull.html"><strong aria-hidden="true">6.23.</strong> PULL</a></li><li class="chapter-item expanded "><a href="../instructions/push.html"><strong aria-hidden="true">6.24.</strong> PUSH</a></li><li class="chapter-item expanded "><a href="../instructions/queue.html"><strong aria-hidden="true">6.25.</strong> QUEUE</a></li><li class="chapter-item expanded "><a href="../instructions/raise.html"><strong aria-hidden="true">6.26.</strong> RAISE</a></li><li class="chapter-item expanded "><a href="../instructions/reply.html"><strong aria-hidden="true">6.27.</strong> REPLY</a></li><li class="chapter-item expanded "><a href="../instructions/return.html"><strong aria-hidden="true">6.28.</strong> RETURN</a></li><li class="chapter-item expanded "><a href="../instructions/say.html"><strong aria-hidden="true">6.29.</strong> SAY</a></li><li class="chapter-item expanded "><a href="../instructions/select.html"><strong aria-hidden="true">6.30.</strong> SELECT</a></li><li class="chapter-item expanded "><a href="../instructions/signal.html"><strong aria-hidden="true">6.31.</strong> SIGNAL</a></li><li class="chapter-item expanded "><a href="../instructions/trace.html"><strong aria-hidden="true">6.32.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../instructions/use.html"><strong aria-hidden="true">6.33.</strong> USE</a></li></ol></li><li class="chapter-item expanded "><a href="../parsing/index.html"><strong aria-hidden="true">7.</strong> Parsing</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../parsing/templates.html"><strong aria-hidden="true">7.1.</strong> Templates</a></li><li class="chapter-item expanded "><a href="../parsing/patterns.html"><strong aria-hidden="true">7.2.</strong> Patterns</a></li><li class="chapter-item expanded "><a href="../parsing/multiple.html"><strong aria-hidden="true">7.3.</strong> Several strings and case</a></li></ol></li><li class="chapter-item expanded "><a href="../directives/index.html"><strong aria-hidden="true">8.</strong> Directives</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../directives/class.html"><strong aria-hidden="true">8.1.</strong> ::CLASS</a></li><li class="chapter-item expanded "><a href="../directives/method.html"><strong aria-hidden="true">8.2.</strong> ::METHOD</a></li><li class="chapter-item expanded "><a href="../directives/attribute.html"><strong aria-hidden="true">8.3.</strong> ::ATTRIBUTE</a></li><li class="chapter-item expanded "><a href="../directives/constant.html"><strong aria-hidden="true">8.4.</strong> ::CONSTANT</a></li><li class="chapter-item expanded "><a href="../directives/routine.html"><strong aria-hidden="true">8.5.</strong> ::ROUTINE</a></li><li class="chapter-item expanded "><a href="../directives/requires.html"><strong aria-hidden="true">8.6.</strong> ::REQUIRES</a></li><li class="chapter-item expanded "><a href="../directives/options.html"><strong aria-hidden="true">8.7.</strong> ::OPTIONS</a></li><li class="chapter-item expanded "><a href="../directives/resource.html"><strong aria-hidden="true">8.8.</strong> ::RESOURCE</a></li><li class="chapter-item expanded "><a href="../directives/annotate.html"><strong aria-hidden="true">8.9.</strong> ::ANNOTATE</a></li></ol></li><li class="chapter-item expanded "><a href="../conditions/index.html"><strong aria-hidden="true">9.</strong> Conditions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../conditions/traps.html"><strong aria-hidden="true">9.1.</strong> Condition traps</a></li><li class="chapter-item expanded "><a href="../conditions/information.html"><strong aria-hidden="true">9.2.</strong> Condition information</a></li><li class="chapter-item expanded "><a href="../conditions/syntax.html"><strong aria-hidden="true">9.3.</strong> SYNTAX</a></li><li class="chapter-item expanded "><a href="../conditions/error.html"><strong aria-hidden="true">9.4.</strong> ERROR and FAILURE</a></li><li class="chapter-item expanded "><a href="../conditions/halt.html"><strong aria-hidden="true">9.5.</strong> HALT</a></li><li class="chapter-item expanded "><a href="../conditions/novalue.html"><strong aria-hidden="true">9.6.</strong> NOVALUE</a></li><li class="chapter-item expanded "><a href="../conditions/nostring.html"><strong aria-hidden="true">9.7.</strong> NOSTRING</a></li><li class="chapter-item expanded "><a href="../conditions/nomethod.html"><strong aria-hidden="true">9.8.</strong> NOMETHOD</a></li><li class="chapter-item expanded "><a href="../conditions/notready.html"><strong aria-hidden="true">9.9.</strong> NOTREADY</a></li><li class="chapter-item expanded "><a href="../conditions/lostdigits.html"><strong aria-hidden="true">9.10.</strong> LOSTDIGITS</a></li><li class="chapter-item expanded "><a href="../conditions/user.html"><strong aria-hidden="true">9.11.</strong> USER conditions</a></li><li class="chapter-item expanded "><a href="../conditions/errors.html"><strong aria-hidden="true">9.12.</strong> Error numbers</a></li></ol></li><li class="chapter-item expanded "><a href="../classes/index.html"><strong aria-hidden="true">10.</strong> Classes</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../classes/methods.html"><strong aria-hidden="true">10.1.</strong> Method search</a></li><li class="chapter-item expanded "><a href="../classes/object.html"><strong aria-hidden="true">10.2.</strong> Object</a></li><li class="chapter-item expanded "><a href="../classes/class.html"><strong aria-hidden="true">10.3.</strong> Class</a></li><li class="chapter-item expanded "><a href="../classes/string.html"><strong aria-hidden="true">10.4.</strong> String</a></li><li class="chapter-item expanded "><a href="../classes/method.html"><strong aria-hidden="true">10.5.</strong> Method</a></li><li class="chapter-item expanded "><a href="../classes/routine.html"><strong aria-hidden="true">10.6.</strong> Routine</a></li><li class="chapter-item expanded "><a href="../classes/package.html"><strong aria-hidden="true">10.7.</strong> Package</a></li><li class="chapter-item expanded "><a href="../classes/message.html"><strong aria-hidden="true">10.8.</strong> Message</a></li><li class="chapter-item expanded "><a href="../classes/messagenotification.html"><strong aria-hidden="true">10.9.</strong> MessageNotification</a></li><li class="chapter-item expanded "><a href="../classes/alarmnotification.html"><strong aria-hidden="true">10.10.</strong> AlarmNotification</a></li><li class="chapter-item expanded "><a href="../classes/collection.html"><strong aria-hidden="true">10.11.</strong> Collection</a></li><li class="chapter-item expanded "><a href="../classes/mapcollection.html"><strong aria-hidden="true">10.12.</strong> MapCollection</a></li><li class="chapter-item expanded "><a href="../classes/orderedcollection.html"><strong aria-hidden="true">10.13.</strong> OrderedCollection</a></li><li class="chapter-item expanded "><a href="../classes/setcollection.html"><strong aria-hidden="true">10.14.</strong> SetCollection</a></li><li class="chapter-item expanded "><a href="../classes/array.html"><strong aria-hidden="true">10.15.</strong> Array</a></li><li class="chapter-item expanded "><a href="../classes/list.html"><strong aria-hidden="true">10.16.</strong> List</a></li><li class="chapter-item expanded "><a href="../classes/queue.html"><strong aria-hidden="true">10.17.</strong> Queue</a></li><li class="chapter-item expanded "><a href="../classes/circularqueue.html"><strong aria-hidden="true">10.18.</strong> CircularQueue</a></li><li class="chapter-item expanded "><a href="../classes/directory.html"><strong aria-hidden="true">10.19.</strong> Directory</a></li><li class="chapter-item expanded "><a href="../classes/stringtable.html"><strong aria-hidden="true">10.20.</strong> StringTable</a></li><li class="chapter-item expanded "><a href="../classes/properties.html"><strong aria-hidden="true">10.21.</strong> Properties</a></li><li class="chapter-item expanded "><a href="../classes/table.html"><strong aria-hidden="true">10.22.</strong> Table</a></li><li class="chapter-item expanded "><a href="../classes/identitytable.html"><strong aria-hidden="true">10.23.</strong> IdentityTable</a></li><li class="chapter-item expanded "><a href="../classes/relation.html"><strong aria-hidden="true">10.24.</strong> Relation</a></li><li class="chapter-item expanded "><a href="../classes/bag.html"><strong aria-hidden="true">10.25.</strong> Bag</a></li><li class="chapter-item expanded "><a href="../classes/set.html"><strong aria-hidden="true">10.26.</strong> Set</a></li><li class="chapter-item expanded "><a href="../classes/stem.html"><strong aria-hidden="true">10.27.</strong> Stem</a></li><li class="chapter-item expanded "><a href="../classes/datetime.html"><strong aria-hidden="true">10.28.</strong> DateTime</a></li><li class="chapter-item expanded "><a href="../classes/timespan.html"><strong aria-hidden="true">10.29.</strong> TimeSpan</a></li><li class="chapter-item expanded "><a href="../classes/comparable.html"><strong aria-hidden="true">10.30.</strong> Comparable</a></li><li class="chapter-item expanded "><a href="../classes/orderable.html"><strong aria-hidden="true">10.31.</strong> Orderable</a></li><li class="chapter-item expanded "><a href="../classes/comparators.html"><strong aria-hidden="true">10.32.</strong> Comparators</a></li><li class="chapter-item expanded "><a href="../classes/mutablebuffer.html"><strong aria-hidden="true">10.33.</strong> MutableBuffer</a></li><li class="chapter-item expanded "><a href="../classes/buffer.html"><strong aria-hidden="true">10.34.</strong> Buffer</a></li><li class="chapter-item expanded "><a href="../classes/pointer.html"><strong aria-hidden="true">10.35.</strong> Pointer</a></li><li class="chapter-item expanded "><a href="../classes/weakreference.html"><strong aria-hidden="true">10.36.</strong> WeakReference</a></li><li class="chapter-item expanded "><a href="../classes/variablereference.html"><strong aria-hidden="true">10.37.</strong> VariableReference</a></li><li class="chapter-item expanded "><a href="../classes/file.html"><strong aria-hidden="true">10.38.</strong> File</a></li><li class="chapter-item expanded "><a href="../classes/rexxcontext.html"><strong aria-hidden="true">10.39.</strong> RexxContext</a></li><li class="chapter-item expanded "><a href="../classes/stackframe.html"><strong aria-hidden="true">10.40.</strong> StackFrame</a></li><li class="chapter-item expanded "><a href="../classes/rexxinfo.html"><strong aria-hidden="true">10.41.</strong> RexxInfo</a></li><li class="chapter-item expanded "><a href="../classes/traceobject.html"><strong aria-hidden="true">10.42.</strong> TraceObject</a></li><li class="chapter-item expanded "><a href="../classes/validate.html"><strong aria-hidden="true">10.43.</strong> Validate</a></li><li class="chapter-item expanded "><a href="../classes/singleton.html"><strong aria-hidden="true">10.44.</strong> Singleton</a></li><li class="chapter-item expanded "><a href="../classes/alarm.html"><strong aria-hidden="true">10.45.</strong> Alarm</a></li><li class="chapter-item expanded "><a href="../classes/ticker.html"><strong aria-hidden="true">10.46.</strong> Ticker</a></li><li class="chapter-item expanded "><a href="../classes/monitor.html"><strong aria-hidden="true">10.47.</strong> Monitor</a></li><li class="chapter-item expanded "><a href="../classes/eventsemaphore.html"><strong aria-hidden="true">10.48.</strong> EventSemaphore</a></li><li class="chapter-item expanded "><a href="../classes/mutexsemaphore.html"><strong aria-hidden="true">10.49.</strong> MutexSemaphore</a></li><li class="chapter-item expanded "><a href="../classes/commandhandler.html"><strong aria-hidden="true">10.50.</strong> CommandHandler</a></li><li class="chapter-item expanded "><a href="../classes/nativecommandhandler.html"><strong aria-hidden="true">10.51.</strong> NativeCommandHandler</a></li><li class="chapter-item expanded "><a href="../classes/commandcontext.html"><strong aria-hidden="true">10.52.</strong> CommandContext</a></li><li class="chapter-item expanded "><a href="../classes/commandinput.html"><strong aria-hidden="true">10.53.</strong> CommandInput</a></li><li class="chapter-item expanded "><a href="../classes/commandoutput.html"><strong aria-hidden="true">10.54.</strong> CommandOutput</a></li><li class="chapter-item expanded "><a href="../classes/rexxqueue.html"><strong aria-hidden="true">10.55.</strong> RexxQueue</a></li><li class="chapter-item expanded "><a href="../classes/supplier.html"><strong aria-hidden="true">10.56.</strong> Supplier</a></li><li class="chapter-item expanded "><a href="../classes/streamsupplier.html"><strong aria-hidden="true">10.57.</strong> StreamSupplier</a></li><li class="chapter-item expanded "><a href="../classes/regularexpression.html"><strong aria-hidden="true">10.58.</strong> RegularExpression</a></li><li class="chapter-item expanded "><a href="../classes/stream.html"><strong aria-hidden="true">10.59.</strong> Stream</a></li><li class="chapter-item expanded "><a href="../classes/inputstream.html"><strong aria-hidden="true">10.60.</strong> InputStream</a></li><li class="chapter-item expanded "><a href="../classes/outputstream.html"><strong aria-hidden="true">10.61.</strong> OutputStream</a></li><li class="chapter-item expanded "><a href="../classes/inputoutputstream.html"><strong aria-hidden="true">10.62.</strong> InputOutputStream</a></li></ol></li><li class="chapter-item expanded "><a href="../environment/index.html"><strong aria-hidden="true">11.</strong> Environment</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../environment/objects.html"><strong aria-hidden="true">11.1.</strong> Environment objects</a></li><li class="chapter-item expanded "><a href="../environment/invocation.html"><strong aria-hidden="true">11.2.</strong> Invocation</a></li><li class="chapter-item expanded "><a href="../environment/search.html"><strong aria-hidden="true">11.3.</strong> Search</a></li><li class="chapter-item expanded "><a href="../environment/commands.html"><strong aria-hidden="true">11.4.</strong> Command environments</a></li><li class="chapter-item expanded "><a href="../environment/security.html"><strong aria-hidden="true">11.5.</strong> Security manager</a></li><li class="chapter-item expanded "><a href="../environment/debugging.html" class="active"><strong aria-hidden="true">11.6.</strong> Debugging</a></li></ol></li><li class="chapter-item expanded "><a href="../builtins/index.html"><strong aria-hidden="true">12.</strong> Built-in functions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../builtins/abbrev.html"><strong aria-hidden="true">12.1.</strong> ABBREV</a></li><li class="chapter-item expanded "><a href="../builtins/abs.html"><strong aria-hidden="true">12.2.</strong> ABS</a></li><li class="chapter-item expanded "><a href="../builtins/address.html"><strong aria-hidden="true">12.3.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../builtins/arg.html"><strong aria-hidden="true">12.4.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../builtins/b2x.html"><strong aria-hidden="true">12.5.</strong> B2X</a></li><li class="chapter-item expanded "><a href="../builtins/beep.html"><strong aria-hidden="true">12.6.</strong> BEEP</a></li><li class="chapter-item expanded "><a href="../builtins/bitand.html"><strong aria-hidden="true">12.7.</strong> BITAND</a></li><li class="chapter-item expanded "><a href="../builtins/bitor.html"><strong aria-hidden="true">12.8.</strong> BITOR</a></li><li class="chapter-item expanded "><a href="../builtins/bitxor.html"><strong aria-hidden="true">12.9.</strong> BITXOR</a></li><li class="chapter-item expanded "><a href="../builtins/c2d.html"><strong aria-hidden="true">12.10.</strong> C2D</a></li><li class="chapter-item expanded "><a href="../builtins/c2x.html"><strong aria-hidden="true">12.11.</strong> C2X</a></li><li class="chapter-item expanded "><a href="../builtins/center.html"><strong aria-hidden="true">12.12.</strong> CENTER</a></li><li class="chapter-item expanded "><a href="../builtins/changestr.html"><strong aria-hidden="true">12.13.</strong> CHANGESTR</a></li><li class="chapter-item expanded "><a href="../builtins/charin.html"><strong aria-hidden="true">12.14.</strong> CHARIN</a></li><li class="chapter-item expanded "><a href="../builtins/charout.html"><strong aria-hidden="true">12.15.</strong> CHAROUT</a></li><li class="chapter-item expanded "><a href="../builtins/chars.html"><strong aria-hidden="true">12.16.</strong> CHARS</a></li><li class="chapter-item expanded "><a href="../builtins/compare.html"><strong aria-hidden="true">12.17.</strong> COMPARE</a></li><li class="chapter-item expanded "><a href="../builtins/condition.html"><strong aria-hidden="true">12.18.</strong> CONDITION</a></li><li class="chapter-item expanded "><a href="../builtins/copies.html"><strong aria-hidden="true">12.19.</strong> COPIES</a></li><li class="chapter-item expanded "><a href="../builtins/countstr.html"><strong aria-hidden="true">12.20.</strong> COUNTSTR</a></li><li class="chapter-item expanded "><a href="../builtins/d2c.html"><strong aria-hidden="true">12.21.</strong> D2C</a></li><li class="chapter-item expanded "><a href="../builtins/d2x.html"><strong aria-hidden="true">12.22.</strong> D2X</a></li><li class="chapter-item expanded "><a href="../builtins/datatype.html"><strong aria-hidden="true">12.23.</strong> DATATYPE</a></li><li class="chapter-item expanded "><a href="../builtins/date.html"><strong aria-hidden="true">12.24.</strong> DATE</a></li><li class="chapter-item expanded "><a href="../builtins/delstr.html"><strong aria-hidden="true">12.25.</strong> DELSTR</a></li><li class="chapter-item expanded "><a href="../builtins/delword.html"><strong aria-hidden="true">12.26.</strong> DELWORD</a></li><li class="chapter-item expanded "><a href="../builtins/digits.html"><strong aria-hidden="true">12.27.</strong> DIGITS</a></li><li class="chapter-item expanded "><a href="../builtins/directory.html"><strong aria-hidden="true">12.28.</strong> DIRECTORY</a></li><li class="chapter-item expanded "><a href="../builtins/endlocal.html"><strong aria-hidden="true">12.29.</strong> ENDLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/errortext.html"><strong aria-hidden="true">12.30.</strong> ERRORTEXT</a></li><li class="chapter-item expanded "><a href="../builtins/filespec.html"><strong aria-hidden="true">12.31.</strong> FILESPEC</a></li><li class="chapter-item expanded "><a href="../builtins/form.html"><strong aria-hidden="true">12.32.</strong> FORM</a></li><li class="chapter-item expanded "><a href="../builtins/format.html"><strong aria-hidden="true">12.33.</strong> FORMAT</a></li><li class="chapter-item expanded "><a href="../builtins/fuzz.html"><strong aria-hidden="true">12.34.</strong> FUZZ</a></li><li class="chapter-item expanded "><a href="../builtins/gc.html"><strong aria-hidden="true">12.35.</strong> GC</a></li><li class="chapter-item expanded "><a href="../builtins/insert.html"><strong aria-hidden="true">12.36.</strong> INSERT</a></li><li class="chapter-item expanded "><a href="../builtins/lastpos.html"><strong aria-hidden="true">12.37.</strong> LASTPOS</a></li><li class="chapter-item expanded "><a href="../builtins/left.html"><strong aria-hidden="true">12.38.</strong> LEFT</a></li><li class="chapter-item expanded "><a href="../builtins/length.html"><strong aria-hidden="true">12.39.</strong> LENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/linein.html"><strong aria-hidden="true">12.40.</strong> LINEIN</a></li><li class="chapter-item expanded "><a href="../builtins/lineout.html"><strong aria-hidden="true">12.41.</strong> LINEOUT</a></li><li class="chapter-item expanded "><a href="../builtins/lines.html"><strong aria-hidden="true">12.42.</strong> LINES</a></li><li class="chapter-item expanded "><a href="../builtins/lower.html"><strong aria-hidden="true">12.43.</strong> LOWER</a></li><li class="chapter-item expanded "><a href="../builtins/max.html"><strong aria-hidden="true">12.44.</strong> MAX</a></li><li class="chapter-item expanded "><a href="../builtins/min.html"><strong aria-hidden="true">12.45.</strong> MIN</a></li><li class="chapter-item expanded "><a href="../builtins/overlay.html"><strong aria-hidden="true">12.46.</strong> OVERLAY</a></li><li class="chapter-item expanded "><a href="../builtins/pos.html"><strong aria-hidden="true">12.47.</strong> POS</a></li><li class="chapter-item expanded "><a href="../builtins/qualify.html"><strong aria-hidden="true">12.48.</strong> QUALIFY</a></li><li class="chapter-item expanded "><a href="../builtins/queued.html"><strong aria-hidden="true">12.49.</strong> QUEUED</a></li><li class="chapter-item expanded "><a href="../builtins/random.html"><strong aria-hidden="true">12.50.</strong> RANDOM</a></li><li class="chapter-item expanded "><a href="../builtins/reverse.html"><strong aria-hidden="true">12.51.</strong> REVERSE</a></li><li class="chapter-item expanded "><a href="../builtins/right.html"><strong aria-hidden="true">12.52.</strong> RIGHT</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncadd.html"><strong aria-hidden="true">12.53.</strong> RXFUNCADD</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncdrop.html"><strong aria-hidden="true">12.54.</strong> RXFUNCDROP</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncquery.html"><strong aria-hidden="true">12.55.</strong> RXFUNCQUERY</a></li><li class="chapter-item expanded "><a href="../builtins/rxqueue.html"><strong aria-hidden="true">12.56.</strong> RXQUEUE</a></li><li class="chapter-item expanded "><a href="../builtins/setlocal.html"><strong aria-hidden="true">12.57.</strong> SETLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/sign.html"><strong aria-hidden="true">12.58.</strong> SIGN</a></li><li class="chapter-item expanded "><a href="../builtins/sourceline.html"><strong aria-hidden="true">12.59.</strong> SOURCELINE</a></li><li class="chapter-item expanded "><a href="../builtins/space.html"><strong aria-hidden="true">12.60.</strong> SPACE</a></li><li class="chapter-item expanded "><a href="../builtins/stream.html"><strong aria-hidden="true">12.61.</strong> STREAM</a></li><li class="chapter-item expanded "><a href="../builtins/strip.html"><strong aria-hidden="true">12.62.</strong> STRIP</a></li><li class="chapter-item expanded "><a href="../builtins/substr.html"><strong aria-hidden="true">12.63.</strong> SUBSTR</a></li><li class="chapter-item expanded "><a href="../builtins/subword.html"><strong aria-hidden="true">12.64.</strong> SUBWORD</a></li><li class="chapter-item expanded "><a href="../builtins/symbol.html"><strong aria-hidden="true">12.65.</strong> SYMBOL</a></li><li class="chapter-item expanded "><a href="../builtins/time.html"><strong aria-hidden="true">12.66.</strong> TIME</a></li><li class="chapter-item expanded "><a href="../builtins/trace.html"><strong aria-hidden="true">12.67.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../builtins/translate.html"><strong aria-hidden="true">12.68.</strong> TRANSLATE</a></li><li class="chapter-item expanded "><a href="../builtins/trunc.html"><strong aria-hidden="true">12.69.</strong> TRUNC</a></li><li class="chapter-item expanded "><a href="../builtins/upper.html"><strong aria-hidden="true">12.70.</strong> UPPER</a></li><li class="chapter-item expanded "><a href="../builtins/userid.html"><strong aria-hidden="true">12.71.</strong> USERID</a></li><li class="chapter-item expanded "><a href="../builtins/value.html"><strong aria-hidden="true">12.72.</strong> VALUE</a></li><li class="chapter-item expanded "><a href="../builtins/var.html"><strong aria-hidden="true">12.73.</strong> VAR</a></li><li class="chapter-item expanded "><a href="../builtins/verify.html"><strong aria-hidden="true">12.74.</strong> VERIFY</a></li><li class="chapter-item expanded "><a href="../builtins/word.html"><strong aria-hidden="true">12.75.</strong> WORD</a></li><li class="chapter-item expanded "><a href="../builtins/wordindex.html"><strong aria-hidden="true">12.76.</strong> WORDINDEX</a></li><li class="chapter-item expanded "><a href="../builtins/wordlength.html"><strong aria-hidden="true">12.77.</strong> WORDLENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/wordpos.html"><strong aria-hidden="true">12.78.</strong> WORDPOS</a></li><li class="chapter-item expanded "><a href="../builtins/words.html"><strong aria-hidden="true">12.79.</strong> WORDS</a></li><li class="chapter-item expanded "><a href="../builtins/x2b.html"><strong aria-hidden="true">12.80.</strong> X2B</a></li><li class="chapter-item expanded "><a href="../builtins/x2c.html"><strong aria-hidden="true">12.81.</strong> X2C</a></li><li class="chapter-item expanded "><a href="../builtins/x2d.html"><strong aria-hidden="true">12.82.</strong> X2D</a></li><li class="chapter-item expanded "><a href="../builtins/xrange.html"><strong aria-hidden="true">12.83.</strong> XRANGE</a></li></ol></li><li class="chapter-item expanded "><a href="../deviations.html"><strong aria-hidden="true">13.</strong> Deviations</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The interrexx Language Specification</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="debugging"><a class="header" href="#debugging">Debugging</a></h1>
+<p class="references">rexxref: Debugging Aids; Debugging Aids &gt; Interactive Debugging of Programs; Debugging Aids &gt; RXTRACE Variable</p>
+<p class="deviations">Deviations: D150, D151, D152</p>
+<p>Interactive tracing lets a person, or a program that stands in for one, step
+through another program: after each clause that is traced the interpreter
+stops, reads a line, and runs it or goes on. This page specifies how that
+state is entered and left, when the interpreter stops, what it reads and from
+where, what each kind of line does, and where its own lines are written. It
+leaves to other pages what they already own: the settings and the question
+mark prefix are those of <a href="../builtins/trace.html#r-bif.trace.prefix">the TRACE function</a>, the format
+of the lines that show clauses is that of <a href="../instructions/trace.html#r-instr.trace.line">the TRACE
+instruction</a>, and the objects <code>.debuginput</code> and
+<code>.traceoutput</code> are among <a href="objects.html#r-env.objects.local">the environment objects</a>.</p>
+<blockquote>
+<p><strong>Note.</strong> The examples feed the lines that a person would type from objects
+of their own, which a program installs as the debug input, and never from
+the terminal. The class <code>in</code> that most of them define answers its lines one
+at a time and then the empty line, and writes each line it answers in
+brackets, so that the output shows when the interpreter stops. The class
+<code>show</code> that most of them define receives the lines of the trace; it leaves
+out the line that holds the program's source string, which names the host's
+file. The line that <a href="#r-env.debugging.opening">the opening rule</a> describes is
+checked in its own example.</p>
+</blockquote>
+<h2 id="starting"><a class="header" href="#starting">Starting</a></h2>
+<div class="rule" id="r-env.debugging.start"><a href="#r-env.debugging.start">[env.debugging.start]</a></div>
+<p>Interactive tracing starts when a <a href="../instructions/trace.html#r-instr.trace.form.interactive">TRACE
+instruction</a> or a call of the <a href="../builtins/trace.html#r-bif.trace.prefix">TRACE
+function</a> gives a setting that turns it on, and it starts
+with whatever letter that setting has. The clause that turns it on is traced
+under the old setting, as <a href="../instructions/trace.html#r-instr.trace.effect">the effect rule</a> says, so it
+is shown only when the old setting shows it. A TRACE instruction, and an
+assignment that calls the function, are followed by no stop: the first stop
+follows the next clause. Any other clause that calls the function and turns it
+on, a CALL, a SAY, an IF or a PARSE VALUE for instance, is followed by a stop
+at once, after the lines it caused; <a href="#r-env.debugging.notice">the notice</a> comes
+before that stop and <a href="#r-env.debugging.opening">the source line</a> before the
+next clause that is shown. How a package asks for it with <code>::OPTIONS TRACE</code> is
+the business of <a href="../directives/options.html#r-dir.options.trace">the directive</a>; the environment variable
+<code>RXTRACE</code> is described <a href="#r-env.debugging.rxtrace">below</a>. In the first example
+the first clause that is shown is <code>say 'one'</code>, the one after <code>trace ?a</code>, and
+the stop follows it, after what it wrote. In the second, the function turns it
+on from inside an assignment, and the stop follows the clause after that one.
+In the third, a CALL of the function turns it on, and the stop follows the
+CALL at once, so that <code>say 'b'</code> is shown only after it. In the fourth, the old
+setting is <code>R</code>, so the clause that turns interactive tracing on is shown.</p>
+<pre><code class="language-rexx">.debuginput~destination(.in~new(.array~of('', '')))
+.traceoutput~destination(.show~new)
+say 'before'
+trace ?a
+say 'one'
+say 'two'
+exit
+::class in
+::method init
+  expose a i
+  use arg a
+  i = 0
+::method linein
+  expose a i
+  i += 1
+  if i &gt; a~items then return ''
+  say '[read' i':' a[i]']'
+  return a[i]
+::class show
+::method lineout
+  use arg l
+  l = '' || l
+  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  return 0
+</code></pre>
+<pre><code class="language-output">before
+     5 *-* say 'one'
+one
++++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+[read 1: ]
+     6 *-* say 'two'
+two
+[read 2: ]
+     7 *-* exit
+</code></pre>
+<pre><code class="language-rexx">.debuginput~destination(.in~new(.array~of('say "typed"', '')))
+.traceoutput~destination(.show~new)
+say 'a'
+x = trace('?r')
+say 'b'
+call trace 'o'
+::class in
+::method init
+  expose a i
+  use arg a
+  i = 0
+::method linein
+  expose a i
+  i += 1
+  if i &gt; a~items then return ''
+  say '[read' i':' a[i]']'
+  return a[i]
+::class show
+::method lineout
+  use arg l
+  l = '' || l
+  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  return 0
+</code></pre>
+<pre><code class="language-output">a
+     5 *-* say 'b'
+       &gt;&gt;&gt;   "b"
+b
++++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+[read 1: say "typed"]
+typed
+[read 2: ]
+     6 *-* call trace 'o'
+</code></pre>
+<pre><code class="language-rexx">.debuginput~destination(.in~new(.array~of('say "t1"', '', '', '', '')))
+.traceoutput~destination(.show~new)
+say 'a'
+call trace '?r'
+say 'b'
+say 'c'
+call trace 'o'
+exit
+::class in
+::method init
+  expose a i
+  use arg a
+  i = 0
+::method linein
+  expose a i
+  i += 1
+  if i &gt; a~items then return ''
+  say '[read' i':' a[i]']'
+  return a[i]
+::class show
+::method lineout
+  use arg l
+  l = '' || l
+  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  return 0
+</code></pre>
+<pre><code class="language-output defect=#222">a
+       &gt;&gt;&gt;   "N"
++++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+[read 1: say "t1"]
+t1
+[read 2: ]
+     5 *-* say 'b'
+       &gt;&gt;&gt;   "b"
+b
+[read 3: ]
+     6 *-* say 'c'
+       &gt;&gt;&gt;   "c"
+c
+[read 4: ]
+     7 *-* call trace 'o'
+</code></pre>
+<pre><code class="language-rexx">.debuginput~destination(.in~new(.array~of('', '')))
+.traceoutput~destination(.show~new)
+trace r
+trace ?r
+say 'b'
+call trace 'o'
+exit
+::class in
+::method init
+  expose a i
+  use arg a
+  i = 0
+::method linein
+  expose a i
+  i += 1
+  if i &gt; a~items then return ''
+  say '[read' i':' a[i]']'
+  return a[i]
+::class show
+::method lineout
+  use arg l
+  l = '' || l
+  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  return 0
+</code></pre>
+<pre><code class="language-output">     4 *-* trace ?r
+     5 *-* say 'b'
+       &gt;&gt;&gt;   "b"
+b
++++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+[read 1: ]
+     6 *-* call trace 'o'
+</code></pre>
+<div class="rule" id="r-env.debugging.opening"><a href="#r-env.debugging.opening">[env.debugging.opening]</a></div>
+<p>When interactive tracing is turned on in code that has not yet written it, a
+line is written before the next clause that is shown: seven blanks, <code>+++</code>, a
+blank, and in double quotation marks the string that <a href="../instructions/parse.html#r-instr.parse.source">PARSE
+SOURCE</a> gives for the program. The code is the main code
+of the program or a run of an internal routine; a routine starts as having
+written the line when its caller has, and what it writes is not handed back,
+so a routine that turns interactive tracing on before its caller ever has
+writes it, and so does the caller later. In the first example the class <code>show</code>
+replaces the source line by a marker, after checking that it has the form and
+the content the rule gives. In the second the routine and then the caller
+write it, and the second call of the routine, made after the caller had
+written it, does not; the class <code>show</code> there also leaves out the notice.</p>
+<pre><code class="language-rexx">parse source src
+.traceoutput~destination(.show~new(src))
+.debuginput~destination(.in~new(.array~of('say "typed"', '')))
+say 'before'
+trace ?a
+say 'one'
+say 'two'
+exit
+::class show
+::method init
+  expose src
+  use arg src
+::method lineout
+  expose src
+  use arg l
+  l = '' || l
+  if l = '       +++ "' || src || '"' then l = '&lt;source line&gt;'
+  .stdout~lineout(l)
+  return 0
+::class in
+::method init
+  expose a i
+  use arg a
+  i = 0
+::method linein
+  expose a i
+  i += 1
+  say '[read' i']'
+  if i &gt; a~items then return ''
+  return a[i]
+</code></pre>
+<pre><code class="language-output">before
+&lt;source line&gt;
+     6 *-* say 'one'
+one
++++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+[read 1]
+typed
+[read 2]
+     7 *-* say 'two'
+two
+[read 3]
+     8 *-* exit
+</code></pre>
+<pre><code class="language-rexx">parse source src
+.traceoutput~destination(.show~new(src))
+.debuginput~destination(.in~new(.array~of('', '', '', '', '', '', '', '')))
+call r1
+trace ?a
+say 'main'
+call trace 'o'
+call r1
+exit
+r1:
+  trace ?a
+  nop
+  return
+::class in
+::method init
+  expose a i
+  use arg a
+  i = 0
+::method linein
+  expose a i
+  i += 1
+  if i &gt; a~items then return ''
+  say '[read' i':' a[i]']'
+  return a[i]
+::class show
+::method init
+  expose src
+  use arg src
+::method lineout
+  expose src
+  use arg l
+  l = '' || l
+  if l = '       +++ "' || src || '"' then l = '&lt;source line&gt;'
+  if l~word(2) \= 'Interactive' then .stdout~lineout(l)
+  return 0
+</code></pre>
+<pre><code class="language-output">&lt;source line&gt;
+    12 *-*   nop
+[read 1: ]
+    13 *-*   return
+&lt;source line&gt;
+     6 *-* say 'main'
+main
+[read 2: ]
+     7 *-* call trace 'o'
+    12 *-*   nop
+[read 3: ]
+    13 *-*   return
+</code></pre>
+<div class="rule" id="r-env.debugging.notice"><a href="#r-env.debugging.notice">[env.debugging.notice]</a></div>
+<p>Each time interactive tracing is turned on where it was off, the line
+<code>+++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++</code> is
+written just before the first stop that follows. Turning it off and on again
+in the same code, in the program or by a line typed at a stop, writes it
+again. In the example it is written before the first stop of each of the two
+periods in which interactive tracing is on.</p>
+<pre><code class="language-rexx">.debuginput~destination(.in~new(.array~of('', '', '', '', '', '')))
+.traceoutput~destination(.show~new)
+trace ?a
+say 'p1'
+call trace 'o'
+say 'p2'
+trace ?a
+say 'p3'
+say 'p4'
+exit
+::class in
+::method init
+  expose a i
+  use arg a
+  i = 0
+::method linein
+  expose a i
+  i += 1
+  if i &gt; a~items then return ''
+  say '[read' i':' a[i]']'
+  return a[i]
+::class show
+::method lineout
+  use arg l
+  l = '' || l
+  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  return 0
+</code></pre>
+<pre><code class="language-output defect=#221">     4 *-* say 'p1'
+p1
++++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+[read 1: ]
+     5 *-* call trace 'o'
+p2
+     8 *-* say 'p3'
+p3
++++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+[read 2: ]
+     9 *-* say 'p4'
+p4
+[read 3: ]
+    10 *-* exit
+</code></pre>
+<h2 id="where-the-lines-go"><a class="header" href="#where-the-lines-go">Where the lines go</a></h2>
+<div class="rule" id="r-env.debugging.output"><a href="#r-env.debugging.output">[env.debugging.output]</a></div>
+<p>Every line that interactive tracing writes, as well as the shown clauses and
+their values, reaches the destination of <code>.traceoutput</code> as a <code>LINEOUT</code> message
+whose argument is a <a href="../classes/traceobject.html#r-class.traceobject.creation"><code>TraceObject</code></a>, as <a href="../instructions/trace.html#r-instr.trace.destination">the
+destination rule</a> says for the lines of a trace:
+the line with the source string, the notice, the lines that report an error in
+what was typed, and the shown clauses. The example sorts what its destination
+receives into those kinds, and every line is one of them; no other line, a
+prompt for instance, is written there.</p>
+<pre><code class="language-rexx">.debuginput~destination(.in~new(.array~of('say 1 +', 'say 7', '')))
+.traceoutput~destination(.catalog~new)
+trace ?r
+say 'one'
+say 'two'
+call trace 'o'
+::class catalog
+::method lineout
+  use arg l
+  s = '' || l
+  select
+    when s~strip~left(5) = '+++ "' then kind = 'source line'
+    when s~word(2) = 'Interactive' &amp; s~word(4) = '"Trace' then kind = 'notice'
+    when s~word(2) = 'Interactive' &amp; s~word(4) = 'Error' then kind = 'error line'
+    when s~pos('*-*') &gt; 0 then kind = 'clause'
+    when s~left(10) = '       &gt;&gt;&gt;' then kind = 'value'
+    otherwise kind = '?'
+  end
+  say kind~left(11) l~class~id
+  return 0
+::class in
+::method init
+  expose a i
+  use arg a
+  i = 0
+::method linein
+  expose a i
+  i += 1
+  if i &gt; a~items then return ''
+  return a[i]
+</code></pre>
+<pre><code class="language-output">source line TraceObject
+clause      TraceObject
+value       TraceObject
+one
+notice      TraceObject
+error line  TraceObject
+error line  TraceObject
+7
+clause      TraceObject
+value       TraceObject
+two
+clause      TraceObject
+</code></pre>
+<h2 id="when-the-interpreter-stops"><a class="header" href="#when-the-interpreter-stops">When the interpreter stops</a></h2>
+<div class="rule" id="r-env.debugging.pause"><a href="#r-env.debugging.pause">[env.debugging.pause]</a></div>
+<p>A stop follows a traced clause, after the clause has run and after the lines
+that it caused have been written, and before the next clause starts. A CALL
+clause that calls a routine is followed by one stop, after the routine has
+returned and its RETURN has been shown, besides the stops inside the routine,
+which come while interactive tracing is on in it. A <code>LEAVE</code> is followed by a
+stop, and so is a label, however it is reached. In the example the stops are
+the ones that follow <code>n = 1</code>, the label <code>sub:</code>, the clause in the routine, and
+the CALL, which is stopped at after the <code>return</code> is shown.</p>
+<pre><code class="language-rexx">.debuginput~destination(.in~new(.array~of('', '', '', '', '')))
+.traceoutput~destination(.show~new)
+trace ?r
+n = 1
+call sub
+say 'back'
+exit
+sub: say 'in sub'
+  return
+::class in
+::method init
+  expose a i
+  use arg a
+  i = 0
+::method linein
+  expose a i
+  i += 1
+  if i &gt; a~items then return ''
+  say '[read' i':' a[i]']'
+  return a[i]
+::class show
+::method lineout
+  use arg l
+  l = '' || l
+  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  return 0
+</code></pre>
+<pre><code class="language-output">     4 *-* n = 1
+       &gt;&gt;&gt;   "1"
++++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+[read 1: ]
+     5 *-* call sub
+     8 *-*   sub:
+[read 2: ]
+     8 *-*   say 'in sub'
+       &gt;&gt;&gt;     "in sub"
+in sub
+[read 3: ]
+     9 *-*   return
+[read 4: ]
+     6 *-* say 'back'
+       &gt;&gt;&gt;   "back"
+back
+[read 5: ]
+     7 *-* exit
+</code></pre>
+<div class="rule" id="r-env.debugging.pause.skipped"><a href="#r-env.debugging.pause.skipped">[env.debugging.pause.skipped]</a></div>
+<p>Some traced clauses are not followed by a stop, because they cannot be run
+again safely: a DO or LOOP clause on its second and later turns, which
+includes the turn that finds the loop at its end, an END, a THEN, an ELSE, an
+OTHERWISE, an ITERATE, a SIGNAL of any kind, a CALL ON or a CALL OFF, a
+RETURN, whose stop is the one that follows the clause that made the call,
+whether a CALL, a function call or a message in an expression, and there is
+none when that clause has no stop, an EXIT, and a clause that raises a syntax
+error. A label that <a href="../conditions/traps.html#r-cond.traps.signal">SIGNAL ON</a> transfers to after an
+error is followed by a stop like any label, and so is a command whose return
+code raises ERROR or FAILURE, a stop that comes before a trap for the
+condition runs. The example prints a number at each stop. It shows each clause
+of the rule without a stop: the second and third turns of the loop header, the
+two <code>end</code> clauses, <code>then</code>, <code>else</code> and <code>otherwise</code>, <code>iterate</code>, the CALL ON, the
+SIGNAL ON and the plain SIGNAL, and <code>x = 1 / 0</code>, after which the label <code>oops</code>
+is the next thing that is shown and stopped at.</p>
+<pre><code class="language-rexx">.debuginput~destination(.in~new(.array~of('', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '')))
+.traceoutput~destination(.show~new)
+trace ?a
+n = 1
+if n = 1 then nop
+if n = 2 then nop
+else nop
+select
+  when n = 5 then nop
+  otherwise nop
+end
+do i = 1 to 2
+  if i = 1 then iterate
+  nop
+end
+do forever
+  leave
+end
+call sub
+call on error name ce
+signal on syntax name oops
+x = 1 / 0
+oops: signal fin
+fin: say 'done'
+exit
+sub: return
+::class in
+::method init
+  expose a i
+  use arg a
+  i = 0
+::method linein
+  expose a i
+  i += 1
+  if i &gt; a~items then return ''
+  say '[read' i':' a[i]']'
+  return a[i]
+::class show
+::method lineout
+  use arg l
+  l = '' || l
+  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  return 0
+</code></pre>
+<pre><code class="language-output">     4 *-* n = 1
++++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+[read 1: ]
+     5 *-* if n = 1 
+[read 2: ]
+     5 *-*   then
+     5 *-*     nop
+[read 3: ]
+     6 *-* if n = 2 
+[read 4: ]
+     7 *-*   else
+     7 *-*     nop
+[read 5: ]
+     8 *-* select
+[read 6: ]
+     9 *-*   when n = 5 
+[read 7: ]
+    10 *-*   otherwise
+    10 *-*     nop
+[read 8: ]
+    11 *-* end
+    12 *-* do i = 1 to 2
+[read 9: ]
+    13 *-*   if i = 1 
+[read 10: ]
+    13 *-*     then
+    13 *-*       iterate
+    12 *-* do i = 1 to 2
+[read 11: ]
+    13 *-*   if i = 1 
+[read 12: ]
+    14 *-*   nop
+[read 13: ]
+    15 *-* end
+    12 *-* do i = 1 to 2
+    16 *-* do forever
+[read 14: ]
+    17 *-*   leave
+[read 15: ]
+    19 *-* call sub
+    26 *-*   sub:
+[read 16: ]
+    26 *-*   return
+[read 17: ]
+    20 *-* call on error name ce
+    21 *-* signal on syntax name oops
+    22 *-* x = 1 / 0
+    23 *-* oops:
+[read 18: ]
+    23 *-* signal fin
+    24 *-* fin:
+[read 19: ]
+    24 *-* say 'done'
+done
+[read 20: ]
+    25 *-* exit
+</code></pre>
+<div class="rule" id="r-env.debugging.interpret"><a href="#r-env.debugging.interpret">[env.debugging.interpret]</a></div>
+<p>The clauses of a string that INTERPRET runs are traced and stopped after as
+the clauses of the program are, and the INTERPRET clause itself is followed by
+a stop that comes before the first clause of its string. A string of two
+clauses therefore causes three stops, and an empty string one.</p>
+<pre><code class="language-rexx">.debuginput~destination(.in~new(.array~of('', '', '', '', '')))
+.traceoutput~destination(.show~new)
+trace ?a
+interpret 'say 1; say 2'
+interpret ''
+exit
+::class in
+::method init
+  expose a i
+  use arg a
+  i = 0
+::method linein
+  expose a i
+  i += 1
+  if i &gt; a~items then return ''
+  say '[read' i':' a[i]']'
+  return a[i]
+::class show
+::method lineout
+  use arg l
+  l = '' || l
+  if l~strip~left(3) \= '+++' then .stdout~lineout(l)
+  return 0
+</code></pre>
+<pre><code class="language-output">     4 *-* interpret 'say 1; say 2'
+[read 1: ]
+     4 *-* say 1;
+1
+[read 2: ]
+     4 *-* say 2
+2
+[read 3: ]
+     5 *-* interpret ''
+[read 4: ]
+     6 *-* exit
+</code></pre>
+<h2 id="what-is-read"><a class="header" href="#what-is-read">What is read</a></h2>
+<div class="rule" id="r-env.debugging.read"><a href="#r-env.debugging.read">[env.debugging.read]</a></div>
+<p>At a stop the interpreter sends the message <code>LINEIN</code>, with no argument, to the
+object that the entry <code>DEBUGINPUT</code> of <code>.local</code> holds, and takes the answer as
+the line that was typed. When the line is the empty string, the stop is over
+and the program goes on, so an input that has run dry and answers the empty
+string lets the program run on. The example installs an object of its own on
+<code>.debuginput</code>: it is sent <code>LINEIN</code> three times, with no argument each time,
+for the line it answers, the empty line that follows, and the stop after the
+second <code>nop</code>.</p>
+<pre><code class="language-rexx">.traceoutput~destination(.quiet~new)
+a = .in~new('say "from debuginput"')
+.debuginput~destination(a)
+trace ?a
+nop
+nop
+call trace 'o'
+say 'LINEIN sent' a~calls 'times, with' a~args 'arguments'
+::class quiet
+::method lineout
+  return 0
+::class in
+::attribute calls
+::attribute args
+::method init
+  expose line
+  use arg line
+  self~calls = 0
+  self~args = 0
+::method linein
+  expose line
+  self~calls += 1
+  self~args = arg()
+  if self~calls = 1 then return line
+  return ''
+</code></pre>
+<pre><code class="language-output">from debuginput
+LINEIN sent 3 times, with 0 arguments
+</code></pre>
+<div class="rule" id="r-env.debugging.read.fallback"><a href="#r-env.debugging.read.fallback">[env.debugging.read.fallback]</a></div>
+<p>When nothing was installed, the object that <code>.debuginput</code> holds is a monitor
+whose destination is the monitor <code>.input</code>, as <a href="objects.html#r-env.objects.bindings">the bindings
+rule</a> says, so the stops read from whatever <code>.input</code>
+reads from, which is the standard input unless a program changes it. The
+example makes <code>.debuginput</code> the way it was by taking the destination that it
+installed off, and then sets the destination of <code>.input</code>: the stops read from
+that object.</p>
+<pre><code class="language-rexx">.traceoutput~destination(.quiet~new)
+.debuginput~destination(.in~new('say "never read"'))
+.debuginput~destination
+say .debuginput~current~class~id
+b = .in~new('say "from input"')
+.input~destination(b)
+trace ?a
+nop
+nop
+call trace 'o'
+say 'LINEIN sent' b~calls 'times'
+::class quiet
+::method lineout
+  return 0
+::class in
+::attribute calls
+::method init
+  expose line
+  use arg line
+  self~calls = 0
+::method linein
+  expose line
+  self~calls += 1
+  if self~calls = 1 then return line
+  return ''
+</code></pre>
+<pre><code class="language-output">Monitor
+from input
+LINEIN sent 3 times
+</code></pre>
+<div class="rule" id="r-env.debugging.read.entry"><a href="#r-env.debugging.read.entry">[env.debugging.read.entry]</a></div>
+<p>It is the entry <code>DEBUGINPUT</code> of <code>.local</code> that is read, as for <a href="objects.html#r-env.objects.replace">the other
+objects</a>, and nothing else. Replacing the entry <code>INPUT</code>
+of <code>.local</code> by another object changes what <code>.input</code> finds and not the monitor
+that <code>.debuginput</code> is connected to, so the stops do not read from it; and an
+object that is in <code>.environment</code> under the name <code>DEBUGINPUT</code> is not read when
+the entry of <code>.local</code> is gone. When the entry is gone, a stop reads nothing
+and the program goes on; interactive tracing stays on. In the first example
+the stops read from the object that is the destination of <code>.input</code>, and the
+object that then replaces <code>INPUT</code> is never sent <code>LINEIN</code>; in the second the
+object in <code>.environment</code> is never sent it, and <code>trace()</code> still answers <code>?A</code>
+after the stop that read nothing.</p>
+<pre><code class="language-rexx">.traceoutput~destination(.quiet~new)
+b = .in~new('say "from b"')
+.input~destination(b)
+c = .in~new('say "from c"')
+.local~input = c
+trace ?a
+nop
+call trace 'o'
+say 'b read' b~calls 'times, c read' c~calls 'times'
+::class quiet
+::method lineout
+  return 0
+::class in
+::attribute calls
+::method init
+  expose line
+  use arg line
+  self~calls = 0
+::method linein
+  expose line
+  self~calls += 1
+  if self~calls = 1 then return line
+  return ''
+</code></pre>
+<pre><code class="language-output">from b
+b read 2 times, c read 0 times
+</code></pre>
+<pre><code class="language-rexx">.traceoutput~destination(.quiet~new)
+a = .in~new
+.environment~debuginput = a
+.local~remove('DEBUGINPUT')
+trace ?a
+nop
+say 'during' trace()
+nop
+call trace 'o'
+say 'sent' a~calls 'times, trace' trace()
+::class quiet
+::method lineout
+  return 0
+::class in
+::attribute calls
+::method init
+  self~calls = 0
+::method linein
+  self~calls += 1
+  return ''
+</code></pre>
+<pre><code class="language-output">during ?A
+sent 0 times, trace O
+</code></pre>
+<div class="rule" id="r-env.debugging.read.refused"><a href="#r-env.debugging.read.refused">[env.debugging.read.refused]</a></div>
+<p>An object that the stops read from, and that does not understand <code>LINEIN</code>,
+raises <code>SYNTAX 97.1</code> at the first stop, an ordinary condition of the clause
+that the stop follows: a trap for SYNTAX in force catches it. The example is
+ended by that error, with the return code that goes with it, after the clause
+that came before the stop has written its line.</p>
+<pre><code class="language-rexx">.debuginput~destination(.mute~new)
+trace ?a
+say 'one'
+say 'two'
+::class mute
+</code></pre>
+<pre><code class="language-output rc=159">one
+</code></pre>
+<h2 id="what-a-line-does"><a class="header" href="#what-a-line-does">What a line does</a></h2>
+<div class="rule" id="r-env.debugging.input.clause"><a href="#r-env.debugging.input.clause">[env.debugging.input.clause]</a></div>
+<p>A line that is not empty and not <code>=</code> is run as the clauses it holds, in the
+way an INTERPRET clause would run it: it can hold several clauses, separated
+by semicolons, and a group such as a DO must be complete in it. Variables that
+it sets stay set. The clauses of the line are not traced, so they write no
+line, and no stop follows any of them. After the line has run the interpreter
+stops again: it reads another line, and goes on to the next clause of the
+program only when the line is empty or does one of the things that the rules
+below give. A line that holds only blanks, only a comment, only a semicolon or
+only <code>nop</code> does nothing and is followed by another read. A LEAVE or an ITERATE
+in a line does not reach the loops of the program: it raises error 28, which
+is reported as <a href="#r-env.debugging.input.error">the next rule</a> says. An INTERPRET
+in a line runs its string untraced too (<a href="#r-env.debugging.deviation.150">Deviation
+150</a>). In the
+example the interpreter reads eight lines after <code>say 'prog' x</code>, the last one
+the empty line.</p>
+<pre><code class="language-rexx">.debuginput~destination(.in~new(.array~of('x = 5; y = x * 2', 'say x y', 'do k = 1 to 2; say k; end', '   ', ';', 'nop', '/* just a comment */', '')))
+.traceoutput~destination(.show~new)
+x = 1
+trace ?r
+say 'prog' x
+say 'prog' x
+exit
+::class in
+::method init
+  expose a i
+  use arg a
+  i = 0
+::method linein
+  expose a i
+  i += 1
+  if i &gt; a~items then return ''
+  say '[read' i':' a[i]']'
+  return a[i]
+::class show
+::method lineout
+  use arg l
+  l = '' || l
+  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  return 0
+</code></pre>
+<pre><code class="language-output">     5 *-* say 'prog' x
+       &gt;&gt;&gt;   "prog 1"
+prog 1
++++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+[read 1: x = 5; y = x * 2]
+[read 2: say x y]
+5 10
+[read 3: do k = 1 to 2; say k; end]
+1
+2
+[read 4:    ]
+[read 5: ;]
+[read 6: nop]
+[read 7: /* just a comment */]
+[read 8: ]
+     6 *-* say 'prog' x
+       &gt;&gt;&gt;   "prog 5"
+prog 5
+     7 *-* exit
+</code></pre>
+<div class="rule" id="r-env.debugging.input.error"><a href="#r-env.debugging.input.error">[env.debugging.input.error]</a></div>
+<p>An error in a line does not end the program. It is reported by two lines that
+reach <code>.traceoutput</code> like the others, which start with
+<code>+++ Interactive trace.  Error</code>, the number and then the subcode of the error,
+followed by text that is not specified; the interpreter then stops again and
+reads another line. Errors that are found when the line is read, such as an
+expression that cannot be parsed or a DO that is not closed, and errors that
+happen when it runs, such as a division by zero or a call of a routine that
+does not exist, are all reported that way, and so is one that RAISE SYNTAX
+in a line causes (<a href="#r-env.debugging.deviation.151">Deviation 151</a>); the empty
+line after any of them is read as any other (<a href="#r-env.debugging.deviation.152">Deviation
+152</a>). The error is not
+<a href="../conditions/traps.html#r-cond.traps.signal">trapped</a>, even when the program has a trap for its
+condition in force; the example would branch to <code>trapped</code> otherwise. The
+example prints only the code of each reported error.</p>
+<pre><code class="language-rexx">.debuginput~destination(.in~new(.array~of('say 1 +', 'do', 'say "inside"', 'say 1/0', 'call nosuchroutine_a6zq', 'say 2', '')))
+.traceoutput~destination(.show~new)
+signal on syntax name trapped
+trace ?a
+say 'one'
+say 'two'
+exit
+trapped: say 'trapped' condition('c')
+::class in
+::method init
+  expose a i
+  use arg a
+  i = 0
+::method linein
+  expose a i
+  i += 1
+  if i &gt; a~items then return ''
+  say '[read' i':' a[i]']'
+  return a[i]
+::class show
+::method lineout
+  use arg l
+  l = '' || l
+  select
+    when l~strip~left(5) = '+++ "' then nop
+    when l~word(2) = 'Interactive' &amp; l~word(4) = 'Error' then do
+      say 'error' l~word(5)~strip('T', ':')
+    end
+    otherwise .stdout~lineout(l)
+  end
+  return 0
+</code></pre>
+<pre><code class="language-output">     5 *-* say 'one'
+one
++++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+[read 1: say 1 +]
+error 35
+error 35.1
+[read 2: do]
+error 14
+error 14.1
+[read 3: say "inside"]
+inside
+[read 4: say 1/0]
+error 42
+error 42.3
+[read 5: call nosuchroutine_a6zq]
+error 43
+error 43.1
+[read 6: say 2]
+2
+[read 7: ]
+     6 *-* say 'two'
+two
+     7 *-* exit
+</code></pre>
+<div class="rule" id="r-env.debugging.input.condition"><a href="#r-env.debugging.input.condition">[env.debugging.input.condition]</a></div>
+<p>A line runs in the variables and the condition traps of the program, with two
+differences. A <code>SIGNAL ON</code> that a line holds sets a trap of the program, and
+the trap stays when the line is over; but no trap is used while the line
+itself runs, as the rule before says. And a command that a line runs does not
+set <code>RC</code>; nothing is written about it, whatever its return code, and it raises
+no ERROR or FAILURE condition that a trap of the program would catch. In the
+example the first line makes the program trap the syntax error that its own
+<code>say 1 / 0</code> raises later, and the second runs a command whose status would be
+5: <code>rc</code> still holds 7, nothing is written, and the trap for ERROR is not
+called.</p>
+<pre><code class="language-rexx">.debuginput~destination(.in~new(.array~of('signal on syntax name hs', 'rc = 7; address system "exit 5"', 'say rc', '')))
+.traceoutput~destination(.show~new)
+call on error name ce
+trace ?a
+say 'one'
+say 1 / 0
+exit
+hs: say 'trapped' condition('c')
+exit
+ce: say 'ce'
+return
+::class in
+::method init
+  expose a i
+  use arg a
+  i = 0
+::method linein
+  expose a i
+  i += 1
+  if i &gt; a~items then return ''
+  say '[read' i':' a[i]']'
+  return a[i]
+::class show
+::method lineout
+  use arg l
+  l = '' || l
+  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  return 0
+</code></pre>
+<pre><code class="language-output">     5 *-* say 'one'
+one
++++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+[read 1: signal on syntax name hs]
+[read 2: rc = 7; address system "exit 5"]
+[read 3: say rc]
+7
+[read 4: ]
+     6 *-* say 1 / 0
+     8 *-* hs:
+     8 *-* say 'trapped' condition('c')
+trapped SYNTAX
+     9 *-* exit
+</code></pre>
+<div class="rule" id="r-env.debugging.input.transfer"><a href="#r-env.debugging.input.transfer">[env.debugging.input.transfer]</a></div>
+<p>A line that runs EXIT, RETURN or SIGNAL carries it out as the program would at
+that point: EXIT ends the program with its value as the return code, RETURN
+returns from the code that is stopped, with its value, and SIGNAL goes to the
+label of the program that it names. The stop is over and what follows in the
+line is not run. In the example each routine <code>body</code> is stopped after its
+<code>nop</code>; <code>return 7</code> and <code>say 1; return 8</code> return from it, <code>signal lab</code> goes on
+at its label, and <code>exit 4</code> ends the program.</p>
+<pre><code class="language-rexx">.traceoutput~destination(.quiet~new)
+call probe 'return 7'
+call probe 'signal lab'
+call probe 'say 1; return 8'
+call probe 'exit 4'
+say 'not reached'
+exit
+probe: procedure
+  .debuginput~destination(.feed~new(arg(1)))
+  call body
+  say 'probe' arg(1) 'result' result
+  return
+body:
+  trace ?a
+  nop
+  say 'after the stop'
+  return 'normal'
+lab: say 'at lab'
+  return 'from lab'
+::class quiet
+::method lineout
+  return 0
+::class feed
+::attribute count class
+::method init
+  expose line
+  use arg line
+  .feed~count = 0
+::method linein
+  expose line
+  .feed~count += 1
+  if .feed~count = 1 then return line
+  return ''
+</code></pre>
+<pre><code class="language-output defect=#217 rc=4">probe return 7 result 7
+at lab
+probe signal lab result from lab
+1
+probe say 1; return 8 result 8
+</code></pre>
+<div class="rule" id="r-env.debugging.input.equals"><a href="#r-env.debugging.input.equals">[env.debugging.input.equals]</a></div>
+<p>The line <code>=</code>, with nothing before or after it, runs again the clause that the
+stop follows, shows it again with the lines that it caused, and stops after it
+again; at the stop that follows a CALL that clause is the CALL, and the
+routine runs again. The clause that is repeated is one of the program, never a
+line that was typed. In the last example the stop after <code>call sub</code> is followed
+by <code>=</code>, so that <code>n</code> is incremented twice. With a blank or any other character
+beside it the line is not <code>=</code> and is run as a clause: <code>=</code> has no meaning as a
+clause and raises an error, which is reported as the rule before says.</p>
+<pre><code class="language-rexx">.debuginput~destination(.in~new(.array~of('=', '=', 'say n', '=', 'say n', '')))
+.traceoutput~destination(.show~new)
+n = 0
+trace ?r
+n = n + 1
+say 'n' n
+exit
+::class in
+::method init
+  expose a i
+  use arg a
+  i = 0
+::method linein
+  expose a i
+  i += 1
+  if i &gt; a~items then return ''
+  say '[read' i':' a[i]']'
+  return a[i]
+::class show
+::method lineout
+  use arg l
+  l = '' || l
+  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  return 0
+</code></pre>
+<pre><code class="language-output">     5 *-* n = n + 1
+       &gt;&gt;&gt;   "1"
++++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+[read 1: =]
+     5 *-* n = n + 1
+       &gt;&gt;&gt;   "2"
+[read 2: =]
+     5 *-* n = n + 1
+       &gt;&gt;&gt;   "3"
+[read 3: say n]
+3
+[read 4: =]
+     5 *-* n = n + 1
+       &gt;&gt;&gt;   "4"
+[read 5: say n]
+4
+[read 6: ]
+     6 *-* say 'n' n
+       &gt;&gt;&gt;   "n 4"
+n 4
+     7 *-* exit
+</code></pre>
+<pre><code class="language-rexx">.debuginput~destination(.in~new(.array~of(' =', '= ', '==', 'say n', '')))
+.traceoutput~destination(.show~new)
+n = 0
+trace ?a
+n = n + 1
+say 'n' n
+exit
+::class in
+::method init
+  expose a i
+  use arg a
+  i = 0
+::method linein
+  expose a i
+  i += 1
+  if i &gt; a~items then return ''
+  say '[read' i':' a[i]']'
+  return a[i]
+::class show
+::method lineout
+  use arg l
+  l = '' || l
+  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  return 0
+</code></pre>
+<pre><code class="language-output">     5 *-* n = n + 1
++++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+[read 1:  =]
++++ Interactive trace.  Error 35:   Invalid expression.
++++ Interactive trace.  Error 35.1:  Incorrect expression detected at "=".
+[read 2: = ]
++++ Interactive trace.  Error 35:   Invalid expression.
++++ Interactive trace.  Error 35.1:  Incorrect expression detected at "=".
+[read 3: ==]
++++ Interactive trace.  Error 35:   Invalid expression.
++++ Interactive trace.  Error 35.1:  Incorrect expression detected at "==".
+[read 4: say n]
+1
+[read 5: ]
+     6 *-* say 'n' n
+n 1
+     7 *-* exit
+</code></pre>
+<pre><code class="language-rexx">.debuginput~destination(.in~new(.array~of('', '', '', '=', '', '', '', '')))
+.traceoutput~destination(.show~new)
+trace ?a
+n = 0
+call sub
+say 'n' n
+exit
+sub: n += 1
+  return
+::class in
+::method init
+  expose a i
+  use arg a
+  i = 0
+::method linein
+  expose a i
+  i += 1
+  if i &gt; a~items then return ''
+  say '[read' i':' a[i]']'
+  return a[i]
+::class show
+::method lineout
+  use arg l
+  l = '' || l
+  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  return 0
+</code></pre>
+<pre><code class="language-output">     4 *-* n = 0
++++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+[read 1: ]
+     5 *-* call sub
+     8 *-*   sub:
+[read 2: ]
+     8 *-*   n += 1
+[read 3: ]
+     9 *-*   return
+[read 4: =]
+     5 *-* call sub
+     8 *-*   sub:
+[read 5: ]
+     8 *-*   n += 1
+[read 6: ]
+     9 *-*   return
+[read 7: ]
+     6 *-* say 'n' n
+n 2
+[read 8: ]
+     7 *-* exit
+</code></pre>
+<div class="rule" id="r-env.debugging.input.trace"><a href="#r-env.debugging.input.trace">[env.debugging.input.trace]</a></div>
+<p>A TRACE instruction that a line runs takes effect, unlike one in the
+program, and so does a call of the TRACE function with an argument; either
+ends the stop, whatever setting it leaves: the program runs on to its next
+stop, if any. The rest of the line still runs. A call with no argument, and a
+TRACE that the line holds but does not run, end nothing.
+<code>trace o</code>, <code>trace off</code>,
+the bare <code>trace</code>, and a setting with a letter and no question mark, as
+<code>trace r</code>, turn interactive tracing off and set the letter, as <a href="../builtins/trace.html#r-bif.trace.prefix">the prefix
+rule</a> says; <code>trace ?</code>, alone, turns it off and leaves the
+letter. The program then runs on with no stop. A line that does something
+else, such as <code>x = 1</code>, leaves interactive tracing on, and an input that has
+run dry does too. The example runs a routine, <code>body</code>, that turns interactive
+tracing on and runs three clauses, once for each line; each row shows the
+line, the number of times the interpreter read, and the setting that <code>body</code>
+answers at its end. Every row but the last three reads once. The last
+three, the call with no argument, the TRACE that is not run and the line that
+is no TRACE, read four times: the line, the empty line that follows it, and
+the stops after the second and third <code>nop</code>. In the second example each line
+leaves interactive tracing on, and so each ends the stop and the stops after
+the second and third <code>nop</code> follow: the routine reads three times, except in
+the last row, where the letter <code>N</code> shows no clause and no stop follows.</p>
+<pre><code class="language-rexx">.traceoutput~destination(.quiet~new)
+call try 'trace o'
+call try 'trace'
+call try 'trace n'
+call try 'trace r'
+call try 'trace ?'
+call try 'trace off'
+call try 'call trace "n"'
+call try 'x = trace()'
+call try 'if 0 then trace ?a'
+call try 'x = 1'
+exit
+try: procedure
+  .debuginput~destination(.in~new(arg(1)))
+  call body
+  say arg(1)~left(18) 'reads' .in~count 'setting' result
+  return
+body:
+  trace ?a
+  nop
+  nop
+  nop
+  return trace()
+::class quiet
+::method lineout
+  return 0
+::class in
+::attribute count class
+::method init
+  expose line
+  use arg line
+  .in~count = 0
+::method linein
+  expose line
+  .in~count += 1
+  if .in~count = 1 then return line
+  return ''
+</code></pre>
+<pre><code class="language-output">trace o            reads 1 setting O
+trace              reads 1 setting N
+trace n            reads 1 setting N
+trace r            reads 1 setting R
+trace ?            reads 1 setting A
+trace off          reads 1 setting O
+call trace "n"     reads 1 setting N
+x = trace()        reads 4 setting ?A
+if 0 then trace ?a reads 4 setting ?A
+x = 1              reads 4 setting ?A
+</code></pre>
+<pre><code class="language-rexx">.traceoutput~destination(.quiet~new)
+call try 'trace ?a'
+call try 'trace ??'
+call try 'x = trace("?i")'
+call try 'trace ?n'
+exit
+try: procedure
+  .debuginput~destination(.in~new(arg(1)))
+  call body
+  say arg(1)~left(18) 'reads' .in~count 'setting' result
+  return
+body:
+  trace ?a
+  nop
+  nop
+  nop
+  return trace()
+::class quiet
+::method lineout
+  return 0
+::class in
+::attribute count class
+::method init
+  expose line
+  use arg line
+  .in~count = 0
+::method linein
+  expose line
+  .in~count += 1
+  if .in~count = 1 then return line
+  return ''
+</code></pre>
+<pre><code class="language-output defect=#223">trace ?a           reads 3 setting ?A
+trace ??           reads 3 setting ?A
+x = trace("?i")    reads 3 setting ?I
+trace ?n           reads 1 setting ?N
+</code></pre>
+<div class="rule" id="r-env.debugging.input.number"><a href="#r-env.debugging.input.number">[env.debugging.input.number]</a></div>
+<p>A TRACE instruction in a line whose operand is a whole number, <a href="../instructions/trace.html#r-instr.trace.number">which a
+program may not give</a>, ends the stop. <code>trace 0</code> and
+<code>trace -0</code> leave nothing out, like the empty line. A positive number <code>n</code>
+leaves out the next <code>n</code> stops; the clauses are shown as before. A negative
+number <code>-n</code> hides the clauses up to and including the one that the <code>n</code>th stop
+would follow, and leaves out those <code>n</code> stops; the clauses in between that have
+no stop are hidden too. In the first example <code>trace 2</code> passes the stops after
+<code>say 'two'</code> and <code>say 'three'</code>, so that the stop returns after <code>say 'four'</code>. In
+the second, <code>trace -2</code> hides <code>say 'two'</code> and <code>say 'three'</code>. In the third,
+<code>trace -4</code> hides the loop header, both <code>nop</code> clauses, both <code>end</code> clauses and
+<code>say 'x'</code>, eight clauses up to the one that the fourth stop would follow, and
+<code>say 'y'</code> is shown with its stop. In the fourth, <code>trace 0</code> and <code>trace -0</code> end
+the stop and leave nothing out.</p>
+<pre><code class="language-rexx">.debuginput~destination(.in~new(.array~of('trace 2', '', '', '')))
+.traceoutput~destination(.show~new)
+trace ?a
+say 'one'
+say 'two'
+say 'three'
+say 'four'
+say 'five'
+exit
+::class in
+::method init
+  expose a i
+  use arg a
+  i = 0
+::method linein
+  expose a i
+  i += 1
+  if i &gt; a~items then return ''
+  say '[read' i':' a[i]']'
+  return a[i]
+::class show
+::method lineout
+  use arg l
+  l = '' || l
+  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  return 0
+</code></pre>
+<pre><code class="language-output">     4 *-* say 'one'
+one
++++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+[read 1: trace 2]
+     5 *-* say 'two'
+two
+     6 *-* say 'three'
+three
+     7 *-* say 'four'
+four
+[read 2: ]
+     8 *-* say 'five'
+five
+[read 3: ]
+     9 *-* exit
+</code></pre>
+<pre><code class="language-rexx">.debuginput~destination(.in~new(.array~of('trace -2', '', '', '')))
+.traceoutput~destination(.show~new)
+trace ?a
+say 'one'
+say 'two'
+say 'three'
+say 'four'
+say 'five'
+exit
+::class in
+::method init
+  expose a i
+  use arg a
+  i = 0
+::method linein
+  expose a i
+  i += 1
+  if i &gt; a~items then return ''
+  say '[read' i':' a[i]']'
+  return a[i]
+::class show
+::method lineout
+  use arg l
+  l = '' || l
+  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  return 0
+</code></pre>
+<pre><code class="language-output">     4 *-* say 'one'
+one
++++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+[read 1: trace -2]
+two
+three
+     7 *-* say 'four'
+four
+[read 2: ]
+     8 *-* say 'five'
+five
+[read 3: ]
+     9 *-* exit
+</code></pre>
+<pre><code class="language-rexx">.debuginput~destination(.in~new(.array~of('trace -4', '', '', '', '', '', '', '', '', '')))
+.traceoutput~destination(.show~new)
+trace ?a
+nop
+do j = 1 to 2
+  nop
+end
+say 'x'
+say 'y'
+exit
+::class in
+::method init
+  expose a i
+  use arg a
+  i = 0
+::method linein
+  expose a i
+  i += 1
+  if i &gt; a~items then return ''
+  say '[read' i':' a[i]']'
+  return a[i]
+::class show
+::method lineout
+  use arg l
+  l = '' || l
+  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  return 0
+</code></pre>
+<pre><code class="language-output">     4 *-* nop
++++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+[read 1: trace -4]
+x
+     9 *-* say 'y'
+y
+[read 2: ]
+    10 *-* exit
+</code></pre>
+<pre><code class="language-rexx">.debuginput~destination(.in~new(.array~of('trace 0', 'trace -0', '', '', '')))
+.traceoutput~destination(.show~new)
+trace ?a
+nop
+say 'x'
+say 'y'
+say 'z'
+exit
+::class in
+::method init
+  expose a i
+  use arg a
+  i = 0
+::method linein
+  expose a i
+  i += 1
+  if i &gt; a~items then return ''
+  say '[read' i':' a[i]']'
+  return a[i]
+::class show
+::method lineout
+  use arg l
+  l = '' || l
+  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  return 0
+</code></pre>
+<pre><code class="language-output">     4 *-* nop
++++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+[read 1: trace 0]
+     5 *-* say 'x'
+x
+[read 2: trace -0]
+     6 *-* say 'y'
+y
+[read 3: ]
+     7 *-* say 'z'
+z
+[read 4: ]
+     8 *-* exit
+</code></pre>
+<h2 id="how-it-ends"><a class="header" href="#how-it-ends">How it ends</a></h2>
+<div class="rule" id="r-env.debugging.end"><a href="#r-env.debugging.end">[env.debugging.end]</a></div>
+<p>Interactive tracing ends when a line typed at a stop turns it off, as <a href="#r-env.debugging.input.trace">the
+rule for TRACE lines</a> says; when the program
+calls the TRACE function with a setting that turns it off, as <a href="../builtins/trace.html#r-bif.trace.prefix">the prefix
+rule</a> says, where a TRACE instruction does nothing, as
+<a href="../builtins/trace.html#r-bif.trace.instruction">its rule</a> says; when the code that turned it on
+returns, as <a href="#r-env.debugging.scope">the next rule</a> says; and when the program
+ends. An input that has run dry does not end it, as the last row of <a href="#r-env.debugging.input.trace">the table
+of the rule for TRACE lines</a> shows. In the
+example the first routine turns it on and returns after two stops, and the
+second turns it off by a call of the function, so that the clauses after the
+call have no stop; the count of reads shows it.</p>
+<pre><code class="language-rexx">.traceoutput~destination(.quiet~new)
+.in~count = 0
+.debuginput~destination(.in~new)
+call routine1
+say 'after routine1:' .in~count 'reads, setting' trace()
+call routine2
+say 'after routine2:' .in~count 'reads, setting' trace()
+exit
+routine1:
+  trace ?a
+  nop
+  nop
+  return
+routine2:
+  trace ?a
+  nop
+  call trace 'o'
+  nop
+  nop
+  return
+::class quiet
+::method lineout
+  return 0
+::class in
+::attribute count class
+::method linein
+  .in~count += 1
+  return ''
+</code></pre>
+<pre><code class="language-output">after routine1: 2 reads, setting N
+after routine2: 3 reads, setting N
+</code></pre>
+<div class="rule" id="r-env.debugging.scope"><a href="#r-env.debugging.scope">[env.debugging.scope]</a></div>
+<p>Interactive tracing is part of the setting and has <a href="../builtins/trace.html#r-bif.trace.scope">its
+scope</a>; in particular a method has no stop after any of its
+clauses until it turns interactive tracing on itself, and neither has a
+<code>::ROUTINE</code>, unless <a href="#r-env.debugging.rxtrace">RXTRACE</a> started it. In the
+example the internal routine <code>inner</code> stops, and so does the code after it; the
+routine <code>outer</code> is not traced and has no stop, and the caller reads <code>?A</code> again
+after it.</p>
+<pre><code class="language-rexx">.debuginput~destination(.in~new(.array~of('', '', '', '', '', '', '', '')))
+.traceoutput~destination(.show~new)
+trace ?a
+call inner
+say 'plain' trace()
+call outer
+say 'back' trace()
+exit
+inner:
+  say 'inner' trace()
+  return
+::routine outer
+  say 'outer' trace()
+  return
+::class in
+::method init
+  expose a i
+  use arg a
+  i = 0
+::method linein
+  expose a i
+  i += 1
+  if i &gt; a~items then return ''
+  say '[read' i':' a[i]']'
+  return a[i]
+::class show
+::method lineout
+  use arg l
+  l = '' || l
+  if l~strip~left(3) \= '+++' then .stdout~lineout(l)
+  return 0
+</code></pre>
+<pre><code class="language-output">     4 *-* call inner
+     9 *-*   inner:
+[read 1: ]
+    10 *-*   say 'inner' trace()
+inner ?A
+[read 2: ]
+    11 *-*   return
+[read 3: ]
+     5 *-* say 'plain' trace()
+plain ?A
+[read 4: ]
+     6 *-* call outer
+outer N
+[read 5: ]
+     7 *-* say 'back' trace()
+back ?A
+[read 6: ]
+     8 *-* exit
+</code></pre>
+<h2 id="the-rxtrace-variable"><a class="header" href="#the-rxtrace-variable">The RXTRACE variable</a></h2>
+<div class="rule" id="r-env.debugging.rxtrace"><a href="#r-env.debugging.rxtrace">[env.debugging.rxtrace]</a></div>
+<p>When the interpreter starts, it reads the environment variable <code>RXTRACE</code>
+once. If its value is <code>ON</code>, in any combination of upper and lower case
+and with nothing else in it, the program starts as if its first clause were
+<code>TRACE ?R</code>, and so does each program that it calls by name and each routine
+object, whether a <code>::ROUTINE</code> directive defines it or <code>new</code> or <code>newFile</code> of
+<code>Routine</code> makes it: <a href="../builtins/trace.html#r-bif.trace.setting"><code>trace()</code></a>
+answers <code>?R</code> in it and its first clause is shown. A method starts with <code>N</code> as
+without the variable, and an internal routine starts with its caller's
+setting, as <a href="../builtins/trace.html#r-bif.trace.scope">the scope rule</a> says. Any other value, among
+them one with a blank around <code>ON</code>, and the empty value, is ignored. A
+later change of the variable changes nothing. An example cannot start the
+interpreter with the variable set, so the rule is tested by the cases of the
+command-line tests, which set it and show the main program and a program
+called by name starting with <code>?R</code>, a method with <code>N</code>, and every other value
+ignored. The example shows the later change: a program called by name before
+and after the variable is set to <code>ON</code> starts with <code>N</code> both times. The
+part on routines is not tested; interrexx starts them with <code>N</code> (interrexx
+defect #218).</p>
+<pre><code class="language-rexx">.traceoutput~destination(.quiet~new)
+call lineout 'a6rrzqrx.rex', 'return trace()'
+call lineout 'a6rrzqrx.rex'
+say 'before' a6rrzqrx()
+old = value('RXTRACE', 'ON', 'ENVIRONMENT')
+say 'after' a6rrzqrx()
+call value 'RXTRACE', old, 'ENVIRONMENT'
+call sysfiledelete 'a6rrzqrx.rex'
+exit
+::class quiet
+::method lineout
+  return 0
+</code></pre>
+<pre><code class="language-output defect=#224">before N
+after N
+</code></pre>
+<h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
+<div class="rule" id="r-env.debugging.deviation.150"><a href="#r-env.debugging.deviation.150">[env.debugging.deviation.150]</a></div>
+<p>An INTERPRET in a line runs the clauses of its string as the rest of the line
+runs: they are not traced and no stop follows them, so that the line
+<code>interpret 'say 7'</code> writes 7 and the interpreter then reads the next line.
+ooRexx traces the clauses of the string: it writes the line of <code>say 7</code> and
+then stops once more before it reads the next line, so that it reads one line
+more than interrexx does; a string of several clauses causes a stop after
+each. The example is not run against it.</p>
+<pre><code class="language-rexx">.debuginput~destination(.in~new(.array~of("interpret 'say 7'", '', '', '', '')))
+.traceoutput~destination(.show~new)
+trace ?a
+say 'one'
+say 'two'
+say 'three'
+exit
+::class in
+::method init
+  expose a i
+  use arg a
+  i = 0
+::method linein
+  expose a i
+  i += 1
+  if i &gt; a~items then return ''
+  say '[read' i':' a[i]']'
+  return a[i]
+::class show
+::method lineout
+  use arg l
+  l = '' || l
+  select
+    when l~strip~left(5) = '+++ "' then nop
+    when l~word(2) = 'Interactive' &amp; l~word(4) = 'Error' then do
+      say 'error' l~word(5)~strip('T', ':')
+    end
+    otherwise .stdout~lineout(l)
+  end
+  return 0
+</code></pre>
+<pre><code class="language-output">     4 *-* say 'one'
+one
++++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+[read 1: interpret 'say 7']
+7
+[read 2: ]
+     5 *-* say 'two'
+two
+[read 3: ]
+     6 *-* say 'three'
+three
+[read 4: ]
+     7 *-* exit
+</code></pre>
+<div class="rule" id="r-env.debugging.deviation.151"><a href="#r-env.debugging.deviation.151">[env.debugging.deviation.151]</a></div>
+<p>A line that runs RAISE SYNTAX is an error of the line like any other
+(<a href="#r-env.debugging.input.error">the rule</a> gives them): it is reported, and the
+tracing and the stops go on as before. After the line ooRexx writes no more
+lines of clauses, and in the example it does not stop again either, so that
+the program runs to its end without a read. The example is not run against it.</p>
+<pre><code class="language-rexx">.debuginput~destination(.in~new(.array~of('raise syntax 93.900', '', '', '', '')))
+.traceoutput~destination(.show~new)
+trace ?a
+say 'one'
+say 'two'
+say 'three'
+exit
+::class in
+::method init
+  expose a i
+  use arg a
+  i = 0
+::method linein
+  expose a i
+  i += 1
+  if i &gt; a~items then return ''
+  say '[read' i':' a[i]']'
+  return a[i]
+::class show
+::method lineout
+  use arg l
+  l = '' || l
+  select
+    when l~strip~left(5) = '+++ "' then nop
+    when l~word(2) = 'Interactive' &amp; l~word(4) = 'Error' then do
+      say 'error' l~word(5)~strip('T', ':')
+    end
+    otherwise .stdout~lineout(l)
+  end
+  return 0
+</code></pre>
+<pre><code class="language-output">     4 *-* say 'one'
+one
++++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+[read 1: raise syntax 93.900]
+error 93
+error 93.900
+[read 2: ]
+     5 *-* say 'two'
+two
+[read 3: ]
+     6 *-* say 'three'
+three
+[read 4: ]
+     7 *-* exit
+</code></pre>
+<div class="rule" id="r-env.debugging.deviation.152"><a href="#r-env.debugging.deviation.152">[env.debugging.deviation.152]</a></div>
+<p>An empty line that comes after a line that failed as it was read, such as
+<code>trace 1.5</code>, whose setting does not exist, or an expression that cannot be
+parsed, ends the stop and goes on to the next clause of the
+program, as an empty line always does. ooRexx ends interactive tracing at that
+empty line: the clauses that follow are run without being traced and without
+a stop. The example is not run against it.</p>
+<pre><code class="language-rexx">.debuginput~destination(.in~new(.array~of('trace 1.5', '', '', '', '')))
+.traceoutput~destination(.show~new)
+trace ?a
+say 'one'
+say 'two'
+say 'three'
+exit
+::class in
+::method init
+  expose a i
+  use arg a
+  i = 0
+::method linein
+  expose a i
+  i += 1
+  if i &gt; a~items then return ''
+  say '[read' i':' a[i]']'
+  return a[i]
+::class show
+::method lineout
+  use arg l
+  l = '' || l
+  select
+    when l~strip~left(5) = '+++ "' then nop
+    when l~word(2) = 'Interactive' &amp; l~word(4) = 'Error' then do
+      say 'error' l~word(5)~strip('T', ':')
+    end
+    otherwise .stdout~lineout(l)
+  end
+  return 0
+</code></pre>
+<pre><code class="language-output">     4 *-* say 'one'
+one
++++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+[read 1: trace 1.5]
+error 24
+error 24.1
+[read 2: ]
+     5 *-* say 'two'
+two
+[read 3: ]
+     6 *-* say 'three'
+three
+[read 4: ]
+     7 *-* exit
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../environment/security.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../builtins/index.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../environment/security.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../builtins/index.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../assets/version-picker.js"></script>
+
+
+    </div>
+    </body>
+</html>
