@@ -106,7 +106,8 @@ fn source_of(interp: &Interp, receiver: ObjRef) -> Result<ExecutableSource, Fail
 /// write the setters have made over it.
 fn flag(interp: &Interp, receiver: ObjRef, which: Flag) -> Result<bool, Failure> {
     let declared = declared_flag(interp, source_of(interp, receiver)?, which)
-        || (which == Flag::Protected && interp.installed_is_protected(receiver));
+        || (which == Flag::Protected && interp.installed_is_protected(receiver))
+        || (which == Flag::Private && interp.installed_is_private(receiver));
     let written = interp.method_flag_writes.get(&receiver).copied();
     Ok(match (which, written) {
         (Flag::Unguarded, Some(writes)) => writes.unguarded.unwrap_or(declared),

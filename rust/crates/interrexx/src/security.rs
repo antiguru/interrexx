@@ -289,6 +289,17 @@ impl Interp {
         }
     }
 
+    /// Whether the method `object` stands for is a private primitive:
+    /// `Object`'s `run`, `setMethod` and `unsetMethod`, whose access scope is
+    /// filed when the object model is installed.
+    pub(crate) fn installed_is_private(&self, object: ObjRef) -> bool {
+        self.executable_sources
+            .get(&object)
+            .and_then(|record| record.installed)
+            .and_then(|method| self.special_methods.get(method))
+            .is_some_and(|scope| scope.access == Access::Private)
+    }
+
     /// Whether the method `object` stands for is protected: a `Setup.cpp`
     /// protected primitive, or one `setProtected` was sent to.
     pub(crate) fn installed_is_protected(&self, object: ObjRef) -> bool {

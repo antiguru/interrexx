@@ -1707,7 +1707,7 @@ say .object~new~instanceMethod('RUN')~isPrivate,
   .object~method('UNSETMETHOD')~isPrivate
 ```
 
-```output defect=#133
+```output
 1 1 1
 ```
 
