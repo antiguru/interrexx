@@ -192,11 +192,11 @@ REQ v
 s = .stem~new('N.')
 s[] = 'D'
 s[''] = 'null'
-say s[,] s~at(,)
+say s[,] s~at(,) s[] s~at
 ```
 
-```output defect=#174
-D D
+```output
+D D D D
 ```
 
 ## Reading and writing items
