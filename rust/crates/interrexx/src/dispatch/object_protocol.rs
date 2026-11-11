@@ -752,6 +752,11 @@ fn copy_object(interp: &mut Interp, receiver: ObjRef) -> Result<ObjRef, Failure>
     if interp.answers_uninit(copy) {
         interp.heap.set_uninit(copy);
     }
+    // An `EventSemaphore` copy is posted where the receiver is; its state is
+    // not in the body. A `MutexSemaphore` copy starts free (Deviation 136).
+    if interp.event_posted(receiver) {
+        interp.set_event_posted(copy);
+    }
     Ok(copy)
 }
 

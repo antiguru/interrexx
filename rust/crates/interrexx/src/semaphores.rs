@@ -292,6 +292,17 @@ impl Interp {
         self.wake_waiters(key, true);
     }
 
+    /// Marks the event semaphore `object` posted, as a copy of a posted one
+    /// is; no waiter is woken, since a new object has none.
+    pub(crate) fn set_event_posted(&mut self, object: ObjRef) {
+        self.activities
+            .semaphores
+            .table
+            .entry(SemaphoreKey::Object(object))
+            .or_default()
+            .posted = true;
+    }
+
     /// Clears the event semaphore `object`'s post.
     pub(crate) fn reset_event(&mut self, object: ObjRef) {
         if let Some(semaphore) = self
