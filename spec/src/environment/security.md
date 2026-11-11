@@ -651,22 +651,23 @@ not read
 r[env.security.names]
 The checkpoints `LOCAL` and `ENVIRONMENT` are sent as [the class
 rules](r:class.routine.setsecuritymanager.local) say, for every environment
-symbol that gets as far as `.local`. That includes the symbols that the
-interpreter answers itself, `.environment`, `.local`, `.context`, `.methods`,
-`.routines`, `.rs` and `.line`, so a manager can provide `.context` to the
-code it governs. A name that `.local` already holds, such as `.stdout`, is
-asked of `LOCAL` only. A manager that answers `1` and sets `RESULT` provides
-the object that the symbol is, and the lookup stops there; `.nil` is an
-object, so a manager can provide it, and the symbol is then found and is
-`.nil`. A manager that answers `1` and sets no `RESULT` says that it found
-nothing, and the lookup goes on to the next place. A `RESULT` that a manager
-sets while it answers `0` is not used. In the example the manager notes the
-messages it is sent for each symbol, except where it provides the name: it
-provides `.envsecnil` and `.context` at `LOCAL`, finds nothing for
-`.envsecnone` at `ENVIRONMENT`, and sets a `RESULT` for `.envsecignored` that
-it does not use.
-The function `VALUE` with the selector `ENVIRONMENT` reads a variable of the
-host, not `.environment`, and sends no checkpoint.
+symbol that gets as far as `.local`. That includes `.environment` and
+`.local`, which are entries of `.environment` ([the directories
+rule](r:env.objects.directories)), and the symbols that the interpreter
+answers itself, `.context`, `.methods`, `.routines`, `.resources`, `.rs` and
+`.line`, so a manager can provide `.context` to the code it governs. A name
+that `.local` already holds, such as `.stdout`, is asked of `LOCAL` only. A
+manager that answers `1` and sets `RESULT` provides the object that the symbol
+is, and the lookup stops there; `.nil` is an object, so a manager can provide
+it, and the symbol is then found and is `.nil`. A manager that answers `1` and
+sets no `RESULT` says that it found nothing, and the lookup goes on to the
+next place. A `RESULT` that a manager sets while it answers `0` is not used.
+In the example the manager notes the messages it is sent for each symbol,
+except where it provides the name: it provides `.envsecnil` and `.context` at
+`LOCAL`, finds nothing for `.envsecnone` at `ENVIRONMENT`, and sets a `RESULT`
+for `.envsecignored` that it does not use. The function `VALUE` with the
+selector `ENVIRONMENT` reads a variable of the host, not `.environment`, and
+sends no checkpoint.
 
 ```rexx
 tests = .array~of('say (.envsecnil == .nil)', 'say .envsecnone', -

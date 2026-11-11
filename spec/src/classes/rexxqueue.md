@@ -19,7 +19,8 @@ states for the names of queues, for the queue `SESSION` and for a queue that
 does not exist hold here too. A program has a current queue that the
 instructions use; the object has a queue of its own, and the two are the same
 queue only when they have the same name. How programs and sessions share the
-queues is specified in the environment chapter.
+queues is specified by [the session rule](r:env.commands.rxqueue.session) and
+[the child rule](r:env.commands.rxqueue.child).
 
 > **Note.** The examples create a queue under a name that no other example
 > uses and delete it when they are done, so they leave nothing behind. An

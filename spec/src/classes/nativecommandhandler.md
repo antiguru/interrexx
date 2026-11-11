@@ -13,10 +13,11 @@ and those that an application that hosts the interpreter adds. A
 program can list it, register it again under another name, remove it, and send
 it a command from a handler written in Rexx. The class inherits
 [`CommandHandler`](commandhandler.md), and the objects answer to the same
-class methods as the handlers written in Rexx do. How a native environment
-runs a command, and what the environments of a host are, is specified in the
-environment chapter. The examples here use the environment `SYSTEM` and the
-commands `echo` and `exit`, which every host's shell has.
+class methods as the handlers written in Rexx do. [How a native environment
+runs a command](r:env.commands.shell), and [what the environments of a host
+are](r:env.commands.names), is specified in the environment chapter. The
+examples here use the environment `SYSTEM` and the commands `echo` and `exit`,
+which every host's shell has.
 
 ## The class
 

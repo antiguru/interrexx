@@ -22,12 +22,12 @@ under. The routine that a directive makes is specified by
 [`::ROUTINE`](../directives/routine.md), the annotations by
 [`::ANNOTATE`](../directives/annotate.md), and the instruction that calls a
 routine by name by [CALL](../instructions/call.md). A routine is made from
-source in the way a method is, so the rules of [the Method
-page](method.md) for the source and the context apply to `new` and `newFile`
-here, and this page states what is its own. The search for a file or a library
-that `newFile` and `loadExternalRoutine` start is specified in the
-environment chapter; the examples here name a file that they create
-themselves, or a library that every installation has.
+source in the way a method is, so the rules of [the Method page](method.md)
+for the source and the context apply to `new` and `newFile` here, and this
+page states what is its own. `newFile` takes its file as [the newFile
+rule](r:env.search.newfile) says, and the library of `loadExternalRoutine` is
+found as [the library rule](r:env.search.library) says; the examples here name
+a file that they create themselves, or a library that every installation has.
 
 The examples that show an error use a routine `try` that sends the message in
 its argument and prints the answer, or the error code when the message raises
@@ -338,7 +338,7 @@ answer is an instance of `Routine` also when a subclass received the message,
 and no `init` is sent. The routine can be called, with the arguments that the
 library routine takes, and its `source` is an empty array and its `package` is
 `.nil`. Where the library is searched for, and whether its name is case
-sensitive, is specified in the environment chapter.
+sensitive, is specified by [the library rule](r:env.search.library).
 
 ```rexx
 p = .routine~loadExternalRoutine('pi', 'LIBRARY rxmath rxcalcpi')

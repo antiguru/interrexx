@@ -10,7 +10,7 @@ This chapter specifies what surrounds a program while it runs: the objects
 that every program can reach by an environment symbol without declaring
 them, and the places that a name such as `.output` is looked up in.
 
-The pages of this chapter so far are:
+The pages of this chapter are:
 
 * [Environment objects](objects.md): the directories `.environment` and
   `.local`, every entry that the language puts in them, what the entries are
@@ -19,7 +19,8 @@ The pages of this chapter so far are:
   seen.
 * [Invocation](invocation.md): the `rexx` command, its words and options, how
   the arguments reach the program, the status it ends with, what a program
-  sees at its start, and what is sent to its objects when it ends.
+  sees at its start, what is sent to its objects when it ends, and the
+  command `rexxc` and the images it writes.
 * [Search](search.md): how an external routine, a required file, a program
   called by name and a library are found: the places, the extensions, the
   case of a name, what is read again at every call, and what a program that

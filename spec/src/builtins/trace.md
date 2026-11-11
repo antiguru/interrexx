@@ -132,11 +132,13 @@ O
 ```
 
 r[bif.trace.instruction]
-While interactive tracing is on, the [TRACE
-instruction](r:instr.trace.form.interactive) changes nothing; the TRACE
-function does, and a call that turns interactive tracing off lets the
-instruction work again. Without interactive tracing, the instruction and the
-function change the same setting.
+While interactive tracing is on, a [TRACE
+instruction](r:instr.trace.form.interactive) of the program changes nothing;
+one in a line typed at a stop takes effect ([the debugging
+rule](r:env.debugging.input.trace)). The TRACE function does, and a call that
+turns interactive tracing off lets the instruction work again. Without
+interactive tracing, the instruction and the function change the same
+setting.
 
 ```rexx
 call show
