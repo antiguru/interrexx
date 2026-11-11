@@ -29660,8 +29660,10 @@ arguments and that the second is there, sends <code>request</code> to the second
 argument, and then to the name, so an error in the array leaves the name
 unasked. <code>Message~new</code> sends <code>request</code> to the name after checking the target,
 before the option and its arguments are read. A first argument that is a string
-is sent nothing. The example shows the messages for an instance of an <code>Array</code>
-subclass and for an object that is no array but answers one.</p>
+is sent nothing. The first example shows the messages for an instance of an
+<code>Array</code> subclass and for an object that is no array but answers one. The second
+shows that a <code>List</code>, and an object that answers an array to <code>makeArray</code>, name a
+message too.</p>
 <pre><code class="language-rexx">o = .w~new
 call try 'o~sendWith(.duck~new, .logged~new)'
 call try 'o~startWith(.duck~new, .logged~new)~result'
@@ -29698,7 +29700,7 @@ bad: say arg(1) '=&gt;' condition('o')~code
   say 'logged request' arg(1)
   return .array~of(1, 2)
 </code></pre>
-<pre><code class="language-output defect=#149">duck request ARRAY
+<pre><code class="language-output">duck request ARRAY
 logged request ARRAY
 o~sendWith(.duck~new, .logged~new) =&gt; count got 2
 logged request ARRAY
@@ -29711,6 +29713,21 @@ o~send(.wrong~new, 6) =&gt; 93.946
 o~send(.none~new, 6) =&gt; 93.972
 larr request ARRAY
 o~send(.larr~of("count"), 6) =&gt; 93.946
+</code></pre>
+<pre><code class="language-rexx">o = .w~new
+say o~send(.list~of('count', .w))
+say o~send(.holder~new)
+say .message~new(o, .list~of('count', .w))~send
+::class w
+::method count
+  return 'w count'
+::class holder
+::method makearray
+  return .array~of('count', .w)
+</code></pre>
+<pre><code class="language-output">w count
+w count
+w count
 </code></pre>
 <div class="rule" id="r-class.object.sendwith"><a href="classes/object.html#r-class.object.sendwith">[class.object.sendwith]</a></div>
 <p><code>sendWith</code> is <code>send</code> with the arguments of the message in an array. The first
@@ -39806,7 +39823,7 @@ say m~messageName
   say 'duck request' arg(1)
   return .array~of('count', .w)
 </code></pre>
-<pre><code class="language-output defect=#149">duck request ARRAY
+<pre><code class="language-output">duck request ARRAY
 made
 count got 1
 COUNT
@@ -41359,7 +41376,7 @@ say 'failing target sent' b~count
   n = n + 1
   raise syntax 93.900 array('refused')
 </code></pre>
-<pre><code class="language-output defect=#158">failing target sent 1
+<pre><code class="language-output">failing target sent 1
 </code></pre>
 <div class="rule" id="r-class.message.deviation.118"><a href="classes/message.html#r-class.message.deviation.118">[class.message.deviation.118]</a></div>
 <p><code>new</code> with the option <code>A</code>, <code>sendWith</code>, <code>startWith</code> and <code>replyWith</code> send an
@@ -41772,7 +41789,7 @@ exit
 ::method cancel unguarded
   say 'cancel sent'
 </code></pre>
-<pre><code class="language-output defect=#150">cancel sent
+<pre><code class="language-output">cancel sent
 done
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="collection"><a class="header" href="#collection">Collection</a></h1>
@@ -74624,7 +74641,7 @@ exit
 ::method cancel unguarded
   say 'cancel sent'
 </code></pre>
-<pre><code class="language-output defect=#150">cancel sent
+<pre><code class="language-output">cancel sent
 done
 </code></pre>
 <div class="rule" id="r-class.alarm.deviation.135"><a href="classes/alarm.html#r-class.alarm.deviation.135">[class.alarm.deviation.135]</a></div>
