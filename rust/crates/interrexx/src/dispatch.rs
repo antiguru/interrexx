@@ -1259,6 +1259,7 @@ static NATIVE_CLASS_METHODS: &[(&str, &str, Arity, NativeMethod)] = &[
     // (`classes/VariableReference.cpp:97`, `memory/Setup.cpp:1294`).
     ("Buffer", "NEW", Arity::Counted, native_unsupported_new),
     ("Pointer", "NEW", Arity::Counted, native_unsupported_new),
+    ("RexxInfo", "NEW", Arity::Counted, native_unsupported_new),
     (
         "VariableReference",
         "NEW",
@@ -1534,11 +1535,16 @@ impl ObjectModel {
                     }),
             )
         {
-            let class = classes.lookup(class_id).unwrap_or_else(|| {
-                panic!(
-                    "NATIVE_CLASS_METHODS names class {class_id:?}, which is not in the registry"
-                )
-            });
+            // The kernel directory too, as in the loop above, for `RexxInfo`.
+            let class = classes
+                .lookup(class_id)
+                .or_else(|| classes.system_lookup(class_id))
+                .unwrap_or_else(|| {
+                    panic!(
+                        "NATIVE_CLASS_METHODS names class {class_id:?}, which is not in the \
+                         registry"
+                    )
+                });
             let (_, method) = classes
                 .lookup_class_method(class, method_name)
                 .unwrap_or_else(|| {
