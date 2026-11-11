@@ -205,14 +205,14 @@ after 30
 
 r[cond.index.syntax]
 A SYNTAX condition that no trap catches ends the clause in which it was
-raised, and then every clause that is running a call, a function or a
-message at that moment, back to the main program, as [the propagation
+raised, and then every clause that is running a call, a function or a message
+at that moment, back to the main program, as [the propagation
 rule](r:cond.information.propagate) says. The program then ends. It writes a
-report of the error to its standard error stream, whose text is not
-specified, and its exit code is `256` minus the number of the error, so that
-the error `97.1` gives 159 and `42.3` gives 214. The output that the clauses
-before the error wrote stays written. The subcode does not enter the exit
-code.
+report of the error, whose text is not specified, to its standard error stream
+([the rule on where the report goes](r:env.objects.error.report)), and its
+exit code is `256` minus the number of the error, so that the error `97.1`
+gives 159 and `42.3` gives 214. The output that the clauses before the error
+wrote stays written. The subcode does not enter the exit code.
 
 ```rexx
 say 'before'

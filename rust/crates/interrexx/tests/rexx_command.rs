@@ -7,7 +7,12 @@
 //! A case's input is its words, one per line: `\xHH` is a byte, and a line
 //! `<empty>` is the empty word. `rexx_path=DIR` sets `REXX_PATH` to the
 //! fixture's `DIR`, `path=DIR` puts it in front of `PATH`, and `cwd=DIR` runs
-//! from it. `DIR` is a name [`directory`] spells.
+//! from it. `DIR` is a name [`directory`] spells. `env=NAME.VALUE`, which may
+//! list several words, sets each environment variable `NAME` to `VALUE` for
+//! both binaries and leaves the rest of the environment as it is, `RXTRACE`
+//! apart, which every run starts without; a case file word holds only
+//! letters, digits, `-`, `_` and `.`, so a `_` in `VALUE` stands for a blank,
+//! and `env=NAME.` sets the empty value.
 
 #[path = "support/banner.rs"]
 mod banner;
@@ -32,15 +37,39 @@ fn lay_fixture(dir: &Path) {
         let path = dir.join(PathBuf::from(OsString::from_vec(name.to_vec())));
         std::fs::write(path, text).expect("a fixture file");
     };
-    for sub in ["sub", "rp", "pp", "dironly.rex"] {
+    for sub in ["sub", "rp", "pp", "dironly.rex", "rp/sub2"] {
         std::fs::create_dir_all(dir.join(sub)).expect("a fixture directory");
     }
     file(b"t.rex", "say 'hi from t'\n");
+    // The search rules: endings, case, places and the caller's directory.
+    file(b"ord.rex", "say 'ord rex'\n");
+    file(b"ord.REX", "say 'ord REX'\n");
+    file(b"ordc.cls", "say 'cls was tried'\n");
+    file(b"ordx.rex", "say 'ordx rex in the current directory'\n");
+    file(b"rp/ordx.REX", "say 'ordx REX in REXX_PATH'\n");
+    file(b"rp/ordy.rex", "say 'ordy in REXX_PATH'\n");
+    file(b"pp/ordy.rex", "say 'ordy in PATH'\n");
+    file(b"rp/sub2/inrp.rex", "say 'inrp'\n");
+    file(b"ordn.rex", "say 'ordn rex'\n");
+    file(b"ordn", "say 'ordn none'\n");
+    file(b"ordm", "say 'ordm none in the current directory'\n");
+    file(b"rp/ordm.rex", "say 'ordm rex in REXX_PATH'\n");
+    file(b"lowonly.rex", "say 'lowonly'\n");
+    file(b"sub/callsib.rex", "say sibonly()\n");
+    file(b"sub/sibonly.rex", "return 'sibling in sub'\n");
     file(b"sub/t.rex", "say 'hi from sub/t'\n");
     file(b"rp/viarp.rex", "say 'hi from rp'\nparse source s; say s\n");
     file(b"pp/viapp.rex", "say 'hi from pp'\nparse source s; say s\n");
     file(b"UP.REX", "say 'upper UP.REX'\n");
+    file(b"A3UPONLY.REX", "say 'upper A3UPONLY.REX'\n");
     file(b"noext", "say 'noext file'\nparse source s; say s\n");
+    // The RXTRACE variable: the main program, a program called by name, and a
+    // method each answer the setting they started with.
+    file(
+        b"rxtrace.rex",
+        ".traceoutput~destination(.quiet~new)\nsay 'main' trace()\nsay 'external' rxtrace2()\nsay 'method' .t~new~m\nexit\n::class quiet\n::method lineout\n  return 0\n::class t\n::method m\n  return trace()\n",
+    );
+    file(b"rxtrace2.rex", "return trace()\n");
     file(b"src.rex", "parse source s; say s\n");
     file(
         b"showargs.rex",
@@ -69,6 +98,11 @@ fn lay_fixture(dir: &Path) {
         b"lib.rex",
         "::routine libr public\nsay 'lib digits='digits()\n",
     );
+    file(b"calllib.rex", "call libr\n");
+    file(
+        b"plib.rex",
+        "say 'prolog ran'\n::routine pr public\nsay 'pr'\n",
+    );
     file(b"err42.rex", "say 1/0\n");
     file(b"err35.rex", "say 'x' +\n");
     for (name, body) in [
@@ -86,6 +120,8 @@ fn lay_fixture(dir: &Path) {
         ("sp", "return ' 4 '"),
         ("e1", "return 1e1"),
         ("obj", "return .array~new"),
+        ("33000", "exit 33000"),
+        ("70000", "exit 70000"),
     ] {
         file(format!("ret_{name}.rex").as_bytes(), &format!("{body}\n"));
     }
@@ -228,8 +264,16 @@ fn run(
         .args(args)
         .current_dir(dir)
         .env_remove("REXX_PATH")
+        .env_remove("RXTRACE")
         .stdin(Stdio::null());
     for (key, values) in &case.args {
+        if key == "env" {
+            for word in values {
+                let (name, value) = word.split_once('.').expect("env=NAME.VALUE");
+                command.env(name, value.replace('_', " "));
+            }
+            continue;
+        }
         let entry = dir.join(directory(values.first().expect("a directory")));
         match key.as_str() {
             "cwd" => command.current_dir(entry),
@@ -275,6 +319,17 @@ fn remove(dir: &Path) {
     std::fs::remove_dir_all(dir).expect("the fixture is removed");
 }
 
+// The cases cover the rules of the invocation page, each by the group of
+// cases whose heading comment in `rexx_command/cases` names its rule.
+// spec: env.invocation.forms, env.invocation.words, env.invocation.version
+// spec: env.invocation.expression, env.invocation.optstring
+// spec: env.invocation.program, env.invocation.notfound
+// spec: env.invocation.arguments, env.invocation.syscargs
+// spec: env.invocation.status
+// spec: env.invocation.deviation.96
+// spec: env.search.program, env.search.names, env.search.extension
+// spec: env.search.case, env.search.places, env.search.caller
+// spec: env.debugging.rxtrace
 #[test]
 fn the_command_line_answers_as_the_oracles_does() {
     let oracle = Path::new(ORACLE_ROOT).join("bin/rexx");
@@ -311,4 +366,43 @@ fn the_command_line_answers_as_the_oracles_does() {
     remove(&ours_dir);
     assert!(cases > 0, "{CASE_DIR} produced no cases");
     assert!(diverged.is_empty(), "{}", diverged.join("\n"));
+}
+
+// Deviation 141: the oracle drops one leading blank of the argument string
+// of a `-e` program, so the harness above cannot hold the case; this one
+// runs interrexx alone and compares `-e` with a program file.
+// spec: env.invocation.deviation.141
+#[test]
+fn a_dash_e_program_gets_its_argument_as_a_file_does() {
+    let ours = Path::new(env!("CARGO_BIN_EXE_rexx"));
+    let dir = fixture("dash-e");
+    let text = "say '[' || arg(1) || ']' arg()";
+    std::fs::write(dir.join("echo.rex"), format!("{text}\n")).expect("the program");
+    let stdout = |args: &[&str]| {
+        let output = Command::new("timeout")
+            .args(["-k", "5", "20"])
+            .arg(ours)
+            .args(args)
+            .current_dir(&dir)
+            .env_remove("REXX_PATH")
+            .stdin(Stdio::null())
+            .output()
+            .expect("the binary starts");
+        String::from_utf8(output.stdout).expect("text")
+    };
+    for words in [
+        &[" ", "x"][..],
+        &["", "x"],
+        &["  ", "x"],
+        &["a", "", "b"],
+        &[],
+    ] {
+        let mut file = vec!["echo.rex"];
+        file.extend_from_slice(words);
+        let mut string = vec!["-e", text];
+        string.extend_from_slice(words);
+        assert_eq!(stdout(&string), stdout(&file), "words {words:?}");
+    }
+    assert_eq!(stdout(&["-e", text, " ", "x"]), "[  x] 1\n");
+    remove(&dir);
 }

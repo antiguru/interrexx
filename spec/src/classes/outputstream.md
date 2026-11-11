@@ -16,8 +16,8 @@ with the `lineOut` of the class. The classes of the library that inherit it
 are [`CommandOutput`](commandoutput.md),
 [`InputOutputStream`](inputoutputstream.md) and, through that,
 [`Stream`](stream.md). What the standard output and error are, and what the
-`.output` and `.error` of a program are bound to, is specified in the
-environment chapter. The examples define their own classes.
+`.output` and `.error` of a program are bound to, is specified in [the
+bindings rule](r:env.objects.bindings). The examples define their own classes.
 
 ## The class
 

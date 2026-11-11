@@ -314,16 +314,17 @@ call sysfiledelete f
 
 r[dir.resource.access]
 The environment symbol `.RESOURCES` holds the resources of the package whose
-code reads it. It is a collection indexed by the resource names in upper case,
-and each item is an array of the lines of that resource. It is there from the
-start of the prolog, and in every routine and method of the package. A package
-with no ::RESOURCE has no `.RESOURCES`, and the symbol has [its own text as
-value](r:lex.symbols.environment). The index is looked up exactly, so that
-`.resources['COBALT']` finds the resource named `cobalt` and
-`.resources['cobalt']` finds nothing. The collection is each package's own:
-the resources of a required package are not in the `.RESOURCES` of the
-package that requires it, and the other way round, so that a routine of the
-required package reads its own. The arrays are shared by all code of the
+code reads it, unless an entry or a class of the same name is found first
+([the order](r:env.objects.search.symbols)). It is a collection indexed by the
+resource names in upper case, and each item is an array of the lines of that
+resource. It is there from the start of the prolog, and in every routine and
+method of the package. A package with no ::RESOURCE has no `.RESOURCES`, and
+the symbol has [its own text as value](r:lex.symbols.environment). The index
+is looked up exactly, so that `.resources['COBALT']` finds the resource named
+`cobalt` and `.resources['cobalt']` finds nothing. The collection is each
+package's own: the resources of a required package are not in the `.RESOURCES`
+of the package that requires it, and the other way round, so that a routine of
+the required package reads its own. The arrays are shared by all code of the
 package: an item that one routine changes, or an array that it extends, is
 changed for every later read, in any routine or method of the package.
 

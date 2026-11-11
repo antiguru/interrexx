@@ -126,8 +126,9 @@ r[instr.trace.form.bare]
 `TRACE` with nothing after it sets `N`, and so does the null string in any
 form of the instruction. Where interactive tracing is on, a setting is
 ignored, as [the instruction rule](r:bif.trace.instruction) of the function
-says; a number still raises the error of [the number
-rule](r:instr.trace.number).
+says, except in a line typed at a stop ([the rule
+there](r:env.debugging.input.trace)); a number in the program still raises the
+error of [the number rule](r:instr.trace.number).
 
 ```rexx
 trace r
@@ -142,13 +143,14 @@ N
 ```
 
 r[instr.trace.form.interactive]
-A question mark before the setting, or alone, turns interactive tracing on
-or off in the way of [the prefix rule](r:bif.trace.prefix): `TRACE ?` alone
-flips it and leaves the letter. The instruction cannot turn interactive
-tracing off, which the function can. What an interactive session accepts as
-input and what it writes is not specified; a program run with no input at all
-goes on after each pause. An example that waits for input is never written
-here.
+A question mark before the setting, or alone, turns interactive tracing on or
+off in the way of [the prefix rule](r:bif.trace.prefix): `TRACE ?` alone flips
+it and leaves the letter. In the program the instruction cannot turn
+interactive tracing off, which the function can; in a line typed at a stop it
+can ([the rule there](r:env.debugging.input.trace)). What a stop reads and
+what each kind of line does is specified in [the debugging
+chapter](r:env.debugging.read); a program run with no input at all goes on
+after each stop.
 
 ```rexx
 trace ?r
@@ -168,15 +170,16 @@ R
 r[instr.trace.number]
 A setting that is a whole number, written as a symbol, as a string or as the
 value of an expression, with a sign and blanks around it as a number may have,
-raises `SYNTAX 24.901`. A number only has a meaning in interactive tracing,
-which this book does not specify. A value that is not a whole number is not
-numeric here and is judged by [the letter rule](r:bif.trace.letter) as any
-other, so `1.5` raises `SYNTAX 24.1`, as does `.5`. A sign directly after
-TRACE, followed by one symbol or string, makes a signed number of it: a whole
-number raises `SYNTAX 24.901`, and any other operand raises `SYNTAX 26.7`.
-A parenthesis after the sign raises `SYNTAX 35.1`, and data after the number
-raises `SYNTAX 21.906`. A sign alone is no number: `TRACE -` is the bare
-form, and `TRACE +` and a second sign after the first raise `SYNTAX 35.1`.
+raises `SYNTAX 24.901` in the program. In a line typed at a stop it has a
+meaning, as [the debugging rule](r:env.debugging.input.number) says. A value
+that is not a whole number is not numeric here and is judged by [the letter
+rule](r:bif.trace.letter) as any other, so `1.5` raises `SYNTAX 24.1`, as does
+`.5`. A sign directly after TRACE, followed by one symbol or string, makes a
+signed number of it: a whole number raises `SYNTAX 24.901`, and any other
+operand raises `SYNTAX 26.7`. A parenthesis after the sign raises
+`SYNTAX 35.1`, and data after the number raises `SYNTAX 21.906`. A sign alone
+is no number: `TRACE -` is the bare form, and `TRACE +` and a second sign
+after the first raise `SYNTAX 35.1`.
 
 ```rexx
 call try '5'

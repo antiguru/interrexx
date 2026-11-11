@@ -389,7 +389,10 @@ fn check(spec_root: &Path, repo: &Path, cited: &Citations) -> Vec<Problem> {
 /// process has ended. The directory is directly under the temp directory, so the
 /// service's socket path does not depend on where the checkout is; a temp
 /// directory long enough to put that path past the platform's limit is an
-/// error. The daemon is built first when the target directory lacks it.
+/// error. The daemon is built first when the target directory lacks it or the
+/// `rxqueue` next to it, not when either is stale: a developer machine can run
+/// the examples against an old `rxqueue` filter until the next build (CI
+/// builds fresh).
 ///
 /// # Panics
 /// If the socket path is too long or the daemon cannot be built; every later
@@ -397,7 +400,7 @@ fn check(spec_root: &Path, repo: &Path, cited: &Citations) -> Vec<Problem> {
 fn private_service() {
     static CHOSEN: std::sync::OnceLock<Result<(), String>> = std::sync::OnceLock::new();
     let chosen = CHOSEN.get_or_init(|| {
-        let dir = std::env::temp_dir().join(format!("interrexx-spec-api-{}", std::process::id()));
+        let dir = service_dir();
         let socket = interrexx_rxapi::transport::unix::socket_path(
             &dir,
             interrexx_rxapi::message::wire::PROTOCOL_VERSION,
@@ -411,7 +414,7 @@ fn private_service() {
             ));
         }
         let daemon = Path::new(env!("CARGO_BIN_EXE_rexx")).with_file_name("rxapi");
-        if !daemon.is_file() {
+        if !daemon.is_file() || !daemon.with_file_name("rxqueue").is_file() {
             build_daemon(&daemon)?;
         }
         interrexx::use_api_service(&dir, &daemon);
@@ -435,14 +438,15 @@ fn private_service() {
     }
 }
 
-/// Builds `interrexx-rxapi`'s `rxapi` binary to `daemon`, the path of a binary
-/// in a profile directory of a target directory, with that profile and target
-/// directory. Cargo's lock on the target directory makes test processes that
-/// build it at the same time wait for each other.
+/// Builds `interrexx-rxapi`'s `rxapi` and `rxqueue` binaries next to `daemon`,
+/// the path of the `rxapi` binary in a profile directory of a target
+/// directory, with that profile and target directory. Cargo's lock on the
+/// target directory makes test processes that build it at the same time wait
+/// for each other.
 ///
 /// # Errors
 /// If `daemon` is not in a profile directory of a target directory, cargo
-/// cannot run, or the build fails or leaves no file at `daemon`; the message
+/// cannot run, or the build fails or leaves either file missing; the message
 /// of a failed build holds cargo's standard error.
 fn build_daemon(daemon: &Path) -> Result<(), String> {
     let in_target = daemon
@@ -464,6 +468,8 @@ fn build_daemon(daemon: &Path) -> Result<(), String> {
             "interrexx-rxapi",
             "--bin",
             "rxapi",
+            "--bin",
+            "rxqueue",
         ])
         .args(["--profile", profile])
         .arg("--target-dir")
@@ -472,7 +478,7 @@ fn build_daemon(daemon: &Path) -> Result<(), String> {
         .stdin(std::process::Stdio::null())
         .output()
         .map_err(|e| format!("running {}: {e}", Path::new(&cargo).display()))?;
-    if output.status.success() && daemon.is_file() {
+    if output.status.success() && daemon.is_file() && daemon.with_file_name("rxqueue").is_file() {
         return Ok(());
     }
     Err(format!(
@@ -487,7 +493,11 @@ fn build_daemon(daemon: &Path) -> Result<(), String> {
 /// corpus runs are. `None` when stdout is exactly the output block (its lines,
 /// each followed by one `\n`) and the exit code is `rc`. An example marked
 /// `defect=#N` is the reverse: a mismatch is expected, and a match is reported
-/// so the marker is removed.
+/// so the marker is removed. The program gets [`environment_with_tools`]: the
+/// interpreter's `rexx` and `rxqueue` first on `PATH` and `REXX_API_DIR` naming
+/// the private service. All examples of the run share that service's `SESSION`
+/// queue, so an example that leaves lines on it changes `QUEUED()` in later
+/// ones: an example drains what it queues.
 fn run_example(
     page: &interrexx_spec::Page,
     example: &interrexx_spec::Example,
@@ -497,6 +507,7 @@ fn run_example(
     let name = format!("{}:{}", page.path.display(), example.line);
     let invocation = interrexx::Invocation::none()
         .with_directory(directory.to_path_buf())
+        .with_environment(environment_with_tools())
         .with_input(interrexx::ProgramInput::Bytes(Vec::new()));
     let outcome = watchdog::run_bounded(&name, example.program.clone().into_bytes(), invocation);
     if watchdog::did_not_finish(&outcome) {
@@ -542,6 +553,54 @@ fn run_example(
         ));
     }
     Some(message)
+}
+
+/// The directory of this process's private API service: the one `private_service`
+/// makes the interpreter use, and the one a command's `rexx` and `rxqueue` are
+/// told to use through `REXX_API_DIR`, so that they reach the same queues.
+fn service_dir() -> PathBuf {
+    std::env::temp_dir().join(format!("interrexx-spec-api-{}", std::process::id()))
+}
+
+/// The process's environment with the directory of `rexx`, which also holds
+/// `rxqueue`, in front of `PATH`, so that a spec example's commands `rexx` and
+/// `rxqueue` find the interpreter's own tools the way the oracle's examples
+/// find the oracle's (see [`path_with_oracle_bin`]).
+fn environment_with_tools() -> Vec<(Vec<u8>, Vec<u8>)> {
+    use std::os::unix::ffi::OsStrExt;
+    let bin = Path::new(env!("CARGO_BIN_EXE_rexx"))
+        .parent()
+        .expect("rexx has a directory")
+        .to_path_buf();
+    let mut path_seen = false;
+    let mut environment: Vec<(Vec<u8>, Vec<u8>)> = std::env::vars_os()
+        .map(|(name, value)| {
+            if name == "PATH" {
+                path_seen = true;
+                let mut dirs = vec![bin.clone()];
+                dirs.extend(std::env::split_paths(&value));
+                let joined = std::env::join_paths(dirs).expect("joining PATH");
+                (name.as_bytes().to_vec(), joined.as_bytes().to_vec())
+            } else {
+                (name.as_bytes().to_vec(), value.as_bytes().to_vec())
+            }
+        })
+        .collect();
+    if !path_seen {
+        let dirs = [
+            bin.clone(),
+            PathBuf::from("/usr/bin"),
+            PathBuf::from("/bin"),
+        ];
+        let joined = std::env::join_paths(dirs).expect("joining PATH");
+        environment.push((b"PATH".to_vec(), joined.as_bytes().to_vec()));
+    }
+    environment.retain(|(name, _)| name != b"REXX_API_DIR");
+    environment.push((
+        b"REXX_API_DIR".to_vec(),
+        service_dir().as_os_str().as_bytes().to_vec(),
+    ));
+    environment
 }
 
 /// A scratch directory removed on drop.

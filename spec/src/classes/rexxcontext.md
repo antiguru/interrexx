@@ -74,12 +74,13 @@ VARIABLES
 ```
 
 r[class.rexxcontext.symbol]
-The environment symbol `.CONTEXT` answers the `RexxContext` of the code that is
-running. Within one run of that code it answers the same object each time, and
-the code of a called routine, of a method and of a message that another activity
-runs has another context. An INTERPRET runs in the context of the code that
-holds it. ([The lookup of environment symbols](r:lex.symbols.environment) is
-specified with the symbols.)
+The environment symbol `.CONTEXT` answers the `RexxContext` of the code that
+is running, unless an entry or a class of the same name is found first ([the
+order](r:env.objects.search.symbols)). Within one run of that code it answers
+the same object each time, and the code of a called routine, of a method and
+of a message that another activity runs has another context. An INTERPRET runs
+in the context of the code that holds it. ([The lookup of environment
+symbols](r:env.objects.search) is specified with the environment objects.)
 
 ```rexx
 c = .context

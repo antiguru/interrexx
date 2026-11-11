@@ -4,8 +4,12 @@
 //! own directory, and each side's `rexx` runs the cases of
 //! `tests/compiled/cases` there. The three descriptors must agree, and the
 //! recorded block is the oracle's. A case's input is its words, one per
-//! line. Images this crate refuses are pinned against this crate alone: the
-//! oracle crashes on a truncated image.
+//! line. Images this crate refuses are pinned against this crate alone:
+//! Deviation 153 (defects `compiled-image-truncated-crash` and
+//! `compiled-image-trailing-bytes-accepted`). The oracle crashes on a
+//! truncated image and on some changed header bytes, and runs an image with
+//! bytes after its end, so no test here hands it an image that was cut,
+//! extended or changed in its header.
 
 #[path = "support/oracle_runtime.rs"]
 mod oracle_runtime;
@@ -181,6 +185,11 @@ fn render(dir: &Path, stdout: &[u8], stderr: &[u8], status: Option<i32>) -> Stri
     rendered
 }
 
+// The cases of `compiled/cases/restore` run images by each route the
+// invocation page's section "Programs without source" names.
+// spec: env.invocation.rexxc.run, env.invocation.rexxc.source
+// spec: env.invocation.rexxc.trace, env.invocation.rexxc.options
+// spec: env.invocation.rexxc.routes
 #[test]
 fn each_route_runs_a_restored_program_as_the_oracles_does() {
     let (theirs, ours) = (Side::oracle(), Side::ours("crate"));
@@ -235,6 +244,8 @@ fn refused(image: &str, sub: u16) -> String {
     format!("rc> 253\nerr> Error 3:  Failure during initialization.\nerr> {message}\n")
 }
 
+// spec: env.invocation.rexxc.foreign, env.invocation.rexxc.damaged
+// spec: env.invocation.deviation.41
 /// Review Focus 2: an image this crate does not write, or a damaged one,
 /// never panics. Undecodable base64 is 3.905 and every other damage 3.903,
 /// rc 253, each measured on the oracle where the oracle survives the image.
@@ -288,6 +299,324 @@ fn a_foreign_or_damaged_image_is_refused() {
             refused(image, sub),
             "{image}"
         );
+    }
+    std::fs::remove_dir_all(&side.dir).expect("the directory is removed");
+}
+
+/// What `rexx` writes for the file `name` that holds `bytes`, run in `side`'s
+/// directory with the argument `x`.
+fn report(side: &Side, name: &str, bytes: &[u8]) -> String {
+    std::fs::write(side.dir.join(name), bytes).expect("the file");
+    let output = side
+        .command(&side.rexx)
+        .args([name, "x"])
+        .output()
+        .expect("rexx starts");
+    render(
+        &side.dir,
+        &output.stdout,
+        &output.stderr,
+        output.status.code(),
+    )
+}
+
+/// The image `side`'s `rexxc` writes for `hello.rex`, with the flags.
+fn hello(side: &Side, flags: &[&str]) -> Vec<u8> {
+    let written = side
+        .command(&side.rexxc)
+        .args(["hello.rex", "hello.out", "-s"])
+        .args(flags)
+        .output()
+        .expect("rexxc starts");
+    assert_eq!(written.status.code(), Some(0), "{flags:?}");
+    let bytes = std::fs::read(side.dir.join("hello.out")).expect("the image");
+    std::fs::remove_file(side.dir.join("hello.out")).expect("the image is removed");
+    bytes
+}
+
+/// The value of a base64 digit.
+fn digit(byte: u8) -> u32 {
+    u32::from(match byte {
+        b'A'..=b'Z' => byte - b'A',
+        b'a'..=b'z' => byte - b'a' + 26,
+        b'0'..=b'9' => byte - b'0' + 52,
+        b'+' => 62,
+        b'/' => 63,
+        other => panic!("{other} is no base64 digit"),
+    })
+}
+
+/// The bytes of whole base64 quartets.
+fn decode(text: &[u8]) -> Vec<u8> {
+    text.chunks(4)
+        .flat_map(|quartet| {
+            let value = quartet
+                .iter()
+                .fold(0u32, |all, &byte| all << 6 | digit(byte));
+            [(value >> 16) as u8, (value >> 8) as u8, value as u8]
+        })
+        .collect()
+}
+
+/// The base64 text of `bytes`, in lines of 72 characters.
+fn encode(bytes: &[u8]) -> Vec<u8> {
+    const DIGITS: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut text = Vec::new();
+    for group in bytes.chunks(3) {
+        let value = group.iter().enumerate().fold(0u32, |all, (at, &byte)| {
+            all | u32::from(byte) << (16 - 8 * at)
+        });
+        for at in 0..4 {
+            text.push(if at <= group.len() {
+                DIGITS[(value >> (18 - 6 * at) & 63) as usize]
+            } else {
+                b'='
+            });
+        }
+    }
+    let mut lines = Vec::new();
+    for line in text.chunks(72) {
+        lines.extend_from_slice(line);
+        lines.push(b'\n');
+    }
+    lines
+}
+
+/// An image that both interpreters write the same way at its opening, and
+/// its encoded form as lines of base64 text.
+// spec: env.invocation.rexxc.image
+#[test]
+fn both_interpreters_write_an_image_with_the_same_opening() {
+    for side in [Side::oracle(), Side::ours("opening")] {
+        let binary = hello(&side, &[]);
+        let opening = b"#!/usr/bin/env rexx\n/**/@REXX\0\0";
+        assert!(binary.starts_with(opening), "{}", side.rexx.display());
+        assert!(binary[31..].contains(&0), "{}", side.rexx.display());
+        let encoded = hello(&side, &["-e"]);
+        let tag = b"#!/usr/bin/env rexx\n/**/@REXX@\n";
+        assert!(encoded.starts_with(tag), "{}", side.rexx.display());
+        let text = &encoded[tag.len()..];
+        assert_eq!(text.last(), Some(&b'\n'));
+        let lines: Vec<&[u8]> = text[..text.len() - 1]
+            .split(|&byte| byte == b'\n')
+            .collect();
+        let (last, whole) = lines.split_last().expect("lines");
+        assert!(whole.iter().all(|line| line.len() == 72));
+        assert!(!last.is_empty() && last.len() <= 72);
+        let decoded = decode(&lines[0][..16]);
+        assert!(
+            decoded.starts_with(b"/**/@REXX\0\0"),
+            "{}: {decoded:?}",
+            side.rexx.display()
+        );
+        std::fs::remove_dir_all(&side.dir).expect("the directory is removed");
+    }
+}
+
+/// An image runs by its bytes alone: without its first line, with another
+/// first line that starts `#!`, under any name; and the search adds no `.rxo`.
+// spec: env.invocation.rexxc.run
+#[test]
+fn an_image_runs_by_its_opening_and_not_by_its_name() {
+    for side in [Side::oracle(), Side::ours("byname")] {
+        let ran = "rc> 4\nout> hello x\n";
+        for flags in [&[][..], &["-e"][..]] {
+            let image = hello(&side, flags);
+            let rest = &image[image.iter().position(|&b| b == b'\n').expect("a line") + 1..];
+            let other = [&b"#!x\n"[..], rest].concat();
+            let variants = [
+                ("a.rxo", image.clone()),
+                ("plain", image.clone()),
+                ("a.rex", image.clone()),
+                ("no-line.rxo", rest.to_vec()),
+                ("other-line.rxo", other),
+            ];
+            for (name, bytes) in variants {
+                assert_eq!(report(&side, name, &bytes), ran, "{name} {flags:?}");
+            }
+        }
+        let missing = report(&side, "solo2.rxo", &hello(&side, &[]));
+        assert_eq!(missing, ran);
+        // In an encoded image a carriage return and a line feed are
+        // skipped between groups of four: a copy with CR LF line ends runs.
+        let encoded = hello(&side, &["-e"]);
+        let tag = b"#!/usr/bin/env rexx\n/**/@REXX@\n".len();
+        let mut crlf = encoded[..tag].to_vec();
+        for &byte in &encoded[tag..] {
+            if byte == b'\n' {
+                crlf.push(b'\r');
+            }
+            crlf.push(byte);
+        }
+        assert_eq!(report(&side, "crlf.rxo", &crlf), ran, "CR LF");
+        // The line feed after the `@` stands alone: with a CR before it the
+        // copy is source and stops at its `@`.
+        let mut tagcr = encoded.clone();
+        tagcr.insert(tag - 1, b'\r');
+        assert_eq!(
+            report(&side, "tagcr.rxo", &tagcr),
+            "rc> 243\n\
+             err>      2 *-* /**/@\n\
+             err> Error 13 running DIR/tagcr.rxo line 2:  Invalid character in program.\n\
+             err> Error 13.1:  Incorrect character in program \"@\" ('40'X).\n",
+            "CR before the tag's LF"
+        );
+        let output = side
+            .command(&side.rexx)
+            .arg("solo2")
+            .output()
+            .expect("rexx starts");
+        assert_eq!(output.status.code(), Some(253));
+        std::fs::remove_dir_all(&side.dir).expect("the directory is removed");
+    }
+}
+
+/// A file that begins like an image, with a changed letter of `REXX` or a
+/// changed byte of the tag, is source and stops at its `@`.
+// spec: env.invocation.rexxc.run
+#[test]
+fn an_opening_with_a_changed_byte_is_source() {
+    let stop = "rc> 243\n\
+                err>      2 *-* /**/@\n\
+                err> Error 13 running DIR/t.rxo line 2:  Invalid character in program.\n\
+                err> Error 13.1:  Incorrect character in program \"@\" ('40'X).\n";
+    // Four text files that begin like an image and hold none: both engines.
+    let texts: [&[u8]; 4] = [
+        b"#!/usr/bin/env rexx\n/**/@REXY say 1\n", // a letter of REXX
+        b"#!/usr/bin/env rexx\n/**/@rexx say 1\n", // the letters in lower case
+        b"#!/usr/bin/env rexx\n/**/@REXXa say 1\n", // the byte after REXX
+        b"#!/usr/bin/env rexx\n/**/@REXX@x say 1\n", // the byte after the @
+    ];
+    for side in [Side::oracle(), Side::ours("changed")] {
+        for text in texts {
+            assert_eq!(report(&side, "t.rxo", text), stop, "{}", escaped(text));
+        }
+        std::fs::remove_dir_all(&side.dir).expect("the directory is removed");
+    }
+    // Deviation 153 (defects `compiled-image-truncated-crash` and
+    // `compiled-image-trailing-bytes-accepted`): a changed byte inside an
+    // image is tried on this crate alone, never on the oracle.
+    let side = Side::ours("changed-image");
+    for (flags, offsets) in [(&[][..], 25..=29), (&["-e"][..], 25..=30)] {
+        let image = hello(&side, flags);
+        for offset in offsets {
+            let mut bytes = image.clone();
+            bytes[offset] ^= 1;
+            assert_eq!(report(&side, "t.rxo", &bytes), stop, "{offset} {flags:?}");
+        }
+    }
+    std::fs::remove_dir_all(&side.dir).expect("the directory is removed");
+}
+
+/// An image of either interpreter is refused by the other with 3.903, and a
+/// line of an encoded image that is not base64 is refused with 3.905; the
+/// images these two refusals run are unchanged ones or carry a changed byte
+/// in the base64 text of an encoded one, not in a header.
+// spec: env.invocation.rexxc.foreign, env.invocation.rexxc.damaged
+#[test]
+fn both_interpreters_refuse_a_foreign_image_and_an_undecodable_line() {
+    let (theirs, ours) = (Side::oracle(), Side::ours("foreign"));
+    let (their_image, our_image) = (hello(&theirs, &[]), hello(&ours, &[]));
+    assert_eq!(
+        report(&theirs, "x.rxo", &our_image),
+        refused("x.rxo", 903),
+        "the oracle on ours"
+    );
+    assert_eq!(
+        report(&ours, "x.rxo", &their_image),
+        refused("x.rxo", 903),
+        "ours on the oracle's"
+    );
+    let body = b"#!/usr/bin/env rexx\n/**/@REXX@\n".len();
+    for side in [&theirs, &ours] {
+        let encoded = hello(side, &["-e"]);
+        for (offset, byte) in [
+            (body + 5, b'!'),
+            (body + 5, b' '),
+            (body + 5, b'\t'),
+            (body + 5, b'\n'),
+            (body + 5, b'\r'),
+            (body + 73 + 9, b'!'),
+        ] {
+            // The oracle gets text that decodes to no image: keep these
+            // bytes outside the base64 characters.
+            debug_assert!(!byte.is_ascii_alphanumeric() && !b"+/=".contains(&byte));
+            let mut bytes = encoded.clone();
+            bytes[offset] = byte;
+            assert_eq!(
+                report(side, "x.rxo", &bytes),
+                refused("x.rxo", 905),
+                "{offset} {byte} on {}",
+                side.rexx.display()
+            );
+        }
+    }
+    std::fs::remove_dir_all(&theirs.dir).expect("the oracle directory is removed");
+    std::fs::remove_dir_all(&ours.dir).expect("the crate directory is removed");
+}
+
+// spec: env.invocation.deviation.153, env.invocation.rexxc.damaged
+/// Deviation 153: an image is checked as a whole. These run on this crate
+/// alone: the oracle runs an image with bytes after its end, ignores some
+/// changed header bytes and crashes on others and on a truncated image
+/// (defects `compiled-image-trailing-bytes-accepted` and
+/// `compiled-image-truncated-crash`), so it is never handed one.
+#[test]
+fn an_image_that_is_cut_extended_or_changed_in_its_header_is_refused() {
+    let side = Side::ours("whole");
+    let binary = hello(&side, &[]);
+    let refusal = |name: &str, bytes: &[u8]| report(&side, name, bytes);
+    assert_eq!(refusal("ok.rxo", &binary), "rc> 4\nout> hello x\n");
+    // Bytes after the end, in the binary form and in the encoded one.
+    let mut extended = binary.clone();
+    extended.extend_from_slice(b"JUNK");
+    assert_eq!(refusal("tail.rxo", &extended), refused("tail.rxo", 903));
+    let first = binary.iter().position(|&b| b == b'\n').expect("a line") + 1;
+    let mut encoded = binary[..first].to_vec();
+    encoded.extend_from_slice(b"/**/@REXX@\n");
+    // The binary image without its first line, extended, as base64 text.
+    let mut inner = binary[first..].to_vec();
+    inner.extend_from_slice(b"JUNK");
+    encoded.extend_from_slice(&encode(&inner[..]));
+    assert_eq!(refusal("etail.rxo", &encoded), refused("etail.rxo", 903));
+    // The text of an unextended copy, built the same way, runs.
+    let mut whole = binary[..first].to_vec();
+    whole.extend_from_slice(b"/**/@REXX@\n");
+    whole.extend_from_slice(&encode(&binary[first..]));
+    assert_eq!(refusal("ewhole.rxo", &whole), "rc> 4\nout> hello x\n");
+    // An image that ends too early.
+    for length in [first + 11, first + 40, binary.len() - 1] {
+        let name = format!("cut{length}.rxo");
+        assert_eq!(refusal(&name, &binary[..length]), refused(&name, 903));
+    }
+    // A changed byte of the second byte of 0 of the opening and of each
+    // byte of the header after it.
+    for offset in first + 10..first + 10 + 42 {
+        let mut bytes = binary.clone();
+        bytes[offset] ^= 1;
+        assert_eq!(
+            refusal("hdr.rxo", &bytes),
+            refused("hdr.rxo", 903),
+            "{offset}"
+        );
+    }
+    // Base64 text that does not decode whole: 3.905. The first has
+    // characters after the `=` that closes the text.
+    let head = &whole[..first + 11];
+    let mut padded = binary[first..].to_vec();
+    while padded.len() % 3 != 2 {
+        padded.push(b'J');
+    }
+    let after = [head, &encode(&padded), b"AAAA\n"].concat();
+    let partial = [&whole[..], b"QQ\n"].concat();
+    let mut inside = whole.clone();
+    inside[first + 11 + 5] = b'=';
+    for (name, bytes) in [
+        ("afterpad.rxo", after),
+        ("partial.rxo", partial),
+        ("eqmid.rxo", inside),
+    ] {
+        assert_eq!(refusal(name, &bytes), refused(name, 905), "{name}");
     }
     std::fs::remove_dir_all(&side.dir).expect("the directory is removed");
 }

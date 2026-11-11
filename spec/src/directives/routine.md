@@ -3,6 +3,7 @@ element: "::ROUTINE"
 kind: directive
 syntax: "::ROUTINE name [PUBLIC | PRIVATE] [EXTERNAL spec]"
 rexxref: "Directives > ::ROUTINE"
+deviations: [143]
 ---
 
 # ::ROUTINE
@@ -163,7 +164,7 @@ named like a built-in function is reached only by a string name that is not in
 capitals, because the symbol and the capitalised string find the built-in
 function first. A program file of the same name is an external routine and is
 found only when no routine of the package or of a required package has the
-name. Where such a file is looked for is not specified here.
+name. Where such a file is looked for is [the places rule](r:env.search.places).
 
 ```rexx
 f = 'spec_dir_routine_extprog.rex'
@@ -282,14 +283,16 @@ local pub local both
 ## The table of routines
 
 r[dir.routine.table]
-The environment symbol `.ROUTINES` holds a table of the routines that the
-package declares, public and private, whose indexes are the routine names in
-upper case and whose items are routine objects. It does not hold the routines
-that the package found through its ::REQUIRES. The symbol exists only in a
-package that declares a routine; for any other package it is the symbol's own
-text. Each package has its own table. The example runs a routine through the
-table with the [CALL method](r:class.routine.call) of the routine object,
-which the classes chapter owns.
+Unless an entry or a class of the same name is found first ([the
+order](r:env.objects.search.symbols)), the environment symbol `.ROUTINES`
+holds a table of the routines that the package declares, public and private,
+whose indexes are the routine names in upper case and whose items are routine
+objects. It does not hold the routines that the package found through its
+::REQUIRES. The symbol exists only in a package that declares a routine; for
+any other package it is the symbol's own text. Each package has its own table.
+The example runs a routine through the table with the [CALL
+method](r:class.routine.call) of the routine object, which the classes chapter
+owns.
 
 ```rexx
 say .routines~items
@@ -329,8 +332,10 @@ entry name raises `90.999`. These are raised when the section of the directive
 ends, so a clause in the section is refused first; [the rule for external
 methods](r:dir.method.external) says how that order goes for the faults of
 other directives. The operand of the LIBRARY form is the one that
-[::METHOD](r:dir.method.external) takes. How a library is searched for, and
-which routine of it the declaration binds, are not specified here.
+[::METHOD](r:dir.method.external) takes. How a library is searched for is
+[the library rule](r:env.search.library). Which routine of a library the
+declaration binds is not specified here, except for the REGISTERED entry that
+[the rule of Deviation 143](r:dir.routine.deviation.143) refuses.
 
 ```rexx
 call try '::routine r external "library spec_no_such_lib_xyz"'
@@ -376,4 +381,32 @@ e: say arg(1) '=>' condition('o')~code
 ::routine r external "library spec_no_such_lib_xyz" => 99.939
 ::routine r external "library spec_no_such_lib_xyz" => 98.903
 ::frob => 99.916
+```
+
+## Deviations
+
+r[dir.routine.deviation.143]
+A REGISTERED declaration whose library loads, and whose entry is not a
+function that the library registers through the classic interface, raises
+`SYNTAX 90.999` when the section of the directive ends, as every REGISTERED
+declaration that finds no routine does. The entry `RxCalcTan` of the library
+`rxmath` is such an entry. ooRexx accepts the directive for that entry and
+raises nothing when the package is loaded; the process ends when the routine
+is called. For other such entries, `SysSleep` of `rexxutil` among them,
+ooRexx raises the same error.
+interrexx raises the error where the directive is, so a package with the
+declaration never loads. The example is not run against ooRexx, whose process
+would end.
+
+```rexx
+signal on syntax name e
+src = .array~of('call tt 0', -
+  '::routine tt external "registered rxmath RxCalcTan"')
+p = .package~new('a3zqregdev', src)
+say 'loaded'
+e: say condition('o')~code
+```
+
+```output
+90.999
 ```

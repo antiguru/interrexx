@@ -153,14 +153,15 @@ required package contributes its own public classes, then those it makes
 visible by its own ::REQUIRES, and all of these come before the classes of the
 next ::REQUIRES directive of the requiring package. A private class of a
 required package does not hide a public class of the same name that the
-package makes visible. When none of these has the name, the lookup goes on as
-[the environment rule](r:lex.symbols.environment) says, which finds the
-built-in classes and any class object that the program has stored in
-`.environment` under the name.
-This book does not specify which other directories that lookup searches. The
-same lookup finds the class that SUBCLASS, MIXINCLASS, METACLASS and INHERIT
-name. A name that no step finds is the environment symbol's own text, and the
-options that need a class raise the error that their rule gives.
+package makes visible. When none of these has the name, the lookup goes on
+with the classes of the class library and then the directories, in the order
+of [the rule of the environment chapter](r:env.objects.search): a library
+class is found before an entry of `.local` or `.environment`, and a class
+object that the program has stored in `.local` or `.environment` is found when
+no class has the name. The same lookup finds the class that SUBCLASS,
+MIXINCLASS, METACLASS and INHERIT name. A name that no step finds is the
+environment symbol's own text, and the options that need a class raise the
+error that their rule gives.
 
 ```rexx
 f = 'spec-dir-class-lib.tmp'

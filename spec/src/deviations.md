@@ -1058,3 +1058,103 @@ as a plain `lineIn` answers it there, as its first item. ooRexx answers the
 whole of the line when the read position is in the first line. It sends
 `lineIn` with the number of the line, where this book sends it with no
 argument.
+
+## 141. The argument string of a program that rexx -e runs
+
+A program that `rexx -e` runs gets its argument string built as a program in a
+file gets it: the words after the text, joined by one blank, less the empty
+words at the head. ooRexx drops one leading blank of that string when it is
+longer than one character, so that the words `' '` and `x` give it `' x'`
+where a file gets `'  x'`.
+
+## 142. A copy of a Stream
+
+A copy of a `Stream` is a new stream that has the name of the original and is
+not open, as any new stream with that name is; the original is unchanged, and
+the copy and the original do not share a read position. ooRexx's copy shares
+the original's internal state, and the process ends abnormally when it ends.
+
+## 143. A REGISTERED routine whose entry is not a classic function
+
+A `::ROUTINE` directive with `EXTERNAL "REGISTERED library entry"`, whose
+library loads and whose entry is not a function that the library registers
+through the classic interface, is refused with `SYNTAX 90.999` when the
+directive ends. ooRexx accepts the directive for some such entries,
+`RxCalcTan` of `rxmath` among them, and the process ends when the routine is
+called; for others, `SysSleep` of `rexxutil` among them, it raises the same
+error.
+
+## 144. LINES of a standard stream in normal mode
+
+LINES with a name that denotes the standard input, output or error stream, and
+no option or an option other than `C`, sends the message `LINES` to that entry
+of `.local` and answers 0 when the string value of the answer is a number
+equal to zero and 1 otherwise, whatever the answer is: `abc`, `1.5`, `1E10`
+and a whole number of more than nine digits answer 1, and so does an object
+that is not a string whose string value is one of these, such as an Array.
+ooRexx answers each of
+these as the object answered it, an object that is not a string included.
+
+## 145. The state after a failed open with BINARY and no RECLENGTH
+
+When `open` with `BINARY` and no `RECLENGTH` raises `SYNTAX 93.0`, as it does
+for a file that is missing or empty, the stream is `UNKNOWN` afterwards.
+ooRexx leaves it `READY`.
+
+## 146. A command string with a NUL character
+
+A command string that holds a NUL character is not run, in any native
+environment: the command raises FAILURE with the return code 127. ooRexx cuts
+the string at the NUL and runs the part before it.
+
+## 147. A file without a #! line that a PATH search finds
+
+ADDRESS PATH runs an executable file that its search of `PATH` finds and that
+has no `#!` line with `/bin/sh`, which reads it as a script, as a shell does.
+ooRexx cannot run such a file and answers FAILURE with the return code 127.
+
+## 148. The descriptors that a command inherits
+
+A command inherits no descriptor that the interpreter opened for its own work;
+descriptors 0, 1 and 2, and any that the interpreter was started with, are
+passed on. ooRexx also passes two descriptors that the interpreter itself
+keeps open, so that a command sees two more open descriptors than the three of
+the program.
+
+## 149. Environment variables set after `export` and `unset`
+
+Every set that VALUE makes in the `ENVIRONMENT` is kept, whatever `export` and
+`unset` the interpreter did before, and `export` with an empty name changes
+nothing. ooRexx loses some sets of VALUE that follow in-process `export` and
+`unset` commands, which ones depending on what the program ran before for
+any variable (the second `unset` of a name among them), so that the variable
+has no value afterwards. For `export` with an empty name it stores an entry
+with no name, which a `$` reference with no name then finds.
+
+## 150. An INTERPRET in a line read at an interactive trace stop
+
+The clauses of a string that an INTERPRET in such a line runs are not traced,
+like the rest of the line, and no stop follows them. ooRexx traces them and
+stops after each of them before the interpreter reads the next line.
+
+## 151. RAISE SYNTAX in a line read at an interactive trace stop
+
+A RAISE SYNTAX in such a line is reported as any error of the line is, and
+tracing and the stops go on as before. In ooRexx the clauses that follow are
+no longer shown, and the program may run on without a stop.
+
+## 152. An empty line after a line that failed as it was read
+
+An empty line that follows a line that failed as it was read, such as
+`trace 1.5`, whose setting does not exist, or an expression that cannot be
+parsed, goes on to the next stop. ooRexx ends interactive tracing at that empty
+line.
+
+## 153. A damaged compiled image is refused
+
+An image that ends too early, one that has bytes after its end, and one that
+has any changed byte are refused with `3.903`, rc 253 (the image carries a
+SHA-256 digest of itself; interrexx issue #235), and an encoded
+image whose base64 text does not decode whole is refused with `3.905`, rc 253.
+ooRexx runs an image with bytes after its end and ignores some changed header
+bytes; it crashes on a truncated image and on other changed header bytes.

@@ -13,9 +13,10 @@ and whose prolog it runs before the requiring package goes on, or a native
 library that it loads. A NAMESPACE option gives the required package a name
 that can qualify the classes and routines it supplies. This page specifies the
 directive, what a required package makes visible, the faults that requiring
-can raise and the two options. How a name is searched for as a file or as a
-library is the subject of the environment chapter, and the examples here name
-files that the program writes into the current directory.
+can raise and the two options. How a name is searched for as a
+[file](r:env.search.required) or as a [library](r:env.search.library) is the
+subject of the environment chapter, and the examples here name files that the
+program writes into the current directory.
 
 ## Requiring a package
 
@@ -23,7 +24,9 @@ r[dir.requires.create]
 The operand of ::REQUIRES is a symbol or a string that names the package, and
 [the names rule](r:dir.index.names) gives the spelling of each. Which of the
 two finds a file is a property of the file system, so that a name that has
-lower-case letters is best written as a string. The interpreter installs the
+lower-case letters is best written as a string. Which directories are
+searched for the file, and the endings and case that are tried, are [the
+required-file rule](r:env.search.required). The interpreter installs the
 required package as [installation](r:dir.index.install) describes, which
 includes running its prolog, before the requiring package creates a class or
 runs its own prolog. An `exit` or `return` in the required prolog ends only
@@ -232,9 +235,9 @@ instead of a Rexx program, and a library that cannot be loaded raises `SYNTAX
 in its text, and only then its other ::REQUIRES directives, so a library that
 cannot be loaded raises before any required program has run its prolog. A
 library can be required more than once. Whether a library name is case
-sensitive, and where libraries are searched for, are not specified here. The
-LIBRARY option does not combine with NAMESPACE: the two together raise `SYNTAX
-25.904`.
+sensitive, and where libraries are searched for, are [the library
+rule](r:env.search.library). The LIBRARY option does not combine with
+NAMESPACE: the two together raise `SYNTAX 25.904`.
 
 ```rexx
 f = 'rq-p.tmp'

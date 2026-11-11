@@ -24,8 +24,9 @@ is [`::METHOD`](../directives/method.md), the annotations come from
 method object, [`define`](r:class.class.define) and
 [`setMethod`](r:class.object.setmethod), are on the pages of `Object` and
 `Class`. The messages every object understands are those of
-[`Object`](object.md). The search for a file or a library that `newFile` and
-`loadExternalMethod` start is specified in the environment chapter; the
+[`Object`](object.md). `newFile` takes its file as [the newFile
+rule](r:env.search.newfile) says, and the library of `loadExternalMethod` is
+found as [the library rule](r:env.search.library) says; the
 examples here name a file that they create themselves, or a library that every
 installation has.
 
@@ -427,9 +428,9 @@ file that come before its first directive, except that a first line that
 begins with `#!` is not part of the source. A directive in the file still
 makes the classes and routines of the method's package, which the package
 answers to `classes` and `routines`, and the code of the method sees them. The
-context is used as for `new`. How the file is searched for is specified in the
-environment chapter. `newFile` sends `init` with no argument to the new
-object, and a subclass of `Method` makes instances of itself.
+context is used as for `new`. The file is not searched for ([the newFile
+rule](r:env.search.newfile)). `newFile` sends `init` with no argument to the
+new object, and a subclass of `Method` makes instances of itself.
 
 ```rexx
 f = 'class_method_newfile_zq.tmp'
@@ -556,9 +557,9 @@ method name when it is left out; a descriptor of another form raises
 name, the answer is `.nil` and nothing is raised. Otherwise the answer is a
 method object that is public and guarded, whose `source` is an empty array and
 whose `package` is `.nil`. Where the library is searched for, and whether its
-name is case sensitive, is specified in the environment chapter. The result is
-an instance of `Method` also when a subclass received the message, and no
-`init` is sent.
+name is case sensitive, is specified by [the library
+rule](r:env.search.library). The result is an instance of `Method` also when a
+subclass received the message, and no `init` is sent.
 
 ```rexx
 m = .method~loadExternalMethod('m', 'LIBRARY rxregexp RegExp_Pos')
@@ -1253,18 +1254,20 @@ x = m~setProtected => 91.999
 ```
 
 r[class.method.setsecuritymanager]
-`setSecurityManager` gives the method a security manager, or with no argument
-removes the one it has, and answers `1`. It is a protected method. The manager
-is any object, `.nil` as well, and it is not checked when it is set: `.nil` is
-an object like any other, which is sent the checkpoints and does not
-understand them (`SYNTAX 97.1`), so only a call with no argument removes the
-manager. A second argument raises `SYNTAX 93.902`. While the code of the
-method runs, and in the internal routines of that code, the actions that
-[the checkpoint rules](r:class.routine.setsecuritymanager.checkpoints) name
-are offered to the manager first; the code of other packages that the method
-calls is not under the manager. A manager that was set before
-[`define`](r:class.class.define) installed the method stays with the
-installed method, as the example shows.
+`setSecurityManager` gives the package that holds the method's code a security
+manager, or with no argument removes the one that package has, and answers `1`
+([the package rule](r:env.security.set)); a method that `new` or `newFile`
+made has a package of its own. It is a protected method. The manager is any
+object, `.nil` as well, and it is not checked when it is set: `.nil` is an
+object like any other, which is sent the checkpoints and does not understand
+them (`SYNTAX 97.1`), so only a call with no argument removes the manager. A
+second argument raises `SYNTAX 93.902`. While code of that package runs, the
+method and its internal routines among it, the actions that [the checkpoint
+rules](r:class.routine.setsecuritymanager.checkpoints) name are offered to the
+manager first ([which code](r:env.security.scope)); the code of other packages
+that the method calls is not under the manager. A manager that was set before
+[`define`](r:class.class.define) installed the method stays with the installed
+method, as the example shows.
 
 ```rexx
 m = .method~new('n', 'address system "echo not run"; return "ran"')

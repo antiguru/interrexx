@@ -4,7 +4,7 @@ kind: builtin
 syntax: "STREAM(name [, operation [, command]])"
 ansi: "9.7.8"
 rexxref: "Functions > Built-in Functions > STREAM"
-deviations: [34, 35, 49, 55, 57, 59, 62, 74, 79, 98, 100]
+deviations: [34, 35, 49, 55, 57, 59, 62, 74, 79, 98, 100, 145]
 ---
 
 # STREAM
@@ -384,7 +384,10 @@ short. [LINES](r:bif.lines.count) counts records.
 end of the record that the write position is in, with no line end; a string
 that is longer than the rest of that record raises `SYNTAX 93.0` and writes
 nothing, and the stream stays `READY`. The option `BINARY` without `RECLENGTH`
-is not specified, and neither is `BINARY RECLENGTH` without `n`.
+is not specified, and neither is `BINARY RECLENGTH` without `n`, except that
+when `BINARY` without `RECLENGTH` raises `SYNTAX 93.0`, as it does for a file
+that is missing or empty, the stream is `UNKNOWN` afterwards ([Deviation
+145](r:bif.stream.deviation.145)).
 
 ```rexx
 f = 'spec-stream-binary.tmp'
@@ -1160,4 +1163,31 @@ say '[' || stream('stdin', 'c', 'query position') || ']',
 
 ```output
 [] [] []
+```
+
+r[bif.stream.deviation.145]
+When `open` with the option `BINARY` and no `RECLENGTH` raises `SYNTAX 93.0`,
+as it does for a file that is missing and for one that is empty, the stream is
+`UNKNOWN` afterwards, as after any open that fails. ooRexx leaves it `READY`;
+the example is not run against it.
+
+```rexx
+f = 'spec-stream-binary3-zq.tmp'
+call sysfiledelete f
+signal on syntax name a
+say stream(f, 'c', 'open binary')
+a: say 'missing' condition('o')~code stream(f)
+call charout f
+call charout f
+s = .stream~new(f)
+signal on syntax name b
+say s~open('binary')
+b: say 'empty' condition('o')~code s~state
+signal off syntax
+call sysfiledelete f
+```
+
+```output
+missing 93.0 UNKNOWN
+empty 93.0 UNKNOWN
 ```

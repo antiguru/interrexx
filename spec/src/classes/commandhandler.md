@@ -20,10 +20,11 @@ it.
 
 This page states the class, how a command reaches the method `command` of the
 handler and what the handler answers, and the class methods. The environment
-chapter specifies the environments of the interpreter, how a command to a name
-that no environment has fails and what the native environments do; this page
-says only where the class takes part. The examples register environments under
-names of their own, and use no environment that runs commands in the host.
+chapter specifies [the environments of the interpreter](r:env.commands.names),
+how a command to a name that no environment has fails and [what the native
+environments do](r:env.commands.shell); this page says only where the class
+takes part. The examples register environments under names of their own, and
+use no environment that runs commands in the host.
 
 ## The class
 
@@ -530,11 +531,12 @@ case, and the item of each is the handler in use for it, the object that
 environment that a program registered, and a
 [`NativeCommandHandler`](nativecommandhandler.md) for a native one. The
 environment `SYSTEM`, which runs commands in the host's shell, is among them.
-Which other native environments exist is not specified: it depends on the host,
-but the native environments include one under the null string, which `register`
-and `deregister` refuse. The table is a snapshot: a later `register` or
-`deregister` does not change it, and changing it does not change the
-environments. The method takes no argument (`SYNTAX 88.922`).
+Which other native environments exist depends on the host: on Linux they
+are the ones that [the names rule](r:env.commands.names) lists. They include
+one under the null string, which `register` and `deregister` refuse. The table
+is a snapshot: a later `register` or `deregister` does not change it, and
+changing it does not change the environments. The method takes no argument
+(`SYNTAX 88.922`).
 
 ```rexx
 before = .commandhandler~environments
