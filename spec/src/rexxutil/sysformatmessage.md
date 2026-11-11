@@ -91,8 +91,7 @@ is one insert, the one for `&1`, and `'a' || '0a'x || 'b'` gives two. A
 subclass whose `MAKEARRAY` is overridden, of String or of Array, gives the
 items of the override. An object that has no `MAKEARRAY` method, `.nil`
 included, raises `SYNTAX 98.913`, and so does an array of more than one
-dimension. What an object answers when its `MAKEARRAY` answers something that
-is not an array is not specified. An item that is not a string is replaced by
+dimension. An item that is not a string is replaced by
 the string that its `request` with the argument `STRING` answers. When that
 answer is not a string, the item is replaced by the answer of its `STRING`
 method, as with an insert of [SysGetMessage](r:util.sysgetmessage.args). So
