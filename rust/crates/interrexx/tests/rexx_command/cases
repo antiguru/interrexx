@@ -1342,3 +1342,123 @@ err>
 err> Syntax is "rexx [-o[d] "options"] filename [arguments]"
 err> or        "rexx -e program_string [arguments]"
 err> or        "rexx -v".
+
+# the endings of a program name: .REX before .rex, no .cls, none last
+# (env.search.program, env.search.extension)
+run
+ord
+----
+rc> 0
+out> ord REX
+
+run
+ordc
+----
+rc> 253
+err> Error 3:  Failure during initialization.
+err> Error 3.901:  Failure during initialization: Program "ordc" was not found.
+
+run rexx_path=rp
+ordx
+----
+rc> 0
+out> ordx REX in REXX_PATH
+
+run
+ordx
+----
+rc> 0
+out> ordx rex in the current directory
+
+# the places: the current directory, REXX_PATH, then PATH, and an ending in
+# every place before the next ending (env.search.program, env.search.places)
+run rexx_path=rp path=pp
+ordy
+----
+rc> 0
+out> ordy in REXX_PATH
+
+run path=pp
+ordy
+----
+rc> 0
+out> ordy in PATH
+
+run rexx_path=rp
+-e
+call t
+----
+rc> 0
+out> hi from t
+
+run
+-e
+call t
+----
+rc> 0
+out> hi from t
+
+# names that are paths (env.search.names)
+run rexx_path=rp
+./viarp
+----
+rc> 253
+err> Error 3:  Failure during initialization.
+err> Error 3.901:  Failure during initialization: Program "./viarp" was not found.
+
+run rexx_path=rp
+sub2/inrp
+----
+rc> 0
+out> inrp
+
+run rexx_path=rp
+./sub2/inrp
+----
+rc> 253
+err> Error 3:  Failure during initialization.
+err> Error 3.901:  Failure during initialization: Program "./sub2/inrp" was not found.
+
+# the written form, then the lower-case form (env.search.case)
+run
+LOWONLY
+----
+rc> 0
+out> lowonly
+
+run
+up
+----
+rc> 253
+err> Error 3:  Failure during initialization.
+err> Error 3.901:  Failure during initialization: Program "up" was not found.
+
+run
+ORD
+----
+rc> 0
+out> ord REX
+
+# a routine found beside its caller, and not by a string with no file
+# (env.search.caller, env.search.places)
+run
+sub/callsib
+----
+rc> 0
+out> sibling in sub
+
+run
+-e
+say sibonly()
+----
+rc> 213
+err>      1 *-* say sibonly()
+err> Error 43 running INSTORE line 1:  Routine not found.
+err> Error 43.1:  Could not find routine "SIBONLY".
+
+run
+-e
+call 'sub/callsib'
+----
+rc> 0
+out> sibling in sub

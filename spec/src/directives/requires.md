@@ -24,8 +24,10 @@ The operand of ::REQUIRES is a symbol or a string that names the package, and
 [the names rule](r:dir.index.names) gives the spelling of each. Which of the
 two finds a file is a property of the file system, so that a name that has
 lower-case letters is best written as a string. Which directories are
-searched for the file is specified with the environment chapter's rules on
-files (not yet written). The interpreter installs the
+searched for the file, and in which order, is [the places
+rule](r:env.search.places), and its endings and case are the rules of
+[the extension rule](r:env.search.extension) and [the case
+rule](r:env.search.case). The interpreter installs the
 required package as [installation](r:dir.index.install) describes, which
 includes running its prolog, before the requiring package creates a class or
 runs its own prolog. An `exit` or `return` in the required prolog ends only
@@ -234,7 +236,8 @@ instead of a Rexx program, and a library that cannot be loaded raises `SYNTAX
 in its text, and only then its other ::REQUIRES directives, so a library that
 cannot be loaded raises before any required program has run its prolog. A
 library can be required more than once. Whether a library name is case
-sensitive, and where libraries are searched for, are not specified here. The
+sensitive, and where libraries are searched for, is [the library
+rule](r:env.search.library). The
 LIBRARY option does not combine with NAMESPACE: the two together raise `SYNTAX
 25.904`.
 

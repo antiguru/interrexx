@@ -32,10 +32,22 @@ fn lay_fixture(dir: &Path) {
         let path = dir.join(PathBuf::from(OsString::from_vec(name.to_vec())));
         std::fs::write(path, text).expect("a fixture file");
     };
-    for sub in ["sub", "rp", "pp", "dironly.rex"] {
+    for sub in ["sub", "rp", "pp", "dironly.rex", "rp/sub2"] {
         std::fs::create_dir_all(dir.join(sub)).expect("a fixture directory");
     }
     file(b"t.rex", "say 'hi from t'\n");
+    // The search rules: endings, case, places and the caller's directory.
+    file(b"ord.rex", "say 'ord rex'\n");
+    file(b"ord.REX", "say 'ord REX'\n");
+    file(b"ordc.cls", "say 'cls was tried'\n");
+    file(b"ordx.rex", "say 'ordx rex in the current directory'\n");
+    file(b"rp/ordx.REX", "say 'ordx REX in REXX_PATH'\n");
+    file(b"rp/ordy.rex", "say 'ordy in REXX_PATH'\n");
+    file(b"pp/ordy.rex", "say 'ordy in PATH'\n");
+    file(b"rp/sub2/inrp.rex", "say 'inrp'\n");
+    file(b"lowonly.rex", "say 'lowonly'\n");
+    file(b"sub/callsib.rex", "say sibonly()\n");
+    file(b"sub/sibonly.rex", "return 'sibling in sub'\n");
     file(b"sub/t.rex", "say 'hi from sub/t'\n");
     file(b"rp/viarp.rex", "say 'hi from rp'\nparse source s; say s\n");
     file(b"pp/viapp.rex", "say 'hi from pp'\nparse source s; say s\n");
@@ -290,6 +302,8 @@ fn remove(dir: &Path) {
 // spec: env.invocation.arguments, env.invocation.syscargs
 // spec: env.invocation.status
 // spec: env.invocation.deviation.96
+// spec: env.search.program, env.search.names, env.search.extension
+// spec: env.search.case, env.search.places, env.search.caller
 #[test]
 fn the_command_line_answers_as_the_oracles_does() {
     let oracle = Path::new(ORACLE_ROOT).join("bin/rexx");

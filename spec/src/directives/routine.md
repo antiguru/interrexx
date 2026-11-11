@@ -163,7 +163,7 @@ named like a built-in function is reached only by a string name that is not in
 capitals, because the symbol and the capitalised string find the built-in
 function first. A program file of the same name is an external routine and is
 found only when no routine of the package or of a required package has the
-name. Where such a file is looked for is not specified here.
+name. Where such a file is looked for is [the places rule](r:env.search.places).
 
 ```rexx
 f = 'spec_dir_routine_extprog.rex'
@@ -331,8 +331,9 @@ entry name raises `90.999`. These are raised when the section of the directive
 ends, so a clause in the section is refused first; [the rule for external
 methods](r:dir.method.external) says how that order goes for the faults of
 other directives. The operand of the LIBRARY form is the one that
-[::METHOD](r:dir.method.external) takes. How a library is searched for, and
-which routine of it the declaration binds, are not specified here.
+[::METHOD](r:dir.method.external) takes. How a library is searched for is [the library
+rule](r:env.search.library); which routine of it the declaration binds is not
+specified here.
 
 ```rexx
 call try '::routine r external "library spec_no_such_lib_xyz"'

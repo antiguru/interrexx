@@ -20,9 +20,13 @@ The pages of this chapter so far are:
 * [Invocation](invocation.md): the `rexx` command, its words and options, how
   the arguments reach the program, the status it ends with, what a program
   sees at its start, and what is sent to its objects when it ends.
+* [Search](search.md): how an external routine, a required file, a program
+  called by name and a library are found: the places, the extensions, the
+  case of a name, what is read again at every call, and what a program that
+  is called by name leaves in its caller.
 
-Pages on how external routines and programs are found, commands and their
-environments, the security manager and interactive debugging follow. Until
+Pages on commands and their environments, the security manager and
+interactive debugging follow. Until
 they exist, the rules of the other chapters that mention those subjects in
 plain text are the rules there are.
 

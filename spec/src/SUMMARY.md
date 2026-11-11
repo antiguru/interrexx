@@ -150,6 +150,7 @@
 - [Environment](environment/index.md)
   - [Environment objects](environment/objects.md)
   - [Invocation](environment/invocation.md)
+  - [Search](environment/search.md)
 - [Built-in functions](builtins/index.md)
   - [ABBREV](builtins/abbrev.md)
   - [ABS](builtins/abs.md)
