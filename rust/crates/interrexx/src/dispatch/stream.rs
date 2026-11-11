@@ -1431,8 +1431,12 @@ pub(super) fn charout(
         return close_for_write(interp, _cleared, receiver, b"0");
     }
     if let Some(which) = standard_opened(interp, receiver)? {
-        refuse_transient_position(interp, which, start.is_some())?;
-        start.map(positive).transpose()?;
+        // The standard input refuses every write, so a start is never looked
+        // at: it fails with NOTREADY, not with a positioning error.
+        if which != StandardStream::In {
+            refuse_transient_position(interp, which, start.is_some())?;
+            start.map(positive).transpose()?;
+        }
         let data = data.unwrap_or_default();
         let residual = data.len().to_string().into_bytes();
         return standard_write(interp, receiver, which, &data, &residual);
