@@ -24,12 +24,14 @@ for the sake of other systems and have no effect here.
 
 r[util.sysfiletree.args]
 `filespec` and `stem` are required; `options`, `tattrib` and `nattrib` are
-optional. The call follows [the native call rule](r:bif.index.call.native): a
+optional. The call follows the argument rule (rule `util.index.args`): a
 required argument that is missing raises `SYNTAX 88.901`, a sixth argument
 raises `SYNTAX 88.922`, and an argument that is an object other than a string
 is read by its string value, or raises `SYNTAX 88.909` when it has none. The
 `stem` argument is the exception to the last point: an array object or a stem
-object is the stem itself, [as the next rule](r:util.sysfiletree.stem) says.
+object is the stem itself, [as the next rule](r:util.sysfiletree.stem) says,
+and any other object that has no string value raises `SYNTAX 40.925`, as a
+name that is not a stem name does.
 
 ```rexx
 signal on syntax name a
@@ -87,6 +89,7 @@ call try "sysfiletree('c2zqft04*', 'f.', 'X', 'zz', 'qq')"
 call try "sysfiletree('c2zqft04*', 'f.', '', 'zz', 'qq')"
 call try "sysfiletree('c2zqft04*', 'f.', 'D', 'zz', 'qq')"
 call try "sysfiletree('c2zqft04*', 'a b', 'X', 'zz', .nil)"
+call try "sysfiletree('c2zqft04*', .object~new)"
 call try "sysfiletree(.nil, 'a b', 'X', 'zz', 'qq')"
 call try "sysfiletree('c2zqft04*', 'f.', 'D', '*****', 'qq')"
 call try "sysfiletree('c2zqft04*', 'f.', 'D', 'zz', '*****')"
@@ -109,6 +112,7 @@ return
 40.21
 40.900
 88.909
+40.925
 88.909
 40.900
 40.900
@@ -118,14 +122,16 @@ return
 
 r[util.sysfiletree.stem]
 When the call returns, the stem holds the number of matches in `.0` and the
-matches in `.1` to `.n`. No other tail is assigned or dropped: a call that
-finds nothing sets `.0` to 0 and leaves the entries of an earlier call in
-place, and a call that finds fewer matches than an earlier one leaves its
-surplus entries. The `stem` argument names a stem variable, with or without
-the final period and in any letter case, and an argument that is a stem object
-is filled in the same way. An argument that is an array object is filled
-differently: it holds the matches at the indexes 1 to n and no item at any
-other index. The order of the matches is not specified.
+matches in `.1` to `.n` (as every function that fills a stem does; rule
+`util.index.stems`). No other tail is assigned or dropped: a call that finds
+nothing sets `.0` to 0 and leaves the entries of an earlier call in place, and
+a call that finds fewer matches than an earlier one leaves its surplus
+entries. The `stem` argument names a stem variable, with or without the final
+period and in any letter case (as for every stem argument; rule
+`util.index.stems`), and an argument that is a stem object is filled in the
+same way. An argument that is an array object is filled differently: it holds
+the matches at the indexes 1 to n and no item at any other index. The order of
+the matches is not specified.
 
 ```rexx
 d = 'c2zqft02'
@@ -215,11 +221,18 @@ r[util.sysfiletree.spec]
 `filespec` is a path whose last component is the pattern. `*` matches any run
 of characters, including none and including a leading period, `?` matches one
 character, `[ ]` matches one of the characters listed in it or in one of its
-ranges such as `a-o`, and `[! ]` one that is not. Only the last component is a
-pattern; a wildcard in an earlier component matches nothing. The match is
-case-sensitive, and the option letter `I` makes it ignore case for the last
-component only: the directory part of a path always has to be spelled as the
-directory is. A pattern with no wildcards matches the entry of that name.
+ranges such as `a-o`, and `[! ]` or `[^ ]` one that is not. The entries `.`
+and `..` that every directory holds are never matches. In a class, a `]` that
+comes first and a `-` that comes first or last stand for themselves, a range
+whose ends are in the wrong order matches nothing, and a name such as
+`[:upper:]` or `[:digit:]` stands for the characters of that kind. A `[` with
+no `]` after it is an ordinary character, and so is `\`: nothing in a pattern
+is escaped. Only the last component is a pattern. In an earlier component `*`,
+`?` and `[` are ordinary characters of a directory's name, so `s*/x` looks in
+a directory whose name is `s*`. The match is case-sensitive, and the option
+letter `I` makes it ignore case for the last component only: the directory
+part of a path always has to be spelled as the directory is. A pattern with no
+wildcards matches the entry of that name.
 
 ```rexx
 d = 'c2zqft05'
@@ -299,18 +312,90 @@ Sub/*  BI    Sub/in.txt
 SUB/*  BI    
 ```
 
+```rexx
+d = 'c2zqft17'
+call sysmkdir d
+call sysmkdir d'/s*'
+call touch d'/s*/in.txt'
+do n over .array~of('\x', '*x', '^q', 'bq', 'aq', ']z', 'b]', '-a', 'a-', 'ab', 'Xb', 'a[')
+  call touch d'/'n
+end
+call t d'/\*', 'F'
+call t d'/[^a]q', 'F'
+call t d'/[!a]q', 'F'
+call t d'/[]b]*', 'F'
+call t d'/[a-]*', 'F'
+call t d'/[-a]*', 'F'
+call t d'/[b-a]*', 'F'
+call t d'/[[:upper:]]*', 'F'
+call t d'/[[:digit:]]*', 'F'
+call t d'/a[', 'F'
+call t d'/a[*', 'F'
+call t d'/[ab', 'F'
+call t d'/s*/in.txt', 'F'
+call t d'/s*/*', 'F'
+call t d'/s?/*', 'F'
+address system 'rm -r 'd
+exit
+touch: procedure
+  parse arg name
+  call lineout name, 'x'
+  call lineout name
+return
+t: procedure
+  parse arg spec, opts
+  call sysfiletree spec, 'f.', opts'O'
+  a = .array~new
+  do i = 1 to f.0
+    a~append(changestr(directory()'/c2zqft17/', f.i, ''))
+  end
+  say left(substr(spec, 10)'  'opts, 16) a~sort~makestring('l', ' ')
+return
+```
+
+```output
+\*  F            \x
+[^a]q  F         ^q bq
+[!a]q  F         ^q bq
+[]b]*  F         ]z b] bq
+[a-]*  F         -a a- a[ ab aq
+[-a]*  F         -a a- a[ ab aq
+[b-a]*  F        
+[[:upper:]]*  F  Xb
+[[:digit:]]*  F  
+a[  F            a[
+a[*  F           a[
+[ab  F           
+s*/in.txt  F     s*/in.txt
+s*/*  F          s*/in.txt
+s?/*  F          
+```
+
 r[util.sysfiletree.spec.dir]
 A `filespec` that names a directory without a slash at its end matches that
 directory itself, and one with a slash at its end, or with `*` after it,
-matches the entries in it. A path that has a component that is a file, a
-component that does not exist, or a directory the program may not read matches
-nothing and is not an error. A relative path starts at the current directory.
-A path that is only `~` or starts with `~/` starts at the directory named by
-the environment variable `HOME`; what other uses of `~` mean is not specified.
-Each name stored is the full name of the match, formed as
-[QUALIFY](r:bif.qualify.normal) forms a name: made absolute, with the repeated
-slashes, the periods and the `..` components of the path taken out. Symbolic
-links in the path are not replaced.
+matches the entries in it. A `filespec` whose last component is `.` or `..`
+names a directory and not a pattern: it matches the entries of that directory,
+as the same path with a slash at its end does, so `dir/sub/..` and `dir/.`
+both match the entries of `dir`. A path that has a component that is a file, a
+component that does not exist, a directory on the way that the program may
+not search, or a directory that the program may not read whose entries are
+needed (the one the last component is matched in, or the one a `filespec`
+ending in a slash names), matches nothing and is not an error; the unreadable
+directory itself is still matched by its own name. A relative path is read as
+every name is (rule `util.index.names`). A `filespec` that starts with `~` is
+read as every name is (rule `util.index.home`), with these exceptions. A
+`filespec` that is `~name` alone, where no user has that name, is a pattern
+for the entries of the current directory, so it matches a directory `~name`
+there. A `filespec` that starts with `~name/`, where no user has that name,
+starts at `/` when only one component follows the slash, and matches nothing
+when more follow. A `HOME` that does not start with a slash is taken from the
+current directory, as any relative name is. Each name stored
+is the full name of the match, formed as [QUALIFY](r:bif.qualify.normal) forms
+a name: made absolute, with the repeated slashes, the periods and the `..`
+components of the path taken out (Deviation 34, rule
+`util.index.deviation.34`, says where ooRexx takes out a different component).
+Symbolic links in the path are not replaced.
 
 ```rexx
 here = directory()
@@ -325,6 +410,8 @@ call t d'//', 'BO'
 call t d'/sub', 'BO'
 call t d'/sub/', 'BO'
 call t d'/sub/', 'DO'
+call t d'/sub/..', 'BO'
+call t d'/.', 'DO'
 call t d'/one.txt/', 'BO'
 call t d'/one.txt', 'BO'
 call t d'/one.txt/in.txt', 'BO'
@@ -341,7 +428,34 @@ call t '~', 'DO'
 call t '~/', 'FO'
 call t '~/one.txt', 'FO'
 call t '~/sub/*', 'FO'
+call value 'HOME', d, 'ENVIRONMENT'
+call t '~/one.txt', 'FO'
+call t '~/sub/*', 'FO'
 call value 'HOME', old, 'ENVIRONMENT'
+address system 'id -u' with output stem u.
+root = (u.1 == 0)
+call sysmkdir d'/nr'
+call sysmkdir d'/nr/sub'
+call lineout d'/nr/sub/in.txt', 'x'; call lineout d'/nr/sub/in.txt'
+address system 'chmod 311 'd'/nr'
+call t d'/nr/sub/*', 'FO'
+call t d'/nr/sub/', 'BO'
+call sysfiletree d'/nr/sub', 'f.', 'BO'
+say 'c2zqft06/nr/sub BO empty:' (f.0 == 0 | root)
+call t d'/nr', 'BO'
+address system 'chmod 755 'd'/nr'
+call sysfiledelete d'/nr/sub/in.txt'
+call sysrmdir d'/nr/sub'
+call sysrmdir d'/nr'
+call sysmkdir d'/~c2zqnouser'
+call lineout d'/~c2zqnouser/in.txt', 'x'; call lineout d'/~c2zqnouser/in.txt'
+call directory d
+call t '~c2zqnouser', 'DO'
+call t '~c2zqnouser/tm?', 'DO'
+call t './~c2zqnouser/*', 'FO'
+call directory here
+call sysfiledelete d'/~c2zqnouser/in.txt'
+call sysrmdir d'/~c2zqnouser'
 call sysfiledelete d'/sub/in.txt'
 call sysfiledelete d'/one.txt'
 call sysrmdir d'/sub'
@@ -365,6 +479,8 @@ c2zqft06// BO                  2 @/c2zqft06/one.txt @/c2zqft06/sub
 c2zqft06/sub BO                1 @/c2zqft06/sub
 c2zqft06/sub/ BO               1 @/c2zqft06/sub/in.txt
 c2zqft06/sub/ DO               0 
+c2zqft06/sub/.. BO             2 @/c2zqft06/one.txt @/c2zqft06/sub
+c2zqft06/. DO                  1 @/c2zqft06/sub
 c2zqft06/one.txt/ BO           0 
 c2zqft06/one.txt BO            1 @/c2zqft06/one.txt
 c2zqft06/one.txt/in.txt BO     0 
@@ -380,6 +496,15 @@ c2zqft06/s* DO                 1 @/c2zqft06/sub
 ~/ FO                          1 @/c2zqft06/one.txt
 ~/one.txt FO                   1 @/c2zqft06/one.txt
 ~/sub/* FO                     1 @/c2zqft06/sub/in.txt
+~/one.txt FO                   1 @/c2zqft06/one.txt
+~/sub/* FO                     1 @/c2zqft06/sub/in.txt
+c2zqft06/nr/sub/* FO           1 @/c2zqft06/nr/sub/in.txt
+c2zqft06/nr/sub/ BO            1 @/c2zqft06/nr/sub/in.txt
+c2zqft06/nr/sub BO empty: 1
+c2zqft06/nr BO                 1 @/c2zqft06/nr
+~c2zqnouser DO                 1 @/c2zqft06/~c2zqnouser
+~c2zqnouser/tm? DO             1 /tmp
+./~c2zqnouser/* FO             1 @/c2zqft06/~c2zqnouser/in.txt
 ```
 
 r[util.sysfiletree.kinds]
@@ -416,14 +541,14 @@ B dir dlink file flink pipe
 ## Options
 
 r[util.sysfiletree.options]
-`options` is a string of letters in either case, with no blanks. `B` selects
-files and directories, `D` directories only and `F` files only; when more than
-one of them is given, the last decides, and when none is given, `B` applies.
-`S`, `I`, `O`, `L`, `T` and `H` change what is searched, how names are
-compared and how a match is written, and are described below; a letter may be
-repeated and the letters may come in any order. Omitting `options`, or leaving
-its place empty, is the same as `B`. `options` that is the null string raises
-`SYNTAX 40.21`.
+`options` is a string of letters, read in either case (rule
+`util.index.options`), with no blanks. `B` selects files and directories, `D`
+directories only and `F` files only; when more than one of them is given, the
+last decides, and when none is given, `B` applies. `S`, `I`, `O`, `L`, `T` and
+`H` change what is searched, how names are compared and how a match is
+written, and are described below; a letter may be repeated and the letters may
+come in any order. Omitting `options`, or leaving its place empty, is the same
+as `B`. `options` that is the null string raises `SYNTAX 40.21`.
 
 ```rexx
 d = 'c2zqft07'
@@ -512,10 +637,13 @@ return
 
 r[util.sysfiletree.recurse]
 With `S` the search goes through every directory below the one `filespec`
-names, however deep, and applies the pattern to the entries of each. A
-directory is entered whether or not its own name matches the pattern. The
-match is also made in the directory of `filespec` itself, and an entry found
-at a deeper level is stored with its full name.
+names, however deep, including a directory reached through a symbolic link,
+which is searched under the link's name, and applies the pattern to the
+entries of each. What a search with `S` does when a link leads back to a
+directory above it is not specified. A directory is entered whether or not its
+own name matches the pattern. The match is also made in the directory of
+`filespec` itself, and an entry found at a deeper level is stored with its
+full name.
 
 ```rexx
 d = 'c2zqft09'
@@ -528,6 +656,7 @@ call touch d'/a/mid.txt'
 call touch d'/a/b/low.txt'
 call touch d'/a/b/low.dat'
 call touch d'/c/other.dat'
+address system 'ln -s ../c 'd'/a/lnk'
 call t d'/*', 'BO'
 call t d'/*', 'BSO'
 call t d'/*', 'FSO'
@@ -550,6 +679,7 @@ call sysfiledelete d'/a/mid.txt'
 call sysfiledelete d'/a/b/low.txt'
 call sysfiledelete d'/a/b/low.dat'
 call sysfiledelete d'/c/other.dat'
+address system 'rm 'd'/a/lnk'
 call sysrmdir d'/a/b'
 call sysrmdir d'/a'
 call sysrmdir d'/c'
@@ -573,18 +703,18 @@ return
 
 ```output
 * BO           a c top.txt
-* BSO          a a/b a/b/low.dat a/b/low.txt a/mid.txt c c/other.dat top.txt
-* FSO          a/b/low.dat a/b/low.txt a/mid.txt c/other.dat top.txt
-* DSO          a a/b c
+* BSO          a a/b a/b/low.dat a/b/low.txt a/lnk a/lnk/other.dat a/mid.txt c c/other.dat top.txt
+* FSO          a/b/low.dat a/b/low.txt a/lnk/other.dat a/mid.txt c/other.dat top.txt
+* DSO          a a/b a/lnk c
 *.txt FSO      a/b/low.txt a/mid.txt top.txt
 *.txt BSO      a/b/low.txt a/mid.txt top.txt
 low* BSO       a/b/low.dat a/b/low.txt
 a DSO          a
 b DSO          a/b
-a/ BSO         a/b a/b/low.dat a/b/low.txt a/mid.txt
-a/* DSO        a/b
-a/* DO         a/b
-* sdo          a a/b c
+a/ BSO         a/b a/b/low.dat a/b/low.txt a/lnk a/lnk/other.dat a/mid.txt
+a/* DSO        a/b a/lnk
+a/* DO         a/b a/lnk
+* sdo          a a/b a/lnk c
 X* DSOI        
 A* DSOI        a
 *.TXT FSOI     a/b/low.txt a/mid.txt top.txt
@@ -634,7 +764,7 @@ call settime '2009-11-30', '09:08:07'
 call t 'F'
 call t 'FL'
 call t 'FT'
-call settime '2100-01-02', '10:00:00'
+call settime '2000-01-02', '10:00:00'
 call t 'F'
 call t 'FL'
 call t 'FT'
@@ -675,7 +805,7 @@ return
 [FL] [2009-11-30 09:08:07          12  -rw-r-----  @/f.txt]
 [FT] [09/11/30/09/08          12  -rw-r-----  @/f.txt]
 [F] [ 1/02/00  10:00a          12  -rw-r-----  @/f.txt]
-[FL] [2100-01-02 10:00:00          12  -rw-r-----  @/f.txt]
+[FL] [2000-01-02 10:00:00          12  -rw-r-----  @/f.txt]
 [FT] [00/01/02/10/00          12  -rw-r-----  @/f.txt]
 [F] [ 1/02/69  10:00a          12  -rw-r-----  @/f.txt]
 [FL] [1969-01-02 10:00:00          12  -rw-r-----  @/f.txt]
@@ -749,13 +879,14 @@ big.dat   9999999999 12345678901
 r[util.sysfiletree.attr]
 The attribute string has ten characters, written as a long listing of the host
 writes the mode of a file. The first is the kind of the entry: `-` for a
-regular file, `d` for a directory, `p` for a pipe, and other letters for the
-other kinds. The other nine are three groups of `r`, `w` and `x` for the
-owner, the group and the others, each `-` where the permission is not given,
-with `s` in place of the owner's or group's `x` when the set-user-id or
-set-group-id bit is set, `S` where that bit is set and `x` is not, and `t` or
-`T` in the same way for the sticky bit at the end. The permissions of a file
-are those of the file the entry names, so a link shows those of its target.
+regular file, `d` for a directory, `p` for a pipe, `c` for a character device,
+`b` for a block device and `s` for a socket. The other nine are three groups
+of `r`, `w` and `x` for the owner, the group and the others, each `-` where
+the permission is not given, with `s` in place of the owner's or group's `x`
+when the set-user-id or set-group-id bit is set, `S` where that bit is set and
+`x` is not, and `t` or `T` in the same way for the sticky bit at the end. The
+permissions of a file are those of the file the entry names, so a link shows
+those of its target.
 
 ```rexx
 d = 'c2zqft12'
@@ -781,6 +912,9 @@ call show 'dir', '2750'
 call sysmkdir d'/stick'
 address system 'chmod 1755 'd'/stick'
 call show 'stick'
+call sysfiletree '/dev/null', 'n.', 'B'
+parse var n.1 . . . attr .
+say 'device' n.0 left(attr, 1) length(attr)
 address system 'rm -r 'd
 exit
 show: procedure
@@ -813,6 +947,7 @@ dlink  1 drwxr-x---
 0007   1 -------rwx
 2750   1 drwxr-s---
 stick  1 drwxr-xr-t
+device 1 c 10
 ```
 
 ## The attribute masks
@@ -907,9 +1042,9 @@ return
 r[util.sysfiletree.none]
 A path that matches nothing gives `.0` equal to 0 and the answer 0, whatever
 the reason: a pattern that no entry fits, a directory or file that is not
-there, a path through a file, a directory that the program may not read. Where
-a directory is unreadable, a search with `S` stores what it finds elsewhere
-and does not report it.
+there, a path through a file, a directory whose entries the program may not
+read. Where a directory is unreadable, a search with `S` stores what it finds
+elsewhere and does not report it.
 
 ```rexx
 d = 'c2zqft14'

@@ -18,13 +18,14 @@ asked. It answers 0, or 3 when the file cannot be read.
 
 r[util.sysfilesearch.args]
 `target`, `file` and `stem` are required, and `options` is optional. The call
-follows [the native call rule](r:bif.index.call.native): a missing required
+follows the argument rule (rule `util.index.args`): a missing required
 argument raises `SYNTAX 88.901`, a fifth argument raises `SYNTAX 88.922`, and
 an argument that is an object other than a string is read by its string value,
-or raises `SYNTAX 88.909` when it has none. `stem` may instead be an array
-object or a stem object, which is the stem itself. The null string is a value
-for `target` and `file`: for `file` it names no file that can be read, and for
-`target` it matches no line.
+or raises `SYNTAX 88.909` when it has none. `stem` is the exception to the
+last point: an array object or a stem object is the stem itself, and any other
+object that has no string value raises `SYNTAX 40.925`, as a name that is not
+a stem name does. The null string is a value for `target` and `file`: for
+`file` it names no file that can be read, and for `target` it matches no line.
 
 ```rexx
 call try "sysfilesearch()"
@@ -179,11 +180,11 @@ no wildcards, and blanks in `target` count. The search ignores case unless the
 option `C` is given. The letters `C` and `I` select a case-sensitive and a
 case-insensitive search and, when both are given, the last decides; `N` stores
 each line as its number in the file, one blank and the line. The letters may
-come in any order and in either case, and a repeated one does no harm. The
-number is written without padding, and the lines of the file are counted from
-1, empty ones included, so the numbers of the stored lines need not be
-consecutive. A `target` that is the null string, or that contains a line end
-character, matches no line.
+come in any order and in either case (rule `util.index.options`), and a
+repeated one does no harm. The number is written without padding, and the
+lines of the file are counted from 1, empty ones included, so the numbers of
+the stored lines need not be consecutive. A `target` that is the null string,
+or that contains a line feed, matches no line.
 
 ```rexx
 d = 'c2zqfs02'
@@ -350,8 +351,10 @@ The answer is 0 when the file was read, whether or not a line was stored, and
 3 when the file could not be opened for reading: a name that no file has, the
 null string, a name that is a directory, a path through a file, or a file the
 program may not read. In that case `.0` is set to 0 and the stem is otherwise
-left as it was. A name that is only `~` or starts with `~/` starts at the
-directory named by the environment variable `HOME`.
+left as it was; an array object is left with no items. The file name is read
+as every name is (rules `util.index.names` and `util.index.home`; Deviation
+34, rule `util.index.deviation.34`, says where ooRexx removes a different
+component for a `..`).
 
 ```rexx
 d = 'c2zqfs05'
@@ -367,6 +370,8 @@ say sysfilesearch('hit', f, 'f.') f.0 f.1
 say sysfilesearch('hit', '', 'f.') f.0
 say sysfilesearch('hit', d'/nodir/in.txt', 'f.') f.0
 say sysfilesearch('hit', d'/in.txt/x', 'f.') f.0
+a = .array~of('k1')
+say sysfilesearch('hit', d'/nofile', a) a~items
 address system 'id -u' with output stem u.
 root = (u.1 == 0)
 address system 'chmod 000 'f
@@ -384,6 +389,7 @@ call sysrmdir d
 3 0 stale1 stale2
 3 0
 0 1 hit one
+3 0
 3 0
 3 0
 3 0

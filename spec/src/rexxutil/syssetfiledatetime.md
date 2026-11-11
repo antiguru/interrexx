@@ -20,7 +20,7 @@ answers 0, or -1 when it did not set the time.
 
 r[util.syssetfiledatetime.args]
 `filename` is required; `newdate` and `newtime` are optional. The call follows
-[the native call rule](r:bif.index.call.native): a missing `filename` raises
+the argument rule (rule `util.index.args`): a missing `filename` raises
 `SYNTAX 88.901`, a fourth argument raises `SYNTAX 88.922`, and an argument
 that is an object other than a string is read by its string value, or raises
 `SYNTAX 88.909` when it has none.
@@ -70,8 +70,10 @@ answers 0. An omitted `newdate` leaves the date of the present modification
 time, and an omitted `newtime` leaves its time of day; an argument whose place
 is empty is omitted. The time of the last access is not changed. `filename`
 may be a directory, and a symbolic link is followed, so that the time of its
-target is set. A name that is `~` or starts with `~/` starts at the directory
-named by the environment variable `HOME`.
+target is set. A name is read as every name is (rule `util.index.names`;
+Deviation 34, rule `util.index.deviation.34`, says where ooRexx removes a
+different component for a `..`), and a name that starts with `~` as rule
+`util.index.home` says.
 
 ```rexx
 d = 'c2zqst01'
@@ -86,7 +88,7 @@ say syssetfiledatetime(f, '2033-03-17', ) sysgetfiledatetime(f)
 say syssetfiledatetime(f,, '04:05:06') sysgetfiledatetime(f)
 say syssetfiledatetime(d'/sub', '1998-07-08', '09:10:11') sysgetfiledatetime(d'/sub')
 say syssetfiledatetime(f, '1969-12-31', '23:59:59') sysgetfiledatetime(f)
-say syssetfiledatetime(f, '2100-12-31', '12:00:00') sysgetfiledatetime(f)
+say syssetfiledatetime(f, '2037-12-31', '12:00:00') sysgetfiledatetime(f)
 say syssetfiledatetime(f, '1970-01-01', '12:00:00') sysgetfiledatetime(f)
 a1 = sysgetfiledatetime(f, 'A')
 call syssetfiledatetime f, '2031-01-15', '12:30:45'
@@ -104,15 +106,17 @@ call sysrmdir d
 0 2033-03-17 04:05:06
 0 1998-07-08 09:10:11
 0 1969-12-31 23:59:59
-0 2100-12-31 12:00:00
+0 2037-12-31 12:00:00
 0 1970-01-01 12:00:00
 1 2031-01-15 12:30:45
 ```
 
 r[util.syssetfiledatetime.now]
-A call with neither `newdate` nor `newtime` sets the time to the present time
-of the host, as the `touch` command does, and answers 0. A `newdate` and a
-`newtime` that are both empty are omitted in the same way.
+A call with neither `newdate` nor `newtime` sets the time of the last
+modification to the present time of the host and answers 0; as in [the rule
+above](r:util.syssetfiledatetime.set), the time of the last access is not
+changed. A `newdate` and a `newtime` that are both empty are omitted in the
+same way.
 
 ```rexx
 d = 'c2zqst06'
@@ -123,11 +127,14 @@ f = d'/f.txt'
 old = '2001-02-03 04:05:06'
 do name over .array~of(f, d'/sub')
   call syssetfiledatetime name, '2001-02-03', '04:05:06'
+  address system 'touch -a -d "2001-02-03 04:05:06" 'name
+  a = sysgetfiledatetime(name, 'A')
   before = date('I')
   r = syssetfiledatetime(name)
   t = sysgetfiledatetime(name)
   after = date('I')
   say r (t \== old) (before <<= left(t, 10)) (left(t, 10) <<= after) length(t)
+  say (sysgetfiledatetime(name, 'A') == a) a
   call syssetfiledatetime name, '2001-02-03', '04:05:06'
   r = syssetfiledatetime(name, , )
   t = sysgetfiledatetime(name)
@@ -140,23 +147,28 @@ call sysrmdir d
 
 ```output
 0 1 1 1 19
+1 2001-02-03 04:05:06
 0 1 - :
 0 1 1 1 19
+1 2001-02-03 04:05:06
 0 1 - :
 ```
 
 r[util.syssetfiledatetime.form]
 `newdate` is read as a year, a month and a day, three whole numbers in decimal
 digits separated by hyphens, and `newtime` as an hour, a minute and a second,
-separated by colons. Leading blanks before a number are skipped, but a blank
-before a separator is not allowed. The year has at most four digits and each
-other number at most two, and a separator has to follow a number directly for
-the first two numbers of each; whatever follows the third number is not read,
-so that `2031-01-155` is the fifteenth. A date or time that has fewer than
-three numbers, other separators or a number that is too long for its place
-gives the answer -1, and the file is not changed. The null string is such a
-date or time, not an omitted one. How a sign in front of a number, a year
-below 1000 and a year above 9999 are read is not specified.
+separated by colons. Leading white space (blanks, tabs and the other space
+characters of the C locale) before a number is skipped, but a blank before a
+separator is not allowed. The year has at most four digits
+and each other number at most two, and a separator has to follow a number
+directly for the first two numbers of each; whatever follows the third number
+is not read, so that `2031-01-155` is the fifteenth. A date or time that has
+fewer than three numbers, other separators or a number that is too long for
+its place gives the answer -1, and the file is not changed. The null string is
+such a date or time, not an omitted one. A number may start with `+` or `-`;
+the sign counts toward its length, and a negative number is borrowed from the
+next larger field as [the next rule](r:util.syssetfiledatetime.carry) says.
+How a year below 1000 and a year above 9999 are read is not specified.
 
 ```rexx
 d = 'c2zqst03'
@@ -190,6 +202,12 @@ call t '2031-01-15', ''
 call t '2031-01-15', 'x'
 call t '2031-01-15', '12:30 :45'
 call t 20310115, 123045
+call t '2031-+1-15', '12:30:45'
+call t '2031-01-15', '12:-1:45'
+call t '2031-01-15', ' -1:30:45'
+call t '-2031-01-15', '12:30:45'
+call syssetfiledatetime f, '2031-06-15', '09:08:07'
+say syssetfiledatetime(f, '2031-01-15', '09'x'12:30:45') sysgetfiledatetime(f)
 call sysfiledelete f
 call sysrmdir d
 exit
@@ -229,6 +247,11 @@ return
 [2031-01-15][x]                -1 2031-06-15 09:08:07
 [2031-01-15][12:30 :45]        -1 2031-06-15 09:08:07
 [20310115][123045]             -1 2031-06-15 09:08:07
+[2031-+1-15][12:30:45]         0 2031-01-15 12:30:45
+[2031-01-15][12:-1:45]         0 2031-01-15 11:59:45
+[2031-01-15][ -1:30:45]        0 2031-01-14 23:30:45
+[-2031-01-15][12:30:45]        -1 2031-06-15 09:08:07
+0 2031-01-15 12:30:45
 ```
 
 r[util.syssetfiledatetime.carry]
@@ -286,9 +309,10 @@ The answer is -1, and nothing is created or changed, when `filename` names
 nothing, when the file's time may not be set, or when the date or time is not
 of the form above. `filename` names nothing when no file has that name, when a
 path goes through a file or a directory the program may not search, when it is
-the null string, and when it has wildcards, which are not expanded. A file the
-program owns can be changed whether or not it may be written. A `newdate` and
-`newtime` that are omitted do not make a missing file exist.
+the null string, and when it has wildcards, which no function expands (rule
+`util.index.names`). A file the program owns can be changed whether or not it
+may be written. A `newdate` and `newtime` that are omitted do not make a
+missing file exist.
 
 ```rexx
 d = 'c2zqst04'
@@ -322,6 +346,8 @@ call try "syssetfiledatetime(d'/lnk', '2035-01-01', '01:01:01')"
 call try "sysgetfiledatetime(f)"
 address system 'id -u' with output stem u.
 root = (u.1 == 0)
+r = syssetfiledatetime('/proc/version', '2036-01-01', '01:01:01')
+say 'a file whose time may not be set:' (r == -1 | root)
 address system 'chmod 000 'd'/ro'
 r = syssetfiledatetime(d'/ro/g.txt', '2036-01-01', '01:01:01')
 say 'in an unsearchable directory:' (r == -1 | root)
@@ -362,6 +388,7 @@ syssetfiledatetime(f, '2034-01-01', '01:01:01') -> 0
 sysgetfiledatetime(f) -> 2034-01-01 01:01:01
 syssetfiledatetime(d'/lnk', '2035-01-01', '01:01:01') -> 0
 sysgetfiledatetime(f) -> 2035-01-01 01:01:01
+a file whose time may not be set: 1
 in an unsearchable directory: 1
 and not changed: 1
 syssetfiledatetime('~/f.txt', '2037-01-01', '01:01:01') -> 0
