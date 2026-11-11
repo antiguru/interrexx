@@ -1233,9 +1233,10 @@ fn every_licensing_deviation_names_this_test() {
 }
 
 /// Another stream object, and another process, writing a file a stream has
-/// counted lines in. The line answers may go stale (rexxref
-/// iostrms.xml:495-500), and a debug build's checks of the line cache must
-/// stand aside rather than abort a legal program. Run unoptimised, this is
+/// counted lines in. A count made again after the file changed size sees the
+/// new lines (Deviation 139); one that finds the size unchanged may still be
+/// stale (rexxref iostrms.xml:495-500), and a debug build's checks of the line
+/// cache must stand aside rather than abort a legal program. Run unoptimised, this is
 /// the test that sees them.
 const SECOND_WRITER: &str = r#"
 f = DIR || '/c.txt'
@@ -1287,6 +1288,6 @@ fn a_second_writer_leaves_the_line_cache_checks_quiet() {
     );
     assert_eq!(
         String::from_utf8_lossy(&outcome.stdout),
-        "before 2\nafter  2 fresh 4\nA aaaa bbbb 3 11\nB 3 3\nC aaaa 2\nD 2 4 bbbb 3\n"
+        "before 2\nafter  4 fresh 4\nA aaaa bbbb 3 11\nB 3 3\nC aaaa 2\nD 2 4 bbbb 3\n"
     );
 }

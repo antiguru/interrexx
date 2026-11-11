@@ -273,7 +273,7 @@ fn a_file_console_counts_lines_once() {
             lines_in(bytes.as_bytes(), offset),
             "at {offset}"
         );
-        assert_eq!(c.open.line_total, Some(301), "counted once");
+        assert_eq!(c.open.line_total(), Some(301), "counted once");
         assert_eq!(c.counted_size, Some(bytes.len() as u64));
         if step % 3 == 1 {
             c.read_bytes(5);
@@ -295,7 +295,7 @@ fn a_file_console_counts_lines_once() {
         lines_in(bytes.as_bytes(), 99),
         "a seek forwards"
     );
-    assert_eq!(c.open.line_total, Some(301));
+    assert_eq!(c.open.line_total(), Some(301));
     let _ = std::fs::remove_file(&path);
 }
 

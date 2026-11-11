@@ -225,7 +225,7 @@ impl FileConsole {
         match self.counted_size {
             Some(counted_at) if counted_at == size => {}
             _ => {
-                self.open.line_total = None;
+                self.open.drop_line_total();
                 self.open.line_total_digest = None;
                 self.counted_size = Some(size);
             }
