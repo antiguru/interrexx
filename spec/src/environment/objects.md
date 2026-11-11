@@ -877,7 +877,7 @@ call lineout , 'two'
   return 0
 ```
 
-```output defect=#212
+```output
 symbol: Class
 one
 two
@@ -898,7 +898,7 @@ x = lineout(, 'three')
   return 0
 ```
 
-```output defect=#212
+```output
 CAP
 one
 two
