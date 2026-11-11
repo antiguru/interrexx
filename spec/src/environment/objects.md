@@ -2,6 +2,7 @@
 element: "Environment objects"
 kind: concept
 rexxref: "Rexx Runtime Objects; Rexx Runtime Objects > The Environment Directory (.ENVIRONMENT); Rexx Runtime Objects > The Local Directory (.LOCAL); Rexx Runtime Objects > The Input Monitor (.INPUT); Rexx Runtime Objects > The Output Monitor (.OUTPUT); Rexx Runtime Objects > The Error Monitor (.ERROR); Rexx Runtime Objects > The Trace Output Monitor (.TRACEOUTPUT); Rexx Runtime Objects > The Debug Input Monitor (.DEBUGINPUT); Rexx Runtime Objects > The STDIN Stream (.STDIN); Rexx Runtime Objects > The STDOUT Stream (.STDOUT); Rexx Runtime Objects > The STDERR Stream (.STDERR); Rexx Runtime Objects > The STDQUE Queue (.STDQUE); Rexx Runtime Objects > The SYSCARGS Array (.SYSCARGS); Rexx Runtime Objects > The ENDOFLINE Constant (.ENDOFLINE); Rexx Runtime Objects > The NIL Object (.NIL); Rexx Runtime Objects > The TRUE Constant (.TRUE); Rexx Runtime Objects > The FALSE Constant (.FALSE); Rexx Runtime Objects > The RexxInfo Object (.RexxInfo); Rexx Runtime Objects > The Rexx Context (.CONTEXT); Rexx Runtime Objects > The Line Number (.LINE)"
+deviations: [144]
 ---
 
 # Environment objects
@@ -442,14 +443,13 @@ and LINES send the message of their own name with the builtin's arguments
 after the name, as given, so a call with none sends none; LINES sends its
 option, and `NORMAL` when the call gives none. STREAM sends `STATE` for the
 option `S` or none, `DESCRIPTION` for `D`, and `COMMAND` with the command for
-`C`. The builtin answers what the object answers, except LINES: for an
-answer that is a whole number of no more than nine digits it answers 0 when
-the value of the answer is 0 and 1 otherwise, unless its option is `C`, and
-then it answers what the object answers. A message
-that a program sends to `.stdout`, `.stderr` or `.stdin` itself is not
-redirected. In the example, one spy answers 3 to every message, and the log
-shows the name of each message with the number of its arguments and the
-arguments themselves.
+`C`. The builtin answers what the object answers, except LINES: unless its
+option is `C`, and then it answers what the object answers, it answers 0 when
+the answer equals zero and 1 otherwise, whether the answer is a number or not
+([Deviation 144](r:env.objects.deviation.144)). A message that a program sends
+to `.stdout`, `.stderr` or `.stdin` itself is not redirected. In the example,
+one spy answers 3 to every message, and the log shows the name of each message
+with the number of its arguments and the arguments themselves.
 
 ```rexx
 s = .spy~new
@@ -895,4 +895,38 @@ CAP
 one
 two
 three
+```
+
+## Deviations
+
+r[env.objects.deviation.144]
+LINES in normal mode answers 1 for every answer of the input object that does
+not equal zero as a number: one that is not a number, such as `abc`, one that
+is not a whole number, such as `1.5`, and one that is a whole number of more
+than nine digits, such as `1E10`. ooRexx answers each of these as the object
+answered it, and answers 0 or 1 as the rule says only for an answer that it
+reads as a whole number of no more than nine digits. The example is not run
+against it.
+
+```rexx
+s = .spy~new
+.input~destination(s)
+do v over 'abc', '1.5', '1E10', '12345678901', '0.1'
+  s~answer = v
+  say v '->' lines() lines(, 'N') lines(, 'C')
+end
+.input~destination
+::class spy
+::attribute answer
+::method unknown
+  expose answer
+  return answer
+```
+
+```output
+abc -> 1 1 abc
+1.5 -> 1 1 1.5
+1E10 -> 1 1 1E10
+12345678901 -> 1 1 12345678901
+0.1 -> 1 1 0.1
 ```

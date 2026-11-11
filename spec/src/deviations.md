@@ -1059,6 +1059,20 @@ whole of the line when the read position is in the first line. It sends
 `lineIn` with the number of the line, where this book sends it with no
 argument.
 
+## 141. The argument string of a program that rexx -e runs
+
+A program that `rexx -e` runs gets its argument string built as a program in
+a file gets it: the words after the text, joined by one blank, less the
+empty words at the head. ooRexx drops one leading blank of that string, so
+that the words `' '` and `x` give it `' x'` where a file gets `'  x'`.
+
+## 142. A copy of a Stream
+
+A copy of a `Stream` is a new stream that has the name of the original and is
+not open, as any new stream with that name is; the original is unchanged, and
+the copy and the original do not share a read position. ooRexx's copy shares
+the original's internal state, and the process ends abnormally when it ends.
+
 ## 143. A REGISTERED routine whose entry is not a classic function
 
 A `::ROUTINE` directive with `EXTERNAL "REGISTERED library entry"`, whose
@@ -1068,3 +1082,17 @@ directive ends. ooRexx accepts the directive for some such entries,
 `RxCalcTan` of `rxmath` among them, and the process ends when the routine is
 called; for others, `SysSleep` of `rexxutil` among them, it raises the same
 error.
+
+## 144. LINES of the standard input in normal mode
+
+LINES with the standard input as its stream and no option, or an option other
+than `C`, sends the message `LINES` to the input object and answers 0 when the
+answer equals zero as a number and 1 otherwise, whatever the answer is: `abc`,
+`1.5`, `1E10` and a whole number of more than nine digits answer 1. ooRexx
+answers each of these as the object answered it.
+
+## 145. The state after a failed open with BINARY and no RECLENGTH
+
+When `open` with `BINARY` and no `RECLENGTH` raises `SYNTAX 93.0`, as it does
+for a file that is missing or empty, the stream is `UNKNOWN` afterwards.
+ooRexx leaves it `READY`.

@@ -12,8 +12,9 @@ longer reaches, and answers whether it did. A program has no need to call it:
 the interpreter reclaims storage on its own, and a request costs time.
 
 This book does not specify when storage is reclaimed, in what order, or when
-the `UNINIT` method of an object runs, whether or not GC is called. A program
-cannot rely on any of it, and the examples show none of it. What is specified
+the `UNINIT` method of an object runs, whether or not GC is called, except
+for [what a program may rely on](r:env.invocation.uninit). A program cannot
+rely on any of the rest, and the examples show none of it. What is specified
 is the argument and the answer.
 
 ## Arguments

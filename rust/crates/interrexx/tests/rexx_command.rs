@@ -346,3 +346,42 @@ fn the_command_line_answers_as_the_oracles_does() {
     assert!(cases > 0, "{CASE_DIR} produced no cases");
     assert!(diverged.is_empty(), "{}", diverged.join("\n"));
 }
+
+// Deviation 141: the oracle drops one leading blank of the argument string
+// of a `-e` program, so the harness above cannot hold the case; this one
+// runs interrexx alone and compares `-e` with a program file.
+// spec: env.invocation.deviation.141
+#[test]
+fn a_dash_e_program_gets_its_argument_as_a_file_does() {
+    let ours = Path::new(env!("CARGO_BIN_EXE_rexx"));
+    let dir = fixture("dash-e");
+    let text = "say '[' || arg(1) || ']' arg()";
+    std::fs::write(dir.join("echo.rex"), format!("{text}\n")).expect("the program");
+    let stdout = |args: &[&str]| {
+        let output = Command::new("timeout")
+            .args(["-k", "5", "20"])
+            .arg(ours)
+            .args(args)
+            .current_dir(&dir)
+            .env_remove("REXX_PATH")
+            .stdin(Stdio::null())
+            .output()
+            .expect("the binary starts");
+        String::from_utf8(output.stdout).expect("text")
+    };
+    for words in [
+        &[" ", "x"][..],
+        &["", "x"],
+        &["  ", "x"],
+        &["a", "", "b"],
+        &[],
+    ] {
+        let mut file = vec!["echo.rex"];
+        file.extend_from_slice(words);
+        let mut string = vec!["-e", text];
+        string.extend_from_slice(words);
+        assert_eq!(stdout(&string), stdout(&file), "words {words:?}");
+    }
+    assert_eq!(stdout(&["-e", text, " ", "x"]), "[  x] 1\n");
+    remove(&dir);
+}

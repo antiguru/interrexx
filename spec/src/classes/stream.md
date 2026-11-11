@@ -2,7 +2,7 @@
 element: "Stream"
 kind: class
 rexxref: "Builtin Classes > Stream Classes > Stream Class; Builtin Classes > Stream Classes > Stream Class > new (Inherited Class Method); Builtin Classes > Stream Classes > Stream Class > arrayIn; Builtin Classes > Stream Classes > Stream Class > arrayOut; Builtin Classes > Stream Classes > Stream Class > charIn; Builtin Classes > Stream Classes > Stream Class > charOut; Builtin Classes > Stream Classes > Stream Class > chars; Builtin Classes > Stream Classes > Stream Class > close; Builtin Classes > Stream Classes > Stream Class > command; Builtin Classes > Stream Classes > Stream Class > description; Builtin Classes > Stream Classes > Stream Class > flush; Builtin Classes > Stream Classes > Stream Class > init; Builtin Classes > Stream Classes > Stream Class > lineIn; Builtin Classes > Stream Classes > Stream Class > lineOut; Builtin Classes > Stream Classes > Stream Class > lines; Builtin Classes > Stream Classes > Stream Class > makeArray; Builtin Classes > Stream Classes > Stream Class > open; Builtin Classes > Stream Classes > Stream Class > position; Builtin Classes > Stream Classes > Stream Class > qualify; Builtin Classes > Stream Classes > Stream Class > query; Builtin Classes > Stream Classes > Stream Class > say; Builtin Classes > Stream Classes > Stream Class > seek; Builtin Classes > Stream Classes > Stream Class > state; Builtin Classes > Stream Classes > Stream Class > string; Builtin Classes > Stream Classes > Stream Class > supplier; Builtin Classes > Stream Classes > Stream Class > uninit"
-deviations: [34, 55, 58, 59, 62, 109, 135, 139, 140]
+deviations: [34, 55, 58, 59, 62, 109, 135, 139, 140, 142]
 ---
 
 # Stream
@@ -38,8 +38,8 @@ every method that [`InputStream`](inputstream.md),
 [`OutputStream`](outputstream.md) and
 [`InputOutputStream`](inputoutputstream.md) define, so a message to a `Stream`
 never reaches the methods of those pages. An instance is not a string, so a
-string method such as `left` raises `SYNTAX 97.1`. A copy of an instance is
-not specified.
+string method such as `left` raises `SYNTAX 97.1`. A copy of an instance is [a
+new stream that is not open](r:class.stream.deviation.142).
 
 ```rexx
 say .stream~superclass~id .stream~superclasses~items .stream~queryMixinClass
@@ -1037,7 +1037,9 @@ number and the NOTREADY condition when it cannot. An option that is not
 allowed, such as a word that no option starts with, raises `SYNTAX 93.0`, and
 the stream is not open after it, also when it was. The state is that of [the
 state rule](r:class.stream.state). Opening a stream that is open opens it
-afresh, as [the function does](r:bif.stream.open.again).
+afresh, as [the function does](r:bif.stream.open.again). When `open` with
+`BINARY` and no `RECLENGTH` raises `SYNTAX 93.0`, the stream is `UNKNOWN`
+afterwards ([Deviation 145](r:bif.stream.deviation.145)).
 
 ```rexx
 f = 'spec-stream-open-zq.tmp'
@@ -2672,4 +2674,40 @@ exit
 ```output defect=#208
 2 wo  state state lineIn()
 3 three  lineIn(3)
+```
+
+r[class.stream.deviation.142]
+A copy of a `Stream`, made by `copy`, is a new stream of the class of the
+original with the name of the original, and it is not open: its `state` is
+`UNKNOWN` until it is opened or used, and it is not the original. It has a
+read position of its own, so that reading from it begins at the start of the
+file, and the original keeps its state and its position. ooRexx's copy shares
+the original's internal state, and the process ends abnormally when it ends;
+the example is not run against it.
+
+```rexx
+f = 'spec-stream-copy-zq.tmp'
+call lineout f, 'one'
+call lineout f, 'two'
+call lineout f
+s = .stream~new(f)
+say s~linein s~state
+c = s~copy
+say (c~class == s~class) (c == s) (c~string == s~string)
+say s~state c~state
+say c~linein c~state
+say s~linein
+say s~close c~close
+say c~state s~state
+call sysfiledelete f
+```
+
+```output
+one READY
+1 0 1
+READY UNKNOWN
+one READY
+two
+READY: READY:
+UNKNOWN UNKNOWN
 ```

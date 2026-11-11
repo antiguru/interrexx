@@ -2,7 +2,7 @@
 element: "Invocation"
 kind: concept
 rexxref: "Rexx Runtime Objects > The SYSCARGS Array (.SYSCARGS); Rexx Runtime Objects > The Local Directory (.LOCAL)"
-deviations: [96]
+deviations: [96, 141]
 ---
 
 # Invocation
@@ -127,9 +127,11 @@ of the words adds nothing, not even its blank, so that the arguments `''`,
 blank before it, so that `a`, `''` and `b` make `a  b`, and `a` and `''` make
 `a `. A command with no words after the program name starts it with no
 argument, so that `ARG()` is 0 and `ARG(1)` the empty string; a command with
-one empty word starts it with one argument, the empty string.
-[`PARSE ARG`](r:instr.parse.arg), [`ARG`](r:bif.arg.args) and [`USE
-ARG`](r:instr.use.arg) read this one argument as they read any other.
+one empty word starts it with one argument, the empty string. [`PARSE
+ARG`](r:instr.parse.arg), [`ARG`](r:bif.arg.args) and [`USE
+ARG`](r:instr.use.arg) read this one argument as they read any other. A
+program that [`-e` runs](r:env.invocation.expression) gets its argument in the
+same way ([Deviation 141](r:env.invocation.deviation.141)).
 
 r[env.invocation.syscargs]
 The array `.syscargs` holds the words after the program name one by one,
@@ -190,98 +192,91 @@ READY READY READY
 
 r[env.invocation.end]
 When the main program ends, by its last clause, by `RETURN`, by `EXIT`, or by
-an error that no trap handles, every object that the program holds, that has a
-method named `UNINIT` and that the interpreter has not yet sent it, is sent
-it (a program that sends `UNINIT` itself does not count). An object that is
-held by a variable, by an entry of `.local` or of a package's local
-directory, or by another such object, is held. An object that the program
-has stopped referring to may be sent it earlier, when it is collected, and
-when is not specified. The messages come after the program's last clause and
-after the output that the program wrote; the status of the command is the
-program's own. The order in which the objects are sent the message is not
-specified, so an example with several such objects prints the same text from
-each. What the objects hold is still alive, and `.output` is still the
-standard output.
+an error that no trap handles, the status of the command is the program's own
+([the status](r:env.invocation.status)), whatever the objects that the program
+holds do. Whether the interpreter sends `UNINIT` to those objects at that end,
+and in what order, is not specified ([the rule of
+`UNINIT`](r:env.invocation.uninit)), so a program that needs something done at
+its end does it itself. The first example ends the program by `EXIT` and the
+second by an error, with an object held in a variable that has an `UNINIT`
+method.
 
 ```rexx
-keep = .guard~new('kept in a variable')
-say 'main ends'
-::class guard
-::method init
-  expose what
-  use arg what
-::method uninit
-  expose what
-  say 'uninit:' what
-```
-
-```output
-main ends
-uninit: kept in a variable
-```
-
-```rexx
-.local~keep = .guard~new('held by .local')
-say 'main ends'
-::class guard
-::method init
-  expose what
-  use arg what
-::method uninit
-  expose what
-  say 'uninit:' what
-```
-
-```output
-main ends
-uninit: held by .local
-```
-
-```rexx
-keep = .guard~new('kept')
+keep = .guard~new
 say 'before exit'
 call quit
 say 'not reached'
 quit: exit 5
 ::class guard
-::method init
-  expose what
-  use arg what
 ::method uninit
-  expose what
-  say 'uninit:' what
+  nop
 ```
 
 ```output rc=5
 before exit
-uninit: kept
 ```
 
 ```rexx
-keep = .guard~new('kept')
+keep = .guard~new
 say 'before error'
 say 1 / 0
 ::class guard
-::method init
-  expose what
-  use arg what
 ::method uninit
-  expose what
-  say 'uninit:' what
+  nop
 ```
 
 ```output rc=214
 before error
-uninit: kept
+```
+
+r[env.invocation.uninit]
+The interpreter sends the message `UNINIT` to an object that has a method of
+that name when it finds that the program cannot reach the object any more;
+what it frees by doing so is up to the method. This is best effort, and a
+program may rely on two things only: an object is sent `UNINIT` at most once
+by the interpreter (a program that sends `UNINIT` itself does not count), and
+it is never sent it while the running program can still reach the object,
+through a variable, an entry of `.local` or `.environment`, or another object
+that it can reach. An object that is held when the main program ends is
+therefore not sent it before the end. It is not specified when an object that
+the program has stopped referring to is sent `UNINIT`, whether the objects
+that are left when the main program ends are sent it, or in what order. The
+examples hold three objects of a class whose `UNINIT` counts the messages it
+gets: while they are held, the count is 0 however often storage is reclaimed
+([GC](r:bif.gc.args)), and after one is dropped the count is at most 1.
+
+```rexx
+.environment~count = 0
+.local~one = .guard~new
+.environment~two = .guard~new
+keep = .guard~new
+do 3
+  call gc 'force'
+end
+say 'held:' .environment~count
+drop keep
+do 5
+  call gc 'force'
+end
+say 'dropped:' (.environment~count <= 1)
+::class guard
+::method uninit
+  .environment~count += 1
+```
+
+```output
+held: 0
+dropped: 1
 ```
 
 r[env.invocation.end.uninit]
-An `EXIT`, or an error that no trap handles, in the `UNINIT` method of one
-object ends that method only, and an error there writes no report. The other
-objects are still sent the message, and neither changes the status of the
-command. In the examples, the `UNINIT` of `bad` exits with 9 in the one and
-divides by zero in the other, the two objects that stand on either side of it
-say that they ran, and the status stays that of the main program.
+An `EXIT`, or an error that no trap handles, in the `UNINIT` method of an
+object ends that method only, and an error there writes no report, whether the
+interpreter sent the message at the end of the main program or earlier. It
+does not change the status of the command. In the examples, the `UNINIT` of
+`bad` exits with 9 in the one and divides by zero in the other, and the status
+stays that of the main program, with nothing written but what the program
+says.
 
 ```rexx
 .error~destination(.stdout)
@@ -295,13 +290,11 @@ return 3
   exit 9
 ::class guard
 ::method uninit
-  say 'uninit: guard'
+  nop
 ```
 
 ```output rc=3
 main
-uninit: guard
-uninit: guard
 ```
 
 ```rexx
@@ -316,13 +309,11 @@ return 3
   say 1 / 0
 ::class guard
 ::method uninit
-  say 'uninit: guard'
+  nop
 ```
 
 ```output rc=3
 main
-uninit: guard
-uninit: guard
 ```
 
 > **Note.** What happens to an activity that is still running when the main
@@ -339,3 +330,10 @@ or licence lines ([Deviation
 96](../deviations.md#96-version-and-library-banners)). Its other two lines,
 `Build date:` followed by the date of the build, and `Addressing mode:`
 followed by the width of an address in bits, are as ooRexx writes them.
+
+r[env.invocation.deviation.141]
+The argument string of a program that `rexx -e` runs is made as [the
+arguments rule](r:env.invocation.arguments) makes it for a program in a file,
+so that the words `' '` and `x` after the text give the string of two blanks
+and `x`. ooRexx drops one leading blank of the string, and gives `' x'`
+([Deviation 141](../deviations.md)).
