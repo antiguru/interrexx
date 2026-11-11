@@ -153,6 +153,7 @@
   - [Search](environment/search.md)
   - [Command environments](environment/commands.md)
   - [Security manager](environment/security.md)
+  - [Debugging](environment/debugging.md)
 - [Built-in functions](builtins/index.md)
   - [ABBREV](builtins/abbrev.md)
   - [ABS](builtins/abs.md)

@@ -1466,3 +1466,92 @@ call 'sub/callsib'
 ----
 rc> 0
 out> sibling in sub
+
+# the RXTRACE variable (env.debugging.rxtrace): only a value that is ON in
+# any case, with nothing else in it, starts the program traced
+
+run env=RXTRACE.ON
+rxtrace
+----
+rc> 0
+out> main ?R
+out> external ?R
+out> method N
+err>        +++ "LINUX COMMAND DIR/rxtrace.rex"
+err>      1 *-* .traceoutput~destination(.quiet~new)
+
+run env=RXTRACE.on
+rxtrace
+----
+rc> 0
+out> main ?R
+out> external ?R
+out> method N
+err>        +++ "LINUX COMMAND DIR/rxtrace.rex"
+err>      1 *-* .traceoutput~destination(.quiet~new)
+
+run env=RXTRACE.oN
+rxtrace
+----
+rc> 0
+out> main ?R
+out> external ?R
+out> method N
+err>        +++ "LINUX COMMAND DIR/rxtrace.rex"
+err>      1 *-* .traceoutput~destination(.quiet~new)
+
+run env=RXTRACE.OFF
+rxtrace
+----
+rc> 0
+out> main N
+out> external N
+out> method N
+
+run env=RXTRACE.yes
+rxtrace
+----
+rc> 0
+out> main N
+out> external N
+out> method N
+
+run env=RXTRACE.ONX
+rxtrace
+----
+rc> 0
+out> main N
+out> external N
+out> method N
+
+run env=RXTRACE._ON
+rxtrace
+----
+rc> 0
+out> main N
+out> external N
+out> method N
+
+run env=RXTRACE.ON_
+rxtrace
+----
+rc> 0
+out> main N
+out> external N
+out> method N
+
+run env=RXTRACE.
+rxtrace
+----
+rc> 0
+out> main N
+out> external N
+out> method N
+
+run
+rxtrace
+----
+rc> 0
+out> main N
+out> external N
+out> method N

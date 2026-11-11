@@ -35,10 +35,9 @@ The pages of this chapter so far are:
   name from `.local` or `.environment`, names a stream or sends a message to a
   protected method: what a manager belongs to, which code it governs, what
   each checkpoint sends and what the answer does.
-
-A page on interactive debugging follows. Until it exists, the rules of the
-other chapters that mention that subject in plain text are the rules there
-are.
+* [Debugging](debugging.md): interactive tracing: how it starts and ends, when
+  the interpreter stops, what it reads at a stop and from where, what each kind
+  of line does, where its own lines are written, and the `RXTRACE` variable.
 
 An example in this chapter changes the objects that its own program reads, as
 a program does. Each example restores what it changed when a later line of the

@@ -1130,3 +1130,22 @@ nothing. ooRexx loses some sets of VALUE that follow in-process `export` and
 any variable (the second `unset` of a name among them), so that the variable
 has no value afterwards. For `export` with an empty name it stores an entry
 with no name, which a `$` reference with no name then finds.
+
+## 150. An INTERPRET in a line read at an interactive trace stop
+
+The clauses of a string that an INTERPRET in such a line runs are not traced,
+like the rest of the line, and no stop follows them. ooRexx traces them and
+stops after each of them before the interpreter reads the next line.
+
+## 151. RAISE SYNTAX in a line read at an interactive trace stop
+
+A RAISE SYNTAX in such a line is reported as any error of the line is, and
+tracing and the stops go on as before. In ooRexx the clauses that follow are
+no longer shown, and the program may run on without a stop.
+
+## 152. An empty line after a line that failed as it was read
+
+An empty line that follows a line that failed as it was read, such as
+`trace 1.5`, whose setting does not exist, or an expression that cannot be
+parsed, goes on to the next stop. ooRexx ends interactive tracing at that empty
+line.

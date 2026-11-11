@@ -7,7 +7,12 @@
 //! A case's input is its words, one per line: `\xHH` is a byte, and a line
 //! `<empty>` is the empty word. `rexx_path=DIR` sets `REXX_PATH` to the
 //! fixture's `DIR`, `path=DIR` puts it in front of `PATH`, and `cwd=DIR` runs
-//! from it. `DIR` is a name [`directory`] spells.
+//! from it. `DIR` is a name [`directory`] spells. `env=NAME.VALUE`, which may
+//! list several words, sets each environment variable `NAME` to `VALUE` for
+//! both binaries and leaves the rest of the environment as it is, `RXTRACE`
+//! apart, which every run starts without; a case file word holds only
+//! letters, digits, `-`, `_` and `.`, so a `_` in `VALUE` stands for a blank,
+//! and `env=NAME.` sets the empty value.
 
 #[path = "support/banner.rs"]
 mod banner;
@@ -58,6 +63,13 @@ fn lay_fixture(dir: &Path) {
     file(b"UP.REX", "say 'upper UP.REX'\n");
     file(b"A3UPONLY.REX", "say 'upper A3UPONLY.REX'\n");
     file(b"noext", "say 'noext file'\nparse source s; say s\n");
+    // The RXTRACE variable: the main program, a program called by name, and a
+    // method each answer the setting they started with.
+    file(
+        b"rxtrace.rex",
+        ".traceoutput~destination(.quiet~new)\nsay 'main' trace()\nsay 'external' rxtrace2()\nsay 'method' .t~new~m\nexit\n::class quiet\n::method lineout\n  return 0\n::class t\n::method m\n  return trace()\n",
+    );
+    file(b"rxtrace2.rex", "return trace()\n");
     file(b"src.rex", "parse source s; say s\n");
     file(
         b"showargs.rex",
@@ -252,8 +264,16 @@ fn run(
         .args(args)
         .current_dir(dir)
         .env_remove("REXX_PATH")
+        .env_remove("RXTRACE")
         .stdin(Stdio::null());
     for (key, values) in &case.args {
+        if key == "env" {
+            for word in values {
+                let (name, value) = word.split_once('.').expect("env=NAME.VALUE");
+                command.env(name, value.replace('_', " "));
+            }
+            continue;
+        }
         let entry = dir.join(directory(values.first().expect("a directory")));
         match key.as_str() {
             "cwd" => command.current_dir(entry),
@@ -309,6 +329,7 @@ fn remove(dir: &Path) {
 // spec: env.invocation.deviation.96
 // spec: env.search.program, env.search.names, env.search.extension
 // spec: env.search.case, env.search.places, env.search.caller
+// spec: env.debugging.rxtrace
 #[test]
 fn the_command_line_answers_as_the_oracles_does() {
     let oracle = Path::new(ORACLE_ROOT).join("bin/rexx");
