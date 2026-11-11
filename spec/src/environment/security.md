@@ -180,7 +180,8 @@ r[env.security.scope]
 The code of a package is governed by the manager of the package, wherever it
 runs: the main code, the routines, the labels that these call, the text that
 `INTERPRET` runs for them, the methods of the classes, and what these run on
-another activity, which is a method that `start` or a started `Message` runs.
+another activity, which is a method that `start` or a started `Message` runs,
+and the rest of a method after `REPLY`.
 Code of another package is not governed, whoever calls it: a routine of the
 program that made the package, a routine of a package that it requires, an
 external program that it calls. These run under the manager of their own
@@ -237,7 +238,8 @@ r[env.security.run]
 A manager that is set, replaced or removed while code of the package is
 running does not move the run that is going on, except for the two name
 checkpoints. A run is a call of a routine, a run of a method, or the main code
-of a program, and the labels that it calls are part of it. It takes the
+of a program, and the labels that it calls and the text that it runs by
+`INTERPRET` are part of it. It takes the
 manager that its package has when it starts, and sends `CALL`, `COMMAND`,
 `REQUIRES`, `STREAM` and `METHOD` to that manager until it ends: a manager
 that the run removes or replaces keeps being asked, and a package that had no
@@ -528,7 +530,11 @@ clause wrote it: in capitals for a symbol, as it is written for a string.
 `COMMAND` is the string after its expression is evaluated, and an empty or
 blank string is sent like any other. The directory holds just those two
 entries, also for a command with a [redirection](r:instr.address.with.syntax).
-A clause that only names an environment sends nothing. What the manager sets
+A manager that answers `1` takes the redirection over with the command:
+nothing is read from an `INPUT` source or written to an `OUTPUT` or `ERROR`
+target. A clause that only names an environment sends nothing. A command that
+names no environment is sent with the name of the current one, which a program
+starts with as `sh`. What the manager sets
 counts only when it answers `1`. `RC` is stored in the variable `rc` as it is,
 whatever it is. `FAILURE` and `ERROR` raise their condition whatever their
 value is (`0` and `.false` included) and whatever `RC` is, so an `ERROR` entry
@@ -544,7 +550,10 @@ for both conditions.
 tests = .array~of('address system "exit 1"', 'address "EnvSec" "exit 2"', -
   'address envsec "exit" 1 + 2', -
   'address system "exit 4" with output normal', 'address system ""', -
-  'address system "   "', 'address envsec')
+  'address system "   "', -
+  'o.0 = "untouched"; address system "echo hi" with output stem o.;' -
+  'say o.0', -
+  'address envsec')
 do t over tests
   say '==' t
   r = .routine~new('agent', t)
@@ -574,6 +583,9 @@ exit
   ADDRESS <SYSTEM> COMMAND <> ADDRESS,COMMAND
 == address system "   "
   ADDRESS <SYSTEM> COMMAND <   > ADDRESS,COMMAND
+== o.0 = "untouched"; address system "echo hi" with output stem o.; say o.0
+  ADDRESS <SYSTEM> COMMAND <echo hi> ADDRESS,COMMAND
+untouched
 == address envsec
 ```
 
@@ -637,6 +649,8 @@ messages it is sent for each symbol, except where it provides the name: it
 provides `.envsecnil` and `.context` at `LOCAL`, finds nothing for
 `.envsecnone` at `ENVIRONMENT`, and sets a `RESULT` for `.envsecignored` that
 it does not use.
+The function `VALUE` with the selector `ENVIRONMENT` reads a variable of the
+host, not `.environment`, and sends no checkpoint.
 
 ```rexx
 tests = .array~of('say (.envsecnil == .nil)', 'say .envsecnone', -
@@ -687,21 +701,31 @@ Stream
 r[env.security.stream]
 The `STREAM` checkpoint is sent when one of the stream functions `CHARIN`,
 `CHAROUT`, `CHARS`, `LINEIN`, `LINEOUT`, `LINES` and `STREAM`, with any
-arguments, names a stream that the program does not have open under that name.
-`NAME` is the name that the function was given, made absolute as [`QUALIFY`
-does](r:bif.qualify.relative). The open streams are one table for the whole
-program. A name that any code opened, governed or not, is not offered again,
-to any manager, until the stream is closed. A stream that a manager chose is
-in the table under that name, so the code that no manager governs gets it as
-well. A manager that answers `1` and sets `STREAM` gives the function that
-object, which must understand the messages of a stream; one that answers `1`
-and sets no `STREAM` leaves the function to open the name as a file, as an
-answer of `0` does. In the example the program has the file open when the
-first manager is to be asked, so it is not asked. After the program closes the
-stream, the first manager is asked and provides a stream of another file; the
-second manager is not asked about that name while the stream is open, and the
-program gets the same stream. After the stream is closed once more the name is
-the real file again, and the second manager is asked.
+arguments, names a stream whose absolute name is not in the program's table of
+streams, except for the standard streams, which [the next
+rule](r:env.security.standard) takes out. `NAME` is the name that the function
+was given, made absolute as [`QUALIFY` does](r:bif.qualify.relative). The
+table is one for the whole program and is keyed by the absolute name, so `x`
+and `./x` are one entry. A stream function that names a stream enters it in
+the table, whether the code is governed or not and whether or not the stream
+can be opened. The name is then not offered again, to any manager, until a
+`close` command of `STREAM`, or an `open` command of `STREAM` that fails,
+takes it out. A `close` sent to another `Stream` object of the same file does
+not. A stream that a manager chose is in the table under that name, so the
+code that no manager governs gets it as well. A manager that answers `1` and
+sets `STREAM` gives the function that object, which must understand the
+messages of a stream; one that answers `1` and sets no `STREAM` leaves the
+function to open the name as a file, as an answer of `0` does. In the example
+the program has the file open when the first manager is to be asked, so it is
+not asked. After the program closes the stream, the first manager is asked and
+provides a stream of another file; the second manager is not asked about that
+name while the stream is open, and the program gets the same stream. After the
+stream is closed once more the name is the real file again, and the second
+manager is asked. The second example shows the table for a file that does not
+exist: the first `lines` is offered and enters the name, the second and the
+one that spells the name with `./` are not, a failing `open` takes the name
+out, a `close` sent to a `Stream` object does not, and the `close` command
+does.
 
 ```rexx
 f = 'envsec_real.tmp'
@@ -753,6 +777,86 @@ two asked, name is absolute: 1
 second manager: repl
 ```
 
+```rexx
+call sysfiledelete 'envsec_tab.tmp'
+steps = .array~of('G:lines("envsec_tab.tmp")', 'G:lines("envsec_tab.tmp")', -
+  'G:lines("./envsec_tab.tmp")', -
+  'P:stream("envsec_tab.tmp", "c", "open read")', -
+  'G:lines("envsec_tab.tmp")', 'G:lines("envsec_tab.tmp")', -
+  'P:.stream~new("envsec_tab.tmp")~close', 'G:lines("envsec_tab.tmp")', -
+  'P:stream("envsec_tab.tmp", "c", "close")', 'G:lines("envsec_tab.tmp")')
+do s over steps
+  parse var s who ':' t
+  if who = 'P' then do
+    interpret 'x =' t
+    say 'program:' t
+  end
+  else do
+    say 'governed:' t
+    r = .routine~new('agent', 'x =' t)
+    r~setSecurityManager(.mgr~new)
+    r~call
+  end
+end
+exit
+::class mgr
+::method unknown
+  say '  offered'
+  return 0
+```
+
+```output
+governed: lines("envsec_tab.tmp")
+  offered
+governed: lines("envsec_tab.tmp")
+governed: lines("./envsec_tab.tmp")
+program: stream("envsec_tab.tmp", "c", "open read")
+governed: lines("envsec_tab.tmp")
+  offered
+governed: lines("envsec_tab.tmp")
+program: .stream~new("envsec_tab.tmp")~close
+governed: lines("envsec_tab.tmp")
+program: stream("envsec_tab.tmp", "c", "close")
+governed: lines("envsec_tab.tmp")
+  offered
+```
+
+r[env.security.standard]
+A stream function that uses a standard stream sends no checkpoint at all:
+neither `STREAM` nor `LOCAL`. This covers a function whose stream name is
+omitted or empty, and one that names `STDIN`, `STDOUT` or `STDERR`, in any
+case and with or without a colon after it. The symbols `.output`, `.input`
+and `.error` send `LOCAL` when the code writes them, as [the name
+rule](r:env.security.names) says, but the functions that reach those objects
+without a symbol do not. In the example each line reaches a standard stream
+from governed code, and the manager, which writes every message it is sent,
+is sent none.
+
+```rexx
+tests = .array~of('call lineout , "one"', -
+  'call charout "", "two" || "0a"x', 'call lineout "stdout:", "three"', -
+  'x = stream("STDIN", "c", "query exists")', 'x = stream("stderr", "s")')
+do t over tests
+  r = .routine~new('agent', t)
+  r~setSecurityManager(.mgr~new)
+  r~call
+end
+say 'no checkpoint'
+exit
+::class mgr
+::method unknown
+  use arg name, args
+  say '  ' name args[1]~name
+  return 0
+```
+
+```output defect=#212
+one
+two
+three
+no checkpoint
+```
+
 r[env.security.requires]
 The `REQUIRES` checkpoint is sent as [the class
 rule](r:class.routine.setsecuritymanager.requires) says. A manager that
@@ -760,7 +864,10 @@ answers `1` and sets `SECURITYMANAGER` to an object gives the package that is
 loaded a manager of its own: the main code of the package and every routine
 and method of it is governed by that object from then on, also when other code
 calls them, and the `::REQUIRES` directives of the package are sent to that
-object and not to the manager that was asked first. A manager that answers
+object and not to the manager that was asked first. When the file is offered
+twice, a `SECURITYMANAGER` set in either message that the manager answered
+with `1` gives the package its manager, whatever the manager answers to the
+other message. A manager that answers
 `0`, or that sets `SECURITYMANAGER` to `.nil`, leaves the package with none,
 and so does a manager that sets nothing; a `::REQUIRES` of such a package is
 sent to no manager. In the example three files are loaded, each with a command
@@ -841,15 +948,28 @@ methods that are protected are the ones that the second example prints. What
 is checked is the send, by governed code, to a protected method, in any form
 of a send: `send`, `sendWith`, the cascade `~~`, the `send` of a `Message` and
 a send to `self` are all offered, and for an attribute the setter has the name
-with `=` after it. A message that is started is not offered: the `start` of an
-object and of a `Message` run the method on another activity with no
-checkpoint. A protected method is run without a checkpoint when the sender is
-code with no manager, as the class rule says. The `setSecurityManager` methods
-are protected, so governed code that changes its manager is passed through the
-manager, which can stop the change by answering `1`; the third example shows
-that the manager is still in place for the next run. In the first example, a
-package that has a manager sends messages to a protected method in the forms
-above, and the manager answers `1` with a result for those it is sent.
+with `=` after it. The messages that the interpreter and the built-in methods
+send while they carry out a clause of governed code are offered in the same
+way: the `INIT` that `new` sends, the `MAKESTRING` that a string value asks
+for (`SAY`, concatenation, `request`), the `MAKEARRAY` that `DO OVER` asks
+for, and a message that a built-in method sends to an argument, such as the
+`COMPARE` that `sortWith` sends. `FORWARD`, an operator, a message to the
+superclass (`~name:super`) and a protected class method are sends like the
+others, and for a class method `OBJECT` is the class. A message that the
+receiver has no method for, and that goes on to the receiver's `UNKNOWN`
+method, is not a checkpoint, even when `UNKNOWN` is protected: the message
+that the code sent names no protected method. A message that is started is not
+offered: the `start` of an object and of a `Message` run the method on another
+activity with no checkpoint. A protected method is run without a checkpoint
+when the sender is code with no manager, as the class rule says. The
+`setSecurityManager` methods are protected, so governed code that changes its
+manager is passed through the manager, which can stop the change by answering
+`1`; the third example shows that the manager is still in place for the next
+run. In the first example, a package that has a manager sends messages to a
+protected method in the forms above, and the manager answers `1` with a result
+for those it is sent. The fourth example shows the messages that the
+interpreter and the built-in methods send, and the fifth the fallback to
+`UNKNOWN`.
 
 ```rexx
 src = .array~of('::class zqbox public', -
@@ -977,6 +1097,75 @@ first run: 5
 second run: 5
 ```
 
+```rexx
+tests = .array~of('x = .envsecp~new', 'say .envsecq~new', -
+  'say .envsecq~new || "!"', 'do i over .envsecs~new; say i; end', -
+  'say .array~of(2, 1)~sortWith(.envsecc~new)~makestring("l", " ")')
+do t over tests
+  say '==' t
+  r = .routine~new('agent', t)
+  r~setSecurityManager(.mgr~new)
+  r~call
+end
+exit
+::class envsecp
+::method init protected
+  say 'init ran'
+::class envsecq
+::method makestring protected
+  return 'makestring ran'
+::class envsecs
+::method makearray protected
+  return .array~of('makearray ran')
+::class envsecc
+::method compare protected
+  use arg a, b
+  return a - b
+::class mgr
+::method method
+  use arg info
+  say '  METHOD' info~name info~arguments~items
+  return 0
+```
+
+```output
+== x = .envsecp~new
+  METHOD INIT 0
+init ran
+== say .envsecq~new
+  METHOD MAKESTRING 0
+makestring ran
+== say .envsecq~new || "!"
+  METHOD MAKESTRING 0
+makestring ran!
+== do i over .envsecs~new; say i; end
+  METHOD MAKEARRAY 0
+makearray ran
+== say .array~of(2, 1)~sortWith(.envsecc~new)~makestring("l", " ")
+  METHOD COMPARE 2
+1 2
+```
+
+```rexx
+src = .array~of('::class zqu public', -
+  '::method unknown protected unguarded', '  return "unknown ran" arg(1)', -
+  '::method try unguarded', '  return self~nosuch')
+p = .package~new('envsec_unknown', src)
+p~setSecurityManager(.mgr~new)
+say p~findClass('ZQU')~new~try
+exit
+::class mgr
+::method method
+  use arg info
+  say '  METHOD' info~name
+  info~result = 'replaced'
+  return 1
+```
+
+```output defect=#225
+unknown ran NOSUCH
+```
+
 ## Answers and errors
 
 r[env.security.answer]
@@ -1052,18 +1241,25 @@ METHOD       error 34.903 error 34.903 error 34.903 error 34.903 error 91.999
 ```
 
 r[env.security.raise]
-A manager may raise instead of answering, and the usual way is
-`RAISE SYNTAX 98.948`, the error for an action that is not allowed. The
-condition is raised in the governed code, at the clause that reached the
-checkpoint, and the handlers of that code are the ones that see it, as [the
-class rule](r:class.routine.setsecuritymanager.checkpoints) says for `SYNTAX`.
-This holds for the other conditions too: `RAISE ERROR`, `FAILURE`, `HALT`,
-`NOTREADY` and `USER` in a manager method are handled by the matching
-`SIGNAL ON` of the governed code, with the description that the `RAISE` gave.
-An error of the manager's own code, such as a division by zero or a message
-that an object does not understand, is raised there in the same way. In the
-example the manager of each line raises one of these when it is asked about a
-command, and the handlers of the governed code write what they got.
+A manager may raise instead of answering, and the usual way is `RAISE SYNTAX
+98.948`, the error for an action that is not allowed. The condition is raised
+in the governed code, at the clause that reached the checkpoint, and the
+handlers of that code are the ones that see it, as [the class
+rule](r:class.routine.setsecuritymanager.checkpoints) says for `SYNTAX`. This
+holds for the other conditions too: `RAISE ERROR`, `FAILURE`, `HALT`,
+`NOTREADY` and `USER` in a manager method are handled by the matching `SIGNAL
+ON` of the governed code, with the description that the `RAISE` gave. An error
+of the manager's own code, such as a division by zero or a message that an
+object does not understand, is raised there in the same way. In the example
+the manager of each line raises one of these when it is asked about a command,
+and the handlers of the governed code write what they got. The condition
+object of a condition that the manager raises, and of an error in the
+manager's code, has the position of the manager's clause that raised it, while
+`SIGL` in the handler is the line of the governed clause that reached the
+checkpoint. The errors of [a wrong answer](r:env.security.answer) have the
+position of the governed clause. In the second example the manager raises in
+the first run and answers wrongly in the second, and the program also prints
+the line of the `RAISE`.
 
 ```rexx
 acts = .array~of('syntax 98.948 array("blocked")', 'error 5', 'failure 6', -
@@ -1107,4 +1303,32 @@ halt description("a halt")                   HALT/a halt
 notready description("not ready")            NOTREADY/not ready
 zero                                         SYNTAX/42.3
 missing                                      SYNTAX/97.1
+```
+
+```rexx
+src = .array~of('signal on syntax', 'address system "exit 1"', -
+  'return "no error"', 'syntax: c = condition("o")', -
+  '  return c~code "at line" c~position "sigl" sigl')
+do mode over .array~of('raise', 'answer')
+  r = .routine~new('agent', src)
+  r~setSecurityManager(.mgr~new(mode))
+  say mode '=>' r~call
+end
+say 'the raise is at line' .envsecline
+exit
+::class mgr
+::method init
+  expose mode
+  use arg mode
+::method command
+  expose mode
+  if mode = 'answer' then return 2
+  .local~envsecline = .line + 1
+  raise syntax 98.948 array('not allowed')
+```
+
+```output
+raise => 98.948 at line 19 sigl 2
+answer => 34.903 at line 2 sigl 2
+the raise is at line 19
 ```
