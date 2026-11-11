@@ -27,6 +27,10 @@ The pages of this chapter so far are:
 * [SysTempFileName](systempfilename.md) and
   [SysSearchPath](syssearchpath.md): inventing a name that is not in use, and
   finding a file along a list of directories.
+* [SysStemCopy](sysstemcopy.md), [SysStemDelete](sysstemdelete.md),
+  [SysStemInsert](syssteminsert.md) and [SysStemSort](sysstemsort.md): working
+  on a stem array, and [SysDumpVariables](sysdumpvariables.md): writing the
+  variables of the current scope.
 
 The rules state the behavior of a Unix-like system. The examples make their
 own files and directories, whose names start with `c1zq`, and remove them
@@ -323,6 +327,192 @@ call SysFileDelete 'c1zqidxs2'
 40.922
 ```
 
+## Stem arrays
+
+r[util.index.stemname]
+The name of a stem that SysStemCopy, SysStemDelete and SysStemInsert take is
+a string, read as [the conventions](r:conv.string.object) read any string
+argument, so that a MutableBuffer that holds `s.` names the stem `s.`, and an
+object that has only a `STRING` method names the stem that the method
+answers. The name is a symbol of letters, digits and the characters `!`, `?`
+and `_` that does not start with a digit, with one period after it or
+without, in any case. The name, with the period that a name without one is
+given, has at most 250 characters. Any other name raises `SYNTAX 40.919`: the
+null string, a name that starts with a digit or a period, a name with a
+period before its last character, one that holds a blank, a character that no
+symbol has, a name that is too long, or the text of `.nil`. The stem is the
+one of that name among the variables of the code that makes the call, so that
+in a procedure it is the procedure's own stem unless the procedure exposes it.
+[SysStemSort](r:util.sysstemsort.name) reads a name that has more after its
+first period differently, and reads an object that is not a string
+differently too.
+
+```rexx
+call p
+say s.0 s.1
+exit
+p: procedure
+  s.0 = 0; ab_1.0 = 0; q?.0 = 0
+  say SysStemInsert('s', 1, 'a') SysStemInsert('S.', 1, 'b'),
+    SysStemInsert('Ab_1.', 1, 'c') SysStemInsert('q?', 1, 'd')
+  say s.0 s.1 s.2 ab_1.0 ab_1.1 q?.0 q?.1
+  call SysStemInsert .mutablebuffer~new('s.'), 1, 'm'
+  say s.0 s.1
+  call SysStemInsert .sonly~new, 1, 'z'
+  call SysStemDelete .sonly~new, 2
+  call SysStemCopy .sonly~new, 'u.', 1, 1, 1
+  say s.0 s.1 s.2 u.0 u.1
+  call try "SysStemInsert('', 1, 'x')"
+  call try "SysStemInsert('1s.', 1, 'x')"
+  call try "SysStemInsert('.s', 1, 'x')"
+  call try "SysStemInsert('s.a', 1, 'x')"
+  call try "SysStemInsert('s..', 1, 'x')"
+  call try "SysStemInsert('s t.', 1, 'x')"
+  call try "SysStemInsert('s-.', 1, 'x')"
+  call try "SysStemInsert(.nil, 1, 'x')"
+  call SysStemCopy 's.', copies('a', 249), 1, 1, 1
+  call try "SysStemInsert(copies('a', 249), 1, 'x')"
+  call try "SysStemInsert(copies('a', 249) || '.', 1, 'x')"
+  call try "SysStemInsert(copies('a', 250), 1, 'x')"
+  call try "SysStemInsert(copies('a', 250) || '.', 1, 'x')"
+  call try "SysStemInsert(copies('a', 251) || '.', 1, 'x')"
+  return
+try:
+  signal on syntax name e
+  interpret 'say' arg(1)
+  return
+e: say condition('o')~code
+  return
+::class sonly
+::method string
+  return 's.'
+```
+
+```output
+0 0 0 0
+2 b a 1 c 1 d
+3 m
+3 z b 1 z
+40.919
+40.919
+40.919
+40.919
+40.919
+40.919
+40.919
+40.919
+0
+0
+40.919
+40.919
+40.919
+S.0 S.1
+```
+
+r[util.index.stemarray]
+A stem array is a stem whose tail `0` holds the number of items, `n`, and
+whose tails `1` to `n` hold the items, written as plain whole numbers, so that
+`s.01` is not an item. A function that reads a stem array reads the tail `0`
+first. It is `n` when it is a whole number, written as `4`, ` 4 `, `04`,
+`4.0`, `4e0` or `+4`. SysStemCopy, SysStemDelete and SysStemInsert read it
+rounded to 18 significant digits and need a magnitude below 10\*\*18.
+SysStemSort reads it rounded to 9 significant digits and needs a magnitude
+below 10\*\*9. The NUMERIC DIGITS of the caller plays no part. A stem without
+that tail, a tail that is not a whole number after that rounding, such as
+`1.5` or a word, a value at or above that limit, and a stem that has only a
+default value (`s. = 'x'`) raise `SYNTAX 40.922`: the default of a stem is
+never the value of a tail that has none. A count below `0` is read as a
+number, and each function says what it does with it. An item that the
+function reads, and that has no value, because it was never assigned or was
+dropped, raises `SYNTAX 40.924`, and again the stem's default does not stand
+for it. A position or a number of items that is outside the array raises
+`SYNTAX 40.923`. An item can be any object, and a function that moves an
+item moves the object itself, so that the item is still the same object. A
+function that changes the count writes it as a plain whole number.
+
+```rexx
+call try "SysStemDelete('s.', 1)", "drop s.0"
+call try "SysStemDelete('s.', 1)", "s.0 = 'x'"
+call try "SysStemDelete('s.', 1)", "s.0 = 1.5"
+call try "SysStemDelete('s.', 1)", "s. = 'dflt'"
+call try "SysStemDelete('s.', 1)", "s. = 'dflt'; s.0 = 3"
+call try "SysStemDelete('s.', 1)", "drop s.2"
+call try "SysStemDelete('s.', 1)", "s.2 = .array~of(7)"
+call try "SysStemDelete('s.', 3)", "drop s.2"
+call try "SysStemDelete('s.', 4)"
+call try "SysStemDelete('s.', 1)", "s.0 = ' 3 '"
+call try "SysStemDelete('s.', 1)", "s.0 = '+3'"
+call try "SysStemDelete('s.', 1)", "s.0 = '3.0'"
+call try "SysStemDelete('s.', 1)", "s.0 = '3e0'"
+call try "SysStemDelete('s.', 1)", "s.0 = '03'"
+call try "SysStemDelete('s.', 1)", "s.0 = '1.000000000000000001'"
+call try "SysStemDelete('s.', 1)", "s.0 = '1.00000000000000001'"
+call try "SysStemDelete('s.', 1)", "s.0 = '1e18'"
+call try "SysStemDelete('s.', 1)", "s.0 = -1"
+call try "SysStemSort('s.')", "s.0 = '1.000000001'"
+call try "SysStemSort('s.')", "s.0 = '1.00000001'"
+call try "SysStemSort('s.')", "s.0 = -1"
+numeric digits 30
+call try "SysStemDelete('s.', 1)", "s.0 = '1.000000000000000001'"
+numeric digits 3
+call try "SysStemSort('s.')", "s.0 = '1.0001'"
+exit
+try:
+  s.0 = 3; s.1 = 'a'; s.2 = 'b'; s.3 = 'c'
+  interpret arg(2)
+  signal on syntax name e
+  interpret 'r = ' arg(1)
+  signal off syntax
+  say r show()
+  return
+e: say condition('o')~code show()
+  return
+show: procedure expose s.
+  out = ''
+  do i = 0 to 3
+    if symbol('s.' || i) == 'VAR' then out = out s.i
+    else out = out '-'
+  end
+  return '[' || strip(out) || ']'
+```
+
+```output
+40.922 [- a b c]
+40.922 [x a b c]
+40.922 [1.5 a b c]
+40.922 [dflt dflt dflt dflt]
+40.924 [3 dflt dflt dflt]
+40.924 [3 a - c]
+0 [2 7 c -]
+0 [2 a - -]
+40.923 [3 a b c]
+0 [2 b c -]
+0 [2 b c -]
+0 [2 b c -]
+0 [2 b c -]
+0 [2 b c -]
+0 [0 - b c]
+40.922 [1.00000000000000001 a b c]
+40.922 [1e18 a b c]
+40.922 [-1 a b c]
+0 [1.000000001 a b c]
+40.922 [1.00000001 a b c]
+40.922 [-1 a b c]
+0 [0 - b c]
+40.922 [1.0001 a b c]
+```
+
+```rexx
+o = .array~of(7)
+s.0 = 2; s.1 = 'a'; s.2 = o; s.01 = 'zero-one'
+call SysStemDelete 's.', 1
+say s.0 (s.1 == o) s.1~class~id s.01
+```
+
+```output
+1 1 Array zero-one
+```
+
 ## Answers
 
 r[util.index.codes]
@@ -432,8 +622,12 @@ follows: the number of arguments first, so that an argument past the last one
 raises `SYNTAX 88.922` before an omitted or wrong argument is reported
 ([Deviation 101](r:bif.index.call.native.deviation.101)).
 ooRexx reports an omitted argument, an object whose `request` answers no
-string, and a `mode` of SysMkDir that fails any of its checks before the
-count, and the count before a `filler` or an `option` that it does not allow.
+string, a stem name of SysStemCopy, SysStemDelete or SysStemInsert that
+fails its check (SysStemSort checks its stem after the count, as interrexx
+does), a whole-number argument of
+SysStemCopy, SysStemDelete, SysStemInsert or SysStemSort that fails its check,
+and a `mode` of SysMkDir that fails any of its checks before the count, and
+the count before a `filler` or an `option` that it does not allow.
 
 ```rexx
 signal on syntax name a
@@ -451,10 +645,22 @@ d: say condition('o')~code
 signal on syntax name f
 say SysTempFileName('c1zqidx?', .nil, 'y')
 f: say condition('o')~code
+signal on syntax name g
+say SysStemDelete('s.a', 1, 1, 1)
+g: say condition('o')~code
+signal on syntax name h
+say SysStemDelete('s.', 'x', 1, 1)
+h: say condition('o')~code
+signal on syntax name i
+say SysStemDelete('s.', 0, 1, 1)
+i: say condition('o')~code
 say SysIsFileDirectory('c1zqidxdm')
 ```
 
 ```output
+88.922
+88.922
+88.922
 88.922
 88.922
 88.922
