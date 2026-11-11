@@ -28,7 +28,7 @@ pub fn prefix_for(relative: &Path) -> Option<String> {
         "lexical" => "lex",
         "numbers" => "num",
         "directives" => "dir",
-        "rexxutil" => "util",
+        "rexxutil" => "ru",
         "environment" => "env",
         _ => return None,
     };
