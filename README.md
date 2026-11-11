@@ -36,3 +36,7 @@ describes the implementation.
 ## License
 
 MIT OR Apache-2.0. See `NOTICE` for the third-party code that built binaries contain.
+
+CI checks both sides of this. `scripts/check-licence-text.sh` fails when a tracked file names the
+ooRexx licence (`NOTICE` excepted until #47 lands), and `cargo deny check licenses`, run from
+`rust/`, fails when a dependency's licence is not one that `rust/deny.toml` allows.

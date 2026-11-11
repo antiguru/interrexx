@@ -1,0 +1,14 @@
+# cargo deny: only licences compatible with distributing interrexx under
+# MIT OR Apache-2.0 may appear in the dependency graph. Run from rust/:
+# `cargo deny check licenses`.
+
+[licenses]
+allow = [
+  "Apache-2.0",
+  "Apache-2.0 WITH LLVM-exception",
+  "ISC",
+  "MIT",
+  "Unicode-3.0",
+  "Unlicense",
+]
+confidence-threshold = 0.9
