@@ -356,7 +356,7 @@ say m~messageName
   return .array~of('count', .w)
 ```
 
-```output defect=#149
+```output
 duck request ARRAY
 made
 count got 1
