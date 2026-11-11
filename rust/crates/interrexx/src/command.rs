@@ -822,6 +822,9 @@ impl Interp {
         shared: Option<&Rc<IoContext>>,
     ) -> Result<Commanded, Failure> {
         let io = shared.map(|io| &**io);
+        if let Some(io) = io {
+            io.gather_input(self)?;
+        }
         // The command exit has the first pass (`RexxActivation::command`).
         if self.exits.is_some()
             && let Some(outcome) = self.command_exit(environment, command)?
