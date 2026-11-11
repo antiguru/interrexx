@@ -1212,10 +1212,10 @@ fn a_store_wakes_every_guard_when_waiter() {
 }
 
 /// A started send's failure whose notifier fails is replaced by the
-/// notifier's failure: the message is told of that one, both runs of the
-/// notifier fail and both are reported, the send's own failure never; the
-/// waiter the completion woke runs once the first notifier failure has
-/// unwound. Unswitched, the order the oracle shows.
+/// notifier's failure: the message is told of that one, the notifier runs
+/// once and its failure is reported, the send's own failure never
+/// (Deviation 116); the waiter the completion woke runs once the notifier
+/// failure has unwound.
 #[test]
 fn a_notifier_failing_in_a_started_activity_replaces_its_failure() {
     let outcome = run(
@@ -1227,18 +1227,15 @@ fn a_notifier_failing_in_a_started_activity_replaces_its_failure() {
                        return .nil~foo\n",
     );
     assert_eq!(outcome.exit_code, 0, "{}", stderr(&outcome));
-    assert_eq!(
-        stdout(&outcome),
-        "notifier sees 42.3\nmain 1 1 42.3\nnotifier sees 97.1\n"
-    );
+    assert_eq!(stdout(&outcome), "notifier sees 42.3\nmain 1 1 42.3\n");
     let reports = stderr(&outcome);
-    assert_eq!(reports.matches("Error 97.1:").count(), 2, "{reports}");
+    assert_eq!(reports.matches("Error 97.1:").count(), 1, "{reports}");
     assert!(!reports.contains("42.3"), "{reports}");
 }
 
 /// A started send's success notification that fails is the send's failure:
-/// the notifier runs again for it and once more for its own failure, the
-/// last two are reported, and the waiter reads the result between.
+/// the notifier is not run again for it (Deviation 116), its failure is
+/// reported once, and the waiter reads the result.
 #[test]
 fn a_notifier_failing_on_a_started_success_is_the_sends_failure() {
     let outcome = run(
@@ -1248,16 +1245,13 @@ fn a_notifier_failing_on_a_started_success_is_the_sends_failure() {
                        say 'in notifier'\n  return 1/0\n",
     );
     assert_eq!(outcome.exit_code, 0, "{}", stderr(&outcome));
-    assert_eq!(
-        stdout(&outcome),
-        "in notifier\nmain 3\nin notifier\nin notifier\n"
-    );
-    assert_eq!(stderr(&outcome).matches("Error 42.3:").count(), 2);
+    assert_eq!(stdout(&outcome), "in notifier\nmain 3\n");
+    assert_eq!(stderr(&outcome).matches("Error 42.3:").count(), 1);
 }
 
 /// Started sends whose notifiers all fail yield in turn, each one's end
 /// running on below the next one's round, which sets it aside: every
-/// notifier runs, twice, and the program ends as the oracle's does.
+/// notifier runs, once (Deviation 116), and the program ends.
 #[test]
 fn notifier_failures_in_several_started_activities_each_end_their_own() {
     let outcome = run(
@@ -1269,9 +1263,9 @@ fn notifier_failures_in_several_started_activities_each_end_their_own() {
     assert_eq!(outcome.exit_code, 0, "{}", stderr(&outcome));
     assert_eq!(
         stdout(&outcome),
-        format!("{}main end\n", "notified\n".repeat(9))
+        format!("{}main end\n", "notified\n".repeat(3))
     );
-    assert_eq!(stderr(&outcome).matches("Error 42.3:").count(), 6);
+    assert_eq!(stderr(&outcome).matches("Error 42.3:").count(), 3);
 }
 
 /// A notifier that fails in a started activity run inside main's pinned
@@ -1297,7 +1291,7 @@ fn a_notifier_failing_inside_a_pinned_notifier_wait_replaces_the_outcome() {
     assert_eq!(replaced.exit_code, 0, "{}", stderr(&replaced));
     assert_eq!(
         stdout(&replaced),
-        "notifier sees 42.3\nnotifier sees 97.1\nouter waited 1 97.1\nmain end\n"
+        "notifier sees 42.3\nouter waited 1 97.1\nmain end\n"
     );
     let raised = outer(
         "  m = .message~new('abc', 'length')\n  m~notify(.bad~new)\n  m~start\n  m~wait\n  \
@@ -1305,13 +1299,13 @@ fn a_notifier_failing_inside_a_pinned_notifier_wait_replaces_the_outcome() {
         "  say 'in notifier'\n  return 1/0\n",
     );
     assert_eq!(raised.exit_code, 214, "{}", stderr(&raised));
-    assert_eq!(stdout(&raised), "in notifier\nin notifier\nin notifier\n");
+    assert_eq!(stdout(&raised), "in notifier\n");
 }
 
 /// Notifier failures in more started activities than an interpreter stack
 /// of 33 MiB has room to nest the yields of: the yields stop nesting, so no
 /// Error 11 reaches main or another activity, and every notifier failure is
-/// reported, as the oracle reports each.
+/// reported.
 #[test]
 fn notifier_failures_too_many_to_nest_are_each_reported() {
     for (starts, waits) in [
@@ -1342,7 +1336,7 @@ fn notifier_failures_too_many_to_nest_are_each_reported() {
         assert_eq!(ran.outcome.exit_code, 0, "{starts}");
         assert_eq!(ran.stdout(), "done\n", "{starts}");
         assert!(!stderr.contains("Error 11"), "{starts}");
-        assert_eq!(stderr.matches("Error 42.3:").count(), 6000, "{starts}");
+        assert_eq!(stderr.matches("Error 42.3:").count(), 3000, "{starts}");
     }
 }
 

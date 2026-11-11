@@ -2083,7 +2083,7 @@ say 'failing target sent' b~count
   raise syntax 93.900 array('refused')
 ```
 
-```output defect=#158
+```output
 failing target sent 1
 ```
 
