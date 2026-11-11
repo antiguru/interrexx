@@ -201,7 +201,7 @@ drop (list)
 say symbol('i') symbol('b.1') symbol('b.2')
 ```
 
-```output defect=#99
+```output
 VAR LIT
 LIT VAR VAR
 ```
