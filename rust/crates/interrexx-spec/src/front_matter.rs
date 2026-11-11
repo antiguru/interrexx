@@ -17,6 +17,7 @@ pub enum Kind {
     Class,
     Method,
     Concept,
+    Function,
     Chapter,
 }
 
@@ -30,6 +31,7 @@ impl Kind {
             "class" => Kind::Class,
             "method" => Kind::Method,
             "concept" => Kind::Concept,
+            "function" => Kind::Function,
             "chapter" => Kind::Chapter,
             _ => return None,
         })

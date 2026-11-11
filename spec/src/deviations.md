@@ -296,8 +296,9 @@ continue the program.
 
 ## 43. Named RexxUtil semaphores are refused
 
-SysCreateEventSem and SysCreateMutexSem with a name, SysOpenEventSem and
-SysOpenMutexSem are refused; unnamed semaphores work. ooRexx shares named
+SysCreateEventSem and SysCreateMutexSem with a name, and SysOpenEventSem and
+SysOpenMutexSem with a name other than the null string, are refused; unnamed
+semaphores work. ooRexx shares named
 semaphores between processes.
 
 ## 44. MAX and MIN round whole numbers
@@ -678,14 +679,22 @@ because a transient stream has no position. ooRexx answers 1.
 
 ## 101. Argument checks of the native builtins
 
-DIRECTORY, FILESPEC, BEEP and the RexxUtil file functions, such as
-SysFileDelete, check their arguments in the order that every other builtin
-follows, the ANSI order: the count of arguments first, so that an argument
-past the last one raises `SYNTAX 88.922` before an omitted or wrong argument
-is reported. ooRexx reports an omitted argument, an object whose `request`
-with the argument `STRING` answers no string and an argument that is not a
-whole number before the count, and the count before an argument's value: an
-option it does not allow or a number out of range.
+DIRECTORY, FILESPEC, BEEP and the RexxUtil file and stem functions, such as
+SysFileDelete and SysStemSort, check their arguments in the order that every
+other builtin follows, the ANSI order: the count of arguments first, so that
+an argument past the last one raises `SYNTAX 88.922` before an omitted or
+wrong argument is reported. ooRexx reports an omitted argument, an object
+whose `request` with the argument `STRING` answers no string and an argument
+that is not a whole number before the count, and so does the substitutions
+argument of SysFormatMessage when it has no `MAKEARRAY` method. It also
+reports these before the count: the stem name of SysStemCopy, SysStemDelete
+and SysStemInsert when it fails its check, and a whole-number argument of
+SysStemCopy, SysStemDelete, SysStemInsert or SysStemSort that fails its check,
+a number out of range among them. It reports the count before an argument's
+value: an option it does not allow, or any other number out of range, except a
+negative semaphore handle, which it reports before the count. SysOpenEventSem
+and SysOpenMutexSem are the exception: in both engines they report an omitted
+name and an object that has no string value before the count.
 
 ## 102. LOSTDIGITS before the right operand's errors
 
@@ -1158,3 +1167,57 @@ SHA-256 digest of itself; interrexx issue #235), and an encoded
 image whose base64 text does not decode whole is refused with `3.905`, rc 253.
 ooRexx runs an image with bytes after its end and ignores some changed header
 bytes; it crashes on a truncated image and on other changed header bytes.
+
+## 154. An entry that SysFileTree cannot examine
+
+An entry of a directory that the program may read but not search is left out
+of the listing, and a symbolic link that points to nothing is listed as a
+file with the data of the link itself and the kind `l`. ooRexx lists both
+with the date, size and permissions that it left from another entry.
+
+## 155. SysFileCopy protects the target
+
+A `source` that is a directory answers `21` before `target` is opened, so
+`target` is neither made nor changed, and a `target` that is the same file as
+`source`, found by device and inode number through any name, hard link or
+symbolic link, answers `17` and changes nothing. ooRexx empties `target` in
+both cases, makes it when it is not there, and answers `0` for a hard link.
+interrexx does not do this yet: issue #234.
+
+## 156. SysSetPriority changes the priority of the process
+
+SysSetPriority changes the priority of the whole process, whichever activity
+calls it, so that every activity, running or started later, and every command
+started afterwards has the new niceness. ooRexx changes the priority of the
+system thread that runs the calling activity.
+
+## 157. SysWait with no child
+
+SysWait answers `-1` when the program has no child process to wait for. ooRexx
+answers a number that nothing set, which differs from run to run.
+
+## 158. A semaphore function with a handle that names no open semaphore
+
+A RexxUtil semaphore function called with a whole number that is not the
+handle of an open semaphore, such as the handle of a closed semaphore, a
+handle that arithmetic has rounded, a number that no call answered or the
+handle of an open semaphore of the other kind, answers `6` and changes no
+semaphore (interrexx accepts a handle of the other kind today: issue #247).
+ooRexx uses the number as an address and crashes for a closed handle, in every
+function but a second SysCloseEventSem or SysCloseMutexSem, which answers `6`,
+for a rounded one, as SysPostEventSem shows, and for a number that no call
+answered; SysRequestMutexSem with an event semaphore's handle hangs.
+
+## 159. A save onto a file that may not be written
+
+A save of the macrospace onto a file that is there and may not be written
+answers `5` and leaves the file as it was. ooRexx answers `5` too, and keeps
+or removes the file depending on the calls the program made earlier.
+
+## 161. SysSleep and whitespace after the sign
+
+SysSleep reads its delay as a Rexx number, so that whitespace (a blank or a
+tab) may follow the sign: `'+ 0.5'` pauses for at least half a second, and `'-
+1'` is a negative delay, which raises `SYNTAX 88.907`. ooRexx answers `0` at
+once for any delay with whitespace after its sign, without a pause and without
+the range check.
