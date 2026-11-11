@@ -3122,7 +3122,7 @@ impl Interp {
         let Failure::Raised(raised) = failure else {
             return;
         };
-        if raised.condition == "SYNTAX" && self.activation().entry != Entry::InternalCall {
+        if raised.condition == "SYNTAX" {
             self.activity.failure_propagated = true;
         }
         if self.activity.reraise_leaving > 0 {
