@@ -351,10 +351,10 @@ The answer is 0 when the file was read, whether or not a line was stored, and
 3 when the file could not be opened for reading: a name that no file has, the
 null string, a name that is a directory, a path through a file, or a file the
 program may not read. In that case `.0` is set to 0 and the stem is otherwise
-left as it was; an array object is left with no items. A name is read as
-every name is (rule `util.index.names`; Deviation 34, rule
-`util.index.deviation.34`, says where ooRexx removes a different component
-for a `..`). A name that starts with `~` is read as every name is (rule `util.index.home`).
+left as it was; an array object is left with no items. The file name is read
+as every name is (rules `util.index.names` and `util.index.home`; Deviation
+34, rule `util.index.deviation.34`, says where ooRexx removes a different
+component for a `..`).
 
 ```rexx
 d = 'c2zqfs05'
