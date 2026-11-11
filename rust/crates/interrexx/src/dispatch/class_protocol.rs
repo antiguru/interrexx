@@ -288,11 +288,10 @@ pub(super) fn method_source_lines(
             .map_or(0, |at| at + 1);
         let mut lines = Vec::with_capacity(last_item);
         for slot in &slots[..last_item] {
-            let item = slot.filter(|item| is_source_line(interp, *item));
-            let Some(item) = item else {
+            let Some(item) = *slot else {
                 return Err(Raised::method_source_not_all_strings(position).into());
             };
-            lines.push(interp.to_text(item).to_vec());
+            lines.push(array_item_line(interp, item, position, taker)?);
         }
         return Ok(lines);
     }
@@ -315,6 +314,32 @@ pub(super) fn method_source_lines(
         SourceTaker::Package => Raised::argument_not_single_dimensional(position),
     }
     .into())
+}
+
+/// The line one item of a source array gives: a string is its own line, and
+/// any other item is sent `REQUEST('STRING')`, whose answer is the line when
+/// it is a string -- a `MutableBuffer` and an instance with a `MAKESTRING`
+/// answer one. An item that gives no string, `.nil` among them, is the
+/// 93.952 a hole is.
+fn array_item_line(
+    interp: &mut Interp,
+    item: ObjRef,
+    position: &'static str,
+    taker: SourceTaker,
+) -> Result<Vec<u8>, Failure> {
+    if is_source_line(interp, item) {
+        return Ok(interp.to_text(item).to_vec());
+    }
+    if item != ObjRef::NIL && !matches!(taker, SourceTaker::Package) {
+        let wanted = interp.text(b"STRING");
+        interp.roots.activity_mut().push_temp(wanted);
+        let caller = interp.caller();
+        let answered = interp.send_message(item, b"REQUEST", None, &[Some(wanted)], caller)?;
+        if let Some(line) = answered.filter(|line| is_source_line(interp, *line)) {
+            return Ok(interp.to_text(line).to_vec());
+        }
+    }
+    Err(Raised::method_source_not_all_strings(position).into())
 }
 
 /// Whether one value is a source line -- the C++'s `isString(source)` for

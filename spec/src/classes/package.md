@@ -299,7 +299,7 @@ bad: say arg(1) '=>' condition('o')~code
 ::class ss subclass string
 ```
 
-```output defect=#142
+```output
 .package~new("n", .array~of("nop", .mk~new))~source[2] => return 1
 .package~new("n", .array~of(.ss~new("nop")))~source[1] => nop
 .package~new("n", .array~of(.mutablebuffer~new("nop")))~source[1] => nop
