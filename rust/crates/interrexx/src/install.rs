@@ -1390,8 +1390,8 @@ impl Interp {
         // `record_package_class` for why the registry's flat table is not
         // that. **Entered only once the class's creation, `INIT` included,
         // is complete**, so inside its own `INIT` the symbol is still its
-        // own text (`ClassDirective::install` calls `addInstalledClass` after
-        // `subclass` returns), as the classes declared later are.
+        // own text, as the classes declared later are (the spec's
+        // installation rule; the oracle agrees).
         // `ClassDirective::install` passes the directive's own `isPublic()`
         // to `addInstalledClass` (`instructions/ClassDirective.cpp:209`),
         // which files a public class in both of the package's tables and
