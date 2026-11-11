@@ -380,7 +380,9 @@ pub(super) fn delete_file(
 }
 
 /// `file_delete_directory`: the directory itself, never its contents --
-/// measured, a non-empty one answers `0`.
+/// measured, a non-empty one answers `0`. The Rexx half sends this when the
+/// receiver's `isDirectory` answers true, which a subclass may do for a plain
+/// file, and then anything that is not a directory is removed as a file is.
 pub(super) fn delete_directory(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -388,7 +390,12 @@ pub(super) fn delete_directory(
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
     let path = path_argument(interp, args)?;
-    let gone = std::fs::remove_dir(&path).is_ok();
+    let is_directory = std::fs::symlink_metadata(&path).is_ok_and(|meta| meta.is_dir());
+    let gone = if is_directory {
+        std::fs::remove_dir(&path).is_ok()
+    } else {
+        std::fs::remove_file(&path).is_ok()
+    };
     flag(interp, gone)
 }
 

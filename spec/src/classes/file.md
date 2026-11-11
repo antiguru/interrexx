@@ -766,7 +766,7 @@ junk = .file~new(d)~delete
   return 1
 ```
 
-```output defect=#179
+```output
 0 1
 1 0
 ```
