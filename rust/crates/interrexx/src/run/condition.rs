@@ -680,12 +680,15 @@ impl Interp {
             unreachable!("matched Failure::Raised immediately above")
         };
         // Removed when it fires (`Activation::traps`' own doc comment has
-        // the two probes). Removed by the condition's *own* name and by
-        // `ANY`, since `trap_for` may have matched either and leaving the
-        // one that matched enabled would re-trap.
+        // the two probes). Only the entry that matched goes: the condition's
+        // own entry when there is one (`trap_for` prefers it), else `ANY`.
+        // Each trap keeps its own state, so a specific trap that fires leaves
+        // `ANY` on to answer a later condition.
         let traps = &mut self.activation_mut().traps;
-        traps.remove(raised.condition.as_bytes());
-        traps.remove(b"ANY".as_slice());
+        match traps.get(raised.condition.as_bytes()) {
+            Some(_) => traps.remove(raised.condition.as_bytes()),
+            None => traps.remove(b"ANY".as_slice()),
+        };
         // **Inherited item I11, and the reason it is this task's.** Both
         // halves of the echo stack are dropped: a trapped condition prints
         // no report at all, so the sites it accumulated must not survive to
