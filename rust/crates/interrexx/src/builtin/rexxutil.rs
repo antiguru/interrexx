@@ -294,6 +294,7 @@ pub(crate) fn create_event_sem(
     if args.len() > 2 {
         return Err(Raised::too_many_internal_arguments(2).into());
     }
+    optional_text(interp, args, 2)?;
     if let Some(Some(value)) = args.first().copied() {
         return refuse_name(interp, name, value);
     }
