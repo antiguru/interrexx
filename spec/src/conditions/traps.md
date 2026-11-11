@@ -386,7 +386,7 @@ exit
   say 'in h' sigl
 ```
 
-```output defect=#111
+```output
 before SIGL
 in h SIGL
 after SIGL
@@ -400,7 +400,7 @@ say 'before' sigl
 say 'after' sigl
 ```
 
-```output defect=#111
+```output
 before SIGL
 after SIGL
 ```
