@@ -363,8 +363,8 @@ pub(crate) struct TraceRequest {
 
 /// [`TraceRequest`] for one setting, or the byte that is not a letter.
 pub(crate) fn parse_trace_request(bytes: &[u8]) -> Result<TraceRequest, u8> {
-    let toggles = bytes.iter().filter(|byte| **byte == b'?').count();
-    let letter = bytes.iter().find(|byte| **byte != b'?');
+    let toggles = bytes.iter().take_while(|byte| **byte == b'?').count();
+    let letter = bytes.get(toggles);
     let setting = match letter {
         None => None,
         Some(byte) => Some(mode_of_letter(*byte)?),
@@ -408,7 +408,7 @@ pub(crate) fn applied(current: TraceMode, request: &TraceRequest) -> TraceMode {
 /// empty string is `setTraceNormal`'s silent answer, and one made only of
 /// `?`s keeps the older reading of `OFF` for the letter.
 pub(crate) fn mode_from_setting(bytes: &[u8]) -> Result<TraceMode, u8> {
-    let toggles = bytes.iter().filter(|byte| **byte == b'?').count();
+    let toggles = bytes.iter().take_while(|byte| **byte == b'?').count();
     let answer = |mode: TraceMode| {
         Ok(TraceMode {
             debug: toggles % 2 == 1,

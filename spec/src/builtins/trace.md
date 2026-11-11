@@ -101,7 +101,7 @@ say trace('N?') trace('a?') trace('?N?') trace()
 say trace('N??') trace('??N?') trace()
 ```
 
-```output defect=#80
+```output
 N N A ?N
 ?N N N
 ```
