@@ -19,8 +19,8 @@ modification.
 ## Arguments
 
 r[util.sysgetfiledatetime.args]
-`filename` is required and `timesel` is optional. The call follows the
-argument rule (rule `util.index.args`): a missing `filename` raises `SYNTAX
+`filename` is required and `timesel` is optional. The call follows
+[the argument rule](r:util.index.args): a missing `filename` raises `SYNTAX
 88.901`, a third argument raises `SYNTAX 88.922`, and an argument that is an
 object other than a string is read by its string value, or raises `SYNTAX
 88.909` when it has none. A `timesel` whose place is empty, as in
@@ -70,9 +70,10 @@ The answer for a file or directory that exists is its time in the form
 digits and every other field in two; how a year below 1000 is written is not
 specified. The file may be a regular file, a directory or any other kind of
 entry; a symbolic link is followed, so the answer is the time of its target. A
-name is read as every name is (rule `util.index.names`; Deviation 34, rule
-`util.index.deviation.34`, says where ooRexx removes a different component for
-a `..`), and a name that starts with `~` as rule `util.index.home` says.
+name is read as [every name is](r:util.index.names) ([Deviation
+34](r:util.index.deviation.34) says where ooRexx removes a different component
+for a `..`), and a name that starts with `~` as
+[the home rule](r:util.index.home) says.
 
 ```rexx
 d = 'c2zqgt01'
@@ -157,9 +158,9 @@ sysgetfiledatetime(f, 'wX') -> 2031-03-07 14:05:09
 r[util.sysgetfiledatetime.fail]
 The answer is -1 when `filename` names nothing: a name that no file has, a
 path through a file, a path through a directory the program may not search,
-the null string, and a name with wildcards, which no function expands (rule
-`util.index.names`). Blanks at the start or the end of `filename` are part of
-the name. No error is raised.
+the null string, and a name with wildcards, which no function expands ([the
+name rule](r:util.index.names)). Blanks at the start or the end of `filename`
+are part of the name. No error is raised.
 
 ```rexx
 d = 'c2zqgt04'

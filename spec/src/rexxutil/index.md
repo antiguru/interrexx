@@ -186,9 +186,10 @@ slashes is one slash, a component that is a single period is dropped, a slash
 at the end is dropped, and a component of two periods is dropped together with
 the component before it, so that the name `c1zqidxd/../c1zqidxn` is the name
 `c1zqidxn` even when `c1zqidxd` does not exist. The characters `*` and `?` are
-characters of the name: no function expands a pattern, so a name that holds
-one names a file that has them or no file. A name of the null string names
-nothing.
+characters of the name: no function except SysFileTree expands a pattern, so
+a name that holds one names a file that has them or no file. A name of the
+null string names nothing. SysFileTree has exceptions to this rule, which
+[its rule for the `filespec`](r:util.sysfiletree.spec) states.
 
 ```rexx
 call lineout 'c1zqidxn', 'x'
@@ -198,6 +199,11 @@ say SysIsFile('./c1zqidxn') SysIsFile('c1zqidxd/../c1zqidxn')
 say SysIsFile('c1zqidxn/') SysIsFile('c1zqidxnone/../c1zqidxn')
 say SysIsFile('c1zqidxd/./../c1zqidxn') SysFileExists('./')
 say SysFileExists('c1zqidx*') SysFileExists('c1zqidxn?') SysFileExists('')
+say SysFileTree('c1zqidx?', 's.', 'FO') s.0 SysGetFileDateTime('c1zqidx?') SysFileTree('c1zqidxd/', 's.') s.0
+signal on syntax name e
+say SysFileTree('', 's.')
+e: say condition('o')~code
+signal off syntax
 call SysFileDelete 'c1zqidx*'
 say SysFileExists('c1zqidxn') SysIsFileDirectory('c1zqidxd')
 call SysFileDelete 'c1zqidxn'
@@ -209,6 +215,8 @@ call SysRmDir 'c1zqidxd'
 1 1
 1 1
 0 0 0
+0 1 -1 0 0
+40.21
 1 1
 ```
 
@@ -221,7 +229,9 @@ or is `~` alone, names an entry. A name that starts with `~` and a user's
 name, up to the first slash or the end, stands for the home directory of that
 user, as [it does for DIRECTORY](r:bif.directory.user); when there is no such
 user, no file has that name, and the name is never read as the name of a file
-of the current directory, which `./~name` reaches.
+of the current directory, which `./~name` reaches. SysFileTree has exceptions
+to this rule, which [its rule for the `filespec`](r:util.sysfiletree.spec.dir)
+states.
 
 ```rexx
 here = directory()
@@ -239,6 +249,9 @@ say SysIsFileDirectory('~') SysIsFileDirectory('~/')
 call value 'HOME', 'c1zqidxh', 'ENVIRONMENT'
 say SysIsFile('~/f') SysIsFileDirectory('~')
 call value 'HOME', old, 'ENVIRONMENT'
+call SysMkDir './~c1zqidxv'
+say SysFileTree('~c1zqidxv', 's.', 'DO') s.0 SysIsFileDirectory('~c1zqidxv')
+call SysRmDir './~c1zqidxv'
 call SysFileDelete './~c1zqidxu'
 call SysFileDelete 'c1zqidxh/f'
 call SysRmDir 'c1zqidxh'
@@ -250,6 +263,7 @@ call SysRmDir 'c1zqidxh'
 0 1
 0 1
 0 0
+0 1 0
 ```
 
 r[util.index.options]

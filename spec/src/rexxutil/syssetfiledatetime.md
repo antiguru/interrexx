@@ -20,7 +20,7 @@ answers 0, or -1 when it did not set the time.
 
 r[util.syssetfiledatetime.args]
 `filename` is required; `newdate` and `newtime` are optional. The call follows
-the argument rule (rule `util.index.args`): a missing `filename` raises
+[the argument rule](r:util.index.args): a missing `filename` raises
 `SYNTAX 88.901`, a fourth argument raises `SYNTAX 88.922`, and an argument
 that is an object other than a string is read by its string value, or raises
 `SYNTAX 88.909` when it has none.
@@ -70,10 +70,10 @@ answers 0. An omitted `newdate` leaves the date of the present modification
 time, and an omitted `newtime` leaves its time of day; an argument whose place
 is empty is omitted. The time of the last access is not changed. `filename`
 may be a directory, and a symbolic link is followed, so that the time of its
-target is set. A name is read as every name is (rule `util.index.names`;
-Deviation 34, rule `util.index.deviation.34`, says where ooRexx removes a
-different component for a `..`), and a name that starts with `~` as rule
-`util.index.home` says.
+target is set. A name is read as [every name is](r:util.index.names)
+([Deviation 34](r:util.index.deviation.34) says where ooRexx removes a
+different component for a `..`), and a name that starts with `~` as
+[the home rule](r:util.index.home) says.
 
 ```rexx
 d = 'c2zqst01'
@@ -309,10 +309,10 @@ The answer is -1, and nothing is created or changed, when `filename` names
 nothing, when the file's time may not be set, or when the date or time is not
 of the form above. `filename` names nothing when no file has that name, when a
 path goes through a file or a directory the program may not search, when it is
-the null string, and when it has wildcards, which no function expands (rule
-`util.index.names`). A file the program owns can be changed whether or not it
-may be written. A `newdate` and `newtime` that are omitted do not make a
-missing file exist.
+the null string, and when it has wildcards, which no function expands ([the
+name rule](r:util.index.names)). A file the program owns can be changed
+whether or not it may be written. A `newdate` and `newtime` that are omitted
+do not make a missing file exist.
 
 ```rexx
 d = 'c2zqst04'

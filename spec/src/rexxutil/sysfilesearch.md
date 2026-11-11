@@ -18,7 +18,7 @@ asked. It answers 0, or 3 when the file cannot be read.
 
 r[util.sysfilesearch.args]
 `target`, `file` and `stem` are required, and `options` is optional. The call
-follows the argument rule (rule `util.index.args`): a missing required
+follows [the argument rule](r:util.index.args): a missing required
 argument raises `SYNTAX 88.901`, a fifth argument raises `SYNTAX 88.922`, and
 an argument that is an object other than a string is read by its string value,
 or raises `SYNTAX 88.909` when it has none. `stem` is the exception to the
@@ -180,11 +180,12 @@ no wildcards, and blanks in `target` count. The search ignores case unless the
 option `C` is given. The letters `C` and `I` select a case-sensitive and a
 case-insensitive search and, when both are given, the last decides; `N` stores
 each line as its number in the file, one blank and the line. The letters may
-come in any order and in either case (rule `util.index.options`), and a
-repeated one does no harm. The number is written without padding, and the
-lines of the file are counted from 1, empty ones included, so the numbers of
-the stored lines need not be consecutive. A `target` that is the null string,
-or that contains a line feed, matches no line.
+come in any order and in either case ([the option
+rule](r:util.index.options)), and a repeated one does no harm. The number is
+written without padding, and the lines of the file are counted from 1, empty
+ones included, so the numbers of the stored lines need not be consecutive. A
+`target` that is the null string, or that contains a line feed, matches no
+line.
 
 ```rexx
 d = 'c2zqfs02'
@@ -352,8 +353,9 @@ The answer is 0 when the file was read, whether or not a line was stored, and
 null string, a name that is a directory, a path through a file, or a file the
 program may not read. In that case `.0` is set to 0 and the stem is otherwise
 left as it was; an array object is left with no items. The file name is read
-as every name is (rules `util.index.names` and `util.index.home`; Deviation
-34, rule `util.index.deviation.34`, says where ooRexx removes a different
+as [every name is](r:util.index.names) and as
+[the home rule](r:util.index.home) says ([Deviation
+34](r:util.index.deviation.34) says where ooRexx removes a different
 component for a `..`).
 
 ```rexx

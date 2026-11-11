@@ -24,7 +24,7 @@ for the sake of other systems and have no effect here.
 
 r[util.sysfiletree.args]
 `filespec` and `stem` are required; `options`, `tattrib` and `nattrib` are
-optional. The call follows the argument rule (rule `util.index.args`): a
+optional. The call follows [the argument rule](r:util.index.args): a
 required argument that is missing raises `SYNTAX 88.901`, a sixth argument
 raises `SYNTAX 88.922`, and an argument that is an object other than a string
 is read by its string value, or raises `SYNTAX 88.909` when it has none. The
@@ -122,16 +122,16 @@ return
 
 r[util.sysfiletree.stem]
 When the call returns, the stem holds the number of matches in `.0` and the
-matches in `.1` to `.n` (as every function that fills a stem does; rule
-`util.index.stems`). No other tail is assigned or dropped: a call that finds
-nothing sets `.0` to 0 and leaves the entries of an earlier call in place, and
-a call that finds fewer matches than an earlier one leaves its surplus
-entries. The `stem` argument names a stem variable, with or without the final
-period and in any letter case (as for every stem argument; rule
-`util.index.stems`), and an argument that is a stem object is filled in the
-same way. An argument that is an array object is filled differently: it holds
-the matches at the indexes 1 to n and no item at any other index. The order of
-the matches is not specified.
+matches in `.1` to `.n` (as every function that fills a stem does; [the stem
+rule](r:util.index.stems)). No other tail is assigned or dropped: a call that
+finds nothing sets `.0` to 0 and leaves the entries of an earlier call in
+place, and a call that finds fewer matches than an earlier one leaves its
+surplus entries. The `stem` argument names a stem variable, with or without
+the final period and in any letter case (as for every stem argument; [the stem
+rule](r:util.index.stems)), and an argument that is a stem object is filled in
+the same way. An argument that is an array object is filled differently: it
+holds the matches at the indexes 1 to n and no item at any other index. The
+order of the matches is not specified.
 
 ```rexx
 d = 'c2zqft02'
@@ -383,8 +383,8 @@ not search, or a directory that the program may not read whose entries are
 needed (the one the last component is matched in, or the one a `filespec`
 ending in a slash names), matches nothing and is not an error; the unreadable
 directory itself is still matched by its own name. A relative path is read as
-every name is (rule `util.index.names`). A `filespec` that starts with `~` is
-read as every name is (rule `util.index.home`), with these exceptions. A
+[every name is](r:util.index.names). A `filespec` that starts with `~` is
+read as [the home rule](r:util.index.home) says, with these exceptions. A
 `filespec` that is `~name` alone, where no user has that name, is a pattern
 for the entries of the current directory, so it matches a directory `~name`
 there. A `filespec` that starts with `~name/`, where no user has that name,
@@ -393,8 +393,8 @@ when more follow. A `HOME` that does not start with a slash is taken from the
 current directory, as any relative name is. Each name stored
 is the full name of the match, formed as [QUALIFY](r:bif.qualify.normal) forms
 a name: made absolute, with the repeated slashes, the periods and the `..`
-components of the path taken out (Deviation 34, rule
-`util.index.deviation.34`, says where ooRexx takes out a different component).
+components of the path taken out ([Deviation 34](r:util.index.deviation.34)
+says where ooRexx takes out a different component).
 Symbolic links in the path are not replaced.
 
 ```rexx
@@ -541,14 +541,15 @@ B dir dlink file flink pipe
 ## Options
 
 r[util.sysfiletree.options]
-`options` is a string of letters, read in either case (rule
-`util.index.options`), with no blanks. `B` selects files and directories, `D`
-directories only and `F` files only; when more than one of them is given, the
-last decides, and when none is given, `B` applies. `S`, `I`, `O`, `L`, `T` and
-`H` change what is searched, how names are compared and how a match is
-written, and are described below; a letter may be repeated and the letters may
-come in any order. Omitting `options`, or leaving its place empty, is the same
-as `B`. `options` that is the null string raises `SYNTAX 40.21`.
+`options` is a string of letters, read in either case ([the option
+rule](r:util.index.options)), with no blanks. `B` selects files and
+directories, `D` directories only and `F` files only; when more than one of
+them is given, the last decides, and when none is given, `B` applies. `S`,
+`I`, `O`, `L`, `T` and `H` change what is searched, how names are compared and
+how a match is written, and are described below; a letter may be repeated and
+the letters may come in any order. Omitting `options`, or leaving its place
+empty, is the same as `B`. `options` that is the null string raises `SYNTAX
+40.21`.
 
 ```rexx
 d = 'c2zqft07'
