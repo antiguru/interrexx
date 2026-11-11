@@ -326,7 +326,7 @@ end
   return 'same'
 ```
 
-```output defect=#168
+```output
 removeAll 0 hash s1
 allAt 2 hash s1
 supplier 2 hash s1

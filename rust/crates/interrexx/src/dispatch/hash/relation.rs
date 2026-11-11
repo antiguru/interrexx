@@ -3,7 +3,7 @@
 
 use super::{
     Arity, Cleared, Failure, Interp, Keys, NativeMethod, ObjRef, keys_of, native_hash_supplier,
-    not_this_task, owns, pairs, same_index, slot_at, store_of, take, walk,
+    not_this_task, owns, pairs, same_index, slot_at, store_of, walk,
 };
 
 /// Every matching slot in chain order, paired with the store it belongs to.
@@ -12,6 +12,16 @@ fn slots_for(
     receiver: ObjRef,
     index: ObjRef,
 ) -> Result<(super::Store, Vec<usize>), Failure> {
+    let (store, _, found) = slots_in_bucket(interp, receiver, index)?;
+    Ok((store, found))
+}
+
+/// [`slots_for`], also answering the bucket the index hashes to.
+fn slots_in_bucket(
+    interp: &mut Interp,
+    receiver: ObjRef,
+    index: ObjRef,
+) -> Result<(super::Store, usize, Vec<usize>), Failure> {
     let keys = keys_of(interp, receiver);
     let hash = super::hash_of(interp, keys, index)?;
     'search: loop {
@@ -53,7 +63,7 @@ fn slots_for(
                 found.push(slot);
             }
         }
-        return Ok((store, found));
+        return Ok((store, bucket, found));
     }
 }
 
@@ -184,11 +194,18 @@ fn native_relation_remove_all(
     // `at()` and `remove()` report `Missing argument; argument index is
     // required.`
     let index = super::collection::item_argument(args)?;
+    // One lookup, one `hashCode`. Entries are taken last first: taking the
+    // bucket's own slot copies its successor into it, which would move a
+    // later matching entry out from under its saved slot.
+    let (store, bucket, slots) = slots_in_bucket(interp, receiver, index)?;
     let mut removed = Vec::new();
-    while let Some(item) = take(interp, receiver, index)? {
-        interp.roots.activity_mut().push_temp(item);
-        removed.push(item);
+    for slot in slots.into_iter().rev() {
+        if let Some(item) = super::take_at(interp, receiver, &store, slot, bucket)? {
+            interp.roots.activity_mut().push_temp(item);
+            removed.push(item);
+        }
     }
+    removed.reverse();
     Ok(Some(super::collection::array_of(interp, removed)))
 }
 

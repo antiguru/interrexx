@@ -687,7 +687,7 @@ bad: say arg(1) '=>' condition('o')~code
   return 'same'
 ```
 
-```output defect=#168
+```output
 a,a,b Array 1 0
 0 Array 1
 r~removeAll => 93.903
