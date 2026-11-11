@@ -22,9 +22,15 @@ impl Interp {
         if let Some(entry) = self.classic_functions.get(&upper) {
             return Some(*entry);
         }
-        let entry = capi::resolve(Registry::Function, &upper, &self.library_search, false)
-            .ok()
-            .flatten()?;
+        let entry = capi::resolve(
+            Registry::Function,
+            &upper,
+            &self.library_search,
+            &self.cwd,
+            false,
+        )
+        .ok()
+        .flatten()?;
         self.classic_functions.insert(upper, entry);
         Some(entry)
     }
@@ -32,7 +38,13 @@ impl Interp {
     /// Resolves `name` as `RxFuncAdd` does once it has registered it, starting a service if
     /// needed, and keeps the handler. Whether it resolved.
     pub(crate) fn resolve_classic_function(&mut self, upper: &[u8]) -> bool {
-        match capi::resolve(Registry::Function, upper, &self.library_search, true) {
+        match capi::resolve(
+            Registry::Function,
+            upper,
+            &self.library_search,
+            &self.cwd,
+            true,
+        ) {
             Ok(Some(entry)) => {
                 self.classic_functions.insert(upper.to_vec(), entry);
                 true
@@ -95,9 +107,15 @@ impl Interp {
             .get(&upper)
             .cloned()
             .unwrap_or_else(|| environment.to_vec());
-        let entry = capi::resolve(Registry::Subcom, &registered, &self.library_search, false)
-            .ok()
-            .flatten()?;
+        let entry = capi::resolve(
+            Registry::Subcom,
+            &registered,
+            &self.library_search,
+            &self.cwd,
+            false,
+        )
+        .ok()
+        .flatten()?;
         self.classic_subcoms.insert(upper, entry);
         Some(entry)
     }

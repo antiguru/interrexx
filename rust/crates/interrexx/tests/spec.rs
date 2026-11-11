@@ -595,6 +595,21 @@ fn environment_with_tools() -> Vec<(Vec<u8>, Vec<u8>)> {
         let joined = std::env::join_paths(dirs).expect("joining PATH");
         environment.push((b"PATH".to_vec(), joined.as_bytes().to_vec()));
     }
+    // The oracle's library directory is on `LD_LIBRARY_PATH` of an oracle run, so an example that
+    // looks for a native library there finds it on this side too.
+    let oracle_lib = Path::new(env!("REXX_ORACLE_ROOT")).join("lib");
+    let mut loader_path = vec![oracle_lib];
+    if let Some(inherited) = std::env::var_os("LD_LIBRARY_PATH") {
+        loader_path.extend(std::env::split_paths(&inherited));
+    }
+    environment.retain(|(name, _)| name != b"LD_LIBRARY_PATH");
+    environment.push((
+        b"LD_LIBRARY_PATH".to_vec(),
+        std::env::join_paths(loader_path)
+            .expect("joining LD_LIBRARY_PATH")
+            .as_bytes()
+            .to_vec(),
+    ));
     environment.retain(|(name, _)| name != b"REXX_API_DIR");
     environment.push((
         b"REXX_API_DIR".to_vec(),

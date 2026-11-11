@@ -1595,3 +1595,34 @@ rc> 0
 out> main N
 out> external N
 out> method N
+
+# A native library named by a program is looked for in the current directory,
+# on the loader path and nowhere else near the program.
+# spec: env.search.library
+run cwd=libcwd
+../loadlib
+zqcwdlib1
+----
+rc> 0
+out> 1
+
+run ldpath=libldp
+loadlib
+zqldplib1
+----
+rc> 0
+out> 1
+
+run
+loadlib
+zqcwdlib1
+----
+rc> 0
+out> 0
+
+run cwd=libcwd
+../libbeside/loadlib
+zqbesidelib1
+----
+rc> 0
+out> 0

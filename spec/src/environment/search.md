@@ -852,7 +852,7 @@ end
 call sysrmdir 'a3zqlcd'
 ```
 
-```output defect=#214
+```output
 libzq1 1
 zq2.so 1
 zq.c3 1
