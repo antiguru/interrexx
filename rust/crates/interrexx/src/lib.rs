@@ -1239,6 +1239,13 @@ struct Interp {
     /// edition, and the test harnesses run interpreters on threads in one
     /// process, so a write reaching the process would reach every other run.
     env: Vec<(Vec<u8>, Vec<u8>)>,
+    /// The clock reading `DATE` and `TIME` last took, and how many seconds the
+    /// program's time zone was ahead of UTC then: the zone is read with the
+    /// clock, so a `TZ` set later in the same clause does not move it.
+    clock_zone: (i64, i32),
+    /// The `TZ` value the program's zone was last parsed from, and that zone,
+    /// so `DATE` and `TIME` parse it again only when `TZ` changes.
+    zone_cache: Option<(Option<Vec<u8>>, tz::TimeZone)>,
     /// The directories `LD_LIBRARY_PATH` named in the environment this
     /// interpreter was started with, which a bare library name is looked for
     /// in before the undecorated `dlopen`.
@@ -2273,6 +2280,8 @@ impl Interp {
             library_search: library_search_of(&env),
             external_trace: external_trace_of(&env),
             env,
+            clock_zone: (0, 0),
+            zone_cache: None,
             cwd: std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("/")),
             programs: plan::Programs::default(),
             option_writes: crate::options::OptionWrites::default(),
@@ -3528,6 +3537,8 @@ impl Interp {
             // own environment, current directory and `SETLOCAL` snapshots are
             // not the collector's.
             env: _,
+            clock_zone: _,
+            zone_cache: _,
             library_search: _,
             external_trace: _,
             cwd: _,
