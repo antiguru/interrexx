@@ -382,16 +382,20 @@ pub(crate) fn post_event_sem(
     Ok(answer(interp, code))
 }
 
-/// `SysResetEventSem(handle)`: the value back to zero, answering `0` whatever
-/// the handle.
+/// `SysResetEventSem(handle)`: the value back to zero; `6` for a handle that
+/// names no open semaphore.
 pub(crate) fn reset_event_sem(
     interp: &mut Interp,
     _name: &'static [u8],
     args: &[Option<ObjRef>],
 ) -> Result<ObjRef, Failure> {
     let handle = only_handle(interp, args)?;
-    interp.reset_counting(handle);
-    Ok(answer(interp, 0))
+    let code = if interp.reset_counting(handle) {
+        0
+    } else {
+        INVALID_HANDLE
+    };
+    Ok(answer(interp, code))
 }
 
 /// `SysReleaseMutexSem(handle)`: a post only where the value is zero, so it

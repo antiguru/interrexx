@@ -130,7 +130,8 @@ call SysCloseEventSem h
 
 r[util.syseventsem.reset]
 SysResetEventSem discards every post that the semaphore holds and answers `0`,
-whether it held posts or not. A wait that follows it finds none.
+whether it held posts or not; for a handle that names no open semaphore it
+answers `6` ([Deviation 158](r:util.syseventsem.deviation.158)). A wait that follows it finds none.
 
 ```rexx
 h = SysCreateEventSem()
@@ -523,8 +524,8 @@ calls but SysCloseEventSem, which answers `6`), for a rounded one, as
 SysPostEventSem shows, and for a number that no call answered;
 SysRequestMutexSem with an event semaphore's handle hangs. The first example
 is a rounded handle and a closed one, the second a number that no call
-answered. SysResetEventSem answers `0` in interrexx for such a handle, where
-it should answer `6` like the others, as the third example shows. The handle
+answered. SysResetEventSem answers `6` for such a handle like the others, as
+the third example shows. The handle
 of an open semaphore of the other kind, a mutex semaphore's handle given to an
 event function or an event semaphore's handle given to a mutex function, is
 such a number too: the call answers `6` and changes neither semaphore.
@@ -557,7 +558,7 @@ call SysCloseEventSem h
 say SysResetEventSem(h)
 ```
 
-```output defect=#236
+```output
 6
 ```
 
