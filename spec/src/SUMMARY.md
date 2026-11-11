@@ -156,6 +156,7 @@
   - [Debugging](environment/debugging.md)
 - [Concurrency](concurrency/index.md)
   - [Activities](concurrency/activities.md)
+  - [Locks](concurrency/locks.md)
 - [Built-in functions](builtins/index.md)
   - [ABBREV](builtins/abbrev.md)
   - [ABS](builtins/abs.md)

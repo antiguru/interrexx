@@ -73,15 +73,16 @@ LIT
 ```
 
 r[instr.reply.guard]
-A method that holds its object's guard when it replies keeps it on the new
+A method that holds the guard of its scope when it replies keeps it on the new
 activity, when its call is the only one on its activity that holds the guard
-of the object. The continuation then has exclusive use of the object
-variables, and a guarded method that another activity sends to the object
-waits until the continuation has ended, as [the exclusion
+of that scope. The continuation then has exclusive use of the object variables
+of the scope, and a guarded method of the scope that another activity sends to
+the object waits until the continuation has ended, as [the exclusion
 rule](r:instr.guard.exclusion) of GUARD says. When a guarded method of the
-same object has called the replying method on that activity, it still holds
-the guard after the reply, and the continuation takes the guard again before
-its first clause runs, which waits until that method has given it up.
+same scope of that object has called the replying method on that activity, it
+still holds the guard of the scope after the reply, and the continuation
+takes the guard again before its first clause runs, which waits until that
+method has given it up.
 
 ```rexx
 log = .array~new

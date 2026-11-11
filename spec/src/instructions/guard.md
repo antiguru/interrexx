@@ -24,15 +24,17 @@ depend on it.
 ## Exclusion
 
 r[instr.guard.exclusion]
-While an activity runs a method of an object with the guard held, no other
-activity runs a method of that object that also holds the guard. A method that
+While an activity runs a method of an object with the guard of the method's
+scope held, no other activity runs a method of the same scope of that object
+that also holds it ([the lock of a scope](r:conc.locks.scope)). A method that
 is guarded starts with the guard held and keeps it until it ends or gives it
 up, and a method that is unguarded starts without it. GUARD ON takes the guard
 for the rest of the method, waiting until the activity that holds it has
 released it. GUARD OFF gives it up for the rest of the method, or until the
 next GUARD ON. An unguarded method can read and write the object variables
 without it, so it can be called while another activity holds the guard.
-Whether repeated GUARD ON or GUARD OFF instructions count is not specified.
+Repeated GUARD ON or GUARD OFF instructions do not count: [the counting
+rule](r:conc.locks.count) says how often a lock is held.
 
 ```rexx
 log = .array~new
@@ -122,13 +124,18 @@ ran after
 ## WHEN
 
 r[instr.guard.when]
-With WHEN the instruction waits until its condition holds. While it waits it
-does not hold the guard, so other activities run methods of the object, and
-the condition is tried again once another activity changes or unsets one of
-the object variables it reads; when it is tried at other times is not
-specified. The guard is taken again before each evaluation. When the condition
-is true, GUARD ON WHEN goes on with the guard held, and GUARD OFF WHEN goes on
-without it. A condition that is true at once does not wait.
+With WHEN the instruction waits until its condition holds. While it waits its
+call does not hold the guard, so other activities can run guarded methods of
+its scope, unless a method below it on the same activity still holds the guard
+([the locks page](r:conc.locks.when)), and the condition is tried again once
+another activity assigns or drops one of the object variables that it names as
+a simple symbol (a compound variable or a stem names the whole stem, as
+[Deviation 160](r:conc.locks.deviation.160) says); when it is tried at other
+times is not specified. GUARD ON
+WHEN takes the guard again before each evaluation; GUARD OFF WHEN evaluates
+the condition without it ([the locks page](r:conc.locks.when)). When the
+condition is true, GUARD ON WHEN goes on with the guard held, and GUARD OFF
+WHEN goes on without it. A condition that is true at once does not wait.
 
 ```rexx
 c = .gate~new

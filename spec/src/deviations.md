@@ -106,9 +106,10 @@ activity that has not yet started to run.
 
 ## 14. A nested wait only a buried activity can end
 
-An activity waiting inside a nested construct, such as INTERPRET, for
-something only an activity suspended beneath it can provide is refused, exit
-code 120. ooRexx runs each activity on its own thread and completes.
+An activity waiting inside a nested construct, such as INTERPRET or a method
+that `run` runs, for something, such as a lock, a result or the change of a
+variable, that only an activity suspended beneath it can provide is refused,
+exit code 120. ooRexx runs each activity on its own thread and completes.
 
 ## 15. Withdrawn
 
@@ -1158,3 +1159,12 @@ SHA-256 digest of itself; interrexx issue #235), and an encoded
 image whose base64 text does not decode whole is refused with `3.905`, rc 253.
 ooRexx runs an image with bytes after its end and ignores some changed header
 bytes; it crashes on a truncated image and on other changed header bytes.
+
+## 160. A GUARD WHEN on a compound variable or a stem
+
+A condition of GUARD ON WHEN or GUARD OFF WHEN that names a compound variable
+or a stem names the whole stem: it is evaluated again when another activity
+assigns to or drops any tail of the stem or the whole stem. ooRexx does not
+evaluate it again for a tail, so the wait does not end, and it evaluates a
+GUARD OFF WHEN again for no assignment to the whole stem. interrexx does not
+evaluate it again for a tail yet (#239).
