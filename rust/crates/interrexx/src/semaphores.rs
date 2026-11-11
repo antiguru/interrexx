@@ -317,7 +317,8 @@ impl Interp {
 
     /// `MutexSemaphoreClass::request` before any wait: the running activity
     /// takes the lock where it is free or its own; `immediate` is a timeout
-    /// of zero, which never waits, and only a trylock reaches a closed one.
+    /// of zero, which never waits; a closed one is refused whatever the
+    /// timeout.
     pub(crate) fn request_mutex(&mut self, object: ObjRef, immediate: bool) -> Request {
         let me = self.running_activity();
         let semaphore = self
@@ -326,7 +327,7 @@ impl Interp {
             .table
             .entry(SemaphoreKey::Object(object))
             .or_default();
-        if semaphore.closed && !immediate {
+        if semaphore.closed {
             return Request::Refused;
         }
         if semaphore.owner == Some(me) || semaphore.depth == 0 {
@@ -369,8 +370,8 @@ impl Interp {
         true
     }
 
-    /// `MutexSemaphoreClass::close`: the nesting goes and only a trylock can
-    /// take the lock again, while a lock it held stays held.
+    /// `MutexSemaphoreClass::close`: the nesting goes and no acquire takes the
+    /// lock again, while a lock it held stays held.
     pub(crate) fn close_mutex(&mut self, object: ObjRef) {
         let semaphore = self
             .activities
