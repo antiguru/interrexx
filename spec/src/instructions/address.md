@@ -167,9 +167,10 @@ say rc address()
 ```
 
 r[instr.address.with.normal]
-`NORMAL` is no redirection: the command reads and writes the program's own
-standard input, output and error, as a command does with no redirection at
-all.
+`NORMAL` connects the stream to the program's own standard input, output or
+error, as a command without `WITH` has it. A `WITH` that names only `NORMAL`
+is still a `WITH`: a command sent with one is not among [the commands that the
+interpreter does itself](r:env.commands.inprocess).
 
 ```rexx
 address system with output stem o.

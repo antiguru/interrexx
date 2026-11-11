@@ -1100,3 +1100,31 @@ these as the object answered it, an object that is not a string included.
 When `open` with `BINARY` and no `RECLENGTH` raises `SYNTAX 93.0`, as it does
 for a file that is missing or empty, the stream is `UNKNOWN` afterwards.
 ooRexx leaves it `READY`.
+
+## 146. A command string with a NUL character
+
+A command string that holds a NUL character is not run, in any native
+environment: the command raises FAILURE with the return code 127. ooRexx cuts
+the string at the NUL and runs the part before it.
+
+## 147. A file without a #! line that a PATH search finds
+
+ADDRESS PATH runs an executable file that its search of `PATH` finds and that
+has no `#!` line with `/bin/sh`, which reads it as a script, as a shell does.
+ooRexx cannot run such a file and answers FAILURE with the return code 127.
+
+## 148. The descriptors that a command inherits
+
+A command inherits the descriptors 0, 1 and 2 of the program and no other
+one. ooRexx also passes two descriptors that the interpreter itself keeps
+open, so that a command sees two more open descriptors than the three of the
+program.
+
+## 149. Environment variables set after `export` and `unset`
+
+Every set that VALUE makes in the `ENVIRONMENT` is kept, whatever `export` and
+`unset` the interpreter did before, and `export` with an empty name changes
+nothing. ooRexx loses a set of VALUE that follows an in-process `export` that
+gives a variable the null string, or the second `unset` of a name, so that the
+variable has no value afterwards, and stores a malformed entry for `export`
+with an empty name.

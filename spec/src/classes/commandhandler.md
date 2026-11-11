@@ -530,9 +530,9 @@ case, and the item of each is the handler in use for it, the object that
 environment that a program registered, and a
 [`NativeCommandHandler`](nativecommandhandler.md) for a native one. The
 environment `SYSTEM`, which runs commands in the host's shell, is among them.
-Which other native environments exist is not specified: it depends on the host,
-but the native environments include one under the null string, which `register`
-and `deregister` refuse. The table is a snapshot: a later `register` or
+Which other native environments exist depends on the host: on Linux they
+are the ones that [the names rule](r:env.commands.names) lists. They include
+one under the null string, which `register` and `deregister` refuse. The table is a snapshot: a later `register` or
 `deregister` does not change it, and changing it does not change the
 environments. The method takes no argument (`SYNTAX 88.922`).
 

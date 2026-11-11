@@ -50,13 +50,12 @@ c: say condition('o')~code
 ## The result
 
 r[bif.address.initial]
-Which environment a program starts with is not specified: it is the one that
-the platform and the way the program was started choose, and its name is
-different on different systems. What is fixed is that the [ADDRESS
-instruction](r:instr.address.form.bare) with no operand, given before any
-other ADDRESS instruction, leaves the environment as it was: the environment
-the program started with is also the one that the instruction would swap back
-to.
+Which environment a program starts with depends on the host: on Linux it is
+`sh` ([the initial environment rule](r:env.commands.initial)). On every host
+it is fixed that the [ADDRESS instruction](r:instr.address.form.bare) with no
+operand, given before any other ADDRESS instruction, leaves the environment as
+it was: the environment the program started with is also the one that the
+instruction would swap back to.
 
 ```rexx
 d = address()

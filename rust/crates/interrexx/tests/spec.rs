@@ -389,7 +389,10 @@ fn check(spec_root: &Path, repo: &Path, cited: &Citations) -> Vec<Problem> {
 /// process has ended. The directory is directly under the temp directory, so the
 /// service's socket path does not depend on where the checkout is; a temp
 /// directory long enough to put that path past the platform's limit is an
-/// error. The daemon is built first when the target directory lacks it.
+/// error. The daemon is built first when the target directory lacks it or the
+/// `rxqueue` next to it, not when either is stale: a developer machine can run
+/// the examples against an old `rxqueue` filter until the next build (CI
+/// builds fresh).
 ///
 /// # Panics
 /// If the socket path is too long or the daemon cannot be built; every later
@@ -435,14 +438,14 @@ fn private_service() {
     }
 }
 
-/// Builds `interrexx-rxapi`'s `rxapi` binary to `daemon`, the path of a binary
-/// in a profile directory of a target directory, with that profile and target
-/// directory. Cargo's lock on the target directory makes test processes that
+/// Builds `interrexx-rxapi`'s `rxapi` and `rxqueue` binaries next to `daemon`,
+/// the path of the `rxapi` binary in a profile directory of a target
+/// directory, with that profile and target directory. Cargo's lock on the target directory makes test processes that
 /// build it at the same time wait for each other.
 ///
 /// # Errors
 /// If `daemon` is not in a profile directory of a target directory, cargo
-/// cannot run, or the build fails or leaves no file at `daemon`; the message
+/// cannot run, or the build fails or leaves either file missing; the message
 /// of a failed build holds cargo's standard error.
 fn build_daemon(daemon: &Path) -> Result<(), String> {
     let in_target = daemon
@@ -489,7 +492,11 @@ fn build_daemon(daemon: &Path) -> Result<(), String> {
 /// corpus runs are. `None` when stdout is exactly the output block (its lines,
 /// each followed by one `\n`) and the exit code is `rc`. An example marked
 /// `defect=#N` is the reverse: a mismatch is expected, and a match is reported
-/// so the marker is removed.
+/// so the marker is removed. The program gets [`environment_with_tools`]: the
+/// interpreter's `rexx` and `rxqueue` first on `PATH` and `REXX_API_DIR` naming
+/// the private service. All examples of the run share that service's `SESSION`
+/// queue, so an example that leaves lines on it changes `QUEUED()` in later
+/// ones: an example drains what it queues.
 fn run_example(
     page: &interrexx_spec::Page,
     example: &interrexx_spec::Example,
@@ -579,7 +586,13 @@ fn environment_with_tools() -> Vec<(Vec<u8>, Vec<u8>)> {
         })
         .collect();
     if !path_seen {
-        environment.push((b"PATH".to_vec(), bin.as_os_str().as_bytes().to_vec()));
+        let dirs = [
+            bin.clone(),
+            PathBuf::from("/usr/bin"),
+            PathBuf::from("/bin"),
+        ];
+        let joined = std::env::join_paths(dirs).expect("joining PATH");
+        environment.push((b"PATH".to_vec(), joined.as_bytes().to_vec()));
     }
     environment.retain(|(name, _)| name != b"REXX_API_DIR");
     environment.push((
