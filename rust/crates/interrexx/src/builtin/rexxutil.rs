@@ -254,12 +254,12 @@ pub(crate) fn sleep(
     if args.len() > 1 {
         return Err(Raised::too_many_internal_arguments(1).into());
     }
-    let Some(Some(value)) = args.first().copied() else {
-        return Err(Raised::missing_internal_argument("1").into());
-    };
-    let text = interp.to_text(value).into_owned();
-    let Ok(seconds) = String::from_utf8_lossy(&text).trim().parse::<f64>() else {
-        return Err(Raised::native_argument_not_a_number("delay", &text).into());
+    // An object with no string value is 88.909; `Inf`, `NaN` and a size past
+    // a 64-bit float's range parse as non-finite floats and are 88.902.
+    let text = required_text(interp, args, 1)?;
+    let seconds = match String::from_utf8_lossy(&text).trim().parse::<f64>() {
+        Ok(seconds) if seconds.is_finite() => seconds,
+        _ => return Err(Raised::native_argument_not_a_number("delay", &text).into()),
     };
     if !(0.0..=SLEEP_MAXIMUM).contains(&seconds) {
         return Err(
