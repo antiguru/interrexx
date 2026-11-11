@@ -375,17 +375,18 @@ r[dir.options.trace]
 TRACE sets the tracing setting that the prolog, every routine and every method
 of the package start with. Its value is a word that the [TRACE
 instruction](r:instr.trace.form.name) accepts, chosen by its first letter, so
-that `Off` and `O` are alike, and a letter that is not valid raises `SYNTAX
-24.1`, which a string with a blank before the letter does too. A missing
-value, a sign and a parenthesis raise `19.919`. The empty string is accepted
-and starts the code with `N`. The directive is stricter than the instruction
-in one respect: a number is not a setting and raises `24.1`. The setting is
-what `TRACE()` returns when the code starts, and a TRACE instruction changes
-it for the running code only, as [the scope rule](r:instr.trace.scope) says.
-A question mark before the letter is accepted, and what interactive tracing
-does belongs to the TRACE instruction. What `TRACE()` returns when the code
-starts after a question mark with no letter after it is `?N`, as
-[the Deviation](r:dir.options.deviation.103) states.
+that `Off` and `O` are alike, and a letter that is not valid raises
+`SYNTAX 24.1`, which a string with a blank before the letter does too. A
+missing value, a sign and a parenthesis raise `19.919`. The empty string is
+accepted and starts the code with `N`. The directive is stricter than the
+instruction in one respect: a number is not a setting and raises `24.1`. The
+setting is what `TRACE()` returns when the code starts, and a TRACE
+instruction changes it for the running code only, as [the scope
+rule](r:instr.trace.scope) says. A question mark before the letter is
+accepted, and what interactive tracing does is specified in [the debugging
+chapter](r:env.debugging.start). What `TRACE()` returns when the code starts
+after a question mark with no letter after it is `?N`, as [the
+Deviation](r:dir.options.deviation.103) states.
 
 ```rexx
 call try 'o'
