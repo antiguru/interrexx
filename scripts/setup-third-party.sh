@@ -14,5 +14,8 @@ cmake -S third_party/ooRexx -B third_party/oracle \
 cmake --build third_party/oracle -j"${JOBS:-4}"
 ln -sfn third_party/oracle build
 [ -d ootest ] || svn checkout -q -r "$OOTEST_REVISION" "$SVN/test/trunk" ootest
-[ -d oodocs/rexxref ] || svn checkout -q -r "$OODOCS_REVISION" "$SVN/docs/trunk/rexxref" oodocs/rexxref
-[ -d oodocs/rexxpg ] || svn checkout -q -r "$OODOCS_REVISION" "$SVN/docs/trunk/rexxpg" oodocs/rexxpg
+# The books the spec is read against: the language reference, the programming
+# guide, and the books of the native API and of the extension libraries.
+for book in rexxref rexxpg rexxapi rexxextensions rxmath rxsock unixextensions orxncurses; do
+    [ -d "oodocs/$book" ] || svn checkout -q -r "$OODOCS_REVISION" "$SVN/docs/trunk/$book" "oodocs/$book"
+done
