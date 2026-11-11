@@ -19,7 +19,7 @@ arguments, and an object in their place, follow [the argument
 rule](r:util.index.args): a call with fewer than two arguments, or with an
 omitted one, raises `SYNTAX 88.901`; a third argument raises `SYNTAX 88.922`;
 and `.nil` for either raises `SYNTAX 88.909`. A name that is the null string
-names no file, so the call answers a number that is not zero.
+names no file, so the call answers `2`.
 
 ```rexx
 call try "SysFileMove()"
@@ -29,8 +29,8 @@ call try "SysFileMove(, 'c1zqmvb')"
 call try "SysFileMove('c1zqmva', 'c1zqmvb', 'y')"
 call try "SysFileMove(.nil, 'c1zqmvb')"
 call try "SysFileMove('c1zqmva', .nil)"
-call try "SysFileMove('', 'c1zqmvb') > 0"
-call try "SysFileMove('c1zqmvnone', '') > 0"
+call try "SysFileMove('', 'c1zqmvb')"
+call try "SysFileMove('c1zqmvnone', '')"
 exit
 try:
   signal on syntax name e
@@ -48,8 +48,8 @@ e: say condition('o')~code
 88.922
 88.909
 88.909
-1
-1
+2
+2
 ```
 
 ## The result
@@ -60,8 +60,9 @@ When `source` is the name of an entry that exists and no entry has the name
 name `target`, `source` names nothing any more, and the call answers `0`. The
 bytes, the permission bits and the times of the file are those it had; a
 symbolic link is moved as a link and not read through, so a link that points
-to nothing can be moved. A directory can be moved to a name that no entry has.
-The names are not patterns.
+to nothing can be moved. A directory can be moved to a name that no entry has
+in the same file system. This book does not specify a move from one file
+system to another. The names are not patterns.
 
 ```rexx
 call charout 'c1zqmva', 'AAA'
@@ -90,14 +91,72 @@ call SysRmDir 'c1zqmvd2'
 1
 ```
 
+r[util.sysfilemove.replace]
+Some entries at `target` are replaced by the move. When `source` is not a
+directory, they are a fifo, and a symbolic link that points to nothing, to a
+directory or to a fifo. When `source` is a directory, it is a directory with
+no entries. The link, the fifo or the empty directory goes, and what a link
+pointed to is not changed.
+
+```rexx
+call charout 'c1zqmra', 'AAA'
+call charout 'c1zqmra'
+call charout 'c1zqmrb', 'BB'
+call charout 'c1zqmrb'
+call SysMkDir 'c1zqmrd'
+call SysMkDir 'c1zqmre'
+call SysMkDir 'c1zqmrf'
+call SysMkDir 'c1zqmrf/in'
+call SysMkDir 'c1zqmrg'
+address system 'ln -s c1zqmrnowhere c1zqmrl; ln -s c1zqmrg c1zqmrk'
+say SysFileMove('c1zqmra', 'c1zqmrl') SysIsFileLink('c1zqmrl') chars('c1zqmrl')
+say SysFileMove('c1zqmrb', 'c1zqmrk') SysIsFileLink('c1zqmrk') chars('c1zqmrk') SysIsFileDirectory('c1zqmrg')
+say SysFileMove('c1zqmrd', 'c1zqmre') SysIsFileDirectory('c1zqmrd') SysIsFileDirectory('c1zqmre')
+say SysFileMove('c1zqmre', 'c1zqmrf') SysFileMove('c1zqmre', 'c1zqmrl') SysFileMove('c1zqmre', 'c1zqmre/sub')
+say SysIsFileDirectory('c1zqmre') SysIsFileDirectory('c1zqmrf/in')
+call stream 'c1zqmrl', 'c', 'close'
+call stream 'c1zqmrk', 'c', 'close'
+call SysFileDelete 'c1zqmrl'
+call SysFileDelete 'c1zqmrk'
+call SysRmDir 'c1zqmre'
+call SysRmDir 'c1zqmrf/in'
+call SysRmDir 'c1zqmrf'
+call SysRmDir 'c1zqmrg'
+call charout 'c1zqmrc', 'CC'
+call charout 'c1zqmrc'
+call SysMkDir 'c1zqmrh'
+address system 'mkfifo c1zqmrp c1zqmrq'
+say SysFileMove('c1zqmrnone', 'c1zqmrp') SysFileMove('c1zqmrh', 'c1zqmrp') SysIsFileDirectory('c1zqmrh')
+say SysFileMove('c1zqmrc', 'c1zqmrq') SysIsFile('c1zqmrq') chars('c1zqmrq') SysFileExists('c1zqmrc')
+call stream 'c1zqmrq', 'c', 'close'
+call SysFileDelete 'c1zqmrq'
+address system 'rm c1zqmrp'
+call SysRmDir 'c1zqmrh'
+```
+
+```output
+0 0 3
+0 0 2 1
+0 0 1
+39 17 22
+1 1
+2 20 1
+0 1 2 0
+```
+
 r[util.sysfilemove.fail]
-SysFileMove answers a number that is not zero when it cannot move, and
-nothing changes: neither name is changed and the files keep their bytes. That
-is so when `source` names nothing, when `target` is the name of a file that
-exists, which a move does not replace, and so when it is `source` itself, when
-`target` is a directory that a file is moved to, when the directory of
-`target` does not exist, and when the system refuses, as it does for a
-directory that may not be changed.
+SysFileMove answers a number that is not zero when it cannot move, and nothing
+changes: neither name is changed and the files keep their bytes. It answers
+`17` when `source` names an entry and `target` names the same one, under the
+same name, under another name or through a symbolic link; and when `target`,
+with symbolic links followed, is a regular file, whether `source` exists or
+not, since a move does not replace a file. Otherwise it answers `2` when
+`source` names nothing or the directory of `target` does not exist, `21` when
+a file is moved to a directory, `39` when a directory is moved to a directory
+that has entries, `20` when a directory is moved to a symbolic link or to an
+entry, such as a fifo, that is neither a directory nor a regular file, `22`
+when a directory is moved into itself, and `13` when the system refuses, as it
+does for a directory that may not be changed.
 
 ```rexx
 call charout 'c1zqmfa', 'AAA'
@@ -105,14 +164,14 @@ call charout 'c1zqmfa'
 call charout 'c1zqmfb', 'BBBBBB'
 call charout 'c1zqmfb'
 call SysMkDir 'c1zqmfd'
-say (SysFileMove('c1zqmfnone', 'c1zqmfn') > 0) SysFileExists('c1zqmfn')
-say (SysFileMove('c1zqmfa', 'c1zqmfb') > 0) chars('c1zqmfa') chars('c1zqmfb')
-say (SysFileMove('c1zqmfa', 'c1zqmfa') > 0) (SysFileMove('c1zqmfa', './c1zqmfa') > 0) chars('c1zqmfa')
-say (SysFileMove('c1zqmfa', 'c1zqmfd') > 0) SysIsFile('c1zqmfa') SysIsFileDirectory('c1zqmfd')
-say (SysFileMove('c1zqmfa', 'c1zqmfd/') > 0) SysFileExists('c1zqmfd/c1zqmfa')
-say (SysFileMove('c1zqmfa', 'c1zqmfnone/a') > 0) SysIsFile('c1zqmfa')
+say SysFileMove('c1zqmfnone', 'c1zqmfn') SysFileExists('c1zqmfn') SysFileMove('c1zqmfnone', 'c1zqmfb')
+say SysFileMove('c1zqmfa', 'c1zqmfb') chars('c1zqmfa') chars('c1zqmfb')
+say SysFileMove('c1zqmfa', 'c1zqmfa') SysFileMove('c1zqmfa', './c1zqmfa') chars('c1zqmfa')
+say SysFileMove('c1zqmfa', 'c1zqmfd') SysIsFile('c1zqmfa') SysIsFileDirectory('c1zqmfd')
+say SysFileMove('c1zqmfa', 'c1zqmfd/') SysFileExists('c1zqmfd/c1zqmfa')
+say SysFileMove('c1zqmfa', 'c1zqmfnone/a') SysIsFile('c1zqmfa')
 address system 'chmod 555 c1zqmfd'
-say (SysFileMove('c1zqmfa', 'c1zqmfd/a') > 0) SysIsFile('c1zqmfa') SysFileExists('c1zqmfd/a')
+say SysFileMove('c1zqmfa', 'c1zqmfd/a') SysIsFile('c1zqmfa') SysFileExists('c1zqmfd/a')
 address system 'chmod 755 c1zqmfd'
 call stream 'c1zqmfa', 'c', 'close'
 call stream 'c1zqmfb', 'c', 'close'
@@ -122,11 +181,11 @@ call SysRmDir 'c1zqmfd'
 ```
 
 ```output
-1 0
-1 3 6
-1 1 3
-1 1 1
-1 0
-1 1
-1 1 0
+2 0 17
+17 3 6
+17 17 3
+21 1 1
+21 0
+2 1
+13 1 0
 ```

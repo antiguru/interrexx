@@ -1,7 +1,7 @@
 ---
 element: "RexxUtil"
 kind: chapter
-rexxref: "Rexx Utilities (RexxUtil)"
+rexxref: "Rexx Utilities (RexxUtil); Rexx Utilities (RexxUtil) > A Note on Error Codes"
 deviations: [34, 101]
 ---
 
@@ -30,8 +30,10 @@ The pages of this chapter so far are:
 
 The rules state the behavior of a Unix-like system. The examples make their
 own files and directories, whose names start with `c1zq`, and remove them
-again. A number that is a system's error number is stated by its form: the
-examples show that it is not zero, never which number it is.
+again. What a function answers for a failure is what
+[the answer rule](r:util.index.codes) gives: an error number of Linux for the
+functions that change files, and a fixed value for the functions that the rule
+names.
 
 ## Availability
 
@@ -44,7 +46,13 @@ string as a message raises `SYNTAX 97.1`. A label of the code that makes the
 call, and a routine of the program, are found before it as
 [the search rule](r:instr.call.search) says, and so a name written as a
 string reaches the function and not the label; a file of the name of the
-function in the current directory is not run in its place.
+function in the current directory is not run in its place. Among the routines
+that are not labels, the RexxUtil functions are where
+[the search order](r:env.search.order) puts the functions that RXFUNCADD made
+callable. A routine of the program, a public routine of a package that it
+requires, and a macro added with the order `B` are found before a RexxUtil
+function of the same name. A file and a macro added with the order `A` are
+not.
 
 ```rexx
 say SysIsFileLink('/') sysisfilelink('/') 'SYSISFILELINK'('/')
@@ -69,6 +77,23 @@ label label 0
 1
 97.1
 1 routine label
+```
+
+```rexx
+call lineout 'c1zqidxm.rex', 'return "macro"'
+call lineout 'c1zqidxm.rex'
+call SysAddRexxMacro 'SYSISFILE', 'c1zqidxm.rex', 'B'
+call SysAddRexxMacro 'SYSISFILELINK', 'c1zqidxm.rex', 'A'
+say SysIsFile('/') SysIsFileLink('/') 'SysIsFile'('/')
+call SysDropRexxMacro 'SYSISFILE'
+call SysDropRexxMacro 'SYSISFILELINK'
+say SysIsFile('/') SysIsFileLink('/')
+call SysFileDelete 'c1zqidxm.rex'
+```
+
+```output
+macro 0 macro
+0 0
 ```
 
 r[util.index.load]
@@ -189,8 +214,10 @@ call SysRmDir 'c1zqidxd'
 
 r[util.index.home]
 A name that is `~` alone, or that starts with `~/`, has the `~` replaced by
-the value of the environment variable `HOME`, which must be the name of a
-directory that starts with a slash. A name that starts with `~` and a user's
+the value of the environment variable `HOME` as it is. When `HOME` is the null
+string, `~` alone names nothing and `~/` is replaced by `/`. When it is any
+other value that does not start with a slash, no name that starts with `~/`,
+or is `~` alone, names an entry. A name that starts with `~` and a user's
 name, up to the first slash or the end, stands for the home directory of that
 user, as [it does for DIRECTORY](r:bif.directory.user); when there is no such
 user, no file has that name, and the name is never read as the name of a file
@@ -207,6 +234,10 @@ old = value('HOME', here || '/c1zqidxh', 'ENVIRONMENT')
 say SysIsFile('~/f') SysIsFileDirectory('~') SysIsFileDirectory('~/')
 say SysIsFile('~//f') SysIsFile('~/../c1zqidxh/f') SysIsFile('~/g')
 say SysIsFile('~c1zqidxu') SysIsFile('./~c1zqidxu')
+call value 'HOME', '', 'ENVIRONMENT'
+say SysIsFileDirectory('~') SysIsFileDirectory('~/')
+call value 'HOME', 'c1zqidxh', 'ENVIRONMENT'
+say SysIsFile('~/f') SysIsFileDirectory('~')
 call value 'HOME', old, 'ENVIRONMENT'
 call SysFileDelete './~c1zqidxu'
 call SysFileDelete 'c1zqidxh/f'
@@ -217,6 +248,8 @@ call SysRmDir 'c1zqidxh'
 1 1 1
 1 1 0
 0 1
+0 1
+0 0
 ```
 
 r[util.index.options]
@@ -279,35 +312,45 @@ call SysFileDelete 'c1zqidxs2'
 ## Answers
 
 r[util.index.codes]
-A function that works on the system answers a whole number for what it did:
-`0` when it did it, and another number, the number the system gave for the
-failure, when it could not. A failure of the system is an answer, never a
-`SYNTAX` condition: a missing file, a directory in place of a file, a refused
-permission and a name that is already taken all answer a number that is not
-zero, and leave the program running. What a function raises is limited to bad
-arguments, which the page of each function lists. Which number a particular
-failure gets is a value of the host, so a program tests for zero and no more.
-A function that answers a state, such as `SysFileExists`, answers `0` or `1`
-and has no failure to report.
+A function that works on the system answers what it did, and a failure of the
+system is an answer, never a `SYNTAX` condition. A missing file, a directory
+in place of a file, a refused permission and a name that is already taken
+leave the program running. What a function raises is limited to bad
+arguments, which the page of each function lists. SysFileDelete, SysMkDir,
+SysRmDir, SysFileCopy and SysFileMove answer `0` when they did it. Otherwise
+they answer the system's error number for the failure: `2` for a name that
+nothing has or a directory in it that does not exist, `13` for a permission
+that the system refuses, `17` for a name that is taken, `20` for a name that
+must be a directory and is not (a component before the last, or the target
+of a directory that is moved), `21` for a directory where a file is needed,
+`22` for a directory moved into itself, and `39` for a directory that is not
+empty. Other failures answer the system's other numbers, such as `36` for a
+name that is too long. The page of each of these five functions gives the
+number of every failure it lists, and says where the function departs from
+the system's number. The other functions answer fixed values, which their
+pages state. SysFileTree answers `0` whether or not it could read what it was
+asked for. SysFileSearch answers `0`, or `3` for a file that it cannot read.
+SysSetFileDateTime answers `0`, or `-1` for every failure.
+SysGetFileDateTime answers a time, or `-1`. SysTempFileName and
+SysSearchPath answer a name, or the null string. A function that answers a
+state, such as `SysFileExists`, answers `0` or `1` and has no failure to
+report.
 
 ```rexx
-say SysFileDelete('c1zqidxnone') > 0
-say SysMkDir('c1zqidxnone/sub') > 0
-say SysRmDir('c1zqidxnone') > 0
-say SysFileCopy('c1zqidxnone', 'c1zqidxcopy') > 0
-say SysFileMove('c1zqidxnone', 'c1zqidxmoved') > 0
+say SysFileDelete('c1zqidxnone') SysMkDir('c1zqidxnone/sub') SysRmDir('c1zqidxnone')
+say SysFileCopy('c1zqidxnone', 'c1zqidxcopy') SysFileMove('c1zqidxnone', 'c1zqidxmoved')
 say SysFileExists('c1zqidxcopy') SysFileExists('c1zqidxmoved')
-say datatype(SysRmDir('c1zqidxnone'), 'W')
+call SysMkDir 'c1zqidxd'
+say SysMkDir('c1zqidxd') SysFileDelete('c1zqidxd') SysRmDir('c1zqidxd')
+say SysFileTree('c1zqidxnone/*', 's.') SysFileSearch('x', 'c1zqidxnone', 's.') SysGetFileDateTime('c1zqidxnone') SysSetFileDateTime('c1zqidxnone')
 ```
 
 ```output
-1
-1
-1
-1
-1
+13 2 2
+2 2
 0 0
-1
+17 21 0
+0 3 -1 -1
 ```
 
 ## Functions that exist only on Windows
@@ -317,8 +360,7 @@ A RexxUtil function that exists only on Windows, such as `SysWinVer`,
 `SysDriveMap` or `RxMessageBox`, is not provided on a Unix-like system.
 Calling one raises `SYNTAX 43.1`, as a call of any name that no routine has
 does, and [RXFUNCQUERY](r:bif.rxfuncquery.answer) and
-[RXFUNCADD](r:bif.rxfuncadd.module) answer `1` for it. The list of these
-functions is on the page of the functions of the host.
+[RXFUNCADD](r:bif.rxfuncadd.module) answer `1` for it.
 
 > **Note.** Support for the Windows-only functions on Windows is tracked in
 > issue #215.
@@ -376,8 +418,8 @@ follows: the number of arguments first, so that an argument past the last one
 raises `SYNTAX 88.922` before an omitted or wrong argument is reported
 ([Deviation 101](r:bif.index.call.native.deviation.101)).
 ooRexx reports an omitted argument, an object whose `request` answers no
-string and an argument that is not a whole number before the count, and the
-count before a value that is out of range.
+string, and a `mode` of SysMkDir that fails any of its checks before the
+count, and the count before a `filler` or an `option` that it does not allow.
 
 ```rexx
 signal on syntax name a
@@ -389,10 +431,20 @@ b: say condition('o')~code
 signal on syntax name c
 say SysFileCopy(, 'x', 'y')
 c: say condition('o')~code
+signal on syntax name d
+say SysMkDir('c1zqidxdm', 'x', 'y')
+d: say condition('o')~code
+signal on syntax name f
+say SysTempFileName('c1zqidx?', .nil, 'y')
+f: say condition('o')~code
+say SysIsFileDirectory('c1zqidxdm')
 ```
 
 ```output
 88.922
 88.922
 88.922
+88.922
+88.922
+0
 ```

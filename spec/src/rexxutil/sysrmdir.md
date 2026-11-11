@@ -18,14 +18,14 @@ r[util.sysrmdir.args]
 an object in its place, follow [the argument rule](r:util.index.args): no
 argument raises `SYNTAX 88.901`, a second argument raises `SYNTAX 88.922`, and
 `.nil` raises `SYNTAX 88.909`. A name that is the null string names no
-directory, so the call answers a number that is not zero.
+directory, so the call answers `2`.
 
 ```rexx
 call try "SysRmDir()"
 call try "SysRmDir('c1zqrmx', 'y')"
 call try "SysRmDir(.nil)"
-call try "SysRmDir('') > 0"
-call try "SysRmDir(.mutablebuffer~new('c1zqrmnone')) > 0"
+call try "SysRmDir('')"
+call try "SysRmDir(.mutablebuffer~new('c1zqrmnone'))"
 exit
 try:
   signal on syntax name e
@@ -39,8 +39,8 @@ e: say condition('o')~code
 88.901
 88.922
 88.909
-1
-1
+2
+2
 ```
 
 ## The result
@@ -67,26 +67,29 @@ say SysRmDir('c1zqrmd') SysIsFileDirectory('c1zqrmd')
 ```
 
 r[util.sysrmdir.fail]
-SysRmDir answers a number that is not zero, and removes nothing, when no entry
-has the name, when the directory has an entry in it, even one that is a
-directory again, and when the system refuses, as it does for a directory in a
-directory that the program may not change.
+SysRmDir removes nothing and answers `2` when no entry has the name, `20` when
+a component before the last is a file, `39` when the directory has an entry in
+it, even one that is a directory again, and `13` when the system refuses, as
+it does for a directory in a directory that the program may not change.
 
 ```rexx
 call SysMkDir 'c1zqrmd'
 call SysMkDir 'c1zqrmd/sub'
-say (SysRmDir('c1zqrmnone') > 0) (SysRmDir('c1zqrmnone/sub') > 0)
-say (SysRmDir('c1zqrmd') > 0) SysIsFileDirectory('c1zqrmd/sub')
+call lineout 'c1zqrmf', 'x'
+call lineout 'c1zqrmf'
+say SysRmDir('c1zqrmnone') SysRmDir('c1zqrmnone/sub') SysRmDir('c1zqrmf/sub')
+say SysRmDir('c1zqrmd') SysIsFileDirectory('c1zqrmd/sub')
 address system 'chmod 555 c1zqrmd'
-say (SysRmDir('c1zqrmd/sub') > 0) SysIsFileDirectory('c1zqrmd/sub')
+say SysRmDir('c1zqrmd/sub') SysIsFileDirectory('c1zqrmd/sub')
 address system 'chmod 755 c1zqrmd'
 say SysRmDir('c1zqrmd/sub') SysRmDir('c1zqrmd')
+call SysFileDelete 'c1zqrmf'
 ```
 
 ```output
-1 1
-1 1
-1 1
+2 2 20
+39 1
+13 1
 0 0
 ```
 

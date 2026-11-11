@@ -13,7 +13,7 @@ null string when it finds none. The variable is `path`, and the file is
 `name`.
 
 The examples set an environment variable of their own for the run of the
-example, and put its value back at the end.
+example, and remove it at the end.
 
 ## Arguments
 
@@ -72,7 +72,7 @@ call lineout 'c1zqspf'
 call SysMkDir 'c1zqspd'
 call lineout 'c1zqspd/g', 'x'
 call lineout 'c1zqspd/g'
-old = value('C1ZQSP', here || '/c1zqspd', 'ENVIRONMENT')
+call value 'C1ZQSP', here || '/c1zqspd', 'ENVIRONMENT'
 say SysSearchPath('C1ZQSP', 'c1zqspf') == here || '/c1zqspf'
 say SysSearchPath('C1ZQSP', 'c1zqspf', 'C') == here || '/c1zqspf'
 say SysSearchPath('C1ZQSP', 'c1zqspf', 'c') == here || '/c1zqspf'
@@ -85,7 +85,7 @@ call try "SysSearchPath('C1ZQSP', 'g', 'Q')"
 call try "SysSearchPath('C1ZQSP', 'g', '')"
 call try "SysSearchPath('C1ZQSP', 'g', ' N')"
 call try "SysSearchPath('C1ZQSP', 'g', 1)"
-call value 'C1ZQSP', old, 'ENVIRONMENT'
+call value 'C1ZQSP', .nil, 'ENVIRONMENT'
 call SysFileDelete 'c1zqspf'
 call SysFileDelete 'c1zqspd/g'
 call SysRmDir 'c1zqspd'
@@ -138,7 +138,7 @@ call lineout 'c1zqslb/h', 'x'
 call lineout 'c1zqslb/h'
 call lineout 'c1zqslc', 'x'
 call lineout 'c1zqslc'
-old = value('C1ZQSL', here || '/c1zqsla:' || here || '/c1zqslb', 'ENVIRONMENT')
+call value 'C1ZQSL', here || '/c1zqsla:' || here || '/c1zqslb', 'ENVIRONMENT'
 oldhome = value('HOME', , 'ENVIRONMENT')
 say SysSearchPath('C1ZQSL', 'f') == here || '/c1zqsla/f'
 say SysSearchPath('C1ZQSL', 'h') == here || '/c1zqslb/h'
@@ -161,7 +161,7 @@ call value 'C1ZQSL', '', 'ENVIRONMENT'
 say '[' || SysSearchPath('C1ZQSL', 'c1zqslc', 'N') || ']' (SysSearchPath('C1ZQSL', 'c1zqslc') == here || '/c1zqslc')
 say '[' || SysSearchPath('C1ZQSLNONE', 'c1zqslc', 'N') || ']' (SysSearchPath('C1ZQSLNONE', 'c1zqslc') == here || '/c1zqslc')
 say '[' || SysSearchPath('c1zqsl', 'f', 'N') || ']' (SysSearchPath('', 'c1zqslc') == here || '/c1zqslc')
-call value 'C1ZQSL', old, 'ENVIRONMENT'
+call value 'C1ZQSL', .nil, 'ENVIRONMENT'
 call value 'HOME', oldhome, 'ENVIRONMENT'
 call SysFileDelete 'c1zqsla/f'
 call SysFileDelete 'c1zqslb/f'
@@ -193,13 +193,17 @@ The answer is the full name of the first file that the search finds, in the
 form that [every name](r:util.index.names) is cleaned up to: it starts with a
 slash and has no `.` or `..` component and no run of slashes. A file is a
 regular file, or a symbolic link to one, and a link in the name is not
-replaced by what it points to. A directory of the list is tried by joining it
-and `name` with a slash, and the first directory that holds an entry of that
-name decides: if that entry is a directory, the answer is the null string,
-though a later directory holds a file of the name. A `name` that is not found
-in any directory, or is the null string, or `.`, or has a blank at its end, or
-holds a `*` or a `?`, which are not patterns, has no answer: the call answers
-the null string. The name is not found in another case.
+replaced by what it points to. The current directory, when `option` is `C`,
+and then each directory of the list are tried by joining it and `name` with a
+slash. The first of them in which that is the name of an entry, with symbolic
+links followed, decides. When the entry is a file, the answer is its name.
+When it is anything else, such as a directory or a fifo, the answer is the
+null string, even when a later directory holds a file of the name. A symbolic
+link that points to nothing, and a name in a directory that the program may
+not search, are no entry, and the search goes on. A `name` that is not found,
+or is the null string or `.`, has no answer: the call answers the null
+string. Blanks, `*` and `?` are characters of the name, so `g ` is not `g` and
+no pattern is expanded. The name is not found in another case.
 
 ```rexx
 here = directory()
@@ -217,7 +221,7 @@ call lineout 'c1zqsfb/sub/k'
 call lineout 'c1zqsff', 'x'
 call lineout 'c1zqsff'
 address system 'ln -s ../c1zqsff c1zqsfb/lk; ln -s sub c1zqsfb/ls'
-old = value('C1ZQSF', here || '/c1zqsfa:' || here || '/c1zqsfb', 'ENVIRONMENT')
+call value 'C1ZQSF', here || '/c1zqsfa:' || here || '/c1zqsfb', 'ENVIRONMENT'
 say SysSearchPath('C1ZQSF', 'g', 'N') == here || '/c1zqsfa/g'
 say '[' || SysSearchPath('C1ZQSF', 'x', 'N') || ']'
 say SysSearchPath('C1ZQSF', 'lk', 'N') == here || '/c1zqsfb/lk'
@@ -227,7 +231,7 @@ say SysSearchPath('C1ZQSF', 'g/', 'N') == here || '/c1zqsfa/g'
 say SysSearchPath('C1ZQSF', 'x/../sub/k', 'N') == here || '/c1zqsfb/sub/k'
 say '[' || SysSearchPath('C1ZQSF', 'sub', 'N') || ']' '[' || SysSearchPath('C1ZQSF', '.', 'N') || ']' '[' || SysSearchPath('C1ZQSF', 'g ', 'N') || ']' '[' || SysSearchPath('C1ZQSF', '', 'N') || ']'
 say '[' || SysSearchPath('C1ZQSF', 'G', 'N') || ']' '[' || SysSearchPath('C1ZQSF', 'g*', 'N') || ']' '[' || SysSearchPath('C1ZQSF', 'c1zqsfnone', 'N') || ']'
-call value 'C1ZQSF', old, 'ENVIRONMENT'
+call value 'C1ZQSF', .nil, 'ENVIRONMENT'
 address system 'rm c1zqsfb/lk c1zqsfb/ls c1zqsff c1zqsfa/g c1zqsfb/x c1zqsfb/sub/k'
 call SysRmDir 'c1zqsfb/g'
 call SysRmDir 'c1zqsfb/sub'
@@ -246,6 +250,33 @@ call SysRmDir 'c1zqsfb'
 1
 [] [] [] []
 [] [] []
+```
+
+```rexx
+here = directory()
+call SysMkDir 'c1zqsfa'
+call SysMkDir 'c1zqsfb'
+address system 'mkfifo c1zqsfa/p; ln -s c1zqsfnowhere c1zqsfa/k'
+call lineout 'c1zqsfb/p', 'x'
+call lineout 'c1zqsfb/p'
+call lineout 'c1zqsfb/k', 'x'
+call lineout 'c1zqsfb/k'
+call lineout 'c1zqsfb/b ', 'x'
+call lineout 'c1zqsfb/b '
+call value 'C1ZQSF', here || '/c1zqsfa:' || here || '/c1zqsfb', 'ENVIRONMENT'
+say '[' || SysSearchPath('C1ZQSF', 'p', 'N') || ']'
+say (SysSearchPath('C1ZQSF', 'k', 'N') == here || '/c1zqsfb/k')
+say (SysSearchPath('C1ZQSF', 'b ', 'N') == here || '/c1zqsfb/b ') '[' || SysSearchPath('C1ZQSF', 'b', 'N') || ']'
+call value 'C1ZQSF', .nil, 'ENVIRONMENT'
+address system 'rm c1zqsfa/p c1zqsfa/k c1zqsfb/p c1zqsfb/k "c1zqsfb/b "'
+call SysRmDir 'c1zqsfa'
+call SysRmDir 'c1zqsfb'
+```
+
+```output
+[]
+1
+1 []
 ```
 
 r[util.syssearchpath.name]
@@ -269,7 +300,7 @@ call lineout 'c1zqsnf', 'x'
 call lineout 'c1zqsnf'
 call lineout 'c1zqsnh/hf', 'x'
 call lineout 'c1zqsnh/hf'
-old = value('C1ZQSN', here || '/c1zqsna', 'ENVIRONMENT')
+call value 'C1ZQSN', here || '/c1zqsna', 'ENVIRONMENT'
 oldhome = value('HOME', here || '/c1zqsnh', 'ENVIRONMENT')
 say SysSearchPath('C1ZQSN', here || '/c1zqsna/c1zqsnf', 'N') == here || '/c1zqsna/c1zqsnf'
 say '[' || SysSearchPath('C1ZQSN', here || '/c1zqsna/none') || ']' '[' || SysSearchPath('C1ZQSN', here || '/c1zqsna') || ']'
@@ -280,7 +311,7 @@ say SysSearchPath('C1ZQSN', '../' || filespec('N', here) || '/c1zqsnf', 'N') == 
 say '[' || SysSearchPath('C1ZQSN', 'c1zqsna/c1zqsnf', 'N') || ']' (SysSearchPath('C1ZQSN', 'c1zqsna/c1zqsnf') == here || '/c1zqsna/c1zqsnf')
 say SysSearchPath('C1ZQSN', 'c1zqsnh/../c1zqsnf', 'N') == here || '/c1zqsna/c1zqsnf'
 say SysSearchPath('C1ZQSN', '~/hf', 'N') == here || '/c1zqsnh/hf'
-call value 'C1ZQSN', old, 'ENVIRONMENT'
+call value 'C1ZQSN', .nil, 'ENVIRONMENT'
 call value 'HOME', oldhome, 'ENVIRONMENT'
 call SysFileDelete 'c1zqsna/c1zqsnf'
 call SysFileDelete 'c1zqsnh/hf'
