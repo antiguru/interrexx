@@ -554,7 +554,7 @@ show:
   return
 ```
 
-```output defect=#181
+```output
 COMPILE 1 1
 COMPILE 1 1
 ```

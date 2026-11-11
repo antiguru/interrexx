@@ -933,18 +933,30 @@ pub(crate) fn build_ended_frame(
     if let Some(executable) = executable {
         interp.roots.activity_mut().push_temp(executable);
     }
+    // A `COMPILE` frame belongs to no activation, so it has neither an
+    // invocation nor a context: both answer `.nil`.
+    let compile = kind == b"COMPILE";
     let kind = interp.text(kind);
     interp.roots.activity_mut().push_temp(kind);
     let name = interp.text(name);
     interp.roots.activity_mut().push_temp(name);
     let line = interp.counted(line);
-    let invocation = invocation.unwrap_or_else(|| {
-        interp.next_invocation += 1;
-        interp.next_invocation
-    });
-    let invocation = interp.counted(invocation as usize);
-    interp.roots.activity_mut().push_temp(invocation);
-    let context = interp.ended_context_object();
+    let invocation = if compile {
+        ObjRef::NIL
+    } else {
+        let invocation = invocation.unwrap_or_else(|| {
+            interp.next_invocation += 1;
+            interp.next_invocation
+        });
+        let invocation = interp.counted(invocation as usize);
+        interp.roots.activity_mut().push_temp(invocation);
+        invocation
+    };
+    let context = if compile {
+        ObjRef::NIL
+    } else {
+        interp.ended_context_object()
+    };
     let trace_line = interp.text(trace_text);
     interp.roots.activity_mut().push_temp(trace_line);
     let arguments = array_of_slots(interp, arguments.to_vec());
