@@ -8,15 +8,16 @@ deviations: [20]
 # Activities
 
 A program is run by an activity: a thread of control that runs the clauses of
-the program one after another, keeps the calls it has made and gives each call
-its own variables. A program starts with one activity. It gets more by asking
-for them: it starts a message, replies early from a method, or sets an alarm
-or a ticker. The activities that exist at one time run side by side. They
-share every object they can reach, and each keeps its own calls, its own
-variables and its own traps. This page specifies what an activity is, where
-each kind of new activity comes from and which code it runs, how the answer or
-the error of a message that another activity ran reaches the program, and what
-a program may count on about the order in which activities do things.
+the program one after another, keeps the calls it has made, each with the
+variables that the rules of its call give it. A program starts with one
+activity. It gets more by asking for them: it starts a message, replies early
+from a method, or sets an alarm or a ticker. The activities that exist at one
+time run side by side. They share every object they can reach, and each keeps
+its own calls, its own variables and its own traps. This page specifies what
+an activity is, where each kind of new activity comes from and which code it
+runs, how the answer or the error of a message that another activity ran
+reaches the program, and what a program may count on about the order in which
+activities do things.
 
 The lock that an object has, the methods that are guarded or unguarded and the
 `GUARD` instruction are specified on the locks page of this chapter, and
@@ -42,9 +43,10 @@ changes is changed for the other, and so are the entries of `.local` and
 `.environment`. They do not share the variables of a call. The variables of a
 method or routine call belong to the activity that made the call, so a method
 that another activity runs starts with its own variables, even when the same
-name is set in the code that started it. A condition trap is set for the
-activity that ran the `SIGNAL ON` or `CALL ON`, and does not catch a condition
-of another.
+name is set in the code that started it. A condition trap belongs to the code
+that set it ([the scope rule](r:cond.traps.scope)), and a condition raised in
+one activity reaches only the calls of that activity: no trap of another
+activity sees it.
 
 ```rexx
 shared = .directory~new
@@ -107,7 +109,8 @@ rule](r:class.message.messagecomplete)). The call that makes the activity does
 not wait for the code the activity runs: it returns, and that code runs next
 to the program. `send` and `sendWith` of a `Message` and an ordinary message
 to an object are not among the list. The method they run is run by the
-activity that sent the message, which goes on when the method has ended.
+activity that sent the message, which goes on when the method has ended or has
+replied.
 
 ```rexx
 log = .array~new
@@ -217,36 +220,52 @@ that of another. The calls that one ticker makes are one after the other and
 in order: the ticker sends `triggered` again only after the call before it has
 returned, so a target that stays inside `triggered` delays the next one, and
 how many are sent after it returns is not specified. When a program cancels an
-alarm or a ticker that is still waiting, the target is sent `cancel` on the
-activity that sent `cancel` to the alarm or ticker, and the sender of `cancel`
-goes on when the target's method has returned ([the cancel
-rule](r:class.alarmnotification.cancel)).
+alarm that has not gone off or a ticker, either not cancelled before, the
+target is sent `cancel` on the activity that sent `cancel` to the alarm or
+ticker, and the sender of `cancel` goes on when the target's method has
+returned ([the cancel rule](r:class.alarmnotification.cancel)). An error that
+nothing traps in the target's `triggered` ends the activity that made the
+call, as [the unasked rule](r:conc.activities.unasked) says, and so ends a
+ticker: it sends no more `triggered`, `canceled` still answers 0, and a later
+`cancel` still sends the target `cancel`. Other alarms and tickers go on. An
+error in the target's `cancel` is raised in the activity that sent `cancel`,
+which finds the alarm or ticker cancelled.
 
 ```rexx
 n = .note~new
 a = .alarm~new(0.01, n, 'first')
+n~awaitFirst
 b = .alarm~new(0.01, n, 'second')
 n~awaitBoth
-say 'the first alarm waited for the second, so they ran side by side'
+say 'the first alarm''s call waited for the second''s,',
+  'so they ran side by side'
 ::class note inherit AlarmNotification
 ::method init
-  expose second
+  expose first second
+  first = .false
   second = .false
 ::method triggered unguarded
-  expose second
+  expose first second
   use arg al
-  if al~attachment == 'first' then guard on when second
+  if al~attachment == 'first' then do
+    first = .true
+    guard on when second
+  end
   else second = .true
 ::method cancel unguarded
   nop
+::method awaitFirst unguarded
+  expose first
+  guard on when first
 ::method awaitBoth unguarded
   expose second
   guard on when second
 ```
 
 ```output
-the first alarm waited for the second, so they ran side by side
+the first alarm's call waited for the second's, so they ran side by side
 ```
+
 
 ```rexx
 n = .slow~new
@@ -316,12 +335,82 @@ after the alarm's cancel returned: alarm
 after the ticker's cancel returned: alarm ticker
 ```
 
-> **Note.** The first example has the target of the first alarm wait for the
-> second alarm's call: it ends only because the two calls are on different
-> activities. The second has a ticker's target stay in its first call; the
-> program waits a while, and the ticker has not made a second call. The third
-> shows that the target has been sent `cancel` when `cancel` returns, for an
-> alarm and for a ticker.
+```rexx
+n = .note~new
+t = .ticker~new(0.01, n, 'tk')
+n~awaitFail
+call syssleep 0.3
+say 'calls:' n~count 'canceled:' t~canceled
+t~cancel
+say 'cancel sent to target:' n~cancels 'canceled:' t~canceled
+a = .alarm~new(0.01, n, 'al')
+n~awaitN(2)
+say 'alarm still runs after:' n~count
+::class note inherit AlarmNotification
+::method init
+  expose count failed cancels
+  count = 0; failed = .false; cancels = 0
+::method count unguarded
+  expose count
+  return count
+::method cancels unguarded
+  expose cancels
+  return cancels
+::method awaitFail unguarded
+  expose failed
+  guard on when failed
+::method awaitN unguarded
+  expose count
+  use arg k
+  guard on when count >= k
+::method triggered unguarded
+  expose count failed
+  count = count + 1
+  if count = 1 then do
+    failed = .true
+    x = 1/0
+  end
+::method cancel unguarded
+  expose cancels
+  cancels = cancels + 1
+```
+
+```output
+calls: 1 canceled: 0
+cancel sent to target: 1 canceled: 1
+alarm still runs after: 2
+```
+
+```rexx
+n = .note~new
+a = .alarm~new(60, n)
+signal on syntax name c
+a~cancel
+say 'no error at cancel'
+exit
+c: say 'canceller trapped:' condition('o')~code a~canceled
+::class note inherit AlarmNotification
+::method triggered
+  nop
+::method cancel
+  x = 1/0
+```
+
+```output
+canceller trapped: 42.3 1
+```
+
+> **Note.** The first example makes the second alarm only once the target's
+> call for the first is waiting for it: that call ends only because the second
+> alarm's call runs on another activity. The second has a ticker's target stay
+> in its first call; the program waits a while, and the ticker has not made a
+> second call. The third shows that the target has been sent `cancel` when
+> `cancel` returns, for an alarm and for a ticker.
+> The fourth has the target's `triggered` fail in a ticker: the ticker stops,
+> but `cancel` still reaches the target and a new alarm still runs; the 0.3
+> second wait is a window in which a further call would show, and the output
+> does not depend on its length. The fifth has the target's `cancel` fail and
+> the error reach the activity that cancelled.
 
 ## Messages and their results
 
@@ -415,13 +504,12 @@ An error in the code of a started message does not reach the activity that
 started it when it happens: nothing is raised at the call to `start`, a trap
 in the starter is not taken, and the starter goes on. The error ends the
 message, which keeps it: `hasError` answers 1 and `errorCondition` the
-condition. It reaches the program when the program asks for
-[`result`](r:class.message.result), which raises it again in the activity that
-asked, with the same code, so that a trap in that activity handles it and a
-trap in any other activity does not see it. Each activity that asks gets its
-own raise, and asking again raises it again. `wait` returns without raising,
-whether or not the message ended with an error. The errors that end a message
-are those of [`hasError`](r:class.message.haserror).
+condition. It reaches the program when an activity asks for
+[`result`](r:class.message.result), which raises it in that activity, so a
+trap there handles it and a trap in any other activity does not see it; each
+activity that asks gets its own raise. [`wait`](r:class.message.wait) does not
+raise it. The errors that end a message are those of
+[`hasError`](r:class.message.haserror).
 
 ```rexx
 m = .t~new~start('boom')
@@ -459,14 +547,17 @@ r[conc.activities.unasked]
 An error of a started message that nothing asks about ends that message's
 activity and nothing else: the program, and every other activity, goes on, and
 the program's exit status is the one the program itself gives. The activity
-that ran the message reports the error on the error stream when the message
-ends, whether or not a later `result` raises it, and the text of the report is
-not specified (the line it names is the case of [Deviation
-67](../deviations.md#67-the-line-a-started-messages-error-names)). An error in
-the continuation of a method that has replied ends the continuation in the
-same way and is never an error of the message, which has ended with the
-`REPLY`. A condition that is not an error, such as a `USER` condition that
-nothing traps, ends the message without an error ([the
+that ran the message reports the error on the error stream, whether or not an
+activity asks for the result, before the error or after it. The text of the
+report is not specified (the line it names is the case of [Deviation
+67](../deviations.md#67-the-line-a-started-messages-error-names)), and neither
+is when it is written compared with what other activities do: it may still be
+written after `wait` or `result` has returned for the message ([Deviation
+22](../deviations.md#22-one-schedule-for-racing-activities)). An error in the
+continuation of a method that has replied ends the continuation in the same
+way and is never an error of the message, which has ended with the `REPLY`. A
+condition that is not an error, such as a `USER` condition that nothing traps,
+ends the message without an error and writes no report ([the
 rule](r:class.message.haserror)).
 
 ```rexx
@@ -492,14 +583,14 @@ exit 3
 ::method release unguarded
   expose go
   go = .true
-::method await unguarded
+::method await
   expose done
   guard on when done
 ::method boom unguarded
   return 1/0
 ::method usr unguarded
   raise user myproblem
-::method late unguarded
+::method late
   expose go done
   reply 'replied'
   guard on when go
@@ -517,7 +608,9 @@ the program goes on
 
 > **Note.** The example ends with the exit status 3 that it gives itself,
 > after a message failed, one raised a `USER` condition, and a continuation
-> failed.
+> failed. The methods `late` and `await` are guarded: the continuation keeps
+> the guard ([the REPLY guard rule](r:instr.reply.guard)) until its error ends
+> it, so `await` returns only after the error.
 
 ## Order
 
@@ -525,19 +618,27 @@ r[conc.activities.order]
 Two things done by different activities happen in a known order only when the
 second activity can learn that the first has done its part. The ways it learns
 are these, and nothing else orders two activities. One is the order of the
-clauses of one activity: what an activity did before it started a message is
-done before the first clause of that message runs, and what a message did is
-done when `result` or `wait` returns for it, and before the targets of its
+clauses of one activity: what an activity did before it started a message, or
+made an alarm or a ticker, is done before the first clause of that message, or
+of the target's `triggered`, runs, and what a message did is done when
+`result` or `wait` returns for it, except the report of its error ([the
+unasked rule](r:conc.activities.unasked)), and before the targets of its
 notifications are sent. Another is a `GUARD ... WHEN` whose condition is
 false, which does not go on until another activity has made the condition
 true, and what that activity did before is done when the first goes on. The
 third is a wait on an `EventSemaphore`, which ends when another activity posts
 it, and a `MutexSemaphore`, which is acquired only after its owner has
 released it: what the other activity did before the post or the release is
-done. Anything else is not ordered. The clauses of activities that nothing
-orders may run in any interleaving that keeps the order of each activity's own
-clauses, and which one runs may differ between runs and between
-implementations ([Deviation
+done. The fourth is the guard of an object: an activity that takes it, by
+calling a guarded method or by `GUARD ON`, does so only after the activity
+that held it has given it up, and what that activity did before is done (the
+locks page; [the exclusion rule](r:instr.guard.exclusion)). Anything else is
+not ordered. A clause that runs no other Rexx code, such as an assignment
+whose expression calls no method, routine or function written in Rexx, is one
+step: no clause of another activity runs while it is half done. The clauses of
+activities that nothing orders may run in any interleaving that keeps the
+order of each activity's own clauses, and which one runs may differ between
+runs and between implementations ([Deviation
 22](../deviations.md#22-one-schedule-for-racing-activities), and [Deviation
 7](../deviations.md#7-order-of-concurrent-trace-lines) for trace lines). That
 one message was started before another does not make it run first.
@@ -661,15 +762,16 @@ r[conc.activities.waiting]
 An activity that waits does not hold up another. The waits are: `result` and
 `wait` of a message, a `GUARD ... WHEN` whose condition is false, an
 `EventSemaphore`'s `wait`, a `MutexSemaphore`'s `acquire` that has to wait,
-and `SysSleep`; an activity in one of them runs no clauses until what it waits
-for has happened, and every other activity that is not itself waiting makes
-progress meanwhile. How fast each progresses, and whether the activities that
-are not waiting share the time fairly, is not specified, and so is how soon an
-activity whose wait has ended runs again. Some blocking operations of the
-library hold every activity, and some busy-waiting code in nested constructs
-does not end; they are the cases of [Deviation
-16](../deviations.md#16-blocking-operations-hold-every-activity) and
-[Deviation 18](../deviations.md#18-nested-busy-waiters).
+and `SysSleep`; an activity in one of them goes on to its next clause only
+when what it waits for has happened (a `GUARD ... WHEN` evaluates its
+expression again meanwhile, as the locks page says), and every other activity
+that is not itself waiting makes progress meanwhile. How fast each progresses,
+and whether the activities that are not waiting share the time fairly, is not
+specified, and so is how soon an activity whose wait has ended runs again.
+Some blocking operations of the library hold every activity, and some
+busy-waiting code in nested constructs does not end; they are the cases of
+[Deviation 16](../deviations.md#16-blocking-operations-hold-every-activity)
+and [Deviation 18](../deviations.md#18-nested-busy-waiters).
 
 ```rexx
 g = .gate~new
@@ -704,11 +806,12 @@ waited and passed opened
 
 r[conc.activities.deviation.20]
 A wait that no other activity, alarm, ticker or call can end is refused, and
-the program ends with exit code 120. It is the wait for the result of a
-message that has never been sent, or that is the original of a `reply`, whose
-copy ran; the same holds for `wait`. ooRexx waits for ever ([Deviation
-20](../deviations.md#20-a-wait-nothing-can-end)). The case of a
-`GUARD ... WHEN` that nothing can make true is the guard rule's.
+the program ends with exit code 120. It is, for instance, the wait for the
+result of a message that has never been sent and that no activity can still
+send, or the original of a `reply`, whose copy ran; the same holds for `wait`.
+ooRexx waits for ever ([Deviation
+20](../deviations.md#20-a-wait-nothing-can-end)). The case of a `GUARD ...
+WHEN` that nothing can make true is the guard rule's.
 
 ```rexx
 m = .message~new(.object~new, 'string')

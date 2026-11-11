@@ -23,10 +23,14 @@ and `HALT` and the end of a program that still has activities on the other,
 are specified on pages of this chapter that are not linked here yet: the locks
 page and the halt page.
 
-The methods of the classes `Message`, `Alarm`, `Ticker`, `Monitor`,
-`EventSemaphore` and `MutexSemaphore`, and the instructions `REPLY` and
-`GUARD`, are specified on their own pages; this chapter links them and
-specifies only what they have in common.
+The methods of the classes [`Message`](../classes/message.md),
+[`Alarm`](../classes/alarm.md), [`Ticker`](../classes/ticker.md),
+[`Monitor`](../classes/monitor.md),
+[`EventSemaphore`](../classes/eventsemaphore.md) and
+[`MutexSemaphore`](../classes/mutexsemaphore.md), and the instructions
+[`REPLY`](../instructions/reply.md) and [`GUARD`](../instructions/guard.md),
+are specified on their own pages; this chapter links them and specifies only
+what they have in common.
 
 Every example in this chapter that uses more than one activity forces the
 order of what it prints. It waits for the result of a message, parks an
