@@ -350,8 +350,8 @@ main
 
 ## Programs without source
 
-> **Note.** The command `rexxc` translates a program and writes the result to a file,
-> the image, so that the program can be handed on without its source; `rexx`
+> **Note.** The command `rexxc` translates a program and writes the result to
+> a file, the image, so that the program can be handed on without its source; `rexx`
 > runs an image as it runs the program it came from ([the run
 > rule](r:env.invocation.rexxc.run)). The rules below state what `rexxc` takes
 > and writes, what an image is to a reader, what a run of one shows, and what
