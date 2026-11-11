@@ -787,8 +787,9 @@ checkpoint rules](r:class.routine.setsecuritymanager.checkpoints) name are
 offered to the manager first ([which code](r:env.security.scope)). The code of
 other packages, and of the packages that the code makes, is not under the
 manager. A manager that is set or removed while code of the package runs is
-taken up by the calls that start after the change ([the run
-rule](r:env.security.run)).
+taken up by the calls that start after the change, except for the name
+checkpoints `LOCAL` and `ENVIRONMENT`, which the run that is going on takes
+up at once ([the run rule](r:env.security.run)).
 
 ```rexx
 src = 'address system "echo hidden"; return "done"'

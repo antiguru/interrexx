@@ -532,7 +532,7 @@ blank string is sent like any other. The directory holds just those two
 entries, also for a command with a [redirection](r:instr.address.with.syntax).
 A manager that answers `1` takes the redirection over with the command:
 nothing is read from an `INPUT` source or written to an `OUTPUT` or `ERROR`
-target. A clause that only names an environment sends nothing. A command that
+target (the third example). A clause that only names an environment sends nothing. A command that
 names no environment is sent with the name of the current one, which a program
 starts with as `sh`. What the manager sets
 counts only when it answers `1`. `RC` is stored in the variable `rc` as it is,
@@ -632,6 +632,21 @@ answer 0 RC          error 4
 answer 0 COMMAND     error 4
 ```
 
+```rexx
+src = 'i.0 = "bad"; address system "cat" with input stem i.; say "not read"'
+r = .routine~new('agent', src)
+r~setSecurityManager(.mgr~new)
+r~call
+exit
+::class mgr
+::method command
+  return 1
+```
+
+```output defect=#226
+not read
+```
+
 r[env.security.names]
 The checkpoints `LOCAL` and `ENVIRONMENT` are sent as [the class
 rules](r:class.routine.setsecuritymanager.local) say, for every environment
@@ -706,9 +721,12 @@ streams, except for the standard streams, which [the next
 rule](r:env.security.standard) takes out. `NAME` is the name that the function
 was given, made absolute as [`QUALIFY` does](r:bif.qualify.relative). The
 table is one for the whole program and is keyed by the absolute name, so `x`
-and `./x` are one entry. A stream function that names a stream enters it in
-the table, whether the code is governed or not and whether or not the stream
-can be opened. The name is then not offered again, to any manager, until a
+and `./x` are one entry. `CHARIN`, `CHAROUT`, `CHARS`, `LINEIN`, `LINEOUT` and
+`LINES` enter the name that they are given in the table, whether the code is
+governed or not and whether or not the stream can be opened. `STREAM` enters
+it only with an `open` command that succeeds; its other operations, such as
+`D`, `S` and a `query` command, are offered each time and leave the table as
+it is. The name is then not offered again, to any manager, until a
 `close` command of `STREAM`, or an `open` command of `STREAM` that fails,
 takes it out. A `close` sent to another `Stream` object of the same file does
 not. A stream that a manager chose is in the table under that name, so the
@@ -722,7 +740,8 @@ provides a stream of another file; the second manager is not asked about that
 name while the stream is open, and the program gets the same stream. After the
 stream is closed once more the name is the real file again, and the second
 manager is asked. The second example shows the table for a file that does not
-exist: the first `lines` is offered and enters the name, the second and the
+exist: two `query exists` commands are offered and enter nothing, the first
+`lines` is offered and enters the name, the second and the
 one that spells the name with `./` are not, a failing `open` takes the name
 out, a `close` sent to a `Stream` object does not, and the `close` command
 does.
@@ -779,7 +798,10 @@ second manager: repl
 
 ```rexx
 call sysfiledelete 'envsec_tab.tmp'
-steps = .array~of('G:lines("envsec_tab.tmp")', 'G:lines("envsec_tab.tmp")', -
+steps = .array~of( -
+  'G:stream("envsec_tab.tmp", "c", "query exists")', -
+  'G:stream("envsec_tab.tmp", "c", "query exists")', -
+  'G:lines("envsec_tab.tmp")', 'G:lines("envsec_tab.tmp")', -
   'G:lines("./envsec_tab.tmp")', -
   'P:stream("envsec_tab.tmp", "c", "open read")', -
   'G:lines("envsec_tab.tmp")', 'G:lines("envsec_tab.tmp")', -
@@ -806,6 +828,10 @@ exit
 ```
 
 ```output
+governed: stream("envsec_tab.tmp", "c", "query exists")
+  offered
+governed: stream("envsec_tab.tmp", "c", "query exists")
+  offered
 governed: lines("envsec_tab.tmp")
   offered
 governed: lines("envsec_tab.tmp")
