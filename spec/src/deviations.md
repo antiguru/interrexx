@@ -1149,3 +1149,11 @@ An empty line that follows a line that failed as it was read, such as
 `trace 1.5`, whose setting does not exist, or an expression that cannot be
 parsed, goes on to the next stop. ooRexx ends interactive tracing at that empty
 line.
+
+## 153. A damaged compiled image is refused
+
+An image that ends too early, one that has bytes after its end, and one that
+has a changed header byte are refused with `3.903`, rc 253, and an encoded
+image whose base64 text does not decode whole is refused with `3.905`, rc 253.
+ooRexx runs an image with bytes after its end and ignores some changed header
+bytes; it crashes on a truncated image and on other changed header bytes.
