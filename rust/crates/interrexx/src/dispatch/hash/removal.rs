@@ -219,11 +219,15 @@ pub(super) fn native_hash_remove_item(
             return Ok(Some(ObjRef::NIL));
         }
     }
-    for (index, item) in pairs(interp, receiver)? {
-        if same_held_item(interp, keys, wanted, item)? {
-            take_merged(interp, receiver, index, Removal::Discarded)?;
-            return Ok(Some(item));
-        }
+    let Some((index, item, from_method)) = search_item(interp, receiver, wanted)? else {
+        return Ok(Some(ObjRef::NIL));
+    };
+    if from_method {
+        // Removed as `remove` removes it: the method runs again and its
+        // second answer is the answer.
+        let answer = take_merged(interp, receiver, index, Removal::Answered)?;
+        return Ok(Some(answer.unwrap_or(ObjRef::NIL)));
     }
-    Ok(Some(ObjRef::NIL))
+    take_merged(interp, receiver, index, Removal::Discarded)?;
+    Ok(Some(item))
 }

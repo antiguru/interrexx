@@ -1004,8 +1004,9 @@ fn merged_has_index(interp: &mut Interp, receiver: ObjRef, index: ObjRef) -> Res
     Ok(found.found.is_some())
 }
 
-/// Every (index, result) the method table answers, in its own store order.
-fn method_pairs(interp: &mut Interp, receiver: ObjRef) -> Result<Vec<(ObjRef, ObjRef)>, Failure> {
+/// Every (index, stored entry) the method table holds, rooted, none of them
+/// run.
+fn method_entries(interp: &mut Interp, receiver: ObjRef) -> Result<Vec<(ObjRef, ObjRef)>, Failure> {
     let Some(store) = method_store(interp, receiver)? else {
         return Ok(Vec::new());
     };
@@ -1020,11 +1021,28 @@ fn method_pairs(interp: &mut Interp, receiver: ObjRef) -> Result<Vec<(ObjRef, Ob
         interp.roots.activity_mut().push_temp(index);
         held.push((index, stored));
     }
+    Ok(held)
+}
+
+/// The answer of the method table's entry `stored` under `index`, rooted.
+fn method_entry_answer(
+    interp: &mut Interp,
+    receiver: ObjRef,
+    index: ObjRef,
+    stored: ObjRef,
+) -> Result<ObjRef, Failure> {
+    let name = interp.to_text(index).to_vec();
+    let item = run_stored_method(interp, receiver, &name, stored, &[])?;
+    interp.roots.activity_mut().push_temp(item);
+    Ok(item)
+}
+
+/// Every (index, result) the method table answers, in its own store order.
+fn method_pairs(interp: &mut Interp, receiver: ObjRef) -> Result<Vec<(ObjRef, ObjRef)>, Failure> {
+    let held = method_entries(interp, receiver)?;
     let mut pairs = Vec::with_capacity(held.len());
     for (index, stored) in held {
-        let name = interp.to_text(index).to_vec();
-        let item = run_stored_method(interp, receiver, &name, stored, &[])?;
-        interp.roots.activity_mut().push_temp(item);
+        let item = method_entry_answer(interp, receiver, index, stored)?;
         pairs.push((index, item));
     }
     Ok(pairs)
@@ -1118,6 +1136,17 @@ pub(super) fn store_put(
 
 /// Every (index, item) pair the receiver holds, in bucket order.
 fn pairs(interp: &mut Interp, receiver: ObjRef) -> Result<Vec<(ObjRef, ObjRef)>, Failure> {
+    let mut pairs = stored_pairs(interp, receiver)?;
+    // `DirectoryClass::allIndexes` and its siblings append the method table
+    // AFTER the contents, each half in its own store order. Measured: a
+    // directory given `AAA`(method), `zzz`, `MMM`(method), `bbb` answers
+    // `zzz bbb MMM AAA`.
+    pairs.extend(method_pairs(interp, receiver)?);
+    Ok(pairs)
+}
+
+/// [`pairs`] without the method table: the contents only, in bucket order.
+fn stored_pairs(interp: &mut Interp, receiver: ObjRef) -> Result<Vec<(ObjRef, ObjRef)>, Failure> {
     let store = store_of(interp, receiver)?;
     let mut pairs = Vec::new();
     for slot in walk(interp, receiver)? {
@@ -1131,12 +1160,31 @@ fn pairs(interp: &mut Interp, receiver: ObjRef) -> Result<Vec<(ObjRef, ObjRef)>,
         interp.roots.activity_mut().push_temp(item);
         pairs.push((index, item));
     }
-    // `DirectoryClass::allIndexes` and its siblings append the method table
-    // AFTER the contents, each half in its own store order. Measured: a
-    // directory given `AAA`(method), `zzz`, `MMM`(method), `bbb` answers
-    // `zzz bbb MMM AAA`.
-    pairs.extend(method_pairs(interp, receiver)?);
     Ok(pairs)
+}
+
+/// The first (index, item) whose item `wanted` is equal to, the stored
+/// items visited before the answers of the methods, and a method run only
+/// when no stored item was equal and no earlier method's answer was. The
+/// bool tells whether the match is a method's answer.
+fn search_item(
+    interp: &mut Interp,
+    receiver: ObjRef,
+    wanted: ObjRef,
+) -> Result<Option<(ObjRef, ObjRef, bool)>, Failure> {
+    let keys = keys_of(interp, receiver);
+    for (index, item) in stored_pairs(interp, receiver)? {
+        if same_held_item(interp, keys, wanted, item)? {
+            return Ok(Some((index, item, false)));
+        }
+    }
+    for (index, stored) in method_entries(interp, receiver)? {
+        let item = method_entry_answer(interp, receiver, index, stored)?;
+        if same_held_item(interp, keys, wanted, item)? {
+            return Ok(Some((index, item, true)));
+        }
+    }
+    Ok(None)
 }
 
 /// Every index the receiver holds, in [`pairs`]'s order, **running no
@@ -1252,13 +1300,8 @@ fn native_hash_has_item(
         return Err(not_this_task(interp, receiver, b"HASITEM"));
     }
     let wanted = super::collection::item_argument(args)?;
-    let keys = keys_of(interp, receiver);
-    for (_, item) in pairs(interp, receiver)? {
-        if same_held_item(interp, keys, wanted, item)? {
-            return Ok(Some(crate::eval::logical(true)));
-        }
-    }
-    Ok(Some(crate::eval::logical(false)))
+    let found = search_item(interp, receiver, wanted)?;
+    Ok(Some(crate::eval::logical(found.is_some())))
 }
 
 fn native_hash_index(
@@ -1283,13 +1326,8 @@ fn native_hash_index(
             slot_at(interp, store.items, slot)?.unwrap_or(ObjRef::NIL),
         ));
     }
-    let keys = keys_of(interp, receiver);
-    for (index, item) in pairs(interp, receiver)? {
-        if same_held_item(interp, keys, wanted, item)? {
-            return Ok(Some(index));
-        }
-    }
-    Ok(Some(ObjRef::NIL))
+    let found = search_item(interp, receiver, wanted)?;
+    Ok(Some(found.map_or(ObjRef::NIL, |(index, _, _)| index)))
 }
 
 fn native_hash_remove(
