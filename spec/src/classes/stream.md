@@ -777,7 +777,7 @@ bad: say arg(1) '=>' condition('o')~code
   return v
 ```
 
-```output defect=#206
+```output
 s~charin(1, .ms~new(2)) => [ab]
 s~linein(.ms~new(1)) => [abc]
 s~linein(1, .ms~new(1)) => [abc]

@@ -140,7 +140,7 @@ static LIBRARY_REXX_METHODS: &[NativeExternal] = &[
     implemented(
         "stream_open",
         Family::Stream,
-        Arity::Fixed(1),
+        Arity::Counted,
         super::stream::open,
     ),
     implemented(
@@ -152,13 +152,13 @@ static LIBRARY_REXX_METHODS: &[NativeExternal] = &[
     implemented(
         "stream_lines",
         Family::Stream,
-        Arity::Fixed(1),
+        Arity::Counted,
         super::stream::lines,
     ),
     implemented(
         "stream_position",
         Family::Stream,
-        Arity::Fixed(1),
+        Arity::Counted,
         super::stream::position,
     ),
     implemented(
