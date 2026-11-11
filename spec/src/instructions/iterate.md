@@ -69,6 +69,50 @@ c 3 k 4
 a 3 b 2
 ```
 
+r[instr.iterate.trap]
+A CALL trap that is waiting when an ITERATE runs is called after the loop has
+done the work that ends the pass, so a WHILE test is made before the routine
+of the trap is called, and `SIGL` is the line of the ITERATE. A condition that
+the routine raises is not answered at that point again: its routine is called
+after the next clause that ends, as [the rule for CALL
+traps](r:cond.traps.call) puts it for any clause. In the example the routine
+`h1` is called after the `RAISE` returns, at the line of the call, `h2` is
+called at the ITERATE after the test, and `h3`, which `h2` raised, is called
+after the first clause of the next pass. After the last pass it is called after
+the clause that follows the loop.
+
+```rexx
+call on user c1 name h1
+call on user c2 name h2
+call on user c3 name h3
+zn = 0
+do while t() < 2
+  zn = zn + 1
+  zr = raiser()
+  iterate
+end
+say 'after' zr
+exit
+t: say 'test' zn; return zn
+raiser: raise user c1 return 5
+h1: say 'h1' sigl; raise user c2 return
+h2: say 'h2' sigl; raise user c3 return
+h3: say 'h3' sigl; return
+```
+
+```output
+test 0
+h1 7
+test 1
+h2 8
+h3 6
+h1 7
+test 2
+h2 8
+after 5
+h3 10
+```
+
 ## Which loop it selects
 
 r[instr.iterate.target]

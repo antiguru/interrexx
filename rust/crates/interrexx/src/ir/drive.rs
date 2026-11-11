@@ -2604,6 +2604,10 @@ impl Interp {
             Flow::Iterate(_, origin) | Flow::Leave(_, origin) => Some(origin.index),
             _ => None,
         };
+        // An `ITERATE` owes no boundary of its own before the loop's re-test
+        // (`Interp::leave_stepped_clause`): the re-test's clause delivers what
+        // is queued, and what its handlers queue waits for the next boundary.
+        let iterate = matches!(&arrival, Flow::Iterate(..));
         let paused_clause = self.save_clause_state();
         let indents = self
             .activity
@@ -2626,13 +2630,16 @@ impl Interp {
         // the `LEAVE`/`ITERATE` clause and not to the step's re-echo.
         let stepped = self.save_clause_state();
         self.restore_clause_state(paused_clause);
+        let queued_before_pause = self.activity.pending_traps.len();
         if self.debug_pause_instruction()? {
             return Ok(match step {
                 crate::run::FlatStep::Body(_) => crate::run::FlatStep::Body(op_at(chunk, index)?),
                 crate::run::FlatStep::Done(_) => crate::run::FlatStep::Done(Flow::Goto(index)),
             });
         }
-        let exit = if self.activity.pending_traps.is_empty() {
+        let exit = if self.activity.pending_traps.is_empty()
+            || (iterate && self.activity.pending_traps.len() == queued_before_pause)
+        {
             None
         } else {
             // Its handlers run at the loop's indent: the body's for a pass
