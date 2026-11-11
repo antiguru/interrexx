@@ -93,18 +93,22 @@ fn home_through(
     lookup(name).map(|home| home.into_os_string().into_vec())
 }
 
-/// `USERID()`: the effective user's login name
-/// (`platform/unix/UseridFunction.cpp:58`, `getpwuid(geteuid())`). Read from
-/// `/proc/self/status` and `/etc/passwd` rather than through libc, because
-/// every libc route is an `unsafe` call. An account that lives only in NSS
-/// (LDAP and the like) is not in `/etc/passwd`, and answers the environment's
-/// own `USER` or `LOGNAME` instead; the oracle would answer the account name.
+/// `USERID()`: the effective user's login name, as the system's user database
+/// gives it for the effective uid, so an account that only an NSS source
+/// (LDAP, sssd, systemd-userdb) holds has its name too. An account the
+/// database does not know answers the environment's own `USER` or `LOGNAME`
+/// instead; the oracle answers the empty string there.
 pub(crate) fn userid(
     interp: &mut Interp,
     _name: &'static [u8],
     _args: Args<'_>,
 ) -> Result<ObjRef, Failure> {
-    if let Some(name) = passwd_name(effective_uid()) {
+    if let Some(name) = name_through(nix::unistd::geteuid().as_raw(), |uid| {
+        nix::unistd::User::from_uid(nix::unistd::Uid::from_raw(uid))
+            .ok()
+            .flatten()
+            .map(|account| account.name)
+    }) {
         return Ok(interp.text_built(name));
     }
     for fallback in [b"USER".as_slice(), b"LOGNAME".as_slice()] {
@@ -116,28 +120,9 @@ pub(crate) fn userid(
     Ok(interp.text(b""))
 }
 
-/// The effective uid, from `/proc/self/status`'s `Uid:` line, whose second
-/// field is the effective one.
-fn effective_uid() -> Option<u32> {
-    let status = std::fs::read_to_string("/proc/self/status").ok()?;
-    let line = status.lines().find(|line| line.starts_with("Uid:"))?;
-    line.split_whitespace().nth(2)?.parse().ok()
-}
-
-/// The login name `/etc/passwd` gives `uid`.
-fn passwd_name(uid: Option<u32>) -> Option<Vec<u8>> {
-    let uid = uid?;
-    let passwd = std::fs::read_to_string("/etc/passwd").ok()?;
-    for line in passwd.lines() {
-        let mut fields = line.split(':');
-        let name = fields.next()?;
-        let _password = fields.next();
-        let Some(entry) = fields.next() else { continue };
-        if entry.parse::<u32>() == Ok(uid) {
-            return Some(name.as_bytes().to_vec());
-        }
-    }
-    None
+/// The login name `lookup` gives the account with uid `uid`, as bytes.
+fn name_through(uid: u32, lookup: impl FnOnce(u32) -> Option<String>) -> Option<Vec<u8>> {
+    lookup(uid).map(String::into_bytes)
 }
 
 /// `SETLOCAL()`: saves the directory and the environment, answering 1.
@@ -417,7 +402,7 @@ fn process_environment(
 mod tests {
     use std::path::PathBuf;
 
-    use super::{home_through, passwd_home};
+    use super::{home_through, name_through, passwd_home};
 
     /// **A home directory comes from the user database lookup, not from
     /// `/etc/passwd`**: an account only an NSS source holds, which no file of
@@ -441,6 +426,29 @@ mod tests {
             .map(|home| home.as_bytes().to_vec());
         assert_eq!(passwd_home(b"root"), listed);
         assert_eq!(passwd_home(b"no-such-account-zq"), None);
+    }
+
+    /// **A login name comes from the user database lookup, not from
+    /// `/etc/passwd`**: an account only an NSS source holds, which no file of
+    /// this host lists, is named through the lookup it is given, and a uid the
+    /// lookup does not know has no name. The adjacent success is the running
+    /// user, whom `USERID()` names as the real lookup does.
+    #[test]
+    fn a_login_name_comes_from_the_user_database_lookup() {
+        let ldap_only = |uid: u32| (uid == 424_242).then(|| "ldapuser".to_string());
+        assert_eq!(name_through(424_242, ldap_only), Some(b"ldapuser".to_vec()));
+        assert_eq!(name_through(7, ldap_only), None);
+        let running = nix::unistd::User::from_uid(nix::unistd::geteuid())
+            .expect("the lookup runs")
+            .map(|account| account.name);
+        let source = b"say userid()\n";
+        let outcome = crate::run_program("/t.rex", source.to_vec(), crate::Invocation::none());
+        assert_eq!(outcome.exit_code, 0);
+        let said = String::from_utf8_lossy(&outcome.stdout).into_owned();
+        match running {
+            Some(name) => assert_eq!(said, format!("{name}\n")),
+            None => assert_eq!(said.matches('\n').count(), 1),
+        }
     }
 
     /// **A `~` with `HOME` unset qualifies to the null string, and `~/x` to
