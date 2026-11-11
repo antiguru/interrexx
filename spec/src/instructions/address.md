@@ -308,7 +308,7 @@ address system 'echo z' with output append stem m.
 say m.0 m.2
 ```
 
-```output defect=#104
+```output
 a
 2 z
 ```
