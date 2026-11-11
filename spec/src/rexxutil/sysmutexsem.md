@@ -426,8 +426,11 @@ handle of thirteen digits is under `NUMERIC DIGITS 9`, and a number that no
 call answered. ooRexx uses the number as the address of the semaphore and
 crashes, with a signal that ends the program, for a closed handle
 (SysRequestMutexSem and SysReleaseMutexSem) and, as it does for
-SysPostEventSem, for a rounded one. The first
-example is a rounded handle and a closed one, the second a number that no call
+SysPostEventSem, for a rounded one. The handle of an open event semaphore is
+such a number too: these calls answer `6` for it and change neither semaphore
+(issue #247 for interrexx, which accepts it today; [the event semaphore
+rule](r:util.syseventsem.deviation.158) has the example). The first example
+is a rounded handle and a closed one, the second a number that no call
 answered.
 
 ```rexx

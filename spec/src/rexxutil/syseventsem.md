@@ -516,7 +516,11 @@ program, for a closed handle (all calls but SysCloseEventSem, which answers
 `6`) and, as SysPostEventSem shows, for a rounded one. The first example is a
 rounded handle and a closed one, the second a number that no call answered.
 SysResetEventSem answers `0` in interrexx for such a handle, where it should
-answer `6` like the others, as the third example shows.
+answer `6` like the others, as the third example shows. The handle of an open
+semaphore of the other kind, a mutex semaphore's handle given to an event
+function or an event semaphore's handle given to a mutex function, is such a
+number too: the call answers `6` and changes neither semaphore. interrexx
+accepts it today (issue #247), as the fourth example shows.
 
 ```rexx
 h = SysCreateEventSem()
@@ -547,4 +551,18 @@ say SysResetEventSem(h)
 
 ```output defect=#236
 6
+```
+
+```rexx
+e = SysCreateEventSem()
+m = SysCreateMutexSem('')
+say SysPostEventSem(m) SysResetEventSem(m) SysCloseEventSem(m)
+say SysRequestMutexSem(e, 10) SysReleaseMutexSem(e) SysCloseMutexSem(e)
+say SysCloseEventSem(e) SysCloseMutexSem(m)
+```
+
+```output defect=#247
+6 6 6
+6 6 6
+0 0
 ```
