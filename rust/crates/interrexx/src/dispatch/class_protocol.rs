@@ -291,7 +291,7 @@ pub(super) fn method_source_lines(
             let Some(item) = *slot else {
                 return Err(Raised::method_source_not_all_strings(position).into());
             };
-            lines.push(array_item_line(interp, item, position, taker)?);
+            lines.push(array_item_line(interp, item, position)?);
         }
         return Ok(lines);
     }
@@ -325,12 +325,11 @@ fn array_item_line(
     interp: &mut Interp,
     item: ObjRef,
     position: &'static str,
-    taker: SourceTaker,
 ) -> Result<Vec<u8>, Failure> {
     if is_source_line(interp, item) {
         return Ok(interp.to_text(item).to_vec());
     }
-    if item != ObjRef::NIL && !matches!(taker, SourceTaker::Package) {
+    if item != ObjRef::NIL {
         let wanted = interp.text(b"STRING");
         interp.roots.activity_mut().push_temp(wanted);
         let caller = interp.caller();
