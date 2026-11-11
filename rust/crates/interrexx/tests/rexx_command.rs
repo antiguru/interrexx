@@ -7,11 +7,12 @@
 //! A case's input is its words, one per line: `\xHH` is a byte, and a line
 //! `<empty>` is the empty word. `rexx_path=DIR` sets `REXX_PATH` to the
 //! fixture's `DIR`, `path=DIR` puts it in front of `PATH`, and `cwd=DIR` runs
-//! from it. `DIR` is a name [`directory`] spells. `env=NAME.VALUE` sets the
-//! environment variable `NAME` to `VALUE` for both binaries and leaves the rest
-//! of the environment as it is, `RXTRACE` apart, which every run starts
-//! without; a case file word holds only letters, digits, `-`, `_` and `.`, so
-//! a `_` in `VALUE` stands for a blank, and `env=NAME.` sets the empty value.
+//! from it. `DIR` is a name [`directory`] spells. `env=NAME.VALUE`, which may
+//! list several words, sets each environment variable `NAME` to `VALUE` for
+//! both binaries and leaves the rest of the environment as it is, `RXTRACE`
+//! apart, which every run starts without; a case file word holds only
+//! letters, digits, `-`, `_` and `.`, so a `_` in `VALUE` stands for a blank,
+//! and `env=NAME.` sets the empty value.
 
 #[path = "support/banner.rs"]
 mod banner;
@@ -267,11 +268,10 @@ fn run(
         .stdin(Stdio::null());
     for (key, values) in &case.args {
         if key == "env" {
-            let (name, value) = values
-                .first()
-                .and_then(|word| word.split_once('.'))
-                .expect("env=NAME.VALUE");
-            command.env(name, value.replace('_', " "));
+            for word in values {
+                let (name, value) = word.split_once('.').expect("env=NAME.VALUE");
+                command.env(name, value.replace('_', " "));
+            }
             continue;
         }
         let entry = dir.join(directory(values.first().expect("a directory")));

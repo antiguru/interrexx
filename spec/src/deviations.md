@@ -1105,7 +1105,7 @@ ooRexx leaves it `READY`.
 
 The clauses of a string that an INTERPRET in such a line runs are not traced,
 like the rest of the line, and no stop follows them. ooRexx traces them and
-stops once more before the interpreter reads the next line.
+stops after each of them before the interpreter reads the next line.
 
 ## 151. RAISE SYNTAX in a line read at an interactive trace stop
 
@@ -1115,6 +1115,7 @@ no longer shown, and the program may run on without a stop.
 
 ## 152. An empty line after a line that failed as it was read
 
-An empty line that follows a line that failed as it was read, such as one with
-a TRACE setting that does not exist or an expression that cannot be parsed,
-goes on to the next stop. ooRexx ends interactive tracing at that empty line.
+An empty line that follows a line that failed as it was read, such as
+`trace 1.5`, whose setting does not exist, or an expression that cannot be
+parsed, goes on to the next stop. ooRexx ends interactive tracing at that empty
+line.

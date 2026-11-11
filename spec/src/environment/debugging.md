@@ -1267,10 +1267,11 @@ n 2
 ```
 
 r[env.debugging.input.trace]
-A TRACE instruction that a line runs, or a call of the TRACE function with an
-argument, takes effect, unlike one in the program, and ends the stop, whatever
-setting it leaves: the program runs on to its next stop, if any. A call with
-no argument, and a TRACE that the line holds but does not run, end nothing.
+A TRACE instruction that a line runs takes effect, unlike one in the
+program, and so does a call of the TRACE function with an argument; either
+ends the stop, whatever setting it leaves: the program runs on to its next
+stop, if any. The rest of the line still runs. A call with no argument, and a
+TRACE that the line holds but does not run, end nothing.
 `trace o`, `trace off`,
 the bare `trace`, and a setting with a letter and no question mark, as
 `trace r`, turn interactive tracing off and set the letter, as [the prefix
@@ -1692,31 +1693,53 @@ back ?A
 ## The RXTRACE variable
 
 r[env.debugging.rxtrace]
-When the interpreter starts a program, it reads the environment variable
-`RXTRACE`. If its value is `ON`, in any combination of upper and lower case
+When the interpreter starts, it reads the environment variable `RXTRACE`
+once. If its value is `ON`, in any combination of upper and lower case
 and with nothing else in it, the program starts as if its first clause were
 `TRACE ?R`, and so does each program that it calls by name and each routine
 that a `::ROUTINE` directive defines: [`trace()`](r:bif.trace.setting)
 answers `?R` in it and its first clause is shown. A method starts with `N` as
 without the variable, and an internal routine starts with its caller's
 setting, as [the scope rule](r:bif.trace.scope) says. Any other value, among
-them one with a blank around `ON`, and the empty value, is ignored. The
-variable is read once, when the interpreter starts; a later change of it
-changes nothing. An example cannot start the interpreter with the variable
-set, so the rule is tested by the cases of the command-line tests, which set
-it and show the main program and a program called by name starting with `?R`,
-a method with `N`, and every other value ignored. The `::ROUTINE` part and the
-later change are not tested.
+them one with a blank around `ON`, and the empty value, is ignored. A
+later change of the variable changes nothing. An example cannot start the
+interpreter with the variable set, so the rule is tested by the cases of the
+command-line tests, which set it and show the main program and a program
+called by name starting with `?R`, a method with `N`, and every other value
+ignored. The example shows the later change: a program called by name before
+and after the variable is set to `ON` starts with `N` both times. The
+`::ROUTINE` part is not tested.
+
+```rexx
+.traceoutput~destination(.quiet~new)
+call lineout 'a6rrzqrx.rex', 'return trace()'
+call lineout 'a6rrzqrx.rex'
+say 'before' a6rrzqrx()
+old = value('RXTRACE', 'ON', 'ENVIRONMENT')
+say 'after' a6rrzqrx()
+call value 'RXTRACE', old, 'ENVIRONMENT'
+call sysfiledelete 'a6rrzqrx.rex'
+exit
+::class quiet
+::method lineout
+  return 0
+```
+
+```output defect=#224
+before N
+after N
+```
 
 ## Deviations
 
 r[env.debugging.deviation.150]
-A line that INTERPRET is the clause of runs like the rest of the line, with
-its clauses not traced and no stop after any of them, so that the line
+An INTERPRET in a line runs the clauses of its string as the rest of the line
+runs: they are not traced and no stop follows them, so that the line
 `interpret 'say 7'` writes 7 and the interpreter then reads the next line.
 ooRexx traces the clauses of the string: it writes the line of `say 7` and
 then stops once more before it reads the next line, so that it reads one line
-more than interrexx does. The example is not run against it.
+more than interrexx does; a string of several clauses causes a stop after
+each. The example is not run against it.
 
 ```rexx
 .debuginput~destination(.in~new(.array~of("interpret 'say 7'", '', '', '', '')))
@@ -1825,9 +1848,9 @@ three
 ```
 
 r[env.debugging.deviation.152]
-An empty line that comes after a line that failed as it was read, such as one
-that holds a TRACE with a setting that does not exist or an expression that
-cannot be parsed, ends the stop and goes on to the next clause of the
+An empty line that comes after a line that failed as it was read, such as
+`trace 1.5`, whose setting does not exist, or an expression that cannot be
+parsed, ends the stop and goes on to the next clause of the
 program, as an empty line always does. ooRexx ends interactive tracing at that
 empty line: the clauses that follow are run without being traced and without
 a stop. The example is not run against it.
