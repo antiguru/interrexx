@@ -22,8 +22,11 @@ The pages of this chapter so far are:
   what an activity that holds one may do, how often it is held, and what
   happens when activities wait for each other in a ring.
 
-`HALT` and the end of a program that still has activities are specified on a
-page of this chapter that is not linked here yet: the halt page.
+* [Halt and program end](halt.md): where a `HALT` asked for by another
+  activity or by the host lands in an activity and what it does not end, what
+  keeps a program alive after its main program has ended and what its status
+  is then, and how the message `UNINIT` that the interpreter sends works with
+  more than one activity.
 
 The methods of the classes [`Message`](../classes/message.md),
 [`Alarm`](../classes/alarm.md), [`Ticker`](../classes/ticker.md),
