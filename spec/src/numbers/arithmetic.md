@@ -364,6 +364,29 @@ say (10 ** 999999999) (2e333333333 ** 3) (3e-333333333 ** 3)
 1E+999999999 8E+999999999 2.7E-999999998
 ```
 
+r[num.arithmetic.power.message]
+The message of the `SYNTAX 42.1` error names the base and the exponent as the
+program wrote them, not as the numbers they denote, with `**` between them.
+
+```rexx
+signal on syntax name a
+say 1e3 ** 999999999
+a: say condition('o')~message
+signal on syntax name b
+say ' 100 ' ** '999999999'
+b: say condition('o')~message
+x = 1e3
+signal on syntax name c
+say x ** 99999999e1
+c: say condition('o')~message
+```
+
+```output
+Arithmetic overflow detected at:  "1E3**999999999".
+Arithmetic overflow detected at:  " 100 **999999999".
+Arithmetic overflow detected at:  "1E3**99999999E1".
+```
+
 ## Errors in the multiplicative and additive operators
 
 r[num.arithmetic.range]

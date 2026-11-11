@@ -869,6 +869,13 @@ impl Interp {
                         self.rendered_failure(right_value, Raised::power_exponent_not_whole)
                     );
                 }
+                // Both operands as the program wrote them, not the numbers
+                // parsed from them.
+                Err(ArithError::PowerOverflow { .. }) => {
+                    let base = self.string_value_text(left_value)?;
+                    let exponent = self.string_value_text(right_value)?;
+                    return Err(Raised::power_overflow(&base, &exponent).into());
+                }
                 other => other,
             }
         } else {
