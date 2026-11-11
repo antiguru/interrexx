@@ -266,7 +266,6 @@ say 'the first alarm''s call waited for the second''s,',
 the first alarm's call waited for the second's, so they ran side by side
 ```
 
-
 ```rexx
 n = .slow~new
 t = .ticker~new(0.01, n)
@@ -608,9 +607,10 @@ the program goes on
 
 > **Note.** The example ends with the exit status 3 that it gives itself,
 > after a message failed, one raised a `USER` condition, and a continuation
-> failed. The methods `late` and `await` are guarded: the continuation keeps
-> the guard ([the REPLY guard rule](r:instr.reply.guard)) until its error ends
-> it, so `await` returns only after the error.
+> failed. The methods `late` and `await` are guarded: the continuation has the
+> guard ([the REPLY guard rule](r:instr.reply.guard)), gives it up only while
+> it waits for `go`, and holds it from then until its error ends it, so
+> `await`, which needs the guard to see `done`, returns only after the error.
 
 ## Order
 
@@ -633,12 +633,14 @@ done. The fourth is the guard of an object: an activity that takes it, by
 calling a guarded method or by `GUARD ON`, does so only after the activity
 that held it has given it up, and what that activity did before is done (the
 locks page; [the exclusion rule](r:instr.guard.exclusion)). Anything else is
-not ordered. A clause that runs no other Rexx code, such as an assignment
-whose expression calls no method, routine or function written in Rexx, is one
-step: no clause of another activity runs while it is half done. The clauses of
-activities that nothing orders may run in any interleaving that keeps the
-order of each activity's own clauses, and which one runs may differ between
-runs and between implementations ([Deviation
+not ordered. A clause that does not wait (none of the waits of [the waiting
+rule](r:conc.activities.waiting)) and that calls no method, routine or
+function of the program, and no library method that runs code of the program,
+is one step: no clause of another activity runs while it is half done. The
+library's own methods are part of the step however they are built. The
+clauses of activities that nothing orders may run in any interleaving that
+keeps the order of each activity's own clauses, and which one runs may differ
+between runs and between implementations ([Deviation
 22](../deviations.md#22-one-schedule-for-racing-activities), and [Deviation
 7](../deviations.md#7-order-of-concurrent-trace-lines) for trace lines). That
 one message was started before another does not make it run first.
