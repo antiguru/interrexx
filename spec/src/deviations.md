@@ -1100,3 +1100,21 @@ these as the object answered it, an object that is not a string included.
 When `open` with `BINARY` and no `RECLENGTH` raises `SYNTAX 93.0`, as it does
 for a file that is missing or empty, the stream is `UNKNOWN` afterwards.
 ooRexx leaves it `READY`.
+
+## 150. An INTERPRET in a line read at an interactive trace stop
+
+The clauses of a string that an INTERPRET in such a line runs are not traced,
+like the rest of the line, and no stop follows them. ooRexx traces them and
+stops once more before the interpreter reads the next line.
+
+## 151. RAISE SYNTAX in a line read at an interactive trace stop
+
+A RAISE SYNTAX in such a line is reported as any error of the line is, and
+tracing and the stops go on as before. In ooRexx the clauses that follow are
+no longer shown, and the program may run on without a stop.
+
+## 152. An empty line after a line that failed as it was read
+
+An empty line that follows a line that failed as it was read, such as one with
+a TRACE setting that does not exist or an expression that cannot be parsed,
+goes on to the next stop. ooRexx ends interactive tracing at that empty line.

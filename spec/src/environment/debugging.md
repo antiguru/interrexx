@@ -1,6 +1,7 @@
 ---
 element: "Debugging"
 kind: concept
+deviations: [150, 151, 152]
 rexxref: "Debugging Aids; Debugging Aids > Interactive Debugging of Programs; Debugging Aids > RXTRACE Variable"
 ---
 
@@ -861,7 +862,9 @@ program only when the line is empty or does one of the things that the rules
 below give. A line that holds only blanks, only a comment, only a semicolon or
 only `nop` does nothing and is followed by another read. A LEAVE or an ITERATE
 in a line does not reach the loops of the program: it raises error 28, which
-is reported as [the next rule](r:env.debugging.input.error) says. In the
+is reported as [the next rule](r:env.debugging.input.error) says. An INTERPRET
+in a line runs its string untraced too ([Deviation
+150](r:env.debugging.deviation.150)). In the
 example the interpreter reads eight lines after `say 'prog' x`, the last one
 the empty line.
 
@@ -922,7 +925,10 @@ followed by text that is not specified; the interpreter then stops again and
 reads another line. Errors that are found when the line is read, such as an
 expression that cannot be parsed or a DO that is not closed, and errors that
 happen when it runs, such as a division by zero or a call of a routine that
-does not exist, are all reported that way. The error is not
+does not exist, are all reported that way, and so is one that RAISE SYNTAX
+in a line causes ([Deviation 151](r:env.debugging.deviation.151)); the empty
+line after any of them is read as any other ([Deviation
+152](r:env.debugging.deviation.152)). The error is not
 [trapped](r:cond.traps.signal), even when the program has a trap for its
 condition in force; the example would branch to `trapped` otherwise. The
 example prints only the code of each reported error.
@@ -1701,3 +1707,177 @@ set, so the rule is tested by the cases of the command-line tests, which set
 it and show the main program and a program called by name starting with `?R`,
 a method with `N`, and every other value ignored. The `::ROUTINE` part and the
 later change are not tested.
+
+## Deviations
+
+r[env.debugging.deviation.150]
+A line that INTERPRET is the clause of runs like the rest of the line, with
+its clauses not traced and no stop after any of them, so that the line
+`interpret 'say 7'` writes 7 and the interpreter then reads the next line.
+ooRexx traces the clauses of the string: it writes the line of `say 7` and
+then stops once more before it reads the next line, so that it reads one line
+more than interrexx does. The example is not run against it.
+
+```rexx
+.debuginput~destination(.in~new(.array~of("interpret 'say 7'", '', '', '', '')))
+.traceoutput~destination(.show~new)
+trace ?a
+say 'one'
+say 'two'
+say 'three'
+exit
+::class in
+::method init
+  expose a i
+  use arg a
+  i = 0
+::method linein
+  expose a i
+  i += 1
+  if i > a~items then return ''
+  say '[read' i':' a[i]']'
+  return a[i]
+::class show
+::method lineout
+  use arg l
+  l = '' || l
+  select
+    when l~strip~left(5) = '+++ "' then nop
+    when l~word(2) = 'Interactive' & l~word(4) = 'Error' then do
+      say 'error' l~word(5)~strip('T', ':')
+    end
+    otherwise .stdout~lineout(l)
+  end
+  return 0
+```
+
+```output
+     4 *-* say 'one'
+one
++++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+[read 1: interpret 'say 7']
+7
+[read 2: ]
+     5 *-* say 'two'
+two
+[read 3: ]
+     6 *-* say 'three'
+three
+[read 4: ]
+     7 *-* exit
+```
+
+r[env.debugging.deviation.151]
+A line that runs RAISE SYNTAX is an error of the line like any other
+([the rule](r:env.debugging.input.error) gives them): it is reported, and the
+tracing and the stops go on as before. After the line ooRexx writes no more
+lines of clauses, and in the example it does not stop again either, so that
+the program runs to its end without a read. The example is not run against it.
+
+```rexx
+.debuginput~destination(.in~new(.array~of('raise syntax 93.900', '', '', '', '')))
+.traceoutput~destination(.show~new)
+trace ?a
+say 'one'
+say 'two'
+say 'three'
+exit
+::class in
+::method init
+  expose a i
+  use arg a
+  i = 0
+::method linein
+  expose a i
+  i += 1
+  if i > a~items then return ''
+  say '[read' i':' a[i]']'
+  return a[i]
+::class show
+::method lineout
+  use arg l
+  l = '' || l
+  select
+    when l~strip~left(5) = '+++ "' then nop
+    when l~word(2) = 'Interactive' & l~word(4) = 'Error' then do
+      say 'error' l~word(5)~strip('T', ':')
+    end
+    otherwise .stdout~lineout(l)
+  end
+  return 0
+```
+
+```output
+     4 *-* say 'one'
+one
++++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+[read 1: raise syntax 93.900]
+error 93
+error 93.900
+[read 2: ]
+     5 *-* say 'two'
+two
+[read 3: ]
+     6 *-* say 'three'
+three
+[read 4: ]
+     7 *-* exit
+```
+
+r[env.debugging.deviation.152]
+An empty line that comes after a line that failed as it was read, such as one
+that holds a TRACE with a setting that does not exist or an expression that
+cannot be parsed, ends the stop and goes on to the next clause of the
+program, as an empty line always does. ooRexx ends interactive tracing at that
+empty line: the clauses that follow are run without being traced and without
+a stop. The example is not run against it.
+
+```rexx
+.debuginput~destination(.in~new(.array~of('trace 1.5', '', '', '', '')))
+.traceoutput~destination(.show~new)
+trace ?a
+say 'one'
+say 'two'
+say 'three'
+exit
+::class in
+::method init
+  expose a i
+  use arg a
+  i = 0
+::method linein
+  expose a i
+  i += 1
+  if i > a~items then return ''
+  say '[read' i':' a[i]']'
+  return a[i]
+::class show
+::method lineout
+  use arg l
+  l = '' || l
+  select
+    when l~strip~left(5) = '+++ "' then nop
+    when l~word(2) = 'Interactive' & l~word(4) = 'Error' then do
+      say 'error' l~word(5)~strip('T', ':')
+    end
+    otherwise .stdout~lineout(l)
+  end
+  return 0
+```
+
+```output
+     4 *-* say 'one'
+one
++++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+[read 1: trace 1.5]
+error 24
+error 24.1
+[read 2: ]
+     5 *-* say 'two'
+two
+[read 3: ]
+     6 *-* say 'three'
+three
+[read 4: ]
+     7 *-* exit
+```
