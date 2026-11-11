@@ -3,6 +3,7 @@ element: "SysFileTree"
 kind: function
 syntax: "SysFileTree(filespec, stem, [options], [tattrib], [nattrib])"
 rexxref: "Rexx Utilities (RexxUtil) > SysFileTree"
+deviations: [154]
 ---
 
 # SysFileTree
@@ -511,7 +512,8 @@ r[util.sysfiletree.kinds]
 A directory is an entry that is a directory once symbolic links have been
 followed; every other entry is a file, whether it is a regular file, a pipe, a
 device or a link to one of them. A link is therefore described by what it
-points to.
+points to. A link that points to nothing is described by itself
+([Deviation 154](r:util.sysfiletree.deviation.154)).
 
 ```rexx
 d = 'c2zqft15'
@@ -1045,7 +1047,9 @@ A path that matches nothing gives `.0` equal to 0 and the answer 0, whatever
 the reason: a pattern that no entry fits, a directory or file that is not
 there, a path through a file, a directory whose entries the program may not
 read. Where a directory is unreadable, a search with `S` stores what it finds
-elsewhere and does not report it.
+elsewhere and does not report it. The entries of a directory that the program
+may read but not search are not found either
+([Deviation 154](r:util.sysfiletree.deviation.154)).
 
 ```rexx
 d = 'c2zqft14'
@@ -1079,4 +1083,43 @@ unreadable listed:   0 1
 unreadable content:  0 1
 unreadable named:    0 1
 unreadable, S:       0 1
+```
+
+r[util.sysfiletree.deviation.154]
+An entry that cannot be examined is treated in one of two ways. An entry of a
+directory that the program may read but not search has a name that can be
+read and data that cannot, so it is left out of every listing, whatever
+options are given. A symbolic link that points to nothing is a file, listed
+with the data of the link itself: its size is the length of the name it holds,
+its permissions are those of a link, and its kind is `l`. It is not a
+directory, so the `D` option leaves it out. ooRexx lists both entries with
+the date, size and permissions that belong to another entry. The example is
+not run against it.
+
+```rexx
+d = 'c2zqft18'
+call sysmkdir d
+call sysmkdir d'/closed'
+call lineout d'/closed/in.txt', 'x'; call lineout d'/closed/in.txt'
+call lineout d'/f.txt', 'x'; call lineout d'/f.txt'
+address system 'ln -s nowhere 'd'/dangling'
+address system 'id -u' with output stem u.
+root = (u.1 == 0)
+address system 'chmod 444 'd'/closed'
+say 'closed, named: ' sysfiletree(d'/closed/*', 'f.', 'FO') (f.0 == 0 | root)
+say 'closed, S:     ' sysfiletree(d'/*', 'f.', 'FSO') (f.0 == 2 | root)
+say 'dangling, D:   ' sysfiletree(d'/dangling', 'f.', 'DO') f.0
+say 'dangling, F:   ' sysfiletree(d'/dangling', 'f.', 'F') f.0
+parse var f.1 . . size mode .
+say 'dangling data: ' size mode
+address system 'chmod 755 'd'/closed'
+address system 'rm -r 'd
+```
+
+```output
+closed, named:  0 1
+closed, S:      0 1
+dangling, D:    0 0
+dangling, F:    0 1
+dangling data:  7 lrwxrwxrwx
 ```

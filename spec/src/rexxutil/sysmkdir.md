@@ -117,7 +117,12 @@ NUMERIC DIGITS setting, as for [BEEP](r:bif.beep.range), and that value must
 be from `-2147483648` to `2147483647`. A `mode` that is not in that form, the
 null string, a value with a fractional part other than zero, a value out of
 that range, and an object whose string fails these checks, `.nil` among them,
-raise `SYNTAX 88.907`. When `mode` is omitted it is `511`.
+raise `SYNTAX 88.907`. An object other than a string is first replaced by the
+string that its `request` with the argument `STRING` answers, and when that
+answer is not a string, by the answer of its `STRING` method; an object with a
+`STRING` method that answers `'0'` is therefore the mode `0`. This differs from
+`name`, which has no such fallback ([the argument rule](r:util.sysmkdir.args)).
+When `mode` is omitted it is `511`.
 
 ```rexx
 say try('x') try('') try(1.5) try(.nil) try(.object~new)
@@ -136,6 +141,35 @@ e: return condition('o')~code
 88.907 88.907 88.907 88.907 88.907
 88.907 88.907 88.907
 0 0 0 0 0
+```
+
+```rexx
+say try(.s0~new) try(.sx~new) try(.r0~new) try(.m0~new)
+exit
+try:
+  signal on syntax name e
+  r = SysMkDir('c1zqmku', arg(1))
+  call SysRmDir 'c1zqmku'
+  return r
+e: return condition('o')~code
+::class s0
+::method string
+  return '0'
+::class sx
+::method string
+  return 'x'
+::class r0
+::method request
+  use arg kind
+  if kind == 'STRING' then return '0'
+  return .nil
+::class m0
+::method makestring
+  return '0'
+```
+
+```output defect=#230
+0 88.907 0 0
 ```
 
 r[util.sysmkdir.bits]

@@ -1149,3 +1149,19 @@ An empty line that follows a line that failed as it was read, such as
 `trace 1.5`, whose setting does not exist, or an expression that cannot be
 parsed, goes on to the next stop. ooRexx ends interactive tracing at that empty
 line.
+
+## 154. An entry that SysFileTree cannot examine
+
+An entry of a directory that the program may read but not search is left out
+of the listing, and a symbolic link that points to nothing is listed as a
+file with the data of the link itself and the kind `l`. ooRexx lists both
+with the date, size and permissions that it left from another entry.
+
+## 155. SysFileCopy protects the target
+
+A `source` that is a directory answers `21` before `target` is opened, so
+`target` is neither made nor changed, and a `target` that is the same file as
+`source`, found by device and inode number through any name, hard link or
+symbolic link, answers `17` and changes nothing. ooRexx empties `target` in
+both cases, makes it when it is not there, and answers `0` for a hard link.
+interrexx does not do this yet: issue #234.
