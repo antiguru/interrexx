@@ -1729,7 +1729,7 @@ exit
   return 0
 ```
 
-```output defect=#224
+```output
 before N
 after N
 ```

@@ -15,7 +15,7 @@ use crate::{
     CallContext, Code, ExecutableRecord, ExecutableSource, GeneratedKind, GeneratedMethod,
     InstallBody, InstalledMethodBody, InstalledRoutine, Interp, LIBRARY_PACKAGE_NAME,
     LibraryBinding, LibraryCodeKey, LibraryLoad, Loud, MergedRoutine, Namespace, dispatch,
-    environment, internal_routines, library_search_of, plan, require, run,
+    environment, external_trace_of, internal_routines, library_search_of, plan, require, run,
 };
 use interrexx_classes::{ClassKind, InheritRefusal, MethodId};
 use interrexx_core::{ObjRef, SlotFrame};
@@ -2226,6 +2226,7 @@ impl Interp {
     /// search taken from it.
     pub(crate) fn adopt_environment(&mut self, environment: Vec<(Vec<u8>, Vec<u8>)>) {
         self.library_search = library_search_of(&environment);
+        self.external_trace = external_trace_of(&environment);
         self.env = environment;
     }
 
