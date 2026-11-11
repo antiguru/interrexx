@@ -1,0 +1,31 @@
+name: "Licenses"
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  # No tracked file may name the ooRexx licence (scripts/check-licence-text.sh).
+  licence-text:
+    name: no ooRexx licence text
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: scripts/check-licence-text.sh
+
+  # Every dependency's licence must be one rust/deny.toml allows.
+  dependencies:
+    name: dependency licences
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: rust
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install cargo-deny
+        uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
+        with:
+          tool: cargo-deny@0.20.2
+      - run: cargo deny check licenses

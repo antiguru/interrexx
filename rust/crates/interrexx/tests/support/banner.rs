@@ -22,7 +22,7 @@ pub fn recorded(line: &str, oracle: bool) -> Option<String> {
         let dropped = [
             "Copyright (c) 2005-",
             "This program and the accompanying materials",
-            "of the Common Public License",
+            "of the Common ",
             "https://www.oorexx.org/license.html",
         ];
         if dropped.iter().any(|prefix| line.starts_with(prefix)) {
