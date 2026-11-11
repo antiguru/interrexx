@@ -329,7 +329,11 @@ fn array_step(
         Some(position) => position,
         None => match args {
             [Some(only)] => super::positive_index(interp, *only, 1)?,
-            _ => return Ok(Some(ObjRef::NIL)),
+            // **A subscript list with a component past its dimension is
+            // past the array** (Deviation 120): `next` answers `.nil` and
+            // `previous` the last item in `allItems` order.
+            _ if forward => return Ok(Some(ObjRef::NIL)),
+            _ => usize::MAX,
         },
     };
     let offsets = occupied(interp, receiver)?;
