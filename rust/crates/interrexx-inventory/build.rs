@@ -61,6 +61,9 @@ const ARITY_OVERRIDES: &[((u16, u16), usize)] = &[
     ((20, 926), 1),
     // `:1336`.
     ((20, 935), 1),
+    // `createConstantGetterMethod`, `DirectiveParser.cpp:1926`-`1933`: the
+    // constant's name, in upper case.
+    ((99, 906), 1),
 ];
 
 fn main() {
