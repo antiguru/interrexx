@@ -248,7 +248,7 @@ exit
   say 'cancel sent'
 ```
 
-```output defect=#150
+```output
 cancel sent
 done
 ```
