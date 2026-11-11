@@ -95,8 +95,7 @@ r[util.sysfilemove.replace]
 Some entries at `target` are replaced by the move. When `source` is not a
 directory, they are a fifo, and a symbolic link that points to nothing, to a
 directory or to a fifo. When `source` is a directory, it is a directory with
-no entries. This book does not specify a `target` of another kind, such as a
-socket. The link, the fifo or the empty directory goes, and what a link
+no entries. The link, the fifo or the empty directory goes, and what a link
 pointed to is not changed.
 
 ```rexx
