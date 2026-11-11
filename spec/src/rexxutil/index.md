@@ -27,6 +27,16 @@ The pages of this chapter so far are:
 * [SysTempFileName](systempfilename.md) and
   [SysSearchPath](syssearchpath.md): inventing a name that is not in use, and
   finding a file along a list of directories.
+* [The macrospace](macrospace.md) and its functions
+  [SysAddRexxMacro](sysaddrexxmacro.md),
+  [SysDropRexxMacro](sysdroprexxmacro.md),
+  [SysQueryRexxMacro](sysqueryrexxmacro.md),
+  [SysReorderRexxMacro](sysreorderrexxmacro.md),
+  [SysClearRexxMacroSpace](sysclearrexxmacrospace.md),
+  [SysSaveRexxMacroSpace](syssaverexxmacrospace.md) and
+  [SysLoadRexxMacroSpace](sysloadrexxmacrospace.md): the routines that the
+  service keeps for every program, and how they are added, found, moved,
+  saved and loaded.
 
 The rules state the behavior of a Unix-like system. The examples make their
 own files and directories, whose names start with `c1zq`, and remove them
