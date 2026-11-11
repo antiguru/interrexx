@@ -153,6 +153,11 @@ impl ClassRegistry {
         self.graph.reparent(id, superclass, kind, metaclass);
     }
 
+    /// See [`ClassGraph::complete_mixin`].
+    pub fn complete_mixin(&mut self, id: ObjRef) {
+        self.graph.complete_mixin(id);
+    }
+
     /// See [`ClassGraph::unlist_subclass`].
     pub fn unlist_subclass(&mut self, id: ObjRef) {
         self.graph.unlist_subclass(id);
