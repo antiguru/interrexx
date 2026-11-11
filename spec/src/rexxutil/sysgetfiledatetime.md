@@ -18,7 +18,7 @@ modification.
 
 ## Arguments
 
-r[ru.sysgetfiledatetime.args]
+r[util.sysgetfiledatetime.args]
 `filename` is required and `timesel` is optional. The call follows [the native
 call rule](r:bif.index.call.native): a missing `filename` raises `SYNTAX
 88.901`, a third argument raises `SYNTAX 88.922`, and an argument that is an
@@ -64,7 +64,7 @@ sysgetfiledatetime(f, .mutablebuffer~new('write')) -> 2031-03-07 14:05:09
 
 ## The answer
 
-r[ru.sysgetfiledatetime.answer]
+r[util.sysgetfiledatetime.answer]
 The answer for a file or directory that exists is its time in the form
 `YYYY-MM-DD HH:MM:SS`, in local time on a 24-hour clock, with the year in four
 digits and every other field in two. The file may be a regular file, a
@@ -108,7 +108,7 @@ call sysrmdir d
 1 2040-01-02 03:04:05
 ```
 
-r[ru.sysgetfiledatetime.timesel]
+r[util.sysgetfiledatetime.timesel]
 `timesel` selects the time, by its first character alone: `W` for the time of
 the last modification, which is the default, and `A` for the time of the last
 access, in either letter case; the characters after the first are not looked
@@ -152,7 +152,7 @@ sysgetfiledatetime(f, 1) -> 40.920
 sysgetfiledatetime(f, 'wX') -> 2031-03-07 14:05:09
 ```
 
-r[ru.sysgetfiledatetime.fail]
+r[util.sysgetfiledatetime.fail]
 The answer is -1 when `filename` names nothing: a name that no file has, a
 path through a file, a path through a directory the program may not search,
 the null string, and a name with wildcards, which is not expanded and is taken

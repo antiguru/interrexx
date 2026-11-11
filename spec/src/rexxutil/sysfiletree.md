@@ -22,14 +22,14 @@ for the sake of other systems and have no effect here.
 
 ## Arguments
 
-r[ru.sysfiletree.args]
+r[util.sysfiletree.args]
 `filespec` and `stem` are required; `options`, `tattrib` and `nattrib` are
 optional. The call follows [the native call rule](r:bif.index.call.native): a
 required argument that is missing raises `SYNTAX 88.901`, a sixth argument
 raises `SYNTAX 88.922`, and an argument that is an object other than a string
 is read by its string value, or raises `SYNTAX 88.909` when it has none. The
 `stem` argument is the exception to the last point: an array object or a stem
-object is the stem itself, [as the next rule](r:ru.sysfiletree.stem) says.
+object is the stem itself, [as the next rule](r:util.sysfiletree.stem) says.
 
 ```rexx
 signal on syntax name a
@@ -70,7 +70,7 @@ say sysfiletree(.mutablebuffer~new('c2zqft01*'), 'f.', .array~of('D'))
 0
 ```
 
-r[ru.sysfiletree.order]
+r[util.sysfiletree.order]
 The arguments are checked in this order, and the first failure decides the
 code: the number of arguments and the conversion of each argument to a string
 (`88.9xx`); the name of the stem (`SYNTAX 40.925`); a `filespec` that is the
@@ -116,7 +116,7 @@ return
 
 ## The stem
 
-r[ru.sysfiletree.stem]
+r[util.sysfiletree.stem]
 When the call returns, the stem holds the number of matches in `.0` and the
 matches in `.1` to `.n`. No other tail is assigned or dropped: a call that
 finds nothing sets `.0` to 0 and leaves the entries of an earlier call in
@@ -167,7 +167,7 @@ call sysrmdir d
 0 0
 ```
 
-r[ru.sysfiletree.stem.name]
+r[util.sysfiletree.stem.name]
 A `stem` string that is not a stem name raises `SYNTAX 40.925`. A stem name is
 a symbol that names a simple variable, with a period at its end or without; a
 name with a period inside it, a name that starts with a digit or a period, a
@@ -211,7 +211,7 @@ return
 
 ## What is looked for
 
-r[ru.sysfiletree.spec]
+r[util.sysfiletree.spec]
 `filespec` is a path whose last component is the pattern. `*` matches any run
 of characters, including none and including a leading period, `?` matches one
 character, `[ ]` matches one of the characters listed in it or in one of its
@@ -299,7 +299,7 @@ Sub/*  BI    Sub/in.txt
 SUB/*  BI    
 ```
 
-r[ru.sysfiletree.spec.dir]
+r[util.sysfiletree.spec.dir]
 A `filespec` that names a directory without a slash at its end matches that
 directory itself, and one with a slash at its end, or with `*` after it,
 matches the entries in it. A path that has a component that is a file, a
@@ -382,7 +382,7 @@ c2zqft06/s* DO                 1 @/c2zqft06/sub
 ~/sub/* FO                     1 @/c2zqft06/sub/in.txt
 ```
 
-r[ru.sysfiletree.kinds]
+r[util.sysfiletree.kinds]
 A directory is an entry that is a directory once symbolic links have been
 followed; every other entry is a file, whether it is a regular file, a pipe, a
 device or a link to one of them. A link is therefore described by what it
@@ -415,7 +415,7 @@ B dir dlink file flink pipe
 
 ## Options
 
-r[ru.sysfiletree.options]
+r[util.sysfiletree.options]
 `options` is a string of letters in either case, with no blanks. `B` selects
 files and directories, `D` directories only and `F` files only; when more than
 one of them is given, the last decides, and when none is given, `B` applies.
@@ -468,7 +468,7 @@ ODB  one.txt sub
 OFD  sub
 ```
 
-r[ru.sysfiletree.options.error]
+r[util.sysfiletree.options.error]
 A character in `options` that is not one of `B`, `D`, `F`, `S`, `I`, `O`, `L`,
 `T` and `H`, whether another letter, a blank, a digit or a punctuation
 character, raises `SYNTAX 40.900`.
@@ -510,7 +510,7 @@ return
 [tl] ok 0
 ```
 
-r[ru.sysfiletree.recurse]
+r[util.sysfiletree.recurse]
 With `S` the search goes through every directory below the one `filespec`
 names, however deep, and applies the pattern to the entries of each. A
 directory is entered whether or not its own name matches the pattern. The
@@ -593,7 +593,7 @@ A* DSOI        a
 
 ## What is stored
 
-r[ru.sysfiletree.line]
+r[util.sysfiletree.line]
 Unless `O` is given, a match is stored as one line of four fields: the time of
 the last modification, the size, the attribute string and the full name, the
 date and the time separated by two blanks. The time is written in the form
@@ -682,7 +682,7 @@ return
 [FT] [69/01/02/10/00          12  -rw-r-----  @/f.txt]
 ```
 
-r[ru.sysfiletree.line.name]
+r[util.sysfiletree.line.name]
 With `O`, a match is stored as its full name only, and `O` takes precedence
 over `L`, `T` and `H`, in whatever order the letters come.
 
@@ -714,7 +714,7 @@ HTLOF  @/f.txt
 FL     2031-03-07 14:05:09           2  -rw-r-----  @/f.txt
 ```
 
-r[ru.sysfiletree.size]
+r[util.sysfiletree.size]
 The size is the size of the file in bytes, right-aligned in ten columns. A
 size above 9999999999 is stored as 9999999999, unless `H` is given: `H` makes
 the field twenty columns wide and stores the true size. The size of a
@@ -746,7 +746,7 @@ ten.dat   9999999999 10000000000
 big.dat   9999999999 12345678901
 ```
 
-r[ru.sysfiletree.attr]
+r[util.sysfiletree.attr]
 The attribute string has ten characters, written as a long listing of the host
 writes the mode of a file. The first is the kind of the entry: `-` for a
 regular file, `d` for a directory, `p` for a pipe, and other letters for the
@@ -817,7 +817,7 @@ stick  1 drwxr-xr-t
 
 ## The attribute masks
 
-r[ru.sysfiletree.masks]
+r[util.sysfiletree.masks]
 `tattrib` and `nattrib` are strings of up to five characters, each `*`, `+` or
 `-`, or the null string. They are checked, and an argument that has any other
 character or is longer than five characters raises `SYNTAX 40.900`. They have
@@ -904,7 +904,7 @@ return
 
 ## Matches that cannot be found
 
-r[ru.sysfiletree.none]
+r[util.sysfiletree.none]
 A path that matches nothing gives `.0` equal to 0 and the answer 0, whatever
 the reason: a pattern that no entry fits, a directory or file that is not
 there, a path through a file, a directory that the program may not read. Where

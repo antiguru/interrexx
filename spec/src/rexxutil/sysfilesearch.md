@@ -16,7 +16,7 @@ asked. It answers 0, or 3 when the file cannot be read.
 
 ## Arguments
 
-r[ru.sysfilesearch.args]
+r[util.sysfilesearch.args]
 `target`, `file` and `stem` are required, and `options` is optional. The call
 follows [the native call rule](r:bif.index.call.native): a missing required
 argument raises `SYNTAX 88.901`, a fifth argument raises `SYNTAX 88.922`, and
@@ -87,11 +87,11 @@ return
 40.925 sysfilesearch('a', 'c2zqfs01.txt', '')
 ```
 
-r[ru.sysfilesearch.order]
+r[util.sysfilesearch.order]
 The arguments are checked in this order: the count and the conversion of the
 arguments to strings (`88.9xx`); `options` (`SYNTAX 40.900` for a character
 that is not an option letter, a blank included); the name of the stem (`SYNTAX
-40.925`, with the names that [SysFileTree](r:ru.sysfiletree.stem.name)
+40.925`, with the names that [SysFileTree](r:util.sysfiletree.stem.name)
 rejects). Only then is the file opened, so a stem or an option that is wrong
 raises its error whether or not the file exists. An `options` that is the null
 string is allowed and means no option.
@@ -131,8 +131,8 @@ sysfilesearch('a', 'c2zqfs06.none', '') -> 40.925
 
 ## What is stored
 
-r[ru.sysfilesearch.stem]
-The stem is filled as [SysFileTree fills it](r:ru.sysfiletree.stem): the
+r[util.sysfilesearch.stem]
+The stem is filled as [SysFileTree fills it](r:util.sysfiletree.stem): the
 number of lines stored in `.0`, the lines in `.1` to `.n` in the order of the
 file, no other tail assigned or dropped, so entries of an earlier call stay
 when this call stores fewer, and an array object holds the lines at the
@@ -173,7 +173,7 @@ call sysrmdir d
 0 0
 ```
 
-r[ru.sysfilesearch.match]
+r[util.sysfilesearch.match]
 A line is stored when `target` occurs in it as a run of characters; there are
 no wildcards, and blanks in `target` count. The search ignores case unless the
 option `C` is given. The letters `C` and `I` select a case-sensitive and a
@@ -273,7 +273,7 @@ beta][]   0 0
 [zzz][N]       0 0
 ```
 
-r[ru.sysfilesearch.lines]
+r[util.sysfilesearch.lines]
 A line of the file ends at a line feed (`'0A'x`). A carriage return that comes
 directly before the line feed is not part of the line; a carriage return
 anywhere else, a null character and a `'1A'x` character are. The last line of
@@ -345,7 +345,7 @@ return s
 
 ## The answer
 
-r[ru.sysfilesearch.answer]
+r[util.sysfilesearch.answer]
 The answer is 0 when the file was read, whether or not a line was stored, and
 3 when the file could not be opened for reading: a name that no file has, the
 null string, a name that is a directory, a path through a file, or a file the

@@ -18,7 +18,7 @@ answers 0, or -1 when it did not set the time.
 
 ## Arguments
 
-r[ru.syssetfiledatetime.args]
+r[util.syssetfiledatetime.args]
 `filename` is required; `newdate` and `newtime` are optional. The call follows
 [the native call rule](r:bif.index.call.native): a missing `filename` raises
 `SYNTAX 88.901`, a fourth argument raises `SYNTAX 88.922`, and an argument
@@ -63,7 +63,7 @@ sysgetfiledatetime(f) -> 2032-01-01 01:01:01
 
 ## What is set
 
-r[ru.syssetfiledatetime.set]
+r[util.syssetfiledatetime.set]
 A call with a `newdate`, a `newtime`, or both sets the time of the last
 modification of `filename` to the date and the time given, local time, and
 answers 0. An omitted `newdate` leaves the date of the present modification
@@ -109,7 +109,7 @@ call sysrmdir d
 1 2031-01-15 12:30:45
 ```
 
-r[ru.syssetfiledatetime.now]
+r[util.syssetfiledatetime.now]
 A call with neither `newdate` nor `newtime` sets the time to the present time
 of the host, as the `touch` command does, and answers 0. A `newdate` and a
 `newtime` that are both empty are omitted in the same way.
@@ -145,7 +145,7 @@ call sysrmdir d
 0 1 - :
 ```
 
-r[ru.syssetfiledatetime.form]
+r[util.syssetfiledatetime.form]
 `newdate` is read as a year, a month and a day, three whole numbers in decimal
 digits separated by hyphens, and `newtime` as an hour, a minute and a second,
 separated by colons. Leading blanks before a number are skipped, but a blank
@@ -231,7 +231,7 @@ return
 [20310115][123045]             -1 2031-06-15 09:08:07
 ```
 
-r[ru.syssetfiledatetime.carry]
+r[util.syssetfiledatetime.carry]
 A number above the largest value of its field is carried into the next larger
 field, and one below the smallest value is borrowed from it: month 13 is
 January of the next year, month 0 is December of the previous year, day 0 is
@@ -281,7 +281,7 @@ return
 
 ## Failing
 
-r[ru.syssetfiledatetime.fail]
+r[util.syssetfiledatetime.fail]
 The answer is -1, and nothing is created or changed, when `filename` names
 nothing, when the file's time may not be set, or when the date or time is not
 of the form above. `filename` names nothing when no file has that name, when a
