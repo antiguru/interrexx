@@ -77,7 +77,7 @@ say SysCreateEventSem(, .nil)
 e: say condition('o')~code
 ```
 
-```output defect=#238
+```output
 88.909
 ```
 
