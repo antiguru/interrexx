@@ -26,6 +26,10 @@ pub(crate) struct Delivery {
 
 /// What each execution of the interpreter needs its own copy of.
 pub(crate) struct Activity {
+    /// Set by a stream builtin whose message answered nothing, just before it
+    /// returns the 44.1 a function call would raise; a `CALL` takes it and
+    /// leaves `RESULT` dropped instead (`builtin::answered_nothing`).
+    pub(crate) builtin_answered_nothing: bool,
     /// A buffer lent out for a builtin call's evaluated argument values.
     pub(crate) value_buffer: Vec<Option<ObjRef>>,
     /// The activation running right now, held in a field of its own rather
@@ -485,6 +489,7 @@ impl Activity {
 
     pub(crate) fn new() -> Activity {
         Activity {
+            builtin_answered_nothing: false,
             value_buffer: Vec::new(),
             running: None,
             suspended: Vec::new(),
@@ -630,6 +635,7 @@ impl Activity {
         let Activity {
             // Every push site roots the value as a temp before it lands here.
             value_buffer: _,
+            builtin_answered_nothing: _,
             running,
             trace_cache: _,
             suspended,

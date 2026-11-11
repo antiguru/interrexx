@@ -851,7 +851,7 @@ say code
   .stdout~lineout('got' arg(1))
 ```
 
-```output defect=#211
+```output
 got x
 got y
 after call LIT
