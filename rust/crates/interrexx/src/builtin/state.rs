@@ -356,6 +356,26 @@ pub(crate) fn condition(
             Ok(interp.text(b""))
         }
         (b'C' | b'D' | b'E' | b'I' | b'S', None) => Ok(interp.text(b"")),
+        // The condition object's entry as it stands now: a handler that holds
+        // the object may have changed it. An entry removed answers the null
+        // string; any other value is answered as it is.
+        (
+            b'C' | b'D' | b'I',
+            Some(TrappedCondition {
+                object: Some(object),
+                ..
+            }),
+        ) => {
+            let entry: &[u8] = match style {
+                b'C' => b"CONDITION",
+                b'D' => b"DESCRIPTION",
+                _ => b"INSTRUCTION",
+            };
+            match interp.condition_entry_held(*object, entry) {
+                Some(value) => Ok(value),
+                None => Ok(interp.text(b"")),
+            }
+        }
         (b'C', Some(condition)) => {
             let name = condition.name.to_vec();
             Ok(interp.text_built(name))

@@ -106,7 +106,7 @@ h: o = arg(1)
   raise user foo description 'raised'
 ```
 
-```output defect=#126
+```output
 same 0 0
 changed changed
 x
