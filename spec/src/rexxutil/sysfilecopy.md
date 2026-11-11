@@ -198,8 +198,8 @@ whether or not its directory exists. A `target` that is the same file as
 changes nothing, whichever name, hard link or symbolic link reaches it. ooRexx
 opens `target` and empties it before it finds that `source` is a directory,
 and makes `target` when it is not there; for a hard link it does not see the
-same file, so it empties the file and answers `0`. interrexx does not yet do
-this (issue #234). The example is not run against ooRexx.
+same file, so it empties the file and answers `0`. The example is not run
+against ooRexx.
 
 ```rexx
 call SysMkDir 'c1zqcgd'
@@ -227,7 +227,7 @@ address system 'chmod 644 c1zqcgu; rm -f c1zqcgt c1zqcgu c1zqcga c1zqcgh c1zqcgl
 call SysRmDir 'c1zqcgd'
 ```
 
-```output defect=#234
+```output
 21 6
 21 0
 21 2

@@ -18,6 +18,7 @@ use crate::{Failure, Interp};
 /// `EEXIST`, which the copy and the move answer for a source and target that
 /// are one file, and the move for a target that is a file already.
 const EEXIST: i32 = 17;
+const EISDIR: i32 = 21;
 
 /// The type of whatever `path` names, following a symbolic link.
 fn file_type(path: &[u8]) -> Option<FileType> {
@@ -58,11 +59,24 @@ fn copy_following_links(from: &[u8], to: &[u8], preserve_mode: bool) -> i32 {
         Ok(stat) => stat,
         Err(errno) => return errno.raw_os_error(),
     };
+    // A directory is refused, and a target that is the source by device and
+    // inode (a hard link, say) is refused, before the target is opened and
+    // emptied.
+    if FileType::from_raw_mode(source_stat.st_mode) == FileType::Directory {
+        return EISDIR;
+    }
+    let target_stat = rustix::fs::stat(to).ok();
+    if target_stat
+        .as_ref()
+        .is_some_and(|stat| stat.st_dev == source_stat.st_dev && stat.st_ino == source_stat.st_ino)
+    {
+        return EEXIST;
+    }
     let source = match rustix::fs::open(from, OFlags::RDONLY, Mode::empty()) {
         Ok(fd) => fd,
         Err(errno) => return errno.raw_os_error(),
     };
-    let created = rustix::fs::stat(to).is_err();
+    let created = target_stat.is_none();
     let flags = OFlags::WRONLY | OFlags::CREATE | OFlags::TRUNC;
     let target = match rustix::fs::open(to, flags, Mode::from_raw_mode(0o666)) {
         Ok(fd) => fd,
