@@ -129,7 +129,9 @@ call does not hold the guard, so other activities can run guarded methods of
 its scope, unless a method below it on the same activity still holds the guard
 ([the locks page](r:conc.locks.when)), and the condition is tried again once
 another activity assigns or drops one of the object variables that it names as
-a simple symbol; when it is tried at other times is not specified. GUARD ON
+a simple symbol (a compound variable or a stem names the whole stem, as
+[Deviation 160](r:conc.locks.deviation.160) says); when it is tried at other
+times is not specified. GUARD ON
 WHEN takes the guard again before each evaluation; GUARD OFF WHEN evaluates
 the condition without it ([the locks page](r:conc.locks.when)). When the
 condition is true, GUARD ON WHEN goes on with the guard held, and GUARD OFF

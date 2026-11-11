@@ -1150,3 +1150,12 @@ An empty line that follows a line that failed as it was read, such as
 `trace 1.5`, whose setting does not exist, or an expression that cannot be
 parsed, goes on to the next stop. ooRexx ends interactive tracing at that empty
 line.
+
+## 160. A GUARD WHEN on a compound variable or a stem
+
+A condition of GUARD ON WHEN or GUARD OFF WHEN that names a compound variable
+or a stem names the whole stem: it is evaluated again when another activity
+assigns to or drops any tail of the stem or the whole stem. ooRexx does not
+evaluate it again for a tail, so the wait does not end, and it evaluates a
+GUARD OFF WHEN again for no assignment to the whole stem. interrexx does not
+evaluate it again for a tail yet (#239).
