@@ -52,6 +52,8 @@ pub(crate) fn cls(
         );
     }
     command.current_dir(std::ffi::OsStr::from_bytes(interp.cwd_bytes()));
+    // `output` would give the child `/dev/null`; `system` inherits it.
+    command.stdin(std::process::Stdio::inherit());
     interp.sync_input_offset();
     let output = command.output();
     interp.adopt_input_offset();
