@@ -149,14 +149,17 @@ changes: neither name is changed and the files keep their bytes. It answers
 `17` when `source` names an entry and `target` names the same one, under the
 same name, under another name or through a symbolic link; and when `target`,
 with symbolic links followed, is a regular file, whether `source` exists or
-not, since a move does not replace a file. It answers `20` when a component of
-`target` before the last is a file, whether `source` exists or not. Otherwise
-it answers `2` when `source` names nothing or the directory of `target` does
-not exist, `21` when a file is moved to a directory, `39` when a directory is
-moved to a directory that has entries, `20` when a directory is moved to a
-symbolic link or to an entry, such as a fifo, that is neither a directory nor
-a regular file, `22` when a directory is moved into itself, and `13` when the
-system refuses, as it does for a directory that may not be changed.
+not, since a move does not replace a file. Otherwise the directories of the
+two names are looked up first, that of `source` before that of `target`: the
+call answers `2` when a component of either before the last does not exist and
+`20` when one is a file, whether `source` exists or not, so that
+`SysFileMove('none', 'f/x')` answers `20` and `SysFileMove('none/x', 'f/x')`
+answers `2`. Otherwise it answers `2` when `source` names nothing, `21` when a
+file is moved to a directory, `39` when a directory is moved to a directory
+that has entries, `20` when a directory is moved to a symbolic link or to an
+entry, such as a fifo, that is neither a directory nor a regular file, `22`
+when a directory is moved into itself, and `13` when the system refuses, as it
+does for a directory that may not be changed.
 
 ```rexx
 call charout 'c1zqmfa', 'AAA'
@@ -171,6 +174,7 @@ say SysFileMove('c1zqmfa', 'c1zqmfd') SysIsFile('c1zqmfa') SysIsFileDirectory('c
 say SysFileMove('c1zqmfa', 'c1zqmfd/') SysFileExists('c1zqmfd/c1zqmfa')
 say SysFileMove('c1zqmfa', 'c1zqmfnone/a') SysIsFile('c1zqmfa')
 say SysFileMove('c1zqmfa', 'c1zqmfb/x') SysFileMove('c1zqmfnone', 'c1zqmfb/x') SysFileMove('c1zqmfd', 'c1zqmfb/x') SysFileMove('c1zqmfd', 'c1zqmfb')
+say SysFileMove('c1zqmfnone/x', 'c1zqmfb/x') SysFileMove('c1zqmfb/x', 'c1zqmfnone/x')
 address system 'chmod 555 c1zqmfd'
 say SysFileMove('c1zqmfa', 'c1zqmfd/a') SysIsFile('c1zqmfa') SysFileExists('c1zqmfd/a')
 address system 'chmod 755 c1zqmfd'
@@ -189,5 +193,6 @@ call SysRmDir 'c1zqmfd'
 21 0
 2 1
 20 20 20 17
+2 20
 13 1 0
 ```

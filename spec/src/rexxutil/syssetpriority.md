@@ -17,22 +17,22 @@ when it did, or a number that is not zero when the system refused.
 r[util.syssetpriority.args]
 `delta` is a required whole number. `class` is a whole number too, and may be
 omitted; its value, and a place that is left empty, make no difference to the
-call ([the next rule](r:util.syssetpriority.answer)). A number is a whole
-number when it has no fraction or only zeros in it, as `1.0` and `1e0` have,
-and it is read as [the whole-number rule](r:util.index.whole) says, in the
-range `-2147483648` to `2147483647`. A value that is not a whole number or is
-out of that range raises `SYNTAX 88.907`: a fraction such as `1.5` or `.5`,
-the null string, a word, and the words `IDLE`, `NORMAL`, `LOWEST` and the
-like, with which some descriptions of the function name classes and deltas,
-are not numbers here. A value that is given is checked before the omission of
-`delta` is reported, so that `SysSetPriority('x')` raises `88.907` and
-`SysSetPriority(1)` raises `SYNTAX 88.901`; three arguments raise `SYNTAX
-88.922`. When an argument past the last one comes with an omitted or wrong
-argument, [Deviation 101](r:util.index.deviation.101) says which error is
-raised. An object that is not a string is read by the string that its `STRING`
-method answers, not by its `request`, so that `.nil` raises `SYNTAX 88.907`
-and an object whose `STRING` answers a whole number is that number; the second
-example shows it.
+call ([the next rule](r:util.syssetpriority.answer)). A number is read as [the
+whole-number rule](r:util.index.whole) says, and is a whole number when it
+then has no fraction or only zeros, as `1.0`, `1e0` and
+`2.00000000000000000001` have, in the range `-2147483648` to `2147483647`. A
+value that is not a whole number or is out of that range raises `SYNTAX
+88.907`: a fraction such as `1.5` or `.5`, the null string, a word, and the
+words `IDLE`, `NORMAL`, `LOWEST` and the like, with which some descriptions of
+the function name classes and deltas, are not numbers here. A value that is
+given is checked before the omission of `delta` is reported, so that
+`SysSetPriority('x')` raises `88.907` and `SysSetPriority(1)` raises `SYNTAX
+88.901`; three arguments raise `SYNTAX 88.922`. When an argument past the last
+one comes with an omitted or wrong argument, [Deviation
+101](r:util.index.deviation.101) says which error is raised. An object that is
+not a string is read by the string that its `STRING` method answers, not by
+its `request`, so that `.nil` raises `SYNTAX 88.907` and an object whose
+`STRING` answers a whole number is that number; the second example shows it.
 
 ```rexx
 call try "SysSetPriority()"

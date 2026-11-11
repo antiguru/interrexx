@@ -59,8 +59,10 @@ The pages of this chapter are:
   functions](windows.md).
 
 The rules state the behavior of a Unix-like system. The examples make their
-own files and directories, whose names start with `c` and a digit and `zq`,
-and remove them again. What a function answers for a failure is what
+own files and directories, whose names start with `c`, a digit and `zq`,
+apart from one named after a function in [the availability
+rule](r:util.index.available) and the names that start with `~` before that
+prefix, and remove them again. What a function answers for a failure is what
 [the answer rule](r:util.index.codes) gives: an error number of Linux for the
 functions that change files, and a fixed value for the functions that the rule
 names.
@@ -178,14 +180,14 @@ with the argument `STRING` answers, and an object that has none raises `SYNTAX
 SysStemCopy, SysStemDelete and SysStemInsert, the whole numbers of
 SysStemCopy, SysStemDelete, SysStemInsert and SysStemSort, the `mode` of
 SysMkDir, the number of SysGetErrorText, the `num` and the inserts of
-SysGetMessage and SysGetMessageX, the arguments of SysSetPriority, a semaphore
-handle and a timeout, and the items of the `substitutions` of
-SysFormatMessage. The page of each says so. An omitted place at the end of the
-call adds nothing to the count, and an optional argument that is omitted takes
-the default that the function's page states. Each page says what its function
-reads as a string and what it reads as a number, and which other error codes
-it raises. The order of these checks is the subject of [Deviation
-101](r:util.index.deviation.101).
+SysGetMessage, the `set`, the `num` and the inserts of SysGetMessageX, the
+arguments of SysSetPriority, a semaphore handle and a timeout, and the items
+of the `substitutions` of SysFormatMessage. The page of each says so. An
+omitted place at the end of the call adds nothing to the count, and an
+optional argument that is omitted takes the default that the function's page
+states. Each page says what its function reads as a string and what it reads
+as a number, and which other error codes it raises. The order of these checks
+is the subject of [Deviation 101](r:util.index.deviation.101).
 
 ```rexx
 call try "SysFileExists()"
@@ -221,8 +223,10 @@ A whole-number argument of a RexxUtil function is read as [BEEP reads its
 arguments](r:bif.beep.range): its number is rounded to 20 significant digits,
 half up, whatever the NUMERIC DIGITS of the caller, and the value after that
 rounding must have no fractional part. So `1.0000000000000000001` (20 digits)
-has a fraction and `1.00000000000000000001` (21 digits) is `1`. The range that
-a function allows is checked on the rounded value and is stated on its page.
+has a fraction and `1.00000000000000000001` (21 digits) is `1`. BEEP's limit
+of 10\*\*18 is not part of this rule: the range that a function allows is
+checked on the rounded value and is stated on its page, and for a semaphore
+handle it reaches 18446744073709551615.
 
 ```rexx
 s.0 = 2
@@ -603,8 +607,9 @@ the system's error number for the failure: `2` for a name that nothing has or
 a directory in it that does not exist, `13` for a permission that the system
 refuses, `17` for a name that is taken, `20` for a name that must be a
 directory and is not (a component before the last, or the target of a
-directory that is moved when that is a fifo or a symbolic link to something
-that is not a regular file), `21` for a directory where a file is needed, `22`
+directory that is moved when that is an entry other than a directory or a
+regular file, such as a fifo, and not a symbolic link that leads to a regular
+file), `21` for a directory where a file is needed, `22`
 for a directory moved into itself, and `39` for a directory that is not empty.
 Other failures answer the system's other numbers, such as `36` for a name that
 is too long. The page of each of these five functions gives the number of

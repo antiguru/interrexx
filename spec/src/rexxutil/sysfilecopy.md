@@ -130,8 +130,9 @@ as `./` before it, through a symbolic link or through a hard link, the call
 answers `17` and changes nothing. Two names are the same file when they are on
 the same device and have the same inode number ([Deviation
 155](r:util.sysfilecopy.deviation.155)). Then `source` is checked: the call
-answers `2` when `source` names nothing and `13` when the program may not read
-it, and a `target` that is not there is not made. Then a `source` that is a
+answers `20` when a component of `source` before the last is a file, `2` when
+`source` names nothing otherwise, and `13` when the program may not read it,
+and a `target` that is not there is not made. Then a `source` that is a
 directory answers `21`, and `target` is neither made nor changed ([Deviation
 155](r:util.sysfilecopy.deviation.155)). Last, `target` is opened to be
 written, made when no entry has the name and emptied when a file has it: the
@@ -160,6 +161,7 @@ address system 'chmod 644 c1zqcfa; chmod 444 c1zqcfb'
 say SysFileCopy('c1zqcfa', 'c1zqcfb') chars('c1zqcfb')
 call stream 'c1zqcfb', 'c', 'close'
 say SysFileCopy('c1zqcfa', 'c1zqcfb/n') SysFileCopy('c1zqcfnone', 'c1zqcfb/n')
+say SysFileCopy('c1zqcfb/x', 'c1zqcfn')
 address system 'chmod 555 c1zqcfd'
 say SysFileCopy('c1zqcfa', 'c1zqcfd/n') SysFileExists('c1zqcfd/n')
 address system 'chmod 755 c1zqcfd; chmod 644 c1zqcfb; rm -f c1zqcfa c1zqcfb c1zqcfl'
@@ -182,6 +184,7 @@ call SysRmDir 'c1zqcod'
 13 0
 13 6
 20 2
+20
 13 0
 2 13 13
 ```

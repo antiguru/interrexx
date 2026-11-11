@@ -168,10 +168,10 @@ answer -1, and the file is not changed. The null string is such a date or
 time, not an omitted one. A number may start with `+` or `-`; the sign counts
 toward its length, and a negative number is borrowed from the next larger
 field as [the next rule](r:util.syssetfiledatetime.carry) says. A time that
-the file system cannot hold, such as one before 1901-12-14 or after the year
-2445 on a file system with 34-bit times, is not specified: the call may answer
-0 and set another time. How a year below 1000 and a year above 9999 are read
-is not specified either.
+the file system cannot hold, such as one before 1901-12-13 20:45:52 or after
+2446-05-10 22:38:55 UTC on a file system with 34-bit times, is not specified:
+the call may answer 0 and set another time. How a year below 1000 and a year
+above 9999 are read is not specified either.
 
 ```rexx
 d = 'c2zqst03'

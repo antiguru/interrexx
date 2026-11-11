@@ -266,18 +266,18 @@ zeros 2 timeouts 1
 r[util.syseventsem.handle]
 The functions that take a handle read it as a whole number from `0` to
 `18446744073709551615`, in the form the creating call answered it. Blanks
-around it, a plus sign and a fraction of only zeros do no harm, and the number
-is read as [the whole-number rule](r:util.index.whole) says. A handle that is
-missing raises `SYNTAX 88.901`, and one argument too many raises `SYNTAX
-88.922`. A value that is not a whole number or is out of that range raises
-`SYNTAX 88.907`: a word, the null string, a negative number, a number with a
-fraction and `.nil`. An object that is not a string is read by the string that
-its `STRING` method answers, as for `.nil`, so that an object whose `STRING`
-answers an open handle names that semaphore; the last example shows it. When
-an argument past the last one comes with an omitted or wrong argument,
-[Deviation 101](r:util.index.deviation.101) says which error is raised. A
-whole number that is not the handle of an open semaphore is answered as
-[Deviation 158](r:util.syseventsem.deviation.158) says.
+around it, a plus sign and a fraction that is only zeros once [the
+whole-number rule](r:util.index.whole) has rounded the number do no harm. A
+handle that is missing raises `SYNTAX 88.901`, and one argument too many
+raises `SYNTAX 88.922`. A value that is not a whole number or is out of that
+range raises `SYNTAX 88.907`: a word, the null string, a negative number, a
+number with a fraction and `.nil`. An object that is not a string is read by
+the string that its `STRING` method answers, as for `.nil`, so that an object
+whose `STRING` answers an open handle names that semaphore; the last example
+shows it. When an argument past the last one comes with an omitted or wrong
+argument, [Deviation 101](r:util.index.deviation.101) says which error is
+raised. A whole number that is not the handle of an open semaphore is answered
+as [Deviation 158](r:util.syseventsem.deviation.158) says.
 
 ```rexx
 h = SysCreateEventSem()
