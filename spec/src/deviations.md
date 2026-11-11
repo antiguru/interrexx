@@ -81,9 +81,10 @@ ooRexx a collection reclaims the old storage and the routine reads garbage.
 
 SIGINT and SIGTERM halt the program with `4.1` even when SIGHUP is ignored,
 as under `nohup`; ooRexx installs no handler then and the signal kills it.
-A halt wakes every waiting activity, including one in SysSleep, GUARD WHEN or
-a semaphore wait, which ooRexx can leave waiting for ever. A halted wait for
-a command sets RC to -4, where ooRexx's RC is unpredictable.
+A halt that a signal asks for wakes an activity that waits in SysSleep, for a
+GUARD WHEN condition or for a semaphore, which ooRexx can leave waiting for
+ever; a wait for the result of a message is not woken. A halted wait for a
+command sets RC to -4, where ooRexx's RC is unpredictable.
 
 ## 11. SIGPIPE in a command's child
 
@@ -1168,3 +1169,12 @@ assigns to or drops any tail of the stem or the whole stem. ooRexx does not
 evaluate it again for a tail, so the wait does not end, and it evaluates a
 GUARD OFF WHEN again for no assignment to the whole stem. interrexx does not
 evaluate it again for a tail yet (#239).
+
+## 162. A second init of an Alarm or a Ticker
+
+An `init` sent to an `Alarm` or a `Ticker` after the one that `new` sent
+raises `SYNTAX 98.915` and leaves the object as it was: still set or still
+cancelled, with its first time, interval, target and attachment. ooRexx sets
+the object up again, without stopping the first setting, and crashes when a
+ticker that runs is set up again. interrexx does not refuse the second `init`
+yet (#248).

@@ -2,7 +2,7 @@
 element: "Halt and program end"
 kind: concept
 rexxref: "Concurrency; Builtin Classes > Fundamental Classes > Message Class > halt; Objects and Classes > Object Destruction and Uninitialization"
-deviations: [10, 21]
+deviations: [10, 21, 162]
 ---
 
 # Halt and program end
@@ -22,9 +22,11 @@ lands, and what the others do meanwhile.
 The examples force the order of what they print, as
 [the chapter](index.md) says. An example that has to show that a wait was not
 ended by a HALT cannot rely on a program having reached the wait before it
-sends the HALT: each such waiter does the work of its wait in one clause that
-also tells the program that it is about to wait, and the HALT is taken only
-between clauses.
+sends the HALT: each such waiter tells the program that it is about to wait
+while it evaluates the clause that waits, by a call of a built-in method in
+the last clause of the method that marks it, so that no clause boundary is
+left between the mark and the wait, and a HALT is taken only at a clause
+boundary.
 
 ## HALT sent to an activity
 
@@ -44,7 +46,11 @@ description, and an error that no call traps ends the message with `4.1`
 sees HALT with the description that `halt` was given. Which clause of the
 target is the first to see a HALT that is sent while the target runs is not
 specified ([Deviation
-22](../deviations.md#22-one-schedule-for-racing-activities)).
+22](../deviations.md#22-one-schedule-for-racing-activities)). When the
+activity is running a nested region, such as a method that a built-in method
+calls back, interrexx takes the HALT only when that region has ended
+([Deviation
+17](../deviations.md#17-halt-of-an-activity-with-a-nested-region)).
 
 ```rexx
 g = .gate~new
@@ -108,57 +114,79 @@ the caller took SYNTAX []
 
 r[conc.halt.pending]
 A HALT that `halt` sends does not end the waits of the activity that runs the
-message. An activity that is waiting for a `GUARD ... WHEN` condition, for the
+message. An activity that is waiting for a `GUARD ... WHEN` condition, for
+the lock of an object that a guarded method or `GUARD ON` asks for, for the
 post of an [`EventSemaphore`](r:class.eventsemaphore.wait), for a
 [`MutexSemaphore`](r:class.mutexsemaphore.acquire) held by another activity,
-for the [result of a message](r:class.message.result), or for a
-[command](r:env.commands.rc) to end, goes on only when what it waits for has
-happened, and takes the HALT at the first clause after the one that waited.
-`halt` answers 1 meanwhile and the message is not completed. The clause that
-waited is finished when the HALT is taken: a variable that it assigns has the
-answer of the wait.
+for the [result](r:class.message.result) or the [end](r:class.message.wait)
+of a message, in `SysSleep`, or for a [command](r:env.commands.rc) to end,
+goes on only when what it waits for has happened, and takes the HALT at the
+first clause boundary after the one that waited. `halt` answers 1 meanwhile
+and the message is not completed. The clause that waited is finished when the
+HALT is taken: a variable that it assigns has the answer of the wait.
 
 ```rexx
 box = .box~new
 box~mx~acquire
-m1 = box~start('byGuard')
-m2 = box~start('byEvent')
-m3 = box~start('byMutex')
-m4 = box~start('byResult')
+m = .array~new
+do name over .array~of('byGuard', 'byEvent', 'byMutex', 'byResult', 'byEnd', 'bySleep')
+  m~append(box~start(name))
+end
 box~allWaiting
-say 'all four wait:' m1~completed m2~completed m3~completed m4~completed
-say 'halts answered:' m1~halt('one') m2~halt('two') m3~halt('three') m4~halt('four')
+say 'all wait:' states(m)
+say 'halts answered:' halts(m)
 call syssleep 0.3
-say 'after the halts:' m1~completed m2~completed m3~completed m4~completed
+say 'after the halts:' states(m)
 box~open
-say m1~result
+say m[1]~result
 box~ev~post
-say m2~result
+say m[2]~result
 box~mx~release
-say m3~result
+say m[3]~result
 box~finish
-say m4~result
+say m[4]~result
+say m[5]~result
+say m[6]~result
+::routine states
+  use arg m
+  r = ''
+  do x over m
+    r = r x~completed
+  end
+  return r~strip
+::routine halts
+  use arg m
+  r = ''
+  do i = 1 to m~items
+    r = r m[i]~halt(i)
+  end
+  return r~strip
 ::class box
 ::method init
-  expose up fin ev mx waiting helper
+  expose up fin ev mx marks helper
   up = .false
   fin = .false
   ev = .EventSemaphore~new
   mx = .MutexSemaphore~new
-  waiting = 0
+  marks = .array~new
   helper = .message~new(self, 'slow')
   helper~start
 ::method arm unguarded
-  expose waiting
-  waiting += 1
-  return 60
+  expose marks
+  use arg name, seconds
+  return seconds + 0 * marks~append(name)
 ::method idle unguarded
-  expose waiting
-  waiting += 1
-  return .false
+  expose marks
+  return marks~append('guard') = 0
+::method peer unguarded
+  expose marks helper
+  use arg name
+  return .array~of(helper, marks~append(name))~at(1)
 ::method allWaiting unguarded
-  expose waiting
-  guard on when waiting >= 4
+  expose marks
+  do until marks~items = 6
+    call syssleep 0.01
+  end
 ::method open unguarded
   expose up
   up = .true
@@ -171,10 +199,6 @@ say m4~result
 ::method mx unguarded
   expose mx
   return mx
-::method peer unguarded
-  expose helper
-  self~arm
-  return helper
 ::method slow unguarded
   expose fin
   guard on when fin
@@ -189,33 +213,100 @@ halt:
 ::method byEvent unguarded
   expose ev
   signal on halt
-  got = ev~wait(self~arm)
+  got = ev~wait(self~arm('event', 60))
   return 'not reached'
 halt:
   return 'event wait answered' got 'then' condition('d')
 ::method byMutex unguarded
   expose mx
   signal on halt
-  got = mx~acquire(self~arm)
+  got = mx~acquire(self~arm('mutex', 60))
   return 'not reached'
 halt:
   return 'acquire answered' got 'then' condition('d')
 ::method byResult unguarded
   signal on halt
-  got = self~peer~result
+  got = self~peer('result')~result
   return 'not reached'
 halt:
   return 'result answered' got 'then' condition('d')
+::method byEnd unguarded
+  signal on halt
+  self~peer('end')~wait
+  return 'not reached'
+halt:
+  return 'the end wait ended, then' condition('d')
+::method bySleep unguarded
+  signal on halt
+  call syssleep self~arm('sleep', 1)
+  return 'not reached'
+halt:
+  return 'the sleep ended, then' condition('d')
 ```
 
 ```output
-all four wait: 0 0 0 0
-halts answered: 1 1 1 1
-after the halts: 0 0 0 0
-guard wait ended, then one
-event wait answered 1 then two
-acquire answered 1 then three
-result answered slow done then four
+all wait: 0 0 0 0 0 0
+halts answered: 1 1 1 1 1 1
+after the halts: 0 0 0 0 0 0
+guard wait ended, then 1
+event wait answered 1 then 2
+acquire answered 1 then 3
+result answered slow done then 4
+the end wait ended, then 5
+the sleep ended, then 6
+```
+
+```rexx
+box = .box~new
+m1 = box~start('holder')
+box~holding
+m2 = box~start('byLock')
+box~allWaiting
+say 'halt answers' m2~halt('stop')
+call syssleep 0.3
+say 'while the lock is held: completed' m2~completed
+box~ev~post
+say m1~result
+say m2~result
+::class box
+::method init
+  expose held marks ev
+  held = .false
+  marks = .array~new
+  ev = .EventSemaphore~new
+::method ev unguarded
+  expose ev
+  return ev
+::method arm unguarded
+  expose marks
+  return marks~append('lock')
+::method holding unguarded
+  expose held
+  guard off when held
+::method allWaiting unguarded
+  expose marks
+  do until marks~items = 1
+    call syssleep 0.01
+  end
+::method holder
+  expose held ev
+  held = .true
+  ev~wait
+  return 'the holder ended'
+::method byLock unguarded
+  return self~locked(self~arm)
+::method locked
+  signal on halt
+  return 'not reached'
+halt:
+  return 'the guarded method took' condition('c') 'then' condition('d')
+```
+
+```output
+halt answers 1
+while the lock is held: completed 0
+the holder ended
+the guarded method took HALT then stop
 ```
 
 ```rexx
@@ -249,27 +340,38 @@ while the command runs: completed 0
 the command ended with rc 0, then stop
 ```
 
-> **Note.** The first example starts four messages that each wait in a
-> different way. The clause that waits also counts the message in: a method
-> that counts makes the `WHEN` condition, the argument of `wait` and
-> `acquire` (a time out of 60 seconds, which nothing uses up, is only an
-> argument to give), and the object that `result` is sent to. The program
-> therefore knows that every message is in its clause when it sends the HALTs.
-> It holds the mutex, and the fourth message waits for a message that is
-> itself waiting for the program. The 0.3 seconds are a window in which a wait
-> that a HALT ended would show; the output does not depend on its length. The
-> second example makes the command say that it has started by creating a
-> file, so that the HALT is sent while the command runs, and the program ends
-> the command by creating a second file.
+> **Note.** The first example starts six messages that each wait in a
+> different way: for a condition, for the post of an event, for the mutex,
+> for the result of a message, for the end of a message and in `SysSleep`
+> for a second. The clause that waits also marks the message: the `WHEN`
+> condition, the argument of `wait`, `acquire` and `SysSleep`, and the
+> receiver of `result` and `wait` each come from a method whose only clause
+> after `expose` and `use arg` is a `RETURN` that appends the mark to an
+> array (a time out of 60 seconds, which nothing uses up, is only an
+> argument to give). No clause boundary is left between the mark and the
+> wait, so the program knows that each message is in its waiting clause when
+> it sends the HALTs. The program holds the mutex, and the fourth and fifth
+> messages wait for a message that is itself waiting for the program. The
+> 0.3 seconds are a window in which a wait that a HALT ended would show; it
+> ends before the second of the sleep does. In the second example a guarded
+> method holds the lock of the object while it waits for a post. The
+> message asks for the same lock by sending a guarded method, whose argument
+> carries the mark, so that the HALT is sent while the message waits for the
+> lock. It is taken in the guarded method, at its first clause, after the
+> program has let the holder go. The third example makes the command say that
+> it has started by creating a file, so that the HALT is sent while the
+> command runs, and the program ends the command by creating a second file.
 
 r[conc.halt.reply]
 A message whose method has replied has ended ([the result
 rule](r:conc.activities.result)), and a HALT sent to it does not reach the
 rest of the method, which runs on as an activity that no message object
-stands for: `halt` answers 1, and the continuation goes on without a HALT
-when the wait it is in ends ([the rule of `halt`](r:class.message.halt) says
-so for any message that has ended). A HALT that the host asks for does reach
-a continuation ([the next section](r:conc.halt.signal)).
+stands for: `halt` answers 1, and the continuation goes on without a HALT,
+whether it is running or waiting. For a message that was started, [the rule
+of `halt`](r:class.message.halt) says that nothing happens; for one that
+`send` ran, that rule raises the HALT in the activity that sent it. A HALT
+that the host asks for does reach a continuation ([the next
+section](r:conc.halt.signal)).
 
 ```rexx
 t = .t~new
@@ -328,13 +430,16 @@ r[conc.halt.signal]
 A request for HALT that the host makes, which [the HALT
 page](r:cond.halt.raise) leaves to the host, goes to every activity that is
 running or waiting when it is made, the main program's included and the rest
-of a method that has replied too, and not to one. Each takes it at a clause
-boundary of the call it is running, as [the rule above](r:conc.halt.sent)
-says, with no description. On Linux, SIGINT and SIGTERM make this request,
-and a program can send one to itself with a command: `kill` of the shell's
-parent, which is the interpreter. [Deviation
-10](../deviations.md#10-signals-halt-and-wake) says how the waits of the
-activities are treated.
+of a method that has replied too; an activity that begins after the request
+is not halted by it. Each takes it at a clause boundary of the call it is
+running, as [the rule above](r:conc.halt.sent) says, with no description.
+On Linux, SIGINT and SIGTERM make this request, and a program can send one to
+itself with a command: `kill` of the shell's parent, which is the
+interpreter. [Deviation 10](../deviations.md#10-signals-halt-and-wake) says
+how the waits of the activities are treated. While one activity reads the
+default input stream, interrexx runs no other, so that a request made then
+can miss an activity that has not begun to run
+([Deviation 13](../deviations.md#13-reading-the-default-input-stream)).
 
 ```rexx
 f = SysTempFileName('conc-halt-????.rex')
@@ -361,6 +466,7 @@ halt:
 say 'main took' condition('c') '['condition('d')']'
 say a~result
 say b~result
+say g~start('late')~result
 ::class gate
 ::method init
   expose busy
@@ -378,6 +484,14 @@ say b~result
   end
 halt:
   return name 'took' condition('c') '['condition('d')']'
+::method late unguarded
+  signal on halt
+  do 1000
+    nop
+  end
+  return 'a message started after the request ran on'
+halt:
+  return 'a message started after the request took' condition('c')
 ::END
 ```
 
@@ -385,6 +499,7 @@ halt:
 main took HALT []
 first took HALT []
 second took HALT []
+a message started after the request ran on
 ```
 
 ```rexx
@@ -451,15 +566,16 @@ the continuation took HALT
 > program that sends it to a file and runs it with a second interpreter,
 > whose output it prints; the program is the text of the `::RESOURCE`. In
 > the first example the signal is sent when both messages loop in a method
-> that traps HALT, and each of the three activities takes it. The second
-> sends it while the rest of a method that has replied loops: the
+> that traps HALT, and each of the three activities takes it; the handler of
+> the main program then starts a message, which the request does not reach.
+> The second sends it while the rest of a method that has replied loops: the
 > continuation takes it, which a `halt` of the message does not do.
 
 ## The end of the program
 
 r[conc.halt.end.alive]
-When the main program has ended, the program goes on until no activity is left
-that runs or can run. It does not end while a started message has not ended,
+When the main program has ended, the program goes on until every other
+activity has ended. It does not end while a started message has not ended,
 while the rest of a method that has replied is still running, while a call of
 the target of an alarm or a ticker is under way, while an alarm has neither
 gone off nor been cancelled, or while a ticker has been neither cancelled nor
@@ -469,8 +585,14 @@ the program. An alarm that has gone off, an alarm or a ticker that was
 cancelled, and a ticker that an error in its target's `triggered` stopped
 ([the timers rule](r:conc.activities.timers)) do not keep the program, so a
 cancelled alarm or ticker with a delay of a minute does not make the program
-last a minute. The status of the command is the main program's ([the next
-rule](r:conc.halt.end.status)).
+last a minute. An activity that waits for something that nothing can bring
+about any more keeps the program for ever: [Deviation
+20](r:conc.activities.deviation.20) says that interrexx refuses such a wait
+while the main program runs; after the main program has ended it does not yet,
+and the program hangs (#249), which no example here tests. A main program
+that interrexx ends with a refusal does not wait for any of them ([the
+Deviation 21 rule](r:conc.halt.deviation.21)). The status of the command is
+the main program's ([the next rule](r:conc.halt.end.status)).
 
 ```rexx
 g = .gate~new
@@ -529,6 +651,19 @@ a ticker went off 3
 ```
 
 ```rexx
+f = SysTempFileName('conc-halt-????.rex')
+do line over .resources~child
+  call lineout f, line
+end
+call lineout f
+call time 'R'
+address system 'rexx' f with output stem out.
+do i = 1 to out.0
+  say out.i
+end
+say 'the program did not last long:' (time('E') < 30)
+call SysFileDelete f
+::resource child
 n = .note~new
 a = .alarm~new(60, n, 'long alarm')
 a~cancel
@@ -556,6 +691,7 @@ say 'the main program ends'
 ::method cancel unguarded
   use arg src
   say src~attachment 'was cancelled'
+::END
 ```
 
 ```output
@@ -564,6 +700,7 @@ long ticker was cancelled
 short alarm went off
 failing ticker went off
 the main program ends
+the program did not last long: 1
 ```
 
 > **Note.** In the first example each activity waits for the gate, which the
@@ -571,10 +708,12 @@ the main program ends
 > that the lines can only come in the order shown: the program prints, opens
 > the gate and ends with the status 3, and the four activities run after it
 > has ended. The ticker is cancelled by its own target at the third call,
-> which ends it. In the second example nothing is left to wait for when the
-> program ends: the alarm and the ticker that were made with a delay of a
-> minute were cancelled, the short alarm went off, and the ticker that fails
-> has stopped.
+> which ends it. The second example is the text of a `::RESOURCE` that a
+> second interpreter runs, and the first one prints how long that took.
+> Nothing is left to wait for when its program ends: the alarm and the ticker
+> that were made with a delay of a minute were cancelled, the short alarm went
+> off, and the ticker that fails has stopped; so the program ends long before
+> a minute is up, and the example allows it 30 seconds.
 
 r[conc.halt.end.status]
 The status of the command is the main program's own ([the status
@@ -583,7 +722,8 @@ main program ended by its last clause, by `EXIT` or by an error that nothing
 traps. An `EXIT` and an error that nothing traps in the method of a started
 message end that message ([the unasked rule](r:conc.activities.unasked)), not
 the program, and change no status. The program does not end before the other
-activities have, also when the main program ended with an error. In the first
+activities have, also when the main program ended with an error, except as
+[the Deviation 21 rule](r:conc.halt.deviation.21) says. In the first
 example the main program ends with its last clause, and in the second with an
 error; in both the two messages run to their ends, one by `EXIT 7` and one by
 an error, and the status is the main program's, 0 and 214.
@@ -719,11 +859,15 @@ after the method has ended. No other activity is held up by it: while the
 method waits, the others go on. Whether a call sends `UNINIT` to a particular
 object is the matter of [the invocation rule](r:env.invocation.uninit), and
 which activity runs the method when no call of `GC` asks for the collection,
-and at the end of the program, is not specified. The example has one activity
-call `GC('FORCE')` until the method has begun, which waits for the program to
-set a flag that only an activity that is not held in the call can set. It
-checks the order of what was logged if the method began, and prints the same
-line if it never did.
+and at the end of the program, is not specified. The first example has one
+activity call `GC('FORCE')` until the method has begun, which waits for the
+program to set a flag that only an activity that is not held in the call can
+set. The second has a guarded method call `GC('FORCE')` while it holds the
+lock of its object, and `UNINIT` sends a guarded method to the same object.
+The lock is free for that message only when the forcing activity runs the
+method, since an activity that holds a lock can enter it again ([the nesting
+rule](r:conc.locks.nested)). Each example checks what was logged or counted if
+the method began, and prints the same line if it never did.
 
 ```rexx
 .environment~log = .array~new
@@ -763,14 +907,44 @@ worker done
 the forcing activity waited for the method: 1
 ```
 
+```rexx
+.environment~started = 0
+.environment~touched = 0
+.environment~lk = .lk~new
+x = .blocker~new
+drop x
+say .environment~lk~force
+say 'the method used the lock that the forcing activity held:',
+  (.environment~started = 0 | .environment~touched = 1)
+::class lk
+::method force
+  do 300 until .environment~started > 0
+    call gc 'force'
+  end
+  return 'GC returned'
+::method touch
+  .environment~touched += 1
+::class blocker
+::method uninit
+  .environment~started += 1
+  .environment~lk~touch
+```
+
+```output
+GC returned
+the method used the lock that the forcing activity held: 1
+```
+
 r[conc.halt.uninit.started]
 An activity that an `UNINIT` method starts while the program runs, with
 `start` or `REPLY`, is an ordinary one: the program does not end before it
 has, as [the rule on the end](r:conc.halt.end.alive) says. In the example the
 program collects until the method has begun, ends, and the message that the
 method started, which waits for a gate that the program opens as its last
-clause, writes its line after the main program has ended. The example is
-written for an interpreter that sends `UNINIT` to the object.
+clause, writes its line after the main program has ended. When no collection
+has sent `UNINIT` by then, the program starts the same message itself and
+stops the method from starting a second one, so that the output does not
+depend on [the invocation rule](r:env.invocation.uninit).
 
 ```rexx
 .environment~started = 0
@@ -779,6 +953,10 @@ x = .starter~new
 drop x
 do 600 until .environment~started > 0
   call gc 'force'
+end
+if .environment~started = 0 then do
+  .environment~started = -1
+  .message~new(.environment~gate, 'later')~start
 end
 say 'the main program ends'
 .environment~gate~open
@@ -795,6 +973,7 @@ say 'the main program ends'
   say 'the message that UNINIT started ran'
 ::class starter
 ::method uninit
+  if .environment~started < 0 then return
   .environment~started += 1
   m = .message~new(.environment~gate, 'later')
   m~start
@@ -843,13 +1022,15 @@ sent at most once: 1
 
 r[conc.halt.deviation.10]
 A HALT that a signal asks for ends the wait of an activity that waits for a
-`GUARD ... WHEN` condition, for the post of an `EventSemaphore`, or in
-`SysSleep`, and the activity takes the HALT at once ([Deviation
-10](../deviations.md#10-signals-halt-and-wake)); a `halt` of a message does
-not end a wait ([the rule](r:conc.halt.pending)). ooRexx does not end these
-waits when a signal asks either: the activity that waits for a condition or a
-post waits for ever, so that the example does not end there, and the one in
-`SysSleep` takes the HALT when its time is up.
+`GUARD ... WHEN` condition, for the post of an `EventSemaphore`, for a
+`MutexSemaphore`, or in `SysSleep`. The clause that waited finishes, with
+`wait` and `acquire` answering 0, and the activity takes the HALT at once
+([Deviation 10](../deviations.md#10-signals-halt-and-wake)). A wait for the
+result of a message is not ended. A `halt` of a message ends no wait ([the
+rule](r:conc.halt.pending)). ooRexx ends none of these waits for a signal.
+The activity goes on waiting until its condition holds, the post or the
+release comes, or the time is up, and then takes the HALT, so that in the
+example, where nothing posts, releases or opens, it waits for ever.
 
 ```rexx
 f = SysTempFileName('conc-halt-????.rex')
@@ -863,11 +1044,14 @@ do i = 1 to out.0
 end
 call SysFileDelete f
 ::resource child
-g = .gate~new
-a = g~start('byGuard')
-b = g~start('byEvent')
-c = g~start('bySleep')
-g~allWaiting
+box = .box~new
+box~mx~acquire
+a = box~start('byGuard')
+b = box~start('byEvent')
+c = box~start('byMutex')
+d = box~start('byResult')
+e = box~start('bySleep')
+box~allWaiting
 signal on halt
 address system 'kill -INT $PPID'
 do forever
@@ -875,26 +1059,51 @@ do forever
 end
 halt:
 say 'main took' condition('c')
+box~finish
 say a~result
 say b~result
 say c~result
-::class gate
+say d~result
+say e~result
+::class box
 ::method init
-  expose up waiting ev
+  expose up fin ev mx marks helper
   up = .false
-  waiting = 0
+  fin = .false
   ev = .EventSemaphore~new
+  mx = .MutexSemaphore~new
+  marks = .array~new
+  helper = .message~new(self, 'slow')
+  helper~start
 ::method arm unguarded
-  expose waiting
-  waiting += 1
-  return 60
+  expose marks
+  use arg name
+  return 60 + 0 * marks~append(name)
 ::method idle unguarded
-  expose waiting
-  waiting += 1
-  return .false
+  expose marks
+  return marks~append('guard') = 0
 ::method allWaiting unguarded
-  expose waiting
-  guard on when waiting = 3
+  expose marks
+  do until marks~items = 5
+    call syssleep 0.01
+  end
+::method finish unguarded
+  expose fin
+  fin = .true
+::method ev unguarded
+  expose ev
+  return ev
+::method mx unguarded
+  expose mx
+  return mx
+::method slow unguarded
+  expose fin
+  signal on halt
+  guard on when fin
+  return 'the message ended'
+halt:
+  guard on when fin
+  return 'the message ended after the HALT'
 ::method byGuard unguarded
   expose up
   signal on halt
@@ -905,13 +1114,27 @@ halt:
 ::method byEvent unguarded
   expose ev
   signal on halt
-  ev~wait(self~arm)
+  got = ev~wait(self~arm('event'))
   return 'not reached'
 halt:
-  return 'the event wait ended with' condition('c')
+  return 'the event wait answered' got 'and ended with' condition('c')
+::method byMutex unguarded
+  expose mx
+  signal on halt
+  got = mx~acquire(self~arm('mutex'))
+  return 'not reached'
+halt:
+  return 'the mutex wait answered' got 'and ended with' condition('c')
+::method byResult unguarded
+  expose helper
+  signal on halt
+  got = .array~of(helper, self~arm('result'))~at(1)~result
+  return 'not reached'
+halt:
+  return 'the result wait answered' got 'and ended with' condition('c')
 ::method bySleep unguarded
   signal on halt
-  call syssleep self~arm
+  call syssleep self~arm('sleep')
   return 'not reached'
 halt:
   return 'the sleep ended with' condition('c')
@@ -921,31 +1144,43 @@ halt:
 ```output
 main took HALT
 the guard wait ended with HALT
-the event wait ended with HALT
+the event wait answered 0 and ended with HALT
+the mutex wait answered 0 and ended with HALT
+the result wait answered the message ended after the HALT and ended with HALT
 the sleep ended with HALT
 ```
 
 > **Note.** As in the examples of [the signal rule](r:conc.halt.signal), a
 > second interpreter runs the program that sends the signal; its text is the
-> `::RESOURCE`. In ooRexx that program writes its first line and then waits
-> for ever for the result of the first message.
+> `::RESOURCE`. The handler of the main program does not post, release or open
+> anything. It only lets the message end that the fourth activity waits for,
+> which traps HALT as well, since the signal reaches it too, and waits on for
+> its flag: the wait for its result is not one that the signal ended. In
+> ooRexx that program writes its first line and then waits for ever for the
+> result of the first message.
 
 r[conc.halt.deviation.21]
 The program does not wait for an activity that an `UNINIT` method starts
 when the interpreter sends it at the end of the main program: a message that
-the method starts, and the rest of a method that it replies from, are not
-waited for, and the lines of the example are not written. ooRexx does not cut
-them off, and often runs them, in an order that varies ([Deviation
+the method starts, and the rest of a method that replies after `UNINIT`
+called it, are not waited for, and the lines of the example that they would
+write are not written. ooRexx does not cut them off, and often runs them, in
+an order that varies ([Deviation
 21](../deviations.md#21-activities-at-program-end)). The case is that of the
 interpreter's own end of the program, for which `UNINIT` is not specified
 ([the invocation rule](r:env.invocation.end)); [the rule
 above](r:conc.halt.uninit.started) holds for an `UNINIT` sent during the run.
+Nor does interrexx wait for the other activities when the main program ends
+with a refusal of one of the Deviations, exit code 120: they are cut off. In
+the second example a started message waits for a gate that the program opens
+just before the refusal, and never writes its line.
 
 ```rexx
 x = .keeper~new
 say 'the main program ends'
 ::class keeper
 ::method uninit
+  say 'UNINIT ran'
   m = .message~new(self, 'later')
   m~start
   self~earlyReply
@@ -958,4 +1193,122 @@ say 'the main program ends'
 
 ```output
 the main program ends
+UNINIT ran
+```
+
+```rexx
+g = .gate~new
+m = g~start('later')
+say 'main: before the refusal'
+g~open
+say upper(.weird~new)
+::class gate
+::method init
+  expose up
+  up = .false
+::method open unguarded
+  expose up
+  up = .true
+::method later unguarded
+  expose up
+  guard on when up
+  say 'the started message ran'
+::class weird
+::method string
+  return .directory~new
+```
+
+```output rc=120
+main: before the refusal
+```
+
+r[conc.halt.deviation.162]
+An `init` that is sent to an `Alarm` or a `Ticker` after the one that `new`
+sent raises `SYNTAX 98.915`, the error of a message that an object cannot take
+in its state, and leaves the object as it was: an alarm or ticker that is set
+stays set, and one that was cancelled stays cancelled, with its first time,
+interval, target and attachment ([Deviation
+162](../deviations.md#162-a-second-init-of-an-alarm-or-a-ticker)). ooRexx sets
+the object up again without stopping the first setting, and a ticker that
+runs crashes it, so the examples are not run on ooRexx. interrexx does not
+refuse the second `init` yet (#248). The first example sends a second `init`
+to an alarm that is set, cancels it and sends a third; the second does the
+same with a ticker. They print which target hears the `cancel`, and what the
+object still answers. The target of the ticker cancels it when it is called,
+so that the example ends where the second `init` is not refused yet.
+
+```rexx
+n1 = .note~new('first target')
+n2 = .note~new('second target')
+dt = .datetime~new~addSeconds(2)
+a = .alarm~new(dt, n1, 'first alarm')
+call try 'a~init(0.01, n2, "second alarm")'
+say a~attachment (a~scheduledTime == dt) a~canceled
+a~cancel
+call try 'a~init(0.01, n2, "third alarm")'
+say a~attachment (a~scheduledTime == dt) a~canceled
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  say arg(1) '=> no error'
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
+::class note inherit AlarmNotification
+::method init
+  expose name
+  use arg name
+::method triggered
+  nop
+::method cancel
+  expose name
+  use arg src
+  say name 'was sent cancel for' src~attachment
+```
+
+```output defect=#248
+a~init(0.01, n2, "second alarm") => 98.915
+first alarm 1 0
+first target was sent cancel for first alarm
+a~init(0.01, n2, "third alarm") => 98.915
+first alarm 1 1
+```
+
+```rexx
+n1 = .note~new('first target')
+n2 = .note~new('second target')
+t = .ticker~new(7200, n1, 'first ticker')
+call try 't~init(30, n2, "second ticker")'
+say t~attachment t~interval t~canceled
+t~cancel
+call try 't~init(30, n2, "third ticker")'
+say t~attachment t~interval t~canceled
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  say arg(1) '=> no error'
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
+::class note inherit AlarmNotification
+::method init
+  expose name
+  use arg name
+::method triggered
+  use arg src
+  src~cancel
+::method cancel
+  expose name
+  use arg src
+  say name 'was sent cancel for' src~attachment
+```
+
+```output defect=#248
+t~init(30, n2, "second ticker") => 98.915
+first ticker 02:00:00.000000 0
+first target was sent cancel for first ticker
+t~init(30, n2, "third ticker") => 98.915
+first ticker 02:00:00.000000 1
 ```
