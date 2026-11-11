@@ -2271,12 +2271,13 @@ NOVAL => 91.999
 
 r[class.stream.uninit]
 `uninit` closes the stream when it is open, as `close` does, so that what was
-written is in the file. The interpreter sends it to an instance that is no
-longer used; when it does so is not specified. A program may send it too, and
-it answers no value: its answer as a term raises `SYNTAX 91.999`. It takes no
-argument: one raises `SYNTAX 88.922`. It sends no message. An instance that
-has been sent `uninit` is not to be used again: what a method does then is not
-specified.
+written is in the file. The interpreter may send it to an instance that the
+program can no longer reach, as [the rule of
+`UNINIT`](r:env.invocation.uninit) says; whether and when it does is not
+specified. A program may send it too, and it answers no value: its answer as a
+term raises `SYNTAX 91.999`. It takes no argument: one raises `SYNTAX 88.922`.
+It sends no message. An instance that has been sent `uninit` is not to be used
+again: what a method does then is not specified.
 
 ```rexx
 f = 'spec-stream-uninit-zq.tmp'
@@ -2679,11 +2680,13 @@ exit
 r[class.stream.deviation.142]
 A copy of a `Stream`, made by `copy`, is a new stream of the class of the
 original with the name of the original, and it is not open: its `state` is
-`UNKNOWN` until it is opened or used, and it is not the original. It has a
-read position of its own, so that reading from it begins at the start of the
-file, and the original keeps its state and its position. ooRexx's copy shares
-the original's internal state, and the process ends abnormally when it ends;
-the example is not run against it.
+`UNKNOWN` until it is opened or used, and it is not the original. Its other
+object variables are copied as [`copy`](r:class.object.copy) copies them, and
+it is not sent `init`; only what makes it a stream is that of a new stream. It
+has a read position of its own, so that reading from it begins at the start of
+the file, and the original keeps its state and its position. ooRexx's copy
+shares the original's internal state, and the process ends abnormally when it
+ends; the example is not run against it.
 
 ```rexx
 f = 'spec-stream-copy-zq.tmp'

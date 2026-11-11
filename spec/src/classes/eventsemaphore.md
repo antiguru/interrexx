@@ -430,8 +430,9 @@ say e~wait(.timeout~new) .log
 ## Cleaning up
 
 r[class.eventsemaphore.uninit]
-`uninit` frees what the semaphore holds. The library sends it when the semaphore
-is reclaimed, at a time that a program does not control, which is not specified.
+`uninit` frees what the semaphore holds. The interpreter may send it when the
+semaphore is reclaimed; whether and when is [not
+specified](r:env.invocation.uninit).
 An `uninit` of a subclass replaces this one, so it frees the semaphore only by
 sending `self~uninit:super`. `uninit` takes no argument (`SYNTAX 93.902`) and
 answers nothing, so using its answer as a value raises `SYNTAX 91.999`. What a

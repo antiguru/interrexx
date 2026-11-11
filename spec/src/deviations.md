@@ -1061,10 +1061,11 @@ argument.
 
 ## 141. The argument string of a program that rexx -e runs
 
-A program that `rexx -e` runs gets its argument string built as a program in
-a file gets it: the words after the text, joined by one blank, less the
-empty words at the head. ooRexx drops one leading blank of that string, so
-that the words `' '` and `x` give it `' x'` where a file gets `'  x'`.
+A program that `rexx -e` runs gets its argument string built as a program in a
+file gets it: the words after the text, joined by one blank, less the empty
+words at the head. ooRexx drops one leading blank of that string when it is
+longer than one character, so that the words `' '` and `x` give it `' x'`
+where a file gets `'  x'`.
 
 ## 142. A copy of a Stream
 
@@ -1083,13 +1084,15 @@ directive ends. ooRexx accepts the directive for some such entries,
 called; for others, `SysSleep` of `rexxutil` among them, it raises the same
 error.
 
-## 144. LINES of the standard input in normal mode
+## 144. LINES of a standard stream in normal mode
 
-LINES with the standard input as its stream and no option, or an option other
-than `C`, sends the message `LINES` to the input object and answers 0 when the
-answer equals zero as a number and 1 otherwise, whatever the answer is: `abc`,
-`1.5`, `1E10` and a whole number of more than nine digits answer 1. ooRexx
-answers each of these as the object answered it.
+LINES with a name that denotes the standard input, output or error stream, and
+no option or an option other than `C`, sends the message `LINES` to that entry
+of `.local` and answers 0 when the string value of the answer is a number
+equal to zero and 1 otherwise, whatever the answer is: `abc`, `1.5`, `1E10`
+and a whole number of more than nine digits answer 1, and so does an answer
+that is not a string and whose string value is not zero. ooRexx answers each
+of these as the object answered it, an object that is not a string included.
 
 ## 145. The state after a failed open with BINARY and no RECLENGTH
 

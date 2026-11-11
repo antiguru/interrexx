@@ -445,11 +445,12 @@ option, and `NORMAL` when the call gives none. STREAM sends `STATE` for the
 option `S` or none, `DESCRIPTION` for `D`, and `COMMAND` with the command for
 `C`. The builtin answers what the object answers, except LINES: unless its
 option is `C`, and then it answers what the object answers, it answers 0 when
-the answer equals zero and 1 otherwise, whether the answer is a number or not
-([Deviation 144](r:env.objects.deviation.144)). A message that a program sends
-to `.stdout`, `.stderr` or `.stdin` itself is not redirected. In the example,
-one spy answers 3 to every message, and the log shows the name of each message
-with the number of its arguments and the arguments themselves.
+the string value of the answer is a number equal to zero and 1 otherwise,
+whether that value is a number or not, and whether the answer is a string or
+another object ([Deviation 144](r:env.objects.deviation.144)). A message that
+a program sends to `.stdout`, `.stderr` or `.stdin` itself is not redirected.
+In the example, one spy answers 3 to every message, and the log shows the name
+of each message with the number of its arguments and the arguments themselves.
 
 ```rexx
 s = .spy~new
@@ -515,9 +516,11 @@ b = lines(, 'N')
 c = lines(, 'C')
 s~answer = '0.0'
 d = lines()
+s~answer = .zero~new
+e = lines()
 .input~destination
 say s~log~makeString('l', ' ')
-say a b c d
+say a b c d e
 ::class spy
 ::method init
   expose log answer
@@ -530,11 +533,14 @@ say a b c d
   use arg name, args
   log~append(name'('args~makeString('l', ',')')')
   return answer
+::class zero
+::method string
+  return '0'
 ```
 
 ```output defect=#213
-LINES(NORMAL) LINES(N) LINES(C) LINES(NORMAL)
-1 1 7 0
+LINES(NORMAL) LINES(N) LINES(C) LINES(NORMAL) LINES(NORMAL)
+1 1 7 0 0
 ```
 
 r[env.objects.output]
@@ -900,13 +906,14 @@ three
 ## Deviations
 
 r[env.objects.deviation.144]
-LINES in normal mode answers 1 for every answer of the input object that does
-not equal zero as a number: one that is not a number, such as `abc`, one that
-is not a whole number, such as `1.5`, and one that is a whole number of more
-than nine digits, such as `1E10`. ooRexx answers each of these as the object
-answered it, and answers 0 or 1 as the rule says only for an answer that it
-reads as a whole number of no more than nine digits. The example is not run
-against it.
+LINES in normal mode answers 1 for every answer of the object it sends `LINES`
+to that does not equal zero as a number: one that is not a number, such as
+`abc`, one that is not a whole number, such as `1.5`, one that is a whole
+number of more than nine digits, such as `1E10`, and one that is not a string
+and whose string value is not zero. ooRexx answers each of these as the object
+answered it, an object that is not a string included, and answers 0 or 1 as
+the rule says only for an answer that it reads as a whole number of no more
+than nine digits. The example is not run against it.
 
 ```rexx
 s = .spy~new
