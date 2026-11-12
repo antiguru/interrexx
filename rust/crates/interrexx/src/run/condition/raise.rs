@@ -91,9 +91,14 @@ impl Interp {
                 let traced = self.traced_string_value_text(value)?;
                 self.trace_keyword(indent, "DESCRIPTION", &traced);
             }
-            let value = self.required_string_value(value)?;
-            self.roots.activity_mut().push_temp(value);
-            description = Some(self.to_text(value).to_vec());
+            // The string is needed only where a report names it: a `SYNTAX`
+            // or `NOMETHOD` message, or a `HALT`. Every other condition keeps
+            // the object, and each read of `CONDITION('D')` converts it anew.
+            if matches!(raise.condition.as_ref(), b"SYNTAX" | b"NOMETHOD" | b"HALT") {
+                let value = self.required_string_value(value)?;
+                self.roots.activity_mut().push_temp(value);
+                description = Some(self.to_text(value).to_vec());
+            }
         }
         // `ADDITIONAL expr` and `ARRAY (a, b)` produce the identical
         // substitution list -- measured, `additional ('MYROUTINE', 3)` and
