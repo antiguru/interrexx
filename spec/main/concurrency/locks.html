@@ -1,0 +1,1263 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Locks - The interrexx Language Specification</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../conventions.html"><strong aria-hidden="true">2.</strong> Conventions</a></li><li class="chapter-item expanded "><a href="../lexical/index.html"><strong aria-hidden="true">3.</strong> Lexical structure</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../lexical/characters.html"><strong aria-hidden="true">3.1.</strong> Characters</a></li><li class="chapter-item expanded "><a href="../lexical/comments.html"><strong aria-hidden="true">3.2.</strong> Comments</a></li><li class="chapter-item expanded "><a href="../lexical/literals.html"><strong aria-hidden="true">3.3.</strong> Literals</a></li><li class="chapter-item expanded "><a href="../lexical/symbols.html"><strong aria-hidden="true">3.4.</strong> Symbols</a></li><li class="chapter-item expanded "><a href="../lexical/operators.html"><strong aria-hidden="true">3.5.</strong> Operators and special characters</a></li><li class="chapter-item expanded "><a href="../lexical/clauses.html"><strong aria-hidden="true">3.6.</strong> Clauses</a></li></ol></li><li class="chapter-item expanded "><a href="../numbers/index.html"><strong aria-hidden="true">4.</strong> Numbers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../numbers/formats.html"><strong aria-hidden="true">4.1.</strong> Formats</a></li><li class="chapter-item expanded "><a href="../numbers/limits.html"><strong aria-hidden="true">4.2.</strong> Limits</a></li><li class="chapter-item expanded "><a href="../numbers/arithmetic.html"><strong aria-hidden="true">4.3.</strong> Arithmetic</a></li><li class="chapter-item expanded "><a href="../numbers/settings.html"><strong aria-hidden="true">4.4.</strong> Settings</a></li><li class="chapter-item expanded "><a href="../numbers/comparison.html"><strong aria-hidden="true">4.5.</strong> Comparison</a></li></ol></li><li class="chapter-item expanded "><a href="../expressions/index.html"><strong aria-hidden="true">5.</strong> Expressions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../expressions/terms.html"><strong aria-hidden="true">5.1.</strong> Terms</a></li><li class="chapter-item expanded "><a href="../expressions/variables.html"><strong aria-hidden="true">5.2.</strong> Variables</a></li><li class="chapter-item expanded "><a href="../expressions/concatenation.html"><strong aria-hidden="true">5.3.</strong> Concatenation</a></li><li class="chapter-item expanded "><a href="../expressions/arithmetic.html"><strong aria-hidden="true">5.4.</strong> Arithmetic operators</a></li><li class="chapter-item expanded "><a href="../expressions/comparison.html"><strong aria-hidden="true">5.5.</strong> Comparison operators</a></li><li class="chapter-item expanded "><a href="../expressions/logical.html"><strong aria-hidden="true">5.6.</strong> Logical operators</a></li><li class="chapter-item expanded "><a href="../expressions/messages.html"><strong aria-hidden="true">5.7.</strong> Message operators</a></li></ol></li><li class="chapter-item expanded "><a href="../instructions/index.html"><strong aria-hidden="true">6.</strong> Instructions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../instructions/address.html"><strong aria-hidden="true">6.1.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../instructions/arg.html"><strong aria-hidden="true">6.2.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../instructions/assignment.html"><strong aria-hidden="true">6.3.</strong> Assignments</a></li><li class="chapter-item expanded "><a href="../instructions/call.html"><strong aria-hidden="true">6.4.</strong> CALL</a></li><li class="chapter-item expanded "><a href="../instructions/command.html"><strong aria-hidden="true">6.5.</strong> Commands</a></li><li class="chapter-item expanded "><a href="../instructions/do.html"><strong aria-hidden="true">6.6.</strong> DO</a></li><li class="chapter-item expanded "><a href="../instructions/drop.html"><strong aria-hidden="true">6.7.</strong> DROP</a></li><li class="chapter-item expanded "><a href="../instructions/exit.html"><strong aria-hidden="true">6.8.</strong> EXIT</a></li><li class="chapter-item expanded "><a href="../instructions/expose.html"><strong aria-hidden="true">6.9.</strong> EXPOSE</a></li><li class="chapter-item expanded "><a href="../instructions/forward.html"><strong aria-hidden="true">6.10.</strong> FORWARD</a></li><li class="chapter-item expanded "><a href="../instructions/guard.html"><strong aria-hidden="true">6.11.</strong> GUARD</a></li><li class="chapter-item expanded "><a href="../instructions/if.html"><strong aria-hidden="true">6.12.</strong> IF</a></li><li class="chapter-item expanded "><a href="../instructions/interpret.html"><strong aria-hidden="true">6.13.</strong> INTERPRET</a></li><li class="chapter-item expanded "><a href="../instructions/iterate.html"><strong aria-hidden="true">6.14.</strong> ITERATE</a></li><li class="chapter-item expanded "><a href="../instructions/leave.html"><strong aria-hidden="true">6.15.</strong> LEAVE</a></li><li class="chapter-item expanded "><a href="../instructions/loop.html"><strong aria-hidden="true">6.16.</strong> LOOP</a></li><li class="chapter-item expanded "><a href="../instructions/message.html"><strong aria-hidden="true">6.17.</strong> Message instructions</a></li><li class="chapter-item expanded "><a href="../instructions/nop.html"><strong aria-hidden="true">6.18.</strong> NOP</a></li><li class="chapter-item expanded "><a href="../instructions/numeric.html"><strong aria-hidden="true">6.19.</strong> NUMERIC</a></li><li class="chapter-item expanded "><a href="../instructions/options.html"><strong aria-hidden="true">6.20.</strong> OPTIONS</a></li><li class="chapter-item expanded "><a href="../instructions/parse.html"><strong aria-hidden="true">6.21.</strong> PARSE</a></li><li class="chapter-item expanded "><a href="../instructions/procedure.html"><strong aria-hidden="true">6.22.</strong> PROCEDURE</a></li><li class="chapter-item expanded "><a href="../instructions/pull.html"><strong aria-hidden="true">6.23.</strong> PULL</a></li><li class="chapter-item expanded "><a href="../instructions/push.html"><strong aria-hidden="true">6.24.</strong> PUSH</a></li><li class="chapter-item expanded "><a href="../instructions/queue.html"><strong aria-hidden="true">6.25.</strong> QUEUE</a></li><li class="chapter-item expanded "><a href="../instructions/raise.html"><strong aria-hidden="true">6.26.</strong> RAISE</a></li><li class="chapter-item expanded "><a href="../instructions/reply.html"><strong aria-hidden="true">6.27.</strong> REPLY</a></li><li class="chapter-item expanded "><a href="../instructions/return.html"><strong aria-hidden="true">6.28.</strong> RETURN</a></li><li class="chapter-item expanded "><a href="../instructions/say.html"><strong aria-hidden="true">6.29.</strong> SAY</a></li><li class="chapter-item expanded "><a href="../instructions/select.html"><strong aria-hidden="true">6.30.</strong> SELECT</a></li><li class="chapter-item expanded "><a href="../instructions/signal.html"><strong aria-hidden="true">6.31.</strong> SIGNAL</a></li><li class="chapter-item expanded "><a href="../instructions/trace.html"><strong aria-hidden="true">6.32.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../instructions/use.html"><strong aria-hidden="true">6.33.</strong> USE</a></li></ol></li><li class="chapter-item expanded "><a href="../parsing/index.html"><strong aria-hidden="true">7.</strong> Parsing</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../parsing/templates.html"><strong aria-hidden="true">7.1.</strong> Templates</a></li><li class="chapter-item expanded "><a href="../parsing/patterns.html"><strong aria-hidden="true">7.2.</strong> Patterns</a></li><li class="chapter-item expanded "><a href="../parsing/multiple.html"><strong aria-hidden="true">7.3.</strong> Several strings and case</a></li></ol></li><li class="chapter-item expanded "><a href="../directives/index.html"><strong aria-hidden="true">8.</strong> Directives</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../directives/class.html"><strong aria-hidden="true">8.1.</strong> ::CLASS</a></li><li class="chapter-item expanded "><a href="../directives/method.html"><strong aria-hidden="true">8.2.</strong> ::METHOD</a></li><li class="chapter-item expanded "><a href="../directives/attribute.html"><strong aria-hidden="true">8.3.</strong> ::ATTRIBUTE</a></li><li class="chapter-item expanded "><a href="../directives/constant.html"><strong aria-hidden="true">8.4.</strong> ::CONSTANT</a></li><li class="chapter-item expanded "><a href="../directives/routine.html"><strong aria-hidden="true">8.5.</strong> ::ROUTINE</a></li><li class="chapter-item expanded "><a href="../directives/requires.html"><strong aria-hidden="true">8.6.</strong> ::REQUIRES</a></li><li class="chapter-item expanded "><a href="../directives/options.html"><strong aria-hidden="true">8.7.</strong> ::OPTIONS</a></li><li class="chapter-item expanded "><a href="../directives/resource.html"><strong aria-hidden="true">8.8.</strong> ::RESOURCE</a></li><li class="chapter-item expanded "><a href="../directives/annotate.html"><strong aria-hidden="true">8.9.</strong> ::ANNOTATE</a></li></ol></li><li class="chapter-item expanded "><a href="../conditions/index.html"><strong aria-hidden="true">9.</strong> Conditions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../conditions/traps.html"><strong aria-hidden="true">9.1.</strong> Condition traps</a></li><li class="chapter-item expanded "><a href="../conditions/information.html"><strong aria-hidden="true">9.2.</strong> Condition information</a></li><li class="chapter-item expanded "><a href="../conditions/syntax.html"><strong aria-hidden="true">9.3.</strong> SYNTAX</a></li><li class="chapter-item expanded "><a href="../conditions/error.html"><strong aria-hidden="true">9.4.</strong> ERROR and FAILURE</a></li><li class="chapter-item expanded "><a href="../conditions/halt.html"><strong aria-hidden="true">9.5.</strong> HALT</a></li><li class="chapter-item expanded "><a href="../conditions/novalue.html"><strong aria-hidden="true">9.6.</strong> NOVALUE</a></li><li class="chapter-item expanded "><a href="../conditions/nostring.html"><strong aria-hidden="true">9.7.</strong> NOSTRING</a></li><li class="chapter-item expanded "><a href="../conditions/nomethod.html"><strong aria-hidden="true">9.8.</strong> NOMETHOD</a></li><li class="chapter-item expanded "><a href="../conditions/notready.html"><strong aria-hidden="true">9.9.</strong> NOTREADY</a></li><li class="chapter-item expanded "><a href="../conditions/lostdigits.html"><strong aria-hidden="true">9.10.</strong> LOSTDIGITS</a></li><li class="chapter-item expanded "><a href="../conditions/user.html"><strong aria-hidden="true">9.11.</strong> USER conditions</a></li><li class="chapter-item expanded "><a href="../conditions/errors.html"><strong aria-hidden="true">9.12.</strong> Error numbers</a></li></ol></li><li class="chapter-item expanded "><a href="../classes/index.html"><strong aria-hidden="true">10.</strong> Classes</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../classes/methods.html"><strong aria-hidden="true">10.1.</strong> Method search</a></li><li class="chapter-item expanded "><a href="../classes/object.html"><strong aria-hidden="true">10.2.</strong> Object</a></li><li class="chapter-item expanded "><a href="../classes/class.html"><strong aria-hidden="true">10.3.</strong> Class</a></li><li class="chapter-item expanded "><a href="../classes/string.html"><strong aria-hidden="true">10.4.</strong> String</a></li><li class="chapter-item expanded "><a href="../classes/method.html"><strong aria-hidden="true">10.5.</strong> Method</a></li><li class="chapter-item expanded "><a href="../classes/routine.html"><strong aria-hidden="true">10.6.</strong> Routine</a></li><li class="chapter-item expanded "><a href="../classes/package.html"><strong aria-hidden="true">10.7.</strong> Package</a></li><li class="chapter-item expanded "><a href="../classes/message.html"><strong aria-hidden="true">10.8.</strong> Message</a></li><li class="chapter-item expanded "><a href="../classes/messagenotification.html"><strong aria-hidden="true">10.9.</strong> MessageNotification</a></li><li class="chapter-item expanded "><a href="../classes/alarmnotification.html"><strong aria-hidden="true">10.10.</strong> AlarmNotification</a></li><li class="chapter-item expanded "><a href="../classes/collection.html"><strong aria-hidden="true">10.11.</strong> Collection</a></li><li class="chapter-item expanded "><a href="../classes/mapcollection.html"><strong aria-hidden="true">10.12.</strong> MapCollection</a></li><li class="chapter-item expanded "><a href="../classes/orderedcollection.html"><strong aria-hidden="true">10.13.</strong> OrderedCollection</a></li><li class="chapter-item expanded "><a href="../classes/setcollection.html"><strong aria-hidden="true">10.14.</strong> SetCollection</a></li><li class="chapter-item expanded "><a href="../classes/array.html"><strong aria-hidden="true">10.15.</strong> Array</a></li><li class="chapter-item expanded "><a href="../classes/list.html"><strong aria-hidden="true">10.16.</strong> List</a></li><li class="chapter-item expanded "><a href="../classes/queue.html"><strong aria-hidden="true">10.17.</strong> Queue</a></li><li class="chapter-item expanded "><a href="../classes/circularqueue.html"><strong aria-hidden="true">10.18.</strong> CircularQueue</a></li><li class="chapter-item expanded "><a href="../classes/directory.html"><strong aria-hidden="true">10.19.</strong> Directory</a></li><li class="chapter-item expanded "><a href="../classes/stringtable.html"><strong aria-hidden="true">10.20.</strong> StringTable</a></li><li class="chapter-item expanded "><a href="../classes/properties.html"><strong aria-hidden="true">10.21.</strong> Properties</a></li><li class="chapter-item expanded "><a href="../classes/table.html"><strong aria-hidden="true">10.22.</strong> Table</a></li><li class="chapter-item expanded "><a href="../classes/identitytable.html"><strong aria-hidden="true">10.23.</strong> IdentityTable</a></li><li class="chapter-item expanded "><a href="../classes/relation.html"><strong aria-hidden="true">10.24.</strong> Relation</a></li><li class="chapter-item expanded "><a href="../classes/bag.html"><strong aria-hidden="true">10.25.</strong> Bag</a></li><li class="chapter-item expanded "><a href="../classes/set.html"><strong aria-hidden="true">10.26.</strong> Set</a></li><li class="chapter-item expanded "><a href="../classes/stem.html"><strong aria-hidden="true">10.27.</strong> Stem</a></li><li class="chapter-item expanded "><a href="../classes/datetime.html"><strong aria-hidden="true">10.28.</strong> DateTime</a></li><li class="chapter-item expanded "><a href="../classes/timespan.html"><strong aria-hidden="true">10.29.</strong> TimeSpan</a></li><li class="chapter-item expanded "><a href="../classes/comparable.html"><strong aria-hidden="true">10.30.</strong> Comparable</a></li><li class="chapter-item expanded "><a href="../classes/orderable.html"><strong aria-hidden="true">10.31.</strong> Orderable</a></li><li class="chapter-item expanded "><a href="../classes/comparators.html"><strong aria-hidden="true">10.32.</strong> Comparators</a></li><li class="chapter-item expanded "><a href="../classes/mutablebuffer.html"><strong aria-hidden="true">10.33.</strong> MutableBuffer</a></li><li class="chapter-item expanded "><a href="../classes/buffer.html"><strong aria-hidden="true">10.34.</strong> Buffer</a></li><li class="chapter-item expanded "><a href="../classes/pointer.html"><strong aria-hidden="true">10.35.</strong> Pointer</a></li><li class="chapter-item expanded "><a href="../classes/weakreference.html"><strong aria-hidden="true">10.36.</strong> WeakReference</a></li><li class="chapter-item expanded "><a href="../classes/variablereference.html"><strong aria-hidden="true">10.37.</strong> VariableReference</a></li><li class="chapter-item expanded "><a href="../classes/file.html"><strong aria-hidden="true">10.38.</strong> File</a></li><li class="chapter-item expanded "><a href="../classes/rexxcontext.html"><strong aria-hidden="true">10.39.</strong> RexxContext</a></li><li class="chapter-item expanded "><a href="../classes/stackframe.html"><strong aria-hidden="true">10.40.</strong> StackFrame</a></li><li class="chapter-item expanded "><a href="../classes/rexxinfo.html"><strong aria-hidden="true">10.41.</strong> RexxInfo</a></li><li class="chapter-item expanded "><a href="../classes/traceobject.html"><strong aria-hidden="true">10.42.</strong> TraceObject</a></li><li class="chapter-item expanded "><a href="../classes/validate.html"><strong aria-hidden="true">10.43.</strong> Validate</a></li><li class="chapter-item expanded "><a href="../classes/singleton.html"><strong aria-hidden="true">10.44.</strong> Singleton</a></li><li class="chapter-item expanded "><a href="../classes/alarm.html"><strong aria-hidden="true">10.45.</strong> Alarm</a></li><li class="chapter-item expanded "><a href="../classes/ticker.html"><strong aria-hidden="true">10.46.</strong> Ticker</a></li><li class="chapter-item expanded "><a href="../classes/monitor.html"><strong aria-hidden="true">10.47.</strong> Monitor</a></li><li class="chapter-item expanded "><a href="../classes/eventsemaphore.html"><strong aria-hidden="true">10.48.</strong> EventSemaphore</a></li><li class="chapter-item expanded "><a href="../classes/mutexsemaphore.html"><strong aria-hidden="true">10.49.</strong> MutexSemaphore</a></li><li class="chapter-item expanded "><a href="../classes/commandhandler.html"><strong aria-hidden="true">10.50.</strong> CommandHandler</a></li><li class="chapter-item expanded "><a href="../classes/nativecommandhandler.html"><strong aria-hidden="true">10.51.</strong> NativeCommandHandler</a></li><li class="chapter-item expanded "><a href="../classes/commandcontext.html"><strong aria-hidden="true">10.52.</strong> CommandContext</a></li><li class="chapter-item expanded "><a href="../classes/commandinput.html"><strong aria-hidden="true">10.53.</strong> CommandInput</a></li><li class="chapter-item expanded "><a href="../classes/commandoutput.html"><strong aria-hidden="true">10.54.</strong> CommandOutput</a></li><li class="chapter-item expanded "><a href="../classes/rexxqueue.html"><strong aria-hidden="true">10.55.</strong> RexxQueue</a></li><li class="chapter-item expanded "><a href="../classes/supplier.html"><strong aria-hidden="true">10.56.</strong> Supplier</a></li><li class="chapter-item expanded "><a href="../classes/streamsupplier.html"><strong aria-hidden="true">10.57.</strong> StreamSupplier</a></li><li class="chapter-item expanded "><a href="../classes/regularexpression.html"><strong aria-hidden="true">10.58.</strong> RegularExpression</a></li><li class="chapter-item expanded "><a href="../classes/stream.html"><strong aria-hidden="true">10.59.</strong> Stream</a></li><li class="chapter-item expanded "><a href="../classes/inputstream.html"><strong aria-hidden="true">10.60.</strong> InputStream</a></li><li class="chapter-item expanded "><a href="../classes/outputstream.html"><strong aria-hidden="true">10.61.</strong> OutputStream</a></li><li class="chapter-item expanded "><a href="../classes/inputoutputstream.html"><strong aria-hidden="true">10.62.</strong> InputOutputStream</a></li></ol></li><li class="chapter-item expanded "><a href="../environment/index.html"><strong aria-hidden="true">11.</strong> Environment</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../environment/objects.html"><strong aria-hidden="true">11.1.</strong> Environment objects</a></li><li class="chapter-item expanded "><a href="../environment/invocation.html"><strong aria-hidden="true">11.2.</strong> Invocation</a></li><li class="chapter-item expanded "><a href="../environment/search.html"><strong aria-hidden="true">11.3.</strong> Search</a></li><li class="chapter-item expanded "><a href="../environment/commands.html"><strong aria-hidden="true">11.4.</strong> Command environments</a></li><li class="chapter-item expanded "><a href="../environment/security.html"><strong aria-hidden="true">11.5.</strong> Security manager</a></li><li class="chapter-item expanded "><a href="../environment/debugging.html"><strong aria-hidden="true">11.6.</strong> Debugging</a></li></ol></li><li class="chapter-item expanded "><a href="../concurrency/index.html"><strong aria-hidden="true">12.</strong> Concurrency</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../concurrency/activities.html"><strong aria-hidden="true">12.1.</strong> Activities</a></li><li class="chapter-item expanded "><a href="../concurrency/locks.html" class="active"><strong aria-hidden="true">12.2.</strong> Locks</a></li><li class="chapter-item expanded "><a href="../concurrency/halt.html"><strong aria-hidden="true">12.3.</strong> Halt and program end</a></li></ol></li><li class="chapter-item expanded "><a href="../rexxutil/index.html"><strong aria-hidden="true">13.</strong> RexxUtil</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../rexxutil/sysfiledelete.html"><strong aria-hidden="true">13.1.</strong> SysFileDelete</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysfileexists.html"><strong aria-hidden="true">13.2.</strong> SysFileExists</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysisfile.html"><strong aria-hidden="true">13.3.</strong> SysIsFile</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysisfiledirectory.html"><strong aria-hidden="true">13.4.</strong> SysIsFileDirectory</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysisfilelink.html"><strong aria-hidden="true">13.5.</strong> SysIsFileLink</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysmkdir.html"><strong aria-hidden="true">13.6.</strong> SysMkDir</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysrmdir.html"><strong aria-hidden="true">13.7.</strong> SysRmDir</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysfilecopy.html"><strong aria-hidden="true">13.8.</strong> SysFileCopy</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysfilemove.html"><strong aria-hidden="true">13.9.</strong> SysFileMove</a></li><li class="chapter-item expanded "><a href="../rexxutil/systempfilename.html"><strong aria-hidden="true">13.10.</strong> SysTempFileName</a></li><li class="chapter-item expanded "><a href="../rexxutil/syssearchpath.html"><strong aria-hidden="true">13.11.</strong> SysSearchPath</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysfiletree.html"><strong aria-hidden="true">13.12.</strong> SysFileTree</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysfilesearch.html"><strong aria-hidden="true">13.13.</strong> SysFileSearch</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysgetfiledatetime.html"><strong aria-hidden="true">13.14.</strong> SysGetFileDateTime</a></li><li class="chapter-item expanded "><a href="../rexxutil/syssetfiledatetime.html"><strong aria-hidden="true">13.15.</strong> SysSetFileDateTime</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysdumpvariables.html"><strong aria-hidden="true">13.16.</strong> SysDumpVariables</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysstemcopy.html"><strong aria-hidden="true">13.17.</strong> SysStemCopy</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysstemdelete.html"><strong aria-hidden="true">13.18.</strong> SysStemDelete</a></li><li class="chapter-item expanded "><a href="../rexxutil/syssteminsert.html"><strong aria-hidden="true">13.19.</strong> SysStemInsert</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysstemsort.html"><strong aria-hidden="true">13.20.</strong> SysStemSort</a></li><li class="chapter-item expanded "><a href="../rexxutil/macrospace.html"><strong aria-hidden="true">13.21.</strong> The macrospace</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysaddrexxmacro.html"><strong aria-hidden="true">13.22.</strong> SysAddRexxMacro</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysdroprexxmacro.html"><strong aria-hidden="true">13.23.</strong> SysDropRexxMacro</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysqueryrexxmacro.html"><strong aria-hidden="true">13.24.</strong> SysQueryRexxMacro</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysreorderrexxmacro.html"><strong aria-hidden="true">13.25.</strong> SysReorderRexxMacro</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysclearrexxmacrospace.html"><strong aria-hidden="true">13.26.</strong> SysClearRexxMacroSpace</a></li><li class="chapter-item expanded "><a href="../rexxutil/syssaverexxmacrospace.html"><strong aria-hidden="true">13.27.</strong> SysSaveRexxMacroSpace</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysloadrexxmacrospace.html"><strong aria-hidden="true">13.28.</strong> SysLoadRexxMacroSpace</a></li><li class="chapter-item expanded "><a href="../rexxutil/syscreatepipe.html"><strong aria-hidden="true">13.29.</strong> SysCreatePipe</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysfork.html"><strong aria-hidden="true">13.30.</strong> SysFork</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysqueryprocess.html"><strong aria-hidden="true">13.31.</strong> SysQueryProcess</a></li><li class="chapter-item expanded "><a href="../rexxutil/syssetpriority.html"><strong aria-hidden="true">13.32.</strong> SysSetPriority</a></li><li class="chapter-item expanded "><a href="../rexxutil/syssleep.html"><strong aria-hidden="true">13.33.</strong> SysSleep</a></li><li class="chapter-item expanded "><a href="../rexxutil/syswait.html"><strong aria-hidden="true">13.34.</strong> SysWait</a></li><li class="chapter-item expanded "><a href="../rexxutil/syseventsem.html"><strong aria-hidden="true">13.35.</strong> Event semaphore functions</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysmutexsem.html"><strong aria-hidden="true">13.36.</strong> Mutex semaphore functions</a></li><li class="chapter-item expanded "><a href="../rexxutil/syscls.html"><strong aria-hidden="true">13.37.</strong> SysCls</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysformatmessage.html"><strong aria-hidden="true">13.38.</strong> SysFormatMessage</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysgeterrortext.html"><strong aria-hidden="true">13.39.</strong> SysGetErrorText</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysgetkey.html"><strong aria-hidden="true">13.40.</strong> SysGetKey</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysgetmessage.html"><strong aria-hidden="true">13.41.</strong> SysGetMessage</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysgetmessagex.html"><strong aria-hidden="true">13.42.</strong> SysGetMessageX</a></li><li class="chapter-item expanded "><a href="../rexxutil/syslinver.html"><strong aria-hidden="true">13.43.</strong> SysLinVer</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysutilversion.html"><strong aria-hidden="true">13.44.</strong> SysUtilVersion</a></li><li class="chapter-item expanded "><a href="../rexxutil/sysversion.html"><strong aria-hidden="true">13.45.</strong> SysVersion</a></li><li class="chapter-item expanded "><a href="../rexxutil/windows.html"><strong aria-hidden="true">13.46.</strong> Windows-only functions</a></li></ol></li><li class="chapter-item expanded "><a href="../builtins/index.html"><strong aria-hidden="true">14.</strong> Built-in functions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../builtins/abbrev.html"><strong aria-hidden="true">14.1.</strong> ABBREV</a></li><li class="chapter-item expanded "><a href="../builtins/abs.html"><strong aria-hidden="true">14.2.</strong> ABS</a></li><li class="chapter-item expanded "><a href="../builtins/address.html"><strong aria-hidden="true">14.3.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../builtins/arg.html"><strong aria-hidden="true">14.4.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../builtins/b2x.html"><strong aria-hidden="true">14.5.</strong> B2X</a></li><li class="chapter-item expanded "><a href="../builtins/beep.html"><strong aria-hidden="true">14.6.</strong> BEEP</a></li><li class="chapter-item expanded "><a href="../builtins/bitand.html"><strong aria-hidden="true">14.7.</strong> BITAND</a></li><li class="chapter-item expanded "><a href="../builtins/bitor.html"><strong aria-hidden="true">14.8.</strong> BITOR</a></li><li class="chapter-item expanded "><a href="../builtins/bitxor.html"><strong aria-hidden="true">14.9.</strong> BITXOR</a></li><li class="chapter-item expanded "><a href="../builtins/c2d.html"><strong aria-hidden="true">14.10.</strong> C2D</a></li><li class="chapter-item expanded "><a href="../builtins/c2x.html"><strong aria-hidden="true">14.11.</strong> C2X</a></li><li class="chapter-item expanded "><a href="../builtins/center.html"><strong aria-hidden="true">14.12.</strong> CENTER</a></li><li class="chapter-item expanded "><a href="../builtins/changestr.html"><strong aria-hidden="true">14.13.</strong> CHANGESTR</a></li><li class="chapter-item expanded "><a href="../builtins/charin.html"><strong aria-hidden="true">14.14.</strong> CHARIN</a></li><li class="chapter-item expanded "><a href="../builtins/charout.html"><strong aria-hidden="true">14.15.</strong> CHAROUT</a></li><li class="chapter-item expanded "><a href="../builtins/chars.html"><strong aria-hidden="true">14.16.</strong> CHARS</a></li><li class="chapter-item expanded "><a href="../builtins/compare.html"><strong aria-hidden="true">14.17.</strong> COMPARE</a></li><li class="chapter-item expanded "><a href="../builtins/condition.html"><strong aria-hidden="true">14.18.</strong> CONDITION</a></li><li class="chapter-item expanded "><a href="../builtins/copies.html"><strong aria-hidden="true">14.19.</strong> COPIES</a></li><li class="chapter-item expanded "><a href="../builtins/countstr.html"><strong aria-hidden="true">14.20.</strong> COUNTSTR</a></li><li class="chapter-item expanded "><a href="../builtins/d2c.html"><strong aria-hidden="true">14.21.</strong> D2C</a></li><li class="chapter-item expanded "><a href="../builtins/d2x.html"><strong aria-hidden="true">14.22.</strong> D2X</a></li><li class="chapter-item expanded "><a href="../builtins/datatype.html"><strong aria-hidden="true">14.23.</strong> DATATYPE</a></li><li class="chapter-item expanded "><a href="../builtins/date.html"><strong aria-hidden="true">14.24.</strong> DATE</a></li><li class="chapter-item expanded "><a href="../builtins/delstr.html"><strong aria-hidden="true">14.25.</strong> DELSTR</a></li><li class="chapter-item expanded "><a href="../builtins/delword.html"><strong aria-hidden="true">14.26.</strong> DELWORD</a></li><li class="chapter-item expanded "><a href="../builtins/digits.html"><strong aria-hidden="true">14.27.</strong> DIGITS</a></li><li class="chapter-item expanded "><a href="../builtins/directory.html"><strong aria-hidden="true">14.28.</strong> DIRECTORY</a></li><li class="chapter-item expanded "><a href="../builtins/endlocal.html"><strong aria-hidden="true">14.29.</strong> ENDLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/errortext.html"><strong aria-hidden="true">14.30.</strong> ERRORTEXT</a></li><li class="chapter-item expanded "><a href="../builtins/filespec.html"><strong aria-hidden="true">14.31.</strong> FILESPEC</a></li><li class="chapter-item expanded "><a href="../builtins/form.html"><strong aria-hidden="true">14.32.</strong> FORM</a></li><li class="chapter-item expanded "><a href="../builtins/format.html"><strong aria-hidden="true">14.33.</strong> FORMAT</a></li><li class="chapter-item expanded "><a href="../builtins/fuzz.html"><strong aria-hidden="true">14.34.</strong> FUZZ</a></li><li class="chapter-item expanded "><a href="../builtins/gc.html"><strong aria-hidden="true">14.35.</strong> GC</a></li><li class="chapter-item expanded "><a href="../builtins/insert.html"><strong aria-hidden="true">14.36.</strong> INSERT</a></li><li class="chapter-item expanded "><a href="../builtins/lastpos.html"><strong aria-hidden="true">14.37.</strong> LASTPOS</a></li><li class="chapter-item expanded "><a href="../builtins/left.html"><strong aria-hidden="true">14.38.</strong> LEFT</a></li><li class="chapter-item expanded "><a href="../builtins/length.html"><strong aria-hidden="true">14.39.</strong> LENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/linein.html"><strong aria-hidden="true">14.40.</strong> LINEIN</a></li><li class="chapter-item expanded "><a href="../builtins/lineout.html"><strong aria-hidden="true">14.41.</strong> LINEOUT</a></li><li class="chapter-item expanded "><a href="../builtins/lines.html"><strong aria-hidden="true">14.42.</strong> LINES</a></li><li class="chapter-item expanded "><a href="../builtins/lower.html"><strong aria-hidden="true">14.43.</strong> LOWER</a></li><li class="chapter-item expanded "><a href="../builtins/max.html"><strong aria-hidden="true">14.44.</strong> MAX</a></li><li class="chapter-item expanded "><a href="../builtins/min.html"><strong aria-hidden="true">14.45.</strong> MIN</a></li><li class="chapter-item expanded "><a href="../builtins/overlay.html"><strong aria-hidden="true">14.46.</strong> OVERLAY</a></li><li class="chapter-item expanded "><a href="../builtins/pos.html"><strong aria-hidden="true">14.47.</strong> POS</a></li><li class="chapter-item expanded "><a href="../builtins/qualify.html"><strong aria-hidden="true">14.48.</strong> QUALIFY</a></li><li class="chapter-item expanded "><a href="../builtins/queued.html"><strong aria-hidden="true">14.49.</strong> QUEUED</a></li><li class="chapter-item expanded "><a href="../builtins/random.html"><strong aria-hidden="true">14.50.</strong> RANDOM</a></li><li class="chapter-item expanded "><a href="../builtins/reverse.html"><strong aria-hidden="true">14.51.</strong> REVERSE</a></li><li class="chapter-item expanded "><a href="../builtins/right.html"><strong aria-hidden="true">14.52.</strong> RIGHT</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncadd.html"><strong aria-hidden="true">14.53.</strong> RXFUNCADD</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncdrop.html"><strong aria-hidden="true">14.54.</strong> RXFUNCDROP</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncquery.html"><strong aria-hidden="true">14.55.</strong> RXFUNCQUERY</a></li><li class="chapter-item expanded "><a href="../builtins/rxqueue.html"><strong aria-hidden="true">14.56.</strong> RXQUEUE</a></li><li class="chapter-item expanded "><a href="../builtins/setlocal.html"><strong aria-hidden="true">14.57.</strong> SETLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/sign.html"><strong aria-hidden="true">14.58.</strong> SIGN</a></li><li class="chapter-item expanded "><a href="../builtins/sourceline.html"><strong aria-hidden="true">14.59.</strong> SOURCELINE</a></li><li class="chapter-item expanded "><a href="../builtins/space.html"><strong aria-hidden="true">14.60.</strong> SPACE</a></li><li class="chapter-item expanded "><a href="../builtins/stream.html"><strong aria-hidden="true">14.61.</strong> STREAM</a></li><li class="chapter-item expanded "><a href="../builtins/strip.html"><strong aria-hidden="true">14.62.</strong> STRIP</a></li><li class="chapter-item expanded "><a href="../builtins/substr.html"><strong aria-hidden="true">14.63.</strong> SUBSTR</a></li><li class="chapter-item expanded "><a href="../builtins/subword.html"><strong aria-hidden="true">14.64.</strong> SUBWORD</a></li><li class="chapter-item expanded "><a href="../builtins/symbol.html"><strong aria-hidden="true">14.65.</strong> SYMBOL</a></li><li class="chapter-item expanded "><a href="../builtins/time.html"><strong aria-hidden="true">14.66.</strong> TIME</a></li><li class="chapter-item expanded "><a href="../builtins/trace.html"><strong aria-hidden="true">14.67.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../builtins/translate.html"><strong aria-hidden="true">14.68.</strong> TRANSLATE</a></li><li class="chapter-item expanded "><a href="../builtins/trunc.html"><strong aria-hidden="true">14.69.</strong> TRUNC</a></li><li class="chapter-item expanded "><a href="../builtins/upper.html"><strong aria-hidden="true">14.70.</strong> UPPER</a></li><li class="chapter-item expanded "><a href="../builtins/userid.html"><strong aria-hidden="true">14.71.</strong> USERID</a></li><li class="chapter-item expanded "><a href="../builtins/value.html"><strong aria-hidden="true">14.72.</strong> VALUE</a></li><li class="chapter-item expanded "><a href="../builtins/var.html"><strong aria-hidden="true">14.73.</strong> VAR</a></li><li class="chapter-item expanded "><a href="../builtins/verify.html"><strong aria-hidden="true">14.74.</strong> VERIFY</a></li><li class="chapter-item expanded "><a href="../builtins/word.html"><strong aria-hidden="true">14.75.</strong> WORD</a></li><li class="chapter-item expanded "><a href="../builtins/wordindex.html"><strong aria-hidden="true">14.76.</strong> WORDINDEX</a></li><li class="chapter-item expanded "><a href="../builtins/wordlength.html"><strong aria-hidden="true">14.77.</strong> WORDLENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/wordpos.html"><strong aria-hidden="true">14.78.</strong> WORDPOS</a></li><li class="chapter-item expanded "><a href="../builtins/words.html"><strong aria-hidden="true">14.79.</strong> WORDS</a></li><li class="chapter-item expanded "><a href="../builtins/x2b.html"><strong aria-hidden="true">14.80.</strong> X2B</a></li><li class="chapter-item expanded "><a href="../builtins/x2c.html"><strong aria-hidden="true">14.81.</strong> X2C</a></li><li class="chapter-item expanded "><a href="../builtins/x2d.html"><strong aria-hidden="true">14.82.</strong> X2D</a></li><li class="chapter-item expanded "><a href="../builtins/xrange.html"><strong aria-hidden="true">14.83.</strong> XRANGE</a></li></ol></li><li class="chapter-item expanded "><a href="../deviations.html"><strong aria-hidden="true">15.</strong> Deviations</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The interrexx Language Specification</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="locks"><a class="header" href="#locks">Locks</a></h1>
+<p class="references">rexxref: Concurrency &gt; Default Concurrency; Concurrency &gt; Sending Messages within an Activity; Concurrency &gt; Using Additional Concurrency Mechanisms; Concurrency &gt; Using Additional Concurrency Mechanisms &gt; SETUNGUARDED Method and UNGUARDED Option; Concurrency &gt; Using Additional Concurrency Mechanisms &gt; GUARD ON and GUARD OFF; Concurrency &gt; Using Additional Concurrency Mechanisms &gt; Guarded Methods</p>
+<p class="deviations">Deviations: D14, D20, D160</p>
+<p>Methods of one object can run on several activities at once, and a guarded
+method must not run at the same time as another guarded method that works on
+the same object variables. The interpreter keeps them apart with locks. This
+page specifies what a lock belongs to, which methods take one and when, what
+an activity that already holds a lock may do, how often a lock is held, and
+what happens when activities wait for each other in a ring. The <a href="../instructions/guard.html#r-instr.guard.exclusion">GUARD
+instruction</a> owns the instruction and its WHEN form,
+the <a href="../directives/method.html#r-dir.method.guard"><code>::METHOD</code> directive</a> owns the options, and the
+<a href="../classes/method.html#r-class.method.setunguarded">Method class</a> owns the methods that change them;
+this page links those rules and says what they mean for the locks.</p>
+<p>The page says only what is guaranteed. Which of several activities that wait
+for the same lock gets it first is not specified, and neither is how long a
+wait lasts; the examples are arranged so that nothing in their output depends
+on either. An example that must show that a method can run while another holds
+a lock makes the program wait for it: if the method could not run, the example
+would not end. An example that must show that a method cannot run starts it,
+lets the holder end, and shows the order in which the two ended, which the
+rule forces. How activities are started and how they end is the matter of the
+<a href="activities.html#r-conc.activities.model">activities page</a> of this chapter; here every
+activity is one that the program starts with <code>start</code>.</p>
+<h2 id="the-lock-of-a-scope"><a class="header" href="#the-lock-of-a-scope">The lock of a scope</a></h2>
+<div class="rule" id="r-conc.locks.scope"><a href="#r-conc.locks.scope">[conc.locks.scope]</a></div>
+<p>An object has one lock for each of its scopes, and the lock of a scope is held
+by at most one activity at a time. A guarded method holds the lock of its
+scope from its first clause until it ends or gives it up, and an activity that
+asks for a lock that another activity holds waits until the holder lets it go.
+The scope of a method is the class that gave the method to the object, as <a href="../classes/method.html#r-class.method.scope">the
+scope rule</a> says, and the object variables of that class
+are the ones its methods share (<a href="../instructions/expose.html#r-instr.expose.scope">the scope rule of
+EXPOSE</a>). So two guarded methods of the same class run
+one after the other when they work on one object, and run together when they
+work on two objects. Guarded methods of different scopes of one object run
+together as well, whether the scopes are a class and its subclass, a class and
+a mixin class that it inherits, or a class and one of its superclasses. In the
+example every trial has a holder, which stays inside a guarded method until
+the program lets it go, and a probe, which appends a word to a log. Where the
+probe can run at once the program waits for it before it lets the holder go,
+and the log shows the probe first. Where it cannot, the log shows the holder's
+end first.</p>
+<pre><code class="language-rexx">call trial 'sub holds, sub probes', 'subHold', 'subProbe', 'wait'
+call trial 'sub holds, base probes', 'subHold', 'baseProbe', 'free'
+call trial 'sub holds, mixin probes', 'subHold', 'mixProbe', 'free'
+call trial 'base holds, sub probes', 'baseHold', 'subProbe', 'free'
+call trial 'base holds, base probes', 'baseHold', 'baseProbe', 'wait'
+call trial 'mixin holds, mixin probes', 'mixHold', 'mixProbe', 'wait'
+call trial 'sub holds, other object probes', 'subHold', 'subProbe', 'free', 1
+exit
+trial: procedure
+  use arg title, hold, probe, how, other = 0
+  .local~log = .array~new
+  .local~inside = .false; .local~go = .false
+  o = .sub~new
+  target = o
+  if other then target = .sub~new
+  h = o~start(hold)
+  do until .local~inside; end
+  p = target~start(probe)
+  if how = 'free' then p~result
+  .local~go = .true
+  h~result; p~result
+  say title':' .local~log~makeString('l', ' ')
+  return
+::class mix mixinclass object
+::method mixHold
+  call hold
+  return 'mixHold'
+::method mixProbe
+  .local~log~append('probe')
+  return 'mixProbe'
+::class base
+::method baseHold
+  call hold
+  return 'baseHold'
+::method baseProbe
+  .local~log~append('probe')
+  return 'baseProbe'
+::class sub subclass base inherit mix
+::method subHold
+  call hold
+  return 'subHold'
+::method subProbe
+  .local~log~append('probe')
+  return 'subProbe'
+::routine hold
+  .local~inside = .true
+  do until .local~go; end
+  .local~log~append('hold-end')
+</code></pre>
+<pre><code class="language-output">sub holds, sub probes: hold-end probe
+sub holds, base probes: probe hold-end
+sub holds, mixin probes: probe hold-end
+base holds, sub probes: probe hold-end
+base holds, base probes: hold-end probe
+mixin holds, mixin probes: hold-end probe
+sub holds, other object probes: probe hold-end
+</code></pre>
+<div class="rule" id="r-conc.locks.scope.owner"><a href="#r-conc.locks.scope.owner">[conc.locks.scope.owner]</a></div>
+<p>A method has the scope that <a href="../classes/method.html#r-class.method.scope">the scope rule of <code>Method</code></a>
+gives it: the class whose directive or <code>define</code> gave it to the class, which an
+inherited method keeps, so a method of a mixin class has the lock of the mixin
+class. A method that <code>setMethod</code> adds to one object with <code>OBJECT</code> takes the
+place of a method of the object's class and has the lock of that class. A
+method that it adds with <code>FLOAT</code>, which is the default, and a method that
+<code>enhanced</code> adds belong to no class: the object has one lock of its own for all
+of them, so that two of them run one after the other, and each runs together
+with a method of any class. A method that <a href="../classes/object.html#r-class.object.run"><code>run</code></a> runs,
+guarded unless it was made unguarded, has that lock as well. The example uses
+the trials of the rule above.</p>
+<pre><code class="language-rexx">.sub~define('defHold', holder())
+call trial 'defined holds, own probes', 'defHold', 'subProbe', 'wait'
+call trial 'defined holds, base probes', 'defHold', 'baseProbe', 'free'
+call trial 'OBJECT holds, own probes', 'objHold', 'subProbe', 'wait'
+call trial 'OBJECT holds, base probes', 'objHold', 'baseProbe', 'free'
+call trial 'FLOAT holds, own probes', 'fltHold', 'subProbe', 'free'
+call trial 'own holds, FLOAT probes', 'subHold', 'fltProbe', 'free'
+call trial 'FLOAT holds, FLOAT probes', 'fltHold', 'fltProbe', 'wait'
+call trial 'enhanced holds, own probes', 'enhHold', 'subProbe', 'free', 'enh'
+call trial 'enhanced holds, enhanced probes', 'enhHold', 'enhProbe',,
+  'wait', 'enh'
+call trial 'run holds, own probes', 'runHold', 'subProbe', 'free'
+call trial 'run holds, FLOAT probes', 'runHold', 'fltProbe', 'wait'
+exit
+trial: procedure
+  use arg title, hold, probe, how, kind = 'plain'
+  .local~log = .array~new
+  .local~inside = .false; .local~go = .false
+  if kind = 'enh' then do
+    t = .table~new
+    t['enhHold'] = holder()
+    t['enhProbe'] = prober()
+    o = .sub~enhanced(t)
+  end
+  else do
+    o = .sub~new
+    o~put('fltHold', holder())
+    o~put('fltProbe', prober())
+    o~put('objHold', holder(), 'OBJECT')
+  end
+  h = o~start(hold)
+  do until .local~inside; end
+  p = o~start(probe)
+  if how = 'free' then p~result
+  .local~go = .true
+  h~result; p~result
+  say title':' .local~log~makeString('l', ' ')
+  return
+holder: return .method~new('h', .array~of('.local~inside = .true',,
+  'do until .local~go; end', '.local~log~append("hold-end")'))
+prober: return .method~new('p', '.local~log~append("probe")')
+::class base
+::method baseProbe
+  .local~log~append('probe')
+::class sub subclass base
+::method put
+  use arg name, method
+  if arg(3, 'E') then self~setMethod(name, method, arg(3))
+  else self~setMethod(name, method)
+::method subProbe
+  .local~log~append('probe')
+::method subHold
+  .local~inside = .true
+  do until .local~go; end
+  .local~log~append('hold-end')
+::method runHold unguarded
+  self~run(.method~new('h', .array~of('.local~inside = .true',,
+    'do until .local~go; end', '.local~log~append("hold-end")')))
+</code></pre>
+<pre><code class="language-output">defined holds, own probes: hold-end probe
+defined holds, base probes: probe hold-end
+OBJECT holds, own probes: hold-end probe
+OBJECT holds, base probes: probe hold-end
+FLOAT holds, own probes: probe hold-end
+own holds, FLOAT probes: probe hold-end
+FLOAT holds, FLOAT probes: hold-end probe
+enhanced holds, own probes: probe hold-end
+enhanced holds, enhanced probes: hold-end probe
+run holds, own probes: probe hold-end
+run holds, FLOAT probes: hold-end probe
+</code></pre>
+<h2 id="guarded-and-unguarded-methods"><a class="header" href="#guarded-and-unguarded-methods">Guarded and unguarded methods</a></h2>
+<div class="rule" id="r-conc.locks.default"><a href="#r-conc.locks.default">[conc.locks.default]</a></div>
+<p>A method is guarded unless it is unguarded, and a guarded method takes the
+lock of its scope when it starts. A method that a <code>::METHOD</code> directive
+declares is guarded unless the directive says <code>UNGUARDED</code>, class methods
+included. The two methods of an <code>::ATTRIBUTE</code> directive take the option of the
+directive, so both are guarded or both unguarded. A <code>::CONSTANT</code> directive
+makes an unguarded method. A method of the name <code>UNKNOWN</code>, a method that
+<code>define</code> gives to a class and a method that <code>new</code> makes are guarded unless
+they were made unguarded, whatever the code they run. <a href="../directives/method.html#r-dir.method.guard">The method
+options</a> and <a href="../classes/method.html#r-class.method.isguarded"><code>isGuarded</code></a> say
+the same of the options and of what a <code>Method</code> object answers; this rule says
+what it means for the locks. In the example a guarded holder keeps the lock of
+the class, and an unguarded <code>relay</code> method sends each probe to the object and
+appends a word to the log when the probe has answered, so the log shows
+whether the probe had to wait. The probes that wait for the holder are the
+guarded methods, the accessors of a guarded attribute, and the <code>UNKNOWN</code>
+method that answers a message the object has no method for; the others run at
+once.</p>
+<pre><code class="language-rexx">.k~define('made', .method~new('made', 'return 1'))
+call trial 'plain method', 'plain', 'wait'
+call trial 'GUARDED method', 'grd', 'wait'
+call trial 'UNGUARDED method', 'un', 'free'
+call trial 'attribute get', 'at', 'wait'
+call trial 'attribute set', 'at=', 'wait', 1
+call trial 'UNGUARDED attribute get', 'au', 'free'
+call trial 'UNGUARDED attribute set', 'au=', 'free', 1
+call trial 'constant', 'cc', 'free'
+call trial 'UNKNOWN', 'nosuch', 'wait'
+call trial 'defined by define', 'made', 'wait'
+exit
+trial: procedure
+  use arg title, probe, how, value
+  .local~log = .array~new
+  .local~inside = .false; .local~go = .false
+  o = .k~new
+  h = o~start('holder')
+  do until .local~inside; end
+  if arg(4, 'E') then p = o~start('relay', probe, value)
+  else p = o~start('relay', probe)
+  if how = 'free' then p~result
+  .local~go = .true
+  h~result; p~result
+  say title':' .local~log~makeString('l', ' ')
+  return
+::class k
+::method holder
+  .local~inside = .true
+  do until .local~go; end
+  .local~log~append('hold-end')
+::method relay unguarded
+  if arg(2, 'E') then self~send(arg(1), arg(2))
+  else self~send(arg(1))
+  .local~log~append('probe')
+::method plain
+  return 1
+::method grd guarded
+  return 1
+::method un unguarded
+  return 1
+::attribute at
+::attribute au unguarded
+::constant cc 5
+::method unknown
+  return 1
+</code></pre>
+<pre><code class="language-output">plain method: hold-end probe
+GUARDED method: hold-end probe
+UNGUARDED method: probe hold-end
+attribute get: hold-end probe
+attribute set: hold-end probe
+UNGUARDED attribute get: probe hold-end
+UNGUARDED attribute set: probe hold-end
+constant: probe hold-end
+UNKNOWN: hold-end probe
+defined by define: hold-end probe
+</code></pre>
+<div class="rule" id="r-conc.locks.unguarded"><a href="#r-conc.locks.unguarded">[conc.locks.unguarded]</a></div>
+<p>An unguarded method holds no lock when it starts, so it runs while another
+activity holds the lock of its scope, and it reads and changes the object
+variables of its scope at its own risk. It can take the lock with <code>GUARD ON</code>
+and give it up again, as <a href="../instructions/guard.html#r-instr.guard.exclusion">the exclusion rule</a> says,
+and a guarded method that it sends a message to holds its own lock for the
+length of that call and no longer.
+<a href="../classes/method.html#r-class.method.setunguarded"><code>setUnguarded</code></a> makes a method unguarded and
+<a href="../classes/method.html#r-class.method.setguarded"><code>setGuarded</code></a> makes it guarded again; a message
+sent to the method afterwards takes the lock, or does not, as the method now
+is. In the example the method object that the class holds is changed between
+the trials.</p>
+<pre><code class="language-rexx">call trial 'guarded', 'wait'
+.k~method('plain')~setUnguarded
+call trial 'after setUnguarded', 'free'
+.k~method('plain')~setGuarded
+call trial 'after setGuarded', 'wait'
+exit
+trial: procedure
+  use arg title, how
+  .local~log = .array~new
+  .local~inside = .false; .local~go = .false
+  o = .k~new
+  h = o~start('holder')
+  do until .local~inside; end
+  p = o~start('plain')
+  if how = 'free' then p~result
+  .local~go = .true
+  h~result; p~result
+  say title':' .local~log~makeString('l', ' ')
+  return
+::class k
+::method holder
+  .local~inside = .true
+  do until .local~go; end
+  .local~log~append('hold-end')
+::method plain
+  .local~log~append('probe')
+</code></pre>
+<pre><code class="language-output">guarded: hold-end probe
+after setUnguarded: probe hold-end
+after setGuarded: hold-end probe
+</code></pre>
+<h2 id="one-activity"><a class="header" href="#one-activity">One activity</a></h2>
+<div class="rule" id="r-conc.locks.nested"><a href="#r-conc.locks.nested">[conc.locks.nested]</a></div>
+<p>An activity that holds the lock of a scope of an object can send a message to
+a method of that scope of that object, and the method runs at once, as a call
+inside the activity: the activity holds the lock already and holds it once
+more for the length of the call. It does not matter who sends the message: the
+object to itself, a method of another object that the first called, or code
+outside any object that a method of the first called. A message to a method of
+another scope, or of another object, takes the lock of that scope or object,
+and waits for it if another activity holds it. A message that is started, as
+<code>start</code> does, is run by another activity, which holds nothing of the sender's,
+so it can wait for a lock that the sender holds. In the example an object
+sends a message to itself, and it sends a message to another object whose
+method sends a message back to the first. Both run on the one activity and
+both end.</p>
+<pre><code class="language-rexx">a = .node~new('a')
+b = .node~new('b')
+a~peer = b
+b~peer = a
+say a~go
+::class node
+::attribute peer
+::attribute name
+::method init
+  expose name
+  use arg name
+::method go
+  return self~name 'sends to' self~peer~relay(self) 'and' self~again
+::method again
+  return 'to itself'
+::method relay
+  use arg origin
+  return self~name 'sends back to' origin~name
+</code></pre>
+<pre><code class="language-output">a sends to b sends back to a and to itself
+</code></pre>
+<div class="rule" id="r-conc.locks.count"><a href="#r-conc.locks.count">[conc.locks.count]</a></div>
+<p>An activity holds the lock of a scope as many times as it has entered methods
+of that scope that hold it: a guarded method that starts while the activity
+holds the lock adds one hold to the activity, and a <code>GUARD ON</code> in a method
+that does not hold the lock adds one; the end of the method or a <code>GUARD OFF</code>
+in it takes away the hold that the method added, and no other. A <code>GUARD ON</code> in
+a method that holds the lock already, and a <code>GUARD OFF</code> in a method that does
+not, change nothing, so repeated ones do not count. The lock is free for the
+other activities when the activity holds it no more. A method that gives up
+its own hold with <code>GUARD OFF</code> therefore lets another activity in only when no
+method below it, on the same activity, still holds the lock. A method that
+replies keeps its hold on the new activity, or, when a guarded method below it
+on the old activity holds the lock as well, gives up its hold on the old
+activity and asks for the lock again on the new one, as <a href="../instructions/reply.html#r-instr.reply.guard">the REPLY
+rule</a> says. A line that
+<a href="../instructions/trace.html#r-instr.trace.destination">TRACE</a> writes in a method shows the count in the
+entries <code>HASSCOPELOCK</code> and <code>SCOPELOCKCOUNT</code> of its <a href="../classes/traceobject.html#r-class.traceobject.entries">trace
+object</a>. The first example prints them for the
+lines of three methods that call a method which does a <code>GUARD OFF</code>; where an
+outer method holds the lock, the inner one counts two holds and, after its
+<code>GUARD OFF</code>, one. The methods have no <code>EXPOSE</code>, whose effect on the entries is
+not specified. The second example starts a method that repeats <code>GUARD ON</code> or
+<code>GUARD OFF</code> and shows with a probe whether the lock was free while the method
+waited: repeated instructions leave the lock as the first one did.</p>
+<pre><code class="language-rexx">.traceoutput~destination(.sink~new)
+.traceobject~notify = .rec~new
+o = .k~new
+r = o~guarded
+r = o~unguarded
+r = o~guardOn
+.traceobject~notify = .nil
+exit
+::class sink
+::method lineout
+  return 0
+::class rec
+::method append
+  use arg t
+  if \t~hasIndex('SCOPELOCKCOUNT') then return
+  parse value t~traceline with . '*-*' clause
+  if clause = '' then return
+  say clause~strip~left(16) 'holds' t~hasScopeLock 'count' t~scopeLockCount
+::class k
+::method guarded
+  trace i
+  x = 'guarded'
+  y = self~inner
+  return 1
+::method unguarded unguarded
+  trace i
+  x = 'unguarded'
+  y = self~inner
+  return 1
+::method guardOn unguarded
+  trace i
+  x = 'guardOn'
+  guard on
+  y = self~inner
+  guard off
+  z = 'released'
+  return 1
+::method inner
+  trace i
+  a = 'inner'
+  guard off
+  b = 'inner off'
+  return 1
+</code></pre>
+<pre><code class="language-output">x = 'guarded'    holds 1 count 1
+y = self~inner   holds 1 count 1
+a = 'inner'      holds 1 count 2
+guard off        holds 1 count 2
+b = 'inner off'  holds 0 count 1
+return 1         holds 0 count 1
+return 1         holds 1 count 1
+x = 'unguarded'  holds 0 count 0
+y = self~inner   holds 0 count 0
+a = 'inner'      holds 1 count 1
+guard off        holds 1 count 1
+b = 'inner off'  holds 0 count 0
+return 1         holds 0 count 0
+return 1         holds 0 count 0
+x = 'guardOn'    holds 0 count 0
+guard on         holds 0 count 0
+y = self~inner   holds 1 count 1
+a = 'inner'      holds 1 count 2
+guard off        holds 1 count 2
+b = 'inner off'  holds 0 count 1
+return 1         holds 0 count 1
+guard off        holds 1 count 1
+z = 'released'   holds 0 count 0
+return 1         holds 0 count 0
+</code></pre>
+<pre><code class="language-rexx">call trial 'on on off', 'onOnOff', 'free'
+call trial 'guarded off off on', 'offOffOn', 'wait'
+call trial 'guarded on off', 'gOnOff', 'free'
+exit
+trial: procedure
+  use arg title, m, how
+  .local~log = .array~new
+  .local~inside = .false; .local~go = .false
+  o = .k~new
+  h = o~start(m)
+  do until .local~inside; end
+  p = o~start('probe')
+  if how = 'free' then p~result
+  .local~go = .true
+  h~result; p~result
+  say title':' .local~log~makeString('l', ' ')
+  return
+::class k
+::method onOnOff unguarded
+  guard on
+  guard on
+  guard off
+  .local~inside = .true
+  do until .local~go; end
+  .local~log~append('hold-end')
+::method offOffOn
+  guard off
+  guard off
+  guard on
+  .local~inside = .true
+  do until .local~go; end
+  .local~log~append('hold-end')
+::method gOnOff
+  guard on
+  guard off
+  .local~inside = .true
+  do until .local~go; end
+  .local~log~append('hold-end')
+::method probe
+  .local~log~append('probe')
+</code></pre>
+<pre><code class="language-output">on on off: probe hold-end
+guarded off off on: hold-end probe
+guarded on off: probe hold-end
+</code></pre>
+<div class="rule" id="r-conc.locks.count.off"><a href="#r-conc.locks.count.off">[conc.locks.count.off]</a></div>
+<p>A <code>GUARD OFF</code> in a method gives up the hold of that method only. When a
+guarded method on the same activity called it, that method still holds the
+lock, and an activity that asks for the lock waits until it has ended; when
+the caller is unguarded, the called method holds the lock alone, and its
+<code>GUARD OFF</code> lets the other activity in. In the example the probe is started
+while the inner method waits after its <code>GUARD OFF</code>: below a guarded method the
+log shows the probe after the end of the inner method, and below an unguarded
+one the program waits for the probe before it lets the inner method go.</p>
+<pre><code class="language-rexx">call trial 'outer guarded', 'outerG', 'wait'
+call trial 'outer unguarded', 'outerU', 'free'
+exit
+trial: procedure
+  use arg title, outer, how
+  .local~log = .array~new
+  .local~inside = .false; .local~go = .false
+  o = .k~new
+  h = o~start(outer)
+  do until .local~inside; end
+  p = o~start('probe')
+  if how = 'free' then p~result
+  .local~go = .true
+  h~result; p~result
+  say title':' .local~log~makeString('l', ' ')
+  return
+::class k
+::method outerG
+  return self~inner
+::method outerU unguarded
+  return self~inner
+::method inner
+  guard off
+  .local~inside = .true
+  do until .local~go; end
+  .local~log~append('inner-end')
+  return 1
+::method probe
+  .local~log~append('probe')
+</code></pre>
+<pre><code class="language-output">outer guarded: inner-end probe
+outer unguarded: probe inner-end
+</code></pre>
+<h2 id="waiting-inside-a-method"><a class="header" href="#waiting-inside-a-method">Waiting inside a method</a></h2>
+<div class="rule" id="r-conc.locks.when"><a href="#r-conc.locks.when">[conc.locks.when]</a></div>
+<p><code>GUARD ON WHEN</code> and <code>GUARD OFF WHEN</code> give up the hold of their own method
+while the condition is false. <code>GUARD ON WHEN</code> takes the lock before each
+evaluation of the condition, so it evaluates it with the lock held and goes on
+holding it, as <a href="../instructions/guard.html#r-instr.guard.when">the WHEN rule</a> says. <code>GUARD OFF WHEN</code>
+gives up its method's hold first and evaluates the condition without it each
+time, while another activity may hold the lock. The condition is evaluated
+again when another activity assigns a value to an object variable that the
+condition names as a simple symbol, even the value that it had, or drops one,
+whether or not the last evaluation reached that name; a variable that only a
+method that the condition calls reads is not one of them. A compound variable
+or a stem in the condition names the whole stem, which
+<a href="#r-conc.locks.deviation.160">Deviation 160</a> describes. When the condition is
+evaluated at other times is not specified. The wait gives up only that one
+hold. When the method was called by a guarded method on the same activity,
+which holds the lock too (<a href="#r-conc.locks.count">the counting rule</a>), the other
+activities find the lock held while the condition waits, so that a guarded
+method of another activity cannot change the variable that the condition
+reads: only an unguarded method can. The example sends the change from an
+unguarded and from a guarded method, to a waiting method that a guarded or an
+unguarded method called. The three trials that end are the ones in which the
+method that changes the variable can run; the fourth, where a guarded method
+has to wait for the lock that its own caller's activity holds, is the case of
+<a href="#r-conc.locks.deviation.20">Deviation 20</a>, and the example does not run it.
+The second example ends only if <code>GUARD OFF WHEN</code> evaluates its condition
+without the lock: a guarded method waits in it, a guarded method of another
+activity then takes the lock and keeps it until the waiting method has gone
+on, and an unguarded method makes the condition true.</p>
+<pre><code class="language-rexx">call trial 'guarded caller, unguarded setter', 'outerG', 'setU'
+call trial 'unguarded caller, guarded setter', 'outerU', 'setG'
+call trial 'unguarded caller, unguarded setter', 'outerU', 'setU'
+exit
+trial: procedure
+  use arg title, outer, setter
+  o = .k~new
+  m = o~start(outer)
+  do until o~waiting; end
+  s = o~start(setter)
+  s~result
+  say title':' m~result
+  return
+::class k
+::method init
+  expose flag waiting
+  flag = .false; waiting = .false
+::method waiting unguarded
+  expose waiting
+  return waiting
+::method outerG
+  return self~inner
+::method outerU unguarded
+  return self~inner
+::method inner
+  expose flag waiting
+  waiting = .true
+  guard off when flag
+  return 'the condition held'
+::method setG
+  expose flag
+  flag = .true
+  return 1
+::method setU unguarded
+  expose flag
+  flag = .true
+  return 1
+</code></pre>
+<pre><code class="language-output">guarded caller, unguarded setter: the condition held
+unguarded caller, guarded setter: the condition held
+unguarded caller, unguarded setter: the condition held
+</code></pre>
+<pre><code class="language-rexx">.local~log = .array~new
+o = .k~new
+w = o~start('waiter')
+do until o~waiting; end
+h = o~start('holder')
+do until o~inside; end
+o~open
+say w~result
+say h~result
+::class k
+::method init
+  expose x waiting inside
+  x = 0; waiting = .false; inside = .false
+::method waiting unguarded
+  expose waiting
+  return waiting
+::method inside unguarded
+  expose inside
+  return inside
+::method open unguarded
+  expose x
+  x = 1
+::method holder
+  expose inside
+  inside = .true
+  do until .local~log~items &gt; 0; end
+  return 'holder saw the waiter go on'
+::method waiter
+  expose x waiting
+  waiting = .true
+  guard off when x
+  .local~log~append('w')
+  return 'waiter went on'
+</code></pre>
+<pre><code class="language-output">waiter went on
+holder saw the waiter go on
+</code></pre>
+<h2 id="class-methods"><a class="header" href="#class-methods">Class methods</a></h2>
+<div class="rule" id="r-conc.locks.class"><a href="#r-conc.locks.class">[conc.locks.class]</a></div>
+<p>A class is an object, and its class methods are the methods of that object, so
+the lock that a guarded class method takes is the lock of the class object for
+the scope that defines the method. The class object of a subclass is another
+object, and so is every instance. A guarded class method that runs on a class
+therefore keeps another guarded class method of the same scope out of the same
+class object, and does not keep out the same method on the subclass, the
+instance methods of the class, or the class methods of other scopes.</p>
+<pre><code class="language-rexx">.local~log = .array~new
+.base~go = .false; .base~inside = .false
+h = .base~start('holder')
+do until .base~inside; end
+q = .base~start('probe')
+r = .sub~start('probe')
+say 'subclass:' r~result
+say 'instance:' .base~new~probe
+say 'superclass scope:' .base~tprobe
+.base~go = .true
+h~result; q~result
+say .log~makeString('l', ' ')
+::class top
+::method tprobe class
+  return 'ran'
+::class base subclass top
+::attribute go class unguarded
+::attribute inside class unguarded
+::method holder class
+  .base~inside = .true
+  do until .base~go; end
+  .log~append('holder-end')
+::method probe class
+  .log~append('class-probe')
+  return 'ran'
+::method probe
+  .log~append('instance-probe')
+  return 'ran'
+::class sub subclass base
+</code></pre>
+<pre><code class="language-output">subclass: ran
+instance: ran
+superclass scope: ran
+class-probe instance-probe holder-end class-probe
+</code></pre>
+<h2 id="ending"><a class="header" href="#ending">Ending</a></h2>
+<div class="rule" id="r-conc.locks.end"><a href="#r-conc.locks.end">[conc.locks.end]</a></div>
+<p>A method that ends releases the hold that it still has, as <a href="../instructions/guard.html#r-instr.guard.end">the end
+rule</a> of GUARD says, whether it ends with RETURN or with an
+error that nothing in the method traps, which the sender sees or, for a
+started message, the message keeps. The next activity that waits for the lock
+gets it, and the error holds nothing back. In the example the first message
+holds the lock when it fails, and the second runs after it.</p>
+<pre><code class="language-rexx">o = .k~new
+m1 = o~start('boom')
+do until o~inside; end
+m2 = o~start('after')
+say m2~result
+m1~wait
+say m1~hasError m1~errorCondition~code
+::class k
+::method init
+  expose inside
+  inside = .false
+::method inside unguarded
+  expose inside
+  return inside
+::method boom
+  expose inside
+  inside = .true
+  return 1/0
+::method after
+  return 'ran'
+</code></pre>
+<pre><code class="language-output">ran
+1 42.3
+</code></pre>
+<h2 id="deadlock"><a class="header" href="#deadlock">Deadlock</a></h2>
+<div class="rule" id="r-conc.locks.deadlock"><a href="#r-conc.locks.deadlock">[conc.locks.deadlock]</a></div>
+<p>An activity waits for another when it asks for a lock that the other holds, or
+when it waits, with <a href="../classes/message.html#r-class.message.result"><code>result</code></a> or
+<a href="../classes/message.html#r-class.message.wait"><code>wait</code></a>, for a message that the other runs. A wait of
+either kind that would close a ring of such waits, with the waiting activity
+in it, could never end, and it is refused: it raises <code>SYNTAX 98.905</code> in the
+activity that was about to wait, at the clause that asked for the lock or at
+the <code>result</code> or <code>wait</code> of the message. A guarded method asks for its lock when
+it starts, so a refused guarded method does not run: the sender sees the
+error, or the message keeps it when the message was started, and
+<a href="../classes/message.html#r-class.message.result"><code>result</code></a> raises it again. The lock that <code>GUARD ON</code>
+asks for is refused in the same way. When the waits of two activities close a
+ring at once, which of them is refused is not specified, and the other goes on
+when the refused one has ended and let go of its locks. In the first example a
+method holds the lock of its object and waits for the result of a message that
+it started to the same object, whose method needs the lock. Whichever of the
+two waits closes the ring is refused, the request for the lock or the
+<code>result</code>, and either way the error reaches the trap of the main program. The
+second is a ring of two objects, in which each of two activities holds the
+lock of its own object and then asks for the other's; one of them is refused,
+and the method that it asked for does not run. The third asks for the lock
+with <code>GUARD ON</code> in an unguarded method. The fourth has no lock in the ring:
+two started unguarded methods each wait for the result of the other's message;
+the one that closes the ring is refused, and the result of the other raises
+the same error again.</p>
+<pre><code class="language-rexx">o = .k~new
+signal on syntax name refused
+say o~outer
+exit
+refused: say 'refused' condition('o')~code
+::class k
+::method outer
+  m = self~start('inner')
+  return m~result
+::method inner
+  return 'inner'
+</code></pre>
+<pre><code class="language-output">refused 98.905
+</code></pre>
+<pre><code class="language-rexx">.local~ran = .array~new
+a = .part~new('a'); b = .part~new('b')
+a~other = b; b~other = a
+m1 = a~start('cross')
+m2 = b~start('cross')
+r = .array~new
+r~append(m1~result); r~append(m2~result)
+do line over r~sort; say line; end
+say 'touch ran' .local~ran~items 'times'
+exit
+::class part
+::attribute other
+::attribute name
+::method init
+  expose mine name
+  use arg name
+  mine = .false
+::method holding unguarded
+  expose mine
+  return mine
+::method cross
+  expose mine
+  mine = .true
+  do until self~other~holding; end
+  signal on syntax name refused
+  return 'touched' self~other~touch
+refused:
+  return 'refused' condition('o')~code
+::method touch
+  .local~ran~append(self~name)
+  return 'ok'
+</code></pre>
+<pre><code class="language-output">refused 98.905
+touched ok
+touch ran 1 times
+</code></pre>
+<pre><code class="language-rexx">o = .k~new
+signal on syntax name refused
+say o~outer
+exit
+refused: say 'refused' condition('o')~code
+::class k
+::method outer
+  m = self~start('inner')
+  return m~result
+::method inner unguarded
+  guard on
+  return 'got the lock'
+</code></pre>
+<pre><code class="language-output">refused 98.905
+</code></pre>
+<pre><code class="language-rexx">.local~ready = .false
+o = .k~new
+m1 = o~start('a')
+m2 = o~start('b')
+.local~m1 = m1; .local~m2 = m2
+.local~ready = .true
+r = .array~new
+r~append(get(m1)); r~append(get(m2))
+do l over r~sort; say l; end
+exit
+get: procedure
+  signal on syntax name bad
+  return 'ok' arg(1)~result
+bad: return 'err' condition('o')~code
+::class k
+::method a unguarded
+  do until .local~ready; end
+  return .local~m2~result
+::method b unguarded
+  do until .local~ready; end
+  return .local~m1~result
+</code></pre>
+<pre><code class="language-output">err 98.905
+err 98.905
+</code></pre>
+<blockquote>
+<p><strong>Note.</strong> The refusal is made when a wait is about to begin, so it needs the
+waits to be known to the interpreter: locks and results of messages are. A
+wait on a semaphore, on a condition of <code>GUARD WHEN</code>, on a message that is
+not sent, or in a loop that polls a variable is not one, and a ring that
+goes through such a wait is not refused: what a program does then is not
+specified, and <a href="#r-conc.locks.deviation.20">Deviation 20</a> says what interrexx
+does with a wait that nothing can end.</p>
+</blockquote>
+<h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
+<div class="rule" id="r-conc.locks.deviation.14"><a href="#r-conc.locks.deviation.14">[conc.locks.deviation.14]</a></div>
+<p>An activity that waits inside a nested construct, such as the code of an
+INTERPRET or a method that <a href="../classes/object.html#r-class.object.run"><code>run</code></a> runs, for something,
+such as a lock, a result or the change of a variable, that only an activity
+that is suspended beneath it can provide is refused, and the program ends with
+exit code 120. ooRexx runs each activity on a thread of its own, so the
+activity that waits is not in the way of the one that must go on, and the
+program ends normally. In the first example the first message waits in an
+INTERPRET until a flag is set; the second sets the flag and then waits, in an
+INTERPRET, for the first one's result. In the second a method that <code>run</code> runs
+keeps the lock of the object and waits for a flag; the method that sets the
+flag then asks, in a method that <code>run</code> runs, for the same lock.</p>
+<pre><code class="language-rexx">say 'start'
+f = .flag~new
+a = f~start('waitForFlag')
+s = f~start('setAndWait', a)
+say s~result
+::class flag
+::attribute done unguarded
+::method init
+  expose done
+  done = 0
+::method waitForFlag unguarded
+  interpret "do while \self~done; end"
+  return 'A ended'
+::method setAndWait unguarded
+  use arg a
+  self~done = 1
+  interpret "r = a~result"
+  return 'S saw' r
+</code></pre>
+<pre><code class="language-output rc=120">start
+</code></pre>
+<pre><code class="language-rexx">say 'start'
+.local~inside = .false; .local~flag = .false
+o = .k~new
+h = o~start('holder')
+do until .local~inside; end
+s = o~start('asker')
+say s~result
+say h~result
+::class k
+::method holder unguarded
+  self~run(.method~new('h', .array~of('.local~inside = .true',,
+    'do until .local~flag; end', 'return "held"')))
+  return 'H ended'
+::method asker unguarded
+  .local~flag = .true
+  return self~run(.method~new('p', 'return "S ran"'))
+</code></pre>
+<pre><code class="language-output rc=120">start
+</code></pre>
+<div class="rule" id="r-conc.locks.deviation.20"><a href="#r-conc.locks.deviation.20">[conc.locks.deviation.20]</a></div>
+<p>A wait that no activity, timer or call can end is refused, and the program
+ends with exit code 120. ooRexx waits for ever. This holds for the waits that
+the refusal of a ring does not cover (<a href="#r-conc.locks.deadlock">the rule</a>): a
+<code>GUARD WHEN</code> whose condition only a method that is held back by the lock of
+the waiting activity's own caller could make true, and a method that holds a
+lock and waits for a semaphore that only the activity that asks for the lock
+posts. In the first example a guarded method calls the waiting method of the
+rule on <a href="#r-conc.locks.when">WHEN</a>, and the method that is to set the variable
+is guarded too; in the second the method that holds the lock waits for an
+event semaphore that the method that asks for the lock posts.</p>
+<pre><code class="language-rexx">say 'start'
+o = .k~new
+m = o~start('outer')
+do until o~waiting; end
+s = o~start('setter')
+say s~result
+::class k
+::method init
+  expose flag waiting
+  flag = .false; waiting = .false
+::method waiting unguarded
+  expose waiting
+  return waiting
+::method outer
+  return self~inner
+::method inner
+  expose flag waiting
+  waiting = .true
+  guard off when flag
+  return 'the condition held'
+::method setter
+  expose flag
+  flag = .true
+  return 1
+</code></pre>
+<pre><code class="language-output rc=120">start
+</code></pre>
+<pre><code class="language-rexx">say 'start'
+e = .eventsemaphore~new
+o = .k~new
+say o~outer(e)
+::class k
+::method outer
+  use arg e
+  m = self~start('inner', e)
+  e~wait
+  return 'outer done'
+::method inner
+  use arg e
+  e~post
+  return 'inner'
+</code></pre>
+<pre><code class="language-output rc=120">start
+</code></pre>
+<div class="rule" id="r-conc.locks.deviation.160"><a href="#r-conc.locks.deviation.160">[conc.locks.deviation.160]</a></div>
+<p>A condition of <code>GUARD ON WHEN</code> or <code>GUARD OFF WHEN</code> that names a compound
+variable or a stem names the whole stem. The condition is evaluated again when
+another activity assigns a value to any tail of that stem or drops one, or
+assigns a value to the whole stem or drops it, for <code>GUARD ON WHEN</code> and <code>GUARD OFF WHEN</code> alike. ooRexx does not evaluate it again for a tail, so the wait
+does not end. interrexx does not evaluate it again for a tail yet (#239). As
+for a simple symbol, a variable that only a method called by the condition
+reads does not cause it. In the first example three waiting methods are ended
+by the assignment to a tail, by the same for <code>GUARD OFF WHEN</code> and by the drop
+of a tail; the second example is the assignment to the whole stem, for <code>GUARD ON WHEN</code> and for <code>GUARD OFF WHEN</code>, which both interpreters already end.</p>
+<pre><code class="language-rexx">say 'start'
+o1 = .k~new; m1 = o1~start('onTail')
+o2 = .k~new; m2 = o2~start('offTail')
+o4 = .k~new; m4 = o4~start('onDrop')
+do o over .array~of(o1, o2, o4)
+  do until o~ready; end
+end
+o1~assignTail; o2~assignTail; o4~dropTail
+say m1~result
+say m2~result
+say m4~result
+::class k
+::attribute ready unguarded
+::method init
+  expose a. ready
+  ready = .false
+  a.b = 0
+::method onTail unguarded
+  expose a. ready
+  ready = .true
+  guard on when a.b = 1
+  return 'on tail'
+::method offTail unguarded
+  expose a. ready
+  ready = .true
+  guard off when a.b = 1
+  return 'off tail'
+::method onDrop unguarded
+  expose a. ready
+  ready = .true
+  guard on when a.b == 'A.B'
+  return 'on drop'
+::method assignTail unguarded
+  expose a.
+  a.b = 1
+::method assignStem unguarded
+  expose a.
+  a. = 1
+::method dropTail unguarded
+  expose a.
+  drop a.b
+</code></pre>
+<pre><code class="language-output defect=#239">start
+on tail
+off tail
+on drop
+</code></pre>
+<pre><code class="language-rexx">say 'start'
+do kind over .array~of('onStem', 'offStem')
+  o = .k~new
+  m = o~start(kind)
+  do until o~ready; end
+  o~assignStem
+  say kind':' m~result
+end
+::class k
+::attribute ready unguarded
+::method init
+  expose a. ready
+  ready = .false
+  a.b = 0
+::method mark unguarded
+  expose ready
+  ready = .true
+  return 1
+::method onStem unguarded
+  expose a.
+  guard on when a.b = self~mark
+  return 'woke'
+::method offStem unguarded
+  expose a.
+  guard off when a.b = self~mark
+  return 'woke'
+::method assignStem unguarded
+  expose a.
+  a. = 1
+</code></pre>
+<pre><code class="language-output">start
+onStem: woke
+offStem: woke
+</code></pre>
+<blockquote>
+<p><strong>Note.</strong> Two more deviations touch what activities do while they wait.
+<a href="activities.html#r-conc.activities.deviation.18">Deviation 18</a> says that two activities
+that busy-wait on each other inside nested constructs never end, where
+ooRexx preempts both. <a href="../deviations.html#22-one-schedule-for-racing-activities">Deviation
+22</a> says that
+interrexx gives racing activities one fixed order, which ooRexx may give
+rarely or not at all.</p>
+</blockquote>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../concurrency/activities.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../concurrency/halt.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../concurrency/activities.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../concurrency/halt.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../assets/version-picker.js"></script>
+
+
+    </div>
+    </body>
+</html>
