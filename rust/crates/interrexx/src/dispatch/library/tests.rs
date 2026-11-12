@@ -1092,5 +1092,8 @@ fn a_native_buffers_bytes_are_charged_and_held() {
         "the trigger's count rose by at least the buffer's size"
     );
     let held = interp.heap.get(buffer).expect("a buffer").body.held_bytes();
-    assert!(held >= N, "held_bytes reports the buffer's {N} bytes, got {held}");
+    assert!(
+        held >= N,
+        "held_bytes reports the buffer's {N} bytes, got {held}"
+    );
 }
