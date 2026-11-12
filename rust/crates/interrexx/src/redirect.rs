@@ -601,16 +601,14 @@ impl Interp {
             _ => None,
         };
         let stored_code = match (&fragment, &fragment_planned, program_body) {
-            (Some(fragment), Some((slots, plan)), _) => Some(Code {
+            (Some(fragment), Some(plan), _) => Some(Code {
                 body: &fragment.body,
                 symbols: &fragment.symbols,
-                slots,
                 plan: Some(plan),
             }),
             (None, _, Some(body)) if !std::ptr::eq(&program.symbols, code.symbols) => Some(Code {
                 body,
                 symbols: &program.symbols,
-                slots: &program_plan.by_symbol,
                 plan: Some(&program_plan),
             }),
             _ => None,

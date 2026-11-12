@@ -278,6 +278,62 @@ impl CompoundName {
     }
 }
 
+/// A table by `SymbolId`, covering the ids from `first` on. A body's table
+/// interns its own symbols over the keyword spellings every table shares
+/// (`SymbolTable::base_len`), so a body's own ids start well above zero: the
+/// table starts at `base_len`, sized up front, and moves `first` down only for
+/// a body that names a keyword spelling as a variable (`value = 1`). An
+/// `INTERPRET` fragment's plan is then sized by the fragment, not by the
+/// keyword set, and a lookup stays one subtraction and one bounds check.
+#[derive(Debug, Default)]
+pub(crate) struct BySymbol<T> {
+    first: usize,
+    items: Vec<T>,
+}
+
+impl<T: Default> BySymbol<T> {
+    /// Every entry the default, for every id `symbols` has handed out.
+    fn for_table(symbols: &SymbolTable) -> Self {
+        let first = symbols.base_len();
+        BySymbol {
+            first,
+            items: std::iter::repeat_with(T::default)
+                .take(symbols.len() - first)
+                .collect(),
+        }
+    }
+
+    /// The entry for `id`, or `None` outside the table.
+    #[inline]
+    pub(crate) fn get(&self, id: SymbolId) -> Option<&T> {
+        // An id below `first` wraps to past the end.
+        self.items.get(id.index().wrapping_sub(self.first))
+    }
+
+    /// The entry for `id`, moving `first` down to it if it is below. Panics
+    /// on an id past the table, which is an id from a different table.
+    fn entry(&mut self, id: SymbolId) -> &mut T {
+        if id.index() < self.first {
+            let added = self.first - id.index();
+            self.items
+                .splice(0..0, std::iter::repeat_with(T::default).take(added));
+            self.first = id.index();
+        }
+        &mut self.items[id.index() - self.first]
+    }
+
+    /// Every entry, in id order.
+    #[cfg(test)]
+    pub(crate) fn iter(&self) -> impl Iterator<Item = &T> {
+        self.items.iter()
+    }
+
+    /// Every entry, in id order.
+    fn iter_mut(&mut self) -> impl Iterator<Item = &mut T> {
+        self.items.iter_mut()
+    }
+}
+
 /// One body's variable-resolution plan, built by one upfront pass at first
 /// execution.
 #[derive(Debug, Default)]
@@ -293,7 +349,9 @@ pub(crate) struct Plan {
     /// A method body's `SELF` and `SUPER`, which every send binds.
     pub(crate) self_slot: Option<usize>,
     pub(crate) super_slot: Option<usize>,
-    pub(crate) by_symbol: Vec<Option<usize>>,
+    /// The slot per `SymbolId` of the body's own table, `None` where this
+    /// pass bound the symbol none.
+    pub(crate) by_symbol: BySymbol<Option<usize>>,
     /// The walk's own flag, and scratch: `note_instruction` clears it when the
     /// instruction it is walking can change the `TRACE` setting in force, and
     /// [`Plan::build`] sets it again in front of each one. It means nothing
@@ -312,7 +370,7 @@ pub(crate) struct Plan {
     pub(crate) lines: Box<[usize]>,
     /// How a compound-shaped symbol this body names splits, by
     /// `SymbolId::index`, `None` where this pass recorded nothing for it.
-    pub(crate) compounds: Box<[Option<CompoundName>]>,
+    pub(crate) compounds: BySymbol<Option<CompoundName>>,
     /// Whether this is a method body whose first instruction past an `EXPOSE`
     /// is a `TRACE` naming a label-tracing letter, whose `>I>` is traced before
     /// the method's guard lock is reserved.
@@ -406,7 +464,7 @@ impl Plan {
 
     /// How the compound `id` names splits, if this plan's pass saw it.
     pub(crate) fn compound(&self, id: SymbolId) -> Option<&CompoundName> {
-        self.compounds.get(id.index())?.as_ref()
+        self.compounds.get(id)?.as_ref()
     }
 
     /// Walks `body` once and returns a finished table, built by one
@@ -421,15 +479,11 @@ impl Plan {
         // because `bind`/`note_compound_name` write into it by id and an id
         // is only an index into a table of that table's own length.
         let mut plan = Plan {
-            compounds: std::iter::repeat_with(|| None)
-                .take(symbols.len())
-                .collect(),
+            compounds: BySymbol::for_table(symbols),
             // Sized here for the reason `compounds` above is, and indexed the
             // same way: `bind` writes it by `SymbolId::index()`, and an id is
             // only an index into a table of that table's own length.
-            by_symbol: std::iter::repeat_with(|| None)
-                .take(symbols.len())
-                .collect(),
+            by_symbol: BySymbol::for_table(symbols),
             ..Plan::default()
         };
         let mut trace_events = Vec::with_capacity(body.instructions.len());
@@ -751,7 +805,7 @@ impl Plan {
                 *at = Some(self.slot_for(name));
             }
         }
-        self.compounds[id.index()] = Some(entry);
+        *self.compounds.entry(id) = Some(entry);
     }
 
     /// Assigns slots to every variable `expr` names, in source order.
@@ -834,9 +888,9 @@ impl Plan {
     /// Binds `name` to a slot, and `id` to the same one.
     fn bind(&mut self, id: SymbolId, name: &str) {
         let slot = self.slot_for(name.as_bytes());
-        self.by_symbol[id.index()] = Some(slot);
+        *self.by_symbol.entry(id) = Some(slot);
         if name.contains('.') {
-            self.compounds[id.index()].get_or_insert_with(|| {
+            self.compounds.entry(id).get_or_insert_with(|| {
                 let mut entry = CompoundName::split(name);
                 if shape_of(name.as_bytes()) == NameShape::Stem {
                     entry.stem_at = Some(slot);
@@ -853,7 +907,7 @@ impl Plan {
     /// why) and so go through this directly.
     /// The slot this pass bound `id` to, or `None` when it bound it none.
     pub(crate) fn slot_for_symbol(&self, id: SymbolId) -> Option<usize> {
-        self.by_symbol.get(id.index()).copied().flatten()
+        self.by_symbol.get(id).copied().flatten()
     }
 
     fn slot_for(&mut self, name: &[u8]) -> usize {
@@ -991,7 +1045,7 @@ impl Interp {
     /// frame. Out of line: inlined into `Interp::run_fragment`, the register
     /// allocation of its loops moves with unrelated changes to the interpreter.
     #[inline(never)]
-    pub(crate) fn fragment_plan(&mut self, fragment: &Fragment) -> (Vec<Option<usize>>, Plan) {
+    pub(crate) fn fragment_plan(&mut self, fragment: &Fragment) -> Plan {
         // The same upfront pass, run against the fragment's own body, which
         // numbers its names 0..n in walk order. Those numbers are local to the
         // fragment and mean nothing to the enclosing frame; the loop below is
@@ -1016,12 +1070,6 @@ impl Interp {
         }
         let enclosing: Vec<usize> = by_local.iter().map(|name| self.slot_of(name)).collect();
 
-        let translation: Vec<Option<usize>> = local
-            .by_symbol
-            .iter()
-            .map(|entry| entry.map(|local_slot| enclosing[local_slot]))
-            .collect();
-
         // **The same plan with every slot it names moved into the enclosing
         // frame**, which is what lets a fragment compile at all: a chunk's
         // `Op::Load` and `Op::Store` carry plan slots, and a fragment's own
@@ -1032,7 +1080,9 @@ impl Interp {
             .iter()
             .map(|(name, slot)| (name.clone(), enclosing[*slot]))
             .collect();
-        compiled.by_symbol = translation.clone();
+        for entry in compiled.by_symbol.iter_mut() {
+            *entry = entry.map(|local_slot| enclosing[local_slot]);
+        }
         compiled.result_slot = compiled.result_slot.map(|slot| enclosing[slot]);
         compiled.sigl_slot = compiled.sigl_slot.map(|slot| enclosing[slot]);
         compiled.self_slot = compiled.self_slot.map(|slot| enclosing[slot]);
@@ -1046,7 +1096,7 @@ impl Interp {
             }
         }
 
-        (translation, compiled)
+        compiled
     }
 }
 

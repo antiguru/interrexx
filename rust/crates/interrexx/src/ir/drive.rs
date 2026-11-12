@@ -773,8 +773,8 @@ macro_rules! region_ops {
                     // **The tripwire for a chunk run against a
                     // plan that is not the one it was compiled
                     // from.** `at` was read out of that plan's
-                    // `by_symbol`, which is the map `code.slots`
-                    // is a view of, so a mismatch here is two
+                    // `by_symbol`, which is the map `Code::slot_for`
+                    // reads, so a mismatch here is two
                     // different plans for one body -- and it
                     // would read somebody else's slot rather
                     // than fail, which is a wrong value found by
@@ -2944,7 +2944,6 @@ impl Interp {
                 let code = body_of(&level.program, level.selector).map(|body| Code {
                     body,
                     symbols: &level.program.symbols,
-                    slots: &level.plan.by_symbol,
                     plan: Some(&level.plan),
                 });
                 let chunk: &Chunk = &level.chunk;

@@ -918,7 +918,8 @@ fn a_fragments_plan_resolves_against_the_enclosing_frame() {
     activate(&mut interp, program);
 
     let fragment = parse_interpret(b"newvar = 7".to_vec()).expect("fragment parses");
-    let (slots, plan) = interp.fragment_plan(&fragment);
+    let plan = interp.fragment_plan(&fragment);
+    let slots = &plan.by_symbol;
     // The table is sized by the fragment's own symbol table and is mostly
     // `None`; what the fragment *names* is the count of bound entries.
     assert_eq!(
@@ -938,12 +939,6 @@ fn a_fragments_plan_resolves_against_the_enclosing_frame() {
         Some(enclosing_slot),
         "the remapped plan's name map still holds the fragment's own \
          local numbering"
-    );
-    assert_eq!(
-        plan.by_symbol.iter().flatten().copied().collect::<Vec<_>>(),
-        vec![enclosing_slot],
-        "the remapped plan's by_symbol disagrees with the translation \
-         `Code::slots` is built from"
     );
     assert_eq!(
         fragment_slot, enclosing_slot,

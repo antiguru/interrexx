@@ -73,8 +73,9 @@ impl SymbolTable {
         }
     }
 
-    /// How many ids the base holds: this table's own ids start here.
-    fn base_len(&self) -> usize {
+    /// How many ids the base holds: this table's own ids start here, and
+    /// every id below it names a keyword spelling every table shares.
+    pub fn base_len(&self) -> usize {
         self.base.map_or(0, |base| base.names.len())
     }
 

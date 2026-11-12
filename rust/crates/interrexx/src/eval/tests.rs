@@ -65,7 +65,6 @@ fn eval_source(interp: &mut Interp, source: &[u8]) -> Result<ObjRef, Failure> {
     let code = Code {
         body: &program.main,
         symbols: &program.symbols,
-        slots: &[],
         plan: None,
     };
     interp.eval(&code, expr)
@@ -90,7 +89,6 @@ fn eval_in_place(interp: &mut Interp, source: &[u8]) -> Result<ObjRef, Failure> 
     let code = Code {
         body: &program.main,
         symbols: &program.symbols,
-        slots: &[],
         plan: None,
     };
     interp.eval(&code, expr)
@@ -344,7 +342,6 @@ fn a_variable_reads_through_the_plan() {
     let code = Code {
         body: &program.main,
         symbols: &program.symbols,
-        slots: &[],
         plan: None,
     };
     let value = interp.eval(&code, expr).unwrap();
@@ -583,7 +580,6 @@ fn the_three_concatenation_forms() {
     let code = Code {
         body: &program.main,
         symbols: &program.symbols,
-        slots: &[],
         plan: None,
     };
     let value = interp.eval(&code, expr).unwrap();
@@ -760,7 +756,6 @@ fn eval_condition(interp: &mut Interp, source: &[u8]) -> Result<ObjRef, Failure>
     let code = Code {
         body: &program.main,
         symbols: &program.symbols,
-        slots: &[],
         plan: None,
     };
     let condition = match &program.main.instructions[0].kind {
