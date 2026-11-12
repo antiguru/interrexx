@@ -326,7 +326,12 @@ impl Oracle {
             .args(args)
             .current_dir(path.parent().unwrap_or(Path::new(".")))
             .env("LD_LIBRARY_PATH", &self.lib_dir)
-            .env("XDG_RUNTIME_DIR", super::oracle_runtime::dir());
+            .env("XDG_RUNTIME_DIR", super::oracle_runtime::dir())
+            // The zone a comparison reads under is part of the comparison, so
+            // it is the one the crate side is given (`super::PINNED_ZONE`),
+            // not the developer's. A caller that asks about another zone
+            // sets `TZ` after this and wins.
+            .env("TZ", super::PINNED_ZONE);
         command
     }
 
@@ -357,6 +362,11 @@ pub enum StderrComparison {
     /// for a program whose trace lines are written by two threads whose
     /// interleaving is not a specified observable.
     Multiset,
+    /// [`StderrComparison::Raw`], except that the message text of an error
+    /// report is dropped: only its code and subcode are compared, as
+    /// [`super::error_codes_only`] describes. For a comparison of the class
+    /// library's own errors, whose texts are not specified.
+    ErrorCodes,
 }
 
 /// How `stdout` is compared: byte-for-byte, or as a sorted multiset of lines.
@@ -456,6 +466,9 @@ pub fn descriptor_diff_modes(
             }
             StderrComparison::Multiset => {
                 stderr_multiset(&rust.stderr) != stderr_multiset(&cpp.stderr)
+            }
+            StderrComparison::ErrorCodes => {
+                super::error_codes_only(&rust.stderr) != super::error_codes_only(&cpp.stderr)
             }
         },
         exit_code: wrapped_exit_code(rust.exit_code) != cpp.expect_exit_code(),

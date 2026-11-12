@@ -5,6 +5,37 @@
 //! for no reason. Renaming it to `support.rs` would add that extra binary
 //! back.
 
+/// The zone every differential comparison reads under unless it asks for
+/// another. A `DateTime` answer, including its `hashCode`, is computed from
+/// the instant and the zone, so a comparison that left the zone to the
+/// developer's machine would agree in UTC and nowhere else.
+pub const PINNED_ZONE: &str = "UTC";
+
+/// The process's environment with `TZ` set to [`PINNED_ZONE`], for the crate
+/// side of a comparison. Entries named in `overrides` replace the inherited
+/// ones, `TZ` included, matching what `Oracle::run_in` does to the spawned
+/// oracle.
+pub fn zone_pinned_environment(overrides: &[(String, String)]) -> Vec<(Vec<u8>, Vec<u8>)> {
+    let mut environment: Vec<(Vec<u8>, Vec<u8>)> = std::env::vars_os()
+        .filter(|(name, _)| {
+            name != "TZ" && !overrides.iter().any(|(over, _)| over.as_str() == name)
+        })
+        .map(|(name, value)| {
+            use std::os::unix::ffi::OsStringExt as _;
+            (name.into_vec(), value.into_vec())
+        })
+        .collect();
+    if !overrides.iter().any(|(name, _)| name == "TZ") {
+        environment.push((b"TZ".to_vec(), PINNED_ZONE.as_bytes().to_vec()));
+    }
+    environment.extend(
+        overrides
+            .iter()
+            .map(|(name, value)| (name.clone().into_bytes(), value.clone().into_bytes())),
+    );
+    environment
+}
+
 /// The arity probe both `collection_arity.rs` and `introspection_arity.rs`
 /// drive: one machine, two tables, parameterised by the four files each
 /// reads and writes. Its own module doc carries the verdicts and the rule
@@ -225,6 +256,75 @@ fn library_report(line: &[u8]) -> Vec<u8> {
     out.push(b'N');
     out.extend_from_slice(&line[number_at + digits..]);
     out
+}
+
+/// `bytes` as [`normalize_library_lines`] leaves it, with the message text of
+/// every error report dropped, so that only an error's code and subcode are
+/// observable. The report is two lines,
+/// `Error <code> running <file> line <n>:  <text>` and
+/// `Error <code>.<subcode>:  <text>`; each keeps its text up to the colon that
+/// ends the numbers and loses what follows. The class library's message texts
+/// are unspecified, its codes and subcodes are not. Every other line, and
+/// every byte of `stdout`, is a separate comparison and stays exact.
+pub fn error_codes_only(bytes: &[u8]) -> Vec<u8> {
+    let bytes = normalize_library_lines(bytes);
+    let had_trailing_newline = bytes.last() == Some(&b'\n');
+    let mut lines: Vec<&[u8]> = bytes.split(|&b| b == b'\n').collect();
+    if had_trailing_newline {
+        lines.pop();
+    }
+    let out: Vec<Vec<u8>> = lines.into_iter().map(error_report_without_text).collect();
+    let mut joined = out.join(&b'\n');
+    if had_trailing_newline {
+        joined.push(b'\n');
+    }
+    joined
+}
+
+/// `line` up to and including the colon that ends an error report's numbers,
+/// when it is one of the two report lines; otherwise `line` unchanged.
+fn error_report_without_text(line: &[u8]) -> Vec<u8> {
+    let Some(rest) = line.strip_prefix(b"Error ") else {
+        return line.to_vec();
+    };
+    let digits = rest.iter().take_while(|b| b.is_ascii_digit()).count();
+    if digits == 0 {
+        return line.to_vec();
+    }
+    let after = &rest[digits..];
+    let numbers_end = if after.starts_with(b".") {
+        // `Error <code>.<subcode>:`
+        let sub = after[1..].iter().take_while(|b| b.is_ascii_digit()).count();
+        (sub > 0 && after.get(1 + sub) == Some(&b':')).then_some(1 + sub)
+    } else if after.starts_with(b" running ") {
+        // `Error <code> running <file> line <n>:`; the file name may hold a
+        // colon, so the colon wanted is the one after ` line <n>`.
+        after
+            .windows(b" line ".len())
+            .enumerate()
+            .filter(|(_, w)| *w == b" line ")
+            .map(|(at, _)| at + b" line ".len())
+            .filter_map(|from| {
+                let n = after[from..]
+                    .iter()
+                    .take_while(|b| b.is_ascii_digit())
+                    .count();
+                (n > 0 && after.get(from + n) == Some(&b':')).then_some(from + n)
+            })
+            .next_back()
+    } else {
+        None
+    };
+    let numbers_end = numbers_end.or_else(|| {
+        // The lineless library form, `Error <code> running REXX:`.
+        after
+            .starts_with(b" running REXX:")
+            .then_some(b" running REXX".len())
+    });
+    match numbers_end {
+        Some(end) => line[..6 + digits + end + 1].to_vec(),
+        None => line.to_vec(),
+    }
 }
 
 /// Whether `line` has a recognised prefix marker at
@@ -536,5 +636,31 @@ mod tests {
         for text in [&b"a  b\n"[..], b"a  b", b"", b"\n\n"] {
             assert_eq!(normalize_library_lines(text), text.to_vec());
         }
+    }
+
+    /// Two reports of one error that differ only in message text compare
+    /// equal; a different code, subcode or program does not, and a line
+    /// that is not a report is kept whole.
+    #[test]
+    fn error_codes_only_drops_message_text_and_nothing_else() {
+        use super::error_codes_only;
+        let one = b"     2 *-* say x~put(1)\nError 93 running /t/x.rex line 2:  Incorrect call to method.\nError 93.902:  Too many arguments; 2 expected.\n";
+        let other = b"     2 *-* say x~put(1)\nError 93 running /t/x.rex line 2:  Wording differs.\nError 93.902:  Another text: with a colon.\n";
+        assert_eq!(error_codes_only(one), error_codes_only(other));
+        let subcode = b"     2 *-* say x~put(1)\nError 93 running /t/x.rex line 2:  Incorrect call to method.\nError 93.903:  Too many arguments; 2 expected.\n";
+        assert_ne!(error_codes_only(one), error_codes_only(subcode));
+        let code = b"     2 *-* say x~put(1)\nError 94 running /t/x.rex line 2:  Incorrect call to method.\nError 93.902:  Too many arguments; 2 expected.\n";
+        assert_ne!(error_codes_only(one), error_codes_only(code));
+        let line = b"     2 *-* say x~put(1)\nError 93 running /t/x.rex line 3:  Incorrect call to method.\nError 93.902:  Too many arguments; 2 expected.\n";
+        assert_ne!(error_codes_only(one), error_codes_only(line));
+        let traceback = b"     3 *-* say x~put(1)\nError 93 running /t/x.rex line 2:  Incorrect call to method.\nError 93.902:  Too many arguments; 2 expected.\n";
+        assert_ne!(error_codes_only(one), error_codes_only(traceback));
+        let plain = b"say with Error 93: text\nErrors: 5\nError 93:  no subcode form\n";
+        assert_eq!(error_codes_only(plain), plain.to_vec());
+        let lineless = b"Error 98 running REXX:  Something\n";
+        assert_eq!(
+            error_codes_only(lineless),
+            b"Error 98 running REXX:\n".to_vec()
+        );
     }
 }

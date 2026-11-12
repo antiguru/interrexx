@@ -582,6 +582,7 @@ fn environment_with_tools() -> Vec<(Vec<u8>, Vec<u8>)> {
         .to_path_buf();
     let mut path_seen = false;
     let mut environment: Vec<(Vec<u8>, Vec<u8>)> = std::env::vars_os()
+        .filter(|(name, _)| name != "TZ")
         .map(|(name, value)| {
             if name == "PATH" {
                 path_seen = true;
@@ -603,6 +604,8 @@ fn environment_with_tools() -> Vec<(Vec<u8>, Vec<u8>)> {
         let joined = std::env::join_paths(dirs).expect("joining PATH");
         environment.push((b"PATH".to_vec(), joined.as_bytes().to_vec()));
     }
+    // The zone the oracle run of an example reads under.
+    environment.push((b"TZ".to_vec(), support::PINNED_ZONE.as_bytes().to_vec()));
     // The oracle's library directory is on `LD_LIBRARY_PATH` of an oracle run, so an example that
     // looks for a native library there finds it on this side too.
     let oracle_lib = Path::new(env!("REXX_ORACLE_ROOT")).join("lib");

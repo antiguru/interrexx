@@ -499,18 +499,36 @@ struct CrateSide {
 }
 
 /// Runs one probe twice, bounded, and reports whether the two runs agreed.
+///
+/// **The two compared runs are subprocesses with `TZ` set to
+/// [`support::PINNED_ZONE`]**, the zone the oracle is run in, because a
+/// `.File` timestamp is read in the zone of the process rather than the one in
+/// the program's environment, so an in-process run would answer in the
+/// developer's zone whatever the invocation says. A third, in-process and
+/// bounded, run goes first: it is what notices a body the compiler refused,
+/// and it bounds a probe that never ends before a subprocess is left to.
 fn run_probe_twice(abs: &Path, text: &[u8]) -> CrateSide {
     let path = abs
         .to_str()
         .unwrap_or_else(|| panic!("probe path {} is not valid UTF-8", abs.display()));
-    let run = || -> Outcome { watchdog::run_bounded(path, text.to_vec(), Invocation::none()) };
-    let first = run();
+    let bounded = watchdog::run_bounded(
+        path,
+        text.to_vec(),
+        Invocation::none().with_environment(support::zone_pinned_environment(&[])),
+    );
     assert!(
-        first.chunks_refused == 0,
+        bounded.chunks_refused == 0,
         "a body of {path} was refused by the compiler, so this row did not measure what it \
          reports",
     );
-    let second = run();
+    if watchdog::did_not_finish(&bounded) {
+        return CrateSide {
+            outcome: bounded,
+            stable: true,
+        };
+    }
+    let first = run_crate_in_zone(abs, support::PINNED_ZONE);
+    let second = run_crate_in_zone(abs, support::PINNED_ZONE);
     let stable = same_outcome(&first, &second);
     CrateSide {
         outcome: first,
@@ -530,6 +548,7 @@ fn run_crate_in_zone(abs: &Path, zone: &str) -> Outcome {
     let out = Command::new(env!("CARGO_BIN_EXE_rexx"))
         .arg(abs)
         .env("TZ", zone)
+        .stdin(std::process::Stdio::null())
         .output()
         .unwrap_or_else(|e| {
             panic!(
@@ -1330,7 +1349,13 @@ fn run_table(shard: Option<usize>) {
                 cell.verdict.label(),
                 cell.evidence
             ));
-        } else if was.verdict != cell.verdict || was.evidence != cell.evidence {
+        } else if was.verdict != cell.verdict
+            // **An unstable row's evidence is not compared.** It names the
+            // side whose pair of runs was seen to differ first, and when both
+            // sides move (`RexxQueue create` makes a fresh queue name in
+            // each engine) which one that is changes from run to run.
+            || (cell.verdict != Body::Unstable && was.evidence != cell.evidence)
+        {
             drifted.push(format!(
                 "{} {} ({} arm): {} [{}] -> {} [{}]",
                 row.class,
