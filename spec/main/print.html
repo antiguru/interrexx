@@ -47629,7 +47629,12 @@ and <code>stableSort</code> still make the slot check, so <code>.array~of(, 5)~s
 <code>SYNTAX 93.903</code> and a second <code>SYNTAX 93.902</code>. An item or comparator that does
 not understand its message raises <code>SYNTAX 97.1</code>. The comparator's answer must
 be a whole number: another answer raises <code>SYNTAX 26.903</code>; the answer of an
-item's <code>compareTo</code> raises <code>SYNTAX 26.902</code> in the same case.</p>
+item's <code>compareTo</code> raises <code>SYNTAX 26.902</code> in the same case.
+A comparator, or a <code>compareTo</code>, that changes the receiver while the sort runs
+(removes items, adds some or empties it) leaves the contents of the array
+unspecified: the sort ends, no error is raised for the change, and every item
+the array holds afterwards is one that it held before the sort or that the
+comparator put there.</p>
 <pre><code class="language-rexx">a = .array~of('b', 'A', 'a', '10', '9')
 say (a~sort == a) a~allItems~makeString('L', ',')
 a = .array~of(3, 1, 2)
@@ -47692,6 +47697,24 @@ a b c d
 .array~of(.badlike~new, .badlike~new)~sort =&gt; 26.902
 1
 1
+</code></pre>
+<pre><code class="language-rexx">a = .array~of(3, 1, 2)
+a~sortWith(.emptier~new(a))
+ok = a~items &lt;= 3
+do i over a~allItems
+  if \ (i = 1 | i = 2 | i = 3) then ok = 0
+end
+say a~class~id ok
+::class emptier
+::method init
+  expose target
+  use arg target
+::method compare
+  expose target
+  target~empty
+  return 0
+</code></pre>
+<pre><code class="language-output">Array 1
 </code></pre>
 <div class="rule" id="r-class.array.sort.sends"><a href="classes/array.html#r-class.array.sort.sends">[class.array.sort.sends]</a></div>
 <p><code>sort</code> and <code>stableSort</code> send <code>compareTo</code> to items, with another item of the
@@ -120766,7 +120789,9 @@ ERROR: 1
 word that names the command: <code>OPEN</code>, <code>CLOSE</code>, <code>FLUSH</code>, <code>SEEK</code>, <code>POSITION</code>
 or <code>QUERY</code>. The word may be in any case, and may be shortened to any of its
 leading letters down to the first. What is after the word is the command's
-own, and the rules for each say what it is. A first word
+own, and the rules for each say what it is. A later word that reads <code>OPEN</code> or
+<code>CLOSE</code> does not make the command an OPEN or a CLOSE: a <code>QUERY</code> that has one
+raises <code>SYNTAX 93.0</code> and leaves the stream open at its position. A first word
 that no command begins with raises <code>SYNTAX 93.914</code>, and anything the
 command does not take after it, <code>SYNTAX 93.0</code>. A <code>command</code> that is the null
 string, or only blanks, has no first word and closes the stream, as <code>CLOSE</code>
@@ -120809,6 +120834,26 @@ call sysfiledelete f
 [READY:] UNKNOWN
 [] UNKNOWN
 READY: [READY:] UNKNOWN
+</code></pre>
+<pre><code class="language-rexx">f = 'spec-stream-command-first.tmp'
+call sysfiledelete f
+call charout f, 'abcdef'
+call charout f
+say stream(f, 'c', 'open read') charin(f, , 2)
+signal on syntax name a
+say stream(f, 'c', 'query position close')
+a: say condition('o')~code stream(f) stream(f, 'c', 'query position read')
+signal on syntax name b
+say stream(f, 'c', 'query position read open')
+b: say condition('o')~code stream(f) stream(f, 'c', 'query position read')
+signal off syntax
+say stream(f, 'c', 'cl') stream(f)
+call sysfiledelete f
+</code></pre>
+<pre><code class="language-output">READY: ab
+93.0 READY 3
+93.0 READY 3
+READY: UNKNOWN
 </code></pre>
 <h3 id="open"><a class="header" href="#open">OPEN</a></h3>
 <div class="rule" id="r-bif.stream.open.result"><a href="builtins/stream.html#r-bif.stream.open.result">[bif.stream.open.result]</a></div>

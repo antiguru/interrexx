@@ -1350,7 +1350,12 @@ and <code>stableSort</code> still make the slot check, so <code>.array~of(, 5)~s
 <code>SYNTAX 93.903</code> and a second <code>SYNTAX 93.902</code>. An item or comparator that does
 not understand its message raises <code>SYNTAX 97.1</code>. The comparator's answer must
 be a whole number: another answer raises <code>SYNTAX 26.903</code>; the answer of an
-item's <code>compareTo</code> raises <code>SYNTAX 26.902</code> in the same case.</p>
+item's <code>compareTo</code> raises <code>SYNTAX 26.902</code> in the same case.
+A comparator, or a <code>compareTo</code>, that changes the receiver while the sort runs
+(removes items, adds some or empties it) leaves the contents of the array
+unspecified: the sort ends, no error is raised for the change, and every item
+the array holds afterwards is one that it held before the sort or that the
+comparator put there.</p>
 <pre><code class="language-rexx">a = .array~of('b', 'A', 'a', '10', '9')
 say (a~sort == a) a~allItems~makeString('L', ',')
 a = .array~of(3, 1, 2)
@@ -1413,6 +1418,24 @@ a b c d
 .array~of(.badlike~new, .badlike~new)~sort =&gt; 26.902
 1
 1
+</code></pre>
+<pre><code class="language-rexx">a = .array~of(3, 1, 2)
+a~sortWith(.emptier~new(a))
+ok = a~items &lt;= 3
+do i over a~allItems
+  if \ (i = 1 | i = 2 | i = 3) then ok = 0
+end
+say a~class~id ok
+::class emptier
+::method init
+  expose target
+  use arg target
+::method compare
+  expose target
+  target~empty
+  return 0
+</code></pre>
+<pre><code class="language-output">Array 1
 </code></pre>
 <div class="rule" id="r-class.array.sort.sends"><a href="#r-class.array.sort.sends">[class.array.sort.sends]</a></div>
 <p><code>sort</code> and <code>stableSort</code> send <code>compareTo</code> to items, with another item of the

@@ -338,7 +338,9 @@ ERROR: 1
 word that names the command: <code>OPEN</code>, <code>CLOSE</code>, <code>FLUSH</code>, <code>SEEK</code>, <code>POSITION</code>
 or <code>QUERY</code>. The word may be in any case, and may be shortened to any of its
 leading letters down to the first. What is after the word is the command's
-own, and the rules for each say what it is. A first word
+own, and the rules for each say what it is. A later word that reads <code>OPEN</code> or
+<code>CLOSE</code> does not make the command an OPEN or a CLOSE: a <code>QUERY</code> that has one
+raises <code>SYNTAX 93.0</code> and leaves the stream open at its position. A first word
 that no command begins with raises <code>SYNTAX 93.914</code>, and anything the
 command does not take after it, <code>SYNTAX 93.0</code>. A <code>command</code> that is the null
 string, or only blanks, has no first word and closes the stream, as <code>CLOSE</code>
@@ -381,6 +383,26 @@ call sysfiledelete f
 [READY:] UNKNOWN
 [] UNKNOWN
 READY: [READY:] UNKNOWN
+</code></pre>
+<pre><code class="language-rexx">f = 'spec-stream-command-first.tmp'
+call sysfiledelete f
+call charout f, 'abcdef'
+call charout f
+say stream(f, 'c', 'open read') charin(f, , 2)
+signal on syntax name a
+say stream(f, 'c', 'query position close')
+a: say condition('o')~code stream(f) stream(f, 'c', 'query position read')
+signal on syntax name b
+say stream(f, 'c', 'query position read open')
+b: say condition('o')~code stream(f) stream(f, 'c', 'query position read')
+signal off syntax
+say stream(f, 'c', 'cl') stream(f)
+call sysfiledelete f
+</code></pre>
+<pre><code class="language-output">READY: ab
+93.0 READY 3
+93.0 READY 3
+READY: UNKNOWN
 </code></pre>
 <h3 id="open"><a class="header" href="#open">OPEN</a></h3>
 <div class="rule" id="r-bif.stream.open.result"><a href="#r-bif.stream.open.result">[bif.stream.open.result]</a></div>
