@@ -1269,11 +1269,10 @@ impl Interp {
     }
 
     /// `::CLASS`'s own R9 install: a class object in [`Interp::classes`],
-    /// carrying the name as written, and an entry in the running package's own
-    /// class table under the uppercased one.
+    /// carrying the name as written. The package's own class table gets its
+    /// entry only once `INIT` has returned.
     fn install_class(
         &mut self,
-        program: ProgramId,
         class: &ClassDirective,
         superclass: ObjRef,
         metaclass: ObjRef,
@@ -1297,16 +1296,6 @@ impl Interp {
         if self.library_bootstrap {
             self.classes().set_rexx_defined(id);
         }
-        // The package's own installed-class table, which is what `.NAME`
-        // resolution reads first -- see `environment/identities.rs`'s
-        // `record_package_class` for why the registry's flat table is not
-        // that.
-        // `ClassDirective::install` passes the directive's own `isPublic()`
-        // to `addInstalledClass` (`instructions/ClassDirective.cpp:209`),
-        // which files a public class in both of the package's tables and
-        // every other class in one (`classes/PackageClass.cpp:1410`-`:1419`).
-        // That is the difference `~publicClasses` reads back.
-        self.record_package_class(program, &class.name, id, class.access == Access::Public)?;
         Ok(id)
     }
 
@@ -1367,7 +1356,7 @@ impl Interp {
         // A metaclass `NEW` that runs is a send from the directive.
         let sends = !dispatch::builds_in_place(self, metaclass);
         let frame = sends.then(|| self.push_directive_activation(program_id, program));
-        let id = self.install_class(program_id, class, superclass, metaclass);
+        let id = self.install_class(class, superclass, metaclass);
         if let Some(frame) = frame {
             self.pop_directive_activation(frame);
         }
@@ -1396,6 +1385,19 @@ impl Interp {
         self.classes().check_uninit(id);
         self.send_directive_message(program_id, program, id, dispatch::INIT, directive)?;
         self.classes().refresh_parent_has_uninit(id);
+        // The package's own installed-class table, which is what `.NAME`
+        // resolution reads first -- see `environment/identities.rs`'s
+        // `record_package_class` for why the registry's flat table is not
+        // that. **Entered only once the class's creation, `INIT` included,
+        // is complete**, so inside its own `INIT` the symbol is still its
+        // own text, as the classes declared later are (the spec's
+        // installation rule; the oracle agrees).
+        // `ClassDirective::install` passes the directive's own `isPublic()`
+        // to `addInstalledClass` (`instructions/ClassDirective.cpp:209`),
+        // which files a public class in both of the package's tables and
+        // every other class in one (`classes/PackageClass.cpp:1410`-`:1419`).
+        // That is the difference `~publicClasses` reads back.
+        self.record_package_class(program_id, &class.name, id, class.access == Access::Public)?;
         for target in &class.inherit {
             let mixin = self.resolve_class_target(
                 program_id,
