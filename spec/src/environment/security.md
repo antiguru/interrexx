@@ -1190,7 +1190,7 @@ exit
   return 1
 ```
 
-```output defect=#225
+```output
 unknown ran NOSUCH
 ```
 
