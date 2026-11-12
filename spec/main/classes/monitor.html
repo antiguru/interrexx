@@ -404,7 +404,9 @@ the destination has on its class side is not reached. A destination that has
 an <code>unknown</code> method of its own gets that message in turn, with the name in
 upper case. Called directly, <code>unknown</code> needs both arguments (<code>SYNTAX 93.901</code>),
 takes no more (<code>SYNTAX 93.902</code>), and needs the name to be present
-(<code>SYNTAX 93.903</code>).</p>
+(<code>SYNTAX 93.903</code>). The second argument of a direct call is any object, and it
+is sent <code>request</code> with <code>ARRAY</code> before anything is forwarded; <a href="#r-class.monitor.unknown.arguments">the arguments
+rule</a> says what that makes of it.</p>
 <pre><code class="language-rexx">a = .target~new('A')
 m = .monitor~new(a)
 say m~hello(1, 2)
@@ -480,9 +482,11 @@ caught WHATSOEVER 2 caught MIXED 1
 object, and it is sent <code>request</code> with <code>ARRAY</code> before anything is forwarded, as
 <a href="#r-class.monitor.unknown">the unknown rule</a> says. The items of what that
 answers, in order and with their holes, are the arguments of the forwarded
-message. A string answers an array of one item, itself, so that a string is one
-argument and the null string is none; a number, <code>.true</code> and a <code>MutableBuffer</code>
-are one argument each, as their strings; a <code>List</code> or a <code>Set</code> answers its items;
+message. A string answers the array of its lines, so that a string without a
+line end is one argument, the null string is none, and a string with line ends
+is as many arguments as it has lines; a <code>MutableBuffer</code> likewise, by its
+string; a number and <code>.true</code> are one argument each, as their strings;
+a <code>List</code> or a <code>Set</code> answers its items;
 and an object that answers no array to <code>request</code>, <code>.nil</code> and an <code>Object</code> among
 them, raises <code>SYNTAX 98.946</code> and forwards nothing.</p>
 <pre><code class="language-rexx">m = .monitor~new(.target~new)
@@ -497,6 +501,9 @@ call try "m~unknown('echo', .nil)"
 call try "m~unknown('echo', .true)"
 call try "m~unknown('echo', .array~of('p', , 'r'))"
 call try "m~unknown('echo', .mutablebuffer~new('q'))"
+call try "m~unknown('echo', 'a'||'0a'x||'b')"
+call try "m~unknown('echo', .mutablebuffer~new('c'||'0d0a'x||'d'))"
+call try "m~unknown('echo', 'a'||'0a'x)"
 exit
 try:
   signal on syntax name bad
@@ -520,6 +527,9 @@ m~unknown('echo', .nil) =&gt; 98.946
 m~unknown('echo', .true) =&gt; 1 [1] [] []
 m~unknown('echo', .array~of('p', , 'r')) =&gt; 3 [p] [] [r]
 m~unknown('echo', .mutablebuffer~new('q')) =&gt; 1 [q] [] []
+m~unknown('echo', 'a'||'0a'x||'b') =&gt; 2 [a] [b] []
+m~unknown('echo', .mutablebuffer~new('c'||'0d0a'x||'d')) =&gt; 2 [c] [d] []
+m~unknown('echo', 'a'||'0a'x) =&gt; 1 [a] [] []
 </code></pre>
 <div class="rule" id="r-class.monitor.object"><a href="#r-class.monitor.object">[class.monitor.object]</a></div>
 <p>Every instance method that <code>Object</code> defines (<a href="object.html">the Object page</a>) is

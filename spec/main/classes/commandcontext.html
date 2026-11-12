@@ -192,17 +192,18 @@ command</a>); the examples here register environments of
 their own under names that no host has, so that nothing depends on the host.</p>
 <h2 id="the-class"><a class="header" href="#the-class">The class</a></h2>
 <div class="rule" id="r-class.commandcontext.creation"><a href="#r-class.commandcontext.creation">[class.commandcontext.creation]</a></div>
-<p><code>CommandContext</code> has the instance methods <code>[]</code>, <code>[]=</code>, <code>dropVar</code>, <code>environment</code>,
-<code>error</code>, <code>getVar</code>, <code>hasVar</code>, <code>input</code>, <code>isRedirected</code>, <code>isValid</code>, <code>output</code>,
-<code>raise</code>, <code>raiseError</code>, <code>raiseFailure</code>, <code>setVar</code> and <code>variables</code>, besides the
-methods that every class has. Its only superclass is <code>Object</code> and it inherits no
-mixin class (<a href="index.html#r-class.index.hierarchy">the hierarchy rule</a>). The interpreter
-makes one for each command that is sent to a handler written in Rexx, and a
-program receives it as the second argument of <code>command</code>; a program does not make
-one. What the <code>new</code> of a program makes, and the method <code>init</code> that it sends, is
-the subject of <a href="#r-class.commandcontext.init">the next rule</a>. The class has other
-methods, <code>finish</code> and <code>pending</code> among them, that the interpreter uses; they are
-not part of this specification.</p>
+<p><code>CommandContext</code> has the instance methods <code>[]</code>, <code>[]=</code>, <code>dropVar</code>,
+<code>environment</code>, <code>error</code>, <code>getVar</code>, <code>hasVar</code>, <code>init</code>, <code>input</code>, <code>isRedirected</code>,
+<code>isValid</code>, <code>output</code>, <code>raise</code>, <code>raiseError</code>, <code>raiseFailure</code>, <code>setVar</code> and
+<code>variables</code>, besides the methods that every class has. Its only superclass is
+<code>Object</code> and it inherits no mixin class (<a href="index.html#r-class.index.hierarchy">the hierarchy
+rule</a>). The interpreter makes one for each command
+that is sent to a handler written in Rexx, and a program receives it as the
+second argument of <code>command</code>; a program does not make one. What the <code>new</code> of a
+program makes, and the method <code>init</code> that it sends, is the subject of <a href="#r-class.commandcontext.init">the next
+rule</a>. The class has other methods, <code>finish</code> and
+<code>pending</code> among them, that the interpreter uses; they are not part of this
+specification.</p>
 <pre><code class="language-rexx">say .commandcontext~id .commandcontext~superclasses~items,
   .commandcontext~superclass~id .commandcontext~queryMixinClass
 have = .set~new
@@ -245,18 +246,23 @@ arguments: <code>SYNTAX 93.901</code> when fewer are present, a trailing omitted
 not counting, <code>SYNTAX 93.902</code> when more than two are given, and <code>SYNTAX 93.903</code>
 when the first is omitted and the second is present. Both can be any object,
 <code>.nil</code> among them, and neither is converted or sent a message. The first
-argument is not used. The second becomes what <a href="#r-class.commandcontext.environment"><code>environment</code></a>
-answers, the same object that was given, so that an array stays an array and
-the null string stays the null string. A context that <code>new</code> makes belongs to no
-command: <code>isValid</code> answers <code>0</code> from the start, and the methods that <a href="#r-class.commandcontext.valid">the
-validity rule</a> lists as working with the code
-that sent a command raise <code>SYNTAX 98.900</code> as they do once the command has ended,
-while <code>environment</code>, <code>isValid</code> and <code>copy</code> work. A message <code>init</code> that is sent
-to a context a second time replaces what <code>environment</code> answers and answers
-nothing, so that using its answer as a value raises <code>SYNTAX 91.999</code>. A subclass
-of <code>CommandContext</code> gets the same, through its own <code>init</code> when it has one and
-<code>forward class (super)</code> or <code>self~init:super(first, name)</code>. What a hand-made
-context may be passed to is not specified.</p>
+argument is not used. The second becomes what
+<a href="#r-class.commandcontext.environment"><code>environment</code></a> answers, the same object
+that was given, so that an array stays an array and the null string stays the
+null string. A context that <code>new</code> makes belongs to no command: <code>isValid</code>
+answers <code>0</code> from the start, and the methods that <a href="#r-class.commandcontext.valid">the validity
+rule</a> lists as working with the code that sent a
+command raise <code>SYNTAX 98.900</code> as they do once the command has ended, while
+<code>environment</code>, <code>isValid</code> and <code>copy</code> work. A message <code>init</code> that is sent to a
+context a second time replaces what <code>environment</code> answers and answers nothing,
+so that using its answer as a value raises <code>SYNTAX 91.999</code>. When the context
+belongs to a command that is running, the second <code>init</code> also detaches it from
+the command: <code>isValid</code> answers <code>0</code> from then on, and the methods of <a href="#r-class.commandcontext.valid">the
+validity rule</a> raise <code>SYNTAX 98.900</code>, as they do
+once the command has ended. A subclass of <code>CommandContext</code> gets the same,
+through its own <code>init</code> when it has one and <code>forward class (super)</code> or
+<code>self~init:super(first, name)</code>. What a hand-made context may be passed to is
+not specified.</p>
 <pre><code class="language-rexx">c = .commandcontext~new(1, 'Env')
 say c~environment c~isValid c~copy~environment
 say (.commandcontext~new(.nil, .nil)~environment == .nil),
@@ -320,6 +326,25 @@ c~init(1) 93.901
 c~init(1, 2, 3) 93.902
 SUB Own 0 set
 .sub~new(1) 93.901
+</code></pre>
+<pre><code class="language-rexx">x = .commandhandler~register('spec_cc_reinit', .again~new)
+address spec_cc_reinit 'go'
+x = .commandhandler~deregister('spec_cc_reinit')
+::class again inherit CommandHandler
+::method command
+  use arg command, caller
+  say caller~isValid caller~environment caller~hasVar('v')
+  caller~init(1, 'Z')
+  say caller~isValid caller~environment
+  signal on syntax name bad
+  say caller~getVar('v')
+  return 0
+bad: say 'getVar' condition('o')~code
+  return 0
+</code></pre>
+<pre><code class="language-output">1 SPEC_CC_REINIT 0
+0 Z
+getVar 98.900
 </code></pre>
 <div class="rule" id="r-class.commandcontext.valid"><a href="#r-class.commandcontext.valid">[class.commandcontext.valid]</a></div>
 <p>A context is good for the command that it stands for, on the activity that is
@@ -453,21 +478,24 @@ d sent to SPEC_CC_TWO
 <h2 id="variables-of-the-code-that-sent-the-command"><a class="header" href="#variables-of-the-code-that-sent-the-command">Variables of the code that sent the command</a></h2>
 <div class="rule" id="r-class.commandcontext.name"><a href="#r-class.commandcontext.name">[class.commandcontext.name]</a></div>
 <p>The <code>name</code> that <code>[]</code>, <code>getVar</code>, <code>[]=</code>, <code>setVar</code>, <code>hasVar</code> and <code>dropVar</code> take
-names a variable of the code that sent the command, a simple variable, a stem or
-a compound variable, as <a href="../lexical/symbols.html#r-lex.symbols.variable">a variable symbol</a> does, and
-its case plays no part. A string is the name as it is; another object, an
-instance of a subclass of <code>String</code> apart (<a href="#r-class.commandcontext.deviation.109">the deviation
-rule</a>), is replaced by what it answers to
-the message <code>request</code> with the argument <code>String</code>. The <code>request</code> of <code>Object</code>
-answers what <code>makeString</code> answers, so an object with a <code>makeString</code>, an <code>Array</code>
-or a <code>MutableBuffer</code> is read through it. A name is refused with <code>SYNTAX 93.900</code>
-when it is no variable name: the null string, a string that starts with a digit
-or with a period, a string with a blank or with a character that no symbol can
-have, a number, and an object that does not answer a string. A name of a
-compound variable has its tail resolved in the code that sent the command, as
-<a href="../expressions/variables.html#r-expr.variables.tail">the tail rule</a> says for a program; the example sets
-<code>c.i</code> while <code>i</code> holds <code>3</code>, and reads the variable back as <code>c.3</code>. Special names
-such as <code>RC</code>, <code>RESULT</code> and <code>SIGL</code> are names of variables like the others.</p>
+names a variable of the code that sent the command, a simple variable, a stem
+or a compound variable, as <a href="../lexical/symbols.html#r-lex.symbols.variable">a variable symbol</a> does,
+and its case plays no part. The number of the arguments is checked before the
+name is read: <code>getVar('1x', 2)</code>, <code>hasVar('1x', 2)</code> and <code>dropVar('1x', 2)</code> raise
+<code>SYNTAX 93.902</code>, and <code>setVar('1x')</code> raises <code>SYNTAX 93.901</code>, not <code>93.900</code>. A
+string is the name as it is; another object, an instance of a subclass of
+<code>String</code> apart (<a href="#r-class.commandcontext.deviation.109">the deviation rule</a>), is
+replaced by what it answers to the message <code>request</code> with the argument
+<code>String</code>. The <code>request</code> of <code>Object</code> answers what <code>makeString</code> answers, so an
+object with a <code>makeString</code>, an <code>Array</code> or a <code>MutableBuffer</code> is read through it.
+A name is refused with <code>SYNTAX 93.900</code> when it is no variable name: the null
+string, a string that starts with a digit or with a period, a string with a
+blank or with a character that no symbol can have, a number, and an object that
+does not answer a string. A name of a compound variable has its tail resolved
+in the code that sent the command, as <a href="../expressions/variables.html#r-expr.variables.tail">the tail rule</a>
+says for a program; the example sets <code>c.i</code> while <code>i</code> holds <code>3</code>, and reads the
+variable back as <code>c.3</code>. Special names such as <code>RC</code>, <code>RESULT</code> and <code>SIGL</code> are
+names of variables like the others.</p>
 <pre><code class="language-rexx">x = .commandhandler~register('spec_cc_name', .namer~new)
 i = 3; word = 'abc'; rc = 'my rc'
 address spec_cc_name 'go'
@@ -549,7 +577,8 @@ x = .commandhandler~deregister('spec_cc_getvar')
     caller['nosuch.1']
   say caller['nilvar']~isNil caller['nothing'] caller['nothing.k']
   do x over .array~of("caller~getVar", "caller~'[]'",,
-      "caller~getVar('a', 'b')", "caller~'[]'('a', 'b')")
+      "caller~getVar('a', 'b')", "caller~'[]'('a', 'b')",,
+      "caller~getVar('1x', 2)")
     self~try(caller, x)
   end
   return 0
@@ -569,6 +598,7 @@ caller~getVar 93.901
 caller~'[]' 93.901
 caller~getVar('a', 'b') 93.902
 caller~'[]'('a', 'b') 93.902
+caller~getVar('1x', 2) 93.902
 3
 </code></pre>
 <div class="rule" id="r-class.commandcontext.hasvar"><a href="#r-class.commandcontext.hasvar">[class.commandcontext.hasvar]</a></div>
@@ -628,7 +658,10 @@ object it is: a string, <code>.nil</code> or any other object, not a string made
 The two methods are not two spellings of one: <strong>the order of the arguments
 differs</strong>, the value first for the bracket form, which is what the assignment
 <code>c[name] = value</code> sends, and the name first for <code>setVar</code>. Both need two
-arguments (<code>SYNTAX 93.901</code>), and a third raises <code>SYNTAX 93.902</code>. The name is
+arguments (<code>SYNTAX 93.901</code>, a trailing omitted argument not counting), a third
+raises <code>SYNTAX 93.902</code>, and <code>SYNTAX 93.903</code> is raised when the name is the
+omitted argument and the value is present: <code>setVar(, 1)</code> and <code>[]=(, 'x')</code>, while
+<code>setVar('x', )</code> and <code>[]=(1, )</code> raise <code>93.901</code>. The name is
 read as <a href="#r-class.commandcontext.name">the name rule</a> says, and the value is not
 read at all. Both answer nothing, so that using the answer as a value raises
 <code>SYNTAX 91.999</code>. A name that is no variable name raises <code>SYNTAX 93.900</code>, and
@@ -654,6 +687,8 @@ x = .commandhandler~deregister('spec_cc_setvar')
   do x over .array~of("caller~setVar('a')", "caller~'[]='('a')",,
       "caller~setVar", "caller~setVar('a', 1, 2)", "caller~setVar('1x', 1)",,
       "caller~'[]='(1, '1x')", "caller~setVar('', 1)",,
+      "caller~setVar(, 1)", "caller~'[]='(, 'x')", "caller~setVar('x', )",,
+      "caller~'[]='(1, )", "caller~setVar('1x')",,
       "x = caller~setVar('zz', 1)", "x = caller~'[]='(1, 'zz')")
     self~try(caller, x)
   end
@@ -675,6 +710,11 @@ caller~setVar('a', 1, 2) 93.902
 caller~setVar('1x', 1) 93.900
 caller~'[]='(1, '1x') 93.900
 caller~setVar('', 1) 93.900
+caller~setVar(, 1) 93.903
+caller~'[]='(, 'x') 93.903
+caller~setVar('x', ) 93.901
+caller~'[]='(1, ) 93.901
+caller~setVar('1x') 93.901
 x = caller~setVar('zz', 1) 91.999
 x = caller~'[]='(1, 'zz') 91.999
 by setVar | by bracket | compound | cleared cleared cleared
@@ -773,19 +813,24 @@ seen by the program set later LIT
 <div class="rule" id="r-class.commandcontext.isredirected"><a href="#r-class.commandcontext.isredirected">[class.commandcontext.isredirected]</a></div>
 <p><code>isRedirected(which)</code> answers <code>1</code> when the command was sent with the
 redirection that the first letter of <code>which</code> names, and <code>0</code> when it was not.
-The letter is <code>I</code> for <code>WITH INPUT</code>, <code>O</code> for <code>WITH OUTPUT</code>, <code>E</code> for
-<code>WITH ERROR</code> and <code>S</code> for output and error that go to the same target, and it
-may be in either case; only the first letter is read, so <code>Input</code>, <code>Ixyz</code> and
-<code>I</code> are the same. A redirection that names a stem, a stream or an object to
+The letter is <code>I</code> for <code>WITH INPUT</code>, <code>O</code> for <code>WITH OUTPUT</code>, <code>E</code> for <code>WITH ERROR</code>
+and <code>S</code> for output and error that go to the same target, and it may be in
+either case; only the first letter is read, so <code>Input</code>, <code>Ixyz</code> and <code>I</code> are the
+same. A redirection that names a stem, a stream or an object to
 <a href="../instructions/address.html#r-instr.address.with.using"><code>USING</code></a> is a redirection, and <code>NORMAL</code> is none.
 The target is the same when both redirections name the same stem, the same
-stream, or the same object, whether either appends or replaces. <code>S</code> is <code>0</code>
-when only one of them is redirected. <code>which</code> is required (<code>SYNTAX 88.901</code>) and
-one more argument raises <code>SYNTAX 88.922</code>. A <code>which</code> that starts with another
-letter or has none, the null string and a number among them, raises
-<code>SYNTAX 93.900</code>. An object that is not a string and answers no string to
-<code>request</code> with <code>STRING</code>, <code>.nil</code> and an <code>Object</code> among them, raises
-<code>SYNTAX 88.909</code>.</p>
+stream, or the same object, whether either appends or replaces. <code>S</code> is <code>0</code> when
+only one of them is redirected. <code>which</code> is required (<code>SYNTAX 88.901</code>) and one
+more argument raises <code>SYNTAX 88.922</code>. A <code>which</code> that starts with another letter
+or has none, the null string and a number among them, raises <code>SYNTAX 93.900</code>.
+An object that is not a string and answers no string to <code>request</code> with
+<code>STRING</code>, <code>.nil</code> and an <code>Object</code> among them, raises <code>SYNTAX 88.909</code>. The checks
+run in this order: <code>which</code> is present (<code>88.901</code>), then it is a string or
+answers one (<code>88.909</code>), then the number of arguments is right (<code>88.922</code>), then
+the letter is one of those above (<code>93.900</code>). So <code>isRedirected(, 1)</code> raises
+<code>88.901</code> and <code>isRedirected(.nil, 1)</code> raises <code>88.909</code>, however many arguments
+follow, while <code>isRedirected('Q', 1)</code> raises <code>88.922</code>. interrexx raises <code>88.922</code>
+for the first two today (issue #429).</p>
 <pre><code class="language-rexx">x = .commandhandler~register('spec_cc_redir', .asker~new)
 a = .array~new; b = .array~new
 f = 'spec_cc_redir.tmp'
@@ -876,6 +921,30 @@ bad: say x '=&gt;' condition('o')~code
 <pre><code class="language-output defect=#164">caller~isRedirected(.nil) =&gt; 88.909
 caller~isRedirected(.object~new) =&gt; 88.909
 caller~isRedirected(.named~new) =&gt; 0
+</code></pre>
+<pre><code class="language-rexx">x = .commandhandler~register('spec_cc_redir_order', .asker~new)
+address spec_cc_redir_order 'go'
+x = .commandhandler~deregister('spec_cc_redir_order')
+::class asker inherit CommandHandler
+::method command
+  use arg command, caller
+  do x over .array~of("caller~isRedirected(, 1)",,
+      "caller~isRedirected(.nil, 1)", "caller~isRedirected('Q', 1)")
+    self~try(caller, x)
+  end
+  return 0
+::method try
+  use arg caller, x
+  signal on syntax name bad
+  interpret 'y =' x
+  say x '=&gt;' y
+  return
+bad: say x '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output defect=#429">caller~isRedirected(, 1) =&gt; 88.901
+caller~isRedirected(.nil, 1) =&gt; 88.909
+caller~isRedirected('Q', 1) =&gt; 88.922
 </code></pre>
 <div class="rule" id="r-class.commandcontext.input"><a href="#r-class.commandcontext.input">[class.commandcontext.input]</a></div>
 <p><code>input</code> answers the <a href="commandinput.html"><code>CommandInput</code></a> that reads the source of
@@ -996,13 +1065,13 @@ it is, whatever object it is, the number or the text, <code>.nil</code> too, so 
 may return the answer of the call or anything else. A HALT is delayed like any
 HALT (<a href="../conditions/halt.html#r-cond.halt.raise">the HALT rule</a>), so the clause after the command is
 run before a trap for it. <code>condition</code> is a string: <code>ERROR</code>, <code>FAILURE</code>, <code>HALT</code>,
-<code>LOSTDIGITS</code>, <code>NOMETHOD</code>, <code>NOSTRING</code>, <code>NOTREADY</code>, <code>NOVALUE</code>, or <code>USER</code>
-followed by a name of one word, in either case; <code>SYNTAX</code> is the other form,
-which <a href="#r-class.commandcontext.raise.syntax">the next rule</a> states. The string
-is read as words separated by <a href="../conventions.html#r-conv.string.whitespace">whitespace</a>, so the
-blanks and tabs around and between the words play no part, and the name after
-<code>USER</code> may be any word; the condition is named in upper case (<code>USER 1X</code>). A
-command that raises ERROR or FAILURE has the status <code>.RS</code> of the <a href="../instructions/command.html#r-instr.command.status">status
+<code>LOSTDIGITS</code>, <code>NOMETHOD</code>, <code>NOSTRING</code>, <code>NOTREADY</code>, <code>NOVALUE</code>, or <code>USER</code> followed
+by a name of one word, in either case; <code>SYNTAX</code> is the other form, which <a href="#r-class.commandcontext.raise.syntax">the
+next rule</a> states. The string is read as
+words separated by <a href="../conventions.html#r-conv.string.whitespace">whitespace</a>, so the blanks and
+tabs around and between the words play no part, and the name after <code>USER</code> may
+be any word; the condition is named in upper case (<code>USER 1X</code>). A command that
+raises ERROR or FAILURE has the status <code>.RS</code> of the <a href="../instructions/command.html#r-instr.command.status">status
 rule</a>. <code>description</code> is what <code>CONDITION('D')</code> answers
 and the <code>DESCRIPTION</code> entry of the condition object holds; when it is omitted
 or <code>.nil</code>, it is the command, and the null string is a description like
@@ -1015,11 +1084,13 @@ rule</a>). <code>additional</code> is the <code>ADDITIONAL</code>
 entry of the condition object, the object as it was given, and when it is
 omitted or <code>.nil</code> the condition object has no such entry. The condition object
 has <code>RC</code>, holding the <code>rc</code> object. <code>condition</code> and <code>rc</code> are required: <code>SYNTAX 93.901</code> when they are fewer than two, <code>SYNTAX 93.903</code> when an omitted place
-stands for one of them, and <code>SYNTAX 93.902</code> for more than four arguments. A
-<code>condition</code> that is none of the forms above, <code>ANY</code>, <code>NONE</code>, <code>PROPAGATE</code>,
-<code>USER</code> with no name or with more than one, any other text, the null string and
-<code>.nil</code> among them, raises <code>SYNTAX 93.900</code>. A call that raises an error does
-not use up the command's one condition, which <a href="#r-class.commandcontext.raise.once">the second
+stands for one of them, and <code>SYNTAX 93.902</code> for more than four arguments. The
+number of arguments is checked before the <code>condition</code> is read, so that
+<code>raise('BOGUS')</code> raises <code>SYNTAX 93.901</code>, not <code>93.900</code>. A <code>condition</code> that is
+none of the forms above, <code>ANY</code>, <code>NONE</code>, <code>PROPAGATE</code>, <code>USER</code> with no name or
+with more than one, any other text, the null string and <code>.nil</code> among them,
+raises <code>SYNTAX 93.900</code>. A call that raises an error does not use up the
+command's one condition, which <a href="#r-class.commandcontext.raise.once">the second
 rule</a> says.</p>
 <pre><code class="language-rexx">x = .commandhandler~register('spec_cc_raise', .raiser~new)
 call on error name trap
@@ -1089,8 +1160,9 @@ x = .commandhandler~deregister('spec_cc_raise_args')
 ::class tries inherit CommandHandler
 ::method command
   use arg command, caller
-  do x over .array~of("raise", "raise('ERROR')", "raise(, 1)",,
-      "raise('ERROR', , 'text')", "raise('ERROR', 1, 'd', 'a', 'x')",,
+  do x over .array~of("raise", "raise('ERROR')", "raise('BOGUS')",,
+      "raise(, 1)", "raise('ERROR', , 'text')",,
+      "raise('ERROR', 1, 'd', 'a', 'x')",,
       "raise('FOO', 1)", "raise('ANY', 1)", "raise('NONE', 1)",,
       "raise('PROPAGATE', 1)", "raise('USER', 1)", "raise('USER a b', 1)",,
       "raise('', 1)", "raise(.nil, 1)", "raise('SYNTAX', 98.900, 1, 2)",,
@@ -1109,6 +1181,7 @@ bad: say x condition('o')~code
 </code></pre>
 <pre><code class="language-output">raise 93.901
 raise('ERROR') 93.901
+raise('BOGUS') 93.901
 raise(, 1) 93.903
 raise('ERROR', , 'text') 93.903
 raise('ERROR', 1, 'd', 'a', 'x') 93.902

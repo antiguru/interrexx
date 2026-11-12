@@ -665,19 +665,19 @@ T
 </code></pre>
 <div class="rule" id="r-class.traceobject.sends"><a href="#r-class.traceobject.sends">[class.traceobject.sends]</a></div>
 <p>These are the messages that the methods of <code>TraceObject</code> send to objects that a
-subclass can observe. <code>new</code> sends the new object <code>init</code> with the arguments of <code>new</code>, as <a href="index.html#r-class.index.new">the <code>new</code> of
-<code>Class</code></a> does; then, when the object is made, it sends the
-object <code>[]=</code> three times, for <code>TIMESTAMP</code>, <code>OPTION</code> and <code>NUMBER</code> in this order,
-with the value first and the name second, and then, if there is a <code>collector</code>,
-sends that <code>append</code>. It does not send the class <code>counter</code>, <code>option</code> or
-<code>collector</code>: it reads the attributes of its own class directly, so that an
-override of those methods in a subclass is not run by <code>new</code>, and the <code>notify</code>
-object is sent <code>append</code> only for the objects that <a href="#r-class.traceobject.lines">the interpreter
-makes</a> for lines of trace output. The <code>makeString</code> of
-an instance, and every conversion of the object to a string that is not a call
-of <code>string</code>, send the class of the object <code>makeStringImpl</code> with the object
-and no other argument, so that a subclass is asked first; <code>makeStringImpl</code> then
-sends the object the messages that <a href="#r-class.traceobject.makestringimpl.sends">its sends
+subclass can observe. <code>new</code> sends the new object <code>init</code> with the arguments of
+<code>new</code>, as <a href="index.html#r-class.index.new">the <code>new</code> of <code>Class</code></a> does; then, when the object
+is made, it sends the object <code>[]=</code> three times, for <code>TIMESTAMP</code>, <code>OPTION</code> and
+<code>NUMBER</code> in this order, with the value first and the name second, and then, if
+there is a <code>collector</code>, sends that <code>append</code>. It does not send the class
+<code>counter</code>, <code>option</code> or <code>collector</code>: it reads the attributes of its own class
+directly, so that an override of those methods in a subclass is not run by
+<code>new</code>, and the <code>notify</code> object is sent <code>append</code> only for the objects that <a href="#r-class.traceobject.lines">the
+interpreter makes</a> for lines of trace output. The
+<code>makeString</code> of an instance, and every conversion of the object to a string
+that is not a call of <code>string</code>, send the class of the object <code>makeStringImpl</code>
+with the object and no other argument, so that a subclass is asked first;
+<code>makeStringImpl</code> then sends the object the messages that <a href="#r-class.traceobject.makestringimpl.sends">its sends
 rule</a> gives. <code>compareTo</code> sends <code>[]</code>
 with <code>NUMBER</code> to each of the two objects. <code>string</code> sends nothing. The example
 subclass shows each message by a line that its overriding method writes.</p>
@@ -843,7 +843,8 @@ and any other value, the lower-case letters and the null string included, that
 of <code>F</code>; an object without an <code>OPTION</code> entry is formatted like <code>N</code>. <a href="#r-class.traceobject.makestringimpl.method">The line of
 a method</a> carries more fields in the
 prefix. <code>makeStringImpl</code> raises <code>SYNTAX 93.901</code> with no argument, <code>93.902</code> with
-two and <code>93.924</code> for a string argument; <a href="#r-class.traceobject.makestringimpl.sends">the next
+two and <code>93.924</code> for a string argument, in this order: the number of arguments
+is checked first, so that <code>makeStringImpl('x', 1)</code> raises <code>93.902</code>; <a href="#r-class.traceobject.makestringimpl.sends">the next
 rule</a> gives the reading of the
 argument. A <code>StringTable</code> without entries gives <code>?</code>.</p>
 <pre><code class="language-rexx">t = .traceobject
@@ -865,6 +866,7 @@ say '['t~makeStringImpl(n)']' '['t~makeStringImpl(.stringtable~new)']'
 call try 't~makeStringImpl'
 call try 't~makeStringImpl(n, n)'
 call try 't~makeStringImpl(1)'
+call try "t~makeStringImpl('x', 1)"
 exit
 try:
   signal on syntax name bad
@@ -923,6 +925,7 @@ option P
 t~makeStringImpl =&gt; 93.901
 t~makeStringImpl(n, n) =&gt; 93.902
 t~makeStringImpl(1) =&gt; 93.924
+t~makeStringImpl('x', 1) =&gt; 93.902
 </code></pre>
 <blockquote>
 <p><strong>Note.</strong> The option applies to the lines a program traces, as the next
@@ -1268,7 +1271,8 @@ objects in the order they were made. It reads the argument's entry by sending it
 compares the two numbers under NUMERIC DIGITS 9, whatever the caller's setting.
 A missing entry, the receiver's or the argument's, counts as smaller than any
 number, and two missing entries are equal. An entry that is not a number raises
-<code>SYNTAX 41.1</code>. A string argument, and a missing one, raises <code>SYNTAX 93.924</code>;
+<code>SYNTAX 41.1</code>. Arguments after the first are ignored. A string argument, and a
+missing one, raises <code>SYNTAX 93.924</code>;
 another object raises the error of <code>[]</code>, such as <code>93.907</code> for an <code>Array</code> and
 <code>97.1</code> for <code>.nil</code>.</p>
 <pre><code class="language-rexx">t = .traceobject
@@ -1281,6 +1285,7 @@ say a~compareTo(.stringtable~new~~put(2, 'NUMBER'))
 call try 'a~compareTo(.stringtable~new~~put("x", "NUMBER"))'
 call try 'a~compareTo(1)'
 call try 'a~compareTo'
+call try 'a~compareTo(b, 1)'
 y = .array~of(b, a)~sort
 say y[1]~number y[2]~number
 exit
@@ -1299,6 +1304,7 @@ bad: say arg(1) '=&gt;' condition('o')~code
 a~compareTo(.stringtable~new~~put("x", "NUMBER")) =&gt; 41.1
 a~compareTo(1) =&gt; 93.924
 a~compareTo =&gt; 93.924
+a~compareTo(b, 1) =&gt; -1
 1 2
 </code></pre>
 <pre><code class="language-rexx">t = .traceobject

@@ -646,18 +646,25 @@ numberRange 5 1 The NIL object - =&gt; 88.907 N ; 1 ; The NIL object ; 5
 wholeNumberRange 5 1.5 9.5 - =&gt; ok
 </code></pre>
 <div class="rule" id="r-class.validate.sends"><a href="#r-class.validate.sends">[class.validate.sends]</a></div>
-<p>The number checks read the value as a string with one <code>makeString</code> (as <a href="../conventions.html#r-conv.string.object">the
-conversion rule</a> says, apart from <a href="#r-class.validate.deviation.109">the
-deviation</a>), and then ask the value itself, the
-object that was given and not the string, to compare. <code>positiveNumber</code>,
-<code>positiveWholeNumber</code> and <code>position</code> send it <code>&gt;</code> with <code>0</code>;
-<code>nonNegativeNumber</code>, <code>nonNegativeWholeNumber</code> and <code>length</code> send it <code>&gt;=</code> with
-<code>0</code>; <code>numberRange</code> and <code>wholeNumberRange</code> send it <code>&gt;=</code> with <code>min</code> and, only
-when that answers true, <code>&lt;=</code> with <code>max</code>. A comparison that answers <code>0</code> raises the error of the check. <code>number</code> and
-<code>wholeNumber</code> send nothing more, and the bounds and <code>digits</code> are read as
-strings and are sent no comparison. The example has an object whose
-<code>makeString</code> and <code>unknown</code> write a line, and whose comparisons answer <code>1</code> and
-then <code>0</code>.</p>
+<p>The number checks convert the value to a string once, as <a href="../conventions.html#r-conv.string.object">the conversion
+rule</a> says (apart from <a href="#r-class.validate.deviation.109">the
+deviation</a>); for an object without a <code>request</code>
+of its own that is one <code>makeString</code>. The string is checked first as a number,
+and as a whole number for the whole-number checks, and only a value that passes
+that check is asked, as the object that was given and not the string, to
+compare. <code>positiveNumber</code>, <code>positiveWholeNumber</code> and <code>position</code> send it <code>&gt;</code>
+with <code>0</code>; <code>nonNegativeNumber</code>, <code>nonNegativeWholeNumber</code> and <code>length</code> send it
+<code>&gt;=</code> with <code>0</code>; <code>numberRange</code> and <code>wholeNumberRange</code> send it <code>&gt;=</code> with <code>min</code>
+and, only when that answers true, <code>&lt;=</code> with <code>max</code>. A comparison that answers
+<code>0</code> raises the error of the check, one that answers neither <code>0</code> nor <code>1</code> raises
+<code>SYNTAX 34.6</code>, and a value whose class has no such comparison method raises
+<code>SYNTAX 97.1</code>, so that an object with only a <code>makeString</code> is refused by
+<code>positiveNumber</code>, <code>nonNegativeNumber</code> and <code>numberRange</code>, which a number check
+alone would have passed. A value that fails the number check raises that error
+and is sent no comparison. <code>number</code> and <code>wholeNumber</code> send nothing more, and
+the bounds and <code>digits</code> are read as strings and are sent no comparison. The
+example has an object whose <code>makeString</code> and <code>unknown</code> write a line, and whose
+comparisons answer <code>1</code> and then <code>0</code>.</p>
 <pre><code class="language-rexx">checks = 'number positiveNumber nonNegativeNumber wholeNumber positiveWholeNumber',
   'nonNegativeWholeNumber position length numberRange wholeNumberRange'
 do answer over 1, 0
@@ -747,6 +754,59 @@ numberRange: =&gt; 88.907
   makeString
   &gt;= 1
 wholeNumberRange: =&gt; 88.907
+</code></pre>
+<pre><code class="language-rexx">call t 'positiveNumber', .ms~new(5)
+call t 'nonNegativeNumber', .ms~new(5)
+call t 'numberRange', .ms~new(5), 1, 9
+call t 'positiveNumber', .cmp~new('x', 'x')
+call t 'positiveNumber', .cmp~new('5.5', 0)
+call t 'positiveWholeNumber', .cmp~new('5.5', 1)
+call t 'wholeNumberRange', .cmp~new('5.5', 1), 1, 9
+call t 'numberRange', .cmp~new('abc', 1), 1, 9
+call t 'numberRange', .cmp~new(5, 'x'), 1, 9
+call t 'positiveNumber', .cmp~new(5, .true)
+exit
+t: procedure
+  signal on syntax name bad
+  if arg() == 2 then .validate~send(arg(1), 'N', arg(2))
+  else .validate~send(arg(1), 'N', arg(2), arg(3), arg(4))
+  say arg(1) 'ok'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class ms
+::method init
+  expose v
+  use arg v
+::method makeString
+  expose v
+  return v
+::class cmp
+::method init
+  expose v a
+  use arg v, a
+::method makeString
+  expose v
+  return v
+::method unknown
+  expose a
+  use arg name
+  say '  sent' name
+  return a
+</code></pre>
+<pre><code class="language-output">positiveNumber =&gt; 97.1
+nonNegativeNumber =&gt; 97.1
+numberRange =&gt; 97.1
+positiveNumber =&gt; 88.926
+  sent &gt;
+positiveNumber =&gt; 88.926
+positiveWholeNumber =&gt; 88.905
+wholeNumberRange =&gt; 88.907
+numberRange =&gt; 88.907
+  sent &gt;=
+numberRange =&gt; 34.6
+  sent &gt;
+positiveNumber ok
 </code></pre>
 <h2 id="logical-values-and-classes"><a class="header" href="#logical-values-and-classes">Logical values and classes</a></h2>
 <div class="rule" id="r-class.validate.logical"><a href="#r-class.validate.logical">[class.validate.logical]</a></div>
