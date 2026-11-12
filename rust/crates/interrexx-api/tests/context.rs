@@ -16,10 +16,10 @@ use interrexx_core::{
     BehaviourHandle, BehaviourId, Body, Bytes, Heap, ObjRef, RootSet, ScopePools,
 };
 
-/// `Rexx_Error_Invalid_template` (`api/oorexxerrors.h:362`).
+/// `Rexx_Error_Invalid_template`.
 const INVALID_TEMPLATE: usize = 38000;
 
-/// `Rexx_Error_Incorrect_method` (`api/oorexxerrors.h:518`).
+/// `Rexx_Error_Incorrect_method`.
 const INCORRECT_METHOD: usize = 93000;
 
 /// The repository root, which is three directories above this crate.
@@ -381,7 +381,7 @@ fn new_pointer_and_set_object_variable_store_the_cself_block() {
 }
 
 /// The write lands in the method's own scope and in no other, which is
-/// `getObjectVariables(getScope())` (`NativeActivation.cpp:1878`) and what a
+/// `getObjectVariables(getScope())` and what a
 /// subclass method's `expose CSELF` measures against the oracle.
 #[test]
 fn the_write_reaches_the_methods_scope_and_no_other() {
@@ -499,9 +499,8 @@ fn string_data_answers_one_address_for_one_object() {
     session.ran(uninit, &[]);
 }
 
-/// `RaiseException0` records the condition and lets the extension run on
-/// (`interpreter/api/ThreadContextStubs.cpp:1863-1885`), and a second raise
-/// overwrites the first as `setConditionInfo` does.
+/// `RaiseException0` records the condition and lets the extension run on,
+/// and a second raise overwrites the first.
 #[test]
 fn raise_exception0_records_the_condition_and_the_call_finishes() {
     let library = rxregexp();
@@ -521,7 +520,7 @@ fn raise_exception0_records_the_condition_and_the_call_finishes() {
     );
 
     // `RegExp_Parse` raises for the match type, parses anyway, and answers
-    // what the parse said (`extensions/rxregexp/rxregexp.cpp:130`, `:135`).
+    // what the parse said.
     let (outcome, pending) = session.call(parse, &[bad, bogus]);
     assert_eq!(outcome, Ok(returned(3)));
     assert_eq!(pending, Some(INCORRECT_METHOD));
@@ -530,7 +529,7 @@ fn raise_exception0_records_the_condition_and_the_call_finishes() {
 }
 
 /// The members that are data rather than functions carry handles for the
-/// objects the interpreter names (`Activity.cpp:1846-1849`).
+/// objects the interpreter names.
 #[test]
 fn the_thread_table_carries_the_four_constant_objects() {
     let mut session = Session::new();

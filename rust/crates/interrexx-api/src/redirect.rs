@@ -25,12 +25,12 @@ pub struct Redirector {
 struct Input {
     lines: Vec<Box<[u8]>>,
     next: Cell<usize>,
-    /// `readInputBuffered`'s buffer, made once and answered again after.
+    /// The buffer of all the lines, made once and answered again after.
     buffer: OnceCell<Box<[u8]>>,
 }
 
 /// One output stream's lines, and the tail of a buffer that ended before its
-/// line did (`OutputRedirector::bufferedData`).
+/// line did.
 #[derive(Default)]
 struct Sink {
     lines: Vec<Vec<u8>>,
@@ -38,13 +38,13 @@ struct Sink {
 }
 
 impl Sink {
-    /// `OutputRedirector::write`: the pending tail is a line of its own.
+    /// Writes a line: the pending tail is a line of its own.
     fn write(&mut self, line: &[u8]) {
         self.flush();
         self.lines.push(line.to_vec());
     }
 
-    /// `OutputRedirector::flushBuffer`, which drops one trailing `\r`.
+    /// Ends the pending tail as a line, which drops one trailing `\r`.
     fn flush(&mut self) {
         if let Some(pending) = self.pending.take() {
             let line = pending.strip_suffix(b"\r").unwrap_or(&pending);
@@ -52,7 +52,7 @@ impl Sink {
         }
     }
 
-    /// `OutputRedirector::writeBuffer`: `\n` and `\r\n` end a line, a `\r\n`
+    /// Writes a buffer: `\n` and `\r\n` end a line, a `\r\n`
     /// split across two buffers included, and the tail waits for the next
     /// buffer or the end.
     fn write_buffer(&mut self, mut data: &[u8]) {
@@ -94,7 +94,7 @@ impl Sink {
     }
 }
 
-/// `OutputRedirector::scanLine`: where the first line of `data` ends and the
+/// Where the first line of `data` ends and the
 /// next begins, or `None` where no line ends in it. A `\r` that is the last
 /// byte decides nothing yet.
 fn scan_line(data: &[u8]) -> Option<(usize, usize)> {
@@ -221,7 +221,7 @@ impl Redirector {
     }
 
     /// The output lines and the error lines, each stream's pending tail a
-    /// line of its own (`CommandIOContext::cleanup`). Under
+    /// line of its own. Under
     /// [`Redirector::same_target`] every line is output.
     #[must_use]
     pub fn finish(self) -> (Vec<Vec<u8>>, Vec<Vec<u8>>) {

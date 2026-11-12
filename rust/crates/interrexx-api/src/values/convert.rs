@@ -6,7 +6,7 @@ use interrexx_core::ObjRef;
 
 use super::{Class, Conversion, Failure, MAX_WHOLENUMBER, RESULT_DIGITS, Value, pointer_string};
 
-/// `REXX_VALUE_ARGLIST` (`NativeActivation.cpp:306`).
+/// `REXX_VALUE_ARGLIST`.
 pub(super) fn arglist_to_native(
     cx: &mut Conversion<'_>,
     _argument: ObjRef,
@@ -16,7 +16,7 @@ pub(super) fn arglist_to_native(
     Ok(Value::Object(cx.host.register_local(arguments)))
 }
 
-/// `REXX_VALUE_NAME` (`NativeActivation.cpp:317`).
+/// `REXX_VALUE_NAME`.
 pub(super) fn name_to_native(
     cx: &mut Conversion<'_>,
     _argument: ObjRef,
@@ -26,7 +26,7 @@ pub(super) fn name_to_native(
     Ok(Value::CString(cx.c_string_name(&name)))
 }
 
-/// `REXX_VALUE_SCOPE` (`NativeActivation.cpp:266`).
+/// `REXX_VALUE_SCOPE`.
 pub(super) fn scope_to_native(
     cx: &mut Conversion<'_>,
     _argument: ObjRef,
@@ -39,7 +39,7 @@ pub(super) fn scope_to_native(
     Ok(Value::Object(cx.host.register_local(scope)))
 }
 
-/// `REXX_VALUE_CSELF` (`NativeActivation.cpp:294`).
+/// `REXX_VALUE_CSELF`.
 pub(super) fn cself_to_native(
     cx: &mut Conversion<'_>,
     _argument: ObjRef,
@@ -53,7 +53,7 @@ pub(super) fn cself_to_native(
     ))
 }
 
-/// `REXX_VALUE_OSELF` (`NativeActivation.cpp:251`).
+/// `REXX_VALUE_OSELF`.
 pub(super) fn oself_to_native(
     cx: &mut Conversion<'_>,
     _argument: ObjRef,
@@ -66,7 +66,7 @@ pub(super) fn oself_to_native(
     Ok(Value::Object(cx.host.register_local(receiver)))
 }
 
-/// `REXX_VALUE_SUPER` (`NativeActivation.cpp:281`).
+/// `REXX_VALUE_SUPER`.
 pub(super) fn super_to_native(
     cx: &mut Conversion<'_>,
     _argument: ObjRef,
@@ -79,7 +79,7 @@ pub(super) fn super_to_native(
     Ok(Value::Object(cx.host.register_local(scope)))
 }
 
-/// `REXX_VALUE_RexxObjectPtr` (`NativeActivation.cpp:335`).
+/// `REXX_VALUE_RexxObjectPtr`.
 pub(super) fn object_to_native(
     cx: &mut Conversion<'_>,
     argument: ObjRef,
@@ -88,8 +88,7 @@ pub(super) fn object_to_native(
     Ok(Value::Object(cx.host.register_local(argument)))
 }
 
-/// A row `signedIntegerValue(argument, position, max, min)` converts
-/// (`NativeActivation.cpp:1901`), answering the value as the C type `T`.
+/// A row converting a signed integer within `min..=max`, answering the value as the C type `T`.
 fn signed<T: TryFrom<i64>>(
     cx: &mut Conversion<'_>,
     argument: ObjRef,
@@ -109,8 +108,7 @@ fn signed<T: TryFrom<i64>>(
         })
 }
 
-/// A row `unsignedIntegerValue(argument, position, max)` converts
-/// (`NativeActivation.cpp:1966`), answering the value as the C type `T`.
+/// A row converting an unsigned integer up to `max`, answering the value as the C type `T`.
 fn unsigned<T: TryFrom<u64>>(
     cx: &mut Conversion<'_>,
     argument: ObjRef,
@@ -129,7 +127,7 @@ fn unsigned<T: TryFrom<u64>>(
         })
 }
 
-/// `REXX_VALUE_int` (`NativeActivation.cpp:341`).
+/// `REXX_VALUE_int`.
 pub(super) fn int_to_native(
     cx: &mut Conversion<'_>,
     argument: ObjRef,
@@ -139,7 +137,7 @@ pub(super) fn int_to_native(
     signed(cx, argument, position, min, max).map(Value::Int)
 }
 
-/// `REXX_VALUE_int8_t` (`NativeActivation.cpp:348`).
+/// `REXX_VALUE_int8_t`.
 pub(super) fn int8_to_native(
     cx: &mut Conversion<'_>,
     argument: ObjRef,
@@ -149,7 +147,7 @@ pub(super) fn int8_to_native(
     signed(cx, argument, position, min, max).map(Value::Int8)
 }
 
-/// `REXX_VALUE_int16_t` (`NativeActivation.cpp:354`).
+/// `REXX_VALUE_int16_t`.
 pub(super) fn int16_to_native(
     cx: &mut Conversion<'_>,
     argument: ObjRef,
@@ -159,7 +157,7 @@ pub(super) fn int16_to_native(
     signed(cx, argument, position, min, max).map(Value::Int16)
 }
 
-/// `REXX_VALUE_int32_t` (`NativeActivation.cpp:360`).
+/// `REXX_VALUE_int32_t`.
 pub(super) fn int32_to_native(
     cx: &mut Conversion<'_>,
     argument: ObjRef,
@@ -169,8 +167,8 @@ pub(super) fn int32_to_native(
     signed(cx, argument, position, min, max).map(Value::Int32)
 }
 
-/// `REXX_VALUE_int64_t` (`NativeActivation.cpp:366`), whose `int64Value`
-/// converts at the same twenty digits as `signedIntegerValue`.
+/// `REXX_VALUE_int64_t`, which converts at the same twenty digits as the
+/// other signed integer rows.
 pub(super) fn int64_to_native(
     cx: &mut Conversion<'_>,
     argument: ObjRef,
@@ -179,8 +177,7 @@ pub(super) fn int64_to_native(
     signed(cx, argument, position, i64::MIN, i64::MAX).map(Value::Int64)
 }
 
-/// `REXX_VALUE_ssize_t` and `REXX_VALUE_intptr_t` (`NativeActivation.cpp:372`,
-/// `:378`), both the whole range of a pointer-sized signed integer.
+/// `REXX_VALUE_ssize_t` and `REXX_VALUE_intptr_t`, both the whole range of a pointer-sized signed integer.
 pub(super) fn signed_word_to_native(
     cx: &mut Conversion<'_>,
     argument: ObjRef,
@@ -189,7 +186,7 @@ pub(super) fn signed_word_to_native(
     signed(cx, argument, position, i64::MIN, i64::MAX).map(Value::Isize)
 }
 
-/// `REXX_VALUE_wholenumber_t` (`NativeActivation.cpp:427`).
+/// `REXX_VALUE_wholenumber_t`.
 pub(super) fn whole_number_to_native(
     cx: &mut Conversion<'_>,
     argument: ObjRef,
@@ -198,7 +195,7 @@ pub(super) fn whole_number_to_native(
     signed(cx, argument, position, -MAX_WHOLENUMBER, MAX_WHOLENUMBER).map(Value::Isize)
 }
 
-/// `REXX_VALUE_uint8_t` (`NativeActivation.cpp:384`).
+/// `REXX_VALUE_uint8_t`.
 pub(super) fn uint8_to_native(
     cx: &mut Conversion<'_>,
     argument: ObjRef,
@@ -207,7 +204,7 @@ pub(super) fn uint8_to_native(
     unsigned(cx, argument, position, u64::from(u8::MAX)).map(Value::Uint8)
 }
 
-/// `REXX_VALUE_uint16_t` (`NativeActivation.cpp:390`).
+/// `REXX_VALUE_uint16_t`.
 pub(super) fn uint16_to_native(
     cx: &mut Conversion<'_>,
     argument: ObjRef,
@@ -216,7 +213,7 @@ pub(super) fn uint16_to_native(
     unsigned(cx, argument, position, u64::from(u16::MAX)).map(Value::Uint16)
 }
 
-/// `REXX_VALUE_uint32_t` (`NativeActivation.cpp:396`).
+/// `REXX_VALUE_uint32_t`.
 pub(super) fn uint32_to_native(
     cx: &mut Conversion<'_>,
     argument: ObjRef,
@@ -225,9 +222,8 @@ pub(super) fn uint32_to_native(
     unsigned(cx, argument, position, u64::from(u32::MAX)).map(Value::Uint32)
 }
 
-/// `REXX_VALUE_uint64_t` (`NativeActivation.cpp:402`), whose
-/// `unsignedInt64Value` converts at the same twenty digits as
-/// `unsignedIntegerValue`.
+/// `REXX_VALUE_uint64_t`, which converts at the same twenty digits as the
+/// other unsigned integer rows.
 pub(super) fn uint64_to_native(
     cx: &mut Conversion<'_>,
     argument: ObjRef,
@@ -236,8 +232,7 @@ pub(super) fn uint64_to_native(
     unsigned(cx, argument, position, u64::MAX).map(Value::Uint64)
 }
 
-/// `REXX_VALUE_size_t` and `REXX_VALUE_uintptr_t` (`NativeActivation.cpp:408`,
-/// `:414`), both the whole range of a pointer-sized unsigned integer.
+/// `REXX_VALUE_size_t` and `REXX_VALUE_uintptr_t`, both the whole range of a pointer-sized unsigned integer.
 pub(super) fn unsigned_word_to_native(
     cx: &mut Conversion<'_>,
     argument: ObjRef,
@@ -246,7 +241,7 @@ pub(super) fn unsigned_word_to_native(
     unsigned(cx, argument, position, u64::MAX).map(Value::Usize)
 }
 
-/// `REXX_VALUE_stringsize_t` (`NativeActivation.cpp:448`).
+/// `REXX_VALUE_stringsize_t`.
 pub(super) fn string_size_to_native(
     cx: &mut Conversion<'_>,
     argument: ObjRef,
@@ -256,7 +251,7 @@ pub(super) fn string_size_to_native(
     unsigned(cx, argument, position, max).map(Value::Usize)
 }
 
-/// `REXX_VALUE_positive_wholenumber_t` (`NativeActivation.cpp:434`).
+/// `REXX_VALUE_positive_wholenumber_t`.
 pub(super) fn positive_whole_number_to_native(
     cx: &mut Conversion<'_>,
     argument: ObjRef,
@@ -270,7 +265,7 @@ pub(super) fn positive_whole_number_to_native(
         .ok_or(Failure::NotPositive { position, argument })
 }
 
-/// `REXX_VALUE_nonnegative_wholenumber_t` (`NativeActivation.cpp:441`).
+/// `REXX_VALUE_nonnegative_wholenumber_t`.
 pub(super) fn nonnegative_whole_number_to_native(
     cx: &mut Conversion<'_>,
     argument: ObjRef,
@@ -284,7 +279,7 @@ pub(super) fn nonnegative_whole_number_to_native(
         .ok_or(Failure::NotNonnegative { position, argument })
 }
 
-/// `REXX_VALUE_logical_t` (`NativeActivation.cpp:420`).
+/// `REXX_VALUE_logical_t`.
 pub(super) fn logical_to_native(
     cx: &mut Conversion<'_>,
     argument: ObjRef,
@@ -296,7 +291,7 @@ pub(super) fn logical_to_native(
     }
 }
 
-/// `REXX_VALUE_double` (`NativeActivation.cpp:454`).
+/// `REXX_VALUE_double`.
 pub(super) fn double_to_native(
     cx: &mut Conversion<'_>,
     argument: ObjRef,
@@ -308,7 +303,7 @@ pub(super) fn double_to_native(
         .ok_or(Failure::InvalidDouble { position, argument })
 }
 
-/// `REXX_VALUE_float` (`NativeActivation.cpp:461`).
+/// `REXX_VALUE_float`.
 pub(super) fn float_to_native(
     cx: &mut Conversion<'_>,
     argument: ObjRef,
@@ -325,7 +320,7 @@ pub(super) fn float_to_native(
         .ok_or(Failure::InvalidDouble { position, argument })
 }
 
-/// `REXX_VALUE_CSTRING` (`NativeActivation.cpp:467`).
+/// `REXX_VALUE_CSTRING`.
 pub(super) fn cstring_to_native(
     cx: &mut Conversion<'_>,
     argument: ObjRef,
@@ -343,7 +338,7 @@ pub(super) fn cstring_to_native(
     Ok(Value::CString(cx.c_string_for(string, &bytes)))
 }
 
-/// `REXX_VALUE_RexxStringObject` (`NativeActivation.cpp:473`).
+/// `REXX_VALUE_RexxStringObject`.
 pub(super) fn string_object_to_native(
     cx: &mut Conversion<'_>,
     argument: ObjRef,
@@ -359,7 +354,7 @@ pub(super) fn string_object_to_native(
     Ok(Value::Object(cx.host.register_local(string)))
 }
 
-/// `REXX_VALUE_RexxArrayObject` (`NativeActivation.cpp:488`).
+/// `REXX_VALUE_RexxArrayObject`.
 pub(super) fn array_to_native(
     cx: &mut Conversion<'_>,
     argument: ObjRef,
@@ -372,7 +367,7 @@ pub(super) fn array_to_native(
     Ok(Value::Object(cx.host.register_local(array)))
 }
 
-/// `REXX_VALUE_RexxStemObject` (`NativeActivation.cpp:502`): a stem, or in a
+/// `REXX_VALUE_RexxStemObject`: a stem, or in a
 /// call the name of the caller's.
 pub(super) fn stem_to_native(
     cx: &mut Conversion<'_>,
@@ -404,7 +399,7 @@ fn instance(
     Ok(Value::Object(cx.host.register_local(argument)))
 }
 
-/// `REXX_VALUE_RexxClassObject` (`NativeActivation.cpp:549`).
+/// `REXX_VALUE_RexxClassObject`.
 pub(super) fn class_to_native(
     cx: &mut Conversion<'_>,
     argument: ObjRef,
@@ -413,7 +408,7 @@ pub(super) fn class_to_native(
     instance(cx, argument, position, Class::Class)
 }
 
-/// `REXX_VALUE_RexxMutableBufferObject` (`NativeActivation.cpp:577`).
+/// `REXX_VALUE_RexxMutableBufferObject`.
 pub(super) fn mutable_buffer_to_native(
     cx: &mut Conversion<'_>,
     argument: ObjRef,
@@ -422,7 +417,7 @@ pub(super) fn mutable_buffer_to_native(
     instance(cx, argument, position, Class::MutableBuffer)
 }
 
-/// `REXX_VALUE_RexxVariableReferenceObject` (`NativeActivation.cpp:588`).
+/// `REXX_VALUE_RexxVariableReferenceObject`.
 pub(super) fn variable_reference_to_native(
     cx: &mut Conversion<'_>,
     argument: ObjRef,
@@ -431,7 +426,7 @@ pub(super) fn variable_reference_to_native(
     instance(cx, argument, position, Class::VariableReference)
 }
 
-/// `REXX_VALUE_POINTER` (`NativeActivation.cpp:560`).
+/// `REXX_VALUE_POINTER`.
 pub(super) fn pointer_to_native(
     cx: &mut Conversion<'_>,
     argument: ObjRef,
@@ -446,7 +441,7 @@ pub(super) fn pointer_to_native(
         })
 }
 
-/// `REXX_VALUE_POINTERSTRING` (`NativeActivation.cpp:571`).
+/// `REXX_VALUE_POINTERSTRING`.
 pub(super) fn pointer_string_to_native(
     cx: &mut Conversion<'_>,
     argument: ObjRef,
@@ -458,7 +453,7 @@ pub(super) fn pointer_string_to_native(
         .ok_or(Failure::NotPointerString { position, argument })
 }
 
-/// `valueToObject` for the object codes (`NativeActivation.cpp:722`).
+/// The object an object code becomes.
 pub(super) fn object_from_native(
     cx: &mut Conversion<'_>,
     value: Value,
@@ -475,7 +470,7 @@ pub(super) fn object_from_native(
         .ok_or(Failure::StaleHandle)
 }
 
-/// `valueToObject` for `REXX_VALUE_POINTER` (`NativeActivation.cpp:839`),
+/// The object a `REXX_VALUE_POINTER` value becomes,
 /// which wraps the address in a `.Pointer` and does not register it: the
 /// answer is the call's result, which the caller roots.
 pub(super) fn pointer_from_native(
@@ -488,7 +483,7 @@ pub(super) fn pointer_from_native(
     Ok(Some(cx.host.new_pointer(address)))
 }
 
-/// `valueToObject` for `REXX_VALUE_POINTERSTRING` (`NativeActivation.cpp:842`).
+/// The object a `REXX_VALUE_POINTERSTRING` value becomes.
 pub(super) fn pointer_string_from_native(
     cx: &mut Conversion<'_>,
     value: Value,
@@ -502,7 +497,7 @@ pub(super) fn pointer_string_from_native(
     ))
 }
 
-/// `valueToObject` for `REXX_VALUE_int` (`NativeActivation.cpp:733`), built
+/// The object a `REXX_VALUE_int` value becomes, built
 /// here rather than through the host: a `c_int` is a tagged value, and asking
 /// the host for it would add an allocation point the call does not have.
 ///
@@ -520,7 +515,7 @@ pub(super) fn int_from_native(
     ))
 }
 
-/// `valueToObject` for `REXX_VALUE_int8_t` (`NativeActivation.cpp:738`).
+/// The object a `REXX_VALUE_int8_t` value becomes.
 pub(super) fn int8_from_native(
     cx: &mut Conversion<'_>,
     value: Value,
@@ -531,7 +526,7 @@ pub(super) fn int8_from_native(
     Ok(Some(cx.host.whole_number(isize::from(number))))
 }
 
-/// `valueToObject` for `REXX_VALUE_int16_t` (`NativeActivation.cpp:743`).
+/// The object a `REXX_VALUE_int16_t` value becomes.
 pub(super) fn int16_from_native(
     cx: &mut Conversion<'_>,
     value: Value,
@@ -542,7 +537,7 @@ pub(super) fn int16_from_native(
     Ok(Some(cx.host.whole_number(isize::from(number))))
 }
 
-/// `valueToObject` for `REXX_VALUE_int32_t` (`NativeActivation.cpp:748`).
+/// The object a `REXX_VALUE_int32_t` value becomes.
 pub(super) fn int32_from_native(
     cx: &mut Conversion<'_>,
     value: Value,
@@ -554,9 +549,8 @@ pub(super) fn int32_from_native(
     Ok(Some(cx.host.whole_number(number)))
 }
 
-/// `valueToObject` for `REXX_VALUE_int64_t` (`NativeActivation.cpp:753`),
-/// whose `int64ToObject` answers what `wholenumberToObject` does for a
-/// pointer-sized value.
+/// The object a `REXX_VALUE_int64_t` value becomes: what a pointer-sized
+/// value becomes.
 pub(super) fn int64_from_native(
     cx: &mut Conversion<'_>,
     value: Value,
@@ -568,8 +562,7 @@ pub(super) fn int64_from_native(
     Ok(Some(cx.host.whole_number(number)))
 }
 
-/// `valueToObject` for the pointer-sized signed codes, `wholenumberToObject`
-/// (`NativeActivation.cpp:758`, `:798`, `:803-805`).
+/// The object a pointer-sized signed code becomes.
 pub(super) fn isize_from_native(
     cx: &mut Conversion<'_>,
     value: Value,
@@ -580,7 +573,7 @@ pub(super) fn isize_from_native(
     Ok(Some(cx.host.whole_number(number)))
 }
 
-/// `valueToObject` for `REXX_VALUE_uint8_t` (`NativeActivation.cpp:763`).
+/// The object a `REXX_VALUE_uint8_t` value becomes.
 pub(super) fn uint8_from_native(
     cx: &mut Conversion<'_>,
     value: Value,
@@ -591,7 +584,7 @@ pub(super) fn uint8_from_native(
     Ok(Some(cx.host.unsigned_number(u64::from(number))))
 }
 
-/// `valueToObject` for `REXX_VALUE_uint16_t` (`NativeActivation.cpp:768`).
+/// The object a `REXX_VALUE_uint16_t` value becomes.
 pub(super) fn uint16_from_native(
     cx: &mut Conversion<'_>,
     value: Value,
@@ -602,7 +595,7 @@ pub(super) fn uint16_from_native(
     Ok(Some(cx.host.unsigned_number(u64::from(number))))
 }
 
-/// `valueToObject` for `REXX_VALUE_uint32_t` (`NativeActivation.cpp:773`).
+/// The object a `REXX_VALUE_uint32_t` value becomes.
 pub(super) fn uint32_from_native(
     cx: &mut Conversion<'_>,
     value: Value,
@@ -613,7 +606,7 @@ pub(super) fn uint32_from_native(
     Ok(Some(cx.host.unsigned_number(u64::from(number))))
 }
 
-/// `valueToObject` for `REXX_VALUE_uint64_t` (`NativeActivation.cpp:778`).
+/// The object a `REXX_VALUE_uint64_t` value becomes.
 pub(super) fn uint64_from_native(
     cx: &mut Conversion<'_>,
     value: Value,
@@ -624,8 +617,7 @@ pub(super) fn uint64_from_native(
     Ok(Some(cx.host.unsigned_number(number)))
 }
 
-/// `valueToObject` for the pointer-sized unsigned codes, `stringsizeToObject`
-/// (`NativeActivation.cpp:783`, `:793`, `:810`).
+/// The object a pointer-sized unsigned code becomes.
 pub(super) fn usize_from_native(
     cx: &mut Conversion<'_>,
     value: Value,
@@ -637,7 +629,7 @@ pub(super) fn usize_from_native(
     Ok(Some(cx.host.unsigned_number(number)))
 }
 
-/// `valueToObject` for `REXX_VALUE_logical_t` (`NativeActivation.cpp:788`):
+/// The object a `REXX_VALUE_logical_t` value becomes:
 /// any value but zero is true.
 pub(super) fn logical_from_native(
     cx: &mut Conversion<'_>,
@@ -649,7 +641,7 @@ pub(super) fn logical_from_native(
     Ok(Some(cx.host.whole_number(isize::from(number != 0))))
 }
 
-/// `valueToObject` for `REXX_VALUE_double` (`NativeActivation.cpp:815`).
+/// The object a `REXX_VALUE_double` value becomes.
 pub(super) fn double_from_native(
     cx: &mut Conversion<'_>,
     value: Value,
@@ -660,7 +652,7 @@ pub(super) fn double_from_native(
     Ok(Some(cx.host.double_object(number, RESULT_DIGITS)))
 }
 
-/// `valueToObject` for `REXX_VALUE_float` (`NativeActivation.cpp:820`), which
+/// The object a `REXX_VALUE_float` value becomes, which
 /// widens to a `double`.
 pub(super) fn float_from_native(
     cx: &mut Conversion<'_>,
@@ -674,7 +666,7 @@ pub(super) fn float_from_native(
     ))
 }
 
-/// `valueToObject` for `REXX_VALUE_CSTRING` (`NativeActivation.cpp:825`): no
+/// The object a `REXX_VALUE_CSTRING` value becomes: no
 /// object for a null pointer, and a string of the bytes before the first NUL
 /// otherwise.
 pub(super) fn cstring_from_native(

@@ -1,8 +1,7 @@
 //! The conversion table an extension's declared signature drives.
 //!
-//! `NativeActivation::processArguments` (`interpreter/execution/NativeActivation.cpp:219`)
-//! is the reference for the Rexx-to-C direction and `valueToObject` (`:718`)
-//! for the way back.
+//! The oracle's conversions are the reference, in both directions: Rexx to C
+//! for an argument, and C to Rexx for a result.
 
 use std::borrow::Cow;
 use std::cell::{Cell, RefCell, RefMut};
@@ -30,30 +29,30 @@ use convert::{
     usize_from_native, variable_reference_to_native, whole_number_to_native,
 };
 
-/// `REXX_ARGUMENT_TERMINATOR` (`api/oorexxapi.h:54`).
+/// `REXX_ARGUMENT_TERMINATOR`.
 pub const ARGUMENT_TERMINATOR: u16 = 0;
 
-/// `REXX_OPTIONAL_ARGUMENT` (`api/oorexxapi.h:100`).
+/// `REXX_OPTIONAL_ARGUMENT`.
 pub const OPTIONAL_ARGUMENT: u16 = 0x8000;
 
-/// `ARGUMENT_EXISTS` (`api/oorexxapi.h:278`).
+/// `ARGUMENT_EXISTS`.
 pub const ARGUMENT_EXISTS: u16 = 0x01;
 
-/// `SPECIAL_ARGUMENT` (`api/oorexxapi.h:280`).
+/// `SPECIAL_ARGUMENT`.
 pub const SPECIAL_ARGUMENT: u16 = 0x02;
 
-/// `ARGUMENT_TYPE` (`api/oorexxapi.h:4272`): a signature word without its
+/// `ARGUMENT_TYPE`: a signature word without its
 /// optional bit.
 pub const fn argument_type(declared: u16) -> u16 {
     declared & !OPTIONAL_ARGUMENT
 }
 
-/// `IS_OPTIONAL_ARGUMENT` (`api/oorexxapi.h:4273`).
+/// `IS_OPTIONAL_ARGUMENT`.
 pub const fn is_optional(declared: u16) -> bool {
     declared & OPTIONAL_ARGUMENT != 0
 }
 
-/// The `REXX_VALUE_*` codes (`api/oorexxapi.h:55-98`).
+/// The `REXX_VALUE_*` codes.
 ///
 /// A `REXX_VALUE_OPTIONAL_*` name in the header is one of these with
 /// [`OPTIONAL_ARGUMENT`] set, not a code of its own, so the table is keyed on
@@ -108,9 +107,8 @@ pub enum Failure {
     /// know, or a special argument asked for outside a method.
     Signature,
     /// The declared return type cannot be converted back: a code the table
-    /// does not know, one `valueToObject` refuses, or a `Value` that does not
-    /// match it. The oracle raises
-    /// this once the extension has run (`NativeActivation.cpp:1301-1310`).
+    /// does not know, one the oracle refuses, or a `Value` that does not
+    /// match it. The oracle raises this once the extension has run.
     ResultSignature,
     /// The extension reached an interface member this crate has not written,
     /// named `Table.Member`; the member recorded itself and returned.
@@ -224,10 +222,10 @@ impl Class {
     }
 }
 
-/// `Numerics::MAX_WHOLENUMBER` (`interpreter/runtime/Numerics.hpp:86`).
+/// The largest whole number.
 pub const MAX_WHOLENUMBER: i64 = 999_999_999_999_999_999;
 
-/// `Numerics::DEFAULT_DIGITS`, the precision a `double` or `float` result is
+/// The precision a `double` or `float` result is
 /// rendered at whatever `NUMERIC DIGITS` is in force: measured, oracle,
 /// `TestDoubleArg('0.6666666666666666')` is `0.666666667` under `NUMERIC
 /// DIGITS 5` and under `20`.
@@ -314,8 +312,8 @@ pub enum Value {
 
 impl Value {
     /// The union with this value's member written over a zeroed word, which
-    /// is how `processArguments` fills the result descriptor
-    /// (`NativeActivation.cpp:229`), so every member reads initialised bytes.
+    /// is how the result descriptor is filled,
+    /// so every member reads initialised bytes.
     ///
     /// An omitted argument is the zero word itself: the C++ writes
     /// `value_int64_t = 0` for the integer and pointer types and `0.0` for
@@ -356,7 +354,7 @@ pub struct Converted {
 ///
 /// `declared` is the signature word the extension published. The optional bit
 /// is stripped here, because what the descriptor carries is the type the
-/// extension reads back (`NativeActivation.cpp:243`, `:246`).
+/// extension reads back.
 pub fn descriptor(declared: u16, converted: Converted) -> ValueDescriptor {
     ValueDescriptor {
         value: converted.value.as_union(),
@@ -404,7 +402,7 @@ impl CStringPool {
     /// [`CStringPool::intern`] keyed on the object the bytes came from, so
     /// that asking twice answers one address.
     ///
-    /// `StringData` (`interpreter/api/ThreadContextStubs.cpp:1068`) hands out
+    /// `StringData` hands out
     /// an interior pointer to a non-moving object, so the oracle answers the
     /// same address for the same object however often it is asked. `object`
     /// is what makes that hold here; the bytes are read again only when the
@@ -495,8 +493,7 @@ pub trait Host {
     fn is_method(&self) -> bool;
 
     /// `object` forced to a string object, or `None` if it has no string
-    /// value. `RexxInternalObject::requiredString`
-    /// (`interpreter/classes/ObjectClass.cpp:1341`) is the reference, so a
+    /// value. A
     /// non-primitive receiver is sent `REQUEST("STRING")` and answering
     /// `.nil` is the `None` here.
     ///
@@ -510,58 +507,50 @@ pub trait Host {
     fn string_bytes(&self, object: ObjRef) -> Option<Cow<'_, [u8]>>;
 
     /// The `CSELF` object variable's pointer, `None` when the receiver has
-    /// none. `NativeActivation::cself` (`:2091`) is the reference: it takes
-    /// the guard lock through `methodVariables` and unwraps the `.Pointer`
+    /// none. It takes
+    /// the guard lock and unwraps the `.Pointer`
     /// the variable holds.
     fn cself(&mut self) -> Option<POINTER>;
 
-    /// The constant objects `Activity::initializeThreadContext`
-    /// (`interpreter/concurrency/Activity.cpp:1846-1849`) patches into the
-    /// thread table once they exist.
+    /// The constant objects the interpreter patches into the thread table once
+    /// they exist.
     fn constants(&mut self) -> Constants<ObjRef>;
 
     /// Binds `name` in the running method's own scope pool, or returns it to
     /// the uninitialised state for a `value` of `None`.
     ///
-    /// `name` is the extension's own spelling: `getVariableRetriever`
-    /// (`interpreter/execution/VariableDictionary.cpp:738`) upper-cases it
+    /// `name` is the extension's own spelling: the interpreter
+    /// upper-cases it
     /// and refuses one that is not a variable name, and both belong to the
     /// interpreter rather than to the boundary. The scope is the method's,
-    /// not the receiver's class (`NativeActivation.cpp:1878`) -- measured
+    /// not the receiver's class -- measured
     /// against the oracle, a subclass method's `expose CSELF`
     /// reads an unset variable where the defining class's reads the pointer.
     fn set_object_variable(&mut self, name: &[u8], value: Option<ObjRef>);
 
     /// [`Host::set_object_variable`]'s scope and name rules, applied to
-    /// `NativeActivation::dropObjectVariable` (`:3071`).
+    /// dropping the variable.
     fn drop_object_variable(&mut self, name: &[u8]);
 
-    /// `Numerics::wholenumberToObject` (`interpreter/runtime/Numerics.cpp:184`).
     fn whole_number(&mut self, value: isize) -> ObjRef;
 
-    /// A `.Pointer` wrapping `value`, which is `new_pointer`
-    /// (`interpreter/classes/PointerClass.hpp:81`).
+    /// A `.Pointer` wrapping `value`, which is `new_pointer`.
     fn new_pointer(&mut self, value: POINTER) -> ObjRef;
 
     /// The `NUMERIC` settings of the Rexx activation that made the call,
-    /// which `NativeActivation::digits`, `fuzz` and `form` answer
-    /// (`interpreter/execution/NativeActivation.cpp:2146-2198`).
+    /// which the `DIGITS`, `FUZZ` and `FORM` members answer.
     fn numeric(&self) -> Numeric;
 
     /// `object`'s value as a C `double`, or `None` where it has none:
-    /// `RexxInternalObject::doubleValue` (`interpreter/classes/ObjectClass.cpp:1101`)
-    /// converts the string `requestString` answers, which is a Rexx number or
-    /// one of `nan`, `+infinity` and `-infinity` spelled exactly
-    /// (`interpreter/classes/StringClass.cpp:510`).
+    /// The conversion is of the object's string value, which is a Rexx number or
+    /// one of `nan`, `+infinity` and `-infinity` spelled exactly.
     ///
     /// # Errors
     /// [`Raised`] where the string conversion raised a condition.
     fn double_value(&mut self, object: ObjRef) -> Result<Option<f64>, Raised>;
 
     /// `object` as a whole number from `min` to `max`, or `None` where it is
-    /// not one: `Numerics::objectToSignedInteger`
-    /// (`interpreter/runtime/Numerics.cpp:272`), whose string limb is
-    /// `NumberString::int64Value` at `Numerics::SIZE_DIGITS`.
+    /// not one. A string is converted at the oracle's whole-number digits.
     ///
     /// # Errors
     /// [`Raised`] where the string conversion raised a condition.
@@ -569,23 +558,22 @@ pub trait Host {
     -> Result<Option<i64>, Raised>;
 
     /// `object` as a whole number from zero to `max`, or `None` where it is
-    /// not one: `Numerics::objectToUnsignedInteger` (`:364`).
+    /// not one.
     ///
     /// # Errors
     /// [`Raised`] where the string conversion raised a condition.
     fn unsigned_integer(&mut self, object: ObjRef, max: u64) -> Result<Option<u64>, Raised>;
 
     /// `object`'s truth value, or where it has none the object that was tested:
-    /// `truthValue` (`interpreter/classes/StringClass.cpp:1475`), which tests
-    /// the string the conversion answered and reports that string.
+    /// the test is of the string the conversion answered, and reports that
+    /// string.
     ///
     /// # Errors
     /// [`Raised`] where the string conversion raised a condition.
     fn logical(&mut self, object: ObjRef) -> Result<Result<bool, ObjRef>, Raised>;
 
     /// `object` as a single-dimensional array, or `None` where it has none:
-    /// `requestArray` and the dimension check `arrayArgument` makes
-    /// (`interpreter/runtime/MethodArguments.hpp:675`).
+    /// the request for an array, and then the dimension check.
     ///
     /// # Errors
     /// [`Raised`] where the conversion raised a condition.
@@ -596,8 +584,7 @@ pub trait Host {
 
     /// The stem the calling Rexx activation holds under the name `object`'s
     /// string value spells, a period added where it has none, or `None` where
-    /// that is not a stem's name: `NativeActivation::getContextStem`
-    /// (`interpreter/execution/NativeActivation.cpp:2835`).
+    /// that is not a stem's name.
     ///
     /// # Errors
     /// [`Raised`] where the string conversion raised a condition.
@@ -616,32 +603,28 @@ pub trait Host {
     /// The running method's receiver.
     fn receiver(&mut self) -> ObjRef;
 
-    /// The running method's scope (`NativeActivation::getScope`, `:2791`).
+    /// The running method's scope.
     fn scope(&mut self) -> ObjRef;
 
     /// The scope above the running method's in its receiver, `.nil` above the
-    /// topmost (`NativeActivation::getSuper`, `:2781`).
+    /// topmost.
     fn super_scope(&mut self) -> ObjRef;
 
     /// The running call's arguments as an array, an omitted one an empty
-    /// position, and the same array however often the call asks
-    /// (`NativeActivation::getArguments`, `:2745`).
+    /// position, and the same array however often the call asks.
     fn arguments(&mut self) -> ObjRef;
 
     /// The name the running method was sent by, or the running routine was
     /// called by.
     fn message_name(&mut self) -> Vec<u8>;
 
-    /// `Numerics::stringsizeToObject` and `uint64ToObject`
-    /// (`interpreter/runtime/Numerics.cpp:163`, `:205`).
     fn unsigned_number(&mut self, value: u64) -> ObjRef;
 
     /// A string object holding `bytes`.
     fn new_string(&mut self, bytes: &[u8]) -> ObjRef;
 
     /// The number `value` rounded to `precision` digits, which is
-    /// `NumberString::newInstanceFromDouble(value, precision)`
-    /// (`interpreter/classes/NumberStringClass.cpp:4073`).
+    /// A number string of `value` at `precision` digits.
     fn double_object(&mut self, value: f64, precision: usize) -> ObjRef;
 
     /// The local-reference table of the native activation this host is
@@ -650,9 +633,8 @@ pub trait Host {
     ///
     /// The table lives behind the host rather than beside it so that a collection a callback triggers can see
     /// it, and so that an implementation holding the table inside itself
-    /// needs no second mutable borrow of that same object. `NativeActivation`
-    /// both serves the context and owns the save list
-    /// (`interpreter/execution/NativeActivation.hpp:232`).
+    /// needs no second mutable borrow of that same object: the activation
+    /// both serves the context and owns the save list.
     fn locals(&mut self) -> &mut Table;
 
     /// The object `handle` names for the running native call: one of its
@@ -985,16 +967,14 @@ impl<'a> Activation<'a> {
         self.conversion.try_borrow_mut().is_err()
     }
 
-    /// `RaiseException0` (`interpreter/api/ThreadContextStubs.cpp:1863`):
-    /// records the condition and returns, leaving the extension to run on.
-    /// A second raise overwrites the first, as `setConditionInfo`
-    /// (`interpreter/execution/NativeActivation.cpp:2678`) does.
+    /// `RaiseException0` records the condition and returns, leaving the
+    /// extension to run on. A second raise overwrites the first.
     pub fn raise(&self, number: usize) {
         self.pending.set(Some(number));
     }
 
     /// The condition the call has to raise once it returns
-    /// (`NativeActivation::checkConditions`, `:1787`), or `None`: a sticky one ahead of any
+    /// or `None`: a sticky one ahead of any
     /// other.
     pub fn pending(&self) -> Option<usize> {
         self.sticky.get().or(self.pending.get())
@@ -1039,7 +1019,7 @@ impl<'a> Activation<'a> {
     }
 
     /// `WholeNumberToObject`, registered as a local reference the way
-    /// `ApiContext::ret` registers one.
+    /// any returned object is.
     pub fn whole_number(&self, value: isize) -> RexxObjectPtr {
         let mut cx = self.conversion();
         let object = cx.host.whole_number(value);
@@ -1108,10 +1088,9 @@ impl<'a> Activation<'a> {
     }
 }
 
-/// Which member of a `ValueDescriptor`'s union a code's value occupies
-/// (`api/oorexxapi.h:287-364`).
+/// Which member of a `ValueDescriptor`'s union a code's value occupies.
 ///
-/// The header's own `ARGUMENT_TYPE_<name>` defines (`:4196-4239`) are what say
+/// The header's own `ARGUMENT_TYPE_<name>` defines are what say
 /// which member a code uses, and the test derives this mapping from them.
 /// Reading a union is `unsafe` and lives past the boundary in `ffi.rs` (D-U1),
 /// so this is how the table tells that side what to read without a second
@@ -1150,13 +1129,11 @@ pub enum Source {
     /// [`SPECIAL_ARGUMENT`] as well.
     Special,
     /// [`Source::Special`] for the whole argument list, which a call may then
-    /// supply more of than its other rows consume (`usedArglist`,
-    /// `NativeActivation.cpp:680`).
+    /// supply more of than its other rows consume.
     Arguments,
 }
 
-/// What an optional argument nobody supplied writes
-/// (`NativeActivation.cpp:615`).
+/// What an optional argument nobody supplied writes.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Absent {
     Zero,
@@ -1186,7 +1163,7 @@ type FromNative = fn(&mut Conversion<'_>, Value) -> Result<Option<ObjRef>, Failu
 /// How a row's result comes back.
 #[derive(Clone, Copy)]
 enum Back {
-    /// `valueToObject`'s `default:` (`NativeActivation.cpp:855`), which reads
+    /// The oracle's refusal of a code it does not know, which reads
     /// nothing.
     Refused,
     Member(FromNative),
@@ -1484,7 +1461,7 @@ static TABLE: &[Row] = &[
         nonnegative_whole_number_to_native,
         isize_from_native,
     ),
-    // The header marks this one as never optional (`api/oorexxapi.h:98`) and
+    // The header marks this one as never optional and
     // the C++ leaves it out of the absent switch, so an omitted one is a
     // signature error rather than a zero.
     Row {
@@ -1516,9 +1493,8 @@ fn row(code: u16) -> Option<&'static Row> {
 }
 
 /// How a declared result word's value is read, or `None` for a word
-/// `valueToObject` refuses without reading. The word is read as declared,
-/// optional bit included, because `valueToObject` switches on it unstripped
-/// (`NativeActivation.cpp:720`, `:855-858`).
+/// the oracle refuses without reading. The word is read as declared,
+/// optional bit included, because the oracle switches on it unstripped.
 pub fn result_read(declared: u16) -> Option<ResultRead> {
     let row = row(declared)?;
     match row.back {
@@ -1536,8 +1512,8 @@ pub fn source(declared: u16) -> Option<Source> {
 
 /// Whether the code in `declared` takes its value from the argument list.
 ///
-/// A code the table does not know does: it is `processArguments`' `default:`,
-/// which consumes an argument (`NativeActivation.cpp:325-327`, `:672`).
+/// A code the table does not know does: the oracle's fallback for it
+/// consumes an argument.
 pub fn consumes_argument(declared: u16) -> bool {
     row(argument_type(declared)).is_none_or(|row| row.source == Source::Argument)
 }
@@ -1563,8 +1539,7 @@ pub fn to_native(
     // The absent cases are settled before the per-type conversion, as they
     // are in the C++: a missing required argument and an omitted optional one
     // are both answered without entering the type switch, and a code the
-    // table does not know is an argument position like any other until then
-    // (`NativeActivation.cpp:607-612`).
+    // table does not know is an argument position like any other until then.
     let object = match row.map(|row| row.source) {
         Some(Source::Special | Source::Arguments) => ObjRef::NIL,
         Some(Source::Argument) | None => match argument {
@@ -1606,10 +1581,10 @@ pub fn from_native(
     declared: u16,
     value: Value,
 ) -> Result<Option<ObjRef>, Failure> {
-    // `valueToObject` treats a zero type as an omitted value rather than a bad
+    // The oracle treats a zero type as an omitted value rather than a bad
     // one, which is what makes a partly filled argument list convertible. The
     // word is not stripped of its optional bit: the switch reads it as
-    // declared (`NativeActivation.cpp:720`).
+    // declared.
     if declared == ARGUMENT_TERMINATOR {
         return Ok(None);
     }
@@ -1622,8 +1597,7 @@ pub fn from_native(
     }
 }
 
-/// What `sscanf(text, "0x%p", &pointer)` reads
-/// (`NativeActivation::pointerString`, `:2049`), or `None` where it converts
+/// What `sscanf(text, "0x%p", &pointer)` reads, or `None` where it converts
 /// nothing.
 ///
 /// glibc reads `%p` as `%x` does, through `strtoul`: blanks, a sign, an

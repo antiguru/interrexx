@@ -23,8 +23,7 @@ use crate::values::{Activation, Baton, Converted, Host, MAX_WHOLENUMBER, Repr, V
 /// The state that owns the context `context` addresses.
 ///
 /// `context` must be the public struct at the head of an [`Owned`] we handed
-/// out, which is how the C++ recovers the owning activation
-/// (`interpreter/concurrency/Activity.hpp:503`).
+/// out, which is how the C++ recovers the owning activation.
 ///
 /// # Safety
 /// `context` is a pointer to a live `Owned<C, T>` cast to its `context`
@@ -203,15 +202,10 @@ impl<'a> std::ops::DerefMut for HostRef<'a> {
     }
 }
 
-/// The method-context table an extension is handed
-/// (`Activity::methodContextFunctions`,
-/// `interpreter/api/MethodContextStubs.cpp:374`).
-///
+/// The method-context table an extension is handed.
 /// A plain initializer nothing patches, so it lives at one address for the
 /// process; the members this crate has not written still refuse loudly.
-///
 /// A member trusts the context it is handed, so calling one is `unsafe`:
-///
 /// ```compile_fail,E0133
 /// # use interrexx_api::ffi::METHOD_CONTEXT;
 /// # use interrexx_api::layout::RexxMethodContext_;
@@ -253,9 +247,8 @@ pub static METHOD_CONTEXT: MethodContextInterface = {
     table
 };
 
-/// The call-context table a routine's stub is handed
-/// (`Activity::callContextFunctions`,
-/// `interpreter/api/CallContextStubs.cpp:678`), at one address for the process
+/// The call-context table a routine's stub is handed,
+/// at one address for the process
 /// as [`METHOD_CONTEXT`] is.
 pub static CALL_CONTEXT: CallContextInterface = {
     let mut table = CallContextInterface::REFUSING;
@@ -284,9 +277,8 @@ pub static CALL_CONTEXT: CallContextInterface = {
     table
 };
 
-/// The exit-context table a command handler is handed
-/// (`Activity::exitContextFunctions`,
-/// `interpreter/api/CallContextStubs.cpp:708`), at one address for the process
+/// The exit-context table a command handler is handed,
+/// at one address for the process
 /// as [`METHOD_CONTEXT`] is. Its variable members reach the activation that
 /// issued the command, as a call context's reach its caller.
 pub static EXIT_CONTEXT: ExitContextInterface = {
@@ -306,9 +298,8 @@ pub static EXIT_CONTEXT: ExitContextInterface = {
     table
 };
 
-/// The I/O-redirector table a redirecting command handler is handed
-/// (`Activity::ioRedirectorContextFunctions`,
-/// `interpreter/api/CallContextStubs.cpp:729`), at one address for the
+/// The I/O-redirector table a redirecting command handler is handed,
+/// at one address for the
 /// process as [`METHOD_CONTEXT`] is.
 pub static IO_REDIRECTOR: IORedirectorInterface = {
     let mut table = IORedirectorInterface::REFUSING;
@@ -326,9 +317,8 @@ pub static IO_REDIRECTOR: IORedirectorInterface = {
     table
 };
 
-/// The instance table a thread context's `instance` addresses
-/// (`InterpreterInstance::interfaceVector`,
-/// `interpreter/api/InterpreterInstanceStubs.cpp:106`), at one address for the
+/// The instance table a thread context's `instance` addresses,
+/// at one address for the
 /// process as [`METHOD_CONTEXT`] is.
 pub static INSTANCE: RexxInstanceInterface = {
     let mut table = RexxInstanceInterface::REFUSING;
@@ -343,9 +333,8 @@ pub static INSTANCE: RexxInstanceInterface = {
     table
 };
 
-/// The thread table a [`ThreadTable`] starts from
-/// (`Activity::threadContextFunctions`,
-/// `interpreter/api/ThreadContextStubs.cpp:2098`), its data members null until
+/// The thread table a [`ThreadTable`] starts from,
+/// its data members null until
 /// the first [`ThreadContext::enter`] writes them.
 pub const THREAD: RexxThreadInterface = {
     let mut table = RexxThreadInterface::REFUSING;
@@ -585,13 +574,11 @@ impl<'a> RedirectorContext<'a> {
 }
 
 /// The thread context an extension is handed, which it may keep for as long as
-/// the interpreter runs: the oracle's belongs to the activity
-/// (`interpreter/concurrency/ActivationApiContexts.hpp:64-68`), and
-/// `RexxPackageLoader` is handed it (`api/oorexxapi.h:257`).
+/// the interpreter runs: the oracle's belongs to the activity, and
+/// `RexxPackageLoader` is handed it.
 ///
 /// Its callbacks reach the innermost native call in flight, which is what
-/// `contextToActivation` does for a thread context
-/// (`interpreter/concurrency/Activity.hpp:458`). A clone addresses the same
+/// a thread context's callbacks do. A clone addresses the same
 /// context; the allocation lives until the last clone is dropped, unless it
 /// is kept ([`ThreadContext::keep`], `AttachThread`), when it lives for the
 /// rest of the process.
@@ -898,8 +885,8 @@ impl ThreadContext {
     }
 
     /// Retires this context when termination takes its thread, as the
-    /// oracle's termination runs on an instance created for it
-    /// (`runtime/Interpreter.cpp:277-281`): a member called through it from
+    /// oracle's termination runs on an instance created for it:
+    /// a member called through it from
     /// a native call of another context on this thread, with none of its own
     /// in flight, then does nothing and answers its failure value, as the
     /// oracle's stub catches the failure it meets (measured: a routine
@@ -1223,8 +1210,7 @@ impl ContextVariables for RexxExitContext_ {
     const REFERENCE: &'static str = "ExitContextInterface.GetContextVariableReference";
 }
 
-/// `Error_Execution_invalid_thread` (`messages/RexxErrorCodes.h:651`): what
-/// `Activity::validateThread` (`concurrency/Activity.cpp:3620`) raises for a
+/// `Error_Execution_invalid_thread`: what the oracle raises for a
 /// member reached through a context another activity's call was handed.
 const INVALID_THREAD: usize = 98983;
 
@@ -1273,13 +1259,10 @@ impl<'a> std::ops::Deref for Reached<'a> {
 enum Addressed<'a> {
     /// Its own activation, or, while a call nested inside that one holds its
     /// conversion state, the innermost activation of its activity, which is
-    /// the one the oracle's non-blocking members answer for
-    /// (`ApiContext(RexxCallContext *, bool)`,
-    /// `interpreter/api/ContextApi.hpp:135`); with the host frame of the
-    /// context's own call in the second case.
+    /// the one the oracle's non-blocking members answer for, with the
+    /// host frame of the context's own call in the second case.
     Here(Reached<'a>, Option<u64>),
-    /// A context whose activity's call does not run on this thread
-    /// (`Activity::validateThread`, `concurrency/Activity.cpp:3620`): the
+    /// A context whose activity's call does not run on this thread: the
     /// call to be given 98.983, and the host frame of the context's call.
     Elsewhere(Reached<'a>, Option<u64>),
     /// A context reached from a thread running no native call, whose callback
@@ -1361,15 +1344,15 @@ unsafe fn variables_of<'a, C: CallLinked>(context: *mut C) -> Option<(Reached<'a
 
 /// The activation of the innermost native call in flight, reached through a
 /// thread context. Where that call runs elsewhere, the call to be given the
-/// oracle's 98.983 is given it, and the member does nothing (`None`), as
-/// `Activity::validateThread` throws before it runs.
+/// oracle's 98.983 is given it, and the member does nothing (`None`), as the
+/// oracle throws before the member runs.
 ///
 /// # Panics
 /// Where no native call is in flight. The oracle aborts there too: measured,
 /// an extension's destructor calling `WholeNumberToObject` through a thread
 /// context it kept, run once the interpreter has terminated, ends the oracle
-/// at rc 134 with `terminate called after throwing an instance of
-/// 'NativeActivation*'`. The caller is an `extern "C"` frame, so the panic
+/// at rc 134 with a `terminate called after throwing an instance of ...`
+/// abort. The caller is an `extern "C"` frame, so the panic
 /// aborts.
 ///
 /// # Safety
@@ -1565,8 +1548,7 @@ unsafe fn name_of<'a>(name: CSTRING) -> Option<&'a [u8]> {
         return None;
     }
     // SAFETY: the caller guarantees a non-null `name` is a live
-    // NUL-terminated string; the extension's own literal is one
-    // (`extensions/rxregexp/rxregexp.cpp:88`).
+    // NUL-terminated string; the extension's own literal is one.
     Some(unsafe { CStr::from_ptr(name) }.to_bytes())
 }
 
@@ -1645,14 +1627,14 @@ unsafe extern "C" fn new_pointer(
         .cast()
 }
 
-/// `InterpreterVersion` (`interpreter/api/InterpreterInstanceStubs.cpp:79`),
+/// `InterpreterVersion`,
 /// which reads nothing through the instance.
 extern "C" fn interpreter_version(_instance: *mut RexxInstance_) -> usize {
     usize::try_from(crate::load::CURRENT_INTERPRETER_VERSION)
         .expect("the interpreter version is positive")
 }
 
-/// `LanguageLevel` (`interpreter/api/InterpreterInstanceStubs.cpp:84`), which
+/// `LanguageLevel`, which
 /// reads nothing through the instance.
 extern "C" fn language_level(_instance: *mut RexxInstance_) -> usize {
     crate::load::CURRENT_LANGUAGE_LEVEL
@@ -1795,8 +1777,8 @@ unsafe extern "C" fn raise_condition(
 /// boundary (`load::call_stub`) accepts and nothing else carries.
 pub(crate) struct Thrown;
 
-/// Leaves the extension as the oracle's `Throw` stubs do by C++ `throw`
-/// (`interpreter/api/CallContextStubs.cpp:207-213`): the condition is already
+/// Leaves the extension as the oracle's `Throw` stubs do by C++ `throw`:
+/// the condition is already
 /// recorded, and the call answers once the unwind reaches its boundary.
 fn unwind() -> ! {
     std::panic::resume_unwind(Box::new(Thrown))
@@ -2417,8 +2399,7 @@ unsafe extern "C" fn string_get(
     let Some(bytes) = activation.string_bytes(string.cast()) else {
         return 0;
     };
-    // `RexxString::copyData` (`interpreter/classes/StringClass.cpp:599`),
-    // whose start is one-based.
+    // The start is one-based.
     let start = offset.wrapping_sub(1);
     if start >= bytes.len() || buffer.is_null() {
         return 0;
@@ -4389,7 +4370,7 @@ unsafe fn context_of_thread(thread: *mut Thread) -> *mut RexxThreadContext_ {
     unsafe { (&raw mut (*thread).thread).cast() }
 }
 
-/// `AttachThread` (`interpreter/api/InterpreterInstanceStubs.cpp:61`): the
+/// `AttachThread`: the
 /// instance's context, which a thread running a native call of its activity
 /// already has. Any other thread is attached to it, so its callbacks reach
 /// that activity's innermost call, until it detaches: every attached thread
@@ -4426,15 +4407,13 @@ unsafe extern "C" fn attach_thread(
     1
 }
 
-/// `AddCommandEnvironment` (`interpreter/api/InterpreterInstanceStubs.cpp:89-101`):
-/// `handler` becomes the handler of the environment `name`, replacing the one
+/// `AddCommandEnvironment`: `handler` becomes the handler of the environment
+/// `name`, replacing the one
 /// that name had, built-in ones included. A type the header does not define,
 /// a null name or a null handler registers nothing.
-///
 /// # Panics
 /// Called from a thread running no native call of the instance's activity
 /// and attached to none, where no call of that activity is in flight.
-///
 /// # Safety
 /// `instance` is an instance a live [`ThreadContext`] links, a non-null
 /// `name` is NUL-terminated, and a non-null `handler` is a function of the
@@ -4515,7 +4494,7 @@ unsafe fn command_environment(
     added
 }
 
-/// `Terminate` (`interpreter/api/InterpreterInstanceStubs.cpp:52`): ends the
+/// `Terminate`: ends the
 /// instance and returns once it has ended. A thread still attached is not
 /// waited for unless it is inside a callback (measured on the oracle: a
 /// thread attached and idle detaches after `Terminate` has returned). From a thread running a call of its activity, and for an
@@ -4538,7 +4517,7 @@ unsafe extern "C" fn terminate(instance: *mut RexxInstance_) {
     }
 }
 
-/// `Halt` (`interpreter/api/InterpreterInstanceStubs.cpp:67`): every activity
+/// `Halt`: every activity
 /// of the instance is asked to halt, from any thread.
 ///
 /// # Safety
@@ -4558,7 +4537,7 @@ unsafe extern "C" fn halt(instance: *mut RexxInstance_) {
     }
 }
 
-/// `SetTrace` (`interpreter/api/InterpreterInstanceStubs.cpp:73`): external
+/// `SetTrace`: external
 /// tracing of every activity of the instance on or off.
 ///
 /// # Safety
@@ -4580,7 +4559,7 @@ unsafe extern "C" fn set_trace(instance: *mut RexxInstance_, setting: logical_t)
 }
 
 /// The members a redirecting command handler reads and writes its streams
-/// through (`interpreter/api/CallContextStubs.cpp:428-670`).
+/// through.
 mod redirector {
     use super::{Redirector, bytes_of, owner_of};
     use crate::layout::{CSTRING, RexxIORedirectorContext_, logical_t};
@@ -4780,7 +4759,7 @@ unsafe extern "C" fn detach_thread(context: *mut RexxThreadContext_) {
     or_nothing!(unsafe { innermost_activation(context, "DetachThread") });
 }
 
-/// `HaltThread` (`interpreter/api/ThreadContextStubs.cpp:91`): the context's
+/// `HaltThread`: the context's
 /// activity is asked to halt.
 ///
 /// # Safety
@@ -4790,7 +4769,7 @@ unsafe extern "C" fn halt_thread(context: *mut RexxThreadContext_) {
     or_nothing!(unsafe { innermost_activation(context, "HaltThread") }).halt(false);
 }
 
-/// `SetThreadTrace` (`interpreter/api/ThreadContextStubs.cpp:104`): external
+/// `SetThreadTrace`: external
 /// tracing of the context's activity on or off.
 ///
 /// # Safety
@@ -4801,10 +4780,8 @@ unsafe extern "C" fn set_thread_trace(context: *mut RexxThreadContext_, setting:
         .set_trace(false, setting != 0);
 }
 
-/// `RaiseConditionObject` (`interpreter/api/ThreadContextStubs.cpp:1934`):
-/// the condition a condition object describes is raised once the call
-/// returns.
-///
+/// `RaiseConditionObject`: the condition a condition object describes is
+/// raised once the call returns.
 /// # Safety
 /// As [`whole_number_to_object`].
 unsafe extern "C" fn raise_condition_object(
@@ -4854,7 +4831,7 @@ unsafe extern "C" fn reallocate_object_memory(
 }
 
 /// The classic API's calls into the running program from a handler it
-/// called: `RexxVariablePool` and `RexxCallBack` (`api/rexx.h`).
+/// called: `RexxVariablePool` and `RexxCallBack`.
 pub mod classic {
     use super::{Activation, CALLING, Entered, Reached, unwind};
     use crate::callbacks::{CallBack, PoolAnswer, PoolRequest};
@@ -4915,8 +4892,8 @@ pub mod classic {
     }
 
     /// `RexxSetHalt` aimed at this thread, which runs a native call of an activity no
-    /// `RexxStart` started: that call's activity halted at its next clause, as
-    /// `ActivityManager::haltActivity` finds the activity running on the thread named.
+    /// `RexxStart` started: that call's activity halted at its next clause: the
+    /// activity running on the thread named is the one found.
     /// hostemu's `HI` command makes this call from its handler. `false` where this thread runs
     /// no native call.
     pub fn halt_calling() -> bool {
@@ -4983,7 +4960,7 @@ pub mod classic {
         if kept < value.len() { TRUNCATED } else { 0 }
     }
 
-    /// Hands a variable pool answer back as the oracle's `copyValue` does: into the caller's
+    /// Hands a variable pool answer back as the oracle does: into the caller's
     /// buffer of `*strlength` bytes -- `length` is not its size -- with a NUL after the value
     /// where the buffer has room for one, truncated to it (`RXSHV_TRUNC`, `*strlength` left at
     /// the buffer's size), or into a fresh block where the caller gave none. `*length` is the
@@ -5020,7 +4997,7 @@ pub mod classic {
     /// One block's request, answering its `shvret`.
     ///
     /// # Safety
-    /// The block's strings are as `api/rexx.h` asks: `shvname` readable for
+    /// The block's strings are as the header asks: `shvname` readable for
     /// its length, and a non-null fetch buffer writable for its `strlength`.
     unsafe fn serve(activation: &Activation<'_>, block: &mut SHVBLOCK) -> u8 {
         // The name is read only for the codes that take one, and the value only for a set: for
@@ -5107,7 +5084,7 @@ pub mod classic {
     /// where this thread runs none.
     ///
     /// # Safety
-    /// `blocks` is null or the head of a chain of `SHVBLOCK`s as `api/rexx.h`
+    /// `blocks` is null or the head of a chain of `SHVBLOCK`s as the header
     /// describes, each live and unaliased for the call.
     pub unsafe fn variable_pool(blocks: *mut SHVBLOCK) -> RexxReturnCode {
         let Some(activation) = calling() else {
@@ -5253,7 +5230,7 @@ pub mod classic {
 }
 
 /// What a stub read through the context, which is the channel
-/// `argumentExists` uses (`api/oorexxapi.h:4276`).
+/// `argumentExists` uses.
 #[cfg(test)]
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub(crate) struct Seen {
@@ -5610,8 +5587,7 @@ static NUMERIC_TYPES: [u16; 2] = [
 /// A routine stub that reads `GetContextDigits`, `GetContextFuzz` and
 /// `GetContextForm` through the call-context table, and answers the object
 /// `DoubleToObjectWithPrecision` builds for [`STUB_DOUBLE`] at the digits it
-/// read, which is what `rxmath`'s `NumericFormatter` does
-/// (`extensions/rxmath/rxmath.cpp:118-140`).
+/// read, which is what `rxmath`'s `NumericFormatter` does.
 #[cfg(test)]
 pub(crate) extern "C-unwind" fn numeric_stub(
     context: *mut RexxCallContext_,
@@ -6109,7 +6085,7 @@ mod tests {
                         .cast::<u8>()
                         .write_bytes(7, (table.BufferLength)(thread, buffer));
                     let grown = (table.NewMutableBuffer)(thread, 2);
-                    // `setCapacity` asks `ensureCapacity` for the difference
+                    // Setting the capacity asks for the difference
                     // over the length (bug #2092, r13247): eight over an
                     // empty buffer, more than twice the two it holds.
                     let data = (table.SetMutableBufferCapacity)(thread, grown, 8).cast::<u8>();

@@ -16,7 +16,7 @@ use interrexx_core::{BehaviourHandle, Body, Bytes, Heap, ObjRef, RootSet};
 
 /// Stands in for the interpreter the table calls back into.
 ///
-/// `string_value` models `requiredString`: a text object is its own string
+/// `string_value` models the string request: a text object is its own string
 /// value, a small integer has one that must be built, and anything in
 /// `speechless` has none. The numeric readers parse a text object's bytes as
 /// Rust parses a number, standing in for the interpreter's number syntax.
@@ -503,7 +503,7 @@ fn the_special_rows_are_the_ones_that_consume_no_argument() {
             code::SUPER
         ]
     );
-    // A code the table does not know is `processArguments`' `default:`,
+    // A code the table does not know is the oracle's fallback,
     // which consumes an argument.
     assert!(consumes_argument(9999));
 }
@@ -541,8 +541,8 @@ fn a_code_the_table_does_not_know_is_a_signature_error() {
     );
 }
 
-/// A result word carrying the optional bit is no row of `valueToObject`'s
-/// switch, which reads the word unstripped: measured through a forged
+/// A result word carrying the optional bit is no row of the oracle's
+/// result switch, which reads the word unstripped: measured through a forged
 /// extension, oracle 93.968 where the stripped word would convert.
 #[test]
 fn a_result_word_carrying_the_optional_bit_is_a_signature_error() {
@@ -571,8 +571,7 @@ fn the_signature_error_is_93_968_in_a_method_and_40_918_in_a_call() {
     assert_eq!(Failure::ResultSignature.error_number(false), Some(40918));
 }
 
-/// A zero type is an omitted value rather than a bad one
-/// (`NativeActivation.cpp:848`).
+/// A zero type is an omitted value rather than a bad one.
 #[test]
 fn the_terminator_converts_to_no_object() {
     let mut host = Interpreter::new();
@@ -825,7 +824,7 @@ fn the_cself_row_reads_the_seam_and_consumes_no_argument() {
     assert_eq!(converted.flags, ARGUMENT_EXISTS | SPECIAL_ARGUMENT);
 }
 
-/// `NativeActivation::cself` answers NULL when the object variable is not
+/// The oracle answers NULL for the receiver's `CSELF` when the object variable is not
 /// set, and does not raise.
 #[test]
 fn a_receiver_with_no_cself_variable_converts_to_null() {
@@ -1281,7 +1280,7 @@ fn sample(repr: Repr) -> Value {
     }
 }
 
-/// The rows whose result `valueToObject` refuses (`NativeActivation.cpp:855`)
+/// The rows whose result the oracle refuses
 /// are exactly the special ones, and every other row converts a value of its
 /// own member back. Measured through a forged extension, oracle: every
 /// special code as a routine's result type is 40.918, and `ARGLIST`, `NAME`
@@ -1849,7 +1848,7 @@ fn the_object_row_hands_over_the_argument_itself() {
 }
 
 /// Measured, oracle: `TestArrayArg(.object~new)` is 98.913 and a string
-/// converts through its `makeArray`.
+/// converts through its array conversion.
 #[test]
 fn the_array_row_hands_over_what_the_host_converts_and_refuses_the_rest() {
     let mut host = Interpreter::new();

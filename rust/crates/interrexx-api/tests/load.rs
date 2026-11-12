@@ -25,8 +25,7 @@ fn open_rxregexp() -> load::Library {
         .expect("checkout-local extension missing or invalid: run python3 rust/scripts/test_preflight.py")
 }
 
-/// The style every row of `rxregexp_methods` carries, `METHOD_TYPED_STYLE`
-/// (`api/oorexxapi.h:221`).
+/// The style every row of `rxregexp_methods` carries, `METHOD_TYPED_STYLE`.
 const METHOD_TYPED_STYLE: c_int = 1;
 
 #[test]
@@ -67,7 +66,7 @@ fn the_method_table_is_what_the_extension_declares() {
 
 #[test]
 fn the_extension_declares_no_routines() {
-    // `rxregexp.cpp:226` passes NULL for the routine table, and a null table
+    // The extension passes NULL for the routine table, and a null table
     // is read as no rows rather than as a failure.
     assert_eq!(open_rxregexp().routines(), &[]);
 }
@@ -151,7 +150,7 @@ fn a_package_asking_for_a_newer_interpreter_is_refused() {
 
 #[test]
 fn a_package_asking_for_this_interpreter_or_less_is_accepted() {
-    // Zero is "any version" (`LibraryPackage.cpp:232`), and `rxregexp`'s own
+    // Zero is "any version", and `rxregexp`'s own
     // `REXX_INTERPRETER_4_0_0` is the below-current case.
     for required in [0, 0x0004_0000, CURRENT_INTERPRETER_VERSION] {
         assert_eq!(

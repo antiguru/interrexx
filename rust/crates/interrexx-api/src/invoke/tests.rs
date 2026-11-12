@@ -359,7 +359,7 @@ fn constants_of(interpreter: &mut Interpreter) -> Constants<ObjRef> {
     }
 }
 
-/// Binds `name`, upper-cased as `getVariableRetriever` upper-cases it, or
+/// Binds `name`, upper-cased as the oracle upper-cases it, or
 /// returns it to the uninitialised state for a `value` of `None`.
 fn set_variable(variables: &mut Vec<(Vec<u8>, ObjRef)>, name: &[u8], value: Option<ObjRef>) {
     let name = name.to_ascii_uppercase();
@@ -369,7 +369,7 @@ fn set_variable(variables: &mut Vec<(Vec<u8>, ObjRef)>, name: &[u8], value: Opti
     }
 }
 
-/// `Numerics::wholenumberToObject`: a small integer where the value fits
+/// A small integer where the value fits
 /// the tag, and its digits otherwise.
 fn whole_number_object(heap: &mut Heap, value: isize) -> ObjRef {
     match i64::try_from(value).ok().and_then(ObjRef::small_int) {
@@ -504,7 +504,7 @@ fn a_classic_routine_is_refused_before_its_stub_is_entered() {
 
 /// A row of any style but typed publishes no signature and calls nothing,
 /// whatever its caller checked: its address is a function of the
-/// `RXSTRING` signature (`api/oorexxapi.h:209`).
+/// `RXSTRING` signature.
 #[test]
 fn a_classic_row_publishes_no_signature_and_calls_nothing() {
     forget_events();
@@ -578,7 +578,7 @@ fn a_routine_reads_numeric_settings_and_builds_a_double_through_its_contexts() {
 /// convert anything, so there is nothing for the array channel to carry.
 /// `GetArgument` is a channel of its own and reaches the activation's own
 /// list, which this says nothing about; the oracle builds its context
-/// before the signature call too (`NativeActivation.cpp:1289-1291`).
+/// before the signature call too.
 #[test]
 fn the_signature_call_runs_before_any_argument_is_touched() {
     let entry = stub_entry(b"probe", probe);
@@ -601,7 +601,7 @@ fn the_signature_call_runs_before_any_argument_is_touched() {
 }
 
 /// The signature call leaves the array channel alone, so an extension
-/// reading it through the context (`api/oorexxapi.h:4276`) sees whatever
+/// reading it through the context sees whatever
 /// was there before rather than an argument of this call.
 #[test]
 fn the_signature_call_publishes_no_array() {
@@ -619,7 +619,7 @@ fn the_signature_call_publishes_no_array() {
 }
 
 /// The call publishes its array on the context, which is where
-/// `argumentExists` reads it (`api/oorexxapi.h:4276`), and what it
+/// `argumentExists` reads it, and what it
 /// publishes is the array the stub was handed with the argument's flags
 /// in it.
 #[test]
@@ -888,7 +888,7 @@ fn a_signature_that_fills_the_array_is_run() {
 }
 
 /// A signature longer than the array is refused rather than grown. The
-/// oracle answers 93.968 in a method (`NativeActivation.cpp:238-241`).
+/// oracle answers 93.968 in a method.
 #[test]
 fn a_signature_longer_than_the_array_is_refused_and_not_called() {
     let entry = stub_entry(b"too_long", too_long_probe);
@@ -918,8 +918,7 @@ fn an_unknown_parameter_code_is_an_argument_position() {
 }
 
 /// A result word carrying the optional bit is refused once the call has
-/// run, as `valueToObject` refuses it inside the call's `try`
-/// (`NativeActivation.cpp:1302-1310`).
+/// run, as the oracle refuses it inside the call's `try`.
 #[test]
 fn a_result_word_carrying_the_optional_bit_is_refused_after_the_call() {
     let entry = stub_entry(b"optional_result", optional_result_probe);

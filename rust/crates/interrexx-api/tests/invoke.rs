@@ -15,14 +15,12 @@ use interrexx_api::values::{
 };
 use interrexx_core::{BehaviourHandle, Body, Bytes, Heap, ObjRef, RootSet};
 
-/// `Rexx_Error_Invalid_template` (`api/oorexxerrors.h:362`), which
-/// `RegExp_Init` raises for an expression it cannot parse
-/// (`extensions/rxregexp/rxregexp.cpp:83`).
+/// `Rexx_Error_Invalid_template`, which
+/// `RegExp_Init` raises for an expression it cannot parse.
 const INVALID_TEMPLATE: usize = 38000;
 
-/// `Rexx_Error_Incorrect_method` (`api/oorexxerrors.h:518`), which
-/// `RegExp_Parse` raises for a match type it does not know
-/// (`extensions/rxregexp/rxregexp.cpp:130`).
+/// `Rexx_Error_Incorrect_method`, which
+/// `RegExp_Parse` raises for a match type it does not know.
 const INCORRECT_METHOD: usize = 93000;
 
 /// The repository root, which is three directories above this crate.
@@ -43,7 +41,7 @@ fn rxregexp() -> load::Library {
 }
 
 /// The checkout-local `rxmath` extension, whose routines are all
-/// typed (`extensions/rxmath/rxmath.cpp:617-638`).
+/// typed.
 fn rxmath() -> load::Library {
     let path = repository_root().join("build/lib/librxmath.so");
     load::open_path(&path, "rxmath")
@@ -374,8 +372,8 @@ fn allocated() -> POINTER {
 
 // ------------------------------------------------------------- the protocol
 
-/// The signature call answers what `extensions/rxregexp/rxregexp.cpp:55` and
-/// `:105-109` declare, read out of the oracle's own compiled binary.
+/// The signature call answers what the extension's source declares, read out
+/// of the oracle's own compiled binary.
 #[test]
 fn the_extension_publishes_the_signatures_its_source_declares() {
     let library = rxregexp();
@@ -438,7 +436,7 @@ fn regexp_init_with_one_argument_parses_it() {
 }
 
 /// A native method that raises runs to completion: the work after the raise
-/// still happens (`interpreter/api/ThreadContextStubs.cpp:1863-1885`).
+/// still happens.
 ///
 /// `RegExp_Init` answers zero on every path, so this says nothing about
 /// element zero; `a_call_that_raised_still_returns_what_it_wrote` does.
@@ -462,8 +460,8 @@ fn an_extension_that_raises_still_finishes() {
 
 /// A call that raised still writes element zero, and the value is read back
 /// whatever the raise did. `RegExp_Parse` raises for an unknown match type
-/// (`extensions/rxregexp/rxregexp.cpp:130`) and then returns what the parse
-/// answered (`:135`), which is not the zero the descriptor started at.
+/// and then returns what the parse
+/// answered, which is not the zero the descriptor started at.
 #[test]
 fn a_call_that_raised_still_returns_what_it_wrote() {
     let library = rxregexp();
@@ -572,7 +570,7 @@ fn an_argument_the_signature_does_not_consume_is_refused() {
 
 /// `RxCalcSqrt` over the routine protocol: no precision argument, so the
 /// extension asks the call context for the digits
-/// (`extensions/rxmath/rxmath.cpp:118-123`) and formats the root at them.
+/// and formats the root at them.
 #[test]
 fn rxcalcsqrt_formats_at_the_callers_digits_when_no_precision_is_given() {
     let library = rxmath();
@@ -589,7 +587,7 @@ fn rxcalcsqrt_formats_at_the_callers_digits_when_no_precision_is_given() {
 
 /// A precision argument that exists wins over the digits, which is
 /// `argumentExists(2)` read through the array the context publishes, and the
-/// extension caps it at 16 (`extensions/rxmath/rxmath.cpp:124-127`).
+/// extension caps it at 16.
 #[test]
 fn rxcalcsqrt_reads_a_precision_argument_that_exists() {
     let library = rxmath();
@@ -648,7 +646,7 @@ fn every_rxmath_routine_is_typed() {
 }
 
 /// The descriptor array is what bounds a signature, and this is the length
-/// the oracle passes (`interpreter/execution/NativeActivation.hpp:209`).
+/// the oracle passes.
 #[test]
 fn the_array_is_as_long_as_the_oracles() {
     assert_eq!(invoke::MAX_NATIVE_ARGUMENTS, 16);

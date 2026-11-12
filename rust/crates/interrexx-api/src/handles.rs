@@ -84,9 +84,8 @@ impl Table {
         self.entries.contains_key(&address_of(object))
     }
 
-    /// Drops `handle`'s registration, so it no longer roots its object
-    /// (`NativeActivation::removeLocalReference`,
-    /// `interpreter/execution/NativeActivation.cpp:1219`). A handle this table
+    /// Drops `handle`'s registration, so it no longer roots its object.
+    /// A handle this table
     /// does not hold is ignored, as the oracle ignores one. Each time the
     /// released handles pass their limit, those whose object `live` says is
     /// gone are forgotten.
@@ -126,7 +125,7 @@ impl Table {
 /// tag reserves the low two bits, and the only tag that sets both leaves the
 /// three above the length clear.
 fn address_of(object: ObjRef) -> usize {
-    // `NULLOBJECT` is the null pointer (`api/rexx.h:155`), so the `ObjRef`
+    // `NULLOBJECT` is the null pointer, so the `ObjRef`
     // whose bits are zero -- heap slot zero at generation zero, the first
     // object a fresh heap allocates -- must not encode to it.
     let biased = object.bits().wrapping_add(1);

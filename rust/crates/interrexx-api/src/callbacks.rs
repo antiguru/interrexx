@@ -19,8 +19,7 @@ use crate::values::{
 /// What the callback tables need from the interpreter beyond what the
 /// conversions need.
 pub trait Surface {
-    /// Forgets the condition the running native call holds, which is what
-    /// `NativeActivation::clearException` does.
+    /// Forgets the condition the running native call holds.
     fn clear_condition(&mut self);
 
     /// A single-dimensional array of `items`, an absent item an empty slot.
@@ -28,11 +27,11 @@ pub trait Surface {
 
     /// Holds a `SYNTAX` condition numbered `number` (`major * 1000 + minor`)
     /// for the running native call, whose substitutions are the items of the
-    /// array `substitutions`, replacing any it held: `reportException`.
+    /// array `substitutions`, replacing any it held.
     fn raise_exception(&mut self, number: usize, substitutions: Option<ObjRef>);
 
     /// Holds the condition `name` for the running native call, replacing any
-    /// it held: `Activity::raiseCondition`.
+    /// it held.
     fn raise_condition(
         &mut self,
         name: &[u8],
@@ -48,22 +47,21 @@ pub trait Surface {
     /// or `None`.
     fn condition_object(&mut self) -> Option<ObjRef>;
 
-    /// `Activity::displayCondition`: writes the report of a held `SYNTAX`
+    /// Writes the report of a held `SYNTAX`
     /// condition and answers its `RC`, or answers zero.
     fn display_condition(&mut self) -> isize;
 
     /// The entry `name` of the directory `directory`, or `None`.
     fn directory_entry(&mut self, directory: ObjRef, name: &[u8]) -> Option<ObjRef>;
 
-    /// `requestString`: `object`'s string value as a string object, or
+    /// `object`'s string value as a string object, or
     /// `None` where the conversion raised a condition, which the host holds.
     fn request_string(&mut self, object: ObjRef) -> Option<ObjRef>;
 
-    /// Whether `object`'s class is exactly the class `id` names, which is
-    /// `isOfClass`.
+    /// Whether `object`'s class is exactly the class `id` names.
     fn is_of_class(&mut self, object: ObjRef, id: &str) -> bool;
 
-    /// `isString`: an instance of `String` that is not a number.
+    /// Whether `object` is an instance of `String` that is not a number.
     fn is_string(&mut self, object: ObjRef) -> bool;
 
     /// `raw_string`: a string of `length` zero bytes, which
@@ -89,13 +87,13 @@ pub trait Surface {
     /// not one.
     fn mutable_buffer(&mut self, buffer: ObjRef) -> Option<(POINTER, usize, usize)>;
 
-    /// `MutableBuffer::setDataLength`, answering the length set.
+    /// Sets a mutable buffer's data length, answering the length set.
     fn set_mutable_buffer_length(&mut self, buffer: ObjRef, length: usize) -> Option<usize>;
 
-    /// `MutableBuffer::setCapacity`, answering the address of the bytes.
+    /// Sets a mutable buffer's capacity, answering the address of the bytes.
     fn set_mutable_buffer_capacity(&mut self, buffer: ObjRef, capacity: usize) -> Option<POINTER>;
 
-    /// `RexxObject::getCSelf`: the `.Pointer` or `Buffer` an object's `CSELF`
+    /// The `.Pointer` or `Buffer` an object's `CSELF`
     /// variable holds, unwrapped. `scope` starts the search at that scope and
     /// walks its super scopes; `None` searches every pool, newest first.
     fn object_cself(&mut self, object: ObjRef, scope: Option<ObjRef>) -> Option<POINTER>;
@@ -153,14 +151,12 @@ pub trait Surface {
     fn object_variable(&mut self, name: &[u8]) -> Option<ObjRef>;
 
     /// `SetGuardOn` or, where `on` is unset, `SetGuardOff`: the running
-    /// method's guard lock reserved or released (`NativeActivation::guardOn`,
-    /// `guardOff`, `execution/NativeActivation.cpp:2395-2429`).
+    /// method's guard lock reserved or released.
     fn set_guard(&mut self, on: bool);
 
     /// `SetGuardOnWhenUpdated` or, where `on` is unset,
     /// `SetGuardOffWhenUpdated`: a wait for a store to the running method's
-    /// object variable `name`, holding the lock or not, then its value
-    /// (`NativeActivation::guardOnWhenUpdated`, `:2470`).
+    /// object variable `name`, holding the lock or not, then its value.
     fn guard_when_updated(&mut self, name: &[u8], on: bool) -> Option<ObjRef>;
 
     /// A `VariableReference` to the simple or stem variable `name`: the
@@ -171,8 +167,7 @@ pub trait Surface {
     /// The class `name`, upper-cased, names, or `None` where it names no
     /// class: resolved from the calling activation, or where `executable` is
     /// set from the running native call's own package, which for a routine a
-    /// library registered is the system's search alone
-    /// (`NativeActivation::findClass`, `execution/NativeActivation.cpp:3094`).
+    /// library registered is the system's search alone.
     fn find_class(&mut self, name: &[u8], executable: bool) -> Option<ObjRef>;
 
     /// `.environment`, or `.local` where `local` is set.
@@ -184,8 +179,7 @@ pub trait Surface {
     /// The `NUMERIC` settings of the top frame of the other activity whose
     /// native call is in the host's frame `frame`, or `None` where no live
     /// call of another activity has that frame: the oracle's non-blocking
-    /// members read the context's activity's top frame
-    /// (`Activity::getApiContext`, `concurrency/Activity.hpp:318`).
+    /// members read the context's activity's top frame.
     fn kept_numeric(&mut self, frame: u64) -> Option<Numeric>;
 
     /// The `Method` or `Routine` object that top frame runs, as
@@ -199,21 +193,20 @@ pub trait Surface {
     /// an array.
     fn array_items(&mut self, array: ObjRef) -> Option<Vec<Option<ObjRef>>>;
 
-    /// `InterpreterInstance::loadRequires` over a file: the package the name
+    /// Loads a package from a file: the package the name
     /// resolves to globally, loaded and its prologue run once, or `None`
     /// where that raised a condition, which the host holds.
     fn load_package(&mut self, name: &[u8]) -> Option<ObjRef>;
 
-    /// `loadRequires` over source text, one line per line end.
+    /// Loads a package from source text, one line per line end.
     fn load_package_source(&mut self, name: &[u8], lines: &[Vec<u8>]) -> Option<ObjRef>;
 
     /// What a native caller's buffer becomes: the `Method` or `Routine` it
     /// compiles or restores to, whose package has no parent, or the package a
     /// compiled image restores to; `None` for package source, which is handed
     /// to the parser as source lines; `Some(None)` where that raised a
-    /// condition, which the host holds. A `Method` is never restored
-    /// (`LanguageParser::createMethod(name, buffer)`): lines whose second line
-    /// is the encoded tag parse as source.
+    /// condition, which the host holds. A `Method` is never restored:
+    /// lines whose second line is the encoded tag parse as source.
     fn compile_buffer(
         &mut self,
         kind: BufferKind,
@@ -222,14 +215,14 @@ pub trait Surface {
         lines: &[Vec<u8>],
     ) -> Option<Option<ObjRef>>;
 
-    /// `PackageManager::loadLibrary`: whether the library loaded.
+    /// Whether the library loaded.
     fn load_library(&mut self, name: &[u8]) -> bool;
 
-    /// `CallProgramDispatcher::run`: the program the name resolves to
+    /// The program the name resolves to
     /// globally, run with `arguments`, answering its result.
     fn call_program(&mut self, name: &[u8], arguments: &[Option<ObjRef>]) -> Option<ObjRef>;
 
-    /// `CallRoutineDispatcher::run`: `routine` run over the items of the
+    /// `routine` run over the items of the
     /// array `arguments`, or over none, answering its result, or `None`
     /// where it raised a condition, which the host holds.
     fn call_routine(&mut self, routine: ObjRef, arguments: Option<ObjRef>) -> Option<ObjRef>;
@@ -238,19 +231,19 @@ pub trait Surface {
     /// then answers from any native call for as long as the interpreter runs.
     fn global_reference(&mut self, object: ObjRef);
 
-    /// `RexxObject::allocateObjectMemory`: bytes the running method's
+    /// Bytes the running method's
     /// receiver keeps until they are freed.
     fn allocate_object_memory(&mut self, size: usize) -> Option<POINTER>;
 
-    /// `RexxObject::freeObjectMemory`.
+    /// Frees bytes an earlier allocation answered.
     fn free_object_memory(&mut self, pointer: POINTER);
 
-    /// `RexxObject::reallocateObjectMemory`: the same bytes where `size` is
+    /// The same bytes where `size` is
     /// no larger, a copy in a larger allocation otherwise, and `None` for an
     /// address the receiver did not allocate.
     fn reallocate_object_memory(&mut self, pointer: POINTER, size: usize) -> Option<POINTER>;
 
-    /// `PackageManager::registerPackage`: holds the library under `name`
+    /// Holds the library under `name`
     /// unless one is held there already, answering whether it did.
     fn register_library(
         &mut self,
@@ -258,7 +251,7 @@ pub trait Surface {
         library: Result<Option<crate::load::Library>, crate::load::Refused>,
     ) -> bool;
 
-    /// `InterpreterInstance::addCommandHandler`: `handler` answers commands
+    /// `handler` answers commands
     /// to the environment `name`, upper-cased, replacing the handler that
     /// name had.
     fn add_command_handler(&mut self, name: &[u8], handler: crate::load::CommandHandler);
@@ -293,12 +286,12 @@ pub trait Surface {
     /// the call to raise once it returns; `false` where it is no directory.
     fn raise_condition_object(&mut self, condition: ObjRef) -> bool;
 
-    /// `InterpreterInstance::stackCommandHandler`: `handler` answers commands
+    /// `handler` answers commands
     /// to `name`, covering the handler in use under it.
     fn stack_command_handler(&mut self, name: &[u8], handler: crate::load::CommandHandler);
 }
 
-/// One `SHVBLOCK` request (`api/rexx.h`), its name as the block holds it.
+/// One `SHVBLOCK` request, its name as the block holds it.
 #[derive(Clone, Copy, Debug)]
 pub enum PoolRequest<'r> {
     /// `RXSHV_SET` or, `symbolic`, `RXSHV_SYSET`.
@@ -338,16 +331,15 @@ pub enum CallBack {
     Ended,
 }
 
-/// `Error_Incorrect_method_positive` (`api/oorexxerrors.h`), which `ArrayAt`
+/// `Error_Incorrect_method_positive`, which `ArrayAt`
 /// and `ArrayPut` raise for an index of zero.
 const INCORRECT_METHOD_POSITIVE: usize = 93_907;
 
-/// `Error_Incorrect_call_external` (`api/oorexxerrors.h`), which
+/// `Error_Incorrect_call_external`, which
 /// `InvalidRoutine` raises.
 const INCORRECT_CALL_EXTERNAL: usize = 40_001;
 
-/// What `DecodeConditionInfo` writes into a `RexxCondition`
-/// (`Interpreter::decodeConditionData`, `interpreter/runtime/Interpreter.cpp:541`).
+/// What `DecodeConditionInfo` writes into a `RexxCondition`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct DecodedCondition {
     pub code: isize,
@@ -361,8 +353,8 @@ pub struct DecodedCondition {
     pub additional: RexxObjectPtr,
 }
 
-/// `NumberString::newInstanceFromDouble`'s precision for `DoubleToObject`,
-/// which is the native activation's `digits()`, the default nine: measured,
+/// The precision of a number string `DoubleToObject` builds, which is the
+/// native activation's digits setting, the default nine: measured,
 /// oracle, `DoubleToObject(1/3)` is `0.333333333` under `NUMERIC DIGITS 20`.
 const DOUBLE_DIGITS: usize = 9;
 
@@ -393,8 +385,8 @@ impl Activation<'_> {
         self.conversion().host.register_local(object)
     }
 
-    /// `Int64ToObject`, `IntptrToObject` and `Int32ToObject`, which are
-    /// `wholenumberToObject` for a value that fits a pointer.
+    /// `Int64ToObject`, `IntptrToObject` and `Int32ToObject`: the whole number a
+    /// value that fits a pointer becomes.
     pub fn signed_object(&self, value: i64) -> RexxObjectPtr {
         let mut cx = self.conversion();
         let value = isize::try_from(value).expect("a pointer is 64 bits");
@@ -410,8 +402,8 @@ impl Activation<'_> {
         cx.host.register_local(object)
     }
 
-    /// `handle`'s value as a whole number from `min` to `max`, which is
-    /// `objectToSignedInteger` and `objectToWholeNumber`, or `None`.
+    /// `handle`'s value as a whole number from `min` to `max`, which serves
+    /// `ObjectToSignedInteger` and `ObjectToWholeNumber`, or `None`.
     pub fn signed_value(&self, handle: RexxObjectPtr, min: i64, max: i64) -> Option<i64> {
         let object = self.resolve(handle)?;
         let found = self.conversion().host.signed_integer(object, min, max);
@@ -421,22 +413,22 @@ impl Activation<'_> {
             .filter(|number| (min..=max).contains(number))
     }
 
-    /// `handle`'s value as a whole number from zero to `max`, which is
-    /// `objectToUnsignedInteger` and `objectToStringSize`, or `None`.
+    /// `handle`'s value as a whole number from zero to `max`, which serves
+    /// `ObjectToUnsignedInteger` and `ObjectToStringSize`, or `None`.
     pub fn unsigned_value(&self, handle: RexxObjectPtr, max: u64) -> Option<u64> {
         let object = self.resolve(handle)?;
         let found = self.conversion().host.unsigned_integer(object, max);
         found.ok().flatten().filter(|number| *number <= max)
     }
 
-    /// `ObjectToLogical`: `logicalValue`, or `None`.
+    /// `ObjectToLogical`: the logical value, or `None`.
     pub fn logical_value(&self, handle: RexxObjectPtr) -> Option<bool> {
         let object = self.resolve(handle)?;
         let found = self.conversion().host.logical(object);
         found.ok()?.ok()
     }
 
-    /// `ObjectToDouble`: `doubleValue`, or `None`.
+    /// `ObjectToDouble`: the double value, or `None`.
     pub fn double_value(&self, handle: RexxObjectPtr) -> Option<f64> {
         let object = self.resolve(handle)?;
         let found = self.conversion().host.double_value(object);
@@ -467,7 +459,7 @@ impl Activation<'_> {
         cx.host.register_local(object)
     }
 
-    /// `valueToObject` over one descriptor an extension filled, whose
+    /// The conversion to an object of one descriptor an extension filled, whose
     /// `CSTRING` value, where it has one, is `text`.
     fn value_object(&self, declared: u16, value: Value, text: Option<&[u8]>) -> Option<ObjRef> {
         let mut cx = self.conversion();
@@ -610,7 +602,7 @@ impl Activation<'_> {
     /// `DisplayCondition`.
     pub fn display_condition(&self) -> isize {
         // `Error_Interpretation / 1000`, the stub's own answer where the
-        // call fails (`interpreter/api/ThreadContextStubs.cpp:1948`).
+        // call fails.
         self.with_surface("RexxThreadInterface.DisplayCondition", 49, |cx| {
             cx.host
                 .surface()
@@ -755,7 +747,7 @@ impl Activation<'_> {
     }
 
     /// `StringUpper` and `StringLower`: the string itself where the case
-    /// changes nothing, as `RexxString::upper` answers `this`.
+    /// changes nothing.
     pub fn string_case(&self, handle: RexxObjectPtr, upper: bool) -> RexxObjectPtr {
         let Some(bytes) = self.string_bytes(handle) else {
             return std::ptr::null_mut();
@@ -1139,7 +1131,7 @@ impl Activation<'_> {
         self.raise_with(slot, INCORRECT_METHOD_POSITIVE, &[position]);
     }
 
-    /// `ArrayAt`: `safeGet`, null beyond the array's size.
+    /// `ArrayAt`: the item, null beyond the array's size.
     pub fn array_at(&self, array: RexxObjectPtr, index: usize) -> RexxObjectPtr {
         const SLOT: &str = "RexxThreadInterface.ArrayAt";
         if index == 0 {
@@ -1182,8 +1174,7 @@ impl Activation<'_> {
         self.send_for_count(slot, array, name, &[])
     }
 
-    /// `ArrayDimension`: `ArrayClass::getDimensions`
-    /// (`interpreter/classes/ArrayClass.hpp:204`), which is 1 for any
+    /// `ArrayDimension`: the number of dimensions, which is 1 for any
     /// single-dimensional array, empty too, where `DIMENSION` answers 0 for
     /// an empty one. Zero for anything that answers no dimension.
     pub fn array_dimension(&self, array: RexxObjectPtr) -> usize {
@@ -1205,11 +1196,9 @@ impl Activation<'_> {
     }
 
     /// `NewArray`: an array of that size and no items, or 93.959 for a size
-    /// above `ArrayClass::MaxFixedArraySize`, as `new_array` raises it
-    /// (`classes/ArrayClass.cpp:183`).
+    /// above the largest fixed array size, as `new_array` raises it.
     pub fn new_array_sized(&self, size: usize) -> RexxObjectPtr {
         const SLOT: &str = "RexxThreadInterface.NewArray";
-        /// `ArrayClass::MaxFixedArraySize` (`classes/ArrayClass.hpp:329`).
         const MAX_FIXED_ARRAY_SIZE: usize = 100_000_000_000_000_000;
         if size > MAX_FIXED_ARRAY_SIZE {
             self.with_surface(SLOT, (), |cx| {
@@ -1435,8 +1424,7 @@ impl Activation<'_> {
     /// `GetContextVariable`. `outer` is the host frame of the call whose
     /// context it came through, where that is not this call: a context kept
     /// from an enclosing call reaches that call's caller, as the oracle's
-    /// blocking members use the context's own activation
-    /// (`interpreter/api/ContextApi.hpp:108`).
+    /// blocking members use the context's own activation.
     pub fn context_variable(&self, outer: Option<u64>, name: &[u8]) -> RexxObjectPtr {
         self.surface_handle("CallContextInterface.GetContextVariable", |surface| {
             in_caller(surface, outer, |surface| surface.context_variable(name))
@@ -1933,7 +1921,7 @@ impl Activation<'_> {
     }
 
     /// `NewMethod` and `NewRoutine`: the class's `NEW` over `source` split
-    /// into lines at each line end, as `LanguageParser` reads a buffer.
+    /// into lines at each line end, as the interpreter reads a buffer.
     pub fn new_executable(
         &self,
         slot: &'static str,
@@ -1969,7 +1957,7 @@ impl Activation<'_> {
 
     /// `RequestGlobalReference` and `ReleaseGlobalReference`, the same
     /// handle answered. The oracle's release adds a reference as its request
-    /// does (`interpreter/runtime/InterpreterInstance.cpp:678`), so a released
+    /// does, so a released
     /// handle stays good: measured through the forged extension.
     pub fn global_reference(&self, slot: &'static str, handle: RexxObjectPtr) -> RexxObjectPtr {
         let Some(object) = self.resolve(handle) else {
@@ -2122,12 +2110,12 @@ impl Activation<'_> {
 
     /// `ObjectToValue`: `handle` converted as `declared` asks, or `None`
     /// where it does not convert, with any condition the conversion raised
-    /// forgotten (`interpreter/api/ThreadContextStubs.cpp:730`).
+    /// forgotten.
     pub fn object_to_value(&self, handle: RexxObjectPtr, declared: u16) -> Option<Value> {
         let object = self.resolve(handle)?;
-        // `objectToValue` switches on the word as the extension wrote it, so
-        // an optional bit, a special row and an unknown code are its
-        // `default:` (`interpreter/execution/NativeActivation.cpp:1170`).
+        // The oracle switches on the word as the extension wrote it, so
+        // an optional bit, a special row and an unknown code all fall through
+        // to its default.
         if is_optional(declared)
             || declared == ARGUMENT_TERMINATOR
             || values::source(declared) != Some(Source::Argument)
@@ -2151,7 +2139,6 @@ impl Activation<'_> {
     }
 }
 
-/// `Interpreter::messageNumber` (`interpreter/runtime/Interpreter.cpp:679`):
 /// `major.minor` as `major * 1000 + minor`, zero where it is not one.
 fn message_number(text: &[u8]) -> isize {
     let text = std::str::from_utf8(text).unwrap_or_default();
@@ -2195,7 +2182,7 @@ pub enum BufferKind {
     Package,
 }
 
-/// Program text as the lines `LanguageParser` reads out of a buffer: split at
+/// Program text as the lines the interpreter reads out of a buffer: split at
 /// each line feed, a carriage return before one dropped, and no empty line
 /// after a final line end.
 fn source_lines(source: &[u8]) -> Vec<Vec<u8>> {
