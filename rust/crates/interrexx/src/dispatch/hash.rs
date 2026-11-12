@@ -684,14 +684,42 @@ fn walk(interp: &mut Interp, receiver: ObjRef) -> Result<Vec<usize>, Failure> {
 /// [`walk`] over a store the caller has already read.
 fn walk_in(interp: &Interp, store: &Store) -> Result<Vec<usize>, Failure> {
     let mut order = Vec::new();
+    walk_each(interp, store, |slot| order.push(slot))?;
+    Ok(order)
+}
+
+/// How many entries [`walk_in`] would answer, without collecting them.
+fn count_in(interp: &Interp, store: &Store) -> Result<usize, Failure> {
+    let mut count = 0;
+    walk_each(interp, store, |_| count += 1)?;
+    Ok(count)
+}
+
+/// Calls `visit` with every occupied slot in [`walk_in`]'s order. The two
+/// arrays are borrowed once rather than looked up per slot, each at the
+/// point the slot-by-slot walk first reads it, so a store whose arrays are
+/// not arrays refuses where it did.
+fn walk_each(interp: &Interp, store: &Store, mut visit: impl FnMut(usize)) -> Result<(), Failure> {
+    if store.buckets == 0 || store.total == 0 {
+        return Ok(());
+    }
+    let indexes = array_slots(interp, store.indexes)?;
+    let mut next: Option<&[Option<ObjRef>]> = None;
     for bucket in 0..store.buckets {
         let mut slot = bucket;
-        while slot < store.total && slot_at(interp, store.indexes, slot)?.is_some() {
-            order.push(slot);
-            slot = link_at(interp, store, slot)?;
+        while slot < store.total && indexes.get(slot).copied().flatten().is_some() {
+            visit(slot);
+            let links = match next {
+                Some(links) => links,
+                None => *next.insert(array_slots(interp, store.next)?),
+            };
+            slot = match links.get(slot).copied().flatten().map(ObjRef::decode) {
+                Some(Decoded::SmallInt(link)) if link >= 0 => link as usize,
+                _ => store.no_more(),
+            };
         }
     }
-    Ok(order)
+    Ok(())
 }
 
 /// Occupied entries and their predecessors, restricted to a bucket when supplied.
@@ -1074,7 +1102,31 @@ fn method_count(interp: &mut Interp, receiver: ObjRef) -> Result<usize, Failure>
     let Some(store) = method_store(interp, receiver)? else {
         return Ok(0);
     };
-    Ok(walk_in(interp, &store)?.len())
+    count_in(interp, &store)
+}
+
+/// How many entries the contents hold: [`walk`]'s length.
+fn count_in_store(interp: &mut Interp, receiver: ObjRef) -> Result<usize, Failure> {
+    let store = store_of(interp, receiver)?;
+    count_in(interp, &store)
+}
+
+/// The contents' entries and the method table's together, which is what
+/// `items` answers, from one read of the pool: [`walk`] then
+/// [`method_count`], in that order.
+fn entry_count(interp: &mut Interp, receiver: ObjRef) -> Result<usize, Failure> {
+    let parts = read_parts(interp, receiver);
+    // Installing the contents' store, as `store_of` does for a receiver
+    // without one, leaves the method table's entries as they were read.
+    let contents = match parts.contents.store(interp)? {
+        Some(store) => store,
+        None => store_of(interp, receiver)?,
+    };
+    let count = count_in(interp, &contents)?;
+    match parts.methods.store(interp)? {
+        Some(methods) => Ok(count + count_in(interp, &methods)?),
+        None => Ok(count),
+    }
 }
 
 // ---- the shared surface ----
@@ -1275,7 +1327,7 @@ fn native_hash_items(
     if !owns(interp, receiver) {
         return Err(not_this_task(interp, receiver, b"ITEMS"));
     }
-    let count = walk(interp, receiver)?.len() + method_count(interp, receiver)?;
+    let count = entry_count(interp, receiver)?;
     Ok(Some(interp.counted(count)))
 }
 
@@ -1288,7 +1340,7 @@ fn native_hash_is_empty(
     if !owns(interp, receiver) {
         return Err(not_this_task(interp, receiver, b"ISEMPTY"));
     }
-    let empty = walk(interp, receiver)?.is_empty() && method_count(interp, receiver)? == 0;
+    let empty = count_in_store(interp, receiver)? == 0 && method_count(interp, receiver)? == 0;
     Ok(Some(crate::eval::logical(empty)))
 }
 
