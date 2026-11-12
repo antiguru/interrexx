@@ -2058,8 +2058,9 @@ after
 SYNTAX 93.900
 ```
 
-A `String` method is one of these: run on an object that is no string, it
-raises `SYNTAX 93.900` too, and does not work on the object's string value.
+> **Note.** A `String` method is one of these: run on an object that is no
+> string, it raises `SYNTAX 93.900` too, and does not work on the object's
+> string value.
 
 ```rexx
 o = .w~new
