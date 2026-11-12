@@ -1279,6 +1279,24 @@ r7 itself 4.1 20
 R7 ignored
 ```
 
+r[instr.raise.untrapped.description]
+The message that the `SYNTAX 97.1` names is the description of the clause. A
+description that is an object is named by its default name, as the object's
+`DEFAULTNAME` gives it, and not by what its `MAKESTRING` answers.
+
+```rexx
+signal on syntax name s
+raise nomethod additional ('obj') description (.key~new)
+s: say condition('o')~message
+::class key
+::method makestring
+  return 'description'
+```
+
+```output
+Object "obj" does not understand message "a KEY".
+```
+
 ```rexx
 call on error name e
 call r1

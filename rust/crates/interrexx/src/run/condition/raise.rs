@@ -91,13 +91,13 @@ impl Interp {
                 let traced = self.traced_string_value_text(value)?;
                 self.trace_keyword(indent, "DESCRIPTION", &traced);
             }
-            // The string is needed only where an untrapped `NOMETHOD` report
-            // names it. Every other condition keeps the object, and each read
-            // of `CONDITION('D')` converts it anew.
+            // The text is needed only where an untrapped `NOMETHOD` report
+            // names it, and it is the object's rendering -- its default name
+            // for an instance, not what its `MAKESTRING` answers. Every other
+            // condition keeps the object, and each read of `CONDITION('D')`
+            // converts it anew.
             if raise.condition.as_ref() == b"NOMETHOD" {
-                let value = self.required_string_value(value)?;
-                self.roots.activity_mut().push_temp(value);
-                description = Some(self.to_text(value).to_vec());
+                description = Some(self.string_value_text(value)?);
             }
         }
         // `ADDITIONAL expr` and `ARRAY (a, b)` produce the identical
