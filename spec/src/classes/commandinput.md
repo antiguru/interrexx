@@ -346,7 +346,8 @@ r[class.commandinput.valid]
 A `CommandInput` belongs to the command it was made for, as its
 [context](r:class.commandcontext.valid) does. When the command is over, or on
 another activity, `charIn`, `chars`, `lineIn` and `lines` raise
-`SYNTAX 98.900`.
+`SYNTAX 98.900`, with the exception that
+[the next rule](r:class.commandinput.valid.buffered) states.
 
 ```rexx
 x = .commandhandler~register('spec_ci_valid', .reader~new)
@@ -387,4 +388,66 @@ lineIn 98.900
 lines 98.900
 chars 98.900
 charIn 98.900
+```
+
+r[class.commandinput.valid.buffered]
+Text that the stream already holds when the command ends stays readable: the
+rest of a line that was partly read, or a line that `lines` or `chars` took
+into hand without it being read. From that text `lines`, `chars`, `lineIn` and
+`charIn` answer as they do in the command, and the reads take it up. A read
+that needs more than the stream holds, a `charIn` with a larger `count` for one,
+raises `SYNTAX 98.900` and takes nothing. When no text is held, which is so
+for an input that was all read or not at all, every one of the four raises
+`SYNTAX 98.900`; only a `count` of `0` for `lineIn` and `charIn` answers the
+null string in either case, since it reads nothing. A copy made in the command
+holds the text that its original held at that moment and keeps it for itself:
+what the original reads afterwards is still there to read for the copy, and what
+the copy reads is not taken from the original. The example's input is `ab` and
+`cd`, and the handler reads the `a`.
+
+```rexx
+x = .commandhandler~register('spec_ci_held', .reader~new)
+address spec_ci_held 'go' with input using (.array~of('ab', 'cd'))
+x = .commandhandler~deregister('spec_ci_held')
+in = .environment~input
+c = .environment~heldcopy
+say in~lines in~chars '<'in~charin(,0)'>' '<'in~linein(,0)'>'
+call try 'in~charin(, 3)'
+call try 'in~charin(, 2)'
+call try 'in~lines'
+call try 'in~charin(, 0)'
+call try 'c~chars'
+call try 'c~charin'
+call try 'c~linein'
+call try 'c~linein'
+call try 'c~linein(, 0)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '<'r~changestr('0a'x, '\n')'>'
+  return
+bad: say arg(1) condition('o')~code
+  return
+::class reader inherit CommandHandler
+::method command
+  use arg command, caller
+  in = caller~input
+  x = in~charin
+  .environment~input = in
+  .environment~heldcopy = in~copy
+  return 0
+```
+
+```output
+1 2 <> <>
+in~charin(, 3) 98.900
+in~charin(, 2) <b\n>
+in~lines 98.900
+in~charin(, 0) <>
+c~chars <2>
+c~charin <b>
+c~linein <>
+c~linein 98.900
+c~linein(, 0) <>
 ```

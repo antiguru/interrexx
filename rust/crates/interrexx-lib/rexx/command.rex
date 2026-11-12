@@ -238,12 +238,17 @@
 
 ::method '!readline' private external 'LIBRARY REXX cmdcontext_lineIn'
 
--- Takes the next line of the command's input into the queue. Asking the
--- command is also how a stream finds out that its command is over.
+-- Takes the next line of the command's input into the queue and answers its
+-- length with the line end, or 0 when the input is all taken. Asking the
+-- command is also how a stream finds out that its command is over: then the
+-- stream raises SYNTAX 98.900. Text that is already in `q` or `buf` is read
+-- without asking (r[class.commandinput.valid]).
 ::method '!nextline' private
   expose q
   line = self~!readline
-  if line \== .nil then q~queue(line)
+  if line == .nil then return 0
+  q~queue(line)
+  return line~length + 1
 
 -- r[class.commandinput.linein]
 ::method lineIn
@@ -253,8 +258,8 @@
   if arg(1, 'E') then raise syntax 93.963 array('LINEIN', 1)
   if \arg(2, 'E') then count = 1
   if count \== '1' & count \== '0' then raise syntax 93.963 array('LINEIN', 2)
-  self~!nextline
   if count == '0' then return ''
+  if buf == '' & q~items = 0 then self~!nextline
   if buf \== '' then do
     rest = buf~left(buf~length - 1)
     buf = ''
@@ -274,8 +279,18 @@
     if \datatype(count, 'N') then raise syntax 93.943 array('CHARIN', 2, count)
     if \datatype(count, 'W') | count < 0 then raise syntax 93.923 array('CHARIN', 2, count)
   end
-  self~!nextline
   if count = 0 then return ''
+  -- Enough text is in hand before any is taken, so that a command that is
+  -- over refuses the read whole, with the text left as it was.
+  have = buf~length
+  do line over q
+    have = have + line~length + 1
+  end
+  do while have < count
+    more = self~!nextline
+    if more = 0 then leave
+    have = have + more
+  end
   out = ''
   do while count > 0
     if buf == '' then do
@@ -293,17 +308,16 @@
 -- r[class.commandinput.lines]
 ::method lines
   expose q buf
-  self~!nextline
   if buf \== '' | q~items > 0 then return 1
+  if self~!nextline > 0 then return 1
   return 0
 
 -- r[class.commandinput.chars]
 ::method chars
   expose q buf
-  self~!nextline
   if buf \== '' then return buf~length
-  if q~items > 0 then return q~peek~length + 1
-  return 0
+  if q~items = 0 then if self~!nextline = 0 then return 0
+  return q~peek~length + 1
 
 
 -- r[class.commandoutput.creation]: `which` is `O` for the output and `E` for
