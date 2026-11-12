@@ -69,8 +69,29 @@ fn native_stem_at(
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
     let receiver = stem_of(interp, receiver, b"[]")?;
+    // No index, or only omitted ones, names the stem's default, never the null
+    // tail.
+    if args.iter().all(Option::is_none) {
+        return Ok(Some(stem_default(interp, receiver)));
+    }
     let tail = stem_tail(interp, args)?;
     Ok(Some(stem_read(interp, receiver, &tail)))
+}
+
+/// What a read with no index answers: the default, or the stem's name when it
+/// has none.
+fn stem_default(interp: &mut Interp, receiver: ObjRef) -> ObjRef {
+    match interp.heap.get(receiver).map(|object| &object.body) {
+        Some(Body::Stem {
+            default: Some(default),
+            ..
+        }) => *default,
+        Some(Body::Stem { name, .. }) => {
+            let name = name.as_ref().to_vec();
+            interp.text_built(name)
+        }
+        _ => ObjRef::NIL,
+    }
 }
 
 /// `StemClass::bracketEqual`: the value is argument one and the subscripts
