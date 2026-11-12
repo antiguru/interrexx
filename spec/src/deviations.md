@@ -1251,5 +1251,5 @@ receiver as it was: every argument is checked before anything is stored.
 ooRexx stores part of the arguments first. A `DateTime` keeps the new date
 when its offset is out of range, with the offset stored as given, and a
 `TimeSpan` keeps an argument that is not a number as its span, so that the
-span then raises errors of its own. interrexx does the same until #47's
-`DateTime` and `TimeSpan` tasks land (#441).
+span then raises errors of its own. interrexx's `TimeSpan` does the same
+until #47's `TimeSpan` task lands (#441).

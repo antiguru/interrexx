@@ -935,9 +935,11 @@ bad: say arg(1) '=>' condition('o')~code
 ## Reading the fields
 
 r[class.datetime.fields]
-`year`, `month`, `day`, `hours`, `minutes`, `seconds` and `microseconds`
-answer the field of that name as a whole number without leading zeros, so the
-microseconds of `10:00:00.012345` are 12345. `dayMinutes`, `daySeconds` and
+`year` answers the year in four digits, with leading zeros for a year before
+1000, so the year of `minDate` is `0001`. `month`, `day`, `hours`, `minutes`,
+`seconds` and `microseconds` answer the field of that name as a whole number
+without leading zeros, so the microseconds of `10:00:00.012345` are 12345 and
+the month of 5 March is 3. `dayMinutes`, `daySeconds` and
 `dayMicroseconds` answer how many whole minutes, whole seconds and
 microseconds the time of day is past 00:00:00.000000. The offset plays no part
 in any of them. Each method takes no argument: one raises `SYNTAX 93.902`.
@@ -948,6 +950,7 @@ say d~year d~month d~day d~hours d~minutes d~seconds d~microseconds
 say d~dayMinutes d~daySeconds d~dayMicroseconds
 say .datetime~minDate~dayMicroseconds .datetime~maxDate~dayMicroseconds
 say d~toUtcTime~hours d~toTimezone(-600)~day
+say .datetime~minDate~year .datetime~new(5, 3, 5)~year .datetime~new(5, 3, 5)~month
 signal on syntax name bad
 say d~year(1)
 bad: say condition('o')~code
@@ -958,6 +961,7 @@ bad: say condition('o')~code
 548 32887 32887012345
 0 86399999999
 7 28
+0001 0005 3
 93.902
 ```
 
@@ -2256,7 +2260,7 @@ bad: say arg(1) '=>' condition('o')~code
   return 0
 ```
 
-```output defect=#189
+```output
 d~compareTo(.timespan~fromHours(2)) => 88.914
 d~compareTo(.file~new("/t/a")) => 88.914
 d~compareTo("2017-06-30") => 88.914
@@ -2359,7 +2363,7 @@ y[d] = 'found'
 say y[s] y[t]
 ```
 
-```output defect=#191
+```output
 1 1 0
 1 1
 8
@@ -2387,7 +2391,7 @@ exit
 near: return abs(arg(1)~totalSeconds - arg(2)~totalSeconds) < 5
 ```
 
-```output defect=#192
+```output
 1 1
 1
 1
@@ -2460,7 +2464,7 @@ bad: say arg(1) '=>' condition('o')~code
   return
 ```
 
-```output defect=#193
+```output
 2017-06-30T00:00:00.000000
 2017-06-30T01:00:00.000000
 2017-06-03T00:00:00.000000
@@ -2523,7 +2527,7 @@ failed: say '=>' condition('o')~code
   nop
 ```
 
-```output defect=#194
+```output
 0001-01-01T00:00:00.000000 00:00:00.000000 0 0001-01-01T00:00:00.000000 0001-01-01T00:00:00.000000Z
 1 1 0 1
 0001 1 1 0 0 0 0
@@ -2573,7 +2577,7 @@ bad: say '['arg(1)'] =>' condition('o')~code
   return
 ```
 
-```output defect=#195
+```output
 2017-06-30T11:08:50.000000Z
 2017-06-30T11:08:50.100000Z
 2017-06-30T11:08:50.123456-15:00
@@ -2620,6 +2624,6 @@ syntax:
 say condition('O')~code (d~isoDate d~offset == before) d~isoDate
 ```
 
-```output defect=#441
+```output
 88.907 1 2020-01-01T00:00:00.000000
 ```

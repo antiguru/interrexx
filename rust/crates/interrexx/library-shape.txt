@@ -251,8 +251,6 @@ class DATETIME public=1 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,COMPARA
   instance BASEDATE private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance CIVILTIME private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance COMPARETO private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-  instance CONVERTDATE private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-  instance CONVERTTIME private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance DATE private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance DAY private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance DAYMICROSECONDS private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
