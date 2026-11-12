@@ -253,9 +253,10 @@ pub(crate) fn lines(
     Ok(interp.text(if present { b"1" } else { b"0" }))
 }
 
-/// Whether the string value of `answer` is a number equal to zero.
+/// Whether the string representation of `answer` (what its `STRING` answers)
+/// is a number equal to zero.
 fn answer_is_zero(interp: &mut Interp, answer: ObjRef) -> Result<bool, Failure> {
-    let text = interp.string_value_text(answer)?;
+    let text = interp.string_representation(answer)?;
     Ok(Number::parse_bytes(&text).is_some_and(|number| number.is_zero()))
 }
 
