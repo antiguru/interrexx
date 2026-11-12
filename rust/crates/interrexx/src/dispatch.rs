@@ -1314,6 +1314,19 @@ pub(crate) const ACTIVATE: &[u8] = b"ACTIVATE";
 
 /// The class model this crate dispatches against, and the implementations
 /// its `MethodId`s name.
+/// The classes whose primitive `UNKNOWN` runs without a level of its own,
+/// each as `.NAME` or the kernel directory resolves it, valid while the class
+/// registry's ancestry stamp is `stamp`: only a define or an expunge changes
+/// what a name resolves to, and both move the stamp.
+#[derive(Clone, Copy)]
+pub(crate) struct FramelessClasses {
+    stamp: u64,
+    stem: Option<ObjRef>,
+    variable_reference: Option<ObjRef>,
+    directory: Option<ObjRef>,
+    string_table: Option<ObjRef>,
+}
+
 pub(crate) struct ObjectModel {
     classes: ClassRegistry,
     natives: MethodRows<NativeEntry>,
@@ -4121,20 +4134,40 @@ impl Interp {
     /// the base class.
     fn frameless_unknown(&mut self, resolution: Resolution, receiver: ObjRef) -> Option<Unsent> {
         self.object_model().natives.get(resolution.method)?;
-        let classes = self.classes();
-        let system = |name| {
-            classes.lookup(name).or_else(|| classes.system_lookup(name)) == Some(resolution.scope)
-        };
-        if system("Stem") {
+        let named = self.frameless_classes();
+        let scope = Some(resolution.scope);
+        if named.stem == scope {
             return Some(hash::stem::stem_unknown);
         }
-        if system("VariableReference") {
+        if named.variable_reference == scope {
             return Some(reference_unknown);
         }
-        if !(system("Directory") || system("StringTable")) {
+        if !(named.directory == scope || named.string_table == scope) {
             return None;
         }
         (self.class_of_value(receiver) == Some(resolution.scope)).then_some(hash::hash_unknown)
+    }
+
+    /// [`FramelessClasses`], resolved again whenever the class registry's
+    /// ancestry stamp has moved since they were.
+    fn frameless_classes(&mut self) -> FramelessClasses {
+        let stamp = self.classes().ancestry_stamp();
+        if let Some(named) = self.frameless_classes
+            && named.stamp == stamp
+        {
+            return named;
+        }
+        let classes = self.classes();
+        let system = |name| classes.lookup(name).or_else(|| classes.system_lookup(name));
+        let named = FramelessClasses {
+            stamp,
+            stem: system("Stem"),
+            variable_reference: system("VariableReference"),
+            directory: system("Directory"),
+            string_table: system("StringTable"),
+        };
+        self.frameless_classes = Some(named);
+        named
     }
 
     /// The condition a send raises when the receiver's behaviour answers
