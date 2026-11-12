@@ -7,7 +7,7 @@ use interrexx_rxapi::macro_file;
 use interrexx_rxapi::message::code::{MACRO_FILE_ERROR, MACRO_NOT_FOUND, NO_SERVICE, OK};
 use interrexx_rxapi::message::{Reply, Request};
 
-use super::{answer, check_arity, path_argument, required_c_string};
+use super::{answer, check_arity, required_c_string};
 use crate::error::Raised;
 use crate::rxapi_client::{self, ApiClient};
 use crate::{Failure, Interp};
@@ -68,6 +68,25 @@ pub(crate) fn translate(path: &[u8], name: &[u8]) -> Option<Vec<u8>> {
     })
 }
 
+/// The `file` argument of SysAddRexxMacro, SysSaveRexxMacroSpace and
+/// SysLoadRexxMacroSpace: the C string joined to the current directory where it
+/// is relative, and otherwise unchanged, so a `~` is a character of the name and
+/// no `..` or trailing slash is cleaned away (r[util.sysaddrexxmacro.answer]).
+fn file_argument(
+    interp: &mut Interp,
+    args: &[Option<ObjRef>],
+    position: usize,
+) -> Result<Vec<u8>, Failure> {
+    let name = required_c_string(interp, args, position)?;
+    if name.is_empty() || name.first() == Some(&b'/') {
+        return Ok(name);
+    }
+    let mut joined = interp.cwd_bytes().to_vec();
+    joined.push(b'/');
+    joined.extend_from_slice(&name);
+    Ok(joined)
+}
+
 /// `SysAddRexxMacro(name, file [, order])`.
 pub(crate) fn add(
     interp: &mut Interp,
@@ -76,7 +95,7 @@ pub(crate) fn add(
 ) -> Result<ObjRef, Failure> {
     check_arity(args, 3)?;
     let name = required_c_string(interp, args, 1)?;
-    let file = path_argument(interp, args, 2)?;
+    let file = file_argument(interp, args, 2)?;
     let position = match super::optional_text(interp, args, 3)? {
         Some(option) => order("SysAddRexxMacro", super::c_string(&option))?,
         None => BEFORE,
@@ -188,7 +207,7 @@ pub(crate) fn save(
     args: &[Option<ObjRef>],
 ) -> Result<ObjRef, Failure> {
     check_arity(args, 1)?;
-    let file = path_argument(interp, args, 1)?;
+    let file = file_argument(interp, args, 1)?;
     let reply = match rxapi_client::running_client() {
         Some(client) => client.call(Request::SaveMacros { names: None }),
         None => Err(MACRO_FILE_ERROR),
@@ -228,7 +247,7 @@ pub(crate) fn load(
     args: &[Option<ObjRef>],
 ) -> Result<ObjRef, Failure> {
     check_arity(args, 1)?;
-    let file = path_argument(interp, args, 1)?;
+    let file = file_argument(interp, args, 1)?;
     let Ok(bytes) = std::fs::read(crate::paths::os_path(&file)) else {
         return Ok(code(interp, MACRO_FILE_ERROR));
     };

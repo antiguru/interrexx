@@ -197,7 +197,7 @@ call SysFileDelete 'c4zqhs'
 call SysFileDelete 'c4zqh.rex'
 ```
 
-```output defect=#232
+```output
 7 7 7
 0 5 5
 0 0
