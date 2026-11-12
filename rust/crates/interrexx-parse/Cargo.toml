@@ -26,6 +26,8 @@ interrexx-inventory.workspace = true
 
 [dev-dependencies]
 criterion = "0.8.2"
+# The interpreter's own library program: the parse bench's input.
+interrexx-lib.workspace = true
 
 [[bench]]
 name = "parse"

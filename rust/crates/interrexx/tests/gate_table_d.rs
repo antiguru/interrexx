@@ -7,7 +7,6 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use gate_tables::orx::{self, CORE_CLASSES, STREAM_CLASSES};
 use gate_tables::{
     Descriptors, Report, Structural, Verdict, assert_no_structural_failures, compare_raw, excerpt,
     is_loud, refused_construct, run_gate_probe, stdout_lines, verdict, verdict_is_gated,
@@ -213,23 +212,6 @@ struct Measured {
     crate_exit: i32,
     crate_stdout: Vec<u8>,
     crate_stderr: Vec<u8>,
-    core_uses: Vec<orx::Hit>,
-    stream_uses: Vec<orx::Hit>,
-}
-
-/// Renders the `.orx` usage column: how many clauses in each file use the
-/// row's shape, and where the first one is.
-fn usage_column(measured: &Measured) -> String {
-    let cite = |hits: &[orx::Hit]| match hits.first() {
-        None => "-".to_string(),
-        Some(first) if hits.len() == 1 => first.cite(),
-        Some(first) => format!("{} +{}", first.cite(), hits.len() - 1),
-    };
-    format!(
-        "core={} stream={}",
-        cite(&measured.core_uses),
-        cite(&measured.stream_uses)
-    )
 }
 
 #[test]
@@ -273,9 +255,6 @@ fn directive_option_gate_table() {
             detail: "a probe program no row names, so nothing runs it".to_string(),
         });
     }
-
-    let core = orx::scan(CORE_CLASSES);
-    let stream = orx::scan(STREAM_CLASSES);
 
     let mut measured = Vec::new();
     for row in rows {
@@ -376,57 +355,8 @@ fn directive_option_gate_table() {
             crate_exit: wrapped_exit_code(crate_side.exit_code),
             crate_stdout: crate_side.stdout,
             crate_stderr: crate_side.stderr,
-            core_uses: orx::usage(&core, &row.directive, &row.keyword, &row.position),
-            stream_uses: orx::usage(&stream, &row.directive, &row.keyword, &row.position),
             row,
         });
-    }
-
-    let shapes = [
-        (
-            "a quoted class name, MIXINCLASS, and INHERIT naming more than one class",
-            [
-                orx::quoted_mixin_inheriting_several(&core),
-                orx::quoted_mixin_inheriting_several(&stream),
-            ]
-            .concat(),
-        ),
-        (
-            "a quoted SUBCLASS target",
-            [
-                orx::quoted_subclass_target(&core),
-                orx::quoted_subclass_target(&stream),
-            ]
-            .concat(),
-        ),
-        (
-            "an install-time ::CONSTANT sending a private class method of its own class",
-            [
-                orx::constant_sending_an_own_private_class_method(&core),
-                orx::constant_sending_an_own_private_class_method(&stream),
-            ]
-            .concat(),
-        ),
-        (
-            "a directive carrying its body on the same physical line",
-            [
-                orx::body_on_the_same_physical_line(&core),
-                orx::body_on_the_same_physical_line(&stream),
-            ]
-            .concat(),
-        ),
-    ];
-    for (shape, hits) in &shapes {
-        if hits.is_empty() {
-            structural.push(Structural {
-                subject: format!("orx shape: {shape}"),
-                detail: "the scan reached no occurrence of this shape in either \
-                         bootstrap file. Either the scanner stopped seeing what those \
-                         files contain, or the C++ tree moved out from under it -- \
-                         both make every derived usage column below unreliable"
-                    .to_string(),
-            });
-        }
     }
 
     let mut report = Report::new(
@@ -439,32 +369,19 @@ fn directive_option_gate_table() {
         measured.len()
     ));
     report.line("");
-    report.line("the four bootstrap shapes the usage column's scan reaches:");
-    for (shape, hits) in &shapes {
-        const SHOWN: usize = 6;
-        let cites: Vec<String> = hits.iter().take(SHOWN).map(|hit| hit.cite()).collect();
-        let rest = match hits.len().checked_sub(SHOWN) {
-            Some(0) | None => String::new(),
-            Some(more) => format!(", and {more} more"),
-        };
-        report.line(&format!("  {shape}"));
-        report.line(&format!("    {}{rest}", cites.join(", ")));
-    }
-    report.line("");
     report.line(
-        "rows (verdict / loud / waits on / row / .orx usage / probe, whose \
-         directory is named above):",
+        "rows (verdict / loud / waits on / row / probe, whose directory is \
+         named above):",
     );
     for row in &measured {
         report.line(&format!(
-            "  {:<14} loud={:<3} {:<29} {:<12} {:<12} {:<16} {:<44} {}",
+            "  {:<14} loud={:<3} {:<29} {:<12} {:<12} {:<16} {}",
             verdict_label(row.verdict),
             if row.loud { "yes" } else { "no" },
             row.waits_on.unwrap_or("-"),
             row.row.directive,
             row.row.keyword,
             row.row.position,
-            usage_column(row),
             row.probe
                 .strip_prefix(PROBE_SUBDIR)
                 .and_then(|rest| rest.strip_prefix('/'))

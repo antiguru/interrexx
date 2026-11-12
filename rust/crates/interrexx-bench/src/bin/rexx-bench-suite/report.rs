@@ -216,10 +216,10 @@ pub(super) fn write_offset(report: &mut String, name: &str, paired: &Paired) {
     let _ = writeln!(
         report,
         "**Comparable, and the difference is a result about startup.** Both sides pay a fixed \
-         cost for the same Rexx-written library before a program's first clause: the oracle \
-         restores its saved image, this crate parses and installs the `.orx` sources that image \
-         was built from. The two numbers below are each side's own fixed cost, reported so every \
-         axis above can be read net of it.\n"
+         cost for their Rexx-written class library before a program's first clause: the oracle \
+         restores its saved image, this crate parses and installs its own library program. The \
+         two libraries are different programs with the same classes. The two numbers below are \
+         each side's own fixed cost, reported so every axis above can be read net of it.\n"
     );
     let _ = writeln!(
         report,
