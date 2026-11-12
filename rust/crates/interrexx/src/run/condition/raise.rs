@@ -91,10 +91,10 @@ impl Interp {
                 let traced = self.traced_string_value_text(value)?;
                 self.trace_keyword(indent, "DESCRIPTION", &traced);
             }
-            // The string is needed only where a report names it: a `SYNTAX`
-            // or `NOMETHOD` message, or a `HALT`. Every other condition keeps
-            // the object, and each read of `CONDITION('D')` converts it anew.
-            if matches!(raise.condition.as_ref(), b"SYNTAX" | b"NOMETHOD" | b"HALT") {
+            // The string is needed only where an untrapped `NOMETHOD` report
+            // names it. Every other condition keeps the object, and each read
+            // of `CONDITION('D')` converts it anew.
+            if raise.condition.as_ref() == b"NOMETHOD" {
                 let value = self.required_string_value(value)?;
                 self.roots.activity_mut().push_temp(value);
                 description = Some(self.to_text(value).to_vec());
@@ -258,6 +258,7 @@ impl Interp {
             }
             let mut raised = raise_syntax_condition(rc_text.as_deref().unwrap_or(b""), additional);
             raised.description = description;
+            self.activity.pending_description = description_object;
             // **The delivery rule follows the tail even when the argument was
             // rejected**, which is measured rather than convenient: `raise
             // syntax 40.10` inside a routine, with the trap in the main body

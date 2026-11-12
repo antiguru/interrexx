@@ -554,10 +554,10 @@ default's default name. A trace value line still shows the default's name.
 
 A LINEOUT that closes a FIFO consumes no input. ooRexx consumes a byte.
 
-## 83. When RAISE DESCRIPTION is converted
+## 83. Withdrawn
 
-RAISE converts its DESCRIPTION to a string when it runs, so a conversion
-that fails fails at RAISE. ooRexx converts at every `CONDITION('D')`.
+RAISE keeps its DESCRIPTION as the object and converts it at every
+`CONDITION('D')`, as ooRexx does.
 
 ## 84. Emptying a Table during REMOVE
 

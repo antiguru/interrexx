@@ -2,8 +2,9 @@
 s1 98.900 boom.
     (dn 1)
 s2 98.900 boom.
-    (noisy dn)
 handler USER ZZ
 handler ERROR
-    (bad dn)
-s3 98.900 boom.
+handler USER ZZ
+after bd user
+handler ERROR
+after bd error
