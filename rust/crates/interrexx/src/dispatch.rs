@@ -5,8 +5,8 @@ use std::rc::Rc;
 
 use interrexx_classes::{ClassKind, ClassRegistry, InheritRefusal, MethodId, MethodSlot};
 use interrexx_core::{
-    BehaviourHandle, BehaviourId, Body, BufferState, Decoded, ObjRef, Object, ObjectMethod,
-    ObjectMethods,
+    BehaviourHandle, BehaviourId, Body, BufferState, Decoded, NativeState, ObjRef, Object,
+    ObjectMethod, ObjectMethods,
 };
 use interrexx_parse::{Access, Expr, Operator};
 
@@ -250,6 +250,10 @@ type ScopedBegin =
 struct NativeEntry {
     arity: Arity,
     body: NativeBody,
+    /// Whether the method is one of `String`'s, which works on the bytes of a
+    /// string and so refuses a receiver that is none
+    /// (r[class.object.borrowed-native]).
+    string_only: bool,
 }
 
 /// A primitive `UNKNOWN`'s work run without a send.
@@ -1445,6 +1449,7 @@ impl ObjectModel {
                 NativeEntry {
                     arity: *arity,
                     body,
+                    string_only: *class_id == "String",
                 },
             );
         }
@@ -1507,6 +1512,7 @@ impl ObjectModel {
                 NativeEntry {
                     arity: *arity,
                     body,
+                    string_only: false,
                 },
             );
         }
@@ -2638,6 +2644,24 @@ impl Interp {
         Err(Loud::unbound_method(name, &scope).into())
     }
 
+    /// Whether `receiver` is a string, a number or an instance of a `String`
+    /// subclass, which is what a `String` method works on.
+    #[inline]
+    fn is_string_valued(&self, receiver: ObjRef) -> bool {
+        match receiver.decode() {
+            Decoded::Text(_) | Decoded::SmallInt(_) => true,
+            Decoded::Nil => false,
+            Decoded::Heap { .. } => match self.heap.get(receiver).map(|object| &object.body) {
+                Some(Body::Text { .. } | Body::Num { .. }) => true,
+                Some(Body::Instance {
+                    native: Some(state),
+                    ..
+                }) => matches!(**state, NativeState::Text(_)),
+                _ => false,
+            },
+        }
+    }
+
     /// **Step two of a send**: run what [`Interp::resolve_in`] found.
     pub(crate) fn invoke(
         &mut self,
@@ -2690,6 +2714,11 @@ impl Interp {
             // A leveled primitive is run by `run_other`, off this path.
             Invocable::Native(entry) if !matches!(entry.body, NativeBody::Leveled(_)) => {
                 let outcome = match (entry.arity, entry.body) {
+                    // A `String` method given to an object of another class
+                    // and run on it (r[class.object.borrowed-native]).
+                    _ if entry.string_only && !self.is_string_valued(receiver) => {
+                        Err(Raised::receiver_kind("a value that is not a string").into())
+                    }
                     (Arity::Fixed(arity), _) if args.len() > arity => {
                         Err(Raised::too_many_method_arguments(arity).into())
                     }
@@ -2940,6 +2969,7 @@ impl Interp {
             Invocable::Native(NativeEntry {
                 arity,
                 body: NativeBody::Leveled(run),
+                ..
             }) => {
                 let ran = match arity {
                     Arity::Fixed(arity) if args.len() > arity => {
