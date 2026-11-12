@@ -142,7 +142,7 @@ d = c~subclass('z')
 say d~class~id d~metaclass~id (d~new == d~new)
 ```
 
-```output defect=#200
+```output
 Singleton 0 1
 Singleton Singleton 1
 ```
