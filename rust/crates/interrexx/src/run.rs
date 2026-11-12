@@ -2560,15 +2560,23 @@ impl Interp {
         // oracle's own `RexxInstruction::traceInstruction`, which every one
         // of those calls too from its own `execute`.
         let (tabled, position) = position;
-        let shortcut = tabled && source.is_some() && self.activity.clause_line_override.is_none();
-        let indent = if shortcut {
+        let rerun = match self.activity.rerun_indent {
+            Some(_) => self.activity.rerun_indent.take(),
+            None => None,
+        };
+        let shortcut = tabled
+            && source.is_some()
+            && self.activity.clause_line_override.is_none()
+            && rerun.is_none();
+        let indent = if let Some(indent) = rerun {
+            indent
+        } else if shortcut {
             position.indent as usize + self.activity.activation_indent + self.activity.indent_offset
         } else {
             self.printed_indent(code, index)
         };
-        debug_assert_eq!(
-            indent,
-            self.printed_indent(code, index),
+        debug_assert!(
+            rerun.is_some() || indent == self.printed_indent(code, index),
             "the chunk's indent table disagrees with the plan's for instruction {index}"
         );
         self.activity.clause_state.current_value_indent = indent;

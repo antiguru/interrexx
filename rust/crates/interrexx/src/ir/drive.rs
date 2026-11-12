@@ -2611,6 +2611,7 @@ impl Interp {
         // for an `ITERATE`), so what its handlers queued waits for the next
         // clause's boundary; only what the debug pause queues is delivered here.
         let boundary_done = matches!(&arrival, Flow::Iterate(..) | Flow::Leave(..));
+        let is_leave = matches!(&arrival, Flow::Leave(..));
         let paused_clause = self.save_clause_state();
         let indents = self
             .activity
@@ -2637,6 +2638,13 @@ impl Interp {
         match self.debug_pause_instruction()? {
             Pause::Go => {}
             Pause::Again => {
+                // The clause is echoed again at the indent of the loop level
+                // it reached: the body's for an `ITERATE`, the `DO`'s for a
+                // `LEAVE`.
+                if let Some((do_indent, loop_indent)) = indents {
+                    self.activity.rerun_indent =
+                        Some(if is_leave { do_indent } else { loop_indent });
+                }
                 return Ok(match step {
                     crate::run::FlatStep::Body(_) => {
                         crate::run::FlatStep::Body(op_at(chunk, index)?)
