@@ -175,6 +175,7 @@
                     <main>
                         <h1 id="the-rxunixsys-library"><a class="header" href="#the-rxunixsys-library">The rxunixsys library</a></h1>
 <p class="references">rexxref: Unix extensions</p>
+<p class="deviations">Deviations: D164</p>
 <p>The library <code>rxunixsys</code> gives a program the calls of a Unix-like system that
 RexxUtil leaves out: the identity of the process, signals, links and
 permissions of files, the user, group and service databases, and the errors
@@ -465,8 +466,9 @@ call that fails sets it; a call that does not fail leaves it as it is, and the
 lookups of users, groups and services set it to <code>0</code> before they look. The
 number is that of the failed call when <code>SysGeterrno</code> is called in the same
 clause, after the failed call and after nothing else that fails, as in the
-examples: what a call that does not fail leaves, and what a later clause finds,
-is not specified. <code>SysGeterrnomsg</code> answers
+examples; what a later clause finds, and what another activity does to it, is
+the subject of <a href="#r-rxunixsys.index.deviation.164">Deviation 164</a>.
+<code>SysGeterrnomsg</code> answers
 <code>Ok</code> for <code>0</code> and <code>Unknown</code> for a number without a text. It takes the number as
 a <a href="#r-rxunixsys.index.whole">whole number</a>, and the numbers of the table that
 the examples show are fixed: the text of another number is that of the system.</p>
@@ -491,6 +493,51 @@ say SysGeterrnomsg(39) '|' SysGeterrnomsg(2147483647) '|' SysGeterrnomsg(1000)
 Ok | Operation not permitted | No such file or directory | Permission denied
 File exists | Not a directory | Is a directory | Invalid argument
 Directory not empty | Unknown | Unknown
+</code></pre>
+<h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
+<div class="rule" id="r-rxunixsys.index.deviation.164"><a href="#r-rxunixsys.index.deviation.164">[rxunixsys.index.deviation.164]</a></div>
+<p>The error number belongs to the activity that made the call: each activity has
+its own, which is <code>0</code> until a call of the library fails on it. A call of the
+library that fails sets the number of its activity; a call that does not fail
+leaves it as it is, except that a lookup of a user, a group or a service sets
+it to <code>0</code> before it looks. No other clause changes it, whether it fails or
+not, and no call on another activity does: after a failed call, a later clause
+of the same activity reads the number of that call, however many clauses that
+do not set it come between, and however many other activities make calls of
+the library meanwhile. A program therefore cannot lose the number to another
+activity between the failed call and the clause that reads it. In the example
+the main activity's call fails with <code>2</code>; the method that <code>start</code> runs begins
+with <code>0</code>, fails with <code>17</code>, and keeps <code>17</code> after a call that does not fail,
+while the main activity still reads <code>2</code> and then <code>0</code> after a lookup.</p>
+<pre><code class="language-rexx">call SysMkdirUnix 'c1zqd1', 493
+say SysUnlink('c1zqnone') SysGeterrno()
+x = 1 + 2
+say 'later' SysGeterrno()
+m = .k~new~start('work')
+say 'result' m~result
+say 'after' SysGeterrno()
+call SysGetpwnam 'c1zqnouser', 'n'
+say 'lookup' SysGeterrno()
+call SysRmdirUnix 'c1zqd1'
+exit
+::requires 'rxunixsys' library
+::class k
+::method work
+  say 'b start' SysGeterrno()
+  say SysMkdirUnix('c1zqd1', 493) SysGeterrno()
+  call SysMkdirUnix 'c1zqd1x', 493
+  say 'b ok' SysGeterrno()
+  call SysRmdirUnix 'c1zqd1x'
+  return SysGeterrno()
+</code></pre>
+<pre><code class="language-output">-1 2
+later 2
+b start 0
+-1 17
+b ok 17
+result 17
+after 2
+lookup 0
 </code></pre>
 
                     </main>

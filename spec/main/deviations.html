@@ -1092,6 +1092,18 @@ when its offset is out of range, with the offset stored as given, and a
 <code>TimeSpan</code> keeps an argument that is not a number as its span, so that the
 span then raises errors of its own. interrexx's <code>TimeSpan</code> does the same
 until #47's <code>TimeSpan</code> task lands (#441).</p>
+<h2 id="164-the-error-number-of-sysgeterrno-and-socksock_errno"><a class="header" href="#164-the-error-number-of-sysgeterrno-and-socksock_errno">164. The error number of SysGeterrno and SockSock_Errno</a></h2>
+<p>The error number that <code>SysGeterrno</code> and <code>SockSock_Errno</code> answer belongs to
+the activity. A failing call of the library sets the number of its activity, a
+call that does not fail leaves it as it is (a lookup of a user, group, service
+or host sets it to <code>0</code> first), and nothing else changes it: not a later clause
+of the activity that is no call of the library, and not any call on another
+activity. A program may read it in a later clause after a failed call, and
+cannot lose it to another activity between the two. ooRexx answers the C
+library's raw error number of the process, which any later clause on any
+activity can overwrite, even after a successful call: the number a program
+reads in a later clause, or while another activity runs, is whatever call set
+it last.</p>
 
                     </main>
 

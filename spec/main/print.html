@@ -106928,6 +106928,7 @@ say RxCalcArcTan(1000000) RxCalcArcTan(0.5, 3) RxCalcArcTan(0.5, 16) RxCalcArcSi
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="the-rxunixsys-library"><a class="header" href="#the-rxunixsys-library">The rxunixsys library</a></h1>
 <p class="references">rexxref: Unix extensions</p>
+<p class="deviations">Deviations: D164</p>
 <p>The library <code>rxunixsys</code> gives a program the calls of a Unix-like system that
 RexxUtil leaves out: the identity of the process, signals, links and
 permissions of files, the user, group and service databases, and the errors
@@ -107218,8 +107219,9 @@ call that fails sets it; a call that does not fail leaves it as it is, and the
 lookups of users, groups and services set it to <code>0</code> before they look. The
 number is that of the failed call when <code>SysGeterrno</code> is called in the same
 clause, after the failed call and after nothing else that fails, as in the
-examples: what a call that does not fail leaves, and what a later clause finds,
-is not specified. <code>SysGeterrnomsg</code> answers
+examples; what a later clause finds, and what another activity does to it, is
+the subject of <a href="rxunixsys/index.html#r-rxunixsys.index.deviation.164">Deviation 164</a>.
+<code>SysGeterrnomsg</code> answers
 <code>Ok</code> for <code>0</code> and <code>Unknown</code> for a number without a text. It takes the number as
 a <a href="rxunixsys/index.html#r-rxunixsys.index.whole">whole number</a>, and the numbers of the table that
 the examples show are fixed: the text of another number is that of the system.</p>
@@ -107244,6 +107246,51 @@ say SysGeterrnomsg(39) '|' SysGeterrnomsg(2147483647) '|' SysGeterrnomsg(1000)
 Ok | Operation not permitted | No such file or directory | Permission denied
 File exists | Not a directory | Is a directory | Invalid argument
 Directory not empty | Unknown | Unknown
+</code></pre>
+<h2 id="deviations-88"><a class="header" href="#deviations-88">Deviations</a></h2>
+<div class="rule" id="r-rxunixsys.index.deviation.164"><a href="rxunixsys/index.html#r-rxunixsys.index.deviation.164">[rxunixsys.index.deviation.164]</a></div>
+<p>The error number belongs to the activity that made the call: each activity has
+its own, which is <code>0</code> until a call of the library fails on it. A call of the
+library that fails sets the number of its activity; a call that does not fail
+leaves it as it is, except that a lookup of a user, a group or a service sets
+it to <code>0</code> before it looks. No other clause changes it, whether it fails or
+not, and no call on another activity does: after a failed call, a later clause
+of the same activity reads the number of that call, however many clauses that
+do not set it come between, and however many other activities make calls of
+the library meanwhile. A program therefore cannot lose the number to another
+activity between the failed call and the clause that reads it. In the example
+the main activity's call fails with <code>2</code>; the method that <code>start</code> runs begins
+with <code>0</code>, fails with <code>17</code>, and keeps <code>17</code> after a call that does not fail,
+while the main activity still reads <code>2</code> and then <code>0</code> after a lookup.</p>
+<pre><code class="language-rexx">call SysMkdirUnix 'c1zqd1', 493
+say SysUnlink('c1zqnone') SysGeterrno()
+x = 1 + 2
+say 'later' SysGeterrno()
+m = .k~new~start('work')
+say 'result' m~result
+say 'after' SysGeterrno()
+call SysGetpwnam 'c1zqnouser', 'n'
+say 'lookup' SysGeterrno()
+call SysRmdirUnix 'c1zqd1'
+exit
+::requires 'rxunixsys' library
+::class k
+::method work
+  say 'b start' SysGeterrno()
+  say SysMkdirUnix('c1zqd1', 493) SysGeterrno()
+  call SysMkdirUnix 'c1zqd1x', 493
+  say 'b ok' SysGeterrno()
+  call SysRmdirUnix 'c1zqd1x'
+  return SysGeterrno()
+</code></pre>
+<pre><code class="language-output">-1 2
+later 2
+b start 0
+-1 17
+b ok 17
+result 17
+after 2
+lookup 0
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="files-and-directories"><a class="header" href="#files-and-directories">Files and directories</a></h1>
 <pre><code>SysMkdirUnix(dir, mode); SysRmdirUnix(dir); SysUmask(mask); SysChmod(file, mode); SysChown(file, uid, gid); SysLchown(file, uid, gid); SysStat(file, option); SysAccess(file, mode); SysEuidaccess(file, mode); SysSymlink(target, link); SysLink(file, link); SysUnlink(file); SysGetdirlist(dir); SysClose(fd); SysChroot(dir)
@@ -107962,6 +108009,7 @@ e: say condition('o')~code
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="the-rxsock-library"><a class="header" href="#the-rxsock-library">The rxsock library</a></h1>
 <p class="references">rexxref: Rexx Socket Functions Library (rxsock) &gt; Functions</p>
+<p class="deviations">Deviations: D164</p>
 <p>The library <code>rxsock</code> lets a program use the sockets of the system: it makes a
 socket, binds it to an address on the host, connects it, sends and receives, and
 asks and sets the options of a socket. This page holds what every function of
@@ -108118,8 +108166,10 @@ those names, and for any other error the number of the error as a Linux system
 gives it, as <code>9</code> for a socket that is not open and <code>22</code> for an argument the
 system found invalid. A call that succeeds sets <code>errno</code> to <code>0</code>. <code>SockSock_Errno()</code>
 answers the number of the error of the last call that failed, which the
-variable shows as a name; what it answers after a call that succeeded, or before
-any failed, is not specified.</p>
+variable shows as a name. What it answers after a call that succeeded, or in a
+later clause, or after another activity made calls, is the subject of
+<a href="rxsock/index.html#r-rxsock.index.deviation.164">Deviation 164</a>; the example below reads it in
+the clause of the call.</p>
 <pre><code class="language-rexx">say SockClose(999) errno h_errno SockSock_Errno()
 say SockClose(-1) errno
 say SockListen(999, 5) errno
@@ -108165,6 +108215,51 @@ call sysfiledelete 'c1zqs1.rex'
 []
 [RxSOCK Error: first]
 [RxSOCK Error: ]
+</code></pre>
+<h2 id="deviations-89"><a class="header" href="#deviations-89">Deviations</a></h2>
+<div class="rule" id="r-rxsock.index.deviation.164"><a href="rxsock/index.html#r-rxsock.index.deviation.164">[rxsock.index.deviation.164]</a></div>
+<p>The number that <code>SockSock_Errno()</code> answers belongs to the activity that made
+the call: each activity has its own, which is <code>0</code> until a call of the library
+fails on it. A call of the library that fails sets the number of its activity;
+a call that succeeds leaves it as it is, except that a lookup of a host sets it
+to <code>0</code> before it looks. No other clause changes it, and no call on another
+activity does: after a failed call, a later clause of the same activity reads
+the number of that call, however many clauses that do not set it come between,
+and however many other activities make calls of the library meanwhile. The
+variables <code>errno</code> and <code>h_errno</code> are not the subject: they are variables of the
+program that made the call, as <a href="rxsock/index.html#r-rxsock.index.errors">the rule on errors</a>
+says. In the example the main activity's call fails with <code>9</code>; the method that
+<code>start</code> runs begins with <code>0</code>, fails with <code>107</code> and keeps it after a call that
+succeeds, while the main activity still reads <code>9</code> after a clause that sets
+nothing, and after a successful call that is not a lookup, and reads <code>0</code> after a
+lookup.</p>
+<pre><code class="language-rexx">say SockClose(999) SockSock_Errno()
+y = 5
+say 'later' SockSock_Errno()
+m = .k~new~start('work')
+say 'result' m~result
+say 'after' SockSock_Errno()
+say SockInit() SockSock_Errno()
+say SockGetHostByName('localhost', 'h.') SockSock_Errno()
+exit
+::requires 'rxsock' library
+::class k
+::method work
+  say 'b start' SockSock_Errno()
+  s = SockSocket('AF_INET', 'SOCK_STREAM', 0)
+  say SockGetPeerName(s, 'p.') SockSock_Errno()
+  say SockClose(s) SockSock_Errno()
+  return SockSock_Errno()
+</code></pre>
+<pre><code class="language-output">-1 9
+later 9
+b start 0
+-1 107
+0 107
+result 107
+after 9
+0 9
+1 0
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="sockets"><a class="header" href="#sockets">Sockets</a></h1>
 <pre><code>SockSocket(domain, type, protocol); SockClose(socket); SockSoClose(socket); SockShutDown(socket, how); SockBind(socket, address); SockListen(socket, backlog); SockConnect(socket, address); SockAccept(socket [, address]); SockGetSockName(socket, address); SockGetPeerName(socket, address); SockSend(socket, data [, flags]); SockSendTo(socket, data [, flags], address); SockRecv(socket, variable, length [, flags]); SockRecvFrom(socket, variable, length [, flags], address); SockGetSockOpt(socket, level, option, variable); SockSetSockOpt(socket, level, option, value); SockIoctl(socket, command, value); SockSelect(read, write, except [, timeout]); SockGetHostByName(name, host); SockGetHostByAddr(address, host); SockGetHostName(); SockGetHostId()
@@ -110352,7 +110447,7 @@ say abs('-1.235') abs('1.235') abs('-1.2349') abs('9996') abs('-0.9995')
 </code></pre>
 <pre><code class="language-output">1.24 1.24 1.23 1.00E+4 1.00
 </code></pre>
-<h2 id="deviations-88"><a class="header" href="#deviations-88">Deviations</a></h2>
+<h2 id="deviations-90"><a class="header" href="#deviations-90">Deviations</a></h2>
 <div class="rule" id="r-bif.abs.deviation.4"><a href="builtins/abs.html#r-bif.abs.deviation.4">[bif.abs.deviation.4]</a></div>
 <p>interrexx does not specify whether the answer of ABS is the same object as
 another string of equal value: as <code>number</code> itself, when the call leaves it
@@ -110990,7 +111085,7 @@ say b2x(101) b2x(1111) b2x(0) b2x(0001)
 </code></pre>
 <pre><code class="language-output">5 F 0 1
 </code></pre>
-<h2 id="deviations-89"><a class="header" href="#deviations-89">Deviations</a></h2>
+<h2 id="deviations-91"><a class="header" href="#deviations-91">Deviations</a></h2>
 <div class="rule" id="r-bif.b2x.deviation.4"><a href="builtins/b2x.html#r-bif.b2x.deviation.4">[bif.b2x.deviation.4]</a></div>
 <p>interrexx does not specify whether the answer of B2X is the same object as
 another string of equal value, as <a href="builtins/index.html#r-bif.index.conv.deviation.4">the shared
@@ -111264,7 +111359,7 @@ say bitand('abc', , 'ff'x) c2x(bitand('abc', , '00'x))
 <pre><code class="language-output">616263 610000
 abc 000000
 </code></pre>
-<h2 id="deviations-90"><a class="header" href="#deviations-90">Deviations</a></h2>
+<h2 id="deviations-92"><a class="header" href="#deviations-92">Deviations</a></h2>
 <div class="rule" id="r-bif.bitand.deviation.4"><a href="builtins/bitand.html#r-bif.bitand.deviation.4">[bif.bitand.deviation.4]</a></div>
 <p>interrexx does not specify whether the answer of BITAND is the same object as
 another string of equal value, as <a href="builtins/index.html#r-bif.index.bit.deviation.4">the shared
@@ -111324,7 +111419,7 @@ say bitor('abc', , '00'x) c2x(bitor('abc', , 'ff'x))
 <pre><code class="language-output">616263 61FFFF
 abc FFFFFF
 </code></pre>
-<h2 id="deviations-91"><a class="header" href="#deviations-91">Deviations</a></h2>
+<h2 id="deviations-93"><a class="header" href="#deviations-93">Deviations</a></h2>
 <div class="rule" id="r-bif.bitor.deviation.4"><a href="builtins/bitor.html#r-bif.bitor.deviation.4">[bif.bitor.deviation.4]</a></div>
 <p>interrexx does not specify whether the answer of BITOR is the same object as
 another string of equal value, as <a href="builtins/index.html#r-bif.index.bit.deviation.4">the shared
@@ -111388,7 +111483,7 @@ say c2x(bitxor('a0'x, , 'ff'x)) c2x(bitxor('abc', 'a', 'ff'x))
 <pre><code class="language-output">000000000000 1 1
 5F 009D9C
 </code></pre>
-<h2 id="deviations-92"><a class="header" href="#deviations-92">Deviations</a></h2>
+<h2 id="deviations-94"><a class="header" href="#deviations-94">Deviations</a></h2>
 <div class="rule" id="r-bif.bitxor.deviation.4"><a href="builtins/bitxor.html#r-bif.bitxor.deviation.4">[bif.bitxor.deviation.4]</a></div>
 <p>interrexx does not specify whether the answer of BITXOR is the same object as
 another string of equal value, as <a href="builtins/index.html#r-bif.index.bit.deviation.4">the shared
@@ -111523,7 +111618,7 @@ c: say condition('o')~code
 93.923
 93.936
 </code></pre>
-<h2 id="deviations-93"><a class="header" href="#deviations-93">Deviations</a></h2>
+<h2 id="deviations-95"><a class="header" href="#deviations-95">Deviations</a></h2>
 <div class="rule" id="r-bif.c2d.deviation.4"><a href="builtins/c2d.html#r-bif.c2d.deviation.4">[bif.c2d.deviation.4]</a></div>
 <p>interrexx does not specify whether the answer of C2D is the same object as
 another string of equal value, as <a href="builtins/index.html#r-bif.index.conv.deviation.4">the shared
@@ -111593,7 +111688,7 @@ say (x2c(c2x(s)) == s) (x2c(c2x('')) == '')
 </code></pre>
 <pre><code class="language-output">1 1
 </code></pre>
-<h2 id="deviations-94"><a class="header" href="#deviations-94">Deviations</a></h2>
+<h2 id="deviations-96"><a class="header" href="#deviations-96">Deviations</a></h2>
 <div class="rule" id="r-bif.c2x.deviation.4"><a href="builtins/c2x.html#r-bif.c2x.deviation.4">[bif.c2x.deviation.4]</a></div>
 <p>interrexx does not specify whether the answer of C2X is the same object as
 another string of equal value, as <a href="builtins/index.html#r-bif.index.conv.deviation.4">the shared
@@ -111724,7 +111819,7 @@ characters and <code>'00'x</code> are characters like any other, in <code>string
 <p><strong>Note.</strong> Whether, when and with which code CENTER fails for a <code>length</code>
 whose result cannot be held in memory is not specified.</p>
 </blockquote>
-<h2 id="deviations-95"><a class="header" href="#deviations-95">Deviations</a></h2>
+<h2 id="deviations-97"><a class="header" href="#deviations-97">Deviations</a></h2>
 <div class="rule" id="r-bif.center.deviation.4"><a href="builtins/center.html#r-bif.center.deviation.4">[bif.center.deviation.4]</a></div>
 <p>interrexx does not specify whether the answer of CENTER is the same object as
 another string of equal value: as <code>string</code> itself, when the call returns all
@@ -111894,7 +111989,7 @@ occurrence, searching from the end of the previous one, which gives the
 rules above for the call without <code>count</code>. The <code>count</code> argument and its
 checks follow ooRexx.</p>
 </blockquote>
-<h2 id="deviations-96"><a class="header" href="#deviations-96">Deviations</a></h2>
+<h2 id="deviations-98"><a class="header" href="#deviations-98">Deviations</a></h2>
 <div class="rule" id="r-bif.changestr.deviation.4"><a href="builtins/changestr.html#r-bif.changestr.deviation.4">[bif.changestr.deviation.4]</a></div>
 <p>interrexx does not specify whether the answer of CHANGESTR is the same object
 as another string of equal value: as <code>haystack</code> itself, when the call replaces
@@ -112109,7 +112204,7 @@ return
 notready STDIN
 [] [] []
 </code></pre>
-<h2 id="deviations-97"><a class="header" href="#deviations-97">Deviations</a></h2>
+<h2 id="deviations-99"><a class="header" href="#deviations-99">Deviations</a></h2>
 <div class="rule" id="r-bif.charin.deviation.62"><a href="builtins/charin.html#r-bif.charin.deviation.62">[bif.charin.deviation.62]</a></div>
 <p>A CHARIN that reads no character because the data is at its end leaves the
 stream in the state <code>NOTREADY</code>, with the description <code>NOTREADY:EOF</code> (STREAM
@@ -112307,7 +112402,7 @@ say charout('STDERR', 'x')
 93.958
 0
 </code></pre>
-<h2 id="deviations-98"><a class="header" href="#deviations-98">Deviations</a></h2>
+<h2 id="deviations-100"><a class="header" href="#deviations-100">Deviations</a></h2>
 <div class="rule" id="r-bif.charout.deviation.60"><a href="builtins/charout.html#r-bif.charout.deviation.60">[bif.charout.deviation.60]</a></div>
 <p>A <code>'1a'x</code> at the end of a stream is data like any other character: a write
 without a <code>start</code> goes after it, and a write at its position replaces it.
@@ -112404,7 +112499,7 @@ return
 0 1
 0 2
 </code></pre>
-<h2 id="deviations-99"><a class="header" href="#deviations-99">Deviations</a></h2>
+<h2 id="deviations-101"><a class="header" href="#deviations-101">Deviations</a></h2>
 <div class="rule" id="r-bif.chars.deviation.54"><a href="builtins/chars.html#r-bif.chars.deviation.54">[bif.chars.deviation.54]</a></div>
 <p>CHARS of the standard input, or of any other transient stream, answers
 whether characters wait to be read, 0 for none and a positive number
@@ -112927,7 +113022,7 @@ ooRexx adds <code>A</code>, <code>O</code> and <code>R</code>, and interrexx fol
 chapter lists every condition, the information each carries, and the traps
 that catch them.</p>
 </blockquote>
-<h2 id="deviations-100"><a class="header" href="#deviations-100">Deviations</a></h2>
+<h2 id="deviations-102"><a class="header" href="#deviations-102">Deviations</a></h2>
 <div class="rule" id="r-bif.condition.deviation.106"><a href="builtins/condition.html#r-bif.condition.deviation.106">[bif.condition.deviation.106]</a></div>
 <p>In the routine of a CALL trap, the option <code>S</code> of CONDITION answers the state
 of the trap that caught the condition, also after the routine has changed the
@@ -113072,7 +113167,7 @@ whitespace, control characters and <code>'00'x</code> are characters like any ot
 <p><strong>Note.</strong> Whether, when and with which code COPIES fails for a count whose
 result cannot be held in memory is not specified.</p>
 </blockquote>
-<h2 id="deviations-101"><a class="header" href="#deviations-101">Deviations</a></h2>
+<h2 id="deviations-103"><a class="header" href="#deviations-103">Deviations</a></h2>
 <div class="rule" id="r-bif.copies.deviation.4"><a href="builtins/copies.html#r-bif.copies.deviation.4">[bif.copies.deviation.4]</a></div>
 <p>interrexx does not specify whether the answer of COPIES is the same object as
 another string of equal value: as <code>string</code> itself, when the call leaves it
@@ -113291,7 +113386,7 @@ say c2d(d2c(127, 1), 1) c2d(d2c(-128, 1), 1) c2d(d2c(128, 1), 1)
 <pre><code class="language-output">300 0 65535 300 -300
 127 -128 -128
 </code></pre>
-<h2 id="deviations-102"><a class="header" href="#deviations-102">Deviations</a></h2>
+<h2 id="deviations-104"><a class="header" href="#deviations-104">Deviations</a></h2>
 <div class="rule" id="r-bif.d2c.deviation.4"><a href="builtins/d2c.html#r-bif.d2c.deviation.4">[bif.d2c.deviation.4]</a></div>
 <p>interrexx does not specify whether the answer of D2C is the same object as
 another string of equal value, as <a href="builtins/index.html#r-bif.index.conv.deviation.4">the shared
@@ -113440,7 +113535,7 @@ say x2d(d2x(7, 1), 1) x2d(d2x(-8, 1), 1) x2d(d2x(8, 1), 1)
 <pre><code class="language-output">300 0 65535 300 -300
 7 -8 -8
 </code></pre>
-<h2 id="deviations-103"><a class="header" href="#deviations-103">Deviations</a></h2>
+<h2 id="deviations-105"><a class="header" href="#deviations-105">Deviations</a></h2>
 <div class="rule" id="r-bif.d2x.deviation.4"><a href="builtins/d2x.html#r-bif.d2x.deviation.4">[bif.d2x.deviation.4]</a></div>
 <p>interrexx does not specify whether the answer of D2X is the same object as
 another string of equal value, as
@@ -114399,7 +114494,7 @@ copies every byte it keeps unchanged: whitespace, control characters and
 </code></pre>
 <pre><code class="language-output">610962 C3
 </code></pre>
-<h2 id="deviations-104"><a class="header" href="#deviations-104">Deviations</a></h2>
+<h2 id="deviations-106"><a class="header" href="#deviations-106">Deviations</a></h2>
 <div class="rule" id="r-bif.delstr.deviation.4"><a href="builtins/delstr.html#r-bif.delstr.deviation.4">[bif.delstr.deviation.4]</a></div>
 <p>interrexx does not specify whether the answer of DELSTR is the same object as
 another string of equal value: as <code>string</code> itself, when the call deletes
@@ -114538,7 +114633,7 @@ the same as the number of them, however large it is.</p>
 </code></pre>
 <pre><code class="language-output">[a d] [a ] [a ]
 </code></pre>
-<h2 id="deviations-105"><a class="header" href="#deviations-105">Deviations</a></h2>
+<h2 id="deviations-107"><a class="header" href="#deviations-107">Deviations</a></h2>
 <div class="rule" id="r-bif.delword.deviation.4"><a href="builtins/delword.html#r-bif.delword.deviation.4">[bif.delword.deviation.4]</a></div>
 <p>interrexx does not specify whether the answer of DELWORD is the same object as
 another string of equal value: as <code>string</code> itself, when the call deletes
@@ -115820,7 +115915,7 @@ part does not make the number scientific: <code>format('99999.5', , 0, , 5)</cod
 <code>100000</code>. And it tests the zeros after the point against a fixed limit, as
 the <a href="builtins/index.html#r-bif.index.num.sci">note on the writing rule</a> says.</p>
 </blockquote>
-<h2 id="deviations-106"><a class="header" href="#deviations-106">Deviations</a></h2>
+<h2 id="deviations-108"><a class="header" href="#deviations-108">Deviations</a></h2>
 <div class="rule" id="r-bif.format.deviation.4"><a href="builtins/format.html#r-bif.format.deviation.4">[bif.format.deviation.4]</a></div>
 <p>interrexx does not specify whether the answer of FORMAT is the same object as
 another string of equal value: as <code>number</code> itself, when the call leaves it
@@ -116269,7 +116364,7 @@ when <code>n</code> is at least <code>LENGTH(target) + 1</code>; read literally 
 from inside the builtin where this page, like ooRexx, pads (see the note on
 <a href="builtins/substr.html">SUBSTR</a>).</p>
 </blockquote>
-<h2 id="deviations-107"><a class="header" href="#deviations-107">Deviations</a></h2>
+<h2 id="deviations-109"><a class="header" href="#deviations-109">Deviations</a></h2>
 <div class="rule" id="r-bif.insert.deviation.4"><a href="builtins/insert.html#r-bif.insert.deviation.4">[bif.insert.deviation.4]</a></div>
 <p>interrexx does not specify whether the answer of INSERT is the same object as
 another string of equal value: as <code>target</code> itself, when the call returns all
@@ -116576,7 +116671,7 @@ a: say condition('o')~code
 <p><strong>Note.</strong> Whether, when and with which code LEFT fails for a <code>length</code>
 whose result cannot be held in memory is not specified.</p>
 </blockquote>
-<h2 id="deviations-108"><a class="header" href="#deviations-108">Deviations</a></h2>
+<h2 id="deviations-110"><a class="header" href="#deviations-110">Deviations</a></h2>
 <div class="rule" id="r-bif.left.deviation.4"><a href="builtins/left.html#r-bif.left.deviation.4">[bif.left.deviation.4]</a></div>
 <p>interrexx does not specify whether the answer of LEFT is the same object as
 another string of equal value: as <code>string</code> itself, when the call returns all
@@ -117176,7 +117271,7 @@ c
 0
 93.958
 </code></pre>
-<h2 id="deviations-109"><a class="header" href="#deviations-109">Deviations</a></h2>
+<h2 id="deviations-111"><a class="header" href="#deviations-111">Deviations</a></h2>
 <div class="rule" id="r-bif.lineout.deviation.46"><a href="builtins/lineout.html#r-bif.lineout.deviation.46">[bif.lineout.deviation.46]</a></div>
 <p>On a stream opened <code>BINARY RECLENGTH n</code>, a LINEOUT that only positions, or
 that closes the stream, clears no record, and only a LINEOUT with a
@@ -117377,7 +117472,7 @@ return
 0 3
 0 3
 </code></pre>
-<h2 id="deviations-110"><a class="header" href="#deviations-110">Deviations</a></h2>
+<h2 id="deviations-112"><a class="header" href="#deviations-112">Deviations</a></h2>
 <div class="rule" id="r-bif.lines.deviation.54"><a href="builtins/lines.html#r-bif.lines.deviation.54">[bif.lines.deviation.54]</a></div>
 <p>LINES of the standard input, or of any other transient stream, answers
 whether input waits to be read, 0 for none and otherwise a positive number
@@ -117517,7 +117612,7 @@ for every <code>n</code> that passes its check.</p>
 </code></pre>
 <pre><code class="language-output">[] []
 </code></pre>
-<h2 id="deviations-111"><a class="header" href="#deviations-111">Deviations</a></h2>
+<h2 id="deviations-113"><a class="header" href="#deviations-113">Deviations</a></h2>
 <blockquote>
 <p><strong>Note.</strong> An argument whose <code>STRING</code> method answers an object that is not a
 string falls under <a href="builtins/../conventions.html#r-conv.string.deviation.30">Deviation 30</a>, as it does
@@ -117640,7 +117735,7 @@ say max(1.04, 1.01) max(1.01, 1.04)
 1.09 1.09
 1.04 1.04
 </code></pre>
-<h2 id="deviations-112"><a class="header" href="#deviations-112">Deviations</a></h2>
+<h2 id="deviations-114"><a class="header" href="#deviations-114">Deviations</a></h2>
 <div class="rule" id="r-bif.max.deviation.44"><a href="builtins/max.html#r-bif.max.deviation.44">[bif.max.deviation.44]</a></div>
 <p>MAX rounds a whole number to NUMERIC DIGITS digits as it does any other
 number, in the function form and in the method form, with or without
@@ -117781,7 +117876,7 @@ say min(1.04, 1.01) min(1.01, 1.04)
 1.04 1.04
 1.01 1.01
 </code></pre>
-<h2 id="deviations-113"><a class="header" href="#deviations-113">Deviations</a></h2>
+<h2 id="deviations-115"><a class="header" href="#deviations-115">Deviations</a></h2>
 <div class="rule" id="r-bif.min.deviation.44"><a href="builtins/min.html#r-bif.min.deviation.44">[bif.min.deviation.44]</a></div>
 <p>MIN rounds a whole number to NUMERIC DIGITS digits as it does any other
 number, in the function form and in the method form, with or without
@@ -118000,7 +118095,7 @@ negative when <code>n + length</code> is at least <code>LENGTH(target) + 2</code
 it would raise from inside the builtin where this page, like ooRexx, pads
 (see the note on <a href="builtins/substr.html">SUBSTR</a>).</p>
 </blockquote>
-<h2 id="deviations-114"><a class="header" href="#deviations-114">Deviations</a></h2>
+<h2 id="deviations-116"><a class="header" href="#deviations-116">Deviations</a></h2>
 <div class="rule" id="r-bif.overlay.deviation.4"><a href="builtins/overlay.html#r-bif.overlay.deviation.4">[bif.overlay.deviation.4]</a></div>
 <p>interrexx does not specify whether the answer of OVERLAY is the same object as
 another string of equal value: as <code>target</code> itself, when the call returns all
@@ -118302,7 +118397,7 @@ say (qualify(' ') == p || ' ') (qualify('  ') == p || '  ')
 <pre><code class="language-output">[] []
 1 1
 </code></pre>
-<h2 id="deviations-115"><a class="header" href="#deviations-115">Deviations</a></h2>
+<h2 id="deviations-117"><a class="header" href="#deviations-117">Deviations</a></h2>
 <div class="rule" id="r-bif.qualify.deviation.34"><a href="builtins/qualify.html#r-bif.qualify.deviation.34">[bif.qualify.deviation.34]</a></div>
 <p>In every name interrexx qualifies, each <code>..</code> removes exactly the one component
 before it, however the component was written. ooRexx removes none after a
@@ -118795,7 +118890,7 @@ say reverse(1/3)
 putting each character in front of those before it, which gives the string
 above.</p>
 </blockquote>
-<h2 id="deviations-116"><a class="header" href="#deviations-116">Deviations</a></h2>
+<h2 id="deviations-118"><a class="header" href="#deviations-118">Deviations</a></h2>
 <div class="rule" id="r-bif.reverse.deviation.4"><a href="builtins/reverse.html#r-bif.reverse.deviation.4">[bif.reverse.deviation.4]</a></div>
 <p>interrexx does not specify whether the answer of REVERSE is the same object as
 another string of equal value: as <code>string</code> itself, when the reversal leaves it
@@ -118928,7 +119023,7 @@ a: say condition('o')~code
 <p><strong>Note.</strong> Whether, when and with which code RIGHT fails for a <code>length</code>
 whose result cannot be held in memory is not specified.</p>
 </blockquote>
-<h2 id="deviations-117"><a class="header" href="#deviations-117">Deviations</a></h2>
+<h2 id="deviations-119"><a class="header" href="#deviations-119">Deviations</a></h2>
 <div class="rule" id="r-bif.right.deviation.4"><a href="builtins/right.html#r-bif.right.deviation.4">[bif.right.deviation.4]</a></div>
 <p>interrexx does not specify whether the answer of RIGHT is the same object as
 another string of equal value: as <code>string</code> itself, when the call returns all
@@ -120199,7 +120294,7 @@ specify. The ANSI draft (9.3.19) defines SPACE through <code>COPIES</code> and
 <code>SUBWORD</code>, with the same answers, and checks <code>n</code> for a value below 0 under
 error 40.13, where ooRexx raises 93.923.</p>
 </blockquote>
-<h2 id="deviations-118"><a class="header" href="#deviations-118">Deviations</a></h2>
+<h2 id="deviations-120"><a class="header" href="#deviations-120">Deviations</a></h2>
 <blockquote>
 <p><strong>Note.</strong> An argument whose <code>STRING</code> method answers an object that is not a
 string falls under <a href="builtins/../conventions.html#r-conv.string.deviation.30">Deviation 30</a>, as it does
@@ -120939,7 +121034,7 @@ a: say condition('o')~code
 <pre><code class="language-output">READY READY READY READY:
 93.958
 </code></pre>
-<h2 id="deviations-119"><a class="header" href="#deviations-119">Deviations</a></h2>
+<h2 id="deviations-121"><a class="header" href="#deviations-121">Deviations</a></h2>
 <div class="rule" id="r-bif.stream.deviation.34"><a href="builtins/stream.html#r-bif.stream.deviation.34">[bif.stream.deviation.34]</a></div>
 <p>In a stream's name, as in every name interrexx qualifies, each <code>..</code> removes
 exactly the one component before it, however the component was written, so
@@ -121373,7 +121468,7 @@ the two are independent of each other.</p>
 </code></pre>
 <pre><code class="language-output">[a  ] [a] [a]
 </code></pre>
-<h2 id="deviations-120"><a class="header" href="#deviations-120">Deviations</a></h2>
+<h2 id="deviations-122"><a class="header" href="#deviations-122">Deviations</a></h2>
 <blockquote>
 <p><strong>Note.</strong> An argument whose <code>STRING</code> method answers an object that is not a
 string falls under <a href="builtins/../conventions.html#r-conv.string.deviation.30">Deviation 30</a>, as it does
@@ -121500,7 +121595,7 @@ and copies every byte unchanged: whitespace, control characters and
 </code></pre>
 <pre><code class="language-output">00096200
 </code></pre>
-<h2 id="deviations-121"><a class="header" href="#deviations-121">Deviations</a></h2>
+<h2 id="deviations-123"><a class="header" href="#deviations-123">Deviations</a></h2>
 <div class="rule" id="r-bif.substr.deviation.4"><a href="builtins/substr.html#r-bif.substr.deviation.4">[bif.substr.deviation.4]</a></div>
 <p>interrexx does not specify whether the answer of SUBSTR is the same object as
 another string of equal value: as <code>string</code> itself, when the call returns all
@@ -121611,7 +121706,7 @@ of the last selected word.</p>
 </code></pre>
 <pre><code class="language-output">610A62 610D
 </code></pre>
-<h2 id="deviations-122"><a class="header" href="#deviations-122">Deviations</a></h2>
+<h2 id="deviations-124"><a class="header" href="#deviations-124">Deviations</a></h2>
 <div class="rule" id="r-bif.subword.deviation.4"><a href="builtins/subword.html#r-bif.subword.deviation.4">[bif.subword.deviation.4]</a></div>
 <p>interrexx does not specify whether the answer of SUBWORD is the same object as
 another string of equal value: as <code>string</code> itself, when the call returns all
@@ -122807,7 +122902,7 @@ any other character, in <code>string</code>, in both tables and as <code>pad</co
 </code></pre>
 <pre><code class="language-output">610920 6100
 </code></pre>
-<h2 id="deviations-123"><a class="header" href="#deviations-123">Deviations</a></h2>
+<h2 id="deviations-125"><a class="header" href="#deviations-125">Deviations</a></h2>
 <div class="rule" id="r-bif.translate.deviation.4"><a href="builtins/translate.html#r-bif.translate.deviation.4">[bif.translate.deviation.4]</a></div>
 <p>interrexx does not specify whether the answer of TRANSLATE is the same object
 as another string of equal value: as <code>string</code> itself, when no character of it
@@ -122951,7 +123046,7 @@ a whole number, where ooRexx, which this book follows, raises 40.12 for <code>n<
 first (for a negative <code>n</code> both check <code>number</code> first). It raises
 <code>SYNTAX 40.13</code> for a negative <code>n</code>, where ooRexx raises 93.906.</p>
 </blockquote>
-<h2 id="deviations-124"><a class="header" href="#deviations-124">Deviations</a></h2>
+<h2 id="deviations-126"><a class="header" href="#deviations-126">Deviations</a></h2>
 <div class="rule" id="r-bif.trunc.deviation.4"><a href="builtins/trunc.html#r-bif.trunc.deviation.4">[bif.trunc.deviation.4]</a></div>
 <p>interrexx does not specify whether the answer of TRUNC is the same object as
 another string of equal value: as <code>number</code> itself, when the call leaves it
@@ -123074,7 +123169,7 @@ for every <code>n</code> that passes its check.</p>
 </code></pre>
 <pre><code class="language-output">[] []
 </code></pre>
-<h2 id="deviations-125"><a class="header" href="#deviations-125">Deviations</a></h2>
+<h2 id="deviations-127"><a class="header" href="#deviations-127">Deviations</a></h2>
 <blockquote>
 <p><strong>Note.</strong> An argument whose <code>STRING</code> method answers an object that is not a
 string falls under <a href="builtins/../conventions.html#r-conv.string.deviation.30">Deviation 30</a>, as it does
@@ -123904,7 +123999,7 @@ end of the word as anywhere else in it.</p>
 </code></pre>
 <pre><code class="language-output">780D 710A72
 </code></pre>
-<h2 id="deviations-126"><a class="header" href="#deviations-126">Deviations</a></h2>
+<h2 id="deviations-128"><a class="header" href="#deviations-128">Deviations</a></h2>
 <div class="rule" id="r-bif.word.deviation.4"><a href="builtins/word.html#r-bif.word.deviation.4">[bif.word.deviation.4]</a></div>
 <p>interrexx does not specify whether the answer of WORD is the same object as
 another string of equal value: as <code>string</code> itself, when the call returns all
@@ -124342,7 +124437,7 @@ letters in capitals and its whitespace removed.</p>
 </code></pre>
 <pre><code class="language-output">A5F 00FF []
 </code></pre>
-<h2 id="deviations-127"><a class="header" href="#deviations-127">Deviations</a></h2>
+<h2 id="deviations-129"><a class="header" href="#deviations-129">Deviations</a></h2>
 <div class="rule" id="r-bif.x2b.deviation.4"><a href="builtins/x2b.html#r-bif.x2b.deviation.4">[bif.x2b.deviation.4]</a></div>
 <p>interrexx does not specify whether the answer of X2B is the same object as
 another string of equal value, as
@@ -124448,7 +124543,7 @@ When the number is odd, it has a <code>0</code> on its left as well.</p>
 </code></pre>
 <pre><code class="language-output">A5F0 00FF 0A5F []
 </code></pre>
-<h2 id="deviations-128"><a class="header" href="#deviations-128">Deviations</a></h2>
+<h2 id="deviations-130"><a class="header" href="#deviations-130">Deviations</a></h2>
 <div class="rule" id="r-bif.x2c.deviation.4"><a href="builtins/x2c.html#r-bif.x2c.deviation.4">[bif.x2c.deviation.4]</a></div>
 <p>interrexx does not specify whether the answer of X2C is the same object as
 another string of equal value, as
@@ -124664,7 +124759,7 @@ its leading zeros and its whitespace removed, its letters in capitals, and
 </code></pre>
 <pre><code class="language-output">FF AB12 0 0
 </code></pre>
-<h2 id="deviations-129"><a class="header" href="#deviations-129">Deviations</a></h2>
+<h2 id="deviations-131"><a class="header" href="#deviations-131">Deviations</a></h2>
 <div class="rule" id="r-bif.x2d.deviation.4"><a href="builtins/x2d.html#r-bif.x2d.deviation.4">[bif.x2d.deviation.4]</a></div>
 <p>interrexx does not specify whether the answer of X2D is the same object as
 another string of equal value, as
@@ -124908,7 +125003,7 @@ or highest character. It has no class names and no further groups; those are
 ooRexx's, and so is <code>SYNTAX 40.28</code> for an argument that starts a group and
 is neither one character long nor a class name.</p>
 </blockquote>
-<h2 id="deviations-130"><a class="header" href="#deviations-130">Deviations</a></h2>
+<h2 id="deviations-132"><a class="header" href="#deviations-132">Deviations</a></h2>
 <div class="rule" id="r-bif.xrange.deviation.4"><a href="builtins/xrange.html#r-bif.xrange.deviation.4">[bif.xrange.deviation.4]</a></div>
 <p>interrexx does not specify whether the answer of XRANGE is the same object as
 another string of equal value, such as the literal <code>'a'</code> beside the answer of
@@ -124921,7 +125016,7 @@ one.</p>
 </code></pre>
 <pre><code class="language-output">1 1 1
 </code></pre>
-<div style="break-before: page; page-break-before: always;"></div><h1 id="deviations-131"><a class="header" href="#deviations-131">Deviations</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="deviations-133"><a class="header" href="#deviations-133">Deviations</a></h1>
 <p>A Deviation is a declared difference between interrexx and ooRexx. Every
 example on which the two answer differently belongs to one; any other
 difference is a defect. Each entry says what interrexx does and how ooRexx
@@ -125840,6 +125935,18 @@ when its offset is out of range, with the offset stored as given, and a
 <code>TimeSpan</code> keeps an argument that is not a number as its span, so that the
 span then raises errors of its own. interrexx's <code>TimeSpan</code> does the same
 until #47's <code>TimeSpan</code> task lands (#441).</p>
+<h2 id="164-the-error-number-of-sysgeterrno-and-socksock_errno"><a class="header" href="#164-the-error-number-of-sysgeterrno-and-socksock_errno">164. The error number of SysGeterrno and SockSock_Errno</a></h2>
+<p>The error number that <code>SysGeterrno</code> and <code>SockSock_Errno</code> answer belongs to
+the activity. A failing call of the library sets the number of its activity, a
+call that does not fail leaves it as it is (a lookup of a user, group, service
+or host sets it to <code>0</code> first), and nothing else changes it: not a later clause
+of the activity that is no call of the library, and not any call on another
+activity. A program may read it in a later clause after a failed call, and
+cannot lose it to another activity between the two. ooRexx answers the C
+library's raw error number of the process, which any later clause on any
+activity can overwrite, even after a successful call: the number a program
+reads in a later clause, or while another activity runs, is whatever call set
+it last.</p>
 
                     </main>
 

@@ -175,6 +175,7 @@
                     <main>
                         <h1 id="the-rxsock-library"><a class="header" href="#the-rxsock-library">The rxsock library</a></h1>
 <p class="references">rexxref: Rexx Socket Functions Library (rxsock) &gt; Functions</p>
+<p class="deviations">Deviations: D164</p>
 <p>The library <code>rxsock</code> lets a program use the sockets of the system: it makes a
 socket, binds it to an address on the host, connects it, sends and receives, and
 asks and sets the options of a socket. This page holds what every function of
@@ -331,8 +332,10 @@ those names, and for any other error the number of the error as a Linux system
 gives it, as <code>9</code> for a socket that is not open and <code>22</code> for an argument the
 system found invalid. A call that succeeds sets <code>errno</code> to <code>0</code>. <code>SockSock_Errno()</code>
 answers the number of the error of the last call that failed, which the
-variable shows as a name; what it answers after a call that succeeded, or before
-any failed, is not specified.</p>
+variable shows as a name. What it answers after a call that succeeded, or in a
+later clause, or after another activity made calls, is the subject of
+<a href="#r-rxsock.index.deviation.164">Deviation 164</a>; the example below reads it in
+the clause of the call.</p>
 <pre><code class="language-rexx">say SockClose(999) errno h_errno SockSock_Errno()
 say SockClose(-1) errno
 say SockListen(999, 5) errno
@@ -378,6 +381,51 @@ call sysfiledelete 'c1zqs1.rex'
 []
 [RxSOCK Error: first]
 [RxSOCK Error: ]
+</code></pre>
+<h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
+<div class="rule" id="r-rxsock.index.deviation.164"><a href="#r-rxsock.index.deviation.164">[rxsock.index.deviation.164]</a></div>
+<p>The number that <code>SockSock_Errno()</code> answers belongs to the activity that made
+the call: each activity has its own, which is <code>0</code> until a call of the library
+fails on it. A call of the library that fails sets the number of its activity;
+a call that succeeds leaves it as it is, except that a lookup of a host sets it
+to <code>0</code> before it looks. No other clause changes it, and no call on another
+activity does: after a failed call, a later clause of the same activity reads
+the number of that call, however many clauses that do not set it come between,
+and however many other activities make calls of the library meanwhile. The
+variables <code>errno</code> and <code>h_errno</code> are not the subject: they are variables of the
+program that made the call, as <a href="#r-rxsock.index.errors">the rule on errors</a>
+says. In the example the main activity's call fails with <code>9</code>; the method that
+<code>start</code> runs begins with <code>0</code>, fails with <code>107</code> and keeps it after a call that
+succeeds, while the main activity still reads <code>9</code> after a clause that sets
+nothing, and after a successful call that is not a lookup, and reads <code>0</code> after a
+lookup.</p>
+<pre><code class="language-rexx">say SockClose(999) SockSock_Errno()
+y = 5
+say 'later' SockSock_Errno()
+m = .k~new~start('work')
+say 'result' m~result
+say 'after' SockSock_Errno()
+say SockInit() SockSock_Errno()
+say SockGetHostByName('localhost', 'h.') SockSock_Errno()
+exit
+::requires 'rxsock' library
+::class k
+::method work
+  say 'b start' SockSock_Errno()
+  s = SockSocket('AF_INET', 'SOCK_STREAM', 0)
+  say SockGetPeerName(s, 'p.') SockSock_Errno()
+  say SockClose(s) SockSock_Errno()
+  return SockSock_Errno()
+</code></pre>
+<pre><code class="language-output">-1 9
+later 9
+b start 0
+-1 107
+0 107
+result 107
+after 9
+0 9
+1 0
 </code></pre>
 
                     </main>
