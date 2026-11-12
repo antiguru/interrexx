@@ -514,7 +514,12 @@
 /* spec: class.timespan.hashcode */
 ::method hashCode
   expose us
-  numeric digits 18
+  numeric digits 40
   if arg() > 0 then raise syntax 93.902 array (0)
   if datatype(us, 'W') = 0 then us = 0
-  return d2c(us, 8)
+  /* a 64-bit hash of the decimal text of the count, least significant byte first */
+  h = 0
+  do i = 1 to length(us)
+    h = (h * 31 + c2d(substr(us, i, 1))) // 18446744073709551616
+  end
+  return reverse(d2c(h, 8))
