@@ -1052,7 +1052,7 @@ is set to the null string, as it does when it is not set. ooRexx answers a
 
 ## 138. allItems after a second init of a Supplier
 
-`init` sent again to a `Supplier` also drops the arrays that an earlier
+`init` sent again to a `Supplier`, a `StreamSupplier` included, also drops the arrays that an earlier
 `allItems` or `allIndexes` collected, so the next call of either collects the
 entries of the new arrays. ooRexx answers the arrays collected before the
 `init`.
