@@ -850,7 +850,7 @@ m = .method~loadExternalMethod('m', 'LIBRARY rxregexp RegExp_Pos')
 say m~annotation('x')~isNil m~annotations~items
 ```
 
-```output defect=#146
+```output
 1 0
 ```
 
@@ -859,7 +859,9 @@ r[class.method.annotations]
 method, indexed by the upper case name, as [the annotation
 rule](r:dir.annotate.read) says. It is the table that the method keeps: the
 same object every time, so an entry put into it is an annotation that
-`annotation` answers. A method with none has an empty table. The method takes
+`annotation` answers. A method with none has an empty table, and a method
+loaded from a library by `loadExternalMethod` has none: `annotation` answers
+`.nil`. The method takes
 no argument (`SYNTAX 93.902`).
 
 ```rexx

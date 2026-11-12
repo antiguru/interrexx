@@ -346,6 +346,7 @@ pub(super) fn native_load_external(
             return Ok(Some(ObjRef::NIL));
         };
         let object = interp.native_instance(class);
+        interp.attach_empty_annotations(object);
         interp.record_rexx_external_method(object, external);
         return Ok(Some(object));
     }
@@ -385,6 +386,7 @@ pub(super) fn native_load_external(
         return Ok(Some(interp.library_routine_object(code)));
     }
     let object = interp.native_instance(class);
+    interp.attach_empty_annotations(object);
     interp.record_loaded_executable(object, code);
     Ok(Some(object))
 }
