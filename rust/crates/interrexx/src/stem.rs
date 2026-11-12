@@ -128,11 +128,10 @@ impl Interp {
                     );
                     let value = self.read_by_name_at(name, *at);
                     // **A substituted tail is a `reqstr` context**, and its
-                    // own one: `RexxInternalObject::copyIntoTail` converts
-                    // with `requestString()` (`classes/ObjectClass.cpp:1204`)
-                    // rather than rendering. Measured, oracle rc 0:
-                    // `a.MS = 'hit'; i = .K; say a.i` with a class-side
-                    // `makeString` returning `'MS'` prints `hit`.
+                    // own one: the oracle converts with the string request
+                    // rather than rendering. Measured, oracle rc 0: `a.MS =
+                    // 'hit'; i = .K; say a.i` with a class-side `makeString`
+                    // returning `'MS'` prints `hit`.
                     let value = self.required_string_or_nil(value)?;
                     self.write_text(value, key);
                 }
@@ -167,18 +166,15 @@ impl Interp {
     }
 
     /// Reads a bare stem (`ExprKind::Stem`): the auto-vivification rule,
-    /// mirroring the oracle's `createStemVariable`,
-    /// which fires on any miss to the variable dictionary, reads included
-    /// (`VariableDictionary::getStemVariable`, `VariableDictionary.hpp:
-    /// 178-183`).
+    /// mirroring the oracle's `createStemVariable`, which fires on any miss
+    /// to the variable dictionary, reads included.
     pub(crate) fn read_stem(&mut self, name: &[u8]) -> ObjRef {
         self.read_stem_at(name, None)
     }
 
-    /// `NativeActivation::getContextStem`: the stem variable `name` names in
-    /// the running activation, a period appended where it has none, or `None`
-    /// where the name is not a stem symbol. Upcased first, as a variable
-    /// retriever reads a name.
+    /// The stem variable `name` names in the running activation, a period
+    /// appended where it has none, or `None` where the name is not a stem
+    /// symbol. Upcased first, as a variable retriever reads a name.
     pub(crate) fn context_stem_named(&mut self, name: &[u8]) -> Option<ObjRef> {
         use crate::builtin::datatype::{SymbolKind, classify};
         let mut name = name.to_ascii_uppercase();
@@ -549,12 +545,12 @@ impl Interp {
         self.set_variable(frame, slot, stem);
     }
 
-    /// `RexxCompoundVariable::expose` and `procedureExpose` past resolving the
-    /// tail: `key` of `home` (the object's stem or the caller's) becomes the
-    /// same tail of the stem the running activation names `stem_name`, so one
-    /// value is read and written through both. `StemClass::
-    /// exposeCompoundVariable` makes the tail in `home` first, holding the
-    /// stem's assigned default if it has one.
+    /// What the oracle's expose does past resolving the tail: `key` of `home`
+    /// (the object's stem or the caller's) becomes the same tail of the stem
+    /// the running activation names `stem_name`, so one value is read and
+    /// written through both. `StemClass:: exposeCompoundVariable` makes the
+    /// tail in `home` first, holding the stem's assigned default if it has
+    /// one.
     pub(crate) fn expose_tail(&mut self, home: ObjRef, stem_name: &[u8], key: &[u8]) {
         // The tail's own stem when `home`'s is already another's, so that
         // every exposed tail names the stem that holds the value.
@@ -617,9 +613,9 @@ impl Interp {
         }
     }
 
-    /// `CompoundVariableTable::clear` over `home`: the elements another stem
-    /// exposes stay with that stem, holding what they hold now, and `home`
-    /// no longer has them. Called before `home`'s tails are cleared. The
+    /// The oracle's table clear over `home`: the elements another stem
+    /// exposes stay with that stem, holding what they hold now, and `home` no
+    /// longer has them. Called before `home`'s tails are cleared. The
     /// exposers are reached through the exposer table, which still reaches
     /// one a returned `PROCEDURE` left as garbage until a collection, so they
     /// are read untagged.
@@ -679,8 +675,7 @@ impl Interp {
         }
     }
 
-    /// One tail of the stem object `stem` as
-    /// `StemClass::evaluateCompoundVariableValue` answers it with no
+    /// One tail of the stem object `stem` as the oracle answers it with no
     /// activation: the tail's value, the default for a tail never held, and
     /// otherwise the stem's own name with `key` appended.
     pub(crate) fn stem_object_compound(&mut self, stem: ObjRef, key: &[u8]) -> ObjRef {
@@ -777,7 +772,7 @@ impl Interp {
     }
 
     /// Whether `value` is a stem named `name` holding no content: no default,
-    /// and no tail that still has a value (`RexxVariable::isAliasable`, whose
+    /// and no tail that still has a value (the oracle's aliasable test, whose
     /// stem's value is its own name).
     /// ```text
     /// (nothing)                    -> referenceable   (slot is None)

@@ -1,28 +1,24 @@
-//! The routines the oracle's two internal packages export, which are neither
-//! builtins nor `::ROUTINE`s: `REXX` (`runtime/NativeFunctions.h`) and
-//! `REXXUTIL` (`runtime/RexxUtilCommon.cpp`'s table plus the platform half in
-//! `platform/unix/SysRexxUtilFunctions.h`). The oracle consults them after a
-//! program's own routines and before the external file search, so a name here
-//! that this crate has no body for must refuse rather than fall through to
-//! 43.1 -- a "routine not found" a program cannot tell from its own typo.
-//! `tests/internal_routines.rs` re-derives this table from those three C++
-//! files.
+//! The routines the oracle's two internal packages export, which are neither builtins
+//! nor `::ROUTINE`s: `REXX` and `REXXUTIL` (a shared table plus a platform half). The
+//! oracle consults them after a program's own routines and before the external file
+//! search, so a name here that this crate has no body for must refuse rather than
+//! fall through to 43.1 -- a "routine not found" a program cannot tell from its own
+//! typo. `tests/internal_routines.rs` re-derives this table from the oracle's
+//! sources.
 
 /// Which internal package exports the routine.
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub(crate) enum Package {
-    /// `runtime/NativeFunctions.h`, loaded as the `REXX` package.
+    /// Loaded as the `REXX` package.
     Rexx,
-    /// `runtime/RexxUtilCommon.cpp`, loaded as the `REXXUTIL` package.
+    /// Loaded as the `REXXUTIL` package.
     RexxUtil,
 }
 
 impl Package {
     /// The internal package a `LIBRARY` name or `::REQUIRES ... LIBRARY`
-    /// names, matched byte for byte as `PackageManager::loadLibrary` matches
-    /// its table (`package/PackageManager.cpp:81-88`, `memory/GlobalNames.h`):
-    /// measured, oracle, `LIBRARY REXXUTIL` is 98.903 where `LIBRARY
-    /// rexxutil` loads.
+    /// names, matched byte for byte against the oracle's own table: measured,
+    /// oracle, `LIBRARY REXXUTIL` is 98.903 where `LIBRARY rexxutil` loads.
     pub(crate) fn named(name: &[u8]) -> Option<Package> {
         match name {
             b"REXX" => Some(Package::Rexx),
@@ -31,7 +27,7 @@ impl Package {
         }
     }
 
-    /// The package's name, as the C++ registers it.
+    /// The package's name, as the oracle registers it.
     pub(crate) fn label(self) -> &'static str {
         match self {
             Package::Rexx => "REXX",
@@ -51,7 +47,7 @@ pub(crate) type InternalBody = fn(
 
 /// One routine an internal package exports.
 pub(crate) struct InternalRoutine {
-    /// The name as the C++ registers it; the lookup is caseless, so the
+    /// The name as the oracle registers it; the lookup is caseless, so the
     /// spelling is for a reader.
     pub(crate) name: &'static str,
     pub(crate) package: Package,
@@ -244,10 +240,8 @@ pub(crate) fn package_indexes(package: Package) -> impl Iterator<Item = usize> {
         .map(|(index, _)| index)
 }
 
-/// `package`'s row `name` names, found as `LibraryPackage::resolveRoutine`
-/// finds a routine table entry
-/// (`interpreter/package/LibraryPackage.cpp:410-435`): by exact spelling, then
-/// without regard to case.
+/// `package`'s row `name` names, found the way the oracle finds a routine
+/// table entry: by exact spelling, then without regard to case.
 pub(crate) fn package_routine(package: Package, name: &[u8]) -> Option<&'static InternalRoutine> {
     package_rows(package)
         .find(|row| row.name.as_bytes() == name)

@@ -395,7 +395,7 @@ fn the_status_file_matches_a_live_differential_run() {
     );
 
     // The counts. `NAMES.len()` and the size of the whole-exclusion set are
-    // both stable facts about the C++ table and the exclusions file, not
+    // both stable facts about the oracle's table and the exclusions file, not
     // facts about how much is implemented, so asserting them here cannot rot
     // as a task lands.
     assert_eq!(

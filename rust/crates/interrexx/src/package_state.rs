@@ -1,5 +1,5 @@
 //! The state a `Package` object holds in its own body: `PackageClass`'s
-//! fields (`classes/PackageClass.hpp`).
+//! fields.
 
 use interrexx_core::{ObjRef, PackageFields, PackageState};
 
@@ -22,7 +22,7 @@ pub(crate) struct PackageData {
     /// What `::OPTIONS` directives and `Package~options` writes left on the
     /// package, `None` where neither has.
     pub(crate) options: Option<PackageOptions>,
-    /// `PackageClass::initialPackageSettings`, entered at the first change.
+    /// The package's initial settings, entered at the first change.
     pub(crate) initial_options: Option<PackageOptions>,
     /// The security manager the package carries, which the
     /// `setSecurityManager` setters write.
@@ -32,29 +32,25 @@ pub(crate) struct PackageData {
     pub(crate) routines: FxHashMap<Box<[u8]>, MergedRoutine>,
     /// Whether a program has written the package's `.ROUTINES` table, whose
     /// entries routine lookups read in place of [`PackageData::routines`]
-    /// from then on (`PackageClass::findLocalRoutine`,
-    /// `classes/PackageClass.cpp:822`).
+    /// from then on.
     pub(crate) routines_written: bool,
     /// `publicRoutines`: the subset of [`PackageData::routines`] a
     /// `::ROUTINE ... PUBLIC` filed.
     pub(crate) public_routines: FxHashMap<Box<[u8]>, MergedRoutine>,
     /// `mergedPublicRoutines`: every `::REQUIRES ... LIBRARY`'s library
     /// routines, then each `::REQUIRES`'s public and imported routines, a name
-    /// keeping its first entry (`PackageClass::mergeLibrary` and
-    /// `::mergeRequired`, `classes/PackageClass.cpp:693-772`).
+    /// keeping its first entry (the oracle's library and required merges).
     pub(crate) merged_public_routines: FxHashMap<Box<[u8]>, MergedRoutine>,
     /// `installedClasses`: the classes the package's `::CLASS` directives and
     /// `~addClass` installed, by uppercased name.
     pub(crate) classes: NameMap<Box<[u8]>, ObjRef>,
     /// `installedPublicClasses`, a second table beside
-    /// [`PackageData::classes`] and not a flag on its entries
-    /// (`classes/PackageClass.cpp:1406`-`:1419`).
+    /// [`PackageData::classes`] and not a flag on its entries.
     pub(crate) public_classes: NameMap<Box<[u8]>, ObjRef>,
     /// `mergedPublicClasses`, merged alongside the routines above.
     pub(crate) merged_public_classes: NameMap<Box<[u8]>, ObjRef>,
     /// The packages `::REQUIRES ... NAMESPACE` directives registered, under
-    /// the upcased qualifier (`PackageClass::addNamespace`,
-    /// `classes/PackageClass.cpp:2152`).
+    /// the upcased qualifier.
     pub(crate) namespaces: FxHashMap<Box<[u8]>, ObjRef>,
     /// The `Directory` `Package~local` answers, built on first ask.
     pub(crate) local: Option<ObjRef>,
@@ -200,8 +196,7 @@ impl Interp {
         self.package_fields_mut(Package::Program(program))
     }
 
-    /// `package` and its fields, then each package up its parent chain
-    /// (`PackageClass::parentPackage`).
+    /// `package` and its fields, then each package up its parent chain.
     pub(crate) fn package_chain(
         &self,
         package: Option<ObjRef>,
@@ -218,9 +213,8 @@ impl Interp {
     }
 
     /// Whether `package` is the REXX package's own object, which
-    /// `checkRexxPackage` refuses writes to (`classes/PackageClass.cpp:470`).
-    /// A copy of it is not: the oracle's test is `isOldSpace`, and a copy is
-    /// new.
+    /// `checkRexxPackage` refuses writes to. A copy of it is not: the
+    /// oracle's test is `isOldSpace`, and a copy is new.
     pub(crate) fn is_the_rexx_package(&self, package: ObjRef) -> bool {
         self.rexx_package == Some(package)
     }

@@ -1,4 +1,4 @@
-//! Re-derives the internal-package routine names from the C++ tree and
+//! Re-derives the internal-package routine names from the oracle's tree and
 //! compares them with the crate's own table, in both directions. The names are
 //! an external enumeration -- three files in a tree this project does not
 //! write -- so the table is checked against them rather than described in
@@ -72,7 +72,7 @@ fn ours(package: &str) -> BTreeSet<String> {
 
 #[test]
 fn the_table_names_exactly_what_the_two_internal_packages_register() {
-    // Per package, not as one union: the two are separate tables in the C++,
+    // Per package, not as one union: the two are separate tables in the oracle,
     // and a name moving between them is a fact about where a body has to come
     // from.
     for (package, oracle) in [("REXX", oracle_rexx()), ("REXXUTIL", oracle_rexxutil())] {

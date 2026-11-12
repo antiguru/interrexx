@@ -218,17 +218,16 @@ pub(crate) struct Activity {
     /// above the trapping activation.
     pub(crate) failure_frames: Vec<ObjRef>,
     /// Whether the failure an extension's method or routine call is answering
-    /// is the condition it raised while running, which
-    /// `NativeActivation::checkConditions` re-raises in the caller, rather
-    /// than one its arguments' conversion raised on the way in.
+    /// is the condition it raised while running, which the native boundary
+    /// re-raises in the caller, rather than one its arguments' conversion
+    /// raised on the way in.
     pub(crate) native_reraise: bool,
     /// Whether the failure an extension's method or routine call is answering
-    /// is the error `NativeActivation::checkConditions` reports for an
-    /// untrapped `HALT` or `NOMETHOD` the call raised. It is reported from the
-    /// native level, which has a package and no line, so the report names
-    /// that package with no line; and `NativeActivation::run` has given up a
-    /// method's receiver by then (`execution/NativeActivation.cpp:1347`), so a
-    /// method's level reports itself as a routine's.
+    /// is the error the native boundary reports for an untrapped `HALT` or
+    /// `NOMETHOD` the call raised. It is reported from the native level, which
+    /// has a package and no line, so the report names that package with no
+    /// line; and the native call has given up a method's receiver by then, so
+    /// a method's level reports itself as a routine's.
     pub(crate) native_reported_on_return: bool,
     /// The activation a redirection's input reader is sending `LINEIN` from,
     /// for as long as that send runs: the `RedirectionDispatcher` a condition
@@ -248,8 +247,8 @@ pub(crate) struct Activity {
     /// the condition's `POSITION` (a native level has none).
     pub(crate) failure_origin: Option<(Package, Option<usize>)>,
     /// Whether the SYNTAX failure has left a level that is not an internal
-    /// call, or was re-raised: `Activity::raiseException` marks it
-    /// `PROPAGATED` once the raising activation does not trap it.
+    /// call, or was re-raised: the oracle marks it `PROPAGATED` once the
+    /// raising activation does not trap it.
     pub(crate) failure_propagated: bool,
     /// Whether it was re-raised, so that `POSITION` is no longer the raise's.
     pub(crate) failure_reraised: bool,
@@ -292,11 +291,11 @@ pub(crate) struct Activity {
     /// The name the last invocation entered under, which the next one under
     /// the same name shares ([`Activity::invocation_name`]).
     last_name: Option<Rc<[u8]>>,
-    /// The generator each top-level activation's `RANDOM` seed is drawn
-    /// from (`Activity::getRandomSeed`), `None` until the first is drawn.
+    /// The generator each top-level activation's `RANDOM` seed is drawn from,
+    /// `None` until the first is drawn.
     pub(crate) random_source: Option<u64>,
     /// The resolved paths whose `::REQUIRES` directives are still installing
-    /// -- `Activity`'s own `requiresTable` (`concurrency/Activity.hpp:308`).
+    /// -- `Activity`'s own `requiresTable`.
     pub(crate) requires_installing: Vec<Box<[u8]>>,
     /// How many Rust frames pin this activity between the scheduler and its
     /// running driver.
@@ -348,8 +347,8 @@ pub(crate) struct Activity {
     pub(crate) guarded_send: Option<Box<crate::dispatch::GuardedSend>>,
     /// A `GUARD` instruction parked for its lock or its `WHEN`.
     pub(crate) guard_exec: Option<Box<crate::guards::GuardExec>>,
-    /// Whether a watched variable changed since the running `GUARD WHEN`
-    /// last began evaluating (`Activity::guardSem`).
+    /// Whether a watched variable changed since the running `GUARD WHEN` last
+    /// began evaluating.
     pub(crate) guard_posted: bool,
     /// Whether the activity is parked in a `GUARD WHEN`.
     pub(crate) when_parked: bool,
@@ -379,10 +378,9 @@ pub(crate) struct Activity {
     pub(crate) sharing_tag: u32,
 }
 
-/// A `CallRoutine` or `CallProgram` call in progress. The oracle runs it under
-/// `Activity::run(ActivityDispatcher &)`, which starts a new activation stack
-/// (`concurrency/Activity.cpp:3565`): the code it runs has no Rexx caller, and
-/// the activations below the native code that called the API are out of its
+/// A `CallRoutine` or `CallProgram` call in progress. The oracle runs it on a
+/// new activation stack: the code it runs has no Rexx caller, and the
+/// activations below the native code that called the API are out of its
 /// reach.
 pub(crate) struct ApiBase {
     /// The activation running when the call was made, which the code the
@@ -395,7 +393,7 @@ pub(crate) struct ApiBase {
 }
 
 /// A primitive method that is running Rexx code, which the oracle runs under
-/// an `InternalActivationFrame` (`concurrency/ActivationFrame.cpp:100`).
+/// an `InternalActivationFrame`.
 pub(crate) struct MethodLevel {
     /// The activation the method was sent from.
     pub(crate) caller: Option<crate::activation::ActivationId>,
@@ -409,8 +407,8 @@ pub(crate) struct MethodLevel {
     pub(crate) arguments: Box<[Option<ObjRef>]>,
 }
 
-/// A routine of an internal package that is running, which the oracle runs
-/// as a `NativeActivation`.
+/// A routine of an internal package that is running, which the oracle runs as
+/// a native activation.
 pub(crate) struct InternalLevel {
     /// The activation the call was made from.
     pub(crate) caller: Option<crate::activation::ActivationId>,
@@ -454,8 +452,7 @@ impl InternalLevel {
     }
 }
 
-/// What a spawned activity keeps of the activity and frame that started it
-/// (`Activity::setCallerStackFrameAsStringTable`, `concurrency/Activity.cpp:1199`).
+/// What a spawned activity keeps of the activity and frame that started it.
 pub(crate) enum Spawner {
     /// The spawner's number, and the `StackFrame` and executable of its
     /// innermost level where it had one.

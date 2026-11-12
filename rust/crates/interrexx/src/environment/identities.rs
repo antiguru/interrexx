@@ -55,8 +55,7 @@ impl Interp {
     }
 
     /// Records a class `Class~subclass` or `Class~mixinClass` built, whose
-    /// own `package` field the oracle leaves null
-    /// (`classes/ClassClass.cpp:1546`, `:1496`, then `:1582`).
+    /// own `package` field the oracle leaves null.
     pub(crate) fn record_packageless_class(&mut self, class: ObjRef) {
         self.class_packages.insert(class, ClassPackage::Null);
     }
@@ -71,9 +70,9 @@ impl Interp {
         }
     }
 
-    /// Records that `class` keeps the package it was defined in alive, as
-    /// `RexxClass::package` does. A class outside the arena is never
-    /// collected and holds nothing.
+    /// Records that `class` keeps the package it was defined in alive, as the
+    /// oracle does. A class outside the arena is never collected and holds
+    /// nothing.
     fn class_holds_package(&mut self, class: ObjRef, package: ObjRef) {
         if matches!(
             self.heap.get(class).map(|held| &held.body),
@@ -90,10 +89,8 @@ impl Interp {
     }
 
     /// `Package~addClass` and `Package~addPublicClass`, which differ only in
-    /// whether the public table gets the entry too --
-    /// `PackageClass::addInstalledClass` (`classes/PackageClass.cpp:1401`),
-    /// which both `addClassRexx` (`:1932`) and `addPublicClassRexx`
-    /// (`:1950`) reach with the flag set differently.
+    /// whether the public table gets the entry too: both `Package~addClass`
+    /// and `Package~addPublicClass` reach this with the flag set differently.
     pub(crate) fn add_installed_class(
         &mut self,
         package: ObjRef,
@@ -101,12 +98,11 @@ impl Interp {
         class: ObjRef,
         public: bool,
     ) {
-        // The reverse direction is deliberately not written here.
-        // `~package` answers the package a class was *defined* in, which is
-        // `RexxClass::package`, a field of the class object;
-        // `addInstalledClass` writes the package's own two tables and
-        // touches no field of the class it is handed, so adding a class to a
-        // package's table does not move it.
+        // The reverse direction is deliberately not written here. `~package`
+        // answers the package a class was *defined* in, which is a field of
+        // the class object; adding an installed class writes the package's
+        // own two tables and touches no field of the class it is handed, so
+        // adding a class to a package's table does not move it.
         self.invalidate_rexx_class_cache();
         let Some(data) = self.package_data_mut(package) else {
             return;
@@ -540,8 +536,8 @@ impl Interp {
 
     /// Files `record` as what the `Method` or `Routine` object `object`
     /// reports on and runs, and makes `object` keep the package its code
-    /// belongs to alive, as `BaseExecutable::package` does. May allocate, so
-    /// `object` must be rooted.
+    /// belongs to alive, as the oracle does. May allocate, so `object` must
+    /// be rooted.
     pub(crate) fn record_executable(
         &mut self,
         object: ObjRef,
@@ -568,9 +564,8 @@ impl Interp {
         Ok(())
     }
 
-    /// `MethodClass::newScope` (`classes/MethodClass.cpp:183`): the same
-    /// method object with `scope` filled in when it had none, and a copy
-    /// carrying `scope` when it already had one.
+    /// The same method object with `scope` filled in when it had none, and a
+    /// copy carrying `scope` when it already had one.
     fn method_new_scope(&mut self, method: ObjRef, scope: ObjRef) -> Option<ObjRef> {
         match self.heap.get(method).map(|held| &held.body) {
             Some(Body::Native(native)) if native.scope().is_none() => {
@@ -586,11 +581,10 @@ impl Interp {
         }
     }
 
-    /// `Method~copy`: `BaseExecutable::copy`
-    /// (`execution/BaseExecutable.cpp:58`), a new object reporting on and
-    /// running what `original` does, with a copy of its annotations, under a
-    /// method identity of its own, so a flag written on one leaves the other
-    /// alone. `None` for an object this crate did not build.
+    /// `Method~copy`: a new object reporting on and running what `original`
+    /// does, with a copy of its annotations, under a method identity of its
+    /// own, so a flag written on one leaves the other alone. `None` for an
+    /// object this crate did not build.
     pub(crate) fn copy_method_object(&mut self, original: ObjRef) -> Option<ObjRef> {
         let object = self.clone_executable(original, None)?;
         if let Some(template) = self
@@ -663,13 +657,13 @@ impl Interp {
         let object = self.alloc_with(BehaviourId::OBJECT, Body::Native(copy));
         self.roots.activity_mut().push_temp(object);
         // The copy reports on the same directive the original did, and
-        // carries the flag writes the four setters made on it -- both are
-        // `RexxObject::copy`'s doing, which duplicates the whole method
-        // object including its flag word. Measured, oracle rc 0:
-        // `.K2~define("X", .K~method("M"))` then `.K2~method("X")~source`
-        // answers `M`'s own body lines, and the same copy taken after
-        // `setPrivate` and `setUnguarded` answers `1 0` for `isPrivate` and
-        // `isGuarded` where the directive alone answers `0 1`.
+        // carries the flag writes the four setters made on it -- both are the
+        // copy's doing, which duplicates the whole method object including
+        // its flag word. Measured, oracle rc 0: `.K2~define("X",
+        // .K~method("M"))` then `.K2~method("X")~source` answers `M`'s own
+        // body lines, and the same copy taken after `setPrivate` and
+        // `setUnguarded` answers `1 0` for `isPrivate` and `isGuarded` where
+        // the directive alone answers `0 1`.
         if let Some(source) = self.executable_sources.get(&original).copied() {
             self.executable_sources.insert(object, source);
         }
@@ -1012,9 +1006,8 @@ impl Interp {
         entries
     }
 
-    /// This crate's native class registry, which `completeSystemClass`
-    /// (`memory/Setup.cpp:199`-`:206`) files every `Setup.cpp` class of the
-    /// REXX package's table in. The shipped `.orx` files' own `::CLASS`
+    /// This crate's native class registry, which every native class of the REXX
+    /// package's table is filed in. The shipped `.orx` files' own `::CLASS`
     /// directives are in the package's own fields.
     fn registered_classes(&mut self) -> Vec<(Box<[u8]>, ObjRef)> {
         self.classes()
@@ -1023,8 +1016,8 @@ impl Interp {
             .collect()
     }
 
-    /// `PackageClass::findClass` (`classes/PackageClass.cpp:1085`): the whole
-    /// search order a package resolves a class name over, from `package`.
+    /// The whole search order a package resolves a class name over, from
+    /// `package`.
     ///
     /// Refuses a name `.local` or `.environment` holds on the oracle and this
     /// crate does not build.
@@ -1059,9 +1052,8 @@ impl Interp {
         }
     }
 
-    /// `PackageClass::findPublicClass` (`classes/PackageClass.cpp:1013`) at
-    /// the `findPublicClassRexx` stub: this package's own public classes, the
-    /// ones it imported, and then the REXX package's.
+    /// `Package~findPublicClass`: this package's own public classes, the ones
+    /// it imported, and then the REXX package's.
     pub(crate) fn package_find_public_class(
         &mut self,
         package: ObjRef,
@@ -1101,7 +1093,7 @@ impl Interp {
         Ok(self.chain_installed_class(Some(package), upper))
     }
 
-    /// `PackageClass::findPublicClass`'s steps: the package's installed public
+    /// The steps of `Package~findPublicClass`: the package's installed public
     /// classes, then its merged ones, then its parent's, then the REXX
     /// package's.
     fn package_public_class_of(
@@ -1125,8 +1117,7 @@ impl Interp {
         Ok(self.rexx_package_class(upper))
     }
 
-    /// `PackageClass::findRoutine` (`classes/PackageClass.cpp:897`), as the
-    /// `Routine` object or `.nil`.
+    /// `Package~findRoutine`, as the `Routine` object or `.nil`.
     pub(crate) fn package_find_routine(
         &mut self,
         package: ObjRef,
@@ -1160,8 +1151,7 @@ impl Interp {
     }
 
     /// A class installed in `package` or up its parent chain --
-    /// `findInstalledClass` and its recursion to `parentPackage`
-    /// (`classes/PackageClass.cpp:982-1003`).
+    /// `findInstalledClass` and its recursion to `parentPackage`.
     pub(crate) fn chain_installed_class(
         &self,
         package: Option<ObjRef>,
@@ -1172,8 +1162,7 @@ impl Interp {
     }
 
     /// A public class of `package` or of one up its parent chain: each
-    /// package's installed public classes, then its merged ones
-    /// (`classes/PackageClass.cpp:1014-1049`).
+    /// package's installed public classes, then its merged ones.
     pub(crate) fn chain_public_class(
         &self,
         package: Option<ObjRef>,
@@ -1187,11 +1176,11 @@ impl Interp {
         })
     }
 
-    /// `PackageClass::findRoutine` (`classes/PackageClass.cpp:822-911`) for
-    /// the upcased `upper`: `findLocalRoutine`, every `routines` table up the
-    /// parent chain, and only then `findPublicRoutine`, every merged table up
-    /// the chain. A package's public routines are among its `routines`, so the
-    /// second walk has only the merged tables left to read.
+    /// `Package~findRoutine` for the upcased `upper`: the local routine, every
+    /// `routines` table up the parent chain, and only then
+    /// `findPublicRoutine`, every merged table up the chain. A package's
+    /// public routines are among its `routines`, so the second walk has only
+    /// the merged tables left to read.
     pub(crate) fn find_routine(
         &self,
         package: Option<ObjRef>,
@@ -1244,8 +1233,8 @@ impl Interp {
     }
 
     /// What a call runs for a `Routine` object a written `.ROUTINES` table
-    /// holds. The oracle casts the entry unchecked
-    /// (`classes/PackageClass.cpp:827`), so anything else is refused.
+    /// holds. The oracle casts the entry unchecked, so anything else is
+    /// refused.
     pub(crate) fn routine_object_resolution(
         &self,
         object: ObjRef,
@@ -1346,8 +1335,7 @@ impl Interp {
     }
 
     /// The one `Routine` object for the library routine at `code`'s row,
-    /// which an imported-routine table and `loadExternalRoutine` both answer
-    /// (`LibraryPackage::resolveRoutine`, `package/LibraryPackage.cpp:410-432`).
+    /// which an imported-routine table and `loadExternalRoutine` both answer.
     pub(crate) fn library_routine_object(&mut self, code: usize) -> ObjRef {
         if let Some(found) = self.library_routine_objects.get(&code).copied() {
             return found;
@@ -1404,9 +1392,8 @@ impl Interp {
     ///
     /// A `loadExternal*` answer no directive has bound hands on the `REXX`
     /// package. Its own package is `.nil`, which the oracle hands on as the
-    /// parent (`execution/BaseExecutable.cpp:121-125`): measured, it answers
-    /// until a name is resolved through that parent, and segfaults there
-    /// (`corpus/oracle-crashes.txt` entry 15).
+    /// parent: measured, it answers until a name is resolved through that
+    /// parent, and segfaults there (`corpus/oracle-crashes.txt` entry 15).
     pub(crate) fn executable_context_package(
         &mut self,
         object: ObjRef,

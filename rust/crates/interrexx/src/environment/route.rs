@@ -26,9 +26,8 @@ impl Interp {
     /// `directory_lookup` answers, and it is reused rather than reopened so the
     /// seam still has one read chokepoint. An owed entry answers `None`.
     ///
-    /// `.local` only: measured, `RexxActivation::resolveStream` and
-    /// `Activity::sayOutput` both read `getLocalEnvironment` and never
-    /// `.environment`.
+    /// `.local` only: measured, stream resolution and the say output both
+    /// read `.local` and never `.environment`.
     pub(crate) fn local_route(&mut self, name: &[u8]) -> Result<Option<ObjRef>, Failure> {
         match self.directory_lookup(&[EnvScope::Local], name, &env_seam::Access::Direct)? {
             hash::DirectoryEntry::Found(found) => Ok(Some(found)),
@@ -84,8 +83,8 @@ impl Interp {
     }
 
     /// Whether `route` still ends at `terminal`, following each monitor's
-    /// destination queue head (`CoreClasses.orx`'s `Monitor`, whose `UNKNOWN`
-    /// forwards to `destination~peek`).
+    /// destination queue head (`Monitor`'s `UNKNOWN` forwards to
+    /// `destination~peek`).
     ///
     /// A route that ends at the stream the bundle minted writes the same bytes
     /// whether it is delivered or written straight to the buffer, and the
@@ -138,8 +137,7 @@ impl Interp {
         }
     }
 
-    /// One finished trace line, delivered to `.TRACEOUTPUT` as a `TraceObject`
-    /// -- `Activity::traceOutput` (`concurrency/Activity.cpp:3171`).
+    /// One finished trace line, delivered to `.TRACEOUTPUT` as a `TraceObject`.
     ///
     /// `start` is where the line begins in the buffer: a `.STDERR` `CHAROUT`
     /// leaves an unterminated fragment there, so the line cannot be found by
@@ -162,18 +160,16 @@ impl Interp {
     /// [`Interp::route_trace_line`] for a `>I>` (`entry`) or `<I<` line,
     /// whose `TraceObject` names the caller's frame for `>I>`. Standard error
     /// is handed over after it. Not gated on the source: the oracle's
-    /// `traceEntryOrExit` (`RexxActivation.cpp:3678`) writes these for a
-    /// restored program too (measured).
+    /// `traceEntryOrExit` writes these for a restored program too (measured).
     pub(crate) fn route_trace_line_as(&mut self, start: usize, entry: bool) {
         self.deliver_trace_line_as(start, entry);
         self.hand_over_stderr();
     }
 
-    /// `RexxActivation::processTraceInfo`: every line becomes a `TraceObject`,
-    /// which `Activity::traceOutput` sends to `.TRACEOUTPUT`, writes to
-    /// standard error where that is the error stream, or keeps back under
-    /// `.TraceObject~option` `P`. Without the class the line goes to
-    /// standard error as it is.
+    /// Trace output: every line becomes a `TraceObject`, which is sent to
+    /// `.TRACEOUTPUT`, writes to standard error where that is the error
+    /// stream, or keeps back under `.TraceObject~option` `P`. Without the
+    /// class the line goes to standard error as it is.
     fn deliver_trace_line_as(&mut self, start: usize, entry: bool) {
         let variable = self.traced_variable.take();
         if self.activity.routing_trace {
@@ -299,11 +295,11 @@ impl Interp {
             .and_then(|pending| pending.trace_failure)
     }
 
-    /// `Activity::traceOutput`'s failed `LINEOUT`: raised in the traced
-    /// activation at its clause's end. With no activation running, the line
-    /// is left on stdout, as `corpus/oracle-crashes.txt` entry 11 licenses.
-    /// A refusal is never dropped: an activation that ends before a clause
-    /// end raises it passes it to its caller ([`Interp::carry_trace_refusals`]).
+    /// The failed `LINEOUT` of a trace delivery: raised in the traced activation
+    /// at its clause's end. With no activation running, the line is left on
+    /// stdout, as `corpus/oracle-crashes.txt` entry 11 licenses. A refusal is
+    /// never dropped: an activation that ends before a clause end raises it
+    /// passes it to its caller ([`Interp::carry_trace_refusals`]).
     #[cold]
     #[inline(never)]
     fn queue_trace_failure(&mut self, failure: Failure, line: &[u8]) {
@@ -404,9 +400,8 @@ impl Interp {
         self.route_trace_line(start);
     }
 
-    /// The `TraceObject` carrying `line` and where it was traced
-    /// (`RexxActivation::createTraceObject`,
-    /// `execution/RexxActivation.cpp:5160`), then its delivery.
+    /// The `TraceObject` carrying `line` and where it was traced, then its
+    /// delivery.
     fn deliver_trace_line(
         &mut self,
         class: ObjRef,
@@ -518,11 +513,11 @@ impl Interp {
                 let caller_ref = self.caller();
                 self.send_message(notify, b"APPEND", None, &[Some(object)], caller_ref)?;
             }
-            // The I/O exit's first pass (`Activity::traceOutput`).
+            // The I/O exit's first pass.
             if self.exits.is_some() && self.trace_exit(line)? {
                 return Ok(Delivered::KeptBack);
             }
-            // `Activity::traceOutput`: the option the object was made under.
+            // The option the object was made under.
             let index = self.text(b"OPTION");
             self.roots.activity_mut().push_temp(index);
             let caller_ref = self.caller();
@@ -634,9 +629,7 @@ impl Interp {
         Ok((frame, executable))
     }
 
-    /// `RexxActivation::getStackFrameAsStringTable`
-    /// (`execution/RexxActivation.cpp:5289`): a `StringTable` of `frame`'s
-    /// entries, empty for none.
+    /// A `StringTable` of `frame`'s entries, empty for none.
     fn frame_table(&mut self, frame: Option<(ObjRef, ObjRef)>) -> Result<ObjRef, Failure> {
         let table = crate::dispatch::hash::new_string_table(self)?;
         self.roots.activity_mut().push_temp(table);
@@ -673,9 +666,8 @@ impl Interp {
         crate::dispatch::hash::directory_put(self, table, name, value)
     }
 
-    /// The table of the frame that started this activity, with the
-    /// spawner's number as its `THREAD` (`Activity::setCallerStackFrameAsStringTable`,
-    /// `concurrency/Activity.cpp:1199`), built once; `.nil` for main.
+    /// The table of the frame that started this activity, with the spawner's
+    /// number as its `THREAD`, built once; `.nil` for main.
     fn spawner_table(&mut self) -> Result<ObjRef, Failure> {
         match self.activity.spawner {
             None => Ok(ObjRef::NIL),

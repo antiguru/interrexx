@@ -33,7 +33,6 @@ pub(crate) const FOREIGN: u32 = 16;
 /// finds it pending when it returns has the calling clause's boundary serve the post.
 pub(crate) const BOUNDARY: u32 = 32;
 
-/// `ActivityManager::timeSliceLength` (`concurrency/ActivityManager.hpp:359`).
 const SLICE_LENGTH: Duration = Duration::from_millis(24);
 
 /// What other threads post to an interpreter's inbox.

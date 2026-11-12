@@ -165,9 +165,8 @@ impl Interp {
     }
 
     /// The value an accessor's or `DELEGATE`'s name holds in `scope`'s pool on
-    /// `owner` (`RexxVariableBase::getValue(VariableDictionary *)`): a simple
-    /// variable's value or derived name, the stem (made if the pool has none),
-    /// or one tail of that stem.
+    /// `owner`: a simple variable's value or derived name, the stem (made if
+    /// the pool has none), or one tail of that stem.
     pub(crate) fn pool_value(&mut self, owner: ObjRef, scope: ObjRef, name: &[u8]) -> ObjRef {
         match shape_of(name) {
             NameShape::Simple => match self
@@ -186,8 +185,7 @@ impl Interp {
         }
     }
 
-    /// Assigns an accessor's name in `scope`'s pool on `owner`
-    /// (`RexxVariableBase::set(VariableDictionary *, ...)`): a stem takes a
+    /// Assigns an accessor's name in `scope`'s pool on `owner`: a stem takes a
     /// stem as it is and wraps anything else as a new stem's default, and a
     /// compound writes one tail of the pool's stem.
     pub(crate) fn set_pool_value(
@@ -212,7 +210,7 @@ impl Interp {
     }
 
     /// The stem `scope`'s pool on `owner` holds under `stem_name`, made empty
-    /// if it holds none (`VariableDictionary::getStem`).
+    /// if it holds none.
     fn pool_stem(&mut self, owner: ObjRef, scope: ObjRef, stem_name: &[u8]) -> ObjRef {
         if let Some(stem) = self
             .pools_of(owner)
@@ -272,11 +270,10 @@ impl Interp {
 
     /// A store of `value`, or a `DROP` where it is `None`, of `name` in
     /// `scope`'s pool on `owner`, an object a `GUARD WHEN` has watched: every
-    /// watcher of the variable is posted (`RexxVariable::set`, `::drop`,
-    /// `::notify`, `execution/RexxVariable.cpp:158-194`). The oracle's
+    /// watcher of the variable is posted (on a set and on a drop). The oracle's
     /// notifier then yields, which hands its kernel lock only to an activity
-    /// already queued for it; a woken watcher measured not to be one runs
-    /// at the next switch, so no switch is asked for here.
+    /// already queued for it; a woken watcher measured not to be one runs at
+    /// the next switch, so no switch is asked for here.
     #[cold]
     #[inline(never)]
     fn store_watched(&mut self, owner: ObjRef, scope: ObjRef, name: &[u8], value: Option<ObjRef>) {
@@ -322,8 +319,8 @@ impl Interp {
     }
 
     /// The value of a `(name)` selector in a variable list, read as an
-    /// expression reads the symbol (`RexxVariableReference::list`), with its
-    /// `NOVALUE` check and its `TRACE I` lines.
+    /// expression reads the symbol, with its `NOVALUE` check and its `TRACE
+    /// I` lines.
     pub(super) fn read_list_selector(
         &mut self,
         code: &Code<'_>,
@@ -394,10 +391,9 @@ impl Interp {
     }
 }
 
-/// A compound name's stem, its period included, and its tail: everything
-/// after the first period, taken literally (`buildCompoundVariable` with
-/// `direct`, which `LanguageParser::getRetriever` builds for an attribute or
-/// `DELEGATE` name).
+/// A compound name's stem, its period included, and its tail: everything after the
+/// first period, taken literally, as the parser builds it for an attribute or
+/// `DELEGATE` name.
 fn direct_compound(name: &[u8]) -> (&[u8], &[u8]) {
     let dot = name
         .iter()

@@ -63,10 +63,9 @@ pub(crate) struct IoContext {
     input: RefCell<Input>,
     output: Option<Target>,
     error: Option<Target>,
-    /// The output target that is also the input source, which
-    /// `CommandIOContext::resolveConflicts` buffers: it is neither emptied
-    /// nor written until the command has ended. The output's, else the
-    /// error's.
+    /// The output target that is also the input source, which the oracle
+    /// buffers: it is neither emptied nor written until the command has
+    /// ended. The output's, else the error's.
     deferred: Option<Stream>,
     /// The output's and the error's next stem tail, from
     /// [`IoContext::begin`] on.
@@ -98,9 +97,9 @@ enum Pending {
     Stream(Vec<u8>),
 }
 
-/// Where an input source reads from, as `OutputRedirector::needsBuffering`
-/// compares it with an output target: a stem object, a stream object or a
-/// stream name. Any other source is never an output target.
+/// Where an input source reads from, as the oracle's buffering test compares
+/// it with an output target: a stem object, a stream object or a stream name.
+/// Any other source is never an output target.
 enum Origin {
     Stem(ObjRef),
     Stream(ObjRef),
@@ -117,7 +116,7 @@ enum Target {
     /// An `OrderedCollection`: `EMPTY`, then one `APPEND` per line, so the
     /// class's own methods decide what that means.
     Collection { object: ObjRef, append: bool },
-    /// A `RexxQueue`, one `QUEUE` per line (`RexxQueueOutputTarget::writeLine`).
+    /// A `RexxQueue`, one `QUEUE` per line.
     Queue { object: ObjRef },
     /// An open stream, one `LINEOUT` per line.
     ///
@@ -169,9 +168,9 @@ impl Target {
     /// Whether two targets are one destination.
     ///
     /// **Two named streams compare on the qualified name, not on identity**,
-    /// which is `StreamOutputTarget::isSameTarget`'s own override -- measured,
-    /// `g.txt` with `g.txt` and `h.txt` with `./h.txt` each collapse to a
-    /// single file the two streams interleave into.
+    /// which is the oracle's own rule -- measured, `g.txt` with `g.txt` and
+    /// `h.txt` with `./h.txt` each collapse to a single file the two streams
+    /// interleave into.
     fn same_target(&self, other: &Target) -> bool {
         match (self, other) {
             (
@@ -285,10 +284,10 @@ impl IoContext {
         }
     }
 
-    /// `CommandIOContext::init`, before the command runs: a `REPLACE` stem is
-    /// emptied with `stem.0` set to 0, an `APPEND` one reads its `stem.0`,
-    /// and a `REPLACE` collection is sent `EMPTY`. A deferred target and an
-    /// error target shared with the output are left for later.
+    /// Before the command runs: a `REPLACE` stem is emptied with `stem.0` set
+    /// to 0, an `APPEND` one reads its `stem.0`, and a `REPLACE` collection
+    /// is sent `EMPTY`. A deferred target and an error target shared with the
+    /// output are left for later.
     pub(crate) fn begin(&self, interp: &mut Interp) -> Result<(), Failure> {
         if let Some(target) = &self.output
             && self.deferred != Some(Stream::Output)
@@ -315,9 +314,8 @@ impl IoContext {
     }
 
     /// Hands the whole lines of `bytes`, standard output's next piece, to the
-    /// output target as they arrive (`OutputRedirector::writeBuffer`), and
-    /// keeps a trailing part line for the next piece. A deferred output keeps
-    /// everything.
+    /// output target as they arrive, and keeps a trailing part line for the
+    /// next piece. A deferred output keeps everything.
     ///
     /// A line the target raises on ends this piece: its later lines and its
     /// part line are dropped, as the oracle's unwind out of `writeBuffer`
@@ -343,9 +341,8 @@ impl IoContext {
 
     /// Hands what the child wrote to the targets once it has ended, in the
     /// oracle's order: `out`, standard output's last piece, then standard
-    /// error, then the cleanup (`CommandIOContext::cleanup`), which writes the
-    /// output's last part line, or all of a deferred output, and closes each
-    /// named stream.
+    /// error, then the cleanup, which writes the output's last part line, or
+    /// all of a deferred output, and closes each named stream.
     ///
     /// `held` is the condition a target raised on an earlier piece. A
     /// condition raised here replaces it ([`Interp::write_holding_last`]); one
@@ -935,8 +932,7 @@ impl Interp {
     }
 
     /// Writes `lines` to one target, a stem's from tail `next` on with
-    /// `stem.0` after each (`StemOutputTarget::writeLine`), answering the
-    /// next tail.
+    /// `stem.0` after each, answering the next tail.
     fn write_target(
         &mut self,
         target: &Target,
@@ -1001,7 +997,7 @@ impl Interp {
         reading: bool,
     ) -> Result<ObjRef, Failure> {
         let Some(class) = self.rexx_package_class(b"STREAM") else {
-            // Only before `StreamClasses.orx` has installed, which is the
+            // Only before the stream classes' bootstrap file has installed, which is the
             // library bootstrap's own step.
             return Err(Loud::environment_symbol(b".STREAM").into());
         };
@@ -1059,9 +1055,8 @@ impl Interp {
                 }
                 Err(failure) => return Err(failure),
             };
-            // `StreamObjectInputSource::read` (`instructions/
-            // InputRedirector.cpp:313`): a condition the send raised ends the
-            // input, and the line it answered with is not one.
+            // A condition the send raised ends the input, and the line it
+            // answered with is not one.
             if trapped {
                 return Ok(lines);
             }

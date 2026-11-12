@@ -36,8 +36,8 @@ pub(crate) fn read_from(
     Ok(out)
 }
 
-/// The lines from `position` to the end, counted the way `SysFile::countLines`
-/// counts them: an unterminated final line counts.
+/// The lines from `position` to the end, counted the way the oracle counts
+/// them: an unterminated final line counts.
 pub(crate) fn count_lines_from(file: &mut std::fs::File, position: u64) -> std::io::Result<u64> {
     let mut count = 0;
     let mut at = position;
@@ -170,11 +170,11 @@ pub(crate) fn lines_after(
     Ok(answer)
 }
 
-/// The start of line `target` and the line reached: past the last line end
-/// of a text stream, the end of the stream on the line after the last line
-/// end (`SysFile::seekForwardLines`). Line ends are counted from the start
-/// every time (rexxref iostrms.xml:476-490). A record stream's line n is
-/// character `(n - 1) * reclength + 1` (iostrms.xml:465-472).
+/// The start of line `target` and the line reached: past the last line end of
+/// a text stream, the end of the stream on the line after the last line end.
+/// Line ends are counted from the start every time (rexxref
+/// iostrms.xml:476-490). A record stream's line n is character `(n - 1) *
+/// reclength + 1` (iostrms.xml:465-472).
 pub(crate) fn seek_line(
     open: &mut interrexx_core::OpenFile,
     target: i64,

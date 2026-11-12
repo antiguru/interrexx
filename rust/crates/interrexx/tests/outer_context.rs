@@ -206,7 +206,7 @@ fn a_kept_call_context_used_by_another_activity_answers_or_raises() {
     fs::remove_dir_all(&base).expect("cannot remove the run directory");
 }
 
-/// The program that calls the `kthr.cpp` member `member` from a started
+/// The program that calls the forge library's member `member` from a started
 /// activity, through the thread context main's `KOuter` kept, with a counter
 /// and a directory a performed member would change.
 fn kept_thread_program(member: char) -> String {
@@ -223,12 +223,12 @@ fn kept_thread_program(member: char) -> String {
     )
 }
 
-/// Each member of a thread context main's `KOuter` kept (`outer_context/kthr.cpp`'s
-/// `KM`), called from a started activity: `Activity::validateThread` throws
-/// before the member runs, so nothing it would do is done, and the running
-/// call raises 98.983 unless it already holds a condition of its own (`H`
-/// raises 93.900 first, which the oracle traps). The oracle then ends in
-/// 44.1 and hangs where it raised 98.983, so this is not a differential.
+/// Each member of a thread context main's `KOuter` kept (the forge library's member
+/// table), called from a started activity: the oracle's thread validation throws
+/// before the member runs, so nothing it would do is done, and the running call
+/// raises 98.983 unless it already holds a condition of its own (`H` raises 93.900
+/// first, which the oracle traps). The oracle then ends in 44.1 and hangs where it
+/// raised 98.983, so this is not a differential.
 #[test]
 fn a_kept_thread_context_used_by_another_activity_does_nothing() {
     if !gate_mode() {

@@ -1,7 +1,7 @@
-//! System exits (`api/rexx.h`, `rexxpg` "System Exit Interface"): the handlers an embedding
-//! installs through `RexxStart`'s exit list or `RexxCreateInterpreter`'s `REGISTERED_EXITS`
-//! and `DIRECT_EXITS`, and the points of a run that call them, each before what it would
-//! otherwise do (`Activity::call*Exit`, `concurrency/Activity.cpp:2535-3296`).
+//! System exits (the `rexxpg` "System Exit Interface"): the handlers an embedding installs
+//! through `RexxStart`'s exit list or `RexxCreateInterpreter`'s `REGISTERED_EXITS` and
+//! `DIRECT_EXITS`, and the points of a run that call them, each before what it would
+//! otherwise do.
 //!
 //! A handler that answers `RXEXIT_NOT_HANDLED` leaves the run to do what it does without one;
 //! one that answers `RXEXIT_RAISE_ERROR` raises 48.1 naming the exit, and an I/O exit that
@@ -48,8 +48,7 @@ impl Interp {
     /// Installs `registered`, each a function code and the name of a registered exit handler,
     /// resolved now as `RexxResolveExit` resolves it (an unresolved name installs nothing),
     /// then `context`, each a code and a context handler; a later entry for a code replaces an
-    /// earlier one (`InterpreterInstance::initialize`). `instance` says this interpreter is an
-    /// embedding instance.
+    /// earlier one. `instance` says this interpreter is an embedding instance.
     pub(crate) fn install_exits(
         &mut self,
         registered: &[(c_int, Vec<u8>)],
@@ -106,8 +105,8 @@ impl Interp {
         self.exits.is_some() && !self.library_bootstrap
     }
 
-    /// Calls the exit `request` names, where one is installed (`Activity::callExit`): the
-    /// reply of a handler that handled it, `None` where none is installed or it passed.
+    /// Calls the exit `request` names, where one is installed: the reply of a handler
+    /// that handled it, `None` where none is installed or it passed.
     fn exit_call(
         &mut self,
         request: ExitRequest<'_, Option<ObjRef>>,
@@ -132,8 +131,8 @@ impl Interp {
     }
 
     /// The object-valued then the string-valued function exit, for a call that gets past the
-    /// running package's own routines (`RexxActivation::externalCall` steps 2a and 2b): the
-    /// value of a call one of them handled, `None` where neither did.
+    /// running package's own routines: the value of a call one of them handled, `None` where
+    /// neither did.
     pub(crate) fn function_exits(
         &mut self,
         name: &[u8],
@@ -176,7 +175,7 @@ impl Interp {
         Ok(None)
     }
 
-    /// The scripting function exit, the last step before 43.1 (`externalCall` step 4).
+    /// The scripting function exit, the last step before 43.1.
     pub(crate) fn scripting_exit(
         &mut self,
         name: &[u8],
@@ -196,8 +195,8 @@ impl Interp {
         }
     }
 
-    /// The command exit (`Activity::callCommandExit`): the outcome of a command it handled,
-    /// its return string the `RC`, `rxfcfail` a `FAILURE` and `rxfcerr` an `ERROR`.
+    /// The command exit: the outcome of a command it handled, its return string the `RC`,
+    /// `rxfcfail` a `FAILURE` and `rxfcerr` an `ERROR`.
     pub(crate) fn command_exit(
         &mut self,
         address: &[u8],
@@ -223,61 +222,60 @@ impl Interp {
         }))
     }
 
-    /// The queue exit's pull (`callPullExit`): the line a handler returned, `Some(None)` where
-    /// it returned none, which reads as an empty queue.
+    /// The queue exit's pull: the line a handler returned, `Some(None)` where it returned
+    /// none, which reads as an empty queue.
     pub(crate) fn pull_exit(&mut self) -> Result<Option<Option<Vec<u8>>>, Failure> {
         Ok(self.exit_call(ExitRequest::Pull)?.map(|reply| reply.text))
     }
 
-    /// The queue exit's push or queue (`callPushExit`): whether a handler took the line.
+    /// The queue exit's push or queue: whether a handler took the line.
     pub(crate) fn push_exit(&mut self, line: &[u8], lifo: bool) -> Result<bool, Failure> {
         Ok(self.exit_call(ExitRequest::Push { line, lifo })?.is_some())
     }
 
-    /// The queue exit's size (`callQueueSizeExit`).
+    /// The queue exit's size.
     pub(crate) fn queue_size_exit(&mut self) -> Result<Option<usize>, Failure> {
         Ok(self
             .exit_call(ExitRequest::QueueSize)?
             .map(|reply| reply.size))
     }
 
-    /// The queue exit's new queue name (`callQueueNameExit`): the name a handler put in place
-    /// of `name`.
+    /// The queue exit's new queue name: the name a handler put in place of `name`.
     pub(crate) fn queue_name_exit(&mut self, name: &[u8]) -> Result<Option<Vec<u8>>, Failure> {
         Ok(self
             .exit_call(ExitRequest::QueueName { name })?
             .map(|reply| reply.text.unwrap_or_default()))
     }
 
-    /// The I/O exit's `SAY` (`callSayExit`): whether a handler took the line.
+    /// The I/O exit's `SAY`: whether a handler took the line.
     pub(crate) fn say_exit(&mut self, line: &[u8]) -> Result<bool, Failure> {
         Ok(self.exit_call(ExitRequest::Say { line })?.is_some())
     }
 
-    /// The I/O exit's trace line (`callTraceExit`): whether a handler took it.
+    /// The I/O exit's trace line: whether a handler took it.
     pub(crate) fn trace_exit(&mut self, line: &[u8]) -> Result<bool, Failure> {
         Ok(self.exit_call(ExitRequest::Trace { line })?.is_some())
     }
 
-    /// The I/O exit's terminal read (`callTerminalInputExit`): the line a handler returned.
+    /// The I/O exit's terminal read: the line a handler returned.
     pub(crate) fn terminal_read_exit(&mut self) -> Result<Option<Vec<u8>>, Failure> {
         Ok(self
             .exit_call(ExitRequest::TerminalRead)?
             .map(|reply| reply.text.unwrap_or_default()))
     }
 
-    /// The I/O exit's interactive debug read (`callDebugInputExit`).
+    /// The I/O exit's interactive debug read.
     pub(crate) fn debug_read_exit(&mut self) -> Result<Option<Vec<u8>>, Failure> {
         Ok(self
             .exit_call(ExitRequest::DebugRead)?
             .map(|reply| reply.text.unwrap_or_default()))
     }
 
-    /// The halt and trace exits at a clause boundary (`RexxActivation::processClauseBoundary`):
-    /// a halt the halt exit asks for is raised there, and a trace the trace exit asks for is
-    /// turned on as `RXTRACE` turns it on. The library's own code calls neither, as the
-    /// oracle's image code does not (`RexxActivation::run`'s `isOldSpace`). Before them, what a
-    /// native call posted to this interpreter's own inbox is served (`boundary_posts`).
+    /// The halt and trace exits at a clause boundary: a halt the halt exit asks for is raised
+    /// there, and a trace the trace exit asks for is turned on as `RXTRACE` turns it on. The
+    /// library's own code calls neither, as the oracle's image code does not. Before them,
+    /// what a native call posted to this interpreter's own inbox is served
+    /// (`boundary_posts`).
     #[cold]
     #[inline(never)]
     pub(crate) fn run_clause_exits(&mut self) -> Result<(), Failure> {
@@ -332,8 +330,8 @@ impl Interp {
             .is_some_and(|exits| exits.root == Some(program))
     }
 
-    /// `Activity::setTrace` (`concurrency/Activity.cpp`): the running Rexx frame's external
-    /// trace, `TRACE ?R` on and `TRACE O` off. An idle activity's frame is not reached.
+    /// The running Rexx frame's external trace, `TRACE ?R` on and `TRACE O` off. An
+    /// idle activity's frame is not reached.
     pub(crate) fn set_external_trace(&mut self, on: bool) {
         if self.running_activation().is_none() {
             return;
@@ -349,8 +347,8 @@ impl Interp {
         self.set_trace_mode(mode);
     }
 
-    /// The halt exit's clear, once a trap has taken a `HALT` (`callHaltClearExit`), unless the
-    /// trap is the instance root's own.
+    /// The halt exit's clear, once a trap has taken a `HALT`, unless the trap is the instance
+    /// root's own.
     pub(crate) fn halt_clear_exit(&mut self) -> Result<(), Failure> {
         let root = self
             .running_activation()
@@ -371,15 +369,14 @@ impl Interp {
         self.exit_call(ExitRequest::Termination).map(drop)
     }
 
-    /// The `NOVALUE` exit (`callNovalueExit`): the value a handler gave the variable `name`.
+    /// The `NOVALUE` exit: the value a handler gave the variable `name`.
     pub(crate) fn novalue_exit(&mut self, name: ObjRef) -> Result<Option<Option<ObjRef>>, Failure> {
         Ok(self
             .exit_call(ExitRequest::Novalue { name: Some(name) })?
             .map(|reply| reply.object))
     }
 
-    /// The `VALUE` exit (`callValueExit`), for a selector nothing else knows: the old value a
-    /// handler returned.
+    /// The `VALUE` exit, for a selector nothing else knows: the old value a handler returned.
     pub(crate) fn value_exit(
         &mut self,
         selector: ObjRef,

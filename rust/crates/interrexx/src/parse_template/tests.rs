@@ -487,8 +487,8 @@ fn source_and_version_carry_their_own_strings() {
     assert_eq!(outcome.stdout, expected);
 }
 
-/// The `RexxInfo` fields reassemble into [`VERSION`] exactly as
-/// `runtime/Version.cpp:73` assembles it.
+/// The `RexxInfo` fields reassemble into [`VERSION`] exactly as the oracle
+/// assembles it.
 #[test]
 fn the_version_fields_reassemble_into_the_constant() {
     let mut rebuilt = b"REXX-ooRexx_".to_vec();

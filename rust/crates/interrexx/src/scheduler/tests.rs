@@ -1552,7 +1552,7 @@ fn a_sender_record_lives_and_dies_with_its_message() {
         [held]
     );
     // Main has no Rexx frame here, so the request is dropped and answered
-    // true (`Activity::halt`).
+    // true.
     assert!(interp.halt_message(held, None));
 }
 

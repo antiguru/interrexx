@@ -360,12 +360,10 @@ impl Interp {
     }
 
     /// An array's items, each rendered as [`string_value_text`] renders it and
-    /// joined by `separator` -- `ArrayClass::toString`
-    /// (`classes/ArrayClass.cpp:1856`), which `ArrayClass::makeString`
-    /// forwards to with no arguments (`classes/ArrayClass.cpp:1841`) and which
-    /// is therefore also what a string context asks an array for, at the
-    /// platform line ending. A condition an item's rendering raises ends the
-    /// join.
+    /// joined by `separator` -- `Array~toString`, which `Array~makeString`
+    /// forwards to with no arguments and which is therefore also what a string
+    /// context asks an array for, at the platform line ending. A condition an
+    /// item's rendering raises ends the join.
     pub(crate) fn array_string(
         &mut self,
         items: &[Option<ObjRef>],
@@ -400,15 +398,12 @@ impl Interp {
         out
     }
 
-    /// `RexxInternalObject::stringValue()`: the rendering of a value as an
-    /// object rather than as text, which is what every `TRACE` value line
-    /// prints, what an error message names an object by, and what an
-    /// array's own items are joined out of. A stem renders as its default
-    /// (`StemClass::stringValue`); an instance or class whose `OBJECTNAME`
-    /// or `DEFAULTNAME` is a method of its own is sent it, as
-    /// `RexxObject::stringValue` sends `OBJECTNAME`
-    /// (`classes/ObjectClass.cpp:1157`), and a condition the send raises is
-    /// the rendering's.
+    /// The rendering of a value as an object rather than as text, which is
+    /// what every `TRACE` value line prints, what an error message names an
+    /// object by, and what an array's own items are joined out of. A stem
+    /// renders as its default; an instance or class whose `OBJECTNAME` or
+    /// `DEFAULTNAME` is a method of its own is sent it, as the oracle sends
+    /// `OBJECTNAME`, and a condition the send raises is the rendering's.
     #[inline(never)]
     pub(crate) fn string_value_text(&mut self, value: ObjRef) -> Result<Vec<u8>, Failure> {
         // Called through a pointer the optimiser cannot see through: measured
@@ -540,11 +535,11 @@ impl Interp {
         })
     }
 
-    /// The rendering `RexxObject::stringValue` sends for: an instance or
-    /// class's `OBJECTNAME` where that is a method of its own, else its
-    /// `DEFAULTNAME` where it has no name set and that is; `None` where
-    /// neither is sent. A `Stem` subclass instance renders as its stem. The
-    /// answer renders as the primitive `OBJECTNAME` renders it.
+    /// The rendering the oracle sends for: an instance or class's
+    /// `OBJECTNAME` where that is a method of its own, else its `DEFAULTNAME`
+    /// where it has no name set and that is; `None` where neither is sent. A
+    /// `Stem` subclass instance renders as its stem. The answer renders as
+    /// the primitive `OBJECTNAME` renders it.
     #[cold]
     #[inline(never)]
     fn sent_string_value(&mut self, value: ObjRef) -> Result<Option<Vec<u8>>, Failure> {
@@ -667,8 +662,7 @@ impl Interp {
         }
     }
 
-    /// Whether a fixed dimension list makes this array multi-dimensional --
-    /// `ArrayClass::isMultiDimensional` (`classes/ArrayClass.hpp:312`), a
+    /// Whether a fixed dimension list makes this array multi-dimensional: a
     /// dimension list of any length other than one.
     pub(crate) fn is_multi_dimensional_array(&self, value: ObjRef) -> bool {
         matches!(
@@ -744,13 +738,13 @@ impl Interp {
             // **`string_value_text` and not `to_text`**, which is the
             // difference between the referent's `stringValue()` and its
             // string *conversion*, and it is measured rather than reasoned:
-            // `RexxObject::requestString` looks `MAKESTRING` up in the
-            // receiver's own behaviour and a reference's holds no such name,
-            // so the conversion falls through to `stringValue()`. Oracle
-            // rc 0, over a `zz` holding a two-item array: `say 'p' >zz` is
-            // `p an Array` where `say 'p' zz` is `p one` and `two`, and over
-            // an instance whose class defines `makeString`, `say 'p' >k` is
-            // the default name where `say 'p' k` runs the method.
+            // The string request looks `MAKESTRING` up in the receiver's own
+            // behaviour and a reference's holds no such name, so the
+            // conversion falls through to `stringValue()`. Oracle rc 0, over
+            // a `zz` holding a two-item array: `say 'p' >zz` is `p an Array`
+            // where `say 'p' zz` is `p one` and `two`, and over an instance
+            // whose class defines `makeString`, `say 'p' >k` is the default
+            // name where `say 'p' k` runs the method.
             Redirect::VarRefValue(referenced) => {
                 return Cow::Owned(self.unsent_string_value_text(referenced));
             }
@@ -794,7 +788,6 @@ impl Interp {
             // `~objectName` the object carries. `NativeObject`'s own
             // `string_value` field carries where the two part and why.
             Body::Native(native) => Cow::Borrowed(native.string_value()),
-            // `MutableBuffer::stringValue` (`classes/MutableBufferClass.cpp:740`):
             // the contents, whether or not `~objectName=` has named the buffer.
             // **One borrow of the state, not two**: a guard that asked
             // `state.buffer().is_some()` and an arm that asked again holds two
@@ -807,11 +800,10 @@ impl Interp {
                 ..
             } => match (state.buffer(), state.pointer()) {
                 (Some(buffer), _) => Cow::Borrowed(&buffer.bytes[..]),
-                // `PointerClass::stringValue`
-                // (`classes/PointerClass.cpp:152`), held nowhere, which is
-                // why `try_text` answers `None` for one.
+                // A pointer's string value, held nowhere, which is why
+                // `try_text` answers `None` for one.
                 (_, Some(address)) => Cow::Owned(interrexx_core::pointer_to_string(address)),
-                // `RexxString::stringValue` for a `String` subclass instance.
+                // The string value of a `String` subclass instance.
                 _ if let Some(text) = state.text() => Cow::Borrowed(text),
                 _ => match name {
                     Some(bytes) => Cow::Borrowed(bytes),
@@ -966,8 +958,7 @@ impl Interp {
         self.number_of(value, false)
     }
 
-    /// `RexxInternalObject::numberValue` for an argument
-    /// (`classes/ObjectClass.cpp:1047`): a value that is not a string or a
+    /// The number value of an argument: a value that is not a string or a
     /// number is read through the required-string protocol first, so an
     /// object whose `STRING` answers a number, or an `Array` of one such
     /// line, converts. `None` where the text is not a number.
@@ -1070,10 +1061,10 @@ impl Interp {
                     Err(marker) => Err(*marker),
                 }
             }
-            // `VariableReference::numberValue` is the referenced value's
-            // (`classes/VariableReference.cpp:262`), which is why `>vr + 1`
-            // is `6` and not 41.1 -- measured, oracle rc 0. Read before the
-            // borrow is taken again, the way the stem redirect is.
+            // A variable reference's number value is the referenced value's,
+            // which is why `>vr + 1` is `6` and not 41.1 -- measured, oracle
+            // rc 0. Read before the borrow is taken again, the way the stem
+            // redirect is.
             Body::VarRef(_) => self.reference_number(value, receiver),
             // A `Body::Stem` with `default: None`, the arm the redirect
             // above leaves behind: parses the object's own name, the
@@ -1093,16 +1084,15 @@ impl Interp {
             // **The marker whatever they render as**, because the oracle
             // sends an operator to its left operand as a message and neither
             // answers one: measured, oracle rc 159, `a = (1,); say a + 1` and
-            // `o~objectName = '123'; say o + 1` are both
-            // `97.1 ... does not understand message "+".` even though each
-            // renders as a number, and the comparisons `say (a = 1)` and
-            // `say (o = 123)` are both `0` where parsing that rendering gives
-            // `1`. `Interp::operator_operand_gap` is what reports them, and
-            // it is reached only where this answers `NotNumeric` -- the
-            // premise `a_value_the_operator_gap_names_parses_as_no_number`
-            // holds.
-            // `RexxString::numberString` reads a `String` subclass
-            // instance's bytes as it reads a base string's.
+            // `o~objectName = '123'; say o + 1` are both `97.1 ... does not
+            // understand message "+".` even though each renders as a number,
+            // and the comparisons `say (a = 1)` and `say (o = 123)` are both
+            // `0` where parsing that rendering gives `1`.
+            // `Interp::operator_operand_gap` is what reports them, and it is
+            // reached only where this answers `NotNumeric` -- the premise
+            // `a_value_the_operator_gap_names_parses_as_no_number` holds. The
+            // oracle reads a `String` subclass instance's bytes as it reads a
+            // base string's.
             Body::Instance {
                 native: Some(state),
                 ..
@@ -1295,8 +1285,8 @@ enum Redirect {
     None,
 }
 
-/// `RexxObject::defaultName` for an object `Class~enhanced` built, which
-/// takes no article (`classes/ObjectClass.cpp:1763`-`:1767`).
+/// The default name of an object `Class~enhanced` built, which takes no
+/// article.
 pub(crate) fn enhanced_object_name(id: &str) -> String {
     format!("enhanced {id}")
 }
@@ -1340,7 +1330,7 @@ impl Interp {
         else {
             return Redirect::None;
         };
-        // `StemClass::stringValue` for a `Stem` subclass instance.
+        // The string value of a `Stem` subclass instance.
         if let Some(store) = self.stem_store_in(pools) {
             return Redirect::StemSubclass(store);
         }

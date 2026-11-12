@@ -11,12 +11,11 @@ pub(crate) fn os_path(path: &[u8]) -> &std::path::Path {
     std::path::Path::new(std::ffi::OsStr::from_bytes(path))
 }
 
-/// `path` made absolute against `cwd` and reduced to one spelling:
-/// `SysFileSystem::canonicalizeName` followed by `normalizePathName`
-/// (`platform/unix/SysFileSystem.cpp:628`, `:687`). Purely lexical -- the
-/// oracle avoids `realpath` here precisely so that a path that does not exist
-/// still normalises. Each `..` removes the component before it, which the
-/// oracle's loop does not do after a doubled slash or after a component
+/// `path` made absolute against `cwd` and reduced to one spelling: the
+/// oracle's canonical name followed by its path normalisation. Purely lexical
+/// -- the oracle avoids `realpath` here precisely so that a path that does not
+/// exist still normalises. Each `..` removes the component before it, which
+/// the oracle's loop does not do after a doubled slash or after a component
 /// starting with `.` (Deviation 34). A name that is not UTF-8 keeps its bytes.
 pub(crate) fn normalize_bytes(path: &[u8], cwd: &[u8]) -> Vec<u8> {
     let mut absolute = Vec::with_capacity(cwd.len() + path.len() + 1);
@@ -55,7 +54,7 @@ mod tests {
             .expect("UTF-8 in, UTF-8 out")
     }
 
-    /// `normalizePathName`'s reductions, each against the C++ loop's own
+    /// `normalizePathName`'s reductions, each against the oracle's own
     /// answer.
     #[test]
     fn normalize_makes_one_spelling_of_a_path() {

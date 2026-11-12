@@ -157,9 +157,8 @@ mod ir;
 // `resolve`/`invoke` pair, and the one security chokepoint (D12).
 mod dispatch;
 
-// `.environment`, `.local`, `.context` and `.methods` as objects, the
-// order `PackageClass::findClass` resolves a `.NAME` in, and the one directory
-// chokepoint (D12).
+// `.environment`, `.local`, `.context` and `.methods` as objects, the order
+// the oracle resolves a `.NAME` in, and the one directory chokepoint (D12).
 mod environment;
 
 // `::OPTIONS`: the numeric, trace and condition settings a file's
@@ -229,7 +228,7 @@ pub const DEADLINE_EXIT: i32 = 121;
 pub const DEADLINE_REPORT: &[u8] = b"interrexx: the run exceeded its deadline\n";
 
 /// The name the interpreter's own package answers to -- `PackageClass::
-/// getProgramName`'s answer for internal code (`classes/PackageClass.hpp:147`).
+/// getProgramName`'s answer for internal code.
 pub(crate) const LIBRARY_PACKAGE_NAME: &[u8] = b"REXX";
 
 /// The interpreter thread's stack, in bytes.
@@ -622,9 +621,9 @@ impl Loud {
         }
     }
 
-    /// A `.NAME` the oracle's `.environment` or `.local` answers and this
-    /// crate builds nothing for: an entry the library bootstrap fills, or
-    /// `.STREAM` before `StreamClasses.orx` installs. No program reaches it.
+    /// A `.NAME` the oracle's `.environment` or `.local` answers and this crate builds
+    /// nothing for: an entry the library bootstrap fills, or `.STREAM` before the stream
+    /// classes' bootstrap file installs. No program reaches it.
     fn environment_symbol(name: &[u8]) -> Loud {
         let shown = String::from_utf8_lossy(name);
         Loud {
@@ -747,10 +746,10 @@ impl Loud {
         }
     }
 
-    /// One of the two methods `Setup.cpp` puts on `.Class` for the image
-    /// build and `removeSetupMethods` deletes, given something it cannot
-    /// use. No program reaches it: `b_define_class_method_setup` and
-    /// `b_inherit_instance_methods` are 97.1 on both engines.
+    /// One of the two methods the oracle puts on `.Class` for its image build
+    /// and later deletes, given something it cannot use. No program reaches
+    /// it: `b_define_class_method_setup` and `b_inherit_instance_methods` are
+    /// 97.1 on both engines.
     fn setup_method(what: &str) -> Loud {
         Loud {
             message: owned_message(what),
@@ -795,10 +794,8 @@ impl Loud {
     }
 
     /// A call to a `ROUTINE_CLASSIC_STYLE` row of a loaded package's routine
-    /// table. No library this crate loads on Linux carries one: `git grep
-    /// --no-index -n -I -e REXX_CLASSIC_ROUTINE -e ROUTINE_CLASSIC_STYLE --
-    /// ootest testbinaries extensions samples` finds only
-    /// `extensions/platform/windows/rxwinsys/rxwinsys.cpp`.
+    /// table. No library this crate loads on Linux carries one: only a
+    /// Windows-only extension in the oracle's tree declares one.
     fn classic_style_routine() -> Loud {
         Loud {
             message: owned_message("a call to a ROUTINE_CLASSIC_STYLE routine"),
@@ -1039,7 +1036,7 @@ pub(crate) mod extensions;
 pub(crate) mod packages;
 
 /// Every internal-package routine name, for the test that re-derives them from
-/// the C++ tree.
+/// the oracle's tree.
 pub fn internal_routine_names() -> Vec<&'static str> {
     internal_routines::INTERNAL_ROUTINES
         .iter()
@@ -1048,7 +1045,7 @@ pub fn internal_routine_names() -> Vec<&'static str> {
 }
 
 /// Every internal-package routine as `(name, package, runs)`, for the test
-/// that re-derives the two packages from the C++ tree separately. `runs` is
+/// that re-derives the two packages from the oracle's tree separately. `runs` is
 /// whether this crate has a body for the row.
 pub fn internal_routine_rows() -> Vec<(&'static str, &'static str, bool)> {
     internal_routines::INTERNAL_ROUTINES
@@ -1180,9 +1177,8 @@ struct PendingTrap {
     /// [`Activity::fragment_depth`] as it stood when this was queued: which
     /// `INTERPRET` fragment, if any, was running.
     fragment_depth: usize,
-    /// What a trace line's delivery raised (`Activity::traceOutput` lets a
-    /// failed `LINEOUT` propagate): delivered by raising it in the traced
-    /// activation.
+    /// What a trace line's delivery raised (a failed `LINEOUT` propagates):
+    /// delivered by raising it in the traced activation.
     trace_failure: Option<Failure>,
 }
 
@@ -1267,8 +1263,7 @@ struct Interp {
     /// reused -- see that type for the two defects that needed an identity a
     /// stack depth could not supply.
     next_activation_id: u64,
-    /// The counter `RexxContext~invocation` mints from --
-    /// `RexxActivation.cpp:94`'s file-scope `counter`.
+    /// The counter `RexxContext~invocation` mints from.
     next_invocation: u32,
     /// Every loaded program and the object standing for its package. A
     /// program is freed at the collection after its last package object goes.
@@ -1345,12 +1340,11 @@ struct Interp {
     package_local_view: Option<(ObjRef, dispatch::hash::StoreView)>,
     /// The last name `.NAME` found absent from a program's package local.
     package_local_miss: environment::PackageLocalMiss,
-    /// The object model message dispatch resolves against: `Setup.cpp`'s
-    /// native classes, whatever `::CLASS`/`::METHOD`/`::ATTRIBUTE` have
-    /// installed beside them, and the primitive methods this crate
-    /// implements. `interrexx-classes`' own
-    /// [`interrexx_classes::ClassRegistry`] is the one class model here (R9), not
-    /// one of two.
+    /// The object model message dispatch resolves against: the oracle's native
+    /// classes, whatever `::CLASS`/`::METHOD`/`::ATTRIBUTE` have installed beside
+    /// them, and the primitive methods this crate implements.
+    /// `interrexx-classes`' own [`interrexx_classes::ClassRegistry`] is the one
+    /// class model here (R9), not one of two.
     object_model: Option<dispatch::ObjectModel>,
     /// `.environment`, `.local` and what `.context`/`.methods` are built from.
     /// `None` until a `.NAME` is resolved, for the reason
@@ -1375,8 +1369,8 @@ struct Interp {
     library_routine_objects: FxHashMap<usize, ObjRef>,
     /// The one `Routine` object of each internal package row, by its
     /// [`internal_routines::INTERNAL_ROUTINES`] index, built on the first ask:
-    /// the routine table of `LibraryPackage` (`package/LibraryPackage.cpp`),
-    /// which every path naming the row answers from.
+    /// the routine table of `LibraryPackage`, which every path naming the row
+    /// answers from.
     internal_routine_objects: Vec<Option<ObjRef>>,
     /// The `StringTable` each annotated thing's `~annotations` answers, keyed
     /// by the thing -- see [`environment::Annotated`] for the key space and
@@ -1442,8 +1436,8 @@ struct Interp {
     /// [`dispatch::executable::MethodFlagWrites`].
     method_flag_writes: FxHashMap<ObjRef, dispatch::executable::MethodFlagWrites>,
     /// What the send behind each `Message` object this crate has built ended
-    /// with -- `MessageClass`'s `flagResultReturned` and `flagRaiseError`
-    /// (`classes/MessageClass.hpp:61`-`:62`) and its `condition` field (`:135`).
+    /// with -- `MessageClass`'s `flagResultReturned` and `flagRaiseError` and
+    /// its `condition` field (`:135`).
     message_outcomes: FxHashMap<ObjRef, Option<Box<Raised>>>,
     /// The `Message` objects a start has been sent to, which cannot be sent,
     /// started or replied again -- `MessageClass`'s `flagMsgActivated`.
@@ -1464,7 +1458,7 @@ struct Interp {
     guarded_externals: rustc_hash::FxHashSet<MethodId>,
     /// Every object an extension made a global reference, which a handle to
     /// it resolves to from any native call for as long as the interpreter
-    /// runs (`InterpreterInstance::addGlobalReference`).
+    /// runs.
     global_references: interrexx_api::handles::Table,
     /// The terminated copies `StringData` and its kin answered, by the object
     /// they copy. Not roots: a collection drops the copy of an object it
@@ -1483,19 +1477,17 @@ struct Interp {
     kept_carried: usize,
     kept_carried_limit: usize,
     /// Every native library a name has loaded, by the name it was resolved
-    /// under -- `PackageManager::packages`
-    /// (`interpreter/package/PackageManager.cpp:229-248`). A miss is not held,
-    /// because the oracle removes the package on a failed load and asks again;
-    /// a library whose version check refused is, because that check raises
-    /// between the `put` and the `remove`.
+    /// under. A miss is not held, because the oracle removes the package on a
+    /// failed load and asks again; a library whose version check refused is,
+    /// because that check raises between the `put` and the `remove`.
     libraries: Libraries,
     /// The thread context [`Interp::terminate`] ran on, which an extension
     /// may have kept. Declared after `libraries`, so a library's destructor
     /// run when they drop still finds it allocated.
     termination_thread: Option<interrexx_api::ffi::ThreadContext>,
     /// The command handlers extensions registered, by upper-cased environment
-    /// name (`InterpreterInstance::commandHandlers`). Emptied at the first
-    /// library close, since nothing ties a handler's code to its library.
+    /// name. Emptied at the first library close, since nothing ties a
+    /// handler's code to its library.
     command_handlers: FxHashMap<Box<[u8]>, Rc<interrexx_api::load::CommandHandler>>,
     /// The environments `.CommandHandler` has stacked handlers on, the
     /// objects of the native handlers, and the commands handlers written in
@@ -1515,8 +1507,8 @@ struct Interp {
     /// `RexxCreateInterpreter`'s `REGISTERED_EXITS` and `DIRECT_EXITS`), `None` where it
     /// installed none.
     pub(crate) exits: Option<Box<crate::exits::Exits>>,
-    /// Whether the halt or the trace exit is installed and so runs at each clause boundary
-    /// (`Activity::queryTrcHlt`).
+    /// Whether the halt or the trace exit is installed and so runs at each clause
+    /// boundary.
     pub(crate) clause_exits: bool,
     /// Whether another thread can switch the trace of this run at a clause boundary
     /// (`RexxSetTrace`), so that no chunk may settle a clause's trace setting at compile time.
@@ -1557,13 +1549,11 @@ struct Interp {
     /// The package of each library procedure's shared code object, `None`
     /// until a directive binds it, indexed by [`ExecutableSource::Loaded`].
     ///
-    /// `NativeCode::setPackageObject` (`execution/NativeCode.cpp:130-140`)
-    /// sets the package in place on the first binding and copies on every
-    /// later one, so an object a `loadExternal*` send answered earlier
-    /// reports the first binder's package from then on. A `::ROUTINE`
-    /// directive discards that copy and stores the shared routine
-    /// (`parser/DirectiveParser.cpp:2691-2693`), so a later routine binder's
-    /// own routine reports the first binder too.
+    /// The oracle sets the package in place on the first binding and copies
+    /// on every later one, so an object a `loadExternal*` send answered
+    /// earlier reports the first binder's package from then on. A `::ROUTINE`
+    /// directive discards that copy and stores the shared routine, so a later
+    /// routine binder's own routine reports the first binder too.
     library_codes: Vec<Option<ProgramId>>,
     /// Which [`Interp::library_codes`] row each procedure owns.
     library_code_rows: FxHashMap<LibraryCodeKey, usize>,
@@ -1582,12 +1572,10 @@ struct Interp {
     /// The [`Interp::library_codes`] row of each method a `~define` installed
     /// from a `loadExternalMethod` answer, which is the package it reports.
     defined_library_codes: FxHashMap<MethodId, usize>,
-    /// `PackageManager::packageRoutines`
-    /// (`interpreter/package/PackageManager.cpp:524`): every routine a loaded
-    /// library exports, by upcased name, as the index of its slot in
-    /// [`Interp::package_routine_codes`]. A later library exporting the same
-    /// name replaces the slot's row and keeps its index, so a call site that
-    /// resolved to the slot calls the replacement.
+    /// Every routine a loaded library exports, by upcased name, as the index
+    /// of its slot in [`Interp::package_routine_codes`]. A later library
+    /// exporting the same name replaces the slot's row and keeps its index,
+    /// so a call site that resolved to the slot calls the replacement.
     package_routines: FxHashMap<Vec<u8>, usize>,
     /// The [`Interp::library_codes`] row each [`Interp::package_routines`]
     /// slot calls.
@@ -1609,8 +1597,8 @@ struct Interp {
     /// the interpreter's life.
     pub(crate) classic_subcoms: FxHashMap<Vec<u8>, interrexx_api::load::ClassicEntry>,
     /// The access scope and protection of every method that has one -- the
-    /// oracle's `isSpecial()` set, which is what `RexxObject::messageSend`
-    /// consults before it runs anything.
+    /// oracle's `isSpecial()` set, which is what message sending consults
+    /// before it runs anything.
     special_methods: method_rows::MethodRows<dispatch::AccessScope>,
     /// The output sink. `SAY` writes here and `Outcome::stdout` is what it
     /// becomes.
@@ -1637,10 +1625,9 @@ struct Interp {
     collect_due: bool,
     /// The objects a collection found unreachable and flagged for `UNINIT`,
     /// oldest first, awaiting [`Interp::run_ready_uninits`] -- oracle's
-    /// `setReadyForUninit` list (`memory/RexxMemory.cpp:274`).
+    /// `setReadyForUninit` list.
     uninit_ready: Vec<ObjRef>,
-    /// Whether a `UNINIT` sweep is running -- oracle's `processingUninits`
-    /// (`memory/RexxMemory.cpp:341`-`:347`, cleared at `:383`).
+    /// Whether a `UNINIT` sweep is running -- oracle's `processingUninits`.
     processing_uninits: bool,
     /// The `.STDERR` the bundle minted, for recognising a trace route no
     /// program has redirected: the monitor chain still ends here, and a direct
@@ -1735,7 +1722,7 @@ struct Interp {
     /// The programs whose first walk of [`Interp::install_directives`], which is
     /// this crate's translation, started and did not finish. The oracle gives
     /// the package of a translation that raised no routine, method or resource
-    /// table (`parser/LanguageParser.cpp:1893-1908`) and no prolog (`:656-665`).
+    /// table and no prolog (`:656-665`).
     untranslated: rustc_hash::FxHashSet<ProgramId>,
     /// Whether [`Interp::install_directives`] stops after its first walk:
     /// a translation that runs nothing, as `rexxc` makes.
@@ -1885,14 +1872,11 @@ pub(crate) enum ExecutableSource {
         directive: usize,
     },
     /// A program's own main section, which is what a body compiled from
-    /// source text is: `translateBlock` starts such a block at line 1
-    /// (`parser/LanguageParser.cpp:1193`) where a directive's starts after
-    /// the directive clause.
+    /// source text is: `translateBlock` starts such a block at line 1 where a
+    /// directive's starts after the directive clause.
     Main { program: ProgramId },
-    /// A primitive, which has no directive to report on:
-    /// `BaseCode::getSource` answers an empty array
-    /// (`execution/BaseCode.cpp:120`) and `BaseCode::setSecurityManager`
-    /// answers `0` (`:133`).
+    /// A primitive, which has no directive to report on: the oracle answers
+    /// an empty array for the source and `0` for a security manager set.
     Native,
     /// An `EXTERNAL` binding a directive of `program` installed, which reads
     /// as [`ExecutableSource::Native`] except that its package is `program`.
@@ -1906,12 +1890,10 @@ pub(crate) enum ExecutableSource {
 
 /// The code object a library shares between every binding of one procedure.
 ///
-/// A method's is cached per spelling asked for
-/// (`LibraryPackage::resolveMethod`, `package/LibraryPackage.cpp:374-400`); a
-/// routine's is built once per routine table entry when the library loads,
-/// and found by its exact spelling or else by the first entry matching
-/// without regard to case (`LibraryPackage::loadRoutines` and
-/// `::resolveRoutine`, `:270-299`, `:410-435`), as `Library::routine` finds it.
+/// A method's is cached per spelling asked for; a routine's is built once per
+/// routine table entry when the library loads, and found by its exact
+/// spelling or else by the first entry matching without regard to case, as
+/// `Library::routine` finds it.
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub(crate) struct LibraryCodeKey {
     /// The library name byte for byte, as [`Interp::libraries`] keys it.
@@ -2018,9 +2000,8 @@ fn library_search_of(environment: &[(Vec<u8>, Vec<u8>)]) -> Vec<std::path::PathB
 pub(crate) enum LibraryLoad {
     Loaded(Rc<interrexx_api::load::Library>),
     /// No shared object of that name loaded, or one loaded and published no
-    /// package entry. `LibraryPackage::load` (`package/LibraryPackage.cpp:147`)
-    /// answers false for both, because `getPackageTable` returns null for each
-    /// (`:204`, `:216`), and its callers cannot tell them apart.
+    /// package entry. The oracle's load answers false for both, and its
+    /// callers cannot tell them apart.
     Missing,
     /// The package entry asks for a newer interpreter than this one. This ask
     /// raises; the library is held, and every later ask answers it loaded.
@@ -2063,8 +2044,7 @@ struct NativeFrame {
     /// is [`Interp::pool_owner`] of the receiver.
     owner: ObjRef,
     /// The running method's own scope, not the receiver's class --
-    /// `receiver->getObjectVariables(getScope())`
-    /// (`execution/NativeActivation.cpp:1878`).
+    /// `receiver->getObjectVariables(getScope())`.
     scope: ObjRef,
     /// A method's activation rather than a routine's, which is what decides
     /// whether a signature may ask for the receiver's state.
@@ -2090,8 +2070,7 @@ struct NativeFrame {
     /// Whether the held condition is one Rexx code a `CallRoutine` or
     /// `CallProgram` call ran `RAISE`d with no Rexx caller to offer it to:
     /// kept for `CheckCondition` and `GetConditionInfo`, and not raised again
-    /// when the call returns (`NativeActivation::setCalleeConditionInfo`,
-    /// `execution/NativeActivation.cpp:2739`).
+    /// when the call returns.
     callee: bool,
     /// The levels the held condition left on the activity before it was
     /// held, which its condition object lists and which go back on the
@@ -2110,11 +2089,9 @@ struct NativeFrame {
     lent: Vec<ObjRef>,
     /// The activation the call was made from.
     caller: Option<crate::activation::ActivationId>,
-    /// Whether the call has no calling activation whose context and
-    /// variables it reaches: none was running, or `caller` is the one a
-    /// `CallRoutine` call that runs it was made from
-    /// (`NativeActivation::accessCallerContext`,
-    /// `execution/NativeActivation.cpp:1789`).
+    /// Whether the call has no calling activation whose context and variables
+    /// it reaches: none was running, or `caller` is the one a `CallRoutine`
+    /// call that runs it was made from.
     callerless: bool,
     /// This native activation's number among its activity's, which is what
     /// interrexx-api names the frame by.
@@ -2122,7 +2099,7 @@ struct NativeFrame {
     /// Whether the code reports a package, which then leads a condition it
     /// raises with no line, so the condition has no `POSITION`.
     packaged: bool,
-    /// Whether a method's call holds its guard lock (`objectScope`).
+    /// Whether a method's call holds its guard lock.
     reserved: bool,
     /// The temporaries' length when the call began, below which
     /// `register_local` pops nothing.
@@ -2467,7 +2444,7 @@ impl Interp {
     }
 
     /// Loads `program` and translates its directives, running none of its
-    /// code: `TranslateDispatcher::run`'s `LanguageParser::createProgram`.
+    /// code.
     fn translate(&mut self, program: Program) -> Result<Option<ObjRef>, Failure> {
         let program = Rc::new(program);
         let program_id = self.load_program(Rc::clone(&program));
@@ -2476,9 +2453,9 @@ impl Interp {
         Ok(None)
     }
 
-    /// Runs the interpreter's own Rexx-written library -- `Setup.cpp:1786`'s
-    /// `resolveProgramName(BASEIMAGELOAD)` and the `runProgram` at `:1795`,
-    /// which hands the entry program `TheRexxPackage` as its one argument.
+    /// Runs the interpreter's own Rexx-written library, which the oracle runs at
+    /// startup and which hands the entry program the REXX package as its one
+    /// argument.
     pub(crate) fn bootstrap_library(&mut self) -> Result<(), Failure> {
         debug_assert!(
             self.object_model.is_none(),
@@ -2751,7 +2728,7 @@ impl Interp {
         let outer = self.install_caller.replace(caller_settings.clone());
         let outer_call = self.install_call.replace(call_type);
         // The activation this installs ahead of keeps the manager its package
-        // had before the install (`RexxActivation.cpp:176`, `:508`).
+        // had before the install.
         self.installing_managers.push((program_id, None));
         let installed = self.install_directives(program_id, &program);
         let kept = self
@@ -2777,13 +2754,12 @@ impl Interp {
         }
 
         // **`::OPTIONS NOPROLOG` suppresses the leading code section of a
-        // package a `::REQUIRES` loaded, and of nothing else** --
-        // `PackageClass::runProlog` installs and stops where
-        // `isPrologEnabled()` is false (`classes/PackageClass.cpp:2131`),
-        // and the top-level program never goes through it. Measured, oracle
-        // rc 0: the same file prints its first clause when it is the program
-        // and does not when another file requires it, its public routines and
-        // classes reachable either way.
+        // package a `::REQUIRES` loaded, and of nothing else** -- the
+        // oracle's prologue run installs and stops where the prologue is
+        // disabled, and the top-level program never goes through it.
+        // Measured, oracle rc 0: the same file prints its first clause when
+        // it is the program and does not when another file requires it, its
+        // public routines and classes reachable either way.
         if call_type == CallType::Requires
             && self
                 .options_of(program_id)
@@ -2805,8 +2781,7 @@ impl Interp {
     }
 
     /// A package's prologue, run under the package's own name and no
-    /// arguments, as `PackageClass::runProlog` calls it
-    /// (`classes/PackageClass.cpp:2128`-`:2137`).
+    /// arguments, as the oracle calls it.
     #[inline(never)]
     fn run_prologue(
         &mut self,
@@ -2877,8 +2852,8 @@ impl Interp {
         outcome
     }
 
-    /// The empty routine `PackageClass::install` calls to install a package
-    /// whose `program` has an empty main body: one activation over that body.
+    /// The empty routine the oracle calls to install a package whose
+    /// `program` has an empty main body: one activation over that body.
     pub(crate) fn run_install_stub(
         &mut self,
         program: Rc<Program>,
@@ -2944,13 +2919,12 @@ impl Interp {
         if let Some(kept) = kept_manager {
             main.cold_mut().security_manager = Some(kept);
         }
-        // `SysInterpreterInstance::setupProgram`
-        // (`platform/unix/SysInterpreterInstance.cpp:105`-`:112`), which runs
-        // for every top-level program activation and not only the first --
-        // measured, a called external program and a `::REQUIRES` prologue
-        // each trace and prompt under `RXTRACE=ON` too. **Not the library
-        // bootstrap**, whose programs are this crate's stand-in for
-        // `Setup.cpp` and have no activation on the oracle to trace.
+        // The oracle's program setup, which runs for every top-level program
+        // activation and not only the first -- measured, a called external program
+        // and a `::REQUIRES` prologue each trace and prompt under `RXTRACE=ON` too.
+        // **Not the library bootstrap**, whose programs are this crate's stand-in
+        // for the oracle's startup image and have no activation on the oracle to
+        // trace.
         let external_trace = !self.library_bootstrap && self.external_trace_enabled();
         // The caller's clause, which its `StackFrame` goes on reporting while
         // this runs and which a program this installs must not leave behind.
@@ -2982,15 +2956,13 @@ impl Interp {
             self.trace_package_invocation_entry();
         }
 
-        // `Returned` and `Exited` are the same thing at the top: measured,
-        // `return 5` in a main body with no active call exits 5, exactly like
-        // `exit 5`, and a bare `return` there exits 0. `Ended` keeps the two
-        // apart because a *callee* has to tell them apart, not because the
-        // program's own exit value ever depends on which arrived.
-        // A program is a program-level call: the initialization exit before its first clause,
-        // and the termination exit once it has returned or exited, its variables still live
-        // (`RexxActivation::run`, `exitFrom`, `implicitExit`). An embedding instance's own root
-        // program runs neither.
+        // `Returned` and `Exited` are the same thing at the top: measured, `return 5` in a
+        // main body with no active call exits 5, exactly like `exit 5`, and a bare `return`
+        // there exits 0. `Ended` keeps the two apart because a *callee* has to tell them
+        // apart, not because the program's own exit value ever depends on which arrived. A
+        // program is a program-level call: the initialization exit before its first clause,
+        // and the termination exit once it has returned or exited, its variables still live.
+        // An embedding instance's own root program runs neither.
         let program_exits = if nested {
             self.calls_program_exits()
         } else {
@@ -3132,8 +3104,7 @@ impl Interp {
     }
 
     /// `SETLOCAL`: saves the directory and the whole environment on the
-    /// nearest top-level activation's list (`pushEnvironment`), and answers
-    /// whether it saved one.
+    /// nearest top-level activation's list, and answers whether it saved one.
     pub(crate) fn push_local_environment(&mut self) -> bool {
         let saved = (self.cwd.clone(), self.env.clone());
         match self.top_level_activation_mut() {
@@ -3179,12 +3150,10 @@ impl Interp {
 
     /// `RXTRACE=ON` in the interpreter's own environment, which starts every
     /// top-level program under `TRACE ?R` -- `setExternalTrace` is
-    /// `setTraceResults` plus the debug flag
-    /// (`execution/TraceSetting.hpp`'s own definition).
+    /// `setTraceResults` plus the debug flag.
     ///
-    /// Caseless, and only that word: `SysInterpreterInstance::initialize`
-    /// compares against `ON` with `strCaselessCompare`, so any other value
-    /// leaves tracing alone.
+    /// Caseless, and only that word: the oracle compares against `ON`
+    /// caselessly, so any other value leaves tracing alone.
     fn external_trace_enabled(&self) -> bool {
         self.external_trace
     }
@@ -3641,13 +3610,10 @@ impl Interp {
         // A sweep can free a class the registry named, which unlinks its row
         // and leaves any `.NAME` answer derived from it naming nothing.
         self.invalidate_rexx_class_cache();
-        // `pending_uninit` is what the collector resurrected so a finalizer
-        // could run against a whole graph. The finalizer is not sent from
-        // here: the oracle's collector only marks
-        // (`MemoryObject::checkUninit`), and `runUninits` is reached from
-        // `GC('force')`, an activation's return (`RexxActivation.cpp:705`,
-        // `NativeActivation.cpp:1361`), an activity's dispatch loop
-        // (`Activity.cpp:249`) and the termination sweep.
+        // `pending_uninit` is what the collector resurrected so a finalizer could run
+        // against a whole graph. The finalizer is not sent from here: the oracle's
+        // collector only marks, and the uninit run is reached from `GC('force')`, an
+        // activation's return, an activity's dispatch loop and the termination sweep.
         self.uninit_ready.extend(stats.pending_uninit);
         // The rows `interrexx-classes` keys by a class go with the class. Done
         // here rather than in a pass of its own: the sweeper already knows
@@ -3992,8 +3958,7 @@ pub fn render_ir(text: Vec<u8>, setting: &[u8]) -> Result<String, String> {
 /// that walks it.
 pub struct NativeEntryPoint {
     /// The name the `REXX` package exports the entry point under, spelled as
-    /// `interpreter/runtime/NativeMethods.h` spells it. The lookup that
-    /// matches it is caseless.
+    /// the oracle's table spells it. The lookup that matches it is caseless.
     pub entry: &'static str,
     /// The family it belongs to, lower case: the interpreter subsystem whose
     /// C++ translation unit defines it.
@@ -4456,13 +4421,11 @@ fn execute_kept(
         Err(Failure::Deadline) => 0,
     };
 
-    // Main's dispatch has ended (`Activity::exitCurrentThread`,
-    // `concurrency/Activity.cpp:324`).
+    // Main's dispatch has ended.
     let mut refused = interp.run_ready_uninits();
 
-    // The oracle's termination waits for every activity
-    // (`InterpreterInstance::terminate`); a refusal in main ends the run
-    // without the wait.
+    // The oracle's termination waits for every activity; a refusal in main
+    // ends the run without the wait.
     let started = if refused_main {
         interp.take_late_failures()
     } else {
@@ -4470,13 +4433,12 @@ fn execute_kept(
     };
     report_late_failures(&mut interp, started, path, &mut exit_code);
 
-    // `MemoryObject::lastChanceUninit` (`memory/RexxMemory.cpp:324`), reached
-    // from `Interpreter::terminateInterpreter` (`runtime/Interpreter.cpp:279`)
-    // -- after everything the program and its activities do, and reached
+    // The last-chance uninit pass, reached from interpreter termination --
+    // after everything the program and its activities do, and reached
     // whatever the program's own outcome was. Measured, oracle: a program
     // whose main body raises 42.3 still prints its class `UNINIT` and exits
-    // 214, and one ending `exit 7` prints it and exits 7.
-    // An activity those `UNINIT`s start is not waited for.
+    // 214, and one ending `exit 7` prints it and exits 7. An activity those
+    // `UNINIT`s start is not waited for.
     refused.extend(interp.terminate());
     refused.extend(interp.sim_finish());
     for loud in refused {

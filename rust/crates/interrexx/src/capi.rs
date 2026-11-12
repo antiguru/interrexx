@@ -1,7 +1,7 @@
 //! The classic C API's queue, registration and macrospace operations, over this process's one
 //! API connection, and the entry-point (`...Exe`) registrations, which stay in the process.
 //!
-//! A `None` name is a NULL pointer at the C API. Statuses are the `rexxapidefs.h` values.
+//! A `None` name is a NULL pointer at the C API. Statuses are the public API's values.
 
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Mutex, MutexGuard};

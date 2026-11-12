@@ -53,9 +53,8 @@ impl Interp {
         }
     }
 
-    /// Calls the classic function `name` with `arguments` as strings
-    /// (`NativeActivation::callRegisteredRoutine`, `execution/NativeActivation.cpp:1466`). A
-    /// non-zero return is 40.1, its traceback line the routine's `Compiled routine`.
+    /// Calls the classic function `name` with `arguments` as strings. A non-zero
+    /// return is 40.1, its traceback line the routine's `Compiled routine`.
     pub(crate) fn call_classic_function(
         &mut self,
         name: &[u8],
@@ -120,9 +119,8 @@ impl Interp {
         Some(entry)
     }
 
-    /// `CommandHandlerDispatcher` (`concurrency/CommandHandler.cpp`): a non-zero return code is
-    /// `RC`, else the result string, else 0; the flags raise `FAILURE` or `ERROR`. A redirected
-    /// command is 98.921.
+    /// A non-zero return code is `RC`, else the result string, else 0; the flags raise
+    /// `FAILURE` or `ERROR`. A redirected command is 98.921.
     pub(crate) fn run_classic_command(
         &mut self,
         entry: ClassicEntry,

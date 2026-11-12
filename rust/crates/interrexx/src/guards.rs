@@ -1,7 +1,5 @@
 //! The guard locks: per object and method scope, the owning activity, its
-//! nesting count and the activities waiting, served FIFO
-//! (`VariableDictionary::reserve`/`release`/`transfer`,
-//! `execution/VariableDictionary.cpp:522-617`).
+//! nesting count and the activities waiting, served FIFO.
 
 use std::collections::VecDeque;
 use std::collections::hash_map::Entry;
@@ -21,8 +19,7 @@ pub(crate) struct GuardKey {
     pub(crate) scope: ObjRef,
 }
 
-/// What a parked activity waits on, which the deadlock check follows
-/// (`Activity::waitingObject`).
+/// What a parked activity waits on, which the deadlock check follows.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum Waiting {
     Guard(GuardKey),
@@ -56,7 +53,7 @@ pub(crate) struct GuardTable {
     pools: FxHashMap<GuardKey, u32>,
     last_pool: u32,
     /// Each watched variable's watchers, by owning object, in the order they
-    /// began watching. An entry stays once made (`RexxVariable::dependents`).
+    /// began watching. An entry stays once made.
     watches: FxHashMap<ObjRef, Vec<Watch>>,
 }
 
@@ -252,8 +249,7 @@ impl GuardTable {
         self.waiting.remove(&activity);
     }
 
-    /// `key`'s pool number, assigned from 1 when first asked
-    /// (`VariableDictionary::getIdntfr`).
+    /// `key`'s pool number, assigned from 1 when first asked.
     pub(crate) fn pool_number(&mut self, key: GuardKey) -> u32 {
         let last = &mut self.last_pool;
         *self.pools.entry(key).or_insert_with(|| {
@@ -269,8 +265,8 @@ impl GuardTable {
         self.watches.retain(|owner, _| live(*owner));
     }
 
-    /// Adds `watcher` to the watchers of `name` in `scope`'s pool on
-    /// `owner`, once (`RexxVariable::inform`).
+    /// Adds `watcher` to the watchers of `name` in `scope`'s pool on `owner`,
+    /// once.
     pub(crate) fn watch(&mut self, owner: ObjRef, scope: ObjRef, name: &[u8], watcher: ActivityId) {
         let watches = self.watches.entry(owner).or_default();
         let at =
@@ -292,7 +288,7 @@ impl GuardTable {
     }
 
     /// Removes `watcher` from the watchers of `name` in `scope`'s pool on
-    /// `owner` (`RexxVariable::uninform`).
+    /// `owner`.
     pub(crate) fn unwatch(
         &mut self,
         owner: ObjRef,
@@ -354,14 +350,12 @@ pub(crate) enum GuardExecWait {
     /// The lock, which a release grants it.
     Reserve,
     /// A change to a watched variable, after which it reserves the lock again
-    /// where it held it (`RexxActivation::guardWait`,
-    /// `execution/RexxActivation.cpp:3350-3372`).
+    /// where it held it.
     When { reacquire: bool },
 }
 
 /// Whether a method the directive `kind` declares is guarded: every
-/// `::METHOD` and `::ATTRIBUTE` without `UNGUARDED`, and no `::CONSTANT`
-/// (`parser/DirectiveParser.cpp:2525`).
+/// `::METHOD` and `::ATTRIBUTE` without `UNGUARDED`, and no `::CONSTANT`.
 #[inline]
 pub(crate) fn directive_guarded(kind: &interrexx_parse::DirectiveKind) -> bool {
     use interrexx_parse::{DirectiveKind, GuardOption};
@@ -436,7 +430,7 @@ impl Interp {
     /// Reserves `key` for the method activation just pushed, or leaves the
     /// reserve to a clause boundary of the method: its first, where another
     /// activity owns the lock, and the one after its `>I>` where that is
-    /// traced early (`RexxActivation::run`, `execution/RexxActivation.cpp:523-532`).
+    /// traced early.
     #[cold]
     #[inline(never)]
     pub(crate) fn reserve_for_method(&mut self, key: GuardKey) {
@@ -594,10 +588,10 @@ impl Interp {
         }
     }
 
-    /// The running method activation's end, unless a `REPLY` moves it on:
-    /// its guard lock released, and a reserve still pending dropped
-    /// (`RexxActivation::termination`'s `guardOff`). A `<I<` runs it first,
-    /// as the oracle releases before tracing the exit.
+    /// The running method activation's end, unless a `REPLY` moves it on: its
+    /// guard lock released, and a reserve still pending dropped (the oracle's
+    /// termination step). A `<I<` runs it first, as the oracle releases
+    /// before tracing the exit.
     pub(crate) fn guard_off_at_end(&mut self) {
         let Some(mut ending) = self.activity.running.take() else {
             return;
@@ -632,8 +626,8 @@ impl Interp {
             .is_some_and(|replied| replied.continuation.is_some())
     }
 
-    /// `GUARD OFF`'s release of one level of the running method's lock,
-    /// where it holds it (`RexxActivation::guardOff`).
+    /// `GUARD OFF`'s release of one level of the running method's lock, where
+    /// it holds it.
     pub(crate) fn guard_off(&mut self, key: GuardKey) {
         if self.activation().flags.reserved() {
             self.activation_mut().flags.set_reserved(false);
@@ -641,10 +635,9 @@ impl Interp {
         }
     }
 
-    /// `GUARD ON`'s reserve of the running method's lock
-    /// (`RexxActivation::guardOn`, `execution/RexxActivation.cpp:2193-2207`):
-    /// `false` where another activity owns it and this one is queued behind
-    /// it, or 98.905 where the waits it would join lead back here.
+    /// `GUARD ON`'s reserve of the running method's lock: `false` where
+    /// another activity owns it and this one is queued behind it, or 98.905
+    /// where the waits it would join lead back here.
     pub(crate) fn guard_on(&mut self, key: GuardKey) -> Result<bool, Failure> {
         if self.activation().flags.reserved() {
             return Ok(true);
@@ -662,7 +655,7 @@ impl Interp {
     }
 
     /// Registers the running activity as a watcher of each of `names` the
-    /// running activation exposes (`RexxVariable::inform`), and answers them.
+    /// running activation exposes, and answers them.
     pub(crate) fn watch_guard_variables(
         &mut self,
         names: &[Box<[u8]>],
@@ -713,8 +706,7 @@ impl Interp {
         None
     }
 
-    /// The end of a `GUARD`'s run: its watches withdrawn
-    /// (`RexxVariable::uninform`).
+    /// The end of a `GUARD`'s run: its watches withdrawn.
     pub(crate) fn end_guard_exec(&mut self, exec: GuardExec) {
         for var in &exec.watched {
             self.unwatch_variable(var.owner, var.scope, &var.name);
@@ -737,10 +729,9 @@ impl Interp {
         self.end_guard_exec(*parked);
     }
 
-    /// `NativeActivation::guardOn`/`guardOff` for the innermost native
-    /// call, a method's: its lock reserved where `on`, waiting pinned for it
-    /// where another activity owns it, else released one level where it
-    /// holds it (`execution/NativeActivation.cpp:2395-2429`).
+    /// `GUARD ON`/`GUARD OFF` for the innermost native call, a method's: its
+    /// lock reserved where `on`, waiting pinned for it where another activity
+    /// owns it, else released one level where it holds it.
     pub(crate) fn native_guard(&mut self, on: bool) -> Result<(), Failure> {
         let frame = self.native_frame();
         if !frame.method || frame.reserved == on {
@@ -772,10 +763,8 @@ impl Interp {
         Ok(())
     }
 
-    /// `NativeActivation::guardWait` (`execution/NativeActivation.cpp:2435`):
-    /// the innermost native call's lock released, a pinned wait for a store
-    /// to a variable it watches, and the lock reserved again where it held
-    /// it.
+    /// `GUARD WHEN` on the innermost native call: its lock released, a pinned wait for a store
+    /// to a variable it watches, and the lock reserved again where it held it.
     pub(crate) fn native_guard_wait(&mut self) -> Result<(), Failure> {
         let reacquire = self.native_frame().reserved;
         self.native_guard(false)?;
@@ -792,8 +781,7 @@ impl Interp {
 
     /// The lock a replying `activation` holds, as its continuation will:
     /// moved at nesting count 1, else released one level and reserved again
-    /// by the continuation (`VariableDictionary::transfer`,
-    /// `execution/VariableDictionary.cpp:600-617`).
+    /// by the continuation.
     pub(crate) fn transfer_on_reply(&mut self, activation: &mut Activation) -> Transfer {
         if !activation.flags.reserved() {
             return Transfer::None;
@@ -815,8 +803,7 @@ impl Interp {
     }
 
     /// A `REPLY` continuation's reserve of the lock its replier could not
-    /// move (`RexxActivation::run`, `execution/RexxActivation.cpp:566-571`),
-    /// before it resumes: whether it holds it now, else it is queued.
+    /// move, before it resumes: whether it holds it now, else it is queued.
     pub(crate) fn reserve_for_continuation(&mut self) -> bool {
         if self.parked_for_guard() {
             self.take_granted_guard();

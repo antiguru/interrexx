@@ -1,4 +1,4 @@
-//! The directive halves of `CoreClasses.orx` and `StreamClasses.orx`,
+//! The directive halves of the core and stream class bootstrap files,
 //! installed and then questioned, against the oracle.
 
 #![expect(

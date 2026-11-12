@@ -1,7 +1,6 @@
-//! Command environments written in Rexx (`.CommandHandler`,
-//! `interpreter/RexxClasses/CommandClasses.orx`) on `rexx`: ooTest's own
-//! group for them, held to the oracle's counts, and a program for what the
-//! group does not reach, held to the oracle's output. Each run has a private
+//! Command environments written in Rexx (`.CommandHandler`) on `rexx`: ooTest's own
+//! group for them, held to the oracle's counts, and a program for what the group
+//! does not reach, held to the oracle's output. Each run has a private
 //! `REXX_API_DIR` and stops its daemon after.
 
 use std::path::{Path, PathBuf};

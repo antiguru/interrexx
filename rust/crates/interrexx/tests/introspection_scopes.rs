@@ -1,6 +1,6 @@
-//! `corpus/introspection-scopes.tsv`: which scope defines
-//! each documented introspection method, whether that scope's body is C++ or
-//! Rexx, and for a C++ body the `Setup.cpp` token and arity operand.
+//! `corpus/introspection-scopes.tsv`: which scope defines each documented
+//! introspection method, whether that scope's body is C++ or Rexx, and for a
+//! C++ body the native-table token and arity operand.
 
 #![expect(
     clippy::disallowed_methods,
@@ -285,7 +285,7 @@ fn refreshing() -> bool {
     matches!(std::env::var(REFRESH_ENV), Ok(value) if !value.is_empty() && value != "0")
 }
 
-/// The committed table is what the oracle and `Setup.cpp` say together.
+/// The committed table is what the oracle and its native class table say together.
 #[test]
 fn the_table_matches_the_interpreter() {
     let derived = derived();
@@ -338,7 +338,7 @@ fn every_documented_row_resolves_to_a_scope() {
     );
 }
 
-/// Every native row cites a `Setup.cpp` arity operand, and every Rexx row
+/// Every native row cites a native-table arity operand, and every Rexx row
 /// cites neither token nor arity.
 #[test]
 fn the_kind_column_agrees_with_the_two_it_governs() {

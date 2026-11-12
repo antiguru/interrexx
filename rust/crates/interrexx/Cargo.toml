@@ -50,8 +50,8 @@ interrexx-rxapi.workspace = true
 interrexx-lib.workspace = true
 
 # The host's local time-zone offset, which `DATE`/`TIME`'s no-argument
-# readings need and `std` has no API for. The oracle's own
-# `SystemInterpreter::getCurrentTime` calls `localtime`; this crate cannot,
+# readings need and `std` has no API for. The oracle calls `localtime`
+# for it; this crate cannot,
 # because that is `unsafe` and the workspace lint is `deny`.
 #
 # `default-features = false` drops `oldtime` (a no-op feature since 0.4.30,

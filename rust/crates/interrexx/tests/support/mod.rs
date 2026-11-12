@@ -11,11 +11,11 @@
 /// that a list is only real if the oracle completes the send.
 pub mod arity;
 
-/// `Setup.cpp`'s per-scope method tables, joined onto the oracle's own scope
+/// The oracle's per-scope native method tables, joined onto the oracle's own scope
 /// answer by both `collection_scopes.rs` and `introspection_scopes.rs`.
 pub mod setup_cpp;
 
-/// Running a program through the C++ oracle and comparing the three
+/// Running a program through the oracle and comparing the three
 /// observable channels. Its own module doc carries the memory limit, the
 /// missing-binary rule and why an invocation count is kept there. Shared for
 /// the same reason [`normalize_stderr`] is: every differential harness has
@@ -34,13 +34,12 @@ pub mod oracle_runtime;
 /// same way by every harness that runs corpus programs.
 pub mod sidecar;
 
-/// `RexxActivation.cpp:3567`-`3587`'s `trace_prefix_table`, all nineteen --
-/// not only the subset this crate has an emitter for. See the module doc
-/// for why the markers nothing here has ever produced are carried anyway:
-/// the alternative is a list that has to be remembered and extended each
-/// time a change adds an emitter, which is exactly the kind of
-/// silent-drift risk this project keeps finding in its own harnesses.
-/// `tests/trace_oracle.rs`'s
+/// The oracle's trace prefix table, all nineteen -- not only the subset this
+/// crate has an emitter for. See the module doc for why the markers nothing
+/// here has ever produced are carried anyway: the alternative is a list that
+/// has to be remembered and extended each time a change adds an emitter,
+/// which is exactly the kind of silent-drift risk this project keeps finding
+/// in its own harnesses. `tests/trace_oracle.rs`'s
 /// `every_trace_prefix_is_witnessed_or_carries_an_owner` asserts its own
 /// `PREFIX_COVERAGE` equals this list, so the two cannot drift and neither
 /// can be shortened quietly.

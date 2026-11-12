@@ -8,20 +8,16 @@
 //! failure's and error's detail, so a test that fails differently, or runs
 //! fewer assertions, differs. `-U` starts no ticker. The copy's `ooTest.frm`
 //! has `printSummary`'s `rxfuncquery` probes removed: on the oracle they reach
-//! rxapi (`interpreter/package/PackageManager.cpp:618-635`), and neither name
-//! they ask for is registered on either side, so the summary prints the same
-//! lines without them.
+//! rxapi, and neither name they ask for is registered on either side, so the
+//! summary prints the same lines without them.
 //!
 //! A test whose source uses a named queue or the function and macro-space
-//! registries ([`reaching_rxapi`]) runs on neither side, the listing run
-//! included: on the oracle those read or change the state rxapi's daemon
-//! keeps between processes. The session queue lives for the process and is
-//! not excluded. The oracle still asks rxapi's macro space, read-only, on each
-//! `::REQUIRES` and external call (`interpreter/package/PackageManager.cpp:747`,
-//! `interpreter/execution/RexxActivation.cpp:2996`), through
-//! `rexxapi/client/MacroSpaceApi.cpp:217-230` and `LocalAPIManager.cpp:56-74`
-//! and `:177-243`, which starts the daemon if it is not running; no ooTest run
-//! on the oracle can avoid that.
+//! registries ([`reaching_rxapi`]) runs on neither side, the listing run included:
+//! on the oracle those read or change the state rxapi's daemon keeps between
+//! processes. The session queue lives for the process and is not excluded. The
+//! oracle still asks rxapi's macro space, read-only, on each `::REQUIRES` and
+//! external call, through its client library, which starts the daemon if it is not
+//! running; no ooTest run on the oracle can avoid that.
 
 // Pulled in by more than one test binary, each of which uses part of it.
 #![allow(dead_code)]
@@ -1110,8 +1106,7 @@ pub fn source_classes(text: &str) -> Vec<SourceClass> {
             let words: Vec<&str> = rest.split_whitespace().collect();
             let mut parents = Vec::new();
             let mut after: Option<&str> = None;
-            // `INHERIT` takes every word after it (the oracle's
-            // `parser/DirectiveParser.cpp:461-469`).
+            // `INHERIT` takes every word after it (the oracle's rule).
             for word in words.iter().skip(1) {
                 if after == Some("inherit") {
                     parents.push(unquoted(word));
@@ -1192,8 +1187,7 @@ pub fn test_classes(classes: &[SourceClass]) -> BTreeSet<String> {
 
 /// The line prefix that ends the resource `directive` opens: its `END`
 /// marker, a quoted string as written or a symbol in upper case, else
-/// `::END` (`LanguageParser::checkMarker`, `parser/LanguageParser.cpp:959`).
-/// A hex or binary string marker is not decoded.
+/// `::END`. A hex or binary string marker is not decoded.
 fn resource_marker(directive: &str) -> String {
     let mut tokens = Vec::new();
     let mut rest = directive.trim_start_matches(':');

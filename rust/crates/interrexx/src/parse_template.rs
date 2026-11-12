@@ -14,8 +14,7 @@ use interrexx_core::{Bytes, Decoded, InlineText, ObjRef};
 use interrexx_parse::{ExprKind, Parse, ParseSource, ParseTrigger, TriggerKind};
 
 /// The two bytes `PARSE` treats as whitespace when carving a section into
-/// words: blank and tab, and nothing else (`RexxTarget::getWord`,
-/// `instructions/ParseTarget.cpp:423`, `*scan == ' ' || *scan == '\t'`).
+/// words: blank and tab, and nothing else.
 fn is_blank(byte: u8) -> bool {
     byte == b' ' || byte == b'\t'
 }
@@ -110,7 +109,7 @@ pub(crate) struct Cursor {
 
 impl Cursor {
     /// A fresh cursor over a parse string of `length` bytes, every position at
-    /// the origin (`RexxTarget::next`'s own reset).
+    /// the origin.
     pub(crate) fn new(length: usize) -> Cursor {
         Cursor {
             length,
@@ -449,8 +448,8 @@ impl Interp {
         };
         match argument {
             // `PARSE ARG` converts each argument through the same
-            // `ParseTarget::init` the other sources reach, and traces no
-            // `>K>` of its own to disagree with.
+            // initialisation the other sources reach, and traces no `>K>` of
+            // its own to disagree with.
             Some(value) => {
                 let value = self.required_string_value(value)?;
                 Ok(self.source_text(value, parse))
@@ -475,7 +474,7 @@ impl Interp {
                 // The comma fence is a template boundary and not a trigger:
                 // it advances to the next parse string, which for `PARSE ARG`
                 // is the next argument and for every other source is the null
-                // string (`RexxTarget::next`'s own `next_argument != 1` arm).
+                // string.
                 let (next_source, next_cursor) = self.next_template(&mut strings, parse, indent)?;
                 cursor = next_cursor;
                 let spent = std::mem::replace(&mut source, next_source);
@@ -605,10 +604,9 @@ impl Interp {
                 version.extend_from_slice(VERSION);
                 ("VERSION", Subject::Bytes(version))
             }
-            // No `>K>` line of any kind, and the one source with more than
-            // one string (`RexxInstructionParse::execute`'s own `SUBKEY_ARG`
-            // arm, which is the only one that does not call
-            // `traceKeywordResult`).
+            // No `>K>` line of any kind, and the one source with more than one
+            // string (the `ARG` source, which is the only one that does not
+            // trace a keyword result).
             ParseSource::Arg => return Ok(ParseStrings::Arg(0)),
             // The two sources that read a line rather than evaluating a value.
             // The split between them is entirely in which reader is called --
@@ -624,12 +622,11 @@ impl Interp {
                 SourceText::Owned(bytes)
             }
             // **`>K>` names the object and the template walks the
-            // conversion.** `RexxInstructionParse::execute` traces `value`
-            // and hands the same object to the target, whose own `init` calls
-            // `string->requestString()` (`instructions/ParseTarget.cpp:113`).
-            // Measured, `trace r` over `parse value .K with a b` with a
-            // class-side `makeString` returning `'p q'`:
-            // `>K>   "VALUE" => "The K class"` and then `>>>   "p q"`.
+            // conversion.** The oracle traces `value` and hands the same
+            // object to the target, which asks for its string. Measured,
+            // `trace r` over `parse value .K with a b` with a class-side
+            // `makeString` returning `'p q'`: `>K>   "VALUE" => "The K
+            // class"` and then `>>>   "p q"`.
             Subject::Value(value) => {
                 // The rendering exists for that line and for nothing else, so
                 // it is taken under the line's own gate.
@@ -715,10 +712,9 @@ impl Interp {
         indent: usize,
     ) -> Result<(), Failure> {
         let last = trigger.targets.len().saturating_sub(1);
-        // **Decided once for the whole trigger**, which is where
-        // `ParseTrigger::parse` decides it: it keeps two copies of this loop
-        // and chooses between them on `context->tracingResults()`
-        // (`ParseTrigger.cpp:248` and `:290`). Nothing the loop below reaches
+        // **Decided once for the whole trigger**, which is where the oracle
+        // decides it: it keeps two copies of this loop and chooses between
+        // them on `context->tracingResults()`. Nothing the loop below reaches
         // runs Rexx code, so the setting cannot move while it runs, and the
         // assertion inside is what says so rather than leaving it argued.
         let traced = self.traced_mode();

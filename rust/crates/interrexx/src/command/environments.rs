@@ -1,9 +1,7 @@
 //! The command environments of this interpreter as the `.CommandHandler`
 //! classes see them: handlers written in Rexx (`.CommandHandler~register`),
 //! stacked over the native ones they cover, every environment as an object,
-//! and the `.CommandContext` a handler written in Rexx is handed
-//! (`concurrency/CommandHandler.cpp:345-952`,
-//! `runtime/InterpreterInstance.cpp:919-1100`).
+//! and the `.CommandContext` a handler written in Rexx is handed.
 
 use std::rc::Rc;
 
@@ -22,15 +20,14 @@ use crate::redirect::{IoContext, split_lines};
 use crate::scheduler::ActivityId;
 use crate::{Interp, Loud};
 
-/// The names `SysInterpreterInstance::registerCommandHandlers` gives the
-/// built-in handler (`platform/unix/SystemCommands.cpp:1077-1093`), each an
-/// environment of its own.
+/// The names the oracle gives the built-in handler, each an environment of
+/// its own.
 const SYSTEM_NAMES: &[&[u8]] = &[
     b"SH", b"", b"COMMAND", b"SYSTEM", b"KSH", b"CSH", b"BSH", b"BASH", b"TCSH", b"ZSH", b"PATH",
 ];
 
 /// A native command handler: what the oracle's `CommandHandler` holds for
-/// every `HandlerType` but `REXX_OBJECT` (`concurrency/CommandHandler.hpp`).
+/// every `HandlerType` but `REXX_OBJECT`.
 #[derive(Clone)]
 pub(crate) enum NativeKind {
     /// The built-in handler under one of [`SYSTEM_NAMES`]: `ioCommandHandler`,
@@ -47,7 +44,6 @@ pub(crate) enum NativeKind {
 }
 
 impl NativeKind {
-    /// `CommandHandler::kindName` (`concurrency/CommandHandler.cpp:827`).
     pub(crate) fn kind_name(&self) -> &'static str {
         match self {
             NativeKind::System(_) => "REDIRECTING",
@@ -64,9 +60,7 @@ impl NativeKind {
 pub(crate) const NATIVE_AT: &[u8] = b"NATIVE_AT";
 
 /// One native handler, with the `.NativeCommandHandler` that stands for it,
-/// made once and kept (`CommandHandler::getRexxObject`,
-/// `concurrency/CommandHandler.cpp:786`), so one native handler is always one
-/// object.
+/// made once and kept, so one native handler is always one object.
 struct NativeEnvironment {
     kind: NativeKind,
     /// The upper-cased name it was registered under, which a forward hands it
@@ -83,8 +77,8 @@ enum Entry {
     /// An index into [`Environments::natives`].
     Native(usize),
     /// The marker a classic subcommand handler's `deregister` leaves alone on
-    /// its stack (`HandlerType::UNRESOLVED`), which keeps the API service from
-    /// bringing it back in this instance.
+    /// its stack, which keeps the API service from bringing it back in this
+    /// instance.
     Unresolved,
 }
 
@@ -107,9 +101,8 @@ struct CommandIo {
     err: Vec<Vec<u8>>,
 }
 
-/// The oracle's `CommandState` (`concurrency/CommandHandler.cpp:363`): what a
-/// `.CommandContext` reaches while its command runs, found by the object its
-/// `CSELF` holds.
+/// The oracle's `CommandState`: what a `.CommandContext` reaches while its
+/// command runs, found by the object its `CSELF` holds.
 struct CommandState {
     cself: ObjRef,
     activity: ActivityId,
@@ -127,8 +120,7 @@ pub(crate) enum Resolved {
     Unknown,
 }
 
-/// The instance's command environments beyond the native table
-/// (`InterpreterInstance::commandHandlers`).
+/// The instance's command environments beyond the native table.
 #[derive(Default)]
 pub(crate) struct Environments {
     /// Each name whose handlers `.CommandHandler` has touched, the one in use
@@ -169,8 +161,8 @@ impl Environments {
         }
     }
 
-    /// `AddCommandEnvironment`'s `put` (`InterpreterInstance.cpp:913`): the
-    /// new handler replaces whatever stack the name had.
+    /// `AddCommandEnvironment`'s `put`: the new handler replaces whatever
+    /// stack the name had.
     pub(crate) fn replace(&mut self, upper: &[u8]) {
         self.stacks.remove(upper);
     }
@@ -188,7 +180,7 @@ impl Environments {
     }
 }
 
-/// `liveState`'s two refusals (`concurrency/CommandHandler.cpp:470`).
+/// `liveState`'s two refusals.
 fn ended() -> Failure {
     Raised::execution_user_defined("this CommandContext belongs to a command that has ended").into()
 }
@@ -208,9 +200,7 @@ impl Interp {
         self.classic_subcom(environment).map(NativeKind::Classic)
     }
 
-    /// What a command to `environment` runs
-    /// (`InterpreterInstance::resolveCommandHandler`,
-    /// `runtime/InterpreterInstance.cpp:1071`).
+    /// What a command to `environment` runs.
     pub(crate) fn resolve_environment(&mut self, environment: &[u8]) -> Resolved {
         let upper = environment.to_ascii_uppercase();
         if let Some(stack) = self.environments.stacks.get(upper.as_slice()) {
@@ -263,7 +253,6 @@ impl Interp {
         self.environments.natives.len() - 1
     }
 
-    /// `CommandHandler::getRexxObject` (`concurrency/CommandHandler.cpp:786`):
     /// the handler object, or the native handler's `.NativeCommandHandler`,
     /// made on first use with `NAME` set and kept.
     fn entry_object(&mut self, entry: Entry) -> Result<ObjRef, Failure> {
@@ -293,7 +282,6 @@ impl Interp {
         }
     }
 
-    /// `listCommandHandlerStack` (`runtime/InterpreterInstance.cpp:1052`):
     /// the objects of the handlers under `environment`, the one in use first.
     pub(crate) fn environment_handlers(
         &mut self,
@@ -316,9 +304,8 @@ impl Interp {
         Ok(objects)
     }
 
-    /// `listCommandHandlers` (`runtime/InterpreterInstance.cpp:1029`): each
-    /// environment name this instance knows with the object of its handler
-    /// in use.
+    /// Each environment name this instance knows with the object of its
+    /// handler in use.
     pub(crate) fn environment_list(&mut self) -> Result<Vec<(Vec<u8>, ObjRef)>, Failure> {
         let mut names: Vec<Vec<u8>> = SYSTEM_NAMES.iter().map(|name| name.to_vec()).collect();
         names.extend(self.command_handlers.keys().map(|name| name.to_vec()));
@@ -336,9 +323,8 @@ impl Interp {
         Ok(listed)
     }
 
-    /// `InterpreterInstance::addCommandHandler(RexxString *, RexxObject *)`
-    /// (`runtime/InterpreterInstance.cpp:973`): `handler` covers the handler
-    /// in use under `environment`, whose object this answers.
+    /// Registering a Rexx-object handler: `handler` covers the handler in use
+    /// under `environment`, whose object this answers.
     pub(crate) fn register_environment(
         &mut self,
         environment: &[u8],
@@ -356,9 +342,7 @@ impl Interp {
         Ok(covered)
     }
 
-    /// `StackCommandEnvironment` (`InterpreterInstance::stackCommandHandler`,
-    /// `runtime/InterpreterInstance.cpp:929`): an extension's handler covers
-    /// the one in use, as `register` covers it.
+    /// An extension's handler covers the one in use, as `register` covers it.
     pub(crate) fn stack_native_environment(&mut self, environment: &[u8], handler: CommandHandler) {
         let upper = environment.to_ascii_uppercase();
         let at = self.add_native(NativeKind::Registered(Rc::new(handler)), &upper);
@@ -368,10 +352,9 @@ impl Interp {
         stack.push(Entry::Native(at));
     }
 
-    /// `InterpreterInstance::removeCommandHandler`
-    /// (`runtime/InterpreterInstance.cpp:996`): takes the handler in use off
-    /// `environment`, uncovering the one it covered, and answers its object.
-    /// A native one taken off the last leaves the name unknown for good.
+    /// Takes the handler in use off `environment`, uncovering the one it
+    /// covered, and answers its object. A native one taken off the last
+    /// leaves the name unknown for good.
     pub(crate) fn deregister_environment(
         &mut self,
         environment: &[u8],
@@ -397,8 +380,7 @@ impl Interp {
     }
 
     /// The native handler `object` stands for, its kind and its name, or
-    /// 93.900 for any other object (`nativeHandlerOf`,
-    /// `concurrency/CommandHandler.cpp:843`).
+    /// 93.900 for any other object.
     pub(crate) fn native_handler_of(
         &mut self,
         object: ObjRef,
@@ -429,9 +411,8 @@ impl Interp {
         (at < self.environments.natives.len()).then_some(at)
     }
 
-    /// `liveState` (`concurrency/CommandHandler.cpp:470`): the running
-    /// command whose context holds `cself`, or 98.900 once it has ended or
-    /// from another activity.
+    /// The running command whose context holds `cself`, or 98.900 once it has
+    /// ended or from another activity.
     pub(crate) fn live_command(&self, cself: Option<ObjRef>) -> Result<usize, Failure> {
         let at = cself
             .and_then(|cself| self.environments.state_of(cself))
@@ -470,8 +451,8 @@ impl Interp {
         }
     }
 
-    /// `CommandIOContext::readInput`: the next line of the running command
-    /// `at`'s input, or `None` at its end or with none.
+    /// The next line of the running command `at`'s input, or `None` at its
+    /// end or with none.
     pub(crate) fn command_read_line(&mut self, at: usize) -> Option<Vec<u8>> {
         let io = self.environments.states[at].io.as_mut()?;
         let line = io.input.as_ref()?.get(io.next)?.clone();
@@ -496,7 +477,6 @@ impl Interp {
         }
     }
 
-    /// `CommandHandler::callRexxObject` (`concurrency/CommandHandler.cpp:385`):
     /// `handler~command(command, caller)`, on this activity, with a fresh
     /// `.CommandContext` as `caller`. Its answer is `RC`; a condition it asked
     /// for with `caller~raise` is raised at the command's clause, a `SYNTAX`
@@ -586,7 +566,7 @@ impl Interp {
     }
 
     /// The condition a handler written in Rexx asked for, `[name, rc,
-    /// description, additional]` (`concurrency/CommandHandler.cpp:427-460`).
+    /// description, additional]`.
     fn pending_command_condition(
         &mut self,
         command: &[u8],
@@ -677,8 +657,7 @@ impl Interp {
         })
     }
 
-    /// `cmdcontext_forward` (`concurrency/CommandHandler.cpp:904`): the
-    /// running command `at` sent to the native handler `kind` registered
+    /// The running command `at` sent to the native handler `kind` registered
     /// under `name`, with the redirection the handler written in Rexx was
     /// given, already begun and written back by it. Answers `RC` and the
     /// condition the native handler raised as `[name, rc, description,
@@ -732,8 +711,7 @@ impl Interp {
         ))
     }
 
-    /// `CommandHandler::callForwarded` (`concurrency/CommandHandler.cpp:815`)
-    /// for the running command `at`.
+    /// The outcome of forwarding the running command `at`.
     fn forwarded_outcome(
         &mut self,
         at: usize,

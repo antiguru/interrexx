@@ -118,10 +118,8 @@ fn peak_kib(dir: &Path, passes: u32) -> u64 {
 
 /// **A released local reference is reclaimable inside the call that made
 /// it.** The oracle's release drops the object from the activation's save
-/// list (`NativeActivation::removeLocalReference`,
-/// `interpreter/execution/NativeActivation.cpp:1219`), so ten times the passes
-/// cost it no more memory: measured, 19980 KB at 200,000 and 20864 KB at
-/// 2,000,000.
+/// list, so ten times the passes cost it no more memory: measured, 19980 KB
+/// at 200,000 and 20864 KB at 2,000,000.
 #[test]
 fn a_release_loop_runs_in_memory_that_does_not_grow_with_its_passes() {
     let dir = fresh_dir("release-loop");
@@ -153,8 +151,8 @@ fn run_in(dir: &Path, program: &str, stress: bool) -> Outcome {
 
 /// **A release drops that handle alone, and a second release, a release
 /// through a context kept from an earlier call and a read after release
-/// answer as the oracle's do.** `relsem.cpp`'s routines, measured on the
-/// oracle with `RelOne(1000000)`: this stdout, empty stderr, rc 0.
+/// answer as the oracle's do.** The probe's routines, measured on the oracle
+/// with `RelOne(1000000)`: this stdout, empty stderr, rc 0.
 #[test]
 fn releases_answer_as_the_oracles_do() {
     let dir = fresh_dir("release-semantics");

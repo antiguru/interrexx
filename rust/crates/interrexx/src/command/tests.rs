@@ -1,6 +1,6 @@
 use super::*;
 
-/// `scan_cmd`'s own split, against the C++ loop's answers.
+/// `scan_cmd`'s own split, against the oracle's answers.
 #[test]
 fn path_splits_on_blanks_and_keeps_quoted_runs_whole() {
     let split = |text: &str| scan_command(text.as_bytes()).expect("under the argument cap");
@@ -57,7 +57,7 @@ fn the_registered_environments_resolve_to_their_shells() {
 }
 
 /// `corpus/oracle-crashes.txt` entry 44: the oracle dies on `cd ~` with
-/// `HOME` unset. Here the shell answers it, as the C++ hands over a bare
+/// `HOME` unset. Here the shell answers it, as the oracle hands over a bare
 /// `cd` or `cd ~/x` with `HOME` unset, and the directory stays. The rc is
 /// the shell's own and is not asserted.
 #[test]
@@ -71,7 +71,7 @@ fn cd_home_with_home_unset_goes_to_the_shell() {
     assert_eq!(String::from_utf8_lossy(&outcome.stdout), "stayed 1\n");
 }
 
-/// `unquote`'s byte rules, the C++ loop's answers.
+/// `unquote`'s byte rules, the oracle's answers.
 #[test]
 fn unquote_drops_quotes_and_escapes_one_byte() {
     assert_eq!(unquote(b"\"a\"b"), b"ab");

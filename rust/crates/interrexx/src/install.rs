@@ -60,28 +60,25 @@ impl Interp {
         id: ProgramId,
         program: &Rc<Program>,
     ) -> Result<(), Failure> {
-        // **The oracle's first walk, in source order**: the `::ANNOTATE`
-        // targets, the `::OPTIONS` settings and the `EXTERNAL` libraries. The
-        // parser has already refused what the declarations alone decide
-        // (duplicate names, a misplaced `::CONSTANT` expression, a missing
-        // `::ANNOTATE` target). See the table in `directives.rs` for the
-        // order this walk is the first of, and for every probe placing a form
-        // in it.
-        // The class a member directive's keys are claimed against, and the
-        // keys claimed so far. `None` is `LanguageParser`'s `unattachedMethods`
-        // table, which is one table for the whole file rather than one per
-        // class (`parser/DirectiveParser.cpp:518`).
+        // **The oracle's first walk, in source order**: the `::ANNOTATE` targets, the
+        // `::OPTIONS` settings and the `EXTERNAL` libraries. The parser has already
+        // refused what the declarations alone decide (duplicate names, a misplaced
+        // `::CONSTANT` expression, a missing `::ANNOTATE` target). See the table in
+        // `directives.rs` for the order this walk is the first of, and for every probe
+        // placing a form in it. The class a member directive's keys are claimed
+        // against, and the keys claimed so far. `None` is the parser's table of
+        // unattached methods, which is one table for the whole file rather than one per
+        // class.
         let mut current_class: Option<usize> = None;
         // Which directive claimed each key, and not merely that one did:
         // `::ANNOTATE ATTRIBUTE` and `::ANNOTATE CONSTANT` accept only a key
         // whose claimant is of the matching kind, which is `isAttribute()`
-        // and `isConstant()` on the method object the C++ finds.
+        // and `isConstant()` on the method object the oracle finds.
         let mut claimed: FxHashMap<(Option<usize>, bool, Vec<u8>), usize> = FxHashMap::default();
         // The declaring directive of each upcased class and routine name,
         // which an `::ANNOTATE CLASS` or `::ANNOTATE ROUTINE` resolves its
         // target against -- `classDependencies` and `routines`, the tables
-        // `findClassDirective` and `findRoutine` read
-        // (`parser/DirectiveParser.cpp:230`, `:258`).
+        // `findClassDirective` and `findRoutine` read.
         let mut declared_classes: FxHashMap<Vec<u8>, usize> = FxHashMap::default();
         let mut declared_routines: FxHashMap<Vec<u8>, usize> = FxHashMap::default();
         // What each `::ANNOTATE` recorded, keyed by what its target names.
@@ -93,9 +90,8 @@ impl Interp {
         // is the order a shared library `Routine` object's table takes them in.
         let mut directive_writes: Vec<(usize, Box<[u8]>, Box<[u8]>)> = Vec::new();
         // The package's routine records, handed over where this walk finishes
-        // as `resolveDependencies` hands its tables to the package
-        // (`parser/LanguageParser.cpp:1893-1900`), so a translation that raises
-        // leaves none.
+        // as `resolveDependencies` hands its tables to the package, so a
+        // translation that raises leaves none.
         let mut routines: FxHashMap<Box<[u8]>, InstalledRoutine> = FxHashMap::default();
         let mut public_routines: FxHashMap<Box<[u8]>, InstalledRoutine> = FxHashMap::default();
         let mut routine_codes: Vec<(InstalledRoutine, usize)> = Vec::new();
@@ -166,12 +162,11 @@ impl Interp {
                     // **Accumulative, and the last write to a name wins.**
                     // Each arm of `annotateDirective` reaches for its
                     // target's own table and `processAnnotation` puts into
-                    // it (`parser/DirectiveParser.cpp:2259`), so a second
-                    // `::ANNOTATE` of one target adds to the first's pairs.
-                    // Measured, oracle rc 0: `::annotate class K a 1` beside
-                    // `::annotate class K b 2` leaves `~annotations~items` 2,
-                    // and `::annotate class K a 1 a 2` leaves it 1 with `A`
-                    // answering `2`.
+                    // it, so a second `::ANNOTATE` of one target adds to the
+                    // first's pairs. Measured, oracle rc 0: `::annotate class
+                    // K a 1` beside `::annotate class K b 2` leaves
+                    // `~annotations~items` 2, and `::annotate class K a 1 a
+                    // 2` leaves it 1 with `A` answering `2`.
                     for site in target {
                         let pairs = staged.entry(site.clone()).or_default();
                         for annotation in &annotate.annotations {
@@ -230,18 +225,16 @@ impl Interp {
                 _ => {}
             }
 
-            // **The eager bind**, in this walk because the oracle does
-            // it while the directive is being translated:
-            // `createNativeMethod` raises from inside `methodDirective`
-            // (`parser/DirectiveParser.cpp:1385`), so the file is refused
+            // **The eager bind**, in this walk because the oracle does it
+            // while the directive is being translated: `createNativeMethod`
+            // raises from inside `methodDirective`, so the file is refused
             // before its own first clause runs. Measured, oracle: a file
-            // opening `say "prolog ran"` and carrying one `::METHOD
-            // EXTERNAL` on a missing entry point is rc 166 with stdout empty,
-            // and the same file naming `file_separator` is rc 0 printing the
+            // opening `say "prolog ran"` and carrying one `::METHOD EXTERNAL`
+            // on a missing entry point is rc 166 with stdout empty, and the
+            // same file naming `file_separator` is rc 0 printing the
             // prologue. Each procedure's shared code is bound to this package
             // as its directive resolves, where nothing bound it first, so a
-            // later directive's refusal leaves the binding in place
-            // (`createNativeMethod`, `parser/DirectiveParser.cpp:1381-1388`).
+            // later directive's refusal leaves the binding in place.
             let (keys, internal) = match self.resolve_external(&directive.kind) {
                 Ok(resolved) => resolved,
                 Err(refusal) => {
@@ -348,8 +341,7 @@ impl Interp {
         let members = class_members(program);
 
         // **Install walks the class list once per pass, and each pass
-        // finishes before the next begins** (`PackageClass::processInstall`):
-        // create every class (`classes/PackageClass.cpp:1281`), then resolve
+        // finishes before the next begins**: create every class, then resolve
         // every `::CONSTANT` expression (`:1290`), then send `ACTIVATE` to
         // every class (`:1299`). Each pass walks `order` rather than the
         // file, because `processInstall`'s own list is the class list.
@@ -359,13 +351,12 @@ impl Interp {
             let class =
                 self.install_class_at(id, program, *index, &declared, &classes, attached)?;
             classes.insert(*index, class);
-            // **After the install and not inside it**, which is where
-            // `ClassDirective::install` puts `setAnnotations`
-            // (`instructions/ClassDirective.cpp:243`): the class is built and
-            // has been sent `INIT` by then. Measured, oracle rc 0: a
-            // class-side `init` saying `self~annotation("A")` prints `The NIL
-            // object` under an `::ANNOTATE CLASS` that the main body reads
-            // back as the annotation's value.
+            // **After the install and not inside it**, which is where the
+            // oracle sets the annotations there: the class is built and has
+            // been sent `INIT` by then. Measured, oracle rc 0: a class-side
+            // `init` saying `self~annotation("A")` prints `The NIL object`
+            // under an `::ANNOTATE CLASS` that the main body reads back as
+            // the annotation's value.
             self.attach_directive_annotations(program, &mut staged, *index, class, attached);
         }
 
@@ -385,8 +376,7 @@ impl Interp {
             self.record_annotations(&[site], &pairs);
         }
         // `::ANNOTATE ROUTINE` reaches the one object a library procedure
-        // has, so every directive bound to it writes into one table
-        // (`parser/DirectiveParser.cpp:2003-2014`).
+        // has, so every directive bound to it writes into one table.
         for (directive, name, value) in directive_writes {
             let installed = InstalledRoutine {
                 program: id,
@@ -472,12 +462,11 @@ impl Interp {
         outcome
     }
 
-    /// Pushes the level installing `id`, stopped on its directive
-    /// `directive`, where `id` has no running activation: the oracle installs
-    /// a package in an activation of its own (`RexxActivation::run`,
-    /// `RexxActivation.cpp:508`), which the files it requires run above, and
-    /// keeps the security manager that activation began under. `None` outside
-    /// an install, and where `id` already has a running activation.
+    /// Pushes the level installing `id`, stopped on its directive `directive`, where
+    /// `id` has no running activation: the oracle installs a package in an activation of
+    /// its own, which the files it requires run above, and keeps the security manager
+    /// that activation began under. `None` outside an install, and where `id` already
+    /// has a running activation.
     fn push_installing_level(
         &mut self,
         id: ProgramId,
@@ -518,10 +507,8 @@ impl Interp {
     }
 
     /// [`Interp::load_required_packages`]' walk: every `::REQUIRES ... LIBRARY`
-    /// in source order, then every other `::REQUIRES` in source order, as
-    /// `PackageClass::processInstall` installs them
-    /// (`classes/PackageClass.cpp:1227-1260`), stopping at the first that
-    /// fails.
+    /// in source order, then every other `::REQUIRES` in source order, as the
+    /// oracle installs them, stopping at the first that fails.
     fn install_requires(&mut self, id: ProgramId, program: &Rc<Program>) -> Result<(), Failure> {
         for library in [true, false] {
             for (index, directive) in program.directives.iter().enumerate() {
@@ -557,11 +544,9 @@ impl Interp {
                         let from = self.package_object(Package::Program(required))?;
                         self.add_imported_package(into, from);
                         self.merge_package(into, from);
-                        // `RequiresDirective::install`
-                        // (`instructions/RequiresDirective.cpp:137`): the
-                        // registration is what the directive does *after* the
-                        // load and the merge, so a namespace neither narrows
-                        // the merge nor replaces it.
+                        // The registration is what the directive does *after*
+                        // the load and the merge, so a namespace neither
+                        // narrows the merge nor replaces it.
                         if let Some(namespace) = requires.namespace {
                             let name = program.symbols.name(namespace).as_bytes().into();
                             self.program_fields_mut(id)?.namespaces.insert(name, from);
@@ -618,14 +603,10 @@ impl Interp {
         directive: bool,
     ) -> Result<ProgramId, Failure> {
         // The name as written, and the file it resolves to, are looked up
-        // before the manager is asked, and a hit asks it nothing:
-        // `InterpreterInstance::loadRequires`
-        // (`runtime/InterpreterInstance.cpp:1021`-`:1045`), whose callers
-        // resolve first (`classes/PackageClass.cpp:1319`). Then the manager
-        // sees the short name, then the resolved one
-        // (`package/PackageManager.cpp:718`-`:766`). Its short-name answer is
-        // only looked up, and the search, a miss and the cache entries use
-        // the original.
+        // before the manager is asked, and a hit asks it nothing, and the
+        // callers resolve first. Then the manager sees the short name, then
+        // the resolved one. Its short-name answer is only looked up, and the
+        // search, a miss and the cache entries use the original.
         let original = name;
         if let Some(&loaded) = self.required_packages.get(original) {
             self.check_not_installing(loaded)?;
@@ -687,8 +668,7 @@ impl Interp {
             return Err(Raised::requires_file_not_found(original).into());
         };
         // `getRequiresFile` translates the name it was given, the manager's
-        // replacement included, and an unreadable one is 3.1 naming it
-        // (`LanguageParser::createPackage`).
+        // replacement included, and an unreadable one is 3.1 naming it.
         let text = match shipped {
             Some(package) if located.as_deref() == Some(&resolved[..]) => package.source.to_vec(),
             _ => match std::fs::read(OsStr::from_bytes(&resolved)) {
@@ -701,20 +681,16 @@ impl Interp {
         self.required_paths
             .insert(required, resolved.as_slice().into());
         // Built before it is cached: the cache holds the package object
-        // weakly (`PackageManager::addToRequiresCache`,
-        // `package/PackageManager.cpp:921`), so an entry lives exactly as long
-        // as its object.
+        // weakly, so an entry lives exactly as long as its object.
         let package = self.package_object(Package::Program(required))?;
         // Installed before the prologue runs, which is where
-        // `getRequiresFile` puts it (`package/PackageManager.cpp:830`-`:833`).
+        // `getRequiresFile` puts it.
         if let Some(manager) = inherited {
             self.install_security_manager(package, Some(manager));
         }
-        // **Cached before the prologue runs, not after**, which is
-        // `addRequiresFile` standing ahead of `runProlog` at
-        // `InterpreterInstance.cpp:1060`: a name reached again from inside
-        // that prologue must find this entry, or the circularity check has
-        // nothing to fire on.
+        // **Cached before the prologue runs, not after**, which is the
+        // oracle's order: a name reached again from inside that prologue must
+        // find this entry, or the circularity check has nothing to fire on.
         self.required_packages.insert(original.into(), required);
         self.required_packages
             .insert(resolved.as_slice().into(), required);
@@ -737,10 +713,10 @@ impl Interp {
         };
         if let Err(failure) = self.run_loaded(parsed, required, CallType::Requires, None, requirer)
         {
-            // `getRequiresFile` caches a package only once it has translated
-            // (`package/PackageManager.cpp:828-836`), so a later ask for one
-            // whose translation raised translates it again; a package that
-            // failed to install or in its prologue stays cached.
+            // `getRequiresFile` caches a package only once it has translated,
+            // so a later ask for one whose translation raised translates it
+            // again; a package that failed to install or in its prologue
+            // stays cached.
             if self.untranslated.contains(&required) {
                 self.required_packages.remove(original);
                 self.required_packages.remove(&resolved[..]);
@@ -753,8 +729,7 @@ impl Interp {
         Ok(required)
     }
 
-    /// The security manager's `REQUIRES` checkpoint
-    /// (`execution/SecurityManager.cpp:318`-`:346`).
+    /// The security manager's `REQUIRES` checkpoint.
     ///
     /// Answers the name to load under -- `manager`'s own replacement where
     /// it made one -- or `None` where it removed the entry, which forbids the
@@ -777,7 +752,7 @@ impl Interp {
         else {
             return Ok(Some(name.to_vec()));
         };
-        // `secObject != TheNilObject` (`SecurityManager.cpp:339`).
+        // `secObject != TheNilObject`.
         if let Some(manager) = self.security_entry(info, crate::security::key::SECURITYMANAGER)?
             && manager != ObjRef::NIL
         {
@@ -792,8 +767,7 @@ impl Interp {
     }
 
     /// 98.952 when `loaded`'s own `::REQUIRES` directives are still
-    /// installing, and `Ok` otherwise -- `Activity::checkRequires`
-    /// (`concurrency/Activity.cpp:3702`).
+    /// installing, and `Ok` otherwise.
     fn check_not_installing(&self, loaded: ProgramId) -> Result<(), Failure> {
         let path = self.package_path(loaded);
         if self
@@ -807,8 +781,7 @@ impl Interp {
         Ok(())
     }
 
-    /// `PackageClass::addPackage` (`classes/PackageClass.cpp:1367`): records
-    /// `from` as one of `into`'s imports, once.
+    /// Records `from` as one of `into`'s imports, once.
     pub(super) fn add_imported_package(&mut self, into: ObjRef, from: ObjRef) -> bool {
         let Some(data) = self.package_data_mut(into) else {
             return false;
@@ -882,10 +855,9 @@ impl Interp {
         found.ok_or_else(|| Raised::namespace_class_not_found(name, namespace).into())
     }
 
-    /// `findPublicClass` for one package: its own `::CLASS ... PUBLIC`
-    /// declarations, then the ones it imported (`classes/PackageClass.cpp:760`
-    /// region). Measured, oracle rc 0: a class a *required* file of the
-    /// namespace package declares public is reachable through the qualifier.
+    /// `findPublicClass` for one package: its own `::CLASS ... PUBLIC` declarations, then the ones
+    /// it imported. Measured, oracle rc 0: a class a *required* file of the namespace package
+    /// declares public is reachable through the qualifier.
     fn public_class_of(&self, package: ObjRef, upper: &[u8]) -> Option<ObjRef> {
         let data = self.package_data(package)?;
         data.public_classes
@@ -925,11 +897,10 @@ impl Interp {
     }
 
     /// The file `name` resolves to from package `id`, or `None` when no route
-    /// holds one: `PackageClass::resolveProgramName`
-    /// (`classes/PackageClass.cpp:926`), searched from the directory and
-    /// extension of the name each package was given, its own first and then
-    /// each parent's. The REXX package has no name and searches the global
-    /// context.
+    /// holds one: as `Package~resolveProgramName` does, searched from the
+    /// directory and extension of the name each package was given, its own
+    /// first and then each parent's. The REXX package has no name and
+    /// searches the global context.
     pub(crate) fn resolve_in_package(
         &self,
         id: ProgramId,
@@ -976,9 +947,8 @@ impl Interp {
         )
     }
 
-    /// `PackageClass::loadPackageRexx`'s load: the same
-    /// [`Interp::load_requires`] a `::REQUIRES` performs, which is what the
-    /// C++ calls too (`classes/PackageClass.cpp:1842`).
+    /// `Package~loadPackage`'s load: the same [`Interp::load_requires`] a
+    /// `::REQUIRES` performs, which is what the oracle does too.
     pub(crate) fn load_package(
         &mut self,
         program: Option<ProgramId>,
@@ -987,14 +957,14 @@ impl Interp {
         self.load_requires(program, name, false)
     }
 
-    /// `PackageClass::newRexx`'s load: the same file load, searched from the
-    /// **global** context rather than from any package's directory.
+    /// `Package~new`'s load: the same file load, searched from the **global**
+    /// context rather than from any package's directory.
     pub(crate) fn load_package_global(&mut self, name: &[u8]) -> Result<ProgramId, Failure> {
         self.load_requires(None, name, false)
     }
 
-    /// `PackageClass::newRexx`'s in-memory form: a package compiled from
-    /// source lines, its directives installed and its prologue run.
+    /// `Package~new`'s in-memory form: a package compiled from source lines,
+    /// its directives installed and its prologue run.
     ///
     /// `parent` is the package its names resolve through after its own, and
     /// `None` leaves it none at all -- measured, a source package built with
@@ -1025,10 +995,9 @@ impl Interp {
     /// package, its directives installed and its prologue run. Where
     /// `requires`, it is `LoadPackageFromData`'s, which a `::REQUIRES` of
     /// `name` then finds: cached under `name` before its prologue runs, as
-    /// `InterpreterInstance::loadRequires` adds it
-    /// (`runtime/InterpreterInstance.cpp:1256`), and held for as long as the
-    /// interpreter runs, as `PackageManager::addToRequiresCache` holds a
-    /// package loaded from in-store data (bug 2108).
+    /// the oracle adds it, and held for as long as the interpreter runs, as
+    /// its requires cache holds a package loaded from in-store data (bug
+    /// 2108).
     pub(crate) fn package_from_program(
         &mut self,
         name: &[u8],
@@ -1288,11 +1257,10 @@ impl Interp {
             ClassKind::Regular
         };
         let id = dispatch::new_subclass(self, superclass, name.as_bytes(), metaclass, kind)?;
-        // **A class the interpreter's own library declares is a class in the
-        // image**, and `RexxClass::liveGeneral` sets `REXX_DEFINED` on every
-        // class in the image under `PREPARINGIMAGE` (`ClassClass.cpp:136`-
-        // `:142`). Measured: the oracle refuses `.Alarm~inherit(.Comparable)`
-        // with 98.985, the same refusal it gives `.Array~inherit()`.
+        // **A class the interpreter's own library declares is a class in the image**, and the
+        // oracle marks every class in its image as interpreter-defined. Measured: the oracle
+        // refuses `.Alarm~inherit(.Comparable)` with 98.985, the same refusal it gives
+        // `.Array~inherit()`.
         if self.library_bootstrap {
             self.classes().set_rexx_defined(id);
         }
@@ -1340,12 +1308,10 @@ impl Interp {
                 Raised::class_not_found,
             )?,
         };
-        // `RexxClass::subclass`'s own opening (`ClassClass.cpp:1566`-
-        // `:1575`): a directive naming no `METACLASS` derives from the
-        // superclass's own, and either way the value has to be a metaclass
-        // before anything is built from it. Measured, `::CLASS S MIXINCLASS
-        // Class METACLASS Object` raises this even though deriving from
-        // `.Class` then discards the named metaclass -- the test is on what
+        // The oracle's `subclass` opens with this: a directive naming no `METACLASS` derives from
+        // the superclass's own, and either way the value has to be a metaclass before anything is
+        // built from it. Measured, `::CLASS S MIXINCLASS Class METACLASS Object` raises this even
+        // though deriving from `.Class` then discards the named metaclass -- the test is on what
         // the directive named, not on what the class ends up with.
         let metaclass = named_metaclass.unwrap_or_else(|| self.classes().metaclass(superclass));
         if !self.classes().is_metaclass(metaclass) {
@@ -1370,17 +1336,14 @@ impl Interp {
         };
         self.record_literal_constants(program_id, program, attached);
         // **The class-side members are the enhancing methods the class is
-        // built with**: `ClassDirective::install` hands `classMethods` to
-        // `mixinClass`/`subclass` (`ClassDirective.cpp:200`, `:205`), which
-        // merges them into the class method dictionary before it builds
-        // either behaviour and therefore before it sends `INIT`
-        // (`ClassClass.cpp:1602`-`:1607`, then `:1613` builds the behaviour and
-        // `:1631` sends the message).
+        // built with**: the oracle hands the class methods to
+        // `mixinClass`/`subclass`, which merges them into the class method
+        // dictionary before it builds either behaviour and therefore before
+        // it sends `INIT`
         self.install_class_members(program_id, program, id, attached, true);
-        // `RexxClass::subclass`'s own tail, in its order: `checkUninit`
-        // (`ClassClass.cpp:1628`), the `INIT` send (`:1631`), then the
-        // parent's `UNINIT` propagation (`:1634`-`:1637`). Reading a finished
-        // parent is what `order` buys: a class is constructed after every
+        // The oracle's `subclass` ends with these, in its order: the uninit check,
+        // the `INIT` send, then the parent's `UNINIT` propagation. Reading a
+        // finished parent is what `order` buys: a class is constructed after every
         // class it names.
         self.classes().check_uninit(id);
         self.send_directive_message(program_id, program, id, dispatch::INIT, directive)?;
@@ -1388,14 +1351,12 @@ impl Interp {
         // The package's own installed-class table, which is what `.NAME`
         // resolution reads first -- see `environment/identities.rs`'s
         // `record_package_class` for why the registry's flat table is not
-        // that. **Entered only once the class's creation, `INIT` included,
-        // is complete**, so inside its own `INIT` the symbol is still its
-        // own text, as the classes declared later are (the spec's
-        // installation rule; the oracle agrees).
-        // `ClassDirective::install` passes the directive's own `isPublic()`
-        // to `addInstalledClass` (`instructions/ClassDirective.cpp:209`),
-        // which files a public class in both of the package's tables and
-        // every other class in one (`classes/PackageClass.cpp:1410`-`:1419`).
+        // that. **Entered only once the class's creation, `INIT` included, is
+        // complete**, so inside its own `INIT` the symbol is still its own
+        // text, as the classes declared later are (the spec's installation
+        // rule; the oracle agrees). The oracle passes the directive's own
+        // public flag when it adds the installed class, which files a public
+        // class in both of the package's tables and every other class in one.
         // That is the difference `~publicClasses` reads back.
         self.record_package_class(program_id, &class.name, id, class.access == Access::Public)?;
         for target in &class.inherit {
@@ -1414,8 +1375,7 @@ impl Interp {
         if !self.library_bootstrap {
             dispatch::charge_class(self, id);
         }
-        // `RexxClass::makeAbstract` (`ClassClass.cpp:1754`-`:1761`): a
-        // metaclass cannot be made abstract, and any other class takes the
+        // A metaclass cannot be made abstract, and any other class takes the
         // keyword by setting the flag `~new`'s `checkAbstract` reads.
         if class.abstract_ {
             if self.classes().is_metaclass(id) {
@@ -1547,10 +1507,9 @@ impl Interp {
                 Raised::inherit_base_class(&class_name, &mixin_name, &base_name)
             }
             // The `INHERIT` keyword carries no position, and this refusal is
-            // the position's alone (`ClassClass.cpp:1350`), so a directive
-            // cannot reach it. Answered rather than unreachable-panicked,
-            // this crate's rule for a case the type admits and the caller
-            // does not produce.
+            // the position's alone, so a directive cannot reach it. Answered
+            // rather than unreachable-panicked, this crate's rule for a case
+            // the type admits and the caller does not produce.
             InheritRefusal::NotInherited(other) => {
                 let class_name = self.class_default_name(class).to_vec();
                 let other_name = self.class_default_name(other).to_vec();
@@ -1625,8 +1584,7 @@ impl Interp {
             // Both accessors of a `Both`-style attribute carry the
             // directive's own access scope, which is the oracle's own shape:
             // `attributeDirective` builds the getter and the setter and calls
-            // `setAttributes(accessFlag, protectedFlag, guardFlag)` on each
-            // (`parser/DirectiveParser.cpp:1683`, `:1690`).
+            // `setAttributes(accessFlag, protectedFlag, guardFlag)` on each.
             self.install_one_method(
                 program,
                 directive,
@@ -1779,8 +1737,8 @@ impl Interp {
         self.compiled_method_names.insert(program_id, name.into());
         self.override_package_settings(program_id)?;
         // `generateMethod` and `generateRoutine` give the executable's own
-        // package `parent` as its parent (`LanguageParser.cpp:603`, `:637`),
-        // which its routine and class lookups walk.
+        // package `parent` as its parent, which its routine and class lookups
+        // walk.
         if let Some(parent) = parent {
             self.set_package_parent(program_id, parent)?;
         }
@@ -1919,8 +1877,8 @@ impl Interp {
         self.compiled_method_names.insert(program_id, name.into());
         self.override_package_settings(program_id)?;
         // `generateMethod` and `generateRoutine` give the executable's own
-        // package `parent` as its parent (`LanguageParser.cpp:603`, `:637`),
-        // which its routine and class lookups walk.
+        // package `parent` as its parent, which its routine and class lookups
+        // walk.
         if let Some(parent) = parent {
             self.set_package_parent(program_id, parent)?;
         }
@@ -1937,12 +1895,9 @@ impl Interp {
         )
     }
 
-    /// `MethodClass::newFileRexx` and `RoutineClass::newFileRexx`
-    /// (`classes/MethodClass.cpp:521`, `classes/RoutineClass.cpp:341`): the
-    /// executable a file's own text becomes.
-    ///
-    /// `parent` is the package the loaded file resolves names through, and
-    /// `None` is the caller's own. `program` as [`Interp::install_executable`]'s.
+    /// The executable a file's own text becomes. `parent` is the package the
+    /// loaded file resolves names through, and `None` is the caller's own.
+    /// `program` as [`Interp::install_executable`]'s.
     pub(crate) fn new_file_executable(
         &mut self,
         name: &[u8],
@@ -1963,7 +1918,7 @@ impl Interp {
         let parsed = self.parse_file(text, name)?;
         let parent = match parent {
             // A restored executable inherits no context, the one given
-            // included (`LanguageParser::createRoutine(name, context)`).
+            // included.
             _ if !parsed.source.is_traceable() => None,
             Some(parent) => Some(parent),
             None => self
@@ -1976,14 +1931,12 @@ impl Interp {
         })
     }
 
-    /// `LanguageParser::generateRoutine` and `generateMethod`
-    /// (`parser/LanguageParser.cpp:624`) over a parsed source: its main body
-    /// becomes the executable, its directives install into a package of its
-    /// own whose parent is `parent`, and `record` names that package. A
-    /// routine restored from an image keeps the name the image gives it.
-    /// `program` says the source is a program `CallProgram` runs
-    /// (`LanguageParser::createProgram`), which installs where it runs and calls no stub
-    /// routine to install here.
+    /// The parser's routine and method generation over a parsed source: its main body
+    /// becomes the executable, its directives install into a package of its own whose
+    /// parent is `parent`, and `record` names that package. A routine restored from an
+    /// image keeps the name the image gives it. `program` says the source is a program
+    /// `CallProgram` runs, which installs where it runs and calls no stub routine to
+    /// install here.
     pub(crate) fn install_executable(
         &mut self,
         parsed: Program,
@@ -2057,10 +2010,10 @@ impl Interp {
             self.seal_package_level(&failure, id);
             return Err(failure);
         }
-        // `PackageClass::install` installs a package with classes or
-        // requires by calling an empty routine of the package, which traces
-        // its `>I>` and `<I<` under the package's `::OPTIONS TRACE`. The main
-        // body built here is that empty routine.
+        // The oracle installs a package with classes or requires by calling
+        // an empty routine of the package, which traces its `>I>` and `<I<`
+        // under the package's `::OPTIONS TRACE`. The main body built here is
+        // that empty routine.
         if !program_run
             && program.directives.iter().any(|directive| {
                 matches!(
@@ -2233,9 +2186,8 @@ impl Interp {
         self.env = environment;
     }
 
-    /// `PackageManager::loadLibrary` (`package/PackageManager.cpp:229`): the
-    /// library `name` names, loaded once however many directives, methods and
-    /// `~loadLibrary` sends ask for it.
+    /// The library `name` names, loaded once however many directives, methods
+    /// and `~loadLibrary` sends ask for it.
     ///
     /// **The name is matched byte for byte**, which is measured rather than
     /// assumed: oracle, `::method m external "LIBRARY RXREGEXP RegExp_Init"`
@@ -2292,7 +2244,6 @@ impl Interp {
         }
     }
 
-    /// `LibraryPackage::loadRoutines` (`package/LibraryPackage.cpp:270-299`):
     /// every routine `library` exports becomes callable by name from any
     /// package, whatever loaded it.
     fn register_package_routines(&mut self, name: &[u8], library: &interrexx_api::load::Library) {
@@ -2314,8 +2265,8 @@ impl Interp {
         }
     }
 
-    /// `PackageClass::mergeLibrary`: `library`'s routines join `id`'s own
-    /// routine lookup where no earlier merge put the name.
+    /// `library`'s routines join `id`'s own routine lookup where no earlier
+    /// merge put the name.
     fn merge_library(
         &mut self,
         id: ProgramId,
@@ -2339,8 +2290,8 @@ impl Interp {
         Ok(())
     }
 
-    /// `PackageClass::mergeLibrary` over an internal package: its routines
-    /// join `id`'s own routine lookup where no earlier merge put the name.
+    /// An internal package's routines join `id`'s own routine lookup where no
+    /// earlier merge put the name.
     fn merge_internal_package(
         &mut self,
         id: ProgramId,
@@ -2359,8 +2310,8 @@ impl Interp {
     }
 
     /// Adds each of `routines` to `into`'s imported routines where the name
-    /// is not there yet (`HashContents::mergePut`), moving
-    /// [`Interp::routine_generation`] when one is added.
+    /// is not there yet, moving [`Interp::routine_generation`] when one is
+    /// added.
     fn merge_routines(&mut self, into: ObjRef, routines: Vec<(Box<[u8]>, MergedRoutine)>) {
         let Some(data) = self.package_data_mut(into) else {
             return;
@@ -2989,8 +2940,7 @@ pub(crate) struct ExternalRefusal {
 /// arguments.
 struct ConstantRun<'a> {
     /// The level's name: `::CONSTANT` while the package installs, which is
-    /// `GlobalNames::CONSTANT_DIRECTIVE` (`memory/GlobalNames.h:84`), and the
-    /// message name on a run.
+    /// the directive's own name, and the message name on a run.
     name: &'a [u8],
     receiver: ObjRef,
     scope: ObjRef,

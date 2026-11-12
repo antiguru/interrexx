@@ -19,8 +19,8 @@ pub(crate) use format::{
 use format::{make_displayable, push_operator, push_tagged, push_value};
 
 /// The variable a `>V>` or `>=>` line names while the line is routed, which
-/// its `TraceObject` carries as `VARIABLE` (`createTraceObject`). A compound
-/// is traced with neither its name nor its value (`traceCompoundValue`).
+/// its `TraceObject` carries as `VARIABLE`. A compound is traced with neither
+/// its name nor its value.
 pub(crate) struct TracedVariable {
     pub(crate) name: Option<Box<[u8]>>,
     pub(crate) value: Option<ObjRef>,
@@ -88,12 +88,12 @@ impl Interp {
     /// The setting the trace sink obeys, which is [`TraceMode::OFF`] while a
     /// line typed at an interactive-debug pause runs.
     ///
-    /// **`RexxActivation::noTracing` includes `debugPause`**, and answering
-    /// an off setting here reaches every gate at once: nothing echoes, a
-    /// chunk compiled during the pause carries no trace op, and one compiled
-    /// earlier is stale and falls back to the run-time gate. The program's
-    /// own setting -- what `TRACE()` answers and what a `TRACE` instruction
-    /// merges into -- is [`Interp::trace_mode`] and is untouched.
+    /// **The oracle's no-tracing test includes the debug pause**, and answering
+    /// an off setting here reaches every gate at once: nothing echoes, a chunk
+    /// compiled during the pause carries no trace op, and one compiled earlier
+    /// is stale and falls back to the run-time gate. The program's own setting
+    /// -- what `TRACE()` answers and what a `TRACE` instruction merges into --
+    /// is [`Interp::trace_mode`] and is untouched.
     #[inline(always)]
     pub(crate) fn traced_mode(&self) -> TraceMode {
         let traced = self.activity.trace_cache.traced();
@@ -109,10 +109,9 @@ impl Interp {
         traced
     }
 
-    /// Whether the code running now shows no source, so it traces nothing
-    /// and never pauses (`RexxActivation::noTracing`'s
-    /// `!code->isTraceable()`): a restored program's own clauses, and not
-    /// an `INTERPRET` string it runs, which shows its own text (measured).
+    /// Whether the code running now shows no source, so it traces nothing and
+    /// never pauses: a restored program's own clauses, and not an `INTERPRET`
+    /// string it runs, which shows its own text (measured).
     #[cold]
     #[inline(never)]
     pub(crate) fn untraceable_code(&self) -> bool {
@@ -161,10 +160,9 @@ impl Interp {
         self.route_trace_line(start);
     }
 
-    /// `traceSourceString` (`RexxActivation.cpp:4007`-`4029`): the banner
-    /// interactive debug prints once per activation, ahead of the first
-    /// clause it traces, unless the activation announced itself with `>I>`
-    /// (`traceEntryOrExit`, `RexxActivation.cpp:3683`).
+    /// The banner interactive debug prints once per activation, ahead of the
+    /// first clause it traces, unless the activation announced itself with
+    /// `>I>`.
     ///
     /// Seven blanks, `+++`, a blank and the `PARSE SOURCE` string in double
     /// quotes -- measured, `       +++ "LINUX COMMAND /abs/t.rex"`.
@@ -224,10 +222,9 @@ impl Interp {
 
     /// A command's own `>>>`, gated on [`TraceMode::commands`] rather than on
     /// `results` -- `traceAllFlags` carries `traceCommands` and not
-    /// `traceResults`, and `TRACE A` shows a command's string all the same
-    /// (`RexxInstructionCommand::execute`). Emitted **before** the command
-    /// runs, which is observable: under `TRACE C` a command writing to its
-    /// own standard error shows this line first.
+    /// `traceResults`, and `TRACE A` shows a command's string all the same.
+    /// Emitted **before** the command runs, which is observable: under `TRACE
+    /// C` a command writing to its own standard error shows this line first.
     pub(crate) fn trace_command_value(&mut self, indent: usize, value: &[u8]) {
         if !self.traced_mode().commands {
             return;
@@ -357,9 +354,8 @@ impl Interp {
     }
 
     /// `>V>` (`TRACE_PREFIX_VARIABLE`): a simple variable or bare stem's own
-    /// read value, tagged with its own name, unquoted
-    /// (`traceVariable`/`RexxActivation.hpp:341`-`342`, `quoteTag = false`).
-    /// `object` is the value read.
+    /// read value, tagged with its own name, unquoted. `object` is the value
+    /// read.
     #[inline(always)]
     pub(crate) fn trace_variable(
         &mut self,
@@ -400,7 +396,7 @@ impl Interp {
     /// `>N>` (`TRACE_PREFIX_NAMESPACE`): a namespace-qualified class lookup's
     /// result, tagged with `namespace:class` and unquoted --
     /// `traceClassResolution` builds the tag as `n->concatWith(c, ':')` and
-    /// passes `quoteTag` false (`RexxActivation.hpp:358`).
+    /// passes `quoteTag` false.
     pub(crate) fn trace_namespace(&mut self, indent: usize, tag: &[u8], value: &[u8]) {
         if !self.traced_mode().intermediates {
             return;
@@ -445,10 +441,9 @@ impl Interp {
     }
 
     /// `>P>` (`TRACE_PREFIX_PREFIX`): a prefix operator's own result, the
-    /// identical shape to `>O>` with its own prefix byte
-    /// (`tracePrefix`/`RexxActivation.hpp:353`-`354` calls the same
-    /// `traceOperatorValue` `traceOperator` does, differing only in which
-    /// `TracePrefix` it passes).
+    /// identical shape to `>O>` with its own prefix byte (the oracle traces
+    /// it through the same path as `>O>`, differing only in the prefix it
+    /// passes).
     pub(crate) fn trace_prefix_op(&mut self, indent: usize, op: &[u8], value: &[u8]) {
         if !self.traced_mode().intermediates {
             return;
@@ -458,16 +453,14 @@ impl Interp {
         self.route_trace_line(start);
     }
 
-    /// `>=>` (`TRACE_PREFIX_ASSIGNMENT`): a variable was just written.
-    /// `tag` is unquoted (`traceAssignment`/`ExpressionVariable.cpp:299`
-    /// pass `quoteTag = false`, unlike a keyword's own tag) -- the read
-    /// site's own name for a simple variable or a bare stem, or the whole
-    /// compound's own source spelling for a compound (`run.rs`'s
-    /// `Assignment` arm is the one caller, and its own doc comment says
-    /// which for each target shape). Gated on `intermediates`: measured,
-    /// `trace r` alone shows `>>>` for an assignment's own value but never
-    /// `>=>` (this task's report, `trace_results.rex`'s own transcript).
-    /// `object` is the value written.
+    /// `>=>` (`TRACE_PREFIX_ASSIGNMENT`): a variable was just written. `tag`
+    /// is unquoted (unlike a keyword's own tag) -- the read site's own name
+    /// for a simple variable or a bare stem, or the whole compound's own
+    /// source spelling for a compound (`run.rs`'s `Assignment` arm is the one
+    /// caller, and its own doc comment says which for each target shape).
+    /// Gated on `intermediates`: measured, `trace r` alone shows `>>>` for an
+    /// assignment's own value but never `>=>` (this task's report,
+    /// `trace_results.rex`'s own transcript). `object` is the value written.
     pub(crate) fn trace_assignment(
         &mut self,
         indent: usize,
@@ -487,10 +480,9 @@ impl Interp {
 
     /// `>A>` (`TRACE_PREFIX_ARGUMENT`): one call argument's own evaluated
     /// value, untagged, emitted at the *call site* once the argument
-    /// expression has produced a value (`RexxInstruction::evaluateArguments`,
-    /// `RexxInstruction.cpp:144`-`162`, read directly: `traceArgument` right
-    /// after each `evaluate`, and `traceArgument(NULLSTRING)` -- an empty
-    /// value line, not a skipped one -- for an omitted position).
+    /// expression has produced a value (traced right after each evaluation,
+    /// and as an empty value line, not a skipped one, for an omitted
+    /// position).
     pub(crate) fn trace_argument(&mut self, indent: usize, value: &[u8]) {
         if !self.traced_mode().intermediates {
             return;
@@ -501,9 +493,8 @@ impl Interp {
     }
 
     /// `>F>` (`TRACE_PREFIX_FUNCTION`): a **function-form** call's own
-    /// returned value, tagged with the routine's name, unquoted
-    /// (`traceFunction`/`RexxActivation.hpp:347`-`348`, `quoteTag = false`,
-    /// like `>V>` and unlike `>K>`).
+    /// returned value, tagged with the routine's name, unquoted (like `>V>`
+    /// and unlike `>K>`).
     pub(crate) fn trace_function(&mut self, indent: usize, name: &[u8], value: &[u8]) {
         if !self.traced_mode().intermediates {
             return;
@@ -514,8 +505,7 @@ impl Interp {
     }
 
     /// `>M>` (`TRACE_PREFIX_MESSAGE`): a message send's own result, tagged
-    /// with the message name, **quoted** (`traceMessage`,
-    /// `RexxActivation.hpp:349`, `quoteTag = true`, unlike `>F>`).
+    /// with the message name, **quoted** (unlike `>F>`).
     pub(crate) fn trace_message(&mut self, indent: usize, name: &[u8], value: &[u8]) {
         if !self.traced_mode().intermediates {
             return;
@@ -527,11 +517,9 @@ impl Interp {
 
     /// `>R>` (`TRACE_PREFIX_ALIAS`): a `USE ARG >name` target has just been
     /// aliased onto the caller's variable. `tag` is the **caller's** own
-    /// variable name and the value is the **callee's** target name
-    /// (`UseInstruction.cpp:167`, `traceVariableAlias(reference->getName(),
-    /// useRef->getName())`, that order), so `orig = 'PP'; call sub >orig`
-    /// into `use arg >q` traces `>R>     "ORIG" => "Q"` -- names on both
-    /// sides, no value anywhere on the line.
+    /// variable name and the value is the **callee's** target name (in that
+    /// order), so `orig = 'PP'; call sub >orig` into `use arg >q` traces `>R>
+    /// "ORIG" => "Q"` -- names on both sides, no value anywhere on the line.
     pub(crate) fn trace_alias(&mut self, indent: usize, reference: &[u8], target: &[u8]) {
         if !self.traced_mode().results {
             return;
@@ -561,15 +549,13 @@ impl Interp {
     }
 
     /// `>C>` (`TRACE_PREFIX_COMPOUND`): announces which fully-resolved
-    /// compound name a read or write just used, before `>V>`/`>=>` shows
-    /// what is actually stored there -- `tag` is the compound's own
-    /// *unresolved* source spelling (`code.symbols.name(id)`, e.g. `A.I`),
-    /// `resolved` is the fully-resolved name (`A.1`) `derived_tail_name`'s
-    /// own shape builds (measured, `evaluateLocalCompoundVariable`,
-    /// `RexxActivation.cpp:4791`-`4802`: `traceCompoundName` then
-    /// `traceCompound`/`traceAssignment`, always both, whether or not the
-    /// tail actually resolves to a stored value). Gated on `intermediates`
-    /// like every other value-prefix line.
+    /// compound name a read or write just used, before `>V>`/`>=>` shows what
+    /// is actually stored there -- `tag` is the compound's own *unresolved*
+    /// source spelling (`code.symbols.name(id)`, e.g. `A.I`), `resolved` is
+    /// the fully-resolved name (`A.1`) `derived_tail_name`'s own shape builds
+    /// (measured: the compound's name line and its assignment line, always
+    /// both, whether or not the tail actually resolves to a stored value).
+    /// Gated on `intermediates` like every other value-prefix line.
     pub(crate) fn trace_compound_name(&mut self, indent: usize, tag: &[u8], resolved: &[u8]) {
         if !self.traced_mode().intermediates {
             return;
@@ -872,10 +858,9 @@ mod tests {
     }
 
     /// The `>A>`, `>F>` and `>R>` gates, which are **not** all the same one:
-    /// `>A>`/`>F>` are `intermediates` and `>R>` is `results`
-    /// (`traceArgument`/`traceFunction` against `traceVariableAlias`,
-    /// `RexxActivation.hpp:340`/`:347`/`:370`, and measured -- `trace r` on
-    /// an aliasing `USE ARG >q` shows `>R>` and nothing else).
+    /// `>A>`/`>F>` are `intermediates` and `>R>` is `results` (argument and
+    /// function lines against the alias line, and measured -- `trace r` on an
+    /// aliasing `USE ARG >q` shows `>R>` and nothing else).
     #[test]
     fn the_two_argument_prefixes_are_intermediates_and_the_alias_prefix_is_results() {
         let mut interp = Interp::new();
