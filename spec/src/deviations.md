@@ -114,7 +114,7 @@ exit code 120. ooRexx runs each activity on its own thread and completes.
 
 ## 15. Withdrawn
 
-A REPLY inside a labelled DO group is a known defect of interrexx, #101.
+A REPLY inside a labelled DO group runs as it does in ooRexx.
 
 ## 16. Blocking operations hold every activity
 

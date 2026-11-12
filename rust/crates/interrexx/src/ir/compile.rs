@@ -138,6 +138,11 @@ enum Before {
     /// ([`Op::EndWhen`]): a listed `WHEN`'s own `false_target`, or the end of
     /// the `OTHERWISE` body.
     SelectBranchEnd,
+    /// A labelled `DO` block runs out in front of this instruction, its
+    /// `END` ([`Op::EndWhen`]). It goes after the boundaries of any `IF`
+    /// ending there: they belong inside the block, and an `IF` whose
+    /// condition is false lands past them on this op.
+    BlockEnd,
 }
 
 /// What a listed `WHEN` needs from the `SELECT` that collected it, recorded
@@ -403,6 +408,15 @@ fn compile_settled(
                     && !matches!(body_node.kind, LoopKind::Simple)
                 {
                     loop_of_end[end] = Some(instruction_index(index)?);
+                }
+                // A labelled block's `END` closes the frame the driver opened
+                // over its body.
+                if let Some(end) = body_node.end
+                    && end < len
+                    && matches!(body_node.kind, LoopKind::Simple)
+                    && body_node.label.is_some()
+                {
+                    before[end].push(Before::BlockEnd);
                 }
                 // Past the `END`, so nothing between here and there can reuse a
                 // register the running loop still reads. A loop whose `END` is
@@ -1848,6 +1862,7 @@ fn emit_before(
     before.sort_by_key(|entry| match entry {
         Before::SelectBranchEnd => 0,
         Before::ThenEnd { .. } | Before::EnterOtherwise(_) => 1,
+        Before::BlockEnd => 2,
     });
     debug_assert!(
         before.iter().rev().skip(1).all(|entry| !matches!(
@@ -1886,7 +1901,7 @@ fn emit_before(
                 }
                 landing[*owner] = Some(if closes { start } else { op_index(ops)? });
             }
-            Before::SelectBranchEnd => ops.push(Op::EndWhen),
+            Before::SelectBranchEnd | Before::BlockEnd => ops.push(Op::EndWhen),
             Before::EnterOtherwise(select) => {
                 landing[*select] = Some(op_index(ops)?);
                 ops.push(Op::EnterOtherwise {

@@ -226,6 +226,20 @@ pub(crate) enum FrameKind {
     /// order this stack is in -- so the loop a frame belongs to is that stack's
     /// top when the frame is the innermost one, and no index is needed.
     Loop,
+    /// A labelled `DO` block, which only a `LEAVE` naming its label or one
+    /// passing through leaves other than by running off its `END`.
+    Block(BlockFrame),
+}
+
+/// What an open labelled block needs to answer an escaping `Flow`.
+pub(crate) struct BlockFrame {
+    /// The `DO` instruction, which `pop_search_frame` resets a forwarded
+    /// `LEAVE`'s indent to.
+    index: usize,
+    label: Option<SymbolId>,
+    /// The instruction after the block's `END`, where a `LEAVE` naming the
+    /// label resumes.
+    resume: usize,
 }
 
 impl Frame {
@@ -236,6 +250,26 @@ impl Frame {
             end: frame.end,
             kind: FrameKind::Select(frame),
         }
+    }
+
+    /// The frame over the labelled block at `index` whose `END` is
+    /// `end_index`, which the op in front of that `END` closes.
+    fn block(
+        chunk: &Chunk,
+        index: usize,
+        end_index: usize,
+        label: Option<SymbolId>,
+    ) -> Result<Self, Failure> {
+        Ok(Frame {
+            op_end: op_at(chunk, end_index)?,
+            start: index + 1,
+            end: end_index,
+            kind: FrameKind::Block(BlockFrame {
+                index,
+                label,
+                resume: end_index + 1,
+            }),
+        })
     }
 
     fn loop_pass(body_start: usize, end_index: usize) -> Self {
@@ -1614,6 +1648,16 @@ macro_rules! region_ops {
                             break $cold Ok(RegionEnd::Flowed(flow));
                         }
                         Ok(crate::run::FlatStart::Block) => break $region $end,
+                        Ok(crate::run::FlatStart::LabelledBlock) => {
+                            let end_index = body.end.expect(
+                                "an unclosed DO is error 14.1, so a body that parsed has this set",
+                            );
+                            match Frame::block($chunk, $index, end_index, body.label) {
+                                Ok(frame) => $self.activity.frames.push(frame),
+                                Err(failure) => break $cold Err(failure),
+                            }
+                            break $region $end;
+                        }
                         Ok(crate::run::FlatStart::Fallback(values)) => values,
                         Err(failure) => break $cold Err(failure),
                     };
@@ -2794,8 +2838,14 @@ impl Interp {
         let Some(frame) = self.activity.frames.pop_if(|frame| pc >= frame.op_end) else {
             return Ok(BranchEnd::None);
         };
-        let FrameKind::Select(frame) = frame.kind else {
-            return Err(Loud::op_not_driven("a loop frame ran off its own end").into());
+        let frame = match frame.kind {
+            FrameKind::Select(frame) => frame,
+            // Running off the block's end leaves it: its `END` is the next
+            // clause.
+            FrameKind::Block(_) => return Ok(BranchEnd::None),
+            FrameKind::Loop => {
+                return Err(Loud::op_not_driven("a loop frame ran off its own end").into());
+            }
         };
         let flow = self.leave_branch(code, &frame, Flow::Next)?;
         Ok(
@@ -3822,15 +3872,22 @@ impl Interp {
                     // the op that closes it, which is a `SELECT` running on into what
                     // follows it and is silent in any program whose branches happen to
                     // agree.
+                    //
+                    // **A labelled block's frame is overdue from the boundaries of the
+                    // `IF`s that end in front of its `END`** too: they run inside the
+                    // block, ahead of the `Op::EndWhen` that closes it.
                     #[cfg(debug_assertions)]
                     if !matches!(stream.get(pc as usize), Some(Op::EndWhen)) {
                         debug_assert!(
                             !(self.activity.frames.len() > base
-                                && self
-                                    .activity
-                                    .frames
-                                    .last()
-                                    .is_some_and(|frame| pc >= frame.op_end)),
+                                && self.activity.frames.last().is_some_and(|frame| {
+                                    pc >= frame.op_end
+                                        && !(matches!(frame.kind, FrameKind::Block(_))
+                                            && matches!(
+                                                stream.get(pc as usize),
+                                                Some(Op::EndBranch)
+                                            ))
+                                })),
                             "the innermost SELECT frame ended before op {pc}, which is not its own EndWhen"
                         );
                     }
@@ -4105,6 +4162,14 @@ impl Interp {
                     {
                         FrameKind::Select(frame) => {
                             flow = self.leave_branch(code, &frame, other)?;
+                        }
+                        FrameKind::Block(frame) => {
+                            let resume = SelectResume {
+                                done: frame.resume,
+                                left: frame.resume,
+                            };
+                            flow =
+                                self.leave_select(code, frame.index, frame.label, resume, other)?;
                         }
                         // A `LEAVE`/`ITERATE` that reached this
                         // loop, decided by the same `do_body_outcome` the

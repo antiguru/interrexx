@@ -107,7 +107,7 @@ fn a_pinned_wait_completes_under_each_pinning_frame() {
     let mut wrong = Vec::new();
     for (kind, program) in [
         ("Interpret", "interpret 'say .m~result'\n"),
-        ("NestedLoop", "do label l\n  say .m~result\nend\n"),
+        ("LabelledBlock", "do label l\n  say .m~result\nend\n"),
         (
             "LoopHeader",
             "do i = 1 to 2 while f()\nend\nsay i\nexit\nf: return .m~result = 3\n",
