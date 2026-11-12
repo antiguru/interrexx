@@ -489,6 +489,13 @@ fn build_daemon(daemon: &Path) -> Result<(), String> {
     ))
 }
 
+/// Output as the spec compares it: the line numbers and the number of levels
+/// of the class library are unspecified (`r[cond.information.library]`), so
+/// a traceback line that shows them is compared without them.
+fn library_lines_normalised(bytes: &[u8]) -> String {
+    String::from_utf8_lossy(&support::normalize_library_lines(bytes)).into_owned()
+}
+
 /// Runs one example in process with an empty standard input, bounded as the
 /// corpus runs are. `None` when stdout is exactly the output block (its lines,
 /// each followed by one `\n`) and the exit code is `rc`. An example marked
@@ -517,8 +524,9 @@ fn run_example(
             String::from_utf8_lossy(&outcome.stderr)
         ));
     }
-    let actual = String::from_utf8_lossy(&outcome.stdout);
-    let matches = actual == example.output && outcome.exit_code == example.rc;
+    let actual = library_lines_normalised(&outcome.stdout);
+    let expected = library_lines_normalised(example.output.as_bytes());
+    let matches = actual == expected && outcome.exit_code == example.rc;
     if let Some(issue) = example.defect {
         return matches.then(|| {
             format!(
@@ -534,7 +542,7 @@ fn run_example(
         "example under `{}` disagrees with its output block",
         example.rule
     );
-    if actual != example.output {
+    if actual != expected {
         message.push_str(&format!(
             "\n  expected output: {:?}\n  actual output:   {:?}",
             example.output, actual
@@ -1035,7 +1043,9 @@ fn oracle_disagreements(spec_root: &Path, oracle: &Oracle) -> Vec<Problem> {
             let message = match outcome.termination {
                 Termination::Exited(code) => {
                     let mut message = String::new();
-                    if outcome.stdout != example.output.as_bytes() {
+                    if library_lines_normalised(&outcome.stdout)
+                        != library_lines_normalised(example.output.as_bytes())
+                    {
                         message.push_str(&format!(
                             "\n  expected output: {:?}\n  oracle output:   {:?}",
                             example.output,

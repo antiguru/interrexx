@@ -84,6 +84,8 @@ const PREFIX_LENGTH: usize = 3;
 /// "a traced value can itself contain a raw newline" paragraph this
 /// continuation tracking exists for.
 pub fn normalize_stderr(bytes: &[u8]) -> Vec<u8> {
+    let bytes = normalize_library_lines(bytes);
+    let bytes = bytes.as_slice();
     let had_trailing_newline = bytes.last() == Some(&b'\n');
     let mut lines: Vec<&[u8]> = bytes.split(|&b| b == b'\n').collect();
     if had_trailing_newline {
@@ -120,6 +122,101 @@ pub fn normalize_stderr(bytes: &[u8]) -> Vec<u8> {
     if had_trailing_newline {
         out.push(b'\n');
     }
+    out
+}
+
+/// What replaces the number of a library level's traceback line: the field's
+/// six columns, the number right-aligned. `r[cond.information.library]` leaves
+/// the number, and how many such levels there are, unspecified.
+const LIBRARY_LINE_FIELD: &[u8] = b"     N";
+
+/// The tail of a traceback line for a method of the class library.
+const LIBRARY_FRAME_TAIL: &[u8] = b" in package \"REXX\" (no source available).";
+
+/// The tail of an error report's first line when the error was raised in the
+/// class library, up to the number.
+const LIBRARY_REPORT_MARK: &[u8] = b" running REXX line ";
+
+/// `r[cond.information.library]` as a comparison: a line number in the class
+/// library, and the number of library levels, are not observable. Every
+/// traceback line of a library method (`<n> *-* Method ... in package "REXX"
+/// (no source available).`) has its number replaced by a placeholder of the
+/// same width, a run of adjacent such lines is kept as its last line (the
+/// level nearest the code that sent the message), and the report's
+/// `running REXX line <n>` is `running REXX line N`. The lineless
+/// `running REXX` form, a user line, a different method name, scope or
+/// package, and every other byte are unchanged.
+pub fn normalize_library_lines(bytes: &[u8]) -> Vec<u8> {
+    let had_trailing_newline = bytes.last() == Some(&b'\n');
+    let mut lines: Vec<&[u8]> = bytes.split(|&b| b == b'\n').collect();
+    if had_trailing_newline {
+        lines.pop();
+    }
+    let mut out: Vec<Vec<u8>> = Vec::with_capacity(lines.len());
+    let mut previous_was_library_frame = false;
+    for line in lines {
+        if let Some(frame) = library_frame(line) {
+            if previous_was_library_frame {
+                out.pop();
+            }
+            out.push(frame);
+            previous_was_library_frame = true;
+        } else {
+            out.push(library_report(line));
+            previous_was_library_frame = false;
+        }
+    }
+    let mut joined = out.join(&b'\n');
+    if had_trailing_newline {
+        joined.push(b'\n');
+    }
+    joined
+}
+
+/// `line` with its number replaced, when it is a traceback line of a library
+/// method: blanks, digits, ` *-* `, text and [`LIBRARY_FRAME_TAIL`].
+fn library_frame(line: &[u8]) -> Option<Vec<u8>> {
+    if !line.ends_with(LIBRARY_FRAME_TAIL) {
+        return None;
+    }
+    let blanks = line.iter().take_while(|&&b| b == b' ').count();
+    let digits = line[blanks..]
+        .iter()
+        .take_while(|b| b.is_ascii_digit())
+        .count();
+    let rest = &line[blanks + digits..];
+    if digits == 0 || !rest.starts_with(b" *-* ") {
+        return None;
+    }
+    let mut out = Vec::with_capacity(line.len());
+    out.extend_from_slice(LIBRARY_LINE_FIELD);
+    out.extend_from_slice(rest);
+    Some(out)
+}
+
+/// `line` with the number of `Error n running REXX line <n>:` replaced, when
+/// it is that line.
+fn library_report(line: &[u8]) -> Vec<u8> {
+    let Some(at) = line
+        .windows(LIBRARY_REPORT_MARK.len())
+        .position(|w| w == LIBRARY_REPORT_MARK)
+    else {
+        return line.to_vec();
+    };
+    if !line.starts_with(b"Error ") {
+        return line.to_vec();
+    }
+    let number_at = at + LIBRARY_REPORT_MARK.len();
+    let digits = line[number_at..]
+        .iter()
+        .take_while(|b| b.is_ascii_digit())
+        .count();
+    if digits == 0 || line.get(number_at + digits) != Some(&b':') {
+        return line.to_vec();
+    }
+    let mut out = line[..number_at].to_vec();
+    out.push(b'N');
+    out.extend_from_slice(&line[number_at + digits..]);
     out
 }
 
@@ -305,5 +402,108 @@ mod tests {
             "a content change inside a value's own embedded-newline \
              continuation must not normalise away"
         );
+    }
+
+    use super::normalize_library_lines;
+
+    const FRAME_1459: &[u8] = b"  1459 *-* Method UNKNOWN with scope \"Monitor\" in package \"REXX\" (no source available).\n";
+    const FRAME_88: &[u8] = b"    88 *-* Method UNKNOWN with scope \"Monitor\" in package \"REXX\" (no source available).\n";
+
+    fn transcript(frame: &[u8], report_line: &str) -> Vec<u8> {
+        let mut out = Vec::new();
+        out.extend_from_slice(frame);
+        out.extend_from_slice(b"     2 *-* x = .Validate~number('N', 'x')\n");
+        out.extend_from_slice(
+            format!("Error 88 running REXX line {report_line}:  Invalid argument.\n").as_bytes(),
+        );
+        out
+    }
+
+    /// The same library frame at another line, and the report naming it,
+    /// compare equal: the number is unspecified.
+    #[test]
+    fn a_different_library_line_normalises_equal() {
+        let one = transcript(FRAME_1459, "1459");
+        let other = transcript(FRAME_88, "88");
+        assert_ne!(one, other, "sanity: byte-exact still differs");
+        assert_eq!(normalize_stderr(&one), normalize_stderr(&other));
+        assert_eq!(
+            normalize_library_lines(&one),
+            normalize_library_lines(&other)
+        );
+    }
+
+    /// An extra library level, with a method of another name, between the
+    /// sender and the raiser compares equal: the number of levels is
+    /// unspecified.
+    #[test]
+    fn an_extra_library_frame_normalises_equal() {
+        let one = transcript(FRAME_1459, "1459");
+        let mut two = Vec::new();
+        two.extend_from_slice(
+            b"    12 *-* Method HELPER with scope \"Validate\" in package \"REXX\" (no source available).\n",
+        );
+        two.extend_from_slice(&transcript(FRAME_88, "12"));
+        assert_ne!(one, two, "sanity: byte-exact still differs");
+        assert_eq!(normalize_stderr(&one), normalize_stderr(&two));
+    }
+
+    /// A user line that differs only in its number is still a difference.
+    #[test]
+    fn a_different_user_line_still_differs() {
+        let one = transcript(FRAME_1459, "1459");
+        let mut other = one.clone();
+        let at = other.windows(7).position(|w| w == b"     2 ").unwrap();
+        other[at + 5] = b'3';
+        assert_ne!(normalize_stderr(&one), normalize_stderr(&other));
+    }
+
+    /// A different method name, a different scope and a package other than
+    /// `REXX` are each still a difference.
+    #[test]
+    fn a_different_method_scope_or_package_still_differs() {
+        let one = transcript(FRAME_1459, "1459");
+        for (from, to) in [
+            (&b"UNKNOWN"[..], &b"OTHER"[..]),
+            (b"\"Monitor\"", b"\"Monitor2\""),
+            (b"package \"REXX\"", b"package \"Rexx\""),
+        ] {
+            let text = String::from_utf8(one.clone()).unwrap();
+            let changed = text.replacen(
+                std::str::from_utf8(from).unwrap(),
+                std::str::from_utf8(to).unwrap(),
+                1,
+            );
+            assert_ne!(
+                normalize_stderr(&one),
+                normalize_stderr(changed.as_bytes()),
+                "{changed}"
+            );
+        }
+        let user_package = b"    12 *-* Method UNKNOWN with scope \"Monitor\" in package \"/tmp/x.rex\" (no source available).\n";
+        let other_package = b"    13 *-* Method UNKNOWN with scope \"Monitor\" in package \"/tmp/x.rex\" (no source available).\n";
+        assert_ne!(
+            normalize_stderr(user_package),
+            normalize_stderr(other_package)
+        );
+    }
+
+    /// The report of an error in a program, and the lineless library report,
+    /// are not touched.
+    #[test]
+    fn a_program_report_and_the_lineless_report_are_untouched() {
+        let program = b"Error 42 running /tmp/x.rex line 8:  Arithmetic overflow\n";
+        assert_eq!(normalize_library_lines(program), program.to_vec());
+        let lineless = b"Error 98 running REXX:  Something\n";
+        assert_eq!(normalize_library_lines(lineless), lineless.to_vec());
+    }
+
+    /// Output that is no traceback at all, trailing newline or none, is
+    /// returned as it was.
+    #[test]
+    fn other_bytes_are_untouched() {
+        for text in [&b"a  b\n"[..], b"a  b", b"", b"\n\n"] {
+            assert_eq!(normalize_library_lines(text), text.to_vec());
+        }
     }
 }

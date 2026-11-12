@@ -350,7 +350,8 @@ pub enum StderrComparison {
     /// DEVIATION 0: both sides' `stderr` run through [`super::normalize_stderr`]
     /// first. The default.
     Normalized,
-    /// Byte-for-byte, no normalisation at all.
+    /// Byte-for-byte, except that library line numbers and levels are
+    /// normalised, as `r[cond.information.library]` leaves them unspecified.
     Raw,
     /// Byte-for-byte after sorting each side's lines: DEVIATION 7's licence,
     /// for a program whose trace lines are written by two threads whose
@@ -378,7 +379,7 @@ pub fn stdout_multiset(bytes: &[u8]) -> String {
 /// One side's `stderr` in the form [`StderrComparison::Multiset`] compares,
 /// exposed so the licence has one implementation and one control.
 pub fn stderr_multiset(bytes: &[u8]) -> String {
-    let text = String::from_utf8_lossy(bytes).into_owned();
+    let text = String::from_utf8_lossy(&super::normalize_library_lines(bytes)).into_owned();
     let mut lines: Vec<&str> = text.split('\n').collect();
     lines.sort_unstable();
     lines.join("\n")
@@ -449,7 +450,10 @@ pub fn descriptor_diff_modes(
             StderrComparison::Normalized => {
                 super::normalize_stderr(&rust.stderr) != super::normalize_stderr(&cpp.stderr)
             }
-            StderrComparison::Raw => rust.stderr != cpp.stderr,
+            StderrComparison::Raw => {
+                super::normalize_library_lines(&rust.stderr)
+                    != super::normalize_library_lines(&cpp.stderr)
+            }
             StderrComparison::Multiset => {
                 stderr_multiset(&rust.stderr) != stderr_multiset(&cpp.stderr)
             }
@@ -539,6 +543,32 @@ mod tests {
             stderr: stderr.to_vec(),
             termination: Termination::Exited(0),
         }
+    }
+
+    /// The raw mode still normalises what `r[cond.information.library]` leaves
+    /// unspecified, and nothing else: a library line number is no difference,
+    /// a user line number is.
+    #[test]
+    fn raw_ignores_a_library_line_number_and_not_a_user_line_number() {
+        let frame = |n: &str| {
+            format!(
+                "{n:>6} *-* Method UNKNOWN with scope \"Monitor\" in package \"REXX\" \
+                 (no source available).\n     2 *-* x = 1\nError 4 running REXX line {n}:  Halt\n"
+            )
+        };
+        let same = descriptor_diffs_with(
+            &outcome(frame("1459").as_bytes()),
+            &cpp_outcome(frame("88").as_bytes()),
+            StderrComparison::Raw,
+        );
+        assert!(same.is_empty(), "{same:?}");
+        let user = frame("1459").replace("     2 *-*", "     3 *-*");
+        let differs = descriptor_diffs_with(
+            &outcome(frame("1459").as_bytes()),
+            &cpp_outcome(user.as_bytes()),
+            StderrComparison::Raw,
+        );
+        assert_eq!(differs, vec!["stderr"]);
     }
 
     /// Both directions of [`StderrComparison`], on a transcript pair whose

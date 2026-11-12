@@ -18,6 +18,8 @@
     reason = "this harness times or bounds real runs"
 )]
 
+mod support;
+
 use std::io::Read;
 use std::os::unix::process::CommandExt;
 use std::path::PathBuf;
@@ -186,7 +188,14 @@ fn run_steps(
     let ended = Ended {
         code: status.and_then(|status| status.code()),
         stdout: String::from_utf8_lossy(&seen).into_owned(),
-        stderr: String::from_utf8_lossy(&stderr).replace(&path, "PROGRAM"),
+        // A line number in the class library is unspecified
+        // (`r[cond.information.library]`), so it is compared as a placeholder.
+        stderr: String::from_utf8_lossy(&support::normalize_library_lines(
+            String::from_utf8_lossy(&stderr)
+                .replace(&path, "PROGRAM")
+                .as_bytes(),
+        ))
+        .into_owned(),
     };
     (ended, took)
 }
@@ -646,10 +655,10 @@ fn monitor_halted(clause: &str) -> Ended {
         code: Some(252),
         stdout: "ready\n".to_string(),
         stderr: format!(
-            "  1459 *-* Method UNKNOWN with scope \"Monitor\" in package \"REXX\" \
+            "     N *-* Method UNKNOWN with scope \"Monitor\" in package \"REXX\" \
              (no source available).\n\
              \x20    2 *-* {clause}\n\
-             Error 4 running REXX line 1459:  Program interrupted.\n\
+             Error 4 running REXX line N:  Program interrupted.\n\
              Error 4.1:  Program interrupted with HALT condition.\n"
         ),
     }

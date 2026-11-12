@@ -256,6 +256,32 @@ h: say arg(1)~hasindex('ADDITIONAL')
 0
 ```
 
+r[cond.information.library]
+A level that runs a method of the class library, the code of package `REXX`,
+has a line number that is not specified. That holds for `POSITION` of a
+condition that was raised there, for the `line` of its
+[StackFrame](r:class.stackframe.line), for the number in its
+[traceback line](r:class.stackframe.traceline) and for the line that the
+[report of an error](r:cond.index.syntax) names. The number of such levels
+between the level that sent the message and the level that raised the
+condition is not specified either, so the number of items of `STACKFRAMES` and
+`TRACEBACK` is not specified where library levels are among them. The code
+and subcode of an error that a library method raises are specified, as the
+page of the class says; its text is not, as [the object
+rule](r:cond.information.object) says for every message.
+
+```rexx
+signal on syntax name h
+x = .Validate~number('N', 'x')
+say 'not reached'
+exit
+h: say condition('o')~code
+```
+
+```output
+88.902
+```
+
 r[cond.information.object.values]
 For a SYNTAX condition, `CODE` is the string `m.n` of the error number and
 subcode, `RC` is `m`, `ERRORTEXT` equals what the `ERRORTEXT` builtin answers

@@ -1,0 +1,42 @@
+# Validate: the errors of `number`, as the page lists them. Each answer is the
+# code with its subcode.
+
+error
+.Validate~number('N', 'x')
+----
+88.902
+
+error
+.Validate~number('my arg', 'x')
+----
+88.902
+
+error
+.Validate~number('N', '')
+----
+88.902
+
+error
+.Validate~number('N', .object~new)
+----
+88.902
+
+error
+.Validate~number('N')
+----
+93.901
+
+error
+.Validate~number('N', 5, 6)
+----
+93.902
+
+error
+.Validate~number(, 5)
+----
+93.903
+
+error
+.Validate~number('N', 5)
+----
+91.999
