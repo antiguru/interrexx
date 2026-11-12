@@ -55,6 +55,10 @@ pub(crate) struct GuardTable {
     /// Each watched variable's watchers, by owning object, in the order they
     /// began watching. An entry stays once made.
     watches: FxHashMap<ObjRef, Vec<Watch>>,
+    /// How many (watcher, stem variable) pairs are watched now: a write to a
+    /// tail of a stem looks for a watcher of the stem only when this is not
+    /// zero (r[conc.locks.deviation.160]).
+    stem_watching: u32,
 }
 
 /// One variable a `GUARD WHEN` has watched, in one scope's pool.
@@ -284,6 +288,9 @@ impl GuardTable {
         let watchers = &mut watches[at].watchers;
         if !watchers.contains(&watcher) {
             watchers.push(watcher);
+            if name.ends_with(b".") {
+                self.stem_watching += 1;
+            }
         }
     }
 
@@ -299,8 +306,37 @@ impl GuardTable {
         if let Some(watch) = (self.watches.get_mut(&owner).into_iter().flatten())
             .find(|watch| watch.scope == scope && *watch.name == *name)
         {
+            let before = watch.watchers.len();
             watch.watchers.retain(|seen| *seen != watcher);
+            if name.ends_with(b".") && watch.watchers.len() < before {
+                self.stem_watching -= 1;
+            }
         }
+    }
+
+    /// Whether any activity watches a stem variable.
+    #[inline]
+    pub(crate) fn watches_a_stem(&self) -> bool {
+        self.stem_watching != 0
+    }
+
+    /// The watchers of each stem variable (a name that ends in a period) that
+    /// has some, with the object, the scope and the name it is bound under.
+    pub(crate) fn stem_watches(&self) -> Vec<(ObjRef, ObjRef, Box<[u8]>, Vec<ActivityId>)> {
+        let mut found = Vec::new();
+        for (owner, watches) in &self.watches {
+            for watch in watches {
+                if watch.name.ends_with(b".") && !watch.watchers.is_empty() {
+                    found.push((
+                        *owner,
+                        watch.scope,
+                        watch.name.clone(),
+                        watch.watchers.clone(),
+                    ));
+                }
+            }
+        }
+        found
     }
 
     /// The watchers of `name` in `scope`'s pool on `owner`.
