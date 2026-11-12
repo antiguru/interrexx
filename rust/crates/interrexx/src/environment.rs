@@ -434,9 +434,8 @@ impl Interp {
         // directory, and this crate runs one activity.
         hash::directory_put_method_value(self, environment, b"LOCAL", local)
             .expect("a string-keyed store accepts a string index");
-        // `LocalServer~initInstance` builds these before any program runs;
-        // `Interp::mint_local_directory` does the same once the classes it
-        // needs exist.
+        // `Interp::mint_local_directory` builds these before any program runs,
+        // once the classes it needs exist.
         for name in ORACLE_LOCAL {
             self.put_interpreter_entry(local, name.as_bytes(), owed[0]);
         }
@@ -852,21 +851,21 @@ impl Interp {
         directory
     }
 
-    /// The `.local` entries `LocalServer~initInstance` builds before any
-    /// program runs: the command-line words, then the streams and monitors, and
-    /// the session queue, each stored as it is built.
+    /// The `.local` entries built before any program runs: the command-line
+    /// words, then the streams and monitors, and the session queue, each
+    /// stored as it is built. A new instance of the library's `LocalServer`
+    /// builds the same streams, monitors and queue.
     ///
-    /// **Here rather than when the directory is built**, because the embedded
-    /// bootstrap evaluates `.environment` while it installs, before the stream
-    /// classes' bootstrap file has declared `Stream`. Each write replaces an
-    /// owed entry in place, so the order is fixed whatever order these are
-    /// built in.
+    /// **Here rather than when the directory is built**, because the library
+    /// program evaluates `.environment` while it installs, before it has
+    /// declared `Stream`. Each write replaces an owed entry in place, so the
+    /// order is fixed whatever order these are built in.
     ///
     /// **Through the package publics, not the class registry.** A `::CLASS`
     /// directive calls `define_unregistered_class`, which by its own contract
     /// records the class "without registering the name", so
-    /// `classes().lookup("Stream")` never finds one the embedded stream
-    /// classes' bootstrap file declared.
+    /// `classes().lookup("Stream")` never finds the one the library program
+    /// declared.
     ///
     /// **No panic on a miss, at any step.** A step that cannot build its
     /// entry leaves that entry and every later one owed.

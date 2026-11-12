@@ -994,8 +994,8 @@ impl Interp {
         reading: bool,
     ) -> Result<ObjRef, Failure> {
         let Some(class) = self.rexx_package_class(b"STREAM") else {
-            // Only before the stream classes' bootstrap file has installed, which is the
-            // library bootstrap's own step.
+            // Only before the library program has installed `Stream`, which is
+            // the library bootstrap's own step.
             return Err(Loud::environment_symbol(b".STREAM").into());
         };
         let argument = self.text(qualified);

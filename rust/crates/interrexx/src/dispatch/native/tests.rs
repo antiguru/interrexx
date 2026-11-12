@@ -5,26 +5,21 @@ use interrexx_parse::DirectiveKind;
 
 use super::*;
 
-/// Each embedded bootstrap program's directives, parsed by this crate's own
-/// parser rather than scanned, from the bytes the interpreter installs (with
-/// any replacement already in place). The path names the program.
+/// The library program's directives, parsed by this crate's own parser
+/// rather than scanned, from the bytes the interpreter installs. The path
+/// names the program.
 fn bootstrap_directives() -> Vec<(PathBuf, interrexx_parse::Program)> {
-    interrexx_lib::PROGRAMS
-        .iter()
-        .map(|program| {
-            let parsed =
-                interrexx_parse::parse_program(program.source.to_vec()).unwrap_or_else(|e| {
-                    panic!(
-                        "{}",
-                        interrexx_lib::describe_parse_error(program, e.byte, e.code(), e.sub())
-                    )
-                });
-            (PathBuf::from(program.name), parsed)
-        })
-        .collect()
+    let program = &interrexx_lib::LIBRARY;
+    let parsed = interrexx_parse::parse_program(program.source.to_vec()).unwrap_or_else(|e| {
+        panic!(
+            "{}",
+            interrexx_lib::describe_parse_error(e.byte, e.code(), e.sub())
+        )
+    });
+    vec![(PathBuf::from(program.name), parsed)]
 }
 
-/// Every `EXTERNAL` the bootstrap files declare is the form this crate
+/// Every `EXTERNAL` the library program declares is the form this crate
 /// binds, and every one of them resolves.
 #[test]
 fn every_bootstrap_external_binds_to_an_entry_point_this_registry_holds() {
@@ -47,7 +42,7 @@ fn every_bootstrap_external_binds_to_an_entry_point_this_registry_holds() {
                     check_binds(&path, "::ATTRIBUTE", &external);
                 }
                 // `::ROUTINE` carries an `EXTERNAL` too and this crate
-                // refuses every spelling of it, so a bootstrap file
+                // refuses every spelling of it, so the library program
                 // declaring one would be refused at install whatever this
                 // registry holds. Asserted rather than written down,
                 // because "the bootstrap declares no `::ROUTINE
@@ -63,7 +58,7 @@ fn every_bootstrap_external_binds_to_an_entry_point_this_registry_holds() {
     }
     assert!(
         reached > 0,
-        "no bootstrap file declared a single ::METHOD EXTERNAL, so this test \
+        "the library program declared not a single ::METHOD EXTERNAL, so this test \
          compared nothing"
     );
 }
@@ -77,7 +72,7 @@ fn check_binds(path: &Path, keyword: &str, external: &MethodExternal) {
         MethodExternal::Attribute(binds) => binds.iter().find_map(|bind| bind.entry.as_ref().err()),
         MethodExternal::OtherLibrary { library, .. } => panic!(
             "{} declares a {keyword} whose EXTERNAL names the library {:?}, which \
-             is not the REXX package the bootstrap files are meant to bind against",
+             is not the REXX package the library program is meant to bind against",
             path.display(),
             String::from_utf8_lossy(library)
         ),
@@ -92,9 +87,9 @@ fn check_binds(path: &Path, keyword: &str, external: &MethodExternal) {
     }
 }
 
-/// The registry and the bootstrap files name the same entry points.
+/// The registry and the library program name the same entry points.
 #[test]
-fn the_bootstrap_files_and_the_registry_name_the_same_entry_points() {
+fn the_library_program_and_the_registry_name_the_same_entry_points() {
     let mut declared: BTreeSet<String> = BTreeSet::new();
     for (_, program) in bootstrap_directives() {
         for directive in &program.directives {
@@ -111,7 +106,7 @@ fn the_bootstrap_files_and_the_registry_name_the_same_entry_points() {
         .collect();
     assert_eq!(
         declared, held,
-        "the entry points the bootstrap files declare and the entry points \
+        "the entry points the library program declares and the entry points \
          this registry holds are not the same set, compared caselessly"
     );
 }

@@ -1337,14 +1337,12 @@ fn bytes_a_body_stops_holding_leave_the_live_figure() {
 /// The library parses without the declaration checks because it is known to
 /// translate; this is what knows it.
 #[test]
-fn every_library_program_passes_the_declaration_checks() {
-    for program in interrexx_lib::PROGRAMS {
-        if let Err(error) = parse_program(program.source.to_vec()) {
-            panic!(
-                "{}",
-                interrexx_lib::describe_parse_error(program, error.byte, error.code(), error.sub())
-            );
-        }
+fn the_library_program_passes_the_declaration_checks() {
+    if let Err(error) = parse_program(interrexx_lib::LIBRARY.source.to_vec()) {
+        panic!(
+            "{}",
+            interrexx_lib::describe_parse_error(error.byte, error.code(), error.sub())
+        );
     }
 }
 

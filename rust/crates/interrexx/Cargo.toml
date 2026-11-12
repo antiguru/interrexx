@@ -43,10 +43,9 @@ interrexx-api.workspace = true
 # The API service's client and vocabulary: external queues, registrations and the macrospace.
 interrexx-rxapi.workspace = true
 
-# The interpreter's own `.orx` library sources, embedded with a sha256 pin.
-# `Interp::bootstrap_library` runs them at interpreter start;
-# `tests/bootstrap_install_oracle.rs` reads the same bytes to compose its own
-# differential.
+# The interpreter's own Rexx-written library, one program built from
+# `interrexx-lib/rexx/`. `Interp::bootstrap_library` runs it at interpreter
+# start.
 interrexx-lib.workspace = true
 
 # The host's local time-zone offset, which `DATE`/`TIME`'s no-argument

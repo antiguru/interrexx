@@ -288,16 +288,6 @@ impl Interp {
     pub(crate) fn resolve_routine_call(&mut self, name: &[u8]) -> Result<Resolved, Failure> {
         let resolved = match self.package_routine_lookup(name)? {
             Some(resolved) => resolved,
-            // **Ahead of the external file search and behind everything above
-            // it.** The core class library's two `CALL`s resolve against the
-            // interpreter's own directory, which is neither a label, a builtin
-            // nor a `::ROUTINE`; this crate embeds those files instead. Gated
-            // on the bootstrap running, so the names mean nothing to a program.
-            None if self.library_bootstrap
-                && let Some(program) = interrexx_lib::lookup(&String::from_utf8_lossy(name)) =>
-            {
-                Resolved::Library(program)
-            }
             // A macro searched before the routines below.
             None if crate::builtin::rexxutil::macros::macro_position(name)
                 == Some(crate::builtin::rexxutil::macros::BEFORE) =>
@@ -1053,22 +1043,12 @@ impl Interp {
         // rooted by the loop above, so the allocation a builtin's result costs
         // happens with the inputs reachable, and the value handed back is
         // rooted by whichever caller receives it exactly as a callee's `RETURN`
-        // value already is. **The library outcome ends here too**, and for a
-        // reason unlike the builtin's: an embedded `.orx` source is a whole
-        // program, with its own directives to install and its own `ProgramId`,
-        // so it is entered the way the command line's program is rather than
-        // the way a routine is. `Entered` has no arm for it because none of the
-        // decisions that enum exists to carry -- `SIGL`, the callee's pool, the
-        // indent, the calling convention's receiver -- is a question about it.
-        // **Every arm below the running package's own `::ROUTINE`s passes the
-        // manager first**, an unresolvable name included.
+        // value already is. **Every arm below the running package's own
+        // `::ROUTINE`s passes the manager first**, an unresolvable name
+        // included.
         if matches!(
             resolved,
-            Resolved::Library(_)
-                | Resolved::External
-                | Resolved::Macro
-                | Resolved::Registered
-                | Resolved::Unresolved
+            Resolved::External | Resolved::Macro | Resolved::Registered | Resolved::Unresolved
         ) {
             if let Some(handled) = self.call_checkpoint(name, &arguments[from..])? {
                 return Ok(Begun::Done(Ended::Returned(handled)));
@@ -1088,11 +1068,6 @@ impl Interp {
                 return Ok(Begun::Done(Ended::Returned(handled)));
             }
             return Err(Raised::routine_not_found(name).into());
-        }
-        if let Resolved::Library(program) = resolved {
-            return self
-                .enter_library_program(program, Some(arguments[from..].to_vec()))
-                .map(|value| Begun::Done(Ended::Returned(value)));
         }
         // **And the external file ends here for the same reason**, which is
         // the whole of why it is not an `Entered`: a file the search found is
@@ -1156,7 +1131,6 @@ impl Interp {
             }
             Resolved::Label(target) => Entered::Label(target),
             Resolved::Routine(installed) => Entered::Routine(installed),
-            Resolved::Library(_) => unreachable!("the library path returns just above"),
             Resolved::External => unreachable!("the external path returns just above"),
             Resolved::Macro => unreachable!("the macro path returns just above"),
             Resolved::Registered => unreachable!("the registered path returns just above"),

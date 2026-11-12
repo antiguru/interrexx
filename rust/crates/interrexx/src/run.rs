@@ -178,9 +178,6 @@ pub(crate) enum Resolved {
     /// A `::ROUTINE` this program installed. `InstalledRoutine::directive` is
     /// the same integer `Activation::body` and `BodyKey::directive` carry.
     Routine(InstalledRoutine),
-    /// One of the interpreter's own embedded `.orx` sources, named by a
-    /// `CALL` inside the library bootstrap.
-    Library(&'static interrexx_lib::Program),
     /// A routine of the `REXX` or `REXXUTIL` package that this crate has a
     /// body for. Like a builtin it runs no activation; unlike one it is not in
     /// the builtin table, which is why its argument errors are
@@ -204,8 +201,8 @@ pub(crate) enum Resolved {
     /// is.
     MergedInternal(&'static crate::internal_routines::InternalRoutine, ObjRef),
     /// An external Rexx file the search found for this name, entered the way
-    /// [`Resolved::Library`] is: a whole program with its own directives and
-    /// its own `ProgramId`.
+    /// the command line's program is: a whole program with its own directives
+    /// and its own `ProgramId`.
     ///
     /// **It carries no path**, and the consumer searches again to recover it.
     /// A `Resolved` is kept per call site in a `Cell`, so it has to be
@@ -244,8 +241,7 @@ impl Resolved {
     pub(crate) fn kept_until_routines_change(self) -> bool {
         matches!(
             self,
-            Resolved::Library(_)
-                | Resolved::Internal(_)
+            Resolved::Internal(_)
                 | Resolved::LibraryRoutine(_)
                 | Resolved::External
                 | Resolved::Macro
@@ -2829,10 +2825,7 @@ impl Interp {
         let mut text = self.sourceless_line(0, &package);
         // Under the library-debug switch (debug builds only), a frame inside
         // a replacement class names our own file and line.
-        if library
-            && let Some(name) = self.library_program_names.get(&program_id)
-            && let Some(shown) = interrexx_lib::debug_frame(name, line)
-        {
+        if library && let Some(shown) = interrexx_lib::debug_frame(line) {
             text = shown.into_bytes();
         }
         Some(FailureSite::Named {

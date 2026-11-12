@@ -1011,7 +1011,7 @@ impl Interp {
     }
 
     /// This crate's native class registry, which every native class of the REXX
-    /// package's table is filed in. The shipped `.orx` files' own `::CLASS`
+    /// package's table is filed in. The library program's own `::CLASS`
     /// directives are in the package's own fields.
     fn registered_classes(&mut self) -> Vec<(Box<[u8]>, ObjRef)> {
         self.classes()
@@ -1079,7 +1079,7 @@ impl Interp {
 
     /// `installedClasses`: the classes `package`'s own directives and
     /// `~addClass` installed, which for the REXX package is the native class
-    /// registry plus what the shipped `.orx` files declared.
+    /// registry plus what the library program declared.
     fn installed_class_of(
         &mut self,
         package: ObjRef,

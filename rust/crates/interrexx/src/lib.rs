@@ -621,8 +621,8 @@ impl Loud {
     }
 
     /// A `.NAME` `.environment` or `.local` answers and this crate builds nothing for:
-    /// an entry the library bootstrap fills, or `.STREAM` before the stream classes'
-    /// bootstrap file installs. No program reaches it.
+    /// an entry the library bootstrap fills, or `.STREAM` before the library
+    /// program installs it. No program reaches it.
     fn environment_symbol(name: &[u8]) -> Loud {
         let shown = String::from_utf8_lossy(name);
         Loud {
@@ -1403,9 +1403,6 @@ struct Interp {
     activities: scheduler::Activities,
     /// The programs the library bootstrap loaded, in load order.
     library_programs: Vec<ProgramId>,
-    /// The embedded program each of `library_programs` was loaded from, which
-    /// the library-debug switch maps a frame back through.
-    library_program_names: FxHashMap<ProgramId, &'static str>,
     /// The name a program compiled from method source text reports under.
     compiled_method_names: FxHashMap<ProgramId, Box<[u8]>>,
     /// Whether any object has been given a method of its own, which is what
@@ -2301,7 +2298,6 @@ impl Interp {
             pinning: pinning::Pinning::default(),
             activities: scheduler::Activities::new(thread_table),
             library_programs: Vec::new(),
-            library_program_names: FxHashMap::default(),
             method_bodies: NameMap::default(),
             compiled_method_names: FxHashMap::default(),
             object_methods: false,
@@ -2454,7 +2450,7 @@ impl Interp {
     }
 
     /// Runs the interpreter's own Rexx-written library, which runs at startup
-    /// and which hands the entry program the REXX package as its one argument.
+    /// with the REXX package as its one argument.
     pub(crate) fn bootstrap_library(&mut self) -> Result<(), Failure> {
         debug_assert!(
             self.object_model.is_none(),
@@ -2466,9 +2462,7 @@ impl Interp {
         self.library_bootstrap = true;
         #[cfg(test)]
         ir::drive::suspend_counters();
-        let entry = interrexx_lib::lookup(interrexx_lib::ENTRY)
-            .unwrap_or_else(|| panic!("{} is embedded", interrexx_lib::ENTRY));
-        let outcome = self.enter_library_program(entry, None);
+        let outcome = self.enter_library_program(&interrexx_lib::LIBRARY);
         if outcome.is_ok() {
             self.reclaim_string_constants();
         }
@@ -2598,25 +2592,20 @@ impl Interp {
         Ok(value)
     }
 
-    /// Parses one embedded library program, registers it, and runs its body
-    /// with `arguments` as its calling convention.
+    /// Parses the library program, registers it, and runs its body with its
+    /// package as the one argument.
     fn enter_library_program(
         &mut self,
         program: &'static interrexx_lib::Program,
-        arguments: Option<Vec<Option<ObjRef>>>,
     ) -> Result<Option<ObjRef>, Failure> {
         let parsed = match parse_known_program(program.source.to_vec()) {
             Ok(parsed) => parsed,
-            // A parse failure here is the embedded source, not a program's:
-            // `interrexx-lib` pins each file's sha256, so this can only fire on a
-            // file this crate cannot yet parse.
+            // A parse failure here is the library's own source, not a
+            // program's, and `the_library_program_passes_the_declaration_checks`
+            // fails on it first.
             Err(error) => {
-                let site = interrexx_lib::describe_parse_error(
-                    program,
-                    error.byte,
-                    error.code(),
-                    error.sub(),
-                );
+                let site =
+                    interrexx_lib::describe_parse_error(error.byte, error.code(), error.sub());
                 return Err(Loud::library_source(&site).into());
             }
         };
@@ -2627,15 +2616,11 @@ impl Interp {
         // can turn a miss into a hit and shadow an earlier answer.
         self.invalidate_rexx_class_cache();
         self.library_programs.push(program_id);
-        self.library_program_names.insert(program_id, program.name);
-        let arguments = arguments.unwrap_or_else(|| {
-            let package = self.held_package_object(Package::Program(program_id));
-            // Rooted for the whole of the bootstrap: `call_context` is not
-            // walked by the collector, and the prologue allocates before it
-            // reads `rexxPackage`.
-            self.roots.activity_mut().push_temp(package);
-            vec![Some(package)]
-        });
+        let package = self.held_package_object(Package::Program(program_id));
+        // Rooted for the whole of the bootstrap: `call_context` is not walked
+        // by the collector.
+        self.roots.activity_mut().push_temp(package);
+        let arguments = vec![Some(package)];
         let saved = std::mem::replace(
             &mut self.activity.call_context,
             CallContext {
@@ -3397,7 +3382,6 @@ impl Interp {
                 pinning: _,
             activities,
             library_programs: _,
-            library_program_names: _,
             compiled_method_names: _,
             object_methods: _,
             // A lookup index holding objects it does not keep: a swept one
