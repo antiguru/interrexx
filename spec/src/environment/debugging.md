@@ -1361,6 +1361,62 @@ n 2
      7 *-* exit
 ```
 
+r[env.debugging.input.iterate]
+An ITERATE that `=` runs again is shown at the indent of the body of its
+loop, not at the indent of its own nesting. In the example the `iterate` is
+nested in an IF, and is shown again at the indent of the loop body.
+
+```rexx
+.debuginput~destination(.in~new(.array~of('', '', '=', '', '', '', '', '', '', '')))
+.traceoutput~destination(.show~new)
+trace ?a
+do i = 1 to 3
+  if i = 1 then iterate
+  say i
+end
+exit
+::class in
+::method init
+  expose a i
+  use arg a
+  i = 0
+::method linein
+  expose a i
+  i += 1
+  if i > a~items then return ''
+  say '[read' i':' a[i]']'
+  return a[i]
+::class show
+::method lineout
+  use arg l
+  l = '' || l
+  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  return 0
+```
+
+```output
+     4 *-* do i = 1 to 3
++++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+[read 1: ]
+     5 *-*   if i = 1 
+[read 2: ]
+     5 *-*     then
+     5 *-*       iterate
+     4 *-* do i = 1 to 3
+[read 3: =]
+     5 *-*   iterate
+     4 *-* do i = 1 to 3
+[read 4: ]
+     5 *-*   if i = 1 
+[read 5: ]
+     6 *-*   say i
+3
+[read 6: ]
+     7 *-* end
+     4 *-* do i = 1 to 3
+     8 *-* exit
+```
+
 r[env.debugging.input.trace]
 A TRACE instruction that a line runs takes effect, unlike one in the
 program, and so does a call of the TRACE function with an argument; either

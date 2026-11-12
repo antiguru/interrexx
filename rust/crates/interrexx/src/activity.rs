@@ -199,6 +199,11 @@ pub(crate) struct Activity {
     /// higher** than its own ordinary `static_indent` would give, for as
     /// long as this stays non-zero.
     pub(crate) indent_offset: usize,
+    /// The absolute indent the next clause echoes at, in place of the one its
+    /// position gives: a `LEAVE` or `ITERATE` that `=` runs again at a debug
+    /// pause echoes at the indent of the loop level it reached, not the one
+    /// it is nested at. Taken by the clause that uses it.
+    pub(crate) rerun_indent: Option<usize>,
     /// The absolute printed indent every clause of the **current activation
     /// level** starts from -- `0` for a program's own body, and an
     /// `INTERPRET` fragment's enclosing clause's own printed indent for the
@@ -526,6 +531,7 @@ impl Activity {
             pending_description: None,
             pending_rc: None,
             indent_offset: 0,
+            rerun_indent: None,
             activation_indent: 0,
             failure_site: None,
             failure_sites: Vec::new(),
@@ -691,6 +697,7 @@ impl Activity {
             pending_description,
             pending_rc,
             indent_offset: _,
+            rerun_indent: _,
             activation_indent: _,
             failure_site: _,
             failure_sites: _,
