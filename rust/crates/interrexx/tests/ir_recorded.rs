@@ -1121,18 +1121,79 @@ fn every_population_the_tree_calls_for_is_present_and_non_empty() {
     }
 }
 
-/// The sweep: every case of every population, run once, to completion, with
-/// no body refused and no corpus program stopped at a library the oracle's
-/// build directory holds.
-#[test]
-fn every_population_runs_without_a_refusal() {
-    let populations = populations();
-    // Flattened first so work stealing spans populations rather than stalling
-    // on the longest one's tail, then folded in the original order.
-    let pairs: Vec<_> = populations
+/// How many tests the sweep is spread over: the unit nextest runs in parallel
+/// is a test function. A case belongs to the shard its index in the flattened
+/// population order, modulo this count, names.
+const SWEEP_SHARDS: usize = 5;
+
+/// Every `(population, case)` pair, populations in their order, cases in
+/// theirs.
+fn sweep_pairs(populations: &[Population]) -> Vec<(&Population, &Case)> {
+    populations
         .iter()
         .flat_map(|population| population.cases.iter().map(move |case| (population, case)))
-        .collect();
+        .collect()
+}
+
+/// The cases of one shard of the sweep.
+fn sweep_shard_of<'a>(
+    pairs: &[(&'a Population, &'a Case)],
+    shard: usize,
+) -> Vec<(&'a Population, &'a Case)> {
+    pairs
+        .iter()
+        .enumerate()
+        .filter(|(index, _)| index % SWEEP_SHARDS == shard)
+        .map(|(_, pair)| *pair)
+        .collect()
+}
+
+/// Every shard index below `SWEEP_SHARDS` has a test running it.
+#[test]
+fn every_sweep_shard_has_a_test() {
+    let source = include_str!("ir_recorded.rs");
+    for shard in 0..SWEEP_SHARDS {
+        let call = format!("\n    sweep_shard({shard});\n");
+        assert_eq!(source.matches(&call).count(), 1, "{call:?}");
+    }
+}
+
+/// The shards together hold every case of every population exactly once: each
+/// case is in the shard its index names and in no other, so the shard sizes add
+/// up to the number of cases.
+#[test]
+fn the_sweep_shards_hold_every_case_once() {
+    let populations = populations();
+    let pairs = sweep_pairs(&populations);
+    let mut seen = vec![0usize; pairs.len()];
+    for shard in 0..SWEEP_SHARDS {
+        for (population, case) in sweep_shard_of(&pairs, shard) {
+            let index = pairs
+                .iter()
+                .position(|(p, c)| std::ptr::eq(*p, population) && std::ptr::eq(*c, case))
+                .expect("a shard case is one of the sweep's cases");
+            seen[index] += 1;
+        }
+    }
+    assert!(
+        seen.iter().all(|count| *count == 1),
+        "a case is in no shard or in more than one"
+    );
+    assert!(
+        pairs.len() >= SWEEP_SHARDS,
+        "fewer cases than shards leaves a shard that compares nothing"
+    );
+}
+
+/// The sweep, one shard of it: every case of every population in the shard, run
+/// once, to completion, with no body refused and no corpus program stopped at
+/// a library the oracle's build directory holds.
+fn sweep_shard(shard: usize) {
+    let populations = populations();
+    let pairs = sweep_pairs(&populations);
+    let pairs = sweep_shard_of(&pairs, shard);
+    // Work stealing spans the shard's populations rather than stalling on the
+    // longest one's tail, then the results fold in the original order.
     let reasons: Vec<Option<String>> = pairs.par_iter().map(|(_, case)| compare(case)).collect();
 
     let mut divergences = Vec::new();
@@ -1145,13 +1206,38 @@ fn every_population_runs_without_a_refusal() {
     }
     assert!(
         compared > 0,
-        "the sweep compared nothing at all, which is a harness defect and not \
+        "the sweep compared nothing at all in shard {shard}, which is a harness defect and not \
          an empty pass"
     );
     assert!(
         divergences.is_empty(),
-        "{} of {compared} programs did not run cleanly:\n{}",
+        "{} of {compared} programs of shard {shard} did not run cleanly:\n{}",
         divergences.len(),
         divergences.join("\n")
     );
+}
+
+#[test]
+fn every_population_runs_without_a_refusal_shard_0() {
+    sweep_shard(0);
+}
+
+#[test]
+fn every_population_runs_without_a_refusal_shard_1() {
+    sweep_shard(1);
+}
+
+#[test]
+fn every_population_runs_without_a_refusal_shard_2() {
+    sweep_shard(2);
+}
+
+#[test]
+fn every_population_runs_without_a_refusal_shard_3() {
+    sweep_shard(3);
+}
+
+#[test]
+fn every_population_runs_without_a_refusal_shard_4() {
+    sweep_shard(4);
 }
