@@ -663,6 +663,167 @@ tx =&gt; T
 " s" =&gt; 93.914
 T
 </code></pre>
+<div class="rule" id="r-class.traceobject.sends"><a href="#r-class.traceobject.sends">[class.traceobject.sends]</a></div>
+<p>These are the messages that the methods of <code>TraceObject</code> send to objects that a
+subclass can observe. <code>new</code> sends the new object <code>init</code> with the arguments of <code>new</code>, as <a href="index.html#r-class.index.new">the <code>new</code> of
+<code>Class</code></a> does; then, when the object is made, it sends the
+object <code>[]=</code> three times, for <code>TIMESTAMP</code>, <code>OPTION</code> and <code>NUMBER</code> in this order,
+with the value first and the name second, and then, if there is a <code>collector</code>,
+sends that <code>append</code>. It does not send the class <code>counter</code>, <code>option</code> or
+<code>collector</code>: it reads the attributes of its own class directly, so that an
+override of those methods in a subclass is not run by <code>new</code>, and the <code>notify</code>
+object is sent <code>append</code> only for the objects that <a href="#r-class.traceobject.lines">the interpreter
+makes</a> for lines of trace output. The <code>makeString</code> of
+an instance, and every conversion of the object to a string that is not a call
+of <code>string</code>, send the class of the object <code>makeStringImpl</code> with the object
+and no other argument, so that a subclass is asked first; <code>makeStringImpl</code> then
+sends the object the messages that <a href="#r-class.traceobject.makestringimpl.sends">its sends
+rule</a> gives. <code>compareTo</code> sends <code>[]</code>
+with <code>NUMBER</code> to each of the two objects. <code>string</code> sends nothing. The example
+subclass shows each message by a line that its overriding method writes.</p>
+<pre><code class="language-rexx">.sub~collector = .log~new
+.sub~notify = .log~new
+say 'new'
+o = .sub~new
+say 'new(7)'
+o2 = .sub~new(7)
+say 'makeString'
+say o~makeString
+say 'concatenation'
+say 'x'o
+say 'string'
+say o~string
+say 'compareTo'
+say o~compareTo(o2)
+say 'class attributes read directly'
+say .sub~counter .sub~option
+say 'after setMakeString'
+.sub~setMakeString('return "custom"')
+say o~makeString
+::class sub subclass traceobject
+::method makeStringImpl class
+  say '  makeStringImpl' self~id arg(1)~class~id arg()
+  forward class (super)
+::method counter class
+  say '  counter'
+  forward class (super)
+::method option class
+  say '  option'
+  forward class (super)
+::method collector class
+  say '  collector'
+  forward class (super)
+::method notify class
+  say '  notify'
+  forward class (super)
+::method init
+  say '  init' arg()
+  forward class (super)
+::method '[]='
+  say '  []=' arg(2)
+  forward class (super)
+::method '[]'
+  say '  []' arg(1)
+  forward class (super)
+::method put
+  say '  put'
+  forward class (super)
+::class log
+::method append
+  say '  append' arg(1)~items
+</code></pre>
+<pre><code class="language-output">new
+  init 0
+  []= TIMESTAMP
+  []= OPTION
+  []= NUMBER
+  append 3
+new(7)
+  init 1
+  []= TIMESTAMP
+  []= OPTION
+  []= NUMBER
+  append 3
+makeString
+  makeStringImpl SUB SUB 1
+  [] TRACELINE
+?
+concatenation
+  makeStringImpl SUB SUB 1
+  [] TRACELINE
+x?
+string
+a SUB
+compareTo
+  [] NUMBER
+  [] NUMBER
+-1
+class attributes read directly
+  counter
+  option
+2 N
+after setMakeString
+  makeStringImpl SUB SUB 1
+custom
+</code></pre>
+<div class="rule" id="r-class.traceobject.arguments"><a href="#r-class.traceobject.arguments">[class.traceobject.arguments]</a></div>
+<p><code>collector</code>, <code>notify</code>, <code>counter</code>, <code>option</code> and <code>unsetMakeString</code> take no
+argument: any argument, an omitted one in front of another included, raises
+<code>SYNTAX 93.902</code>. <code>option=</code> needs one argument and reads the first, as <a href="#r-class.traceobject.option">the
+option rule</a> says, so that it raises <code>SYNTAX 93.914</code>
+for no argument and for an omitted first argument, the way it does for the null
+string, and takes a good first argument with any second one, an omitted one
+too, without a message. The example makes each call and shows its error code, or
+that there was none; the setters <code>collector=</code> and <code>notify=</code> are in the rules of
+<a href="#r-class.traceobject.collector">the collector</a> and <a href="#r-class.traceobject.notify">the
+notify</a> attributes.</p>
+<pre><code class="language-rexx">t = .traceobject
+do m over 'collector notify counter option unsetMakeString'~makeArray(' ')
+  call try 't~'m
+  call try 't~'m'(1)'
+  call try 't~'m'(, 1)'
+end
+call try 't~"OPTION="'
+call try 't~"OPTION="(,)'
+call try 't~"OPTION="(, "F")'
+call try 't~"OPTION="("F", 2)'
+call try 't~"OPTION="("x", 2)'
+call try 't~"OPTION="("F", )'
+say t~option
+t~option = 'N'
+exit
+try:
+  signal on syntax name bad
+  interpret 'rr =' arg(1)
+  say arg(1) '=&gt; no error, answers' rr
+  return
+bad: if condition('o')~code == 91.999 then say arg(1) '=&gt; no error, no answer'
+  else say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">t~collector =&gt; no error, answers The NIL object
+t~collector(1) =&gt; 93.902
+t~collector(, 1) =&gt; 93.902
+t~notify =&gt; no error, answers The NIL object
+t~notify(1) =&gt; 93.902
+t~notify(, 1) =&gt; 93.902
+t~counter =&gt; no error, answers 0
+t~counter(1) =&gt; 93.902
+t~counter(, 1) =&gt; 93.902
+t~option =&gt; no error, answers N
+t~option(1) =&gt; 93.902
+t~option(, 1) =&gt; 93.902
+t~unsetMakeString =&gt; no error, no answer
+t~unsetMakeString(1) =&gt; 93.902
+t~unsetMakeString(, 1) =&gt; 93.902
+t~"OPTION=" =&gt; 93.914
+t~"OPTION="(,) =&gt; 93.914
+t~"OPTION="(, "F") =&gt; 93.914
+t~"OPTION="("F", 2) =&gt; no error, no answer
+t~"OPTION="("x", 2) =&gt; 93.914
+t~"OPTION="("F", ) =&gt; no error, no answer
+F
+</code></pre>
 <div class="rule" id="r-class.traceobject.makestringimpl"><a href="#r-class.traceobject.makestringimpl">[class.traceobject.makestringimpl]</a></div>
 <p><code>makeStringImpl</code> answers the text of one <code>TraceObject</code>, which it takes as its
 one argument, in the format that the <code>option</code> names. With <code>N</code> it is the

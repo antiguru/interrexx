@@ -245,7 +245,9 @@ holds the least number of arguments, that of the second the most, and that of
 the third the position of the first argument left out. The argument count is
 checked first, then <code>digits</code>, and the value last. Every value and bound is read
 as a string as <a href="../conventions.html#r-conv.string.object">the conversion rule</a> says. A check that
-fails raises the <code>SYNTAX</code> error of its method, which the rules below give.</p>
+fails raises the <code>SYNTAX</code> error of its method, which the rules below give.
+The second example asks every check, with no argument, for one fewer than it
+needs, for the first one left out and for one more than it takes.</p>
 <pre><code class="language-rexx">call t 'number', 'N', 'x'
 call t 'number', 'my arg', 'x'
 call t 'number', 'N'
@@ -298,6 +300,46 @@ classType 93.901 1 3
 number("N", ) 93.901 1 2
 numberRange("N", 5, 1, ) 93.901 1 4
 </code></pre>
+<pre><code class="language-rexx">/* per check: no argument; one fewer than it needs; the first left out; one more
+   than it takes (code/number of ADDITIONAL entries/first entry) */
+specs = .array~of('number 2 2', 'logical 2 2', 'positiveNumber 2 3',,
+  'nonNegativeNumber 2 3', 'wholeNumber 2 3', 'positiveWholeNumber 2 3',,
+  'nonNegativeWholeNumber 2 3', 'position 2 3', 'length 2 3', 'classType 3 3',,
+  'requestClassType 3 3', 'numberRange 4 5', 'wholeNumberRange 4 5')
+do spec over specs
+  parse var spec m low high
+  say left(m, 22) try(m, '') try(m, items(low - 1)) try(m, ','items(low - 1)) ,
+    try(m, items(high + 1))
+end
+exit
+items: procedure
+  n = arg(1)
+  list = "'N'"
+  do n - 1
+    list = list',1'
+  end
+  return list
+try: procedure
+  signal on syntax name bad
+  interpret '.validate~'arg(1)'('arg(2)')'
+  return 'ok'
+bad: c = condition('o')
+  return c~code'/'c~additional~items'/'c~additional[1]
+</code></pre>
+<pre><code class="language-output">number                 93.901/1/2 93.901/1/2 93.903/1/1 93.902/1/2
+logical                93.901/1/2 93.901/1/2 93.903/1/1 93.902/1/2
+positiveNumber         93.901/1/2 93.901/1/2 93.903/1/1 93.902/1/3
+nonNegativeNumber      93.901/1/2 93.901/1/2 93.903/1/1 93.902/1/3
+wholeNumber            93.901/1/2 93.901/1/2 93.903/1/1 93.902/1/3
+positiveWholeNumber    93.901/1/2 93.901/1/2 93.903/1/1 93.902/1/3
+nonNegativeWholeNumber 93.901/1/2 93.901/1/2 93.903/1/1 93.902/1/3
+position               93.901/1/2 93.901/1/2 93.903/1/1 93.902/1/3
+length                 93.901/1/2 93.901/1/2 93.903/1/1 93.902/1/3
+classType              93.901/1/3 93.901/1/3 93.903/1/1 93.902/1/3
+requestClassType       93.901/1/3 93.901/1/3 93.903/1/1 93.902/1/3
+numberRange            93.901/1/4 93.901/1/4 93.903/1/1 93.902/1/5
+wholeNumberRange       93.901/1/4 93.901/1/4 93.903/1/1 93.902/1/5
+</code></pre>
 <div class="rule" id="r-class.validate.digits"><a href="#r-class.validate.digits">[class.validate.digits]</a></div>
 <p>The checks that take <code>digits</code> compare and round under that many digits and not
 under the NUMERIC DIGITS of the running code. <code>digits</code> is a whole number of at
@@ -305,7 +347,10 @@ least 1 and at most 999999999 and defaults to <code>9</code>, except for <code>l
 <code>position</code>, whose default is <a href="rexxinfo.html#r-class.rexxinfo.limits">the number of digits that whole numbers have
 internally</a>. Any other value, a string that is no
 number included, raises <code>SYNTAX 26.5</code> before the value is read; its <code>ADDITIONAL</code>
-array holds the value of <code>digits</code>.</p>
+array holds the value of <code>digits</code>.
+The last example of this rule asks every check that takes <code>digits</code> for the cases
+that are refused, for the two limits that are not, and for a value that is no
+number under a refused <code>digits</code>.</p>
 <pre><code class="language-rexx">numeric digits 20
 call t 'wholeNumber', '1234567890'
 call t 'wholeNumber', '1234567890', 9
@@ -371,6 +416,37 @@ bad: c = condition('o')
 </code></pre>
 <pre><code class="language-output">26.5 1 0
 26.5 1 y
+</code></pre>
+<pre><code class="language-rexx">/* digits 0, 1000000000, 'x', .nil, 1.5; then 999999999 and 1, which are accepted;
+   last, a value that is no number together with digits 0 */
+names = 'positiveNumber nonNegativeNumber wholeNumber positiveWholeNumber',
+  'nonNegativeWholeNumber position length numberRange wholeNumberRange'
+do m over names~makeArray(' ')
+  if m~pos('Range') &gt; 0 then bounds = ', 1, 9'
+  else bounds = ''
+  line = left(m, 22)
+  do digits over '0', '1000000000', "'x'", '.nil', '1.5', '999999999', '1'
+    line = line try(m, "'N', 5"bounds', 'digits)
+  end
+  say line try(m, "'N', 'x'"bounds', 0')
+end
+exit
+try: procedure
+  signal on syntax name bad
+  interpret '.validate~'arg(1)'('arg(2)')'
+  return 'ok'
+bad: c = condition('o')
+  return c~code
+</code></pre>
+<pre><code class="language-output">positiveNumber         26.5 26.5 26.5 26.5 26.5 ok ok 26.5
+nonNegativeNumber      26.5 26.5 26.5 26.5 26.5 ok ok 26.5
+wholeNumber            26.5 26.5 26.5 26.5 26.5 ok ok 26.5
+positiveWholeNumber    26.5 26.5 26.5 26.5 26.5 ok ok 26.5
+nonNegativeWholeNumber 26.5 26.5 26.5 26.5 26.5 ok ok 26.5
+position               26.5 26.5 26.5 26.5 26.5 ok ok 26.5
+length                 26.5 26.5 26.5 26.5 26.5 ok ok 26.5
+numberRange            26.5 26.5 26.5 26.5 26.5 ok ok 26.5
+wholeNumberRange       26.5 26.5 26.5 26.5 26.5 ok ok 26.5
 </code></pre>
 <h2 id="numbers"><a class="header" href="#numbers">Numbers</a></h2>
 <div class="rule" id="r-class.validate.number"><a href="#r-class.validate.number">[class.validate.number]</a></div>
@@ -568,6 +644,109 @@ numberRange 5 x 9 - =&gt; 88.907 N ; x ; 9 ; 5
 numberRange 5 1 4x - =&gt; 88.907 N ; 1 ; 4x ; 5
 numberRange 5 1 The NIL object - =&gt; 88.907 N ; 1 ; The NIL object ; 5
 wholeNumberRange 5 1.5 9.5 - =&gt; ok
+</code></pre>
+<div class="rule" id="r-class.validate.sends"><a href="#r-class.validate.sends">[class.validate.sends]</a></div>
+<p>The number checks read the value as a string with one <code>makeString</code> (as <a href="../conventions.html#r-conv.string.object">the
+conversion rule</a> says, apart from <a href="#r-class.validate.deviation.109">the
+deviation</a>), and then ask the value itself, the
+object that was given and not the string, to compare. <code>positiveNumber</code>,
+<code>positiveWholeNumber</code> and <code>position</code> send it <code>&gt;</code> with <code>0</code>;
+<code>nonNegativeNumber</code>, <code>nonNegativeWholeNumber</code> and <code>length</code> send it <code>&gt;=</code> with
+<code>0</code>; <code>numberRange</code> and <code>wholeNumberRange</code> send it <code>&gt;=</code> with <code>min</code> and, only
+when that answers true, <code>&lt;=</code> with <code>max</code>. A comparison that answers <code>0</code> raises the error of the check. <code>number</code> and
+<code>wholeNumber</code> send nothing more, and the bounds and <code>digits</code> are read as
+strings and are sent no comparison. The example has an object whose
+<code>makeString</code> and <code>unknown</code> write a line, and whose comparisons answer <code>1</code> and
+then <code>0</code>.</p>
+<pre><code class="language-rexx">checks = 'number positiveNumber nonNegativeNumber wholeNumber positiveWholeNumber',
+  'nonNegativeWholeNumber position length numberRange wholeNumberRange'
+do answer over 1, 0
+  say 'comparisons answer' answer
+  do m over checks~makeArray(' ')
+    say m':' try(m, .probe~new(answer))
+  end
+end
+exit
+try: procedure
+  use arg m, o
+  signal on syntax name bad
+  if m~pos('Range') &gt; 0 then .validate~send(m, 'N', o, 1, 9)
+  else .validate~send(m, 'N', o)
+  return 'ok'
+bad: return '=&gt;' condition('o')~code
+::class probe
+::method init
+  expose answer
+  use arg answer
+::method makeString
+  say '  makeString'
+  return 5
+::method unknown
+  expose answer
+  use arg name, args
+  say ' ' name args[1]
+  return answer
+</code></pre>
+<pre><code class="language-output">comparisons answer 1
+  makeString
+number: ok
+  makeString
+  &gt; 0
+positiveNumber: ok
+  makeString
+  &gt;= 0
+nonNegativeNumber: ok
+  makeString
+wholeNumber: ok
+  makeString
+  &gt; 0
+positiveWholeNumber: ok
+  makeString
+  &gt;= 0
+nonNegativeWholeNumber: ok
+  makeString
+  &gt; 0
+position: ok
+  makeString
+  &gt;= 0
+length: ok
+  makeString
+  &gt;= 1
+  &lt;= 9
+numberRange: ok
+  makeString
+  &gt;= 1
+  &lt;= 9
+wholeNumberRange: ok
+comparisons answer 0
+  makeString
+number: ok
+  makeString
+  &gt; 0
+positiveNumber: =&gt; 88.926
+  makeString
+  &gt;= 0
+nonNegativeNumber: =&gt; 88.925
+  makeString
+wholeNumber: ok
+  makeString
+  &gt; 0
+positiveWholeNumber: =&gt; 88.905
+  makeString
+  &gt;= 0
+nonNegativeWholeNumber: =&gt; 88.904
+  makeString
+  &gt; 0
+position: =&gt; 88.912
+  makeString
+  &gt;= 0
+length: =&gt; 88.911
+  makeString
+  &gt;= 1
+numberRange: =&gt; 88.907
+  makeString
+  &gt;= 1
+wholeNumberRange: =&gt; 88.907
 </code></pre>
 <h2 id="logical-values-and-classes"><a class="header" href="#logical-values-and-classes">Logical values and classes</a></h2>
 <div class="rule" id="r-class.validate.logical"><a href="#r-class.validate.logical">[class.validate.logical]</a></div>

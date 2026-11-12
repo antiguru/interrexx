@@ -475,6 +475,52 @@ m~unknown(, .array~of(1)) =&gt; 93.903
 .monitor~new~hello =&gt; 97.1
 caught WHATSOEVER 2 caught MIXED 1
 </code></pre>
+<div class="rule" id="r-class.monitor.unknown.arguments"><a href="#r-class.monitor.unknown.arguments">[class.monitor.unknown.arguments]</a></div>
+<p>The second argument of a direct <code>unknown</code> need not be an <code>Array</code>: it is any
+object, and it is sent <code>request</code> with <code>ARRAY</code> before anything is forwarded, as
+<a href="#r-class.monitor.unknown">the unknown rule</a> says. The items of what that
+answers, in order and with their holes, are the arguments of the forwarded
+message. A string answers an array of one item, itself, so that a string is one
+argument and the null string is none; a number, <code>.true</code> and a <code>MutableBuffer</code>
+are one argument each, as their strings; a <code>List</code> or a <code>Set</code> answers its items;
+and an object that answers no array to <code>request</code>, <code>.nil</code> and an <code>Object</code> among
+them, raises <code>SYNTAX 98.946</code> and forwards nothing.</p>
+<pre><code class="language-rexx">m = .monitor~new(.target~new)
+call try "m~unknown('echo', 'abc')"
+call try "m~unknown('echo', 'a b  c')"
+call try "m~unknown('echo', '')"
+call try "m~unknown('echo', 5)"
+call try "m~unknown('echo', .list~of('x', 'y'))"
+call try "m~unknown('echo', .set~of('x'))"
+call try "m~unknown('echo', .object~new)"
+call try "m~unknown('echo', .nil)"
+call try "m~unknown('echo', .true)"
+call try "m~unknown('echo', .array~of('p', , 'r'))"
+call try "m~unknown('echo', .mutablebuffer~new('q'))"
+exit
+try:
+  signal on syntax name bad
+  interpret 'x =' arg(1)
+  say arg(1) '=&gt;' x
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class target
+::method echo
+  return arg() '['arg(1)']' '['arg(2)']' '['arg(3)']'
+</code></pre>
+<pre><code class="language-output">m~unknown('echo', 'abc') =&gt; 1 [abc] [] []
+m~unknown('echo', 'a b  c') =&gt; 1 [a b  c] [] []
+m~unknown('echo', '') =&gt; 0 [] [] []
+m~unknown('echo', 5) =&gt; 1 [5] [] []
+m~unknown('echo', .list~of('x', 'y')) =&gt; 2 [x] [y] []
+m~unknown('echo', .set~of('x')) =&gt; 1 [x] [] []
+m~unknown('echo', .object~new) =&gt; 98.946
+m~unknown('echo', .nil) =&gt; 98.946
+m~unknown('echo', .true) =&gt; 1 [1] [] []
+m~unknown('echo', .array~of('p', , 'r')) =&gt; 3 [p] [] [r]
+m~unknown('echo', .mutablebuffer~new('q')) =&gt; 1 [q] [] []
+</code></pre>
 <div class="rule" id="r-class.monitor.object"><a href="#r-class.monitor.object">[class.monitor.object]</a></div>
 <p>Every instance method that <code>Object</code> defines (<a href="object.html">the Object page</a>) is
 the monitor's own, so a message with the name of one is not forwarded: it

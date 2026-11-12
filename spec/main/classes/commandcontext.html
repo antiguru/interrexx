@@ -199,11 +199,10 @@ methods that every class has. Its only superclass is <code>Object</code> and it 
 mixin class (<a href="index.html#r-class.index.hierarchy">the hierarchy rule</a>). The interpreter
 makes one for each command that is sent to a handler written in Rexx, and a
 program receives it as the second argument of <code>command</code>; a program does not make
-one. The <code>new</code> of a program raises <code>SYNTAX 93.901</code> with fewer than two arguments
-and <code>SYNTAX 93.902</code> with more than two, and what an object made with two
-arguments is good for is not specified: it belongs to no command, so its methods
-have nothing to work with. The class has other methods, <code>finish</code> and <code>pending</code>
-among them, that the interpreter uses; they are not part of this specification.</p>
+one. What the <code>new</code> of a program makes, and the method <code>init</code> that it sends, is
+the subject of <a href="#r-class.commandcontext.init">the next rule</a>. The class has other
+methods, <code>finish</code> and <code>pending</code> among them, that the interpreter uses; they are
+not part of this specification.</p>
 <pre><code class="language-rexx">say .commandcontext~id .commandcontext~superclasses~items,
   .commandcontext~superclass~id .commandcontext~queryMixinClass
 have = .set~new
@@ -237,6 +236,90 @@ bad: say arg(1) condition('o')~code
 .commandcontext~new 93.901
 .commandcontext~new(1) 93.901
 .commandcontext~new(1, 2, 3) 93.902
+</code></pre>
+<div class="rule" id="r-class.commandcontext.init"><a href="#r-class.commandcontext.init">[class.commandcontext.init]</a></div>
+<p><code>init(first, name)</code> is the method that <code>new</code> sends the arguments of <code>new</code>, as
+<a href="index.html#r-class.index.new">the <code>new</code> of <code>Class</code></a> does for every class, and a program
+that makes a context with <code>new</code> is therefore subject to it. It needs two
+arguments: <code>SYNTAX 93.901</code> when fewer are present, a trailing omitted argument
+not counting, <code>SYNTAX 93.902</code> when more than two are given, and <code>SYNTAX 93.903</code>
+when the first is omitted and the second is present. Both can be any object,
+<code>.nil</code> among them, and neither is converted or sent a message. The first
+argument is not used. The second becomes what <a href="#r-class.commandcontext.environment"><code>environment</code></a>
+answers, the same object that was given, so that an array stays an array and
+the null string stays the null string. A context that <code>new</code> makes belongs to no
+command: <code>isValid</code> answers <code>0</code> from the start, and the methods that <a href="#r-class.commandcontext.valid">the
+validity rule</a> lists as working with the code
+that sent a command raise <code>SYNTAX 98.900</code> as they do once the command has ended,
+while <code>environment</code>, <code>isValid</code> and <code>copy</code> work. A message <code>init</code> that is sent
+to a context a second time replaces what <code>environment</code> answers and answers
+nothing, so that using its answer as a value raises <code>SYNTAX 91.999</code>. A subclass
+of <code>CommandContext</code> gets the same, through its own <code>init</code> when it has one and
+<code>forward class (super)</code> or <code>self~init:super(first, name)</code>. What a hand-made
+context may be passed to is not specified.</p>
+<pre><code class="language-rexx">c = .commandcontext~new(1, 'Env')
+say c~environment c~isValid c~copy~environment
+say (.commandcontext~new(.nil, .nil)~environment == .nil),
+  '['.commandcontext~new(1, '')~environment']',
+  .commandcontext~new(1, .array~of(7))~environment~class~id
+call try "c~init(1, 'Other')"
+say c~environment
+call try "c~getVar('x')"
+call try "c~hasVar('x')"
+call try "c['x']"
+call try "c~setVar('x', 1)"
+call try "c~variables"
+call try "c~isRedirected('I')"
+call try "c~input"
+call try "c~raiseError(5)"
+call try ".commandcontext~new(1)"
+call try ".commandcontext~new(1,)"
+call try ".commandcontext~new(,2)"
+call try ".commandcontext~new(1, 2, 3)"
+call try "c~init"
+call try "c~init(1)"
+call try "c~init(1, 2, 3)"
+s = .sub~new('a', 'Own')
+say s~class~id s~environment s~isValid s~marker
+call try ".sub~new(1)"
+exit
+try:
+  signal on syntax name bad
+  interpret 'x =' arg(1)
+  say arg(1) 'no error'
+  return
+bad: say arg(1) condition('o')~code
+  return
+::class sub subclass commandcontext
+::method init
+  expose marker
+  marker = 'set'
+  forward class (super)
+::method marker
+  expose marker
+  return marker
+</code></pre>
+<pre><code class="language-output">Env 0 Env
+1 [] Array
+c~init(1, 'Other') 91.999
+Other
+c~getVar('x') 98.900
+c~hasVar('x') 98.900
+c['x'] 98.900
+c~setVar('x', 1) 98.900
+c~variables 98.900
+c~isRedirected('I') 98.900
+c~input 98.900
+c~raiseError(5) 98.900
+.commandcontext~new(1) 93.901
+.commandcontext~new(1,) 93.901
+.commandcontext~new(,2) 93.903
+.commandcontext~new(1, 2, 3) 93.902
+c~init 93.901
+c~init(1) 93.901
+c~init(1, 2, 3) 93.902
+SUB Own 0 set
+.sub~new(1) 93.901
 </code></pre>
 <div class="rule" id="r-class.commandcontext.valid"><a href="#r-class.commandcontext.valid">[class.commandcontext.valid]</a></div>
 <p>A context is good for the command that it stands for, on the activity that is
