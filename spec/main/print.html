@@ -80687,7 +80687,8 @@ first second third 0 0
 <p>A <code>CommandInput</code> belongs to the command it was made for, as its
 <a href="classes/commandcontext.html#r-class.commandcontext.valid">context</a> does. When the command is over, or on
 another activity, <code>charIn</code>, <code>chars</code>, <code>lineIn</code> and <code>lines</code> raise
-<code>SYNTAX 98.900</code>.</p>
+<code>SYNTAX 98.900</code>, with the exception that
+<a href="classes/commandinput.html#r-class.commandinput.valid.buffered">the next rule</a> states.</p>
 <pre><code class="language-rexx">x = .commandhandler~register('spec_ci_valid', .reader~new)
 address spec_ci_valid 'go' with input using (.array~of('a'))
 in = .environment~input
@@ -80724,6 +80725,63 @@ lineIn 98.900
 lines 98.900
 chars 98.900
 charIn 98.900
+</code></pre>
+<div class="rule" id="r-class.commandinput.valid.buffered"><a href="classes/commandinput.html#r-class.commandinput.valid.buffered">[class.commandinput.valid.buffered]</a></div>
+<p>Text that the stream already holds when the command ends stays readable: the
+rest of a line that was partly read, or a line that <code>lines</code> or <code>chars</code> took
+into hand without it being read. From that text <code>lines</code>, <code>chars</code>, <code>lineIn</code> and
+<code>charIn</code> answer as they do in the command, and the reads take it up. A read
+that needs more than the stream holds, a <code>charIn</code> with a larger <code>count</code> for one,
+raises <code>SYNTAX 98.900</code> and takes nothing. When no text is held, which is so
+for an input that was all read or not at all, every one of the four raises
+<code>SYNTAX 98.900</code>; only a <code>count</code> of <code>0</code> for <code>lineIn</code> and <code>charIn</code> answers the
+null string in either case, since it reads nothing. A copy made in the command
+holds the text that its original held at that moment and keeps it for itself:
+what the original reads afterwards is still there to read for the copy, and what
+the copy reads is not taken from the original. The example's input is <code>ab</code> and
+<code>cd</code>, and the handler reads the <code>a</code>.</p>
+<pre><code class="language-rexx">x = .commandhandler~register('spec_ci_held', .reader~new)
+address spec_ci_held 'go' with input using (.array~of('ab', 'cd'))
+x = .commandhandler~deregister('spec_ci_held')
+in = .environment~input
+c = .environment~heldcopy
+say in~lines in~chars '&lt;'in~charin(,0)'&gt;' '&lt;'in~linein(,0)'&gt;'
+call try 'in~charin(, 3)'
+call try 'in~charin(, 2)'
+call try 'in~lines'
+call try 'in~charin(, 0)'
+call try 'c~chars'
+call try 'c~charin'
+call try 'c~linein'
+call try 'c~linein'
+call try 'c~linein(, 0)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '&lt;'r~changestr('0a'x, '\n')'&gt;'
+  return
+bad: say arg(1) condition('o')~code
+  return
+::class reader inherit CommandHandler
+::method command
+  use arg command, caller
+  in = caller~input
+  x = in~charin
+  .environment~input = in
+  .environment~heldcopy = in~copy
+  return 0
+</code></pre>
+<pre><code class="language-output">1 2 &lt;&gt; &lt;&gt;
+in~charin(, 3) 98.900
+in~charin(, 2) &lt;b\n&gt;
+in~lines 98.900
+in~charin(, 0) &lt;&gt;
+c~chars &lt;2&gt;
+c~charin &lt;b&gt;
+c~linein &lt;&gt;
+c~linein 98.900
+c~linein(, 0) &lt;&gt;
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="commandoutput"><a class="header" href="#commandoutput">CommandOutput</a></h1>
 <p class="references">rexxref: Builtin Classes &gt; Utility Classes &gt; CommandOutput Class</p>
