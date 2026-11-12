@@ -135,11 +135,11 @@ fn parse_number(text: &[u8]) -> Option<Number> {
 }
 
 /// whether every byte of `text` is in `set`, in groups of `modulus` bytes
-/// optionally separated by a blank or tab -- the first group may be
-/// shorter than `modulus`, every later one must match the first group's own
-/// remainder exactly, and neither a leading nor a trailing blank is
-/// admitted. The empty-string case is the caller's, matching the oracle's
-/// own empty-string test at each of its two call sites.
+/// optionally separated by a blank or tab -- the first group may be shorter
+/// than `modulus`, every later one must match the first group's own remainder
+/// exactly, and neither a leading nor a trailing blank is admitted. The
+/// empty-string case is the caller's, matching the empty-string test at each of
+/// its two call sites.
 fn grouped(text: &[u8], set: fn(u8) -> bool, modulus: usize) -> bool {
     if matches!(text.first(), Some(b' ') | Some(b'\t')) {
         return false;
@@ -169,8 +169,8 @@ fn grouped(text: &[u8], set: fn(u8) -> bool, modulus: usize) -> bool {
     !space_found || (count % modulus) == residue
 }
 
-/// The 13 letters `DATATYPE`'s option argument accepts, spelled exactly as
-/// the oracle's own 93.915 message does.
+/// The 13 letters `DATATYPE`'s option argument accepts, spelled exactly as the
+/// 93.915 message does.
 pub(crate) const DATATYPE_OPTIONS: &str = "ABILMNOSUVWX9";
 
 /// `DATATYPE(string)` / `DATATYPE(string, type)`: what kind of data a string
@@ -229,11 +229,10 @@ pub(crate) fn datatype_matches(
             SymbolKind::Name | SymbolKind::Stem | SymbolKind::CompoundName
         ),
         // `W`'s precision is the *running* `NUMERIC DIGITS`, where `I`'s and
-        // `9`'s are the two fixed ones -- the oracle's `'W'` test
-        // rounds through a plus of zero under the current
-        // settings and asks whether the result is an integer, with no
-        // bound from a machine integer.
-        // That `plus` is an operator, so it raises LOSTDIGITS and 42 as one.
+        // `9`'s are the two fixed ones -- the `'W'` test rounds through a plus
+        // of zero under the current settings and asks whether the result is an
+        // integer, with no bound from a machine integer. That `plus` is an
+        // operator, so it raises LOSTDIGITS and 42 as one.
         b'W' => match parse_number(text) {
             Some(number) => {
                 let digits = interp.activation().settings.digits();
@@ -358,10 +357,10 @@ pub(crate) fn value(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result<
     let upper = text.to_ascii_uppercase();
     let newvalue = arg(args, 2);
     match classify(&upper) {
-        // `found` is the call's own spelling, not the upcased text just
-        // used to classify it -- see `Raised::argument_not_a_symbol`'s own
-        // doc for the oracle pointer-aliasing mistake that makes those two
-        // different call sites in the oracle and one call site here.
+        // `found` is the call's own spelling, not the upcased text just used to
+        // classify it -- see `Raised::argument_not_a_symbol`'s own doc for the
+        // aliasing mistake that makes those two different call sites in the
+        // reference implementation and one call site here.
         SymbolKind::Bad => Err(Raised::argument_not_a_symbol(name, 1, &text).into()),
         SymbolKind::Numeric | SymbolKind::Literal | SymbolKind::LiteralDot => {
             if newvalue.is_some() {

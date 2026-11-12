@@ -25,13 +25,12 @@ impl Interp {
         // level a `WhenCase`'s own comparison lines are indented to.
         self.trace_keyword(indent, "CASE", &text);
         // **The block opens after this**, so the header clause's own boundary
-        // runs one level in -- the oracle opens the block next
-        // once the scrutinee has
+        // runs one level in -- the block is opened next once the scrutinee has
         // been evaluated and its `>K>` traced, and a `CALL ON` handler
         // delivered at that boundary is based on whatever the counter reads
-        // then. Measured: the handler `h:` of a `select case raiser()` at top
-        // level echoes at `12 *-*     h:` on the oracle, where the `SELECT`
-        // clause itself echoes unindented.
+        // then. The handler `h:` of a `select case raiser()` at top level
+        // echoes at `12 *-* h:`, where the `SELECT` clause itself echoes
+        // unindented.
         self.settle_block_indent(true, indent);
         Ok(value)
     }

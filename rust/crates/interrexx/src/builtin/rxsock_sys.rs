@@ -37,9 +37,8 @@ fn check_open(fd: RawFd) -> Os<()> {
     }
 }
 
-/// Calls `call` with the descriptor numbered `fd` borrowed, as the oracle's C
-/// uses the number: `EBADF` (without calling) where `fd` names no open
-/// descriptor.
+/// Calls `call` with the descriptor numbered `fd` borrowed, as C code uses the
+/// number: `EBADF` (without calling) where `fd` names no open descriptor.
 pub(crate) fn with_socket<T>(
     fd: RawFd,
     call: impl for<'a> FnOnce(BorrowedFd<'a>) -> Os<T>,
@@ -47,18 +46,18 @@ pub(crate) fn with_socket<T>(
     check_open(fd)?;
     // SAFETY: `borrow_raw` asks that `fd` be open, and not -1, for as long as
     // the borrow lives. `check_open` has just found it open (so it is not -1)
-    // and not one of the interpreter's own descriptors, which no Rust object
-    // of this process but `interrexx_rxapi::reserved`'s holders owns; the borrow
-    // lives only for `call`, which its higher-ranked lifetime keeps from
-    // storing it. The number can still be closed while it is borrowed: by
-    // another interpreter thread's `SockClose` or `SysClose` of the same
-    // number, or by code outside the interpreter. The descriptor is then the
-    // program's, owned by no Rust object, so no object's descriptor is
-    // closed under it; and `call` only passes the number to system calls
-    // through `rustix` and `nix`, which read and write no memory through it.
-    // A closed or reused number makes the call fail with `EBADF` or act on
-    // the descriptor now under it, as the oracle's C does; that is a wrong
-    // answer to a racing program, not undefined behaviour.
+    // and not one of the interpreter's own descriptors, which no Rust object of
+    // this process but `interrexx_rxapi::reserved`'s holders owns; the borrow
+    // lives only for `call`, which its higher-ranked lifetime keeps from storing
+    // it. The number can still be closed while it is borrowed: by another
+    // interpreter thread's `SockClose` or `SysClose` of the same number, or by
+    // code outside the interpreter. The descriptor is then the program's, owned
+    // by no Rust object, so no object's descriptor is closed under it; and
+    // `call` only passes the number to system calls through `rustix` and `nix`,
+    // which read and write no memory through it. A closed or reused number makes
+    // the call fail with `EBADF` or act on the descriptor now under it, as C
+    // code does; that is a wrong answer to a racing program, not undefined
+    // behaviour.
     let socket = unsafe { BorrowedFd::borrow_raw(fd) };
     call(socket)
 }

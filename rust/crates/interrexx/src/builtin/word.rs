@@ -28,8 +28,8 @@ use crate::error::Failure;
 /// argument is omitted.
 const ALL_REMAINING_WORDS: usize = 999_999_999_999_999_999;
 
-/// Whether `byte` separates words: blank or horizontal tab, and no other
-/// byte -- see the module doc for the oracle and the 256-byte measurement.
+/// Whether `byte` separates words: blank or horizontal tab, and no other byte
+/// -- see the module doc for the 256-byte measurement.
 fn is_blank(byte: u8) -> bool {
     byte == b' ' || byte == b'\t'
 }
@@ -37,9 +37,9 @@ fn is_blank(byte: u8) -> bool {
 /// A scan over the words of a byte string.
 struct Words<'a> {
     text: &'a [u8],
-    /// Where the next scan starts. The oracle carries a pointer and a remaining
-    /// length; one index says the same thing, since the remaining length is
-    /// always `text.len() - next`.
+    /// Where the next scan starts. A pointer and a remaining length would carry
+    /// the same state; one index says the same thing, since the remaining
+    /// length is always `text.len() - next`.
     next: usize,
     /// The word [`step`] last found, as a byte range of `text`.
     word: Range<usize>,
@@ -139,10 +139,10 @@ pub(crate) fn delword_bytes(bytes: &mut Vec<u8>, position: usize, count: Option<
         return;
     }
     let front = scan.word.start;
-    // The oracle asks for the blanks only when the skip reached its count;
-    // unconditionally is the same thing here,
-    // because a [`Words::step`] that fails leaves the scan at the end of the
-    // string and there is nothing left for the skip to consume.
+    // The blanks need only be asked for when the skip reached its count;
+    // unconditionally is the same thing here, because a [`Words::step`] that
+    // fails leaves the scan at the end of the string and there is nothing left
+    // for the skip to consume.
     scan.skip(count - 1);
     scan.skip_blanks();
     let rest = scan.next;
@@ -169,12 +169,11 @@ fn wordpos_with(
 ) -> usize {
     let needle = word_slices(phrase);
     let haystack = word_slices(string);
-    // Both guards earn their place, and for different reasons. An empty
-    // phrase would otherwise match at every position, since the empty slice
-    // equals the empty needle -- the oracle answers 0. A phrase with more
-    // words than the string is what the subtraction below cannot survive.
-    // A `start` past the last candidate needs no guard of its own: the range
-    // is then simply empty.
+    // Both guards earn their place, and for different reasons. An empty phrase
+    // would otherwise match at every position, since the empty slice equals the
+    // empty needle -- the answer is 0. A phrase with more words than the string
+    // is what the subtraction below cannot survive. A `start` past the last
+    // candidate needs no guard of its own: the range is then simply empty.
     if needle.is_empty() || needle.len() > haystack.len() {
         0
     } else {
@@ -453,10 +452,9 @@ mod tests {
             b"aa bb  cc"
         );
 
-        // The surviving separator is the argument's own byte, not a blank
-        // the result was rebuilt with. A tab before the deleted word stays a
-        // tab; a tab *after* it goes with the word. Asserted in the oracle's
-        // own whitespace tests rather than in its `DELWORD` test.
+        // The surviving separator is the argument's own byte, not a blank the
+        // result was rebuilt with. A tab before the deleted word stays a tab; a
+        // tab *after* it goes with the word. Asserted by the whitespace tests.
         assert_eq!(
             answer(b"DELWORD", &[b"hey\tis-this  you", b"2", b"1"]),
             b"hey\tyou"
@@ -542,12 +540,10 @@ mod tests {
         assert_eq!(answer(b"DELWORD", &[subject, b"2", b"1"]), b"a\xe9 c\nd");
         assert_eq!(answer(b"WORDPOS", &[b"\x00b", subject]), b"2");
         assert_eq!(answer(b"WORDPOS", &[b"c\nd", subject]), b"3");
-        // The oracle's own committed case for a NUL inside a word:
-        // the oracle's `DELWORD` test asserts that
-        // `asdf zxcv<NUL x5>ASDF ZXCV` is three words whose second is 13
-        // bytes long, and that deleting from word 3 keeps the blank in front
-        // of it. Measured here as well as read: `words` is 3, `wordlength`
-        // at 2 is 13.
+        // A NUL inside a word: the case asserts that `asdf zxcv<NUL x5>ASDF
+        // ZXCV` is three words whose second is 13 bytes long, and that deleting
+        // from word 3 keeps the blank in front of it. So `words` is 3,
+        // `wordlength` at 2 is 13.
         let nuls: &[u8] = b"asdf zxcv\x00\x00\x00\x00\x00ASDF ZXCV";
         assert_eq!(answer(b"WORDS", &[nuls]), b"3");
         assert_eq!(answer(b"WORDLENGTH", &[nuls, b"2"]), b"13");
@@ -645,8 +641,8 @@ mod tests {
         assert_eq!(answer(b"DELWORD", &[ten, b"1"]), b"");
         assert_eq!(answer(b"DELWORD", &[ten, b"2"]), b"a ");
         assert_eq!(answer(b"DELWORD", &[ten, b"9"]), b"a b c d e f g h ");
-        // And the explicit spelling of that default, which is the oracle's
-        // own `MAX_WHOLENUMBER` and the largest the conversion admits.
+        // And the explicit spelling of that default, which is the largest the
+        // conversion admits.
         assert_eq!(answer(b"SUBWORD", &[ten, b"1", b"999999999999999999"]), ten);
         assert_eq!(answer(b"DELWORD", &[ten, b"1", b"999999999999999999"]), b"");
     }
@@ -749,8 +745,8 @@ mod tests {
         assert_eq!(answer(b"WORD", &[b"a b c", b"1e1"]), b"");
     }
 
-    /// A substitution carries the argument's own bytes, and the report
-    /// applies the oracle's display rule to them.
+    /// A substitution carries the argument's own bytes, and the report applies
+    /// the display rule to them.
     #[test]
     fn a_substitution_carries_bytes_and_the_report_makes_them_displayable() {
         assert_eq!(

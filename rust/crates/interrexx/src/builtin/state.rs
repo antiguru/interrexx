@@ -116,19 +116,19 @@ pub(crate) fn gc(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result<Obj
     if !matches!(text.first(), Some(b'f' | b'F')) {
         return Err(Raised::argument_not_in_list(name, 1, VALID, &text).into());
     }
-    // Really collect, the way the oracle's collect-and-uninit does, rather
-    // than report `1` for something that did not happen. Safe at exactly the
-    // point every allocation is: this crate's own collect-stress mode
+    // Really collect, the way a collect-and-uninit does, rather than report `1`
+    // for something that did not happen. Safe at exactly the point every
+    // allocation is: this crate's own collect-stress mode
     // (`Interp::alloc_with`) runs a collection immediately before every
     // allocation, so a caller's values are already rooted by the time any
     // builtin can be entered.
     interp.collect_now();
-    // That is collect *and* run, and `GC('force')` is the one
-    // path that runs the finalizers inline rather than leaving them to a
-    // later safe point. Measured, oracle rc 0: `o = .K~new` / `say 'b'` /
-    // `drop o` / `call gc 'force'` / `say 'c'` answers `a b uninit c`, five
-    // runs of five, where 200,000 unforced allocations in place of the
-    // `GC('force')` defer the same finalizer to termination.
+    // That is collect *and* run, and `GC('force')` is the one path that runs
+    // the finalizers inline rather than leaving them to a later safe point. For
+    // example, `o = .K~new` / `say 'b'` / `drop o` / `call gc 'force'` / `say
+    // 'c'` answers `a b uninit c`, five runs of five, where 200,000 unforced
+    // allocations in place of the `GC('force')` defer the same finalizer to
+    // termination.
     if let Some(loud) = interp.run_ready_uninits().into_iter().next() {
         return Err(Failure::Loud(Box::new(loud)));
     }
@@ -236,8 +236,8 @@ pub(crate) fn trace(interp: &mut Interp, _name: &[u8], args: Args<'_>) -> Result
 pub(crate) fn arg(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result<ObjRef, Failure> {
     const VALID: &str = "AENO";
     let position = whole_number(interp, name, args, 1)?;
-    // Read but not validated here: `optional_string` is all the oracle does
-    // with it until the switch below.
+    // Read but not validated here: `optional_string` is all that is done with
+    // it until the switch below.
     let option = optional_string(interp, args, 2);
     let Some(position) = position else {
         // No position at all: any option, empty or not, is 40.5, and
@@ -278,11 +278,10 @@ pub(crate) fn arg(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result<Ob
             } else {
                 arguments[index - 1..].to_vec()
             };
-            // `new_array()` leaves the shape unset, while the oracle's
-            // array construction fixes it when the count is zero
-            // -- and position 1 takes the
-            // second even when there are no arguments at all, because the
-            // oracle tests it before the past-the-end arm.
+            // `new_array()` leaves the shape unset, while array construction
+            // with a count of zero fixes it -- and position 1 takes the second
+            // even when there are no arguments at all, because that is tested
+            // before the past-the-end arm.
             let dimensions: Option<Box<[usize]>> =
                 (index == 1 && slots.is_empty()).then(|| Box::from([0].as_slice()));
             let object = interp.alloc_charged(
@@ -376,9 +375,9 @@ pub(crate) fn condition(
             Ok(interp.text(text))
         }
         (b'S', Some(condition)) => {
-            // Live, not stored: the oracle reads the trap table by the
-            // condition's *own* name, so an `ANY` trap that caught a
-            // `SYNTAX` condition reports `OFF` even before it is removed.
+            // Live, not stored: the trap table is read by the condition's *own*
+            // name, so an `ANY` trap that caught a `SYNTAX` condition reports
+            // `OFF` even before it is removed.
             let text: &[u8] = match interp.activation().traps.get(&condition.name) {
                 None => b"OFF",
                 Some(trap) if trap.delayed => b"DELAY",
@@ -586,9 +585,8 @@ mod tests {
             "2\nsay sourceline()\n"
         );
         // The two failures are different sub-codes with different
-        // substitutions, and the whole message is what the oracle is
-        // compared against -- both transcripts below were measured on it,
-        // against a one-line program, at rc 216.
+        // substitutions, and the whole message is what is compared -- both
+        // transcripts below are of a one-line program at rc 216.
         assert_eq!(
             failure(b"say sourceline(0)\n"),
             (
@@ -652,7 +650,7 @@ mod tests {
     }
 
     /// An option with no position is the missing-argument error, not the
-    /// bad-option one -- the oracle checks for the position first.
+    /// bad-option one -- the position is checked first.
     #[test]
     fn an_arg_option_without_a_position_is_a_missing_argument() {
         let mut interp = Interp::new();
@@ -727,9 +725,9 @@ mod tests {
         }
     }
 
-    /// A range check reports the integer the conversion produced, and 40.12
-    /// -- raised when that conversion fails -- reports the value's own
-    /// rendering. [`converted`] has the oracle transcripts.
+    /// A range check reports the integer the conversion produced, and 40.12 --
+    /// raised when that conversion fails -- reports the value's own rendering.
+    /// [`converted`] has the transcripts.
     #[test]
     fn a_range_message_substitutes_the_converted_integer() {
         assert_eq!(
@@ -830,7 +828,7 @@ mod tests {
     }
 
     /// `TRACE(setting)` and the `TRACE` instruction disagree about a digit
-    /// string, and the disagreement is the oracle's own.
+    /// string (`bif.trace.error`, `instr.trace.number`).
     #[test]
     fn a_digit_string_is_a_bad_letter_to_the_builtin_and_a_skip_count_to_the_instruction() {
         let (code, stderr) = failure(b"say trace('5')\n");

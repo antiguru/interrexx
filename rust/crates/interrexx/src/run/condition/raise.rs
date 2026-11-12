@@ -107,28 +107,21 @@ impl Interp {
         if let Some(expr) = &raise.additional {
             let mut value = self.eval(code, expr)?;
             self.roots.activity_mut().push_temp(value);
-            // **A surface that is neither `stringValue()` nor an operator,
-            // and only under one condition.** The oracle converts the
-            // additional information to an array exactly once, and
-            // only for `SYNTAX` -- so under
-            // `USER` or any other condition the value is never
-            // array-converted and this crate's rendering is the oracle's own
-            // answer. Measured both ways: `raise syntax 40.1 additional
-            // (.array)` is a 98 execution error at rc 158, `additional
-            // (.environment)` substitutes `INPUTOUTPUTSTREAM` -- the first
-            // entry of the array the directory converts to -- and `raise user
-            // zork additional (.array)` under a trap is rc 0 on both sides.
-            // The array is retained for every condition, but only `SYNTAX`
-            // splits it into substitutions and refuses a value that is not one. The oracle converts
-            // inside its `SYNTAX` branch alone, and that governs the
-            // *substitution list* a catalogue message renders from -- which
-            // only a `SYNTAX` condition has. The condition object's
-            // `ADDITIONAL` carries the raise's own array whatever the
-            // condition is: measured, `raise user mycond additional
-            // (.array~of('x','y'))` gives a directory holding two items, and
-            // pushing the rendered whole value gave one holding `x\ny`.
-            // `Raised::message` is the only other reader and runs for a
-            // catalogue entry alone, so nothing else sees the split.
+            // **A surface that is neither `stringValue()` nor an operator, and only under one
+            // condition.** The additional information is converted to an array exactly once, and
+            // only for `SYNTAX` -- so under `USER` or any other condition the value is never
+            // array-converted. For example `raise syntax 40.1 additional (.array)` is a 98
+            // execution error at rc 158, `additional (.environment)` substitutes
+            // `INPUTOUTPUTSTREAM` -- the first entry of the array the directory converts to -- and
+            // `raise user zork additional (.array)` under a trap is rc 0. The array is retained for
+            // every condition, but only `SYNTAX` splits it into substitutions and refuses a value
+            // that is not one. The conversion is inside the `SYNTAX` branch alone, and that governs
+            // the *substitution list* a catalogue message renders from -- which only a `SYNTAX`
+            // condition has. The condition object's `ADDITIONAL` carries the raise's own array
+            // whatever the condition is: `raise user mycond additional (.array~of('x','y'))` gives
+            // a directory holding two items, and pushing the rendered whole value gave one holding
+            // `x\ny`. `Raised::message` is the only other reader and runs for a catalogue entry
+            // alone, so nothing else sees the split.
             let converted = raise.condition.eq_ignore_ascii_case(b"SYNTAX");
             let mut slots = self.array_slots_of(value);
             // The object on the line, the same split the two keywords above
@@ -177,14 +170,11 @@ impl Interp {
             let mut held = Vec::with_capacity(items.len());
             for item in items {
                 let Some(expr) = item else {
-                    // An omitted position (`array (1,,3)`) **holds its
-                    // place** in the substitution list rather than closing
-                    // up, and substitutes as empty. Measured -- this used to
-                    // `continue`, on a stated-as-unmeasured guess, and the
-                    // guess was wrong: `raise syntax 40.4 array('R',,'X')`
-                    // reports "maximum expected is ." on the oracle (`&2` is
-                    // the hole) where closing up reported "maximum expected
-                    // is X." here.
+                    // An omitted position (`array (1,,3)`) **holds its place**
+                    // in the substitution list rather than closing up, and
+                    // substitutes as empty. `raise syntax 40.4 array('R',,'X')`
+                    // reports "maximum expected is ." (`&2` is the hole), where
+                    // closing up would report "maximum expected is X.".
                     self.trace_argument(indent, b"");
                     held.push(None);
                     continue;
@@ -192,16 +182,13 @@ impl Interp {
                 let value = self.eval(code, expr)?;
                 self.roots.activity_mut().push_temp(value);
                 held.push(Some(value));
-                // **No gap check here, and the absence is the decision.**
-                // The oracle builds a real array from
-                // these elements and the
-                // conversion below it therefore gets an array already and
-                // returns it unchanged -- the elements are never
-                // array-converted, only rendered by the substitution
-                // machinery. Measured: `array (.array)`, `array
-                // (.environment)` and `array (.array, 'b')` are all rc 216
-                // and byte-identical here. A check on this arm refused all
-                // three.
+                // **No gap check here, and the absence is the decision.** A
+                // real array is built from these elements and the conversion
+                // below it therefore gets an array already and returns it
+                // unchanged -- the elements are never array-converted, only
+                // rendered by the substitution machinery. So `array (.array)`,
+                // `array (.environment)` and `array (.array, 'b')` are all rc
+                // 216, and a check on this arm would refuse all three.
                 if let Some(rendered) = self.intermediate_text(value)? {
                     self.trace_argument(indent, &rendered);
                     self.trace_argument(indent, &rendered);
@@ -215,12 +202,11 @@ impl Interp {
                 self.roots.activity_mut().push_temp(array);
                 substitutions = Some(array);
             }
-            // **`an Array`, verbatim and regardless of the elements** --
-            // it is the Array class's own default string form, which is
-            // what the oracle traces here (measured for `array
-            // ('ZORKROUTINE', 7)`). This crate has no array object to render,
-            // and building one purely to print a constant would be the
-            // longer way to the same two words.
+            // **`an Array`, verbatim and regardless of the elements** -- it is
+            // the Array class's own default string form, which is what is
+            // traced here (for `array ('ZORKROUTINE', 7)`). This crate has no
+            // array object to render, and building one purely to print a
+            // constant would be the longer way to the same two words.
             self.trace_keyword(indent, "ARRAY", b"an Array");
         }
         // The `RETURN`/`EXIT` value, and its own `>K>` line -- measured for
@@ -333,7 +319,7 @@ impl Interp {
                     ..Raised::condition(Cow::Owned(String::from_utf8_lossy(&name).into_owned()))
                 };
                 // rexxref (`condtra.xml`, RESULT): the `RETURN` or `EXIT`
-                // value, which the oracle drops.
+                // value, which is dropped.
                 self.activity.pending_result = result;
                 self.activity.pending_description = description_object;
                 self.activity.pending_rc = rc_object;
@@ -545,11 +531,11 @@ impl Interp {
         raised.delivery.positionless = true;
         // The original condition's echo stack, put back exactly as it stood
         // when the trap cleared it: the report is the object's `TRACEBACK`.
-        // `record_failure_at` is first-wins, so restoring a full
-        // `failure_site` is also what stops this `raise propagate` clause
-        // recording itself over the clause that actually raised -- measured,
-        // the oracle echoes line 8 (`say 1/0`), not line 12 (`raise
-        // propagate`) -- and the levels below the trapping one seal nothing.
+        // `record_failure_at` is first-wins, so restoring a full `failure_site`
+        // is also what stops this `raise propagate` clause recording itself
+        // over the clause that actually raised -- line 8 (`say 1/0`) is echoed,
+        // not line 12 (`raise propagate`) -- and the levels below the trapping
+        // one seal nothing.
         let (site, sites) = (active.site.clone(), active.sites.clone());
         self.clear_failure_levels();
         self.activity.failure_site = site;
@@ -566,9 +552,9 @@ impl Interp {
         {
             self.propagate_after_reply(object)?;
         }
-        // The oracle pops the level and re-raises the same object. Measured: without a `RETURN` tail, from an internal call it
-        // is trapped neither by that call's parent nor by the first
-        // activation that is not one, but by the caller of that activation.
+        // The level is popped and the same object re-raised. Without a `RETURN` tail, from an
+        // internal call it is trapped neither by that call's parent nor by the first activation
+        // that is not one, but by the caller of that activation.
         let sender = self.raise_sender(returns);
         if self.frame_at(sender.depth).is_some() {
             raised.delivery.search = sender.search();

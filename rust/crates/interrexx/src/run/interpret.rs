@@ -88,13 +88,13 @@ impl Interp {
             }
         };
 
-        // The exhausted search, at the fragment's own boundary rather than
-        // the program's: measured, the oracle's `LEAVE`/`ITERATE` search
-        // does not cross an `INTERPRET` (this function's own doc comment has
-        // the six transcripts). Byte-identical in shape to
-        // `run_activation`'s own four arms, deliberately -- same four
-        // constructors, same `record_leave_failure` call -- because it is
-        // the same event happening at a different boundary.
+        // The exhausted search, at the fragment's own boundary rather than the
+        // program's: the `LEAVE`/`ITERATE` search does not cross an `INTERPRET`
+        // (this function's own doc comment has the six transcripts).
+        // Byte-identical in shape to `run_activation`'s own four arms,
+        // deliberately -- same four constructors, same `record_leave_failure`
+        // call -- because it is the same event happening at a different
+        // boundary.
         match flow {
             Flow::Leave(name, origin) => {
                 self.record_leave_failure(&origin);
@@ -222,18 +222,17 @@ impl Interp {
     /// Answers whether the clause is to run again, which is what `=` asks for.
     /// A failure the pause raises is recorded against `clause`.
     ///
-    /// The oracle decides per instruction class
-    /// against flags the trace setting derives from the
-    /// letter: an instruction pauses under `A`, `R` and `I` and a label
-    /// wherever labels trace. A command pauses from
+    /// The decision is per instruction class, against flags the trace setting
+    /// derives from the letter: an instruction pauses under `A`, `R` and `I`
+    /// and a label wherever labels trace. A command pauses from
     /// [`Interp::debug_pause_after_command`] instead. A negative skip count
-    /// suppresses the echo and not the pauses it counts, so the flags come
-    /// from the setting it saved. An `IF`, a `SELECT` or a block `DO` that
-    /// answers a `Flow` ran its whole construct; a repeating `DO` that answers
-    /// one ended before any pass, and pauses after its header. A flow that
-    /// leaves the instruction for good owes no pause, and a `LEAVE` or an
-    /// `ITERATE` pauses once the loop it reaches has taken it, so one that
-    /// reaches none raises first.
+    /// suppresses the echo and not the pauses it counts, so the flags come from
+    /// the setting it saved. An `IF`, a `SELECT` or a block `DO` that answers a
+    /// `Flow` ran its whole construct; a repeating `DO` that answers one ended
+    /// before any pass, and pauses after its header. A flow that leaves the
+    /// instruction for good owes no pause, and a `LEAVE` or an `ITERATE` pauses
+    /// once the loop it reaches has taken it, so one that reaches none raises
+    /// first.
     #[cold]
     #[inline(never)]
     pub(crate) fn debug_pause_after_clause(
@@ -525,13 +524,13 @@ pub(crate) enum Pause {
     Transfer(Flow),
 }
 
-/// Whether a debug pause follows an instruction of `kind` once its own work
-/// is done, as the oracle's instructions end in a pause, or a block header's
-/// in a conditional one. `INTERPRET` pauses before its fragment instead.
-/// `CALL ON` and `CALL OFF` do not pause. `REPLY` pauses once the activation
-/// is marked as having replied and before the caller goes on, so its banner
-/// comes there and the continuation, which shares the activation's debug
-/// state, does not print it again.
+/// Whether a debug pause follows an instruction of `kind` once its own work is
+/// done, as instructions end in a pause, or a block header's in a conditional
+/// one. `INTERPRET` pauses before its fragment instead. `CALL ON` and `CALL
+/// OFF` do not pause. `REPLY` pauses once the activation is marked as having
+/// replied and before the caller goes on, so its banner comes there and the
+/// continuation, which shares the activation's debug state, does not print it
+/// again.
 pub(crate) fn pauses_after(kind: &InstructionKind) -> bool {
     !matches!(
         kind,

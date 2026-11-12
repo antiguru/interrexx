@@ -15,12 +15,11 @@ use crate::clause::DeadlineCounted;
 enum DoOutcome {
     /// The body ran off its end into the `END` clause.
     FellThrough,
-    /// An `ITERATE` naming this construct cut the pass short. The line is
-    /// that `ITERATE` clause's own -- what the loop's next re-test is
-    /// attributed to, because the oracle re-enters the loop from inside
-    /// the `ITERATE`, with it still the current
-    /// instruction. `site` is the same clause's echo site, for the case
-    /// where that re-test fails -- see [`HeaderClause::Iterate`].
+    /// An `ITERATE` naming this construct cut the pass short. The line is that
+    /// `ITERATE` clause's own -- what the loop's next re-test is attributed to,
+    /// because the loop is re-entered from inside the `ITERATE`, with it still
+    /// the current instruction. `site` is the same clause's echo site, for the
+    /// case where that re-test fails -- see [`HeaderClause::Iterate`].
     Iterated {
         line: usize,
         site: Option<(usize, Vec<u8>)>,
@@ -240,9 +239,8 @@ enum LoopState {
     Count {
         remaining: u64,
     },
-    /// `DO name OVER expr`: binds `control` to each of `items` in turn. A
-    /// stem target iterates its tails in this crate's order rather than the
-    /// oracle's (Deviation 1).
+    /// `DO name OVER expr`: binds `control` to each of `items` in turn. A stem
+    /// target iterates its tails in this crate's order (Deviation 1).
     OverItems {
         control: SymbolId,
         /// [`control_slot`], taken once when this loop was entered.
@@ -271,22 +269,20 @@ enum LoopState {
         by_int: Option<i64>,
         /// Whether the control variable is spelled simple, stem or compound.
         shape: NameShape,
-        /// Whether at least one candidate iteration has already been
-        /// decided, which is exactly the oracle's own "not the first pass" test: it
-        /// selects between "read the value the header computed" and
-        /// "increment it, tracing on both sides of the addition". A `bool`
-        /// on the state rather than a flag threaded through `run_repeating`
-        /// because `loop_advance` is the only reader and the only writer,
-        /// and because it has to survive an `ITERATE`, which re-enters that
+        /// Whether at least one candidate iteration has already been decided, which
+        /// is exactly the "not the first pass" test: it selects between "read the
+        /// value the header computed" and "increment it, tracing on both sides of
+        /// the addition". A `bool` on the state rather than a flag threaded through
+        /// `run_repeating` because `loop_advance` is the only reader and the only
+        /// writer, and because it has to survive an `ITERATE`, which re-enters that
         /// function without passing through the top of the driver's loop.
         stepped: bool,
     },
     /// `DO WITH INDEX i ITEM v OVER expr`: steps the supplier the target
     /// answered `SUPPLIER` with.
     With(Box<WithState>),
-    /// A controlled loop whose header value or control variable is an
-    /// object: driven by message, as the oracle drives every
-    /// controlled loop.
+    /// A controlled loop whose header value or control variable is an object:
+    /// driven by message, as every controlled loop is driven.
     ObjectControlled(Box<ObjectControl>),
 }
 
@@ -406,10 +402,9 @@ pub(crate) enum HeaderRole {
     By,
     /// A controlled loop's `FOR`.
     For,
-    /// A bare `DO expr`'s repeat count, **echoed under the `FOR` tag**
-    /// (measured: the oracle traces a bare repeat count under `FOR`, the
-    /// same as an explicit `DO ... FOR n`), and validated against 26.2 where
-    /// a `FOR` is 26.3.
+    /// A bare `DO expr`'s repeat count, **echoed under the `FOR` tag** (a bare
+    /// repeat count is traced under `FOR`, the same as an explicit `DO ... FOR
+    /// n`), and validated against 26.2 where a `FOR` is 26.3.
     Count,
     /// `DO name OVER expr`'s target, echoed under the `OVER` tag.
     Over,
@@ -418,19 +413,18 @@ pub(crate) enum HeaderRole {
     /// A `COUNTER` variable's reset to `0`, ahead of every header
     /// expression. Its slot has no expression.
     Counter,
-    /// The `FOR` count of `DO name OVER expr FOR expr` and of `DO WITH ...
-    /// OVER expr FOR expr`, **echoed under the `FOR` tag** (measured against
-    /// the oracle: `do qq over zs for 1` prints `>K>   "FOR" => "1"`, on both
-    /// `trace i` and `trace r` -- the same tag a controlled loop's own `FOR`
-    /// and a bare `DO`'s repeat count carry; `do_with_trace.rex` measures the
-    /// `DO WITH` form).
+    /// The `FOR` count of `DO name OVER expr FOR expr` and of `DO WITH ... OVER
+    /// expr FOR expr`, **echoed under the `FOR` tag** (`do qq over zs for 1`
+    /// prints `>K> "FOR" => "1"`, on both `trace i` and `trace r` -- the same
+    /// tag a controlled loop's own `FOR` and a bare `DO`'s repeat count carry;
+    /// `do_with_trace.rex` measures the `DO WITH` form).
     OverFor,
 }
 
 impl HeaderRole {
-    /// The `>K>` tag this value's own echo carries, or `None` for the one
-    /// role the oracle echoes nothing for: `Initial`, a control variable's
-    /// own starting value (its own doc has the measurement).
+    /// The `>K>` tag this value's own echo carries, or `None` for the one role
+    /// that echoes nothing: `Initial`, a control variable's own starting value
+    /// (its own doc has the transcript).
     pub(crate) fn keyword(self) -> Option<&'static str> {
         match self {
             HeaderRole::Initial => None,
@@ -573,7 +567,7 @@ pub(crate) struct LoopHeaderValues {
 
 impl Interp {
     /// One header value's own `>K>` line, at the `DO`/`LOOP` clause's own
-    /// indent, for the roles the oracle echoes one for.
+    /// indent, for the roles that echo one.
     pub(crate) fn echo_header_value(
         &mut self,
         role: HeaderRole,
@@ -628,10 +622,10 @@ impl Interp {
         values: &mut LoopHeaderValues,
     ) -> Result<(), Failure> {
         match role {
-            // **The rounded value and the representation it arrived in.** The
-            // rounding is the oracle's, and for an integer inside `DIGITS` it
-            // is a no-op, so the two arms carry the same worth and differ only
-            // in what [`ControlValue::small`] may then answer.
+            // **The rounded value and the representation it arrived in.** For
+            // an integer inside `DIGITS` it is a no-op, so the two arms carry
+            // the same worth and differ only in what [`ControlValue::small`]
+            // may then answer.
             HeaderRole::Initial => {
                 let digits = self.activation().settings.digits();
                 // **The `Number` is built only by the arm that keeps it.**
@@ -830,12 +824,11 @@ impl Interp {
     /// The values a `DO OVER` binds its control variable to: the **non-empty**
     /// slots of what [`Interp::over_target_array`] converts the target into.
     fn over_snapshot(&mut self, value: ObjRef) -> Result<(ObjRef, Vec<ObjRef>), Failure> {
-        // The collections whose order is this crate's rather than the
-        // oracle's, a native `StringTable` or `Directory`, answer from their
-        // own walk -- see
+        // The collections whose order is this crate's own, a native
+        // `StringTable` or `Directory`, answer from their own walk -- see
         // [`Interp::hash_collection_indexes`] for why it is sorted and what
-        // that costs. It cannot go through `MAKEARRAY` either: a
-        // `Body::Native` receiver is not the store `hash.rs` owns.
+        // that costs. It cannot go through `MAKEARRAY` either: a `Body::Native`
+        // receiver is not the store `hash.rs` owns.
         let items: Vec<ObjRef> = if self.is_hash_collection(value) {
             self.hash_collection_indexes(value)
         } else {
@@ -1104,14 +1097,12 @@ impl Interp {
                 // clause left once `run_bounded` has returned.
                 let do_indent = self.activity.clause_state.current_value_indent;
                 // **The block's own clause, opened and ended before any body
-                // instruction runs.** The oracle
-                // traces the instruction,
-                // opens the block and returns -- it never runs the body -- so
-                // a condition queued before the `DO` is delivered here, at the
-                // `DO`'s own line and with the block open. Measured, a handler
-                // that requeues ahead of `do` / `say 'body'` / `end`: the
-                // oracle runs the requeued handler with `SIGL` naming the `DO`
-                // and prints its output ahead of `body`.
+                // instruction runs.** The instruction is traced, the block
+                // opened and the body not yet run, so a condition queued before
+                // the `DO` is delivered here, at the `DO`'s own line and with
+                // the block open. With a handler that requeues ahead of `do` /
+                // `say 'body'` / `end`, the requeued handler runs with `SIGL`
+                // naming the `DO` and prints its output ahead of `body`.
                 let do_line = self
                     .clause_line_at(code, index, instruction, source)
                     .unwrap_or_else(|| self.activity.clause_state.line());
@@ -1149,15 +1140,12 @@ impl Interp {
                     DoOutcome::FellThrough | DoOutcome::Iterated { .. } => {
                         // **`END` is a clause of its own, and its boundary is
                         // where a condition queued by the block's last body
-                        // clause is delivered.** The oracle executes `END` as
-                        // an instruction, so a handler requeued inside the
-                        // block runs there rather than after the whole
-                        // construct. Measured, `do` / `end` with a handler
-                        // that requeues twice: the oracle reports the second
-                        // handler's `SIGL` as `END`'s line, ahead of the
-                        // `SAY` that follows the block; without this clause
-                        // it ran after that `SAY` had already printed, on
-                        // both engines.
+                        // clause is delivered.** `END` is executed as an
+                        // instruction, so a handler requeued inside the block
+                        // runs there rather than after the whole construct.
+                        // With `do` / `end` and a handler that requeues twice,
+                        // the second handler's `SIGL` is `END`'s line, ahead of
+                        // the `SAY` that follows the block.
                         let end_instruction = &code.body.instructions[end_index];
                         let end_line = self
                             .clause_line_at(code, end_index, end_instruction, source)
@@ -1308,16 +1296,13 @@ impl Interp {
     }
 
     /// The shared driver for every repeating `LoopKind` (everything but
-    /// `Simple`, which never repeats and runs through
-    /// `run_loop_with_header`'s own arm directly):
-    /// advance-test-run-test-advance, in the order the oracle is measured to
-    /// use it in --
-    /// `WHILE` tested before the body, `UNTIL` after, and a `LEAVE`/
-    /// `ITERATE` handled identically to falling off the bottom of the body
-    /// normally, because that is what the oracle's own `ITERATE` does
-    /// (measured: `do until n = 1 / n = n + 1 / if n = 1 then iterate / ...`
-    /// terminates immediately rather than skipping straight to the next
-    /// pass's top, because `ITERATE` jumps to the loop's own
+    /// `Simple`, which never repeats and runs through `run_loop_with_header`'s
+    /// own arm directly): advance-test-run-test-advance, in this order: `WHILE`
+    /// tested before the body, `UNTIL` after, and a `LEAVE`/ `ITERATE` handled
+    /// identically to falling off the bottom of the body normally, because that
+    /// is what `ITERATE` does (`do until n = 1 / n = n + 1 / if n = 1 then
+    /// iterate / ...` terminates immediately rather than skipping straight to
+    /// the next pass's top, because `ITERATE` jumps to the loop's own
     /// bottom-of-iteration bookkeeping, which for an `UNTIL` loop includes
     /// testing `UNTIL` right there).
     #[allow(
@@ -1353,19 +1338,17 @@ impl Interp {
         // instruction step), so it has not moved.
         let do_indent = self.activity.clause_state.current_value_indent;
         let loop_indent = do_indent + 2;
-        // `TRACE`'s own per-iteration re-echo: the oracle's `DO`/`LOOP` instruction is re-executed
-        // once per pass, so its
-        // own clause -- and `END`'s -- echo again on every pass, unlike
-        // every other construct in this crate, which resolves its whole
-        // repetition inside one `step` call and so is stepped, and echoed,
-        // exactly once (`Op::Clause`'s own doc comment). `false`
-        // on entry because the *first* pass's echo already happened there,
-        // before `run_loop_with_header` ever called into this function.
+        // `TRACE`'s own per-iteration re-echo: the `DO`/`LOOP` instruction is re-executed once per
+        // pass, so its own clause -- and `END`'s -- echo again on every pass, unlike every other
+        // construct in this crate, which resolves its whole repetition inside one `step` call and
+        // so is stepped, and echoed, exactly once (`Op::Clause`'s own doc comment). `false` on
+        // entry because the *first* pass's echo already happened there, before
+        // `run_loop_with_header` ever called into this function.
         let is_until_loop = matches!(conditional, Some(cond) if cond.until);
         let mut first_pass = true;
-        // Which clause the loop header's own evaluation belongs to on this
-        // pass -- `HeaderClause`'s own doc comment has the oracle mechanism
-        // and the three measured transcripts.
+        // Which clause the loop header's own evaluation belongs to on this pass
+        // -- `HeaderClause`'s own doc comment has the mechanism and the three
+        // transcripts.
         let mut header_clause = HeaderClause::Do;
         let mut iterate_site: IterateSite = None;
         let end_line = self
@@ -1468,23 +1451,22 @@ impl Interp {
             }
 
             let flow = self.run_bounded(code, body_start, end_index, source, engine)?;
-            // The pass boundary is an instruction of its own on the oracle
-            // (`END`, or the `ITERATE` that jumped to it), and the clock is
-            // stale after it, so a loop with no
-            // body clause still reads a fresh `TIME('E')` per test.
+            // The pass boundary is an instruction of its own (`END`, or the
+            // `ITERATE` that jumped to it), and the clock is stale after it, so
+            // a loop with no body clause still reads a fresh `TIME('E')` per
+            // test.
             self.activation_mut().clock_stale = true;
             match self.do_body_outcome(code, do_index, label, true, resume, flow)? {
                 DoOutcome::Escaped(escape) => return Ok(escape),
                 // **`END` is not reached at all when an `ITERATE` ended the
-                // pass**, so it neither echoes nor owns the re-test. Measured:
-                // under `trace r`, `do while zn < 2 / zn = zn +
-                // 1 / iterate / end` echoes `iterate` and then the `do`
-                // clause again, with no `end` line between them, where the
-                // same loop without the `ITERATE` does echo `end`. The
-                // oracle's reason is structural: `END` itself is
-                // what re-executes the loop on a fall-through, and
-                // `ITERATE` re-executes it directly --
-                // `END` is jumped straight over.
+                // pass**, so it neither echoes nor owns the re-test. Under
+                // `trace r`, `do while zn < 2 / zn = zn + 1 / iterate / end`
+                // echoes `iterate` and then the `do` clause again, with no
+                // `end` line between them, where the same loop without the
+                // `ITERATE` does echo `end`. The reason is structural: `END`
+                // itself is what re-executes the loop on a fall-through, and
+                // `ITERATE` re-executes it directly -- `END` is jumped straight
+                // over.
                 DoOutcome::Iterated { line, site } => {
                     header_clause = HeaderClause::Iterate { line };
                     iterate_site = site;
@@ -1508,21 +1490,18 @@ impl Interp {
             if let Some(cond) = conditional
                 && cond.until
             {
-                // **F4's own sibling, found while re-verifying this task's
-                // review fixes rather than assumed clean**: `UNTIL`'s own
-                // check needs a *second*, unconditional re-echo of the
-                // `DO`/`LOOP` clause here, not only the top-of-loop one
-                // above. Measured: `do until n = 1 / n = n + 1 / end`
-                // re-echoes `do until ...` a second time, after `END`,
-                // before testing `UNTIL` at all -- even on the very first
-                // test, which runs after the body's only pass and before
-                // the top-of-loop re-echo (gated on `!first_pass`) would
-                // ever fire again. The oracle's own `DO`/`LOOP` instruction
-                // is re-entered to make *this* decision too, exactly like
-                // it is to test `WHILE` or advance a `Controlled` loop
-                // -- `UNTIL`'s decision point is not the same event as the
-                // top-of-loop one, so it needs its own echo unconditionally
-                // rather than sharing `first_pass`'s gate.
+                // **`UNTIL`'s own check needs a *second*, unconditional re-echo
+                // of the `DO`/`LOOP` clause here, not only the top-of-loop one
+                // above.** For example `do until n = 1 / n = n + 1 / end`
+                // re-echoes `do until ...` a second time, after `END`, before
+                // testing `UNTIL` at all -- even on the very first test, which
+                // runs after the body's only pass and before the top-of-loop
+                // re-echo (gated on `!first_pass`) would ever fire again. The
+                // `DO`/`LOOP` instruction is re-entered to make *this* decision
+                // too, exactly like it is to test `WHILE` or advance a
+                // `Controlled` loop -- `UNTIL`'s decision point is not the same
+                // event as the top-of-loop one, so it needs its own echo
+                // unconditionally rather than sharing `first_pass`'s gate.
                 if self.trace_mode().all
                     && let Some((line, text)) = self.clause_site(source, do_instruction)
                 {
@@ -1534,14 +1513,13 @@ impl Interp {
                 // call does not set it), so without this `UNTIL`'s
                 // intermediates would otherwise still read `do_indent`.
                 self.activity.clause_state.current_value_indent = loop_indent;
-                // `UNTIL`'s test belongs to the same clause the *next*
-                // top-of-loop re-test does, and for the same reason: in the
-                // oracle they are one event, a re-execution of the loop started by whichever
-                // instruction transferred control back to the loop. Measured
-                // with an `ITERATE` in the body, which is what tells the two
-                // candidates apart -- `do until zs() >= 2` with `if zn = 1
-                // then iterate` on line 4 reports `4` for the first test and
-                // `6` (the `END` line) for the second.
+                // `UNTIL`'s test belongs to the same clause the *next* top-of-loop re-test
+                // does, and for the same reason: they are one event, a re-execution of the
+                // loop started by whichever instruction transferred control back to the
+                // loop. With an `ITERATE` in the body, which is what tells the two
+                // candidates apart, `do until zs() >= 2` with `if zn = 1 then iterate` on
+                // line 4 reports `4` for the first test and `6` (the `END` line) for the
+                // second.
                 let until_line = match header_clause {
                     HeaderClause::Do => do_line,
                     HeaderClause::End => end_line,
@@ -1588,10 +1566,10 @@ impl Interp {
                 }
             }
             // Nothing happens at the bottom of a pass: a `Controlled` loop's
-            // `BY` increment is `loop_advance`'s, where the oracle does it,
-            // because the two `>>>` lines the oracle traces straddle that
-            // addition and the value on the near side of it is gone by the
-            // time the next `loop_advance` runs.
+            // `BY` increment is `loop_advance`'s, where it belongs, because the
+            // two `>>>` lines traced straddle that addition and the value on
+            // the near side of it is gone by the time the next `loop_advance`
+            // runs.
         }
     }
 
@@ -1955,9 +1933,9 @@ impl Interp {
             }
         }
         // **`UNTIL`'s own test, and its own re-echo of the `DO`/`LOOP`
-        // clause.** `run_repeating`'s own arm has the measurement: the oracle
-        // re-enters the loop instruction to make this decision as much as to
-        // test `WHILE` or advance a control variable, so the echo here is
+        // clause.** `run_repeating`'s own arm has the transcript: the loop
+        // instruction is re-entered to make this decision as much as to test
+        // `WHILE` or advance a control variable, so the echo here is
         // unconditional rather than sharing the top-of-loop one below -- which
         // is why that one is not emitted at all for an `UNTIL` loop.
         if flat.test.until() {
@@ -2168,7 +2146,7 @@ impl Interp {
 
     /// [`Interp::flat_loop_header`] for a loop that carries a `WHILE` or a
     /// `COUNTER`: the same advance, then the condition, then the counter, all
-    /// inside the one clause the oracle re-enters to make this decision.
+    /// inside the one clause re-entered to make this decision.
     #[inline(never)]
     fn flat_loop_header_general(
         &mut self,
@@ -2311,9 +2289,8 @@ impl Interp {
                 remaining,
             } => {
                 // **The item is bound before `FOR`'s budget is consulted**,
-                // which is the oracle's own order: the `OVER` check
-                // assigns the control variable and only then is `FOR`
-                // consulted. Measured, three descriptors: `a =
+                // which is the order of the steps: the `OVER` check assigns the
+                // control variable and only then is `FOR` consulted. With `a =
                 // (10,20,30,40)` with `do e over a for 2` leaves `e` at `30`,
                 // and `do e over 'abc' for 0` leaves it at `abc` with the body
                 // never entered. Under `trace i` the terminating pass still
@@ -2351,14 +2328,12 @@ impl Interp {
                 shape,
                 stepped,
             } => {
-                // **The re-tested pass's own four lines.**
-                // The oracle's control check on a re-tested pass
-                // does four traceable things in this order:
-                // read the control variable (which
-                // traces `>V>`), trace that value (`>>>`), add `BY`,
-                // trace the sum, then assign it (`>=>`).
-                // "Not the first pass" is exactly `stepped` here. `trace i` /
-                // `do ii = 1 to 2`'s own second pass:
+                // **The re-tested pass's own four lines.** The control check on
+                // a re-tested pass does four traceable things in this order:
+                // read the control variable (which traces `>V>`), trace that
+                // value (`>>>`), add `BY`, trace the sum, then assign it
+                // (`>=>`). "Not the first pass" is exactly `stepped` here.
+                // `trace i` / `do ii = 1 to 2`'s own second pass:
                 // ```text
                 //   >V>     II => "1"
                 //   >>>     "1"
@@ -2482,8 +2457,8 @@ impl Interp {
                 // The cache is only ever as good as its invalidation, so the
                 // debug gate re-derives both on every pass and compares. This
                 // is the tripwire, not the test: a stale entry is invisible in
-                // the answer for every program tried against the oracle, which
-                // is exactly why it needs an assertion rather than a probe.
+                // the answer for every program tried, which is exactly why it
+                // needs an assertion rather than a probe.
                 debug_assert_eq!(
                     *to_int,
                     to.as_ref().and_then(|bound| bound.plain_integer(digits)),
@@ -2581,10 +2556,9 @@ impl Interp {
                 }
                 // The first pass takes the value the header already computed,
                 // unincremented and with no line of its own beyond the `>=>`
-                // below -- the oracle reads it without tracing:
-                // the initial assignment
-                // was already traced during setup, and tracing here too
-                // would show an extra add-looking item.
+                // below -- it is read without tracing: the initial assignment
+                // was already traced during setup, and tracing here too would
+                // show an extra add-looking item.
                 let value = if let ControlValue::Small(small) = current
                     && let Some(handle) = exact_small_int(*small, digits)
                 {
@@ -2654,16 +2628,14 @@ impl Interp {
         shape: NameShape,
         loop_indent: usize,
     ) -> Result<ObjRef, Failure> {
-        // **`read`, not `read_by_name`: this is an evaluation and
-        // it can raise `NOVALUE`**. The oracle's own `control->evaluate`
-        // is a full expression evaluation, so a body that
-        // `DROP`s the control variable makes the next re-test
-        // raise `NOVALUE` rather than read a derived name.
-        // Measured, `signal on novalue name nv` around
-        // `do ii = 1 to 3 ; drop ii ; end`: the oracle runs the
-        // handler and exits 0, where `read_by_name` here gave a
-        // spurious 41.1 at rc 215. `read_by_name` reports
-        // nothing to its caller and cannot express that.
+        // **`read`, not `read_by_name`: this is an evaluation and it can raise
+        // `NOVALUE`**. The control variable is read by a full expression
+        // evaluation, so a body that `DROP`s the control variable makes the
+        // next re-test raise `NOVALUE` rather than read a derived name. With
+        // `signal on novalue name nv` around `do ii = 1 to 3 ; drop ii ; end`
+        // the handler runs and the exit is 0, where `read_by_name` would give a
+        // spurious 41.1 at rc 215. `read_by_name` reports nothing to its caller
+        // and cannot express that.
         let (previous, novalue, resolved) = match shape {
             NameShape::Simple => {
                 // `read_at` with the slot `control_slot` took when
@@ -3114,25 +3086,20 @@ pub(super) fn numeric_less(
     compare_decoded(b"", Some(a), b"", Some(b), digits, fuzz, CompareOp::Less)
 }
 
-/// Rounds `number` under `digits`, mirroring the oracle's own unary `+` at
-/// a controlled loop's entry (F1, branch review, Important): `setup_
-/// controlled` used to store `initial`/`to`/`by` as their exact parse, but
-/// the oracle's controlled-loop setup (verified by containment) rounds all
-/// three with a unary `+` before the loop ever starts. Masked while `NUMERIC DIGITS` stays
-/// constant (every later use re-rounds to the same width anyway) and wrong
-/// the moment digits changes inside the loop body -- measured: `numeric
-/// digits 3; do i = 1.23456 to 3; say i; numeric digits 9; end` is `1.23 /
-/// 2.23 / 3.23` on the oracle (the header values were rounded once, at
-/// entry, under digits 3, and stay that width even after digits widens);
-/// this crate gave `1.23 / 2.23456 / 3.23456` before this fix (the exact
-/// parse survived into the wider-digits passes untouched).
+/// Rounds `number` under `digits`, as a unary `+` does, at a controlled loop's entry:
+/// `initial`, `to` and `by` are all rounded before the loop ever starts. This is invisible
+/// while `NUMERIC DIGITS` stays constant (every later use re-rounds to the same width
+/// anyway) and matters the moment digits changes inside the loop body: `numeric digits 3;
+/// do i = 1.23456 to 3; say i; numeric digits 9; end` is `1.23 / 2.23 / 3.23`, the header
+/// values having been rounded once, at entry, under digits 3, and staying that width even
+/// after digits widens.
 fn round_via_unary_plus(number: &Number, digits: u64) -> Result<Number, ArithError> {
     Number::zero().add(number, digits)
 }
 
-/// Whether a failed advance is a message-driven loop's first test, which the
-/// oracle makes inside the block it has just opened: blamed on the `DO`
-/// clause at the body's indent, as a `WHILE` is.
+/// Whether a failed advance is a message-driven loop's first test, which is
+/// made inside the block just opened: blamed on the `DO` clause at the body's
+/// indent, as a `WHILE` is.
 fn by_message_first_pass(blame: HeaderClause, state: &LoopState) -> bool {
     matches!(blame, HeaderClause::Do) && matches!(state, LoopState::ObjectControlled(_))
 }

@@ -331,24 +331,21 @@ impl Interp {
             return Ok(());
         }
         // The variable's own derived name, which `CONDITION('D')` and the
-        // condition object's `DESCRIPTION` both report -- measured, the
-        // oracle answers `ZZUNDEF` for `say zzundef` under `SIGNAL ON
-        // NOVALUE`. `derived_name_text` is the same value the
-        // `::OPTIONS NOVALUE SYNTAX` branch above already builds; leaving it
-        // off here is what made both answer empty.
+        // condition object's `DESCRIPTION` both report: `ZZUNDEF` for `say
+        // zzundef` under `SIGNAL ON NOVALUE`. `derived_name_text` is the same
+        // value the `::OPTIONS NOVALUE SYNTAX` branch above already builds;
+        // leaving it off here is what made both answer empty.
         let mut raised = Raised::condition(Cow::Borrowed("NOVALUE"));
         raised.description = Some(self.derived_name_text(read));
         Err(raised.into())
     }
 
-    /// The value of an uninitialised read whose derived name is `derived`,
-    /// in the oracle's order:
-    /// where `::OPTIONS NOVALUE SYNTAX` is
-    /// about to raise 98.986, `derived`; otherwise the `.local~novalue`
-    /// hook's answer, or `derived` where it answers none. The read is still
-    /// [`Novalue::Unset`]: where the hook answered or failed, that outcome
-    /// waits in `Interp::novalue_hooked` for the `novalue_check` after the
-    /// read.
+    /// The value of an uninitialised read whose derived name is `derived`, in
+    /// this order: where `::OPTIONS NOVALUE SYNTAX` is about to raise 98.986,
+    /// `derived`; otherwise the `.local~novalue` hook's answer, or `derived`
+    /// where it answers none. The read is still [`Novalue::Unset`]: where the
+    /// hook answered or failed, that outcome waits in `Interp::novalue_hooked`
+    /// for the `novalue_check` after the read.
     #[cold]
     #[inline(never)]
     pub(crate) fn novalue_answer(&mut self, derived: ObjRef) -> ObjRef {
@@ -628,13 +625,12 @@ impl Interp {
             }
             Search::Nobody => return Err(failure),
         }
-        // A phantom does not trap: the oracle checks whether the activation
-        // is forwarded before it
-        // looks at any trap table, and this crate reaches the frame it drills
-        // to by declining here and letting the failure leave this activation.
-        // [`Interp::trap_for`] does the drilling for the callers that ask
-        // whether a condition would be trapped at all, which is the same
-        // question the oracle's trap test answers.
+        // A phantom does not trap: whether the activation is forwarded is
+        // checked before any trap table is looked at, and this crate reaches
+        // the frame it drills to by declining here and letting the failure
+        // leave this activation. [`Interp::trap_for`] does the drilling for the
+        // callers that ask whether a condition would be trapped at all, which
+        // is the same question the trap test answers.
         if self
             .running_activation()
             .is_some_and(|a| a.flags.forwarded())
@@ -647,17 +643,15 @@ impl Interp {
         if trap.call {
             return Err(failure);
         }
-        // Resolved **before** anything is cleared or removed, because a
-        // label that does not exist is not a trap that fired: measured,
-        // `signal on syntax name nosuchlabel` with `say 1/0` on line 3
-        // reports `Error 16.1 Label "NOSUCHLABEL" not found` against line 3
-        // -- the raising clause's own site, which is still the one
-        // `Op::Clause`'s region recorded a moment ago and which the clearing
-        // below would have thrown away.
-        // `SIGNAL ON` turns the trap off before it raises
-        // 16.1, so the 16.1 is offered to this same table: measured, `signal
-        // on novalue` with no `NOVALUE:` label is trapped by `signal on
-        // syntax` at the raising clause (upstream bug 1877).
+        // Resolved **before** anything is cleared or removed, because a label
+        // that does not exist is not a trap that fired: `signal on syntax name
+        // nosuchlabel` with `say 1/0` on line 3 reports `Error 16.1 Label
+        // "NOSUCHLABEL" not found` against line 3 -- the raising clause's own
+        // site, which is still the one `Op::Clause`'s region recorded a moment
+        // ago and which the clearing below would have thrown away. `SIGNAL ON`
+        // turns the trap off before it raises 16.1, so the 16.1 is offered to
+        // this same table: `signal on novalue` with no `NOVALUE:` label is
+        // trapped by `signal on syntax` at the raising clause (defect 1877).
         let target = match self.resolve_signal_target(&trap.label) {
             Ok(target) => target,
             Err(missing) => {
@@ -750,9 +744,9 @@ impl Interp {
         self.activation_mut()
             .replace_condition(Some(TrappedCondition {
                 name: raised.condition.as_bytes().into(),
-                // Only a `SYNTAX` condition has a `CODE` item at all
-                // (the oracle puts it in only there), so the name and not the number is the test: measured,
-                // a trapped `HALT` reports `E` as the null string.
+                // Only a `SYNTAX` condition has a `CODE` item at all (it is put in only there), so
+                // the name and not the number is the test: a trapped `HALT` reports `E` as the null
+                // string.
                 code_sub: (raised.condition == "SYNTAX").then_some(raised.sub),
                 call: false,
                 description: raised.description.clone(),
@@ -768,14 +762,14 @@ impl Interp {
             replied,
         }));
         // **The failed clause's own boundary, and the one place it can
-        // happen**. `Op::Clause`'s region ends a *completing*
-        // clause; a clause that raised has not completed, and at that moment
-        // nothing yet knows whether it will be trapped here or unwind the
-        // activation. This is the point where that is decided in favour of
-        // "trapped here, execution continues", so it is the point where a
-        // `CALL ON` handler queued by the same clause is owed its run. A halt
-        // request waits for the label's clause: measured, the oracle reports
-        // an untrapped one there, and `SIGL` names it for a trapped one.
+        // happen**. `Op::Clause`'s region ends a *completing* clause; a clause
+        // that raised has not completed, and at that moment nothing yet knows
+        // whether it will be trapped here or unwind the activation. This is the
+        // point where that is decided in favour of "trapped here, execution
+        // continues", so it is the point where a `CALL ON` handler queued by
+        // the same clause is owed its run. A halt request waits for the label's
+        // clause: an untrapped one is reported there, and `SIGL` names it for a
+        // trapped one.
         if let Some(exit) = self.deliver_pending(false)? {
             return Ok(Flow::Exit(exit.value()));
         }
@@ -801,11 +795,11 @@ impl Interp {
             // comment has the three transcripts this identity check answers,
             // including the two a stack depth got wrong.
             let here = self.activation().id;
-            // Both keys, and they answer different questions: the identity
-            // says which activation's trap table matched, the depth says which
+            // Both keys, and they answer different questions: the identity says
+            // which activation's trap table matched, the depth says which
             // `INTERPRET` fragment's queue the condition is sitting in. A
-            // fragment is an activation in the oracle and is not one here, so
-            // the second is what the first cannot see.
+            // fragment is an activation of its own in the reference model and
+            // is not one here, so the second is what the first cannot see.
             let depth = self.activity.fragment_depth;
             let Some(at) = self
                 .activity
@@ -931,18 +925,16 @@ impl Interp {
         // cleared.
         let mut raised = Raised::condition(condition_name(&pending.condition));
         raised.rc = pending.rc.clone();
-        // **Saved and restored, not cleared**: clearing is right
-        // only when nothing was active before -- and one clause can queue a
-        // `CALL ON` condition *and* raise a `SIGNAL ON`-trapped one, so a
-        // `SIGNAL` handler can be running when a `CALL` handler is delivered
-        // inside it. Measured: `zq = sub() + 1/0` under both traps, with the
-        // `SIGNAL` handler ending in `raise propagate`, is the original 42.3
-        // at rc 214 on the oracle; clearing to `None` gave 98.918 at rc 158,
-        // and never clearing at all gave silence at rc 0. Restoring gives the
-        // oracle's answer in all three measured shapes, the "nothing was
-        // active, restore `None`" one included.
-        // Set here for the handler's activation to inherit,
-        // and put back once it returns.
+        // **Saved and restored, not cleared**: clearing is right only when
+        // nothing was active before -- and one clause can queue a `CALL ON`
+        // condition *and* raise a `SIGNAL ON`-trapped one, so a `SIGNAL`
+        // handler can be running when a `CALL` handler is delivered inside it.
+        // So `zq = sub() + 1/0` under both traps, with the `SIGNAL` handler
+        // ending in `raise propagate`, is the original 42.3 at rc 214; clearing
+        // to `None` would give 98.918 at rc 158, and never clearing at all
+        // would give silence at rc 0. Restoring is right in all three shapes,
+        // the "nothing was active, restore `None`" one included. Set here for
+        // the handler's activation to inherit, and put back once it returns.
         let enclosing = self
             .activation_mut()
             .cold_mut()
@@ -955,8 +947,7 @@ impl Interp {
             }));
         let key: Box<[u8]> = pending.condition.clone();
         // The entry the trap was found under, `ANY` where the condition has
-        // none: the trap instruction's own condition is what the oracle
-        // delays.
+        // none: the trap instruction's own condition is what is delayed.
         let delayed: Box<[u8]> = match self
             .trap_frame()
             .is_some_and(|frame| frame.traps.get(&key).is_some())
@@ -1013,18 +1004,16 @@ impl Interp {
         let queued_before = self.activity.pending_traps.len();
         // `CallType::Subroutine` because a `CALL ON` handler is a `CALL`, and
         // that reaches `PARSE SOURCE` when the trap's name resolves to a
-        // `::ROUTINE` rather than to a label. Measured: a trapped `USER`
-        // condition whose handler is a `::routine` running `parse source`
-        // answers `SUBROUTINE`, where the same handler written as a label
-        // answers whatever the trapping activation answers.
-        // **`CallEntry::Trap`, which is the one thing about a handler's own
-        // activation that differs from an internal `CALL`'s**: the oracle's
-        // trap call passes no receiver where an internal call passes
-        // the caller's, so the handler's calling convention carries
-        // none -- `entered_receiver` has the measurement for both.
-        // The condition object is the handler's one argument,
-        // whether it is a label, a builtin or
-        // an external routine.
+        // `::ROUTINE` rather than to a label. A trapped `USER` condition whose
+        // handler is a `::routine` running `parse source` answers `SUBROUTINE`,
+        // where the same handler written as a label answers whatever the
+        // trapping activation answers. **`CallEntry::Trap`, which is the one
+        // thing about a handler's own activation that differs from an internal
+        // `CALL`'s**: a trap call passes no receiver where an internal call
+        // passes the caller's, so the handler's calling convention carries none
+        // -- `entered_receiver` has both. The condition object is the handler's
+        // one argument, whether it is a label, a builtin or an external
+        // routine.
         let arguments = pending.object.map(Some).into_iter().collect();
         let ended = pinned!(
             self,
@@ -1044,10 +1033,9 @@ impl Interp {
             pending.queued_during_delivery = true;
         }
         self.activation_mut().replace_condition(enclosing_condition);
-        // The delay is lifted again. The `if let` mirrors the oracle testing the handler
-        // for null before enabling it; nothing a Rexx program can do
-        // removes the entry between here and the delay above, so the arm is
-        // structural rather than a case anything reaches.
+        // The delay is lifted again. The `if let` tests the handler for null before
+        // enabling it; nothing a Rexx program can do removes the entry between here and
+        // the delay above, so the arm is structural rather than a case anything reaches.
         if let Some(trap) = self.activation_mut().traps.get_mut(&delayed) {
             trap.delayed = false;
         }
@@ -1168,9 +1156,8 @@ impl Interp {
     /// because `SIGNAL` reaches across an activation boundary on its own.
     pub(crate) fn signal_to_label(&mut self, name: &[u8]) -> Result<Flow, Failure> {
         let target = self.resolve_signal_target(name)?;
-        // Set only once the target actually resolves -- an unresolved
-        // `SIGNAL` (16.1) ends the program regardless, matching the oracle, which a caller only ever invokes `SIGNAL` with an
-        // already-resolved target.
+        // Set only once the target actually resolves -- an unresolved `SIGNAL` (16.1) ends the
+        // program regardless.
         self.set_sigl(self.activity.clause_state.line());
         Ok(Flow::Signal(target))
     }
@@ -1179,12 +1166,12 @@ impl Interp {
     /// same search and transfer a written label takes.
     pub(crate) fn signal_to_value(&mut self, value: ObjRef) -> Result<Flow, Failure> {
         let text = self.to_text(value).to_vec();
-        // `>K>` names the object and the search reads the conversion, which
-        // is the oracle's own order: the `>K>` trace first, then
-        // the string request. Measured, oracle rc 240: `signal value .K` with a
-        // class-side `makeString` returning `'NOSUCH'` reports `Label
-        // "NOSUCH" not found.`, so 16.1 names the conversion where NUMERIC's
-        // own errors name the object.
+        // `>K>` names the object and the search reads the conversion, which is
+        // the order of the steps: the `>K>` trace first, then the string
+        // request. For example, `signal value .K` with a class-side
+        // `makeString` returning `'NOSUCH'` reports `Label "NOSUCH" not
+        // found.`, so 16.1 names the conversion where NUMERIC's own errors name
+        // the object.
         self.trace_keyword(
             self.activity.clause_state.current_value_indent,
             "VALUE",

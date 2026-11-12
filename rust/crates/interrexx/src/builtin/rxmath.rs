@@ -18,8 +18,8 @@ use crate::{Failure, Interp};
 /// The most significant digits a result carries.
 const MAX_PRECISION: u64 = 16;
 
-/// 88.922 where more arguments were passed than `arity`. An omitted argument
-/// at the end does not count: measured, oracle, `RxCalcSqrt(4,,,,)` is `2`.
+/// 88.922 where more arguments were passed than `arity`. An omitted argument at
+/// the end does not count: `RxCalcSqrt(4,,,,)` is `2`.
 pub(crate) fn check_arity(args: &[Option<ObjRef>], arity: usize) -> Result<(), Failure> {
     let passed = args
         .iter()
@@ -70,11 +70,11 @@ pub(crate) fn double_argument(
     }
 }
 
-/// C's `strtod` over a valid Rexx number: leading white space skipped, then
-/// the longest prefix that is a decimal floating literal, and 0 where there is
-/// none. Measured, oracle: `RxCalcPower(' -4', 1)` is `-4` and
-/// `RxCalcPower('- 4', 1)` is `0`, because a blank after the sign ends the
-/// literal before it starts.
+/// C's `strtod` over a valid Rexx number: leading white space skipped, then the
+/// longest prefix that is a decimal floating literal, and 0 where there is
+/// none. For example, `RxCalcPower(' -4', 1)` is `-4` and `RxCalcPower('- 4',
+/// 1)` is `0`, because a blank after the sign ends the literal before it
+/// starts.
 fn strtod(text: &[u8]) -> f64 {
     let start = text
         .iter()

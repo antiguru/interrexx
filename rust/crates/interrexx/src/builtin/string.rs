@@ -49,7 +49,7 @@ fn push_pad(out: &mut Vec<u8>, byte: u8, len: usize) {
     out.resize(out.len() + len, byte);
 }
 
-/// Room for `additional` more bytes in `out`, or the oracle's 5.1.
+/// Room for `additional` more bytes in `out`, or 5.1.
 fn reserve(out: &mut Vec<u8>, additional: usize) -> Result<(), Raised> {
     out.try_reserve(additional)
         .map_err(|_| Raised::system_resources())
@@ -244,9 +244,9 @@ pub(crate) fn split_slices<'a>(text: &'a [u8], separator: &[u8]) -> Vec<&'a [u8]
     if separator.is_empty() {
         return text.chunks(1).collect();
     }
-    // The oracle scans up to the start plus the text length minus the separator length plus one, which for a
-    // separator longer than the text lies behind the start and stops the scan
-    // before its `memcmp` can read past the end.
+    // The scan runs up to the start plus the text length minus the separator length plus one, which
+    // for a separator longer than the text lies behind the start and stops the scan before its
+    // `memcmp` can read past the end.
     let limit = match text.len().checked_sub(separator.len()) {
         Some(room) => room + 1,
         None => 0,
@@ -419,9 +419,9 @@ pub(crate) fn delstr(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result
         Some(value) => position_of(value)?,
         None => 1,
     };
-    // Range-checked before the out-of-range start is answered, which is what
-    // the oracle's own ordering does -- measured, `delstr('abc',9,-1)` is
-    // 93.923 rather than the unchanged string.
+    // Range-checked before the out-of-range start is answered, which is the
+    // order of the checks: `delstr('abc',9,-1)` is 93.923 rather than the
+    // unchanged string.
     let deleted = requested.map(length_of).transpose()?;
     delete_range(&mut string, start - 1, deleted);
     Ok(interp.text_built(string))
@@ -906,9 +906,9 @@ fn changestr_with(
         // **Every growth stays fallible**, which is what a result sized in one
         // reservation gets for free and this one has to ask for.
         // `extend_from_slice` grows through the infallible path and aborts the
-        // process where the oracle raises 5.1, so the room for what is about
-        // to be written is taken here and the extends below cannot be what
-        // grows the buffer.
+        // process where 5.1 is raised, so the room for what is about to be
+        // written is taken here and the extends below cannot be what grows the
+        // buffer.
         reserve(out, kept.len() + replacement.len())?;
         out.extend_from_slice(kept);
         out.extend_from_slice(replacement);

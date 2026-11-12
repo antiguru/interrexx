@@ -11,8 +11,7 @@ use crate::error::Raised;
 use crate::{Failure, Interp};
 
 /// Resolves `args`' first argument and sends `message` the rest of them.
-/// `added` is the oracle's own `&added`: whether a miss may leave the stream
-/// in the table.
+/// `added` says whether a miss may leave the stream in the table.
 fn send_to_stream(
     interp: &mut Interp,
     args: Args<'_>,
@@ -333,8 +332,9 @@ pub(crate) fn stream(
     };
     let answer = answer.ok_or_else(|| Failure::from(Raised::no_result(b"COMMAND")))?;
     // A CLOSE drops the entry, and an OPEN drops it when the answer is not
-    // `READY:`. The word scan is over the whole upper-cased command, so
-    // `query open` takes the OPEN branch -- the oracle's own quirk.
+    // `READY:`. The word scan is over the whole upper-cased command, so `query
+    // open` takes the OPEN branch (matches the reference implementation; not
+    // yet specified).
     if let Some(command) = command.as_deref() {
         let upper = command.to_ascii_uppercase();
         let words: Vec<&[u8]> = upper.split(|byte| byte.is_ascii_whitespace()).collect();
@@ -348,8 +348,9 @@ pub(crate) fn stream(
     Ok(answer)
 }
 
-/// Whether a `STREAM` command is one the table follows: the oracle scans the
-/// whole upper-cased string for the words rather than reading the first one.
+/// Whether a `STREAM` command is one the table follows: the whole upper-cased
+/// string is scanned for the words rather than reading the first one (matches
+/// the reference implementation; not yet specified).
 fn repositions(command: &[u8]) -> bool {
     let upper = command.to_ascii_uppercase();
     upper

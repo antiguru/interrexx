@@ -12,8 +12,8 @@ use crate::error::Raised;
 use crate::{Failure, Interp};
 
 /// `QUALIFY(name)`: the name resolved against the interpreter's current
-/// directory and reduced to one spelling, whether or not it exists
-/// (the oracle's stream-name qualification).
+/// directory and reduced to one spelling, whether or not it exists (stream-name
+/// qualification).
 pub(crate) fn qualify(
     interp: &mut Interp,
     _name: &'static [u8],
@@ -24,12 +24,11 @@ pub(crate) fn qualify(
     Ok(interp.text_built(qualified))
 }
 
-/// Stream-name qualification: `name` up to its first NUL, as the C
-/// string the oracle is given, with a leading `~` or `~user` resolved, made
-/// absolute against the interpreter's current directory and reduced by
-/// [`crate::paths::normalize_bytes`]. The null string where the oracle fails: an
-/// empty name, a `~user` naming no account, or a home directory that is not
-/// absolute.
+/// Stream-name qualification: `name` up to its first NUL, as the C string, with
+/// a leading `~` or `~user` resolved, made absolute against the interpreter's
+/// current directory and reduced by [`crate::paths::normalize_bytes`]. The null
+/// string where qualification fails: an empty name, a `~user` naming no account,
+/// or a home directory that is not absolute.
 pub(crate) fn qualify_name(interp: &Interp, name: &[u8]) -> Vec<u8> {
     let name = match name.iter().position(|byte| *byte == 0) {
         Some(end) => &name[..end],
@@ -93,10 +92,10 @@ fn home_through(
 }
 
 /// `USERID()`: the effective user's login name, as the system's user database
-/// gives it for the effective uid, so an account that only an NSS source
-/// (LDAP, sssd, systemd-userdb) holds has its name too. An account the
-/// database does not know answers the environment's own `USER` or `LOGNAME`
-/// instead; the oracle answers the empty string there.
+/// gives it for the effective uid, so an account that only an NSS source (LDAP,
+/// sssd, systemd-userdb) holds has its name too. An account the database does
+/// not know answers the environment's own `USER` or `LOGNAME` instead; the
+/// empty string is answered there.
 pub(crate) fn userid(
     interp: &mut Interp,
     _name: &'static [u8],
@@ -137,12 +136,12 @@ pub(crate) fn setlocal(
 /// `ENDLOCAL()`: restores the innermost saved pair, answering 1 when there was
 /// one and 0 when there was not.
 ///
-/// **The oracle crashes past the end and this crate does not**
-/// (`corpus/oracle-crashes.txt` entry 10): an `ENDLOCAL` with nothing
+/// **This crate does not crash past the end** (oracle defect,
+/// `corpus/oracle-crashes.txt` entry 10): an `ENDLOCAL` with nothing
 /// outstanding dereferences null there once any `SETLOCAL` has run, and a
 /// second restore in one process aborts in the allocator. Answering 0 is what
-/// the oracle itself answers before its first `SETLOCAL`, so that is the answer
-/// here, and no differential case may run either program.
+/// is answered before the first `SETLOCAL`, so that is the answer here, and no
+/// differential case may run either program.
 pub(crate) fn endlocal(
     interp: &mut Interp,
     _name: &'static [u8],
@@ -197,8 +196,7 @@ fn can_enter(directory: &std::path::Path) -> bool {
     .is_ok()
 }
 
-/// The `FILESPEC` options, in the order the oracle's own message lists them:
-/// `DELNP`.
+/// The `FILESPEC` options, in the order the message lists them: `DELNP`.
 const FILESPEC_OPTIONS: &[u8] = b"DELNP";
 
 /// `FILESPEC(option, name)`: the piece of `name` that `option`'s first letter
@@ -230,7 +228,7 @@ pub(crate) fn filespec(
     };
     let cut = spec.iter().rposition(|byte| *byte == b'/');
     let answer: Vec<u8> = match letter {
-        // Unix has no drive letter, and the oracle answers the null string.
+        // Unix has no drive letter, and the answer is the null string.
         b'D' => Vec::new(),
         b'L' | b'P' => match cut {
             None => Vec::new(),
@@ -265,9 +263,8 @@ const MIN_DURATION: i64 = 0;
 const MAX_DURATION: i64 = 60000;
 
 /// `BEEP(frequency, duration)`: writes one bell byte and answers the null
-/// string. The oracle sounds the speaker and, on
-/// this platform, that reaches the terminal as a single `0x07` on standard
-/// output -- measured, `beep(440,10)` writes it and answers `''`.
+/// string. On this platform that reaches the terminal as a single `0x07` on
+/// standard output: `beep(440,10)` writes it and answers `''`.
 pub(crate) fn beep(
     interp: &mut Interp,
     _name: &'static [u8],
@@ -324,8 +321,8 @@ fn in_range(number: i64, argument: &str, minimum: i64, maximum: i64) -> Result<(
 /// `VALUE(name, [new], selector)`: the two external pools this crate answers.
 /// The empty selector names `.environment` itself; `ENVIRONMENT`, caselessly,
 /// names the process environment this interpreter holds. Any other selector is
-/// 40.914, which is also what the oracle answers on unix for every selector its
-/// own value function declines.
+/// 40.914, which is also what is answered on unix for every selector the value
+/// function declines.
 pub(crate) fn value_selector(
     interp: &mut Interp,
     args: Args<'_>,
@@ -374,7 +371,7 @@ fn environment_directory(
 /// The `ENVIRONMENT` selector: the interpreter's own environment. A name it
 /// does not hold reads as the null string; `.nil` removes; any other value is
 /// stored as its string. The name and the value are both cut at the first NUL,
-/// because `setenv` takes C strings and the oracle's own read-back stops there.
+/// because `setenv` takes C strings and the read-back stops there.
 fn process_environment(
     interp: &mut Interp,
     name: &[u8],
@@ -451,10 +448,10 @@ mod tests {
     }
 
     /// **A `~` with `HOME` unset qualifies to the null string, and `~/x` to
-    /// `/x`**, the empty home read as no directory at all. The oracle runs
-    /// `strlen` on the null `getenv("HOME")` there (`corpus/oracle-crashes.txt`
-    /// entry 48), so this is the crate's own answer. The adjacent success is
-    /// the same names with `HOME` set.
+    /// `/x`**, the empty home read as no directory at all. The reference run
+    /// applies `strlen` to the null `getenv("HOME")` there (oracle defect,
+    /// `corpus/oracle-crashes.txt` entry 48), so this is the crate's own
+    /// answer. The adjacent success is the same names with `HOME` set.
     #[test]
     fn a_tilde_with_home_unset_qualifies_without_a_home() {
         let source = b"call value 'HOME', '/h', 'ENVIRONMENT'\n\

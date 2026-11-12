@@ -3,12 +3,12 @@
 //!
 //! Each routine makes the OS call its name says through `rustix`, or through
 //! `nix` where `rustix` has no safe process-wide form, and answers the call's
-//! result: 0 or a value on success, -1 on failure, never a condition. A
-//! failing call's `errno` is kept on the activity for `SysGeterrno`
-//! (`Activity::rxunixsys_errno`); a success leaves it as it was, as C's
-//! `errno` is left. The user, group and service lookups set it to 0 first,
-//! as the oracle does. A relative path is the interpreter's own directory's,
-//! not the process's. `SysCrypt` is not provided (Rulings).
+//! result: 0 or a value on success, -1 on failure, never a condition. A failing
+//! call's `errno` is kept on the activity for `SysGeterrno`
+//! (`Activity::rxunixsys_errno`); a success leaves it as it was, as C's `errno`
+//! is left. The user, group and service lookups set it to 0 first. A relative
+//! path is the interpreter's own directory's, not the process's. `SysCrypt` is
+//! not provided (Rulings).
 
 mod messages;
 mod tzname;
@@ -224,9 +224,9 @@ pub(crate) fn getegid(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<Ob
     Ok(number(interp, rustix::process::getegid().as_raw()))
 }
 
-/// `SysSetuid(uid)`: drops the supplementary groups, then `setuid`.
-/// Measured, oracle: setting the caller's own uid answers 0 with `errno` 1,
-/// the `setgroups` refusal.
+/// `SysSetuid(uid)`: drops the supplementary groups, then `setuid`. For
+/// example, setting the caller's own uid answers 0 with `errno` 1, the
+/// `setgroups` refusal.
 pub(crate) fn setuid(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<ObjRef> {
     check_arity(args, 1)?;
     let uid = int(interp, args, 1)?;
@@ -303,14 +303,13 @@ pub(crate) fn getpgid(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<Ob
     Ok(value(interp, group))
 }
 
-/// `SysKill(pid, sig)`: `kill` with the raw signal number, real-time
-/// signals included (`crate::signal::send`). Signal 0 tests for the process.
-/// The output written so far is handed over first, as before a command: the
-/// signal may end this process, whose `SAY`s the oracle has already written.
-/// A halting signal this process sent itself is served at once, as one a
-/// command's child sent is at the command's end: measured, oracle, `SysKill`
-/// of its own pid with SIGINT raises HALT before a following `SysSleep`
-/// sleeps.
+/// `SysKill(pid, sig)`: `kill` with the raw signal number, real-time signals
+/// included (`crate::signal::send`). Signal 0 tests for the process. The output
+/// written so far is handed over first, as before a command: the signal may end
+/// this process, whose `SAY`s have already been written. A halting signal this
+/// process sent itself is served at once, as one a command's child sent is at
+/// the command's end: `SysKill` of its own pid with SIGINT raises HALT before a
+/// following `SysSleep` sleeps.
 pub(crate) fn kill(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<ObjRef> {
     check_arity(args, 2)?;
     let of = int(interp, args, 1)?;
@@ -325,9 +324,8 @@ pub(crate) fn kill(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<ObjRe
 /// signal, by the action's first character caselessly
 /// (`crate::signal::set_disposition`); 0 whatever `signal` answered, its
 /// refusal's `errno` kept. It replaces the interpreter's own handler for a
-/// halting signal: measured, oracle and this crate alike, `SysKill` of the
-/// process with SIGINT raises HALT before, is ignored after
-/// `SysSignal(2, 'I')`, and ends the process (status 130) after
+/// halting signal: `SysKill` of the process with SIGINT raises HALT before, is
+/// ignored after `SysSignal(2, 'I')`, and ends the process (status 130) after
 /// `SysSignal(2, 'D')`.
 pub(crate) fn signal(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<ObjRef> {
     check_arity(args, 2)?;
@@ -406,8 +404,8 @@ pub(crate) fn lchown(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<Obj
 }
 
 /// `SysChroot(path)`: the directory becomes `/` first, so a relative path is
-/// read from there -- measured, oracle: `SysChroot('sub')` from a directory
-/// holding `sub` fails with `ENOENT`, and `directory()` is `/` after it.
+/// read from there: `SysChroot('sub')` from a directory holding `sub` fails
+/// with `ENOENT`, and `directory()` is `/` after it.
 pub(crate) fn chroot(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<ObjRef> {
     check_arity(args, 1)?;
     let text = c_string(interp, args, 1)?;
@@ -703,7 +701,8 @@ fn group_answer(
         return Err(failed(interp));
     }
     interp.activity.rxunixsys_errno = 0;
-    // Deviation 88: the oracle crashes on a group that does not exist.
+    // Deviation 88: a group that does not exist is refused where the reference
+    // run crashes.
     let Some(Some(group)) = kept(interp, found.map_err(nix_errno)) else {
         return Err(failed(interp));
     };
@@ -878,9 +877,8 @@ pub(crate) fn gettzname2(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result
 }
 
 /// `SysWordexp(text)`: refused, whatever its arguments (Deviation 90). The routine stays
-/// registered, so `RxFuncQuery` answers 0 as on the oracle, but every call is the routine's
-/// failure, 40.1, whose condition description says why; nothing is expanded and no process is
-/// started.
+/// registered, so `RxFuncQuery` answers 0, but every call is the routine's failure, 40.1,
+/// whose condition description says why; nothing is expanded and no process is started.
 pub(crate) fn wordexp(interp: &mut Interp, _args: &[Option<ObjRef>]) -> Result<ObjRef> {
     let mut refused = Raised::routine_failed(&interp.native_frame().name.to_ascii_uppercase());
     refused.description = Some(WORDEXP_REFUSED.to_vec());

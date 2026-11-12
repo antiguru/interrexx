@@ -433,9 +433,9 @@ mod tests {
         );
     }
 
-    /// An `INTERPRET` can run a `TRACE` in this very activation -- measured
-    /// against the oracle, a `trace i` inside one traces the clauses after it
-    /// in the enclosing body -- so it is bottom.
+    /// An `INTERPRET` can run a `TRACE` in this very activation: a `trace i`
+    /// inside one traces the clauses after it in the enclosing body -- so it is
+    /// bottom.
     #[test]
     fn interpret_leaves_what_follows_it_unknown() {
         assert_eq!(
@@ -546,10 +546,10 @@ mod tests {
     /// answers the meet of the setting at the `LEAVE` and the one the `END`
     /// was reached under.
     ///
-    /// Measured against the oracle on this very body, rc 0: the `LEAVE` fires
-    /// on the second pass under the `I` the clause above it installed, and
-    /// `say 'x'` echoes `>L>   "x"` and `>>>   "x"`. Without the `LEAVE`'s
-    /// edge the answer there is `Known(OFF)`, which drops both lines.
+    /// On this very body the `LEAVE` fires on the second pass under the `I` the
+    /// clause above it installed, and `say 'x'` echoes `>L> "x"` and `>>> "x"`.
+    /// Without the `LEAVE`'s edge the answer there is `Known(OFF)`, which drops
+    /// both lines.
     #[test]
     fn a_leave_carries_the_setting_from_before_the_trace_after_it() {
         let settings = settings_of(

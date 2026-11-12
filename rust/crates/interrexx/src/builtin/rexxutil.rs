@@ -230,15 +230,14 @@ pub(crate) fn mk_dir(
     Ok(answer(interp, code))
 }
 
-/// The upper bound `SysSleep` enforces, on every platform -- the oracle holds
-/// this one number and the Unix documentation's `999999999` corresponds to
-/// nothing it checks.
+/// The upper bound `SysSleep` enforces, on every platform -- the one number
+/// checked; the Unix documentation's `999999999` corresponds to nothing checked
+/// (`util.syssleep.args`).
 const SLEEP_MAXIMUM: f64 = 2_147_483.0;
 
-/// The shortest sleep: one microsecond, `TIME`'s resolution. The oracle's
-/// sleep is a `nanosleep` call even for a zero delay,
-/// and `TIME('E')` after it read 0 in none of 2000 passes for a delay of 0 or
-/// 0.00000001.
+/// The shortest sleep: one microsecond, `TIME`'s resolution. The sleep is a
+/// `nanosleep` call even for a zero delay, and `TIME('E')` after it read 0 in
+/// none of 2000 passes for a delay of 0 or 0.00000001.
 const SLEEP_FLOOR: std::time::Duration = std::time::Duration::from_micros(1);
 
 /// A delay as a Rexx number reads it: surrounding whitespace goes, and a blank
@@ -320,9 +319,9 @@ pub(crate) fn create_event_sem(
 }
 
 /// `SysCreateMutexSem([name])`: an unnamed semaphore of value one, by its
-/// handle. The oracle's unnamed form is an empty name; with no argument at
-/// all it crashes (`corpus/oracle-crashes.txt` entry 27), and here it is
-/// unnamed too.
+/// handle. The unnamed form is an empty name; with no argument at all the
+/// reference run crashes (oracle defect, `corpus/oracle-crashes.txt` entry 27),
+/// and here it is unnamed too.
 pub(crate) fn create_mutex_sem(
     interp: &mut Interp,
     name: &'static [u8],
@@ -500,8 +499,8 @@ fn only_handle(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<u64, Fail
     handle_argument(interp, args)
 }
 
-/// The first argument as the oracle's `uintptr_t`: 88.901 where it is
-/// missing, 88.907 where it is not a whole number from zero to `2^64 - 1`.
+/// The first argument as a `uintptr_t`: 88.901 where it is missing, 88.907
+/// where it is not a whole number from zero to `2^64 - 1`.
 fn handle_argument(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<u64, Failure> {
     let Some(Some(value)) = args.first().copied() else {
         return Err(Raised::missing_internal_argument("1").into());
@@ -520,7 +519,7 @@ fn handle_argument(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<u64, 
     })
 }
 
-/// `value`, the argument at `position`, as the oracle's `int`.
+/// `value`, the argument at `position`, as an `int`.
 fn int_argument(interp: &mut Interp, value: ObjRef, position: usize) -> Result<i64, Failure> {
     let number = match value.decode() {
         Decoded::SmallInt(number) => Some(number),

@@ -62,10 +62,10 @@ struct Builtin {
     /// side -- see [`dispatch`] for the measurement that makes that the rule
     /// rather than a shortcut.
     name: &'static [u8],
-    /// The fewest arguments the oracle accepts, which is also the number of
+    /// The fewest arguments the builtin accepts, which is also the number of
     /// leading positions that may not be omitted (40.3 and 40.5 below).
     min: usize,
-    /// The most the oracle accepts, or `None` for a variadic builtin.
+    /// The most the builtin accepts, or `None` for a variadic builtin.
     max: Option<usize>,
     /// The code, taking this row's own [`name`] as its second argument.
     run: Run,
@@ -590,9 +590,8 @@ const IMPLEMENTED: &[Builtin] = &[
     },
     Builtin {
         // The search phrase is argument 1 and the string searched is argument
-        // 2, which is the reverse of every other builtin here that takes both
-        // in the oracle). Measured,
-        // the message numbers them the same way round: `wordpos('a','a b','q')`
+        // 2, which is the reverse of every other builtin here that takes both.
+        // The message numbers them the same way round: `wordpos('a','a b','q')`
         // is `WORDPOS argument 3 must be a whole number`.
         name: b"WORDPOS",
         min: 2,
@@ -808,8 +807,8 @@ pub(crate) struct Args<'a> {
 }
 
 impl<'a> Args<'a> {
-    /// How many argument positions the call wrote, omissions included --
-    /// the oracle's `argcount`.
+    /// How many argument positions the call wrote, omissions included -- the
+    /// call's `argcount`.
     fn len(self) -> usize {
         self.objects.len()
     }
@@ -827,8 +826,8 @@ impl<'a> Args<'a> {
     }
 }
 
-/// The 40.x incorrect-call checks every builtin shares, in the order the
-/// oracle applies them.
+/// The 40.x incorrect-call checks every builtin shares, in the order they are
+/// applied.
 /// ```text
 /// say substr('abc')             40.3  Not enough arguments in invocation of SUBSTR; minimum expected is 2.
 /// say length('abc','x')         40.4  Too many arguments in invocation of LENGTH; maximum expected is 1.
@@ -851,7 +850,7 @@ fn check_arity(builtin: &Builtin, args: &[Option<ObjRef>]) -> Result<(), Failure
 
 // ---- reading arguments ----
 
-/// The precision the oracle converts a builtin's numeric arguments under.
+/// The precision a builtin's numeric arguments are converted under.
 const ARGUMENT_DIGITS: usize = 18;
 
 /// The argument at 1-based `position`, or `None` if the call did not supply
@@ -881,8 +880,8 @@ fn optional_string(interp: &mut Interp, args: Args<'_>, position: usize) -> Opti
     Some(interp.to_text(value).into_owned())
 }
 
-/// An argument the builtin declared as an integer, converted the way the
-/// oracle's `optional_integer`/`required_integer` macros do.
+/// An argument the builtin declared as an integer, converted as an optional or
+/// required integer argument is.
 #[inline]
 fn whole_number(
     interp: &mut Interp,
@@ -935,12 +934,11 @@ fn pad_byte(
     let Some(value) = arg(args, position) else {
         return Ok(None);
     };
-    // **The string value, and quoted as the string value too** -- the
-    // opposite of [`whole_number`] above, because the padding argument is converted
-    // to a string and the oracle then quotes the *converted string* rather than the
-    // object. Measured, `translate('abc','x','y',(1,2))` is 40.23 `found "1`
-    // and `2"` on two lines, where `substr('abcdef',(1,2))` quotes
-    // `"an Array"`.
+    // **The string value, and quoted as the string value too** -- the opposite of
+    // [`whole_number`] above, because the padding argument is converted to a string
+    // and the message then quotes the *converted string* rather than the object:
+    // `translate('abc','x','y',(1,2))` is 40.23 `found "1` and `2"` on two lines,
+    // where `substr('abcdef',(1,2))` quotes `"an Array"`.
     let found = interp.to_text(value).into_owned();
     match found.as_slice() {
         [byte] => Ok(Some(*byte)),
@@ -966,8 +964,8 @@ fn position_of(value: i64) -> Result<usize, Failure> {
 }
 
 /// A converted argument used as a repetition or replacement count: zero or
-/// positive. `method_position` is the position the oracle's message names,
-/// which is the *operation's* own numbering rather than the call's.
+/// positive. `method_position` is the position the message names, which is the
+/// *operation's* own numbering rather than the call's.
 #[inline]
 fn count_of(value: i64, method_position: usize) -> Result<usize, Failure> {
     usize::try_from(value).map_err(|_| {
@@ -977,8 +975,8 @@ fn count_of(value: i64, method_position: usize) -> Result<usize, Failure> {
 
 // ---- building results ----
 
-/// A result buffer of exactly `len` bytes' capacity, or the condition the
-/// oracle raises when the allocator refuses.
+/// A result buffer of exactly `len` bytes' capacity, or the condition raised
+/// when the allocator refuses.
 fn fresh_buffer(len: usize) -> Result<Vec<u8>, Failure> {
     let mut out = Vec::new();
     out.try_reserve_exact(len)

@@ -253,13 +253,12 @@ fn search(
     }
 }
 
-/// The names in `directory` other than `.` and `..` that `wanted` accepts,
-/// each with what `stat` answers for it, following a symbolic link. Only
-/// those names are stat'ed, as the oracle does. Where `stat` fails (a
-/// dangling link, a chain of links past the kernel's limit) it is `lstat`'s
-/// answer: the oracle reports whatever its buffer last held
-/// (`corpus/oracle-crashes.txt` entry 40). A name both fail on, removed since
-/// it was read, is left out.
+/// The names in `directory` other than `.` and `..` that `wanted` accepts, each
+/// with what `stat` answers for it, following a symbolic link. Only those names
+/// are stat'ed. Where `stat` fails (a dangling link, a chain of links past the
+/// kernel's limit) it is `lstat`'s answer; the reference run reports whatever
+/// its buffer last held (oracle defect, `corpus/oracle-crashes.txt` entry 40).
+/// A name both fail on, removed since it was read, is left out.
 fn entries(directory: &[u8], wanted: impl Fn(&[u8]) -> bool) -> Vec<(Vec<u8>, Stat)> {
     use std::os::unix::ffi::OsStrExt as _;
     let Ok(listing) = std::fs::read_dir(os_path(directory)) else {
@@ -437,14 +436,13 @@ fn matches(pattern: &[u8], name: &[u8], caseless: bool) -> bool {
 /// The longest character class name glibc's `fnmatch` scans for.
 const CLASS_NAME_LIMIT: usize = 256;
 
-/// One bracket expression opening at `open` against one byte: the index
-/// just past its `]` when it matches, `None` when it does not. A port of the
-/// bracket case of glibc's `posix/fnmatch_loop.c` (2.43, the oracle's libc)
-/// in the C locale with `FNM_NOESCAPE`. Each item is tried in turn and the
-/// first that matches ends the scan, which then skips to the `]` and fails
-/// the pattern on a malformed `[=` or `[.` it passes over. A bracket with no
-/// `]` is a literal `[`. A `^` negates as `!` does, which glibc does unless
-/// `POSIXLY_CORRECT` is set.
+/// One bracket expression opening at `open` against one byte: the index just
+/// past its `]` when it matches, `None` when it does not. A port of the bracket
+/// case of glibc's `posix/fnmatch_loop.c` (2.43) in the C locale with
+/// `FNM_NOESCAPE`. Each item is tried in turn and the first that matches ends
+/// the scan, which then skips to the `]` and fails the pattern on a malformed
+/// `[=` or `[.` it passes over. A bracket with no `]` is a literal `[`. A `^`
+/// negates as `!` does, which glibc does unless `POSIXLY_CORRECT` is set.
 fn bracket(pattern: &[u8], open: usize, byte: u8, caseless: bool) -> Option<usize> {
     // The pattern is a C string: past its end every read is a NUL.
     let at = |index: usize| pattern.get(index).copied().unwrap_or(0);

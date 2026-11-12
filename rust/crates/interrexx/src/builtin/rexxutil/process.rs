@@ -259,7 +259,7 @@ impl Usage {
     /// `%2d:%.2d:%.2d:%.3d` hours, minutes, seconds and milliseconds, the
     /// total's milliseconds the sum of the two truncated parts.
     fn cpu_summary(&self) -> String {
-        // The oracle works in `unsigned int`.
+        // The work is in `unsigned int`.
         let narrow = |value: u64| value as u32;
         let mut milliseconds = narrow(self.user.1 / 1000) + narrow(self.system.1 / 1000);
         let mut seconds = 0;
@@ -325,13 +325,14 @@ pub(crate) fn fork(
     Err(Loud::fork_child(name).into())
 }
 
-/// What `SysWait` answers where `wait` finds no child or fails: the oracle
-/// answers a status it never set (`corpus/oracle-crashes.txt` entry 45).
+/// What `SysWait` answers where `wait` finds no child or fails: the reference
+/// run answers a status it never set (oracle defect,
+/// `corpus/oracle-crashes.txt` entry 45).
 const NO_CHILD: i64 = -1;
 
-/// `SysWait()`: `wait` for any child of this process, answering its raw
-/// status, or [`NO_CHILD`]. Any child: another activity's command, or one of
-/// another interpreter in the process, as the oracle's `wait` reaps any.
+/// `SysWait()`: `wait` for any child of this process, answering its raw status,
+/// or [`NO_CHILD`]. Any child: another activity's command, or one of another
+/// interpreter in the process, as `wait` reaps any.
 pub(crate) fn wait(
     interp: &mut Interp,
     _name: &'static [u8],
@@ -393,7 +394,7 @@ pub(crate) fn create_pipe(
     Ok(interp.text_built(text.into_bytes()))
 }
 
-/// The oracle `perror` of `what` on standard error, and the null string.
+/// `perror` of `what` on standard error, and the null string.
 fn pipe_failed(interp: &mut Interp, what: &str, error: &std::io::Error) -> ObjRef {
     let message = std::io::Error::from_raw_os_error(error.raw_os_error().unwrap_or(0)).to_string();
     let message = message
