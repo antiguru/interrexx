@@ -1,5 +1,6 @@
 /*
- * Collection, MapCollection and the multi-item set operations of Relation.
+ * Collection, MapCollection, SetCollection and the multi-item set operations
+ * of Relation.
  *
  * The rules are those of the class pages (collection.md, mapcollection.md,
  * relation.md). The messages each method sends, and their order, are part of
@@ -378,6 +379,10 @@ require: procedure
     checked = checked name
   end
   return checked
+
+
+-- r[class.setcollection.creation]: no method on either side.
+::class "SetCollection" public mixinclass Collection
 
 
 ::class "ManyItemMixin"

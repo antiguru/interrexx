@@ -470,8 +470,9 @@ LIST.instance.[] native
 LIST.instance.[]= native
 LIST.class.NEW native
 LIST.class.OF native
-LOCALSERVER.instance.INIT host:CoreClasses
-LOCALSERVER.instance.INITINSTANCE host:CoreClasses
+LOCALSERVER.instance.INIT replacement:localserver.rex
+LOCALSERVER.instance.INITINSTANCE replacement:localserver.rex
+LOCALSERVER.instance.INTERREXX_STANDARDSTREAM entry:interrexx_standard_stream
 MANYITEMMIXIN.instance.DIFFERENCE replacement:collection.rex
 MANYITEMMIXIN.instance.INTERSECTION replacement:collection.rex
 MANYITEMMIXIN.instance.SUBSET replacement:collection.rex

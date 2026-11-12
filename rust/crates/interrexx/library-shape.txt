@@ -503,6 +503,7 @@ class LIST public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,ORDERE
 class LOCALSERVER public=0 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1
   instance INIT private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance INITINSTANCE private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
+  instance INTERREXX_STANDARDSTREAM private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=interrexx_standard_stream
 class MANYITEMMIXIN public=0 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1
   instance DIFFERENCE private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance INTERSECTION private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
