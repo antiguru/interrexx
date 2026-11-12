@@ -667,19 +667,14 @@ fn separator_errors_are_40_43_and_40_44() {
     );
 }
 
-/// A `0x00` byte, crossed against the separator check and the two
-/// `strchr` style checks in this builtin, each measured directly against
-/// the oracle. The separator check is `memchr`
-/// over `ALPHANUM`'s own length, so a NUL osep is a separator; a NUL
-/// *style* is still "found" in `EINOSU`, so it is treated as
-/// osep-compatible and falls through to be rejected by the final style
-/// switch instead (40.904, not 40.44); a NUL *style2* is "found" in
-/// `BDFLMTW`, which is the incompatible set, so that one really is 40.44.
-/// Both refusals report `found "?"` -- the same control-byte placeholder a
-/// raw `0x01` gets, since this is the *report line's* own substitution,
-/// not something either raiser spells specially for a NUL.
+/// A `0x00` byte is a separator, and as an option letter or a format letter it
+/// is invalid like any other character that is no letter (Deviation 165): a
+/// NUL `option` with an `osep` is a format incompatible with the separator
+/// (40.44), and a NUL `informat` with an `isep` reaches the letter check
+/// (40.904). Both refusals report `found "?"`, the placeholder a raw `0x01`
+/// gets, since the report line substitutes it.
 #[test]
-fn a_nul_byte_separates_and_is_found_by_both_style_checks() {
+fn a_nul_byte_separates_and_is_an_invalid_letter() {
     assert_eq!(
         output(b"say c2x(date('S','20070922','S','00'x))\n"),
         "32303037003039003232\n"
@@ -687,15 +682,15 @@ fn a_nul_byte_separates_and_is_found_by_both_style_checks() {
     let (code, stderr) = failure(b"call date '00'x,,,'-'\n");
     assert_eq!(code, 216, "{stderr}");
     assert!(
-        stderr.contains("DATE argument 1 must be one of BDEFILMNOSTUW; found \"?\"."),
+        stderr.contains(
+            "DATE argument 1, \"?\", is a format incompatible with the separator specified in argument 4."
+        ),
         "{stderr}"
     );
     let (code, stderr) = failure(b"call date , '20070922', '00'x, , '-'\n");
     assert_eq!(code, 216, "{stderr}");
     assert!(
-        stderr.contains(
-            "DATE argument 3, \"?\", is a format incompatible with the separator specified in argument 5."
-        ),
+        stderr.contains("DATE argument 3 must be one of BDEFINOSTU; found \"?\"."),
         "{stderr}"
     );
 }

@@ -918,33 +918,9 @@ fn style_byte(
 /// membership test.
 const ALPHANUM: &[u8] = b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
-/// Membership as `strchr(set, byte)` computes it, its C-string quirk included
-/// (matches the reference implementation; not yet specified): `strchr` finds
-/// the byte `0` in **any** string, because a C string's own terminator is a `0`
-/// byte and `strchr` treats that as ordinary membership, checked or not against
-/// `set`'s own contents. Every `strchr`-based membership test `BUILTIN(DATE)`/
-/// `BUILTIN(TIME)` runs therefore reports "found" for a `0` byte against
-/// *every* set, including one that itself carries no zero -- at two call sites,
-/// both 40.904 and neither what `set.contains(&0)` alone would answer since
-/// neither `"EINOSU"` nor `"BDFLMTW"` contains a literal zero:
-/// ```text
-/// date('00'x,,,'-')                  40.904  (the EINOSU osep-compatibility check;
-///                                              0 counts as "found", so as
-///                                              "compatible", so parsing falls
-///                                              through to the style switch, which
-///                                              then rejects the 0 byte as a style)
-/// date(,'20070922','00'x,,'-')       40.44   (the BDFLMTW isep-compatibility check;
-///                                              0 counts as "found", so as
-///                                              "incompatible")
-/// ```
-fn strchr_matches(set: &[u8], byte: u8) -> bool {
-    byte == 0 || set.contains(&byte)
-}
-
 /// A separator argument (`DATE`'s `osep`/`isep`): exactly one non- alphanumeric
 /// byte, or the null string. Membership is tested with `memchr` over
-/// [`ALPHANUM`]'s own length, so a `0x00` byte is a valid separator -- unlike
-/// the style checks, which still use [`strchr_matches`].
+/// [`ALPHANUM`]'s own length, so a `0x00` byte is a valid separator.
 fn check_separator(name: &[u8], position: usize, sep: &[u8]) -> Result<(), Failure> {
     let bad = sep.len() > 1 || sep.first().is_some_and(|byte| ALPHANUM.contains(byte));
     if bad {
@@ -985,7 +961,7 @@ pub(crate) fn date(
     let output_sep: Option<&[u8]> = match &osep {
         None => None,
         Some(sep) => {
-            if !strchr_matches(b"EINOSU", style) {
+            if !b"EINOSU".contains(&style) {
                 return Err(Raised::format_incompatible_separator(name, 1, &[style], 4).into());
             }
             check_separator(name, 4, sep)?;
@@ -999,7 +975,7 @@ pub(crate) fn date(
         let input_sep: Option<&[u8]> = match &isep {
             None => None,
             Some(sep) => {
-                if strchr_matches(b"BDFLMTW", style2) {
+                if b"BDFLMTW".contains(&style2) {
                     return Err(Raised::format_incompatible_separator(name, 3, &[style2], 5).into());
                 }
                 check_separator(name, 5, sep)?;
