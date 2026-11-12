@@ -247,7 +247,14 @@ impl Interp {
             // there. The substituted condition is still a `SYNTAX` condition
             // and travels like one.
             raised.position = u32::try_from(self.activity.clause_state.line()).unwrap_or(0);
-            raised.delivery.search = if returns { Search::Here } else { Search::Top };
+            // An argument that is not an error number fails the clause itself,
+            // in the code that holds it, whatever the tail says.
+            let invalid = syntax_code(rc_text.as_deref().unwrap_or(b"")).is_none();
+            raised.delivery.search = if returns || invalid {
+                Search::Here
+            } else {
+                Search::Top
+            };
             // The condition object's `RESULT` (`Activity::raiseException`).
             self.activity.pending_result = result;
             return Err(raised.into());

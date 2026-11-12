@@ -5,7 +5,7 @@ mod raise;
 use super::{
     ActiveCondition, CallEntry, CallType, Code, ConditionTrap, Cow, Ended, Entry, Failure, Flow,
     HandlerExit, Interp, Loud, Novalue, Number, ObjRef, PendingTrap, Raise, Raised, Rc, ReplyState,
-    Search, Trap, TrappedCondition, body_of, raise_syntax_condition,
+    Search, Trap, TrappedCondition, body_of, raise_syntax_condition, syntax_code,
 };
 use crate::error::FailureSite;
 
