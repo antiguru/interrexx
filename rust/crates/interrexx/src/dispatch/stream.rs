@@ -522,9 +522,10 @@ pub(super) fn open(
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
     let options = match args.first().copied().flatten() {
-        Some(value) => interp.to_text(value).into_owned(),
+        Some(value) => write_text(interp, value)?,
         None => Vec::new(),
     };
+    declared_only(args, 1)?;
     let owned_alias = owned_stdout_alias(interp, receiver)?;
     release_held(interp, receiver)?;
     if owned_alias
@@ -1702,15 +1703,17 @@ pub(super) fn lines(
 ) -> Result<Option<ObjRef>, Failure> {
     // `stream_lines`: the first letter only, and anything but `N` or `C` is
     // 93.915.
-    let quick = match args.first().copied().flatten() {
-        Some(value) => {
-            let text = interp.to_text(value).into_owned();
-            match text.first().map(u8::to_ascii_uppercase) {
-                Some(b'N') => true,
-                Some(b'C') => false,
-                _ => return Err(Raised::method_option_not_recognised("CN", &text).into()),
-            }
-        }
+    let option = match args.first().copied().flatten() {
+        Some(value) => Some(write_text(interp, value)?),
+        None => None,
+    };
+    declared_only(args, 1)?;
+    let quick = match option {
+        Some(text) => match text.first().map(u8::to_ascii_uppercase) {
+            Some(b'N') => true,
+            Some(b'C') => false,
+            _ => return Err(Raised::method_option_not_recognised("CN", &text).into()),
+        },
         None => false,
     };
     if let Some(which) = standard_opened(interp, receiver)? {
@@ -1762,6 +1765,14 @@ pub(super) fn lines(
     Ok(Some(interp.text_built(answer.to_string().into_bytes())))
 }
 
+/// The text a method reads a start, a line or a count from, which is the
+/// string value of `value` as the conversion rule reads an argument of a
+/// builtin: the `makeString` answer, else the answer of `string`.
+fn number_text(interp: &mut Interp, value: ObjRef) -> Result<Vec<u8>, Failure> {
+    let text = interp.required_string_value(value)?;
+    Ok(interp.to_text(text).into_owned())
+}
+
 /// An optional position argument, marshalled as the native boundary's
 /// `int64_t`: anything that is not a whole number in its range is 88.907
 /// naming argument `which` (`NativeActivation::int64Value`).
@@ -1776,7 +1787,7 @@ fn optional_position(
     let number = match value.decode() {
         Decoded::SmallInt(number) => Some(number),
         _ => {
-            let text = interp.to_text(value);
+            let text = number_text(interp, value)?;
             Number::parse_bytes(&text).and_then(|number| number.int64_value(DIGITS64))
         }
     };
@@ -1830,7 +1841,7 @@ fn whole_number(interp: &mut Interp, value: ObjRef, which: usize) -> Result<u64,
     let number = match value.decode() {
         Decoded::SmallInt(number) => u64::try_from(number).ok(),
         _ => {
-            let text = interp.to_text(value);
+            let text = number_text(interp, value)?;
             Number::parse_bytes(&text).and_then(|number| number.unsigned_int64_value(DIGITS64))
         }
     };
@@ -1965,7 +1976,8 @@ pub(super) fn position(
     let Some(value) = args.first().copied().flatten() else {
         return Err(Raised::missing_internal_argument("1").into());
     };
-    let options = interp.to_text(value).into_owned();
+    let options = write_text(interp, value)?;
+    declared_only(args, 1)?;
     let Ok(mut parsed) = parse_positioning(&options) else {
         return Err(Raised::syntax(93, 0, Vec::new()).into());
     };
