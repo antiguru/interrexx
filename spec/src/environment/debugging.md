@@ -504,6 +504,65 @@ back
      7 *-* exit
 ```
 
+r[env.debugging.pause.header]
+A `DO` or `LOOP` clause is stopped at after its header has been evaluated,
+and a condition that the evaluation queued is not delivered until that stop is
+over. In the example the `NOTREADY` that the `LINEIN` call raises in the header
+is handled after the stop that follows the header: the label `h:` and the
+clauses of the handler are shown and stopped at after it.
+
+```rexx
+.debuginput~destination(.in~new(.array~of('', '', '', '', '', '', '', '', '')))
+.traceoutput~destination(.show~new)
+call on notready name h
+trace ?a
+do i = 1 to length(linein('/nonexistent/dh')) + 1
+  say 'body' i
+end
+say 'after'
+exit
+h: say 'h' sigl
+  return
+::class in
+::method init
+  expose a i
+  use arg a
+  i = 0
+::method linein
+  expose a i
+  i += 1
+  if i > a~items then return ''
+  say '[read' i':' a[i]']'
+  return a[i]
+::class show
+::method lineout
+  use arg l
+  l = '' || l
+  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  return 0
+```
+
+```output
+     5 *-* do i = 1 to length(linein('/nonexistent/dh')) + 1
++++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+[read 1: ]
+    10 *-*     h:
+[read 2: ]
+    10 *-*     say 'h' sigl
+h 5
+[read 3: ]
+    11 *-*     return
+     6 *-*   say 'body' i
+body 1
+[read 4: ]
+     7 *-* end
+     5 *-* do i = 1 to length(linein('/nonexistent/dh')) + 1
+     8 *-* say 'after'
+after
+[read 5: ]
+     9 *-* exit
+```
+
 r[env.debugging.pause.skipped]
 Some traced clauses are not followed by a stop, because they cannot be run
 again safely: a DO or LOOP clause on its second and later turns, which

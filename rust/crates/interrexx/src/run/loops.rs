@@ -2099,6 +2099,15 @@ impl Interp {
         self.record_failure_at(source, &code.body.instructions[do_index], loop_indent);
     }
 
+    /// Whether the first header test of a `DO`/`LOOP` leaves the boundary for
+    /// its clause's pause to precede. Under interactive debug the pause after
+    /// the header comes before the traps the header queued are delivered, so
+    /// the clause's own boundary delivers them.
+    #[inline(always)]
+    fn header_defers_boundary(&self, blame: HeaderClause) -> bool {
+        matches!(blame, HeaderClause::Do) && self.chunk_trace().debugging()
+    }
+
     /// The header re-test, in its own clause: `Some(flow)` is the
     /// loop finishing, `None` is one more pass.
     #[inline(always)]
@@ -2137,7 +2146,11 @@ impl Interp {
                 Err(failure)
             }
         };
-        let header = self.leave_clause(entry, ran);
+        let header = if self.header_defers_boundary(blame) {
+            self.leave_clause_without_boundary(entry, ran)
+        } else {
+            self.leave_clause(entry, ran)
+        };
         let header = match header {
             Ok(header) => header,
             // The boundary's own failure, a requested `HALT`, is blamed as the
@@ -2182,7 +2195,9 @@ impl Interp {
         if !matches!(blame, HeaderClause::Do) {
             self.activation_mut().clock_stale = true;
         }
-        let header = self.in_counted_clause(header_line, counted, |it| {
+        let entry = self.enter_clause(header_line, counted);
+        let defers = self.header_defers_boundary(blame);
+        let ran = (|it: &mut Self| {
             let advanced = match it.loop_advance(code, state, do_indent, loop_indent) {
                 Ok(advanced) => advanced,
                 Err(failure) => {
@@ -2240,7 +2255,12 @@ impl Interp {
             }
             it.settle_block_indent(true, do_indent);
             Ok(true)
-        });
+        })(self);
+        let header = if defers {
+            self.leave_clause_without_boundary(entry, ran)
+        } else {
+            self.leave_clause(entry, ran)
+        };
         let header = match header {
             Ok(header) => header,
             // The boundary's own failure, a requested `HALT`, is blamed as the
