@@ -62254,6 +62254,75 @@ bad: say arg(1) '=&gt;' condition('o')~code
 .datetime~fromWeekNumberDate =&gt; 93.901
 .datetime~fromWeekNumberDate("2020-W07-1", 0, 1) =&gt; 93.902
 </code></pre>
+<div class="rule" id="r-class.datetime.fromdate.argument"><a href="classes/datetime.html#r-class.datetime.fromdate.argument">[class.datetime.fromdate.argument]</a></div>
+<p><code>fromOrdinalDate</code> and <code>fromWeekNumberDate</code> do not read their first argument as
+a string at once. After the argument count is checked, each sends the argument
+<code>contains</code> with the one argument <code>-</code>, once and before anything else, and uses
+the answer to pick the form: true for the form with hyphens, false for the one
+without. The answer must be exactly <code>0</code> or <code>1</code>; any other answer, <code>.nil</code>
+included, raises <code>SYNTAX 34.1</code>, and an argument that does not understand
+<code>contains</code> raises <code>SYNTAX 97.1</code> (an <code>Array</code>, a <code>List</code>, a <code>Set</code> or <code>.nil</code>; a
+<code>Directory</code> answers <code>.nil</code> and so raises 34.1). Then the string value of the
+argument is read, and a form that the answer did not pick, or a string that is
+not a date, raises <code>SYNTAX 88.918</code>. A string that is a number or a <code>String</code>
+subclass instance is sent <code>contains</code> like any other value, so a subclass that
+overrides it decides the form: an instance of the string <code>2020041</code> whose
+<code>contains</code> answers true raises 88.918, though the string is a date.</p>
+<pre><code class="language-rexx">say .datetime~fromOrdinalDate(.cs~new('2020-041'))
+say .datetime~fromOrdinalDate(.cs~new('2020041'))
+call try '.datetime~fromOrdinalDate(.array~of("2020-041"))'
+call try '.datetime~fromWeekNumberDate(.nil)'
+call try '.datetime~fromOrdinalDate(.directory~new)'
+call try '.datetime~fromOrdinalDate(.spy~new(1))'
+call try '.datetime~fromWeekNumberDate(.spy~new("maybe"))'
+call try '.datetime~fromOrdinalDate(.no~new("2020-041"))'
+call try '.datetime~fromWeekNumberDate(.yes~new("2020W071"))'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class spy
+::method init
+  expose answer
+  use arg answer
+::method unknown
+  expose answer
+  use arg name, args
+  say name args~toString
+  return answer
+::class cs subclass string
+::method contains
+  say 'contains' arg(1)
+  return self~string~contains(arg(1))
+::class no subclass string
+::method contains
+  say 'contains' arg(1)
+  return 0
+::class yes subclass string
+::method contains
+  say 'contains' arg(1)
+  return 1
+</code></pre>
+<pre><code class="language-output">contains -
+2020-02-10T00:00:00.000000
+contains -
+2020-02-10T00:00:00.000000
+.datetime~fromOrdinalDate(.array~of("2020-041")) =&gt; 97.1
+.datetime~fromWeekNumberDate(.nil) =&gt; 97.1
+.datetime~fromOrdinalDate(.directory~new) =&gt; 34.1
+CONTAINS -
+.datetime~fromOrdinalDate(.spy~new(1)) =&gt; 88.918
+CONTAINS -
+.datetime~fromWeekNumberDate(.spy~new("maybe")) =&gt; 34.1
+contains -
+.datetime~fromOrdinalDate(.no~new("2020-041")) =&gt; 88.918
+contains -
+.datetime~fromWeekNumberDate(.yes~new("2020W071")) =&gt; 88.918
+</code></pre>
 <div class="rule" id="r-class.datetime.fromtime"><a href="classes/datetime.html#r-class.datetime.fromtime">[class.datetime.fromtime]</a></div>
 <p><code>fromNormalTime</code>, <code>fromCivilTime</code> and <code>fromLongTime</code> read a time of day that
 is written in the form of the option N, C or L of
@@ -62473,9 +62542,11 @@ bad: say arg(1) '=&gt;' condition('o')~code
 </code></pre>
 <h2 id="reading-the-fields"><a class="header" href="#reading-the-fields">Reading the fields</a></h2>
 <div class="rule" id="r-class.datetime.fields"><a href="classes/datetime.html#r-class.datetime.fields">[class.datetime.fields]</a></div>
-<p><code>year</code>, <code>month</code>, <code>day</code>, <code>hours</code>, <code>minutes</code>, <code>seconds</code> and <code>microseconds</code>
-answer the field of that name as a whole number without leading zeros, so the
-microseconds of <code>10:00:00.012345</code> are 12345. <code>dayMinutes</code>, <code>daySeconds</code> and
+<p><code>year</code> answers the year in four digits, with leading zeros for a year before
+1000, so the year of <code>minDate</code> is <code>0001</code>. <code>month</code>, <code>day</code>, <code>hours</code>, <code>minutes</code>,
+<code>seconds</code> and <code>microseconds</code> answer the field of that name as a whole number
+without leading zeros, so the microseconds of <code>10:00:00.012345</code> are 12345 and
+the month of 5 March is 3. <code>dayMinutes</code>, <code>daySeconds</code> and
 <code>dayMicroseconds</code> answer how many whole minutes, whole seconds and
 microseconds the time of day is past 00:00:00.000000. The offset plays no part
 in any of them. Each method takes no argument: one raises <code>SYNTAX 93.902</code>.</p>
@@ -62484,6 +62555,7 @@ say d~year d~month d~day d~hours d~minutes d~seconds d~microseconds
 say d~dayMinutes d~daySeconds d~dayMicroseconds
 say .datetime~minDate~dayMicroseconds .datetime~maxDate~dayMicroseconds
 say d~toUtcTime~hours d~toTimezone(-600)~day
+say .datetime~minDate~year .datetime~new(5, 3, 5)~year .datetime~new(5, 3, 5)~month
 signal on syntax name bad
 say d~year(1)
 bad: say condition('o')~code
@@ -62492,6 +62564,7 @@ bad: say condition('o')~code
 548 32887 32887012345
 0 86399999999
 7 28
+0001 0005 3
 93.902
 </code></pre>
 <div class="rule" id="r-class.datetime.calendar"><a href="classes/datetime.html#r-class.datetime.calendar">[class.datetime.calendar]</a></div>
@@ -63663,7 +63736,7 @@ bad: say arg(1) '=&gt;' condition('o')~code
   .local~log = .local~log 'UTCDATE'
   return 0
 </code></pre>
-<pre><code class="language-output defect=#189">d~compareTo(.timespan~fromHours(2)) =&gt; 88.914
+<pre><code class="language-output">d~compareTo(.timespan~fromHours(2)) =&gt; 88.914
 d~compareTo(.file~new("/t/a")) =&gt; 88.914
 d~compareTo("2017-06-30") =&gt; 88.914
 d~compareTo(5) =&gt; 88.914
@@ -63756,7 +63829,7 @@ y = .table~new
 y[d] = 'found'
 say y[s] y[t]
 </code></pre>
-<pre><code class="language-output defect=#191">1 1 0
+<pre><code class="language-output">1 1 0
 1 1
 8
 2
@@ -63779,7 +63852,7 @@ say d~elapsed~sign .datetime~maxDate~elapsed~sign d~elapsed~class~id
 exit
 near: return abs(arg(1)~totalSeconds - arg(2)~totalSeconds) &lt; 5
 </code></pre>
-<pre><code class="language-output defect=#192">1 1
+<pre><code class="language-output">1 1
 1
 1
 1
@@ -63847,7 +63920,7 @@ try:
 bad: say arg(1) '=&gt;' condition('o')~code
   return
 </code></pre>
-<pre><code class="language-output defect=#193">2017-06-30T00:00:00.000000
+<pre><code class="language-output">2017-06-30T00:00:00.000000
 2017-06-30T01:00:00.000000
 2017-06-03T00:00:00.000000
 0001-01-01T00:00:00.000090
@@ -63905,7 +63978,7 @@ failed: say '=&gt;' condition('o')~code
 ::method init
   nop
 </code></pre>
-<pre><code class="language-output defect=#194">0001-01-01T00:00:00.000000 00:00:00.000000 0 0001-01-01T00:00:00.000000 0001-01-01T00:00:00.000000Z
+<pre><code class="language-output">0001-01-01T00:00:00.000000 00:00:00.000000 0 0001-01-01T00:00:00.000000 0001-01-01T00:00:00.000000Z
 1 1 0 1
 0001 1 1 0 0 0 0
 Monday 1 1 -62135596800 0 00:00:00.000000
@@ -63950,7 +64023,7 @@ try:
 bad: say '['arg(1)'] =&gt;' condition('o')~code
   return
 </code></pre>
-<pre><code class="language-output defect=#195">2017-06-30T11:08:50.000000Z
+<pre><code class="language-output">2017-06-30T11:08:50.000000Z
 2017-06-30T11:08:50.100000Z
 2017-06-30T11:08:50.123456-15:00
 2017-06-30T11:08:50.500000+14:59
@@ -63992,7 +64065,7 @@ exit
 syntax:
 say condition('O')~code (d~isoDate d~offset == before) d~isoDate
 </code></pre>
-<pre><code class="language-output defect=#441">88.907 1 2020-01-01T00:00:00.000000
+<pre><code class="language-output">88.907 1 2020-01-01T00:00:00.000000
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="timespan"><a class="header" href="#timespan">TimeSpan</a></h1>
 <p class="references">rexxref: Builtin Classes &gt; Utility Classes &gt; TimeSpan Class; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; init; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; fromCivilTime (Class Method); Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; fromDays (Class Method); Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; fromHours (Class Method); Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; fromLongTime (Class Method); Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; fromMicroseconds (Class Method); Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; fromMinutes (Class Method); Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; fromNormalTime (Class Method); Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; fromSeconds (Class Method); Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; fromStringFormat (Class Method); Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; Arithmetic Methods; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; addDays; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; addHours; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; addMicroseconds; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; addMinutes; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; addSeconds; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; addWeeks; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; compareTo; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; days; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; duration; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; hashCode; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; hours; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; makeString; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; microseconds; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; minutes; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; seconds; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; sign; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; string; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; totalDays; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; totalHours; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; totalMicroseconds; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; totalMinutes; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; totalSeconds</p>
@@ -123448,8 +123521,8 @@ receiver as it was: every argument is checked before anything is stored.
 ooRexx stores part of the arguments first. A <code>DateTime</code> keeps the new date
 when its offset is out of range, with the offset stored as given, and a
 <code>TimeSpan</code> keeps an argument that is not a number as its span, so that the
-span then raises errors of its own. interrexx does the same until #47's
-<code>DateTime</code> and <code>TimeSpan</code> tasks land (#441).</p>
+span then raises errors of its own. interrexx's <code>TimeSpan</code> does the same
+until #47's <code>TimeSpan</code> task lands (#441).</p>
 
                     </main>
 
