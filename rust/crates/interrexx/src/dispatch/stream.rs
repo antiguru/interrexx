@@ -120,6 +120,37 @@ pub(crate) fn standard_stream(
     Ok(object)
 }
 
+/// `interrexx_standard_stream(name)`: a new standard stream as
+/// [`standard_stream`] builds it for `.local`, where argument 1 is `STDIN`,
+/// `STDOUT` or `STDERR`. The class library's `LocalServer` stores what it
+/// answers in `.local` when it is created. A library without a `Stream`
+/// class answers `.nil`.
+pub(super) fn local_standard_stream(
+    interp: &mut Interp,
+    _cleared: Cleared,
+    _receiver: ObjRef,
+    args: &[Option<ObjRef>],
+) -> Result<Option<ObjRef>, Failure> {
+    let Some(value) = args.first().copied().flatten() else {
+        return Err(Raised::missing_method_argument(1).into());
+    };
+    let name = interp.to_text(value).into_owned();
+    let which = match name.as_slice() {
+        b"STDIN" => StandardStream::In,
+        b"STDOUT" => StandardStream::Out,
+        b"STDERR" => StandardStream::Err,
+        _ => {
+            return Err(
+                Raised::method_argument_not_in_list(1, "STDIN, STDOUT, STDERR", &name).into(),
+            );
+        }
+    };
+    let Some(class) = interp.rexx_package_class(b"STREAM") else {
+        return Ok(Some(ObjRef::NIL));
+    };
+    standard_stream(interp, class, which).map(Some)
+}
+
 /// `stream_init`: records the name as written and the path it resolves to.
 /// The resolution happens **here**, so a later `DIRECTORY()` cannot move a
 /// stream that has already been named.

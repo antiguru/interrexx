@@ -68,6 +68,7 @@ const REPLACEMENTS: &[&str] = &[
     "stream.rex",
     "queue.rex",
     "orderedcollection.rex",
+    "localserver.rex",
 ];
 
 /// One host member a replacement may leave out.

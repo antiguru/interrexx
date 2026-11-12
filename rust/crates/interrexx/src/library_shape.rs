@@ -481,7 +481,8 @@ fn library_shape_and_origin_match_the_goldens() {
     check_golden("library-origin.txt", &origin);
 }
 
-/// The tables are not empty and name the CoreClasses host.
+/// The tables are not empty, and no method comes from a host program: every
+/// class a host declared has been replaced.
 #[test]
 fn library_shape_is_not_empty() {
     let (shape, origin) = tables();
@@ -489,7 +490,7 @@ fn library_shape_is_not_empty() {
     assert!(origin.lines().count() > 500);
     assert!(shape.lines().any(|l| l.starts_with("environment ")));
     assert!(shape.lines().any(|l| l.starts_with("local ")));
-    assert!(origin.contains(" host:CoreClasses"));
+    assert!(!origin.contains(" host:"));
 }
 
 /// Calls that hand back a library object by name or by route; a file that
