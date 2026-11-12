@@ -1670,7 +1670,20 @@ x = .k~subclass('X', , .array~of('return 1', .object~new))
 d: say condition('o')~code .k~subclasses~items
 ::class k
 </code></pre>
-<pre><code class="language-output defect=#134">93.974 0
+<pre><code class="language-output">93.974 0
+</code></pre>
+<div class="rule" id="r-class.class.subclass.failed.supplier"><a href="#r-class.class.subclass.failed.supplier">[class.class.subclass.failed.supplier]</a></div>
+<p>A <code>subclass</code> whose third argument's <code>supplier</code> raises leaves the receiver with
+no new subclass either.</p>
+<pre><code class="language-rexx">signal on syntax name d
+x = .k~subclass('X', , .sp~new)
+d: say condition('o')~code .k~subclasses~items
+::class k
+::class sp
+::method supplier
+  raise syntax 93.900 array('boom')
+</code></pre>
+<pre><code class="language-output">93.900 0
 </code></pre>
 <div class="rule" id="r-class.class.subclass.sends"><a href="#r-class.class.subclass.sends">[class.class.subclass.sends]</a></div>
 <p><code>subclass</code> sends the message <code>new</code> to the metaclass, which is the receiver's
@@ -1821,7 +1834,7 @@ say y~queryMixinClass y~baseclass~id
   say self~id self~superclass~id self~queryMixinClass self~baseclass~id
   forward class (super) continue
 </code></pre>
-<pre><code class="language-output defect=#135">M2 Object 0 M2
+<pre><code class="language-output">M2 Object 0 M2
 M2 K 0 M2
 1 K
 </code></pre>
