@@ -32,7 +32,11 @@ fn string_argument(
     at: usize,
 ) -> Result<Vec<u8>, Failure> {
     match args.get(at).copied().flatten() {
-        Some(value) => interp.string_value_text(value),
+        // An object that gives no string, `.nil` among them, is 88.909.
+        Some(value) => {
+            let string = required_string_argument(interp, value, at + 1)?;
+            interp.string_value_text(string)
+        }
         None => Err(missing(at)),
     }
 }

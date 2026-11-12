@@ -2706,7 +2706,7 @@ bad: say arg(1) '=>' condition('o')~code
   return 'spec-stream-dev109-other-zq.tmp'
 ```
 
-```output defect=#140
+```output
 s~string => [spec-stream-dev109-zq.tmp]
 s~lineout(.digits~new("abc")) => [0]
 s~charout(.digits~new("def")) => [0]

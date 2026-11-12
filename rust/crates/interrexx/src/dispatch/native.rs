@@ -304,25 +304,25 @@ static LIBRARY_REXX_METHODS: &[NativeExternal] = &[
     scoped(
         "rexx_create_queue",
         Family::Queue,
-        Arity::Fixed(1),
+        Arity::Counted,
         super::queue_methods::create,
     ),
     scoped(
         "rexx_open_queue",
         Family::Queue,
-        Arity::Fixed(1),
+        Arity::Counted,
         super::queue_methods::open,
     ),
     scoped(
         "rexx_queue_exists",
         Family::Queue,
-        Arity::Fixed(1),
+        Arity::Counted,
         super::queue_methods::exists,
     ),
     scoped(
         "rexx_delete_queue",
         Family::Queue,
-        Arity::Fixed(1),
+        Arity::Counted,
         super::queue_methods::delete,
     ),
     scoped(
@@ -334,13 +334,13 @@ static LIBRARY_REXX_METHODS: &[NativeExternal] = &[
     scoped(
         "rexx_push_queue",
         Family::Queue,
-        Arity::Fixed(1),
+        Arity::Counted,
         super::queue_methods::push,
     ),
     scoped(
         "rexx_queue_queue",
         Family::Queue,
-        Arity::Fixed(1),
+        Arity::Counted,
         super::queue_methods::queue,
     ),
     scoped(

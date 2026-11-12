@@ -89,6 +89,7 @@ done:
   expose stream_name
   use strict arg name
   if name~isA(.File) then text = name~absolutePath
+  else if name~isInstanceOf(.string) then text = name~makeString:.string
   else text = name~request('STRING')
   if .nil == text then raise syntax 93.938 array (1)
   stream_name = text
@@ -196,6 +197,9 @@ done:
    through string for an object that has only that. */
 ::method interrexx_value private
   use arg value
+  /* An instance of a String subclass is read by its own characters
+     (Deviation 109). */
+  if value~isInstanceOf(.string) then return value~makeString:.string
   text = value~request('STRING')
   if .nil == text then text = value~string
   return text

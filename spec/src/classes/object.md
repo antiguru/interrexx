@@ -2282,7 +2282,7 @@ bad: say arg(1) '=>' condition('o')~code
   return 'other'
 ```
 
-```output defect=#140
+```output
 o~send(n, 1) => count got 1
 o~sendWith(n, .array~of(2)) => count got 1
 o~start(n, 3)~result => count got 1

@@ -2007,7 +2007,7 @@ say m~messageName m~send
   return 'other'
 ```
 
-```output defect=#140
+```output
 COUNT count got 0
 ```
 

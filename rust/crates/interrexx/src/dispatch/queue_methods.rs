@@ -35,16 +35,41 @@ fn queue_name(interp: &mut Interp, receiver: ObjRef, scope: ObjRef) -> Result<Ve
     }
 }
 
-/// A `CSTRING` argument: 88.901 where it is missing.
+/// A string argument, read as the conversion rule reads one: 88.901 where it
+/// is missing, 88.909 for an object that gives no string, and the number of
+/// arguments checked after it, so a call with too many whose first is such an
+/// object raises 88.909 (r[class.rexxqueue.name]).
 fn name_argument(
     interp: &mut Interp,
     args: &[Option<ObjRef>],
     index: usize,
 ) -> Result<Vec<u8>, Failure> {
     match args.get(index).copied().flatten() {
-        Some(value) => interp.string_value_text(value),
+        Some(value) => {
+            let text = read_text(interp, value, index + 1)?;
+            check_count(args)?;
+            Ok(text)
+        }
         None => Err(Raised::missing_native_argument(index + 1).into()),
     }
+}
+
+/// The string `value` stands for, the argument at `position`.
+fn read_text(interp: &mut Interp, value: ObjRef, position: usize) -> Result<Vec<u8>, Failure> {
+    match interp.blamed_string_conversion(value)? {
+        Some(text) => Ok(interp.to_text(text).into_owned()),
+        None => Err(crate::builtin::rexxutil::marshalled(
+            Raised::argument_needs_a_string_value(position),
+        )),
+    }
+}
+
+/// 88.922 where more than the one argument these methods take was passed.
+fn check_count(args: &[Option<ObjRef>]) -> Result<(), Failure> {
+    if args.len() > 1 {
+        return Err(Raised::too_many_external_arguments(1).into());
+    }
+    Ok(())
 }
 
 fn ran(value: ObjRef) -> Result<NativeStarted, Failure> {
@@ -64,9 +89,10 @@ pub(super) fn create(
     args: &[Option<ObjRef>],
 ) -> Result<NativeStarted, Failure> {
     let requested = match args.first().copied().flatten() {
-        Some(value) => Some(interp.string_value_text(value)?),
+        Some(value) => Some(read_text(interp, value, 1)?),
         None => None,
     };
+    check_count(args)?;
     let name = interp
         .queue_create(requested.as_deref())
         .unwrap_or_default();
@@ -169,9 +195,10 @@ fn add(
     lifo: bool,
 ) -> Result<NativeStarted, Failure> {
     let line = match args.first().copied().flatten() {
-        Some(value) => interp.string_value_text(value)?,
+        Some(value) => read_text(interp, value, 1)?,
         None => Vec::new(),
     };
+    check_count(args)?;
     let name = queue_name(interp, receiver, scope)?;
     match interp.queue_add(&name, line, lifo) {
         OK => code(interp, OK),

@@ -26,7 +26,8 @@
 -- handler is asked isA, once.
 ::method register class
   use strict arg name, handler
-  name = name~request('String')
+  if name~isInstanceOf(.string) then name = name~makeString:.string
+  else name = name~request('String')
   if name == .nil | \name~isA(.string) then raise syntax 93.900 array('name')
   if name == '' then raise syntax 93.900 array('name')
   accepted = handler~isA(.CommandHandler)
@@ -36,7 +37,8 @@
 -- r[class.commandhandler.deregister]
 ::method deregister class
   use strict arg name
-  name = name~request('String')
+  if name~isInstanceOf(.string) then name = name~makeString:.string
+  else name = name~request('String')
   if name == .nil | \name~isA(.string) then raise syntax 93.900 array('name')
   if name == '' then raise syntax 93.900 array('name')
   if self~handler(name) == .nil then raise syntax 93.900,
@@ -84,7 +86,8 @@
 -- `request` answers; what is no string is no name.
 ::method '!varname' private
   use arg name
-  name = name~request('String')
+  if name~isInstanceOf(.string) then name = name~makeString:.string
+  else name = name~request('String')
   if name == .nil | \name~isA(.string) then raise syntax 93.900 array('name')
   return name
 
@@ -181,7 +184,8 @@
   expose pending
   use strict arg condition, rc, description = .nil, additional = .nil
   self~!check
-  kind = condition~request('String')
+  if condition~isInstanceOf(.string) then kind = condition~makeString:.string
+  else kind = condition~request('String')
   if kind == .nil | \kind~isA(.string) then raise syntax 93.900 array('condition')
   kind = space(translate(kind, ' ', '09'x), 1)~upper
   wordcount = kind~words
@@ -191,7 +195,8 @@
     when kind == 'SYNTAX' & \arg(4, 'E') then do
       -- The second form: `description` holds `additional`.
       -- The number is major * 1000 + minor, as the interpreter reads it.
-      text = rc~request('String')
+      if rc~isInstanceOf(.string) then text = rc~makeString:.string
+      else text = rc~request('String')
       if text == .nil | \text~isA(.string) then raise syntax 93.900 array('code')
       parse value text with major '.' minor
       if text~countStr('.') \= 1 then raise syntax 93.900 array('code')
@@ -336,7 +341,10 @@
   expose which kept
   use arg string
   if arg() > 1 then raise syntax 93.902 array('LINEOUT', 1)
-  if arg(1, 'E') then text = kept || string~string
+  if arg(1, 'E') then do
+    if string~isInstanceOf(.string) then text = kept || string~makeString:.string
+    else text = kept || string~string
+  end
   else do
     if kept == '' then return 0
     text = kept
@@ -352,7 +360,8 @@
   if arg() > 2 then raise syntax 93.902 array('CHAROUT', 2)
   if arg(2, 'E') then raise syntax 93.963 array('CHAROUT', 2)
   if \arg(1, 'E') then return 0
-  text = kept || string~string
+  if string~isInstanceOf(.string) then text = kept || string~makeString:.string
+  else text = kept || string~string
   p = text~lastPos('0a'x)
   if p = 0 then do
     kept = text
