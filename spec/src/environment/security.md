@@ -878,7 +878,7 @@ exit
   return 0
 ```
 
-```output defect=#212
+```output
 one
 two
 three

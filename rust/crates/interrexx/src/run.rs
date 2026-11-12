@@ -3888,7 +3888,15 @@ impl Interp {
         added: bool,
     ) -> Result<ObjRef, Failure> {
         if let Some(standard) = standard_stream_name(name, input) {
-            return self.dot_variable(standard);
+            // **The entry of `.local`, not the symbol**: a class of that name
+            // or a package's `local` entry changes what `.OUTPUT` finds and
+            // not where the builtins write. A `.local` without the entry
+            // falls back to the symbol.
+            let entry = standard.strip_prefix(b".").unwrap_or(standard);
+            return match self.local_route(entry)? {
+                Some(found) => Ok(found),
+                None => self.dot_variable(standard),
+            };
         }
         let qualified = crate::builtin::platform::qualify_name(self, name);
         if let Some(found) = self
