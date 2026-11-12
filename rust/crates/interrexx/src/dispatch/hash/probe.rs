@@ -28,15 +28,79 @@ pub(super) fn probe_in(
     index: ObjRef,
 ) -> Result<(Store, Probe), Failure> {
     let keys = keys_of(interp, receiver);
-    // String-value hash and index comparison never send. Specialize the shared
-    // traversal so this protocol carries no callback restart state.
+    // String-value hash and index comparison never send, so that protocol
+    // has a traversal of its own that carries no callback restart state.
     match keys {
-        Keys::StringValue => probe_by_protocol::<false>(interp, receiver, half, store, index, keys),
-        _ => probe_by_protocol::<true>(interp, receiver, half, store, index, keys),
+        Keys::StringValue => probe_string_value(interp, store, index),
+        _ => probe_by_protocol(interp, receiver, half, store, index, keys),
     }
 }
 
-fn probe_by_protocol<const MAY_REENTER: bool>(
+/// [`probe_in`] for the string-value protocol, which never sends: the index's
+/// string value is read once, for the hash and for every comparison, rather
+/// than copied out again for each.
+fn probe_string_value(
+    interp: &mut Interp,
+    store: Store,
+    index: ObjRef,
+) -> Result<(Store, Probe), Failure> {
+    let inline;
+    let owned;
+    let wanted: &[u8] = match index.decode() {
+        Decoded::Text(text) => {
+            inline = text;
+            &inline
+        }
+        _ => {
+            owned = interp.to_text(index).into_owned();
+            &owned
+        }
+    };
+    let hash = super::super::string_hash(wanted);
+    let bucket = (hash % store.buckets as u64) as usize;
+    if slot_at(interp, store.indexes, bucket)?.is_none() {
+        return Ok((
+            store,
+            Probe {
+                bucket,
+                found: None,
+                last: None,
+            },
+        ));
+    }
+    let mut slot = bucket;
+    let mut last = bucket;
+    loop {
+        let matches = match slot_at(interp, store.indexes, slot)? {
+            Some(held) => *interp.to_text(held) == *wanted,
+            None => false,
+        };
+        if matches {
+            return Ok((
+                store,
+                Probe {
+                    bucket,
+                    found: Some(slot),
+                    last: Some(last),
+                },
+            ));
+        }
+        last = slot;
+        slot = link_at(interp, &store, slot)?;
+        if slot >= store.total {
+            return Ok((
+                store,
+                Probe {
+                    bucket,
+                    found: None,
+                    last: Some(last),
+                },
+            ));
+        }
+    }
+}
+
+fn probe_by_protocol(
     interp: &mut Interp,
     receiver: ObjRef,
     half: Half,
@@ -44,14 +108,9 @@ fn probe_by_protocol<const MAY_REENTER: bool>(
     index: ObjRef,
     keys: Keys,
 ) -> Result<(Store, Probe), Failure> {
-    let keys = if MAY_REENTER { keys } else { Keys::StringValue };
-    let generation = if MAY_REENTER {
-        interp.store_generation
-    } else {
-        0
-    };
+    let generation = interp.store_generation;
     let hash = hash_of(interp, keys, index)?;
-    if MAY_REENTER && generation != interp.store_generation {
+    if generation != interp.store_generation {
         store = store_in(interp, receiver, half)?;
     }
     'search: loop {
@@ -69,13 +128,9 @@ fn probe_by_protocol<const MAY_REENTER: bool>(
         let mut slot = bucket;
         let mut last = bucket;
         loop {
-            let generation = if MAY_REENTER {
-                interp.store_generation
-            } else {
-                0
-            };
+            let generation = interp.store_generation;
             let matches = same_index(interp, &store, keys, slot, index)?;
-            if MAY_REENTER && generation != interp.store_generation {
+            if generation != interp.store_generation {
                 let current = store_in(interp, receiver, half)?;
                 if current != store {
                     store = current;
