@@ -6,7 +6,8 @@
 use interrexx_api::callbacks::Surface;
 use interrexx_core::ObjRef;
 
-use super::{Cleared, class_protocol::new_instance, hash};
+use super::string::subclass_text;
+use super::{Cleared, class_protocol::new_instance, hash, required_string_argument};
 use crate::activation::ActivationId;
 use crate::builtin::datatype::{SymbolKind, classify};
 use crate::command::NATIVE_AT;
@@ -199,14 +200,29 @@ pub(super) fn deregister(
 }
 
 /// `cmdcontext_isRedirected(which)`: by its first letter, `Input`, `Output`,
-/// `Error` or `Same`.
+/// `Error` or `Same`. The checks run in the order of
+/// `r[class.commandcontext.isredirected]`: `which` present (88.901), a string
+/// (88.909), the argument count (88.922), then the letter (93.900).
 pub(super) fn is_redirected(
     interp: &mut Interp,
     _cleared: Cleared,
     receiver: ObjRef,
     args: &[Option<ObjRef>],
 ) -> Answer {
-    let which = string_argument(interp, args, 0)?;
+    let which = object_argument(args, 0)?;
+    // An instance of a subclass of `String` is read by its own characters
+    // (spec: class.commandcontext.deviation.109); any other object is asked
+    // for the string `request('STRING')` answers.
+    let which = match subclass_text(interp, which) {
+        Some(text) => text.to_vec(),
+        None => {
+            let string = required_string_argument(interp, which, 1)?;
+            interp.string_value_text(string)?
+        }
+    };
+    if args.len() > 1 {
+        return Err(Raised::too_many_external_arguments(1).into());
+    }
     let at = live(interp, receiver)?;
     let [input, output, error, same] = interp.command_redirects(at);
     let answer = match which.first().map(u8::to_ascii_uppercase) {

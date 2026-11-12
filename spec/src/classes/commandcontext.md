@@ -718,8 +718,7 @@ run in this order: `which` is present (`88.901`), then it is a string or
 answers one (`88.909`), then the number of arguments is right (`88.922`), then
 the letter is one of those above (`93.900`). So `isRedirected(, 1)` raises
 `88.901` and `isRedirected(.nil, 1)` raises `88.909`, however many arguments
-follow, while `isRedirected('Q', 1)` raises `88.922`. interrexx raises `88.922`
-for the first two today (issue #429).
+follow, while `isRedirected('Q', 1)` raises `88.922`.
 
 ```rexx
 x = .commandhandler~register('spec_cc_redir', .asker~new)
@@ -842,7 +841,7 @@ bad: say x '=>' condition('o')~code
   return
 ```
 
-```output defect=#429
+```output
 caller~isRedirected(, 1) => 88.901
 caller~isRedirected(.nil, 1) => 88.909
 caller~isRedirected('Q', 1) => 88.922

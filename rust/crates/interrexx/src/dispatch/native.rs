@@ -544,7 +544,7 @@ static LIBRARY_REXX_METHODS: &[NativeExternal] = &[
     implemented(
         "cmdcontext_isRedirected",
         Family::Command,
-        Arity::Fixed(1),
+        Arity::Counted,
         super::command_handler::is_redirected,
     ),
     implemented(
