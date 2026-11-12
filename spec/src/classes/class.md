@@ -1855,7 +1855,7 @@ say y~queryMixinClass y~baseclass~id
   forward class (super) continue
 ```
 
-```output defect=#135
+```output
 M2 Object 0 M2
 M2 K 0 M2
 1 K

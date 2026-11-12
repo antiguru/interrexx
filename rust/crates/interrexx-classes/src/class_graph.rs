@@ -349,6 +349,17 @@ impl ClassGraph {
         self.rebuild_behaviour(id, Side::Class);
     }
 
+    /// Makes `id`, built as a regular class, a mixin class of its superclass:
+    /// the step `mixinClass` takes once the second `init` has run, which
+    /// gives it the superclass's base class.
+    pub fn complete_mixin(&mut self, id: ObjRef) {
+        let superclass = self.classes[&id].superclasses[0];
+        let base_class = self.classes[&superclass].base_class;
+        let def = self.classes.get_mut(&id).unwrap();
+        def.kind = ClassKind::Mixin;
+        def.base_class = base_class;
+    }
+
     /// Takes `id` out of its superclasses' subclass lists, as a `subclass`
     /// that raised before its second `init` leaves the receiver: the class
     /// itself is kept, but nothing lists it.

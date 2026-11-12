@@ -733,7 +733,9 @@ fn class_factory(
     let class = class_receiver(interp, receiver)?;
     let metaclass = factory_metaclass(interp, class, args)?;
     let name = class_id_argument(interp, metaclass, args)?;
-    let id = new_subclass(interp, class, &name, metaclass, kind)?;
+    // A mixin class is one only once its second `init` has run: until then
+    // it reads as a regular class, its own base class.
+    let id = new_subclass(interp, class, &name, metaclass, ClassKind::Regular)?;
     charge_class(interp, id);
     interp.record_packageless_class(id);
     if let Some(enhancing) = args.get(2).copied().flatten() {
@@ -744,6 +746,9 @@ fn class_factory(
         }
     }
     finish_subclass(interp, id)?;
+    if matches!(kind, ClassKind::Mixin) {
+        interp.classes().complete_mixin(id);
+    }
     Ok(Some(id))
 }
 
