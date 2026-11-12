@@ -101830,7 +101830,9 @@ e: say condition('o')~code
 of the pipe that is read, the second the end that is written. They are numbers
 of open files of the program, which stay open for the rest of its run: a
 command that ADDRESS starts has them too, and can write to the second number
-and read from the first, as a shell does with <code>&gt;&amp;</code> and <code>&lt;&amp;</code> and a number. What
+and read from the first, as a shell does with <code>&gt;&amp;</code> and <code>&lt;&amp;</code> and a number (the example runs its
+commands through <code>bash</code>, because some shells, <code>dash</code> among them, refuse a
+number of 10 or more). What
 is written is read in the order in which it was written. Two calls make two
 pipes, whose four numbers are all different, and what is written to one is not
 read from the other. Which numbers a call answers is not specified.</p>
@@ -101838,17 +101840,17 @@ read from the other. Which numbers a call answers is not specified.</p>
 parse value SysCreatePipe() with r2 w2
 say words(r w) datatype(r, 'W') datatype(w, 'W') (r \= w)
 say (r2 \= r) (r2 \= w) (w2 \= r) (w2 \= w) (r2 \= w2)
-address system 'echo through &gt;&amp;'w
-address system 'echo other &gt;&amp;'w2
-address system 'read x &lt;&amp;'r2'; echo "got $x"' with output stem out.
+address system "bash -c 'echo through &gt;&amp;"w"'"
+address system "bash -c 'echo other &gt;&amp;"w2"'"
+address system "bash -c 'read x &lt;&amp;"r2"; echo got $x'" with output stem out.
 say out.0 out.1
-address system 'read x &lt;&amp;'r'; echo "got $x"' with output stem out.
+address system "bash -c 'read x &lt;&amp;"r"; echo got $x'" with output stem out.
 say out.0 out.1
-address system 'echo first &gt;&amp;'w
-address system 'echo second &gt;&amp;'w
-address system 'read x &lt;&amp;'r'; echo "got $x"' with output stem out.
+address system "bash -c 'echo first &gt;&amp;"w"'"
+address system "bash -c 'echo second &gt;&amp;"w"'"
+address system "bash -c 'read x &lt;&amp;"r"; echo got $x'" with output stem out.
 say out.1
-address system 'read x &lt;&amp;'r'; echo "got $x"' with output stem out.
+address system "bash -c 'read x &lt;&amp;"r"; echo got $x'" with output stem out.
 say out.1
 </code></pre>
 <pre><code class="language-output">2 1 1 1
