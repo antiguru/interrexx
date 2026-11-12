@@ -387,8 +387,9 @@ pub(crate) fn applied(current: TraceMode, request: &TraceRequest) -> TraceMode {
 
 /// The answer for a caller with no setting in force to merge against: the
 /// letter alone, with `?` recorded as the debug flag. An empty string is the
-/// silent normal setting, and one made only of `?`s keeps the older reading of
-/// `OFF` for the letter.
+/// silent normal setting, and one made only of `?`s toggles the debug flag on
+/// the default `NORMAL` setting, as `trace ?` does at the start of a program
+/// (`r[dir.options.deviation.103]`).
 pub(crate) fn mode_from_setting(bytes: &[u8]) -> Result<TraceMode, u8> {
     let toggles = bytes.iter().take_while(|byte| **byte == b'?').count();
     let answer = |mode: TraceMode| {
@@ -411,10 +412,7 @@ pub(crate) fn mode_from_setting(bytes: &[u8]) -> Result<TraceMode, u8> {
         }
         return answer(mode);
     }
-    if bytes.is_empty() {
-        return answer(TraceMode::NORMAL);
-    }
-    answer(TraceMode::OFF)
+    answer(TraceMode::NORMAL)
 }
 
 /// The mode one `TRACE` letter names, case-insensitively, or the byte itself

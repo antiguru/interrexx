@@ -699,18 +699,17 @@ mod tests {
     /// once each rather than only through the corpus's own two programs.
     #[test]
     fn every_recognised_letter_classifies_and_unrecognised_ones_report_the_byte() {
-        // The empty setting is `setTraceNormal`, the all-`?` one is the
-        // debug toggle this crate answers `OFF` for -- `mode_from_setting`'s
-        // own doc has the measurement and the owner for each.
+        // The empty setting is the normal one, the all-`?` one toggles the
+        // debug flag on it (`r[dir.options.deviation.103]`).
         assert_eq!(mode_from_setting(b""), Ok(TraceMode::NORMAL));
         assert_eq!(
             mode_from_setting(b"?"),
             Ok(TraceMode {
                 debug: true,
-                ..TraceMode::OFF
+                ..TraceMode::NORMAL
             })
         );
-        assert_eq!(mode_from_setting(b"??"), Ok(TraceMode::OFF));
+        assert_eq!(mode_from_setting(b"??"), Ok(TraceMode::NORMAL));
         assert_eq!(mode_from_setting(b"a"), Ok(TraceMode::ALL));
         assert_eq!(
             mode_from_setting(b"?R"),
