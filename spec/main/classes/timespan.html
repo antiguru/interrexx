@@ -175,7 +175,7 @@
                     <main>
                         <h1 id="timespan"><a class="header" href="#timespan">TimeSpan</a></h1>
 <p class="references">rexxref: Builtin Classes &gt; Utility Classes &gt; TimeSpan Class; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; init; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; fromCivilTime (Class Method); Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; fromDays (Class Method); Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; fromHours (Class Method); Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; fromLongTime (Class Method); Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; fromMicroseconds (Class Method); Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; fromMinutes (Class Method); Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; fromNormalTime (Class Method); Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; fromSeconds (Class Method); Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; fromStringFormat (Class Method); Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; Arithmetic Methods; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; addDays; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; addHours; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; addMicroseconds; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; addMinutes; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; addSeconds; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; addWeeks; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; compareTo; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; days; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; duration; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; hashCode; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; hours; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; makeString; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; microseconds; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; minutes; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; seconds; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; sign; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; string; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; totalDays; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; totalHours; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; totalMicroseconds; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; totalMinutes; Builtin Classes &gt; Utility Classes &gt; TimeSpan Class &gt; totalSeconds</p>
-<p class="deviations">Deviations: D109, D126, D127, D130, D131, D132, D133</p>
+<p class="deviations">Deviations: D109, D126, D127, D130, D131, D132, D133, D163</p>
 <p>A <code>TimeSpan</code> is a length of time: a signed count of microseconds, at most
 3652058 days and 23:59:59.999999 either way, read as days, hours, minutes,
 seconds and microseconds. It is the difference of two <a href="datetime.html#r-class.datetime.minus"><code>DateTime</code>
@@ -1964,6 +1964,22 @@ say .timespan~fromStringFormat('00:00:30.000000')~totalSeconds
 -30
 59
 30
+</code></pre>
+<div class="rule" id="r-class.timespan.deviation.163"><a href="#r-class.timespan.deviation.163">[class.timespan.deviation.163]</a></div>
+<p>An <code>init</code> sent to a <code>TimeSpan</code> that raises an error leaves the receiver as it
+was: every argument is checked before the instance is changed (<a href="../deviations.html">Deviation
+163</a>). ooRexx stores an argument that is not a number as the
+span before it raises the error, so that the span then raises errors of its
+own, and the example is not run against it.</p>
+<pre><code class="language-rexx">t = .timespan~new(0, 1, 2, 3)
+before = t~string
+signal on syntax
+t~init('x')
+exit
+syntax:
+say condition('O')~code (t~string == before) t
+</code></pre>
+<pre><code class="language-output defect=#441">88.903 1 01:02:03.000000
 </code></pre>
 
                     </main>

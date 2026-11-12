@@ -1084,6 +1084,14 @@ was: still set or still cancelled, with its first time, interval, target and
 attachment. ooRexx sets the object up again, without stopping the first
 setting, and crashes when a ticker that runs is set up again. interrexx does
 not refuse the second <code>init</code> yet (#248).</p>
+<h2 id="163-a-failed-init-of-a-datetime-or-a-timespan"><a class="header" href="#163-a-failed-init-of-a-datetime-or-a-timespan">163. A failed init of a DateTime or a TimeSpan</a></h2>
+<p>An <code>init</code> sent to a <code>DateTime</code> or a <code>TimeSpan</code> that raises an error leaves the
+receiver as it was: every argument is checked before anything is stored.
+ooRexx stores part of the arguments first. A <code>DateTime</code> keeps the new date
+when its offset is out of range, with the offset stored as given, and a
+<code>TimeSpan</code> keeps an argument that is not a number as its span, so that the
+span then raises errors of its own. interrexx does the same until #47's
+<code>DateTime</code> and <code>TimeSpan</code> tasks land (#441).</p>
 
                     </main>
 
