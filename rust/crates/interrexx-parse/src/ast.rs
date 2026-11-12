@@ -55,8 +55,8 @@ pub enum ExprKind {
     /// A quoted literal, carrying its decoded bytes: doubled quotes collapsed
     /// and any `x` or `b` suffix already packed.
     Literal(Box<[u8]>),
-    /// A symbol whose value is its own spelling, so never a variable:
-    /// the oracle's constant and dummy symbol classes, which it treats alike.
+    /// A symbol whose value is its own spelling, so never a variable: constant
+    /// and dummy symbols, which are treated alike.
     Constant(SymbolId),
     /// A simple variable, no periods.
     Variable(SymbolId),
@@ -94,10 +94,9 @@ pub enum ExprKind {
     /// `target~name`, `target~~name`, and `target[...]`.
     Message {
         target: Box<Expr>,
-        /// Upcased, for every spelling. Measured: `"abc"~'length'`,
-        /// `"abc"~'LENGTH'` and `"abc"~"lEnGtH"` all give 3, because
-        /// the oracle upcases the name whether it came from a symbol or a
-        /// literal. `[]` for the bracket form.
+        /// Upcased, for every spelling. So `"abc"~'length'`, `"abc"~'LENGTH'`
+        /// and `"abc"~"lEnGtH"` all give 3, because the name is upcased whether
+        /// it came from a symbol or a literal. `[]` for the bracket form.
         name: Selector,
         /// `target~name:super(...)`, the superclass override.
         super_class: Option<Box<Expr>>,
@@ -431,17 +430,17 @@ pub struct CodeBody {
     pub labels: BTreeMap<Box<[u8]>, usize>,
 }
 
-/// Which closure action an `END` performs, as the oracle's end-style and
-/// `SELECT` end matching set it.
+/// Which closure action an `END` performs, as the end style and `SELECT` end
+/// matching set it.
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum EndStyle {
     /// A `DO` with no control expression and no `LABEL`.
     Do,
     /// A `DO` with no control expression but with a `LABEL`.
     LabeledDo,
-    /// Every other `DO`/`LOOP` form, labelled or not: the oracle's end style is
-    /// the plain loop block for all of them, so the label makes no difference
-    /// here where it does for the block form.
+    /// Every other `DO`/`LOOP` form, labelled or not: the end style is the
+    /// plain loop block for all of them, so the label makes no difference here
+    /// where it does for the block form.
     Loop,
     /// A `SELECT` with no `OTHERWISE`, labelled or not. Reaching this `END` at
     /// run time is error 7.3, because every `WHEN` was false.
@@ -519,7 +518,8 @@ pub enum InstructionKind {
     },
     Select {
         label: Option<SymbolId>,
-        /// `SELECT CASE expr`, a different instruction class in the C++.
+        /// `SELECT CASE expr`, a different instruction class from the plain
+        /// `SELECT`.
         case: Option<Expr>,
         /// The `WHEN` instructions this `SELECT` collected, in source order.
         whens: Vec<usize>,
@@ -632,9 +632,8 @@ impl InstructionKind {
             InstructionKind::Else { .. } => "ELSE",
             InstructionKind::Select { .. } => "SELECT",
             // Both spellings are the WHEN keyword. They are separate variants
-            // because they are separate instruction classes in the C++ and the
-            // clause means something else in each, not because the keyword
-            // differs.
+            // because they are separate instruction classes and the clause
+            // means something else in each, not because the keyword differs.
             InstructionKind::When { .. } | InstructionKind::WhenCase { .. } => "WHEN",
             InstructionKind::Otherwise => "OTHERWISE",
             InstructionKind::Leave { .. } => "LEAVE",
@@ -682,8 +681,7 @@ pub enum VariableRef {
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Loop {
     /// `DO LABEL name`. For a controlled or `OVER` loop with no `LABEL`, the
-    /// control variable's name becomes the label, exactly as
-    /// the oracle does.
+    /// control variable's name becomes the label, .
     pub label: Option<SymbolId>,
     /// `DO COUNTER name`.
     pub counter: Option<SymbolId>,
@@ -762,7 +760,7 @@ pub struct Parse {
     pub lower: bool,
     pub caseless: bool,
     /// The templates. `None` is the comma fence between one template and the
-    /// next, which the C++ pushes as a null entry.
+    /// next, which is pushed as a null entry.
     pub template: Vec<Option<ParseTrigger>>,
 }
 
@@ -854,11 +852,10 @@ pub enum Signal {
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct ConditionTrap {
     pub on: bool,
-    /// The condition name, `USER name` spelled out for a user condition
-    /// exactly as the oracle builds it.
+    /// The condition name, `USER name` spelled out for a user condition.
     pub condition: Box<[u8]>,
-    /// The label to trap to. `None` for the `OFF` form, which is how the
-    /// C++ distinguishes them too.
+    /// The label to trap to. `None` for the `OFF` form, which is how the two
+    /// forms are told apart.
     pub label: Option<Box<[u8]>>,
 }
 
@@ -941,8 +938,8 @@ pub struct UseTarget {
 #[derive(Clone, PartialEq, Eq, Debug, Default)]
 pub struct Address {
     /// `ADDRESS env`, the constant target. A symbol contributes its upcased
-    /// spelling and a literal its bytes, which is what the oracle's token value
-    /// yields for each.
+    /// spelling and a literal its bytes, which is what the token value yields
+    /// for each.
     pub environment: Option<Box<[u8]>>,
     /// `ADDRESS VALUE expr`, and the implicit form where the target is
     /// neither a symbol nor a literal.
@@ -1028,7 +1025,7 @@ pub struct Directive {
     pub clause_span: Range<usize>,
 }
 
-/// One directive form, one variant per row of the oracle's directive table.
+/// One directive form, one variant per row of the directive table.
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum DirectiveKind {
     Annotate(Box<Annotate>),
@@ -1116,9 +1113,9 @@ pub struct ClassDirective {
     /// `::CLASS c PACKAGE` is 25.901.
     pub access: Access,
     pub abstract_: bool,
-    /// `SUBCLASS c` and `MIXINCLASS c`, which fill the same slot in the C++
-    /// (setting the mixin class sets the subclass too), which is why a directive
-    /// carrying both is 25.901 whichever order they come in.
+    /// `SUBCLASS c` and `MIXINCLASS c`, which fill the same slot (setting the
+    /// mixin class sets the subclass too), which is why a directive carrying
+    /// both is 25.901 whichever order they come in.
     pub subclass: Option<ClassRef>,
     /// True when the subclass came from `MIXINCLASS`.
     pub mixin: bool,
@@ -1132,11 +1129,11 @@ pub struct ClassDirective {
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct ClassRef {
     /// `ns:name`, restricted to the symbol spelling. A literal cannot carry a
-    /// namespace: the oracle returns immediately for one.
+    /// namespace.
     pub namespace: Option<SymbolId>,
-    /// Upcased for both spellings. A symbol arrives upcased from the scanner
-    /// and a literal is upcased here, because the oracle calls the upcased token
-    /// value for the literal form.
+    /// Upcased for both spellings. A symbol arrives upcased from the scanner and
+    /// a literal is upcased here, because the upcased token value is what the
+    /// literal form uses.
     pub name: Box<[u8]>,
 }
 
@@ -1207,8 +1204,8 @@ pub enum ConstantValue {
     /// not upcased.
     Name,
     /// A literal, a symbol, or a signed constant symbol, taken as text. The
-    /// signed form is concatenated exactly as the C++ concatenates it, so
-    /// `::CONSTANT c - 5` yields `-5` with the blank dropped.
+    /// signed form is concatenated so that `::CONSTANT c - 5` yields `-5` with
+    /// the blank dropped.
     Text(Box<[u8]>),
     /// `(expr)`, which is evaluated when the package is installed rather than
     /// now.
@@ -1230,8 +1227,8 @@ pub enum AnnotationTarget {
     Class(Box<[u8]>),
     Routine(Box<[u8]>),
     Method(Box<[u8]>),
-    /// The getter name. The C++ annotates whichever of the getter/setter pair
-    /// exists, so the setter name is derived rather than stored.
+    /// The getter name. Whichever of the getter/setter pair exists is
+    /// annotated, so the setter name is derived rather than stored.
     Attribute(Box<[u8]>),
     Constant(Box<[u8]>),
 }

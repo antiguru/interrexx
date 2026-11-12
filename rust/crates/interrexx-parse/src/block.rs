@@ -114,8 +114,8 @@ pub(crate) struct Block<'a> {
     /// not the same as empty
     /// -- see `is_exposed`.
     exposed: Option<Vec<Box<[u8]>>>,
-    /// The names `USE LOCAL` listed, seeded with the five the C++ seeds. `None`
-    /// until a `USE LOCAL`.
+    /// The names `USE LOCAL` listed, seeded with the five names always present.
+    /// `None` until a `USE LOCAL`.
     local: Option<Vec<Box<[u8]>>>,
     /// Every variable name referenced by an instruction already in the chain,
     /// which is the part of `variables` that is observable from here.
@@ -179,8 +179,8 @@ impl<'a> Block<'a> {
     }
 
     /// Whether a compound variable of this exact spelling has already been
-    /// referenced by an instruction in this body, which makes the oracle return
-    /// it from the cache and capture nothing.
+    /// referenced by an instruction in this body, which makes it come from the
+    /// cache and capture nothing.
     pub(crate) fn compound_is_cached(&self, name: &[u8]) -> bool {
         self.referenced.contains(name)
     }
@@ -239,11 +239,11 @@ impl<'a> Block<'a> {
         }
         // Registered here rather than during the parse, so that an instruction
         // never sees its own references. That is what a `GUARD` needs: the
-        // C++'s cache is consulted as each reference is built, and within one
-        // clause the only reference that could precede the guard expression is
-        // in the guard expression itself, where the first occurrence captures
-        // and a later duplicate is a no-op on a set. Measured:
-        // `guard on when a.1 & a.1` is rc 0.
+        // cache is consulted as each reference is built, and within one clause
+        // the only reference that could precede the guard expression is in the
+        // guard expression itself, where the first occurrence captures and a
+        // later duplicate is a no-op on a set. So `guard on when a.1 & a.1` is
+        // rc 0.
         let symbols = self.symbols;
         for_each_variable_name(&instruction, symbols, &mut |name| {
             self.referenced.insert(Box::from(name.as_bytes()));
@@ -299,8 +299,8 @@ impl<'a> Block<'a> {
                     }
                     let target = self.next_index();
                     self.set_then_exit(frame.index(), target);
-                    // The C++ goes around again rather than breaking, so a stack
-                    // of pending ELSEs unwinds in one call.
+                    // The loop goes around again rather than breaking, so a
+                    // stack of pending ELSEs unwinds in one call.
                 }
                 // A pending THEN. Its branch is now complete, so the IF or WHEN
                 // learns where to go when its condition is false.
@@ -379,14 +379,13 @@ impl<'a> Block<'a> {
             Control::Do => (E14_1, frame.index()),
             // For both SELECT spellings.
             Control::Select | Control::SelectCase => (E14_2, frame.index()),
-            // A THEN the source ends after is the C++'s own check, which fires
-            // from the failed next-clause read right after the THEN and names
-            // the IF or WHEN. It reports against the clause holding the THEN,
-            // and this against the THEN instruction, whose span is that keyword,
-            // so the reported line is the same: measured, `if 1 = 1` / blank /
-            // `then` at end of file reports line 5 and names line 3. Anything
-            // else after the THEN, a directive, reaches the block-error report,
-            // which names the THEN.
+            // A THEN the source ends after is checked from the failed
+            // next-clause read right after the THEN, naming the IF or WHEN. It
+            // reports against the clause holding the THEN, and this against the
+            // THEN instruction, whose span is that keyword, so the reported line
+            // is the same: `if 1 = 1` / blank / `then` at end of file reports
+            // line 5 and names line 3. Anything else after the THEN, a
+            // directive, reaches the block-error report, which names the THEN.
             Control::IfThen | Control::WhenThen if at_end => (
                 E14_3,
                 frame
@@ -506,9 +505,9 @@ impl<'a> Block<'a> {
                 ..
             } => {
                 *slot = Some(end);
-                // Cloned rather than taken. The C++ drops its `WHEN` list here,
-                // because it has just moved the information into each WHEN, but
-                // the list is not recoverable from the result: which WHENs
+                // Cloned rather than taken. The `WHEN` list could be dropped
+                // here, because the information has just moved into each WHEN,
+                // but the list is not recoverable from the result: which WHENs
                 // between a SELECT and its END belong to it is exactly what the
                 // list records, and a nested one may not.
                 (*label, whens.clone(), otherwise.is_some())
@@ -575,14 +574,14 @@ impl<'a> Block<'a> {
     fn match_end(&mut self, end: usize, end_byte: usize) -> Result<(), ParseError> {
         let frame = self.pop();
         if !frame.kind.is_block() {
-            // The oracle has two more specific numbers here, for an END closing
-            // a THEN and for one closing an ELSE, and neither is reachable. The
-            // argument is structural rather than empirical: an END is not a
-            // control instruction, so the pending control block is always
-            // flushed before this check, and that flush cannot return with an
-            // ELSE or a THEN on top -- it pops an ELSE outright and rewrites a
-            // THEN into a branch-end marker. The block type this arm tests for
-            // therefore cannot be present.
+            // There are two more specific numbers possible here, for an END
+            // closing a THEN and for one closing an ELSE, and neither is
+            // reachable. The argument is structural rather than empirical: an
+            // END is not a control instruction, so the pending control block is
+            // always flushed before this check, and that flush cannot return
+            // with an ELSE or a THEN on top -- it pops an ELSE outright and
+            // rewrites a THEN into a branch-end marker. The block type this arm
+            // tests for therefore cannot be present.
             return Err(ParseError::raise(E10_1, end_byte, []));
         }
         // An END on an OTHERWISE really closes the SELECT behind it.
@@ -738,12 +737,11 @@ pub(crate) fn translate_block(
             return Ok(block.finish());
         };
 
-        // A THEN is not dispatched at all in the C++: the block translation
-        // builds it itself inside the IF arm and goes straight back to the top
-        // of the loop. Reproducing that placement matters, because a THEN
-        // reaching the SELECT-membership check below would be rejected as a
-        // non-WHEN inside a SELECT. Measured rc 0: `select` / `when 1 = 1` /
-        // `then nop` / `end`.
+        // A THEN is not dispatched at all: the block translation builds it
+        // itself inside the IF arm and goes straight back to the top of the
+        // loop. That placement matters, because a THEN reaching the
+        // SELECT-membership check below would be rejected as a non-WHEN inside
+        // a SELECT: `select` / `when 1 = 1` / `then nop` / `end` is rc 0.
         if matches!(instruction.kind, InstructionKind::Then) {
             let (parent, is_when) = block
                 .pending_then
@@ -834,9 +832,9 @@ pub(crate) fn translate_block(
             if block.top().kind != Control::EndThen {
                 return Err(ParseError::raise(E8_2, byte, []));
             }
-            // No label may sit immediately in front of an ELSE. The C++ has no
-            // label name to hand here and substitutes the string "ELSE", which
-            // is why the measured message reads `found "ELSE"`.
+            // No label may sit immediately in front of an ELSE. There is no
+            // label name to hand here, so the string "ELSE" is substituted,
+            // which is why the message reads `found "ELSE"`.
             if block.last_is_label() {
                 return Err(ParseError::raise(E47_3, byte, [b"ELSE".to_vec()]));
             }

@@ -109,8 +109,8 @@ pub(crate) struct Declared<'a> {
     /// Whether the checks against the declarations run, which a source known
     /// to translate does without.
     checked: bool,
-    /// Whether the directive just parsed reached the point where the oracle
-    /// resolves its `EXTERNAL`.
+    /// Whether the directive just parsed reached the point where its `EXTERNAL`
+    /// is resolved.
     pub(crate) bound: bool,
 }
 
@@ -195,8 +195,8 @@ pub(crate) fn parse_directive<'a>(
         .expect("parse_directive on an exhausted cursor");
     let mut parser = Dir::new(ctx, clause, declared);
     let kind = parser.dispatch(cursor)?;
-    // A body check that read past the last clause has met a scanner error
-    // there first, if there is one, before the oracle resolves anything.
+    // A body check that read past the last clause has met a scanner error there
+    // first, if there is one, before anything is resolved.
     let bound = parser.bound && !cursor.read_past_end();
     let clause_span = parser.clause.span.clone();
     declared.bound = bound;
@@ -213,8 +213,8 @@ struct Dir<'a, 'd> {
     /// clause, not of the offending token.
     clause_byte: usize,
     declared: &'d mut Declared<'a>,
-    /// Whether the parse reached the point where the oracle resolves this
-    /// directive's `EXTERNAL`.
+    /// Whether the parse reached the point where this directive's `EXTERNAL` is
+    /// resolved.
     bound: bool,
 }
 
@@ -314,16 +314,16 @@ impl<'a, 'd> Dir<'a, 'd> {
         ParseError::raise(msg, self.clause_byte, inserts)
     }
 
-    /// `msg` naming `token` as the oracle displays it, `None` being the end of
-    /// the clause.
+    /// `msg` naming `token` as it is displayed, `None` being the end of the
+    /// clause.
     #[cold]
     #[inline(never)]
     fn found(&self, msg: Msg<1>, token: Option<&Token>) -> ParseError {
         self.error(msg, [display_value(self.ctx, token)])
     }
 
-    /// 36.901 for the `(` `opener` with no `)`: the oracle
-    /// inserts its 1-based offset in its line, then the line.
+    /// 36.901 for the `(` `opener` with no `)`: the inserts are its 1-based
+    /// offset in its line, then the line.
     #[cold]
     #[inline(never)]
     fn unmatched_paren(&self, opener: &Token) -> ParseError {
@@ -341,7 +341,7 @@ impl<'a, 'd> Dir<'a, 'd> {
     }
 
     /// 24.1 for a `TRACE` value `check_trace_setting` refused, naming its first
-    /// byte that is not `?` (the oracle's rejected-option position).
+    /// byte that is not `?` (the rejected-option position).
     #[cold]
     #[inline(never)]
     fn bad_trace_setting(&self, value: &[u8]) -> ParseError {
@@ -591,9 +591,8 @@ impl<'a, 'd> Dir<'a, 'd> {
             return Err(self.found(msg, None));
         };
         match &token.kind {
-            // A literal is the whole reference: the oracle returns before it can
-            // look for a colon, so `"rexx:object"` is one name and not a
-            // qualified one.
+            // A literal is the whole reference: no colon is looked for, so
+            // `"rexx:object"` is one name and not a qualified one.
             TokenKind::Literal { .. } => Ok(ClassRef {
                 namespace: None,
                 name: self.upper_value_of(token),
@@ -602,7 +601,7 @@ impl<'a, 'd> Dir<'a, 'd> {
                 let first = *id;
                 let name = self.upper_value_of(token);
                 // A `:` here makes this `ns:name`. Peeked rather than consumed,
-                // because the C++ puts the token back when it is not a colon.
+                // because the token is put back when it is not a colon.
                 if self.peek_real().map(|next| next.kind.tag()) != Some(Tag::Colon) {
                     return Ok(ClassRef {
                         namespace: None,
@@ -706,10 +705,10 @@ impl<'a, 'd> Dir<'a, 'd> {
         let side = method.class_method;
         self.claim(upper.clone(), false, side, member, E99_902)?;
 
-        // The shapes, in the C++'s own order, because they are not disjoint:
-        // ATTRIBUTE combines with each of EXTERNAL and ABSTRACT, and DELEGATE
-        // combines with ATTRIBUTE. Measured, `::method m delegate p attribute`
-        // and `::method m attribute abstract` are both rc 0.
+        // The shapes, in order, because they are not disjoint: ATTRIBUTE
+        // combines with each of EXTERNAL and ABSTRACT, and DELEGATE combines
+        // with ATTRIBUTE. `::method m delegate p attribute` and `::method m
+        // attribute abstract` are both rc 0.
         if let Some(delegate) = method.delegate {
             // The delegate-name check runs BEFORE `check_directive` here.
             // Measured: `::method m delegate 5` with a body is 99.925 on line 1,
@@ -822,10 +821,10 @@ impl<'a, 'd> Dir<'a, 'd> {
         }
 
         // The name check runs before the style switch and so before every body
-        // check; the oracle runs it first deliberately, so that errors are
-        // diagnosed on the correct line. Measured: `::attribute 3` with a body
-        // is 99.925 on line 1, not 99.937 on line 2, and `::attribute 3 external
-        // "LIBRARY x"` is 99.925 too.
+        // check; it runs first deliberately, so that errors are diagnosed on the
+        // correct line: `::attribute 3` with a body is 99.925 on line 1, not
+        // 99.937 on line 2, and `::attribute 3 external "LIBRARY x"` is 99.925
+        // too.
         self.require_variable_name(&attribute.name)?;
         // Each style's duplicate-method check comes next, ahead of its body
         // check. Measured: `::attribute 'foo' class` with a body and no
@@ -892,10 +891,8 @@ impl<'a, 'd> Dir<'a, 'd> {
         };
         // `words()` splits on blanks and upcases the FIRST word only, which is
         // why the library name keeps its case. A blank is a space or a tab and
-        // nothing else: `words` goes through the oracle's sub-word walk, whose
-        // word iterator's blank and non-blank skips both test `*scan != ' ' &&
-        // *scan != '\t'`. Measured: tabs do separate words, and `"  library   x
-        // "` resolves the library `x`.
+        // nothing else: so tabs do separate words, and `" library x "` resolves
+        // the library `x`.
         let words: Vec<&[u8]> = spec
             .split(|&byte| byte == b' ' || byte == b'\t')
             .filter(|word| !word.is_empty())
@@ -1190,9 +1187,9 @@ impl<'a, 'd> Dir<'a, 'd> {
                     // measured, `::options fuzz 0` is rc 0 and `::options fuzz
                     // "-1"` is 26.6.
                     let value = self.require_name(E19_918)?;
-                    // `try_from` also rejects a negative, which is what
-                    // the oracle's unsigned-number request does and is why FUZZ
-                    // has no lower-bound filter of its own.
+                    // `try_from` also rejects a negative, which is what an
+                    // unsigned-number request does and is why FUZZ has no
+                    // lower-bound filter of its own.
                     let fuzz = whole_number(&value, ARGUMENT_DIGITS)
                         .and_then(|fuzz| usize::try_from(fuzz).ok())
                         .ok_or_else(|| self.error(E26_6, [value.to_vec()]))?;
@@ -1209,11 +1206,11 @@ impl<'a, 'd> Dir<'a, 'd> {
                     check_trace_setting(&value).map_err(|()| self.bad_trace_setting(&value))?;
                     options.push(PackageOption::Trace(value));
                 }
-                // The seven condition options, each taking SYNTAX or
-                // CONDITION. NOVALUE additionally accepts ERROR, which the C++
-                // marks as backwards compatibility, and nothing else does:
-                // measured, `::options novalue error` is rc 0 while
-                // `::options error error` and `::options all error` are 25.927.
+                // The seven condition options, each taking SYNTAX or CONDITION.
+                // NOVALUE additionally accepts ERROR, which is kept for
+                // backwards compatibility, and nothing else accepts it:
+                // `::options novalue error` is rc 0 while `::options error
+                // error` and `::options all error` are 25.927.
                 Some(SUBDIR_ALL) => options.push(self.condition_option(ConditionOption::All)?),
                 Some(SUBDIR_ERROR) => options.push(self.condition_option(ConditionOption::Error)?),
                 Some(SUBDIR_FAILURE) => {
@@ -1338,8 +1335,8 @@ impl<'a, 'd> Dir<'a, 'd> {
                 return Err(self.found(E25_926, Some(token)));
             }
             // And the marker is UPCASED when it comes from a symbol because that
-            // is what the oracle gives. Measured: `::resource data end stop` is
-            // closed by `STOP` and not by `stop`.
+            // is the value it has: `::resource data end stop` is closed by
+            // `STOP` and not by `stop`.
             end_marker = self.require_name(E19_921)?;
             // Measured: `::resource data end "x" extra` is 21.914.
             self.required_end(E21_914)?;
@@ -1384,12 +1381,12 @@ impl<'a, 'd> Dir<'a, 'd> {
         while let Some(token) = self.next_real() {
             match self.sub_directive(token) {
                 Some(SUBDIR_EXTERNAL) => {
-                    // A SECOND external is 25.901, the ::CLASS number, because
-                    // the oracle's routine parser passes the ::CLASS error there.
-                    // Measured: `::routine r external "LIBRARY x" external
-                    // "LIBRARY y"` reports `Unknown keyword on ::CLASS directive`.
-                    // The interpreter defines the behaviour, so the oddity is
-                    // reproduced rather than corrected.
+                    // A SECOND external is 25.901, the ::CLASS number, because the
+                    // ::CLASS error is what is passed there: `::routine r external
+                    // "LIBRARY x" external "LIBRARY y"` reports `Unknown keyword
+                    // on ::CLASS directive`. The interpreter defines the
+                    // behaviour, so the oddity is reproduced rather than
+                    // corrected.
                     if external.is_some() {
                         return Err(self.found(E25_901, Some(token)));
                     }
@@ -1417,10 +1414,9 @@ impl<'a, 'd> Dir<'a, 'd> {
     }
 }
 
-/// What `signed_constant` names when it refuses: `token`, the token the
-/// oracle's own `token` points at there (the one found where a sign was
-/// wanted, otherwise the sign), and `value`, the signed value when only the
-/// number test failed.
+/// What `signed_constant` names when it refuses: `token`, the token found there
+/// (the one found where a sign was wanted, otherwise the sign), and `value`,
+/// the signed value when only the number test failed.
 struct NotSigned {
     token: Vec<u8>,
     value: Option<Vec<u8>>,

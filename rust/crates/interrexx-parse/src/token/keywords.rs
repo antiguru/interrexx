@@ -2,9 +2,8 @@
 
 use super::{SymbolId, SymbolTable};
 
-/// One table: the interned spellings, in the order the C++ table lists them,
-/// so a hit yields that table's own index and the caller maps the index to its
-/// own enum.
+/// One table: the interned spellings, in table order, so a hit yields that
+/// table's own index and the caller maps the index to its own enum.
 #[derive(Debug)]
 pub struct KeywordSet {
     ids: Vec<SymbolId>,
@@ -60,10 +59,8 @@ impl Keywords {
     }
 }
 
-// The six tables, copied from the oracle without reordering. The C++ keeps them
-// in ASCII order so it can binary-search them; here the order is load-bearing
-// for a different reason, since `index_of` returns a position that the caller
-// maps to its own enum.
+// The six tables, kept in ASCII order, which is load-bearing since `index_of`
+// returns a position that the caller maps to its own enum.
 
 const INSTRUCTIONS: [&str; 35] = [
     "ADDRESS",

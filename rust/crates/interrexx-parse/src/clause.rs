@@ -61,11 +61,10 @@ pub(crate) fn split_clauses(tokens: &[Token]) -> Result<Vec<Clause>, ParseError>
 
 /// Whether tokens `start..limit` open with a label, `name:`.
 fn starts_label(tokens: &[Token], start: usize, limit: usize) -> bool {
-    // A blank never sits between a label and its colon: a blank is only a
-    // token when the next real character starts a symbol, a literal, a `(` or
-    // a `[`, and `:` is none of those. So the colon is at `start + 1` exactly,
-    // which is also where the C++ looks, with the next-token read rather than
-    // next-real read.
+    // A blank never sits between a label and its colon: a blank is only a token
+    // when the next real character starts a symbol, a literal, a `(` or a `[`,
+    // and `:` is none of those. So the colon is at `start + 1` exactly, which
+    // is also where the next-token read looks, rather than the next-real read.
     start + 1 < limit
         && matches!(tokens[start].kind.tag(), Tag::Symbol | Tag::Literal)
         && tokens[start + 1].kind.tag() == Tag::Colon
@@ -73,10 +72,10 @@ fn starts_label(tokens: &[Token], start: usize, limit: usize) -> bool {
 
 /// The label clause for the `name:` at token `start`.
 fn label_clause(tokens: &[Token], start: usize) -> Clause {
-    // The label clause's span always stops at the colon, even when the colon
-    // is the last token before a `;` and so does not itself terminate
-    // anything. The oracle sets the end unconditionally, and measured, `here: ;
-    // nop` traces as `here:` then `nop`.
+    // The label clause's span always stops at the colon, even when the colon is
+    // the last token before a `;` and so does not itself terminate anything.
+    // The end is set unconditionally, so `here: ; nop` traces as `here:` then
+    // `nop`.
     Clause {
         tokens: start..start + 1,
         span: tokens[start].span.start..tokens[start + 1].span.end,
@@ -129,7 +128,7 @@ pub(crate) struct ClauseCursor {
     /// ```
     pending_then: Option<(PendingThen, usize)>,
     /// Whether the parse has asked for a clause after the last one, which is
-    /// where the oracle would have read the clause a scanner error stopped in.
+    /// where the clause a scanner error stopped in would have been read.
     read_past_end: Cell<bool>,
 }
 
@@ -153,8 +152,7 @@ impl ClauseCursor {
 
     /// `error` echoing the clause it was reported against: the one holding its
     /// byte, from its first token to its terminator. A label's runs on to the
-    /// end of the clause the label starts, which is what the oracle echoes
-    /// for `lab: nop`.
+    /// end of the clause the label starts, as in the echo of `lab: nop`.
     pub(crate) fn echo(&self, error: ParseError) -> ParseError {
         let Some(mut index) = self
             .clauses
@@ -173,12 +171,12 @@ impl ClauseCursor {
         error.echoing(start..self.clauses[index].span.end)
     }
 
-    /// Where the clause of the source holding byte `byte` starts, and the
-    /// index of its first token: what the C++ parser's position 1 still
-    /// names after a THEN, an ELSE or an OTHERWISE has been trimmed off its
-    /// front. The start is that of the clause `split_clauses` cut, and the
-    /// token steps back over labels that open the same source clause, which
-    /// `split_clauses` cut off as clauses of their own.
+    /// Where the clause of the source holding byte `byte` starts, and the index
+    /// of its first token: what position 1 still names after a THEN, an ELSE or
+    /// an OTHERWISE has been trimmed off its front. The start is that of the
+    /// clause `split_clauses` cut, and the token steps back over labels that
+    /// open the same source clause, which `split_clauses` cut off as clauses of
+    /// their own.
     pub(crate) fn origin(&self, byte: usize) -> (usize, usize) {
         let mut index = self
             .clauses

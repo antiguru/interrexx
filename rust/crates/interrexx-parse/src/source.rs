@@ -14,9 +14,9 @@ pub enum SourceKind {
     /// The interpreter wraps the string in a one-element array, so nothing
     /// inside it can start a second line.
     Interpret,
-    /// Source handed over as an array of lines, one element per physical
-    /// line, with no interpret adjustment, which is what the oracle compiles a
-    /// method body from.
+    /// Source handed over as an array of lines, one element per physical line,
+    /// with no interpret adjustment, which is what a method body is compiled
+    /// from.
     Lines,
 }
 
@@ -174,10 +174,10 @@ impl ProgramSource {
         self.traceable
     }
 
-    /// The number of physical lines, as `SOURCELINE()` with no argument
-    /// reports it. A completely empty program has zero lines (the oracle's line
-    /// scan never runs for an empty buffer, so its count stays 0). Empty
-    /// `INTERPRET` text still has its one line.
+    /// The number of physical lines, as `SOURCELINE()` with no argument reports
+    /// it. A completely empty program has zero lines (the line scan never runs
+    /// for an empty buffer, so the count stays 0). Empty `INTERPRET` text still
+    /// has its one line.
     pub fn line_count(&self) -> usize {
         self.lines.len()
     }

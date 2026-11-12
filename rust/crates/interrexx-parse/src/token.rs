@@ -85,8 +85,8 @@ impl ParseError {
     }
 
     /// The source the error's traceback line echoes: the clause being
-    /// translated, from its first token to the last one scanned
-    /// as the oracle's stack frame records it.
+    /// translated, from its first token to the last one scanned, as the stack
+    /// frame records it.
     pub fn clause(&self) -> Range<usize> {
         self.byte..(self.end as usize).max(self.byte)
     }
@@ -198,7 +198,7 @@ pub enum SymbolClass {
     Compound,
 }
 
-/// The 19 token classes, in the oracle's order.
+/// The 19 token classes, in a fixed order.
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum TokenKind {
     /// Never produced.

@@ -11,8 +11,7 @@ use crate::token::{
 };
 use crate::{ProgramSource, SourceKind};
 
-/// The longest symbol the interpreter accepts
-/// (the oracle's symbol length limit). Measured: a 250-character name works, 251
+/// The longest symbol the interpreter accepts . A 250-character name works, 251
 /// raises error 30.1.
 pub(crate) const MAX_SYMBOL_LENGTH: usize = 250;
 
@@ -53,8 +52,8 @@ pub fn scan(source: &ProgramSource) -> Result<Scanned, ParseError> {
 
 /// Tokenises `source` up to the clause holding the first scanner error, and
 /// that error. The tokens stop before the failing clause's first token, so a
-/// parse of them meets every earlier clause as the oracle does, which reads
-/// one clause at a time.
+/// parse of them meets every earlier clause as a parse reading one clause at a
+/// time does.
 pub(crate) fn scan_to_error(source: &ProgramSource) -> (Scanned, Option<ParseError>) {
     let mut symbols = SymbolTable::default();
     let keywords = Keywords::new(&mut symbols);
@@ -91,8 +90,8 @@ fn first_line(source: &ProgramSource) -> usize {
     }
 }
 
-/// What the token locator found, folding the C++'s character-class return and
-/// its out-parameter into one value.
+/// What the token locator found, as a character class and an end position in
+/// one value.
 enum Located {
     /// A character that starts a token. The scan position is on it.
     Normal(u8),
@@ -152,8 +151,8 @@ struct Scanner<'a> {
     end_id: SymbolId,
 
     /// Whether the token just produced makes a following blank significant.
-    /// False at a clause start, which is what the C++ gets by passing a null
-    /// previous token to the token reader.
+    /// False at a clause start, which is what a null previous token to the
+    /// token reader gives.
     prev_blank_significant: bool,
     /// Byte offset a scanner error is reported against: the current clause's
     /// start, or the position scanning began if the clause has no tokens yet.
@@ -190,7 +189,7 @@ impl<'a> Scanner<'a> {
         scanner
     }
 
-    // Scanning position primitives, mirroring the oracle's.
+    // Scanning position primitives.
 
     /// Move to a line and offset, loading that line. A line number past the end
     /// leaves an empty line at `text_end`, which is how the more-lines and
@@ -716,11 +715,10 @@ impl<'a> Scanner<'a> {
             }
 
             if state == ExpState::E && (inch == b'+' || inch == b'-') {
-                // The C++ guards this with a have-next-char test, which tests
-                // the same thing as the more-chars test and so is always true
-                // here. A sign at the end of the line therefore falls through to
-                // reading the line terminator, which is not a symbol character,
-                // and backs up.
+                // A have-next-char guard here would test the same thing as the
+                // more-chars test and so is always true. A sign at the end of
+                // the line therefore falls through to reading the line
+                // terminator, which is not a symbol character, and backs up.
                 let sign = self.line_offset;
                 eoffset = Some(sign);
                 self.step_position();
@@ -965,8 +963,8 @@ impl<'a> Scanner<'a> {
         error.echoing(self.clause_start..start + width)
     }
 
-    /// A token's value the way the oracle gives it: upcased for a symbol,
-    /// verbatim for a literal, and nothing for anything else.
+    /// A token's value as given: upcased for a symbol, verbatim for a literal,
+    /// and nothing for anything else.
     fn token_value(&self, index: usize) -> Option<Vec<u8>> {
         match &self.tokens[index].kind {
             TokenKind::Symbol { id, .. } => Some(self.symbols.name(*id).as_bytes().to_vec()),
