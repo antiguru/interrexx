@@ -8,7 +8,7 @@ use interrexx_parse::{
     Call, ExprKind, Instruction, InstructionKind, Program, ProgramSource, SymbolId,
 };
 
-use super::{BodyEngine, Chunk, ConditionKeyword, Op, SendForm};
+use super::{Chunk, ConditionKeyword, Op, SendForm};
 use crate::activation::{CallType, body_of};
 use crate::clause::{ClauseOutcome, ClauseValue};
 use crate::eval::{SymbolRead, call_target_name};
@@ -1612,9 +1612,7 @@ macro_rules! region_ops {
                     }
                 }
                 // The construct itself, from the values the ops
-                // above filed, through `run_loop_with_header`.
-                // `BodyEngine::Chunk` says the body's clauses
-                // come from this chunk.
+                // above filed, started by `flat_loop_start`.
                 Op::LoopRun { $index } => {
                     debug_assert_names_the_clause(
                         $code, *$index, $clause, "LoopRun",
@@ -1631,7 +1629,7 @@ macro_rules! region_ops {
                     // on the stack, the region ends, and the
                     // counter falls into the body's first op,
                     // which is the op after this region.
-                    let values = match $self.flat_loop_start(
+                    match $self.flat_loop_start(
                         $code, $index, $clause, body, $source, values, $end,
                         $registers,
                     ) {
@@ -1658,26 +1656,8 @@ macro_rules! region_ops {
                             }
                             break $region $end;
                         }
-                        Ok(crate::run::FlatStart::Fallback(values)) => values,
                         Err(failure) => break $cold Err(failure),
-                    };
-                    let flow = match pinned!(
-                        $self,
-                        crate::pinning::PinKind::NestedLoop,
-                        $self.run_loop_with_header(
-                            $code,
-                            $index,
-                            $clause,
-                            body,
-                            $source,
-                            BodyEngine::Chunk { $chunk, $registers },
-                            values,
-                        )
-                    ) {
-                        Ok(flow) => flow,
-                        Err(failure) => break $cold Err(failure),
-                    };
-                    break $cold Ok(RegionEnd::Flowed(flow));
+                    }
                 }
                 Op::Jump { target } => {
                     break $region *target;

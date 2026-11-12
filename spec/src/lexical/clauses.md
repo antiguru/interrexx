@@ -124,7 +124,8 @@ and [ends](r:lex.index.read-first) with the exit code 221. A label inside a
 [DO](../instructions/do.md), [IF](../instructions/if.md) or
 [SELECT](../instructions/select.md) body raises `SYNTAX 47.2`, `47.3` or
 `47.4` when the program is read, and a label in the text given to
-[INTERPRET](r:instr.interpret.labels) raises `SYNTAX 47.1`.
+[INTERPRET](r:instr.interpret.labels) raises `SYNTAX 47.1`. A program that holds only labels has no clause to
+run, so it ends at once with no output and the exit code 0.
 
 ```rexx
 go : /* c */ say 'a'
@@ -153,6 +154,15 @@ d
 found
 first
 16.1
+```
+
+```rexx
+first:
+second: /* c */
+"third":
+```
+
+```output
 ```
 
 ```rexx
