@@ -1083,7 +1083,7 @@ e: say arg(1) '=>' condition('o')~code
 ::class k metaclass meta
 ```
 
-```output defect=#156
+```output
 .k~subclass("S") => 98.900
 .k~subclass("N") => 98.900
 .k~mixinclass("O") => 98.900

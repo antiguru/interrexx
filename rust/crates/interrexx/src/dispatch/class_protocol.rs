@@ -765,14 +765,10 @@ pub(crate) fn new_subclass(
         interp.roots.activity_mut().push_temp(argument);
         let caller = interp.caller();
         let answer = interp.send_message(metaclass, b"NEW", None, &[Some(argument)], caller)?;
-        // An answer that is not a class is refused here (oracle defect,
-        // `oracle-crashes.txt` entry 8: the reference run casts it to a class
-        // unchecked and crashes).
+        // An answer that is not a class raises 98.900 in the program that sent
+        // the request, where it can be trapped (r[class.index.deviation.114]).
         let Some(id) = answer.filter(|answer| interp.heap.is_class(*answer)) else {
-            return Err(Loud::receiver_class(
-                "a metaclass whose NEW answers something other than a class",
-            )
-            .into());
+            return Err(Raised::metaclass_new_not_a_class().into());
         };
         // A class `Class~new` did not build, or one a subclass already took, is
         // not rewired in place here, as that would damage a class others hold

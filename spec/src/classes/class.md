@@ -2073,7 +2073,7 @@ e2: say 'mixinclass' condition('o')~code
   return .nil
 ```
 
-```output defect=#156
+```output
 subclass 98.900
 mixinclass 98.900
 ```

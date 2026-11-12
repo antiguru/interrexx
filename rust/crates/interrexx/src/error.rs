@@ -1072,6 +1072,12 @@ impl Raised {
         Raised::syntax(98, 900, vec![text.as_bytes().to_vec()])
     }
 
+    /// 98.900 for a metaclass `NEW` that answers an object that is not a class
+    /// (r[class.index.deviation.114]).
+    pub(crate) fn metaclass_new_not_a_class() -> Raised {
+        Raised::execution_user_defined("a metaclass NEW answered something other than a class")
+    }
+
     /// 26.900: `Error_Invalid_whole_number_user_defined`, whose whole
     /// message the raise site supplies.
     pub(crate) fn whole_number_user_defined(text: &str) -> Raised {
