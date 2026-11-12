@@ -8,7 +8,7 @@ use crate::run::{CallResolution, Resolved, Started, function_started};
 use crate::value::{Referent, canonical_small_int, exact_small_int, within_digits};
 use crate::{Code, Failure, Interp, Loud, StackSpan};
 use interrexx_core::{Body, Decoded, INLINE_BYTES, NotNumeric, ObjRef};
-use interrexx_num::{CompareOp, DivOp, Number};
+use interrexx_num::{ArithError, CompareOp, DivOp, Number};
 use interrexx_parse::{CallTarget, Expr, ExprKind, Operator, PrefixOp, SymbolId};
 
 /// The evaluation-depth limit: `eval`'s own recursion, one level per
@@ -861,7 +861,16 @@ impl Interp {
             // own whole-number conversion, which runs first and never
             // reaches LOSTDIGITS.
             self.lostdigits_check(&left_number, left_value)?;
-            left_number.pow(&exponent, digits)
+            match left_number.pow(&exponent, digits) {
+                // The exponent as the program wrote it, not the number
+                // parsed from it.
+                Err(ArithError::PowerExponentNotWhole { .. }) => {
+                    return Err(
+                        self.rendered_failure(right_value, Raised::power_exponent_not_whole)
+                    );
+                }
+                other => other,
+            }
         } else {
             let right_number = match self.to_number(converted) {
                 Ok(number) => number,
