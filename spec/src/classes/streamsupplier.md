@@ -29,9 +29,10 @@ have private methods besides these; they are not part of this specification.
 the arguments of `new`, as [the new rule](r:class.index.new) says. The `init`
 takes the stream as its first argument and reads the first line from it; it
 does not take the arrays of `Supplier`. An argument after the first is not
-used. An argument that is not a stream, which includes a missing one, raises
-`SYNTAX 97.1`, because the object does not answer the messages that `init`
-sends it.
+used. An argument that does not answer the messages that `init` sends, such as
+a missing one, a string, `.nil` or an `Object`, raises `SYNTAX 97.1`, because
+the object does not understand them; what other objects do is stated in [the
+sends rule](r:class.streamsupplier.sends).
 
 ```rexx
 f = 'spec-streamsupplier-creation-zq.tmp'
@@ -130,8 +131,9 @@ whose number is one more than the index, by that number, and the stream's read
 position is after it. When the stream has no such line the supplier is at its
 end: `available` answers 0, and `index`, `item` and `next` raise
 `SYNTAX 93.937`, as for any [`Supplier`](r:class.supplier.next). `available`,
-`index` and `item` read nothing from the stream, and each takes no argument:
-an argument raises `SYNTAX 93.902`.
+`index` and `item` read nothing from the stream. None of the four takes an
+argument: an argument raises `SYNTAX 93.902`, at the end of the supplier too,
+and for `next` before the `SYNTAX 93.937` of the end.
 
 ```rexx
 f = 'spec-streamsupplier-next-zq.tmp'
@@ -153,6 +155,7 @@ say s~available
 call try 's~item'
 call try 's~index'
 call try 's~next'
+call try 's~next(1)'
 call try 's~available(1)'
 call sysfiledelete f
 exit
@@ -173,33 +176,47 @@ l3
 s~item => 93.937
 s~index => 93.937
 s~next => 93.937
+s~next(1) => 93.902
 s~available(1) => 93.902
 ```
 
 r[class.streamsupplier.sends]
-`init` sends the stream `state` twice and then sends the
-receiver `next`, which sends the stream `lineIn` with the number of the line to
-read, as [the rule of `supplier`](r:class.stream.supplier.sends) says of a
-stream: line 1 unless the second answer of `state` is `READY`. So the receiver
-is sent `next` once when it is made, and an override of `next` takes part
-there. `init` also sends the stream private messages of its own, which are not
-part of this specification; an argument that does not answer them raises
-`SYNTAX 97.1` as [the creation rule](r:class.streamsupplier.creation) says, so
-an object that is not a stream is accepted as the stream if it answers them,
-for instance by an `UNKNOWN` method. Each later `next` sends the stream one
-`lineIn`, whose argument is one more than the index, and nothing else.
-`available`, `index`, `item` and `copy` send nothing, to the receiver or to the
-stream, and `supplier` answers the receiver without a message. `allItems` and
-`allIndexes` are those of [`Supplier`](r:class.supplier.allitems.sends) for an
-instance of a subclass: they send the receiver `available`, `index`, `item` and
-`next` until `available` answers false, so the stream is sent one `lineIn` for
-every line that is left and one more, the one that ends the walk, and once a
-call has collected the arrays, the other call sends the stream nothing. An entry is the answer of a `lineIn` that does not raise NOTREADY. A `lineIn`
-that raises it ends the supplier, whether it was sent by `init` or by `next`:
-the supplier is then not available, and what the `lineIn` answered is not an
-item. A `lineIn` that answers no value raises `SYNTAX 91.999` from the method
-that sent it, and any other error that the stream raises is raised by that
-method as it is.
+`init` sends the stream `state` twice and then sends the receiver `next`,
+which sends the stream the first `lineIn`. What that `lineIn` is sent with,
+and which line the supplier starts at, is stated once, in [the rule of
+`supplier`](r:class.stream.supplier.sends), and holds here: no argument when
+the stream was read part of the way into a line, and otherwise the number of
+the line to read. A [transient stream](r:class.stream.supplier.transient) is
+sent `lineIn` with no argument every time. So the receiver is sent `next` once
+when it is made, and an override of `next` takes part there; what `available`,
+`index` and `item` answer inside that first `next` is not specified. Each
+later `next` sends the stream one `lineIn`, with the argument that the rule of
+`supplier` gives, which is one more than the index for a stream that is not
+transient, and nothing else. `init` also sends the stream private messages of
+its own, which are not part of this specification, and the answers to them
+decide how the supplier starts. So the outcome is specified only for a stream,
+and for an argument that is not a `Stream` only when it answers every message
+other than `state` and `lineIn` with the string `UNKNOWN` and its second
+answer to `state` is not `READY`: the supplier then starts at line 1, as for a
+stream that was not read. An argument that answers other things behaves as its
+answers decide, which may be an error such as `SYNTAX 41.1`, `97.1` or
+`91.999`, and is not specified. `available`, `index`, `item` and `copy` send
+nothing, to the receiver or to the stream, and `supplier` answers the receiver
+without a message. `allItems` and `allIndexes` are those of
+[`Supplier`](r:class.supplier.allitems.sends) for an instance of a subclass:
+they send the receiver `available`, `index`, `item` and `next` until
+`available` answers false, so the stream is sent one `lineIn` for every line
+that is left and one more, the one that ends the walk, and once a call has
+collected the arrays, every later call of either sends the stream nothing. An
+entry is the answer of a `lineIn` that does not raise NOTREADY, as it is, not
+converted: a `lineIn` that answers an `Array` makes an item that is that
+`Array`. A `lineIn` that raises NOTREADY ends the supplier, whether it was
+sent by `init` or by `next`: the supplier is then not available, and what the
+`lineIn` answered is not an item. The supplier traps that NOTREADY itself: a
+`CALL ON NOTREADY` or `SIGNAL ON NOTREADY` of the code that sent `new` or
+`next` is not run. A `lineIn` that answers no value raises `SYNTAX 91.999`
+from the method that sent it, and any other error that the stream raises is
+raised by that method as it is.
 
 ```rexx
 .local~log = .array~new
@@ -246,7 +263,7 @@ show:
     .log~append('state')
     return 'UNKNOWN'
   end
-  return 1
+  return 'UNKNOWN'
 ::method linein
   expose left
   use arg number
@@ -317,6 +334,37 @@ later => 91.999
 ends made 1
 ends next 0
 ends => 93.937
+```
+
+```rexx
+trapped = 0
+call on notready name trap
+s = .streamsupplier~new(.short~new)
+say s~available s~item~class~id
+s~next
+say s~available trapped
+t = .streamsupplier~new(.short~new(0))
+say t~available trapped
+exit
+trap: trapped += 1
+  return
+::class short
+::method init
+  expose left
+  use arg left = 1
+::method unknown
+  return 'UNKNOWN'
+::method linein
+  expose left
+  if left <= 0 then raise notready
+  left -= 1
+  return .array~of(left)
+```
+
+```output
+1 Array
+0 0
+0 0
 ```
 
 r[class.streamsupplier.rest]

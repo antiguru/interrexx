@@ -2130,7 +2130,8 @@ one argument, the number of the line to read. For each `next` it sends
 `lineIn` with the number of the next line; the other methods of the supplier
 send nothing. `supplier` sends nothing else. The first answer of `state` is
 not used. When the second is `READY`, the supplier starts at the line that the
-read position is in, which it finds without sending a message, and otherwise
+read position is in, which it learns from the stream by messages that are not part of this
+specification, and otherwise
 at line 1; when the second answer is `READY` for a stream that is not open,
 `supplier` raises `SYNTAX 41.1` and sends no `lineIn`. An entry is the answer
 of a `lineIn` that does not raise NOTREADY. A `lineIn` that raises it ends the
@@ -2267,6 +2268,51 @@ bad:
 FAKE: 1=one 2=two 3=fake3 4=fake4 0
 RAISE: 1=one 2=two 0
 NOVAL => 91.999
+```
+
+r[class.stream.supplier.transient]
+For a transient stream, such as `STDIN`, the supplier does not number the
+lines it asks for. When the stream has been read from, as by `lineIn`,
+`charIn` or `lines`, every `lineIn` that the supplier sends, the first and each
+later one, has no argument, and the answers to `state` do not change that. The
+index of the supplier counts from 1 at the first line it reads, whatever the
+number of that line in the stream. When the stream has not been read from, the
+first `lineIn` is sent with the argument 1, as for a stream that was not read,
+and raises `SYNTAX 93.958` because a transient stream cannot be positioned;
+`supplier`, or `new` of [`StreamSupplier`](r:class.streamsupplier.sends),
+raises it. The examples run with an empty standard input, so they show these
+sends and the end of the supplier and not lines of data; a transient stream
+that holds lines is not shown by an example.
+
+```rexx
+call try 'unread'
+call try 'read'
+exit
+try:
+  s = .spy~new('STDIN')
+  if arg(1) == 'read' then x = s~lines
+  signal on syntax name bad
+  p = s~supplier
+  say arg(1) p~available s~log
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
+::class spy subclass stream
+::attribute log
+::method init
+  self~log = ''
+  forward class (super)
+::method state
+  self~log = self~log 'state'
+  forward class (super)
+::method linein
+  self~log = self~log 'lineIn(' || arg(1) || ')'
+  forward class (super)
+```
+
+```output
+unread => 93.958
+read 0  state state lineIn()
 ```
 
 r[class.stream.uninit]
