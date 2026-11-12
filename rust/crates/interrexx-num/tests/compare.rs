@@ -53,10 +53,10 @@ fn strict_ordering_is_plain_byte_ordering() {
 fn not_equal_holds_whenever_equal_does_not() {
     use CompareOp::*;
     // `\=`, `<>` and `><` are three spellings of the same operator in the
-    // interpreter's grammar (`StringClass.cpp:2391-2410` repeats the same
-    // method pointer for all three); this crate models that as one
-    // `NotEqual` variant, and the harness's token-to-variant mapping
-    // (`bin/muldiv.rs::compare_op`) is what collapses the spellings.
+    // interpreter's grammar (its operator table repeats the same method pointer
+    // for all three); this crate models that as one `NotEqual` variant, and the
+    // harness's token-to-variant mapping (`bin/muldiv.rs::compare_op`) is what
+    // collapses the spellings.
     assert!(c("1", "2", NotEqual));
     assert!(!c("1", "1", NotEqual));
 }

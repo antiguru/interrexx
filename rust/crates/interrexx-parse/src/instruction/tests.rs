@@ -263,7 +263,7 @@ fn a_second_token_of_equals_is_an_assignment_whatever_the_first_spells() {
     assert_eq!(names(&ok("then = 7")), ["<assign>"]);
     assert_eq!(names(&ok("end. = 0")), ["<assign>"]);
     assert_eq!(names(&ok("stem.if = 99")), ["<assign>"]);
-    // The shortcut operators are assignments too (`assignmentOpNew`).
+    // The shortcut operators are assignments too.
     assert_eq!(names(&ok("a += 1")), ["<assign>"]);
     assert_eq!(names(&ok("a ||= 'x'")), ["<assign>"]);
 }
@@ -278,15 +278,13 @@ fn a_keyword_with_no_equals_after_it_is_the_keyword() {
 
 #[test]
 fn a_strict_equals_in_the_assignment_position_is_rejected() {
-    // `syntaxError(Error_Invalid_expression_general, second)` at
-    // `InstructionParser.cpp:185`. Verified with rexxc: `a == 1` is rc 221,
-    // Error 35.1.
+    // Verified with rexxc: `a == 1` is rc 221, Error 35.1.
     assert_eq!(err("a == 1"), (35, 1));
 }
 
 #[test]
 fn an_assignment_target_must_be_a_variable() {
-    // `needVariable` picks its number from the spelling, not the class:
+    // The variable check picks its number from the spelling, not the class:
     // verified with rexxc, `1 = 2` is 31.2 and `.a = 2` is 31.3.
     assert_eq!(err("1 = 2"), (31, 2));
     assert_eq!(err(".a = 2"), (31, 3));
@@ -338,8 +336,8 @@ fn a_term_with_a_message_applied_is_a_message_instruction() {
 
 #[test]
 fn a_term_with_no_message_applied_is_a_command() {
-    // `parseMessageTerm` returns null unless a `~`, `~~` or `[` was applied,
-    // which is why a bare call is a command and not a call.
+    // The message-term parse returns nothing unless a `~`, `~~` or `[` was
+    // applied, which is why a bare call is a command and not a call.
     assert_eq!(names(&ok("f(1)")), ["<command>"]);
     assert_eq!(names(&ok("'echo hi'")), ["<command>"]);
     assert_eq!(names(&ok("a b c")), ["<command>"]);
@@ -359,8 +357,8 @@ fn a_keyword_survives_the_message_term_trial() {
 
 #[test]
 fn a_bare_then_is_8_1() {
-    // `nextInstruction`'s KEYWORD_THEN arm is an unconditional error.
-    // Measured: `then` is rc 248, Error 8.1.
+    // The oracle treats a keyword THEN as an unconditional error. Measured:
+    // `then` is rc 248, Error 8.1.
     assert_eq!(err("then"), (8, 1));
     // ... and the other direction: after an IF it is the THEN instruction.
     assert_eq!(names(&ok("if 1 then nop")), ["IF", "THEN", "NOP"]);
@@ -378,8 +376,8 @@ fn an_if_with_no_then_is_18_1_and_a_when_is_18_2() {
 
 #[test]
 fn an_empty_if_condition_is_35_929() {
-    // `parseLogical` raises before `requiredLogicalExpression` can, so the
-    // number is 35.929 and not 35.902. Measured, all three: rc 221, 35.929.
+    // The logical-list parse raises before the required-expression check can, so
+    // the number is 35.929 and not 35.902. Measured, all three: rc 221, 35.929.
     assert_eq!(err("if then nop"), (35, 929));
     assert_eq!(err("if , 1 = 1 then nop"), (35, 929));
     assert_eq!(err("if 1 = 1, then nop"), (35, 929));
@@ -402,9 +400,9 @@ fn else_and_otherwise_parse_nothing() {
 #[test]
 fn end_takes_an_optional_name_and_nothing_else() {
     assert_eq!(names(&ok("do\nend")), ["DO", "END"]);
-    // `isSymbol()` is class-agnostic, so a number, a stem and a compound are
-    // all legal block names, both on the LABEL and on the END. Measured rc 0
-    // for each pairing.
+    // The symbol test is class-agnostic, so a number, a stem and a compound are
+    // all legal block names, both on the LABEL and on the END. Measured rc 0 for
+    // each pairing.
     for name in ["1", "loop", "a.", "a.1"] {
         let text = format!("do label {name}\nnop\nend {name}");
         assert_eq!(names(&ok(&text)), ["DO", "NOP", "END"], "{text:?}");
@@ -523,8 +521,8 @@ fn select_rejects_anything_that_is_not_label_or_case() {
 fn leave_and_iterate_parse_bare() {
     // The Step 4 table's point: measured, `leave` and `iterate` alone are
     // rc 0 under rexxc and only fail at run time, with Error 28.1 and 28.2
-    // from `RexxActivation.cpp:1214` and `:1161`. They are NOT wrapped in a
-    // loop here, because standing alone is the behaviour under test.
+    // from the interpreter. They are NOT wrapped in a loop here, because
+    // standing alone is the behaviour under test.
     assert_eq!(names(&ok("leave")), ["LEAVE"]);
     assert_eq!(names(&ok("iterate")), ["ITERATE"]);
     // The named form, which is the only one the oracle accepts at run time.
@@ -653,14 +651,14 @@ fn the_order_of_a_controlled_loops_keywords_is_the_order_written() {
 #[test]
 fn over_is_tested_before_with_so_a_variable_may_be_named_with() {
     // `do with over x` is a DO OVER whose control variable is WITH, because
-    // `createLoop` tests `second == OVER` before it tests `first == WITH`.
-    // Measured: rc 0 under rexxc, and the shape is `over`, not `with`.
+    // The oracle tests the second token for OVER before it tests the first for
+    // WITH. Measured: rc 0 under rexxc, and the shape is `over`, not `with`.
     assert_eq!(loop_shape("do with over x\nend"), "@over");
 }
 
 #[test]
 fn a_loop_control_variable_must_be_a_variable() {
-    // `addVariable` calls `needVariable`, so the number comes from the
+    // The variable path calls the variable check, so the number comes from the
     // SPELLING. Measured: `do 1 = 1 to 2` is 31.2 and `do .5 = 1 to 2` is
     // 31.3, where `drop .5` is 31.2 from the class-based test instead.
     assert_eq!(err("do 1 = 1 to 2\nend"), (31, 2));
@@ -686,11 +684,10 @@ fn a_duplicated_loop_keyword_is_27_902() {
 
 #[test]
 fn an_empty_loop_conditional_is_the_logical_list_error_not_the_per_keyword_one() {
-    // `requiredLogicalExpression` carries a per-caller sub-number, 35.908 for
-    // WHILE and 35.909 for UNTIL, and both are dead: `parseLogical` raises
-    // `Error_Invalid_expression_logical_list` itself as soon as a sub-expression
-    // comes back null, so no caller reaches its own number. Measured under
-    // `rexxc`, both spellings:
+    // The oracle carries a per-caller sub-number, 35.908 for WHILE and 35.909
+    // for UNTIL, and both are dead: the condition parser raises the logical-list
+    // error itself as soon as a sub-expression comes back null, so no caller
+    // reaches its own number. Measured under `rexxc`, both spellings:
     assert_eq!(err("do while\nend"), (35, 929));
     assert_eq!(err("do until\nend"), (35, 929));
     // The controlled forms reach the same site, so they answer the same way.
@@ -700,8 +697,7 @@ fn an_empty_loop_conditional_is_the_logical_list_error_not_the_per_keyword_one()
 
 #[test]
 fn a_loop_takes_at_most_one_conditional() {
-    // `Error_Invalid_do_whileuntil`. Measured:
-    // `do i = 1 to 3 while 1 until 2` is rc 229, Error 27.1.
+    // Measured: `do i = 1 to 3 while 1 until 2` is rc 229, Error 27.1.
     assert_eq!(err("do i = 1 to 3 while 1 until 2\nend"), (27, 1));
     assert_eq!(err("do while 1 until 2\nend"), (27, 1));
     // The other direction, and it is not obvious: `while 1 x` is ACCEPTED,
@@ -715,8 +711,8 @@ fn a_loop_takes_at_most_one_conditional() {
 
 #[test]
 fn do_forever_allows_only_a_conditional_after_it() {
-    // The one reachable use of `parseLoopConditional`'s error argument.
-    // Measured: `do forever x` is rc 229, Error 27.901.
+    // The one reachable use of the loop conditional's error argument. Measured:
+    // `do forever x` is rc 229, Error 27.901.
     assert_eq!(err("do forever x\nend"), (27, 901));
     assert_eq!(loop_shape("do forever while 1\nend"), "forever+while");
 }
@@ -833,9 +829,9 @@ fn an_indirect_variable_reference_must_be_closed() {
 
 #[test]
 fn expose_is_rejected_inside_interpret() {
-    // `exposeNew` calls `isInterpret()` first. Measured at RUN time, because
-    // rexxc never parses an INTERPRET string: `interpret "expose a"` is
-    // rc 157, Error 99.908.
+    // The oracle checks for INTERPRET first. Measured at RUN time, because rexxc
+    // never parses an INTERPRET string: `interpret "expose a"` is rc 157, Error
+    // 99.908.
     let (code, sub) = match parse_kind("expose a", SourceKind::Interpret) {
         Ok(_) => panic!("EXPOSE inside INTERPRET must be rejected"),
         Err(e) => (e.code, e.sub),
@@ -1007,9 +1003,9 @@ fn a_template_with_no_variables_after_its_last_trigger_gets_no_end_trigger() {
 
 #[test]
 fn a_trigger_position_may_not_be_a_variable() {
-    // The gate `parseNew` applies with `token->isVariable()`. Measured:
-    // `parse arg +x a` is 38.2 and `parse arg +"x"` is 38.2, while
-    // `parse arg +(x) a` is rc 0, which is the other direction.
+    // The gate the oracle applies to a variable token. Measured: `parse arg +x
+    // a` is 38.2 and `parse arg +"x"` is 38.2, while `parse arg +(x) a` is rc 0,
+    // which is the other direction.
     assert_eq!(err("parse arg +x a"), (38, 2));
     assert_eq!(err("parse arg +a. a"), (38, 2));
     assert_eq!(err("parse arg +\"x\""), (38, 2));
@@ -1097,7 +1093,7 @@ fn every_call_form_reaches_its_own_variant() {
 
 #[test]
 fn call_rejects_a_target_that_is_neither_symbol_literal_nor_paren() {
-    // `Error_Symbol_or_string_call`. Measured: bare `call` is rc 237, 19.2.
+    // Measured: bare `call` is rc 237, 19.2.
     assert_eq!(err("call"), (19, 2));
     // Measured: `call +1` and `call ,1` are both rc 237, Error 19.2.
     assert_eq!(err("call +1"), (19, 2));
@@ -1105,7 +1101,7 @@ fn call_rejects_a_target_that_is_neither_symbol_literal_nor_paren() {
     // But `call ~x` is rc 0 and is NOT a CALL at all: the message-term test
     // runs before keyword dispatch, so this is the message `CALL~X`.
     assert_eq!(names(&ok("call ~x")), ["<message>"]);
-    // `Error_Symbol_expected_qualified_call`, measured as 20.922.
+    // Measured as 20.922.
     assert_eq!(err("call ns:"), (20, 922));
 }
 
@@ -1150,7 +1146,7 @@ fn a_user_condition_carries_its_composed_name() {
         call_shape("call on user x\nx: return"),
         "call-trap on USER X ->X"
     );
-    // `Error_Symbol_expected_user`, measured as 20.915.
+    // Measured as 20.915.
     assert_eq!(err("call on user"), (20, 915));
     assert_eq!(err("call on user \"x\""), (20, 915));
 }
@@ -1190,7 +1186,7 @@ fn every_signal_form_reaches_its_own_variant() {
     // `signal 1+1` is not an expression. Measured, both rc 235, Error 21.905.
     assert_eq!(err("signal lab x"), (21, 905));
     assert_eq!(err("signal 1+1"), (21, 905));
-    // `Error_Symbol_or_string_signal`, measured as 19.4.
+    // Measured as 19.4.
     assert_eq!(err("signal"), (19, 4));
 }
 
@@ -1629,8 +1625,8 @@ fn every_address_form_reaches_its_own_fields() {
     // An implicit ADDRESS VALUE, where what follows is neither symbol nor
     // literal.
     assert_eq!(address_shape("address (e)"), "env:- dyn:E");
-    // `Error_Invalid_expression_address`, measured as 35.914 for both
-    // `address value` and `address value with input normal`.
+    // Measured as 35.914 for both `address value` and `address value with input
+    // normal`.
     assert_eq!(err("address value"), (35, 914));
     assert_eq!(err("address value with input normal"), (35, 914));
 }
@@ -1683,10 +1679,10 @@ fn every_redirection_target_reaches_its_own_variant() {
 
 #[test]
 fn a_redirection_target_is_a_constant_expression_not_an_expression() {
-    // `parseConstantExpression` takes a literal, a constant symbol or a
+    // The oracle's constant expression takes a literal, a constant symbol or a
     // parenthesised expression, so a bare variable is 35.1. Measured, both
-    // directions: `with error using x` is rc 221 Error 35.1 while
-    // `with error using (x)` is rc 0.
+    // directions: `with error using x` is rc 221 Error 35.1 while `with error
+    // using (x)` is rc 0.
     assert_eq!(err("address system with error using x"), (35, 1));
     assert_eq!(
         address_shape("address system with error using (x)"),
@@ -1695,7 +1691,7 @@ fn a_redirection_target_is_a_constant_expression_not_an_expression() {
     // A STEM target must be a stem symbol, not a variable. Measured:
     // `with input stem a` is 20.932 where `stem a.` is rc 0.
     assert_eq!(err("address system with input stem a"), (20, 932));
-    // `Error_Invalid_expression_missing_general`, measured as 35.935.
+    // Measured as 35.935.
     assert_eq!(err("address system with input stream"), (35, 935));
 }
 
@@ -1945,8 +1941,8 @@ fn the_keyword_as_variable_corpus_parses_every_keyword_as_a_variable() {
 
 #[test]
 fn a_to_or_by_after_a_do_over_or_with_for_is_a_keyword_error() {
-    // Deviation 38: TERM_CONTROL ends the FOR count at TO and BY, and the
-    // oracle has no case for them there, so it answers 49.2.
+    // Deviation 38: the control terminator set ends the FOR count at TO and BY,
+    // and the oracle has no case for them there, so it answers 49.2.
     for source in [
         "do i over x for 1 to 2\nend",
         "do i over x for 1 by 2\nend",
@@ -2034,9 +2030,9 @@ fn a_missing_then_is_reported_on_the_offending_clauses_line() {
 
 #[test]
 fn a_when_picks_its_grammar_from_the_enclosing_select() {
-    // The enclosing block chooses between `parseCaseWhenList` and
-    // `parseLogical`, and the missing-element error is what makes the choice
-    // visible. Measured all four: inside `select case 1` an empty element is
+    // The enclosing block chooses between the `SELECT CASE` list and the logical
+    // list, and the missing-element error is what makes the choice visible.
+    // Measured all four: inside `select case 1` an empty element is
     // 35.934, inside a plain `select` it is 35.929.
     assert_eq!(err("select case 1\nwhen , 1 = 1 then nop\nend"), (35, 934));
     assert_eq!(err("select case 1\nwhen then nop\nend"), (35, 934));
@@ -2060,8 +2056,8 @@ fn a_when_inside_select_case_builds_a_value_list_not_an_and() {
         InstructionKind::WhenCase { values, .. } => assert_eq!(values.len(), 2),
         other => panic!("expected a case WHEN, got {other:?}"),
     }
-    // One element still builds a list, because `parseCaseWhenList` never
-    // collapses where `parseLogical` does.
+    // One element still builds a list, because the `SELECT CASE` list never
+    // collapses where the logical list does.
     let one = ok("select case 2\nwhen 1 then nop\nend");
     match &one[1].kind {
         InstructionKind::WhenCase { values, .. } => assert_eq!(values.len(), 1),

@@ -148,7 +148,7 @@ impl Number {
 }
 
 /// The reciprocal `1 / accum` for a negative power, ported from
-/// `NumberString::dividePower` (`NumberStringMath2.cpp:1059`).
+/// the oracle's power division.
 fn divide_power(accum: &Number, digits: u64) -> Number {
     debug_assert!(!accum.is_zero(), "pow never inverts a zero accumulator");
     let divisor = &accum.digits;

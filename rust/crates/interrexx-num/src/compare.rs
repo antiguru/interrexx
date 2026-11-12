@@ -5,8 +5,8 @@ use std::cmp::Ordering;
 use crate::{ArithError, Number};
 
 /// The twelve Rexx comparison operators. `\=`, `<>` and `><` all mean
-/// `NotEqual`; the interpreter's operator table (`StringClass.cpp:2391-2410`)
-/// literally repeats the same method pointer for all three tokens.
+/// `NotEqual`; the interpreter's operator table literally repeats the same
+/// method pointer for all three tokens.
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum CompareOp {
     Equal,
@@ -119,10 +119,10 @@ pub fn compare_decoded(
 
     match (a_number, b_number) {
         (Some(na), Some(nb)) => Ok(op.holds(numeric_order(na, nb, digits, fuzz)?)),
-        // `RexxString::comp`: if either side doesn't convert, this drops to
-        // `stringComp` -- not an error. `NumberString::comp` does the same
-        // thing symmetrically (`stringValue()->stringComp(...)`) when only
-        // its own right-hand argument fails to convert.
+        // If either side doesn't convert, this drops to a string comparison --
+        // not an error. The oracle's number comparison does the same thing
+        // symmetrically (comparing the string values) when only its own
+        // right-hand argument fails to convert.
         _ => Ok(compare_strings(a, b, op)),
     }
 }
@@ -159,7 +159,7 @@ fn parse_bytes(bytes: &[u8]) -> Option<Number> {
     Number::parse_bytes(bytes)
 }
 
-/// Numeric ordering per `NumberString::comp` (`NumberStringClass.cpp:3194`).
+/// Numeric ordering, as the oracle's number comparison gives it.
 fn numeric_order(a: &Number, b: &Number, digits: u64, fuzz: u64) -> Result<Ordering, ArithError> {
     let sign = |n: &Number| {
         if n.is_zero() {
@@ -263,7 +263,7 @@ fn digit_prefix_order(a: &[u8], b: &[u8]) -> Ordering {
     Ordering::Equal
 }
 
-/// String fallback per `RexxString::stringComp` (`StringClass.cpp:795`).
+/// String fallback, as the oracle's string comparison gives it.
 fn string_order(a: &[u8], b: &[u8]) -> Ordering {
     fn is_blank(byte: u8) -> bool {
         byte == b' ' || byte == b'\t'

@@ -86,7 +86,7 @@ impl ParseError {
 
     /// The source the error's traceback line echoes: the clause being
     /// translated, from its first token to the last one scanned
-    /// (`LanguageParser::createStackFrame`'s `clauseLocation`).
+    /// as the oracle's stack frame records it.
     pub fn clause(&self) -> Range<usize> {
         self.byte..(self.end as usize).max(self.byte)
     }
@@ -103,7 +103,7 @@ impl ParseError {
 }
 
 /// An operator's identity, mirroring the operator range of `TokenSubclass`
-/// (`Token.hpp:110`-`141`) in that order.
+/// in that order.
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum Operator {
     Plus,
@@ -180,31 +180,28 @@ impl Operator {
     }
 }
 
-/// What kind of thing a symbol names, from `scanSymbol`'s classification
-/// (`Scanner.cpp:1527`-`1593`).
+/// What kind of thing a symbol names, from the symbol scan's classification.
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum SymbolClass {
-    /// A lone `.`, the placeholder in a `PARSE` template (`SYMBOL_DUMMY`).
+    /// A lone `.`, the placeholder in a `PARSE` template.
     Dummy,
     /// Starts with a digit, or starts with `.` and scanned as a number: a
-    /// literal value, never a variable (`SYMBOL_CONSTANT`).
+    /// literal value, never a variable.
     Constant,
-    /// Starts with `.` and is not a number, e.g. `.true` or `.array`
-    /// (`SYMBOL_DOTSYMBOL`).
+    /// Starts with `.` and is not a number, e.g. `.true` or `.array`.
     DotSymbol,
-    /// A simple variable name, no periods (`SYMBOL_VARIABLE`).
+    /// A simple variable name, no periods.
     Variable,
-    /// One period, at the end, e.g. `stem.` (`SYMBOL_STEM`).
+    /// One period, at the end, e.g. `stem.`.
     Stem,
-    /// A period that is not the only one or not at the end, e.g. `stem.i.j`
-    /// (`SYMBOL_COMPOUND`).
+    /// A period that is not the only one or not at the end, e.g. `stem.i.j`.
     Compound,
 }
 
-/// The 19 token classes of `TokenClass` (`Token.hpp:77`), in that order.
+/// The 19 token classes, in the oracle's order.
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum TokenKind {
-    /// `TOKEN_NULL`. Never produced.
+    /// Never produced.
     Null,
     /// A blank that is an operator, under the two-sided rule in `scan`.
     Blank,
@@ -226,11 +223,11 @@ pub enum TokenKind {
     /// A clause terminator: `;`, an uncontinued line end, or end of file.
     Eoc,
     Comma,
-    /// `TOKEN_PREFIX`. Never produced.
+    /// Never produced.
     Prefix,
     LeftParen,
     RightParen,
-    /// `TOKEN_POINT`. Never produced.
+    /// Never produced.
     Point,
     Colon,
     Tilde,
@@ -238,12 +235,12 @@ pub enum TokenKind {
     LeftBracket,
     RightBracket,
     DColon,
-    /// `TOKEN_CONTINUE`. Never produced: a `,` or `-` continuation is
-    /// resolved inside `locateToken` and becomes a blank or nothing.
+    /// Never produced: a `,` or `-` continuation is resolved inside the token
+    /// locator and becomes a blank or nothing.
     Continue,
     /// An operator immediately followed by `=`, e.g. `+=`, which the
     /// interpreter treats as an assignment shortcut rather than as an
-    /// operator (`Token.cpp:95`).
+    /// operator.
     Assignment(Operator),
 }
 
@@ -298,8 +295,7 @@ impl TokenKind {
     }
 
     /// Whether a blank *following* this token can be significant:
-    /// `RexxToken::isBlankSignificant()` (`Token.hpp:595`). One half of the
-    /// two-sided rule; the other half looks at what comes next.
+    /// One half of the two-sided rule; the other half looks at what comes next.
     pub fn makes_blank_significant(&self) -> bool {
         matches!(
             self,

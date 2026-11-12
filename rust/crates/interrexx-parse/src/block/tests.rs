@@ -50,8 +50,8 @@ fn names(program: &Program) -> Vec<&'static str> {
 fn a_select_with_no_when_is_7_1_reported_against_the_select() {
     // Measured: the reported line is 3, the SELECT's, with the END on line 5.
     // This is the ONE error in the family that reports against the construct
-    // rather than the offending clause, because `matchEnd` passes
-    // `getLocation()` where every neighbour passes the END's location.
+    // rather than the offending clause, because the oracle passes the
+    // construct's location where every neighbour passes the END's location.
     assert_eq!(err_at("nop\n\nselect\n\nend\n"), (7, 1, 3));
     // `SELECT CASE` counts the same way, and an OTHERWISE does not stand in for
     // a WHEN. Measured, reported on the SELECT's line again.
@@ -97,11 +97,11 @@ fn an_else_with_no_then_above_it_is_8_2() {
 
 #[test]
 fn a_when_outside_a_select_is_9_1() {
-    // Raised in `whenNew` from the control stack, which is why it precedes every
-    // check the assembler makes. Measured on line 3.
+    // Raised from the control stack, which is why it precedes every check the
+    // assembler makes. Measured on line 3.
     assert_eq!(err_at("nop\n\nwhen 1 = 1 then nop\n"), (9, 1, 3));
-    // A DO between the WHEN and the SELECT: `topBlockInstruction` stops at the
-    // DO, because a DO is a block. Measured 9.1.
+    // A DO between the WHEN and the SELECT: the control-stack search stops at
+    // the DO, because a DO is a block. Measured 9.1.
     assert_eq!(err("nop\n\ndo\n\nwhen 1 = 1 then nop\n\nend\n"), (9, 1));
     assert_eq!(
         err("nop\n\nselect\n\nwhen 1 = 1 then\n\ndo\n\nwhen 2 = 2 then nop\n\nend\n\nend\n"),
@@ -213,7 +213,7 @@ fn an_unclosed_block_picks_its_number_from_the_block_kind() {
     // line 5.
     assert_eq!(err_at("nop\n\ndo\n\nnop\n"), (14, 1, 5));
     // A LABEL does not move a plain DO to the loop number, which is worth
-    // pinning because `getEndStyle` DOES distinguish it. Measured 14.1.
+    // pinning because the oracle's end style DOES distinguish it. Measured 14.1.
     assert_eq!(err("nop\n\ndo label a\n\nnop\n"), (14, 1));
     // Every other DO/LOOP form is one number, however it is spelled.
     for header in ["do while 1", "do 3", "loop", "loop forever", "do i over x"] {
@@ -250,10 +250,10 @@ fn a_then_or_else_with_nothing_after_it_is_14_3_or_14_4() {
     // give the same numbers with a `::` clause after them. Measured all three.
     assert_eq!(err("nop\n\nif 1 = 1 then\n\n::routine r\n"), (14, 3));
     // 18.1 with a directive ending the body is reported against the DIRECTIVE's
-    // line, not the IF's, because `nextClause()` succeeded on the `::` clause and
-    // moved `clauseLocation` there. Measured: line 5 reported, line 3
-    // substituted. At plain end of file the two coincide, which is the row
-    // below.
+    // line, not the IF's, because reading the next clause succeeded on the `::`
+    // clause and moved the clause location there. Measured: line 5 reported,
+    // line 3 substituted. At plain end of file the two coincide, which is the
+    // row below.
     assert_eq!(err_at("nop\n\nif 1 = 1\n\n::routine r\nnop\n"), (18, 1, 5));
     assert_eq!(
         err_at("nop\n\nselect\n\nwhen 1 = 1\n\n::routine r\nnop\n"),
@@ -335,8 +335,9 @@ fn expose_and_use_local_must_be_the_first_instruction_of_their_body() {
 #[test]
 fn each_body_gets_its_own_must_be_first_check() {
     // The main body already has an EXPOSE, and the method body may still start
-    // with one, because `lastInstruction` is per-`translateBlock`. Measured
-    // rc 0, and this is the test that would fail if bodies shared an assembler.
+    // with one, because the last-instruction record is per block translation.
+    // Measured rc 0, and this is the test that would fail if bodies shared an
+    // assembler.
     ok("expose a\n::method m\nexpose b\n");
     // And a body's own second instruction is still rejected. Measured 99.907.
     assert_eq!(err("expose a\n::method m\nnop\nexpose b\n"), (99, 907));
@@ -346,8 +347,9 @@ fn each_body_gets_its_own_must_be_first_check() {
 
 #[test]
 fn a_guard_when_expression_must_name_an_exposed_variable() {
-    // Raised in `guardNew` rather than by the assembler, which is why it fires
-    // in the main program with no method anywhere. Measured 99.913 for each.
+    // Raised while parsing the GUARD rather than by the assembler, which is why
+    // it fires in the main program with no method anywhere. Measured 99.913 for
+    // each.
     assert_eq!(err_at("guard on when 1\n"), (99, 913, 1));
     assert_eq!(err("::method m\nexpose a\nguard on when b\n"), (99, 913));
     assert_eq!(err("::method m\nguard on when a\n"), (99, 913));
@@ -391,9 +393,9 @@ fn use_local_inverts_the_exposure_rule_and_seeds_five_names() {
     ok("::method m\nuse local b\nguard on when a\n");
     // A name that IS listed is not exposed. Measured 99.913.
     assert_eq!(err("::method m\nuse local a\nguard on when a\n"), (99, 913));
-    // The five names `autoExpose` seeds are local even though no USE LOCAL
-    // listed them, which is only observable through this check. Measured 99.913
-    // for SELF, and the other four are seeded by the same statement.
+    // The five names seeded as local are local even though no USE LOCAL listed
+    // them, which is only observable through this check. Measured 99.913 for
+    // SELF, and the other four are seeded by the same statement.
     assert_eq!(
         err("::method m\nuse local a\nguard on when self\n"),
         (99, 913)
@@ -422,7 +424,7 @@ fn a_compound_feeds_a_guard_only_on_its_first_reference_in_the_body() {
     // captures and a repeat is a no-op on a set.
     ok("::method m\nexpose a.\nguard on when a.1 & a.1\n");
     // A simple variable and a stem are unaffected, because their own
-    // `addVariable` paths capture whatever the cache holds.
+    // variable paths capture whatever the cache holds.
     ok("::method m\nexpose a\nsay a\nguard on when a\n");
     ok("::method m\nexpose a.\nsay a.\nguard on when a.\n");
     // A stem reference does not cache the COMPOUND spelling, so a compound guard
@@ -480,9 +482,9 @@ fn only_a_variable_slot_feeds_the_compound_cache() {
         "::method m\nexpose a.\nif a.1 = 1 then nop\nguard on when a.1\n",
         "::method m\nexpose a.\na.1\nguard on when a.1\n",
         "::method m\nexpose a.\na.1~string\nguard on when a.1\n",
-        // The `(name)` indirect spelling reaches `addVariable` through the symbol
-        // inside the parentheses, so it feeds the cache too. Measured 99.913,
-        // which is why `visit_refs` handles both `VariableRef` variants.
+        // The `(name)` indirect spelling reaches the variable path through the
+        // symbol inside the parentheses, so it feeds the cache too. Measured
+        // 99.913, which is why `visit_refs` handles both `VariableRef` variants.
         "::method m\nexpose a.\ndrop (a.1)\nguard on when a.1\n",
     ] {
         assert_eq!(err(source), (99, 913), "{source:?}");
@@ -503,8 +505,8 @@ fn a_compound_guard_reference_contributes_its_stem_and_its_tail_pieces() {
 
 #[test]
 fn the_indirect_expose_form_does_not_expose_the_name() {
-    // `EXPOSE (a)` takes a different path in `processVariableList` and never
-    // calls `expose`, so the name is not exposed as far as this check goes.
+    // `EXPOSE (a)` takes a different path in the variable-list parse and never
+    // exposes nothing, so the name is not exposed as far as this check goes.
     // Measured 99.913, which is a quirk rather than a rule anyone would guess.
     assert_eq!(err("::method m\nexpose (a)\nguard on when a\n"), (99, 913));
 }
@@ -662,20 +664,22 @@ fn a_whens_false_path_is_the_otherwise_when_there_is_one() {
 #[test]
 fn a_when_that_is_another_whens_then_instruction_is_never_added_to_the_select() {
     // A shape the oracle ACCEPTS, measured rc 0, and it is accepted because the
-    // second WHEN is the first one's THEN instruction. `addWhen` runs only when
-    // the SELECT is the immediate top of the stack, and by the second WHEN it is
-    // not, so the SELECT collects one WHEN and the second gets no exit at all.
-    // Reproducing the quirk is what transliterating rather than tidying buys.
-    // `select`(0) `when`(1) `then`(2) `when`(3) `then`(4) `nop`(5) `end`(6).
+    // second WHEN is the first one's THEN instruction. Adding a WHEN to its
+    // SELECT runs only when the SELECT is the immediate top of the stack, and by
+    // the second WHEN it is not, so the SELECT collects one WHEN and the second
+    // gets no exit at all. Reproducing the quirk is what transliterating rather
+    // than tidying buys. `select`(0) `when`(1) `then`(2) `when`(3) `then`(4)
+    // `nop`(5) `end`(6).
     let program = ok("select\nwhen 1 = 1 then\nwhen 2 = 2 then nop\nend\n");
     match &program.main.instructions[0].kind {
         InstructionKind::Select { whens, .. } => assert_eq!(whens, &[1]),
         other => panic!("expected a SELECT, got {other:?}"),
     }
     // The first WHEN's branch is closed by the arrival of the second, which is
-    // what makes a WHEN go through `flushControl` rather than joining the chain
-    // directly the way a control instruction does. Treating a WHEN as control
-    // instead leaves this branch open until the END and moves the target to 6.
+    // what makes a WHEN go through the control flush rather than joining the
+    // chain directly the way a control instruction does. Treating a WHEN as
+    // control instead leaves this branch open until the END and moves the target
+    // to 6.
     match &program.main.instructions[1].kind {
         InstructionKind::When { false_target, .. } => assert_eq!(*false_target, Some(4)),
         other => panic!("expected the first WHEN, got {other:?}"),
@@ -780,7 +784,7 @@ fn an_end_on_an_otherwise_closes_the_select_behind_it() {
 fn a_block_inside_a_then_still_completes_the_pending_branch() {
     // `if`(0) `then`(1) `do`(2) `say`(3) `end`(4) `nop`(5). The DO is control so
     // the branch stays pending until the END closes it, which is what the
-    // `flushControl` call at the end of the END arm is for.
+    // control flush at the end of the END arm is for.
     let program = ok("if 1 = 1 then do\nsay 1\nend\nnop\n");
     assert_eq!(names(&program), ["IF", "THEN", "DO", "SAY", "END", "NOP"]);
     match &program.main.instructions[0].kind {

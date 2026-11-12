@@ -12,8 +12,8 @@ use crate::token::{
 use crate::{ProgramSource, SourceKind};
 
 /// The longest symbol the interpreter accepts
-/// (`LanguageParser::MAX_SYMBOL_LENGTH`). Measured: a 250-character name
-/// works, 251 raises error 30.1.
+/// (the oracle's symbol length limit). Measured: a 250-character name works, 251
+/// raises error 30.1.
 pub(crate) const MAX_SYMBOL_LENGTH: usize = 250;
 
 /// The end marker a `::RESOURCE` directive uses when it names none
@@ -54,7 +54,7 @@ pub fn scan(source: &ProgramSource) -> Result<Scanned, ParseError> {
 /// Tokenises `source` up to the clause holding the first scanner error, and
 /// that error. The tokens stop before the failing clause's first token, so a
 /// parse of them meets every earlier clause as the oracle does, which reads
-/// one clause at a time (`LanguageParser::nextClause`).
+/// one clause at a time.
 pub(crate) fn scan_to_error(source: &ProgramSource) -> (Scanned, Option<ParseError>) {
     let mut symbols = SymbolTable::default();
     let keywords = Keywords::new(&mut symbols);
@@ -73,8 +73,7 @@ pub(crate) fn scan_to_error(source: &ProgramSource) -> (Scanned, Option<ParseErr
     (scanned, error)
 }
 
-/// `LanguageParser::isSymbolCharacter` (`LanguageParser.hpp:415`): whether
-/// `byte` may appear in a symbol.
+/// Whether `byte` may appear in a symbol.
 pub(crate) fn is_symbol_char(byte: u8) -> bool {
     matches!(byte,
         b'!' | b'.' | b'?' | b'_' | b'0'..=b'9' | b'A'..=b'Z' | b'a'..=b'z')
@@ -92,7 +91,7 @@ fn first_line(source: &ProgramSource) -> usize {
     }
 }
 
-/// What `locateToken` found, folding the C++'s `CharacterClass` return and
+/// What the token locator found, folding the C++'s character-class return and
 /// its out-parameter into one value.
 enum Located {
     /// A character that starts a token. The scan position is on it.
@@ -104,7 +103,7 @@ enum Located {
     ClauseEol,
 }
 
-/// The numeric-symbol state machine of `scanSymbol` (`Scanner.cpp:1220`).
+/// The numeric-symbol state machine of the symbol scan.
 #[derive(Copy, Clone, PartialEq, Eq)]
 enum ExpState {
     Start,
@@ -117,7 +116,7 @@ enum ExpState {
     EDigit,
 }
 
-/// Which flavour of literal `scanLiteral` found, before its value is decoded.
+/// Which flavour of literal the literal scan found, before its value is decoded.
 #[derive(Copy, Clone, PartialEq, Eq)]
 enum LiteralKind {
     String,
@@ -127,8 +126,8 @@ enum LiteralKind {
 
 struct Scanner<'a> {
     source: &'a ProgramSource,
-    /// The current line's bytes, terminator excluded: the C++'s `current`,
-    /// with `line.len()` standing in for `currentLength`.
+    /// The current line's bytes, terminator excluded, whose length is
+    /// `line.len()`.
     line: &'a [u8],
     /// Absolute offset of `line[0]` in the retained source, which is what
     /// turns every in-line offset into a token span.
@@ -154,7 +153,7 @@ struct Scanner<'a> {
 
     /// Whether the token just produced makes a following blank significant.
     /// False at a clause start, which is what the C++ gets by passing a null
-    /// previous token to `sourceNextToken`.
+    /// previous token to the token reader.
     prev_blank_significant: bool,
     /// Byte offset a scanner error is reported against: the current clause's
     /// start, or the position scanning began if the clause has no tokens yet.
@@ -191,11 +190,11 @@ impl<'a> Scanner<'a> {
         scanner
     }
 
-    // Scanning position primitives, mirroring `LanguageParser.hpp:152`-`162`.
+    // Scanning position primitives, mirroring the oracle's.
 
-    /// `LanguageParser::position`: move to a line and offset, loading that
-    /// line. A line number past the end leaves an empty line at `text_end`,
-    /// which is how `moreLines` and `moreChars` both go false.
+    /// Move to a line and offset, loading that line. A line number past the end
+    /// leaves an empty line at `text_end`, which is how the more-lines and
+    /// more-chars tests both go false.
     fn position(&mut self, line: usize, offset: usize) {
         self.line_number = line;
         self.line_offset = offset;
@@ -238,8 +237,7 @@ impl<'a> Scanner<'a> {
         self.line_offset += 1;
     }
 
-    /// `truncateLine`: discard the rest of the line, which is how a `--`
-    /// comment ends a clause.
+    /// Discard the rest of the line, which is how a `--` comment ends a clause.
     fn truncate_line(&mut self) {
         self.line_offset = self.line.len();
     }
@@ -293,8 +291,8 @@ impl<'a> Scanner<'a> {
         }
     }
 
-    /// `LanguageParser::locateToken`: step over insignificant blanks,
-    /// comments and line continuations, and report what stopped the scan.
+    /// Step over insignificant blanks, comments and line continuations, and
+    /// report what stopped the scan.
     fn locate_token(&mut self, blanks_significant: bool) -> Result<Located, ParseError> {
         if !self.more_lines() {
             return Ok(Located::ClauseEof);
@@ -369,8 +367,7 @@ impl<'a> Scanner<'a> {
         Ok(Located::ClauseEol)
     }
 
-    /// `LanguageParser::scanComment`: step over a `/* */` comment, which
-    /// nests and may span lines.
+    /// Step over a `/* */` comment, which nests and may span lines.
     fn scan_comment(&mut self) -> Result<(), ParseError> {
         let mut level = 1;
         self.step_position();
@@ -402,8 +399,8 @@ impl<'a> Scanner<'a> {
         Ok(())
     }
 
-    /// `LanguageParser::nextSpecial`: consume the next character if it is
-    /// `target`, extending `end` to cover it.
+    /// Consume the next character if it is `target`, extending `end` to cover
+    /// it.
     fn next_special(&mut self, target: u8, end: &mut usize) -> Result<bool, ParseError> {
         match self.locate_token(false)? {
             Located::Normal(found) if found == target => {
@@ -416,7 +413,7 @@ impl<'a> Scanner<'a> {
     }
 
     /// An operator that may instead be an assignment shortcut, as `+` is in
-    /// `x += 1` (`RexxToken::checkAssignment`, `Token.cpp:95`).
+    /// `x += 1`.
     fn check_assignment(&mut self, op: Operator, end: &mut usize) -> Result<TokenKind, ParseError> {
         if self.next_special(b'=', end)? {
             Ok(TokenKind::Assignment(op))
@@ -425,8 +422,7 @@ impl<'a> Scanner<'a> {
         }
     }
 
-    /// `LanguageParser::sourceNextToken`: the next token, or `None` at end of
-    /// file.
+    /// The next token, or `None` at end of file.
     fn source_next_token(&mut self) -> Result<Option<Token>, ParseError> {
         // While the clause has no tokens, the clause's reported position is
         // wherever scanning began, so that an error inside a comment or an
@@ -443,9 +439,8 @@ impl<'a> Scanner<'a> {
             let inch = match located {
                 Located::ClauseEof => return Ok(None),
                 Located::ClauseEol => {
-                    // `locateToken` only reports a line end with the position
-                    // at the line's end, so the terminator's span is empty
-                    // there.
+                    // The token locator only reports a line end with the position
+                    // at the line's end, so the terminator's span is empty there.
                     debug_assert_eq!(self.line_offset, self.line.len());
                     self.next_line();
                     return Ok(Some(Token {
@@ -493,7 +488,7 @@ impl<'a> Scanner<'a> {
                 b']' => TokenKind::RightBracket,
                 b'(' => TokenKind::LeftParen,
                 b'[' => TokenKind::LeftBracket,
-                // Continuation commas are resolved in `locateToken`, so a
+                // Continuation commas are resolved in the token locator, so a
                 // comma here is an argument or template separator.
                 b',' => TokenKind::Comma,
                 b';' => TokenKind::Eoc,
@@ -621,7 +616,7 @@ impl<'a> Scanner<'a> {
         }
     }
 
-    /// `LanguageParser::scanSymbol`: consume a symbol and classify it.
+    /// Consume a symbol and classify it.
     fn scan_symbol(&mut self) -> Result<Token, ParseError> {
         let mut state = ExpState::Start;
         // Position of an exponent sign, kept so the scan can back up over it
@@ -721,11 +716,11 @@ impl<'a> Scanner<'a> {
             }
 
             if state == ExpState::E && (inch == b'+' || inch == b'-') {
-                // The C++ guards this with `haveNextChar()`, which tests the
-                // same thing as `moreChars()` and so is always true here
-                // (`LanguageParser.hpp:159`-`160`). A sign at the end of the
-                // line therefore falls through to reading the line
-                // terminator, which is not a symbol character, and backs up.
+                // The C++ guards this with a have-next-char test, which tests
+                // the same thing as the more-chars test and so is always true
+                // here. A sign at the end of the line therefore falls through to
+                // reading the line terminator, which is not a symbol character,
+                // and backs up.
                 let sign = self.line_offset;
                 eoffset = Some(sign);
                 self.step_position();
@@ -755,15 +750,15 @@ impl<'a> Scanner<'a> {
             return Err(name_too_long(bytes, self.clause_start));
         }
 
-        // Infallible: `characterTable` admits only ASCII, and the one byte a
+        // Infallible: the character table admits only ASCII, and the one byte a
         // symbol can hold that it does not admit is an exponent sign, also
         // ASCII.
         let text = std::str::from_utf8(bytes)
             .expect("a symbol's bytes are ASCII: characterTable is zero for 0x80 to 0xFF");
         let id = self.symbols.intern(text);
 
-        // Classification works on the source bytes because `translateChar`
-        // only upcases: `.` and the digits are unchanged by it.
+        // Classification works on the source bytes because the character
+        // translation only upcases: `.` and the digits are unchanged by it.
         let first = bytes[0];
         let class = if length == 1 && first == b'.' {
             SymbolClass::Dummy
@@ -789,8 +784,7 @@ impl<'a> Scanner<'a> {
         })
     }
 
-    /// `LanguageParser::scanLiteral`: consume a quoted literal and decode its
-    /// value.
+    /// Consume a quoted literal and decode its value.
     fn scan_literal(&mut self) -> Result<Token, ParseError> {
         let span_start = self.absolute();
         let delimiter = self.get_char();
@@ -885,7 +879,7 @@ impl<'a> Scanner<'a> {
             return;
         }
 
-        // `nextReal` skips blanks, and `::RESOURCE DATA` has a significant
+        // A next-real read skips blanks, and `::RESOURCE DATA` has a significant
         // blank in it, so the shape has to be matched over the real tokens.
         // Either shape has at most five, so this needs no growth.
         let mut real = [0usize; 5];
@@ -926,10 +920,10 @@ impl<'a> Scanner<'a> {
             DEFAULT_RESOURCE_END.to_vec()
         };
 
-        // `conditionalNextLine`: if the clause ended at a `;` rather than at a
-        // line end, the rest of that line is neither parsed nor part of the
-        // body. Measured: `::resource data; say 'x'` gets rc 0 from `rexxc`
-        // and yields a one-line resource, so the `say` is simply skipped.
+        // If the clause ended at a `;` rather than at a line end, the rest of
+        // that line is neither parsed nor part of the body. Measured:
+        // `::resource data; say 'x'` gets rc 0 from `rexxc` and yields a
+        // one-line resource, so the `say` is simply skipped.
         if self.line_offset != 0 {
             self.next_line();
         }
@@ -971,8 +965,8 @@ impl<'a> Scanner<'a> {
         error.echoing(self.clause_start..start + width)
     }
 
-    /// A token's value the way `RexxToken::value()` gives it: upcased for a
-    /// symbol, verbatim for a literal, and nothing for anything else.
+    /// A token's value the way the oracle gives it: upcased for a symbol,
+    /// verbatim for a literal, and nothing for anything else.
     fn token_value(&self, index: usize) -> Option<Vec<u8>> {
         match &self.tokens[index].kind {
             TokenKind::Symbol { id, .. } => Some(self.symbols.name(*id).as_bytes().to_vec()),
@@ -981,8 +975,7 @@ impl<'a> Scanner<'a> {
         }
     }
 
-    /// `LanguageParser::checkMarker`: whether the current line *begins* with
-    /// `marker`.
+    /// Whether the current line *begins* with `marker`.
     fn check_marker(&self, marker: &[u8]) -> bool {
         marker.len() <= self.line.len() && &self.line[..marker.len()] == marker
     }
@@ -1017,8 +1010,7 @@ fn invalid_digit(msg: Msg<1>, digit: u8, clause_start: usize) -> ParseError {
 }
 
 /// The length of the UTF-8 sequence `bytes` starts with, or 1 where it starts
-/// none: what `utf8proc_iterate` answers for the 13.1 echo
-/// (`parser/Scanner.cpp:1185`).
+/// none: what `utf8proc_iterate` answers for the 13.1 echo.
 fn utf8_width(bytes: &[u8]) -> usize {
     let head = &bytes[..bytes.len().min(4)];
     let valid = match std::str::from_utf8(head) {
@@ -1028,8 +1020,7 @@ fn utf8_width(bytes: &[u8]) -> usize {
     valid.chars().next().map_or(1, char::len_utf8)
 }
 
-/// `LanguageParser::packHexLiteral`: validate a hex literal's grouping and
-/// pack it down to bytes.
+/// Validate a hex literal's grouping and pack it down to bytes.
 fn pack_hex_literal(data: &[u8], clause_start: usize) -> Result<Vec<u8>, ParseError> {
     if data.is_empty() {
         return Ok(Vec::new());
@@ -1085,8 +1076,7 @@ fn pack_hex_literal(data: &[u8], clause_start: usize) -> Result<Vec<u8>, ParseEr
     Ok(out)
 }
 
-/// `LanguageParser::packBinaryLiteral`: validate a binary literal's grouping
-/// and pack it down to bytes.
+/// Validate a binary literal's grouping and pack it down to bytes.
 fn pack_binary_literal(data: &[u8], clause_start: usize) -> Result<Vec<u8>, ParseError> {
     if data.is_empty() {
         return Ok(Vec::new());

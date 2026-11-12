@@ -89,8 +89,8 @@ fn things_that_are_not_numbers_are_rejected() {
 
 #[test]
 fn blanks_are_legal_between_a_sign_and_its_digits() {
-    // `numberStringScan` (NumberStringClass.cpp:1289-1295) skips blanks and
-    // tabs after a sign. All confirmed against `build/bin/rexx` via `v + 0`.
+    // The oracle's number scan skips blanks and tabs after a sign. All confirmed
+    // against `build/bin/rexx` via `v + 0`.
     for (input, expected) in [
         ("+ 3", "3"),
         ("- 3", "-3"),

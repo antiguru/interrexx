@@ -60,10 +60,10 @@ impl Keywords {
     }
 }
 
-// The six tables, copied from `KeywordConstants.cpp` without reordering. The
-// C++ keeps them in ASCII order so it can binary-search them; here the order
-// is load-bearing for a different reason, since `index_of` returns a position
-// that the caller maps to its own enum.
+// The six tables, copied from the oracle without reordering. The C++ keeps them
+// in ASCII order so it can binary-search them; here the order is load-bearing
+// for a different reason, since `index_of` returns a position that the caller
+// maps to its own enum.
 
 const INSTRUCTIONS: [&str; 35] = [
     "ADDRESS",

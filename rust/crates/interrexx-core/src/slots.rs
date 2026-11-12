@@ -7,8 +7,8 @@ use crate::ObjRef;
 
 /// An array's slots in index order, `None` for a slot that holds no object,
 /// and the 1-based index of the last occupied slot, 0 when none is
-/// (`ArrayClass::lastItem`). Reads go through `Deref`. Every write goes
-/// through a method here, which keeps the index.
+/// (an array's last item). Reads go through `Deref`. Every write goes through a
+/// method here, which keeps the index.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct ArraySlots {
     items: Vec<Option<ObjRef>>,

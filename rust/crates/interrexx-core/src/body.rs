@@ -16,7 +16,7 @@ impl BehaviourId {
 }
 
 /// Names one flattened method dictionary in the class graph `interrexx-classes`
-/// builds -- the oracle's `RexxBehaviour` object, which an object points at.
+/// builds -- the oracle's behaviour object, which an object points at.
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct BehaviourHandle(usize);
 
@@ -79,19 +79,18 @@ pub enum Body {
         default: Option<ObjRef>,
         /// **The `usize` is the tail's insertion ordinal, and it is
         /// load-bearing.** A stem's tails are held in a balanced tree keyed
-        /// on (length, bytes) and walked in POST-ORDER
-        /// (`classes/support/CompoundVariableTable.cpp:343`, `:405`), so the
-        /// order `allIndexes` and `supplier` answer in depends on the shape
-        /// the insertions built and not on the tail names alone -- measured,
-        /// the same five tails inserted forwards and backwards answer
+        /// on (length, bytes) and walked in POST-ORDER, so the order
+        /// `allIndexes` and `supplier` answer in depends on the shape the
+        /// insertions built and not on the tail names alone -- measured, the
+        /// same five tails inserted forwards and backwards answer
         /// `Q,MANGO,LONGKEYNAME,ZEBRA,APPLE` and
-        /// `APPLE,Q,ZEBRA,LONGKEYNAME,MANGO`. A `HashMap` cannot say which
-        /// came first, so the ordinal rides with the value.
+        /// `APPLE,Q,ZEBRA,LONGKEYNAME,MANGO`. A `HashMap` cannot say which came
+        /// first, so the ordinal rides with the value.
         tails: crate::NameMap<Vec<u8>, (usize, Option<ObjRef>)>,
         /// The tails an `EXPOSE` or `PROCEDURE EXPOSE` made another stem's,
-        /// each naming that stem: `CompoundTableElement::expose`'s
-        /// `realElement`. Such a tail is also in `tails`, as a tombstone, so
-        /// that it keeps its place and holds no value of its own.
+        /// each naming that stem: the oracle's exposed compound element's real
+        /// element. Such a tail is also in `tails`, as a tombstone, so that it
+        /// keeps its place and holds no value of its own.
         exposed: Option<Box<crate::NameMap<Vec<u8>, ObjRef>>>,
     },
     /// An array's slots, in index order, `None` for a slot that holds no
@@ -168,17 +167,15 @@ pub enum NativeState {
     /// for [`NativeState::Buffer`] alone. Boxed so that every other native
     /// state stays its size.
     Stream(Box<StreamState>),
-    /// A `.Pointer`'s address, the `pointerData` of `PointerClass`
-    /// (`interpreter/classes/PointerClass.hpp:77`). Its string value is the
-    /// address rendered, so it answers for the reader
+    /// A `.Pointer`'s address, the oracle's pointer data. Its string value is
+    /// the address rendered, so it answers for the reader
     /// [`NativeState::Buffer`] answers for.
     Pointer(*mut std::ffi::c_void),
-    /// A `Buffer`'s bytes (`interpreter/classes/BufferClass.hpp`), which an
-    /// extension writes through the address `BufferData` handed it for as long
-    /// as the object lives, so the storage is never resized.
+    /// A `Buffer`'s bytes, which an extension writes through the address
+    /// `BufferData` handed it for as long as the object lives, so the storage is
+    /// never resized.
     Data(AlignedBytes),
-    /// A `String` subclass instance's bytes, the `RexxString` body that
-    /// `RexxString::newRexx` (`interpreter/classes/StringClass.cpp:2352`)
+    /// A `String` subclass instance's bytes, the string body that the oracle
     /// gives the subclass's behaviour.
     Text(Box<[u8]>),
     /// A `Package` subclass instance's package state.
@@ -494,10 +491,8 @@ impl NativeState {
     }
 
     /// Whether the object holding this state renders its string value from the
-    /// state itself, as `MutableBuffer::stringValue`
-    /// (`interpreter/classes/MutableBufferClass.cpp:740`) and
-    /// `PointerClass::stringValue` (`interpreter/classes/PointerClass.cpp:152`)
-    /// do, rather than from the name every other instance answers with.
+    /// state itself, as a `MutableBuffer` and a `.Pointer` do, rather than from
+    /// the name every other instance answers with.
     ///
     /// Matched over the variants rather than asked of one of them, so that a
     /// state added here has to decide.
@@ -513,8 +508,7 @@ impl NativeState {
     }
 }
 
-/// `Numerics::pointerToString` (`interpreter/runtime/Numerics.cpp:882`): the
-/// string value of a `.Pointer`, which is `0x0` for a null address and the
+/// The string value of a `.Pointer`, which is `0x0` for a null address and the
 /// platform's `%p` rendering otherwise.
 pub fn pointer_to_string(address: *mut std::ffi::c_void) -> Vec<u8> {
     if address.is_null() {
@@ -524,8 +518,8 @@ pub fn pointer_to_string(address: *mut std::ffi::c_void) -> Vec<u8> {
 }
 
 /// What a stream is, once `~init` has named it. The four states are the
-/// oracle's own (`streamLibrary/StreamNative.hpp`), and `Unknown` is what a
-/// stream that has never been opened -- or has been closed -- answers.
+/// oracle's own, and `Unknown` is what a stream that has never been opened -- or
+/// has been closed -- answers.
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum StreamStatus {
     /// Never opened, or closed since.
@@ -562,9 +556,9 @@ pub struct OpenMode {
 mod open_file;
 pub use open_file::{OpenFile, STREAM_BUFFER};
 
-/// A `Stream`'s own state (`streamLibrary/StreamNative.hpp:158`). The name is
-/// kept as the program wrote it, because `~string` answers it verbatim; the
-/// qualified path is what anything touching the file system uses.
+/// A `Stream`'s own state. The name is kept as the program wrote it, because
+/// `~string` answers it verbatim; the qualified path is what anything touching
+/// the file system uses.
 #[derive(Debug)]
 pub struct StreamState {
     /// The name as given, which `~qualify` resolves and `~string` does not.
@@ -644,7 +638,7 @@ impl StreamState {
     }
 
     /// `state`'s own word, which `~state` answers and `~description` opens
-    /// with (`StreamNative.cpp`'s `getState`).
+    /// with.
     pub fn state_word(&self) -> &'static [u8] {
         match self.status {
             StreamStatus::Unknown => b"UNKNOWN",
@@ -655,8 +649,7 @@ impl StreamState {
     }
 }
 
-/// A `MutableBuffer`'s state: its contents, `bufferLength` and `defaultSize`
-/// (`classes/MutableBufferClass.hpp`).
+/// A `MutableBuffer`'s state: its contents, buffer length and default size.
 #[derive(Clone, Debug)]
 pub struct BufferState {
     pub bytes: BufferBytes,
@@ -798,9 +791,8 @@ impl std::ops::DerefMut for BufferBytes {
 }
 
 impl BufferState {
-    /// `MutableBuffer::ensureCapacity`: room for `added` more bytes, taking
-    /// the larger of what is needed and twice the capacity. Answers how far
-    /// the capacity grew.
+    /// Room for `added` more bytes, taking the larger of what is needed and
+    /// twice the capacity. Answers how far the capacity grew.
     pub fn ensure_capacity(&mut self, added: usize) -> Result<usize, TryReserveError> {
         let needed = self.bytes.len().saturating_add(added);
         if needed > self.capacity {
@@ -813,10 +805,9 @@ impl BufferState {
         Ok(0)
     }
 
-    /// `MutableBuffer::setCapacity`: room for `length` bytes in all. Only a
-    /// length past the capacity grows it, by [`Self::ensure_capacity`] for
-    /// the bytes beyond the contents, so the doubling rule still applies.
-    /// Answers how far the capacity grew.
+    /// Room for `length` bytes in all. Only a length past the capacity grows it,
+    /// by [`Self::ensure_capacity`] for the bytes beyond the contents, so the
+    /// doubling rule still applies. Answers how far the capacity grew.
     pub fn set_capacity(&mut self, length: usize) -> Result<usize, TryReserveError> {
         if length > self.capacity {
             return self.ensure_capacity(length.saturating_sub(self.bytes.len()));
@@ -841,10 +832,9 @@ impl BufferState {
         (self.bytes.as_mut_ptr(), self.capacity)
     }
 
-    /// `MutableBuffer::setBufferSize`: zero empties the contents and takes
-    /// the capacity back to `default_size`; any other size becomes the
-    /// capacity and truncates contents longer than it. Answers how far the
-    /// capacity grew.
+    /// Zero empties the contents and takes the capacity back to `default_size`;
+    /// any other size becomes the capacity and truncates contents longer than
+    /// it. Answers how far the capacity grew.
     pub fn set_buffer_size(&mut self, size: usize) -> Result<usize, TryReserveError> {
         let before = self.capacity;
         if size == 0 {
@@ -867,9 +857,8 @@ impl BufferState {
 }
 
 /// Every variable pool one object holds: one per scope that has bound a name
-/// in it, found by walking the list (`ObjectClass.cpp:2489`, whose
-/// `objectVariables` is a linked list of `VariableDictionary`s chained by
-/// `nextDictionary` and searched the same way).
+/// in it, found by walking the list (the oracle holds a linked list of variable
+/// dictionaries and searches it the same way).
 #[derive(Clone, Debug, Default)]
 pub struct ScopePools {
     /// The scope's class identity, and the names it has bound. A name with no
@@ -922,8 +911,8 @@ impl ScopePools {
     }
 
     /// The value `name` holds in the pool created last that binds it, which
-    /// is `RexxObject::getObjectVariable`'s walk: the oracle chains each new
-    /// dictionary at the head of the list (`ObjectClass.cpp:2504`).
+    /// is the oracle's walk: it chains each new dictionary at the head of the
+    /// list.
     pub fn find(&self, name: &[u8]) -> Option<ObjRef> {
         self.pools.iter().rev().find_map(|(_, pool)| {
             pool.iter()
@@ -969,17 +958,16 @@ pub struct ObjectMethod {
 }
 
 /// The methods attached to one object rather than to its class, searched
-/// ahead of the class behaviour (`MethodDictionary::addInstanceMethod`'s
-/// `addFront`, `behaviour/MethodDictionary.cpp:399`).
+/// ahead of the class behaviour (the oracle adds an instance method at the front
+/// of the object's table).
 #[derive(Clone, Debug, Default)]
 pub struct ObjectMethods {
     set: Vec<(Box<[u8]>, Option<ObjectMethod>)>,
     /// The "Enhanced Subclass" `Class~enhanced` built this object from, whose
     /// instance behaviour the object dispatches against while its `class` is
-    /// the receiver: `setOwningClass` and `setEnhanced`
-    /// (`classes/ClassClass.cpp:1474`-`:1476`). Held so the object keeps it
-    /// alive; `RexxObject::defaultName` answers `enhanced <id>` for such an
-    /// object (`classes/ObjectClass.cpp:1763`-`:1767`).
+    /// the receiver, the oracle's owning-class and enhanced setters. Held so the
+    /// object keeps it alive; the oracle's default name answers `enhanced <id>`
+    /// for such an object.
     enhanced_by: Option<ObjRef>,
 }
 
@@ -1018,8 +1006,8 @@ impl ObjectMethods {
     }
 
     /// Adds or replaces `setMethod`'s entry for `name`, which
-    /// `addInstanceMethod` does in one step: it removes any method it added
-    /// before under that name and puts the new one at the front.
+    /// the oracle does in one step: it removes any method it added before under
+    /// that name and puts the new one at the front.
     pub fn set(&mut self, name: &[u8], entry: Option<ObjectMethod>) {
         Self::write(&mut self.set, name, entry);
     }
@@ -1123,9 +1111,8 @@ impl NativeObject {
         &self.rendered
     }
 
-    /// `RexxObject::stringValue()`: what this object renders as in a
-    /// conversion, which falls back to the default name when the class does
-    /// not separate the two. See the field.
+    /// What this object renders as in a conversion, which falls back to the
+    /// default name when the class does not separate the two. See the field.
     pub fn string_value(&self) -> &[u8] {
         self.string_value.as_deref().unwrap_or(&self.rendered)
     }
@@ -1136,7 +1123,7 @@ impl NativeObject {
     }
 
     /// `~objectName=`: replaces the answer to `~objectName`, and with it
-    /// every rendering of this object, since `RexxObject::stringValue` is a
+    /// every rendering of this object, since the oracle's string value is a
     /// `~objectName` send.
     pub fn set_rendered(&mut self, rendered: &[u8]) {
         self.rendered = rendered.into();
@@ -1144,9 +1131,9 @@ impl NativeObject {
 
     /// The value stored under `key`, which callers hold already uppercased --
     /// the oracle stores every environment entry under
-    /// `getUpperGlobalName(name)` and looks one up by `className->upper()`, so
-    /// the case folding belongs to the caller that produced the key and not to
-    /// each lookup.
+    /// the upcased name and looks one up by the upcased class name, so the case
+    /// folding belongs to the caller that produced the key and not to each
+    /// lookup.
     pub fn entry(&self, key: &[u8]) -> Option<ObjRef> {
         self.entries.get(key).copied()
     }
@@ -1180,8 +1167,8 @@ impl NativeObject {
         self.annotations = annotations;
     }
 
-    /// `MethodClass::getScope`: the class this method object is installed on,
-    /// or `None` for one nothing has installed yet.
+    /// The class this method object is installed on, or `None` for one nothing
+    /// has installed yet.
     pub fn scope(&self) -> Option<ObjRef> {
         match self.bound {
             Bound::Scope(scope) | Bound::ScopedCode { scope, .. } => Some(scope),
@@ -1189,7 +1176,6 @@ impl NativeObject {
         }
     }
 
-    /// `MethodClass::setScope` (`classes/MethodClass.cpp:219`).
     pub fn set_scope(&mut self, scope: ObjRef) {
         self.bound = match self.bound {
             Bound::Code(package) | Bound::ScopedCode { package, .. } => {
@@ -1285,9 +1271,8 @@ impl Body {
     }
 
     /// A `.Pointer` over `address`, an instance of `class` with no variables
-    /// and no methods of its own (`PointerClass::operator new`,
-    /// `interpreter/classes/PointerClass.cpp:122`, which marks the object as
-    /// having no references).
+    /// and no methods of its own (the oracle marks the object as having no
+    /// references).
     pub fn pointer(
         class: ObjRef,
         behaviour: BehaviourHandle,
@@ -1447,13 +1432,12 @@ pub struct Object {
     pub(crate) has_uninit: bool,
     /// Set once the collector has reported this object through
     /// `CollectStats::pending_uninit`, so that a later collection resurrects
-    /// it again without reporting it twice -- oracle's `setReadyForUninit`
-    /// (`classes/ObjectClass.hpp`), read by `MemoryObject::runUninits`.
+    /// it again without reporting it twice -- the oracle's ready-for-uninit
+    /// flag, read when it runs the pending uninits.
     pub(crate) ready_for_uninit: bool,
     /// Set once a `GUARD WHEN` has watched one of this object's variables,
-    /// and never cleared, as `RexxVariable::dependents` stays once created
-    /// (`execution/RexxVariable.cpp:137-150`): the one test a variable store
-    /// or drop makes before looking for watchers.
+    /// and never cleared, as the oracle's variable dependents stay once created:
+    /// the one test a variable store or drop makes before looking for watchers.
     pub(crate) watched: bool,
 }
 

@@ -91,8 +91,8 @@ fn a_prefix_extent_that_omits_its_operand_is_widened_to_include_it() {
 
 #[test]
 fn a_compound_name_splits_at_the_first_period_and_keeps_it_on_the_stem() {
-    // Matches `addCompound` (`LanguageParser.cpp:2153`), which builds the stem
-    // as `start` up to and including the period it stopped on.
+    // Matches the oracle, which builds the stem as `start` up to and including
+    // the period it stopped on.
     assert_eq!(
         compound_parts("A.B.C"),
         ("A.", vec![Tail::Variable("B"), Tail::Variable("C")])
@@ -112,9 +112,9 @@ fn a_compound_name_splits_at_the_first_period_and_keeps_it_on_the_stem() {
 
 #[test]
 fn a_tail_piece_that_cannot_be_a_variable_name_is_a_constant() {
-    // `LanguageParser.cpp:2184`: empty, or starting with a digit. Measured with
-    // `build/bin/rexx` and `b = 2`: `say a.1.b` prints `A.1.2`, so `1` stood
-    // for itself where `B` was looked up, and `say a..b` prints `A..2`.
+    // Such a piece is empty or starts with a digit. Measured with
+    // `build/bin/rexx` and `b = 2`: `say a.1.b` prints `A.1.2`, so `1` stood for
+    // itself where `B` was looked up, and `say a..b` prints `A..2`.
     assert_eq!(
         compound_parts("A.1.B"),
         ("A.", vec![Tail::Constant("1"), Tail::Variable("B")])

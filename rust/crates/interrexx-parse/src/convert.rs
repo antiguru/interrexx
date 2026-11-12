@@ -3,12 +3,11 @@
 
 use interrexx_num::Number;
 // The precision `::OPTIONS DIGITS` and `::OPTIONS FUZZ` convert under, which is
-// `Numerics::ARGUMENT_DIGITS` and belongs to the numeric layer along with
-// everything else about numbers here.
+// `ARGUMENT_DIGITS` and belongs to the numeric layer along with everything else
+// about numbers here.
 pub(crate) use interrexx_num::ARGUMENT_DIGITS;
 
-/// `RexxString::numberString()`: the number `text` denotes, or `None` if it
-/// denotes none.
+/// The number `text` denotes, or `None` if it denotes none.
 fn number(text: &[u8]) -> Option<Number> {
     Number::parse(std::str::from_utf8(text).ok()?)
 }

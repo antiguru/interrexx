@@ -24,7 +24,7 @@ pub const DEFAULT_DIGITS: u64 = 9;
 
 /// The largest adjusted exponent a Rexx number may have. Beyond this a
 /// literal will not convert (error 41) and an arithmetic result overflows
-/// (error 42). `Numerics.hpp:113`.
+/// (error 42).
 pub const MAX_EXPONENT: i32 = 999_999_999;
 pub const MIN_EXPONENT: i32 = -999_999_999;
 
@@ -32,9 +32,8 @@ pub const MIN_EXPONENT: i32 = -999_999_999;
 /// width of that integer in decimal digits.
 pub const ARGUMENT_DIGITS: usize = 18;
 
-/// `Numerics::DIGITS64` (`interpreter/runtime/Numerics.hpp:120`), the precision
-/// a native argument converts to a 64-bit integer under, and the widest
-/// integer [`Number::int64_value`] builds.
+/// The precision a native argument converts to a 64-bit integer under, and the
+/// widest integer [`Number::int64_value`] builds.
 pub const DIGITS64: usize = 20;
 
 /// What arithmetic can fail with, carrying the interpreter's error numbers.
@@ -64,8 +63,7 @@ pub enum ArithError {
     /// practice). No substitution, because there is no valid exponent left
     /// to report if this ever does fire -- that is the failure itself.
     /// Falls back to the bare 42.000 text, which the interpreter itself
-    /// never emits (grepped: no `reportException` call uses bare
-    /// `Error_Overflow`).
+    /// never emits.
     ExponentComputationOverflow,
     /// `%`'s quotient needs more digits than DIGITS allows. Error 26.011,
     /// no substitution. Raised only by `muldiv.rs`'s `div`.
@@ -121,8 +119,8 @@ impl ArithError {
             ArithError::IntegerDivideNotWhole => (26, 11),
             ArithError::RemainderNotWhole => (26, 12),
             ArithError::PowerExponentNotWhole { .. } => (26, 8),
-            // The bare major: `Error_System_resources` is message number 5
-            // itself, entered in the table as sub 0.
+            // The bare major: error 5 is a message number in its own right,
+            // entered in the table as sub 0.
             ArithError::SystemResources => (5, 0),
         }
     }
@@ -175,8 +173,7 @@ fn full_precision(n: &Number) -> String {
     n.format(n.digits.len() as u64)
 }
 
-/// `Numerics::maxValueForDigits` (`Numerics.hpp:160`): `10^digits - 1`, capped
-/// at the platform's integer width.
+/// `10^digits - 1`, capped at the platform's integer width.
 fn max_value_for_digits(digits: usize) -> i64 {
     let capped = digits.min(ARGUMENT_DIGITS);
     let mut max: i64 = 0;
@@ -192,8 +189,7 @@ pub fn whole_i64(value: i64, digits: usize) -> Option<i64> {
     (value.unsigned_abs() <= max_value_for_digits(digits) as u64).then_some(value)
 }
 
-/// `NumberString::createUnsignedValue` (`NumberStringClass.cpp:788`): the first
-/// `length` digits, plus a carry, scaled by `10^exponent`.
+/// The first `length` digits, plus a carry, scaled by `10^exponent`.
 fn unsigned_value(digits: &[u8], length: i64, carry: bool, exponent: i64, max: i64) -> Option<i64> {
     if exponent + length > i64::try_from(ARGUMENT_DIGITS).ok()? {
         return None;
@@ -214,8 +210,7 @@ fn unsigned_value(digits: &[u8], length: i64, carry: bool, exponent: i64, max: i
     Some(number)
 }
 
-/// `NumberString::createUnsignedInt64Value` (`NumberStringClass.cpp:863`): the
-/// first `length` digits, plus a carry, scaled by `10^exponent`, and no more
+/// The first `length` digits, plus a carry, scaled by `10^exponent`, and no more
 /// than `max`.
 ///
 /// Each step is refused only where it answers less than the value before it,
@@ -366,8 +361,7 @@ impl Number {
 
     #[inline(always)]
     /// How many significant digits this number stores, trailing zeros
-    /// included -- `NumberString`'s own `digitsCount`
-    /// (`classes/NumberStringClass.hpp`), which is what the interpreter
+    /// included -- the oracle's own digit count, which is what the interpreter
     /// compares against `DIGITS` to decide that an operand loses digits.
     pub fn digit_count(&self) -> usize {
         self.digits.len()
@@ -552,8 +546,8 @@ impl Number {
         if signed {
             i += 1;
             // Blanks are allowed between the sign and the digits -- the sign
-            // branch of `numberStringScan` has its own skip loop. Without a
-            // sign there is nothing to skip: the leading skip above already
+            // branch of the oracle's number scan has its own skip loop. Without
+            // a sign there is nothing to skip: the leading skip above already
             // ran, so a blank here is simply not part of a number.
             while i < bytes.len() && is_blank(bytes[i]) {
                 i += 1;
@@ -712,8 +706,7 @@ impl Number {
     /// The value as a machine integer under `digits` precision, or `None` if it
     /// has none.
     pub fn whole_value(&self, digits: usize) -> Option<i64> {
-        // `isZero()`: every spelling of zero converts to zero whatever the
-        // exponent says.
+        // Every spelling of zero converts to zero whatever the exponent says.
         if self.is_zero() {
             return Some(0);
         }
@@ -734,12 +727,12 @@ impl Number {
 
         // The point now sits left of the first digit, so the value is whatever
         // the carry contributed and nothing else. The C++ does NOT apply the
-        // sign here, and that is reproduced rather than corrected: `numberValue`
-        // returns `carry ? 1 : 0` with no `* numberSign`. It is unobservable
-        // through the only caller that can reach it, because a numeric `TRACE`
-        // is rejected at RUN time with error 24.901, "Numeric TRACE requests are
-        // valid only from interactive debugging", whatever value the parse
-        // produced.
+        // sign here, and that is reproduced rather than corrected: the oracle's
+        // number value returns `carry ? 1 : 0` with no `* numberSign`. It is
+        // unobservable through the only caller that can reach it, because a
+        // numeric `TRACE` is rejected at RUN time with error 24.901, "Numeric
+        // TRACE requests are valid only from interactive debugging", whatever
+        // value the parse produced.
         if -exponent >= length {
             return Some(i64::from(carry));
         }
@@ -752,10 +745,9 @@ impl Number {
         Some(converted * sign)
     }
 
-    /// `NumberString::checkIntegerDigits` (`NumberStringClass.cpp:937`): the
-    /// length and exponent left once the digits are cut to `digits`, and
-    /// whether the first digit cut carries, or `None` where a surviving
-    /// decimal is not a zero (a nine, under a carry).
+    /// The length and exponent left once the digits are cut to `digits`, and
+    /// whether the first digit cut carries, or `None` where a surviving decimal
+    /// is not a zero (a nine, under a carry).
     fn integer_digits(&self, digits: usize) -> Option<(i64, i64, bool)> {
         let precision = i64::try_from(digits).ok()?;
         let mut length = i64::try_from(self.digits.len()).ok()?;
@@ -797,8 +789,8 @@ impl Number {
         Some((length, exponent, carry))
     }
 
-    /// `NumberString::int64Value` (`NumberStringClass.cpp:1024`): the value as
-    /// an `i64` under `digits` precision, or `None` where it has none.
+    /// The value as an `i64` under `digits` precision, or `None` where it has
+    /// none.
     ///
     /// Two answers are the C++'s rather than arithmetic's, each measured on the
     /// oracle through `orxmethod`: a value whose digits all round away into a
@@ -836,9 +828,8 @@ impl Number {
         Some(if self.negative { -number } else { number })
     }
 
-    /// `NumberString::unsignedInt64Value` (`NumberStringClass.cpp:1132`): the
-    /// value as a `u64` under `digits` precision, or `None` where it has none
-    /// or is negative. The wrap [`Number::int64_value`] describes applies.
+    /// The value as a `u64` under `digits` precision, or `None` where it has
+    /// none or is negative. The wrap [`Number::int64_value`] describes applies.
     pub fn unsigned_int64_value(&self, digits: usize) -> Option<u64> {
         if self.is_zero() {
             return Some(0);
@@ -969,8 +960,8 @@ impl Number {
 
 impl Number {
     /// Renders every stored digit, with `digits` and `form` deciding only
-    /// whether and how the exponent shows: `NumberString::stringValue`
-    /// (`classes/NumberStringClass.cpp:338`) on a number not yet rounded.
+    /// whether and how the exponent shows: the oracle's string value on a number
+    /// not yet rounded.
     pub fn render_unrounded(&self, digits: u64, form: Form) -> String {
         if self.is_zero() {
             return "0".to_string();

@@ -11,15 +11,12 @@ pub enum SourceKind {
     /// (`BufferProgramSource`).
     Program,
     /// The string an `INTERPRET` is about to run. Exactly one physical line:
-    /// the interpreter wraps the string in a one-element array
-    /// (`LanguageParser.cpp:450`, `new ArrayProgramSource(new_array(
-    /// interpretString), lineNumber)`), so nothing inside it can start a
-    /// second line.
+    /// The interpreter wraps the string in a one-element array, so nothing
+    /// inside it can start a second line.
     Interpret,
     /// Source handed over as an array of lines, one element per physical
-    /// line -- `ArrayProgramSource` with no interpret adjustment, which is
-    /// what `MethodClass::newMethodObject` compiles a method body from
-    /// (`classes/MethodClass.cpp:463`, `:482`).
+    /// line, with no interpret adjustment, which is what the oracle compiles a
+    /// method body from.
     Lines,
 }
 
@@ -37,10 +34,10 @@ pub struct ProgramSource {
     /// For an `Interpret` source, the line of the clause running it, which
     /// the interpreter numbers the whole string with.
     interpret_line: usize,
-    /// Whether a program may show this text (`ProgramSource::isTraceable`).
-    /// A program restored from a compiled image is parsed from the source
-    /// the image holds and shows none of it: no lines, no trace, and a
-    /// traceback line naming the program in place of the clause.
+    /// Whether a program may show this text. A program restored from a compiled
+    /// image is parsed from the source the image holds and shows none of it: no
+    /// lines, no trace, and a traceback line naming the program in place of the
+    /// clause.
     traceable: bool,
     /// The name the image gives the routine it holds, for a restored source.
     image_name: Option<Box<[u8]>>,
@@ -147,8 +144,7 @@ impl ProgramSource {
         }
     }
 
-    /// The string an `INTERPRET` on line `line` is about to run
-    /// (`LanguageParser::translateInterpret`, `LanguageParser.cpp:446`).
+    /// The string an `INTERPRET` on line `line` is about to run.
     pub fn interpret(text: Vec<u8>, line: usize) -> Self {
         let mut source = ProgramSource::new(text, SourceKind::Interpret);
         source.interpret_line = line;
@@ -157,7 +153,7 @@ impl ProgramSource {
 
     /// The line an error message's insert names for physical line `line`:
     /// `line` itself, or for an `INTERPRET` string the line of the clause
-    /// running it (`LanguageParser.cpp:450`).
+    /// running it.
     pub fn message_line(&self, line: usize) -> usize {
         match self.kind {
             SourceKind::Interpret => self.interpret_line,
@@ -179,10 +175,9 @@ impl ProgramSource {
     }
 
     /// The number of physical lines, as `SOURCELINE()` with no argument
-    /// reports it. A completely empty program has zero lines (verified via
-    /// `ProgramSource.cpp:387`'s `while (bufferLength != 0)`, which never
-    /// runs for an empty buffer, so `lineCount` stays 0). Empty `INTERPRET`
-    /// text still has its one line.
+    /// reports it. A completely empty program has zero lines (the oracle's line
+    /// scan never runs for an empty buffer, so its count stays 0). Empty
+    /// `INTERPRET` text still has its one line.
     pub fn line_count(&self) -> usize {
         self.lines.len()
     }

@@ -124,8 +124,8 @@ fn consecutive_labels_each_become_their_own_clause() {
 
 #[test]
 fn a_literal_or_a_constant_symbol_labels_a_clause_too() {
-    // `isSymbolOrLiteral` (`Token.hpp:580`) ignores the symbol's class.
-    // Measured: all four of these trace as a label clause plus `nop`.
+    // The label test ignores the symbol's class. Measured: all four of these
+    // trace as a label clause plus `nop`.
     assert_eq!(traced("\"lit\": nop\n"), ["\"lit\":", "nop"]);
     assert_eq!(traced("1: nop\n"), ["1:", "nop"]);
     assert_eq!(traced(".a: nop\n"), [".a:", "nop"]);

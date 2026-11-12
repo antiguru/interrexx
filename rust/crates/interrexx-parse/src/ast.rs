@@ -42,7 +42,7 @@ impl PrefixOp {
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum CallTarget {
     /// `f(...)`. The id holds the upcased spelling, and this form can also
-    /// resolve to an internal label (`parseFunction` calls `addReference`).
+    /// resolve to an internal label.
     Symbol(SymbolId),
     /// `"f"(...)`. Never an internal label, never a builtin unless the literal
     /// is already upper case.
@@ -56,8 +56,7 @@ pub enum ExprKind {
     /// and any `x` or `b` suffix already packed.
     Literal(Box<[u8]>),
     /// A symbol whose value is its own spelling, so never a variable:
-    /// `SYMBOL_CONSTANT` and `SYMBOL_DUMMY`, which `addText` treats alike
-    /// (`LanguageParser.cpp:2352`).
+    /// the oracle's constant and dummy symbol classes, which it treats alike.
     Constant(SymbolId),
     /// A simple variable, no periods.
     Variable(SymbolId),
@@ -97,7 +96,7 @@ pub enum ExprKind {
         target: Box<Expr>,
         /// Upcased, for every spelling. Measured: `"abc"~'length'`,
         /// `"abc"~'LENGTH'` and `"abc"~"lEnGtH"` all give 3, because
-        /// `parseMessage` upcases the name whether it came from a symbol or a
+        /// the oracle upcases the name whether it came from a symbol or a
         /// literal. `[]` for the bracket form.
         name: Selector,
         /// `target~name:super(...)`, the superclass override.
@@ -109,8 +108,8 @@ pub enum ExprKind {
     /// A comma-separated list in parentheses, which builds an array.
     List(Vec<Option<Expr>>),
     /// A comma-separated list in a conditional, which is a logical AND of its
-    /// parts: `RexxExpressionLogical`, built by `parseLogical` for `IF`,
-    /// `WHEN`, `GUARD`, `WHILE` and `UNTIL`. No element may be omitted.
+    /// parts, built for `IF`, `WHEN`, `GUARD`, `WHILE` and `UNTIL`. No element
+    /// may be omitted.
     Logical(Vec<Expr>),
     /// A prefix `>` or `<` on a simple variable or a stem.
     VariableReference(Box<Expr>),
@@ -432,18 +431,17 @@ pub struct CodeBody {
     pub labels: BTreeMap<Box<[u8]>, usize>,
 }
 
-/// Which closure action an `END` performs: `EndBlockType`
-/// (`RexxInstruction.hpp:107`), as `getEndStyle` and
-/// `RexxInstructionSelect::matchEnd` set it.
+/// Which closure action an `END` performs, as the oracle's end-style and
+/// `SELECT` end matching set it.
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum EndStyle {
     /// A `DO` with no control expression and no `LABEL`.
     Do,
     /// A `DO` with no control expression but with a `LABEL`.
     LabeledDo,
-    /// Every other `DO`/`LOOP` form, labelled or not: `getEndStyle`
-    /// (`DoInstruction.hpp:105`) answers `LOOP_BLOCK` for all of them, so the
-    /// label makes no difference here where it does for the block form.
+    /// Every other `DO`/`LOOP` form, labelled or not: the oracle's end style is
+    /// the plain loop block for all of them, so the label makes no difference
+    /// here where it does for the block form.
     Loop,
     /// A `SELECT` with no `OTHERWISE`, labelled or not. Reaching this `END` at
     /// run time is error 7.3, because every `WHEN` was false.
@@ -459,8 +457,8 @@ pub enum EndStyle {
 pub struct EndTarget {
     /// The block instruction this `END` closes: a `Do`, a `Loop` or a
     /// `Select`. Never the `Otherwise`, even when `style` says the `SELECT` had
-    /// one: `translateBlock` pops the `OTHERWISE` and matches the `END` against
-    /// the `SELECT` behind it (`LanguageParser.cpp:1530`).
+    /// one: the parser pops the `OTHERWISE` and matches the `END` against the
+    /// `SELECT` behind it.
     pub block: usize,
     pub style: EndStyle,
 }
@@ -480,7 +478,7 @@ pub struct Instruction {
 pub enum InstructionKind {
     // ---- the four clause shapes with no keyword ----
     /// `name = expr`, and also `name (op)= expr`, whose right-hand side is
-    /// already the expanded `name op expr` tree (`assignmentOpNew`).
+    /// already the expanded `name op expr` tree.
     Assignment {
         target: Expr,
         value: Expr,
@@ -539,8 +537,8 @@ pub enum InstructionKind {
         /// `WHEN` ends the whole `SELECT`. `None` is the end of this body.
         exit: Option<usize>,
     },
-    /// A `WHEN` inside `SELECT CASE`: `RexxInstructionCaseWhen`, a different
-    /// class from `RexxInstructionIf` because the clause means something else.
+    /// A `WHEN` inside `SELECT CASE`, a different kind from the plain `WHEN`
+    /// because the clause means something else.
     WhenCase {
         /// At least one, and none may be omitted: an empty element is 35.934.
         values: Vec<Expr>,
@@ -685,13 +683,13 @@ pub enum VariableRef {
 pub struct Loop {
     /// `DO LABEL name`. For a controlled or `OVER` loop with no `LABEL`, the
     /// control variable's name becomes the label, exactly as
-    /// `newControlledLoop` does.
+    /// the oracle does.
     pub label: Option<SymbolId>,
     /// `DO COUNTER name`.
     pub counter: Option<SymbolId>,
     pub kind: LoopKind,
-    /// A trailing `WHILE` or `UNTIL`. Never both: `parseLoopConditional`
-    /// requires the end of the clause after the one it parsed.
+    /// A trailing `WHILE` or `UNTIL`. Never both: the loop conditional requires
+    /// the end of the clause after the one it parsed.
     pub conditional: Option<LoopConditional>,
     /// The `END` that closes this block.
     pub end: Option<usize>,
@@ -715,7 +713,7 @@ pub enum LoopKind {
         for_count: Option<Expr>,
     },
     /// `DO WITH INDEX i ITEM v OVER expr`. At least one of the two variables
-    /// is present (`Error_Invalid_do_with_no_control` otherwise).
+    /// is present.
     With {
         index: Option<SymbolId>,
         item: Option<SymbolId>,
@@ -857,7 +855,7 @@ pub enum Signal {
 pub struct ConditionTrap {
     pub on: bool,
     /// The condition name, `USER name` spelled out for a user condition
-    /// exactly as `commonString(name->concatToCstring("USER "))` builds it.
+    /// exactly as the oracle builds it.
     pub condition: Box<[u8]>,
     /// The label to trap to. `None` for the `OFF` form, which is how the
     /// C++ distinguishes them too.
@@ -871,7 +869,7 @@ pub struct Guard {
     /// `GUARD ON WHEN expr`.
     pub condition: Option<Expr>,
     /// The exposed variables `condition` names, each once, upcased: what a
-    /// wait watches (`LanguageParser::captureGuardVariable`).
+    /// wait watches.
     pub watched: Vec<Box<[u8]>>,
 }
 
@@ -930,12 +928,12 @@ pub enum Use {
 /// One target of a `USE ARG` list.
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct UseTarget {
-    /// A variable or a message term (`parseVariableOrMessageTerm`).
+    /// A variable or a message term.
     pub target: Expr,
     /// `USE ARG a = 1`, a constant expression. Never present with `alias`.
     pub default: Option<Expr>,
     /// `USE ARG >a`, which aliases the caller's variable rather than copying.
-    /// `<` is the same thing (`isOperator(OPERATOR_LESSTHAN)`).
+    /// `<` is the same thing.
     pub alias: bool,
 }
 
@@ -943,7 +941,7 @@ pub struct UseTarget {
 #[derive(Clone, PartialEq, Eq, Debug, Default)]
 pub struct Address {
     /// `ADDRESS env`, the constant target. A symbol contributes its upcased
-    /// spelling and a literal its bytes, which is what `token->value()`
+    /// spelling and a literal its bytes, which is what the oracle's token value
     /// yields for each.
     pub environment: Option<Box<[u8]>>,
     /// `ADDRESS VALUE expr`, and the implicit form where the target is
@@ -951,8 +949,8 @@ pub struct Address {
     pub dynamic: Option<Expr>,
     /// `ADDRESS env command`.
     pub command: Option<Expr>,
-    /// The `WITH` redirections. Absent means the plain `RexxInstructionAddress`
-    /// rather than `RexxInstructionAddressWith`.
+    /// The `WITH` redirections. Absent means the plain `ADDRESS` form rather
+    /// than the `WITH` form.
     pub io: Option<Box<AddressIo>>,
 }
 
@@ -1011,8 +1009,8 @@ pub enum Trace {
     /// `TRACE` alone: the default setting.
     Default,
     /// A validated option string, kept as written. Only its leading `?`s and
-    /// first other character mean anything (`TraceSetting.cpp:135`), and the
-    /// rest is retained because the setting is echoed back by `TRACE()`.
+    /// first other character mean anything, and the rest is retained because the
+    /// setting is echoed back by `TRACE()`.
     Setting(Box<[u8]>),
     /// A whole number, which skips that many debug pauses. Negative for the
     /// `TRACE -n` spelling.
@@ -1030,8 +1028,7 @@ pub struct Directive {
     pub clause_span: Range<usize>,
 }
 
-/// One directive form, one variant per row of `RexxToken::directives[]`
-/// (`KeywordConstants.cpp:52`-`63`).
+/// One directive form, one variant per row of the oracle's directive table.
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum DirectiveKind {
     Annotate(Box<Annotate>),
@@ -1120,7 +1117,7 @@ pub struct ClassDirective {
     pub access: Access,
     pub abstract_: bool,
     /// `SUBCLASS c` and `MIXINCLASS c`, which fill the same slot in the C++
-    /// (`setMixinClass` sets the subclass too), which is why a directive
+    /// (setting the mixin class sets the subclass too), which is why a directive
     /// carrying both is 25.901 whichever order they come in.
     pub subclass: Option<ClassRef>,
     /// True when the subclass came from `MIXINCLASS`.
@@ -1135,11 +1132,11 @@ pub struct ClassDirective {
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct ClassRef {
     /// `ns:name`, restricted to the symbol spelling. A literal cannot carry a
-    /// namespace: `parseClassReference` returns immediately for one.
+    /// namespace: the oracle returns immediately for one.
     pub namespace: Option<SymbolId>,
     /// Upcased for both spellings. A symbol arrives upcased from the scanner
-    /// and a literal is upcased here, because `parseClassReference` calls
-    /// `token->upperValue()` for the literal form.
+    /// and a literal is upcased here, because the oracle calls the upcased token
+    /// value for the literal form.
     pub name: Box<[u8]>,
 }
 
@@ -1207,7 +1204,7 @@ pub struct ConstantDirective {
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum ConstantValue {
     /// No value at all, whose value is the constant's own name AS WRITTEN and
-    /// not upcased (`value = name` at `DirectiveParser.cpp:1875`).
+    /// not upcased.
     Name,
     /// A literal, a symbol, or a signed constant symbol, taken as text. The
     /// signed form is concatenated exactly as the C++ concatenates it, so
@@ -1234,8 +1231,7 @@ pub enum AnnotationTarget {
     Routine(Box<[u8]>),
     Method(Box<[u8]>),
     /// The getter name. The C++ annotates whichever of the getter/setter pair
-    /// exists (`processAttributeAnnotations`), so the setter name is derived
-    /// rather than stored.
+    /// exists, so the setter name is derived rather than stored.
     Attribute(Box<[u8]>),
     Constant(Box<[u8]>),
 }
@@ -1328,7 +1324,7 @@ pub struct Resource {
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct RoutineDirective {
     /// The name as written and NOT upcased, because a quoted routine name is
-    /// looked up case-sensitively (`DirectiveParser.cpp:2575`).
+    /// looked up case-sensitively.
     pub name: Box<[u8]>,
     /// `PUBLIC` or `PRIVATE`. `Package` never appears: measured,
     /// `::ROUTINE r PACKAGE` is 25.903.

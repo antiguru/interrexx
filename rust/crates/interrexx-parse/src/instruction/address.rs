@@ -14,7 +14,6 @@ use super::{
 };
 
 impl<'a> Inst<'a> {
-    /// `addressNew` (`InstructionParser.cpp:563`).
     pub(super) fn address(&mut self) -> Result<Address, ParseError> {
         let mut address = Address::default();
         let Some(index) = self.peek_real_index() else {
@@ -27,8 +26,7 @@ impl<'a> Inst<'a> {
             address.dynamic = self.opt_expr(Terminators::PARSE_WITH)?;
         } else if self.sub_keyword(token) == Some(SUB_VALUE) {
             self.seek(index + 1);
-            // `Error_Invalid_expression_address`, measured as 35.914 for
-            // `address value`.
+            // Measured as 35.914 for `address value`.
             address.dynamic = Some(self.expr(Terminators::PARSE_WITH, E35_914)?);
         } else {
             self.seek(index + 1);
@@ -51,12 +49,11 @@ impl<'a> Inst<'a> {
         Ok(address)
     }
 
-    /// `parseAddressWith` (`InstructionParser.cpp:670`): the `INPUT`, `OUTPUT`
-    /// and `ERROR` redirections, each at most once and in any order.
+    /// The `INPUT`, `OUTPUT` and `ERROR` redirections, each at most once and in
+    /// any order.
     fn address_with(&mut self) -> Result<AddressIo, ParseError> {
         let mut io = AddressIo::default();
-        // `Error_Symbol_expected_address_with`, measured as 20.933 for
-        // `address system with`.
+        // Measured as 20.933 for `address system with`.
         if self.at_end() {
             return Err(self.error(E20_933, []));
         }
@@ -71,7 +68,7 @@ impl<'a> Inst<'a> {
                 Some(SUB_INPUT) => 0,
                 Some(SUB_OUTPUT) => 1,
                 Some(SUB_ERROR) => 2,
-                // `Error_Invalid_subkeyword_address_with_option`, measured as
+                // Measured as
                 // 25.934 for `address system with foo` and for `with 1`.
                 _ => return Err(self.found(E25_934, Some(token))),
             };
@@ -112,8 +109,7 @@ impl<'a> Inst<'a> {
         Ok(io)
     }
 
-    /// `parseRedirectOutputOptions` (`InstructionParser.cpp:812`): `APPEND` or
-    /// `REPLACE`, or neither, in which case nothing is consumed.
+    /// `APPEND` or `REPLACE`, or neither, in which case nothing is consumed.
     fn output_option(&mut self) -> OutputOption {
         let Some(token) = self.peek_real() else {
             return OutputOption::Default;
@@ -128,11 +124,10 @@ impl<'a> Inst<'a> {
         option
     }
 
-    /// `parseRedirectOptions` (`InstructionParser.cpp:834`): where one stream
-    /// goes.
+    /// Where one stream goes.
     fn redirect_target(&mut self) -> Result<Redirection, ParseError> {
-        // `Error_Invalid_subkeyword_address_with_io_option`, measured as 25.933
-        // for `address system with input` and for `with input foo`.
+        // Measured as 25.933 for `address system with input` and for `with input
+        // foo`.
         let Some(token) = self.next_real() else {
             return Err(self.found(E25_933, None));
         };
@@ -141,7 +136,7 @@ impl<'a> Inst<'a> {
         }
         match self.sub_keyword(token) {
             Some(SUB_STEM) => {
-                // `Error_Symbol_expected_after_stem_keyword`, measured as
+                // Measured as
                 // 20.932 for `with input stem a`, because `a` is a variable and
                 // not a stem.
                 let Some(name) = self.next_real() else {
@@ -161,7 +156,7 @@ impl<'a> Inst<'a> {
             // `with error using (x)` would be accepted.
             Some(index @ (SUB_STREAM | SUB_USING)) => {
                 match parse_constant_expression(self.ctx, &mut self.cursor)? {
-                    // `Error_Invalid_expression_missing_general`, measured as
+                    // Measured as
                     // 35.935 for `with input stream`, naming the keyword and
                     // the instruction.
                     None => {

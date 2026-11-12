@@ -50,8 +50,7 @@ use crate::scanner::scan_to_error;
 use crate::selector::SelectorTable;
 use crate::token::ParseCtx;
 
-/// A whole program: everything `translate` produces from one source buffer
-/// (`LanguageParser.cpp:735`-`765`).
+/// A whole program: everything `translate` produces from one source buffer.
 #[derive(Debug)]
 pub struct Program {
     pub source: ProgramSource,
@@ -232,12 +231,11 @@ fn translate<'a>(
 ) -> Result<CodeBody, ParseError> {
     let main = translate_block(ctx, cursor)?;
 
-    // `translate` raises 99.914 exactly here, once, before `nextDirective` is
-    // ever called (`LanguageParser.cpp:1113`-`1120`): `INTERPRET` text may not
-    // carry a directive at all, so this is not a per-directive check. Measured
-    // via a `signal on syntax` trap around `interpret "::routine r"`:
-    // `condition('o')~code` is `99.914` with message "INTERPRET data must not
-    // contain directive instructions."
+    // `translate` raises 99.914 exactly here, once, before the next directive is
+    // ever called: `INTERPRET` text may not carry a directive at all, so this is
+    // not a per-directive check. Measured via a `signal on syntax` trap around
+    // `interpret "::routine r"`: `condition('o')~code` is `99.914` with message
+    // "INTERPRET data must not contain directive instructions."
     if let Some(clause) = cursor.peek()
         && ctx.source.kind() == SourceKind::Interpret
     {
@@ -291,5 +289,5 @@ pub(crate) fn directive_body(kind: &mut DirectiveKind) -> Option<&mut CodeBody> 
 
 // The label table used to be built here, in a pass over the finished
 // instruction list. It is built by `Block::add_clause` now, which is where
-// `addLabel` sits in the C++, because a body's labels have to be its own and
-// only the assembler knows where one body ends and the next begins.
+// the oracle adds labels, because a body's labels have to be its own and only
+// the assembler knows where one body ends and the next begins.

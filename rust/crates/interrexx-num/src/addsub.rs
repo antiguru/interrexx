@@ -52,11 +52,11 @@ impl Number {
         // and `len + digits_usize` must compare large, not wrap.
         let digits_usize = usize::try_from(digits).unwrap_or(usize::MAX);
 
-        // Fast paths, ported from NumberString::addSub. Each returns one
-        // operand essentially untouched, and they are not an optimisation:
-        // going through the general path produces a leading zero that
-        // rounding then turns into a different number. `0 + 123456789` is
-        // 123456789, but computing it yields `0123456789`, which rounds to
+        // Fast paths, ported from the oracle's addition. Each returns one
+        // operand essentially untouched, and they are not an optimisation: going
+        // through the general path produces a leading zero that rounding then
+        // turns into a different number. `0 + 123456789` is 123456789, but
+        // computing it yields `0123456789`, which rounds to
         // 123456790.
         let fast = if left.is_zero() {
             Some((&right, right_negative))
@@ -168,7 +168,8 @@ impl Number {
     }
 
     /// Shortens an over-long operand to the working precision, as
-    /// `addSub` and `checkNumber` both do. Truncation, not rounding.
+    /// the oracle's addition and its operand check both do. Truncation, not
+    /// rounding.
     pub(crate) fn truncated_to(&self, max_length: usize) -> Cow<'_, Number> {
         if self.digits.len() <= max_length {
             return Cow::Borrowed(self);
