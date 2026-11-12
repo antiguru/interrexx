@@ -33,8 +33,7 @@ mod seam {
         /// did not answer: code it ran may have changed the receiver.
         Checked(Cleared),
         /// The security manager answered the send itself, and the method
-        /// never runs (`RexxObject::processProtectedMethod`,
-        /// `classes/ObjectClass.cpp:976`-`:988`).
+        /// never runs.
         Answered(Option<ObjRef>),
     }
 
@@ -262,7 +261,7 @@ enum NativeBody {
     Run(NativeMethod),
     Begin(NativeBegin),
     /// A [`NativeBody::Run`] that runs Rexx code under a stack frame of its
-    /// own (`InternalActivationFrame`, `concurrency/ActivationFrame.cpp:100`).
+    /// own.
     Leveled(NativeMethod),
     /// A [`NativeBody::Leveled`] whose Rexx code is only an argument's own
     /// `==` or `HASHCODE`, so it takes its level only for an argument not of
@@ -271,7 +270,7 @@ enum NativeBody {
 }
 
 /// The primitives that render their items by `stringValue`, which sends a
-/// `DEFAULTNAME` of an item's own (`ArrayClass::toString`).
+/// `DEFAULTNAME` of an item's own.
 const RENDERING_METHODS: &[(&str, &str)] = &[("Array", "MAKESTRING"), ("Array", "TOSTRING")];
 
 /// The collection primitives that compare or hash an argument
@@ -432,7 +431,7 @@ impl Interp {
     /// Runs `body`, which a primitive method `name` of `receiver` runs and
     /// which may reach Rexx code, as that method's own level, which
     /// `.context~stackFrames` lists: the `InternalActivationFrame` every
-    /// primitive runs under (`execution/CPPCode.cpp:140`). The level's method
+    /// primitive runs under. The level's method
     /// is found when a frame is built ([`Interp::running_primitive`]).
     #[cold]
     #[inline(never)]
@@ -475,8 +474,7 @@ impl Interp {
     }
 
     /// The `StackFrame` of the primitive method that entered the running
-    /// activation (`InternalActivationFrame::createStackFrame`,
-    /// `concurrency/ActivationFrame.cpp:100`) and its `Method` object (`.nil`
+    /// activation and its `Method` object (`.nil`
     /// where this crate has none), where one did.
     pub(crate) fn entering_native_frame(&mut self) -> Option<(ObjRef, ObjRef)> {
         let depth = self.activity.call_tails.len();
@@ -633,15 +631,15 @@ impl NativePark {
 /// How many arguments an entry admits.
 #[derive(Copy, Clone)]
 enum Arity {
-    /// A numeric count. For a primitive method `CPPCode::run` refuses more
+    /// A numeric count. For a primitive method the oracle refuses more
     /// than this with 93.902 before the body is entered
-    /// (`execution/CPPCode.cpp:151`-`:154`) and pads a shorter list out with
+    /// and pads a shorter list out with
     /// nulls -- measured, `'abc'~length(1)` is `0 expected` and
     /// `'abc'~hasMethod('a','b')` is `1 expected`.
     Fixed(usize),
-    /// `A_COUNT` (`execution/CPPCode.hpp:48`), which hands the body the whole
-    /// argument list and count and refuses nothing here
-    /// (`execution/CPPCode.cpp:144`-`:148`). The body's own check is what
+    /// An uncounted entry, which hands the body the whole
+    /// argument list and count and refuses nothing here.
+    /// The body's own check is what
     /// reports, and its error is not always 93.902 -- measured,
     /// `(1,2)~at(1,2)` is 93.926 `Too many subscripts for array; 1 expected.`
     /// where `.environment~at(1,2)`, whose row is a count, is 93.902.
@@ -651,20 +649,19 @@ enum Arity {
 /// The primitive methods every run of this crate implements, as (class id,
 /// method name, declared parameter count, implementation).
 static NATIVE_METHODS: &[(&str, &str, Arity, NativeMethod)] = &[
-    // `ArrayClass::getRexx` under both of its names, `memory/Setup.cpp:713`
-    // and `:715`, at `A_COUNT` in each row -- the same both-names-one-function
+    // `Array`'s lookup under both of its names, at an uncounted arity in each
+    // row -- the same both-names-one-function
     // shape `MAKESTRING`/`TOSTRING` below have, and for the same reason: a
     // second function is where the two could come to disagree. Measured, the
     // two agree on every shape `array_list_expression.rex` and
     // `array_index_refusals.rex` ask.
     ("Array", "[]", Arity::Counted, native_array_at),
     ("Array", "AT", Arity::Counted, native_array_at),
-    // `ArrayClass::putRexx` under both of its names, `memory/Setup.cpp:714`
-    // and `:721`, the same shape again. `t[i] = v` sends `t~"[]="(v, i)`, so
+    // `Array`'s store under both of its names, the same shape again. `t[i] = v` sends `t~"[]="(v, i)`, so
     // the value leads the subscript list here too.
     ("Array", "[]=", Arity::Counted, native_array_put),
     ("Array", "PUT", Arity::Counted, native_array_put),
-    // `ArrayClass::dimensionRexx`, `memory/Setup.cpp:716`, whose declared
+    // `Array~dimension`, whose declared
     // count is 1 and whose argument is optional.
     (
         "Array",
@@ -679,8 +676,8 @@ static NATIVE_METHODS: &[(&str, &str, Arity, NativeMethod)] = &[
         Arity::Fixed(2),
         native_array_make_string,
     ),
-    // The same C++ function under a second name, `Setup.cpp:733`-`:734`
-    // binding `ArrayClass::toString` twice with the same arity. Measured, the
+    // The same function under a second name, bound
+    // twice with the same arity. Measured, the
     // two agree on every shape `array_make_string.rex` and
     // `array_make_string_refusals.rex` ask -- the default, `L` with and
     // without a separator, `C`, a lower-case option, an option omitted in
@@ -696,23 +693,20 @@ static NATIVE_METHODS: &[(&str, &str, Arity, NativeMethod)] = &[
         native_array_make_string,
     ),
     ("Array", "SIZE", Arity::Fixed(0), native_array_size),
-    // `HashCollection::initRexx`, in `Bag`'s own dictionary by
-    // `InheritInstanceMethods(Relation)` (`memory/Setup.cpp:988`) out of
-    // `IdentityTable`'s own row (`:841`). A donation puts the method in the
+    // `Bag`'s `init`: the creation-size handler, in `Bag`'s own dictionary,
+    // the same one `IdentityTable` declares. A donation puts the method in the
     // receiving class's own dictionary, which is what the scope in the
     // traceback says, so each donee needs a row of its own here.
     ("Bag", "INIT", Arity::Fixed(1), native_capacity_init),
-    // `RexxObject::initRexx`, bound to `.Class` under this name by
-    // `memory/Setup.cpp:497` whose own comment is "this is a NOP by default,
-    // so we'll just use the object init method as a fill in". Every class
+    // `Object`'s `init`, bound to `.Class` under this name. The oracle
+    // documents it as a no-op by default, used as a fill-in. Every class
     // object answers it, because a class's class behaviour merges its
-    // metaclass's instance behaviour, and `ClassDirective::activate`
-    // (`instructions/ClassDirective.cpp:288`) sends it to every class the
+    // metaclass's instance behaviour, and the `::CLASS` directive
+    // sends it to every class the
     // package installed.
     ("Class", "ACTIVATE", Arity::Fixed(0), native_no_op),
-    // The comparison operators `memory/Setup.cpp`'s `Class` block declares
-    // (`:485`-`:490`), each at count 1 and each `RexxClass::equal`,
-    // `strictEqual` or `notEqual` -- the same identity test `Object`'s rows
+    // The comparison operators the oracle's `Class` declares, each at count 1
+    // and each an identity or its negation -- the same identity test `Object`'s rows
     // below carry, bound
     // again here because `Class` names its own and a name resolves to the
     // more specific scope. `Interp::operator_message_receiver` is the send,
@@ -726,11 +720,9 @@ static NATIVE_METHODS: &[(&str, &str, Arity, NativeMethod)] = &[
     ("Class", "\\==", Arity::Fixed(1), native_object_different),
     ("Class", "<>", Arity::Fixed(1), native_object_different),
     ("Class", "><", Arity::Fixed(1), native_object_different),
-    // `RexxClass::getAnnotationRexx` and `RexxClass::getAnnotations`
-    // (`memory/Setup.cpp:499`, `:498`). The same pair is bound at `Method`
-    // and `Routine` out of `BaseExecutable` (`:1112`/`:1111` and
-    // `:1141`/`:1140`) and at `Package` out of `PackageClass` (`:1173`,
-    // `:1172`); each C++ body differs from the others only in which field it
+    // The same pair is bound at `Method`
+    // and `Routine`, and at `Package`; each differs from the others only in
+    // which field it
     // reaches for, so `Class`, `Method`, `Routine` and `Package` share one
     // implementation here for the reason `MAKESTRING`/`TOSTRING` share
     // theirs.
@@ -743,11 +735,10 @@ static NATIVE_METHODS: &[(&str, &str, Arity, NativeMethod)] = &[
         Arity::Fixed(0),
         native_class_default_name,
     ),
-    // The five mutators, each of which `Setup.cpp` declares
-    // `AddProtectedMethod` (`:456`, `:457`, `:463`, `:478`) except `Inherit`
-    // (`:466`), and each of which opens with the same `REXX_DEFINED` refusal.
-    // `RexxClass::copyRexx` (`classes/ClassClass.cpp:166`), which is a
-    // refusal and not a copy: `Setup.cpp:483` overrides `Object`'s row with
+    // The five mutators, each of which is protected except `Inherit`,
+    // and each of which opens with the same refusal for a class defined by the system.
+    // `Class~copy` is a
+    // refusal and not a copy: it overrides `Object`'s row with
     // one that raises. Measured, oracle rc 163: `.K~copy` is `93.970 COPY
     // method is not supported for object The K class.`
     ("Class", "COPY", Arity::Fixed(0), native_class_copy),
@@ -771,10 +762,10 @@ static NATIVE_METHODS: &[(&str, &str, Arity, NativeMethod)] = &[
     ),
     ("Class", "METACLASS", Arity::Fixed(0), native_metaclass),
     ("Class", "METHOD", Arity::Fixed(1), native_method),
-    // `RexxClass::mixinClassRexx` and `RexxClass::subclassRexx`
-    // (`memory/Setup.cpp:470`, `:474`), the class factory a program reaches
-    // by message. Neither carries the `REXX_DEFINED` refusal the mutators
-    // above open with: `RexxClass::subclass` does not test the flag, and what
+    // `Class~mixinClass` and `Class~subclass`,
+    // the class factory a program reaches
+    // by message. Neither carries the refusal for system-defined classes that the mutators
+    // above open with: `subclass` does not test the flag, and what
     // it builds does not carry it either -- measured, oracle rc 0,
     // `.object~subclass("k")~inherit(.object~mixinclass("mx"))`.
     (
@@ -793,27 +784,23 @@ static NATIVE_METHODS: &[(&str, &str, Arity, NativeMethod)] = &[
         native_superclasses,
     ),
     ("Class", "UNINHERIT", Arity::Fixed(1), native_uninherit),
-    // `Directory`'s own row (`memory/Setup.cpp:935`), which names
-    // `DirectoryClass::initRexx` -- the inherited `HashCollection::initRexx`,
-    // since `DirectoryClass` declares none of its own.
+    // `Directory`'s own row: the `init` it inherits from the hash
+    // collections, since it declares none of its own.
     ("Directory", "INIT", Arity::Fixed(1), native_capacity_init),
-    // `HashCollection::getRexx` under both of its names and
-    // `HashCollection::putRexx`, donated to `Directory` by
-    // `InheritInstanceMethods(StringTable)` (`memory/Setup.cpp:933`) out of
-    // `IdentityTable`'s own rows (`:825`, `:828`, `:831`). The donation puts
+    // The hash collections' lookup under both of its names and
+    // their store, donated to `Directory` out of
+    // `StringTable`, which takes them from `IdentityTable`'s own rows. The donation puts
     // them in `Directory`'s **own** dictionary, which is what the scope in the
     // traceback says: measured, `.environment~at()` reports `Compiled method
     // "AT" with scope "Directory".`, not `IdentityTable`.
     ("Directory", "[]", Arity::Fixed(1), native_hash_bracket_at),
-    // `HashCollection::putRexx` under its second name, donated from
-    // `IdentityTable` (`memory/Setup.cpp:826`) and so the same function with
-    // the same argument order: `t[i] = v` sends `t~"[]="(v, i)`.
+    // The store under its second name, donated from
+    // `IdentityTable` and so the same function with
     ("Directory", "[]=", Arity::Fixed(2), native_hash_bracket_put),
     ("Directory", "AT", Arity::Fixed(1), native_hash_at),
     ("Directory", "PUT", Arity::Fixed(2), native_hash_put),
-    // `StringHashCollection::unknownRexx`, `StringTable`'s own row
-    // (`memory/Setup.cpp:883`) and donated to `Directory` by the same
-    // `InheritInstanceMethods`. This is the entry-method mechanism: an entry
+    // The string-keyed `unknown`, `StringTable`'s own row
+    // and donated to `Directory` by the same donation.
     // is reached by sending its name.
     ("Directory", "UNKNOWN", Arity::Fixed(2), native_hash_unknown),
     (
@@ -829,12 +816,10 @@ static NATIVE_METHODS: &[(&str, &str, Arity, NativeMethod)] = &[
         Arity::Fixed(0),
         native_event_reset,
     ),
-    // `EventSemaphoreClass::close` (`memory/Setup.cpp:1330`), which leaves
+    // `EventSemaphore~uninit`, which leaves
     // the post as it was: measured, a posted semaphore still answers
-    // `isPosted` with `1` after its `UNINIT`.
     ("EventSemaphore", "UNINIT", Arity::Fixed(0), native_no_op),
-    // `HashCollection::initRexx` at the class that declares it
-    // (`memory/Setup.cpp:841`).
+    // The creation-size `init` at the class that declares it.
     (
         "IdentityTable",
         "INIT",
@@ -896,10 +881,10 @@ static NATIVE_METHODS: &[(&str, &str, Arity, NativeMethod)] = &[
     ("Message", "TARGET", Arity::Fixed(0), native_message_target),
     ("Method", "ANNOTATION", Arity::Fixed(1), native_annotation),
     ("Method", "ANNOTATIONS", Arity::Fixed(0), native_annotations),
-    // `MethodClass::getScopeRexx`, `memory/Setup.cpp:1113`. `Routine` and
-    // `Package` carry no such row: `Setup.cpp` binds `Scope` at `Method`
-    // alone, and the scope is a `MethodClass` field rather than a
-    // `BaseExecutable` one (`classes/MethodClass.hpp:168`).
+    // `Method~scope`. `Routine` and
+    // `Package` carry no such row: `Scope` is bound at `Method`
+    // alone, and the scope is a field of a method rather than of any
+    // executable.
     ("Method", "SCOPE", Arity::Fixed(0), native_scope),
     (
         "MutexSemaphore",
@@ -913,7 +898,7 @@ static NATIVE_METHODS: &[(&str, &str, Arity, NativeMethod)] = &[
         Arity::Fixed(0),
         native_mutex_uninit,
     ),
-    // `Setup.cpp:521`-`:530`, each declared at count 1. These are what an
+    // Each declared at count 1. These are what an
     // operator applied to an instance resolves against when its class defines
     // none of its own; `Interp::operator_message_receiver` is the send, and
     // the names are `Operator::spelling`'s, which
@@ -943,11 +928,11 @@ static NATIVE_METHODS: &[(&str, &str, Arity, NativeMethod)] = &[
         Arity::Fixed(0),
         native_identity_hash,
     ),
-    // `RexxObject::initRexx` under its own name, `memory/Setup.cpp:520`. The
+    // `Object`'s `init` under its own name. The
     // same function `ACTIVATE` above names, and a second row rather than a
     // second implementation, because a second implementation is where the two
-    // could come to disagree. `RexxClass::subclass` sends this to every class
-    // it builds (`classes/ClassClass.cpp:1631`), so a `::CLASS` declaring no
+    // could come to disagree. Class creation sends this to every class
+    // it builds, so a `::CLASS` declaring no
     // `::METHOD init CLASS` of its own reaches this entry.
     ("Object", "INIT", Arity::Fixed(0), native_no_op),
     ("Object", "ISA", Arity::Fixed(1), native_is_a),
@@ -960,13 +945,11 @@ static NATIVE_METHODS: &[(&str, &str, Arity, NativeMethod)] = &[
         native_object_name_set,
     ),
     ("Object", "REQUEST", Arity::Fixed(1), native_request),
-    // `AddPrivateMethod("Run", RexxObject::run, A_COUNT)`,
-    // `memory/Setup.cpp:549`. Private, so a program context is refused by
+    // `Object~run`. Private, so a program context is refused by
     // the private check before this entry is reached, and restricted
     // besides -- [`check_restricted_method`].
     ("Object", "RUN", Arity::Counted, native_run),
-    // `AddPrivateMethod("SetMethod", ..., 3)` and its partner at
-    // `memory/Setup.cpp:550`-`:551`. Private, which is where the refusal a
+    // `Object~setMethod` and its partner. Private, which is where the refusal a
     // program context meets comes from; `interrexx_classes::native_classes` files
     // the access scope off the same rows.
     ("Object", "SETMETHOD", Arity::Fixed(3), native_set_method),
@@ -998,8 +981,8 @@ static NATIVE_METHODS: &[(&str, &str, Arity, NativeMethod)] = &[
     ),
     ("Package", "LOCAL", Arity::Fixed(0), native_package_local),
     ("Package", "NAME", Arity::Fixed(0), native_package_name),
-    // `QueueClass::initRexx` (`memory/Setup.cpp:777`) and the donation
-    // `InheritInstanceMethods(IdentityTable)` makes at `Relation` (`:958`).
+    // `Relation`'s `init`: the creation-size handler, donated from
+    // `IdentityTable`.
     ("Relation", "INIT", Arity::Fixed(1), native_capacity_init),
     ("Routine", "ANNOTATION", Arity::Fixed(1), native_annotation),
     (
@@ -1008,7 +991,7 @@ static NATIVE_METHODS: &[(&str, &str, Arity, NativeMethod)] = &[
         Arity::Fixed(0),
         native_annotations,
     ),
-    // The same donation at `Set` (`memory/Setup.cpp:908`).
+    // The same donation at `Set`.
     ("Set", "INIT", Arity::Fixed(1), native_capacity_init),
     ("String", "LENGTH", Arity::Fixed(0), native_length),
     (
@@ -1024,14 +1007,14 @@ static NATIVE_METHODS: &[(&str, &str, Arity, NativeMethod)] = &[
         native_string_make_string,
     ),
     ("String", "REVERSE", Arity::Fixed(0), native_reverse),
-    // `memory/Setup.cpp:648`, at count 0.
+    // Declared at count 0.
     ("String", "SIGN", Arity::Fixed(0), native_string_sign),
     ("String", "UPPER", Arity::Fixed(2), native_string_upper),
     // `.methods`, `.routines` and `.resources`. The same functions the
-    // `Directory` rows above name, because the C++ is the same code reached
+    // `Directory` rows above name, because the code is the same, reached
     // through the same donation: `StringTable` takes `[]`, `At` and `Put` from
-    // `IdentityTable` (`memory/Setup.cpp:881`) and declares `Unknown` itself
-    // (`:883`), and `Directory` then takes that whole set from `StringTable`.
+    // `IdentityTable` and declares `Unknown` itself, and `Directory` then
+    // takes that whole set from `StringTable`.
     ("StringTable", "[]", Arity::Fixed(1), native_hash_bracket_at),
     (
         "StringTable",
@@ -1040,10 +1023,9 @@ static NATIVE_METHODS: &[(&str, &str, Arity, NativeMethod)] = &[
         native_hash_bracket_put,
     ),
     ("StringTable", "AT", Arity::Fixed(1), native_hash_at),
-    // `HashCollection::initRexx`, which `~new` sends and which validates the
-    // initial-size argument, in `StringTable`'s own dictionary by
-    // `InheritInstanceMethods(IdentityTable)` (`memory/Setup.cpp:881`) out of
-    // that class's own row (`:841`).
+    // The creation-size `init`, which `~new` sends and which validates the
+    // initial-size argument, in `StringTable`'s own dictionary, donated from
+    // `IdentityTable`.
     ("StringTable", "INIT", Arity::Fixed(1), native_capacity_init),
     ("StringTable", "PUT", Arity::Fixed(2), native_hash_put),
     (
@@ -1052,12 +1034,12 @@ static NATIVE_METHODS: &[(&str, &str, Arity, NativeMethod)] = &[
         Arity::Fixed(2),
         native_hash_unknown,
     ),
-    // `SupplierClass::initRexx` (`memory/Setup.cpp:1626`), which is where
+    // `Supplier~init`, which is where
     // `.Supplier~new`'s refusal comes from: the two arrays are required and
     // the allocation above it is not what raises.
-    // The same donation at `Table` (`memory/Setup.cpp:861`).
+    // The same donation at `Table`.
     ("Table", "INIT", Arity::Fixed(1), native_capacity_init),
-    // `VariableReference`'s own rows (`memory/Setup.cpp:1298`-`:1302`), the
+    // `VariableReference`'s own rows, the
     // whole of what its class defines beyond `Object`'s.
     (
         "VariableReference",
@@ -1094,8 +1076,7 @@ static NATIVE_METHODS: &[(&str, &str, Arity, NativeMethod)] = &[
 /// The primitive methods that send a message the receiver may answer with a
 /// Rexx body, or that park the activity, entered by their begin halves.
 static RESUMABLE_METHODS: &[(&str, &str, Arity, NativeBegin)] = &[
-    // `MessageClass::messageCompleted`, bound under both names
-    // (`memory/Setup.cpp:1073`-`:1074`).
+    // `Message~completed`, bound under both names.
     (
         "Message",
         "MESSAGECOMPLETE",
@@ -1133,24 +1114,20 @@ static RESUMABLE_METHODS: &[(&str, &str, Arity, NativeBegin)] = &[
 /// [`RESUMABLE_METHODS`] for the class dictionary: every `NEW` that sends
 /// `INIT`.
 static RESUMABLE_CLASS_METHODS: &[(&str, &str, Arity, NativeBegin)] = &[
-    // `AddClassMethod("New", RexxObject::newRexx, A_COUNT)`,
-    // `memory/Setup.cpp:514`, reached by every class whose own class
+    // `Object`'s `new`, reached by every class whose own class
     // behaviour declares no `NEW` of its own, and the classes below whose
-    // `newRexx` allocates a body this crate does not model.
+    // allocation builds a body this crate does not model.
     ("Object", "NEW", Arity::Counted, native_new),
     ("EventSemaphore", "NEW", Arity::Counted, native_new),
     ("List", "NEW", Arity::Counted, native_new),
     ("MutexSemaphore", "NEW", Arity::Counted, native_new),
     ("Queue", "NEW", Arity::Counted, native_new),
     ("Supplier", "NEW", Arity::Counted, native_new),
-    // `AddClassMethod("New", ArrayClass::newRexx, A_COUNT)`,
-    // `memory/Setup.cpp:708`. A row of its own for the reason
+    // `Array`'s `new`. A row of its own for the reason
     // `StringTable`'s below is one: the answer is a body this crate builds
     // rather than an instance.
     ("Array", "NEW", Arity::Counted, native_array_new),
-    // `AddClassMethod("New", StringTable::newRexx, A_COUNT)` and
-    // `AddClassMethod("New", DirectoryClass::newRexx, A_COUNT)`,
-    // `memory/Setup.cpp:875` and `:928`. Rows of their own rather than
+    // `StringTable`'s and `Directory`'s `new`. Rows of their own rather than
     // `Object`'s, because each allocates a hash body rather than an instance.
     (
         "StringTable",
@@ -1159,18 +1136,16 @@ static RESUMABLE_CLASS_METHODS: &[(&str, &str, Arity, NativeBegin)] = &[
         native_hash_collection_new,
     ),
     ("Directory", "NEW", Arity::Counted, native_directory_new),
-    // `AddClassMethod("New", MethodClass::newRexx, A_COUNT)` and
-    // `RoutineClass::newRexx`, `memory/Setup.cpp:1091` and `:1128`, and the
+    // `Method`'s and `Routine`'s `new`, and the
     // two `newFile` rows beside them: a compiled executable, then `INIT`.
     ("Method", "NEW", Arity::Counted, native_executable_new),
     ("Routine", "NEW", Arity::Counted, native_executable_new),
     ("Method", "NEWFILE", Arity::Fixed(2), native_new_file),
     ("Routine", "NEWFILE", Arity::Fixed(2), native_new_file),
-    // Every class whose own `newRexx` is an allocation followed by
-    // `completeNewObject` and nothing else -- `memory/Setup.cpp:766`, `:821`,
-    // `:902`, `:953`, `:982`, `:1006`, `:1327`, `:1350`, `:1618`.
+    // Every class whose own `new` is an allocation followed by
+    // the standard initialisation and nothing else.
     ("Bag", "NEW", Arity::Counted, hash::native_hash_new),
-    // `TableClass::newRexx` and `IdentityTable::newRexx` take an optional
+    // `Table`'s and `IdentityTable`'s `new` take an optional
     // initial capacity, and it is observable: it decides the bucket count,
     // which decides the order every iteration answers in.
     (
@@ -1182,8 +1157,7 @@ static RESUMABLE_CLASS_METHODS: &[(&str, &str, Arity, NativeBegin)] = &[
     ("Relation", "NEW", Arity::Counted, hash::native_hash_new),
     ("Set", "NEW", Arity::Counted, hash::native_hash_new),
     ("Table", "NEW", Arity::Counted, hash::native_hash_new),
-    // `AddClassMethod("New", RexxClass::newRexx, A_COUNT)`,
-    // `memory/Setup.cpp:450`, the one class method `.Class` adds.
+    // `.Class`'s `new`, the one class method `.Class` adds.
     ("Class", "NEW", Arity::Counted, native_new_class),
     ("Message", "NEW", Arity::Counted, native_message_new),
     (
@@ -1192,16 +1166,13 @@ static RESUMABLE_CLASS_METHODS: &[(&str, &str, Arity, NativeBegin)] = &[
         Arity::Counted,
         native_weak_reference_new,
     ),
-    // `AddClassMethod("New", RexxString::newRexx, A_COUNT)`,
-    // `memory/Setup.cpp:572`. The one row here whose answer is a value rather
+    // `String`'s `new`. The one row here whose answer is a value rather
     // than an instance.
     ("String", "NEW", Arity::Counted, native_string_new),
-    // `AddClassMethod("New", StemClass::newRexx, A_COUNT)`,
-    // `memory/Setup.cpp:1371`. A row of its own because the answer is the
+    // `Stem`'s `new`. A row of its own because the answer is the
     // `Body::Stem` a bare stem read also produces, not an instance.
     ("Stem", "NEW", Arity::Counted, native_stem_new),
-    // `AddClassMethod("New", MutableBuffer::newRexx, A_COUNT)`,
-    // `memory/Setup.cpp:1418`. A row of its own because the arguments are
+    // `MutableBuffer`'s `new`. A row of its own because the arguments are
     // checked before the allocation rather than by `INIT`.
     (
         "MutableBuffer",
@@ -1212,16 +1183,14 @@ static RESUMABLE_CLASS_METHODS: &[(&str, &str, Arity, NativeBegin)] = &[
 ];
 
 /// The primitive methods bound to a class's **class** dictionary rather than
-/// its instance one -- `memory/Setup.cpp`'s `AddClassMethod` rows.
+/// its instance one.
 static NATIVE_CLASS_METHODS: &[(&str, &str, Arity, NativeMethod)] = &[
-    // `AddClassMethod("Of", ArrayClass::ofRexx, A_COUNT)`,
-    // `memory/Setup.cpp:709`. The same body as `Array~new`'s, filled from the
+    // `Array~of`. The same body as `Array~new`'s, filled from the
     // arguments rather than sized from them.
     ("Array", "OF", Arity::Counted, native_array_of),
-    // `AddClassMethod("Of", QueueClass::ofRexx, A_COUNT)` and
-    // `AddClassMethod("Of", ListClass::ofRexx, A_COUNT)`. One body: each
+    // `Queue~of` and `List~of`. One body: each
     // creates a collection of the receiver's own class and appends the
-    // arguments to it (`classes/ListClass.cpp:1010`).
+    // arguments to it.
     (
         "Queue",
         "OF",
@@ -1234,14 +1203,12 @@ static NATIVE_CLASS_METHODS: &[(&str, &str, Arity, NativeMethod)] = &[
         Arity::Counted,
         collection::native_collection_of,
     ),
-    // `AddClassMethod("Of", BagClass::ofRexx, A_COUNT)`, which unlike
+    // `Bag~of`, which unlike
     // `Set~of` keeps the duplicates.
     ("Bag", "OF", Arity::Counted, hash::native_bag_of),
-    // `AddClassMethod("Of", SetClass::ofRexx, A_COUNT)`: `Set`'s own, unlike
+    // `Set~of`: `Set`'s own, unlike
     // the mapped classes whose `of` is `MapCollection~OF` in Rexx.
     ("Set", "OF", Arity::Counted, hash::native_set_of),
-    // `loadExternalMethod` and `loadExternalRoutine` (`memory/Setup.cpp:1093`,
-    // `:1130`).
     (
         "Method",
         "LOADEXTERNALMETHOD",
@@ -1254,10 +1221,9 @@ static NATIVE_CLASS_METHODS: &[(&str, &str, Arity, NativeMethod)] = &[
         Arity::Fixed(2),
         native_load_external,
     ),
-    // The classes whose `newRexx` is the refusal and nothing else, because
-    // their instances come only from native code (`utilityclasses.xml:429`,
-    // `:6910`) or from the `>name` operator
-    // (`classes/VariableReference.cpp:97`, `memory/Setup.cpp:1294`).
+    // The classes whose `new` is the refusal and nothing else, because
+    // their instances come only from native code or from the `>name`
+    // operator.
     ("Buffer", "NEW", Arity::Counted, native_unsupported_new),
     ("Pointer", "NEW", Arity::Counted, native_unsupported_new),
     ("RexxInfo", "NEW", Arity::Counted, native_unsupported_new),
@@ -1269,8 +1235,8 @@ static NATIVE_CLASS_METHODS: &[(&str, &str, Arity, NativeMethod)] = &[
     ),
 ];
 
-/// The two methods `Setup.cpp` puts on `.Class` for the image build and
-/// `removeSetupMethods` deletes before the image is saved.
+/// The two methods put on `.Class` for the image build, which are
+/// deleted before the image is saved.
 static SETUP_METHODS: &[(&str, &str, Arity, NativeMethod)] = &[
     (
         "Class",
@@ -1286,17 +1252,14 @@ static SETUP_METHODS: &[(&str, &str, Arity, NativeMethod)] = &[
     ),
 ];
 
-/// `~defaultName` for an array -- `RexxObject::defaultName`'s article rule
-/// (`classes/ObjectClass.cpp:1760`) applied to `.Array`'s id.
+/// `~defaultName` for an array -- the article rule
+/// applied to `.Array`'s id.
 pub(crate) const ARRAY_DEFAULT_NAME: &[u8] = b"an Array";
 
-/// The message the search order's last step sends -- `GlobalNames::UNKNOWN`.
+/// The message the search order's last step sends.
 const UNKNOWN: &[u8] = b"UNKNOWN";
 
-/// The message name a `~run` body is entered under --
-/// `GlobalNames::UNNAMED_METHOD` (`memory/GlobalNames.h:240`), which
-/// `RexxObject::run` passes to `methobj->run`
-/// (`classes/ObjectClass.cpp:2245`).
+/// The message name a `~run` body is entered under.
 const UNNAMED_METHOD: &[u8] = b"*UNNAMED*";
 
 /// The entry a `Message` object keeps the value its send answered under.
@@ -1307,29 +1270,26 @@ const MESSAGE_RESULT: &[u8] = b"RESULT";
 pub(crate) const MESSAGE_CONDITION: &[u8] = b"ERRORCONDITION";
 
 /// The entries a `Message~new` object keeps its unsent message in:
-/// `MessageClass`'s `receiver`, `message`, `startscope` and `args`.
+/// the `receiver`, `message`, `startscope` and `args`.
 const MESSAGE_TARGET: &[u8] = b"TARGET";
 const MESSAGE_NAME: &[u8] = b"MESSAGENAME";
 const MESSAGE_SCOPE: &[u8] = b"SCOPE";
 const MESSAGE_ARGUMENTS: &[u8] = b"ARGUMENTS";
 
 /// The entry a `Message` object keeps the `Array` of objects `~notify` named
-/// under -- `MessageClass`'s `interestedParties`.
+/// under -- its interested parties.
 const MESSAGE_PARTIES: &[u8] = b"NOTIFY";
 
-/// The message a class construction sends the class it just built --
-/// `GlobalNames::INIT`, sent by `RexxClass::subclass`
-/// (`classes/ClassClass.cpp:1631`). Upper case for [`UNKNOWN`]'s reason.
+/// The message a class construction sends the class it just built.
+/// Upper case for [`UNKNOWN`]'s reason.
 pub(crate) const INIT: &[u8] = b"INIT";
 
-/// The message `SAY` sends whatever `.OUTPUT` holds -- `Activity::sayOutput`
-/// (`concurrency/Activity.cpp:3214`), whose reply is dropped. Upper case for
-/// [`UNKNOWN`]'s reason.
+/// The message `SAY` sends whatever `.OUTPUT` holds, whose reply is dropped.
+/// Upper case for [`UNKNOWN`]'s reason.
 pub(crate) const SAY: &[u8] = b"SAY";
 
 /// The message a trace line and an error report line send whatever
-/// `.TRACEOUTPUT` holds -- `Activity::traceOutput`
-/// (`concurrency/Activity.cpp:3171`). Upper case for [`UNKNOWN`]'s reason.
+/// `.TRACEOUTPUT` holds. Upper case for [`UNKNOWN`]'s reason.
 pub(crate) const LINEOUT: &[u8] = b"LINEOUT";
 
 /// The message a line read with no stream name sends whatever `.INPUT` holds.
@@ -1337,15 +1297,12 @@ pub(crate) const LINEOUT: &[u8] = b"LINEOUT";
 /// Upper case for [`UNKNOWN`]'s reason.
 pub(crate) const LINEIN: &[u8] = b"LINEIN";
 
-/// The message a finalizer delivery sends -- `GlobalNames::UNINIT`, sent by
-/// `UninitDispatcher::run` (`memory/UninitDispatcher.cpp:52`). Upper case for
+/// The message a finalizer delivery sends. Upper case for
 /// [`UNKNOWN`]'s reason.
 const UNINIT: &[u8] = b"UNINIT";
 
 /// How many times the termination sweep runs, from the number of times the
-/// oracle's shutdown reaches `MemoryObject::runUninits`: `collectAndUninit`
-/// at `runtime/InterpreterInstance.cpp:581` and `lastChanceUninit` at
-/// `runtime/Interpreter.cpp:279`. See
+/// oracle's shutdown runs the pending finalizers. See
 /// [`Interp::run_termination_uninits`](Interp::run_termination_uninits).
 const SWEEPS: usize = 2;
 
@@ -1354,9 +1311,7 @@ const SWEEPS: usize = 2;
 /// 628364 kB.
 const RETIRED_ENTRY_BYTES: usize = 128;
 
-/// The message the last install pass sends every class the package built --
-/// `GlobalNames::ACTIVATE`, sent by `ClassDirective::activate`
-/// (`instructions/ClassDirective.cpp:288`).
+/// The message the last install pass sends every class the package built.
 pub(crate) const ACTIVATE: &[u8] = b"ACTIVATE";
 
 /// The class model this crate dispatches against, and the implementations
@@ -1382,7 +1337,7 @@ pub(crate) struct ObjectModel {
     /// The scope a mapped collection's store is bound under.
     table: ObjRef,
     context: ObjRef,
-    /// The class `Setup.cpp` registers with `addToSystem` and whose
+    /// The class the native class set registers with the system and whose
     /// *instance* `.RexxInfo` answers -- see [`Primitive::RexxInfo`].
     /// Reached through `ClassRegistry::system_lookup`, since no `.NAME`
     /// resolves to it.
@@ -1397,14 +1352,14 @@ pub(crate) struct ObjectModel {
     /// The scope [`construct::WEAK_REFERENT`] is bound in, so that a subclass's instance
     /// keeps its referent where `WeakReference~value` looks for it.
     weak_reference: ObjRef,
-    /// The class `RexxContext~stackFrames` builds its elements from. Reached
+    /// The class `.Context~stackFrames` builds its elements from. Reached
     /// here rather than by name at every build, exactly as `context` beside
     /// it is.
     stack_frame: ObjRef,
     /// [`hash::STORE_HOLDERS`], resolved.
     store_holders: Vec<ObjRef>,
     /// `.nil`'s own behaviour: `Object`'s with `COPY`, `START` and
-    /// `OBJECTNAME=` hidden (`memory/Setup.cpp:1758`-`:1760`).
+    /// `OBJECTNAME=` hidden.
     nil_behaviour: interrexx_classes::BehaviourHandle,
 }
 
@@ -1415,7 +1370,7 @@ impl ObjectModel {
         self.string_table
     }
 
-    /// `Setup.cpp`'s native class set, plus the lookup from each implemented
+    /// The native class set, plus the lookup from each implemented
     /// method's minted identity to its code.
     fn bootstrap(mint: &mut dyn FnMut() -> ObjRef) -> ObjectModel {
         ObjectModel::build(interrexx_classes::native_classes(mint), &[])
@@ -1652,9 +1607,8 @@ enum ObjectMethodWrite {
 enum Primitive {
     /// Every string-valued receiver: a literal of any length, and a number.
     /// Measured, `~class~id` for `'abc'`, `12345` and `1.5` is `String` for
-    /// all three -- `RexxInteger` and `NumberString` are
-    /// `CLASS_CREATE_SPECIAL(..., "String", ...)` and answer `String` for
-    /// their own class.
+    /// all three -- an integer and a number string both
+    /// answer `String` for their own class.
     String,
     /// A receiver whose whole value is in the handle's integer tag
     /// ([`Decoded::SmallInt`]) -- **the `SmallInt` behaviour arm**.
@@ -1685,7 +1639,7 @@ enum Primitive {
     /// `.context~stackFrames[1]~class~id` is `StackFrame`.
     StackFrame,
     /// A `Body::Native` whose class is the `RexxInfo` one -- the single
-    /// pre-built instance `.RexxInfo` answers (`Setup.cpp:1735`-`:1737`).
+    /// pre-built instance `.RexxInfo` answers.
     /// Measured, `.RexxInfo~class~id` is `RexxInfo` and
     /// `.RexxInfo~isA(.Class)` is `0`.
     RexxInfo,
@@ -1721,7 +1675,7 @@ enum Primitive {
 enum Behaviour {
     Instance {
         methods: BehaviourHandle,
-        /// `behaviour->getOwningClass()`: the class the dictionary belongs
+        /// The class the dictionary belongs
         /// to, which the copying mutators carry across unchanged.
         owner: ObjRef,
     },
@@ -1741,9 +1695,7 @@ pub(crate) struct MessageTerm<'a> {
     /// `~~`, which yields the target rather than the method's result.
     pub(crate) cascade: bool,
     /// The message-assignment form's value expression, which the oracle
-    /// inserts as the **first** argument ahead of the term's own
-    /// (`RexxInstructionMessage`'s two-argument constructor,
-    /// `MessageInstruction.cpp:76-88`).
+    /// inserts as the **first** argument ahead of the term's own.
     pub(crate) assigned: Option<&'a Expr>,
 }
 
@@ -1757,11 +1709,11 @@ pub(crate) struct Caller {
     package: CallerPackage,
 }
 
-/// The package a send is written in, as `RexxObject::checkPackage` reads it.
+/// The package a send is written in, as the package check reads it.
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub(crate) enum CallerPackage {
-    /// No activation is running. `checkPackage` refuses outright for it
-    /// (`classes/ObjectClass.cpp:665`-`:669`), and a resolution asked for
+    /// No activation is running. The package check refuses outright for it,
+    /// and a resolution asked for
     /// from outside any running program is in it.
     NoActivation,
     /// The running activation's own package, which is the package its clauses
@@ -1783,13 +1735,13 @@ impl Caller {
 }
 
 /// One method's access scope and protection, as `MethodClass`'s own flags
-/// carry them (`classes/MethodClass.hpp:115`-`:118`).
+/// carry them.
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub(crate) struct AccessScope {
     /// `PRIVATE` or `PACKAGE`. `Access::Default` or `Access::Public` for a
     /// method whose row exists for `PROTECTED` alone.
     pub(crate) access: Access,
-    /// `MethodClass::isProtected`, which is what the security-manager seam
+    /// Whether the method is protected, which is what the security-manager seam
     /// asks about.
     pub(crate) protected: bool,
     /// The package the method's own directive was translated in.
@@ -1848,7 +1800,7 @@ impl Interp {
     }
 
     /// Stores a freshly built object model and files the access scopes of
-    /// the natives `Setup.cpp` declares private or protected.
+    /// the natives the native class set declares private or protected.
     pub(crate) fn install_object_model(&mut self, model: ObjectModel) {
         debug_assert!(
             self.special_methods.is_empty(),
@@ -1879,7 +1831,7 @@ impl Interp {
     }
 
     /// The class registry: the one class model in this crate (R9), holding
-    /// `Setup.cpp`'s native classes and whatever `::CLASS` directives have
+    /// the native classes and whatever `::CLASS` directives have
     /// installed beside them.
     pub(crate) fn classes(&mut self) -> &mut ClassRegistry {
         &mut self.object_model().classes
@@ -1968,7 +1920,7 @@ impl Interp {
             .as_bytes()
     }
 
-    /// `behaviour->getOwningClass()->getId()` for any receiver: the id of the
+    /// The id, for any receiver, of the
     /// class whose behaviour answers this object's messages.
     pub(crate) fn is_base_class(&mut self, value: ObjRef) -> bool {
         let Some(class) = self.class_of_value(value) else {
@@ -2007,8 +1959,8 @@ impl Interp {
     }
 
     /// `.Object` and `.Class`: the superclass and metaclass
-    /// `RexxClass::subclass` defaults to, which is what a bare `::CLASS`
-    /// declares (`ClassClass.cpp:1562`).
+    /// a class creation defaults to, which is what a bare `::CLASS`
+    /// declares.
     pub(crate) fn root_and_metaclass(&mut self) -> (ObjRef, ObjRef) {
         let model = self.object_model();
         (model.object, model.metaclass)
@@ -2072,12 +2024,12 @@ impl Interp {
                     }),
                     Body::WeakRef(_) => Err("a weak reference"),
                     Body::Cell(..) => Err("a variable's cell"),
-                    // `>name`'s own object. Its behaviour is `Setup.cpp`'s
+                    // `>name`'s own object. Its behaviour is the native class's
                     // whole set, hidden operators included, so a name it
                     // does not hold reaches `UNKNOWN` on both sides.
                     Body::VarRef(_) => Ok(Primitive::VariableReference),
                     // The package object `~package` answers. `.Package`'s
-                    // instance behaviour here is `Setup.cpp`'s whole set, so a
+                    // instance behaviour here is the native class's whole set, so a
                     // name it does not hold is a name the running oracle does
                     // not hold either, and 97.1 is the right answer rather than
                     // a guess.
@@ -2089,7 +2041,7 @@ impl Interp {
                     }
                     // The `Method` and `Routine` objects `~method` and a
                     // package table put in a program's hands. Each class's
-                    // instance behaviour here is `Setup.cpp`'s whole set, so
+                    // instance behaviour here is the native class's whole set, so
                     // a name it does not hold is a name the running oracle
                     // does not hold either -- the position `.Package` beside
                     // them is in.
@@ -2124,7 +2076,7 @@ impl Interp {
                     }
                     // `.context`. Its class is in the registry, so there is
                     // a behaviour to resolve against, and `RexxContext`'s
-                    // instance behaviour here is `Setup.cpp`'s whole set --
+                    // instance behaviour here is the native class's whole set --
                     // the position `.Package` above is in, so a name it does
                     // not hold is 97.1 and a name it holds with no row here
                     // is this crate's own gap.
@@ -2146,7 +2098,7 @@ impl Interp {
                     }
                     // One element of `RexxContext~stackFrames`, in the same
                     // position `.context` above is: the class is in the
-                    // registry with `Setup.cpp`'s whole instance set, so a
+                    // registry with the native class's whole instance set, so a
                     // name it does not hold is 97.1 and a name it holds with
                     // no row here is this crate's own gap.
                     Body::Native(native)
@@ -2179,8 +2131,8 @@ impl Interp {
         let live = match kind {
             // Both arms answer one behaviour, which is what makes
             // `Primitive::SmallInt` a distinction without a divergence: the
-            // oracle gives `RexxInteger` the id `String`
-            // (`classes/IntegerClass.cpp:2066`), so a small integer's messages
+            // oracle gives a small integer the id `String`,
+            // so a small integer's messages
             // resolve against `String`'s instance behaviour exactly as a
             // literal's do. This fold is one of the two sites that would
             // change if that ever stopped being true.
@@ -2266,8 +2218,8 @@ impl Interp {
                 // A method whose row exists for `PROTECTED` alone. The seam
                 // asks about that one, not this.
                 Access::Default | Access::Public => Ok(resolution),
-                // `isPrivate()` and `isPackageScope()` are the two arms of
-                // one `else if` in the C++, and the parser makes a second
+                // `PRIVATE` and `PACKAGE` are two exclusive arms,
+                // and the parser makes a second
                 // access keyword 25.902, so no method is in both.
                 Access::Private => self
                     .check_private(resolution, receiver, caller)
@@ -2277,8 +2229,8 @@ impl Interp {
         }
     }
 
-    /// `RexxBehaviour::methodLookup`, or `RexxObject::superMethod(msgname,
-    /// startscope)` for a `target~name:scope` override, which searches only
+    /// The ordinary method lookup, or the scope-restricted one for a
+    /// `target~name:scope` override, which searches only
     /// the starting scope itself and the scopes folded in ahead of it.
     pub(crate) fn lookup(
         &mut self,
@@ -2286,11 +2238,11 @@ impl Interp {
         name: &[u8],
         start_scope: Option<ObjRef>,
     ) -> Option<Resolution> {
-        // **The object's own methods come first**, which is where
-        // `MethodDictionary::addInstanceMethod` puts them
-        // (`behaviour/MethodDictionary.cpp:399`, `addFront`). A scope
+        // **The object's own methods come first**, since an object's own
+        // methods sit ahead of its class's.
+        // A scope
         // override starts inside the class hierarchy and so never reaches
-        // one: `RexxObject::superMethod` searches from a named scope, and a
+        // one: a lookup from a named scope searches the hierarchy only, and a
         // one-off's scope is `.nil` or the class's own.
         if let Some(found) = self.own_lookup(receiver, name, start_scope) {
             return found;
@@ -2381,8 +2333,7 @@ impl Interp {
     }
 
     /// Installs one entry in `receiver`'s own dictionary, or takes one away
-    /// -- `RexxObject::defineInstanceMethod` (`classes/ObjectClass.cpp:2297`)
-    /// and `deleteInstanceMethod` (`:2328`).
+    /// -- `setMethod` and `unsetMethod`.
     fn write_object_method(
         &mut self,
         receiver: ObjRef,
@@ -2421,7 +2372,7 @@ impl Interp {
         Ok(())
     }
 
-    /// `RexxObject::checkUninit` (`classes/ObjectClass.cpp:2604`), which both
+    /// The finalization check, which both
     /// mutators run: an object that answers `UNINIT` after the change is
     /// registered for finalization and one that does not is taken back out.
     fn check_uninit(&mut self, receiver: ObjRef, name: &[u8]) {
@@ -2435,9 +2386,8 @@ impl Interp {
         }
     }
 
-    /// `RexxObject::validateScopeOverride` (`classes/ObjectClass.cpp:1950`):
-    /// whether `scope` was folded into the behaviour this receiver resolves
-    /// against, which is `behaviour->hasScope(scope)`.
+    /// Whether `scope` was folded into the behaviour this receiver resolves
+    /// against.
     pub(crate) fn validate_scope_override(
         &mut self,
         target: ObjRef,
@@ -2472,15 +2422,15 @@ impl Interp {
         self.special_methods.get(method).copied()
     }
 
-    /// `MethodClass::isProtected` (`classes/MethodClass.hpp:116`), asked by
+    /// Whether the method is protected, asked by
     /// the security-manager seam and by nothing else.
     fn method_is_protected(&self, method: MethodId) -> bool {
         self.access_scope_of(method)
             .is_some_and(|scope| scope.protected)
     }
 
-    /// The security manager's `checkProtectedMethod`
-    /// (`execution/SecurityManager.cpp:172`-`:194`), asked for a method the
+    /// The security manager's protected-method check,
+    /// asked for a method the
     /// send has found to be `PROTECTED`.
     ///
     /// `Some(result)` where the manager handled the send, the method then
@@ -2510,7 +2460,6 @@ impl Interp {
         Ok(Some(result))
     }
 
-    /// `RexxObject::checkPrivate` (`classes/ObjectClass.cpp:608`-`:646`).
     fn check_private(
         &mut self,
         resolution: Resolution,
@@ -2518,43 +2467,41 @@ impl Interp {
         caller: Caller,
     ) -> Result<(), Miss> {
         // No calling activation, or one whose frame carries no receiver: a
-        // routine or program context, which is `OREF_NULL` at `:622`-`:626`
-        // and the same refusal as `activation == OREF_NULL` at `:611`.
+        // routine or program context, which is refused the same way as
+        // no activation at all.
         let Some(sender) = caller.receiver() else {
             return Err(Miss::Private);
         };
         // The sending and receiving object being the same is allowed
-        // outright (`:617`-`:620`).
+        // outright.
         if sender == receiver {
             return Ok(());
         }
-        // Another instance of the class that defined the method (`:628`-
-        // `:633`), which is `classObject()->isCompatibleWith(scope)`.
+        // Another instance of the class that defined the method.
         if let Some(class) = self.class_of_value(sender)
             && self.classes().is_a(class, resolution.scope)
         {
             return Ok(());
         }
         // A class object anywhere in the defining scope's own hierarchy
-        // (`:635`-`:643`). `isOfClassType(Class, sender)` first, because
-        // `isCompatibleWith` is a method on a class and not on a value.
+        // Checked as a class first, because the compatibility test is a
+        // method on a class and not on a value.
         if self.is_class_object(sender) && self.classes().is_a(sender, resolution.scope) {
             return Ok(());
         }
         Err(Miss::Private)
     }
 
-    /// `RexxObject::checkPackage` (`classes/ObjectClass.cpp:658`-`:685`).
     fn check_package(method_package: Package, caller: Caller) -> Result<(), Miss> {
         match caller.package() {
-            // No calling activation at all (`:665`-`:669`).
+            // No calling activation at all.
             CallerPackage::NoActivation => Err(Miss::PackageScope),
             CallerPackage::Package(package) if package == method_package => Ok(()),
             CallerPackage::Package(_) => Err(Miss::PackageScope),
         }
     }
 
-    /// `RexxObject::classObject()`, the class an arbitrary value is an
+    /// The class an arbitrary value is an
     /// instance of, or `None` for a value this crate builds no class for.
     pub(crate) fn class_of_value(&mut self, value: ObjRef) -> Option<ObjRef> {
         match self.receiver_behaviour(value).ok()? {
@@ -2564,8 +2511,8 @@ impl Interp {
     }
 
     /// Mints a method identity that runs what `template` runs, with its
-    /// access scope and guard: the identity a copy `MethodClass::newScope`
-    /// makes is installed under, so the copy's own flags stay its own.
+    /// access scope and guard: the identity a copy made by `Method~newScope`
+    /// is installed under, so the copy's own flags stay its own.
     pub(crate) fn copy_method_identity(&mut self, template: MethodId) -> MethodId {
         let method = self.classes().mint_method_id();
         let natives = &mut self.object_model().natives;
@@ -2643,9 +2590,7 @@ impl Interp {
 
     /// The scope a method found at `resolution` sees as `SUPER`, or `None`
     /// when it is the topmost scope in the receiver's behaviour --
-    /// `RexxObject::superScope(scope)`, the second of the two locals
-    /// `RexxActivation::run` sets on a method activation
-    /// (`RexxActivation.cpp:535`-`536`).
+    /// the superscope the oracle sets on a method activation.
     fn super_scope_for(&mut self, receiver: ObjRef, resolution: Resolution) -> Option<ObjRef> {
         self.super_scope_of(receiver, resolution.scope)
     }
@@ -2658,8 +2603,7 @@ impl Interp {
 
     /// [`Interp::super_scope_of`] in `behaviour`, the receiver's. A method of
     /// scope `.nil` (`setMethod`, `Class~enhanced`) sees the behaviour's
-    /// owning class, as `RexxBehaviour::superScope` does
-    /// (`behaviour/RexxBehaviour.cpp:549`-`:557`).
+    /// owning class.
     fn super_scope_in(&mut self, behaviour: Behaviour, scope: ObjRef) -> Option<ObjRef> {
         match behaviour {
             Behaviour::Instance { owner, .. } if scope == ObjRef::NIL => Some(owner),
@@ -2746,10 +2690,9 @@ impl Interp {
             // `93.902` with the sending clause alone on `stderr`, where
             // `'abc'~length(1)` -- a [`NativeMethod`] taking the same
             // refusal -- carries a `Compiled method "LENGTH"` line. The two
-            // differ in the C++ because `AttributeGetterCode::run` and
-            // `AbstractCode::run` raise directly where `CPPCode::run` raises
-            // from inside a `NativeActivation` of its own
-            // (`execution/CPPCode.cpp:280`, `:526`).
+            // differ in the oracle because an attribute getter and an
+            // abstract method raise directly where a primitive method raises
+            // from inside an activation of its own.
             self.begin_method(
                 cleared, installed, resolution, behaviour, receiver, name, args,
             )?;
@@ -2839,9 +2782,7 @@ impl Interp {
     }
 
     /// The guard lock a send to `invocable` reserves: a generated getter,
-    /// setter or `DELEGATE` and an external method, where guarded
-    /// (`execution/CPPCode.cpp:288-298`, `:344-358`, `:612-620`;
-    /// `NativeActivation::methodVariables`).
+    /// setter or `DELEGATE` and an external method, where guarded.
     fn other_guard(
         &self,
         invocable: &Invocable,
@@ -2914,7 +2855,7 @@ impl Interp {
 
     /// [`Interp::run_other`] holding `guard`, which it releases: a
     /// `DELEGATE` method's once it has read its target, before the send
-    /// (`DelegateCode::run`), anything else's once it has run.
+    /// (the delegate path), anything else's once it has run.
     #[expect(
         clippy::too_many_arguments,
         reason = "the send's own parts, and the lock it holds"
@@ -3060,8 +3001,7 @@ impl Interp {
                 }
             },
         };
-        // A native method's return runs the `UNINIT`s a collection readied
-        // (`NativeActivation::run`, `NativeActivation.cpp:1361`).
+        // A native method's return runs the `UNINIT`s a collection readied.
         if native
             && !self.uninit_ready.is_empty()
             && let Ok(value) = outcome
@@ -3073,8 +3013,8 @@ impl Interp {
 
     /// Leads each condition object a `CALL ON` trap queued inside this
     /// `LIBRARY REXX` method with the method's own frame, as
-    /// `generateProgramInformation` builds it with the method's
-    /// `NativeActivation` on top.
+    /// the program information is built with the method's own
+    /// activation on top.
     #[cold]
     #[inline(never)]
     fn settle_native_frames_owed(
@@ -3101,8 +3041,8 @@ impl Interp {
         settled
     }
 
-    /// A `LIBRARY REXX` entry's `run` after the arity check `CPPCode`-style
-    /// externals make, with the method blamed for a failure.
+    /// A `LIBRARY REXX` entry's `run` after the arity check external
+    /// methods make, with the method blamed for a failure.
     fn run_external<T>(
         &mut self,
         arity: Arity,
@@ -3456,8 +3396,7 @@ impl Interp {
 
     /// A `DELEGATE` method: the message re-sent, under the name it arrived
     /// under and with the arguments it arrived with, to the value of the
-    /// delegate variable in the declaring scope's pool on the receiver
-    /// (`DelegateCode::run`, `execution/CPPCode.cpp:605`-`:628`).
+    /// delegate variable in the declaring scope's pool on the receiver.
     fn send_to_delegate(
         &mut self,
         _cleared: Cleared,
@@ -3578,7 +3517,7 @@ impl Interp {
         match continuation {
             Some(continuation) => self.spawn_continuation(callee, callee_context, continuation),
             // A rest that could not be filed is dropped with the numbering a
-            // spawn would have made (`Activity.cpp:1206`).
+            // spawn would have made.
             None => {
                 self.activity_number();
                 self.rotate_pooled();
@@ -3593,7 +3532,7 @@ impl Interp {
 
     /// Files `continuation`, the record a `REPLY`'s split left, with
     /// `activation` and its slot frame moved into it. The oracle's replier
-    /// yields only to a thread already waiting (`ActivityManager.hpp:293`),
+    /// yields only to a thread already waiting,
     /// which the continuation's is not: the sender yields at its next clause
     /// boundary where another activity is ready, and otherwise keeps running.
     #[cold]
@@ -3687,8 +3626,7 @@ impl Interp {
         }
     }
 
-    /// Whether `object` still answers `UNINIT` -- `RexxObject::hasMethod`
-    /// as `RexxObject::uninit` asks it (`classes/ObjectClass.cpp:2581`),
+    /// Whether `object` still answers `UNINIT`,
     /// resolved the way [`native_has_method`] resolves the `HASMETHOD`
     /// message.
     fn answers_uninit(&mut self, object: ObjRef) -> bool {
@@ -3696,7 +3634,7 @@ impl Interp {
     }
 
     /// Whether `object`'s behaviour answers `name`, which must already be
-    /// upper case. `RexxBehaviour::methodLookup` with no scope override,
+    /// upper case. The lookup is the one with no scope override,
     /// resolved the way [`native_has_method`] resolves `HASMETHOD`.
     pub(crate) fn answers_message(&mut self, object: ObjRef, name: &str) -> bool {
         if let Some(entry) = self.own_method_entry(object, name.as_bytes()) {
@@ -3723,9 +3661,9 @@ impl Interp {
     }
 
     /// Runs the `UNINIT` of every object a collection has readied, oldest
-    /// first -- oracle's `MemoryObject::runUninits`
-    /// (`memory/RexxMemory.cpp:337`), reached from `collectAndUninit` and so
-    /// from `GC('force')` (`expression/BuiltinFunctions.cpp:3033`).
+    /// first -- the oracle's pending-finalizer run,
+    /// reached from a collection and so
+    /// from `GC('force')`.
     pub(crate) fn run_ready_uninits(&mut self) -> Vec<Loud> {
         if self.processing_uninits {
             return Vec::new();
@@ -3848,9 +3786,7 @@ impl Interp {
 
     /// **What the documented search order has left after the class chain**:
     /// `UNKNOWN` on the receiver's own behaviour, and the `NOMETHOD`
-    /// condition beneath it when the behaviour answers no `UNKNOWN` either --
-    /// `RexxObject::processUnknown` (`classes/ObjectClass.cpp:1002`), reached
-    /// from `messageSend` at `:904`.
+    /// condition beneath it when the behaviour answers no `UNKNOWN` either.
     #[cold]
     #[inline(never)]
     fn unknown_or_nomethod(
@@ -3906,8 +3842,7 @@ impl Interp {
     /// The primitive `UNKNOWN` a send the receiver does not understand runs
     /// without a level of its own: `processUnknown` calls it directly for a
     /// `Stem`, a `VariableReference`, and a `Directory` or `StringTable` of
-    /// the base class (`StemClass.cpp:277`, `VariableReference.cpp:241`,
-    /// `HashCollection.cpp:989`).
+    /// the base class.
     fn frameless_unknown(&mut self, resolution: Resolution, receiver: ObjRef) -> Option<Unsent> {
         self.object_model().natives.get(resolution.method)?;
         let classes = self.classes();
@@ -3993,7 +3928,7 @@ impl Interp {
         }
     }
 
-    /// The receiver as 97.1 names it: `stringValue()`, which is **not** the
+    /// The receiver as 97.1 names it: the string value, which is **not** the
     /// string value [`Interp::to_text`] answers for every receiver.
     fn message_target_text(&mut self, receiver: ObjRef) -> Result<Vec<u8>, Failure> {
         self.string_value_text(receiver)
@@ -4025,9 +3960,8 @@ impl Interp {
                 // before either check below, which is the oracle's order.
                 let scope = self.eval(code, super_class)?;
                 self.roots.activity_mut().push_temp(scope);
-                // `RexxExpressionMessage::evaluate`'s
-                // `_super->isInstanceOf(TheClassClass)`, then
-                // `_target->validateScopeOverride(_super)`. Both run before
+                // The scope must be a class, and must be in the target's
+                // behaviour. Both checks run before
                 // the arguments are evaluated.
                 if !self.heap.is_class(scope) {
                     return Err(Raised::scope_override_not_a_class().into());
@@ -4047,8 +3981,8 @@ impl Interp {
 
         // `~~` replaces the result with the target **before** the send is
         // traced, so `>M>` shows the target for a cascade -- measured,
-        // `'abc'~~length` traces `>M>   "LENGTH" => "abc"`
-        // (`ExpressionMessage.cpp:202-219`). It also gives a cascade a value
+        // `'abc'~~length` traces `>M>   "LENGTH" => "abc"`.
+        // It also gives a cascade a value
         // where the send itself had none, measured: `.K~~m` on a method
         // ending in a bare `return` yields the target at rc 0.
         let value = if cascade { Some(receiver) } else { sent };
@@ -4138,7 +4072,7 @@ impl Interp {
             reraised,
             reported_on_return,
         });
-        // `NativeActivation::run` has given up the receiver before it reports
+        // The native activation has given up the receiver before it reports
         // that error, so the level is a routine's: no target, and the
         // `Compiled routine` line.
         if reported_on_return {
@@ -4253,9 +4187,8 @@ impl Interp {
         );
         self.activity.failure_frame = Some(frame);
         match level.activation {
-            // `NativeActivation::checkConditions` (`execution/
-            // NativeActivation.cpp:1787`) re-raises a SYNTAX condition in the
-            // caller through `Activity::reraiseException`, whose `POSITION`
+            // The native activation re-raises a SYNTAX condition in the
+            // caller, whose `POSITION`
             // and program are the caller's.
             Some(NativeActivationLevel { reraised: true, .. }) => self.reraise_failure_levels(),
             // Anything else keeps the object built where it was raised, and
@@ -4298,9 +4231,9 @@ struct NativeLevel<'a> {
     activation: Option<NativeActivationLevel>,
 }
 
-/// A level the oracle runs as a `NativeActivation`.
+/// A level the oracle runs as a native-method activation.
 struct NativeActivationLevel {
-    /// What `NativeActivationFrame::getPackage` answers.
+    /// What the level's package query answers.
     package: Option<Package>,
     /// Whether the condition leaves it re-raised: a SYNTAX condition
     /// ([`Failure::reraised_by_native_call`]).
@@ -4311,8 +4244,7 @@ struct NativeActivationLevel {
     reported_on_return: bool,
 }
 
-/// `VariableReference~name`: the referenced variable's own spelling --
-/// `VariableReference::getName` (`classes/VariableReference.cpp:150`).
+/// `VariableReference~name`: the referenced variable's own spelling.
 fn native_reference_name(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -4328,9 +4260,8 @@ fn native_reference_name(
     Ok(Some(interp.text_built(name)))
 }
 
-/// `VariableReference~value`: what the referenced variable holds --
-/// `VariableReference::getValue` (`classes/VariableReference.cpp:161`), whose
-/// `getResolvedValue` answers the variable's derived name when it holds
+/// `VariableReference~value`: what the referenced variable holds.
+/// It answers the variable's derived name when it holds
 /// nothing.
 fn native_reference_value(
     interp: &mut Interp,
@@ -4352,9 +4283,8 @@ fn native_reference_value(
     }
 }
 
-/// `VariableReference~value=`: writes the referenced variable --
-/// `VariableReference::setValueRexx` (`classes/VariableReference.cpp:190`),
-/// whose `requiredArgument` is the 93.903 an omitted value raises.
+/// `VariableReference~value=`: writes the referenced variable.
+/// An omitted value raises 93.903.
 fn native_reference_value_set(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -4371,8 +4301,8 @@ fn native_reference_value_set(
     };
     let home = reference.home.clone();
     let name = reference.name.clone();
-    // `RexxVariable::setValue` "sorts out the stem vs. simple assignment
-    // bits" (`classes/VariableReference.cpp:184`), so a stem reference
+    // The oracle sorts out the stem vs. simple assignment
+    // bits, so a stem reference
     // assigns what the bare `stem. = value` assigns rather than storing the
     // value itself -- a plain value in a stem-named slot is a state nothing
     // else in this crate can produce.
@@ -4391,8 +4321,7 @@ fn native_reference_value_set(
 }
 
 /// `VariableReference~unknown(name, arguments)`: forwards to the referenced
-/// value -- `VariableReference::unknownRexx`
-/// (`classes/VariableReference.cpp:205`), which is what makes every message
+/// value, which is what makes every message
 /// the class does not define read as one to the variable's value.
 fn native_reference_unknown(
     interp: &mut Interp,
@@ -4429,9 +4358,8 @@ fn reference_unknown(
     interp.send_message_as_given(referenced, &name, &forwarded, caller)
 }
 
-/// `VariableReference~request(class)`: forwards to the referenced value --
-/// `VariableReference::request` (`classes/VariableReference.cpp:359`), which
-/// handles none of them itself.
+/// `VariableReference~request(class)`: forwards to the referenced value,
+/// which handles none of them itself.
 fn native_reference_request(
     interp: &mut Interp,
     _cleared: Cleared,
