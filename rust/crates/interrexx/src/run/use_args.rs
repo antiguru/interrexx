@@ -278,7 +278,18 @@ impl Interp {
                 None => Ok(()),
             };
         }
-        let name = self.use_target_name(code, target)?;
+        let mut name = self.use_target_name(code, target)?;
+        // A compound target's tail takes the values its variables have now,
+        // so an earlier target of this `USE` that set one counts.
+        let compound = match &target.target.kind {
+            ExprKind::Compound(id) => {
+                let (stem_name, stem_at) = code.stem(*id);
+                let key = self.tail_key(code, *id)?;
+                name = [stem_name, key.as_slice()].concat();
+                Some((stem_name, stem_at, key))
+            }
+            _ => None,
+        };
         match value {
             Some(value) => {
                 // `>>>` then `>=>`, in that order and both at this `USE`
@@ -303,7 +314,12 @@ impl Interp {
                 if matches!(value.decode(), Decoded::Heap { .. }) {
                     self.roots.activity_mut().push_temp(value);
                 }
-                self.assign_by_name(&name, value);
+                match &compound {
+                    Some((stem_name, stem_at, key)) => {
+                        self.stem_set_at(stem_name, *stem_at, key, value);
+                    }
+                    None => self.assign_by_name(&name, value),
+                }
                 if let Some(rendered) = self.intermediate_text(value)? {
                     self.trace_assignment(indent, &name, &rendered, value);
                 }
@@ -321,7 +337,12 @@ impl Interp {
                 Raised::missing_argument(&call, position).into()
             }),
             None => {
-                self.drop_by_name(&name);
+                match &compound {
+                    Some((stem_name, stem_at, key)) => {
+                        self.stem_drop_tail_at(stem_name, *stem_at, key);
+                    }
+                    None => self.drop_by_name(&name),
+                }
                 Ok(())
             }
         }

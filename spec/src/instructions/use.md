@@ -96,7 +96,7 @@ chain:
   return
 ```
 
-```output defect=#108
+```output
 v1 v2
 second
 ```
