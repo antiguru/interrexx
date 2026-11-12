@@ -1,7 +1,7 @@
 //! `ClassRegistry`: class objects, and the name-to-class registry, over
 //! [`ClassGraph`](crate::ClassGraph).
 
-use crate::class_graph::{ClassGraph, ClassKind, InheritRefusal};
+use crate::class_graph::{ClassGraph, ClassKind, Epoch, InheritRefusal};
 use crate::method_dict::MethodSlot;
 use interrexx_core::MethodId;
 use interrexx_core::NameMap;
@@ -545,6 +545,11 @@ impl ClassRegistry {
     /// behaviour a receiver holds.
     pub fn super_scope_at(&self, handle: BehaviourHandle, scope: ObjRef) -> Option<ObjRef> {
         self.graph.resolve_super_scope_at(handle, scope)
+    }
+
+    /// The graph's dispatch stamp: see [`ClassGraph::epoch`].
+    pub fn epoch(&self) -> Epoch {
+        self.graph.epoch()
     }
 
     /// An ordinary message resolution against the class object itself --
