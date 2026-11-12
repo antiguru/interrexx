@@ -1,8 +1,7 @@
 //! A trace line's delivery to a short Rexx destination lets no other
 //! activity's lines in, under any schedule of the simulation mode. The oracle
 //! gives up the kernel only in an activation past `yieldInstructions` or at a
-//! native call (`RexxActivation.cpp:616`, `NativeActivation.cpp:1304`), and
-//! this destination's `lineOut` has neither.
+//! native call, and this destination's `lineOut` has neither.
 
 use std::process::Command;
 

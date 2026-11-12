@@ -95,7 +95,7 @@ pub struct Invocation {
 }
 
 /// How an embedding calls a program (`RXCOMMAND`, `RXSUBROUTINE`,
-/// `RXFUNCTION`, `api/rexx.h`).
+/// `RXFUNCTION`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum StartType {
     Command,

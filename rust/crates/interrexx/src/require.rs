@@ -5,8 +5,7 @@
 /// thing that makes a `::REQUIRES` search differ from an external call's.
 const REQUIRES_EXTENSION: &str = ".cls";
 
-/// The extensions `SysInterpreterInstance::initialize` appends, in its order
-/// (`platform/unix/SysInterpreterInstance.cpp:73`).
+/// The extensions the oracle appends, in its order.
 const DEFAULT_EXTENSIONS: [&str; 2] = [".REX", ".rex"];
 
 /// The current directory's entry, which `SysSearchPath` adds as this literal
@@ -26,8 +25,7 @@ pub(crate) fn search_entries(
 }
 
 /// [`search_entries`] with an embedding instance's `EXTERNAL_CALL_PATH`,
-/// searched after the current directory and before `REXX_PATH`
-/// (`SysSearchPath::SysSearchPath`, `platform/unix/SysInterpreterInstance.cpp:123`).
+/// searched after the current directory and before `REXX_PATH`.
 pub(crate) fn search_entries_with(
     program_dir: Option<&str>,
     call_path: Option<&str>,
@@ -67,8 +65,8 @@ pub(crate) fn candidates(
 }
 
 /// [`candidates`] with an embedding instance's `EXTERNAL_CALL_EXTENSIONS`,
-/// tried before the default extensions, which follow where they are not
-/// among them (`SysInterpreterInstance::addSearchExtension`).
+/// tried before the default extensions, which follow where they are not among
+/// them.
 pub(crate) fn candidates_with(
     name: &str,
     entries: &[String],
@@ -111,8 +109,8 @@ pub(crate) fn candidates_with(
         for spelling in spellings {
             let candidate = format!("{spelling}{}", extension.unwrap_or(""));
             // Qualified enough to name a file on its own, so the path is not
-            // searched at all -- `SysFileSystem::primitiveSearchName`'s own
-            // branch, and `searchPath` repeats the test for the same reason.
+            // searched at all, as the oracle's name search does, and its path
+            // search repeats the test for the same reason.
             if has_directory(&candidate) {
                 out.push(vec![candidate]);
                 continue;
@@ -165,14 +163,14 @@ pub(crate) fn first_regular(
 }
 
 /// The directory `path` names, trailing separator included, or `None` for a
-/// name with no directory part -- `SysFileSystem::extractDirectory`.
+/// name with no directory part.
 pub(crate) fn program_directory(path: &str) -> Option<&str> {
     let first = first_char_len(path)?;
     path[first..].rfind('/').map(|at| &path[..=first + at])
 }
 
 /// The extension `path` ends with, leading dot included, or `None` for a name
-/// whose last component carries none -- `SysFileSystem::extractExtension`.
+/// whose last component carries none.
 pub(crate) fn program_extension(path: &str) -> Option<&str> {
     let first = first_char_len(path)?;
     let at = first + path[first..].rfind(['/', '.'])?;
@@ -185,15 +183,13 @@ fn first_char_len(path: &str) -> Option<usize> {
     path.chars().next().map(char::len_utf8)
 }
 
-/// Whether `name`'s last component carries an extension --
-/// `SysFileSystem::hasExtension`.
+/// Whether `name`'s last component carries an extension.
 fn has_extension(name: &str) -> bool {
     program_extension(name).is_some()
 }
 
 /// Whether `name` carries enough directory information to be checked directly
-/// rather than searched for along the path --
-/// `SysFileSystem::hasDirectory`.
+/// rather than searched for along the path.
 fn has_directory(name: &str) -> bool {
     name.starts_with('~')
         || name.starts_with('/')
@@ -320,7 +316,7 @@ mod tests {
             vec!["/prog/", ".", "/pp"]
         );
         assert_eq!(search_entries(None, None, None), vec!["."]);
-        // The `::` case `SysFileSystem::searchPath` skips.
+        // The `::` case the oracle's path search skips.
         assert_eq!(
             search_entries(None, Some("/a::/b"), None),
             vec![".", "/a", "/b"]
@@ -511,7 +507,7 @@ mod tests {
         assert_eq!(program_extension("\u{e9}.x"), Some(".x"));
     }
 
-    /// `extractDirectory` never examines the first byte either, so `/x` has
+    /// The oracle's directory extraction never examines the first byte either, so `/x` has
     /// no directory.
     #[test]
     fn the_first_byte_is_never_a_directory_separator() {

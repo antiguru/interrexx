@@ -29,28 +29,25 @@ use collector::collect;
 pub(crate) use environments::{Environments, NATIVE_AT, NativeKind};
 
 /// A return code's whole-number value under the default precision, or `None`
-/// where it has none -- `RexxObject::numberValue(wholenumber_t &)`, which is
-/// what the `+++ "RC(n)"` line is gated on.
+/// where it has none, which is what the `+++ "RC(n)"` line is gated on.
 pub(crate) fn whole_value(text: &[u8]) -> Option<i32> {
     let number = interrexx_num::Number::parse(std::str::from_utf8(text).ok()?)?;
     i32::try_from(number.whole_value(9)?).ok()
 }
 
-/// `SYSSHELLPATH` for every unix but AIX
-/// (`interpreter/platform/unix/PlatformDefinitions.h:66`-`:70`).
+/// The shell directory for every unix but AIX.
 const SHELL_DIRECTORY: &str = "/bin";
 
 /// `MAX_COMMAND_ARGS`: the most arguments `ADDRESS PATH` splits a command
-/// into, beyond which the split fails
-/// (`interpreter/platform/unix/SystemCommands.cpp:70`).
+/// into, beyond which the split fails.
 const MAX_COMMAND_ARGS: usize = 400;
 
 /// `UNKNOWN_COMMAND`: what a shell answers for a command it could not find,
 /// and the one non-zero code raising `FAILURE` rather than `ERROR`.
 const UNKNOWN_COMMAND: i32 = 127;
 
-/// `RXSUBCOM_NOTREG` (`api/rexxapidefs.h:91`): the return code for an
-/// environment no handler is registered for.
+/// `RXSUBCOM_NOTREG`: the return code for an environment no handler is
+/// registered for.
 const NOT_REGISTERED: i32 = 30;
 
 /// What a command's return code did, and so what `.RS` answers.
@@ -100,8 +97,8 @@ pub(crate) struct CommandOutcome {
     pub(crate) condition: Option<Box<HandlerCondition>>,
 }
 
-/// A condition a registered handler raised through its thread context, as
-/// `RexxActivation::command` finds it (`execution/RexxActivation.cpp`).
+/// A condition a registered handler raised through its thread context, as the
+/// oracle's command path finds it.
 pub(crate) struct HandlerCondition {
     pub(crate) name: Vec<u8>,
     pub(crate) description: Option<Vec<u8>>,
@@ -154,10 +151,9 @@ pub(crate) enum Handler {
 }
 
 /// The handler registered for `environment`, or `None` for a name nothing
-/// answers. `registerCommandHandlers`
-/// (`interpreter/platform/unix/SystemCommands.cpp:1072`) is the registered
-/// set; the lookup upcases, and the name an activation stores keeps the
-/// spelling it was written with.
+/// answers. `registerCommandHandlers` is the registered set; the lookup
+/// upcases, and the name an activation stores keeps the spelling it was
+/// written with.
 fn handler_for(environment: &[u8]) -> Option<Handler> {
     let upper = environment.to_ascii_uppercase();
     match upper.as_slice() {
@@ -172,7 +168,6 @@ fn handler_for(environment: &[u8]) -> Option<Handler> {
     }
 }
 
-/// `scan_cmd` (`interpreter/platform/unix/SystemCommands.cpp:639`):
 /// `ADDRESS PATH` has no shell, so it splits its own command string. Blanks
 /// and tabs separate. A `"` opens a run that only a `"` **followed by
 /// whitespace or the end** closes, so a quote inside a run does not end it.
@@ -223,9 +218,8 @@ fn scan_command(command: &[u8]) -> Option<Vec<Vec<u8>>> {
 }
 
 /// Whether `command` carries a redirection or sequencing character outside a
-/// double-quoted run, which is what stops `handleCommandInternally`
-/// (`interpreter/platform/unix/SystemCommands.cpp:721`) handling it here. A
-/// backslash escapes the byte after it.
+/// double-quoted run, which is what stops `handleCommandInternally` handling
+/// it here. A backslash escapes the byte after it.
 fn shell_metacharacter(command: &[u8]) -> bool {
     let mut in_quotes = false;
     let mut escape = false;
@@ -251,7 +245,7 @@ enum Assignment {
     Export,
 }
 
-/// `st` after the keyword, with the blanks the C++ skips removed.
+/// `st` after the keyword, with the blanks the oracle skips removed.
 fn after_keyword(command: &[u8], keyword: usize) -> &[u8] {
     let rest = &command[keyword..];
     let at = rest
@@ -284,9 +278,8 @@ fn run_internally(interp: &mut Interp, command: &[u8]) -> Option<CommandOutcome>
     None
 }
 
-/// `unquote` (`interpreter/platform/unix/SystemCommands.cpp:453`): every `"`
-/// dropped, and a backslash dropped with the byte after it kept. A trailing
-/// backslash ends the text.
+/// Every `"` dropped, and a backslash dropped with the byte after it kept. A
+/// trailing backslash ends the text.
 fn unquote(text: &[u8]) -> Vec<u8> {
     let mut out = Vec::with_capacity(text.len());
     let mut bytes = text.iter();
@@ -303,13 +296,12 @@ fn unquote(text: &[u8]) -> Vec<u8> {
     out
 }
 
-/// `sys_process_cd` (`interpreter/platform/unix/SystemCommands.cpp:494`): the
-/// target after the leading spaces, unquoted, is where this interpreter's own
-/// directory moves. Nothing is the home directory. `~`, `~/rest` and `~ rest`
-/// are `HOME` with a `/` after it, the rest kept only after `~/`. `~user` and
-/// `~user/rest` are that account's home directory. `None` hands the command
-/// to the shell, as the C++ does where `HOME` is unset or the account is
-/// unknown. With `HOME` unset the oracle dies on `cd ~`
+/// The target after the leading spaces, unquoted, is where this interpreter's
+/// own directory moves. Nothing is the home directory. `~`, `~/rest` and `~
+/// rest` are `HOME` with a `/` after it, the rest kept only after `~/`.
+/// `~user` and `~user/rest` are that account's home directory. `None` hands
+/// the command to the shell, as the oracle does where `HOME` is unset or the
+/// account is unknown. With `HOME` unset the oracle dies on `cd ~`
 /// (`corpus/oracle-crashes.txt` entry 44), and that goes to the shell too.
 ///
 /// The directory is resolved as `chdir` resolves it, `..` after any link, and
@@ -435,7 +427,7 @@ fn assign_environment(
         return Some(CommandOutcome::of(0));
     }
     let Some(equals) = equals else {
-        // No assignment operator at all: the C++ treats this as no command,
+        // No assignment operator at all: the oracle treats this as no command,
         // except where a pipe or a redirection means a shell should see it.
         if rest.contains(&b'|') || rest.contains(&b'>') {
             return None;
@@ -461,10 +453,9 @@ fn exit_code(status: std::process::ExitStatus) -> i32 {
     }
 }
 
-/// The `SYNTAX` error the `::OPTIONS` for `condition` makes of it: 98.971
-/// for `FAILURE`, the `LOSTDIGITS`, `NOSTRING` and `NOTREADY` ones for a
-/// handler's condition of that name (`Activity::raiseCondition`,
-/// `concurrency/Activity.cpp:596-620`), and 98.970 for any other.
+/// The `SYNTAX` error the `::OPTIONS` for `condition` makes of it: 98.971 for
+/// `FAILURE`, the `LOSTDIGITS`, `NOSTRING` and `NOTREADY` ones for a
+/// handler's condition of that name, and 98.970 for any other.
 pub(crate) fn escalated(condition: &[u8], description: &[u8], rc: &[u8]) -> Raised {
     match condition {
         b"FAILURE" => Raised::failure_syntax(description, rc),
@@ -799,19 +790,16 @@ impl Interp {
     /// environment in force, answering its return code and status.
     ///
     /// A handler an extension registered answers first, a built-in name's
-    /// included, as `InterpreterInstance::resolveCommandHandler` finds it. An
-    /// environment no handler is registered for runs nothing and answers
-    /// [`NOT_REGISTERED`] with a `FAILURE` -- measured, the command is
-    /// evaluated and never executed.
+    /// included. An environment no handler is registered for runs nothing and
+    /// answers [`NOT_REGISTERED`] with a `FAILURE` -- measured, the command
+    /// is evaluated and never executed.
     ///
-    /// `io`'s targets are begun before the handler runs
-    /// (`CommandHandler::call`), so a target that cannot be begun stops the
-    /// command before it starts.
+    /// `io`'s targets are begun before the handler runs, so a target that
+    /// cannot be begun stops the command before it starts.
     ///
     /// A child's wait leaves the baton, answering `Left`, outside a park's
-    /// continuation (`NativeActivation::run`,
-    /// `execution/NativeActivation.cpp:1691`, releases the kernel lock around
-    /// a command handler), where a halt can abandon it.
+    /// continuation (the kernel lock is released around a command handler),
+    /// where a halt can abandon it.
     ///
     /// A handler written in Rexx (`.CommandHandler~register`) is sent the
     /// command on this activity ([`Interp::run_rexx_command`]).
@@ -825,7 +813,7 @@ impl Interp {
         if let Some(io) = io {
             io.gather_input(self)?;
         }
-        // The command exit has the first pass (`RexxActivation::command`).
+        // The command exit has the first pass.
         if self.exits.is_some()
             && let Some(outcome) = self.command_exit(environment, command)?
         {
@@ -968,11 +956,10 @@ impl Interp {
         finished.map(|()| CommandOutcome::of(ended.rc))
     }
 
-    /// `CommandHandler::call` (`concurrency/CommandHandler.cpp:98-151`) for a
-    /// handler an extension registered: a direct one refuses any redirection
-    /// with 98.921, and a redirecting one reads and writes through `io`,
-    /// whose lines reach their targets once it returns, a `SYNTAX` it raised
-    /// notwithstanding.
+    /// The call of a handler an extension registered: a direct one refuses
+    /// any redirection with 98.921, and a redirecting one reads and writes
+    /// through `io`, whose lines reach their targets once it returns, a
+    /// `SYNTAX` it raised notwithstanding.
     ///
     /// `RC` is the object the handler returned, or `.false` for none, and
     /// the status is `Normal` unless it raised `ERROR` or `FAILURE`.
@@ -1021,8 +1008,8 @@ impl Interp {
                 return Err(raised);
             }
         };
-        // `RexxActivation::command`: the condition's `RESULT` stands in for
-        // its missing `RC`, and then for the handler's answer.
+        // The condition's `RESULT` stands in for its missing `RC`, and then
+        // for the handler's answer.
         let object = match condition.as_ref().and_then(|held| held.result) {
             Some(result) => result,
             None => match handled.value {
@@ -1048,9 +1035,8 @@ impl Interp {
     /// The security manager's `COMMAND` checkpoint, and then the command
     /// itself where the manager did not take it.
     ///
-    /// `Activity::callCommandExit` (`concurrency/Activity.cpp:2782`-`2792`)
-    /// runs **before the handler is resolved**, so an environment nothing
-    /// answers still reaches the manager.
+    /// The command exit runs **before the handler is resolved**, so an
+    /// environment nothing answers still reaches the manager.
     fn checked_command(
         &mut self,
         environment: &[u8],
@@ -1071,8 +1057,7 @@ impl Interp {
         self.command_from_manager(info).map(Commanded::Done)
     }
 
-    /// What `SecurityManager::checkCommand` (`execution/SecurityManager.cpp:
-    /// 244`-`281`) reads back out of the info directory once the manager has
+    /// What the security manager's command check reads back out of the info directory once it has
     /// handled a command: the return code, and which condition to raise.
     fn command_from_manager(&mut self, info: ObjRef) -> Result<CommandOutcome, Failure> {
         let status = if self.security_entry(info, key::FAILURE)?.is_some() {
@@ -1373,26 +1358,26 @@ impl Interp {
         }
 
         // **`::OPTIONS ERROR|FAILURE SYNTAX` escalates where the condition is
-        // raised, not where it is delivered**: `Activity::raiseCondition`
-        // reports the syntax error from inside the handler's own
-        // `RaiseCondition`, so `RexxActivation::command` never regains control
-        // and neither `RC`, `.RS` nor the failure retrace happens. Measured on
-        // three descriptors -- `::OPTIONS FAILURE SYNTAX` with an untrapped
-        // 127 shows the clause echo the error report writes and nothing else,
-        // where the same program without the directive shows `>>>` and
-        // `+++ "RC(127)"` first; `trace e` with `::OPTIONS ERROR SYNTAX` is
-        // the same for an `exit 3`, and its control without the directive
-        // keeps the retrace. `RC` in a `SIGNAL ON SYNTAX` handler is 98, the
-        // raise's own, rather than the command's code or a stale one.
+        // raised, not where it is delivered**: the oracle reports the syntax
+        // error from inside the handler's own `RaiseCondition`, so the command
+        // path never regains control and neither `RC`, `.RS` nor the failure
+        // retrace happens. Measured on three descriptors -- `::OPTIONS FAILURE
+        // SYNTAX` with an untrapped 127 shows the clause echo the error report
+        // writes and nothing else, where the same program without the
+        // directive shows `>>>` and `+++ "RC(127)"` first; `trace e` with
+        // `::OPTIONS ERROR SYNTAX` is the same for an `exit 3`, and its
+        // control without the directive keeps the retrace. `RC` in a `SIGNAL
+        // ON SYNTAX` handler is 98, the raise's own, rather than the command's
+        // code or a stale one.
         //
         // The **original** condition is what is tested here. A `FAILURE` with
         // only `ERROR SYNTAX` set escalates at neither point: it traces, finds
         // no trap, is renamed, and is caught by the check in
-        // `raise_command_condition` -- the C++'s own second test.
+        // `raise_command_condition` -- the oracle's own second test.
         //
         // A handler's `LOSTDIGITS`, `NOSTRING` and `NOTREADY` escalate here
-        // too, under their own `::OPTIONS`: `Activity::raiseCondition` has an
-        // arm for each and none for `NOVALUE`.
+        // too, under their own `::OPTIONS`: the oracle has an arm for each
+        // and none for `NOVALUE`.
         match &outcome.condition {
             Some(held) => {
                 if held.name != b"NOVALUE" && self.condition_raises_syntax(&held.name) {
@@ -1410,13 +1395,12 @@ impl Interp {
         }
 
         // A command typed at a debug pause sets neither `RC` nor `.RS`,
-        // traces nothing and raises nothing (`RexxActivation.cpp:4442`).
+        // traces nothing and raises nothing.
         if self.debug_pause() {
             return Ok(Flow::Next);
         }
 
-        // `RC` before anything else, which is where the C++ puts it too
-        // (`RexxActivation::command`).
+        // `RC` before anything else, which is where the oracle puts it too.
         //
         // **A manager's own `RC` is assigned as the object it set**, not as
         // a rendering of it: measured, `info~rc = 'abc'` leaves `RC` reading
@@ -1491,10 +1475,10 @@ impl Interp {
     }
 
     /// Offers a condition a registered handler raised to the traps in force
-    /// as `RexxActivation::command` does: under its own name and with the
-    /// handler's description, `ADDITIONAL` and `RESULT`, its `RESULT` also
-    /// its `RC`, which an `ERROR` or `FAILURE` carries even with no `RESULT`.
-    /// An untrapped `FAILURE` is re-raised as `ERROR`; any other untrapped
+    /// as the oracle does: under its own name and with the handler's
+    /// description, `ADDITIONAL` and `RESULT`, its `RESULT` also its `RC`,
+    /// which an `ERROR` or `FAILURE` carries even with no `RESULT`. An
+    /// untrapped `FAILURE` is re-raised as `ERROR`; any other untrapped
     /// condition is silent.
     fn raise_handler_condition(
         &mut self,
@@ -1502,11 +1486,10 @@ impl Interp {
         name: &[u8],
     ) -> Result<(), Failure> {
         // **Only `ERROR` and `FAILURE` meet their `::OPTIONS ... SYNTAX` ahead
-        // of the traps** (`RexxActivation::command`'s `errorCondition` and
-        // `failureCondition` tests): measured, a handler's `USER` under
-        // `::OPTIONS ERROR SYNTAX` reaches a `SIGNAL ON USER` handler, and
-        // untrapped it is ignored. The re-raise of an untrapped `FAILURE`
-        // re-enters here as `ERROR`, the C++'s second `ERROR SYNTAX` test.
+        // of the traps**: measured, a handler's `USER` under `::OPTIONS ERROR
+        // SYNTAX` reaches a `SIGNAL ON USER` handler, and untrapped it is
+        // ignored. The re-raise of an untrapped `FAILURE` re-enters here as
+        // `ERROR`, the oracle's second `ERROR SYNTAX` test.
         let command_status = matches!(name, b"ERROR" | b"FAILURE");
         if command_status && self.condition_raises_syntax(name) {
             return Err(self.handler_escalation(held, name));
@@ -1560,8 +1543,8 @@ impl Interp {
     /// exiting 3 reaches a lone `SIGNAL ON FAILURE` handler not at all.
     ///
     /// `supplied` is the `RC` a security manager set: the condition carries
-    /// that object as its `RC` and no `RESULT`, as `checkCommand`'s
-    /// `createConditionObject` builds it.
+    /// that object as its `RC` and no `RESULT`, as the oracle's command check
+    /// builds it.
     fn raise_command_condition(
         &mut self,
         condition: &'static str,
@@ -1569,13 +1552,13 @@ impl Interp {
         rc: i32,
         supplied: Option<ObjRef>,
     ) -> Result<(), Failure> {
-        // **Ahead of the traps**, which is where `RexxActivation::command`
-        // checks it. That cannot overtake a handler: arming one clears the
-        // escalation first (`ConditionSyntax::disable_for` turns ERROR and
-        // FAILURE off for `CALL ON` as well as `SIGNAL ON`), and measured,
-        // `::OPTIONS ERROR SYNTAX` with `signal on error` armed runs the
-        // handler and exits 0. The reraise below re-enters here, which is the
-        // C++'s second check after a FAILURE becomes an ERROR.
+        // **Ahead of the traps**, which is where the oracle checks it. That
+        // cannot overtake a handler: arming one clears the escalation first
+        // (`ConditionSyntax::disable_for` turns ERROR and FAILURE off for
+        // `CALL ON` as well as `SIGNAL ON`), and measured, `::OPTIONS ERROR
+        // SYNTAX` with `signal on error` armed runs the handler and exits 0.
+        // The reraise below re-enters here, which is the oracle's second check
+        // after a FAILURE becomes an ERROR.
         if self.condition_raises_syntax(condition.as_bytes()) {
             return Err(
                 escalated(condition.as_bytes(), command, &rc.to_string().into_bytes()).into(),

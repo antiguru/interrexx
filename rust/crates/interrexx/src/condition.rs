@@ -1,6 +1,6 @@
 //! The condition object a trap holds, whose copy `CONDITION('O')` answers:
-//! the Directory `Activity::createConditionObject` builds, with the entries
-//! the raised condition's own kind carries.
+//! the Directory the oracle builds, with the entries the raised condition's
+//! own kind carries.
 
 use interrexx_core::ObjRef;
 
@@ -10,8 +10,8 @@ use crate::error::{Failure, FailureSite, Raised};
 use crate::plan::Package;
 
 /// What the levels a trapped failure left contribute to its condition object:
-/// the frames `Activity::generateProgramInformation` takes at the raise, which
-/// this crate can only take as each level ends.
+/// the frames the oracle takes at the raise, which this crate can only take
+/// as each level ends.
 pub(crate) struct Unwound<'a> {
     /// Innermost first, as [`Activity::failure_sites`] holds them.
     pub(crate) sites: &'a [FailureSite],
@@ -56,9 +56,8 @@ mod key {
     pub(super) const STACKFRAMES: &[u8] = b"STACKFRAMES";
     pub(super) const TRACEBACK: &[u8] = b"TRACEBACK";
 
-    /// The order `Activity::createExceptionObject` puts a `SYNTAX`
-    /// condition's entries in, then the trap's `INSTRUCTION`
-    /// (`RexxActivation.cpp:2524`); iteration order depends on it.
+    /// The order the oracle puts a `SYNTAX` condition's entries in, then the
+    /// trap's `INSTRUCTION`; iteration order depends on it.
     pub(super) const SYNTAX_ORDER: &[&[u8]] = &[
         CODE,
         RC,
@@ -77,7 +76,7 @@ mod key {
         INSTRUCTION,
     ];
 
-    /// `Activity::createConditionObject`'s order, for every other condition.
+    /// The oracle's order, for every other condition.
     pub(super) const ORDER: &[&[u8]] = &[
         CONDITION,
         DESCRIPTION,
@@ -136,7 +135,7 @@ impl Interp {
         self.build_condition_object_from(raised, Some(false), false, Some(unwound))
     }
 
-    /// `Activity::reraiseException` over `object`: `POSITION`, `PROGRAM` and
+    /// The oracle's re-raise over `object`: `POSITION`, `PROGRAM` and
     /// `PACKAGE` become those of the level it was re-raised in, `origin` when
     /// that level has since been left, and it is `PROPAGATED`.
     pub(crate) fn reraise_condition_object(
@@ -223,8 +222,8 @@ impl Interp {
         attached
     }
 
-    /// `MessageClass::error` (`classes/MessageClass.cpp:706`) for every
-    /// message whose send the condition behind `object` ended.
+    /// What `Message~error` answers for every message whose send the
+    /// condition behind `object` ended.
     pub(crate) fn attach_condition(&mut self, object: ObjRef) {
         for message in std::mem::take(&mut self.activity.failed_sends) {
             self.set_native_entry(message, crate::dispatch::MESSAGE_CONDITION, object);
@@ -325,7 +324,7 @@ impl Interp {
     }
 
     /// [`Interp::reraise_condition_object`] for a `SIGNAL ON` trap, which
-    /// names its instruction in the object (`RexxActivation::trap`).
+    /// names its instruction in the object.
     pub(crate) fn trap_reraised_condition_object(
         &mut self,
         object: ObjRef,
@@ -421,9 +420,9 @@ impl Interp {
 
     /// [`Interp::build_condition_object`] for a condition the innermost
     /// native call raised, whose own frame leads `STACKFRAMES` and
-    /// `TRACEBACK` (`NativeActivation::createStackFrame`). Where it is a
-    /// callback's failure, `levels` are the levels it left, whose frames lead
-    /// those, as `Activity::raiseException` builds the object at the raise.
+    /// `TRACEBACK`. Where it is a callback's failure, `levels` are the levels
+    /// it left, whose frames lead those, as the oracle builds the object at
+    /// the raise.
     pub(crate) fn build_native_condition_object(
         &mut self,
         raised: &Raised,

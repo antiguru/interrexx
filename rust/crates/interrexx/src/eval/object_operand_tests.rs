@@ -152,10 +152,9 @@ fn a_class_objects_operators_are_sent_as_messages() {
     }
 }
 
-/// **R12 at the one numeric surface that is not an operator**: a
-/// controlled `DO` header's `initial`, `TO` and `BY` values are sent `+`
-/// (`ControlledLoop::setup`), so an object without one is 97.1. Measured,
-/// oracle rc 159 for each.
+/// **R12 at the one numeric surface that is not an operator**: a controlled
+/// `DO` header's `initial`, `TO` and `BY` values are sent `+`, so an object
+/// without one is 97.1. Measured, oracle rc 159 for each.
 #[test]
 fn an_object_in_a_do_headers_numeric_position_is_sent_plus() {
     for (source, object) in [

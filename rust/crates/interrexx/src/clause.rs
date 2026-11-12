@@ -54,27 +54,23 @@ pub(crate) struct ClauseState {
     /// it began**, which is the only thing an assignment's `>>>` echo is
     /// allowed to consult.
     pub(crate) instructions_traced_at_entry: bool,
-    /// The line the clause currently being stepped starts at -- **`SIGL`'s**
-    /// own value, one control transfer away from being read, and the exact
-    /// analogue of `current_value_indent` just above: `Interp::invoke_call`
-    /// (`CALL`, and `ExprKind::Call`'s expression form through `eval_call`,
-    /// `eval.rs`) and `SIGNAL`'s own two `step` arms all need "which line is
-    /// this transfer's own", and `eval_call` reaches `invoke_call`
-    /// from arbitrarily deep inside an expression tree with no `source`/
-    /// `instruction` of its own to compute it from -- threading either
-    /// through `eval`/`eval_node`'s entire recursive call graph is exactly
-    /// the "every arm in `eval.rs`" retrofit `current_value_indent`'s own
-    /// doc comment already declined for the identical reason. Set
-    /// unconditionally by `Op::Clause`'s region, via `clause_line`, which
-    /// honours `clause_line_override` the same way `clause_site` does -- so
-    /// a `SIGNAL`/`CALL` fired from inside an `INTERPRET` fragment reads the
-    /// *enclosing* `INTERPRET` clause's own line, matching the oracle's own
-    /// `RexxActivation::signalTo`, read directly: an interpret-created
-    /// activation delegates a `SIGNAL` to its parent rather than setting
-    /// `SIGL` itself, so what ends up in `SIGL` is the parent's own
-    /// currently-executing instruction -- the `INTERPRET` clause -- and this
-    /// field reproduces that observable answer without this crate adopting
-    /// the C++ architecture that produces it (`run_fragment` still runs
+    /// The line the clause currently being stepped starts at -- **`SIGL`'s** own value, one
+    /// control transfer away from being read, and the exact analogue of
+    /// `current_value_indent` just above: `Interp::invoke_call` (`CALL`, and
+    /// `ExprKind::Call`'s expression form through `eval_call`, `eval.rs`) and `SIGNAL`'s
+    /// own two `step` arms all need "which line is this transfer's own", and `eval_call`
+    /// reaches `invoke_call` from arbitrarily deep inside an expression tree with no
+    /// `source`/ `instruction` of its own to compute it from -- threading either through
+    /// `eval`/`eval_node`'s entire recursive call graph is exactly the "every arm in
+    /// `eval.rs`" retrofit `current_value_indent`'s own doc comment already declined for
+    /// the identical reason. Set unconditionally by `Op::Clause`'s region, via
+    /// `clause_line`, which honours `clause_line_override` the same way `clause_site` does
+    /// -- so a `SIGNAL`/`CALL` fired from inside an `INTERPRET` fragment reads the
+    /// *enclosing* `INTERPRET` clause's own line, matching the oracle: an interpret-created
+    /// activation delegates a `SIGNAL` to its parent rather than setting `SIGL` itself, so
+    /// what ends up in `SIGL` is the parent's own currently-executing instruction -- the
+    /// `INTERPRET` clause -- and this field reproduces that observable answer without this
+    /// crate adopting the oracle's architecture that produces it (`run_fragment` still runs
     /// inside the creating activation, not a nested one of its own).
     current_clause_line: usize,
     /// The index, in the running activation's own body, of the clause being
@@ -386,8 +382,7 @@ impl Interp {
             return Ok(ClauseOutcome::Ran(ran));
         };
         // The halt and trace exits, ahead of the conditions the boundary
-        // delivers (`RexxActivation::processClauseBoundary`); their failure
-        // is the clause's.
+        // delivers; their failure is the clause's.
         if self.clause_exits {
             if let Some(value) = value.rooted() {
                 self.roots.activity_mut().push_temp(value);

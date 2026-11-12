@@ -223,7 +223,7 @@ fn exit_value_covers_the_exit_instructions_own_result_line() {
 /// worth pinning is a *choice* of prefix: an assigned target traces `>=>`
 /// under `I` and `>>>` under `R`, never both, and the placeholder's `>.>`
 /// appears under `I` only. Either mode alone passes against an engine with two
-/// independent gates. The program's own header has the C++ site and says why
+/// independent gates. The program's own header has the oracle site and says why
 /// it contains no `parse source`.
 #[test]
 fn parse_placeholder_covers_the_dummy_prefix_and_the_two_modes_disagreement() {

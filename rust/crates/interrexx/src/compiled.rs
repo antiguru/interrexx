@@ -1,9 +1,8 @@
 //! The compiled program image `rexxc` writes: the oracle's `#!` line and
-//! `ProgramMetaData` header layout (`classes/support/ProgramMetaData.cpp`),
-//! with this build's own magic number and format version, then the name of
-//! the routine the image holds, as a 4-byte little-endian length and its
-//! bytes, then the checked source. No compatibility is promised between
-//! versions of this crate.
+//! `ProgramMetaData` header layout, with this build's own magic number and
+//! format version, then the name of the routine the image holds, as a 4-byte
+//! little-endian length and its bytes, then the checked source. No
+//! compatibility is promised between versions of this crate.
 
 use interrexx_inventory::errors::{E3_903, E3_905};
 use interrexx_parse::{ProgramSource, SourceKind};
@@ -21,8 +20,8 @@ const TAG: &[u8] = b"/**/@REXX\0";
 /// What the encoded form carries in place of the header.
 const ENCODED_TAG: &[u8] = b"/**/@REXX@\n";
 
-/// The second line an array of lines holds when it is an encoded image
-/// (`LanguageParser`'s `ENCODED_NEEDLE`).
+/// The second line an array of lines holds when it is an encoded image (the
+/// encoded-image marker).
 const ENCODED_LINE: &[u8] = b"/**/@REXX@";
 
 /// `ProgramMetaData`'s 64-bit size, up to `imageData`.
@@ -42,7 +41,7 @@ const FORMAT_VERSION: u16 = 2;
 /// The width of the routine name's length.
 const NAME_LENGTH_BYTES: usize = 4;
 
-/// The base64 line length, `ProgramMetaData::encodingChunkLength`.
+/// The base64 line length.
 const CHUNK: usize = 72;
 
 /// What a program file's bytes turn out to hold.
@@ -72,14 +71,11 @@ fn header_prefix() -> [u8; LENGTH_AT] {
     header
 }
 
-/// The image of `source`, whose routine is called `name`: the oracle names
-/// a translated program's routine for the file it was read from and keeps
-/// that name in the image (`RoutineClass::flatten`,
-/// `classes/RoutineClass.cpp:148`). Binary, or with `encode` the encoded tag
-/// and the base64 of the image in lines of [`CHUNK`] digits.
-///
-/// # Panics
-/// If `name` is longer than a `u32` counts.
+/// The image of `source`, whose routine is called `name`: the oracle names a
+/// translated program's routine for the file it was read from and keeps that
+/// name in the image. Binary, or with `encode` the encoded tag and the base64
+/// of the image in lines of [`CHUNK`] digits. # Panics If `name` is longer
+/// than a `u32` counts.
 pub fn write_image(source: &[u8], name: &[u8], encode: bool) -> Vec<u8> {
     let mut image =
         Vec::with_capacity(HEADER_BYTES + NAME_LENGTH_BYTES + name.len() + source.len());
@@ -103,8 +99,7 @@ pub fn write_image(source: &[u8], name: &[u8], encode: bool) -> Vec<u8> {
     out
 }
 
-/// What `bytes` hold, decided as `ProgramMetaData::processRestoreData` and
-/// `validate` decide it.
+/// What `bytes` hold, decided as the oracle decides it.
 pub fn restore(bytes: &[u8]) -> Restore {
     let mut rest = bytes;
     if rest.starts_with(b"#!") {
@@ -125,9 +120,9 @@ pub fn restore(bytes: &[u8]) -> Restore {
     Restore::Source
 }
 
-/// The source `text`, a program buffer's bytes, holds: its own, or the
-/// source of the image it is (`ProgramMetaData::restore`). A damaged or
-/// foreign image raises 3.903 and undecodable base64 3.905, naming `name`.
+/// The source `text`, a program buffer's bytes, holds: its own, or the source
+/// of the image it is. A damaged or foreign image raises 3.903 and
+/// undecodable base64 3.905, naming `name`.
 pub(crate) fn program_source(text: Vec<u8>, name: &[u8]) -> Result<ProgramSource, Raised> {
     match restore(&text) {
         Restore::Source => Ok(ProgramSource::new(text, SourceKind::Program)),
@@ -136,8 +131,7 @@ pub(crate) fn program_source(text: Vec<u8>, name: &[u8]) -> Result<ProgramSource
 }
 
 /// The source an array of lines holds when its second line is the encoded
-/// tag, joined with line feeds and restored (`LanguageParser::
-/// createProgram(name, array, context)`), or `None` where the lines are
+/// tag, joined with line feeds and restored, or `None` where the lines are
 /// source.
 pub(crate) fn lines_source(lines: &[&[u8]], name: &[u8]) -> Option<Result<ProgramSource, Raised>> {
     if !encoded_lines(lines) {
@@ -203,9 +197,8 @@ fn image_source(image: &[u8]) -> Restore {
     }
 }
 
-/// `StringUtil::decodeBase64` (`classes/support/StringUtil.cpp:1743`): line
-/// ends only between quartets, `=` only in a quartet's last two digits, and
-/// anything after the padding a line end. `None` is its refusal.
+/// Line ends only between quartets, `=` only in a quartet's last two digits,
+/// and anything after the padding a line end. `None` is its refusal.
 fn decode(text: &[u8]) -> Option<Vec<u8>> {
     let mut out = Vec::with_capacity(text.len() / 4 * 3);
     let mut digit = 0;

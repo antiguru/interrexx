@@ -23,9 +23,8 @@ pub(crate) enum SemaphoreKey {
 /// How a semaphore wait re-tests its condition when it resumes.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum WaitKind {
-    /// `EventSemaphore~wait`: a timed one re-tests the post, as
-    /// `SysSemaphore::wait(t)` loops (`common/platform/unix/SysSemaphore.cpp:298`);
-    /// an untimed one does not (`:250`).
+    /// `EventSemaphore~wait`: a timed one re-tests the post, as the oracle's
+    /// timed wait loops; an untimed one does not.
     Event,
     /// `MutexSemaphore~acquire`: takes the lock where it is free.
     Mutex,
@@ -45,12 +44,11 @@ pub(crate) struct SemaphoreWait {
     pub(crate) deadline: Option<Instant>,
 }
 
-/// How often a timed `Sys*Sem` wait tries its semaphore
-/// (`SEM_WAIT_PERIOD`, `platform/unix/SysRexxUtil.cpp:800`).
+/// How often a timed `Sys*Sem` wait tries its semaphore.
 pub(crate) const SEM_POLL: Duration = Duration::from_millis(100);
 
 /// One semaphore's state: an event's post, a counting semaphore's value, or a
-/// mutex's lock (`classes/MutexSemaphore.cpp`).
+/// mutex's lock.
 #[derive(Default)]
 struct Semaphore {
     posted: bool,
@@ -60,9 +58,9 @@ struct Semaphore {
     owner: Option<ActivityId>,
     /// The recursive pthread mutex's lock count.
     depth: u32,
-    /// `MutexSemaphoreClass::nestCount`.
+    /// The nesting count `MutexSemaphore~nestCount` answers.
     nest: u32,
-    /// Whether `MutexSemaphoreClass::close` has run.
+    /// Whether `MutexSemaphore~close` has run.
     closed: bool,
     waiters: Vec<Waiter>,
 }
@@ -89,9 +87,8 @@ pub(crate) struct Semaphores {
     handles: u64,
 }
 
-/// The first unnamed `Sys*Sem` handle. The oracle's are `malloc` addresses
-/// (`platform/unix/SysRexxUtil.cpp:676`), wider than a whole number at the
-/// default digits; these are too.
+/// The first unnamed `Sys*Sem` handle. The oracle's are `malloc` addresses,
+/// wider than a whole number at the default digits; these are too.
 const FIRST_HANDLE: u64 = 1 << 40;
 
 impl Semaphores {
@@ -209,8 +206,8 @@ impl Interp {
         let me = self.running_activity();
         self.activities.semaphores.withdraw(me);
         // A halt withdrew the wait: an untimed `Sys*Sem` wait answers `0`, as
-        // `sem_wait` interrupted does (`platform/unix/SysRexxUtil.cpp:836-850`),
-        // and every other wait answers that it took nothing.
+        // `sem_wait` interrupted does, and every other wait answers that it
+        // took nothing.
         if std::mem::take(&mut self.activity.woken_by_halt) {
             let answer = wait.kind == WaitKind::Counting;
             self.activities.semaphores.answers.insert(me, answer);
@@ -279,8 +276,8 @@ impl Interp {
             .is_some_and(|semaphore| semaphore.posted)
     }
 
-    /// Posts the event semaphore `object` and readies every waiter
-    /// (`SysSemaphore::post`, a broadcast).
+    /// Posts the event semaphore `object` and readies every waiter (a
+    /// broadcast).
     pub(crate) fn post_event(&mut self, object: ObjRef) {
         let key = SemaphoreKey::Object(object);
         self.activities
@@ -315,10 +312,9 @@ impl Interp {
         }
     }
 
-    /// `MutexSemaphoreClass::request` before any wait: the running activity
-    /// takes the lock where it is free or its own; `immediate` is a timeout
-    /// of zero, which never waits; a closed one is refused whatever the
-    /// timeout.
+    /// `MutexSemaphore~request` before any wait: the running activity takes
+    /// the lock where it is free or its own; `immediate` is a timeout of
+    /// zero, which never waits; a closed one is refused whatever the timeout.
     pub(crate) fn request_mutex(&mut self, object: ObjRef, immediate: bool) -> Request {
         let me = self.running_activity();
         let semaphore = self
@@ -349,8 +345,8 @@ impl Interp {
         }
     }
 
-    /// `MutexSemaphoreClass::release`: `false` where the lock is not held at
-    /// all or not by the running activity.
+    /// `MutexSemaphore~release`: `false` where the lock is not held at all or
+    /// not by the running activity.
     pub(crate) fn release_mutex(&mut self, object: ObjRef) -> bool {
         let me = self.running_activity();
         let key = SemaphoreKey::Object(object);
@@ -370,8 +366,8 @@ impl Interp {
         true
     }
 
-    /// `MutexSemaphoreClass::close`: the nesting goes and no acquire takes the
-    /// lock again, while a lock it held stays held.
+    /// `MutexSemaphore~close`: the nesting goes and no acquire takes the lock
+    /// again, while a lock it held stays held.
     pub(crate) fn close_mutex(&mut self, object: ObjRef) {
         let semaphore = self
             .activities
@@ -383,8 +379,8 @@ impl Interp {
         semaphore.nest = 0;
     }
 
-    /// `Activity::cleanupMutexes` for the running activity, which has ended:
-    /// each lock it holds is released once per nesting level.
+    /// The cleanup for the running activity, which has ended: each lock it
+    /// holds is released once per nesting level.
     pub(crate) fn release_ended_mutexes(&mut self) {
         let me = self.running_activity();
         let mut freed = Vec::new();

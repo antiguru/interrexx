@@ -30,17 +30,17 @@ impl Interp {
         let value = self.eval_in_parse(code, operand)?;
         self.roots.activity_mut().push_temp(value);
         // `>>>` for the operand, after `eval`'s own `>L>`/`>V>` and before
-        // the conversion that can fail: `integerTrigger`
-        // (`ParseTrigger.cpp:143`-`153`) traces and only then converts, so
-        // the operand's own value line is emitted even on the 26.4 path.
-        // **Copied only where a copy is needed**, which is neither of the two
-        // arms below. `trace_result` returns at once unless `results` is on,
-        // and a search reads the bytes where they already are: `Cursor` is a
-        // local of `exec_parse` rather than a field, so a shared borrow of
-        // the value can be live while it is written to. The unconditional
-        // `to_vec` here was 5.2% of every allocation `samples/rexxcps.rex`
-        // made -- one per trigger, on a program whose templates are mostly
-        // numeric triggers that never look at the bytes at all.
+        // the conversion that can fail: `integerTrigger` traces and only then
+        // converts, so the operand's own value line is emitted even on the
+        // 26.4 path. **Copied only where a copy is needed**, which is neither
+        // of the two arms below. `trace_result` returns at once unless
+        // `results` is on, and a search reads the bytes where they already
+        // are: `Cursor` is a local of `exec_parse` rather than a field, so a
+        // shared borrow of the value can be live while it is written to. The
+        // unconditional `to_vec` here was 5.2% of every allocation
+        // `samples/rexxcps.rex` made -- one per trigger, on a program whose
+        // templates are mostly numeric triggers that never look at the bytes
+        // at all.
         if self.trace_mode().results {
             let rendered = self.traced_string_value_text(value)?;
             self.trace_result(indent, &rendered);

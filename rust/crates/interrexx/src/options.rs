@@ -39,19 +39,16 @@ pub(crate) struct PackageOptions {
     /// every activation of its code starts from and can then turn off.
     pub(crate) syntax: ConditionSyntax,
     /// `NOPROLOG`, stored negated so that a package naming no `::OPTIONS` has
-    /// its prologue run -- `PackageClass::isPrologEnabled`, which
-    /// `runProlog` reads (`classes/PackageClass.cpp:2131`).
+    /// its prologue run, which the prologue run reads.
     pub(crate) suppress_prolog: bool,
     /// Which options a `::OPTIONS` directive named, as opposed to which are
-    /// in force -- `PackageClass::isExplicit*Option`, which
-    /// `Package~options('X')` renders and which the class-level override
-    /// mechanism consults before it writes.
+    /// in force, which `Package~options('X')` renders and which the
+    /// class-level override mechanism consults before it writes.
     explicit: Explicit,
 }
 
 /// The `::OPTIONS` subkeywords a package's directives actually named, in the
-/// order `PackageClass::optionsExplicitlySetToString`
-/// (`classes/PackageClass.cpp:2910`) writes them.
+/// order `Package~options` writes them.
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Default)]
 struct Explicit {
     named: [bool; EXPLICIT_WORDS.len()],
@@ -163,7 +160,7 @@ impl PackageOptions {
                 .expect("every name passed here is an EXPLICIT_WORDS entry");
             self.explicit.named[which] = true;
             // `PROLOG` and `NOPROLOG` clear each other: the directive parser
-            // keeps one of the two flags (`parser/DirectiveParser.cpp:1315`).
+            // keeps one of the two flags.
             let other = match word {
                 "PROLOG" => Some("NOPROLOG"),
                 "NOPROLOG" => Some("PROLOG"),
@@ -231,9 +228,9 @@ impl PackageOptions {
         self.syntax.raises(b"LOSTDIGITS")
     }
 
-    /// `PackageSetting::toString` (`execution/PackageSetting.hpp:122`): these
-    /// settings written back as the `::OPTIONS` directive that would produce
-    /// them, which `Package~options` answers when sent no option name.
+    /// These settings written back as the `::OPTIONS` directive that would
+    /// produce them, which `Package~options` answers when sent no option
+    /// name.
     pub(crate) fn to_options_string(&self, trace: Option<TraceMode>) -> Vec<u8> {
         let condition = |which: &[u8]| {
             if self.syntax.raises(which) {
@@ -316,9 +313,9 @@ NOSTRING {} NOTREADY {} NOVALUE {} {} TRACE {}",
         text.as_bytes().to_vec()
     }
 
-    /// The setting switch's arms that take a value's first letter --
-    /// `PackageClass::options` (`classes/PackageClass.cpp:2418`). `Err` is
-    /// the list the 93.914 for any other letter names.
+    /// The setting switch's arms that take a value's first letter, as
+    /// `Package~options` does. `Err` is the list the 93.914 for any other
+    /// letter names.
     pub(crate) fn set_by_letter(
         &mut self,
         which: OptionName,
@@ -356,10 +353,10 @@ NOSTRING {} NOTREADY {} NOVALUE {} {} TRACE {}",
         Ok(())
     }
 
-    /// `PackageClass::overridePackageSettings`: every setting this package's
-    /// own `::OPTIONS` did not name, taken from `defaults`. Only `PROLOG`
-    /// guards the prologue setting: a package naming `NOPROLOG` takes it
-    /// too, as `isExplicitPrologOption` reads one flag.
+    /// The package-settings override: every setting this package's own
+    /// `::OPTIONS` did not name, taken from `defaults`. Only `PROLOG` guards
+    /// the prologue setting: a package naming `NOPROLOG` takes it too, as the
+    /// oracle reads one flag.
     pub(crate) fn take_defaults(&mut self, defaults: &PackageOptions) {
         let named = |word: &str| self.explicit.named(word);
         let pick = |word: &str, own: u64, other: u64| if named(word) { own } else { other };
@@ -404,7 +401,7 @@ NOSTRING {} NOTREADY {} NOVALUE {} {} TRACE {}",
     }
 }
 
-/// One `Package~options` option name, by the letters `PackageClass::options`
+/// One `Package~options` option name, by the letters `Package~options`
 /// switches on.
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub(crate) enum OptionName {
@@ -457,7 +454,7 @@ impl OptionName {
 }
 
 /// What `.Package~defaultOptions` writes keep: the statics `PackageClass`
-/// holds (`classes/PackageClass.cpp:70`).
+/// holds.
 #[derive(Default)]
 pub(crate) struct OptionWrites {
     /// `psOverridePackageSettings`.
@@ -467,7 +464,7 @@ pub(crate) struct OptionWrites {
     pub(crate) count: i64,
 }
 
-/// `NUMERIC FORM`'s two words, as `PackageSetting::toString` writes them.
+/// `NUMERIC FORM`'s two words, as `Package~options` writes them.
 fn form_word(form: Form) -> &'static str {
     match form {
         Form::Scientific => "SCIENTIFIC",
@@ -475,7 +472,7 @@ fn form_word(form: Form) -> &'static str {
     }
 }
 
-/// The word `PackageSetting::toString` writes for one trace setting.
+/// The word `Package~options` writes for one trace setting.
 fn trace_word(mode: TraceMode) -> &'static str {
     match mode.letter {
         b'A' => "ALL",
@@ -520,9 +517,8 @@ impl Interp {
         self.lostdigits_armed |= lostdigits;
     }
 
-    /// `PackageClass::overridePackageSettings`, which every compile of a
-    /// package runs (`parser/LanguageParser.cpp:658`, `:856`) and an
-    /// `INTERPRET` does not. A restored program is not compiled, so it
+    /// The package-settings override, which every compile of a package runs
+    /// and an `INTERPRET` does not. A restored program is not compiled, so it
     /// neither takes the defaults nor spends a count: measured, `rexx -o
     /// "digits 5"` on an image answers 9, and a source it requires 5.
     pub(crate) fn override_package_settings(&mut self, id: ProgramId) -> Result<(), Failure> {
@@ -543,9 +539,9 @@ impl Interp {
         Ok(())
     }
 
-    /// `PackageClass::setPackageSettings`: the settings `text`, a single
-    /// `::OPTIONS` directive, gives a routine compiled from it. That compile
-    /// is a package's like any other, so it takes the override too.
+    /// The settings `text`, a single `::OPTIONS` directive, gives a routine
+    /// compiled from it. That compile is a package's like any other, so it
+    /// takes the override too.
     pub(crate) fn settings_from_directive(
         &mut self,
         text: &[u8],

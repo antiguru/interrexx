@@ -1,20 +1,16 @@
-//! **Termination runs on a thread context of its own.** The oracle creates an
-//! instance to terminate on (`runtime/Interpreter.cpp:277-281`,
-//! `InstanceBlock instance;`, then `lastChanceUninit()`, then
-//! `PackageManager::unload()`), so the last-chance `UNINIT`s and the package
-//! unloaders are handed a thread context that is not the one the loader and
-//! the program's own native calls got, and a call through a context kept
-//! from before termination answers nothing.
+//! **Termination runs on a thread context of its own.** The oracle creates an instance to
+//! terminate on, runs the last-chance `UNINIT`s, and then unloads the packages, so the
+//! last-chance `UNINIT`s and the package unloaders are handed a thread context that is
+//! not the one the loader and the program's own native calls got, and a call through a
+//! context kept from before termination answers nothing.
 //!
-//! The extension is the surface forge (`termination_context/forge.cpp`, its routines
-//! `Stash`, `UseStash` and `Same`), compiled with `g++` against this
-//! worktree's `api/` into a directory of this run's own, and the programs are
-//! run by this crate's `rexx` binary, because the forge's loader, unloader
-//! and destructor write to the process's own standard output. The expected
-//! lines are the oracle's, measured three times each with identical output,
-//! rc 0 and empty stderr. The Rexx lines and the forge's lines are compared
-//! each in their own order, since `SAY` output and an extension's `printf`
-//! interleave differently by decision.
+//! The extension is the surface forge (a C++ extension under `tests/termination_context/`, its
+//! routines `Stash`, `UseStash` and `Same`), compiled with `g++` against this worktree's `api/`
+//! into a directory of this run's own, and the programs are run by this crate's `rexx` binary,
+//! because the forge's loader, unloader and destructor write to the process's own standard output.
+//! The expected lines are the oracle's, measured three times each with identical output, rc 0 and
+//! empty stderr. The Rexx lines and the forge's lines are compared each in their own order, since
+//! `SAY` output and an extension's `printf` interleave differently by decision.
 
 #![cfg(target_os = "linux")]
 

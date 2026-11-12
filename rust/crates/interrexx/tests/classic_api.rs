@@ -1454,7 +1454,7 @@ fn method_package() -> String {
         .expect("METHODPackage.cls is readable")
 }
 
-/// `CallRoutine` runs its routine on a fresh activation stack, as `Activity::run` does for a
+/// `CallRoutine` runs its routine on a fresh activation stack, as the oracle does for a
 /// dispatcher: the routine has no Rexx caller. A non-SYNTAX condition it `RAISE`s untrapped is
 /// kept for the native caller's `CheckCondition` and `GetConditionInfo` and goes no further; a
 /// native routine's frame has no context and its caller's variables do not exist; a condition
@@ -1487,11 +1487,10 @@ fn call_routine_runs_without_a_rexx_caller() {
     );
 }
 
-/// `DecodeConditionInfo` as `Interpreter::decodeConditionData` decodes: only a `SYNTAX`
-/// condition has a code, the `RC` of `ERROR` and `FAILURE` is given where it is a whole number,
-/// and the description and additional information only where they are a string and an array;
-/// the condition object has `RAISE`'s description object as it is. The expected output is the
-/// oracle's.
+/// `DecodeConditionInfo` as the oracle decodes it: only a `SYNTAX` condition has a code, the
+/// `RC` of `ERROR` and `FAILURE` is given where it is a whole number, and the description and
+/// additional information only where they are a string and an array; the condition object has
+/// `RAISE`'s description object as it is. The expected output is the oracle's.
 #[test]
 fn decode_condition_info_gives_what_the_structure_declares() {
     let stdout = run_program(
@@ -1586,9 +1585,9 @@ fn new_array_refuses_a_size_above_the_largest_array() {
 }
 
 /// A package `LoadPackageFromData` loads is in the instance's `::REQUIRES` cache under its
-/// name, as `InterpreterInstance::loadRequires` adds it: a `::REQUIRES` of the name finds it
-/// with no file of that name, and a second load answers it without running anything. The
-/// expected output is the oracle's.
+/// name, as the oracle adds it: a `::REQUIRES` of the name finds it with no file of that
+/// name, and a second load answers it without running anything. The expected output is the
+/// oracle's.
 #[test]
 fn load_package_from_data_is_found_by_requires() {
     let stdout = run_program(
@@ -1612,10 +1611,10 @@ fn function_package() -> String {
         .expect("FUNCTIONPackage.cls is readable")
 }
 
-/// `::OPTIONS ERROR SYNTAX` turns only an `ERROR` a command handler raises into 98.970, as
-/// `RexxActivation::command` tests it: any other condition the handler raises is raised as
-/// itself, trapped or ignored, and meets only its own `::OPTIONS` -- `NOTREADY SYNTAX` makes a
-/// handler's `NOTREADY` 98.974. The expected output is the oracle's.
+/// `::OPTIONS ERROR SYNTAX` turns only an `ERROR` a command handler raises into 98.970, as the
+/// oracle tests it: any other condition the handler raises is raised as itself, trapped or
+/// ignored, and meets only its own `::OPTIONS` -- `NOTREADY SYNTAX` makes a handler's
+/// `NOTREADY` 98.974. The expected output is the oracle's.
 #[test]
 fn error_syntax_escalates_only_a_handler_error() {
     let stdout = run_program(

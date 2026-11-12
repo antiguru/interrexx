@@ -1,5 +1,5 @@
 //! The executable half of the Deviations that license a difference from
-//! the oracle: each row's program run through the C++ interpreter and through
+//! the oracle: each row's program run through the oracle and through
 //! both of this crate's engines, with all three descriptors asserted on every
 //! side.
 

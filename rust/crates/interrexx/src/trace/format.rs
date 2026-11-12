@@ -4,57 +4,50 @@
 use super::{Number, Raised, Trace};
 
 /// The visible-output shape of the current `TRACE` setting, and whether
-/// interactive debug is on. The separate `pauseInstructions`/`pauseLabels`/
-/// `pauseCommands` flags have no field: a pause follows every clause the
-/// letter in force traced, so [`TraceMode::debug`] and the letter decide it
-/// together.
+/// interactive debug is on. The oracle's separate per-kind pause flags have
+/// no field: a pause follows every clause the letter in force traced, so
+/// [`TraceMode::debug`] and the letter decide it together.
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub(crate) struct TraceMode {
     /// `TRACE_PREFIX_CLAUSE` (`*-*`): every stepped instruction's own clause
-    /// is echoed. `TraceSetting::tracingAll`/`tracingInstructions`.
+    /// is echoed.
     pub(crate) all: bool,
     /// `TRACE_PREFIX_RESULT`/`_KEYWORD` (`>>>`/`>K>`): a traced instruction's
-    /// own top-level computed value is shown once. `tracingResults`.
+    /// own top-level computed value is shown once.
     pub(crate) results: bool,
     /// Every other value prefix (`>L>`/`>V>`/`>O>`/`>P>`/`>C>`) plus
     /// `>=>` (`TRACE_PREFIX_ASSIGNMENT`): every step of *evaluating* a
     /// traced instruction's expression is shown, not only its final value.
-    /// `tracingIntermediates`.
     pub(crate) intermediates: bool,
-    /// `TraceSetting::tracingLabels`: a `LABEL` clause is echoed, with the
-    /// ordinary `*-*` prefix. `RexxInstructionLabel::execute` (`LabelInstruction.cpp`,
-    /// read directly) traces through `traceLabel` and nothing else, and
-    /// `traceLabel`'s gate is `tracingLabels()` -- which
-    /// `TraceSetting.cpp:52`-`54` sets in `traceAllFlags`,
-    /// `traceResultsFlags` and `traceIntermediatesFlags` as well as in
-    /// `setTraceLabels`. So this is `true` under `A`/`R`/`I` too, where
-    /// `all` already covers it, and the only mode it decides anything in is
-    /// `L`.
+    /// A `LABEL` clause is echoed, with the ordinary `*-*` prefix. A `LABEL`
+    /// clause traces through the label path and nothing else, and that path's
+    /// gate is the labels flag -- which the oracle sets in the `A`, `R` and
+    /// `I` settings as well as in `L`. So this is `true` under `A`/`R`/`I`
+    /// too, where `all` already covers it, and the only mode it decides
+    /// anything in is `L`.
     pub(crate) labels: bool,
-    /// `TraceSetting::tracingCommands`: a command clause echoes `*-*` and its
-    /// evaluated string as `>>>`, before the command runs. Measured under
-    /// `TRACE C`, where a command that succeeds still shows both and nothing
-    /// else in the program shows anything.
+    /// A command clause echoes `*-*` and its evaluated string as `>>>`,
+    /// before the command runs. Measured under `TRACE C`, where a command
+    /// that succeeds still shows both and nothing else in the program shows
+    /// anything.
     pub(crate) commands: bool,
-    /// `TraceSetting::tracingErrors`: a command that raised `ERROR` echoes
-    /// `*-*` and `>>>` **after** it has run, where the setting did not
-    /// already echo them.
+    /// A command that raised `ERROR` echoes `*-*` and `>>>` **after** it has
+    /// run, where the setting did not already echo them.
     pub(crate) errors: bool,
-    /// `TraceSetting::tracingFailures`, the same for `FAILURE`. Set under
-    /// `TRACE N`, which is why a failing command traces itself in a program
-    /// carrying no `TRACE` instruction at all.
+    /// The same for `FAILURE`. Set under `TRACE N`, which is why a failing
+    /// command traces itself in a program carrying no `TRACE` instruction at
+    /// all.
     pub(crate) failures: bool,
-    /// The byte `TraceSetting::toString` (`runtime/TraceSetting.cpp:62`-`119`)
-    /// renders this setting as, and so the byte `TRACE()` answers.
+    /// The byte this setting renders as, and so the byte `TRACE()` answers.
     pub(crate) letter: u8,
-    /// `TraceSetting::traceDebug`, the `?` prefix: every traced clause is
-    /// followed by a pause. `TRACE()` answers it as a `?` before the letter.
+    /// The `?` prefix: every traced clause is followed by a pause. `TRACE()`
+    /// answers it as a `?` before the letter.
     pub(crate) debug: bool,
 }
 
 impl TraceMode {
-    /// `TraceSetting::setTraceOff`: every flag clear, and the one setting
-    /// under which a failing command shows nothing.
+    /// Every flag clear, and the one setting under which a failing command
+    /// shows nothing.
     pub(crate) const OFF: TraceMode = TraceMode {
         all: false,
         results: false,
@@ -66,41 +59,40 @@ impl TraceMode {
         letter: b'O',
         debug: false,
     };
-    /// `TRACE N` (`setTraceNormal`), and the setting every activation starts
-    /// under. `defaultTraceFlags` is `traceNormal` **and `traceFailures`**
-    /// (`TraceSetting.cpp:49`), so this is not [`TraceMode::OFF`] with
-    /// another letter: a command that raises `FAILURE` traces itself here.
+    /// `TRACE N`, and the setting every activation starts under. The oracle's
+    /// default is normal tracing **and failures**, so this is not
+    /// [`TraceMode::OFF`] with another letter: a command that raises
+    /// `FAILURE` traces itself here.
     pub(crate) const NORMAL: TraceMode = TraceMode {
         failures: true,
         letter: b'N',
         ..TraceMode::OFF
     };
-    /// `TRACE C` (`setTraceCommands`): the single instruction type, so a
-    /// command clause echoes and nothing else in the program does.
+    /// `TRACE C`: the single instruction type, so a command clause echoes and
+    /// nothing else in the program does.
     const COMMANDS: TraceMode = TraceMode {
         commands: true,
         letter: b'C',
         ..TraceMode::OFF
     };
-    /// `TRACE E` (`setTraceErrors`), which sets `traceFailures` beside
-    /// `traceErrors` -- "just errors includes failures", `TraceSetting.hpp`.
+    /// `TRACE E`, which sets the failures flag beside the errors flag --
+    /// "just errors includes failures".
     const ERRORS: TraceMode = TraceMode {
         errors: true,
         failures: true,
         letter: b'E',
         ..TraceMode::OFF
     };
-    /// `TRACE F` (`setTraceFailures`): failures and, unlike
-    /// [`TraceMode::ERRORS`], not errors. Measured -- `exit 127` traces and
-    /// `exit 3` does not.
+    /// `TRACE F`: failures and, unlike [`TraceMode::ERRORS`], not errors.
+    /// Measured -- `exit 127` traces and `exit 3` does not.
     const FAILURES: TraceMode = TraceMode {
         failures: true,
         letter: b'F',
         ..TraceMode::OFF
     };
-    /// `TRACE L` (`setTraceLabels`, which resets every other flag and sets
-    /// `traceLabels` alone). The one mode where `labels` decides anything:
-    /// every executed `LABEL` clause echoes and nothing else does.
+    /// `TRACE L` (which resets every other flag and sets the labels flag
+    /// alone). The one mode where `labels` decides anything: every executed
+    /// `LABEL` clause echoes and nothing else does.
     /// `tests/trace_oracle/trace_labels.rex` carries the probed routes and
     /// says why they are examples rather than an enumeration.
     pub(super) const LABELS: TraceMode = TraceMode {
@@ -114,29 +106,27 @@ impl TraceMode {
         letter: b'L',
         debug: false,
     };
-    /// `TRACE A` (`setTraceAll`, `traceAllFlags`): every clause echoes, but
-    /// `traceAllFlags` deliberately omits `traceResults` -- measured
-    /// nowhere in this task's own corpus, but stated here because
-    /// `mode_from_setting` needs a real answer for the letter, not a
-    /// silent fallback that would misreport `TRACE A x = 1` as producing no
-    /// `*-*` line at all.
+    /// `TRACE A`: every clause echoes, but the oracle deliberately omits the
+    /// results flag -- measured nowhere in this task's own corpus, but stated
+    /// here because `mode_from_setting` needs a real answer for the letter,
+    /// not a silent fallback that would misreport `TRACE A x = 1` as
+    /// producing no `*-*` line at all.
     pub(super) const ALL: TraceMode = TraceMode {
         all: true,
         results: false,
         intermediates: false,
         labels: true,
-        // `traceAllFlags` carries `traceCommands` and neither of the other
-        // two (`TraceSetting.cpp:52`), so a command's `>>>` here comes from
-        // this flag rather than from `results`.
+        // The oracle's `A` setting carries the commands flag and neither of the other
+        // two, so a command's `>>>` here comes from this flag rather than from
+        // `results`.
         commands: true,
         errors: false,
         failures: false,
         letter: b'A',
         debug: false,
     };
-    /// `TRACE R` (`setTraceResults`, `traceResultsFlags`). Also the half of
-    /// `setExternalTrace` that is not the debug flag, which is what
-    /// `RXTRACE=ON` starts a program under.
+    /// `TRACE R`. Also the half of the external-trace setting that is not the debug
+    /// flag, which is what `RXTRACE=ON` starts a program under.
     pub(crate) const RESULTS: TraceMode = TraceMode {
         all: true,
         results: true,
@@ -148,7 +138,7 @@ impl TraceMode {
         letter: b'R',
         debug: false,
     };
-    /// `TRACE I` (`setTraceIntermediates`, `traceIntermediatesFlags`).
+    /// `TRACE I`.
     pub(crate) const INTERMEDIATES: TraceMode = TraceMode {
         all: true,
         results: true,
@@ -161,8 +151,8 @@ impl TraceMode {
         debug: false,
     };
 
-    /// `TraceSetting::isTraceOff`, the one setting that refuses the debug
-    /// flag. The letter is the flag: `setTraceOff` clears every other one.
+    /// The one setting that refuses the debug flag. The letter is the flag:
+    /// the off setting clears every other one.
     pub(crate) fn is_off(self) -> bool {
         self.letter == b'O'
     }
@@ -350,10 +340,8 @@ pub(crate) fn literal_trace_event(setting: &Trace) -> TraceEvent {
     TraceEvent::Sets(ChunkTrace::of(mode))
 }
 
-/// Classifies a `TRACE` option string exactly like
-/// What one `TRACE` setting asks for: `TraceSetting::parseTraceSetting`
-/// (`TraceSetting.cpp:135`-`210`) reads any number of `?`s and then one
-/// letter, case-insensitively, ignoring everything after it.
+/// What one `TRACE` setting asks for: any number of `?`s and then one letter,
+/// case-insensitively, ignoring everything after it.
 pub(crate) struct TraceRequest {
     /// The letter's own mode, or `None` for a setting that named no letter.
     pub(crate) setting: Option<TraceMode>,
@@ -379,12 +367,10 @@ pub(crate) fn parse_trace_request(bytes: &[u8]) -> Result<TraceRequest, u8> {
 /// results *and* pauses, `trace ?` from a pause ends debug and leaves `R` in
 /// force, and a bare `trace` ends debug and sets Normal.
 ///
-/// `OFF` is the exception in both halves: `parseTraceSetting`
-/// (`TraceSetting.cpp:225`-`238`) skips `setDebug` when the letter is `O`,
-/// and `RexxActivation::setTrace` (`RexxActivation.cpp:1010`-`1017`) applies
-/// a bare toggle only while the setting in force is not `OFF`. So no
-/// spelling of `TRACE` reaches interactive debug from `OFF`, which is what
-/// `base/keyword`'s `TRACE::test_trace_?o` asserts.
+/// `OFF` is the exception in both halves: the oracle skips the debug flag
+/// when the letter is `O`, and a bare toggle only while the setting in force
+/// is not `OFF`. So no spelling of `TRACE` reaches interactive debug from
+/// `OFF`, which is what `base/keyword`'s `TRACE::test_trace_?o` asserts.
 pub(crate) fn applied(current: TraceMode, request: &TraceRequest) -> TraceMode {
     match (request.setting, request.toggles) {
         (Some(mode), toggles) => TraceMode {
@@ -403,10 +389,10 @@ pub(crate) fn applied(current: TraceMode, request: &TraceRequest) -> TraceMode {
     }
 }
 
-/// `parseTraceSetting`'s answer for a caller with no setting in force to
-/// merge against: the letter alone, with `?` recorded as the debug flag. An
-/// empty string is `setTraceNormal`'s silent answer, and one made only of
-/// `?`s keeps the older reading of `OFF` for the letter.
+/// The oracle's answer for a caller with no setting in force to merge
+/// against: the letter alone, with `?` recorded as the debug flag. An empty
+/// string is the silent normal setting, and one made only of `?`s keeps the
+/// older reading of `OFF` for the letter.
 pub(crate) fn mode_from_setting(bytes: &[u8]) -> Result<TraceMode, u8> {
     let toggles = bytes.iter().take_while(|byte| **byte == b'?').count();
     let answer = |mode: TraceMode| {
@@ -420,10 +406,10 @@ pub(crate) fn mode_from_setting(bytes: &[u8]) -> Result<TraceMode, u8> {
             continue;
         }
         let mode = mode_of_letter(byte)?;
-        // `setTraceOff` is unconditional, so `::options trace ?o` is `OFF`
-        // and not a paused `OFF`, exactly as the instruction is. The
-        // all-`?` fallback below is not covered by this: what it stands in
-        // for is `setDebugToggle`, not `setTraceOff`.
+        // Setting `OFF` is unconditional, so `::options trace ?o` is `OFF`
+        // and not a paused `OFF`, exactly as the instruction is. The all-`?`
+        // fallback below is not covered by this: what it stands in for is a
+        // bare debug toggle, not setting `OFF`.
         if mode.is_off() {
             return Ok(mode);
         }
@@ -492,13 +478,12 @@ pub(crate) fn raised_numeric_trace_interactive_only() -> Raised {
 }
 
 /// 24.1, "TRACE request letter must be one of \"ACEFILNOR\"; found \"&1\"."
-/// -- `mode_from_setting`'s `Err` case, reachable only through `TRACE
-/// VALUE` (a `Trace::Setting`'s own text is pre-validated, so this arm is
+/// -- `mode_from_setting`'s `Err` case, reachable only through `TRACE VALUE`
+/// (a `Trace::Setting`'s own text is pre-validated, so this arm is
 /// unreachable from it; `run/settings.rs`'s own `Trace::Setting` call site
-/// `.expect()`s that rather than routing through this at all). `found` is
-/// the offending byte exactly as `mode_from_setting` returned it -- not
-/// uppercased, matching `TraceSetting.cpp`'s own `badOption = value->
-/// getChar(pos)`, which records the character as typed.
+/// `.expect()`s that rather than routing through this at all). `found` is the
+/// offending byte exactly as `mode_from_setting` returned it -- not
+/// uppercased, matching the oracle, which records the character as typed.
 pub(crate) fn raised_invalid_trace_letter(found: u8) -> Raised {
     Raised::syntax(24, 1, vec![vec![found]])
 }
@@ -563,11 +548,10 @@ fn push_quoted(out: &mut Vec<u8>, value: &[u8]) {
 }
 
 /// `TRACE_PREFIX_VARIABLE`/`_ASSIGNMENT`/`_KEYWORD` (`>V>`/`>=>`/`>K>`), the
-/// `tag marker "value"` shape `traceTaggedValue` builds. `quote_tag`
-/// controls whether `tag` itself is wrapped in quotes -- measured
-/// (`traceKeywordResult`'s own call passes `quoteTag = true`, `>K>   "TO"
-/// => "2"`; `traceVariable`/`traceAssignment` both pass `false`, `>V>   X
-/// => "2"` and `>=>   X <= "2"`, no quotes around the variable name).
+/// `tag marker "value"` shape the oracle builds. `quote_tag` controls whether
+/// `tag` itself is wrapped in quotes -- measured (a keyword result quotes it,
+/// `>K>   "TO" => "2"`; a variable read and an assignment do not, `>V>   X =>
+/// "2"` and `>=>   X <= "2"`, no quotes around the variable name).
 pub(crate) fn push_tagged(
     out: &mut Vec<u8>,
     prefix: &str,
@@ -598,11 +582,10 @@ fn push_quoted_tag(out: &mut Vec<u8>, tag: &[u8]) {
     out.push(b'"');
 }
 
-/// `TRACE_PREFIX_OPERATOR`/`_PREFIX` (`>O>`/`>P>`): `traceOperatorValue`'s
-/// own shape, `"op" => "value"` -- always a quoted tag (measured: `>O>
-/// "+" => "2"`, unlike `>V>`/`>=>`), so this is `push_tagged` with
-/// `quote_tag` fixed to `true` and the arithmetic/comparison/logical
-/// operator's own spelling as the tag.
+/// `TRACE_PREFIX_OPERATOR`/`_PREFIX` (`>O>`/`>P>`): the shape `"op" =>
+/// "value"` -- always a quoted tag (measured: `>O> "+" => "2"`, unlike
+/// `>V>`/`>=>`), so this is `push_tagged` with `quote_tag` fixed to `true`
+/// and the arithmetic/comparison/logical operator's own spelling as the tag.
 pub(crate) fn push_operator(
     out: &mut Vec<u8>,
     prefix: &str,

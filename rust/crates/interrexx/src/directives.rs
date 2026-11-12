@@ -92,8 +92,7 @@ fn class_dependencies<'a>(
 
 /// The order a file's `::CLASS` directives install in: each round takes the
 /// first class in source order whose targets declared in the same file are
-/// all installed (`LanguageParser::resolveDependencies`,
-/// `parser/LanguageParser.cpp:1801`). `Err` is the first class left when no
+/// all installed. `Err` is the first class left when no
 /// class qualifies, which is the one a cycle blames.
 /// ```text
 /// blame the LAST ::CLASS directive in the file:
@@ -307,7 +306,7 @@ pub(super) struct MissingTarget<'a> {
 }
 
 /// Whether a member directive's methods are the *attribute* methods
-/// `::ANNOTATE ATTRIBUTE` will accept -- `MethodClass::isAttribute()`.
+/// `::ANNOTATE ATTRIBUTE` will accept.
 fn is_attribute_method(kind: &DirectiveKind) -> bool {
     match kind {
         DirectiveKind::Attribute(_) => true,
@@ -316,9 +315,8 @@ fn is_attribute_method(kind: &DirectiveKind) -> bool {
     }
 }
 
-/// `annotateDirective`'s target resolution (`parser/DirectiveParser.cpp:1940`):
-/// which directives an `::ANNOTATE` annotates, or the target it could not
-/// find.
+/// `annotateDirective`'s target resolution: which directives an `::ANNOTATE`
+/// annotates, or the target it could not find.
 pub(super) fn annotation_target<'a>(
     program: &Program,
     target: &'a AnnotationTarget,

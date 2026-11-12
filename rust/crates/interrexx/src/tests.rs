@@ -605,10 +605,9 @@ fn an_installed_class_does_not_displace_the_environments_own_entry() {
     assert_eq!(interp.classes().id_string(native), "Array");
 }
 
-/// A bare `::CLASS` is `subclass Object`, `metaclass Class`, which is
-/// what `RexxClass::subclass`'s own defaults give it. Had `install_class`
-/// left the superclass out, or named some other class, this would
-/// catch it.
+/// A bare `::CLASS` is `subclass Object`, `metaclass Class`, which is what
+/// the oracle's `subclass` defaults give it. Had `install_class` left the
+/// superclass out, or named some other class, this would catch it.
 #[test]
 fn a_bare_class_directive_subclasses_object() {
     let (mut interp, _program) = installed(b"say 'main ran'\n::class Foo\n");
@@ -1233,8 +1232,8 @@ fn uninit_rounds(make: &str) -> crate::Outcome {
     outcome
 }
 
-/// Pending `UNINIT`s run as a method's activation returns
-/// (`RexxActivation.cpp:705`): here `INIT`'s, through the send `NEW` made.
+/// Pending `UNINIT`s run as a method's activation returns: here `INIT`'s,
+/// through the send `NEW` made.
 #[test]
 fn pending_uninits_run_as_a_method_returns() {
     uninit_rounds("    o = .f~new(copies('x', 300000) || i)\n");
@@ -1271,8 +1270,8 @@ fn inline_uninit_rounds(stmt: &str) {
     );
 }
 
-/// Pending `UNINIT`s run as a native method returns
-/// (`NativeActivation.cpp:1361`): here `LINEOUT`'s, a `Stream` method.
+/// Pending `UNINIT`s run as a native method returns: here `LINEOUT`'s, a
+/// `Stream` method.
 #[test]
 fn pending_uninits_run_as_a_native_method_returns() {
     inline_uninit_rounds("call lineout '/dev/null', 'x'");
@@ -1285,7 +1284,7 @@ fn pending_uninits_run_as_say_writes() {
     inline_uninit_rounds("say ''");
 }
 
-/// The same as an `INTERPRET` ends (`RexxActivation.cpp:676-705`).
+/// The same as an `INTERPRET` ends.
 #[test]
 fn pending_uninits_run_as_an_interpret_ends() {
     inline_uninit_rounds("interpret 'nop'");

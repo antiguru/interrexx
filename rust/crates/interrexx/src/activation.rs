@@ -32,8 +32,7 @@ pub(crate) struct Trap {
     /// The oracle's own figure for the same pair is 0, so the remainder is
     /// the table and its keys, not this.
     pub(crate) label: std::rc::Rc<[u8]>,
-    /// The trap is armed but held while its own `CALL ON` handler runs
-    /// (`TrapHandler::disable`/`enable`, `execution/TrapHandler.cpp`), and
+    /// The trap is armed but held while its own `CALL ON` handler runs and
     /// its conditions with it (`crate::DelayedTrap`).
     pub(crate) delayed: bool,
 }
@@ -219,13 +218,10 @@ pub(crate) enum ReplyState {
 /// `~traceLine` and `RexxContext~line` report it.
 #[derive(Copy, Clone)]
 pub(crate) struct ClauseSnapshot {
-    /// `RexxActivation::getContextLineNumber`
-    /// (`execution/RexxActivation.cpp:2941`), whose answer with no current
-    /// instruction is `1`.
+    /// The context line number, which with no current instruction is `1`.
     pub(crate) line: usize,
-    /// The `*-*` echo's own indent: `PackageClass::traceBack`'s
-    /// `indent * INDENT_SPACING`, already doubled here as
-    /// `Interp::printed_indent` produces it.
+    /// The `*-*` echo's own indent: the indent level times the spacing,
+    /// already doubled here as `Interp::printed_indent` produces it.
     pub(crate) indent: usize,
     pub(crate) index: usize,
 }
@@ -277,9 +273,8 @@ pub(crate) struct Activation {
     /// Every name an `EXPOSE` in this activation bound to a scope pool on the
     /// receiving object, by the slot index that name resolves to here.
     pub(crate) exposed: Vec<(usize, InstanceVar)>,
-    /// How far this activation is through a `REPLY`, which is
-    /// `ActivationSettings::isReplyIssued` plus the `REPLIED` execution state
-    /// as one value.
+    /// How far this activation is through a `REPLY`, which is the oracle's
+    /// reply-issued flag plus its `REPLIED` execution state as one value.
     pub(crate) reply: ReplyState,
     /// Whether the `REPLY` that ran here carried a value.
     pub(crate) replied_a_value: bool,
@@ -300,9 +295,9 @@ pub(crate) struct Activation {
     /// ```
     pub(crate) first_instruction_pending: bool,
     /// How far this activation is past the point where a `>I>` could still be
-    /// announced -- `RexxActivation::traceEntryAllowed` and `traceEntryDone`
-    /// as one value, because the two are read together everywhere and a
-    /// separate pair admits states the C++ never reaches.
+    /// announced -- the oracle's "allowed" and "done" flags as one value,
+    /// because the two are read together everywhere and a separate pair
+    /// admits states the oracle never reaches.
     pub(crate) trace_entry: TraceEntry,
     pub(crate) pc: usize,
     /// This activation's own `NUMERIC DIGITS`/`FUZZ`/`FORM`.
@@ -310,7 +305,7 @@ pub(crate) struct Activation {
     /// What `.RS` answers here: 0 after a command that succeeded, 1 after one
     /// that raised `ERROR` and -1 after one that raised `FAILURE`. `None`
     /// until a command runs, which `.RS` answers as its own name rather than
-    /// as a number (`RexxActivation::rexxVariable`, `isReturnStatusSet`).
+    /// as a number.
     pub(crate) rs: Option<i32>,
     /// Which conditions this activation raises as SYNTAX errors --
     /// `::OPTIONS <condition> SYNTAX` on its own package, minus whatever a
@@ -340,8 +335,7 @@ pub(crate) struct Activation {
     ///
     /// Behind an `Rc` so an internal call inherits it by refcount and a write
     /// in the callee clones first: that is `checkIOConfigTable`'s own lazy
-    /// copy (`RexxActivation.cpp:1651`), and it is what makes the
-    /// inheritance one-way.
+    /// copy, and it is what makes the inheritance one-way.
     pub(crate) io_configs: Option<Rc<IoConfigs>>,
     /// The condition traps enabled in this activation, keyed by the exact
     /// condition name a raise carries (`Raised::condition`) -- `SYNTAX`,
@@ -354,10 +348,9 @@ pub(crate) struct Activation {
     /// microseconds-since-0001-01-01 unit -- the last value this activation
     /// ever read, or [`NO_CLOCK`] before its first one. **This is not itself
     /// the per-clause cache** -- see [`clock_stale`] for that half -- because
-    /// `RexxActivation::getTime`'s own lazy `TIME('R')` reset
-    /// (`execution/RexxActivation.cpp:3400`-`3406`) needs the *stale* value
-    /// still readable one call after the clause that produced it stopped
-    /// being current, to anchor the reset to.
+    /// the lazy `TIME('R')` reset needs the *stale* value still readable one
+    /// call after the clause that produced it stopped being current, to
+    /// anchor the reset to.
     pub(crate) cached_clock: i64,
     /// `TIME('E')`/`TIME('R')`'s anchor, `settings.elapsedTime`: the reading
     /// elapsed time is measured from, in [`cached_clock`]'s unit, or
@@ -367,20 +360,17 @@ pub(crate) struct Activation {
     /// compares against; `None` inside a plain `SELECT`.
     pub(crate) current_case: Option<ObjRef>,
     /// Whether [`cached_clock`] needs a fresh read before this activation's
-    /// clause may trust it -- the per-clause half [`cached_clock`]'s own
-    /// doc names, set `true` once per instruction by `Op::Clause`'s region
-    /// on whichever activation is executing at the time, mirroring
-    /// `RexxActivation::run`'s own `settings.timeStamp.valid = false` set
-    /// right after `nextInst->execute()` returns (`RexxActivation.cpp:647`).
+    /// clause may trust it -- the per-clause half [`cached_clock`]'s own doc
+    /// names, set `true` once per instruction by `Op::Clause`'s region on
+    /// whichever activation is executing at the time, mirroring the oracle's
+    /// invalidation of its time stamp right after each instruction returns.
     pub(crate) clock_stale: bool,
     /// The `RexxContext` this activation's `.CONTEXT` answers, built on the
-    /// first ask and kept for the rest of the activation --
-    /// `RexxActivation::getContextObject`, which fills its own field the
-    /// same way.
+    /// first ask and kept for the rest of the activation, as the oracle does.
     pub(crate) context_object: Option<ObjRef>,
     /// The `Message` whose held send this activation made last and that has
-    /// not completed: `RexxActivation`'s single `notifyObject`
-    /// (`execution/RexxActivation.cpp:4630`), told of a `SYNTAX` failure.
+    /// not completed: the activation's single notify object, told of a
+    /// `SYNTAX` failure.
     pub(crate) notify_message: Option<ObjRef>,
     /// The clause this activation is executing. [`ClauseSnapshot`] carries
     /// where it is written and why it is carried rather than derived.
@@ -426,8 +416,8 @@ pub(crate) enum Entry {
 
 /// `PARSE SOURCE`'s second word: the *calling context* the running activation
 /// was entered under, which the oracle keeps as `settings.calltype`
-/// (`execution/ActivationSettings.hpp:179`) and renders straight into the
-/// source string (`RexxActivation.cpp:4601`).
+/// and renders straight into the
+/// source string.
 /// ```text
 /// the program itself                          COMMAND
 /// an internal label, by CALL                  the enclosing activation's
@@ -440,7 +430,7 @@ pub(crate) enum Entry {
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub(crate) enum CallType {
     /// A program run as a command, which is how the `rexx` front end starts
-    /// the top-level activation (`RexxStartDispatcher.cpp:104`, `RXCOMMAND`).
+    /// the top-level activation.
     Command,
     /// A `::ROUTINE` body reached by `CALL`.
     Subroutine,
@@ -448,10 +438,9 @@ pub(crate) enum CallType {
     Function,
     /// A `::METHOD` or `::ATTRIBUTE` body reached by a message send.
     Method,
-    /// The prologue of a file a `::REQUIRES` loaded, which
-    /// `PackageClass::runProlog` calls under `GlobalNames::REQUIRES`
-    /// (`classes/PackageClass.cpp:2136`). Measured, oracle rc 0: `parse
-    /// source` in such a prologue answers `LINUX REQUIRES <its own path>`.
+    /// The prologue of a file a `::REQUIRES` loaded, which the oracle runs
+    /// under the `REQUIRES` call type. Measured, oracle rc 0: `parse source`
+    /// in such a prologue answers `LINUX REQUIRES <its own path>`.
     Requires,
 }
 
@@ -483,7 +472,7 @@ pub(crate) struct MethodIdentity {
 
 /// An activation's flags in one byte: forwarded, `ActivationSettings::
 /// isGuarded`, `objectScope == SCOPE_RESERVED`, the elapsed clock's pending
-/// reset (`elapsedReset`), and `debugPause`.
+/// reset, and `debugPause`.
 #[derive(Clone, Copy, Default)]
 pub(crate) struct ActivationFlags(u8);
 
@@ -535,8 +524,8 @@ impl ActivationFlags {
         self.set(Self::ELAPSED_RESET, reset);
     }
 
-    /// Whether this activation is running a line typed at a debug pause:
-    /// `RexxActivation::debugPause`, which `inDebug` and `noTracing` read.
+    /// Whether this activation is running a line typed at a debug pause, which
+    /// the in-debug and no-tracing tests read.
     pub(crate) fn debug_pause(self) -> bool {
         self.0 & Self::DEBUG_PAUSE != 0
     }
@@ -588,16 +577,15 @@ pub(crate) struct ActivationCold {
     pub(crate) directive_clause: Option<usize>,
     /// The security manager this activation runs under, kept once its
     /// package's was replaced after the activation began: an activation keeps
-    /// the manager its package had when it started
-    /// (`RexxActivation.cpp:176`, `:315`), and an internal call its caller's.
+    /// the manager its package had when it started, and an internal call its
+    /// caller's.
     pub(crate) security_manager: Option<Option<ObjRef>>,
     /// This activation's `CALL ON` trap delayed while the handler it called
     /// runs.
     pub(crate) delayed: Option<crate::DelayedTrap>,
 }
 
-/// A `USE LOCAL` method's object pool and the names it keeps local
-/// (`RexxLocalVariables::setAutoExpose`).
+/// A `USE LOCAL` method's object pool and the names it keeps local.
 #[derive(Clone)]
 pub(crate) struct AutoExpose {
     pub(crate) owner: ObjRef,
@@ -777,10 +765,9 @@ impl Activation {
             io_configs: inherited.io_configs,
             traps: inherited.traps,
             cold: inherited.cold,
-            // The caller's stamp, invalid: `RexxActivation`'s internal-call
-            // constructor copies the settings and sets `timeStamp.valid =
-            // false` (`RexxActivation.cpp:241`), so a reset the caller left
-            // pending anchors to the caller's last reading.
+            // The caller's stamp, invalid: an internal call copies the
+            // settings and invalidates the time stamp, so a reset the caller
+            // left pending anchors to the caller's last reading.
             cached_clock: inherited.cached_clock,
             elapsed_anchor: inherited.elapsed_anchor,
             current_case: None,
@@ -1133,9 +1120,8 @@ impl Interp {
         id
     }
 
-    /// The activation stack innermost first -- the order
-    /// `Activity::generateStackFrames` (`concurrency/Activity.cpp:1141`)
-    /// walks it and the order `RexxContext~stackFrames` answers in.
+    /// The activation stack innermost first -- the order the oracle walks it in
+    /// and the order `RexxContext~stackFrames` answers in.
     pub(crate) fn frames(&self) -> impl DoubleEndedIterator<Item = &Activation> {
         self.activity
             .running
@@ -1404,9 +1390,8 @@ impl Interp {
         Some(ended)
     }
 
-    /// An activation ending with `SETLOCAL`s outstanding restores the oldest
-    /// (`RexxActivation.cpp:1494-1500`); one a `REPLY` moves on ends later,
-    /// on its continuation's activity.
+    /// An activation ending with `SETLOCAL`s outstanding restores the oldest;
+    /// one a `REPLY` moves on ends later, on its continuation's activity.
     #[cold]
     #[inline(never)]
     fn end_cold(&mut self) {

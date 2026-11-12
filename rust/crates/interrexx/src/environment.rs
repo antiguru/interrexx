@@ -42,12 +42,12 @@ mod env_seam {
     /// reason the clearance beside it is not: one trip through the seam
     /// carries one reason.
     pub(super) enum Access {
-        /// `PackageClass::findClass` (`classes/PackageClass.cpp:1134`-`1158`),
-        /// whose two manager checks bracket the `.local` read.
+        /// The class lookup of the environment-symbol search, whose two
+        /// manager checks bracket the `.local` read.
         Resolve,
-        /// Every other read. `ActivityManager::getLocalEnvironment` and
-        /// `ClassDirective`'s own search reach the directories directly, so
-        /// a manager never sees an output route or a directive's target.
+        /// Every other read. The activity's local-environment access and a
+        /// class directive's own search reach the directories directly, so a
+        /// manager never sees an output route or a directive's target.
         Direct,
     }
 
@@ -284,13 +284,12 @@ pub(crate) enum Annotated {
 /// Which directive list a reflection name reports on.
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub(crate) enum PackageTable {
-    /// `.METHODS` -- the methods attached to no class. `LanguageParser::
-    /// addMethod` (`parser/DirectiveParser.cpp:610`) files a method under the
-    /// package rather than a class exactly while `activeClass` is still unset,
-    /// so these are the method-shaped directives ahead of the first `::CLASS`.
-    /// Measured, a lone `::constant sep '/'` and a lone `::attribute zz` each
-    /// make `.METHODS` a `StringTable`, and a `::method foo` under a `::class
-    /// K` leaves it the string `.METHODS`.
+    /// `.METHODS` -- the methods attached to no class. The parser files a
+    /// method under the package rather than a class exactly while
+    /// `activeClass` is still unset, so these are the method-shaped directives
+    /// ahead of the first `::CLASS`. Measured, a lone `::constant sep '/'` and
+    /// a lone `::attribute zz` each make `.METHODS` a `StringTable`, and a
+    /// `::method foo` under a `::class K` leaves it the string `.METHODS`.
     UnattachedMethods,
     /// `.ROUTINES`.
     Routines,
@@ -325,9 +324,9 @@ enum TableValue {
         routine: bool,
     },
     /// A `::RESOURCE`'s own body lines, which is what `.RESOURCES` holds --
-    /// `resources->put(resource, internalname)` over an `ArrayClass`
-    /// (`parser/DirectiveParser.cpp:2344`). Measured, a two-line resource's
-    /// `~items` is `2` and `SAY` of it prints both lines.
+    /// `resources->put(resource, internalname)` over an `ArrayClass`.
+    /// Measured, a two-line resource's `~items` is `2` and `SAY` of it prints
+    /// both lines.
     Lines(Vec<Vec<u8>>),
 }
 
@@ -374,26 +373,25 @@ impl Interp {
         );
         let local = self.interpreter_directory(LOCAL_ROOT, 0, b"The Local Directory");
 
-        // `completeSystemClass` (`memory/Setup.cpp:199`) puts every native
-        // class into the environment under its uppercased id, and that is the
-        // whole of what this crate has to put there beyond the entries
-        // `addToEnvironment` adds by hand.
+        // `completeSystemClass` puts every native class into the environment
+        // under its uppercased id, and that is the whole of what this crate
+        // has to put there beyond the entries `addToEnvironment` adds by
+        // hand.
         let mut known: FxHashMap<Box<[u8]>, ObjRef> = self
             .classes()
             .registered()
             .map(|(name, id)| (name.as_bytes().into(), id))
             .collect();
-        // `addToEnvironment` (`Setup.cpp:1730`-`1733`) registers these by
-        // hand.
+        // `addToEnvironment` registers these by hand.
         let true_value = self.text(b"1");
         self.roots.activity_mut().push_temp(true_value);
         let false_value = self.text(b"0");
         self.roots.activity_mut().push_temp(false_value);
-        // `Setup.cpp:1736`-`:1737`: `REXXINFO` is a pre-built *instance* of a
-        // class no environment name reaches, which is why the entry renders
-        // as `a RexxInfo` and answers `~class~id` `RexxInfo`. Measured
-        // on the oracle at rc 0, `.RexxInfo~isA(.Class)` is `0` and
-        // `.RexxInfo~class~superClass` is `The Object class`.
+        // `REXXINFO` is a pre-built *instance* of a class no environment name
+        // reaches, which is why the entry renders as `a RexxInfo` and answers
+        // `~class~id` `RexxInfo`. Measured on the oracle at rc 0,
+        // `.RexxInfo~isA(.Class)` is `0` and `.RexxInfo~class~superClass` is
+        // `The Object class`.
         let rexx_info_class = self
             .classes()
             .system_lookup("RexxInfo")
@@ -434,13 +432,13 @@ impl Interp {
         for (name, value) in rest {
             self.put_interpreter_entry(environment, &name, value);
         }
-        // `Setup.cpp:1781`: `LOCAL` is a method answering the running
-        // activity's local directory, and this crate runs one activity.
+        // `LOCAL` is a method answering the running activity's local
+        // directory, and this crate runs one activity.
         hash::directory_put_method_value(self, environment, b"LOCAL", local)
             .expect("a string-keyed store accepts a string index");
-        // `LocalServer~initInstance` (`CoreClasses.orx:987`) builds these
-        // before any program runs; `Interp::mint_local_directory` does the
-        // same once the classes it needs exist.
+        // `LocalServer~initInstance` builds these before any program runs;
+        // `Interp::mint_local_directory` does the same once the classes it
+        // needs exist.
         for name in ORACLE_LOCAL {
             self.put_interpreter_entry(local, name.as_bytes(), owed[0]);
         }
@@ -482,9 +480,8 @@ impl Interp {
             .is_some_and(|model| model.owed.contains(&item))
     }
 
-    /// `.NAME`'s value: `PackageClass::findClass`'s order, then
-    /// `RexxActivation::rexxVariable`'s reflection names, then the name's own
-    /// text.
+    /// `.NAME`'s value: the class lookup's order, then the activation's
+    /// reflection names, then the name's own text.
     pub(crate) fn dot_variable(&mut self, dotted: &[u8]) -> Result<ObjRef, Failure> {
         let bare = dotted.strip_prefix(b".").unwrap_or(dotted);
 
@@ -524,15 +521,13 @@ impl Interp {
             return Ok(found);
         }
 
-        // `variableName->concatToCstring(".")`
-        // (`expression/ExpressionDotVariable.cpp:167`, and `:218` for the
-        // route `VALUE` takes).
+        // The dotted name is built the same way on the route `VALUE` takes.
         Ok(self.text(dotted))
     }
 
-    /// `PackageClass::findClass` for `program` rather than the running
-    /// package: [`Interp::dot_variable`]'s order without the reflection names,
-    /// which only an activation has.
+    /// The class lookup for `program` rather than the running package:
+    /// [`Interp::dot_variable`]'s order without the reflection names, which
+    /// only an activation has.
     ///
     /// # Errors
     /// The condition a searched directory's `UNKNOWN` method raised, and
@@ -575,9 +570,9 @@ impl Interp {
         }
     }
 
-    /// What `Interpreter::findClass` (`runtime/Interpreter.cpp:601`) answers
-    /// for `bare`: the `REXX` package's class, then `.local`'s and
-    /// `.environment`'s entry, with no program's own classes in the search.
+    /// What the oracle's class finder answers for `bare`: the `REXX`
+    /// package's class, then `.local`'s and `.environment`'s entry, with no
+    /// program's own classes in the search.
     pub(crate) fn system_symbol(&mut self, bare: &[u8]) -> Option<ObjRef> {
         if let Some(found) = self.rexx_package_class(bare) {
             return Some(found);
@@ -605,10 +600,9 @@ impl Interp {
         installing: ProgramId,
         upper: &[u8],
     ) -> Result<Option<ObjRef>, Failure> {
-        // `findClass` on the installing package (`ClassResolver::lookup`,
-        // `ClassDirective.cpp:185`): its installed classes and then its
-        // parents', then its merged public classes and then its parents'
-        // public ones (`classes/PackageClass.cpp:982-1049`).
+        // `findClass` on the installing package: its installed classes and then its
+        // parents', then its merged public classes and then its parents' public
+        // ones.
         let package = self.program_package(installing);
         if let Some(found) = self.chain_installed_class(package, upper) {
             return Ok(Some(found));
@@ -622,12 +616,11 @@ impl Interp {
         if let Some(found) = self.chain_public_class(parent, upper) {
             return Ok(Some(found));
         }
-        // The rest of `findClass` (`classes/PackageClass.cpp:1105`-`:1159`):
-        // the REXX package's public classes, then the package's own local
-        // directory, `.local` and `.environment`, the first of them holding
-        // the name deciding. Uncached, because a directive's target is
-        // resolved once. `ClassDirective`'s own search reads the two
-        // directories without the security manager.
+        // The rest of `findClass`: the REXX package's public classes, then
+        // the package's own local directory, `.local` and `.environment`, the
+        // first of them holding the name deciding. Uncached, because a
+        // directive's target is resolved once. `ClassDirective`'s own search
+        // reads the two directories without the security manager.
         //
         // The directory model is built here even when the REXX package
         // answers, so that the bootstrap's first directive builds it. Built at
@@ -650,9 +643,9 @@ impl Interp {
             )?;
         }
         // A name that answers an object which is not a class is 99.949,
-        // `ClassResolver::lookup` (`expression/ExpressionClassResolver.cpp:159`).
-        // Measured, oracle rc 157: `::class k subclass rexxinfo`, and
-        // `::class t subclass input`, `.INPUT` being `.local`'s stream.
+        // `ClassResolver::lookup`. Measured, oracle rc 157: `::class k
+        // subclass rexxinfo`, and `::class t subclass input`, `.INPUT` being
+        // `.local`'s stream.
         match entry {
             hash::DirectoryEntry::Absent => Ok(None),
             hash::DirectoryEntry::Found(found) if self.heap.is_class(found) => Ok(Some(found)),
@@ -703,9 +696,8 @@ impl Interp {
 
     /// A class the running package's own directives installed, or one
     /// installed up its parent chain, then a public class its `::REQUIRES`
-    /// directives imported, or one public up its parent chain --
-    /// `PackageClass::findInstalledClass` and `findPublicClass`, the first
-    /// two steps of the order.
+    /// directives imported, or one public up its parent chain -- the
+    /// installed-class and public-class steps, the first two of the order.
     #[inline]
     fn running_package_class(&self, upper: &[u8]) -> Option<ObjRef> {
         let data = self.program_data(self.running_program()?)?;
@@ -735,8 +727,7 @@ impl Interp {
     }
 
     /// A package's own local environment directory entry for `bare`, by the
-    /// name's bytes: `packageLocal->get(internalName)` in
-    /// `PackageClass::findClass` (`classes/PackageClass.cpp:1122`), the step
+    /// name's bytes: the package-local lookup of the class search, the step
     /// between the REXX package's public classes and `.local`.
     #[inline(never)]
     pub(crate) fn package_local_entry(
@@ -806,8 +797,8 @@ impl Interp {
     /// A public class of the interpreter's own package --
     /// `TheRexxPackage->findPublicClass`, step 4 of the documented
     /// environment-symbol search order (`rexxpg` `classes.xml:838`) and the
-    /// step `PackageClass::findClass` takes between a package's imports and
-    /// its own local (`classes/PackageClass.cpp:1105`).
+    /// step the class search takes between a package's imports and its own
+    /// local.
     #[inline]
     pub(crate) fn rexx_package_class(&mut self, upper: &[u8]) -> Option<ObjRef> {
         if let Some(&hit) = self.rexx_class_cache.get(upper) {
@@ -865,20 +856,20 @@ impl Interp {
     }
 
     /// The `.local` entries `LocalServer~initInstance` builds before any
-    /// program runs (`CoreClasses.orx:987`): the command-line words, then the
-    /// streams and monitors, and the session queue, each stored as it is built.
+    /// program runs: the command-line words, then the streams and monitors, and
+    /// the session queue, each stored as it is built.
     ///
     /// **Here rather than when the directory is built**, because the embedded
-    /// bootstrap evaluates `.environment` while it installs
-    /// (`CoreClasses.orx:55`), before `StreamClasses.orx` has declared `Stream`.
-    /// Each write replaces an owed entry in place, so the order is the
-    /// oracle's whatever order these are built in.
+    /// bootstrap evaluates `.environment` while it installs, before the
+    /// stream classes' bootstrap file has declared `Stream`. Each write
+    /// replaces an owed entry in place, so the order is the oracle's whatever
+    /// order these are built in.
     ///
     /// **Through the package publics, not the class registry.** A `::CLASS`
     /// directive calls `define_unregistered_class`, which by its own contract
     /// records the class "without registering the name", so
-    /// `classes().lookup("Stream")` never finds one the embedded
-    /// `StreamClasses.orx` declared.
+    /// `classes().lookup("Stream")` never finds one the embedded stream
+    /// classes' bootstrap file declared.
     ///
     /// **No panic on a miss, at any step.** A step that cannot build its
     /// entry leaves that entry and every later one owed.
@@ -1009,8 +1000,7 @@ impl Interp {
 
     /// Writes `name` into `scope`'s directory, through the same seam a read
     /// passes: `VALUE(name, new, '')`, whose empty selector names
-    /// `.environment` itself (`expression/BuiltinFunctions.cpp:1848`), and
-    /// [`Interp::mint_local_directory`].
+    /// `.environment` itself, and [`Interp::mint_local_directory`].
     pub(crate) fn set_directory_entry(
         &mut self,
         scope: EnvScope,
@@ -1031,8 +1021,7 @@ impl Interp {
     /// `scope`'s directory, admitted for a write of `name`.
     fn writable_directory(&mut self, scope: EnvScope, name: &[u8]) -> Result<ObjRef, Failure> {
         // A write the manager never sees: `VALUE(name, new, 'ENVIRONMENT')`
-        // puts into the directory directly (`expression/BuiltinFunctions.cpp:
-        // 1848`).
+        // puts into the directory directly.
         let admitted = match env_seam::admit(self, scope, name, &env_seam::Access::Direct)? {
             env_seam::Admission::Permitted(admitted) => admitted,
             env_seam::Admission::Replaced(_) => unreachable!("a direct access is never replaced"),
@@ -1041,7 +1030,6 @@ impl Interp {
         Ok(env_seam::directory(&model.directories, admitted, scope))
     }
 
-    /// `RexxActivation::rexxVariable` (`execution/RexxActivation.cpp:2842`):
     /// the names the interpreter answers out of the running activation rather
     /// than out of a directory.
     fn rexx_variable(&mut self, bare: &[u8]) -> Result<Option<ObjRef>, Failure> {
@@ -1063,14 +1051,13 @@ impl Interp {
         match bare {
             // `new_integer(current->getLineNumber())`. `clause_state.line()`
             // is the same quantity `SIGL` reads and carries the same
-            // `INTERPRET` rule the oracle's own `isInterpret` delegation
-            // gives this name: the enclosing clause's line, not the
-            // fragment's.
-            // Answering `None` before any command has run is what makes
-            // `.RS` render as its own name: `dot_variable`'s tail falls back
-            // to the name's text, which is `isReturnStatusSet`'s else branch
-            // (`RexxActivation::rexxVariable`). Measured -- `say .rs` ahead of
-            // every command prints `.RS`, and 1 after one that failed.
+            // `INTERPRET` rule the oracle's own `isInterpret` delegation gives
+            // this name: the enclosing clause's line, not the fragment's.
+            // Answering `None` before any command has run is what makes `.RS`
+            // render as its own name: `dot_variable`'s tail falls back to the
+            // name's text, which is `isReturnStatusSet`'s else branch.
+            // Measured -- `say.rs` ahead of every command prints `.RS`, and 1
+            // after one that failed.
             b"RS" => {
                 let rs = self.activation().rs?;
                 Some(self.text(rs.to_string().as_bytes()))
@@ -1182,8 +1169,7 @@ impl Interp {
                     let installed = crate::InstalledRoutine { program, directive };
                     // A library-backed `::ROUTINE` is the one object its
                     // library procedure has, shared by every directive naming
-                    // it (`LibraryPackage::resolveRoutine`,
-                    // `package/LibraryPackage.cpp:410-432`).
+                    // it.
                     if let Some(code) = routine
                         .then(|| self.library_routine_code(installed))
                         .flatten()
@@ -1241,8 +1227,8 @@ impl Interp {
     }
 
     /// A fresh `StringTable` holding `entries`, put in name order: the copy
-    /// `PackageClass::getClassesRexx` and its siblings answer, which a program
-    /// can ask everything a `.StringTable~new` answers.
+    /// the package's class and routine listings answer, which a program can
+    /// ask everything a `.StringTable~new` answers.
     pub(crate) fn string_table_of(
         &mut self,
         mut entries: Vec<(Box<[u8]>, ObjRef)>,
@@ -1302,8 +1288,8 @@ impl Interp {
         array
     }
 
-    /// `.CONTEXT`: `RexxActivation::getContextObject`, which builds the
-    /// object on the first ask and keeps it in the activation's own field.
+    /// `.CONTEXT`: the object is built on the first ask and kept in the
+    /// activation's own field.
     fn context_object(&mut self) -> ObjRef {
         self.context_object_at(0).unwrap_or_else(|| {
             let class = self.environment_model().context;
@@ -1319,12 +1305,12 @@ impl Interp {
     }
 
     /// [`Interp::context_object`] for the activation at `depth`, which
-    /// `RexxContext~stackFrames` needs: `RexxActivation::createStackFrame`
-    /// passes `getContextObject()`, so **building a frame creates the
-    /// context object of an activation that never asked for one**. Measured,
-    /// oracle rc 0: every frame of a four-frame stack answers
-    /// `~context~class~id` `RexxContext` in a program where only the
-    /// innermost ever named `.context`.
+    /// `RexxContext~stackFrames` needs: the oracle's frame builder asks for
+    /// the context object, so **building a frame creates the context object
+    /// of an activation that never asked for one**. Measured, oracle rc 0:
+    /// every frame of a four-frame stack answers `~context~class~id`
+    /// `RexxContext` in a program where only the innermost ever named
+    /// `.context`.
     pub(crate) fn context_object_at(&mut self, depth: usize) -> Option<ObjRef> {
         if let Some(found) = self.frame_at(depth)?.context_object {
             return Some(found);
@@ -1335,8 +1321,8 @@ impl Interp {
         Some(object)
     }
 
-    /// An instance of `class` with no entries, rendered the way
-    /// `RexxObject::defaultName` renders one.
+    /// An instance of `class` with no entries, rendered the way the oracle
+    /// renders a default object name.
     pub(crate) fn native_instance(&mut self, class: ObjRef) -> ObjRef {
         let rendered = default_object_name(self.classes().id_string(class));
         let object = self.alloc_with(
@@ -1514,14 +1500,10 @@ fn package_table_entries(
                 if unattached && kind == PackageTable::UnattachedMethods =>
             {
                 let upper = method.name.to_ascii_uppercase();
-                // `ATTRIBUTE` files an accessor pair, the plain name and
-                // that name with `=`. Measured, `::method z attribute` puts
-                // `Z` and `Z=` in `.METHODS`; that spelling takes
-                // `methodDirective`'s `else` at
-                // `parser/DirectiveParser.cpp:889` and files each half
-                // through `createAttributeGetterMethod` and
-                // `createAttributeSetterMethod` (`:895`, `:896`), whose own
-                // `addMethod` calls are at `:2418` and `:2474`.
+                // `ATTRIBUTE` files an accessor pair, the plain name and that
+                // name with `=`. Measured, `::method z attribute` puts `Z`
+                // and `Z=` in `.METHODS`; that spelling is filed as an
+                // attribute getter and setter pair.
                 if method.attribute {
                     let setter = crate::accessor_setter_name(&upper);
                     let value = unattached_method(&setter, index);
@@ -1562,19 +1544,17 @@ fn package_table_entries(
                 if unattached && kind == PackageTable::UnattachedMethods =>
             {
                 // One getter, `createConstantGetterMethod`'s own
-                // `addMethod(name, method, false)`
-                // (`parser/DirectiveParser.cpp:2536`). Measured,
-                // `::constant sep '/'` leaves `.methods~items` `1`.
+                // `addMethod(name, method, false)`. Measured, `::constant sep
+                // '/'` leaves `.methods~items` `1`.
                 let upper = constant.name.to_ascii_uppercase();
                 let value = unattached_method(&upper, index);
                 entries.push((upper, value));
             }
             interrexx_parse::DirectiveKind::Routine(routine) if kind == PackageTable::Routines => {
                 // Both access scopes, not the public ones alone: `.ROUTINES`
-                // is `package->routines` (`parser/LanguageParser.cpp:1893`)
-                // and `publicRoutines` is a second table nothing here reads.
-                // Measured, a file with one `PUBLIC` and one plain `::ROUTINE`
-                // leaves `.routines~items` `2`.
+                // is `package->routines` and `publicRoutines` is a second
+                // table nothing here reads. Measured, a file with one `PUBLIC`
+                // and one plain `::ROUTINE` leaves `.routines~items` `2`.
                 entries.push((
                     routine.name.to_ascii_uppercase(),
                     TableValue::Instance {
@@ -1607,9 +1587,8 @@ fn package_table_entries(
     entries
 }
 
-/// `RexxObject::defaultName` (`classes/ObjectClass.cpp:1760`): the owning
-/// class's id with an article in front, `an` before a vowel and `a`
-/// otherwise.
+/// The owning class's id with an article in front, `an` before a vowel and
+/// `a` otherwise.
 pub(crate) fn default_object_name(id: &str) -> String {
     let vowel = id
         .as_bytes()

@@ -1,6 +1,6 @@
-//! `Setup.cpp`, read for the native-or-Rexx column and the entry-point token
-//! that `collection_scopes.rs` and `introspection_scopes.rs` both join onto
-//! the oracle's own scope answer.
+//! The oracle's native class table source, read for the native-or-Rexx column and the entry-point
+//! token that `collection_scopes.rs` and `introspection_scopes.rs` both join onto the oracle's own
+//! scope answer.
 
 #![allow(dead_code)]
 

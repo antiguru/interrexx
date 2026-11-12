@@ -1,9 +1,8 @@
 use super::*;
 
 impl Interp {
-    /// Runs the `::CONSTANT` expression of `program`'s directive `directive`
-    /// as a method of its own, as `ClassDirective::resolveConstants` does
-    /// (`instructions/ClassDirective.cpp:257`): a guarded `METHOD` level named
+    /// Runs the `::CONSTANT` expression of `program`'s directive `directive` as
+    /// a method of its own, as the oracle does: a guarded `METHOD` level named
     /// `::CONSTANT` with `run`'s receiver and scope, stopped on the directive's
     /// clause, whose executable is a `Method` of its own and which the
     /// package's `::OPTIONS TRACE` traces as a method. While a package

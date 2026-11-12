@@ -10,7 +10,7 @@ use crate::plan::{Package, ProgramId};
 use crate::{Failure, Interp};
 
 /// The message one checkpoint sends, and the entries its info directory
-/// carries in. `SecurityManager.cpp`'s own six checks, one per method there.
+/// carries in. The oracle's six checks, one per method of the manager.
 pub(crate) mod message {
     pub(crate) const COMMAND: &[u8] = b"COMMAND";
     pub(crate) const STREAM: &[u8] = b"STREAM";
@@ -41,10 +41,9 @@ impl Interp {
     /// Installs `manager` on `package`, or clears it when the setter was sent
     /// no argument.
     ///
-    /// `MethodClass::setSecurityManager` and `RoutineClass::setSecurityManager`
-    /// both reach `RexxCode::setSecurityManager` (`execution/RexxCode.cpp:245`),
-    /// which sets it on the package rather than on the executable, so all
-    /// three setters write the same place.
+    /// `Method~setSecurityManager` and `Routine~setSecurityManager` both set
+    /// it on the package rather than on the executable, so all three setters
+    /// write the same place.
     ///
     /// Every activation already running `package`'s code keeps the manager it
     /// started under, as the oracle's copies it into its settings when it
@@ -92,10 +91,9 @@ impl Interp {
         self.activities.for_each_activation_mut(&mut keep);
     }
 
-    /// `RexxActivation::getEffectiveSecurityManager`
-    /// (`execution/RexxActivation.cpp:4977`): the manager the running
-    /// activation started under. There is no instance-level manager here, so
-    /// that arm's fallback is `None`, as it is with no running activation.
+    /// The manager the running activation started under. There is no
+    /// instance-level manager here, so that arm's fallback is `None`, as it
+    /// is with no running activation.
     #[inline]
     pub(crate) fn effective_security_manager(&self) -> Option<ObjRef> {
         if !self.security_armed {
@@ -121,8 +119,8 @@ impl Interp {
     }
 
     /// The manager the running code's package has now, which its `LOCAL` and
-    /// `ENVIRONMENT` checkpoints ask: `PackageClass::findClass` reads the
-    /// package's own (`classes/PackageClass.cpp:1135`), not the activation's.
+    /// `ENVIRONMENT` checkpoints ask: the class lookup reads the package's
+    /// own, not the activation's.
     #[inline]
     pub(crate) fn package_security_manager(&self) -> Option<ObjRef> {
         if !self.security_armed {
@@ -140,9 +138,8 @@ impl Interp {
     }
 
     /// The manager `program`'s own installing activation runs under, which is
-    /// the one its `::REQUIRES` directives consult
-    /// (`RexxActivation::run` installs the package, `RexxActivation.cpp:508`):
-    /// the package's when its install began.
+    /// the one its `::REQUIRES` directives consult: the package's when its
+    /// install began.
     pub(crate) fn installing_security_manager(&self, program: ProgramId) -> Option<ObjRef> {
         if !self.security_armed {
             return None;
@@ -163,8 +160,7 @@ impl Interp {
             .and_then(|(_, kept)| *kept)
     }
 
-    /// One checkpoint: `SecurityManager::callSecurityManager`
-    /// (`execution/SecurityManager.cpp:147`-`158`).
+    /// One checkpoint.
     ///
     /// Answers the info directory, rooted as a temp of the caller's frame,
     /// when the manager handled the checkpoint, and `None` when it did not or
@@ -227,8 +223,8 @@ impl Interp {
         }
     }
 
-    /// The info directory one checkpoint hands its manager, filled by
-    /// `DirectoryClass::put` itself rather than a sent `PUT`.
+    /// The info directory one checkpoint hands its manager, filled by the
+    /// directory's own put rather than a sent `PUT`.
     fn security_arguments(&mut self, entries: &[(&[u8], ObjRef)]) -> Result<ObjRef, Failure> {
         let directory = crate::dispatch::hash::new_directory(self, 0)?;
         self.roots.activity_mut().push_temp(directory);
@@ -249,10 +245,10 @@ impl Interp {
         array
     }
 
-    /// One entry of an info directory the manager has answered, or `None`
-    /// where it left the name unset. `DirectoryClass::get`, which is an
-    /// exact-string lookup and not `ENTRY`'s upcasing one. An entry the
-    /// manager set to `.nil` is `Some(.nil)`: `get` answers the object stored.
+    /// One entry of an info directory the manager has answered, or `None` where it
+    /// left the name unset. The lookup is an exact-string one and not `ENTRY`'s
+    /// upcasing one. An entry the manager set to `.nil` is `Some(.nil)`: the lookup
+    /// answers the object stored.
     pub(crate) fn security_entry(
         &mut self,
         directory: ObjRef,
@@ -267,8 +263,8 @@ impl Interp {
         Ok(answer)
     }
 
-    /// `MethodClass::setProtected` on the method `object` stands for, which
-    /// the dispatch seam then asks the manager about.
+    /// `Method~setProtected` on the method `object` stands for, which the
+    /// dispatch seam then asks the manager about.
     pub(crate) fn make_method_protected(&mut self, object: ObjRef) {
         let Some(method) = self.unshared_identity(object) else {
             return;
@@ -300,8 +296,8 @@ impl Interp {
             .is_some_and(|scope| scope.access == Access::Private)
     }
 
-    /// Whether the method `object` stands for is protected: a `Setup.cpp`
-    /// protected primitive, or one `setProtected` was sent to.
+    /// Whether the method `object` stands for is protected: a protected primitive of the
+    /// oracle's class table, or one `setProtected` was sent to.
     pub(crate) fn installed_is_protected(&self, object: ObjRef) -> bool {
         self.executable_sources
             .get(&object)

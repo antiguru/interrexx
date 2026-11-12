@@ -157,10 +157,9 @@ impl Raised {
     /// activation before its own trap can see the condition, so the trap
     /// does not fire.
     pub(crate) fn halt() -> Raised {
-        // `RexxActivation::raise` reports it as a SYNTAX error of the raising
-        // level (`execution/RexxActivation.cpp:1870`), which a `SIGNAL ON
-        // SYNTAX` there traps. The `(4, 1)` catalogue entry's `&1` is the
-        // condition's own name.
+        // The oracle reports it as a SYNTAX error of the raising level, which
+        // a `SIGNAL ON SYNTAX` there traps. The `(4, 1)` catalogue entry's
+        // `&1` is the condition's own name.
         Raised::syntax(4, 1, vec![b"HALT".to_vec()])
     }
 
@@ -208,8 +207,8 @@ impl Raised {
     }
 
     /// 34.903: a security manager answered a checkpoint with something other
-    /// than `0` or `1` (`SecurityManager::callSecurityManager`, whose
-    /// `truthValue` names `Error_Logical_value_authorization`).
+    /// than `0` or `1` (the oracle's logical-value check names
+    /// `Error_Logical_value_authorization`).
     pub(crate) fn authorization_not_logical(found: &[u8]) -> Raised {
         Raised::syntax(34, 903, vec![found.to_vec()])
     }
@@ -276,7 +275,7 @@ impl Raised {
     }
 
     /// 98.905: a wait for a guard lock or a message whose chain of waits
-    /// leads back to the waiting activity (`Activity::checkDeadLock`).
+    /// leads back to the waiting activity.
     pub(crate) fn deadlock() -> Raised {
         Raised::syntax(98, 905, Vec::new())
     }
@@ -302,22 +301,21 @@ impl Raised {
     }
 
     /// 98.903: a library name no shared object answered to, or one that
-    /// answered and published no package entry -- `PackageManager::getLibrary`
-    /// (`interpreter/package/PackageManager.cpp:214`). One substitution, the
-    /// name as the directive spelled it.
+    /// answered and published no package entry. One substitution, the name as
+    /// the directive spelled it.
     pub(crate) fn library_not_loaded(name: &[u8]) -> Raised {
         Raised::syntax(98, 903, vec![name.to_vec()])
     }
 
     /// 98.982: a package entry whose `requiredVersion` is above this
-    /// interpreter's (`interpreter/package/LibraryPackage.cpp:232-235`).
+    /// interpreter's.
     pub(crate) fn library_version(name: &[u8]) -> Raised {
         Raised::syntax(98, 982, vec![name.to_vec()])
     }
 
-    /// 88.901: an argument a native call's signature declares as required
-    /// and that the send left out. `position` counts the arguments alone,
-    /// which is what `NativeActivation.cpp:327` reports.
+    /// 88.901: an argument a native call's signature declares as required and
+    /// that the send left out. `position` counts the arguments alone, which
+    /// is what the oracle reports.
     pub(crate) fn missing_native_argument(position: usize) -> Raised {
         let mut raised = Raised::syntax(88, 901, vec![position.to_string().into_bytes()]);
         // Measured, oracle rc 168: `Error 88 running <path>:  Invalid
@@ -326,14 +324,12 @@ impl Raised {
         raised
     }
 
-    /// A native method's or routine's signature the boundary cannot honour
-    /// (`NativeActivation::reportSignatureError`,
-    /// `execution/NativeActivation.cpp:190-193`): `number` is what
-    /// `Failure::error_number` answers, 93968 for a method and 40918 for a
-    /// routine. No substitutions. `before_call` is a parameter refused before
-    /// the extension ran, reported against the declaring package with no line
-    /// (measured, rc 163 and 216); a result word refused after it names the
-    /// sending clause's line.
+    /// A native method's or routine's signature the boundary cannot honour:
+    /// `number` is what `Failure::error_number` answers, 93968 for a method
+    /// and 40918 for a routine. No substitutions. `before_call` is a
+    /// parameter refused before the extension ran, reported against the
+    /// declaring package with no line (measured, rc 163 and 216); a result
+    /// word refused after it names the sending clause's line.
     pub(crate) fn incorrect_native_signature(number: u32, before_call: bool) -> Raised {
         let mut raised = if number == 40918 {
             Raised::syntax(40, 918, Vec::new())
@@ -378,9 +374,8 @@ impl Raised {
     }
 
     /// 99.949: a `::CLASS` directive naming a target whose name resolves to
-    /// an object that is not a class (`ClassResolver::lookup`,
-    /// `expression/ExpressionClassResolver.cpp:159`). One substitution, the
-    /// target's upcased spelling.
+    /// an object that is not a class. One substitution, the target's upcased
+    /// spelling.
     pub(crate) fn not_a_valid_class(name: &[u8]) -> Raised {
         Raised::syntax(99, 949, vec![name.to_vec()])
     }
@@ -420,16 +415,14 @@ impl Raised {
         )
     }
 
-    /// 98.991: `run`, `setMethod` or `unsetMethod` sent from somewhere
-    /// `RexxObject::checkRestrictedMethod` does not allow. One
-    /// substitution, the method's own name.
+    /// 98.991: `run`, `setMethod` or `unsetMethod` sent from somewhere the
+    /// oracle does not allow. One substitution, the method's own name.
     pub(crate) fn restricted_method(name: &[u8]) -> Raised {
         Raised::syntax(98, 991, vec![name.to_vec()])
     }
 
-    /// 98.989: `~new` on an `ABSTRACT` class -- `RexxClass::checkAbstract`
-    /// (`classes/ClassClass.cpp:1741`). One substitution, the class's own
-    /// `~id`, unquoted.
+    /// 98.989: `~new` on an `ABSTRACT` class. One substitution, the class's
+    /// own `~id`, unquoted.
     pub(crate) fn abstract_class(id: &[u8]) -> Raised {
         Raised::syntax(98, 989, vec![id.to_vec()])
     }
@@ -476,8 +469,8 @@ impl Raised {
         Raised::syntax(98, 985, Vec::new())
     }
 
-    /// 98.915: a send, start or reply of a message object a start has
-    /// already been sent to (`MessageClass::checkReuse`). No substitutions.
+    /// 98.915: a send, start or reply of a message object a start has already
+    /// been sent to. No substitutions.
     pub(crate) fn message_reuse() -> Raised {
         Raised::syntax(98, 915, Vec::new())
     }
@@ -533,12 +526,9 @@ impl Raised {
     /// 99.945: an `::ANNOTATE` named a target the accumulated package does
     /// not hold. `kind` is the keyword's own lower-case spelling and `name`
     /// the upcased target name, which is how
-    /// `Error_Translation_missing_annotation_target` takes them:
-    /// `::ANNOTATE target &1 "&2" not found.`
-    /// (`messages/RexxErrorMessages.h:715`), with the quotes in the template
-    /// and each `syntaxError` call passing a bare C string for `&1`
-    /// (`parser/DirectiveParser.cpp:1983`, `:2010`, `:2037`, `:2090`,
-    /// `:2172`).
+    /// `Error_Translation_missing_annotation_target` takes them: `::ANNOTATE
+    /// target &1 "&2" not found.` with the quotes in the template and a bare
+    /// string for `&1`.
     pub(crate) fn missing_annotation_target(kind: &str, name: &[u8]) -> Raised {
         Raised::syntax(99, 945, vec![kind.as_bytes().to_vec(), name.to_vec()])
     }
@@ -710,10 +700,9 @@ impl Raised {
     /// 40.27: `STREAM`'s first argument is not a usable stream name, which
     /// measured is the empty string alone -- a blank answers `UNKNOWN` and
     /// every other reader takes an empty name as the default input or output
-    /// rather than an error (`BuiltinFunctions.cpp:2444`).
-    /// 98.999: a `STREAM` input redirection whose file would not open. The
-    /// substitutions are the qualified name and the `ERROR:n` the open
-    /// answered.
+    /// rather than an error. 98.999: a `STREAM` input redirection whose file
+    /// would not open. The substitutions are the qualified name and the
+    /// `ERROR:n` the open answered.
     pub(crate) fn stream_not_readable(file: &[u8], answered: &[u8]) -> Raised {
         Raised::syntax(98, 999, vec![file.to_vec(), answered.to_vec()])
     }
@@ -769,13 +758,13 @@ impl Raised {
 
     /// 40.19: `DATE`/`TIME`'s input-conversion argument does not parse under
     /// the input style it was given, or parses but is out of range for it
-    /// (`Error_Incorrect_call_format_invalid`, `expression/
-    /// BuiltinFunctions.cpp`, both builtins' own `indate`/`intime` blocks).
-    /// `found` is the argument's own rendered text and `style` the single
-    /// upcased input-style byte, never the whole option string -- both
-    /// measured, rc 216: `date(,'','f')` gives `DATE argument 2, "", is not
-    /// in the format described by argument 3, "F".` and `date('D','367',
-    /// 'D')` (2026 is not a leap year) gives the same shape naming `"D"`.
+    /// (`Error_Incorrect_call_format_invalid`, both builtins' own
+    /// input-conversion blocks). `found` is the argument's own rendered text
+    /// and `style` the single upcased input-style byte, never the whole
+    /// option string -- both measured, rc 216: `date(,'','f')` gives `DATE
+    /// argument 2, "", is not in the format described by argument 3, "F".`
+    /// and `date('D','367', 'D')` (2026 is not a leap year) gives the same
+    /// shape naming `"D"`.
     pub(crate) fn date_format_invalid(routine: &[u8], found: &[u8], style: u8) -> Raised {
         Raised::syntax(40, 19, vec![routine.to_vec(), found.to_vec(), vec![style]])
     }
@@ -1044,7 +1033,7 @@ impl Raised {
     }
 
     /// 93.974: a method that is neither a string, an array nor a `Method`
-    /// object -- `newMethodObject`'s refusal (`classes/MethodClass.cpp:468`).
+    /// object -- `newMethodObject`'s refusal.
     pub(crate) fn not_a_method_or_source(position: &str) -> Raised {
         Raised::syntax(93, 974, vec![position.as_bytes().to_vec()])
     }
@@ -1183,9 +1172,8 @@ impl Raised {
         Raised::syntax(93, 925, vec![expected.to_string().into_bytes()])
     }
 
-    /// 93.959: an array size or dimension product past
-    /// `ArrayClass::MaxFixedArraySize`. `max` is that bound, which the
-    /// message names.
+    /// 93.959: an array size or dimension product past the oracle's
+    /// fixed-array size limit. `max` is that bound, which the message names.
     pub(crate) fn array_too_big(max: usize) -> Raised {
         Raised::syntax(93, 959, vec![max.to_string().into_bytes()])
     }
@@ -1435,13 +1423,11 @@ impl Raised {
     }
 
     /// A native argument declared `RexxStemObject` is not a stem, nor in a
-    /// routine a stem's name: 93.969 in a method and 40.919 in a routine
-    /// (`NativeActivation::reportStemError`,
-    /// `execution/NativeActivation.cpp:202`). Measured, oracle, through
-    /// `orxmethod`'s `TestStemArg('zz')`, rc 163: `Method argument 1 must have
-    /// a stem object value; found "zz".`; through `orxfunction`'s
-    /// `TestStemArg('a.b')`: `Argument 1 must have a stem object or stem name
-    /// value; found "a.b".`
+    /// routine a stem's name: 93.969 in a method and 40.919 in a routine.
+    /// Measured, oracle, through `orxmethod`'s `TestStemArg('zz')`, rc 163:
+    /// `Method argument 1 must have a stem object value; found "zz".`; through
+    /// `orxfunction`'s `TestStemArg('a.b')`: `Argument 1 must have a stem
+    /// object or stem name value; found "a.b".`
     pub(crate) fn native_argument_not_a_stem(
         method: bool,
         position: usize,
@@ -1617,8 +1603,7 @@ impl Raised {
     }
 
     /// 93.946: a `~send`/`~start` message name that is an array of any shape
-    /// but a single dimension of two elements
-    /// (`classes/ObjectClass.cpp:2143`-`:2146`). No substitution.
+    /// but a single dimension of two elements. No substitution.
     pub(crate) fn message_array_shape() -> Raised {
         Raised::syntax(93, 946, vec![])
     }
@@ -1630,8 +1615,8 @@ impl Raised {
         Raised::syntax(97, 1, vec![target.to_vec(), name.to_vec()])
     }
 
-    /// 97.2: the method is `PRIVATE` and `RexxObject::checkPrivate` refused
-    /// the caller. The substitutions are [`Raised::no_method`]'s.
+    /// 97.2: the method is `PRIVATE` and the oracle refused the caller. The
+    /// substitutions are [`Raised::no_method`]'s.
     pub(crate) fn private_method(target: &[u8], name: &[u8]) -> Raised {
         Raised::syntax(97, 2, vec![target.to_vec(), name.to_vec()])
     }
@@ -1675,17 +1660,16 @@ impl Raised {
     }
 
     /// 98.973, what `::OPTIONS NOSTRING SYNTAX` turns an untrapped NOSTRING
-    /// into (`Activity::raiseCondition`, `concurrency/Activity.cpp:615`).
+    /// into.
     pub(crate) fn nostring_syntax(readable: &[u8]) -> Raised {
         Raised::syntax(98, 973, vec![readable.to_vec()])
     }
 
-    /// 98.970, what `::OPTIONS ERROR SYNTAX` turns a command's `ERROR` into
-    /// (`RexxActivation::command`): the condition's `DESCRIPTION` and `RC`.
-    /// The catalogue quotes `&1` itself, so a command's description is the
-    /// string as the program wrote it and nothing more -- measured,
-    /// `External command "sh -c 'exit 3'" ended with return code 3.` at rc
-    /// 158.
+    /// 98.970, what `::OPTIONS ERROR SYNTAX` turns a command's `ERROR` into:
+    /// the condition's `DESCRIPTION` and `RC`. The catalogue quotes `&1`
+    /// itself, so a command's description is the string as the program wrote
+    /// it and nothing more -- measured, `External command "sh -c 'exit 3'"
+    /// ended with return code 3.` at rc 158.
     pub(crate) fn error_syntax(description: &[u8], rc: &[u8]) -> Raised {
         Raised::syntax(98, 970, vec![description.to_vec(), rc.to_vec()])
     }
@@ -1697,25 +1681,23 @@ impl Raised {
     }
 
     /// 98.921: `ADDRESS ... WITH` to an environment whose handler does not
-    /// redirect (`CommandHandler::call`, `concurrency/CommandHandler.cpp:98`).
-    /// The substitution is the environment name as the program gave it.
+    /// redirect. The substitution is the environment name as the program gave
+    /// it.
     pub(crate) fn redirection_not_supported(environment: &[u8]) -> Raised {
         Raised::syntax(98, 921, vec![environment.to_vec()])
     }
 
     /// 98.974, what `::OPTIONS NOTREADY SYNTAX` turns an untrapped NOTREADY
-    /// into (`Activity::raiseCondition`, `concurrency/Activity.cpp:619`).
-    /// `name` is the stream's name as the program wrote it, not the qualified
-    /// path -- measured, `Stream "n.txt" is not ready.` at rc 158. From a
-    /// command handler's condition (`command.rs`'s `escalated`), the
+    /// into. `name` is the stream's name as the program wrote it, not the
+    /// qualified path -- measured, `Stream "n.txt" is not ready.` at rc 158.
+    /// From a command handler's condition (`command.rs`'s `escalated`), the
     /// condition's description instead.
     pub(crate) fn notready_syntax(name: &[u8]) -> Raised {
         Raised::syntax(98, 974, vec![name.to_vec()])
     }
 
     /// 98.986, what `::OPTIONS NOVALUE SYNTAX` turns an untrapped NOVALUE
-    /// into (`RexxActivation::handleNovalueEvent`,
-    /// `execution/RexxActivation.cpp:2648`).
+    /// into.
     pub(crate) fn unassigned_variable(name: &[u8]) -> Raised {
         Raised::syntax(98, 986, vec![name.to_vec()])
     }
@@ -1727,10 +1709,8 @@ impl Raised {
     }
 
     /// The traceback line a method activation contributes when its package
-    /// carries no source -- `RexxActivation::formatSourcelessTraceLine`'s
-    /// `isMethod()` arm (`execution/RexxActivation.cpp:5057`), reached from
-    /// `PackageClass::traceBack` (`classes/PackageClass.cpp:589`) when
-    /// `source->extract` answers nothing.
+    /// carries no source -- the oracle's sourceless method line, reached from
+    /// the traceback when `source->extract` answers nothing.
     pub(crate) fn sourceless_method_line(name: &[u8], scope: &str, package: &[u8]) -> Vec<u8> {
         let substitutions = vec![name.to_vec(), scope.as_bytes().to_vec(), package.to_vec()];
         match interrexx_inventory::errors::lookup(101, 24) {
@@ -1974,8 +1954,7 @@ impl From<&ParseError> for Raised {
 
 impl Raised {
     /// The condition `error` raises in `source`, positioned at `line`, and the
-    /// text of the clause its traceback line echoes
-    /// (`LanguageParser::createStackFrame`).
+    /// text of the clause its traceback line echoes.
     pub(crate) fn parse_failure(
         error: &ParseError,
         source: &ProgramSource,
@@ -2095,13 +2074,13 @@ pub(crate) enum FailureSite {
     Rendered { text: Vec<u8> },
     /// A native level that reported the condition itself, rendered as
     /// [`FailureSite::Rendered`] is, and the topmost level with a package:
-    /// the major line names `name`, that package, with no line, because
-    /// `Activity::generateProgramInformation` takes the `POSITION` from that
-    /// frame and a native frame has none (`concurrency/Activity.cpp:1241-1263`).
+    /// the major line names `name`, that package, with no line, because the
+    /// oracle takes the `POSITION` from that frame and a native frame has
+    /// none.
     Packaged { text: Vec<u8>, name: Vec<u8> },
     /// The level a kept condition object was raised again in, which echoes
-    /// nothing and whose line and `name` the report names
-    /// (`Activity::reraiseException`); no level it leaves records a site.
+    /// nothing and whose line and `name` the report names; no level it leaves
+    /// records a site.
     Reraised { line: usize, name: Option<Vec<u8>> },
 }
 
@@ -2241,9 +2220,9 @@ impl Raised {
         out
     }
 
-    /// [`Raised::report`] as the lines `Activity::display` writes one at a
-    /// time, each without its line end. A line keeps a line end its echo or
-    /// substitution holds.
+    /// [`Raised::report`] as the lines the oracle writes one at a time, each
+    /// without its line end. A line keeps a line end its echo or substitution
+    /// holds.
     pub(crate) fn report_lines(&self, site: &ClauseSite<'_>) -> Vec<Vec<u8>> {
         let mut lines = Vec::new();
         // `push_clause` owns the 40-column clamp, the six-wide line field and
@@ -2320,10 +2299,10 @@ impl Raised {
             out.extend_from_slice(&self.message(self.number, self.sub));
             lines.push(out);
         }
-        // `Activity::display` sends each line through
-        // `displayUsingTraceOutput`, which sanitises it. That covers the
-        // clause echoes too, which carry the program's own source -- measured,
-        // a raw `0x01` inside a source literal echoes as `?`.
+        // The oracle sends each line through its trace-output display, which
+        // sanitises it. That covers the clause echoes too, which carry the
+        // program's own source -- measured, a raw `0x01` inside a source
+        // literal echoes as `?`.
         for line in &mut lines {
             displayable(line);
         }

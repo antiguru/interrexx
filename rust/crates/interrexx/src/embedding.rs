@@ -1,7 +1,6 @@
-//! The embedding entry points over safe values: the classic `RexxStart`
-//! (`api/rexx.h`) and the instance API's `RexxCreateInterpreter`
-//! (`api/oorexxapi.h`). The `librexx` exports read the caller's C structures
-//! and write the answers back.
+//! The embedding entry points over safe values: the classic `RexxStart` and the instance
+//! API's `RexxCreateInterpreter`. The `librexx` exports read the caller's C structures and
+//! write the answers back.
 
 use std::io::{IsTerminal, Write};
 
@@ -20,8 +19,8 @@ pub struct Start {
     pub exits: Vec<(std::ffi::c_int, Vec<u8>)>,
 }
 
-/// `RexxStart`'s `instore` pair (`LanguageParser::processInstore`): the source, its image from
-/// an earlier call, both, or neither -- which runs the macro `name` names.
+/// `RexxStart`'s `instore` pair: the source, its image from an earlier call, both, or neither
+/// -- which runs the macro `name` names.
 #[derive(Default)]
 pub struct Instore {
     pub source: Option<Vec<u8>>,
@@ -39,8 +38,7 @@ pub struct Started {
     pub image: Option<Vec<u8>>,
 }
 
-/// `Error_Program_unreadable` (`messages/RexxErrorCodes.h`), negated as
-/// `RexxStart` answers it.
+/// `Error_Program_unreadable`, negated as `RexxStart` answers it.
 const UNREADABLE: i32 = -3;
 
 /// `RexxGetVersionInformation`'s text, the banner `rexx -v` writes.
@@ -60,8 +58,8 @@ fn message_texts() -> &'static [std::ffi::CString] {
     })
 }
 
-/// `RexxGetErrorMessage` (`runtime/Interpreter.cpp:794`): the text of the message whose code
-/// (major times 1000 plus minor) is `code`.
+/// The text of the message whose code (major times 1000 plus minor) is
+/// `code`.
 pub fn error_message(code: i32) -> Option<&'static std::ffi::CStr> {
     let at = interrexx_inventory::errors::MESSAGES
         .iter()
@@ -69,8 +67,7 @@ pub fn error_message(code: i32) -> Option<&'static std::ffi::CStr> {
     message_texts().get(at).map(std::ffi::CString::as_c_str)
 }
 
-/// `RexxGetErrorMessageByNumber` (`runtime/Interpreter.cpp:819`): the text of the message the
-/// message number `number` maps to.
+/// The text of the message the message number `number` maps to.
 pub fn error_message_by_number(number: i32) -> Option<&'static std::ffi::CStr> {
     let message = crate::builtin::rexxutil::messages::mapped_message(number)?;
     error_message(i32::from(message.major) * 1000 + i32::from(message.sub))
@@ -84,9 +81,9 @@ struct Loaded {
     image_wanted: bool,
 }
 
-/// Reads the program `name` and `instore` give (`RexxStartDispatcher::run`): a file, an image
-/// from an earlier call (its source, where given too, is not read again), an in-store source,
-/// or, with neither, the macro `name`. A refusal is the report written and the negated error.
+/// Reads the program `name` and `instore` give: a file, an image from an earlier call (its
+/// source, where given too, is not read again), an in-store source, or, with neither, the
+/// macro `name`. A refusal is the report written and the negated error.
 fn load(name: &[u8], instore: Option<Instore>) -> Result<Loaded, (Vec<u8>, i32)> {
     let Some(instore) = instore else {
         return match launcher::load(name) {
@@ -138,13 +135,11 @@ fn write_outcome(outcome: &crate::Outcome) {
     let _ = std::io::stderr().write_all(&outcome.stderr);
 }
 
-/// Runs `start` in an interpreter of its own, its output on this process's
-/// standard output and error, and answers as `RexxStart` does
-/// (`RexxStartDispatcher::run`): 0, the result and, where it is a whole
-/// number a `short` holds, its value; or the negated error number of the
-/// condition that ended it. A single command argument with a leading blank loses it, and a
-/// single command argument `//T` translates the program without running it
-/// (`api/InterpreterAPI.cpp:127`), leaving the `short` alone.
+/// Runs `start` in an interpreter of its own, its output on this process's standard output
+/// and error, and answers as `RexxStart` does: 0, the result and, where it is a whole
+/// number a `short` holds, its value; or the negated error number of the condition that
+/// ended it. A single command argument with a leading blank loses it, and a single command
+/// argument `//T` translates the program without running it, leaving the `short` alone.
 pub fn rexx_start(start: Start) -> Started {
     // The oracle's interpreter takes the halting signals (`SystemInterpreter`), so a SIGINT
     // during the run halts the program rather than ending the process, and the handlers stay
@@ -174,8 +169,8 @@ pub fn rexx_start(start: Start) -> Started {
             };
         }
     };
-    // An in-store source's image is saved once it has translated, before it runs
-    // (`LanguageParser::processInstore`), so a run that fails still leaves it.
+    // An in-store source's image is saved once it has translated, before it
+    // runs, so a run that fails still leaves it.
     let image = (loaded.image_wanted
         && crate::translate_program(&loaded.path, loaded.text.clone())
             .error
@@ -247,9 +242,9 @@ pub fn rexx_start(start: Start) -> Started {
     }
 }
 
-/// `RexxTranslateProgram` and `RexxCompileProgram` (`TranslateDispatcher::run`): the program
-/// file `input` translated and, where `output` names a file, its image written there, encoded
-/// as `encode` says. An error is reported and answers its negated number.
+/// `RexxTranslateProgram` and `RexxCompileProgram`: the program file `input` translated and,
+/// where `output` names a file, its image written there, encoded as `encode` says. An error
+/// is reported and answers its negated number.
 pub fn translate_file(input: &[u8], output: Option<&[u8]>, encode: bool) -> i32 {
     let loaded = match load(input, None) {
         Ok(loaded) => loaded,
@@ -277,8 +272,8 @@ pub fn translate_file(input: &[u8], output: Option<&[u8]>, encode: bool) -> i32 
     0
 }
 
-/// `RexxTranslateInstoreProgram` (`TranslateInstoreDispatcher::run`): `source`, named `name`,
-/// translated, and its image; an error is reported nowhere and answers its negated number.
+/// `RexxTranslateInstoreProgram`: `source`, named `name`, translated, and its image; an error
+/// is reported nowhere and answers its negated number.
 pub fn translate_instore(name: &[u8], source: Vec<u8>) -> Result<Vec<u8>, i32> {
     let image = crate::compiled::write_image(&source, name, false);
     let outcome = crate::translate_program(name, source);
@@ -356,12 +351,12 @@ impl Drop for OtherRun {
     }
 }
 
-/// `RexxSetHalt` (`ActivityManager::haltActivity`): the run on `thread` halted at its next
-/// clause; `false` where no run is in flight there. A `thread` no `RexxStart` run is on that is
-/// this thread halts the activity whose native call this thread runs, as a command handler that
-/// names its own thread reaches it (hostemu's `HI`); a native call on another thread has its
-/// interpreter halted as a `RexxStart` run is (measured: the oracle's halt reaches a native
-/// function's activity from a thread the function started).
+/// `RexxSetHalt`: the run on `thread` halted at its next clause; `false` where no run is in
+/// flight there. A `thread` no `RexxStart` run is on that is this thread halts the activity
+/// whose native call this thread runs, as a command handler that names its own thread reaches
+/// it (hostemu's `HI`); a native call on another thread has its interpreter halted as a
+/// `RexxStart` run is (measured: the oracle's halt reaches a native function's activity from a
+/// thread the function started).
 pub fn classic_halt(thread: usize) -> bool {
     let current = crate::signal::current_thread();
     let inbox = classic_inbox(thread).or_else(|| {
@@ -385,8 +380,8 @@ pub fn classic_halt(thread: usize) -> bool {
     true
 }
 
-/// `RexxSetTrace` and `RexxResetTrace` (`ActivityManager::setActivityTrace`): the external
-/// trace of the run on `thread`, on or off; `false` where no run is in flight there.
+/// `RexxSetTrace` and `RexxResetTrace`: the external trace of the run on `thread`, on or
+/// off; `false` where no run is in flight there.
 pub fn classic_trace(thread: usize, on: bool) -> bool {
     let Some(inbox) = classic_inbox(thread) else {
         return false;

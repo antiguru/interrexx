@@ -274,10 +274,9 @@ pub(crate) struct Activities {
     next_timer: u32,
     message_ids: FxHashMap<ObjRef, MessageId>,
     next_message: u32,
-    /// The activity each `Message` object was last sent from
-    /// (`MessageClass`'s `startActivity`, set by `dispatch`,
-    /// `classes/MessageClass.cpp:432`), which `Message~halt` asks. Pruned
-    /// of swept messages at each collection.
+    /// The activity each `Message` object was last sent from (`MessageClass`'s `startActivity`,
+    /// set by `dispatch`), which `Message~halt` asks. Pruned of swept messages at each
+    /// collection.
     senders: FxHashMap<ObjRef, ActivityId>,
     /// The parked activities waiting on each message, in the order they
     /// parked.
@@ -289,11 +288,10 @@ pub(crate) struct Activities {
     /// The thread table every activity's context links.
     thread_table: interrexx_api::ffi::ThreadTable,
     /// The numbers of ended activities a new one takes first, oldest first:
-    /// the oracle's pool of idle threads (`availableActivities`,
-    /// `concurrency/ActivityManager.cpp:556`), whose threads keep their
-    /// numbers, including none.
+    /// the oracle's pool of idle threads, whose threads keep their numbers,
+    /// including none.
     pooled: VecDeque<Option<u32>>,
-    /// The last number assigned (`Activity::getIdntfr`'s counter).
+    /// The last number assigned.
     last_number: u32,
     /// The next [`crate::NativeFrame`] number, wrapping: one counter for
     /// every activity, so a frame token names its call on one of them.
@@ -337,8 +335,7 @@ const MAIN: ActivityId = ActivityId(0);
 /// checks and the raise of 11.1.
 const STACK_MARGIN: usize = 32 * 1024 * 1024;
 
-/// `ActivityManager::MAX_THREAD_POOL_SIZE` (`ActivityManager.hpp:358`): an
-/// ended activity is pooled while the pool holds no more than this.
+/// An ended activity is pooled while the pool holds no more than this.
 const MAX_POOLED: usize = 5;
 
 impl Activities {
@@ -574,8 +571,7 @@ pub(crate) trait Scheduler {
 impl Scheduler for Interp {
     fn spawn(&mut self, idle: Box<Idle>) -> ActivityId {
         self.guards_go_live(None);
-        // `Activity::setCallerStackFrameAsStringTable` numbers the spawner
-        // (`concurrency/Activity.cpp:1206`).
+        // The spawner is numbered.
         self.activity_number();
         let table = &mut self.activities;
         let id = match table.free.pop() {
@@ -805,8 +801,8 @@ impl Scheduler for Interp {
     }
 }
 
-/// The oracle's `yieldInstructions` (`RexxActivation.hpp:591`): the clauses
-/// an activation runs before it may give up the kernel.
+/// The oracle's `yieldInstructions`: the clauses an activation runs before it
+/// may give up the kernel.
 const DELIVERY_YIELD_CLAUSES: u32 = 50;
 
 impl Interp {
@@ -972,8 +968,7 @@ impl Interp {
 
     /// The running activity's number, which `.context~thread` answers: main
     /// is 1 and an activity is numbered when first asked, as the oracle
-    /// numbers its threads (`Activity::getIdntfr`,
-    /// `concurrency/Activity.cpp:108`).
+    /// numbers its threads.
     pub(crate) fn activity_number(&mut self) -> u32 {
         if let Some(number) = self.activity.number {
             return number;
@@ -990,9 +985,8 @@ impl Interp {
     }
 
     /// Whether the waits chained from `owner`'s lead back to the running
-    /// activity (`Activity::checkDeadLock`, `concurrency/Activity.cpp:2000`):
-    /// each waiting activity waits on a guard lock's owner or on the activity
-    /// running a message's send.
+    /// activity: each waiting activity waits on a guard lock's owner or on
+    /// the activity running a message's send.
     pub(crate) fn deadlocks(&self, owner: ActivityId) -> bool {
         let me = self.activities.running;
         let mut at = owner;
@@ -1016,8 +1010,7 @@ impl Interp {
         false
     }
 
-    /// The activity running `message`'s send, started or sent, while it runs
-    /// (`MessageClass::startActivity`).
+    /// The activity running `message`'s send, started or sent, while it runs.
     pub(crate) fn message_runner(&self, message: ObjRef) -> Option<ActivityId> {
         let runs = |activity: &Activity| {
             matches!(activity.root_then, Some(Then::Started(started)) if started == message)
@@ -1041,8 +1034,8 @@ impl Interp {
         Some(ActivityId(u32::try_from(index).expect("handles fit u32")))
     }
 
-    /// Posts `watcher`'s guard semaphore (`Activity::guardPost`): its next
-    /// `GUARD WHEN` wait ends at once, and one it is parked in ends now.
+    /// Posts `watcher`'s guard semaphore: its next `GUARD WHEN` wait ends at
+    /// once, and one it is parked in ends now.
     pub(crate) fn post_guard(&mut self, watcher: ActivityId) {
         if watcher == self.activities.running {
             self.activity.guard_posted = true;
@@ -1730,9 +1723,8 @@ impl Interp {
     }
 
     /// The `UNINIT`s a collection readied, run on an activity whose dispatch
-    /// has ended (`Activity::runThread`, `concurrency/Activity.cpp:249`) or
-    /// whose activation returns. The first refusal they meet is answered; the
-    /// later ones are kept for the program's end, in order.
+    /// has ended or whose activation returns. The first refusal they meet is
+    /// answered; the later ones are kept for the program's end, in order.
     pub(crate) fn run_ending_uninits(&mut self) -> Result<(), Failure> {
         let mut refused = self.run_ready_uninits().into_iter();
         let Some(first) = refused.next() else {
@@ -1760,9 +1752,8 @@ impl Interp {
 
     /// Runs every started activity to its end, for the end of the program.
     /// One that nothing left can wake keeps the program waiting, as the
-    /// oracle's termination does (`InterpreterInstance::terminate`,
-    /// `runtime/InterpreterInstance.cpp:562`), until the run's deadline or
-    /// a signal's halt wakes it.
+    /// oracle's termination does, until the run's deadline or a signal's halt
+    /// wakes it.
     pub(crate) fn run_started_activities(&mut self) -> Result<(), Failure> {
         self.activities.main_finished = true;
         self.cancel_wait();
@@ -1994,7 +1985,7 @@ impl Interp {
             }
             first => 'resumed: {
                 // The oracle's resumed activation announces itself again
-                // where it had before the `REPLY` (`RexxActivation.cpp:561`).
+                // where it had before the `REPLY`.
                 if matches!(first, Some(First::Reply)) {
                     if !self.reserve_for_continuation() {
                         self.activity.first = first;
@@ -2071,13 +2062,12 @@ impl Interp {
     }
 
     /// Settles and reports `failed`, the failure a started activity ended
-    /// with, as the oracle's `Activity::run` handler and then the thread's own
-    /// do (`concurrency/Activity.cpp:3423`, `:233`): the message `started`
-    /// is told of it, and where a notifier fails, that failure replaces it
-    /// and is reported. A target is sent `messageComplete` once for the
-    /// message (Deviation 116): where `notified` says the failure is that of
-    /// a notifier, the targets are not sent it again, and a replacement is
-    /// not told to them.
+    /// with, as the oracle's activity handler and then the thread's own do:
+    /// the message `started` is told of it, and where a notifier fails, that
+    /// failure replaces it and is reported. A target is sent
+    /// `messageComplete` once for the message (Deviation 116): where
+    /// `notified` says the failure is that of a notifier, the targets are not
+    /// sent it again, and a replacement is not told to them.
     fn end_failed_started(
         &mut self,
         started: Option<ObjRef>,
@@ -2197,7 +2187,7 @@ impl Interp {
     }
 
     /// The traceback an untrapped condition writes on the started activity it
-    /// ended, at once (`MessageDispatcher.cpp:64-72`).
+    /// ended, at once.
     fn report_started_failure(&mut self, raised: &crate::Raised) {
         let mut sites = std::mem::take(&mut self.activity.failure_sites);
         sites.extend(self.activity.failure_site.take());
@@ -2207,7 +2197,7 @@ impl Interp {
             sites: &sites,
         };
         // With no level that has a line, the report names no program or line
-        // (`Activity::display` with no `POSITION`).
+        // (as the oracle displays a condition with no `POSITION`).
         let report = if sites.iter().any(crate::error::FailureSite::positions) {
             raised.report_lines(&site)
         } else {
@@ -2427,11 +2417,10 @@ impl Interp {
     /// that guard under a pin of its own. Otherwise it may once the running
     /// activation has run more than [`DELIVERY_YIELD_CLAUSES`] clauses of its
     /// own since the slice fell due, its callees' not counted and not
-    /// restarting its count. The oracle yields only in an activation past
-    /// `yieldInstructions`, a count each `RexxActivation` keeps, or at a
-    /// native call (`RexxActivation.cpp:616`, `NativeActivation.cpp:1304`),
-    /// so a short destination's clauses never let another activity's lines
-    /// in between.
+    /// restarting its count. The oracle yields only in an activation past its
+    /// yield-instruction count, which each activation keeps, or at a native
+    /// call, so a short destination's clauses never let another activity's
+    /// lines in between.
     fn delivery_may_yield(&self) -> bool {
         let activity = &self.activity;
         if !activity.routing_trace {
@@ -2511,11 +2500,10 @@ impl Interp {
         Ok(())
     }
 
-    /// `RexxActivation::processClauseBoundary`'s halt
-    /// (`execution/RexxActivation.cpp:4085`-`:4093`), at the end of the
-    /// clause the request found running, in that clause's activation: a
-    /// `CALL ON` trap queues it, a delayed one included, a `SIGNAL ON` trap
-    /// takes it, and untrapped it is 4.1.
+    /// The halt a clause boundary delivers, at the end of the clause the
+    /// request found running, in that clause's activation: a `CALL ON` trap
+    /// queues it, a delayed one included, a `SIGNAL ON` trap takes it, and
+    /// untrapped it is 4.1.
     pub(crate) fn raise_requested_halt(
         &mut self,
         description: Option<Vec<u8>>,
@@ -2524,7 +2512,7 @@ impl Interp {
             description: description.clone(),
             ..Raised::condition(std::borrow::Cow::Borrowed("HALT"))
         };
-        // A trap taking the halt calls the halt exit's clear (`RexxActivation::trap`).
+        // A trap taking the halt calls the halt exit's clear.
         if self.exits.is_some() && self.trap_for(b"HALT").is_some() {
             self.halt_clear_exit()?;
         }
@@ -2556,12 +2544,10 @@ impl Interp {
         }
     }
 
-    /// `Message~halt` (`MessageClass::halt`, `classes/MessageClass.cpp:806`):
-    /// false for a message never started or sent and for an activity already
-    /// asked; true where the request is queued for the running activation of
-    /// the activity that started or sent it (`RexxActivation::halt`), and
-    /// where that activity has no Rexx frame to make it to (`Activity::halt`,
-    /// `concurrency/Activity.cpp:2155`), which drops it.
+    /// `Message~halt`: false for a message never started or sent and for an
+    /// activity already asked; true where the request is queued for the
+    /// running activation of the activity that started or sent it, and where
+    /// that activity has no Rexx frame to make it to, which drops it.
     pub(crate) fn halt_message(&mut self, message: ObjRef, description: Option<Vec<u8>>) -> bool {
         if !self.started_messages.contains(&message) {
             let Some(&sender) = self.activities.senders.get(&message) else {
@@ -2605,11 +2591,10 @@ impl Interp {
             .insert(message, self.activities.running);
     }
 
-    /// A signal's halt (`InterpreterInstance::haltAllActivities`,
-    /// `runtime/InterpreterInstance.cpp:686`): every activity with a Rexx
-    /// frame is asked to raise `HALT` with no description, and one parked in
-    /// `SysSleep`, a `GUARD WHEN`, a semaphore wait or a command's wait is
-    /// woken to take it, in handle order.
+    /// A signal's halt: every activity with a Rexx frame is asked to raise
+    /// `HALT` with no description, and one parked in `SysSleep`, a `GUARD
+    /// WHEN`, a semaphore wait or a command's wait is woken to take it, in
+    /// handle order.
     pub(crate) fn halt_all(&mut self) {
         let mark = self.activities.ready.len();
         self.halt_each();
@@ -2618,8 +2603,8 @@ impl Interp {
         }
     }
 
-    /// `Activity::halt` for the running activity (`HaltThread`): its
-    /// running Rexx frame is asked to halt.
+    /// A halt for the running activity (`HaltThread`): its running Rexx frame
+    /// is asked to halt.
     pub(crate) fn halt_running(&mut self) {
         let running = self.activities.running;
         if request_halt(&mut self.activity, None) == Some(true) {
@@ -2627,10 +2612,9 @@ impl Interp {
         }
     }
 
-    /// `RexxActivation::halt(description)` for the running activation, as a
-    /// handler written in Rexx asks it with `caller~raise("HALT", rc)`
-    /// (`concurrency/CommandHandler.cpp:451-457`): seen at the end of the
-    /// clause, as a Ctrl-C is.
+    /// A halt with a description for the running activation, as a handler
+    /// written in Rexx asks it with `caller~raise("HALT", rc)`: seen at the
+    /// end of the clause, as a Ctrl-C is.
     pub(crate) fn request_running_halt(&mut self, description: Vec<u8>) {
         request_halt(&mut self.activity, Some(description));
     }
@@ -2754,9 +2738,8 @@ impl Interp {
     }
 }
 
-/// Queues a halt request for `target`'s running activation
-/// (`RexxActivation::halt`): `None` where it has none, `Some(false)` where
-/// one is already queued, else `Some(true)`.
+/// Queues a halt request for `target`'s running activation: `None` where it
+/// has none, `Some(false)` where one is already queued, else `Some(true)`.
 fn request_halt(target: &mut Activity, description: Option<Vec<u8>>) -> Option<bool> {
     let activation = target.running.as_ref()?.id;
     if target.pending_traps.iter().any(|pending| pending.request) {

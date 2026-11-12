@@ -1,11 +1,11 @@
-//! Reading the interpreter's own bootstrap Rexx -- `CoreClasses.orx` and
-//! `StreamClasses.orx` -- so a gate table can say which directive shapes the
-//! bootstrap actually depends on.
+//! Reading the interpreter's own bootstrap Rexx -- the core and stream class
+//! files -- so a gate table can say which directive shapes the bootstrap
+//! actually depends on.
 
 use std::fs;
 use std::path::PathBuf;
 
-/// The two bootstrap files, by the names they are cited by.
+/// The two bootstrap files, by their file names.
 pub const CORE_CLASSES: &str = "CoreClasses.orx";
 pub const STREAM_CLASSES: &str = "StreamClasses.orx";
 

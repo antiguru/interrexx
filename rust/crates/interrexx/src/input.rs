@@ -238,7 +238,7 @@ impl FileConsole {
 
     /// CHARIN's start: moves the read position to character `position`,
     /// counted from 1, answering `false` past the end of the file, where
-    /// nothing moves (`StreamInfo::setCharReadPosition`).
+    /// nothing moves.
     fn seek_char(&mut self, position: u64) -> bool {
         if position == 0 || position > size_of(self.open.file()) {
             return false;
@@ -562,8 +562,8 @@ impl Interp {
     /// answers** -- measured, a program with one line pushed reads it and the
     /// destination sees a single `LINEIN`, for the second read.
     pub(crate) fn pull_line(&mut self) -> Result<Vec<u8>, Failure> {
-        // The queue exit's first pass (`Activity::pullInput`): a handler that returned no
-        // line answers `.nil`, read as its string.
+        // The queue exit's first pass: a handler that returned no line answers `.nil`,
+        // read as its string.
         if self.exits.is_some()
             && let Some(line) = self.pull_exit()?
         {
@@ -604,7 +604,7 @@ impl Interp {
     /// crate's licensed answer where the oracle dies
     /// (`corpus/oracle-crashes.txt` entry 11b).
     pub(crate) fn linein_line(&mut self) -> Result<Vec<u8>, Failure> {
-        // The I/O exit's first pass (`Activity::lineIn`).
+        // The I/O exit's first pass.
         if self.exits.is_some()
             && let Some(line) = self.terminal_read_exit()?
         {

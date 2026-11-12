@@ -148,9 +148,9 @@ fn a_buffer_changed_in_place_under_a_call_stays_shared() {
 }
 
 /// **Finishing a buffer string keeps the address `StringData` answered for
-/// it**, which then reads every byte written up to the length the string
-/// was made at, as the oracle's one storage does (`RexxString::finish` sets
-/// only the length): measured, oracle, `helloxxxxx` for the shorter finish.
+/// it**, which then reads every byte written up to the length the string was
+/// made at, as the oracle's one storage does (its finish sets only the
+/// length): measured, oracle, `helloxxxxx` for the shorter finish.
 #[test]
 fn finishing_a_buffer_string_keeps_its_kept_string_in_place() {
     let ran = run(

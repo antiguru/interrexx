@@ -1,11 +1,10 @@
-//! The signal handlers. A process entry
-//! point that starts Rexx for a user installs them once: SIGINT
-//! and SIGTERM where the action is the default or ignored, SIGHUP only where
-//! it is the default, never over a handler, without `SA_RESTART`
-//! (`platform/unix/SystemInterpreter.cpp:117-145`); SIGPIPE is
-//! ignored (`:146-148`). A handler sets [`PENDING`] and writes one byte to
-//! the timer's wake socket, nothing else; the timer thread serves it. These
-//! statics are the signal half of the timer's wake source.
+//! The signal handlers. A process entry point that starts Rexx for a user
+//! installs them once: SIGINT and SIGTERM where the action is the default or
+//! ignored, SIGHUP only where it is the default, never over a handler,
+//! without `SA_RESTART`; SIGPIPE is ignored (`:146-148`). A handler sets
+//! [`PENDING`] and writes one byte to the timer's wake socket, nothing else;
+//! the timer thread serves it. These statics are the signal half of the
+//! timer's wake source.
 
 #![allow(unsafe_code)]
 

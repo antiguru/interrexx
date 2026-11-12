@@ -198,22 +198,19 @@ impl Programs {
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub(crate) enum Package {
     /// The package the interpreter's own classes belong to. `PackageClass::
-    /// getProgramName` answers `REXX` for it (`classes/PackageClass.hpp:147`).
+    /// getProgramName` answers `REXX` for it.
     Rexx,
     /// The package a loaded program's own directives install into.
     Program(ProgramId),
 }
 
-/// What a class object's own `package` field holds -- `RexxClass::setPackage`,
-/// the write `RexxClass::subclass` makes before it builds anything
-/// (`classes/ClassClass.cpp:1582`).
+/// What a class object's own `package` field holds, which the oracle writes
+/// before it builds anything.
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub(crate) enum ClassPackage {
-    /// `ClassDirective::install` passes the installing package
-    /// (`instructions/ClassDirective.cpp:200`, `:205`).
+    /// The class directive passes the installing package.
     Program(ProgramId),
-    /// `OREF_NULL`, which is what `subclassRexx` and `mixinClassRexx` forward
-    /// (`classes/ClassClass.cpp:1546`, `:1496`).
+    /// `OREF_NULL`, which is what `subclassRexx` and `mixinClassRexx` forward.
     Null,
 }
 
@@ -250,7 +247,7 @@ pub(crate) enum TailPiece {
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) struct CompoundName {
     /// The stem half, its trailing period included (`compound_parts`' own
-    /// convention, matching `addCompound`, `LanguageParser.cpp:2153`).
+    /// convention).
     pub(crate) stem: Box<[u8]>,
     /// The slot the plan holding this entry bound `stem` to, so that finding
     /// the stem object at a reference costs an index rather than a hash of the
@@ -316,10 +313,9 @@ pub(crate) struct Plan {
     /// How a compound-shaped symbol this body names splits, by
     /// `SymbolId::index`, `None` where this pass recorded nothing for it.
     pub(crate) compounds: Box<[Option<CompoundName>]>,
-    /// Whether this is a method body whose first instruction past an
-    /// `EXPOSE` is a `TRACE` naming a label-tracing letter, whose `>I>` the
-    /// oracle traces before the method's guard lock is reserved
-    /// (`RexxActivation::traceEntry`, `execution/RexxActivation.cpp:3630-3642`).
+    /// Whether this is a method body whose first instruction past an `EXPOSE`
+    /// is a `TRACE` naming a label-tracing letter, whose `>I>` the oracle
+    /// traces before the method's guard lock is reserved.
     pub(crate) traces_entry_early: bool,
     last_chunk: LastChunk,
 }
@@ -454,9 +450,7 @@ impl Plan {
         }
         plan.trace_events = trace_events.into_boxed_slice();
         // **`RESULT`, `RC` and `SIGL` get a slot whether or not the body
-        // mentions them**, which is what
-        // `interpreter/execution/RexxLocalVariables.hpp` does with
-        // `VARIABLE_RESULT`/`VARIABLE_RC`/`VARIABLE_SIGL`. Registered after
+        // mentions them**, which is what the oracle does. Registered after
         // the body's own names rather than before them, because only being
         // *in* the plan matters here and taking the low indices would
         // renumber every slot this crate's tests pin.

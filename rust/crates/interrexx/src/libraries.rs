@@ -10,9 +10,8 @@ use interrexx_api::load::Library;
 
 /// Every library name that has loaded, with the library it loaded.
 ///
-/// Only a library is held, never a miss: `PackageManager::loadLibrary`
-/// (`interpreter/package/PackageManager.cpp:238-244`) removes a package whose
-/// load answered false, so the next ask looks again.
+/// Only a library is held, never a miss: a package whose load answered false
+/// is removed, so the next ask looks again.
 ///
 /// A name's library is written once and afterwards neither removed nor
 /// replaced, so a library this hands an [`Rc`] out for stays loaded as long as
@@ -64,9 +63,8 @@ impl Libraries {
         }
     }
 
-    /// Every held library with its name, in the order
-    /// `PackageManager::unload` runs their unloaders
-    /// (`interpreter/package/PackageManager.cpp:645-650`).
+    /// Every held library with its name, in the order the oracle runs their
+    /// unloaders.
     pub(crate) fn in_unload_order(&self) -> Vec<(Vec<u8>, Rc<Library>)> {
         self.order
             .names()
@@ -88,10 +86,9 @@ impl Drop for Libraries {
     }
 }
 
-/// The names in the oracle's `PackageManager::packages` string table, laid
-/// out as `HashContents` lays them out, which is what fixes the order the
-/// table iterates in: bucket by bucket, each bucket's chain in the order it
-/// was built (`interpreter/classes/support/HashContents.cpp:226-300`).
+/// The names in the oracle's package string table, laid out as its hash
+/// contents lay them out, which is what fixes the order the table iterates
+/// in: bucket by bucket, each bucket's chain in the order it was built.
 struct PackageTable {
     buckets: usize,
     names: Vec<Option<Vec<u8>>>,
@@ -101,11 +98,9 @@ struct PackageTable {
 }
 
 impl PackageTable {
-    /// The table `PackageManager::initialize` builds
-    /// (`interpreter/package/PackageManager.cpp:81-88`): the default size,
-    /// holding the two internal packages under `GlobalNames::REXX` and
-    /// `GlobalNames::REXXUTIL`, which is spelled `rexxutil`
-    /// (`memory/GlobalNames.h:201`).
+    /// The table the oracle builds at startup: the default size, holding the
+    /// two internal packages under the names `REXX` and `REXXUTIL`, which is
+    /// spelled `rexxutil`.
     fn new() -> PackageTable {
         let mut table = PackageTable::with_buckets(bucket_size(DEFAULT_TABLE_SIZE));
         table.put(b"REXX");
@@ -134,8 +129,8 @@ impl PackageTable {
         self.names().any(|held| held == name)
     }
 
-    /// `HashCollection::put`: expands first where the free chain is empty
-    /// (`HashCollection.cpp:455-460`), then appends to the end of the chain.
+    /// Adds a name as the oracle's hash collection does: expands first where the free chain is
+    /// empty, then appends to the end of the chain.
     fn put(&mut self, name: &[u8]) {
         if self.free.is_none() {
             // `expandContents(capacity() * 2)`, whose capacity is the total.
@@ -167,7 +162,6 @@ impl PackageTable {
         self.next[at] = Some(slot);
     }
 
-    /// `HashContents::remove` and `removeChainLink` (`HashContents.cpp:350-406`).
     fn remove(&mut self, name: &[u8]) {
         let mut at = self.bucket(name);
         let mut previous = None;
@@ -219,14 +213,12 @@ impl PackageTable {
     }
 }
 
-/// `HashCollection::DefaultTableSize` (`classes/support/HashCollection.hpp:130`).
 const DEFAULT_TABLE_SIZE: usize = 17;
 
-/// `HashCollection::MinimumBucketSize` (`classes/support/HashCollection.hpp:126`).
 const MINIMUM_BUCKET_SIZE: usize = 17;
 
-/// `HashCollection::calculateBucketSize` (`classes/support/HashCollection.cpp:150`),
-/// below the table sizes this can reach.
+/// The oracle's bucket size for `capacity`, below the table sizes this can
+/// reach.
 fn bucket_size(capacity: usize) -> usize {
     let capacity = capacity.max(MINIMUM_BUCKET_SIZE);
     if capacity.is_multiple_of(2) {
@@ -236,8 +228,7 @@ fn bucket_size(capacity: usize) -> usize {
     }
 }
 
-/// `RexxString::getStringHash` (`classes/StringClass.hpp:328-346`), over
-/// `char`, which is signed on this platform.
+/// The oracle's string hash, over `char`, which is signed on this platform.
 fn string_hash(name: &[u8]) -> u64 {
     name.iter().fold(0, |hash: u64, byte| {
         hash.wrapping_mul(31)

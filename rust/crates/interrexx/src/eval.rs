@@ -223,15 +223,13 @@ impl Interp {
             ExprKind::Binary { op, .. } => self.echo_operator(*op, value),
             // `>name`/`<name` traces as an **operator**, not as the read of
             // the variable it names: `>O>   ">" => "PQ"`, the referenced
-            // variable's own *name* as the operator's value
-            // (`VariableReferenceOp::evaluate`, `VariableReferenceOp.cpp:110`
-            // -`118`, read directly -- `getVariableReference` never reads the
-            // variable's value at all, so there is no `>V>` line to go with
-            // it). Measured at both spellings and in both positions: `say
-            // >pq`, `say <pq`, `call sub >pq` and `call sub <pq` all trace
-            // `>O>   ">" => "PQ"`, the `<` form included -- the oracle's own
-            // call passes the literal `">"` regardless of which byte was
-            // written.
+            // variable's own *name* as the operator's value (the reference
+            // operator never reads the variable's value at all, so there is
+            // no `>V>` line to go with it). Measured at both spellings and in
+            // both positions: `say >pq`, `say <pq`, `call sub >pq` and `call
+            // sub <pq` all trace `>O>   ">" => "PQ"`, the `<` form included
+            // -- the oracle's own call passes the literal `">"` regardless of
+            // which byte was written.
             ExprKind::VariableReference(inner) => {
                 let (ExprKind::Variable(id) | ExprKind::Stem(id)) = &inner.kind else {
                     // `interrexx-parse` admits nothing else inside a reference
@@ -272,9 +270,8 @@ impl Interp {
                 let text = self.traced_string_value_text(value)?;
                 self.trace_function(indent, &name, &text);
             }
-            // `>N>`, tagged `namespace:class` -- `traceClassResolution`
-            // (`RexxActivation.hpp:358`), whose tag is the two symbols joined
-            // by a colon.
+            // `>N>`, tagged `namespace:class` -- `traceClassResolution`,
+            // whose tag is the two symbols joined by a colon.
             ExprKind::ClassResolver { namespace, name } => {
                 let mut tag = code.symbols.name(*namespace).as_bytes().to_vec();
                 tag.push(b':');
@@ -357,13 +354,11 @@ impl Interp {
     /// An environment symbol's value.
     ///
     /// **The parser's own names never reach resolution and every other one
-    /// does.** `LanguageParser`'s constructor installs a
-    /// `SpecialDotVariable` retriever for `.NIL`, `.TRUE` and `.FALSE`
-    /// (`parser/LanguageParser.cpp:781`-`783`), so those three are parse-time
-    /// constants in the oracle too. Measured: with `::class True` in the
-    /// file, `say .TRUE` still prints `1` where `say value('.TRUE')` prints
-    /// `The TRUE class`, because only the second goes through
-    /// `getVariableRetriever`.
+    /// does.** The parser installs a `SpecialDotVariable` retriever for
+    /// `.NIL`, `.TRUE` and `.FALSE`, so those three are parse-time constants
+    /// in the oracle too. Measured: with `::class True` in the file, `say
+    /// .TRUE` still prints `1` where `say value('.TRUE')` prints `The TRUE
+    /// class`, because only the second goes through `getVariableRetriever`.
     fn environment_symbol(&mut self, code: &Code<'_>, id: SymbolId) -> Result<ObjRef, Failure> {
         match code.symbols.name(id) {
             ".NIL" => Ok(ObjRef::NIL),
@@ -539,14 +534,11 @@ impl Interp {
     #[inline(never)]
     fn eval_cold(&mut self, code: &Code<'_>, expr: &Expr) -> Result<ObjRef, Failure> {
         match &expr.kind {
-            // `RexxExpressionList::evaluate` (`expression/ExpressionList.cpp:83`),
-            // which builds an array of the list's own length and fills the
+            // The list evaluation builds an array of the list's own length and fills the
             // positions that were written.
             ExprKind::List(items) => self.eval_list(code, items),
-            // `ns:Name`, the qualified class lookup
-            // (`ClassResolver::evaluate`,
-            // `expression/ExpressionClassResolver.cpp:123`). The `>N>` line
-            // it owes is this hook's sibling below, in `trace_intermediate`.
+            // `ns:Name`, the qualified class lookup. The `>N>` line it owes
+            // is this hook's sibling below, in `trace_intermediate`.
             ExprKind::ClassResolver { namespace, name } => {
                 let namespace = code.symbols.name(*namespace).as_bytes().to_vec();
                 let name = code.symbols.name(*name).as_bytes().to_vec();
@@ -611,7 +603,7 @@ impl Interp {
     ) -> Result<ObjRef, Failure> {
         let (name, search_labels) = call_target_name(code, target);
         // Held until the arguments have run -- `Interp::resolved_after_
-        // arguments` has the C++ citation and the two measurements.
+        // arguments` has the details and the two measurements.
         let fixed = self.resolve_fixed_call(name, search_labels);
         let fixed = self.resolved_after_arguments(code, fixed, args)?;
         self.eval_call_resolved(code, Self::unkept_resolution(fixed), name, args)
@@ -840,7 +832,7 @@ impl Interp {
 
         // The argument of the operator method the receiver answers, converted
         // after the receiver itself is accepted -- `apply_binary`'s own doc
-        // has the citations, and `StringClass::arith` reports **`otherObj`**
+        // has the details, and the oracle's arithmetic reports **`otherObj`**
         // rather than the conversion when the converted string is not
         // numeric. Measured, rc 215: `'2' + .K` with a class-side
         // `makeString` returning `'xx'` is 41.1 `Nonnumeric value ("The K
@@ -1289,9 +1281,9 @@ impl Interp {
         // ordering or arithmetic operator against it is 97.1 -- measured,
         // `.nil < 'x'` and `.nil + 1` both report `Object "The NIL object"
         // does not understand message`. Reaching that through the send is
-        // what `RexxObject`'s own operator methods do; converting `.nil` to
-        // its string value instead makes it equal to the text `The NIL
-        // object` and orderable against anything.
+        // what `Object`'s own operator methods do; converting `.nil` to its
+        // string value instead makes it equal to the text `The NIL object`
+        // and orderable against anything.
         if value == ObjRef::NIL {
             return Some(value);
         }
@@ -1302,18 +1294,18 @@ impl Interp {
         };
         match &self.heap.get(value)?.body {
             // **A class object is an operator receiver on the same terms
-            // `.nil` is.** `Setup.cpp`'s `Class` block declares `=`, `==`,
+            // `.nil` is.** The oracle's `Class` block declares `=`, `==`,
             // `\\=`, `\\==`, `<>` and `><` and no other operator, so the six
             // are `Object`'s identity test and every other operator is a name
-            // the behaviour does not hold -- measured, oracle rc 0,
-            // `.array = .array` is `1` and `.array = 'The Array class'` is
-            // `0`; oracle rc 159, `.array > .array` and `.array + 1` are both
-            // `97.1 Object "The Array class" does not understand message`.
+            // the behaviour does not hold -- measured, oracle rc 0, `.array =
+            // .array` is `1` and `.array = 'The Array class'` is `0`; oracle
+            // rc 159, `.array > .array` and `.array + 1` are both `97.1
+            // Object "The Array class" does not understand message`.
             Body::Class { .. } => Some(value),
             Body::Instance { .. } => Some(value),
             // Neither `Array` nor a class this crate builds as a native body
-            // declares an operator but `Object`'s and `Pointer`'s
-            // (`memory/Setup.cpp`), so the send answers by identity or 97.1.
+            // declares an operator but `Object`'s and `Pointer`'s, so the
+            // send answers by identity or 97.1.
             Body::Array { .. } | Body::Native(_) => Some(value),
             Body::Stem {
                 default: Some(default),
@@ -1381,14 +1373,14 @@ impl Interp {
         match &self.heap.get(value)?.body {
             Body::Class { .. } => Some("a class object"),
             Body::Native(_) => Some("one of the interpreter's own objects"),
-            // An array *does* have a string value -- `ArrayClass::makeString`
-            // joins its items -- so concatenation, which never asks here,
-            // agrees with the oracle. An operator that does ask never gets
-            // that string value: `.Array` defines no arithmetic or logical
-            // method, so measured, oracle rc 159, `a = (1,); say a + 1` is
-            // 97.1; and where a comparison finds one it is `Object`'s own
-            // identity test, so `say (a = 1)` is `0` at rc 0 rather than a
-            // comparison of `1` against `1`.
+            // An array *does* have a string value -- `Array~makeString` joins
+            // its items -- so concatenation, which never asks here, agrees
+            // with the oracle. An operator that does ask never gets that
+            // string value: `.Array` defines no arithmetic or logical method,
+            // so measured, oracle rc 159, `a = (1,); say a + 1` is 97.1; and
+            // where a comparison finds one it is `Object`'s own identity
+            // test, so `say (a = 1)` is `0` at rc 0 rather than a comparison
+            // of `1` against `1`.
             Body::Array { .. } => Some("an array"),
             // The oracle sends the operator as a message here too, and it is
             // the send that fails: measured, oracle rc 159, `o + 1` on an
@@ -1429,15 +1421,13 @@ impl Interp {
         left: ObjRef,
         right: ObjRef,
     ) -> Result<ObjRef, Failure> {
-        // **`reqstr`'s dyadic-operator context is the operand on the
-        // *right*.** The section names "Rexx dyadic operators when the
-        // receiving object (the object to the left of the operator) is a
-        // string", and the receiver's own method is what converts its
-        // argument -- `StringClass::concatRexx`, `stringComp` and `andOp` all
-        // open with `otherObj->requestString()` (`classes/StringClass.cpp:653`,
-        // `:774`, `:925`). The left operand is the receiver and is not
-        // converted at all: measured, `.array + 1` is 97.1 where `1 + .array`
-        // is 41.1, and `eval.rs`'s `object_operand_tests` is that half.
+        // **`reqstr`'s dyadic-operator context is the operand on the *right*.** The section names
+        // "Rexx dyadic operators when the receiving object (the object to the left of the operator)
+        // is a string", and the receiver's own method is what converts its argument -- string
+        // concatenation, comparison and logical operators all start by asking the right operand for
+        // its string. The left operand is the receiver and is not converted at all: measured,
+        // `.array + 1` is 97.1 where `1 + .array` is 41.1, and `eval.rs`'s `object_operand_tests`
+        // is that half.
         if let Some(target) = self.operator_message_receiver(left) {
             if is_concatenation(op)
                 && (self.as_variable_reference(left).is_some() || self.is_stem_object(left))
@@ -1446,15 +1436,12 @@ impl Interp {
             }
             return self.send_operator(op.spelling(), target, &[Some(right)]);
         }
-        // **A string or number compared with `.nil` answers without reading
-        // it.** `RexxString::primitiveIsEqual` (`classes/StringClass.cpp:674`)
-        // returns false for `TheNilObject` before it looks at any bytes, and
-        // every other comparison operator of `String`, `Integer` and
-        // `NumberString` answers `.false` for it (`CompareOperator`,
-        // `StringClass.cpp:1248`), except `\=`, `<>`, `><` and `\==`, which
-        // answer `.true`. So `'The NIL object' == .nil` is `0`, `'a' < .nil`
-        // is `0` with no NOSTRING, and `'a' || .nil`, which is not a
-        // comparison, reads the string value.
+        // **A string or number compared with `.nil` answers without reading it.** The
+        // oracle's string equality returns false for `.nil` before it looks at any bytes,
+        // and every other comparison operator of `String`, `Integer` and `NumberString`
+        // answers `.false` for it, except `\=`, `<>`, `><` and `\==`, which answer
+        // `.true`. So `'The NIL object' == .nil` is `0`, `'a' < .nil` is `0` with no
+        // NOSTRING, and `'a' || .nil`, which is not a comparison, reads the string value.
         if right == ObjRef::NIL && is_comparison(op) {
             return Ok(logical(is_inequality(op)));
         }
@@ -1591,8 +1578,7 @@ pub(crate) fn truth_without_conversion(value: ObjRef) -> Option<bool> {
 }
 
 impl Interp {
-    /// Whether `value` is logically true: `RexxInternalObject::truthValue`
-    /// (`classes/ObjectClass.cpp:523`), the one judgment every keyword,
+    /// Whether `value` is logically true: the one judgment every keyword,
     /// operator and method that takes a logical value makes. The value's
     /// string by the required-string protocol (a user object is sent
     /// `STRING`, an array joins its items) must be exactly `0` or `1`;
