@@ -274,7 +274,7 @@ say r~call
 call sysfiledelete f
 ```
 
-```output defect=#144
+```output
 1 return "after the first line"
 after the first line
 ```

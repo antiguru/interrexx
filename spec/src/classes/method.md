@@ -489,6 +489,13 @@ MINE
 .method~newFile("class_method_newfile_none.tmp", "PROGRAMSCOPE") => 3.1
 ```
 
+r[class.method.newfile.shebang]
+A first line that begins with `#!` in the file `newFile` reads is not part of
+the code: the `source` of the method or routine starts with the line after it.
+The same holds for the `source` of the `prolog` of a package that
+[`Package~new`](r:class.package.new) reads from a file, while the `source` of
+the package itself keeps the line.
+
 ```rexx
 f = 'class_method_shebang_zq.tmp'
 call sysfiledelete f
@@ -500,7 +507,7 @@ say m~source~items m~source[1]
 call sysfiledelete f
 ```
 
-```output defect=#144
+```output
 1 return "after the first line"
 ```
 

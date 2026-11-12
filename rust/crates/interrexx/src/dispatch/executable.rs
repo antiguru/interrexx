@@ -464,7 +464,7 @@ fn block_source_lines(
         return Ok(Vec::new());
     }
     let (first, from) = match directive {
-        None => (1, 0),
+        None => (text.main_section_first_line(), 0),
         Some(directive) => match block_start(source, directive) {
             Some(start) => block_first_line(text, start),
             None => return Ok(Vec::new()),
