@@ -368,6 +368,12 @@ static LIBRARY_REXX_METHODS: &[NativeExternal] = &[
         super::files::list_roots,
     ),
     implemented(
+        "interrexx_file_string",
+        Family::File,
+        Arity::Fixed(1),
+        super::files::string_or_nil,
+    ),
+    implemented(
         "file_qualify",
         Family::File,
         Arity::Fixed(1),

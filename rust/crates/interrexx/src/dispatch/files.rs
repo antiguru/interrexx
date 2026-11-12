@@ -1,7 +1,8 @@
 //! `.File`'s `LIBRARY REXX` entry points.
 //!
-//! The class itself is Rexx: it keeps `path` and `qualifiedPath`, and every
-//! native method here is reached as `self~someImpl(self~qualifiedPath)`. So
+//! The class itself is Rexx (`interrexx-lib/rexx/file.rex`): it keeps `path`
+//! and `qualifiedPath`, and every native method here but
+//! `interrexx_file_string` is reached as `self~someImpl(qualifiedPath)`. So
 //! each one is a function of that path alone, and none of them touches the
 //! receiver.
 
@@ -9,7 +10,7 @@ use std::path::{Path, PathBuf};
 
 use interrexx_core::{BehaviourId, Body, ObjRef};
 
-use super::Cleared;
+use super::{Cleared, Primitive};
 use crate::builtin::datetime::{UNIX_BASE_TIME, local_offset_micros};
 use crate::error::Raised;
 use crate::paths::os_path;
@@ -349,7 +350,7 @@ pub(super) fn set_last_accessed(
 /// `file_make_dir`: the one directory, never its parents.
 ///
 /// Measured: `0` when a parent is missing and `0` over a name that already
-/// exists, which is what makes the orx `makeDirs` recurse.
+/// exists, which is what makes `makeDirs` recurse (r[class.file.makedir]).
 pub(super) fn make_dir(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -536,7 +537,7 @@ pub(super) fn list_roots(
     )))
 }
 
-/// `file_temporary_path`: a string the orx wraps in a `File`.
+/// `file_temporary_path`: a string the Rexx half wraps in a `File`.
 ///
 /// Read from the interpreter's own environment rather than the process's, so a
 /// `SETLOCAL`'d `TMPDIR` is what a program sees.
@@ -633,4 +634,31 @@ pub(super) fn qualify(
     let path = interp.to_text(value).into_owned();
     let qualified = crate::builtin::platform::qualify_name(interp, &path);
     Ok(Some(interp.text_built(qualified)))
+}
+
+/// `interrexx_file_string`: argument 1 as a plain string when it is a string,
+/// and `.nil` when it is any other object. A number is a string, and an
+/// instance of a subclass of `String` is read by its own characters
+/// (r[class.index.string], r[class.file.deviation.109]). Nothing is sent to
+/// the argument: the Rexx half sends `request` with `STRING` itself where a
+/// rule reads an object as a string argument (r[class.file.string-args]), and
+/// asks this again of the answer.
+pub(super) fn string_or_nil(
+    interp: &mut Interp,
+    _cleared: Cleared,
+    _receiver: ObjRef,
+    args: &[Option<ObjRef>],
+) -> Result<Option<ObjRef>, Failure> {
+    let Some(value) = args.first().copied().flatten() else {
+        return Err(Raised::missing_method_argument(1).into());
+    };
+    if let Some(bytes) = super::string::subclass_text(interp, value) {
+        let bytes = bytes.to_vec();
+        return Ok(Some(interp.text_built(bytes)));
+    }
+    let plain = matches!(
+        interp.receiver_kind(value),
+        Ok(Primitive::String | Primitive::SmallInt)
+    );
+    Ok(Some(if plain { value } else { ObjRef::NIL }))
 }
