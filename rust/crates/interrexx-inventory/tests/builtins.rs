@@ -1,6 +1,6 @@
 #[test]
 fn the_builtin_table_has_81_entries() {
-    // The table at BuiltinFunctions.cpp:3042 holds 81 entries plus a leading
+    // The oracle's builtin table holds 81 entries plus a leading
     // NULL dummy, which the extractor skips.
     assert_eq!(interrexx_inventory::builtins::NAMES.len(), 81);
 }

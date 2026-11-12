@@ -52,7 +52,7 @@ enum Role {
     /// rather than as an axis. Its two sides **are** comparable: each pays
     /// the startup cost of the same Rexx-written library, the oracle by
     /// restoring its saved image and this crate by parsing and installing
-    /// the `.orx` sources that image was built from.
+    /// the Rexx sources that image was built from.
     Offset,
     /// This crate cannot run it. Reported with the exit status and message it
     /// actually produced, never omitted -- an axis that quietly leaves the

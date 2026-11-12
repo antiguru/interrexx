@@ -19,8 +19,8 @@ pub const EXCLUDED_CLASS: &str = "RegularExpression";
 
 /// The class documented as a class whose `.environment` entry is an
 /// *instance*: `say .RexxInfo` is `a RexxInfo`, and
-/// `EndSpecialClassDefinition(RexxInfo)` (`Setup.cpp:1285`) routes the class
-/// to `addToSystem`, whose target is not an environment symbol.
+/// the oracle's special (system) class definition of `RexxInfo` routes the
+/// class to a system registration whose target is not an environment symbol.
 pub const INSTANCE_ENTRY_CLASS: &str = "RexxInfo";
 
 /// The `.environment` class the books document nowhere. `provide.xml:838`

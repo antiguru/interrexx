@@ -161,8 +161,8 @@ fn a_class_subclassing_class_itself_can_inherit_a_mixinclass_class_mixin() {
 // ---------------------------------------------------------------------
 
 /// Checklist token -> block name, for the entries `native_classes.rs`'s
-/// own doc comment names as irregular (`RexxClass`/`RexxInteger`/
-/// `RexxString`/`RexxObject`) -- every other checklist token is its own
+/// own doc comment names as irregular (the class, integer, string and
+/// object classes) -- every other checklist token is its own
 /// block name with a trailing `Class` stripped, or already identical.
 fn block_name_for(token: &str) -> &str {
     match token {
@@ -202,12 +202,12 @@ fn native_class_ids(r: &ClassRegistry) -> Vec<(&'static str, ObjRef)> {
 
 // ---------------------------------------------------------------------
 // Structural facts true for every native class regardless of whether
-// `CoreClasses.orx` later touches it: metaclass, `~class`, and `~isA(.object)`
+// the core class library later touches it: metaclass, `~class`, and `~isA(.object)`
 // are never affected by an `~inherit` call (it only appends ancestors, never
 // changes `metaClass`, and `.Object` remains an ancestor once true). This is
 // the R8 boundary made concrete: those hold for every native class;
 // `~superClass`/`~superClasses` do not, for the R8 classes, and are
-// asserted separately, against `Setup.cpp`'s own pre-prologue state rather
+// asserted separately, against the native bootstrap's own pre-prologue state rather
 // than the live (post-prologue) oracle.
 // ---------------------------------------------------------------------
 
@@ -263,7 +263,7 @@ fn is_a_is_false_for_unrelated_and_reversed_pairs() {
 }
 
 // ---------------------------------------------------------------------
-// The classes `CoreClasses.orx` never touches (named in
+// The classes the core class library never touches (named in
 // UNTOUCHED_BY_PROLOGUE below): full recorded structural facts,
 // byte-identical against the live oracle.
 // ---------------------------------------------------------------------
@@ -285,12 +285,12 @@ const UNTOUCHED_BY_PROLOGUE: &[&str] = &[
     "VariableReference",
 ];
 
-/// The classes R8 un-deferred (named below): `CoreClasses.orx` mutates each
+/// The classes R8 un-deferred (named below): the core class library mutates each
 /// of these (an `~inherit` or `~inheritInstanceMethods` call this crate
 /// does not, and cannot, replay), so their *live* `~superClasses` is not
 /// what this module builds. Their pre-prologue `~superClasses` -- `.Object`
 /// alone -- is still asserted below, explicitly as the pre-prologue state
-/// `Setup.cpp` itself builds, not a live-oracle match.
+/// the native bootstrap itself builds, not a live-oracle match.
 const MUTATED_BY_PROLOGUE: &[&str] = &[
     "String",
     "Array",
@@ -304,7 +304,7 @@ const MUTATED_BY_PROLOGUE: &[&str] = &[
     "List",
     "Message",
     "Supplier",
-    // `CoreClasses.orx:99` and `:110` are the `~inherit`s: measured on the
+    // The core class library's two `~inherit`s: measured on the
     // shipped image, `.Queue~superClasses` is `The Object class` and `The
     // OrderedCollection class`, and `.Stem~superClasses` is `The Object
     // class` and `The MapCollection class`.
@@ -342,8 +342,8 @@ fn every_class_untouched_by_the_prologue_matches_the_live_oracle_exactly() {
 }
 
 /// `MUTATED_BY_PROLOGUE`'s pre-prologue `~superClasses` -- `.Object` alone --
-/// asserted as exactly that: the state `Setup.cpp` builds before
-/// `CoreClasses.orx` runs, not a claim about what the live, fully-booted
+/// asserted as exactly that: the state the native bootstrap builds before
+/// the core class library runs, not a claim about what the live, fully-booted
 /// oracle answers (measured different: e.g. `.Array~superClasses` there is
 /// `Object OrderedCollection`). Full post-prologue verification for these
 /// classes is `interrexx`'s.
@@ -364,7 +364,7 @@ fn every_prologue_mutated_class_has_the_pre_prologue_superclasses_setup_cpp_buil
 
 /// `exact_methods.rex` recorded `.class~instancemethods(.class)`'s full
 /// scope-exact set with neither `DEFINECLASSMETHOD` nor
-/// `INHERITINSTANCEMETHODS` present -- `removeSetupMethods()` deletes both
+/// `INHERITINSTANCEMETHODS` present -- the oracle's setup-method removal deletes both
 /// before the image ships. Building them and never removing them (the
 /// one path this crate's `MethodDict` supports) would be a corpus-visible
 /// divergence.
@@ -431,7 +431,7 @@ fn objects_subclass_list_contains_every_other_native_class() {
 // `Supplier` are asserted separately, below (`set_bag_relation_and_supplier_match_their_setup_cpp_derived_own_sets`):
 // `~inheritInstanceMethods` rescopes their donated content onto the
 // recipient itself, so `cls~methods(cls)` answers their post-donation set
-// on the live oracle, not `Setup.cpp`'s own -- the same reason this
+// on the live oracle, not the native bootstrap's own -- the same reason this
 // technique cannot verify them the way it does every class in this table.
 // ---------------------------------------------------------------------
 
@@ -759,10 +759,10 @@ fn every_prologue_mutated_class_matches_its_recorded_own_instance_method_set() {
             ],
         ),
         // `Queue`'s own set is `Array`'s, minus the names
-        // `Setup.cpp:792`-`:804` removes and plus `Queue`'s own additions.
+        // the bootstrap removes and plus `Queue`'s own additions.
         // Unlike `Supplier`/`Set`/`Bag`/`Relation` below, the donation this
-        // one rests on is `Setup.cpp`'s own (`InheritInstanceMethods(Array)`,
-        // `:775`) and is replayed here, so the live oracle's
+        // one rests on is the native bootstrap's own (the instance-method donation
+        // from `Array`) and is replayed here, so the live oracle's
         // `.Queue~methods(.Queue)` is exactly this set -- measured, and the
         // absence of `SORT`, `MAKESTRING` and the rest is what says the
         // removals ran.
@@ -805,7 +805,7 @@ fn every_prologue_mutated_class_matches_its_recorded_own_instance_method_set() {
         ),
         // `Stem`'s hidden names are absent here for the same reason they are
         // absent from the live oracle's answer: `~methods` steps over a
-        // tombstone (`MethodDictionary.cpp:486`), so the measured
+        // tombstone, so the measured
         // `.Stem~methods(.Stem)` has no `==` either. `.Stem~method("==")` is
         // what reads it back, and that is the corpus row.
         (
@@ -834,17 +834,16 @@ fn every_prologue_mutated_class_matches_its_recorded_own_instance_method_set() {
         ),
         // `Supplier`, `Set`, `Bag` and `Relation` are deliberately not in
         // this table: `~inheritInstanceMethods` (unlike `~inherit`) rewrites
-        // the donor's methods to the recipient's *own* scope
-        // (`RexxClass::inheritInstanceMethods`, `ClassClass.cpp:558-586`,
-        // `setMethodScope`, `:563`), so on the live oracle
+        // the donor's methods to the recipient's *own* scope,
+        // so on the live oracle
         // `.Supplier~methods(.Supplier)` (and likewise `.Set`'s, `.Bag`'s,
-        // `.Relation`'s) answers the post-donation set, not `Setup.cpp`'s
+        // `.Relation`'s) answers the post-donation set, not the native bootstrap's
         // own -- the donor mixin's contribution is no longer
-        // distinguishable by scope at all once `CoreClasses.orx` has run
+        // distinguishable by scope at all once the core class library has run
         // it. This table's technique (`cls~methods(cls)`) therefore cannot
         // verify these classes' pre-prologue derivation against the
         // oracle the way it does for every other class here;
-        // `own_instance_method_names` (trusted from `Setup.cpp` alone) and
+        // `own_instance_method_names` (trusted from the native bootstrap alone) and
         // the dedicated `*_flattened_set_*` tests below carry their actual
         // evidence instead.
     ];
@@ -1043,7 +1042,7 @@ fn every_untouched_class_matches_its_recorded_own_instance_method_set() {
                 "TYPE",
             ],
         ),
-        // The names `Setup.cpp:1307`-`:1312` hides are absent, matching
+        // The names the bootstrap hides are absent, matching
         // the measured `.VariableReference~methods(.VariableReference)`.
         // `VALUE=` is here and `==` is not, which separates the tombstone
         // from an entry whose name merely ends in `=`.
@@ -1316,7 +1315,7 @@ fn every_class_answers_its_recorded_own_class_methods() {
 /// class method would pass unnoticed. `Array`/`Set`/`Bag`/`List`'s `Of` and
 /// `Method`/`Routine`/`Package`'s extra entries are corroborated against a
 /// live oracle `hasmethod` check in the test above; every class not listed
-/// in `new_only` below is `New` alone -- `Setup.cpp`'s own `AddClassMethod`
+/// in `new_only` below is `New` alone -- the native bootstrap's own class-method
 /// list for that block names nothing else, and `build.rs`'s derivation
 /// (independently re-implemented against the oracle and shown to agree)
 /// is what this assertion actually reads.
@@ -1418,7 +1417,7 @@ fn class_method_names_reads_the_flattened_class_side_set() {
 // ---------------------------------------------------------------------
 // R8's measured subset: for a prologue-mutated class, this crate's
 // flattened set is a subset of what the live oracle answers, and the
-// measured difference is attributed to a specific `CoreClasses.orx` mixin.
+// measured difference is attributed to a specific mixin of the core class library.
 // How that difference is measured depends on the donation. `Array` and `String`
 // (which receive an ordinary `~inherit`, not `~inheritInstanceMethods`) are
 // measured via `task3_fixround1.rex` Part C, a direct scope-exact query
@@ -1426,11 +1425,10 @@ fn class_method_names_reads_the_flattened_class_side_set() {
 // measured that way -- Part C's queries against `.SetMixin`/
 // `.ManyItemMixin`/`.BagMixin`/`.SupplierMixin` themselves all come back
 // empty, because `~inheritInstanceMethods` rescopes the donated methods to
-// the recipient (`RexxClass::inheritInstanceMethods`'s `setMethodScope`,
-// `ClassClass.cpp:563`) -- so their divergence is measured instead by
+// the recipient -- so their divergence is measured instead by
 // diffing Part A's recorded `OWN_INSTANCE` line (which, for a recipient,
 // already contains the rescoped donation) against `own_instance_method_names`'s
-// `Setup.cpp`-derived value.
+// bootstrap-derived value.
 // ---------------------------------------------------------------------
 
 /// A class's flattened instance method set -- own methods plus everything
@@ -1464,8 +1462,8 @@ fn a_native_classs_flattened_set_includes_its_ancestors_methods_the_cascade_witn
 
 /// `array_from_orderedcollection` (`task3_fixround1.rex` Part C): the names
 /// recorded scoped to `.OrderedCollection` on a live `.Array` instance
-/// include several Array already has under its own scope (`CoreClasses.orx:1011-1231`
-/// redeclares them `ABSTRACT` before `Array`'s concrete versions were ever
+/// include several Array already has under its own scope (the core class
+/// library redeclares them `ABSTRACT` before `Array`'s concrete versions were ever
 /// donated -- irrelevant to the *name set* this task's probes check, only
 /// to scope attribution, which no probe here reads) alongside genuinely new
 /// ones. This is the measured difference R8 asks for: each name below is
@@ -1486,7 +1484,7 @@ fn arrays_flattened_set_is_a_measured_subset_of_the_live_oracles() {
     }
 
     // The measured difference: recorded live-oracle names beyond this
-    // crate's native set, attributed to CoreClasses.orx:1011-1231's
+    // crate's native set, attributed to the core class library's
     // OrderedCollection mixin.
     let extra_from_ordered_collection = [
         "APPENDALL",
@@ -1510,8 +1508,8 @@ fn arrays_flattened_set_is_a_measured_subset_of_the_live_oracles() {
 
 // `string_from_comparable` (Part C): `.Comparable`'s method,
 // `COMPARETO`, is scoped to `.Comparable` on a live `.String` instance --
-// but `Setup.cpp` already gives `.String` its own `CompareTo`
-// (`StringClass.cpp:688`, `AddMethod("CompareTo", ...)`), so this is a
+// but the native bootstrap already gives `.String` its own `CompareTo`,
+// so this is a
 // scope-attribution change, not a name-set one. Unlike
 // `Array`/`Set`/`Bag`/`Relation`/`Supplier` (below), `String`'s
 // `~inherit(.Comparable)` measurably donates no name this crate's native
@@ -1520,7 +1518,7 @@ fn arrays_flattened_set_is_a_measured_subset_of_the_live_oracles() {
 // `String` case above, so there is no separate test for it here -- a
 // dedicated one would only restate that membership.
 
-/// `Setup.cpp`'s own derivation for `Set`, `Bag`, `Relation` and `Supplier`
+/// the native bootstrap's own derivation for `Set`, `Bag`, `Relation` and `Supplier`
 /// -- the classes `~inheritInstanceMethods` rescopes (excluded from the
 /// exact-match table above for exactly that reason): each one's
 /// *pre-prologue* own instance methods, asserted directly against this
@@ -1619,15 +1617,13 @@ fn set_bag_relation_and_supplier_match_their_setup_cpp_derived_own_sets() {
 /// `.Set`'s live instance, `task3_fixround1.rex` Part A's `Set|OWN_INSTANCE`
 /// line, carries names beyond `own_instance_method_names(Set)` -- because
 /// `~inheritInstanceMethods` rescopes `.SetMixin`'s donation
-/// (`CoreClasses.orx:85`, `SetMixin` itself defined at `:411`) onto `Set`
-/// itself (`RexxClass::inheritInstanceMethods`'s `setMethodScope`,
-/// `ClassClass.cpp:563`), so a direct scope-exact query against
+/// onto `Set` itself, so a direct scope-exact query against
 /// `.SetMixin` finds nothing there any more (confirmed empty by
 /// `task3_fixround1.rex` Part C's `set_from_setmixin`) -- the names have to
 /// be read from `Set`'s own line instead: `XOR`, `INTERSECTION`, `UNION`,
-/// `SUBSET`, `PUTALL`. `.SetCollection` (`~inherit`ed separately, `:114`)
+/// `SUBSET`, `PUTALL`. `.SetCollection` (`~inherit`ed separately)
 /// donates no additional name -- `grep` confirms its own definition
-/// (`:1296`) declares no methods at all, so an empty result there is not
+/// declares no methods at all, so an empty result there is not
 /// "abstract declarations `Set` already answers", it is that there is
 /// nothing to declare. Paired with a native name's presence, since an
 /// absence-only assertion cannot distinguish this crate's real flattened
@@ -1652,7 +1648,7 @@ fn sets_flattened_set_lacks_setmixins_donated_methods() {
 
 /// `.Relation`'s live instance, `task3_fixround1.rex` Part A's
 /// `Relation|OWN_INSTANCE` line, carries `.ManyItemMixin`'s donated methods
-/// (`CoreClasses.orx:82`, `ManyItemMixin` itself defined at `:218`) rescoped
+/// rescoped
 /// onto `Relation` for the identical reason `Set`'s case states in full:
 /// `UNION`, `DIFFERENCE`, `XOR`, `INTERSECTION`, `SUBSET`.
 #[test]
@@ -1675,8 +1671,8 @@ fn relations_flattened_set_lacks_manyitemmixins_donated_methods() {
 }
 
 /// `.Bag`'s live instance, `task3_fixround1.rex` Part A's `Bag|OWN_INSTANCE`
-/// line, carries both `.ManyItemMixin`'s (`CoreClasses.orx:83`) and
-/// `.BagMixin`'s (`:87`, `BagMixin` itself defined at `:557`) donated
+/// line, carries both `.ManyItemMixin`'s and
+/// `.BagMixin`'s donated
 /// methods, rescoped onto `Bag` the same way: `UNION`, `XOR`,
 /// `INTERSECTION`, `DIFFERENCE`, `SUBSET`, `PUTALL` (`ManyItemMixin`'s and
 /// `BagMixin`'s own donations overlap except for `BagMixin`'s own
@@ -1709,7 +1705,7 @@ fn bags_flattened_set_lacks_manyitemmixin_and_bagmixins_donated_methods() {
 
 /// `.Supplier`'s live instance, `task3_fixround1.rex` Part A's
 /// `Supplier|OWN_INSTANCE` line, carries `.SupplierMixin`'s donated methods
-/// (`CoreClasses.orx:80`) rescoped onto `Supplier`: `ALLINDEXES`,
+/// rescoped onto `Supplier`: `ALLINDEXES`,
 /// `ALLITEMS`, `GETARRAYS`, `SUPPLIER`. A direct scope-exact query against
 /// `.SupplierMixin` itself finds nothing there any more, confirmed empty by
 /// `task3_fixround1.rex` Part C's `supplier_from_suppliermixin` -- the same
@@ -1791,7 +1787,7 @@ fn every_setup_class_is_native_or_deferred_with_a_reason() {
                 // Not deferred -- must actually be registered, in one
                 // directory or the other. Which of the two is
                 // `native_classes.rs`'s own internal test, since it is the
-                // side that can read `Setup.cpp`'s closing macro.
+                // side that can read the native bootstrap's closing form.
                 let block_name = block_name_for(token);
                 let upper = block_name.to_ascii_uppercase();
                 assert!(
@@ -1803,7 +1799,7 @@ fn every_setup_class_is_native_or_deferred_with_a_reason() {
     }
     // The reverse direction the loop above cannot see: every deferral's own
     // token must itself be a real checklist entry, or a stale deferral
-    // (naming a class Setup.cpp no longer declares) would go unnoticed --
+    // (naming a class the native bootstrap no longer declares) would go unnoticed --
     // the loop above only ever looks *up* from the checklist into the
     // deferral table, never the other way.
     for d in deferrals {

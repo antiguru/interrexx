@@ -1,5 +1,5 @@
 //! Table D's row set: the directive and option surface, from `dire.xml` and
-//! from `DirectiveParser.cpp`, unioned.
+//! from the oracle's directive parser source, unioned.
 
 use std::collections::BTreeMap;
 
@@ -166,7 +166,7 @@ pub fn parser_arms(source: &str) -> BTreeMap<String, Vec<ParserArm>> {
     out
 }
 
-/// The braced body of `void LanguageParser::<name>()`, and the 1-based line
+/// The braced body of the parser function named `name`, and the 1-based line
 /// its opening brace is on.
 fn function_body<'a>(source: &'a str, name: &str) -> (&'a str, usize) {
     let signature = format!("void LanguageParser::{name}()");

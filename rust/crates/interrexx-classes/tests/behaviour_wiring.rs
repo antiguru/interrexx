@@ -382,7 +382,7 @@ fn inherit_instance_methods_donates_without_a_superclass_edge() {
         "inherit_instance_methods.rex recorded 'after hasmethod DONATED= 1'"
     );
     // The donated method now answers to `target`'s own scope, not
-    // `donor`'s -- `setMethodScope`, what makes `newScope` on a donated
+    // `donor`'s -- the rescoping that makes `newScope` on a donated
     // method report the recipient rather than the class that wrote it.
     assert_eq!(
         g.lookup_at(after_handle, "DONATED"),
@@ -395,7 +395,7 @@ fn inherit_instance_methods_donates_without_a_superclass_edge() {
 /// `.Bag~superClasses` are byte-identical -- three entries, "The Object
 /// class", "The MapCollection class", "The SetCollection class", in that
 /// order, on both -- despite `.set~inheritInstanceMethods(.SetMixin)` and
-/// `.bag~inheritInstanceMethods(.BagMixin)` (`CoreClasses.orx:85,87`)
+/// `.bag~inheritInstanceMethods(.BagMixin)`
 /// donating different content.
 #[test]
 fn two_classes_with_identical_ancestors_can_still_answer_to_different_method_sets() {
@@ -418,8 +418,9 @@ fn two_classes_with_identical_ancestors_can_still_answer_to_different_method_set
     g.define(bag_mixin, "BAGONLY", MethodId(2));
 
     // Both start as a bootstrap SUBCLASS(Object), matching how the
-    // primitive .Set/.Bag are built in Setup.cpp, then each receives the
-    // same two ~inherit calls in the same order CoreClasses.orx does.
+    // primitive .Set/.Bag are built by the oracle's native bootstrap, then each
+    // receives the same two ~inherit calls in the same order the oracle's
+    // Rexx-written core library does.
     g.define_class(set_like, Some(object), ClassKind::Regular, object);
     g.define_class(bag_like, Some(object), ClassKind::Regular, object);
     g.inherit(set_like, map_collection)
@@ -462,13 +463,13 @@ fn two_classes_with_identical_ancestors_can_still_answer_to_different_method_set
 // `inherit`'s validation guards -- not oracle probes (these panic; no
 // probe can run an invalid `inherit` against the built oracle without
 // first tripping the identical `SYNTAX` condition and exiting), but each
-// is a distinct check `RexxClass::inherit` (`ClassClass.cpp:1298-1332`)
+// is a distinct check `~inherit`
 // makes that this crate's own code must refuse identically. One test per
 // guard, each stating what letting it through would have done.
 // ---------------------------------------------------------------------
 
 /// Guard: `mixin` must actually be declared `MIXINCLASS` -- oracle's
-/// `Error_Execution_mixinclass` (`ClassClass.cpp:1299`). Absent this
+/// `SYNTAX` 98.942. Absent this
 /// guard, an ordinary (non-mixin) class would be silently accepted as an
 /// `INHERIT` target: `combo.superclasses` would gain `plain` as an
 /// ancestor the oracle would have refused outright, and every later
@@ -498,8 +499,8 @@ fn inherit_refuses_a_non_mixin_class() {
 }
 
 /// Guard: `inherit` refuses a `mixin` that is already an ancestor of
-/// `class` -- oracle's `Error_Execution_recursive_inherit`
-/// (`ClassClass.cpp:1311`). Absent this guard, re-inheriting the same
+/// `class` -- oracle's `SYNTAX` 98.944.
+/// Absent this guard, re-inheriting the same
 /// mixin would push a duplicate entry onto `class.superclasses` and a
 /// duplicate cascade registration onto `mixin.subclasses`;
 /// `cascade_build`'s own `has_scope` guard hides the method-merge
@@ -532,7 +533,7 @@ fn inherit_refuses_re_inheriting_the_same_mixin() {
 
 /// Guard: `inherit` refuses making `class` an ancestor of a `mixin` that
 /// is itself already an ancestor of `class` -- oracle's
-/// `Error_Execution_recursive_inherit`'s mirror check (`:1317`). Absent
+/// `SYNTAX` 98.944's mirror check. Absent
 /// this guard: `define_class(b, Some(a), Mixin)` (`B mixinclass A`) then
 /// `inherit(a, b)` (`.A~inherit(.B)`) passes every other check (`B` is a
 /// genuine `MIXINCLASS`, `A` is not already `B`'s ancestor, the
@@ -558,8 +559,8 @@ fn inherit_refuses_a_cycle_through_a_mixins_own_mixinclass_target() {
 }
 
 /// The `UNINIT` propagation flags **at this crate's own API**, through each
-/// constructor that builds an inheritance edge: `subclass`
-/// (`ClassClass.cpp:1634`), `mixinClass` (`:1525`) and `inherit` (`:1364`).
+/// constructor that builds an inheritance edge: `~subclass`,
+/// `~mixinClass` and `~inherit`.
 #[test]
 fn uninit_propagates_through_all_three_constructors_at_the_graph_api() {
     let object = id(1);
@@ -577,8 +578,8 @@ fn uninit_propagates_through_all_three_constructors_at_the_graph_api() {
     let mut g = ClassGraph::new();
     g.define_class(object, None, ClassKind::Regular, object);
 
-    // `parent` defines UNINIT itself, which is `defineMethod`'s own flag
-    // (`:852`-`:857`) and not something a caller sets.
+    // `parent` defines UNINIT itself, which is the oracle's own flag
+    // and not something a caller sets.
     g.define_class(parent, Some(object), ClassKind::Regular, object);
     g.define(parent, "UNINIT", MethodId(1));
     assert!(g.has_uninit(parent), "the class that defines UNINIT");
@@ -590,7 +591,7 @@ fn uninit_propagates_through_all_three_constructors_at_the_graph_api() {
 
     // **`has_uninit` is `false` here and the oracle's is `true`, and this
     // records the divergence rather than blessing it.** The oracle's
-    // `subclass` calls `checkUninit` (`ClassClass.cpp:1628`), which sets the
+    // `~subclass` runs the uninit check, which sets the
     // flag from the class's *flattened* instance behaviour, so an inheriting
     // class has it. Measured: `::CLASS P` with an instance `::METHOD uninit`,
     // `::CLASS K SUBCLASS P`, `o = .K~new` -- the oracle runs P's `uninit`
@@ -649,8 +650,8 @@ fn uninit_propagates_through_all_three_constructors_at_the_graph_api() {
 }
 
 /// A refused `inherit` propagates nothing -- the oracle's own
-/// `setParentHasUninitDefined` is the last statement of `RexxClass::inherit`
-/// (`:1364`-`:1367`) and every `reportException` above it leaves the
+/// parent-has-uninit marking is the last step of `~inherit`
+/// and every refusal above it leaves the
 /// function first.
 #[test]
 fn a_refused_inherit_propagates_no_uninit_flag() {
@@ -670,8 +671,8 @@ fn a_refused_inherit_propagates_no_uninit_flag() {
 
 // ---------------------------------------------------------------------
 // Design tests, not oracle probes: the scope-ordering data and the
-// monotonic version. These read `MethodDictionary::resolveSuperScope`
-// (`MethodDictionary.cpp:569`) and `findSuperMethod` (`:434`) directly --
+// monotonic version. These read the oracle's super-scope resolution
+// and super-method lookup directly --
 // This crate builds no dispatch, so there is no scope-override *send* to
 // probe against the oracle; only the data these functions would read.
 // ---------------------------------------------------------------------

@@ -309,7 +309,7 @@ fn scan_method_for_assertions(
             continue;
         }
         // `self~assertSyntaxError`/`self~assertRuntimeError` call
-        // `self~expectSyntax` internally (`OOREXXUNIT.CLS:1203`/`:1213`) and
+        // `self~expectSyntax` internally and
         // then attempt the risky statement themselves -- but neither checks
         // the raise *locally*. There is no local catch inside either
         // method: if the attempt raises, it escapes exactly the way a bare
