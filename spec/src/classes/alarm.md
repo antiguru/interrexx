@@ -842,7 +842,7 @@ bad: say arg(1) '=>' condition('o')~code
   nop
 ```
 
-```output defect=#197
+```output
 o~attachment => 98.901
 o~cancel => 98.901
 o~canceled => 98.901

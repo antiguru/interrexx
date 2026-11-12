@@ -1240,12 +1240,12 @@ stays cancelled, with its first time, interval, target and attachment
 ([Deviation 162](../deviations.md#162-a-second-init-of-an-alarm-or-a-ticker)).
 ooRexx sets the object up again without stopping the first setting, and
 crashes when a ticker that is running is set up again, so the examples are not
-run on ooRexx. interrexx does not refuse the second `init` yet (#248). The
+run on ooRexx. The
 first example sends a second `init` to an alarm that is set, cancels it and
 sends a third; the second does the same with a ticker. They print which target
 hears the `cancel`, and what the object still answers. The target of the
-ticker cancels it when it is called, so that the example ends where the second
-`init` is not refused yet.
+ticker cancels it when it is called, so that the example ends even if a
+second `init` were not refused.
 
 ```rexx
 n1 = .note~new('first target')
@@ -1277,7 +1277,7 @@ bad: say arg(1) '=>' condition('o')~code
   say name 'was sent cancel for' src~attachment
 ```
 
-```output defect=#248
+```output
 a~init(0.01, n2, "second alarm") => 98.900
 first alarm 1 0
 first target was sent cancel for first alarm
@@ -1315,7 +1315,7 @@ bad: say arg(1) '=>' condition('o')~code
   say name 'was sent cancel for' src~attachment
 ```
 
-```output defect=#248
+```output
 t~init(30, n2, "second ticker") => 98.900
 first ticker 02:00:00.000000 0
 first target was sent cancel for first ticker

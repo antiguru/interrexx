@@ -1,0 +1,128 @@
+# Alarm and Ticker: the argument-count errors of the readers and of cancel
+# that the pages do not print. Each answer is the code with its subcode.
+# A target is a Message, which implements AlarmNotification.
+
+program
+a = .alarm~new(600, .message~new(.object~new, 'x'))
+signal on syntax name h
+v = a~cancelled(1)
+say 'no error'
+a~cancel
+exit
+h: say condition('o')~code
+a~cancel
+----
+93.902
+
+program
+a = .alarm~new(600, .message~new(.object~new, 'x'))
+signal on syntax name h
+v = a~canceled(1)
+say 'no error'
+a~cancel
+exit
+h: say condition('o')~code
+a~cancel
+----
+93.902
+
+program
+t = .ticker~new(600, .message~new(.object~new, 'x'))
+signal on syntax name h
+v = t~attachment(1)
+say 'no error'
+t~cancel
+exit
+h: say condition('o')~code
+t~cancel
+----
+93.902
+
+program
+t = .ticker~new(600, .message~new(.object~new, 'x'))
+signal on syntax name h
+v = t~interval(1)
+say 'no error'
+t~cancel
+exit
+h: say condition('o')~code
+t~cancel
+----
+93.902
+
+program
+t = .ticker~new(600, .message~new(.object~new, 'x'))
+signal on syntax name h
+v = t~canceled(1)
+say 'no error'
+t~cancel
+exit
+h: say condition('o')~code
+t~cancel
+----
+93.902
+
+program
+t = .ticker~new(600, .message~new(.object~new, 'x'))
+signal on syntax name h
+v = t~cancelled(1)
+say 'no error'
+t~cancel
+exit
+h: say condition('o')~code
+t~cancel
+----
+93.902
+
+program
+t = .ticker~new(600, .message~new(.object~new, 'x'))
+signal on syntax name h
+t~cancel(1)
+say 'no error'
+t~cancel
+exit
+h: say condition('o')~code
+t~cancel
+----
+93.902
+
+program
+t = .ticker~new(600, .message~new(.object~new, 'x'))
+signal on syntax name h
+v = t~cancel
+say 'no error'
+exit
+h: say condition('o')~code
+t~cancel
+----
+91.999
+
+error
+.ticker~new(-1, .message~new(.object~new, 'x'))
+----
+93.951
+
+error
+.ticker~new('1e12', .message~new(.object~new, 'x'))
+----
+88.903
+
+error
+.ticker~new(.timespan~fromSeconds(-1), .message~new(.object~new, 'x'))
+----
+93.951
+
+error
+.alarm~new('1e12', .message~new(.object~new, 'x'))
+----
+88.903
+
+error
+.alarm~new('12:00:00 1 Jan 2000', .message~new(.object~new, 'x'))
+----
+93.951
+
+error
+.alarm~new('2.6e11', .message~new(.object~new, 'x'))
+----
+40.19

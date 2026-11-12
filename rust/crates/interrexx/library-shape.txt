@@ -1,5 +1,6 @@
 # The interrexx library shape. Generated: see library_shape.rs for how to regenerate.
 class ALARM public=1 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1
+  instance !RUN private=1 protected=0 guarded=0 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance !STARTTIMER private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=alarm_startTimer
   instance !STOPTIMER private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=alarm_stopTimer
   instance ATTACHMENT private=0 protected=0 guarded=0 abstract=0 constant=0 attribute=1 package=0 entry=-
@@ -1204,6 +1205,7 @@ class TABLE public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,MAPCO
   class NEW private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
 class TICKER public=1 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1
   instance !CREATETIMER private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=ticker_createTimer
+  instance !RUN private=1 protected=0 guarded=0 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance !STOPTIMER private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=ticker_stopTimer
   instance !WAITTIMER private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=ticker_waitTimer
   instance ATTACHMENT private=0 protected=0 guarded=0 abstract=0 constant=0 attribute=1 package=0 entry=-

@@ -1241,8 +1241,7 @@ An `init` sent to an `Alarm` or a `Ticker` after the one that `new` sent,
 whatever its arguments, raises `SYNTAX 98.900` and leaves the object as it
 was: still set or still cancelled, with its first time, interval, target and
 attachment. ooRexx sets the object up again, without stopping the first
-setting, and crashes when a ticker that runs is set up again. interrexx does
-not refuse the second `init` yet (#248).
+setting, and crashes when a ticker that runs is set up again.
 
 ## 163. A failed init of a DateTime or a TimeSpan
 
