@@ -1,9 +1,10 @@
 //! `Supplier`'s primitive methods, and the constructor every collection's
 //! `supplier` method builds one with.
 
+use super::super::array::collection_store;
 use super::{
     Arity, ArrayArgument, Cleared, Decoded, Failure, Interp, Loud, NativeMethod, ObjRef, Raised,
-    array_argument_object, array_slots, new_instance, pool_variable,
+    array_argument_object, array_slots, is_queue, new_instance, pool_variable,
 };
 
 /// The `Supplier` state's three names, bound in the receiver's own pool under
@@ -164,6 +165,29 @@ fn native_supplier_next(
     Ok(None)
 }
 
+/// One of `init`'s arguments as the array the supplier holds. An answer of
+/// `request` with `ARRAY` that is an instance of an `Array` subclass is kept
+/// as it is, which [`array_argument_object`] would refuse.
+fn supplier_array(interp: &mut Interp, value: ObjRef) -> Result<ObjRef, Failure> {
+    if interp.array_body(value).is_some() {
+        return array_argument_object(interp, value, ArrayArgument::Positional);
+    }
+    if let Some(answer) = interp.request_array_value(value)? {
+        interp.roots.activity_mut().push_temp(answer);
+        let store = collection_store(interp, answer);
+        // A `Queue` or `CircularQueue` keeps its items in an array store too,
+        // and is refused all the same.
+        if !is_queue(interp, answer)
+            && let Some((_, dimensions)) = interp.array_body(store)
+            && dimensions.is_none_or(|held| held.len() == 1)
+        {
+            return Ok(answer);
+        }
+    }
+    let found = interp.string_value_text(value)?;
+    Err(Raised::object_not_single_dimensional(&found).into())
+}
+
 /// `Supplier~init(items, indexes)`: `SupplierClass::initRexx`.
 fn native_supplier_init(
     interp: &mut Interp,
@@ -176,17 +200,11 @@ fn native_supplier_init(
         let Some(value) = args.get(position - 1).copied().flatten() else {
             return Err(Raised::missing_method_argument(position).into());
         };
-        // `arrayArgument` is `requestArray`
-        // (`runtime/MethodArguments.hpp:683`), so a `List` or a `Queue` is
-        // converted and the CONVERTED array is what the supplier keeps --
-        // measured, `.Supplier~new(.List~of('a'), .List~of('h'))` answers
-        // `1 a h`. An argument that already is an array is kept as it
-        // stands, object identity and all.
-        sides.push(array_argument_object(
-            interp,
-            value,
-            ArrayArgument::Positional,
-        )?);
+        // A `List` or a `Queue` is converted and the CONVERTED array is what
+        // the supplier keeps -- measured, `.Supplier~new(.List~of('a'),
+        // .List~of('h'))` answers `1 a h`. An argument that already is an
+        // array is kept as it stands, object identity and all.
+        sides.push(supplier_array(interp, value)?);
     }
     store_supplier(interp, receiver, sides[0], sides[1], 0);
     Ok(None)

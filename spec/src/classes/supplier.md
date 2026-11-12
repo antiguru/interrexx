@@ -642,7 +642,7 @@ say s~item c~item
 ::class twin subclass supplier
 ```
 
-```output defect=#201
+```output
 changed changed
 ```
 
