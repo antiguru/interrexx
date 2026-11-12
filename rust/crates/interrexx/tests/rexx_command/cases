@@ -1500,6 +1500,23 @@ out> method N
 err>        +++ "LINUX COMMAND DIR/rxtrace.rex"
 err>      1 *-* .traceoutput~destination(.quiet~new)
 
+# a program called by name is announced with `>I>` before its first clause and
+# `<I<` after its last, as a routine is
+
+run env=RXTRACE.ON
+rxtraceannounce
+----
+rc> 0
+out> sub
+err>        +++ "LINUX COMMAND DIR/rxtraceannounce.rex"
+err>      1 *-* call rxtraceannounce2
+err>        >I> Routine "DIR/rxtraceannounce2.rex" in package "DIR/rxtraceannounce2.rex".
+err>      1 *-* say 'sub'
+err>        >>>   "sub"
+err> +++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+err>        <I< Routine "DIR/rxtraceannounce2.rex" in package "DIR/rxtraceannounce2.rex".
+err> +++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+
 # a called `::ROUTINE` starts under the variable too: by name, as a function,
 # and as a routine object
 

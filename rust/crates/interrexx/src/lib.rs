@@ -2972,14 +2972,14 @@ impl Interp {
         if own_level {
             self.trace_package_invocation_entry();
         }
-        // Through the same route a `TRACE` instruction takes, because
         // `enableExternalTrace` is `setTrace` and that calls `traceEntry()`:
-        // a called program announces itself with `>I>` where the top-level
-        // one, which has nothing to announce, prints the debug banner
-        // instead.
+        // a called program announces itself with `>I>`, entered still on
+        // its first clause as the package route requires, where the
+        // top-level one, which has nothing to announce, prints the debug
+        // banner instead.
         if external_trace {
             self.begin_external_trace();
-            self.trace_invocation_entry();
+            self.trace_package_invocation_entry();
         }
 
         // `Returned` and `Exited` are the same thing at the top: measured,
