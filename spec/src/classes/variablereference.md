@@ -354,7 +354,7 @@ exit
 bad: say condition('o')~code
 ```
 
-```output defect=#171
+```output
 5
 97.1
 ```

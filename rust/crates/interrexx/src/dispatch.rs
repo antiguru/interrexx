@@ -3781,6 +3781,42 @@ impl Interp {
         self.complete_send(started)
     }
 
+    /// [`Interp::send_message`] for a name a program supplied, such as the one
+    /// `unknown` is sent. Method names are held in upper case and the name
+    /// is looked up as given, so one with a lower-case letter finds no method
+    /// and goes to the receiver's `UNKNOWN`, or raises `SYNTAX 97.1`.
+    pub(crate) fn send_message_as_given(
+        &mut self,
+        receiver: ObjRef,
+        name: &[u8],
+        args: &[Option<ObjRef>],
+        caller: Caller,
+    ) -> Result<Option<ObjRef>, Failure> {
+        if !name.iter().any(u8::is_ascii_lowercase) {
+            return self.send_message(receiver, name, None, args, caller);
+        }
+        if let Err(kind) = self.receiver_behaviour(receiver) {
+            return Err(Loud::unknown_receiver(kind).into());
+        }
+        self.unknown_or_nomethod(receiver, name, args, Miss::NoMethod)
+    }
+
+    /// The `SYNTAX 97.1` that [`Interp::send_message_as_given`] raises, when
+    /// it raises one without having needed its arguments: the name has a
+    /// lower-case letter and the receiver answers no `UNKNOWN`.
+    pub(crate) fn unanswered_name_as_given(
+        &mut self,
+        receiver: ObjRef,
+        name: &[u8],
+    ) -> Option<Failure> {
+        if !name.iter().any(u8::is_ascii_lowercase)
+            || self.lookup(receiver, UNKNOWN, None).is_some()
+        {
+            return None;
+        }
+        Some(self.nomethod(receiver, name, Miss::NoMethod))
+    }
+
     /// [`Interp::send_message`] up to the point a Rexx body it enters would
     /// run.
     pub(crate) fn begin_send(
@@ -4368,10 +4404,16 @@ fn reference_unknown(
     let Some(Some(arguments)) = args.get(1).copied() else {
         return Err(Raised::missing_method_argument(2).into());
     };
+    if name.iter().any(u8::is_ascii_lowercase) {
+        let referenced = referenced_receiver(interp, receiver)?;
+        if let Some(refusal) = interp.unanswered_name_as_given(referenced, &name) {
+            return Err(refusal);
+        }
+    }
     let forwarded = array_argument(interp, arguments, ArrayArgument::Positional)?;
     let referenced = referenced_receiver(interp, receiver)?;
     let caller = interp.caller();
-    interp.send_message(referenced, &name, None, &forwarded, caller)
+    interp.send_message_as_given(referenced, &name, &forwarded, caller)
 }
 
 /// `VariableReference~request(class)`: forwards to the referenced value --
