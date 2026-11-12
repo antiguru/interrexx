@@ -2522,6 +2522,21 @@ impl Interp {
             Some(_) => self.activity.rerun_indent.take(),
             None => None,
         };
+        let here = self.running_activation().map(|activation| activation.id);
+        match (rerun, here) {
+            (Some(indent), Some(program)) => {
+                self.activity.rerun_failure_indent = Some((program, index, indent));
+            }
+            _ => {
+                if self
+                    .activity
+                    .rerun_failure_indent
+                    .is_some_and(|(program, at, _)| Some(program) == here && at == index)
+                {
+                    self.activity.rerun_failure_indent = None;
+                }
+            }
+        }
         let shortcut = tabled
             && source.is_some()
             && self.activity.clause_line_override.is_none()
@@ -2710,6 +2725,17 @@ impl Interp {
         }
     }
 
+    /// The indent the error report echoes the clause at `index` with: the
+    /// indent a debug pause's `=` echoed it at when it ran the clause again
+    /// (`r[env.debugging.input.iterate]`), else its own printed indent.
+    fn failure_indent(&self, code: &Code<'_>, index: usize) -> usize {
+        let here = self.running_activation().map(|activation| activation.id);
+        match self.activity.rerun_failure_indent {
+            Some((program, at, indent)) if Some(program) == here && at == index => indent,
+            _ => self.printed_indent(code, index),
+        }
+    }
+
     /// Resolves `instruction`'s own clause (and its statically-derived
     /// indent, `static_indent`) into `self.failure_site`, first call wins,
     /// when `source` is `Some`.
@@ -2720,7 +2746,7 @@ impl Interp {
         source: Option<&ProgramSource>,
         instruction: &Instruction,
     ) {
-        let indent = self.printed_indent(code, index);
+        let indent = self.failure_indent(code, index);
         self.record_failure_at(source, instruction, indent);
     }
 
@@ -2889,7 +2915,7 @@ impl Interp {
             // temps_frame`'s own computation at all (`Flow::Leave`'s own
             // doc comment: eagerly, before any propagation), so it needs
             // the identical addition independently, not by inheritance.
-            indent: self.printed_indent(code, index),
+            indent: self.failure_indent(code, index),
             // Already this instruction's own line: `Op::Clause`'s region's
             // `in_clause` set it before dispatching this `step`, through the
             // same `clause_line` call `SIGL` reads.
