@@ -1233,11 +1233,14 @@ main: before the refusal
 r[conc.halt.deviation.162]
 An `init` that is sent to an `Alarm` or a `Ticker` after the one that `new`
 sent ([`Alarm`'s `init`](r:class.alarm.init), [`Ticker`'s
-`init`](r:class.ticker.init)), whatever its arguments, raises `SYNTAX 98.900`,
+`init`](r:class.ticker.init)), with a number of arguments that `init` accepts,
+whatever their values, raises `SYNTAX 98.900`,
 the execution error whose text says what was refused, and leaves the object as
 it was: an alarm or ticker that is set stays set, and one that was cancelled
 stays cancelled, with its first time, interval, target and attachment
-([Deviation 162](../deviations.md#162-a-second-init-of-an-alarm-or-a-ticker)).
+([Deviation 162](../deviations.md#162-a-second-init-of-an-alarm-or-a-ticker)). A
+wrong number of arguments raises the argument-count error first, as it does
+for the `init` that `new` sends.
 ooRexx sets the object up again without stopping the first setting, and
 crashes when a ticker that is running is set up again, so the examples are not
 run on ooRexx. The

@@ -1238,7 +1238,8 @@ the range check.
 ## 162. A second init of an Alarm or a Ticker
 
 An `init` sent to an `Alarm` or a `Ticker` after the one that `new` sent,
-whatever its arguments, raises `SYNTAX 98.900` and leaves the object as it
+with a number of arguments that `init` accepts, whatever their values, raises
+`SYNTAX 98.900` and leaves the object as it
 was: still set or still cancelled, with its first time, interval, target and
 attachment. ooRexx sets the object up again, without stopping the first
 setting, and crashes when a ticker that runs is set up again.
