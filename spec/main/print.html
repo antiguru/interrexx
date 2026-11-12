@@ -90557,6 +90557,148 @@ back
 [read 5: ]
      7 *-* exit
 </code></pre>
+<div class="rule" id="r-env.debugging.pause.header"><a href="environment/debugging.html#r-env.debugging.pause.header">[env.debugging.pause.header]</a></div>
+<p>A <code>DO</code> or <code>LOOP</code> clause is stopped at after its header has been evaluated,
+and a condition that the evaluation queued is not delivered until that stop is
+over. In the example the <code>NOTREADY</code> that the <code>LINEIN</code> call raises in the header
+is handled after the stop that follows the header: the label <code>h:</code> and the
+clauses of the handler are shown and stopped at after it.</p>
+<pre><code class="language-rexx">.debuginput~destination(.in~new(.array~of('', '', '', '', '', '', '', '', '')))
+.traceoutput~destination(.show~new)
+call on notready name h
+trace ?a
+do i = 1 to length(linein('/nonexistent/dh')) + 1
+  say 'body' i
+end
+say 'after'
+exit
+h: say 'h' sigl
+  return
+::class in
+::method init
+  expose a i
+  use arg a
+  i = 0
+::method linein
+  expose a i
+  i += 1
+  if i &gt; a~items then return ''
+  say '[read' i':' a[i]']'
+  return a[i]
+::class show
+::method lineout
+  use arg l
+  l = '' || l
+  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  return 0
+</code></pre>
+<pre><code class="language-output">     5 *-* do i = 1 to length(linein('/nonexistent/dh')) + 1
++++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+[read 1: ]
+    10 *-*     h:
+[read 2: ]
+    10 *-*     say 'h' sigl
+h 5
+[read 3: ]
+    11 *-*     return
+     6 *-*   say 'body' i
+body 1
+[read 4: ]
+     7 *-* end
+     5 *-* do i = 1 to length(linein('/nonexistent/dh')) + 1
+     8 *-* say 'after'
+after
+[read 5: ]
+     9 *-* exit
+</code></pre>
+<div class="rule" id="r-env.debugging.pause.block"><a href="environment/debugging.html#r-env.debugging.pause.block">[env.debugging.pause.block]</a></div>
+<p>A <code>DO</code> that opens a block, with a label or without, is stopped at after its
+header like any other <code>DO</code>, ahead of the first clause of its body. In the
+example the stop after <code>do label lbl</code> comes before <code>nop</code> is shown.</p>
+<pre><code class="language-rexx">.debuginput~destination(.in~new(.array~of('', '', '', '', '', '', '', '')))
+.traceoutput~destination(.show~new)
+trace ?a
+do label lbl
+  nop
+end lbl
+say 'end'
+exit
+::class in
+::method init
+  expose a i
+  use arg a
+  i = 0
+::method linein
+  expose a i
+  i += 1
+  if i &gt; a~items then return ''
+  say '[read' i':' a[i]']'
+  return a[i]
+::class show
+::method lineout
+  use arg l
+  l = '' || l
+  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  return 0
+</code></pre>
+<pre><code class="language-output">     4 *-* do label lbl
++++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+[read 1: ]
+     5 *-*   nop
+[read 2: ]
+     6 *-* end lbl
+     7 *-* say 'end'
+end
+[read 3: ]
+     8 *-* exit
+</code></pre>
+<div class="rule" id="r-env.debugging.pause.reply"><a href="environment/debugging.html#r-env.debugging.pause.reply">[env.debugging.pause.reply]</a></div>
+<p>A REPLY is stopped at after the activity has replied, as any clause is, and the
+continuation of the method goes on from that stop. The notice
+is shown there, once: the clauses of the continuation do not show it again. In
+the example the stop after <code>reply 5</code> comes before <code>say 'after reply'</code> is shown.
+(The lines that announce the method on entering and leaving are not shown.)</p>
+<pre><code class="language-rexx">.debuginput~destination(.in~new(.array~of('', '', '', '', '', '', '')))
+.traceoutput~destination(.show~new)
+o = .obj~new
+o~r
+call syssleep 0.5
+exit
+::class obj
+::method r
+  trace ?a
+  reply 5
+  say 'after reply'
+  nop
+  return
+::class in
+::method init
+  expose a i
+  use arg a
+  i = 0
+::method linein
+  expose a i
+  i += 1
+  if i &gt; a~items then return ''
+  say '[read' i':' a[i]']'
+  return a[i]
+::class show
+::method lineout
+  use arg l
+  l = '' || l
+  if l~strip~left(5) \= '+++ "' &amp; l~word(1) \= '&gt;I&gt;' &amp; l~word(1) \= '&lt;I&lt;' then .stdout~lineout(l)
+  return 0
+</code></pre>
+<pre><code class="language-output">    10 *-* reply 5
++++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+[read 1: ]
+    11 *-* say 'after reply'
+after reply
+[read 2: ]
+    12 *-* nop
+[read 3: ]
+    13 *-* return
+</code></pre>
 <div class="rule" id="r-env.debugging.pause.skipped"><a href="environment/debugging.html#r-env.debugging.pause.skipped">[env.debugging.pause.skipped]</a></div>
 <p>Some traced clauses are not followed by a stop, because they cannot be run
 again safely: a DO or LOOP clause on its second and later turns, which
@@ -91098,11 +91240,40 @@ lab: say 'at lab'
   if .feed~count = 1 then return line
   return ''
 </code></pre>
-<pre><code class="language-output defect=#217 rc=4">probe return 7 result 7
+<pre><code class="language-output rc=4">probe return 7 result 7
 at lab
 probe signal lab result from lab
 1
 probe say 1; return 8 result 8
+</code></pre>
+<div class="rule" id="r-env.debugging.input.sigl"><a href="environment/debugging.html#r-env.debugging.input.sigl">[env.debugging.input.sigl]</a></div>
+<p>A line is run at the line of the clause that the stop follows, so a routine
+that a <code>CALL</code> in it enters reads that line in <code>SIGL</code>. In the example <code>SIGL</code>
+is 4, the line of the <code>nop</code>.</p>
+<pre><code class="language-rexx">.traceoutput~destination(.quiet~new)
+.debuginput~destination(.feed~new('call sub'))
+trace ?a
+nop
+say 'done'
+exit
+sub: say 'sigl' sigl
+return
+::class quiet
+::method lineout
+  return 0
+::class feed
+::method init
+  expose line n
+  use arg line
+  n = 0
+::method linein
+  expose line n
+  n += 1
+  if n = 1 then return line
+  return ''
+</code></pre>
+<pre><code class="language-output">sigl 4
+done
 </code></pre>
 <div class="rule" id="r-env.debugging.input.equals"><a href="environment/debugging.html#r-env.debugging.input.equals">[env.debugging.input.equals]</a></div>
 <p>The line <code>=</code>, with nothing before or after it, runs again the clause that the
@@ -91251,6 +91422,57 @@ sub: n += 1
 n 2
 [read 8: ]
      7 *-* exit
+</code></pre>
+<div class="rule" id="r-env.debugging.input.iterate"><a href="environment/debugging.html#r-env.debugging.input.iterate">[env.debugging.input.iterate]</a></div>
+<p>An ITERATE that <code>=</code> runs again is shown at the indent of the body of its
+loop, not at the indent of its own nesting. In the example the <code>iterate</code> is
+nested in an IF, and is shown again at the indent of the loop body.</p>
+<pre><code class="language-rexx">.debuginput~destination(.in~new(.array~of('', '', '=', '', '', '', '', '', '', '')))
+.traceoutput~destination(.show~new)
+trace ?a
+do i = 1 to 3
+  if i = 1 then iterate
+  say i
+end
+exit
+::class in
+::method init
+  expose a i
+  use arg a
+  i = 0
+::method linein
+  expose a i
+  i += 1
+  if i &gt; a~items then return ''
+  say '[read' i':' a[i]']'
+  return a[i]
+::class show
+::method lineout
+  use arg l
+  l = '' || l
+  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  return 0
+</code></pre>
+<pre><code class="language-output">     4 *-* do i = 1 to 3
++++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+[read 1: ]
+     5 *-*   if i = 1 
+[read 2: ]
+     5 *-*     then
+     5 *-*       iterate
+     4 *-* do i = 1 to 3
+[read 3: =]
+     5 *-*   iterate
+     4 *-* do i = 1 to 3
+[read 4: ]
+     5 *-*   if i = 1 
+[read 5: ]
+     6 *-*   say i
+3
+[read 6: ]
+     7 *-* end
+     4 *-* do i = 1 to 3
+     8 *-* exit
 </code></pre>
 <div class="rule" id="r-env.debugging.input.trace"><a href="environment/debugging.html#r-env.debugging.input.trace">[env.debugging.input.trace]</a></div>
 <p>A TRACE instruction that a line runs takes effect, unlike one in the
