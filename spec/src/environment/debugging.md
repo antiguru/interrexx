@@ -563,6 +563,7 @@ after
      9 *-* exit
 ```
 
+r[env.debugging.pause.block]
 A `DO` that opens a block, with a label or without, is stopped at after its
 header like any other `DO`, ahead of the first clause of its body. In the
 example the stop after `do label lbl` comes before `nop` is shown.
