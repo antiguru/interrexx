@@ -180,7 +180,8 @@ fn the_generators_give_their_reference_outputs() {
 }
 
 /// A started activity whose wait nothing can end is refused at the
-/// program's end, where real time waits for the run's deadline.
+/// program's end, in the simulation mode with a message of its own and in
+/// real time as a wait nothing left can end (Deviation 20).
 #[test]
 fn a_wait_only_a_signal_can_end_is_refused() {
     let source = ".w~new~start('WAITON', .message~new('abc', 'length'))\nsay 'main done'\n\
@@ -197,7 +198,11 @@ fn a_wait_only_a_signal_can_end_is_refused() {
         source.as_bytes().to_vec(),
         Invocation::none().with_deadline(std::time::Duration::from_millis(300)),
     );
-    assert_eq!(real.exit_code, crate::DEADLINE_EXIT);
+    assert_eq!(real.exit_code, 120);
+    assert_eq!(
+        stderr(&real),
+        "interrexx: a wait that nothing left to run can end is not implemented\n"
+    );
 }
 
 /// `halt@K` halts every activity at clause boundary `K`, the same boundary

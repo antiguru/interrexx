@@ -451,23 +451,28 @@ fn under_nohup_sigint_still_halts() {
     );
 }
 
-/// With main ended and an activity parked in `GUARD WHEN`, the program waits
-/// for it; the signal wakes it and the program ends. The oracle waits on:
-/// killed after 3 s, 30 of 30 runs. DEVIATIONS entry 10.
+/// With main ended, an activity parked in `GUARD WHEN` and another asleep, the program waits for
+/// the sleeper; the signal wakes both and the program ends. A program whose every remaining
+/// activity waits for something nothing can bring about is refused instead (Deviation 20). The
+/// oracle waits on: killed after 3 s, 30 of 30 runs. DEVIATIONS entry 10.
 #[test]
-fn sigint_ends_a_program_waiting_on_a_guard_when() {
+fn sigint_ends_a_program_waiting_on_a_guard_when_and_a_sleep() {
     halts(
         "endguard",
-        "o = .t~new\no~start('w')\ncall SysSleep 0.2\nsay 'main done'\nexit\n\
-         ::class t\n::method w\n  expose flag\n  flag = 0\n  guard on when flag\n",
+        "o = .t~new\no~start('w')\no~start('s')\ncall SysSleep 0.2\nsay 'main done'\nexit\n\
+         ::class t\n::method w\n  expose flag\n  flag = 0\n  guard on when flag\n\
+         ::method s unguarded\n  call SysSleep 30\n",
         "main done\n",
         "INT",
         Launch::Plain,
         &Ended {
             code: Some(0),
             stdout: "main done\n".to_string(),
-            stderr: "    10 *-* guard on when flag\n\
-                     Error 4 running PROGRAM line 10:  Program interrupted.\n\
+            stderr: "    11 *-* guard on when flag\n\
+                     Error 4 running PROGRAM line 11:  Program interrupted.\n\
+                     Error 4.1:  Program interrupted with HALT condition.\n\
+                     \x20   13 *-* call SysSleep 30\n\
+                     Error 4 running PROGRAM line 13:  Program interrupted.\n\
                      Error 4.1:  Program interrupted with HALT condition.\n"
                 .to_string(),
         },
