@@ -29,6 +29,8 @@ pub fn prefix_for(relative: &Path) -> Option<String> {
         "numbers" => "num",
         "directives" => "dir",
         "rexxutil" => "util",
+        "rxmath" => "rxmath",
+        "rxunixsys" => "rxunixsys",
         "environment" => "env",
         "concurrency" => "conc",
         _ => return None,

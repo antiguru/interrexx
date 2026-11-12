@@ -232,6 +232,8 @@ fn prefixes_name_the_page() {
     assert_eq!(p("numbers/x.md").as_deref(), Some("num.x."));
     assert_eq!(p("directives/x.md").as_deref(), Some("dir.x."));
     assert_eq!(p("rexxutil/x.md").as_deref(), Some("util.x."));
+    assert_eq!(p("rxmath/x.md").as_deref(), Some("rxmath.x."));
+    assert_eq!(p("rxunixsys/x.md").as_deref(), Some("rxunixsys.x."));
     assert_eq!(p("environment/x.md").as_deref(), Some("env.x."));
     assert_eq!(p("conventions.md").as_deref(), Some("conv."));
     assert_eq!(p("intro.md"), None);
