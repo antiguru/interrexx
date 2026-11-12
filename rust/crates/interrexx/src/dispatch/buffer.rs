@@ -9,8 +9,8 @@ use super::method_arguments::{
     required_position_argument, string_method_argument, whole_method_argument,
 };
 use super::{
-    Arity, BehaviourId, Body, BufferState, Cleared, Failure, INIT, Interp, NativeMethod,
-    ObjRef, Object, Raised, class_receiver, new_instance, required_string_argument,
+    Arity, BehaviourId, Body, BufferState, Cleared, Failure, INIT, Interp, NativeMethod, ObjRef,
+    Object, Raised, class_receiver, new_instance, required_string_argument,
 };
 
 /// `MutableBuffer`'s instance methods. Chained into `ObjectModel::build`

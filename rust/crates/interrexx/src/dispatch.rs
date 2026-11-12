@@ -4320,7 +4320,9 @@ fn native_reference_name(
     _args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
     let Some(reference) = interp.as_variable_reference(receiver) else {
-        return Err(crate::Raised::receiver_kind("a value that is not a variable reference").into());
+        return Err(
+            crate::Raised::receiver_kind("a value that is not a variable reference").into(),
+        );
     };
     let name = reference.name.to_vec();
     Ok(Some(interp.text_built(name)))
@@ -4337,7 +4339,9 @@ fn native_reference_value(
     _args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
     let Some(reference) = interp.as_variable_reference(receiver) else {
-        return Err(crate::Raised::receiver_kind("a value that is not a variable reference").into());
+        return Err(
+            crate::Raised::receiver_kind("a value that is not a variable reference").into(),
+        );
     };
     match interp.referenced_value(reference) {
         Some(value) => Ok(Some(value)),
@@ -4361,7 +4365,9 @@ fn native_reference_value_set(
         return Err(Raised::missing_named_argument("VALUE").into());
     };
     let Some(reference) = interp.as_variable_reference(receiver) else {
-        return Err(crate::Raised::receiver_kind("a value that is not a variable reference").into());
+        return Err(
+            crate::Raised::receiver_kind("a value that is not a variable reference").into(),
+        );
     };
     let home = reference.home.clone();
     let name = reference.name.clone();
@@ -4449,7 +4455,9 @@ fn referenced_receiver(interp: &mut Interp, receiver: ObjRef) -> Result<ObjRef, 
         crate::value::Referent::Value(referenced) => Ok(referenced),
         crate::value::Referent::Unset(last) => interp
             .referenced_object(last.unwrap_or(receiver))
-            .ok_or_else(|| crate::Raised::receiver_kind("a value that is not a variable reference").into()),
+            .ok_or_else(|| {
+                crate::Raised::receiver_kind("a value that is not a variable reference").into()
+            }),
         crate::value::Referent::Cycle => Err(crate::error::Raised::insufficient_stack().into()),
     }
 }

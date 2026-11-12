@@ -8,8 +8,8 @@ use super::collection::{
     read_slots, same_item, slots_of, store_of, subscript_object,
 };
 use super::{
-    Arity, BehaviourId, Body, Cleared, Failure, IndexUse, Interp, NativeMethod, ObjRef,
-    Raised, array_slots,
+    Arity, BehaviourId, Body, Cleared, Failure, IndexUse, Interp, NativeMethod, ObjRef, Raised,
+    array_slots,
 };
 
 // ---- Array's shared collection surface ----
@@ -595,9 +595,9 @@ fn same_class_array(
         interp.roots.activity_mut().push_temp(store);
         return Ok(store);
     }
-    let class = interp
-        .class_of_value(receiver)
-        .ok_or_else(|| Failure::from(crate::Raised::receiver_kind("a value that is not an array")))?;
+    let class = interp.class_of_value(receiver).ok_or_else(|| {
+        Failure::from(crate::Raised::receiver_kind("a value that is not an array"))
+    })?;
     // The receiver's class is sent `new` with the size, as `new` for an
     // `Array` or a `Queue` makes the object and sends its `init`; the slots
     // then go into the object's store.

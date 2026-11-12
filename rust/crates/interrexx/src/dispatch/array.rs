@@ -1,8 +1,8 @@
 //! Array slot and subscript arithmetic, and `Array`'s primitive methods.
 
 use super::{
-    BehaviourId, Body, Cleared, Decoded, Failure, INIT, Interp, ObjRef, Raised,
-    class_receiver, collection, required_string_argument,
+    BehaviourId, Body, Cleared, Decoded, Failure, INIT, Interp, ObjRef, Raised, class_receiver,
+    collection, required_string_argument,
 };
 
 use super::{Arity, NativeMethod};

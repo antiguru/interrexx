@@ -2,9 +2,9 @@
 //! methods over them.
 
 use super::{
-    Arity, BehaviourId, Body, Cleared, Failure, Interp, NativeMethod, ObjRef, Raised,
-    array_of, array_of_slots, array_slots, array_slots_owned, array_splice, array_splice_slot,
-    item_argument, new_instance, new_supplier, optional_length_argument, pool_variable, same_item,
+    Arity, BehaviourId, Body, Cleared, Failure, Interp, NativeMethod, ObjRef, Raised, array_of,
+    array_of_slots, array_slots, array_slots_owned, array_splice, array_splice_slot, item_argument,
+    new_instance, new_supplier, optional_length_argument, pool_variable, same_item,
 };
 
 // ---- List ----
