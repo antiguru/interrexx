@@ -1980,6 +1980,6 @@ syntax:
 say condition('O')~code (t~string == before) t
 ```
 
-```output defect=#441
+```output
 88.903 1 01:02:03.000000
 ```
