@@ -170,7 +170,8 @@ fn the_composed_program_carries_both_files_directives_and_neither_prologue() {
         );
     }
     // The one class each file declares that the other does not, so a
-    // composition that dropped either file is red rather than green.
+    // composition that dropped either file is red rather than green. File is
+    // spliced into StreamClasses from `interrexx-lib/rexx/file.rex`.
     assert!(text.contains("::class \"TraceObject\" subclass StringTable public"));
-    assert!(text.contains("::CLASS \"File\" public inherit Comparable Orderable"));
+    assert!(text.contains("::class \"File\" public inherit Comparable Orderable"));
 }
