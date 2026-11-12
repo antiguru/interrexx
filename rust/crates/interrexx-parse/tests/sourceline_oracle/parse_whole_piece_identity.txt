@@ -1,0 +1,36 @@
+count 35
+/* A PARSE piece that covers the whole parse string is the parse string
+   object itself, as an IdentityTable sees it; any shorter piece, and a
+   string a folding PARSE changes, is a new object. */
+a = 'alpha beta gamma delta'
+w = 'alphabetagammadelta'
+u = 'ALPHA BETA GAMMA DELTA'
+t = .identityTable~new
+t[a] = 'a'; t[w] = 'w'; t[u] = 'u'
+parse var a b; call show 'var', b
+parse var a 1 b; call show 'column 1', b
+parse var a b 1 c; call show 'twice', b, c
+parse value a with b; call show 'value', b
+call sub a
+parse var a b +0 c; call show 'plus 0', b, c
+parse var w b c; call show 'only word', b, c
+parse var w b .; call show 'word and dot', b
+parse var a b 'zz' c; call show 'no match', b, c
+parse caseless var a b 'ZZ' c; call show 'caseless', b
+parse var a b c; call show 'first word', b, c
+parse var a 'alpha' b; call show 'after pattern', b
+parse upper var a b; call show 'upper changes', b
+parse upper var u b; call show 'upper keeps', b
+parse lower var u b; call show 'lower changes', b
+parse lower var a b; call show 'lower keeps', b
+n = 12345678901
+parse var n b; say 'number' (b == n) t~hasIndex(b)
+exit
+sub: parse arg b; call show 'arg', b; return
+show:
+  line = arg(1)':'
+  do i = 2 to arg()
+    line = line t~hasIndex(arg(i)) || '['arg(i)']'
+  end
+  say line
+  return
