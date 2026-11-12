@@ -44,10 +44,7 @@ const PREV: usize = 2;
 
 /// The `List` class, which is the scope the chain is bound under.
 fn list_scope(interp: &mut Interp) -> ObjRef {
-    interp
-        .classes()
-        .lookup("List")
-        .expect("List is a native class")
+    interp.object_model().list
 }
 
 /// A link or a count as the inline integer the chain stores.
@@ -175,9 +172,7 @@ pub(super) fn is_list(interp: &mut Interp, receiver: ObjRef) -> bool {
     let Some(class) = interp.class_of_value(receiver) else {
         return false;
     };
-    let Some(list) = interp.classes().lookup("List") else {
-        return false;
-    };
+    let list = list_scope(interp);
     interp.classes().is_a(class, list)
 }
 
