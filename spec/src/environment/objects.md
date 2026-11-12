@@ -539,9 +539,48 @@ say a b c d e
   return '0'
 ```
 
-```output defect=#213
+```output
 LINES(NORMAL) LINES(N) LINES(C) LINES(NORMAL) LINES(NORMAL)
 1 1 7 0 0
+```
+
+r[env.objects.streams.lines.zero]
+Every spelling of zero makes the normal form answer 0, and the option arrives
+in the case it was written in.
+
+```rexx
+s = .spy~new
+.input~destination(s)
+do v over '0', '00', ' 0 ', '-0', '0E5', '1'
+  s~answer = v
+  say '['v']' lines()
+end
+call lines , 'c'
+call lines , 'n'
+.input~destination
+say s~log~makeString('l', ' ')
+::class spy
+::method init
+  expose log answer
+  log = .array~new
+  answer = 7
+::attribute log get
+::attribute answer
+::method unknown
+  expose log answer
+  use arg name, args
+  log~append(name'('args~makeString('l', ',')')')
+  return answer
+```
+
+```output
+[0] 0
+[00] 0
+[ 0 ] 0
+[-0] 0
+[0E5] 0
+[1] 1
+LINES(NORMAL) LINES(NORMAL) LINES(NORMAL) LINES(NORMAL) LINES(NORMAL) LINES(NORMAL) LINES(c) LINES(n)
 ```
 
 r[env.objects.output]

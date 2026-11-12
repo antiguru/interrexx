@@ -222,7 +222,7 @@ pub(crate) fn lines(
         if option == b'C' {
             return Ok(answer);
         }
-        let present = interp.to_text(answer).as_ref() != b"0";
+        let present = !answer_is_zero(interp, answer)?;
         return Ok(interp.text(if present { b"1" } else { b"0" }));
     }
     let stream_name = match arg(args, 1) {
@@ -231,10 +231,11 @@ pub(crate) fn lines(
     };
     let stream = interp.resolve_stream(&stream_name, true, true)?;
     interp.roots.activity_mut().push_temp(stream);
-    // **The two spellings are not symmetric**, measured against a route whose
-    // destination answers `LINES` itself: the quick option goes out as
-    // `NORMAL` and the counting one as `C`.
-    let argument = interp.text(if option == b'C' { b"C" } else { b"NORMAL" });
+    // The option goes out as written, and `NORMAL` where it was omitted.
+    let argument = match arg(args, 2) {
+        Some(value) => value,
+        None => interp.text(b"NORMAL"),
+    };
     interp.roots.activity_mut().push_temp(argument);
     let caller = interp.caller();
     let answer = pinned!(
@@ -248,9 +249,15 @@ pub(crate) fn lines(
     }
     // The quick answer is the builtin's own, not the destination's: measured,
     // a destination answering `7` gives `lines()` 1 and `lines(,'C')` 7.
-    let text = interp.to_text(answer).into_owned();
-    let present = text != b"0";
+    let present = !answer_is_zero(interp, answer)?;
     Ok(interp.text(if present { b"1" } else { b"0" }))
+}
+
+/// Whether the string representation of `answer` (what its `STRING` answers)
+/// is a number equal to zero.
+fn answer_is_zero(interp: &mut Interp, answer: ObjRef) -> Result<bool, Failure> {
+    let text = interp.string_representation(answer)?;
+    Ok(Number::parse_bytes(&text).is_some_and(|number| number.is_zero()))
 }
 
 /// `STREAM(name, [operation], [command])`. The operation is read by its first
