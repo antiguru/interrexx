@@ -5,7 +5,7 @@
 /// thing that makes a `::REQUIRES` search differ from an external call's.
 const REQUIRES_EXTENSION: &str = ".cls";
 
-/// The extensions the oracle appends, in its order.
+/// The extensions appended, in order.
 const DEFAULT_EXTENSIONS: [&str; 2] = [".REX", ".rex"];
 
 /// The current directory's entry, which `SysSearchPath` adds as this literal
@@ -75,8 +75,8 @@ pub(crate) fn candidates_with(
     instance_extensions: &[String],
 ) -> Vec<Vec<String>> {
     // **ASCII, because `strlower` is.** A name with a non-ASCII letter lowers
-    // to itself here and takes one pass, where Unicode lowercasing would
-    // invent a second spelling the oracle never tries.
+    // to itself here and takes one pass, where Unicode lowercasing would invent
+    // a second spelling that is never tried.
     let lower = name.to_ascii_lowercase();
     // `primitiveSearchName`'s own `iterations`: the second pass exists only
     // where lowercasing changes the name.
@@ -109,8 +109,8 @@ pub(crate) fn candidates_with(
         for spelling in spellings {
             let candidate = format!("{spelling}{}", extension.unwrap_or(""));
             // Qualified enough to name a file on its own, so the path is not
-            // searched at all, as the oracle's name search does, and its path
-            // search repeats the test for the same reason.
+            // searched at all, as the name search does, and the path search
+            // repeats the test for the same reason.
             if has_directory(&candidate) {
                 out.push(vec![candidate]);
                 continue;
@@ -177,8 +177,8 @@ pub(crate) fn program_extension(path: &str) -> Option<&str> {
     path[at..].starts_with('.').then(|| &path[at..])
 }
 
-/// The length of `path`'s first char, the byte the oracle's backwards scans
-/// stop before (`while (pathName < endPtr)`), or `None` for an empty path.
+/// The length of `path`'s first char, the byte the backwards scans stop before,
+/// or `None` for an empty path.
 fn first_char_len(path: &str) -> Option<usize> {
     path.chars().next().map(char::len_utf8)
 }
@@ -283,9 +283,8 @@ fn narrow(text: &str) -> Vec<u8> {
 mod tests {
     use super::*;
 
-    /// The four routes, in the oracle's own order: the requiring program's
-    /// directory first, then the current directory, then `REXX_PATH`, then
-    /// `PATH`.
+    /// The four routes, in order: the requiring program's directory first, then
+    /// the current directory, then `REXX_PATH`, then `PATH`.
     #[test]
     fn the_four_routes_are_searched_in_the_oracles_order() {
         let entries = search_entries(Some("/prog/"), Some("/rp1:/rp2"), Some("/pp"));
@@ -316,7 +315,7 @@ mod tests {
             vec!["/prog/", ".", "/pp"]
         );
         assert_eq!(search_entries(None, None, None), vec!["."]);
-        // The `::` case the oracle's path search skips.
+        // The `::` case the path search skips.
         assert_eq!(
             search_entries(None, Some("/a::/b"), None),
             vec![".", "/a", "/b"]
@@ -489,8 +488,8 @@ mod tests {
 
     /// Only the name's first byte is exempt from the backwards scan, so a
     /// dotfile named alone is extensionless and one after a directory is its
-    /// own extension. Measured, the oracle answers 43.901 for
-    /// `::requires 'sub/.hid'` with only `sub/.hid.cls` present.
+    /// own extension. So `::requires 'sub/.hid'` is 43.901 with only
+    /// `sub/.hid.cls` present.
     #[test]
     fn only_the_names_first_byte_is_exempt_from_the_extension_scan() {
         assert!(!has_extension(".hid"));
@@ -507,8 +506,8 @@ mod tests {
         assert_eq!(program_extension("\u{e9}.x"), Some(".x"));
     }
 
-    /// The oracle's directory extraction never examines the first byte either, so `/x` has
-    /// no directory.
+    /// Directory extraction never examines the first byte either, so `/x` has no
+    /// directory.
     #[test]
     fn the_first_byte_is_never_a_directory_separator() {
         assert_eq!(program_directory("/x"), None);

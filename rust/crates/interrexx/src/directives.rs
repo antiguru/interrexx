@@ -20,9 +20,8 @@ fn class_references(class: &ClassDirective) -> impl Iterator<Item = &ClassRef> {
         .chain(class.inherit.iter())
 }
 
-// Which stage answers when directives could each refuse a file, all
-// measured against the oracle. [`Interp::resolve_directive_library`] is the
-// walk it describes.
+// Which stage answers when directives could each refuse a file,
+// [`Interp::resolve_directive_library`] is the walk it describes.
 // ```text
 // ::routine/::method/::attribute EXTERNAL  vs a failing ::CLASS  98.903 rc 158, the EXTERNAL line
 // ::routine/::method/::attribute EXTERNAL  vs a ::CLASS cycle    98.903 rc 158, the EXTERNAL line
@@ -45,10 +44,9 @@ fn class_references(class: &ClassDirective) -> impl Iterator<Item = &ClassRef> {
 // ::routine r / ::annotate routine r / a duplicate ::ROUTINE pair       99.903 rc 157
 // ::routine r / ::annotate routine r / a class-less ::constant (1/0)    99.906 rc 157
 // ```
-/// The `LIBRARY REXX` entry point a directive's `EXTERNAL` names and the
-/// `REXX` package does not export -- the one the oracle reports 90.998 for --
-/// or `None` for a directive whose `EXTERNAL` resolves and for one carrying
-/// none.
+/// The `LIBRARY REXX` entry point a directive's `EXTERNAL` names and the `REXX`
+/// package does not export -- the one 90.998 is reported for -- or `None` for a
+/// directive whose `EXTERNAL` resolves and for one carrying none.
 pub(super) fn unresolved_external(kind: &DirectiveKind) -> Option<Vec<u8>> {
     let external = match kind {
         DirectiveKind::Method(method) => dispatch::native::method_external(method),

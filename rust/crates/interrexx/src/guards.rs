@@ -503,9 +503,8 @@ impl Interp {
         failure.map_or(Ok(()), Err)
     }
 
-    /// Blames the running activation's first clause for a failure raised
-    /// before it runs, as the oracle's reserve fails with that clause
-    /// current.
+    /// Blames the running activation's first clause for a failure raised before
+    /// it runs, as a failing reserve has that clause current.
     fn blame_first_clause(&mut self) {
         let Some(activation) = self.running_activation() else {
             return;
@@ -589,9 +588,9 @@ impl Interp {
     }
 
     /// The running method activation's end, unless a `REPLY` moves it on: its
-    /// guard lock released, and a reserve still pending dropped (the oracle's
-    /// termination step). A `<I<` runs it first, as the oracle releases
-    /// before tracing the exit.
+    /// guard lock released, and a reserve still pending dropped (the
+    /// termination step). A `<I<` runs it first, as the release comes before
+    /// tracing the exit.
     pub(crate) fn guard_off_at_end(&mut self) {
         let Some(mut ending) = self.activity.running.take() else {
             return;

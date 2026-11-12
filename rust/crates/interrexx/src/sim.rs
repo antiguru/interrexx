@@ -28,9 +28,8 @@ use crate::error::Failure;
 use crate::scheduler::Posted;
 use crate::{Interp, Loud};
 
-/// The per-clause quantum's range: half and twice the oracle's measured
-/// 58 ns per clause (`rexxcps`, median of five runs, 17,229,378 clauses per
-/// second).
+/// The per-clause quantum's range: half and twice a measured 58 ns per clause
+/// (`rexxcps`, median of five runs, 17,229,378 clauses per second).
 const QUANTUM_NANOS: std::ops::RangeInclusive<u64> = 29..=116;
 
 /// The seeded origin's epoch, 2026-01-01T00:00:00Z, in seconds since the Unix
@@ -129,8 +128,8 @@ const BLOCK_SECONDS: f64 = 2.0;
 /// The largest `block=`: a day.
 const BLOCK_LIMIT: f64 = 86_400.0;
 
-/// [`Knobs::floor`] where `floor=` does not set it: the oracle's 24 ms slice
-/// (`SLICE_LENGTH`) at its measured 58 ns per clause.
+/// [`Knobs::floor`] where `floor=` does not set it: a 24 ms slice at a measured
+/// 58 ns per clause.
 pub(crate) const FAIRNESS_FLOOR: u64 = 24_000_000 / 58;
 
 /// Set in the environment of a child a run in the simulation mode starts: the

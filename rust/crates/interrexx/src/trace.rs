@@ -88,8 +88,8 @@ impl Interp {
     /// The setting the trace sink obeys, which is [`TraceMode::OFF`] while a
     /// line typed at an interactive-debug pause runs.
     ///
-    /// **The oracle's no-tracing test includes the debug pause**, and answering
-    /// an off setting here reaches every gate at once: nothing echoes, a chunk
+    /// **The no-tracing test includes the debug pause**, and answering an off
+    /// setting here reaches every gate at once: nothing echoes, a chunk
     /// compiled during the pause carries no trace op, and one compiled earlier
     /// is stale and falls back to the run-time gate. The program's own setting
     /// -- what `TRACE()` answers and what a `TRACE` instruction merges into --
@@ -314,11 +314,9 @@ impl Interp {
 
     /// `>L>` (`TRACE_PREFIX_LITERAL`): a literal's own value, untagged.
     /// `eval.rs`'s `eval` calls this for `ExprKind::Literal` and
-    /// `ExprKind::Constant` alike -- a constant symbol's own upcased
-    /// spelling is not distinguished from a quoted literal here, matching
-    /// how little either one is: **not independently oracle-probed for
-    /// `Constant`** (this task's report says so), reasoned from `Literal`'s
-    /// own measured shape rather than a second transcript.
+    /// `ExprKind::Constant` alike -- a constant symbol's own upcased spelling
+    /// is not distinguished from a quoted literal here, matching how little
+    /// either one is.
     #[inline(always)]
     pub(crate) fn trace_literal(&mut self, indent: usize, value: &[u8]) {
         if !self.traced_mode().intermediates {
@@ -441,9 +439,8 @@ impl Interp {
     }
 
     /// `>P>` (`TRACE_PREFIX_PREFIX`): a prefix operator's own result, the
-    /// identical shape to `>O>` with its own prefix byte (the oracle traces
-    /// it through the same path as `>O>`, differing only in the prefix it
-    /// passes).
+    /// identical shape to `>O>` with its own prefix byte (traced through the
+    /// same path as `>O>`, differing only in the prefix).
     pub(crate) fn trace_prefix_op(&mut self, indent: usize, op: &[u8], value: &[u8]) {
         if !self.traced_mode().intermediates {
             return;
@@ -637,9 +634,8 @@ pub(crate) enum Announced {
 mod tests {
     use super::*;
 
-    /// Every formatter that finishes a line puts it through the oracle's
-    /// display rule, and the rule reaches the whole line rather than the
-    /// quoted value alone.
+    /// Every formatter that finishes a line puts it through the display rule,
+    /// and the rule reaches the whole line rather than the quoted value alone.
     #[test]
     fn every_completed_trace_line_is_made_displayable() {
         let mut out = Vec::new();
@@ -782,10 +778,9 @@ mod tests {
         assert_eq!(mode_from_setting(b"?z"), Err(b'z'));
     }
 
-    /// `is_whole_number`'s own oracle-measured pair: `trace value 5` raises
-    /// 24.901 exactly like `trace 5` (a digit string is a skip count), and
-    /// `trace value 'R'` behaves exactly like `trace r` (a letter is a
-    /// setting) -- this task's report has both transcripts.
+    /// `is_whole_number`'s own pair: `trace value 5` raises 24.901 exactly like
+    /// `trace 5` (a digit string is a skip count), and `trace value 'R'`
+    /// behaves exactly like `trace r` (a letter is a setting).
     #[test]
     fn a_digit_string_is_a_whole_number_and_a_letter_is_not() {
         assert!(is_whole_number(b"5"));
@@ -796,10 +791,10 @@ mod tests {
         assert!(!is_whole_number(b"5x"));
     }
 
-    /// The formatting functions, checked against the exact bytes this
-    /// task's report captured from the oracle (`cat -A`, `trace_output.rex`
-    /// under `TRACE I`) -- one assertion per prefix shape, independent of
-    /// whichever `run.rs`/`eval.rs` call site ends up calling each one.
+    /// The formatting functions, checked against exact bytes (`cat -A` of
+    /// `trace_output.rex` under `TRACE I`), one assertion per prefix shape,
+    /// independent of whichever `run.rs`/`eval.rs` call site ends up calling
+    /// each one.
     #[test]
     fn every_formatter_matches_its_own_oracle_transcript() {
         let mut out = Vec::new();

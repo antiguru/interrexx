@@ -20,14 +20,13 @@ use crate::redirect::{IoContext, split_lines};
 use crate::scheduler::ActivityId;
 use crate::{Interp, Loud};
 
-/// The names the oracle gives the built-in handler, each an environment of
-/// its own.
+/// The names of the built-in handler, each an environment of its own.
 const SYSTEM_NAMES: &[&[u8]] = &[
     b"SH", b"", b"COMMAND", b"SYSTEM", b"KSH", b"CSH", b"BSH", b"BASH", b"TCSH", b"ZSH", b"PATH",
 ];
 
-/// A native command handler: what the oracle's `CommandHandler` holds for
-/// every `HandlerType` but `REXX_OBJECT`.
+/// A native command handler: what a `CommandHandler` holds for every handler
+/// type but `REXX_OBJECT`.
 #[derive(Clone)]
 pub(crate) enum NativeKind {
     /// The built-in handler under one of [`SYSTEM_NAMES`]: `ioCommandHandler`,
@@ -101,8 +100,8 @@ struct CommandIo {
     err: Vec<Vec<u8>>,
 }
 
-/// The oracle's `CommandState`: what a `.CommandContext` reaches while its
-/// command runs, found by the object its `CSELF` holds.
+/// The command state: what a `.CommandContext` reaches while its command runs,
+/// found by the object its `CSELF` holds.
 struct CommandState {
     cself: ObjRef,
     activity: ActivityId,
@@ -124,8 +123,8 @@ pub(crate) enum Resolved {
 #[derive(Default)]
 pub(crate) struct Environments {
     /// Each name whose handlers `.CommandHandler` has touched, the one in use
-    /// last. An empty stack is a name `deregister` took out of the oracle's
-    /// table, which only a classic subcommand handler answers again.
+    /// last. An empty stack is a name `deregister` took out of the table, which
+    /// only a classic subcommand handler answers again.
     stacks: FxHashMap<Box<[u8]>, Vec<Entry>>,
     natives: Vec<NativeEnvironment>,
     /// The commands handlers written in Rexx are running, innermost last.

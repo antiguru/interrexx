@@ -141,10 +141,10 @@ fn write_outcome(outcome: &crate::Outcome) {
 /// ended it. A single command argument with a leading blank loses it, and a single command
 /// argument `//T` translates the program without running it, leaving the `short` alone.
 pub fn rexx_start(start: Start) -> Started {
-    // The oracle's interpreter takes the halting signals (`SystemInterpreter`), so a SIGINT
-    // during the run halts the program rather than ending the process, and the handlers stay
-    // installed once it returns -- measured, `RexxStart` of `call SysSleep 5` answers -4 with
-    // Error 4.1 reported, or the trapped halt's result.
+    // The interpreter takes the halting signals, so a SIGINT during the run halts the program
+    // rather than ending the process, and the handlers stay installed once it returns:
+    // `RexxStart` of `call SysSleep 5` answers -4 with Error 4.1 reported, or the trapped
+    // halt's result.
     crate::timer::install_signals();
     let Start {
         name,
@@ -197,7 +197,7 @@ pub fn rexx_start(start: Start) -> Started {
     let mut invocation = Invocation::none()
         .with_input(ProgramInput::Stdin)
         .with_sinks(Sinks {
-            // After what the C program wrote through stdio, as the oracle orders them.
+            // After what the C program wrote through stdio, in that order.
             stdout: Box::new(|bytes| {
                 crate::signal::flush_c_streams();
                 let mut stdout = std::io::stdout();
@@ -220,7 +220,7 @@ pub fn rexx_start(start: Start) -> Started {
     let outcome = run_program_named(&loaded.path, loaded.text, invocation);
     write_outcome(&outcome);
     if let Some(number) = outcome.error {
-        // Measured, the oracle's `rc` is the negated error number too.
+        // The `rc` is the negated error number too.
         return Started {
             code: -number,
             result: None,
@@ -355,8 +355,8 @@ impl Drop for OtherRun {
 /// flight there. A `thread` no `RexxStart` run is on that is this thread halts the activity
 /// whose native call this thread runs, as a command handler that names its own thread reaches
 /// it (hostemu's `HI`); a native call on another thread has its interpreter halted as a
-/// `RexxStart` run is (measured: the oracle's halt reaches a native function's activity from a
-/// thread the function started).
+/// `RexxStart` run is (the halt reaches a native function's activity from a thread the
+/// function started).
 pub fn classic_halt(thread: usize) -> bool {
     let current = crate::signal::current_thread();
     let inbox = classic_inbox(thread).or_else(|| {
@@ -486,8 +486,8 @@ static STARTING: std::sync::Mutex<Vec<(usize, std::sync::Arc<Shared>)>> =
 /// `None` where the interpreter did not start.
 pub fn create_instance(options: InstanceOptions) -> Option<usize> {
     interrexx_api::ffi::set_embedder(&EMBEDDER);
-    // The oracle's instance takes the halting signals (`SystemInterpreter`),
-    // which reach every live interpreter; the caller's mask is its own.
+    // The instance takes the halting signals, which reach every live
+    // interpreter; the caller's mask is its own.
     crate::timer::install_signals();
     let shared = std::sync::Arc::new(Shared::default());
     let starting = std::sync::Arc::clone(&shared);
@@ -537,10 +537,10 @@ pub fn create_instance(options: InstanceOptions) -> Option<usize> {
     }
 }
 
-/// The root call's body, on the thread running it: the instance is live
-/// until `Terminate`. A thread attached and idle is not waited for, as the
-/// oracle's `terminate` removes inactive activities; one inside a callback
-/// holds the baton the call's end needs, so the instance ends after it.
+/// The root call's body, on the thread running it: the instance is live until
+/// `Terminate`. A thread attached and idle is not waited for, as `terminate`
+/// removes inactive activities; one inside a callback holds the baton the
+/// call's end needs, so the instance ends after it.
 pub(crate) fn wait_in_root(context: usize) {
     let shared = {
         let mut starting = STARTING

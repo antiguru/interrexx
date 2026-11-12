@@ -127,11 +127,11 @@ impl Interp {
                          give its name"
                     );
                     let value = self.read_by_name_at(name, *at);
-                    // **A substituted tail is a `reqstr` context**, and its
-                    // own one: the oracle converts with the string request
-                    // rather than rendering. Measured, oracle rc 0: `a.MS =
-                    // 'hit'; i = .K; say a.i` with a class-side `makeString`
-                    // returning `'MS'` prints `hit`.
+                    // **A substituted tail is a `reqstr` context**, and its own
+                    // one: the conversion is the string request rather than a
+                    // rendering. For example, `a.MS = 'hit'; i = .K; say a.i`
+                    // with a class-side `makeString` returning `'MS'` prints
+                    // `hit`.
                     let value = self.required_string_or_nil(value)?;
                     self.write_text(value, key);
                 }
@@ -165,9 +165,8 @@ impl Interp {
         }
     }
 
-    /// Reads a bare stem (`ExprKind::Stem`): the auto-vivification rule,
-    /// mirroring the oracle's `createStemVariable`, which fires on any miss
-    /// to the variable dictionary, reads included.
+    /// Reads a bare stem (`ExprKind::Stem`): the auto-vivification rule, which
+    /// fires on any miss to the variable dictionary, reads included.
     pub(crate) fn read_stem(&mut self, name: &[u8]) -> ObjRef {
         self.read_stem_at(name, None)
     }
@@ -272,15 +271,13 @@ impl Interp {
     /// g.1='x'; h.=g.; k.=h.;      say k.9  ->  G.9   (two hops, still G)
     /// m.1='x'; n.2='y'; m.=n.;    say m.1  ->  N.1   (m.'s own object discarded)
     /// ```
-    /// **Returns the `Novalue` flag alongside the value**,
-    /// the same pair `Interp::read` returns and for the same
-    /// reader: `SIGNAL ON NOVALUE`. `Novalue::Unset` is precisely the two
-    /// derived-name exits below -- no object at all, or an object with
-    /// nothing at this key -- and measured against the oracle both count,
+    /// **Returns the `Novalue` flag alongside the value**, the same pair
+    /// `Interp::read` returns and for the same reader: `SIGNAL ON NOVALUE`.
+    /// `Novalue::Unset` is precisely the two derived-name exits below -- no
+    /// object at all, or an object with nothing at this key -- and both count,
     /// since `signal on novalue` traps on `say zunset.1` whether or not the
-    /// stem itself has ever been assigned. This read sends the
-    /// `.local~novalue` hook nothing: it is an inquiry's (`SYMBOL`, `VALUE`,
-    /// the native API's).
+    /// stem itself has ever been assigned. This read sends the `.local~novalue`
+    /// hook nothing: it is an inquiry's (`SYMBOL`, `VALUE`, the native API's).
     pub(crate) fn stem_get(&mut self, stem_name: &[u8], key: &[u8]) -> (ObjRef, Novalue) {
         self.stem_lookup::<false>(stem_name, None, key)
     }
@@ -545,12 +542,11 @@ impl Interp {
         self.set_variable(frame, slot, stem);
     }
 
-    /// What the oracle's expose does past resolving the tail: `key` of `home`
-    /// (the object's stem or the caller's) becomes the same tail of the stem
-    /// the running activation names `stem_name`, so one value is read and
-    /// written through both. `StemClass:: exposeCompoundVariable` makes the
-    /// tail in `home` first, holding the stem's assigned default if it has
-    /// one.
+    /// What an expose does past resolving the tail: `key` of `home` (the
+    /// object's stem or the caller's) becomes the same tail of the stem the
+    /// running activation names `stem_name`, so one value is read and written
+    /// through both. The tail is made in `home` first, holding the stem's
+    /// assigned default if it has one.
     pub(crate) fn expose_tail(&mut self, home: ObjRef, stem_name: &[u8], key: &[u8]) {
         // The tail's own stem when `home`'s is already another's, so that
         // every exposed tail names the stem that holds the value.
@@ -613,12 +609,12 @@ impl Interp {
         }
     }
 
-    /// The oracle's table clear over `home`: the elements another stem
-    /// exposes stay with that stem, holding what they hold now, and `home` no
-    /// longer has them. Called before `home`'s tails are cleared. The
-    /// exposers are reached through the exposer table, which still reaches
-    /// one a returned `PROCEDURE` left as garbage until a collection, so they
-    /// are read untagged.
+    /// The table clear over `home`: the elements another stem exposes stay with
+    /// that stem, holding what they hold now, and `home` no longer has them.
+    /// Called before `home`'s tails are cleared. The exposers are reached
+    /// through the exposer table, which still reaches one a returned
+    /// `PROCEDURE` left as garbage until a collection, so they are read
+    /// untagged.
     pub(crate) fn detach_exposed_tails(&mut self, home: ObjRef) {
         let Some(cells) = self.stem_exposers.get(&home) else {
             return;
@@ -675,9 +671,9 @@ impl Interp {
         }
     }
 
-    /// One tail of the stem object `stem` as the oracle answers it with no
-    /// activation: the tail's value, the default for a tail never held, and
-    /// otherwise the stem's own name with `key` appended.
+    /// One tail of the stem object `stem` as it is answered with no activation:
+    /// the tail's value, the default for a tail never held, and otherwise the
+    /// stem's own name with `key` appended.
     pub(crate) fn stem_object_compound(&mut self, stem: ObjRef, key: &[u8]) -> ObjRef {
         let (resolved, name) = match self.heap.get(stem).map(|object| &object.body) {
             Some(Body::Stem { exposed, name, .. }) => {
@@ -772,8 +768,8 @@ impl Interp {
     }
 
     /// Whether `value` is a stem named `name` holding no content: no default,
-    /// and no tail that still has a value (the oracle's aliasable test, whose
-    /// stem's value is its own name).
+    /// and no tail that still has a value (the aliasable test, whose stem's
+    /// value is its own name).
     /// ```text
     /// (nothing)                    -> referenceable   (slot is None)
     /// say q.                       -> referenceable   (read_stem vivifies an empty stem)
@@ -881,8 +877,7 @@ mod tests {
         (activate(interp, program), id)
     }
 
-    // The seven transcripts, each re-verified against the oracle in the task
-    // report before being encoded here.
+    // The seven transcripts, each encoded as an expected transcript.
 
     #[test]
     fn a_dropped_tail_is_a_tombstone_that_does_not_take_the_default() {
@@ -982,8 +977,7 @@ mod tests {
 
     #[test]
     fn reading_an_untouched_stem_auto_vivifies_a_shared_object() {
-        // b. = a. (a. never touched) ; a.1 = 5 ; say b.1 -> 5 ; say b.7 ->
-        // A.7 (measured against the oracle; branch review F4).
+        // b. = a. (a. never touched) ; a.1 = 5 ; say b.1 -> 5 ; say b.7 -> A.7
         let mut interp = Interp::new();
         activated(&mut interp);
 

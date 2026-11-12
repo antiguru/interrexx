@@ -139,11 +139,11 @@ pub struct Sinks {
     /// ends. Any other `stdout` is handed its buffer once it passes 64 KiB,
     /// and `stderr` is handed each line whatever it writes to.
     pub stdout_terminal: bool,
-    /// Whether `stdout` and `stderr` write this process's own standard
-    /// output and error. A command whose output or error is not redirected
-    /// then writes that descriptor itself, as the oracle's child does, once
-    /// the buffers have been handed over; otherwise its writes are read back
-    /// and handed over with the interpreter's own.
+    /// Whether `stdout` and `stderr` write this process's own standard output
+    /// and error. A command whose output or error is not redirected then writes
+    /// that descriptor itself, once the buffers have been handed over;
+    /// otherwise its writes are read back and handed over with the
+    /// interpreter's own.
     pub own_descriptors: bool,
 }
 

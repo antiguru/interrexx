@@ -127,14 +127,14 @@ const ENVIRONMENT_ROOT: &str = ".environment";
 /// The root name `.local` is held alive under.
 const LOCAL_ROOT: &str = ".local";
 
-/// `.environment`'s store capacity, which gives the 69 buckets the oracle's
-/// holds its contents at: measured, the contents in `ORACLE_ENVIRONMENT`'s order
-/// are non-decreasing in `hash % 69` and in no other bucket count from 17 to 4999,
-/// and a `.Directory~new(68)` filled in that order answers the oracle's
-/// `allIndexes` before and after 200 more entries.
+/// `.environment`'s store capacity, which gives the 69 buckets its contents are
+/// held at: the contents in `ORACLE_ENVIRONMENT`'s order are non-decreasing in
+/// `hash % 69` and in no other bucket count from 17 to 4999, and a
+/// `.Directory~new(68)` filled in that order answers `allIndexes` the same before
+/// and after 200 more entries.
 const ENVIRONMENT_CAPACITY: usize = 68;
 
-/// `.environment~allIndexes` on the oracle, in its order: the contents at
+/// `.environment~allIndexes`, in its order: the contents at
 /// [`ENVIRONMENT_CAPACITY`], then `LOCAL`, which is a method-table entry.
 static ORACLE_ENVIRONMENT: &[&str] = &[
     "INPUTOUTPUTSTREAM",
@@ -213,7 +213,7 @@ static ORACLE_ENVIRONMENT: &[&str] = &[
     "LOCAL",
 ];
 
-/// `.local~allIndexes` on the oracle, in its order, at the default size.
+/// `.local~allIndexes`, in its order, at the default size.
 static ORACLE_LOCAL: &[&str] = &[
     "SYSCARGS",
     "INPUT",
@@ -231,10 +231,9 @@ static ORACLE_LOCAL: &[&str] = &[
 /// built from.
 pub(crate) struct EnvironmentModel {
     directories: env_seam::Directories,
-    /// The item standing in for an entry the oracle's directory holds and this
-    /// crate does not build: one the library bootstrap fills, which no program
-    /// reads unfilled. A write replaces one in place, which keeps the oracle's
-    /// order.
+    /// The item standing in for an entry the directory holds and this crate
+    /// does not build: one the library bootstrap fills, which no program reads
+    /// unfilled. A write replaces one in place, which keeps the order.
     owed: [ObjRef; 1],
     /// A reading of `.local`'s pool and of `.environment`'s, in that order,
     /// from an earlier lookup; one that is not current is read again.
@@ -389,9 +388,8 @@ impl Interp {
         self.roots.activity_mut().push_temp(false_value);
         // `REXXINFO` is a pre-built *instance* of a class no environment name
         // reaches, which is why the entry renders as `a RexxInfo` and answers
-        // `~class~id` `RexxInfo`. Measured on the oracle at rc 0,
-        // `.RexxInfo~isA(.Class)` is `0` and `.RexxInfo~class~superClass` is
-        // `The Object class`.
+        // `~class~id` `RexxInfo`. So `.RexxInfo~isA(.Class)` is `0` and
+        // `.RexxInfo~class~superClass` is `The Object class`.
         let rexx_info_class = self
             .classes()
             .system_lookup("RexxInfo")
@@ -417,9 +415,9 @@ impl Interp {
             known.insert(name.into(), value);
         }
 
-        // In the oracle's order, so every entry sits where the oracle's does
-        // and a later write of a name replaces it in place. A name this crate
-        // has not built yet is owed until the library bootstrap puts it.
+        // In the fixed order, so every entry sits at its position and a later
+        // write of a name replaces it in place. A name this crate has not built
+        // yet is owed until the library bootstrap puts it.
         for name in ORACLE_ENVIRONMENT {
             if *name == "LOCAL" {
                 continue;
@@ -472,8 +470,8 @@ impl Interp {
             .expect("a string-keyed store accepts a string index");
     }
 
-    /// Whether `item` stands in for an entry the oracle's directory holds
-    /// and this crate does not build.
+    /// Whether `item` stands in for an entry the directory holds and this crate
+    /// does not build.
     pub(crate) fn is_owed_entry(&self, item: ObjRef) -> bool {
         self.environment
             .as_ref()
@@ -570,9 +568,9 @@ impl Interp {
         }
     }
 
-    /// What the oracle's class finder answers for `bare`: the `REXX`
-    /// package's class, then `.local`'s and `.environment`'s entry, with no
-    /// program's own classes in the search.
+    /// What the class finder answers for `bare`: the `REXX` package's class,
+    /// then `.local`'s and `.environment`'s entry, with no program's own
+    /// classes in the search.
     pub(crate) fn system_symbol(&mut self, bare: &[u8]) -> Option<ObjRef> {
         if let Some(found) = self.rexx_package_class(bare) {
             return Some(found);
@@ -643,9 +641,8 @@ impl Interp {
             )?;
         }
         // A name that answers an object which is not a class is 99.949,
-        // `ClassResolver::lookup`. Measured, oracle rc 157: `::class k
-        // subclass rexxinfo`, and `::class t subclass input`, `.INPUT` being
-        // `.local`'s stream.
+        // `ClassResolver::lookup`. For example, `::class k subclass rexxinfo`,
+        // and `::class t subclass input`, `.INPUT` being `.local`'s stream.
         match entry {
             hash::DirectoryEntry::Absent => Ok(None),
             hash::DirectoryEntry::Found(found) if self.heap.is_class(found) => Ok(Some(found)),
@@ -860,10 +857,10 @@ impl Interp {
     /// the session queue, each stored as it is built.
     ///
     /// **Here rather than when the directory is built**, because the embedded
-    /// bootstrap evaluates `.environment` while it installs, before the
-    /// stream classes' bootstrap file has declared `Stream`. Each write
-    /// replaces an owed entry in place, so the order is the oracle's whatever
-    /// order these are built in.
+    /// bootstrap evaluates `.environment` while it installs, before the stream
+    /// classes' bootstrap file has declared `Stream`. Each write replaces an
+    /// owed entry in place, so the order is fixed whatever order these are
+    /// built in.
     ///
     /// **Through the package publics, not the class registry.** A `::CLASS`
     /// directive calls `define_unregistered_class`, which by its own contract
@@ -1049,15 +1046,13 @@ impl Interp {
     /// activation itself.
     fn activation_variable(&mut self, bare: &[u8]) -> Option<ObjRef> {
         match bare {
-            // `new_integer(current->getLineNumber())`. `clause_state.line()`
-            // is the same quantity `SIGL` reads and carries the same
-            // `INTERPRET` rule the oracle's own `isInterpret` delegation gives
-            // this name: the enclosing clause's line, not the fragment's.
-            // Answering `None` before any command has run is what makes `.RS`
-            // render as its own name: `dot_variable`'s tail falls back to the
-            // name's text, which is `isReturnStatusSet`'s else branch.
-            // Measured -- `say.rs` ahead of every command prints `.RS`, and 1
-            // after one that failed.
+            // `clause_state.line()` is the same quantity `SIGL` reads and
+            // carries the same `INTERPRET` rule: the enclosing clause's line,
+            // not the fragment's. Answering `None` before any command has run
+            // is what makes `.RS` render as its own name: `dot_variable`'s tail
+            // falls back to the name's text, which is what an unset return
+            // status renders as: `say.rs` ahead of every command prints `.RS`,
+            // and 1 after one that failed.
             b"RS" => {
                 let rs = self.activation().rs?;
                 Some(self.text(rs.to_string().as_bytes()))
@@ -1305,12 +1300,11 @@ impl Interp {
     }
 
     /// [`Interp::context_object`] for the activation at `depth`, which
-    /// `RexxContext~stackFrames` needs: the oracle's frame builder asks for
-    /// the context object, so **building a frame creates the context object
-    /// of an activation that never asked for one**. Measured, oracle rc 0:
-    /// every frame of a four-frame stack answers `~context~class~id`
-    /// `RexxContext` in a program where only the innermost ever named
-    /// `.context`.
+    /// `RexxContext~stackFrames` needs: the frame builder asks for the context
+    /// object, so **building a frame creates the context object of an
+    /// activation that never asked for one**. For example, every frame of a
+    /// four-frame stack answers `~context~class~id` `RexxContext` in a program
+    /// where only the innermost ever named `.context`.
     pub(crate) fn context_object_at(&mut self, depth: usize) -> Option<ObjRef> {
         if let Some(found) = self.frame_at(depth)?.context_object {
             return Some(found);
@@ -1321,8 +1315,8 @@ impl Interp {
         Some(object)
     }
 
-    /// An instance of `class` with no entries, rendered the way the oracle
-    /// renders a default object name.
+    /// An instance of `class` with no entries, rendered the way a default
+    /// object name is.
     pub(crate) fn native_instance(&mut self, class: ObjRef) -> ObjRef {
         let rendered = default_object_name(self.classes().id_string(class));
         let object = self.alloc_with(
@@ -1473,7 +1467,7 @@ fn package_root_key(package: Package) -> String {
     }
 }
 
-/// What `kind`'s table holds for `program`, keyed the way the oracle keys it.
+/// What `kind`'s table holds for `program`, keyed as the table keys it.
 fn package_table_entries(
     id: ProgramId,
     program: &interrexx_parse::Program,

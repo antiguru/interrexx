@@ -141,9 +141,9 @@ impl Interp {
     ///
     /// `start` is where the line begins in the buffer: a `.STDERR` `CHAROUT`
     /// leaves an unterminated fragment there, so the line cannot be found by
-    /// scanning back for a newline. A route that cannot take the line leaves
-    /// it on stdout, which is `corpus/oracle-crashes.txt` entry 11's licensed
-    /// answer for a route the oracle dies on.
+    /// scanning back for a newline. A route that cannot take the line leaves it
+    /// on stdout, which is `corpus/oracle-crashes.txt` entry 11's licensed
+    /// answer for a route the reference run dies on.
     ///
     /// Code that shows no source traces nothing through here
     /// ([`Interp::untraceable_code`]).
@@ -157,10 +157,10 @@ impl Interp {
         self.route_trace_line_as(start, false);
     }
 
-    /// [`Interp::route_trace_line`] for a `>I>` (`entry`) or `<I<` line,
-    /// whose `TraceObject` names the caller's frame for `>I>`. Standard error
-    /// is handed over after it. Not gated on the source: the oracle's
-    /// `traceEntryOrExit` writes these for a restored program too (measured).
+    /// [`Interp::route_trace_line`] for a `>I>` (`entry`) or `<I<` line, whose
+    /// `TraceObject` names the caller's frame for `>I>`. Standard error is
+    /// handed over after it. Not gated on the source: these are written for a
+    /// restored program too.
     pub(crate) fn route_trace_line_as(&mut self, start: usize, entry: bool) {
         self.deliver_trace_line_as(start, entry);
         self.hand_over_stderr();
@@ -297,9 +297,9 @@ impl Interp {
 
     /// The failed `LINEOUT` of a trace delivery: raised in the traced activation
     /// at its clause's end. With no activation running, the line is left on
-    /// stdout, as `corpus/oracle-crashes.txt` entry 11 licenses. A refusal is
-    /// never dropped: an activation that ends before a clause end raises it
-    /// passes it to its caller ([`Interp::carry_trace_refusals`]).
+    /// stdout, as `corpus/oracle-crashes.txt` entry 11 licenses (oracle defect).
+    /// A refusal is never dropped: an activation that ends before a clause end
+    /// raises it passes it to its caller ([`Interp::carry_trace_refusals`]).
     #[cold]
     #[inline(never)]
     fn queue_trace_failure(&mut self, failure: Failure, line: &[u8]) {
@@ -375,9 +375,9 @@ impl Interp {
         }
     }
 
-    /// Each line of an error report, delivered the way a trace line is:
-    /// measured, the oracle sends one `LINEOUT` per line -- three for an
-    /// uncaught `1/0` -- and not one for the report.
+    /// Each line of an error report, delivered the way a trace line is: one
+    /// `LINEOUT` per line -- three for an uncaught `1/0` -- and not one for the
+    /// report.
     pub(crate) fn write_trace_report(&mut self, report: &[u8]) {
         let body = report.strip_suffix(b"\n").unwrap_or(report);
         for line in body.split(|&byte| byte == b'\n') {

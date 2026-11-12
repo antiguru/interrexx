@@ -39,7 +39,7 @@ pub(crate) struct PackageData {
     pub(crate) public_routines: FxHashMap<Box<[u8]>, MergedRoutine>,
     /// `mergedPublicRoutines`: every `::REQUIRES ... LIBRARY`'s library
     /// routines, then each `::REQUIRES`'s public and imported routines, a name
-    /// keeping its first entry (the oracle's library and required merges).
+    /// keeping its first entry (the library and required merges).
     pub(crate) merged_public_routines: FxHashMap<Box<[u8]>, MergedRoutine>,
     /// `installedClasses`: the classes the package's `::CLASS` directives and
     /// `~addClass` installed, by uppercased name.
@@ -68,8 +68,7 @@ pub(crate) struct PackageData {
     pub(crate) constants: FxHashMap<usize, ObjRef>,
     /// The package of each other program's `::ROUTINE` a call site of this
     /// program keeps, with how many sites keep one of its routines: the
-    /// oracle's instruction holds the routine it keeps
-    /// ([`Interp::hold_site_program`]).
+    /// instruction holds the routine it keeps ([`Interp::hold_site_program`]).
     pub(crate) site_held: FxHashMap<ObjRef, u32>,
 }
 
@@ -102,7 +101,7 @@ impl PackageFields for PackageData {
         out.extend(*security_manager);
         // The `Routine` objects `~addRoutine` filed as themselves, which the
         // table does not follow into these copies, and the package of each
-        // `::ROUTINE`, as the oracle's merged `Routine` object holds it.
+        // `::ROUTINE`, as the merged `Routine` object holds it.
         for table in [public_routines, merged_public_routines] {
             out.extend(table.values().filter_map(|merged| match merged {
                 MergedRoutine::Installed(_, object)
@@ -111,8 +110,8 @@ impl PackageFields for PackageData {
                 _ => None,
             }));
         }
-        // A package pins the classes it declares: measured, a `::CLASS`
-        // class survives a forced collection on the oracle.
+        // A package pins the classes it declares: a `::CLASS` class survives a
+        // forced collection.
         for table in [classes, public_classes, merged_public_classes] {
             out.extend(table.values().copied());
         }
@@ -213,8 +212,8 @@ impl Interp {
     }
 
     /// Whether `package` is the REXX package's own object, which
-    /// `checkRexxPackage` refuses writes to. A copy of it is not: the
-    /// oracle's test is `isOldSpace`, and a copy is new.
+    /// `checkRexxPackage` refuses writes to. A copy of it is not: the test is
+    /// on the original object, and a copy is a new one.
     pub(crate) fn is_the_rexx_package(&self, package: ObjRef) -> bool {
         self.rexx_package == Some(package)
     }

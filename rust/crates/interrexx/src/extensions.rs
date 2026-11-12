@@ -1,13 +1,13 @@
 //! The extension libraries this crate runs in Rust: `rxmath`, `rxregexp`,
 //! `rxsock` and `rxunixsys` (`docs/design/extensions.md`).
 //!
-//! A program sees each as the oracle's shared library: [`Interp::resolve_library`]
-//! answers a library whose tables name the routines and methods with no
-//! address ([`interrexx_api::load::names_only`]) before any `dlopen`, so
-//! `::REQUIRES ... LIBRARY`, `RxFuncAdd`, `Package~loadLibrary`, `EXTERNAL`
-//! directives and `loadExternalRoutine`/`loadExternalMethod` bind, merge and
-//! report it as any library. Where one of its rows is called, its body here
-//! runs in place of a native call.
+//! A program sees each as a shared library: [`Interp::resolve_library`] answers a
+//! library whose tables name the routines and methods with no address
+//! ([`interrexx_api::load::names_only`]) before any `dlopen`, so `::REQUIRES ...
+//! LIBRARY`, `RxFuncAdd`, `Package~loadLibrary`, `EXTERNAL` directives and
+//! `loadExternalRoutine`/`loadExternalMethod` bind, merge and report it as any
+//! library. Where one of its rows is called, its body here runs in place of a
+//! native call.
 //!
 //! [`Interp::resolve_library`]: crate::Interp::resolve_library
 
@@ -122,7 +122,7 @@ static LIBRARIES: &[RustLibrary] = &[
     },
     RustLibrary {
         name: "rxunixsys",
-        // The oracle's table order. `SysCrypt` is not provided (Rulings).
+        // The table order. `SysCrypt` is not provided (Rulings).
         routines: &[
             ("SysSignal", crate::builtin::rxunixsys::signal),
             ("SysUname", crate::builtin::rxunixsys::uname),

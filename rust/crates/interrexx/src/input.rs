@@ -28,9 +28,9 @@ use crate::{Failure, Interp};
 pub(crate) struct Input {
     source: Source,
     /// Whether a read has already found the end of the input. **What parts a
-    /// live source from a drained one**, which is a distinction the oracle
-    /// makes and seekability alone does not: measured, `.stdin~chars` over a
-    /// pipe answers `1` before anything is read and `0` once it is drained.
+    /// live source from a drained one**, which is a distinction seekability
+    /// alone does not make: `.stdin~chars` over a pipe answers `1` before
+    /// anything is read and `0` once it is drained.
     exhausted: bool,
     /// Whether the line count has been asked for already. Measured on an
     /// unmeasurable input: `.stdin~lines` answers `1` the first time and `0`
@@ -331,8 +331,8 @@ impl Input {
         }
     }
 
-    /// A halt abandoned a read: the counts answer `0` until the next read,
-    /// as the oracle's do after its interrupted read.
+    /// A halt abandoned a read: the counts answer `0` until the next read, as
+    /// they do after an interrupted read.
     fn interrupted(&mut self) {
         self.exhausted = true;
     }
@@ -415,10 +415,10 @@ impl Input {
     }
 
     /// Up to `wanted` bytes, answering what is **already there** rather than
-    /// waiting for the rest. Measured on the oracle: `.stdin~charin(,50)`
-    /// against a pipe carrying six bytes and still open answers those six
-    /// immediately, so filling the request would hang the interpreter on a
-    /// live descriptor. Empty once there is nothing left.
+    /// waiting for the rest. For example, `.stdin~charin(,50)` against a pipe
+    /// carrying six bytes and still open answers those six immediately, so
+    /// filling the request would hang the interpreter on a live descriptor.
+    /// Empty once there is nothing left.
     fn read_bytes(&mut self, wanted: usize) -> Vec<u8> {
         let mut buffer = vec![0u8; wanted];
         let read = match &mut self.source {
@@ -527,10 +527,10 @@ impl Input {
 
     /// The bytes left to read, when that is knowable without consuming them,
     /// and `None` when it is not -- a live standard input is a stream, not a
-    /// length. Measured on the oracle: `.stdin~chars` answers the true
-    /// remaining count for a redirected regular file, `1` for a pipe nothing
-    /// has drained, and `0` for either once a read has found the end, which is
-    /// what `exhausted` carries.
+    /// length. For example, `.stdin~chars` answers the true remaining count for
+    /// a redirected regular file, `1` for a pipe nothing has drained, and `0`
+    /// for either once a read has found the end, which is what `exhausted`
+    /// carries.
     fn remaining(&mut self) -> Option<u64> {
         if let Source::File(file) = &self.source {
             return Some(file.chars_left());
@@ -542,9 +542,9 @@ impl Input {
             return self.stdin_waiting().map(u64::from);
         }
         match &self.source {
-            // Live but empty, exactly like a `/dev/null` descriptor: measured,
-            // the oracle answers `1` there until a read drains it and `0`
-            // after -- so an unread `Nothing` is not yet a measured zero.
+            // Live but empty, exactly like a `/dev/null` descriptor: `1` is
+            // answered there until a read drains it and `0` after -- so an
+            // unread `Nothing` is not yet a zero.
             Source::Nothing => None,
             Source::Stdin(_) | Source::File(_) => None,
             Source::Bytes(cursor) => {
@@ -592,17 +592,16 @@ impl Interp {
 
     /// One line for `PARSE LINEIN`: always the route, never the queue.
     ///
-    /// **A message, not a descriptor read.** Measured, the oracle sends
-    /// `LINEIN` with no arguments to whatever `.local` holds under `INPUT`, so
-    /// a program that redirects the destination answers the instruction. End
-    /// of input raises `NOTREADY` for the same reason: the untouched route
-    /// ends at `.STDIN`, whose own `LINEIN` raises it -- measured, `PARSE
-    /// LINEIN` and `PARSE PULL` on empty input are both rc 9 under a trap
-    /// where this crate used to answer an empty line and carry on.
+    /// **A message, not a descriptor read.** `LINEIN` is sent with no arguments
+    /// to whatever `.local` holds under `INPUT`, so a program that redirects
+    /// the destination answers the instruction. End of input raises `NOTREADY`
+    /// for the same reason: the untouched route ends at `.STDIN`, whose own
+    /// `LINEIN` raises it -- `PARSE LINEIN` and `PARSE PULL` on empty input are
+    /// both rc 9 under a trap, and answer no empty line.
     ///
     /// A missing or `.nil` entry reads the descriptor instead, which is this
-    /// crate's licensed answer where the oracle dies
-    /// (`corpus/oracle-crashes.txt` entry 11b).
+    /// crate's licensed answer where the reference run dies (oracle defect,
+    /// `corpus/oracle-crashes.txt` entry 11b).
     pub(crate) fn linein_line(&mut self) -> Result<Vec<u8>, Failure> {
         // The I/O exit's first pass.
         if self.exits.is_some()
@@ -651,13 +650,12 @@ impl Interp {
         Ok(self.input.read_bytes(wanted))
     }
 
-    /// Reads standard input until it holds a line where `line`, else a byte,
-    /// or has ended: each chunk off the baton, with this thread idle until
-    /// it is posted or a signal's halt arrives. A halt abandons
-    /// the wait, whose chunk is filed when it comes, and answers `false`:
-    /// the read answers nothing, as the oracle's interrupted read does.
-    /// Other posts wait for the next drain, held here so that an idle waits
-    /// for a new post.
+    /// Reads standard input until it holds a line where `line`, else a byte, or
+    /// has ended: each chunk off the baton, with this thread idle until it is
+    /// posted or a signal's halt arrives. A halt abandons the wait, whose chunk
+    /// is filed when it comes, and answers `false`: the read answers nothing,
+    /// as an interrupted read does. Other posts wait for the next drain, held
+    /// here so that an idle waits for a new post.
     fn fill_stdin(&mut self, line: bool) -> Result<bool, Failure> {
         let mut kept = std::collections::VecDeque::new();
         let filled = self.fill_stdin_keeping(line, &mut kept);

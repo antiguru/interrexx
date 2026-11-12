@@ -204,8 +204,8 @@ pub(crate) enum Package {
     Program(ProgramId),
 }
 
-/// What a class object's own `package` field holds, which the oracle writes
-/// before it builds anything.
+/// What a class object's own `package` field holds, which is written before
+/// anything is built.
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub(crate) enum ClassPackage {
     /// The class directive passes the installing package.
@@ -283,11 +283,11 @@ impl CompoundName {
 #[derive(Debug, Default)]
 pub(crate) struct Plan {
     pub(crate) names: interrexx_core::NameMap<Box<[u8]>, usize>,
-    /// The slots `build` reserved for the names the interpreter assigns on
-    /// its own -- `RESULT` after a call that returns a value, `SIGL` on a
-    /// transfer. Cached because the alternative is `Interp::slot_of`, which
-    /// hashes the name; measured, setting `RESULT` cost 236 user
-    /// instructions per call against the oracle's 18.
+    /// The slots `build` reserved for the names the interpreter assigns on its
+    /// own -- `RESULT` after a call that returns a value, `SIGL` on a transfer.
+    /// Cached because the alternative is `Interp::slot_of`, which hashes the
+    /// name; setting `RESULT` cost 236 user instructions per call against 18
+    /// for a slot write.
     pub(crate) result_slot: Option<usize>,
     pub(crate) sigl_slot: Option<usize>,
     /// A method body's `SELF` and `SUPER`, which every send binds.
@@ -314,8 +314,8 @@ pub(crate) struct Plan {
     /// `SymbolId::index`, `None` where this pass recorded nothing for it.
     pub(crate) compounds: Box<[Option<CompoundName>]>,
     /// Whether this is a method body whose first instruction past an `EXPOSE`
-    /// is a `TRACE` naming a label-tracing letter, whose `>I>` the oracle
-    /// traces before the method's guard lock is reserved.
+    /// is a `TRACE` naming a label-tracing letter, whose `>I>` is traced before
+    /// the method's guard lock is reserved.
     pub(crate) traces_entry_early: bool,
     last_chunk: LastChunk,
 }
@@ -450,10 +450,9 @@ impl Plan {
         }
         plan.trace_events = trace_events.into_boxed_slice();
         // **`RESULT`, `RC` and `SIGL` get a slot whether or not the body
-        // mentions them**, which is what the oracle does. Registered after
-        // the body's own names rather than before them, because only being
-        // *in* the plan matters here and taking the low indices would
-        // renumber every slot this crate's tests pin.
+        // mentions them**. Registered after the body's own names rather than
+        // before them, because only being *in* the plan matters here and taking
+        // the low indices would renumber every slot this crate's tests pin.
         plan.result_slot = Some(plan.slot_for(b"RESULT"));
         plan.slot_for(b"RC");
         plan.sigl_slot = Some(plan.slot_for(b"SIGL"));

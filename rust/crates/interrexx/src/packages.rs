@@ -12,8 +12,8 @@ pub(crate) struct Shipped {
 
 impl Shipped {
     /// The path the package is known by: its name in the interpreter's own
-    /// directory, where the oracle installs its copy, or the bare name where
-    /// that directory is unknown.
+    /// directory, where its copy is installed, or the bare name where that
+    /// directory is unknown.
     pub(crate) fn path(&self) -> Vec<u8> {
         use std::os::unix::ffi::OsStrExt as _;
         match std::env::current_exe()

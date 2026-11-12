@@ -81,8 +81,8 @@ impl Explicit {
     }
 
     /// The blank-delimited subkeyword list, empty for a package whose
-    /// directives named none -- measured, oracle rc 0, a file with no
-    /// `::OPTIONS` renders the null string.
+    /// directives named none: a file with no `::OPTIONS` renders the null
+    /// string.
     fn to_text(self) -> Vec<u8> {
         let named: Vec<&str> = EXPLICIT_WORDS
             .iter()
@@ -355,8 +355,8 @@ NOSTRING {} NOTREADY {} NOVALUE {} {} TRACE {}",
 
     /// The package-settings override: every setting this package's own
     /// `::OPTIONS` did not name, taken from `defaults`. Only `PROLOG` guards
-    /// the prologue setting: a package naming `NOPROLOG` takes it too, as the
-    /// oracle reads one flag.
+    /// the prologue setting: a package naming `NOPROLOG` takes it too, as one
+    /// flag is read.
     pub(crate) fn take_defaults(&mut self, defaults: &PackageOptions) {
         let named = |word: &str| self.explicit.named(word);
         let pick = |word: &str, own: u64, other: u64| if named(word) { own } else { other };

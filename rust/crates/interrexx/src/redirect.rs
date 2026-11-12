@@ -2,11 +2,10 @@
 //! sets, and the per-command context saying where one command's three streams
 //! go.
 //!
-//! The oracle splits these the same way. A `CommandIOConfiguration` is what
-//! the parser built and what an `ADDRESS env WITH ...` stores under the
-//! environment name; a `CommandIOContext` is built at **issue** time by
-//! evaluating that configuration's sources and targets in the variable
-//! context then in force.
+//! A configuration is what the parser built and what an `ADDRESS env WITH ...`
+//! stores under the environment name; a context is built at **issue** time by
+//! evaluating that configuration's sources and targets in the variable context
+//! then in force.
 
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
@@ -19,12 +18,11 @@ use crate::error::{Failure, Raised};
 use crate::{Code, Interp, Loud};
 
 /// One stored `ADDRESS ... WITH` configuration and the code its names were
-/// parsed in. Its stems and expressions name symbols of that code's own
-/// table, so a configuration an `INTERPRET` stored is evaluated through the
-/// fragment it came from, against whatever frame issues the command -- as
-/// the oracle's configuration holds its own retrievers. Without the origin
-/// the fragment's ids were read in the program's table, which named another
-/// variable entirely.
+/// parsed in. Its stems and expressions name symbols of that code's own table,
+/// so a configuration an `INTERPRET` stored is evaluated through the fragment
+/// it came from, against whatever frame issues the command -- as a
+/// configuration holds its own retrievers. Without the origin the fragment's
+/// ids were read in the program's table, which named another variable entirely.
 pub(crate) struct StoredIo {
     pub(crate) io: AddressIo,
     /// `None` for the program this activation runs, which every activation
@@ -63,9 +61,9 @@ pub(crate) struct IoContext {
     input: RefCell<Input>,
     output: Option<Target>,
     error: Option<Target>,
-    /// The output target that is also the input source, which the oracle
-    /// buffers: it is neither emptied nor written until the command has
-    /// ended. The output's, else the error's.
+    /// The output target that is also the input source, which is buffered: it
+    /// is neither emptied nor written until the command has ended. The
+    /// output's, else the error's.
     deferred: Option<Stream>,
     /// The output's and the error's next stem tail, from
     /// [`IoContext::begin`] on.
@@ -97,9 +95,9 @@ enum Pending {
     Stream(Vec<u8>),
 }
 
-/// Where an input source reads from, as the oracle's buffering test compares
-/// it with an output target: a stem object, a stream object or a stream name.
-/// Any other source is never an output target.
+/// Where an input source reads from, as the buffering test compares it with an
+/// output target: a stem object, a stream object or a stream name. Any other
+/// source is never an output target.
 enum Origin {
     Stem(ObjRef),
     Stream(ObjRef),
@@ -167,10 +165,9 @@ impl Target {
 
     /// Whether two targets are one destination.
     ///
-    /// **Two named streams compare on the qualified name, not on identity**,
-    /// which is the oracle's own rule -- measured, `g.txt` with `g.txt` and
-    /// `h.txt` with `./h.txt` each collapse to a single file the two streams
-    /// interleave into.
+    /// **Two named streams compare on the qualified name, not on identity**, --
+    /// `g.txt` with `g.txt` and `h.txt` with `./h.txt` each collapse to a
+    /// single file the two streams interleave into.
     fn same_target(&self, other: &Target) -> bool {
         match (self, other) {
             (
@@ -318,8 +315,8 @@ impl IoContext {
     /// next piece. A deferred output keeps everything.
     ///
     /// A line the target raises on ends this piece: its later lines and its
-    /// part line are dropped, as the oracle's unwind out of `writeBuffer`
-    /// drops them, and the next piece is offered as usual.
+    /// part line are dropped, as the unwind out of the buffer write drops them,
+    /// and the next piece is offered as usual.
     pub(crate) fn write_output(&self, interp: &mut Interp, bytes: &[u8]) -> Result<(), Failure> {
         let Some(target) = &self.output else {
             return Ok(());
@@ -339,16 +336,16 @@ impl IoContext {
         written
     }
 
-    /// Hands what the child wrote to the targets once it has ended, in the
-    /// oracle's order: `out`, standard output's last piece, then standard
-    /// error, then the cleanup, which writes the output's last part line, or
-    /// all of a deferred output, and closes each named stream.
+    /// Hands what the child wrote to the targets once it has ended, in this
+    /// order: `out`, standard output's last piece, then standard error, then
+    /// the cleanup, which writes the output's last part line, or all of a
+    /// deferred output, and closes each named stream.
     ///
-    /// `held` is the condition a target raised on an earlier piece. A
-    /// condition raised here replaces it ([`Interp::write_holding_last`]); one
-    /// standing once standard error has been offered is raised again at the
-    /// command's clause and answered, and the cleanup does not run, as the
-    /// oracle raises it before `cleanup`.
+    /// `held` is the condition a target raised on an earlier piece. A condition
+    /// raised here replaces it ([`Interp::write_holding_last`]); one standing
+    /// once standard error has been offered is raised again at the command's
+    /// clause and answered, and the cleanup does not run, as it is raised
+    /// before the cleanup.
     ///
     /// Under [`IoContext::shares_one_target`] the caller has already merged
     /// both streams into `out` and `err` is empty.
@@ -830,7 +827,7 @@ impl Interp {
         let append = option == OutputOption::Append;
         // **Whether an option was written matters here, not just which one.**
         // Neither `REPLACE` nor `APPEND` means anything to an object that is
-        // not a file, and the oracle refuses both rather than ignoring them.
+        // not a file, and both are refused rather than ignored.
         let optioned = option != OutputOption::Default;
         if self.is_stem_object(object) {
             return Ok(Target::Stem { object, append });
@@ -1213,8 +1210,8 @@ impl Interp {
     }
 
     /// Whether `value` is an object a redirection reads with `LINEIN`: an
-    /// InputStream or InputOutputStream. A `Monitor` counts, which is the
-    /// oracle's own rule: it treats one as a stream on both sides.
+    /// InputStream or InputOutputStream. A `Monitor` counts, which treats one
+    /// as a stream on both sides.
     fn is_input_stream_object(&mut self, value: ObjRef) -> bool {
         self.is_instance_of_rexx_class(value, b"INPUTSTREAM")
             || self.is_instance_of_rexx_class(value, b"INPUTOUTPUTSTREAM")

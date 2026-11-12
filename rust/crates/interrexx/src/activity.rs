@@ -252,8 +252,8 @@ pub(crate) struct Activity {
     /// the condition's `POSITION` (a native level has none).
     pub(crate) failure_origin: Option<(Package, Option<usize>)>,
     /// Whether the SYNTAX failure has left a level that is not an internal
-    /// call, or was re-raised: the oracle marks it `PROPAGATED` once the
-    /// raising activation does not trap it.
+    /// call, or was re-raised: it is marked `PROPAGATED` once the raising
+    /// activation does not trap it.
     pub(crate) failure_propagated: bool,
     /// Whether it was re-raised, so that `POSITION` is no longer the raise's.
     pub(crate) failure_reraised: bool,
@@ -271,8 +271,9 @@ pub(crate) struct Activity {
     pub(crate) fragment_clause: usize,
     /// Whether a trace line is being delivered to `.TRACEOUTPUT`. A traced
     /// clause inside that delivery writes to the buffer instead of routing
-    /// again: the oracle SIGSEGVs in the one shape that reaches this
-    /// (`corpus/oracle-crashes.txt` entry 14), and this crate must terminate.
+    /// again: the reference run SIGSEGVs in the one shape that reaches this
+    /// (oracle defect, `corpus/oracle-crashes.txt` entry 14), and this crate
+    /// must terminate.
     pub(crate) routing_trace: bool,
     /// Current `eval` recursion depth, and the deepest it has reached.
     pub(crate) depth: usize,
@@ -383,10 +384,9 @@ pub(crate) struct Activity {
     pub(crate) sharing_tag: u32,
 }
 
-/// A `CallRoutine` or `CallProgram` call in progress. The oracle runs it on a
-/// new activation stack: the code it runs has no Rexx caller, and the
-/// activations below the native code that called the API are out of its
-/// reach.
+/// A `CallRoutine` or `CallProgram` call in progress. It runs on a new
+/// activation stack: the code it runs has no Rexx caller, and the activations
+/// below the native code that called the API are out of its reach.
 pub(crate) struct ApiBase {
     /// The activation running when the call was made, which the code the
     /// call runs must not reach as its caller.
@@ -397,8 +397,8 @@ pub(crate) struct ApiBase {
     pub(crate) native: usize,
 }
 
-/// A primitive method that is running Rexx code, which the oracle runs under
-/// an `InternalActivationFrame`.
+/// A primitive method that is running Rexx code, which runs under an internal
+/// activation frame.
 pub(crate) struct MethodLevel {
     /// The activation the method was sent from.
     pub(crate) caller: Option<crate::activation::ActivationId>,
@@ -412,8 +412,8 @@ pub(crate) struct MethodLevel {
     pub(crate) arguments: Box<[Option<ObjRef>]>,
 }
 
-/// A routine of an internal package that is running, which the oracle runs as
-/// a native activation.
+/// A routine of an internal package that is running, which runs as a native
+/// activation.
 pub(crate) struct InternalLevel {
     /// The activation the call was made from.
     pub(crate) caller: Option<crate::activation::ActivationId>,

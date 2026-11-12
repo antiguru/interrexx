@@ -98,7 +98,7 @@ pub(crate) struct CommandOutcome {
 }
 
 /// A condition a registered handler raised through its thread context, as the
-/// oracle's command path finds it.
+/// command path finds it.
 pub(crate) struct HandlerCondition {
     pub(crate) name: Vec<u8>,
     pub(crate) description: Option<Vec<u8>>,
@@ -245,7 +245,7 @@ enum Assignment {
     Export,
 }
 
-/// `st` after the keyword, with the blanks the oracle skips removed.
+/// `st` after the keyword, with the blanks skipped removed.
 fn after_keyword(command: &[u8], keyword: usize) -> &[u8] {
     let rest = &command[keyword..];
     let at = rest
@@ -298,11 +298,11 @@ fn unquote(text: &[u8]) -> Vec<u8> {
 
 /// The target after the leading spaces, unquoted, is where this interpreter's
 /// own directory moves. Nothing is the home directory. `~`, `~/rest` and `~
-/// rest` are `HOME` with a `/` after it, the rest kept only after `~/`.
-/// `~user` and `~user/rest` are that account's home directory. `None` hands
-/// the command to the shell, as the oracle does where `HOME` is unset or the
-/// account is unknown. With `HOME` unset the oracle dies on `cd ~`
-/// (`corpus/oracle-crashes.txt` entry 44), and that goes to the shell too.
+/// rest` are `HOME` with a `/` after it, the rest kept only after `~/`. `~user`
+/// and `~user/rest` are that account's home directory. `None` hands the command
+/// to the shell, where `HOME` is unset or the account is unknown. With `HOME`
+/// unset the reference run dies on `cd ~` (oracle defect,
+/// `corpus/oracle-crashes.txt` entry 44), and that goes to the shell too.
 ///
 /// The directory is resolved as `chdir` resolves it, `..` after any link, and
 /// the new directory is its physical path, as `getcwd` answers. A failure is
@@ -380,8 +380,8 @@ fn physical_directory(interp: &Interp, target: &[u8]) -> Result<std::path::PathB
 /// `two-tail`; measured, and the terminator itself is left in the stream for
 /// the next segment to copy.
 fn expand(interp: &Interp, value: &[u8]) -> Vec<u8> {
-    // The C++ sets its `HitFlag` on seeing a `$` rather than on resolving
-    // one, and copies the value untouched only when there is none.
+    // The hit flag is set on seeing a `$` rather than on resolving one, and the
+    // value is copied untouched only when there is none.
     if !value.contains(&b'$') {
         return value.to_vec();
     }
@@ -427,8 +427,8 @@ fn assign_environment(
         return Some(CommandOutcome::of(0));
     }
     let Some(equals) = equals else {
-        // No assignment operator at all: the oracle treats this as no command,
-        // except where a pipe or a redirection means a shell should see it.
+        // No assignment operator at all: this is treated as no command, except
+        // where a pipe or a redirection means a shell should see it.
         if rest.contains(&b'|') || rest.contains(&b'>') {
             return None;
         }
@@ -439,10 +439,9 @@ fn assign_environment(
     Some(CommandOutcome::of(0))
 }
 
-/// The return code the oracle reports for a finished child: the exit status
-/// where there is one, and the negated signal number where the child died of
-/// one (`ioCommandHandler`'s `WIFEXITED`/`WTERMSIG` pair, whose `-1` clamp
-/// this keeps).
+/// The return code reported for a finished child: the exit status where there
+/// is one, and the negated signal number where the child died of one (the
+/// `WIFEXITED`/`WTERMSIG` pair, whose `-1` clamp this keeps).
 fn exit_code(status: std::process::ExitStatus) -> i32 {
     match status.code() {
         Some(code) => code,
@@ -505,9 +504,8 @@ pub(crate) enum Piece {
 
 impl Block {
     /// Waits for the child, handing each piece it writes to `written` as it
-    /// arrives, except standard error going to a target, which the answer
-    /// holds whole (the oracle's error reader writes its target once the
-    /// output has ended).
+    /// arrives, except standard error going to a target, which the answer holds
+    /// whole (the error reader writes its target once the output has ended).
     pub(crate) fn stream(self, written: &(dyn Fn(Piece, Vec<u8>) + Sync)) -> Waited {
         let out = match self.captures_output {
             true => Piece::Captured,
@@ -603,9 +601,9 @@ impl Blocks {
         }
     }
 
-    /// Ends the wait `token` names for a child still running, as a halt
-    /// does; answers whether it did. `waitpid` interrupted leaves the
-    /// oracle's status unset, and this answers [`INTERRUPTED`].
+    /// Ends the wait `token` names for a child still running, as a halt does;
+    /// answers whether it did. A `waitpid` that is interrupted leaves the
+    /// status unset, and this answers [`INTERRUPTED`].
     pub(crate) fn abandon(&mut self, token: u64) -> bool {
         match self.find(token) {
             Some(blocked) if blocked.ended.is_none() => {
@@ -676,9 +674,9 @@ enum Child {
 
 /// Starts `command` in a child.
 ///
-/// Standard input is inherited unless `io` supplies one, which is the
-/// oracle's own rule -- it spawns with no file actions until an `ADDRESS ...
-/// WITH` asks for them.
+/// Standard input is inherited unless `io` supplies one, which is the rule: a
+/// child is spawned with no file actions until an `ADDRESS ... WITH` asks for
+/// them.
 ///
 /// `switch_mode`, where there is one, is the child's `REXX_SWITCH_MODE`.
 fn start(
@@ -1182,9 +1180,9 @@ impl Interp {
         let outcome = outcome?;
         self.serve_signal_now();
         // The SYNTAX condition the input reader's dispatcher took, raised now
-        // that the command has completed: measured, oracle rc 0, a `LINEIN`
-        // failing on its second line leaves `cat`'s one line of output in
-        // the target and `RC` 41 in the trap.
+        // that the command has completed: a `LINEIN` failing on its second line
+        // leaves `cat`'s one line of output in the target and `RC` 41 in the
+        // trap.
         if let Some(kept) = kept {
             self.reraise_failure_levels();
             return Err(kept);
@@ -1194,9 +1192,9 @@ impl Interp {
     }
 
     /// The `*-*` line of an `ADDRESS` clause issuing a command where the
-    /// setting echoes commands but not every clause (`TRACE C`), which the
-    /// oracle echoes as it does a command clause. Every other setting that
-    /// echoes it has done so before the clause ran.
+    /// setting echoes commands but not every clause (`TRACE C`), which is
+    /// echoed as a command clause is. Every other setting that echoes it has
+    /// done so before the clause ran.
     fn echo_address_command(
         &mut self,
         source: Option<&ProgramSource>,
@@ -1358,26 +1356,24 @@ impl Interp {
         }
 
         // **`::OPTIONS ERROR|FAILURE SYNTAX` escalates where the condition is
-        // raised, not where it is delivered**: the oracle reports the syntax
-        // error from inside the handler's own `RaiseCondition`, so the command
-        // path never regains control and neither `RC`, `.RS` nor the failure
-        // retrace happens. Measured on three descriptors -- `::OPTIONS FAILURE
-        // SYNTAX` with an untrapped 127 shows the clause echo the error report
-        // writes and nothing else, where the same program without the
-        // directive shows `>>>` and `+++ "RC(127)"` first; `trace e` with
-        // `::OPTIONS ERROR SYNTAX` is the same for an `exit 3`, and its
-        // control without the directive keeps the retrace. `RC` in a `SIGNAL
-        // ON SYNTAX` handler is 98, the raise's own, rather than the command's
-        // code or a stale one.
+        // raised, not where it is delivered**: the syntax error is reported
+        // from inside the handler's own raise, so the command path never
+        // regains control and neither `RC`, `.RS` nor the failure retrace
+        // happens. With `::OPTIONS FAILURE SYNTAX` with an untrapped 127 shows
+        // the clause echo the error report writes and nothing else, where the
+        // same program without the directive shows `>>>` and `+++ "RC(127)"`
+        // first; `trace e` with `::OPTIONS ERROR SYNTAX` is the same for an
+        // `exit 3`, and its control without the directive keeps the retrace.
+        // `RC` in a `SIGNAL ON SYNTAX` handler is 98, the raise's own, rather
+        // than the command's code or a stale one.
         //
         // The **original** condition is what is tested here. A `FAILURE` with
         // only `ERROR SYNTAX` set escalates at neither point: it traces, finds
         // no trap, is renamed, and is caught by the check in
-        // `raise_command_condition` -- the oracle's own second test.
+        // `raise_command_condition` -- the second test.
         //
         // A handler's `LOSTDIGITS`, `NOSTRING` and `NOTREADY` escalate here
-        // too, under their own `::OPTIONS`: the oracle has an arm for each
-        // and none for `NOVALUE`.
+        // too, under their own `::OPTIONS`; `NOVALUE` has none.
         match &outcome.condition {
             Some(held) => {
                 if held.name != b"NOVALUE" && self.condition_raises_syntax(&held.name) {
@@ -1400,7 +1396,7 @@ impl Interp {
             return Ok(Flow::Next);
         }
 
-        // `RC` before anything else, which is where the oracle puts it too.
+        // `RC` before anything else, which is where it belongs.
         //
         // **A manager's own `RC` is assigned as the object it set**, not as
         // a rendering of it: measured, `info~rc = 'abc'` leaves `RC` reading
@@ -1474,22 +1470,21 @@ impl Interp {
         escalated(condition, held.description.as_deref().unwrap_or(b""), &rc).into()
     }
 
-    /// Offers a condition a registered handler raised to the traps in force
-    /// as the oracle does: under its own name and with the handler's
-    /// description, `ADDITIONAL` and `RESULT`, its `RESULT` also its `RC`,
-    /// which an `ERROR` or `FAILURE` carries even with no `RESULT`. An
-    /// untrapped `FAILURE` is re-raised as `ERROR`; any other untrapped
-    /// condition is silent.
+    /// Offers a condition a registered handler raised to the traps in force:
+    /// under its own name and with the handler's description, `ADDITIONAL` and
+    /// `RESULT`, its `RESULT` also its `RC`, which an `ERROR` or `FAILURE`
+    /// carries even with no `RESULT`. An untrapped `FAILURE` is re-raised as
+    /// `ERROR`; any other untrapped condition is silent.
     fn raise_handler_condition(
         &mut self,
         held: &HandlerCondition,
         name: &[u8],
     ) -> Result<(), Failure> {
         // **Only `ERROR` and `FAILURE` meet their `::OPTIONS ... SYNTAX` ahead
-        // of the traps**: measured, a handler's `USER` under `::OPTIONS ERROR
-        // SYNTAX` reaches a `SIGNAL ON USER` handler, and untrapped it is
-        // ignored. The re-raise of an untrapped `FAILURE` re-enters here as
-        // `ERROR`, the oracle's second `ERROR SYNTAX` test.
+        // of the traps**: a handler's `USER` under `::OPTIONS ERROR SYNTAX`
+        // reaches a `SIGNAL ON USER` handler, and untrapped it is ignored. The
+        // re-raise of an untrapped `FAILURE` re-enters here as `ERROR`, the
+        // second `ERROR SYNTAX` test.
         let command_status = matches!(name, b"ERROR" | b"FAILURE");
         if command_status && self.condition_raises_syntax(name) {
             return Err(self.handler_escalation(held, name));
@@ -1543,8 +1538,7 @@ impl Interp {
     /// exiting 3 reaches a lone `SIGNAL ON FAILURE` handler not at all.
     ///
     /// `supplied` is the `RC` a security manager set: the condition carries
-    /// that object as its `RC` and no `RESULT`, as the oracle's command check
-    /// builds it.
+    /// that object as its `RC` and no `RESULT`, as the command check builds it.
     fn raise_command_condition(
         &mut self,
         condition: &'static str,
@@ -1552,13 +1546,13 @@ impl Interp {
         rc: i32,
         supplied: Option<ObjRef>,
     ) -> Result<(), Failure> {
-        // **Ahead of the traps**, which is where the oracle checks it. That
-        // cannot overtake a handler: arming one clears the escalation first
-        // (`ConditionSyntax::disable_for` turns ERROR and FAILURE off for
-        // `CALL ON` as well as `SIGNAL ON`), and measured, `::OPTIONS ERROR
-        // SYNTAX` with `signal on error` armed runs the handler and exits 0.
-        // The reraise below re-enters here, which is the oracle's second check
-        // after a FAILURE becomes an ERROR.
+        // **Ahead of the traps**, which is where it is checked. That cannot
+        // overtake a handler: arming one clears the escalation first
+        // (`ConditionSyntax::disable_for` turns ERROR and FAILURE off for `CALL
+        // ON` as well as `SIGNAL ON`), so `::OPTIONS ERROR SYNTAX` with `signal
+        // on error` armed runs the handler and exits 0. The reraise below
+        // re-enters here, which is the second check after a FAILURE becomes an
+        // ERROR.
         if self.condition_raises_syntax(condition.as_bytes()) {
             return Err(
                 escalated(condition.as_bytes(), command, &rc.to_string().into_bytes()).into(),

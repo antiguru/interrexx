@@ -24,8 +24,8 @@ pub(crate) struct Exits {
     /// The interpreter is an embedding instance, whose own root program runs no
     /// initialization or termination exit: only the programs it is asked to call do.
     instance: bool,
-    /// An instance's root program, which stands in for the oracle's native root: no clause
-    /// exit runs between its clauses and no halt it takes is cleared.
+    /// An instance's root program, which stands in for a native root: no clause exit runs
+    /// between its clauses and no halt it takes is cleared.
     root: Option<crate::ProgramId>,
 }
 
@@ -273,9 +273,8 @@ impl Interp {
 
     /// The halt and trace exits at a clause boundary: a halt the halt exit asks for is raised
     /// there, and a trace the trace exit asks for is turned on as `RXTRACE` turns it on. The
-    /// library's own code calls neither, as the oracle's image code does not. Before them,
-    /// what a native call posted to this interpreter's own inbox is served
-    /// (`boundary_posts`).
+    /// library's own code calls neither. Before them, what a native call posted to this
+    /// interpreter's own inbox is served (`boundary_posts`).
     #[cold]
     #[inline(never)]
     pub(crate) fn run_clause_exits(&mut self) -> Result<(), Failure> {
