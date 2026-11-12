@@ -226,7 +226,7 @@ h: c = condition('o')
   raise failure (arg(1))
 ```
 
-```output defect=#124
+```output
 ERROR The Array class The Array class
 FAILURE The String class The String class
 ```

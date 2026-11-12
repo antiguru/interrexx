@@ -716,7 +716,12 @@ impl Interp {
         self.activity.propagate_absorb = 0;
         self.set_sigl(self.activity.clause_state.line());
         if let Some(rc) = &raised.rc {
-            let value = self.text(rc);
+            // A `RAISE` that named an object for `RC` holds it for the
+            // condition object, and the variable has that object.
+            let value = match self.activity.pending_rc {
+                Some(object) => object,
+                None => self.text(rc),
+            };
             self.assign_by_name(b"RC", value);
         }
         // What `CONDITION()` reports for the rest of this activation, kept
@@ -910,7 +915,15 @@ impl Interp {
         // No `SIGL` here: a handler that is a label sets it when the call
         // enters it, and one that is a `::ROUTINE` or a builtin leaves it.
         if let Some(rc) = &pending.rc {
-            let value = self.text(rc);
+            // The condition object has the object the `RAISE` named, which the
+            // variable has too.
+            let entry = pending
+                .object
+                .and_then(|object| self.condition_entry_held(object, b"RC"));
+            let value = match entry {
+                Some(entry) => entry,
+                None => self.text(rc),
+            };
             self.assign_by_name(b"RC", value);
         }
         // A `CALL ON` handler is running a condition too, and `RAISE
