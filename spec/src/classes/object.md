@@ -1424,9 +1424,10 @@ message object; an error in the message itself, such as a name with no method
 or the abuttal method's missing argument, is not raised by `start`: the
 message object keeps it, and it is raised when the result is asked for. The
 access check is that of [Deviation 105](r:dir.method.deviation.105). How the
-message is scheduled and what the message object offers is specified in the
-environment chapter and with the `Message` class; the examples show only
-results that no scheduling changes.
+message is scheduled is specified by [the ordering
+rule](r:conc.activities.order) of the concurrency chapter, and what the
+message object offers with the `Message` class; the examples show only results
+that no scheduling changes.
 
 ```rexx
 o = .w~new

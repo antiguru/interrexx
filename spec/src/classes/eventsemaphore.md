@@ -13,10 +13,10 @@ does calls `wait`; the activity that does it calls `post`, and every activity
 that waits goes on. A semaphore that is posted lets `wait` return at once,
 until it is cleared again with `reset`. This page states what each method
 answers and checks, and what a timeout may be. How activities are scheduled,
-and so which of several waiters runs first after a `post`, is specified in the
-environment chapter. The examples that use two activities start a message and
-wait on the semaphore from the program; the order of their output is forced by
-the semaphore itself.
+and so which of several waiters runs first after a `post`, is specified by
+[the waiting rule](r:conc.activities.waiting) of the concurrency chapter. The
+examples that use two activities start a message and wait on the semaphore
+from the program; the order of their output is forced by the semaphore itself.
 
 ## The class
 
@@ -208,21 +208,22 @@ say c~isPosted c~wait(0)
 
 r[class.eventsemaphore.wait]
 `wait(timeout)` answers 1 when the semaphore is posted, at the call or before
-the timeout ends, and 0 when the timeout ended with the semaphore still cleared.
-The timeout says how long the caller is prepared to wait. Omitted or below zero,
-there is no limit, so the answer can only be 1. Zero is no wait at all, and the
-answer is the state at the call, as `isPosted` gives it. Above zero it is a
-limit in seconds. One `post` ends the wait of every caller that is waiting,
-however many there are; which of them runs on first is not specified. A call of
-`wait` that is released by `post` and one that finds the semaphore posted answer
-alike. The timeout is read before the semaphore is looked at, as
-[the next rule](r:class.eventsemaphore.wait.timeout) says, so an invalid one
-raises its error even for a posted semaphore. In the example a message that the
-program starts posts after a short pause, and a second starts two waiters, one
-without a timeout and one with a long one that never ends before the post; the
-program waits for the post too, and prints what each answered, which the post
-forces to be 1 for all, and what `wait(0)` and a short timeout answer on a
-cleared semaphore.
+the timeout ends, and 0 when the timeout ended with the semaphore still
+cleared. The timeout says how long the caller is prepared to wait. Omitted or
+below zero, there is no limit, so the answer is 1, except for a wait that a
+signal's HALT ends ([Deviation 10](r:conc.halt.deviation.10)). Zero is no wait
+at all, and the answer is the state at the call, as `isPosted` gives it. Above
+zero it is a limit in seconds. One `post` ends the wait of every caller that
+is waiting, however many there are; which of them runs on first is not
+specified. A call of `wait` that is released by `post` and one that finds the
+semaphore posted answer alike. The timeout is read before the semaphore is
+looked at, as [the next rule](r:class.eventsemaphore.wait.timeout) says, so an
+invalid one raises its error even for a posted semaphore. In the example a
+message that the program starts posts after a short pause, and a second starts
+two waiters, one without a timeout and one with a long one that never ends
+before the post; the program waits for the post too, and prints what each
+answered, which the post forces to be 1 for all, and what `wait(0)` and a
+short timeout answer on a cleared semaphore.
 
 ```rexx
 e = .eventsemaphore~new

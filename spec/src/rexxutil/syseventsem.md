@@ -221,8 +221,9 @@ semaphore has posts, the others go on waiting, and which of them gets a post
 is not specified. In the first example the message that the program starts
 waits with no limit, and the program posts. In the second the program posts
 twice and then starts three messages that wait for 600 milliseconds: two waits
-answer `0` and the third, which no post is left for, answers `121`. (The locks
-page of the concurrency chapter has the rules for an activity that waits.)
+answer `0` and the third, which no post is left for, answers `121`. (The
+concurrency chapter has [the rules for an activity that
+waits](r:conc.activities.waiting).)
 
 ```rexx
 h = SysCreateEventSem()

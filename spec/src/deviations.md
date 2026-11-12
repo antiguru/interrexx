@@ -79,11 +79,12 @@ ooRexx a collection reclaims the old storage and the routine reads garbage.
 
 ## 10. Signals halt and wake
 
-SIGINT and SIGTERM halt the program with `4.1` even when SIGHUP is ignored,
-as under `nohup`; ooRexx installs no handler then and the signal kills it.
-A halt wakes every waiting activity, including one in SysSleep, GUARD WHEN or
-a semaphore wait, which ooRexx can leave waiting for ever. A halted wait for
-a command sets RC to -4, where ooRexx's RC is unpredictable.
+SIGINT and SIGTERM halt the program with `4.1` even when SIGHUP is ignored, as
+under `nohup`; ooRexx installs no handler then and the signal kills it. A halt
+that a signal asks for wakes an activity that waits in SysSleep, for a GUARD
+WHEN condition or for a semaphore, which ooRexx can leave waiting for ever; a
+wait for the result or the end of a message, or for a lock, is not woken. A
+halted wait for a command sets RC to -4, where ooRexx's RC is unpredictable.
 
 ## 11. SIGPIPE in a command's child
 
@@ -106,9 +107,10 @@ activity that has not yet started to run.
 
 ## 14. A nested wait only a buried activity can end
 
-An activity waiting inside a nested construct, such as INTERPRET, for
-something only an activity suspended beneath it can provide is refused, exit
-code 120. ooRexx runs each activity on its own thread and completes.
+An activity waiting inside a nested construct, such as INTERPRET or a method
+that `run` runs, for something, such as a lock, a result or the change of a
+variable, that only an activity suspended beneath it can provide is refused,
+exit code 120. ooRexx runs each activity on its own thread and completes.
 
 ## 15. Withdrawn
 
@@ -1182,7 +1184,6 @@ A `source` that is a directory answers `21` before `target` is opened, so
 `source`, found by device and inode number through any name, hard link or
 symbolic link, answers `17` and changes nothing. ooRexx empties `target` in
 both cases, makes it when it is not there, and answers `0` for a hard link.
-interrexx does not do this yet: issue #234.
 
 ## 156. SysSetPriority changes the priority of the process
 
@@ -1214,6 +1215,14 @@ A save of the macrospace onto a file that is there and may not be written
 answers `5` and leaves the file as it was. ooRexx answers `5` too, and keeps
 or removes the file depending on the calls the program made earlier.
 
+## 160. A GUARD WHEN on a compound variable or a stem
+
+A condition of GUARD ON WHEN or GUARD OFF WHEN that names a compound variable
+or a stem names the whole stem: it is evaluated again when another activity
+assigns to or drops any tail of the stem or the whole stem. ooRexx does not
+evaluate it again for a tail, so the wait does not end. interrexx does not
+evaluate it again for a tail yet (#239).
+
 ## 161. SysSleep and whitespace after the sign
 
 SysSleep reads its delay as a Rexx number, so that whitespace (a blank or a
@@ -1221,3 +1230,12 @@ tab) may follow the sign: `'+ 0.5'` pauses for at least half a second, and `'-
 1'` is a negative delay, which raises `SYNTAX 88.907`. ooRexx answers `0` at
 once for any delay with whitespace after its sign, without a pause and without
 the range check.
+
+## 162. A second init of an Alarm or a Ticker
+
+An `init` sent to an `Alarm` or a `Ticker` after the one that `new` sent,
+whatever its arguments, raises `SYNTAX 98.900` and leaves the object as it
+was: still set or still cancelled, with its first time, interval, target and
+attachment. ooRexx sets the object up again, without stopping the first
+setting, and crashes when a ticker that runs is set up again. interrexx does
+not refuse the second `init` yet (#248).

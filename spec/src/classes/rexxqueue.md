@@ -696,7 +696,8 @@ r[class.rexxqueue.linein]
 [`pull`](r:class.rexxqueue.pull) does, when the queue holds a line. When the
 queue exists and holds no line, `lineIn` does not answer at once: it waits
 until some activity adds a line, and answers that. Which of several activities
-that wait gets a line is specified in the environment chapter. A queue that
+that wait gets a line is specified by [the waiting
+rule](r:conc.activities.waiting) of the concurrency chapter. A queue that
 does not exist makes `lineIn` answer `.nil` at once, as `pull` does. The
 method takes no argument (`SYNTAX 88.922`). In the example a message that the
 program starts waits on an empty queue, and the program adds the line from the

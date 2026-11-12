@@ -22,16 +22,18 @@ the instructions chapter.
 r[cond.halt.raise]
 HALT is raised by a request that the host makes, and by a RAISE instruction
 that names it. Which host requests exist, and at which clause boundary one is
-noticed, is not specified. The condition has no description unless the RAISE
-instruction gave one with DESCRIPTION, so `CONDITION('D')` answers the null
-string otherwise. Its condition object has the entries that every condition
-has and `POSITION`, and neither `RC`, `CODE` nor `ADDITIONAL`, as [the entries
-rule](r:cond.information.object) lists them. A HALT that the host raises is
-not passed on to the caller of the code that was running, as [the propagation
-rule](r:cond.information.propagate.only) says for every condition but SYNTAX.
-Which level a RAISE instruction raises HALT in, the one that runs it or the
-caller of that one, is specified with that instruction. The examples whose
-trap answers HALT raise it with `RETURN`, which raises it in the caller.
+noticed, is not specified. On Linux, SIGINT and SIGTERM are such requests
+([the signal rule](r:conc.halt.signal)). The condition has no description
+unless the RAISE instruction gave one with DESCRIPTION, so `CONDITION('D')`
+answers the null string otherwise. Its condition object has the entries that
+every condition has and `POSITION`, and neither `RC`, `CODE` nor `ADDITIONAL`,
+as [the entries rule](r:cond.information.object) lists them. A HALT that the
+host raises is not passed on to the caller of the code that was running, as
+[the propagation rule](r:cond.information.propagate.only) says for every
+condition but SYNTAX. Which level a RAISE instruction raises HALT in, the one
+that runs it or the caller of that one, is specified with that instruction.
+The examples whose trap answers HALT raise it with `RETURN`, which raises it
+in the caller.
 
 ```rexx
 call on halt name h

@@ -333,9 +333,10 @@ open with 1234
 r[dir.method.guard]
 A method is guarded unless UNGUARDED says otherwise, and the instruction page
 of [GUARD](r:instr.guard.exclusion) says what that means: a guarded method
-starts with the exclusive use of its object's variables, and an unguarded one
-does not. An unguarded method can therefore run while another method holds the
-guard. GUARDED may be written, and it is the same as writing no option.
+starts with the exclusive use of the object variables of its scope, and an
+unguarded one does not. An unguarded method can therefore run while another
+method holds the guard. GUARDED may be written, and it is the same as writing
+no option.
 
 ```rexx
 log = .array~new

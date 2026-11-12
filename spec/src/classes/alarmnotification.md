@@ -17,12 +17,13 @@ target of an alarm. The interface has two methods: `triggered` is abstract
 and an implementation declares it, and `cancel` does nothing, so that an
 implementation declares it only when it wants to hear of cancellations.
 
-The page specifies what the class is, what an implementation has to answer
-to, and when the library sends to it. The classes `Alarm` and `Ticker` are
-specified apart from this page, and the times at which an alarm goes off and
-how its activity is scheduled are specified in the environment chapter; the
-examples here wait on a guard that the notification opens before they print
-what it recorded.
+The page specifies what the class is, what an implementation has to answer to,
+and when the library sends to it. The classes `Alarm` and `Ticker` are
+specified apart from this page, the times at which an alarm or ticker goes off
+are specified with their `init`, and which activity runs the target by [the
+timer rule](r:conc.activities.timers) of the concurrency chapter; the examples
+here wait on a guard that the notification opens before they print what it
+recorded.
 
 ## The class
 
@@ -91,9 +92,10 @@ r[class.alarmnotification.triggered]
 as [the abstract rule](r:dir.method.abstract) says of any abstract method. An
 implementation declares the method and takes one argument, the `Alarm` or
 `Ticker` that went off, as `source`: the library sends it at the time of the
-alarm, once for an `Alarm`, and once at each time for a `Ticker` until that
-is cancelled. The object that was given as the attachment when the alarm was
-made is `source~attachment`. What an implementation answers is not used.
+alarm, once for an `Alarm`, and for a `Ticker` at its times until it is
+cancelled or stopped, as [the timer rule](r:conc.activities.timers) says. The
+object that was given as the attachment when the alarm was made is
+`source~attachment`. What an implementation answers is not used.
 
 ```rexx
 n = .note~new

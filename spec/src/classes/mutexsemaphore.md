@@ -15,10 +15,11 @@ go, or gives up after a timeout. An activity that owns the semaphore can
 acquire it again without waiting, and then has to release it as many times.
 This page states what each method answers and checks, how the count of
 acquisitions works and what a timeout may be. How activities are scheduled,
-and so which of several that wait gets the semaphore next, is specified in the
-environment chapter. The examples that use two activities start a message from
-the program and use event semaphores to force the order of what happens, so
-that nothing in their output depends on speed.
+and so which of several that wait gets the semaphore next, is specified by
+[the waiting rule](r:conc.activities.waiting) of the concurrency chapter. The
+examples that use two activities start a message from the program and use
+event semaphores to force the order of what happens, so that nothing in their
+output depends on speed.
 
 ## The class
 
@@ -95,22 +96,23 @@ LAZY 1 1 0
 r[class.mutexsemaphore.acquire]
 `acquire(timeout)` gives the activity that calls it ownership, and answers 1,
 when no activity owns the semaphore and when the activity already owns it. It
-answers 0 when another activity owns it and keeps it for the whole timeout. The
-semaphore counts how many times its owner has acquired it: a call from the owner
-does not wait, adds one to the count and answers 1, and the semaphore becomes
-free only when [`release`](r:class.mutexsemaphore.release) has taken the count
-back to zero. The timeout bounds the wait of a caller that does not get the
-semaphore at once. Omitted or below zero, there is no bound, so the answer can
-only be 1. Zero means no wait: the answer says whether the semaphore was free or
-the caller's already. Above zero it is a bound in seconds. When the owner lets
-go, one of the activities that wait gets the semaphore, which of them is not
-specified. The timeout is read as
-[the next rule](r:class.mutexsemaphore.timeout) says, before the semaphore is
-looked at, so an invalid one raises its error whoever owns the semaphore.
-Ownership does not outlive the activity: when an activity ends, every count it
-held is dropped and the semaphore is free for others. In the first example one
-activity does all the calls, and in the second a message that the program starts
-owns the semaphore while the program calls.
+answers 0 when another activity owns it and keeps it for the whole timeout.
+The semaphore counts how many times its owner has acquired it: a call from the
+owner does not wait, adds one to the count and answers 1, and the semaphore
+becomes free only when [`release`](r:class.mutexsemaphore.release) has taken
+the count back to zero. The timeout bounds the wait of a caller that does not
+get the semaphore at once. Omitted or below zero, there is no bound, so the
+answer is 1, except for a wait that a signal's HALT ends ([Deviation
+10](r:conc.halt.deviation.10)). Zero means no wait: the answer says whether
+the semaphore was free or the caller's already. Above zero it is a bound in
+seconds. When the owner lets go, one of the activities that wait gets the
+semaphore, which of them is not specified. The timeout is read as [the next
+rule](r:class.mutexsemaphore.timeout) says, before the semaphore is looked at,
+so an invalid one raises its error whoever owns the semaphore. Ownership does
+not outlive the activity: when an activity ends, every count it held is
+dropped and the semaphore is free for others. In the first example one
+activity does all the calls, and in the second a message that the program
+starts owns the semaphore while the program calls.
 
 ```rexx
 m = .mutexsemaphore~new

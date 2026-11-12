@@ -196,8 +196,8 @@ A request that has to wait suspends the activity that made it, and the other
 activities go on; the release that makes the lock free ends the wait of the
 request, which takes the lock and answers `0`. In the example the message the
 program starts asks for a lock that the program holds, with no limit, and
-waits; the program frees the lock, and the message gets it. (The locks page of
-the concurrency chapter has the rules for an activity that waits.)
+waits; the program frees the lock, and the message gets it. (The concurrency
+chapter has [the rules for an activity that waits](r:conc.activities.waiting).)
 
 ```rexx
 m = SysCreateMutexSem('')

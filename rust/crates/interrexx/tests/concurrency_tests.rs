@@ -1126,6 +1126,7 @@ mod measured {
         );
     }
 
+    // spec: conc.activities.deviation.18
     /// Two pinned busy-waiters that need each other: `a` spins until `b`
     /// sets `x`, then sets `y`; `b`, run inside `a`'s pinned yields, sets `x`
     /// and spins until `y`. `b`'s yields can never run `a`, buried below, so
