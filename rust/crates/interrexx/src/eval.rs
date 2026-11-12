@@ -358,10 +358,7 @@ impl Interp {
             // same way any other text value is.
             ".TRUE" => Ok(LOGICAL_TRUE),
             ".FALSE" => Ok(self.text(b"0")),
-            other => {
-                let name = other.as_bytes().to_vec();
-                self.dot_variable(&name)
-            }
+            other => self.dot_variable(other.as_bytes()),
         }
     }
 
