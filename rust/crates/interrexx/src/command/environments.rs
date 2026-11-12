@@ -59,6 +59,10 @@ impl NativeKind {
     }
 }
 
+/// The `.NativeCommandHandler` variable holding the index of the native
+/// handler an object stands for.
+pub(crate) const NATIVE_AT: &[u8] = b"NATIVE_AT";
+
 /// One native handler, with the `.NativeCommandHandler` that stands for it,
 /// made once and kept (`CommandHandler::getRexxObject`,
 /// `concurrency/CommandHandler.cpp:786`), so one native handler is always one
@@ -272,7 +276,7 @@ impl Interp {
             return Ok(object);
         }
         let name = self.environments.natives[at].name.clone();
-        let object = self.native_handler_object(&name)?;
+        let object = self.native_handler_object(&name, at)?;
         self.environments.natives[at].object = Some(object);
         Ok(object)
     }
@@ -396,10 +400,14 @@ impl Interp {
     /// 93.900 for any other object (`nativeHandlerOf`,
     /// `concurrency/CommandHandler.cpp:843`).
     pub(crate) fn native_handler_of(
-        &self,
+        &mut self,
         object: ObjRef,
     ) -> Result<(NativeKind, Vec<u8>), Failure> {
-        match self.environments.native_of(object) {
+        let found = match self.environments.native_of(object) {
+            Some(at) => Some(at),
+            None => self.copied_native_of(object),
+        };
+        match found {
             Some(at) => {
                 let native = &self.environments.natives[at];
                 Ok((native.kind.clone(), native.name.clone()))
@@ -409,6 +417,16 @@ impl Interp {
             )
             .into()),
         }
+    }
+
+    /// The native handler a copy of a `.NativeCommandHandler` stands for,
+    /// which the copy's variables name.
+    fn copied_native_of(&mut self, object: ObjRef) -> Option<usize> {
+        let class = self.rexx_package_class(b"NATIVECOMMANDHANDLER")?;
+        let index = self.pools_of(object)?.get(class, NATIVE_AT)?;
+        let text = self.default_string_value_text(index);
+        let at: usize = std::str::from_utf8(&text).ok()?.parse().ok()?;
+        (at < self.environments.natives.len()).then_some(at)
     }
 
     /// `liveState` (`concurrency/CommandHandler.cpp:470`): the running

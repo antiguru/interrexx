@@ -26,7 +26,7 @@ mod collector;
 mod environments;
 
 use collector::collect;
-pub(crate) use environments::{Environments, NativeKind};
+pub(crate) use environments::{Environments, NATIVE_AT, NativeKind};
 
 /// A return code's whole-number value under the default precision, or `None`
 /// where it has none -- `RexxObject::numberValue(wholenumber_t &)`, which is
