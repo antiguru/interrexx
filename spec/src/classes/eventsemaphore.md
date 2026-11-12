@@ -197,7 +197,7 @@ c = .eventsemaphore~new~copy
 say c~isPosted c~wait(0)
 ```
 
-```output defect=#182
+```output
 1 1
 1 0
 0 1 0
