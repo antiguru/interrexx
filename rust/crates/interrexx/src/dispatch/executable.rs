@@ -1,6 +1,4 @@
-//! `Method`'s and `Routine`'s own readers -- `classes/MethodClass.cpp`,
-//! `classes/RoutineClass.cpp` and the `BaseExecutable` rows both share, bound
-//! by `memory/Setup.cpp:1089`-`:1113` and `:1128`-`:1143`.
+//! `Method`'s and `Routine`'s own readers, and the rows both share.
 
 use super::{
     Arity, Cleared, Failure, Interp, Loud, NativeBegin, NativeMethod, NativeStarted, ObjRef,
@@ -117,9 +115,7 @@ fn flag(interp: &Interp, receiver: ObjRef, which: Flag) -> Result<bool, Failure>
     })
 }
 
-/// One flag as the declaring directive set it -- `setAttributes` and the
-/// `setAbstract`/`setAttribute`/`setConstant` calls beside it
-/// (`parser/DirectiveParser.cpp:2413`-`:2525`).
+/// One flag as the declaring directive set it.
 fn declared_flag(interp: &Interp, source: ExecutableSource, which: Flag) -> bool {
     let ExecutableSource::Directive { program, directive } = source else {
         // A primitive carries the flag word `new MethodClass` left it: every
@@ -147,11 +143,10 @@ fn declared_flag(interp: &Interp, source: ExecutableSource, which: Flag) -> bool
         },
         DirectiveKind::Attribute(attribute) => match which {
             Flag::Abstract => attribute.abstract_,
-            // `createAttributeGetterMethod` and the `createMethod` an
-            // `::ATTRIBUTE ... GET` with a body takes both mark the
-            // attribute state (`:2416`, `:2472`, `:2502`). Measured, oracle
-            // rc 0: `::attribute ATT` and `::attribute ATT get` with a body
-            // each answer `isAttribute` `1`.
+            // The attribute getter and the method an `::ATTRIBUTE ... GET`
+            // with a body takes both mark the attribute state. Measured,
+            // oracle rc 0: `::attribute ATT` and `::attribute ATT get` with a
+            // body each answer `isAttribute` `1`.
             Flag::Attribute => true,
             Flag::Constant => false,
             Flag::Unguarded => attribute.guard == GuardOption::Unguarded,
@@ -159,14 +154,13 @@ fn declared_flag(interp: &Interp, source: ExecutableSource, which: Flag) -> bool
             Flag::Private => attribute.access == Access::Private,
             Flag::Protected => attribute.protection == Protection::Protected,
         },
-        // `createConstantGetterMethod` sets `CONSTANT_METHOD` and calls
-        // `setUnguarded()` outright (`parser/DirectiveParser.cpp:2523`,
-        // `:2525`), taking no access or protection option. Measured, oracle
-        // rc 0: `::constant CON 5` answers `0 0 1 0 0 0 0`, and it is the one
-        // directive whose `isGuarded` is `0` without an `UNGUARDED` keyword.
+        // A constant getter is marked constant and unguarded outright, taking
+        // no access or protection option. Measured, oracle rc 0: `::constant
+        // CON 5` answers `0 0 1 0 0 0 0`, and it is the one directive whose
+        // `isGuarded` is `0` without an `UNGUARDED` keyword.
         DirectiveKind::Constant(_) => matches!(which, Flag::Constant | Flag::Unguarded),
         // A `::ROUTINE` is not a `Method` and answers none of these; the rows
-        // are not bound at `Routine` (`memory/Setup.cpp:1134`-`:1143`).
+        // are not bound at `Routine`.
         _ => false,
     }
 }
@@ -178,7 +172,6 @@ pub(super) static RESUMABLE_METHODS: &[(&str, &str, Arity, NativeBegin)] = &[
     ("Routine", "CALLWITH", Arity::Fixed(1), call_with),
 ];
 
-/// `MethodClass::isAbstractRexx`.
 fn is_abstract(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -188,7 +181,6 @@ fn is_abstract(
     answer_flag(interp, receiver, Flag::Abstract, false)
 }
 
-/// `MethodClass::isAttributeRexx`.
 fn is_attribute(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -198,7 +190,6 @@ fn is_attribute(
     answer_flag(interp, receiver, Flag::Attribute, false)
 }
 
-/// `MethodClass::isConstantRexx`.
 fn is_constant(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -208,7 +199,7 @@ fn is_constant(
     answer_flag(interp, receiver, Flag::Constant, false)
 }
 
-/// `MethodClass::isGuardedRexx`, which is `!methodFlags[UNGUARDED_FLAG]`.
+/// Whether the method is guarded: the negation of its unguarded flag.
 fn is_guarded(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -218,7 +209,6 @@ fn is_guarded(
     answer_flag(interp, receiver, Flag::Unguarded, true)
 }
 
-/// `MethodClass::isPackageRexx`.
 fn is_package(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -228,7 +218,6 @@ fn is_package(
     answer_flag(interp, receiver, Flag::Package, false)
 }
 
-/// `MethodClass::isPrivateRexx`.
 fn is_private(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -238,7 +227,6 @@ fn is_private(
     answer_flag(interp, receiver, Flag::Private, false)
 }
 
-/// `MethodClass::isProtectedRexx`.
 fn is_protected(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -260,8 +248,8 @@ fn answer_flag(
     Ok(Some(interp.counted(usize::from(set != negated))))
 }
 
-/// `MethodClass::setUnguardedRexx`, `setGuardedRexx`, `setPrivateRexx` and
-/// `setProtectedRexx`: each writes one bit and returns `OREF_NULL`.
+/// `Method~setUnguarded`, `setGuarded`, `setPrivate` and `setProtected`: each
+/// writes one bit and answers nothing.
 fn set_guarded(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -323,9 +311,8 @@ fn write_flag(
     Ok(None)
 }
 
-/// `MethodClass::setSecurityManager` and `RoutineClass::setSecurityManager`,
-/// each of which is `code->setSecurityManager(manager)`
-/// (`classes/MethodClass.cpp:209`, `classes/RoutineClass.cpp:275`).
+/// `Method~setSecurityManager` and `Routine~setSecurityManager`, which set the
+/// security manager on the executable's code.
 fn set_security_manager(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -335,10 +322,9 @@ fn set_security_manager(
     let source = source_of(interp, receiver)?;
     let rexx_code = is_rexx_code(interp, source);
     // **The manager lands on the package, not on the executable.** Both
-    // setters are `code->setSecurityManager`, and `RexxCode`'s override
-    // writes `package->setSecurityManager`, so a manager set through one
-    // method of a package is in force for every activation of that package's
-    // code.
+    // setters write the manager onto the package of a Rexx-source body, so a
+    // manager set through one method of a package is in force for every
+    // activation of that package's code.
     if rexx_code {
         let program = match source {
             ExecutableSource::Directive { program, .. }
@@ -354,7 +340,7 @@ fn set_security_manager(
     Ok(Some(interp.counted(usize::from(rexx_code))))
 }
 
-/// Whether this executable's body is a `RexxCode` -- the distinction
+/// Whether this executable's body is Rexx source -- the distinction
 /// `setSecurityManager` answers and `~source` reads.
 fn is_rexx_code(interp: &Interp, source: ExecutableSource) -> bool {
     let (program, directive) = match source {
@@ -381,9 +367,8 @@ fn is_rexx_code(interp: &Interp, source: ExecutableSource) -> bool {
     }
 }
 
-/// `BaseExecutable::getPackage`: the package the declaring directive belongs
-/// to, `REXX` for a primitive, and `.nil` for a loaded library procedure no
-/// directive has bound.
+/// The package the declaring directive belongs to, `REXX` for a primitive, and
+/// `.nil` for a loaded library procedure no directive has bound.
 fn package(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -405,7 +390,7 @@ fn package(
     }))
 }
 
-/// `BaseExecutable::source`: the body's own source lines as an `Array`.
+/// The body's own source lines as an `Array`.
 fn source(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -459,10 +444,10 @@ fn directive_clause_lines(interp: &Interp, program: ProgramId, directive: usize)
         .collect()
 }
 
-/// The physical lines `RexxCode::getSource` answers for one code block:
-/// `Some(i)` is directive `i`'s own body and `None` is the program's main
-/// section. Refuses a `program` that was freed, which only a holder the
-/// collector was not shown reaches.
+/// The physical lines one code block's source covers: `Some(i)` is directive
+/// `i`'s own body and `None` is the program's main section. Refuses a
+/// `program` that was freed, which only a holder the collector was not shown
+/// reaches.
 fn block_source_lines(
     interp: &Interp,
     program: ProgramId,
@@ -499,13 +484,12 @@ fn block_source_lines(
         }
     };
     // `extractSourceLines`' own step back over an end that sits at the start
-    // of a line (`parser/ProgramSource.cpp:224`-`:233`): the block's end
-    // offset is that line's length, so an **empty** last line drops out.
-    // Measured, oracle rc 0, counting the items of a body followed by `n`
-    // blank lines: one blank answers the body alone and two answer the body
-    // and one blank, at the end of the file and before a following directive
-    // alike; and a `::method` with nothing after it but one blank line
-    // answers `Array(0)`.
+    // of a line: the block's end offset is that line's length, so an **empty**
+    // last line drops out. Measured, oracle rc 0, counting the items of a body
+    // followed by `n` blank lines: one blank answers the body alone and two
+    // answer the body and one blank, at the end of the file and before a
+    // following directive alike; and a `::method` with nothing after it but
+    // one blank line answers `Array(0)`.
     let (last, upto) = match text.line_span(last) {
         Some(span) if span.is_empty() => {
             let stepped = last.saturating_sub(1);
@@ -556,7 +540,7 @@ fn block_last_line(text: &interrexx_parse::ProgramSource, next: usize) -> (usize
 }
 
 /// The byte the block whose source is being extracted begins after, or `None`
-/// for a directive that owns no `RexxCode` at all.
+/// for a directive that owns no Rexx source at all.
 fn block_start(program: &Program, directive: usize) -> Option<usize> {
     let clause_end = program.directives.get(directive)?.clause_span.end;
     match &program.directives[directive].kind {
@@ -571,9 +555,8 @@ fn block_start(program: &Program, directive: usize) -> Option<usize> {
     }
 }
 
-/// `RoutineClass::callRexx` and the `[]` bound to the same body
-/// (`memory/Setup.cpp:1137`-`:1138`): run the routine over the arguments
-/// given, and answer what it returned.
+/// `Routine~call` and the `[]` bound to the same body: run the routine over
+/// the arguments given, and answer what it returned.
 fn call(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -593,7 +576,7 @@ fn call_index(
     begin_routine(interp, receiver, args.to_vec(), None, (b"[]", args))
 }
 
-/// `RoutineClass::callWithRexx`: the same call over an argument array.
+/// The same call over an argument array.
 fn call_with(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -607,10 +590,8 @@ fn call_with(
     begin_routine(interp, receiver, values, None, (b"CALLWITH", args))
 }
 
-/// `CallRoutineDispatcher::run` (`concurrency/RexxStartDispatcher.cpp:207`):
 /// the routine run directly, under the null string for a name, over the
 /// items of `arguments` or over none.
-///
 /// # Errors
 /// 98.913 for `arguments` that is not an array, and what the routine raised.
 pub(crate) fn call_routine_directly(
@@ -628,12 +609,11 @@ pub(crate) fn call_routine_directly(
 
 /// The half [`call`] and [`call_with`] share, once the arguments are values,
 /// `name` being what a Rexx routine's frame is called, or `None` for the
-/// routine's own name (`executableName`, which `RoutineClass::callRexx` runs
-/// it under, `classes/RoutineClass.cpp:205-211`): a directive's name, the
-/// name a compiled image gives it, or the name its package was created under.
-/// Up to the point a Rexx routine's body would run. `sent` is the message
-/// that runs it and that message's own arguments, which a routine run to its
-/// end here lists as a frame of its own; an empty name for none.
+/// routine's own name: a directive's name, the name a compiled image gives it,
+/// or the name its package was created under. Up to the point a Rexx routine's
+/// body would run. `sent` is the message that runs it and that message's own
+/// arguments, which a routine run to its end here lists as a frame of its own;
+/// an empty name for none.
 fn begin_routine(
     interp: &mut Interp,
     receiver: ObjRef,
@@ -644,12 +624,10 @@ fn begin_routine(
     let Some(record) = interp.executable_sources.get(&receiver).copied() else {
         return Err(Loud::unrecorded_executable().into());
     };
-    // A library routine runs under its own table spelling, which is the
-    // name `RoutineClass::callRexx` passes
-    // (`interpreter/classes/RoutineClass.cpp:205-211`): measured, `r~call(1,
-    // 2, 3)` over `RxCalcSqrt` is reported under `Compiled routine
-    // "RxCalcSqrt".` whether a directive or `loadExternalRoutine` answered
-    // `r`.
+    // A library routine runs under its own table spelling, which is the name
+    // `Routine~call` passes: measured, `r~call(1, 2, 3)` over `RxCalcSqrt` is
+    // reported under `Compiled routine "RxCalcSqrt".` whether a directive or
+    // an external-routine load answered `r`.
     let code = match (record.source, record.routine) {
         (crate::ExecutableSource::Loaded { code }, _) => Some(code),
         (_, Some((program, directive))) => {

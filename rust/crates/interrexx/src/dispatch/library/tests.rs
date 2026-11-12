@@ -129,9 +129,8 @@ fn a_search_directory_written_after_the_start_is_not_searched() {
     ));
 }
 
-/// A name that resolved to nothing is not held, so the next ask opens
-/// again: `PackageManager::loadLibrary` removes a package whose load
-/// answered false (`interpreter/package/PackageManager.cpp:240-244`).
+/// A name that resolved to nothing is not held, so the next ask opens again: a
+/// failed library load is removed from the registry.
 #[test]
 fn a_name_that_resolves_to_nothing_is_not_held() {
     let mut interp = Interp::new();

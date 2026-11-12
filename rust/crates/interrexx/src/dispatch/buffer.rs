@@ -16,8 +16,7 @@ use super::{
 /// `MutableBuffer`'s instance methods. Chained into `ObjectModel::build`
 /// beside [`super::NATIVE_METHODS`].
 pub(super) static NATIVE_METHODS: &[(&str, &str, Arity, NativeMethod)] = &[
-    // `MutableBuffer`'s rows in `memory/Setup.cpp:1416`-`:1479`, each at its
-    // declared count.
+    // `MutableBuffer`'s rows, each at its declared count.
     (
         "MutableBuffer",
         "[]",
@@ -326,9 +325,8 @@ pub(super) static NATIVE_METHODS: &[(&str, &str, Arity, NativeMethod)] = &[
     ),
 ];
 
-/// `MutableBuffer~new(string, size, ...)`: an instance carrying the string
-/// and the capacities `MutableBuffer::newRexx` derives from its arguments
-/// (`classes/MutableBufferClass.cpp:90`): `default_size` is the second
+/// `MutableBuffer~new(string, size, ...)`: an instance carrying the string and
+/// the capacities derived from the arguments: `default_size` is the second
 /// argument or `DEFAULT_BUFFER_LENGTH`, and the capacity is that or the
 /// string's length, whichever is larger.
 pub(super) fn native_mutable_buffer_new(
@@ -370,7 +368,6 @@ pub(super) fn native_mutable_buffer_new(
     super::begin_init(interp, object, &rest)
 }
 
-/// `MutableBuffer::DEFAULT_BUFFER_LENGTH` (`classes/MutableBufferClass.hpp:150`).
 const BUFFER_DEFAULT_LENGTH: usize = 256;
 
 /// What a receiver with no buffer state is not.
@@ -392,7 +389,6 @@ fn buffer_state_mut(interp: &mut Interp, receiver: ObjRef) -> Result<&mut Buffer
         .ok_or_else(|| Loud::receiver_class(NOT_A_BUFFER).into())
 }
 
-/// `MutableBuffer::lengthRexx` (`classes/MutableBufferClass.cpp:310`).
 fn native_mutable_buffer_length(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -403,7 +399,6 @@ fn native_mutable_buffer_length(
     Ok(Some(interp.counted(length)))
 }
 
-/// `MutableBuffer::getBufferSize` (`classes/MutableBufferClass.hpp:91`).
 fn native_mutable_buffer_getbuffersize(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -414,9 +409,7 @@ fn native_mutable_buffer_getbuffersize(
     Ok(Some(interp.counted(capacity)))
 }
 
-/// `MutableBuffer~string`, `RexxObject::makeStringRexx` reaching
-/// `MutableBuffer::stringValue` (`classes/MutableBufferClass.cpp:740`): a
-/// fresh string of the contents.
+/// `MutableBuffer~string`: a fresh string of the contents.
 fn native_mutable_buffer_string(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -429,11 +422,8 @@ fn native_mutable_buffer_string(
     Ok(Some(interp.text_built(out)))
 }
 
-/// `MutableBuffer~makeString`, `RexxObject::makeStringRexx`
-/// (`classes/ObjectClass.cpp:2846`) reaching `MutableBuffer::makeString`
-/// (`classes/MutableBufferClass.cpp:717`): a fresh string of the contents.
-/// `Setup.cpp:1446` and `:1473` bind that one C++ entry under both `String`
-/// and `makeString`.
+/// `MutableBuffer~makeString`: a fresh string of the contents. One entry is
+/// bound under both `String` and `makeString`.
 fn native_mutable_buffer_makestring(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -446,7 +436,6 @@ fn native_mutable_buffer_makestring(
     Ok(Some(interp.text_built(out)))
 }
 
-/// `MutableBuffer::endsWithRexx` (`classes/MutableBufferClass.cpp:1569`).
 fn native_mutable_buffer_endswith(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -460,7 +449,6 @@ fn native_mutable_buffer_endswith(
     Ok(Some(interp.counted(usize::from(answer))))
 }
 
-/// `MutableBuffer::caselessEndsWithRexx` (`classes/MutableBufferClass.cpp:1590`):
 /// `ENDSWITH`'s region compare, folded, an empty `match` likewise `0`.
 fn native_mutable_buffer_caselessendswith(
     interp: &mut Interp,
@@ -475,8 +463,7 @@ fn native_mutable_buffer_caselessendswith(
     Ok(Some(interp.counted(usize::from(answer))))
 }
 
-/// `MutableBuffer::appendRexx` (`classes/MutableBufferClass.cpp:323`): every
-/// argument a required string, appended in turn; answers the receiver.
+/// Every argument a required string, appended in turn; answers the receiver.
 fn native_mutable_buffer_append(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -500,9 +487,8 @@ fn native_mutable_buffer_append(
     Ok(Some(receiver))
 }
 
-/// `MutableBuffer::mydelete` (`classes/MutableBufferClass.cpp:647`): the
-/// position defaults to 1 and the length to the rest of the contents, and a
-/// position past them deletes nothing; answers the receiver.
+/// The position defaults to 1 and the length to the rest of the contents, and
+/// a position past them deletes nothing; answers the receiver.
 fn buffer_delete(
     interp: &mut Interp,
     receiver: ObjRef,
@@ -536,8 +522,8 @@ fn native_mutable_buffer_delete(
     buffer_delete(interp, receiver, args)
 }
 
-/// `MutableBuffer::setBufferSize` (`classes/MutableBufferClass.cpp:679`),
-/// whose rule [`BufferState::set_buffer_size`] carries; answers the receiver.
+/// `MutableBuffer~setBufferSize`, whose rule [`BufferState::set_buffer_size`]
+/// carries; answers the receiver.
 fn native_mutable_buffer_setbuffersize(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -556,9 +542,8 @@ fn native_mutable_buffer_setbuffersize(
     Ok(Some(receiver))
 }
 
-/// `MutableBuffer::setTextRexx` (`classes/MutableBufferClass.cpp:355`)
-/// reaching `setText` (`:369`): the contents become the argument's; answers
-/// the receiver.
+/// `MutableBuffer~setText`: the contents become the argument's; answers the
+/// receiver.
 fn native_mutable_buffer_settext(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -647,8 +632,7 @@ pub(super) fn strip_arguments(
 }
 
 /// `EQUALS`'s and `CASELESSEQUALS`'s one operand through the required-string
-/// protocol, or `None` for `.nil`, which no string equals
-/// (`RexxString::primitiveIsEqual`, `classes/StringClass.cpp:677`).
+/// protocol, or `None` for `.nil`, which no string equals.
 pub(super) fn equals_argument(
     interp: &mut Interp,
     args: &[Option<ObjRef>],
@@ -705,8 +689,7 @@ pub(super) fn pad_arguments(
     Ok((width, pad))
 }
 
-/// `COPIES`'s count: `nonNegativeArgument` (`classes/StringClassMisc.cpp:288`),
-/// required.
+/// `COPIES`'s count: a required non-negative whole number.
 pub(super) fn copies_argument(
     interp: &mut Interp,
     args: &[Option<ObjRef>],
@@ -730,8 +713,7 @@ pub(super) fn verify_arguments(
     Ok((reference, option, start, range))
 }
 
-/// `MutableBuffer::substr` (`classes/MutableBufferClass.cpp:770`),
-/// `StringUtil::substr`'s padding form.
+/// `MutableBuffer~substr`, in the string method's padding form.
 fn native_mutable_buffer_substr(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -745,10 +727,10 @@ fn native_mutable_buffer_substr(
     Ok(Some(interp.text_built(out)))
 }
 
-/// `MutableBuffer::brackets` (`classes/MutableBufferClass.cpp:787`),
-/// `StringUtil::substr`'s two-argument form: the length defaults to one
-/// byte, is capped at the end of the contents, and nothing pads -- measured,
-/// oracle rc 0: `.MutableBuffer~new('abcabc')[2]` is `b` and `[5, 10]` is `bc`.
+/// `MutableBuffer~[]`, in the string method's two-argument form: the length
+/// defaults to one byte, is capped at the end of the contents, and nothing
+/// pads -- measured, oracle rc 0: `.MutableBuffer~new('abcabc')[2]` is `b` and
+/// `[5, 10]` is `bc`.
 fn native_mutable_buffer_brackets(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -764,8 +746,8 @@ fn native_mutable_buffer_brackets(
     Ok(Some(interp.text_built(out)))
 }
 
-/// `StringUtil::posRexx`'s argument handling: the needle, a 1-based start
-/// defaulting to the first byte, and an optional range.
+/// The argument handling of `POS`: the needle, a 1-based start defaulting to
+/// the first byte, and an optional range.
 pub(super) fn forward_search_arguments(
     interp: &mut Interp,
     args: &[Option<ObjRef>],
@@ -789,9 +771,9 @@ pub(super) fn forward_search(
     scan(haystack, needle, start - 1, range)
 }
 
-/// `StringUtil::lastPosRexx`'s argument handling: the needle, and a start and
-/// range that each default to the receiver's whole length rather than to a
-/// fixed number, so both stay `None` here.
+/// The argument handling of `LASTPOS`: the needle, and a start and range that
+/// each default to the receiver's whole length rather than to a fixed number,
+/// so both stay `None` here.
 pub(super) fn backward_search_arguments(
     interp: &mut Interp,
     args: &[Option<ObjRef>],
@@ -821,9 +803,7 @@ pub(super) fn backward_search(
 }
 
 /// [`forward_search`] over a buffer's contents, for the `MutableBuffer` rows
-/// that answer a position: `POS` and `CONTAINS`
-/// (`classes/MutableBufferClass.cpp:803`, `:819`) and their caseless twins
-/// (`:851`, `:869`).
+/// that answer a position: `POS` and `CONTAINS` and their caseless twins.
 fn buffer_pos(
     interp: &mut Interp,
     receiver: ObjRef,
@@ -837,7 +817,6 @@ fn buffer_pos(
     Ok(found)
 }
 
-/// `MutableBuffer::posRexx` (`classes/MutableBufferClass.cpp:803`).
 fn native_mutable_buffer_pos(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -848,7 +827,6 @@ fn native_mutable_buffer_pos(
     Ok(Some(interp.counted(found)))
 }
 
-/// `MutableBuffer::containsRexx` (`classes/MutableBufferClass.cpp:819`).
 fn native_mutable_buffer_contains(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -859,7 +837,6 @@ fn native_mutable_buffer_contains(
     Ok(Some(interp.counted(usize::from(found > 0))))
 }
 
-/// `MutableBuffer::caselessPos` (`classes/MutableBufferClass.cpp:851`).
 fn native_mutable_buffer_caselesspos(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -875,7 +852,6 @@ fn native_mutable_buffer_caselesspos(
     Ok(Some(interp.counted(found)))
 }
 
-/// `MutableBuffer::caselessContains` (`classes/MutableBufferClass.cpp:869`).
 fn native_mutable_buffer_caselesscontains(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -891,9 +867,8 @@ fn native_mutable_buffer_caselesscontains(
     Ok(Some(interp.counted(usize::from(found > 0))))
 }
 
-/// `MutableBuffer::lastPos` (`classes/MutableBufferClass.cpp:835`) through
-/// `StringUtil::lastPosRexx`: the start and the range each default to the
-/// whole length.
+/// `MutableBuffer~lastPos`: the start and the range each default to the whole
+/// length.
 fn native_mutable_buffer_lastpos(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -913,7 +888,6 @@ fn native_mutable_buffer_lastpos(
     Ok(Some(interp.counted(found)))
 }
 
-/// `MutableBuffer::caselessLastPos` (`classes/MutableBufferClass.cpp:890`):
 /// `LASTPOS`'s scan and defaults, the compare folded.
 fn native_mutable_buffer_caselesslastpos(
     interp: &mut Interp,
@@ -934,7 +908,6 @@ fn native_mutable_buffer_caselesslastpos(
     Ok(Some(interp.counted(found)))
 }
 
-/// `MutableBuffer::countStrRexx` (`classes/MutableBufferClass.cpp:940`).
 fn native_mutable_buffer_countstr(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -948,7 +921,6 @@ fn native_mutable_buffer_countstr(
     Ok(Some(interp.counted(count)))
 }
 
-/// `MutableBuffer::caselessCountStrRexx` (`classes/MutableBufferClass.cpp:955`).
 fn native_mutable_buffer_caselesscountstr(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -963,9 +935,8 @@ fn native_mutable_buffer_caselesscountstr(
     Ok(Some(interp.counted(count)))
 }
 
-/// `MutableBuffer::verify` (`classes/MutableBufferClass.cpp:1744`) through
-/// `StringUtil::verify`, which builds an integer on every path -- a start past
-/// the end included, where the builtin answers text.
+/// `MutableBuffer~verify`: builds an integer on every path -- a start past the
+/// end included, where the builtin answers text.
 fn native_mutable_buffer_verify(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -980,7 +951,6 @@ fn native_mutable_buffer_verify(
     Ok(Some(interp.counted(answer)))
 }
 
-/// `MutableBuffer::subWord` (`classes/MutableBufferClass.cpp:1758`).
 fn native_mutable_buffer_subword(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1019,9 +989,8 @@ pub(super) fn array_of_texts(interp: &mut Interp, pieces: Vec<Vec<u8>>) -> Resul
     Ok(object)
 }
 
-/// `MutableBuffer::subWords` (`classes/MutableBufferClass.cpp:1778`) over
-/// `StringUtil::subWords` (`classes/support/StringUtil.cpp:1405`): an
-/// **`Array`** of the words from `position`, at most `count` of them.
+/// `MutableBuffer~subWords`: an **`Array`** of the words from `position`, at
+/// most `count` of them.
 fn native_mutable_buffer_subwords(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1040,10 +1009,8 @@ fn native_mutable_buffer_subwords(
     Ok(Some(array_of_texts(interp, words)?))
 }
 
-/// `MutableBuffer::makeArrayRexx` (`classes/MutableBufferClass.cpp:927`) over
-/// `StringUtil::makearray` (`classes/support/StringUtil.cpp:545`): an
-/// `Array` of the contents split on line ends, or on `separator` where one is
-/// given.
+/// `MutableBuffer~makeArray`: an `Array` of the contents split on line ends,
+/// or on `separator` where one is given.
 fn native_mutable_buffer_makearray(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1060,7 +1027,6 @@ fn native_mutable_buffer_makearray(
     Ok(Some(array_of_texts(interp, pieces)?))
 }
 
-/// `MutableBuffer::word` (`classes/MutableBufferClass.cpp:1791`).
 fn native_mutable_buffer_word(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1075,7 +1041,6 @@ fn native_mutable_buffer_word(
     Ok(Some(interp.text_built(out)))
 }
 
-/// `MutableBuffer::wordIndex` (`classes/MutableBufferClass.cpp:1805`).
 fn native_mutable_buffer_wordindex(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1089,7 +1054,6 @@ fn native_mutable_buffer_wordindex(
     Ok(Some(interp.counted(index)))
 }
 
-/// `MutableBuffer::wordLength` (`classes/MutableBufferClass.cpp:1820`).
 fn native_mutable_buffer_wordlength(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1103,7 +1067,6 @@ fn native_mutable_buffer_wordlength(
     Ok(Some(interp.counted(length)))
 }
 
-/// `MutableBuffer::words` (`classes/MutableBufferClass.cpp:1830`).
 fn native_mutable_buffer_words(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1114,7 +1077,7 @@ fn native_mutable_buffer_words(
     Ok(Some(interp.counted(count)))
 }
 
-/// `StringUtil::wordPos`'s argument handling: the phrase, and a 1-based start
+/// The argument handling of `WORDPOS`: the phrase, and a 1-based start
 /// defaulting to the first word.
 pub(super) fn wordpos_arguments(
     interp: &mut Interp,
@@ -1125,9 +1088,8 @@ pub(super) fn wordpos_arguments(
     Ok((phrase, start))
 }
 
-/// [`wordpos_arguments`]' search over a buffer's contents, shared by
-/// `WORDPOS` and `CONTAINSWORD` (`classes/MutableBufferClass.cpp:1845`,
-/// `:1859`) and their caseless twins (`:1873`, `:1887`).
+/// [`wordpos_arguments`]' search over a buffer's contents, shared by `WORDPOS`
+/// and `CONTAINSWORD` and their caseless twins.
 fn buffer_wordpos(
     interp: &mut Interp,
     receiver: ObjRef,
@@ -1141,7 +1103,6 @@ fn buffer_wordpos(
     Ok(found)
 }
 
-/// `MutableBuffer::wordPos` (`classes/MutableBufferClass.cpp:1845`).
 fn native_mutable_buffer_wordpos(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1152,7 +1113,6 @@ fn native_mutable_buffer_wordpos(
     Ok(Some(interp.counted(found)))
 }
 
-/// `MutableBuffer::containsWord` (`classes/MutableBufferClass.cpp:1859`).
 fn native_mutable_buffer_containsword(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1163,7 +1123,6 @@ fn native_mutable_buffer_containsword(
     Ok(Some(interp.counted(usize::from(found > 0))))
 }
 
-/// `MutableBuffer::caselessWordPos` (`classes/MutableBufferClass.cpp:1873`).
 fn native_mutable_buffer_caselesswordpos(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1179,7 +1138,6 @@ fn native_mutable_buffer_caselesswordpos(
     Ok(Some(interp.counted(found)))
 }
 
-/// `MutableBuffer::caselessContainsWord` (`classes/MutableBufferClass.cpp:1887`).
 fn native_mutable_buffer_caselesscontainsword(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1217,7 +1175,6 @@ pub(super) fn ends_with(haystack: &[u8], needle: &[u8], matches: fn(&[u8], &[u8]
             .is_some_and(|at| matches(&haystack[at..], needle))
 }
 
-/// `MutableBuffer::startsWithRexx` (`classes/MutableBufferClass.cpp:1541`):
 /// `ENDSWITH`'s twin, an empty `match` likewise `0`.
 fn native_mutable_buffer_startswith(
     interp: &mut Interp,
@@ -1232,7 +1189,6 @@ fn native_mutable_buffer_startswith(
     Ok(Some(interp.counted(usize::from(answer))))
 }
 
-/// `MutableBuffer::caselessStartsWithRexx` (`classes/MutableBufferClass.cpp:1555`):
 /// `STARTSWITH`'s region compare, folded, an empty `match` likewise `0`.
 fn native_mutable_buffer_caselessstartswith(
     interp: &mut Interp,
@@ -1247,9 +1203,8 @@ fn native_mutable_buffer_caselessstartswith(
     Ok(Some(interp.counted(usize::from(answer))))
 }
 
-/// `MutableBuffer::match` (`classes/MutableBufferClass.cpp:1460`): a start
-/// past the contents is `0` before `other` is looked at -- measured, oracle
-/// rc 0: `.MutableBuffer~new('abcabc')~match(99, .nil)` is `0`.
+/// A start past the contents is `0` before `other` is looked at -- measured,
+/// oracle rc 0: `.MutableBuffer~new('abcabc')~match(99, .nil)` is `0`.
 fn native_mutable_buffer_match(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1266,9 +1221,8 @@ fn native_mutable_buffer_match(
     Ok(Some(interp.counted(usize::from(answer?))))
 }
 
-/// `MutableBuffer::caselessMatch` (`classes/MutableBufferClass.cpp:1505`):
-/// `MATCH`'s scan, `primitiveCaselessMatch` (`:1642`) the only difference,
-/// and the same order -- measured, oracle rc 0:
+/// `MATCH`'s scan, the caseless comparison the only difference, and the same
+/// order -- measured, oracle rc 0:
 /// `.MutableBuffer~new('aBcaBc')~caselessMatch(99, .nil)` is `0`.
 fn native_mutable_buffer_caselessmatch(
     interp: &mut Interp,
@@ -1316,8 +1270,8 @@ pub(super) fn match_region_arguments(
 }
 
 /// [`match_region_arguments`]' comparison, once the receiver's bytes are in
-/// hand: `primitiveMatch` (`classes/MutableBufferClass.cpp:1615`) compares the
-/// two regions, and `matches` is what separates the two spellings.
+/// hand: the two regions are compared, and `matches` is what separates the two
+/// spellings.
 pub(super) fn match_region_over(
     haystack: &[u8],
     start: usize,
@@ -1354,9 +1308,9 @@ fn match_region(
     ))
 }
 
-/// `MutableBuffer::matchChar` (`classes/MutableBufferClass.cpp:1668`): a
-/// position past the contents is `0` before the set is looked at -- measured,
-/// oracle rc 0: `.MutableBuffer~new('abcabc')~matchChar(99, .nil)` is `0`.
+/// A position past the contents is `0` before the set is looked at --
+/// measured, oracle rc 0: `.MutableBuffer~new('abcabc')~matchChar(99, .nil)`
+/// is `0`.
 fn native_mutable_buffer_matchchar(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1377,7 +1331,6 @@ fn native_mutable_buffer_matchchar(
     Ok(Some(interp.counted(usize::from(answer))))
 }
 
-/// `MutableBuffer::caselessMatchChar` (`classes/MutableBufferClass.cpp:1705`):
 /// `MATCHCHAR`'s scan with both sides folded, and the same order -- measured,
 /// oracle rc 0: `.MutableBuffer~new('aBcaBc')~caselessMatchChar(99, .nil)` is
 /// `0`.
@@ -1401,8 +1354,7 @@ fn native_mutable_buffer_caselessmatchchar(
     Ok(Some(interp.counted(usize::from(answer))))
 }
 
-/// `MutableBuffer::subchar` (`classes/MutableBufferClass.cpp:914`): the one
-/// byte at the position, or the null string past the end.
+/// The one byte at the position, or the null string past the end.
 fn native_mutable_buffer_subchar(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1443,9 +1395,9 @@ fn grow_buffer(
 }
 
 /// The receiver's state with room for `length` bytes in all
-/// ([`BufferState::set_capacity`], `MutableBuffer::setCapacity`), the growth
-/// charged as [`grow_buffer`] charges it. `overlay`, `replaceAt`, `[]=` and
-/// the two `changeStr`s size by this.
+/// ([`BufferState::set_capacity`]), the growth charged as [`grow_buffer`]
+/// charges it. `overlay`, `replaceAt`, `[]=` and the two `changeStr`s size by
+/// this.
 fn grow_buffer_to(
     interp: &mut Interp,
     receiver: ObjRef,
@@ -1597,9 +1549,9 @@ pub(super) fn replace_at_bytes(
     Ok(())
 }
 
-/// `MutableBuffer::insert` (`classes/MutableBufferClass.cpp:420`): the
-/// position is a 0-based count defaulting to 0, a position past the contents
-/// pads the gap, and the length pads the insertion; answers the receiver.
+/// The position is a 0-based count defaulting to 0, a position past the
+/// contents pads the gap, and the length pads the insertion; answers the
+/// receiver.
 fn native_mutable_buffer_insert(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1618,9 +1570,8 @@ fn native_mutable_buffer_insert(
     Ok(Some(receiver))
 }
 
-/// `MutableBuffer::overlay` (`classes/MutableBufferClass.cpp:493`): the
-/// position is 1-based and defaults to 1, and the capacity is raised to the
-/// position plus the overlay length rather than to the result's length;
+/// The position is 1-based and defaults to 1, and the capacity is raised to
+/// the position plus the overlay length rather than to the result's length;
 /// answers the receiver.
 fn native_mutable_buffer_overlay(
     interp: &mut Interp,
@@ -1639,9 +1590,8 @@ fn native_mutable_buffer_overlay(
     Ok(Some(receiver))
 }
 
-/// `MutableBuffer::replaceAt` (`classes/MutableBufferClass.cpp:570`): the
-/// range from the 1-based position is excised and the replacement spliced in
-/// whole, so the contents shift where the two lengths differ; answers the
+/// The range from the 1-based position is excised and the replacement spliced
+/// in whole, so the contents shift where the two lengths differ; answers the
 /// receiver.
 fn buffer_replace_at(
     interp: &mut Interp,
@@ -1684,9 +1634,8 @@ fn native_mutable_buffer_bracketsequal(
     buffer_replace_at(interp, receiver, args)
 }
 
-/// `MutableBuffer::changeStr` (`classes/MutableBufferClass.cpp:971`): answers
-/// the receiver, and raises the capacity only on the branch where the
-/// replacement is longer than the needle (`:1081`).
+/// Answers the receiver, and raises the capacity only on the branch where the
+/// replacement is longer than the needle.
 fn native_mutable_buffer_changestr(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1710,12 +1659,10 @@ fn native_mutable_buffer_changestr(
     Ok(Some(receiver))
 }
 
-/// `MutableBuffer::caselessChangeStr` (`classes/MutableBufferClass.cpp:1136`):
 /// `CHANGESTR`'s three length branches with the search folded, and the same
-/// capacity rule -- only the growing branch calls `setCapacity`, with the
-/// result's own length. Measured, oracle rc 0:
-/// `.MutableBuffer~new('aBc', 10)~caselessChangeStr('B', copies('q', 40))`
-/// reads `42 42`.
+/// capacity rule -- only the growing branch sets the capacity, with the
+/// result's own length. Measured, oracle rc 0: `.MutableBuffer~new('aBc',
+/// 10)~caselessChangeStr('B', copies('q', 40))` reads `42 42`.
 fn native_mutable_buffer_caselesschangestr(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1746,10 +1693,9 @@ fn native_mutable_buffer_caselesschangestr(
     Ok(Some(receiver))
 }
 
-/// `MutableBuffer::upper` and `::lower` (`classes/MutableBufferClass.cpp:1341`,
-/// `:1301`), and `::translate`'s no-table form: the bytes within the range
-/// case-shifted in place, with `first` the argument index the position is
-/// read from; answers the receiver.
+/// `MutableBuffer~upper`, `~lower` and the no-table form of `~translate`: the
+/// bytes within the range case-shifted in place, with `first` the argument
+/// index the position is read from; answers the receiver.
 fn buffer_case_shift(
     interp: &mut Interp,
     receiver: ObjRef,
@@ -1783,10 +1729,10 @@ fn native_mutable_buffer_lower(
     buffer_case_shift(interp, receiver, args, 0, u8::to_ascii_lowercase)
 }
 
-/// `MutableBuffer::translate` (`classes/MutableBufferClass.cpp:1382`): each
-/// byte within the range that the input table holds -- or every byte, read as
-/// its own index, where that table is the null string -- becomes the output
-/// table's byte at that index, or the pad past its end; answers the receiver.
+/// Each byte within the range that the input table holds -- or every byte,
+/// read as its own index, where that table is the null string -- becomes the
+/// output table's byte at that index, or the pad past its end; answers the
+/// receiver.
 fn native_mutable_buffer_translate(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1809,9 +1755,8 @@ fn native_mutable_buffer_translate(
     Ok(Some(receiver))
 }
 
-/// `MutableBuffer::space` (`classes/MutableBufferClass.cpp:1962`): the words
-/// rejoined by the pad, and the capacity raised from the single-blank form's
-/// length rather than from the original (`:2031`, `:2038`); answers the
+/// The words rejoined by the pad, and the capacity raised from the
+/// single-blank form's length rather than from the original; answers the
 /// receiver.
 fn native_mutable_buffer_space(
     interp: &mut Interp,
@@ -1832,9 +1777,8 @@ fn native_mutable_buffer_space(
     Ok(Some(receiver))
 }
 
-/// `MutableBuffer::delWord` (`classes/MutableBufferClass.cpp:1901`): the words
-/// from the 1-based position, with the blanks after the last of them, removed
-/// in place; answers the receiver.
+/// The words from the 1-based position, with the blanks after the last of
+/// them, removed in place; answers the receiver.
 fn native_mutable_buffer_delword(
     interp: &mut Interp,
     _cleared: Cleared,

@@ -105,9 +105,8 @@ pub(crate) fn standard_stream(
     let mut state = StreamState::new(name.to_vec(), name.into());
     state.standard = Some(which);
     state.status = StreamStatus::Ready;
-    // `.STDOUT` and `.STDERR` are opened `NOBUFFER` (`CoreClasses.orx`'s
-    // `LocalServer~init`), where a program's own `.Stream~new('STDOUT')` is
-    // buffered.
+    // `.STDOUT` and `.STDERR` are opened `NOBUFFER` in the oracle's class
+    // library, where a program's own `.Stream~new('STDOUT')` is buffered.
     state.mode.nobuffer = true;
     state.local = true;
     let Some(held) = interp.heap.get_mut(object) else {
@@ -292,9 +291,8 @@ pub(super) fn qualify(
 }
 
 /// The errno a failed open reports when there is nothing to open. A directory
-/// opens on unix and `SysFile::open` closes it again and substitutes this
-/// (`common/platform/unix/SysFile.cpp:139`-`:147`), so a directory answers
-/// `ERROR:2` rather than `ERROR:21`.
+/// opens on unix and `SysFile::open` closes it again and substitutes this, so
+/// a directory answers `ERROR:2` rather than `ERROR:21`.
 const ENOENT: i32 = 2;
 
 /// Puts the stream in `status` and raises `NOTREADY` for it, answering
@@ -318,8 +316,7 @@ fn notready(
 }
 
 /// One token of an options string: runs of non-blanks, except that `=`, `+`,
-/// `-` and `<` are single-character tokens and also end the run before them
-/// (`streamLibrary/StreamCommandParser.cpp:56`-`:99`).
+/// `-` and `<` are single-character tokens and also end the run before them.
 struct Tokens<'a> {
     source: &'a [u8],
     offset: usize,
@@ -358,7 +355,7 @@ impl<'a> Tokens<'a> {
         Some(&self.source[self.offset..self.offset + self.length])
     }
 
-    /// `previousToken`: the next scan re-reads the token just returned.
+    /// The previous token: the next scan re-reads the token just returned.
     fn back(&mut self) {
         self.length = 0;
     }
@@ -390,10 +387,10 @@ enum OpenOption {
 }
 
 /// The table in its own order with each entry's minimum abbreviation: the
-/// first entry whose leading bytes match caselessly wins, so `re` reaches
-/// READ rather than REPLACE and is then too short for it (`StreamNative.cpp`'s
-/// `tts`). The three SHARE options share a row because every `RX_SH_*` is `0`
-/// on unix -- they are parsed for their conflicts and change no open.
+/// first entry whose leading bytes match caselessly wins, so `re` reaches READ
+/// rather than REPLACE and is then too short for it. The three SHARE options
+/// share a row because every share flag is `0` on unix -- they are parsed for
+/// their conflicts and change no open.
 const OPEN_TABLE: &[(&[u8], usize, OpenOption)] = &[
     (b"READ", 3, OpenOption::Read),
     (b"WRITE", 1, OpenOption::Write),
@@ -544,7 +541,7 @@ pub(super) fn open(
     state.mode = interrexx_core::OpenMode::default();
     state.status = StreamStatus::Unknown;
     // A `HANDLE:n` stream takes the options a file does and reports its name
-    // as written from here on (`StreamNative.cpp`'s `handleOpen`).
+    // as written from here on.
     if state.handle.is_some() {
         state.qualified = state.name.as_slice().into();
         if parse_open_options(&options).is_err() {
@@ -554,9 +551,8 @@ pub(super) fn open(
         return Ok(Some(interp.text(b"READY:")));
     }
     // The three standard streams take only NOBUFFER, found anywhere in the
-    // options, and are ready without touching the file system
-    // (`StreamNative.cpp`'s `openStd` and `hasNoBufferOption`). `.local`'s
-    // stay unbuffered: they write where `SAY` and trace output go.
+    // options, and are ready without touching the file system. `.local`'s stay
+    // unbuffered: they write where `SAY` and trace output go.
     if state.standard.is_some() {
         state.mode.nobuffer = state.local
             || options
@@ -619,8 +615,8 @@ pub(super) fn open(
     let opened = match opening.open(&path) {
         Ok(file) => file,
         // An explicit WRITE retries write-only, so a file that grants write
-        // and not read opens (`streamOpen`, bug 3274050). The retry is the
-        // oracle's `WR_CREAT`, which does not truncate even under REPLACE.
+        // and not read opens. The retry is the oracle's create-for-write open,
+        // which does not truncate even under REPLACE.
         Err(_) if parsed.write_only => {
             match std::fs::OpenOptions::new()
                 .write(true)
@@ -635,9 +631,8 @@ pub(super) fn open(
         }
         Err(error) => return open_failed(interp, receiver, &error),
     };
-    // A directory opens on unix and is then rejected as if it had not
-    // (`common/platform/unix/SysFile.cpp:139`-`:147`), which is why a
-    // directory answers `ERROR:2` and not `ERROR:21`.
+    // A directory opens on unix and is then rejected as if it had not, which
+    // is why a directory answers `ERROR:2` and not `ERROR:21`.
     let metadata = opened.metadata().ok();
     if metadata.as_ref().is_none_or(std::fs::Metadata::is_dir) {
         let answer = format!("ERROR:{ENOENT}").into_bytes();
@@ -645,8 +640,8 @@ pub(super) fn open(
     }
     let size = metadata.map_or(0, |meta| meta.len());
     let transient = is_transient(&opened);
-    // `checkStreamType`: a BINARY open with no RECLENGTH takes the file's own
-    // size as the record, and a size of zero is the bare 93. A transient
+    // The stream-type check: a BINARY open with no RECLENGTH takes the file's
+    // own size as the record, and a size of zero is the bare 93. A transient
     // stream's record is one byte.
     if parsed.record_based && parsed.record_length == 0 {
         if transient {
@@ -730,9 +725,9 @@ fn ensure_open(
     let path = qualified_path(interp, receiver)?;
     let mut opening = std::fs::OpenOptions::new();
     // **Never truncates.** An implicit open creates a missing file but keeps
-    // what an existing one holds -- `implicitOpen` uses `RDWR_CREAT` with no
-    // `O_TRUNC` -- which is what lets a `lineout` to an existing file append
-    // at the end instead of emptying it.
+    // what an existing one holds -- it opens read-write with create and no
+    // truncate -- which is what lets a `lineout` to an existing file append at
+    // the end instead of emptying it.
     opening.read(true).write(true).truncate(false);
     if for_write {
         opening.create(true);
@@ -745,7 +740,7 @@ fn ensure_open(
                 ..interrexx_core::OpenMode::default()
             },
         ),
-        // `O_WRONLY` alone, as `implicitOpen`'s own fallback is: it creates
+        // `O_WRONLY` alone, as the implicit open's own fallback is: it creates
         // nothing, because the read-write attempt above already carried
         // `O_CREAT` for a write, so reaching here means the open failed for
         // some reason other than the file being absent.
@@ -778,7 +773,7 @@ fn ensure_open(
     let size = size_of(&opened);
     let transient = is_transient(&opened);
     // A stream that can write writes at the end, whichever operation opened
-    // it. A read-only or transient one keeps `implicitOpen`'s character 1.
+    // it. A read-only or transient one keeps the implicit open's character 1.
     let write_position = if mode.read_only || transient {
         1
     } else {
@@ -1389,7 +1384,7 @@ pub(super) fn arrayin(
     Ok(None)
 }
 
-/// Moves the read position to the start of `line` (`setLineReadPosition`).
+/// Moves the read position to the start of `line`.
 fn seek_to_line(interp: &mut Interp, receiver: ObjRef, line: i64) -> Result<(), Failure> {
     let state = require_mut(interp, receiver)?;
     let record_length = if state.mode.record_based {
@@ -1523,9 +1518,9 @@ pub(super) fn lineout(
     let Some(open) = state.open.as_mut() else {
         return Ok(Some(interp.text(b"1")));
     };
-    // `setLineWritePosition`: a line number names a line, not a character, so
-    // it goes through the same walk `SEEK ... LINE` uses. Writing at the number
-    // itself overwrites whatever happens to sit at that offset.
+    // The line write position: a line number names a line, not a character, so
+    // it goes through the same walk `SEEK ... LINE` uses. Writing at the
+    // number itself overwrites whatever happens to sit at that offset.
     if let Some(line) = line {
         let record_length = if mode.record_based {
             mode.record_length
@@ -1775,7 +1770,7 @@ fn number_text(interp: &mut Interp, value: ObjRef) -> Result<Vec<u8>, Failure> {
 
 /// An optional position argument, marshalled as the native boundary's
 /// `int64_t`: anything that is not a whole number in its range is 88.907
-/// naming argument `which` (`NativeActivation::int64Value`).
+/// naming argument `which`.
 fn optional_position(
     interp: &mut Interp,
     value: Option<ObjRef>,
@@ -1808,9 +1803,8 @@ fn optional_position(
 }
 
 /// 88.922 for more arguments than the entry declares, raised after the
-/// declared ones convert: `NativeActivation::processArguments` converts each
-/// declared argument before it counts the rest, so `lineout('a', 'b', 'c')`
-/// is 88.907 on `'b'`.
+/// declared ones convert: each declared argument converts before the rest are
+/// counted, so `lineout('a', 'b', 'c')` is 88.907 on `'b'`.
 fn declared_only(args: &[Option<ObjRef>], arity: usize) -> Result<(), Failure> {
     if args.len() > arity {
         return Err(Raised::too_many_external_arguments(arity).into());
@@ -1836,7 +1830,7 @@ fn positive(position: i64) -> Result<u64, Failure> {
 }
 
 /// A whole-number argument that may be zero, marshalled as the native
-/// boundary's `size_t` (`NativeActivation::unsignedIntegerValue`).
+/// boundary's `size_t`.
 fn whole_number(interp: &mut Interp, value: ObjRef, which: usize) -> Result<u64, Failure> {
     let number = match value.decode() {
         Decoded::SmallInt(number) => u64::try_from(number).ok(),
@@ -1885,9 +1879,9 @@ struct Positioning {
     offset: Option<i64>,
 }
 
-/// `streamPosition`'s option table. **Every word takes one letter**, unlike
-/// OPEN's per-option minimums, so `r`, `w`, `c` and `l` all match; a bare
-/// number is the offset, and anything else fails.
+/// The position option table. **Every word takes one letter**, unlike OPEN's
+/// per-option minimums, so `r`, `w`, `c` and `l` all match; a bare number is
+/// the offset, and anything else fails.
 fn parse_positioning(options: &[u8]) -> Result<Positioning, ()> {
     let mut parsed = Positioning {
         style: SeekFrom::Start,
@@ -2022,7 +2016,7 @@ pub(super) fn position(
     // The implicit open comes after the flags and never creates the file: a
     // seek naming one that does not exist answers 0 and leaves state ERROR.
     // Asking for the read-shaped open is what selects that, because it is the
-    // `operation_nocreate` one whichever pointer is about to move.
+    // no-create operation whichever pointer is about to move.
     if !ensure_open(interp, receiver, false, b"0")? {
         return Ok(Some(interp.text(b"0")));
     }

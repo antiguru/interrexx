@@ -1,5 +1,5 @@
-//! `.RexxQueue`'s body (`classes/RexxQueueMethods.cpp`): each instance method reads the queue
-//! name from the receiver's `NAMED_QUEUE`, and each class method takes it as its argument.
+//! `.RexxQueue`'s body: each instance method reads the queue name from the
+//! receiver's `NAMED_QUEUE`, and each class method takes it as its argument.
 
 use std::time::Duration;
 

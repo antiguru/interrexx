@@ -67,7 +67,7 @@ fn slots_in_bucket(
     }
 }
 
-/// `RelationClass::allAt(index)`: every item under that index, newest first.
+/// `Relation~allAt(index)`: every item under that index, newest first.
 fn native_relation_all_at(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -77,8 +77,8 @@ fn native_relation_all_at(
     if !owns(interp, receiver) {
         return Err(not_this_task(interp, receiver, b"ALLAT"));
     }
-    // **93.903 and not 88.901.** `RelationClass`'s own methods take their
-    // index positionally where `HashCollection`'s take it as a named
+    // **93.903 and not 88.901.** `Relation`'s own methods take their index
+    // positionally where the other hash collections' take it as a named
     // argument: measured on a `.Relation~new`, `allAt()` and `removeAll()`
     // report `Missing argument in method; argument 1 is required.` where
     // `at()` and `remove()` report `Missing argument; argument index is
@@ -92,7 +92,7 @@ fn native_relation_all_at(
     Ok(Some(super::collection::array_of(interp, items)))
 }
 
-/// `RelationClass::allIndexRexx(item)`: every index whose item matches.
+/// `Relation~allIndex(item)`: every index whose item matches.
 fn native_relation_all_index(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -112,7 +112,7 @@ fn native_relation_all_index(
     Ok(Some(super::collection::array_of(interp, indexes)))
 }
 
-/// `RelationClass::uniqueIndexes`: each index once, in first-seen order.
+/// Each index once, in first-seen order.
 fn native_relation_unique_indexes(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -156,9 +156,9 @@ fn native_relation_unique_indexes(
     Ok(Some(super::collection::array_of(interp, unique)))
 }
 
-/// `RelationClass::itemsRexx([index])`: the whole count, or the count under
-/// one index. Measured, a relation holding `k -> v1`, `k -> v2` and `j -> w`
-/// answers `items` 3, `items('k')` 2 and `items('z')` 0.
+/// `Relation~items([index])`: the whole count, or the count under one index.
+/// Measured, a relation holding `k -> v1`, `k -> v2` and `j -> w` answers
+/// `items` 3, `items('k')` 2 and `items('z')` 0.
 fn native_relation_items(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -175,9 +175,9 @@ fn native_relation_items(
     Ok(Some(interp.counted(count)))
 }
 
-/// `RelationClass::removeAll(index)`: takes every entry under that index out
-/// and answers them as an array, newest first -- an empty `Array` for an
-/// index the relation does not hold.
+/// `Relation~removeAll(index)`: takes every entry under that index out and
+/// answers them as an array, newest first -- an empty `Array` for an index the
+/// relation does not hold.
 fn native_relation_remove_all(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -187,8 +187,8 @@ fn native_relation_remove_all(
     if !owns(interp, receiver) {
         return Err(not_this_task(interp, receiver, b"REMOVEALL"));
     }
-    // **93.903 and not 88.901.** `RelationClass`'s own methods take their
-    // index positionally where `HashCollection`'s take it as a named
+    // **93.903 and not 88.901.** `Relation`'s own methods take their index
+    // positionally where the other hash collections' take it as a named
     // argument: measured on a `.Relation~new`, `allAt()` and `removeAll()`
     // report `Missing argument in method; argument 1 is required.` where
     // `at()` and `remove()` report `Missing argument; argument index is
@@ -209,8 +209,8 @@ fn native_relation_remove_all(
     Ok(Some(super::collection::array_of(interp, removed)))
 }
 
-/// `RelationClass::supplierRexx([index])`: a supplier over the whole
-/// relation, or over one index's items.
+/// `Relation~supplier([index])`: a supplier over the whole relation, or over
+/// one index's items.
 fn native_relation_supplier(
     interp: &mut Interp,
     cleared: Cleared,
@@ -235,9 +235,9 @@ fn native_relation_supplier(
     super::collection::new_supplier(interp, items, indexes).map(Some)
 }
 
-/// `RelationClass::hasItemRexx(item [, index])`: whether the relation holds
-/// that item, optionally under that index. Measured, `hasItem('v1','k')` is
-/// 1 and `hasItem('v1','j')` is 0 for a relation holding `k -> v1`.
+/// `Relation~hasItem(item [, index])`: whether the relation holds that item,
+/// optionally under that index. Measured, `hasItem('v1','k')` is 1 and
+/// `hasItem('v1','j')` is 0 for a relation holding `k -> v1`.
 fn native_relation_has_item(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -264,9 +264,9 @@ fn native_relation_has_item(
         .map(|index| super::hash_of(interp, keys, index))
         .transpose()?;
     let store = store_of(interp, receiver)?;
-    // The active HashContents lookup keeps its contents through growth.
-    // These arrays are actually read after callbacks, even if expansion
-    // detached them from the receiver. EMPTY clears them in place.
+    // The active lookup keeps its hash store through growth. These arrays are
+    // actually read after callbacks, even if expansion detached them from the
+    // receiver. EMPTY clears them in place.
     for array in [store.indexes, store.items, store.next] {
         interp.roots.activity_mut().push_temp(array);
     }
@@ -308,8 +308,8 @@ fn native_relation_has_item(
     Ok(Some(crate::eval::logical(false)))
 }
 
-/// `RelationClass::removeItemRexx(item [, index])`: takes out the first entry
-/// holding that item, optionally under that index, and answers it.
+/// `Relation~removeItem(item [, index])`: takes out the first entry holding
+/// that item, optionally under that index, and answers it.
 fn native_relation_remove_item(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -378,11 +378,11 @@ fn native_relation_remove_item(
 /// `ObjectModel::build` beside [`super::NATIVE_METHODS`].
 pub(in crate::dispatch) const NATIVE_METHODS: &[(&str, &str, Arity, NativeMethod)] = &[
     // **`Relation` and `Bag` have identical native entry-point sets**, which
-    // is why they are one task: `Setup.cpp` writes `Bag`'s `AllAt`,
-    // `AllIndex`, `Items`, `RemoveAll`, `Supplier` and `UniqueIndexes` as
-    // `RelationClass::` bodies, and only `HasItem` and `RemoveItem` are
-    // `BagClass::`. A Bag's index is its item, so HASITEM specializes the
-    // optional argument check and index-only comparison in its shared body.
+    // is why they are one task: the oracle writes `Bag`'s `AllAt`, `AllIndex`,
+    // `Items`, `RemoveAll`, `Supplier` and `UniqueIndexes` with `Relation`'s
+    // bodies, and only `HasItem` and `RemoveItem` are `Bag`'s own. A Bag's
+    // index is its item, so HASITEM specializes the optional argument check
+    // and index-only comparison in its shared body.
     ("Relation", "ALLAT", Arity::Fixed(1), native_relation_all_at),
     (
         "Relation",

@@ -1,8 +1,7 @@
 use super::*;
 
 /// `Class~defineMethods(methods)`: install a whole table of instance methods
-/// in one mutation -- `RexxClass::defineMethodsRexx`
-/// (`classes/ClassClass.cpp:518`).
+/// in one mutation.
 pub(in crate::dispatch) fn native_define_methods(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -24,10 +23,9 @@ pub(in crate::dispatch) fn native_define_methods(
         let value = if interp.receiver_kind(value) == Ok(Primitive::Method) {
             value
         } else {
-            // The entry's own index is the method's name, as stored:
-            // `createMethodDictionary` builds the object under
-            // `supplier->index()->requestString()` and keys the dictionary
-            // under its upcase (`classes/ClassClass.cpp:1255`-`:1258`).
+            // The entry's own index is the method's name, as stored: the
+            // method object is built under the index's string value and the
+            // dictionary is keyed under its upcase.
             compile_method_source(interp, &name, value, "method source", SourceTaker::Method)?
         };
         entries.push((name, Some(value)));
@@ -52,10 +50,10 @@ fn string_keyed_table(interp: &mut Interp, value: ObjRef) -> bool {
     hash::owns(interp, value) && hash::string_keyed(interp, value)
 }
 
-/// The (name, value) pairs `createMethodDictionary`
-/// (`classes/ClassClass.cpp:1242`) obtains from `table`'s `SUPPLIER`, each
-/// index as its string value, in supplier order. Native directories using
-/// the compatibility path return their own entries sorted by name.
+/// The (name, value) pairs `createMethodDictionary` obtains from `table`'s
+/// `SUPPLIER`, each index as its string value, in supplier order. Native
+/// directories using the compatibility path return their own entries sorted by
+/// name.
 pub(super) fn method_table_pairs(
     interp: &mut Interp,
     table: ObjRef,

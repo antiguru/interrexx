@@ -14,15 +14,14 @@ enum RequiredString {
 /// required-string protocol a program can write.
 pub(crate) const MAKESTRING: &[u8] = b"MAKESTRING";
 
-/// What `RexxObject::stringValue` sends (`classes/ObjectClass.cpp:1157`).
+/// What the default string value sends.
 pub(crate) const OBJECTNAME: &[u8] = b"OBJECTNAME";
 
-/// What `RexxObject::objectName` sends for an object nothing has named and
-/// whose class is not a base class (`classes/ObjectClass.cpp:1712`).
+/// What the default object name sends for an object nothing has named and
+/// whose class is not a base class.
 pub(crate) const DEFAULTNAME: &[u8] = b"DEFAULTNAME";
 
-/// The required-string protocol's last limb, past every conversion
-/// (`RexxInternalObject::requiredString`, `classes/ObjectClass.cpp:1353`).
+/// The required-string protocol's last limb, past every conversion.
 pub(crate) const STRING: &[u8] = b"STRING";
 
 /// What a value's own string value is, before the protocol's fallbacks: the
@@ -38,7 +37,7 @@ enum StringConversion {
     Array(ObjRef),
     /// The receiver's behaviour has a `makeString` to send.
     MakeString,
-    /// None of those, which is `.nil` from `requestString`'s point of view.
+    /// None of those, which is `.nil` from the string request's point of view.
     None,
 }
 
@@ -55,8 +54,8 @@ impl Interp {
 
     /// [`Interp::required_string_value`] for a consumer that reads the answer
     /// as an object (a truth value, a native logical argument): a user
-    /// `STRING` answer with no string value is `.nil` here, as
-    /// `primitiveMakeString` makes it, where the bytes consumers refuse it.
+    /// `STRING` answer with no string value is `.nil` here, as the primitive
+    /// string conversion makes it, where the bytes consumers refuse it.
     #[inline]
     pub(crate) fn required_string_or_nil(&mut self, value: ObjRef) -> Result<ObjRef, Failure> {
         self.required_string_or(value, || true)
@@ -66,7 +65,7 @@ impl Interp {
     /// logical operator and an equality read it as
     /// [`Interp::required_string_or_nil`] does, and every other operator reads
     /// its bytes. The oracle's ordering operators read `.nil` through the
-    /// string layout (`StringClass.cpp:795-801`).
+    /// string layout.
     #[inline]
     pub(crate) fn required_string_operand(
         &mut self,
@@ -209,7 +208,7 @@ impl Interp {
                 Some(answered) => match self.string_answer_text(answered)? {
                     Some(text) => text,
                     // `.nil`, raised as NOSTRING's description before any
-                    // consumer reads it (`ObjectClass.cpp:1259-1287`).
+                    // consumer reads it.
                     None => {
                         no_string = true;
                         self.string_value_text(ObjRef::NIL)?
@@ -230,7 +229,7 @@ impl Interp {
         // error and `CALL ON ANY` is measured not to catch a condition with
         // no resumption point.
         if self.trap_for(b"NOSTRING").is_some_and(|trap| !trap.call) {
-            // The object is the condition's `ADDITIONAL` (`ObjectClass.cpp:1247`).
+            // The object is the condition's `ADDITIONAL`.
             self.activity.pending_additional = Some(value);
             return Err(Raised::nostring(&readable).into());
         }
@@ -252,11 +251,11 @@ impl Interp {
         Ok(readable)
     }
 
-    /// What a user `STRING` method's answer reads as: `primitiveMakeString`
-    /// on it (`classes/ObjectClass.cpp:1285`). A string or a number is
-    /// itself, an array (not a queue) is its items joined by a newline, and a
-    /// buffer is its text. Any other object is `None`: `.nil` there, which a
-    /// consumer of bytes reads as a string (Deviation 30).
+    /// What a user `STRING` method's answer reads as under the primitive
+    /// string conversion. A string or a number is itself, an array (not a
+    /// queue) is its items joined by a newline, and a buffer is its text. Any
+    /// other object is `None`: `.nil` there, which a consumer of bytes reads
+    /// as a string (Deviation 30).
     fn string_answer_text(&mut self, answered: ObjRef) -> Result<Option<Vec<u8>>, Failure> {
         let joined = match answered.decode() {
             Decoded::SmallInt(_) | Decoded::Text(_) => None,
@@ -343,14 +342,13 @@ impl Interp {
             )),
             StringConversion::None => None,
             StringConversion::MakeString => {
-                // `string_value = string_value->primitiveMakeString()`
-                // (`:1257`, `:1353`): what `makeString` answered has to be a
-                // real string, and an object that is not one converts here or
-                // counts as no answer at all. Measured, oracle rc 0 on
-                // `say .K` with a class-side `makeString`: `return 5` prints
-                // `5`, `return .Object~superClasses` prints the empty line
-                // an empty array joins to, and `return .array` prints
-                // `The K class` -- the third fell back.
+                // What `makeString` answered has to be a real string, and an
+                // object that is not one converts here or counts as no answer
+                // at all. Measured, oracle rc 0 on `say .K` with a class-side
+                // `makeString`: `return 5` prints `5`, `return
+                // .Object~superClasses` prints the empty line an empty array
+                // joins to, and `return .array` prints `The K class` -- the
+                // third fell back.
                 match self.send_make_string(value)? {
                     Some(answered) => match self.classify_string_conversion(answered) {
                         StringConversion::Object(text) => Some(RequiredString::Object(text)),
@@ -366,8 +364,7 @@ impl Interp {
         })
     }
 
-    /// `RexxInternalObject::requiredString()` (`classes/ObjectClass.cpp:1341`):
-    /// the protocol's conversion limbs alone, with **no** `~string` fallback
+    /// The protocol's conversion limbs alone, with **no** `~string` fallback
     /// and **no** NOSTRING condition. `None` is the oracle's `.nil`.
     pub(crate) fn string_conversion(&mut self, value: ObjRef) -> Result<Option<ObjRef>, Failure> {
         Ok(match self.required_string_answer(value)? {
@@ -398,9 +395,7 @@ impl Interp {
     fn classify_string_conversion(&mut self, value: ObjRef) -> StringConversion {
         let redirect = match value.decode() {
             Decoded::Nil => return self.make_string_or_none(value),
-            // `RexxString::primitiveMakeString` and
-            // `RexxInteger::primitiveMakeString`: a string and a number are
-            // their own string value.
+            // A string and a number are their own string value.
             Decoded::SmallInt(_) | Decoded::Text(_) => {
                 return StringConversion::Object(value);
             }
@@ -416,9 +411,9 @@ impl Interp {
                     Body::Text { .. } | Body::Num { .. } => {
                         return StringConversion::Object(value);
                     }
-                    // `StemClass::makeString` forwards to the default value,
-                    // and a stem holding none is its own derived name, which
-                    // is what `to_text` renders for it.
+                    // A stem's string value forwards to the default value, and
+                    // a stem holding none is its own derived name, which is
+                    // what `to_text` renders for it.
                     Body::Stem { default: None, .. } => {
                         return StringConversion::Object(value);
                     }
@@ -426,9 +421,8 @@ impl Interp {
                         default: Some(default),
                         ..
                     } => Some(*default),
-                    // `ArrayClass::makeString` (`classes/ArrayClass.cpp:1841`),
-                    // the items joined by a newline -- **not**
-                    // `stringValue()`, which is `an Array`.
+                    // An array's string value, the items joined by a newline
+                    // -- **not** its `string`, which is `an Array`.
                     Body::Array { .. } => None,
                     // **The referenced value's string value**: a string
                     // value is what `request('STRING')` answers (rexxref
@@ -457,11 +451,10 @@ impl Interp {
 
     /// [`Interp::classify_string_conversion`]'s instance arm, out of line so
     /// that the arms a string takes stay as small as they were: a `Stem`
-    /// subclass instance answers as its stem, which is where
-    /// `StemClass::request` forwards, so as the value its stem's chain ends
-    /// at; any other instance as [`Interp::make_string_or_none`] finds it. A
-    /// chain that leads back has no string value here;
-    /// [`Interp::conversion_subject`] refuses it.
+    /// subclass instance answers as its stem, which is where `request`
+    /// forwards, so as the value its stem's chain ends at; any other instance
+    /// as [`Interp::make_string_or_none`] finds it. A chain that leads back
+    /// has no string value here; [`Interp::conversion_subject`] refuses it.
     #[inline(never)]
     fn instance_conversion(&mut self, value: ObjRef) -> StringConversion {
         match self.stem_subclass_store(value) {
@@ -533,9 +526,9 @@ impl Interp {
         name: &[u8],
     ) -> Result<Option<ObjRef>, Failure> {
         // The sending side is the frame the conversion happens in, not the
-        // conversion itself: `checkPrivate` asks
-        // `getTopStackFrame()->getReceiver()`, and `requestString` runs no
-        // frame of its own that could answer that question differently.
+        // conversion itself: the private check asks the top frame's receiver,
+        // and the string request runs no frame of its own that could answer
+        // that question differently.
         let caller = self.caller();
         pinned!(
             self,
@@ -553,10 +546,9 @@ impl Interp {
     }
 }
 
-/// `RexxInternalObject::requiredString(position)`
-/// (`classes/ObjectClass.cpp:1373`): a method argument the method needs as
-/// text, converted through the required-string protocol, or 88.909 for a
-/// value that has no string value at all.
+/// A method argument the method needs as text, converted through the
+/// required-string protocol, or 88.909 for a value that has no string value at
+/// all.
 /// ```text
 /// 'abc'~hasMethod(5)                oracle `0` rc 0    a number has one
 /// 'abc'~hasMethod(a.)               oracle `0` rc 0    an unset stem is its own name

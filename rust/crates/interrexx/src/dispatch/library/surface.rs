@@ -40,9 +40,8 @@ impl Surface for Interp {
     }
 
     fn raise_exception(&mut self, number: usize, substitutions: Option<ObjRef>) {
-        // Each item's `stringValue()`, the default name where that raises,
-        // and nothing for an empty slot, which is `messageSubstitution`'s
-        // (`interpreter/concurrency/Activity.cpp:1246`).
+        // Each item's `stringValue()`, the default name where that raises, and
+        // nothing for an empty slot, which is what message substitution does.
         let items = substitutions
             .and_then(|array| self.array_slots_of(array))
             .unwrap_or_default();
@@ -133,7 +132,7 @@ impl Surface for Interp {
         }
         let report = self.condition_report(object);
         self.write_trace_report(&report);
-        // `Error_Interpretation / 1000` where `RC` is not a number.
+        // The error number divided by 1000, where `RC` is not a number.
         self.condition_entry(object, b"RC")
             .and_then(|rc| {
                 std::str::from_utf8(&self.unsent_string_value_text(rc))
@@ -211,11 +210,10 @@ impl Surface for Interp {
             let after = body.held_bytes();
             self.heap.rehold_body_bytes(before, after);
         }
-        // Rewritten where it lies, as the oracle's string data is: a call
-        // may hold the address `StringData` answered for the unfinished
-        // string. Every byte made is copied and the terminator at the made
-        // length stays, as `RexxString::finish` sets only the length
-        // (`StringClass.hpp:541`).
+        // Rewritten where it lies, as the oracle's string data is: a call may
+        // hold the address `StringData` answered for the unfinished string.
+        // Every byte made is copied and the terminator at the made length
+        // stays, as finishing sets only the length.
         match self.kept_strings.get_mut(&string) {
             Some(kept) if made.len() < kept.len() => {
                 kept[..made.len()].copy_from_slice(made);
@@ -268,9 +266,7 @@ impl Surface for Interp {
 
     fn set_mutable_buffer_length(&mut self, buffer: ObjRef, length: usize) -> Option<usize> {
         let state = self.buffer_mut(buffer)?;
-        // `MutableBuffer::setDataLength`
-        // (`interpreter/classes/MutableBufferClass.cpp:264`): capped at the
-        // capacity, and padded with NULs where it grows.
+        // Capped at the capacity, and padded with NULs where it grows.
         let length = length.min(state.capacity);
         state.bytes.resize(length, 0);
         Some(length)
@@ -278,8 +274,8 @@ impl Surface for Interp {
 
     fn set_mutable_buffer_capacity(&mut self, buffer: ObjRef, capacity: usize) -> Option<POINTER> {
         let state = self.lent_buffer(buffer)?;
-        // `MutableBuffer::setCapacity` (`:292`), which asks `ensureCapacity`
-        // for the difference over the length.
+        // The capacity change, which asks for room for the difference over the
+        // length.
         let grown = state.set_capacity(capacity).unwrap_or(0);
         let reserved = state.capacity;
         let address = state.writable().0.cast();
@@ -377,7 +373,7 @@ impl Surface for Interp {
         let upper = name.to_ascii_uppercase();
         match classify(&upper) {
             SymbolKind::Bad => None,
-            // `isString(retriever)`: a constant symbol is its own value.
+            // A constant symbol is its own value.
             SymbolKind::Numeric | SymbolKind::Literal => Some(self.text(&upper)),
             SymbolKind::LiteralDot => self.dot_variable(&upper).ok(),
             SymbolKind::Name => {
@@ -488,8 +484,7 @@ impl Surface for Interp {
         if let Some(value) = self.pools_of(owner)?.get(scope, &name) {
             return Some(value);
         }
-        // A stem variable always has a value, made on first read
-        // (`RexxStemVariable::getRealValue`, `expression/ExpressionStem.cpp:178`).
+        // A stem variable always has a value, made on first read.
         if crate::run::shape_of(&name) != crate::run::NameShape::Stem {
             return None;
         }
@@ -576,9 +571,8 @@ impl Surface for Interp {
             let found = self.system_symbol(name)?;
             return self.is_class_object(found).then_some(found);
         }
-        // A method's executable is its own package's
-        // (`NativeActivation::findClass`, `execution/NativeActivation.cpp:3094`),
-        // which is the package that defined its scope.
+        // A method's executable is its own package's, which is the package
+        // that defined its scope.
         if frame.method
             && let Some(crate::plan::ClassPackage::Program(program)) =
                 self.class_packages.get(&frame.scope).copied()
@@ -650,8 +644,8 @@ impl Surface for Interp {
         lines: &[Vec<u8>],
     ) -> Option<Option<ObjRef>> {
         let source = match kind {
-            // `LanguageParser::createMethod(name, buffer)` parses even lines
-            // `.Method~new` would restore.
+            // Method creation from a buffer parses even lines `.Method~new`
+            // would restore.
             BufferKind::Method => {
                 let borrowed: Vec<&[u8]> = lines.iter().map(Vec::as_slice).collect();
                 Ok(interrexx_parse::ProgramSource::from_lines(&borrowed))
@@ -689,8 +683,6 @@ impl Surface for Interp {
 
     fn call_program(&mut self, name: &[u8], arguments: &[Option<ObjRef>]) -> Option<ObjRef> {
         let Some(path) = self.resolve_program_name(None, name, false) else {
-            // `Error_Program_unreadable_notfound`
-            // (`concurrency/RexxStartDispatcher.cpp:233`).
             let raised = Raised::syntax(3, 901, vec![name.to_vec()]);
             self.hold_native_condition(raised.into());
             return None;
@@ -781,7 +773,6 @@ impl Surface for Interp {
         }
     }
 
-    /// `InterpreterInstance::addCommandHandler` (`runtime/InterpreterInstance.cpp:913`):
     /// the handler replaces whatever the name had, stacked handlers included.
     fn add_command_handler(&mut self, name: &[u8], handler: interrexx_api::load::CommandHandler) {
         let upper = name.to_ascii_uppercase();
@@ -804,18 +795,16 @@ impl Surface for Interp {
         }
     }
 
-    /// `Activity::setTrace` (`concurrency/Activity.cpp`): the running Rexx
-    /// frame's external trace, `TRACE ?R` on and `TRACE O` off. An idle
-    /// activity's frame is not reached.
+    /// The running Rexx frame's external trace, `TRACE ?R` on and `TRACE O`
+    /// off. An idle activity's frame is not reached.
     fn set_trace(&mut self, _all: bool, on: bool) {
         self.set_external_trace(on);
     }
 
-    /// `Activity::raiseConditionObject` (`concurrency/Activity.cpp:776`): the
-    /// condition a copy of `condition` describes, with its description,
+    /// The condition a copy of `condition` describes, with its description,
     /// additional information, result and `RC`; a `SYNTAX` one by its `CODE`,
-    /// with the `RC`, `ERRORTEXT` and `MESSAGE` that follow from it. An
-    /// object that describes no condition is 93.900.
+    /// with the `RC`, `ERRORTEXT` and `MESSAGE` that follow from it. An object
+    /// that describes no condition is 93.900.
     fn raise_condition_object(&mut self, condition: ObjRef) -> bool {
         if !Surface::is_of_class(self, condition, "Directory") {
             return false;
@@ -887,8 +876,8 @@ impl Surface for Interp {
     }
 }
 
-/// `validErrorCode` (`concurrency/Activity.cpp:740`): `code` as an error
-/// number, a major part from 1 to 99 and a minor part from 0 to 999.
+/// `code` as an error number, a major part from 1 to 99 and a minor part from
+/// 0 to 999.
 fn valid_error_code(code: &[u8]) -> Option<(u16, u16)> {
     let whole = |part: &[u8]| {
         interrexx_num::Number::parse_bytes(part).and_then(|number| number.int64_value(9))
@@ -928,8 +917,8 @@ impl Interp {
         frame.levels = None;
     }
 
-    /// `Error_Incorrect_method_user_defined` (93.900) with `message`, which
-    /// the condition APIs raise for a request they cannot serve.
+    /// The 93.900 user-defined-method error with `message`, which the
+    /// condition APIs raise for a request they cannot serve.
     fn hold_api_misuse(&mut self, message: &[u8]) {
         self.hold_raised(
             Raised::syntax(93, 900, vec![message.to_vec()]),
@@ -939,7 +928,6 @@ impl Interp {
         );
     }
 
-    /// `Activity::checkConditionSyntaxOptions` (`concurrency/Activity.cpp:595`):
     /// the `SYNTAX` error the calling activation's `::OPTIONS` make of the
     /// condition `name` a native call raises, with its description and, for
     /// `ERROR` and `FAILURE`, its result as the return code.
@@ -1006,8 +994,7 @@ impl Interp {
 
     /// The buffers the running method's receiver keeps for
     /// `AllocateObjectMemory`, which the oracle keeps in the receiver's
-    /// `Object`-scope pool under the empty name (`classes/ObjectClass.cpp:2994`),
-    /// or `None` outside a method.
+    /// `Object`-scope pool under the empty name, or `None` outside a method.
     fn object_memory(&mut self) -> Option<Vec<Option<ObjRef>>> {
         let frame = self.native_frame();
         if !frame.method {
@@ -1051,9 +1038,8 @@ impl Interp {
                 .map_err(|rejected| self.raise_parse_failure(&rejected, Some(name))),
             Err(raised) => Err(raised.into()),
         };
-        // `NewMethod` and `NewRoutine` translate with no source context
-        // (`api/ThreadContextStubs.cpp:529`, `:547`), so the executable's
-        // package has no parent.
+        // `NewMethod` and `NewRoutine` translate with no source context, so
+        // the executable's package has no parent.
         let built = parsed.and_then(|parsed| match kind {
             BufferKind::Method => {
                 super::super::class_protocol::method_in_package(self, name, parsed, None)
@@ -1229,7 +1215,6 @@ impl Interp {
 }
 
 impl Interp {
-    /// `Activity::display` (`interpreter/concurrency/Activity.cpp:1414`):
     /// the condition object's traceback lines, then the error lines its
     /// entries spell.
     fn condition_report(&mut self, object: ObjRef) -> Vec<u8> {

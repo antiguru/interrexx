@@ -1,5 +1,5 @@
-//! `Stem`'s primitive methods, and the tail tree that orders a stem's tails the
-//! way `CompoundTableElement`'s does.
+//! `Stem`'s primitive methods, and the tail tree that orders a stem's tails
+//! the way the oracle's does.
 
 use super::{
     Arity, ArrayArgument, Body, Cleared, Failure, Interp, NativeMethod, ObjRef, Raised,
@@ -37,8 +37,8 @@ fn stem_read(interp: &mut Interp, receiver: ObjRef, tail: &[u8]) -> ObjRef {
             exposed,
         }) => (
             match crate::stem::exposed_home(exposed, tail) {
-                // `findCompoundVariable` answers the exposed tail's
-                // `realVariable`, as the variable read does.
+                // The compound-variable lookup answers the exposed tail's real
+                // variable, as the variable read does.
                 Some(home) => Some(interp.tail_value(home, tail)),
                 None => tails.get(tail).map(|(_, value)| *value),
             },
@@ -94,8 +94,8 @@ fn stem_default(interp: &mut Interp, receiver: ObjRef) -> ObjRef {
     }
 }
 
-/// `StemClass::bracketEqual`: the value is argument one and the subscripts
-/// follow it, as `Array~put`'s do.
+/// The value is argument one and the subscripts follow it, as `Array~put`'s
+/// do.
 fn native_stem_put(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -104,8 +104,7 @@ fn native_stem_put(
 ) -> Result<Option<ObjRef>, Failure> {
     let receiver = stem_of(interp, receiver, b"[]=")?;
     let value = super::collection::item_argument(args)?;
-    // No tail: `StemClass::bracketEqual` (`classes/StemClass.cpp:476`) makes
-    // `value` the default and clears every tail.
+    // No tail: `value` becomes the default and every tail is cleared.
     if args.len() == 1 {
         if is_stem(interp, value) {
             return Err(Raised::syntax(98, 976, Vec::new()).into());
@@ -168,8 +167,8 @@ impl Interp {
         pools.entries(scope).first().map(|(_, store)| *store)
     }
 
-    /// `StemClass::dropElement`: drops `tail` where the stem holds it, and
-    /// leaves a tail it never held absent.
+    /// Drops `tail` where the stem holds it, and leaves a tail it never held
+    /// absent.
     pub(crate) fn stem_drop_element(&mut self, stem: ObjRef, tail: &[u8]) {
         let held = exposed_tail(self, stem, tail).is_some()
             || matches!(
@@ -181,13 +180,13 @@ impl Interp {
         }
     }
 
-    /// `StemClass::toDirectory`'s pairs: every tail that holds a value, in
-    /// the order the stem answers its tails.
+    /// The pairs of `Stem~toDirectory`: every tail that holds a value, in the
+    /// order the stem answers its tails.
     pub(crate) fn stem_live_tails(&self, stem: ObjRef) -> Vec<(Vec<u8>, ObjRef)> {
         stem_live(self, stem)
     }
 
-    /// `StemClass::getStemValue`: the stem's default, else its own name.
+    /// The stem's default, else its own name.
     pub(crate) fn stem_own_value(&mut self, stem: ObjRef) -> ObjRef {
         stem_value(self, stem)
     }
@@ -215,9 +214,8 @@ fn stem_refusal(interp: &mut Interp, receiver: ObjRef, method: &[u8]) -> Failure
     )
 }
 
-/// One node of the stem's tail tree, laid out as
-/// `CompoundTableElement` is: two links, a parent, and a depth per side
-/// rather than one height.
+/// One node of the stem's tail tree, laid out as the oracle's is: two links, a
+/// parent, and a depth per side rather than one height.
 struct TailNode {
     tail: usize,
     left: Option<usize>,
@@ -227,7 +225,6 @@ struct TailNode {
     right_depth: u16,
 }
 
-/// `CompoundVariableTail::compare` (`classes/support/CompoundVariableTail.hpp:170`):
 /// **length first, bytes second**, which is why the tree's order is not
 /// alphabetical.
 fn tail_order(left: &[u8], right: &[u8]) -> std::cmp::Ordering {
@@ -302,8 +299,8 @@ fn stem_order(tails: &[(Vec<u8>, Option<ObjRef>)]) -> Vec<usize> {
     order
 }
 
-/// `CompoundVariableTable::findLeaf` (`:367`): as far left as possible, then
-/// one step right, repeatedly -- the first node of a post-order walk.
+/// As far left as possible, then one step right, repeatedly -- the first node
+/// of a post-order walk.
 fn first_tail(nodes: &[TailNode], mut node: usize) -> usize {
     loop {
         while let Some(left) = nodes[node].left {
@@ -316,8 +313,7 @@ fn first_tail(nodes: &[TailNode], mut node: usize) -> usize {
     }
 }
 
-/// `CompoundVariableTable::moveNode` (`:273`): one rotation, and the depth
-/// bookkeeping upstream does with it.
+/// One rotation, and the depth bookkeeping upstream does with it.
 fn move_tail(
     nodes: &mut [TailNode],
     root: &mut Option<usize>,
@@ -363,9 +359,9 @@ fn move_tail(
     work
 }
 
-/// `CompoundVariableTable::balance` (`:197`): walk up from the new node,
-/// recording the depth on the side it came from and rotating once wherever
-/// that side has run more than one deeper than the other.
+/// Walk up from the new node, recording the depth on the side it came from and
+/// rotating once wherever that side has run more than one deeper than the
+/// other.
 fn rebalance(nodes: &mut [TailNode], root: &mut Option<usize>, node: usize) {
     if *root == Some(node) {
         return;
@@ -375,13 +371,13 @@ fn rebalance(nodes: &mut [TailNode], root: &mut Option<usize>, node: usize) {
     let mut depth: u16 = 1;
     while let Some(mut current) = parent {
         // **Upstream's early return is dead and is not reproduced.** The C++
-        // writes `if (depth > workingDepth) { move } else { if (workingDepth
-        // < depth) return; }` (`CompoundVariableTable.cpp:221`, `:244`), and
-        // the inner test is the outer one again -- it can never hold in the
-        // `else`, so the walk always runs to the root. The simulation this was
-        // ported from carried the same dead branch and matched the oracle on
-        // four cases either way, so dropping it changes no shape; clippy
-        // names it as `same condition` and it would be noise to keep.
+        // writes `if (depth > workingDepth) { move } else { if (workingDepth <
+        // depth) return; }`, and the inner test is the outer one again -- it
+        // can never hold in the `else`, so the walk always runs to the root.
+        // The simulation this was ported from carried the same dead branch and
+        // matched the oracle on four cases either way, so dropping it changes
+        // no shape; clippy names it as `same condition` and it would be noise
+        // to keep.
         if nodes[current].right == Some(node) {
             nodes[current].right_depth = depth;
             if depth > nodes[current].left_depth + 1 {
@@ -482,9 +478,9 @@ fn forward_to_value(
     })
 }
 
-/// `StemClass::request(class)` (`classes/StemClass.cpp`): `'ARRAY'` answers
-/// the stem's own `makeArray` -- which for a `Stem` is its TAILS -- and every
-/// other class is forwarded to the stem's value.
+/// `Stem~request(class)`: `'ARRAY'` answers the stem's own `makeArray` --
+/// which for a `Stem` is its TAILS -- and every other class is forwarded to
+/// the stem's value.
 fn native_stem_request(
     interp: &mut Interp,
     cleared: Cleared,
@@ -509,9 +505,8 @@ fn native_stem_request(
     forward_to_value(interp, store, b"REQUEST", &[Some(forwarded)])
 }
 
-/// `StemClass::toDirectory`: a fresh `Directory` holding one entry per tail
-/// that HAS a value, keyed by the tail's name, added in the tail tree's own
-/// `first`/`next` order.
+/// A fresh `Directory` holding one entry per tail that HAS a value, keyed by
+/// the tail's name, added in the tail tree's own `first`/`next` order.
 fn native_stem_to_directory(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -533,8 +528,8 @@ fn native_stem_to_directory(
     Ok(Some(object))
 }
 
-/// `StemClass::unknownRexx(message, arguments)`: forwards the message and its
-/// argument array to the stem's value.
+/// `Stem~unknown(message, arguments)`: forwards the message and its argument
+/// array to the stem's value.
 fn native_stem_unknown(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -544,7 +539,7 @@ fn native_stem_unknown(
     stem_unknown(interp, receiver, args)
 }
 
-/// [`native_stem_unknown`]'s work, which `processUnknown` also runs without a send.
+/// [`native_stem_unknown`]'s work, which the oracle also runs without a send.
 pub(in crate::dispatch) fn stem_unknown(
     interp: &mut Interp,
     receiver: ObjRef,
@@ -725,10 +720,9 @@ fn native_stem_remove(
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
     let receiver = stem_of(interp, receiver, b"REMOVE")?;
-    // No subscripts names the stem's value: `StemClass::remove`
-    // (`classes/StemClass.cpp:346`) answers it and makes the stem's name its
-    // value, which an unset tail of a stem that had a value then reads as.
-    // `obj~remove('ZZ')` answers `.nil`.
+    // No subscripts names the stem's value: `Stem~remove` answers it and makes
+    // the stem's name its value, which an unset tail of a stem that had a
+    // value then reads as. `obj~remove('ZZ')` answers `.nil`.
     if args.is_empty() {
         let value = stem_value(interp, receiver);
         let name = match interp.heap.get(receiver).map(|object| &object.body) {

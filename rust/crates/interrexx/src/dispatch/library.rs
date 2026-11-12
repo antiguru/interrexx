@@ -1,10 +1,9 @@
 //! Running a method whose body is a procedure of a loaded shared library, and
 //! the [`Host`] the boundary reaches this interpreter through.
 //!
-//! `NativeActivation::run` (`interpreter/execution/NativeActivation.cpp:1264`)
-//! is the reference for the call, and the `NativeActivation` that runs it is
-//! also what serves the context, which is why one frame carries both the
-//! receiver's pool and the local references.
+//! The reference for the call is the oracle's native-method run, and the
+//! native frame that runs it is also what serves the context, which is why one
+//! frame carries both the receiver's pool and the local references.
 
 use std::borrow::Cow;
 
@@ -39,9 +38,8 @@ fn rendered(value: ObjRef) -> Option<Vec<u8>> {
     }
 }
 
-/// The pool name an extension's spelling addresses, a simple or a stem
-/// name, or `None` for one `getObjectVariableRetriever`
-/// (`execution/NativeActivation.cpp:3002`) answers nothing for: a constant
+/// The pool name an extension's spelling addresses, a simple or a stem name,
+/// or `None` for one the variable lookup answers nothing for: a constant
 /// symbol or a compound name. The write then does nothing, which is all the
 /// API can see of the refusal.
 fn pool_variable_name(name: &[u8]) -> Option<Vec<u8>> {
@@ -133,11 +131,10 @@ impl Interp {
         let trapped = trapped?;
 
         // The condition first, because the oracle raises it in the caller's
-        // frame once the call has returned (`NativeActivation::checkConditions`,
-        // `:1787`) and before it does anything with the value the extension
-        // wrote. Measured, oracle: `.MyRe~new('[')` over `RegExp_Init` is
-        // `Error 38 ... Invalid template or pattern.` at rc 218, and the
-        // extension returned zero on that path.
+        // frame once the call has returned and before it does anything with
+        // the value the extension wrote. Measured, oracle: `.MyRe~new('[')`
+        // over `RegExp_Init` is `Error 38 ... Invalid template or pattern.` at
+        // rc 218, and the extension returned zero on that path.
         if let Some(number) = pending {
             self.activity.native_reraise = true;
             return Err(condition_of(number));
@@ -659,8 +656,7 @@ impl Interp {
     }
 
     /// Runs `library`'s `hook` in a native frame of its own, as
-    /// `Activity::run` runs a `CallbackDispatcher`
-    /// (`interpreter/concurrency/Activity.cpp:3461-3474`).
+    /// `Activity::run` runs a callback dispatcher.
     ///
     /// # Errors
     /// The condition the hook raised, and [`Loud`] for an interface member it
@@ -705,7 +701,7 @@ impl Interp {
 
     /// Runs the registered command handler `handler` for `command`, issued to
     /// `environment`, in a native frame of its own, as `Activity::run` runs a
-    /// `ContextCommandHandlerDispatcher` (`concurrency/CommandHandler.cpp:231-241`).
+    /// context command-handler dispatcher.
     ///
     /// # Errors
     /// A condition a string conversion raised, and [`Loud`] for an interface
@@ -766,15 +762,14 @@ impl Interp {
     }
 
     /// `Interpreter::terminateInterpreter`'s two steps that run extension or
-    /// Rexx code (`runtime/Interpreter.cpp:279-281`): the last-chance
-    /// `UNINIT`s, then the package unloaders. Answers the refusals they met.
+    /// Rexx code: the last-chance `UNINIT`s, then the package unloaders.
+    /// Answers the refusals they met.
     ///
     /// Both run on a thread context of their own, as the oracle's run on the
-    /// instance it creates to terminate on (`InstanceBlock instance;`,
-    /// `:277`): the running activity's context is retired
-    /// ([`interrexx_api::ffi::ThreadContext::retire`]) and set aside for the
-    /// length of the two steps, so the first native call or hook among them
-    /// makes a new one.
+    /// instance it creates to terminate on: the running activity's context is
+    /// retired ([`interrexx_api::ffi::ThreadContext::retire`]) and set aside
+    /// for the length of the two steps, so the first native call or hook among
+    /// them makes a new one.
     pub(crate) fn terminate(&mut self) -> Vec<Loud> {
         let running = self.activity.thread.take();
         if let Some(running) = &running {
@@ -789,15 +784,12 @@ impl Interp {
         refused
     }
 
-    /// `PackageManager::unload` (`interpreter/package/PackageManager.cpp:642-650`):
     /// each held library's unloader, in the order the oracle's table walks
-    /// them, each library closed straight after its own
-    /// (`LibraryPackage::unload`, `interpreter/package/LibraryPackage.cpp:166-181`),
-    /// answering the refusal that ended the walk if one did.
-    ///
-    /// Measured, oracle: a condition raised inside an unloader ends the walk,
-    /// reports nothing, leaves the exit status alone and leaves that library
-    /// and every later one open. A refusal ends it too.
+    /// them, each library closed straight after its own, answering the refusal
+    /// that ended the walk if one did. Measured, oracle: a condition raised
+    /// inside an unloader ends the walk, reports nothing, leaves the exit
+    /// status alone and leaves that library and every later one open. A
+    /// refusal ends it too.
     fn run_package_unloaders(&mut self) -> Option<Loud> {
         for (_, library) in self.libraries.in_unload_order() {
             match self.run_package_hook(&library, Hook::Unloader) {
@@ -820,8 +812,7 @@ impl Interp {
     /// the condition its string conversion raised, or the boundary's own
     /// refusal. `packaged` is whether the code reports a package, which is
     /// what a refusal before the call is reported against with no line; one
-    /// that reports none is reported against the caller's clause
-    /// (`Activity::generateProgramInformation`, `interpreter/concurrency/Activity.cpp:1093-1113`).
+    /// that reports none is reported against the caller's clause.
     ///
     /// `trapped` is the object [`Interp::call_trapped_native_condition`]
     /// built before the frame came off.
@@ -856,13 +847,12 @@ impl Interp {
     }
 
     /// A condition a callback raised and the extension did not clear, raised
-    /// once the call has returned (`NativeActivation::checkConditions`,
-    /// `:1787`): a `SYNTAX` condition as the call's failure; any other is
-    /// offered to the caller's trap, and the call answers the condition's
-    /// `RESULT` where no `SIGNAL ON` takes it, or else `returned`, what the
-    /// call itself returned. As with `RAISE`, an untrapped `HALT` or
-    /// `NOMETHOD` is an error. `held` is the condition with its
-    /// `ADDITIONAL` and `RESULT` objects.
+    /// once the call has returned: a `SYNTAX` condition as the call's failure;
+    /// any other is offered to the caller's trap, and the call answers the
+    /// condition's `RESULT` where no `SIGNAL ON` takes it, or else `returned`,
+    /// what the call itself returned. As with `RAISE`, an untrapped `HALT` or
+    /// `NOMETHOD` is an error. `held` is the condition with its `ADDITIONAL`
+    /// and `RESULT` objects.
     fn raise_held_condition(
         &mut self,
         held: (Failure, Option<ObjRef>, Option<ObjRef>),
@@ -919,7 +909,7 @@ impl Interp {
             None if condition == "NOMETHOD" => {
                 let raised = match (additional, held.description.as_deref()) {
                     (Some(receiver), Some(description)) => {
-                        // `Error_No_method_name`'s substitutions are the
+                        // The "no method name" error's substitutions are the
                         // receiver object itself and the message name.
                         let name = self.text(description);
                         self.roots.activity_mut().push_temp(name);
@@ -941,10 +931,10 @@ impl Interp {
         }
     }
 
-    /// The object a `CALL ON` trap takes for the condition other than
-    /// `SYNTAX` that the innermost native call holds, built while that call's
-    /// frame still leads the stack, as `Activity::createConditionObject`
-    /// builds it at the raise (`interpreter/concurrency/Activity.cpp:722-749`).
+    /// The object a `CALL ON` trap takes for the condition other than `SYNTAX`
+    /// that the innermost native call holds, built while that call's frame
+    /// still leads the stack, as `Activity::createConditionObject` builds it
+    /// at the raise.
     fn call_trapped_native_condition(&mut self) -> Result<Option<ObjRef>, Failure> {
         let Some(Failure::Raised(held)) = &self.native_frame().raised else {
             return Ok(None);
@@ -1216,10 +1206,8 @@ impl Interp {
             Refused::ClassicStyle => return Loud::classic_style_routine().into(),
             Refused::UnfilledSlot { entry } => return Loud::unfilled_slot(entry).into(),
             // A stale handle stays refused: a local reference protects its
-            // object only until the call that made it ends
-            // (`NativeActivation::createLocalReference`,
-            // `interpreter/execution/NativeActivation.cpp:1179-1185`), so an
-            // extension using one past that call is outside the API.
+            // object only until the call that made it ends, so an extension
+            // using one past that call is outside the API.
             Refused::StaleHandle => return Loud::stale_handle().into(),
             Refused::Raised => return Loud::conversion_raised().into(),
         };
@@ -1734,7 +1722,7 @@ fn lives(heap: &interrexx_core::Heap, object: ObjRef) -> bool {
 }
 
 /// The condition an extension raised, whose number is the major and the minor
-/// packed as `major * 1000 + minor` (`api/oorexxerrors.h`).
+/// packed as `major * 1000 + minor`.
 fn condition_of(number: usize) -> Failure {
     let major = u16::try_from(number / 1000).unwrap_or(u16::MAX);
     let minor = u16::try_from(number % 1000).unwrap_or(0);
@@ -1789,7 +1777,6 @@ impl Host for Interp {
     fn cself(&mut self) -> Option<POINTER> {
         let frame = self.activity.native_handles.last()?;
         let (receiver, scope) = (frame.receiver, frame.scope);
-        // `NativeActivation::cself` (`execution/NativeActivation.cpp:2091`):
         // the receiver's, from the running method's scope upwards.
         interrexx_api::callbacks::Surface::object_cself(self, receiver, Some(scope))
     }
@@ -1820,8 +1807,8 @@ impl Host for Interp {
                 self.set_pool_variable(owner, scope, &name, value);
             }
             Some(value) => self.set_pool_variable(owner, scope, &name, value),
-            // `VariableDictionary::dropStemVariable` (`:356`): a stem variable
-            // always has a value, so a drop leaves a fresh one.
+            // A stem variable always has a value, so a drop leaves a fresh
+            // one.
             None if stem => {
                 let fresh = self.empty_stem(&name);
                 self.set_pool_variable(owner, scope, &name, fresh);
@@ -1940,8 +1927,7 @@ impl Host for Interp {
             return Ok(None);
         };
         self.roots.activity_mut().push_temp(array);
-        // `isMultiDimensional`: an array with a dimension list of any length
-        // but one.
+        // An array with a dimension list of any length but one.
         Ok(match self.array_body(array) {
             Some((_, dimensions)) if dimensions.is_none_or(|shape| shape.len() == 1) => Some(array),
             _ => None,
@@ -2151,15 +2137,14 @@ impl Host for Interp {
 
 impl Interp {
     /// A native refusal's `found` insert: the object's `stringValue()`, which
-    /// for an instance sends `OBJECTNAME` (`interpreter/classes/ObjectClass.cpp:1157`)
-    /// and so runs a class's own `defaultName`, and which falls back to the
-    /// default name where that send raises, as message substitution does
-    /// (`interpreter/concurrency/Activity.cpp:1300-1306`).
+    /// for an instance sends `OBJECTNAME` and so runs a class's own
+    /// `defaultName`, and which falls back to the default name where that send
+    /// raises, as message substitution does.
     pub(crate) fn native_found(&mut self, object: ObjRef) -> Vec<u8> {
         let sends = match self.heap.get(object).map(|held| &held.body) {
             // A state that renders its own `stringValue` answers without a
             // send, which is the arm `Interp::to_text` takes for one; every
-            // other instance reaches `RexxObject::stringValue`.
+            // other instance is sent `stringValue`.
             Some(Body::Instance {
                 native: Some(state),
                 ..
@@ -2179,7 +2164,7 @@ impl Interp {
         self.unsent_string_value_text(object)
     }
 
-    /// `requestString` for a native argument, holding a raised condition on
+    /// The string request for a native argument, holding a raised condition on
     /// the running native frame as [`Host::string_value`] does.
     fn native_string_conversion(&mut self, object: ObjRef) -> Result<ObjRef, Condition> {
         match self.required_string_or_nil(object) {
@@ -2235,12 +2220,11 @@ impl Interp {
         frame.levels = None;
     }
 
-    /// Whether the running native call has no calling activation, as a
-    /// native routine a `CallRoutine` call runs has none: its caller's
-    /// variables do not exist (`NativeActivation::getContextVariable` and its
-    /// kin answer nothing where `activation` is null). A Rust library, which
-    /// reaches the surface with no native frame, has the running activation
-    /// for its caller.
+    /// Whether the running native call has no calling activation, as a native
+    /// routine a `CallRoutine` call runs has none: its caller's variables do
+    /// not exist, and the context accessors answer nothing. A Rust library,
+    /// which reaches the surface with no native frame, has the running
+    /// activation for its caller.
     pub(crate) fn native_callerless(&self) -> bool {
         self.activity
             .native_handles
@@ -2299,8 +2283,7 @@ pub(super) fn numeric_of(settings: &interrexx_num::Settings) -> Numeric {
     }
 }
 
-/// A Rexx number as the C `double` `strtod` reads from its digits
-/// (`NumberString::doubleValue`, `interpreter/classes/NumberStringClass.cpp:704`).
+/// A Rexx number as the C `double` `strtod` reads from its digits.
 ///
 /// Rendered at as many digits as the number has, which keeps every digit.
 /// `Number::format` takes the exponential form where the plain one would
@@ -2319,10 +2302,9 @@ fn double_literal(number: &Number) -> String {
     number.format(digits)
 }
 
-/// `NumberString::newInstanceFromDouble(value, precision)`
-/// (`interpreter/classes/NumberStringClass.cpp:4073`) as its string value:
-/// `%.*g` at two digits past the precision, capped at sixteen, then rounded
-/// to the precision and formatted at it.
+/// `NumberString::newInstanceFromDouble(value, precision)` as its string
+/// value: `%.*g` at two digits past the precision, capped at sixteen, then
+/// rounded to the precision and formatted at it.
 pub(crate) fn double_text(value: f64, precision: usize) -> Vec<u8> {
     if value.is_nan() {
         return b"nan".to_vec();
@@ -2345,12 +2327,10 @@ pub(crate) fn double_text(value: f64, precision: usize) -> Vec<u8> {
         .into_bytes()
 }
 
-/// `newInstanceFromDouble` at precision 0: `truncateToDigits` keeps no digit
-/// and moves only the exponent, `mathRound` adds one to it where the first
-/// digit dropped is 5 or more (`classes/NumberStringMath.cpp:315`, `:489`), and
-/// `stringValue` renders the digitless number
-/// (`classes/NumberStringClass.cpp:338`): the sign alone at exponent 0, else
-/// `0` with any exponent past the first place.
+/// A new number at precision 0: truncation keeps no digit and moves only the
+/// exponent, rounding adds one to it where the first digit dropped is 5 or
+/// more, and `stringValue` renders the digitless number: the sign alone at
+/// exponent 0, else `0` with any exponent past the first place.
 fn no_digit_text(value: f64) -> Vec<u8> {
     if value == 0.0 {
         return b"0".to_vec();

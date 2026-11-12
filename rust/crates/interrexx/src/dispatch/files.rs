@@ -1,9 +1,9 @@
 //! `.File`'s `LIBRARY REXX` entry points.
 //!
-//! The class itself is Rexx, in `StreamClasses.orx`: it keeps `path` and
-//! `qualifiedPath`, and every native method here is reached as
-//! `self~someImpl(self~qualifiedPath)`. So each one is a function of that path
-//! alone, and none of them touches the receiver.
+//! The class itself is Rexx: it keeps `path` and `qualifiedPath`, and every
+//! native method here is reached as `self~someImpl(self~qualifiedPath)`. So
+//! each one is a function of that path alone, and none of them touches the
+//! receiver.
 
 use std::path::{Path, PathBuf};
 
@@ -363,8 +363,8 @@ pub(super) fn make_dir(
 /// `file_delete_file`.
 ///
 /// **The write check is on the file, not on its directory**, which is what the
-/// oracle's own `SysFileSystem::deleteFile` asks -- unlike `unlink(2)`, whose
-/// permission lives on the parent.
+/// oracle's file deletion asks -- unlike `unlink(2)`, whose permission lives
+/// on the parent.
 pub(super) fn delete_file(
     interp: &mut Interp,
     _cleared: Cleared,

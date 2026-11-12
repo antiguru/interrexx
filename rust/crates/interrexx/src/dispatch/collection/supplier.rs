@@ -103,8 +103,7 @@ fn supplier_remaining(interp: &mut Interp, receiver: ObjRef) -> Result<usize, Fa
     Ok(items.saturating_sub(position))
 }
 
-/// `Supplier~available`: whether a pair is still there --
-/// `SupplierClass::available`.
+/// `Supplier~available`: whether a pair is still there.
 fn native_supplier_available(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -188,7 +187,7 @@ fn supplier_array(interp: &mut Interp, value: ObjRef) -> Result<ObjRef, Failure>
     Err(Raised::object_not_single_dimensional(&found).into())
 }
 
-/// `Supplier~init(items, indexes)`: `SupplierClass::initRexx`.
+/// `Supplier~init(items, indexes)`.
 fn native_supplier_init(
     interp: &mut Interp,
     _cleared: Cleared,

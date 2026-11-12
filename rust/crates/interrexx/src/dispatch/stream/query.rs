@@ -5,7 +5,7 @@ use chrono::TimeZone;
 
 /// `query_exists`: the qualified name when it names a file, and the null
 /// string otherwise -- a directory answers nothing, measured, because the
-/// oracle's own check is `fileExists`.
+/// oracle's own check is for a regular file.
 pub(in crate::dispatch) fn query_exists(
     interp: &mut Interp,
     _cleared: Cleared,

@@ -1,5 +1,4 @@
-//! `Package`'s readers and its four writes -- `classes/PackageClass.cpp`,
-//! bound by `memory/Setup.cpp`'s `Package` block.
+//! `Package`'s readers and its four writes.
 
 use rustc_hash::FxHashMap;
 
@@ -106,7 +105,7 @@ pub(super) static NATIVE_CLASS_METHODS: &[(&str, &str, Arity, NativeMethod)] = &
 
 /// `Package`'s class methods entered by their begin halves.
 pub(super) static RESUMABLE_CLASS_METHODS: &[(&str, &str, Arity, super::NativeBegin)] = &[
-    // `AddClassMethod("New", PackageClass::newRexx, A_COUNT)`.
+    // The class method `New`, which takes any number of arguments.
     ("Package", "NEW", Arity::Counted, package_new),
 ];
 
@@ -117,7 +116,7 @@ fn package_of(interp: &Interp, receiver: ObjRef) -> Result<Option<ProgramId>, Fa
 }
 
 /// `package_of` for the writes, which refuse the REXX package rather than
-/// answering for it -- `checkRexxPackage` (`classes/PackageClass.cpp:470`).
+/// answering for it.
 fn writable_package_of(interp: &Interp, receiver: ObjRef) -> Result<Option<ProgramId>, Failure> {
     let program = package_of(interp, receiver)?;
     if interp.is_the_rexx_package(receiver) {
@@ -136,8 +135,7 @@ fn settings_of(
     Ok(shown(data.program.is_none(), data.options.clone()))
 }
 
-/// [`settings_of`] as the package's first change found them --
-/// `PackageClass::getInitialPackageSettings`.
+/// [`settings_of`] as the package's first change found them.
 fn initial_of(
     interp: &Interp,
     receiver: ObjRef,
@@ -167,7 +165,7 @@ fn shown(rexx: bool, options: Option<PackageOptions>) -> (PackageOptions, Option
     (options, trace)
 }
 
-/// `PackageClass::digitsRexx`: the package's own `DIGITS`.
+/// The package's own `DIGITS`.
 fn digits(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -179,7 +177,6 @@ fn digits(
     Ok(Some(interp.text(text.as_bytes())))
 }
 
-/// `PackageClass::fuzzRexx`.
 fn fuzz(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -191,8 +188,7 @@ fn fuzz(
     Ok(Some(interp.text(text.as_bytes())))
 }
 
-/// `PackageClass::formRexx`, whose two answers are `GlobalNames::SCIENTIFIC`
-/// and `GlobalNames::ENGINEERING`.
+/// `Package~form`, whose two answers are `SCIENTIFIC` and `ENGINEERING`.
 fn form(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -207,9 +203,9 @@ fn form(
     Ok(Some(interp.text(text)))
 }
 
-/// `PackageClass::traceRexx`: `TraceSetting::toString`, which is the one
-/// letter the setting is known by, after a `?` for an interactive setting,
-/// and the null string for a setting that was never made.
+/// `TraceSetting::toString`, which is the one letter the setting is known by,
+/// after a `?` for an interactive setting, and the null string for a setting
+/// that was never made.
 fn trace(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -230,8 +226,8 @@ fn trace(
     Ok(Some(interp.text_built(text)))
 }
 
-/// `PackageClass::options(optionName, newValue)`: the whole `::OPTIONS`
-/// string, or one option's value, or a write answering the value it replaced.
+/// `Package~options(optionName, newValue)`: the whole `::OPTIONS` string, or
+/// one option's value, or a write answering the value it replaced.
 fn options(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -346,8 +342,7 @@ fn options(
     Ok(Some(interp.text_built(previous)))
 }
 
-/// `numberArgument`'s conversion: `value` as a whole number at
-/// `Numerics::ARGUMENT_DIGITS`.
+/// The conversion of `value` as a whole number at the argument precision.
 fn whole_argument(interp: &mut Interp, value: ObjRef) -> Option<i64> {
     interp
         .to_number(value)
@@ -355,8 +350,8 @@ fn whole_argument(interp: &mut Interp, value: ObjRef) -> Option<i64> {
         .and_then(|number| number.whole_value(interrexx_num::ARGUMENT_DIGITS))
 }
 
-/// `Error_Incorrect_method_list` for an option name `~options` does not
-/// accept, in the two spellings the C++ has: the list a no-value send names
+/// The "incorrect method list" error for an option name `~options` does not
+/// accept, in the two spellings the oracle has: the list a no-value send names
 /// and the list a setting send names are not the same set.
 fn unknown_option(name: &[u8], setting: bool) -> Failure {
     let list = if setting {
@@ -371,9 +366,8 @@ fn unknown_option(name: &[u8], setting: bool) -> Failure {
     Raised::method_argument_not_in_list(1, list, name).into()
 }
 
-/// `PackageClass::clzOptions`: the override settings a package compiled
-/// while the override count is not zero takes for every option it does not
-/// name itself, and that count.
+/// The override settings a package compiled while the override count is not
+/// zero takes for every option it does not name itself, and that count.
 fn default_options(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -415,7 +409,7 @@ fn default_options(
         return Err(Raised::method_user_defined("argument 2 must not be empty").into());
     }
     if which == Some(b'C') {
-        // `numberArgument`, whose failure is the oracle's own: measured at
+        // The number argument, whose failure is the oracle's own: measured at
         // rc 163, `.Package~defaultOptions('C', 'x')` is 93.905.
         let Some(count) = whole_argument(interp, value) else {
             return Err(Raised::method_argument_not_whole(2, &text).into());
@@ -427,8 +421,8 @@ fn default_options(
     Ok(Some(answer(interp)))
 }
 
-/// `PackageClass::getSourceSizeRexx`: the package's own line count, and zero
-/// for the REXX package, which holds no source.
+/// The package's own line count, and zero for the REXX package, which holds no
+/// source.
 fn source_size(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -439,8 +433,7 @@ fn source_size(
     Ok(Some(interp.counted(lines)))
 }
 
-/// `PackageClass::getSourceRexx`: the package's source as an `Array` of
-/// strings, in program order.
+/// The package's source as an `Array` of strings, in program order.
 fn source(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -461,7 +454,7 @@ fn source(
     Ok(Some(array))
 }
 
-/// `PackageClass::getSourceLineRexx`: one line, by position.
+/// One line, by position.
 fn source_line(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -498,12 +491,10 @@ fn source_lines(interp: &Interp, program: Option<ProgramId>) -> Result<Vec<Vec<u
         .collect())
 }
 
-/// `PackageClass::getMainRexx`: the `Routine` a package's leading code
-/// section became, and `.nil` for the REXX package, for a package whose
-/// translation raised, and for the package of a `Method` or `Routine` built
-/// from source, whose leading section became that executable and which keeps
-/// no init code (`LanguageParser::generateMethod` and `generateRoutine`,
-/// `parser/LanguageParser.cpp:599`, `:633`).
+/// The `Routine` a package's leading code section became, and `.nil` for the
+/// REXX package, for a package whose translation raised, and for the package
+/// of a `Method` or `Routine` built from source, whose leading section became
+/// that executable and which keeps no init code.
 fn prolog(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -529,7 +520,6 @@ fn prolog(
     Ok(Some(interp.program_routine_object(program)?))
 }
 
-/// `PackageClass::setSecurityManagerRexx`.
 fn set_security_manager(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -541,8 +531,7 @@ fn set_security_manager(
     Ok(Some(interp.counted(1)))
 }
 
-/// `PackageClass::loadLibraryRexx`: `PackageManager::loadLibrary`, a
-/// `dlopen` of a native library, answering whether it loaded.
+/// A `dlopen` of a native library, answering whether it loaded.
 ///
 /// Measured, oracle rc 0: `.context~package~loadLibrary('rxregexp')` is `1`
 /// and the same call naming `zorkolib` is `0`, so a library that is not there
@@ -553,9 +542,10 @@ fn load_library(
     receiver: ObjRef,
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
-    // The name is validated before the receiver is: `loadLibraryRexx` calls
-    // `stringArgument` and then `checkRexxPackage`. Measured at rc 168,
-    // `.Class~package~loadLibrary` is 88.901 and not 98.984.
+    // The name is validated before the receiver is: the oracle checks the
+    // string argument and then that the package is not the REXX package.
+    // Measured at rc 168, `.Class~package~loadLibrary` is 88.901 and not
+    // 98.984.
     let Some(name) = args.first().copied().flatten() else {
         return Err(Raised::missing_named_argument("name").into());
     };
@@ -577,8 +567,8 @@ fn load_library(
     Ok(Some(interp.counted(usize::from(loaded))))
 }
 
-/// `PackageClass::getClassesRexx`: the classes this package's own `::CLASS`
-/// directives and `~addClass` installed.
+/// The classes this package's own `::CLASS` directives and `~addClass`
+/// installed.
 fn classes(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -590,7 +580,6 @@ fn classes(
     interp.string_table_of(entries).map(Some)
 }
 
-/// `PackageClass::getPublicClassesRexx`.
 fn public_classes(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -602,11 +591,10 @@ fn public_classes(
     interp.string_table_of(entries).map(Some)
 }
 
-/// `PackageClass::getImportedClassesRexx`: `mergedPublicClasses`, which is
-/// what this package's `::REQUIRES` and `~addPackage` brought in and **not**
-/// its own public classes. Measured, oracle rc 0: a file declaring
-/// `::class K public` and requiring one declaring `::class LIBC public`
-/// answers `LIBC` alone.
+/// The merged public classes, which is what this package's `::REQUIRES` and
+/// `~addPackage` brought in and **not** its own public classes. Measured,
+/// oracle rc 0: a file declaring `::class K public` and requiring one
+/// declaring `::class LIBC public` answers `LIBC` alone.
 fn imported_classes(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -617,8 +605,8 @@ fn imported_classes(
     interp.string_table_of(entries).map(Some)
 }
 
-/// `PackageClass::getRoutinesRexx`: every routine this package's own
-/// `::ROUTINE` directives and `~addRoutine` installed, public or not.
+/// Every routine this package's own `::ROUTINE` directives and `~addRoutine`
+/// installed, public or not.
 fn routines(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -636,7 +624,6 @@ fn routines(
     interp.string_table_of(entries).map(Some)
 }
 
-/// `PackageClass::getPublicRoutinesRexx`.
 fn public_routines(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -647,7 +634,7 @@ fn public_routines(
     interp.string_table_of(entries).map(Some)
 }
 
-/// `PackageClass::getImportedRoutinesRexx`: `mergedPublicRoutines`.
+/// The merged public routines.
 fn imported_routines(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -695,8 +682,8 @@ fn rooted_routine_objects(
     Ok(entries)
 }
 
-/// `PackageClass::getMethodsRexx`: the package's unattached `::METHOD`s,
-/// which is the same table `.METHODS` answers.
+/// The package's unattached `::METHOD`s, which is the same table `.METHODS`
+/// answers.
 fn defined_methods(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -707,8 +694,7 @@ fn defined_methods(
     interp.string_table_of(entries).map(Some)
 }
 
-/// `PackageClass::getResourcesRexx`: the package's `::RESOURCE` bodies, the
-/// same table `.RESOURCES` answers.
+/// The package's `::RESOURCE` bodies, the same table `.RESOURCES` answers.
 fn resources(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -719,7 +705,7 @@ fn resources(
     interp.string_table_of(entries).map(Some)
 }
 
-/// `PackageClass::getResourceRexx`: one `::RESOURCE`'s `Array`, or `.nil`.
+/// One `::RESOURCE`'s `Array`, or `.nil`.
 fn resource(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -761,9 +747,8 @@ fn package_table_entries(
     Ok(pairs)
 }
 
-/// `PackageClass::getNamespacesRexx`: the qualifiers this package's
-/// `::REQUIRES ... NAMESPACE` directives and `~addPackage` registered, each
-/// answering the package it names.
+/// The qualifiers this package's `::REQUIRES ... NAMESPACE` directives and
+/// `~addPackage` registered, each answering the package it names.
 fn namespaces(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -774,8 +759,8 @@ fn namespaces(
     interp.string_table_of(entries).map(Some)
 }
 
-/// `PackageClass::getImportedPackagesRexx`: the packages this one has
-/// imported, in the order they were added, as an `Array`.
+/// The packages this one has imported, in the order they were added, as an
+/// `Array`.
 fn imported_packages(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -786,8 +771,7 @@ fn imported_packages(
     Ok(Some(interp.object_array(items)))
 }
 
-/// `PackageClass::findClassRexx`: the whole environment-symbol search order,
-/// starting at this package.
+/// The whole environment-symbol search order, starting at this package.
 fn find_class(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -799,8 +783,8 @@ fn find_class(
     Ok(Some(interp.package_find_class(receiver, &name)?))
 }
 
-/// `PackageClass::findPublicClassRexx`: this package's own public classes,
-/// then its imports, then the REXX package's.
+/// This package's own public classes, then its imports, then the REXX
+/// package's.
 fn find_public_class(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -812,8 +796,8 @@ fn find_public_class(
     Ok(Some(interp.package_find_public_class(receiver, &name)?))
 }
 
-/// `PackageClass::findRoutineRexx`: the package's own routines, then the
-/// public ones its `::REQUIRES` brought in.
+/// The package's own routines, then the public ones its `::REQUIRES` brought
+/// in.
 fn find_routine(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -825,7 +809,6 @@ fn find_routine(
     Ok(Some(interp.package_find_routine(receiver, &name)?))
 }
 
-/// `PackageClass::findPublicRoutineRexx`.
 fn find_public_routine(
     interp: &mut Interp,
     cleared: Cleared,
@@ -835,8 +818,8 @@ fn find_public_routine(
     find_routine(interp, cleared, receiver, args)
 }
 
-/// `PackageClass::findNamespaceRexx`: one of this package's registered
-/// qualifiers, or the REXX package for the name `REXX`.
+/// One of this package's registered qualifiers, or the REXX package for the
+/// name `REXX`.
 fn find_namespace(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -855,8 +838,8 @@ fn find_namespace(
     Ok(Some(found.unwrap_or(ObjRef::NIL)))
 }
 
-/// `PackageClass::findProgramRexx`: the file `name` resolves to from this
-/// package's own directory, as a **String**, or `.nil`.
+/// The file `name` resolves to from this package's own directory, as a
+/// **String**, or `.nil`.
 fn find_program(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -887,8 +870,7 @@ fn upper_name_argument(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<V
     Ok(interp.to_text(name).to_ascii_uppercase())
 }
 
-/// `PackageClass::addRoutineRexx`: files a `Routine` under `name` in this
-/// package's own routine table.
+/// Files a `Routine` under `name` in this package's own routine table.
 fn add_routine(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -898,11 +880,10 @@ fn add_routine(
     install_routine(interp, receiver, args, false)
 }
 
-/// `PackageClass::addPublicRoutineRexx`, which files into **both** tables:
-/// `addInstalledRoutine(name, routine, true)` writes `routines` and then
-/// `publicRoutines` (`classes/PackageClass.cpp:1432`). Measured, oracle rc 0:
-/// after `p~addPublicRoutine('PUBR', r)` the name is in `~routines` as well
-/// as in `~publicRoutines`.
+/// `Package~addPublicRoutine`, which files into **both** tables: it writes
+/// `routines` and then `publicRoutines`. Measured, oracle rc 0: after
+/// `p~addPublicRoutine('PUBR', r)` the name is in `~routines` as well as in
+/// `~publicRoutines`.
 fn add_public_routine(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -928,8 +909,7 @@ fn install_routine(
     let Some(routine) = args.get(1).copied().flatten() else {
         return Err(Raised::missing_named_argument("routine").into());
     };
-    // `classArgument` (`PackageClass::addRoutineRexx`) admits a subclass
-    // instance as well.
+    // The class argument check admits a subclass instance as well.
     let routine_class = interp.routine_class();
     let admitted = interp
         .class_of_value(routine)
@@ -957,8 +937,8 @@ fn install_routine(
     Ok(Some(receiver))
 }
 
-/// `PackageClass::addPackageRexx`: imports another package into this one,
-/// optionally under a namespace qualifier.
+/// Imports another package into this one, optionally under a namespace
+/// qualifier.
 fn add_package(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -990,8 +970,8 @@ fn add_package(
     Ok(Some(receiver))
 }
 
-/// `PackageClass::loadPackageRexx`: loads a file the way a `::REQUIRES`
-/// would, imports it, and answers the loaded package.
+/// Loads a file the way a `::REQUIRES` would, imports it, and answers the
+/// loaded package.
 fn load_package(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1007,8 +987,8 @@ fn load_package(
     };
     let name = super::required_string_argument(interp, name, 1)?;
     let name = interp.to_text(name).to_vec();
-    // `checkRexxPackage` stands between the name and the source array, so the
-    // REXX package refuses even the form this crate declines: measured at
+    // The REXX-package check stands between the name and the source array, so
+    // the REXX package refuses even the form this crate declines: measured at
     // rc 158, `.Class~package~loadPackage('X', 'Y')` is 98.984.
     let program = writable_package_of(interp, receiver)?;
     // **The source form loads a package that is not a file**, under a name
@@ -1031,8 +1011,7 @@ fn load_package(
     Ok(Some(loaded))
 }
 
-/// `PackageClass::newRexx`: a package built from a file, or from an `Array`
-/// of source lines.
+/// A package built from a file, or from an `Array` of source lines.
 fn package_new(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1094,11 +1073,11 @@ fn package_new(
     super::begin_init(interp, object, &extra)
 }
 
-/// `PackageClass::newRexx`'s context argument, resolved to the package the
-/// compiled source resolves names through. A value that is none of the three
-/// accepted classes is 93.953 before anything is compiled -- measured at
-/// rc 163, `.Package~new('X', 'Y', 'Z')`, and `"PROGRAMSCOPE"`, which
-/// `newFile` takes, is refused here alike.
+/// The context argument of `Package~new`, resolved to the package the compiled
+/// source resolves names through. A value that is none of the three accepted
+/// classes is 93.953 before anything is compiled -- measured at rc 163,
+/// `.Package~new('X', 'Y', 'Z')`, and `"PROGRAMSCOPE"`, which `newFile` takes,
+/// is refused here alike.
 fn package_context(interp: &mut Interp, context: ObjRef) -> Result<ObjRef, Failure> {
     let class = interp.class_of_value(context);
     let resolved = if class == Some(interp.package_class()) {
@@ -1136,8 +1115,7 @@ pub(super) fn native_package_local(
     Ok(Some(interp.package_local(receiver)))
 }
 
-/// `Package~name`: the package's own name -- `PackageClass::getProgramName`
-/// (`classes/PackageClass.hpp:147`), bound as `Name` by `memory/Setup.cpp:1189`.
+/// `Package~name`: the package's own name.
 pub(super) fn native_package_name(
     interp: &mut Interp,
     _cleared: Cleared,

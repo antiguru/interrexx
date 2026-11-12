@@ -1,8 +1,7 @@
 //! The `LIBRARY REXX` entry points behind `.CommandHandler`,
 //! `.CommandContext`, `.CommandInput`, `.CommandOutput` and
-//! `.NativeCommandHandler` (`interpreter/RexxClasses/CommandClasses.orx`),
-//! as `concurrency/CommandHandler.cpp:499-951` writes them. The table they
-//! read and write is [`crate::command::Environments`].
+//! `.NativeCommandHandler`. The table they read and write is
+//! [`crate::command::Environments`].
 
 use interrexx_api::callbacks::Surface;
 use interrexx_core::ObjRef;
@@ -52,14 +51,15 @@ fn or_nil(found: Option<ObjRef>) -> Answer {
     Ok(Some(found.unwrap_or(ObjRef::NIL)))
 }
 
-/// What the receiver's `CSELF` holds: the identity of the command its
-/// context belongs to (`CommandHandler.cpp:387`).
+/// What the receiver's `CSELF` holds: the identity of the command its context
+/// belongs to.
 fn cself_of(interp: &mut Interp, receiver: ObjRef) -> Option<ObjRef> {
     let owner = interp.pool_owner(receiver).ok()?;
     interp.pools_of(owner)?.find(b"CSELF")
 }
 
-/// `liveState` on the receiver's `CSELF`: the running command's index.
+/// The live-state check on the receiver's `CSELF`: the running command's
+/// index.
 fn live(interp: &mut Interp, receiver: ObjRef) -> Result<usize, Failure> {
     let cself = cself_of(interp, receiver);
     interp.live_command(cself)
@@ -78,7 +78,7 @@ pub(crate) fn new_identity(interp: &mut Interp) -> ObjRef {
 impl Interp {
     /// A `.NativeCommandHandler` with `NAME` set to `name`, made as
     /// `CommandHandler::getRexxObject` makes one: its private `NEW` run
-    /// directly, so no `INIT` (`concurrency/CommandHandler.cpp:794-803`).
+    /// directly, so no `INIT`.
     pub(crate) fn native_handler_object(
         &mut self,
         name: &[u8],
@@ -99,10 +99,9 @@ impl Interp {
         Ok(object)
     }
 
-    /// `variableRetriever(name)` run against `issuer`
-    /// (`concurrency/CommandHandler.cpp:488`): `serve` with that activation
-    /// swapped in as the running one, or 93.900 for a name that is not a
-    /// variable's.
+    /// The variable retriever for `name` run against `issuer`: `serve` with
+    /// that activation swapped in as the running one, or 93.900 for a name
+    /// that is not a variable's.
     fn in_issuer<R>(
         &mut self,
         issuer: ActivationId,
@@ -237,7 +236,7 @@ pub(super) fn is_valid(
     flag(interp, running)
 }
 
-/// `cmdcontext_check`: nothing, or `liveState`'s 98.900.
+/// `cmdcontext_check`: nothing, or the live-state check's 98.900.
 pub(super) fn check(
     interp: &mut Interp,
     _cleared: Cleared,

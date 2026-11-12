@@ -96,13 +96,12 @@ fn list_position(
         if let Some(slot) = *slot
             && super::unsigned_index(interp, slot)? == Some(wanted)
         {
-            // `isIndexValid` is `isInUse`
-            // (`classes/support/ListContents.hpp:235`), so `validateIndex`
-            // answers NoLink for an entry holding nothing and every lookup
-            // reads it as absent. Measured over `l~put(, 1)`: `hasIndex(1)`
-            // is `0`, `at(1)` and `next(1)` are `.nil`, and `section(1,1)`
-            // raises -- while the chain still walks through the entry, which
-            // is [`list_pairs`]'s business and not this function's.
+            // `isIndexValid` is `isInUse`, so `validateIndex` answers NoLink
+            // for an entry holding nothing and every lookup reads it as
+            // absent. Measured over `l~put(, 1)`: `hasIndex(1)` is `0`,
+            // `at(1)` and `next(1)` are `.nil`, and `section(1,1)` raises --
+            // while the chain still walks through the entry, which is
+            // [`list_pairs`]'s business and not this function's.
             return Ok(stored.get(offset).copied().flatten().map(|_| offset));
         }
     }
@@ -148,10 +147,10 @@ fn native_list_init(
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
     super::optional_length_argument(interp, args, 0)?;
-    // **`INIT` sent a second time keeps the contents.** `ListClass::initRexx`
-    // takes the optional size and nothing else; the entries belong to the
-    // allocated object. Measured, `l~init` on a two-item list still answers
-    // `items 2`, where rebuilding the entries here answered `0`.
+    // **`INIT` sent a second time keeps the contents.** `List~init` takes the
+    // optional size and nothing else; the entries belong to the allocated
+    // object. Measured, `l~init` on a two-item list still answers `items 2`,
+    // where rebuilding the entries here answered `0`.
     list_state(interp, receiver)?;
     Ok(None)
 }
@@ -177,9 +176,8 @@ fn native_list_insert(
     receiver: ObjRef,
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
-    // The value is optional -- `insertRexx` has no `requiredArgument` for it
-    // (`classes/ListClass.cpp:454`). Measured: `.List~new~insert` answers `0`
-    // at rc 0.
+    // The value is optional -- `insert` requires no argument for it. Measured:
+    // `.List~new~insert` answers `0` at rc 0.
     let item = args.first().copied().flatten();
     let (items, _, _) = list_state(interp, receiver)?;
     let at = match args.get(1).copied() {
@@ -203,9 +201,8 @@ fn native_list_at(
     receiver: ObjRef,
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
-    // **Argument TWO, not one.** `ListClass::getRexx` reaches
-    // `validateIndex(argIndex, ARG_TWO)` (`classes/ListClass.cpp:381`), so a
-    // bare `~at` reports `argument 2 is required` even though the method
+    // **Argument TWO, not one.** `List~at` validates the index as argument 2,
+    // so a bare `~at` reports `argument 2 is required` even though the method
     // takes one argument. Measured on the oracle.
     let handle = list_index_argument(args, 0)?;
     let Some(at) = list_position(interp, receiver, handle)? else {
@@ -228,9 +225,9 @@ fn native_list_put(
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
     // The INDEX is what is required, and it is argument two:
-    // `requiredIndex(argIndex, ARG_TWO)` (`classes/ListClass.cpp:349`). The
-    // value is not checked at all -- measured, `l~put(, handle)` succeeds and
-    // leaves the entry holding nothing.
+    // `requiredIndex(argIndex, ARG_TWO)`. The value is not checked at all --
+    // measured, `l~put(, handle)` succeeds and leaves the entry holding
+    // nothing.
     let handle = list_index_argument(args, 1)?;
     let item = args.first().copied().flatten();
     let Some(at) = list_position(interp, receiver, handle)? else {
@@ -328,8 +325,8 @@ fn list_pairs(
     Ok(pairs)
 }
 
-/// A list's items in order, read the way `ListClass::makeArray` is called
-/// directly rather than sent.
+/// A list's items in order, read the way `List~makeArray` reads them when
+/// called directly rather than sent.
 pub(in crate::dispatch) fn list_items(
     interp: &mut Interp,
     receiver: ObjRef,
@@ -572,10 +569,9 @@ fn native_list_section(
     let available = pairs.len() - at;
     let count =
         optional_length_argument(interp, args, 1)?.map_or(available, |count| count.min(available));
-    // **Always a `List`, and never the receiver's class.**
-    // `ListClass::section` is an unconditional `new ListClass`
-    // (`classes/ListClass.cpp:429`), where `Array` and `Queue` both build
-    // from the receiver's. Measured, with one subclass of each:
+    // **Always a `List`, and never the receiver's class.** `List~section`
+    // always builds a new `List`, where `Array` and `Queue` both build from
+    // the receiver's class. Measured, with one subclass of each:
     // `.MyList~of('a','b','c')~section(0,2)~class~id` is `List`, while the
     // `Queue` subclass answers `MYQ` and the `Array` subclass `MYARR`.
     let class = list_scope(interp);
@@ -605,8 +601,7 @@ fn native_list_supplier(
     new_supplier(interp, items, handles).map(Some)
 }
 
-/// `List~makeArray`: `ArrayClass::makeArray`'s side of the virtual -- items,
-/// not handles.
+/// `List~makeArray`: the `Array` side of the virtual -- items, not handles.
 fn native_list_make_array(
     interp: &mut Interp,
     cleared: Cleared,

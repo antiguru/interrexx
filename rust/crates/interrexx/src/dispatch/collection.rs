@@ -71,13 +71,12 @@ pub(super) fn position_in(
     array_position(interp, store, args, index_use)
 }
 
-/// The one index a method validates for `receiver`: `index` itself, except
-/// an `Array` index on a `Queue`. `QueueClass::validateIndex`
-/// (`classes/QueueClass.cpp:98`) does not spread that into subscripts but
-/// reads it as `requestString` does, as its items' lines, so only a single
-/// item holding a positive whole number converts, and anything else is
-/// 93.907 naming the Array. `position` is the argument's place in the
-/// method's argument list.
+/// The one index a method validates for `receiver`: `index` itself, except an
+/// `Array` index on a `Queue`. A `Queue` does not spread that into subscripts
+/// but reads it as the string request does, as its items' lines, so only a
+/// single item holding a positive whole number converts, and anything else is
+/// 93.907 naming the Array. `position` is the argument's place in the method's
+/// argument list.
 pub(super) fn queue_index(
     interp: &mut Interp,
     receiver: ObjRef,
@@ -106,7 +105,6 @@ pub(super) const QUEUE_ITEMS: &[u8] = b"ITEMS";
 /// measured against and which is not its item count.
 const QUEUE_CAPACITY: &[u8] = b"CAPACITY";
 
-/// `ArrayClass::DefaultArraySize` (`classes/ArrayClass.hpp:327`).
 const DEFAULT_ARRAY_SIZE: usize = 16;
 
 /// The scope the Array-shaped store is bound under.
@@ -240,8 +238,7 @@ fn array_of_slots(interp: &mut Interp, slots: Vec<Option<ObjRef>>) -> ObjRef {
 }
 
 /// Whether the collection holds `wanted`, comparing it against `element`; a
-/// non-logical `==` answer is 34.901 (`RexxInternalObject::isEqual`,
-/// `classes/ObjectClass.cpp:193`).
+/// non-logical `==` answer is 34.901.
 pub(super) fn same_item(
     interp: &mut Interp,
     wanted: ObjRef,
@@ -289,7 +286,7 @@ pub(super) fn append_slot(
     item: ObjRef,
 ) -> Result<usize, Failure> {
     let store = store_of(interp, receiver)?;
-    // `ArrayClass::appendRexx` puts at `lastItem + 1`, which the slots keep.
+    // `Array~append` puts at `lastItem + 1`, which the slots keep.
     let (at, length) = match interp.heap.get(store).map(|object| &object.body) {
         Some(Body::Array { slots, .. }) => (slots.last_item(), slots.len()),
         _ => return Err(Loud::receiver_class("a value that is not an array").into()),
@@ -302,7 +299,7 @@ pub(super) fn append_slot(
 }
 
 impl Interp {
-    /// `ArrayClass::append` with no message send, as a native routine's
+    /// `Array~append` with no message send, as a native routine's
     /// `ArrayAppendString` reaches it: the 1-based index `item` landed on.
     pub(crate) fn array_append(&mut self, array: ObjRef, item: ObjRef) -> Result<usize, Failure> {
         append_slot(self, array, item)

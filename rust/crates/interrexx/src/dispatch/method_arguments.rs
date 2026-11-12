@@ -1,13 +1,12 @@
-//! The method-argument parsers the primitive methods share: the conversions
-//! of `runtime/MethodArguments.hpp`, and the precision they convert at.
+//! The method-argument parsers the primitive methods share, and the precision
+//! they convert at.
 
 use super::{
     Failure, Interp, ObjRef, Raised, required_string_argument, required_string_named_argument,
 };
 
-/// `optionalLengthArgument` (`runtime/MethodArguments.hpp:327`): `None` for
-/// an omitted argument, and anything that is not a non-negative whole number
-/// in range is 93.923.
+/// `None` for an omitted argument, and anything that is not a non-negative
+/// whole number in range is 93.923.
 pub(super) fn optional_length_argument(
     interp: &mut Interp,
     args: &[Option<ObjRef>],
@@ -31,9 +30,9 @@ pub(super) fn optional_length_argument(
     }
 }
 
-/// `lengthArgument` (`runtime/MethodArguments.hpp`): [`optional_length_argument`]
-/// with an omitted argument 93.903 -- measured, oracle rc 163:
-/// `.MutableBuffer~new('abc')~setBufferSize` reports `argument 1 is required`.
+/// [`optional_length_argument`] with an omitted argument 93.903 -- measured,
+/// oracle rc 163: `.MutableBuffer~new('abc')~setBufferSize` reports `argument
+/// 1 is required`.
 pub(super) fn required_length_argument(
     interp: &mut Interp,
     args: &[Option<ObjRef>],
@@ -45,9 +44,8 @@ pub(super) fn required_length_argument(
     }
 }
 
-/// `optionalPositionArgument` (`runtime/MethodArguments.hpp:387`): `None` for
-/// an omitted argument, and anything that is not a positive whole number in
-/// range is 93.924.
+/// `None` for an omitted argument, and anything that is not a positive whole
+/// number in range is 93.924.
 pub(super) fn optional_position_argument(
     interp: &mut Interp,
     args: &[Option<ObjRef>],
@@ -71,9 +69,9 @@ pub(super) fn optional_position_argument(
     }
 }
 
-/// `positionArgument` (`runtime/MethodArguments.hpp`): [`optional_position_argument`]
-/// with an omitted argument 93.903 -- measured, oracle rc 163:
-/// `.MutableBuffer~new('abcabc')~substr` reports `argument 1 is required`.
+/// [`optional_position_argument`] with an omitted argument 93.903 -- measured,
+/// oracle rc 163: `.MutableBuffer~new('abcabc')~substr` reports `argument 1 is
+/// required`.
 pub(super) fn required_position_argument(
     interp: &mut Interp,
     args: &[Option<ObjRef>],
@@ -85,9 +83,8 @@ pub(super) fn required_position_argument(
     }
 }
 
-/// `stringArgument` by position (`runtime/MethodArguments.hpp:136`), the
-/// bytes copied into the lent result buffer: omitted is 93.903 and a value
-/// without a string value is 88.909.
+/// `stringArgument` by position, the bytes copied into the lent result buffer:
+/// omitted is 93.903 and a value without a string value is 88.909.
 pub(super) fn string_method_argument(
     interp: &mut Interp,
     args: &[Option<ObjRef>],
@@ -102,9 +99,8 @@ pub(super) fn string_method_argument(
     Ok(bytes)
 }
 
-/// `optionalPadArgument` (`classes/StringClassUtil.cpp:261`): `None` for an
-/// omitted argument, 88.909 for one without a string value, and 93.922 for a
-/// string that is not one byte -- measured, oracle rc 163:
+/// `None` for an omitted argument, 88.909 for one without a string value, and
+/// 93.922 for a string that is not one byte -- measured, oracle rc 163:
 /// `.MutableBuffer~new('abcabc')~substr(1, 2, 'xx')` reports `found "xx"`.
 pub(super) fn pad_method_argument(
     interp: &mut Interp,
@@ -125,12 +121,12 @@ pub(super) fn pad_method_argument(
     }
 }
 
-/// `optionalOptionArgument` with a valid set (`classes/StringClassUtil.cpp:341`):
-/// `None` for an omitted argument, 88.909 for one without a string value,
-/// and 93.915 for the null string or a first byte outside `valid`, compared
-/// case-folded; the `0x00` byte is admitted as the builtin's is -- measured,
-/// oracle rc 163: `.MutableBuffer~new('abcabc')~verify('a', 'X')` reports
-/// `must be one of "MN"; found "X"`, and rc 0: `~verify('abc', '00'x)` is `1`.
+/// The optional option argument with a valid set: `None` for an omitted
+/// argument, 88.909 for one without a string value, and 93.915 for the null
+/// string or a first byte outside `valid`, compared case-folded; the `0x00`
+/// byte is admitted as the builtin's is -- measured, oracle rc 163:
+/// `.MutableBuffer~new('abcabc')~verify('a', 'X')` reports `must be one of
+/// "MN"; found "X"`, and rc 0: `~verify('abc', '00'x)` is `1`.
 pub(super) fn option_method_argument(
     interp: &mut Interp,
     args: &[Option<ObjRef>],
@@ -153,11 +149,10 @@ pub(super) fn option_method_argument(
     }
 }
 
-/// `optionalStringArgument` by position (`runtime/MethodArguments.hpp:186`):
-/// the null string for an omitted argument, and 88.909 for a value without a
-/// string value -- measured, oracle rc 0:
-/// `.MutableBuffer~new('abcdef')~translate('ABC')` answers six blanks, the
-/// empty input table reading each byte as its own index.
+/// The optional string argument by position: the null string for an omitted
+/// argument, and 88.909 for a value without a string value -- measured, oracle
+/// rc 0: `.MutableBuffer~new('abcdef')~translate('ABC')` answers six blanks,
+/// the empty input table reading each byte as its own index.
 pub(super) fn optional_string_method_argument(
     interp: &mut Interp,
     args: &[Option<ObjRef>],
@@ -171,10 +166,8 @@ pub(super) fn optional_string_method_argument(
 }
 
 /// [`optional_string_method_argument`] where an omitted argument has to stay
-/// distinguishable from the null string, which is
-/// `StringUtil::makearray`'s own `separator != OREF_NULL` test
-/// (`classes/support/StringUtil.cpp:552`): `None` for an omitted argument,
-/// and 88.909 for a value without a string value.
+/// distinguishable from the null string: `None` for an omitted argument, and
+/// 88.909 for a value without a string value.
 pub(super) fn optional_string_or_none_argument(
     interp: &mut Interp,
     args: &[Option<ObjRef>],
@@ -187,9 +180,8 @@ pub(super) fn optional_string_or_none_argument(
     Ok(Some(interp.to_text(text).into_owned()))
 }
 
-/// `nonNegativeArgument` (`classes/StringClassUtil.cpp:167`): `None` for an
-/// omitted argument, and anything that is not a non-negative whole number in
-/// range is 93.906 -- measured, oracle rc 163:
+/// `None` for an omitted argument, and anything that is not a non-negative
+/// whole number in range is 93.906 -- measured, oracle rc 163:
 /// `.MutableBuffer~new('abcdef')~insert('a', -1)` reports `Method argument 2
 /// must be zero or a positive whole number; found "-1"`.
 pub(super) fn optional_non_negative_argument(
@@ -205,9 +197,8 @@ pub(super) fn optional_non_negative_argument(
     }
 }
 
-/// `stringArgument`'s named overload (`runtime/MethodArguments.hpp:161`), the
-/// bytes copied into the lent result buffer: omitted is 88.901 and a value
-/// without a string value is 88.909.
+/// `stringArgument`'s named overload, the bytes copied into the lent result
+/// buffer: omitted is 88.901 and a value without a string value is 88.909.
 pub(super) fn named_string_argument(
     interp: &mut Interp,
     args: &[Option<ObjRef>],
@@ -223,9 +214,8 @@ pub(super) fn named_string_argument(
     Ok(bytes)
 }
 
-/// `positionArgument`'s named overload (`classes/StringClassUtil.cpp:225`):
-/// omitted is 88.901 and anything that is not a positive whole number in
-/// range is 88.912.
+/// The position argument's named overload: omitted is 88.901 and anything that
+/// is not a positive whole number in range is 88.912.
 pub(super) fn named_position_argument(
     interp: &mut Interp,
     args: &[Option<ObjRef>],
@@ -240,9 +230,9 @@ pub(super) fn named_position_argument(
     }
 }
 
-/// `optionalLengthArgument`'s named overload
-/// (`runtime/MethodArguments.hpp:344`): `None` for an omitted argument, and
-/// anything that is not a non-negative whole number in range is 88.911.
+/// The optional length argument's named overload: `None` for an omitted
+/// argument, and anything that is not a non-negative whole number in range is
+/// 88.911.
 pub(super) fn optional_named_length_argument(
     interp: &mut Interp,
     args: &[Option<ObjRef>],
@@ -257,8 +247,7 @@ pub(super) fn optional_named_length_argument(
     }
 }
 
-/// `optionalPadArgument`'s named overload
-/// (`classes/StringClassUtil.cpp:275`): `None` for an omitted argument,
+/// The optional pad argument's named overload: `None` for an omitted argument,
 /// 88.909 for one without a string value, and 88.910 for a string that is not
 /// one byte.
 pub(super) fn named_pad_argument(
@@ -285,9 +274,9 @@ pub(super) fn named_pad_argument(
     }
 }
 
-/// One `optionalPositionArgument`/`optionalLengthArgument` conversion: the
-/// argument at `index` as a whole number, `None` for an omitted or absent
-/// position, and `raise`'s own condition for anything that is not one.
+/// One optional position or length conversion: the argument at `index` as a
+/// whole number, `None` for an omitted or absent position, and `raise`'s own
+/// condition for anything that is not one.
 pub(super) fn whole_method_argument(
     interp: &mut Interp,
     args: &[Option<ObjRef>],
@@ -339,9 +328,8 @@ pub(super) fn usize_or_refuse(
     usize::try_from(value).map_err(|_| refuse_method_argument(interp, args, index, raise))
 }
 
-/// `Numerics::ARGUMENT_DIGITS`, the precision every method-argument
-/// conversion runs at -- `builtin.rs`'s own constant of the same value, kept
-/// separate because the two layers reach it through different call paths and
-/// a shared one would tie them together for no reason beyond the number
-/// agreeing today.
+/// The argument precision, the one every method-argument conversion runs at --
+/// `builtin.rs`'s own constant of the same value, kept separate because the
+/// two layers reach it through different call paths and a shared one would tie
+/// them together for no reason beyond the number agreeing today.
 const METHOD_ARGUMENT_DIGITS: usize = 18;

@@ -58,7 +58,7 @@ const METHOD_NEXT: &[u8] = b"METHODNEXT";
 const METHOD_BUCKETS: &[u8] = b"METHODBUCKETS";
 const METHOD_FREE: &[u8] = b"METHODFREE";
 
-/// `DirectoryClass::methodTable`, which only a `Directory` ever installs.
+/// The method table, which only a `Directory` ever installs.
 const METHODS: Half = Half {
     indexes: METHOD_INDEXES,
     items: METHOD_ITEMS,
@@ -67,16 +67,14 @@ const METHODS: Half = Half {
     free: METHOD_FREE,
 };
 
-/// `DirectoryClass::unknownMethod`: the one method `setMethod` keeps out of
-/// the method table, because `UNKNOWN` is not an entry -- it is what answers
-/// when there is none. Measured: with it set, `items` is still 1 for a
-/// directory holding one ordinary entry and `allIndexes` does not name it.
+/// The one method `setMethod` keeps out of the method table, because `UNKNOWN`
+/// is not an entry -- it is what answers when there is none. Measured: with it
+/// set, `items` is still 1 for a directory holding one ordinary entry and
+/// `allIndexes` does not name it.
 const UNKNOWN_METHOD: &[u8] = b"METHODUNKNOWN";
 
-/// `HashCollection::MinimumBucketSize` (`classes/support/HashCollection.hpp:126`).
 const MINIMUM_BUCKET_SIZE: usize = 17;
 
-/// `HashCollection::calculateBucketSize` (`classes/support/HashCollection.cpp:150`).
 fn calculate_bucket_size(capacity: usize) -> usize {
     if capacity >= 1 << 30 {
         return 1 << 30;
@@ -110,13 +108,11 @@ const OWNED: &[&str] = &[
 ];
 
 /// The classes whose `put` takes its index from its value --
-/// `IndexOnlyHashCollection`, whose only two subclasses are `Set` and `Bag`
-/// (`classes/support/HashCollection.cpp:1129`).
+/// `IndexOnlyHashCollection`, whose only two subclasses are `Set` and `Bag`.
 const INDEX_ONLY: &[&str] = &["Set", "Bag"];
 
-/// The classes whose `put` adds a second entry under an existing index
-/// instead of replacing it -- `MultiValueContents`, whose `put` is
-/// `addFront` (`classes/support/HashContents.cpp:1650`).
+/// The classes whose `put` adds a second entry under an existing index instead
+/// of replacing it: the multi-value contents, whose `put` adds at the front.
 const MULTI_VALUE: &[&str] = &["Relation", "Bag"];
 
 /// Whether `receiver` holds more than one item per index.
@@ -298,9 +294,8 @@ fn install_store(interp: &mut Interp, receiver: ObjRef, half: Half, buckets: usi
     interp.roots.activity_mut().push_temp(indexes);
     let items = interp.alloc_charged(BehaviourId::ARRAY, Body::array(vec![None; total]));
     interp.roots.activity_mut().push_temp(items);
-    // `initializeFreeChain` (`classes/support/HashContents.cpp:145`): every
-    // bucket slot ends its own chain, and the overflow slots are chained
-    // upward from `bucketSize` with the last one ending the chain.
+    // Every bucket slot ends its own chain, and the overflow slots are chained
+    // upward from the bucket count with the last one ending the chain.
     let mut links: Vec<Option<ObjRef>> = Vec::with_capacity(total);
     for slot in 0..total {
         let link = if slot < buckets || slot + 1 == total {
@@ -425,14 +420,13 @@ fn store_of(interp: &mut Interp, receiver: ObjRef) -> Result<Store, Failure> {
         return Ok(store);
     }
     // **A `Body::Native` receiver is not this store's**, and the check has to
-    // be here because the two are one method. `Setup.cpp` donates
+    // be here because the two are one method. The oracle donates
     // `IdentityTable`'s `At`, `Put` and `[]` rows to `StringTable` and then
-    // `StringTable`'s whole set to `Directory` (`memory/Setup.cpp:881`,
-    // `:933`), so all four classes share one method identity and one body --
-    // which is why registering these names for `Table` alone reached a
-    // `StringTable` during the bootstrap. `Directory`, `StringTable` and
-    // `Properties` keep the entry map they already have until the task that
-    // owns them.
+    // `StringTable`'s whole set to `Directory`, so all four classes share one
+    // method identity and one body -- which is why registering these names for
+    // `Table` alone reached a `StringTable` during the bootstrap. `Directory`,
+    // `StringTable` and `Properties` keep the entry map they already have
+    // until the task that owns them.
     if matches!(
         interp.heap.get(receiver).map(|object| &object.body),
         Some(Body::Native(_))
@@ -509,13 +503,11 @@ fn write_link(interp: &mut Interp, store: &Store, slot: usize, link: usize) {
 /// Which key protocol a receiver's class uses.
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Keys {
-    /// `IdentityHashContents`: reference identity, hashed by `getHashValue()`
-    /// rather than by the identity hash -- `HashContents.hpp:197`'s own
-    /// comment gives the reason, which is that a saved image would otherwise
-    /// lose its lookups.
+    /// `IdentityHashContents`: reference identity, hashed by the object's own
+    /// hash value rather than by the identity hash, which would lose its
+    /// lookups in a saved image.
     Identity,
-    /// `EqualityHashContents`: `equalValue`, hashed by `hash()`
-    /// (`HashContents.hpp:441`).
+    /// `EqualityHashContents`: `equalValue`, hashed by `hash()`.
     Equality,
     /// `StringHashContents`: the index's STRING VALUE, compared as bytes and
     /// hashed by the string hash.
@@ -563,14 +555,13 @@ fn keys_of(interp: &mut Interp, receiver: ObjRef) -> Keys {
     }
 }
 
-/// `RexxInternalObject::getHashValue()`, which is what the identity contents
-/// hashes with and what the equality contents falls back on for a base class.
+/// An object's own hash value, which is what the identity contents hashes with
+/// and what the equality contents falls back on for a base class.
 fn get_hash_value(interp: &mut Interp, value: ObjRef) -> u64 {
     super::hash_value(interp, value)
 }
 
-/// `RexxString::getObjectHashCode` (`classes/StringClass.cpp:220`): a
-/// `HASHCODE` answer turned back into a number.
+/// A `HASHCODE` answer turned back into a number.
 fn object_hash_code(text: &[u8]) -> u64 {
     if text.is_empty() {
         return 1;
@@ -591,10 +582,9 @@ fn hash_of(interp: &mut Interp, keys: Keys, index: ObjRef) -> Result<u64, Failur
         let text = interp.to_text(index).into_owned();
         return Ok(super::string_hash(&text));
     }
-    // `RexxObject::hash` branches on whether the behaviour is a primitive one
-    // (`classes/ObjectClass.cpp:416`). **"Has a string value" and "is a
-    // base-class object" are different questions**:
-    // a `String` subclass has a string value and is not a base class, so its
+    // Hashing branches on whether the behaviour is a primitive one. **"Has a
+    // string value" and "is a base-class object" are different questions**: a
+    // `String` subclass has a string value and is not a base class, so its
     // `HASHCODE` override is reached where a plain string's -- which cannot
     // exist, since `.String~define` is 98.985 -- would not be.
     if keys == Keys::Identity || interp.is_base_class(index) {
@@ -632,9 +622,8 @@ fn same_index(
 }
 
 /// Whether `wanted` is the held `item` under the receiver's item protocol:
-/// identity for [`Keys::Identity`] (`HashContents::isItemEqual`,
-/// `HashContents.hpp:190`), and `==` for the equality and string contents
-/// (`EqualityHashContents::isItemEqual`, `:434`).
+/// identity for [`Keys::Identity`], and `==` for the equality and string
+/// contents.
 fn same_held_item(
     interp: &mut Interp,
     keys: Keys,
@@ -649,8 +638,7 @@ fn same_held_item(
 
 // ---- the store's own operations ----
 
-/// Every occupied slot, in bucket order following each chain --
-/// `HashContents::TableIterator`.
+/// Every occupied slot, in bucket order following each chain.
 fn walk(interp: &mut Interp, receiver: ObjRef) -> Result<Vec<usize>, Failure> {
     let store = store_of(interp, receiver)?;
     walk_in(interp, &store)
@@ -692,8 +680,7 @@ fn entries_in(
     Ok(entries)
 }
 
-/// Grows the table and re-adds every entry in old bucket order --
-/// `HashCollection::expandContents` and `HashContents::reMerge`.
+/// Grows the table and re-adds every entry in old bucket order.
 fn expand(interp: &mut Interp, receiver: ObjRef, half: Half) -> Result<(), Failure> {
     let store = store_in(interp, receiver, half)?;
     let order = walk_in(interp, &store)?;
@@ -712,18 +699,17 @@ fn expand(interp: &mut Interp, receiver: ObjRef, half: Half) -> Result<(), Failu
     let buckets = calculate_bucket_size(store.total * 2);
     install_store(interp, receiver, half, buckets);
     for (index, item) in carried {
-        // **Never `insert`**, which replaces an index the table already
-        // holds: a `Relation` carries duplicate indexes and would lose one
-        // per pair on every growth. `reMerge` adds rather than puts
-        // (`classes/support/HashContents.cpp:1238`), and adding in the old
-        // walk order is what keeps each index's chain in its order.
+        // **Never `insert`**, which replaces an index the table already holds:
+        // a `Relation` carries duplicate indexes and would lose one per pair
+        // on every growth. The merge adds rather than puts, and adding in the
+        // old walk order is what keeps each index's chain in its order.
         append_entry(interp, receiver, half, index, item)?;
     }
     Ok(())
 }
 
 /// Appends an entry at the end of its bucket's chain without looking for an
-/// index the table already holds -- `HashContents::append`'s half of `put`.
+/// index the table already holds -- the append half of `put`.
 fn append_entry(
     interp: &mut Interp,
     receiver: ObjRef,
@@ -764,8 +750,7 @@ fn append_entry(
     Ok(())
 }
 
-/// `HashContents::addFront` (`classes/support/HashContents.cpp:1650`): a new
-/// entry for an index the table already holds goes to the FRONT of that
+/// A new entry for an index the table already holds goes to the FRONT of that
 /// index's chain.
 fn insert_front(
     interp: &mut Interp,
@@ -803,18 +788,18 @@ fn insert_front(
     Ok(())
 }
 
-/// `HashContents::put`: replaces the value under an index the table already
-/// holds, and otherwise appends to the end of the bucket's chain, expanding
-/// first if the free chain has run out.
+/// Replaces the value under an index the table already holds, and otherwise
+/// appends to the end of the bucket's chain, expanding first if the free chain
+/// has run out.
 fn insert(
     interp: &mut Interp,
     receiver: ObjRef,
     index: ObjRef,
     item: Option<ObjRef>,
 ) -> Result<(), Failure> {
-    // `DirectoryClass::put`: a put replaces any method of the same name.
-    // Measured: `setMethod('M', 'return 2')` then `d['M'] = 5` answers 5, and
-    // `unsetMethod('M')` afterwards still answers 5.
+    // A put replaces any method of the same name. Measured: `setMethod('M',
+    // 'return 2')` then `d['M'] = 5` answers 5, and `unsetMethod('M')`
+    // afterwards still answers 5.
     if method_store(interp, receiver)?.is_some() {
         take_in(interp, receiver, METHODS, index)?;
     }
@@ -832,11 +817,11 @@ fn insert_in(
     // `.local['OUTPUT'] = x` moves a route's far end.
     interp.bump_route_generation();
     // **The fullness test comes first, and it is the free chain rather than
-    // the item count** (`classes/support/HashContents.hpp:297`): a table can
-    // run its overflow dry while primary buckets stand empty, and upstream
-    // expands before every `put` rather than only when one needs a slot.
-    // Measured through the simulation this was written from: testing the item
-    // count instead runs the free chain out on the forty-integer case.
+    // the item count**: a table can run its overflow dry while primary buckets
+    // stand empty, and upstream expands before every `put` rather than only
+    // when one needs a slot. Measured through the simulation this was written
+    // from: testing the item count instead runs the free chain out on the
+    // forty-integer case.
     let store = store_in(interp, receiver, half)?;
     if store.free >= store.total {
         expand(interp, receiver, half)?;
@@ -871,7 +856,7 @@ fn method_store(interp: &mut Interp, receiver: ObjRef) -> Result<Option<Store>, 
     read_store(interp, receiver, METHODS)
 }
 
-/// `DirectoryClass::unknownMethod`, or `None` when there is none.
+/// The unknown method, or `None` when there is none.
 fn unknown_method(interp: &mut Interp, receiver: ObjRef) -> Option<ObjRef> {
     let scope = hash_scope(interp);
     pool_variable(interp, receiver, scope, UNKNOWN_METHOD).filter(|held| *held != ObjRef::NIL)
@@ -898,8 +883,8 @@ fn run_stored_method(
     args: &[Option<ObjRef>],
 ) -> Result<ObjRef, Failure> {
     // An entry holding an object rather than a method answers that object:
-    // `.environment`'s `LOCAL`, which `Setup.cpp:1781` installs as a method
-    // running `ActivityManager::getLocalRexx`.
+    // `.environment`'s `LOCAL`, which is installed as a method answering the
+    // activity's local environment.
     let Some(method) = interp
         .executable_sources
         .get(&stored)
@@ -915,8 +900,8 @@ fn run_stored_method(
     .unwrap_or(ObjRef::NIL))
 }
 
-/// `DirectoryClass::methodTableValue`: the result of the method stored under
-/// `index`, run with NO arguments and under its own name.
+/// The result of the method stored under `index`, run with NO arguments and
+/// under its own name.
 fn method_table_value(
     interp: &mut Interp,
     receiver: ObjRef,
@@ -936,9 +921,8 @@ fn method_table_value(
     run_stored_method(interp, receiver, &name, stored, &[]).map(Some)
 }
 
-/// `DirectoryClass::unknownValue`: run under the name `UNKNOWN` and with the
-/// index as its ONE argument -- unlike a method table entry, which is run
-/// with none.
+/// Run under the name `UNKNOWN` and with the index as its ONE argument --
+/// unlike a method table entry, which is run with none.
 fn unknown_value(
     interp: &mut Interp,
     receiver: ObjRef,
@@ -950,8 +934,7 @@ fn unknown_value(
     run_stored_method(interp, receiver, b"UNKNOWN", stored, &[Some(index)]).map(Some)
 }
 
-/// `DirectoryClass::get`: the contents, then the method table, then the
-/// unknown method.
+/// The contents, then the method table, then the unknown method.
 fn merged_get(
     interp: &mut Interp,
     receiver: ObjRef,
@@ -967,9 +950,8 @@ fn merged_get(
     unknown_value(interp, receiver, index)
 }
 
-/// `DirectoryClass::get` for the native API's `DirectoryAt` and
-/// `StringTableAt`, which call the collection rather than send `AT`
-/// (`interpreter/api/ThreadContextStubs.cpp:1218-1224`).
+/// `Directory~at` for the native API's `DirectoryAt` and `StringTableAt`,
+/// which call the collection rather than send `AT`.
 pub(crate) fn store_get(
     interp: &mut Interp,
     receiver: ObjRef,
@@ -978,7 +960,7 @@ pub(crate) fn store_get(
     merged_get(interp, receiver, index)
 }
 
-/// `DirectoryClass::remove` for the native API's `DirectoryRemove` and
+/// `Directory~remove` for the native API's `DirectoryRemove` and
 /// `StringTableRemove`, likewise.
 pub(crate) fn store_remove(
     interp: &mut Interp,
@@ -989,9 +971,9 @@ pub(crate) fn store_remove(
     take_merged(interp, receiver, index, Removal::Answered)
 }
 
-/// `DirectoryClass::hasIndex`: either half, and **not** the unknown method.
-/// Measured, with an `UNKNOWN` method set: `hasIndex('nosuch')` is 0 while
-/// `d['nosuch']` answers what the method returns.
+/// Either half, and **not** the unknown method. Measured, with an `UNKNOWN`
+/// method set: `hasIndex('nosuch')` is 0 while `d['nosuch']` answers what the
+/// method returns.
 fn merged_has_index(interp: &mut Interp, receiver: ObjRef, index: ObjRef) -> Result<bool, Failure> {
     let (_, found) = probe(interp, receiver, index)?;
     if found.found.is_some() {
@@ -1048,10 +1030,10 @@ fn method_pairs(interp: &mut Interp, receiver: ObjRef) -> Result<Vec<(ObjRef, Ob
     Ok(pairs)
 }
 
-/// How many entries the method table holds, WITHOUT running any of them --
-/// `DirectoryClass::items` adds the two counts. The unknown method is not one
-/// of them: measured, a directory holding one ordinary entry and an `UNKNOWN`
-/// method answers `items` as 1.
+/// How many entries the method table holds, WITHOUT running any of them;
+/// `items` adds the two counts. The unknown method is not one of them:
+/// measured, a directory holding one ordinary entry and an `UNKNOWN` method
+/// answers `items` as 1.
 fn method_count(interp: &mut Interp, receiver: ObjRef) -> Result<usize, Failure> {
     let Some(store) = method_store(interp, receiver)? else {
         return Ok(0);
@@ -1070,8 +1052,8 @@ fn index_argument(args: &[Option<ObjRef>], position: usize) -> Result<ObjRef, Fa
 }
 
 /// `validateIndex`: a string-keyed collection takes its index as
-/// `stringArgument(index, "index")` (`classes/support/HashCollection.cpp:1112`),
-/// and every other collection takes it as given.
+/// `stringArgument(index, "index")`, and every other collection takes it as
+/// given.
 fn validated_index(
     interp: &mut Interp,
     receiver: ObjRef,
@@ -1083,7 +1065,7 @@ fn validated_index(
     Ok(index)
 }
 
-/// `HashCollection::getRexx` and `[]`: the item under that index, or `.nil`.
+/// `~at` and `[]`: the item under that index, or `.nil`.
 #[inline(always)]
 pub(super) fn store_at(
     interp: &mut Interp,
@@ -1097,8 +1079,8 @@ pub(super) fn store_at(
     ))
 }
 
-/// `HashCollection::putRexx` and `[]=`: **the item comes first and the index
-/// second**, the opposite of the reading order of `t['k'] = 'v'`.
+/// `~put` and `[]=`: **the item comes first and the index second**, the
+/// opposite of the reading order of `t['k'] = 'v'`.
 pub(super) fn store_put(
     interp: &mut Interp,
     receiver: ObjRef,
@@ -1109,14 +1091,14 @@ pub(super) fn store_put(
         return Err(Raised::missing_named_argument("item").into());
     };
     // **A `Set`'s index is its value.**
-    // `IndexOnlyHashCollection::validateValueIndex`
-    // (`classes/support/HashCollection.cpp:1129`): the value is required, the
-    // index is optional, and an index that is given must equal the value or
-    // the send is 93.949. Measured: `s~put('a')` twice leaves `items` at 1,
+    // `IndexOnlyHashCollection::validateValueIndex`: the value is required,
+    // the index is optional, and an index that is given must equal the value
+    // or the send is 93.949. Measured: `s~put('a')` twice leaves `items` at 1,
     // `s~put('b','b')` is accepted, and `s~put('c','d')` raises.
     let index = if index_only(interp, receiver) {
         match args.get(1).copied().flatten() {
-            // `isIndexEqual(value, index)` -- the VALUE receives the `==`.
+            // The index-equality test is `isIndexEqual(value, index)` -- the
+            // VALUE receives the `==`.
             Some(given) if !super::collection::same_item(interp, item, given)? => {
                 return Err(Raised::index_does_not_match().into());
             }
@@ -1137,10 +1119,9 @@ pub(super) fn store_put(
 /// Every (index, item) pair the receiver holds, in bucket order.
 fn pairs(interp: &mut Interp, receiver: ObjRef) -> Result<Vec<(ObjRef, ObjRef)>, Failure> {
     let mut pairs = stored_pairs(interp, receiver)?;
-    // `DirectoryClass::allIndexes` and its siblings append the method table
-    // AFTER the contents, each half in its own store order. Measured: a
-    // directory given `AAA`(method), `zzz`, `MMM`(method), `bbb` answers
-    // `zzz bbb MMM AAA`.
+    // `allIndexes` and its siblings append the method table AFTER the
+    // contents, each half in its own store order. Measured: a directory given
+    // `AAA`(method), `zzz`, `MMM`(method), `bbb` answers `zzz bbb MMM AAA`.
     pairs.extend(method_pairs(interp, receiver)?);
     Ok(pairs)
 }
@@ -1188,8 +1169,8 @@ fn search_item(
 }
 
 /// Every index the receiver holds, in [`pairs`]'s order, **running no
-/// method** -- `DirectoryClass::allIndexes` appends
-/// `methodTable->allIndexes()`, which reads names only.
+/// method**: the method table's names are appended after the contents, and are
+/// read as names only.
 fn indexes(interp: &mut Interp, receiver: ObjRef) -> Result<Vec<ObjRef>, Failure> {
     let mut indexes = Vec::new();
     let store = store_of(interp, receiver)?;
@@ -1364,8 +1345,8 @@ fn native_hash_supplier(
     super::collection::new_supplier(interp, items, indexes).map(Some)
 }
 
-/// `TableClass::newRexx` and its siblings: an instance with no store yet and
-/// `INIT` with every argument. The store is sized by `INIT`
+/// The constructor of `Table` and its siblings: an instance with no store yet
+/// and `INIT` with every argument. The store is sized by `INIT`
 /// ([`initialize_store`]), or at the default capacity on first use by a
 /// subclass whose `INIT` does not forward.
 pub(super) fn native_hash_new(
@@ -1379,7 +1360,6 @@ pub(super) fn native_hash_new(
     super::begin_init(interp, object, args)
 }
 
-/// `HashCollection::initialize` (`classes/support/HashCollection.cpp:78`):
 /// the store sized for `capacity`, unless the receiver already has one. The
 /// capacity is **observable**: it decides the bucket count, which decides
 /// the iteration order. Measured, the same eight keys in the same order come
@@ -1470,7 +1450,7 @@ pub(crate) fn new_string_table(interp: &mut Interp) -> Result<ObjRef, Failure> {
     Ok(table)
 }
 
-/// `DirectoryClass::put` of `item` under the string `name`.
+/// `Directory~put` of `item` under the string `name`.
 pub(crate) fn directory_put(
     interp: &mut Interp,
     directory: ObjRef,
@@ -1493,11 +1473,10 @@ pub(crate) fn directory_remove(
     take_merged(interp, directory, index, Removal::Discarded).map(|_| ())
 }
 
-/// `HashCollection::put` of `item` under the string `name`, run for the
-/// native API's `DirectoryPut` and `StringTablePut` on any collection this
-/// file owns (`interpreter/api/ThreadContextStubs.cpp:1205-1216`): a
-/// multi-value one adds, as its contents' `put` is `addFront`, and a
-/// `Directory` runs `DirectoryClass::put`.
+/// `put` of `item` under the string `name`, run for the native API's
+/// `DirectoryPut` and `StringTablePut` on any collection this file owns: a
+/// multi-value one adds at the front, as its contents' `put` does, and a
+/// `Directory` runs its own `put`.
 pub(crate) fn native_put(
     interp: &mut Interp,
     receiver: ObjRef,
@@ -1527,7 +1506,7 @@ pub(crate) fn directory_put_method_value(
     insert_in(interp, directory, METHODS, index, Some(value))
 }
 
-/// What `DirectoryClass::get` finds for a name.
+/// What `Directory~get` finds for a name.
 pub(crate) enum DirectoryEntry {
     Found(ObjRef),
     /// An entry the oracle holds and this crate does not build.
@@ -1576,7 +1555,7 @@ impl<'a> Key<'a> {
     }
 }
 
-/// `DirectoryClass::get` over a string-keyed store, by the name's bytes: the
+/// `Directory~get` over a string-keyed store, by the name's bytes: the
 /// contents, then the method table, then the unknown method.
 ///
 /// `view` is a reading of `directory`'s pool from an earlier call, used when
@@ -1724,8 +1703,8 @@ fn hash_index(
 }
 
 /// `~at(index)` and `~[index]` on a `Directory` or a `StringTable`: the entry
-/// stored under `index`, or `.nil` -- `HashCollection::getRexx`, donated to
-/// each of them by an `InheritInstanceMethods`.
+/// stored under `index`, or `.nil`. Both classes are given the same method as
+/// the other hash collections.
 pub(super) fn native_hash_at(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1753,13 +1732,12 @@ fn hash_at(
     args: &[Option<ObjRef>],
     name: &[u8],
 ) -> Result<Option<ObjRef>, Failure> {
-    // **One body, two stores.** `Setup.cpp` donates `IdentityTable`'s `At`,
+    // **One body, two stores.** The oracle donates `IdentityTable`'s `At`,
     // `Put` and `[]` rows to `StringTable` and that whole set on to
-    // `Directory` (`memory/Setup.cpp:881`, `:933`), so `Table`,
-    // `IdentityTable`, `StringTable` and `Directory` share one method
-    // identity here exactly as they share one function upstream. A table
-    // this crate built on `NativeObject`'s map reads that map; everything
-    // else reads the store.
+    // `Directory`, so `Table`, `IdentityTable`, `StringTable` and `Directory`
+    // share one method identity here exactly as they share one function there.
+    // A table this crate built on `NativeObject`'s map reads that map;
+    // everything else reads the store.
     if !matches!(
         interp.heap.get(receiver).map(|object| &object.body),
         Some(Body::Native(_))
@@ -1797,7 +1775,7 @@ fn leveled_store_at(
 }
 
 /// `~put(item, index)` on a `Directory` or a `StringTable`: stores `item`
-/// under `index`, replacing whatever was there -- `HashCollection::putRexx`.
+/// under `index`, replacing whatever was there.
 pub(super) fn native_hash_put(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1857,8 +1835,7 @@ fn hash_put(
 }
 
 /// `~unknown(message, arguments)` on a `Directory` or a `StringTable`: **the
-/// entry-method mechanism**, `StringHashCollection::unknown`
-/// (`classes/support/HashCollection.cpp:1015`).
+/// entry-method mechanism**, `StringHashCollection::unknown`.
 pub(super) fn native_hash_unknown(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1870,7 +1847,7 @@ pub(super) fn native_hash_unknown(
     })
 }
 
-/// [`native_hash_unknown`]'s work, which `processUnknown` also runs without a send.
+/// [`native_hash_unknown`]'s work, which the oracle also runs without a send.
 pub(super) fn hash_unknown(
     interp: &mut Interp,
     receiver: ObjRef,
@@ -1968,7 +1945,6 @@ fn native_hash_set_entry(
     Ok(None)
 }
 
-/// `DirectoryClass::setMethodRexx` (`classes/DirectoryClass.cpp:480`):
 /// attaches a method whose RESULT is the entry's item, recomputed on every
 /// read.
 fn native_directory_set_method(
@@ -1985,9 +1961,8 @@ fn native_directory_set_method(
     interp.roots.activity_mut().push_temp(name);
     let unknown = is_unknown_name(interp, name);
     match args.get(1).copied().flatten() {
-        // `newMethodObject(entryname, methodobj, TheNilObject, "method")`
-        // (`classes/DirectoryClass.cpp:484`): the table holds the Method
-        // object, compiled under the entry's name, which is what
+        // The `Method` object is built with the entry's name, and the table
+        // holds it: it is compiled under the entry's name, which is what
         // `.context~executable` answers when the entry runs.
         Some(source) => {
             let object = if interp.receiver_kind(source) == Ok(super::Primitive::Method) {
@@ -2019,8 +1994,7 @@ fn native_directory_set_method(
     Ok(None)
 }
 
-/// `DirectoryClass::unsetMethodRexx`: drops a method, and unlike `setMethod`
-/// leaves the contents alone.
+/// Drops a method, and unlike `setMethod` leaves the contents alone.
 fn native_directory_unset_method(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -2058,8 +2032,8 @@ fn native_hash_remove_entry(
 
 // ---- `Relation` and `Bag`'s own surface ----
 
-/// `Bag~of(item, ...)`: `BagClass::ofRexx`, which unlike `Set~of` keeps the
-/// duplicates -- measured, `.Bag~of('p','p','q')~items` is 3.
+/// `Bag~of(item, ...)`: unlike `Set~of`, keeps the duplicates -- measured,
+/// `.Bag~of('p','p','q')~items` is 3.
 pub(super) fn native_bag_of(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -2083,8 +2057,8 @@ pub(super) fn native_bag_of(
     Ok(Some(object))
 }
 
-/// `SetClass::ofRexx`: a new `Set` of the receiver's own class holding the
-/// arguments, each of which is its own index.
+/// A new `Set` of the receiver's own class holding the arguments, each of
+/// which is its own index.
 pub(super) fn native_set_of(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -2195,14 +2169,12 @@ pub(super) const NATIVE_METHODS: &[(&str, &str, Arity, NativeMethod)] = &[
         Arity::Fixed(0),
         native_hash_supplier,
     ),
-    // **`Set`'s two overrides route to the INDEX bodies.** `Setup.cpp` writes
-    // `Set`'s `HasItem` as `IdentityTable::hasIndexRexx` and its `RemoveItem`
-    // as `IdentityTable::removeRexx`, and `IndexOnlyHashCollection`'s own
-    // comment gives the reason: for a collection whose index is its value,
-    // searching by index is the faster operation and answers the same thing.
-    // Rows of their own here because they are method identities of their own
-    // -- `Set~hasItem` is not `Table~hasItem`, which is why adding `Set` to
-    // [`OWNED`] alone left it refusing.
+    // **`Set`'s two overrides route to the INDEX bodies.** `Set`'s `HasItem`
+    // and `RemoveItem` use the index-based bodies, for a collection whose
+    // index is its value: searching by index is the faster operation and
+    // answers the same thing. Rows of their own here because they are method
+    // identities of their own -- `Set~hasItem` is not `Table~hasItem`, which
+    // is why adding `Set` to [`OWNED`] alone left it refusing.
     ("Set", "HASITEM", Arity::Fixed(1), native_hash_has_index),
     ("Set", "REMOVEITEM", Arity::Fixed(1), native_hash_remove),
     // `StringHashCollection`'s four, which read the same store the index
@@ -2227,9 +2199,9 @@ pub(super) const NATIVE_METHODS: &[(&str, &str, Arity, NativeMethod)] = &[
         native_hash_remove_entry,
     ),
     // `Directory`'s own two, which override `Object`'s private pair. Neither
-    // reaches `StringTable`: `setMethodRexx` is declared only in
-    // `DirectoryClass.cpp`, and a `setMethod` send to a `StringTable` falls
-    // through to its `unknown` and answers `.nil`.
+    // reaches `StringTable`: `setMethod` is declared only on `Directory`, and
+    // a `setMethod` send to a `StringTable` falls through to its `unknown` and
+    // answers `.nil`.
     (
         "Directory",
         "SETMETHOD",
@@ -2244,10 +2216,8 @@ pub(super) const NATIVE_METHODS: &[(&str, &str, Arity, NativeMethod)] = &[
     ),
 ];
 
-/// A fresh `Directory` holding one entry per pair, string-keyed --
-/// `VariableDictionary::getVariableDirectory`
-/// (`execution/VariableDictionary.cpp`), which `RexxContext~variables`
-/// answers.
+/// A fresh `Directory` holding one entry per pair, string-keyed -- what
+/// `RexxContext~variables` answers.
 pub(super) fn directory_of(
     interp: &mut Interp,
     entries: Vec<(Vec<u8>, ObjRef)>,

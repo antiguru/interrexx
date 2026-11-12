@@ -1,9 +1,8 @@
 use super::*;
 
-/// The caller a resolution asked for outside any send is asking as:
-/// neither a receiver nor a package, which is the state
-/// `RexxObject::checkPrivate` and `RexxObject::checkPackage` each refuse
-/// (`classes/ObjectClass.cpp:622`-`:626`, `:665`-`:669`).
+/// The caller a resolution asked for outside any send is asking as: neither a
+/// receiver nor a package, which is the state the private and package access
+/// checks each refuse.
 fn no_caller() -> Caller {
     Caller {
         receiver: None,
@@ -243,8 +242,7 @@ fn a_pointer_renders_as_its_address_and_names_its_class() {
 }
 
 /// A null address renders as `0x0` and answers `~isNull`, where any other
-/// address does not (`interpreter/runtime/Numerics.cpp:882`,
-/// `classes/PointerClass.cpp:163`).
+/// address does not.
 #[test]
 fn a_null_pointer_renders_as_zero_and_answers_is_null() {
     let mut interp = Interp::new();
@@ -562,7 +560,7 @@ fn a_native_row_on_a_receiver_of_another_class_refuses_its_type() {
 }
 
 /// Every mutator a `StringTable` answers changes what a package's routine
-/// names resolve to once written, as `PackageClass::findLocalRoutine` reads
+/// names resolve to once written, as the package's local routine lookup reads
 /// the same table: each answer measured on the oracle.
 #[test]
 fn a_write_to_a_packages_routines_table_moves_call_resolution() {
@@ -602,9 +600,9 @@ fn a_write_to_a_packages_routines_table_moves_call_resolution() {
     );
 }
 
-/// A user `STRING` method's answer reads as `primitiveMakeString` reads it:
-/// an array (or an `Array` subclass) joins its items and a buffer is its
-/// text. A `Queue`, `.nil` or any other object is `.nil` there: a truth
+/// A user `STRING` method's answer reads under the primitive string
+/// conversion: an array (or an `Array` subclass) joins its items and a buffer
+/// is its text. A `Queue`, `.nil` or any other object is `.nil` there: a truth
 /// value and a logical operator judge `.nil`, and a consumer of its bytes
 /// (concatenation, `LENGTH`) refuses (Deviation 30).
 #[test]
@@ -921,10 +919,8 @@ fn a_generated_accessor_pair_reads_and_writes_the_declaring_scopes_pool() {
         ),
         // An unassigned variable reads as its derived name, which is the
         // directive's name **as written** and not the accessor's upcased
-        // dictionary key: `getRetriever(name)` against
-        // `addMethod(internalname)`. The quoted row is what tells the two
-        // apart -- an accessor keyed on the message name would answer
-        // `AB` here.
+        // dictionary key. The quoted row is what tells the two apart -- an
+        // accessor keyed on the message name would answer `AB` here.
         ("say .K~a\n::class K\n::attribute a class\n", "A\n"),
         ("say .K~ab\n::class K\n::attribute \"aB\" class\n", "aB\n"),
         // And it is the same pool entry `EXPOSE` reaches, in both
@@ -1003,8 +999,7 @@ fn a_generated_accessor_pair_reads_and_writes_the_declaring_scopes_pool() {
     );
 
     // The argument bounds, which are the accessor pair's own and are the
-    // C++'s (`execution/CPPCode.cpp:284`, `:334`, `:339`). Each row is
-    // measured at rc 163.
+    // C++'s. Each row is measured at rc 163.
     for (source, catalogue) in [
         (
             "say .K~a(1)\n::class K\n::attribute a class\n",
@@ -1277,7 +1272,7 @@ fn a_scope_override_answers_and_has_one_refusal_for_each_bad_scope() {
 }
 
 /// A `Stem` answers a message it has no method for by forwarding it to its
-/// VALUE -- `StemClass::unknownRexx`.
+/// VALUE.
 #[test]
 fn a_stem_forwards_a_message_it_has_no_method_for_to_its_value() {
     let mut interp = Interp::new();
@@ -1732,10 +1727,10 @@ fn an_index_list_with_a_hole_is_98_975_naming_it() {
 }
 
 /// The position a subscript refusal names is the subscript's place in the
-/// **method's own** argument list, which `putRexx`'s leading value moves
-/// by one -- and which index kind the subscript belongs to decides the
-/// error as well as the number, because `positionArgument` names no
-/// position at all where `requiredPositive` does.
+/// **method's own** argument list, which `put`'s leading value moves by one --
+/// and which index kind the subscript belongs to decides the error as well as
+/// the number, because a position argument names no position at all where a
+/// required positive does.
 #[test]
 fn a_subscript_refusal_names_the_position_its_own_method_counts_from() {
     for (source, message) in [

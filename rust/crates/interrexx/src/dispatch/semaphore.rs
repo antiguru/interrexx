@@ -1,6 +1,5 @@
-//! `EventSemaphore`'s and `MutexSemaphore`'s methods
-//! (`classes/EventSemaphore.cpp`, `classes/MutexSemaphore.cpp`), whose waits
-//! park the activity.
+//! `EventSemaphore`'s and `MutexSemaphore`'s methods, whose waits park the
+//! activity.
 
 use std::time::Duration;
 
@@ -13,7 +12,6 @@ use crate::scheduler::ParkReason;
 use crate::semaphores::{Request, SemaphoreKey, SemaphoreWait, WaitKind};
 use crate::{Failure, Interp};
 
-/// `EventSemaphoreClass::post`.
 pub(super) fn native_event_post(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -24,7 +22,6 @@ pub(super) fn native_event_post(
     Ok(None)
 }
 
-/// `EventSemaphoreClass::reset`.
 pub(super) fn native_event_reset(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -35,7 +32,6 @@ pub(super) fn native_event_reset(
     Ok(None)
 }
 
-/// `EventSemaphoreClass::posted`.
 pub(super) fn native_event_is_posted(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -46,8 +42,8 @@ pub(super) fn native_event_is_posted(
     Ok(Some(interp.counted(usize::from(posted))))
 }
 
-/// `EventSemaphoreClass::wait(timeout)`: `1` at once where posted, the post
-/// itself for a timeout of zero, else parked until a post or the timeout.
+/// `EventSemaphore~wait(timeout)`: `1` at once where posted, the post itself
+/// for a timeout of zero, else parked until a post or the timeout.
 pub(super) fn native_event_wait(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -72,9 +68,9 @@ fn woken(interp: &mut Interp, _receiver: ObjRef) -> Result<Option<ObjRef>, Failu
     Ok(Some(interp.counted(usize::from(answer))))
 }
 
-/// `MutexSemaphoreClass::request(timeout)`, the method `ACQUIRE`: the lock
-/// where it is free or the activity's own, `0` for a timeout of zero, else
-/// parked until a release hands it over or the timeout.
+/// `MutexSemaphore~request(timeout)`, the method `ACQUIRE`: the lock where it
+/// is free or the activity's own, `0` for a timeout of zero, else parked until
+/// a release hands it over or the timeout.
 pub(super) fn native_mutex_acquire(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -96,7 +92,6 @@ pub(super) fn native_mutex_acquire(
     )))
 }
 
-/// `MutexSemaphoreClass::release`.
 pub(super) fn native_mutex_release(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -107,7 +102,7 @@ pub(super) fn native_mutex_release(
     Ok(Some(interp.counted(usize::from(released))))
 }
 
-/// `MutexSemaphoreClass::close`, the method `UNINIT`.
+/// `MutexSemaphore~close`, the method `UNINIT`.
 pub(super) fn native_mutex_uninit(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -155,7 +150,7 @@ fn timeout_argument(
         .then(|| Duration::from_millis((seconds * 1000.0) as u64)))
 }
 
-/// `floatingPointArgument(seconds, "timeout")`.
+/// A floating-point `timeout` argument in seconds.
 fn timeout_seconds(
     interp: &mut Interp,
     #[cfg_attr(not(feature = "pinning"), expect(unused_variables))] method: &[u8],
