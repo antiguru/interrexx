@@ -1558,7 +1558,7 @@ exit
   return 0
 ```
 
-```output defect=#162
+```output
 requires 1 absolute name: 0
 b body
 Package

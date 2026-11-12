@@ -805,7 +805,9 @@ nothing was replaced, with the full name of the file found for it. A NAME
 replaced in the information of the first message chooses the file: that file
 is loaded, and the manager is not sent a second `requires` message for it, so
 it is never asked to approve its own replacement. A NAME replaced in the
-second message chooses the file as well. ooRexx uses a replacement made at the
+second message chooses the file as well. When the replacement names no file
+that can be found, the error names the name as it was written, not the
+replacement, so the mapping the manager made is not revealed. ooRexx uses a replacement made at the
 first message only to look for a package that is already loaded under that
 name; otherwise it sends the second message with the full name of the file
 the program asked for, and loads that file.
