@@ -393,6 +393,29 @@ c d+e => 20.928
 c => ok
 ```
 
+> The length limit of [the DROP list](r:instr.drop.list.error) holds here too.
+
+```rexx
+signal on syntax name e
+l = copies('a', 250)
+call p
+say 'ok 250'
+l = copies('a', 251)
+call p
+say 'ok 251'
+exit
+e: say condition('o')~code
+  return
+p: procedure expose (l)
+  return
+```
+
+```output
+ok 250
+20.928
+ok 251
+```
+
 ## Errors
 
 r[instr.procedure.syntax]

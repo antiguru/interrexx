@@ -256,7 +256,7 @@ exit
 s: say condition('o')~code length(l)
 ```
 
-```output defect=#100
+```output
 ok 250
 20.928 251
 ```

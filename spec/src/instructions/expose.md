@@ -282,6 +282,31 @@ c d+e => 20.928
 c => ok
 ```
 
+> The length limit of [the DROP list](r:instr.drop.list.error) holds here too.
+
+```rexx
+o = .box~new
+signal on syntax name e
+o~set(copies('a', 250))
+say o~go
+o~set(copies('a', 251))
+say o~go
+exit
+e: say condition('o')~code
+::class box
+::method set
+  expose lst
+  use arg lst
+::method go
+  expose (lst)
+  return 'ok'
+```
+
+```output
+ok
+20.928
+```
+
 ## Where EXPOSE may appear
 
 r[instr.expose.first]
