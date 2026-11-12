@@ -2092,7 +2092,7 @@ say p~index p~item
 s~close
 call sysfiledelete f
 </code></pre>
-<pre><code class="language-output defect=#208">2 wo
+<pre><code class="language-output">2 wo
 3 three
 </code></pre>
 <pre><code class="language-rexx">f = 'spec-stream-supplier-last-zq.tmp'
@@ -2105,7 +2105,7 @@ say p~available s~state
 s~close
 call sysfiledelete f
 </code></pre>
-<pre><code class="language-output defect=#207">one two READY
+<pre><code class="language-output">one two READY
 0 NOTREADY
 </code></pre>
 <div class="rule" id="r-class.stream.supplier.sends"><a href="#r-class.stream.supplier.sends">[class.stream.supplier.sends]</a></div>
@@ -2115,8 +2115,9 @@ was read part of the way into a line, so that its answer is the rest of that
 line as <a href="#r-class.stream.deviation.140">Deviation 140</a> says, and otherwise with
 one argument, the number of the line to read. For each <code>next</code> it sends
 <code>lineIn</code> with the number of the next line; the other methods of the supplier
-send nothing. <code>supplier</code> sends nothing else. The first answer of <code>state</code> is
-not used. When the second is <code>READY</code>, the supplier starts at the line that the
+send nothing. <code>supplier</code> sends nothing else, apart from the <code>close</code> that
+<a href="streamsupplier.html#r-class.streamsupplier.sends">the rule of <code>StreamSupplier</code></a> says. The first
+answer of <code>state</code> is used for that <code>close</code> only. When the second is <code>READY</code>, the supplier starts at the line that the
 read position is in, which it learns from the stream by messages that are not part of this
 specification, and otherwise
 at line 1; when the second answer is <code>READY</code> for a stream that is not open,
@@ -2626,7 +2627,7 @@ say p~index p~item
 s~close
 call sysfiledelete f
 </code></pre>
-<pre><code class="language-output defect=#208">1 e [two]
+<pre><code class="language-output">1 e [two]
 2 two
 </code></pre>
 <pre><code class="language-rexx">f = 'spec-stream-dev140-sends-zq.tmp'
@@ -2658,7 +2659,7 @@ exit
   else self~log = self~log 'lineIn()'
   forward class (super)
 </code></pre>
-<pre><code class="language-output defect=#208">2 wo  state state lineIn()
+<pre><code class="language-output">2 wo  state state lineIn()
 3 three  lineIn(3)
 </code></pre>
 <div class="rule" id="r-class.stream.deviation.142"><a href="#r-class.stream.deviation.142">[class.stream.deviation.142]</a></div>
