@@ -365,7 +365,7 @@ exit
   return 0
 ```
 
-```output defect=#221
+```output
      4 *-* say 'p1'
 p1
 +++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
