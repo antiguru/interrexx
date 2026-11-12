@@ -15,6 +15,15 @@ jobs:
       - uses: actions/checkout@v7
       - run: scripts/check-licence-text.sh
 
+  # No file under rust/ may cite an ooRexx source file
+  # (scripts/check-oorexx-citations.sh).
+  oorexx-citations:
+    name: no ooRexx source citations
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - run: scripts/check-oorexx-citations.sh
+
   # Every dependency's licence must be one rust/deny.toml allows.
   dependencies:
     name: dependency licences
