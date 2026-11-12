@@ -199,7 +199,9 @@ leading letters down to the first. What is after the word is the command's
 own, and the rules for each say what it is. A first word
 that no command begins with raises `SYNTAX 93.914`, and anything the
 command does not take after it, `SYNTAX 93.0`. A `command` that is the null
-string, or only blanks, has no first word, and what it does is not specified.
+string, or only blanks, has no first word and closes the stream, as `CLOSE`
+does: it answers `READY:` for a stream that was open and the null string for
+one that was not.
 
 ```rexx
 f = 'spec-stream-command.tmp'
@@ -228,6 +230,25 @@ call sysfiledelete f
 93.914
 ```
 
+```rexx
+f = 'spec-stream-emptycmd.tmp'
+call sysfiledelete f
+call charout f, 'abc'
+call charout f
+say stream(f, 'c', 'open') stream(f)
+say '['stream(f, 'c', '')']' stream(f)
+say '['stream(f, 'c', '   ')']' stream(f)
+say stream(f, 'c', 'open') '['stream(f, 'c', '  ')']' stream(f)
+call sysfiledelete f
+```
+
+```output
+READY: READY
+[READY:] UNKNOWN
+[] UNKNOWN
+READY: [READY:] UNKNOWN
+```
+
 ### OPEN
 
 r[bif.stream.open.result]
@@ -243,7 +264,8 @@ options, [the next rules](r:bif.stream.open.mode) give them. The words
 `SHARED`, `SHAREREAD`, `SHAREWRITE` and `NOBUFFER` are accepted, and what they
 do is not specified; so are their shortenings as far as `SHARER`, `SHAREW` and
 `NOB`. Any other word in the list raises `SYNTAX 93.0`, a shortening of
-`SHARED` among them.
+`SHARED` among them. So do two of `SHARED`, `SHAREREAD` and `SHAREWRITE`, and
+`NOBUFFER` given twice.
 
 ```rexx
 f = 'spec-stream-open.tmp'
@@ -347,6 +369,99 @@ READY: 0 READY:
 93.0
 ```
 
+```rexx
+f = 'spec-stream-openmore.tmp'
+call sysfiledelete f
+call charout f, 'abcdef'
+call charout f
+call try "stream(f, 'c', 'open nobuffer nobuffer')"
+call try "stream(f, 'c', 'open shared shared')"
+call try "stream(f, 'c', 'open shared shareread')"
+call try "stream(f, 'c', 'open sharewrite sharer')"
+call try "stream(f, 'c', 'open read nobuffer shared')"
+call try "stream(f, 'c', 'open both write')"
+call try "stream(f, 'c', 'open both both')"
+call try "stream(f, 'c', 'open write write')"
+call try "stream(f, 'c', 'open read both')"
+call try "stream(f, 'c', 'open write append')"
+call try "stream(f, 'c', 'open both append')"
+call try "stream(f, 'c', 'open write replace')"
+call try "stream(f, 'c', 'open append append')"
+call try "stream(f, 'c', 'open append replace')"
+call try "stream(f, 'c', 'open replace append')"
+call try "stream(f, 'c', 'open replace replace')"
+call try "stream(f, 'c', 'open replace read')"
+call try "stream(f, 'c', 'open append read')"
+call try "stream(f, 'c', 'open  READ ')"
+call try "stream(f, 'c', 'open 1')"
+call try "stream(f, 'c', 'open readx')"
+call try "stream(f, 'c', 'open b')"
+call try "stream(f, 'c', 'open a')"
+call try "stream(f, 'c', 'open repl')"
+call try "stream(f, 'c', 'close')"
+call sysfiledelete f
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say left(arg(1), 42) '=> [' || r || ']'
+  return
+bad: say left(arg(1), 42) '=>' condition('o')~code
+  return
+```
+
+```output
+stream(f, 'c', 'open nobuffer nobuffer')   => 93.0
+stream(f, 'c', 'open shared shared')       => 93.0
+stream(f, 'c', 'open shared shareread')    => 93.0
+stream(f, 'c', 'open sharewrite sharer')   => 93.0
+stream(f, 'c', 'open read nobuffer shared' => [READY:]
+stream(f, 'c', 'open both write')          => 93.0
+stream(f, 'c', 'open both both')           => 93.0
+stream(f, 'c', 'open write write')         => 93.0
+stream(f, 'c', 'open read both')           => 93.0
+stream(f, 'c', 'open write append')        => [READY:]
+stream(f, 'c', 'open both append')         => [READY:]
+stream(f, 'c', 'open write replace')       => [READY:]
+stream(f, 'c', 'open append append')       => 93.0
+stream(f, 'c', 'open append replace')      => 93.0
+stream(f, 'c', 'open replace append')      => 93.0
+stream(f, 'c', 'open replace replace')     => 93.0
+stream(f, 'c', 'open replace read')        => 93.0
+stream(f, 'c', 'open append read')         => 93.0
+stream(f, 'c', 'open  READ ')              => [READY:]
+stream(f, 'c', 'open 1')                   => 93.0
+stream(f, 'c', 'open readx')               => 93.0
+stream(f, 'c', 'open b')                   => 93.0
+stream(f, 'c', 'open a')                   => 93.0
+stream(f, 'c', 'open repl')                => [READY:]
+stream(f, 'c', 'close')                    => [READY:]
+```
+
+```rexx
+f = 'spec-stream-openfail.tmp'
+call sysfiledelete f
+n = 0
+call on notready name nr
+say stream(f, 'c', 'open read') stream(f) n
+say stream(f, 'c', 'open write') stream(f) (stream(f, 'c', 'query exists') \== '')
+say stream(f, 'c', 'close') stream(f, 'c', 'open replace') stream(f, 'c', 'query size')
+say stream(f, 'c', 'close')
+say stream('.', 'c', 'open read') stream('.') n
+call sysfiledelete f
+exit
+nr: n = n + 1
+return
+```
+
+```output
+ERROR:2 UNKNOWN 0
+READY: READY 1
+READY: READY: 0
+READY:
+ERROR:2 UNKNOWN 1
+```
+
 r[bif.stream.open.again]
 `OPEN` of a stream that is open opens it afresh: the positions are those
 of a stream just opened, the read position at the first character and the
@@ -383,7 +498,10 @@ short. [LINES](r:bif.lines.count) counts records.
 [LINEOUT](r:bif.lineout.result) writes its string and then blanks up to the
 end of the record that the write position is in, with no line end; a string
 that is longer than the rest of that record raises `SYNTAX 93.0` and writes
-nothing, and the stream stays `READY`. The option `BINARY` without `RECLENGTH`
+nothing, and the stream stays `READY`. `RECLENGTH` that does not come after
+`BINARY`, an `n` that is not a whole number of 1 or more, `BINARY` or
+`RECLENGTH` given twice, and `BINARY` with `REPLACE` and no `RECLENGTH` raise
+`SYNTAX 93.0`. The option `BINARY` without `RECLENGTH`
 is not specified, and neither is `BINARY RECLENGTH` without `n`, except that
 when `BINARY` without `RECLENGTH` raises `SYNTAX 93.0`, as it does for a file
 that is missing or empty, the stream is `UNKNOWN` afterwards ([Deviation
@@ -434,6 +552,60 @@ READY:
 93.0 READY
 READY:
 [ab__xy__]
+```
+
+```rexx
+f = 'spec-stream-openopts.tmp'
+call sysfiledelete f
+call charout f, 'abcdefghij'
+call charout f
+call try "stream(f, 'c', 'open binary reclength 4 read')"
+call try "'['linein(f)']' '['linein(f)']' '['linein(f)']' lines(f)"
+call try "stream(f, 'c', 'open bi rec 4')"
+call try "stream(f, 'c', 'open binary reclength 0')"
+call try "stream(f, 'c', 'open binary reclength x')"
+call try "stream(f, 'c', 'open binary reclength 1.5')"
+call try "stream(f, 'c', 'open reclength 4')"
+call try "stream(f, 'c', 'open reclength 4 binary')"
+call try "stream(f, 'c', 'open binary binary reclength 4')"
+call try "stream(f, 'c', 'open binary reclength 4 reclength 5')"
+call try "stream(f, 'c', 'open binary reclength 4 5')"
+call try "stream(f, 'c', 'open replace binary')"
+call try "stream(f, 'c', 'open binary replace reclength 3')"
+call try "lineout(f, 'abc') stream(f, 'c', 'query size')"
+call try "stream(f, 'c', 'close')"
+call try "stream('spec-stream-openopts-none.tmp', 'c', 'open binary reclength 2') stream('spec-stream-openopts-none.tmp', 'c', 'query size')"
+call try "stream('spec-stream-openopts-none.tmp', 'c', 'close')"
+call sysfiledelete f
+call sysfiledelete 'spec-stream-openopts-none.tmp'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say left(arg(1), 62) '=> [' || r || ']'
+  return
+bad: say left(arg(1), 62) '=>' condition('o')~code
+  return
+```
+
+```output
+stream(f, 'c', 'open binary reclength 4 read')                 => [READY:]
+'['linein(f)']' '['linein(f)']' '['linein(f)']' lines(f)       => [[abcd] [efgh] [ij] 0]
+stream(f, 'c', 'open bi rec 4')                                => [READY:]
+stream(f, 'c', 'open binary reclength 0')                      => 93.0
+stream(f, 'c', 'open binary reclength x')                      => 93.0
+stream(f, 'c', 'open binary reclength 1.5')                    => 93.0
+stream(f, 'c', 'open reclength 4')                             => 93.0
+stream(f, 'c', 'open reclength 4 binary')                      => 93.0
+stream(f, 'c', 'open binary binary reclength 4')               => 93.0
+stream(f, 'c', 'open binary reclength 4 reclength 5')          => 93.0
+stream(f, 'c', 'open binary reclength 4 5')                    => 93.0
+stream(f, 'c', 'open replace binary')                          => 93.0
+stream(f, 'c', 'open binary replace reclength 3')              => [READY:]
+lineout(f, 'abc') stream(f, 'c', 'query size')                 => [0 3]
+stream(f, 'c', 'close')                                        => [READY:]
+stream('spec-stream-openopts-none.tmp', 'c', 'open binary recl => [READY: 0]
+stream('spec-stream-openopts-none.tmp', 'c', 'close')          => [READY:]
 ```
 
 ## Closing and flushing
@@ -534,8 +706,11 @@ a write there [fills the gap](r:bif.charout.start), except on a stream opened
 character](r:bif.stream.deviation.79) wherever the write position is. A stream
 that is not open is opened by `SEEK`; when it cannot be, `SEEK` answers 0,
 raises [NOTREADY](r:bif.index.stream.notready), leaves the state `ERROR`, and
-creates nothing. An offset that is not a whole number or an option that is not
-one of these raises `SYNTAX 93.0`, and a missing offset `SYNTAX 93.903`.
+creates nothing. An offset that is not a whole number or is too large for 63
+bits, an option that is not one of these, a word given twice, `READ` with `WRITE`, `CHAR` with
+`LINE`, a second offset, and a second prefix raise `SYNTAX 93.0`, and a
+missing offset `SYNTAX 93.903`. A `SEEK` of a stream that is open and
+[transient](r:bif.index.stream.transient) raises `SYNTAX 93.958`.
 
 ```rexx
 f = 'spec-stream-seek.tmp'
@@ -584,6 +759,63 @@ call sysfiledelete f
 > `seek 2 write` is `W`, in place of the `1`, as the hex string shows. The
 > position `<2` is the one two characters back from the end of the data, the
 > character `8`.
+
+```rexx
+f = 'spec-stream-seekmore.tmp'
+none = 'spec-stream-seekmore-none.tmp'
+call sysfiledelete f
+call sysfiledelete none
+call charout f, '0123456789'
+call charout f
+n = 0
+call on notready name nr
+say stream(none, 'c', 'seek 1') stream(none) (stream(none, 'c', 'query exists') == '')
+say stream(none, 'c', 'seek 1 write') stream(none) (stream(none, 'c', 'query exists') == '')
+say stream(f, 'c', 'open read') stream(f, 'c', 'seek 2 read') stream(f, 'c', 'seek 0 read') stream(f, 'c', 'seek 3 read')
+say stream(f, 'c', 'close')
+say stream(f, 'c', 'open both') stream(f, 'c', 'seek 0')
+say stream(f, 'c', 'seek 1') stream(f, 'c', 'seek =2')
+call try "stream(f, 'c', 'seek 1 2')"
+call try "stream(f, 'c', 'seek = + 2')"
+call try "stream(f, 'c', 'seek 2 read read')"
+call try "stream(f, 'c', 'seek 2 char line')"
+call try "stream(f, 'c', 'seek 2 write read')"
+call try "stream(f, 'c', 'seek 1.5')"
+call try "stream(f, 'c', 'seek 9223372036854775808')"
+call try "stream(f, 'c', 'seek 2 bogus')"
+call try "stream('/dev/null', 'c', 'open') stream('/dev/null', 'c', 'seek 1')"
+call stream '/dev/null', 'c', 'close'
+call stream f, 'c', 'close'
+call sysfiledelete f
+exit
+nr: n = n + 1
+return
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say left(arg(1), 48) '=> [' || r || ']'
+  return
+bad: say left(arg(1), 48) '=>' condition('o')~code
+  return
+```
+
+```output
+0 ERROR 1
+0 ERROR 1
+READY: 2 0 3
+READY:
+READY: 0
+1 2
+stream(f, 'c', 'seek 1 2')                       => 93.0
+stream(f, 'c', 'seek = + 2')                     => 93.0
+stream(f, 'c', 'seek 2 read read')               => 93.0
+stream(f, 'c', 'seek 2 char line')               => 93.0
+stream(f, 'c', 'seek 2 write read')              => 93.0
+stream(f, 'c', 'seek 1.5')                       => 93.0
+stream(f, 'c', 'seek 9223372036854775808')       => 93.0
+stream(f, 'c', 'seek 2 bogus')                   => 93.0
+stream('/dev/null', 'c', 'open') stream('/dev/nu => 93.958
+```
 
 r[bif.stream.seek.line]
 With `LINE`, the offset counts [lines](r:bif.index.stream.line-end) and not
@@ -634,7 +866,10 @@ null string; so is the answer for a standard stream that is
 [transient](r:bif.index.stream.transient) (see [Deviation
 100](r:bif.stream.deviation.100)). On a stream opened `APPEND`, the write
 position after a write is just after the last character, wherever the write
-was asked to go (see [Deviation 79](r:bif.stream.deviation.79)).
+was asked to go (see [Deviation 79](r:bif.stream.deviation.79)). An open
+stream that is transient answers 1. Two of `READ` and `WRITE`, two of `CHAR`
+and `LINE`, a word given twice, `SYS` with another word, and a word that is
+none of these raise `SYNTAX 93.0`.
 
 ```rexx
 f = 'spec-stream-qpos.tmp'
@@ -661,6 +896,67 @@ READY:
 1 1
 READY:
 READY: 1
+```
+
+```rexx
+f = 'spec-stream-qposopts.tmp'
+call sysfiledelete f
+call charout f, 'ab' || '0a'x || 'cd' || '0a'x || 'ef' || '0a'x
+call charout f
+say stream(f, 'c', 'open read') stream(f, 'c', 'query position write') stream(f, 'c', 'query position read line')
+say stream(f, 'c', 'close')
+say stream(f, 'c', 'open write') stream(f, 'c', 'query position') stream(f, 'c', 'query position write') stream(f, 'c', 'query position read')
+say stream(f, 'c', 'close')
+say stream(f, 'c', 'open binary reclength 3') stream(f, 'c', 'query position line') stream(f, 'c', 'query position')
+say translate(linein(f), '/', '0a'x) stream(f, 'c', 'query position line') stream(f, 'c', 'query position')
+say stream(f, 'c', 'seek 8 read') stream(f, 'c', 'query position line') stream(f, 'c', 'query position write line')
+say stream(f, 'c', 'close')
+say stream(f, 'c', 'open') stream(f, 'c', 'seek 3 read') stream(f, 'c', 'query position read line') stream(f, 'c', 'seek 4 read') stream(f, 'c', 'query position read line')
+say stream('/dev/null', 'c', 'open') stream('/dev/null', 'c', 'query position') stream('/dev/null', 'c', 'query position write')
+call try "stream(f, 'c', 'query position read write')"
+call try "stream(f, 'c', 'query position write read')"
+call try "stream(f, 'c', 'query position char line')"
+call try "stream(f, 'c', 'query position line char')"
+call try "stream(f, 'c', 'query position read read')"
+call try "stream(f, 'c', 'query position char char')"
+call try "stream(f, 'c', 'query position sys read')"
+call try "stream(f, 'c', 'query position write sys')"
+call try "stream(f, 'c', 'query position 1')"
+call try "stream(f, 'c', 'query position bogus')"
+call stream f, 'c', 'close'
+call stream '/dev/null', 'c', 'close'
+call sysfiledelete f
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say left(arg(1), 48) '=> [' || r || ']'
+  return
+bad: say left(arg(1), 48) '=>' condition('o')~code
+  return
+```
+
+```output
+READY: 0 1
+READY:
+READY: 10 10 1
+READY:
+READY: 1 1
+ab/ 2 4
+8 3 4
+READY:
+READY: 3 1 4 2
+READY: 1 1
+stream(f, 'c', 'query position read write')      => 93.0
+stream(f, 'c', 'query position write read')      => 93.0
+stream(f, 'c', 'query position char line')       => 93.0
+stream(f, 'c', 'query position line char')       => 93.0
+stream(f, 'c', 'query position read read')       => 93.0
+stream(f, 'c', 'query position char char')       => 93.0
+stream(f, 'c', 'query position sys read')        => 93.0
+stream(f, 'c', 'query position write sys')       => 93.0
+stream(f, 'c', 'query position 1')               => 93.0
+stream(f, 'c', 'query position bogus')           => 93.0
 ```
 
 ## Asking about the file
@@ -796,11 +1092,13 @@ call sysfiledelete f
 
 r[bif.stream.query.words]
 The word after `QUERY` is `EXISTS`, `SIZE`, `STREAMTYPE`, `TIMESTAMP`,
-`DATETIME`, `HANDLE` or `POSITION`, in either case. It may be shortened to any
+`DATETIME`, `HANDLE`, `POSITION` or `SEEK`, in either case. It may be shortened to any
 of its leading letters, as far as to its first letter for `EXISTS`, `HANDLE`,
 `TIMESTAMP` and `DATETIME`, to `SI` for `SIZE`, to `ST` for `STREAMTYPE` and
-to `P` for `POSITION`; what a shorter word answers is not specified. A `QUERY`
-with no word is not specified. A word that is none of them, and words after it
+to `P` for `POSITION`; what a shorter word answers is not specified. `SEEK` is a second name for
+`POSITION`, with its options and its answers; what a shortening of it answers
+is not specified. A `QUERY` with no word, or with only blanks, answers as
+`DATETIME` does. A word that is none of them, and words after it
 that the query does not take, raise `SYNTAX 93.0`.
 
 ```rexx
@@ -824,6 +1122,53 @@ call sysfiledelete f
 1 19 17
 93.0
 93.0
+```
+
+```rexx
+f = 'spec-stream-qseek.tmp'
+call sysfiledelete f
+call charout f, 'ab' || '0a'x || 'cd' || '0a'x || 'ef'
+call charout f
+say '['stream(f, 'c', 'query seek')']' '['stream(f, 'c', 'QUERY SEEK read line')']'
+say stream(f, 'c', 'open read') stream(f, 'c', 'query seek') stream(f, 'c', 'query seek write')
+x = charin(f, , 4)
+say stream(f, 'c', 'query seek') stream(f, 'c', 'query seek read line') (stream(f, 'c', 'query seek') == stream(f, 'c', 'query position'))
+signal on syntax name a
+say stream(f, 'c', 'query seek read write')
+a: say condition('o')~code
+signal on syntax name b
+say stream(f, 'c', 'query seeker')
+b: say condition('o')~code
+call stream f, 'c', 'close'
+call sysfiledelete f
+```
+
+```output
+[] []
+READY: 1 0
+5 2 1
+93.0
+93.0
+```
+
+```rexx
+f = 'spec-stream-qempty.tmp'
+call sysfiledelete f
+call charout f, 'abc'
+call charout f
+say (stream(f, 'c', 'query') == stream(f, 'c', 'query datetime')) (stream(f, 'c', 'query   ') == stream(f, 'c', 'query datetime'))
+say length(stream(f, 'c', 'query')) (stream(f, 'c', 'query') == stream(f, 'c', 'query timestamp'))
+say stream(f, 'c', 'open') (stream(f, 'c', 'query ') == stream(f, 'c', 'query d'))
+say '['stream('spec-stream-qempty-none.tmp', 'c', 'query')']' '['stream('spec-stream-qempty-none.tmp', 'c', 'query datetime')']'
+call stream f, 'c', 'close'
+call sysfiledelete f
+```
+
+```output
+1 1
+17 0
+READY: 1
+[] []
 ```
 
 ## The standard streams
