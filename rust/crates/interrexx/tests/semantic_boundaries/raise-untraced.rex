@@ -1,6 +1,6 @@
-/* Untraced ADDITIONAL renders nothing for a trace line. DESCRIPTION takes
-   its required string at RAISE under Deviation 83. A SYNTAX code uses the
-   RC value's string value. */
+/* Untraced ADDITIONAL renders nothing for a trace line. DESCRIPTION is kept
+   as the object and converted when read. A SYNTAX code uses the RC value's
+   string value. */
 o = .bad~new
 q = .noisy~new
 call on user zz name u

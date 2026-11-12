@@ -210,7 +210,7 @@ h: o = condition('o')
   return
 ```
 
-```output defect=#121
+```output
 The Array class / 1 / The Array class
 ```
 
