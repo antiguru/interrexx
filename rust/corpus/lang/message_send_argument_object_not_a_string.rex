@@ -4,7 +4,7 @@
  * interpreter's own -- are refused there, while a string, a number and a stem
  * standing for one are not.
  *
- * A stem answers as its default value (StemClass::makeString forwards to it),
+ * A stem answers as its default value (its string form forwards to it),
  * so which side of the line a stem falls on is decided by what it holds:
  * rows 3 and 4 are refused and rows 8 and 9 are not.
  *

@@ -11,7 +11,7 @@ needs it.
 ## `directives/`
 
 Gate table D's probes: one per row of `../docs/directive-options.txt`, which
-is the union of `dire.xml`'s and `interpreter/parser/DirectiveParser.cpp`'s
+is the union of `dire.xml`'s and the oracle's directive parser's
 directive keywords. `crates/interrexx/tests/gate_table_d.rs` runs each one
 under both crate engines and against the oracle, and derives the file name
 from the row rather than looking it up, so a row and its probe cannot drift.

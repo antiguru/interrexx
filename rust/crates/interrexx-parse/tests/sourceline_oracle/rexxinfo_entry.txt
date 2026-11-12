@@ -3,8 +3,8 @@ count 78
  * rather than a class object.
  *
  * `addToEnvironment("REXXINFO", info)` puts the instance there
- * (Setup.cpp:1737) while `EndSpecialClassDefinition(RexxInfo)` routes the
- * class itself to `addToSystem` (Setup.cpp:1285), so no environment name
+ * while the class itself is routed to the system
+ * rather than the environment, so no environment name
  * reaches the class. That split is what rows 1 to 4 read: the entry renders
  * as `a RexxInfo` and not as `The RexxInfo class`, and `~isA(.Class)` is 0.
  *
@@ -16,7 +16,7 @@ count 78
  *
  * `~id` and `~new` raise 97.1 because the instance's behaviour genuinely
  * holds neither name; `hasMethod` reads that same dictionary, and the ID and
- * FILESEPARATOR rows are the absences that decide it. A name Setup.cpp adds
+ * FILESEPARATOR rows are the absences that decide it. A name added natively
  * to the RexxInfo block answers 1 on the instance and 0 on the class object,
  * and the ID and NEW rows run the other way for a reason each: NEW is the
  * block's class method, and ID is .Class's own instance method, which every

@@ -1,6 +1,6 @@
-/* ABBREV and COMPARE as methods: `AddMethod("Abbrev", RexxString::abbrev, 2)`
- * and `AddMethod("Compare", RexxString::compare, 2)`
- * (memory/Setup.cpp:612, :616), `classes/StringClassMisc.cpp:75` and `:159`.
+/* ABBREV and COMPARE as methods, each declared at arity 2: ABBREV's
+ * arguments are the abbreviation and a minimum length; COMPARE's are the
+ * other string and a pad.
  *
  * ABBREV is case-sensitive and answers the text 1 or 0, not a boolean object,
  * so the answer goes on to arithmetic. Its length argument is a MINIMUM: an

@@ -1,4 +1,4 @@
-/* `~of` on the ordered collections.  One body serves Queue and List upstream
+/* `~of` on the ordered collections.  One body serves Queue and List in the oracle
    -- each creates a collection of the RECEIVER's own class and appends the
    arguments -- and CircularQueue reaches it through Queue.  The class of the
    answer is the point: `of` is not a synonym for `.Array~of`. */

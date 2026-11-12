@@ -1,7 +1,7 @@
 count 79
 /* ~method reads the class's own instance dictionary and nothing else
- * (RexxClass::method, classes/ClassClass.cpp:984, which retrieves from
- * instanceMethodDictionary directly).
+ * (Class~method, which retrieves from
+ * the instance method dictionary directly).
  *
  * This is a guard against a build that flattens every scope onto one class:
  * such a build answers the rows below that raise here, and an inherited name

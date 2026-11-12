@@ -2,13 +2,13 @@ count 33
 /* .LOCAL, .ENVIRONMENT and .CONTEXT as objects, a class name out of the
  * environment, and the reflection names beside them.
  *
- * .LOCAL and .ENVIRONMENT render as the names CoreClasses.orx:990 and :55
- * assign with ~objectName=, .ARRAY as RexxClass::defaultName's "The <id>
- * class", and .CONTEXT as RexxObject::defaultName's "a <id>".
+ * .LOCAL and .ENVIRONMENT render as the names the embedded library
+ * assigns with ~objectName=, .ARRAY as a class's default name "The <id>
+ * class", and .CONTEXT as an object's default name "a <id>".
  *
  * .METHODS, .ROUTINES and .RESOURCES are the string form of their own name
  * here rather than a StringTable, because the package declares no directive
- * of any of those kinds: LanguageParser hands the package its table only
+ * of any of those kinds: the parser hands the package its table only
  * when the table is non-empty, so the field stays null and the name falls
  * through. .RS is the same shape -- no command has set a return status.
  *

@@ -1,5 +1,5 @@
-/* Object~hashCode: `AddMethod("HashCode", RexxObject::hashCode, 0)`
- * (memory/Setup.cpp:523), which is getHashValue() rendered as its own eight
+/* Object~hashCode, declared at arity 0: the object's hash value
+ * rendered as its own eight
  * bytes, little-endian.
  *
  * getHashValue is virtual. NilObject, String, Pointer, Integer, NumberString
@@ -13,7 +13,7 @@
  * with the byte SIGNED, which only shows above 0x7f.
  *
  * DateTime and TimeSpan reach this through their own Rexx-level hashCode in
- * CoreClasses.orx, which returns `timestamp~hashcode` -- a number's hash, so
+ * the embedded core library, which returns `timestamp~hashcode` -- a number's hash, so
  * two equal instants agree and two different ones do not.
  */
 

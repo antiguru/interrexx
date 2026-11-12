@@ -1,7 +1,7 @@
-/* ABS, TRUNC and FORMAT as methods: `AddMethod("Abs", RexxString::abs, 0)`,
- * `AddMethod("Trunc", RexxString::trunc, 1)` and
- * `AddMethod("Format", RexxString::format, 4)` (memory/Setup.cpp:645, :604,
- * :586).
+/* ABS, TRUNC and FORMAT as methods, declared at arity 0, 1 and 4
+ * respectively: ABS takes no argument, TRUNC a number of decimals, and
+ * FORMAT the before, after, exponent-digits and exponent-trigger
+ * arguments.
  *
  * The receiver is the builtin's first argument, so every position here is the
  * builtin's less one.

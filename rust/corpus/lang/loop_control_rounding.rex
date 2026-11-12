@@ -31,7 +31,7 @@ say 'after' k
 
 /* FUZZ does NOT reach this bound earlier, and that is what the loop is here
    for. A controlled loop whose control value and TO are both integer objects
-   inside DIGITS has its bound tested by RexxInteger::comp, which subtracts
+   inside DIGITS has its bound tested by integer comparison, which subtracts
    them directly and never reads FUZZ at all -- so this runs 1 to 10 and ends
    at 11, exactly as it would at FUZZ 0. A bound test that applied FUZZ here
    would compare at one digit and run past 10.

@@ -22,9 +22,9 @@ count 284
  * receivers are in. Section J is that receiver, and it is the reason the copy
  * carries the record forward -- and the flag writes with it, which is a
  * second thing to carry and was a second defect: the copy is
- * RexxObject::copy, which duplicates the flag word the setters wrote.
+ * the object copy, which duplicates the flag word the setters wrote.
  *
- * ~source IS A LINE RANGE AND THE RANGE HAS TWO EDGES THE C++ PUTS THERE.
+ * ~source IS A LINE RANGE AND THE RANGE HAS TWO EDGES THE ORACLE PUTS THERE.
  * The block starts on the line after the directive and ends on the line
  * before the next one, so blank lines and whole-line comments INSIDE it are
  * its own -- ::method PAD below is the row that says so. And an end that

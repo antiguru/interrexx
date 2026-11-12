@@ -1,7 +1,7 @@
 count 30
-/* ENCODEBASE64 and DECODEBASE64 as methods: `AddMethod("EncodeBase64",
- * RexxString::encodeBase64, 0)` and its pair, reaching
- * classes/StringClassConversion.cpp:90 and :153.
+/* ENCODEBASE64 and DECODEBASE64 as methods, each declared at arity 0.
+ * The two are a pair and are witnessed together.
+ * Neither accepts an argument.
  *
  * The alphabet is RFC 2045's, with `+` and `/` rather than the URL-safe pair,
  * and the last group is padded with `=` to a multiple of four. Both are byte

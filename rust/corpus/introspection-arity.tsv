@@ -114,7 +114,7 @@ Object	instanceMethods	instance	agree	rc0
 Object	isA	instance	agree	rc0
 Object	isInstanceOf	instance	agree	rc0
 Object	isNil	instance	agree	rc0
-Object	new	class	exempt	the oracle refuses an argument here -- measured, .Object~new('x') raises 93.902 while .Object~new answers, so Setup.cpp's A_COUNT is a maximum and not a minimum
+Object	new	class	exempt	the oracle refuses an argument here -- measured, .Object~new('x') raises 93.902 while .Object~new answers, so a declared A_COUNT is a maximum and not a minimum
 Object	objectName	instance	agree	rc0
 Object	objectName=	instance	no-value	rc0, the send returned no result to compare
 Object	request	instance	agree	rc0

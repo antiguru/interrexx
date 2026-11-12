@@ -41,9 +41,9 @@ indexes in is the order of the oracle's own hash table: bucket
 `key->getHashValue() % bucketSize`, iterated bucket-ascending. Whether that
 reproduces from run to run depends on what the keys are, not on which collection
 class it is. A string's `getHashValue` is `31*h + byte` over its own content
-(`classes/StringClass.hpp:328`), and a number's delegates to its string value.
-Every other object's is `RexxObject::identityHash`, which is
-`((uintptr_t)this) ^ UINTPTR_MAX` (`classes/ObjectClass.hpp:340`) -- the
+and a number's delegates to its string value.
+Every other object's is its identity hash, which is
+`((uintptr_t)this) ^ UINTPTR_MAX` -- the
 address, which ASLR moves on every run.
 
 Measured, ten oracle runs each: a program filling an `IdentityTable` with eight
@@ -59,9 +59,9 @@ has nothing to compare against. Iterating a string-keyed table and printing
 something order-independent -- a count, or a lookup of each index against the
 table -- is fine, and is what `lang/do_over_string_table.rex` does.
 
-A class object is an exception, because `RexxClass::getHashValue`
-(`classes/ClassClass.cpp:209`) answers the hash of the class's id string, so a
-class object's bucket does not move with ASLR. `RexxNilObject`'s hash is a
+A class object is an exception, because its hash value is
+the hash of the class's id string, so a
+class object's bucket does not move with ASLR. The `.nil` object's hash is a
 stored constant, so `.nil` is reproducible too. The collection this reaches is
 the collector's own uninit table, whose iteration order is the order class
 `UNINIT`s run at termination. `lang/uninit_class_sweep_order.rex` prints that

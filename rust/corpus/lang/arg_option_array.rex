@@ -40,7 +40,7 @@ three:
   return
 
 /* With no arguments at all, position 1 still answers a SHAPED array where any
-   other position answers an unshaped one: the C++ tests position 1 before the
+   other position answers an unshaped one: the oracle tests position 1 before the
    past-the-end arm, and the two constructors differ in exactly that. */
 none:
   atOne = arg(1, 'A')

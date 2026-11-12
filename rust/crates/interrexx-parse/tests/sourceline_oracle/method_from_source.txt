@@ -2,15 +2,15 @@ count 77
 /* A method compiled from source text: `Class~define` handed something that is
  * not already a `Method` object.
  *
- * `MethodClass::newMethodObject` compiles anything that is not a method object
- * (classes/MethodClass.cpp:457-:486), and the dictionary key is the upcased
- * name while the object itself is built under the name as written
- * (classes/ClassClass.cpp:830-:832). The `type` rows are that pair: a name
+ * Method creation compiles anything that is not a method object,
+ * and the dictionary key is the upcased
+ * name while the object itself is built under the name as written.
+ * The `type` rows are that pair: a name
  * added in lower case is found by a message spelled any way at all, and `%` is
  * a name no symbol could hold.
  *
  * The source is an array of lines, a string being the one-line case of it that
- * `processExecutableSource` wraps (execution/BaseExecutable.cpp:169-:177). So a
+ * the executable-source handling wraps. So a
  * number is a source and a `#!` first line is skipped as it is in a file.
  *
  * `~define` answers nothing, so it cannot sit in an expression: 91.999.
@@ -20,8 +20,8 @@ count 77
  * empty, and two compiled methods do not share one.
  *
  * The file ends untrapped on an array whose last item is not the last index
- * filled: `stringArrayArgument` walks `1..=lastIndex()`
- * (classes/StringClassUtil.cpp:417) and reports the position string `~define`
+ * filled: the oracle walks `1..=lastIndex()`
+ * and reports the position string `~define`
  * hands it. `method_from_source_table.rex` is the other caller, which hands
  * down a different one. rc 163.
  */

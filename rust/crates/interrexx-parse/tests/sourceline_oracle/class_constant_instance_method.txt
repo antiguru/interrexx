@@ -2,7 +2,7 @@ count 38
 /* A ::CONSTANT installs its getter on the instance side as well as the class
    side, and ~method is a reader for the instance
    side: it retrieves from the class's own instanceMethodDictionary
-   (RexxClass::method, classes/ClassClass.cpp:984, the retrieval at :991).
+   (Class~method).
 
    The class-only ::METHOD under the same ::CLASS is what makes the constant's
    answer mean that. Both names are K's own members and both are readable

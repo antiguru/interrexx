@@ -1,6 +1,6 @@
 /* NEW on a String subclass: the instance holds the bytes and carries the
    subclass's behaviour, INIT gets the arguments after the first, every
-   string operation reads the bytes, and the methods whose C++ answers
+   string operation reads the bytes, and the methods that answer
    `this` when nothing changes answer the instance itself, each beside a
    call that changes something and answers a new String. */
 x = .k~new('abc')

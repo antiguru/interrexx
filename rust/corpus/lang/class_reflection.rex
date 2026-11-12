@@ -15,7 +15,7 @@
  * .Array~isSubclassOf(.Array) is 1.
  *
  * The primitive rows are the classes whose superclass list this crate has:
- * every class CoreClasses.orx sends ~inherit gains a mixin there that no
+ * every class the embedded library sends ~inherit gains a mixin there that no
  * ::CLASS in this file can add, and asking one of those would be asking
  * about the prologue rather than about this protocol.
  */

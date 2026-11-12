@@ -1,6 +1,6 @@
 /* POS's fourth argument, and the one position the search reaches past it.
 
-   The window does NOT simply bound where a match may fit. StringUtil::pos
+   The window does NOT simply bound where a match may fit. The oracle's POS
    scans for the needle's first byte up to the last position at which the
    whole needle fits, and on a candidate whose first byte matched but whose
    whole did not, it rescans with a length measured from the candidate it just
@@ -13,7 +13,7 @@
 
    NOT HERE, and deliberately: a needle whose last byte is '00'x searched to
    the end of the haystack. The position past the window is then the byte past
-   the string, where the C++ reads the RexxString terminator and matches. This
+   the string, where the oracle reads the string's terminator and matches. This
    crate declines to invent that byte, and the oracle has no behaviour to
    compare against beyond POS itself -- changestr('a'||'00'x,'aa','ZZZ')
    copies through the match and the interpreter exits 139. */

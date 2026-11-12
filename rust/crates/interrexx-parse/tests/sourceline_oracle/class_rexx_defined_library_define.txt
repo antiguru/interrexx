@@ -1,6 +1,6 @@
 count 5
 /* The same lock, a second mutator, and a class from the
    other embedded file that declares one -- `.Stream` is a `::CLASS` in
-   `StreamClasses.orx`. Without the flag on the library's own classes this is
+   the embedded stream library. Without the flag on the library's own classes this is
    a silent rc 0 against the oracle's rc 158. */
 .Stream~define('ZZZ')

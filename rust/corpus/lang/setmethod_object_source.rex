@@ -1,5 +1,5 @@
 /* setMethod with a method that is neither a string, an array nor a Method
- * object: 93.974 (classes/MethodClass.cpp:468). */
+ * object: 93.974. */
 say .t~new~go
 ::class t
 ::method go

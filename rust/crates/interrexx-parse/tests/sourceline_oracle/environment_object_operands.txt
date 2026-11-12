@@ -6,7 +6,7 @@ count 40
  * answer, so each line is a place a wrong answer could hide. The ones here
  * are the ones the two implementations agree on, and the agreement is
  * structural rather than lucky: all of them reach the object through
- * stringValue(), which is RexxClass::defaultName for a class and the
+ * stringValue(), which is the default name for a class and the
  * assigned ~objectName for a directory -- the same bytes this crate renders.
  *
  * The operator is sent to the LEFT operand on the oracle, so an object on

@@ -9,7 +9,7 @@
    The oracle's rule, which every block below reads back: what a handler
    queues WHILE IT RUNS is owed to the next clause boundary and not to the one
    that delivered it, and a plain DO is TWO clauses -- the header, which
-   RexxInstructionSimpleDo::execute ends as soon as it has opened the block,
+   the plain DO's execution ends as soon as it has opened the block,
    and END, which is an instruction of its own. The rule's other half -- a
    boundary takes everything the clause left pending, not one -- is
    condition_queue_drain.rex's subject rather than this file's.

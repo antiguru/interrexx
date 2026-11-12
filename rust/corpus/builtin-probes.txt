@@ -45,7 +45,7 @@
 # EVERY PROGRAM IS SELF-CONTAINED. None reads stdin, needs a terminal, or
 # writes a file, which is what lets the harness run them unattended.
 #
-# ORDER is `NAMES` order, which is `BuiltinFunctions.cpp`'s own table order.
+# ORDER is `NAMES` order, which is the oracle's own builtin table order.
 
 ABBREV	say abbrev('Print','Pri') abbrev('Print','Pro')
 ABS	say abs(-4.5)

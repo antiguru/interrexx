@@ -3,8 +3,8 @@
  *
  * insert and overlay agree with their buffer twins on every refusal --
  * a non-whole offset is 93.906 for insert and 93.924 for overlay's position,
- * at either receiver. replaceAt does not: RexxString::replaceAt takes its
- * arguments positionally where MutableBuffer::replaceAt takes them by name,
+ * at either receiver. replaceAt does not: String's takes its
+ * arguments positionally where MutableBuffer's takes them by name,
  * so the same send raises 93.903 here and 88.901 there, 93.924 here and
  * 88.912 there, 93.922 here and 88.910 there. Only .nil in the first
  * position agrees, at 88.909. The pairs below are sent to both receivers so

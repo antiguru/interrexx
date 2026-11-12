@@ -2,7 +2,7 @@
  * index and as a message.
  *
  * A StringTable answers an entry name sent as a message exactly as a Directory
- * does, out of the same donated UNKNOWN. What CoreClasses.orx needs is the
+ * does, out of the same donated UNKNOWN. What the embedded library needs is the
  * index form, .methods[name], whose value it hands to ~defineClassMethod.
  *
  * Which names a directive files is the rest of it: ::ATTRIBUTE's style decides

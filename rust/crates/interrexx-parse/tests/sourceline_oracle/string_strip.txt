@@ -1,7 +1,7 @@
 count 25
-/* STRIP as a method: `AddMethod("Strip", RexxString::strip, 2)`
- * (memory/Setup.cpp:593), `RexxString::strip`
- * (classes/StringClassSub.cpp:529).
+/* STRIP as a method, declared at arity 2: the option and the set of
+ * characters to remove. The option is the first letter of Both, Leading or
+ * Trailing.
  *
  * The second argument is a SET of characters, not a pad -- documented, in
  * rexxref's own words: "The third argument, chars, specifies the set of

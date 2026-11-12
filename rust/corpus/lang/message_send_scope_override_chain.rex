@@ -1,8 +1,8 @@
 /* target~name:scope starts the lookup at scope and searches only the scopes
- * folded in ahead of scope, which is MethodDictionary::findSuperMethod.
+ * folded in ahead of scope, as a SUPER lookup does.
  *
  *
- * SUPER inside a method body is the scope RexxObject::superScope answers for
+ * SUPER inside a method body is the scope the object's super-scope answers for
  * the scope the running method was found at, so self~tag:super in Mid's own
  * TAG reaches Base's. Every line here is class-side because ~new is not used.
  */

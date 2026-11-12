@@ -124,16 +124,14 @@ and the same prediction held when it was checked directly for this file's
 `Message~result` entry. It has not been checked for this one, because doing so
 means running this program, which this file's own header forbids.
 
-Cause: `RexxInstructionGuard::execute` evaluates the expression and, while it
-is false, loops on `context->guardWait()`
-(`instructions/GuardInstruction.cpp:167`-`:185`). That releases the object's
+Cause: the GUARD instruction evaluates the expression and, while it
+is false, loops on a guard wait. That releases the object's
 scope and waits to be woken by another activity changing one of the exposed
 variables the expression names. A program with one activity has nothing that
 can change it, so the wait has no end. `GUARD OFF WHEN` blocks identically:
 the `WHEN` form waits whichever way the `ON`/`OFF` flag is set, and
 `guardWait` releases the object's scope in both cases. The flag decides the
-state the activity returns to when it is awake, not what the wait holds
-(`instructions/GuardInstruction.cpp:147`-`:150`).
+state the activity returns to when it is awake, not what the wait holds.
 
 The neighbours bound it and are clean, all rc 0 and all agreeing with this
 crate on both engines: the same method with `v = 1` answers, so it is the
@@ -145,11 +143,10 @@ block.** Measured: the same method without it, `guard on when 1 = 0`, is a
 clean `Error 99.913 GUARD instruction did not include references to exposed
 variables.` at rc 157 in 0.00 s, three runs of three. What that check tests is
 which names the expression mentions, and nothing about whether the expression
-can ever change: `LanguageParser::captureGuardVariable` records a variable only
-when `isExposed(varname)` holds (`parser/LanguageParser.cpp:2024`), and the
-raise fires when that list comes back empty
-(`parser/InstructionParser.cpp:2640`-`:2646`). The maintainers state their
-reason for it there -- "if using GUARD WHEN, we will never wake up if there are
+can ever change: the parser records a variable only
+when it is an exposed object variable, and the
+raise fires when that list comes back empty. The maintainers state their
+reason for it in the source -- "if using GUARD WHEN, we will never wake up if there are
 not at least one object variable accessed." -- which is the check's motivation
 and not its reach. Measured at the neighbours, three runs each: `guard on when
 w = 0`, with `w` local and the expression already true, is the same 99.913 at
@@ -185,13 +182,11 @@ particular wait is a design question not put to the maintainers.
 Effect: SIGSEGV, rc 139, deterministic (measured 3 runs of 3), stdout and
 stderr both empty.
 
-Cause: `RexxClass::subclass` builds the class object by sending `NEW` to the
-metaclass and casts the answer without checking it --
-`RexxClass *new_class = (RexxClass *)meta_class->sendMessage(GlobalNames::NEW,
-class_id, p);` (`classes/ClassClass.cpp:1579`), and the very next statement
-dereferences it, `new_class->setPackage(package)` (`:1582`). A metaclass may
+Cause: `Class~subclass` builds the class object by sending `NEW` to the
+metaclass and casts the answer to a class without checking it, and the very
+next statement writes the package into it. A metaclass may
 carry its own `NEW`, and nothing constrains what that method returns, so a
-`RexxString` reaches a `RexxClass` field write.
+a string reaches a class field write.
 
 The neighbour that bounds it: the same metaclass whose `NEW` forwards
 (`forward class (super)`) answers rc 0 and builds the class, and the same
@@ -226,14 +221,14 @@ Not about any one option. `forward` bare is the minimal form; `forward
 array(1,2)` and `forward message('M')` crash the same way, and so does the
 subclass shape where a `::METHOD m` overriding a superclass `m` forwards
 without naming a target. What they share is that `FORWARD` supplies the
-defaults: `RexxActivation::forward` (`execution/RexxActivation.cpp:1335`-`:1347`)
+defaults: FORWARD
 fills an unspecified target with `receiver` and an unspecified message with
 `settings.messageName`, so the send goes back to the method it left.
 
 Cause: the non-continuing path makes the activation a phantom **before** it
-sends. `execution/RexxActivation.cpp:1365`-`:1391`: it calls
-`settings.setForwarded(true)`, then `stopExecution(RETURNED)`, and only then
-`target->messageSend(...)`, finishing with `termination()`. The comment above
+sends. It marks the activation as forwarded, then stops its execution, and
+only then sends to the target, finishing with the activation's termination.
+The comment above
 it says so -- "this activation becomes a phantom, and we issued the message as
 if we don't exist". Because the activation is already stopped, the recursion
 does not grow the interpreter's own activation depth, which is what the
@@ -242,7 +237,7 @@ without anything checking.
 
 The neighbour that bounds it, and it is one keyword: **the same program with
 `forward continue` is a clean `rc 245`** with a traceback, because the
-continuing path at `:1349`-`:1361` sends without terminating the activation, so
+continuing path sends without terminating the activation, so
 the depth guard sees the frames. Ordinary unbounded Rexx recursion -- a
 `procedure` that calls itself -- is also a clean `rc 245`. So the interpreter
 does have the guard; the phantom path is what steps around it.
@@ -296,10 +291,9 @@ the wrapper above was run against **that** spinner to show it cannot tell the
 two apart: it reports `User time 0.00`, `System time 0.00` and `Percent of CPU
 this job got: 0%` over 6.00 s elapsed for the 700-tick program.
 
-Cause: `MessageClass::result` waits for the message to complete
-(`classes/MessageClass.cpp:279`). `Message~new` builds the message without
-dispatching it -- `MessageClass::newRexx` ends at `completeNewObject`
-(`:896`), with no send -- so nothing will ever complete it and the wait has no
+Cause: `Message~result` waits for the message to complete. `Message~new`
+builds the message without dispatching it -- creation ends with no send --
+so nothing will ever complete it and the wait has no
 end.
 
 The neighbours bound it and are all clean, rc 0 under the same deadline:
@@ -339,23 +333,22 @@ It is the receiver's class and not the operator. `1~"<<"` is the same clean
 93.903 at rc 163, and `.Object~new~"<<"` is `Error 97.1` at rc 159 because
 `Object` has no such method.
 
-Cause: `RexxString::primitiveStrictComp` opens by dereferencing its argument
-with no check at all -- `RexxObject *other = otherObj->requestString();`
-(`classes/StringClass.cpp:920`-`:923`) -- and the six operator methods are the
-ones that route to it: `strictGreaterThan` (`:1297`), `strictLessThan`
-(`:1303`), and the two at `:1311` and `:1317`. A method sent without its
-argument arrives with `OREF_NULL`, and that is a virtual call on a null
+Cause: the strict string comparison opens by dereferencing its argument
+with no check at all -- it asks the argument for its string form -- and the
+six operator methods are the ones that route to it: the strict greater-than,
+strict less-than, and the two or-equal forms. A method sent without its
+argument arrives as a null pointer, and that is a virtual call on a null
 pointer.
 
-The twelve clean ones go through `RexxString::comp` (`:753`), whose first
-statement is `requiredArgument(other, ARG_ONE)` (`:762`). The `CompareOperator`
-macro they all share (`:1248`) guards only `.nil`, so it is not what saves
+The twelve clean ones go through the ordinary string comparison, whose first
+statement requires the first argument. The shared comparison-operator wrapper
+guards only `.nil`, so it is not what saves
 them.
 
 **The checked twin already exists and is the one the operators do not call.**
-`RexxString::strictComp` (`:874`) carries a body identical to
-`primitiveStrictComp`'s and opens `RexxString *other = stringArgument(otherObj,
-ARG_ONE);` (`:879`). The comment above `primitiveStrictComp` says it is for
+The string class's own strict comparison carries a body identical to the
+unchecked one's and opens by requiring its argument as a string. The comment
+above the unchecked one says it is for
 calls "by either the Interger or NumberString class", which is a statement
 about intended callers rather than a check, and the operator methods use it
 anyway. So the upstream fix is a one-liner either way: guard the argument
@@ -381,14 +374,13 @@ Effect: SIGSEGV, rc 139, deterministic (measured 3 runs of 3), stdout and
 stderr both empty. `say s~hasItem` in place of `say s~index` is the same
 crash; the two are the whole of it on this class.
 
-Cause: `StemClass::index` (`classes/StemClass.cpp:430`) and
-`StemClass::hasItem` (`:377`) both open with `findByValue(target)` and neither
-calls `requiredArgument` first. `Setup.cpp` registers each at arity 1, and an
+Cause: `Stem~index` and `Stem~hasItem` both open with a search by value and
+neither requires its argument first. Each is registered at arity 1, and an
 arity operand there is a MAXIMUM rather than a minimum, so a zero-argument
-send arrives with `target` as `OREF_NULL` and the search dereferences it.
+send arrives with the target as a null pointer and the search dereferences it.
 
 **The guarded sibling is in the same file and makes the fix a one-liner.**
-`StemClass::removeItemRexx` (`:391`) carries the comment "we require the index
+`Stem~removeItem` carries the comment "we require the index
 to be there" and checks; measured, `say s~removeItem` on the same receiver is
 a clean 93.x at rc 163. So the two crashing methods need that same check and
 nothing more.
@@ -418,9 +410,9 @@ after the preceding line and stderr empty. Four shapes, and they are one
 defect: the empty entry can come from `insert(, handle)` or from
 `put(, handle)`, and any of `removeItem`, `hasItem` or `index` reaches it.
 
-Cause: a `List` entry is allowed to hold nothing -- `ListClass::insertRexx`
-has no `requiredArgument` for its value (`classes/ListClass.cpp:454`) and
-`putRexx` requires only the index (`:349`), both measured -- and the three
+Cause: a `List` entry is allowed to hold nothing -- `List~insert`
+does not require its value and
+`put` requires only the index, both measured -- and the three
 methods that search by ITEM dereference each entry's value without checking
 for it. Same class as the `Stem~index` entry above: a null the search does not
 guard.
@@ -498,24 +490,22 @@ and not an unpaired call. Measured the same way with the two `SETLOCAL`s nested
 So a program reaches 10a only when its first `ENDLOCAL` too many arrives before
 its second restore does; every measured program hits one or the other.
 
-Cause, read end to end in the C++. `SETLOCAL` reaches
-`SystemInterpreter::pushEnvironment` (`platform/unix/ExternalFunctions.cpp:145`)
-and `RexxActivation::pushEnvironment` (`execution/RexxActivation.cpp:4640`),
-which creates `environmentList = new_queue()` on the first call and pushes the
-saved block. `ENDLOCAL` reaches `SystemInterpreter::popEnvironment`
-(`ExternalFunctions.cpp:167`), whose guard is `TheNilObject == Current`.
-`RexxActivation::popEnvironment` (`RexxActivation.cpp:4666`) answers
-`TheNilObject` **only when `environmentList` is still null**; once the queue
-exists it answers `environmentList->pull()`, which is `deleteItem(1)`
-(`classes/QueueClass.hpp:72`), and `ArrayClass::deleteItem`
-(`classes/ArrayClass.cpp:2577`) answers **`OREF_NULL`** for an out-of-bounds
-index -- which an empty queue's index 1 is. `OREF_NULL` is not `TheNilObject`,
-so the guard passes it through to `restoreEnvironment(Current->getData())`,
-which reads `((ENVENTRY *)current)->size` and `chdir(current)` off it
-(`ExternalFunctions.cpp:275`-`:278`). That is 10a.
+Cause, read end to end in the oracle's source. `SETLOCAL` reaches the
+system-level environment push and the activation's own, which creates its
+environment queue on the first call and pushes the
+saved block. `ENDLOCAL` reaches the system-level environment pop,
+whose guard tests for `.nil`.
+The activation's pop answers
+`.nil` **only when its environment queue is still null**; once the queue
+exists it answers the queue's first item pulled, which is `deleteItem(1)`,
+and an array's `deleteItem` answers a **null pointer** for an out-of-bounds
+index -- which an empty queue's index 1 is. A null pointer is not `.nil`,
+so the guard passes it through to the environment restore,
+which reads the saved block's size and does `chdir` off it.
+That is 10a.
 
-10b is a second defect in the same function. `restoreEnvironment`
-(`ExternalFunctions.cpp:258`-`:341`) `putenv`s pointers that live **inside the
+10b is a second defect in the same function. The environment restore
+`putenv`s pointers that live **inside the
 saved Rexx buffer** and frees whatever `environ` entry each name resolved to;
 its first run also copies the whole environment into `malloc`ed strings under
 the `putflag` guard. After one restore, `environ` points into GC-managed memory,
@@ -524,7 +514,7 @@ process survives, whatever the nesting -- which is why the paired program above
 dies too.
 
 A termination restore counts. An activation ending with a `SETLOCAL` outstanding
-restores the oldest (`RexxActivation.cpp:1494-1500`), so a `::ROUTINE` that
+restores the oldest, so a `::ROUTINE` that
 leaves one open spends the process's one restore on its return:
 
     call r
@@ -613,13 +603,13 @@ where this crate writes the raising variant's trace lines is its own answer, rec
 licensed further.
 
 Cause, for 11a and 11b, read and not measured further:
-`RexxActivation::resolveStream` (`execution/RexxActivation.cpp:1938`-`:1977`)
+the stream resolution
 answers `.INPUT` or `.OUTPUT` for an omitted stream name by asking
-`getLocalEnvironment`, which answers null once the entry is gone, and the
+the local environment, which answers null once the entry is gone, and the
 builtin sends its message to that null. `SAY` survives because
-`Activity::sayOutput` (`concurrency/Activity.cpp:3214`) tests the null and falls
+the say output tests the null and falls
 back to writing the line itself. For 11c the fallback exists too --
-`Activity::traceOutput` (`:3171`) catches the failed send and writes through
+the trace output catches the failed send and writes through
 `lineOut`, which is why the lines land on stdout -- but what dies at exit was
 not established.
 
@@ -648,9 +638,9 @@ rather than written: `stream('HANDLE:1','C','query streamtype')` answers
     say s~state
 
 SIGSEGV, rc 139. The control is the same program without the last line: rc 0.
-`stream_uninit` destroys the `StreamInfo` and drops `CSELF`
-(`streamLibrary/StreamNative.cpp:2195`-`:2198`), and `stream_state` dereferences
-it without the `checkStreamInfo` guard its siblings use (`:3609`-`:3610`) --
+`stream_uninit` destroys the stream's native state and drops `CSELF`,
+and `stream_state` dereferences
+it without the check its siblings use --
 Read, not measured. The guarded ones are safe and measured:
 `~lineout`, `~linein`, `~open` and `~chars` after `~uninit` raise 48.1
 `Stream not initialized`. `~description`, `~qualify` and the five `query_*`
@@ -740,12 +730,12 @@ way. With nothing resolved through the context the same object answers at rc 0: 
 `return 44` or `return 45`. Controls, rc 0 both: the caller's routine called from a prolog whose
 context is `.context~package` runs, and with no context is 43.1.
 
-`BaseExecutable::getPackage` answers `resultOrNil(package)` (`execution/BaseExecutable.cpp:121-125`),
-which `PackageClass::newRexx` (`classes/PackageClass.cpp:202-205`) and the `new`/`newFile` argument
-processing (`execution/BaseExecutable.cpp:274-277`, `:343-346`) take as a `PackageClass *`. It
-becomes the new package's `parentPackage` (`classes/PackageClass.cpp:680-684`), and every lookup
-that misses locally calls a `PackageClass` member on `TheNilObject` (`findLocalRoutine`
-`:836-839`, `findInstalledClass` `:997-1000`), reading fields out of an object that is not a
+An executable's `package` answers the package or `.nil`,
+which `Package~new` and the `new`/`newFile` argument
+processing take as a package pointer. It
+becomes the new package's parent package, and every lookup
+that misses locally calls a package member on `.nil` (the local-routine and
+installed-class lookups), reading fields out of an object that is not a
 package. **Read**, not established under a debugger.
 
 **No upstream ticket.** This crate hands such a
@@ -771,7 +761,7 @@ shape the oracle answers and answers the crashing ones as if the context held no
 
 The routines are from a purpose-built native test library named `reach` (global references,
 `RegisterLibrary`, a nested attach), loaded with its directory on `LD_LIBRARY_PATH`. Its source is
-`oracle-crashes/reach.cpp`: `g++ -shared -fPIC -I third_party/ooRexx/api -I third_party/ooRexx/api/platform/unix reach.cpp -o libreach.so`.
+`oracle-crashes/reach.cpp`: `g++ -shared -fPIC -I <oracle API headers> reach.cpp -o libreach.so`.
 
 SIGSEGV, rc 139, **at termination**: stdout is complete and byte-identical to this crate's, which
 ends at rc 0. Measured twice. Which call leaves the state the termination trips on **has not been isolated**,
@@ -832,8 +822,8 @@ ticket.
 
 SIGSEGV, rc 139, 3 runs of 3, stdout empty; stderr has the started activity's report, then the
 re-raise report's first two traceback lines (`    10 *-* return 1/0`, `extra line`) before the
-crash. Cause read, not run under a debugger: `Activity::display`
-(`concurrency/Activity.cpp:1428`) casts each TRACEBACK item to `RexxString *` without a check, so
+crash. Cause read, not run under a debugger: the condition display
+casts each TRACEBACK item to a string without a check, so
 the Array is written as a string. This crate prints `an Array` for that line and re-raises, rc 214.
 No upstream ticket.
 
@@ -913,8 +903,8 @@ SIGABRT, rc 134, 10 runs of 10 under the standard wrapper with `timeout -s KILL 
 stderr `Fatal glibc error: pthread_mutex_lock.c:426 (__pthread_mutex_lock_full): assertion
 failed: e != ESRCH || !robust`. An earlier shape (the stop during a second object's wait) aborted
 10 of 10 at `pthread_mutex_lock.c:88` instead. Cause: `alarm_startTimer`'s semaphore is a local
-of the native (`platform/unix/TimeSupport.cpp:116`) and `EVENTSEMHANDLE` keeps a pointer to it,
-which `alarm_stopTimer` posts (`:165`-`:166`) after the frame is gone. `.Alarm~cancel` reaches it
+of the native and `EVENTSEMHANDLE` keeps a pointer to it,
+which `alarm_stopTimer` posts after the frame is gone. `.Alarm~cancel` reaches it
 only in the window before `init` clears `eventSemHandle`. This crate's stop on an ended timer does nothing. No upstream ticket.
 
 ## 26. Two waits on one ticker timer, both in their whole days, and one post
@@ -945,10 +935,10 @@ only in the window before `init` clears `eventSemHandle`. This crate's stop on a
 under `memcap 1G` with `timeout -s KILL 20`, print `1 1` then `1 0` and are killed at 20 s
 (rc 137, the kill); the others print `1 1` twice and exit 0. The same second pass alone (one
 object, days 1, millis 300) did not block in 10 runs under the wrapper or 40 under `memcap 1G`.
-Cause: `ticker_waitTimer`'s day loop (`platform/unix/TimeSupport.cpp:191`-`:212`) resets the
-semaphore when a wait ends early without `CANCELED`; the post wakes both waiters by broadcast
-(`common/platform/unix/SysSemaphore.cpp:231`-`:238`), and when the first resets before the
-second's `pthread_cond_timedwait` loop re-tests `postedCount` (`:291`-`:306`), the second goes
+Cause: `ticker_waitTimer`'s day loop resets the
+semaphore when a wait ends early without `CANCELED`; the post wakes both waiters by broadcast,
+and when the first resets before the
+second's `pthread_cond_timedwait` loop re-tests the posted count, the second goes
 back to waiting out its day. This crate ends both
 waits' current day (`a_post_wakes_every_waiter_of_a_timer`). No upstream ticket.
 
@@ -958,8 +948,8 @@ waits' current day (`a_post_wakes_every_waiter_of_a_timer`). No upstream ticket.
     h = SysCreateMutexSem()
 
 SIGSEGV, rc 139, 3 runs of 3 under the standard wrapper: stdout `before`, nothing on stderr. Cause:
-`SysCreateMutexSem` tests its optional name with `strlen(name) == 0`
-(`platform/unix/SysRexxUtil.cpp:878`), and an omitted `OPTIONAL_CSTRING` is a null pointer. The
+`SysCreateMutexSem` tests its optional name with `strlen(name) == 0`,
+and an omitted `OPTIONAL_CSTRING` is a null pointer. The
 oracle's unnamed form is `SysCreateMutexSem('')`. This crate creates an unnamed semaphore for both. No upstream ticket.
 
 ## 28. FORWARD ARGUMENTS over an instance whose `MAKEARRAY` answers a List
@@ -1025,8 +1015,8 @@ No upstream ticket.
     ::method linein
       return
 
-SIGSEGV, rc 139, 3 runs of 3 under the standard wrapper (`Activity::traceInput` casts the answer
-of `LINEIN` to `RexxString *` unchecked, `Activity.cpp:3252`). This crate reads an absent answer as the null string. No
+SIGSEGV, rc 139, 3 runs of 3 under the standard wrapper (the trace-input path casts the answer
+of `LINEIN` to a string unchecked). This crate reads an absent answer as the null string. No
 upstream ticket.
 
 ## 32. A `.DebugInput` whose `LINEIN` itself runs under interactive debug
@@ -1094,8 +1084,8 @@ refuses each loudly (Deviation 30). No upstream ticket.
     ::method makearray; return .list~of(1,2)
 
 SIGSEGV, rc 139, 5 runs of 5 under the standard wrapper, nothing on stdout or stderr.
-`arrayArgument` (`runtime/MethodArguments.hpp:675`) checks the `requestArray` answer only against
-`TheNilObject` and then reads it through the array layout. A string answer is read the same way, and the outcome is fixed by the string's
+the array-argument conversion checks the `requestArray` answer only against
+`.nil` and then reads it through the array layout. A string answer is read the same way, and the outcome is fixed by the string's
 content: the table under entry 43 holds it, measured on this program and on that one. This crate
 raises 98.913 for any answer that is not a single-dimensional array. No upstream ticket.
 
@@ -1108,8 +1098,8 @@ raises 98.913 for any answer that is not a single-dimensional array. No upstream
     ::method supplier; return 'x'
 
 SIGSEGV, rc 139, 5 runs of 5 under the standard wrapper, nothing on stdout or stderr.
-`RexxClass::createMethodDictionary` (`classes/ClassClass.cpp:1250`-`:1251`) casts the `SUPPLIER`
-answer to `SupplierClass *` and calls its methods directly. This crate refuses with `Loud::receiver_class` (`a message send to a value that is
+`Class~defineMethods` casts the `SUPPLIER`
+answer to a supplier and calls its methods directly. This crate refuses with `Loud::receiver_class` (`a message send to a value that is
 not a supplier`). No upstream ticket.
 
 ## 36. A `TRACE` write to the REXX package's settings
@@ -1142,7 +1132,7 @@ Dropped at r13346: its programs raise their error, rc 216 and 163 (SF #2068, r13
 
 SIGSEGV, rc 139, 3 runs of 3 under the standard wrapper and `memcap 4G`: stdout `Name=A, Value='first'`, nothing from the interpreter on
 stderr. The `SIGNAL ON SYNTAX` does not save it. Cause not read: the
-raise comes out of `ObjectToString` inside `writeVariable` (`runtime/RexxUtilCommon.cpp:1449`).
+raise comes out of the object-to-string conversion inside the stem dump.
 This crate traps the 93.900 and prints `trapped 93.900`, pinned by
 `builtin::rexxutil::stems::tests::a_string_method_raising_inside_the_dump_is_trapped`. No
 upstream ticket.
@@ -1159,7 +1149,7 @@ Dropped at r13346: answers `0 0 1` from a directory on another file system than 
     'rm dangling'
 
 Not a crash: an UNDEFINED ANSWER. 3 runs under the standard wrapper: stdout `1  1/01/70   1:00a           0  ----------  <dir>/dangling` each time, rc 0.
-`SysFileIterator::findNextEntry` (`platform/unix/SysFileSystem.cpp`) ignores `stat64`'s failure,
+The directory iterator ignores `stat64`'s failure,
 so the line carries whatever its `findFileData` held: a longer probe program printed
 `1/01/70   1:00a          23  l-----S--T` for the same call, and in a `*` listing whose previous
 entry was a directory the link carried that directory's date, size and mode and was counted under
@@ -1178,8 +1168,8 @@ witness `lang/rexxutil_file_tree.rex` makes no dangling link.
     ::method string; raise syntax 93.900 array('raised')
 
 SIGSEGV, rc 139, 3 runs of 3 under the standard wrapper and `memcap 4G`, nothing on stdout.
-`formatMessage` (`runtime/RexxUtilCommon.cpp`) takes
-each value through `ObjectToStringValue`, which catches the raise and answers `NULL`, and the
+The message formatter takes
+each value through the object-to-string conversion, which catches the raise and answers `NULL`, and the
 message's `&1` then runs `strlen` on it. A raising value the message does not refer to is safe:
 the other values are still converted and the last raise is the routine's answer, which the corpus
 witness `lang/rexxutil_messages.rex` runs. This crate answers the raise here too, pinned by
@@ -1207,7 +1197,7 @@ and `a_table_reaching_past_the_mapping_is_rejected`. No upstream ticket.
     ::method makearray; return 'not an array'
 
 SIGSEGV, rc 139, 5 runs of 5 under the standard wrapper and `memcap 4G`, nothing on stdout.
-`arrayArgument` (`runtime/MethodArguments.hpp:675`) reads
+the array-argument conversion reads
 the string through the array layout, as in entry 34, and what follows depends on the string's
 content and not on the run. Measured on both programs, entry 34's
 (`.environment~unknown('ARRAY', .k~new)`) and this one, 3 runs each, with `MAKEARRAY` answering:
@@ -1230,7 +1220,7 @@ ticket.
 
 Run with `HOME` removed from the environment (`env -u HOME`): SIGSEGV, rc 139, 3 runs of 3 under
 the standard wrapper and `memcap 4G`, nothing on stdout.
-`sys_process_cd` (`platform/unix/SystemCommands.cpp:494`) hands a bare `cd` and `cd ~/x` to the
+The command handler's `cd` processing hands a bare `cd` and `cd ~/x` to the
 shell where `getenv("HOME")` is null, but for `cd ~` and `cd ~ x` it runs `strlen` on it. This
 crate hands those to the shell too, and the shell's answer is the command's, the directory
 unchanged, pinned by `command::tests::cd_home_with_home_unset_goes_to_the_shell`. No upstream
@@ -1241,9 +1231,9 @@ ticket.
     say SysWait()
 
 Not a crash: an UNDEFINED ANSWER. 3 runs under the standard wrapper and `memcap 4G`, : stdout `32582`, `32589`, `32624`, rc 0, and a second call in the
-same run answers the same value as the first. `SysWait` (`platform/unix/SysRexxUtil.cpp`) answers
+same run answers the same value as the first. `SysWait` answers
 the status `wait` would have set, and `wait` fails with `ECHILD` and sets nothing. A command whose child a `SysWait` on another activity reaped is the
-same defect one step on: `ioCommandHandler` (`platform/unix/SystemCommands.cpp`) reads the status
+same defect one step on: the command handler reads the status
 of its own failed `waitpid`. With `'exit 3'` then `'sleep 0.6; exit 5'` run on a started activity
 and `SysWait` after `SysSleep 0.2` on the main one, 3 runs printed the wait's answer and the
 command's `rc` as `1280` and `3` twice, then `32631` and `5`. This crate answers `-1` for a wait that finds no
@@ -1324,12 +1314,11 @@ collecting at every allocation. No corpus witness can run it. No upstream ticket
 
     say qualify('~')
 
-Measured at r13346 under `env -u HOME`: SIGSEGV, rc 139. `SysFileSystem::resolveTilde` (`platform/unix/SysFileSystem.cpp:569` at the
-oracle's `cb9563364`) assigns `getenv("HOME")` to a
-`FileNameBuffer`, whose `operator=` (`memory/FileNameBuffer.hpp:122`) runs `strlen` on it:
+Measured at r13346 under `env -u HOME`: SIGSEGV, rc 139. The oracle's tilde resolution assigns `getenv("HOME")` to a
+file-name buffer, whose assignment runs `strlen` on it:
 `strlen(NULL)` where `HOME` is unset, as in entry 44's `cd ~`, which was measured.
-`canonicalizeName` calls it for a name starting `~`, and `qualifyStreamName` calls
-`canonicalizeName`. In this crate the same names go through `qualify_name`: `QUALIFY`, stream names,
+Name canonicalisation calls it for a name starting `~`, and stream-name
+qualification calls canonicalisation. In this crate the same names go through `qualify_name`: `QUALIFY`, stream names,
 `DIRECTORY` and the RexxUtil file routines. This crate reads the missing `HOME` as empty: `~`
 qualifies to the null string and `~/x` to `/x`, pinned by
 `builtin::platform::tests::a_tilde_with_home_unset_qualifies_without_a_home`. No upstream ticket.
@@ -1364,8 +1353,8 @@ not implemented` (rc 120), and answers on Set (`0`, rc 0). No upstream ticket.
 
 Effect: SIGSEGV, rc 139, at exit. Before it, stdout holds every trace line from `6 *-* a = 1` on,
 then `routine end` and `not reached`; stderr is empty. The failed `LINEOUT` raises 97.1 with no trap anywhere, so
-`Activity::raiseException` pops the traced activation and `raisePropagate` reaches the base frame,
-where `traceOutput`'s `catch (NativeActivation *)` writes the line with `lineOut` (stdout, as in
+the raise pops the traced activation and propagates to the base frame,
+where the trace output's catch writes the line with `lineOut` (stdout, as in
 entry 11c) and returns into the popped activation, which runs on. This crate reports the
 untrapped 97.1 at `a = 1`, rc 159, and writes the report's lines, which the destination cannot
 take either, on stdout under entry 11's licence. No upstream ticket.
@@ -1457,8 +1446,7 @@ the stream target, so this crate answers the same 97.1, leaves the file alone an
       args[1]['NAME'] = .object~new
       return 1
 
-with `present.cls` an existing file beside the program. Effect: SIGSEGV, rc 139, on 3 of 3 runs, with nothing written. Cause: the unchecked `(RexxString *)` cast of the entry at
-`SecurityManager.cpp:343`. A string or `.nil` replacement answers 3.1 naming its string value. A
+with `present.cls` an existing file beside the program. Effect: SIGSEGV, rc 139, on 3 of 3 runs, with nothing written. Cause: the unchecked string cast of the entry in the security-manager call. A string or `.nil` replacement answers 3.1 naming its string value. A
 run that traps the load with `SIGNAL ON SYNTAX`, after a `.nil` replacement in the same loop, can
 answer 3.1 naming `an Object` instead (3 of 3). This
 crate reads the object's string value too, which is 3.1 naming `an Object`
@@ -1563,7 +1551,7 @@ whose stem shapes it holds). No upstream ticket.
     ::class ksub subclass k
 
 Effect: SIGSEGV, rc 139. Measured under the standard
-wrapper from a fresh empty directory. `ArrayClass::stableSortWithRexx` runs with a receiver that is not an `ArrayClass`. This crate
+wrapper from a fresh empty directory. The array stable sort runs with a receiver that is not an array. This crate
 refuses loudly (`a message send to a value that is not an array is not implemented`, rc 120). No upstream ticket.
 
 ## 63. TRACE I over a `~value=` assignment to a variable reference
@@ -1763,8 +1751,8 @@ Effect: an INDEFINITE BLOCK. Measured 5 of 5 under the standard wrapper with
 stderr empty.
 
 Cause: the notification loop fixes its count before the sends and sets
-all-notified after them (`classes/MessageClass.cpp:666-685`), and `~notify`
-sends at once only where all-notified is set (`:217-229`), so `w` is never sent
+all-notified after them, and `~notify`
+sends at once only where all-notified is set, so `w` is never sent
 `messageComplete` and `w~wait` never ends. Here `slow`'s `messageComplete`
 sleeps 1 s, and main's `~notify` lands 0.3 s in. This crate prints `notified 1`
 and refuses with `interrexx: a wait that nothing left to run can end is not

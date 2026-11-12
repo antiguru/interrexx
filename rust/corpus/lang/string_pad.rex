@@ -1,7 +1,7 @@
 /* CENTER/CENTRE/LEFT/RIGHT/COPIES as methods.
  *
- * `AddMethod("Center", RexxString::center, 2)` and its four siblings
- * (memory/Setup.cpp:582, :583, :588, :592, :618). The receiver is the
+ * Each has a fixed declared argument count.
+ * The receiver is the
  * builtin's first argument, so every argument position here is the builtin's
  * less one.
  *

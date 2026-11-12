@@ -1,7 +1,7 @@
 /* The order a .NAME resolves in, at the two steps a program can observe:
  * .LOCAL before .ENVIRONMENT.
  *
- * PackageClass::findClass asks the running package's own installed classes,
+ * Class lookup asks the running package's own installed classes,
  * then .LOCAL, then .ENVIRONMENT, and only the last two are reachable from a
  * program that declares no ::CLASS. Setting an entry is itself a message send
  * to one of the interpreter's own objects, which is why this program could

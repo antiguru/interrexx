@@ -1,7 +1,7 @@
-/* FLOOR, CEILING, ROUND and MODULO as methods: `AddMethod("Floor",
- * RexxString::floor, 0)` and its three neighbours (memory/Setup.cpp), each
- * reaching NumberString through the ArithmeticMethod macro
- * (classes/StringClass.cpp:1058).
+/* FLOOR, CEILING, ROUND and MODULO as methods, each of which hands the
+ * value on to NumberString arithmetic rather than computing the answer
+ * on the String itself.
+ * Each is witnessed below.
  *
  * The value is rounded to the current NUMERIC DIGITS BEFORE the direction is
  * applied, so the answer is a function of the rounded value: at DIGITS 9

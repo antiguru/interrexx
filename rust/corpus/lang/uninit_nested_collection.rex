@@ -1,5 +1,5 @@
 /* A GC('force') inside a finalizer collects and marks and runs nothing:
-   MemoryObject::runUninits refuses to re-enter while a sweep is in progress.
+   the finalizer run refuses to re-enter while a sweep is in progress.
    G asks K whether its finalizer has run yet, immediately after driving a
    collection that made K's instance unreachable; the answer is 0 because the
    interlock held it back.  When K's finalizer does run is deliberately not

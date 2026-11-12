@@ -1,6 +1,6 @@
 /* `.RexxContext~new` and `.StackFrame~new` are both refused: instances of
-   either come only from the interpreter (`RexxContext::newRexx`,
-   `StackFrameClass::newRexx`, one `reportException` each). The refusal names
+   either come only from the interpreter (each `new` raises one refusal).
+   The refusal names
    the RECEIVER class, not the scope the method is compiled in, which is why
    the trace line above the report says `RexxContext` for a subclass too.
 

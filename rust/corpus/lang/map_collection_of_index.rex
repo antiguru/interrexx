@@ -1,7 +1,7 @@
 /* `MapCollection~of` with an argument that is not an array: 88.923, whose
    first substitution is `.context~name` -- the message name the method was
    invoked under, `OF`. So this witnesses `RexxContext~name` from inside a
-   Rexx-coded library method (`CoreClasses.orx`) as much as it witnesses `of`:
+   Rexx-coded library method as much as it witnesses `of`:
    an engine whose `~name` answered the declaring spelling, or the program's
    path, prints a different first word.
 

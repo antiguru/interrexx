@@ -19,7 +19,7 @@
  * is run with no arguments at all, even when the send carried some.
  *
  * `EMPTY` clears only the contents: the Rexx-visible method is
- * `HashCollection::emptyRexx`, which never reaches `DirectoryClass::empty`.
+ * the generic hash-collection empty, which never reaches Directory's own.
  */
 
 d = .Directory~new

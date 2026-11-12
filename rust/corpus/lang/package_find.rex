@@ -3,7 +3,7 @@
    Two of them reach past this package's own tables and are what a body
    searching only ~classes gets wrong: ~findClass and ~findPublicClass both
    answer the Array class, which no table this program declares holds.
-   ~findPublicRoutine is the C++'s own oddity -- it calls findRoutine, so a
+   ~findPublicRoutine is the oracle's own oddity -- it calls findRoutine, so a
    ::ROUTINE declared without PUBLIC answers through it. And ~findProgram
    answers a path String, not a Package. */
 

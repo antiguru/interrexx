@@ -1,7 +1,7 @@
 /* D1 measurement, C++ side: build a ~1M-object graph of the same shape the
    Rust benchmark builds, then time a FORCED full collection.
 
-   GC('F') calls memoryObject.collectAndUninit (BuiltinFunctions.cpp:3031),
+   GC('F') runs a forced full collection with finalizers,
    so the second number is a real full-GC pause and is directly comparable
    with the Rust figure. The build time is NOT comparable -- it includes
    parsing, dispatch and variable lookup that the Rust microbenchmark never

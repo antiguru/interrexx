@@ -2,9 +2,9 @@ count 23
 /* A class this file declares resolves by name from inside this file, with no
  * PUBLIC keyword on the directive.
  *
- * PackageClass::findClass consults findInstalledClass first, which is the
+ * Class lookup consults the installed classes first, which are the
  * package's own class table and is not the environment: nothing installs a
- * ::CLASS into .environment. CoreClasses.orx:47-52 is this case, naming
+ * ::CLASS into .environment. The embedded core library is this case, naming
  * classes its own file declares further down.
  *
  * An unquoted directive name is a symbol, which the scanner upcases, so the

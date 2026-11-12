@@ -6,7 +6,7 @@
  * The two are different answers and the rows are side by side for that
  * reason: makeString('C') concatenates where the string context joins with
  * the line ending, which is makeString's own default. A third answer, the one
- * RexxObject::stringRexx gives, is not asked for here: ~string reports
+ * Object's own string method gives, is not asked for here: ~string reports
  * stringValue(), which for an array is its default name, and
  * array_unknown_method.rex beside it is where those bytes are compared.
  *
@@ -31,8 +31,8 @@ say 'omit-both [' t~makeString(,) ']'
 say 'string-context [' 'x't ']'
 say 'length' t~makeString('C')~length
 
-/* ~toString is the same C++ function under a second name (Setup.cpp:733-:734
-   both bind ArrayClass::toString at arity 2), so each row above has its
+/* ~toString is the same function under a second name (both are bound at
+   arity 2), so each row above has its
    toString twin here. The pair is what would catch the two names coming
    apart, which a single implementation cannot do and a second one could. */
 say 'ts-default [' t~toString ']'

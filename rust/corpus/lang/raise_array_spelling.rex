@@ -5,7 +5,7 @@
  *
  * The traces are not identical and that is the point of tracing both: an
  * element written in an ARRAY list gets two `>A>` lines and an omitted one
- * gets one, which is `RaiseInstruction.cpp:229`-`237` calling traceArgument on
+ * gets one, which is the RAISE instruction tracing the argument on
  * both sides of the put, where a parenthesised list gets one `>A>` per written
  * element and a `>>>` of its own.
  *

@@ -1,8 +1,8 @@
 /* The state the interpreter's own Rexx-written library leaves behind, asked
  * by a program that did nothing to produce it.
  *
- * `CoreClasses.orx` and `StreamClasses.orx` install at interpreter start and
- * `CoreClasses.orx`'s prologue runs to its `exit`, so every row below is
+ * the embedded core and stream libraries install at interpreter start and
+ * the core library's prologue runs to its `exit`, so every row below is
  * about work no clause in this file did.
  *
  * Each kind of row answers something a different half of the bootstrap

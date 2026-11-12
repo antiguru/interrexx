@@ -1,5 +1,5 @@
 /* Names the stream builtins, .Stream, .File and the redirects qualify as
-   SysFileSystem::qualifyStreamName does: a NUL ends the name, an unknown
+   the oracle's stream-name qualification does: a NUL ends the name, an unknown
    ~user and the empty name qualify to the null string, ~/ is HOME, and bytes
    that are not UTF-8 stay as they are. Everything is made under a directory
    this program makes and removes, with HOME moved into it. */

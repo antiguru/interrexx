@@ -2,9 +2,9 @@ count 61
 /* The whole-string rewrites' refusals, and the second row of the shared set
  * that shares nothing with its MutableBuffer twin.
  *
- * append is RexxString::concatRexx registered under a second name with arity
- * one (memory/Setup.cpp:578), so a String appends exactly one argument and
- * renders it; MutableBuffer::appendRexx is A_COUNT (:1422) and takes as many
+ * append is String's concatenation registered under a second name with arity
+ * one, so a String appends exactly one argument and
+ * renders it; MutableBuffer's append has a counted argument list and takes as many
  * as it is given. The pair below is what pins that: the same two-argument
  * send is 93.902 at a String and answers at a MutableBuffer.
  *

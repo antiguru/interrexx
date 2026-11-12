@@ -77,8 +77,8 @@ back = p~addPackage(.Class~package, 'NSR')
 say 'addPackage of the REXX package answers' back~class~id back~objectName
 say 'importedPackages now' p~importedPackages~items
 /* Read BY POSITION, because the order is the oracle's own and not incidental:
-   `PackageClass::addPackage` appends to `loadedPackages` and
-   `getImportedPackagesRexx` copies it, so it is insertion order -- the
+   `addPackage` appends to the loaded-packages list and
+   `importedPackages` copies it, so it is insertion order -- the
    `::REQUIRES` directives in source order, then each `~addPackage` and
    `~loadPackage` in call order. Reversing it is a change nothing would notice
    if only the membership were asserted. */

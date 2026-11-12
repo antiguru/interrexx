@@ -2,7 +2,7 @@ count 23
 /* .NIL, .TRUE and .FALSE are resolved by the parser and never reach the
  * environment, and VALUE's one-argument form does reach it.
  *
- * LanguageParser's constructor puts a SpecialDotVariable retriever in the
+ * The parser puts a special-dot-variable retriever in the
  * dot-variable table for each of those names, so the expression form is a
  * constant and a class of that name cannot shadow it. VALUE goes through
  * getVariableRetriever instead and gets an ordinary dot variable, which

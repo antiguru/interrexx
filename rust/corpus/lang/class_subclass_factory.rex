@@ -1,7 +1,7 @@
 /* Class~subclass and Class~mixinClass: the class factory a program reaches by
- * message rather than by directive (RexxClass::subclassRexx and
- * mixinClassRexx, classes/ClassClass.cpp:1543 and :1493, each forwarding
- * OREF_NULL where ClassDirective::install passes its package).
+ * message rather than by directive (both forward a null
+ * package where the directive's install
+ * passes its package).
  *
  * What a class built this way answers where a directive-installed one answers
  * otherwise, and what a build that shared one path with the directive would
@@ -9,7 +9,7 @@
  *
  *   - ~package is .nil, because the forward passes no package. The row reads
  *     that beside the other answers: the running program's for a ::CLASS, and
- *     REXX for a class Setup.cpp built.
+ *     REXX for a class built natively.
  *   - The REXX_DEFINED lock does not reach it, so ~inherit, ~uninherit,
  *     ~define and ~defineMethods all succeed on what it just built.
  *     corpus/lang/class_rexx_defined_inherit.rex is the other half of that
@@ -23,7 +23,7 @@
  * so the INIT an enhancing table supplies is the one that runs.
  *
  * The inherited class-side INIT printing twice is what says the send at
- * ClassClass.cpp:1631 happened at all: once for the ::CLASS install, once for
+ * happened at all: once for the ::CLASS install, once for
  * the class ~subclass built under it.
  *
  * rc 0.

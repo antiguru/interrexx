@@ -2,7 +2,7 @@ count 19
 /* An ::ANNOTATE whose target the accumulated package does not hold is
    99.945 at rc 157, echoing the ::ANNOTATE line, with stdout empty --
    Error_Translation_missing_annotation_target, raised while the directive
-   list is read (parser/DirectiveParser.cpp:1983 and the four beside it).
+   list is read (and the four beside it).
 
    The target here is a class this file does declare, and declares BELOW the
    ::ANNOTATE. That is what makes the program a witness for the resolution

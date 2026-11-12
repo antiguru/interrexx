@@ -1,5 +1,5 @@
 /* An untrapped HALT or NOMETHOD an extension raised is an error once its
-   call has returned (NativeActivation::checkConditions). The native level
+   call has returned. The native level
    reports it: by then a method has given up its receiver, so its frame is a
    routine's, and that frame has a package and no line, so the condition has
    no POSITION and the report's major line names the package with no line.

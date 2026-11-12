@@ -1,5 +1,5 @@
 /* A native method's refusal of its argument is reported against the calling
-   line, below the method's compiled frame: a RexxClassObject that is not a class is 88.914. */
+   line, below the method's compiled frame: a RexxClassObject argument that is not a class is 88.914. */
 say 'before'
 t = .T~new
 say t~classarg(1)

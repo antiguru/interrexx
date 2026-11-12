@@ -11,7 +11,7 @@
  * observable in the report.
  *
  * The trace lines it also pins, all measured: >A> fires TWICE per supplied
- * element (RaiseInstruction.cpp calls traceArgument on both sides of the
+ * element (RAISE traces the argument on both sides of the
  * put into the array) and once, empty, for the omitted one; and >K>
  * "ARRAY" comes AFTER the elements, not before them.
  *

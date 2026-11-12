@@ -1,5 +1,5 @@
 /* One post to a timer wakes every activity waiting on it. The natives are
-   bound to a class of this program, as CoreClasses.orx binds them. */
+   bound to a class of this program, as the embedded core library binds them. */
 o = .t~new
 r = o~tickerCreate
 h = o~handle
