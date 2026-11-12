@@ -387,7 +387,36 @@ say o~m
   return
 ```
 
-```output defect=#101
+```output
 before
 from block
+```
+
+r[instr.reply.group.leave]
+A LEAVE that names the group ends it on the new activity as it does on the
+first one, and the rest of the method goes on from there.
+
+```rexx
+o = .rep~new
+say o~m
+call SysSleep 0.3
+say 'caller done'
+::class rep
+::method m
+  do label outer
+    do label inner
+      reply 'replied'
+      say 'inner continues'
+      leave outer
+    end
+    say 'not reached'
+  end
+  say 'method done'
+```
+
+```output
+replied
+inner continues
+method done
+caller done
 ```

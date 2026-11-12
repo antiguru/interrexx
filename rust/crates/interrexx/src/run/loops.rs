@@ -215,6 +215,11 @@ pub(crate) enum FlatStart {
     /// An unlabelled `DO; ... END` block whose `DO` clause has run: the body
     /// runs inline and its `END` is an ordinary clause, with nothing pushed.
     Block,
+    /// A `DO LABEL name; ... END` block whose `DO` clause has run: the body
+    /// runs inline like [`FlatStart::Block`]'s, under a frame that a `LEAVE`
+    /// naming the label leaves it through, and which the compiled op in front
+    /// of the `END` closes (`r[instr.reply.group]`).
+    LabelledBlock,
     /// Not a shape the flat path drives: take the nested path, with the header
     /// values handed back so that the nested path can move them rather than
     /// this one copying them.
@@ -1187,12 +1192,11 @@ impl Interp {
             LoopKind::Count(_) => LoopState::Count {
                 remaining: values.count.unwrap_or(1),
             },
-            // `flat_loop_start` answers every kind but a labelled block itself,
-            // and this function is reached only from its `Fallback`, so a loop
-            // driven by message sends never gets here to be held and left
-            // unreleased.
+            // `flat_loop_start` answers every kind itself, and this function is
+            // reached only from its `Fallback`, so a loop driven by message
+            // sends never gets here to be held and left unreleased.
             LoopKind::Controlled(_) if values.objects.is_some() => {
-                unreachable!("only a labelled block falls back to the nested path")
+                unreachable!("a loop over objects never falls back to the nested path")
             }
             LoopKind::Controlled(ctrl) => LoopState::Controlled {
                 control: ctrl.control,
@@ -1655,10 +1659,15 @@ impl Interp {
         op_body: u32,
         registers: RegFrame<'_>,
     ) -> Result<FlatStart, Failure> {
-        // A labelled block is left by a `LEAVE` naming it, which needs a
-        // frame to absorb it, so it keeps the nested path.
-        if matches!(body.kind, LoopKind::Simple) && body.label.is_none() {
-            return self.flat_block_start(code, index, instruction, source);
+        // A block runs inline. A labelled one is left by a `LEAVE` naming it,
+        // so the driver opens a frame over it to absorb that.
+        if matches!(body.kind, LoopKind::Simple) {
+            return Ok(
+                match self.flat_block_start(code, index, instruction, source)? {
+                    FlatStart::Block if body.label.is_some() => FlatStart::LabelledBlock,
+                    started => started,
+                },
+            );
         }
         let over_register = values.over_register;
         let state = match &body.kind {
@@ -1708,7 +1717,7 @@ impl Interp {
                 item,
                 ..
             } => self.with_state(*with_index, *item, &values),
-            // A labelled block.
+            // A block, which returned above.
             LoopKind::Simple => return Ok(FlatStart::Fallback(values)),
         };
         // **The snapshot's only root once this answers `Flat`**: the driver

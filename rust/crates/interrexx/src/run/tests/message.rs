@@ -357,14 +357,6 @@ fn the_guard_instructions_answers_and_their_refusals() {
             exit_code: crate::NOT_IMPLEMENTED_EXIT,
             stderr_contains: "a wait that nothing left to run can end",
         },
-        Row {
-            name: "a REPLY in a labelled block, which runs on a nested Rust frame",
-            source: "say .K~m\n::class K\n::method m class\n  do label l\n    reply 'in-do'\n  \
-                     leave l\n  end\n",
-            stdout: b"",
-            exit_code: crate::NOT_IMPLEMENTED_EXIT,
-            stderr_contains: "a REPLY its method body runs on a nested Rust frame",
-        },
     ];
     for row in rows {
         let outcome = crate::run_program(

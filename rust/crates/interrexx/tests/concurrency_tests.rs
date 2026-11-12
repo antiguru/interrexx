@@ -1019,21 +1019,17 @@ mod measured {
         );
     }
 
-    /// A `REPLY` in a labelled block is refused and counted with the
-    /// `NestedLoop` frame; one whose pins all lie below its method body's
-    /// driver moves and is not counted.
+    /// A `REPLY` in a labelled block runs on its method body's driver, so it
+    /// moves to a new activity and is not counted as immovable.
     #[test]
-    fn an_immovable_reply_is_counted_with_its_frames() {
+    fn a_reply_in_a_labelled_block_moves_and_is_not_counted() {
         let report = report_of(
             "say .c~new~m\n::class c\n::method m\n  do label l\n    reply 1\n    leave l\n  end\n",
         );
-        let immovable = &report.immovable_replies;
-        assert_eq!(immovable.values().sum::<u64>(), 1, "{immovable:?}");
         assert!(
-            immovable
-                .keys()
-                .all(|frames| frames.contains(&PinKind::NestedLoop)),
-            "{immovable:?}"
+            report.immovable_replies.is_empty(),
+            "{:?}",
+            report.immovable_replies
         );
         let report =
             report_of(".c~new~~m\nsay 'main'\n::class c\n::method m\n  reply\n  say 'rest'\n");
@@ -1343,7 +1339,6 @@ mod measured {
             "LoopHeader",
             "do i = 1 to 2 while f()\nend\nexit\nf:\n  call SysSleep 0\n  return 1\n",
         ),
-        ("NestedLoop", "do label l\n  call SysSleep 0\nend\n"),
         (
             "Conversion",
             "do i over .c~new\nend\n::class c\n::method makearray\n  call SysSleep 0\n  return .array~new\n",
