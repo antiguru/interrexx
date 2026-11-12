@@ -8121,7 +8121,7 @@ list = 'i b.i'
 drop (list)
 say symbol('i') symbol('b.1') symbol('b.2')
 </code></pre>
-<pre><code class="language-output defect=#99">VAR LIT
+<pre><code class="language-output">VAR LIT
 LIT VAR VAR
 </code></pre>
 <div class="rule" id="r-instr.drop.list.error"><a href="instructions/drop.html#r-instr.drop.list.error">[instr.drop.list.error]</a></div>
@@ -8167,7 +8167,7 @@ say 'ok 251'
 exit
 s: say condition('o')~code length(l)
 </code></pre>
-<pre><code class="language-output defect=#100">ok 250
+<pre><code class="language-output">ok 250
 20.928 251
 </code></pre>
 <h2 id="exposed-variables"><a class="header" href="#exposed-variables">Exposed variables</a></h2>
@@ -8746,6 +8746,28 @@ c (d) =&gt; 20.928
 c "d" =&gt; 20.928
 c d+e =&gt; 20.928
 c =&gt; ok
+</code></pre>
+<blockquote>
+<p>The length limit of <a href="instructions/drop.html#r-instr.drop.list.error">the DROP list</a> holds here too.</p>
+</blockquote>
+<pre><code class="language-rexx">o = .box~new
+signal on syntax name e
+o~set(copies('a', 250))
+say o~go
+o~set(copies('a', 251))
+say o~go
+exit
+e: say condition('o')~code
+::class box
+::method set
+  expose lst
+  use arg lst
+::method go
+  expose (lst)
+  return 'ok'
+</code></pre>
+<pre><code class="language-output">ok
+20.928
 </code></pre>
 <h2 id="where-expose-may-appear"><a class="header" href="#where-expose-may-appear">Where EXPOSE may appear</a></h2>
 <div class="rule" id="r-instr.expose.first"><a href="instructions/expose.html#r-instr.expose.first">[instr.expose.first]</a></div>
@@ -12317,6 +12339,26 @@ c "d" =&gt; 20.928
 c d+e =&gt; 20.928
   =&gt; ok
 c =&gt; ok
+</code></pre>
+<blockquote>
+<p>The length limit of <a href="instructions/drop.html#r-instr.drop.list.error">the DROP list</a> holds here too.</p>
+</blockquote>
+<pre><code class="language-rexx">signal on syntax name e
+l = copies('a', 250)
+call p
+say 'ok 250'
+l = copies('a', 251)
+call p
+say 'ok 251'
+exit
+e: say condition('o')~code
+  return
+p: procedure expose (l)
+  return
+</code></pre>
+<pre><code class="language-output">ok 250
+20.928
+ok 251
 </code></pre>
 <h2 id="errors-11"><a class="header" href="#errors-11">Errors</a></h2>
 <div class="rule" id="r-instr.procedure.syntax"><a href="instructions/procedure.html#r-instr.procedure.syntax">[instr.procedure.syntax]</a></div>
@@ -16573,7 +16615,7 @@ chain:
   use arg t, d.t
   return
 </code></pre>
-<pre><code class="language-output defect=#108">v1 v2
+<pre><code class="language-output">v1 v2
 second
 </code></pre>
 <div class="rule" id="r-instr.use.stem"><a href="instructions/use.html#r-instr.use.stem">[instr.use.stem]</a></div>

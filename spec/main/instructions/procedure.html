@@ -490,6 +490,26 @@ c d+e =&gt; 20.928
   =&gt; ok
 c =&gt; ok
 </code></pre>
+<blockquote>
+<p>The length limit of <a href="drop.html#r-instr.drop.list.error">the DROP list</a> holds here too.</p>
+</blockquote>
+<pre><code class="language-rexx">signal on syntax name e
+l = copies('a', 250)
+call p
+say 'ok 250'
+l = copies('a', 251)
+call p
+say 'ok 251'
+exit
+e: say condition('o')~code
+  return
+p: procedure expose (l)
+  return
+</code></pre>
+<pre><code class="language-output">ok 250
+20.928
+ok 251
+</code></pre>
 <h2 id="errors"><a class="header" href="#errors">Errors</a></h2>
 <div class="rule" id="r-instr.procedure.syntax"><a href="#r-instr.procedure.syntax">[instr.procedure.syntax]</a></div>
 <p>A fault in the form of the clause is raised when the program is read, so no

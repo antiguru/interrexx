@@ -413,6 +413,28 @@ c "d" =&gt; 20.928
 c d+e =&gt; 20.928
 c =&gt; ok
 </code></pre>
+<blockquote>
+<p>The length limit of <a href="drop.html#r-instr.drop.list.error">the DROP list</a> holds here too.</p>
+</blockquote>
+<pre><code class="language-rexx">o = .box~new
+signal on syntax name e
+o~set(copies('a', 250))
+say o~go
+o~set(copies('a', 251))
+say o~go
+exit
+e: say condition('o')~code
+::class box
+::method set
+  expose lst
+  use arg lst
+::method go
+  expose (lst)
+  return 'ok'
+</code></pre>
+<pre><code class="language-output">ok
+20.928
+</code></pre>
 <h2 id="where-expose-may-appear"><a class="header" href="#where-expose-may-appear">Where EXPOSE may appear</a></h2>
 <div class="rule" id="r-instr.expose.first"><a href="#r-instr.expose.first">[instr.expose.first]</a></div>
 <p>EXPOSE must be the first instruction of the code of a method. Only comments
