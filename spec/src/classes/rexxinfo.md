@@ -97,7 +97,7 @@ bad: say arg(1) '=>' condition('o')~code
   return
 ```
 
-```output defect=#180
+```output
 .rexxinfo~class~new => 93.967
 .rexxinfo~class~new(1, 2) => 93.967
 ```
