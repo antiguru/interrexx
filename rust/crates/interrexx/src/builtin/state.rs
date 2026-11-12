@@ -203,6 +203,13 @@ pub(crate) fn trace(interp: &mut Interp, _name: &[u8], args: Args<'_>) -> Result
             .map_err(crate::trace::raised_invalid_trace_letter)?;
         let merged = crate::trace::applied(before, &request);
         interp.set_trace_mode(merged);
+        if !before.debug && merged.debug {
+            // The clause that called the function is followed by a stop at
+            // once. The hot clause exit asks `clause_exits`, so raising it
+            // sends this clause to the exit that takes the stop.
+            interp.activity.debug_stop_owed = Some(interp.activation().id);
+            interp.clause_exits = true;
+        }
     }
     let mut answer = Vec::with_capacity(2);
     if before.debug {

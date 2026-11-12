@@ -87,6 +87,14 @@ impl Interp {
         self.exits = Some(Box::new(exits));
     }
 
+    /// `clause_exits` as the installed exits and a pending boundary post
+    /// leave it, once a clause that raised it for another reason is done.
+    pub(crate) fn restore_clause_exits(&mut self) {
+        self.clause_exits = self.boundary_posts.is_some()
+            || self.exit_installed(exit_code::HLT)
+            || self.exit_installed(exit_code::TRC);
+    }
+
     /// Whether an exit is installed for `code`.
     fn exit_installed(&self, code: c_int) -> bool {
         self.exits

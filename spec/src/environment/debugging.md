@@ -157,7 +157,7 @@ exit
   return 0
 ```
 
-```output defect=#222
+```output
 a
        >>>   "N"
 +++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
