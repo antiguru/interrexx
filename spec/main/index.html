@@ -240,6 +240,9 @@ evidence, not decoration. An example belongs to the rule above it.</p>
 issue N. The output shown is still the specified one, and the checker accepts
 the mismatch on interrexx; when the example starts to pass, it reports that
 the marker is to be removed.</p>
+<p>An output marked <code>no-oracle</code> (combinable with the other markers) is an example
+the oracle crashes on or answers with an accident of memory; the oracle gate
+does not run it.</p>
 <p>An output marked <code>escaped</code> (combinable with the other markers) writes a
 character that cannot be shown as itself with an escape: <code>\a</code> or <code>\x07</code> is the
 bell character, <code>\xNN</code> is the ASCII character of code <code>NN</code> in hexadecimal,

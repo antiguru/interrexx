@@ -305,10 +305,12 @@ and continues. ooRexx damages its record of open blocks and later raises
 <p>An answer that is not a string is read as its text: an Array as its lines,
 any other object as its default string. ooRexx reads the object as if it
 were a string, running garbage or crashing.</p>
-<h2 id="28-a-built-in-method-run-on-the-wrong-object"><a class="header" href="#28-a-built-in-method-run-on-the-wrong-object">28. A built-in method run on the wrong object</a></h2>
-<p>A built-in class's method run on an object of an unrelated class, through
-<code>run</code>, <code>setMethod</code> or <code>enhanced</code>, is refused, exit code 120. ooRexx reads the
-object with the wrong layout and answers garbage or crashes.</p>
+<h2 id="28-a-written-entry-or-answer-of-the-wrong-class"><a class="header" href="#28-a-written-entry-or-answer-of-the-wrong-class">28. A written entry or answer of the wrong class</a></h2>
+<p>A <code>.ROUTINES</code> entry written to a package that is not a routine, and a
+metaclass <code>NEW</code> that answers something other than a class, are refused, exit
+code 120. ooRexx casts the object unchecked and crashes. A native method run
+on a receiver of the wrong kind is not covered: it raises a trappable
+<code>SYNTAX 93.900</code>, as <a href="classes/object.html#r-class.object.borrowed-native">the rule</a> says.</p>
 <h2 id="29-an-entry-assignment-with-no-value"><a class="header" href="#29-an-entry-assignment-with-no-value">29. An entry assignment with no value</a></h2>
 <p><code>d~"A="()</code> on a Directory, a StringTable or a Properties, with no argument,
 is refused, exit code 120, and so is <code>d~unknown('A=', args)</code> sent directly
