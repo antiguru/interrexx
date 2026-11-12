@@ -30,6 +30,9 @@ fn scratch(name: &str) -> PathBuf {
 fn run_rexx(arguments: &[&str], cwd: &Path, library_path: Option<&Path>) -> Output {
     let api = cwd.join("api");
     std::fs::create_dir_all(&api).expect("the service directory");
+    // The service refuses a directory that others can use, and says so.
+    std::fs::set_permissions(&api, std::os::unix::fs::PermissionsExt::from_mode(0o700))
+        .expect("a private service directory");
     let bin = Path::new(REXX).parent().expect("rexx has a directory");
     let path = std::env::join_paths(std::iter::once(bin.to_path_buf()).chain(
         std::env::split_paths(&std::env::var_os("PATH").unwrap_or_default()),
