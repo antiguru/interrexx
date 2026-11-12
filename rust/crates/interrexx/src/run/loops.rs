@@ -1975,7 +1975,7 @@ impl Interp {
                             && let Some(limit) = *to_scaled
                             && let Some(sum) = value.add(step, digits)
                             && let Some(order) = sum.order(limit, digits)
-                            && let Some(next) = scaled_handle(sum, digits)
+                            && let Some(next) = crate::value::scaled_handle(sum, digits)
                         {
                             debug_assert_eq!(
                                 Ok(sum.to_number()),
@@ -2685,14 +2685,6 @@ pub(super) fn numeric_less(
 /// do i = 1.23456 to 3; say i; numeric digits 9; end` is `1.23 / 2.23 / 3.23`, the header
 /// values having been rounded once, at entry, under digits 3, and staying that width even
 /// after digits widens.
-/// The handle [`Interp::number`] makes of `value` at `digits`, where that is
-/// the inline rendering of a short fraction; `None` for any other value.
-fn scaled_handle(value: Scaled, digits: u64) -> Option<ObjRef> {
-    let mut short = [0u8; interrexx_core::INLINE_TEXT];
-    let length = value.write_short_fraction(digits, &mut short)?;
-    ObjRef::inline_text(&short[..length])
-}
-
 fn round_via_unary_plus(number: Number, digits: u64) -> Result<Number, ArithError> {
     number.plus(digits)
 }

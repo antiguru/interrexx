@@ -812,6 +812,20 @@ impl Interp {
         let digits = self.activation().settings.digits();
         let form = self.activation().settings.form();
 
+        // **An addition or subtraction of two operands carried in their
+        // handles, on their scaled mantissas**, where the sum is exact and its
+        // value fits a handle again. Neither operand can be an operator
+        // receiver or fail to convert, and one that `Scaled::add` accepts is
+        // no longer than DIGITS, so LOSTDIGITS has nothing to say either.
+        // The tag test is all a wide operand pays.
+        if matches!(op, Operator::Plus | Operator::Subtract)
+            && !matches!(left_value.decode(), Decoded::Heap { .. })
+            && !matches!(right_value.decode(), Decoded::Heap { .. })
+            && let Some(handle) = self.scaled_sum(op, left_value, right_value, digits)
+        {
+            return Ok(handle);
+        }
+
         let left_number = match self.arith_left_operand(op.spelling(), left_value)? {
             ArithOperand::Number(number) => number,
             ArithOperand::Send(target) => {
@@ -881,6 +895,30 @@ impl Interp {
         .map_err(Raised::from)?;
 
         Ok(self.number(result, saturate_digits(digits), form))
+    }
+
+    /// [`Interp::arith_general_body`]'s `+` or `-` on two operands carried
+    /// in their handles, or `None` where it is not that exact short case.
+    #[inline(never)]
+    fn scaled_sum(
+        &mut self,
+        op: Operator,
+        left_value: ObjRef,
+        right_value: ObjRef,
+        digits: u64,
+    ) -> Option<ObjRef> {
+        let QuickOperand::Scaled(left, _) = self.quick_operand(left_value) else {
+            return None;
+        };
+        let QuickOperand::Scaled(right, _) = self.quick_operand(right_value) else {
+            return None;
+        };
+        let right = if op == Operator::Subtract {
+            right.negated()
+        } else {
+            right
+        };
+        crate::value::scaled_handle(left.add(right, digits)?, digits)
     }
 
     /// Converts an arithmetic operand to a `Number`, or 41.1 with the

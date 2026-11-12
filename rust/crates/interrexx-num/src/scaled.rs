@@ -111,6 +111,25 @@ impl Scaled {
         Some(op.holds(self.order(other, digits)?))
     }
 
+    /// The value with its sign turned, which is how [`Number::sub`] reads
+    /// its right operand.
+    pub fn negated(self) -> Scaled {
+        Scaled {
+            mantissa: -self.mantissa,
+            ..self
+        }
+    }
+
+    /// How many digits the value has, as [`Number::digit_count`] counts them.
+    pub fn digit_count(self) -> u32 {
+        self.length
+    }
+
+    /// `(mantissa, exponent)`, for a caller that builds a handle from them.
+    pub fn parts(self) -> (i64, i32) {
+        (self.mantissa, self.exponent)
+    }
+
     pub fn is_negative(self) -> bool {
         self.mantissa < 0
     }

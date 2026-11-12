@@ -1751,6 +1751,23 @@ fn short_fraction(value: &Number, created_digits: u32, created_form: Form) -> Op
     ObjRef::inline_text(&short[..length])
 }
 
+/// The handle [`Interp::number`] makes of `value` at `digits` where that is a
+/// tagged integer or a short fraction's inline rendering, built from the
+/// scaled parts; `None` where it would be anything else.
+pub(crate) fn scaled_handle(value: Scaled, digits: u64) -> Option<ObjRef> {
+    let (mantissa, exponent) = value.parts();
+    if exponent == 0 {
+        // A value of at most DIGITS digits with no exponent renders as the
+        // integer it is.
+        return (digits >= u64::from(value.digit_count()))
+            .then(|| ObjRef::small_int(mantissa))
+            .flatten();
+    }
+    let mut short = [0u8; interrexx_core::INLINE_TEXT];
+    let length = value.write_short_fraction(digits, &mut short)?;
+    ObjRef::inline_text(&short[..length])
+}
+
 fn small_int_for(value: &Number, created_digits: u32) -> Option<i64> {
     let whole = value.rendered_integer(u64::from(created_digits))?;
     (SMALL_INT_MIN..=SMALL_INT_MAX)
