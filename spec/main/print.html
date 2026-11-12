@@ -14525,8 +14525,32 @@ say o~m
   end
   return
 </code></pre>
-<pre><code class="language-output defect=#101">before
+<pre><code class="language-output">before
 from block
+</code></pre>
+<div class="rule" id="r-instr.reply.group.leave"><a href="instructions/reply.html#r-instr.reply.group.leave">[instr.reply.group.leave]</a></div>
+<p>A LEAVE that names the group ends it on the new activity as it does on the
+first one, and the rest of the method goes on from there.</p>
+<pre><code class="language-rexx">o = .rep~new
+say o~m
+call SysSleep 0.3
+say 'caller done'
+::class rep
+::method m
+  do label outer
+    do label inner
+      reply 'replied'
+      say 'inner continues'
+      leave outer
+    end
+    say 'not reached'
+  end
+  say 'method done'
+</code></pre>
+<pre><code class="language-output">replied
+inner continues
+method done
+caller done
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="return"><a class="header" href="#return">RETURN</a></h1>
 <pre><code>RETURN [expression [, expression]...]
@@ -124975,7 +124999,7 @@ that <code>run</code> runs, for something, such as a lock, a result or the chang
 variable, that only an activity suspended beneath it can provide is refused,
 exit code 120. ooRexx runs each activity on its own thread and completes.</p>
 <h2 id="15-withdrawn"><a class="header" href="#15-withdrawn">15. Withdrawn</a></h2>
-<p>A REPLY inside a labelled DO group is a known defect of interrexx, #101.</p>
+<p>A REPLY inside a labelled DO group runs as it does in ooRexx.</p>
 <h2 id="16-blocking-operations-hold-every-activity"><a class="header" href="#16-blocking-operations-hold-every-activity">16. Blocking operations hold every activity</a></h2>
 <p>While a stream builtin, SAY to a redirected <code>.OUTPUT</code>, trace output, ADDRESS
 WITH redirection, condition handling, package loading or a library routine

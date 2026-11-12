@@ -515,8 +515,32 @@ say o~m
   end
   return
 </code></pre>
-<pre><code class="language-output defect=#101">before
+<pre><code class="language-output">before
 from block
+</code></pre>
+<div class="rule" id="r-instr.reply.group.leave"><a href="#r-instr.reply.group.leave">[instr.reply.group.leave]</a></div>
+<p>A LEAVE that names the group ends it on the new activity as it does on the
+first one, and the rest of the method goes on from there.</p>
+<pre><code class="language-rexx">o = .rep~new
+say o~m
+call SysSleep 0.3
+say 'caller done'
+::class rep
+::method m
+  do label outer
+    do label inner
+      reply 'replied'
+      say 'inner continues'
+      leave outer
+    end
+    say 'not reached'
+  end
+  say 'method done'
+</code></pre>
+<pre><code class="language-output">replied
+inner continues
+method done
+caller done
 </code></pre>
 
                     </main>
