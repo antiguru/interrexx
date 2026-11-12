@@ -2173,7 +2173,7 @@ bad: say condition('o')~code
   return 'return 9'
 ```
 
-```output defect=#139
+```output
 1 2 available index item next
 1 2
 97.1
@@ -2208,7 +2208,7 @@ say e~m1 e~m2 .k~new~hasMethod('m1')
   i = i + 1
 ```
 
-```output defect=#139
+```output
 1 2 0
 ```
 
