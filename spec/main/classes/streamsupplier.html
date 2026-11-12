@@ -327,6 +327,140 @@ s~index =&gt; 93.937
 s~next =&gt; 93.937
 s~available(1) =&gt; 93.902
 </code></pre>
+<div class="rule" id="r-class.streamsupplier.sends"><a href="#r-class.streamsupplier.sends">[class.streamsupplier.sends]</a></div>
+<p><code>init</code> sends the stream <code>state</code> twice and then sends the
+receiver <code>next</code>, which sends the stream <code>lineIn</code> with the number of the line to
+read, as <a href="stream.html#r-class.stream.supplier.sends">the rule of <code>supplier</code></a> says of a
+stream: line 1 unless the second answer of <code>state</code> is <code>READY</code>. So the receiver
+is sent <code>next</code> once when it is made, and an override of <code>next</code> takes part
+there. <code>init</code> also sends the stream private messages of its own, which are not
+part of this specification; an argument that does not answer them raises
+<code>SYNTAX 97.1</code> as <a href="#r-class.streamsupplier.creation">the creation rule</a> says, so
+an object that is not a stream is accepted as the stream if it answers them,
+for instance by an <code>UNKNOWN</code> method. Each later <code>next</code> sends the stream one
+<code>lineIn</code>, whose argument is one more than the index, and nothing else.
+<code>available</code>, <code>index</code>, <code>item</code> and <code>copy</code> send nothing, to the receiver or to the
+stream, and <code>supplier</code> answers the receiver without a message. <code>allItems</code> and
+<code>allIndexes</code> are those of <a href="supplier.html#r-class.supplier.allitems.sends"><code>Supplier</code></a> for an
+instance of a subclass: they send the receiver <code>available</code>, <code>index</code>, <code>item</code> and
+<code>next</code> until <code>available</code> answers false, so the stream is sent one <code>lineIn</code> for
+every line that is left and one more, the one that ends the walk, and once a
+call has collected the arrays, the other call sends the stream nothing. An entry is the answer of a <code>lineIn</code> that does not raise NOTREADY. A <code>lineIn</code>
+that raises it ends the supplier, whether it was sent by <code>init</code> or by <code>next</code>:
+the supplier is then not available, and what the <code>lineIn</code> answered is not an
+item. A <code>lineIn</code> that answers no value raises <code>SYNTAX 91.999</code> from the method
+that sent it, and any other error that the stream raises is raised by that
+method as it is.</p>
+<pre><code class="language-rexx">.local~log = .array~new
+s = .spy~new(.stand~new(3))
+call show 'new'
+s~next
+call show 'next'
+x = s~available; y = s~index; z = s~item
+call show 'read'
+c = s~copy
+call show 'copy'
+say c~class~id c~index c~item
+.log~empty
+t = .spy~new(.stand~new(3))
+call show 'new'
+a = t~allItems
+call show 'allItems'
+b = t~allIndexes
+call show 'allIndexes'
+say a~makeString('L', ',') b~makeString('L', ',') t~available
+exit
+show:
+  say strip(arg(1)':' .log~makeString('L', ' '))
+  .log~empty
+  return
+::class spy subclass streamsupplier
+::method available
+  .log~append('available'); return self~available:super
+::method index
+  .log~append('index'); return self~index:super
+::method item
+  .log~append('item'); return self~item:super
+::method next
+  .log~append('next'); self~next:super
+::method copy
+  .log~append('copy'); return self~copy:super
+::class stand
+::method init
+  expose left
+  use arg left
+::method unknown
+  use arg name
+  if name == 'STATE' then do
+    .log~append('state')
+    return 'UNKNOWN'
+  end
+  return 1
+::method linein
+  expose left
+  use arg number
+  .log~append('lineIn('number')')
+  if number &gt; left then raise notready
+  return 'line' number
+</code></pre>
+<pre><code class="language-output">new: state state next lineIn(1)
+next: next lineIn(2)
+read: available index item
+copy: copy
+SPY 2 line 2
+new: state state next lineIn(1)
+allItems: available index item next lineIn(2) available index item next lineIn(3) available index item next lineIn(4) available
+allIndexes:
+line 1,line 2,line 3 1,2,3 0
+</code></pre>
+<pre><code class="language-rexx">call try 'empty'
+call try 'none'
+call try 'error'
+call try 'later'
+call try 'ends'
+exit
+try:
+  mode = arg(1)
+  signal on syntax name bad
+  s = .streamsupplier~new(.stand~new(mode))
+  say mode 'made' s~available
+  if s~available then do
+    s~next
+    say mode 'next' s~available
+    s~next
+    say mode 'again' s~available
+  end
+  return
+bad: say mode '=&gt;' condition('o')~code
+  return
+::class stand
+::method init
+  expose mode calls
+  use arg mode
+  calls = 0
+::method unknown
+  return 'UNKNOWN'
+::method linein
+  expose mode calls
+  calls += 1
+  select
+    when mode == 'empty' then raise notready
+    when mode == 'none' then return
+    when mode == 'error' then raise syntax 40.900 array ('stand-in')
+    when mode == 'ends' &amp; calls &gt; 1 then raise notready
+    when mode == 'later' &amp; calls &gt; 1 then return
+    otherwise return 'line' calls
+  end
+</code></pre>
+<pre><code class="language-output">empty made 0
+none =&gt; 91.999
+error =&gt; 40.900
+later made 1
+later =&gt; 91.999
+ends made 1
+ends next 0
+ends =&gt; 93.937
+</code></pre>
 <div class="rule" id="r-class.streamsupplier.rest"><a href="#r-class.streamsupplier.rest">[class.streamsupplier.rest]</a></div>
 <p>The methods that <code>StreamSupplier</code> inherits work on the lines that are left.
 <code>allItems</code> answers an <code>Array</code> of the texts of the lines from the one the

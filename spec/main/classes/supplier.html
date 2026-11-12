@@ -499,6 +499,49 @@ s~next =&gt; 93.937
 s~next(1) =&gt; 93.902
 y = .supplier~new(.array~of(1), .array~of(2))~next =&gt; 91.999
 </code></pre>
+<div class="rule" id="r-class.supplier.read.sends"><a href="#r-class.supplier.read.sends">[class.supplier.read.sends]</a></div>
+<p><code>available</code>, <code>index</code> and <code>item</code> send nothing, to the arrays or to the
+supplier itself, so an override of one of them is sent only the messages that
+the program sends it. Nor do <code>next</code>, <code>copy</code> and <code>supplier</code> send the supplier
+or the arrays a message. In the example the class <code>spy</code> logs each message it
+receives and the class <code>watched</code> logs the messages that the arrays receive:
+the log holds only the messages that the program sent.</p>
+<pre><code class="language-rexx">.local~log = .array~new
+s = .spy~new(.watched~of('p', 'q'), .watched~of(1, 2))
+x = s~available; y = s~index; z = s~item
+say x y z '['.log~makeString('L', ' ')']'
+.log~empty
+s~next
+say '['.log~makeString('L', ' ')']'
+.log~empty
+c = s~copy
+d = s~supplier
+say '['.log~makeString('L', ' ')']'
+::class spy subclass supplier
+::method available
+  .log~append('available'); return self~available:super
+::method index
+  .log~append('index'); return self~index:super
+::method item
+  .log~append('item'); return self~item:super
+::method next
+  .log~append('next'); self~next:super
+::method copy
+  .log~append('copy'); return self~copy:super
+::method supplier
+  .log~append('supplier'); return self~supplier:super
+::class watched subclass array
+::method at
+  .log~append('at'); return self~at:super(arg(1))
+::method size
+  .log~append('size'); return self~size:super
+::method '[]'
+  .log~append('[]'); return self~'[]':super(arg(1))
+</code></pre>
+<pre><code class="language-output">1 1 p [available index item]
+[next]
+[copy supplier]
+</code></pre>
 <h2 id="the-remaining-entries-as-arrays"><a class="header" href="#the-remaining-entries-as-arrays">The remaining entries as arrays</a></h2>
 <div class="rule" id="r-class.supplier.allitems"><a href="#r-class.supplier.allitems">[class.supplier.allitems]</a></div>
 <p><code>allItems</code> answers an <code>Array</code> of the items of the entries from the current one
@@ -737,6 +780,21 @@ say s~item c~item
 ::class twin subclass supplier
 </code></pre>
 <pre><code class="language-output">changed changed
+</code></pre>
+<pre><code class="language-rexx">s = .supplier~new(.array~of('p'), .array~of(1))
+call try 's~copy(1)'
+call try 's~allIndexes(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  say arg(1) '=&gt; ok'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">s~copy(1) =&gt; 93.902
+s~allIndexes(1) =&gt; 93.902
 </code></pre>
 <h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
 <div class="rule" id="r-class.supplier.deviation.118"><a href="#r-class.supplier.deviation.118">[class.supplier.deviation.118]</a></div>
