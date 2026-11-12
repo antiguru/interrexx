@@ -82283,6 +82283,7 @@ say s~allItems~makeString('L', ',') s~allIndexes~makeString('L', ',')
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="streamsupplier"><a class="header" href="#streamsupplier">StreamSupplier</a></h1>
 <p class="references">rexxref: Builtin Classes &gt; Utility Classes &gt; StreamSupplier Class; Builtin Classes &gt; Utility Classes &gt; StreamSupplier Class &gt; available; Builtin Classes &gt; Utility Classes &gt; StreamSupplier Class &gt; index; Builtin Classes &gt; Utility Classes &gt; StreamSupplier Class &gt; init; Builtin Classes &gt; Utility Classes &gt; StreamSupplier Class &gt; item; Builtin Classes &gt; Utility Classes &gt; StreamSupplier Class &gt; next</p>
+<p class="deviations">Deviations: D138</p>
 <p>A <code>StreamSupplier</code> is a <a href="classes/supplier.html"><code>Supplier</code></a> over the lines of a stream.
 Its entries are the lines that are left to read, the index of an entry is the
 number of its line in the stream, and the item is the text of the line without
@@ -82304,9 +82305,10 @@ have private methods besides these; they are not part of this specification.
 the arguments of <code>new</code>, as <a href="classes/index.html#r-class.index.new">the new rule</a> says. The <code>init</code>
 takes the stream as its first argument and reads the first line from it; it
 does not take the arrays of <code>Supplier</code>. An argument after the first is not
-used. An argument that is not a stream, which includes a missing one, raises
-<code>SYNTAX 97.1</code>, because the object does not answer the messages that <code>init</code>
-sends it.</p>
+used. An argument that does not answer the messages that <code>init</code> sends, such as
+a missing one, a string, <code>.nil</code> or an <code>Object</code>, raises <code>SYNTAX 97.1</code>, because
+the object does not understand them; what other objects do is stated in <a href="classes/streamsupplier.html#r-class.streamsupplier.sends">the
+sends rule</a>.</p>
 <pre><code class="language-rexx">f = 'spec-streamsupplier-creation-zq.tmp'
 call sysfiledelete f
 call lineout f, 'first'
@@ -82394,8 +82396,9 @@ whose number is one more than the index, by that number, and the stream's read
 position is after it. When the stream has no such line the supplier is at its
 end: <code>available</code> answers 0, and <code>index</code>, <code>item</code> and <code>next</code> raise
 <code>SYNTAX 93.937</code>, as for any <a href="classes/supplier.html#r-class.supplier.next"><code>Supplier</code></a>. <code>available</code>,
-<code>index</code> and <code>item</code> read nothing from the stream, and each takes no argument:
-an argument raises <code>SYNTAX 93.902</code>.</p>
+<code>index</code> and <code>item</code> read nothing from the stream. None of the four takes an
+argument: an argument raises <code>SYNTAX 93.902</code>, at the end of the supplier too,
+and for <code>next</code> before the <code>SYNTAX 93.937</code> of the end.</p>
 <pre><code class="language-rexx">f = 'spec-streamsupplier-next-zq.tmp'
 call sysfiledelete f
 do l over .array~of('l1', 'l2', 'l3', 'l4')
@@ -82415,6 +82418,7 @@ say s~available
 call try 's~item'
 call try 's~index'
 call try 's~next'
+call try 's~next(1)'
 call try 's~available(1)'
 call sysfiledelete f
 exit
@@ -82433,32 +82437,46 @@ l3
 s~item =&gt; 93.937
 s~index =&gt; 93.937
 s~next =&gt; 93.937
+s~next(1) =&gt; 93.902
 s~available(1) =&gt; 93.902
 </code></pre>
 <div class="rule" id="r-class.streamsupplier.sends"><a href="classes/streamsupplier.html#r-class.streamsupplier.sends">[class.streamsupplier.sends]</a></div>
-<p><code>init</code> sends the stream <code>state</code> twice and then sends the
-receiver <code>next</code>, which sends the stream <code>lineIn</code> with the number of the line to
-read, as <a href="classes/stream.html#r-class.stream.supplier.sends">the rule of <code>supplier</code></a> says of a
-stream: line 1 unless the second answer of <code>state</code> is <code>READY</code>. So the receiver
-is sent <code>next</code> once when it is made, and an override of <code>next</code> takes part
-there. <code>init</code> also sends the stream private messages of its own, which are not
-part of this specification; an argument that does not answer them raises
-<code>SYNTAX 97.1</code> as <a href="classes/streamsupplier.html#r-class.streamsupplier.creation">the creation rule</a> says, so
-an object that is not a stream is accepted as the stream if it answers them,
-for instance by an <code>UNKNOWN</code> method. Each later <code>next</code> sends the stream one
-<code>lineIn</code>, whose argument is one more than the index, and nothing else.
-<code>available</code>, <code>index</code>, <code>item</code> and <code>copy</code> send nothing, to the receiver or to the
-stream, and <code>supplier</code> answers the receiver without a message. <code>allItems</code> and
-<code>allIndexes</code> are those of <a href="classes/supplier.html#r-class.supplier.allitems.sends"><code>Supplier</code></a> for an
-instance of a subclass: they send the receiver <code>available</code>, <code>index</code>, <code>item</code> and
-<code>next</code> until <code>available</code> answers false, so the stream is sent one <code>lineIn</code> for
-every line that is left and one more, the one that ends the walk, and once a
-call has collected the arrays, the other call sends the stream nothing. An entry is the answer of a <code>lineIn</code> that does not raise NOTREADY. A <code>lineIn</code>
-that raises it ends the supplier, whether it was sent by <code>init</code> or by <code>next</code>:
-the supplier is then not available, and what the <code>lineIn</code> answered is not an
-item. A <code>lineIn</code> that answers no value raises <code>SYNTAX 91.999</code> from the method
-that sent it, and any other error that the stream raises is raised by that
-method as it is.</p>
+<p><code>init</code> sends the stream <code>state</code> twice and then sends the receiver <code>next</code>,
+which sends the stream the first <code>lineIn</code>. What that <code>lineIn</code> is sent with,
+and which line the supplier starts at, is stated once, in <a href="classes/stream.html#r-class.stream.supplier.sends">the rule of
+<code>supplier</code></a>, and holds here: no argument when
+the stream was read part of the way into a line, and otherwise the number of
+the line to read. A <a href="classes/stream.html#r-class.stream.supplier.transient">transient stream</a> is
+sent <code>lineIn</code> with no argument every time. So the receiver is sent <code>next</code> once
+when it is made, and an override of <code>next</code> takes part there; what <code>available</code>,
+<code>index</code> and <code>item</code> answer inside that first <code>next</code> is not specified. Each
+later <code>next</code> sends the stream one <code>lineIn</code>, with the argument that the rule of
+<code>supplier</code> gives, which is one more than the index for a stream that is not
+transient, and nothing else. <code>init</code> also sends the stream private messages of
+its own, which are not part of this specification, and the answers to them
+decide how the supplier starts. So the outcome is specified only for a stream,
+and for an argument that is not a <code>Stream</code> only when it answers every message
+other than <code>state</code> and <code>lineIn</code> with the string <code>UNKNOWN</code> and its second
+answer to <code>state</code> is not <code>READY</code>: the supplier then starts at line 1, as for a
+stream that was not read. An argument that answers other things behaves as its
+answers decide, which may be an error such as <code>SYNTAX 41.1</code>, <code>97.1</code> or
+<code>91.999</code>, and is not specified. <code>available</code>, <code>index</code>, <code>item</code> and <code>copy</code> send
+nothing, to the receiver or to the stream, and <code>supplier</code> answers the receiver
+without a message. <code>allItems</code> and <code>allIndexes</code> are those of
+<a href="classes/supplier.html#r-class.supplier.allitems.sends"><code>Supplier</code></a> for an instance of a subclass:
+they send the receiver <code>available</code>, <code>index</code>, <code>item</code> and <code>next</code> until
+<code>available</code> answers false, so the stream is sent one <code>lineIn</code> for every line
+that is left and one more, the one that ends the walk, and once a call has
+collected the arrays, every later call of either sends the stream nothing. An
+entry is the answer of a <code>lineIn</code> that does not raise NOTREADY, as it is, not
+converted: a <code>lineIn</code> that answers an <code>Array</code> makes an item that is that
+<code>Array</code>. A <code>lineIn</code> that raises NOTREADY ends the supplier, whether it was
+sent by <code>init</code> or by <code>next</code>: the supplier is then not available, and what the
+<code>lineIn</code> answered is not an item. The supplier traps that NOTREADY itself: a
+<code>CALL ON NOTREADY</code> or <code>SIGNAL ON NOTREADY</code> of the code that sent <code>new</code> or
+<code>next</code> is not run. A <code>lineIn</code> that answers no value raises <code>SYNTAX 91.999</code>
+from the method that sent it, and any other error that the stream raises is
+raised by that method as it is.</p>
 <pre><code class="language-rexx">.local~log = .array~new
 s = .spy~new(.stand~new(3))
 call show 'new'
@@ -82503,7 +82521,7 @@ show:
     .log~append('state')
     return 'UNKNOWN'
   end
-  return 1
+  return 'UNKNOWN'
 ::method linein
   expose left
   use arg number
@@ -82569,12 +82587,40 @@ ends made 1
 ends next 0
 ends =&gt; 93.937
 </code></pre>
+<pre><code class="language-rexx">trapped = 0
+call on notready name trap
+s = .streamsupplier~new(.short~new)
+say s~available s~item~class~id
+s~next
+say s~available trapped
+t = .streamsupplier~new(.short~new(0))
+say t~available trapped
+exit
+trap: trapped += 1
+  return
+::class short
+::method init
+  expose left
+  use arg left = 1
+::method unknown
+  return 'UNKNOWN'
+::method linein
+  expose left
+  if left &lt;= 0 then raise notready
+  left -= 1
+  return .array~of(left)
+</code></pre>
+<pre><code class="language-output">1 Array
+0 0
+0 0
+</code></pre>
 <div class="rule" id="r-class.streamsupplier.rest"><a href="classes/streamsupplier.html#r-class.streamsupplier.rest">[class.streamsupplier.rest]</a></div>
 <p>The methods that <code>StreamSupplier</code> inherits work on the lines that are left.
 <code>allItems</code> answers an <code>Array</code> of the texts of the lines from the one the
 supplier is at to the last, <code>allIndexes</code> an <code>Array</code> of their numbers, and both
 leave the supplier at its end and answer the same arrays whenever they are
-sent again, as <a href="classes/supplier.html#r-class.supplier.allitems">the rule of <code>Supplier</code></a> says.
+sent again, as <a href="classes/supplier.html#r-class.supplier.allitems">the rule of <code>Supplier</code></a> says, until
+a second <code>init</code> (<a href="classes/streamsupplier.html#r-class.streamsupplier.deviation.138">Deviation 138</a>).
 <code>supplier</code> answers the supplier itself. <code>copy</code> answers another supplier of the
 same class at the same line, over the same stream: each of the two moves on
 its own, and every line after the first is read by its number, so after the
@@ -82610,6 +82656,35 @@ call sysfiledelete f
 l3 l1
 l2 l3
 l4 l2
+</code></pre>
+<div class="rule" id="r-class.streamsupplier.deviation.138"><a href="classes/streamsupplier.html#r-class.streamsupplier.deviation.138">[class.streamsupplier.deviation.138]</a></div>
+<p><code>init</code> sent again to a <code>StreamSupplier</code> drops the arrays that an earlier
+<code>allItems</code> or <code>allIndexes</code> collected, as it does for a
+<a href="classes/supplier.html#r-class.supplier.deviation.138"><code>Supplier</code></a>: the next call of either collects
+the lines that are left of the new stream (<a href="classes/../deviations.html">Deviation 138</a>).
+ooRexx answers the arrays collected before the <code>init</code>, so the example is not
+run against it.</p>
+<pre><code class="language-rexx">f = 'spec-streamsupplier-d138-a.tmp'
+g = 'spec-streamsupplier-d138-b.tmp'
+call sysfiledelete f
+call sysfiledelete g
+do l over .array~of('l1', 'l2', 'l3')
+  call lineout f, l
+end
+call lineout f
+do l over .array~of('x1', 'x2')
+  call lineout g, l
+end
+call lineout g
+s = .streamsupplier~new(.stream~new(f))
+say s~allItems~makeString('L', ',')
+s~init(.stream~new(g))
+say s~item s~allItems~makeString('L', ',')
+call sysfiledelete f
+call sysfiledelete g
+</code></pre>
+<pre><code class="language-output defect=#430">l1,l2,l3
+x1 x1,x2
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="regularexpression"><a class="header" href="#regularexpression">RegularExpression</a></h1>
 <p class="references">rexxref: Builtin Classes &gt; Utility Classes &gt; RegularExpression Class; Builtin Classes &gt; Utility Classes &gt; RegularExpression Class &gt; new (Class Method); Builtin Classes &gt; Utility Classes &gt; RegularExpression Class &gt; match; Builtin Classes &gt; Utility Classes &gt; RegularExpression Class &gt; parse; Builtin Classes &gt; Utility Classes &gt; RegularExpression Class &gt; pos; Builtin Classes &gt; Utility Classes &gt; RegularExpression Class &gt; position</p>
@@ -85339,7 +85414,8 @@ one argument, the number of the line to read. For each <code>next</code> it send
 <code>lineIn</code> with the number of the next line; the other methods of the supplier
 send nothing. <code>supplier</code> sends nothing else. The first answer of <code>state</code> is
 not used. When the second is <code>READY</code>, the supplier starts at the line that the
-read position is in, which it finds without sending a message, and otherwise
+read position is in, which it learns from the stream by messages that are not part of this
+specification, and otherwise
 at line 1; when the second answer is <code>READY</code> for a stream that is not open,
 <code>supplier</code> raises <code>SYNTAX 41.1</code> and sends no <code>lineIn</code>. An entry is the answer
 of a <code>lineIn</code> that does not raise NOTREADY. A <code>lineIn</code> that raises it ends the
@@ -85464,6 +85540,46 @@ bad:
 <pre><code class="language-output">FAKE: 1=one 2=two 3=fake3 4=fake4 0
 RAISE: 1=one 2=two 0
 NOVAL =&gt; 91.999
+</code></pre>
+<div class="rule" id="r-class.stream.supplier.transient"><a href="classes/stream.html#r-class.stream.supplier.transient">[class.stream.supplier.transient]</a></div>
+<p>For a transient stream, such as <code>STDIN</code>, the supplier does not number the
+lines it asks for. When the stream has been read from, as by <code>lineIn</code>,
+<code>charIn</code> or <code>lines</code>, every <code>lineIn</code> that the supplier sends, the first and each
+later one, has no argument, and the answers to <code>state</code> do not change that. The
+index of the supplier counts from 1 at the first line it reads, whatever the
+number of that line in the stream. When the stream has not been read from, the
+first <code>lineIn</code> is sent with the argument 1, as for a stream that was not read,
+and raises <code>SYNTAX 93.958</code> because a transient stream cannot be positioned;
+<code>supplier</code>, or <code>new</code> of <a href="classes/streamsupplier.html#r-class.streamsupplier.sends"><code>StreamSupplier</code></a>,
+raises it. The examples run with an empty standard input, so they show these
+sends and the end of the supplier and not lines of data; a transient stream
+that holds lines is not shown by an example.</p>
+<pre><code class="language-rexx">call try 'unread'
+call try 'read'
+exit
+try:
+  s = .spy~new('STDIN')
+  if arg(1) == 'read' then x = s~lines
+  signal on syntax name bad
+  p = s~supplier
+  say arg(1) p~available s~log
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class spy subclass stream
+::attribute log
+::method init
+  self~log = ''
+  forward class (super)
+::method state
+  self~log = self~log 'state'
+  forward class (super)
+::method linein
+  self~log = self~log 'lineIn(' || arg(1) || ')'
+  forward class (super)
+</code></pre>
+<pre><code class="language-output">unread =&gt; 93.958
+read 0  state state lineIn()
 </code></pre>
 <div class="rule" id="r-class.stream.uninit"><a href="classes/stream.html#r-class.stream.uninit">[class.stream.uninit]</a></div>
 <p><code>uninit</code> closes the stream when it is open, as <code>close</code> does, so that what was
@@ -122729,7 +122845,7 @@ that activity ended, so that no activity can acquire it.</p>
 is set to the null string, as it does when it is not set. ooRexx answers a
 <code>File</code> for the null string.</p>
 <h2 id="138-allitems-after-a-second-init-of-a-supplier"><a class="header" href="#138-allitems-after-a-second-init-of-a-supplier">138. allItems after a second init of a Supplier</a></h2>
-<p><code>init</code> sent again to a <code>Supplier</code> also drops the arrays that an earlier
+<p><code>init</code> sent again to a <code>Supplier</code>, a <code>StreamSupplier</code> included, also drops the arrays that an earlier
 <code>allItems</code> or <code>allIndexes</code> collected, so the next call of either collects the
 entries of the new arrays. ooRexx answers the arrays collected before the
 <code>init</code>.</p>

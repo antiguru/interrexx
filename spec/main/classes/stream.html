@@ -2117,7 +2117,8 @@ one argument, the number of the line to read. For each <code>next</code> it send
 <code>lineIn</code> with the number of the next line; the other methods of the supplier
 send nothing. <code>supplier</code> sends nothing else. The first answer of <code>state</code> is
 not used. When the second is <code>READY</code>, the supplier starts at the line that the
-read position is in, which it finds without sending a message, and otherwise
+read position is in, which it learns from the stream by messages that are not part of this
+specification, and otherwise
 at line 1; when the second answer is <code>READY</code> for a stream that is not open,
 <code>supplier</code> raises <code>SYNTAX 41.1</code> and sends no <code>lineIn</code>. An entry is the answer
 of a <code>lineIn</code> that does not raise NOTREADY. A <code>lineIn</code> that raises it ends the
@@ -2242,6 +2243,46 @@ bad:
 <pre><code class="language-output">FAKE: 1=one 2=two 3=fake3 4=fake4 0
 RAISE: 1=one 2=two 0
 NOVAL =&gt; 91.999
+</code></pre>
+<div class="rule" id="r-class.stream.supplier.transient"><a href="#r-class.stream.supplier.transient">[class.stream.supplier.transient]</a></div>
+<p>For a transient stream, such as <code>STDIN</code>, the supplier does not number the
+lines it asks for. When the stream has been read from, as by <code>lineIn</code>,
+<code>charIn</code> or <code>lines</code>, every <code>lineIn</code> that the supplier sends, the first and each
+later one, has no argument, and the answers to <code>state</code> do not change that. The
+index of the supplier counts from 1 at the first line it reads, whatever the
+number of that line in the stream. When the stream has not been read from, the
+first <code>lineIn</code> is sent with the argument 1, as for a stream that was not read,
+and raises <code>SYNTAX 93.958</code> because a transient stream cannot be positioned;
+<code>supplier</code>, or <code>new</code> of <a href="streamsupplier.html#r-class.streamsupplier.sends"><code>StreamSupplier</code></a>,
+raises it. The examples run with an empty standard input, so they show these
+sends and the end of the supplier and not lines of data; a transient stream
+that holds lines is not shown by an example.</p>
+<pre><code class="language-rexx">call try 'unread'
+call try 'read'
+exit
+try:
+  s = .spy~new('STDIN')
+  if arg(1) == 'read' then x = s~lines
+  signal on syntax name bad
+  p = s~supplier
+  say arg(1) p~available s~log
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class spy subclass stream
+::attribute log
+::method init
+  self~log = ''
+  forward class (super)
+::method state
+  self~log = self~log 'state'
+  forward class (super)
+::method linein
+  self~log = self~log 'lineIn(' || arg(1) || ')'
+  forward class (super)
+</code></pre>
+<pre><code class="language-output">unread =&gt; 93.958
+read 0  state state lineIn()
 </code></pre>
 <div class="rule" id="r-class.stream.uninit"><a href="#r-class.stream.uninit">[class.stream.uninit]</a></div>
 <p><code>uninit</code> closes the stream when it is open, as <code>close</code> does, so that what was
