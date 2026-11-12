@@ -1924,3 +1924,32 @@ fn a_hash_lookup_sends_the_identical_indexs_equality() {
          \x20 == called\n1\n"
     );
 }
+
+/// A run that ended with nothing in flight leaves its class model and parsed
+/// programs to be freed after its outcome is answered, and the run that
+/// answers it frees them: nothing of one run outlives the next.
+#[test]
+fn an_ended_runs_memory_is_freed_after_its_outcome() {
+    let held = || super::ENDED.with(|ended| ended.borrow().is_some());
+    let outcome = super::execute_kept(
+        b"ended.rex",
+        b"say 'ran'\n::class k\n::method m\n".to_vec(),
+        super::Entry::Run,
+        super::Invocation::none(),
+        None,
+    );
+    assert_eq!(outcome.0.stdout, b"ran\n");
+    assert!(outcome.1.is_none(), "nothing was in flight");
+    assert!(held(), "the memory waits for the outcome");
+    super::free_ended();
+    assert!(!held());
+    let outcome = super::execute_as(
+        b"ended.rex",
+        b"say 'ran'\n".to_vec(),
+        super::Entry::Run,
+        super::Invocation::none(),
+        None,
+    );
+    assert_eq!(outcome.stdout, b"ran\n");
+    assert!(!held(), "a run answered here frees its own");
+}

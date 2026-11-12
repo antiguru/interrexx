@@ -4125,6 +4125,7 @@ fn on_thread_of(
             signal::receive();
             let (outcome, kept) = body();
             let _ = deliver.send(outcome);
+            free_ended();
             if let Some(interp) = kept {
                 interp.wind_down();
             }
@@ -4248,6 +4249,7 @@ fn execute_as(
     stack: Option<usize>,
 ) -> Outcome {
     let (outcome, kept) = execute_kept(path, text, entry, invocation, stack);
+    free_ended();
     if let Some(interp) = kept {
         interp.wind_down();
     }
@@ -4537,8 +4539,38 @@ fn execute_kept(
             SharingReport { bootstrap, program }
         },
     };
-    let kept = interp.activities.in_flight().then_some(interp);
-    (outcome, kept)
+    if interp.activities.in_flight() {
+        return (outcome, Some(interp));
+    }
+    let ballast = Ballast {
+        _object_model: interp.object_model.take(),
+        _programs: std::mem::take(&mut interp.programs),
+    };
+    drop(interp);
+    ENDED.with(|ended| *ended.borrow_mut() = Some(ballast));
+    (outcome, None)
+}
+
+/// What only takes memory of an interpreter that has ended: its class model
+/// and its parsed programs, which are most of the time a short run takes to
+/// free. Everything else of the interpreter, which closes files and libraries,
+/// is dropped before its outcome is answered.
+struct Ballast {
+    _object_model: Option<dispatch::ObjectModel>,
+    _programs: plan::Programs,
+}
+
+thread_local! {
+    /// The [`Ballast`] of the last interpreter to end on this thread with nothing
+    /// in flight, freed once its outcome has been delivered, or when the next one
+    /// ends here.
+    static ENDED: std::cell::RefCell<Option<Ballast>> = const { std::cell::RefCell::new(None) };
+}
+
+/// Frees the [`Ballast`] this thread holds, if any.
+fn free_ended() {
+    let ballast = ENDED.with(|ended| ended.borrow_mut().take());
+    drop(ballast);
 }
 
 /// The program an embedding instance's root activity runs: the native call
