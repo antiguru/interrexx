@@ -718,7 +718,7 @@ bad: say condition('o')~code
   return .mya~of(2, 1)
 ```
 
-```output defect=#173
+```output
 b
 98.913
 ```

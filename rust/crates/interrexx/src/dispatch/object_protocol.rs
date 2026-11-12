@@ -1998,10 +1998,13 @@ fn converted_array_argument(
     };
     if let Some(array) = array {
         interp.roots.activity_mut().push_temp(array);
-        if let Some((_, dimensions)) = interp.array_body(array)
+        // An answer that is an `Array` subclass instance holds its slots in
+        // the store behind it.
+        let store = super::array::collection_store(interp, array);
+        if let Some((_, dimensions)) = interp.array_body(store)
             && single_dimensional(dimensions)
         {
-            return Ok(array);
+            return Ok(store);
         }
     }
     Err(match overload {
