@@ -33,6 +33,9 @@ impl Interp {
         //   >K>   "RESULT" => "zret"
         // ```
         let indent = self.activity.clause_state.current_value_indent;
+        // The object the clause named for `ERROR` or `FAILURE`, which the
+        // condition object and the variable `RC` hold as it is.
+        let mut rc_object = None;
         let rc_text = match &raise.rc {
             Some(expr) => {
                 let value = self.eval(code, expr)?;
@@ -54,6 +57,9 @@ impl Interp {
                     true => self.required_string_value(value)?,
                     false => value,
                 };
+                if matches!(raise.condition.as_ref(), b"ERROR" | b"FAILURE") {
+                    rc_object = Some(value);
+                }
                 Some(self.to_text(code).to_vec())
             }
             None => None,
@@ -332,6 +338,7 @@ impl Interp {
                 // its `result` member, `RexxActivation.cpp:1827`).
                 self.activity.pending_result = result;
                 self.activity.pending_description = description_object;
+                self.activity.pending_rc = rc_object;
                 let object = self.build_condition_object(&queued, Some(true))?;
                 self.activity.pending_traps.push_back(PendingTrap {
                     condition: name,
@@ -382,6 +389,7 @@ impl Interp {
                 raised.delivery.search = sender.search();
                 self.activity.pending_result = result;
                 self.activity.pending_description = description_object;
+                self.activity.pending_rc = rc_object;
                 Err(raised.into())
             }
             // Nothing traps it. `HALT` and `NOMETHOD` report; everything else
@@ -422,6 +430,7 @@ impl Interp {
                 // native caller's `GetConditionInfo` answers.
                 self.activity.pending_result = result;
                 self.activity.pending_description = description_object;
+                self.activity.pending_rc = rc_object;
                 let object = self.build_condition_object(&held, None)?;
                 self.hold_callee_condition(held, object);
                 Ok(finish(result))
