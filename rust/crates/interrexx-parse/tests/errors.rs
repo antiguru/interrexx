@@ -1032,14 +1032,11 @@ fn every_sample_program_parses() {
 }
 
 #[test]
-fn both_bootstrap_files_parse() {
+fn the_library_program_parses() {
     // The interpreter's own class library, which is the largest real Rexx in the
-    // tree and the only input that exercises the directive grammar at scale.
-    for name in ["CoreClasses.orx", "StreamClasses.orx", "CommandClasses.orx"] {
-        let path = Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../../third_party/ooRexx/interpreter/RexxClasses")
-            .join(name);
-        let text = std::fs::read(&path).unwrap_or_else(|e| panic!("{name} is readable: {e}"));
-        parse_program(text).unwrap_or_else(|e| panic!("{name} failed to parse: {e}"));
-    }
+    // tree and the input that exercises the directive grammar at scale.
+    let library = &interrexx_lib::LIBRARY;
+    let program = parse_program(library.source.to_vec())
+        .unwrap_or_else(|e| panic!("the library failed to parse: {e}"));
+    assert!(program.directives.len() > 400);
 }

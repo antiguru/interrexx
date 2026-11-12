@@ -14,7 +14,7 @@ All under `rust/crates/`.
 | `interrexx-core` | object handles, the arena heap and collector, behaviours, register frame arenas |
 | `interrexx-parse` | source retention, scanner, clause splitter, grammar; produces the AST |
 | `interrexx-classes` | the class and method-dictionary model, and the native class table |
-| `interrexx-lib` | the `.orx` class library sources from `third_party/ooRexx`, embedded at build time |
+| `interrexx-lib` | interrexx's own Rexx-written class library (`rexx/`), embedded at build time as one program |
 | `interrexx-inventory` | tables derived mechanically from the ooRexx tree (builtins, error messages) |
 | `interrexx` | the interpreter: IR compiler and driver, dispatch, builtins, streams, commands, scheduler; the `rexx`, `rexxc` and `rexx-ir` binaries |
 | `interrexx-api` | the C ABI boundary: context interface tables, value conversion, library loading |
@@ -98,7 +98,7 @@ one object is unspecified, they carry no per-object state (`objectName=` refuses
 * **UNINIT** runs when a collection finds the object unreachable, when an activity ends, and at
   termination for every live object that defines it. The order over several instances at
   termination is not reproducible on ooRexx and nothing may depend on it.
-* **Startup** has no saved image: the embedded `.orx` library is parsed and run at every start.
+* **Startup** has no saved image: the embedded library program is parsed and run at every start.
 
 ## Collections
 
@@ -177,7 +177,7 @@ gating.
 | | decision | reason |
 |---|---|---|
 | D1 | arena of slots with tagged, generation-checked handles; one traced `Body` enum | memory safety without hand-written mark methods; full-GC pause measured within 1.5x of ooRexx |
-| D2 | no saved image; bootstrap from the embedded `.orx` sources at start | an image is an optimisation and startup is fast enough without one |
+| D2 | no saved image; bootstrap from the embedded library program at start | an image is an optimisation and startup is fast enough without one |
 | D3 | isolated interpreters, a per-interpreter baton, no process-wide lock; cross-activity requests by flag or channel only | no invariant may rest on one activity running at a time |
 | D4 | the decimal arithmetic is a port of ooRexx's, not a decimal crate | ANSI rounding and rendering differ from IEEE decimal in tested details |
 | D5 | the C API is source-compatible with ooRexx's frozen headers; `RexxObjectPtr` is a handle in the activation's reference table | extensions recompile unchanged; a stale handle misses instead of aliasing |

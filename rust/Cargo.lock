@@ -451,6 +451,7 @@ version = "0.1.0"
 dependencies = [
  "criterion",
  "interrexx-inventory",
+ "interrexx-lib",
  "interrexx-num",
  "rustc-hash",
 ]

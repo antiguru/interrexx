@@ -1723,8 +1723,8 @@ fn suppliers_flattened_set_lacks_suppliermixins_donated_methods() {
         assert!(
             !native.contains(name),
             "{name} recorded present on a live .Supplier instance via \
-             SupplierMixin (CoreClasses.orx:80) but should be absent from \
-             this crate's pre-prologue native set"
+             SupplierMixin, which the library's bootstrap copies in, but \
+             should be absent from this crate's pre-bootstrap native set"
         );
     }
 }

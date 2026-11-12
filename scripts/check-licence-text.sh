@@ -4,13 +4,10 @@
 # words, so no file of it may carry or mention that licence. Submodules are not
 # searched.
 #
-# NOTICE is exempt while built binaries embed ooRexx's class files (see NOTICE
-# and issue #47); drop the exemption when #47 lands.
-#
 # The pattern is split so that this script does not match itself.
 set -eu
 cd "$(git rev-parse --show-toplevel)"
-found=$(git ls-files -z -- . ':(exclude)NOTICE' | perl -0 -ne '
+found=$(git ls-files -z -- . | perl -0 -ne '
   chomp;
   next unless -f $_ && -T $_;
   open my $f, "<", $_ or die "$_: $!";

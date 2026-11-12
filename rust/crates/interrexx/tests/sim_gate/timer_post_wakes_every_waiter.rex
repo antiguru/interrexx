@@ -1,7 +1,7 @@
 /* One post to a timer wakes every activity waiting on it (the seeded gate's
    witness for a post waking only the last waiter). A line starting FAIL is
    the gate's assertion. The natives are bound to a class of this program, as
-   CoreClasses.orx binds them. */
+   the class library binds them. */
 o = .t~new
 r = o~tickerCreate
 h = o~handle

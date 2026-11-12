@@ -23,8 +23,6 @@ use crate::support::oracle::{
     CppOutcome, ORACLE_DEADLINE, StderrComparison, descriptor_diff_with, wrapped_exit_code,
 };
 
-pub mod orx;
-
 /// Which of the three observable channels a row's two sides disagree on.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct Descriptors {
