@@ -137,7 +137,7 @@ bad: say arg(1) '=>' condition('o')~code
   return
 ```
 
-```output defect=#143
+```output
 .routine~new("n", .nil, 7) => 93.961
 .routine~new("n", "nop", 7) => 40.904
 ```

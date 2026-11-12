@@ -132,6 +132,12 @@ Method greet return "hello" arg(1)
 .method~new(.onlystr~new, "nop") => 88.909
 ```
 
+r[class.method.new.order]
+`new` checks the source before the context: a source that is neither a string
+nor an array and a context that is not valid together raise the source's
+`SYNTAX 93.961`, and the context's `SYNTAX 40.904` only follows a valid source.
+`Routine~new` checks in the same order.
+
 ```rexx
 call try '.method~new("n", .nil, 7)'
 call try '.method~new("n", "nop", 7)'
@@ -145,7 +151,7 @@ bad: say arg(1) '=>' condition('o')~code
   return
 ```
 
-```output defect=#143
+```output
 .method~new("n", .nil, 7) => 93.961
 .method~new("n", "nop", 7) => 40.904
 ```
