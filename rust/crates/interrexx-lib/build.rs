@@ -56,6 +56,7 @@ const REPLACEMENTS: &[&str] = &[
     "ordering.rex",
     "supplier.rex",
     "datetime.rex",
+    "file.rex",
 ];
 
 /// One host member a replacement may leave out.
@@ -86,6 +87,34 @@ const ALLOW_DROPPED: &[Allowed] = &[
         member: "convertTime",
         class_side: false,
         reason: "private helper; interrexx's DateTime converts with the TIME builtin",
+        sent_sites: 0,
+    },
+    Allowed {
+        class: "File",
+        member: "createPath",
+        class_side: false,
+        reason: "private; makeDirs recurses through parentFile (r[class.file.makedir])",
+        sent_sites: 0,
+    },
+    Allowed {
+        class: "File",
+        member: "normalizePathSyntax",
+        class_side: false,
+        reason: "private; init forms the path itself (r[class.file.new])",
+        sent_sites: 0,
+    },
+    Allowed {
+        class: "File",
+        member: "qualifiedPath",
+        class_side: false,
+        reason: "private; the absolute path is an instance variable of file.rex",
+        sent_sites: 0,
+    },
+    Allowed {
+        class: "File",
+        member: "readImpl",
+        class_side: true,
+        reason: "private; readChars and readLines each read through a Stream",
         sent_sites: 0,
     },
 ];

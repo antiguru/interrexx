@@ -95,12 +95,12 @@ holds is made in these steps. First `path` and `dir` each lose their trailing
 slashes, but a lone slash keeps its slash: `a//b///` is `a//b`, `///` is `/`,
 and the empty string stays empty; slashes anywhere else are kept. Then, when
 `dir` is omitted or `.nil`, the path is the `path` that is left. Otherwise it
-is `dir`, a slash and `path`, where the slash is left out when `dir` ends in
-one or `path` begins with one, and where both supply one a single slash
-stands. A `dir` that is the empty string counts as a `dir`, so `a` with an
-empty `dir` is `/a`. A `dir` that is a `File` is read as its absolute path,
-and any other `dir` as a [string argument](r:class.index.string), with the
-error that a `path` has. The text of the path is kept as it was written, apart
+is `dir`, a slash and `path` without the slashes that it begins with, where
+the slash is left out when `dir` ends in one: `/x` and `//x` with the `dir`
+`d` are both `d/x`, and with the `dir` `/` both `/x`. A `dir` that is the
+empty string counts as a `dir`, so `a` with an empty `dir` is `/a`. A `dir`
+that is a `File` is read as its absolute path, and any other `dir` as a
+[string argument](r:class.index.string), with the error that a `path` has. The text of the path is kept as it was written, apart
 from these steps: `path` ([the path rule](r:class.file.path)) answers it, and
 a `File` made with a relative `path` or `dir` is relative to the current
 directory when it is made ([the absolute rule](r:class.file.absolute)). `init`
@@ -113,6 +113,7 @@ say .file~new('a', 'd')~path .file~new('a/', 'd//')~path,
     .file~new('/a', 'd')~path
 say .file~new('a', '/d/')~path .file~new('', 'd')~path .file~new('a', '')~path
 say .file~new('a', .nil)~path .file~new('a', )~path .file~new('/a', '/')~path
+say .file~new('//x', 'd')~path .file~new('//x', '/')~path .file~new('/', 'd')~path
 say .file~new('a', .file~new('/x/y'))~path
 say (.file~new('a', .file~new('q'))~path == directory() || '/q/a')
 say .file~new(12)~path .file~new('a b', 'c d')~path .file~new('a\b')~path
@@ -144,6 +145,7 @@ a//b / []
 d/a d/a d/a
 /d/a d/ /a
 a a /a
+d/x /x d/
 /x/y/a
 1
 12 c d/a b a\b
@@ -158,8 +160,8 @@ dir/second
 
 r[class.file.new.sends]
 `init` sends the receiver `separator` before it forms the path, and the answer
-is the separator that it removes at the end of `path` and `dir` and puts between
-them; it is sent once when `dir` is omitted or `.nil` and three times when a
+is the separator that it removes at the end of `path` and `dir` and at the start
+of `path`, and puts between them; it is sent once when `dir` is omitted or `.nil` and three times when a
 `dir` is given. A `File` given as `dir` is sent `isA` with the argument `.File`
 and, when that answers true, `absolutePath`, before the first `separator`; any
 other `dir` is read as a string. A `File` given as `path` is read by its
@@ -182,7 +184,7 @@ i = .logfile~new('b', 'dd')
 call show 'new path, string dir'
 x = f~absoluteFile
 call show 'absoluteFile'
-say .sharp~new('a##')~path .sharp~new('a/b', 'd#')~path
+say .sharp~new('a##')~path .sharp~new('a/b', 'd#')~path .sharp~new('##x', 'd')~path
 exit
 show:
   line = ''
@@ -218,7 +220,7 @@ new path, File dir:  isA File absolutePath separator
 new File path:  separator makeString
 new path, string dir:  separator
 absoluteFile:  separator
-a d#a/b
+a d#a/b d#x
 ```
 
 r[class.file.string-args]
@@ -264,7 +266,7 @@ show:
   return 'spec-file-str.tmp'
 ```
 
-```output defect=#164
+```output
 new path           [request STRING makeString]
 new dir            [request STRING makeString]
 searchPath name    [request STRING makeString]
@@ -2320,7 +2322,7 @@ say 'sends' .environment~sent
   return 'zzz'
 ```
 
-```output defect=#140
+```output
 p/q p/q/a
 abc
 sends 0
@@ -2424,7 +2426,7 @@ bad: say arg(1) '=>' condition('o')~code
   return '/z'
 ```
 
-```output defect=#189
+```output
 a~compareTo(.datetime~new(2017, 6, 30, 5, 6, 7, 8, 0)) => 88.914
 a~compareTo(.timespan~fromHours(2)) => 88.914
 a~compareTo("/t/a") => 88.914

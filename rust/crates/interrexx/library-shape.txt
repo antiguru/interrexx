@@ -358,7 +358,6 @@ class FILE public=1 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,COMPARABLE,
   instance CANWRITE private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance CANWRITEIMPL private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=file_can_write
   instance COMPARETO private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-  instance CREATEPATH private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance DELETE private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance DELETEDIR private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=file_delete_directory
   instance DELETEFILE private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=file_delete_file
@@ -369,6 +368,7 @@ class FILE public=1 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,COMPARABLE,
   instance GETLASTMODIFIEDIMPL private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=file_get_last_modified
   instance HASHCODE private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance INIT private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
+  instance INTERREXX_STRING private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=interrexx_file_string
   instance ISCASESENSITIVE private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance ISCASESENSITIVEIMPL private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=this_file_case_sensitive
   instance ISDIRECTORY private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
@@ -391,12 +391,10 @@ class FILE public=1 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,COMPARABLE,
   instance MAKEDIRS private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance MAKESTRING private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance NAME private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-  instance NORMALIZEPATHSYNTAX private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance PARENT private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance PARENTFILE private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance PATH private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=1 package=0 entry=-
   instance PATHSEPARATOR private=0 protected=0 guarded=0 abstract=0 constant=1 attribute=0 package=0 entry=-
-  instance QUALIFIEDPATH private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance QUALIFYIMPL private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=file_qualify
   instance RENAMETO private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance RENAMETOIMPL private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=file_rename
@@ -411,11 +409,11 @@ class FILE public=1 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,COMPARABLE,
   class FILE_TEMPORARY_PATH private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=file_temporary_path
   class GETPATHSEPARATOR private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=file_path_separator
   class GETSEPARATOR private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=file_separator
+  class INTERREXX_STRING private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=interrexx_file_string
   class ISCASESENSITIVE private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=file_case_sensitive
   class LISTROOTS private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=file_list_roots
   class PATHSEPARATOR private=0 protected=0 guarded=0 abstract=0 constant=1 attribute=0 package=0 entry=-
   class READCHARS private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-  class READIMPL private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   class READLINES private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   class SEARCHPATH private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   class SEARCHPATHIMPL private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=file_search_path_impl
