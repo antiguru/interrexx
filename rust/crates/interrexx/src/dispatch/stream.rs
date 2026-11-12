@@ -25,22 +25,39 @@ use crate::lines::{
 };
 use crate::{Failure, Interp};
 
-/// The state block, or 48.1 when `~uninit` has already dropped it. The
-/// reference run segfaults for the unguarded half of its entry points here
-/// (oracle defect, `corpus/oracle-crashes.txt` entry 12b); answering 48.1 from
-/// every one of them is this crate's licensed divergence.
+/// The state block, or 48.1 when `~uninit` has already dropped it, or 98.901
+/// where `init` never ran (r[class.stream.deviation.135]). The reference run
+/// segfaults for the unguarded half of its entry points here (oracle defect,
+/// `corpus/oracle-crashes.txt` entry 12b); answering 48.1 from every one of
+/// them is this crate's licensed divergence.
 fn require(interp: &Interp, receiver: ObjRef) -> Result<&StreamState, Failure> {
     match interp.stream(receiver) {
         Some(state) => Ok(state),
-        None => Err(Raised::syntax(48, 1, vec![b"Stream not initialized".to_vec()]).into()),
+        None => Err(no_state(interp, receiver)),
     }
 }
 
 /// [`require`] for a caller that changes the state.
 fn require_mut(interp: &mut Interp, receiver: ObjRef) -> Result<&mut StreamState, Failure> {
-    match interp.stream_mut(receiver) {
-        Some(state) => Ok(state),
-        None => Err(Raised::syntax(48, 1, vec![b"Stream not initialized".to_vec()]).into()),
+    if interp.stream(receiver).is_none() {
+        return Err(no_state(interp, receiver));
+    }
+    Ok(interp
+        .stream_mut(receiver)
+        .expect("the state was just found"))
+}
+
+/// The refusal of a receiver with no stream state: 98.901 when `init` never
+/// ran, which is when the name it keeps was never set, and otherwise 48.1,
+/// `uninit` having dropped the state.
+fn no_state(interp: &Interp, receiver: ObjRef) -> Failure {
+    let set_up = interp
+        .pools_of(receiver)
+        .is_some_and(|pools| pools.find(b"STREAM_NAME").is_some());
+    if set_up {
+        Raised::syntax(48, 1, vec![b"Stream not initialized".to_vec()]).into()
+    } else {
+        Raised::syntax(98, 901, vec![b"a Stream".to_vec()]).into()
     }
 }
 

@@ -40,12 +40,14 @@
 /* r[class.streamsupplier.entry] */
 ::method available
   expose valid
+  if \var('VALID') then raise syntax 98.901 array (self~defaultName)
   if arg() > 0 then raise syntax 93.902 array (0)
   return valid
 
 /* r[class.streamsupplier.entry] */
 ::method index
   expose index valid
+  if \var('VALID') then raise syntax 98.901 array (self~defaultName)
   if arg() > 0 then raise syntax 93.902 array (0)
   if \valid then raise syntax 93.937
   return index
@@ -53,6 +55,7 @@
 /* r[class.streamsupplier.entry] */
 ::method item
   expose item valid
+  if \var('VALID') then raise syntax 98.901 array (self~defaultName)
   if arg() > 0 then raise syntax 93.902 array (0)
   if \valid then raise syntax 93.937
   return item
@@ -62,6 +65,7 @@
    A NOTREADY from the stream ends the supplier and is not passed on. */
 ::method next
   expose stream index item valid first plain transient closing
+  if \var('VALID') then raise syntax 98.901 array (self~defaultName)
   if arg() > 0 then raise syntax 93.902 array (0)
   if first then first = 0
   else do
@@ -78,6 +82,14 @@ ended:
   item = .nil
   if closing then stream~close
   return
+
+/* r[class.supplier.supplier], r[class.supplier.deviation.135]: the receiver
+   itself, once its own `init` has run. */
+::method supplier
+  expose valid
+  if \var('VALID') then raise syntax 98.901 array (self~defaultName)
+  if arg() > 0 then raise syntax 93.902 array (0)
+  return self
 
 /* Whether the read position of a stream is inside a line, not at its start. */
 ::method interrexx_mid_line private external 'LIBRARY REXX interrexx_stream_mid_line'

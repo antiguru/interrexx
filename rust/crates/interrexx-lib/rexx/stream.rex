@@ -101,6 +101,7 @@ done:
 /* r[class.stream.string] */
 ::method string
   expose stream_name
+  if \var('STREAM_NAME') then raise syntax 98.901 array (self~defaultName)
   if arg() > 0 then raise syntax 93.902 array (0)
   return stream_name
 

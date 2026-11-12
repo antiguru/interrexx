@@ -110,6 +110,12 @@ static LIBRARY_REXX_METHODS: &[NativeExternal] = &[
         super::collection::supplier::collected,
     ),
     implemented(
+        "interrexx_supplier_check",
+        Family::Supplier,
+        Arity::Fixed(0),
+        super::collection::supplier::check_set_up,
+    ),
+    implemented(
         "interrexx_stream_mid_line",
         Family::Stream,
         Arity::Fixed(1),
