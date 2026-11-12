@@ -695,6 +695,80 @@ bad: say arg(1) '=>' condition('o')~code
 .datetime~fromWeekNumberDate("2020-W07-1", 0, 1) => 93.902
 ```
 
+r[class.datetime.fromdate.argument]
+`fromOrdinalDate` and `fromWeekNumberDate` do not read their first argument as
+a string at once. After the argument count is checked, each sends the argument
+`contains` with the one argument `-`, once and before anything else, and uses
+the answer to pick the form: true for the form with hyphens, false for the one
+without. The answer must be exactly `0` or `1`; any other answer, `.nil`
+included, raises `SYNTAX 34.1`, and an argument that does not understand
+`contains` raises `SYNTAX 97.1` (an `Array`, a `List`, a `Set` or `.nil`; a
+`Directory` answers `.nil` and so raises 34.1). Then the string value of the
+argument is read, and a form that the answer did not pick, or a string that is
+not a date, raises `SYNTAX 88.918`. A string that is a number or a `String`
+subclass instance is sent `contains` like any other value, so a subclass that
+overrides it decides the form: an instance of the string `2020041` whose
+`contains` answers true raises 88.918, though the string is a date.
+
+```rexx
+say .datetime~fromOrdinalDate(.cs~new('2020-041'))
+say .datetime~fromOrdinalDate(.cs~new('2020041'))
+call try '.datetime~fromOrdinalDate(.array~of("2020-041"))'
+call try '.datetime~fromWeekNumberDate(.nil)'
+call try '.datetime~fromOrdinalDate(.directory~new)'
+call try '.datetime~fromOrdinalDate(.spy~new(1))'
+call try '.datetime~fromWeekNumberDate(.spy~new("maybe"))'
+call try '.datetime~fromOrdinalDate(.no~new("2020-041"))'
+call try '.datetime~fromWeekNumberDate(.yes~new("2020W071"))'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=>' r
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
+::class spy
+::method init
+  expose answer
+  use arg answer
+::method unknown
+  expose answer
+  use arg name, args
+  say name args~toString
+  return answer
+::class cs subclass string
+::method contains
+  say 'contains' arg(1)
+  return self~string~contains(arg(1))
+::class no subclass string
+::method contains
+  say 'contains' arg(1)
+  return 0
+::class yes subclass string
+::method contains
+  say 'contains' arg(1)
+  return 1
+```
+
+```output
+contains -
+2020-02-10T00:00:00.000000
+contains -
+2020-02-10T00:00:00.000000
+.datetime~fromOrdinalDate(.array~of("2020-041")) => 97.1
+.datetime~fromWeekNumberDate(.nil) => 97.1
+.datetime~fromOrdinalDate(.directory~new) => 34.1
+CONTAINS -
+.datetime~fromOrdinalDate(.spy~new(1)) => 88.918
+CONTAINS -
+.datetime~fromWeekNumberDate(.spy~new("maybe")) => 34.1
+contains -
+.datetime~fromOrdinalDate(.no~new("2020-041")) => 88.918
+contains -
+.datetime~fromWeekNumberDate(.yes~new("2020W071")) => 88.918
+```
+
 r[class.datetime.fromtime]
 `fromNormalTime`, `fromCivilTime` and `fromLongTime` read a time of day that
 is written in the form of the option N, C or L of

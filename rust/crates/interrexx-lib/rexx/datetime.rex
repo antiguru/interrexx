@@ -171,10 +171,15 @@ refused:
 ::method fromOrdinalDate class
   use strict arg text, offset = 0
   numeric digits 18
+  -- r[class.datetime.fromdate.argument]: the argument is sent `contains`
+  -- first, and its answer picks the form.
+  if text~contains('-') then dashed = 1
+  else dashed = 0
   s = '' || text
   select
-    when length(s) == 7 then parse var s year 5 day
-    when length(s) == 8 & substr(s, 5, 1) == '-' then parse var s year 5 . 6 day
+    when \dashed & length(s) == 7 then parse var s year 5 day
+    when dashed & length(s) == 8 & substr(s, 5, 1) == '-' then
+      parse var s year 5 . 6 day
     otherwise raise syntax 88.918 array('date', text)
   end
   if verify(year || day, '0123456789') \= 0 then
@@ -197,10 +202,13 @@ refused:
 ::method fromWeekNumberDate class
   use strict arg text, offset = 0
   numeric digits 18
+  -- r[class.datetime.fromdate.argument]: as for fromOrdinalDate.
+  if text~contains('-') then dashed = 1
+  else dashed = 0
   s = '' || text
   select
-    when length(s) == 8 then parse var s year 5 w 6 week 8 day
-    when length(s) == 10 then do
+    when \dashed & length(s) == 8 then parse var s year 5 w 6 week 8 day
+    when dashed & length(s) == 10 then do
       parse var s year 5 d1 6 w 7 week 9 d2 10 day
       if d1 \== '-' | d2 \== '-' then raise syntax 88.918 array('date', text)
     end
