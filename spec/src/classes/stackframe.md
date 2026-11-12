@@ -293,8 +293,9 @@ indentation that a program reads back. The string of a built-in method's frame
 is seven blanks, `*-*`, a blank and `Compiled method "NAME" with scope
 "Class".`, with the method's name in upper case and the id of the class that
 defines it.
-The number in the line of a method of the class library is not specified, as
-[the library rule](r:cond.information.library) says.
+The number in the line of a method of the class library, and its
+indentation, are not specified, as [the library rule](r:cond.information.library)
+says.
 
 ```rexx
 call show

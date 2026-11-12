@@ -262,7 +262,9 @@ has a line number that is not specified. That holds for `POSITION` of a
 condition that was raised there, for the `line` of its
 [StackFrame](r:class.stackframe.line), for the number in its
 [traceback line](r:class.stackframe.traceline) and for the line that the
-[report of an error](r:cond.index.syntax) names. The number of such levels
+[report of an error](r:cond.index.syntax) names. The indentation of the
+traceback line of such a level, which is the depth of the clause that it was
+running, is not specified either. The number of such levels
 between the level that sent the message and the level that raised the
 condition is not specified either, so the number of items of `STACKFRAMES` and
 `TRACEBACK` is not specified where library levels are among them. The code
