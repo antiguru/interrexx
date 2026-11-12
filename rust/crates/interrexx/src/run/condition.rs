@@ -203,9 +203,15 @@ impl Interp {
         let traps = &frame.traps;
         // A delayed trap is answered too: its condition queues as for any
         // `CALL ON` trap, and its delivery holds it (`Interp::hold_delayed`).
+        // A `CALL ON ANY` trap does not take what only `SIGNAL` can trap,
+        // whoever raises it (`call_on_any_takes`).
         traps
             .get(condition)
-            .or_else(|| traps.get(b"ANY".as_slice()))
+            .or_else(|| {
+                traps
+                    .get(b"ANY".as_slice())
+                    .filter(|any| !any.call || call_on_any_takes(condition))
+            })
             .cloned()
     }
 
