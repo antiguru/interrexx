@@ -468,15 +468,16 @@ pub(super) fn native_collection_of(
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
     let class = super::class_receiver(interp, receiver)?;
+    let object = new_instance(interp, class)?;
+    interp.roots.activity_mut().push_temp(object);
+    let caller = interp.caller();
+    interp.send_message(object, super::INIT, None, &[], caller)?;
+    // After the `init`: a subclass sees it before the error.
     for (at, argument) in args.iter().enumerate() {
         if argument.is_none() {
             return Err(Raised::missing_method_argument(at + 1).into());
         }
     }
-    let object = new_instance(interp, class)?;
-    interp.roots.activity_mut().push_temp(object);
-    let caller = interp.caller();
-    interp.send_message(object, super::INIT, None, &[], caller)?;
     let list = is_list(interp, object);
     for argument in args.iter().flatten() {
         if list {

@@ -195,7 +195,7 @@ bad: say arg(1) '=>' condition('o')~code
   forward class (super)
 ```
 
-```output defect=#163
+```output
 init 0
 .watch~of(1, , 3) => 93.903
 init 0
