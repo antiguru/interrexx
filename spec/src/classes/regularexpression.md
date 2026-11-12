@@ -149,10 +149,10 @@ argument is its items joined by line feeds.
 ```rexx
 re = .RegularExpression~new('xy')
 call try "re~match('a', .nil)"
-call try "re~parse('a', 'MINIMAL', 3)"
 call try ".RegularExpression~new('a', 'MAXIMAL', 3)"
 call try ".RegularExpression~new('a', 'bogus')"
 call try "re~parse('a', 'bogus')"
+re = .RegularExpression~new('xy')
 call try "re~match(.str~new)"
 call try "re~match(.object~new)"
 call try "re~match(.mk~new)"
@@ -184,7 +184,6 @@ bad: say arg(1) '=>' condition('o')~code
 
 ```output
 re~match('a', .nil) => 88.922
-re~parse('a', 'MINIMAL', 3) => 88.922
 .RegularExpression~new('a', 'MAXIMAL', 3) => 88.922
 .RegularExpression~new('a', 'bogus') => 93.0
 re~parse('a', 'bogus') => 93.0
