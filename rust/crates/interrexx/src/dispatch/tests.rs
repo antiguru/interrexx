@@ -2288,3 +2288,23 @@ fn a_hidden_primitive_lists_no_frame() {
                    ::class myarr subclass array\n";
     assert_eq!(run_source(program), (0, "0\n".to_string(), String::new()));
 }
+
+/// `next` and `previous` of an index given as an `Array` that lies beyond a
+/// dimension answer as the argument form does (Deviation 120): `next` is
+/// `.nil` and `previous` the last item's index, not `SYNTAX 93.907`. An
+/// `Array` of one item beyond a one-dimensional array is beyond it too.
+#[test]
+fn next_and_previous_take_an_array_index_beyond_a_dimension() {
+    let program = "a = .array~new(2, 2)\n\
+        a[1, 1] = 1\n\
+        a[2, 2] = 2\n\
+        say (a~next(.array~of(3, 1)) == .nil) (a~next(.array~of(5, 5)) == .nil)\n\
+        say a~previous(.array~of(5, 5))~makeString('L', ',')\n\
+        say a~previous(.array~of(3, 1))~makeString('L', ',')\n\
+        say a~previous(.array~of(2, 2))~makeString('L', ',')\n\
+        b = .array~of('x', , 'z')\n\
+        say b~previous(.array~of(9)) (b~next(.array~of(9)) == .nil)\n";
+    let (code, out, err) = run_source(program);
+    assert_eq!((code, err.as_str()), (0, ""));
+    assert_eq!(out, "1 1\n2,2\n2,2\n1,1\n3 1\n");
+}
