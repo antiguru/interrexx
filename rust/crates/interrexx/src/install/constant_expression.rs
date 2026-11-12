@@ -2,12 +2,12 @@ use super::*;
 
 impl Interp {
     /// Runs the `::CONSTANT` expression of `program`'s directive `directive` as
-    /// a method of its own, as the oracle does: a guarded `METHOD` level named
-    /// `::CONSTANT` with `run`'s receiver and scope, stopped on the directive's
-    /// clause, whose executable is a `Method` of its own and which the
-    /// package's `::OPTIONS TRACE` traces as a method. While a package
-    /// installs, below it is the level installing the package, stopped on
-    /// directive `level`, the `::CLASS` installed last.
+    /// a method of its own: a guarded `METHOD` level named `::CONSTANT` with
+    /// `run`'s receiver and scope, stopped on the directive's clause, whose
+    /// executable is a `Method` of its own and which the package's `::OPTIONS
+    /// TRACE` traces as a method. While a package installs, below it is the
+    /// level installing the package, stopped on directive `level`, the
+    /// `::CLASS` installed last.
     pub(super) fn eval_constant_expression(
         &mut self,
         id: ProgramId,

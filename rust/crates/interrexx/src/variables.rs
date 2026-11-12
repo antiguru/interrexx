@@ -32,9 +32,9 @@ impl Interp {
     }
 
     /// Returns the variable slot `slot` of `frame` names to the uninitialised
-    /// state, which is what `DROP` does. Measured on the oracle: a class
-    /// method that exposes `v`, assigns it and drops it leaves a later `expose
-    /// v` reading the derived name `V`.
+    /// state, which is what `DROP` does. For example, a class method that
+    /// exposes `v`, assigns it and drops it leaves a later `expose v` reading
+    /// the derived name `V`.
     #[inline(always)]
     pub(super) fn clear_variable(&mut self, frame: SlotFrame, slot: usize) {
         if self.activation_exposes(frame) {
@@ -270,10 +270,10 @@ impl Interp {
 
     /// A store of `value`, or a `DROP` where it is `None`, of `name` in
     /// `scope`'s pool on `owner`, an object a `GUARD WHEN` has watched: every
-    /// watcher of the variable is posted (on a set and on a drop). The oracle's
-    /// notifier then yields, which hands its kernel lock only to an activity
-    /// already queued for it; a woken watcher measured not to be one runs at
-    /// the next switch, so no switch is asked for here.
+    /// watcher of the variable is posted (on a set and on a drop). The notifier
+    /// then yields, which hands its kernel lock only to an activity already
+    /// queued for it; a woken watcher that is not one runs at the next switch,
+    /// so no switch is asked for here.
     #[cold]
     #[inline(never)]
     fn store_watched(&mut self, owner: ObjRef, scope: ObjRef, name: &[u8], value: Option<ObjRef>) {

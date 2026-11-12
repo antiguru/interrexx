@@ -27,10 +27,9 @@ impl Interp {
         // **A class the interpreter's own library installed belongs to the
         // `REXX` package, not to the program whose directives installed it.**
         // Leaving it out of this table is what `Interp::package_object_for`
-        // reads as `Package::Rexx`, which is the oracle's answer: measured
-        // on both engines and the oracle, `.Alarm~package~name` is `REXX`.
-        // The REXX package's own tables hold it too, the first library
-        // program's declaration of a name standing.
+        // reads as `Package::Rexx`, so `.Alarm~package~name` is `REXX`. The
+        // REXX package's own tables hold it too, the first library program's
+        // declaration of a name standing.
         if !self.library_programs.contains(&program) {
             self.class_packages
                 .insert(class, ClassPackage::Program(program));
@@ -54,8 +53,8 @@ impl Interp {
         Ok(())
     }
 
-    /// Records a class `Class~subclass` or `Class~mixinClass` built, whose
-    /// own `package` field the oracle leaves null.
+    /// Records a class `Class~subclass` or `Class~mixinClass` built, whose own
+    /// `package` field is left null.
     pub(crate) fn record_packageless_class(&mut self, class: ObjRef) {
         self.class_packages.insert(class, ClassPackage::Null);
     }
@@ -70,9 +69,8 @@ impl Interp {
         }
     }
 
-    /// Records that `class` keeps the package it was defined in alive, as the
-    /// oracle does. A class outside the arena is never collected and holds
-    /// nothing.
+    /// Records that `class` keeps the package it was defined in alive. A class
+    /// outside the arena is never collected and holds nothing.
     fn class_holds_package(&mut self, class: ObjRef, package: ObjRef) {
         if matches!(
             self.heap.get(class).map(|held| &held.body),
@@ -82,8 +80,8 @@ impl Interp {
         }
     }
 
-    /// Whether `class` is one the interpreter's own bootstrap built, which
-    /// no program's install recorded -- the oracle's `isPrimitiveClass`.
+    /// Whether `class` is one the interpreter's own bootstrap built, which no
+    /// program's install recorded (a primitive class).
     pub(crate) fn is_primitive_class(&self, class: ObjRef) -> bool {
         !self.class_packages.contains_key(&class)
     }
@@ -369,12 +367,12 @@ impl Interp {
             .filter(|object| self.heap.get(*object).is_some())
     }
 
-    /// What `RexxContext~executable` answers from a method activation
-    /// running `body` for a send to `receiver` under `name` at `scope`: the
-    /// `Method` object the send ran, which is not always one a class
-    /// dictionary reaches by that name. Measured, oracle rc 0, each answers
-    /// `Method`: a body `setMethod` or `enhanced` installed, one `run` ran,
-    /// and one whose class `define` took the name back from while it ran.
+    /// What `RexxContext~executable` answers from a method activation running
+    /// `body` for a send to `receiver` under `name` at `scope`: the `Method`
+    /// object the send ran, which is not always one a class dictionary reaches
+    /// by that name. For example, each answers `Method`: a body `setMethod` or
+    /// `enhanced` installed, one `run` ran, and one whose class `define` took
+    /// the name back from while it ran.
     pub(crate) fn running_method_executable(
         &mut self,
         scope: ObjRef,
@@ -534,10 +532,9 @@ impl Interp {
         Ok(object)
     }
 
-    /// Files `record` as what the `Method` or `Routine` object `object`
-    /// reports on and runs, and makes `object` keep the package its code
-    /// belongs to alive, as the oracle does. May allocate, so `object` must
-    /// be rooted.
+    /// Files `record` as what the `Method` or `Routine` object `object` reports
+    /// on and runs, and makes `object` keep the package its code belongs to
+    /// alive. May allocate, so `object` must be rooted.
     pub(crate) fn record_executable(
         &mut self,
         object: ObjRef,
@@ -656,14 +653,13 @@ impl Interp {
         // it is detached.
         let object = self.alloc_with(BehaviourId::OBJECT, Body::Native(copy));
         self.roots.activity_mut().push_temp(object);
-        // The copy reports on the same directive the original did, and
-        // carries the flag writes the four setters made on it -- both are the
-        // copy's doing, which duplicates the whole method object including
-        // its flag word. Measured, oracle rc 0: `.K2~define("X",
-        // .K~method("M"))` then `.K2~method("X")~source` answers `M`'s own
-        // body lines, and the same copy taken after `setPrivate` and
-        // `setUnguarded` answers `1 0` for `isPrivate` and `isGuarded` where
-        // the directive alone answers `0 1`.
+        // The copy reports on the same directive the original did, and carries
+        // the flag writes the four setters made on it -- both are the copy's
+        // doing, which duplicates the whole method object including its flag
+        // word. For example, `.K2~define("X", .K~method("M"))` then
+        // `.K2~method("X")~source` answers `M`'s own body lines, and the same
+        // copy taken after `setPrivate` and `setUnguarded` answers `1 0` for
+        // `isPrivate` and `isGuarded` where the directive alone answers `0 1`.
         if let Some(source) = self.executable_sources.get(&original).copied() {
             self.executable_sources.insert(object, source);
         }
@@ -675,10 +671,10 @@ impl Interp {
 
     /// The method identity `object` stands for, made its own first where its
     /// class's dictionary entry shares the identity with another class's
-    /// (`InheritInstanceMethods`): the oracle keeps one method object per
-    /// class there, so a flag one of them is given leaves the others alone.
-    /// The class's existing behaviours are repointed, so instances made
-    /// before see the flag too.
+    /// (`InheritInstanceMethods`): one method object is kept per class there,
+    /// so a flag one of them is given leaves the others alone. The class's
+    /// existing behaviours are repointed, so instances made before see the flag
+    /// too.
     pub(crate) fn unshared_identity(
         &mut self,
         object: ObjRef,
@@ -966,9 +962,8 @@ impl Interp {
         Some(match self.which_package(package)? {
             Package::Rexx => crate::LIBRARY_PACKAGE_NAME.to_vec(),
             // A program's own package, answered as the file that program was
-            // loaded from -- measured, oracle rc 0: a required file's
-            // `.context~package~name` is that file's own path where the
-            // requiring program's is its own.
+            // loaded from: a required file's `.context~package~name` is that
+            // file's own path where the requiring program's is its own.
             Package::Program(program) => self.program_display_name(program).to_vec(),
         })
     }
@@ -995,8 +990,8 @@ impl Interp {
         if data.program.is_some() {
             return own;
         }
-        // One table, as the oracle's is: a name the package's own fields hold
-        // replaces the registry's entry rather than following it.
+        // One table: a name the package's own fields hold replaces the
+        // registry's entry rather than following it.
         let mut entries: Vec<(Box<[u8]>, ObjRef)> = self
             .registered_classes()
             .into_iter()
@@ -1019,8 +1014,8 @@ impl Interp {
     /// The whole search order a package resolves a class name over, from
     /// `package`.
     ///
-    /// Refuses a name `.local` or `.environment` holds on the oracle and this
-    /// crate does not build.
+    /// Refuses a name `.local` or `.environment` holds that this crate does not
+    /// build.
     pub(crate) fn package_find_class(
         &mut self,
         package: ObjRef,
@@ -1233,8 +1228,7 @@ impl Interp {
     }
 
     /// What a call runs for a `Routine` object a written `.ROUTINES` table
-    /// holds. The oracle casts the entry unchecked, so anything else is
-    /// refused.
+    /// holds. Anything else is refused.
     pub(crate) fn routine_object_resolution(
         &self,
         object: ObjRef,
@@ -1372,8 +1366,8 @@ impl Interp {
     /// ([`Interp::resolve_in_package`]), which `~findProgram` and
     /// `~loadPackage` each reach with their own resolve type, or from the
     /// global context where `package` is `None`. A package built from source
-    /// under a bare name has no directory of its own: measured, the oracle
-    /// resolves its `findProgram` against the current directory first.
+    /// under a bare name has no directory of its own, so its `findProgram`
+    /// resolves against the current directory first.
     pub(crate) fn resolve_program_name(
         &self,
         package: Option<ProgramId>,
@@ -1391,9 +1385,10 @@ impl Interp {
     /// did not build.
     ///
     /// A `loadExternal*` answer no directive has bound hands on the `REXX`
-    /// package. Its own package is `.nil`, which the oracle hands on as the
-    /// parent: measured, it answers until a name is resolved through that
-    /// parent, and segfaults there (`corpus/oracle-crashes.txt` entry 15).
+    /// package. Its own package is `.nil`, which is handed on as the parent;
+    /// the reference run answers until a name is resolved through that parent,
+    /// and segfaults there (oracle defect, `corpus/oracle-crashes.txt` entry
+    /// 15).
     pub(crate) fn executable_context_package(
         &mut self,
         object: ObjRef,

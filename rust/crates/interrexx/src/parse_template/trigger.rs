@@ -70,12 +70,10 @@ impl Interp {
             }
             _ => {
                 // 26.4, and the conversion is bounded by the **active**
-                // `NUMERIC DIGITS` rather than by a fixed width
-                // (`integerTrigger`'s own `requestUnsignedNumber(result,
-                // number_digits())`). Measured: `numeric digits 2; parse
-                // value d with p +(100) q` is 26.4 on the oracle, as are a
-                // fractional operand, a non-numeric one and a negative one.
-                // The substitution is the operand's own rendering -- measured
+                // `NUMERIC DIGITS` rather than by a fixed width. For example
+                // `numeric digits 2; parse value d with p +(100) q` is 26.4, as
+                // are a fractional operand, a non-numeric one and a negative
+                // one. The substitution is the operand's own rendering --
                 // `found "1E2"` for `+(1e2)`, which is D15's rule showing
                 // through rather than a re-rendering here.
                 //

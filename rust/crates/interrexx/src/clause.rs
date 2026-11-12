@@ -40,15 +40,14 @@ pub(crate) struct DeadlineCounted(());
 /// `Op::Clause`'s region calls overwrite these exactly as the caller's own
 /// next clause would.
 pub(crate) struct ClauseState {
-    /// The indent (`static_indent`, spaces already
-    /// doubled) an intermediate value line traces at right now -- the one
-    /// piece of state `eval`'s own single insertion point needs that
-    /// `eval`'s signature does not otherwise carry, mirroring the oracle's
-    /// own `settings.traceIndent` (a persistent field every `traceValue`/
-    /// `traceVariable`/... call reads, never threaded as a parameter
-    /// through `evaluate`). Set once per traced clause, at whichever call
-    /// site already computed that clause's own indent for the `*-*` echo
-    /// or a `>K>` line -- `run.rs`'s own doc comments name each site.
+    /// The indent (`static_indent`, spaces already doubled) an intermediate
+    /// value line traces at right now -- the one piece of state `eval`'s own
+    /// single insertion point needs that `eval`'s signature does not otherwise
+    /// carry, a persistent field every value or variable trace call reads,
+    /// never threaded as a parameter through evaluation. Set once per traced
+    /// clause, at whichever call site already computed that clause's own indent
+    /// for the `*-*` echo or a `>K>` line -- `run.rs`'s own doc comments name
+    /// each site.
     pub(crate) current_value_indent: usize,
     /// Whether the clause now running had instruction tracing in force **when
     /// it began**, which is the only thing an assignment's `>>>` echo is
@@ -66,11 +65,10 @@ pub(crate) struct ClauseState {
     /// the identical reason. Set unconditionally by `Op::Clause`'s region, via
     /// `clause_line`, which honours `clause_line_override` the same way `clause_site` does
     /// -- so a `SIGNAL`/`CALL` fired from inside an `INTERPRET` fragment reads the
-    /// *enclosing* `INTERPRET` clause's own line, matching the oracle: an interpret-created
-    /// activation delegates a `SIGNAL` to its parent rather than setting `SIGL` itself, so
-    /// what ends up in `SIGL` is the parent's own currently-executing instruction -- the
-    /// `INTERPRET` clause -- and this field reproduces that observable answer without this
-    /// crate adopting the oracle's architecture that produces it (`run_fragment` still runs
+    /// *enclosing* `INTERPRET` clause's own line, as an interpret-created activation
+    /// delegates a `SIGNAL` to its parent rather than setting `SIGL` itself, so what ends
+    /// up in `SIGL` is the parent's own currently-executing instruction -- the `INTERPRET`
+    /// clause -- and this field reproduces that observable answer (`run_fragment` runs
     /// inside the creating activation, not a nested one of its own).
     current_clause_line: usize,
     /// The index, in the running activation's own body, of the clause being

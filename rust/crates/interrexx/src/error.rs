@@ -92,11 +92,10 @@ pub(crate) struct Raised {
     pub(crate) result_is_rc: bool,
     /// The line the raise happened on, captured **at the raise** because the
     /// activation it belongs to may be gone by the time a trap takes it: a
-    /// `RAISE ... RETURN` inside a routine unwinds before a `SIGNAL ON`
-    /// handler runs, and the innermost frame left on the stack is then the
-    /// caller's. Measured, the oracle answers 4 there where the caller's own
-    /// clause is 2. `0` means "not captured", and the condition object falls
-    /// back to the innermost frame's own line.
+    /// `RAISE ... RETURN` inside a routine unwinds before a `SIGNAL ON` handler
+    /// runs, and the innermost frame left on the stack is then the caller's. It
+    /// is 4 there where the caller's own clause is 2. `0` means "not captured",
+    /// and the condition object falls back to the innermost frame's own line.
     pub(crate) position: u32,
     pub(crate) delivery: Delivery,
 }
@@ -157,9 +156,9 @@ impl Raised {
     /// activation before its own trap can see the condition, so the trap
     /// does not fire.
     pub(crate) fn halt() -> Raised {
-        // The oracle reports it as a SYNTAX error of the raising level, which
-        // a `SIGNAL ON SYNTAX` there traps. The `(4, 1)` catalogue entry's
-        // `&1` is the condition's own name.
+        // It is reported as a SYNTAX error of the raising level, which a
+        // `SIGNAL ON SYNTAX` there traps. The `(4, 1)` catalogue entry's `&1`
+        // is the condition's own name.
         Raised::syntax(4, 1, vec![b"HALT".to_vec()])
     }
 
@@ -171,16 +170,15 @@ impl Raised {
         Raised::syntax(41, 1, vec![value.to_vec()])
     }
 
-    /// 26.8: `**`'s right operand is not a whole number, **including not
-    /// being a number at all**. Measured: `2 ** 'x'` and `2 ** 2.5` both
-    /// give 26.8 ("found \"x\""/"found \"2.5\""), while the identical
-    /// failure on the *left* operand is the ordinary 41.1 (`'y' ** 2` is
-    /// 41.1, `'y' ** 'x'` is still 41.1 -- the base is checked first).
-    /// This is deliberately not routed through `nonnumeric`: the oracle's
-    /// own asymmetry between the two operands is the fact being
-    /// reproduced, not an implementation shortcut. `found` is the
-    /// exponent's own text; used when the exponent does not even parse as
-    /// a number, so there is no `Number` for `interrexx-num`'s own
+    /// 26.8: `**`'s right operand is not a whole number, **including not being
+    /// a number at all**. So `2 ** 'x'` and `2 ** 2.5` both give 26.8 ("found
+    /// \"x\""/"found \"2.5\""), while the identical failure on the *left*
+    /// operand is the ordinary 41.1 (`'y' ** 2` is 41.1, `'y' ** 'x'` is still
+    /// 41.1 -- the base is checked first). This is deliberately not routed
+    /// through `nonnumeric`: the asymmetry between the two operands is the fact
+    /// being reproduced, not an implementation shortcut. `found` is the
+    /// exponent's own text; used when the exponent does not even parse as a
+    /// number, so there is no `Number` for `interrexx-num`'s own
     /// `ArithError::PowerExponentNotWhole` to carry.
     pub(crate) fn power_exponent_not_whole(found: &[u8]) -> Raised {
         Raised::syntax(26, 8, vec![found.to_vec()])
@@ -207,17 +205,14 @@ impl Raised {
     }
 
     /// 34.903: a security manager answered a checkpoint with something other
-    /// than `0` or `1` (the oracle's logical-value check names
-    /// `Error_Logical_value_authorization`).
+    /// than `0` or `1` (the logical-value check).
     pub(crate) fn authorization_not_logical(found: &[u8]) -> Raised {
         Raised::syntax(34, 903, vec![found.to_vec()])
     }
 
-    /// 11.1: "Insufficient control stack space" -- the evaluation-depth
-    /// limit (`eval.rs`'s own `MAX_EVAL_DEPTH`). No substitution: measured
-    /// against the oracle's own parse-side 11.1 (nested parens/calls,
-    /// Deviation 2), the catalogue's `(11, 1)`
-    /// entry carries none either.
+    /// 11.1: "Insufficient control stack space" -- the evaluation-depth limit
+    /// (`eval.rs`'s own `MAX_EVAL_DEPTH`). No substitution: the parse-side 11.1
+    /// (nested parens/calls, Deviation 2) carries none either.
     pub(crate) fn insufficient_stack() -> Raised {
         Raised::syntax(11, 1, Vec::new())
     }
@@ -239,11 +234,10 @@ impl Raised {
         Raised::syntax(34, 6, vec![found.to_vec()])
     }
 
-    /// 44.1: an internal routine reached through `ExprKind::Call`'s
-    /// expression form (`f(...)`, `eval.rs`'s `eval_call`) ran to
-    /// completion without a value to hand back -- a bare `RETURN`, measured
-    /// against the oracle in a clean directory: `say f(1)` into `f: return`
-    /// gives rc 212 and
+    /// 44.1: an internal routine reached through `ExprKind::Call`'s expression
+    /// form (`f(...)`, `eval.rs`'s `eval_call`) ran to completion without a
+    /// value to hand back -- a bare `RETURN`: `say f(1)` into `f: return` gives
+    /// rc 212 and
     /// ```text
     /// Error 44 running .../f.rex line 1:  Function or message did not return data.
     /// Error 44.1:  No data returned from function "F".
@@ -314,12 +308,12 @@ impl Raised {
     }
 
     /// 88.901: an argument a native call's signature declares as required and
-    /// that the send left out. `position` counts the arguments alone, which
-    /// is what the oracle reports.
+    /// that the send left out. `position` counts the arguments alone, which is
+    /// what is reported.
     pub(crate) fn missing_native_argument(position: usize) -> Raised {
         let mut raised = Raised::syntax(88, 901, vec![position.to_string().into_bytes()]);
-        // Measured, oracle rc 168: `Error 88 running <path>:  Invalid
-        // argument.` with no line, under the method's own traceback line.
+        // For example, `Error 88 running <path>: Invalid argument.` with no
+        // line, under the method's own traceback line.
         raised.delivery.lineless = true;
         raised
     }
@@ -415,8 +409,8 @@ impl Raised {
         )
     }
 
-    /// 98.991: `run`, `setMethod` or `unsetMethod` sent from somewhere the
-    /// oracle does not allow. One substitution, the method's own name.
+    /// 98.991: `run`, `setMethod` or `unsetMethod` sent from somewhere not
+    /// allowed. One substitution, the method's own name.
     pub(crate) fn restricted_method(name: &[u8]) -> Raised {
         Raised::syntax(98, 991, vec![name.to_vec()])
     }
@@ -860,9 +854,9 @@ impl Raised {
     }
 
     /// 93.915: an option argument's first letter is not one of the ones the
-    /// builtin accepts. `valid` is the accepted set as the oracle spells it
-    /// in the message, and `found` is the **whole option string**, not the
-    /// letter that was rejected.
+    /// builtin accepts. `valid` is the accepted set as the message spells it,
+    /// and `found` is the **whole option string**, not the letter that was
+    /// rejected.
     pub(crate) fn invalid_option(valid: &str, found: &[u8]) -> Raised {
         Raised::syntax(93, 915, vec![valid.as_bytes().to_vec(), found.to_vec()])
     }
@@ -1098,8 +1092,8 @@ impl Raised {
         Raised::syntax(93, 965, vec![name.to_vec()])
     }
 
-    /// 93.901: a method was given fewer arguments than it needs.
-    /// `expected` is the count the oracle names.
+    /// 93.901: a method was given fewer arguments than it needs. `expected` is
+    /// the count the message names.
     pub(crate) fn not_enough_method_arguments(expected: usize) -> Raised {
         Raised::syntax(93, 901, vec![expected.to_string().into_bytes()])
     }
@@ -1126,10 +1120,9 @@ impl Raised {
         Raised::syntax(98, 975, vec![position.to_string().into_bytes()])
     }
 
-    /// 93.939: an `Array` given as an index list has more than one
-    /// dimension. Measured, oracle rc 0 under a trap, through
-    /// `(1,2)~at(.array~new(2,2))`: `Method argument 1 must have a
-    /// single-dimensional array value.`
+    /// 93.939: an `Array` given as an index list has more than one dimension.
+    /// Under a trap, `(1,2)~at(.array~new(2,2))` gives `Method argument 1 must
+    /// have a single-dimensional array value.`
     pub(crate) fn index_list_not_single_dimensional(position: usize) -> Raised {
         Raised::syntax(93, 939, vec![position.to_string().into_bytes()])
     }
@@ -1172,8 +1165,8 @@ impl Raised {
         Raised::syntax(93, 925, vec![expected.to_string().into_bytes()])
     }
 
-    /// 93.959: an array size or dimension product past the oracle's
-    /// fixed-array size limit. `max` is that bound, which the message names.
+    /// 93.959: an array size or dimension product past the fixed-array size
+    /// limit. `max` is that bound, which the message names.
     pub(crate) fn array_too_big(max: usize) -> Raised {
         Raised::syntax(93, 959, vec![max.to_string().into_bytes()])
     }
@@ -1237,7 +1230,7 @@ impl Raised {
         )
     }
 
-    /// 88.901: a method argument the oracle names rather than numbers was
+    /// 88.901: a method argument that is named rather than numbered was
     /// omitted.
     pub(crate) fn missing_named_argument(argument: &str) -> Raised {
         Raised::syntax(88, 901, vec![argument.as_bytes().to_vec()])
@@ -1301,19 +1294,18 @@ impl Raised {
         Raised::syntax(88, 909, vec![position.to_string().into_bytes()])
     }
 
-    /// [`Raised::argument_needs_a_string_value`] for a native method's
-    /// declared string parameter. Measured, oracle rc 168: `Error 88 running
-    /// <declaring package>:` with no line.
+    /// [`Raised::argument_needs_a_string_value`] for a native method's declared
+    /// string parameter. For example, `Error 88 running <declaring package>:`
+    /// with no line.
     pub(crate) fn native_argument_needs_a_string_value(position: usize) -> Raised {
         let mut raised = Raised::argument_needs_a_string_value(position);
         raised.delivery.lineless = true;
         raised
     }
 
-    /// 88.921: a native argument declared `double` has no value as one.
-    /// `found` is the argument's own rendered bytes. Measured, oracle rc 168:
-    /// `RxCalcSqrt('abc')` is `Argument 1 must be a valid double value; found
-    /// "abc".`
+    /// 88.921: a native argument declared `double` has no value as one. `found`
+    /// is the argument's own rendered bytes. For example, `RxCalcSqrt('abc')`
+    /// is `Argument 1 must be a valid double value; found "abc".`
     pub(crate) fn native_argument_not_a_double(position: usize, found: &[u8]) -> Raised {
         let mut raised = Raised::syntax(
             88,
@@ -1325,8 +1317,8 @@ impl Raised {
     }
 
     /// 88.905: a native argument declared `positive_wholenumber_t` is not a
-    /// whole number from one up. Measured, oracle rc 168: `RxCalcSqrt(2, 0)`
-    /// is `Argument 2 must be a positive whole number; found "0".`
+    /// whole number from one up. For example, `RxCalcSqrt(2, 0)` is `Argument 2
+    /// must be a positive whole number; found "0".`
     pub(crate) fn native_argument_not_positive(position: usize, found: &[u8]) -> Raised {
         let mut raised = Raised::syntax(
             88,
@@ -1337,10 +1329,10 @@ impl Raised {
         raised
     }
 
-    /// 88.904: a native argument declared `nonnegative_wholenumber_t` is not
-    /// a whole number from zero up. Measured, oracle rc 168, through
-    /// `orxmethod`'s `TestNonnegativeWholeNumberArg(-1)`: `The 1 argument must
-    /// be zero or a positive whole number; found "-1".`
+    /// 88.904: a native argument declared `nonnegative_wholenumber_t` is not a
+    /// whole number from zero up. For example, through `orxmethod`'s
+    /// `TestNonnegativeWholeNumberArg(-1)`: `The 1 argument must be zero or a
+    /// positive whole number; found "-1".`
     pub(crate) fn native_argument_not_nonnegative(position: usize, found: &[u8]) -> Raised {
         let mut raised = Raised::syntax(
             88,
@@ -1352,7 +1344,7 @@ impl Raised {
     }
 
     /// 88.907: a native argument declared as a C integer is not a whole number
-    /// in that type's range. Measured, oracle rc 168, through `orxmethod`'s
+    /// in that type's range. For example, through `orxmethod`'s
     /// `TestIntArg('x')`: `Argument 1 must be in the range -2147483648 to
     /// 2147483647; found "x".`
     pub(crate) fn native_argument_outside_range(
@@ -1376,9 +1368,8 @@ impl Raised {
     }
 
     /// 34.901: a native argument declared `logical_t` is not exactly `0` or
-    /// `1`. Measured, oracle rc 222, through `orxmethod`'s
-    /// `TestLogicalArg(3)`: `Logical value must be exactly "0" or "1"; found
-    /// "3".`
+    /// `1`. For example, through `orxmethod`'s `TestLogicalArg(3)`: `Logical
+    /// value must be exactly "0" or "1"; found "3".`
     pub(crate) fn native_argument_not_logical(found: &[u8]) -> Raised {
         let mut raised = Raised::syntax(34, 901, vec![found.to_vec()]);
         raised.delivery.lineless = true;
@@ -1386,18 +1377,18 @@ impl Raised {
     }
 
     /// 98.913: a native argument declared `RexxArrayObject` has no
-    /// single-dimensional array value. Measured, oracle rc 158, through
-    /// `orxmethod`'s `TestArrayArg(.object~new)`: `Unable to convert object "an
-    /// Object" to a single-dimensional array value.`
+    /// single-dimensional array value. For example, through `orxmethod`'s
+    /// `TestArrayArg(.object~new)`: `Unable to convert object "an Object" to a
+    /// single-dimensional array value.`
     pub(crate) fn native_argument_not_an_array(found: &[u8]) -> Raised {
         let mut raised = Raised::syntax(98, 913, vec![found.to_vec()]);
         raised.delivery.lineless = true;
         raised
     }
 
-    /// 88.914: a native argument is not an instance of the class its
-    /// declared type requires. Measured, oracle rc 168, through `orxmethod`'s
-    /// `TestClassArg(1)`: `Argument 1 must be an instance of the Class class.`
+    /// 88.914: a native argument is not an instance of the class its declared
+    /// type requires. For example, through `orxmethod`'s `TestClassArg(1)`:
+    /// `Argument 1 must be an instance of the Class class.`
     pub(crate) fn native_argument_not_an_instance(position: usize, class: &str) -> Raised {
         let mut raised = Raised::syntax(
             88,
@@ -1409,7 +1400,7 @@ impl Raised {
     }
 
     /// 88.919: a native argument declared `POINTERSTRING` is not an address
-    /// written after `0x`. Measured, oracle rc 168, through `orxmethod`'s
+    /// written after `0x`. For example, through `orxmethod`'s
     /// `TestPointerStringArg('zz')`: `Argument 1 is not in valid pointer
     /// format; found "zz".`
     pub(crate) fn native_argument_not_a_pointer(position: usize, found: &[u8]) -> Raised {
@@ -1423,9 +1414,9 @@ impl Raised {
     }
 
     /// A native argument declared `RexxStemObject` is not a stem, nor in a
-    /// routine a stem's name: 93.969 in a method and 40.919 in a routine.
-    /// Measured, oracle, through `orxmethod`'s `TestStemArg('zz')`, rc 163:
-    /// `Method argument 1 must have a stem object value; found "zz".`; through
+    /// routine a stem's name: 93.969 in a method and 40.919 in a routine. For
+    /// example, through `orxmethod`'s `TestStemArg('zz')`, rc 163: `Method
+    /// argument 1 must have a stem object value; found "zz".`; through
     /// `orxfunction`'s `TestStemArg('a.b')`: `Argument 1 must have a stem
     /// object or stem name value; found "a.b".`
     pub(crate) fn native_argument_not_a_stem(
@@ -1517,7 +1508,7 @@ impl Raised {
     }
 
     /// 40.925: the argument at `position` is not an array, a stem or a stem
-    /// name. The oracle substitutes the stem it failed to resolve, which is
+    /// name. The substitution is the stem that failed to resolve, which is
     /// null, so the value it reports is always empty.
     pub(crate) fn not_an_array_or_stem(position: usize) -> Raised {
         Raised::syntax(40, 925, vec![position.to_string().into_bytes(), Vec::new()])
@@ -1557,41 +1548,41 @@ impl Raised {
         Raised::syntax(40, 924, vec![position.to_string().into_bytes()])
     }
 
-    /// 88.909 for an argument the oracle names rather than numbers.
+    /// 88.909 for an argument that is named rather than numbered.
     pub(crate) fn named_argument_needs_a_string_value(argument: &str) -> Raised {
         Raised::syntax(88, 909, vec![argument.as_bytes().to_vec()])
     }
 
-    /// 88.910: a pad argument the oracle names rather than numbers is a
-    /// string that is not exactly one byte. `found` is the argument's own
-    /// rendered bytes.
+    /// 88.910: a pad argument that is named rather than numbered is a string
+    /// that is not exactly one byte. `found` is the argument's own rendered
+    /// bytes.
     pub(crate) fn named_argument_invalid_pad(argument: &str, found: &[u8]) -> Raised {
         Raised::syntax(88, 910, vec![argument.as_bytes().to_vec(), found.to_vec()])
     }
 
-    /// 88.911: a length argument the oracle names rather than numbers did not
+    /// 88.911: a length argument that is named rather than numbered did not
     /// convert to a non-negative whole number. `found` is the argument's own
     /// rendered bytes.
     pub(crate) fn named_argument_invalid_length(argument: &str, found: &[u8]) -> Raised {
         Raised::syntax(88, 911, vec![argument.as_bytes().to_vec(), found.to_vec()])
     }
 
-    /// 88.912: a position argument the oracle names rather than numbers did
-    /// not convert to a positive whole number. `found` is the argument's own
+    /// 88.912: a position argument that is named rather than numbered did not
+    /// convert to a positive whole number. `found` is the argument's own
     /// rendered bytes.
     pub(crate) fn named_argument_invalid_position(argument: &str, found: &[u8]) -> Raised {
         Raised::syntax(88, 912, vec![argument.as_bytes().to_vec(), found.to_vec()])
     }
 
-    /// 93.915: a method's option argument is not one of the letters it
-    /// accepts. `options` is the accepted set as the oracle spells it and
-    /// `found` is the argument's own rendered bytes.
+    /// 93.915: a method's option argument is not one of the letters it accepts.
+    /// `options` is the accepted set as the message spells it and `found` is
+    /// the argument's own rendered bytes.
     pub(crate) fn method_option_not_recognised(options: &str, found: &[u8]) -> Raised {
         Raised::syntax(93, 915, vec![options.as_bytes().to_vec(), found.to_vec()])
     }
 
-    /// 93.970: `Class~copy`, which the oracle answers for no class object.
-    /// `object` is the receiver's own string value.
+    /// 93.970: `Class~copy`, which is answered for no class object. `object` is
+    /// the receiver's own string value.
     pub(crate) fn copy_not_supported(object: &[u8]) -> Raised {
         Raised::syntax(93, 970, vec![object.to_vec()])
     }
@@ -1615,7 +1606,7 @@ impl Raised {
         Raised::syntax(97, 1, vec![target.to_vec(), name.to_vec()])
     }
 
-    /// 97.2: the method is `PRIVATE` and the oracle refused the caller. The
+    /// 97.2: the method is `PRIVATE` and the caller was refused. The
     /// substitutions are [`Raised::no_method`]'s.
     pub(crate) fn private_method(target: &[u8], name: &[u8]) -> Raised {
         Raised::syntax(97, 2, vec![target.to_vec(), name.to_vec()])
@@ -1709,8 +1700,8 @@ impl Raised {
     }
 
     /// The traceback line a method activation contributes when its package
-    /// carries no source -- the oracle's sourceless method line, reached from
-    /// the traceback when `source->extract` answers nothing.
+    /// carries no source -- the sourceless method line, reached from the
+    /// traceback when no source is available.
     pub(crate) fn sourceless_method_line(name: &[u8], scope: &str, package: &[u8]) -> Vec<u8> {
         let substitutions = vec![name.to_vec(), scope.as_bytes().to_vec(), package.to_vec()];
         match interrexx_inventory::errors::lookup(101, 24) {
@@ -1737,10 +1728,9 @@ impl Raised {
         }
     }
 
-    /// The traceback line a native (C++-implemented, here Rust-implemented)
-    /// method activation contributes, rendered whole.
-    /// 101.5: the line an interactive-debug pause prints before it reads,
-    /// once per activation and unindented.
+    /// The traceback line a native method activation contributes, rendered
+    /// whole. 101.5: the line an interactive-debug pause prints before it
+    /// reads, once per activation and unindented.
     pub(crate) fn debug_prompt_line() -> Vec<u8> {
         match interrexx_inventory::errors::lookup(101, 5) {
             Some(entry) => substitute(entry.text, &[]),
@@ -1903,13 +1893,13 @@ impl Raised {
         Raised::syntax(29, 1, vec![limit.to_string().into_bytes(), found.to_vec()])
     }
 
-    /// 88.913: a method argument the oracle names is not a single-dimensional
+    /// 88.913: a method argument that is named is not a single-dimensional
     /// array. The substitution is that name.
     pub(crate) fn argument_not_single_dimensional(argument: &str) -> Raised {
         Raised::syntax(88, 913, vec![argument.as_bytes().to_vec()])
     }
 
-    /// 98.913: an argument the oracle numbers rather than names is not a
+    /// 98.913: an argument that is numbered rather than named is not a
     /// single-dimensional array. The substitution is the value's own string
     /// value.
     pub(crate) fn object_not_single_dimensional(found: &[u8]) -> Raised {
@@ -1938,8 +1928,8 @@ impl From<FormatError> for Raised {
     }
 }
 
-/// Converts a `interrexx-parse` translation failure into the condition the oracle
-/// raises for it.
+/// Converts a `interrexx-parse` translation failure into the condition raised for
+/// it.
 /// ```text
 ///      2 *-* do forever then
 ///      2 *-* interpret "do forever then"
@@ -2073,10 +2063,9 @@ pub(crate) enum FailureSite {
     /// line-number field, `*-*` marker and text.
     Rendered { text: Vec<u8> },
     /// A native level that reported the condition itself, rendered as
-    /// [`FailureSite::Rendered`] is, and the topmost level with a package:
-    /// the major line names `name`, that package, with no line, because the
-    /// oracle takes the `POSITION` from that frame and a native frame has
-    /// none.
+    /// [`FailureSite::Rendered`] is, and the topmost level with a package: the
+    /// major line names `name`, that package, with no line, because the
+    /// `POSITION` is taken from that frame and a native frame has none.
     Packaged { text: Vec<u8>, name: Vec<u8> },
     /// The level a kept condition object was raised again in, which echoes
     /// nothing and whose line and `name` the report names; no level it leaves
@@ -2163,9 +2152,9 @@ impl FailureSite {
 /// Where the failing clause is, which is everything the report needs from
 /// outside this module.
 pub(crate) struct ClauseSite<'a> {
-    /// The program's path **as the oracle prints it**, absolute. Measured:
-    /// the major line carries the full path, and `interrexx-oracle`'s `normalize`
-    /// masks the cwd, so an absolute path is comparable across machines.
+    /// The program's path **as printed**, absolute: the major line carries the
+    /// full path, and `interrexx-oracle`'s `normalize` masks the cwd, so an
+    /// absolute path is comparable across machines.
     pub(crate) path: &'a [u8],
     /// One entry per activation-like level the condition escaped through,
     /// **innermost first**.
@@ -2205,7 +2194,7 @@ impl Raised {
         lines
     }
 
-    /// The exact bytes the oracle writes to stderr for this condition.
+    /// The exact bytes written to stderr for this condition.
     /// ```text
     ///      4 *-* end
     /// Error 7 running /abs/path/f.rex line 4:  WHEN or OTHERWISE expected.
@@ -2220,9 +2209,8 @@ impl Raised {
         out
     }
 
-    /// [`Raised::report`] as the lines the oracle writes one at a time, each
-    /// without its line end. A line keeps a line end its echo or substitution
-    /// holds.
+    /// [`Raised::report`] as the lines written one at a time, each without its
+    /// line end. A line keeps a line end its echo or substitution holds.
     pub(crate) fn report_lines(&self, site: &ClauseSite<'_>) -> Vec<Vec<u8>> {
         let mut lines = Vec::new();
         // `push_clause` owns the 40-column clamp, the six-wide line field and
@@ -2246,21 +2234,19 @@ impl Raised {
                 FailureSite::Reraised { .. } => {}
             }
         }
-        // The innermost *clause* entry's line, or `0` when nothing was
-        // recorded at all -- `execute`'s own guard already substitutes a
-        // visible placeholder entry for that case, so this fallback is
-        // unreachable from there and exists so this function has no panic on
-        // the error path. A `Rendered` entry is skipped rather than counted:
-        // it has no line of its own, and the oracle reports the sending
-        // clause's line above it.
-        // **The innermost line-bearing entry decides the name as well as the
-        // number.** A frame in a package with no source reports that
-        // package where a program reports its path -- measured, `say
-        // .Validate~number('LENGTH', 'abc')` is `Error 88 running REXX line
-        // 3700` on the oracle where the same failure in a program's own
-        // clause names the program's file. A `Rendered` entry decides
-        // neither, for the reason its own doc gives.
-        // A `Packaged` level decides both too, and names no line.
+        // The innermost *clause* entry's line, or `0` when nothing was recorded
+        // at all -- `execute`'s own guard already substitutes a visible
+        // placeholder entry for that case, so this fallback is unreachable from
+        // there and exists so this function has no panic on the error path. A
+        // `Rendered` entry is skipped rather than counted: it has no line of
+        // its own, and the sending clause's line is reported above it. **The
+        // innermost line-bearing entry decides the name as well as the
+        // number.** A frame in a package with no source reports that package
+        // where a program reports its path -- `say .Validate~number('LENGTH',
+        // 'abc')` is `Error 88 running REXX line 3700` where the same failure
+        // in a program's own clause names the program's file. A `Rendered`
+        // entry decides neither, for the reason its own doc gives. A `Packaged`
+        // level decides both too, and names no line.
         let innermost = site.sites.iter().find(|entry| entry.positions());
         let line = innermost.and_then(FailureSite::line);
         let named: &[u8] = if self.delivery.internal_package && !self.delivery.lineless {
@@ -2299,10 +2285,9 @@ impl Raised {
             out.extend_from_slice(&self.message(self.number, self.sub));
             lines.push(out);
         }
-        // The oracle sends each line through its trace-output display, which
-        // sanitises it. That covers the clause echoes too, which carry the
-        // program's own source -- measured, a raw `0x01` inside a source
-        // literal echoes as `?`.
+        // Each line goes through the trace-output display, which sanitises it.
+        // That covers the clause echoes too, which carry the program's own
+        // source: a raw `0x01` inside a source literal echoes as `?`.
         for line in &mut lines {
             displayable(line);
         }
@@ -2353,7 +2338,7 @@ fn substitute(text: &str, values: &[Substitution]) -> Vec<u8> {
     out
 }
 
-/// The oracle's own rule for putting arbitrary Rexx bytes on a report line.
+/// The rule for putting arbitrary Rexx bytes on a report line.
 /// ```text
 /// rendered as ?  :  00-08  0b-0c  0e-1f
 /// rendered raw   :  09-0a  0d     20-ff
@@ -2391,8 +2376,8 @@ mod tests {
         }]
     }
 
-    /// The 7.3 transcript, captured from `build/bin/rexx` with `cat -A` so the
-    /// trailing bytes are the oracle's and not a guess.
+    /// The 7.3 transcript, captured with `cat -A` so the trailing bytes are
+    /// exact and not a guess.
     #[test]
     fn the_7_3_report_matches_the_oracle_byte_for_byte() {
         let raised = Raised::syntax(7, 3, vec![]);
@@ -2429,9 +2414,8 @@ mod tests {
         assert_eq!(raised.exit_code(), 222);
     }
 
-    /// The line number is right-aligned in a six-character field, measured at
-    /// one, two and three digits against the oracle: `     4`, `    12`,
-    /// `   105`.
+    /// The line number is right-aligned in a six-character field, shown at one,
+    /// two and three digits: ` 4`, ` 12`, ` 105`.
     #[test]
     fn the_line_number_field_is_six_wide() {
         for (line, expected) in [(4usize, "     4"), (12, "    12"), (105, "   105")] {
@@ -2617,9 +2601,8 @@ mod tests {
         }
     }
 
-    /// A `ParseError` becomes the SYNTAX condition the oracle raises for it,
-    /// with the parser's own major and sub and the matching `256 - major`
-    /// exit code.
+    /// A `ParseError` becomes the SYNTAX condition raised for it, with the
+    /// parser's own major and sub and the matching `256 - major` exit code.
     #[test]
     fn a_parse_error_becomes_the_condition_the_oracle_raises() {
         let cases = [

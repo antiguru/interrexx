@@ -592,9 +592,8 @@ impl Interp {
                 source.push(b' ');
                 // The third word is the executable's own name, which is the
                 // program's path for a program and the method's name for a
-                // method compiled from source text -- measured, oracle rc 0,
-                // `parse source` inside a `setMethod` body answers `LINUX
-                // METHOD MM`.
+                // method compiled from source text: `parse source` inside a
+                // `setMethod` body answers `LINUX METHOD MM`.
                 let program = self.activation().program_id;
                 source.extend_from_slice(self.program_display_name(program));
                 ("SOURCE", Subject::Bytes(source))
@@ -621,12 +620,11 @@ impl Interp {
                 self.trace_keyword(indent, keyword, &bytes);
                 SourceText::Owned(bytes)
             }
-            // **`>K>` names the object and the template walks the
-            // conversion.** The oracle traces `value` and hands the same
-            // object to the target, which asks for its string. Measured,
-            // `trace r` over `parse value .K with a b` with a class-side
-            // `makeString` returning `'p q'`: `>K>   "VALUE" => "The K
-            // class"` and then `>>>   "p q"`.
+            // **`>K>` names the object and the template walks the conversion.**
+            // `value` is traced and the same object is handed to the target,
+            // which asks for its string. With `trace r` over `parse value .K
+            // with a b` with a class-side `makeString` returning `'p q'`: `>K>
+            // "VALUE" => "The K class"` and then `>>> "p q"`.
             Subject::Value(value) => {
                 // The rendering exists for that line and for nothing else, so
                 // it is taken under the line's own gate.
@@ -712,11 +710,11 @@ impl Interp {
         indent: usize,
     ) -> Result<(), Failure> {
         let last = trigger.targets.len().saturating_sub(1);
-        // **Decided once for the whole trigger**, which is where the oracle
-        // decides it: it keeps two copies of this loop and chooses between
-        // them on `context->tracingResults()`. Nothing the loop below reaches
-        // runs Rexx code, so the setting cannot move while it runs, and the
-        // assertion inside is what says so rather than leaving it argued.
+        // **Decided once for the whole trigger**, which is where it is decided,
+        // between two copies of this loop, on whether results are traced.
+        // Nothing the loop below reaches runs Rexx code, so the setting cannot
+        // move while it runs, and the assertion inside is what says so rather
+        // than leaving it argued.
         let traced = self.traced_mode();
         for (index, target) in trigger.targets.iter().enumerate() {
             debug_assert_eq!(

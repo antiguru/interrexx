@@ -1,8 +1,8 @@
-//! The compiled program image `rexxc` writes: the oracle's `#!` line and
-//! `ProgramMetaData` header layout, with this build's own magic number and
-//! format version, then the name of the routine the image holds, as a 4-byte
-//! little-endian length and its bytes, then the checked source. No
-//! compatibility is promised between versions of this crate.
+//! The compiled program image `rexxc` writes: a `#!` line and a metadata header
+//! layout, with this build's own magic number and format version, then the name
+//! of the routine the image holds, as a 4-byte little-endian length and its
+//! bytes, then the checked source. No compatibility is promised between
+//! versions of this crate.
 
 use interrexx_inventory::errors::{E3_903, E3_905};
 use interrexx_parse::{ProgramSource, SourceKind};
@@ -30,8 +30,8 @@ const HEADER_BYTES: usize = 48;
 /// Where the source length sits in the header.
 const LENGTH_AT: usize = 40;
 
-/// The oracle's is 11111, so the oracle's `validate` refuses every image
-/// this crate writes with 3.903 rather than reading the source as its own
+/// The reference implementation's differs, so its validation refuses every
+/// image this crate writes with 3.903 rather than reading the source as its own
 /// flattened heap.
 const MAGIC: u16 = 0x7273;
 
@@ -54,7 +54,7 @@ pub enum Restore {
     Compiled { source: Vec<u8>, name: Vec<u8> },
     /// A header this build does not write, or a damaged image: 3.903.
     Rejected,
-    /// The encoded tag over text the oracle's base64 decoder refuses: 3.905.
+    /// The encoded tag over text the base64 decoder refuses: 3.905.
     Undecodable,
 }
 
@@ -66,16 +66,16 @@ fn header_prefix() -> [u8; LENGTH_AT] {
     header[18..20].copy_from_slice(&FORMAT_VERSION.to_le_bytes());
     // `wordSize`, then `bigEndian` left 0.
     header[20..22].copy_from_slice(&64u16.to_le_bytes());
-    // `requiredLevel`, the oracle's language level 6.06.
+    // `requiredLevel`, the language level 6.06.
     header[24..28].copy_from_slice(&60600u32.to_le_bytes());
     header
 }
 
-/// The image of `source`, whose routine is called `name`: the oracle names a
-/// translated program's routine for the file it was read from and keeps that
-/// name in the image. Binary, or with `encode` the encoded tag and the base64
-/// of the image in lines of [`CHUNK`] digits. # Panics If `name` is longer
-/// than a `u32` counts.
+/// The image of `source`, whose routine is called `name`: a translated
+/// program's routine is named for the file it was read from and keeps that name
+/// in the image. Binary, or with `encode` the encoded tag and the base64 of the
+/// image in lines of [`CHUNK`] digits. # Panics If `name` is longer than a
+/// `u32` counts.
 pub fn write_image(source: &[u8], name: &[u8], encode: bool) -> Vec<u8> {
     let mut image =
         Vec::with_capacity(HEADER_BYTES + NAME_LENGTH_BYTES + name.len() + source.len());
@@ -99,7 +99,7 @@ pub fn write_image(source: &[u8], name: &[u8], encode: bool) -> Vec<u8> {
     out
 }
 
-/// What `bytes` hold, decided as the oracle decides it.
+/// What `bytes` hold, decided as `.Routine~new` decides it.
 pub fn restore(bytes: &[u8]) -> Restore {
     let mut rest = bytes;
     if rest.starts_with(b"#!") {
@@ -140,8 +140,8 @@ pub(crate) fn lines_source(lines: &[&[u8]], name: &[u8]) -> Option<Result<Progra
     joined_source(lines, name)
 }
 
-/// Whether the second of `lines` is the encoded tag, which is what makes
-/// the oracle try to restore an array of lines.
+/// Whether the second of `lines` is the encoded tag, which is what makes an
+/// array of lines be restored.
 pub(crate) fn encoded_lines(lines: &[&[u8]]) -> bool {
     lines.get(1) == Some(&ENCODED_LINE)
 }
@@ -339,7 +339,7 @@ mod tests {
         let mut broken = encoded.clone();
         broken[at] = b'!';
         assert_eq!(restore(&broken), Restore::Undecodable);
-        // Measured, oracle `rexx`: each of these is 3.905.
+        // Each of these is 3.905.
         assert_eq!(restore(b"/**/@REXX@\nsay 1\n"), Restore::Undecodable);
         assert_eq!(
             restore(b"#!/usr/bin/env rexx\n/**/@REXX@\n!!!!\n"),
@@ -353,7 +353,7 @@ mod tests {
 
     #[test]
     fn source_that_merely_starts_like_a_tag_is_source() {
-        // Measured, oracle `rexx`: both are parsed, 13.1 on the `@`.
+        // Both are parsed, 13.1 on the `@`.
         assert_eq!(restore(b"/**/@REXX say 1\n"), Restore::Source);
         assert_eq!(restore(b"#!/x\n/**/@REXX say 1\n"), Restore::Source);
         assert_eq!(restore(b"#!/usr/bin/env rexx"), Restore::Source);

@@ -15,8 +15,8 @@ pub(crate) const VERSION: &[u8] = concat!(
 )
 .as_bytes();
 
-/// `RexxInfo~version`: `ORX_VER.ORX_REL.ORX_MOD`, which the oracle renders
-/// with the same `%d.%d.%d` that its version string embeds in [`VERSION`].
+/// `RexxInfo~version`: `ORX_VER.ORX_REL.ORX_MOD`, rendered with the same
+/// `%d.%d.%d` that the version string embeds in [`VERSION`].
 pub(crate) const VERSION_NUMBER: &[u8] = part(VERSION, UNDERSCORE + 1, PAREN);
 
 /// `RexxInfo~majorVersion`: `ORX_VER`, [`VERSION_NUMBER`]'s first field.
@@ -28,15 +28,15 @@ pub(crate) const RELEASE: &[u8] = part(VERSION_NUMBER, FIRST_DOT + 1, SECOND_DOT
 /// `RexxInfo~modification`: `ORX_MOD`, [`VERSION_NUMBER`]'s third field.
 pub(crate) const MODIFICATION: &[u8] = part(VERSION_NUMBER, SECOND_DOT + 1, VERSION_NUMBER.len());
 
-/// `RexxInfo~languageLevel`: the word the oracle's version string carries
-/// after the `-bit` one.
+/// `RexxInfo~languageLevel`: the word the version string carries after the
+/// `-bit` one.
 pub(crate) const LANGUAGE_LEVEL: &[u8] = part(VERSION, BIT_BLANK + 1, LEVEL_BLANK);
 
 /// `RexxInfo~date`: the interpreter's build date, `day month year`, the tail of
 /// [`VERSION`].
 pub(crate) const BUILD_DATE: &[u8] = part(VERSION, LEVEL_BLANK + 1, VERSION.len());
 
-/// The pointer width the oracle's version string carries in front of `-bit`.
+/// The pointer width the version string carries in front of `-bit`.
 /// `RexxInfo~architecture` reads the pointer size in bits instead and the two
 /// must agree, which is what this constant exists to let a test say.
 #[cfg(test)]

@@ -12,11 +12,11 @@ pub(crate) fn os_path(path: &[u8]) -> &std::path::Path {
 }
 
 /// `path` made absolute against `cwd` and reduced to one spelling: the
-/// oracle's canonical name followed by its path normalisation. Purely lexical
-/// -- the oracle avoids `realpath` here precisely so that a path that does not
-/// exist still normalises. Each `..` removes the component before it, which
-/// the oracle's loop does not do after a doubled slash or after a component
-/// starting with `.` (Deviation 34). A name that is not UTF-8 keeps its bytes.
+/// canonical name followed by path normalisation. Purely lexical, so that a
+/// path that does not exist still normalises. Each `..` removes the component
+/// before it, which the reference loop does not do after a doubled slash or
+/// after a component starting with `.` (Deviation 34). A name that is not UTF-8
+/// keeps its bytes.
 pub(crate) fn normalize_bytes(path: &[u8], cwd: &[u8]) -> Vec<u8> {
     let mut absolute = Vec::with_capacity(cwd.len() + path.len() + 1);
     if path.first() != Some(&b'/') {
@@ -54,8 +54,7 @@ mod tests {
             .expect("UTF-8 in, UTF-8 out")
     }
 
-    /// `normalizePathName`'s reductions, each against the oracle's own
-    /// answer.
+    /// `normalizePathName`'s reductions, each with its expected answer.
     #[test]
     fn normalize_makes_one_spelling_of_a_path() {
         assert_eq!(normalize("lib.rex", "/a/b"), "/a/b/lib.rex");
@@ -69,9 +68,9 @@ mod tests {
     }
 
     /// Deviation 34: a `..` removes the component before it, after a doubled
-    /// slash and after a component starting with `.` too. The oracle's
-    /// `normalizePathName` answers the second column, measured through
-    /// `QUALIFY`, which names a different file.
+    /// slash and after a component starting with `.` too. The reference
+    /// normalisation answers the second column, as `QUALIFY` shows, which names
+    /// a different file.
     #[test]
     fn a_parent_reference_removes_one_component_where_the_oracle_does_not() {
         for (path, oracle, this_crate) in [

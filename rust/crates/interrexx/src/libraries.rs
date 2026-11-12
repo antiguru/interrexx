@@ -54,8 +54,8 @@ impl Libraries {
         }))
     }
 
-    /// Records an ask for `name` that loaded nothing, which the oracle's
-    /// table sees as a put and then a remove.
+    /// Records an ask for `name` that loaded nothing, which the table sees as a
+    /// put and then a remove.
     pub(crate) fn missed(&mut self, name: &[u8]) {
         if !self.order.contains(name) {
             self.order.put(name);
@@ -63,8 +63,7 @@ impl Libraries {
         }
     }
 
-    /// Every held library with its name, in the order the oracle runs their
-    /// unloaders.
+    /// Every held library with its name, in the order their unloaders run.
     pub(crate) fn in_unload_order(&self) -> Vec<(Vec<u8>, Rc<Library>)> {
         self.order
             .names()
@@ -73,9 +72,9 @@ impl Libraries {
     }
 }
 
-/// Closes every library termination left open, in the order they loaded,
-/// which is the order the oracle's process exit runs their destructors in:
-/// measured with forged extensions, after an unloader raised.
+/// Closes every library termination left open, in the order they loaded, which
+/// is the order process exit runs their destructors in, after an unloader
+/// raised too.
 impl Drop for Libraries {
     fn drop(&mut self) {
         for name in &self.loaded {
@@ -86,9 +85,9 @@ impl Drop for Libraries {
     }
 }
 
-/// The names in the oracle's package string table, laid out as its hash
-/// contents lay them out, which is what fixes the order the table iterates
-/// in: bucket by bucket, each bucket's chain in the order it was built.
+/// The names in the package string table, laid out as its hash contents lay
+/// them out, which is what fixes the order the table iterates in: bucket by
+/// bucket, each bucket's chain in the order it was built.
 struct PackageTable {
     buckets: usize,
     names: Vec<Option<Vec<u8>>>,
@@ -98,9 +97,9 @@ struct PackageTable {
 }
 
 impl PackageTable {
-    /// The table the oracle builds at startup: the default size, holding the
-    /// two internal packages under the names `REXX` and `REXXUTIL`, which is
-    /// spelled `rexxutil`.
+    /// The table built at startup: the default size, holding the two internal
+    /// packages under the names `REXX` and `REXXUTIL`, which is spelled
+    /// `rexxutil`.
     fn new() -> PackageTable {
         let mut table = PackageTable::with_buckets(bucket_size(DEFAULT_TABLE_SIZE));
         table.put(b"REXX");
@@ -129,8 +128,8 @@ impl PackageTable {
         self.names().any(|held| held == name)
     }
 
-    /// Adds a name as the oracle's hash collection does: expands first where the free chain is
-    /// empty, then appends to the end of the chain.
+    /// Adds a name as a hash collection does: expands first where the free chain is empty,
+    /// then appends to the end of the chain.
     fn put(&mut self, name: &[u8]) {
         if self.free.is_none() {
             // `expandContents(capacity() * 2)`, whose capacity is the total.
@@ -217,8 +216,7 @@ const DEFAULT_TABLE_SIZE: usize = 17;
 
 const MINIMUM_BUCKET_SIZE: usize = 17;
 
-/// The oracle's bucket size for `capacity`, below the table sizes this can
-/// reach.
+/// The bucket size for `capacity`, below the table sizes this can reach.
 fn bucket_size(capacity: usize) -> usize {
     let capacity = capacity.max(MINIMUM_BUCKET_SIZE);
     if capacity.is_multiple_of(2) {
@@ -228,7 +226,7 @@ fn bucket_size(capacity: usize) -> usize {
     }
 }
 
-/// The oracle's string hash, over `char`, which is signed on this platform.
+/// The string hash, over `char`, which is signed on this platform.
 fn string_hash(name: &[u8]) -> u64 {
     name.iter().fold(0, |hash: u64, byte| {
         hash.wrapping_mul(31)

@@ -6,9 +6,9 @@
 //! `(a*)*` and a set range ending at `'7F'x` terminate).
 //!
 //! The language is the grammar's, with standard meanings for alternation and
-//! repetition; the oracle's departures from it (a starred factor at the
-//! start of an alternative, and `X+` followed by a starred factor) are not
-//! reproduced.
+//! repetition; the reference implementation's departures from it (a starred
+//! factor at the start of an alternative, and `X+` followed by a starred
+//! factor) are not reproduced.
 
 /// One automaton state.
 #[derive(Clone, Debug)]
@@ -71,8 +71,8 @@ impl Node {
 
 /// The most states a pattern may compile to: about 40 MB of automaton and
 /// thread sets. A count past it is compile error 5 at its `{` (Deviation 87);
-/// measured, the oracle answers `a{10000000}` and crashes on `a{2000000000}`
-/// and on `((a{1000}){1000}){1000}`.
+/// the reference run answers `a{10000000}` and crashes on `a{2000000000}` and
+/// on `((a{1000}){1000}){1000}` (oracle defect).
 const STATE_BUDGET: u64 = 2_000_000;
 
 /// A compile error: its code (1 to 6) and the position `!POS` reports.
@@ -311,8 +311,8 @@ fn single(byte: u8) -> Node {
     Node::Set(set)
 }
 
-/// C's `atoi` as glibc has it: `strtol`, saturated to a `long`, then
-/// truncated to an `int`. Measured, oracle: `a{4294967298}` is `a{2}`.
+/// C's `atoi` as glibc has it: `strtol`, saturated to a `long`, then truncated
+/// to an `int`. For example, `a{4294967298}` is `a{2}`.
 fn atoi(text: &[u8]) -> i64 {
     let mut at = text
         .iter()

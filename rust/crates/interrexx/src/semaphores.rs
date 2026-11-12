@@ -1,7 +1,7 @@
 //! The state of `MutexSemaphore` and `EventSemaphore` instances and of the
 //! unnamed RexxUtil semaphores, and the activities waiting on each. A post or
-//! release readies waiters, and each re-tests its condition when it resumes,
-//! as the oracle's wait loops do.
+//! release readies waiters, and each re-tests its condition when it resumes, as
+//! wait loops do.
 
 use std::time::{Duration, Instant};
 
@@ -23,8 +23,8 @@ pub(crate) enum SemaphoreKey {
 /// How a semaphore wait re-tests its condition when it resumes.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum WaitKind {
-    /// `EventSemaphore~wait`: a timed one re-tests the post, as the oracle's
-    /// timed wait loops; an untimed one does not.
+    /// `EventSemaphore~wait`: a timed one re-tests the post, as a timed wait
+    /// loops; an untimed one does not.
     Event,
     /// `MutexSemaphore~acquire`: takes the lock where it is free.
     Mutex,
@@ -87,7 +87,7 @@ pub(crate) struct Semaphores {
     handles: u64,
 }
 
-/// The first unnamed `Sys*Sem` handle. The oracle's are `malloc` addresses,
+/// The first unnamed `Sys*Sem` handle. Handles are `malloc`-style addresses,
 /// wider than a whole number at the default digits; these are too.
 const FIRST_HANDLE: u64 = 1 << 40;
 
@@ -120,8 +120,7 @@ impl Semaphores {
         true
     }
 
-    /// Appends each mutex semaphore an activity holds, as the oracle's
-    /// `heldMutexes` marks it.
+    /// Appends each mutex semaphore an activity holds, for marking.
     pub(crate) fn object_roots(&self, out: &mut Vec<ObjRef>) {
         out.extend(self.held.values().flatten().filter_map(|key| match key {
             SemaphoreKey::Object(object) => Some(*object),

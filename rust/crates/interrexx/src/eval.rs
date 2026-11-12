@@ -65,16 +65,14 @@ impl Interp {
             self.activity.stack_deepest = here;
         }
 
-        // The evaluation-depth limit, checked **after** the bookkeeping
-        // above so a run that trips it still gets an accurate `StackSpan`
-        // (the deepest level reached is this one, not the one before it).
-        // `> MAX_EVAL_DEPTH`, not `>=`: a 100,000-term left-deep expression
-        // reaches depth exactly 100,000 and the oracle is measured to
-        // survive and print an answer at that depth
-        // (Deviation 2), so the check must fire
-        // one level *above* the one the oracle is known to handle, or the
-        // one depth we are supposed to match becomes the first one we
-        // refuse.
+        // The evaluation-depth limit, checked **after** the bookkeeping above
+        // so a run that trips it still gets an accurate `StackSpan` (the
+        // deepest level reached is this one, not the one before it). `>
+        // MAX_EVAL_DEPTH`, not `>=`: a 100,000-term left-deep expression
+        // reaches depth exactly 100,000 and survives to print an answer at that
+        // depth (Deviation 2), so the check must fire one level *above* the
+        // deepest one that must be handled, or the one depth we are supposed to
+        // match becomes the first one we refuse.
         if self.activity.depth > MAX_EVAL_DEPTH || self.stack_exhausted(anchor) {
             self.activity.depth -= 1;
             return Err(Raised::insufficient_stack().into());
@@ -88,13 +86,12 @@ impl Interp {
         let value = self.eval_node(code, expr);
         self.activity.depth -= 1;
         // `TRACE I`'s own value events, inserted here and in
-        // [`Interp::eval_in_parse`], which repeats this depth bookkeeping, so
-        // a post-order event with the value already in hand needs no
-        // threading through `eval_node`'s own arms at all. Only `Ok` gets
-        // one: a raise has no value to show, and the oracle's own trace
-        // never shows one for a failing sub-expression either (the *clause*
-        // echo already happened, and the raise's own report is what
-        // follows).
+        // [`Interp::eval_in_parse`], which repeats this depth bookkeeping, so a
+        // post-order event with the value already in hand needs no threading
+        // through `eval_node`'s own arms at all. Only `Ok` gets one: a raise
+        // has no value to show, and a trace never shows one for a failing
+        // sub-expression either (the *clause* echo already happened, and the
+        // raise's own report is what follows).
         if let Ok(v) = &value
             && self.tracing_intermediates()
             && self.trace_intermediate_held(code, expr, *v)
@@ -209,27 +206,21 @@ impl Interp {
             // `echo_literal` above is one function.
             ExprKind::Prefix { op, .. } => self.echo_prefix_op(*op, value),
             // Every binary operator, arithmetic, comparison, logical and
-            // concatenation alike, traces as `>O>` -- not independently
-            // probed for every family, reasoned from the arithmetic
-            // transcript this task's report has (`RexxBinaryOperator`'s own
-            // base `evaluate` is where the oracle's `traceOperator` call
-            // sits, shared by every operator subclass the same way this one
-            // `match` arm is shared here).
-            // `echo_operator` rather than an open-coded render plus
-            // `trace_operator`, because the compiled stream's own
+            // concatenation alike, traces as `>O>` -- one `match` arm is shared
+            // by every family. `echo_operator` rather than an open-coded render
+            // plus `trace_operator`, because the compiled stream's own
             // `crate::ir::Op::TraceOperator` emits the identical line from a
             // register and the two must not be able to disagree -- the reason
             // `echo_literal` above is one function.
             ExprKind::Binary { op, .. } => self.echo_operator(*op, value),
-            // `>name`/`<name` traces as an **operator**, not as the read of
-            // the variable it names: `>O>   ">" => "PQ"`, the referenced
-            // variable's own *name* as the operator's value (the reference
-            // operator never reads the variable's value at all, so there is
-            // no `>V>` line to go with it). Measured at both spellings and in
-            // both positions: `say >pq`, `say <pq`, `call sub >pq` and `call
-            // sub <pq` all trace `>O>   ">" => "PQ"`, the `<` form included
-            // -- the oracle's own call passes the literal `">"` regardless of
-            // which byte was written.
+            // `>name`/`<name` traces as an **operator**, not as the read of the
+            // variable it names: `>O> ">" => "PQ"`, the referenced variable's
+            // own *name* as the operator's value (the reference operator never
+            // reads the variable's value at all, so there is no `>V>` line to
+            // go with it). At both spellings and in both positions -- `say
+            // >pq`, `say <pq`, `call sub >pq` and `call sub <pq` -- all trace
+            // `>O> ">" => "PQ"`, the `<` form included: the literal `">"` is
+            // passed regardless of which byte was written.
             ExprKind::VariableReference(inner) => {
                 let (ExprKind::Variable(id) | ExprKind::Stem(id)) = &inner.kind else {
                     // `interrexx-parse` admits nothing else inside a reference
@@ -354,11 +345,11 @@ impl Interp {
     /// An environment symbol's value.
     ///
     /// **The parser's own names never reach resolution and every other one
-    /// does.** The parser installs a `SpecialDotVariable` retriever for
-    /// `.NIL`, `.TRUE` and `.FALSE`, so those three are parse-time constants
-    /// in the oracle too. Measured: with `::class True` in the file, `say
-    /// .TRUE` still prints `1` where `say value('.TRUE')` prints `The TRUE
-    /// class`, because only the second goes through `getVariableRetriever`.
+    /// does.** The parser installs a `SpecialDotVariable` retriever for `.NIL`,
+    /// `.TRUE` and `.FALSE`, so those three are parse-time constants. With
+    /// `::class True` in the file, `say .TRUE` still prints `1` where `say
+    /// value('.TRUE')` prints `The TRUE class`, because only the second goes
+    /// through variable resolution.
     fn environment_symbol(&mut self, code: &Code<'_>, id: SymbolId) -> Result<ObjRef, Failure> {
         match code.symbols.name(id) {
             ".NIL" => Ok(ObjRef::NIL),
@@ -488,9 +479,8 @@ impl Interp {
             ExprKind::Logical(items) => self.eval_logical_list(code, items),
 
             // `>name`/`<name` answers a `VariableReference`, the variable
-            // itself rather than its value -- measured, oracle rc 0:
-            // `vr = 5; o = >vr; say o~class~id` is `VariableReference`, and
-            // `o~value = 7` writes `vr`.
+            // itself rather than its value: `vr = 5; o = >vr; say o~class~id`
+            // is `VariableReference`, and `o~value = 7` writes `vr`.
             ExprKind::VariableReference(inner) => self.variable_reference(code, inner),
 
             // `f(...)`/`"f"(...)` -- see `eval_call`'s own doc.
@@ -716,9 +706,9 @@ impl Interp {
                 self.number(result, saturate_digits(digits), form)
             }
             PrefixOp::Not => {
-                // `\.array` is 97.1 on the oracle, the same message send the
-                // dyadic operators make, and it is asked ahead of the truth
-                // test for the reason [`Interp::logical_values_body`] states.
+                // `\.array` is 97.1, the same message send the dyadic operators
+                // make, and it is asked ahead of the truth test for the reason
+                // [`Interp::logical_values_body`] states.
                 if let Some(target) = self.operator_message_receiver(value) {
                     return self.send_operator(op.spelling(), target, &[]);
                 }
@@ -792,19 +782,18 @@ impl Interp {
         right_value: ObjRef,
     ) -> Result<ObjRef, Failure> {
         let result = self.arith_general_body(op, left_value, right_value);
-        // **Blamed on any failure past this point, not only the left
-        // operand's own conversion.** The oracle's forwarded native method
-        // runs to completion or fails; whichever of its own steps raises --
-        // the base's conversion, the argument's, or the arithmetic itself --
-        // is still inside that one activation, each of them past
-        // `arith_left_operand`'s own return. Measured: `s. = 1; say s. /
-        // 0` is 42.3 with the frame, `s. = 1; say s. ** 999999999999` is
-        // 26.8 with the frame (the base converts fine; the *exponent*
-        // fails), and `s. = 1; say s. + .array` is 41.1 with the frame even
-        // though it is the *right* operand's own conversion that fails.
-        // The receiver test is `blame_forwarded_operator`'s own, so
-        // this site gates on failure alone and hands it every failing path
-        // here, leaving a non-stem receiver for that predicate to discard.
+        // **Blamed on any failure past this point, not only the left operand's
+        // own conversion.** The forwarded native method runs to completion or
+        // fails; whichever of its own steps raises -- the base's conversion,
+        // the argument's, or the arithmetic itself -- is still inside that one
+        // activation, each of them past `arith_left_operand`'s own return. So
+        // `s. = 1; say s. / 0` is 42.3 with the frame, `s. = 1; say s. **
+        // 999999999999` is 26.8 with the frame (the base converts fine; the
+        // *exponent* fails), and `s. = 1; say s. + .array` is 41.1 with the
+        // frame even though it is the *right* operand's own conversion that
+        // fails. The receiver test is `blame_forwarded_operator`'s own, so this
+        // site gates on failure alone and hands it every failing path here,
+        // leaving a non-stem receiver for that predicate to discard.
         if result.is_err() {
             self.blame_forwarded_operator(op.spelling().as_bytes(), left_value);
         }
@@ -831,12 +820,11 @@ impl Interp {
         };
 
         // The argument of the operator method the receiver answers, converted
-        // after the receiver itself is accepted -- `apply_binary`'s own doc
-        // has the details, and the oracle's arithmetic reports **`otherObj`**
-        // rather than the conversion when the converted string is not
-        // numeric. Measured, rc 215: `'2' + .K` with a class-side
-        // `makeString` returning `'xx'` is 41.1 `Nonnumeric value ("The K
-        // class")`.
+        // after the receiver itself is accepted -- `apply_binary`'s own doc has
+        // the details, and the arithmetic reports the **original argument**
+        // rather than the conversion when the converted string is not numeric:
+        // `'2' + .K` with a class-side `makeString` returning `'xx'` is 41.1
+        // `Nonnumeric value ("The K class")`.
         let converted = self.required_string_or_nil(right_value)?;
 
         let result = if op == Operator::Power {
@@ -877,9 +865,8 @@ impl Interp {
                     return Err(self.rendered_failure(right_value, Raised::nonnumeric));
                 }
             };
-            // Left first, which is the oracle's order: measured, `987654321 +
-            // 123456789` at DIGITS 3 names 987654321. The right operand is
-            // named by its string value.
+            // Left first: `987654321 + 123456789` at DIGITS 3 names 987654321.
+            // The right operand is named by its string value.
             self.lostdigits_check2(&left_number, left_value, &right_number, converted)?;
             match op {
                 Operator::Plus => left_number.add(&right_number, digits),
@@ -969,11 +956,11 @@ impl Interp {
         }
     }
 
-    /// Whether `value` is `String`/`Number`-valued, chasing a nested stem's
-    /// own default the way [`Interp::to_number`] and
+    /// Whether `value` is `String`/`Number`-valued, chasing a nested stem's own
+    /// default the way [`Interp::to_number`] and
     /// [`Interp::operator_operand_gap`] both do. `.nil` and a class object
-    /// answer no arithmetic operator on the oracle, so a forward landing on
-    /// either never reaches a method to raise from.
+    /// answer no arithmetic operator, so a forward landing on either never
+    /// reaches a method to raise from.
     fn stem_default_is_string_or_number(&self, value: ObjRef) -> bool {
         match value.decode() {
             Decoded::Nil => false,
@@ -1150,9 +1137,9 @@ impl Interp {
             self.to_number(left_value)
         };
         // **Behind the fast path above, because a comparison of renderings
-        // never fails and so offers nothing to ride.** Measured, comparing an
-        // object against the very text it renders as answers `0` on the
-        // oracle and `1` here; see `Loud::operator_operand`.
+        // never fails and so offers nothing to ride.** Comparing an object
+        // against the very text it renders as answers `0` and not `1`; see
+        // `Loud::operator_operand`.
         debug_assert!(
             left_number.is_err()
                 || unshared!(self, self.operator_operand_gap(left_value)).is_none(),
@@ -1177,10 +1164,10 @@ impl Interp {
         // `render` plus `text` on both sides, whose result reaches only the
         // string fallback below.
         if let (Ok(left), Ok(right)) = (&left_number, &right_number) {
-            // The **numeric** arm only: measured, `1.23456789 = 'abc'` at
-            // DIGITS 3 is rc 0 on the oracle, because a comparison that falls
-            // through to the string rule converts no operand at all. A strict
-            // operator never reaches here either.
+            // The **numeric** arm only: `1.23456789 = 'abc'` at DIGITS 3 is rc
+            // 0, because a comparison that falls through to the string rule
+            // converts no operand at all. A strict operator never reaches here
+            // either.
             self.lostdigits_check_compare(left, left_value, right, right_value, fuzz)?;
             let holds = interrexx_num::compare_numbers(left, right, digits, fuzz, compare_op(op))
                 .map_err(Raised::from)?;
@@ -1249,12 +1236,11 @@ impl Interp {
         left_value: ObjRef,
         right_value: ObjRef,
     ) -> Result<ObjRef, Failure> {
-        // **Ahead of the truth test, not behind it.** The oracle sends
-        // `&`/`|`/`&&` to the left operand as a message -- `.array & 1` is
-        // 97.1 where this crate's own 34.901 quotes the object's rendering --
-        // so an operand this names refuses however it renders, and a
-        // rendering that is itself `0` or `1` is not an answer: measured,
-        // oracle rc 159, `o & 1` for an instance named `'1'` is
+        // **Ahead of the truth test, not behind it.** `&`/`|`/`&&` are sent to
+        // the left operand as a message -- `.array & 1` is 97.1 where this
+        // crate's own 34.901 quotes the object's rendering -- so an operand
+        // this names refuses however it renders, and a rendering that is itself
+        // `0` or `1` is not an answer: `o & 1` for an instance named `'1'` is
         // `97.1 Object "1" does not understand message "&".`
         if let Some(kind) = self.operator_operand_gap(left_value) {
             return Err(Loud::operator_operand(op.spelling(), kind).into());
@@ -1293,14 +1279,13 @@ impl Interp {
             return None;
         };
         match &self.heap.get(value)?.body {
-            // **A class object is an operator receiver on the same terms
-            // `.nil` is.** The oracle's `Class` block declares `=`, `==`,
-            // `\\=`, `\\==`, `<>` and `><` and no other operator, so the six
-            // are `Object`'s identity test and every other operator is a name
-            // the behaviour does not hold -- measured, oracle rc 0, `.array =
-            // .array` is `1` and `.array = 'The Array class'` is `0`; oracle
-            // rc 159, `.array > .array` and `.array + 1` are both `97.1
-            // Object "The Array class" does not understand message`.
+            // **A class object is an operator receiver on the same terms `.nil`
+            // is.** `Class` declares `=`, `==`, `\\=`, `\\==`, `<>` and `><`
+            // and no other operator, so the six are `Object`'s identity test
+            // and every other operator is a name the behaviour does not hold:
+            // `.array = .array` is `1` and `.array = 'The Array class'` is `0`;
+            // `.array > .array` and `.array + 1` are both `97.1 Object "The
+            // Array class" does not understand message`.
             Body::Class { .. } => Some(value),
             Body::Instance { .. } => Some(value),
             // Neither `Array` nor a class this crate builds as a native body
@@ -1374,40 +1359,37 @@ impl Interp {
             Body::Class { .. } => Some("a class object"),
             Body::Native(_) => Some("one of the interpreter's own objects"),
             // An array *does* have a string value -- `Array~makeString` joins
-            // its items -- so concatenation, which never asks here, agrees
-            // with the oracle. An operator that does ask never gets that
-            // string value: `.Array` defines no arithmetic or logical method,
-            // so measured, oracle rc 159, `a = (1,); say a + 1` is 97.1; and
-            // where a comparison finds one it is `Object`'s own identity
-            // test, so `say (a = 1)` is `0` at rc 0 rather than a comparison
-            // of `1` against `1`.
+            // its items -- so concatenation, which never asks here, is
+            // unaffected. An operator that does ask never gets that string
+            // value: `.Array` defines no arithmetic or logical method, so `a =
+            // (1,); say a + 1` is 97.1; and where a comparison finds one it is
+            // `Object`'s own identity test, so `say (a = 1)` is `0` at rc 0
+            // rather than a comparison of `1` against `1`.
             Body::Array { .. } => Some("an array"),
-            // The oracle sends the operator as a message here too, and it is
-            // the send that fails: measured, oracle rc 159, `o + 1` on an
-            // instance is `97.1 Object "a K" does not understand message
-            // "+".`, and the same after `o~objectName = '123'` -- the
-            // rendering being numeric does not make it a conversion.
+            // The operator is sent as a message here too, and it is the send
+            // that fails: `o + 1` on an instance is `97.1 Object "a K" does not
+            // understand message "+".`, and the same after `o~objectName =
+            // '123'` -- the rendering being numeric does not make it a
+            // conversion.
             Body::Instance { .. } => Some("an instance of a user class"),
-            // **The redirect every conversion here takes, taken here too.**
-            // A stem with a default answers *as* that default -- `to_text`
-            // and `to_number` both chase it -- so a check that stopped at the
-            // stem handle would let `a. = .array; say (a. == 'The Array
-            // class')` answer 1 where the oracle answers 0, which is this
-            // gap's original shape reached through one assignment. Measured.
-            // A compound read (`a.zz`) yields the class handle itself and
-            // needs no redirect, which is what says the hole was the
-            // indirection rather than the operator arm.
+            // **The redirect every conversion here takes, taken here too.** A
+            // stem with a default answers *as* that default -- `to_text` and
+            // `to_number` both chase it -- so a check that stopped at the stem
+            // handle would let `a. = .array; say (a. == 'The Array class')`
+            // answer 1 where 0 is right, which is this gap's original shape
+            // reached through one assignment. A compound read (`a.zz`) yields
+            // the class handle itself and needs no redirect, which is what says
+            // the hole was the indirection rather than the operator arm.
             Body::Stem {
                 default: Some(default),
                 ..
             } => self.operator_operand_gap(*default),
             // The redirect one arm up, for the same reason: every operator
             // reaches the referenced value through `UNKNOWN`, so it is that
-            // value the oracle sends to. Measured, oracle rc 159:
-            // `zz = .array~new(2); say (>zz) + 1` is
-            // `97.1 Object "an Array" does not understand message "+".` --
-            // the array's own answer, substituting the array rather than the
-            // reference.
+            // value the message is sent to. For example, `zz = .array~new(2);
+            // say (>zz) + 1` is `97.1 Object "an Array" does not understand
+            // message "+".` -- the array's own answer, substituting the array
+            // rather than the reference.
             Body::VarRef(_) => self.reference_operand_gap(value),
             _ => None,
         }
@@ -1436,12 +1418,12 @@ impl Interp {
             }
             return self.send_operator(op.spelling(), target, &[Some(right)]);
         }
-        // **A string or number compared with `.nil` answers without reading it.** The
-        // oracle's string equality returns false for `.nil` before it looks at any bytes,
-        // and every other comparison operator of `String`, `Integer` and `NumberString`
-        // answers `.false` for it, except `\=`, `<>`, `><` and `\==`, which answer
-        // `.true`. So `'The NIL object' == .nil` is `0`, `'a' < .nil` is `0` with no
-        // NOSTRING, and `'a' || .nil`, which is not a comparison, reads the string value.
+        // **A string or number compared with `.nil` answers without reading it.** String
+        // equality returns false for `.nil` before it looks at any bytes, and every other
+        // comparison operator of `String`, `Integer` and `NumberString` answers `.false`
+        // for it, except `\=`, `<>`, `><` and `\==`, which answer `.true`. So `'The NIL
+        // object' == .nil` is `0`, `'a' < .nil` is `0` with no NOSTRING, and `'a' ||
+        // .nil`, which is not a comparison, reads the string value.
         if right == ObjRef::NIL && is_comparison(op) {
             return Ok(logical(is_inequality(op)));
         }
@@ -1619,19 +1601,18 @@ impl Interp {
 }
 
 /// `Operator` -> `interrexx-num`'s `CompareOp`, for the `Operator` variants
-/// `apply_binary` dispatches to `compare_values`. **Several operators share
-/// one `CompareOp`**: `\=`/`<>`/`><` (`BackslashEqual`/`LessThanGreaterThan`/
-/// `GreaterThanLessThan`) all mean `NotEqual` (`compare.rs`'s own doc
-/// comment: the interpreter's operator table repeats one method pointer for
-/// them), and `\>`/`\<` with their strict siblings `\>>`/`\<<` invert their
-/// positive counterpart's sense rather than getting a `CompareOp` of their
-/// own: `\>` ("not greater than") is `LessEqual`, `\<` is `GreaterEqual`,
-/// `\>>` is `StrictLessEqual` and `\<<` is `StrictGreaterEqual`. `\==` is
-/// **not** among them -- it has `StrictNotEqual` to itself -- and `\=` is one
-/// of the operators sharing `NotEqual` above. Verified against the oracle
-/// (this task's report), not derived from the names alone -- `\>>`/`\<<` are
-/// strict-family byte comparisons, where "greater"/"less" do not carry the
-/// numeric intuition their spelling suggests.
+/// `apply_binary` dispatches to `compare_values`. **Several operators share one
+/// `CompareOp`**: `\=`/`<>`/`><` (`BackslashEqual`/`LessThanGreaterThan`/
+/// `GreaterThanLessThan`) all mean `NotEqual` (`compare.rs`'s own doc comment:
+/// the interpreter's operator table repeats one method pointer for them), and
+/// `\>`/`\<` with their strict siblings `\>>`/`\<<` invert their positive
+/// counterpart's sense rather than getting a `CompareOp` of their own: `\>`
+/// ("not greater than") is `LessEqual`, `\<` is `GreaterEqual`, `\>>` is
+/// `StrictLessEqual` and `\<<` is `StrictGreaterEqual`. `\==` is **not** among
+/// them -- it has `StrictNotEqual` to itself -- and `\=` is one of the
+/// operators sharing `NotEqual` above. Not derived from the names alone:
+/// `\>>`/`\<<` are strict-family byte comparisons, where "greater"/"less" do
+/// not carry the numeric intuition their spelling suggests.
 fn compare_op(op: Operator) -> CompareOp {
     use Operator::*;
     match op {

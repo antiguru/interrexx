@@ -118,10 +118,10 @@ pub fn parse(args: &[Vec<u8>]) -> Command {
 /// byte after its first non-blank is a colon, `::OPTIONS ` and the string
 /// otherwise, cut to [`OVERRIDE_LIMIT`].
 ///
-/// **The byte looked at can lie past the string.** The oracle's launcher reads it
-/// out of `argv`'s memory, where an empty or all-blank string is followed by its
-/// terminator and the next word: measured, `-o '' ':x'` sends the empty string
-/// (93.900, argument 2 must not be empty).
+/// **The byte looked at can lie past the string.** The launcher reads it out of
+/// `argv`'s memory, where an empty or all-blank string is followed by its
+/// terminator and the next word: `-o '' ':x'` sends the empty string (93.900,
+/// argument 2 must not be empty).
 fn options_directive(rest: &[Vec<u8>]) -> Vec<u8> {
     let text = &rest[0];
     let first = text
@@ -141,9 +141,9 @@ fn options_directive(rest: &[Vec<u8>]) -> Vec<u8> {
     directive
 }
 
-/// The program `name` names: the oracle's name resolution for a program with
-/// no caller, so the current directory, then `REXX_PATH`, then `PATH`, each
-/// with the default extensions.
+/// The program `name` names: the name resolution for a program with no caller,
+/// so the current directory, then `REXX_PATH`, then `PATH`, each with the
+/// default extensions.
 pub fn resolve_program(
     name: &OsStr,
     cwd: &Path,
@@ -297,8 +297,8 @@ pub fn program_unreadable(path: &[u8]) -> (Vec<u8>, i32) {
     positionless(Raised::syntax(3, 1, vec![path.to_vec()]))
 }
 
-/// The report the oracle writes for `raised` with no program position, and
-/// the status `main` returns for it.
+/// The report written for `raised` with no program position, and the status
+/// `main` returns for it.
 pub(crate) fn positionless(mut raised: Raised) -> (Vec<u8>, i32) {
     raised.delivery.positionless = true;
     let report = raised.report(&ClauseSite {
@@ -353,8 +353,8 @@ impl Interp {
         Ok(())
     }
 
-    /// `failure` as the oracle shows a condition no clause of a program
-    /// raised: with no position when no recorded site has a line.
+    /// `failure` as a condition no clause of a program raised is shown: with no
+    /// position when no recorded site has a line.
     fn displayed_without_position(&self, failure: Failure) -> Failure {
         let mut sites = self
             .activity

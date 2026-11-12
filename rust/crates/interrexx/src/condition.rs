@@ -1,6 +1,5 @@
-//! The condition object a trap holds, whose copy `CONDITION('O')` answers:
-//! the Directory the oracle builds, with the entries the raised condition's
-//! own kind carries.
+//! The condition object a trap holds, whose copy `CONDITION('O')` answers: the
+//! Directory with the entries the raised condition's own kind carries.
 
 use interrexx_core::ObjRef;
 
@@ -10,8 +9,8 @@ use crate::error::{Failure, FailureSite, Raised};
 use crate::plan::Package;
 
 /// What the levels a trapped failure left contribute to its condition object:
-/// the frames the oracle takes at the raise, which this crate can only take
-/// as each level ends.
+/// the frames taken at the raise, which this crate can only take as each level
+/// ends.
 pub(crate) struct Unwound<'a> {
     /// Innermost first, as [`Activity::failure_sites`] holds them.
     pub(crate) sites: &'a [FailureSite],
@@ -56,8 +55,8 @@ mod key {
     pub(super) const STACKFRAMES: &[u8] = b"STACKFRAMES";
     pub(super) const TRACEBACK: &[u8] = b"TRACEBACK";
 
-    /// The order the oracle puts a `SYNTAX` condition's entries in, then the
-    /// trap's `INSTRUCTION`; iteration order depends on it.
+    /// The order of a `SYNTAX` condition's entries, then the trap's
+    /// `INSTRUCTION`; iteration order depends on it.
     pub(super) const SYNTAX_ORDER: &[&[u8]] = &[
         CODE,
         RC,
@@ -76,7 +75,7 @@ mod key {
         INSTRUCTION,
     ];
 
-    /// The oracle's order, for every other condition.
+    /// The order for every other condition.
     pub(super) const ORDER: &[&[u8]] = &[
         CONDITION,
         DESCRIPTION,
@@ -135,9 +134,9 @@ impl Interp {
         self.build_condition_object_from(raised, Some(false), false, Some(unwound))
     }
 
-    /// The oracle's re-raise over `object`: `POSITION`, `PROGRAM` and
-    /// `PACKAGE` become those of the level it was re-raised in, `origin` when
-    /// that level has since been left, and it is `PROPAGATED`.
+    /// The re-raise over `object`: `POSITION`, `PROGRAM` and `PACKAGE` become
+    /// those of the level it was re-raised in, `origin` when that level has
+    /// since been left, and it is `PROPAGATED`.
     pub(crate) fn reraise_condition_object(
         &mut self,
         object: ObjRef,
@@ -230,12 +229,12 @@ impl Interp {
         }
     }
 
-    /// The objects `message`'s `~notify` named sent `messageComplete` while
-    /// the condition its send failed with unwinds, its record set aside
-    /// meanwhile. A notifier's failure is answered with its own record in
-    /// the activity's, and the set-aside one below it where `keep` is set:
-    /// on the oracle a held send's notifier runs above the levels the
-    /// condition was raised in, and a started one's after they have gone.
+    /// The objects `message`'s `~notify` named sent `messageComplete` while the
+    /// condition its send failed with unwinds, its record set aside meanwhile.
+    /// A notifier's failure is answered with its own record in the activity's,
+    /// and the set-aside one below it where `keep` is set: a held send's
+    /// notifier runs above the levels the condition was raised in, and a
+    /// started one's after they have gone.
     pub(crate) fn notify_failed_send(
         &mut self,
         message: ObjRef,
@@ -418,11 +417,10 @@ impl Interp {
         crate::dispatch::hash::directory_put(self, object, name, value)
     }
 
-    /// [`Interp::build_condition_object`] for a condition the innermost
-    /// native call raised, whose own frame leads `STACKFRAMES` and
-    /// `TRACEBACK`. Where it is a callback's failure, `levels` are the levels
-    /// it left, whose frames lead those, as the oracle builds the object at
-    /// the raise.
+    /// [`Interp::build_condition_object`] for a condition the innermost native
+    /// call raised, whose own frame leads `STACKFRAMES` and `TRACEBACK`. Where
+    /// it is a callback's failure, `levels` are the levels it left, whose
+    /// frames lead those, as the object is built at the raise.
     pub(crate) fn build_native_condition_object(
         &mut self,
         raised: &Raised,
@@ -676,10 +674,10 @@ impl Interp {
         let lines = self.new_list(list_class)?;
         // `POSITION` is the **innermost frame's** line, not
         // `clause_state.line()`. By the time a raise is trapped from a called
-        // routine the clause state has moved to the caller -- measured, the
-        // oracle answers 4 for a `RAISE ERROR 5` inside a routine where the
-        // caller's own clause is line 2. The frame already carries the right
-        // number, so it is read back rather than derived a second way.
+        // routine the clause state has moved to the caller -- 4 for a `RAISE
+        // ERROR 5` inside a routine where the caller's own clause is line 2.
+        // The frame already carries the right number, so it is read back rather
+        // than derived a second way.
         let mut position = None;
         if let Some(unwound) = unwound {
             for &frame in &unwound.frames {

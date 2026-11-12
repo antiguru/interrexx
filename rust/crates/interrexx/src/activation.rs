@@ -21,25 +21,23 @@ pub(crate) struct Trap {
     /// `CALL ON` rather than `SIGNAL ON`.
     pub(crate) call: bool,
     /// The label to transfer (or call) to -- `NAME label`, or the condition's
-    /// own name when `NAME` is omitted. `USER foo`'s own default is `FOO`,
-    /// measured: `signal on user foo` with a `foo:` label traps there.
-    /// **`Rc<[u8]>` and not `Box<[u8]>`, which is a measurement.** A callee
-    /// inherits its caller's trap table by clone, so every armed trap's label
-    /// was copied on every call. Measured with the marginal method -- a
-    /// `call` body run at N and 2N iterations, differenced -- one
-    /// `signal on novalue` cost 423 user instructions per call over a program
-    /// with no trap armed, and 319 with the label shared instead of copied.
-    /// The oracle's own figure for the same pair is 0, so the remainder is
-    /// the table and its keys, not this.
+    /// own name when `NAME` is omitted. `USER foo`'s own default is `FOO`:
+    /// `signal on user foo` with a `foo:` label traps there. **`Rc<[u8]>` and
+    /// not `Box<[u8]>`, which is a measurement.** A callee inherits its
+    /// caller's trap table by clone, so every armed trap's label was copied on
+    /// every call. Measured with the marginal method -- a `call` body run at N
+    /// and 2N iterations, differenced -- one `signal on novalue` cost 423 user
+    /// instructions per call over a program with no trap armed, and 319 with
+    /// the label shared instead of copied. The remainder is the table and its
+    /// keys, not this.
     pub(crate) label: std::rc::Rc<[u8]>,
     /// The trap is armed but held while its own `CALL ON` handler runs and
     /// its conditions with it (`crate::DelayedTrap`).
     pub(crate) delayed: bool,
 }
 
-/// The condition a handler running in this activation was entered for: as
-/// much of the oracle's condition Directory as `CONDITION()` can be answered
-/// from here.
+/// The condition a handler running in this activation was entered for: as much
+/// of the condition object as `CONDITION()` can be answered from here.
 /// ```text
 /// handler          condition('C')  ->  SYNTAX
 ///  call clearer    condition('C')  ->  SYNTAX      inherited
@@ -263,7 +261,7 @@ pub(crate) struct Activation {
     /// and equivalently whether the pool in it is its own.
     pub(crate) owns_frame: bool,
     /// How this activation was entered -- what an instruction whose legality
-    /// depends on the entry reads. [`Entry`] carries the oracle's own table.
+    /// depends on the entry reads. [`Entry`] carries the table.
     pub(crate) entry: Entry,
     /// What `PARSE SOURCE`'s second word answers while this activation runs.
     pub(crate) call_type: CallType,
@@ -273,8 +271,8 @@ pub(crate) struct Activation {
     /// Every name an `EXPOSE` in this activation bound to a scope pool on the
     /// receiving object, by the slot index that name resolves to here.
     pub(crate) exposed: Vec<(usize, InstanceVar)>,
-    /// How far this activation is through a `REPLY`, which is the oracle's
-    /// reply-issued flag plus its `REPLIED` execution state as one value.
+    /// How far this activation is through a `REPLY`, which is the reply-issued
+    /// flag plus the `REPLIED` execution state as one value.
     pub(crate) reply: ReplyState,
     /// Whether the `REPLY` that ran here carried a value.
     pub(crate) replied_a_value: bool,
@@ -295,9 +293,9 @@ pub(crate) struct Activation {
     /// ```
     pub(crate) first_instruction_pending: bool,
     /// How far this activation is past the point where a `>I>` could still be
-    /// announced -- the oracle's "allowed" and "done" flags as one value,
-    /// because the two are read together everywhere and a separate pair
-    /// admits states the oracle never reaches.
+    /// announced -- the "allowed" and "done" flags as one value, because the
+    /// two are read together everywhere and a separate pair admits states that
+    /// never arise.
     pub(crate) trace_entry: TraceEntry,
     pub(crate) pc: usize,
     /// This activation's own `NUMERIC DIGITS`/`FUZZ`/`FORM`.
@@ -328,10 +326,9 @@ pub(crate) struct Activation {
     /// ```
     pub(crate) address: AddressState,
     /// The `ADDRESS ... WITH` configurations in force here, keyed by the
-    /// **upcased** environment name -- measured, `address sh with output stem
-    /// o.` still redirects after a later `address SH`. `None` is the table
-    /// the oracle has not created yet (`settings.ioConfigs == OREF_NULL`),
-    /// which is every program that never writes one.
+    /// **upcased** environment name -- `address sh with output stem o.` still
+    /// redirects after a later `address SH`. `None` is the table that has not
+    /// been created yet, which is every program that never writes one.
     ///
     /// Behind an `Rc` so an internal call inherits it by refcount and a write
     /// in the callee clones first: that is `checkIOConfigTable`'s own lazy
@@ -362,11 +359,11 @@ pub(crate) struct Activation {
     /// Whether [`cached_clock`] needs a fresh read before this activation's
     /// clause may trust it -- the per-clause half [`cached_clock`]'s own doc
     /// names, set `true` once per instruction by `Op::Clause`'s region on
-    /// whichever activation is executing at the time, mirroring the oracle's
-    /// invalidation of its time stamp right after each instruction returns.
+    /// whichever activation is executing at the time, so the time stamp is
+    /// invalidated right after each instruction returns.
     pub(crate) clock_stale: bool,
     /// The `RexxContext` this activation's `.CONTEXT` answers, built on the
-    /// first ask and kept for the rest of the activation, as the oracle does.
+    /// first ask and kept for the rest of the activation.
     pub(crate) context_object: Option<ObjRef>,
     /// The `Message` whose held send this activation made last and that has
     /// not completed: the activation's single notify object, told of a
@@ -415,9 +412,8 @@ pub(crate) enum Entry {
 }
 
 /// `PARSE SOURCE`'s second word: the *calling context* the running activation
-/// was entered under, which the oracle keeps as `settings.calltype`
-/// and renders straight into the
-/// source string.
+/// was entered under, which is kept as the call type and rendered straight into
+/// the source string.
 /// ```text
 /// the program itself                          COMMAND
 /// an internal label, by CALL                  the enclosing activation's
@@ -438,9 +434,9 @@ pub(crate) enum CallType {
     Function,
     /// A `::METHOD` or `::ATTRIBUTE` body reached by a message send.
     Method,
-    /// The prologue of a file a `::REQUIRES` loaded, which the oracle runs
-    /// under the `REQUIRES` call type. Measured, oracle rc 0: `parse source`
-    /// in such a prologue answers `LINUX REQUIRES <its own path>`.
+    /// The prologue of a file a `::REQUIRES` loaded, which runs under the
+    /// `REQUIRES` call type. For example, `parse source` in such a prologue
+    /// answers `LINUX REQUIRES <its own path>`.
     Requires,
 }
 
@@ -543,8 +539,8 @@ impl ActivationFlags {
     }
 }
 
-/// [`Activation::cached_clock`] and [`Activation::elapsed_anchor`] before
-/// their first reading: the oracle's own `elapsedTime == 0`.
+/// [`Activation::cached_clock`] and [`Activation::elapsed_anchor`] before their
+/// first reading: the elapsed time being 0.
 pub(crate) const NO_CLOCK: i64 = 0;
 
 /// The part of an activation most never use, boxed off the call path.
@@ -1120,8 +1116,8 @@ impl Interp {
         id
     }
 
-    /// The activation stack innermost first -- the order the oracle walks it in
-    /// and the order `RexxContext~stackFrames` answers in.
+    /// The activation stack innermost first -- the order it is walked in and
+    /// the order `RexxContext~stackFrames` answers in.
     pub(crate) fn frames(&self) -> impl DoubleEndedIterator<Item = &Activation> {
         self.activity
             .running
@@ -1169,8 +1165,8 @@ impl Interp {
     }
 
     /// The innermost activation that is not an internal call: the one
-    /// `RANDOM`'s seed and `SETLOCAL`'s list belong to (the oracle's
-    /// `isInternalLevelCall` delegation to `parent`).
+    /// `RANDOM`'s seed and `SETLOCAL`'s list belong to (an internal call
+    /// delegates to its parent).
     pub(crate) fn top_level_activation_mut(&mut self) -> Option<&mut Activation> {
         if self
             .activity

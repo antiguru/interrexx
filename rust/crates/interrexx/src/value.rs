@@ -1,5 +1,5 @@
 //! The value model (D15): four functions every caller manipulates a value
-//! through, and the two rules the oracle makes observable everywhere.
+//! through, and the two rules that are observable everywhere.
 
 use crate::{Failure, Interp};
 use interrexx_core::{
@@ -398,12 +398,12 @@ impl Interp {
         out
     }
 
-    /// The rendering of a value as an object rather than as text, which is
-    /// what every `TRACE` value line prints, what an error message names an
-    /// object by, and what an array's own items are joined out of. A stem
-    /// renders as its default; an instance or class whose `OBJECTNAME` or
-    /// `DEFAULTNAME` is a method of its own is sent it, as the oracle sends
-    /// `OBJECTNAME`, and a condition the send raises is the rendering's.
+    /// The rendering of a value as an object rather than as text, which is what
+    /// every `TRACE` value line prints, what an error message names an object
+    /// by, and what an array's own items are joined out of. A stem renders as
+    /// its default; an instance or class whose `OBJECTNAME` or `DEFAULTNAME` is
+    /// a method of its own is sent it, as `OBJECTNAME` is sent, and a condition
+    /// the send raises is the rendering's.
     #[inline(never)]
     pub(crate) fn string_value_text(&mut self, value: ObjRef) -> Result<Vec<u8>, Failure> {
         // Called through a pointer the optimiser cannot see through: measured
@@ -535,11 +535,11 @@ impl Interp {
         })
     }
 
-    /// The rendering the oracle sends for: an instance or class's
-    /// `OBJECTNAME` where that is a method of its own, else its `DEFAULTNAME`
-    /// where it has no name set and that is; `None` where neither is sent. A
-    /// `Stem` subclass instance renders as its stem. The answer renders as
-    /// the primitive `OBJECTNAME` renders it.
+    /// The rendering that is sent for: an instance or class's `OBJECTNAME`
+    /// where that is a method of its own, else its `DEFAULTNAME` where it has
+    /// no name set and that is; `None` where neither is sent. A `Stem` subclass
+    /// instance renders as its stem. The answer renders as the primitive
+    /// `OBJECTNAME` renders it.
     #[cold]
     #[inline(never)]
     fn sent_string_value(&mut self, value: ObjRef) -> Result<Option<Vec<u8>>, Failure> {
@@ -736,15 +736,14 @@ impl Interp {
             }
             Redirect::StemSubclass(store) => return Cow::Owned(self.stem_subclass_text(store)),
             // **`string_value_text` and not `to_text`**, which is the
-            // difference between the referent's `stringValue()` and its
-            // string *conversion*, and it is measured rather than reasoned:
-            // The string request looks `MAKESTRING` up in the receiver's own
-            // behaviour and a reference's holds no such name, so the
-            // conversion falls through to `stringValue()`. Oracle rc 0, over
-            // a `zz` holding a two-item array: `say 'p' >zz` is `p an Array`
-            // where `say 'p' zz` is `p one` and `two`, and over an instance
-            // whose class defines `makeString`, `say 'p' >k` is the default
-            // name where `say 'p' k` runs the method.
+            // difference between the referent's `stringValue()` and its string
+            // *conversion*, and the difference is observable: The string
+            // request looks `MAKESTRING` up in the receiver's own behaviour and
+            // a reference's holds no such name, so the conversion falls through
+            // to `stringValue()`. Over a `zz` holding a two-item array, `say
+            // 'p' >zz` is `p an Array` where `say 'p' zz` is `p one` and `two`,
+            // and over an instance whose class defines `makeString`, `say 'p'
+            // >k` is the default name where `say 'p' k` runs the method.
             Redirect::VarRefValue(referenced) => {
                 return Cow::Owned(self.unsent_string_value_text(referenced));
             }
@@ -984,8 +983,8 @@ impl Interp {
     }
 
     /// [`Interp::to_number`] for the receiver of an operator: a `String`
-    /// subclass instance is `NotNumeric` here, because the oracle sends the
-    /// operator to it rather than computing.
+    /// subclass instance is `NotNumeric` here, because the operator is sent to
+    /// it rather than computed.
     #[inline]
     pub(crate) fn operand_number(&mut self, value: ObjRef) -> Result<Number, NotNumeric> {
         self.number_of(value, true)
@@ -1062,9 +1061,8 @@ impl Interp {
                 }
             }
             // A variable reference's number value is the referenced value's,
-            // which is why `>vr + 1` is `6` and not 41.1 -- measured, oracle
-            // rc 0. Read before the borrow is taken again, the way the stem
-            // redirect is.
+            // which is why `>vr + 1` is `6` and not 41.1. Read before the
+            // borrow is taken again, the way the stem redirect is.
             Body::VarRef(_) => self.reference_number(value, receiver),
             // A `Body::Stem` with `default: None`, the arm the redirect
             // above leaves behind: parses the object's own name, the
@@ -1081,18 +1079,17 @@ impl Interp {
             // and never numeric, so this answers the marker rather
             // than parsing what `to_text` would produce.
             Body::Native(_) => Err(NotNumeric),
-            // **The marker whatever they render as**, because the oracle
-            // sends an operator to its left operand as a message and neither
-            // answers one: measured, oracle rc 159, `a = (1,); say a + 1` and
-            // `o~objectName = '123'; say o + 1` are both `97.1 ... does not
-            // understand message "+".` even though each renders as a number,
-            // and the comparisons `say (a = 1)` and `say (o = 123)` are both
-            // `0` where parsing that rendering gives `1`.
+            // **The marker whatever they render as**, because an operator is
+            // sent to its left operand as a message and neither answers one: `a
+            // = (1,); say a + 1` and `o~objectName = '123'; say o + 1` are both
+            // `97.1 ... does not understand message "+".` even though each
+            // renders as a number, and the comparisons `say (a = 1)` and `say
+            // (o = 123)` are both `0` where parsing that rendering gives `1`.
             // `Interp::operator_operand_gap` is what reports them, and it is
             // reached only where this answers `NotNumeric` -- the premise
-            // `a_value_the_operator_gap_names_parses_as_no_number` holds. The
-            // oracle reads a `String` subclass instance's bytes as it reads a
-            // base string's.
+            // `a_value_the_operator_gap_names_parses_as_no_number` holds. A
+            // `String` subclass instance's bytes are read as a base string's
+            // are.
             Body::Instance {
                 native: Some(state),
                 ..
@@ -1262,10 +1259,9 @@ struct Chain {
 enum Redirect {
     /// A stem with a default answers *as* that default.
     StemDefault(ObjRef),
-    /// A `>name` reference answers *as* the variable it names, whose value
-    /// is read at the moment of the ask rather than captured -- measured on
-    /// the oracle, `o = >vr` then `vr = 'changed'` leaves `o~value` reading
-    /// `changed`.
+    /// A `>name` reference answers *as* the variable it names, whose value is
+    /// read at the moment of the ask rather than captured: `o = >vr` then `vr =
+    /// 'changed'` leaves `o~value` reading `changed`.
     VarRefValue(ObjRef),
     /// The same for a reference whose chain ends at a variable holding
     /// nothing, which reads as that variable's derived name, and for a cyclic

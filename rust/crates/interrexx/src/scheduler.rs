@@ -1,10 +1,9 @@
-//! The scheduler seam and the activity table:
-//! the running activity sits inline on `Interp`, every other one boxed here,
-//! and a switch swaps the two where a driver has exited or, for a pinned
-//! wait, inside the Rust frames that pin the outgoing activity. A pinned
-//! waiter that becomes ready while a loop nested above its own runs waits
-//! for that loop to return, so a buried sleeper can wake after a later
-//! deadline: a recorded divergence from the oracle, counted as a late wake.
+//! The scheduler seam and the activity table: the running activity sits inline
+//! on `Interp`, every other one boxed here, and a switch swaps the two where a
+//! driver has exited or, for a pinned wait, inside the Rust frames that pin the
+//! outgoing activity. A pinned waiter that becomes ready while a loop nested
+//! above its own runs waits for that loop to return, so a buried sleeper can
+//! wake after a later deadline: a recorded divergence, counted as a late wake.
 
 use std::cmp::Reverse;
 use std::collections::{BinaryHeap, VecDeque};
@@ -66,8 +65,8 @@ impl TimerId {
     }
 }
 
-/// A timer's state: the oracle's event semaphore (`SysSemaphore`), posted
-/// until reset, and the activities waiting on it.
+/// A timer's state: an event semaphore, posted until reset, and the activities
+/// waiting on it.
 #[derive(Default)]
 struct Timer {
     posted: bool,
@@ -287,9 +286,8 @@ pub(crate) struct Activities {
     retired: Vec<interrexx_api::ffi::ThreadContext>,
     /// The thread table every activity's context links.
     thread_table: interrexx_api::ffi::ThreadTable,
-    /// The numbers of ended activities a new one takes first, oldest first:
-    /// the oracle's pool of idle threads, whose threads keep their numbers,
-    /// including none.
+    /// The numbers of ended activities a new one takes first, oldest first: a
+    /// pool of idle threads, whose threads keep their numbers, including none.
     pooled: VecDeque<Option<u32>>,
     /// The last number assigned.
     last_number: u32,
@@ -322,7 +320,7 @@ pub(crate) struct Activities {
     main_finished: bool,
 }
 
-/// The oracle's `msecInADay`: a timer's wait is whole days of this, then a
+/// Milliseconds in a day: a timer's wait is whole days of this, then a
 /// remainder.
 pub(crate) const TIMER_DAY: std::time::Duration = std::time::Duration::from_secs(86_400);
 
@@ -801,8 +799,7 @@ impl Scheduler for Interp {
     }
 }
 
-/// The oracle's `yieldInstructions`: the clauses an activation runs before it
-/// may give up the kernel.
+/// The clauses an activation runs before it may give up the kernel.
 const DELIVERY_YIELD_CLAUSES: u32 = 50;
 
 impl Interp {
@@ -966,9 +963,8 @@ impl Interp {
         }
     }
 
-    /// The running activity's number, which `.context~thread` answers: main
-    /// is 1 and an activity is numbered when first asked, as the oracle
-    /// numbers its threads.
+    /// The running activity's number, which `.context~thread` answers: main is
+    /// 1 and an activity is numbered when first asked, as threads are numbered.
     pub(crate) fn activity_number(&mut self) -> u32 {
         if let Some(number) = self.activity.number {
             return number;
@@ -1400,7 +1396,7 @@ impl Interp {
     /// Posts `id`, `cancelled` saying for each of [`Interp::timer_waiters`]
     /// whether its object's `CANCELED` is `.true`, and wakes every waiter. A
     /// waiter in its whole days whose object is not cancelled resets the post
-    /// and has its current day end instead, as the oracle's day loop does.
+    /// and has its current day end instead, as the day loop does.
     ///
     /// # Panics
     ///
@@ -1750,10 +1746,9 @@ impl Interp {
         self.activities.late_failures.push(failure);
     }
 
-    /// Runs every started activity to its end, for the end of the program.
-    /// One that nothing left can wake keeps the program waiting, as the
-    /// oracle's termination does, until the run's deadline or a signal's halt
-    /// wakes it.
+    /// Runs every started activity to its end, for the end of the program. One
+    /// that nothing left can wake keeps the program waiting, as termination
+    /// does, until the run's deadline or a signal's halt wakes it.
     pub(crate) fn run_started_activities(&mut self) -> Result<(), Failure> {
         self.activities.main_finished = true;
         self.cancel_wait();
@@ -1984,8 +1979,8 @@ impl Interp {
                 }
             }
             first => 'resumed: {
-                // The oracle's resumed activation announces itself again
-                // where it had before the `REPLY`.
+                // A resumed activation announces itself again where it had
+                // before the `REPLY`.
                 if matches!(first, Some(First::Reply)) {
                     if !self.reserve_for_continuation() {
                         self.activity.first = first;
@@ -2061,13 +2056,13 @@ impl Interp {
         Ok(Stopped::Ended)
     }
 
-    /// Settles and reports `failed`, the failure a started activity ended
-    /// with, as the oracle's activity handler and then the thread's own do:
-    /// the message `started` is told of it, and where a notifier fails, that
-    /// failure replaces it and is reported. A target is sent
-    /// `messageComplete` once for the message (Deviation 116): where
-    /// `notified` says the failure is that of a notifier, the targets are not
-    /// sent it again, and a replacement is not told to them.
+    /// Settles and reports `failed`, the failure a started activity ended with,
+    /// as the activity handler and then the thread's own do: the message
+    /// `started` is told of it, and where a notifier fails, that failure
+    /// replaces it and is reported. A target is sent `messageComplete` once for
+    /// the message (Deviation 116): where `notified` says the failure is that
+    /// of a notifier, the targets are not sent it again, and a replacement is
+    /// not told to them.
     fn end_failed_started(
         &mut self,
         started: Option<ObjRef>,
@@ -2197,7 +2192,7 @@ impl Interp {
             sites: &sites,
         };
         // With no level that has a line, the report names no program or line
-        // (as the oracle displays a condition with no `POSITION`).
+        // (as a condition with no `POSITION` is displayed).
         let report = if sites.iter().any(crate::error::FailureSite::positions) {
             raised.report_lines(&site)
         } else {
@@ -2366,7 +2361,7 @@ impl Interp {
             self.count_delivery_clause();
         }
         // Inside a delivery the slice is taken at the first clause that may
-        // yield, as the oracle's own count is checked at each instruction.
+        // yield, as the count is checked at each instruction.
         if (fresh || self.activity.routing_trace)
             && self.slice_deferred
             && self.activity.pin_depth > 0
@@ -2417,7 +2412,7 @@ impl Interp {
     /// that guard under a pin of its own. Otherwise it may once the running
     /// activation has run more than [`DELIVERY_YIELD_CLAUSES`] clauses of its
     /// own since the slice fell due, its callees' not counted and not
-    /// restarting its count. The oracle yields only in an activation past its
+    /// restarting its count. A yield happens only in an activation past its
     /// yield-instruction count, which each activation keeps, or at a native
     /// call, so a short destination's clauses never let another activity's
     /// lines in between.
@@ -2466,13 +2461,13 @@ impl Interp {
         }
     }
 
-    /// One round of the other ready activities, where a started activity
-    /// ending holds no frame of its driver's: on the oracle the activity a
-    /// notifier failed in gives up the kernel lock while the failure
-    /// unwinds, and an activity the completion woke runs then. Its end runs
-    /// on below the round, so a loop above sets it aside. Each such yield
-    /// nests, so one made with less than half the stack's room left is not
-    /// made, keeping room for the code of the activities ending below it.
+    /// One round of the other ready activities, where a started activity ending
+    /// holds no frame of its driver's: the activity a notifier failed in gives
+    /// up the kernel lock while the failure unwinds, and an activity the
+    /// completion woke runs then. Its end runs on below the round, so a loop
+    /// above sets it aside. Each such yield nests, so one made with less than
+    /// half the stack's room left is not made, keeping room for the code of the
+    /// activities ending below it.
     fn yield_after_notifier_failure(&mut self) -> Result<(), Failure> {
         let probe = 0u8;
         if !self.any_ready()
@@ -2484,12 +2479,12 @@ impl Interp {
         self.run_round(true).map(|_| ())
     }
 
-    /// A pinned activity's yield: one round of the other ready
-    /// activities on its own stack, as a pinned wait runs them, each until it
-    /// parks, ends or its own slice ends; those whose frames lie below are
-    /// set aside, and a round that set one aside is counted as an inverted
-    /// yield. A pinned busy-wait on a buried activity therefore spins where
-    /// the oracle completes, a recorded divergence.
+    /// A pinned activity's yield: one round of the other ready activities on
+    /// its own stack, as a pinned wait runs them, each until it parks, ends or
+    /// its own slice ends; those whose frames lie below are set aside, and a
+    /// round that set one aside is counted as an inverted yield. A pinned
+    /// busy-wait on a buried activity therefore spins where a completed one
+    /// would not, a recorded divergence.
     fn pinned_yield(&mut self) -> Result<(), Failure> {
         pinned_yield!(self);
         self.yield_at_slice();

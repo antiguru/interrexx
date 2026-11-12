@@ -9,8 +9,8 @@ use crate::error::Raised;
 use crate::plan::{Package, ProgramId};
 use crate::{Failure, Interp};
 
-/// The message one checkpoint sends, and the entries its info directory
-/// carries in. The oracle's six checks, one per method of the manager.
+/// The message one checkpoint sends, and the entries its info directory carries
+/// in. Six checks, one per method of the manager.
 pub(crate) mod message {
     pub(crate) const COMMAND: &[u8] = b"COMMAND";
     pub(crate) const STREAM: &[u8] = b"STREAM";
@@ -46,7 +46,7 @@ impl Interp {
     /// write the same place.
     ///
     /// Every activation already running `package`'s code keeps the manager it
-    /// started under, as the oracle's copies it into its settings when it
+    /// started under, as it is copied into the activation's settings when it
     /// begins.
     pub(crate) fn install_security_manager(&mut self, package: ObjRef, manager: Option<ObjRef>) {
         if let Some(previous) = self.package_data(package).map(|data| data.security_manager) {
@@ -103,8 +103,8 @@ impl Interp {
     }
 
     /// [`Interp::effective_security_manager`] once any manager has been
-    /// installed. A started message's activity runs no activation, and the
-    /// oracle finds no manager for it.
+    /// installed. A started message's activity runs no activation, and no
+    /// manager is found for it.
     #[inline(never)]
     fn armed_security_manager(&self) -> Option<ObjRef> {
         let activation = self.activity.running.as_deref()?;
@@ -297,7 +297,7 @@ impl Interp {
     }
 
     /// Whether the method `object` stands for is protected: a protected primitive of the
-    /// oracle's class table, or one `setProtected` was sent to.
+    /// class table, or one `setProtected` was sent to.
     pub(crate) fn installed_is_protected(&self, object: ObjRef) -> bool {
         self.executable_sources
             .get(&object)

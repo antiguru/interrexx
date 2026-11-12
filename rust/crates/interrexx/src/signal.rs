@@ -37,8 +37,8 @@ pub(crate) fn current_thread() -> usize {
 }
 
 /// Flushes the C library's output streams, so that what a C program embedding the interpreter
-/// wrote through stdio before a program's output lands before it, as on the oracle, also where
-/// standard output is a file and stdio holds it back.
+/// wrote through stdio before a program's output lands before it, also where standard output
+/// is a file and stdio holds it back.
 pub(crate) fn flush_c_streams() {
     // SAFETY: `fflush(NULL)` flushes every open output stream, each under its own lock.
     unsafe {
@@ -271,7 +271,7 @@ impl Interrupter {
 /// for `rxunixsys`'s `SysSignal`: the `errno` of a refusal. It replaces any
 /// action, the halting signals' handlers included, so a SIGINT after
 /// `SysSignal(2, 'I')` is ignored and after `SysSignal(2, 'D')` ends the
-/// process, as on the oracle.
+/// process.
 pub(crate) fn set_disposition(number: i32, ignore: bool) -> Result<(), i32> {
     let action = if ignore { libc::SIG_IGN } else { libc::SIG_DFL };
     // SAFETY: `SIG_IGN` and `SIG_DFL` install no code; `signal` checks the
@@ -381,9 +381,9 @@ mod tests {
 
     /// A halt readies a deadline-woken activity that a nested loop has set
     /// aside only once: main's timed wait in an `INTERPRET` is due while
-    /// another activity's pinned wait runs a busy one, and a second entry
-    /// would end main's later `SysSleep` at once. The halt queued in the
-    /// `INTERPRET` runs no handler, as on the oracle.
+    /// another activity's pinned wait runs a busy one, and a second entry would
+    /// end main's later `SysSleep` at once. The halt queued in the `INTERPRET`
+    /// runs no handler.
     #[test]
     fn a_halt_readies_a_set_aside_activity_once() {
         if !alone("signal::tests::a_halt_readies_a_set_aside_activity_once") {

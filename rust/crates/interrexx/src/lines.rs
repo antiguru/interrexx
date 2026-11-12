@@ -13,9 +13,9 @@ pub(crate) fn as_position(value: u64) -> i64 {
     i64::try_from(value).unwrap_or(i64::MAX)
 }
 
-/// A logical character position as a file offset. A position below 1 is not
-/// a legal offset -- a `SEEK` can drive one negative and the oracle's `lseek`
-/// fails there -- so it clamps, and the read or write then finds nothing.
+/// A logical character position as a file offset. A position below 1 is not a
+/// legal offset -- a `SEEK` can drive one negative and `lseek` fails there --
+/// so it clamps, and the read or write then finds nothing.
 pub(crate) fn offset_of(position: i64) -> u64 {
     u64::try_from(position).unwrap_or(0)
 }
@@ -36,8 +36,8 @@ pub(crate) fn read_from(
     Ok(out)
 }
 
-/// The lines from `position` to the end, counted the way the oracle counts
-/// them: an unterminated final line counts.
+/// The lines from `position` to the end, counted as follows: an unterminated
+/// final line counts.
 pub(crate) fn count_lines_from(file: &mut std::fs::File, position: u64) -> std::io::Result<u64> {
     let mut count = 0;
     let mut at = position;
