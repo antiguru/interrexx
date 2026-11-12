@@ -1562,7 +1562,7 @@ ooRexx answers `.nil`. See [Deviation 45](../deviations.md).
 say .bag~of(1, 1, 1)~hasItem(1, 2) .bag~of('a')~hasItem('a', 'A')
 ```
 
-```output defect=#172
+```output
 0 0
 ```
 
