@@ -487,7 +487,9 @@ package keeps in the table that <code>.METHODS</code> names, as <a href="method.
 methods</a> are kept, under the name in upper case. Its
 value is limited to the forms that are not expressions: a floating constant
 whose value is in parentheses raises <code>SYNTAX 99.906</code> when the program is read.
-A name declared twice raises <code>99.932</code>, as it does in a class.</p>
+A name declared twice raises <code>99.932</code>, as it does in a class. The <code>ADDITIONAL</code>
+array of the 99.906 condition holds one item, the name in upper case, though
+the message text does not use it.</p>
 <pre><code class="language-rexx">say .methods~items
 say .methods~allindexes~sort~makearray~makestring('l', ' ')
 .box~define('LIMIT', .methods['LIMIT'])
@@ -515,6 +517,12 @@ FREE LIMIT
 99
 ::constant a (1) =&gt; 99.906
 ::constant a 1 / ::constant A 2 =&gt; 99.932
+</code></pre>
+<pre><code class="language-rexx">signal on syntax
+p = .package~new('spec-dir-constant-fl2', '::Constant mixed (1+2)')
+syntax: say condition('o')~code condition('o')~additional~items condition('o')~additional[1]
+</code></pre>
+<pre><code class="language-output">99.906 1 MIXED
 </code></pre>
 <h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
 <div class="rule" id="r-dir.constant.deviation.69"><a href="#r-dir.constant.deviation.69">[dir.constant.deviation.69]</a></div>

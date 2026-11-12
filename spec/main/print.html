@@ -20385,7 +20385,9 @@ package keeps in the table that <code>.METHODS</code> names, as <a href="directi
 methods</a> are kept, under the name in upper case. Its
 value is limited to the forms that are not expressions: a floating constant
 whose value is in parentheses raises <code>SYNTAX 99.906</code> when the program is read.
-A name declared twice raises <code>99.932</code>, as it does in a class.</p>
+A name declared twice raises <code>99.932</code>, as it does in a class. The <code>ADDITIONAL</code>
+array of the 99.906 condition holds one item, the name in upper case, though
+the message text does not use it.</p>
 <pre><code class="language-rexx">say .methods~items
 say .methods~allindexes~sort~makearray~makestring('l', ' ')
 .box~define('LIMIT', .methods['LIMIT'])
@@ -20413,6 +20415,12 @@ FREE LIMIT
 99
 ::constant a (1) =&gt; 99.906
 ::constant a 1 / ::constant A 2 =&gt; 99.932
+</code></pre>
+<pre><code class="language-rexx">signal on syntax
+p = .package~new('spec-dir-constant-fl2', '::Constant mixed (1+2)')
+syntax: say condition('o')~code condition('o')~additional~items condition('o')~additional[1]
+</code></pre>
+<pre><code class="language-output">99.906 1 MIXED
 </code></pre>
 <h2 id="deviations-21"><a class="header" href="#deviations-21">Deviations</a></h2>
 <div class="rule" id="r-dir.constant.deviation.69"><a href="directives/constant.html#r-dir.constant.deviation.69">[dir.constant.deviation.69]</a></div>
@@ -32693,7 +32701,7 @@ bad: say condition('o')~code
 ::method item
   return 'return 9'
 </code></pre>
-<pre><code class="language-output defect=#139">1 2 available index item next
+<pre><code class="language-output">1 2 available index item next
 1 2
 97.1
 </code></pre>
@@ -32724,7 +32732,7 @@ say e~m1 e~m2 .k~new~hasMethod('m1')
   expose i
   i = i + 1
 </code></pre>
-<pre><code class="language-output defect=#139">1 2 0
+<pre><code class="language-output">1 2 0
 </code></pre>
 <div class="rule" id="r-class.class.deviation.109"><a href="classes/class.html#r-class.class.deviation.109">[class.class.deviation.109]</a></div>
 <p>An instance of a subclass of <code>String</code> that is the id of <code>subclass</code> or
@@ -34041,7 +34049,7 @@ bad: say arg(1) '=&gt;' condition('o')~code
 ::method string
   return 6
 </code></pre>
-<pre><code class="language-output defect=#138">2 5
+<pre><code class="language-output">2 5
 </code></pre>
 <h3 id="base-64"><a class="header" href="#base-64">Base 64</a></h3>
 <div class="rule" id="r-class.string.encodebase64"><a href="classes/string.html#r-class.string.encodebase64">[class.string.encodebase64]</a></div>
@@ -71963,7 +71971,7 @@ show:
   say f~type f~context~isNil f~invocation~isNil
   return
 </code></pre>
-<pre><code class="language-output defect=#181">COMPILE 1 1
+<pre><code class="language-output">COMPILE 1 1
 COMPILE 1 1
 </code></pre>
 <h2 id="deviations-59"><a class="header" href="#deviations-59">Deviations</a></h2>
@@ -76051,7 +76059,7 @@ say k~isPosted e~isPosted k~wait(0.05)
 c = .eventsemaphore~new~copy
 say c~isPosted c~wait(0)
 </code></pre>
-<pre><code class="language-output defect=#182">1 1
+<pre><code class="language-output">1 1
 1 0
 0 1 0
 0 0
@@ -118333,7 +118341,7 @@ show: procedure
 say trace('N?') trace('a?') trace('?N?') trace()
 say trace('N??') trace('??N?') trace()
 </code></pre>
-<pre><code class="language-output defect=#80">N N A ?N
+<pre><code class="language-output">N N A ?N
 ?N N N
 </code></pre>
 <div class="rule" id="r-bif.trace.prefix"><a href="builtins/trace.html#r-bif.trace.prefix">[bif.trace.prefix]</a></div>
