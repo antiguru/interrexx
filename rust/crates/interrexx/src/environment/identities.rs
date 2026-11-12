@@ -927,6 +927,15 @@ impl Interp {
         }
     }
 
+    /// Gives a method object loaded from a library an annotation table of its
+    /// own, empty for good: no directive declared it, so `~annotation` answers
+    /// `.nil` and `~annotations` an empty table (`r[class.method.annotations]`).
+    pub(crate) fn attach_empty_annotations(&mut self, object: ObjRef) {
+        let site = Annotated::Compiled(self.compiled_methods);
+        self.compiled_methods += 1;
+        self.attach_annotations(object, site);
+    }
+
     /// The `StringTable` a receiver's `~annotations` answers, or the refusal
     /// for a receiver that carries none.
     pub(crate) fn annotations_of(&mut self, receiver: ObjRef) -> Result<ObjRef, Failure> {
