@@ -1,4 +1,5 @@
-//! `bounded-run`, the time limit the tests put around a program they start.
+//! `bounded-run`, a test helper: the time limit the tests put around a program they start.
+//! It is not part of the interpreter and nothing outside the tests runs it.
 //!
 //! The tests used to start programs through the system's `timeout`, whose
 //! answers differ between coreutils implementations: a Rust `timeout` refuses
