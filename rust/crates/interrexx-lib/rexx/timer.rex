@@ -59,10 +59,12 @@
 ::method init guarded
   expose armed attachment target canceled triggered scheduledTime ,
     eventSemHandle timerStarted
+  use strict arg atime, tgt, att = .nil
   -- r[conc.halt.deviation.162]: a second init is refused and changes nothing.
+  -- The count of its arguments is checked before that, so a send with a
+  -- wrong count raises the count's error as for any other init.
   if armed == 1 then
     raise syntax 98.900 array('init was sent to an alarm that is already set up')
-  use strict arg atime, tgt, att = .nil
   numeric digits 18
   if \tgt~isA(.AlarmNotification) then
     raise syntax 88.914 array(2, 'AlarmNotification')
@@ -180,7 +182,7 @@
   target~cancel(self)
 
 -- r[class.ticker.creation]
-::class "Ticker" public
+::class Ticker public
 
 -- r[class.ticker.attachment], r[class.ticker.canceled], r[class.ticker.interval]:
 -- each reader refuses a ticker whose init never ran
@@ -213,10 +215,12 @@
 -- r[class.ticker.init.sends]
 ::method init guarded
   expose armed attachment target canceled interval eventSemHandle
+  use strict arg ival, tgt, att = .nil
   -- r[conc.halt.deviation.162]: a second init is refused and changes nothing.
+  -- The count of its arguments is checked before that, so a send with a
+  -- wrong count raises the count's error as for any other init.
   if armed == 1 then
     raise syntax 98.900 array('init was sent to a ticker that is already set up')
-  use strict arg ival, tgt, att = .nil
   numeric digits 18
   if \tgt~isA(.AlarmNotification) then
     raise syntax 88.914 array(2, 'AlarmNotification')
