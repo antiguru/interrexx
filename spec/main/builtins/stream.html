@@ -341,7 +341,9 @@ leading letters down to the first. What is after the word is the command's
 own, and the rules for each say what it is. A first word
 that no command begins with raises <code>SYNTAX 93.914</code>, and anything the
 command does not take after it, <code>SYNTAX 93.0</code>. A <code>command</code> that is the null
-string, or only blanks, has no first word, and what it does is not specified.</p>
+string, or only blanks, has no first word and closes the stream, as <code>CLOSE</code>
+does: it answers <code>READY:</code> for a stream that was open and the null string for
+one that was not.</p>
 <pre><code class="language-rexx">f = 'spec-stream-command.tmp'
 call sysfiledelete f
 call charout f, 'abc'
@@ -365,6 +367,21 @@ call sysfiledelete f
 93.0
 93.914
 </code></pre>
+<pre><code class="language-rexx">f = 'spec-stream-emptycmd.tmp'
+call sysfiledelete f
+call charout f, 'abc'
+call charout f
+say stream(f, 'c', 'open') stream(f)
+say '['stream(f, 'c', '')']' stream(f)
+say '['stream(f, 'c', '   ')']' stream(f)
+say stream(f, 'c', 'open') '['stream(f, 'c', '  ')']' stream(f)
+call sysfiledelete f
+</code></pre>
+<pre><code class="language-output">READY: READY
+[READY:] UNKNOWN
+[] UNKNOWN
+READY: [READY:] UNKNOWN
+</code></pre>
 <h3 id="open"><a class="header" href="#open">OPEN</a></h3>
 <div class="rule" id="r-bif.stream.open.result"><a href="#r-bif.stream.open.result">[bif.stream.open.result]</a></div>
 <p><code>OPEN</code> opens the stream and answers <code>READY:</code>. If it cannot, it answers
@@ -379,7 +396,8 @@ options, <a href="#r-bif.stream.open.mode">the next rules</a> give them. The wor
 <code>SHARED</code>, <code>SHAREREAD</code>, <code>SHAREWRITE</code> and <code>NOBUFFER</code> are accepted, and what they
 do is not specified; so are their shortenings as far as <code>SHARER</code>, <code>SHAREW</code> and
 <code>NOB</code>. Any other word in the list raises <code>SYNTAX 93.0</code>, a shortening of
-<code>SHARED</code> among them.</p>
+<code>SHARED</code> among them. So do two of <code>SHARED</code>, <code>SHAREREAD</code> and <code>SHAREWRITE</code>, and
+<code>NOBUFFER</code> given twice.</p>
 <pre><code class="language-rexx">f = 'spec-stream-open.tmp'
 call sysfiledelete f
 n = 0
@@ -474,6 +492,91 @@ READY: 0 READY:
 93.0
 93.0
 </code></pre>
+<pre><code class="language-rexx">f = 'spec-stream-openmore.tmp'
+call sysfiledelete f
+call charout f, 'abcdef'
+call charout f
+call try "stream(f, 'c', 'open nobuffer nobuffer')"
+call try "stream(f, 'c', 'open shared shared')"
+call try "stream(f, 'c', 'open shared shareread')"
+call try "stream(f, 'c', 'open sharewrite sharer')"
+call try "stream(f, 'c', 'open read nobuffer shared')"
+call try "stream(f, 'c', 'open both write')"
+call try "stream(f, 'c', 'open both both')"
+call try "stream(f, 'c', 'open write write')"
+call try "stream(f, 'c', 'open read both')"
+call try "stream(f, 'c', 'open write append')"
+call try "stream(f, 'c', 'open both append')"
+call try "stream(f, 'c', 'open write replace')"
+call try "stream(f, 'c', 'open append append')"
+call try "stream(f, 'c', 'open append replace')"
+call try "stream(f, 'c', 'open replace append')"
+call try "stream(f, 'c', 'open replace replace')"
+call try "stream(f, 'c', 'open replace read')"
+call try "stream(f, 'c', 'open append read')"
+call try "stream(f, 'c', 'open  READ ')"
+call try "stream(f, 'c', 'open 1')"
+call try "stream(f, 'c', 'open readx')"
+call try "stream(f, 'c', 'open b')"
+call try "stream(f, 'c', 'open a')"
+call try "stream(f, 'c', 'open repl')"
+call try "stream(f, 'c', 'close')"
+call sysfiledelete f
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say left(arg(1), 42) '=&gt; [' || r || ']'
+  return
+bad: say left(arg(1), 42) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">stream(f, 'c', 'open nobuffer nobuffer')   =&gt; 93.0
+stream(f, 'c', 'open shared shared')       =&gt; 93.0
+stream(f, 'c', 'open shared shareread')    =&gt; 93.0
+stream(f, 'c', 'open sharewrite sharer')   =&gt; 93.0
+stream(f, 'c', 'open read nobuffer shared' =&gt; [READY:]
+stream(f, 'c', 'open both write')          =&gt; 93.0
+stream(f, 'c', 'open both both')           =&gt; 93.0
+stream(f, 'c', 'open write write')         =&gt; 93.0
+stream(f, 'c', 'open read both')           =&gt; 93.0
+stream(f, 'c', 'open write append')        =&gt; [READY:]
+stream(f, 'c', 'open both append')         =&gt; [READY:]
+stream(f, 'c', 'open write replace')       =&gt; [READY:]
+stream(f, 'c', 'open append append')       =&gt; 93.0
+stream(f, 'c', 'open append replace')      =&gt; 93.0
+stream(f, 'c', 'open replace append')      =&gt; 93.0
+stream(f, 'c', 'open replace replace')     =&gt; 93.0
+stream(f, 'c', 'open replace read')        =&gt; 93.0
+stream(f, 'c', 'open append read')         =&gt; 93.0
+stream(f, 'c', 'open  READ ')              =&gt; [READY:]
+stream(f, 'c', 'open 1')                   =&gt; 93.0
+stream(f, 'c', 'open readx')               =&gt; 93.0
+stream(f, 'c', 'open b')                   =&gt; 93.0
+stream(f, 'c', 'open a')                   =&gt; 93.0
+stream(f, 'c', 'open repl')                =&gt; [READY:]
+stream(f, 'c', 'close')                    =&gt; [READY:]
+</code></pre>
+<pre><code class="language-rexx">f = 'spec-stream-openfail.tmp'
+call sysfiledelete f
+n = 0
+call on notready name nr
+say stream(f, 'c', 'open read') stream(f) n
+say stream(f, 'c', 'open write') stream(f) (stream(f, 'c', 'query exists') \== '')
+say stream(f, 'c', 'close') stream(f, 'c', 'open replace') stream(f, 'c', 'query size')
+say stream(f, 'c', 'close')
+say stream('.', 'c', 'open read') stream('.') n
+call sysfiledelete f
+exit
+nr: n = n + 1
+return
+</code></pre>
+<pre><code class="language-output">ERROR:2 UNKNOWN 0
+READY: READY 1
+READY: READY: 0
+READY:
+ERROR:2 UNKNOWN 1
+</code></pre>
 <div class="rule" id="r-bif.stream.open.again"><a href="#r-bif.stream.open.again">[bif.stream.open.again]</a></div>
 <p><code>OPEN</code> of a stream that is open opens it afresh: the positions are those
 of a stream just opened, the read position at the first character and the
@@ -505,7 +608,10 @@ short. <a href="lines.html#r-bif.lines.count">LINES</a> counts records.
 <a href="lineout.html#r-bif.lineout.result">LINEOUT</a> writes its string and then blanks up to the
 end of the record that the write position is in, with no line end; a string
 that is longer than the rest of that record raises <code>SYNTAX 93.0</code> and writes
-nothing, and the stream stays <code>READY</code>. The option <code>BINARY</code> without <code>RECLENGTH</code>
+nothing, and the stream stays <code>READY</code>. <code>RECLENGTH</code> that does not come after
+<code>BINARY</code>, an <code>n</code> that is not a whole number of 1 or more, <code>BINARY</code> or
+<code>RECLENGTH</code> given twice, and <code>BINARY</code> with <code>REPLACE</code> and no <code>RECLENGTH</code> raise
+<code>SYNTAX 93.0</code>. The option <code>BINARY</code> without <code>RECLENGTH</code>
 is not specified, and neither is <code>BINARY RECLENGTH</code> without <code>n</code>, except that
 when <code>BINARY</code> without <code>RECLENGTH</code> raises <code>SYNTAX 93.0</code>, as it does for a file
 that is missing or empty, the stream is <code>UNKNOWN</code> afterwards (<a href="#r-bif.stream.deviation.145">Deviation
@@ -548,6 +654,56 @@ call sysfiledelete f
 93.0 READY
 READY:
 [ab__xy__]
+</code></pre>
+<pre><code class="language-rexx">f = 'spec-stream-openopts.tmp'
+call sysfiledelete f
+call charout f, 'abcdefghij'
+call charout f
+call try "stream(f, 'c', 'open binary reclength 4 read')"
+call try "'['linein(f)']' '['linein(f)']' '['linein(f)']' lines(f)"
+call try "stream(f, 'c', 'open bi rec 4')"
+call try "stream(f, 'c', 'open binary reclength 0')"
+call try "stream(f, 'c', 'open binary reclength x')"
+call try "stream(f, 'c', 'open binary reclength 1.5')"
+call try "stream(f, 'c', 'open reclength 4')"
+call try "stream(f, 'c', 'open reclength 4 binary')"
+call try "stream(f, 'c', 'open binary binary reclength 4')"
+call try "stream(f, 'c', 'open binary reclength 4 reclength 5')"
+call try "stream(f, 'c', 'open binary reclength 4 5')"
+call try "stream(f, 'c', 'open replace binary')"
+call try "stream(f, 'c', 'open binary replace reclength 3')"
+call try "lineout(f, 'abc') stream(f, 'c', 'query size')"
+call try "stream(f, 'c', 'close')"
+call try "stream('spec-stream-openopts-none.tmp', 'c', 'open binary reclength 2') stream('spec-stream-openopts-none.tmp', 'c', 'query size')"
+call try "stream('spec-stream-openopts-none.tmp', 'c', 'close')"
+call sysfiledelete f
+call sysfiledelete 'spec-stream-openopts-none.tmp'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say left(arg(1), 62) '=&gt; [' || r || ']'
+  return
+bad: say left(arg(1), 62) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">stream(f, 'c', 'open binary reclength 4 read')                 =&gt; [READY:]
+'['linein(f)']' '['linein(f)']' '['linein(f)']' lines(f)       =&gt; [[abcd] [efgh] [ij] 0]
+stream(f, 'c', 'open bi rec 4')                                =&gt; [READY:]
+stream(f, 'c', 'open binary reclength 0')                      =&gt; 93.0
+stream(f, 'c', 'open binary reclength x')                      =&gt; 93.0
+stream(f, 'c', 'open binary reclength 1.5')                    =&gt; 93.0
+stream(f, 'c', 'open reclength 4')                             =&gt; 93.0
+stream(f, 'c', 'open reclength 4 binary')                      =&gt; 93.0
+stream(f, 'c', 'open binary binary reclength 4')               =&gt; 93.0
+stream(f, 'c', 'open binary reclength 4 reclength 5')          =&gt; 93.0
+stream(f, 'c', 'open binary reclength 4 5')                    =&gt; 93.0
+stream(f, 'c', 'open replace binary')                          =&gt; 93.0
+stream(f, 'c', 'open binary replace reclength 3')              =&gt; [READY:]
+lineout(f, 'abc') stream(f, 'c', 'query size')                 =&gt; [0 3]
+stream(f, 'c', 'close')                                        =&gt; [READY:]
+stream('spec-stream-openopts-none.tmp', 'c', 'open binary recl =&gt; [READY: 0]
+stream('spec-stream-openopts-none.tmp', 'c', 'close')          =&gt; [READY:]
 </code></pre>
 <h2 id="closing-and-flushing"><a class="header" href="#closing-and-flushing">Closing and flushing</a></h2>
 <div class="rule" id="r-bif.stream.close"><a href="#r-bif.stream.close">[bif.stream.close]</a></div>
@@ -631,8 +787,11 @@ a write there <a href="charout.html#r-bif.charout.start">fills the gap</a>, exce
 character</a> wherever the write position is. A stream
 that is not open is opened by <code>SEEK</code>; when it cannot be, <code>SEEK</code> answers 0,
 raises <a href="index.html#r-bif.index.stream.notready">NOTREADY</a>, leaves the state <code>ERROR</code>, and
-creates nothing. An offset that is not a whole number or an option that is not
-one of these raises <code>SYNTAX 93.0</code>, and a missing offset <code>SYNTAX 93.903</code>.</p>
+creates nothing. An offset that is not a whole number or is too large for 63
+bits, an option that is not one of these, a word given twice, <code>READ</code> with <code>WRITE</code>, <code>CHAR</code> with
+<code>LINE</code>, a second offset, and a second prefix raise <code>SYNTAX 93.0</code>, and a
+missing offset <code>SYNTAX 93.903</code>. A <code>SEEK</code> of a stream that is open and
+<a href="index.html#r-bif.index.stream.transient">transient</a> raises <code>SYNTAX 93.958</code>.</p>
 <pre><code class="language-rexx">f = 'spec-stream-seek.tmp'
 call sysfiledelete f
 call charout f, '0123456789'
@@ -678,6 +837,59 @@ call sysfiledelete f
 position <code>&lt;2</code> is the one two characters back from the end of the data, the
 character <code>8</code>.</p>
 </blockquote>
+<pre><code class="language-rexx">f = 'spec-stream-seekmore.tmp'
+none = 'spec-stream-seekmore-none.tmp'
+call sysfiledelete f
+call sysfiledelete none
+call charout f, '0123456789'
+call charout f
+n = 0
+call on notready name nr
+say stream(none, 'c', 'seek 1') stream(none) (stream(none, 'c', 'query exists') == '')
+say stream(none, 'c', 'seek 1 write') stream(none) (stream(none, 'c', 'query exists') == '')
+say stream(f, 'c', 'open read') stream(f, 'c', 'seek 2 read') stream(f, 'c', 'seek 0 read') stream(f, 'c', 'seek 3 read')
+say stream(f, 'c', 'close')
+say stream(f, 'c', 'open both') stream(f, 'c', 'seek 0')
+say stream(f, 'c', 'seek 1') stream(f, 'c', 'seek =2')
+call try "stream(f, 'c', 'seek 1 2')"
+call try "stream(f, 'c', 'seek = + 2')"
+call try "stream(f, 'c', 'seek 2 read read')"
+call try "stream(f, 'c', 'seek 2 char line')"
+call try "stream(f, 'c', 'seek 2 write read')"
+call try "stream(f, 'c', 'seek 1.5')"
+call try "stream(f, 'c', 'seek 9223372036854775808')"
+call try "stream(f, 'c', 'seek 2 bogus')"
+call try "stream('/dev/null', 'c', 'open') stream('/dev/null', 'c', 'seek 1')"
+call stream '/dev/null', 'c', 'close'
+call stream f, 'c', 'close'
+call sysfiledelete f
+exit
+nr: n = n + 1
+return
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say left(arg(1), 48) '=&gt; [' || r || ']'
+  return
+bad: say left(arg(1), 48) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">0 ERROR 1
+0 ERROR 1
+READY: 2 0 3
+READY:
+READY: 0
+1 2
+stream(f, 'c', 'seek 1 2')                       =&gt; 93.0
+stream(f, 'c', 'seek = + 2')                     =&gt; 93.0
+stream(f, 'c', 'seek 2 read read')               =&gt; 93.0
+stream(f, 'c', 'seek 2 char line')               =&gt; 93.0
+stream(f, 'c', 'seek 2 write read')              =&gt; 93.0
+stream(f, 'c', 'seek 1.5')                       =&gt; 93.0
+stream(f, 'c', 'seek 9223372036854775808')       =&gt; 93.0
+stream(f, 'c', 'seek 2 bogus')                   =&gt; 93.0
+stream('/dev/null', 'c', 'open') stream('/dev/nu =&gt; 93.958
+</code></pre>
 <div class="rule" id="r-bif.stream.seek.line"><a href="#r-bif.stream.seek.line">[bif.stream.seek.line]</a></div>
 <p>With <code>LINE</code>, the offset counts <a href="index.html#r-bif.index.stream.line-end">lines</a> and not
 characters: <code>=</code> counts from the first line, being line 1, and <code>+</code> and <code>-</code>
@@ -722,7 +934,10 @@ null string; so is the answer for a standard stream that is
 <a href="index.html#r-bif.index.stream.transient">transient</a> (see <a href="#r-bif.stream.deviation.100">Deviation
 100</a>). On a stream opened <code>APPEND</code>, the write
 position after a write is just after the last character, wherever the write
-was asked to go (see <a href="#r-bif.stream.deviation.79">Deviation 79</a>).</p>
+was asked to go (see <a href="#r-bif.stream.deviation.79">Deviation 79</a>). An open
+stream that is transient answers 1. Two of <code>READ</code> and <code>WRITE</code>, two of <code>CHAR</code>
+and <code>LINE</code>, a word given twice, <code>SYS</code> with another word, and a word that is
+none of these raise <code>SYNTAX 93.0</code>.</p>
 <pre><code class="language-rexx">f = 'spec-stream-qpos.tmp'
 call sysfiledelete f
 call charout f, 'ab' || '0a'x || 'cd' || '0a'x || 'ef'
@@ -745,6 +960,63 @@ READY:
 1 1
 READY:
 READY: 1
+</code></pre>
+<pre><code class="language-rexx">f = 'spec-stream-qposopts.tmp'
+call sysfiledelete f
+call charout f, 'ab' || '0a'x || 'cd' || '0a'x || 'ef' || '0a'x
+call charout f
+say stream(f, 'c', 'open read') stream(f, 'c', 'query position write') stream(f, 'c', 'query position read line')
+say stream(f, 'c', 'close')
+say stream(f, 'c', 'open write') stream(f, 'c', 'query position') stream(f, 'c', 'query position write') stream(f, 'c', 'query position read')
+say stream(f, 'c', 'close')
+say stream(f, 'c', 'open binary reclength 3') stream(f, 'c', 'query position line') stream(f, 'c', 'query position')
+say translate(linein(f), '/', '0a'x) stream(f, 'c', 'query position line') stream(f, 'c', 'query position')
+say stream(f, 'c', 'seek 8 read') stream(f, 'c', 'query position line') stream(f, 'c', 'query position write line')
+say stream(f, 'c', 'close')
+say stream(f, 'c', 'open') stream(f, 'c', 'seek 3 read') stream(f, 'c', 'query position read line') stream(f, 'c', 'seek 4 read') stream(f, 'c', 'query position read line')
+say stream('/dev/null', 'c', 'open') stream('/dev/null', 'c', 'query position') stream('/dev/null', 'c', 'query position write')
+call try "stream(f, 'c', 'query position read write')"
+call try "stream(f, 'c', 'query position write read')"
+call try "stream(f, 'c', 'query position char line')"
+call try "stream(f, 'c', 'query position line char')"
+call try "stream(f, 'c', 'query position read read')"
+call try "stream(f, 'c', 'query position char char')"
+call try "stream(f, 'c', 'query position sys read')"
+call try "stream(f, 'c', 'query position write sys')"
+call try "stream(f, 'c', 'query position 1')"
+call try "stream(f, 'c', 'query position bogus')"
+call stream f, 'c', 'close'
+call stream '/dev/null', 'c', 'close'
+call sysfiledelete f
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say left(arg(1), 48) '=&gt; [' || r || ']'
+  return
+bad: say left(arg(1), 48) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">READY: 0 1
+READY:
+READY: 10 10 1
+READY:
+READY: 1 1
+ab/ 2 4
+8 3 4
+READY:
+READY: 3 1 4 2
+READY: 1 1
+stream(f, 'c', 'query position read write')      =&gt; 93.0
+stream(f, 'c', 'query position write read')      =&gt; 93.0
+stream(f, 'c', 'query position char line')       =&gt; 93.0
+stream(f, 'c', 'query position line char')       =&gt; 93.0
+stream(f, 'c', 'query position read read')       =&gt; 93.0
+stream(f, 'c', 'query position char char')       =&gt; 93.0
+stream(f, 'c', 'query position sys read')        =&gt; 93.0
+stream(f, 'c', 'query position write sys')       =&gt; 93.0
+stream(f, 'c', 'query position 1')               =&gt; 93.0
+stream(f, 'c', 'query position bogus')           =&gt; 93.0
 </code></pre>
 <h2 id="asking-about-the-file"><a class="header" href="#asking-about-the-file">Asking about the file</a></h2>
 <div class="rule" id="r-bif.stream.query.exists"><a href="#r-bif.stream.query.exists">[bif.stream.query.exists]</a></div>
@@ -853,11 +1125,13 @@ call sysfiledelete f
 </code></pre>
 <div class="rule" id="r-bif.stream.query.words"><a href="#r-bif.stream.query.words">[bif.stream.query.words]</a></div>
 <p>The word after <code>QUERY</code> is <code>EXISTS</code>, <code>SIZE</code>, <code>STREAMTYPE</code>, <code>TIMESTAMP</code>,
-<code>DATETIME</code>, <code>HANDLE</code> or <code>POSITION</code>, in either case. It may be shortened to any
+<code>DATETIME</code>, <code>HANDLE</code>, <code>POSITION</code> or <code>SEEK</code>, in either case. It may be shortened to any
 of its leading letters, as far as to its first letter for <code>EXISTS</code>, <code>HANDLE</code>,
 <code>TIMESTAMP</code> and <code>DATETIME</code>, to <code>SI</code> for <code>SIZE</code>, to <code>ST</code> for <code>STREAMTYPE</code> and
-to <code>P</code> for <code>POSITION</code>; what a shorter word answers is not specified. A <code>QUERY</code>
-with no word is not specified. A word that is none of them, and words after it
+to <code>P</code> for <code>POSITION</code>; what a shorter word answers is not specified. <code>SEEK</code> is a second name for
+<code>POSITION</code>, with its options and its answers; what a shortening of it answers
+is not specified. A <code>QUERY</code> with no word, or with only blanks, answers as
+<code>DATETIME</code> does. A word that is none of them, and words after it
 that the query does not take, raise <code>SYNTAX 93.0</code>.</p>
 <pre><code class="language-rexx">f = 'spec-stream-words.tmp'
 call sysfiledelete f
@@ -877,6 +1151,45 @@ call sysfiledelete f
 1 19 17
 93.0
 93.0
+</code></pre>
+<pre><code class="language-rexx">f = 'spec-stream-qseek.tmp'
+call sysfiledelete f
+call charout f, 'ab' || '0a'x || 'cd' || '0a'x || 'ef'
+call charout f
+say '['stream(f, 'c', 'query seek')']' '['stream(f, 'c', 'QUERY SEEK read line')']'
+say stream(f, 'c', 'open read') stream(f, 'c', 'query seek') stream(f, 'c', 'query seek write')
+x = charin(f, , 4)
+say stream(f, 'c', 'query seek') stream(f, 'c', 'query seek read line') (stream(f, 'c', 'query seek') == stream(f, 'c', 'query position'))
+signal on syntax name a
+say stream(f, 'c', 'query seek read write')
+a: say condition('o')~code
+signal on syntax name b
+say stream(f, 'c', 'query seeker')
+b: say condition('o')~code
+call stream f, 'c', 'close'
+call sysfiledelete f
+</code></pre>
+<pre><code class="language-output">[] []
+READY: 1 0
+5 2 1
+93.0
+93.0
+</code></pre>
+<pre><code class="language-rexx">f = 'spec-stream-qempty.tmp'
+call sysfiledelete f
+call charout f, 'abc'
+call charout f
+say (stream(f, 'c', 'query') == stream(f, 'c', 'query datetime')) (stream(f, 'c', 'query   ') == stream(f, 'c', 'query datetime'))
+say length(stream(f, 'c', 'query')) (stream(f, 'c', 'query') == stream(f, 'c', 'query timestamp'))
+say stream(f, 'c', 'open') (stream(f, 'c', 'query ') == stream(f, 'c', 'query d'))
+say '['stream('spec-stream-qempty-none.tmp', 'c', 'query')']' '['stream('spec-stream-qempty-none.tmp', 'c', 'query datetime')']'
+call stream f, 'c', 'close'
+call sysfiledelete f
+</code></pre>
+<pre><code class="language-output">1 1
+17 0
+READY: 1
+[] []
 </code></pre>
 <h2 id="the-standard-streams"><a class="header" href="#the-standard-streams">The standard streams</a></h2>
 <div class="rule" id="r-bif.stream.std"><a href="#r-bif.stream.std">[bif.stream.std]</a></div>

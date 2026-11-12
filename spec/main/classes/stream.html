@@ -249,9 +249,12 @@ standard stream.) A name that is not a string is read as the string value its
 <code>makeString</code> method answers, which is sent once, when the stream is made, and
 never again, so a later change in what the object answers does not change the
 name. An argument that has no <code>makeString</code> method, <code>.nil</code> among them, raises
-<code>SYNTAX 93.938</code>; a <code>string</code> method alone does not do. A <code>MutableBuffer</code>, an
-<code>Array</code> and a <code>File</code> have a <code>makeString</code> method, and the name of the stream is
-its answer.</p>
+<code>SYNTAX 93.938</code>; a <code>string</code> method alone does not do. A <code>MutableBuffer</code> and an
+<code>Array</code> have a <code>makeString</code> method, and the name of the stream is its answer. A
+<code>File</code>, or an instance of a subclass of <code>File</code>, is not read through
+<code>makeString</code>: the name of the stream is the answer of its <code>absolutePath</code>, so it
+is absolute, and a subclass that changes one of the two methods changes the
+name only by <code>absolutePath</code>.</p>
 <pre><code class="language-rexx">f = 'spec-stream-new-zq.tmp'
 call try '.stream~new'
 call try '.stream~new(f, f)'
@@ -313,12 +316,47 @@ UNKNOWN [UNKNOWN:]
 made-name made-name 1
 1 1
 </code></pre>
+<pre><code class="language-rexx">f = 'spec-stream-newfile-zq.tmp'
+call sysfiledelete f
+fl = .file~new(f)
+say (fl~absolutePath == qualify(f)) (.stream~new(fl)~string == fl~absolutePath) (.stream~new(f)~string == f)
+say .stream~new(.abs_file~new(f))~string
+say .stream~new(.make_file~new(f))~string == fl~absolutePath
+say .stream~new(.not_file~new)~string
+s = .stream~new(.abs_file~new(f))
+say s~open s~charout('xy') s~close s~state
+say .file~new('spec-stream-newfile-abs.tmp')~exists
+say .file~new(f)~exists
+call sysfiledelete f
+call sysfiledelete 'spec-stream-newfile-abs.tmp'
+exit
+::class abs_file subclass file
+::method absolutePath
+  return 'spec-stream-newfile-abs.tmp'
+::class make_file subclass file
+::method makeString
+  return 'spec-stream-newfile-made.tmp'
+::class not_file
+::method makeString
+  return 'made-name'
+::method absolutePath
+  return 'abs-name'
+</code></pre>
+<pre><code class="language-output">1 1 1
+spec-stream-newfile-abs.tmp
+1
+made-name
+READY: 0 READY: UNKNOWN
+1
+0
+</code></pre>
 <div class="rule" id="r-class.stream.new.sends"><a href="#r-class.stream.new.sends">[class.stream.new.sends]</a></div>
 <p><code>new</code> sends <code>init</code> to the new instance, with the arguments of <code>new</code> and no
 others, so a subclass that declares <code>init</code> receives them all and decides what
 the superclass <code>init</code> is given. The <code>init</code> of <code>Stream</code> checks the count of its
-arguments, and then sends <code>makeString</code> to the name when it is not a string,
-once, and it sends no other message. A subclass whose <code>init</code> does not send
+arguments, and then, when the name is not a string, sends it <code>isA</code> with the class
+<code>File</code>, and then <code>absolutePath</code> if the answer is true and <code>makeString</code> if it is
+not, once, and it sends no other message. A subclass whose <code>init</code> does not send
 <code>init</code> to its superclass has an instance that was never initialized: see
 <a href="#r-class.stream.deviation.135">Deviation 135</a>.</p>
 <pre><code class="language-rexx">f = 'spec-stream-newsends-zq.tmp'
@@ -359,6 +397,45 @@ init gets 0 argument(s)
 .loud~new =&gt; 93.901
 init gets 2 argument(s)
 .loud~new(.nil, 2) =&gt; 93.902
+</code></pre>
+<pre><code class="language-rexx">o = .counted~new
+t = .stream~new(o)
+say t~string o~log
+p = .counted2~new
+t = .stream~new(p)
+say t~string p~log
+t~init(o)
+say o~log
+::class counted
+::attribute log
+::method init
+  self~log = ''
+::method makestring
+  self~log = self~log 'makestring'
+  return 'counted-name'
+::method isA
+  use arg c
+  self~log = self~log 'isA' c~id
+  return self~isA:super(c)
+::class counted2 subclass file
+::attribute log
+::method init
+  self~log = ''
+  forward class (super) continue arguments ('zq.tmp')
+::method makestring
+  self~log = self~log 'makestring'
+  return 'counted-name'
+::method absolutePath
+  self~log = self~log 'absolutePath'
+  return 'abs.tmp'
+::method isA
+  use arg c
+  self~log = self~log 'isA' c~id
+  return self~isA:super(c)
+</code></pre>
+<pre><code class="language-output">counted-name  isA File makestring
+abs.tmp  isA File absolutePath
+ isA File makestring isA File makestring
 </code></pre>
 <div class="rule" id="r-class.stream.init"><a href="#r-class.stream.init">[class.stream.init]</a></div>
 <p><code>init</code> may be sent again to a stream that exists. It takes the one argument
@@ -1233,7 +1310,8 @@ call sysfiledelete f
 <p><code>query</code> answers what <a href="../builtins/stream.html#r-bif.stream.query.words">QUERY</a> answers for the word in
 its one argument, a string: the position, the size, the type, the file name
 that exists, the times and the handle, with the options and the shortenings
-that the rules of QUERY give. A word that is none of those, and words after it
+that the rules of QUERY give. The word <code>SEEK</code> is <code>POSITION</code>, and an argument that is the null string or only
+blanks answers as <code>DATETIME</code> does. A word that is none of those, and words after it
 that the query does not take, raise <code>SYNTAX 93.0</code>; a missing argument raises
 <code>SYNTAX 93.901</code>. The answers are strings, the null string where the function
 answers it. It sends no message.</p>
@@ -1342,8 +1420,7 @@ so the name of another method, raises <code>SYNTAX 93.914</code>; words after <c
 <code>FLUSH</code>, an option or a word that the command does not know raise <code>SYNTAX 93.0</code>, and <code>SEEK</code> or <code>POSITION</code> without an offset <code>SYNTAX 93.903</code>. A missing
 argument raises <code>SYNTAX 93.901</code>. The answer is the answer of the method that
 carries the command out, <a href="#r-class.stream.command.sends">which the next rule
-names</a>. What <code>command</code> does with a command that
-is the null string or only blanks is not specified.</p>
+names</a>. A command that is the null string or only blanks closes the stream, as <code>close</code> does, and answers what <code>close</code> answers.</p>
 <pre><code class="language-rexx">f = 'spec-stream-command-zq.tmp'
 call charout f, 'abcdef'
 call charout f
@@ -1394,6 +1471,37 @@ s~command =&gt; 93.901
 s~command(1) =&gt; 93.914
 s~command("query size", 2) =&gt; 93.902
 </code></pre>
+<pre><code class="language-rexx">f = 'spec-stream-cmdq-zq.tmp'
+call charout f, 'abcdef'
+call charout f
+s = .stream~new(f)
+say s~command('open read') s~command('seek 3 read') s~command('query seek') s~command('QUERY SEEK write')
+say (s~command('query') == s~query('datetime')) (s~query('') == s~query('datetime')) (s~query('  ') == s~query('datetime'))
+say '['s~command('')']' s~state
+say '['s~command('')']' s~state
+say s~open s~state '['s~command('  ')']' s~state
+say s~query('seek') '['s~query('seek read')']' length(s~query(''))
+call try 's~query("seek read write")'
+call try 's~query("seeker")'
+call sysfiledelete f
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt; [' || r || ']'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">READY: 3 3 0
+1 1 1
+[READY:] UNKNOWN
+[] UNKNOWN
+READY: READY [READY:] UNKNOWN
+ [] 17
+s~query("seek read write") =&gt; 93.0
+s~query("seeker") =&gt; 93.0
+</code></pre>
 <div class="rule" id="r-class.stream.command.sends"><a href="#r-class.stream.command.sends">[class.stream.command.sends]</a></div>
 <p><code>command</code> sends one message to the receiver for a command that it carries out,
 after it has split the first word from the rest, and none for a command it
@@ -1404,7 +1512,9 @@ one blank, in upper case, with the other blanks as they were. <code>SEEK</code> 
 <code>position</code>, not <code>seek</code>. The answer of the message is the answer of <code>command</code>,
 whatever it is, and an error that the message raises is the error of
 <code>command</code>. A command that has words after <code>CLOSE</code> or <code>FLUSH</code>, or an unknown
-first word, sends nothing. In the example a log lists each message as its
+first word, sends nothing. A command that is the null string or only blanks
+sends <code>close</code> with no argument, and <code>QUERY</code> with nothing after it sends <code>query</code>
+with the null string. In the example a log lists each message as its
 name, the number of its arguments after a <code>#</code>, and the argument in brackets.</p>
 <pre><code class="language-rexx">f = 'spec-stream-commandsends-zq.tmp'
 call charout f, 'abcdef'
@@ -1513,6 +1623,37 @@ open bogus           =&gt; 93.0  open#1[BOGUS]
 seek:  seek#1[2]
 query:  query#1[size]
 uninit: []
+</code></pre>
+<pre><code class="language-rexx">s = .spy~new('spec-stream-spy-zq.tmp')
+say '['s~command('')']' s~log
+s~log = ''
+say '['s~command('   ')']' s~log
+s~log = ''
+say '['s~command('query')']' s~log
+s~log = ''
+say '['s~command('query ')']' s~log
+s~log = ''
+say '['s~command('query seek')']' s~log
+::class spy subclass stream
+::attribute log
+::method init
+  self~log = ''
+  forward class (super) continue
+::method close
+  self~log = self~log 'close#'arg()
+  forward class (super)
+::method query
+  self~log = self~log 'query#'arg() || '['arg(1)']'
+  forward class (super)
+::method position
+  self~log = self~log 'position#'arg() || '['arg(1)']'
+  forward class (super)
+</code></pre>
+<pre><code class="language-output">[]  close#0
+[]  close#0
+[]  query#1[]
+[]  query#1[]
+[]  query#1[SEEK]
 </code></pre>
 <h2 id="writing-lines-and-arrays"><a class="header" href="#writing-lines-and-arrays">Writing lines and arrays</a></h2>
 <div class="rule" id="r-class.stream.say"><a href="#r-class.stream.say">[class.stream.say]</a></div>
