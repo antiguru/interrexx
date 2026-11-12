@@ -134,23 +134,7 @@
   if arg() == 0 then raise syntax 93.901 array (1)
   if arg(1, 'O') then raise syntax 93.903 array (1)
   item = arg(1)
-  unique = 0
-  if arg(2, 'E') then if arg(2)~caselessMatchChar(1, 'u') then unique = 1
-  if unique then do
-    do while self~hasItem(item)
-      self~removeItem(item)
-    end
-  end
-  self~queue:super(item)
-  if self~items > limit then return self~pull
-  return .nil
-
-::method push
-  expose limit
-  if arg() > 2 then raise syntax 93.902 array (2)
-  if arg() == 0 then raise syntax 93.901 array (1)
-  if arg(1, 'O') then raise syntax 93.903 array (1)
-  item = arg(1)
+  if 1 > limit then return .nil
   unique = 0
   if arg(2, 'E') then if arg(2)~caselessMatchChar(1, 'u') then unique = 1
   if unique then do
@@ -159,12 +143,27 @@
     end
   end
   taken = .nil
-  if self~items >= limit then do
-    count = self~items
-    if count > 0 then taken = self~remove(count)
+  if self~items >= limit then taken = self~pull
+  self~queue:super(item)
+  return taken
+
+::method push
+  expose limit
+  if arg() > 2 then raise syntax 93.902 array (2)
+  if arg() == 0 then raise syntax 93.901 array (1)
+  if arg(1, 'O') then raise syntax 93.903 array (1)
+  item = arg(1)
+  if 1 > limit then return .nil
+  unique = 0
+  if arg(2, 'E') then if arg(2)~caselessMatchChar(1, 'u') then unique = 1
+  if unique then do
+    do while self~hasItem(item)
+      self~removeItem(item)
+    end
   end
+  taken = .nil
+  if self~items >= limit then taken = self~remove(self~items)
   self~push:super(item)
-  if limit < 1 then return self~remove(1)
   return taken
 
 /* r[class.circularqueue.append] */
@@ -172,13 +171,9 @@
   expose limit
   if arg() > 1 then raise syntax 93.902 array (1)
   if arg() == 0 then raise syntax 93.901 array (1)
-  index = self~append:super(arg(1))
-  if self~items > limit then do
-    self~pull
-    index = index - 1
-  end
-  if index == 0 then return .nil
-  return index
+  if 1 > limit then return .nil
+  if self~items >= limit then self~pull
+  return self~append:super(arg(1))
 
 /* r[class.circularqueue.insert] */
 ::method insert
