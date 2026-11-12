@@ -1222,6 +1222,7 @@ class TICKER public=1 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotatio
   instance INIT private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance INTERVAL private=0 protected=0 guarded=0 abstract=0 constant=0 attribute=1 package=0 entry=-
 class TIMESPAN public=1 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,COMPARABLE,ORDERABLE annotations=- identity=1
+  instance !SETCOUNT private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance % private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance * private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance + private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-

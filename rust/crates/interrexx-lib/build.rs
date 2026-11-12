@@ -60,6 +60,7 @@ const REPLACEMENTS: &[&str] = &[
     "streamsupplier.rex",
     "command.rex",
     "sets.rex",
+    "timespan.rex",
 ];
 
 /// One host member a replacement may leave out.
