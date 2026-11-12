@@ -607,6 +607,57 @@ end
      8 *-* exit
 ```
 
+A REPLY is stopped at after the activity has replied, as any clause is, and the
+continuation of the method goes on from that stop. The notice
+is shown there, once: the clauses of the continuation do not show it again. In
+the example the stop after `reply 5` comes before `say 'after reply'` is shown.
+(The lines that announce the method on entering and leaving are not shown.)
+
+```rexx
+.debuginput~destination(.in~new(.array~of('', '', '', '', '', '', '')))
+.traceoutput~destination(.show~new)
+o = .obj~new
+o~r
+call syssleep 0.5
+exit
+::class obj
+::method r
+  trace ?a
+  reply 5
+  say 'after reply'
+  nop
+  return
+::class in
+::method init
+  expose a i
+  use arg a
+  i = 0
+::method linein
+  expose a i
+  i += 1
+  if i > a~items then return ''
+  say '[read' i':' a[i]']'
+  return a[i]
+::class show
+::method lineout
+  use arg l
+  l = '' || l
+  if l~strip~left(5) \= '+++ "' & l~word(1) \= '>I>' & l~word(1) \= '<I<' then .stdout~lineout(l)
+  return 0
+```
+
+```output
+    10 *-* reply 5
++++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+[read 1: ]
+    11 *-* say 'after reply'
+after reply
+[read 2: ]
+    12 *-* nop
+[read 3: ]
+    13 *-* return
+```
+
 r[env.debugging.pause.skipped]
 Some traced clauses are not followed by a stop, because they cannot be run
 again safely: a DO or LOOP clause on its second and later turns, which
