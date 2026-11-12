@@ -571,7 +571,7 @@ h: o = condition('o')
 ::routine r2; raise user b
 ```
 
-```output defect=#114
+```output
 USER B 0
 ```
 
