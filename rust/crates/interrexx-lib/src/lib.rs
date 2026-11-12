@@ -7,6 +7,10 @@ pub struct Program {
     pub name: &'static str,
     /// Its bytes: the `rexx/` sources, one after another.
     pub source: &'static [u8],
+    /// `source` parsed when this crate was built, as
+    /// `interrexx_parse::program_image` writes it; empty where it did not
+    /// parse.
+    pub image: &'static [u8],
 }
 
 /// Where one source file's text sits in [`LIBRARY`]'s `source`.

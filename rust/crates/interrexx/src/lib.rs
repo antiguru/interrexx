@@ -2639,13 +2639,15 @@ impl Interp {
         Ok(value)
     }
 
-    /// Parses the library program, registers it, and runs its body with its
-    /// package as the one argument.
+    /// Reads the library program from the image its build parsed it into, or
+    /// parses it where that image is refused, registers it, and runs its body
+    /// with its package as the one argument.
     fn enter_library_program(
         &mut self,
         program: &'static interrexx_lib::Program,
     ) -> Result<Option<ObjRef>, Failure> {
-        let parsed = match parse_known_program(program.source.to_vec()) {
+        let read = interrexx_parse::program_from_image(program.image, program.source);
+        let parsed = match read.map_or_else(|| parse_known_program(program.source.to_vec()), Ok) {
             Ok(parsed) => parsed,
             // A parse failure here is the library's own source, not a
             // program's, and `the_library_program_passes_the_declaration_checks`

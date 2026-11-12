@@ -113,6 +113,50 @@ impl ProgramSource {
 
     /// The name a compiled image gives the routine it holds, or `None` for a
     /// source that is no image's.
+    /// Every field, for [`crate::image`] to write: the text, the line index,
+    /// the kind, the line an `INTERPRET` source is numbered with, whether it
+    /// is traceable and the image name.
+    #[allow(clippy::type_complexity)]
+    pub(crate) fn parts(
+        &self,
+    ) -> (
+        &[u8],
+        &[(usize, usize)],
+        SourceKind,
+        usize,
+        bool,
+        Option<&[u8]>,
+    ) {
+        (
+            &self.text,
+            &self.lines,
+            self.kind,
+            self.interpret_line,
+            self.traceable,
+            self.image_name.as_deref(),
+        )
+    }
+
+    /// A source from what [`Self::parts`] answered for one, which
+    /// [`crate::image`] reads back.
+    pub(crate) fn from_parts(
+        text: Vec<u8>,
+        lines: Vec<(usize, usize)>,
+        kind: SourceKind,
+        interpret_line: usize,
+        traceable: bool,
+        image_name: Option<Box<[u8]>>,
+    ) -> Self {
+        ProgramSource {
+            text,
+            lines,
+            kind,
+            interpret_line,
+            traceable,
+            image_name,
+        }
+    }
+
     pub fn image_name(&self) -> Option<&[u8]> {
         self.image_name.as_deref()
     }
