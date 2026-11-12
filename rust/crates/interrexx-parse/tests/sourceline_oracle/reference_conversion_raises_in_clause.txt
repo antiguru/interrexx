@@ -1,6 +1,7 @@
-count 47
+count 48
 /* A reference's required string value that raises raises in its clause,
-   with one send. DESCRIPTION converts at RAISE under Deviation 83. */
+   with one send. RAISE does not convert its
+   DESCRIPTION. */
 b1 = .once~new
 q1 = >b1
 signal on syntax name s1
