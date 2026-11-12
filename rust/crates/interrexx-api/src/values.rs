@@ -1,7 +1,7 @@
 //! The conversion table an extension's declared signature drives.
 //!
-//! The oracle's conversions are the reference, in both directions: Rexx to C
-//! for an argument, and C to Rexx for a result.
+//! The conversions run in both directions: Rexx to C for an argument, and C to
+//! Rexx for a result.
 
 use std::borrow::Cow;
 use std::cell::{Cell, RefCell, RefMut};
@@ -106,9 +106,9 @@ pub enum Failure {
     /// The declared parameters cannot be honoured: a code the table does not
     /// know, or a special argument asked for outside a method.
     Signature,
-    /// The declared return type cannot be converted back: a code the table
-    /// does not know, one the oracle refuses, or a `Value` that does not
-    /// match it. The oracle raises this once the extension has run.
+    /// The declared return type cannot be converted back: a code the table does
+    /// not know, one that is refused, or a `Value` that does not match it. It
+    /// is raised once the extension has run.
     ResultSignature,
     /// The extension reached an interface member this crate has not written,
     /// named `Table.Member`; the member recorded itself and returned.
@@ -161,23 +161,22 @@ impl From<Raised> for Failure {
 }
 
 impl Failure {
-    /// The error the oracle raises, or `None` where the refusal is this
-    /// implementation's gap rather than a condition a program can see.
+    /// The error raised, or `None` where the refusal is this implementation's
+    /// gap rather than a condition a program can see.
     pub fn error_number(&self, method: bool) -> Option<u32> {
         match self {
-            // Measured against the oracle: a required CSTRING left
-            // off `RegularExpression~parse` answers "Error 88.901".
+            // For example, a required CSTRING left off
+            // `RegularExpression~parse` answers "Error 88.901".
             Failure::MissingArgument { .. } => Some(88901),
             // Measured the same way, passing an instance of a class with no
             // string value: "Error 88.909".
             Failure::NoStringValue { .. } => Some(88909),
-            // Measured against the oracle through `RxCalcSqrt`:
-            // `'abc'` answers "Error 88.921" and a precision of `0` "Error
-            // 88.905".
+            // For example, `'abc'` answers "Error 88.921" and a precision of
+            // `0` "Error 88.905".
             Failure::InvalidDouble { .. } => Some(88921),
             Failure::NotPositive { .. } => Some(88905),
-            // Measured against the oracle through `orxmethod` and
-            // `orxfunction`'s echo methods and routines.
+            // Checked through `orxmethod` and `orxfunction`'s echo methods and
+            // routines.
             Failure::NotNonnegative { .. } => Some(88904),
             Failure::OutOfRange { .. } => Some(88907),
             Failure::NotLogical { .. } => Some(34901),
@@ -185,13 +184,13 @@ impl Failure {
             Failure::NotInstance { .. } => Some(88914),
             Failure::NotPointerString { .. } => Some(88919),
             Failure::NoStem { .. } => Some(if method { 93969 } else { 40919 }),
-            // Measured against the oracle through a forged routine
-            // library: a routine declaring `CSELF` answers "Error 40.918".
+            // Checked through a forged routine library: a routine declaring
+            // `CSELF` answers "Error 40.918".
             Failure::Signature | Failure::ResultSignature => {
                 Some(if method { 93968 } else { 40918 })
             }
-            // Measured against the oracle: a third argument to
-            // `RegularExpression~new` answers "Error 88.922".
+            // For example, a third argument to `RegularExpression~new` answers
+            // "Error 88.922".
             Failure::TooManyArguments { .. } => Some(88922),
             Failure::UnfilledSlot { .. }
             | Failure::StaleHandle
@@ -225,10 +224,9 @@ impl Class {
 /// The largest whole number.
 pub const MAX_WHOLENUMBER: i64 = 999_999_999_999_999_999;
 
-/// The precision a `double` or `float` result is
-/// rendered at whatever `NUMERIC DIGITS` is in force: measured, oracle,
-/// `TestDoubleArg('0.6666666666666666')` is `0.666666667` under `NUMERIC
-/// DIGITS 5` and under `20`.
+/// The precision a `double` or `float` result is rendered at whatever `NUMERIC
+/// DIGITS` is in force: `TestDoubleArg('0.6666666666666666')` is `0.666666667`
+/// under `NUMERIC DIGITS 5` and under `20`.
 const RESULT_DIGITS: usize = 9;
 
 impl std::fmt::Display for Failure {
@@ -315,9 +313,9 @@ impl Value {
     /// is how the result descriptor is filled,
     /// so every member reads initialised bytes.
     ///
-    /// An omitted argument is the zero word itself: the C++ writes
-    /// `value_int64_t = 0` for the integer and pointer types and `0.0` for
-    /// `double` and `float`, which are the same bytes.
+    /// An omitted argument is the zero word itself: zero is written for the
+    /// integer and pointer types and `0.0` for `double` and `float`, which are
+    /// the same bytes.
     fn as_union(self) -> ValueUnion {
         let mut word = ValueUnion { value_int64_t: 0 };
         match self {
@@ -365,14 +363,14 @@ pub fn descriptor(declared: u16, converted: Converted) -> ValueDescriptor {
 
 /// The terminated copies a call's `CSTRING` conversions point at.
 ///
-/// A `CSTRING`'s lifetime is the call, and the oracle achieves that by rooting
-/// the string object and pointing into it. That is not open to us: a Rexx
-/// string carries no terminator, and the arena moves nothing but reallocates
-/// the slot vector, so no address inside the heap survives an allocation. The
-/// pool owns its copies instead, so a collection cannot free them, and each
-/// one is a separate boxed slice, so growing the pool does not move a pointer
-/// already handed out. Dropping the pool is what ends the lifetime, and that
-/// is the end of the call.
+/// A `CSTRING`'s lifetime is the call, and that could be achieved by rooting
+/// the string object and pointing into it. That is not open here: a Rexx string
+/// carries no terminator, and the arena moves nothing but reallocates the slot
+/// vector, so no address inside the heap survives an allocation. The pool owns
+/// its copies instead, so a collection cannot free them, and each one is a
+/// separate boxed slice, so growing the pool does not move a pointer already
+/// handed out. Dropping the pool is what ends the lifetime, and that is the end
+/// of the call.
 #[derive(Default)]
 pub struct CStringPool {
     /// Each copy with the object it was made for, `None` for a copy
@@ -393,8 +391,8 @@ impl CStringPool {
     /// [`CStringPool::clear`] or the pool is dropped.
     ///
     /// Bytes are copied verbatim, so an embedded zero truncates the string an
-    /// extension reads, which is what pointing into the oracle's string data
-    /// does too. Each call answers a fresh copy at its own address.
+    /// extension reads, which is what pointing into string data does too. Each
+    /// call answers a fresh copy at its own address.
     pub fn intern(&mut self, bytes: &[u8]) -> CSTRING {
         self.push(None, bytes)
     }
@@ -402,11 +400,10 @@ impl CStringPool {
     /// [`CStringPool::intern`] keyed on the object the bytes came from, so
     /// that asking twice answers one address.
     ///
-    /// `StringData` hands out
-    /// an interior pointer to a non-moving object, so the oracle answers the
-    /// same address for the same object however often it is asked. `object`
-    /// is what makes that hold here; the bytes are read again only when the
-    /// pool has no copy for it yet.
+    /// `StringData` hands out an interior pointer to a non-moving object, so
+    /// the same address is answered for the same object however often it is
+    /// asked. `object` is what makes that hold here; the bytes are read again
+    /// only when the pool has no copy for it yet.
     pub fn intern_for(&mut self, object: ObjRef, bytes: &[u8]) -> CSTRING {
         if let Some(found) = self.pointer_for(object) {
             return found;
@@ -519,13 +516,11 @@ pub trait Host {
     /// Binds `name` in the running method's own scope pool, or returns it to
     /// the uninitialised state for a `value` of `None`.
     ///
-    /// `name` is the extension's own spelling: the interpreter
-    /// upper-cases it
+    /// `name` is the extension's own spelling: the interpreter upper-cases it
     /// and refuses one that is not a variable name, and both belong to the
-    /// interpreter rather than to the boundary. The scope is the method's,
-    /// not the receiver's class -- measured
-    /// against the oracle, a subclass method's `expose CSELF`
-    /// reads an unset variable where the defining class's reads the pointer.
+    /// interpreter rather than to the boundary. The scope is the method's, not
+    /// the receiver's class: a subclass method's `expose CSELF` reads an unset
+    /// variable where the defining class's reads the pointer.
     fn set_object_variable(&mut self, name: &[u8], value: Option<ObjRef>);
 
     /// [`Host::set_object_variable`]'s scope and name rules, applied to
@@ -550,7 +545,7 @@ pub trait Host {
     fn double_value(&mut self, object: ObjRef) -> Result<Option<f64>, Raised>;
 
     /// `object` as a whole number from `min` to `max`, or `None` where it is
-    /// not one. A string is converted at the oracle's whole-number digits.
+    /// not one. A string is converted at the whole-number digits.
     ///
     /// # Errors
     /// [`Raised`] where the string conversion raised a condition.
@@ -1005,7 +1000,7 @@ impl<'a> Activation<'a> {
 
     /// `SetObjectVariable`: `value` is the handle the extension passed, and a
     /// handle this activation does not hold -- a null one included -- is the
-    /// `OREF_NULL` the oracle would store (D5).
+    /// null reference that is stored (D5).
     pub fn set_object_variable(&self, name: &[u8], value: RexxObjectPtr) {
         let mut cx = self.conversion();
         let object = cx.host.resolve(value);
@@ -1163,8 +1158,7 @@ type FromNative = fn(&mut Conversion<'_>, Value) -> Result<Option<ObjRef>, Failu
 /// How a row's result comes back.
 #[derive(Clone, Copy)]
 enum Back {
-    /// The oracle's refusal of a code it does not know, which reads
-    /// nothing.
+    /// The refusal of a code that is not known, which reads nothing.
     Refused,
     Member(FromNative),
     Text(FromNative),
@@ -1461,9 +1455,8 @@ static TABLE: &[Row] = &[
         nonnegative_whole_number_to_native,
         isize_from_native,
     ),
-    // The header marks this one as never optional and
-    // the C++ leaves it out of the absent switch, so an omitted one is a
-    // signature error rather than a zero.
+    // The header marks this one as never optional and it is left out of the
+    // absent switch, so an omitted one is a signature error rather than a zero.
     Row {
         code: code::REXX_VARIABLE_REFERENCE_OBJECT,
         name: "RexxVariableReferenceObject",
@@ -1492,9 +1485,9 @@ fn row(code: u16) -> Option<&'static Row> {
     TABLE.iter().find(|row| row.code == code)
 }
 
-/// How a declared result word's value is read, or `None` for a word
-/// the oracle refuses without reading. The word is read as declared,
-/// optional bit included, because the oracle switches on it unstripped.
+/// How a declared result word's value is read, or `None` for a word that is
+/// refused without reading. The word is read as declared, optional bit
+/// included, because the switch is on it unstripped.
 pub fn result_read(declared: u16) -> Option<ResultRead> {
     let row = row(declared)?;
     match row.back {
@@ -1512,8 +1505,8 @@ pub fn source(declared: u16) -> Option<Source> {
 
 /// Whether the code in `declared` takes its value from the argument list.
 ///
-/// A code the table does not know does: the oracle's fallback for it
-/// consumes an argument.
+/// A code the table does not know does: the fallback for it consumes an
+/// argument.
 pub fn consumes_argument(declared: u16) -> bool {
     row(argument_type(declared)).is_none_or(|row| row.source == Source::Argument)
 }
@@ -1528,7 +1521,7 @@ pub fn takes_argument_list(declared: u16) -> bool {
 ///
 /// `argument` is the Rexx object at this position, or `None` when the caller
 /// supplied nothing there; a row that consumes no argument ignores it either
-/// way. `position` is one-based, as the oracle's error inserts are.
+/// way. `position` is one-based, as the error inserts are.
 pub fn to_native(
     cx: &mut Conversion<'_>,
     declared: u16,
@@ -1536,10 +1529,10 @@ pub fn to_native(
     position: usize,
 ) -> Result<Converted, Failure> {
     let row = row(argument_type(declared));
-    // The absent cases are settled before the per-type conversion, as they
-    // are in the C++: a missing required argument and an omitted optional one
-    // are both answered without entering the type switch, and a code the
-    // table does not know is an argument position like any other until then.
+    // The absent cases are settled before the per-type conversion, a missing
+    // required argument and an omitted optional one are both answered without
+    // entering the type switch, and a code the table does not know is an
+    // argument position like any other until then.
     let object = match row.map(|row| row.source) {
         Some(Source::Special | Source::Arguments) => ObjRef::NIL,
         Some(Source::Argument) | None => match argument {
@@ -1571,8 +1564,8 @@ pub fn to_native(
     })
 }
 
-/// The Rexx object `value` describes under `declared`, or `None` where the
-/// oracle answers `OREF_NULL`.
+/// The Rexx object `value` describes under `declared`, or `None` where a null
+/// reference is answered.
 ///
 /// A `CSTRING` value is a pointer into `cx`'s pool, where the call put the
 /// bytes [`Written::Text`] carried.
@@ -1581,10 +1574,9 @@ pub fn from_native(
     declared: u16,
     value: Value,
 ) -> Result<Option<ObjRef>, Failure> {
-    // The oracle treats a zero type as an omitted value rather than a bad
-    // one, which is what makes a partly filled argument list convertible. The
-    // word is not stripped of its optional bit: the switch reads it as
-    // declared.
+    // A zero type is treated as an omitted value rather than a bad one, which
+    // is what makes a partly filled argument list convertible. The word is not
+    // stripped of its optional bit: the switch reads it as declared.
     if declared == ARGUMENT_TERMINATOR {
         return Ok(None);
     }
@@ -1603,13 +1595,13 @@ pub fn from_native(
 /// glibc reads `%p` as `%x` does, through `strtoul`: blanks, a sign, an
 /// optional `0x` or `0X`, then hex digits; a value past the range reads as the
 /// largest, and a `-` negates any other. It also spells the null pointer
-/// `(nil)` and reads that spelling back. Measured, oracle, over the address
+/// `(nil)` and reads that spelling back. For example, over the address
 /// `TestPointerStringValue` answers: `0x0x<hex>`, `0x-<complement>` and
 /// trailing junk convert to it; `0X<hex>`, a leading blank, `0x0x` alone and
-/// `0x--1` refuse; `0x0` converts to something else. Measured, `sscanf`
-/// itself: `0x(nil)`, `0x (nil)`, `0x(NIL)`, `0x(nil)zz`, `0x0x(nil)` and
-/// `0x0X(nil)` read a null pointer, where `0x-(nil)`, `0x+(nil)`, `0x(nil`,
-/// `0x( nil)`, `0x(nil )` and `0x0x (nil)` convert nothing.
+/// `0x--1` refuse; `0x0` converts to something else. Measured, `sscanf` itself:
+/// `0x(nil)`, `0x (nil)`, `0x(NIL)`, `0x(nil)zz`, `0x0x(nil)` and `0x0X(nil)`
+/// read a null pointer, where `0x-(nil)`, `0x+(nil)`, `0x(nil`, `0x( nil)`,
+/// `0x(nil )` and `0x0x (nil)` convert nothing.
 pub fn pointer_string(text: &[u8]) -> Option<usize> {
     let text = text.split(|byte| *byte == 0).next().unwrap_or_default();
     let mut rest = text.strip_prefix(b"0x")?;

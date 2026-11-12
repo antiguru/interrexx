@@ -1,7 +1,8 @@
 //! The two-call protocol: ask the stub for its signature, then call it with
 //! the arguments that signature declares.
 //!
-//! The oracle's native call is the reference.
+//! The native extension API is not yet specified; its behaviour follows the
+//! reference implementation.
 
 use interrexx_core::ObjRef;
 
@@ -22,15 +23,15 @@ pub const MAX_NATIVE_ARGUMENTS: usize = 16;
 
 /// Run the native method `entry` against `arguments`.
 ///
-/// `context` is the method context the extension is handed. `arguments` is
-/// the Rexx argument list, in which `None` is a position the caller left out.
-/// The answer is the object the extension returned, `None` where the oracle
-/// answers `OREF_NULL`.
+/// `context` is the method context the extension is handed. `arguments` is the
+/// Rexx argument list, in which `None` is a position the caller left out. The
+/// answer is the object the extension returned, `None` where a null reference
+/// is answered.
 ///
-/// The result is read whatever the call did with it: an extension that raises
-/// a condition returns normally and still writes element zero.
-/// A condition it raised is left on `cx` for the caller to raise once the call
-/// has returned, which is where the oracle raises it.
+/// The result is read whatever the call did with it: an extension that raises a
+/// condition returns normally and still writes element zero. A condition it
+/// raised is left on `cx` for the caller to raise once the call has returned,
+/// which is where it is raised.
 ///
 /// The halves are [`prepare`], [`call_method`] and [`finish`], with
 /// [`Host::between_halves`](crate::values::Host::between_halves) run between
@@ -87,8 +88,7 @@ pub fn held_method(
 }
 
 /// Run the native routine `entry` against `arguments`, as [`method`] runs a
-/// method: the oracle shares
-/// its argument conversion with the method call.
+/// method: the argument conversion is shared with the method call.
 ///
 /// # Errors
 /// [`method`]'s, and [`Failure::ClassicStyle`] for a
@@ -473,15 +473,14 @@ pub fn held_routine_signature(
 
 /// The signature `read` answers when it may read at most `limit` words.
 fn bounded(read: impl FnOnce(usize) -> Option<Vec<u16>>) -> Result<Vec<u16>, Failure> {
-    // The words are the return type, the parameters the array has room for,
-    // and the terminator, so a signature that fits is one word longer than
-    // the array. Reading no further is this crate's form of the oracle's
-    // bound check.
+    // The words are the return type, the parameters the array has room for, and
+    // the terminator, so a signature that fits is one word longer than the
+    // array. Reading no further is this crate's form of a bound check.
     read(MAX_NATIVE_ARGUMENTS + 1).ok_or(Failure::Signature)
 }
 
-/// A descriptor holding nothing, which is what the oracle's `type` of zero
-/// and zeroed value word describe.
+/// A descriptor holding nothing, which is what a `type` of zero and a zeroed
+/// value word describe.
 fn empty() -> ValueDescriptor {
     values::descriptor(
         ARGUMENT_TERMINATOR,

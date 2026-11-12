@@ -11,11 +11,11 @@ pub enum MethodSlot {
     /// A real, invokable entry: the scope it was defined at and the method
     /// it names.
     Defined { scope: ObjRef, method: MethodId },
-    /// The oracle's `.nil` tombstone. It carries neither scope nor method,
-    /// which is not an omission here but the shape of the oracle's own
-    /// hide operation, a `put` of `.nil` under the name: the two dictionary
-    /// walks that read scopes (rescoping and scope-override lookup) each
-    /// test for `.nil` and skip it rather than asking it for one.
+    /// The `.nil` tombstone. It carries neither scope nor method, which is not
+    /// an omission but the shape of the hide operation, a `put` of `.nil` under
+    /// the name: the two dictionary walks that read scopes (rescoping and
+    /// scope-override lookup) each test for `.nil` and skip it rather than
+    /// asking it for one.
     Hidden,
     /// What `define` with `.nil` as the method leaves: hides the name from
     /// the search as [`MethodSlot::Hidden`] does, but `Class~method` finds
@@ -47,24 +47,22 @@ impl MethodDict {
         Self::default()
     }
 
-    /// Discard everything -- the oracle's dictionary clearing, the step
-    /// every cascade takes before rebuilding a behaviour from scratch.
+    /// Discard everything, the step every cascade takes before rebuilding a
+    /// behaviour from scratch.
     pub fn clear(&mut self) {
         *self = Self::new();
     }
 
     /// True once `scope` has been folded into this dictionary. This is the
-    /// cascade's own de-duplication guard: the oracle's instance- and
-    /// class-behaviour construction both skip a superclass already merged, which
-    /// is what makes a diamond ancestor safe to reach by more than one path.
+    /// cascade's own de-duplication guard: the instance- and class-behaviour
+    /// construction both skip a superclass already merged, which is what makes a
+    /// diamond ancestor safe to reach by more than one path.
     pub fn has_scope(&self, scope: ObjRef) -> bool {
         self.scope_orders.contains_key(&scope)
     }
 
-    /// Fold a new scope into the ordering, unconditionally taking a
-    /// snapshot of everything folded in so far -- the oracle's
-    /// scope addition. A repeat is a no-op, matching the
-    /// oracle's own guard.
+    /// Fold a new scope into the ordering, unconditionally taking a snapshot of
+    /// everything folded in so far. A repeat is a no-op,
     pub fn add_scope(&mut self, scope: ObjRef) {
         if self.scope_orders.contains_key(&scope) {
             return;
@@ -73,10 +71,9 @@ impl MethodDict {
         self.scope_list.push(scope);
     }
 
-    /// Add one method under `name`. A pre-existing entry from the same
-    /// `scope` is replaced in place (matching the oracle's same-scope
-    /// replacement); otherwise the new entry becomes the highest-priority entry
-    /// for `name`, as in the oracle.
+    /// Add one method under `name`. A pre-existing entry from the same `scope`
+    /// is replaced in place; otherwise the new entry becomes the
+    /// highest-priority entry for `name`.
     pub fn add_method(&mut self, name: &str, scope: ObjRef, method: MethodId) {
         let key = name.to_ascii_uppercase();
         let list = self.entries.entry(key).or_default();
@@ -87,10 +84,9 @@ impl MethodDict {
         list.insert(0, MethodSlot::Defined { scope, method });
     }
 
-    /// Replace everything under `name` with one entry -- the oracle's
-    /// method replacement, which is a bare `put`: the replaced name may have
-    /// been inherited from another class, so any existing method by that
-    /// name is completely removed.
+    /// Replace everything under `name` with one entry, which is a bare `put`:
+    /// the replaced name may have been inherited from another class, so any
+    /// existing method by that name is completely removed.
     pub fn replace_method(&mut self, name: &str, scope: ObjRef, method: MethodId) {
         let key = name.to_ascii_uppercase();
         self.entries
@@ -114,8 +110,8 @@ impl MethodDict {
     }
 
     /// Add a tombstone under `name` as its highest-priority entry, leaving
-    /// whatever was already there behind it -- the oracle's no-method
-    /// branch of adding a method, which is an unconditional push of `.nil`.
+    /// whatever was already there behind it -- the no-method branch of adding a
+    /// method, which is an unconditional push of `.nil`.
     pub fn add_hidden(&mut self, name: &str) {
         let key = name.to_ascii_uppercase();
         self.entries
@@ -124,10 +120,9 @@ impl MethodDict {
             .insert(0, MethodSlot::Hidden);
     }
 
-    /// Replace everything under `name` with a tombstone -- the oracle's hide
-    /// operation, and the
-    /// omitted-second-argument arm of `~define`,
-    /// which reaches the same replacing `put` with the same `.nil`.
+    /// Replace everything under `name` with a tombstone, and the
+    /// omitted-second-argument arm of `~define`, which reaches the same
+    /// replacing `put` with the same `.nil`.
     pub fn hide_method(&mut self, name: &str) {
         let key = name.to_ascii_uppercase();
         self.entries.insert(key, vec![MethodSlot::Hidden]);
@@ -140,11 +135,9 @@ impl MethodDict {
         self.entries.insert(key, vec![MethodSlot::Withdrawn]);
     }
 
-    /// Take `name` out of the dictionary entirely -- the oracle's
-    /// method removal, whose `bool` says whether there was
-    /// anything to remove. `~delete` reads that answer: it
-    /// propagates to the subclasses only when the dictionary actually
-    /// changed.
+    /// Take `name` out of the dictionary entirely, whose `bool` says whether
+    /// there was anything to remove. `~delete` reads that answer: it propagates
+    /// to the subclasses only when the dictionary actually changed.
     pub fn remove_method(&mut self, name: &str) -> bool {
         let key = name.to_ascii_uppercase();
         self.entries
@@ -152,9 +145,8 @@ impl MethodDict {
             .is_some_and(|list| !list.is_empty())
     }
 
-    /// The highest-priority entry under `name`, tombstone included -- the
-    /// oracle's method fetch, which `~method` reads and
-    /// method lookup filters.
+    /// The highest-priority entry under `name`, tombstone included, which
+    /// `~method` reads and method lookup filters.
     pub fn slot(&self, name: &str) -> Option<MethodSlot> {
         // Every send arrives here, and the uppercase copy was an allocation
         // per send. `to_ascii_uppercase` changes a name exactly when it
@@ -168,14 +160,11 @@ impl MethodDict {
         list.and_then(|l| l.first()).copied()
     }
 
-    /// Overlay `source`'s methods on top of this dictionary's own -- the
-    /// oracle's method merge. Iterating `source` in
-    /// reverse priority order and folding each entry in through
+    /// Overlay `source`'s methods on top of this dictionary's own. Iterating
+    /// `source` in reverse priority order and folding each entry in through
     /// [`Self::add_method`] is what preserves `source`'s own relative priority
-    /// after the merge: the oracle does the identical reversal
-    /// (`ReverseTableIterator`) for the identical reason, stated in its own
-    /// comment -- "so the methods get added to our directory in the same
-    /// relative order that they appear in the source directory".
+    /// after the merge: so the methods get added to this directory in the same
+    /// relative order that they appear in the source directory.
     pub fn merge_methods(&mut self, source: &MethodDict) {
         for (name, list) in &source.entries {
             for entry in list.iter().rev() {
@@ -189,19 +178,18 @@ impl MethodDict {
         }
     }
 
-    /// Overlay `source`'s methods **and its already-folded scope order** on
-    /// top of this dictionary -- the oracle's behaviour merge,
-    /// which does a method merge (identical to [`Self::merge_methods`]) followed
-    /// by a scope merge, which folds every scope already in `source`'s own
-    /// `scope_list`, in `source`'s order, into this one via [`Self::add_scope`].
-    /// This is distinct from [`Self::merge_methods`] alone: that merges methods
-    /// only, and is what an ordinary `INHERIT` mixin cascade uses
-    /// (`class_graph.rs`'s `cascade_build`) because a mixin's own ancestors are
-    /// walked independently by that same cascade. This method is for the one
-    /// case where the source's scope history has to come along wholesale
-    /// instead of being re-derived: the oracle's class-behaviour metaclass merge,
-    /// where a class's class-behaviour
-    /// absorbs its metaclass's already-built instance behaviour verbatim.
+    /// Overlay `source`'s methods **and its already-folded scope order** on top
+    /// of this dictionary, which does a method merge (identical to
+    /// [`Self::merge_methods`]) followed by a scope merge, which folds every
+    /// scope already in `source`'s own `scope_list`, in `source`'s order, into
+    /// this one via [`Self::add_scope`]. This is distinct from
+    /// [`Self::merge_methods`] alone: that merges methods only, and is what an
+    /// ordinary `INHERIT` mixin cascade uses (`class_graph.rs`'s `cascade_build`)
+    /// because a mixin's own ancestors are walked independently by that same
+    /// cascade. This method is for the one case where the source's scope history
+    /// has to come along wholesale instead of being re-derived: the
+    /// class-behaviour metaclass merge, where a class's class-behaviour absorbs
+    /// its metaclass's already-built instance behaviour verbatim.
     pub fn merge(&mut self, source: &MethodDict) {
         self.merge_methods(source);
         for &scope in &source.scope_list {
@@ -210,8 +198,8 @@ impl MethodDict {
     }
 
     /// Copy `source`'s entries **defined at `filter`** into this dictionary
-    /// under `scope`, leaving `source` untouched -- the oracle's
-    /// method-table replacement filtered by scope.
+    /// under `scope`, leaving `source` untouched -- a method-table replacement
+    /// filtered by scope.
     pub fn replace_methods_from(&mut self, source: &MethodDict, filter: ObjRef, scope: ObjRef) {
         for (name, list) in &source.entries {
             for entry in list.iter().rev() {
@@ -227,10 +215,9 @@ impl MethodDict {
         }
     }
 
-    /// Rewrite every entry's scope to `scope` -- the oracle's
-    /// method rescoping, what `Class~inheritInstanceMethods`
-    /// uses to make a donor's methods present under the recipient's own
-    /// identity rather than the donor's.
+    /// Rewrite every entry's scope to `scope`, what
+    /// `Class~inheritInstanceMethods` uses to make a donor's methods present
+    /// under the recipient's own identity rather than the donor's.
     pub fn set_method_scope(&mut self, scope: ObjRef) {
         for list in self.entries.values_mut() {
             for entry in list.iter_mut() {
@@ -262,8 +249,8 @@ impl MethodDict {
         self.entries.is_empty()
     }
 
-    /// True if `name` resolves -- the oracle's method-presence test, which
-    /// answers false for a name whose highest-priority entry is a tombstone.
+    /// True if `name` resolves, which answers false for a name whose
+    /// highest-priority entry is a tombstone.
     pub fn has_method(&self, name: &str) -> bool {
         matches!(self.slot(name), Some(MethodSlot::Defined { .. }))
     }
@@ -282,8 +269,7 @@ impl MethodDict {
     }
 
     /// Every defined entry under every name, shadowed ones and ones behind a
-    /// tombstone included -- what the oracle's whole-dictionary method walk
-    /// visits.
+    /// tombstone included -- what a whole-dictionary method walk visits.
     pub fn defined_entries(&self) -> impl Iterator<Item = (&str, ObjRef, MethodId)> + '_ {
         self.entries.iter().flat_map(|(name, list)| {
             list.iter().filter_map(move |slot| match *slot {
@@ -302,12 +288,11 @@ impl MethodDict {
         }
     }
 
-    /// Resolve `name` as a scope-override send starting at `start_scope`,
-    /// matching the oracle's super-method lookup: the first (highest
-    /// priority) entry whose scope is `start_scope` itself, or appears in
-    /// `start_scope`'s own snapshot. Returns `None` if `start_scope` was
-    /// never folded into this dictionary, exactly like the oracle's
-    /// belt-and-braces scope-table miss.
+    /// Resolve `name` as a scope-override send starting at `start_scope`, as a
+    /// super-method lookup does: the first (highest priority) entry whose scope
+    /// is `start_scope` itself, or appears in `start_scope`'s own snapshot.
+    /// Returns `None` if `start_scope` was never folded into this dictionary,
+    /// as a scope-table miss does.
     pub fn lookup_from_scope(&self, name: &str, start_scope: ObjRef) -> Option<(ObjRef, MethodId)> {
         let visible = self.scope_orders.get(&start_scope)?;
         let list = self.entries.get(&name.to_ascii_uppercase())?;
@@ -319,9 +304,8 @@ impl MethodDict {
             .find(|(scope, _)| *scope == start_scope || visible.contains(scope))
     }
 
-    /// The immediate superscope for `scope`: the last entry of `scope`'s
-    /// own snapshot, or `None` for the topmost scope (the oracle's
-    /// `resolveSuperScope`, which returns `.nil` for the same case).
+    /// The immediate superscope for `scope`: the last entry of `scope`'s own
+    /// snapshot, or `None` for the topmost scope .
     pub fn resolve_super_scope(&self, scope: ObjRef) -> Option<ObjRef> {
         self.scope_orders.get(&scope)?.last().copied()
     }

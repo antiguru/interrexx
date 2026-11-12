@@ -16,7 +16,7 @@ impl BehaviourId {
 }
 
 /// Names one flattened method dictionary in the class graph `interrexx-classes`
-/// builds -- the oracle's behaviour object, which an object points at.
+/// builds -- the behaviour object an object points at.
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct BehaviourHandle(usize);
 
@@ -88,9 +88,9 @@ pub enum Body {
         /// first, so the ordinal rides with the value.
         tails: crate::NameMap<Vec<u8>, (usize, Option<ObjRef>)>,
         /// The tails an `EXPOSE` or `PROCEDURE EXPOSE` made another stem's,
-        /// each naming that stem: the oracle's exposed compound element's real
-        /// element. Such a tail is also in `tails`, as a tombstone, so that it
-        /// keeps its place and holds no value of its own.
+        /// each naming that stem: an exposed compound element's real element.
+        /// Such a tail is also in `tails`, as a tombstone, so that it keeps its
+        /// place and holds no value of its own.
         exposed: Option<Box<crate::NameMap<Vec<u8>, ObjRef>>>,
     },
     /// An array's slots, in index order, `None` for a slot that holds no
@@ -155,7 +155,7 @@ pub enum VarRefHome {
 }
 
 /// The native state an instance carries in its own body, for the classes whose
-/// C++ counterparts keep a `CSELF` block. [`NativeState::Package`] and
+/// native counterparts keep a `CSELF` block. [`NativeState::Package`] and
 /// [`NativeState::Executable`] hold [`ObjRef`]s.
 #[derive(Clone, Debug)]
 pub enum NativeState {
@@ -167,23 +167,22 @@ pub enum NativeState {
     /// for [`NativeState::Buffer`] alone. Boxed so that every other native
     /// state stays its size.
     Stream(Box<StreamState>),
-    /// A `.Pointer`'s address, the oracle's pointer data. Its string value is
-    /// the address rendered, so it answers for the reader
-    /// [`NativeState::Buffer`] answers for.
+    /// A `.Pointer`'s address. Its string value is the address rendered, so it
+    /// answers for the reader [`NativeState::Buffer`] answers for.
     Pointer(*mut std::ffi::c_void),
     /// A `Buffer`'s bytes, which an extension writes through the address
     /// `BufferData` handed it for as long as the object lives, so the storage is
     /// never resized.
     Data(AlignedBytes),
-    /// A `String` subclass instance's bytes, the string body that the oracle
-    /// gives the subclass's behaviour.
+    /// A `String` subclass instance's bytes, the string body that carries the
+    /// subclass's behaviour.
     Text(Box<[u8]>),
     /// A `Package` subclass instance's package state.
     Package(PackageState),
     /// The package a `Method` or `Routine` subclass instance's code belongs
     /// to, which the instance keeps alive.
     Executable(ObjRef),
-    /// An extension library's own state for the instance, the block its C++
+    /// An extension library's own state for the instance, the block its native
     /// counterpart keeps behind `CSELF`. It holds no object.
     Extension(ExtensionState),
 }
@@ -334,9 +333,9 @@ impl AlignedBytes {
 const _: () = assert!(size_of::<NativeState>() <= 72);
 
 impl NativeState {
-    /// A `Buffer`'s `length` zero bytes, at an address no other buffer
-    /// shares, which an empty `Vec` would not give: the oracle's empty buffer
-    /// is an object of its own.
+    /// A `Buffer`'s `length` zero bytes, at an address no other buffer shares,
+    /// which an empty `Vec` would not give: an empty buffer is an object of its
+    /// own.
     pub fn zeroed(length: usize) -> NativeState {
         NativeState::Data(AlignedBytes::zeroed(length))
     }
@@ -517,9 +516,8 @@ pub fn pointer_to_string(address: *mut std::ffi::c_void) -> Vec<u8> {
     format!("{address:p}").into_bytes()
 }
 
-/// What a stream is, once `~init` has named it. The four states are the
-/// oracle's own, and `Unknown` is what a stream that has never been opened -- or
-/// has been closed -- answers.
+/// What a stream is, once `~init` has named it. `Unknown` is what a stream that
+/// has never been opened -- or has been closed -- answers.
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum StreamStatus {
     /// Never opened, or closed since.
@@ -528,7 +526,7 @@ pub enum StreamStatus {
     Ready,
     /// A read found the end of the stream.
     NotReady,
-    /// The last operation failed, carrying the errno the oracle reports.
+    /// The last operation failed, carrying the errno reported.
     Error(i32),
 }
 
@@ -598,11 +596,11 @@ pub struct StreamState {
 /// whole process, all of it in libc's allocator.
 const _: () = assert!(size_of::<StreamState>() <= 232);
 
-/// A copy is an **unopened** stream carrying the same name: a descriptor
-/// cannot be cloned without either sharing a file position or a `dup(2)` that
-/// can fail where `Clone` cannot. The oracle has no answer to match --
-/// `~copy` of a stream aborts it (`corpus/oracle-crashes.txt` entry 13) --
-/// so this is a licensed divergence rather than a shape being reproduced.
+/// A copy is an **unopened** stream carrying the same name: a descriptor cannot
+/// be cloned without either sharing a file position or a `dup(2)` that can fail
+/// where `Clone` cannot. There is no answer to match: `~copy` of a stream
+/// aborts the reference run (oracle defect, `corpus/oracle-crashes.txt` entry
+/// 13), so this is a licensed divergence rather than a shape being reproduced.
 impl Clone for StreamState {
     fn clone(&self) -> StreamState {
         StreamState {
@@ -856,9 +854,9 @@ impl BufferState {
     }
 }
 
-/// Every variable pool one object holds: one per scope that has bound a name
-/// in it, found by walking the list (the oracle holds a linked list of variable
-/// dictionaries and searches it the same way).
+/// Every variable pool one object holds: one per scope that has bound a name in
+/// it, found by walking the list (a list of variable dictionaries searched in
+/// order).
 #[derive(Clone, Debug, Default)]
 pub struct ScopePools {
     /// The scope's class identity, and the names it has bound. A name with no
@@ -910,9 +908,8 @@ impl ScopePools {
         self.pools[index].1.retain(|(bound, _)| **bound != *name);
     }
 
-    /// The value `name` holds in the pool created last that binds it, which
-    /// is the oracle's walk: it chains each new dictionary at the head of the
-    /// list.
+    /// The value `name` holds in the pool created last that binds it, each new
+    /// dictionary being chained at the head of the list.
     pub fn find(&self, name: &[u8]) -> Option<ObjRef> {
         self.pools.iter().rev().find_map(|(_, pool)| {
             pool.iter()
@@ -949,7 +946,7 @@ pub struct MethodId(pub u32);
 
 /// One method attached to a single object: the body it runs, the scope its
 /// `EXPOSE` binds in, and the `Method` object it is, which the entry keeps
-/// alive as the oracle's behaviour keeps the object it holds.
+/// alive.
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct ObjectMethod {
     pub method: MethodId,
@@ -957,17 +954,16 @@ pub struct ObjectMethod {
     pub executable: ObjRef,
 }
 
-/// The methods attached to one object rather than to its class, searched
-/// ahead of the class behaviour (the oracle adds an instance method at the front
-/// of the object's table).
+/// The methods attached to one object rather than to its class, searched ahead
+/// of the class behaviour (an instance method is added at the front of the
+/// object's table).
 #[derive(Clone, Debug, Default)]
 pub struct ObjectMethods {
     set: Vec<(Box<[u8]>, Option<ObjectMethod>)>,
     /// The "Enhanced Subclass" `Class~enhanced` built this object from, whose
-    /// instance behaviour the object dispatches against while its `class` is
-    /// the receiver, the oracle's owning-class and enhanced setters. Held so the
-    /// object keeps it alive; the oracle's default name answers `enhanced <id>`
-    /// for such an object.
+    /// instance behaviour the object dispatches against while its `class` is the
+    /// receiver. Held so the object keeps it alive; the default name answers
+    /// `enhanced <id>` for such an object.
     enhanced_by: Option<ObjRef>,
 }
 
@@ -1005,9 +1001,9 @@ impl ObjectMethods {
         Self::find(&self.set, name).copied()
     }
 
-    /// Adds or replaces `setMethod`'s entry for `name`, which
-    /// the oracle does in one step: it removes any method it added before under
-    /// that name and puts the new one at the front.
+    /// Adds or replaces `setMethod`'s entry for `name`, in one step: any method
+    /// added before under that name is removed and the new one put at the
+    /// front.
     pub fn set(&mut self, name: &[u8], entry: Option<ObjectMethod>) {
         Self::write(&mut self.set, name, entry);
     }
@@ -1122,18 +1118,17 @@ impl NativeObject {
         self.string_value = Some(bytes.into());
     }
 
-    /// `~objectName=`: replaces the answer to `~objectName`, and with it
-    /// every rendering of this object, since the oracle's string value is a
-    /// `~objectName` send.
+    /// `~objectName=`: replaces the answer to `~objectName`, and with it every
+    /// rendering of this object, since the string value is a `~objectName`
+    /// send.
     pub fn set_rendered(&mut self, rendered: &[u8]) {
         self.rendered = rendered.into();
     }
 
     /// The value stored under `key`, which callers hold already uppercased --
-    /// the oracle stores every environment entry under
-    /// the upcased name and looks one up by the upcased class name, so the case
-    /// folding belongs to the caller that produced the key and not to each
-    /// lookup.
+    /// every environment entry is stored under the upcased name and looked up
+    /// by the upcased class name, so the case folding belongs to the caller
+    /// that produced the key and not to each lookup.
     pub fn entry(&self, key: &[u8]) -> Option<ObjRef> {
         self.entries.get(key).copied()
     }
@@ -1271,7 +1266,7 @@ impl Body {
     }
 
     /// A `.Pointer` over `address`, an instance of `class` with no variables
-    /// and no methods of its own (the oracle marks the object as having no
+    /// and no methods of its own (the object is marked as having no
     /// references).
     pub fn pointer(
         class: ObjRef,
@@ -1433,13 +1428,13 @@ pub struct Object {
     /// finalizer has run.
     pub(crate) has_uninit: bool,
     /// Set once the collector has reported this object through
-    /// `CollectStats::pending_uninit`, so that a later collection resurrects
-    /// it again without reporting it twice -- the oracle's ready-for-uninit
-    /// flag, read when it runs the pending uninits.
+    /// `CollectStats::pending_uninit`, so that a later collection resurrects it
+    /// again without reporting it twice , the flag read when the pending
+    /// uninits run.
     pub(crate) ready_for_uninit: bool,
-    /// Set once a `GUARD WHEN` has watched one of this object's variables,
-    /// and never cleared, as the oracle's variable dependents stay once created:
-    /// the one test a variable store or drop makes before looking for watchers.
+    /// Set once a `GUARD WHEN` has watched one of this object's variables, and
+    /// never cleared, as variable dependents stay once created: the one test a
+    /// variable store or drop makes before looking for watchers.
     pub(crate) watched: bool,
 }
 

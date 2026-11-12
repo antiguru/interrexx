@@ -1,10 +1,10 @@
 //! The callbacks an extension makes through its context tables, over handles
 //! and bytes rather than raw pointers.
 //!
-//! Each answers the value the oracle's stub answers on its failure path where
-//! the call cannot be served: a handle this activation does not hold, a
-//! condition the interpreter raised while serving it, or a host with no
-//! [`Surface`], which records the member as refused.
+//! Each answers its failure value where the call cannot be served: a handle
+//! this activation does not hold, a condition the interpreter raised while
+//! serving it, or a host with no [`Surface`], which records the member as
+//! refused.
 
 use interrexx_core::ObjRef;
 
@@ -112,10 +112,9 @@ pub trait Surface {
     ) -> Result<Option<ObjRef>, ()>;
 
     /// `get` on a hashed collection this host stores itself, run without a
-    /// message send, so a subclass's `AT` is not what answers, as the
-    /// oracle's `DirectoryAt` calls the collection's own `get`. `None` where
-    /// `table` is not such a collection; `Err` where it raised a condition,
-    /// which the host holds.
+    /// message send, so a subclass's `AT` is not what answers, the collection's
+    /// own `get` being called. `None` where `table` is not such a collection;
+    /// `Err` where it raised a condition, which the host holds.
     fn store_get(&mut self, table: ObjRef, index: &[u8]) -> Option<Result<Option<ObjRef>, ()>>;
 
     /// [`Surface::store_get`]'s `put`, which adds on a multi-value
@@ -177,9 +176,9 @@ pub trait Surface {
     fn executable(&mut self) -> Option<ObjRef>;
 
     /// The `NUMERIC` settings of the top frame of the other activity whose
-    /// native call is in the host's frame `frame`, or `None` where no live
-    /// call of another activity has that frame: the oracle's non-blocking
-    /// members read the context's activity's top frame.
+    /// native call is in the host's frame `frame`, or `None` where no live call
+    /// of another activity has that frame: the non-blocking members read the
+    /// context's activity's top frame.
     fn kept_numeric(&mut self, frame: u64) -> Option<Numeric>;
 
     /// The `Method` or `Routine` object that top frame runs, as
@@ -354,8 +353,8 @@ pub struct DecodedCondition {
 }
 
 /// The precision of a number string `DoubleToObject` builds, which is the
-/// native activation's digits setting, the default nine: measured,
-/// oracle, `DoubleToObject(1/3)` is `0.333333333` under `NUMERIC DIGITS 20`.
+/// native activation's digits setting, the default nine: `DoubleToObject(1/3)`
+/// is `0.333333333` under `NUMERIC DIGITS 20`.
 const DOUBLE_DIGITS: usize = 9;
 
 impl Activation<'_> {
@@ -1092,8 +1091,8 @@ impl Activation<'_> {
     }
 
     /// The item a collection holds at `index`, or `None` where it holds none,
-    /// which the oracle's `get` answers as `OREF_NULL` where the message
-    /// answers `.nil`.
+    /// which `get` answers as a null reference where the message answers
+    /// `.nil`.
     fn item_at(
         &self,
         slot: &'static str,
@@ -1423,8 +1422,8 @@ impl Activation<'_> {
 
     /// `GetContextVariable`. `outer` is the host frame of the call whose
     /// context it came through, where that is not this call: a context kept
-    /// from an enclosing call reaches that call's caller, as the oracle's
-    /// blocking members use the context's own activation.
+    /// from an enclosing call reaches that call's caller, as the blocking
+    /// members use the context's own activation.
     pub fn context_variable(&self, outer: Option<u64>, name: &[u8]) -> RexxObjectPtr {
         self.surface_handle("CallContextInterface.GetContextVariable", |surface| {
             in_caller(surface, outer, |surface| surface.context_variable(name))
@@ -1955,10 +1954,9 @@ impl Activation<'_> {
         )
     }
 
-    /// `RequestGlobalReference` and `ReleaseGlobalReference`, the same
-    /// handle answered. The oracle's release adds a reference as its request
-    /// does, so a released
-    /// handle stays good: measured through the forged extension.
+    /// `RequestGlobalReference` and `ReleaseGlobalReference`, the same handle
+    /// answered. A release adds a reference as a request does, so a released
+    /// handle stays good.
     pub fn global_reference(&self, slot: &'static str, handle: RexxObjectPtr) -> RexxObjectPtr {
         let Some(object) = self.resolve(handle) else {
             return std::ptr::null_mut();
@@ -1973,7 +1971,7 @@ impl Activation<'_> {
     }
 
     /// `ReleaseLocalReference`: the handle no longer roots its object, and
-    /// answers until a collection takes it, as the oracle's does.
+    /// answers until a collection takes it.
     pub fn release_local_reference(&self, handle: RexxObjectPtr) {
         self.conversion().host.release_local(handle);
     }
@@ -2073,7 +2071,7 @@ impl Activation<'_> {
     }
 
     /// `RaiseConditionObject`: a null or unknown handle is 93.911, one naming
-    /// no directory 93.948, as the oracle's stub reports them.
+    /// no directory 93.948, as the stub reports them.
     pub fn raise_condition_object(&self, handle: RexxObjectPtr) {
         const SLOT: &str = "RexxThreadInterface.RaiseConditionObject";
         let condition = self.resolve(handle);
@@ -2113,9 +2111,9 @@ impl Activation<'_> {
     /// forgotten.
     pub fn object_to_value(&self, handle: RexxObjectPtr, declared: u16) -> Option<Value> {
         let object = self.resolve(handle)?;
-        // The oracle switches on the word as the extension wrote it, so
-        // an optional bit, a special row and an unknown code all fall through
-        // to its default.
+        // The switch is on the word as the extension wrote it, so an optional
+        // bit, a special row and an unknown code all fall through to its
+        // default.
         if is_optional(declared)
             || declared == ARGUMENT_TERMINATOR
             || values::source(declared) != Some(Source::Argument)

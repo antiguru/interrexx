@@ -23,7 +23,7 @@ use crate::values::{Activation, Baton, Converted, Host, MAX_WHOLENUMBER, Repr, V
 /// The state that owns the context `context` addresses.
 ///
 /// `context` must be the public struct at the head of an [`Owned`] we handed
-/// out, which is how the C++ recovers the owning activation.
+/// out, which is how the owning activation is recovered.
 ///
 /// # Safety
 /// `context` is a pointer to a live `Owned<C, T>` cast to its `context`
@@ -574,8 +574,8 @@ impl<'a> RedirectorContext<'a> {
 }
 
 /// The thread context an extension is handed, which it may keep for as long as
-/// the interpreter runs: the oracle's belongs to the activity, and
-/// `RexxPackageLoader` is handed it.
+/// the interpreter runs: it belongs to the activity, and `RexxPackageLoader` is
+/// handed it.
 ///
 /// Its callbacks reach the innermost native call in flight, which is what
 /// a thread context's callbacks do. A clone addresses the same
@@ -884,12 +884,10 @@ impl ThreadContext {
         };
     }
 
-    /// Retires this context when termination takes its thread, as the
-    /// oracle's termination runs on an instance created for it:
-    /// a member called through it from
-    /// a native call of another context on this thread, with none of its own
-    /// in flight, then does nothing and answers its failure value, as the
-    /// oracle's stub catches the failure it meets (measured: a routine
+    /// Retires this context when termination takes its thread, as termination
+    /// runs on an instance created for it: a member called through it from a
+    /// native call of another context on this thread, with none of its own in
+    /// flight, then does nothing and answers its failure value (a routine
     /// answering through it in a termination `UNINIT` returns no object).
     pub fn retire(&self) {
         let raw = self.home.0.as_ptr();
@@ -1210,8 +1208,8 @@ impl ContextVariables for RexxExitContext_ {
     const REFERENCE: &'static str = "ExitContextInterface.GetContextVariableReference";
 }
 
-/// `Error_Execution_invalid_thread`: what the oracle raises for a
-/// member reached through a context another activity's call was handed.
+/// `Error_Execution_invalid_thread`: what is raised for a member reached
+/// through a context another activity's call was handed.
 const INVALID_THREAD: usize = 98983;
 
 /// Why the call [`CALLING`] names never holds its conversion state when a
@@ -1258,9 +1256,9 @@ impl<'a> std::ops::Deref for Reached<'a> {
 /// What a method or call context addresses.
 enum Addressed<'a> {
     /// Its own activation, or, while a call nested inside that one holds its
-    /// conversion state, the innermost activation of its activity, which is
-    /// the one the oracle's non-blocking members answer for, with the
-    /// host frame of the context's own call in the second case.
+    /// conversion state, the innermost activation of its activity, which is the
+    /// one the non-blocking members answer for, with the host frame of the
+    /// context's own call in the second case.
     Here(Reached<'a>, Option<u64>),
     /// A context whose activity's call does not run on this thread: the
     /// call to be given 98.983, and the host frame of the context's call.
@@ -1307,8 +1305,8 @@ unsafe fn addressed<'a, C: CallLinked>(context: *mut C) -> Addressed<'a> {
 }
 
 /// The activation `context` addresses ([`addressed`]). Where its call runs
-/// elsewhere, the call to be given the oracle's 98.983 is given it and the
-/// member answers nothing: `None`.
+/// elsewhere, the call to be given 98.983 is given it and the member answers
+/// nothing: `None`.
 ///
 /// # Safety
 /// As [`addressed`].
@@ -1343,17 +1341,16 @@ unsafe fn variables_of<'a, C: CallLinked>(context: *mut C) -> Option<(Reached<'a
 }
 
 /// The activation of the innermost native call in flight, reached through a
-/// thread context. Where that call runs elsewhere, the call to be given the
-/// oracle's 98.983 is given it, and the member does nothing (`None`), as the
-/// oracle throws before the member runs.
+/// thread context. Where that call runs elsewhere, the call to be given 98.983
+/// is given it, and the member does nothing (`None`), the throw coming before
+/// the member runs.
 ///
 /// # Panics
-/// Where no native call is in flight. The oracle aborts there too: measured,
-/// an extension's destructor calling `WholeNumberToObject` through a thread
-/// context it kept, run once the interpreter has terminated, ends the oracle
-/// at rc 134 with a `terminate called after throwing an instance of ...`
-/// abort. The caller is an `extern "C"` frame, so the panic
-/// aborts.
+/// Where no native call is in flight the process aborts: an extension's
+/// destructor calling `WholeNumberToObject` through a thread context it kept,
+/// run once the interpreter has terminated, ends at rc 134 with a `terminate
+/// called after throwing an instance of ...` abort. The caller is an `extern
+/// "C"` frame, so the panic aborts.
 ///
 /// # Safety
 /// `context` is a thread context a [`ThreadContext`] handed out, some clone
@@ -1374,12 +1371,11 @@ unsafe fn innermost_activation<'a>(
     }
 }
 
-/// Gives `running` the oracle's 98.983 for a member reached through a context
-/// whose call runs elsewhere, unless it already holds a condition: the
-/// oracle raises it against that other activity, so a condition the running
-/// call raised itself is the one it ends with. A call whose conversion state
-/// is held, by its own thread waiting in a callback, or whose activity
-/// abandoned it, records it.
+/// Gives `running` 98.983 for a member reached through a context whose call
+/// runs elsewhere, unless it already holds a condition: it is raised against
+/// that other activity, so a condition the running call raised itself is the
+/// one it ends with. A call whose conversion state is held, by its own thread
+/// waiting in a callback, or whose activity abandoned it, records it.
 fn raise_invalid_thread(running: &Reached<'_>) {
     if running.abandoned || running.is_busy() {
         if running.pending().is_none() {
@@ -1392,8 +1388,8 @@ fn raise_invalid_thread(running: &Reached<'_>) {
     }
 }
 
-/// What a member reached through a context of another activity's call
-/// answers: what the oracle's stubs answer on their failure paths.
+/// What a member reached through a context of another activity's call answers:
+/// what the stubs answer on their failure paths.
 pub(crate) trait Nothing {
     fn nothing() -> Self;
 }
@@ -1514,8 +1510,8 @@ unsafe fn reached<'a>(context: *mut RexxThreadContext_, slot: &str) -> Addressed
 
 /// The innermost call of `cell`'s activity, reached from a thread attached to
 /// its context that runs none of its calls: the attached thread acts as that
-/// call, as the oracle's attached thread is its activity, under the baton the
-/// context's requester takes.
+/// call, as the attached thread is its activity, under the baton the context's
+/// requester takes.
 ///
 /// # Panics
 /// Where no native call of the activity is in flight, as [`reached`].
@@ -1777,9 +1773,8 @@ unsafe extern "C" fn raise_condition(
 /// boundary (`load::call_stub`) accepts and nothing else carries.
 pub(crate) struct Thrown;
 
-/// Leaves the extension as the oracle's `Throw` stubs do by C++ `throw`:
-/// the condition is already
-/// recorded, and the call answers once the unwind reaches its boundary.
+/// Leaves the extension as the `Throw` stubs do, by unwinding: the condition is
+/// already recorded, and the call answers once the unwind reaches its boundary.
 fn unwind() -> ! {
     std::panic::resume_unwind(Box::new(Thrown))
 }
@@ -4102,8 +4097,8 @@ mod packages {
     /// # Safety
     /// As [`load_package`].
     ///
-    /// A loader left by a `Throw` leaves the calling extension too, as the
-    /// oracle's does, once the load has settled.
+    /// A loader left by a `Throw` leaves the calling extension too, once the
+    /// load has settled.
     pub(super) unsafe extern "C-unwind" fn load_library(
         context: *mut RexxThreadContext_,
         name: CSTRING,
@@ -4446,9 +4441,9 @@ unsafe extern "C" fn stack_command_environment(
     logical_t::from(unsafe { command_environment(instance, name, handler, kind, true) })
 }
 
-/// The two command-environment members: from a thread running no call of
-/// the instance's activity, attached for the length of the call, as the
-/// oracle attaches it. Answers whether a handler was added.
+/// The two command-environment members: from a thread running no call of the
+/// instance's activity, attached for the length of the call, . Answers whether
+/// a handler was added.
 ///
 /// # Safety
 /// As [`add_command_environment`].
@@ -4494,12 +4489,10 @@ unsafe fn command_environment(
     added
 }
 
-/// `Terminate`: ends the
-/// instance and returns once it has ended. A thread still attached is not
-/// waited for unless it is inside a callback (measured on the oracle: a
-/// thread attached and idle detaches after `Terminate` has returned). From a thread running a call of its activity, and for an
-/// interpreter no embedding created, it does nothing, as the oracle's
-/// `terminate` refuses while the root activity is active.
+/// `Terminate`: ends the instance and returns once it has ended. A thread still attached is not
+/// waited for unless it is inside a callback (a thread attached and idle detaches after `Terminate`
+/// has returned). From a thread running a call of its activity, and for an interpreter no embedding
+/// created, it does nothing, as `terminate` refuses while the root activity is active.
 ///
 /// # Safety
 /// `instance` is an instance a live [`ThreadContext`] links.
@@ -4960,11 +4953,11 @@ pub mod classic {
         if kept < value.len() { TRUNCATED } else { 0 }
     }
 
-    /// Hands a variable pool answer back as the oracle does: into the caller's
-    /// buffer of `*strlength` bytes -- `length` is not its size -- with a NUL after the value
-    /// where the buffer has room for one, truncated to it (`RXSHV_TRUNC`, `*strlength` left at
-    /// the buffer's size), or into a fresh block where the caller gave none. `*length` is the
-    /// value's whole length in every case.
+    /// Hands a variable pool answer back into the caller's buffer of `*strlength` bytes --
+    /// `length` is not its size -- with a NUL after the value where the buffer has room for
+    /// one, truncated to it (`RXSHV_TRUNC`, `*strlength` left at the buffer's size), or into a
+    /// fresh block where the caller gave none. `*length` is the value's whole length in every
+    /// case.
     ///
     /// # Safety
     /// A non-null `*strptr` addresses `*strlength` writable bytes.
@@ -6456,7 +6449,7 @@ mod tests {
     }
 
     /// **A released local reference still answers while its object lives**,
-    /// as the oracle's does until its next collection.
+    /// until its next collection.
     #[test]
     fn a_released_local_reference_still_answers() {
         let mut host = FakeHost::new();
@@ -6538,8 +6531,8 @@ mod tests {
     /// The variable this test sets on the child it spawns.
     const CALL_WITH_NO_FRAME: &str = "REXX_API_CALL_WITH_NO_NATIVE_CALL";
 
-    /// A thread context called through with no native call in flight ends
-    /// the process naming the member, which is the oracle's rc 134.
+    /// A thread context called through with no native call in flight ends the
+    /// process naming the member, with rc 134.
     #[test]
     #[cfg_attr(miri, ignore = "spawns a process")]
     fn a_thread_context_with_no_call_in_flight_aborts() {
@@ -6578,8 +6571,8 @@ mod tests {
     }
 
     /// Every other unbuilt member records the first of itself the call reached
-    /// and returns the oracle's failure value, whatever context it was handed,
-    /// and the record in force before is back afterwards.
+    /// and returns its failure value, whatever context it was handed, and the
+    /// record in force before is back afterwards.
     #[test]
     fn a_refusing_entry_records_itself_and_returns() {
         let table = RexxThreadInterface::REFUSING;

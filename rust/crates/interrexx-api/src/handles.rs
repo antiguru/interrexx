@@ -84,11 +84,10 @@ impl Table {
         self.entries.contains_key(&address_of(object))
     }
 
-    /// Drops `handle`'s registration, so it no longer roots its object.
-    /// A handle this table
-    /// does not hold is ignored, as the oracle ignores one. Each time the
-    /// released handles pass their limit, those whose object `live` says is
-    /// gone are forgotten.
+    /// Drops `handle`'s registration, so it no longer roots its object. A
+    /// handle this table does not hold is ignored. Each time the released
+    /// handles pass their limit, those whose object `live` says is gone are
+    /// forgotten.
     pub fn release(&mut self, handle: RexxObjectPtr, live: impl Fn(ObjRef) -> bool) {
         let address = handle.addr();
         let Some(object) = self.entries.remove(&address) else {

@@ -10,8 +10,8 @@ use std::cell::{Cell, OnceCell, RefCell};
 /// Every address [`Redirector::read_line`] and [`Redirector::read_buffer`]
 /// answer stays valid until this is dropped.
 pub struct Redirector {
-    /// Whether the command carried any `WITH` configuration: the oracle hands
-    /// a handler no I/O context otherwise, and every member answers nothing.
+    /// Whether the command carried any `WITH` configuration: a handler is
+    /// handed no I/O context otherwise, and every member answers nothing.
     requested: bool,
     input: Option<Input>,
     output: Option<RefCell<Sink>>,
@@ -248,9 +248,8 @@ mod tests {
         redirector.finish().0
     }
 
-    /// The oracle's own lines for the buffer shapes the `FUNCTION` group
-    /// writes, a `\r\n` split across two buffers and a trailing `\r` among
-    /// them.
+    /// The lines for the buffer shapes the `FUNCTION` group writes, a `\r\n`
+    /// split across two buffers and a trailing `\r` among them.
     #[test]
     fn buffers_split_into_the_oracles_lines() {
         assert_eq!(written(&[b"Line1\r\n"]), [b"Line1".to_vec()]);

@@ -214,8 +214,8 @@ fn unsigned_value(digits: &[u8], length: i64, carry: bool, exponent: i64, max: i
 /// than `max`.
 ///
 /// Each step is refused only where it answers less than the value before it,
-/// which is the C++'s own overflow test: a multiplication by ten can wrap to a
-/// larger value, and that step passes.
+/// which is the overflow test: a multiplication by ten can wrap to a larger
+/// value, and that step passes.
 fn wrapping_unsigned_value(
     digits: &[u8],
     length: i64,
@@ -348,8 +348,8 @@ pub struct Number {
 const _: () = assert!(size_of::<Number>() <= 40);
 
 impl Number {
-    /// The canonical zero. Every spelling of zero collapses to this: the
-    /// oracle prints `0` for `-0`, `0.0` and `00.00` alike.
+    /// The canonical zero. Every spelling of zero collapses to this: `0` is
+    /// printed for `-0`, `0.0` and `00.00` alike.
     #[inline(always)]
     pub const fn zero() -> Self {
         Number {
@@ -360,9 +360,9 @@ impl Number {
     }
 
     #[inline(always)]
-    /// How many significant digits this number stores, trailing zeros
-    /// included -- the oracle's own digit count, which is what the interpreter
-    /// compares against `DIGITS` to decide that an operand loses digits.
+    /// How many significant digits this number stores, trailing zeros included
+    /// -- which is what the interpreter compares against `DIGITS` to decide
+    /// that an operand loses digits.
     pub fn digit_count(&self) -> usize {
         self.digits.len()
     }
@@ -546,9 +546,9 @@ impl Number {
         if signed {
             i += 1;
             // Blanks are allowed between the sign and the digits -- the sign
-            // branch of the oracle's number scan has its own skip loop. Without
-            // a sign there is nothing to skip: the leading skip above already
-            // ran, so a blank here is simply not part of a number.
+            // branch of the number scan has its own skip loop. Without a sign
+            // there is nothing to skip: the leading skip above already ran, so
+            // a blank here is simply not part of a number.
             while i < bytes.len() && is_blank(bytes[i]) {
                 i += 1;
             }
@@ -726,13 +726,12 @@ impl Number {
         (length, exponent, carry) = self.integer_digits(digits)?;
 
         // The point now sits left of the first digit, so the value is whatever
-        // the carry contributed and nothing else. The C++ does NOT apply the
-        // sign here, and that is reproduced rather than corrected: the oracle's
-        // number value returns `carry ? 1 : 0` with no `* numberSign`. It is
-        // unobservable through the only caller that can reach it, because a
-        // numeric `TRACE` is rejected at RUN time with error 24.901, "Numeric
-        // TRACE requests are valid only from interactive debugging", whatever
-        // value the parse produced.
+        // the carry contributed and nothing else. The sign is NOT applied here:
+        // the value is `carry ? 1 : 0` with no sign factor. It is unobservable
+        // through the only caller that can reach it, because a numeric `TRACE`
+        // is rejected at RUN time with error 24.901, "Numeric TRACE requests
+        // are valid only from interactive debugging", whatever value the parse
+        // produced.
         if -exponent >= length {
             return Some(i64::from(carry));
         }
@@ -792,11 +791,11 @@ impl Number {
     /// The value as an `i64` under `digits` precision, or `None` where it has
     /// none.
     ///
-    /// Two answers are the C++'s rather than arithmetic's, each measured on the
-    /// oracle through `orxmethod`: a value whose digits all round away into a
-    /// carry is `1` whatever its sign (`-0.999999999999999999999` is `1`), and
-    /// the overflow test can miss a wrap ([`wrapping_unsigned_value`]), so
-    /// `21000000000000000000` is `2553255926290448384`.
+    /// Two answers are not arithmetic's: a value whose digits all round away
+    /// into a carry is `1` whatever its sign (`-0.999999999999999999999` is
+    /// `1`), and the overflow test can miss a wrap
+    /// ([`wrapping_unsigned_value`]), so `21000000000000000000` is
+    /// `2553255926290448384`.
     pub fn int64_value(&self, digits: usize) -> Option<i64> {
         if self.is_zero() {
             return Some(0);
@@ -960,8 +959,8 @@ impl Number {
 
 impl Number {
     /// Renders every stored digit, with `digits` and `form` deciding only
-    /// whether and how the exponent shows: the oracle's string value on a number
-    /// not yet rounded.
+    /// whether and how the exponent shows: the string value of a number not yet
+    /// rounded.
     pub fn render_unrounded(&self, digits: u64, form: Form) -> String {
         if self.is_zero() {
             return "0".to_string();
@@ -982,7 +981,7 @@ impl Number {
                 if adjusted < 0 {
                     adjusted -= 2;
                 }
-                // Truncating division, as the C++ divides.
+                // Truncating division.
                 adjusted = (adjusted / 3) * 3;
             }
             shown -= adjusted;
