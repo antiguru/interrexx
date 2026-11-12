@@ -392,6 +392,7 @@ before
 from block
 ```
 
+r[instr.reply.group.leave]
 A LEAVE that names the group ends it on the new activity as it does on the
 first one, and the rest of the method goes on from there.
 
