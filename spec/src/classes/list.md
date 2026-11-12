@@ -217,6 +217,7 @@ m~insert("t", gone) => 93.918
 m~section(gone) => 93.918
 ```
 
+r[class.list.indexes.stable]
 Entries keep their handles when others are inserted or removed before them:
 
 ```rexx

@@ -317,8 +317,9 @@ fn run_source(source: &str) -> (i32, String, String) {
 /// `Array~append`, `items`, `last` and `List~append`, and a SYNTAX unwind
 /// through deep frames (which appends each frame to its TRACEBACK and
 /// STACKFRAMES lists), copy a bounded number of slots per operation: twice
-/// the work copies about twice the slots, where copying the whole collection
-/// on each append copies about four times as many.
+/// the work copies at most about twice the slots (none at all is allowed: a
+/// position-hinted list lookup copies nothing), where copying the whole
+/// collection on each append copies about four times as many.
 #[test]
 fn appends_and_reads_copy_slots_linearly() {
     let copied = |n: usize| {
@@ -355,7 +356,7 @@ fn appends_and_reads_copy_slots_linearly() {
     let (twice, large) = copied(4000);
     assert_eq!(twice, "4000 4000 4000 4000 4000\nh 1001\n");
     assert!(
-        large * 10 < small * 25,
+        large * 10 <= small * 25,
         "{small} slots copied at 2000, {large} at 4000"
     );
 }
