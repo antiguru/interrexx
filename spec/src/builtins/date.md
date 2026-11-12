@@ -3,6 +3,7 @@ element: DATE
 kind: builtin
 syntax: "DATE([option [, [string] [, [informat] [, [osep] [, isep]]]]])"
 ansi: "9.8.1"
+deviations: [165]
 rexxref: "Functions > Built-in Functions > DATE"
 ---
 
@@ -681,3 +682,29 @@ j: say condition('o')~code
 > **Note.** The ANSI draft (9.8.1) has neither separators nor the options F,
 > I, L and T. The reference manual does not give the order of the checks; this
 > rule matches ooRexx.
+
+## Deviations
+
+r[bif.date.deviation.165]
+A 0 byte as the first character of `option` or of `informat` is a character
+that is no letter, like any other: it names nothing, and it is refused as the
+[letter rule](r:bif.index.dt.letter) says. So an `option` of a 0 byte with an
+`osep` is a format that does not apply the separator (`SYNTAX 40.44`), as
+`Q` is, and an `informat` of a 0 byte with an `isep` reaches the check of the
+letter of `informat` (`SYNTAX 40.904`), as `Q` does. ooRexx finds a 0 byte in
+every set of letters, as a search of a C string does, so it answers `40.904`
+for the first call below and `40.44` for the second.
+
+```rexx
+signal on syntax name a
+say date('00'x, , , '-')
+a: say condition('o')~code
+signal on syntax name b
+say date(, '20070922', '00'x, , '-')
+b: say condition('o')~code
+```
+
+```output
+40.44
+40.904
+```

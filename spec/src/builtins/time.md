@@ -3,6 +3,7 @@ element: TIME
 kind: builtin
 syntax: "TIME([option [, [string] [, informat]]])"
 ansi: "9.8.5"
+deviations: [165]
 rexxref: "Functions > Built-in Functions > TIME"
 ---
 
@@ -661,6 +662,30 @@ f: say condition('o')~code
 40.29
 40.904
 40.19
+40.904
+```
+
+## Deviations
+
+r[bif.time.deviation.165]
+A 0 byte as the first character of `option` or of `informat` is a character
+that is no letter, like any other: it names nothing, and it is refused as the
+[letter rule](r:bif.index.dt.letter) says, with `SYNTAX 40.904`. ooRexx tests
+the letter against the set of letters as a search of a C string does, which
+finds a 0 byte in every set; its answers to these calls are the same
+as interrexx's, and [DATE](r:bif.date.deviation.165) is where the two differ.
+
+```rexx
+signal on syntax name a
+say time('00'x)
+a: say condition('o')~code
+signal on syntax name b
+say time('N', '13:05:09', '00'x)
+b: say condition('o')~code
+```
+
+```output
+40.904
 40.904
 ```
 

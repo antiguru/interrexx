@@ -1267,3 +1267,13 @@ library's raw error number of the process, which any later clause on any
 activity can overwrite, even after a successful call: the number a program
 reads in a later clause, or while another activity runs, is whatever call set
 it last.
+
+## 165. A 0 byte as the letter of a DATE option or informat
+
+A 0 byte as the first character of the `option` or the `informat` of `DATE`
+or `TIME` is a character that is no letter, and is refused like any other: the
+`option` of `DATE` with an `osep` raises `SYNTAX 40.44` as `Q` does, and the
+`informat` with an `isep` raises `SYNTAX 40.904` as `Q` does. ooRexx tests the
+letter against the set of letters as a search of a C string does, which finds
+a 0 byte in every set: a 0 byte `option` with an `osep` raises `SYNTAX 40.904`
+and a 0 byte `informat` with an `isep` raises `SYNTAX 40.44`.
