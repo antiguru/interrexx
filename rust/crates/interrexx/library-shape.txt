@@ -984,6 +984,7 @@ class STREAM public=1 mixin=1 abstract=0 metaclass=CLASS supers=INPUTOUTPUTSTREA
   instance DESCRIPTION private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=stream_description
   instance FLUSH private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=stream_flush
   instance INIT private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
+  instance INTERREXX_VALUE private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance LINEIN private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=stream_linein
   instance LINEOUT private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=stream_lineout
   instance LINES private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=stream_lines
