@@ -173,9 +173,9 @@ impl Surface for Interp {
     }
 
     fn is_string(&mut self, object: ObjRef) -> bool {
-        // A number is a `RexxInteger` or a `NumberString` in the oracle, which
-        // `isString` does not count: measured, `IsString(1+1)` is `0` where
-        // `IsString('abc')` is `1`.
+        // A number is a `RexxInteger` or a `NumberString`, which `isString`
+        // does not count: `IsString(1+1)` is `0` where `IsString('abc')` is
+        // `1`.
         let text = match object.decode() {
             Decoded::Text(_) => true,
             Decoded::Heap { .. } => matches!(
@@ -210,10 +210,10 @@ impl Surface for Interp {
             let after = body.held_bytes();
             self.heap.rehold_body_bytes(before, after);
         }
-        // Rewritten where it lies, as the oracle's string data is: a call may
-        // hold the address `StringData` answered for the unfinished string.
-        // Every byte made is copied and the terminator at the made length
-        // stays, as finishing sets only the length.
+        // Rewritten where it lies, as string data is: a call may hold the
+        // address `StringData` answered for the unfinished string. Every byte
+        // made is copied and the terminator at the made length stays, as
+        // finishing sets only the length.
         match self.kept_strings.get_mut(&string) {
             Some(kept) if made.len() < kept.len() => {
                 kept[..made.len()].copy_from_slice(made);
@@ -240,8 +240,8 @@ impl Surface for Interp {
 
     fn new_mutable_buffer(&mut self, capacity: usize) -> ObjRef {
         let mut bytes = Vec::new();
-        // An allocation this large fails here as `new_buffer` fails in the
-        // oracle; the empty buffer is what a failed reservation leaves.
+        // An allocation this large fails here as `new_buffer` fails; the empty
+        // buffer is what a failed reservation leaves.
         let capacity = match bytes.try_reserve_exact(capacity) {
             Ok(()) => capacity,
             Err(_) => 0,
@@ -997,8 +997,8 @@ impl Interp {
     }
 
     /// The buffers the running method's receiver keeps for
-    /// `AllocateObjectMemory`, which the oracle keeps in the receiver's
-    /// `Object`-scope pool under the empty name, or `None` outside a method.
+    /// `AllocateObjectMemory`, which are kept in the receiver's `Object`-scope
+    /// pool under the empty name, or `None` outside a method.
     fn object_memory(&mut self) -> Option<Vec<Option<ObjRef>>> {
         let frame = self.native_frame();
         if !frame.method {
@@ -1182,7 +1182,7 @@ impl Interp {
     }
 
     /// An instance of the native class `id` carrying `state`, made as the
-    /// C++ constructors make one, with no `INIT` sent.
+    /// native constructors make one, with no `INIT` sent.
     fn native_state_instance(&mut self, id: &str, state: NativeState) -> ObjRef {
         let class = self
             .classes()

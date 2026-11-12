@@ -216,7 +216,7 @@ pub(super) fn pull(
 
 /// `rexx_linein_queue()`: the head line, waiting for one, or `.nil` on any failure. The wait
 /// gives up the guard lock, and a halt ends it. A wait on the in-process session queue that no
-/// other activity can satisfy is refused, where the oracle blocks for ever (Deviation 20).
+/// other activity can satisfy is refused, where blocking would never end (Deviation 20).
 pub(super) fn linein(
     interp: &mut Interp,
     _cleared: Cleared,

@@ -47,12 +47,11 @@ pub(super) fn list_state(
     ) {
         return Ok((items, handles, free));
     }
-    // Built on demand for [`store_of`]'s reason: upstream the contents belong
-    // to the allocated object, so a subclass `INIT` that does not forward
-    // still has them. Measured, a `List` subclass whose `INIT` only sets an
-    // exposed variable answers `items 1` after `append('a')`. The three are
-    // only ever written together, so a partial set is not a state this can
-    // meet.
+    // Built on demand for [`store_of`]'s reason: the contents belong to the
+    // allocated object, so a subclass `INIT` that does not forward still has
+    // them: a `List` subclass whose `INIT` only sets an exposed variable
+    // answers `items 1` after `append('a')`. The three are only ever written
+    // together, so a partial set is not a state this can meet.
     if !is_list(interp, receiver) {
         return Err(crate::Raised::receiver_kind("a value that is not a list").into());
     }
@@ -203,7 +202,7 @@ fn native_list_at(
 ) -> Result<Option<ObjRef>, Failure> {
     // **Argument TWO, not one.** `List~at` validates the index as argument 2,
     // so a bare `~at` reports `argument 2 is required` even though the method
-    // takes one argument. Measured on the oracle.
+    // takes one argument.
     let handle = list_index_argument(args, 0)?;
     let Some(at) = list_position(interp, receiver, handle)? else {
         return Ok(Some(ObjRef::NIL));
@@ -244,9 +243,9 @@ fn native_list_put(
     }
 }
 
-/// `List~remove(index)` and `List~delete(index)`, one body upstream: takes
-/// the item out, frees the handle and answers the item, or `.nil` for a
-/// handle the list does not hold.
+/// `List~remove(index)` and `List~delete(index)`, one body: takes the item out,
+/// frees the handle and answers the item, or `.nil` for a handle the list does
+/// not hold.
 fn native_list_remove(
     interp: &mut Interp,
     _cleared: Cleared,

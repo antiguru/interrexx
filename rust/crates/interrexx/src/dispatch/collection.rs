@@ -126,13 +126,13 @@ pub(super) fn store_of(interp: &mut Interp, receiver: ObjRef) -> Result<ObjRef, 
     if let Some(store) = pool_variable(interp, receiver, scope, QUEUE_ITEMS) {
         return Ok(store);
     }
-    // **A subclass `INIT` that never forwards still has a store.** Upstream
-    // the contents belong to the object `newRexx` allocates, so they are
-    // there before any `INIT` runs and a subclass that does not chain up
-    // cannot lose them. Measured: a `Queue` subclass whose `INIT` only sets
-    // an exposed variable answers `items 1` after `queue('a')`, and the same
-    // of a `CircularQueue` subclass -- both of which this crate refused with
-    // `a value that is not an array` when the store was `INIT`'s to make.
+    // **A subclass `INIT` that never forwards still has a store.** The contents
+    // belong to the object allocated for the class, so they are there before
+    // any `INIT` runs and a subclass that does not chain up cannot lose them: a
+    // `Queue` subclass whose `INIT` only sets an exposed variable answers
+    // `items 1` after `queue('a')`, and the same of a `CircularQueue` subclass
+    // -- both of which this crate refused with `a value that is not an array`
+    // when the store was `INIT`'s to make.
     if !holds_array_store(interp, receiver) {
         return Err(crate::Raised::receiver_kind("a value that is not an array").into());
     }
@@ -441,8 +441,7 @@ pub(super) fn array_grow(
     let grown = match interp.heap.get_mut(receiver).map(|object| &mut object.body) {
         Some(Body::Array { slots, .. }) => {
             let before = slots.capacity();
-            // A length the allocator refuses is 5.0, as on the oracle, and
-            // not an abort.
+            // A length the allocator refuses is 5.0, and not an abort.
             if let Some(extra) = length.checked_sub(slots.len()) {
                 slots
                     .try_reserve(extra)

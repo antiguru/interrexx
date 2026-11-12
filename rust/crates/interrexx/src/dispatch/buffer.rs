@@ -729,8 +729,7 @@ fn native_mutable_buffer_substr(
 
 /// `MutableBuffer~[]`, in the string method's two-argument form: the length
 /// defaults to one byte, is capped at the end of the contents, and nothing
-/// pads -- measured, oracle rc 0: `.MutableBuffer~new('abcabc')[2]` is `b` and
-/// `[5, 10]` is `bc`.
+/// pads: `.MutableBuffer~new('abcabc')[2]` is `b` and `[5, 10]` is `bc`.
 fn native_mutable_buffer_brackets(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1203,8 +1202,8 @@ fn native_mutable_buffer_caselessstartswith(
     Ok(Some(interp.counted(usize::from(answer))))
 }
 
-/// A start past the contents is `0` before `other` is looked at -- measured,
-/// oracle rc 0: `.MutableBuffer~new('abcabc')~match(99, .nil)` is `0`.
+/// A start past the contents is `0` before `other` is looked at:
+/// `.MutableBuffer~new('abcabc')~match(99, .nil)` is `0`.
 fn native_mutable_buffer_match(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1222,8 +1221,7 @@ fn native_mutable_buffer_match(
 }
 
 /// `MATCH`'s scan, the caseless comparison the only difference, and the same
-/// order -- measured, oracle rc 0:
-/// `.MutableBuffer~new('aBcaBc')~caselessMatch(99, .nil)` is `0`.
+/// order: `.MutableBuffer~new('aBcaBc')~caselessMatch(99, .nil)` is `0`.
 fn native_mutable_buffer_caselessmatch(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1249,9 +1247,8 @@ fn native_mutable_buffer_caselessmatch(
 
 /// The rest of `match`'s arguments once `start` is inside the receiver: an
 /// explicit offset past `other` is `0` before the length is looked at, and a
-/// length past `other` is `0` -- measured, oracle rc 0: `~match(1, 'abc', 4,
-/// -1)` is `0`. `None` is those two answers; `Some` is the region of `other`
-/// to compare.
+/// length past `other` is `0`: `~match(1, 'abc', 4, -1)` is `0`. `None` is
+/// those two answers; `Some` is the region of `other` to compare.
 pub(super) fn match_region_arguments(
     interp: &mut Interp,
     args: &[Option<ObjRef>],
@@ -1308,9 +1305,8 @@ fn match_region(
     ))
 }
 
-/// A position past the contents is `0` before the set is looked at --
-/// measured, oracle rc 0: `.MutableBuffer~new('abcabc')~matchChar(99, .nil)`
-/// is `0`.
+/// A position past the contents is `0` before the set is looked at:
+/// `.MutableBuffer~new('abcabc')~matchChar(99, .nil)` is `0`.
 fn native_mutable_buffer_matchchar(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1331,9 +1327,8 @@ fn native_mutable_buffer_matchchar(
     Ok(Some(interp.counted(usize::from(answer))))
 }
 
-/// `MATCHCHAR`'s scan with both sides folded, and the same order -- measured,
-/// oracle rc 0: `.MutableBuffer~new('aBcaBc')~caselessMatchChar(99, .nil)` is
-/// `0`.
+/// `MATCHCHAR`'s scan with both sides folded, and the same order:
+/// `.MutableBuffer~new('aBcaBc')~caselessMatchChar(99, .nil)` is `0`.
 fn native_mutable_buffer_caselessmatchchar(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1376,8 +1371,8 @@ fn replace_buffer_contents(state: &mut BufferState, built: &[u8]) {
 }
 
 /// The receiver's state with room for `added` more bytes
-/// ([`BufferState::ensure_capacity`], whose refusal is the oracle's 5.1),
-/// the growth charged before the state is answered.
+/// ([`BufferState::ensure_capacity`], whose refusal is 5.1), the growth charged
+/// before the state is answered.
 fn grow_buffer(
     interp: &mut Interp,
     receiver: ObjRef,
@@ -1661,7 +1656,7 @@ fn native_mutable_buffer_changestr(
 
 /// `CHANGESTR`'s three length branches with the search folded, and the same
 /// capacity rule -- only the growing branch sets the capacity, with the
-/// result's own length. Measured, oracle rc 0: `.MutableBuffer~new('aBc',
+/// result's own length. For example, `.MutableBuffer~new('aBc',
 /// 10)~caselessChangeStr('B', copies('q', 40))` reads `42 42`.
 fn native_mutable_buffer_caselesschangestr(
     interp: &mut Interp,

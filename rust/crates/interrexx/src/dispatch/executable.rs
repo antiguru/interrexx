@@ -119,9 +119,9 @@ fn flag(interp: &Interp, receiver: ObjRef, which: Flag) -> Result<bool, Failure>
 fn declared_flag(interp: &Interp, source: ExecutableSource, which: Flag) -> bool {
     let ExecutableSource::Directive { program, directive } = source else {
         // A primitive carries the flag word `new MethodClass` left it: every
-        // bit clear, which `isGuarded` reads as guarded. Measured, oracle rc
-        // 0: `.Object~method('objectName')` answers `0 0 0 1 0 0 0` for the
-        // seven readers in the order they are declared here.
+        // bit clear, which `isGuarded` reads as guarded. For example,
+        // `.Object~method('objectName')` answers `0 0 0 1 0 0 0` for the seven
+        // readers in the order they are declared here.
         return false;
     };
     let Some(directive) = interp
@@ -143,10 +143,10 @@ fn declared_flag(interp: &Interp, source: ExecutableSource, which: Flag) -> bool
         },
         DirectiveKind::Attribute(attribute) => match which {
             Flag::Abstract => attribute.abstract_,
-            // The attribute getter and the method an `::ATTRIBUTE ... GET`
-            // with a body takes both mark the attribute state. Measured,
-            // oracle rc 0: `::attribute ATT` and `::attribute ATT get` with a
-            // body each answer `isAttribute` `1`.
+            // The attribute getter and the method an `::ATTRIBUTE ... GET` with
+            // a body takes both mark the attribute state. For example,
+            // `::attribute ATT` and `::attribute ATT get` with a body each
+            // answer `isAttribute` `1`.
             Flag::Attribute => true,
             Flag::Constant => false,
             Flag::Unguarded => attribute.guard == GuardOption::Unguarded,
@@ -155,8 +155,8 @@ fn declared_flag(interp: &Interp, source: ExecutableSource, which: Flag) -> bool
             Flag::Protected => attribute.protection == Protection::Protected,
         },
         // A constant getter is marked constant and unguarded outright, taking
-        // no access or protection option. Measured, oracle rc 0: `::constant
-        // CON 5` answers `0 0 1 0 0 0 0`, and it is the one directive whose
+        // no access or protection option. For example, `::constant CON 5`
+        // answers `0 0 1 0 0 0 0`, and it is the one directive whose
         // `isGuarded` is `0` without an `UNGUARDED` keyword.
         DirectiveKind::Constant(_) => matches!(which, Flag::Constant | Flag::Unguarded),
         // A `::ROUTINE` is not a `Method` and answers none of these; the rows
@@ -270,10 +270,9 @@ fn set_unguarded(
 }
 
 /// See [`set_guarded`]. **This one changes how a send resolves**, because the
-/// object `Class~method` answers is the dictionary's own method: measured,
-/// oracle, `o~mm` answers `1`, then `.K~method('MM')~setPrivate`, and the
-/// same `o~mm` is 97 at rc 159. [`Interp::make_method_private`] is the half
-/// that does it.
+/// object `Class~method` answers is the dictionary's own method: `o~mm` answers
+/// `1`, then `.K~method('MM')~setPrivate`, and the same `o~mm` is 97 at rc 159.
+/// [`Interp::make_method_private`] is the half that does it.
 fn set_private(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -378,8 +377,8 @@ fn package(
     let source = source_of(interp, receiver)?;
     Ok(Some(match interp.source_package(source) {
         // The interpreter's own library programs are the `REXX` package:
-        // measured, oracle rc 0, `.Stream~method('INIT')~package~name` is
-        // `REXX` and its `source` has no lines.
+        // `.Stream~method('INIT')~package~name` is `REXX` and its `source` has
+        // no lines.
         Some(crate::plan::Package::Program(program))
             if interp.library_programs.contains(&program) =>
         {
@@ -399,8 +398,8 @@ fn source(
 ) -> Result<Option<ObjRef>, Failure> {
     let lines = match source_of(interp, receiver)? {
         // The REXX package's methods are restored from the image with no
-        // source: measured, oracle rc 0, every method of `.OrderedCollection`,
-        // `.DateTime` and `.Stream` answers no lines.
+        // source: every method of `.OrderedCollection`, `.DateTime` and
+        // `.Stream` answers no lines.
         ExecutableSource::Directive { program, .. } | ExecutableSource::Main { program }
             if interp.library_programs.contains(&program) =>
         {
@@ -420,9 +419,8 @@ fn source(
     array_of_texts(interp, lines).map(Some)
 }
 
-/// The physical lines a `::CONSTANT` expression's method answers as its
-/// source: its own directive clause's, where the oracle answers the last
-/// `::CONSTANT` clause for each.
+/// The physical lines a `::CONSTANT` expression's method answers as its source:
+/// its own directive clause's, and not the last `::CONSTANT` clause's for each.
 fn directive_clause_lines(interp: &Interp, program: ProgramId, directive: usize) -> Vec<Vec<u8>> {
     let Some(source) = interp.programs.get(program) else {
         return Vec::new();
@@ -483,13 +481,13 @@ fn block_source_lines(
             (last, text.line_span(last).map_or(0, |span| span.end))
         }
     };
-    // `extractSourceLines`' own step back over an end that sits at the start
-    // of a line: the block's end offset is that line's length, so an **empty**
-    // last line drops out. Measured, oracle rc 0, counting the items of a body
-    // followed by `n` blank lines: one blank answers the body alone and two
-    // answer the body and one blank, at the end of the file and before a
-    // following directive alike; and a `::method` with nothing after it but
-    // one blank line answers `Array(0)`.
+    // `extractSourceLines`' own step back over an end that sits at the start of
+    // a line: the block's end offset is that line's length, so an **empty**
+    // last line drops out. For example, counting the items of a body followed
+    // by `n` blank lines: one blank answers the body alone and two answer the
+    // body and one blank, at the end of the file and before a following
+    // directive alike; and a `::method` with nothing after it but one blank
+    // line answers `Array(0)`.
     let (last, upto) = match text.line_span(last) {
         Some(span) if span.is_empty() => {
             let stepped = last.saturating_sub(1);
@@ -702,7 +700,7 @@ fn begin_routine(
     };
     let started = interp.begin_installed_routine(program, directive, &mut values, &name)?;
     // `.context~executable` inside answers the object the call came through:
-    // measured, oracle rc 0, `r~call == r` and `r~copy~call == r~copy`.
+    // `r~call == r` and `r~copy~call == r~copy`.
     if let NativeStarted::Entered(_) = started {
         interp.activation_mut().cold_mut().executable = Some(receiver);
     }

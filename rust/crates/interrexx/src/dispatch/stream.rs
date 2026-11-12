@@ -24,10 +24,10 @@ use crate::lines::{
 };
 use crate::{Failure, Interp};
 
-/// The state block, or 48.1 when `~uninit` has already dropped it. The oracle
-/// segfaults for the unguarded half of its own entry points here
-/// (`corpus/oracle-crashes.txt` entry 12b); answering 48.1 from every one of
-/// them is this crate's licensed divergence.
+/// The state block, or 48.1 when `~uninit` has already dropped it. The
+/// reference run segfaults for the unguarded half of its entry points here
+/// (oracle defect, `corpus/oracle-crashes.txt` entry 12b); answering 48.1 from
+/// every one of them is this crate's licensed divergence.
 fn require(interp: &Interp, receiver: ObjRef) -> Result<&StreamState, Failure> {
     match interp.stream(receiver) {
         Some(state) => Ok(state),
@@ -105,8 +105,8 @@ pub(crate) fn standard_stream(
     let mut state = StreamState::new(name.to_vec(), name.into());
     state.standard = Some(which);
     state.status = StreamStatus::Ready;
-    // `.STDOUT` and `.STDERR` are opened `NOBUFFER` in the oracle's class
-    // library, where a program's own `.Stream~new('STDOUT')` is buffered.
+    // `.STDOUT` and `.STDERR` are opened `NOBUFFER` in the class library, where
+    // a program's own `.Stream~new('STDOUT')` is buffered.
     state.mode.nobuffer = true;
     state.local = true;
     let Some(held) = interp.heap.get_mut(object) else {
@@ -257,14 +257,14 @@ pub(super) fn description(
     out.push(b':');
     match state.status {
         StreamStatus::NotReady => out.extend_from_slice(b"EOF"),
-        // A zero errno carries no text: the oracle appends `strerror` only
-        // when it has an errno to render.
+        // A zero errno carries no text: `strerror` is appended only when there
+        // is an errno to render.
         StreamStatus::Error(0) => out.extend_from_slice(b"0"),
         StreamStatus::Error(errno) => {
             out.extend_from_slice(errno.to_string().as_bytes());
             let text = std::io::Error::from_raw_os_error(errno).to_string();
-            // `io::Error`'s rendering appends " (os error N)", which the
-            // oracle's `strerror` does not.
+            // `io::Error`'s rendering appends " (os error N)", which `strerror`
+            // does not.
             let text = match text.find(" (os error") {
                 Some(at) => text[..at].to_string(),
                 None => text,
@@ -405,8 +405,8 @@ const OPEN_TABLE: &[(&[u8], usize, OpenOption)] = &[
     (b"SHAREWRITE", 6, OpenOption::Shared),
 ];
 
-/// What the options parsed to, in the C++'s own terms: the mode booleans and
-/// the two `oflag` bits the table's mutual-exclusion actions test.
+/// What the options parsed to, in the terms of the native entry: the mode
+/// booleans and the two `oflag` bits the table's mutual-exclusion actions test.
 #[derive(Default)]
 struct Parsed {
     read_only: bool,
@@ -614,9 +614,9 @@ pub(super) fn open(
     }
     let opened = match opening.open(&path) {
         Ok(file) => file,
-        // An explicit WRITE retries write-only, so a file that grants write
-        // and not read opens. The retry is the oracle's create-for-write open,
-        // which does not truncate even under REPLACE.
+        // An explicit WRITE retries write-only, so a file that grants write and
+        // not read opens. The retry is a create-for-write open, which does not
+        // truncate even under REPLACE.
         Err(_) if parsed.write_only => {
             match std::fs::OpenOptions::new()
                 .write(true)
@@ -1024,11 +1024,11 @@ fn standard_is_transient(interp: &Interp, which: StandardStream) -> bool {
     }]
 }
 
-/// Positioning a transient stream is 93.958, and a standard stream reaches
-/// that check by what the `Invocation` says rather than by an `OpenFile` it
-/// does not have. **Only when the descriptor is transient**: measured against
-/// the oracle, the same `CHAROUT( , 'xxxxx', 15)` answers `0` and writes when
-/// fd 1 is a regular file and raises when it is a pipe.
+/// Positioning a transient stream is 93.958, and a standard stream reaches that
+/// check by what the `Invocation` says rather than by an `OpenFile` it does not
+/// have. **Only when the descriptor is transient**: the same `CHAROUT( ,
+/// 'xxxxx', 15)` answers `0` and writes when fd 1 is a regular file and raises
+/// when it is a pipe.
 fn refuse_transient_position(
     interp: &Interp,
     which: StandardStream,
@@ -1509,8 +1509,8 @@ pub(super) fn lineout(
     {
         return notready(interp, receiver, StreamStatus::NotReady, b"1".to_vec());
     }
-    // Only a LINEOUT with a string pads its record. Positioning writes
-    // nothing (Deviation 46: the oracle pads from the write position here).
+    // Only a LINEOUT with a string pads its record. Positioning writes nothing
+    // (Deviation 46: pads from the write position here).
     let record = record_length(interp, receiver)?;
     let mode = require(interp, receiver)?.mode;
     let state = require_mut(interp, receiver)?;
@@ -1564,9 +1564,8 @@ pub(super) fn lineout(
 /// read-only is closed first, then the write setup runs -- creating a missing
 /// file, or raising `NOTREADY` with `answer` where it cannot -- and the stream
 /// is closed (`StreamInfo::lineout`, `StreamInfo::charout`). A close writes
-/// nothing (Deviation 46: the oracle's `LINEOUT` pads a record stream's
-/// current record from the write position first). A standard stream only
-/// closes.
+/// nothing (Deviation 46: `LINEOUT` pads a record stream's current record from
+/// the write position first). A standard stream only closes.
 fn close_for_write(
     interp: &mut Interp,
     cleared: Cleared,
@@ -1663,9 +1662,9 @@ pub(super) fn chars(
         let StandardStream::In = which else {
             return Ok(Some(interp.text(b"0")));
         };
-        // An unmeasurable source answers `1` while it is live: measured, a
-        // pipe on the oracle's own standard input answers `1` where a
-        // redirected regular file answers the true byte count.
+        // An unmeasurable source answers `1` while it is live: a pipe on
+        // standard input answers `1` where a redirected regular file answers
+        // the true byte count.
         let left = interp.input_remaining().unwrap_or(1);
         return Ok(Some(interp.text_built(left.to_string().into_bytes())));
     }
@@ -2221,9 +2220,8 @@ pub(super) fn close(
 ///
 /// A standard output or error stream hands the interpreter's buffer for its
 /// descriptor over. A buffered one whose held writes that hand-over refused
-/// answers the descriptor's error, and so does every flush after it until
-/// the stream writes again: the oracle keeps the refused bytes and fails on
-/// each retry.
+/// answers the descriptor's error, and so does every flush after it until the
+/// stream writes again: the refused bytes are kept and each retry fails.
 pub(super) fn flush(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -2260,8 +2258,8 @@ pub(super) fn flush(
 }
 
 /// `stream_uninit`: drops the state block, after which every entry point here
-/// raises 48.1. **Answers nothing**, so a value context is 91.999 -- measured
-/// on the oracle, which returns no result either.
+/// raises 48.1. **Answers nothing**, so a value context is 91.999: which
+/// returns no result either.
 pub(super) fn uninit(
     interp: &mut Interp,
     _cleared: Cleared,

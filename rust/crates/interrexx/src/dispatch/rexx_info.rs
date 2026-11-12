@@ -67,8 +67,7 @@ pub(super) static NATIVE_METHODS: &[(&str, &str, Arity, NativeMethod)] = &[
     ("RexxInfo", "VERSION", Arity::Fixed(0), version),
 ];
 
-/// The platform's `PATH_MAX`, from which the oracle takes its maximum path
-/// length.
+/// The platform's `PATH_MAX`, from which the maximum path length is taken.
 const PATH_MAX: usize = 4096;
 
 /// `ORX_BLD`: the source-control revision the interpreter was configured at.
@@ -218,8 +217,8 @@ fn end_of_line(
 
 /// `GlobalNames::SCIENTIFIC`, which that function returns unconditionally --
 /// its own comment is "always scientific". Not the default setting's form,
-/// which would agree on this interpreter and stop mirroring the C++ on one
-/// where they parted.
+/// which would agree on this interpreter and stop matching on one where they
+/// parted.
 fn form(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -293,9 +292,8 @@ fn major_version(
 }
 
 /// The fixed-array maximum, the same constant [`super::MAX_FIXED_ARRAY_SIZE`]
-/// bounds `.Array~new` by. Measured, oracle rc 0 under a trap:
-/// `.Array~new(that + 1)` is `Error 93.959: An array cannot contain more than
-/// 100000000000000000 elements.`
+/// bounds `.Array~new` by. Under a trap, `.Array~new(that + 1)` is `Error
+/// 93.959: An array cannot contain more than 100000000000000000 elements.`
 fn max_array_size(
     interp: &mut Interp,
     _cleared: Cleared,

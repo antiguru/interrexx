@@ -498,9 +498,9 @@ fn single_subscript(
         _ if super::array_is_fixed_dimension(interp, receiver)? => {
             Err(Raised::too_many_subscripts(1).into())
         }
-        // An array with no extent yet keeps the plain refusal: the oracle's
-        // `IndexUpdate` makes it multi-dimensional under `insert`, a method
-        // that refuses one, and `IndexAccess` leaves `section`'s start unset.
+        // An array with no extent yet keeps the plain refusal: index resolution
+        // would make it multi-dimensional under `insert`, a method that refuses
+        // one, and would leave `section`'s start unset.
         _ => super::positive_index(interp, value, position),
     }
 }

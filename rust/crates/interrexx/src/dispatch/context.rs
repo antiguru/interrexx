@@ -431,10 +431,9 @@ pub(crate) fn executable_at(interp: &mut Interp, depth: usize) -> Result<ObjRef,
 #[inline(never)]
 fn internal_executable_at(interp: &mut Interp, depth: usize) -> Result<ObjRef, Failure> {
     // An internal call runs its caller's code, and answers its caller's
-    // executable: measured, oracle rc 0, an internal routine called from a
-    // `::METHOD` answers that `Method`. Each internal call keeps the answer,
-    // so a stack's frames, built level by level, walk a chain of internal
-    // calls once.
+    // executable: an internal routine called from a `::METHOD` answers that
+    // `Method`. Each internal call keeps the answer, so a stack's frames, built
+    // level by level, walk a chain of internal calls once.
     let mut found = depth;
     while let Some(activation) = interp.frame_at(found)
         && activation.entry == Entry::InternalCall
@@ -478,9 +477,9 @@ fn caller_executable_at(interp: &mut Interp, depth: usize) -> Result<ObjRef, Fai
                 (identity.scope, identity.name.to_vec(), identity.receiver);
             let body = crate::InstalledMethodBody { program, directive };
             let executable = interp.running_method_executable(scope, &name, receiver, body)?;
-            // Kept on the activation, which roots it: measured, oracle rc 0,
-            // a method that unsets its own entry answers the same object
-            // before and after a forced collection.
+            // Kept on the activation, which roots it: a method that unsets its
+            // own entry answers the same object before and after a forced
+            // collection.
             if let Some(activation) = interp.frame_at_mut(depth) {
                 activation.cold_mut().executable = Some(executable);
             }
@@ -497,9 +496,8 @@ fn caller_executable_at(interp: &mut Interp, depth: usize) -> Result<ObjRef, Fai
                 return Ok(executable);
             }
             // A routine built from source text is a synthetic directive in no
-            // package table, and is its own executable: measured, oracle rc
-            // 0, `.routine~new('r', 'return .context~executable~class~id')~call`
-            // answers `Routine`.
+            // package table, and is its own executable: `.routine~new('r',
+            // 'return .context~executable~class~id')~call` answers `Routine`.
             let synthetic = interp
                 .programs
                 .get(program)
@@ -769,17 +767,16 @@ pub(crate) fn build_frame(interp: &mut Interp, depth: usize) -> Result<ObjRef, F
 
 /// [`build_frame`], with the arguments left out where `arguments` is false: an
 /// internal call a tail-less `RAISE` left has had its argument list cleared by
-/// the time the oracle's frame is taken. Measured, oracle rc 0: a call with
-/// two arguments reports none in the condition object.
+/// the time the frame is taken. For example, a call with two arguments reports
+/// none in the condition object.
 pub(crate) fn build_frame_with(
     interp: &mut Interp,
     depth: usize,
     arguments: bool,
 ) -> Result<ObjRef, Failure> {
     let invocation = interp.invocation_of(depth);
-    // Created here when the activation never asked for one, which is what the
-    // oracle's frame creation does for the context object -- see
-    // `Interp::context_object_at`.
+    // Created here when the activation never asked for one, which is what frame
+    // creation does for the context object -- see `Interp::context_object_at`.
     let context = interp.context_object_at(depth);
     let executable = executable_at(interp, depth).ok();
     let mut snapshot = read_snapshot(interp, depth)?;
@@ -851,8 +848,8 @@ fn frame_object(
     // `StackFrame` answers the traceback line for `string` and `makeString`
     // where `defaultName` answers `a StackFrame` -- the one native class in
     // this crate that separates the two. Without it an `Array` holding a frame
-    // joins on the default name: measured, oracle rc 0, `say .array~of(f)` is
-    // the traceback line where `f~objectName` is `a StackFrame`.
+    // joins on the default name: `say .array~of(f)` is the traceback line where
+    // `f~objectName` is `a StackFrame`.
     native.set_string_value(trace_text);
     interp.roots.activity_mut().pop_frame(frame);
     // Re-pushed above the frame that has just closed, which is the shape
@@ -964,10 +961,10 @@ pub(crate) fn build_ended_frame(
 /// The `StackFrame` of a native method or routine that `target` (`.nil` for a
 /// routine) was sent with `arguments`, with no line or invocation and its
 /// `Compiled method` or `Compiled routine` line as its traceback. A routine's
-/// context is the calling activation's and a method's is `.nil`: measured,
-/// oracle rc 0, `SysSleep`, `FILESPEC` and an `EXTERNAL` routine answer one,
-/// `SUBSTR` and an `EXTERNAL` method none. `caller` is `None` for a method,
-/// and for a routine the depth of the activation that called it.
+/// context is the calling activation's and a method's is `.nil`: `SysSleep`,
+/// `FILESPEC` and an `EXTERNAL` routine answer one, `SUBSTR` and an `EXTERNAL`
+/// method none. `caller` is `None` for a method, and for a routine the depth of
+/// the activation that called it.
 pub(crate) fn build_native_level_frame(
     interp: &mut Interp,
     caller: Option<usize>,
@@ -1013,11 +1010,10 @@ pub(crate) fn build_native_level_frame(
     frame_object(interp, frame, &entries, trace_text)
 }
 
-/// The `Method` object a native method level runs: the dictionary entry
-/// `name` resolves to for `target`, which is what `Class~method` answers.
-/// Measured, oracle rc 0: a `CHARIN` frame's executable is
-/// `.Stream~method('CHARIN')` and a `SORTWITH` frame's
-/// `.Array~method('SORTWITH')`.
+/// The `Method` object a native method level runs: the dictionary entry `name`
+/// resolves to for `target`, which is what `Class~method` answers. For example,
+/// a `CHARIN` frame's executable is `.Stream~method('CHARIN')` and a `SORTWITH`
+/// frame's `.Array~method('SORTWITH')`.
 pub(crate) fn native_method_executable(
     interp: &mut Interp,
     target: ObjRef,
@@ -1283,7 +1279,7 @@ fn frame_entry(interp: &Interp, receiver: ObjRef, name: &[u8]) -> Result<ObjRef,
 }
 
 /// `PROGRAM`, `INTERNALCALL`, `ROUTINE` or `METHOD` -- see [`read_snapshot`]
-/// for the two of the C++'s six this crate cannot reach.
+/// for the two of the six kinds this crate cannot reach.
 fn frame_type(
     interp: &mut Interp,
     _cleared: Cleared,

@@ -127,7 +127,7 @@ fn semaphore_wait(
     }
 }
 
-/// The largest timeout in seconds the oracle's `uint32_t` milliseconds hold;
+/// The largest timeout in seconds a `uint32_t` count of milliseconds holds;
 /// beyond it, as below zero, the wait is for ever.
 const LONGEST_SECONDS: f64 = 4_294_967.0;
 
@@ -180,9 +180,8 @@ fn timeout_seconds(
         crate::pinning::PinKind::native(method),
         interp.required_string_or_nil(seconds)
     )?;
-    // A `STRING` answer with no string value is `.nil` here, and the
-    // refusal names the object: measured, oracle rc 168, 88.902 `found "a
-    // SN"`.
+    // A `STRING` answer with no string value is `.nil` here, and the refusal
+    // names the object: 88.902 `found "a SN"`.
     let bytes = if text == ObjRef::NIL && seconds != ObjRef::NIL {
         interp.string_value_text(seconds)?
     } else {

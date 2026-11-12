@@ -351,8 +351,8 @@ fn whole_argument(interp: &mut Interp, value: ObjRef) -> Option<i64> {
 }
 
 /// The "incorrect method list" error for an option name `~options` does not
-/// accept, in the two spellings the oracle has: the list a no-value send names
-/// and the list a setting send names are not the same set.
+/// accept, in two spellings: the list a no-value send names and the list a
+/// setting send names are not the same set.
 fn unknown_option(name: &[u8], setting: bool) -> Failure {
     let list = if setting {
         "\"A[ll], D[igits], E[rror], FA[ilure], FO[rm], FU[zz], I[nitialOptions], \
@@ -409,8 +409,8 @@ fn default_options(
         return Err(Raised::method_user_defined("argument 2 must not be empty").into());
     }
     if which == Some(b'C') {
-        // The number argument, whose failure is the oracle's own: measured at
-        // rc 163, `.Package~defaultOptions('C', 'x')` is 93.905.
+        // The number argument, whose failure is the usual number refusal:
+        // `.Package~defaultOptions('C', 'x')` is 93.905.
         let Some(count) = whole_argument(interp, value) else {
             return Err(Raised::method_argument_not_whole(2, &text).into());
         };
@@ -533,19 +533,18 @@ fn set_security_manager(
 
 /// A `dlopen` of a native library, answering whether it loaded.
 ///
-/// Measured, oracle rc 0: `.context~package~loadLibrary('rxregexp')` is `1`
-/// and the same call naming `zorkolib` is `0`, so a library that is not there
-/// is an answer here rather than the 98.903 a directive gets.
+/// For example, `.context~package~loadLibrary('rxregexp')` is `1` and the same
+/// call naming `zorkolib` is `0`, so a library that is not there is an answer
+/// here rather than the 98.903 a directive gets.
 fn load_library(
     interp: &mut Interp,
     _cleared: Cleared,
     receiver: ObjRef,
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
-    // The name is validated before the receiver is: the oracle checks the
-    // string argument and then that the package is not the REXX package.
-    // Measured at rc 168, `.Class~package~loadLibrary` is 88.901 and not
-    // 98.984.
+    // The name is validated before the receiver is: the string argument is
+    // checked first and then that the package is not the REXX package, so
+    // `.Class~package~loadLibrary` is 88.901 and not 98.984.
     let Some(name) = args.first().copied().flatten() else {
         return Err(Raised::missing_named_argument("name").into());
     };
@@ -555,9 +554,9 @@ fn load_library(
     if crate::internal_routines::Package::named(&name).is_some() {
         return Ok(Some(interp.counted(1)));
     }
-    // A version refusal raises here as it does at a directive: measured,
-    // oracle rc 158, `loadLibrary` of a package entry asking for a newer
-    // interpreter is 98.982 on the first ask and answers `1` on the next.
+    // A version refusal raises here as it does at a directive: `loadLibrary` of
+    // a package entry asking for a newer interpreter is 98.982 on the first ask
+    // and answers `1` on the next.
     let loaded = match interp.resolve_library(&name) {
         crate::LibraryLoad::Loaded(_) => true,
         crate::LibraryLoad::Missing => false,
@@ -592,9 +591,9 @@ fn public_classes(
 }
 
 /// The merged public classes, which is what this package's `::REQUIRES` and
-/// `~addPackage` brought in and **not** its own public classes. Measured,
-/// oracle rc 0: a file declaring `::class K public` and requiring one
-/// declaring `::class LIBC public` answers `LIBC` alone.
+/// `~addPackage` brought in and **not** its own public classes. For example, a
+/// file declaring `::class K public` and requiring one declaring `::class LIBC
+/// public` answers `LIBC` alone.
 fn imported_classes(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -614,8 +613,8 @@ fn routines(
     _args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
     // A written `.ROUTINES` table is the package's routines from then on, as
-    // `findRoutine` reads them: measured, oracle rc 0, `p~routines['C']` is
-    // what `.routines['C'] = u` stored.
+    // `findRoutine` reads them: `p~routines['C']` is what `.routines['C'] = u`
+    // stored.
     if fields_of(interp, receiver)?.routines_written {
         let entries = package_table_entries(interp, receiver, PackageTable::Routines)?;
         return interp.string_table_of(entries).map(Some);
@@ -881,7 +880,7 @@ fn add_routine(
 }
 
 /// `Package~addPublicRoutine`, which files into **both** tables: it writes
-/// `routines` and then `publicRoutines`. Measured, oracle rc 0: after
+/// `routines` and then `publicRoutines`. For example, after
 /// `p~addPublicRoutine('PUBR', r)` the name is in `~routines` as well as in
 /// `~publicRoutines`.
 fn add_public_routine(
@@ -928,9 +927,8 @@ fn install_routine(
             data.public_routines.insert(name.clone(), merged);
         }
     }
-    // `.ROUTINES` answers this same table, so the write has to reach it --
-    // measured, oracle rc 0, `.routines~allIndexes` carries a name added by
-    // `~addRoutine`.
+    // `.ROUTINES` answers this same table, so the write has to reach it:
+    // `.routines~allIndexes` carries a name added by `~addRoutine`.
     if let Some(table) = interp.package_string_table_for_write(receiver, PackageTable::Routines)? {
         super::hash::directory_put(interp, table, &name, routine)?;
     }

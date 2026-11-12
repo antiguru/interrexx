@@ -64,8 +64,7 @@ impl Interp {
     /// [`Interp::required_string_value`] for the right operand of `op`: a
     /// logical operator and an equality read it as
     /// [`Interp::required_string_or_nil`] does, and every other operator reads
-    /// its bytes. The oracle's ordering operators read `.nil` through the
-    /// string layout.
+    /// its bytes. An ordering operator reads `.nil` through the string layout.
     #[inline]
     pub(crate) fn required_string_operand(
         &mut self,
@@ -190,10 +189,10 @@ impl Interp {
         let value = self.conversion_subject(value)?;
         // `sendMessage(STRING)`. An instance's or a class's `STRING` can be a
         // Rexx method, so it is sent; the shortcut below is what the send
-        // answers wherever `STRING` resolves to `native_string`. Measured,
-        // oracle rc 0: with `::METHOD string` returning `from-string`, `say
-        // o`, `'x' o` and `length(o)` all follow it, and with `::METHOD string
-        // CLASS` returning `KS`, `say .k` prints `KS`.
+        // answers wherever `STRING` resolves to `native_string`. For example,
+        // with `::METHOD string` returning `from-string`, `say o`, `'x' o` and
+        // `length(o)` all follow it, and with `::METHOD string CLASS` returning
+        // `KS`, `say .k` prints `KS`.
         let mut no_string = false;
         let readable = if matches!(
             self.receiver_kind(value),
@@ -344,11 +343,10 @@ impl Interp {
             StringConversion::MakeString => {
                 // What `makeString` answered has to be a real string, and an
                 // object that is not one converts here or counts as no answer
-                // at all. Measured, oracle rc 0 on `say .K` with a class-side
-                // `makeString`: `return 5` prints `5`, `return
-                // .Object~superClasses` prints the empty line an empty array
-                // joins to, and `return .array` prints `The K class` -- the
-                // third fell back.
+                // at all. With `say .K` and a class-side `makeString`, `return
+                // 5` prints `5`, `return .Object~superClasses` prints the empty
+                // line an empty array joins to, and `return .array` prints `The
+                // K class` -- the third fell back.
                 match self.send_make_string(value)? {
                     Some(answered) => match self.classify_string_conversion(answered) {
                         StringConversion::Object(text) => Some(RequiredString::Object(text)),
@@ -365,7 +363,7 @@ impl Interp {
     }
 
     /// The protocol's conversion limbs alone, with **no** `~string` fallback
-    /// and **no** NOSTRING condition. `None` is the oracle's `.nil`.
+    /// and **no** NOSTRING condition. `None` is `.nil`.
     pub(crate) fn string_conversion(&mut self, value: ObjRef) -> Result<Option<ObjRef>, Failure> {
         Ok(match self.required_string_answer(value)? {
             Some(RequiredString::Object(text)) => Some(text),
@@ -537,8 +535,8 @@ impl Interp {
         )
     }
 
-    /// The traceback line the oracle's own `REQUEST` activation contributes
-    /// when a `makeString` reached through the protocol fails.
+    /// The traceback line the `REQUEST` activation contributes when a
+    /// `makeString` reached through the protocol fails.
     fn blame_request(&mut self, value: ObjRef) {
         let class = self.text(b"STRING");
         self.roots.activity_mut().push_temp(class);
@@ -569,8 +567,8 @@ pub(super) fn required_string_argument(
     }
 }
 
-/// [`required_string_argument`] for an argument the oracle's 88.909 names
-/// rather than numbers.
+/// [`required_string_argument`] for an argument 88.909 names rather than
+/// numbers.
 pub(super) fn required_string_named_argument(
     interp: &mut Interp,
     value: ObjRef,

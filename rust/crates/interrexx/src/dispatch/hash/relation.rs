@@ -377,12 +377,12 @@ fn native_relation_remove_item(
 /// `Relation`'s and `Bag`'s primitive methods, chained into
 /// `ObjectModel::build` beside [`super::NATIVE_METHODS`].
 pub(in crate::dispatch) const NATIVE_METHODS: &[(&str, &str, Arity, NativeMethod)] = &[
-    // **`Relation` and `Bag` have identical native entry-point sets**, which
-    // is why they are one task: the oracle writes `Bag`'s `AllAt`, `AllIndex`,
-    // `Items`, `RemoveAll`, `Supplier` and `UniqueIndexes` with `Relation`'s
-    // bodies, and only `HasItem` and `RemoveItem` are `Bag`'s own. A Bag's
-    // index is its item, so HASITEM specializes the optional argument check
-    // and index-only comparison in its shared body.
+    // **`Relation` and `Bag` have identical native entry-point sets**, which is
+    // why they are one task: `Bag`'s `AllAt`, `AllIndex`, `Items`, `RemoveAll`,
+    // `Supplier` and `UniqueIndexes` are `Relation`'s bodies, and only
+    // `HasItem` and `RemoveItem` are `Bag`'s own. A Bag's index is its item, so
+    // HASITEM specializes the optional argument check and index-only comparison
+    // in its shared body.
     ("Relation", "ALLAT", Arity::Fixed(1), native_relation_all_at),
     (
         "Relation",

@@ -214,14 +214,14 @@ pub(super) fn native_scope(
 
 /// The `REXX_DEFINED` refusal every class mutator opens with, one per mutator.
 fn rexx_defined_lock(interp: &mut Interp, class: ObjRef) -> Result<(), Failure> {
-    // **Open while the interpreter's own library runs**, which is the state
-    // the library image is built in: its prologue is a run of `~inherit`
-    // clauses against exactly the classes this flag guards, and the oracle
-    // sets `REXX_DEFINED` on them at image-save time rather than before. This
-    // crate flags each library class as `Interp::install_class` creates it, so
-    // the bypass is not a convenience: it is what lets the prologue's own
-    // `~inherit` clauses run at all. See `Interp::library_bootstrap` for what
-    // else the same flag opens and for why no program can be inside it.
+    // **Open while the interpreter's own library runs**, which is the state the
+    // library image is built in: its prologue is a run of `~inherit` clauses
+    // against exactly the classes this flag guards, and the `REXX_DEFINED` mark
+    // is set on them at image-save time rather than before. This crate flags
+    // each library class as `Interp::install_class` creates it, so the bypass
+    // is not a convenience: it is what lets the prologue's own `~inherit`
+    // clauses run at all. See `Interp::library_bootstrap` for what else the
+    // same flag opens and for why no program can be inside it.
     if !interp.library_bootstrap && interp.classes().is_rexx_defined(class) {
         return Err(Raised::rexx_defined_class().into());
     }
@@ -253,9 +253,9 @@ pub(super) fn method_source_lines(
         return Ok(vec![interp.to_text(source).to_vec()]);
     }
     // `requestArray`, then `makeString` for a value that is not a primitive.
-    // Measured, oracle rc 0: `.method~new('m', x)` takes `.environment` as
-    // its index array, a `List` or `Queue` of lines, a stem's tails, and an
-    // instance whose `MAKEARRAY` or `MAKESTRING` answers the lines.
+    // For example, `.method~new('m', x)` takes `.environment` as its index
+    // array, a `List` or `Queue` of lines, a stem's tails, and an instance
+    // whose `MAKEARRAY` or `MAKESTRING` answers the lines.
     let array = if interp.array_slots_of(source).is_some() {
         Some(source)
     } else {
@@ -294,9 +294,8 @@ pub(super) fn method_source_lines(
         interp.roots.activity_mut().push_temp(wanted);
         let caller = interp.caller();
         let answered = interp.send_message(source, b"REQUEST", None, &[Some(wanted)], caller)?;
-        // Any answer but `.nil` is the line, as its string value: measured,
-        // oracle rc 0, a `MAKESTRING` answering an `Array` compiles the line
-        // `an Array`.
+        // Any answer but `.nil` is the line, as its string value: a
+        // `MAKESTRING` answering an `Array` compiles the line `an Array`.
         if let Some(line) = answered.filter(|line| *line != ObjRef::NIL) {
             return Ok(vec![interp.string_value_text(line)?]);
         }
@@ -343,10 +342,9 @@ fn is_source_line(interp: &Interp, value: ObjRef) -> bool {
     )
 }
 
-/// `lines` parsed as a program, or restored where they are an encoded image,
-/// or the `SYNTAX` condition they raise, positioned within them (measured,
-/// oracle `1` for `.Routine~new('T', 'return arg(1')` on line 2 of its
-/// caller).
+/// `lines` parsed as a program, or restored where they are an encoded image, or
+/// the `SYNTAX` condition they raise, positioned within them (for example `1`
+/// for `.Routine~new('T', 'return arg(1')` on line 2 of its caller).
 fn parse_source_lines(
     interp: &mut Interp,
     name: &[u8],
@@ -438,11 +436,10 @@ pub(crate) fn method_in_package(
     let method_class = interp.method_class();
     let object = interp.native_instance(method_class);
     // Every `Method` object this crate builds carries an annotation table, so
-    // that `~annotations` and `~annotation` answer from the object rather
-    // than from a way back to a directive. A compiled method has no directive
-    // and its table starts empty, which is the oracle's own answer: measured,
-    // rc 0, `.k~define("m", 'return 1')` then `.k~method("M")~annotation('x')`
-    // is `The NIL object`.
+    // that `~annotations` and `~annotation` answer from the object rather than
+    // from a way back to a directive. A compiled method has no directive and
+    // its table starts empty, so `.k~define("m", 'return 1')` then
+    // `.k~method("M")~annotation('x')` is `The NIL object`.
     let site = crate::environment::Annotated::Compiled(interp.compiled_methods);
     interp.compiled_methods += 1;
     interp.attach_annotations(object, site);
@@ -474,8 +471,8 @@ fn routine_from_program(
     parent: Option<ObjRef>,
 ) -> Result<ObjRef, Failure> {
     // Routine generation installs them into the routine's own package, whose
-    // parent is the caller's: measured, oracle rc 0, `.Routine~new('T',
-    // .array~of('::class a1'))~package~classes~hasIndex('A1')` is `1`.
+    // parent is the caller's: `.Routine~new('T', .array~of('::class
+    // a1'))~package~classes~hasIndex('A1')` is `1`.
     let parent = executable_parent(interp, &parsed, parent)?;
     routine_in_package(interp, name, parsed, parent)
 }
@@ -601,10 +598,10 @@ pub(super) fn native_mixin_class_factory(
 
 /// `Class~new(id, ...)`: a copy of the receiver that answers the receiver's
 /// instance methods, derives its instances from `Object` alone and is in no
-/// subclass list, sent `INIT` with the arguments after the id. Measured,
-/// oracle rc 0: `.class~new('FooBar')` answers `FooBar Object 0 The REXX
-/// Package` for its id, superclass, membership of `.object~subclasses` and
-/// package, and its own `~new` is 97.1.
+/// subclass list, sent `INIT` with the arguments after the id. For example,
+/// `.class~new('FooBar')` answers `FooBar Object 0 The REXX Package` for its
+/// id, superclass, membership of `.object~subclasses` and package, and its own
+/// `~new` is 97.1.
 pub(super) fn native_new_class(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -761,17 +758,18 @@ pub(crate) fn new_subclass(
         interp.roots.activity_mut().push_temp(argument);
         let caller = interp.caller();
         let answer = interp.send_message(metaclass, b"NEW", None, &[Some(argument)], caller)?;
-        // Measured, oracle rc 139 (`oracle-crashes.txt` entry 8): an answer
-        // that is not a class is cast to one unchecked.
+        // An answer that is not a class is refused here (oracle defect,
+        // `oracle-crashes.txt` entry 8: the reference run casts it to a class
+        // unchecked and crashes).
         let Some(id) = answer.filter(|answer| interp.heap.is_class(*answer)) else {
             return Err(Loud::receiver_class(
                 "a metaclass whose NEW answers something other than a class",
             )
             .into());
         };
-        // A class `Class~new` did not build, or one a subclass already took,
-        // is rewired in place by the oracle, which damages a class others
-        // hold (Deviation 32).
+        // A class `Class~new` did not build, or one a subclass already took, is
+        // not rewired in place here, as that would damage a class others hold
+        // (Deviation 32).
         if !interp.classes().is_cloned(id) {
             return Err(Loud::metaclass_new_reused_class().into());
         }
@@ -837,8 +835,8 @@ fn factory_metaclass(
     Ok(metaclass)
 }
 
-/// The `class id` argument, and the traceback frame the oracle's own `NEW`
-/// activation contributes when it refuses.
+/// The `class id` argument, and the traceback frame `NEW`'s own activation
+/// contributes when it refuses.
 fn class_id_argument(
     interp: &mut Interp,
     metaclass: ObjRef,
@@ -896,9 +894,9 @@ fn install_enhancing_class_methods(
         let value = if interp.receiver_kind(value) == Ok(Primitive::Method) {
             value
         } else {
-            // Measured, oracle rc 163: a literal array `('return 1', ,
-            // 'nop')` in this table is `93.952 Method argument method source
-            // is an array and does not contain all string values.`
+            // For example, a literal array `('return 1', , 'nop')` in this
+            // table is `93.952 Method argument method source is an array and
+            // does not contain all string values.`
             compile_method_source(interp, name, value, "method source", SourceTaker::Method)?
         };
         interp
@@ -938,13 +936,12 @@ pub(super) fn native_class_inherit(
     let class = class_receiver(interp, receiver)?;
     rexx_defined_lock(interp, class)?;
     let mixin = mixin_class_argument(interp, args)?;
-    // **The position is not type-checked, and that is the oracle's shape.** It
-    // is used in one place, to find the position in the superclass list, and a
-    // value that is not in the list gives index 0 and the "has not inherited"
-    // error whatever kind of object it was. Measured at rc 158, `::class K`
-    // inheriting `.M1`: `.K~inherit(.M2, "abc")` is `98.945`, `Class "The K
-    // class" has not inherited class "abc".` -- the second argument's error
-    // and not the first's.
+    // **The position is not type-checked.** It is used in one place, to find
+    // the position in the superclass list, and a value that is not in the list
+    // gives index 0 and the "has not inherited" error whatever kind of object
+    // it was. With `::class K` inheriting `.M1`, `.K~inherit(.M2, "abc")` is
+    // `98.945`, `Class "The K class" has not inherited class "abc".` -- the
+    // second argument's error and not the first's.
     let position = args.get(1).copied().flatten();
     match interp.classes().inherit_at(class, mixin, position) {
         Ok(()) => Ok(None),
@@ -977,9 +974,9 @@ pub(super) fn native_define_class_method(
     Ok(None)
 }
 
-/// `Class~inheritInstanceMethods(source)`: copy `source`'s own instance
-/// methods into the receiver's dictionary at the receiver's scope, with no
-/// superclass edge added -- the "phony inherit" of the oracle's class library.
+/// `Class~inheritInstanceMethods(source)`: copy `source`'s own instance methods
+/// into the receiver's dictionary at the receiver's scope, with no superclass
+/// edge added -- the "phony inherit".
 pub(super) fn native_inherit_instance_methods(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1034,8 +1031,8 @@ fn mixin_class_argument(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<
     })
 }
 
-/// One [`InheritRefusal`] as the condition the oracle reports in its place,
-/// with the substitutions rendered the way the message renders an object:
+/// One [`InheritRefusal`] as the condition reported in its place, with the
+/// substitutions rendered the way the message renders an object:
 /// `stringValue()`, which is `~objectName` and so follows a rename.
 fn inherit_refusal(
     interp: &mut Interp,
@@ -1133,8 +1130,8 @@ pub(super) fn native_package(
     Ok(Some(interp.package_object_for(class)?))
 }
 
-/// `Class~copy`: the refusal the oracle puts over [`super::native_copy`]; its
-/// whole body is the raise.
+/// `Class~copy`: the refusal put over [`super::native_copy`]; its whole body is
+/// the raise.
 pub(super) fn native_class_copy(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1156,11 +1153,11 @@ pub(super) fn native_enhanced(
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
     let class = class_receiver(interp, receiver)?;
-    // The refusals are different errors and the C++ checks them in this order.
-    // Measured: `.K~enhanced` and `.K~enhanced()` are both `93.901 Not enough
-    // arguments for method; 1 expected.` at rc 163, the second because a
-    // trailing omission is dropped from the count, while `.K~enhanced(, 'x')`
-    // is `88.901 Missing argument; argument methods is required.` at rc 168.
+    // The refusals are different errors and are checked in this order:
+    // `.K~enhanced` and `.K~enhanced()` are both `93.901 Not enough arguments
+    // for method; 1 expected.` at rc 163, the second because a trailing
+    // omission is dropped from the count, while `.K~enhanced(, 'x')` is `88.901
+    // Missing argument; argument methods is required.` at rc 168.
     if args.is_empty() {
         return Err(Raised::not_enough_method_arguments(1).into());
     }
@@ -1195,8 +1192,8 @@ pub(super) fn native_enhanced(
 
 /// The owning class and the enhanced mark are set on what the dummy's `NEW`
 /// answered, where the dummy built it. An answer built from anywhere else is
-/// handed back untouched, where the oracle writes into whatever behaviour that
-/// object shares with every other of its class (Deviation 32).
+/// handed back untouched, where writing into it would change whatever behaviour
+/// that object shares with every other of its class (Deviation 32).
 fn mark_enhanced(interp: &mut Interp, answer: ObjRef, dummy: ObjRef, class: ObjRef) {
     if interp.heap.is_class(answer) {
         if interp.classes().class_of(answer) == dummy {

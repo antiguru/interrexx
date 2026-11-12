@@ -95,8 +95,8 @@ fn array_is_fixed_dimension(interp: &Interp, receiver: ObjRef) -> Result<bool, F
 
 pub(super) const MAX_FIXED_ARRAY_SIZE: usize = 100_000_000_000_000_000;
 
-/// `size` empty slots, or the 5.0 the oracle raises when the allocator refuses
-/// -- [`Raised::system_resources`] carries why that refusal is asked of the
+/// `size` empty slots, or the 5.0 raised when the allocator refuses --
+/// [`Raised::system_resources`] carries why that refusal is asked of the
 /// allocator rather than of a size limit.
 fn empty_slots(size: usize) -> Result<Vec<Option<ObjRef>>, Failure> {
     let mut slots = Vec::new();

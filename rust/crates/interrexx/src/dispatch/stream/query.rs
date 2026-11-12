@@ -3,9 +3,9 @@
 use super::*;
 use chrono::TimeZone;
 
-/// `query_exists`: the qualified name when it names a file, and the null
-/// string otherwise -- a directory answers nothing, measured, because the
-/// oracle's own check is for a regular file.
+/// `query_exists`: the qualified name when it names a file, and the null string
+/// otherwise -- a directory answers nothing, because the check is for a regular
+/// file (`class.stream.query`).
 pub(in crate::dispatch) fn query_exists(
     interp: &mut Interp,
     _cleared: Cleared,
