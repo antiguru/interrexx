@@ -220,6 +220,7 @@ impl Interp {
     }
 
     /// Creates a number value, applying the `SmallInt` admissibility rule.
+    #[inline]
     pub(crate) fn number(
         &mut self,
         value: Number,
@@ -229,6 +230,17 @@ impl Interp {
         if let Some(small) = small_int_for(&value, created_digits) {
             return ObjRef::small_int(small)
                 .expect("small_int_for already checked SMALL_INT_MIN/MAX");
+        }
+        // **A short fraction is its rendering**, carried in the handle: the
+        // bytes are exactly what the object would render, and they parse back
+        // to the same digits and exponent, so no operation can tell the two
+        // apart -- the position a tagged integer is in. The digit count is
+        // the test a wide result fails without leaving this function: the
+        // point takes one of the handle's bytes.
+        if value.digit_count() < interrexx_core::INLINE_TEXT
+            && let Some(handle) = short_fraction(&value, created_digits, created_form)
+        {
+            return handle;
         }
         self.alloc_with(
             BehaviourId::STRING,
@@ -1670,6 +1682,21 @@ impl Rendered {
                 .expect("`render` carried no bytes, so it left them borrowable"),
         }
     }
+}
+
+/// [`Interp::number`]'s inline handle for a value with a fractional part
+/// whose rendering fits the handle, or `None`.
+#[inline(never)]
+fn short_fraction(value: &Number, created_digits: u32, created_form: Form) -> Option<ObjRef> {
+    let mut short = [0u8; interrexx_core::INLINE_TEXT];
+    let length = value.write_short_fraction(u64::from(created_digits), &mut short)?;
+    debug_assert_eq!(
+        &short[..length],
+        value
+            .format_form(u64::from(created_digits), created_form)
+            .as_bytes()
+    );
+    ObjRef::inline_text(&short[..length])
 }
 
 fn small_int_for(value: &Number, created_digits: u32) -> Option<i64> {

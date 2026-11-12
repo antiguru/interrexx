@@ -1931,7 +1931,7 @@ impl Interp {
                     if !mode.results && !mode.intermediates && fuzz == 0 {
                         let frame = self.activation().frame;
                         if let Some(previous) = self.variable(frame, slot)
-                            && matches!(previous.decode(), Decoded::Heap { .. })
+                            && matches!(previous.decode(), Decoded::Heap { .. } | Decoded::Text(_))
                             && let Some(sum) = self.controlled_step_wide(previous, by, digits)?
                         {
                             let stepped_value = ControlValue::Wide(sum);

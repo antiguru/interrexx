@@ -109,6 +109,60 @@ impl Number {
             .expect("no `before`/`expp` supplied, so no width check can fail")
     }
 
+    /// Writes into `out` what [`Number::format_form`] answers at `digits`,
+    /// for a value with a fractional part that renders exactly and plainly
+    /// in at most `out.len()` bytes; `None`, writing nothing, otherwise.
+    ///
+    /// Exact means no digit is rounded away (the value holds at most
+    /// `digits` digits) and plain means no exponent, which is the same in
+    /// either form. Under those conditions the rendering spells every
+    /// stored digit and the negative exponent as the point's position, so
+    /// parsing it back yields this number's digits and exponent unchanged.
+    pub fn write_short_fraction(&self, digits: u64, out: &mut [u8]) -> Option<usize> {
+        let count = self.digits.len();
+        if self.exponent >= 0 || count as u64 > digits {
+            return None;
+        }
+        let places = self.exponent.unsigned_abs() as usize;
+        // `format_with`'s exponential trigger for a value below one: more
+        // places after the point than twice DIGITS.
+        let adjusted = i64::from(self.exponent) + count as i64 - 1;
+        if adjusted < 0 && places as u64 > digits.saturating_mul(2) {
+            return None;
+        }
+        let whole = count.saturating_sub(places);
+        let leading_zeros = places.saturating_sub(count);
+        let length = usize::from(self.negative) + whole.max(1) + 1 + places;
+        if length > out.len() {
+            return None;
+        }
+        let mut at = 0;
+        if self.negative {
+            out[at] = b'-';
+            at += 1;
+        }
+        if whole == 0 {
+            out[at] = b'0';
+            at += 1;
+        }
+        for &digit in &self.digits[..whole] {
+            out[at] = b'0' + digit;
+            at += 1;
+        }
+        out[at] = b'.';
+        at += 1;
+        for slot in &mut out[at..at + leading_zeros] {
+            *slot = b'0';
+        }
+        at += leading_zeros;
+        for &digit in &self.digits[whole..] {
+            out[at] = b'0' + digit;
+            at += 1;
+        }
+        debug_assert_eq!(at, length);
+        Some(length)
+    }
+
     /// Implements the `FORMAT(number, before, after, expp, expt)` builtin.
     pub fn format_with(
         &self,
