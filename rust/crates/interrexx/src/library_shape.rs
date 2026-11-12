@@ -700,7 +700,8 @@ fn probe(interp: &mut Interp) {
 fn send_to_stream(interp: &mut Interp, message: &[u8]) {
     interp.send_message(stream, message, None, &[], caller);
 }
-pub(crate) unsafe fn after() {
+pub(crate) uns\
+afe fn after() {
     interp.send_message(stream, b\"ATTRIBUTED\", None, &[], caller);
 }
 ";
