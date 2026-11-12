@@ -2016,6 +2016,231 @@ pub(super) fn native_reverse(
     Ok(Some(interp.text_built(bytes)))
 }
 
+/// `String`'s class-side character classes, by the name each is answered
+/// under (`r[class.string.constants]`): the ASCII bytes the predicate
+/// accepts, in ascending order. `blank` is tab then blank, which is also
+/// ascending.
+const CHARACTER_CLASSES: &[(&str, ClassMembers)] = &[
+    ("ALNUM", |b| b.is_ascii_alphanumeric()),
+    ("ALPHA", |b| b.is_ascii_alphabetic()),
+    ("BLANK", |b| b == b' ' || b == b'\t'),
+    ("CNTRL", |b| b < 0x20 || b == 0x7f),
+    ("CR", |b| b == b'\r'),
+    ("DIGIT", |b| b.is_ascii_digit()),
+    ("GRAPH", |b| b.is_ascii_graphic()),
+    ("LOWER", |b| b.is_ascii_lowercase()),
+    ("NL", |b| b == b'\n'),
+    ("NULL", |b| b == 0),
+    ("PRINT", |b| (0x20..=0x7e).contains(&b)),
+    ("PUNCT", |b| b.is_ascii_punctuation()),
+    ("SPACE", |b| b == b' ' || (0x09..=0x0d).contains(&b)),
+    ("TAB", |b| b == b'\t'),
+    ("UPPER", |b| b.is_ascii_uppercase()),
+    ("XDIGIT", |b| b.is_ascii_hexdigit()),
+];
+
+/// Whether a byte belongs to a character class.
+type ClassMembers = fn(u8) -> bool;
+
+/// One class-side character-class method; `which` is its row in
+/// [`CHARACTER_CLASSES`].
+fn class_constant(interp: &mut Interp, which: usize) -> Result<Option<ObjRef>, Failure> {
+    let text: Vec<u8> = (0..=0x7f_u8)
+        .filter(|&b| (CHARACTER_CLASSES[which].1)(b))
+        .collect();
+    Ok(Some(interp.text_built(text)))
+}
+
+fn native_class_alnum(
+    interp: &mut Interp,
+    _cleared: Cleared,
+    _receiver: ObjRef,
+    _args: &[Option<ObjRef>],
+) -> Result<Option<ObjRef>, Failure> {
+    class_constant(interp, 0)
+}
+
+fn native_class_alpha(
+    interp: &mut Interp,
+    _cleared: Cleared,
+    _receiver: ObjRef,
+    _args: &[Option<ObjRef>],
+) -> Result<Option<ObjRef>, Failure> {
+    class_constant(interp, 1)
+}
+
+fn native_class_blank(
+    interp: &mut Interp,
+    _cleared: Cleared,
+    _receiver: ObjRef,
+    _args: &[Option<ObjRef>],
+) -> Result<Option<ObjRef>, Failure> {
+    class_constant(interp, 2)
+}
+
+fn native_class_cntrl(
+    interp: &mut Interp,
+    _cleared: Cleared,
+    _receiver: ObjRef,
+    _args: &[Option<ObjRef>],
+) -> Result<Option<ObjRef>, Failure> {
+    class_constant(interp, 3)
+}
+
+fn native_class_cr(
+    interp: &mut Interp,
+    _cleared: Cleared,
+    _receiver: ObjRef,
+    _args: &[Option<ObjRef>],
+) -> Result<Option<ObjRef>, Failure> {
+    class_constant(interp, 4)
+}
+
+fn native_class_digit(
+    interp: &mut Interp,
+    _cleared: Cleared,
+    _receiver: ObjRef,
+    _args: &[Option<ObjRef>],
+) -> Result<Option<ObjRef>, Failure> {
+    class_constant(interp, 5)
+}
+
+fn native_class_graph(
+    interp: &mut Interp,
+    _cleared: Cleared,
+    _receiver: ObjRef,
+    _args: &[Option<ObjRef>],
+) -> Result<Option<ObjRef>, Failure> {
+    class_constant(interp, 6)
+}
+
+fn native_class_lower(
+    interp: &mut Interp,
+    _cleared: Cleared,
+    _receiver: ObjRef,
+    _args: &[Option<ObjRef>],
+) -> Result<Option<ObjRef>, Failure> {
+    class_constant(interp, 7)
+}
+
+fn native_class_nl(
+    interp: &mut Interp,
+    _cleared: Cleared,
+    _receiver: ObjRef,
+    _args: &[Option<ObjRef>],
+) -> Result<Option<ObjRef>, Failure> {
+    class_constant(interp, 8)
+}
+
+fn native_class_null(
+    interp: &mut Interp,
+    _cleared: Cleared,
+    _receiver: ObjRef,
+    _args: &[Option<ObjRef>],
+) -> Result<Option<ObjRef>, Failure> {
+    class_constant(interp, 9)
+}
+
+fn native_class_print(
+    interp: &mut Interp,
+    _cleared: Cleared,
+    _receiver: ObjRef,
+    _args: &[Option<ObjRef>],
+) -> Result<Option<ObjRef>, Failure> {
+    class_constant(interp, 10)
+}
+
+fn native_class_punct(
+    interp: &mut Interp,
+    _cleared: Cleared,
+    _receiver: ObjRef,
+    _args: &[Option<ObjRef>],
+) -> Result<Option<ObjRef>, Failure> {
+    class_constant(interp, 11)
+}
+
+fn native_class_space(
+    interp: &mut Interp,
+    _cleared: Cleared,
+    _receiver: ObjRef,
+    _args: &[Option<ObjRef>],
+) -> Result<Option<ObjRef>, Failure> {
+    class_constant(interp, 12)
+}
+
+fn native_class_tab(
+    interp: &mut Interp,
+    _cleared: Cleared,
+    _receiver: ObjRef,
+    _args: &[Option<ObjRef>],
+) -> Result<Option<ObjRef>, Failure> {
+    class_constant(interp, 13)
+}
+
+fn native_class_upper(
+    interp: &mut Interp,
+    _cleared: Cleared,
+    _receiver: ObjRef,
+    _args: &[Option<ObjRef>],
+) -> Result<Option<ObjRef>, Failure> {
+    class_constant(interp, 14)
+}
+
+fn native_class_xdigit(
+    interp: &mut Interp,
+    _cleared: Cleared,
+    _receiver: ObjRef,
+    _args: &[Option<ObjRef>],
+) -> Result<Option<ObjRef>, Failure> {
+    class_constant(interp, 15)
+}
+
+/// The bodies of [`CHARACTER_CLASSES`], row for row.
+const CHARACTER_CLASS_BODIES: [NativeMethod; 16] = [
+    native_class_alnum,
+    native_class_alpha,
+    native_class_blank,
+    native_class_cntrl,
+    native_class_cr,
+    native_class_digit,
+    native_class_graph,
+    native_class_lower,
+    native_class_nl,
+    native_class_null,
+    native_class_print,
+    native_class_punct,
+    native_class_space,
+    native_class_tab,
+    native_class_upper,
+    native_class_xdigit,
+];
+
+impl Interp {
+    /// Puts `String`'s class-side character-class methods back as primitive
+    /// rows, over whatever the library programs defined under those names
+    /// (`r[class.string.constants]`). Runs inside the library bootstrap,
+    /// after the programs and before they are sealed.
+    pub(crate) fn reclaim_string_constants(&mut self) {
+        let string = self
+            .classes()
+            .lookup("String")
+            .expect("String is a native class");
+        for ((name, _), body) in CHARACTER_CLASSES.iter().zip(CHARACTER_CLASS_BODIES) {
+            let method = self.classes().mint_method_id();
+            self.classes().define_class_method(string, name, method);
+            self.object_model().natives.insert(
+                method,
+                super::NativeEntry {
+                    arity: Arity::Fixed(0),
+                    body: super::NativeBody::Run(body),
+                },
+            );
+            self.method_objects
+                .remove(&(string, true, Box::from(name.as_bytes())));
+        }
+    }
+}
+
 /// `String`'s rows, in the shape [`super::NATIVE_METHODS`] uses.
 pub(super) static NATIVE_METHODS: &[(&str, &str, Arity, NativeMethod)] = &[
     ("String", "", Arity::Fixed(1), native_string_op_abuttal),

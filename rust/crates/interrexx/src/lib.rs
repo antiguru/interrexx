@@ -2469,6 +2469,9 @@ impl Interp {
         let entry = interrexx_lib::lookup(interrexx_lib::ENTRY)
             .unwrap_or_else(|| panic!("{} is embedded", interrexx_lib::ENTRY));
         let outcome = self.enter_library_program(entry, None);
+        if outcome.is_ok() {
+            self.reclaim_string_constants();
+        }
         self.library_bootstrap = false;
         self.special_methods.seal();
         self.executable_objects.seal();
