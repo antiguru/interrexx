@@ -1574,7 +1574,7 @@ show:
   return 'a.txt'
 ```
 
-```output defect=#178
+```output
 1
 1
 1

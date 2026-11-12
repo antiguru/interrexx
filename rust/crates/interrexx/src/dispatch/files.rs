@@ -550,6 +550,12 @@ pub(super) fn temporary_path(
 
 /// `file_search_path_impl`: the first directory of `pathList` holding `file`,
 /// joined, or `.nil`.
+///
+/// `file` is read as a string argument, so an object answers by its
+/// `makeString` and `.nil` is 88.909. A `file` that begins with a slash is the
+/// absolute path of the file and is answered whatever the directories. A
+/// relative directory is relative to the interpreter's current directory, and
+/// the answer is absolute.
 pub(super) fn search_path_impl(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -559,11 +565,22 @@ pub(super) fn search_path_impl(
     let Some(wanted) = args.first().copied().flatten() else {
         return Err(Raised::missing_method_argument(1).into());
     };
+    let Some(wanted) = interp.blamed_string_conversion(wanted)? else {
+        return Err(Raised::native_argument_needs_a_string_value(1).into());
+    };
     let wanted = interp.to_text(wanted).into_owned();
     let Some(value) = args.get(1).copied().flatten() else {
         return Err(Raised::missing_method_argument(2).into());
     };
     let list = interp.to_text(value).into_owned();
+    let is_file = |path: &[u8]| std::fs::metadata(os_path(path)).is_ok_and(|meta| meta.is_file());
+    if wanted.first() == Some(&b'/') {
+        return Ok(Some(if is_file(&wanted) {
+            interp.text_built(wanted)
+        } else {
+            ObjRef::NIL
+        }));
+    }
     for directory in list
         .split(|byte| *byte == b':')
         .filter(|part| !part.is_empty())
@@ -577,7 +594,10 @@ pub(super) fn search_path_impl(
         let mut candidate = directory[..trimmed].to_vec();
         candidate.push(b'/');
         candidate.extend_from_slice(&wanted);
-        if std::fs::metadata(os_path(&candidate)).is_ok_and(|meta| meta.is_file()) {
+        if candidate.first() != Some(&b'/') {
+            candidate = crate::builtin::platform::qualify_name(interp, &candidate);
+        }
+        if is_file(&candidate) {
             return Ok(Some(interp.text_built(candidate)));
         }
     }
