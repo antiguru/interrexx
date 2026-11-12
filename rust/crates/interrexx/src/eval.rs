@@ -5,7 +5,7 @@ use crate::activation::CallType;
 use crate::error::Raised;
 use crate::run::CallEntry;
 use crate::run::{CallResolution, Resolved, Started, function_started};
-use crate::value::{Referent, canonical_small_int, exact_small_int, within_digits};
+use crate::value::{QuickOperand, Referent, canonical_small_int, exact_small_int, within_digits};
 use crate::{Code, Failure, Interp, Loud, StackSpan};
 use interrexx_core::{Body, Decoded, INLINE_BYTES, NotNumeric, ObjRef};
 use interrexx_num::{ArithError, CompareOp, DivOp, Number};
@@ -1123,6 +1123,36 @@ impl Interp {
             return Ok(logical(holds));
         }
         let strict = is_strict_compare(op);
+        // **Operands in their handles, compared without a `Number` built**:
+        // two numbers that align within DIGITS compare exactly on their
+        // scaled mantissas, and two texts at least one of which is not a
+        // number take the string rule on the bytes the handles hold. Neither
+        // has an operator gap to report, and an operand that aligns within
+        // DIGITS loses no digits, so nothing below would raise.
+        if !strict && fuzz == 0 {
+            match (
+                self.quick_operand(left_value),
+                self.quick_operand(right_value),
+            ) {
+                (QuickOperand::Scaled(left, _), QuickOperand::Scaled(right, _)) => {
+                    if let Some(holds) = left.compare(right, digits, compare_op(op)) {
+                        return Ok(logical(holds));
+                    }
+                }
+                (
+                    QuickOperand::NotNumber(left) | QuickOperand::Scaled(_, Some(left)),
+                    QuickOperand::NotNumber(right),
+                )
+                | (QuickOperand::NotNumber(left), QuickOperand::Scaled(_, Some(right))) => {
+                    return Ok(logical(interrexx_num::compare_strings(
+                        &left,
+                        &right,
+                        compare_op(op),
+                    )));
+                }
+                _ => {}
+            }
+        }
         // **The `Result` is kept rather than turned into an `Option`.** A
         // `Number` is forty bytes and `Result::ok` moves one, so the two calls
         // here moved eighty bytes for nothing: every read below is `is_ok`,

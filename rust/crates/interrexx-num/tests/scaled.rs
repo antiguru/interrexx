@@ -8,13 +8,40 @@ use interrexx_num::{CompareOp, Number, compare_numbers};
 /// Spellings chosen for shape: zeros, trailing zeros, both signs, values
 /// close together and far apart, and widths either side of small DIGITS.
 const VALUES: &[&str] = &[
-    "0", "1", "-1", "1.1", "-1.1", "2.2", "1.10", "0.5", "-0.25", "3.0", "9.99", "0.999", "1.00",
-    "0.001", "100", "1E+3", "12E+2", "123456", "1234567", "-98765.4321", "0.000001", "1E-20",
-    "5.5E-9", "99999999", "999999999", "123456789012345678", "1234567890123456789",
+    "0",
+    "1",
+    "-1",
+    "1.1",
+    "-1.1",
+    "2.2",
+    "1.10",
+    "0.5",
+    "-0.25",
+    "3.0",
+    "9.99",
+    "0.999",
+    "1.00",
+    "0.001",
+    "100",
+    "1E+3",
+    "12E+2",
+    "123456",
+    "1234567",
+    "-98765.4321",
+    "0.000001",
+    "1E-20",
+    "5.5E-9",
+    "99999999",
+    "999999999",
+    "123456789012345678",
+    "1234567890123456789",
 ];
 
 fn numbers() -> Vec<Number> {
-    VALUES.iter().map(|text| Number::parse(text).unwrap()).collect()
+    VALUES
+        .iter()
+        .map(|text| Number::parse(text).unwrap())
+        .collect()
 }
 
 const DIGITS: &[u64] = &[1, 2, 3, 5, 9, 12, 18, 19, 30];

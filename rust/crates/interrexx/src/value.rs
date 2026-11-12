@@ -6,8 +6,20 @@ use interrexx_core::{
     BehaviourId, Body, BufferState, Bytes, Decoded, INLINE_BYTES, InlineText, NotNumeric, ObjRef,
     SMALL_INT_MAX, SMALL_INT_MIN, VarRef, VarRefHome,
 };
-use interrexx_num::{Form, Number};
+use interrexx_num::{Form, Number, Scaled};
 use std::borrow::Cow;
+
+/// What an operand is, as far as a comparison can tell without a [`Number`]
+/// built: see [`Interp::quick_operand`].
+pub(crate) enum QuickOperand {
+    /// A number whose digits fit a [`Scaled`], with its bytes where the
+    /// handle carries them.
+    Scaled(Scaled, Option<InlineText>),
+    /// Text carried in the handle that is not a number.
+    NotNumber(InlineText),
+    /// Anything else: the general path decides.
+    Unknown,
+}
 
 /// Parses already answered for values whose bytes live in the handle.
 pub(crate) struct TextNumbers {
@@ -15,6 +27,8 @@ pub(crate) struct TextNumbers {
     /// every one carries the inline-text tag, which `.nil` does not.
     keys: [ObjRef; TEXT_NUMBERS],
     parsed: [Result<Number, NotNumeric>; TEXT_NUMBERS],
+    /// Each `Ok` parse as a [`Scaled`], where its digits fit one.
+    scaled: [Option<Scaled>; TEXT_NUMBERS],
 }
 
 /// How many parses [`TextNumbers`] remembers. A power of two, so the slot is
@@ -28,6 +42,7 @@ impl TextNumbers {
         TextNumbers {
             keys: [ObjRef::NIL; TEXT_NUMBERS],
             parsed: std::array::from_fn(|_| Err(NotNumeric)),
+            scaled: [None; TEXT_NUMBERS],
         }
     }
 
@@ -1029,9 +1044,44 @@ impl Interp {
         // Stored before it is handed back, so the parse is moved into the
         // table and only the answer is copied -- filling it the other way
         // round would clone twice for one miss.
-        self.text_numbers.keys[slot] = value;
-        self.text_numbers.parsed[slot] = Number::parse_bytes(inline).ok_or(NotNumeric);
+        self.text_numbers_fill(slot, value, inline);
         self.text_numbers.parsed[slot].clone()
+    }
+
+    /// Parses `inline` into [`TextNumbers`]' `slot` for `value`.
+    fn text_numbers_fill(&mut self, slot: usize, value: ObjRef, inline: &[u8]) {
+        let parsed = Number::parse_bytes(inline).ok_or(NotNumeric);
+        self.text_numbers.keys[slot] = value;
+        self.text_numbers.scaled[slot] = parsed.as_ref().ok().and_then(Number::scaled);
+        self.text_numbers.parsed[slot] = parsed;
+    }
+
+    /// `value` as a comparison's operand where no [`Number`] needs building:
+    /// a tagged integer, or text in the handle whose parse [`TextNumbers`]
+    /// holds. The same answers `to_number` gives, read without a copy.
+    #[inline]
+    pub(crate) fn quick_operand(&mut self, value: ObjRef) -> QuickOperand {
+        match value.decode() {
+            Decoded::SmallInt(small) => match Scaled::from_i64(small) {
+                Some(scaled) => QuickOperand::Scaled(scaled, None),
+                None => QuickOperand::Unknown,
+            },
+            Decoded::Text(inline) => {
+                let slot = TextNumbers::slot(value);
+                if self.text_numbers.keys[slot] != value {
+                    self.text_numbers_fill(slot, value, &inline);
+                }
+                match (
+                    &self.text_numbers.parsed[slot],
+                    self.text_numbers.scaled[slot],
+                ) {
+                    (Err(_), _) => QuickOperand::NotNumber(inline),
+                    (Ok(_), Some(scaled)) => QuickOperand::Scaled(scaled, Some(inline)),
+                    (Ok(_), None) => QuickOperand::Unknown,
+                }
+            }
+            Decoded::Heap { .. } | Decoded::Nil => QuickOperand::Unknown,
+        }
     }
 
     /// [`to_number`]'s arm for a value that lives in the arena.

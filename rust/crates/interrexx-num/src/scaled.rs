@@ -9,7 +9,7 @@
 
 use std::cmp::Ordering;
 
-use crate::{Digits, MAX_EXPONENT, MIN_EXPONENT, Number};
+use crate::{CompareOp, Digits, MAX_EXPONENT, MIN_EXPONENT, Number};
 
 /// The widest mantissa held: eighteen decimal digits always fit an `i64`,
 /// with room left for the sum of two of them.
@@ -37,11 +37,7 @@ impl Number {
             .iter()
             .fold(0i64, |acc, digit| acc * 10 + i64::from(*digit));
         Some(Scaled {
-            mantissa: if self.negative {
-                -magnitude
-            } else {
-                magnitude
-            },
+            mantissa: if self.negative { -magnitude } else { magnitude },
             exponent: self.exponent,
             length,
         })
@@ -94,6 +90,25 @@ impl Scaled {
             digits,
             exponent: self.exponent,
         }
+    }
+
+    /// `value` as a `Scaled`, as [`Number::from_i64`] spells it.
+    pub fn from_i64(value: i64) -> Option<Scaled> {
+        let magnitude = value.unsigned_abs();
+        if magnitude >= POWERS[WIDEST as usize] as u64 {
+            return None;
+        }
+        Some(Scaled {
+            mantissa: value,
+            exponent: 0,
+            length: digit_length(magnitude),
+        })
+    }
+
+    /// [`crate::compare_numbers`] with `FUZZ` 0 for a non-strict `op`, where
+    /// [`Scaled::order`] answers.
+    pub fn compare(self, other: Scaled, digits: u64, op: CompareOp) -> Option<bool> {
+        Some(op.holds(self.order(other, digits)?))
     }
 
     pub fn is_negative(self) -> bool {

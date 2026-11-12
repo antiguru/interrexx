@@ -59,5 +59,8 @@ fn agrees_with_the_full_rendering_and_parses_back_unchanged() {
             }
         }
     }
-    assert!(written > 1000, "only {written} cases took the short rendering");
+    assert!(
+        written > 1000,
+        "only {written} cases took the short rendering"
+    );
 }

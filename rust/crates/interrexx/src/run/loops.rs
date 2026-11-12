@@ -353,7 +353,10 @@ enum ControlValue {
     /// A short value, with the inline handle the pass that made it bound:
     /// while the control variable still holds that handle, the value is
     /// this one without the variable being read as a number.
-    Scaled { value: Scaled, handle: ObjRef },
+    Scaled {
+        value: Scaled,
+        handle: ObjRef,
+    },
 }
 
 impl ControlValue {
