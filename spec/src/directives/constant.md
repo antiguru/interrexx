@@ -357,7 +357,9 @@ package keeps in the table that `.METHODS` names, as [floating
 methods](r:dir.method.floating) are kept, under the name in upper case. Its
 value is limited to the forms that are not expressions: a floating constant
 whose value is in parentheses raises `SYNTAX 99.906` when the program is read.
-A name declared twice raises `99.932`, as it does in a class.
+A name declared twice raises `99.932`, as it does in a class. The `ADDITIONAL`
+array of the 99.906 condition holds one item, the name in upper case, though
+the message text does not use it.
 
 ```rexx
 say .methods~items
@@ -389,6 +391,16 @@ FREE LIMIT
 99
 ::constant a (1) => 99.906
 ::constant a 1 / ::constant A 2 => 99.932
+```
+
+```rexx
+signal on syntax
+p = .package~new('spec-dir-constant-fl2', '::Constant mixed (1+2)')
+syntax: say condition('o')~code condition('o')~additional~items condition('o')~additional[1]
+```
+
+```output
+99.906 1 MIXED
 ```
 
 ## Deviations

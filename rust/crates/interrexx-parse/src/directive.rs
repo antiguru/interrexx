@@ -984,7 +984,7 @@ impl<'a, 'd> Dir<'a, 'd> {
         if self.declared.in_class {
             self.claim(upper, false, true, member, E99_932)?;
         } else if matches!(value, ConstantValue::Expression(_)) {
-            return Err(self.error(E99_906, []));
+            return Err(self.error(E99_906, [name.to_ascii_uppercase()]));
         }
         Ok(DirectiveKind::Constant(Box::new(ConstantDirective {
             name,
