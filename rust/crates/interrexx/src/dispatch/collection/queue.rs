@@ -2,7 +2,7 @@
 //! keeps.
 
 use super::{
-    Arity, Body, Cleared, DEFAULT_ARRAY_SIZE, Failure, IndexUse, Interp, Loud, NativeMethod,
+    Arity, Body, Cleared, DEFAULT_ARRAY_SIZE, Failure, IndexUse, Interp, NativeMethod,
     ObjRef, QUEUE_CAPACITY, Raised, append_slot, array_position, array_slots, array_splice,
     array_splice_slot, item_argument, native_array_delete, pool_variable, queue_bound, queue_index,
     read_slots, store_of, store_scope,
@@ -140,7 +140,7 @@ fn native_queue_put(
             slots.set(position - 1, Some(item));
             Ok(None)
         }
-        _ => Err(Loud::receiver_class("a value that is not an array").into()),
+        _ => Err(crate::Raised::receiver_kind("a value that is not an array").into()),
     }
 }
 

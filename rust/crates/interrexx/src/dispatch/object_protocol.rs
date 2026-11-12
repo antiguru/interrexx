@@ -1244,7 +1244,7 @@ fn dispatch_held_message(
         interp.native_entry(message, MESSAGE_NAME),
         interp.native_entry(message, MESSAGE_ARGUMENTS),
     ) else {
-        return Err(Loud::receiver_class(NOT_A_MESSAGE).into());
+        return Err(crate::Raised::receiver_kind(NOT_A_MESSAGE).into());
     };
     let scope = interp.native_entry(message, MESSAGE_SCOPE);
     let name = interp.to_text(name).into_owned();
@@ -1358,7 +1358,7 @@ fn start_held_message(interp: &mut Interp, message: ObjRef) -> Result<Option<Obj
         interp.native_entry(message, MESSAGE_NAME),
         interp.native_entry(message, MESSAGE_ARGUMENTS),
     ) else {
-        return Err(Loud::receiver_class(NOT_A_MESSAGE).into());
+        return Err(crate::Raised::receiver_kind(NOT_A_MESSAGE).into());
     };
     let scope = interp.native_entry(message, MESSAGE_SCOPE);
     let name = interp.to_text(name).into_owned();
@@ -1440,7 +1440,7 @@ fn reply_held_message(interp: &mut Interp, message: ObjRef) -> Result<Option<Obj
     }
     clear_completion(interp, message);
     let Some(target) = interp.native_entry(message, MESSAGE_TARGET) else {
-        return Err(Loud::receiver_class(NOT_A_MESSAGE).into());
+        return Err(crate::Raised::receiver_kind(NOT_A_MESSAGE).into());
     };
     let scope = interp.native_entry(message, MESSAGE_SCOPE);
     interp.validate_scope_override(target, scope)?;
@@ -1522,7 +1522,7 @@ pub(super) fn native_message_message_complete(
 const MESSAGE_COMPLETE: &[u8] = b"MESSAGECOMPLETE";
 
 /// What a receiver with no held send is not: every `Message`, a subclass
-/// instance included, has its entries from `NEW` (Deviation 28).
+/// instance included, has its entries from `NEW`.
 const NOT_A_MESSAGE: &str = "a value that is not a message";
 
 impl Interp {

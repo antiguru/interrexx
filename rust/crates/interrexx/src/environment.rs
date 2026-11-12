@@ -1364,7 +1364,7 @@ impl Interp {
             return Err(Loud::unknown_receiver("a value whose object is no longer live").into());
         };
         let Body::Native(native) = &mut object.body else {
-            return Err(Loud::receiver_class("a value that is not a hash collection").into());
+            return Err(crate::Raised::receiver_kind("a value that is not a hash collection").into());
         };
         native.set_entry(index, item);
         Ok(())

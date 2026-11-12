@@ -182,7 +182,7 @@ fn class_is_one_of(interp: &mut Interp, receiver: ObjRef, names: &[&str]) -> boo
 
 /// The refusal for a receiver [`owns`] declines: a collection of one of
 /// `classes` with no store is the class's own unbuilt method, and any other
-/// receiver is of the wrong type (Deviation 28).
+/// receiver is of the wrong type, which raises `SYNTAX 93.900`.
 fn not_this_task(interp: &mut Interp, receiver: ObjRef, method: &[u8]) -> Failure {
     refusal_outside(
         interp,
@@ -203,7 +203,7 @@ fn refusal_outside(
     kind: &str,
 ) -> Failure {
     if !class_is_one_of(interp, receiver, classes) {
-        return Loud::receiver_class(kind).into();
+        return crate::Raised::receiver_kind(kind).into();
     }
     match interp.receiver_class_id(receiver) {
         Some(id) => Loud::hash_collection_without_store(method, &id).into(),
@@ -438,7 +438,7 @@ fn store_of(interp: &mut Interp, receiver: ObjRef) -> Result<Store, Failure> {
         Some(Body::Native(_))
     ) || !holds_hash_store(interp, receiver)
     {
-        return Err(Loud::receiver_class("a value that is not a hash collection").into());
+        return Err(crate::Raised::receiver_kind("a value that is not a hash collection").into());
     }
     Ok(install_store(
         interp,

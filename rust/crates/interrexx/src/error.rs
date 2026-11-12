@@ -1076,6 +1076,13 @@ impl Raised {
         Raised::syntax(93, 900, vec![text.as_bytes().to_vec()])
     }
 
+    /// 93.900: a native method run on a receiver of a kind it cannot work
+    /// on, reached by borrowing the method onto an object of another class.
+    /// `kind` names what the receiver is not.
+    pub(crate) fn receiver_kind(kind: &str) -> Raised {
+        Raised::method_user_defined(&format!("the receiver is {kind}"))
+    }
+
     /// 98.900: `Error_Execution_user_defined`, whose whole message the raise
     /// site supplies.
     pub(crate) fn execution_user_defined(text: &str) -> Raised {

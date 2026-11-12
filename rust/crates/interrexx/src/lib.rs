@@ -558,11 +558,10 @@ impl Loud {
         }
     }
 
-    /// A native method whose receiver is not of the type the method reads,
-    /// reached by running a primitive's own row on an object of another class.
-    /// The oracle reads such a receiver through the wrong layout: it crashes
-    /// (`corpus/oracle-crashes.txt` entry 33) or answers an accident of memory
-    /// (Deviation 28).
+    /// A native method meeting an object of a class it does not read: a
+    /// metaclass `NEW` answer that is not a class, or a `.ROUTINES` entry that
+    /// is not a routine (Deviation 28). A receiver of the wrong kind raises
+    /// `SYNTAX 93.900` instead ([`Raised::receiver_kind`]).
     #[cold]
     fn receiver_class(kind: &str) -> Loud {
         Loud {

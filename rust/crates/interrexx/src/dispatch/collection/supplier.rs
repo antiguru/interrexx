@@ -3,7 +3,7 @@
 
 use super::super::array::collection_store;
 use super::{
-    Arity, ArrayArgument, Cleared, Decoded, Failure, Interp, Loud, NativeMethod, ObjRef, Raised,
+    Arity, ArrayArgument, Cleared, Decoded, Failure, Interp, NativeMethod, ObjRef, Raised,
     array_argument_object, array_slots, is_queue, new_instance, pool_variable,
 };
 
@@ -65,7 +65,7 @@ fn supplier_state(
         pool_variable(interp, receiver, scope, SUPPLIER_INDEXES),
         pool_variable(interp, receiver, scope, SUPPLIER_POSITION),
     ) else {
-        return Err(Loud::receiver_class("a value that is not a supplier").into());
+        return Err(crate::Raised::receiver_kind("a value that is not a supplier").into());
     };
     let Decoded::SmallInt(position) = position.decode() else {
         unreachable!("the position this crate stored is a small integer")

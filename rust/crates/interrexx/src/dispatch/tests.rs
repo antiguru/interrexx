@@ -509,8 +509,8 @@ fn a_compiled_sources_package_finds_through_its_parent() {
     );
 }
 
-/// A primitive's native method run on an instance of a plain class refuses
-/// as a receiver of the wrong type, owner none (Deviation 28), where a
+/// A primitive's native method run on an instance of a plain class raises
+/// `SYNTAX 93.900` for a receiver of the wrong type, where a
 /// `Directory` with no store keeps its own method's refusal and a
 /// `MutableBuffer` subclass whose `INIT` does not forward still answers.
 #[test]
@@ -536,16 +536,13 @@ fn a_native_row_on_a_receiver_of_another_class_refuses_its_type() {
         ("stackframe", "NAME", "a stack frame"),
         ("stackframe", "EXECUTABLE", "a stack frame"),
     ] {
-        assert_eq!(
-            run(class, method),
-            (
-                120,
-                String::new(),
-                format!(
-                    "interrexx: a message send to a value that is not {kind} is not implemented\n"
-                )
-            ),
-            "{class}~{method}"
+        let (code, stdout, stderr) = run(class, method);
+        assert_eq!((code, stdout.as_str()), (163, ""), "{class}~{method}");
+        assert!(
+            stderr.ends_with(&format!(
+                "Error 93.900:  the receiver is a value that is not {kind}.\n"
+            )),
+            "{class}~{method}: {stderr}"
         );
     }
     assert_eq!(

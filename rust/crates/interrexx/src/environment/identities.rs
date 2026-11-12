@@ -948,7 +948,7 @@ impl Interp {
             Some(Body::Instance { pools, .. }) => self.subclass_annotations(pools),
             _ => None,
         }
-        .ok_or_else(|| Loud::receiver_class("a value that carries no annotations").into())
+        .ok_or_else(|| crate::Raised::receiver_kind("a value that carries no annotations").into())
     }
 
     /// `Method~scope`: the class the method object was defined at, and `.nil`
@@ -963,7 +963,7 @@ impl Interp {
             {
                 Ok(ObjRef::NIL)
             }
-            _ => Err(Loud::receiver_class("a value that carries no method scope").into()),
+            _ => Err(crate::Raised::receiver_kind("a value that carries no method scope").into()),
         }
     }
 
@@ -1077,7 +1077,7 @@ impl Interp {
     fn is_rexx_package(&self, package: ObjRef) -> Result<bool, Failure> {
         match self.package_data(package) {
             Some(data) => Ok(data.program.is_none()),
-            None => Err(Loud::receiver_class("a value that is not a package").into()),
+            None => Err(crate::Raised::receiver_kind("a value that is not a package").into()),
         }
     }
 

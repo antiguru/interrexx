@@ -9,7 +9,7 @@ use super::method_arguments::{
     required_position_argument, string_method_argument, whole_method_argument,
 };
 use super::{
-    Arity, BehaviourId, Body, BufferState, Cleared, Failure, INIT, Interp, Loud, NativeMethod,
+    Arity, BehaviourId, Body, BufferState, Cleared, Failure, INIT, Interp, NativeMethod,
     ObjRef, Object, Raised, class_receiver, new_instance, required_string_argument,
 };
 
@@ -376,20 +376,20 @@ const BUFFER_DEFAULT_LENGTH: usize = 256;
 /// What a receiver with no buffer state is not.
 const NOT_A_BUFFER: &str = "a value that is not a mutable buffer";
 
-/// The receiver's buffer state, or [`Loud::receiver_class`] for a receiver
+/// The receiver's buffer state, or `SYNTAX 93.900` for a receiver
 /// that carries none: every `MutableBuffer` has one, a subclass instance
-/// whose `INIT` does not forward included (Deviation 28).
+/// whose `INIT` does not forward included.
 fn buffer_state(interp: &Interp, receiver: ObjRef) -> Result<&BufferState, Failure> {
     interp
         .buffer(receiver)
-        .ok_or_else(|| Loud::receiver_class(NOT_A_BUFFER).into())
+        .ok_or_else(|| crate::Raised::receiver_kind(NOT_A_BUFFER).into())
 }
 
 /// [`buffer_state`] for a method that changes the contents.
 fn buffer_state_mut(interp: &mut Interp, receiver: ObjRef) -> Result<&mut BufferState, Failure> {
     interp
         .buffer_mut(receiver)
-        .ok_or_else(|| Loud::receiver_class(NOT_A_BUFFER).into())
+        .ok_or_else(|| crate::Raised::receiver_kind(NOT_A_BUFFER).into())
 }
 
 /// `MutableBuffer::lengthRexx` (`classes/MutableBufferClass.cpp:310`).

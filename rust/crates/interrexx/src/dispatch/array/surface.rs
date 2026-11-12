@@ -8,7 +8,7 @@ use super::collection::{
     read_slots, same_item, slots_of, store_of, subscript_object,
 };
 use super::{
-    Arity, BehaviourId, Body, Cleared, Failure, IndexUse, Interp, Loud, NativeMethod, ObjRef,
+    Arity, BehaviourId, Body, Cleared, Failure, IndexUse, Interp, NativeMethod, ObjRef,
     Raised, array_slots,
 };
 
@@ -213,7 +213,7 @@ fn clear_array_slot(interp: &mut Interp, receiver: ObjRef, offset: usize) -> Res
             slots.set_within(offset, None);
             Ok(())
         }
-        _ => Err(Loud::receiver_class("a value that is not an array").into()),
+        _ => Err(crate::Raised::receiver_kind("a value that is not an array").into()),
     }
 }
 
@@ -479,7 +479,7 @@ fn native_array_fill(
             slots.fill(Some(item));
             Ok(Some(receiver))
         }
-        _ => Err(Loud::receiver_class("a value that is not an array").into()),
+        _ => Err(crate::Raised::receiver_kind("a value that is not an array").into()),
     }
 }
 
@@ -597,7 +597,7 @@ fn same_class_array(
     }
     let class = interp
         .class_of_value(receiver)
-        .ok_or_else(|| Failure::from(Loud::receiver_class("a value that is not an array")))?;
+        .ok_or_else(|| Failure::from(crate::Raised::receiver_kind("a value that is not an array")))?;
     // The receiver's class is sent `new` with the size, as `new` for an
     // `Array` or a `Queue` makes the object and sends its `init`; the slots
     // then go into the object's store.
@@ -609,10 +609,10 @@ fn same_class_array(
     interp.roots.activity_mut().push_temp(object);
     let store = store_of(interp, object)?;
     let Some(body) = interp.heap.get_mut(store).map(|object| &mut object.body) else {
-        return Err(Loud::receiver_class("a value that is not an array").into());
+        return Err(crate::Raised::receiver_kind("a value that is not an array").into());
     };
     if !matches!(body, Body::Array { .. }) {
-        return Err(Loud::receiver_class("a value that is not an array").into());
+        return Err(crate::Raised::receiver_kind("a value that is not an array").into());
     }
     let before = body.held_bytes();
     *body = Body::array(slots);
@@ -652,7 +652,7 @@ fn splice_absorbing_slack(
             }
             Ok(())
         }
-        _ => Err(Loud::receiver_class("a value that is not an array").into()),
+        _ => Err(crate::Raised::receiver_kind("a value that is not an array").into()),
     }
 }
 

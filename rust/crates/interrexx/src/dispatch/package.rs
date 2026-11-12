@@ -153,7 +153,7 @@ fn initial_of(
 fn fields_of(interp: &Interp, receiver: ObjRef) -> Result<&PackageData, Failure> {
     interp
         .package_data(receiver)
-        .ok_or_else(|| Loud::receiver_class("a value that is not a package").into())
+        .ok_or_else(|| crate::Raised::receiver_kind("a value that is not a package").into())
 }
 
 /// A package's settings with the trace setting its `~trace` reports, which
@@ -1146,7 +1146,7 @@ pub(super) fn native_package_name(
 ) -> Result<Option<ObjRef>, Failure> {
     // `Interp::package_name`'s `None` is a receiver that is not a package.
     let Some(name) = interp.package_name(receiver) else {
-        return Err(Loud::receiver_class("a value that is not a package").into());
+        return Err(crate::Raised::receiver_kind("a value that is not a package").into());
     };
     Ok(Some(interp.text_built(name)))
 }
