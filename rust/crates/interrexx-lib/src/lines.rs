@@ -1,5 +1,4 @@
-//! Line arithmetic over program bytes, shared by the splice and the library's
-//! error sites.
+//! Line arithmetic over program bytes, for the library's error sites.
 
 /// The 1-based line of byte `offset` in `bytes`. A line ends at LF, at CR, or
 /// at a CR directly followed by LF.

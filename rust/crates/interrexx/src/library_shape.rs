@@ -5,18 +5,14 @@
 //!
 //! * `library-shape.txt`: one row per class and per method of each class
 //!   scope, with the class and method flags, then `.environment`'s and
-//!   `.local`'s indexes in order. The replacement of a host class by one of
-//!   interrexx's own must leave it unchanged, except for the rows of members
-//!   that `build.rs` lists as dropped.
+//!   `.local`'s indexes in order.
 //! * `library-origin.txt`: for the same rows, where each method comes from:
 //!   `native` (a Rust method table), `entry:<name>` (a `LIBRARY REXX` entry
-//!   point), `host:<program>` (a directive of an embedded program),
-//!   `replacement:<file>` (a directive of interrexx's own source, inside a
-//!   splice range), or `same-as:<row>` (the method object is the same one an
-//!   earlier row holds, which is what a donation leaves). There is no
-//!   separate `rust` origin: a method that moves from a host directive to a
-//!   native one (String's constants, say) changes from `host:` to `native`,
-//!   which is an expected change of that swap's rows.
+//!   point), `replacement:<file>` (a directive of the library's source file
+//!   `<file>` under `interrexx-lib/rexx/`), or `same-as:<row>` (the method
+//!   object is the same one an earlier row holds, which is what a donation
+//!   leaves). There is no separate `rust` origin: a Rust method is
+//!   `native`.
 //! * `library-sends.txt`: every message the Rust side sends in a file that
 //!   reaches a library class by name or through a lookup helper (stream and
 //!   queue resolution included), with the literal message of each call of a
@@ -182,21 +178,18 @@ impl Probe {
         match self.interp.installed_executable_source(installed) {
             ExecutableSource::Directive { program, directive }
             | ExecutableSource::ConstantExpression { program, directive } => {
-                let Some(name) = self.interp.library_program_names.get(&program).copied() else {
+                if !self.interp.library_programs.contains(&program) {
                     return "outside-library".into();
-                };
+                }
                 let start = self
                     .interp
                     .programs
                     .get(program)
                     .and_then(|parsed| parsed.directives.get(directive))
                     .map(|directive| directive.clause_span.start);
-                match start.and_then(|at| spliced_file(interrexx_lib::SPLICES, name, at)) {
+                match start.and_then(interrexx_lib::file_at) {
                     Some(file) => format!("replacement:{file}"),
-                    None => format!(
-                        "host:{}",
-                        name.rsplit_once('.').map_or(name, |(stem, _)| stem)
-                    ),
+                    None => "outside-files".into(),
                 }
             }
             ExecutableSource::External { .. } => {
@@ -242,38 +235,6 @@ impl Probe {
             .and_then(|id| self.interp.native_externals.get(&id))
             .map_or_else(|| "-".to_string(), |entry| entry.name.to_string())
     }
-}
-
-/// The replacement file whose splice range in `program` holds byte `at`, for a
-/// directive whose clause starts there.
-fn spliced_file<'a>(
-    splices: &'a [interrexx_lib::SpliceRange],
-    program: &str,
-    at: usize,
-) -> Option<&'a str> {
-    splices
-        .iter()
-        .find(|s| s.program == program && (s.start..s.end).contains(&at))
-        .map(|s| s.file)
-}
-
-/// A method is a replacement's exactly when its clause starts inside a splice
-/// range of its own program.
-#[test]
-fn a_directive_inside_a_splice_range_is_a_replacements() {
-    let splices = [interrexx_lib::SpliceRange {
-        program: "HostA",
-        class: "C",
-        file: "c.rex",
-        start: 10,
-        end: 20,
-        first_line: 1,
-    }];
-    assert_eq!(spliced_file(&splices, "HostA", 10), Some("c.rex"));
-    assert_eq!(spliced_file(&splices, "HostA", 19), Some("c.rex"));
-    assert_eq!(spliced_file(&splices, "HostA", 20), None);
-    assert_eq!(spliced_file(&splices, "HostA", 9), None);
-    assert_eq!(spliced_file(&splices, "HostB", 15), None);
 }
 
 /// Both tables, built from one interpreter.
@@ -481,8 +442,8 @@ fn library_shape_and_origin_match_the_goldens() {
     check_golden("library-origin.txt", &origin);
 }
 
-/// The tables are not empty, and no method comes from a host program: every
-/// class a host declared has been replaced.
+/// The tables are not empty, and every library method's directive lies in one
+/// of the library's source files.
 #[test]
 fn library_shape_is_not_empty() {
     let (shape, origin) = tables();
@@ -490,7 +451,7 @@ fn library_shape_is_not_empty() {
     assert!(origin.lines().count() > 500);
     assert!(shape.lines().any(|l| l.starts_with("environment ")));
     assert!(shape.lines().any(|l| l.starts_with("local ")));
-    assert!(!origin.contains(" host:"));
+    assert!(!origin.contains(" outside-"));
 }
 
 /// Calls that hand back a library object by name or by route; a file that
@@ -731,15 +692,13 @@ fn library_sends_match_the_golden() {
     check_golden("library-sends.txt", &rust_sends());
 }
 
-/// Trimmed lines of the embedded programs long enough to be distinctive.
+/// Trimmed lines of the library program long enough to be distinctive.
 fn library_source_lines() -> BTreeSet<String> {
     let mut lines = BTreeSet::new();
-    for program in interrexx_lib::PROGRAMS {
-        for line in String::from_utf8_lossy(program.source).lines() {
-            let line = line.trim();
-            if line.len() >= 14 {
-                lines.insert(line.to_string());
-            }
+    for line in String::from_utf8_lossy(interrexx_lib::LIBRARY.source).lines() {
+        let line = line.trim();
+        if line.len() >= 14 {
+            lines.insert(line.to_string());
         }
     }
     lines
@@ -853,136 +812,4 @@ fn the_leak_check_finds_a_planted_library_line() {
     assert!(!shown.contains(&planted), "the redaction printed the line");
     assert!(shown.contains("<library line>"));
     assert_eq!(redacted("nothing of the library here", "").0, 0);
-}
-
-/// The first-run report: which embedded program declares which class, the
-/// access of every host member, whether the spec page of its class names it,
-/// each program's `::OPTIONS`, and how native classes' methods are provided.
-/// Names and flags only. Run with
-/// `cargo nextest run -p interrexx first_run_report --run-ignored only --no-capture`.
-#[test]
-#[ignore = "prints a report"]
-fn first_run_report() {
-    use interrexx_parse::{DirectiveKind, Program};
-    let probe = Probe::new();
-    let spec = manifest("../../../spec/src/classes");
-    let mut page_cache: BTreeMap<String, String> = BTreeMap::new();
-    let mut with_methods: BTreeSet<String> = BTreeSet::new();
-    let mut declared: BTreeMap<String, String> = BTreeMap::new();
-    for program in probe.interp.library_programs.clone() {
-        let host = probe.interp.library_program_names[&program].to_string();
-        let parsed: &Program = probe.interp.programs.get(program).expect("a program");
-        let mut options = Vec::new();
-        let mut class = String::new();
-        for directive in &parsed.directives {
-            match &directive.kind {
-                DirectiveKind::Options(list) => options.push(format!("{list:?}")),
-                DirectiveKind::Class(c) => {
-                    class = String::from_utf8_lossy(&c.name).to_ascii_uppercase();
-                    declared.insert(class.clone(), host.clone());
-                }
-                DirectiveKind::Method(m) => {
-                    let flags = format!(
-                        "{:?}/{:?}/{:?}{}{}",
-                        m.access,
-                        m.protection,
-                        m.guard,
-                        if m.class_method { "/classside" } else { "" },
-                        if m.external.is_some() {
-                            "/external"
-                        } else {
-                            ""
-                        },
-                    );
-                    member(&mut page_cache, &spec, &host, &class, &m.name, &flags);
-                    with_methods.insert(class.clone());
-                }
-                DirectiveKind::Attribute(a) => {
-                    let flags = format!(
-                        "{:?}/{:?}/{:?}/attribute{}",
-                        a.access,
-                        a.protection,
-                        a.guard,
-                        if a.class_method { "/classside" } else { "" },
-                    );
-                    member(&mut page_cache, &spec, &host, &class, &a.name, &flags);
-                    with_methods.insert(class.clone());
-                }
-                DirectiveKind::Constant(k) => {
-                    member(&mut page_cache, &spec, &host, &class, &k.name, "constant");
-                    with_methods.insert(class.clone());
-                }
-                _ => {}
-            }
-        }
-        let mut kinds: BTreeMap<String, usize> = BTreeMap::new();
-        for directive in &parsed.directives {
-            let kind = format!("{:?}", directive.kind);
-            let kind = kind.split(['(', ' ', '{']).next().unwrap_or("").to_string();
-            *kinds.entry(kind).or_default() += 1;
-        }
-        println!(
-            "OPTIONS {host}: [{}] directive kinds: {kinds:?}",
-            options.join(" ")
-        );
-    }
-    for (class, host) in &declared {
-        println!(
-            "DECLARES {host} {class}{}",
-            if with_methods.contains(class) {
-                ""
-            } else {
-                " (no members)"
-            }
-        );
-    }
-    let (_, origin) = tables();
-    let mut native: BTreeMap<String, [usize; 3]> = BTreeMap::new();
-    for line in origin.lines().filter(|l| !l.starts_with('#')) {
-        let Some((key, from)) = line.split_once(' ') else {
-            continue;
-        };
-        let class = key.split('.').next().unwrap_or("");
-        if declared.contains_key(class) {
-            continue;
-        }
-        let counts = native.entry(class.to_string()).or_default();
-        if from.starts_with("same-as") {
-            counts[0] += 1;
-        } else if from == "native" {
-            counts[1] += 1;
-        } else {
-            counts[2] += 1;
-        }
-    }
-    for (class, [donated, own, other]) in native {
-        println!("NATIVE {class}: donated={donated} native={own} host-or-entry={other}");
-    }
-}
-
-fn member(
-    pages: &mut BTreeMap<String, String>,
-    spec: &Path,
-    host: &str,
-    class: &str,
-    name: &[u8],
-    flags: &str,
-) {
-    let name = String::from_utf8_lossy(name).to_ascii_uppercase();
-    let page = pages.entry(class.to_string()).or_insert_with(|| {
-        std::fs::read_to_string(spec.join(format!("{}.md", class.to_ascii_lowercase())))
-            .unwrap_or_default()
-            .to_ascii_uppercase()
-    });
-    let named = page.contains(&name);
-    println!(
-        "MEMBER {host} {class}.{name} {flags} spec={}",
-        if page.is_empty() {
-            "nopage"
-        } else if named {
-            "named"
-        } else {
-            "unnamed"
-        }
-    );
 }
