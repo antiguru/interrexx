@@ -1693,7 +1693,7 @@ say o~m
   return 'return "from ms"'
 ```
 
-```output defect=#142
+```output
 from ms
 ```
 

@@ -247,7 +247,7 @@ bad: say arg(1) '=>' condition('o')~code
 ::class ss subclass string
 ```
 
-```output defect=#142
+```output
 .method~new("n", .array~of("a", .mk~new))~source[2] => from makestring
 .method~new("n", .array~of(.ss~new("x")))~source[1] => x
 .method~new("n", .array~of(.mutablebuffer~new("mb")))~source[1] => mb
