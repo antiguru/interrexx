@@ -563,6 +563,52 @@ after
      9 *-* exit
 ```
 
+r[env.debugging.pause.block]
+A `DO` that opens a block, with a label or without, is stopped at after its
+header like any other `DO`, ahead of the first clause of its body. In the
+example the stop after `do label lbl` comes before `nop` is shown.
+
+```rexx
+.debuginput~destination(.in~new(.array~of('', '', '', '', '', '', '', '')))
+.traceoutput~destination(.show~new)
+trace ?a
+do label lbl
+  nop
+end lbl
+say 'end'
+exit
+::class in
+::method init
+  expose a i
+  use arg a
+  i = 0
+::method linein
+  expose a i
+  i += 1
+  if i > a~items then return ''
+  say '[read' i':' a[i]']'
+  return a[i]
+::class show
+::method lineout
+  use arg l
+  l = '' || l
+  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  return 0
+```
+
+```output
+     4 *-* do label lbl
++++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+[read 1: ]
+     5 *-*   nop
+[read 2: ]
+     6 *-* end lbl
+     7 *-* say 'end'
+end
+[read 3: ]
+     8 *-* exit
+```
+
 r[env.debugging.pause.skipped]
 Some traced clauses are not followed by a stop, because they cannot be run
 again safely: a DO or LOOP clause on its second and later turns, which
