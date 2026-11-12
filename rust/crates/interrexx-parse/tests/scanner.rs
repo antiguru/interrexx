@@ -576,9 +576,8 @@ fn scan_interpret(text: &str) -> Result<Vec<Token>, (u16, u16)> {
 
 #[test]
 fn interpret_text_is_one_line_so_a_line_terminator_in_it_is_an_invalid_character() {
-    // The interpreter wraps the string in a one-element array
-    // (`LanguageParser.cpp:450`), so nothing inside it starts a second line.
-    // Measured, every one of these is error 13.1:
+    // The interpreter wraps the string in a one-element array, so nothing inside
+    // it starts a second line. Measured, every one of these is error 13.1:
     //   interpret "say 1" || '0a'x || "say 2"   =>  13.1, ('0A'X)
     //   interpret "say 1" || '0d'x || "say 2"   =>  13.1, ('0D'X)
     //   interpret "say 1" || '0d0a'x || "say 2" =>  13.1, ('0D'X)
@@ -636,13 +635,11 @@ fn a_semicolon_still_separates_interpret_clauses() {
 
 #[test]
 fn an_interpret_does_not_skip_a_shebang_line() {
-    // `ArrayProgramSource::setup` (`ProgramSource.cpp:594`) guards the skip
-    // with `interpretAdjust == 0`. Measured both directions:
-    // `interpret "#! nothing here"` is error 13 with
-    // `Incorrect character in program "#" ('23'X)`, while the identical text
-    // as line 1 of a file is accepted and `say "after"` on line 2 prints
-    // `after`. Skipping unconditionally would silently accept an empty
-    // program.
+    // `ArrayProgramSource::setup` guards the skip with `interpretAdjust == 0`.
+    // Measured both directions: `interpret "#! nothing here"` is error 13 with
+    // `Incorrect character in program "#" ('23'X)`, while the identical text as
+    // line 1 of a file is accepted and `say "after"` on line 2 prints `after`.
+    // Skipping unconditionally would silently accept an empty program.
     assert_eq!(scan_interpret("#! nothing here"), Err((13, 1)));
     assert_eq!(scan_interpret("#!"), Err((13, 1)));
     let source = ProgramSource::new(b"#! nothing here".to_vec(), SourceKind::Program);
@@ -909,9 +906,8 @@ fn the_comparison_operators_scan_to_their_own_kinds() {
 
 #[test]
 fn the_alternative_logical_not_bytes_are_accepted() {
-    // The interpreter takes 0xAA and 0xAC as alternative spellings of `\`
-    // (`Scanner.cpp:1110`), which is why they are not error 13.1 the way
-    // every other byte above 0x7F is.
+    // The interpreter takes 0xAA and 0xAC as alternative spellings of `\`, which
+    // is why they are not error 13.1 the way every other byte above 0x7F is.
     for byte in [0xAAu8, 0xACu8] {
         let source = ProgramSource::new(vec![byte, b'a'], SourceKind::Program);
         let toks = scan(&source).expect("scans").tokens;

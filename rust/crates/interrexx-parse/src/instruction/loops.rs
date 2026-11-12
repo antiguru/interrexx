@@ -1,4 +1,4 @@
-//! The loop header of `DO` and `LOOP`: `createLoop` and the loop forms it
+//! The loop header of `DO` and `LOOP`: the loop header and the loop forms it
 //! builds.
 
 use interrexx_inventory::errors::{
@@ -16,7 +16,7 @@ use super::{
 };
 
 impl<'a> Inst<'a> {
-    /// `createLoop` (`InstructionParser.cpp:1994`), for both `DO` and `LOOP`.
+    /// The loop header, for both `DO` and `LOOP`.
     pub(super) fn create_loop(&mut self, is_loop: bool) -> Result<Loop, ParseError> {
         let mut label = None;
         let mut counter = None;
@@ -61,8 +61,8 @@ impl<'a> Inst<'a> {
                 Some(TokenKind::Operator(Operator::StrictEqual)) => {
                     return Err(self.found(E35_1, name));
                 }
-                // `Error_Symbol_expected_LABEL` is 20.918 and
-                // `Error_Symbol_expected_counter` is 20.934.
+                // 20.918 and
+                // 20.934.
                 _ => {
                     let msg = if which == SUB_LABEL { E20_918 } else { E20_934 };
                     return Err(self.error(msg, []));
@@ -75,7 +75,7 @@ impl<'a> Inst<'a> {
             if is_loop {
                 return self.plain_loop(label, counter, LoopKind::Forever);
             }
-            // `newSimpleDo` takes no counter, because a block does not iterate.
+            // A plain `DO` takes no counter, because a block does not iterate.
             if counter.is_some() {
                 return Err(self.error(E27_905, []));
             }
@@ -120,14 +120,14 @@ impl<'a> Inst<'a> {
                 match self.sub_keyword(first) {
                     Some(SUB_FOREVER) => {
                         self.next_real();
-                        // `Error_Invalid_do_forever` is 27.901, and it is the
-                        // one reachable use of `parseLoopConditional`'s error
-                        // argument: measured, `do forever x` is rc 229.
+                        // 27.901, and it is the
+                        // one reachable use of the loop conditional's error argument:
+                        // measured, `do forever x` is rc 229.
                         self.plain_loop(label, counter, LoopKind::Forever)
                     }
                     // `DO WHILE` and `DO UNTIL` are a FOREVER loop with the
-                    // conditional attached, which is what `newLoopWhile` and
-                    // `newLoopUntil` build.
+                    // conditional attached, which is what the oracle's
+                    // loop-with-condition forms build.
                     Some(SUB_WHILE | SUB_UNTIL) => {
                         self.plain_loop(label, counter, LoopKind::Forever)
                     }
@@ -156,8 +156,7 @@ impl<'a> Inst<'a> {
         })
     }
 
-    /// `parseCountLoop` (`InstructionParser.cpp:1916`): `DO expr`, with an
-    /// optional trailing conditional.
+    /// `DO expr`, with an optional trailing conditional.
     fn count_loop(
         &mut self,
         label: Option<SymbolId>,
@@ -174,7 +173,6 @@ impl<'a> Inst<'a> {
         })
     }
 
-    /// `newControlledLoop` (`InstructionParser.cpp:1265`):
     /// `DO i = initial TO t BY b FOR f`.
     fn controlled(
         &mut self,
@@ -206,16 +204,16 @@ impl<'a> Inst<'a> {
                 Some(SUB_TO) => (&mut control.to, E35_906, ControlExpr::To),
                 Some(SUB_FOR) => (&mut control.for_count, E35_907, ControlExpr::For),
                 Some(SUB_WHILE | SUB_UNTIL) => {
-                    // `parseLoopConditional` allows nothing after itself, so
-                    // this ends the clause.
+                    // The loop conditional allows nothing after itself, so this
+                    // ends the clause.
                     conditional = self.loop_conditional(None)?;
                     break;
                 }
                 _ => return Err(self.unreachable_switch("loop subkey", Some(token))),
             };
             if slot.is_some() {
-                // `Error_Invalid_do_duplicate`, naming the keyword. Measured:
-                // `do i = 1 to 3 to 4` is rc 229, Error 27.902.
+                // Naming the keyword. Measured: `do i = 1 to 3 to 4` is rc 229,
+                // Error 27.902.
                 return Err(self.found(E27_902, Some(token)));
             }
             self.next_real();
@@ -238,8 +236,7 @@ impl<'a> Inst<'a> {
         })
     }
 
-    /// `newDoOverLoop` (`InstructionParser.cpp:1432`): `DO name OVER expr`,
-    /// with an optional `FOR` and an optional conditional.
+    /// `DO name OVER expr`, with an optional `FOR` and an optional conditional.
     fn do_over(
         &mut self,
         label: Option<SymbolId>,
@@ -268,7 +265,6 @@ impl<'a> Inst<'a> {
         })
     }
 
-    /// `newDoWithLoop` (`InstructionParser.cpp:1582`):
     /// `DO WITH INDEX i ITEM v OVER expr`.
     fn do_with(
         &mut self,
@@ -290,10 +286,10 @@ impl<'a> Inst<'a> {
                 return Err(self.found(E27_902, Some(token)));
             }
             self.next_real();
-            // `requiredVariable` then `addVariable`, so a non-symbol is
+            // A required variable, then the variable path, so a non-symbol is
             // 20.929 naming the keyword and a symbol that is not a variable is
-            // `needVariable`'s own number: measured, `do with index 1 over x`
-            // is 31.2 and `do with index .a over x` is 31.3.
+            // the variable check's own number: measured, `do with index 1 over
+            // x` is 31.2 and `do with index .a over x` is 31.3.
             let Some(&TokenKind::Symbol { id, class }) = self.next_real().map(|name| &name.kind)
             else {
                 return Err(self.error(E20_929, [self.value_of(token).into_vec()]));
@@ -305,13 +301,12 @@ impl<'a> Inst<'a> {
             }
         }
         if index.is_none() && item.is_none() {
-            // `Error_Invalid_do_with_no_control`. Unreachable through
-            // `createLoop`, which only comes here when the token after WITH is
-            // INDEX or ITEM, and kept because `newDoWithLoop` checks it.
+            // Unreachable through the loop header, which only comes here when
+            // the token after WITH is INDEX or ITEM, and kept because the oracle
+            // checks it.
             return Err(self.error(E27_903, []));
         }
-        // `Error_Invalid_do_with_no_over`. Measured: `do with index i x` is
-        // rc 229, Error 27.904.
+        // Measured: `do with index i x` is rc 229, Error 27.904.
         let over = self
             .peek_real()
             .filter(|token| token.kind.tag() == Tag::Symbol);
@@ -357,7 +352,7 @@ impl<'a> Inst<'a> {
                 }
                 // Only a `TO` or `BY` that ended the FOR expression gets here.
                 // Deviation 38: the oracle raises 49.2 with an internal enum
-                // value (`InstructionParser.cpp:1491`, `:1700`).
+                // value.
                 _ => {
                     return Err(
                         self.error(E25_927, [b"FOR".to_vec(), self.value_of(token).into_vec()])
@@ -368,10 +363,9 @@ impl<'a> Inst<'a> {
         Ok((for_count, conditional))
     }
 
-    /// `parseLoopConditional` (`InstructionParser.cpp:4600`): an optional
-    /// trailing `WHILE` or `UNTIL`, and nothing after it. `unexpected` names
-    /// anything else, `None` where the caller has already stopped at `WHILE` or
-    /// `UNTIL`.
+    /// An optional trailing `WHILE` or `UNTIL`, and nothing after it.
+    /// `unexpected` names anything else, `None` where the caller has already
+    /// stopped at `WHILE` or `UNTIL`.
     fn loop_conditional(
         &mut self,
         unexpected: Option<Msg<1>>,
@@ -389,16 +383,14 @@ impl<'a> Inst<'a> {
                 });
             }
         };
-        // 35.929 is `Error_Invalid_expression_logical_list`, for the same reason the
-        // `IF` arm passes it: `parseLogical` raises it itself as soon as a
-        // sub-expression comes back null, so `requiredLogicalExpression`'s
-        // per-caller `Error_Invalid_expression_while` (35.908) and
-        // `Error_Invalid_expression_until` (35.909) are unreachable for every
-        // caller. Measured: `do while` then `end` and `do until` then `end` both
-        // give `Error 35.929` under `rexxc`, not 908 or 909.
+        // 35.929 is the logical-list error, passed for the same reason the
+        // `IF` arm passes it: the condition parser raises it itself as soon as a
+        // sub-expression comes back null, so the per-caller WHILE (35.908) and
+        // UNTIL (35.909) numbers are unreachable for every caller. Measured: `do
+        // while` then `end` and `do until` then `end` both give `Error 35.929`
+        // under `rexxc`, not 908 or 909.
         let condition = self.logical(Terminators::COND, E35_929)?;
-        // `Error_Invalid_do_whileuntil`. Measured:
-        // `do i = 1 to 3 while 1 until 2` is rc 229, Error 27.1.
+        // Measured: `do i = 1 to 3 while 1 until 2` is rc 229, Error 27.1.
         self.required_end(E27_1)?;
         Ok(Some(LoopConditional { until, condition }))
     }

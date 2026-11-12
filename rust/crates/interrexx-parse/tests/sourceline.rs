@@ -58,9 +58,9 @@ fn crlf_terminators_are_excluded_from_line_content() {
 fn crlf_pair_is_one_terminator_but_lone_cr_ends_a_line_on_its_own() {
     // Verified against build/bin/rexx: a file using bare \r (no \n) as its
     // only line terminator (old Mac style) still reports the right line
-    // count and content, matching ProgramSource.cpp's line_delimiters scan,
-    // which treats \r and \n as equally valid terminators and only pairs a
-    // \r immediately followed by \n into a single CRLF terminator.
+    // count and content, matching the oracle's line-delimiter scan, which treats
+    // \r and \n as equally valid terminators and only pairs a \r immediately
+    // followed by \n into a single CRLF terminator.
     let src = ProgramSource::new(b"say 1\rsay 2\r".to_vec(), SourceKind::Program);
     assert_eq!(src.line_count(), 2);
     assert_eq!(src.line(1), Some(&b"say 1"[..]));
@@ -451,11 +451,11 @@ fn join_span_borrows_on_one_line_and_agrees_with_span_bytes_about_none() {
 #[test]
 fn interpret_text_is_one_line_from_end_to_end() {
     // `ArrayProgramSource` holds the interpret string as a single array
-    // element (`LanguageParser.cpp:450`), so neither of `new`'s program rules
-    // applies: nothing splits it and nothing truncates it. Measured against
-    // the oracle: `interpret "say 1" || '0a'x || "say 2"` is error 13.1 on the
-    // 0A byte, and so are the `'0d'x`, `'0d0a'x` and `'1a'x` versions, which
-    // can only happen if those bytes are still on the line.
+    // element, so neither of `new`'s program rules applies: nothing splits it
+    // and nothing truncates it. Measured against the oracle: `interpret "say 1"
+    // || '0a'x || "say 2"` is error 13.1 on the 0A byte, and so are the `'0d'x`,
+    // `'0d0a'x` and `'1a'x` versions, which can only happen if those bytes are
+    // still on the line.
     let src = ProgramSource::new(b"say 1\n\rsay 2\x1amore".to_vec(), SourceKind::Interpret);
     assert_eq!(src.kind(), SourceKind::Interpret);
     assert_eq!(src.line_count(), 1);

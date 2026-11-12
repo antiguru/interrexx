@@ -623,8 +623,8 @@ fn the_do_subkey_rows_differ_from_the_oracle_as_deviation_38_says() {
 
 #[test]
 fn a_scan_error_waits_for_the_parse_to_reach_its_clause() {
-    // The oracle scans one clause at a time (`LanguageParser::nextClause`), so
-    // the earlier parse error wins: measured, 37.2 on line 1.
+    // The oracle scans one clause at a time so the earlier parse error wins:
+    // measured, 37.2 on line 1.
     let program = b"say )\n\n'unclosed\n";
     let source = ProgramSource::new(program.to_vec(), SourceKind::Program);
     let error = parse_program(program.to_vec()).expect_err("both reject it");
@@ -928,7 +928,7 @@ fn every_message_the_parser_names_is_raised_by_a_corpus_row_or_recorded_as_unrea
     }
 }
 
-/// The oracle's symbolic name for `pair`, from `RexxErrorCodes.h`.
+/// The oracle's symbolic name for `pair`, from the oracle's error-code table.
 fn oracle_name(pair: (u16, u16)) -> String {
     let path = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../../third_party/ooRexx/interpreter/messages/RexxErrorCodes.h");

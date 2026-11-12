@@ -156,7 +156,7 @@ SIGNBLANK_A = ["+ 3","- 3","+  3","-   3","  + 3  ","+ .5","- .5","+ 3.","+ 0","
 def signblank():
     """Blanks between a sign and its digits, and blank/tab edge handling.
 
-    `numberStringScan` (NumberStringClass.cpp:1289-1295) skips blanks and
+    The oracle's number scan skips blanks and
     tabs after a sign, so `'+ 3'` is the number 3 -- legal there, at either
     end, and nowhere else. None of the other eleven sets can see this: no
     generator above emits a blank after a sign, which is how a parser that

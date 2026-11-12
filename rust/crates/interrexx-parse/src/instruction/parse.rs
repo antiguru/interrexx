@@ -16,8 +16,7 @@ use super::{
 };
 
 impl<'a> Inst<'a> {
-    /// `parseNew` (`InstructionParser.cpp:3102`), shared by `PARSE`, `ARG` and
-    /// `PULL`.
+    /// The `PARSE` body, shared by `PARSE`, `ARG` and `PULL`.
     pub(super) fn parse_instruction_body(
         &mut self,
         short_form: Option<ParseSource>,
@@ -70,8 +69,7 @@ impl<'a> Inst<'a> {
                         // The expression is optional and defaults to the null
                         // string: measured, `parse value with a` is rc 0.
                         let value = self.opt_expr(Terminators::PARSE_WITH)?;
-                        // `Error_Invalid_template_with`. Measured:
-                        // `parse value "x" a` is rc 218, Error 38.3.
+                        // Measured: `parse value "x" a` is rc 218, Error 38.3.
                         let with = self
                             .next_real()
                             .filter(|token| self.sub_keyword(token) == Some(SUB_WITH));
@@ -80,7 +78,6 @@ impl<'a> Inst<'a> {
                         }
                         ParseSource::Value(value)
                     }
-                    // `Error_Invalid_subkeyword_parse`.
                     _ => return Err(self.found(E25_12, Some(token))),
                 }
             }
@@ -95,8 +92,8 @@ impl<'a> Inst<'a> {
         })
     }
 
-    /// `RexxToken::parseOption` (`KeywordConstants.cpp:551`), which is a table
-    /// of its own and not the sub-keyword table.
+    /// The `PARSE` option table, which is a table of its own and not the
+    /// sub-keyword table.
     fn parse_option(&self, token: &Token) -> Option<usize> {
         match &token.kind {
             TokenKind::Symbol { id, .. } => self.ctx.keywords.parse_options.index_of(*id),
@@ -104,8 +101,7 @@ impl<'a> Inst<'a> {
         }
     }
 
-    /// The template grammar (`InstructionParser.cpp:3239`-`3418`), shared by
-    /// all three spellings.
+    /// The template grammar, shared by all three spellings.
     fn parse_template(&mut self, caseless: bool) -> Result<Vec<Option<ParseTrigger>>, ParseError> {
         let string_kind = if caseless {
             TriggerKind::Mixed
@@ -145,8 +141,7 @@ impl<'a> Inst<'a> {
                         Operator::Equal => TriggerKind::Absolute,
                         Operator::LessThan => TriggerKind::MinusLength,
                         Operator::GreaterThan => TriggerKind::PlusLength,
-                        // `Error_Invalid_template_trigger`. Measured:
-                        // `parse arg *3` is rc 218, Error 38.1.
+                        // Measured: `parse arg *3` is rc 218, Error 38.1.
                         _ => return Err(self.found(E38_1, Some(token))),
                     };
                     let value = self.trigger_position()?;
@@ -158,8 +153,7 @@ impl<'a> Inst<'a> {
                 }
                 TokenKind::LeftParen => {
                     let Some(value) = parse_paren_expression(self.ctx, &mut self.cursor)? else {
-                        // `Error_Invalid_expression_parse`. Measured:
-                        // `parse arg +()` is rc 221, Error 35.931.
+                        // Measured: `parse arg +()` is rc 221, Error 35.931.
                         return Err(self.error(E35_931, []));
                     };
                     template.push(Some(ParseTrigger {
@@ -202,7 +196,7 @@ impl<'a> Inst<'a> {
                                     self.cursor = trial;
                                     targets.push(Some(target));
                                 }
-                                // `Error_Variable_expected_PARSE`, 89.2.
+                                // 89.2.
                                 None => return Err(self.error(E89_2, [])),
                             }
                         }
@@ -217,8 +211,7 @@ impl<'a> Inst<'a> {
     /// The column a `+`, `-`, `=`, `<` or `>` trigger moves to.
     fn trigger_position(&mut self) -> Result<Expr, ParseError> {
         let Some(token) = self.next_real() else {
-            // `Error_Invalid_template_missing`. Measured: `parse arg +` is
-            // rc 218, Error 38.901.
+            // Measured: `parse arg +` is rc 218, Error 38.901.
             return Err(self.error(E38_901, []));
         };
         match &token.kind {
@@ -227,8 +220,7 @@ impl<'a> Inst<'a> {
                 None => Err(self.error(E35_931, [])),
             },
             TokenKind::Symbol { id, class } => {
-                // `Error_Invalid_template_position`, for a variable, a stem or
-                // a compound.
+                // For a variable, a stem or a compound.
                 if matches!(
                     class,
                     SymbolClass::Variable | SymbolClass::Stem | SymbolClass::Compound

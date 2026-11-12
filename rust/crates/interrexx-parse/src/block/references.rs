@@ -199,7 +199,7 @@ fn visit_slot(id: Option<SymbolId>, symbols: &SymbolTable, f: &mut impl FnMut(&s
 }
 
 /// A `DROP`, `EXPOSE`, `PROCEDURE EXPOSE` or `USE LOCAL` list. Both spellings
-/// reach `addVariable`, the indirect one through the symbol inside the
+/// reach the variable path, the indirect one through the symbol inside the
 /// parentheses.
 fn visit_refs(variables: &[VariableRef], symbols: &SymbolTable, f: &mut impl FnMut(&str)) {
     for variable in variables {

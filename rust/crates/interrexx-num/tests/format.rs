@@ -710,9 +710,9 @@ fn exponent_oversize_message_uses_the_pre_carry_exponent_not_the_final_one() {
     // 9.996E+20 rounded to 0 decimals carries the exponent from 20 to 21 (see
     // `after_rounding_carry_can_bump_the_exponent_itself`), but the
     // interpreter's own oversize check runs *before* that carry is even
-    // computed (`NumberStringClass.cpp`'s `mathexp` check precedes the
-    // decimals section), so it reports the number reframed at the pre-carry
-    // exponent (20 -> "9.996"), not the post-carry one (21 -> "0.9996").
+    // computed (its exponent-size check precedes the decimals section), so it
+    // reports the number reframed at the pre-carry exponent (20 -> "9.996"), not
+    // the post-carry one (21 -> "0.9996").
     let err = fmt(
         "9.996e20",
         9,
@@ -732,15 +732,13 @@ fn exponent_oversize_message_uses_the_pre_carry_exponent_not_the_final_one() {
 #[test]
 fn exponent_oversize_is_still_reported_when_only_the_post_carry_exponent_overflows_expp() {
     // Regression: an earlier version of the pre-carry fix above dropped the
-    // interpreter's *second* exponent-width check entirely
-    // (`NumberStringClass.cpp:2126-2193`), which redoes the trigger/width
-    // check after the decimal-rounding carry the first check couldn't have
-    // known about. 9.996E+99's pre-carry exponent (99, two digits) fits
-    // `expp` 2, but rounding to 0 decimals carries it to 100 (three
+    // interpreter's *second* exponent-width check entirely, which redoes the
+    // trigger/width check after the decimal-rounding carry the first check
+    // couldn't have known about. 9.996E+99's pre-carry exponent (99, two digits)
+    // fits `expp` 2, but rounding to 0 decimals carries it to 100 (three
     // digits), which does not -- confirmed against the interpreter, and by
     // `crates/interrexx-num/tests/gen-curated-sets.py fmtcarry` (15,840 cases
-    // built specifically for this, 0 divergences after the fix, 148 before
-    // it).
+    // built specifically for this, 0 divergences after the fix, 148 before it).
     let err = fmt(
         "9.996e99",
         9,
@@ -766,7 +764,7 @@ fn exponent_oversize_can_be_triggered_for_the_first_time_by_a_post_carry_exponen
     // *does* trigger, for the first time, only at this second check.
     // Confirmed against the interpreter. The substitution keeps the
     // mid-computation trailing zeros from the interpreter's own rounding
-    // step (`mathRound`, which -- like `Number::round_to`, and unlike
+    // step (the oracle's rounding, which -- like `Number::round_to`, and unlike
     // `round_to_places` -- carries by bumping the exponent and holding the
     // digit count fixed): "1.000000000", not the trimmed "1"
     // `resolve_exponential_state`'s rounder would produce for the same

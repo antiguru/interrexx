@@ -1,5 +1,5 @@
 /// How many written bytes a buffered stream holds before it writes them: the
-/// oracle's `DEFAULT_BUFFER_SIZE` (`common/platform/unix/SysFile.hpp`).
+/// oracle's `DEFAULT_BUFFER_SIZE`.
 pub const STREAM_BUFFER: usize = 4096;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -51,8 +51,8 @@ pub struct OpenFile {
     /// Debug builds only: digests of the bytes [`OpenFile::line_mark`] and
     /// [`OpenFile::line_total`] were counted over, so a check of either runs
     /// only while those bytes are unchanged. Another stream object or process
-    /// writing the file may leave the line answers stale (rexxref
-    /// iostrms.xml:495-500); the checks then stand aside.
+    /// writing the file may leave the line answers stale (the reference
+    /// documentation says so); the checks then stand aside.
     pub line_mark_digest: Option<u64>,
     pub line_total_digest: Option<u64>,
 }

@@ -83,11 +83,10 @@ impl SettingsError {
     }
 }
 
-/// `Numerics::MAX_WHOLENUMBER` (`Numerics.hpp:86`): the largest value any
-/// whole-number conversion can produce on 64-bit, and therefore the absolute
-/// ceiling on `DIGITS` itself (confirmed: `NUMERIC DIGITS
-/// 999999999999999999` succeeds from DIGITS 18, and 10^18 fails even from
-/// DIGITS 30). Unrelated to `crate::MAX_EXPONENT`, which bounds a number's
+/// The largest value any whole-number conversion can produce on 64-bit, and
+/// therefore the absolute ceiling on `DIGITS` itself (confirmed: `NUMERIC DIGITS
+/// 999999999999999999` succeeds from DIGITS 18, and 10^18 fails even from DIGITS
+/// 30). Unrelated to `crate::MAX_EXPONENT`, which bounds a number's
 /// *exponent* -- conflating the two was exactly the defect this rule
 /// replaces.
 const MAX_WHOLENUMBER: u64 = 999_999_999_999_999_999;
@@ -109,9 +108,8 @@ impl Default for Settings {
     }
 }
 
-/// `Numerics::maxValueForDigits` (`Numerics.hpp:160`): the largest unsigned
-/// whole number expressible in `digits` significant positions, capped at
-/// `MAX_WHOLENUMBER`'s eighteen.
+/// The largest unsigned whole number expressible in `digits` significant
+/// positions, capped at `MAX_WHOLENUMBER`'s eighteen.
 fn max_value_for_digits(digits: u64) -> u64 {
     if digits >= 18 {
         MAX_WHOLENUMBER
@@ -122,8 +120,8 @@ fn max_value_for_digits(digits: u64) -> u64 {
 }
 
 /// Converts `text` the way the interpreter converts a NUMERIC DIGITS/FUZZ
-/// operand: `requestUnsignedNumber(setting, number_digits())`
-/// (`NumericInstruction.cpp:103`/`:139`), i.e. an unsigned whole number
+/// operand: an unsigned-number request at the current precision
+/// -- i.e. an unsigned whole number
 /// **within the DIGITS setting currently in force** -- there is no fixed
 /// cap. The value is rounded at that DIGITS boundary first (half-up on the
 /// first dropped digit), every decimal digit that remains must reduce to
@@ -177,12 +175,12 @@ fn unsigned_whole_number(text: &str, digits: u64) -> Option<u64> {
     create_unsigned_value(&kept[..length - decimals as usize], carry, 0, max_value)
 }
 
-/// Mirrors `NumberString::createUnsignedValue` (`NumberStringClass.cpp:788`):
-/// accumulate the integer digits, add the rounding carry, scale by the
-/// exponent's trailing zeros, and reject anything past `max_value`. The
-/// checked u64 arithmetic stands in for the C++ wrap tests -- and bounds the
-/// scaling loop the same way, since any nonzero value overflows u64 within
-/// twenty scalings however large `exponent` is.
+/// Mirrors the oracle's unsigned-value conversion: accumulate the integer
+/// digits, add the rounding carry, scale by the exponent's trailing zeros, and
+/// reject anything past `max_value`. The checked u64 arithmetic stands in for
+/// the C++ wrap tests -- and bounds the scaling loop the same way, since any
+/// nonzero value overflows u64 within twenty scalings however large `exponent`
+/// is.
 fn create_unsigned_value(digits: &[u8], carry: bool, exponent: i64, max_value: u64) -> Option<u64> {
     let mut value: u64 = 0;
     for &d in digits {
@@ -198,9 +196,9 @@ fn create_unsigned_value(digits: &[u8], carry: bool, exponent: i64, max_value: u
 }
 
 impl Settings {
-    /// The three settings as given, unchecked: `PackageSetting::setDigits`
-    /// and `setFuzz` store without the check `NUMERIC` makes. The caller
-    /// owns `digits >= 1`; `fuzz >= digits` is allowed through.
+    /// The three settings as given, unchecked: the oracle's package digits and
+    /// fuzz setters store without the check `NUMERIC` makes. The caller owns
+    /// `digits >= 1`; `fuzz >= digits` is allowed through.
     pub fn from_parts(digits: u64, fuzz: u64, form: Form) -> Settings {
         Settings { digits, fuzz, form }
     }
@@ -232,8 +230,8 @@ impl Settings {
     }
 
     /// `::OPTIONS DIGITS n`, whose operand the directive parser has already
-    /// converted with `Numerics::ARGUMENT_DIGITS` rather than with the
-    /// setting in force.
+    /// converted with [`ARGUMENT_DIGITS`](crate::ARGUMENT_DIGITS) rather than
+    /// with the setting in force.
     pub fn set_digits(&mut self, value: u64) -> Result<(), SettingsError> {
         self.set_digits_checked(value, || SettingsError::DigitsNotWhole {
             found: value.to_string(),
@@ -293,7 +291,7 @@ impl Settings {
     }
 
     /// `::OPTIONS FUZZ n`, the sibling of [`Settings::set_digits`] and
-    /// converted the same way (`DirectiveParser.cpp:1046`).
+    /// converted the same way.
     pub fn set_fuzz(&mut self, value: u64) -> Result<(), SettingsError> {
         self.set_fuzz_checked(value)
     }

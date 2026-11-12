@@ -121,7 +121,7 @@ pub(super) fn check_spans(expr: &Expr, text: &str) {
 }
 
 // ---------------------------------------------------------------------------
-// Precedence, one test per boundary in `RexxToken::precedence`.
+// Precedence, one test per boundary in the oracle's precedence table.
 // ---------------------------------------------------------------------------
 
 #[test]
@@ -234,8 +234,8 @@ fn comparison_is_left_associative() {
 fn concatenation_is_left_associative_though_no_value_can_show_it() {
     // Concatenation is associative, so the interpreter cannot discriminate:
     // `r = 1 2 3` is `1 2 3` under either grouping, and so is `1 || 2 3`. The
-    // shape comes from the C++'s stack machine, which pops while
-    // `token->precedence() <= second->precedence()`, and is asserted here
+    // shape comes from the C++'s stack machine, which pops while the incoming
+    // operator's precedence is at most the stacked one's, and is asserted here
     // because a later change to the loop bound would otherwise go unnoticed.
     assert_eq!(shape("a b c"), "(blank (blank A B) C)");
     assert_eq!(shape("'a' || 'b' || 'c'"), "(|| (|| \"a\" \"b\") \"c\")");
@@ -379,9 +379,9 @@ fn a_cascade_is_one_term_and_reads_left_to_right() {
 
 #[test]
 fn a_colon_after_a_message_name_is_a_superclass_override() {
-    // The gate is `isVariableOrDot` (`Token.hpp:576`), which is
-    // `VARIABLE | STEM | COMPOUND | DOTSYMBOL`, and it is wider than a class
-    // name has any use for. build/bin/rexxc translates all five of these:
+    // The gate is the variable-or-dot test, which is `VARIABLE | STEM | COMPOUND
+    // | DOTSYMBOL`, and it is wider than a class name has any use for.
+    // build/bin/rexxc translates all five of these:
     assert_eq!(shape("a~b:.nil"), "(msg~ A \"B\" :env:.NIL)");
     assert_eq!(shape("a~b:c(1)"), "(msg~ A \"B\" :C 1)");
     assert_eq!(shape("a~b:c."), "(msg~ A \"B\" :stem:C.)");
@@ -395,8 +395,8 @@ fn a_colon_after_a_message_name_is_a_superclass_override() {
     assert_eq!(error("a~b:1"), (20, 917));
     assert_eq!(error("a~b:1e5"), (20, 917));
     assert_eq!(error("a~b:."), (20, 917));
-    // A literal cannot pass either, because `isVariableOrDot` reads only the
-    // symbol subclass and a literal token has none of the four.
+    // A literal cannot pass either, because the variable-or-dot test reads only
+    // the symbol subclass and a literal token has none of the four.
     assert_eq!(error("a~b:'c'"), (20, 917));
 }
 
@@ -508,8 +508,8 @@ fn a_control_keyword_ends_a_control_expression_but_not_a_plain_one() {
     assert_eq!(shape_until("1 while x", Terminators::COND), "1");
     assert_eq!(shape_until("1 until x", Terminators::COND), "1");
     assert_eq!(shape_until("1 then x", Terminators::IF), "1");
-    // `OVER` has no case in `isTerminator`, so it never terminates however
-    // the flags are set, and the two blanks then associate left.
+    // `OVER` has no case in the oracle's terminator test, so it never terminates
+    // however the flags are set, and the two blanks then associate left.
     assert_eq!(
         shape_until("1 over x", Terminators::OVER),
         "(blank (blank 1 OVER) X)"
@@ -518,7 +518,7 @@ fn a_control_keyword_ends_a_control_expression_but_not_a_plain_one() {
 
 #[test]
 fn a_keyword_terminator_only_counts_as_a_simple_variable() {
-    // `isTerminator` gates the keyword check on `isSimpleVariable`, so a
+    // The terminator test gates the keyword check on a simple variable, so a
     // stem or a compound spelled like a keyword does not terminate.
     assert_eq!(
         shape_until("1 to. 3", Terminators::CONTROL),
@@ -528,9 +528,9 @@ fn a_keyword_terminator_only_counts_as_a_simple_variable() {
 
 #[test]
 fn the_keyword_gate_is_what_admits_a_keyword_terminator() {
-    // No terminator set the interpreter builds omits `TERM_KEYWORD` while
-    // setting a keyword flag, so this constructs one that it never would. The
-    // gate is otherwise unobservable: removing it from `is_terminator` fails
+    // No terminator set the interpreter builds omits the keyword terminator
+    // while setting a keyword flag, so this constructs one that it never would.
+    // The gate is otherwise unobservable: removing it from `is_terminator` fails
     // no other test here, and this records that rather than leaving it as a
     // silent hole.
     let gated = Terminators::EOC.with(Terminators::TO);
@@ -541,9 +541,9 @@ fn the_keyword_gate_is_what_admits_a_keyword_terminator() {
 
 #[test]
 fn a_terminator_set_is_dropped_inside_parentheses() {
-    // `parseSubTerm` passes only `TERM_RIGHT` into a parenthesised
-    // subexpression, so a `DO` keyword inside parentheses is an ordinary
-    // variable again.
+    // The oracle passes only the right-parenthesis terminator into a
+    // parenthesised subexpression, so a `DO` keyword inside parentheses is an
+    // ordinary variable again.
     assert_eq!(
         shape_until("(1 to 3)", Terminators::CONTROL),
         "(blank (blank 1 TO) 3)"
@@ -568,7 +568,7 @@ fn a_comma_in_a_conditional_builds_a_logical_and() {
 #[test]
 fn every_element_of_a_logical_list_is_required_including_the_first() {
     // build/bin/rexxc: `if then nop`, `if , 1 = 1 then nop` and
-    // `if 1 = 1, then nop` are all error 35.929. So `parseLogical` never
+    // `if 1 = 1, then nop` are all error 35.929. So the logical-list parse never
     // returns an absent expression and the instruction gets no say.
     assert_eq!(logical_error("then nop", Terminators::IF), (35, 929));
     assert_eq!(
@@ -761,9 +761,9 @@ fn sub_keyword_indices_still_name_the_right_spellings() {
 #[test]
 fn the_precedence_table_matches_the_cpp_level_for_level() {
     use crate::token::Operator::*;
-    // `RexxToken::precedence` (`Token.cpp:111`), read out level by level. The
-    // shape tests above check that these numbers are wired up correctly. This
-    // checks the numbers themselves against the source they came from.
+    // The oracle's precedence table, read out level by level. The shape tests
+    // above check that these numbers are wired up correctly. This checks the
+    // numbers themselves against the source they came from.
     for (op, level) in [
         (Backslash, 8),
         (Power, 7),
@@ -872,8 +872,7 @@ fn one_method_name_is_one_selector_across_a_whole_program() {
 }
 
 /// The bracket form is a message name like any other, and the parse interns
-/// it in the same pool: `"abc"[2]` and `"abc"~'[]'(2)` are one method
-/// (`parser/LanguageParser.cpp:3317`-`:3321`).
+/// it in the same pool: `"abc"[2]` and `"abc"~'[]'(2)` are one method.
 #[test]
 fn the_bracket_form_and_the_written_name_are_one_selector() {
     let selectors = program_selectors(

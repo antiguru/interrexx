@@ -102,8 +102,8 @@ fn digits_ranges_over_the_full_u64_width_up_to_max_wholenumber() {
     assert!(s.set_digits_str("4294967296").is_ok());
     assert_eq!(s.digits(), 4_294_967_296);
 
-    // The absolute ceiling is `Numerics::MAX_WHOLENUMBER`, 10^18 - 1:
-    // reachable exactly from DIGITS 18 ...
+    // The absolute ceiling is the largest whole number, 10^18 - 1: reachable
+    // exactly from DIGITS 18 ...
     let mut s = Settings::default();
     s.set_digits_str("18").unwrap();
     assert!(s.set_digits_str("999999999999999999").is_ok());
@@ -121,9 +121,9 @@ fn digits_ranges_over_the_full_u64_width_up_to_max_wholenumber() {
 
 #[test]
 fn the_candidate_is_rounded_at_the_digits_in_force_before_the_check() {
-    // The conversion is `requestUnsignedNumber` at the current DIGITS, so a
-    // fractional spelling that rounds clean is accepted -- all confirmed
-    // against `build/bin/rexx`.
+    // The conversion is an unsigned-number request at the current DIGITS, so a
+    // fractional spelling that rounds clean is accepted -- all confirmed against
+    // `build/bin/rexx`.
     let mut s = Settings::default();
     s.set_digits_str("4").unwrap();
     assert!(s.set_digits_str("999.9999").is_ok()); // carry through the nines

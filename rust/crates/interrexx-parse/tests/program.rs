@@ -470,8 +470,8 @@ fn a_shebang_first_element_is_skipped() {
 }
 
 /// Directives and labels are accepted, where an `INTERPRET` raises 99.914 and
-/// 47.1 for them: `generateMethod` compiles the whole source and takes the
-/// main section (`parser/LanguageParser.cpp:590`).
+/// 47.1 for them: the oracle compiles the whole source and takes the
+/// main section.
 #[test]
 fn parse_lines_accepts_what_an_interpret_refuses() {
     let with_directive =

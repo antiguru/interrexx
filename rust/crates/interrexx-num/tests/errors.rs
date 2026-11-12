@@ -26,9 +26,9 @@ fn divide_by_zero_message_is_42_003() {
 
 #[test]
 fn divide_by_zero_message_is_the_same_for_all_three_operators() {
-    // `NumberStringMath2.cpp:355` reports `Error_Overflow_zero` before
-    // branching on `/`, `%`, or `//`, so all three share this crate's single
-    // `DivideByZero` variant and therefore the same message.
+    // The interpreter reports the zero divisor before branching on `/`, `%`, or
+    // `//`, so all three share this crate's single `DivideByZero` variant and
+    // therefore the same message.
     for op in [DivOp::Divide, DivOp::IntegerDivide, DivOp::Remainder] {
         assert_eq!(
             n("1").div(&n("0"), 9, op).unwrap_err().message(),
@@ -56,10 +56,10 @@ fn general_overflow_message_is_42_901_substituting_the_adjusted_exponent_and_the
 
 #[test]
 fn general_overflow_message_uses_9_regardless_of_the_active_digits_setting() {
-    // &2 is `Numerics::DEFAULT_DIGITS`, a fixed C++ constant, not the active
-    // `NUMERIC DIGITS` -- confirmed by provoking the same overflow at DIGITS
-    // 9 and DIGITS 15 and getting back identical text ("...exceeds 9
-    // digits.") either way.
+    // &2 is the oracle's default digits, a fixed constant, not the active
+    // `NUMERIC DIGITS` -- confirmed by provoking the same overflow at DIGITS 9
+    // and DIGITS 15 and getting back identical text ("...exceeds 9 digits.")
+    // either way.
     let err = n("9e999999999").mul(&n("9e999999999"), 15).unwrap_err();
     assert_eq!(err.additional()[1], "9");
     assert_eq!(
@@ -185,10 +185,10 @@ fn power_exponent_not_whole_message_substitutes_the_original_exponent_not_the_ro
 fn system_resources_message_is_the_bare_error_5_no_substitution() {
     // Provoked with `numeric digits 999999999999999999; r = 4.0 / 2`, which
     // reports rc 5. The message text is the table's own
-    // (`Error_System_resources`, message number 5): the *interpreter's*
-    // rendering for this one is visibly broken -- `condition('o')~message`
-    // came back as "The NIL object" -- so the rc and table text are the
-    // contract here, not what the interpreter happens to print.
+    // (message number 5): the *interpreter's* rendering for this one is visibly
+    // broken -- `condition('o')~message` came back as "The NIL object" -- so the
+    // rc and table text are the contract here, not what the interpreter happens
+    // to print.
     let err = n("4.0")
         .div(&n("2"), 999_999_999_999_999_999, DivOp::Divide)
         .unwrap_err();

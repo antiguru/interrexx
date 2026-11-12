@@ -635,8 +635,8 @@ fn class_carries_its_options_and_rejects_a_second_of_each() {
         ]
     );
     // A namespace-qualified reference, and a literal that is NOT one because
-    // `parseClassReference` returns before it can look for a colon. Measured:
-    // `::class c subclass rexx:object` is rc 0.
+    // the oracle returns before it can look for a colon. Measured: `::class c
+    // subclass rexx:object` is rc 0.
     assert_eq!(
         shapes("::class c subclass rexx:object\n"),
         vec!["class \"C\" subclass REXX:\"OBJECT\""]
@@ -1080,8 +1080,7 @@ fn the_options_arguments_are_gated_the_way_the_oracle_gates_them() {
     // DIGITS must exceed zero and FUZZ need not, which is one number apart.
     assert_eq!(shapes("::options fuzz 0\n"), vec!["options fuzz 0"]);
     assert_eq!(err("::options digits 0\n"), (26, 5));
-    // Eighteen digits is the boundary, `Numerics::ARGUMENT_DIGITS` on a 64-bit
-    // build.
+    // Eighteen digits is the boundary, `ARGUMENT_DIGITS` on a 64-bit build.
     assert_eq!(
         shapes("::options digits 123456789012345678\n"),
         vec!["options digits 123456789012345678"]
@@ -1208,7 +1207,8 @@ fn routine_takes_an_access_option_and_an_external_specification() {
     assert_eq!(err("::routine\n"), (19, 903));
     assert_eq!(err("::routine r external nostring\n"), (19, 905));
     // A SECOND external on a `::ROUTINE` reports the `::CLASS` number, because
-    // `routineDirective` passes the wrong error code. Measured: 25.901, not
+    // the oracle's routine parser passes the wrong error code. Measured: 25.901,
+    // not
     // 25.903. The interpreter defines the behaviour.
     assert_eq!(
         err("::routine r external \"LIBRARY x\" external \"LIBRARY y\"\n"),
@@ -1283,7 +1283,7 @@ fn a_resource_carries_its_body_verbatim() {
 
 #[test]
 fn a_clause_that_is_not_a_directive_and_a_directive_that_is_not_known() {
-    // `nextDirective`'s own two guards, both measured.
+    // The directive reader's own two guards, both measured.
     assert_eq!(err("::\n"), (20, 916));
     assert_eq!(err(":: \"x\"\n"), (20, 916));
     // A symbol that is not a directive keyword is 99.916 and NOT 20.916, which
@@ -1297,7 +1297,7 @@ fn a_clause_that_is_not_a_directive_and_a_directive_that_is_not_known() {
     assert_eq!(err("nop\n:junk\n"), (35, 1));
 }
 
-/// `getRetriever`'s name check, 99.925, at all four of its call sites.
+/// The name check, 99.925, at all four of its call sites.
 #[test]
 fn an_attribute_name_must_be_a_variable_name() {
     // The three kinds a variable name can be, all rc 0.
@@ -1318,7 +1318,7 @@ fn an_attribute_name_must_be_a_variable_name() {
     ] {
         assert_eq!(err(text), (99, 925), "{text:?}");
     }
-    // `scanSymbol` looks for an exponent before giving up, so a sign after an
+    // The symbol scan looks for an exponent before giving up, so a sign after an
     // `E` survives and the compound test is reached anyway. Measured: rc 0.
     ok("::attribute \"a.e+5\"\n");
     // The length bound. Measured: 250 bytes is rc 0 and 251 is 99.925.
@@ -1380,14 +1380,14 @@ fn a_directive_spans_its_own_clause() {
     assert_eq!(spans, vec!["::class c;", "::class d   "]);
 }
 
-/// A `checkDirective` error is reported against the OFFENDING clause and every
+/// A `check_directive` error is reported against the OFFENDING clause and every
 /// other directive error against the directive's own clause. Two positions, and
 /// only a source with blank lines between them can tell them apart.
 #[test]
 fn a_body_error_is_reported_against_the_body_and_not_the_directive() {
-    // `checkDirective` saves `clauseLocation` and restores it only AFTER the
-    // error, so `nextClause()` has already moved it. The oracle prints the
-    // WHOLE message, and it names line 5:
+    // `check_directive` saves the clause location and restores it only AFTER the
+    // error, so reading the next clause has already moved it. The oracle prints
+    // the WHOLE message, and it names line 5:
     let text = "::method m abstract\n\n\n\n  return 1\n";
     assert_eq!(err(text), (99, 933));
     let offender = text.find("  return").expect("the body clause is there");
@@ -1403,9 +1403,9 @@ fn a_body_error_is_reported_against_the_body_and_not_the_directive() {
     assert_eq!(err_byte(text), text.find("::method").expect("line 5"));
 }
 
-/// `CoreClasses.orx` is the acceptance test for this task: 347 of its 4,193
-/// lines start with `::`, and every method body in the file sits inside one, so
-/// nothing in the file parses until the directives do.
+/// The shipped core class library is the acceptance test for this task: 347 of
+/// its 4,193 lines start with `::`, and every method body in the file sits
+/// inside one, so nothing in the file parses until the directives do.
 #[test]
 fn core_classes_parses() {
     const CORE_CLASSES: &str =
@@ -1438,8 +1438,9 @@ fn core_classes_parses() {
 }
 
 /// The other shipped package, so that the acceptance test is not one file's
-/// habits. `StreamClasses.orx` adds `::CONSTANT`, which `CoreClasses.orx` never
-/// uses: 7 `::CLASS`, 139 `::METHOD`, 5 `::ATTRIBUTE` and 2 `::CONSTANT`.
+/// habits. The shipped stream class library adds `::CONSTANT`, which the core
+/// library never uses: 7 `::CLASS`, 139 `::METHOD`, 5 `::ATTRIBUTE` and 2
+/// `::CONSTANT`.
 #[test]
 fn the_other_shipped_packages_parse() {
     /// How many of each directive a package holds, in the order

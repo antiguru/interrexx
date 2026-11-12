@@ -29,8 +29,7 @@ const _: () = assert!(
      and a deep expression aborts the process instead of raising 11.1"
 );
 
-/// Dyadic operator precedence, ported from `RexxToken::precedence`
-/// (`Token.cpp:111`).
+/// Dyadic operator precedence, ported from the oracle's precedence table.
 fn precedence(op: Operator) -> u8 {
     match op {
         Operator::Backslash => 8,
@@ -68,16 +67,16 @@ pub(crate) struct Terminators(u32);
 // Tasks 3.6 and 3.7 pick a set per instruction. Only `EOC`, `RIGHT` and
 // `SQRIGHT` have a caller inside the grammar itself.
 impl Terminators {
-    /// End of clause. Carried for fidelity with `TERM_EOC` and never read:
-    /// `RexxToken::isTerminator` returns true for an end of clause and for a
-    /// comma whatever the flags say (`Token.cpp:194`-`201`).
+    /// End of clause. Carried for fidelity with the oracle and never read: the
+    /// oracle's terminator test returns true for an end of clause and for a
+    /// comma whatever the flags say.
     pub(crate) const EOC: Terminators = Terminators(0x0000_0001);
     pub(crate) const RIGHT: Terminators = Terminators(0x0000_0002);
     pub(crate) const SQRIGHT: Terminators = Terminators(0x0000_0004);
     pub(super) const TO: Terminators = Terminators(0x0000_0008);
     const BY: Terminators = Terminators(0x0000_0010);
     const FOR: Terminators = Terminators(0x0000_0020);
-    /// `TERM_WHILE` picks up both `WHILE` and `UNTIL` (`Token.cpp:252`).
+    /// Picks up both `WHILE` and `UNTIL`.
     const WHILE: Terminators = Terminators(0x0000_0040);
     const WITH: Terminators = Terminators(0x0000_0100);
     const THEN: Terminators = Terminators(0x0000_0200);
@@ -85,15 +84,15 @@ impl Terminators {
     /// however it is spelled.
     pub(super) const KEYWORD: Terminators = Terminators(0x1000_0000);
 
-    /// `TERM_CONTROL`: a `DO`/`LOOP` control expression.
+    /// A `DO`/`LOOP` control expression.
     pub(crate) const CONTROL: Terminators =
         Terminators(Self::KEYWORD.0 | Self::TO.0 | Self::BY.0 | Self::FOR.0 | Self::WHILE.0);
-    /// `TERM_COND`: a `WHILE`/`UNTIL` conditional.
+    /// A `WHILE`/`UNTIL` conditional.
     pub(crate) const COND: Terminators = Terminators(Self::KEYWORD.0 | Self::WHILE.0);
-    /// `TERM_OVER`: a `DO ... OVER` collection expression. `OVER` itself is
-    /// not a terminator: `isTerminator` has no case for it.
+    /// A `DO ... OVER` collection expression. `OVER` itself is not a terminator:
+    /// the oracle's terminator test has no case for it.
     pub(crate) const OVER: Terminators = Terminators(Self::KEYWORD.0 | Self::FOR.0 | Self::WHILE.0);
-    /// `TERM_IF`: an `IF` or `WHEN` condition.
+    /// An `IF` or `WHEN` condition.
     pub(crate) const IF: Terminators = Terminators(Self::KEYWORD.0 | Self::THEN.0);
     /// `PARSE VALUE`'s source expression, which stops at `WITH`.
     pub(crate) const PARSE_WITH: Terminators = Terminators(Self::KEYWORD.0 | Self::WITH.0);
@@ -208,8 +207,8 @@ pub(crate) fn parse_constant_expression(
             parser.advance();
             Ok(Some(Expr::new(ExprKind::Literal(value), span)))
         }
-        // `isConstant`: a symbol that is not a variable, a stem or a
-        // compound, so a number, a lone period, or a dot symbol.
+        // A symbol that is not a variable, a stem or a compound, so a number, a
+        // lone period, or a dot symbol.
         TokenKind::Symbol { id, class }
             if !matches!(
                 class,
@@ -223,7 +222,7 @@ pub(crate) fn parse_constant_expression(
         TokenKind::LeftParen => {
             parser.advance();
             // A comma list is allowed in here, which is why this is
-            // `parseFullSubExpression` and not `parseSubExpression`.
+            // a full subexpression and not a single one.
             let inner = parser.full_subexpression(Terminators::RIGHT)?;
             if parser.peek_tag() != Some(Tag::RightParen) {
                 return Err(parser.unmatched(at, false));
@@ -368,8 +367,8 @@ impl<'a, 'c> Parser<'a, 'c> {
     }
 
     /// Error 36's two sub-numbers, for the token at index `opener` with no
-    /// matching closer: `errorPosition` (`LanguageParser.cpp:4114`) inserts
-    /// its 1-based offset in its line, then the line.
+    /// matching closer: the oracle inserts its 1-based offset in its line, then
+    /// the line.
     #[cold]
     #[inline(never)]
     fn unmatched(&self, opener: usize, bracket: bool) -> ParseError {
@@ -403,8 +402,8 @@ impl<'a, 'c> Parser<'a, 'c> {
         self.cursor.advance().map(|i| &self.ctx.tokens[i])
     }
 
-    /// Steps past any blank operator, which is what `nextReal` followed by
-    /// `previousToken` leaves behind.
+    /// Steps past any blank operator, which is what a next-real read followed by
+    /// a step back leaves behind.
     fn skip_blanks(&mut self) {
         while self.peek_tag() == Some(Tag::Blank) {
             self.cursor.advance();
@@ -423,8 +422,7 @@ impl<'a, 'c> Parser<'a, 'c> {
         self.ctx.tokens.get(i)
     }
 
-    /// `RexxToken::isTerminator` (`Token.cpp:189`). `None` is an end of
-    /// clause, which always terminates.
+    /// `None` is an end of clause, which always terminates.
     fn is_terminator(&self, token: Option<&Token>, term: Terminators) -> bool {
         let Some(token) = token else { return true };
         match &token.kind {
@@ -467,16 +465,15 @@ impl<'a, 'c> Parser<'a, 'c> {
         start..end
     }
 
-    /// `parseExpression`: skip to the first real token, then parse a full
-    /// subexpression, where commas build a list.
+    /// Skip to the first real token, then parse a full subexpression, where
+    /// commas build a list.
     fn expression(&mut self, term: Terminators) -> Result<Option<Expr>, ParseError> {
         self.skip_blanks();
         self.full_subexpression(term)
     }
 
-    /// `parseFullSubExpression` (`LanguageParser.cpp:2753`): one or more
-    /// comma-separated subexpressions, which become an array-building list
-    /// when there is more than one.
+    /// One or more comma-separated subexpressions, which become an
+    /// array-building list when there is more than one.
     fn full_subexpression(&mut self, term: Terminators) -> Result<Option<Expr>, ParseError> {
         let from = self.cursor.position();
         let mut parts: Vec<Option<Expr>> = Vec::new();
@@ -494,13 +491,12 @@ impl<'a, 'c> Parser<'a, 'c> {
         }
         // Trailing omitted elements are kept here, unlike in an argument list:
         // measured, `(1,)~size` is 2 and `(1,,)~size` is 3, where `f(1,)`
-        // passes one argument. `parseFullSubExpression` returns `total` where
-        // `parseArgList` returns `realcount`.
+        // passes one argument. The full-subexpression parse returns the total
+        // where the argument-list parse returns the real count.
         let extent = self.extent(from);
         Ok(Some(Expr::new(ExprKind::List(parts), extent)))
     }
 
-    /// `parseLogical` (`LanguageParser.cpp:4264`).
     fn logical(&mut self, term: Terminators, missing: Msg<0>) -> Result<Expr, ParseError> {
         let from = {
             self.skip_blanks();
@@ -514,8 +510,8 @@ impl<'a, 'c> Parser<'a, 'c> {
         Ok(Expr::new(ExprKind::Logical(parts), extent))
     }
 
-    /// The comma-separated loop that `parseLogical` (`LanguageParser.cpp:4264`)
-    /// and `parseCaseWhenList` (`:3168`) share.
+    /// The comma-separated loop that the logical list and the `SELECT CASE`
+    /// `WHEN` list share.
     fn comma_list(&mut self, term: Terminators, missing: Msg<0>) -> Result<Vec<Expr>, ParseError> {
         self.skip_blanks();
         let mut parts: Vec<Expr> = Vec::new();
@@ -533,8 +529,7 @@ impl<'a, 'c> Parser<'a, 'c> {
         Ok(parts)
     }
 
-    /// `parseSubExpression` (`LanguageParser.cpp:2812`): a term, then dyadic
-    /// operators by precedence. A comma always terminates.
+    /// A term, then dyadic operators by precedence. A comma always terminates.
     fn subexpression(&mut self, term: Terminators) -> Result<Option<Expr>, ParseError> {
         let Some(left) = self.message_subterm(term)? else {
             return Ok(None);
@@ -559,8 +554,7 @@ impl<'a, 'c> Parser<'a, 'c> {
             let op = match &token.kind {
                 // A term where an operator was expected is an abuttal. The
                 // C++ synthesises a zero-length operator token and pushes the
-                // term back (`LanguageParser.cpp:2878`), so nothing is
-                // consumed here either.
+                // term back, so nothing is consumed here either.
                 TokenKind::Symbol { .. } | TokenKind::Literal { .. } | TokenKind::LeftParen => {
                     Operator::Abuttal
                 }
@@ -568,7 +562,7 @@ impl<'a, 'c> Parser<'a, 'c> {
                     // A blank next to a terminator is not an operator, which
                     // is what stops `do i = 1 to 3 while x` concatenating `3`
                     // with `WHILE`. The C++ consumes the blank even then,
-                    // because `nextReal` moved past it, so the blanks are
+                    // because the next-real read moved past it, so the blanks are
                     // skipped rather than left for the caller.
                     if self.is_terminator(self.peek_real(), term) {
                         self.skip_blanks();
@@ -613,8 +607,7 @@ impl<'a, 'c> Parser<'a, 'c> {
         }
     }
 
-    /// `parseMessageSubterm` (`LanguageParser.cpp:3617`): prefix operators,
-    /// then a subterm with every message send that follows it.
+    /// Prefix operators, then a subterm with every message send that follows it.
     fn message_subterm(&mut self, term: Terminators) -> Result<Option<Expr>, ParseError> {
         let Some(token) = self.peek() else {
             return Ok(None);
@@ -657,8 +650,8 @@ impl<'a, 'c> Parser<'a, 'c> {
             return Ok(None);
         };
         // A message cascade is part of the same expression term, and the C++
-        // parses its message names with `TERM_EOC` rather than the caller's
-        // set (`LanguageParser.cpp:3701`).
+        // parses its message names with the end-of-clause terminator rather than
+        // the caller's set.
         self.cascade(atom, Terminators::EOC).map(Some)
     }
 
@@ -681,16 +674,15 @@ impl<'a, 'c> Parser<'a, 'c> {
         }
     }
 
-    /// `parseCollectionMessage` (`LanguageParser.cpp:3309`): `target[args]`,
-    /// which is the `[]` message.
+    /// `target[args]`, which is the `[]` message.
     fn collection_message(&mut self, target: Expr, from: usize) -> Result<Expr, ParseError> {
         let args = self.arg_list(Some(Tag::RightBracket))?;
         let extent = self.extent(from);
         // Interned like a written name, where the oracle reaches for
-        // `GlobalNames::BRACKETS` (`parser/LanguageParser.cpp:3320`-`:3321`):
-        // its pool of pre-made names is a second pool this crate does not
-        // have, and one pool that holds the spelling however it was written
-        // is the same answer for a reader that compares selectors.
+        // `GlobalNames::BRACKETS`: its pool of pre-made names is a second pool
+        // this crate does not have, and one pool that holds the spelling however
+        // it was written is the same answer for a reader that compares
+        // selectors.
         let name = self.ctx.selectors.borrow_mut().intern(b"[]");
         Ok(Expr::new(
             ExprKind::Message {
@@ -704,8 +696,8 @@ impl<'a, 'c> Parser<'a, 'c> {
         ))
     }
 
-    /// `parseMessage` (`LanguageParser.cpp:3369`): the message name, an
-    /// optional `:superclass` override, and an optional argument list.
+    /// The message name, an optional `:superclass` override, and an optional
+    /// argument list.
     fn message(
         &mut self,
         target: Expr,
@@ -714,19 +706,17 @@ impl<'a, 'c> Parser<'a, 'c> {
         term: Terminators,
     ) -> Result<Expr, ParseError> {
         // No blank is ever skipped here, and the C++ does not skip one either:
-        // it uses `nextToken`. A blank is only a token when the next real
-        // character starts a symbol, a literal, `(` or `[`, and the previous
-        // token was a symbol, a literal, `)` or `]`, so a `~` can have a
-        // blank on neither side. Measured, `"abc" ~ length` is 3.
+        // it uses the next-token read. A blank is only a token when the next
+        // real character starts a symbol, a literal, `(` or `[`, and the
+        // previous token was a symbol, a literal, `)` or `]`, so a `~` can have
+        // a blank on neither side. Measured, `"abc" ~ length` is 3.
         let name = match self.peek() {
             Some(token) if !self.is_terminator(Some(token), term) => match &token.kind {
                 // Already upcased by the scanner.
                 TokenKind::Symbol { id, .. } => self.ctx.symbols.name(*id).as_bytes().to_vec(),
-                // `parseMessage` upcases a literal name too, with
-                // `RexxString::upper`, which is `Utilities::toUpper` per byte
-                // and so upcases ASCII only (`Utilities.hpp:52`). Measured,
-                // `"abc"~'length'`, `"abc"~'LENGTH'` and `"abc"~"lEnGtH"` all
-                // give 3.
+                // The oracle upcases a literal name too, per byte and so ASCII
+                // only. Measured, `"abc"~'length'`, `"abc"~'LENGTH'` and
+                // `"abc"~"lEnGtH"` all give 3.
                 TokenKind::Literal { value } => {
                     value.iter().map(|b| b.to_ascii_uppercase()).collect()
                 }
@@ -735,9 +725,7 @@ impl<'a, 'c> Parser<'a, 'c> {
             },
             _ => return Err(self.raise(E19_909, [])),
         };
-        // Interned upcased, which is where `parseMessage` interns it:
-        // `messagename = commonString(messagename->upper())`
-        // (`parser/LanguageParser.cpp:3391`).
+        // Interned upcased, which is where the oracle interns it.
         let name = self.ctx.selectors.borrow_mut().intern(&name);
         self.advance();
 
@@ -771,8 +759,7 @@ impl<'a, 'c> Parser<'a, 'c> {
     }
 
     /// The `:superclass` override's term, which must pass
-    /// `isVariableOrDot` (`Token.hpp:576`): a simple variable, a stem, a
-    /// compound variable or a dot symbol.
+    /// A simple variable, a stem, a compound variable or a dot symbol.
     fn super_class_term(&mut self, term: Terminators) -> Result<Expr, ParseError> {
         let Some(token) = self.peek() else {
             return Err(self.raise(E20_917, []));
@@ -781,9 +768,9 @@ impl<'a, 'c> Parser<'a, 'c> {
             return Err(self.raise(E20_917, []));
         }
         let span = token.span.clone();
-        // `isVariableOrDot` reads only the subclass, so a literal token cannot
-        // pass it whatever it holds, and this match on `Symbol` is the same
-        // gate.
+        // The variable-or-dot test reads only the subclass, so a literal token
+        // cannot pass it whatever it holds, and this match on `Symbol` is the
+        // same gate.
         let TokenKind::Symbol { id, class } = &token.kind else {
             return Err(self.raise(E20_917, []));
         };
@@ -801,8 +788,7 @@ impl<'a, 'c> Parser<'a, 'c> {
         Ok(Expr::new(kind, span))
     }
 
-    /// `parseVariableReferenceTerm` (`LanguageParser.cpp:3719`): a prefix `>`
-    /// or `<` on a simple variable or a stem.
+    /// A prefix `>` or `<` on a simple variable or a stem.
     fn variable_reference_term(&mut self, from: usize) -> Result<Expr, ParseError> {
         self.skip_blanks();
         let Some(token) = self.peek() else {
@@ -829,8 +815,7 @@ impl<'a, 'c> Parser<'a, 'c> {
         ))
     }
 
-    /// `parseArgList` (`LanguageParser.cpp:3083`): comma-separated arguments
-    /// up to `closer`, which is consumed.
+    /// Comma-separated arguments up to `closer`, which is consumed.
     fn arg_list(&mut self, closer: Option<Tag>) -> Result<Vec<Option<Expr>>, ParseError> {
         // An argument list re-enters expression parsing, so
         // `f(f(f(...)))` and `a[a[a[...]]]` recurse once per nesting level
@@ -885,8 +870,7 @@ impl<'a, 'c> Parser<'a, 'c> {
         Ok(args)
     }
 
-    /// `parseMessageTerm` (`LanguageParser.cpp:3500`): a subterm with at least
-    /// one `~`, `~~` or `[` applied to it.
+    /// A subterm with at least one `~`, `~~` or `[` applied to it.
     fn message_term(&mut self) -> Result<Option<Expr>, ParseError> {
         let Some(token) = self.peek() else {
             return Ok(None);
@@ -941,7 +925,7 @@ impl<'a, 'c> Parser<'a, 'c> {
         Ok(applied.then_some(target))
     }
 
-    /// `parseSubTerm` (`LanguageParser.cpp:3757`): the atoms.
+    /// The atoms.
     fn subterm(&mut self, term: Terminators) -> Result<Option<Expr>, ParseError> {
         let Some(token) = self.peek() else {
             return Ok(None);
@@ -1043,8 +1027,7 @@ impl<'a, 'c> Parser<'a, 'c> {
         }
     }
 
-    /// `parseQualifiedSymbol` (`LanguageParser.cpp:3261`): `ns:name`, either a
-    /// qualified call or a class lookup.
+    /// `ns:name`, either a qualified call or a class lookup.
     fn qualified_symbol(&mut self, namespace: SymbolId, from: usize) -> Result<Expr, ParseError> {
         let Some(token) = self.peek() else {
             return Err(self.raise(E20_923, []));
@@ -1075,8 +1058,7 @@ impl<'a, 'c> Parser<'a, 'c> {
     }
 }
 
-/// `RexxToken::displayValue` (`Token.cpp:308`): what an error insert shows for
-/// `token`, `None` being the end of the clause.
+/// What an error insert shows for `token`, `None` being the end of the clause.
 pub(crate) fn display_value(ctx: &ParseCtx, token: Option<&Token>) -> Vec<u8> {
     let Some(token) = token else {
         return b";".to_vec();

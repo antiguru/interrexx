@@ -1,4 +1,4 @@
-//! `Number::whole_value`, the `requestNumber` conversion.
+//! `Number::whole_value`, the oracle's number-request conversion.
 
 use interrexx_num::{ARGUMENT_DIGITS, Number};
 
@@ -42,8 +42,8 @@ fn a_number_that_is_not_whole_has_no_whole_value() {
 
 /// The conversion ROUNDS to the precision and only then asks whether the result
 /// is an integer, so a fraction can survive it. This is the rule a caller
-/// reimplementing `requestNumber` gets wrong, so both directions are pinned at
-/// each boundary.
+/// reimplementing the oracle's number request gets wrong, so both directions are
+/// pinned at each boundary.
 #[test]
 fn the_conversion_rounds_to_the_precision_before_asking_if_it_is_whole() {
     // rc 0: ten digits truncate to nine, the dropped 4 does not carry.

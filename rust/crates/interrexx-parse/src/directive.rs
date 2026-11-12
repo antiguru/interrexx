@@ -96,12 +96,11 @@ const SUBKEY_SCIENTIFIC: usize = 37;
 const DEFAULT_RESOURCE_END: &[u8] = b"::END";
 
 /// What the directives parsed so far declare, which a later directive is
-/// checked against while it is parsed: `LanguageParser`'s `activeClass`,
-/// `classDependencies`, `routines`, `resources`, the member tables and the
-/// package's numeric settings.
+/// checked against while it is parsed: the active class, the class dependencies,
+/// `routines`, `resources`, the member tables and the package's numeric
+/// settings.
 pub(crate) struct Declared<'a> {
-    /// Whether a `::CLASS` directive came before (`activeClass`,
-    /// `DirectiveParser.cpp:355`).
+    /// Whether a `::CLASS` directive came before.
     in_class: bool,
     /// Made at the first name declared.
     tables: Option<Box<Tables<'a>>>,
@@ -111,8 +110,7 @@ pub(crate) struct Declared<'a> {
     /// to translate does without.
     checked: bool,
     /// Whether the directive just parsed reached the point where the oracle
-    /// resolves its `EXTERNAL` (`createNativeMethod`,
-    /// `PackageManager::resolveRoutine`).
+    /// resolves its `EXTERNAL`.
     pub(crate) bound: bool,
 }
 
@@ -124,7 +122,7 @@ struct Tables<'a> {
     resources: FxHashSet<Name<'a>>,
     /// The active class's methods by side (`true` for the class side), the
     /// upcased name and whether it is the `=` setter of that name, or before
-    /// any `::CLASS` the file's `unattachedMethods`.
+    /// any `::CLASS` the file's unattached methods.
     members: FxHashMap<(bool, Name<'a>, bool), Member>,
 }
 
@@ -147,8 +145,8 @@ fn member_key(class_side: bool, name: Name<'_>, setter: bool) -> (bool, Name<'_>
     }
 }
 
-/// What `::ANNOTATE` asks of a method it names: `isConstant()` and
-/// `isAttribute()`.
+/// What `::ANNOTATE` asks of a method it names: whether it is a constant and
+/// whether it is an attribute.
 #[derive(Copy, Clone)]
 struct Member {
     constant: bool,
@@ -160,7 +158,7 @@ impl Default for Declared<'_> {
         Declared {
             in_class: false,
             tables: None,
-            // `Numerics::DEFAULT_DIGITS` and a fuzz of zero.
+            // The default digits and a fuzz of zero.
             digits: 9,
             fuzz: 0,
             checked: true,
@@ -236,9 +234,8 @@ impl<'a, 'd> Dir<'a, 'd> {
         }
     }
 
-    /// The CLASS-keyword half of `checkDuplicateMethod`
-    /// (`DirectiveParser.cpp:510`-`516`): a class method needs a `::CLASS`
-    /// above it.
+    /// The CLASS-keyword half of the duplicate-method check: a class method
+    /// needs a `::CLASS` above it.
     fn require_class(&self, class_method: bool) -> Result<(), ParseError> {
         if class_method && !self.declared.in_class {
             return Err(self.error(E99_905, []));
@@ -246,10 +243,9 @@ impl<'a, 'd> Dir<'a, 'd> {
         Ok(())
     }
 
-    /// The duplicate half of `checkDuplicateMethod`
-    /// (`DirectiveParser.cpp:518`-`529`): `msg` if the active class, or the
-    /// unattached table, already holds `name` on that side, which `name` then
-    /// claims.
+    /// The duplicate half of the duplicate-method check: `msg` if the active
+    /// class, or the unattached table, already holds `name` on that side, which
+    /// `name` then claims.
     fn claim(
         &mut self,
         name: Name<'a>,
@@ -275,8 +271,7 @@ impl<'a, 'd> Dir<'a, 'd> {
         }
     }
 
-    /// `findMethod`: the active class's instance method `name`, else its class
-    /// method.
+    /// The active class's instance method `name`, else its class method.
     fn find_member(&self, name: &[u8]) -> Option<Member> {
         let tables = self.declared.tables.as_deref()?;
         [false, true].into_iter().find_map(|side| {
@@ -319,17 +314,16 @@ impl<'a, 'd> Dir<'a, 'd> {
         ParseError::raise(msg, self.clause_byte, inserts)
     }
 
-    /// `msg` naming `token` as `RexxToken::displayValue` shows it, `None`
-    /// being the end of the clause.
+    /// `msg` naming `token` as the oracle displays it, `None` being the end of
+    /// the clause.
     #[cold]
     #[inline(never)]
     fn found(&self, msg: Msg<1>, token: Option<&Token>) -> ParseError {
         self.error(msg, [display_value(self.ctx, token)])
     }
 
-    /// 36.901 for the `(` `opener` with no `)`: `errorPosition`
-    /// (`LanguageParser.cpp:4114`) inserts its 1-based offset in its line,
-    /// then the line.
+    /// 36.901 for the `(` `opener` with no `)`: the oracle
+    /// inserts its 1-based offset in its line, then the line.
     #[cold]
     #[inline(never)]
     fn unmatched_paren(&self, opener: &Token) -> ParseError {
@@ -347,7 +341,7 @@ impl<'a, 'd> Dir<'a, 'd> {
     }
 
     /// 24.1 for a `TRACE` value `check_trace_setting` refused, naming its first
-    /// byte that is not `?` (`TraceSetting::parseTraceSetting`'s `badOption`).
+    /// byte that is not `?` (the oracle's rejected-option position).
     #[cold]
     #[inline(never)]
     fn bad_trace_setting(&self, value: &[u8]) -> ParseError {
@@ -355,26 +349,26 @@ impl<'a, 'd> Dir<'a, 'd> {
         self.error(E24_1, [bad.into_iter().collect()])
     }
 
-    /// `nextReal` without consuming.
+    /// [`Self::next_real`] without consuming.
     fn peek_real(&self) -> Option<&'a Token> {
         self.cursor
             .peek_real(self.ctx.tokens)
             .map(|i| &self.ctx.tokens[i])
     }
 
-    /// `nextReal`: the next token that is not a blank, consumed.
+    /// The next token that is not a blank, consumed.
     fn next_real(&mut self) -> Option<&'a Token> {
         self.cursor
             .advance_real(self.ctx.tokens)
             .map(|i| &self.ctx.tokens[i])
     }
 
-    /// `isEndOfClause()` on the next real token.
+    /// Whether the next real token ends the clause.
     fn at_end(&self) -> bool {
         self.peek_real().is_none()
     }
 
-    /// `requiredEndOfClause`: nothing may follow, and `msg` names what does.
+    /// Nothing may follow, and `msg` names what does.
     fn required_end(&self, msg: Msg<1>) -> Result<(), ParseError> {
         match self.peek_real() {
             None => Ok(()),
@@ -400,8 +394,7 @@ impl<'a, 'd> Dir<'a, 'd> {
         }
     }
 
-    /// `RexxToken::value()`: the upcased spelling of a symbol, or a literal's
-    /// bytes verbatim.
+    /// The upcased spelling of a symbol, or a literal's bytes verbatim.
     fn value_of(&self, token: &Token) -> Box<[u8]> {
         match &token.kind {
             TokenKind::Symbol { id, .. } => Box::from(self.ctx.symbols.name(*id).as_bytes()),
@@ -410,7 +403,7 @@ impl<'a, 'd> Dir<'a, 'd> {
         }
     }
 
-    /// `RexxToken::upperValue()`: like `value_of`, but a literal is upcased too.
+    /// Like `value_of`, but a literal is upcased too.
     fn upper_value_of(&self, token: &Token) -> Box<[u8]> {
         let mut value = self.value_of(token).into_vec();
         value.make_ascii_uppercase();
@@ -426,8 +419,8 @@ impl<'a, 'd> Dir<'a, 'd> {
         }
     }
 
-    /// A required `isSymbolOrLiteral()` name, taken as written, `msg` naming
-    /// the token found instead.
+    /// A required symbol or literal name, taken as written, `msg` naming the
+    /// token found instead.
     fn require_name(&mut self, msg: Msg<1>) -> Result<Box<[u8]>, ParseError> {
         match self.next_name() {
             Ok(token) => Ok(self.value_of(token)),
@@ -447,8 +440,8 @@ impl<'a, 'd> Dir<'a, 'd> {
         }
     }
 
-    /// A required `isLiteral()` token, yielding its decoded bytes, `msg`
-    /// naming the token found instead.
+    /// A required literal token, yielding its decoded bytes, `msg` naming the
+    /// token found instead.
     fn require_literal(&mut self, msg: Msg<1>) -> Result<Box<[u8]>, ParseError> {
         match self.next_real() {
             Some(Token {
@@ -459,8 +452,8 @@ impl<'a, 'd> Dir<'a, 'd> {
         }
     }
 
-    /// `getRetriever` (`LanguageParser.cpp:2507`): a name that an attribute
-    /// method will read and write must be a variable name.
+    /// A name that an attribute method will read and write must be a variable
+    /// name.
     fn require_variable_name(&self, name: &[u8]) -> Result<(), ParseError> {
         if is_variable_name(name) {
             return Ok(());
@@ -470,8 +463,7 @@ impl<'a, 'd> Dir<'a, 'd> {
 
     // ---- what follows the directive ----
 
-    /// `checkDirective` (`DirectiveParser.cpp:154`): if a clause follows, it
-    /// must be a directive.
+    /// If a clause follows, it must be a directive.
     fn check_directive(&self, cursor: &ClauseCursor, msg: Msg<0>) -> Result<(), ParseError> {
         let Some(next) = cursor.peek() else {
             return Ok(());
@@ -482,8 +474,7 @@ impl<'a, 'd> Dir<'a, 'd> {
         Err(ParseError::raise(msg, next.span.start, []))
     }
 
-    /// `hasBody` (`DirectiveParser.cpp:189`): whether a non-directive clause
-    /// follows.
+    /// Whether a non-directive clause follows.
     fn has_body(&self, cursor: &ClauseCursor) -> bool {
         cursor
             .peek()
@@ -493,15 +484,13 @@ impl<'a, 'd> Dir<'a, 'd> {
     // ---- dispatch ----
 
     fn dispatch(&mut self, cursor: &ClauseCursor) -> Result<DirectiveKind, ParseError> {
-        // `Error_Translation_bad_directive`. Measured on the other side of this
-        // gate too: a lone `:` is not a directive at all but an expression, and
-        // `:junk` is 35.1.
+        // Measured on the other side of this gate too: a lone `:` is not a
+        // directive at all but an expression, and `:junk` is 35.1.
         match self.next_real() {
             Some(token) if token.kind.tag() == Tag::DColon => {}
             _ => return Err(self.error(E99_916, [])),
         }
-        // `Error_Symbol_expected_directive`. Measured: `::` alone and `:: "x"`
-        // are both 20.916.
+        // Measured: `::` alone and `:: "x"` are both 20.916.
         let Some(token) = self.next_real() else {
             return Err(self.error(E20_916, []));
         };
@@ -530,16 +519,14 @@ impl<'a, 'd> Dir<'a, 'd> {
 
     // ---- ::CLASS ----
 
-    /// `classDirective` (`DirectiveParser.cpp:334`).
     fn class(&mut self) -> Result<DirectiveKind, ParseError> {
-        // `Error_Symbol_or_string_class`, raised with no insert
-        // (`DirectiveParser.cpp:340`).
+        // Raised with no insert.
         let (name, key) = match self.next_name() {
             Ok(token) => (self.value_of(token), self.name_key(token)),
             Err(_) => return Err(self.error(E19_901, [])),
         };
-        // `isDuplicateClass` on the upcased name, then the new `activeClass`
-        // with empty method tables (`DirectiveParser.cpp:349`-`355`).
+        // The duplicate-class check on the upcased name, then the new active
+        // class with empty method tables.
         if self.declared.checked && !self.declared.tables_mut().classes.insert(key) {
             return Err(self.error(E99_901, []));
         }
@@ -572,8 +559,8 @@ impl<'a, 'd> Dir<'a, 'd> {
                     class.access = Access::Private;
                 }
                 // `SUBCLASS` and `MIXINCLASS` fill one slot, because
-                // `setMixinClass` sets the subclass too, so either one already
-                // present rejects the other. Measured in both orders.
+                // setting the mixin class sets the subclass too, so either one
+                // already present rejects the other. Measured in both orders.
                 Some(SUBDIR_SUBCLASS) if class.subclass.is_none() => {
                     class.subclass = Some(self.class_reference(E19_907)?);
                 }
@@ -599,15 +586,14 @@ impl<'a, 'd> Dir<'a, 'd> {
         Ok(DirectiveKind::Class(Box::new(class)))
     }
 
-    /// `parseClassReference` (`DirectiveParser.cpp:287`).
     fn class_reference(&mut self, msg: Msg<1>) -> Result<ClassRef, ParseError> {
         let Some(token) = self.next_real() else {
             return Err(self.found(msg, None));
         };
         match &token.kind {
-            // A literal is the whole reference: `parseClassReference` returns
-            // before it can look for a colon, so `"rexx:object"` is one name
-            // and not a qualified one.
+            // A literal is the whole reference: the oracle returns before it can
+            // look for a colon, so `"rexx:object"` is one name and not a
+            // qualified one.
             TokenKind::Literal { .. } => Ok(ClassRef {
                 namespace: None,
                 name: self.upper_value_of(token),
@@ -624,8 +610,7 @@ impl<'a, 'd> Dir<'a, 'd> {
                     });
                 }
                 self.next_real();
-                // `Error_Symbol_expected_namespace_class`. Measured:
-                // `::class c subclass rexx:` is 20.921.
+                // Measured: `::class c subclass rexx:` is 20.921.
                 let qualified = self.next_symbol().map_err(|_| self.error(E20_921, []))?;
                 Ok(ClassRef {
                     namespace: Some(first),
@@ -638,7 +623,6 @@ impl<'a, 'd> Dir<'a, 'd> {
 
     // ---- ::METHOD and ::ATTRIBUTE ----
 
-    /// `methodDirective` (`DirectiveParser.cpp:629`).
     fn method(&mut self, cursor: &ClauseCursor) -> Result<DirectiveKind, ParseError> {
         let (name, upper) = self.require_name_key(E19_902)?;
         let mut method = MethodDirective {
@@ -666,8 +650,8 @@ impl<'a, 'd> Dir<'a, 'd> {
                 Some(SUBDIR_EXTERNAL)
                     if external.is_none() && method.delegate.is_none() && !method.abstract_ =>
                 {
-                    // `Error_Symbol_or_string_external`, and a symbol is not
-                    // enough: measured, `::method m external nostring` is
+                    // And a symbol is not enough: measured, `::method m external
+                    // nostring` is
                     // 19.905.
                     external = Some(self.require_literal(E19_905)?);
                 }
@@ -701,8 +685,7 @@ impl<'a, 'd> Dir<'a, 'd> {
                 Some(SUBDIR_DELEGATE)
                     if external.is_none() && method.delegate.is_none() && !method.abstract_ =>
                 {
-                    // `Error_Symbol_expected_delegate`. Measured:
-                    // `::method m delegate "p"` is 20.926.
+                    // Measured: `::method m delegate "p"` is 20.926.
                     method.delegate = Some(
                         self.next_symbol()
                             .map_err(|found| self.found(E20_926, found))?,
@@ -712,9 +695,9 @@ impl<'a, 'd> Dir<'a, 'd> {
             }
         }
 
-        // `checkDuplicateMethod` runs ahead of every shape
-        // (`DirectiveParser.cpp:822`). Measured: `::method m class` with a
-        // body holding a syntax error and no `::CLASS` above it is 99.905.
+        // The duplicate-method check runs ahead of every shape. Measured:
+        // `::method m class` with a body holding a syntax error and no `::CLASS`
+        // above it is 99.905.
         self.require_class(method.class_method)?;
         let member = Member {
             constant: false,
@@ -728,9 +711,9 @@ impl<'a, 'd> Dir<'a, 'd> {
         // combines with ATTRIBUTE. Measured, `::method m delegate p attribute`
         // and `::method m attribute abstract` are both rc 0.
         if let Some(delegate) = method.delegate {
-            // `getRetriever(delegateName)` runs BEFORE `checkDirective` here
-            // (`DirectiveParser.cpp:831`-`834`). Measured:
-            // `::method m delegate 5` with a body is 99.925 on line 1, not
+            // The delegate-name check runs BEFORE `check_directive` here.
+            // Measured: `::method m delegate 5` with a body is 99.925 on line 1,
+            // not
             // 99.946 on line 2.
             self.require_variable_name(self.ctx.symbols.name(delegate).as_bytes())?;
             self.check_directive(cursor, E99_946)?;
@@ -738,16 +721,14 @@ impl<'a, 'd> Dir<'a, 'd> {
                 self.claim(upper, true, side, member, E99_902)?;
             }
         } else if method.attribute {
-            // The setter's duplicate check comes before the body check here
-            // (`DirectiveParser.cpp:855`).
+            // The setter's duplicate check comes before the body check here.
             self.claim(upper, true, side, member, E99_902)?;
             self.check_directive(cursor, E99_934)?;
             method.external = self.decode_external(external.as_deref(), false)?;
             self.bound = method.external.is_some();
             // And here it runs AFTER, and only in the sub-branch that generates
-            // the accessor pair (`DirectiveParser.cpp:892`). Measured:
-            // `::method 3 attribute` with a body is 99.934 on line 2, while
-            // `::method 3 attribute abstract` and
+            // the accessor pair. Measured: `::method 3 attribute` with a body is
+            // 99.934 on line 2, while `::method 3 attribute abstract` and
             // `::method 3 attribute external "LIBRARY x"` never reach the check
             // at all and are rc 0 and 98.903.
             if external.is_none() && !method.abstract_ {
@@ -765,7 +746,6 @@ impl<'a, 'd> Dir<'a, 'd> {
         Ok(DirectiveKind::Method(Box::new(method)))
     }
 
-    /// `attributeDirective` (`DirectiveParser.cpp:1457`).
     fn attribute(&mut self, cursor: &ClauseCursor) -> Result<DirectiveKind, ParseError> {
         let (name, upper) = self.require_name_key(E19_914)?;
         let mut attribute = AttributeDirective {
@@ -841,15 +821,15 @@ impl<'a, 'd> Dir<'a, 'd> {
             }
         }
 
-        // `getRetriever(name)` runs before the style switch and so before every
-        // body check (`DirectiveParser.cpp:1656`, whose own comment says it is
-        // deliberately first "so errors get diagnosed on the correct line").
-        // Measured: `::attribute 3` with a body is 99.925 on line 1, not 99.937
-        // on line 2, and `::attribute 3 external "LIBRARY x"` is 99.925 too.
+        // The name check runs before the style switch and so before every body
+        // check; the oracle runs it first deliberately, so that errors are
+        // diagnosed on the correct line. Measured: `::attribute 3` with a body
+        // is 99.925 on line 1, not 99.937 on line 2, and `::attribute 3 external
+        // "LIBRARY x"` is 99.925 too.
         self.require_variable_name(&attribute.name)?;
-        // Each style's `checkDuplicateMethod` comes next, ahead of its body
-        // check (`DirectiveParser.cpp:1664`, `:1725`, `:1790`). Measured:
-        // `::attribute 'foo' class` with a body and no `::CLASS` above it is
+        // Each style's duplicate-method check comes next, ahead of its body
+        // check. Measured: `::attribute 'foo' class` with a body and no
+        // `::CLASS` above it is
         // 99.905, not 99.937.
         self.require_class(attribute.class_method)?;
         let member = Member {
@@ -901,8 +881,7 @@ impl<'a, 'd> Dir<'a, 'd> {
         Ok(DirectiveKind::Attribute(Box::new(attribute)))
     }
 
-    /// `decodeExternalMethod` (`DirectiveParser.cpp:1403`) and the routine
-    /// form (`DirectiveParser.cpp:2649`-`2749`).
+    /// The `EXTERNAL` decoding shared by the method and routine forms.
     fn decode_external(
         &self,
         spec: Option<&[u8]>,
@@ -913,18 +892,16 @@ impl<'a, 'd> Dir<'a, 'd> {
         };
         // `words()` splits on blanks and upcases the FIRST word only, which is
         // why the library name keeps its case. A blank is a space or a tab and
-        // nothing else: `words` goes through `subWords`, which drives
-        // `RexxString::WordIterator`, whose `skipBlanks` and `skipNonBlanks`
-        // both test `*scan != ' ' && *scan != '\t'` (`StringClass.hpp:155` and
-        // `:178`). Measured: tabs do separate words, and `"  library   x  "`
-        // resolves the library `x`.
+        // nothing else: `words` goes through the oracle's sub-word walk, whose
+        // word iterator's blank and non-blank skips both test `*scan != ' ' &&
+        // *scan != '\t'`. Measured: tabs do separate words, and `"  library   x
+        // "` resolves the library `x`.
         let words: Vec<&[u8]> = spec
             .split(|&byte| byte == b' ' || byte == b'\t')
             .filter(|word| !word.is_empty())
             .collect();
-        // `Error_Translation_bad_external`. Measured for the empty string, for
-        // one word, for four words and for a first word that is neither
-        // keyword.
+        // Measured for the empty string, for one word, for four words and for a
+        // first word that is neither keyword.
         let bad = || self.error(E99_917, [spec.to_vec()]);
         let Some((&keyword, rest)) = words.split_first() else {
             return Err(bad());
@@ -949,7 +926,6 @@ impl<'a, 'd> Dir<'a, 'd> {
 
     // ---- ::CONSTANT ----
 
-    /// `constantDirective` (`DirectiveParser.cpp:1854`).
     fn constant(&mut self, cursor: &ClauseCursor) -> Result<DirectiveKind, ParseError> {
         let (name, upper) = self.require_name_key(E19_915)?;
         let value = match self.peek_real() {
@@ -969,13 +945,13 @@ impl<'a, 'd> Dir<'a, 'd> {
                     .map_err(|refused| self.error(E19_916, [refused.token]))?,
             ),
         };
-        // `Error_Invalid_data_constant_dir`. Measured: `::constant c 5 6` is
+        // Measured: `::constant c 5 6` is
         // 21.913.
         self.required_end(E21_913)?;
-        // `Error_Translation_constant_body`. Measured: 99.938 on line 2.
+        // Measured: 99.938 on line 2.
         self.check_directive(cursor, E99_938)?;
         // The duplicate checks, the class side only under a `::CLASS`, then
-        // `createConstantGetterMethod`'s 99.906 (`DirectiveParser.cpp:1926`-`1933`).
+        // the constant getter's 99.906.
         let member = Member {
             constant: true,
             attribute: false,
@@ -992,23 +968,20 @@ impl<'a, 'd> Dir<'a, 'd> {
         })))
     }
 
-    /// `translateConstantExpression` (`LanguageParser.cpp:1725`), entered with
-    /// the `(` `opener` already consumed.
+    /// The constant expression parse, entered with the `(` `opener` already
+    /// consumed.
     fn constant_expression(&mut self, opener: &Token) -> Result<Expr, ParseError> {
-        // `Error_Invalid_expression_missing_constant`. Measured:
-        // `::constant c ()` is 35.936.
+        // Measured: `::constant c ()` is 35.936.
         let expr = parse_expr(self.ctx, &mut self.cursor, Terminators::RIGHT, E35_936)?;
-        // `Error_Unmatched_parenthesis_paren`. Measured: `::constant c (1+2`
-        // is 36.901. No blank can sit before a `)`, so `nextToken` and
-        // `nextReal` agree here.
+        // Measured: `::constant c (1+2` is 36.901. No blank can sit before a
+        // `)`, so the next-token read and next-real read agree here.
         match self.next_real() {
             Some(token) if token.kind.tag() == Tag::RightParen => Ok(expr),
             _ => Err(self.unmatched_paren(opener)),
         }
     }
 
-    /// The signed-number value form that `::CONSTANT` and `::ANNOTATE` share
-    /// (`DirectiveParser.cpp:1886`-`1907` and `2230`-`2251`).
+    /// The signed-number value form that `::CONSTANT` and `::ANNOTATE` share.
     fn signed_constant(&mut self) -> Result<Box<[u8]>, NotSigned> {
         let token = self.next_real();
         let sign: &[u8] = match token.map(|token| &token.kind) {
@@ -1049,16 +1022,14 @@ impl<'a, 'd> Dir<'a, 'd> {
 
     // ---- ::ANNOTATE ----
 
-    /// `annotateDirective` (`DirectiveParser.cpp:1940`).
     fn annotate(&mut self) -> Result<DirectiveKind, ParseError> {
-        // `Error_Symbol_expected_annotation_type`, and a literal is not enough:
-        // measured, `::annotate "package"` is 20.924.
+        // And a literal is not enough: measured, `::annotate "package"` is
+        // 20.924.
         let Some(token) = self.next_real() else {
             return Err(self.found(E20_924, None));
         };
-        // `Error_Symbol_or_string_directive_option`, one error for every named
-        // target, naming the directive and the target. Measured:
-        // `::annotate class` is 19.925.
+        // One error for every named target, naming the directive and the target.
+        // Measured: `::annotate class` is 19.925.
         let target = match self.sub_directive(token) {
             Some(SUBDIR_PACKAGE) => AnnotationTarget::Package,
             Some(SUBDIR_CLASS) => AnnotationTarget::Class(self.annotated_name(b"CLASS")?),
@@ -1091,8 +1062,7 @@ impl<'a, 'd> Dir<'a, 'd> {
     }
 
     /// 99.945 for a target the directives so far do not declare, which
-    /// `annotateDirective` checks before reading any pair
-    /// (`DirectiveParser.cpp:1983`-`2090`, `processAttributeAnnotations`).
+    /// the `::ANNOTATE` parse checks before reading any pair.
     fn require_annotation_target(&self, target: &AnnotationTarget) -> Result<(), ParseError> {
         let attribute = |name: &[u8], side: bool| {
             let tables = self.declared.tables.as_deref();
@@ -1154,17 +1124,15 @@ impl<'a, 'd> Dir<'a, 'd> {
         }
     }
 
-    /// `processAnnotation` (`DirectiveParser.cpp:2209`): one `name value` pair.
+    /// One `name value` pair.
     fn annotation(&mut self) -> Result<Annotation, ParseError> {
-        // `Error_Symbol_expected_annotation_attribute`. Measured:
-        // `::annotate package "a" 1` is 20.919.
+        // Measured: `::annotate package "a" 1` is 20.919.
         let name = self
             .next_symbol()
             .map_err(|found| self.found(E20_919, found))?;
         let value = match self.peek_real() {
-            // `Error_Symbol_or_string_package_attribute_missing`, a DIFFERENT
-            // number from the bad-value one. Measured: `::annotate package a`
-            // is 19.924 and `::annotate package a *` is 19.923.
+            // A DIFFERENT number from the bad-value one. Measured: `::annotate
+            // package a` is 19.924 and `::annotate package a *` is 19.923.
             None => return Err(self.error(E19_924, [])),
             Some(token) if matches!(token.kind.tag(), Tag::Symbol | Tag::Literal) => {
                 self.next_real();
@@ -1180,19 +1148,16 @@ impl<'a, 'd> Dir<'a, 'd> {
 
     // ---- ::OPTIONS ----
 
-    /// `optionsDirective` (`DirectiveParser.cpp:948`).
     fn options(&mut self) -> Result<DirectiveKind, ParseError> {
         let mut options = Vec::new();
         while let Some(token) = self.next_real() {
-            // `Error_Invalid_subkeyword_options`. Measured: `::options junk`
-            // and `::options "digits" 9` are both 25.924.
+            // Measured: `::options junk` and `::options "digits" 9` are both
+            // 25.924.
             match self.sub_directive(token) {
                 Some(SUBDIR_DIGITS) => {
-                    // `Error_Symbol_or_string_digits_value`, then
-                    // `Error_Invalid_whole_number_digits`. Measured:
-                    // `::options digits -1` is 19.917 because a `-` is neither
-                    // a symbol nor a literal, and `::options digits 0` is 26.5
-                    // because the value must exceed zero.
+                    // Then Measured: `::options digits -1` is 19.917 because a `-`
+                    // is neither a symbol nor a literal, and `::options digits 0`
+                    // is 26.5 because the value must exceed zero.
                     let value = self.require_name(E19_917)?;
                     let digits = whole_number(&value, ARGUMENT_DIGITS)
                         .filter(|&digits| digits >= 1)
@@ -1205,11 +1170,10 @@ impl<'a, 'd> Dir<'a, 'd> {
                     options.push(PackageOption::Digits(digits));
                 }
                 Some(SUBDIR_FORM) => {
-                    // `Error_Symbol_expected_form`, then
-                    // `Error_Invalid_subkeyword_form`. This argument resolves
-                    // against `subKeywords[]`: measured, `::options form value`
-                    // is 25.11 where `VALUE` is a row of that table, and
-                    // `::options form "scientific"` is 20.925.
+                    // Then This argument resolves against `subKeywords[]`:
+                    // measured, `::options form value` is 25.11 where `VALUE` is a
+                    // row of that table, and `::options form "scientific"` is
+                    // 20.925.
                     let token = match self.next_real() {
                         Some(token) if token.kind.tag() == Tag::Symbol => token,
                         found => return Err(self.found(E20_925, found)),
@@ -1222,14 +1186,13 @@ impl<'a, 'd> Dir<'a, 'd> {
                     options.push(PackageOption::Form(form));
                 }
                 Some(SUBDIR_FUZZ) => {
-                    // `Error_Symbol_or_string_fuzz_value`, then
-                    // `Error_Invalid_whole_number_fuzz`. Zero is legal here
-                    // where it is not for DIGITS: measured, `::options fuzz 0`
-                    // is rc 0 and `::options fuzz "-1"` is 26.6.
+                    // Then Zero is legal here where it is not for DIGITS:
+                    // measured, `::options fuzz 0` is rc 0 and `::options fuzz
+                    // "-1"` is 26.6.
                     let value = self.require_name(E19_918)?;
                     // `try_from` also rejects a negative, which is what
-                    // `requestUnsignedNumber` does and is why FUZZ has no
-                    // lower-bound filter of its own.
+                    // the oracle's unsigned-number request does and is why FUZZ
+                    // has no lower-bound filter of its own.
                     let fuzz = whole_number(&value, ARGUMENT_DIGITS)
                         .and_then(|fuzz| usize::try_from(fuzz).ok())
                         .ok_or_else(|| self.error(E26_6, [value.to_vec()]))?;
@@ -1240,9 +1203,8 @@ impl<'a, 'd> Dir<'a, 'd> {
                     options.push(PackageOption::Fuzz(fuzz));
                 }
                 Some(SUBDIR_TRACE) => {
-                    // `Error_Symbol_or_string_trace_value`, then
-                    // `Error_Invalid_trace_trace`. Measured: `::options trace
-                    // zzz` is 24.1 and `::options trace r` is rc 0.
+                    // Then Measured: `::options trace zzz` is 24.1 and `::options
+                    // trace r` is rc 0.
                     let value = self.require_name(E19_919)?;
                     check_trace_setting(&value).map_err(|()| self.bad_trace_setting(&value))?;
                     options.push(PackageOption::Trace(value));
@@ -1294,8 +1256,7 @@ impl<'a, 'd> Dir<'a, 'd> {
         Ok(DirectiveKind::Options(options))
     }
 
-    /// 33.1 for a package `digits` that does not exceed its `fuzz`
-    /// (`Error_Expression_result_digits`, `DirectiveParser.cpp:988`, `:1047`).
+    /// 33.1 for a package `digits` that does not exceed its `fuzz`.
     #[cold]
     #[inline(never)]
     fn numeric_conflict(&self, digits: usize, fuzz: usize) -> ParseError {
@@ -1311,9 +1272,8 @@ impl<'a, 'd> Dir<'a, 'd> {
     /// One of the seven condition options and its `SYNTAX`/`CONDITION`
     /// argument.
     fn condition_option(&mut self, which: ConditionOption) -> Result<PackageOption, ParseError> {
-        // `Error_Symbol_expected_after_keyword`, the same number for all seven.
-        // Measured: `::options novalue` with nothing after it and
-        // `::options novalue "syntax"` are both 20.929.
+        // The same number for all seven. Measured: `::options novalue` with
+        // nothing after it and `::options novalue "syntax"` are both 20.929.
         let name = || condition_option_name(which).to_vec();
         let Some(token) = self.next_real() else {
             return Err(self.error(E20_929, [name()]));
@@ -1325,9 +1285,8 @@ impl<'a, 'd> Dir<'a, 'd> {
             Some(SUBDIR_SYNTAX) => true,
             Some(SUBDIR_CONDITION) => false,
             // `SUBDIRECTIVE_ERROR` falls through to the SYNTAX arm for NOVALUE
-            // alone (`DirectiveParser.cpp:1091`).
+            // alone.
             Some(SUBDIR_ERROR) if which == ConditionOption::NoValue => true,
-            // `Error_Invalid_subkeyword_following`.
             _ => return Err(self.error(E25_927, [name(), self.value_of(token).into_vec()])),
         };
         Ok(PackageOption::Condition { which, syntax })
@@ -1335,7 +1294,6 @@ impl<'a, 'd> Dir<'a, 'd> {
 
     // ---- ::REQUIRES ----
 
-    /// `requiresDirective` (`DirectiveParser.cpp:2779`).
     fn requires(&mut self) -> Result<DirectiveKind, ParseError> {
         let name = self.require_name(E19_904)?;
         let mut requires = Requires {
@@ -1344,17 +1302,16 @@ impl<'a, 'd> Dir<'a, 'd> {
             namespace: None,
         };
         while let Some(token) = self.next_real() {
-            // `Error_Invalid_subkeyword_requires`. LIBRARY and NAMESPACE are
-            // mutually exclusive as well as each being once-only, and both
-            // rejections are this error: measured in both orders and doubled.
+            // LIBRARY and NAMESPACE are mutually exclusive as well as each being
+            // once-only, and both rejections are this error: measured in both
+            // orders and doubled.
             let taken = requires.library || requires.namespace.is_some();
             match self.sub_directive(token) {
                 Some(SUBDIR_NAMESPACE) if !taken => {
-                    // `Error_Symbol_expected_namespace`. Measured:
-                    // `::requires "x" namespace "ns"` is 20.920.
+                    // Measured: `::requires "x" namespace "ns"` is 20.920.
                     let namespace = self.next_symbol().map_err(|_| self.error(E20_920, []))?;
-                    // `Error_Translation_reserved_namespace`. The symbol is
-                    // already upcased, so this catches every spelling of REXX.
+                    // The symbol is already upcased, so this catches every
+                    // spelling of REXX.
                     if self.ctx.symbols.name(namespace) == "REXX" {
                         return Err(self.error(E99_944, []));
                     }
@@ -1369,29 +1326,25 @@ impl<'a, 'd> Dir<'a, 'd> {
 
     // ---- ::RESOURCE ----
 
-    /// `resourceDirective` (`DirectiveParser.cpp:2266`).
     fn resource(&mut self) -> Result<DirectiveKind, ParseError> {
         let (name, key) = self.require_name_key(E19_920)?;
         let mut end_marker: Box<[u8]> = Box::from(DEFAULT_RESOURCE_END);
         if !self.at_end() {
-            // `Error_Invalid_subkeyword_resource`, for a non-symbol and for
-            // any sub-directive but END. Measured: `::resource data junk` is
+            // For a non-symbol and for any sub-directive but END. Measured:
+            // `::resource data junk` is
             // 25.926.
             let token = self.next_real().expect("at_end was false");
             if self.sub_directive(token) != Some(SUBDIR_END) {
                 return Err(self.found(E25_926, Some(token)));
             }
-            // `Error_Symbol_or_string_resource_end`, and the marker is UPCASED
-            // when it comes from a symbol because that is what
-            // `RexxToken::value()` gives. Measured: `::resource data end stop`
-            // is closed by `STOP` and not by `stop`.
+            // And the marker is UPCASED when it comes from a symbol because that
+            // is what the oracle gives. Measured: `::resource data end stop` is
+            // closed by `STOP` and not by `stop`.
             end_marker = self.require_name(E19_921)?;
-            // `Error_Invalid_data_resource_dir`. Measured:
-            // `::resource data end "x" extra` is 21.914.
+            // Measured: `::resource data end "x" extra` is 21.914.
             self.required_end(E21_914)?;
         }
-        // `Error_Translation_duplicate_resource`, before the body is read
-        // (`DirectiveParser.cpp:2316`).
+        // Before the body is read.
         if self.declared.checked && !self.declared.tables_mut().resources.insert(key) {
             return Err(self.error(E99_942, []));
         }
@@ -1415,10 +1368,9 @@ impl<'a, 'd> Dir<'a, 'd> {
 
     // ---- ::ROUTINE ----
 
-    /// `routineDirective` (`DirectiveParser.cpp:2565`).
     fn routine(&mut self, cursor: &ClauseCursor) -> Result<DirectiveKind, ParseError> {
         let (name, key) = self.require_name_key(E19_903)?;
-        // `isDuplicateRoutine`, ahead of the options (`DirectiveParser.cpp:2578`).
+        // The duplicate-routine check, ahead of the options.
         if self.declared.checked && !self.declared.tables_mut().routines.insert(key) {
             return Err(self.error(E99_903, []));
         }
@@ -1433,11 +1385,10 @@ impl<'a, 'd> Dir<'a, 'd> {
             match self.sub_directive(token) {
                 Some(SUBDIR_EXTERNAL) => {
                     // A SECOND external is 25.901, the ::CLASS number, because
-                    // `routineDirective` passes `Error_Invalid_subkeyword_class`
-                    // there (`DirectiveParser.cpp:2606`). Measured:
-                    // `::routine r external "LIBRARY x" external "LIBRARY y"`
-                    // reports `Unknown keyword on ::CLASS directive`. The
-                    // interpreter defines the behaviour, so the oddity is
+                    // the oracle's routine parser passes the ::CLASS error there.
+                    // Measured: `::routine r external "LIBRARY x" external
+                    // "LIBRARY y"` reports `Unknown keyword on ::CLASS directive`.
+                    // The interpreter defines the behaviour, so the oddity is
                     // reproduced rather than corrected.
                     if external.is_some() {
                         return Err(self.found(E25_901, Some(token)));
@@ -1457,7 +1408,6 @@ impl<'a, 'd> Dir<'a, 'd> {
             // `REGISTERED` is accepted here and nowhere else.
             Some(spec) => {
                 routine.external = self.decode_external(Some(&spec), true)?;
-                // `Error_Translation_external_routine`.
                 self.check_directive(cursor, E99_939)?;
                 self.bound = true;
             }

@@ -84,7 +84,6 @@ fn a_weak_reference_to_a_handle_carried_value_is_not_cleared() {
 fn a_weak_reference_to_an_uninit_pending_object_is_still_cleared() {
     // The oracle clears weak references BEFORE the uninit list is marked, so
     // resurrection for UNINIT must not retroactively rescue a weak reference.
-    // See RexxMemory.cpp:422-426.
     let mut heap = Heap::new();
     let mut roots = RootSet::new();
     let target = heap.alloc(Body::Instance {

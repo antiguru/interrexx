@@ -315,7 +315,7 @@ impl Heap {
                 if !self.marks[slot] {
                     // Resurrected on every collection that finds it
                     // unreachable, because the flag is what keeps it alive;
-                    // reported once, which is `setReadyForUninit`.
+                    // reported once, as the oracle's ready-for-uninit flag does.
                     if !object.ready_for_uninit {
                         pending_uninit.push(r);
                     }

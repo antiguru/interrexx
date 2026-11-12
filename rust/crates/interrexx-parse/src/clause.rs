@@ -64,8 +64,8 @@ fn starts_label(tokens: &[Token], start: usize, limit: usize) -> bool {
     // A blank never sits between a label and its colon: a blank is only a
     // token when the next real character starts a symbol, a literal, a `(` or
     // a `[`, and `:` is none of those. So the colon is at `start + 1` exactly,
-    // which is also where the C++ looks, with `nextToken` rather than
-    // `nextReal`.
+    // which is also where the C++ looks, with the next-token read rather than
+    // next-real read.
     start + 1 < limit
         && matches!(tokens[start].kind.tag(), Tag::Symbol | Tag::Literal)
         && tokens[start + 1].kind.tag() == Tag::Colon
@@ -75,9 +75,8 @@ fn starts_label(tokens: &[Token], start: usize, limit: usize) -> bool {
 fn label_clause(tokens: &[Token], start: usize) -> Clause {
     // The label clause's span always stops at the colon, even when the colon
     // is the last token before a `;` and so does not itself terminate
-    // anything. `labelNew` (`InstructionParser.cpp:2809`) sets the end
-    // unconditionally, and measured, `here: ; nop` traces as `here:` then
-    // `nop`.
+    // anything. The oracle sets the end unconditionally, and measured, `here: ;
+    // nop` traces as `here:` then `nop`.
     Clause {
         tokens: start..start + 1,
         span: tokens[start].span.start..tokens[start + 1].span.end,
@@ -89,9 +88,9 @@ fn label_clause(tokens: &[Token], start: usize) -> Clause {
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub(crate) enum Remainder {
     /// The instruction after a `THEN`, an `ELSE` or an `OTHERWISE`, which
-    /// `nextInstruction` parses and so may be a label.
+    /// instruction parsing handles and so may be a label.
     Instruction,
-    /// The `THEN` after an `IF` or `WHEN` condition, which `translateBlock`
+    /// The `THEN` after an `IF` or `WHEN` condition, which block translation
     /// reads as a token and never as a label.
     Then,
 }
@@ -239,8 +238,8 @@ impl ClauseCursor {
     /// End the current clause at byte `end_at`, and re-present tokens `at..`
     /// as the next clause starting at token `at`'s own start byte. An
     /// [`Remainder::Instruction`] has its leading labels peeled off as
-    /// `split_clauses` peels them, because `nextInstruction` finds a label
-    /// in a trimmed clause as it does in a whole one.
+    /// `split_clauses` peels them, because instruction parsing finds a label in
+    /// a trimmed clause as it does in a whole one.
     pub(crate) fn split_before(
         &mut self,
         ctx: &ParseCtx,

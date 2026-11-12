@@ -68,7 +68,7 @@ impl TokenCursor {
         Some(i)
     }
 
-    /// `nextReal` without consuming: index of the next token that is not a
+    /// A next-real read without consuming: index of the next token that is not a
     /// blank.
     pub(crate) fn peek_real(&self, tokens: &[Token]) -> Option<usize> {
         let mut i = self.peek()?;
@@ -78,7 +78,7 @@ impl TokenCursor {
         (i < self.range.end).then_some(i)
     }
 
-    /// `nextReal`: the next token that is not a blank, consumed.
+    /// The next token that is not a blank, consumed.
     pub(crate) fn advance_real(&mut self, tokens: &[Token]) -> Option<usize> {
         let i = self.peek_real(tokens)?;
         self.pos = i + 1;
