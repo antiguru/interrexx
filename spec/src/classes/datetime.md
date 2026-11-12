@@ -2,7 +2,7 @@
 element: "DateTime"
 kind: class
 rexxref: "Builtin Classes > Utility Classes > DateTime Class; Builtin Classes > Utility Classes > DateTime Class > init; Builtin Classes > Utility Classes > DateTime Class > fromBaseDate (Class Method); Builtin Classes > Utility Classes > DateTime Class > fromCivilTime (Class Method); Builtin Classes > Utility Classes > DateTime Class > fromEuropeanDate (Class Method); Builtin Classes > Utility Classes > DateTime Class > fromIsoDate (Class Method); Builtin Classes > Utility Classes > DateTime Class > fromLongTime (Class Method); Builtin Classes > Utility Classes > DateTime Class > fromNormalDate (Class Method); Builtin Classes > Utility Classes > DateTime Class > fromNormalTime (Class Method); Builtin Classes > Utility Classes > DateTime Class > fromOrderedDate (Class Method); Builtin Classes > Utility Classes > DateTime Class > fromOrdinalDate (Class Method); Builtin Classes > Utility Classes > DateTime Class > fromStandardDate (Class Method); Builtin Classes > Utility Classes > DateTime Class > fromTicks (Class Method); Builtin Classes > Utility Classes > DateTime Class > fromUsaDate (Class Method); Builtin Classes > Utility Classes > DateTime Class > fromUtcIsoDate (Class Method); Builtin Classes > Utility Classes > DateTime Class > fromWeekNumberDate (Class Method); Builtin Classes > Utility Classes > DateTime Class > maxDate (Class Method); Builtin Classes > Utility Classes > DateTime Class > minDate (Class Method); Builtin Classes > Utility Classes > DateTime Class > today (Class Method); Builtin Classes > Utility Classes > DateTime Class > Arithmetic Methods; Builtin Classes > Utility Classes > DateTime Class > addDays; Builtin Classes > Utility Classes > DateTime Class > addHours; Builtin Classes > Utility Classes > DateTime Class > addMicroseconds; Builtin Classes > Utility Classes > DateTime Class > addMinutes; Builtin Classes > Utility Classes > DateTime Class > addSeconds; Builtin Classes > Utility Classes > DateTime Class > addWeeks; Builtin Classes > Utility Classes > DateTime Class > addYears; Builtin Classes > Utility Classes > DateTime Class > baseDate; Builtin Classes > Utility Classes > DateTime Class > civilTime; Builtin Classes > Utility Classes > DateTime Class > compareTo; Builtin Classes > Utility Classes > DateTime Class > date; Builtin Classes > Utility Classes > DateTime Class > day; Builtin Classes > Utility Classes > DateTime Class > dayMicroseconds; Builtin Classes > Utility Classes > DateTime Class > dayMinutes; Builtin Classes > Utility Classes > DateTime Class > dayName; Builtin Classes > Utility Classes > DateTime Class > daySeconds; Builtin Classes > Utility Classes > DateTime Class > daysInMonth; Builtin Classes > Utility Classes > DateTime Class > daysInYear; Builtin Classes > Utility Classes > DateTime Class > elapsed; Builtin Classes > Utility Classes > DateTime Class > europeanDate; Builtin Classes > Utility Classes > DateTime Class > fullDate; Builtin Classes > Utility Classes > DateTime Class > hashCode; Builtin Classes > Utility Classes > DateTime Class > hours; Builtin Classes > Utility Classes > DateTime Class > isLeapYear; Builtin Classes > Utility Classes > DateTime Class > isoDate; Builtin Classes > Utility Classes > DateTime Class > languageDate; Builtin Classes > Utility Classes > DateTime Class > longTime; Builtin Classes > Utility Classes > DateTime Class > makeString; Builtin Classes > Utility Classes > DateTime Class > microseconds; Builtin Classes > Utility Classes > DateTime Class > minutes; Builtin Classes > Utility Classes > DateTime Class > month; Builtin Classes > Utility Classes > DateTime Class > monthName; Builtin Classes > Utility Classes > DateTime Class > normalDate; Builtin Classes > Utility Classes > DateTime Class > normalTime; Builtin Classes > Utility Classes > DateTime Class > offset; Builtin Classes > Utility Classes > DateTime Class > orderedDate; Builtin Classes > Utility Classes > DateTime Class > ordinalDate; Builtin Classes > Utility Classes > DateTime Class > seconds; Builtin Classes > Utility Classes > DateTime Class > standardDate; Builtin Classes > Utility Classes > DateTime Class > string; Builtin Classes > Utility Classes > DateTime Class > ticks; Builtin Classes > Utility Classes > DateTime Class > timeOfDay; Builtin Classes > Utility Classes > DateTime Class > toLocalTime; Builtin Classes > Utility Classes > DateTime Class > toTimezone; Builtin Classes > Utility Classes > DateTime Class > toUtcTime; Builtin Classes > Utility Classes > DateTime Class > usaDate; Builtin Classes > Utility Classes > DateTime Class > utcDate; Builtin Classes > Utility Classes > DateTime Class > utcIsoDate; Builtin Classes > Utility Classes > DateTime Class > weekDay; Builtin Classes > Utility Classes > DateTime Class > weekNumber; Builtin Classes > Utility Classes > DateTime Class > weekNumberDate; Builtin Classes > Utility Classes > DateTime Class > weekNumberYear; Builtin Classes > Utility Classes > DateTime Class > weeksInYear; Builtin Classes > Utility Classes > DateTime Class > year; Builtin Classes > Utility Classes > DateTime Class > yearDay"
-deviations: [109, 126, 127, 128, 129, 130, 131, 132]
+deviations: [109, 126, 127, 128, 129, 130, 131, 132, 163]
 ---
 
 # DateTime
@@ -2549,4 +2549,24 @@ bad: say '['arg(1)'] =>' condition('o')~code
 [2017-06-30T11:08:50.123456ZZ] => 88.918
 [2017-06-30T11:08:50.123456%Z] => 88.918
 [2017-06-30T11:08:50.123456+02:00 x] => 88.918
+```
+
+r[class.datetime.deviation.163]
+An `init` sent to a `DateTime` that raises an error leaves the receiver as it
+was: every argument is checked before the instance is changed ([Deviation
+163](../deviations.md)). ooRexx stores the date of the arguments before it
+checks the offset, so the example is not run against it.
+
+```rexx
+d = .datetime~new(2020, 1, 1)
+before = d~isoDate d~offset
+signal on syntax
+d~init(2018, 2, 3, 0, 0, 0, 0, 901)
+exit
+syntax:
+say condition('O')~code (d~isoDate d~offset == before) d~isoDate
+```
+
+```output defect=#441
+88.907 1 2020-01-01T00:00:00.000000
 ```

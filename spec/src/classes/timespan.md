@@ -2,7 +2,7 @@
 element: "TimeSpan"
 kind: class
 rexxref: "Builtin Classes > Utility Classes > TimeSpan Class; Builtin Classes > Utility Classes > TimeSpan Class > init; Builtin Classes > Utility Classes > TimeSpan Class > fromCivilTime (Class Method); Builtin Classes > Utility Classes > TimeSpan Class > fromDays (Class Method); Builtin Classes > Utility Classes > TimeSpan Class > fromHours (Class Method); Builtin Classes > Utility Classes > TimeSpan Class > fromLongTime (Class Method); Builtin Classes > Utility Classes > TimeSpan Class > fromMicroseconds (Class Method); Builtin Classes > Utility Classes > TimeSpan Class > fromMinutes (Class Method); Builtin Classes > Utility Classes > TimeSpan Class > fromNormalTime (Class Method); Builtin Classes > Utility Classes > TimeSpan Class > fromSeconds (Class Method); Builtin Classes > Utility Classes > TimeSpan Class > fromStringFormat (Class Method); Builtin Classes > Utility Classes > TimeSpan Class > Arithmetic Methods; Builtin Classes > Utility Classes > TimeSpan Class > addDays; Builtin Classes > Utility Classes > TimeSpan Class > addHours; Builtin Classes > Utility Classes > TimeSpan Class > addMicroseconds; Builtin Classes > Utility Classes > TimeSpan Class > addMinutes; Builtin Classes > Utility Classes > TimeSpan Class > addSeconds; Builtin Classes > Utility Classes > TimeSpan Class > addWeeks; Builtin Classes > Utility Classes > TimeSpan Class > compareTo; Builtin Classes > Utility Classes > TimeSpan Class > days; Builtin Classes > Utility Classes > TimeSpan Class > duration; Builtin Classes > Utility Classes > TimeSpan Class > hashCode; Builtin Classes > Utility Classes > TimeSpan Class > hours; Builtin Classes > Utility Classes > TimeSpan Class > makeString; Builtin Classes > Utility Classes > TimeSpan Class > microseconds; Builtin Classes > Utility Classes > TimeSpan Class > minutes; Builtin Classes > Utility Classes > TimeSpan Class > seconds; Builtin Classes > Utility Classes > TimeSpan Class > sign; Builtin Classes > Utility Classes > TimeSpan Class > string; Builtin Classes > Utility Classes > TimeSpan Class > totalDays; Builtin Classes > Utility Classes > TimeSpan Class > totalHours; Builtin Classes > Utility Classes > TimeSpan Class > totalMicroseconds; Builtin Classes > Utility Classes > TimeSpan Class > totalMinutes; Builtin Classes > Utility Classes > TimeSpan Class > totalSeconds"
-deviations: [109, 126, 127, 130, 131, 132, 133]
+deviations: [109, 126, 127, 130, 131, 132, 133, 163]
 ---
 
 # TimeSpan
@@ -1961,4 +1961,25 @@ say .timespan~fromStringFormat('00:00:30.000000')~totalSeconds
 -30
 59
 30
+```
+
+r[class.timespan.deviation.163]
+An `init` sent to a `TimeSpan` that raises an error leaves the receiver as it
+was: every argument is checked before the instance is changed ([Deviation
+163](../deviations.md)). ooRexx stores an argument that is not a number as the
+span before it raises the error, so that the span then raises errors of its
+own, and the example is not run against it.
+
+```rexx
+t = .timespan~new(0, 1, 2, 3)
+before = t~string
+signal on syntax
+t~init('x')
+exit
+syntax:
+say condition('O')~code (t~string == before) t
+```
+
+```output defect=#441
+88.903 1 01:02:03.000000
 ```
