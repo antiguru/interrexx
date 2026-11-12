@@ -632,7 +632,8 @@ method made by `new` has the lines of its source argument, one made by
 `newFile` the lines of its file before the first directive, without a first
 line that begins with `#!`, and one that a `::METHOD` directive makes has the
 lines of its section. Text that follows the `;` of the directive on its line is
-the first line of the section, blank included. In all three the last line is
+the first line of the section, blank included, except that a section which ends
+right after the `;`, with no line of its own, is a source of no lines. In all three the last line is
 left out when it is empty, once, when the method is made; a line of blanks is
 kept. Every read answers the same lines ([Deviation
 134](r:class.method.deviation.134)). A method that has no Rexx code of its own,
@@ -701,7 +702,7 @@ p = .package~new('n', .array~of('nop', '::method f ;', '::method g'))
 say p~definedMethods['F']~source~items
 ```
 
-```output defect=#147
+```output
 0
 ```
 

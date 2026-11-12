@@ -641,7 +641,7 @@ p = .package~new('n', .array~of('nop', '::routine r ;', '::routine s'))
 say p~routines['R']~source~items
 ```
 
-```output defect=#147
+```output
 0
 ```
 
