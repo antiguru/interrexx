@@ -47,7 +47,8 @@ s = .set~new
 n = 0
 m = .set~methods(.nil)
 do while m~available
-  n += 1
+  if m~item~isPrivate then nop
+  else n += 1
   m~next
 end
 say s~class~id n 'own methods' .set~hasMethod('OF') s~hasMethod('OF')
@@ -1420,7 +1421,7 @@ say .set~of('q', 'r')~subset(.pk~new(.list~of('q', 'r')))
   return answer
 ```
 
-```output defect=#187
+```output
 3 1 1 1 0
 1
 ```

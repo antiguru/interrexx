@@ -49,7 +49,8 @@ b = .bag~new
 n = 0
 m = .bag~methods(.nil)
 do while m~available
-  n += 1
+  if m~item~isPrivate then nop
+  else n += 1
   m~next
 end
 say b~class~id n 'own methods' .bag~hasMethod('OF') b~hasMethod('OF')
@@ -1685,7 +1686,7 @@ say d~items
   return answer
 ```
 
-```output defect=#187
+```output
 3 1 1 1 0
 1
 1
