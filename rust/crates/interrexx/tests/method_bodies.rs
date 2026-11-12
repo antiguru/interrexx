@@ -1349,7 +1349,13 @@ fn run_table(shard: Option<usize>) {
                 cell.verdict.label(),
                 cell.evidence
             ));
-        } else if was.verdict != cell.verdict || was.evidence != cell.evidence {
+        } else if was.verdict != cell.verdict
+            // **An unstable row's evidence is not compared.** It names the
+            // side whose pair of runs was seen to differ first, and when both
+            // sides move (`RexxQueue create` makes a fresh queue name in
+            // each engine) which one that is changes from run to run.
+            || (cell.verdict != Body::Unstable && was.evidence != cell.evidence)
+        {
             drifted.push(format!(
                 "{} {} ({} arm): {} [{}] -> {} [{}]",
                 row.class,
