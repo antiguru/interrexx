@@ -469,6 +469,52 @@ impl Interp {
     /// `RETURN` or `EXIT` value replaces the condition object's `RESULT`
     /// (`RexxActivation::raise`).
     fn exec_raise_propagate(&mut self, code: &Code<'_>, raise: &Raise) -> Result<Flow, Failure> {
+        let indent = self.activity.clause_state.current_value_indent;
+        // DESCRIPTION, then ADDITIONAL or ARRAY, then the tail, as `RAISE`
+        // evaluates them; they replace what the passed-on condition carries.
+        let mut description = None;
+        if let Some(expr) = &raise.description {
+            let value = self.eval(code, expr)?;
+            self.roots.activity_mut().push_temp(value);
+            if self.traced_mode().results {
+                let traced = self.traced_string_value_text(value)?;
+                self.trace_keyword(indent, "DESCRIPTION", &traced);
+            }
+            let text = self.required_string_value(value)?;
+            self.roots.activity_mut().push_temp(text);
+            description = Some((value, self.to_text(text).to_vec()));
+        }
+        let mut additional = None;
+        if let Some(expr) = &raise.additional {
+            let value = self.eval(code, expr)?;
+            self.roots.activity_mut().push_temp(value);
+            if self.traced_mode().results {
+                let traced = self.traced_string_value_text(value)?;
+                self.trace_keyword(indent, "ADDITIONAL", &traced);
+            }
+            additional = Some(value);
+        }
+        if let Some(items) = &raise.array {
+            let mut held = Vec::with_capacity(items.len());
+            for item in items {
+                let Some(expr) = item else {
+                    self.trace_argument(indent, b"");
+                    held.push(None);
+                    continue;
+                };
+                let value = self.eval(code, expr)?;
+                self.roots.activity_mut().push_temp(value);
+                held.push(Some(value));
+                if let Some(rendered) = self.intermediate_text(value)? {
+                    self.trace_argument(indent, &rendered);
+                    self.trace_argument(indent, &rendered);
+                }
+            }
+            let array = self.security_arguments_array(&held);
+            self.roots.activity_mut().push_temp(array);
+            self.trace_keyword(indent, "ARRAY", b"an Array");
+            additional = Some(array);
+        }
         let result = self.raise_result(code, raise)?;
         let Some(active) = self
             .activation()
@@ -478,6 +524,16 @@ impl Interp {
         else {
             return Err(Raised::syntax(98, 918, Vec::new()).into());
         };
+        let mut passed = active.raised.clone();
+        if let Some(object) = self.activation().condition().and_then(|c| c.object) {
+            if let Some((value, text)) = description {
+                self.condition_put(object, b"DESCRIPTION", value)?;
+                passed.description = Some(text);
+            }
+            if let Some(value) = additional {
+                self.condition_put(object, b"ADDITIONAL", value)?;
+            }
+        }
         if let Some(result) = result
             && let Some(object) = self.activation().condition().and_then(|c| c.object)
         {
@@ -487,9 +543,9 @@ impl Interp {
         // report, and is still re-raised as a condition.
         let returns = raise.result.as_ref().is_some_and(|result| !result.exit);
         if active.raised.condition != "SYNTAX" {
-            return self.propagate_unreportable(&active.raised, returns);
+            return self.propagate_unreportable(&passed, returns);
         }
-        let mut raised = active.raised.clone();
+        let mut raised = passed;
         raised.delivery.search = Search::Nobody;
         raised.delivery.positionless = true;
         // The original condition's echo stack, put back exactly as it stood
