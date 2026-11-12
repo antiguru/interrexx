@@ -734,12 +734,14 @@ impl Loud {
         }
     }
 
-    /// One of the interpreter's own embedded `.orx` sources will not parse.
-    /// No program reaches it: `interrexx-lib` pins each file's sha256, and every
-    /// probe runs past the library bootstrap.
-    fn library_source(name: &str, error: &str) -> Loud {
+    /// One of the interpreter's own embedded sources will not parse. `site` is
+    /// where, as file and line, and the error's code: never source text. No
+    /// program reaches it: `interrexx-lib` pins each file's sha256 and checks
+    /// each program it builds, and every probe runs past the library
+    /// bootstrap.
+    fn library_source(site: &str) -> Loud {
         Loud {
-            message: owned_message(&format!("{name} does not parse here: {error}")),
+            message: owned_message(&format!("does not parse here: {site}")),
         }
     }
 
@@ -1401,6 +1403,9 @@ struct Interp {
     activities: scheduler::Activities,
     /// The programs the library bootstrap loaded, in load order.
     library_programs: Vec<ProgramId>,
+    /// The embedded program each of `library_programs` was loaded from, which
+    /// the library-debug switch maps a frame back through.
+    library_program_names: FxHashMap<ProgramId, &'static str>,
     /// The name a program compiled from method source text reports under.
     compiled_method_names: FxHashMap<ProgramId, Box<[u8]>>,
     /// Whether any object has been given a method of its own, which is what
@@ -2296,6 +2301,7 @@ impl Interp {
             pinning: pinning::Pinning::default(),
             activities: scheduler::Activities::new(thread_table),
             library_programs: Vec::new(),
+            library_program_names: FxHashMap::default(),
             method_bodies: NameMap::default(),
             compiled_method_names: FxHashMap::default(),
             object_methods: false,
@@ -2602,7 +2608,13 @@ impl Interp {
             // `interrexx-lib` pins each file's sha256, so this can only fire on a
             // file this crate cannot yet parse.
             Err(error) => {
-                return Err(Loud::library_source(program.name, &format!("{error}")).into());
+                let site = interrexx_lib::describe_parse_error(
+                    program,
+                    error.byte,
+                    error.code(),
+                    error.sub(),
+                );
+                return Err(Loud::library_source(&site).into());
             }
         };
         let parsed = Rc::new(parsed);
@@ -2612,6 +2624,7 @@ impl Interp {
         // can turn a miss into a hit and shadow an earlier answer.
         self.invalidate_rexx_class_cache();
         self.library_programs.push(program_id);
+        self.library_program_names.insert(program_id, program.name);
         let arguments = arguments.unwrap_or_else(|| {
             let package = self.held_package_object(Package::Program(program_id));
             // Rooted for the whole of the bootstrap: `call_context` is not
@@ -3381,6 +3394,7 @@ impl Interp {
                 pinning: _,
             activities,
             library_programs: _,
+            library_program_names: _,
             compiled_method_names: _,
             object_methods: _,
             // A lookup index holding objects it does not keep: a swept one
