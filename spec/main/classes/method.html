@@ -389,7 +389,7 @@ bad: say arg(1) '=&gt;' condition('o')~code
   return 'from makestring'
 ::class ss subclass string
 </code></pre>
-<pre><code class="language-output defect=#142">.method~new("n", .array~of("a", .mk~new))~source[2] =&gt; from makestring
+<pre><code class="language-output">.method~new("n", .array~of("a", .mk~new))~source[2] =&gt; from makestring
 .method~new("n", .array~of(.ss~new("x")))~source[1] =&gt; x
 .method~new("n", .array~of(.mutablebuffer~new("mb")))~source[1] =&gt; mb
 .method~new("n", .array~of(.array~of("a", "b"))) =&gt; 13.1
@@ -1372,7 +1372,7 @@ bad: say arg(1) '=&gt;' condition('o')~code
   if arg(1) == 'ARRAY' then return ans
   return 'return 2'
 </code></pre>
-<pre><code class="language-output defect=#157">request ARRAY
+<pre><code class="language-output">request ARRAY
 .method~new("n", .src~new("return 1")) =&gt; 88.913
 request ARRAY
 .method~new("n", .src~new(.directory~new)) =&gt; 88.913

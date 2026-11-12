@@ -440,7 +440,7 @@ bad: say arg(1) '=&gt;' condition('o')~code
   return 'return 1'
 ::class ss subclass string
 </code></pre>
-<pre><code class="language-output defect=#142">.package~new("n", .array~of("nop", .mk~new))~source[2] =&gt; return 1
+<pre><code class="language-output">.package~new("n", .array~of("nop", .mk~new))~source[2] =&gt; return 1
 .package~new("n", .array~of(.ss~new("nop")))~source[1] =&gt; nop
 .package~new("n", .array~of(.mutablebuffer~new("nop")))~source[1] =&gt; nop
 .package~new("n", .array~of(.array~of("nop", "nop"))) =&gt; 13.1
@@ -2688,7 +2688,7 @@ bad: say arg(1) '=&gt;' condition('o')~code
   return 'say "second"'
 ::class ss subclass string
 </code></pre>
-<pre><code class="language-output defect=#155">first
+<pre><code class="language-output">first
 second
 third
 fourth
@@ -2724,7 +2724,7 @@ bad: say arg(1) '=&gt;' condition('o')~code
   if arg(1) == 'ARRAY' then return ans
   return 'nop'
 </code></pre>
-<pre><code class="language-output defect=#157">request ARRAY
+<pre><code class="language-output">request ARRAY
 .package~new("n", .src~new("nop")) =&gt; 88.913
 request ARRAY
 .package~new("n", .src~new(.list~of("nop"))) =&gt; 88.913

@@ -30143,7 +30143,7 @@ say o~m
 ::method makestring
   return 'return "from ms"'
 </code></pre>
-<pre><code class="language-output defect=#142">from ms
+<pre><code class="language-output">from ms
 </code></pre>
 <div class="rule" id="r-class.object.setmethod.private"><a href="classes/object.html#r-class.object.setmethod.private">[class.object.setmethod.private]</a></div>
 <p>The method objects of <code>run</code>, <code>setMethod</code> and <code>unsetMethod</code>, which are
@@ -34551,7 +34551,7 @@ bad: say arg(1) '=&gt;' condition('o')~code
   return 'from makestring'
 ::class ss subclass string
 </code></pre>
-<pre><code class="language-output defect=#142">.method~new("n", .array~of("a", .mk~new))~source[2] =&gt; from makestring
+<pre><code class="language-output">.method~new("n", .array~of("a", .mk~new))~source[2] =&gt; from makestring
 .method~new("n", .array~of(.ss~new("x")))~source[1] =&gt; x
 .method~new("n", .array~of(.mutablebuffer~new("mb")))~source[1] =&gt; mb
 .method~new("n", .array~of(.array~of("a", "b"))) =&gt; 13.1
@@ -35534,7 +35534,7 @@ bad: say arg(1) '=&gt;' condition('o')~code
   if arg(1) == 'ARRAY' then return ans
   return 'return 2'
 </code></pre>
-<pre><code class="language-output defect=#157">request ARRAY
+<pre><code class="language-output">request ARRAY
 .method~new("n", .src~new("return 1")) =&gt; 88.913
 request ARRAY
 .method~new("n", .src~new(.directory~new)) =&gt; 88.913
@@ -36875,7 +36875,7 @@ bad: say arg(1) '=&gt;' condition('o')~code
   if arg(1) == 'ARRAY' then return ans
   return 'return 2'
 </code></pre>
-<pre><code class="language-output defect=#157">request ARRAY
+<pre><code class="language-output">request ARRAY
 .routine~new("n", .src~new("return 1")) =&gt; 88.913
 request ARRAY
 .routine~new("n", .src~new(.list~of("return 1"))) =&gt; 88.913
@@ -37267,7 +37267,7 @@ bad: say arg(1) '=&gt;' condition('o')~code
   return 'return 1'
 ::class ss subclass string
 </code></pre>
-<pre><code class="language-output defect=#142">.package~new("n", .array~of("nop", .mk~new))~source[2] =&gt; return 1
+<pre><code class="language-output">.package~new("n", .array~of("nop", .mk~new))~source[2] =&gt; return 1
 .package~new("n", .array~of(.ss~new("nop")))~source[1] =&gt; nop
 .package~new("n", .array~of(.mutablebuffer~new("nop")))~source[1] =&gt; nop
 .package~new("n", .array~of(.array~of("nop", "nop"))) =&gt; 13.1
@@ -39515,7 +39515,7 @@ bad: say arg(1) '=&gt;' condition('o')~code
   return 'say "second"'
 ::class ss subclass string
 </code></pre>
-<pre><code class="language-output defect=#155">first
+<pre><code class="language-output">first
 second
 third
 fourth
@@ -39551,7 +39551,7 @@ bad: say arg(1) '=&gt;' condition('o')~code
   if arg(1) == 'ARRAY' then return ans
   return 'nop'
 </code></pre>
-<pre><code class="language-output defect=#157">request ARRAY
+<pre><code class="language-output">request ARRAY
 .package~new("n", .src~new("nop")) =&gt; 88.913
 request ARRAY
 .package~new("n", .src~new(.list~of("nop"))) =&gt; 88.913
@@ -52293,7 +52293,7 @@ say d~m
 ::method makestring
   return 'return "from ms"'
 </code></pre>
-<pre><code class="language-output defect=#142">from ms
+<pre><code class="language-output">from ms
 </code></pre>
 <div class="rule" id="r-class.directory.unsetmethod"><a href="classes/directory.html#r-class.directory.unsetmethod">[class.directory.unsetmethod]</a></div>
 <p><code>unsetMethod(name)</code> removes the method associated with the name, the name
