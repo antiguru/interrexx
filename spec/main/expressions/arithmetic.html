@@ -250,6 +250,27 @@ bad: say arg(1) '=&gt;' condition('o')~code
 2 ** 1.5 =&gt; 26.8
 2 ** "x" =&gt; 26.8
 </code></pre>
+<div class="rule" id="r-expr.arithmetic.exponent.message"><a href="#r-expr.arithmetic.exponent.message">[expr.arithmetic.exponent.message]</a></div>
+<p>The message of the <code>SYNTAX 26.8</code> error names the exponent as the program wrote
+it, not as the number it denotes.</p>
+<pre><code class="language-rexx">signal on syntax name a
+say 2 ** 0.5e0
+a: say condition('o')~message
+signal on syntax name b
+say 2 ** ' 0.50 '
+b: say condition('o')~message
+signal on syntax name c
+say 2 ** 00.5
+c: say condition('o')~message
+signal on syntax name d
+say '3'~'**'(' 0.5E+0')
+d: say condition('o')~message
+</code></pre>
+<pre><code class="language-output">Operand to the right of the power operator (**) must be a whole number; found "0.5E0".
+Operand to the right of the power operator (**) must be a whole number; found " 0.50 ".
+Operand to the right of the power operator (**) must be a whole number; found "00.5".
+Operand to the right of the power operator (**) must be a whole number; found " 0.5E+0".
+</code></pre>
 <h2 id="operands-that-are-not-numbers"><a class="header" href="#operands-that-are-not-numbers">Operands that are not numbers</a></h2>
 <div class="rule" id="r-expr.arithmetic.number"><a href="#r-expr.arithmetic.number">[expr.arithmetic.number]</a></div>
 <p>Both operands of an infix operator, and the operand of a prefix one, must be

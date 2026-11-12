@@ -385,7 +385,7 @@ too small: <code>11 ** -999999999</code> raises <code>42.901</code>, not <code>4
 decides: an intermediate value of the computation that is out of range raises
 nothing when the result is in range. The powers of the second example pass the
 pre-test and have results within the range, although the base to the positive
-exponent has its last digit below the range, and interrexx raises <code>SYNTAX 42.902</code> for that intermediate value.</p>
+exponent has its last digit below the range.</p>
 <pre><code class="language-rexx">signal on syntax name a
 say 1e500000000 ** 2
 a: say condition('o')~code
@@ -419,7 +419,7 @@ say (1e300000000 ** 3) (1e-300000000 ** 3) (1e999999999 ** 1),
 say 1.01e-333333333 ** -3
 say 1.1e-499999999 ** -2
 </code></pre>
-<pre><code class="language-output defect=#95">7.51314801E+999999998
+<pre><code class="language-output">7.51314801E+999999998
 9.70590148E+999999998
 8.26446281E+999999997
 </code></pre>

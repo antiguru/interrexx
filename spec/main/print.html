@@ -2614,7 +2614,7 @@ too small: <code>11 ** -999999999</code> raises <code>42.901</code>, not <code>4
 decides: an intermediate value of the computation that is out of range raises
 nothing when the result is in range. The powers of the second example pass the
 pre-test and have results within the range, although the base to the positive
-exponent has its last digit below the range, and interrexx raises <code>SYNTAX 42.902</code> for that intermediate value.</p>
+exponent has its last digit below the range.</p>
 <pre><code class="language-rexx">signal on syntax name a
 say 1e500000000 ** 2
 a: say condition('o')~code
@@ -2648,7 +2648,7 @@ say (1e300000000 ** 3) (1e-300000000 ** 3) (1e999999999 ** 1),
 say 1.01e-333333333 ** -3
 say 1.1e-499999999 ** -2
 </code></pre>
-<pre><code class="language-output defect=#95">7.51314801E+999999998
+<pre><code class="language-output">7.51314801E+999999998
 9.70590148E+999999998
 8.26446281E+999999997
 </code></pre>
@@ -4242,6 +4242,27 @@ bad: say arg(1) '=&gt;' condition('o')~code
 <pre><code class="language-output">64 0.25 4 -8 1
 2 ** 1.5 =&gt; 26.8
 2 ** "x" =&gt; 26.8
+</code></pre>
+<div class="rule" id="r-expr.arithmetic.exponent.message"><a href="expressions/arithmetic.html#r-expr.arithmetic.exponent.message">[expr.arithmetic.exponent.message]</a></div>
+<p>The message of the <code>SYNTAX 26.8</code> error names the exponent as the program wrote
+it, not as the number it denotes.</p>
+<pre><code class="language-rexx">signal on syntax name a
+say 2 ** 0.5e0
+a: say condition('o')~message
+signal on syntax name b
+say 2 ** ' 0.50 '
+b: say condition('o')~message
+signal on syntax name c
+say 2 ** 00.5
+c: say condition('o')~message
+signal on syntax name d
+say '3'~'**'(' 0.5E+0')
+d: say condition('o')~message
+</code></pre>
+<pre><code class="language-output">Operand to the right of the power operator (**) must be a whole number; found "0.5E0".
+Operand to the right of the power operator (**) must be a whole number; found " 0.50 ".
+Operand to the right of the power operator (**) must be a whole number; found "00.5".
+Operand to the right of the power operator (**) must be a whole number; found " 0.5E+0".
 </code></pre>
 <h2 id="operands-that-are-not-numbers"><a class="header" href="#operands-that-are-not-numbers">Operands that are not numbers</a></h2>
 <div class="rule" id="r-expr.arithmetic.number"><a href="expressions/arithmetic.html#r-expr.arithmetic.number">[expr.arithmetic.number]</a></div>
@@ -105162,7 +105183,10 @@ the <a href="builtins/index.html#r-bif.index.num.limit">limits</a> before it is 
 too, for the same numbers, although its answer does not otherwise depend on
 NUMERIC DIGITS. In TRUNC and FORMAT the error comes after the checks of the
 arguments that their pages list, and in FORMAT before the checks of the fit
-of its result.</p>
+of its result.
+In MAX and MIN it is the rounding of the receiver, and it comes before the
+checks of the other arguments, so a later argument that is not a number does
+not hide it. The same holds for the method forms of these calls.</p>
 <pre><code class="language-rexx">numeric digits 1
 say abs('94e999999998') sign('94e999999998')
 signal on syntax name a
@@ -105182,11 +105206,46 @@ signal on syntax name e
 say abs('9.999999995e999999999')
 e: say condition('o')~code
 </code></pre>
-<pre><code class="language-output defect=#78">9E+999999999 1
+<pre><code class="language-output">9E+999999999 1
 42.901
 42.901
 42.901
 93.906
+42.901
+</code></pre>
+<pre><code class="language-rexx">numeric digits 1
+signal on syntax name a
+say trunc('99999e999999995')
+a: say condition('o')~code
+signal on syntax name b
+say max('95e999999998')
+b: say condition('o')~code
+signal on syntax name c
+say min('95e999999998', 'x')
+c: say condition('o')~code
+signal on syntax name d
+say '99999e999999995'~abs
+d: say condition('o')~code
+signal on syntax name e
+say '95e999999998'~sign
+e: say condition('o')~code
+signal on syntax name f
+say '99999e999999995'~format
+f: say condition('o')~code
+signal on syntax name g
+say '99999e999999995'~trunc
+g: say condition('o')~code
+signal on syntax name h
+say '95e999999998'~max('x')
+h: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">42.901
+42.901
+42.901
+42.901
+42.901
+42.901
+42.901
 42.901
 </code></pre>
 <div class="rule" id="r-bif.index.num.write"><a href="builtins/index.html#r-bif.index.num.write">[bif.index.num.write]</a></div>
