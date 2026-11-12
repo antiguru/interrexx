@@ -1462,7 +1462,7 @@ impl Interp {
         // the caller's, taken at the call. The caller has to learn about it,
         // because after the isolation below this map is replaced and the
         // return path deliberately does not write it back.
-        let resolved = self.activation().extra.clone();
+        let resolved = crate::activation::clone_extra(&self.activation().extra);
         if let Some(caller) = self.caller_activation_mut() {
             caller.extra = resolved;
         }

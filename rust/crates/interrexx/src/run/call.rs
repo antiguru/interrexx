@@ -1192,7 +1192,7 @@ impl Interp {
                 // rest of that activation, and an internal call is still
                 // inside it.
                 let condition_syntax = caller.condition_syntax;
-                let extra = caller.extra.clone();
+                let extra = crate::activation::clone_extra(&caller.extra);
                 // Cloned with `extra`, and for the same reason: a label
                 // reached without `PROCEDURE` shares the caller's pool, and an
                 // exposed name is part of that pool. Measured -- a class

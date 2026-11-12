@@ -539,6 +539,18 @@ impl ActivationFlags {
     }
 }
 
+/// A copy of an activation's [`Activation::extra`], which is empty on every
+/// call that does not grow a frame: an empty map is made rather than cloned,
+/// which costs a hash table's clone on every internal call.
+#[inline]
+pub(crate) fn clone_extra(extra: &NameMap<Box<[u8]>, usize>) -> NameMap<Box<[u8]>, usize> {
+    if extra.is_empty() {
+        NameMap::default()
+    } else {
+        extra.clone()
+    }
+}
+
 /// [`Activation::cached_clock`] and [`Activation::elapsed_anchor`] before their
 /// first reading: the elapsed time being 0.
 pub(crate) const NO_CLOCK: i64 = 0;
