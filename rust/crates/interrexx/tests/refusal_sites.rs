@@ -102,6 +102,13 @@ fn identifiers(body: &str, sites: &str) -> Identifiers {
     }
 }
 
+/// The file of a definition site `path:line`. The table names the file only,
+/// so that an edit above a constructor does not move its row; the name
+/// already identifies the constructor.
+fn definition_file(at: &str) -> String {
+    at.rsplit_once(':').map_or(at, |(path, _)| path).to_string()
+}
+
 /// The four derived columns, as the committed file spells them.
 fn derived() -> Vec<(String, String, String, String)> {
     let files: BTreeMap<PathBuf, Vec<(usize, String)>> = sources()
@@ -120,7 +127,7 @@ fn derived() -> Vec<(String, String, String, String)> {
                 kind.clone(),
                 name.clone(),
                 surfaces[name].clone(),
-                at.clone(),
+                definition_file(at),
             )
         })
         .collect()
