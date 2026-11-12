@@ -1,0 +1,47 @@
+# Monitor: the argument-count errors of init, current and destination.
+# Each answer is the code with its subcode.
+
+error
+.monitor~new(1, 2)
+----
+93.902
+
+error
+.monitor~new~current(1)
+----
+93.902
+
+error
+.monitor~new~destination(1, 2)
+----
+93.902
+
+error
+.monitor~new~unknown('x', .array~new, 3)
+----
+93.902
+
+error
+.monitor~new~unknown
+----
+93.901
+
+error
+.monitor~new~unknown('x')
+----
+93.901
+
+error
+.monitor~new~unknown(, .array~new)
+----
+93.903
+
+error
+.monitor~new~unknown('x', .object~new)
+----
+98.946
+
+error
+.monitor~new~nosuch
+----
+97.1

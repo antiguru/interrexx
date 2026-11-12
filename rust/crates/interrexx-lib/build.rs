@@ -63,6 +63,8 @@ const REPLACEMENTS: &[&str] = &[
     "timespan.rex",
     "misc.rex",
     "traceobject.rex",
+    "timer.rex",
+    "monitor.rex",
 ];
 
 /// One host member a replacement may leave out.
