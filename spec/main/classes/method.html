@@ -285,6 +285,11 @@ bad: say arg(1) '=&gt;' condition('o')~code
 .method~new(.list~new, "nop") =&gt; 88.909
 .method~new(.onlystr~new, "nop") =&gt; 88.909
 </code></pre>
+<div class="rule" id="r-class.method.new.order"><a href="#r-class.method.new.order">[class.method.new.order]</a></div>
+<p><code>new</code> checks the source before the context: a source that is neither a string
+nor an array and a context that is not valid together raise the source's
+<code>SYNTAX 93.961</code>, and the context's <code>SYNTAX 40.904</code> only follows a valid source.
+<code>Routine~new</code> checks in the same order.</p>
 <pre><code class="language-rexx">call try '.method~new("n", .nil, 7)'
 call try '.method~new("n", "nop", 7)'
 exit
@@ -296,7 +301,7 @@ try:
 bad: say arg(1) '=&gt;' condition('o')~code
   return
 </code></pre>
-<pre><code class="language-output defect=#143">.method~new("n", .nil, 7) =&gt; 93.961
+<pre><code class="language-output">.method~new("n", .nil, 7) =&gt; 93.961
 .method~new("n", "nop", 7) =&gt; 40.904
 </code></pre>
 <div class="rule" id="r-class.method.new.source"><a href="#r-class.method.new.source">[class.method.new.source]</a></div>
@@ -605,6 +610,12 @@ MINE
 .method~newFile("class_method_newfile_none.tmp", "bad") =&gt; 40.904
 .method~newFile("class_method_newfile_none.tmp", "PROGRAMSCOPE") =&gt; 3.1
 </code></pre>
+<div class="rule" id="r-class.method.newfile.shebang"><a href="#r-class.method.newfile.shebang">[class.method.newfile.shebang]</a></div>
+<p>A first line that begins with <code>#!</code> in the file <code>newFile</code> reads is not part of
+the code: the <code>source</code> of the method or routine starts with the line after it.
+The same holds for the <code>source</code> of the <code>prolog</code> of a package that
+<a href="package.html#r-class.package.new"><code>Package~new</code></a> reads from a file, while the <code>source</code> of
+the package itself keeps the line.</p>
 <pre><code class="language-rexx">f = 'class_method_shebang_zq.tmp'
 call sysfiledelete f
 call lineout f, '#!/usr/bin/rexx'
@@ -614,7 +625,7 @@ m = .method~newFile(f)
 say m~source~items m~source[1]
 call sysfiledelete f
 </code></pre>
-<pre><code class="language-output defect=#144">1 return "after the first line"
+<pre><code class="language-output">1 return "after the first line"
 </code></pre>
 <div class="rule" id="r-class.method.newfile.sends"><a href="#r-class.method.newfile.sends">[class.method.newfile.sends]</a></div>
 <p><code>newFile</code> sends the new object the message <code>init</code> with no argument, after the
@@ -724,7 +735,8 @@ method made by <code>new</code> has the lines of its source argument, one made b
 <code>newFile</code> the lines of its file before the first directive, without a first
 line that begins with <code>#!</code>, and one that a <code>::METHOD</code> directive makes has the
 lines of its section. Text that follows the <code>;</code> of the directive on its line is
-the first line of the section, blank included. In all three the last line is
+the first line of the section, blank included, except that a section which ends
+right after the <code>;</code>, with no line of its own, is a source of no lines. In all three the last line is
 left out when it is empty, once, when the method is made; a line of blanks is
 kept. Every read answers the same lines (<a href="#r-class.method.deviation.134">Deviation
 134</a>). A method that has no Rexx code of its own,
@@ -782,7 +794,7 @@ BLANK 2 [  say "b"|  ]
 <pre><code class="language-rexx">p = .package~new('n', .array~of('nop', '::method f ;', '::method g'))
 say p~definedMethods['F']~source~items
 </code></pre>
-<pre><code class="language-output defect=#147">0
+<pre><code class="language-output">0
 </code></pre>
 <div class="rule" id="r-class.method.package"><a href="#r-class.method.package">[class.method.package]</a></div>
 <p><code>package</code> answers the package that holds the method's code, which decides
@@ -912,14 +924,16 @@ m~annotation("a", "b") =&gt; 93.902
 <pre><code class="language-rexx">m = .method~loadExternalMethod('m', 'LIBRARY rxregexp RegExp_Pos')
 say m~annotation('x')~isNil m~annotations~items
 </code></pre>
-<pre><code class="language-output defect=#146">1 0
+<pre><code class="language-output">1 0
 </code></pre>
 <div class="rule" id="r-class.method.annotations"><a href="#r-class.method.annotations">[class.method.annotations]</a></div>
 <p><code>annotations</code> answers the <code>StringTable</code> that holds every annotation of the
 method, indexed by the upper case name, as <a href="../directives/annotate.html#r-dir.annotate.read">the annotation
 rule</a> says. It is the table that the method keeps: the
 same object every time, so an entry put into it is an annotation that
-<code>annotation</code> answers. A method with none has an empty table. The method takes
+<code>annotation</code> answers. A method with none has an empty table, and a method
+loaded from a library by <code>loadExternalMethod</code> has none: <code>annotation</code> answers
+<code>.nil</code>. The method takes
 no argument (<code>SYNTAX 93.902</code>).</p>
 <pre><code class="language-rexx">t = .k~method('m')~annotations
 say t~class~id t~items t['VERSION'] t['WHO']

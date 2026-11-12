@@ -880,7 +880,7 @@ say p~prolog~source~items p~prolog~source[1]
 say p~source~items p~source[1] p~sourceSize '['p~sourceLine(1)']'
 call sysfiledelete f
 </code></pre>
-<pre><code class="language-output defect=#144">1 return "after the first line"
+<pre><code class="language-output">1 return "after the first line"
 2 #!/usr/bin/rexx 2 [#!/usr/bin/rexx]
 </code></pre>
 <h3 id="what-the-package-holds"><a class="header" href="#what-the-package-holds">What the package holds</a></h3>
@@ -2102,7 +2102,7 @@ src = .array~of('nop', '::requires "class_package_found_zq.cls"')
 q = .package~new('q', src)
 say (q~importedPackages[1] == a)
 </code></pre>
-<pre><code class="language-output defect=#145">first body
+<pre><code class="language-output">first body
 1 1 1
 1
 1
@@ -2111,13 +2111,13 @@ say (q~importedPackages[1] == a)
 <pre><code class="language-rexx">p = .package~new('n', 'nop')
 say p~loadPackage('class_package_empty_zq.cls', '')~sourceSize
 </code></pre>
-<pre><code class="language-output defect=#147">0
+<pre><code class="language-output">0
 </code></pre>
 <pre><code class="language-rexx">p = .package~new('n', 'nop')
 src = 'nop' || '0A'x || 'return 1'
 say p~loadPackage('class_package_split_zq.cls', src)~sourceSize
 </code></pre>
-<pre><code class="language-output defect=#148">2
+<pre><code class="language-output">2
 </code></pre>
 <div class="rule" id="r-class.package.loadpackage.sends"><a href="#r-class.package.loadpackage.sends">[class.package.loadpackage.sends]</a></div>
 <p><code>loadPackage</code> sends a source that is not an instance of <code>Array</code> itself the

@@ -288,7 +288,7 @@ try:
 bad: say arg(1) '=&gt;' condition('o')~code
   return
 </code></pre>
-<pre><code class="language-output defect=#143">.routine~new("n", .nil, 7) =&gt; 93.961
+<pre><code class="language-output">.routine~new("n", .nil, 7) =&gt; 93.961
 .routine~new("n", "nop", 7) =&gt; 40.904
 </code></pre>
 <div class="rule" id="r-class.routine.new.sends"><a href="#r-class.routine.new.sends">[class.routine.new.sends]</a></div>
@@ -410,7 +410,7 @@ say r~source~items r~source[1]
 say r~call
 call sysfiledelete f
 </code></pre>
-<pre><code class="language-output defect=#144">1 return "after the first line"
+<pre><code class="language-output">1 return "after the first line"
 after the first line
 </code></pre>
 <div class="rule" id="r-class.routine.newfile.sends"><a href="#r-class.routine.newfile.sends">[class.routine.newfile.sends]</a></div>
@@ -734,7 +734,7 @@ r~source(1) =&gt; 93.902
 <pre><code class="language-rexx">p = .package~new('n', .array~of('nop', '::routine r ;', '::routine s'))
 say p~routines['R']~source~items
 </code></pre>
-<pre><code class="language-output defect=#147">0
+<pre><code class="language-output">0
 </code></pre>
 <div class="rule" id="r-class.routine.package"><a href="#r-class.routine.package">[class.routine.package]</a></div>
 <p><code>package</code> answers the package that holds the routine's code, which decides
