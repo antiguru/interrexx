@@ -61,7 +61,16 @@ jobs:
         with:
           tool: nextest@0.9.150
       - name: Archive the test binaries
-        run: cargo nextest archive --locked --workspace --archive-file "$ARCHIVE"
+        # Debug info is off, as setup-rust-toolchain sets it, and pinned here so the archive
+        # does not grow if that default changes. The test binaries each link the whole
+        # interpreter, so they are alike over long distances: the long-distance window is what
+        # lets the compressor see that (220 MiB to under 80 MiB at level 16).
+        env:
+          CARGO_PROFILE_DEV_DEBUG: "0"
+          CARGO_PROFILE_TEST_DEBUG: "0"
+        run: >
+          cargo nextest archive --locked --workspace --archive-file "$ARCHIVE"
+          --zstd-long --zstd-level 16
       - uses: actions/upload-artifact@v7
         with:
           name: nextest-archive
