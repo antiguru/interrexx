@@ -768,7 +768,7 @@ r = .nb~new~union(.pk~new(.twoans~new))
   forward class (super)
 ```
 
-```output defect=#153
+```output
 hasIndex i1
 put c i1
 hasIndex i2

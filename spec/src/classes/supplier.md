@@ -250,7 +250,7 @@ bad: say arg(1) '=>' condition('o')~code
   return a
 ```
 
-```output defect=#201
+```output
 m1 1
 m2 2
 .supplier~new(.answers~new("x"), .array~of(1)) => 98.913

@@ -2000,7 +2000,15 @@ fn converted_array_argument(
         interp.roots.activity_mut().push_temp(array);
         // An answer that is an `Array` subclass instance holds its slots in
         // the store behind it.
-        let store = super::array::collection_store(interp, array);
+        let plain_array = interp.object_model().array;
+        let is_array = interp
+            .class_of_value(array)
+            .is_some_and(|held| interp.classes().is_a(held, plain_array));
+        let store = if is_array {
+            super::array::collection_store(interp, array)
+        } else {
+            array
+        };
         if let Some((_, dimensions)) = interp.array_body(store)
             && single_dimensional(dimensions)
         {
