@@ -1361,6 +1361,7 @@ n 2
      7 *-* exit
 ```
 
+r[env.debugging.input.iterate]
 An ITERATE that `=` runs again is shown at the indent of the body of its
 loop, not at the indent of its own nesting. In the example the `iterate` is
 nested in an IF, and is shown again at the indent of the loop body.
