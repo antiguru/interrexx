@@ -73,6 +73,15 @@ class BAG public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,MAPCOLL
   instance HASITEM private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance INDEX private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance INIT private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
+  instance INTERREXX_ASK private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
+  instance INTERREXX_DIFFERENCE private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
+  instance INTERREXX_INTERSECTION private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
+  instance INTERREXX_PUT private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
+  instance INTERREXX_READ private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
+  instance INTERREXX_SUBSET private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
+  instance INTERREXX_UNION private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
+  instance INTERREXX_WALK private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
+  instance INTERREXX_XOR private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance INTERSECTION private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance ISEMPTY private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance ITEMS private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
@@ -93,6 +102,15 @@ class BAG public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,MAPCOLL
   class OF private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
 class BAGMIXIN public=0 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1
   instance DIFFERENCE private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
+  instance INTERREXX_ASK private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
+  instance INTERREXX_DIFFERENCE private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
+  instance INTERREXX_INTERSECTION private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
+  instance INTERREXX_PUT private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
+  instance INTERREXX_READ private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
+  instance INTERREXX_SUBSET private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
+  instance INTERREXX_UNION private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
+  instance INTERREXX_WALK private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
+  instance INTERREXX_XOR private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance INTERSECTION private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance PUTALL private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance SUBSET private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
@@ -879,6 +897,14 @@ class SET public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,MAPCOLL
   instance HASITEM private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance INDEX private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance INIT private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
+  instance INTERREXX_ASK private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
+  instance INTERREXX_INTERSECTION private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
+  instance INTERREXX_PUT private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
+  instance INTERREXX_READ private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
+  instance INTERREXX_SUBSET private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
+  instance INTERREXX_UNION private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
+  instance INTERREXX_WALK private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
+  instance INTERREXX_XOR private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance INTERSECTION private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance ISEMPTY private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance ITEMS private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
@@ -897,6 +923,14 @@ class SET public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,MAPCOLL
   class OF private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
 class SETCOLLECTION public=1 mixin=1 abstract=0 metaclass=CLASS supers=COLLECTION annotations=- identity=1
 class SETMIXIN public=0 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1
+  instance INTERREXX_ASK private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
+  instance INTERREXX_INTERSECTION private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
+  instance INTERREXX_PUT private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
+  instance INTERREXX_READ private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
+  instance INTERREXX_SUBSET private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
+  instance INTERREXX_UNION private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
+  instance INTERREXX_WALK private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
+  instance INTERREXX_XOR private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance INTERSECTION private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance PUTALL private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance SUBSET private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-

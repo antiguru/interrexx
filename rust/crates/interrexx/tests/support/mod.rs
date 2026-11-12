@@ -138,10 +138,11 @@ const LIBRARY_FRAME_TAIL: &[u8] = b" in package \"REXX\" (no source available)."
 const LIBRARY_REPORT_MARK: &[u8] = b" running REXX line ";
 
 /// `r[cond.information.library]` as a comparison: a line number in the class
-/// library, and the number of library levels, are not observable. Every
-/// traceback line of a library method (`<n> *-* Method ... in package "REXX"
-/// (no source available).`) has its number replaced by a placeholder of the
-/// same width, a run of adjacent such lines is kept as its last line (the
+/// library, the indentation of its trace line, and the number of library
+/// levels, are not observable. Every traceback line of a library method
+/// (`<n> *-* Method ... in package "REXX" (no source available).`) has its
+/// number replaced by a placeholder of the same width and the blanks after
+/// `*-*` replaced by one, a run of adjacent such lines is kept as its last line (the
 /// level nearest the code that sent the message), and the report's
 /// `running REXX line <n>` is `running REXX line N`. The lineless
 /// `running REXX` form, a user line, a different method name, scope or
@@ -188,9 +189,15 @@ fn library_frame(line: &[u8]) -> Option<Vec<u8>> {
     if digits == 0 || !rest.starts_with(b" *-* ") {
         return None;
     }
+    // The blanks after `*-*` are the nesting depth of the clause that was
+    // running, which `r[cond.information.library]` leaves unspecified for a
+    // library level.
+    let text = &rest[b" *-* ".len()..];
+    let indent = text.iter().take_while(|&&b| b == b' ').count();
     let mut out = Vec::with_capacity(line.len());
     out.extend_from_slice(LIBRARY_LINE_FIELD);
-    out.extend_from_slice(rest);
+    out.extend_from_slice(b" *-* ");
+    out.extend_from_slice(&text[indent..]);
     Some(out)
 }
 
@@ -430,6 +437,30 @@ mod tests {
         assert_eq!(
             normalize_library_lines(&one),
             normalize_library_lines(&other)
+        );
+    }
+
+    /// The same library frame at another nesting depth compares equal: the
+    /// indentation of a library level's trace line is unspecified.
+    #[test]
+    fn a_different_library_indentation_normalises_equal() {
+        let shallow = b"  1459 *-*     Method UNKNOWN with scope \"Monitor\" in package \"REXX\" (no source available).\n";
+        let deep = b"  1459 *-*         Method UNKNOWN with scope \"Monitor\" in package \"REXX\" (no source available).\n";
+        assert_ne!(
+            shallow.to_vec(),
+            deep.to_vec(),
+            "sanity: byte-exact still differs"
+        );
+        assert_eq!(
+            normalize_library_lines(shallow),
+            normalize_library_lines(deep)
+        );
+        assert_eq!(normalize_stderr(shallow), normalize_stderr(deep));
+        let user = b"     5 *-*     say 1\n";
+        assert_ne!(
+            normalize_library_lines(user),
+            normalize_library_lines(b"     5 *-* say 1\n"),
+            "a user line keeps its indentation"
         );
     }
 

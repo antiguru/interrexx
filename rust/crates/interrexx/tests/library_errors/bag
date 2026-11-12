@@ -1,0 +1,63 @@
+# Bag: the argument-count errors of the operations that read a
+# collection. The operand errors and the errors of the reading are in the
+# examples of the page.
+
+error
+.bag~new~putAll
+----
+93.901
+
+error
+.bag~new~putAll(1, 2)
+----
+93.902
+
+error
+.bag~new~union
+----
+93.901
+
+error
+.bag~new~union(1, 2)
+----
+93.902
+
+error
+.bag~new~difference
+----
+93.901
+
+error
+.bag~new~difference(1, 2)
+----
+93.902
+
+error
+.bag~new~intersection
+----
+93.901
+
+error
+.bag~new~intersection(1, 2)
+----
+93.902
+
+error
+.bag~new~xor
+----
+93.901
+
+error
+.bag~new~xor(1, 2)
+----
+93.902
+
+error
+.bag~new~subset
+----
+93.901
+
+error
+.bag~new~subset(1, 2)
+----
+93.902
