@@ -228,6 +228,17 @@ impl MethodDict {
         }
     }
 
+    /// Whether `name`, already upper case, holds an entry, tombstones included.
+    pub fn contains(&self, name: &str) -> bool {
+        self.entries.contains_key(name)
+    }
+
+    /// How many entries `name`, already upper case, holds, every scope's and
+    /// tombstones included.
+    pub fn entry_count(&self, name: &str) -> usize {
+        self.entries.get(name).map_or(0, Vec::len)
+    }
+
     /// How many names hold an entry, tombstones included.
     pub fn len(&self) -> usize {
         self.entries.len()

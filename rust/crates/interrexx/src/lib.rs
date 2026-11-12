@@ -1719,6 +1719,10 @@ struct Interp {
     /// Whether [`Interp::install_directives`] stops after its first walk:
     /// a translation that runs nothing, as `rexxc` makes.
     translate_only: bool,
+    /// The instance methods a `::CLASS`'s directives are installing, minted and
+    /// waiting to be defined together once the last is, while
+    /// [`Interp::install_class_members`] installs that side; `None` otherwise.
+    instance_installs: Option<Vec<(String, interrexx_classes::MethodId)>>,
     /// While [`Interp::run_loaded`] installs a program's directives, the
     /// settings `::OPTIONS NUMERIC INHERIT` inherits from there: the outer
     /// `Some` says an install is running, the inner value is its caller's.
@@ -2441,6 +2445,7 @@ impl Interp {
             data_packages: Vec::new(),
             untranslated: rustc_hash::FxHashSet::default(),
             translate_only: false,
+            instance_installs: None,
             install_caller: None,
             install_call: None,
             pool: new_pool(),
@@ -3538,6 +3543,8 @@ impl Interp {
             data_packages,
             untranslated: _,
             translate_only: _,
+            // Names and method identities.
+            instance_installs: _,
             install_caller: _,
             install_call: _,
             // Bytes and paths, no `ObjRef` in any of them: the interpreter's

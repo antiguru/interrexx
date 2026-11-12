@@ -3,7 +3,7 @@
 
 use crate::class_graph::ClassKind;
 use crate::registry::ClassRegistry;
-use interrexx_core::ObjRef;
+use interrexx_core::{MethodId, ObjRef};
 
 include!(concat!(env!("OUT_DIR"), "/setup_classes.rs"));
 
@@ -106,6 +106,10 @@ fn replay(
     def: &ClassDefinition,
     keep_setup_methods: bool,
 ) {
+    // A run of instance-method rows is defined in turn by one call, which
+    // builds the behaviour once for the run; a class-method row in the middle
+    // writes only the class side and does not end it.
+    let mut pending: Vec<(String, MethodId)> = Vec::new();
     for op in def.ops {
         match op {
             Op::AddClassMethod(name) => {
@@ -118,7 +122,8 @@ fn replay(
                 {
                     continue;
                 }
-                let method = registry.add_instance_method(class, name);
+                let method = registry.mint_method_id();
+                pending.push(((*name).to_owned(), method));
                 if matches!(op, Op::AddProtectedInstanceMethod(_)) {
                     registry.mark_protected_native(method);
                 }
@@ -128,22 +133,28 @@ fn replay(
                 registry.mark_protected_native(method);
             }
             Op::AddPrivateInstanceMethod(name) => {
-                registry.add_private_instance_method(class, name);
+                let method = registry.mint_method_id();
+                pending.push(((*name).to_owned(), method));
+                registry.mark_private_native(method);
             }
             Op::InheritInstanceMethods(source) => {
+                registry.define_instance_methods_in_turn(class, &std::mem::take(&mut pending));
                 let source_id = registry.lookup(source).unwrap_or_else(|| {
                     panic!("InheritInstanceMethods({source}) before {source} was built")
                 });
                 registry.donate_instance_methods(class, source_id);
             }
             Op::RemoveInstanceMethod(name) => {
+                registry.define_instance_methods_in_turn(class, &std::mem::take(&mut pending));
                 registry.delete_instance_method(class, name);
             }
             Op::HideInstanceMethod(name) => {
+                registry.define_instance_methods_in_turn(class, &std::mem::take(&mut pending));
                 registry.hide_instance_method(class, name);
             }
         }
     }
+    registry.define_instance_methods_in_turn(class, &pending);
 }
 
 /// Build the native class registry: every checklist entry not in
