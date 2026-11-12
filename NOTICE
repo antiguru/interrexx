@@ -7,5 +7,11 @@ interrexx-inventory generate tables of interface facts (class and method
 names, arities, error numbers and error message texts) from Setup.cpp,
 BuiltinFunctions.cpp and rexxmsg.xml at build time.
 
+Attribution: the error message texts, and the error numbers and names they
+belong to, come from the message catalogue of Open Object Rexx (ooRexx),
+https://www.oorexx.org/, copyright the Rexx Language Association and its
+contributors. ooRexx is distributed under the Common Public License 1.0,
+https://opensource.org/license/cpl1-0-txt/.
+
 ooTest and the ooRexx documentation are fetched by scripts/setup-third-party.sh
 and are not redistributed here.

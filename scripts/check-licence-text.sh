@@ -5,9 +5,13 @@
 # searched.
 #
 # The pattern is split so that this script does not match itself.
+#
+# NOTICE is exempt: it attributes the error message texts that the build
+# generates from ooRexx's message catalogue, and names ooRexx's licence for
+# that attribution.
 set -eu
 cd "$(git rev-parse --show-toplevel)"
-found=$(git ls-files -z -- . | perl -0 -ne '
+found=$(git ls-files -z -- . ':(exclude)NOTICE' | perl -0 -ne '
   chomp;
   next unless -f $_ && -T $_;
   open my $f, "<", $_ or die "$_: $!";
