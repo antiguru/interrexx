@@ -256,18 +256,18 @@ fn spliced_file<'a>(
 #[test]
 fn a_directive_inside_a_splice_range_is_a_replacements() {
     let splices = [interrexx_lib::SpliceRange {
-        program: "A.orx",
+        program: "HostA",
         class: "C",
         file: "c.rex",
         start: 10,
         end: 20,
         first_line: 1,
     }];
-    assert_eq!(spliced_file(&splices, "A.orx", 10), Some("c.rex"));
-    assert_eq!(spliced_file(&splices, "A.orx", 19), Some("c.rex"));
-    assert_eq!(spliced_file(&splices, "A.orx", 20), None);
-    assert_eq!(spliced_file(&splices, "A.orx", 9), None);
-    assert_eq!(spliced_file(&splices, "B.orx", 15), None);
+    assert_eq!(spliced_file(&splices, "HostA", 10), Some("c.rex"));
+    assert_eq!(spliced_file(&splices, "HostA", 19), Some("c.rex"));
+    assert_eq!(spliced_file(&splices, "HostA", 20), None);
+    assert_eq!(spliced_file(&splices, "HostA", 9), None);
+    assert_eq!(spliced_file(&splices, "HostB", 15), None);
 }
 
 /// Both tables, built from one interpreter.
