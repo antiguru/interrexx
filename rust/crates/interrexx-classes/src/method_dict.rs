@@ -80,6 +80,12 @@ pub struct MethodDict {
     /// itself is the scopes folded in before it, the part of this list ahead
     /// of it, so its position is all a scope-override send needs.
     scope_list: Vec<ObjRef>,
+    /// At least the largest method any entry names, and `None` while none
+    /// has been entered since the dictionary was built or cleared: an upper
+    /// bound, kept by every write that enters a method and never lowered by
+    /// one that takes a method out, so a search for a method newer than it
+    /// can pass the dictionary by without reading its entries.
+    newest: Option<MethodId>,
 }
 
 impl MethodDict {
@@ -134,6 +140,7 @@ impl MethodDict {
 
     /// [`Self::add_method`] for a key already upper case.
     fn add_method_key(&mut self, key: &Name, scope: ObjRef, method: MethodId) {
+        self.note_method(method);
         let slot = MethodSlot::Defined { scope, method };
         let Some(list) = self.add_slot(key, slot) else {
             return;
@@ -172,6 +179,7 @@ impl MethodDict {
     /// the replaced name may have been inherited from another class, so any
     /// existing method by that name is completely removed.
     pub fn replace_method(&mut self, name: &str, scope: ObjRef, method: MethodId) {
+        self.note_method(method);
         self.entries.insert(
             Self::key(name),
             Slots::One(MethodSlot::Defined { scope, method }),
@@ -191,7 +199,23 @@ impl MethodDict {
                 found = true;
             }
         }
+        if found {
+            self.note_method(new);
+        }
         found
+    }
+
+    /// Raise [`Self::newest`] to cover `method`.
+    fn note_method(&mut self, method: MethodId) {
+        if self.newest.is_none_or(|newest| newest.0 < method.0) {
+            self.newest = Some(method);
+        }
+    }
+
+    /// No entry names a method larger than this, and none names any method
+    /// where it is `None`; see the field.
+    pub fn newest(&self) -> Option<MethodId> {
+        self.newest
     }
 
     /// Add a tombstone under `name` as its highest-priority entry, leaving

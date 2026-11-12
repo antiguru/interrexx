@@ -981,3 +981,34 @@ fn every_dispatch_visible_mutation_changes_the_epoch() {
     // Two graphs never share a stamp.
     assert_ne!(ClassGraph::new().epoch(), ClassGraph::new().epoch());
 }
+
+/// Freeing the behaviours `define` retired answers each method only a freed
+/// behaviour named: not an inherited one, not one a held behaviour still
+/// names, and not one another class's dictionary names, old or new.
+#[test]
+fn freeing_retired_behaviours_answers_only_the_methods_nothing_else_names() {
+    let object = id(1);
+    let class = id(2);
+    let other = id(3);
+    let mut g = ClassGraph::new();
+    g.define_class(object, None, ClassKind::Regular, object);
+    g.define(object, "BASE", MethodId(1));
+    g.define_class(class, Some(object), ClassKind::Regular, object);
+    g.define_class(other, Some(object), ClassKind::Regular, object);
+    // An older method another class names, and a newer one.
+    g.define(other, "SHARED", MethodId(5));
+    g.define(class, "SHARED", MethodId(5));
+    g.define(class, "M", MethodId(10));
+    let held = g.instance_behaviour_handle(class);
+    g.define(class, "M", MethodId(11));
+    g.define(class, "M", MethodId(12));
+    g.define(class, "N", MethodId(13));
+    g.define(other, "LATER", MethodId(13));
+    g.define(class, "N", MethodId(14));
+    let unnamed = g.free_unheld_behaviours([held].into_iter());
+    assert_eq!(unnamed, vec![(class, MethodId(11))]);
+    assert!(g.has_method_at(held, "M"), "a held behaviour was freed");
+    // Once nothing holds it, its method is answered too.
+    let unnamed = g.free_unheld_behaviours(std::iter::empty());
+    assert_eq!(unnamed, vec![(class, MethodId(10))]);
+}

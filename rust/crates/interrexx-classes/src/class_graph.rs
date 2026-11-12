@@ -564,16 +564,40 @@ impl ClassGraph {
             });
         }
         if !unnamed.is_empty() {
-            let named: std::collections::HashSet<MethodId> = behaviours
-                .iter()
-                .flat_map(|behaviour| behaviour.dict.methods())
-                .chain(classes.values().flat_map(|def| {
-                    def.own_instance_methods
-                        .methods()
-                        .chain(def.own_class_methods.methods())
-                }))
-                .collect();
-            unnamed.retain(|(_, method)| !named.contains(method));
+            // Only the freed behaviours' own methods are in question, a few
+            // hundred where the dictionaries left hold tens of thousands of
+            // entries: probe the entries against those, oldest first, and pass
+            // by every dictionary whose newest method is older than the oldest
+            // still open -- which, once the inherited methods are found, is
+            // every dictionary built before the freed methods were minted.
+            let mut open: Vec<u32> = unnamed.iter().map(|(_, method)| method.0).collect();
+            open.sort_unstable();
+            open.dedup();
+            let mut named = vec![false; open.len()];
+            let mut oldest = 0;
+            let dicts = behaviours.iter().map(|behaviour| &behaviour.dict).chain(
+                classes
+                    .values()
+                    .flat_map(|def| [&def.own_instance_methods, &def.own_class_methods]),
+            );
+            'scan: for dict in dicts {
+                if dict.newest().is_none_or(|newest| newest.0 < open[oldest]) {
+                    continue;
+                }
+                for method in dict.methods() {
+                    let Ok(at) = open.binary_search(&method.0) else {
+                        continue;
+                    };
+                    named[at] = true;
+                    while named[oldest] {
+                        oldest += 1;
+                        if oldest == open.len() {
+                            break 'scan;
+                        }
+                    }
+                }
+            }
+            unnamed.retain(|(_, method)| open.binary_search(&method.0).is_ok_and(|at| !named[at]));
             unnamed.sort_unstable_by_key(|(class, method)| (class.bits(), method.0));
             unnamed.dedup();
         }
