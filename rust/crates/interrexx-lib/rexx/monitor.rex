@@ -38,8 +38,4 @@
   if args~isA(.Array) then list = args
   else list = args~request('ARRAY')
   if \list~isA(.Array) then raise syntax 98.946 array(args)
-  -- A message keeps the holes of the argument array, which a FORWARD would
-  -- close up, and an answer that is no answer stays none.
-  msg = .Message~new(destination~peek, name, 'A', list)
-  msg~send
-  if msg~hasResult then return msg~result
+  forward to (destination~peek) message (name) arguments (list)
