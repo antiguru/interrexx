@@ -2016,38 +2016,12 @@ pub(super) fn native_reverse(
     Ok(Some(interp.text_built(bytes)))
 }
 
-/// `String`'s class-side character classes, by the name each is answered
-/// under (`r[class.string.constants]`): the ASCII bytes the predicate
-/// accepts, in ascending order. `blank` is tab then blank, which is also
-/// ascending.
-const CHARACTER_CLASSES: &[(&str, ClassMembers)] = &[
-    ("ALNUM", |b| b.is_ascii_alphanumeric()),
-    ("ALPHA", |b| b.is_ascii_alphabetic()),
-    ("BLANK", |b| b == b' ' || b == b'\t'),
-    ("CNTRL", |b| b < 0x20 || b == 0x7f),
-    ("CR", |b| b == b'\r'),
-    ("DIGIT", |b| b.is_ascii_digit()),
-    ("GRAPH", |b| b.is_ascii_graphic()),
-    ("LOWER", |b| b.is_ascii_lowercase()),
-    ("NL", |b| b == b'\n'),
-    ("NULL", |b| b == 0),
-    ("PRINT", |b| (0x20..=0x7e).contains(&b)),
-    ("PUNCT", |b| b.is_ascii_punctuation()),
-    ("SPACE", |b| b == b' ' || (0x09..=0x0d).contains(&b)),
-    ("TAB", |b| b == b'\t'),
-    ("UPPER", |b| b.is_ascii_uppercase()),
-    ("XDIGIT", |b| b.is_ascii_hexdigit()),
-];
-
-/// Whether a byte belongs to a character class.
-type ClassMembers = fn(u8) -> bool;
-
-/// One class-side character-class method; `which` is its row in
-/// [`CHARACTER_CLASSES`].
-fn class_constant(interp: &mut Interp, which: usize) -> Result<Option<ObjRef>, Failure> {
-    let text: Vec<u8> = (0..=0x7f_u8)
-        .filter(|&b| (CHARACTER_CLASSES[which].1)(b))
-        .collect();
+/// One class-side character-class method: the ASCII bytes `members`
+/// accepts, in ascending order (`r[class.string.constants]`). The
+/// predicate is written at the one method that answers it, so no method
+/// can be paired with another's class.
+fn class_constant(interp: &mut Interp, members: fn(u8) -> bool) -> Result<Option<ObjRef>, Failure> {
+    let text: Vec<u8> = (0..=0x7f_u8).filter(|&b| members(b)).collect();
     Ok(Some(interp.text_built(text)))
 }
 
@@ -2057,7 +2031,7 @@ fn native_class_alnum(
     _receiver: ObjRef,
     _args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
-    class_constant(interp, 0)
+    class_constant(interp, |b| b.is_ascii_alphanumeric())
 }
 
 fn native_class_alpha(
@@ -2066,7 +2040,7 @@ fn native_class_alpha(
     _receiver: ObjRef,
     _args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
-    class_constant(interp, 1)
+    class_constant(interp, |b| b.is_ascii_alphabetic())
 }
 
 fn native_class_blank(
@@ -2075,7 +2049,7 @@ fn native_class_blank(
     _receiver: ObjRef,
     _args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
-    class_constant(interp, 2)
+    class_constant(interp, |b| b == b' ' || b == b'\t')
 }
 
 fn native_class_cntrl(
@@ -2084,7 +2058,7 @@ fn native_class_cntrl(
     _receiver: ObjRef,
     _args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
-    class_constant(interp, 3)
+    class_constant(interp, |b| b < 0x20 || b == 0x7f)
 }
 
 fn native_class_cr(
@@ -2093,7 +2067,7 @@ fn native_class_cr(
     _receiver: ObjRef,
     _args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
-    class_constant(interp, 4)
+    class_constant(interp, |b| b == b'\r')
 }
 
 fn native_class_digit(
@@ -2102,7 +2076,7 @@ fn native_class_digit(
     _receiver: ObjRef,
     _args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
-    class_constant(interp, 5)
+    class_constant(interp, |b| b.is_ascii_digit())
 }
 
 fn native_class_graph(
@@ -2111,7 +2085,7 @@ fn native_class_graph(
     _receiver: ObjRef,
     _args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
-    class_constant(interp, 6)
+    class_constant(interp, |b| b.is_ascii_graphic())
 }
 
 fn native_class_lower(
@@ -2120,7 +2094,7 @@ fn native_class_lower(
     _receiver: ObjRef,
     _args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
-    class_constant(interp, 7)
+    class_constant(interp, |b| b.is_ascii_lowercase())
 }
 
 fn native_class_nl(
@@ -2129,7 +2103,7 @@ fn native_class_nl(
     _receiver: ObjRef,
     _args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
-    class_constant(interp, 8)
+    class_constant(interp, |b| b == b'\n')
 }
 
 fn native_class_null(
@@ -2138,7 +2112,7 @@ fn native_class_null(
     _receiver: ObjRef,
     _args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
-    class_constant(interp, 9)
+    class_constant(interp, |b| b == 0)
 }
 
 fn native_class_print(
@@ -2147,7 +2121,7 @@ fn native_class_print(
     _receiver: ObjRef,
     _args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
-    class_constant(interp, 10)
+    class_constant(interp, |b| (0x20..=0x7e).contains(&b))
 }
 
 fn native_class_punct(
@@ -2156,7 +2130,7 @@ fn native_class_punct(
     _receiver: ObjRef,
     _args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
-    class_constant(interp, 11)
+    class_constant(interp, |b| b.is_ascii_punctuation())
 }
 
 fn native_class_space(
@@ -2165,7 +2139,7 @@ fn native_class_space(
     _receiver: ObjRef,
     _args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
-    class_constant(interp, 12)
+    class_constant(interp, |b| b == b' ' || (0x09..=0x0d).contains(&b))
 }
 
 fn native_class_tab(
@@ -2174,7 +2148,7 @@ fn native_class_tab(
     _receiver: ObjRef,
     _args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
-    class_constant(interp, 13)
+    class_constant(interp, |b| b == b'\t')
 }
 
 fn native_class_upper(
@@ -2183,7 +2157,7 @@ fn native_class_upper(
     _receiver: ObjRef,
     _args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
-    class_constant(interp, 14)
+    class_constant(interp, |b| b.is_ascii_uppercase())
 }
 
 fn native_class_xdigit(
@@ -2192,27 +2166,28 @@ fn native_class_xdigit(
     _receiver: ObjRef,
     _args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
-    class_constant(interp, 15)
+    class_constant(interp, |b| b.is_ascii_hexdigit())
 }
 
-/// The bodies of [`CHARACTER_CLASSES`], row for row.
-const CHARACTER_CLASS_BODIES: [NativeMethod; 16] = [
-    native_class_alnum,
-    native_class_alpha,
-    native_class_blank,
-    native_class_cntrl,
-    native_class_cr,
-    native_class_digit,
-    native_class_graph,
-    native_class_lower,
-    native_class_nl,
-    native_class_null,
-    native_class_print,
-    native_class_punct,
-    native_class_space,
-    native_class_tab,
-    native_class_upper,
-    native_class_xdigit,
+/// `String`'s class-side character-class methods, by the name each is
+/// answered under (`r[class.string.constants]`).
+const CHARACTER_CLASSES: [(&str, NativeMethod); 16] = [
+    ("ALNUM", native_class_alnum),
+    ("ALPHA", native_class_alpha),
+    ("BLANK", native_class_blank),
+    ("CNTRL", native_class_cntrl),
+    ("CR", native_class_cr),
+    ("DIGIT", native_class_digit),
+    ("GRAPH", native_class_graph),
+    ("LOWER", native_class_lower),
+    ("NL", native_class_nl),
+    ("NULL", native_class_null),
+    ("PRINT", native_class_print),
+    ("PUNCT", native_class_punct),
+    ("SPACE", native_class_space),
+    ("TAB", native_class_tab),
+    ("UPPER", native_class_upper),
+    ("XDIGIT", native_class_xdigit),
 ];
 
 impl Interp {
@@ -2225,7 +2200,7 @@ impl Interp {
             .classes()
             .lookup("String")
             .expect("String is a native class");
-        for ((name, _), body) in CHARACTER_CLASSES.iter().zip(CHARACTER_CLASS_BODIES) {
+        for (name, body) in CHARACTER_CLASSES {
             let method = self.classes().mint_method_id();
             self.classes().define_class_method(string, name, method);
             self.object_model().natives.insert(
