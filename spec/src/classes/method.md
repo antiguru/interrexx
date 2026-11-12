@@ -1380,7 +1380,7 @@ bad: say arg(1) '=>' condition('o')~code
   return 'return 2'
 ```
 
-```output defect=#157
+```output
 request ARRAY
 .method~new("n", .src~new("return 1")) => 88.913
 request ARRAY
