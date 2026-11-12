@@ -1277,13 +1277,3 @@ or `TIME` is a character that is no letter, and is refused like any other: the
 letter against the set of letters as a search of a C string does, which finds
 a 0 byte in every set: a 0 byte `option` with an `osep` raises `SYNTAX 40.904`
 and a 0 byte `informat` with an `isep` raises `SYNTAX 40.44`.
-
-## 166. The command that STREAM carries out is named by its first word
-
-What the `STREAM` function does with a stream of the name, beyond what the
-command itself does, follows the command that its first word names. A `QUERY`
-whose words include `OPEN` or `CLOSE` is a `QUERY`: it raises `SYNTAX 93.0`
-and leaves the stream open at its position. ooRexx searches the whole command
-for the words `OPEN` and `CLOSE`, and treats such a command as an OPEN or a
-CLOSE in its own bookkeeping of the stream, where interrexx does not. No
-program is known whose output shows the difference.

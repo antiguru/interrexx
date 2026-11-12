@@ -333,7 +333,7 @@ pub(crate) fn stream(
     let answer = answer.ok_or_else(|| Failure::from(Raised::no_result(b"COMMAND")))?;
     // A CLOSE drops the entry, and an OPEN drops it when the answer is not
     // `READY:`; the command is the one its first word names
-    // (r[bif.stream.deviation.166]).
+    // (r[bif.stream.command]).
     match command.as_deref().and_then(first_command) {
         Some(StreamCommand::Close) => interp.forget_stream(&stream_name),
         Some(StreamCommand::Open) if interp.to_text(answer).as_ref() != b"READY:" => {
@@ -355,7 +355,7 @@ enum StreamCommand {
 /// The command a `STREAM` command string names: its first word, in any case,
 /// shortened to any of its leading letters (r[bif.stream.command]). Words
 /// later in the string never count, so `query position close` is a `QUERY`
-/// (r[bif.stream.deviation.166]).
+/// (r[bif.stream.command]).
 fn first_command(command: &[u8]) -> Option<StreamCommand> {
     let word = command
         .split(|byte| byte.is_ascii_whitespace())
