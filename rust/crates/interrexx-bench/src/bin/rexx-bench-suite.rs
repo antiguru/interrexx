@@ -89,6 +89,10 @@ const AXES: &[Axis] = &[
         role: Role::Loop,
     },
     Axis {
+        name: "bigdigits",
+        role: Role::Loop,
+    },
+    Axis {
         name: "churn",
         role: Role::Loop,
     },

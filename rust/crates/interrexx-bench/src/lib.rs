@@ -75,6 +75,10 @@ pub static PROGRAMS: &[&str] = &[
     // `List` insertion, removal and stepping at the ends and after a handle
     // in the middle of a long list, each constant time per operation.
     "listops",
+    // Arithmetic at NUMERIC DIGITS 1000, on operands of tens to a thousand
+    // digits: the only axis where an operation's cost grows with its
+    // operands' length rather than staying constant (issue #58).
+    "bigdigits",
 ];
 
 /// Programs in `bench-programs/` that the criterion harness deliberately does
