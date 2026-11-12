@@ -156,7 +156,7 @@ fn crate_rexx() -> Command {
     let api = Path::new(env!("CARGO_TARGET_TMPDIR")).join("smtp-wire-api");
     let _ = std::fs::remove_dir_all(&api);
     std::fs::create_dir_all(&api).expect("a service directory");
-    let mut command = Command::new("timeout");
+    let mut command = Command::new(env!("CARGO_BIN_EXE_bounded-run"));
     command
         .args(["-k", "5", "60"])
         .arg(env!("CARGO_BIN_EXE_rexx"))
@@ -186,7 +186,7 @@ fn smtp_and_mime_send_the_oracles_bytes_to_a_scripted_server() {
         let path = std::env::var_os("PATH").unwrap_or_default();
         let mut directories = vec![oracle.join("bin")];
         directories.extend(std::env::split_paths(&path));
-        let mut command = Command::new("timeout");
+        let mut command = Command::new(env!("CARGO_BIN_EXE_bounded-run"));
         command
             .args(["-k", "5", "60"])
             .arg(oracle.join("bin/rexx"))

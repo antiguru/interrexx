@@ -98,7 +98,7 @@ fn competing_child_waiters_accept_either_valid_winner() {
         return\n";
     let (_, dir) = rexx("sys-wait-race", program);
     let output = Command::new("memcap")
-        .args(["2G", "timeout", "-k", "2", "30"])
+        .args(["2G", env!("CARGO_BIN_EXE_bounded-run"), "-k", "2", "30"])
         .arg(env!("CARGO_BIN_EXE_rexx"))
         .arg(dir.join("p.rex"))
         .current_dir(&dir)
@@ -129,7 +129,14 @@ fn competing_child_waiters_accept_either_valid_winner() {
 fn waitable_child(mode: &str) -> std::process::Output {
     let (_, dir) = rexx(&format!("sys-wait-owned-{mode}"), "say SysWait()\n");
     let output = Command::new("memcap")
-        .args(["2G", "timeout", "-k", "2", "15", "python3"])
+        .args([
+            "2G",
+            env!("CARGO_BIN_EXE_bounded-run"),
+            "-k",
+            "2",
+            "15",
+            "python3",
+        ])
         .arg(Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/rexxutil_process/owned_child.py"))
         .arg(mode)
         .arg(env!("CARGO_BIN_EXE_rexx"))

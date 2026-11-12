@@ -240,7 +240,7 @@ fn an_overlap_probe_restores_absent_empty_and_present_timezone_settings() {
         fs::write(&program, source).unwrap();
         let cpp = oracle.run_in(&program, &empty_dir(&format!("restore-oracle-{name}")), &[]);
         let out = Command::new("memcap")
-            .args(["2G", "timeout", "-k", "2", "20"])
+            .args(["2G", env!("CARGO_BIN_EXE_bounded-run"), "-k", "2", "20"])
             .arg(env!("CARGO_BIN_EXE_rexx"))
             .arg(&program)
             .current_dir(empty_dir(&format!("restore-crate-{name}")))

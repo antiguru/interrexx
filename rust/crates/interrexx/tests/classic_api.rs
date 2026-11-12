@@ -108,7 +108,7 @@ fn rexx(arguments: &[&str], cwd: &Path, api: &Path, library_path: OsString) -> C
         std::env::split_paths(&std::env::var_os("PATH").unwrap_or_default()),
     ))
     .expect("a PATH");
-    let mut command = Command::new("timeout");
+    let mut command = Command::new(env!("CARGO_BIN_EXE_bounded-run"));
     command
         .args(["-k", "5", "600"])
         .arg(REXX)
@@ -719,7 +719,7 @@ fn an_invocation_group_runs_programs_in_instances(group: &str, ran: usize, asser
 #[test]
 fn concurrent_instances_start_run_and_terminate() {
     let api = scratch().join("api-provoke-locks");
-    let output = Command::new("timeout")
+    let output = Command::new(env!("CARGO_BIN_EXE_bounded-run"))
         .args(["-k", "5", "300"])
         .arg(testbinaries().join("provoke_locks"))
         .arg(testbinaries().join("provoke_locks.rex"))
@@ -791,7 +791,7 @@ fn run_binary(
         std::fs::write(dir.join(file), text).expect("a program written");
     }
     let api = scratch().join(format!("api-{name}"));
-    let output = Command::new("timeout")
+    let output = Command::new(env!("CARGO_BIN_EXE_bounded-run"))
         .args(["-k", "5", "60"])
         .arg(binary)
         .args(arguments)
@@ -866,7 +866,7 @@ fn c_stdio_and_rexx_output_keep_their_order_in_files() {
     std::fs::create_dir_all(&dir).expect("the driver's directory");
     let (out, err) = (dir.join("out.txt"), dir.join("err.txt"));
     let api = scratch().join("api-stdio");
-    let status = Command::new("timeout")
+    let status = Command::new(env!("CARGO_BIN_EXE_bounded-run"))
         .args(["-k", "5", "60"])
         .arg(binary)
         .current_dir(&dir)
@@ -1081,7 +1081,7 @@ fn callrexx1_runs_as_on_the_oracle() {
         }
     }
     let api = scratch().join("api-callrexx1");
-    let mut child = Command::new("timeout")
+    let mut child = Command::new(env!("CARGO_BIN_EXE_bounded-run"))
         .args(["-k", "5", "120"])
         .arg(testbinaries().join("callrexx1"))
         .current_dir(&dir)

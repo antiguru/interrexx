@@ -170,11 +170,11 @@ pub fn crate_run_once(
     if let Err(problem) = check_path(&path, &bin) {
         panic!("{problem}");
     }
-    // `--foreground` keeps `timeout` in the run's process group, so the kill
+    // `--foreground` keeps `bounded-run` in the run's process group, so the kill
     // `run_process` sends the group once the run ends reaches what a test left
     // running.
     let mut words = vec![
-        "timeout".to_string(),
+        env!("CARGO_BIN_EXE_bounded-run").to_string(),
         "--foreground".to_string(),
         "-s".to_string(),
         "KILL".to_string(),

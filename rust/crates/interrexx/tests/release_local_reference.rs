@@ -84,7 +84,7 @@ fn peak_kib(dir: &Path, passes: u32) -> u64 {
     };
     let output = command
         .args([
-            "timeout",
+            env!("CARGO_BIN_EXE_bounded-run"),
             "-k",
             "5",
             "120",

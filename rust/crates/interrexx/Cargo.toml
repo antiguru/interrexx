@@ -101,6 +101,12 @@ nix = { version = "0.31.3", default-features = false, features = ["net", "proces
 # directly (`src/builtin/rxsock/hosts.rs`).
 dns-lookup = "4"
 
+# The time limit the tests put around a program they start, so that no test
+# depends on which `timeout` the system has (`tests/support/bounded_run.rs`).
+[[bin]]
+name = "bounded-run"
+path = "tests/support/bounded_run.rs"
+
 [features]
 # The pinned-park counter, `src/pinning.rs`.
 pinning = []

@@ -135,7 +135,7 @@ fn render(dir: &Path, stdout: &[u8], stderr: &[u8], status: Option<i32>, oracle:
 /// A command running `program` from `dir` under `timeout`, the oracle's
 /// under its address-space cap.
 fn command(program: &Path, dir: &Path, oracle: bool) -> Command {
-    let mut command = Command::new("timeout");
+    let mut command = Command::new(env!("CARGO_BIN_EXE_bounded-run"));
     command.args(["-k", "5", "20"]);
     if oracle {
         command

@@ -51,7 +51,7 @@ impl Service {
             &std::env::var_os("PATH").unwrap_or_default(),
         )))
         .expect("a PATH");
-        let mut command = Command::new("timeout");
+        let mut command = Command::new(env!("CARGO_BIN_EXE_bounded-run"));
         command
             .args(["-k", "5", "30"])
             .arg(REXX)
@@ -438,7 +438,7 @@ fn child_runs_the_oracle() {
     let dir = oracle_runtime::dir();
     let program = dir.join("one.rex");
     std::fs::write(&program, "say 1\n").expect("the program is written");
-    let output = Command::new("timeout")
+    let output = Command::new(env!("CARGO_BIN_EXE_bounded-run"))
         .args(["-k", "5", "20"])
         .arg(root.join("bin/rexx"))
         .arg(&program)
