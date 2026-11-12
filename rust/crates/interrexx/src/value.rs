@@ -18,8 +18,10 @@ pub(crate) struct TextNumbers {
 }
 
 /// How many parses [`TextNumbers`] remembers. A power of two, so the slot is
-/// a mask rather than a division.
-const TEXT_NUMBERS: usize = 32;
+/// a mask rather than a division. Measured on `rexxcps`, whose loop compares
+/// a few dozen short values: at 32 one lookup in five missed and reparsed,
+/// and 64 retires 1.3% fewer instructions; 128 adds less than 0.1% more.
+const TEXT_NUMBERS: usize = 64;
 
 impl TextNumbers {
     pub(crate) fn new() -> Self {
