@@ -460,8 +460,8 @@ unsafe fn instance_options(options: *const RexxOption) -> interrexx::embedding::
                         read.registered_libraries.push((name, table));
                     }
                 }
-                // An unknown name ends the list: the oracle's `processOptions` returns at it
-                // (`runtime/InterpreterInstance.cpp:866-870`), leaving the options after it unread,
+                // An unknown name ends the list: the oracle's option processing stops at it,
+                // leaving the options after it unread,
                 // and creates the instance all the same.
                 _ => break,
             }

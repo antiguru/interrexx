@@ -1,4 +1,4 @@
-//! `ClassGraph`: the oracle's `RexxClass` cascade over `MethodDict`.
+//! `ClassGraph`: the oracle's class-object cascade over `MethodDict`.
 
 use crate::method_dict::{MethodDict, MethodSlot};
 use interrexx_core::MethodId;
@@ -8,8 +8,8 @@ use std::collections::BTreeSet;
 
 /// Whether a class was declared with `SUBCLASS`/plain inheritance or with
 /// `MIXINCLASS`. The only difference this makes is `base_class`: a
-/// `Mixin`'s is inherited from the class named after `MIXINCLASS`
-/// (`RexxClass::mixinClass`, `ClassClass.cpp:1514-1529`), a `Regular`
+/// `Mixin`'s is inherited from the class named after `MIXINCLASS`,
+/// a `Regular`
 /// class's is itself.
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum ClassKind {
@@ -18,22 +18,21 @@ pub enum ClassKind {
 }
 
 /// Why [`ClassGraph::inherit`] refused to build the edge, each variant named
-/// for the `SYNTAX` condition `RexxClass::inherit` reports in its place
-/// (`ClassClass.cpp:1298`-`1332`).
+/// for the `SYNTAX` condition `~inherit` reports in its place.
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum InheritRefusal {
-    /// `Error_Execution_mixinclass` (`:1299`), 98.942: the target is not a
+    /// `SYNTAX` 98.942: the target is not a
     /// `MIXINCLASS`, so nothing may inherit it.
     NotAMixin,
-    /// `Error_Execution_recursive_inherit` (`:1311`, `:1317`), 98.944: one of
+    /// `SYNTAX` 98.944: one of
     /// the two classes is already an ancestor of the other, in whichever
     /// direction.
     Recursive,
-    /// `Error_Execution_baseclass` (`:1323`, `:1329`), 98.943: the inheriting
+    /// `SYNTAX` 98.943: the inheriting
     /// class does not already have the mixin's base class in scope. The base
     /// class travels with the refusal because the oracle's message names it.
     BaseClass(ObjRef),
-    /// `Error_Execution_uninherit` (`:1350`, `:1407`), 98.945: a class named
+    /// `SYNTAX` 98.945: a class named
     /// as a position or as an `~uninherit` target is not one this class
     /// inherits. The class travels with the refusal because the oracle's
     /// message names it, and it is the *named* class rather than the mixin:
@@ -59,7 +58,7 @@ struct Behaviour {
 
 struct ClassDef {
     /// `Regular` or `Mixin` -- oracle's `isMixinClass`. `inherit`'s
-    /// `Error_Execution_mixinclass` check reads this: only a `Mixin` may
+    /// mixin check reads this: only a `Mixin` may
     /// be inherited.
     kind: ClassKind,
     /// Cascade order: the explicit superclass first (if any), then every
@@ -70,13 +69,13 @@ struct ClassDef {
     /// change: populated by both [`ClassGraph::define_class`] (the
     /// explicit superclass) and [`ClassGraph::inherit`] (a mixin), and
     /// walked identically either way -- oracle's `subClasses`, populated
-    /// uniformly by `addSubClass` from both `subclass()` and `inherit()`.
+    /// uniformly from both `~subclass` and `~inherit`.
     subclasses: Vec<ObjRef>,
     /// This class's own instance methods, always at its own scope --
-    /// oracle's `instanceMethodDictionary`.
+    /// oracle's instance-method dictionary.
     own_instance_methods: MethodDict,
     /// This class's own class (static) methods -- oracle's
-    /// `classMethodDictionary`.
+    /// class-method dictionary.
     own_class_methods: MethodDict,
     instance_behaviour: BehaviourHandle,
     class_behaviour: BehaviourHandle,
@@ -89,15 +88,15 @@ struct ClassDef {
     base_class: ObjRef,
     /// The class whose *instance* behaviour gets merged into this class's
     /// own class-behaviour by [`ClassGraph::cascade_build`]
-    /// (`RexxClass::createClassBehaviour`'s `metaClass->mergeInstanceBehaviour`
-    /// branch, `ClassClass.cpp:1119-1127`) -- oracle's `metaClass` field.
-    /// Every class built by `interpreter/memory/Setup.cpp` has `.Class` here,
+    /// (the oracle merges the metaclass's instance behaviour into a class's
+    /// class behaviour) -- oracle's `metaClass` field.
+    /// Every class the oracle's bootstrap builds has `.Class` here,
     /// including `.Class` itself, self-referentially (measured:
     /// `.class~metaclass~id` is `"Class"`).
     metaclass: ObjRef,
     /// The class this class object's own behaviour belongs to -- oracle's
-    /// `behaviour->owningClass`, set from the metaclass `subclass` was given
-    /// or defaulted to (`ClassClass.cpp:1615`), and what `~class` answers for
+    /// owning-class field, set from the metaclass `~subclass` was given
+    /// or defaulted to, and what `~class` answers for
     /// a class object.
     /// ```text
     /// ::CLASS T  SUBCLASS MC METACLASS M1   ~metaClass MC     ~class M1      part
@@ -109,27 +108,26 @@ struct ClassDef {
     /// ```
     owning_class: ObjRef,
     /// This class may be named as another class's metaclass -- oracle's
-    /// `META_CLASS` class flag, which `RexxClass::subclass` tests before it
-    /// will build anything from the metaclass it was handed (`:1572`).
+    /// `META_CLASS` class flag, which `~subclass` tests before it
+    /// will build anything from the metaclass it was handed.
     is_metaclass: bool,
     /// This class's instances need `UNINIT` run when they are collected --
     /// oracle's `HAS_UNINIT` class flag, which is what
-    /// `completeNewObject` reads to register each new instance
-    /// (`ClassClass.cpp:1892`).
+    /// instance creation reads to register each new instance.
     has_uninit: bool,
     /// Some class this one inherits from carries `UNINIT` -- oracle's
     /// `PARENT_HAS_UNINIT`, set by each constructor that builds an
-    /// inheritance edge: `subclass` (`:1634`), `mixinClass` (`:1525`) and
-    /// `inherit` (`:1364`).
+    /// inheritance edge: `~subclass`, `~mixinClass` and
+    /// `~inherit`.
     parent_has_uninit: bool,
     /// `~new` on this class refuses -- oracle's `ABSTRACT` class flag, set by
-    /// `RexxClass::makeAbstract` (`ClassClass.cpp:1754`) and read by
-    /// `checkAbstract` (`:1741`) as the first step of `completeNewObject`.
+    /// marking the class abstract and read as the first step of
+    /// instance creation.
     is_abstract: bool,
     /// This class may not be altered from Rexx -- oracle's `REXX_DEFINED`
-    /// class flag. `RexxClass::liveGeneral` sets it on every class in the
-    /// image under `PREPARINGIMAGE` (`ClassClass.cpp:136`-`:142`), which is
-    /// every class the image holds: the ones `Setup.cpp` builds and the ones
+    /// class flag. Image preparation sets it on every class in the
+    /// image, which is
+    /// every class the image holds: the ones the oracle's bootstrap builds and the ones
     /// the interpreter's own Rexx-written library declares alike. A `::CLASS`
     /// a program declares does not carry it.
     rexx_defined: bool,
@@ -155,8 +153,7 @@ pub struct ClassGraph {
     /// The entries of the behaviours retired since [`ClassGraph::take_retired_entries`].
     retired_entries: usize,
     /// Oracle's uninit table restricted to class objects -- the entries
-    /// `RexxClass::checkUninit`'s `requiresUninit()` (`ClassClass.cpp:1224`)
-    /// makes, in the order it makes them.
+    /// the uninit check makes, in the order it makes them.
     uninit_classes: Vec<ObjRef>,
 }
 
@@ -178,8 +175,8 @@ impl ClassGraph {
     }
 
     /// Register a new class and build its two initial behaviours by
-    /// cascading from `superclass` -- oracle's `RexxClass::subclass`
-    /// (`ClassClass.cpp:1562`). `superclass` is `None` only for a root
+    /// cascading from `superclass` -- oracle's `~subclass`.
+    /// `superclass` is `None` only for a root
     /// class with no ancestor (a test's own stand-in for `.Object`).
     pub fn define_class(
         &mut self,
@@ -232,7 +229,7 @@ impl ClassGraph {
         self.rebuild_behaviour(id, Side::Class);
     }
 
-    /// A class `RexxClass::newRexx` (`ClassClass.cpp:1776`) makes: a copy of
+    /// A class `~new` makes: a copy of
     /// `receiver` whose class behaviour is a copy of `receiver`'s instance
     /// behaviour, whose instance side derives from `root` alone, and which no
     /// subclass list holds. `metaclass` is `receiver` where it is not one of
@@ -278,8 +275,7 @@ impl ClassGraph {
 
     /// A behaviour of its own holding `class`'s current instance methods with
     /// each of `hidden` hidden in front, as `defineInstanceMethod` with a
-    /// `.nil` method does to one object's behaviour copy
-    /// (`ObjectClass.cpp:2297`).
+    /// `.nil` method does to one object's behaviour copy.
     pub fn hiding_behaviour(&mut self, class: ObjRef, hidden: &[&str]) -> BehaviourHandle {
         let source = self.classes[&class].instance_behaviour;
         let mut dict = self.behaviours[source.index()].dict.clone();
@@ -311,8 +307,8 @@ impl ClassGraph {
         self.classes[&class].cloned
     }
 
-    /// `RexxClass::subclass`'s rewiring of the class its metaclass's `NEW`
-    /// answered (`ClassClass.cpp:1585`-`:1626`): `superclass` becomes its
+    /// `~subclass`'s rewiring of the class its metaclass's `NEW`
+    /// answered: `superclass` becomes its
     /// only superclass, it becomes a metaclass when `superclass` is one,
     /// `metaclass` owns its class behaviour, and both behaviours are rebuilt
     /// in place. Its own method dictionaries are kept.
@@ -372,10 +368,9 @@ impl ClassGraph {
         }
     }
 
-    /// `RexxClass::enhanced`'s merge of its methods into the dummy subclass's
+    /// `~enhanced`'s merge of its methods into the dummy subclass's
     /// own instance dictionary, each defined at `scope`, `None` hiding the
-    /// name, then the instance behaviour rebuilt in place
-    /// (`ClassClass.cpp:1456`-`:1463`).
+    /// name, then the instance behaviour rebuilt in place.
     pub fn enhance_instance_methods(
         &mut self,
         class: ObjRef,
@@ -395,8 +390,8 @@ impl ClassGraph {
         self.rebuild_behaviour(class, Side::Instance);
     }
 
-    /// `enhanced_object->behaviour->setOwningClass(this)`
-    /// (`ClassClass.cpp:1474`) for an enhanced object that is a class: what
+    /// The oracle's `~enhanced` sets the owning class of an enhanced
+    /// object that is a class: what
     /// its `~class` answers.
     pub fn set_owning_class(&mut self, class: ObjRef, owner: ObjRef) {
         self.classes
@@ -406,26 +401,24 @@ impl ClassGraph {
     }
 
     /// Oracle's `hasUninitDefined() || parentHasUninitDefined()`, the exact
-    /// pair every propagation site asks about the class it is deriving from
-    /// (`ClassClass.cpp:1364`, `:1525`, `:1634`).
+    /// pair every propagation site asks about the class it is deriving from.
     fn uninit_reaches(&self, class: ObjRef) -> bool {
         let def = &self.classes[&class];
         def.has_uninit || def.parent_has_uninit
     }
 
     /// Whether `class`'s instances need `UNINIT` -- oracle's
-    /// `hasUninitDefined`. See the field for what sets it.
+    /// has-uninit flag. See the field for what sets it.
     pub fn has_uninit(&self, class: ObjRef) -> bool {
         self.classes[&class].has_uninit
     }
 
-    /// Oracle's `RexxClass::checkUninit` (`ClassClass.cpp:1210`-`:1226`), both
+    /// Oracle's uninit check, both
     /// halves of it: set [`Self::has_uninit`] when the class's **flattened**
     /// instance behaviour answers `UNINIT`, whether the class defines it or
     /// inherits it, and enter the class object itself in
     /// the `uninit_classes` list when its **class** behaviour answers `UNINIT`
-    /// -- `if (hasUninitMethod()) requiresUninit();` (`:1224`), which is where
-    /// a `::METHOD uninit CLASS` lands.
+    /// -- which is where a `::METHOD uninit CLASS` lands.
     pub fn check_uninit(&mut self, class: ObjRef) {
         let instance = self.behaviour_handle(class, Side::Instance);
         if self.behaviours[instance.index()].dict.has_method("UNINIT") {
@@ -473,7 +466,7 @@ impl ClassGraph {
         }
         // A subclass list holds classes that may have died: the oracle's own
         // `subClasses` is a list of `WeakReference` and `getSubClasses`
-        // prunes as it reads (`ClassClass.hpp:208`, `ClassClass.cpp:473`).
+        // prunes as it reads.
         for def in classes.values_mut() {
             def.subclasses.retain(|sub| !dead.contains(sub));
         }
@@ -587,13 +580,13 @@ impl ClassGraph {
         self.classes[&class].parent_has_uninit
     }
 
-    /// Oracle's `RexxClass::makeAbstract` past its metaclass refusal, which
+    /// Oracle's abstract marking past its metaclass refusal, which
     /// the caller raises -- see [`ClassDef::is_abstract`].
     pub fn make_abstract(&mut self, class: ObjRef) {
         self.classes.get_mut(&class).unwrap().is_abstract = true;
     }
 
-    /// Oracle's `RexxClass::isAbstract`, what `checkAbstract` reads.
+    /// Oracle's abstract test, which instance creation reads.
     pub fn is_abstract(&self, class: ObjRef) -> bool {
         self.classes[&class].is_abstract
     }
@@ -611,8 +604,8 @@ impl ClassGraph {
         self.behaviours[handle.index()].dict.has_scope(scope)
     }
 
-    /// Oracle's `createInstanceBehaviour` / `createClassBehaviour`
-    /// (`ClassClass.cpp:1098`, `:1148`), unified over which per-class
+    /// The oracle's instance- and class-behaviour construction,
+    /// unified over which per-class
     /// dictionary side is folded in. Ancestors are processed
     /// furthest-inherited-first (`superclasses.iter().rev()`, matching the
     /// oracle's `for index = items() downto 1`), skipping a superclass
@@ -653,9 +646,7 @@ impl ClassGraph {
         }
     }
 
-    /// Oracle's `instanceBehaviour->clearMethodDictionary()` followed by
-    /// `createInstanceBehaviour(instanceBehaviour)` (or the class-side
-    /// equivalent): clear the *existing* dictionary in place, then cascade
+    /// Oracle's rebuild of a behaviour: clear the *existing* dictionary in place, then cascade
     /// into it, rather than building a separate dictionary and swapping it
     /// in. The handle's identity is unaffected either way; this is the
     /// literal oracle shape rather than an equivalent one.
@@ -669,7 +660,7 @@ impl ClassGraph {
         behaviour.version += 1;
     }
 
-    /// Oracle's `updateSubClasses` (`:1036`): rebuild both behaviours in
+    /// Oracle's full subclass update: rebuild both behaviours in
     /// place, instance side first ("the added methods may have an impact
     /// on metaclasses"), then [`check_uninit`](Self::check_uninit), then
     /// cascade to every subclass. This is what [`inherit`](Self::inherit)
@@ -686,8 +677,8 @@ impl ClassGraph {
         }
     }
 
-    /// Oracle's `updateInstanceSubClasses` (`:1071`): rebuild only the
-    /// instance behaviour, in place, run `checkUninit` where `uninit` says
+    /// Oracle's instance-side subclass update: rebuild only the
+    /// instance behaviour, in place, run the uninit check where `uninit` says
     /// the change touched `UNINIT` (no other change can make it resolve),
     /// then cascade. This is what
     /// [`define`](Self::define) calls **after** repointing `class` itself
@@ -705,10 +696,9 @@ impl ClassGraph {
         }
     }
 
-    /// `~define`. Oracle's `defineMethod` (`ClassClass.cpp:819`) copies
-    /// `instanceBehaviour` *before* mutating it -- its own comment reads
-    /// "make a copy of the instance behaviour so any previous objects
-    /// aren't enhanced" -- then cascades only the instance side. The copy
+    /// `~define`. The oracle copies the instance behaviour
+    /// *before* mutating it, so that previous objects are not enhanced,
+    /// then cascades only the instance side. The copy
     /// is why an instance created before this call keeps answering the
     /// old method set: `class` is repointed at a brand-new
     /// [`BehaviourHandle`] and the old one is never written to again,
@@ -724,10 +714,8 @@ impl ClassGraph {
         self.update_instance_sub_classes(class, name.eq_ignore_ascii_case("UNINIT"));
     }
 
-    /// `~define` with the method argument omitted, and `Setup.cpp`'s
-    /// `HideMethod`: a `.nil` tombstone under `name`, which the oracle's own
-    /// comment calls "hiding this method definition"
-    /// (`ClassClass.cpp:836`-`:843`).
+    /// `~define` with the method argument omitted, and the oracle's
+    /// bootstrap hiding of a method: a `.nil` tombstone under `name`.
     pub fn hide(&mut self, class: ObjRef, name: &str) {
         self.classes
             .get_mut(&class)
@@ -750,12 +738,12 @@ impl ClassGraph {
         self.update_instance_sub_classes(class, name.eq_ignore_ascii_case("UNINIT"));
     }
 
-    /// `~delete`, and `Setup.cpp`'s `RemoveMethod`: take `name` out of
-    /// `class`'s own instance dictionary -- `RexxClass::deleteMethod`
-    /// (`ClassClass.cpp:952`). Answers whether there was anything to remove,
+    /// `~delete`, and the oracle's bootstrap removal of a method: take `name`
+    /// out of `class`'s own instance dictionary.
+    /// Answers whether there was anything to remove,
     /// which is what decides whether the subclasses are told: the oracle
     /// copies the behaviour unconditionally and calls
-    /// `updateInstanceSubClasses` only inside the `if` (`:966`-`:971`).
+    /// updates subclasses only inside the `if`.
     pub fn delete(&mut self, class: ObjRef, name: &str) -> bool {
         let removed = self
             .classes
@@ -776,9 +764,7 @@ impl ClassGraph {
     }
 
     /// `~defineMethods`: a whole table of names in one mutation --
-    /// `RexxClass::defineMethodsRexx` (`ClassClass.cpp:518`), whose
-    /// `replaceMethods` is a `replaceMethod` per entry (`:536`,
-    /// `MethodDictionary.cpp:221`-`:237`) and which copies the behaviour and
+    /// `~defineMethods`, which replaces one method per entry and copies the behaviour and
     /// cascades once for the whole table rather than once per name.
     pub fn define_methods(&mut self, class: ObjRef, methods: &[(String, Option<MethodId>)]) {
         let def = self
@@ -789,7 +775,7 @@ impl ClassGraph {
             match method {
                 Some(id) => {
                     def.own_instance_methods.replace_method(name, class, *id);
-                    // `checkUninit` (`ClassClass.cpp:543`) reads the flattened
+                    // The uninit check reads the flattened
                     // behaviour; this crate's `has_uninit` is the same fact
                     // asked of the name being installed, exactly as
                     // `define` above asks it.
@@ -808,7 +794,7 @@ impl ClassGraph {
     }
 
     /// Point `class` at a fresh, empty [`BehaviourHandle`] -- the
-    /// `setField(instanceBehaviour, instanceBehaviour->copy())` that
+    /// copy of the instance behaviour that
     /// `~define`, `~defineMethods` and `~delete` each take before they touch
     /// the dictionary, so that an object created before the call keeps
     /// answering the old method set.
@@ -828,17 +814,16 @@ impl ClassGraph {
     }
 
     /// Install a class (static) method directly -- oracle's
-    /// `RexxClass::defineClassMethod` (`ClassClass.cpp:883-895`), itself a
+    /// `~defineClassMethod`, itself a
     /// "special method to allow a class method to be added to a primitive
     /// class during image build" (its own doc comment), and one of the two
-    /// methods `removeSetupMethods` strips before the oracle ships,
-    /// alongside `~inheritInstanceMethods` (`:923-941`, `DEFINECLASSMETHOD`).
+    /// methods the oracle strips before it ships,
+    /// alongside `~inheritInstanceMethods`.
     /// It adds directly to `class`'s *current* class behaviour and to its
-    /// own `classMethodDictionary` (`own_class_methods` here) -- **no
+    /// own class-method dictionary (`own_class_methods` here) -- **no
     /// clear, no rebuild-from-scratch, no cascade to subclasses**, unlike
-    /// every other mutator in this file (`behaviour->defineMethod(name,
-    /// addedMethod)` is a direct, unconditional `MethodDictionary::addMethod`
-    /// on the already-built behaviour, not a `createClassBehaviour`
+    /// every other mutator in this file (the oracle adds the method directly
+    /// and unconditionally to the already-built behaviour, with no
     /// rebuild). A class that already has subclasses when this is called
     /// would leave them unaware of the new method until their own class
     /// behaviour is next rebuilt for an unrelated reason -- the oracle has
@@ -860,9 +845,9 @@ impl ClassGraph {
             .add_method(name, class, method);
     }
 
-    /// `~inherit`. Oracle's `RexxClass::inherit` (`:1287`) does **no**
-    /// copy: it appends to `superClasses` and calls `updateSubClasses`,
-    /// which rebuilds the existing behaviour objects in place. An
+    /// `~inherit`. Oracle's `~inherit` does **no**
+    /// copy: it appends to the superclass list and runs the full subclass
+    /// update, which rebuilds the existing behaviour objects in place. An
     /// instance created before this call sees the donated methods
     /// immediately, unlike [`define`](Self::define).
     pub fn inherit(&mut self, class: ObjRef, mixin: ObjRef) -> Result<(), InheritRefusal> {
@@ -921,7 +906,7 @@ impl ClassGraph {
     }
 
     /// `~uninherit`: take a mixin back out of the superclass list --
-    /// `RexxClass::uninherit` (`ClassClass.cpp:1379`).
+    /// `~uninherit`.
     pub fn uninherit(&mut self, class: ObjRef, mixin: ObjRef) -> Result<(), InheritRefusal> {
         if !matches!(self.classes[&mixin].kind, ClassKind::Mixin) {
             return Err(InheritRefusal::NotAMixin);
@@ -939,7 +924,7 @@ impl ClassGraph {
             .unwrap()
             .superclasses
             .remove(at);
-        // `RexxClass::removeSubclass` (`:1424`) takes out the one entry it
+        // The oracle's subclass-list removal takes out the one entry it
         // finds, and a class reaches a mixin's subclass list once: a second
         // `~inherit` of the same mixin is the recursive refusal above.
         if let Some(sub) = self.classes[&mixin]
@@ -953,8 +938,7 @@ impl ClassGraph {
         Ok(())
     }
 
-    /// `Setup.cpp`'s `InheritInstanceMethods(source)` macro, which is
-    /// `RexxBehaviour::inheritInstanceMethods` (`RexxBehaviour.cpp:350`):
+    /// The oracle's bootstrap donation of a source's instance methods:
     /// copy the donor's own methods into this class's dictionary under this
     /// class's scope, **leaving the donor alone**.
     pub fn donate_instance_methods(&mut self, class: ObjRef, donor: ObjRef) {
@@ -973,16 +957,15 @@ impl ClassGraph {
     }
 
     /// `Class~inheritInstanceMethods`. Oracle's
-    /// `RexxClass::inheritInstanceMethods` (`ClassClass.cpp:558`-`:586`)
+    /// `~inheritInstanceMethods`
     /// takes `donor`'s own instance-method dictionary **by pointer and
-    /// rewrites it in place** (`MethodDictionary *sourceMethods =
-    /// source->instanceMethodDictionary; sourceMethods->setMethodScope(this);`,
-    /// `:560`-`:563`), folds it into `class`'s own instance dictionary, then
+    /// rewrites it in place** (every method in it is rescoped to the
+    /// recipient), folds it into `class`'s own instance dictionary, then
     /// rebuilds `class`'s instance behaviour in place -- **no superclass
     /// edge** (`class`'s `superclasses` is untouched) and **no cascade** to
     /// `class`'s own subclasses (unlike [`Self::define`] and
-    /// [`Self::inherit`], the oracle function's body has no call to either
-    /// `updateSubClasses` or `updateInstanceSubClasses`).
+    /// [`Self::inherit`], the oracle's operation runs neither of its two
+    /// subclass updates).
     pub fn inherit_instance_methods(&mut self, class: ObjRef, donor: ObjRef) {
         let mut donor_methods = std::mem::take(
             &mut self
@@ -1025,28 +1008,28 @@ impl ClassGraph {
     }
 
     /// `class`'s own behaviour's owning class -- oracle's
-    /// `behaviour->owningClass`, and what `~class` answers for a class
+    /// owning-class field, and what `~class` answers for a class
     /// object. See the field for why this is not [`ClassGraph::metaclass`].
     pub fn owning_class(&self, class: ObjRef) -> ObjRef {
         self.classes[&class].owning_class
     }
 
     /// Whether `class` may be named as another class's metaclass -- oracle's
-    /// `isMetaClass`, and the flag `RexxClass::subclass` refuses on
-    /// (`ClassClass.cpp:1572`, `Error_Translation_bad_metaclass`). See the
+    /// `isMetaClass`, and the flag `~subclass` refuses on.
+    /// See the
     /// field for what sets it.
     pub fn is_metaclass(&self, class: ObjRef) -> bool {
         self.classes[&class].is_metaclass
     }
 
     /// `~queryMixinClass` -- oracle's `isMixinClass`, the same
-    /// [`ClassKind`] `inherit`'s `Error_Execution_mixinclass` check reads.
+    /// [`ClassKind`] `inherit`'s mixin check reads.
     pub fn is_mixin(&self, class: ObjRef) -> bool {
         matches!(self.classes[&class].kind, ClassKind::Mixin)
     }
 
-    /// `~baseClass` -- oracle's `getBaseClass` (`Setup.cpp:455` binds it as a
-    /// method of `.Class`). A `Regular` class answers itself; a `Mixin`
+    /// `~baseClass` -- the oracle's `~baseClass`
+    /// method of `.Class`. A `Regular` class answers itself; a `Mixin`
     /// answers whatever its `MIXINCLASS` target's own base class is, which is
     /// the value [`ClassGraph::inherit`]'s compatibility check reads.
     pub fn base_class(&self, class: ObjRef) -> ObjRef {
@@ -1072,8 +1055,8 @@ impl ClassGraph {
     }
 
     /// Mark `class` a metaclass without deriving it from one -- oracle's
-    /// `buildFinalClassBehaviour`'s `if (this == TheClassClass)
-    /// setMetaClass();` (`ClassClass.cpp:744`-`:747`), which is where the
+    /// the oracle's final class-behaviour build marks `.Class` itself as
+    /// a metaclass, which is where the
     /// chain [`ClassGraph::define_class`] propagates starts.
     pub fn bootstrap_metaclass(&mut self, class: ObjRef) {
         self.classes
@@ -1083,7 +1066,7 @@ impl ClassGraph {
     }
 
     /// `class`'s own, unflattened instance-method names -- oracle's
-    /// `instanceMethodDictionary`, what `instance~instanceMethods(class)`
+    /// instance-method dictionary, what `instance~instanceMethods(class)`
     /// answers for a genuine instance (scope-filtered, so ancestor-donated
     /// names are excluded) -- the exact-match target for a per-class
     /// derivation, as opposed to [`Self::method_names_at`]'s flattened,
@@ -1101,8 +1084,8 @@ impl ClassGraph {
     }
 
     /// What `name` holds in `class`'s own, unflattened instance-method
-    /// dictionary, tombstone included -- what `RexxClass::method` reads
-    /// (`ClassClass.cpp:991`) and where it parts from
+    /// dictionary, tombstone included -- what `~method` reads
+    /// and where it parts from
     /// [`Self::has_own_instance_method`] beside it: a hidden name is
     /// `Some(MethodSlot::Hidden)` here and `false` there, and the oracle
     /// answers the two the same way round.
@@ -1111,8 +1094,8 @@ impl ClassGraph {
     }
 
     /// Whether a class other than `class` holds `method` in its own
-    /// instance or class dictionary: an identity `InheritInstanceMethods`
-    /// donated, which the oracle keeps as a separate method object per class.
+    /// instance or class dictionary: a method object that
+    /// instance-method donation shared, which the oracle keeps as a separate method object per class.
     pub fn held_elsewhere(&self, method: MethodId, class: ObjRef) -> bool {
         self.classes.iter().any(|(id, def)| {
             *id != class
@@ -1152,9 +1135,8 @@ impl ClassGraph {
         self.classes[&class].rexx_defined
     }
 
-    /// Oracle's `setRexxDefined` (`ClassClass.cpp:396`), which
-    /// `liveGeneral` calls on every class it walks while the image is being
-    /// prepared. There is no clearing counterpart, in this crate or in the
+    /// Oracle's marking of a class as Rexx-defined, which image
+    /// preparation applies to every class it walks. There is no clearing counterpart, in this crate or in the
     /// oracle.
     pub fn set_rexx_defined(&mut self, class: ObjRef) {
         self.classes
@@ -1164,7 +1146,7 @@ impl ClassGraph {
     }
 
     /// `class`'s own, unflattened class-method names -- oracle's
-    /// `classMethodDictionary`, what `class~instanceMethods(class)` answers
+    /// class-method dictionary, what `class~instanceMethods(class)` answers
     /// when sent to the class object itself (its own receiver behaviour is
     /// its class-behaviour, filtered to its own scope).
     pub fn own_class_method_names(&self, class: ObjRef) -> BTreeSet<String> {

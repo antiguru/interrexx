@@ -1,12 +1,12 @@
-//! The Rexx-written part of the interpreter's own library: the `.orx` sources
-//! the C++ interpreter runs to finish building its image, embedded at build
+//! The Rexx-written part of the interpreter's own library: the Rexx sources
+//! the oracle runs to finish building its image, embedded at build
 //! time from this repository's tracked copies.
 
 /// One embedded program.
 pub struct Program {
-    /// The name the C++ resolves it by, which is what a `CALL` inside the
-    /// bootstrap writes: `call 'StreamClasses.orx' rexxPackage`
-    /// (`CoreClasses.orx:122`). Compared case-insensitively by
+    /// The name the oracle resolves it by, which is what a `CALL` inside the
+    /// bootstrap writes (a quoted program name followed by the package).
+    /// Compared case-insensitively by
     /// [`lookup`], because the oracle's own program-name resolution is.
     pub name: &'static str,
     /// The file's bytes, exactly as tracked.
@@ -17,9 +17,8 @@ pub struct Program {
 
 include!(concat!(env!("OUT_DIR"), "/programs.rs"));
 
-/// The program the bootstrap starts at -- `BASEIMAGELOAD`, which
-/// `memory/Setup.cpp:1786` resolves and `:1795` runs with `TheRexxPackage` as
-/// its one argument.
+/// The program the bootstrap starts at: the oracle resolves it and runs it
+/// with the Rexx package as its one argument.
 pub const ENTRY: &str = "CoreClasses.orx";
 
 /// The embedded program a `CALL` target names, or `None` for a name that is
@@ -78,7 +77,7 @@ mod tests {
         called
     }
 
-    /// `CoreClasses.orx`'s two `CALL`s name the other two rows, and neither
+    /// The entry program's two `CALL`s name the other two rows, and neither
     /// of those two calls anything embedded.
     #[test]
     fn the_entry_program_calls_exactly_the_other_embedded_programs() {

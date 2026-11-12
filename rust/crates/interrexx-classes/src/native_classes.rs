@@ -1,6 +1,6 @@
-//! Bootstraps the native class set `interpreter/memory/Setup.cpp` builds in
-//! C++, before `CoreClasses.orx` ever runs, checked per class against the
-//! oracle rather than transcribed.
+//! Bootstraps the native class set the oracle builds in its native
+//! bootstrap, before its Rexx-written core class library ever runs, checked
+//! per class against the oracle rather than transcribed.
 
 use crate::class_graph::ClassKind;
 use crate::registry::ClassRegistry;
@@ -86,13 +86,13 @@ fn definition_for(block_name: &str) -> &'static ClassDefinition {
         .unwrap_or_else(|| panic!("no CLASS_DEFINITIONS block named {block_name:?}"))
 }
 
-/// `Setup.cpp:1809`'s `TheClassClass->removeSetupMethods()`: `TheClassClass`
+/// The oracle's removal of its setup-only methods: `.Class`
 /// specifically, applied at image-save time to delete exactly the names
 /// below from `.Class`'s own instance methods.
 const REMOVED_BY_IMAGE_SAVE: &[&str] = &["DefineClassMethod", "InheritInstanceMethods"];
 
 /// The names [`remove_setup_methods`] deletes, in the spelling a dictionary
-/// is keyed by. `Setup.cpp` writes them mixed-case and every lookup upcases,
+/// is keyed by. The oracle's bootstrap writes them mixed-case and every lookup upcases,
 /// so a caller registering an implementation for one needs this spelling and
 /// not [`REMOVED_BY_IMAGE_SAVE`]'s.
 pub fn setup_method_names() -> Vec<String> {
@@ -149,14 +149,14 @@ fn replay(
 }
 
 /// Build the native class registry: every checklist entry not in
-/// [`deferred_classes`], wired as `Setup.cpp` wires it.
+/// [`deferred_classes`], wired as the oracle's bootstrap wires it.
 pub fn native_classes(mint: &mut dyn FnMut() -> ObjRef) -> ClassRegistry {
     build(false, mint)
 }
 
-/// [`native_classes`] with the two methods `removeSetupMethods` deletes
-/// still present -- the state the C++ image build runs `CoreClasses.orx` in,
-/// before `Setup.cpp:1809` strips them.
+/// [`native_classes`] with the two methods the setup-method removal deletes
+/// still present -- the state the oracle's image build runs its Rexx-written
+/// core class library in, before they are stripped.
 pub fn native_classes_for_bootstrap(mint: &mut dyn FnMut() -> ObjRef) -> ClassRegistry {
     build(true, mint)
 }
@@ -175,8 +175,8 @@ fn build(keep_setup_methods: bool, mint: &mut dyn FnMut() -> ObjRef) -> ClassReg
     );
     // `.Class` is where metaclass-ness starts, and nothing derives it from a
     // metaclass -- its superclass is `.Object`. The oracle seeds it by hand
-    // in the same dedicated bootstrap constructor (`ClassClass.cpp:744`-
-    // `:747`); see `ClassGraph::bootstrap_metaclass`. Which of the classes
+    // in the same dedicated bootstrap constructor; see
+    // `ClassGraph::bootstrap_metaclass`. Which of the classes
     // below inherits it is `ClassGraph::define_class`'s decision, read off
     // the superclass each is given here.
     registry.bootstrap_metaclass(class_id);
@@ -208,10 +208,10 @@ fn build(keep_setup_methods: bool, mint: &mut dyn FnMut() -> ObjRef) -> ClassReg
     registry.set_rexx_defined(object_id);
     registry.set_rexx_defined(class_id);
 
-    // `CLASS_DEFINITIONS` is in `Setup.cpp`'s own file order, which is a real
-    // dependency order (a donor's `StartClassDefinition` block precedes
-    // every recipient that `InheritInstanceMethods` from it) and *differs*
-    // from the checklist's `createInstance()` order (`TableClass` precedes
+    // `CLASS_DEFINITIONS` is in the oracle bootstrap's own file order, which is a real
+    // dependency order (a donor's class block precedes
+    // every recipient that inherits instance methods from it) and *differs*
+    // from the checklist's creation order (`TableClass` precedes
     // `IdentityTable` there, but `IdentityTable`'s block precedes `Table`'s
     // -- `Table` donates from it). Replaying in checklist order instead
     // would call `donate_instance_methods` against a donor not yet built.
@@ -232,7 +232,7 @@ fn build(keep_setup_methods: bool, mint: &mut dyn FnMut() -> ObjRef) -> ClassReg
         if DEFERRALS.iter().any(|d| d.setup_class == setup_class) {
             continue;
         }
-        // `def.system_only` is which closing macro `Setup.cpp` used, and it
+        // `def.system_only` is which closing form the oracle's bootstrap used, and it
         // decides the directory alone: a system class is built, wired and
         // `REXX_DEFINED` exactly like every other entry here, and differs
         // only in answering `system_lookup` where the rest answer `lookup`.
@@ -254,9 +254,9 @@ fn build(keep_setup_methods: bool, mint: &mut dyn FnMut() -> ObjRef) -> ClassReg
             )
         };
         replay(&mut registry, id, def, keep_setup_methods);
-        // `RexxClass::liveGeneral` sets `REXX_DEFINED` on every class it
-        // reaches while the image is being prepared
-        // (`ClassClass.cpp:136`-`:142`), which is every class this function
+        // image preparation sets `REXX_DEFINED` on every class it
+        // reaches while the image is being prepared,
+        // which is every class this function
         // builds. Set here, and beside the two bootstrapped above, rather
         // than by a sweep over the finished registry: the sweep's only
         // source of classes is a `HashMap`, and a loop whose order is the
@@ -267,8 +267,7 @@ fn build(keep_setup_methods: bool, mint: &mut dyn FnMut() -> ObjRef) -> ClassReg
     registry
 }
 
-/// `RexxClass::removeSetupMethods` (`classes/ClassClass.cpp:923`-`:941`):
-/// delete [`REMOVED_BY_IMAGE_SAVE`]'s names from `.Class`'s own instance
+/// The oracle's setup-method removal: delete [`REMOVED_BY_IMAGE_SAVE`]'s names from `.Class`'s own instance
 /// dictionary, and from every behaviour that merged them.
 pub fn remove_setup_methods(registry: &mut ClassRegistry) {
     let class = registry
@@ -310,8 +309,8 @@ mod tests {
     /// brief's own done-when condition): every `SETUP_CLASSES` checklist
     /// entry is in [`CHECKLIST_TO_DEFINITION`] exactly once, and every one
     /// of those is *either* built by [`native_classes`] *or* named in
-    /// [`DEFERRALS`] -- never both, never neither. A `Setup.cpp` edit that
-    /// adds, renames, or removes a `createInstance()` call fails this test
+    /// [`DEFERRALS`] -- never both, never neither. A change to the oracle's bootstrap that
+    /// adds, renames, or removes a class fails this test
     /// rather than silently landing outside both sets.
     #[test]
     fn every_checklist_entry_is_mapped_and_either_built_or_deferred() {
@@ -342,7 +341,7 @@ mod tests {
             );
         }
         // Every CHECKLIST_TO_DEFINITION entry corresponds to a real checklist
-        // name -- catches a stale mapping entry after a Setup.cpp rename.
+        // name -- catches a stale mapping entry after a rename in the oracle's bootstrap.
         for (token, _) in CHECKLIST_TO_DEFINITION {
             assert!(
                 SETUP_CLASSES.contains(token),
@@ -370,8 +369,8 @@ mod tests {
     }
 
     /// `native_classes()` actually builds exactly the checklist entries this
-    /// module claims to build, **in the directory `Setup.cpp`'s own closing
-    /// macro puts each in** -- not the deferred ones, and nothing extra.
+    /// module claims to build, **in the directory the oracle's own closing
+    /// form puts each in** -- not the deferred ones, and nothing extra.
     #[test]
     fn every_checklist_entry_is_registered_in_the_directory_setup_cpp_names() {
         let mut next: u32 = 1;

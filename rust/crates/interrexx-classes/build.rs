@@ -1,6 +1,6 @@
 //! Derives the primitive-class checklist and each class's own method-name
-//! table from `Setup.cpp` at build time -- the model is `interrexx-inventory`'s
-//! `build.rs`: the C++ tree is the source of truth, nothing here is
+//! table from the oracle's class-bootstrap source at build time -- the model
+//! is `interrexx-inventory`'s `build.rs`: the oracle's source tree is the source of truth, nothing here is
 //! hand-maintained, and nothing generated is written into `src/`.
 
 use std::path::{Path, PathBuf};
@@ -128,9 +128,9 @@ struct ClassDef {
 }
 
 /// Extract the class-method/instance-method distinction and the operation
-/// kind from one `Setup.cpp` line, following the macro table at
-/// `Setup.cpp:349-398`. Lines this does not recognize (comments, braces,
-/// `CompleteClassMethodDefinitions()`, ...) are simply not operations.
+/// kind from one line of the bootstrap source, following the table of
+/// definition macros it declares. Lines this does not recognize (comments,
+/// braces, completion calls, ...) are simply not operations.
 fn parse_definitions(src: &str) -> Vec<ClassDef> {
     let mut result = Vec::new();
     let mut current: Option<ClassDef> = None;
@@ -149,13 +149,13 @@ fn parse_definitions(src: &str) -> Vec<ClassDef> {
             });
             continue;
         }
-        // Which of the two closing macros ran is the whole of the
-        // registration difference: `EndClassDefinition` expands to
-        // `completeSystemClass`, which puts the class into `.environment`
-        // under its own name, and `EndSpecialClassDefinition` expands to
-        // `addToSystem`, which puts it into the kernel directory no `.NAME`
-        // reaches (`Setup.cpp:390`-`:398`). Read off the source rather than
-        // listed in `native_classes.rs`, so a block that changes which macro
+        // Which of the two closing forms ran is the whole of the
+        // registration difference: the ordinary one
+        // puts the class into `.environment`
+        // under its own name, and the special one
+        // puts it into the kernel directory no `.NAME`
+        // reaches. Read off the source rather than
+        // listed in `native_classes.rs`, so a block that changes which form
         // closes it changes the registry with it.
         let closing = macro_arg(line, "EndClassDefinition")
             .map(|name| (name, false))
@@ -204,8 +204,8 @@ fn parse_definitions(src: &str) -> Vec<ClassDef> {
 }
 
 /// `Macro(bareword)` -> `"bareword"`, for macros whose argument is an
-/// identifier rather than a quoted string (`StartClassDefinition`,
-/// `EndClassDefinition`, `InheritInstanceMethods`).
+/// identifier rather than a quoted string (the class-block openers and
+/// closers and the instance-method donations).
 fn macro_arg(line: &str, macro_name: &str) -> Option<String> {
     let rest = line.strip_prefix(macro_name)?;
     let rest = rest.strip_prefix('(')?;
@@ -214,8 +214,8 @@ fn macro_arg(line: &str, macro_name: &str) -> Option<String> {
 }
 
 /// `Macro("quoted", ...)` -> the unescaped content of the first quoted
-/// argument -- every `Add*Method`/`RemoveMethod`/`HideMethod` invocation's
-/// method name. The only C escape `Setup.cpp` uses in these strings is a
+/// argument -- every method-adding, removing or hiding invocation's
+/// method name. The only C escape the source uses in these strings is a
 /// doubled backslash standing for one literal backslash (`"\\="` is the
 /// two-character method name `\=`); this unescapes exactly that and
 /// nothing else, since nothing else occurs here.

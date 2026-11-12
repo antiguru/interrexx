@@ -12,54 +12,34 @@ const BUILTINS_CPP: &str =
 /// Messages the oracle raises with more inserts than their text uses, each with
 /// that count. The extra inserts reach a trapped condition's `ADDITIONAL`.
 const ARITY_OVERRIDES: &[((u16, u16), usize)] = &[
-    // `InstructionParser.cpp:1122`, the token after `CALL ns:`.
+    // CALL with a namespace: the token after `ns:` is named.
     ((20, 922), 1),
-    // `requiredEndOfClause`, `InstructionParser.cpp:4616`, `:4631`.
+    // A clause that does not end where it should: the token found is named.
     ((27, 1), 1),
-    // `InstructionParser.cpp:4393`, the token the term started at.
+    // An expression term that cannot be completed: the token the term
+    // started at is named.
     ((89, 1), 1),
-    // The directive errors below name the token found, `DirectiveParser.cpp`
-    // at each line cited, and `parseClassReference`'s `:293` for those it is
-    // passed.
-    // `:646`.
+    // The directive errors below name the token found (for a class
+    // reference, the token at which it was parsed).
     ((19, 902), 1),
-    // `:2572`.
     ((19, 903), 1),
-    // `:2788`.
     ((19, 904), 1),
-    // `:694`, `:1610`, `:2612`.
     ((19, 905), 1),
-    // `:404` through `:293`.
     ((19, 906), 1),
-    // `:439` through `:293`.
     ((19, 907), 1),
-    // `:461`, and `:469` through `:293`.
     ((19, 908), 1),
-    // `:452` through `:293`.
     ((19, 913), 1),
-    // `:1473`.
     ((19, 914), 1),
-    // `:1860`.
     ((19, 915), 1),
-    // `:1891`, `:1898`, `:1905`.
     ((19, 916), 1),
-    // `:977`.
     ((19, 917), 1),
-    // `:1034`.
     ((19, 918), 1),
-    // `:1062`.
     ((19, 919), 1),
-    // `:2272`.
     ((19, 920), 1),
-    // `:2304`.
     ((19, 921), 1),
-    // `:1947`.
     ((20, 924), 1),
-    // `:1004`.
     ((20, 925), 1),
-    // `:807`, `:1638`.
     ((20, 926), 1),
-    // `:1336`.
     ((20, 935), 1),
     // A `::CONSTANT` outside a class: the constant's name, in upper case, as
     // the oracle answers.
@@ -149,7 +129,7 @@ fn generate_errors(path: &Path) -> String {
                     field = Field::Text;
                     depth_in_text = 0;
                 }
-                // Rendering rules copied from RexxErrorMessages.xsl:86-96.
+                // Rendering rules follow the oracle's message-rendering stylesheet.
                 // <q> keeps its quotes -- it is not documentation-only markup.
                 "q" if field == Field::Text => {
                     depth_in_text += 1;

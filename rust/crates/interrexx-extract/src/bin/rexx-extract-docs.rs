@@ -1,5 +1,5 @@
 //! Derives the gate tables' row sets from `oodocs/` and from
-//! `interpreter/parser/DirectiveParser.cpp`, and writes them to
+//! the oracle's directive parser source, and writes them to
 //! `rust/corpus/docs/`.
 //! ```text
 //! cargo run -p interrexx-extract --bin rexx-extract-docs -- \
