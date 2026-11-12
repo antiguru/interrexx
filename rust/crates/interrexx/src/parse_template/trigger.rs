@@ -1,4 +1,5 @@
 use super::*;
+use interrexx_parse::Expr;
 
 impl Interp {
     /// Evaluates one trigger's operand, if it has one, and moves the cursor.
@@ -27,7 +28,25 @@ impl Interp {
                 None => return Err(Loud::parse_trigger_operand().into()),
             },
         };
-        let value = self.eval_in_parse(code, operand)?;
+        let results = self.trace_mode().results;
+        // **A literal pattern is searched for as the bytes it spells** when
+        // no line will show it: its value would be a string holding exactly
+        // those bytes, which is its own string value, so building it changes
+        // nothing a search can see.
+        if let (TriggerKind::String | TriggerKind::Mixed, ExprKind::Literal(needle)) =
+            (trigger.kind, &operand.kind)
+            && !results
+            && !self.tracing_intermediates()
+        {
+            let string = source.bytes(self);
+            if trigger.kind == TriggerKind::String {
+                cursor.search(string, needle);
+            } else {
+                cursor.caseless_search(string, needle);
+            }
+            return Ok(());
+        }
+        let value = self.trigger_operand(code, operand)?;
         self.roots.activity_mut().push_temp(value);
         // `>>>` for the operand, after `eval`'s own `>L>`/`>V>` and before
         // the conversion that can fail: `integerTrigger` traces and only then
@@ -41,7 +60,7 @@ impl Interp {
         // `samples/rexxcps.rex` made -- one per trigger, on a program whose
         // templates are mostly numeric triggers that never look at the bytes
         // at all.
-        if self.trace_mode().results {
+        if results {
             let rendered = self.traced_string_value_text(value)?;
             self.trace_result(indent, &rendered);
         }
@@ -108,5 +127,26 @@ impl Interp {
                 Ok(())
             }
         }
+    }
+
+    /// A trigger's operand value: [`Interp::eval_in_parse`], with a leaf
+    /// read directly where `TRACE I` will not show it. A leaf evaluates no
+    /// sub-expression, so the evaluation-depth bookkeeping `eval_in_parse`
+    /// wraps around it has nothing to guard.
+    #[inline(always)]
+    fn trigger_operand(&mut self, code: &Code<'_>, operand: &Expr) -> Result<ObjRef, Failure> {
+        if !self.tracing_intermediates() {
+            match &operand.kind {
+                ExprKind::Literal(bytes) => return Ok(self.literal(bytes)),
+                ExprKind::Constant(id) => {
+                    return Ok(self.literal(code.symbols.name(*id).as_bytes()));
+                }
+                ExprKind::Variable(id) => {
+                    return self.read_symbol(code, crate::eval::SymbolRead::Simple, *id, None);
+                }
+                _ => {}
+            }
+        }
+        self.eval_in_parse(code, operand)
     }
 }
