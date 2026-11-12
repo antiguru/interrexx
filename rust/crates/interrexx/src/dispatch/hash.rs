@@ -150,6 +150,9 @@ impl HashKind {
 pub(crate) struct HashKinds {
     stamp: u64,
     kinds: NameMap<ObjRef, HashKind>,
+    /// The class asked about last and its kind, ahead of the map: a loop over
+    /// one collection asks about one class several times a message.
+    last: Option<(ObjRef, HashKind)>,
 }
 
 /// Whether `class` is or inherits from the class registered as one of `names`.
@@ -190,20 +193,35 @@ fn classify(interp: &mut Interp, class: ObjRef) -> HashKind {
 /// `class`'s [`HashKind`], from [`HashKinds`] while the ancestry stamp holds.
 fn kind_of_class(interp: &mut Interp, class: ObjRef) -> HashKind {
     let stamp = interp.classes().ancestry_stamp();
-    if interp.hash_kinds.stamp != stamp {
-        interp.hash_kinds.kinds.clear();
-        interp.hash_kinds.stamp = stamp;
-    } else if let Some(&kind) = interp.hash_kinds.kinds.get(&class) {
+    let kinds = &mut interp.hash_kinds;
+    if kinds.stamp != stamp {
+        kinds.kinds.clear();
+        kinds.last = None;
+        kinds.stamp = stamp;
+    } else if let Some((last, kind)) = kinds.last
+        && last == class
+    {
+        return kind;
+    } else if let Some(&kind) = kinds.kinds.get(&class) {
+        kinds.last = Some((class, kind));
         return kind;
     }
     let kind = classify(interp, class);
     interp.hash_kinds.kinds.insert(class, kind);
+    interp.hash_kinds.last = Some((class, kind));
     kind
 }
 
 /// The [`HashKind`] of `receiver`'s class; none of the bits for a value with
 /// no class.
 fn kind_of(interp: &mut Interp, receiver: ObjRef) -> HashKind {
+    // An instance's class is in its body, which is where `class_of_value`
+    // would find it after classifying the receiver.
+    if let Some(Body::Instance { class, .. }) = interp.heap.get(receiver).map(|object| &object.body)
+    {
+        let class = *class;
+        return kind_of_class(interp, class);
+    }
     match interp.class_of_value(receiver) {
         Some(class) => kind_of_class(interp, class),
         None => HashKind::default(),
