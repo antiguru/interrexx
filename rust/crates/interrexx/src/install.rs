@@ -966,6 +966,13 @@ impl Interp {
         self.load_requires(program, name, false)
     }
 
+    /// The package an earlier load already holds under `name`, as the
+    /// requires cache keeps it: what `Package~loadPackage` answers for a name
+    /// it is given a source for a second time (`r[class.package.loadpackage]`).
+    pub(crate) fn package_loaded_as(&self, name: &[u8]) -> Option<ProgramId> {
+        self.required_packages.get(name).copied()
+    }
+
     /// `Package~new`'s load: the same file load, searched from the **global**
     /// context rather than from any package's directory.
     pub(crate) fn load_package_global(&mut self, name: &[u8]) -> Result<ProgramId, Failure> {

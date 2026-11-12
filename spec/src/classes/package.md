@@ -2166,7 +2166,7 @@ q = .package~new('q', src)
 say (q~importedPackages[1] == a)
 ```
 
-```output defect=#145
+```output
 first body
 1 1 1
 1
