@@ -869,7 +869,7 @@ trace value 'r'
 trace ('n')
 ```
 
-```output defect=#103
+```output
      3 *-* trace value 'r'
        >L>   "r"
        >K>   "VALUE" => "r"
