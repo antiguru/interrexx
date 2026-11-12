@@ -1384,6 +1384,6 @@ say .traceobject~option
   return 'Full'
 ```
 
-```output defect=#140
+```output
 S
 ```

@@ -391,7 +391,7 @@ bad: say o~class~id condition('o')~code
   return '5'
 ```
 
-```output defect=#164
+```output
   string
 WITHSTR ok
   makestring
@@ -908,7 +908,7 @@ bad: say condition('o')~code
   return '7'
 ```
 
-```output defect=#140
+```output
 accepted
 in range
 88.902

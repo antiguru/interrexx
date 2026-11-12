@@ -61,6 +61,8 @@ const REPLACEMENTS: &[&str] = &[
     "command.rex",
     "sets.rex",
     "timespan.rex",
+    "misc.rex",
+    "traceobject.rex",
 ];
 
 /// One host member a replacement may leave out.
@@ -79,6 +81,69 @@ struct Allowed {
 /// Host members a replacement may leave out. Every entry must match a dropped
 /// member of a replaced class, and carry a reason.
 const ALLOW_DROPPED: &[Allowed] = &[
+    Allowed {
+        class: "ArgUtil",
+        member: "validateClass",
+        class_side: true,
+        reason: "ruling 9: ArgUtil is an empty class",
+        sent_sites: 0,
+    },
+    Allowed {
+        class: "ArgUtil",
+        member: "validateLength",
+        class_side: true,
+        reason: "ruling 9: ArgUtil is an empty class",
+        sent_sites: 0,
+    },
+    Allowed {
+        class: "ArgUtil",
+        member: "validateNonNegative",
+        class_side: true,
+        reason: "ruling 9: ArgUtil is an empty class",
+        sent_sites: 0,
+    },
+    Allowed {
+        class: "ArgUtil",
+        member: "validateNumber",
+        class_side: true,
+        reason: "ruling 9: ArgUtil is an empty class",
+        sent_sites: 0,
+    },
+    Allowed {
+        class: "ArgUtil",
+        member: "validateNumberRange",
+        class_side: true,
+        reason: "ruling 9: ArgUtil is an empty class",
+        sent_sites: 0,
+    },
+    Allowed {
+        class: "ArgUtil",
+        member: "validatePosition",
+        class_side: true,
+        reason: "ruling 9: ArgUtil is an empty class",
+        sent_sites: 0,
+    },
+    Allowed {
+        class: "ArgUtil",
+        member: "validatePositive",
+        class_side: true,
+        reason: "ruling 9: ArgUtil is an empty class",
+        sent_sites: 0,
+    },
+    Allowed {
+        class: "ArgUtil",
+        member: "validateWhole",
+        class_side: true,
+        reason: "ruling 9: ArgUtil is an empty class",
+        sent_sites: 0,
+    },
+    Allowed {
+        class: "ArgUtil",
+        member: "validateWholeRange",
+        class_side: true,
+        reason: "ruling 9: ArgUtil is an empty class",
+        sent_sites: 0,
+    },
     Allowed {
         class: "DateTime",
         member: "convertDate",

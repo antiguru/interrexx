@@ -40,3 +40,473 @@ error
 .Validate~number('N', 5)
 ----
 91.999
+
+error
+.Validate~positiveNumber('N', 0)
+----
+88.926
+
+error
+.Validate~positiveNumber('N', 'x')
+----
+88.926
+
+error
+.Validate~nonNegativeNumber('N', -1)
+----
+88.925
+
+error
+.Validate~nonNegativeNumber('N', 'x')
+----
+88.925
+
+error
+.Validate~wholeNumber('N', 1.5)
+----
+88.903
+
+error
+.Validate~positiveWholeNumber('N', 0)
+----
+88.905
+
+error
+.Validate~nonNegativeWholeNumber('N', -1)
+----
+88.904
+
+error
+.Validate~position('N', 0)
+----
+88.912
+
+error
+.Validate~length('N', -1)
+----
+88.911
+
+error
+.Validate~numberRange('N', 11, 1, 10)
+----
+88.907
+
+error
+.Validate~numberRange('N', 5, 1, .nil)
+----
+88.907
+
+error
+.Validate~wholeNumberRange('N', 5.5, 1, 10)
+----
+88.907
+
+error
+.Validate~logical('N', 2)
+----
+88.927
+
+error
+.Validate~classType('N', 'x', .array)
+----
+88.914
+
+error
+.Validate~classType('N', 'x', 'string')
+----
+88.914
+
+error
+.Validate~classType('N', .nil, 'string')
+----
+88.914
+
+error
+.Validate~requestClassType('N', 'x', .list)
+----
+93.978
+
+error
+.Validate~requestClassType('N', 'x', 'string')
+----
+97.1
+
+error
+.Validate~positiveNumber('N', 5, 0)
+----
+26.5
+
+error
+.Validate~positiveNumber('N', 5, 'x')
+----
+26.5
+
+error
+.Validate~positiveNumber('N', 5, 1000000000)
+----
+26.5
+
+error
+.Validate~nonNegativeNumber('N', 5, 0)
+----
+26.5
+
+error
+.Validate~nonNegativeNumber('N', 5, 'x')
+----
+26.5
+
+error
+.Validate~nonNegativeNumber('N', 5, 1000000000)
+----
+26.5
+
+error
+.Validate~wholeNumber('N', 5, 0)
+----
+26.5
+
+error
+.Validate~wholeNumber('N', 5, 'x')
+----
+26.5
+
+error
+.Validate~wholeNumber('N', 5, 1000000000)
+----
+26.5
+
+error
+.Validate~positiveWholeNumber('N', 5, 0)
+----
+26.5
+
+error
+.Validate~positiveWholeNumber('N', 5, 'x')
+----
+26.5
+
+error
+.Validate~positiveWholeNumber('N', 5, 1000000000)
+----
+26.5
+
+error
+.Validate~nonNegativeWholeNumber('N', 5, 0)
+----
+26.5
+
+error
+.Validate~nonNegativeWholeNumber('N', 5, 'x')
+----
+26.5
+
+error
+.Validate~nonNegativeWholeNumber('N', 5, 1000000000)
+----
+26.5
+
+error
+.Validate~position('N', 5, 0)
+----
+26.5
+
+error
+.Validate~position('N', 5, 'x')
+----
+26.5
+
+error
+.Validate~position('N', 5, 1000000000)
+----
+26.5
+
+error
+.Validate~length('N', 5, 0)
+----
+26.5
+
+error
+.Validate~length('N', 5, 'x')
+----
+26.5
+
+error
+.Validate~length('N', 5, 1000000000)
+----
+26.5
+
+error
+.Validate~numberRange('N', 5, 1, 9, 0)
+----
+26.5
+
+error
+.Validate~numberRange('N', 5, 1, 9, 1.5)
+----
+26.5
+
+error
+.Validate~wholeNumberRange('N', 5, 1, 9, 0)
+----
+26.5
+
+error
+.Validate~wholeNumberRange('N', 5, 1, 9, 1.5)
+----
+26.5
+
+error
+.Validate~number()
+----
+93.901
+
+error
+.Validate~number(, 1)
+----
+93.903
+
+error
+.Validate~number('N', 1, 1)
+----
+93.902
+
+error
+.Validate~logical()
+----
+93.901
+
+error
+.Validate~logical('N')
+----
+93.901
+
+error
+.Validate~logical(, 1)
+----
+93.903
+
+error
+.Validate~logical('N', 1, 1)
+----
+93.902
+
+error
+.Validate~positiveNumber()
+----
+93.901
+
+error
+.Validate~positiveNumber('N')
+----
+93.901
+
+error
+.Validate~positiveNumber(, 1)
+----
+93.903
+
+error
+.Validate~positiveNumber('N', 1, 1, 1)
+----
+93.902
+
+error
+.Validate~nonNegativeNumber()
+----
+93.901
+
+error
+.Validate~nonNegativeNumber('N')
+----
+93.901
+
+error
+.Validate~nonNegativeNumber(, 1)
+----
+93.903
+
+error
+.Validate~nonNegativeNumber('N', 1, 1, 1)
+----
+93.902
+
+error
+.Validate~wholeNumber()
+----
+93.901
+
+error
+.Validate~wholeNumber('N')
+----
+93.901
+
+error
+.Validate~wholeNumber(, 1)
+----
+93.903
+
+error
+.Validate~wholeNumber('N', 1, 1, 1)
+----
+93.902
+
+error
+.Validate~positiveWholeNumber()
+----
+93.901
+
+error
+.Validate~positiveWholeNumber('N')
+----
+93.901
+
+error
+.Validate~positiveWholeNumber(, 1)
+----
+93.903
+
+error
+.Validate~positiveWholeNumber('N', 1, 1, 1)
+----
+93.902
+
+error
+.Validate~nonNegativeWholeNumber()
+----
+93.901
+
+error
+.Validate~nonNegativeWholeNumber('N')
+----
+93.901
+
+error
+.Validate~nonNegativeWholeNumber(, 1)
+----
+93.903
+
+error
+.Validate~nonNegativeWholeNumber('N', 1, 1, 1)
+----
+93.902
+
+error
+.Validate~position()
+----
+93.901
+
+error
+.Validate~position('N')
+----
+93.901
+
+error
+.Validate~position(, 1)
+----
+93.903
+
+error
+.Validate~position('N', 1, 1, 1)
+----
+93.902
+
+error
+.Validate~length()
+----
+93.901
+
+error
+.Validate~length('N')
+----
+93.901
+
+error
+.Validate~length(, 1)
+----
+93.903
+
+error
+.Validate~length('N', 1, 1, 1)
+----
+93.902
+
+error
+.Validate~classType()
+----
+93.901
+
+error
+.Validate~classType('N', 1)
+----
+93.901
+
+error
+.Validate~classType(, 1, 1)
+----
+93.903
+
+error
+.Validate~classType('N', 1, 1, 1)
+----
+93.902
+
+error
+.Validate~requestClassType()
+----
+93.901
+
+error
+.Validate~requestClassType('N', 1)
+----
+93.901
+
+error
+.Validate~requestClassType(, 1, 1)
+----
+93.903
+
+error
+.Validate~requestClassType('N', 1, 1, 1)
+----
+93.902
+
+error
+.Validate~numberRange()
+----
+93.901
+
+error
+.Validate~numberRange('N', 1, 1)
+----
+93.901
+
+error
+.Validate~numberRange(, 1, 1, 1)
+----
+93.903
+
+error
+.Validate~numberRange('N', 1, 1, 1, 1, 1)
+----
+93.902
+
+error
+.Validate~wholeNumberRange()
+----
+93.901
+
+error
+.Validate~wholeNumberRange('N', 1, 1)
+----
+93.901
+
+error
+.Validate~wholeNumberRange(, 1, 1, 1)
+----
+93.903
+
+error
+.Validate~wholeNumberRange('N', 1, 1, 1, 1, 1)
+----
+93.902
