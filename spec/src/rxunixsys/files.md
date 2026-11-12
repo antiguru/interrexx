@@ -253,7 +253,7 @@ call SysFileDelete 'c1zqf1'
 ::requires 'rxunixsys' library
 ```
 
-```output defect=#474
+```output
 0 0 -1 0
 -1
 ```
