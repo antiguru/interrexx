@@ -1243,3 +1243,13 @@ was: still set or still cancelled, with its first time, interval, target and
 attachment. ooRexx sets the object up again, without stopping the first
 setting, and crashes when a ticker that runs is set up again. interrexx does
 not refuse the second `init` yet (#248).
+
+## 163. A failed init of a DateTime or a TimeSpan
+
+An `init` sent to a `DateTime` or a `TimeSpan` that raises an error leaves the
+receiver as it was: every argument is checked before anything is stored.
+ooRexx stores part of the arguments first. A `DateTime` keeps the new date
+when its offset is out of range, with the offset stored as given, and a
+`TimeSpan` keeps an argument that is not a number as its span, so that the
+span then raises errors of its own. interrexx does the same until #47's
+`DateTime` and `TimeSpan` tasks land (#441).
