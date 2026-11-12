@@ -58,6 +58,16 @@ impl Interp {
             }
             None => None,
         };
+        // An argument that is not an error number fails the clause as soon as
+        // it is evaluated, before DESCRIPTION and ADDITIONAL are.
+        if raise.condition.as_ref() == b"SYNTAX"
+            && syntax_code(rc_text.as_deref().unwrap_or(b"")).is_none()
+        {
+            let mut raised = raise_syntax_condition(rc_text.as_deref().unwrap_or(b""), Vec::new());
+            raised.position = u32::try_from(self.activity.clause_state.line()).unwrap_or(0);
+            raised.delivery.search = Search::Here;
+            return Err(raised.into());
+        }
         // Kept, not only traced: a trapping handler reads it back through
         // `CONDITION('D')` -- measured, `raise syntax 40.4 description 'zd'`
         // trapped gives `zd` where the same raise without the clause gives

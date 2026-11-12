@@ -625,7 +625,7 @@ t: say 'evaluate' arg(1)
   return arg(1)
 ```
 
-```output defect=#125
+```output
 evaluate abc
 SYNTAX 33.904
 ```
