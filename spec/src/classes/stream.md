@@ -2602,11 +2602,39 @@ b~close
 call sysfiledelete f
 ```
 
-```output defect=#209
+```output
 one
 4 0 0
 8 4 1
 14 10 2
+```
+
+```rexx
+f = 'spec-stream-dev139-lines-zq.tmp'
+call lineout f, 'one'
+call lineout f
+a = .stream~new(f)
+b = .stream~new(f)
+say b~lines
+x = a~lineout('two')
+a~flush
+say b~lines('C') b~chars
+x = a~lineout('three')
+a~flush
+say b~lines('C') b~chars
+say b~linein
+say b~lines('C') b~chars
+a~close
+b~close
+call sysfiledelete f
+```
+
+```output
+1
+2 8
+3 14
+one
+2 10
 ```
 
 r[class.stream.deviation.140]

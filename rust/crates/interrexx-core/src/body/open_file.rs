@@ -41,8 +41,13 @@ pub struct OpenFile {
     /// operation. Any write landing before the position drops it, so it is
     /// always what a count from the start would answer.
     pub line_mark: Option<(i64, i64)>,
-    /// The stream's line count, dropped by any write.
-    pub line_total: Option<u64>,
+    /// The stream's line count and the file's size when it was counted, which
+    /// [`OpenFile::NO_TOTAL`] in the size marks as not counted. Any write drops
+    /// it; a count that finds the file another size drops it too, which is how
+    /// lines another stream or process wrote and flushed are counted. The two
+    /// numbers share the room one `Option` of the count took.
+    line_total: u64,
+    line_total_size: u64,
     /// Debug builds only: digests of the bytes [`OpenFile::line_mark`] and
     /// [`OpenFile::line_total`] were counted over, so a check of either runs
     /// only while those bytes are unchanged. Another stream object or process
@@ -53,6 +58,29 @@ pub struct OpenFile {
 }
 
 impl OpenFile {
+    const NO_TOTAL: u64 = u64::MAX;
+
+    /// The stream's line count, if one is held.
+    pub fn line_total(&self) -> Option<u64> {
+        (self.line_total_size != Self::NO_TOTAL).then_some(self.line_total)
+    }
+
+    /// The size the file had when the held line count was made.
+    pub fn line_total_size(&self) -> Option<u64> {
+        (self.line_total_size != Self::NO_TOTAL).then_some(self.line_total_size)
+    }
+
+    /// Holds `total` as the line count of the file at `size` bytes.
+    pub fn set_line_total(&mut self, total: u64, size: u64) {
+        self.line_total = total;
+        self.line_total_size = size;
+    }
+
+    /// Drops the held line count.
+    pub fn drop_line_total(&mut self) {
+        self.line_total_size = Self::NO_TOTAL;
+    }
+
     /// `file` opened, read from position 1 and written at `write_position`.
     pub fn new(
         file: std::fs::File,
@@ -74,7 +102,8 @@ impl OpenFile {
             pending: None,
             transient,
             line_mark: None,
-            line_total: None,
+            line_total: 0,
+            line_total_size: Self::NO_TOTAL,
             line_mark_digest: None,
             line_total_digest: None,
         }

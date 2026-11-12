@@ -77,7 +77,20 @@ pub(crate) fn line_count(
         let whole = size.checked_div(record_length).unwrap_or(0);
         return Ok(whole + u64::from(!size.is_multiple_of(record_length)));
     }
-    if let Some(total) = open.line_total {
+    // Another stream or process may have written and flushed the file since
+    // the count and the mark were made; a file of another size is counted
+    // again from its start.
+    let size = size_of(open.flushed());
+    if open
+        .line_total_size()
+        .is_some_and(|counted| counted != size)
+    {
+        open.drop_line_total();
+        open.line_total_digest = None;
+        open.line_mark = None;
+        open.line_mark_digest = None;
+    }
+    if let Some(total) = open.line_total() {
         if cfg!(debug_assertions) && total_intact(open) {
             assert_eq!(
                 Some(total),
@@ -88,7 +101,7 @@ pub(crate) fn line_count(
         return Ok(total);
     }
     let total = count_lines_from(open.flushed(), 1)?;
-    open.line_total = Some(total);
+    open.set_line_total(total, size);
     if cfg!(debug_assertions) {
         let end = size_of(open.flushed()) as i64 + 1;
         open.line_total_digest = digest_before(open.flushed(), end);

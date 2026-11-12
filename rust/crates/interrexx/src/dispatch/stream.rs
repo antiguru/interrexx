@@ -1644,7 +1644,7 @@ fn landing(open: &interrexx_core::OpenFile, append: bool, position: i64) -> i64 
 /// rexxref's condition for its positioning optimizations, that nothing else
 /// writes the file meanwhile (iostrms.xml:495-500).
 fn write_open(open: &mut interrexx_core::OpenFile, at: i64, bytes: &[u8]) -> std::io::Result<()> {
-    open.line_total = None;
+    open.drop_line_total();
     open.line_total_digest = None;
     if open.line_mark.is_some_and(|(mark, _)| at <= mark) {
         open.line_mark = None;
