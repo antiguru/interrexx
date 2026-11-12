@@ -2095,7 +2095,10 @@ pub(super) fn hash_unknown(
         return Err(Raised::missing_method_argument(1).into());
     };
     let message = required_string_argument(interp, message, 1)?;
-    let mut name = interp.to_text(message).to_vec();
+    // Built in the result buffer, which the short index it becomes hands
+    // back, rather than in a fresh allocation per send.
+    let mut name = interp.take_result_buffer();
+    name.extend_from_slice(&interp.to_text(message));
     let Some(Some(arguments)) = args.get(1).copied() else {
         return Err(Raised::missing_method_argument(2).into());
     };
