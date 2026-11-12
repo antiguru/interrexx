@@ -51,7 +51,7 @@ const SOURCES: &[Source] = &[
 
 /// The replacement files under `rexx/`, in order. Adding a file here is the
 /// swap: every class it declares replaces the host's class of that name.
-const REPLACEMENTS: &[&str] = &["collection.rex", "ordering.rex", "supplier.rex"];
+const REPLACEMENTS: &[&str] = &["collection.rex", "ordering.rex", "supplier.rex", "datetime.rex"];
 
 /// One host member a replacement may leave out.
 struct Allowed {
@@ -68,7 +68,22 @@ struct Allowed {
 
 /// Host members a replacement may leave out. Every entry must match a dropped
 /// member of a replaced class, and carry a reason.
-const ALLOW_DROPPED: &[Allowed] = &[];
+const ALLOW_DROPPED: &[Allowed] = &[
+    Allowed {
+        class: "DateTime",
+        member: "convertDate",
+        class_side: false,
+        reason: "private helper; interrexx's DateTime converts with the DATE builtin",
+        sent_sites: 0,
+    },
+    Allowed {
+        class: "DateTime",
+        member: "convertTime",
+        class_side: false,
+        reason: "private helper; interrexx's DateTime converts with the TIME builtin",
+        sent_sites: 0,
+    },
+];
 
 fn main() {
     let out = PathBuf::from(std::env::var("OUT_DIR").expect("cargo sets OUT_DIR"));
