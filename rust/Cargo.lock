@@ -432,6 +432,9 @@ dependencies = [
 [[package]]
 name = "interrexx-lib"
 version = "0.1.0"
+dependencies = [
+ "interrexx-parse",
+]
 
 [[package]]
 name = "interrexx-num"

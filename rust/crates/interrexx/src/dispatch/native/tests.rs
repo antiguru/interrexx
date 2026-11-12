@@ -5,34 +5,21 @@ use interrexx_parse::DirectiveKind;
 
 use super::*;
 
-/// The interpreter's own bootstrap Rexx, at the paths the C++ tree keeps
-/// it at.
-fn bootstrap_files() -> Vec<PathBuf> {
-    let root = PathBuf::from(concat!(env!("REXX_UPSTREAM"), "/interpreter"));
-    vec![
-        root.join("RexxClasses/CoreClasses.orx"),
-        root.join("RexxClasses/StreamClasses.orx"),
-        root.join("RexxClasses/CommandClasses.orx"),
-        root.join("platform/unix/PlatformObjects.orx"),
-    ]
-}
-
-/// Each bootstrap file's directives, parsed by this crate's own parser
-/// rather than scanned.
+/// Each embedded bootstrap program's directives, parsed by this crate's own
+/// parser rather than scanned, from the bytes the interpreter installs (with
+/// any replacement already in place). The path names the program.
 fn bootstrap_directives() -> Vec<(PathBuf, interrexx_parse::Program)> {
-    bootstrap_files()
-        .into_iter()
-        .map(|path| {
-            let text = std::fs::read(&path).unwrap_or_else(|e| {
-                panic!(
-                    "cannot read {}: {e}. This crate is checked against that C++ \
-                     tree; without it there is nothing to resolve against",
-                    path.display()
-                )
-            });
-            let program = interrexx_parse::parse_program(text)
-                .unwrap_or_else(|e| panic!("{} does not parse: {e:?}", path.display()));
-            (path, program)
+    interrexx_lib::PROGRAMS
+        .iter()
+        .map(|program| {
+            let parsed =
+                interrexx_parse::parse_program(program.source.to_vec()).unwrap_or_else(|e| {
+                    panic!(
+                        "{}",
+                        interrexx_lib::describe_parse_error(program, e.byte, e.code(), e.sub())
+                    )
+                });
+            (PathBuf::from(program.name), parsed)
         })
         .collect()
 }

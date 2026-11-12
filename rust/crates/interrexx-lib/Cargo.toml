@@ -9,3 +9,12 @@ description = "The Rexx-written class library sources interrexx runs at start-up
 
 [lints]
 workspace = true
+
+[build-dependencies]
+# The splice reads the host programs and the replacement files with the
+# interpreter's own parser, so a class and its members are found by directive
+# and never by a text match.
+interrexx-parse.workspace = true
+
+[dev-dependencies]
+interrexx-parse.workspace = true

@@ -2800,7 +2800,15 @@ impl Interp {
             true => crate::LIBRARY_PACKAGE_NAME.to_vec(),
             false => self.program_display_name(program_id).to_vec(),
         };
-        let text = self.sourceless_line(0, &package);
+        let mut text = self.sourceless_line(0, &package);
+        // Under the library-debug switch (debug builds only), a frame inside
+        // a replacement class names our own file and line.
+        if library
+            && let Some(name) = self.library_program_names.get(&program_id)
+            && let Some(shown) = interrexx_lib::debug_frame(name, line)
+        {
+            text = shown.into_bytes();
+        }
         Some(FailureSite::Named {
             line,
             indent,

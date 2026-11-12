@@ -1340,7 +1340,10 @@ fn bytes_a_body_stops_holding_leave_the_live_figure() {
 fn every_library_program_passes_the_declaration_checks() {
     for program in interrexx_lib::PROGRAMS {
         if let Err(error) = parse_program(program.source.to_vec()) {
-            panic!("{}: {error}", program.name);
+            panic!(
+                "{}",
+                interrexx_lib::describe_parse_error(program, error.byte, error.code(), error.sub())
+            );
         }
     }
 }
