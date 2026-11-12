@@ -829,8 +829,7 @@ run in this order: <code>which</code> is present (<code>88.901</code>), then it 
 answers one (<code>88.909</code>), then the number of arguments is right (<code>88.922</code>), then
 the letter is one of those above (<code>93.900</code>). So <code>isRedirected(, 1)</code> raises
 <code>88.901</code> and <code>isRedirected(.nil, 1)</code> raises <code>88.909</code>, however many arguments
-follow, while <code>isRedirected('Q', 1)</code> raises <code>88.922</code>. interrexx raises <code>88.922</code>
-for the first two today (issue #429).</p>
+follow, while <code>isRedirected('Q', 1)</code> raises <code>88.922</code>.</p>
 <pre><code class="language-rexx">x = .commandhandler~register('spec_cc_redir', .asker~new)
 a = .array~new; b = .array~new
 f = 'spec_cc_redir.tmp'
@@ -942,7 +941,7 @@ x = .commandhandler~deregister('spec_cc_redir_order')
 bad: say x '=&gt;' condition('o')~code
   return
 </code></pre>
-<pre><code class="language-output defect=#429">caller~isRedirected(, 1) =&gt; 88.901
+<pre><code class="language-output">caller~isRedirected(, 1) =&gt; 88.901
 caller~isRedirected(.nil, 1) =&gt; 88.909
 caller~isRedirected('Q', 1) =&gt; 88.922
 </code></pre>
