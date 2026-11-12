@@ -351,7 +351,9 @@ report of the error, whose text is not specified, to its standard error stream
 (<a href="../environment/objects.html#r-env.objects.error.report">the rule on where the report goes</a>), and its
 exit code is <code>256</code> minus the number of the error, so that the error <code>97.1</code>
 gives 159 and <code>42.3</code> gives 214. The output that the clauses before the error
-wrote stays written. The subcode does not enter the exit code.</p>
+wrote stays written. The subcode does not enter the exit code.
+The line that the report names is not specified where the error was raised in
+the class library, as <a href="information.html#r-cond.information.library">the library rule</a> says.</p>
 <pre><code class="language-rexx">say 'before'
 x = .nil~nosuchmethod
 say 'not reached'

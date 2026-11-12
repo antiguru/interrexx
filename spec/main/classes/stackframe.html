@@ -391,7 +391,8 @@ clause that holds the text, as <a href="../instructions/trace.html#r-instr.trace
 is. A frame is a snapshot of the moment it was made: the running code goes on,
 and the line of the frame's context, <a href="rexxcontext.html#r-class.rexxcontext.line">asked with
 <code>line</code></a>, moves with it. <code>line</code> answers <code>.nil</code> for a
-built-in method.</p>
+built-in method. The number that it answers for a method of the class library
+is not specified, as <a href="../conditions/information.html#r-cond.information.library">the library rule</a> says.</p>
 <pre><code class="language-rexx">call r
 exit
 r:
@@ -421,7 +422,9 @@ indentation rule</a> says, which counts one level for each
 active internal call. <a href="#r-class.stackframe.deviation.0">Deviation 0</a> covers the
 indentation that a program reads back. The string of a built-in method's frame
 is seven blanks, <code>*-*</code>, a blank and <code>Compiled method "NAME" with scope "Class".</code>, with the method's name in upper case and the id of the class that
-defines it.</p>
+defines it.
+The number in the line of a method of the class library is not specified, as
+<a href="../conditions/information.html#r-cond.information.library">the library rule</a> says.</p>
 <pre><code class="language-rexx">call show
 do i = 1 to 1
   call show

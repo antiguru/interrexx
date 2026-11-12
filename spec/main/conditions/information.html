@@ -394,6 +394,27 @@ h: say arg(1)~hasindex('ADDITIONAL')
 <pre><code class="language-output">1 0
 0
 </code></pre>
+<div class="rule" id="r-cond.information.library"><a href="#r-cond.information.library">[cond.information.library]</a></div>
+<p>A level that runs a method of the class library, the code of package <code>REXX</code>,
+has a line number that is not specified. That holds for <code>POSITION</code> of a
+condition that was raised there, for the <code>line</code> of its
+<a href="../classes/stackframe.html#r-class.stackframe.line">StackFrame</a>, for the number in its
+<a href="../classes/stackframe.html#r-class.stackframe.traceline">traceback line</a> and for the line that the
+<a href="index.html#r-cond.index.syntax">report of an error</a> names. The number of such levels
+between the level that sent the message and the level that raised the
+condition is not specified either, so the number of items of <code>STACKFRAMES</code> and
+<code>TRACEBACK</code> is not specified where library levels are among them. The code
+and subcode of an error that a library method raises are specified, as the
+page of the class says; its text is not, as <a href="#r-cond.information.object">the object
+rule</a> says for every message.</p>
+<pre><code class="language-rexx">signal on syntax name h
+x = .Validate~number('N', 'x')
+say 'not reached'
+exit
+h: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">88.902
+</code></pre>
 <div class="rule" id="r-cond.information.object.values"><a href="#r-cond.information.object.values">[cond.information.object.values]</a></div>
 <p>For a SYNTAX condition, <code>CODE</code> is the string <code>m.n</code> of the error number and
 subcode, <code>RC</code> is <code>m</code>, <code>ERRORTEXT</code> equals what the <code>ERRORTEXT</code> builtin answers
