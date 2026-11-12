@@ -211,7 +211,8 @@ or <code>uniqueIndexes</code>. Its superclasses are <code>Object</code>, <code>M
 n = 0
 m = .set~methods(.nil)
 do while m~available
-  n += 1
+  if m~item~isPrivate then nop
+  else n += 1
   m~next
 end
 say s~class~id n 'own methods' .set~hasMethod('OF') s~hasMethod('OF')
@@ -1407,7 +1408,7 @@ say .set~of('q', 'r')~subset(.pk~new(.list~of('q', 'r')))
   expose answer
   return answer
 </code></pre>
-<pre><code class="language-output defect=#187">3 1 1 1 0
+<pre><code class="language-output">3 1 1 1 0
 1
 </code></pre>
 

@@ -527,7 +527,7 @@ say p~getWhole('B')
   if arg(1) = 'STRING' then return v
   return .nil
 </code></pre>
-<pre><code class="language-output defect=#164">12
+<pre><code class="language-output">12
 </code></pre>
 <pre><code class="language-rexx">.local~n = 0
 p = .properties~new
@@ -543,7 +543,7 @@ say p~getWhole('B') .local~n
   if arg(1) = 'STRING' then return v
   return .nil
 </code></pre>
-<pre><code class="language-output defect=#164">12 1
+<pre><code class="language-output">12 1
 </code></pre>
 <h2 id="setting-logical-and-whole-values"><a class="header" href="#setting-logical-and-whole-values">Setting logical and whole values</a></h2>
 <div class="rule" id="r-class.properties.setlogical"><a href="#r-class.properties.setlogical">[class.properties.setlogical]</a></div>
@@ -984,7 +984,7 @@ say t~lines~makeString('L', '|')
   expose lines
   return lines
 </code></pre>
-<pre><code class="language-output defect=#164">O=val
+<pre><code class="language-output">O=val
 </code></pre>
 <h2 id="what-a-properties-object-inherits"><a class="header" href="#what-a-properties-object-inherits">What a properties object inherits</a></h2>
 <div class="rule" id="r-class.properties.inherited"><a href="#r-class.properties.inherited">[class.properties.inherited]</a></div>
@@ -1172,7 +1172,7 @@ say p['k'] p['k2'] p['w'] p['l']
 ::method makestring
   return 'other'
 </code></pre>
-<pre><code class="language-output defect=#140">abc def 12 true
+<pre><code class="language-output">abc def 12 true
 </code></pre>
 <div class="rule" id="r-class.properties.deviation.123"><a href="#r-class.properties.deviation.123">[class.properties.deviation.123]</a></div>
 <p><code>isEmpty</code> agrees with <code>items</code>, as <a href="directory.html#r-class.directory.deviation.123">the directory

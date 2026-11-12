@@ -400,7 +400,9 @@ has a line number that is not specified. That holds for <code>POSITION</code> of
 condition that was raised there, for the <code>line</code> of its
 <a href="../classes/stackframe.html#r-class.stackframe.line">StackFrame</a>, for the number in its
 <a href="../classes/stackframe.html#r-class.stackframe.traceline">traceback line</a> and for the line that the
-<a href="index.html#r-cond.index.syntax">report of an error</a> names. The number of such levels
+<a href="index.html#r-cond.index.syntax">report of an error</a> names. The indentation of the
+traceback line of such a level, which is the depth of the clause that it was
+running, is not specified either. The number of such levels
 between the level that sent the message and the level that raised the
 condition is not specified either, so the number of items of <code>STACKFRAMES</code> and
 <code>TRACEBACK</code> is not specified where library levels are among them. The code

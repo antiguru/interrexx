@@ -1313,19 +1313,22 @@ say upper(.weird~new)
 <div class="rule" id="r-conc.halt.deviation.162"><a href="#r-conc.halt.deviation.162">[conc.halt.deviation.162]</a></div>
 <p>An <code>init</code> that is sent to an <code>Alarm</code> or a <code>Ticker</code> after the one that <code>new</code>
 sent (<a href="../classes/alarm.html#r-class.alarm.init"><code>Alarm</code>'s <code>init</code></a>, <a href="../classes/ticker.html#r-class.ticker.init"><code>Ticker</code>'s
-<code>init</code></a>), whatever its arguments, raises <code>SYNTAX 98.900</code>,
+<code>init</code></a>), with a number of arguments that <code>init</code> accepts,
+whatever their values, raises <code>SYNTAX 98.900</code>,
 the execution error whose text says what was refused, and leaves the object as
 it was: an alarm or ticker that is set stays set, and one that was cancelled
 stays cancelled, with its first time, interval, target and attachment
-(<a href="../deviations.html#162-a-second-init-of-an-alarm-or-a-ticker">Deviation 162</a>).
+(<a href="../deviations.html#162-a-second-init-of-an-alarm-or-a-ticker">Deviation 162</a>). A
+wrong number of arguments raises the argument-count error first, as it does
+for the <code>init</code> that <code>new</code> sends.
 ooRexx sets the object up again without stopping the first setting, and
 crashes when a ticker that is running is set up again, so the examples are not
-run on ooRexx. interrexx does not refuse the second <code>init</code> yet (#248). The
+run on ooRexx. The
 first example sends a second <code>init</code> to an alarm that is set, cancels it and
 sends a third; the second does the same with a ticker. They print which target
 hears the <code>cancel</code>, and what the object still answers. The target of the
-ticker cancels it when it is called, so that the example ends where the second
-<code>init</code> is not refused yet.</p>
+ticker cancels it when it is called, so that the example ends even if a
+second <code>init</code> were not refused.</p>
 <pre><code class="language-rexx">n1 = .note~new('first target')
 n2 = .note~new('second target')
 dt = .datetime~new~addSeconds(2)
@@ -1354,7 +1357,7 @@ bad: say arg(1) '=&gt;' condition('o')~code
   use arg src
   say name 'was sent cancel for' src~attachment
 </code></pre>
-<pre><code class="language-output defect=#248">a~init(0.01, n2, "second alarm") =&gt; 98.900
+<pre><code class="language-output">a~init(0.01, n2, "second alarm") =&gt; 98.900
 first alarm 1 0
 first target was sent cancel for first alarm
 a~init(0.01, n2, "third alarm") =&gt; 98.900
@@ -1388,7 +1391,7 @@ bad: say arg(1) '=&gt;' condition('o')~code
   use arg src
   say name 'was sent cancel for' src~attachment
 </code></pre>
-<pre><code class="language-output defect=#248">t~init(30, n2, "second ticker") =&gt; 98.900
+<pre><code class="language-output">t~init(30, n2, "second ticker") =&gt; 98.900
 first ticker 02:00:00.000000 0
 first target was sent cancel for first ticker
 t~init(30, n2, "third ticker") =&gt; 98.900

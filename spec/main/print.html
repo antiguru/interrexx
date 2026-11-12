@@ -23657,7 +23657,9 @@ has a line number that is not specified. That holds for <code>POSITION</code> of
 condition that was raised there, for the <code>line</code> of its
 <a href="conditions/../classes/stackframe.html#r-class.stackframe.line">StackFrame</a>, for the number in its
 <a href="conditions/../classes/stackframe.html#r-class.stackframe.traceline">traceback line</a> and for the line that the
-<a href="conditions/index.html#r-cond.index.syntax">report of an error</a> names. The number of such levels
+<a href="conditions/index.html#r-cond.index.syntax">report of an error</a> names. The indentation of the
+traceback line of such a level, which is the depth of the clause that it was
+running, is not specified either. The number of such levels
 between the level that sent the message and the level that raised the
 condition is not specified either, so the number of items of <code>STACKFRAMES</code> and
 <code>TRACEBACK</code> is not specified where library levels are among them. The code
@@ -50538,10 +50540,44 @@ y b The NIL object 4
 r~queue("n", .nil) =&gt; 97.1
 r~push("n", .nil) =&gt; 97.1
 </code></pre>
+<div class="rule" id="r-class.circularqueue.queue.zero"><a href="classes/circularqueue.html#r-class.circularqueue.queue.zero">[class.circularqueue.queue.zero]</a></div>
+<p>On a queue of size 0, <code>queue</code>, <code>push</code> and <code>append</code> hold nothing: after the
+argument checks of their own rules they answer <code>.nil</code> and add nothing, and
+they send no message to the receiver. The <code>option</code> of <code>queue</code> and <code>push</code> is
+not read, <code>Unique</code> included, so that an option that does not understand
+<code>caselessMatchChar</code> raises no error. <code>insert</code> is not covered: it adds the item
+and takes it out again by <a href="classes/circularqueue.html#r-class.circularqueue.insert">the insert rule</a>. A
+queue that <code>resize(0)</code> made size 0 behaves so too.</p>
+<pre><code class="language-rexx">q = .circularqueue~new(0)
+say (q~queue('a') == .nil) (q~push('b') == .nil) (q~append('c') == .nil) q~items
+say (q~queue('d', .object~new) == .nil) (q~push('e', 'U') == .nil) q~items
+call try 'q~queue'
+call try 'q~push(, "U")'
+call try 'q~append(1, 2)'
+r = .circularqueue~of(1, 2, 3)
+r~resize(0)
+say (r~queue('x') == .nil) r~size r~items
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">1 1 1 0
+1 1 0
+q~queue =&gt; 93.901
+q~push(, "U") =&gt; 93.903
+q~append(1, 2) =&gt; 93.902
+1 0 0
+</code></pre>
 <div class="rule" id="r-class.circularqueue.queue.sends"><a href="classes/circularqueue.html#r-class.circularqueue.queue.sends">[class.circularqueue.queue.sends]</a></div>
-<p><code>queue</code> and <code>push</code> send, to the receiver, <code>items</code> and then, when the answer is
-greater than the size, <code>pull</code> for <code>queue</code> or, for <code>push</code>, <code>items</code> again and
-<code>remove</code> with the answer as the index. With the option <code>Unique</code> they send
+<p><code>queue</code> and <code>push</code> send, to the receiver, <code>items</code> before the item is added and,
+when the answer is not less than the size, <code>pull</code> for <code>queue</code> or, for <code>push</code>,
+<code>items</code> again and <code>remove</code> with that answer as the index; then the item is added.
+With the option <code>Unique</code> they send
 <code>hasItem</code> with the item first and, for as long as it answers true, <code>removeItem</code>
 with the item and <code>hasItem</code> again, and only then the <code>items</code>. The strict <code>==</code> of
 that search is the one of <a href="classes/queue.html#r-class.queue.removeitem.sends">the Queue search
@@ -50629,8 +50665,8 @@ c,a,b
 number of items afterwards; a queue of size 0 holds nothing, and <code>append</code> then
 answers <code>.nil</code>. A full queue takes out the item at its head first, so the
 index is the size then. It takes exactly one argument: none raises
-<code>SYNTAX 93.901</code>, and a second raises <code>SYNTAX 93.902</code>. After the item is added,
-<code>append</code> sends <code>items</code> to the receiver, and <code>pull</code> when the answer is greater
+<code>SYNTAX 93.901</code>, and a second raises <code>SYNTAX 93.902</code>. Before the item is added,
+<code>append</code> sends <code>items</code> to the receiver, and <code>pull</code> when the answer is not less
 than the size.</p>
 <pre><code class="language-rexx">q = .circularqueue~new(3)
 say q~append('a') q~append('b') q~append('c')
@@ -51625,6 +51661,11 @@ call run 3, 'a~resize(5)'
 call run 3, 'a~resize(2)'
 call run 3, 'a~resize(2, "L")'
 call run 3, 'a~resize(0)'
+say 'size 0'
+call run 0, 'a~append("d")'
+call run 0, 'a~queue("d")'
+call run 0, 'a~push("d")'
+call run 0, 'a~insert("d")'
 exit
 run:
   use arg n, c
@@ -51714,6 +51755,18 @@ a~resize(0) 3
   items()
   remove(1)
   remove(1)
+  remove(1)
+size 0
+a~append("d") 0
+  append(d)
+a~queue("d") 0
+  queue(d)
+a~push("d") 0
+  push(d)
+a~insert("d") 0
+  insert(d)
+  items()
+  last()
   remove(1)
 </code></pre>
 <pre><code class="language-rexx">own = 'allItems append at empty items last makeArray remove copy pull push',
@@ -54183,7 +54236,7 @@ say p~getWhole('B')
   if arg(1) = 'STRING' then return v
   return .nil
 </code></pre>
-<pre><code class="language-output defect=#164">12
+<pre><code class="language-output">12
 </code></pre>
 <pre><code class="language-rexx">.local~n = 0
 p = .properties~new
@@ -54199,7 +54252,7 @@ say p~getWhole('B') .local~n
   if arg(1) = 'STRING' then return v
   return .nil
 </code></pre>
-<pre><code class="language-output defect=#164">12 1
+<pre><code class="language-output">12 1
 </code></pre>
 <h2 id="setting-logical-and-whole-values"><a class="header" href="#setting-logical-and-whole-values">Setting logical and whole values</a></h2>
 <div class="rule" id="r-class.properties.setlogical"><a href="classes/properties.html#r-class.properties.setlogical">[class.properties.setlogical]</a></div>
@@ -54640,7 +54693,7 @@ say t~lines~makeString('L', '|')
   expose lines
   return lines
 </code></pre>
-<pre><code class="language-output defect=#164">O=val
+<pre><code class="language-output">O=val
 </code></pre>
 <h2 id="what-a-properties-object-inherits"><a class="header" href="#what-a-properties-object-inherits">What a properties object inherits</a></h2>
 <div class="rule" id="r-class.properties.inherited"><a href="classes/properties.html#r-class.properties.inherited">[class.properties.inherited]</a></div>
@@ -54828,7 +54881,7 @@ say p['k'] p['k2'] p['w'] p['l']
 ::method makestring
   return 'other'
 </code></pre>
-<pre><code class="language-output defect=#140">abc def 12 true
+<pre><code class="language-output">abc def 12 true
 </code></pre>
 <div class="rule" id="r-class.properties.deviation.123"><a href="classes/properties.html#r-class.properties.deviation.123">[class.properties.deviation.123]</a></div>
 <p><code>isEmpty</code> agrees with <code>items</code>, as <a href="classes/directory.html#r-class.directory.deviation.123">the directory
@@ -58036,7 +58089,8 @@ order.</p>
 n = 0
 m = .bag~methods(.nil)
 do while m~available
-  n += 1
+  if m~item~isPrivate then nop
+  else n += 1
   m~next
 end
 say b~class~id n 'own methods' .bag~hasMethod('OF') b~hasMethod('OF')
@@ -59462,7 +59516,7 @@ say d~items
   expose answer
   return answer
 </code></pre>
-<pre><code class="language-output defect=#187">3 1 1 1 0
+<pre><code class="language-output">3 1 1 1 0
 1
 1
 </code></pre>
@@ -59504,7 +59558,8 @@ or <code>uniqueIndexes</code>. Its superclasses are <code>Object</code>, <code>M
 n = 0
 m = .set~methods(.nil)
 do while m~available
-  n += 1
+  if m~item~isPrivate then nop
+  else n += 1
   m~next
 end
 say s~class~id n 'own methods' .set~hasMethod('OF') s~hasMethod('OF')
@@ -60700,7 +60755,7 @@ say .set~of('q', 'r')~subset(.pk~new(.list~of('q', 'r')))
   expose answer
   return answer
 </code></pre>
-<pre><code class="language-output defect=#187">3 1 1 1 0
+<pre><code class="language-output">3 1 1 1 0
 1
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="stem"><a class="header" href="#stem">Stem</a></h1>
@@ -63837,7 +63892,7 @@ exit
   .local~log = .local~log 'ISA'
   forward class (super)
 </code></pre>
-<pre><code class="language-output defect=#190">2016-02-29T09:09:37.012345
+<pre><code class="language-output">2016-02-29T09:09:37.012345
 2016-02-29T09:06:37.012345
 2016-02-29T09:09:37.012345
 05:30:00.000000 05:30:00.000000 05:30:00.000000
@@ -65674,7 +65729,7 @@ bad: say arg(1) '=&gt;' condition('o')~code
   .local~log = .local~log 'TOTALMICROSECONDS'
   return 0
 </code></pre>
-<pre><code class="language-output defect=#189">a~compareTo(.datetime~new(2017, 6, 30, 5, 6, 7, 8, 0)) =&gt; 88.914
+<pre><code class="language-output">a~compareTo(.datetime~new(2017, 6, 30, 5, 6, 7, 8, 0)) =&gt; 88.914
 a~compareTo(.file~new("/t/a")) =&gt; 88.914
 a~compareTo("01:02:03.000000") =&gt; 88.914
 a~compareTo(5) =&gt; 88.914
@@ -65724,7 +65779,7 @@ exit
   .local~log = .local~log 'ISA('arg(1)~id')'
   forward class (super)
 </code></pre>
-<pre><code class="language-output defect=#190">2016-02-29T09:09:37.012345
+<pre><code class="language-output">2016-02-29T09:09:37.012345
 05:30:00.000000 1
 2016-03-01T02:08:07.012345-01:30
 SUB
@@ -65765,7 +65820,7 @@ try:
 bad: say arg(1) '=&gt;' condition('o')~code
   return
 </code></pre>
-<pre><code class="language-output defect=#193">1.02:03:04.000005
+<pre><code class="language-output">1.02:03:04.000005
 00:00:00.000020 00:00:00.000007
 00:00:00.001234
 .timespan~new(1.0000000001, 2, 3, 4, 5) =&gt; 88.904
@@ -65801,7 +65856,7 @@ failed: say '=&gt;' condition('o')~code
 ::method init
   nop
 </code></pre>
-<pre><code class="language-output defect=#194">00:00:00.000000 0 0 00:00:00.000000 0 0 00:00:00.000000
+<pre><code class="language-output">00:00:00.000000 0 0 00:00:00.000000 0 0 00:00:00.000000
 1 1 0 1
 01:00:00.000000 -01:00:00.000000 00:00:00.000000 00:00:00.000000 00:00:00.000000 00:00:00.000000
 0001-01-01T00:00:00.000000 1.00:00:00.000000 00:00:00.000000 ST
@@ -65843,7 +65898,7 @@ try:
 bad: say '['arg(1)'] =&gt;' condition('o')~code
   return
 </code></pre>
-<pre><code class="language-output defect=#195">1.02:03:04.000005 =&gt; 93784000005
+<pre><code class="language-output">1.02:03:04.000005 =&gt; 93784000005
 -1.02:03:04.000005 =&gt; -93784000005
 23:59:59.999999 =&gt; 86399999999
 -00:00:00.000001 =&gt; -1
@@ -65890,7 +65945,7 @@ say .timespan~fromStringFormat('-00:00:30.000000')~totalSeconds
 say .timespan~fromStringFormat('-00:59:59.999999')~seconds
 say .timespan~fromStringFormat('00:00:30.000000')~totalSeconds
 </code></pre>
-<pre><code class="language-output defect=#196">-00:00:00.000001 -00:00:00.000001 -1 1
+<pre><code class="language-output">-00:00:00.000001 -00:00:00.000001 -1 1
 -00:01:30.000000 -00:01:30.000000 -1 1
 -00:59:59.999999 -00:59:59.999999 -1 1
 -01:00:00.000000 -01:00:00.000000 -1 1
@@ -65915,7 +65970,7 @@ exit
 syntax:
 say condition('O')~code (t~string == before) t
 </code></pre>
-<pre><code class="language-output defect=#441">88.903 1 01:02:03.000000
+<pre><code class="language-output">88.903 1 01:02:03.000000
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="comparable"><a class="header" href="#comparable">Comparable</a></h1>
 <p class="references">rexxref: Builtin Classes &gt; Utility Classes &gt; Comparable Class; Builtin Classes &gt; Utility Classes &gt; Comparable Class &gt; compareTo</p>
@@ -72409,8 +72464,9 @@ active internal call. <a href="classes/stackframe.html#r-class.stackframe.deviat
 indentation that a program reads back. The string of a built-in method's frame
 is seven blanks, <code>*-*</code>, a blank and <code>Compiled method "NAME" with scope "Class".</code>, with the method's name in upper case and the id of the class that
 defines it.
-The number in the line of a method of the class library is not specified, as
-<a href="classes/../conditions/information.html#r-cond.information.library">the library rule</a> says.</p>
+The number in the line of a method of the class library, and its
+indentation, are not specified, as <a href="classes/../conditions/information.html#r-cond.information.library">the library rule</a>
+says.</p>
 <pre><code class="language-rexx">call show
 do i = 1 to 1
   call show
@@ -74157,7 +74213,7 @@ say .traceobject~option
   use arg c
   return 'Full'
 </code></pre>
-<pre><code class="language-output defect=#140">S
+<pre><code class="language-output">S
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="validate"><a class="header" href="#validate">Validate</a></h1>
 <p class="references">rexxref: Builtin Classes &gt; Utility Classes &gt; Validate Class; Builtin Classes &gt; Utility Classes &gt; Validate Class &gt; classType (Class Method); Builtin Classes &gt; Utility Classes &gt; Validate Class &gt; length (Class Method); Builtin Classes &gt; Utility Classes &gt; Validate Class &gt; logical (Class Method); Builtin Classes &gt; Utility Classes &gt; Validate Class &gt; nonNegativeNumber (Class Method); Builtin Classes &gt; Utility Classes &gt; Validate Class &gt; nonNegativeWholeNumber (Class Method); Builtin Classes &gt; Utility Classes &gt; Validate Class &gt; number (Class Method); Builtin Classes &gt; Utility Classes &gt; Validate Class &gt; numberRange (Class Method); Builtin Classes &gt; Utility Classes &gt; Validate Class &gt; position (Class Method); Builtin Classes &gt; Utility Classes &gt; Validate Class &gt; positiveNumber (Class Method); Builtin Classes &gt; Utility Classes &gt; Validate Class &gt; positiveWholeNumber (Class Method); Builtin Classes &gt; Utility Classes &gt; Validate Class &gt; requestClassType (Class Method); Builtin Classes &gt; Utility Classes &gt; Validate Class &gt; wholeNumber (Class Method); Builtin Classes &gt; Utility Classes &gt; Validate Class &gt; wholeNumberRange (Class Method)</p>
@@ -74507,7 +74563,7 @@ bad: say o~class~id condition('o')~code
   say '  request' arg(1)
   return '5'
 </code></pre>
-<pre><code class="language-output defect=#164">  string
+<pre><code class="language-output">  string
 WITHSTR ok
   makestring
 WITHMS ok
@@ -74983,7 +75039,7 @@ bad: say condition('o')~code
   use arg c
   return '7'
 </code></pre>
-<pre><code class="language-output defect=#140">accepted
+<pre><code class="language-output">accepted
 in range
 88.902
 </code></pre>
@@ -75911,7 +75967,7 @@ bad: say arg(1) '=&gt;' condition('o')~code
 ::method init
   nop
 </code></pre>
-<pre><code class="language-output defect=#197">o~attachment =&gt; 98.901
+<pre><code class="language-output">o~attachment =&gt; 98.901
 o~cancel =&gt; 98.901
 o~canceled =&gt; 98.901
 o~cancelled =&gt; 98.901
@@ -76482,7 +76538,7 @@ bad: say arg(1) '=&gt;' condition('o')~code
 ::method init
   nop
 </code></pre>
-<pre><code class="language-output defect=#197">o~attachment =&gt; 98.901
+<pre><code class="language-output">o~attachment =&gt; 98.901
 o~cancel =&gt; 98.901
 o~canceled =&gt; 98.901
 o~cancelled =&gt; 98.901
@@ -82092,7 +82148,7 @@ bad: say arg(1) '=&gt;' condition('o')~code
 ::method init
   nop
 </code></pre>
-<pre><code class="language-output defect=#197">o~delete =&gt; 98.901
+<pre><code class="language-output">o~delete =&gt; 98.901
 o~empty =&gt; 98.901
 o~get =&gt; 98.901
 o~lineIn =&gt; 98.901
@@ -96592,19 +96648,22 @@ say upper(.weird~new)
 <div class="rule" id="r-conc.halt.deviation.162"><a href="concurrency/halt.html#r-conc.halt.deviation.162">[conc.halt.deviation.162]</a></div>
 <p>An <code>init</code> that is sent to an <code>Alarm</code> or a <code>Ticker</code> after the one that <code>new</code>
 sent (<a href="concurrency/../classes/alarm.html#r-class.alarm.init"><code>Alarm</code>'s <code>init</code></a>, <a href="concurrency/../classes/ticker.html#r-class.ticker.init"><code>Ticker</code>'s
-<code>init</code></a>), whatever its arguments, raises <code>SYNTAX 98.900</code>,
+<code>init</code></a>), with a number of arguments that <code>init</code> accepts,
+whatever their values, raises <code>SYNTAX 98.900</code>,
 the execution error whose text says what was refused, and leaves the object as
 it was: an alarm or ticker that is set stays set, and one that was cancelled
 stays cancelled, with its first time, interval, target and attachment
-(<a href="concurrency/../deviations.html#162-a-second-init-of-an-alarm-or-a-ticker">Deviation 162</a>).
+(<a href="concurrency/../deviations.html#162-a-second-init-of-an-alarm-or-a-ticker">Deviation 162</a>). A
+wrong number of arguments raises the argument-count error first, as it does
+for the <code>init</code> that <code>new</code> sends.
 ooRexx sets the object up again without stopping the first setting, and
 crashes when a ticker that is running is set up again, so the examples are not
-run on ooRexx. interrexx does not refuse the second <code>init</code> yet (#248). The
+run on ooRexx. The
 first example sends a second <code>init</code> to an alarm that is set, cancels it and
 sends a third; the second does the same with a ticker. They print which target
 hears the <code>cancel</code>, and what the object still answers. The target of the
-ticker cancels it when it is called, so that the example ends where the second
-<code>init</code> is not refused yet.</p>
+ticker cancels it when it is called, so that the example ends even if a
+second <code>init</code> were not refused.</p>
 <pre><code class="language-rexx">n1 = .note~new('first target')
 n2 = .note~new('second target')
 dt = .datetime~new~addSeconds(2)
@@ -96633,7 +96692,7 @@ bad: say arg(1) '=&gt;' condition('o')~code
   use arg src
   say name 'was sent cancel for' src~attachment
 </code></pre>
-<pre><code class="language-output defect=#248">a~init(0.01, n2, "second alarm") =&gt; 98.900
+<pre><code class="language-output">a~init(0.01, n2, "second alarm") =&gt; 98.900
 first alarm 1 0
 first target was sent cancel for first alarm
 a~init(0.01, n2, "third alarm") =&gt; 98.900
@@ -96667,7 +96726,7 @@ bad: say arg(1) '=&gt;' condition('o')~code
   use arg src
   say name 'was sent cancel for' src~attachment
 </code></pre>
-<pre><code class="language-output defect=#248">t~init(30, n2, "second ticker") =&gt; 98.900
+<pre><code class="language-output">t~init(30, n2, "second ticker") =&gt; 98.900
 first ticker 02:00:00.000000 0
 first target was sent cancel for first ticker
 t~init(30, n2, "third ticker") =&gt; 98.900
@@ -125730,11 +125789,11 @@ once for any delay with whitespace after its sign, without a pause and without
 the range check.</p>
 <h2 id="162-a-second-init-of-an-alarm-or-a-ticker"><a class="header" href="#162-a-second-init-of-an-alarm-or-a-ticker">162. A second init of an Alarm or a Ticker</a></h2>
 <p>An <code>init</code> sent to an <code>Alarm</code> or a <code>Ticker</code> after the one that <code>new</code> sent,
-whatever its arguments, raises <code>SYNTAX 98.900</code> and leaves the object as it
+with a number of arguments that <code>init</code> accepts, whatever their values, raises
+<code>SYNTAX 98.900</code> and leaves the object as it
 was: still set or still cancelled, with its first time, interval, target and
 attachment. ooRexx sets the object up again, without stopping the first
-setting, and crashes when a ticker that runs is set up again. interrexx does
-not refuse the second <code>init</code> yet (#248).</p>
+setting, and crashes when a ticker that runs is set up again.</p>
 <h2 id="163-a-failed-init-of-a-datetime-or-a-timespan"><a class="header" href="#163-a-failed-init-of-a-datetime-or-a-timespan">163. A failed init of a DateTime or a TimeSpan</a></h2>
 <p>An <code>init</code> sent to a <code>DateTime</code> or a <code>TimeSpan</code> that raises an error leaves the
 receiver as it was: every argument is checked before anything is stored.

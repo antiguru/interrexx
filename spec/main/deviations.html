@@ -1079,11 +1079,11 @@ once for any delay with whitespace after its sign, without a pause and without
 the range check.</p>
 <h2 id="162-a-second-init-of-an-alarm-or-a-ticker"><a class="header" href="#162-a-second-init-of-an-alarm-or-a-ticker">162. A second init of an Alarm or a Ticker</a></h2>
 <p>An <code>init</code> sent to an <code>Alarm</code> or a <code>Ticker</code> after the one that <code>new</code> sent,
-whatever its arguments, raises <code>SYNTAX 98.900</code> and leaves the object as it
+with a number of arguments that <code>init</code> accepts, whatever their values, raises
+<code>SYNTAX 98.900</code> and leaves the object as it
 was: still set or still cancelled, with its first time, interval, target and
 attachment. ooRexx sets the object up again, without stopping the first
-setting, and crashes when a ticker that runs is set up again. interrexx does
-not refuse the second <code>init</code> yet (#248).</p>
+setting, and crashes when a ticker that runs is set up again.</p>
 <h2 id="163-a-failed-init-of-a-datetime-or-a-timespan"><a class="header" href="#163-a-failed-init-of-a-datetime-or-a-timespan">163. A failed init of a DateTime or a TimeSpan</a></h2>
 <p>An <code>init</code> sent to a <code>DateTime</code> or a <code>TimeSpan</code> that raises an error leaves the
 receiver as it was: every argument is checked before anything is stored.

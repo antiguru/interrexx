@@ -1738,7 +1738,7 @@ bad: say arg(1) '=&gt;' condition('o')~code
   .local~log = .local~log 'TOTALMICROSECONDS'
   return 0
 </code></pre>
-<pre><code class="language-output defect=#189">a~compareTo(.datetime~new(2017, 6, 30, 5, 6, 7, 8, 0)) =&gt; 88.914
+<pre><code class="language-output">a~compareTo(.datetime~new(2017, 6, 30, 5, 6, 7, 8, 0)) =&gt; 88.914
 a~compareTo(.file~new("/t/a")) =&gt; 88.914
 a~compareTo("01:02:03.000000") =&gt; 88.914
 a~compareTo(5) =&gt; 88.914
@@ -1788,7 +1788,7 @@ exit
   .local~log = .local~log 'ISA('arg(1)~id')'
   forward class (super)
 </code></pre>
-<pre><code class="language-output defect=#190">2016-02-29T09:09:37.012345
+<pre><code class="language-output">2016-02-29T09:09:37.012345
 05:30:00.000000 1
 2016-03-01T02:08:07.012345-01:30
 SUB
@@ -1829,7 +1829,7 @@ try:
 bad: say arg(1) '=&gt;' condition('o')~code
   return
 </code></pre>
-<pre><code class="language-output defect=#193">1.02:03:04.000005
+<pre><code class="language-output">1.02:03:04.000005
 00:00:00.000020 00:00:00.000007
 00:00:00.001234
 .timespan~new(1.0000000001, 2, 3, 4, 5) =&gt; 88.904
@@ -1865,7 +1865,7 @@ failed: say '=&gt;' condition('o')~code
 ::method init
   nop
 </code></pre>
-<pre><code class="language-output defect=#194">00:00:00.000000 0 0 00:00:00.000000 0 0 00:00:00.000000
+<pre><code class="language-output">00:00:00.000000 0 0 00:00:00.000000 0 0 00:00:00.000000
 1 1 0 1
 01:00:00.000000 -01:00:00.000000 00:00:00.000000 00:00:00.000000 00:00:00.000000 00:00:00.000000
 0001-01-01T00:00:00.000000 1.00:00:00.000000 00:00:00.000000 ST
@@ -1907,7 +1907,7 @@ try:
 bad: say '['arg(1)'] =&gt;' condition('o')~code
   return
 </code></pre>
-<pre><code class="language-output defect=#195">1.02:03:04.000005 =&gt; 93784000005
+<pre><code class="language-output">1.02:03:04.000005 =&gt; 93784000005
 -1.02:03:04.000005 =&gt; -93784000005
 23:59:59.999999 =&gt; 86399999999
 -00:00:00.000001 =&gt; -1
@@ -1954,7 +1954,7 @@ say .timespan~fromStringFormat('-00:00:30.000000')~totalSeconds
 say .timespan~fromStringFormat('-00:59:59.999999')~seconds
 say .timespan~fromStringFormat('00:00:30.000000')~totalSeconds
 </code></pre>
-<pre><code class="language-output defect=#196">-00:00:00.000001 -00:00:00.000001 -1 1
+<pre><code class="language-output">-00:00:00.000001 -00:00:00.000001 -1 1
 -00:01:30.000000 -00:01:30.000000 -1 1
 -00:59:59.999999 -00:59:59.999999 -1 1
 -01:00:00.000000 -01:00:00.000000 -1 1
@@ -1979,7 +1979,7 @@ exit
 syntax:
 say condition('O')~code (t~string == before) t
 </code></pre>
-<pre><code class="language-output defect=#441">88.903 1 01:02:03.000000
+<pre><code class="language-output">88.903 1 01:02:03.000000
 </code></pre>
 
                     </main>
