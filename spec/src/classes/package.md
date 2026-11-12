@@ -2832,7 +2832,7 @@ bad: say arg(1) '=>' condition('o')~code
 ::class ss subclass string
 ```
 
-```output defect=#155
+```output
 first
 second
 third
