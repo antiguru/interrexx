@@ -93,6 +93,11 @@ impl MethodDict {
         *self = Self::new();
     }
 
+    /// Room for `names` names without growing.
+    pub fn reserve(&mut self, names: usize) {
+        self.entries.reserve(names);
+    }
+
     /// The scopes folded in before `scope`, or `None` when `scope` never was.
     fn scopes_before(&self, scope: ObjRef) -> Option<&[ObjRef]> {
         let at = self.scope_list.iter().position(|folded| *folded == scope)?;
