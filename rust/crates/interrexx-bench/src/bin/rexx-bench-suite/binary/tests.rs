@@ -35,6 +35,7 @@ fn executable_location_preserves_alternate_targets_and_deps() {
     for exe in [
         "/custom/release/rexx-bench-suite",
         "/custom/debug/deps/rexx-bench-suite-hash",
+        "/custom/debug/build/interrexx-bench/0123abcd/out/rexx-bench-suite-hash",
     ] {
         assert_eq!(
             rust_binary_candidates_for(None, Path::new("/invoke"), Path::new(exe), manifest),
@@ -77,12 +78,14 @@ fn unrecognized_executable_uses_the_workspace_target() {
 #[test]
 fn runtime_candidates_use_this_build_target() {
     let executable = std::env::current_exe().expect("test executable");
-    let profile = executable
-        .parent()
-        .expect("deps")
-        .parent()
-        .expect("profile");
-    let target = profile.parent().expect("target directory");
+    let target = executable
+        .ancestors()
+        .find(|dir| {
+            dir.file_name()
+                .is_some_and(|name| name == "debug" || name == "release")
+        })
+        .and_then(Path::parent)
+        .expect("a test executable under a cargo profile directory");
     let candidates = rust_binary_candidates();
     assert_eq!(
         candidates,
