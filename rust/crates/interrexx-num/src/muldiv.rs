@@ -219,17 +219,33 @@ impl Number {
         }
 
         // Long-divide the digit strings, generating one more digit than
-        // DIGITS so the final rounding has something to look at.
+        // DIGITS so the final rounding has something to look at. `%` and `//`
+        // keep only the integer part of the quotient, so their division stops
+        // at the units digit: the digits it would generate past that are the
+        // ones the truncation below drops. `calc_exp >= 0` here, so the units
+        // digit comes no earlier than the divisor's length.
         let want = crate::working_length(digits);
-        let (mut q, shift) = long_divide(&left.digits, &right.digits, want);
+        let units = if op == DivOp::Divide {
+            usize::MAX
+        } else {
+            usize::try_from(calc_exp)
+                .ok()
+                .and_then(|e| e.checked_add(right.digits.len()))
+                .unwrap_or(usize::MAX)
+        };
+        let (mut q, consumed) = long_divide(&left.digits, &right.digits, want, units);
+        debug_assert!(
+            op != DivOp::Divide || consumed >= left.digits.len(),
+            "an operand truncated to the working length is consumed whole"
+        );
 
-        // value = q * 10^(left.exponent - right.exponent - shift). Same
-        // believed-unreachable guard as the two above.
-        let q_exp = left
-            .exponent
-            .checked_sub(right.exponent)
-            .and_then(|e| e.checked_sub(shift))
-            .ok_or(ArithError::ExponentComputationOverflow)?;
+        // Each numerator digit consumed past the units digit scales the
+        // quotient down one place: value = q * 10^(left.exponent -
+        // right.exponent + left length - consumed). Same believed-
+        // unreachable guard as the two above.
+        let q_exp = i64::from(left.exponent) - i64::from(right.exponent) + left.digits.len() as i64
+            - i64::try_from(consumed).unwrap_or(i64::MAX);
+        let q_exp = i32::try_from(q_exp).map_err(|_| ArithError::ExponentComputationOverflow)?;
 
         if op == DivOp::Divide {
             let raw = Number {
@@ -258,7 +274,12 @@ impl Number {
             return Ok(result);
         }
 
-        // For % and //, keep only the integer part of the quotient.
+        // For % and //, keep only the integer part of the quotient. A
+        // division stopped at the units digit before any significant one has
+        // an empty quotient, which is the zero integer part.
+        if q.is_empty() {
+            q = Digits::single(0);
+        }
         if q_exp < 0 {
             let drop = (-q_exp) as usize;
             if drop >= q.len() {
@@ -316,9 +337,12 @@ impl Number {
 /// The widest divisor [`short_divide`] can carry in a machine word.
 const SHORT_DIVISOR_DIGITS: usize = 18;
 
-/// Divides two digit strings, returning `want` quotient digits, the residue,
-/// and how many powers of ten the quotient was scaled by.
-fn long_divide(n: &[u8], d: &[u8], want: usize) -> (Digits, i32) {
+/// Divides two digit strings, returning up to `want` significant quotient
+/// digits and how many digits of the numerator (padded with zeros past its
+/// end) were consumed to produce them. The division also stops once it has
+/// consumed `max_consumed` digits, or as soon as it comes out even once the
+/// numerator's own digits are used up.
+fn long_divide(n: &[u8], d: &[u8], want: usize, max_consumed: usize) -> (Digits, usize) {
     if d.len() <= SHORT_DIVISOR_DIGITS {
         let divisor = d
             .iter()
@@ -328,16 +352,22 @@ fn long_divide(n: &[u8], d: &[u8], want: usize) -> (Digits, i32) {
         // routes it to the behaviour that was already here rather than to a
         // new division by zero.
         if divisor != 0 {
-            return short_divide(n, divisor, d.len(), want);
+            return short_divide(n, divisor, d.len(), want, max_consumed);
         }
     }
-    wide_divide(n, d, want)
+    wide_divide(n, d, want, max_consumed)
 }
 
 /// [`long_divide`] for a divisor a `u64` holds, which is the schoolbook short
 /// division: one hardware divide per quotient digit, and no working storage
 /// at all.
-fn short_divide(n: &[u8], divisor: u64, divisor_len: usize, want: usize) -> (Digits, i32) {
+fn short_divide(
+    n: &[u8],
+    divisor: u64,
+    divisor_len: usize,
+    want: usize,
+    max_consumed: usize,
+) -> (Digits, usize) {
     // **A quotient of a working length that fits the stack is written there
     // and built once**, where pushing digit by digit re-tests the storage
     // arm and the capacity per digit. The loop is the one below.
@@ -346,16 +376,10 @@ fn short_divide(n: &[u8], divisor: u64, divisor_len: usize, want: usize) -> (Dig
         let mut quotient = [0u8; STACK_QUOTIENT];
         let mut length = 0usize;
         let mut remainder = 0u64;
-        let mut shift = 0i32;
         let mut i = 0usize;
         let exhausted = n.len().saturating_add(want).saturating_add(divisor_len);
-        while length < want {
-            let next = if i < n.len() {
-                n[i]
-            } else {
-                shift += 1;
-                0
-            };
+        while length < want && i < max_consumed {
+            let next = if i < n.len() { n[i] } else { 0 };
             i += 1;
             remainder = remainder * 10 + u64::from(next);
             let digit = (remainder / divisor) as u8;
@@ -372,23 +396,17 @@ fn short_divide(n: &[u8], divisor: u64, divisor_len: usize, want: usize) -> (Dig
                 break;
             }
         }
-        return (Digits::from_slice(&quotient[..length]), shift);
+        return (Digits::from_slice(&quotient[..length]), i);
     }
     let mut remainder = 0u64;
     let mut q = Digits::new();
-    let mut shift = 0i32;
     let mut i = 0usize;
     // Saturating, for the reason the wide path's own copy of this bound
     // gives: `want` is itself saturated by `working_length`.
     let exhausted = n.len().saturating_add(want).saturating_add(divisor_len);
 
-    while q.len() < want {
-        let next = if i < n.len() {
-            n[i]
-        } else {
-            shift += 1;
-            0
-        };
+    while q.len() < want && i < max_consumed {
+        let next = if i < n.len() { n[i] } else { 0 };
         i += 1;
         remainder = remainder * 10 + u64::from(next);
         let digit = (remainder / divisor) as u8;
@@ -405,12 +423,12 @@ fn short_divide(n: &[u8], divisor: u64, divisor_len: usize, want: usize) -> (Dig
             break;
         }
     }
-    (q, shift)
+    (q, i)
 }
 
 /// [`long_divide`] for a divisor too wide for a machine word: guess a
 /// multiple from the divisor's leading digits, subtract it out, and repeat.
-fn wide_divide(n: &[u8], d: &[u8], want: usize) -> (Digits, i32) {
+fn wide_divide(n: &[u8], d: &[u8], want: usize, max_consumed: usize) -> (Digits, usize) {
     // The live remainder is `rem[start..]`: leading zeros are skipped by
     // advancing `start` instead of draining them out, which cost a memmove
     // on every subtraction pass. The dead prefix stays zero, so slicing from
@@ -421,7 +439,6 @@ fn wide_divide(n: &[u8], d: &[u8], want: usize) -> (Digits, i32) {
     // representation they are; the working remainder above is scratch that
     // never leaves this function and stays a plain vector.
     let mut q = Digits::new();
-    let mut shift = 0i32;
     let mut i = 0usize;
 
     // Digit guesses divide by the divisor's first two digits plus one, so a
@@ -435,11 +452,8 @@ fn wide_divide(n: &[u8], d: &[u8], want: usize) -> (Digits, i32) {
 
     // Feed digits of the numerator, then zeros, taking one quotient digit
     // per step once the quotient has started.
-    while q.len() < want {
+    while q.len() < want && i < max_consumed {
         rem.push(if i < n.len() { n[i] } else { 0 });
-        if i >= n.len() {
-            shift += 1;
-        }
         i += 1;
         while rem.len() - start > 1 && rem[start] == 0 {
             start += 1;
@@ -502,7 +516,7 @@ fn wide_divide(n: &[u8], d: &[u8], want: usize) -> (Digits, i32) {
     // remainder good enough to report has to be recomputed at exact
     // precision rather than read off the division (see `DivOp::Remainder`
     // above). Building it cost a `split_off`, which allocates.
-    (q, shift)
+    (q, i)
 }
 
 pub(crate) fn strip_leading(v: &mut Vec<u8>) {
@@ -689,8 +703,8 @@ mod divide_route_tests {
                     .iter()
                     .fold(0u64, |acc, digit| acc * 10 + u64::from(*digit));
                 for want in [1usize, 2, 3, 9, 10, 21, 25, 40] {
-                    let short = short_divide(n, divisor, d.len(), want);
-                    let wide = wide_divide(n, d, want);
+                    let short = short_divide(n, divisor, d.len(), want, usize::MAX);
+                    let wide = wide_divide(n, d, want, usize::MAX);
                     assert_eq!(
                         short, wide,
                         "{n:?} / {d:?} to {want} digit(s): short {short:?}, wide {wide:?}"
@@ -699,7 +713,7 @@ mod divide_route_tests {
                     if short.0.len() < want {
                         ended_early += 1;
                     }
-                    if short.1 > 0 {
+                    if short.1 > n.len() {
                         ran_past_the_numerator += 1;
                     }
                 }
@@ -713,6 +727,43 @@ mod divide_route_tests {
         assert!(checked > 500, "only {checked} case(s)");
         assert!(ended_early > 0, "no case stopped before `want` digits");
         assert!(ran_past_the_numerator > 0, "no case scaled the quotient");
+    }
+
+    /// A division stopped after `max_consumed` numerator digits answers the
+    /// prefix of the unbounded one that those digits produce -- which is what
+    /// lets `%` and `//` stop at the units digit and drop nothing they kept.
+    #[test]
+    fn a_bounded_division_is_a_prefix_of_the_unbounded_one() {
+        let population = strings();
+        let mut cut = 0usize;
+        for n in &population {
+            for d in &population {
+                let divisor = (d.len() <= SHORT_DIVISOR_DIGITS).then(|| {
+                    d.iter()
+                        .fold(0u64, |acc, digit| acc * 10 + u64::from(*digit))
+                });
+                for want in [1usize, 3, 10, 25, 40] {
+                    let full = wide_divide(n, d, want, usize::MAX);
+                    // The digit `k` of the quotient is produced on consuming
+                    // numerator digit `first + k` (counting from 1).
+                    let first = full.1 + 1 - full.0.len();
+                    for bound in 1..full.1 + 3 {
+                        let expected = if bound >= full.1 {
+                            full.clone()
+                        } else {
+                            cut += 1;
+                            let keep = (bound + 1).saturating_sub(first);
+                            (full.0[..keep].iter().copied().collect(), bound)
+                        };
+                        assert_eq!(wide_divide(n, d, want, bound), expected);
+                        if let Some(divisor) = divisor {
+                            assert_eq!(short_divide(n, divisor, d.len(), want, bound), expected);
+                        }
+                    }
+                }
+            }
+        }
+        assert!(cut > 500, "only {cut} bounded case(s)");
     }
 
     /// The constant is the widest divisor whose remainder survives taking one
