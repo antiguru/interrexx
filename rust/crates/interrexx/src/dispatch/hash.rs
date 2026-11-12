@@ -475,7 +475,24 @@ fn read_parts(interp: &mut Interp, receiver: ObjRef) -> Parts {
     else {
         return parts;
     };
-    for (name, value) in pools.entries(scope) {
+    let names = &interp.hash_names;
+    let mut rest = pools.entries(scope);
+    while !rest.is_empty() {
+        // [`install_store`] binds a half's five names together, in this order
+        // and as copies of [`PoolNames`]' own, so a run of them is recognised
+        // by identity before any name is compared byte by byte.
+        if let Some(found) = shared_run(rest, &names.contents) {
+            parts.contents = found;
+            rest = &rest[5..];
+            continue;
+        }
+        if let Some(found) = shared_run(rest, &names.methods) {
+            parts.methods = found;
+            rest = &rest[5..];
+            continue;
+        }
+        let (name, value) = &rest[0];
+        rest = &rest[1..];
         let value = *value;
         match name.as_ref() {
             HASH_INDEXES => parts.contents.indexes = Some(value),
@@ -493,6 +510,37 @@ fn read_parts(interp: &mut Interp, receiver: ObjRef) -> Parts {
         }
     }
     parts
+}
+
+/// One half's entries, when `entries` starts with that half's five shared
+/// names in [`install_store`]'s order. A pool binds a name once, so what this
+/// finds is what the byte-by-byte reading would.
+#[inline]
+fn shared_run(entries: &[(Rc<[u8]>, ObjRef)], names: &[Rc<[u8]>; 5]) -> Option<Found> {
+    let [
+        (indexes_name, indexes),
+        (items_name, items),
+        (next_name, next),
+        (buckets_name, buckets),
+        (free_name, free),
+        ..,
+    ] = entries
+    else {
+        return None;
+    };
+    let [indexes_at, items_at, next_at, buckets_at, free_at] = names;
+    (Rc::ptr_eq(indexes_name, indexes_at)
+        && Rc::ptr_eq(items_name, items_at)
+        && Rc::ptr_eq(next_name, next_at)
+        && Rc::ptr_eq(buckets_name, buckets_at)
+        && Rc::ptr_eq(free_name, free_at))
+    .then(|| Found {
+        indexes: Some(*indexes),
+        items: Some(*items),
+        next: Some(*next),
+        buckets: counted(*buckets),
+        free: counted(*free),
+    })
 }
 
 /// The store `half` names, installing an empty one if it is not there yet.
