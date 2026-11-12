@@ -47,9 +47,7 @@
 
 -- r[class.collection.union], r[class.collection.union.sends]
 ::method union
-  if arg() = 0 then raise syntax 93.901 array(1)
-  if arg() > 1 then raise syntax 93.902 array(1)
-  other = arg(1)
+  use strict arg other
   copy = self~copy
   checked = ''
   if other~isA(.OrderedCollection) then source = other~allItems
@@ -112,9 +110,7 @@ asarray: procedure
 
 -- r[class.collection.difference], r[class.collection.difference.sends]
 ::method difference
-  if arg() = 0 then raise syntax 93.901 array(1)
-  if arg() > 1 then raise syntax 93.902 array(1)
-  other = arg(1)
+  use strict arg other
   if other~isA(.OrderedCollection) then answer = other~allItems
   else if other~isA(.MapCollection) then answer = other~allIndexes
   else do
@@ -144,9 +140,7 @@ require: procedure
 
 -- r[class.collection.intersection], r[class.collection.intersection.sends]
 ::method intersection
-  if arg() = 0 then raise syntax 93.901 array(1)
-  if arg() > 1 then raise syntax 93.902 array(1)
-  other = arg(1)
+  use strict arg other
   made = self~class~new
   checked = ''
   if other~isA(.OrderedCollection) then source = other~allItems
@@ -202,9 +196,7 @@ asarray: procedure
 
 -- r[class.collection.xor], r[class.collection.xor.sends]
 ::method xor
-  if arg() = 0 then raise syntax 93.901 array(1)
-  if arg() > 1 then raise syntax 93.902 array(1)
-  other = arg(1)
+  use strict arg other
   copy = self~copy
   checked = ''
   if other~isA(.OrderedCollection) then source = other~allItems
@@ -269,9 +261,7 @@ asarray: procedure
 -- r[class.collection.subset], r[class.collection.subset.sends],
 -- r[class.collection.subset.receiver]
 ::method subset
-  if arg() = 0 then raise syntax 93.901 array(1)
-  if arg() > 1 then raise syntax 93.902 array(1)
-  other = arg(1)
+  use strict arg other
   map = 0
   setlike = 0
   if other~isA(.OrderedCollection) then answer = other~allItems
@@ -317,15 +307,12 @@ require: procedure
 
 -- r[class.collection.disjoint], r[class.collection.disjoint.sends]
 ::method disjoint
-  if arg() = 0 then raise syntax 93.901 array(1)
-  if arg() > 1 then raise syntax 93.902 array(1)
-  return self~intersection(arg(1))~isEmpty
+  use strict arg other
+  return self~intersection(other)~isEmpty
 
 -- r[class.collection.equivalent], r[class.collection.equivalent.sends]
 ::method equivalent
-  if arg() = 0 then raise syntax 93.901 array(1)
-  if arg() > 1 then raise syntax 93.902 array(1)
-  other = arg(1)
+  use strict arg other
   mine = self~items
   theirs = other~items
   if mine = theirs, 1 then nop
@@ -397,10 +384,7 @@ require: procedure
 
 -- r[class.relation.operand], r[class.relation.setops.sends]
 ::method union
-  if arg() = 0 then raise syntax 93.901 array(1)
-  if \ arg(1, 'E') then raise syntax 93.901 array(1)
-  if arg() > 1 then raise syntax 93.902 array(1)
-  other = arg(1)
+  use strict arg other
   copy = self~copy
   checked = ''
   if other~isA(.OrderedCollection) then source = other~allItems
@@ -456,10 +440,7 @@ asarray: procedure
 
 -- r[class.relation.operand], r[class.relation.setops.sends]
 ::method difference
-  if arg() = 0 then raise syntax 93.901 array(1)
-  if \ arg(1, 'E') then raise syntax 93.901 array(1)
-  if arg() > 1 then raise syntax 93.902 array(1)
-  other = arg(1)
+  use strict arg other
   copy = self~copy
   checked = ''
   if other~isA(.OrderedCollection) then source = other~allItems
@@ -515,10 +496,7 @@ asarray: procedure
 
 -- r[class.relation.operand], r[class.relation.setops.sends]
 ::method intersection
-  if arg() = 0 then raise syntax 93.901 array(1)
-  if \ arg(1, 'E') then raise syntax 93.901 array(1)
-  if arg() > 1 then raise syntax 93.902 array(1)
-  other = arg(1)
+  use strict arg other
   made = self~class~new
   copy = self~copy
   checked = ''
@@ -585,10 +563,7 @@ asarray: procedure
 
 -- r[class.relation.operand], r[class.relation.setops.sends]
 ::method xor
-  if arg() = 0 then raise syntax 93.901 array(1)
-  if \ arg(1, 'E') then raise syntax 93.901 array(1)
-  if arg() > 1 then raise syntax 93.902 array(1)
-  other = arg(1)
+  use strict arg other
   copy = self~copy
   made = self~class~new
   checked = ''
@@ -663,10 +638,7 @@ asarray: procedure
 
 -- r[class.relation.operand], r[class.relation.setops.sends]
 ::method subset
-  if arg() = 0 then raise syntax 93.901 array(1)
-  if \ arg(1, 'E') then raise syntax 93.901 array(1)
-  if arg() > 1 then raise syntax 93.902 array(1)
-  other = arg(1)
+  use strict arg other
   copy = self~copy
   checked = ''
   if other~isA(.OrderedCollection) then source = other~allItems
