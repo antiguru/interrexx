@@ -88,7 +88,8 @@ done:
 ::method init
   expose stream_name
   use strict arg name
-  text = name~request('STRING')
+  if name~isA(.File) then text = name~absolutePath
+  else text = name~request('STRING')
   if .nil == text then raise syntax 93.938 array (1)
   stream_name = text
   self~!c_stream_init(text)
@@ -133,7 +134,7 @@ done:
 ::method line_arrayIn private external 'LIBRARY REXX stream_arrayin'
 
 /* r[class.stream.query]: the word, shortened as far as its rule allows, and
-   what follows it. No message goes to anything but the receiver's own
+   what follows it. SEEK is a second name for POSITION. No message goes to anything but the receiver's own
    entry points. */
 ::method query
   use strict arg request
@@ -141,7 +142,7 @@ done:
   parse upper var text word rest
   rest = rest~strip
   select
-    when 'POSITION'~abbrev(word, 1) then return self~!query_position(rest)
+    when 'POSITION'~abbrev(word, 1) | 'SEEK'~abbrev(word, 1) then return self~!query_position(rest)
     when rest \== '' then raise syntax 93.0
     when 'EXISTS'~abbrev(word, 1) then return self~!query_exists
     when 'SIZE'~abbrev(word, 2) then return self~!query_size
