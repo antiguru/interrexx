@@ -307,6 +307,7 @@ impl Interp {
         let trap = caller.and_then(|_| self.trap_at_depth(sender.depth, &name));
         match trap {
             Some(trap) if trap.call && sender.reply_issued && result.is_some() => {
+                self.activity.pending_additional = None;
                 Err(Raised::return_after_reply().into())
             }
             // Raised again while the trap is delayed by its first raise.
@@ -315,6 +316,7 @@ impl Interp {
                     && ignored_while_delayed(&raise.condition)
                     && caller.is_some_and(|caller| self.call_trap_delayed_at(caller, &name)) =>
             {
+                self.activity.pending_additional = None;
                 Ok(finish(result))
             }
             // A `CALL ON` trap resumes, so the condition waits for the
@@ -416,6 +418,7 @@ impl Interp {
             }
             // `returnFrom`'s check (`RexxActivation::raise`).
             None if sender.reply_issued && result.is_some() => {
+                self.activity.pending_additional = None;
                 Err(Raised::return_after_reply().into())
             }
             None if sender.api => {
@@ -435,7 +438,12 @@ impl Interp {
                 self.hold_callee_condition(held, object);
                 Ok(finish(result))
             }
-            None => Ok(finish(result)),
+            // Ignored: the clause's own ADDITIONAL goes with it, and is not
+            // left for the next condition raised.
+            None => {
+                self.activity.pending_additional = None;
+                Ok(finish(result))
+            }
         }
     }
 
@@ -644,6 +652,7 @@ impl Interp {
                 Err(raised.into())
             }
             None if sender.reply_issued && result.is_some() => {
+                self.activity.pending_additional = None;
                 Err(Raised::return_after_reply().into())
             }
             None if sender.api => {
