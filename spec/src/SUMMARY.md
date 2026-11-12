@@ -211,6 +211,8 @@
   - [Files and directories](rxunixsys/files.md)
   - [Processes, the system and file attributes](rxunixsys/system.md)
   - [Users, groups and services](rxunixsys/databases.md)
+- [The rxsock library](rxsock/index.md)
+  - [Sockets](rxsock/sockets.md)
 - [Built-in functions](builtins/index.md)
   - [ABBREV](builtins/abbrev.md)
   - [ABS](builtins/abs.md)
