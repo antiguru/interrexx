@@ -504,6 +504,7 @@ back
      7 *-* exit
 ```
 
+r[env.debugging.pause.header]
 A `DO` or `LOOP` clause is stopped at after its header has been evaluated,
 and a condition that the evaluation queued is not delivered until that stop is
 over. In the example the `NOTREADY` that the `LINEIN` call raises in the header
