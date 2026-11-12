@@ -309,12 +309,33 @@ impl Interp {
         // hold copies of what the caller already has. An armed interpreter
         // otherwise allocated one `Vec` per builtin call for the whole run,
         // and being armed is not rare: any instance of a Rexx class arms it.
-        if !args.iter().enumerate().any(|(index, argument)| {
-            argument.is_some_and(|value| {
-                !raw.contains(&(index + 1))
-                    && !matches!(value.decode(), Decoded::SmallInt(_) | Decoded::Text(_))
-            })
-        }) {
+        //
+        // A heap string or number is its own string value too, which is
+        // [`Interp::required_string_or`]'s answer for it; that answer roots
+        // it, so it is rooted here as well. Only a position whose conversion
+        // could answer another object makes the list worth copying.
+        let mut stands = true;
+        for (index, argument) in args.iter().enumerate() {
+            let Some(value) = *argument else { continue };
+            if raw.contains(&(index + 1)) {
+                continue;
+            }
+            match value.decode() {
+                Decoded::SmallInt(_) | Decoded::Text(_) => {}
+                _ if matches!(
+                    self.heap.get(value).map(|object| &object.body),
+                    Some(Body::Text { .. } | Body::Num { .. })
+                ) =>
+                {
+                    self.roots.activity_mut().push_temp(value);
+                }
+                _ => {
+                    stands = false;
+                    break;
+                }
+            }
+        }
+        if stands {
             return Ok(None);
         }
         let mut converted = Vec::with_capacity(args.len());
