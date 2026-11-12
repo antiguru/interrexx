@@ -73,7 +73,8 @@
 
 /* r[class.properties.getlogical] */
 ::method getLogical
-  value = self~sendWith('GETPROPERTY', arg(1, 'A'))
+  forward message 'GETPROPERTY' continue
+  value = result
   if value~isInstanceOf(.string) then do
     if value == '1' | value == 'true' then return 1
     if value == '0' | value == 'false' then return 0
@@ -83,7 +84,8 @@
 /* r[class.properties.getwhole] */
 ::method getWhole
   numeric digits 9
-  value = self~sendWith('GETPROPERTY', arg(1, 'A'))
+  forward message 'GETPROPERTY' continue
+  value = result
   text = value~request('STRING')
   if text~isInstanceOf(.string) then do
     if text~datatype('W') then return text

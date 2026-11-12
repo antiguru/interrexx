@@ -49,7 +49,7 @@
       end
     end
   end
-  raise syntax 93.914 array (1, 'N, T, S, F, P', arg(1))
+  raise syntax 93.914 array (1, '"N" (normal), "T" (thread), "S" (standard), "F" (full) or "P" (profiling)', arg(1))
 
 /* r[class.traceobject.new]: the object, then its three entries, then the
    collector. */
@@ -183,11 +183,8 @@
 /* r[class.traceobject.compareto] */
 ::method compareTo
   numeric digits 9
-  if \arg(1, 'E') then raise syntax 93.924 array (1)
-  other = arg(1)
-  if other~isInstanceOf(.string) then raise syntax 93.924 array (other)
   mine = self['NUMBER']
-  theirs = other['NUMBER']
+  theirs = arg(1)['NUMBER']
   if mine == .nil & theirs == .nil then return 0
   if mine == .nil then return -1
   if theirs == .nil then return 1
