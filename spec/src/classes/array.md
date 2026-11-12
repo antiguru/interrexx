@@ -1713,7 +1713,7 @@ do i = 1 to 3; do j = 1 to 3; b[i, j] = i||j; end; end
 say b~previous(4, 1)~makeString('L', ',') b~previous(1, 5)~makeString('L', ',')
 ```
 
-```output defect=#160
+```output
 2,2 2,2
 2,2 2,2
 3,3 3,3
