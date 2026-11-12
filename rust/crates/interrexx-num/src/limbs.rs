@@ -213,6 +213,117 @@ fn sub_from(acc: &mut [u32], sub: &[u32]) {
     }
 }
 
+/// `(n / d, n % d)` for a non-zero `d` without leading zero limbs: the
+/// quotient, possibly with leading zero limbs, and the remainder, without
+/// any (so a zero remainder is empty).
+pub(crate) fn divide(n: &[u32], d: &[u32]) -> (Vec<u32>, Vec<u32>) {
+    debug_assert!(d.last().is_some_and(|top| *top != 0), "a trimmed divisor");
+    if n.len() < d.len() {
+        let mut rem = n.to_vec();
+        trim(&mut rem);
+        return (vec![0], rem);
+    }
+    if d.len() == 1 {
+        let divisor = u64::from(d[0]);
+        let mut q = vec![0u32; n.len()];
+        let mut rem = 0u64;
+        for i in (0..n.len()).rev() {
+            let cur = rem * BASE + u64::from(n[i]);
+            q[i] = (cur / divisor) as u32;
+            rem = cur % divisor;
+        }
+        let rem = if rem == 0 { vec![] } else { vec![rem as u32] };
+        return (q, rem);
+    }
+
+    // Knuth's algorithm D: normalise so the divisor's top limb is at least
+    // half the base, which keeps each quotient-limb estimate within two of
+    // the truth.
+    let k = d.len();
+    let factor = BASE / (u64::from(d[k - 1]) + 1);
+    let dd = scale(d, factor);
+    debug_assert_eq!(dd.len(), k, "normalising never grows the divisor");
+    let mut nn = scale(n, factor);
+    nn.resize(n.len() + 1, 0);
+    let m = n.len() - k;
+    let mut q = vec![0u32; m + 1];
+    let top = u64::from(dd[k - 1]);
+    let next = u64::from(dd[k - 2]);
+    for j in (0..=m).rev() {
+        let numerator = u64::from(nn[j + k]) * BASE + u64::from(nn[j + k - 1]);
+        let mut qhat = numerator / top;
+        let mut rhat = numerator % top;
+        while qhat >= BASE || qhat * next > rhat * BASE + u64::from(nn[j + k - 2]) {
+            qhat -= 1;
+            rhat += top;
+            if rhat >= BASE {
+                break;
+            }
+        }
+        // nn[j..=j+k] -= qhat * dd
+        let mut carry = 0u64;
+        let mut borrow = 0i64;
+        for i in 0..k {
+            let p = qhat * u64::from(dd[i]) + carry;
+            carry = p / BASE;
+            let t = i64::from(nn[j + i]) - (p % BASE) as i64 - borrow;
+            if t < 0 {
+                nn[j + i] = (t + BASE as i64) as u32;
+                borrow = 1;
+            } else {
+                nn[j + i] = t as u32;
+                borrow = 0;
+            }
+        }
+        let t = i64::from(nn[j + k]) - carry as i64 - borrow;
+        if t < 0 {
+            // The estimate was one too high: add the divisor back.
+            nn[j + k] = (t + BASE as i64) as u32;
+            qhat -= 1;
+            let mut carry = 0u32;
+            for i in 0..k {
+                let mut s = nn[j + i] + dd[i] + carry;
+                carry = u32::from(s >= BASE as u32);
+                if carry != 0 {
+                    s -= BASE as u32;
+                }
+                nn[j + i] = s;
+            }
+            // The carry out cancels the borrow left in the top limb.
+            nn[j + k] = ((u64::from(nn[j + k]) + u64::from(carry)) % BASE) as u32;
+        } else {
+            nn[j + k] = t as u32;
+        }
+        q[j] = qhat as u32;
+    }
+    // The remainder is what is left of the scaled numerator, scaled back.
+    let mut rem = vec![0u32; k];
+    let mut carry = 0u64;
+    for i in (0..k).rev() {
+        let cur = carry * BASE + u64::from(nn[i]);
+        rem[i] = (cur / factor) as u32;
+        carry = cur % factor;
+    }
+    debug_assert_eq!(carry, 0, "the scaled remainder divides by the scale");
+    trim(&mut rem);
+    (q, rem)
+}
+
+/// `limbs * factor` for a factor below the base.
+fn scale(limbs: &[u32], factor: u64) -> Vec<u32> {
+    let mut out = Vec::with_capacity(limbs.len() + 1);
+    let mut carry = 0u64;
+    for &limb in limbs {
+        let t = u64::from(limb) * factor + carry;
+        out.push((t % BASE) as u32);
+        carry = t / BASE;
+    }
+    if carry != 0 {
+        out.push(carry as u32);
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -310,6 +421,32 @@ mod tests {
                     assert_eq!(to_digits(&product), reference_mul(&a, &b), "{la} x {lb}");
                 }
             }
+        }
+    }
+
+    #[test]
+    fn the_limb_quotient_multiplies_back_to_the_dividend() {
+        let mut rng = Rng(13);
+        for _ in 0..3000 {
+            let ld = 1 + rng.below(80) as usize;
+            let lq = 1 + rng.below(80) as usize;
+            let d = from_digits(&rng.digits(ld), 0);
+            let qq = from_digits(&rng.digits(lq), 0);
+            // Zero, or a remainder with fewer digits than the divisor.
+            let r = if ld == 1 || rng.below(3) == 0 {
+                vec![]
+            } else {
+                let len = 1 + rng.below(ld as u64 - 1) as usize;
+                from_digits(&rng.digits(len), 0)
+            };
+            let mut n = mul(&qq, &d);
+            let mut padded = r.clone();
+            padded.resize(n.len(), 0);
+            add_into(&mut n, &padded);
+            trim(&mut n);
+            let (q, rem) = divide(&n, &d);
+            assert_eq!(to_digits(&q), to_digits(&qq));
+            assert_eq!(to_digits(&rem), to_digits(&r));
         }
     }
 }
