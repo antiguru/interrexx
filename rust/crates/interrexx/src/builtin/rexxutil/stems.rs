@@ -5,7 +5,10 @@ use std::cmp::Ordering;
 use interrexx_core::{Decoded, ObjRef};
 use interrexx_num::{DIGITS64, Number};
 
-use super::{answer, c_string, check_arity, marshalled, optional_text, os_path, required};
+use super::{
+    answer, c_string, check_arity, marshalled, optional_text, os_path, request_string_answer,
+    required,
+};
 use crate::error::Raised;
 use crate::{Failure, Interp};
 
@@ -529,7 +532,12 @@ fn sort_target(interp: &mut Interp, argument: ObjRef) -> Result<(ObjRef, Vec<u8>
     if interp.is_stem_object(argument) {
         return Ok((argument, Vec::new()));
     }
-    let text = interp.required_string_value(argument)?;
+    // r[util.sysstemsort.name]: the object's `request('STRING')` is read, and
+    // there is no `STRING` fallback.
+    let Some(text) = request_string_answer(interp, argument)? else {
+        let found = interp.string_value_text(argument)?;
+        return Err(Raised::stem_argument_unresolved(1, &found).into());
+    };
     let name = interp.to_text(text).into_owned();
     if let Some(stem) = interp.context_stem_named(&name) {
         interp.roots.activity_mut().push_temp(stem);

@@ -204,7 +204,8 @@ pub(crate) fn mk_dir(
     let mode = match args.get(1).copied().flatten() {
         None => 0o777,
         Some(value) => {
-            let bits = match stems::whole_value(interp, value, i64::from(i32::MIN))? {
+            let source = number_source(interp, value)?;
+            let bits = match stems::whole_value(interp, source, i64::from(i32::MIN))? {
                 Some(bits) if bits <= i64::from(i32::MAX) => bits,
                 _ => {
                     let found = interp.string_value_text(value)?;
@@ -505,9 +506,10 @@ fn handle_argument(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<u64, 
     let Some(Some(value)) = args.first().copied() else {
         return Err(Raised::missing_internal_argument("1").into());
     };
-    let handle = match value.decode() {
+    let source = number_source(interp, value)?;
+    let handle = match source.decode() {
         Decoded::SmallInt(number) => u64::try_from(number).ok(),
-        _ => Number::parse_bytes(&interp.to_text(value))
+        _ => Number::parse_bytes(&interp.to_text(source))
             .and_then(|number| number.unsigned_int64_value(DIGITS64)),
     };
     handle.ok_or_else(|| {
@@ -519,11 +521,50 @@ fn handle_argument(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<u64, 
     })
 }
 
+/// The string an object argument that a number is read from stands for: a
+/// string or a number is itself; any other object is replaced by the string
+/// that its `request` with the argument `STRING` answers, and where that is no
+/// string, by the answer of its `STRING` method (r[util.sysmkdir.mode],
+/// r[util.sysgeterrortext.number]).
+fn number_source(interp: &mut Interp, value: ObjRef) -> Result<ObjRef, Failure> {
+    if let Some(answered) = request_string_answer(interp, value)? {
+        return Ok(answered);
+    }
+    interp.required_string_or_nil(value)
+}
+
+/// What `value`'s `request` with the argument `STRING` answers where that is a
+/// string, a string or a number being its own answer, and `None` where it
+/// answers anything else.
+pub(crate) fn request_string_answer(
+    interp: &mut Interp,
+    value: ObjRef,
+) -> Result<Option<ObjRef>, Failure> {
+    if matches!(value.decode(), Decoded::SmallInt(_) | Decoded::Text(_)) {
+        return Ok(Some(value));
+    }
+    let selector = interp.text(b"STRING");
+    interp.roots.activity_mut().push_temp(selector);
+    let caller = interp.caller();
+    let Some(answered) = interp.send_message(value, b"REQUEST", None, &[Some(selector)], caller)?
+    else {
+        return Ok(None);
+    };
+    interp.roots.activity_mut().push_temp(answered);
+    let is_string = matches!(answered.decode(), Decoded::SmallInt(_) | Decoded::Text(_))
+        || matches!(
+            interp.heap.get(answered).map(|object| &object.body),
+            Some(Body::Text { .. } | Body::Num { .. })
+        );
+    Ok(is_string.then_some(answered))
+}
+
 /// `value`, the argument at `position`, as an `int`.
 fn int_argument(interp: &mut Interp, value: ObjRef, position: usize) -> Result<i64, Failure> {
-    let number = match value.decode() {
+    let source = number_source(interp, value)?;
+    let number = match source.decode() {
         Decoded::SmallInt(number) => Some(number),
-        _ => Number::parse_bytes(&interp.to_text(value))
+        _ => Number::parse_bytes(&interp.to_text(source))
             .and_then(|number| number.int64_value(DIGITS64)),
     };
     let (min, max) = (i64::from(i32::MIN), i64::from(i32::MAX));

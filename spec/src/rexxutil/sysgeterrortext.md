@@ -66,7 +66,7 @@ say SysGetErrorText(.c6zqs~new) == SysGetErrorText(2)
   return '2'
 ```
 
-```output defect=#230
+```output
 1
 ```
 
