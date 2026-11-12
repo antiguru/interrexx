@@ -32,11 +32,10 @@ methods that every class has. Its only superclass is `Object` and it inherits no
 mixin class ([the hierarchy rule](r:class.index.hierarchy)). The interpreter
 makes one for each command that is sent to a handler written in Rexx, and a
 program receives it as the second argument of `command`; a program does not make
-one. The `new` of a program raises `SYNTAX 93.901` with fewer than two arguments
-and `SYNTAX 93.902` with more than two, and what an object made with two
-arguments is good for is not specified: it belongs to no command, so its methods
-have nothing to work with. The class has other methods, `finish` and `pending`
-among them, that the interpreter uses; they are not part of this specification.
+one. What the `new` of a program makes, and the method `init` that it sends, is
+the subject of [the next rule](r:class.commandcontext.init). The class has other
+methods, `finish` and `pending` among them, that the interpreter uses; they are
+not part of this specification.
 
 ```rexx
 say .commandcontext~id .commandcontext~superclasses~items,
@@ -75,6 +74,97 @@ CommandContext 1 Object 0
 .commandcontext~new(1) 93.901
 .commandcontext~new(1, 2, 3) 93.902
 ```
+
+r[class.commandcontext.init]
+`init(first, name)` is the method that `new` sends the arguments of `new`, as
+[the `new` of `Class`](r:class.index.new) does for every class, and a program
+that makes a context with `new` is therefore subject to it. It needs two
+arguments: `SYNTAX 93.901` when fewer are present, a trailing omitted argument
+not counting, `SYNTAX 93.902` when more than two are given, and `SYNTAX 93.903`
+when the first is omitted and the second is present. Both can be any object,
+`.nil` among them, and neither is converted or sent a message. The first
+argument is not used. The second becomes what [`environment`](r:class.commandcontext.environment)
+answers, the same object that was given, so that an array stays an array and
+the null string stays the null string. A context that `new` makes belongs to no
+command: `isValid` answers `0` from the start, and the methods that [the
+validity rule](r:class.commandcontext.valid) lists as working with the code
+that sent a command raise `SYNTAX 98.900` as they do once the command has ended,
+while `environment`, `isValid` and `copy` work. A message `init` that is sent
+to a context a second time replaces what `environment` answers and answers
+nothing, so that using its answer as a value raises `SYNTAX 91.999`. A subclass
+of `CommandContext` gets the same, through its own `init` when it has one and
+`forward class (super)` or `self~init:super(first, name)`. What a hand-made
+context may be passed to is not specified.
+
+```rexx
+c = .commandcontext~new(1, 'Env')
+say c~environment c~isValid c~copy~environment
+say (.commandcontext~new(.nil, .nil)~environment == .nil),
+  '['.commandcontext~new(1, '')~environment']',
+  .commandcontext~new(1, .array~of(7))~environment~class~id
+call try "c~init(1, 'Other')"
+say c~environment
+call try "c~getVar('x')"
+call try "c~hasVar('x')"
+call try "c['x']"
+call try "c~setVar('x', 1)"
+call try "c~variables"
+call try "c~isRedirected('I')"
+call try "c~input"
+call try "c~raiseError(5)"
+call try ".commandcontext~new(1)"
+call try ".commandcontext~new(1,)"
+call try ".commandcontext~new(,2)"
+call try ".commandcontext~new(1, 2, 3)"
+call try "c~init"
+call try "c~init(1)"
+call try "c~init(1, 2, 3)"
+s = .sub~new('a', 'Own')
+say s~class~id s~environment s~isValid s~marker
+call try ".sub~new(1)"
+exit
+try:
+  signal on syntax name bad
+  interpret 'x =' arg(1)
+  say arg(1) 'no error'
+  return
+bad: say arg(1) condition('o')~code
+  return
+::class sub subclass commandcontext
+::method init
+  expose marker
+  marker = 'set'
+  forward class (super)
+::method marker
+  expose marker
+  return marker
+```
+
+```output
+Env 0 Env
+1 [] Array
+c~init(1, 'Other') 91.999
+Other
+c~getVar('x') 98.900
+c~hasVar('x') 98.900
+c['x'] 98.900
+c~setVar('x', 1) 98.900
+c~variables 98.900
+c~isRedirected('I') 98.900
+c~input 98.900
+c~raiseError(5) 98.900
+.commandcontext~new(1) 93.901
+.commandcontext~new(1,) 93.901
+.commandcontext~new(,2) 93.903
+.commandcontext~new(1, 2, 3) 93.902
+c~init 93.901
+c~init(1) 93.901
+c~init(1, 2, 3) 93.902
+SUB Own 0 set
+.sub~new(1) 93.901
+```
+
+
 
 r[class.commandcontext.valid]
 A context is good for the command that it stands for, on the activity that is

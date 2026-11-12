@@ -335,6 +335,57 @@ m~unknown(, .array~of(1)) => 93.903
 caught WHATSOEVER 2 caught MIXED 1
 ```
 
+r[class.monitor.unknown.arguments]
+The second argument of a direct `unknown` need not be an `Array`: it is any
+object, and it is sent `request` with `ARRAY` before anything is forwarded, as
+[the unknown rule](r:class.monitor.unknown) says. The items of what that
+answers, in order and with their holes, are the arguments of the forwarded
+message. A string answers an array of one item, itself, so that a string is one
+argument and the null string is none; a number, `.true` and a `MutableBuffer`
+are one argument each, as their strings; a `List` or a `Set` answers its items;
+and an object that answers no array to `request`, `.nil` and an `Object` among
+them, raises `SYNTAX 98.946` and forwards nothing.
+
+```rexx
+m = .monitor~new(.target~new)
+call try "m~unknown('echo', 'abc')"
+call try "m~unknown('echo', 'a b  c')"
+call try "m~unknown('echo', '')"
+call try "m~unknown('echo', 5)"
+call try "m~unknown('echo', .list~of('x', 'y'))"
+call try "m~unknown('echo', .set~of('x'))"
+call try "m~unknown('echo', .object~new)"
+call try "m~unknown('echo', .nil)"
+call try "m~unknown('echo', .true)"
+call try "m~unknown('echo', .array~of('p', , 'r'))"
+call try "m~unknown('echo', .mutablebuffer~new('q'))"
+exit
+try:
+  signal on syntax name bad
+  interpret 'x =' arg(1)
+  say arg(1) '=>' x
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
+::class target
+::method echo
+  return arg() '['arg(1)']' '['arg(2)']' '['arg(3)']'
+```
+
+```output
+m~unknown('echo', 'abc') => 1 [abc] [] []
+m~unknown('echo', 'a b  c') => 1 [a b  c] [] []
+m~unknown('echo', '') => 0 [] [] []
+m~unknown('echo', 5) => 1 [5] [] []
+m~unknown('echo', .list~of('x', 'y')) => 2 [x] [y] []
+m~unknown('echo', .set~of('x')) => 1 [x] [] []
+m~unknown('echo', .object~new) => 98.946
+m~unknown('echo', .nil) => 98.946
+m~unknown('echo', .true) => 1 [1] [] []
+m~unknown('echo', .array~of('p', , 'r')) => 3 [p] [] [r]
+m~unknown('echo', .mutablebuffer~new('q')) => 1 [q] [] []
+```
+
 r[class.monitor.object]
 Every instance method that `Object` defines ([the Object page](object.md)) is
 the monitor's own, so a message with the name of one is not forwarded: it

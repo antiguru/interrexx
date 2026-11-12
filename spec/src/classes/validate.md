@@ -86,6 +86,8 @@ the third the position of the first argument left out. The argument count is
 checked first, then `digits`, and the value last. Every value and bound is read
 as a string as [the conversion rule](r:conv.string.object) says. A check that
 fails raises the `SYNTAX` error of its method, which the rules below give.
+The second example asks every check, with no argument, for one fewer than it
+needs, for the first one left out and for one more than it takes.
 
 ```rexx
 call t 'number', 'N', 'x'
@@ -143,6 +145,50 @@ number("N", ) 93.901 1 2
 numberRange("N", 5, 1, ) 93.901 1 4
 ```
 
+```rexx
+/* per check: no argument; one fewer than it needs; the first left out; one more
+   than it takes (code/number of ADDITIONAL entries/first entry) */
+specs = .array~of('number 2 2', 'logical 2 2', 'positiveNumber 2 3',,
+  'nonNegativeNumber 2 3', 'wholeNumber 2 3', 'positiveWholeNumber 2 3',,
+  'nonNegativeWholeNumber 2 3', 'position 2 3', 'length 2 3', 'classType 3 3',,
+  'requestClassType 3 3', 'numberRange 4 5', 'wholeNumberRange 4 5')
+do spec over specs
+  parse var spec m low high
+  say left(m, 22) try(m, '') try(m, items(low - 1)) try(m, ','items(low - 1)) ,
+    try(m, items(high + 1))
+end
+exit
+items: procedure
+  n = arg(1)
+  list = "'N'"
+  do n - 1
+    list = list',1'
+  end
+  return list
+try: procedure
+  signal on syntax name bad
+  interpret '.validate~'arg(1)'('arg(2)')'
+  return 'ok'
+bad: c = condition('o')
+  return c~code'/'c~additional~items'/'c~additional[1]
+```
+
+```output
+number                 93.901/1/2 93.901/1/2 93.903/1/1 93.902/1/2
+logical                93.901/1/2 93.901/1/2 93.903/1/1 93.902/1/2
+positiveNumber         93.901/1/2 93.901/1/2 93.903/1/1 93.902/1/3
+nonNegativeNumber      93.901/1/2 93.901/1/2 93.903/1/1 93.902/1/3
+wholeNumber            93.901/1/2 93.901/1/2 93.903/1/1 93.902/1/3
+positiveWholeNumber    93.901/1/2 93.901/1/2 93.903/1/1 93.902/1/3
+nonNegativeWholeNumber 93.901/1/2 93.901/1/2 93.903/1/1 93.902/1/3
+position               93.901/1/2 93.901/1/2 93.903/1/1 93.902/1/3
+length                 93.901/1/2 93.901/1/2 93.903/1/1 93.902/1/3
+classType              93.901/1/3 93.901/1/3 93.903/1/1 93.902/1/3
+requestClassType       93.901/1/3 93.901/1/3 93.903/1/1 93.902/1/3
+numberRange            93.901/1/4 93.901/1/4 93.903/1/1 93.902/1/5
+wholeNumberRange       93.901/1/4 93.901/1/4 93.903/1/1 93.902/1/5
+```
+
 r[class.validate.digits]
 The checks that take `digits` compare and round under that many digits and not
 under the NUMERIC DIGITS of the running code. `digits` is a whole number of at
@@ -151,6 +197,9 @@ least 1 and at most 999999999 and defaults to `9`, except for `length` and
 internally](r:class.rexxinfo.limits). Any other value, a string that is no
 number included, raises `SYNTAX 26.5` before the value is read; its `ADDITIONAL`
 array holds the value of `digits`.
+The last example of this rule asks every check that takes `digits` for the cases
+that are refused, for the two limits that are not, and for a value that is no
+number under a refused `digits`.
 
 ```rexx
 numeric digits 20
@@ -224,6 +273,41 @@ bad: c = condition('o')
 ```output
 26.5 1 0
 26.5 1 y
+```
+
+```rexx
+/* digits 0, 1000000000, 'x', .nil, 1.5; then 999999999 and 1, which are accepted;
+   last, a value that is no number together with digits 0 */
+names = 'positiveNumber nonNegativeNumber wholeNumber positiveWholeNumber',
+  'nonNegativeWholeNumber position length numberRange wholeNumberRange'
+do m over names~makeArray(' ')
+  if m~pos('Range') > 0 then bounds = ', 1, 9'
+  else bounds = ''
+  line = left(m, 22)
+  do digits over '0', '1000000000', "'x'", '.nil', '1.5', '999999999', '1'
+    line = line try(m, "'N', 5"bounds', 'digits)
+  end
+  say line try(m, "'N', 'x'"bounds', 0')
+end
+exit
+try: procedure
+  signal on syntax name bad
+  interpret '.validate~'arg(1)'('arg(2)')'
+  return 'ok'
+bad: c = condition('o')
+  return c~code
+```
+
+```output
+positiveNumber         26.5 26.5 26.5 26.5 26.5 ok ok 26.5
+nonNegativeNumber      26.5 26.5 26.5 26.5 26.5 ok ok 26.5
+wholeNumber            26.5 26.5 26.5 26.5 26.5 ok ok 26.5
+positiveWholeNumber    26.5 26.5 26.5 26.5 26.5 ok ok 26.5
+nonNegativeWholeNumber 26.5 26.5 26.5 26.5 26.5 ok ok 26.5
+position               26.5 26.5 26.5 26.5 26.5 ok ok 26.5
+length                 26.5 26.5 26.5 26.5 26.5 ok ok 26.5
+numberRange            26.5 26.5 26.5 26.5 26.5 ok ok 26.5
+wholeNumberRange       26.5 26.5 26.5 26.5 26.5 ok ok 26.5
 ```
 
 ## Numbers
@@ -441,6 +525,114 @@ numberRange 5 x 9 - => 88.907 N ; x ; 9 ; 5
 numberRange 5 1 4x - => 88.907 N ; 1 ; 4x ; 5
 numberRange 5 1 The NIL object - => 88.907 N ; 1 ; The NIL object ; 5
 wholeNumberRange 5 1.5 9.5 - => ok
+```
+
+r[class.validate.sends]
+The number checks read the value as a string with one `makeString` (as [the
+conversion rule](r:conv.string.object) says, apart from [the
+deviation](r:class.validate.deviation.109)), and then ask the value itself, the
+object that was given and not the string, to compare. `positiveNumber`,
+`positiveWholeNumber` and `position` send it `>` with `0`;
+`nonNegativeNumber`, `nonNegativeWholeNumber` and `length` send it `>=` with
+`0`; `numberRange` and `wholeNumberRange` send it `>=` with `min` and, only
+when that answers true, `<=` with `max`. A comparison that answers `0` raises the error of the check. `number` and
+`wholeNumber` send nothing more, and the bounds and `digits` are read as
+strings and are sent no comparison. The example has an object whose
+`makeString` and `unknown` write a line, and whose comparisons answer `1` and
+then `0`.
+
+```rexx
+checks = 'number positiveNumber nonNegativeNumber wholeNumber positiveWholeNumber',
+  'nonNegativeWholeNumber position length numberRange wholeNumberRange'
+do answer over 1, 0
+  say 'comparisons answer' answer
+  do m over checks~makeArray(' ')
+    say m':' try(m, .probe~new(answer))
+  end
+end
+exit
+try: procedure
+  use arg m, o
+  signal on syntax name bad
+  if m~pos('Range') > 0 then .validate~send(m, 'N', o, 1, 9)
+  else .validate~send(m, 'N', o)
+  return 'ok'
+bad: return '=>' condition('o')~code
+::class probe
+::method init
+  expose answer
+  use arg answer
+::method makeString
+  say '  makeString'
+  return 5
+::method unknown
+  expose answer
+  use arg name, args
+  say ' ' name args[1]
+  return answer
+```
+
+```output
+comparisons answer 1
+  makeString
+number: ok
+  makeString
+  > 0
+positiveNumber: ok
+  makeString
+  >= 0
+nonNegativeNumber: ok
+  makeString
+wholeNumber: ok
+  makeString
+  > 0
+positiveWholeNumber: ok
+  makeString
+  >= 0
+nonNegativeWholeNumber: ok
+  makeString
+  > 0
+position: ok
+  makeString
+  >= 0
+length: ok
+  makeString
+  >= 1
+  <= 9
+numberRange: ok
+  makeString
+  >= 1
+  <= 9
+wholeNumberRange: ok
+comparisons answer 0
+  makeString
+number: ok
+  makeString
+  > 0
+positiveNumber: => 88.926
+  makeString
+  >= 0
+nonNegativeNumber: => 88.925
+  makeString
+wholeNumber: ok
+  makeString
+  > 0
+positiveWholeNumber: => 88.905
+  makeString
+  >= 0
+nonNegativeWholeNumber: => 88.904
+  makeString
+  > 0
+position: => 88.912
+  makeString
+  >= 0
+length: => 88.911
+  makeString
+  >= 1
+numberRange: => 88.907
+  makeString
+  >= 1
+wholeNumberRange: => 88.907
 ```
 
 ## Logical values and classes
