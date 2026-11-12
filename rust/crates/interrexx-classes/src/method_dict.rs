@@ -72,7 +72,7 @@ impl MethodDict {
     }
 
     /// Add one method under `name`. A pre-existing entry from the same `scope`
-    /// is replaced in place ; otherwise the new entry becomes the
+    /// is replaced in place; otherwise the new entry becomes the
     /// highest-priority entry for `name`.
     pub fn add_method(&mut self, name: &str, scope: ObjRef, method: MethodId) {
         let key = name.to_ascii_uppercase();
