@@ -791,7 +791,7 @@ say p~source~items p~source[1] p~sourceSize '['p~sourceLine(1)']'
 call sysfiledelete f
 ```
 
-```output defect=#144
+```output
 1 return "after the first line"
 2 #!/usr/bin/rexx 2 [#!/usr/bin/rexx]
 ```

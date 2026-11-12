@@ -174,6 +174,19 @@ impl ProgramSource {
         self.traceable
     }
 
+    /// The line a file's main section starts at: 2 when a file opens with a
+    /// `#!` line, which the section's own source leaves out
+    /// (`r[class.method.newfile.shebang]`), and 1 otherwise.
+    pub fn main_section_first_line(&self) -> usize {
+        if self.kind == SourceKind::Program
+            && self.line(1).is_some_and(|line| line.starts_with(b"#!"))
+        {
+            2
+        } else {
+            1
+        }
+    }
+
     /// The number of physical lines, as `SOURCELINE()` with no argument reports
     /// it. A completely empty program has zero lines (the line scan never runs
     /// for an empty buffer, so the count stays 0). Empty `INTERPRET` text still
