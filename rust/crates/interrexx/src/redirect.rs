@@ -774,8 +774,11 @@ impl Interp {
             return Err(Raised::address_input_source(&shown).into());
         };
         let mut lines = Vec::new();
+        // **An item that is not a string follows the string argument rule**:
+        // `REQUEST('STRING')` (so `MAKESTRING`) first, then `STRING`.
         for item in slots.into_iter().flatten() {
-            lines.push(self.string_value_text(item)?);
+            let converted = self.required_string_value(item)?;
+            lines.push(self.string_value_text(converted)?);
         }
         Ok(lines)
     }
