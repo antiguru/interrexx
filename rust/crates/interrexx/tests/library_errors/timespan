@@ -1,0 +1,444 @@
+# TimeSpan: the errors of its methods that the page does not print. Each
+# answer is the code with its subcode.
+
+ours
+signal on syntax name h
+v = .timespan~fromStringFormat("+1.02:03:04.000005")
+say 'no error'
+exit
+h: say condition('o')~code
+----
+88.918
+
+ours
+signal on syntax name h
+v = .timespan~fromStringFormat(" 01:02:03.000005")
+say 'no error'
+exit
+h: say condition('o')~code
+----
+88.918
+
+ours
+signal on syntax name h
+v = .timespan~fromStringFormat("01:02:03.000005 ")
+say 'no error'
+exit
+h: say condition('o')~code
+----
+88.918
+
+ours
+signal on syntax name h
+v = .timespan~fromStringFormat("- 01:02:03.000005")
+say 'no error'
+exit
+h: say condition('o')~code
+----
+88.918
+
+ours
+signal on syntax name h
+v = .timespan~fromStringFormat("--01:02:03.000005")
+say 'no error'
+exit
+h: say condition('o')~code
+----
+88.918
+
+ours
+signal on syntax name h
+v = .timespan~fromStringFormat("-00:00:00.000000")
+say 'no error'
+exit
+h: say condition('o')~code
+----
+88.918
+
+ours
+signal on syntax name h
+v = .timespan~fromStringFormat("1.2:03:04.000005")
+say 'no error'
+exit
+h: say condition('o')~code
+----
+88.918
+
+ours
+signal on syntax name h
+v = .timespan~fromStringFormat("1.02:3:04.000005")
+say 'no error'
+exit
+h: say condition('o')~code
+----
+88.918
+
+ours
+signal on syntax name h
+v = .timespan~fromStringFormat("1.02:03:4.000005")
+say 'no error'
+exit
+h: say condition('o')~code
+----
+88.918
+
+ours
+signal on syntax name h
+v = .timespan~fromStringFormat("1:02:03.000005")
+say 'no error'
+exit
+h: say condition('o')~code
+----
+88.918
+
+ours
+signal on syntax name h
+v = .timespan~fromStringFormat("00:01:30.0000005")
+say 'no error'
+exit
+h: say condition('o')~code
+----
+88.918
+
+ours
+signal on syntax name h
+v = .timespan~fromStringFormat("00:01:30.5")
+say 'no error'
+exit
+h: say condition('o')~code
+----
+88.918
+
+ours
+signal on syntax name h
+v = .timespan~fromStringFormat("00:01:30.")
+say 'no error'
+exit
+h: say condition('o')~code
+----
+88.918
+
+ours
+signal on syntax name h
+v = .timespan~fromStringFormat("00:61:30.000000")
+say 'no error'
+exit
+h: say condition('o')~code
+----
+88.918
+
+ours
+signal on syntax name h
+v = .timespan~fromStringFormat("00:00:60.000000")
+say 'no error'
+exit
+h: say condition('o')~code
+----
+88.918
+
+ours
+signal on syntax name h
+v = .timespan~fromStringFormat("24:00:00.000000")
+say 'no error'
+exit
+h: say condition('o')~code
+----
+88.918
+
+ours
+signal on syntax name h
+v = .timespan~fromStringFormat("1.24:00:00.000000")
+say 'no error'
+exit
+h: say condition('o')~code
+----
+88.918
+
+ours
+signal on syntax name h
+v = .timespan~fromStringFormat("1.02:03:04.000005.")
+say 'no error'
+exit
+h: say condition('o')~code
+----
+88.918
+
+ours
+signal on syntax name h
+v = .timespan~fromStringFormat("1. 02:03:04.000005")
+say 'no error'
+exit
+h: say condition('o')~code
+----
+88.918
+
+ours
+signal on syntax name h
+v = .timespan~fromStringFormat("00001.02:03:04.000005")
+say 'no error'
+exit
+h: say condition('o')~code
+----
+88.918
+
+ours
+signal on syntax name h
+v = .timespan~fromStringFormat("0.02:03:04.000005")
+say 'no error'
+exit
+h: say condition('o')~code
+----
+88.918
+
+ours
+signal on syntax name h
+v = .timespan~fromStringFormat("-0.00:01:30.000000")
+say 'no error'
+exit
+h: say condition('o')~code
+----
+88.918
+
+ours
+signal on syntax name h
+v = .timespan~fromStringFormat("1.02-03-04.000005")
+say 'no error'
+exit
+h: say condition('o')~code
+----
+88.918
+
+ours
+signal on syntax name h
+v = .timespan~fromStringFormat("01:02:03:04.000005")
+say 'no error'
+exit
+h: say condition('o')~code
+----
+88.918
+
+ours
+signal on syntax name h
+v = .timespan~fromStringFormat("3652058.24:00:00.000000")
+say 'no error'
+exit
+h: say condition('o')~code
+----
+88.918
+
+ours
+signal on syntax name h
+v = .timespan~fromStringFormat("3652059.00:00:00.000000")
+say 'no error'
+exit
+h: say condition('o')~code
+----
+88.918
+
+ours
+signal on syntax name h
+v = .timespan~fromStringFormat("01:02:03")
+say 'no error'
+exit
+h: say condition('o')~code
+----
+88.918
+
+ours
+signal on syntax name h
+v = .timespan~fromStringFormat("1.02:03")
+say 'no error'
+exit
+h: say condition('o')~code
+----
+88.918
+
+ours
+signal on syntax name h
+v = .timespan~fromStringFormat("x")
+say 'no error'
+exit
+h: say condition('o')~code
+----
+88.918
+
+ours
+signal on syntax name h
+v = .timespan~fromStringFormat("")
+say 'no error'
+exit
+h: say condition('o')~code
+----
+88.918
+
+ours
+signal on syntax name h
+v = .timespan~fromStringFormat("1.02:03:04.00000a")
+say 'no error'
+exit
+h: say condition('o')~code
+----
+88.918
+
+ours
+signal on syntax name h
+v = .timespan~fromStringFormat("1.02:03:04,000005")
+say 'no error'
+exit
+h: say condition('o')~code
+----
+88.918
+
+error
+.timespan~fromNormalTime("12:34")
+----
+88.918
+
+error
+.timespan~fromNormalTime("12:34:5x")
+----
+88.918
+
+error
+.timespan~fromLongTime("12:34:56.")
+----
+88.918
+
+error
+.timespan~fromLongTime("12:34:56.1.2")
+----
+88.918
+
+error
+.timespan~fromCivilTime("12:34")
+----
+88.918
+
+error
+.timespan~fromCivilTime("12:3pm")
+----
+88.918
+
+error
+.timespan~fromCivilTime("123:30pm")
+----
+88.918
+
+error
+.timespan~new(1, 2, 3, 4, 5, 6, 7)
+----
+93.902
+
+error
+.timespan~new
+----
+93.901
+
+error
+.timespan~new(, 1)
+----
+93.903
+
+error
+.timespan~new(1, 2, 3, 4.5)
+----
+88.907
+
+error
+.timespan~new(1, 2, 3, 4, "x")
+----
+88.907
+
+error
+.timespan~new(1, 2, 3, 4, 1000000)
+----
+88.907
+
+error
+.timespan~new(1.5, 2, 3, 4)
+----
+88.904
+
+error
+.timespan~new(0, 0, 0, 0, 0)~addMonths(1)
+----
+97.1
+
+error
+.timespan~new(1) * "x"
+----
+41.1
+
+error
+.timespan~new(1) / "x"
+----
+41.1
+
+error
+.timespan~new(1) // "x"
+----
+41.1
+
+error
+.timespan~new(1) % ""
+----
+41.1
+
+error
+.timespan~new(1) / 0
+----
+42.3
+
+error
+.timespan~new(1) // 0
+----
+42.3
+
+ours
+signal on syntax name h
+v = .timespan~new(1)~compareTo(3)
+say 'no error'
+exit
+h: say condition('o')~code
+----
+88.914
+
+error
+.timespan~new(1) + "x"
+----
+88.914
+
+error
+.timespan~new(1) - 3
+----
+93.948
+
+error
+.timespan~new(1)~addDays("x")
+----
+88.902
+
+error
+.timespan~fromDays("x")
+----
+88.902
+
+error
+.timespan~fromMicroseconds(.nil)
+----
+88.902
+
+error
+.timespan~fromHours(1e15)
+----
+88.903
+
+error
+.timespan~new(315537897599999999) + .timespan~new(1)
+----
+40.19
+
+error
+-(.timespan~new(315537897599999999) + .timespan~new(0))
+----
+no error
