@@ -510,7 +510,7 @@ bad: say arg(1) '=&gt;' condition('o')~code
 ::method request
   return 'asked' arg() || ':' || arg(1) || ':' || arg(1, 'E')
 </code></pre>
-<pre><code class="language-output defect=#199">asked 1:FOO:1 asked 1:STRING:1
+<pre><code class="language-output">asked 1:FOO:1 asked 1:STRING:1
 asked 1::0 asked 1::0
 a b 1 The NIL object
 r~request('A', 'B') =&gt; 93.902
