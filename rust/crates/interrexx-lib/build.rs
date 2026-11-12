@@ -67,6 +67,7 @@ const REPLACEMENTS: &[&str] = &[
     "monitor.rex",
     "stream.rex",
     "queue.rex",
+    "orderedcollection.rex",
 ];
 
 /// One host member a replacement may leave out.
