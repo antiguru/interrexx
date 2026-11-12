@@ -2,11 +2,10 @@
    and its insertion index is bounded by the last
    item where an Array's extends to meet it.
 
-   The bound is TWO-TIER and so are the errors.  `putRexx` validates the index
-   against the ALLOCATED extent first (93.918 past it), then calls
-   checkInsertIndex for a position inside the extent but past the last item
-   (93.966).  The extent is the larger of what the queue was built with,
-   floored at ooRexx's DefaultArraySize of 16, and what it now holds. */
+   An index past the last item is 93.966 (r[class.queue.put]).  The oracle
+   answers 93.918 for an index far enough above the last item
+   (Deviation 121, r[class.queue.deviation.121]), so only indexes the oracle
+   also answers 93.966 for are probed here. */
 
 q = .Queue~new
 q~queue('a')
@@ -26,19 +25,14 @@ call bounded r, 'INSERT'
 call bounded r, 'PUT'
 say 'both refused'
 
-/* Inside the extent but past the last item, against past the extent. */
+/* Past the last item, inside the oracle's allocated extent. */
 e = .Queue~new
 e~queue('a')
 call bounded2 e, 16, 'inside the default extent'
-call bounded2 e, 17, 'past the default extent'
 f = .Queue~new(50)
 f~queue('a')
 call bounded2 f, 50, 'inside a requested extent'
-call bounded2 f, 51, 'past a requested extent'
-g = .Queue~new(5)
-g~queue('a')
-call bounded2 g, 6, 'a request below the default is floored at it'
-say 'all five refused'
+say 'both refused'
 
 s = .Queue~new
 s~queue('a')

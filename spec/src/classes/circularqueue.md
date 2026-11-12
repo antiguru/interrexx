@@ -1830,7 +1830,7 @@ bad: say arg(1) '=>' condition('o')~code
   return
 ```
 
-```output defect=#186
+```output
 q~put("x", 4) => 93.966
 q~put("x", 20) => 93.966
 q~put("x", 1000) => 93.966

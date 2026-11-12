@@ -101,12 +101,6 @@ pub(super) fn queue_index(
 /// reason: `ScopePools` is already walked by the collector.
 pub(super) const QUEUE_ITEMS: &[u8] = b"ITEMS";
 
-/// The allocated extent a `Queue` was built with, which its index bound is
-/// measured against and which is not its item count.
-const QUEUE_CAPACITY: &[u8] = b"CAPACITY";
-
-const DEFAULT_ARRAY_SIZE: usize = 16;
-
 /// The scope the Array-shaped store is bound under.
 pub(super) fn store_scope(interp: &mut Interp) -> ObjRef {
     interp
@@ -306,33 +300,14 @@ impl Interp {
     }
 }
 
-/// A `Queue`'s two-tier index bound, which is two different errors.
-/// `index` is the argument as given, which the 93.918 names.
+/// A `Queue`'s index bound: a position past its last item is 93.966, however
+/// far past it is (`r[class.queue.put]`, `r[class.queue.deviation.121]`).
 pub(super) fn queue_bound(
     interp: &mut Interp,
     receiver: ObjRef,
-    index: ObjRef,
     position: usize,
 ) -> Result<(), Failure> {
-    if !is_queue(interp, receiver) {
-        return Ok(());
-    }
-    // The extent is the larger of what the queue was built with and what it
-    // now holds -- measured, a default queue grown to 20 items bounds at 20.
-    let scope = store_scope(interp);
-    let declared = match pool_variable(interp, receiver, scope, QUEUE_CAPACITY) {
-        Some(value) => match value.decode() {
-            Decoded::SmallInt(value) => value as usize,
-            _ => DEFAULT_ARRAY_SIZE,
-        },
-        None => DEFAULT_ARRAY_SIZE,
-    };
-    let extent = declared.max(slots_of(interp, receiver)?.iter().flatten().count());
-    if position > extent {
-        let written = interp.string_value_text(index)?;
-        return Err(Raised::incorrect_list_index(&written).into());
-    }
-    if position > last_item(interp, receiver)? {
+    if is_queue(interp, receiver) && position > last_item(interp, receiver)? {
         return Err(Raised::incorrect_queue_index(position).into());
     }
     Ok(())
