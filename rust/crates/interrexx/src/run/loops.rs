@@ -18,7 +18,7 @@ enum DoOutcome {
     /// An `ITERATE` naming this construct cut the pass short. The line is
     /// that `ITERATE` clause's own -- what the loop's next re-test is
     /// attributed to, because the oracle re-enters the loop from inside
-    /// `RexxActivation::iterate`, with the `ITERATE` still the current
+    /// the `ITERATE`, with it still the current
     /// instruction. `site` is the same clause's echo site, for the case
     /// where that re-test fails -- see [`HeaderClause::Iterate`].
     Iterated {
@@ -272,8 +272,7 @@ enum LoopState {
         /// Whether the control variable is spelled simple, stem or compound.
         shape: NameShape,
         /// Whether at least one candidate iteration has already been
-        /// decided, which is exactly the oracle's own `!first` argument to
-        /// `DoBlock::checkControl` (`ControlledDoInstruction.cpp:162`): it
+        /// decided, which is exactly the oracle's own "not the first pass" test: it
         /// selects between "read the value the header computed" and
         /// "increment it, tracing on both sides of the addition". A `bool`
         /// on the state rather than a flag threaded through `run_repeating`
@@ -283,11 +282,10 @@ enum LoopState {
         stepped: bool,
     },
     /// `DO WITH INDEX i ITEM v OVER expr`: steps the supplier the target
-    /// answered `SUPPLIER` with, `WithLoop::checkIteration`
-    /// (`instructions/DoBlockComponents.cpp`).
+    /// answered `SUPPLIER` with.
     With(Box<WithState>),
     /// A controlled loop whose header value or control variable is an
-    /// object: driven by message, as `DoBlock::checkControl` drives every
+    /// object: driven by message, as the oracle drives every
     /// controlled loop.
     ObjectControlled(Box<ObjectControl>),
 }
@@ -350,7 +348,6 @@ struct WithState {
 }
 
 /// A loop's `COUNTER` variable and the passes entered so far
-/// (`DoBlock::setCounter`).
 #[derive(Clone, Copy)]
 struct LoopCounter {
     name: SymbolId,
@@ -419,7 +416,7 @@ pub(crate) enum HeaderRole {
     /// `DO WITH ... OVER expr`'s target, echoed under the `WITH` tag.
     With,
     /// A `COUNTER` variable's reset to `0`, ahead of every header
-    /// expression (`DoBlock::DoBlock`). Its slot has no expression.
+    /// expression. Its slot has no expression.
     Counter,
     /// The `FOR` count of `DO name OVER expr FOR expr` and of `DO WITH ...
     /// OVER expr FOR expr`, **echoed under the `FOR` tag** (measured against
@@ -668,11 +665,10 @@ impl Interp {
             // to serve a branch that is not taken.
             // **`exprf` and `exprr` are the two `reqstr` contexts in a `DO`
             // header, and the three numeric positions above are not.**
-            // `ForLoop::setup` and `DoWhile::setup` convert with
-            // `result->requestString()->numberString()`
-            // (`instructions/DoBlockComponents.cpp:88`) where
-            // `ControlledLoop::setup` sends `callOperatorMethod(OPERATOR_PLUS)`
-            // to the value instead (`:127`), which is a message to the object
+            // `FOR` and `WHILE` convert with
+            // the string request followed by a number conversion,
+            // where a controlled loop sends `+`
+            // to the value instead, which is a message to the object
             // and is 97.1 rather than a conversion -- `eval.rs`'s
             // `object_operand_tests` is that half.
             HeaderRole::For | HeaderRole::OverFor => {
@@ -697,7 +693,7 @@ impl Interp {
                     }
                 });
             }
-            // `DO OVER` hands its target to `requestArray` -- see
+            // `DO OVER` hands its target to the array request -- see
             // [`Interp::over_snapshot`].
             HeaderRole::Over => values.over = Some(value),
             HeaderRole::With => values.supplier = Some(self.with_supplier(value)?),
@@ -707,7 +703,7 @@ impl Interp {
         Ok(())
     }
 
-    /// `WithLoop::setup`: the supplier `value` answers `SUPPLIER` with, 98.994
+    /// The supplier `value` answers `SUPPLIER` with, 98.994
     /// when that is not a `Supplier`.
     fn with_supplier(&mut self, value: ObjRef) -> Result<ObjRef, Failure> {
         let caller = self.caller();
@@ -751,7 +747,7 @@ impl Interp {
     }
 
     /// One pass's `COUNTER` assignment and its `>K>` line, at the loop body's
-    /// indent (`DoBlock::setCounter`).
+    /// indent.
     fn count_pass(
         &mut self,
         code: &Code<'_>,
@@ -780,9 +776,8 @@ impl Interp {
         Ok(())
     }
 
-    /// `OverLoop::setup`'s conversion
-    /// (`instructions/DoBlockComponents.cpp:233`): the array whose items a
-    /// `DO OVER` binds in turn.
+    /// The conversion for `DO OVER`:
+    /// the array whose items it binds in turn.
     fn over_target_array(&mut self, value: ObjRef) -> Result<ObjRef, Failure> {
         if self.array_slots_of(value).is_some() {
             return Ok(value);
@@ -797,7 +792,7 @@ impl Interp {
         Err(Raised::object_not_single_dimensional(&found).into())
     }
 
-    /// `RexxInternalObject::requestArray`'s conversion, which is a message
+    /// The array conversion, which is a message
     /// send on one path and a direct call on the other: `None` where a
     /// primitive has no `MAKEARRAY`, and otherwise what the send answers.
     pub(crate) fn request_array_value(&mut self, value: ObjRef) -> Result<Option<ObjRef>, Failure> {
@@ -939,7 +934,7 @@ impl Interp {
     }
 
     /// A controlled header value once the header holds an object:
-    /// `ControlledLoop::setup`'s `callOperatorMethod(OPERATOR_PLUS)`, a message
+    /// the setup's `+`, a message
     /// to an object (97.1 where it has no `+`), whose answer is kept as it is.
     /// `BY`'s answer is sent the setup's `<` against 0 for the direction.
     #[cold]
@@ -1109,8 +1104,8 @@ impl Interp {
                 // clause left once `run_bounded` has returned.
                 let do_indent = self.activity.clause_state.current_value_indent;
                 // **The block's own clause, opened and ended before any body
-                // instruction runs.** The oracle's
-                // `RexxInstructionSimpleDo::execute` traces the instruction,
+                // instruction runs.** The oracle
+                // traces the instruction,
                 // opens the block and returns -- it never runs the body -- so
                 // a condition queued before the `DO` is delivered here, at the
                 // `DO`'s own line and with the block open. Measured, a handler
@@ -1359,7 +1354,7 @@ impl Interp {
         let do_indent = self.activity.clause_state.current_value_indent;
         let loop_indent = do_indent + 2;
         // `TRACE`'s own per-iteration re-echo: the oracle's `DO`/`LOOP` instruction is re-executed
-        // once per pass (`DoBlock::checkControl`, read directly), so its
+        // once per pass, so its
         // own clause -- and `END`'s -- echo again on every pass, unlike
         // every other construct in this crate, which resolves its whole
         // repetition inside one `step` call and so is stepped, and echoed,
@@ -1475,7 +1470,7 @@ impl Interp {
             let flow = self.run_bounded(code, body_start, end_index, source, engine)?;
             // The pass boundary is an instruction of its own on the oracle
             // (`END`, or the `ITERATE` that jumped to it), and the clock is
-            // stale after it (`RexxActivation.cpp:647`), so a loop with no
+            // stale after it, so a loop with no
             // body clause still reads a fresh `TIME('E')` per test.
             self.activation_mut().clock_stale = true;
             match self.do_body_outcome(code, do_index, label, true, resume, flow)? {
@@ -1486,10 +1481,10 @@ impl Interp {
                 // 1 / iterate / end` echoes `iterate` and then the `do`
                 // clause again, with no `end` line between them, where the
                 // same loop without the `ITERATE` does echo `end`. The
-                // oracle's reason is structural: `END`'s own `execute` is
-                // what calls `reExecute` on a fall-through, and
-                // `RexxActivation::iterate` is what calls it for an
-                // `ITERATE` -- `END` is jumped straight over.
+                // oracle's reason is structural: `END` itself is
+                // what re-executes the loop on a fall-through, and
+                // `ITERATE` re-executes it directly --
+                // `END` is jumped straight over.
                 DoOutcome::Iterated { line, site } => {
                     header_clause = HeaderClause::Iterate { line };
                     iterate_site = site;
@@ -1525,8 +1520,7 @@ impl Interp {
                 // ever fire again. The oracle's own `DO`/`LOOP` instruction
                 // is re-entered to make *this* decision too, exactly like
                 // it is to test `WHILE` or advance a `Controlled` loop
-                // (`checkControl`, read directly, this task's report) --
-                // `UNTIL`'s decision point is not the same event as the
+                // -- `UNTIL`'s decision point is not the same event as the
                 // top-of-loop one, so it needs its own echo unconditionally
                 // rather than sharing `first_pass`'s gate.
                 if self.trace_mode().all
@@ -1542,7 +1536,7 @@ impl Interp {
                 self.activity.clause_state.current_value_indent = loop_indent;
                 // `UNTIL`'s test belongs to the same clause the *next*
                 // top-of-loop re-test does, and for the same reason: in the
-                // oracle they are one event, `reExecute` called by whichever
+                // oracle they are one event, a re-execution of the loop started by whichever
                 // instruction transferred control back to the loop. Measured
                 // with an `ITERATE` in the body, which is what tells the two
                 // candidates apart -- `do until zs() >= 2` with `if zn = 1
@@ -2317,11 +2311,9 @@ impl Interp {
                 remaining,
             } => {
                 // **The item is bound before `FOR`'s budget is consulted**,
-                // which is `RexxInstructionDoOverFor::iterate`'s own
-                // `doblock->checkOver(context, stack) && doblock->checkFor()`
-                // (`instructions/DoOverInstruction.cpp:279`): `checkOver`
-                // assigns the control variable, and the `&&` reaches
-                // `checkFor` afterwards. Measured, three descriptors: `a =
+                // which is the oracle's own order: the `OVER` check
+                // assigns the control variable and only then is `FOR`
+                // consulted. Measured, three descriptors: `a =
                 // (10,20,30,40)` with `do e over a for 2` leaves `e` at `30`,
                 // and `do e over 'abc' for 0` leaves it at `abc` with the body
                 // never entered. Under `trace i` the terminating pass still
@@ -2360,14 +2352,12 @@ impl Interp {
                 stepped,
             } => {
                 // **The re-tested pass's own four lines.**
-                // `DoBlock::checkControl` (`DoBlock.cpp:182`-`205`, read
-                // directly) is called as `checkControl(context, stack,
-                // !first)` (`ControlledDoInstruction.cpp:162`), and its
-                // `increment` arm does four traceable things in this order:
-                // read the control variable (`control->evaluate`, which
-                // traces `>V>`), `traceResult` that value, add `BY`,
-                // `traceResult` the sum, then `control->assign` (`>=>`).
-                // The `!first` is exactly `stepped` here. `trace i` /
+                // The oracle's control check on a re-tested pass
+                // does four traceable things in this order:
+                // read the control variable (which
+                // traces `>V>`), trace that value (`>>>`), add `BY`,
+                // trace the sum, then assign it (`>=>`).
+                // "Not the first pass" is exactly `stepped` here. `trace i` /
                 // `do ii = 1 to 2`'s own second pass:
                 // ```text
                 //   >V>     II => "1"
@@ -2591,10 +2581,10 @@ impl Interp {
                 }
                 // The first pass takes the value the header already computed,
                 // unincremented and with no line of its own beyond the `>=>`
-                // below -- `checkControl`'s own `else` arm reads it with
-                // `getValue`, whose comment says why: the initial assignment
+                // below -- the oracle reads it without tracing:
+                // the initial assignment
                 // was already traced during setup, and tracing here too
-                // "prevents getting an extra add looking item traced".
+                // would show an extra add-looking item.
                 let value = if let ControlValue::Small(small) = current
                     && let Some(handle) = exact_small_int(*small, digits)
                 {
@@ -2652,7 +2642,7 @@ impl Interp {
         }
     }
 
-    /// `DoBlock::checkControl`'s read of the control variable at a re-test:
+    /// The read of the control variable at a re-test:
     /// an evaluation, so it can raise `NOVALUE`, traced `>C>`, `>V>` and
     /// `>>>`, and rooted.
     #[inline(always)]
@@ -2803,7 +2793,7 @@ impl Interp {
         }))
     }
 
-    /// One pass of an [`ObjectControl`] loop, `DoBlock::checkControl`: at a
+    /// One pass of an [`ObjectControl`] loop: at a
     /// re-test `+` is sent to `previous` with `BY` and the answer traced; the
     /// value is bound as it is, then sent the `TO` comparison, and the loop
     /// ends where that answers true. An object without the method is 97.1.
@@ -2900,7 +2890,7 @@ impl Interp {
         Ok(within)
     }
 
-    /// `WithLoop::checkIteration` and then the `FOR` budget: steps the
+    /// The `WITH` iteration check and then the `FOR` budget: steps the
     /// supplier past the first pass, binds `INDEX` and then `ITEM`, and
     /// consults `FOR` only after both are bound.
     #[inline(never)]
@@ -3127,9 +3117,8 @@ pub(super) fn numeric_less(
 /// Rounds `number` under `digits`, mirroring the oracle's own unary `+` at
 /// a controlled loop's entry (F1, branch review, Important): `setup_
 /// controlled` used to store `initial`/`to`/`by` as their exact parse, but
-/// `ControlledLoop::setup` (`DoBlockComponents.cpp:126-166`, verified by
-/// containment) rounds all three with `callOperatorMethod(OPERATOR_PLUS,
-/// ...)` before the loop ever starts. Masked while `NUMERIC DIGITS` stays
+/// the oracle's controlled-loop setup (verified by containment) rounds all
+/// three with a unary `+` before the loop ever starts. Masked while `NUMERIC DIGITS` stays
 /// constant (every later use re-rounds to the same width anyway) and wrong
 /// the moment digits changes inside the loop body -- measured: `numeric
 /// digits 3; do i = 1.23456 to 3; say i; numeric digits 9; end` is `1.23 /

@@ -1,5 +1,5 @@
-//! `RXFUNCADD`, `RXFUNCQUERY` and `RXFUNCDROP` (`package/PackageManager.cpp`'s
-//! `addRegisteredRoutine`, `queryRegisteredRoutine` and `dropRegisteredRoutine`).
+//! `RXFUNCADD`, `RXFUNCQUERY` and `RXFUNCDROP`: adding, querying and dropping a
+//! registered routine.
 //!
 //! A function a package library exports, or an internal package's, is callable without the
 //! registry. Any other library is a classic one: its function is registered with the service,

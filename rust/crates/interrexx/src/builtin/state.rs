@@ -116,14 +116,14 @@ pub(crate) fn gc(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result<Obj
     if !matches!(text.first(), Some(b'f' | b'F')) {
         return Err(Raised::argument_not_in_list(name, 1, VALID, &text).into());
     }
-    // Really collect, the way `memoryObject.collectAndUninit` does, rather
+    // Really collect, the way the oracle's collect-and-uninit does, rather
     // than report `1` for something that did not happen. Safe at exactly the
     // point every allocation is: this crate's own collect-stress mode
     // (`Interp::alloc_with`) runs a collection immediately before every
     // allocation, so a caller's values are already rooted by the time any
     // builtin can be entered.
     interp.collect_now();
-    // `collectAndUninit` is collect *and* run, and `GC('force')` is the one
+    // That is collect *and* run, and `GC('force')` is the one
     // path that runs the finalizers inline rather than leaving them to a
     // later safe point. Measured, oracle rc 0: `o = .K~new` / `say 'b'` /
     // `drop o` / `call gc 'force'` / `say 'c'` answers `a b uninit c`, five
@@ -236,7 +236,7 @@ pub(crate) fn trace(interp: &mut Interp, _name: &[u8], args: Args<'_>) -> Result
 pub(crate) fn arg(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result<ObjRef, Failure> {
     const VALID: &str = "AENO";
     let position = whole_number(interp, name, args, 1)?;
-    // Read but not validated here: `optional_string` is all the C++ does
+    // Read but not validated here: `optional_string` is all the oracle does
     // with it until the switch below.
     let option = optional_string(interp, args, 2);
     let Some(position) = position else {
@@ -278,11 +278,11 @@ pub(crate) fn arg(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result<Ob
             } else {
                 arguments[index - 1..].to_vec()
             };
-            // `new_array()` leaves the shape unset, while `ArrayClass(objs,
-            // count)` fixes it when `count` is zero
-            // (`classes/ArrayClass.cpp:314`) -- and position 1 takes the
+            // `new_array()` leaves the shape unset, while the oracle's
+            // array construction fixes it when the count is zero
+            // -- and position 1 takes the
             // second even when there are no arguments at all, because the
-            // C++ tests it before the past-the-end arm.
+            // oracle tests it before the past-the-end arm.
             let dimensions: Option<Box<[usize]>> =
                 (index == 1 && slots.is_empty()).then(|| Box::from([0].as_slice()));
             let object = interp.alloc_charged(
@@ -376,7 +376,7 @@ pub(crate) fn condition(
             Ok(interp.text(text))
         }
         (b'S', Some(condition)) => {
-            // Live, not stored: `trapState` reads the trap table by the
+            // Live, not stored: the oracle reads the trap table by the
             // condition's *own* name, so an `ANY` trap that caught a
             // `SYNTAX` condition reports `OFF` even before it is removed.
             let text: &[u8] = match interp.activation().traps.get(&condition.name) {
@@ -652,7 +652,7 @@ mod tests {
     }
 
     /// An option with no position is the missing-argument error, not the
-    /// bad-option one -- the C++ checks for the position first.
+    /// bad-option one -- the oracle checks for the position first.
     #[test]
     fn an_arg_option_without_a_position_is_a_missing_argument() {
         let mut interp = Interp::new();

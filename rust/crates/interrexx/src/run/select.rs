@@ -20,14 +20,13 @@ impl Interp {
         let value = self.eval(code, case_expr)?;
         self.roots.activity_mut().push_temp(value);
         let text = self.to_text(value).to_vec();
-        // `>K>` (`SelectInstruction.cpp:372`, `traceKeywordResult(CASE, ...)`),
-        // at the `SELECT`'s own level -- measured, `>K>   "CASE" => "2"` sits
+        // The `>K>` line is at the `SELECT`'s own level -- measured, `>K>   "CASE" => "2"` sits
         // at the same indent as `select case ...` itself, not the `WHEN`-scan
         // level a `WhenCase`'s own comparison lines are indented to.
         self.trace_keyword(indent, "CASE", &text);
         // **The block opens after this**, so the header clause's own boundary
-        // runs one level in -- `newBlockInstruction` is the next thing
-        // `RexxInstructionSelectCase::execute` does once the scrutinee has
+        // runs one level in -- the oracle opens the block next
+        // once the scrutinee has
         // been evaluated and its `>K>` traced, and a `CALL ON` handler
         // delivered at that boundary is based on whatever the counter reads
         // then. Measured: the handler `h:` of a `select case raiser()` at top

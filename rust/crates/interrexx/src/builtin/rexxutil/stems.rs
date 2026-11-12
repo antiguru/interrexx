@@ -1,5 +1,4 @@
-//! The `REXXUTIL` routines over stem arrays and the caller's variables:
-//! `interpreter/runtime/RexxUtilCommon.cpp` and `StemClass::sort`.
+//! The `REXXUTIL` routines over stem arrays and the caller's variables.
 
 use std::cmp::Ordering;
 
@@ -10,14 +9,14 @@ use super::{answer, c_string, check_arity, marshalled, optional_text, os_path, r
 use crate::error::Raised;
 use crate::{Failure, Interp};
 
-/// `Numerics::MAX_WHOLENUMBER`, the top of a native whole-number argument.
+/// The top of a native whole-number argument.
 pub(crate) const MAX_WHOLENUMBER: i64 = 999_999_999_999_999_999;
 
-/// `Numerics::ARGUMENT_DIGITS`, the precision `WholeNumber` converts under.
+/// The precision `WholeNumber` converts under.
 const ARGUMENT_DIGITS: usize = 18;
 
-/// The largest count `StemClass::sort` reads from element 0: an unsigned
-/// value at the default nine digits (`Numerics::maxValueForDigits(9)`).
+/// The largest count the stem sort reads from element 0: an unsigned
+/// value at the default nine digits.
 const SORT_COUNT_MAXIMUM: u64 = 999_999_999;
 
 /// A `RexxStemObject` argument: a stem itself, or a string naming a stem
@@ -46,7 +45,7 @@ fn stem_argument(
 }
 
 /// A whole number from `minimum` to [`MAX_WHOLENUMBER`], as
-/// `objectToSignedInteger` converts a native argument.
+/// a native argument is converted.
 pub(crate) fn whole_value(
     interp: &mut Interp,
     value: ObjRef,
@@ -311,7 +310,7 @@ struct SortOrder {
 }
 
 impl SortOrder {
-    /// The comparator `StemClass::sort` picks, as `-1`, `0` or `1`.
+    /// The comparator the stem sort picks, as `-1`, `0` or `1`.
     fn compare(self, left: &[u8], right: &[u8]) -> i32 {
         let ordering = match self.columns {
             None => compare_whole(left, right, self.caseless),
@@ -326,7 +325,7 @@ impl SortOrder {
     }
 }
 
-/// One byte as `StringUtil::caselessCompare` reads it: upcased, then taken as
+/// One byte as the oracle's caseless comparison reads it: upcased, then taken as
 /// a signed `char`, so a byte from `0x80` up orders below every ASCII byte.
 fn caseless_byte(byte: u8) -> i8 {
     i8::from_ne_bytes([byte.to_ascii_uppercase()])
@@ -352,7 +351,7 @@ fn compare_run(
     Ordering::Equal
 }
 
-/// `RexxString::sortCompare` and `sortCaselessCompare` with no columns: the
+/// The two sort comparisons, exact and caseless, with no columns: the
 /// shared prefix, then the shorter first.
 fn compare_whole(left: &[u8], right: &[u8], caseless: bool) -> Ordering {
     let shared = left.len().min(right.len());
@@ -366,7 +365,7 @@ fn compare_whole(left: &[u8], right: &[u8], caseless: bool) -> Ordering {
 
 /// The column forms of the same two comparisons.
 ///
-/// The run compared reaches one byte past the shorter value, where the C++
+/// The run compared reaches one byte past the shorter value, where the oracle
 /// reads the string's terminating NUL.
 fn compare_columns(
     left: &[u8],
@@ -397,7 +396,7 @@ fn terminated(value: &[u8], start: usize, count: usize) -> impl Iterator<Item = 
     (start..start + count).map(|at| value.get(at).copied().unwrap_or(0))
 }
 
-/// `StemClass::mergeSort` over `order`, one index per element: the oracle's
+/// A merge sort over `order`, one index per element: the oracle's
 /// own algorithm, an insertion sort below eight elements and an exponential
 /// search in the merge, so the order it leaves is the oracle's whatever the
 /// comparator answers.
@@ -436,7 +435,7 @@ fn merge_sort(
     merge(order, working, left, middle + 1, right, compare);
 }
 
-/// `StemClass::merge`: joins the sorted runs `left..middle` and
+/// Joins the sorted runs `left..middle` and
 /// `middle..=right`, copying each stretch past an exponential search.
 fn merge(
     order: &mut [usize],
@@ -488,7 +487,7 @@ fn merge(
     order[left..=right].copy_from_slice(&working[left..=right]);
 }
 
-/// `StemClass::find`: the last index from `left` to `right` whose element
+/// The last index from `left` to `right` whose element
 /// `value` compares above `limit` against, or `left - 1` where there is none.
 fn find(
     order: &[usize],
@@ -498,7 +497,7 @@ fn find(
     right: usize,
     compare: &dyn Fn(usize, usize) -> i32,
 ) -> usize {
-    // Signed, because the C++'s `right = checkPoint - 1` may pass below
+    // Signed, because the oracle's step back from the check point may pass below
     // `left` and the loops end on that.
     let (mut left, mut right) = (left as isize, right as isize);
     let mut check = left;
@@ -560,7 +559,7 @@ fn sort_target(interp: &mut Interp, argument: ObjRef) -> Result<(ObjRef, Vec<u8>
 /// which replace them.
 ///
 /// `last` and `lastcol` of `999999999999999999` mean "to the end" whether
-/// given or defaulted, as in the C++, which marks the default with that value.
+/// given or defaulted, as in the oracle, which marks the default with that value.
 pub(crate) fn sort(
     interp: &mut Interp,
     _name: &'static [u8],
@@ -679,7 +678,7 @@ pub(crate) fn sort(
     Ok(answer(interp, 0))
 }
 
-/// Element 0 as `StemClass::sort` reads it: an unsigned whole number at nine
+/// Element 0 as the stem sort reads it: an unsigned whole number at nine
 /// digits, `None` where it is not one.
 fn sort_count(interp: &mut Interp, value: ObjRef) -> Result<Option<i64>, Failure> {
     let count = match value.decode() {

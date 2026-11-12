@@ -11,7 +11,7 @@ use super::{
 const MAX_ADDRESS_NAME_LENGTH: usize = 250;
 
 impl Interp {
-    /// `debugSkip`: how many further pauses to skip, from a numeric `TRACE`
+    /// How many further pauses to skip, from a numeric `TRACE`
     /// typed at one. A negative count also suppresses the echo -- measured,
     /// `trace 2` traces the two clauses it skips the pause for and
     /// `trace -2` traces neither.
@@ -46,7 +46,7 @@ impl Interp {
     }
 
     /// Whether a `TRACE` instruction leaves the setting alone, and calls
-    /// neither `setTrace` nor the `>I>` it makes.
+    /// neither the setting change nor the `>I>` it makes.
     ///
     /// **A `TRACE` instruction is ignored while interactive debug is on**,
     /// and traced like any other clause: measured, a program that reaches
@@ -54,7 +54,7 @@ impl Interp {
     /// `TRACE()` and keeps tracing. The builtin has no such guard, which is
     /// why it lives here rather than in `set_trace_mode`.
     ///
-    /// **`inDebug()` is `isDebug() && !debugPause`**, so the same
+    /// **"In debug" means debug is on and no pause is running**, so the same
     /// instruction the program cannot use is what a line typed at the
     /// pause uses to end debug -- measured, `trace off` at a prompt ends
     /// the session and the pause with it.
@@ -67,7 +67,7 @@ impl Interp {
     pub(super) fn exec_trace(&mut self, code: &Code<'_>, setting: &Trace) -> Result<(), Failure> {
         match setting {
             Trace::Default => {
-                // `setTraceNormal`, which is silent here and is *not*
+                // The normal setting, which is silent here and is *not*
                 // `TRACE OFF` -- measured, `trace r` then bare `trace` then
                 // `trace()` gives `N`, where `trace off` gives `O`.
                 if self.ignores_trace_instruction() {
@@ -83,7 +83,7 @@ impl Interp {
                     .expect("interrexx-parse's check_trace_setting already validated this byte");
                 self.apply_trace_request(&request);
             }
-            // `debugSkip` (`RexxActivation.cpp:932`-`945`): valid only from
+            // Valid only from
             // a pause, and 24.901 anywhere else -- measured, `trace 0` in a
             // program raises it exactly like `trace 5`.
             Trace::Skip(count) => {
@@ -109,8 +109,7 @@ impl Interp {
                     "VALUE",
                     &shown,
                 );
-                // `result->requestString()` (`instructions/TraceInstruction
-                // .cpp:172`), and 24.1 names the conversion: measured, oracle
+                // The string request, and 24.1 names the conversion: measured, oracle
                 // rc 232, `trace value .K` with a class-side `makeString`
                 // returning `'ZZ'` reports `found "Z"`.
                 let value = self.required_string_value(value)?;
@@ -133,17 +132,17 @@ impl Interp {
                 self.apply_trace_request(&request);
             }
         }
-        // `RexxActivation::setTrace` calls `traceEntry()` right after
-        // installing the new flags (`RexxActivation.cpp:1024`), which is the
+        // The oracle announces the entry right after
+        // installing the new flags, which is the
         // route every `>I>` takes. `Trace::Skip` never gets here
-        // -- it returned above -- and the C++ agrees: its own arm sets no
+        // -- it returned above -- and the oracle agrees: its own arm sets no
         // flags and calls nothing.
         self.allow_entry_after_exposes(code);
         self.trace_invocation_entry();
         Ok(())
     }
 
-    /// `RexxActivation::run` keeps `traceEntryAllowed` past an `EXPOSE`, so a
+    /// The oracle keeps the entry announcement allowed past an `EXPOSE`, so a
     /// `TRACE` that only `EXPOSE`s precede in the body may still announce
     /// `>I>`. Nothing but those `EXPOSE`s can have run before it: any other
     /// way to reach it passes a label, a `DO` or another instruction first.
@@ -229,7 +228,7 @@ impl Interp {
     }
 
     /// What the running activation announces itself as, or `None` when it
-    /// announces nothing at all -- which is the `isMethodOrRoutine()` half of
+    /// announces nothing at all -- which is the method-or-routine half of
     /// the gate, expressed as the lookup that would supply the substitutions.
     pub(crate) fn invocation_subject(&self) -> Option<Announced> {
         if let Some(identity) = &self.activation().method_identity {
@@ -239,7 +238,7 @@ impl Interp {
             });
         }
         // A program called as a routine is announced under its package name, and
-        // so is a prologue, which `runProlog` calls as an `EXTERNALCALL`.
+        // so is a prologue, which the oracle runs as an `EXTERNALCALL`.
         if self.activation().entry == crate::activation::Entry::TopLevel
             && matches!(
                 self.activation().call_type,
@@ -275,8 +274,8 @@ impl Interp {
         code: &Code<'_>,
         address: &interrexx_parse::Address,
     ) -> Result<(), Failure> {
-        // `environment` before `dynamic`, mirroring the C++'s own `if
-        // (environment != OREF_NULL)` ahead of its `ADDRESS VALUE` arm. The
+        // `environment` before `dynamic`, mirroring the oracle, which tests the
+        // environment ahead of its `ADDRESS VALUE` arm. The
         // parser never fills both, so the order decides nothing today.
         match (&address.environment, &address.dynamic) {
             (None, None) => {
@@ -297,8 +296,8 @@ impl Interp {
             (None, Some(expression)) => {
                 let value = self.eval(code, expression)?;
                 self.roots.activity_mut().push_temp(value);
-                // `_address = result->requestString()` before the `>>>`
-                // (`instructions/AddressInstruction.cpp:182`), so the trace
+                // The string request comes before the `>>>`,
+                // so the trace
                 // names the conversion: measured, `trace r` over
                 // `address (.K)` with a class-side `makeString` returning
                 // `'CMD'` prints `>>>   "CMD"` and `ADDRESS()` answers `CMD`.
@@ -422,8 +421,7 @@ impl Interp {
                     &text,
                 );
                 // The required-string protocol between the `>K>` and the
-                // validation, which is where `requestString` sits
-                // (`instructions/NumericInstruction.cpp:175`).
+                // validation, which is where the string request sits.
                 let converted = self.required_string_or_nil(value)?;
                 let parsed = String::from_utf8_lossy(&self.to_text(converted)).into_owned();
                 if let Err(error) = self.activation_mut().settings.set_form_str(&parsed) {
@@ -455,8 +453,8 @@ impl Interp {
             &text,
         );
         // **The required-string protocol runs after the `>K>` and its answer
-        // replaces the bytes**, which is `requestUnsignedNumber`'s own
-        // `requestString()` (`classes/ObjectClass.cpp:1077`). The trace above
+        // replaces the bytes**, which is the oracle's own
+        // string request. The trace above
         // names the object and the parse below reads the conversion --
         // measured, `numeric digits .K` with a class-side `makeString`
         // returning `12` traces `>K>   "DIGITS" => "The K class"` and then

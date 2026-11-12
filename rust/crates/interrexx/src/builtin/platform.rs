@@ -13,8 +13,7 @@ use crate::{Failure, Interp};
 
 /// `QUALIFY(name)`: the name resolved against the interpreter's current
 /// directory and reduced to one spelling, whether or not it exists
-/// (`expression/BuiltinFunctions.cpp:2988` through
-/// `SysFileSystem::qualifyStreamName`).
+/// (the oracle's stream-name qualification).
 pub(crate) fn qualify(
     interp: &mut Interp,
     _name: &'static [u8],
@@ -25,10 +24,10 @@ pub(crate) fn qualify(
     Ok(interp.text_built(qualified))
 }
 
-/// `SysFileSystem::qualifyStreamName`: `name` up to its first NUL, as the C
-/// string the C++ is given, with a leading `~` or `~user` resolved, made
+/// Stream-name qualification: `name` up to its first NUL, as the C
+/// string the oracle is given, with a leading `~` or `~user` resolved, made
 /// absolute against the interpreter's current directory and reduced by
-/// [`crate::paths::normalize_bytes`]. The null string where the C++ fails: an
+/// [`crate::paths::normalize_bytes`]. The null string where the oracle fails: an
 /// empty name, a `~user` naming no account, or a home directory that is not
 /// absolute.
 pub(crate) fn qualify_name(interp: &Interp, name: &[u8]) -> Vec<u8> {
@@ -50,7 +49,7 @@ pub(crate) fn qualify_name(interp: &Interp, name: &[u8]) -> Vec<u8> {
     crate::paths::normalize_bytes(name, interp.cwd_bytes())
 }
 
-/// `SysFileSystem::resolveTilde`: a leading `~` replaced by the environment's
+/// A leading `~` replaced by the environment's
 /// `HOME`, a leading `~user` by that account's home directory, and `None`
 /// where no account has that name.
 pub(crate) fn expand_tilde(interp: &Interp, name: &[u8]) -> Option<Vec<u8>> {
@@ -154,7 +153,7 @@ pub(crate) fn endlocal(
 }
 
 /// `DIRECTORY([new])`: a native routine of the `REXX` package, not a builtin
-/// (`runtime/NativeFunctions.h:48`), which is why its arity errors are the
+/// which is why its arity errors are the
 /// 88.9xx family. With an argument it moves the interpreter's own current
 /// directory and answers the new one; a change it cannot make answers the null
 /// string and moves nothing. With none it answers where it is.
@@ -203,7 +202,7 @@ fn can_enter(directory: &std::path::Path) -> bool {
 const FILESPEC_OPTIONS: &[u8] = b"DELNP";
 
 /// `FILESPEC(option, name)`: the piece of `name` that `option`'s first letter
-/// selects (`runtime/InternalPackage.cpp:87`). Purely textual -- the file need
+/// selects. Purely textual -- the file need
 /// not exist, and nothing here touches the file system. On unix the drive is
 /// always the null string.
 pub(crate) fn filespec(
@@ -259,14 +258,14 @@ pub(crate) fn filespec(
     Ok(interp.text_built(answer))
 }
 
-/// `BEEP`'s bounds (`runtime/InternalPackage.cpp:160`-`:163`).
+/// `BEEP`'s bounds.
 const MIN_FREQUENCY: i64 = 37;
 const MAX_FREQUENCY: i64 = 32767;
 const MIN_DURATION: i64 = 0;
 const MAX_DURATION: i64 = 60000;
 
 /// `BEEP(frequency, duration)`: writes one bell byte and answers the null
-/// string. The oracle sounds the speaker through `SysProcess::beep` and, on
+/// string. The oracle sounds the speaker and, on
 /// this platform, that reaches the terminal as a single `0x07` on standard
 /// output -- measured, `beep(440,10)` writes it and answers `''`.
 pub(crate) fn beep(
@@ -288,7 +287,7 @@ pub(crate) fn beep(
 }
 
 /// A required `wholenumber_t` argument as the routine's marshalling converts
-/// it (`NativeActivation::signedIntegerValue`): 88.901 where it is omitted,
+/// it: 88.901 where it is omitted,
 /// 88.907 over the whole-number range where it is not a whole number.
 fn whole_number(
     interp: &mut Interp,
@@ -326,7 +325,7 @@ fn in_range(number: i64, argument: &str, minimum: i64, maximum: i64) -> Result<(
 /// The empty selector names `.environment` itself; `ENVIRONMENT`, caselessly,
 /// names the process environment this interpreter holds. Any other selector is
 /// 40.914, which is also what the oracle answers on unix for every selector its
-/// own `valueFunction` declines (`platform/unix/ValueFunction.cpp:66`).
+/// own value function declines.
 pub(crate) fn value_selector(
     interp: &mut Interp,
     args: Args<'_>,

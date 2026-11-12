@@ -1,5 +1,4 @@
-//! `SysFileTree`: `TreeFinder` in `interpreter/runtime/RexxUtilCommon.cpp`
-//! and its Unix half in `platform/unix/SysRexxUtil.cpp`.
+//! `SysFileTree`.
 
 use interrexx_core::ObjRef;
 use rustix::fs::{FileType, Stat};
@@ -30,7 +29,7 @@ struct TreeOptions {
 }
 
 impl TreeOptions {
-    /// `TreeFinder::goodOpts`: the letters in any case, each of `F`, `D` and
+    /// The letters in any case, each of `F`, `D` and
     /// `B` replacing what an earlier one chose. `None` for any other letter.
     fn parse(text: &[u8]) -> Option<TreeOptions> {
         let mut options = TreeOptions {
@@ -67,7 +66,7 @@ fn user_defined(mut text: Vec<u8>) -> Failure {
     Raised::routine_user_defined(&text).into()
 }
 
-/// `TreeFinder::parseMask`: an attribute mask, cut at a NUL, is empty or up
+/// An attribute mask, cut at a NUL, is empty or up
 /// to five of `+`, `-` and `*`. Unix applies neither mask.
 fn check_mask(mask: Option<&[u8]>, position: usize) -> Result<(), Failure> {
     let mask = mask.map_or(&[][..], c_string);
@@ -84,7 +83,7 @@ fn check_mask(mask: Option<&[u8]>, position: usize) -> Result<(), Failure> {
     Ok(())
 }
 
-/// `SysFileSystem::canonicalizeName` over a name starting with `~`: the
+/// Canonicalisation of a name starting with `~`: the
 /// tilde resolved where it can be, and the result normalised where it is
 /// absolute. What does not resolve or is not absolute stays as it is.
 fn canonicalize_tilde(interp: &Interp, name: Vec<u8>) -> Vec<u8> {
@@ -96,7 +95,7 @@ fn canonicalize_tilde(interp: &Interp, name: Vec<u8>) -> Vec<u8> {
     }
 }
 
-/// `TreeFinder::adjustDirectory`: `*` becomes `./*`, a spec ending in `/`,
+/// `*` becomes `./*`, a spec ending in `/`,
 /// `/.` or `/..` gains a wildcard, and a leading `~` is resolved.
 fn adjust_directory(interp: &Interp, spec: &[u8]) -> Vec<u8> {
     let mut spec = spec.to_vec();
@@ -113,7 +112,7 @@ fn adjust_directory(interp: &Interp, spec: &[u8]) -> Vec<u8> {
     spec
 }
 
-/// `TreeFinder::getFullPath`: the directory to search, ending in `/`, and
+/// The directory to search, ending in `/`, and
 /// the pattern for the names in it.
 ///
 /// A spec with no `/` is searched for in the current directory, unqualified,
@@ -224,7 +223,7 @@ fn validate(
     Ok(options)
 }
 
-/// `TreeFinder::recursiveFindFile`: the entries of `directory` whose names
+/// The entries of `directory` whose names
 /// match `pattern`, then, under `S`, every subdirectory's the same way. A
 /// directory that does not open contributes nothing.
 fn search(
@@ -256,7 +255,7 @@ fn search(
 
 /// The names in `directory` other than `.` and `..` that `wanted` accepts,
 /// each with what `stat` answers for it, following a symbolic link. Only
-/// those names are stat'ed, as `SysFileIterator` does. Where `stat` fails (a
+/// those names are stat'ed, as the oracle does. Where `stat` fails (a
 /// dangling link, a chain of links past the kernel's limit) it is `lstat`'s
 /// answer: the oracle reports whatever its buffer last held
 /// (`corpus/oracle-crashes.txt` entry 40). A name both fail on, removed since
@@ -293,7 +292,7 @@ const EPOCH: CivilTime = CivilTime {
     second: 0,
 };
 
-/// `TreeFinder::checkFile` and `formatFileAttributes`: the line for one
+/// The line for one
 /// entry, or `None` where `F` or `D` leaves its kind out. The qualified name
 /// alone under `O`, otherwise the date, the size, the mode string and the
 /// name, two blanks after each of the first three.

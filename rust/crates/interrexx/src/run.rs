@@ -180,12 +180,11 @@ pub(crate) enum Resolved {
     /// the same integer `Activation::body` and `BodyKey::directive` carry.
     Routine(InstalledRoutine),
     /// One of the interpreter's own embedded `.orx` sources, named by a
-    /// `CALL` inside the library bootstrap -- `CoreClasses.orx:122` and
-    /// `:124`.
+    /// `CALL` inside the library bootstrap.
     Library(&'static interrexx_lib::Program),
     /// A routine of the `REXX` or `REXXUTIL` package that this crate has a
     /// body for. Like a builtin it runs no activation; unlike one it is not in
-    /// `BuiltinFunctions.cpp`'s table, which is why its argument errors are
+    /// the builtin table, which is why its argument errors are
     /// the native-routine family.
     Internal(&'static crate::internal_routines::InternalRoutine),
     /// A routine a loaded library exports, as the index of its
@@ -220,12 +219,11 @@ pub(crate) enum Resolved {
     /// fetched again where it is entered.
     Macro,
     /// A classic function handler registered under this name (`RxFuncAdd`,
-    /// `RexxRegisterFunctionDll|Exe`), found in `Interp::classic_functions` where it is entered.
+    /// `RexxRegisterFunctionDll`/`RexxRegisterFunctionExe`), found in `Interp::classic_functions` where it is entered.
     Registered,
     /// Nothing answers this name. **Not an error here**: the security
-    /// manager's `CALL` checkpoint runs before 43.1 is reported
-    /// (`RexxActivation::externalCall`, `execution/RexxActivation.cpp:3077`
-    /// against `:3102`), and it needs the arguments. The raise happens where
+    /// manager's `CALL` checkpoint runs before 43.1 is reported, and it needs
+    /// the arguments. The raise happens where
     /// the checkpoint declines.
     Unresolved,
 }
@@ -236,8 +234,7 @@ impl Resolved {
     /// site's compiled body lives.
     ///
     /// The oracle hands a routine back to the instruction from
-    /// `externalCall`'s Step 2 alone (`findRoutine`,
-    /// `execution/RexxActivation.cpp:3062-3070`), so a `::ROUTINE` or an
+    /// its external-call search's second step alone, so a `::ROUTINE` or an
     /// imported routine stays at the instruction, a label and a builtin are
     /// fixed when the clause resolves, and everything later in the search (the
     /// REXX package's routines, a registered library routine, an external
@@ -354,20 +351,19 @@ pub(crate) enum ConditionTrace<'a> {
 enum Conversion {
     /// An array answers itself.
     Array,
-    /// `StringUtil::makearray` over the value's own text.
+    /// The lines of the value's own text.
     Lines,
-    /// `StemClass::tailArray`.
+    /// The stem's assigned tails.
     Tails,
-    /// `TheNilObject`, which `FORWARD` reports as 98.946.
+    /// `.nil`, which `FORWARD` reports as 98.946.
     Refused,
     /// [`Interp::request_array_value`]'s send.
     Requested,
 }
 
-/// `StringUtil::makearray` with the default separator
-/// (`classes/support/StringUtil.cpp:545`-`:638`): a piece per line end, one
-/// `\r` dropped from a piece that ends in one, and a trailing piece only
-/// where the text does not end at a separator.
+/// Splits on the default separator:
+/// a piece per line end, one `\r` dropped from a piece that ends in one, and
+/// a trailing piece only where the text does not end at a separator.
 fn makearray_lines(text: &[u8]) -> Vec<&[u8]> {
     let mut pieces = Vec::new();
     let mut start = 0;
@@ -709,7 +705,7 @@ impl Interp {
             // clause reaching the command fallback has a term in it -- an
             // empty one is a null clause and is dropped before this. Measured
             // on the oracle: `;`, a blank line and `;;` each run nothing at
-            // all, and the C++'s own `execute` would fault on the null it
+            // all, and the oracle would fault on the null it
             // would need. The assertion is the tripwire rather than a
             // sentence claiming it cannot happen.
             InstructionKind::Command { expression } => {
@@ -743,7 +739,7 @@ impl Interp {
                         (None, None) => Vec::new(),
                     };
                     // **The configuration is this command's alone.** The
-                    // arm that carries a command never calls `setAddress`,
+                    // arm that carries a command never sets the address,
                     // so it stores nothing under the name -- measured, a
                     // later command in the same program is not redirected
                     // and the stem it filled keeps its one line.
@@ -840,7 +836,7 @@ impl Interp {
                 self.returned_value(value, ReturnKeyword::Exit)
             }
 
-            // A label is a traced no-op: the C++'s own `execute` on a label
+            // A label is a traced no-op: the oracle's execution of a label
             // instruction only traces it (a
             // `Label` clause is echoed here via `Op::Clause`'s region, same
             // as any other instruction) and does nothing else besides.
@@ -857,10 +853,8 @@ impl Interp {
             InstructionKind::Interpret { expression } => {
                 let value = self.eval(code, expression)?;
                 self.roots.activity_mut().push_temp(value);
-                // `RexxInstructionExpression::evaluateStringExpression`
-                // (`instructions/RexxInstruction.cpp:257`), the one
-                // `requestString` every instruction that evaluates a single
-                // string expression shares -- so the `>>>` below traces the
+                // The string request every instruction that evaluates a
+                // single string expression shares -- so the `>>>` below traces the
                 // conversion, measured: `trace r` over `interpret .K` with a
                 // class-side `makeString` returning `'nop'` prints
                 // `>>>   "nop"` and then the fragment's own `*-* nop`.
@@ -1002,7 +996,7 @@ impl Interp {
             // absorbed-`WHEN` shape -- a `WHEN` whose own `THEN` consequence
             // is itself a `WHEN`/`WHEN CASE` clause, which the enclosing
             // `SELECT`'s own `whens` never collects (`ast.rs`'s own doc
-            // comment on `whens`, `LanguageParser.cpp:1319`) -- since a
+            // comment on `whens`) -- since a
             // *listed* `When`/`WhenCase` is always fully handled by
             // `Select`'s own explicit arm, above, without ever calling
             // `step` on itself (its own body range never contains another
@@ -1140,8 +1134,8 @@ impl Interp {
                 interrexx_parse::Call::Dynamic { target, args } => {
                     let value = self.eval(code, target)?;
                     self.roots.activity_mut().push_temp(value);
-                    // `targetName = evaluatedTarget->requestString()`
-                    // (`instructions/CallInstruction.cpp:296`), before the
+                    // The target is converted to a string
+                    // before the
                     // `>>>` below: measured, `trace r` over `call (.K)` with a
                     // class-side `makeString` returning `'MS'` traces
                     // `>>>   "MS"` and runs `MS:`.
@@ -1162,9 +1156,8 @@ impl Interp {
                 // `bool` selects between.
                 interrexx_parse::Call::Trap(trap) => self.exec_condition_trap(trap, true),
                 // `CALL ns:name`, whose target is a public routine of that
-                // namespace and nothing else --
-                // `RexxInstructionQualifiedCall::resolve`
-                // (`instructions/CallInstruction.cpp:443`). It settles
+                // namespace and nothing else.
+                // It settles
                 // `RESULT` exactly as `Named` does, which is why it joins the
                 // same second half; what it does not do is search labels or
                 // builtins, so it has no `search_labels` to pass.
@@ -1309,7 +1302,7 @@ impl Interp {
             InstructionKind::Forward(forward) => self.exec_forward(code, forward),
 
             // `OPTIONS`: the expression is evaluated, converted and traced, and
-            // nothing else (`RexxInstructionOptions::execute`).
+            // nothing else.
             InstructionKind::Options { expression } => {
                 let value = self.eval(code, expression)?;
                 self.roots.activity_mut().push_temp(value);
@@ -1323,8 +1316,7 @@ impl Interp {
         }
     }
 
-    /// A message send that is a clause of its own
-    /// (`RexxInstructionMessage::execute`, `MessageInstruction.cpp:151`).
+    /// A message send that is a clause of its own.
     pub(crate) fn exec_message(
         &mut self,
         code: &Code<'_>,
@@ -1451,8 +1443,8 @@ impl Interp {
             // Whole stems alias fine -- the stem object lives in one slot,
             // so aliasing that slot shares the object and every measured
             // stem transcript falls out of it. A single tail is exposed once
-            // the callee has a frame of its own: `procedureExpose` resolves it
-            // and makes it in the caller (`exposeLocalCompoundVariable`), and
+            // the callee has a frame of its own: the oracle resolves it
+            // and makes it in the caller, and
             // the caller's stem is found here, in the caller's pool.
             let shape = shape_of(&name);
             if shape == NameShape::Compound {
@@ -1570,9 +1562,8 @@ impl Interp {
                     let name = code.symbols.name(*id).as_bytes().into();
                     self.bind_exposed(owner, scope, name)?;
                     let value = self.read_list_selector(code, *id)?;
-                    // `IndirectVariableReference::evaluate`'s own
-                    // `value->requestString()`
-                    // (`expression/IndirectVariableReference.cpp:132`), so a
+                    // The oracle converts through the string request,
+                    // so a
                     // selector holding an object spells its list from the
                     // conversion. Measured, oracle rc 0: `zz = 1; x = .K;
                     // drop (x)` with a class-side `makeString` returning
@@ -1644,9 +1635,9 @@ impl Interp {
         }
     }
 
-    /// `RexxCompoundVariable::expose`: the tail `name` spells becomes the same
-    /// tail of `scope`'s stem on `owner`, which `VariableDictionary::getStem`
-    /// makes if the object has none, and the resolved name is traced.
+    /// The tail `name` spells becomes the same
+    /// tail of `scope`'s stem on `owner`, which is made if the object has
+    /// none, and the resolved name is traced.
     fn expose_object_tail(
         &mut self,
         owner: ObjRef,
@@ -1670,7 +1661,7 @@ impl Interp {
         Ok(())
     }
 
-    /// The `>C>` line `traceCompoundName` gives an exposed tail.
+    /// The `>C>` line an exposed tail gets.
     fn trace_exposed_tail(&mut self, name: &[u8], stem_name: &[u8], key: &[u8]) {
         if self.tracing_intermediates() {
             let mut resolved = stem_name.to_vec();
@@ -1755,7 +1746,7 @@ impl Interp {
     }
 
     /// A compound `PROCEDURE EXPOSE` selector's value as the procedure's own
-    /// frame reads it (`RexxVariableReference::procedureExpose` reads after
+    /// frame reads it (the read comes after
     /// exposing): a tail variable and the compound itself have a value only
     /// through a name `exposed` already holds, and are unset otherwise, with
     /// the `NOVALUE` check and `TRACE I` lines of an ordinary read.
@@ -1827,18 +1818,18 @@ impl Interp {
             None => Vec::new(),
         };
         self.trace_result(self.activity.clause_state.current_value_indent, &line);
-        // The I/O exit's first pass (`Activity::callSayExit`).
+        // The I/O exit's first pass.
         if self.exits.is_some() && self.say_exit(&line)? {
             return Ok(());
         }
-        // `Activity::sayOutput` (`concurrency/Activity.cpp:3214`): `.OUTPUT`
-        // gets the line as a `SAY` message and its reply is dropped; an entry
+        // `.OUTPUT` gets the line as a `SAY` message and its reply is dropped;
+        // an entry
         // that is missing **or holds `.nil`** takes the buffer instead.
         //
         // The `.nil` test belongs here rather than in `resolve_stream`, and
         // the asymmetry is measured: `.local~output = .nil` then `say` then
         // `lineout(,)` prints the `SAY` line and *then* fails 97.1 on the
-        // builtin, because `resolveStream` has no such test and sends to the
+        // builtin, because the stream lookup has no such test and sends to the
         // `.nil` it found.
         // **The direct write when nothing has redirected `.OUTPUT`**, which is
         // the same bytes the monitor would forward and none of the cost:
@@ -1864,7 +1855,7 @@ impl Interp {
             _ => {
                 self.write_out_line(&line);
                 // The write the `Stream` native method's return would have
-                // ended with (`NativeActivation.cpp:1361`).
+                // ended with.
                 if !self.uninit_ready.is_empty() {
                     self.run_uninits_at_return(None)?;
                 }
@@ -1873,8 +1864,7 @@ impl Interp {
         Ok(())
     }
 
-    /// `GUARD ON`/`GUARD OFF`, with or without a `WHEN` expression
-    /// (`RexxInstructionGuard::execute`, `instructions/GuardInstruction.cpp`).
+    /// `GUARD ON`/`GUARD OFF`, with or without a `WHEN` expression.
     /// A reserve another activity holds the lock for, and a `WHEN` that is
     /// false, answer a park; the instruction's op runs it again once woken,
     /// and it goes on from the wait.
@@ -2005,8 +1995,7 @@ impl Interp {
         Ok(ExecOutcome::Done(Flow::Next))
     }
 
-    /// `REPLY`, bare or with a value (`RexxInstructionReply::execute`,
-    /// `instructions/ReplyInstruction.cpp:66`).
+    /// `REPLY`, bare or with a value.
     fn exec_reply(
         &mut self,
         code: &Code<'_>,
@@ -2021,8 +2010,8 @@ impl Interp {
             None => None,
         };
         // The rooting and the `>>>` line are `RETURN`'s, for the same reason
-        // and at the same indent: `evaluateExpression` is the shared call in
-        // the C++ and this is the shared call here.
+        // and at the same indent: the expression evaluation is shared in
+        // the oracle and is shared here.
         if let Some(value) = value {
             self.roots.activity_mut().push_temp(value);
             if let Some(rendered) = self.result_text(value)? {
@@ -2044,8 +2033,7 @@ impl Interp {
     }
 
     /// `FORWARD`, with any of `TO`, `MESSAGE`, `CLASS`, `ARGUMENTS`, `ARRAY`
-    /// and `CONTINUE` (`RexxInstructionForward::execute`,
-    /// `instructions/ForwardInstruction.cpp:128`).
+    /// and `CONTINUE`.
     fn exec_forward(&mut self, code: &Code<'_>, forward: &Forward) -> Result<Flow, Failure> {
         let Some(identity) = self.activation().method_identity.as_ref() else {
             return Err(Raised::forward_outside_method().into());
@@ -2054,7 +2042,7 @@ impl Interp {
         let own_name = Rc::clone(&identity.name);
         let indent = self.activity.clause_state.current_value_indent;
 
-        // The option order is the C++'s, and it is observable in the trace:
+        // The option order is the oracle's, and it is observable in the trace:
         // `TO`, `MESSAGE`, `CLASS`, then whichever of `ARGUMENTS` and `ARRAY`
         // is present. Measured under `trace i`, `forward to (t)
         // message('OTHER') array(1,2)` emits `>K> "TO"`, `>K> "MESSAGE"` and
@@ -2077,8 +2065,7 @@ impl Interp {
             Some(expr) => {
                 let value = self.eval(code, expr)?;
                 self.roots.activity_mut().push_temp(value);
-                // `_superClass->isInstanceOf(TheClassClass)`
-                // (`ForwardInstruction.cpp:171`), reported with the same two
+                // The class check is reported with the same two
                 // fixed substitutions a `~name:scope` override's own check
                 // takes. Measured, `forward class (5) message('OTHER')` is
                 // 88.914 at rc 168.
@@ -2093,11 +2080,10 @@ impl Interp {
         let (mut values, mark) = self.take_value_buffer();
         let evaluated = self.forward_arguments(code, forward, &mut values);
         // **After every option and before the send**, which is where
-        // `RexxActivation::forward` asks it (`execution/RexxActivation.cpp:
-        // 1367`-`:1369`): a non-continuing `FORWARD` answers the sender, and
-        // a `REPLY` carrying a value has answered it already.
+        // the oracle asks it: a non-continuing `FORWARD` answers the sender,
+        // and a `REPLY` carrying a value has answered it already.
         let owed = evaluated.and_then(|()| self.forward_after_reply(forward));
-        // `settings.setForwarded(true)` (`execution/RexxActivation.cpp:1372`):
+        // The activation is marked forwarded
         // after the 98.937 above and before the send below, so a condition
         // the send raises is not offered to this activation's own traps.
         // [`Activation::forwarded`] carries what that costs.
@@ -2137,7 +2123,7 @@ impl Interp {
 
     /// 98.937 for a non-continuing `FORWARD` under a `REPLY` that carried a
     /// value, which is the one legality question `FORWARD` asks that is not
-    /// about `FORWARD` (`execution/RexxActivation.cpp:1367`-`:1369`).
+    /// about `FORWARD`.
     fn forward_after_reply(&self, forward: &Forward) -> Result<(), Failure> {
         if forward.continue_ || !self.activation().replied_a_value {
             return Ok(());
@@ -2146,7 +2132,7 @@ impl Interp {
     }
 
     /// One `FORWARD` option that is a single expression: its value, rooted,
-    /// with the `>K>` line the oracle's `traceKeywordResult` writes.
+    /// with the `>K>` line the oracle writes.
     fn forward_keyword(
         &mut self,
         code: &Code<'_>,
@@ -2219,8 +2205,8 @@ impl Interp {
         Ok(())
     }
 
-    /// `ARGUMENTS expr`'s value through `requestArray`
-    /// (`instructions/ForwardInstruction.cpp:182`), appended to `values`.
+    /// `ARGUMENTS expr`'s value through the array request,
+    /// appended to `values`.
     fn forward_arguments_converted(
         &mut self,
         value: ObjRef,
@@ -2254,8 +2240,8 @@ impl Interp {
         Ok(())
     }
 
-    /// `requestArray` over `value` when it answers a single-dimensional
-    /// array, rooted; `None` where the oracle reports `TheNilObject` or a
+    /// An array request over `value` when it answers a single-dimensional
+    /// array, rooted; `None` where the oracle reports `.nil` or a
     /// multi-dimensional answer.
     pub(crate) fn single_dimension_request(
         &mut self,
@@ -2271,22 +2257,21 @@ impl Interp {
         Ok(Some(array))
     }
 
-    /// Which arm of `requestArray` this value takes.
+    /// Which arm of the array request this value takes.
     fn forward_arguments_conversion(&self, value: ObjRef) -> Conversion {
         match value.decode() {
             Decoded::Nil => return Conversion::Refused,
-            // `RexxInteger::makeArray` and `NumberString::makeArray` both
+            // An integer and a number both
             // hand the work to their string value's.
             Decoded::SmallInt(_) | Decoded::Text(_) => return Conversion::Lines,
             Decoded::Heap { .. } => {}
         }
         match self.heap.get(value).map(|object| &object.body) {
             // A class object is a primitive with no `makeArray` of its own,
-            // so `requestArray` stops at `TheNilObject`.
+            // so the array request stops at `.nil`.
             Some(Body::Class { .. }) => Conversion::Refused,
-            // A multi-dimensional array shares `TheNilObject`'s raise rather
-            // than converting (`instructions/ForwardInstruction.cpp:189`-
-            // `:191`).
+            // A multi-dimensional array shares `.nil`'s raise rather
+            // than converting.
             Some(Body::Array { .. }) => {
                 if self.is_multi_dimensional_array(value) {
                     Conversion::Refused
@@ -2295,20 +2280,19 @@ impl Interp {
                 }
             }
             Some(Body::Text { .. } | Body::Num { .. }) => Conversion::Lines,
-            // `StemClass::makeArray` is `tailArray`, which is the assigned
+            // A stem converts to its assigned
             // tails and never the default: measured, `a. = 'dflt'` with no
             // tail assigned forwards no arguments at all.
             Some(Body::Stem { .. }) => Conversion::Tails,
-            // `requestArray` sends `REQUEST('ARRAY')` for a non-primitive,
+            // The array request sends `REQUEST('ARRAY')` for a non-primitive,
             // which looks `MAKEARRAY` up in the behaviour and sends it, and
-            // otherwise answers `.nil` (`RexxObject::requestRexx`,
-            // `classes/ObjectClass.cpp:1920`-`:1940`).
+            // otherwise answers `.nil`.
             Some(Body::Instance { .. }) => Conversion::Requested,
             // **Not the referent's conversion**, which is what
             // `~request('ARRAY')` answers and is a different route:
-            // `requestArray` looks `MAKEARRAY` up in the receiver's own
+            // the array request looks `MAKEARRAY` up in the receiver's own
             // behaviour rather than sending it, and a reference's behaviour
-            // holds no such name, so the lookup fails and `TheNilObject` is
+            // holds no such name, so the lookup fails and `.nil` is
             // the answer. Measured, oracle rc 158: `forward arguments (>v)`
             // over a `v` holding `'val'` is `98.946`, where the same
             // instruction over `v` itself is rc 0 -- so this arm may not
@@ -2327,8 +2311,7 @@ impl Interp {
         values.push(Some(item));
     }
 
-    /// A stem's assigned tails, ordered by `CompoundVariableTail::compare`
-    /// (`classes/support/CompoundVariableTail.hpp:170`), which sorts on
+    /// A stem's assigned tails, ordered
     /// length first and bytes second.
     fn stem_assigned_tails(&self, value: ObjRef) -> Vec<Vec<u8>> {
         let Some(Body::Stem { tails, .. }) = self.heap.get(value).map(|object| &object.body) else {
@@ -2360,12 +2343,10 @@ impl Interp {
         // the sender, so a value here has nobody to go to whatever activity
         // the rest of the body runs on: 98.936 for `RETURN`, 98.937 for
         // `EXIT`. Both are
-        // asked **after** the trace line above, which is the order the C++
-        // takes them in -- `RexxInstructionReturn::execute` evaluates through
-        // `evaluateExpression` and only then calls `returnFrom`
-        // (`instructions/ReturnInstruction.cpp:72`), whose check is at
-        // `execution/RexxActivation.cpp:1074`; `exitFrom`'s own is at
-        // `:1413`. The bare form of either is legal after a reply and is
+        // asked **after** the trace line above, which is the order the oracle
+        // takes them in: `RETURN` evaluates its expression first and only then
+        // checks. `EXIT` checks in the same order. The bare form of either is
+        // legal after a reply and is
         // measured: `reply 'v'` then `say 'tail'` then `return` is rc 0 with
         // both lines printed and an empty stderr.
         match keyword {
@@ -2383,11 +2364,10 @@ impl Interp {
     }
 
     /// An `EXIT`'s reply check, made on the activation it ends: the innermost
-    /// that is not an internal call (`exitFrom` walks up to it,
-    /// `RexxActivation.cpp:1411`-`1440`). An `EXIT` in a `CALL ON` handler
-    /// run at the `REPLY` clause's end ends the method before its split, and
-    /// its result replaces the reply's (`exitFrom` sets `result`), so the
-    /// sender receives none.
+    /// that is not an internal call (`EXIT` walks up to it). An `EXIT` in a
+    /// `CALL ON` handler run at the `REPLY` clause's end ends the method
+    /// before its split, and its result replaces the reply's, so the sender
+    /// receives none.
     #[cold]
     fn exit_after_reply(&mut self, value: Option<ObjRef>) -> Result<(), Failure> {
         let Some(ended) = self.top_level_activation_mut() else {
@@ -2416,7 +2396,7 @@ impl Interp {
         let line = match value {
             Some(value) => {
                 self.roots.activity_mut().push_temp(value);
-                // `evaluateStringExpression` again, so the `>>>` below traces
+                // The same string request again, so the `>>>` below traces
                 // the conversion: measured, `trace r` over `push .K` with a
                 // class-side `makeString` returning `'pv'` prints
                 // `>>>   "pv"` and `pull` reads `PV`.
@@ -2523,9 +2503,9 @@ impl Interp {
         // `DATE`/`TIME`'s per-clause clock cache (`activation.rs`'s own doc
         // on `Activation::clock_stale`) is invalidated **unconditionally,
         // once per call, on whichever activation is executing right now**,
-        // mirroring `RexxActivation::run`'s `settings.timeStamp.valid =
-        // false` right after `nextInst->execute()` returns
-        // (`RexxActivation.cpp:647`). This is that same one place every
+        // mirroring the oracle, which invalidates its timestamp right after
+        // each instruction executes.
+        // This is that same one place every
         // flat instruction position -- including one nested inside `IF`/
         // `SELECT`/`DO`/`INTERPRET`, per this function's own doc, and
         // including a callee's own body reached through `resolve_and_run_
@@ -2541,8 +2521,8 @@ impl Interp {
         activation.clock_stale = true;
         // `>I>`'s own "am I still on the first instruction" decay
         // (`TraceEntry`, `activation.rs`), spent **here** and not in
-        // `run_activation`'s loop. `RexxActivation.cpp:657`-`659` clears the
-        // C++'s flag at the bottom of its instruction loop, and an `IF`'s
+        // `run_activation`'s loop. The oracle clears its flag at the bottom of
+        // its instruction loop, and an `IF`'s
         // then-clause, a `DO` body clause and a fragment's clauses are each a
         // separate instruction in that loop -- where here they are nested
         // inside their enclosing clause's step. This function is the one
@@ -2557,8 +2537,8 @@ impl Interp {
         // (this function's only non-test caller) visits every flat
         // instruction position it steps, markers (`Then`/`Else`/
         // `Otherwise`/`When`/`WhenCase`/`Label`) included, matching the
-        // oracle's own `RexxInstruction::traceInstruction`, which every one
-        // of those calls too from its own `execute`.
+        // oracle's own instruction trace, which every one
+        // of those calls too from its own execution.
         let (tabled, position) = position;
         let rerun = match self.activity.rerun_indent {
             Some(_) => self.activity.rerun_indent.take(),
@@ -2852,8 +2832,8 @@ impl Interp {
         })
     }
 
-    /// `RexxActivation::formatSourcelessTraceLine`
-    /// (`execution/RexxActivation.cpp:5057`) for the activation at `depth`,
+    /// The sourceless trace line
+    /// for the activation at `depth`,
     /// in `package`: a method names itself and its scope, a routine (the
     /// oracle's `EXTERNALCALL`: a `::ROUTINE`, a `Routine` object, an
     /// external program and a package's prologue) its name, and the program
@@ -2958,7 +2938,7 @@ impl Interp {
     }
 
     /// The condition a source that does not parse raises, its failing clause
-    /// recorded as a level of its own (`LanguageParser::createStackFrame`).
+    /// recorded as a level of its own.
     /// `name` is the source's where it is not the running program: a file or
     /// a package compiled from lines. An `INTERPRET` fragment's clause is
     /// reported at the line of the clause running it.
@@ -3003,8 +2983,7 @@ impl Interp {
     /// Makes the source named `name` that failed to translate at `line` the
     /// failure's origin: the condition object's `PROGRAM` names it and its
     /// `PACKAGE` is a package of its own holding the source and nothing it
-    /// declares, as the oracle's parser builds one before it translates
-    /// (`LanguageParser::createStackFrame` reports from it).
+    /// declares, as the oracle's parser builds one before it translates.
     #[cold]
     fn untranslated_origin(
         &mut self,
@@ -3068,7 +3047,7 @@ impl Interp {
     }
 
     /// The `COMPILE` frame of a translation of `program` failing at `site`,
-    /// unless a frame is already recorded (`LanguageParser::createStackFrame`).
+    /// unless a frame is already recorded.
     pub(crate) fn record_compile_frame(&mut self, site: &FailureSite, program: &[u8]) {
         if self.activity.failure_frame.is_some() {
             return;
@@ -3078,7 +3057,7 @@ impl Interp {
         };
         let mut trace_line = Vec::new();
         site.push_trace_line(&mut trace_line);
-        // `CompileActivationFrame::executable` is `OREF_NULL`.
+        // A compile frame has no executable.
         if let Ok(frame) = crate::dispatch::context::build_ended_frame(
             self,
             b"COMPILE",
@@ -3195,7 +3174,7 @@ impl Interp {
     }
 
     /// The same for an `INTERPRET` fragment `failure` is leaving, whose frame
-    /// is the one `RexxActivation::createStackFrame` gives an interpret
+    /// is the one the oracle gives an interpret
     /// activation: no name, target or arguments, and its own invocation and
     /// context.
     pub(crate) fn capture_fragment_frame(&mut self, failure: &Failure) {
@@ -3218,8 +3197,8 @@ impl Interp {
         self.activity.failure_origin.get_or_insert(origin);
     }
 
-    /// `Activity::reraiseException` (`concurrency/Activity.cpp:1330`): the
-    /// condition is raised again from the level that is failing now, so
+    /// Raises the
+    /// condition again from the level that is failing now, so
     /// `POSITION`, the program and the report's `line <n>` are that level's,
     /// while every level already left keeps its traceback line.
     pub(crate) fn reraise_failure_levels(&mut self) {
@@ -3240,10 +3219,9 @@ impl Interp {
         }
     }
 
-    /// `MessageClass::result` raising the condition its send failed with
+    /// A message's `RESULT` raising the condition its send failed with
     /// again, `object` being that condition's object and `traceback` its
-    /// `TRACEBACK` lines (`Activity::reraiseException`,
-    /// `concurrency/Activity.cpp:1330`): the report echoes those lines and
+    /// `TRACEBACK` lines: the report echoes those lines and
     /// names this clause's line.
     pub(crate) fn reraise_kept_condition(
         &mut self,
@@ -3663,8 +3641,8 @@ impl Interp {
         if self.trace_mode().results {
             let text = self.to_text(value).to_vec();
             match trace {
-                // `IF`/plain `WHEN`'s own `>>>` (`IfInstruction.cpp:140`, and
-                // `select` / `when 1 = 1 then` measured to show the identical
+                // `IF`/plain `WHEN`'s own `>>>` (`select` / `when 1 = 1 then`
+                // measured to show the identical
                 // shape) -- measured, `WHILE`/`UNTIL` never get this (this
                 // task's report: `trace r` over a `DO WHILE` shows only `>K>
                 // "WHILE" => ...`, no bare `>>>` alongside it), which is why
@@ -3673,8 +3651,7 @@ impl Interp {
                 // `WHEN`/`WhenCase` comparison never reaches this function at
                 // all -- see `test_case_when`'s own trace calls instead.
                 ConditionTrace::Result(indent) => self.trace_result(indent, &text),
-                // `WHILE`/`UNTIL`'s own `>K>` (`DoBlockComponents.cpp`'s
-                // `traceKeywordResult(WHILE, ...)`/`(UNTIL, ...)`) -- re-fires
+                // `WHILE`/`UNTIL`'s own `>K>` -- re-fires
                 // every pass because the oracle re-evaluates the condition every
                 // pass too, which `run_repeating`'s own call site already does
                 // without any change from this task.
@@ -3696,8 +3673,7 @@ impl Interp {
 
     /// Whether the `SELECT CASE` value `case` answers true to `==` with any
     /// of a `WHEN CASE`'s `values`, matching on the first that does
-    /// (`RexxInstructionCaseWhen::execute`, `WhenCaseInstruction.cpp:157`:
-    /// the case value is the receiver, and a non-logical answer is 34.905).
+    /// (the case value is the receiver, and a non-logical answer is 34.905).
     fn test_case_when(
         &mut self,
         code: &Code<'_>,
@@ -3881,7 +3857,7 @@ fn validate_indirect_word(word: &[u8]) -> Result<Vec<u8>, Failure> {
 mod tests;
 
 impl Interp {
-    /// `RexxActivation::resolveStream`: the object a stream builtin sends its
+    /// The object a stream builtin sends its
     /// message to. An omitted or empty name and `STDIN`/`STDOUT`/`STDERR`
     /// (caselessly, with or without a trailing colon) are the standard
     /// streams; anything else is qualified and looked up in the owning
@@ -3928,7 +3904,7 @@ impl Interp {
             return Ok(replacement);
         }
         let Some(class) = self.rexx_package_class(b"STREAM") else {
-            // Only before `StreamClasses.orx` has installed, which is the
+            // Only before the stream class library has installed, which is the
             // library bootstrap's own step.
             return Err(Loud::environment_symbol(b".STREAM").into());
         };
@@ -3949,9 +3925,8 @@ impl Interp {
 }
 
 impl Interp {
-    /// The security manager's `STREAM` checkpoint
-    /// (`execution/SecurityManager.cpp:290`-`:308`): the object to use in
-    /// place of a new `Stream`, or `None` where the manager declined or none
+    /// The security manager's `STREAM` checkpoint:
+    /// the object to use in place of a new `Stream`, or `None` where the manager declined or none
     /// is installed.
     ///
     /// **The manager's entry is `STREAM`, not `RESULT`.**
@@ -3971,7 +3946,7 @@ impl Interp {
     /// Drops `name`'s entry from the owning activation's table, which is what
     /// `LINEOUT(name)` with no string and a `CLOSE` command do after their
     /// send: the stream stays closed and the next builtin to name it builds a
-    /// fresh one (`RexxActivation::removeFileName`).
+    /// fresh one.
     pub(crate) fn forget_stream(&mut self, name: &[u8]) {
         let qualified = crate::builtin::platform::qualify_name(self, name);
         if let Some(table) = self.stream_table_mut() {
@@ -3982,10 +3957,9 @@ impl Interp {
 
 /// The `.local` name a stream name spells, or `None` for an ordinary one.
 /// Matched caselessly with an optional trailing colon, and an omitted or empty
-/// name is the default input or output rather than a file
-/// (`RexxActivation.cpp:1938-2041`).
+/// name is the default input or output rather than a file.
 ///
-/// **The monitors, not the streams behind them.** `resolveStream` answers
+/// **The monitors, not the streams behind them.** the stream lookup answers
 /// `.INPUT`, `.OUTPUT` and `.ERROR`, so a redirected route is followed: measured
 /// with `.output~destination(.stderr)` pushed, the oracle puts `SAY`,
 /// `LINEOUT(,)` and `CHAROUT(,)` on stderr while `.stdout~lineout` stays on

@@ -602,7 +602,7 @@ fn a_seed_starts_a_stream_that_later_calls_continue() {
 }
 
 /// `RANDOM`'s answer keeps its own spelling whatever `DIGITS` and `FORM`
-/// say, because the oracle answers a `RexxInteger` and not a value
+/// say, because the oracle answers an integer object and not a value
 /// carrying the D15 pair.
 #[test]
 fn a_random_answer_keeps_its_own_spelling_at_every_precision() {

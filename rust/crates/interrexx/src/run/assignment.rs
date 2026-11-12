@@ -13,8 +13,7 @@ impl Interp {
     ) -> Result<(), Failure> {
         self.roots.activity_mut().push_temp(value);
         // `>>>` fires before the assignment itself
-        // (`RexxInstructionAssignment::execute`: evaluate, trace, *then*
-        // assign), which matters only in that the traced value can never be
+        // (evaluate, trace, *then* assign), which matters only in that the traced value can never be
         // affected by the write it precedes.
         // Reads `current_value_indent` rather than recomputing
         // `static_indent(index)` independently -- the clause unit already
@@ -160,7 +159,6 @@ impl Interp {
                 }
                 self.give_key_buffer(key);
             }
-            // `RexxExpressionMessage::assign` (`expression/ExpressionMessage.cpp:232`):
             // the term's `NAME=` sent with the value ahead of its own
             // arguments, each argument traced as a result.
             ExprKind::Message {

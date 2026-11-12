@@ -672,7 +672,7 @@ fn the_invocation_prefixes_are_gated_on_more_than_the_trace_letter() {
         &both,
     );
 
-    // The dynamic form reaches the same `setTrace` route.
+    // The dynamic form reaches the same setting route.
     check(
         "trace value 'l'",
         "call rtn\n::routine rtn\ntrace value 'l'\nreturn\n",
@@ -779,8 +779,8 @@ fn an_extension_reading_the_instance_reaches_its_table() {
 /// **An extension's own raise, built from an array of substitutions, is the
 /// call's condition, and the program's earlier output is kept.** Measured,
 /// oracle: `RxCalcSin(30, 3, 'X')` is 88.916 at rc 168, its units check
-/// raising through `RaiseException` over `ArrayOfThree`
-/// (`extensions/rxmath/rxmath.cpp:177`). The test loads this worktree's own
+/// raising through `RaiseException` over `ArrayOfThree`.
+/// The test loads this worktree's own
 /// `build/lib/librxmath.so`; the measurements used the oracle checkout's.
 #[test]
 fn an_extensions_raise_with_substitutions_is_the_calls_condition() {

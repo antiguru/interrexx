@@ -184,7 +184,7 @@ fn a_callees_own_time_r_stays_in_the_callee() {
 // ---- DATE's option letters: the deterministic conversion form ----
 
 /// Every one of `DATE`'s thirteen output letters, converted from one
-/// fixed input -- `DATE.testGroup`'s own `test_standard` transcript,
+/// fixed input -- the oracle's own `DATE` test transcript,
 /// unabridged.
 #[test]
 fn date_every_output_letter_from_a_fixed_standard_input() {
@@ -495,7 +495,7 @@ fn time_f_and_t_round_trip_through_their_own_style() {
 
 /// The module doc's own corrected divergence claim, both halves: `N`/
 /// `C`/`L` agree with the oracle for a date-shaped output because
-/// `parseDateTimeFormat`'s unconditional `day=1;month=1;year=1` runs
+/// the oracle's date parse's unconditional `day=1;month=1;year=1` runs
 /// identically on both sides, while `H`/`S`/`M` diverge because they
 /// bypass that reset entirely and land on the oracle's own `year == 0`
 /// instead -- each of the six numbers below is measured directly

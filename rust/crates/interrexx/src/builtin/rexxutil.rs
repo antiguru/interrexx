@@ -1,6 +1,5 @@
 //! The `REXXUTIL` package's file-system, message, process, sleep, semaphore, stem and version
-//! routines: `interpreter/platform/unix/SysRexxUtil.cpp` and the shared
-//! `RexxUtilCommon.cpp`.
+//! routines.
 
 pub(crate) mod files;
 pub(crate) mod macros;
@@ -42,7 +41,7 @@ pub(crate) fn required(args: &[Option<ObjRef>], position: usize) -> Result<ObjRe
 }
 
 /// An `OPTIONAL_CSTRING` argument's bytes, 88.909 where it has no string
-/// value: `requiredString`, with no `STRING` fallback.
+/// value, with no `STRING` fallback.
 pub(crate) fn optional_text(
     interp: &mut Interp,
     args: &[Option<ObjRef>],
@@ -141,8 +140,7 @@ pub(crate) fn is_file(
     Ok(answer(interp, i64::from(found)))
 }
 
-/// `SysFileDelete(name)`: `SysFileSystem::deleteFile`, which is an
-/// `access(W_OK)` pre-check and then `unlink`.
+/// `SysFileDelete(name)`: an `access(W_OK)` pre-check and then `unlink`.
 ///
 /// **The pre-check collapses every one of its own failures to `EACCES`**, so a
 /// name that is not there answers `13` and not the `ENOENT` the delete itself
@@ -232,15 +230,14 @@ pub(crate) fn mk_dir(
     Ok(answer(interp, code))
 }
 
-/// The upper bound `SysSleep` enforces, on every platform -- the C++ holds
+/// The upper bound `SysSleep` enforces, on every platform -- the oracle holds
 /// this one number and the Unix documentation's `999999999` corresponds to
 /// nothing it checks.
 const SLEEP_MAXIMUM: f64 = 2_147_483.0;
 
 /// The shortest sleep: one microsecond, `TIME`'s resolution. The oracle's
-/// sleep is a `nanosleep` call even for a zero delay
-/// (`SysThread::longSleep`, `common/platform/unix/SysThread.cpp:191`), and
-/// `TIME('E')` after it read 0 in none of 2000 passes for a delay of 0 or
+/// sleep is a `nanosleep` call even for a zero delay,
+/// and `TIME('E')` after it read 0 in none of 2000 passes for a delay of 0 or
 /// 0.00000001.
 const SLEEP_FLOOR: std::time::Duration = std::time::Duration::from_micros(1);
 
@@ -294,8 +291,7 @@ pub(crate) fn sleep(
     )
 }
 
-/// What a sleep a halt ended answers: `nanosleep`'s errno
-/// (`SysThread::longSleep`, `common/platform/unix/SysThread.cpp:191`).
+/// What a sleep a halt ended answers: `nanosleep`'s errno.
 const EINTR: i64 = 4;
 
 /// `ERROR_SEM_TIMEOUT`: a timed wait ended with nothing taken.

@@ -47,19 +47,19 @@ impl Interp {
                 self.activation_mut()
                     .traps
                     .insert(trap.condition.clone(), entry);
-                // `RexxActivation::trapOn`'s second half: arming a trap turns
+                // Arming a trap also turns
                 // off whatever `::OPTIONS ... SYNTAX` asked for the same
                 // condition, so the trap takes it rather than a SYNTAX error
                 // preempting the trap. `novalue_trapped` is false because the
-                // guard is `trapOff`'s alone.
+                // guard is disarming's alone.
                 self.activation_mut()
                     .condition_syntax
                     .disable_for(&trap.condition, !call, false);
             }
             None => {
                 self.activation_mut().traps.remove(&trap.condition);
-                // `RexxActivation::trapOff`'s second half, with the one guard
-                // that arm carries and `trapOn`'s does not: a `NOVALUE` or
+                // Disarming has a second half too, with the one guard
+                // that arming's does not: a `NOVALUE` or
                 // `ANY` trap still in the table keeps `NOVALUE`'s escalation
                 // where it was.
                 let traps = &self.activation().traps;
@@ -229,7 +229,7 @@ impl Interp {
     /// **The caller answers normally after `Ok`**: a raise never changes what
     /// the failing call returns -- the residual, `1`, or the null string.
     /// The condition object carries `stream` as `ADDITIONAL` and `result`, the
-    /// value the caller answers, as `RESULT` (`StreamInfo::notreadyError`).
+    /// value the caller answers, as `RESULT`.
     pub(crate) fn raise_notready(
         &mut self,
         name: &[u8],
@@ -342,8 +342,8 @@ impl Interp {
     }
 
     /// The value of an uninitialised read whose derived name is `derived`,
-    /// in `RexxActivation::handleNovalueEvent`'s order
-    /// (`RexxActivation.cpp:2645-2674`): where `::OPTIONS NOVALUE SYNTAX` is
+    /// in the oracle's order:
+    /// where `::OPTIONS NOVALUE SYNTAX` is
     /// about to raise 98.986, `derived`; otherwise the `.local~novalue`
     /// hook's answer, or `derived` where it answers none. The read is still
     /// [`Novalue::Unset`]: where the hook answered or failed, that outcome
@@ -363,7 +363,7 @@ impl Interp {
                 value
             }
             // The `NOVALUE` exit's pass, once the hook has answered none: a value it gives is
-            // the variable's from then on (`RexxActivation::handleNovalueEvent`).
+            // the variable's from then on.
             Ok(None) if self.exits.is_some() => match self.novalue_exit(derived) {
                 Ok(Some(value)) => {
                     let value = value.unwrap_or(ObjRef::NIL);
@@ -388,8 +388,7 @@ impl Interp {
 
     /// The object `.local` holds under `NOVALUE`, sent `NOVALUE` with the
     /// uninitialised variable's derived name: an answer other than `.nil` is
-    /// the read's value, and the variable stays unset
-    /// (`RexxActivation::novalueHandler`, `RexxActivation.cpp:4763-4773`).
+    /// the read's value, and the variable stays unset.
     fn novalue_hook(&mut self, read: ObjRef) -> Result<Option<ObjRef>, Failure> {
         let Some(handler) = self.local_route(b"NOVALUE")? else {
             return Ok(None);
@@ -432,8 +431,7 @@ impl Interp {
 
     /// Raises LOSTDIGITS where `operand` carries more digits than the
     /// precision in force: to a `SIGNAL ON` trap, else as 98.972 where
-    /// `::OPTIONS LOSTDIGITS SYNTAX` is in force
-    /// (`NumberString::checkLostDigits`, `Activity::raiseCondition`).
+    /// `::OPTIONS LOSTDIGITS SYNTAX` is in force.
     #[inline(always)]
     pub(crate) fn lostdigits_check(
         &mut self,
@@ -608,7 +606,6 @@ impl Interp {
                 raised.delivery.search = Search::Here;
                 return Err(Failure::Raised(raised));
             }
-            // `RexxActivation::raiseExit` (`execution/RexxActivation.cpp:1741`):
             // an internal call hands the raise to its parent, and the first
             // activation that is not one raises it, from there outward.
             Search::Top if self.activation().entry == Entry::InternalCall => return Err(failure),
@@ -631,13 +628,13 @@ impl Interp {
             }
             Search::Nobody => return Err(failure),
         }
-        // A phantom does not trap. `RexxActivation::trap`
-        // (`execution/RexxActivation.cpp:2450`) reads `isForwarded` before it
+        // A phantom does not trap: the oracle checks whether the activation
+        // is forwarded before it
         // looks at any trap table, and this crate reaches the frame it drills
         // to by declining here and letting the failure leave this activation.
         // [`Interp::trap_for`] does the drilling for the callers that ask
         // whether a condition would be trapped at all, which is the same
-        // question `RexxActivation::willTrap` answers.
+        // question the oracle's trap test answers.
         if self
             .running_activation()
             .is_some_and(|a| a.flags.forwarded())
@@ -657,7 +654,7 @@ impl Interp {
         // -- the raising clause's own site, which is still the one
         // `Op::Clause`'s region recorded a moment ago and which the clearing
         // below would have thrown away.
-        // `RexxInstructionSignalOn::trap` turns the trap off before it raises
+        // `SIGNAL ON` turns the trap off before it raises
         // 16.1, so the 16.1 is offered to this same table: measured, `signal
         // on novalue` with no `NOVALUE:` label is trapped by `signal on
         // syntax` at the raising clause (upstream bug 1877).
@@ -739,9 +736,9 @@ impl Interp {
         };
         let object = match self.activity.reraised_object.take() {
             Some(object) if raised.delivery.held => self.trap_held_condition_object(object)?,
-            // `RexxActivation::raise` re-raises any other condition with the
-            // object it was built with, where `Activity::reraiseException`
-            // moves a SYNTAX condition's position to this level.
+            // Any other condition is re-raised with the
+            // object it was built with, where a SYNTAX condition's position
+            // moves to this level.
             Some(object) if raised.condition != "SYNTAX" => {
                 self.trap_propagated_condition_object(object)?
             }
@@ -754,8 +751,7 @@ impl Interp {
             .replace_condition(Some(TrappedCondition {
                 name: raised.condition.as_bytes().into(),
                 // Only a `SYNTAX` condition has a `CODE` item at all
-                // (`Activity::createExceptionObject` is the one place it is put
-                // in), so the name and not the number is the test: measured,
+                // (the oracle puts it in only there), so the name and not the number is the test: measured,
                 // a trapped `HALT` reports `E` as the null string.
                 code_sub: (raised.condition == "SYNTAX").then_some(raised.sub),
                 call: false,
@@ -945,8 +941,8 @@ impl Interp {
         // and never clearing at all gave silence at rc 0. Restoring gives the
         // oracle's answer in all three measured shapes, the "nothing was
         // active, restore `None`" one included.
-        // Set here for the handler's activation to inherit
-        // (`RexxActivation.cpp:3340`), and put back once it returns.
+        // Set here for the handler's activation to inherit,
+        // and put back once it returns.
         let enclosing = self
             .activation_mut()
             .cold_mut()
@@ -960,7 +956,7 @@ impl Interp {
         let key: Box<[u8]> = pending.condition.clone();
         // The entry the trap was found under, `ANY` where the condition has
         // none: the trap instruction's own condition is what the oracle
-        // delays (`CallInstruction.cpp:603`, `:632`).
+        // delays.
         let delayed: Box<[u8]> = match self
             .trap_frame()
             .is_some_and(|frame| frame.traps.get(&key).is_some())
@@ -1003,8 +999,7 @@ impl Interp {
                 // and `CALL ON ANY`, the one spelling that could smuggle it in,
                 // does not catch a `SYNTAX` condition either: `call on any name
                 // uh` with `say 1/0` is the ordinary fatal 42.3 at rc 214 on
-                // both interpreters. `TrapHandler::canHandle` is the C++ side of
-                // the same rule.
+                // both interpreters.
                 code_sub: None,
                 call: true,
                 description: pending.description.clone(),
@@ -1024,11 +1019,11 @@ impl Interp {
         // answers whatever the trapping activation answers.
         // **`CallEntry::Trap`, which is the one thing about a handler's own
         // activation that differs from an internal `CALL`'s**: the oracle's
-        // `internalCallTrap` passes `OREF_NULL` where `internalCall` passes
-        // the caller's receiver, so the handler's calling convention carries
+        // trap call passes no receiver where an internal call passes
+        // the caller's, so the handler's calling convention carries
         // none -- `entered_receiver` has the measurement for both.
-        // The condition object is the handler's one argument
-        // (`RexxInstructionCallOn::trap`), whether it is a label, a builtin or
+        // The condition object is the handler's one argument,
+        // whether it is a label, a builtin or
         // an external routine.
         let arguments = pending.object.map(Some).into_iter().collect();
         let ended = pinned!(
@@ -1049,7 +1044,7 @@ impl Interp {
             pending.queued_during_delivery = true;
         }
         self.activation_mut().replace_condition(enclosing_condition);
-        // `trapUndelay`. The `if let` mirrors the C++ testing the handler
+        // The delay is lifted again. The `if let` mirrors the oracle testing the handler
         // for null before enabling it; nothing a Rexx program can do
         // removes the entry between here and the delay above, so the arm is
         // structural rather than a case anything reaches.
@@ -1174,8 +1169,7 @@ impl Interp {
     pub(crate) fn signal_to_label(&mut self, name: &[u8]) -> Result<Flow, Failure> {
         let target = self.resolve_signal_target(name)?;
         // Set only once the target actually resolves -- an unresolved
-        // `SIGNAL` (16.1) ends the program regardless, matching the oracle's
-        // own `signalTo`, which a caller only ever invokes with an
+        // `SIGNAL` (16.1) ends the program regardless, matching the oracle, which a caller only ever invokes `SIGNAL` with an
         // already-resolved target.
         self.set_sigl(self.activity.clause_state.line());
         Ok(Flow::Signal(target))
@@ -1186,10 +1180,8 @@ impl Interp {
     pub(crate) fn signal_to_value(&mut self, value: ObjRef) -> Result<Flow, Failure> {
         let text = self.to_text(value).to_vec();
         // `>K>` names the object and the search reads the conversion, which
-        // is `RexxInstructionDynamicSignal::execute`'s own order:
-        // `traceKeywordResult(VALUE, result)` and then
-        // `result->requestString()` (`instructions/SignalInstruction.cpp:217`
-        // -`:219`). Measured, oracle rc 240: `signal value .K` with a
+        // is the oracle's own order: the `>K>` trace first, then
+        // the string request. Measured, oracle rc 240: `signal value .K` with a
         // class-side `makeString` returning `'NOSUCH'` reports `Label
         // "NOSUCH" not found.`, so 16.1 names the conversion where NUMERIC's
         // own errors name the object.
@@ -1231,7 +1223,7 @@ struct Sender {
     in_fragment: bool,
     returns: bool,
     /// Whether `top` has replied, which an `INTERPRET` fragment's sender
-    /// inherits: a value it returns is then 98.936 (`returnFrom`) unless a
+    /// inherits: a value it returns is then 98.936 unless a
     /// `SIGNAL ON` trap takes the condition first.
     reply_issued: bool,
     /// The identity of the level at `depth`, unless that level is beyond a
@@ -1239,9 +1231,7 @@ struct Sender {
     activation: Option<crate::activation::ActivationId>,
     /// Whether the level at `depth` is the activation a `CallRoutine` or
     /// `CallProgram` call was made from: the code it runs has no Rexx
-    /// caller, and the native code that made the call keeps the condition
-    /// (`RexxActivation::senderActivation`, `execution/RexxActivation.cpp:
-    /// 2766`, and `NativeActivation::trapRaised`).
+    /// caller, and the native code that made the call keeps the condition.
     api: bool,
 }
 
@@ -1268,7 +1258,7 @@ fn condition_name(name: &[u8]) -> Cow<'static, str> {
     Cow::Owned(String::from_utf8_lossy(name).into_owned())
 }
 
-/// Whether a `CALL ON ANY` trap takes `condition` (`TrapHandler::canHandle`).
+/// Whether a `CALL ON ANY` trap takes `condition` .
 fn call_on_any_takes(condition: &[u8]) -> bool {
     !matches!(
         condition,
@@ -1276,8 +1266,8 @@ fn call_on_any_takes(condition: &[u8]) -> bool {
     )
 }
 
-/// `RexxActivation::trap` while a line typed at a debug pause runs: every
-/// condition but `SYNTAX` goes untrapped (`RexxActivation.cpp:2475`, `:2600`).
+/// While a line typed at a debug pause runs, every
+/// condition but `SYNTAX` goes untrapped.
 fn ignored_in_debug_pause(frame: &crate::activation::Activation, condition: &[u8]) -> bool {
     frame.flags.debug_pause() && condition != b"SYNTAX"
 }

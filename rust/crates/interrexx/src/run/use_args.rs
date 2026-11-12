@@ -41,9 +41,8 @@ impl Interp {
         }
     }
 
-    /// `USE LOCAL` as a method's first instruction
-    /// (`RexxActivation::autoExpose`): the listed names and `SELF`, `SUPER`,
-    /// `RC`, `SIGL` and `RESULT` stay local, and every other name binds to the
+    /// `USE LOCAL` as a method's first instruction: the listed names and
+    /// `SELF`, `SUPER`, `RC`, `SIGL` and `RESULT` stay local, and every other name binds to the
     /// receiver's pool for the method's scope, a name first met later
     /// included ([`Interp::slot_of`]).
     fn use_local(&mut self, code: &Code<'_>, variables: &[VariableRef]) -> Result<(), Failure> {
@@ -229,10 +228,9 @@ impl Interp {
             }
             // `>R>`, the alias's own line and the **only** trace line this
             // branch emits: no `>>>` and no `>=>`, because nothing was
-            // evaluated and nothing was assigned (`UseInstruction.cpp:164`-
-            // `167`, `aliasVariable` then `traceVariableAlias`, and
-            // `handleArgument` `return`s before its own `traceResult` for
-            // this case). Caller's name first, target's second -- see
+            // evaluated and nothing was assigned (the alias is traced and the
+            // clause returns before any result trace for this case). Caller's
+            // name first, target's second -- see
             // `trace_alias`.
             self.trace_alias(
                 self.activity.clause_state.current_value_indent,
@@ -257,7 +255,7 @@ impl Interp {
             },
         };
         // A message or bracket term assigns through PARSE's arm; its `drop` is
-        // a no-op (`ExpressionBaseVariable.hpp:65`), so an omitted argument
+        // a no-op, so an omitted argument
         // without a default leaves it alone.
         if matches!(target.target.kind, ExprKind::Message { .. }) {
             return match value {
@@ -293,12 +291,10 @@ impl Interp {
         match value {
             Some(value) => {
                 // `>>>` then `>=>`, in that order and both at this `USE`
-                // clause's own indent -- `handleArgument`'s own
-                // `traceResult(argument)` immediately before
-                // `retriever->assign(context, argument)`, whose own
-                // `traceAssignment` is the second line
-                // (`UseInstruction.cpp:74`-`77`, and the default-value arm
-                // ten lines below it does the identical pair). Measured
+                // clause's own indent -- the argument's result trace comes
+                // immediately before the assignment, whose own
+                // assignment trace is the second line (the default-value arm
+                // below does the identical pair). Measured
                 // under `trace r`: `use arg a, b` on a two-argument call
                 // traces `>>>     "1"` and `>>>     "2"` and no `>=>`, which
                 // is the gating -- `>>>` is `results`, `>=>` is
@@ -326,10 +322,10 @@ impl Interp {
                 Ok(())
             }
             // `USE STRICT ARG` refuses an omitted position that has no
-            // default of its own, where `USE ARG` drops the target
-            // (`UseInstruction.cpp:97`-`:111`). The position is the target's,
-            // not the last one supplied -- measured, oracle rc 216, `call r
-            // , 2` into `use strict arg a, b` reports `argument 1`.
+            // default of its own, where `USE ARG` drops the target.
+            // The position is the target's,
+            // not the last one supplied -- measured, oracle rc 216, `call r,
+            // 2` into `use strict arg a, b` reports `argument 1`.
             None if strict => Err(if in_method {
                 Raised::missing_method_argument(position).into()
             } else {
@@ -349,7 +345,7 @@ impl Interp {
     }
 
     /// Whether a `USE ARG >name` target is in the uninitialised state the
-    /// oracle requires of it: a local variable (`RexxVariable::isAliasable`),
+    /// oracle requires of it: a local variable,
     /// so never one an `EXPOSE` or `USE LOCAL` bound to the object's pool, and
     /// for a stem one named as the variable that owns the slot's storage.
     fn target_is_uninitialised(&self, name: &[u8], frame: SlotFrame, index: usize) -> bool {

@@ -29,16 +29,15 @@ use crate::error::Failure;
 const ALL_REMAINING_WORDS: usize = 999_999_999_999_999_999;
 
 /// Whether `byte` separates words: blank or horizontal tab, and no other
-/// byte -- see the module doc for the C++ and the 256-byte measurement.
+/// byte -- see the module doc for the oracle and the 256-byte measurement.
 fn is_blank(byte: u8) -> bool {
     byte == b' ' || byte == b'\t'
 }
 
-/// A scan over the words of a byte string, mirroring
-/// `RexxString::WordIterator` (`classes/StringClass.hpp`).
+/// A scan over the words of a byte string.
 struct Words<'a> {
     text: &'a [u8],
-    /// Where the next scan starts. The C++ carries a pointer and a remaining
+    /// Where the next scan starts. The oracle carries a pointer and a remaining
     /// length; one index says the same thing, since the remaining length is
     /// always `text.len() - next`.
     next: usize,
@@ -140,8 +139,8 @@ pub(crate) fn delword_bytes(bytes: &mut Vec<u8>, position: usize, count: Option<
         return;
     }
     let front = scan.word.start;
-    // The C++ asks for the blanks only when the skip reached its count
-    // (`RexxString::delWord`); unconditionally is the same thing here,
+    // The oracle asks for the blanks only when the skip reached its count;
+    // unconditionally is the same thing here,
     // because a [`Words::step`] that fails leaves the scan at the end of the
     // string and there is nothing left for the skip to consume.
     scan.skip(count - 1);
@@ -156,8 +155,7 @@ pub(crate) fn wordpos_bytes(phrase: &[u8], string: &[u8], start: usize) -> usize
     wordpos_with(phrase, string, start, <[u8]>::eq)
 }
 
-/// [`wordpos_bytes`] with ASCII case folded away,
-/// `StringUtil::caselessWordPos` (`classes/support/StringUtil.cpp:1651`).
+/// [`wordpos_bytes`] with ASCII case folded away.
 pub(crate) fn caseless_wordpos_bytes(phrase: &[u8], string: &[u8], start: usize) -> usize {
     wordpos_with(phrase, string, start, crate::builtin::string::caseless_eq)
 }
@@ -458,8 +456,7 @@ mod tests {
         // The surviving separator is the argument's own byte, not a blank
         // the result was rebuilt with. A tab before the deleted word stays a
         // tab; a tab *after* it goes with the word. Asserted in the oracle's
-        // own suite at `ootest/ooRexx/base/source.file/whiteSpace.testGroup`
-        // rather than in `DELWORD.testGroup`.
+        // own whitespace tests rather than in its `DELWORD` test.
         assert_eq!(
             answer(b"DELWORD", &[b"hey\tis-this  you", b"2", b"1"]),
             b"hey\tyou"
@@ -546,7 +543,7 @@ mod tests {
         assert_eq!(answer(b"WORDPOS", &[b"\x00b", subject]), b"2");
         assert_eq!(answer(b"WORDPOS", &[b"c\nd", subject]), b"3");
         // The oracle's own committed case for a NUL inside a word:
-        // `DELWORD.testGroup` test19 asserts that
+        // the oracle's `DELWORD` test asserts that
         // `asdf zxcv<NUL x5>ASDF ZXCV` is three words whose second is 13
         // bytes long, and that deleting from word 3 keeps the blank in front
         // of it. Measured here as well as read: `words` is 3, `wordlength`

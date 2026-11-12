@@ -15,7 +15,7 @@ use crate::Interp;
 use crate::error::{Failure, Raised};
 
 /// What `STRIP` strips when no character set is given: blank and horizontal
-/// tab (`RexxString::strip`, `classes/StringClassSub.cpp`). Measured, a tab
+/// tab. Measured, a tab
 /// really is in the default set -- `strip('a'||'09'x||'b'||'09'x)` answers
 /// `a<tab>b`, with the trailing tab gone.
 const DEFAULT_STRIP_SET: &[u8] = b" \t";
@@ -133,8 +133,7 @@ pub(crate) fn find_backward(haystack: &[u8], needle: &[u8], start: usize, range:
     find_backward_with(haystack, needle, start, range, <[u8]>::eq)
 }
 
-/// [`find_backward`] with ASCII case folded away, `StringUtil::caselessLastPos`
-/// (`classes/support/StringUtil.cpp:418-478`).
+/// [`find_backward`] with ASCII case folded away.
 pub(crate) fn caseless_find_backward(
     haystack: &[u8],
     needle: &[u8],
@@ -196,8 +195,7 @@ pub(crate) fn count_occurrences(haystack: &[u8], needle: &[u8], limit: usize) ->
     count_with(haystack, needle, limit, find_forward)
 }
 
-/// [`count_occurrences`] with ASCII case folded away,
-/// `StringUtil::caselessCountStr` (`classes/support/StringUtil.cpp:1220`).
+/// [`count_occurrences`] with ASCII case folded away.
 pub(crate) fn caseless_count_occurrences(haystack: &[u8], needle: &[u8], limit: usize) -> usize {
     count_with(haystack, needle, limit, caseless_find_forward)
 }
@@ -225,8 +223,7 @@ fn count_with(
     count
 }
 
-/// `StringUtil::makearray`'s default separator (`classes/support/StringUtil.cpp:545`):
-/// the lines of `text`.
+/// The default separator's split: the lines of `text`.
 pub(crate) fn line_slices(text: &[u8]) -> Vec<&[u8]> {
     let mut lines = Vec::new();
     let mut rest = text;
@@ -241,14 +238,13 @@ pub(crate) fn line_slices(text: &[u8]) -> Vec<&[u8]> {
     lines
 }
 
-/// `StringUtil::makearray` with an explicit separator
-/// (`classes/support/StringUtil.cpp:552`-`:640`): the pieces of `text`
+/// A split with an explicit separator: the pieces of `text`
 /// between occurrences of `separator`.
 pub(crate) fn split_slices<'a>(text: &'a [u8], separator: &[u8]) -> Vec<&'a [u8]> {
     if separator.is_empty() {
         return text.chunks(1).collect();
     }
-    // The C++ scans up to `start + length - sepSize + 1`, which for a
+    // The oracle scans up to the start plus the text length minus the separator length plus one, which for a
     // separator longer than the text lies behind the start and stops the scan
     // before its `memcmp` can read past the end.
     let limit = match text.len().checked_sub(separator.len()) {
@@ -864,8 +860,7 @@ pub(crate) fn changestr_bytes(
     changestr_with(out, haystack, needle, replacement, limit, find_forward)
 }
 
-/// [`changestr_bytes`] with ASCII case folded away,
-/// `MutableBuffer::caselessChangeStr` (`classes/MutableBufferClass.cpp:1136`).
+/// [`changestr_bytes`] with ASCII case folded away.
 pub(crate) fn caseless_changestr_bytes(
     out: &mut Vec<u8>,
     haystack: &[u8],
@@ -1079,10 +1074,10 @@ pub(crate) fn verify_bytes(
     let available = string.len() - start;
     let range = range.map_or(available, |range| range.min(available));
     if reference.is_empty() {
-        // `if (opt == VERIFY_MATCH) return 0; else return startPos;`
+        // `M` answers 0 and `N` answers the start position.
         return if option == b'M' { 0 } else { start + 1 };
     }
-    // `if (opt == VERIFY_NOMATCH) ... else ...`, the other letter.
+    // `N` is the other letter.
     let matching = option != b'N';
     string[start..start + range]
         .iter()

@@ -42,9 +42,8 @@ impl Interp {
                 self.roots.activity_mut().push_temp(value);
                 // **The line renders the object and the code is its string
                 // value**, which `Interp::string_value_text`'s own doc has the
-                // split for: `traceKeywordResult(conditionName, rc)`
-                // (`instructions/RaiseInstruction.cpp:182`) is handed the
-                // object and `rc->requestString()` (`:193`) is what becomes the
+                // split for: the `>K>` trace is handed the
+                // object and its string request is what becomes the
                 // code. Measured, `trace i` over `raise syntax (1,2)`:
                 // `>K>   "SYNTAX" => "an Array"`.
                 if self.traced_mode().results {
@@ -52,7 +51,7 @@ impl Interp {
                     let keyword = String::from_utf8_lossy(&raise.condition).into_owned();
                     self.trace_keyword(indent, &keyword, &traced);
                 }
-                // A SYNTAX code is `rc->requestString()` (`:193`).
+                // A SYNTAX code is the string request of the value.
                 let code = match raise.condition.as_ref() == b"SYNTAX" {
                     true => self.required_string_value(value)?,
                     false => value,
@@ -109,10 +108,9 @@ impl Interp {
             let mut value = self.eval(code, expr)?;
             self.roots.activity_mut().push_temp(value);
             // **A surface that is neither `stringValue()` nor an operator,
-            // and only under one condition.** `RaiseInstruction::execute`
-            // (`instructions/RaiseInstruction.cpp:270`-`290`) calls
-            // `requestArray` on the additional information exactly once, and
-            // only inside `if (errorCode->strCompare(SYNTAX))` -- so under
+            // and only under one condition.** The oracle converts the
+            // additional information to an array exactly once, and
+            // only for `SYNTAX` -- so under
             // `USER` or any other condition the value is never
             // array-converted and this crate's rendering is the oracle's own
             // answer. Measured both ways: `raise syntax 40.1 additional
@@ -121,7 +119,7 @@ impl Interp {
             // entry of the array the directory converts to -- and `raise user
             // zork additional (.array)` under a trap is rc 0 on both sides.
             // The array is retained for every condition, but only `SYNTAX`
-            // splits it into substitutions and refuses a value that is not one. The C++ calls `requestArray`
+            // splits it into substitutions and refuses a value that is not one. The oracle converts
             // inside its `SYNTAX` branch alone, and that governs the
             // *substitution list* a catalogue message renders from -- which
             // only a `SYNTAX` condition has. The condition object's
@@ -141,8 +139,8 @@ impl Interp {
                 self.trace_keyword(indent, "ADDITIONAL", &traced);
             }
             if converted && slots.is_none() {
-                // `requestArray`, a string's lines included, and 98.939 for
-                // `TheNilObject` or a multi-dimensional answer.
+                // An array request, a string's lines included, and 98.939 for
+                // `.nil` or a multi-dimensional answer.
                 let Some(array) = self.single_dimension_request(value)? else {
                     return Err(Raised::syntax_additional().into());
                 };
@@ -195,9 +193,9 @@ impl Interp {
                 self.roots.activity_mut().push_temp(value);
                 held.push(Some(value));
                 // **No gap check here, and the absence is the decision.**
-                // `RaiseInstruction::execute` builds a real `ArrayClass` from
-                // these elements (`RaiseInstruction.cpp:217`-`239`) and the
-                // `requestArray` below it therefore gets an array already and
+                // The oracle builds a real array from
+                // these elements and the
+                // conversion below it therefore gets an array already and
                 // returns it unchanged -- the elements are never
                 // array-converted, only rendered by the substitution
                 // machinery. Measured: `array (.array)`, `array
@@ -271,7 +269,7 @@ impl Interp {
             } else {
                 Search::Top
             };
-            // The condition object's `RESULT` (`Activity::raiseException`).
+            // The condition object's `RESULT`.
             self.activity.pending_result = result;
             return Err(raised.into());
         }
@@ -279,8 +277,7 @@ impl Interp {
         // Every other condition. `HALT` is the one whose untrapped default
         // action reports; the rest are silent, and both halves are below.
         let halt = raise.condition.as_ref() == b"HALT";
-        // No tail, or `EXIT`: `RexxActivation::raiseExit` (`execution/
-        // RexxActivation.cpp:1741`) leaves every internal call, and the first
+        // No tail, or `EXIT`: the raise leaves every internal call, and the first
         // activation that is not one raises it as `RETURN` does, from there.
         let exits = !returns;
         let sender = self.raise_sender(returns);
@@ -336,8 +333,7 @@ impl Interp {
                     ..Raised::condition(Cow::Owned(String::from_utf8_lossy(&name).into_owned()))
                 };
                 // rexxref (`condtra.xml`, RESULT): the `RETURN` or `EXIT`
-                // value, which the oracle drops (`RexxActivation::raise` passes
-                // its `result` member, `RexxActivation.cpp:1827`).
+                // value, which the oracle drops.
                 self.activity.pending_result = result;
                 self.activity.pending_description = description_object;
                 self.activity.pending_rc = rc_object;
@@ -398,7 +394,7 @@ impl Interp {
             // is ignored outright and the routine simply returns its value -- measured,
             // `raise user foo return 'RETVAL-88'` with no trap anywhere
             // prints `RETVAL-88` and the caller carries on.
-            // `RexxActivation::raise` reports an untrapped `HALT` or `NOMETHOD`
+            // An untrapped `HALT` or `NOMETHOD` is reported
             // as an ordinary error of the level that raises it.
             None if halt => {
                 let mut raised = Raised::halt();
@@ -416,7 +412,7 @@ impl Interp {
                 raised.delivery.search = if exits { Search::Top } else { Search::Here };
                 Err(raised.into())
             }
-            // `returnFrom`'s check (`RexxActivation::raise`).
+            // The `RETURN` check.
             None if sender.reply_issued && result.is_some() => {
                 self.activity.pending_additional = None;
                 Err(Raised::return_after_reply().into())
@@ -466,8 +462,7 @@ impl Interp {
     }
 
     /// `RAISE PROPAGATE`: re-raise the condition whose handler is running. A
-    /// `RETURN` or `EXIT` value replaces the condition object's `RESULT`
-    /// (`RexxActivation::raise`).
+    /// `RETURN` or `EXIT` value replaces the condition object's `RESULT`.
     fn exec_raise_propagate(&mut self, code: &Code<'_>, raise: &Raise) -> Result<Flow, Failure> {
         let indent = self.activity.clause_state.current_value_indent;
         // DESCRIPTION, then ADDITIONAL or ARRAY, then the tail, as `RAISE`
@@ -571,9 +566,7 @@ impl Interp {
         {
             self.propagate_after_reply(object)?;
         }
-        // `RexxActivation::raise` pops the level and `Activity::
-        // reraiseException`s the same object (`execution/RexxActivation.cpp:
-        // 1840`). Measured: without a `RETURN` tail, from an internal call it
+        // The oracle pops the level and re-raises the same object. Measured: without a `RETURN` tail, from an internal call it
         // is trapped neither by that call's parent nor by the first
         // activation that is not one, but by the caller of that activation.
         let sender = self.raise_sender(returns);
@@ -584,7 +577,7 @@ impl Interp {
             self.reraise_failure_levels();
             // Re-raised at or below the trapping level, whose clauses the
             // object's traceback does not show, the report names the line
-            // of the clause it is re-raised in (`Activity::reraiseException`).
+            // of the clause it is re-raised in.
             if sender.depth <= trapper {
                 let line = self.clause_of(sender.depth).line;
                 let marker = FailureSite::Reraised { line, name: None };
@@ -641,9 +634,7 @@ impl Interp {
     /// activation that is not one -- none after a `REPLY`, whose sender has
     /// its answer. Untrapped, `HALT` and `NOMETHOD` are reported as errors.
     /// Unless a `SIGNAL ON` trap takes it, the activation returns the
-    /// object's `RESULT`, which after a `REPLY` is 98.936
-    /// (`RexxActivation::raise`, `execution/RexxActivation.cpp:1801`-`:1805`
-    /// and `:1866`-`:1895`).
+    /// object's `RESULT`, which after a `REPLY` is 98.936.
     fn propagate_unreportable(&mut self, raised: &Raised, returns: bool) -> Result<Flow, Failure> {
         let object = self.activation().condition().and_then(|c| c.object);
         let result = object.and_then(|object| self.condition_entry(object, b"RESULT"));
@@ -722,8 +713,7 @@ impl Interp {
     }
 
     /// The activation a `RAISE` of a condition other than SYNTAX, or any
-    /// `RAISE PROPAGATE`, offers its condition to (`RexxActivation::raise`
-    /// and `raiseExit`). With a `RETURN` tail that is the raising level's
+    /// `RAISE PROPAGATE`, offers its condition to. With a `RETURN` tail that is the raising level's
     /// sender: an internal call's caller, or, from an `INTERPRET` fragment,
     /// the activation running it -- measured, `interpret "raise user u
     /// return 1"` in a routine runs that routine's own `CALL ON USER U`

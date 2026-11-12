@@ -500,7 +500,7 @@ fn a_freed_programs_literals_are_released_with_it() {
 }
 
 /// A collection drops the notification and waiter-identity rows of the
-/// messages it swept: a party raising in `messageComplete` leaves a message
+/// messages it swept: a party raising on message completion leaves a message
 /// unnotified, and a waiter identity is minted for one by hand.
 #[test]
 fn a_collection_drops_the_unnotified_and_waiter_rows_of_swept_messages() {
@@ -638,8 +638,8 @@ fn building_a_programs_package_charges_it() {
     );
 }
 
-/// A collection drops the method-identity rows of the `loadExternalMethod`
-/// answers it swept, for a `LIBRARY REXX` entry point and a shared library's
+/// A collection drops the method-identity rows of the external method
+/// loads it swept, for a `LIBRARY REXX` entry point and a shared library's
 /// procedure, flag writes included.
 #[test]
 fn a_collection_drops_the_rows_of_swept_loaded_methods() {

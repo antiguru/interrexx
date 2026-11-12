@@ -1,7 +1,7 @@
 //! The stream builtins. Each resolves its first argument to a `Stream` through
 //! the running activation's table and sends the message named after itself
 //! with the arguments that followed, positionally, so an omitted middle
-//! argument arrives omitted (`BuiltinFunctions.cpp:2126-2570`).
+//! argument arrives omitted.
 
 use interrexx_core::{Decoded, ObjRef};
 use interrexx_num::{DIGITS64, Number};
@@ -48,7 +48,7 @@ fn send_to_stream(
 
 /// The arguments at `positions` that the builtin declares as
 /// `optional_big_integer`: each present one must be a whole number in the
-/// `int64_t` range, or it is 40.12 (`ExpressionStack::optionalBigIntegerArg`).
+/// `int64_t` range, or it is 40.12.
 fn whole_positions(
     interp: &mut Interp,
     name: &[u8],

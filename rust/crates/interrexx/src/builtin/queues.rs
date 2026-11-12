@@ -1,5 +1,5 @@
 //! `RXQUEUE`: the current queue's name, and named queues through `.RexxQueue`
-//! (`expression/BuiltinFunctions.cpp`'s `RXQUEUE`).
+//! (the `RXQUEUE` builtin).
 
 use interrexx_core::ObjRef;
 

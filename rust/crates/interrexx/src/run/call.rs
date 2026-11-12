@@ -53,10 +53,10 @@ fn add_internal_level(
 #[derive(Clone, Copy)]
 pub(crate) enum CallResolution<'a> {
     /// Decided before the arguments: a label or a builtin, a namespace-qualified
-    /// routine, or a `findRoutine` answer a call site keeps.
+    /// routine, or a routine-search answer a call site keeps.
     Settled(Resolved),
-    /// Searched for once the arguments have run, as `externalCall` is
-    /// (`expression/ExpressionFunction.cpp:185-210`): what `site` keeps by
+    /// Searched for once the arguments have run, as the oracle's external call is:
+    /// what `site` keeps by
     /// then, or a search whose answer `site` keeps once the call returns.
     AfterArguments {
         site: Option<crate::ir::CallSiteSlot<'a>>,
@@ -64,9 +64,8 @@ pub(crate) enum CallResolution<'a> {
 }
 
 /// What a call site keeps once the call through it that found `resolved`
-/// under `generation` returns: the oracle sets `externalTarget` only after
-/// `externalCall` comes back (`instructions/CallInstruction.cpp:191-197`,
-/// `expression/ExpressionFunction.cpp:206-210`), so a call that raised keeps
+/// under `generation` returns: the oracle sets its external target only after
+/// the external call comes back, so a call that raised keeps
 /// nothing. The copy `resolved` names is pinned until the call ends.
 #[derive(Clone, Copy)]
 pub(crate) struct SiteKeep {
@@ -237,9 +236,8 @@ impl Interp {
     }
 
     /// The half of a call's resolution the oracle decides before its
-    /// arguments run: a label (`RexxExpressionFunction::resolve`,
-    /// `expression/ExpressionFunction.cpp:154`) or a builtin (the parser's
-    /// `builtinIndex`), or the refusal of a builtin this crate excludes. `None`
+    /// arguments run: a label or a builtin (the parser's
+    /// builtin index), or the refusal of a builtin this crate excludes. `None`
     /// for a name that is none of those.
     pub(crate) fn resolve_fixed_call(
         &self,
@@ -287,15 +285,14 @@ impl Interp {
     }
 
     /// The half of a call's resolution the oracle searches once the
-    /// arguments have run (`RexxActivation::externalCall`,
-    /// `execution/RexxActivation.cpp:3062-3105`), for a name
+    /// arguments have run, for a name
     /// [`Interp::resolve_fixed_call`] answered `None` for.
     pub(crate) fn resolve_routine_call(&mut self, name: &[u8]) -> Result<Resolved, Failure> {
         let resolved = match self.package_routine_lookup(name)? {
             Some(resolved) => resolved,
             // **Ahead of the external file search and behind
-            // everything above it.** `Setup.cpp` resolves
-            // `CoreClasses.orx`'s two `CALL`s against the interpreter's
+            // everything above it.** The oracle resolves the core class
+            // library's two `CALL`s against the interpreter's
             // own directory, which is neither a label, a builtin nor a
             // `::ROUTINE`; this crate embeds those files instead. Gated
             // on the bootstrap running, so the names mean nothing to a
@@ -305,8 +302,7 @@ impl Interp {
             {
                 Resolved::Library(program)
             }
-            // A macro searched before the routines below
-            // (`SystemInterpreter::invokeExternalFunction`).
+            // A macro searched before the routines below.
             None if crate::builtin::rexxutil::macros::macro_position(name)
                 == Some(crate::builtin::rexxutil::macros::BEFORE) =>
             {
@@ -332,7 +328,7 @@ impl Interp {
             // decided here; the path is searched for again where the
             // file is entered, because a `Resolved` is `Copy` and this
             // resolver is `&self`.
-            // **A registered classic function**, which `SystemInterpreter::invokeExternalFunction`
+            // **A registered classic function**, which the oracle
             // tries after the macros searched first and before the external file search.
             None if self.classic_function(name).is_some() => Resolved::Registered,
             None if self.external_program(name).is_some() => Resolved::External,
@@ -478,8 +474,7 @@ impl Interp {
             match arg {
                 None => {
                     // An omitted position traces an **empty** value line, not
-                    // no line: `traceArgument(GlobalNames::NULLSTRING)`,
-                    // `RexxInstruction.cpp:161`, and measured above.
+                    // no line, and measured above.
                     self.trace_argument(self.activity.clause_state.current_value_indent, b"");
                     arguments.push(None);
                 }
@@ -746,8 +741,8 @@ impl Interp {
         outcome
     }
 
-    /// The security manager's `CALL` checkpoint
-    /// (`execution/SecurityManager.cpp:203`-`:225`), asked for every name
+    /// The security manager's `CALL` checkpoint,
+    /// asked for every name
     /// that gets past the running package's own `::ROUTINE`s -- including
     /// one nothing answers, which is why it runs before 43.1.
     ///
@@ -896,8 +891,7 @@ impl Interp {
             return started;
         }
         // Kept before the callee's value is checked: the oracle keeps a
-        // routine that returned nothing to a function call
-        // (`expression/ExpressionFunction.cpp:206-216`).
+        // routine that returned nothing to a function call.
         let begun = self.begin_call(
             resolved,
             name,
@@ -991,8 +985,8 @@ impl Interp {
         function_value(ended, name.as_deref().unwrap_or_default())
     }
 
-    /// `RoutineClass::runProgram`, which `CallProgram` runs a file's routine
-    /// through: as a command, and its `EXIT` ending that program alone.
+    /// Runs a file's routine as a program:
+    /// as a command, and its `EXIT` ending that program alone.
     pub(crate) fn run_routine_as_program(
         &mut self,
         installed: InstalledRoutine,
@@ -1088,7 +1082,7 @@ impl Interp {
             if let Some(handled) = self.call_checkpoint(name, &arguments[from..])? {
                 return Ok(Begun::Done(Ended::Returned(handled)));
             }
-            // The function exits next (`RexxActivation::externalCall` steps 2a and 2b).
+            // The function exits next.
             if self.exits.is_some()
                 && let Some(handled) = self.function_exits(name, call_type, &arguments[from..])?
             {
@@ -1179,7 +1173,7 @@ impl Interp {
         };
 
         // `SIGL`, set here rather than before the argument loop above: the
-        // oracle's own `internalCall` (`RexxActivation.cpp`, read directly)
+        // oracle's internal call
         // receives its arguments already evaluated by its caller, so they
         // are evaluated under whatever `SIGL` was already in force, and only
         // then does the transfer overwrite it. Measured: `signal there` /
@@ -1288,7 +1282,7 @@ impl Interp {
                         address,
                         // The refcount, not the table: a write in the callee
                         // clones first, which is how the oracle keeps the
-                        // inheritance one-way (`checkIOConfigTable`).
+                        // inheritance one-way.
                         io_configs: caller_io_configs,
                         traps,
                         cold,
@@ -1406,7 +1400,7 @@ impl Interp {
             self.start_external_trace();
         }
         // A routine is a program-level call, which runs the initialization exit before its
-        // first clause (`RexxActivation::run`); its failure ends the call there.
+        // first clause; its failure ends the call there.
         if matches!(entered, Entered::Routine(_))
             && self.calls_program_exits()
             && let Err(failure) = self.initialization_exit()
@@ -1439,7 +1433,7 @@ impl Interp {
             return Err(Loud::op_not_driven("a call with no saved level state").into());
         };
         // A routine that returned or exited runs the termination exit while its variables are
-        // live (`RexxActivation::exitFrom`, `implicitExit`); its failure is the call's.
+        // live; its failure is the call's.
         let ended = if kind == TailKind::Routine
             && self.calls_program_exits()
             && matches!(ended, Ok(_) | Err(Failure::Exited(_)))
@@ -1455,7 +1449,7 @@ impl Interp {
             self.capture_activation_frame(failure);
         }
 
-        // `RexxActivation::termination` releases the guard lock first. With one
+        // Termination releases the guard lock first. With one
         // activity there is nothing to release; a `<I<` drops the flag first.
         if kind == TailKind::Method
             && (self.activities.guards.is_live() || !self.activity.guard_waits.is_empty())
@@ -1464,7 +1458,7 @@ impl Interp {
         }
         // Before the pop, because both halves of `<I<`'s gate are the
         // callee's own -- its `trace_entry` state and its `TRACE` setting.
-        // `RexxActivation::termination` is where the C++ puts it, which is
+        // The oracle puts it in termination, which is
         // likewise inside the activation.
         self.trace_invocation_exit(|| match &ended {
             Ok(ended) => ended.value_ref(),
@@ -1522,7 +1516,7 @@ impl Interp {
             LentStack::Lent(values) => self.activity.value_buffer = values,
         }
         // A returning activation runs the `UNINIT`s a collection readied
-        // (`memoryObject.checkUninitQueue()`, `RexxActivation.cpp:705`). A
+        // (the oracle checks its uninit queue here). A
         // method's run in `Interp::finish_send`, once the primitive methods
         // waiting on it have finished, since an `UNINIT`'s own send would
         // otherwise find their tails at its depth.
@@ -1534,10 +1528,10 @@ impl Interp {
         }
 
         // **`EXIT` inside a `::ROUTINE` ends the routine, not the program**,
-        // where `EXIT` inside a `CALL`ed label ends the program. The C++'s
-        // `implicitExit` sets `RETURNED` outright for an `isProgramLevelCall`
-        // activation and only otherwise walks up through `exitFrom`
-        // (`RexxActivation.cpp:1455`-`1469`), and a routine invocation is one
+        // where `EXIT` inside a `CALL`ed label ends the program. The oracle
+        // sets `RETURNED` outright for a program-level call
+        // activation and only otherwise walks up,
+        // and a routine invocation is one
         // of those. Measured on the oracle, rc 0 every time, and the shapes
         // matter because the exit arrives here by three different routes:
         // ```text
@@ -1688,8 +1682,7 @@ impl Interp {
     }
 
     /// A call's resolution, held back until its arguments have run: the oracle
-    /// evaluates a call's arguments before its external search
-    /// (`expression/ExpressionFunction.cpp:184`, `instructions/CallInstruction.cpp:166`).
+    /// evaluates a call's arguments before its external search.
     #[inline(always)]
     pub(crate) fn resolved_after_arguments<T>(
         &mut self,

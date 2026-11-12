@@ -166,7 +166,7 @@ fn an_environment_name_over_two_hundred_and_fifty_bytes_raises_29_1() {
 }
 
 /// `address with output stem o.` is **not** a `WITH` form. `WITH` is a
-/// keyword only after an environment or a `VALUE` expression (`addressNew`),
+/// keyword only after an environment or a `VALUE` expression,
 /// so that clause names an environment called `WITH` and runs `OUTPUT STEM
 /// O.` as a command against it -- measured, the oracle answers `>>> "OUTPUT
 /// STEM O."` and `+++ "RC(30)"` on stderr at exit 0.

@@ -1,4 +1,4 @@
-//! The macrospace routines (`runtime/RexxUtilCommon.cpp`), over the API service's macrospace.
+//! The macrospace routines, over the API service's macrospace.
 //! A macro's image is this crate's compiled form of its source. Reads ask only a service
 //! already running: with none, the macrospace is empty.
 
