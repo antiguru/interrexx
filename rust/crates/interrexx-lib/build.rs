@@ -58,6 +58,7 @@ const REPLACEMENTS: &[&str] = &[
     "datetime.rex",
     "file.rex",
     "streamsupplier.rex",
+    "command.rex",
 ];
 
 /// One host member a replacement may leave out.
