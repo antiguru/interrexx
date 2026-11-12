@@ -250,15 +250,19 @@ impl Cursor {
         if self.subcurrent >= self.end {
             return 0..0;
         }
-        let mut scan = self.subcurrent;
-        while scan < self.length && is_blank(string[scan]) {
-            scan += 1;
-        }
-        self.subcurrent = scan;
+        // Scanned as slices, which carry their own bound, rather than by
+        // indexing `string` at each position.
+        let blanks = string[self.subcurrent..]
+            .iter()
+            .position(|&byte| !is_blank(byte))
+            .unwrap_or(self.length - self.subcurrent);
+        self.subcurrent += blanks;
         if self.subcurrent >= self.end {
             return 0..0;
         }
-        let word_end = (self.subcurrent..self.end).find(|&i| is_blank(string[i]));
+        let word_end = string[self.subcurrent..self.end]
+            .iter()
+            .position(|&byte| is_blank(byte));
         match word_end {
             // No blank before the section's end: the rest of the section is
             // the word.
@@ -269,7 +273,8 @@ impl Cursor {
             }
             // The terminating blank is consumed as well, so the next scan
             // starts past it.
-            Some(at) => {
+            Some(length) => {
+                let at = self.subcurrent + length;
                 let word = self.subcurrent..at;
                 self.subcurrent = at + 1;
                 word
