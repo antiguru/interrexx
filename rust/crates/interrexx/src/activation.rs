@@ -892,6 +892,109 @@ impl Activation {
         }
     }
 
+    /// [`Activation::method`] written over a recycled activation, field by
+    /// field, so the send path never moves a whole activation: a move is a
+    /// copy of a struct just written, and its wide loads stall on the
+    /// narrower stores that built it. The destructuring names every field,
+    /// so a field added to [`Activation`] does not compile here until it is
+    /// given its method value.
+    #[inline(always)]
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "Activation::method's own arguments, written over the activation"
+    )]
+    pub(crate) fn reset_method(
+        &mut self,
+        id: ActivationId,
+        program: Rc<Program>,
+        program_id: ProgramId,
+        body: usize,
+        plan: Rc<Plan>,
+        frame: SlotFrame,
+        identity: MethodIdentity,
+    ) {
+        let Activation {
+            id: id_field,
+            program: program_field,
+            program_id: program_id_field,
+            body: body_field,
+            plan: plan_field,
+            extra,
+            frame: frame_field,
+            owns_frame,
+            entry,
+            rs,
+            call_type,
+            method_identity,
+            exposed,
+            reply,
+            replied_a_value,
+            replied,
+            flags,
+            first_instruction_pending,
+            trace_entry,
+            pc,
+            settings,
+            condition_syntax,
+            trace_mode,
+            debug,
+            address,
+            io_configs,
+            traps,
+            cold,
+            cached_clock,
+            elapsed_anchor,
+            current_case,
+            clock_stale,
+            context_object,
+            notify_message,
+            clause,
+            invocation,
+            call_name,
+            call_arguments,
+            streams,
+        } = self;
+        *id_field = id;
+        *program_field = program;
+        *program_id_field = program_id;
+        *body_field = Some(body);
+        *plan_field = plan;
+        *extra = NameMap::default();
+        *frame_field = frame;
+        *owns_frame = true;
+        *entry = Entry::Method;
+        *rs = None;
+        *call_type = CallType::Method;
+        *method_identity = Some(identity);
+        *exposed = Vec::new();
+        *reply = ReplyState::None;
+        *replied_a_value = false;
+        *replied = None;
+        *flags = ActivationFlags::default();
+        *first_instruction_pending = true;
+        *trace_entry = TraceEntry::Pending;
+        *pc = 0;
+        *settings = Settings::default();
+        *condition_syntax = ConditionSyntax::default();
+        *trace_mode = TraceMode::NORMAL;
+        *debug = DebugState::default();
+        *address = AddressState::default();
+        *io_configs = None;
+        *traps = TrapMap::default();
+        *cold = None;
+        *cached_clock = NO_CLOCK;
+        *elapsed_anchor = NO_CLOCK;
+        *current_case = None;
+        *clock_stale = true;
+        *context_object = None;
+        *notify_message = None;
+        *clause = ClauseSnapshot::default();
+        *invocation = None;
+        *call_name = None;
+        *call_arguments = None;
+        *streams = NameMap::default();
+    }
+
     /// The key this activation's body is cached under, in both the plan
     /// cache and the chunk cache.
     pub(crate) fn body_key(&self) -> BodyKey {
@@ -1331,6 +1434,18 @@ impl Interp {
             }
             None => Box::new(activation),
         };
+        self.push_boxed_activation(boxed);
+    }
+
+    /// A box for an activation about to be pushed: a recycled one where the
+    /// activity keeps one, for the caller to write over in place.
+    #[inline]
+    pub(crate) fn spare_activation(&mut self) -> Option<Box<Activation>> {
+        self.activity.spare_activations.pop()
+    }
+
+    /// [`Interp::push_activation`] of an activation already in its box.
+    pub(crate) fn push_boxed_activation(&mut self, boxed: Box<Activation>) {
         // `trace_cache`'s own invariant: the setting travels with whichever
         // activation is running, and this changes which one that is.
         self.activity.trace_cache =
