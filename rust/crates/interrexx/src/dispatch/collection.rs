@@ -1,7 +1,7 @@
 //! The collection classes' primitive methods.
 
 use super::{
-    Arity, ArrayArgument, BehaviourId, Body, Cleared, Decoded, Failure, IndexUse, Interp, Loud,
+    Arity, ArrayArgument, BehaviourId, Body, Cleared, Decoded, Failure, IndexUse, Interp,
     NativeMethod, ObjRef, Raised, array_argument_object, array_dimensions, array_position,
     array_slots, array_slots_owned, new_instance,
 };
@@ -136,7 +136,7 @@ pub(super) fn store_of(interp: &mut Interp, receiver: ObjRef) -> Result<ObjRef, 
     // of a `CircularQueue` subclass -- both of which this crate refused with
     // `a value that is not an array` when the store was `INIT`'s to make.
     if !holds_array_store(interp, receiver) {
-        return Err(Loud::receiver_class("a value that is not an array").into());
+        return Err(crate::Raised::receiver_kind("a value that is not an array").into());
     }
     let store = interp.alloc_charged(BehaviourId::ARRAY, Body::array(Vec::new()));
     interp.roots.activity_mut().push_temp(store);
@@ -292,7 +292,7 @@ pub(super) fn append_slot(
     // `ArrayClass::appendRexx` puts at `lastItem + 1`, which the slots keep.
     let (at, length) = match interp.heap.get(store).map(|object| &object.body) {
         Some(Body::Array { slots, .. }) => (slots.last_item(), slots.len()),
-        _ => return Err(Loud::receiver_class("a value that is not an array").into()),
+        _ => return Err(crate::Raised::receiver_kind("a value that is not an array").into()),
     };
     if at >= length {
         array_grow(interp, receiver, at + 1)?;
@@ -371,7 +371,7 @@ pub(super) fn array_splice(
                 }
                 Ok(())
             }
-            _ => Err(Loud::receiver_class("a value that is not an array").into()),
+            _ => Err(crate::Raised::receiver_kind("a value that is not an array").into()),
         },
     }
 }
@@ -408,7 +408,7 @@ pub(super) fn array_splice_slot(
             slots.insert(at, item);
             slots.capacity() - before
         }
-        _ => return Err(Loud::receiver_class("a value that is not an array").into()),
+        _ => return Err(crate::Raised::receiver_kind("a value that is not an array").into()),
     };
     interp.charge_growth(grown * interrexx_core::SLOT_BYTES);
     Ok(())
@@ -430,7 +430,7 @@ fn write_slot(
             slots.set_within(at, item);
             Ok(())
         }
-        _ => Err(Loud::receiver_class("a value that is not an array").into()),
+        _ => Err(crate::Raised::receiver_kind("a value that is not an array").into()),
     }
 }
 
@@ -454,7 +454,7 @@ pub(super) fn array_grow(
             slots.resize(length);
             slots.capacity().saturating_sub(before)
         }
-        _ => return Err(Loud::receiver_class("a value that is not an array").into()),
+        _ => return Err(crate::Raised::receiver_kind("a value that is not an array").into()),
     };
     interp.charge_growth(grown * interrexx_core::SLOT_BYTES);
     Ok(())

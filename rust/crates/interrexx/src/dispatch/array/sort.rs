@@ -3,7 +3,7 @@
 
 use super::collection::{item_argument, read_slots, store_of};
 use super::{
-    Arity, Body, Cleared, Failure, Interp, Loud, NativeMethod, ObjRef, Raised, array_slots,
+    Arity, Body, Cleared, Failure, Interp, NativeMethod, ObjRef, Raised, array_slots,
     whole_comparison,
 };
 
@@ -259,7 +259,7 @@ fn write_back(interp: &mut Interp, receiver: ObjRef, items: Vec<ObjRef>) -> Resu
             slots.overwrite(items);
             Ok(())
         }
-        _ => Err(Loud::receiver_class("a value that is not an array").into()),
+        _ => Err(crate::Raised::receiver_kind("a value that is not an array").into()),
     }
 }
 

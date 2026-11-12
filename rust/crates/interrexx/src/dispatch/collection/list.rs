@@ -2,9 +2,9 @@
 //! methods over them.
 
 use super::{
-    Arity, BehaviourId, Body, Cleared, Failure, Interp, Loud, NativeMethod, ObjRef, Raised,
-    array_of, array_of_slots, array_slots, array_slots_owned, array_splice, array_splice_slot,
-    item_argument, new_instance, new_supplier, optional_length_argument, pool_variable, same_item,
+    Arity, BehaviourId, Body, Cleared, Failure, Interp, NativeMethod, ObjRef, Raised, array_of,
+    array_of_slots, array_slots, array_slots_owned, array_splice, array_splice_slot, item_argument,
+    new_instance, new_supplier, optional_length_argument, pool_variable, same_item,
 };
 
 // ---- List ----
@@ -54,7 +54,7 @@ pub(super) fn list_state(
     // only ever written together, so a partial set is not a state this can
     // meet.
     if !is_list(interp, receiver) {
-        return Err(Loud::receiver_class("a value that is not a list").into());
+        return Err(crate::Raised::receiver_kind("a value that is not a list").into());
     }
     let mut built = Vec::with_capacity(3);
     for name in [LIST_ITEMS, LIST_HANDLES, LIST_FREE] {
@@ -243,7 +243,7 @@ fn native_list_put(
             slots.set(at, item);
             Ok(None)
         }
-        _ => Err(Loud::receiver_class("a value that is not a list").into()),
+        _ => Err(crate::Raised::receiver_kind("a value that is not a list").into()),
     }
 }
 
@@ -396,7 +396,7 @@ fn native_list_empty(
     for store in [items, handles, free] {
         match interp.heap.get_mut(store).map(|object| &mut object.body) {
             Some(Body::Array { slots, .. }) => slots.clear(),
-            _ => return Err(Loud::receiver_class("a value that is not a list").into()),
+            _ => return Err(crate::Raised::receiver_kind("a value that is not a list").into()),
         }
     }
     // Answers the receiver, as `Array~empty` does -- measured, `say l~empty`

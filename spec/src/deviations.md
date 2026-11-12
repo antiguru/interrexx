@@ -193,11 +193,13 @@ An answer that is not a string is read as its text: an Array as its lines,
 any other object as its default string. ooRexx reads the object as if it
 were a string, running garbage or crashing.
 
-## 28. A built-in method run on the wrong object
+## 28. A written entry or answer of the wrong class
 
-A built-in class's method run on an object of an unrelated class, through
-`run`, `setMethod` or `enhanced`, is refused, exit code 120. ooRexx reads the
-object with the wrong layout and answers garbage or crashes.
+A `.ROUTINES` entry written to a package that is not a routine, and a
+metaclass `NEW` that answers something other than a class, are refused, exit
+code 120. ooRexx casts the object unchecked and crashes. A native method run
+on a receiver of the wrong kind is not covered: it raises a trappable
+`SYNTAX 93.900`, as [the rule](r:class.object.borrowed-native) says.
 
 ## 29. An entry assignment with no value
 

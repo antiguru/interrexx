@@ -29,7 +29,7 @@ pub(super) fn native_base_class(
 pub(super) fn class_receiver(interp: &Interp, receiver: ObjRef) -> Result<ObjRef, Failure> {
     match interp.receiver_kind(receiver) {
         Ok(Primitive::Class(class)) => Ok(class),
-        Ok(_) => Err(Loud::receiver_class("a value that is not a class object").into()),
+        Ok(_) => Err(crate::Raised::receiver_kind("a value that is not a class object").into()),
         Err(kind) => Err(Loud::unknown_receiver(kind).into()),
     }
 }
@@ -1150,7 +1150,7 @@ fn add_installed_class(
         return Err(Raised::argument_not_a_class("class").into());
     }
     if interp.package_data(receiver).is_none() {
-        return Err(Loud::receiver_class("a value that is not a package").into());
+        return Err(crate::Raised::receiver_kind("a value that is not a package").into());
     }
     if interp.is_the_rexx_package(receiver) {
         return Err(Raised::rexx_package_addition().into());

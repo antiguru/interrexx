@@ -2013,12 +2013,29 @@ say (n == 12) (n~hashCode == 12~hashCode)
 1 1
 ```
 
-r[class.object.deviation.28]
-A method of a built-in class that `setMethod` gives to an object of an
-unrelated class, or `run` or `enhanced` runs on one, is refused: the program
-ends with exit code 120. ooRexx reads the object with the layout of the other
-class and answers garbage or crashes. The check happens when the method is
-run, so `setMethod` itself still answers no value.
+r[class.object.borrowed-native]
+A native method of a built-in class, given to an object of another class by
+`define`, `setMethod`, `enhanced` or `run`, and run on a receiver of a kind it
+cannot work on, raises `SYNTAX 93.900`, a condition a program can trap. The
+rule holds for every native method alike, `SORTWITH` and `ITEMS` of an Array,
+the methods of a Directory, a Package, a Supplier and the rest. The check
+happens when the method is run, so `define` and `setMethod` themselves
+succeed. ooRexx reads such a receiver with the layout of the other class and
+answers garbage or crashes.
+
+```rexx
+signal on syntax name bad
+c = .object~subclass('K')
+c~define('SORTWITH', .array~method('SORTWITH'))
+c~new~sortWith(.numericComparator~new)
+say 'no error'
+exit
+bad: say 'SYNTAX' condition('o')~code
+```
+
+```output no-oracle
+SYNTAX 93.900
+```
 
 ```rexx
 say 'before'
@@ -2026,15 +2043,37 @@ m = .array~method('ITEMS')
 o = .w~new
 o~sm(m)
 say 'after'
+signal on syntax name bad
 say o~items
+exit
+bad: say 'SYNTAX' condition('o')~code
 ::class w
 ::method sm
   self~setMethod('ITEMS', arg(1))
 ```
 
-```output rc=120
+```output no-oracle
 before
 after
+SYNTAX 93.900
+```
+
+r[class.object.deviation.28]
+A metaclass `new` that answers something other than a class, while a class
+with that metaclass is made by `subclass`, and a `.ROUTINES` entry that is
+not a routine, are refused: the program ends with exit code 120. ooRexx casts
+the answer unchecked and crashes. A native method run on a receiver of the
+wrong kind is another matter: [its rule](r:class.object.borrowed-native)
+raises a condition.
+
+```rexx
+say 'id' .object~subclass("k", .MyMeta)~id
+::class MyMeta subclass Class
+::method new class
+  return 'x'
+```
+
+```output rc=120
 ```
 
 r[class.object.deviation.30]

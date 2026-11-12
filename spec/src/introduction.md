@@ -89,6 +89,10 @@ issue N. The output shown is still the specified one, and the checker accepts
 the mismatch on interrexx; when the example starts to pass, it reports that
 the marker is to be removed.
 
+An output marked `no-oracle` (combinable with the other markers) is an example
+the oracle crashes on or answers with an accident of memory; the oracle gate
+does not run it.
+
 An output marked `escaped` (combinable with the other markers) writes a
 character that cannot be shown as itself with an escape: `\a` or `\x07` is the
 bell character, `\xNN` is the ASCII character of code `NN` in hexadecimal,

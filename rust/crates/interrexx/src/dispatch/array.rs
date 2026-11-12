@@ -1,8 +1,8 @@
 //! Array slot and subscript arithmetic, and `Array`'s primitive methods.
 
 use super::{
-    BehaviourId, Body, Cleared, Decoded, Failure, INIT, Interp, Loud, ObjRef, Raised,
-    class_receiver, collection, required_string_argument,
+    BehaviourId, Body, Cleared, Decoded, Failure, INIT, Interp, ObjRef, Raised, class_receiver,
+    collection, required_string_argument,
 };
 
 use super::{Arity, NativeMethod};
@@ -21,7 +21,7 @@ pub(super) fn array_slots(interp: &Interp, receiver: ObjRef) -> Result<&[Option<
     let receiver = collection_store(interp, receiver);
     interp
         .array_slots(receiver)
-        .ok_or_else(|| Loud::receiver_class("a value that is not an array").into())
+        .ok_or_else(|| crate::Raised::receiver_kind("a value that is not an array").into())
 }
 
 /// The array that actually holds `receiver`'s slots: the receiver itself when
@@ -80,7 +80,7 @@ pub(super) fn array_dimensions(
     let receiver = collection_store(interp, receiver);
     match interp.array_body(receiver) {
         Some((_, dimensions)) => Ok(dimensions.map(<[usize]>::to_vec)),
-        None => Err(Loud::receiver_class("a value that is not an array").into()),
+        None => Err(crate::Raised::receiver_kind("a value that is not an array").into()),
     }
 }
 
@@ -90,7 +90,7 @@ fn array_is_fixed_dimension(interp: &Interp, receiver: ObjRef) -> Result<bool, F
     let receiver = collection_store(interp, receiver);
     match interp.array_body(receiver) {
         Some((slots, dimensions)) => Ok(dimensions.is_some() || !slots.is_empty()),
-        None => Err(Loud::receiver_class("a value that is not an array").into()),
+        None => Err(crate::Raised::receiver_kind("a value that is not an array").into()),
     }
 }
 
@@ -388,7 +388,7 @@ fn array_resize(interp: &mut Interp, receiver: ObjRef, size: usize) -> Result<()
             slots.resize(size);
             slots.capacity().saturating_sub(before)
         }
-        _ => return Err(Loud::receiver_class("a value that is not an array").into()),
+        _ => return Err(crate::Raised::receiver_kind("a value that is not an array").into()),
     };
     interp.charge_growth(grown * interrexx_core::SLOT_BYTES);
     Ok(())
@@ -463,7 +463,7 @@ fn array_reshape(
             *held = Some(dimensions.into());
             (before, slots.capacity())
         }
-        _ => return Err(Loud::receiver_class("a value that is not an array").into()),
+        _ => return Err(crate::Raised::receiver_kind("a value that is not an array").into()),
     };
     // The replacement can hold fewer slots than the extended original did.
     interp.charge_growth(after.saturating_sub(before) * interrexx_core::SLOT_BYTES);
@@ -531,7 +531,7 @@ pub(super) fn native_array_put(
             slots.set(position - 1, Some(value));
             Ok(None)
         }
-        _ => Err(Loud::receiver_class("a value that is not an array").into()),
+        _ => Err(crate::Raised::receiver_kind("a value that is not an array").into()),
     }
 }
 

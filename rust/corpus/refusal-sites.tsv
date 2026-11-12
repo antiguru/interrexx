@@ -283,7 +283,8 @@ Raised	raised_when_not_logical	body+ir	crates/interrexx/src/run/raised.rs	off-se
 Raised	raised_while_not_logical	body	crates/interrexx/src/run/raised.rs	off-send-surface	-	-	-
 Raised	random_bounds_reversed	body	crates/interrexx/src/error.rs	off-send-surface	-	-	-
 Raised	random_range_too_wide	body	crates/interrexx/src/error.rs	off-send-surface	-	-	-
-Loud	receiver_class	body+send	crates/interrexx/src/lib.rs	diverges	yes	a message send to	say .t~new~go(.array~method('ITEMS')) over ::class t / ::method go / use arg m / return self~run(m): ours rc 120, the oracle a different number each run (Deviation 28)
+Loud	receiver_class	body+send	crates/interrexx/src/lib.rs	recorded	yes	a message send to	Deviation 28: a metaclass whose NEW answers something other than a class
+Raised	receiver_kind	body+send	crates/interrexx/src/error.rs	not-run	yes	the receiver is	oracle-crashes.txt entry 62: never run
 Raised	recursive_inherit	body+send	crates/interrexx/src/error.rs	agrees	yes	98.944	.M~inherit(.M) with M a mixinclass
 Raised	redirection_failed	body	crates/interrexx/src/error.rs	off-send-surface	-	-	-
 Raised	redirection_not_supported	body	crates/interrexx/src/error.rs	off-send-surface	-	-	-

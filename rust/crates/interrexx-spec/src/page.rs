@@ -26,6 +26,9 @@ pub struct Example {
     pub rc: i32,
     /// The open issue that tracks an interrexx failure of this example.
     pub defect: Option<u32>,
+    /// The oracle crashes or answers an accident of memory on this program,
+    /// so the oracle gate does not run it.
+    pub no_oracle: bool,
 }
 
 /// A `[text](r:ID)` link.
@@ -415,7 +418,15 @@ fn finish_block(
             let mut rc_seen = false;
             let mut defect = None;
             let mut escaped = false;
+            let mut no_oracle = false;
             for w in words {
+                if w == "no-oracle" {
+                    if no_oracle {
+                        err(f.line, "duplicate `no-oracle` option".into());
+                    }
+                    no_oracle = true;
+                    continue;
+                }
                 if w == "escaped" {
                     if escaped {
                         err(f.line, "duplicate `escaped` option".into());
@@ -474,6 +485,7 @@ fn finish_block(
                     output: content,
                     rc,
                     defect,
+                    no_oracle,
                 }),
                 None => err(line, "example appears before any rule".into()),
             }
