@@ -375,6 +375,54 @@ s~next(1) => 93.902
 y = .supplier~new(.array~of(1), .array~of(2))~next => 91.999
 ```
 
+r[class.supplier.read.sends]
+`available`, `index` and `item` send nothing, to the arrays or to the
+supplier itself, so an override of one of them is sent only the messages that
+the program sends it. Nor do `next`, `copy` and `supplier` send the supplier
+or the arrays a message. In the example the class `spy` logs each message it
+receives and the class `watched` logs the messages that the arrays receive:
+the log holds only the messages that the program sent.
+
+```rexx
+.local~log = .array~new
+s = .spy~new(.watched~of('p', 'q'), .watched~of(1, 2))
+x = s~available; y = s~index; z = s~item
+say x y z '['.log~makeString('L', ' ')']'
+.log~empty
+s~next
+say '['.log~makeString('L', ' ')']'
+.log~empty
+c = s~copy
+d = s~supplier
+say '['.log~makeString('L', ' ')']'
+::class spy subclass supplier
+::method available
+  .log~append('available'); return self~available:super
+::method index
+  .log~append('index'); return self~index:super
+::method item
+  .log~append('item'); return self~item:super
+::method next
+  .log~append('next'); self~next:super
+::method copy
+  .log~append('copy'); return self~copy:super
+::method supplier
+  .log~append('supplier'); return self~supplier:super
+::class watched subclass array
+::method at
+  .log~append('at'); return self~at:super(arg(1))
+::method size
+  .log~append('size'); return self~size:super
+::method '[]'
+  .log~append('[]'); return self~'[]':super(arg(1))
+```
+
+```output
+1 1 p [available index item]
+[next]
+[copy supplier]
+```
+
 ## The remaining entries as arrays
 
 r[class.supplier.allitems]
@@ -644,6 +692,25 @@ say s~item c~item
 
 ```output
 changed changed
+```
+
+```rexx
+s = .supplier~new(.array~of('p'), .array~of(1))
+call try 's~copy(1)'
+call try 's~allIndexes(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  say arg(1) '=> ok'
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
+```
+
+```output
+s~copy(1) => 93.902
+s~allIndexes(1) => 93.902
 ```
 
 ## Deviations
