@@ -504,6 +504,7 @@ back
      7 *-* exit
 ```
 
+r[env.debugging.pause.header]
 A `DO` or `LOOP` clause is stopped at after its header has been evaluated,
 and a condition that the evaluation queued is not delivered until that stop is
 over. In the example the `NOTREADY` that the `LINEIN` call raises in the header
@@ -1165,6 +1166,7 @@ probe signal lab result from lab
 probe say 1; return 8 result 8
 ```
 
+r[env.debugging.input.sigl]
 A line is run at the line of the clause that the stop follows, so a routine
 that a `CALL` in it enters reads that line in `SIGL`. In the example `SIGL`
 is 4, the line of the `nop`.
