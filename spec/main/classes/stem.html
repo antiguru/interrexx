@@ -798,8 +798,17 @@ say s~unknown('length', .array~new)
 exit
 bad: say condition('o')~code
 </code></pre>
-<pre><code class="language-output defect=#171">3
+<pre><code class="language-output">3
 97.1
+</code></pre>
+<pre><code class="language-rexx">s = .stem~new('N.')
+s[] = 'abc'
+signal on syntax name bad
+say s~unknown('length', 1)
+exit
+bad: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">97.1
 </code></pre>
 <h2 id="copies-and-the-string-value"><a class="header" href="#copies-and-the-string-value">Copies and the string value</a></h2>
 <div class="rule" id="r-class.stem.copy"><a href="#r-class.stem.copy">[class.stem.copy]</a></div>

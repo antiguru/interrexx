@@ -58386,7 +58386,7 @@ say b~removeItem(.k~new('s1'), .k~new('s1'))~tag '|',
   .local~log~append('hash' tag)
   return 'same'
 </code></pre>
-<pre><code class="language-output defect=#170">1 | == A B
+<pre><code class="language-output">1 | == A B
 s1 | == s1 s1 | hash s1 | == s1 s1
 </code></pre>
 <h2 id="removing-members"><a class="header" href="#removing-members">Removing members</a></h2>
@@ -61119,8 +61119,17 @@ say s~unknown('length', .array~new)
 exit
 bad: say condition('o')~code
 </code></pre>
-<pre><code class="language-output defect=#171">3
+<pre><code class="language-output">3
 97.1
+</code></pre>
+<pre><code class="language-rexx">s = .stem~new('N.')
+s[] = 'abc'
+signal on syntax name bad
+say s~unknown('length', 1)
+exit
+bad: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">97.1
 </code></pre>
 <h2 id="copies-and-the-string-value-9"><a class="header" href="#copies-and-the-string-value-9">Copies and the string value</a></h2>
 <div class="rule" id="r-class.stem.copy"><a href="classes/stem.html#r-class.stem.copy">[class.stem.copy]</a></div>
@@ -68786,7 +68795,7 @@ say r~unknown('length', .array~new)
 exit
 bad: say condition('o')~code
 </code></pre>
-<pre><code class="language-output defect=#171">5
+<pre><code class="language-output">5
 97.1
 </code></pre>
 <div class="rule" id="r-class.variablereference.request"><a href="classes/variablereference.html#r-class.variablereference.request">[class.variablereference.request]</a></div>
