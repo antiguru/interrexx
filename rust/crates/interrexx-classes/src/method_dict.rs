@@ -318,6 +318,66 @@ impl MethodDict {
         }
     }
 
+    /// [`Self::merge_methods`] for the names in `keys` alone, each already
+    /// upper case: what the merge makes of every other name is left as it
+    /// stands, which is what a cascade that knows only `keys` changed needs.
+    pub fn merge_methods_named(&mut self, source: &MethodDict, keys: &[String]) {
+        for key in keys {
+            let Some((name, list)) = source.entries.get_key_value(key.as_str()) else {
+                continue;
+            };
+            for entry in list.as_slice().iter().rev() {
+                match *entry {
+                    MethodSlot::Defined { scope, method } => {
+                        self.add_method_key(name, scope, method);
+                    }
+                    MethodSlot::Hidden | MethodSlot::Withdrawn => self.add_hidden_key(name),
+                }
+            }
+        }
+    }
+
+    /// What `from` holds under `key` (upper case), moved here in place of
+    /// what was there, or no entry under it where `from` holds none.
+    pub fn adopt_entry(&mut self, from: &mut MethodDict, key: &str) {
+        let Some((name, list)) = from.entries.remove_entry(key) else {
+            self.entries.remove(key);
+            return;
+        };
+        for slot in list.as_slice() {
+            if let MethodSlot::Defined { method, .. } = *slot {
+                self.note_method(method);
+            }
+        }
+        match self.entries.get_mut(key) {
+            Some(held) => *held = list,
+            None => {
+                self.entries.insert(name, list);
+            }
+        }
+    }
+
+    /// Whether `key` (upper case) holds an entry, tombstone included.
+    pub fn has_entry(&self, key: &str) -> bool {
+        self.entries.contains_key(key)
+    }
+
+    /// Whether the two hold the same entries under every name and the same
+    /// scopes, and list them in the same order, which `Class~methods`
+    /// answers in: what a cascade over the same inputs in the same order
+    /// makes.
+    #[cfg(debug_assertions)]
+    pub fn same_contents(&self, other: &MethodDict) -> bool {
+        self.entries
+            .iter()
+            .map(|(name, list)| (name, list.as_slice()))
+            .eq(other
+                .entries
+                .iter()
+                .map(|(name, list)| (name, list.as_slice())))
+            && self.scope_list == other.scope_list
+    }
+
     /// Overlay `source`'s methods **and its already-folded scope order** on top
     /// of this dictionary, which does a method merge (identical to
     /// [`Self::merge_methods`]) followed by a scope merge, which folds every

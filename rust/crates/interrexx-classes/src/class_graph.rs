@@ -164,6 +164,53 @@ pub struct ClassGraph {
     uninit_classes: Vec<ObjRef>,
     /// See [`ClassGraph::epoch`].
     epoch: Epoch,
+    /// When each instance behaviour's inputs last changed and when each was
+    /// built, which says whether [`ClassGraph::define`] may recompute only
+    /// the names it changed.
+    inputs: InputTicks,
+}
+
+/// A clock over the cascade's instance-side inputs -- each class's own
+/// instance dictionary and superclass list -- read by the mutators that
+/// change one name ([`ClassGraph::define`] and its siblings): a behaviour
+/// built after every input it was built from last changed is the cascade of
+/// those inputs, so the change can be applied to that one name of it rather
+/// than rebuilding it whole. A behaviour built before is rebuilt whole, as a
+/// class an update never reached (a subclass a failed `subclass` left out
+/// of its superclass's list) needs.
+#[derive(Default)]
+struct InputTicks {
+    /// Raised by every change of an input.
+    now: u64,
+    /// When each class's inputs last changed; a class not in the map has
+    /// not changed since the clock started.
+    changed: NameMap<ObjRef, u64>,
+    /// When each behaviour, by index, was last built by the cascade.
+    built: Vec<u64>,
+}
+
+impl InputTicks {
+    /// Records a change of `class`'s own instance dictionary or superclasses.
+    fn touch(&mut self, class: ObjRef) {
+        self.now += 1;
+        self.changed.insert(class, self.now);
+    }
+
+    fn changed(&self, class: ObjRef) -> u64 {
+        self.changed.get(&class).copied().unwrap_or(0)
+    }
+
+    fn set_built(&mut self, handle: BehaviourHandle) {
+        let index = handle.index();
+        if self.built.len() <= index {
+            self.built.resize(index + 1, 0);
+        }
+        self.built[index] = self.now;
+    }
+
+    fn built(&self, handle: BehaviourHandle) -> u64 {
+        self.built.get(handle.index()).copied().unwrap_or(0)
+    }
 }
 
 impl ClassGraph {
@@ -249,6 +296,7 @@ impl ClassGraph {
         if let Some(sup) = superclass {
             self.classes.get_mut(&sup).unwrap().subclasses.push(id);
         }
+        self.inputs.touch(id);
         self.rebuild_behaviour(id, Side::Instance);
         self.rebuild_behaviour(id, Side::Class);
     }
@@ -290,6 +338,7 @@ impl ClassGraph {
                 cloned: true,
             },
         );
+        self.inputs.touch(id);
         self.rebuild_behaviour(id, Side::Instance);
         let source = self.classes[&receiver].instance_behaviour;
         let dict = self.behaviours[source.index()].dict.clone();
@@ -370,6 +419,7 @@ impl ClassGraph {
             .unwrap()
             .subclasses
             .push(id);
+        self.inputs.touch(id);
         self.rebuild_behaviour(id, Side::Instance);
         self.rebuild_behaviour(id, Side::Class);
     }
@@ -419,6 +469,7 @@ impl ClassGraph {
                 None => def.own_instance_methods.add_hidden(name),
             }
         }
+        self.inputs.touch(class);
         self.rebuild_behaviour(class, Side::Instance);
     }
 
@@ -477,6 +528,7 @@ impl ClassGraph {
             retired_entries: _,
             uninit_classes,
             epoch: _,
+            inputs,
         } = self;
         for class in dead {
             // The dictionaries are the weight: a flattened behaviour holds
@@ -497,6 +549,7 @@ impl ClassGraph {
                 *retired -= def.retired_behaviours.len();
             }
             classes.remove(class);
+            inputs.changed.remove(class);
             uninit_classes.retain(|held| held != class);
         }
         // A subclass list holds classes that may have died: the list is of weak
@@ -710,6 +763,19 @@ impl ClassGraph {
         let handle = self.behaviour_handle(class, side);
         let mut dict = std::mem::take(&mut self.behaviours[handle.index()].dict);
         dict.clear();
+        dict.reserve(self.rebuilt_names(class, side));
+        Self::cascade_build(&self.classes, &self.behaviours, class, &mut dict, side);
+        let behaviour = &mut self.behaviours[handle.index()];
+        behaviour.dict = dict;
+        behaviour.version += 1;
+        if side == Side::Instance {
+            self.inputs.set_built(handle);
+        }
+    }
+
+    /// The names a rebuild of `class`'s `side` behaviour makes room for up
+    /// front: its own and its first superclass's.
+    fn rebuilt_names(&self, class: ObjRef, side: Side) -> usize {
         let def = &self.classes[&class];
         let own = match side {
             Side::Instance => def.own_instance_methods.len(),
@@ -720,11 +786,7 @@ impl ClassGraph {
                 .dict
                 .len()
         });
-        dict.reserve(inherited + own);
-        Self::cascade_build(&self.classes, &self.behaviours, class, &mut dict, side);
-        let behaviour = &mut self.behaviours[handle.index()];
-        behaviour.dict = dict;
-        behaviour.version += 1;
+        inherited + own
     }
 
     /// The full subclass update: rebuild both behaviours in place, instance
@@ -743,24 +805,6 @@ impl ClassGraph {
         }
     }
 
-    /// The instance-side subclass update: rebuild only the instance behaviour,
-    /// in place, run the uninit check where `uninit` says the change touched
-    /// `UNINIT` (no other change can make it resolve), then cascade. This is
-    /// what [`define`](Self::define) calls **after** repointing `class` itself
-    /// at a fresh handle, so only the cascaded subclasses' behaviours are
-    /// rebuilt in place -- the direct recipient's old handle is never touched
-    /// again.
-    fn update_instance_sub_classes(&mut self, class: ObjRef, uninit: bool) {
-        self.rebuild_behaviour(class, Side::Instance);
-        if uninit {
-            self.check_uninit(class);
-        }
-        let subclasses = self.classes[&class].subclasses.clone();
-        for sub in subclasses {
-            self.update_instance_sub_classes(sub, uninit);
-        }
-    }
-
     /// `~define`. The instance behaviour is copied *before* it is mutated, so
     /// that previous objects are not enhanced, then cascades only the instance
     /// side. The copy is why an instance created before this call keeps
@@ -769,13 +813,14 @@ impl ClassGraph {
     /// every subclass keeps its own existing handle and is rebuilt in place.
     pub fn define(&mut self, class: ObjRef, name: &str, method: MethodId) {
         self.bump_epoch();
+        let prior = self.inputs.changed(class);
+        let kept = self.has_own_entry(class, name);
         let def = self.classes.get_mut(&class).expect("define: unknown class");
         def.own_instance_methods.replace_method(name, class, method);
         if name.eq_ignore_ascii_case("UNINIT") {
             def.has_uninit = true;
         }
-        self.copy_instance_behaviour(class);
-        self.update_instance_sub_classes(class, name.eq_ignore_ascii_case("UNINIT"));
+        self.redefine(class, prior, kept, &[name], true);
     }
 
     /// [`ClassGraph::define`] of each of `methods` in turn, with one copy of the instance
@@ -790,6 +835,7 @@ impl ClassGraph {
     /// by one.
     pub fn define_all(&mut self, class: ObjRef, methods: &[(String, MethodId)]) {
         self.bump_epoch();
+        let prior = self.inputs.changed(class);
         let def = &self.classes[&class];
         let mut names: Vec<String> = methods
             .iter()
@@ -818,8 +864,8 @@ impl ClassGraph {
                 .replace_method(name, class, *method);
         }
         let rexx_defined = def.rexx_defined;
-        self.copy_instance_behaviour(class);
-        self.update_instance_sub_classes(class, false);
+        // Every name is new to the class, so the behaviours are rebuilt whole.
+        self.redefine(class, prior, false, &[], true);
         if !rexx_defined {
             // The separate calls retire the behaviour each of them replaces: the one
             // `class` had, then the one each call but the last built. The one call `i`
@@ -842,26 +888,28 @@ impl ClassGraph {
     /// a method: a `.nil` tombstone under `name`.
     pub fn hide(&mut self, class: ObjRef, name: &str) {
         self.bump_epoch();
+        let prior = self.inputs.changed(class);
+        let kept = self.has_own_entry(class, name);
         self.classes
             .get_mut(&class)
             .expect("hide: unknown class")
             .own_instance_methods
             .hide_method(name);
-        self.copy_instance_behaviour(class);
-        self.update_instance_sub_classes(class, name.eq_ignore_ascii_case("UNINIT"));
+        self.redefine(class, prior, kept, &[name], true);
     }
 
     /// `~define` with `.nil` as the method: [`ClassGraph::hide`] with the
     /// mark [`MethodSlot::Withdrawn`], which `Class~method` does not answer.
     pub fn withdraw(&mut self, class: ObjRef, name: &str) {
         self.bump_epoch();
+        let prior = self.inputs.changed(class);
+        let kept = self.has_own_entry(class, name);
         self.classes
             .get_mut(&class)
             .expect("withdraw: unknown class")
             .own_instance_methods
             .withdraw_method(name);
-        self.copy_instance_behaviour(class);
-        self.update_instance_sub_classes(class, name.eq_ignore_ascii_case("UNINIT"));
+        self.redefine(class, prior, kept, &[name], true);
     }
 
     /// `~delete`, and the bootstrap removal of a method: take `name` out of
@@ -871,21 +919,18 @@ impl ClassGraph {
     /// something was removed.
     pub fn delete(&mut self, class: ObjRef, name: &str) -> bool {
         self.bump_epoch();
+        let prior = self.inputs.changed(class);
         let removed = self
             .classes
             .get_mut(&class)
             .expect("delete: unknown class")
             .own_instance_methods
             .remove_method(name);
-        self.copy_instance_behaviour(class);
-        if removed {
-            self.update_instance_sub_classes(class, name.eq_ignore_ascii_case("UNINIT"));
-        } else {
-            // A copy would carry the old contents across; this one is built
-            // empty, so the class's own behaviour is rebuilt into it either way
-            // and only the walk over the subclasses is conditional.
-            self.rebuild_behaviour(class, Side::Instance);
-        }
+        // The behaviour is copied either way, and only the walk over the
+        // subclasses is conditional.
+        // A name taken out can leave the others listed in another order than
+        // a cascade without it makes, so the behaviours are rebuilt whole.
+        self.redefine(class, prior, false, &[name], removed);
         removed
     }
 
@@ -894,6 +939,10 @@ impl ClassGraph {
     /// cascades once for the whole table rather than once per name.
     pub fn define_methods(&mut self, class: ObjRef, methods: &[(String, Option<MethodId>)]) {
         self.bump_epoch();
+        let prior = self.inputs.changed(class);
+        let kept = methods
+            .iter()
+            .all(|(name, _)| self.has_own_entry(class, name));
         let def = self
             .classes
             .get_mut(&class)
@@ -913,11 +962,171 @@ impl ClassGraph {
                 None => def.own_instance_methods.hide_method(name),
             }
         }
-        let uninit = methods
-            .iter()
-            .any(|(name, _)| name.eq_ignore_ascii_case("UNINIT"));
+        let names: Vec<&str> = methods.iter().map(|(name, _)| name.as_str()).collect();
+        self.redefine(class, prior, kept, &names, true);
+    }
+
+    /// What follows a change to the entries under `names` in `class`'s own
+    /// instance dictionary, whose inputs had last changed at `prior`: the
+    /// copy of its instance behaviour, then, where `cascade`, the update of
+    /// every subclass's in place (only the instance side: the copy is
+    /// repointed, the old handle is never written again, and each subclass
+    /// keeps its handle), each followed by the uninit check where one of
+    /// `names` is `UNINIT`, the one change that can make it resolve; without
+    /// `cascade`, the class's own copy alone.
+    ///
+    /// A behaviour [`Self::built_from_current`] clears has only `names`
+    /// recomputed, which is all a rebuild would change of it, where `kept`
+    /// says each of `names` was in the class's own dictionary before the
+    /// change and still is: then every dictionary the cascade reads lists its
+    /// names in the order it did, a rebuild would enter the names in the
+    /// order it did, and the behaviour lists them, as `Class~methods` does,
+    /// in the order a rebuild would. Any other is rebuilt whole.
+    fn redefine(&mut self, class: ObjRef, prior: u64, kept: bool, names: &[&str], cascade: bool) {
+        if cascade {
+            self.inputs.touch(class);
+        }
+        // A table may name one method twice; each name is recomputed once.
+        let mut keys: Vec<String> = names.iter().map(|name| name.to_ascii_uppercase()).collect();
+        keys.sort_unstable();
+        keys.dedup();
+        let uninit = cascade && keys.iter().any(|key| key == "UNINIT");
+        let old = self.classes[&class].instance_behaviour;
+        let current = kept && self.built_from_current(old, class, class, prior);
         self.copy_instance_behaviour(class);
-        self.update_instance_sub_classes(class, uninit);
+        let fresh = self.classes[&class].instance_behaviour;
+        if current {
+            let dict = self.behaviours[old.index()].dict.clone();
+            self.behaviours[fresh.index()].dict = dict;
+            self.recompute_names(class, &keys);
+        } else {
+            self.rebuild_behaviour(class, Side::Instance);
+        }
+        if !cascade {
+            return;
+        }
+        if uninit {
+            self.check_uninit(class);
+        }
+        let subclasses = self.classes[&class].subclasses.clone();
+        for sub in subclasses {
+            self.redefine_below(sub, class, prior, kept, &keys, uninit);
+        }
+    }
+
+    /// Whether `class`'s own instance dictionary holds an entry under `name`,
+    /// tombstone included.
+    fn has_own_entry(&self, class: ObjRef, name: &str) -> bool {
+        self.classes[&class]
+            .own_instance_methods
+            .has_entry(&name.to_ascii_uppercase())
+    }
+
+    /// The update of a subclass's instance behaviour, and its subclasses',
+    /// for [`Self::redefine`], each behaviour recomputed under `keys` alone where
+    /// it was built from the inputs as they stood but for `changed`'s.
+    fn redefine_below(
+        &mut self,
+        class: ObjRef,
+        changed: ObjRef,
+        prior: u64,
+        kept: bool,
+        keys: &[String],
+        uninit: bool,
+    ) {
+        let handle = self.classes[&class].instance_behaviour;
+        if kept && self.built_from_current(handle, class, changed, prior) {
+            self.recompute_names(class, keys);
+        } else {
+            self.rebuild_behaviour(class, Side::Instance);
+        }
+        if uninit {
+            self.check_uninit(class);
+        }
+        let subclasses = self.classes[&class].subclasses.clone();
+        for sub in subclasses {
+            self.redefine_below(sub, changed, prior, kept, keys, uninit);
+        }
+    }
+
+    /// Whether `handle`, `class`'s instance behaviour, was built after every
+    /// input of its cascade last changed, taking `changed`'s last change to
+    /// be at `prior`: then it is the cascade of the inputs as they stood
+    /// before `changed`'s latest change.
+    fn built_from_current(
+        &self,
+        handle: BehaviourHandle,
+        class: ObjRef,
+        changed: ObjRef,
+        prior: u64,
+    ) -> bool {
+        let built = self.inputs.built(handle);
+        let mut pending = vec![class];
+        while let Some(at) = pending.pop() {
+            let last = if at == changed {
+                prior
+            } else {
+                self.inputs.changed(at)
+            };
+            if last > built {
+                return false;
+            }
+            pending.extend_from_slice(&self.classes[&at].superclasses);
+        }
+        true
+    }
+
+    /// The entries under `keys` of `class`'s instance behaviour made again
+    /// by the cascade, every other name left as it stands, as a rebuild of a
+    /// behaviour that differs from its inputs' cascade only under `keys`
+    /// would make it.
+    fn recompute_names(&mut self, class: ObjRef, keys: &[String]) {
+        let mut made = MethodDict::new();
+        Self::cascade_names(&self.classes, class, &mut made, keys);
+        let handle = self.classes[&class].instance_behaviour;
+        let behaviour = &mut self.behaviours[handle.index()];
+        for key in keys {
+            behaviour.dict.adopt_entry(&mut made, key);
+        }
+        behaviour.version += 1;
+        self.inputs.set_built(handle);
+        #[cfg(debug_assertions)]
+        {
+            let mut whole = MethodDict::new();
+            whole.reserve(self.rebuilt_names(class, Side::Instance));
+            Self::cascade_build(
+                &self.classes,
+                &self.behaviours,
+                class,
+                &mut whole,
+                Side::Instance,
+            );
+            assert!(
+                self.behaviours[handle.index()].dict.same_contents(&whole),
+                "the instance behaviour of {class:?} recomputed under {keys:?} is not its cascade"
+            );
+        }
+    }
+
+    /// [`Self::cascade_build`] of the instance side for the names in `keys`
+    /// alone: the same walk, folding in only those names, so that each
+    /// comes out as the whole cascade would make it.
+    fn cascade_names(
+        classes: &NameMap<ObjRef, ClassDef>,
+        class: ObjRef,
+        target: &mut MethodDict,
+        keys: &[String],
+    ) {
+        let def = &classes[&class];
+        for &sup in def.superclasses.iter().rev() {
+            if !target.has_scope(sup) {
+                Self::cascade_names(classes, sup, target, keys);
+            }
+        }
+        if !target.has_scope(class) {
+            target.merge_methods_named(&def.own_instance_methods, keys);
+            target.add_scope(class);
+        }
     }
 
     /// Point `class` at a fresh, empty [`BehaviourHandle`] -- the
@@ -1022,6 +1231,7 @@ impl ClassGraph {
             .unwrap()
             .superclasses
             .insert(at, mixin);
+        self.inputs.touch(class);
         self.classes.get_mut(&mixin).unwrap().subclasses.push(class);
         self.update_sub_classes(class);
         if self.uninit_reaches(mixin) {
@@ -1050,6 +1260,7 @@ impl ClassGraph {
             .unwrap()
             .superclasses
             .remove(at);
+        self.inputs.touch(class);
         // The subclass-list removal takes out the one entry it finds, and a
         // class reaches a mixin's subclass list once: a second `~inherit` of
         // the same mixin is the recursive refusal above.
@@ -1080,6 +1291,7 @@ impl ClassGraph {
             .expect("donate_instance_methods: unknown recipient class")
             .own_instance_methods
             .replace_methods_from(&donor_methods, donor, class);
+        self.inputs.touch(class);
         self.rebuild_behaviour(class, Side::Instance);
     }
 
@@ -1106,6 +1318,8 @@ impl ClassGraph {
             .own_instance_methods
             .merge_methods(&donor_methods);
         self.classes.get_mut(&donor).unwrap().own_instance_methods = donor_methods;
+        self.inputs.touch(donor);
+        self.inputs.touch(class);
         self.rebuild_behaviour(class, Side::Instance);
     }
 
@@ -1131,7 +1345,7 @@ impl ClassGraph {
 
     /// Every class registered as a direct subclass or `INHERIT` recipient of
     /// `class`, what a cascade (`update_sub_classes` /
-    /// `update_instance_sub_classes`) walks. Exposed for assertions that need
+    /// `redefine`) walks. Exposed for assertions that need
     /// to see the cascade's own wiring, not just its effect.
     pub fn subclasses(&self, class: ObjRef) -> &[ObjRef] {
         &self.classes[&class].subclasses
@@ -1294,6 +1508,7 @@ impl ClassGraph {
             .expect("repoint_instance_method: unknown class")
             .own_instance_methods
             .repoint(name, class, old, new);
+        self.inputs.touch(class);
         for behaviour in &mut self.behaviours {
             if behaviour.dict.repoint(name, class, old, new) {
                 behaviour.version += 1;

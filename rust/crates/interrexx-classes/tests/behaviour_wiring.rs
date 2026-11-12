@@ -1012,3 +1012,49 @@ fn freeing_retired_behaviours_answers_only_the_methods_nothing_else_names() {
     let unnamed = g.free_unheld_behaviours(std::iter::empty());
     assert_eq!(unnamed, vec![(class, MethodId(10))]);
 }
+
+/// A `define` reaches a subclass only through the subclass lists, so a class
+/// a failed `subclass` left out of its superclass's list misses it; its own
+/// next `define` builds it from every class it inherits from as they stand,
+/// not from the behaviour the missed change left it.
+#[test]
+fn a_define_on_a_class_no_update_reached_sees_its_superclasses_as_they_stand() {
+    let object = id(1);
+    let base = id(2);
+    let unlisted = id(3);
+    let mut g = ClassGraph::new();
+    g.define_class(object, None, ClassKind::Regular, object);
+    g.define_class(base, Some(object), ClassKind::Regular, object);
+    g.define_class(unlisted, Some(base), ClassKind::Regular, object);
+    g.unlist_subclass(unlisted);
+    g.define(base, "X", MethodId(1));
+    assert!(!g.has_method_at(g.instance_behaviour_handle(unlisted), "X"));
+    g.define(unlisted, "Y", MethodId(2));
+    let handle = g.instance_behaviour_handle(unlisted);
+    assert!(g.has_method_at(handle, "X") && g.has_method_at(handle, "Y"));
+}
+
+/// A `define` on a class with subclasses changes the name in each of their
+/// behaviours in place and leaves every other name as it was.
+#[test]
+fn a_define_reaches_every_subclass_under_its_one_name() {
+    let object = id(1);
+    let base = id(2);
+    let mid = id(3);
+    let leaf = id(4);
+    let mut g = ClassGraph::new();
+    g.define_class(object, None, ClassKind::Regular, object);
+    g.define(object, "X", MethodId(1));
+    g.define_class(base, Some(object), ClassKind::Regular, object);
+    g.define_class(mid, Some(base), ClassKind::Regular, object);
+    g.define_class(leaf, Some(mid), ClassKind::Regular, object);
+    g.define(mid, "Y", MethodId(2));
+    let before = g.instance_behaviour_handle(leaf);
+    g.define(base, "X", MethodId(3));
+    let handle = g.instance_behaviour_handle(leaf);
+    assert_eq!(handle, before, "a subclass keeps its handle");
+    assert_eq!(g.lookup_at(handle, "X"), Some((base, MethodId(3))));
+    assert_eq!(g.lookup_at(handle, "Y"), Some((mid, MethodId(2))));
+    g.delete(base, "X");
+    assert_eq!(g.lookup_at(handle, "X"), Some((object, MethodId(1))));
+}
