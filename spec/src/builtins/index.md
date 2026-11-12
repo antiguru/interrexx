@@ -1592,7 +1592,7 @@ call sysfiledelete f
   call lineout f, 'from method'
 ```
 
-```output defect=#122
+```output
 size after call 12
 ```
 
