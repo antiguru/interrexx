@@ -1149,6 +1149,7 @@ class SUPPLIER public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT an
   instance GETARRAYS private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance INDEX private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance INIT private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
+  instance INTERREXX_COLLECTED private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=interrexx_supplier_collected
   instance ITEM private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance NEXT private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance SUPPLIER private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
@@ -1157,6 +1158,7 @@ class SUPPLIERMIXIN public=0 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT an
   instance ALLINDEXES private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance ALLITEMS private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance GETARRAYS private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
+  instance INTERREXX_COLLECTED private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=interrexx_supplier_collected
   instance SUPPLIER private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
 class TABLE public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,MAPCOLLECTION annotations=- identity=1
   instance ALLINDEXES private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-

@@ -482,7 +482,7 @@ bad: say arg(1) '=>' condition('o')~code
   return
 ```
 
-```output defect=#201
+```output
 20,30 0
 20,30
 b,c 1
@@ -576,7 +576,7 @@ say v~sa v~si
   return self~item:super
 ```
 
-```output defect=#201
+```output
 2,3 0
 9 sends
 b,c 0
@@ -614,7 +614,7 @@ bad: say arg(1) '=>' condition('o')~code
   return
 ```
 
-```output defect=#201
+```output
 .stuck~new(.array~of(1), .array~of(2))~allItems => 93.937
 .odd~new(.array~of(1), .array~of(2))~allItems => 34.3
 .odd2~new(.array~of(1), .array~of(2))~allItems => 34.3
