@@ -79,17 +79,17 @@ jobs:
           retention-days: 1
           if-no-files-found: error
 
-  # Each shard runs every fourth test of the workspace's list, dealt round-robin. Tests that are
+  # Each shard runs every sixth test of the workspace's list, dealt round-robin. Tests that are
   # shards of one big test have consecutive names, so this spreads them over the shards, which a
   # hash of the name left to chance (all four sweep shards landed on one runner).
   shard:
-    name: nextest shard ${{ matrix.shard }}/4
+    name: nextest shard ${{ matrix.shard }}/6
     needs: [third-party, build]
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4]
+        shard: [1, 2, 3, 4, 5, 6]
     steps:
       - uses: actions/checkout@v7
         with:
@@ -126,7 +126,7 @@ jobs:
       - name: Cargo nextest
         run: >
           cargo nextest run --archive-file "$ARCHIVE" --extract-to . --extract-overwrite --workspace-remap .
-          --partition slice:${{ matrix.shard }}/4 --profile ci
+          --partition slice:${{ matrix.shard }}/6 --profile ci
 
   # The specification's examples on the oracle, from the same archive.
   spec-oracle:
