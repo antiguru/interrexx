@@ -78,6 +78,7 @@ fn main() -> ExitCode {
         dry_run,
         idle_grace: idle_grace(),
         close_inherited: true,
+        stop_on_signal: true,
         report: &say,
     };
     match serve(&options) {

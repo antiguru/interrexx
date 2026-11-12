@@ -12,6 +12,8 @@ description = "The API service of interrexx: external queues, registrations and 
 test-direct = []
 
 [dependencies]
+# `sigwait`, the one wait for a stopping signal that no safe crate offers (`src/signals.rs`).
+libc = "0.2.186"
 chrono = { version = "0.4.45", default-features = false, features = ["clock", "std"] }
 rustix = { version = "1.1.4", features = ["fs", "net", "process"] }
 # `classic_procedure`: `rxsubcom LOAD` loads a registration's library and finds its handler.

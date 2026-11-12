@@ -328,6 +328,66 @@ fn a_killed_daemon_gives_clean_errors_and_the_next_connect_restarts() {
     );
 }
 
+/// A daemon that is a child of this test, killed outright if the test ends without it having
+/// stopped.
+struct OwnDaemon(Child);
+
+impl Drop for OwnDaemon {
+    fn drop(&mut self) {
+        let _ = self.0.kill();
+        let _ = self.0.wait();
+    }
+}
+
+/// A daemon a client started can hold `SIGTERM` blocked or ignored, because both survive an
+/// `exec`: the signal then stopped nothing. It stops the daemon cleanly, with its socket removed,
+/// whichever of the two it was started with.
+#[test]
+fn sigterm_stops_a_daemon_that_started_with_it_blocked_or_ignored() {
+    for how in ["--block-signal=TERM", "--ignore-signal=TERM"] {
+        let service = ServiceDir::new();
+        let child = Command::new("env")
+            .args([how, DAEMON])
+            .env("REXX_API_DIR", &service.dir)
+            .env("REXX_API_IDLE_MS", "600000")
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()
+            .expect("env starts the daemon");
+        let pid = child.id();
+        let mut daemon = OwnDaemon(child);
+        let socket = socket_path(&service.dir, PROTOCOL_VERSION);
+        eventually("the daemon listens", || socket.exists());
+        let environment = std::fs::read(format!("/proc/{pid}/environ")).expect("its environment");
+        let own_dir = format!("REXX_API_DIR={}", service.dir.display());
+        assert!(
+            environment
+                .split(|byte| *byte == 0)
+                .any(|entry| entry == own_dir.as_bytes()),
+            "pid {pid} is not the daemon this test started"
+        );
+
+        let status = Command::new("kill")
+            .arg("-TERM")
+            .arg(pid.to_string())
+            .status()
+            .expect("kill runs");
+        assert!(status.success());
+
+        let mut ended = None;
+        eventually(&format!("the daemon stops ({how})"), || {
+            ended = daemon.0.try_wait().expect("the daemon can be waited for");
+            ended.is_some()
+        });
+        assert!(
+            ended.is_some_and(|status| status.success()),
+            "{how}: {ended:?}"
+        );
+        assert!(!socket.exists(), "{how}: the socket is removed");
+    }
+}
+
 /// Review Focus 4.
 #[test]
 fn a_stale_socket_does_not_block_the_next_start() {
@@ -390,6 +450,7 @@ fn serve_backlog(dir: PathBuf, version: u32, backlog: usize) -> std::thread::Joi
             dry_run: false,
             idle_grace: Duration::from_secs(60),
             close_inherited: false,
+            stop_on_signal: false,
             report: &|_| {},
         })
         .expect("the other version serves")
@@ -457,6 +518,7 @@ fn a_connection_from_another_user_is_dropped() {
             dry_run: false,
             idle_grace: Duration::from_secs(60),
             close_inherited: false,
+            stop_on_signal: false,
             report: &report,
         })
     });
