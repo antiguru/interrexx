@@ -256,12 +256,12 @@ holds is made in these steps. First <code>path</code> and <code>dir</code> each 
 slashes, but a lone slash keeps its slash: <code>a//b///</code> is <code>a//b</code>, <code>///</code> is <code>/</code>,
 and the empty string stays empty; slashes anywhere else are kept. Then, when
 <code>dir</code> is omitted or <code>.nil</code>, the path is the <code>path</code> that is left. Otherwise it
-is <code>dir</code>, a slash and <code>path</code>, where the slash is left out when <code>dir</code> ends in
-one or <code>path</code> begins with one, and where both supply one a single slash
-stands. A <code>dir</code> that is the empty string counts as a <code>dir</code>, so <code>a</code> with an
-empty <code>dir</code> is <code>/a</code>. A <code>dir</code> that is a <code>File</code> is read as its absolute path,
-and any other <code>dir</code> as a <a href="index.html#r-class.index.string">string argument</a>, with the
-error that a <code>path</code> has. The text of the path is kept as it was written, apart
+is <code>dir</code>, a slash and <code>path</code> without the slashes that it begins with, where
+the slash is left out when <code>dir</code> ends in one: <code>/x</code> and <code>//x</code> with the <code>dir</code>
+<code>d</code> are both <code>d/x</code>, and with the <code>dir</code> <code>/</code> both <code>/x</code>. A <code>dir</code> that is the
+empty string counts as a <code>dir</code>, so <code>a</code> with an empty <code>dir</code> is <code>/a</code>. A <code>dir</code>
+that is a <code>File</code> is read as its absolute path, and any other <code>dir</code> as a
+<a href="index.html#r-class.index.string">string argument</a>, with the error that a <code>path</code> has. The text of the path is kept as it was written, apart
 from these steps: <code>path</code> (<a href="#r-class.file.path">the path rule</a>) answers it, and
 a <code>File</code> made with a relative <code>path</code> or <code>dir</code> is relative to the current
 directory when it is made (<a href="#r-class.file.absolute">the absolute rule</a>). <code>init</code>
@@ -272,6 +272,7 @@ say .file~new('a', 'd')~path .file~new('a/', 'd//')~path,
     .file~new('/a', 'd')~path
 say .file~new('a', '/d/')~path .file~new('', 'd')~path .file~new('a', '')~path
 say .file~new('a', .nil)~path .file~new('a', )~path .file~new('/a', '/')~path
+say .file~new('//x', 'd')~path .file~new('//x', '/')~path .file~new('/', 'd')~path
 say .file~new('a', .file~new('/x/y'))~path
 say (.file~new('a', .file~new('q'))~path == directory() || '/q/a')
 say .file~new(12)~path .file~new('a b', 'c d')~path .file~new('a\b')~path
@@ -301,6 +302,7 @@ b6: say condition('o')~code
 d/a d/a d/a
 /d/a d/ /a
 a a /a
+d/x /x d/
 /x/y/a
 1
 12 c d/a b a\b
@@ -314,8 +316,8 @@ dir/second
 </code></pre>
 <div class="rule" id="r-class.file.new.sends"><a href="#r-class.file.new.sends">[class.file.new.sends]</a></div>
 <p><code>init</code> sends the receiver <code>separator</code> before it forms the path, and the answer
-is the separator that it removes at the end of <code>path</code> and <code>dir</code> and puts between
-them; it is sent once when <code>dir</code> is omitted or <code>.nil</code> and three times when a
+is the separator that it removes at the end of <code>path</code> and <code>dir</code> and at the start
+of <code>path</code>, and puts between them; it is sent once when <code>dir</code> is omitted or <code>.nil</code> and three times when a
 <code>dir</code> is given. A <code>File</code> given as <code>dir</code> is sent <code>isA</code> with the argument <code>.File</code>
 and, when that answers true, <code>absolutePath</code>, before the first <code>separator</code>; any
 other <code>dir</code> is read as a string. A <code>File</code> given as <code>path</code> is read by its
@@ -336,7 +338,7 @@ i = .logfile~new('b', 'dd')
 call show 'new path, string dir'
 x = f~absoluteFile
 call show 'absoluteFile'
-say .sharp~new('a##')~path .sharp~new('a/b', 'd#')~path
+say .sharp~new('a##')~path .sharp~new('a/b', 'd#')~path .sharp~new('##x', 'd')~path
 exit
 show:
   line = ''
@@ -370,7 +372,7 @@ new path, File dir:  isA File absolutePath separator
 new File path:  separator makeString
 new path, string dir:  separator
 absoluteFile:  separator
-a d#a/b
+a d#a/b d#x
 </code></pre>
 <div class="rule" id="r-class.file.string-args"><a href="#r-class.file.string-args">[class.file.string-args]</a></div>
 <p>A <code>path</code>, a <code>dir</code>, a <code>name</code>, a directory of a search path and the string that
@@ -412,7 +414,7 @@ show:
   .environment~log~append('makeString')
   return 'spec-file-str.tmp'
 </code></pre>
-<pre><code class="language-output defect=#164">new path           [request STRING makeString]
+<pre><code class="language-output">new path           [request STRING makeString]
 new dir            [request STRING makeString]
 searchPath name    [request STRING makeString]
 searchPath item    [request STRING makeString]
@@ -2264,7 +2266,7 @@ say 'sends' .environment~sent
   .environment~sent = .environment~sent + 1
   return 'zzz'
 </code></pre>
-<pre><code class="language-output defect=#140">p/q p/q/a
+<pre><code class="language-output">p/q p/q/a
 abc
 sends 0
 </code></pre>
@@ -2353,7 +2355,7 @@ bad: say arg(1) '=&gt;' condition('o')~code
   .local~log = .local~log 'ARG:ABSOLUTEPATH'
   return '/z'
 </code></pre>
-<pre><code class="language-output defect=#189">a~compareTo(.datetime~new(2017, 6, 30, 5, 6, 7, 8, 0)) =&gt; 88.914
+<pre><code class="language-output">a~compareTo(.datetime~new(2017, 6, 30, 5, 6, 7, 8, 0)) =&gt; 88.914
 a~compareTo(.timespan~fromHours(2)) =&gt; 88.914
 a~compareTo("/t/a") =&gt; 88.914
 a~compareTo(5) =&gt; 88.914
