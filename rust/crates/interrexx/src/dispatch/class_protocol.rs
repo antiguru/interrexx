@@ -264,6 +264,10 @@ pub(super) fn method_source_lines(
         Some(source)
     } else {
         let converted = interp.request_array_value(source)?;
+        // An answer that is an instance of an `Array` subclass is the array
+        // its slots are held in, and is sent nothing
+        // (r[class.package.loadpackage.sends]).
+        let converted = converted.map(|answer| array_store(interp, answer));
         // An instance's `REQUEST('ARRAY')` that answers an object that is
         // neither an array nor `.nil` is refused here, and no
         // `REQUEST('STRING')` follows it (Deviation 115).
@@ -310,6 +314,20 @@ pub(super) fn method_source_lines(
         SourceTaker::Package => Raised::argument_not_single_dimensional(position),
     }
     .into())
+}
+
+/// The array that holds the slots of `value`: the store behind an instance of
+/// an `Array` subclass, and `value` itself for anything else.
+fn array_store(interp: &mut Interp, value: ObjRef) -> ObjRef {
+    let plain_array = interp.object_model().array;
+    let is_array = interp
+        .class_of_value(value)
+        .is_some_and(|held| interp.classes().is_a(held, plain_array));
+    if is_array && interp.array_slots_of(value).is_none() {
+        super::array::collection_store(interp, value)
+    } else {
+        value
+    }
 }
 
 /// The line one item of a source array gives: a string is its own line, and
