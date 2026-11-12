@@ -227,7 +227,11 @@ impl Surface for Interp {
     }
 
     fn new_buffer(&mut self, length: usize) -> ObjRef {
-        self.native_state_instance("Buffer", NativeState::zeroed(length))
+        let buffer = self.native_state_instance("Buffer", NativeState::zeroed(length));
+        // The bytes count toward the next collection and are held until the
+        // buffer is swept; a native `Buffer` never grows.
+        self.charge_growth(length);
+        buffer
     }
 
     fn buffer_data(&mut self, buffer: ObjRef) -> Option<(POINTER, usize)> {
