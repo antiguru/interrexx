@@ -443,7 +443,8 @@ A message with more arguments than the method accepts raises a SYNTAX error
 whatever the values of the arguments are, and an omitted place before the
 last argument still counts. The subcode is `93.902` unless the page of the
 method gives another; some stream methods, such as `state` and `lines`,
-raise `88.922`.
+raise `88.922`. A message that has several faults is subject to [the general
+rule](r:cond.syntax.which) on which one is raised.
 
 ```rexx
 o = .object~new

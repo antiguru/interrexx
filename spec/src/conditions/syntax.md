@@ -30,7 +30,10 @@ before the point, such as the output of a function that the expression called,
 stay. The error can come from an expression, from a builtin function or a
 method, from a call that finds no routine, from the text of an INTERPRET
 instruction, from a trap that has no label, and from a RAISE instruction that
-names SYNTAX, as the last two examples show. A fault in the text of an
+names SYNTAX, as the last two examples show. What the clause has done and
+not done when it ends, and which error it raises when it has several faults,
+are the business of [the fault rule](r:cond.syntax.fault) and [the choice
+rule](r:cond.syntax.which). A fault in the text of an
 INTERPRET is found when that text is read as a whole, as [the whole-text
 rule](r:instr.interpret.whole) says, so none of its clauses has run then. An
 error found while the program itself is read is not a condition, as [the
@@ -124,6 +127,65 @@ say o~code o~rc
 
 ```output
 93.900 93
+```
+
+r[cond.syntax.fault]
+A clause that has a fault raises SYNTAX and does not complete, and the error
+belongs to that clause. The effects of the clauses before it, and of the calls
+and messages that the clause made before it reached the fault, have happened,
+in source order. A fault is not removed by leaving its value unused: an
+expression that would raise raises even when nothing reads its value, and a
+message that would raise raises even when its answer is dropped.
+
+```rexx
+signal on syntax name s
+x = 'before'
+y = (1 + 'a') * 0
+say 'not reached'
+s: say 'x' x 'y' y condition('c') condition('o')~code sigl
+```
+
+```output
+x before y Y SYNTAX 41.1 3
+```
+
+r[cond.syntax.which]
+When a clause has more than one fault, which of them raises SYNTAX is not
+specified, and neither is the order in which an implementation performs the
+checks that have no effect of their own within the clause: the conversion of
+operands, arithmetic, and the checks of the arguments of a builtin function or
+a method. A program that depends on which of several faults of one clause is
+reported, or on which check ran first, depends on something this book leaves
+open. The effects that [the fault rule](r:cond.syntax.fault) puts before the
+fault still hold whichever fault is raised, and the examples of this book give
+a clause one fault wherever they show an error number.
+
+```rexx
+signal on syntax name s
+seen = 'earlier clause'
+say left('abc', -1) + 'x'
+say 'not reached'
+s: say 'caught SYNTAX:' (condition('c') == 'SYNTAX'),
+       'line' sigl',' seen
+```
+
+```output
+caught SYNTAX: 1 line 3, earlier clause
+```
+
+r[cond.syntax.single]
+When a clause has exactly one fault, the error number, subcode and message
+that this book names for the fault are the ones raised, as [the code
+rule](r:cond.syntax.code) says of what a trap sees.
+
+```rexx
+signal on syntax name s
+say left('abc', -1)
+s: say condition('o')~code
+```
+
+```output
+93.923
 ```
 
 ## What identifies the error

@@ -447,7 +447,8 @@ the arguments from left to right, and the first failure is raised. Only when
 every argument passes them do the range checks of
 [positions](r:conv.position.check) and [lengths](r:conv.length.check) run,
 again from left to right. A builtin page that has checks of its own states
-where they fall in this order.
+where they fall in this order. What a clause with several faults is
+guaranteed to raise is the business of [the general rule](r:cond.syntax.which).
 
 ```rexx
 signal on syntax name a
