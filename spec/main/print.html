@@ -113936,6 +113936,7 @@ say datatype(.array~of(1, 2), 'S') datatype(.array~of(1, 2), 'A')
 <pre><code>DATE([option [, [string] [, [informat] [, [osep] [, isep]]]]])
 </code></pre>
 <p class="references">ANSI: 9.8.1; rexxref: Functions &gt; Built-in Functions &gt; DATE</p>
+<p class="deviations">Deviations: D165</p>
 <p>DATE answers a calendar date. With no <code>string</code> it answers the current local
 date; with a <code>string</code> it reads a date written in one format and writes it in
 another. The dates are those of the Gregorian calendar, extended back to
@@ -114514,6 +114515,26 @@ j: say condition('o')~code
 I, L and T. The reference manual does not give the order of the checks; this
 rule matches ooRexx.</p>
 </blockquote>
+<h2 id="deviations-106"><a class="header" href="#deviations-106">Deviations</a></h2>
+<div class="rule" id="r-bif.date.deviation.165"><a href="builtins/date.html#r-bif.date.deviation.165">[bif.date.deviation.165]</a></div>
+<p>A 0 byte as the first character of <code>option</code> or of <code>informat</code> is a character
+that is no letter, like any other: it names nothing, and it is refused as the
+<a href="builtins/index.html#r-bif.index.dt.letter">letter rule</a> says. So an <code>option</code> of a 0 byte with an
+<code>osep</code> is a format that does not apply the separator (<code>SYNTAX 40.44</code>), as
+<code>Q</code> is, and an <code>informat</code> of a 0 byte with an <code>isep</code> reaches the check of the
+letter of <code>informat</code> (<code>SYNTAX 40.904</code>), as <code>Q</code> does. ooRexx finds a 0 byte in
+every set of letters, as a search of a C string does, so it answers <code>40.904</code>
+for the first call below and <code>40.44</code> for the second.</p>
+<pre><code class="language-rexx">signal on syntax name a
+say date('00'x, , , '-')
+a: say condition('o')~code
+signal on syntax name b
+say date(, '20070922', '00'x, , '-')
+b: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">40.44
+40.904
+</code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="delstr"><a class="header" href="#delstr">DELSTR</a></h1>
 <pre><code>DELSTR(string [, n [, length]])
 </code></pre>
@@ -114619,7 +114640,7 @@ copies every byte it keeps unchanged: whitespace, control characters and
 </code></pre>
 <pre><code class="language-output">610962 C3
 </code></pre>
-<h2 id="deviations-106"><a class="header" href="#deviations-106">Deviations</a></h2>
+<h2 id="deviations-107"><a class="header" href="#deviations-107">Deviations</a></h2>
 <div class="rule" id="r-bif.delstr.deviation.4"><a href="builtins/delstr.html#r-bif.delstr.deviation.4">[bif.delstr.deviation.4]</a></div>
 <p>interrexx does not specify whether the answer of DELSTR is the same object as
 another string of equal value: as <code>string</code> itself, when the call deletes
@@ -114758,7 +114779,7 @@ the same as the number of them, however large it is.</p>
 </code></pre>
 <pre><code class="language-output">[a d] [a ] [a ]
 </code></pre>
-<h2 id="deviations-107"><a class="header" href="#deviations-107">Deviations</a></h2>
+<h2 id="deviations-108"><a class="header" href="#deviations-108">Deviations</a></h2>
 <div class="rule" id="r-bif.delword.deviation.4"><a href="builtins/delword.html#r-bif.delword.deviation.4">[bif.delword.deviation.4]</a></div>
 <p>interrexx does not specify whether the answer of DELWORD is the same object as
 another string of equal value: as <code>string</code> itself, when the call deletes
@@ -116040,7 +116061,7 @@ part does not make the number scientific: <code>format('99999.5', , 0, , 5)</cod
 <code>100000</code>. And it tests the zeros after the point against a fixed limit, as
 the <a href="builtins/index.html#r-bif.index.num.sci">note on the writing rule</a> says.</p>
 </blockquote>
-<h2 id="deviations-108"><a class="header" href="#deviations-108">Deviations</a></h2>
+<h2 id="deviations-109"><a class="header" href="#deviations-109">Deviations</a></h2>
 <div class="rule" id="r-bif.format.deviation.4"><a href="builtins/format.html#r-bif.format.deviation.4">[bif.format.deviation.4]</a></div>
 <p>interrexx does not specify whether the answer of FORMAT is the same object as
 another string of equal value: as <code>number</code> itself, when the call leaves it
@@ -116489,7 +116510,7 @@ when <code>n</code> is at least <code>LENGTH(target) + 1</code>; read literally 
 from inside the builtin where this page, like ooRexx, pads (see the note on
 <a href="builtins/substr.html">SUBSTR</a>).</p>
 </blockquote>
-<h2 id="deviations-109"><a class="header" href="#deviations-109">Deviations</a></h2>
+<h2 id="deviations-110"><a class="header" href="#deviations-110">Deviations</a></h2>
 <div class="rule" id="r-bif.insert.deviation.4"><a href="builtins/insert.html#r-bif.insert.deviation.4">[bif.insert.deviation.4]</a></div>
 <p>interrexx does not specify whether the answer of INSERT is the same object as
 another string of equal value: as <code>target</code> itself, when the call returns all
@@ -116796,7 +116817,7 @@ a: say condition('o')~code
 <p><strong>Note.</strong> Whether, when and with which code LEFT fails for a <code>length</code>
 whose result cannot be held in memory is not specified.</p>
 </blockquote>
-<h2 id="deviations-110"><a class="header" href="#deviations-110">Deviations</a></h2>
+<h2 id="deviations-111"><a class="header" href="#deviations-111">Deviations</a></h2>
 <div class="rule" id="r-bif.left.deviation.4"><a href="builtins/left.html#r-bif.left.deviation.4">[bif.left.deviation.4]</a></div>
 <p>interrexx does not specify whether the answer of LEFT is the same object as
 another string of equal value: as <code>string</code> itself, when the call returns all
@@ -117396,7 +117417,7 @@ c
 0
 93.958
 </code></pre>
-<h2 id="deviations-111"><a class="header" href="#deviations-111">Deviations</a></h2>
+<h2 id="deviations-112"><a class="header" href="#deviations-112">Deviations</a></h2>
 <div class="rule" id="r-bif.lineout.deviation.46"><a href="builtins/lineout.html#r-bif.lineout.deviation.46">[bif.lineout.deviation.46]</a></div>
 <p>On a stream opened <code>BINARY RECLENGTH n</code>, a LINEOUT that only positions, or
 that closes the stream, clears no record, and only a LINEOUT with a
@@ -117597,7 +117618,7 @@ return
 0 3
 0 3
 </code></pre>
-<h2 id="deviations-112"><a class="header" href="#deviations-112">Deviations</a></h2>
+<h2 id="deviations-113"><a class="header" href="#deviations-113">Deviations</a></h2>
 <div class="rule" id="r-bif.lines.deviation.54"><a href="builtins/lines.html#r-bif.lines.deviation.54">[bif.lines.deviation.54]</a></div>
 <p>LINES of the standard input, or of any other transient stream, answers
 whether input waits to be read, 0 for none and otherwise a positive number
@@ -117737,7 +117758,7 @@ for every <code>n</code> that passes its check.</p>
 </code></pre>
 <pre><code class="language-output">[] []
 </code></pre>
-<h2 id="deviations-113"><a class="header" href="#deviations-113">Deviations</a></h2>
+<h2 id="deviations-114"><a class="header" href="#deviations-114">Deviations</a></h2>
 <blockquote>
 <p><strong>Note.</strong> An argument whose <code>STRING</code> method answers an object that is not a
 string falls under <a href="builtins/../conventions.html#r-conv.string.deviation.30">Deviation 30</a>, as it does
@@ -117860,7 +117881,7 @@ say max(1.04, 1.01) max(1.01, 1.04)
 1.09 1.09
 1.04 1.04
 </code></pre>
-<h2 id="deviations-114"><a class="header" href="#deviations-114">Deviations</a></h2>
+<h2 id="deviations-115"><a class="header" href="#deviations-115">Deviations</a></h2>
 <div class="rule" id="r-bif.max.deviation.44"><a href="builtins/max.html#r-bif.max.deviation.44">[bif.max.deviation.44]</a></div>
 <p>MAX rounds a whole number to NUMERIC DIGITS digits as it does any other
 number, in the function form and in the method form, with or without
@@ -118001,7 +118022,7 @@ say min(1.04, 1.01) min(1.01, 1.04)
 1.04 1.04
 1.01 1.01
 </code></pre>
-<h2 id="deviations-115"><a class="header" href="#deviations-115">Deviations</a></h2>
+<h2 id="deviations-116"><a class="header" href="#deviations-116">Deviations</a></h2>
 <div class="rule" id="r-bif.min.deviation.44"><a href="builtins/min.html#r-bif.min.deviation.44">[bif.min.deviation.44]</a></div>
 <p>MIN rounds a whole number to NUMERIC DIGITS digits as it does any other
 number, in the function form and in the method form, with or without
@@ -118220,7 +118241,7 @@ negative when <code>n + length</code> is at least <code>LENGTH(target) + 2</code
 it would raise from inside the builtin where this page, like ooRexx, pads
 (see the note on <a href="builtins/substr.html">SUBSTR</a>).</p>
 </blockquote>
-<h2 id="deviations-116"><a class="header" href="#deviations-116">Deviations</a></h2>
+<h2 id="deviations-117"><a class="header" href="#deviations-117">Deviations</a></h2>
 <div class="rule" id="r-bif.overlay.deviation.4"><a href="builtins/overlay.html#r-bif.overlay.deviation.4">[bif.overlay.deviation.4]</a></div>
 <p>interrexx does not specify whether the answer of OVERLAY is the same object as
 another string of equal value: as <code>target</code> itself, when the call returns all
@@ -118522,7 +118543,7 @@ say (qualify(' ') == p || ' ') (qualify('  ') == p || '  ')
 <pre><code class="language-output">[] []
 1 1
 </code></pre>
-<h2 id="deviations-117"><a class="header" href="#deviations-117">Deviations</a></h2>
+<h2 id="deviations-118"><a class="header" href="#deviations-118">Deviations</a></h2>
 <div class="rule" id="r-bif.qualify.deviation.34"><a href="builtins/qualify.html#r-bif.qualify.deviation.34">[bif.qualify.deviation.34]</a></div>
 <p>In every name interrexx qualifies, each <code>..</code> removes exactly the one component
 before it, however the component was written. ooRexx removes none after a
@@ -119015,7 +119036,7 @@ say reverse(1/3)
 putting each character in front of those before it, which gives the string
 above.</p>
 </blockquote>
-<h2 id="deviations-118"><a class="header" href="#deviations-118">Deviations</a></h2>
+<h2 id="deviations-119"><a class="header" href="#deviations-119">Deviations</a></h2>
 <div class="rule" id="r-bif.reverse.deviation.4"><a href="builtins/reverse.html#r-bif.reverse.deviation.4">[bif.reverse.deviation.4]</a></div>
 <p>interrexx does not specify whether the answer of REVERSE is the same object as
 another string of equal value: as <code>string</code> itself, when the reversal leaves it
@@ -119148,7 +119169,7 @@ a: say condition('o')~code
 <p><strong>Note.</strong> Whether, when and with which code RIGHT fails for a <code>length</code>
 whose result cannot be held in memory is not specified.</p>
 </blockquote>
-<h2 id="deviations-119"><a class="header" href="#deviations-119">Deviations</a></h2>
+<h2 id="deviations-120"><a class="header" href="#deviations-120">Deviations</a></h2>
 <div class="rule" id="r-bif.right.deviation.4"><a href="builtins/right.html#r-bif.right.deviation.4">[bif.right.deviation.4]</a></div>
 <p>interrexx does not specify whether the answer of RIGHT is the same object as
 another string of equal value: as <code>string</code> itself, when the call returns all
@@ -120419,7 +120440,7 @@ specify. The ANSI draft (9.3.19) defines SPACE through <code>COPIES</code> and
 <code>SUBWORD</code>, with the same answers, and checks <code>n</code> for a value below 0 under
 error 40.13, where ooRexx raises 93.923.</p>
 </blockquote>
-<h2 id="deviations-120"><a class="header" href="#deviations-120">Deviations</a></h2>
+<h2 id="deviations-121"><a class="header" href="#deviations-121">Deviations</a></h2>
 <blockquote>
 <p><strong>Note.</strong> An argument whose <code>STRING</code> method answers an object that is not a
 string falls under <a href="builtins/../conventions.html#r-conv.string.deviation.30">Deviation 30</a>, as it does
@@ -121159,7 +121180,7 @@ a: say condition('o')~code
 <pre><code class="language-output">READY READY READY READY:
 93.958
 </code></pre>
-<h2 id="deviations-121"><a class="header" href="#deviations-121">Deviations</a></h2>
+<h2 id="deviations-122"><a class="header" href="#deviations-122">Deviations</a></h2>
 <div class="rule" id="r-bif.stream.deviation.34"><a href="builtins/stream.html#r-bif.stream.deviation.34">[bif.stream.deviation.34]</a></div>
 <p>In a stream's name, as in every name interrexx qualifies, each <code>..</code> removes
 exactly the one component before it, however the component was written, so
@@ -121593,7 +121614,7 @@ the two are independent of each other.</p>
 </code></pre>
 <pre><code class="language-output">[a  ] [a] [a]
 </code></pre>
-<h2 id="deviations-122"><a class="header" href="#deviations-122">Deviations</a></h2>
+<h2 id="deviations-123"><a class="header" href="#deviations-123">Deviations</a></h2>
 <blockquote>
 <p><strong>Note.</strong> An argument whose <code>STRING</code> method answers an object that is not a
 string falls under <a href="builtins/../conventions.html#r-conv.string.deviation.30">Deviation 30</a>, as it does
@@ -121720,7 +121741,7 @@ and copies every byte unchanged: whitespace, control characters and
 </code></pre>
 <pre><code class="language-output">00096200
 </code></pre>
-<h2 id="deviations-123"><a class="header" href="#deviations-123">Deviations</a></h2>
+<h2 id="deviations-124"><a class="header" href="#deviations-124">Deviations</a></h2>
 <div class="rule" id="r-bif.substr.deviation.4"><a href="builtins/substr.html#r-bif.substr.deviation.4">[bif.substr.deviation.4]</a></div>
 <p>interrexx does not specify whether the answer of SUBSTR is the same object as
 another string of equal value: as <code>string</code> itself, when the call returns all
@@ -121831,7 +121852,7 @@ of the last selected word.</p>
 </code></pre>
 <pre><code class="language-output">610A62 610D
 </code></pre>
-<h2 id="deviations-124"><a class="header" href="#deviations-124">Deviations</a></h2>
+<h2 id="deviations-125"><a class="header" href="#deviations-125">Deviations</a></h2>
 <div class="rule" id="r-bif.subword.deviation.4"><a href="builtins/subword.html#r-bif.subword.deviation.4">[bif.subword.deviation.4]</a></div>
 <p>interrexx does not specify whether the answer of SUBWORD is the same object as
 another string of equal value: as <code>string</code> itself, when the call returns all
@@ -122065,6 +122086,7 @@ LIT
 <pre><code>TIME([option [, [string] [, informat]]])
 </code></pre>
 <p class="references">ANSI: 9.8.5; rexxref: Functions &gt; Built-in Functions &gt; TIME</p>
+<p class="deviations">Deviations: D165</p>
 <p>TIME answers a time of day. With no <code>string</code> it answers the current local time,
 or the reading of an elapsed-time clock that the program can start and reset;
 with a <code>string</code> it reads a time written in one format and writes it in
@@ -122610,6 +122632,24 @@ f: say condition('o')~code
 40.19
 40.904
 </code></pre>
+<h2 id="deviations-126"><a class="header" href="#deviations-126">Deviations</a></h2>
+<div class="rule" id="r-bif.time.deviation.165"><a href="builtins/time.html#r-bif.time.deviation.165">[bif.time.deviation.165]</a></div>
+<p>A 0 byte as the first character of <code>option</code> or of <code>informat</code> is a character
+that is no letter, like any other: it names nothing, and it is refused as the
+<a href="builtins/index.html#r-bif.index.dt.letter">letter rule</a> says, with <code>SYNTAX 40.904</code>. ooRexx tests
+the letter against the set of letters as a search of a C string does, which
+finds a 0 byte in every set; its answers to these calls are the same
+as interrexx's, and <a href="builtins/date.html#r-bif.date.deviation.165">DATE</a> is where the two differ.</p>
+<pre><code class="language-rexx">signal on syntax name a
+say time('00'x)
+a: say condition('o')~code
+signal on syntax name b
+say time('N', '13:05:09', '00'x)
+b: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">40.904
+40.904
+</code></pre>
 <blockquote>
 <p><strong>Note.</strong> The ANSI draft (9.8.5) has neither the options F and T nor the
 informats F, O and T, and it raises <code>SYNTAX 40.29</code> for O as well as E and R
@@ -123027,7 +123067,7 @@ any other character, in <code>string</code>, in both tables and as <code>pad</co
 </code></pre>
 <pre><code class="language-output">610920 6100
 </code></pre>
-<h2 id="deviations-125"><a class="header" href="#deviations-125">Deviations</a></h2>
+<h2 id="deviations-127"><a class="header" href="#deviations-127">Deviations</a></h2>
 <div class="rule" id="r-bif.translate.deviation.4"><a href="builtins/translate.html#r-bif.translate.deviation.4">[bif.translate.deviation.4]</a></div>
 <p>interrexx does not specify whether the answer of TRANSLATE is the same object
 as another string of equal value: as <code>string</code> itself, when no character of it
@@ -123171,7 +123211,7 @@ a whole number, where ooRexx, which this book follows, raises 40.12 for <code>n<
 first (for a negative <code>n</code> both check <code>number</code> first). It raises
 <code>SYNTAX 40.13</code> for a negative <code>n</code>, where ooRexx raises 93.906.</p>
 </blockquote>
-<h2 id="deviations-126"><a class="header" href="#deviations-126">Deviations</a></h2>
+<h2 id="deviations-128"><a class="header" href="#deviations-128">Deviations</a></h2>
 <div class="rule" id="r-bif.trunc.deviation.4"><a href="builtins/trunc.html#r-bif.trunc.deviation.4">[bif.trunc.deviation.4]</a></div>
 <p>interrexx does not specify whether the answer of TRUNC is the same object as
 another string of equal value: as <code>number</code> itself, when the call leaves it
@@ -123294,7 +123334,7 @@ for every <code>n</code> that passes its check.</p>
 </code></pre>
 <pre><code class="language-output">[] []
 </code></pre>
-<h2 id="deviations-127"><a class="header" href="#deviations-127">Deviations</a></h2>
+<h2 id="deviations-129"><a class="header" href="#deviations-129">Deviations</a></h2>
 <blockquote>
 <p><strong>Note.</strong> An argument whose <code>STRING</code> method answers an object that is not a
 string falls under <a href="builtins/../conventions.html#r-conv.string.deviation.30">Deviation 30</a>, as it does
@@ -124124,7 +124164,7 @@ end of the word as anywhere else in it.</p>
 </code></pre>
 <pre><code class="language-output">780D 710A72
 </code></pre>
-<h2 id="deviations-128"><a class="header" href="#deviations-128">Deviations</a></h2>
+<h2 id="deviations-130"><a class="header" href="#deviations-130">Deviations</a></h2>
 <div class="rule" id="r-bif.word.deviation.4"><a href="builtins/word.html#r-bif.word.deviation.4">[bif.word.deviation.4]</a></div>
 <p>interrexx does not specify whether the answer of WORD is the same object as
 another string of equal value: as <code>string</code> itself, when the call returns all
@@ -124562,7 +124602,7 @@ letters in capitals and its whitespace removed.</p>
 </code></pre>
 <pre><code class="language-output">A5F 00FF []
 </code></pre>
-<h2 id="deviations-129"><a class="header" href="#deviations-129">Deviations</a></h2>
+<h2 id="deviations-131"><a class="header" href="#deviations-131">Deviations</a></h2>
 <div class="rule" id="r-bif.x2b.deviation.4"><a href="builtins/x2b.html#r-bif.x2b.deviation.4">[bif.x2b.deviation.4]</a></div>
 <p>interrexx does not specify whether the answer of X2B is the same object as
 another string of equal value, as
@@ -124668,7 +124708,7 @@ When the number is odd, it has a <code>0</code> on its left as well.</p>
 </code></pre>
 <pre><code class="language-output">A5F0 00FF 0A5F []
 </code></pre>
-<h2 id="deviations-130"><a class="header" href="#deviations-130">Deviations</a></h2>
+<h2 id="deviations-132"><a class="header" href="#deviations-132">Deviations</a></h2>
 <div class="rule" id="r-bif.x2c.deviation.4"><a href="builtins/x2c.html#r-bif.x2c.deviation.4">[bif.x2c.deviation.4]</a></div>
 <p>interrexx does not specify whether the answer of X2C is the same object as
 another string of equal value, as
@@ -124884,7 +124924,7 @@ its leading zeros and its whitespace removed, its letters in capitals, and
 </code></pre>
 <pre><code class="language-output">FF AB12 0 0
 </code></pre>
-<h2 id="deviations-131"><a class="header" href="#deviations-131">Deviations</a></h2>
+<h2 id="deviations-133"><a class="header" href="#deviations-133">Deviations</a></h2>
 <div class="rule" id="r-bif.x2d.deviation.4"><a href="builtins/x2d.html#r-bif.x2d.deviation.4">[bif.x2d.deviation.4]</a></div>
 <p>interrexx does not specify whether the answer of X2D is the same object as
 another string of equal value, as
@@ -125128,7 +125168,7 @@ or highest character. It has no class names and no further groups; those are
 ooRexx's, and so is <code>SYNTAX 40.28</code> for an argument that starts a group and
 is neither one character long nor a class name.</p>
 </blockquote>
-<h2 id="deviations-132"><a class="header" href="#deviations-132">Deviations</a></h2>
+<h2 id="deviations-134"><a class="header" href="#deviations-134">Deviations</a></h2>
 <div class="rule" id="r-bif.xrange.deviation.4"><a href="builtins/xrange.html#r-bif.xrange.deviation.4">[bif.xrange.deviation.4]</a></div>
 <p>interrexx does not specify whether the answer of XRANGE is the same object as
 another string of equal value, such as the literal <code>'a'</code> beside the answer of
@@ -125141,7 +125181,7 @@ one.</p>
 </code></pre>
 <pre><code class="language-output">1 1 1
 </code></pre>
-<div style="break-before: page; page-break-before: always;"></div><h1 id="deviations-133"><a class="header" href="#deviations-133">Deviations</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="deviations-135"><a class="header" href="#deviations-135">Deviations</a></h1>
 <p>A Deviation is a declared difference between interrexx and ooRexx. Every
 example on which the two answer differently belongs to one; any other
 difference is a defect. Each entry says what interrexx does and how ooRexx
@@ -126072,6 +126112,14 @@ library's raw error number of the process, which any later clause on any
 activity can overwrite, even after a successful call: the number a program
 reads in a later clause, or while another activity runs, is whatever call set
 it last.</p>
+<h2 id="165-a-0-byte-as-the-letter-of-a-date-option-or-informat"><a class="header" href="#165-a-0-byte-as-the-letter-of-a-date-option-or-informat">165. A 0 byte as the letter of a DATE option or informat</a></h2>
+<p>A 0 byte as the first character of the <code>option</code> or the <code>informat</code> of <code>DATE</code>
+or <code>TIME</code> is a character that is no letter, and is refused like any other: the
+<code>option</code> of <code>DATE</code> with an <code>osep</code> raises <code>SYNTAX 40.44</code> as <code>Q</code> does, and the
+<code>informat</code> with an <code>isep</code> raises <code>SYNTAX 40.904</code> as <code>Q</code> does. ooRexx tests the
+letter against the set of letters as a search of a C string does, which finds
+a 0 byte in every set: a 0 byte <code>option</code> with an <code>osep</code> raises <code>SYNTAX 40.904</code>
+and a 0 byte <code>informat</code> with an <code>isep</code> raises <code>SYNTAX 40.44</code>.</p>
 
                     </main>
 

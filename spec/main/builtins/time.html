@@ -177,6 +177,7 @@
 <pre><code>TIME([option [, [string] [, informat]]])
 </code></pre>
 <p class="references">ANSI: 9.8.5; rexxref: Functions &gt; Built-in Functions &gt; TIME</p>
+<p class="deviations">Deviations: D165</p>
 <p>TIME answers a time of day. With no <code>string</code> it answers the current local time,
 or the reading of an elapsed-time clock that the program can start and reset;
 with a <code>string</code> it reads a time written in one format and writes it in
@@ -720,6 +721,24 @@ f: say condition('o')~code
 40.29
 40.904
 40.19
+40.904
+</code></pre>
+<h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
+<div class="rule" id="r-bif.time.deviation.165"><a href="#r-bif.time.deviation.165">[bif.time.deviation.165]</a></div>
+<p>A 0 byte as the first character of <code>option</code> or of <code>informat</code> is a character
+that is no letter, like any other: it names nothing, and it is refused as the
+<a href="index.html#r-bif.index.dt.letter">letter rule</a> says, with <code>SYNTAX 40.904</code>. ooRexx tests
+the letter against the set of letters as a search of a C string does, which
+finds a 0 byte in every set; its answers to these calls are the same
+as interrexx's, and <a href="date.html#r-bif.date.deviation.165">DATE</a> is where the two differ.</p>
+<pre><code class="language-rexx">signal on syntax name a
+say time('00'x)
+a: say condition('o')~code
+signal on syntax name b
+say time('N', '13:05:09', '00'x)
+b: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">40.904
 40.904
 </code></pre>
 <blockquote>

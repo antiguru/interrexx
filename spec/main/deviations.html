@@ -1104,6 +1104,14 @@ library's raw error number of the process, which any later clause on any
 activity can overwrite, even after a successful call: the number a program
 reads in a later clause, or while another activity runs, is whatever call set
 it last.</p>
+<h2 id="165-a-0-byte-as-the-letter-of-a-date-option-or-informat"><a class="header" href="#165-a-0-byte-as-the-letter-of-a-date-option-or-informat">165. A 0 byte as the letter of a DATE option or informat</a></h2>
+<p>A 0 byte as the first character of the <code>option</code> or the <code>informat</code> of <code>DATE</code>
+or <code>TIME</code> is a character that is no letter, and is refused like any other: the
+<code>option</code> of <code>DATE</code> with an <code>osep</code> raises <code>SYNTAX 40.44</code> as <code>Q</code> does, and the
+<code>informat</code> with an <code>isep</code> raises <code>SYNTAX 40.904</code> as <code>Q</code> does. ooRexx tests the
+letter against the set of letters as a search of a C string does, which finds
+a 0 byte in every set: a 0 byte <code>option</code> with an <code>osep</code> raises <code>SYNTAX 40.904</code>
+and a 0 byte <code>informat</code> with an <code>isep</code> raises <code>SYNTAX 40.44</code>.</p>
 
                     </main>
 

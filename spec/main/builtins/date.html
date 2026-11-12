@@ -177,6 +177,7 @@
 <pre><code>DATE([option [, [string] [, [informat] [, [osep] [, isep]]]]])
 </code></pre>
 <p class="references">ANSI: 9.8.1; rexxref: Functions &gt; Built-in Functions &gt; DATE</p>
+<p class="deviations">Deviations: D165</p>
 <p>DATE answers a calendar date. With no <code>string</code> it answers the current local
 date; with a <code>string</code> it reads a date written in one format and writes it in
 another. The dates are those of the Gregorian calendar, extended back to
@@ -755,6 +756,26 @@ j: say condition('o')~code
 I, L and T. The reference manual does not give the order of the checks; this
 rule matches ooRexx.</p>
 </blockquote>
+<h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
+<div class="rule" id="r-bif.date.deviation.165"><a href="#r-bif.date.deviation.165">[bif.date.deviation.165]</a></div>
+<p>A 0 byte as the first character of <code>option</code> or of <code>informat</code> is a character
+that is no letter, like any other: it names nothing, and it is refused as the
+<a href="index.html#r-bif.index.dt.letter">letter rule</a> says. So an <code>option</code> of a 0 byte with an
+<code>osep</code> is a format that does not apply the separator (<code>SYNTAX 40.44</code>), as
+<code>Q</code> is, and an <code>informat</code> of a 0 byte with an <code>isep</code> reaches the check of the
+letter of <code>informat</code> (<code>SYNTAX 40.904</code>), as <code>Q</code> does. ooRexx finds a 0 byte in
+every set of letters, as a search of a C string does, so it answers <code>40.904</code>
+for the first call below and <code>40.44</code> for the second.</p>
+<pre><code class="language-rexx">signal on syntax name a
+say date('00'x, , , '-')
+a: say condition('o')~code
+signal on syntax name b
+say date(, '20070922', '00'x, , '-')
+b: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">40.44
+40.904
+</code></pre>
 
                     </main>
 
