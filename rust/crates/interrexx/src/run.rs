@@ -2666,9 +2666,12 @@ impl Interp {
         }
         // **A `DO`/`LOOP`'s step is not a clause the oracle has, so it owes no
         // boundary** -- `Interp::leave_clause_without_boundary` has the
-        // mechanism and the transcript.
+        // mechanism and the transcript. **An `ITERATE` owes none either**:
+        // the oracle re-tests the loop from inside the instruction, so the one
+        // boundary of that clause follows the re-test -- the header clause the
+        // loop runs for it, `Interp::flat_loop_step_escaped` for the flat one.
         let outcome = match &instruction.kind {
-            InstructionKind::Do(_) | InstructionKind::Loop(_) => {
+            InstructionKind::Do(_) | InstructionKind::Loop(_) | InstructionKind::Iterate { .. } => {
                 self.leave_clause_without_boundary(entry.entry, ran)
             }
             _ => self.leave_clause(entry.entry, ran),
