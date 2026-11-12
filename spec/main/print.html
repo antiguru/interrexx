@@ -10617,6 +10617,45 @@ c 3 k 4
 2 1
 a 3 b 2
 </code></pre>
+<div class="rule" id="r-instr.iterate.trap"><a href="instructions/iterate.html#r-instr.iterate.trap">[instr.iterate.trap]</a></div>
+<p>A CALL trap that is waiting when an ITERATE runs is called after the loop has
+done the work that ends the pass, so a WHILE test is made before the routine
+of the trap is called, and <code>SIGL</code> is the line of the ITERATE. A condition that
+the routine raises is not answered at that point again: its routine is called
+after the next clause that ends, as <a href="instructions/../conditions/traps.html#r-cond.traps.call">the rule for CALL
+traps</a> puts it for any clause. In the example the routine
+<code>h1</code> is called after the <code>RAISE</code> returns, at the line of the call, <code>h2</code> is
+called at the ITERATE after the test, and <code>h3</code>, which <code>h2</code> raised, is called
+after the first clause of the next pass. After the last pass it is called after
+the clause that follows the loop.</p>
+<pre><code class="language-rexx">call on user c1 name h1
+call on user c2 name h2
+call on user c3 name h3
+zn = 0
+do while t() &lt; 2
+  zn = zn + 1
+  zr = raiser()
+  iterate
+end
+say 'after' zr
+exit
+t: say 'test' zn; return zn
+raiser: raise user c1 return 5
+h1: say 'h1' sigl; raise user c2 return
+h2: say 'h2' sigl; raise user c3 return
+h3: say 'h3' sigl; return
+</code></pre>
+<pre><code class="language-output">test 0
+h1 7
+test 1
+h2 8
+h3 6
+h1 7
+test 2
+h2 8
+after 5
+h3 10
+</code></pre>
 <h2 id="which-loop-it-selects"><a class="header" href="#which-loop-it-selects">Which loop it selects</a></h2>
 <div class="rule" id="r-instr.iterate.target"><a href="instructions/iterate.html#r-instr.iterate.target">[instr.iterate.target]</a></div>
 <p>An ITERATE with no name selects the innermost running block that is a
@@ -10799,6 +10838,35 @@ after 2
 2 1
 3 2
 out
+</code></pre>
+<div class="rule" id="r-instr.leave.trap"><a href="instructions/leave.html#r-instr.leave.trap">[instr.leave.trap]</a></div>
+<p>A CALL trap that is waiting when a LEAVE runs is called at the LEAVE, once the
+block has been left. A condition that the routine raises is not answered at
+that point again: its routine is called after the next clause that ends, as
+<a href="instructions/../conditions/traps.html#r-cond.traps.call">the rule for CALL traps</a> puts it for any clause. In the
+example the routine <code>h1</code> is called after the <code>RAISE</code> returns, at the line of
+the call, <code>h2</code> is called at the LEAVE, and <code>h3</code>, which <code>h2</code> raised, is called
+after the clause that follows the loop.</p>
+<pre><code class="language-rexx">call on user c1 name h1
+call on user c2 name h2
+call on user c3 name h3
+do forever
+  zr = raiser()
+  leave
+end
+say 'after' zr
+say 'end'
+exit
+raiser: raise user c1 return 5
+h1: say 'h1' sigl; raise user c2 return
+h2: say 'h2' sigl; raise user c3 return
+h3: say 'h3' sigl; return
+</code></pre>
+<pre><code class="language-output">h1 5
+h2 6
+after 5
+h3 8
+end
 </code></pre>
 <h2 id="which-block-it-selects"><a class="header" href="#which-block-it-selects">Which block it selects</a></h2>
 <div class="rule" id="r-instr.leave.target"><a href="instructions/leave.html#r-instr.leave.target">[instr.leave.target]</a></div>
