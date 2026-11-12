@@ -427,7 +427,7 @@ impl Interp {
         // The clauses of the line answer to the paused clause's line, as the
         // clauses of an `INTERPRET` do: a `CALL` of a label in the line sets
         // `SIGL` to it.
-        let saved_override = std::mem::replace(&mut self.activity.clause_line_override, Some(line));
+        let saved_override = self.activity.clause_line_override.replace(line);
         let outcome = pinned!(
             self,
             crate::pinning::PinKind::Interpret,

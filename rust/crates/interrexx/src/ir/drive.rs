@@ -13,13 +13,13 @@ use crate::activation::{CallType, body_of};
 use crate::clause::{ClauseOutcome, ClauseValue};
 use crate::eval::{SymbolRead, call_target_name};
 use crate::plan::Plan;
+use crate::run::interpret::Pause;
 use crate::run::{
     Absorbed, CallEntry, CallResolution, ConditionTrace, Echo, Ended, Flow, LoopHeaderValues,
     QueueKeyword, Resolved, ReturnKeyword, SelectEscape, SelectResume, SiteCall, SiteKeep, Started,
     SteppedClause, absorb, otherwise_range, otherwise_resume, select_escape, select_parts,
     subroutine_started, when_resume, when_targets,
 };
-use crate::run::interpret::Pause;
 use crate::scheduler::{ExecOutcome, Scheduler};
 use crate::{Code, Failure, Interp, Loud, Raised};
 
