@@ -78,7 +78,15 @@ impl Interp {
                 // The substitution is the operand's own rendering -- measured
                 // `found "1E2"` for `+(1e2)`, which is D15's rule showing
                 // through rather than a re-rendering here.
-                let Some(offset) = self.whole_nonneg(value) else {
+                //
+                // **An object that is not a string is read through its string
+                // value** (`requested_number`, `numberValue`'s own
+                // protocol), so a `MutableBuffer` of `3` is the position 3.
+                let offset = match self.whole_nonneg(value) {
+                    Some(offset) => Some(offset),
+                    None => self.whole_nonneg_requested(value)?,
+                };
+                let Some(offset) = offset else {
                     // The one place the operand's own rendering is still
                     // owned, and it is the raise's substitution.
                     return Err(Raised::syntax(26, 4, vec![self.to_text(value).to_vec()]).into());
