@@ -176,9 +176,22 @@ impl Interp {
                     names.push(validate_indirect_word(word)?);
                 }
                 for name in &names {
-                    self.drop_by_name(name);
+                    self.drop_list_name(name)?;
                 }
             }
+        }
+        Ok(())
+    }
+
+    /// Drops one validated name of a `DROP (list)`. A compound name has the
+    /// variables of its tail replaced by their values as DROP reaches it, so
+    /// a name earlier in the list that changed one counts.
+    fn drop_list_name(&mut self, name: &[u8]) -> Result<(), Failure> {
+        if shape_of(name) == NameShape::Compound {
+            let (stem_name, key) = self.split_compound(name)?;
+            self.stem_drop_tail(&stem_name, &key);
+        } else {
+            self.drop_by_name(name);
         }
         Ok(())
     }
