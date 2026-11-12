@@ -748,7 +748,7 @@ b~removeItem(7)
 say b~first~makeString('L', ',')
 ```
 
-```output defect=#159
+```output
 q,r
 2,1 q
 1,2 r

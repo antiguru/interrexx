@@ -206,7 +206,8 @@ pub(super) fn last_item(interp: &mut Interp, receiver: ObjRef) -> Result<usize, 
 
 /// The index object for the flat 0-based `offset` of an array shaped
 /// `dimensions`: the 1-based position for a single dimension, and an `Array`
-/// of coordinates for more than one.
+/// of coordinates for more than one. The first coordinate moves fastest, as
+/// [`array_position`] flattens it.
 pub(super) fn subscript_object(
     interp: &mut Interp,
     offset: usize,
@@ -217,7 +218,7 @@ pub(super) fn subscript_object(
     };
     let mut coordinates = vec![None; shape.len()];
     let mut rest = offset;
-    for axis in (0..shape.len()).rev() {
+    for axis in 0..shape.len() {
         let extent = shape[axis].max(1);
         coordinates[axis] = Some(interp.counted(rest % extent + 1));
         rest /= extent;
