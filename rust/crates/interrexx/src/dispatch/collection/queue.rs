@@ -95,7 +95,7 @@ fn native_queue_pull(
 }
 
 /// `Queue~delete(index)` and `Queue~remove(index)`, which are **one body**
-/// upstream where `Array` has two.
+/// where `Array` has two.
 fn native_queue_delete(
     interp: &mut Interp,
     cleared: Cleared,

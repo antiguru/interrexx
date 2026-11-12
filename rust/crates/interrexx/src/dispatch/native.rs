@@ -51,9 +51,9 @@ impl Family {
 
 /// One entry point the `REXX` package exports to `::METHOD ... EXTERNAL`.
 pub(crate) struct NativeExternal {
-    /// The name, spelled as the oracle's native-method table spells it.
-    /// Matched caselessly, so the spelling is for a reader's sake and never
-    /// for the lookup's.
+    /// The name, spelled as the native-method table spells it. Matched
+    /// caselessly, so the spelling is for a reader's sake and never for the
+    /// lookup's.
     pub(crate) name: &'static str,
     pub(crate) family: Family,
     /// **Not `pub(crate)`**: `dispatch::Interp::invoke` is the only reader,
@@ -64,11 +64,11 @@ pub(crate) struct NativeExternal {
 
 /// What a send to a method bound to an entry point runs.
 pub(in crate::dispatch) enum ExternalBody {
-    /// A body this crate runs, with the parameter count the C++ entry
+    /// A body this crate runs, with the parameter count the native entry
     /// declares.
     Implemented { arity: Arity, run: NativeMethod },
     /// A body that runs in the method's scope, with the parameter count the
-    /// C++ entry declares.
+    /// native entry declares.
     Scoped { arity: Arity, begin: ScopedBegin },
 }
 
@@ -618,9 +618,9 @@ pub(crate) fn entry_point(name: &[u8]) -> Option<&'static NativeExternal> {
 }
 
 /// The method entry point `package` exports under `name`. `REXXUTIL` exports
-/// routines only: measured, oracle, `::method m external 'LIBRARY rexxutil
-/// SysFileTree'` is 90.998 rc 166 and `loadExternalMethod('x', 'LIBRARY
-/// rexxutil SysSleep')` answers `.nil`.
+/// routines only: `::method m external 'LIBRARY rexxutil SysFileTree'` is
+/// 90.998 rc 166 and `loadExternalMethod('x', 'LIBRARY rexxutil SysSleep')`
+/// answers `.nil`.
 pub(crate) fn package_entry_point(
     package: Package,
     name: &[u8],
@@ -639,16 +639,16 @@ pub(crate) enum MethodExternal {
     /// package exports; `Err` is the name it does not export, which the
     /// install reports as 90.998.
     LibraryRexx(Result<&'static NativeExternal, Vec<u8>>),
-    /// `'LIBRARY REXX [entry]'` on a `::ATTRIBUTE`, or on a `::METHOD`
-    /// carrying `ATTRIBUTE`: the accessors [`attribute_binds`] derives, in the
-    /// order the oracle creates them.
+    /// `'LIBRARY REXX [entry]'` on a `::ATTRIBUTE`, or on a `::METHOD` carrying
+    /// `ATTRIBUTE`: the accessors [`attribute_binds`] derives, in the order
+    /// they are created.
     Attribute(Vec<AttributeBind>),
     /// `'LIBRARY <name>'` for any name but `REXX`: a shared library to load,
     /// with the dictionary key each of its procedures fills.
     OtherLibrary {
-        /// The library name as written. Matched byte for byte: measured,
-        /// oracle, `LIBRARY RXREGEXP` is `98.903 Unable to load library
-        /// "RXREGEXP"` where `LIBRARY rxregexp` loads.
+        /// The library name as written. Matched byte for byte: `LIBRARY
+        /// RXREGEXP` is `98.903 Unable to load library "RXREGEXP"` where
+        /// `LIBRARY rxregexp` loads.
         library: Vec<u8>,
         binds: Vec<LibraryBind>,
     },
@@ -675,8 +675,8 @@ pub(crate) struct AttributeBind {
     pub(crate) entry: Result<&'static NativeExternal, Vec<u8>>,
 }
 
-/// The accessors an attribute-shaped `EXTERNAL` binds, in the order the oracle
-/// creates them: the getter, then the setter.
+/// The accessors an attribute-shaped `EXTERNAL` binds, in the order they are
+/// created: the getter, then the setter.
 /// ```text
 /// ::attribute at external 'LIBRARY REXX zzz_no_entry'      90.998 rc 166 on "GETzzz_no_entry"
 /// ::attribute at external 'LIBRARY REXX'                   90.998 rc 166 on "GETAT"
@@ -752,8 +752,8 @@ pub(crate) fn method_external(method: &MethodDirective) -> Option<MethodExternal
     let spec = method.external.as_ref()?;
     let upper = method.name.to_ascii_uppercase();
     // Before the `ATTRIBUTE` question, because method resolution loads the
-    // library before it looks for either accessor's procedure in it. Measured,
-    // oracle: `::method m attribute external 'LIBRARY nosuchlib x'` is `98.903
+    // library before it looks for either accessor's procedure in it. For
+    // example, `::method m attribute external 'LIBRARY nosuchlib x'` is `98.903
     // Unable to load library "nosuchlib"` at rc 158 and not 90.998.
     let Some(package) = Package::named(&spec.library) else {
         let style = method.attribute.then_some(AttributeStyle::Both);
@@ -798,10 +798,10 @@ pub(crate) fn attribute_external(attribute: &AttributeDirective) -> Option<Metho
 /// not the method registry above and whose entries [`internal_routine_entry`]
 /// names.
 ///
-/// The entry defaults to the routine's own name, which the parser upcases for
-/// a symbol and keeps as written for a string -- measured, oracle: `::routine
-/// zzz external "LIBRARY rxmath"` is `90.999 Unable to find external routine
-/// "ZZZ"` and `::routine 'zq' external "LIBRARY rxmath"` names `"zq"`.
+/// The entry defaults to the routine's own name, which the parser upcases for a
+/// symbol and keeps as written for a string: `::routine zzz external "LIBRARY
+/// rxmath"` is `90.999 Unable to find external routine "ZZZ"` and `::routine
+/// 'zq' external "LIBRARY rxmath"` names `"zq"`.
 pub(crate) fn routine_external(routine: &RoutineDirective) -> Option<MethodExternal> {
     let spec = routine.external.as_ref()?;
     if spec.registered || Package::named(&spec.library).is_some() {
@@ -869,8 +869,8 @@ pub(crate) fn bound_entry(
 }
 
 /// The first procedure an `EXTERNAL` names that the `REXX` package does not
-/// export -- the one the oracle reports 90.998 for -- or `None` when every
-/// accessor resolved.
+/// export -- the one 90.998 is reported for -- or `None` when every accessor
+/// resolved.
 pub(crate) fn unresolved_entry(external: Option<&MethodExternal>) -> Option<&[u8]> {
     match external? {
         MethodExternal::LibraryRexx(entry) => entry.as_ref().err().map(Vec::as_slice),

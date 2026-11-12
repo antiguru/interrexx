@@ -36,19 +36,17 @@ pub(super) fn native_has_method(
     let argument = required_string_argument(interp, argument, 1)?;
     let name = String::from_utf8_lossy(&interp.to_text(argument).to_ascii_uppercase()).into_owned();
     // **The object's own dictionary answers first**, so a `setMethod` name
-    // reports `1` and a hidden one reports `0` even where the class defines
-    // it -- measured, oracle rc 0 for the first and rc 159 for the send
-    // after the second.
+    // reports `1` and a hidden one reports `0` even where the class defines it
+    // -- the first answers `1` and a send after the second raises.
     if let Some(entry) = interp.own_method_entry(receiver, name.as_bytes()) {
         return Ok(Some(interp.counted(usize::from(entry.is_some()))));
     }
     // **A receiver with no class here is loud, not `0`.** `send_message`
-    // screens for it before any method runs, so this arm is unreachable
-    // today; answering `0` from it anyway would make this the one place in
-    // the module where a gap becomes an answer, and the answer would be one
-    // the oracle contradicts.
-    // **Which dictionary is asked follows the receiver**, measured on
-    // `::class K` plus `::method m class`: `.K~hasMethod('M')` is `1` and
+    // screens for it before any method runs, so this arm is unreachable today;
+    // answering `0` from it anyway would make this the one place in the module
+    // where a gap becomes an answer, and the answer would be wrong. **Which
+    // dictionary is asked follows the receiver**: with `::class K` plus
+    // `::method m class`: `.K~hasMethod('M')` is `1` and
     // `.K~hasMethod('LENGTH')` is `0`, so a class object is asked about its
     // class behaviour and not about `.Class`'s instances.
     let behaviour = match interp.receiver_behaviour(receiver) {
@@ -74,8 +72,8 @@ pub(super) fn native_default_name(
         return Err(Loud::unknown_receiver("a value with no class of its own").into());
     };
     // **An enhanced object takes no article**, returning before the `a`/`an`
-    // choice. Measured, oracle rc 0:
-    // `.Object~subclass('K')~enhanced(t)~defaultName` is `enhanced K`.
+    // choice. For example, `.Object~subclass('K')~enhanced(t)~defaultName` is
+    // `enhanced K`.
     let enhanced = is_enhanced_instance(interp, receiver);
     let id = interp.classes().id_string(class);
     let name = if enhanced {
@@ -295,15 +293,15 @@ pub(super) fn native_string(
         let text = interp.stem_string_representation(store)?;
         return Ok(Some(interp.text_built(text)));
     }
-    // `Pointer` overrides the send below: measured, oracle rc 0, `p~objectName
-    // = 'zzz'` leaves `p~string` answering the address.
+    // `Pointer` overrides the send below: `p~objectName = 'zzz'` leaves
+    // `p~string` answering the address.
     if pointer_address(interp, receiver).is_some() {
         let text = interp.default_string_value_text(receiver);
         return Ok(Some(interp.text_built(text)));
     }
     // **Sent rather than shortcut for an instance**, whose `OBJECTNAME` a
-    // program can replace: measured, oracle rc 0, `::METHOD defaultName`
-    // returning `overridden` makes `o~string` answer `overridden`.
+    // program can replace: `::METHOD defaultName` returning `overridden` makes
+    // `o~string` answer `overridden`.
     let sent = match interp.receiver_kind(receiver) {
         Ok(Primitive::Instance { .. }) => true,
         Ok(Primitive::Class(class)) => declared_class(interp, class),
@@ -372,11 +370,11 @@ pub(super) fn native_object_name(
         // `defaultName` from `.String`'s own id; `native_object_name_set`
         // names no string.
         Primitive::String | Primitive::SmallInt => b"a String".to_vec(),
-        // **A set name, or the answer to a `DEFAULTNAME` send.** The oracle
-        // reads the object's own `Object`-scope variable and, for anything
-        // that is not a base class, sends rather than deriving -- so a class
+        // **A set name, or the answer to a `DEFAULTNAME` send.** The object's
+        // own `Object`-scope variable is read and, for anything that is not a
+        // base class, `DEFAULTNAME` is sent rather than derived -- so a class
         // overriding `defaultName` decides what an unnamed instance answers,
-        // and a name set afterwards wins over it. Both measured, oracle rc 0.
+        // and a name set afterwards wins over it.
         Primitive::Instance { .. } => match interp.instance_name(receiver) {
             Some(held) => held,
             None => {
@@ -388,11 +386,10 @@ pub(super) fn native_object_name(
             }
         },
         // Derived from the class id rather than read through
-        // `string_value_text`, which for this receiver answers the
-        // *referenced* value: `~objectName` is the reference's own and is
-        // one of the names its `UNKNOWN` never sees. Measured, oracle rc 0:
-        // `vr = 5; o = >vr; say o~objectName` is `a VariableReference` where
-        // `say o~string` is `5`.
+        // `string_value_text`, which for this receiver answers the *referenced*
+        // value: `~objectName` is the reference's own and is one of the names
+        // its `UNKNOWN` never sees. For example, `vr = 5; o = >vr; say
+        // o~objectName` is `a VariableReference` where `say o~string` is `5`.
         Primitive::VariableReference => match interp.heap.object_name(receiver) {
             Some(name) => name.to_vec(),
             None => crate::environment::default_object_name("VariableReference").into_bytes(),
@@ -401,21 +398,19 @@ pub(super) fn native_object_name(
         // which for this receiver answers the **traceback line**:
         // `StackFrameClass` overrides `stringValue()` and leaves
         // `defaultName()` alone, the split `NativeObject::string_value`
-        // carries. Measured, oracle rc 0, six renderings of one frame:
-        // `say f`, `~string`, `~makeString` and an `Array` join are the
-        // traceback line where `~objectName` and `~defaultName` are
-        // `a StackFrame`. Read rather than derived, so a name
-        // `~objectName=` has set still wins -- measured, `f~objectName =
-        // 'tagged'` then `f~objectName` is `tagged` while `say f` is
-        // unchanged.
+        // carries. For example, six renderings of one frame: `say f`,
+        // `~string`, `~makeString` and an `Array` join are the traceback line
+        // where `~objectName` and `~defaultName` are `a StackFrame`. Read
+        // rather than derived, so a name `~objectName=` has set still wins --
+        // measured, `f~objectName = 'tagged'` then `f~objectName` is `tagged`
+        // while `say f` is unchanged.
         Primitive::StackFrame => match interp.heap.get(receiver).map(|held| &held.body) {
             Some(Body::Native(native)) => native.rendered().to_vec(),
             _ => return Err(Loud::receiver_class("a stack frame this crate did not build").into()),
         },
         // Derived for the same reason, and the two answers part here too: a
-        // stem's `string_value_text` is its default. Measured, oracle rc 0:
-        // `s. = 'dflt'; o = s.; say o~objectName` is `a Stem` where
-        // `say o~string` is `dflt`.
+        // stem's `string_value_text` is its default. For example, `s. = 'dflt';
+        // o = s.; say o~objectName` is `a Stem` where `say o~string` is `dflt`.
         Primitive::Stem => match interp.heap.object_name(receiver) {
             Some(name) => name.to_vec(),
             None => crate::environment::default_object_name("Stem").into_bytes(),
@@ -532,8 +527,8 @@ pub(super) fn native_set_method(
         )?),
     };
     // The method object is built ahead of the checks, then the instance method
-    // is defined over a fresh scope copy: measured, oracle rc 0, the method's
-    // `.context~executable` is not the object `setMethod` was given.
+    // is defined over a fresh scope copy: the method's `.context~executable` is
+    // not the object `setMethod` was given.
     let source = match source {
         None => None,
         Some(object) => {
@@ -638,12 +633,11 @@ pub(super) fn native_copy(
 /// [`native_copy`]'s copy of `receiver`, left on the temps.
 fn copy_object(interp: &mut Interp, receiver: ObjRef) -> Result<ObjRef, Failure> {
     // **An `Array` and a `Stem` are copyable too**, and each keeps its own
-    // behaviour: measured, `.Array~of('x','y')~copy~class~id` is `Array` and a
-    // stem's is `Stem`. The clone below is what makes both deep in the way
-    // upstream's virtual `copy()` is -- the slots and the tails travel with
-    // the body, so appending to the copy leaves the receiver alone
-    // (`a~items` 2 against `b~items` 3) and a tail written on the copy does
-    // not appear on the receiver.
+    // behaviour: `.Array~of('x','y')~copy~class~id` is `Array` and a stem's is
+    // `Stem`. The clone below is what makes both deep -- the slots and the
+    // tails travel with the body, so appending to the copy leaves the receiver
+    // alone (`a~items` 2 against `b~items` 3) and a tail written on the copy
+    // does not appear on the receiver.
     let behaviour = match interp.receiver_kind(receiver) {
         Ok(Primitive::Instance { .. } | Primitive::Message) => interrexx_core::BehaviourId::OBJECT,
         Ok(Primitive::Array) => interrexx_core::BehaviourId::ARRAY,
@@ -652,12 +646,10 @@ fn copy_object(interp: &mut Interp, receiver: ObjRef) -> Result<ObjRef, Failure>
         Ok(Primitive::SmallInt) => return Ok(receiver),
         Ok(Primitive::String) if interp.heap.get(receiver).is_none() => return Ok(receiver),
         Ok(Primitive::String) => interrexx_core::BehaviourId::STRING,
-        // `StackFrameClass` has no `copy` of its own: measured, oracle rc 0,
-        // a frame's copy is a different object answering the same `~type`,
-        // `~line` and `~context`.
+        // `StackFrameClass` has no `copy` of its own: a frame's copy is a
+        // different object answering the same `~type`, `~line` and `~context`.
         Ok(Primitive::StackFrame) => interrexx_core::BehaviourId::OBJECT,
-        // Measured, oracle rc 0: a copy reads and writes the variable the
-        // original names.
+        // For example, a copy reads and writes the variable the original names.
         Ok(Primitive::VariableReference) => interrexx_core::BehaviourId::OBJECT,
         Ok(Primitive::Method | Primitive::Routine) => {
             interp.roots.activity_mut().push_temp(receiver);
@@ -671,9 +663,9 @@ fn copy_object(interp: &mut Interp, receiver: ObjRef) -> Result<ObjRef, Failure>
         // Reached only through a scope override, `.nil`'s own behaviour
         // hiding `COPY`.
         Ok(Primitive::Object) => return Ok(copy_nil(interp)),
-        // rexxref forbids copying each of these on every route: the oracle's
-        // own `copy` raises 93.970 for a plain send, and a scope override
-        // reaches the generic copy, which copies.
+        // rexxref forbids copying each of these on every route: `copy` raises
+        // 93.970 for a plain send, and a scope override reaches the generic
+        // copy, which copies.
         Ok(Primitive::Class(_) | Primitive::Context | Primitive::RexxInfo) => {
             let target = interp.string_value_text(receiver)?;
             return Err(Raised::copy_not_supported(&target).into());
@@ -737,9 +729,8 @@ fn copy_object(interp: &mut Interp, receiver: ObjRef) -> Result<ObjRef, Failure>
 }
 
 /// `.nil`'s copy, left on the temps: a distinct `Object` with `.nil`'s methods
-/// and its name, as a generic copy clones it. Measured, oracle rc 0: the copy
-/// is not `.nil`, renders `The NIL object` and answers `an Object` for
-/// `~defaultName`.
+/// and its name, as a generic copy clones it. For example, the copy is not
+/// `.nil`, renders `The NIL object` and answers `an Object` for `~defaultName`.
 fn copy_nil(interp: &mut Interp) -> ObjRef {
     let model = interp.object_model();
     let (class, behaviour) = (model.object, model.nil_behaviour);
@@ -907,8 +898,8 @@ pub(super) fn native_run(
     interp.roots.activity_mut().push_temp(executable);
     let values = run_arguments(interp, args)?;
     check_restricted_method(interp, receiver, b"RUN")?;
-    // Measured, oracle rc 0: `.context~executable` in a method `run` ran is
-    // the object `run` was given the first time and a copy after.
+    // For example, `.context~executable` in a method `run` ran is the object
+    // `run` was given the first time and a copy after.
     interp.primitive_level(receiver, b"RUN", args, |interp| {
         invoke_executable(
             interp,
@@ -1003,8 +994,8 @@ fn run_arguments(
     match text.first().map(u8::to_ascii_uppercase) {
         Some(b'I') => Ok(args[2..].to_vec()),
         // `argCount < 3` and `argCount > 3` are separate raises with separate
-        // numbers. Measured, oracle: `self~run('return 1', 'A')` is `88.901
-        // ... argument argument array is required.` at rc 168, and a fourth
+        // numbers. For example, `self~run('return 1', 'A')` is `88.901 ...
+        // argument argument array is required.` at rc 168, and a fourth
         // argument is `93.902 ... 3 expected.` at rc 163.
         Some(b'A') => {
             let Some(Some(array)) = args.get(2).copied() else {
@@ -1830,16 +1821,16 @@ pub(super) fn decode_message_name(
         return Err(Raised::message_array_shape().into());
     };
     // `messageArgCount() != 2`, which is `lastItem` and not the slot count: a
-    // trailing empty slot is not an element. Measured, oracle rc 163,
-    // `o~send(('M',))` is 93.946 where the same array is `~size` 2.
+    // trailing empty slot is not an element. For example, `o~send(('M',))` is
+    // 93.946 where the same array is `~size` 2.
     let slots = &slots[..message_argument_count(&slots)];
     if slots.len() != 2 {
         return Err(Raised::message_array_shape().into());
     }
-    // `stringArgument` distinguishes an empty slot from a value with no
-    // string value. Measured, oracle: `o~send((, .K))` is `88.901 ...
-    // argument message name is required.` and `o~send((.nil, .K))` is
-    // `88.909 Argument message name must have a string value.`, both rc 168.
+    // `stringArgument` distinguishes an empty slot from a value with no string
+    // value. For example, `o~send((, .K))` is `88.901 ... argument message name
+    // is required.` and `o~send((.nil, .K))` is `88.909 Argument message name
+    // must have a string value.`, both rc 168.
     let Some(name) = slots[0] else {
         return Err(Raised::missing_named_argument("message name").into());
     };
@@ -1889,9 +1880,9 @@ pub(super) enum ArrayArgument {
 /// `requestArray` where it is not already an array.
 ///
 /// A conversion answering an object that is not an array raises what `.nil`
-/// does. The oracle reads that answer through the array layout: measured, a
-/// string answer is 98.913 and a `List` answer kills it
-/// (`corpus/oracle-crashes.txt` entry 34).
+/// does. The reference run reads that answer through the array layout, so a
+/// string answer is 98.913 and a `List` answer kills it (oracle defect,
+/// `corpus/oracle-crashes.txt` entry 34).
 pub(super) fn array_argument(
     interp: &mut Interp,
     value: ObjRef,

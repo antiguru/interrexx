@@ -1155,9 +1155,9 @@ fn string_arithmetic_operator(
     if args.first().copied().flatten().is_none() {
         match op {
             // **`+` and `-` sent with no operand are the prefix forms, not an
-            // error.** Measured, oracle: `'12'~'+'()` is `12` and `'12'~'-'()`
-            // is `-12`, so the unary reading belongs to exactly the two
-            // operators the language has a prefix form for.
+            // error.** `'12'~'+'()` is `12` and `'12'~'-'()` is `-12`, so the
+            // unary reading belongs to exactly the two operators the language
+            // has a prefix form for.
             Operator::Plus => {
                 return Ok(Some(
                     interp.apply_prefix(interrexx_parse::PrefixOp::Plus, receiver)?,
@@ -1169,7 +1169,7 @@ fn string_arithmetic_operator(
                 ));
             }
             // The other five convert the receiver *before* they complain about
-            // the operand. Measured, oracle: `.String~new('abc')~'*'()` is 41.1
+            // the operand. For example, `.String~new('abc')~'*'()` is 41.1
             // naming `"abc"`, while `'12'~'*'()` is 93.903 -- so a receiver
             // that is not a number is what the send reports, and the missing
             // argument only surfaces once the receiver converts.
@@ -1988,8 +1988,8 @@ pub(super) fn native_string_makearray(
         interp.roots.activity_mut().push_temp(text);
         slots.push(Some(text));
     }
-    // Measured, oracle: `''~makeArray~dimension` is 0, so an empty result
-    // carries no dimensions rather than one of size 0.
+    // For example, `''~makeArray~dimension` is 0, so an empty result carries no
+    // dimensions rather than one of size 0.
     let body = Body::Array {
         dimensions: None,
         slots: slots.into(),

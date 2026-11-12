@@ -631,11 +631,10 @@ impl NativePark {
 /// How many arguments an entry admits.
 #[derive(Copy, Clone)]
 enum Arity {
-    /// A numeric count. For a primitive method the oracle refuses more
-    /// than this with 93.902 before the body is entered
-    /// and pads a shorter list out with
-    /// nulls -- measured, `'abc'~length(1)` is `0 expected` and
-    /// `'abc'~hasMethod('a','b')` is `1 expected`.
+    /// A numeric count. For a primitive method more than this is refused with
+    /// 93.902 before the body is entered, and a shorter list is padded out with
+    /// nulls: `'abc'~length(1)` is `0 expected` and `'abc'~hasMethod('a','b')`
+    /// is `1 expected`.
     Fixed(usize),
     /// An uncounted entry, which hands the body the whole
     /// argument list and count and refuses nothing here.
@@ -698,22 +697,19 @@ static NATIVE_METHODS: &[(&str, &str, Arity, NativeMethod)] = &[
     // receiving class's own dictionary, which is what the scope in the
     // traceback says, so each donee needs a row of its own here.
     ("Bag", "INIT", Arity::Fixed(1), native_capacity_init),
-    // `Object`'s `init`, bound to `.Class` under this name. The oracle
-    // documents it as a no-op by default, used as a fill-in. Every class
-    // object answers it, because a class's class behaviour merges its
-    // metaclass's instance behaviour, and the `::CLASS` directive
-    // sends it to every class the
+    // `Object`'s `init`, bound to `.Class` under this name. It is a no-op by
+    // default, there to be overridden as a fill-in. Every class object answers
+    // it, because a class's class behaviour merges its metaclass's instance
+    // behaviour, and the `::CLASS` directive sends it to every class the
     // package installed.
     ("Class", "ACTIVATE", Arity::Fixed(0), native_no_op),
-    // The comparison operators the oracle's `Class` declares, each at count 1
-    // and each an identity or its negation -- the same identity test `Object`'s rows
-    // below carry, bound
-    // again here because `Class` names its own and a name resolves to the
-    // more specific scope. `Interp::operator_message_receiver` is the send,
-    // so these answer the expression `(.Array = .Array)` and the message
-    // `.Array~'='(.Array)` alike. Measured, oracle rc 0: `.array = .array` is
-    // `1`, `.array = 'The Array class'` is `0` -- identity, not a comparison
-    // of renderings.
+    // The comparison operators `Class` declares, each at count 1 and each an
+    // identity or its negation -- the same identity test `Object`'s rows below
+    // carry, bound again here because `Class` names its own and a name resolves to
+    // the more specific scope. `Interp::operator_message_receiver` is the send, so
+    // these answer the expression `(.Array = .Array)` and the message
+    // `.Array~'='(.Array)` alike. For example, `.array = .array` is `1`, `.array =
+    // 'The Array class'` is `0` -- identity, not a comparison of renderings.
     ("Class", "=", Arity::Fixed(1), native_object_identical),
     ("Class", "==", Arity::Fixed(1), native_object_identical),
     ("Class", "\\=", Arity::Fixed(1), native_object_different),
@@ -735,12 +731,11 @@ static NATIVE_METHODS: &[(&str, &str, Arity, NativeMethod)] = &[
         Arity::Fixed(0),
         native_class_default_name,
     ),
-    // The five mutators, each of which is protected except `Inherit`,
-    // and each of which opens with the same refusal for a class defined by the system.
-    // `Class~copy` is a
-    // refusal and not a copy: it overrides `Object`'s row with
-    // one that raises. Measured, oracle rc 163: `.K~copy` is `93.970 COPY
-    // method is not supported for object The K class.`
+    // The five mutators, each of which is protected except `Inherit`, and each of
+    // which opens with the same refusal for a class defined by the system.
+    // `Class~copy` is a refusal and not a copy: it overrides `Object`'s row with one
+    // that raises. For example, `.K~copy` is `93.970 COPY method is not supported for
+    // object The K class.`
     ("Class", "COPY", Arity::Fixed(0), native_class_copy),
     ("Class", "DEFINE", Arity::Fixed(2), native_define),
     (
@@ -762,12 +757,10 @@ static NATIVE_METHODS: &[(&str, &str, Arity, NativeMethod)] = &[
     ),
     ("Class", "METACLASS", Arity::Fixed(0), native_metaclass),
     ("Class", "METHOD", Arity::Fixed(1), native_method),
-    // `Class~mixinClass` and `Class~subclass`,
-    // the class factory a program reaches
-    // by message. Neither carries the refusal for system-defined classes that the mutators
-    // above open with: `subclass` does not test the flag, and what
-    // it builds does not carry it either -- measured, oracle rc 0,
-    // `.object~subclass("k")~inherit(.object~mixinclass("mx"))`.
+    // `Class~mixinClass` and `Class~subclass`, the class factory a program reaches by
+    // message. Neither carries the refusal for system-defined classes that the mutators
+    // above open with: `subclass` does not test the flag, and what it builds does not
+    // carry it either: `.object~subclass("k")~inherit(.object~mixinclass("mx"))`.
     (
         "Class",
         "MIXINCLASS",
@@ -898,11 +891,11 @@ static NATIVE_METHODS: &[(&str, &str, Arity, NativeMethod)] = &[
         Arity::Fixed(0),
         native_mutex_uninit,
     ),
-    // Each declared at count 1. These are what an
-    // operator applied to an instance resolves against when its class defines
-    // none of its own; `Interp::operator_message_receiver` is the send, and
-    // the names are `Operator::spelling`'s, which
-    // `corpus/lang/operator_methods.rex` is what holds against the oracle.
+    // Each declared at count 1. These are what an operator applied to an
+    // instance resolves against when its class defines none of its own;
+    // `Interp::operator_message_receiver` is the send, and the names are
+    // `Operator::spelling`'s, which `corpus/lang/operator_methods.rex` checks
+    // against the reference run.
     ("Object", "=", Arity::Fixed(1), native_object_identical),
     ("Object", "==", Arity::Fixed(1), native_object_identical),
     ("Object", "\\=", Arity::Fixed(1), native_object_different),
@@ -1301,8 +1294,8 @@ pub(crate) const LINEIN: &[u8] = b"LINEIN";
 /// [`UNKNOWN`]'s reason.
 const UNINIT: &[u8] = b"UNINIT";
 
-/// How many times the termination sweep runs, from the number of times the
-/// oracle's shutdown runs the pending finalizers. See
+/// How many times the termination sweep runs, from the number of times shutdown
+/// runs the pending finalizers. See
 /// [`Interp::run_termination_uninits`](Interp::run_termination_uninits).
 const SWEEPS: usize = 2;
 
@@ -1594,8 +1587,8 @@ impl ObjectModel {
 /// dictionary, which decides which of [`ObjectMethods`]'s levels it reaches.
 #[derive(Copy, Clone, Debug)]
 enum ObjectMethodWrite {
-    /// `setMethod`, whose `None` is the no-method form: it stores the
-    /// oracle's `.nil` and hides the name rather than removing anything.
+    /// `setMethod`, whose `None` is the no-method form: it stores `.nil` and
+    /// hides the name rather than removing anything.
     Set(Option<ObjectMethod>),
     /// `unsetMethod`, which reveals whatever is behind the entry it takes.
     Remove,
@@ -1644,15 +1637,14 @@ enum Primitive {
     /// `.RexxInfo~isA(.Class)` is `0`.
     RexxInfo,
     /// A `Body::Native` whose class is `.Message` -- what `~start` and
-    /// `~startWith` answer. Measured, oracle rc 0: `o~start('M', 5)~class~id`
-    /// is `Message` and `~string` is `a Message`.
+    /// `~startWith` answer. For example, `o~start('M', 5)~class~id` is
+    /// `Message` and `~string` is `a Message`.
     Message,
     /// A `Body::VarRef` -- the object a `>name` term answers. Measured,
     /// `vr = 5; o = >vr; say o~class~id` is `VariableReference`.
     VariableReference,
     /// A `Body::Stem` -- what a bare stem read answers and what `.Stem~new`
-    /// builds. Measured, oracle rc 0: `s. = 'd'; o = s.; say o~class~id` is
-    /// `Stem`.
+    /// builds. For example, `s. = 'd'; o = s.; say o~class~id` is `Stem`.
     Stem,
     /// The receiver **is** a class object, so its messages resolve against
     /// that class's own class behaviour rather than against any class's
@@ -1694,8 +1686,8 @@ pub(crate) struct MessageTerm<'a> {
     pub(crate) args: &'a [Option<Expr>],
     /// `~~`, which yields the target rather than the method's result.
     pub(crate) cascade: bool,
-    /// The message-assignment form's value expression, which the oracle
-    /// inserts as the **first** argument ahead of the term's own.
+    /// The message-assignment form's value expression, which is inserted as the
+    /// **first** argument ahead of the term's own.
     pub(crate) assigned: Option<&'a Expr>,
 }
 
@@ -1944,9 +1936,8 @@ impl Interp {
 
     /// `~id` for a class object -- the name it was declared with, case
     /// unmodified -- and `.NIL` for the `.nil` scope a method `setMethod` or
-    /// `run` installed carries, which is how the oracle's `>I>` line and
-    /// traceback name it: measured, oracle rc 0, `>I> Method "HM" with scope
-    /// ".NIL"`.
+    /// `run` installed carries, which is how the `>I>` line and traceback name
+    /// it: `>I> Method "HM" with scope ".NIL"`.
     pub(crate) fn class_id_text(&self, class: ObjRef) -> &str {
         if class == ObjRef::NIL {
             return ".NIL";
@@ -2028,23 +2019,21 @@ impl Interp {
                     // whole set, hidden operators included, so a name it
                     // does not hold reaches `UNKNOWN` on both sides.
                     Body::VarRef(_) => Ok(Primitive::VariableReference),
-                    // The package object `~package` answers. `.Package`'s
-                    // instance behaviour here is the native class's whole set, so a
-                    // name it does not hold is a name the running oracle does
-                    // not hold either, and 97.1 is the right answer rather than
-                    // a guess.
+                    // The package object `~package` answers. `.Package`'s instance
+                    // behaviour here is the native class's whole set, so a name it
+                    // does not hold is not a method of `.Package`, and 97.1 is the
+                    // right answer rather than a guess.
                     Body::Native(native)
                         if self.object_model.as_ref().map(|model| model.package)
                             == Some(native.class()) =>
                     {
                         Ok(Primitive::Package)
                     }
-                    // The `Method` and `Routine` objects `~method` and a
-                    // package table put in a program's hands. Each class's
-                    // instance behaviour here is the native class's whole set, so
-                    // a name it does not hold is a name the running oracle
-                    // does not hold either -- the position `.Package` beside
-                    // them is in.
+                    // The `Method` and `Routine` objects `~method` and a package
+                    // table put in a program's hands. Each class's instance
+                    // behaviour here is the native class's whole set, so a name
+                    // it does not hold is not a method of the class -- the
+                    // position `.Package` beside them is in.
                     Body::Native(native)
                         if self.object_model.as_ref().map(|model| model.method)
                             == Some(native.class()) =>
@@ -2130,12 +2119,11 @@ impl Interp {
         let model = self.object_model();
         let live = match kind {
             // Both arms answer one behaviour, which is what makes
-            // `Primitive::SmallInt` a distinction without a divergence: the
-            // oracle gives a small integer the id `String`,
-            // so a small integer's messages
+            // `Primitive::SmallInt` a distinction without a divergence: a small
+            // integer has the id `String`, so a small integer's messages
             // resolve against `String`'s instance behaviour exactly as a
-            // literal's do. This fold is one of the two sites that would
-            // change if that ever stopped being true.
+            // literal's do. This fold is one of the two sites that would change
+            // if that ever stopped being true.
             Primitive::String | Primitive::SmallInt => model.string,
             Primitive::Object => {
                 return Ok(Behaviour::Instance {
@@ -2342,9 +2330,8 @@ impl Interp {
     ) -> Result<(), Failure> {
         let holder = match self.receiver_kind(receiver) {
             Ok(Primitive::Instance { .. }) => receiver,
-            // Measured, oracle rc 0: a class method's `self~setMethod('m2',
-            // 'return 42')` then `.K~m2` answers `42`, and `unsetMethod`
-            // from one answers.
+            // For example, a class method's `self~setMethod('m2', 'return 42')`
+            // then `.K~m2` answers `42`, and `unsetMethod` from one answers.
             Ok(Primitive::Class(_)) => self.pool_owner(receiver)?,
             Ok(_) => return Err(Loud::object_method("a receiver with no scope of its own").into()),
             Err(kind) => return Err(Loud::unknown_receiver(kind).into()),
@@ -2575,9 +2562,9 @@ impl Interp {
         }
     }
 
-    /// A method scope's `~id`, [`Interp::class_id_text`]'s rendering:
-    /// measured, oracle rc 163, a primitive `setMethod` or `run` installed
-    /// under the `.nil` scope is `Compiled method "HM" with scope ".NIL"`.
+    /// A method scope's `~id`, [`Interp::class_id_text`]'s rendering: a
+    /// primitive `setMethod` or `run` installed under the `.nil` scope is
+    /// `Compiled method "HM" with scope ".NIL"`.
     pub(crate) fn scope_id(&mut self, scope: ObjRef) -> String {
         self.object_model();
         self.class_id_text(scope).to_string()
@@ -2588,9 +2575,9 @@ impl Interp {
         matches!(self.receiver_kind(value), Ok(Primitive::Class(_)))
     }
 
-    /// The scope a method found at `resolution` sees as `SUPER`, or `None`
-    /// when it is the topmost scope in the receiver's behaviour --
-    /// the superscope the oracle sets on a method activation.
+    /// The scope a method found at `resolution` sees as `SUPER`, or `None` when
+    /// it is the topmost scope in the receiver's behaviour -- the superscope a
+    /// method activation carries.
     fn super_scope_for(&mut self, receiver: ObjRef, resolution: Resolution) -> Option<ObjRef> {
         self.super_scope_of(receiver, resolution.scope)
     }
@@ -2678,21 +2665,19 @@ impl Interp {
             seam::Clearance::Answered(result) => return Ok(Started::Ran(result)),
         };
         if let Invocable::Rexx(installed) = invocable {
-            // **Neither this path nor `Generated` blames the method**,
-            // measured twice over.
-            // An untrapped `1/0` inside a `::METHOD` body reports
-            // the method's own failing clause and then the sending clause,
-            // with no `Compiled method` line between them, and
+            // **Neither this path nor `Generated` blames the method**, and both
+            // are observable. An untrapped `1/0` inside a `::METHOD` body
+            // reports the method's own failing clause and then the sending
+            // clause, with no `Compiled method` line between them, and
             // [`Interp::finish_call`] seals the method's own level for that,
-            // exactly as it does for a call. A generated accessor and
-            // an `ABSTRACT` send report the *sending* clause and nothing
-            // above it: measured, `.K~a(1)` on `::attribute a class` is
-            // `93.902` with the sending clause alone on `stderr`, where
-            // `'abc'~length(1)` -- a [`NativeMethod`] taking the same
-            // refusal -- carries a `Compiled method "LENGTH"` line. The two
-            // differ in the oracle because an attribute getter and an
-            // abstract method raise directly where a primitive method raises
-            // from inside an activation of its own.
+            // exactly as it does for a call. A generated accessor and an
+            // `ABSTRACT` send report the *sending* clause and nothing above it:
+            // `.K~a(1)` on `::attribute a class` is `93.902` with the sending
+            // clause alone on `stderr`, where `'abc'~length(1)` -- a
+            // [`NativeMethod`] taking the same refusal -- carries a `Compiled
+            // method "LENGTH"` line. The two differ because an attribute getter
+            // and an abstract method raise directly where a primitive method
+            // raises from inside an activation of its own.
             self.begin_method(
                 cleared, installed, resolution, behaviour, receiver, name, args,
             )?;
@@ -2912,11 +2897,11 @@ impl Interp {
     ) -> Result<Started<Option<ObjRef>>, Failure> {
         let native = !matches!(invocable, Invocable::Generated(_));
         let outcome = match invocable {
-            // The implemented arm blames the method for a refusal, because
-            // its refusals are the oracle's own -- measured, `.k~sep(1)` on a
-            // class method bound to `file_separator` is `88.922 Too many
-            // arguments in invocation; 0 expected.` at rc 168, under a
-            // `Compiled method "SEP" with scope "K".` line.
+            // The implemented arm blames the method for a refusal, because its
+            // refusals are those of a native method: `.k~sep(1)` on a class
+            // method bound to `file_separator` is `88.922 Too many arguments in
+            // invocation; 0 expected.` at rc 168, under a `Compiled method
+            // "SEP" with scope "K".` line.
             Invocable::External(entry) => match &entry.body {
                 native::ExternalBody::Implemented { arity, run } => {
                     let ran =
@@ -3508,8 +3493,8 @@ impl Interp {
         // Parked while the rest is filed: the spawner's frame it records is
         // a fresh allocation.
         let parked = self.roots.activity_mut().park(value.into_iter().collect());
-        // The body ended before its next clause, so no split ran. The
-        // oracle still spawns the empty rest, which announces itself again.
+        // The body ended before its next clause, so no split ran. The empty
+        // rest is still spawned, and it announces itself again.
         let (callee, continuation) = match continuation {
             Some(continuation) => (callee, Some(continuation)),
             None => self.empty_continuation(callee),
@@ -3531,10 +3516,10 @@ impl Interp {
     }
 
     /// Files `continuation`, the record a `REPLY`'s split left, with
-    /// `activation` and its slot frame moved into it. The oracle's replier
-    /// yields only to a thread already waiting,
-    /// which the continuation's is not: the sender yields at its next clause
-    /// boundary where another activity is ready, and otherwise keeps running.
+    /// `activation` and its slot frame moved into it. A replier yields only to
+    /// a thread already waiting, which the continuation's is not: the sender
+    /// yields at its next clause boundary where another activity is ready, and
+    /// otherwise keeps running.
     #[cold]
     #[inline(never)]
     fn spawn_continuation(
@@ -3660,10 +3645,9 @@ impl Interp {
         self.roots.activity_mut().release(parked);
     }
 
-    /// Runs the `UNINIT` of every object a collection has readied, oldest
-    /// first -- the oracle's pending-finalizer run,
-    /// reached from a collection and so
-    /// from `GC('force')`.
+    /// Runs the `UNINIT` of every object a collection has readied, oldest first
+    /// -- the pending-finalizer run, reached from a collection and so from
+    /// `GC('force')`.
     pub(crate) fn run_ready_uninits(&mut self) -> Vec<Loud> {
         if self.processing_uninits {
             return Vec::new();
@@ -3956,8 +3940,8 @@ impl Interp {
         let start_scope = match super_class {
             None => None,
             Some(super_class) => {
-                // Evaluated for its own trace lines and its own failures
-                // before either check below, which is the oracle's order.
+                // Evaluated for its own trace lines and its own failures before
+                // either check below, which is the check order.
                 let scope = self.eval(code, super_class)?;
                 self.roots.activity_mut().push_temp(scope);
                 // The scope must be a class, and must be in the target's
@@ -4231,7 +4215,7 @@ struct NativeLevel<'a> {
     activation: Option<NativeActivationLevel>,
 }
 
-/// A level the oracle runs as a native-method activation.
+/// A level run as a native-method activation.
 struct NativeActivationLevel {
     /// What the level's package query answers.
     package: Option<Package>,
@@ -4301,11 +4285,10 @@ fn native_reference_value_set(
     };
     let home = reference.home.clone();
     let name = reference.name.clone();
-    // The oracle sorts out the stem vs. simple assignment
-    // bits, so a stem reference
-    // assigns what the bare `stem. = value` assigns rather than storing the
-    // value itself -- a plain value in a stem-named slot is a state nothing
-    // else in this crate can produce.
+    // The stem and simple assignment bits are sorted out here, so a stem
+    // reference assigns what the bare `stem. = value` assigns rather than
+    // storing the value itself -- a plain value in a stem-named slot is a state
+    // nothing else in this crate can produce.
     let value = if crate::run::shape_of(&name) == crate::run::NameShape::Stem {
         interp.stem_assignment_value(&name, value)
     } else {

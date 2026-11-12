@@ -30,9 +30,8 @@ pub(super) fn optional_length_argument(
     }
 }
 
-/// [`optional_length_argument`] with an omitted argument 93.903 -- measured,
-/// oracle rc 163: `.MutableBuffer~new('abc')~setBufferSize` reports `argument
-/// 1 is required`.
+/// [`optional_length_argument`] with an omitted argument 93.903:
+/// `.MutableBuffer~new('abc')~setBufferSize` reports `argument 1 is required`.
 pub(super) fn required_length_argument(
     interp: &mut Interp,
     args: &[Option<ObjRef>],
@@ -69,9 +68,8 @@ pub(super) fn optional_position_argument(
     }
 }
 
-/// [`optional_position_argument`] with an omitted argument 93.903 -- measured,
-/// oracle rc 163: `.MutableBuffer~new('abcabc')~substr` reports `argument 1 is
-/// required`.
+/// [`optional_position_argument`] with an omitted argument 93.903:
+/// `.MutableBuffer~new('abcabc')~substr` reports `argument 1 is required`.
 pub(super) fn required_position_argument(
     interp: &mut Interp,
     args: &[Option<ObjRef>],
@@ -100,7 +98,7 @@ pub(super) fn string_method_argument(
 }
 
 /// `None` for an omitted argument, 88.909 for one without a string value, and
-/// 93.922 for a string that is not one byte -- measured, oracle rc 163:
+/// 93.922 for a string that is not one byte:
 /// `.MutableBuffer~new('abcabc')~substr(1, 2, 'xx')` reports `found "xx"`.
 pub(super) fn pad_method_argument(
     interp: &mut Interp,
@@ -124,7 +122,7 @@ pub(super) fn pad_method_argument(
 /// The optional option argument with a valid set: `None` for an omitted
 /// argument, 88.909 for one without a string value, and 93.915 for the null
 /// string or a first byte outside `valid`, compared case-folded; the `0x00`
-/// byte is admitted as the builtin's is -- measured, oracle rc 163:
+/// byte is admitted as the builtin's is:
 /// `.MutableBuffer~new('abcabc')~verify('a', 'X')` reports `must be one of
 /// "MN"; found "X"`, and rc 0: `~verify('abc', '00'x)` is `1`.
 pub(super) fn option_method_argument(
@@ -150,9 +148,9 @@ pub(super) fn option_method_argument(
 }
 
 /// The optional string argument by position: the null string for an omitted
-/// argument, and 88.909 for a value without a string value -- measured, oracle
-/// rc 0: `.MutableBuffer~new('abcdef')~translate('ABC')` answers six blanks,
-/// the empty input table reading each byte as its own index.
+/// argument, and 88.909 for a value without a string value:
+/// `.MutableBuffer~new('abcdef')~translate('ABC')` answers six blanks, the
+/// empty input table reading each byte as its own index.
 pub(super) fn optional_string_method_argument(
     interp: &mut Interp,
     args: &[Option<ObjRef>],
@@ -181,9 +179,9 @@ pub(super) fn optional_string_or_none_argument(
 }
 
 /// `None` for an omitted argument, and anything that is not a non-negative
-/// whole number in range is 93.906 -- measured, oracle rc 163:
-/// `.MutableBuffer~new('abcdef')~insert('a', -1)` reports `Method argument 2
-/// must be zero or a positive whole number; found "-1"`.
+/// whole number in range is 93.906: `.MutableBuffer~new('abcdef')~insert('a',
+/// -1)` reports `Method argument 2 must be zero or a positive whole number;
+/// found "-1"`.
 pub(super) fn optional_non_negative_argument(
     interp: &mut Interp,
     args: &[Option<ObjRef>],

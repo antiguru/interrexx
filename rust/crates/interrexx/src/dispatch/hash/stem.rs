@@ -1,5 +1,4 @@
-//! `Stem`'s primitive methods, and the tail tree that orders a stem's tails
-//! the way the oracle's does.
+//! `Stem`'s primitive methods, and the tail tree that orders a stem's tails.
 
 use super::{
     Arity, ArrayArgument, Body, Cleared, Failure, Interp, NativeMethod, ObjRef, Raised,
@@ -214,8 +213,8 @@ fn stem_refusal(interp: &mut Interp, receiver: ObjRef, method: &[u8]) -> Failure
     )
 }
 
-/// One node of the stem's tail tree, laid out as the oracle's is: two links, a
-/// parent, and a depth per side rather than one height.
+/// One node of the stem's tail tree, two links, a parent, and a depth per side
+/// rather than one height.
 struct TailNode {
     tail: usize,
     left: Option<usize>,
@@ -313,7 +312,7 @@ fn first_tail(nodes: &[TailNode], mut node: usize) -> usize {
     }
 }
 
-/// One rotation, and the depth bookkeeping upstream does with it.
+/// One rotation, and the depth bookkeeping that goes with it.
 fn move_tail(
     nodes: &mut [TailNode],
     root: &mut Option<usize>,
@@ -370,14 +369,12 @@ fn rebalance(nodes: &mut [TailNode], root: &mut Option<usize>, node: usize) {
     let mut parent = nodes[node].parent;
     let mut depth: u16 = 1;
     while let Some(mut current) = parent {
-        // **Upstream's early return is dead and is not reproduced.** The C++
-        // writes `if (depth > workingDepth) { move } else { if (workingDepth <
-        // depth) return; }`, and the inner test is the outer one again -- it
-        // can never hold in the `else`, so the walk always runs to the root.
-        // The simulation this was ported from carried the same dead branch and
-        // matched the oracle on four cases either way, so dropping it changes
-        // no shape; clippy names it as `same condition` and it would be noise
-        // to keep.
+        // **The rebalancing walk has no early return.** A test of the form `if
+        // depth > workingDepth { move } else { if workingDepth < depth { return
+        // } }` repeats the outer condition in the inner one, which can never
+        // hold in the `else`, so the walk always runs to the root. Keeping the
+        // dead branch changes no shape and clippy names it as `same condition`,
+        // so it is left out.
         if nodes[current].right == Some(node) {
             nodes[current].right_depth = depth;
             if depth > nodes[current].left_depth + 1 {
@@ -539,7 +536,7 @@ fn native_stem_unknown(
     stem_unknown(interp, receiver, args)
 }
 
-/// [`native_stem_unknown`]'s work, which the oracle also runs without a send.
+/// [`native_stem_unknown`]'s work, which runs without a send too.
 pub(in crate::dispatch) fn stem_unknown(
     interp: &mut Interp,
     receiver: ObjRef,
@@ -785,10 +782,10 @@ fn native_stem_empty(
 ) -> Result<Option<ObjRef>, Failure> {
     let store = stem_of(interp, receiver, b"EMPTY")?;
     // **Deleted, not dropped.** A tombstone reads as the tail's own derived
-    // name; the oracle's `empty` leaves the tails never-assigned, so they
-    // read as the stem's default. Measured: `u. = 5` with one tail set
-    // answers `items` 0 after `empty` and `u~at('K')` still answers `5`,
-    // where writing tombstones answered `U.K`.
+    // name; `empty` leaves the tails never-assigned, so they read as the stem's
+    // default. So `u. = 5` with one tail set answers `items` 0 after `empty`
+    // and `u~at('K')` still answers `5`, where writing tombstones answered
+    // `U.K`.
     interp.detach_exposed_tails(store);
     let default = match interp.heap.get(store).map(|object| &object.body) {
         Some(Body::Stem { default, .. }) => *default,

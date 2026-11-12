@@ -76,7 +76,8 @@ fn order_of(
     Ok(value)
 }
 
-/// Upstream's stable merge sort, comparison for comparison.
+/// A stable merge sort, comparison for comparison with the reference sequence
+/// of compares (`class.array.sort`).
 fn merge_sort(
     interp: &mut Interp,
     order: &Order,
@@ -104,9 +105,9 @@ fn sort_range(
     left: usize,
     right: usize,
 ) -> Result<(), Failure> {
-    // `len <= 10` is upstream's threshold, and it is why nine elements sort
-    // by insertion with no merge at all. Bound as `size_t len = right - left
-    // + 1` is, rather than folded into the test, so the two read alike.
+    // `len <= 10` is the insertion-sort threshold, and it is why nine elements
+    // sort by insertion with no merge at all. Bound as `size_t len = right -
+    // left + 1` is, rather than folded into the test, so the two read alike.
     let len = right - left + 1;
     if len <= 10 {
         for i in left + 1..=right {
@@ -191,9 +192,9 @@ fn merge(
     if left_cursor < mid {
         copy_run(items, left_cursor, working, position, mid - left_cursor);
     } else {
-        // `right - rightCursor + 1` in the oracle, where both are unsigned and
-        // the loop can leave `rightCursor` one past `right` -- which wraps to
-        // zero there and would panic here.
+        // `right - rightCursor + 1` where both are unsigned and the loop can
+        // leave `rightCursor` one past `right` -- which wraps to zero there and
+        // would panic here.
         copy_run(
             items,
             right_cursor,
@@ -284,14 +285,14 @@ fn sort_by(
         crate::pinning::PinKind::SortComparator,
         merge_sort(interp, order, items)
     )?;
-    // **Upstream sorts in place, so a comparator that changes the receiver
-    // under the sort loses the sort's writes.** This crate sorts a copy, so
-    // it has to notice: measured, `sortWith` over a comparator that empties
-    // the array leaves it holding nothing on the oracle, where writing the
-    // copy back would restore the pre-sort contents. Approximated by the item
-    // count, which is what a callback that empties or refills moves; a
-    // callback that swaps one item for another is not distinguished and is
-    // not measured.
+    // **The sort runs in place, so a comparator that changes the receiver under
+    // the sort loses the sort's writes.** This crate sorts a copy, so it has to
+    // notice: `sortWith` over a comparator that empties the array leaves it
+    // holding nothing, where writing the copy back would restore the pre-sort
+    // contents. Approximated by the item count, which is what a callback that
+    // empties or refills moves; a callback that swaps one item for another is
+    // not distinguished. Matches the reference implementation; not yet
+    // specified.
     let after = read_slots(interp, receiver, |slots| slots.iter().flatten().count())?;
     if after == before {
         write_back(interp, receiver, sorted)?;

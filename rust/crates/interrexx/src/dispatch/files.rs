@@ -151,10 +151,10 @@ pub(super) fn length(
 /// `file_list`: the names directly inside `path`, or `.nil` when it is not a
 /// directory.
 ///
-/// **Raw `readdir` order, never sorted** -- measured, the oracle answers
-/// `.dot`, `two.txt`, `one.txt`, `nested` for a directory whose `os.listdir`
-/// gives exactly that. Dot files and subdirectories are in; `.` and `..` are
-/// not, which `read_dir` already handles.
+/// **Raw `readdir` order, never sorted** (`class.file.list`): `.dot`,
+/// `two.txt`, `one.txt`, `nested` for a directory whose `os.listdir` gives
+/// exactly that. Dot files and subdirectories are in; `.` and `..` are not,
+/// which `read_dir` already handles.
 pub(super) fn list(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -272,9 +272,9 @@ enum Stamp {
 /// Sets one stamp and leaves the other alone, through `utimensat` with
 /// `UTIME_OMIT`.
 ///
-/// **The file is not opened.** A read-only file's stamp is still the owner's
-/// to set -- measured, the oracle answers `1` for one -- which an
-/// implementation going through an open writable handle could not do.
+/// **The file is not opened.** A read-only file's stamp is still the owner's to
+/// set, answering `1` (`class.file.lastmodified-set`), which an implementation
+/// going through an open writable handle could not do.
 fn set_one_stamp(path: &Path, when: i64, which: Stamp) -> bool {
     let target = system_time_of(when);
     let spec = match target.duration_since(std::time::UNIX_EPOCH) {
@@ -317,8 +317,9 @@ fn set_one_stamp(path: &Path, when: i64, which: Stamp) -> bool {
 }
 
 /// `file_set_last_modified`: the modification stamp, leaving the access stamp
-/// alone -- measured, the oracle keeps the other one in both directions, which
-/// is why this is `set_file_mtime` and not `set_file_times`.
+/// alone, and the access setter leaves the modification stamp alone
+/// (`class.file.lastmodified-set`, `class.file.lastaccessed-set`), which is why
+/// this is `set_file_mtime` and not `set_file_times`.
 pub(super) fn set_last_modified(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -362,9 +363,9 @@ pub(super) fn make_dir(
 
 /// `file_delete_file`.
 ///
-/// **The write check is on the file, not on its directory**, which is what the
-/// oracle's file deletion asks -- unlike `unlink(2)`, whose permission lives
-/// on the parent.
+/// **The write check is on the file, not on its directory**, which is what file
+/// deletion asks (`class.file.delete`) -- unlike `unlink(2)`, whose permission
+/// lives on the parent.
 pub(super) fn delete_file(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -400,11 +401,11 @@ pub(super) fn delete_directory(
 }
 
 /// `file_rename`: refuses a same-path rename and an existing target before it
-/// asks the file system, because `rename(2)` would answer success for the
-/// first and replace the second -- measured, the oracle answers `0` to both.
-/// The one target left to the file system is a directory taking the place of
-/// a directory, which `rename(2)` replaces when it is empty and refuses
-/// otherwise, as it does a target inside the receiver.
+/// asks the file system, because `rename(2)` would answer success for the first
+/// and replace the second, where `~renameTo` answers `0` to both
+/// (`class.file.renameto`). The one target left to the file system is a
+/// directory taking the place of a directory, which `rename(2)` replaces when
+/// it is empty and refuses otherwise, as it does a target inside the receiver.
 pub(super) fn rename(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -614,9 +615,9 @@ pub(super) fn search_path_impl(
 /// `file_qualify`: the absolute spelling of `path`, against the interpreter's
 /// own current directory, by [`crate::builtin::platform::qualify_name`].
 ///
-/// **Purely lexical, and that is the oracle's own choice** -- measured,
-/// `a/b/../c.txt` answers `<cwd>/a/c.txt` although no such directory exists,
-/// so nothing here resolves a symlink or asks the file system anything.
+/// **Purely lexical** (`class.file.absolute`): `a/b/../c.txt` answers
+/// `<cwd>/a/c.txt` although no such directory exists, so nothing here resolves
+/// a symlink or asks the file system anything.
 ///
 /// This is the entry point the rest of the class waits on: `init` qualifies
 /// eagerly, so without it `.File~new` builds nothing at all.

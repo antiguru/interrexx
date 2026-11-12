@@ -328,11 +328,10 @@ pub(super) fn native_load_external(
     let Some((library, entry)) = external_specification(&descriptor, &name) else {
         return Err(Raised::bad_external_specification(&descriptor).into());
     };
-    // **The keyword is case-insensitive and the library name is not**, which
-    // is measured rather than assumed: oracle rc 0,
+    // **The keyword is case-insensitive and the library name is not**, so
     // `library REXX file_separator` and `LiBrArY REXX file_separator` each
-    // answer a `Method`, while `LIBRARY rexx file_separator` and
-    // `LIBRARY Rexx file_separator` answer `.nil`.
+    // answer a `Method`, while `LIBRARY rexx file_separator` and `LIBRARY Rexx
+    // file_separator` answer `.nil`.
     if let Some(package) = crate::internal_routines::Package::named(&library) {
         // An internal package's routine table is not this registry.
         if routine {
@@ -350,11 +349,10 @@ pub(super) fn native_load_external(
         return Ok(Some(object));
     }
     // The procedure the shared code is keyed by, as [`crate::LibraryCodeKey`]
-    // documents, or `None` where nothing answers the name.
-    // **Neither a library that is not there nor a procedure it does not
-    // export raises**: measured, oracle rc 0, `.Method~loadExternalMethod('x',
-    // 'LIBRARY zorkolib RegExp_Parse')` and the same naming `rxregexp
-    // NoSuchEntry` both answer `The NIL object`, and
+    // documents, or `None` where nothing answers the name. **Neither a library
+    // that is not there nor a procedure it does not export raises**:
+    // `.Method~loadExternalMethod('x', 'LIBRARY zorkolib RegExp_Parse')` and
+    // the same naming `rxregexp NoSuchEntry` both answer `The NIL object`, and
     // `.Routine~loadExternalRoutine` answers it for the same two.
     let procedure = match interp.resolve_library(&library) {
         crate::LibraryLoad::Loaded(loaded) => {
@@ -365,8 +363,8 @@ pub(super) fn native_load_external(
             }
         }
         crate::LibraryLoad::Missing => None,
-        // Measured, oracle rc 158: 98.982 on the first ask, as
-        // `Package~loadLibrary` raises it.
+        // For example, 98.982 on the first ask, as `Package~loadLibrary` raises
+        // it.
         crate::LibraryLoad::Version => {
             return Err(Raised::library_version(&library).into());
         }

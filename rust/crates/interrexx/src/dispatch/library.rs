@@ -1,9 +1,9 @@
 //! Running a method whose body is a procedure of a loaded shared library, and
 //! the [`Host`] the boundary reaches this interpreter through.
 //!
-//! The reference for the call is the oracle's native-method run, and the
-//! native frame that runs it is also what serves the context, which is why one
-//! frame carries both the receiver's pool and the local references.
+//! The call is a native-method run, and the native frame that runs it is also
+//! what serves the context, which is why one frame carries both the receiver's
+//! pool and the local references.
 
 use std::borrow::Cow;
 
@@ -130,11 +130,11 @@ impl Interp {
         }
         let trapped = trapped?;
 
-        // The condition first, because the oracle raises it in the caller's
-        // frame once the call has returned and before it does anything with
-        // the value the extension wrote. Measured, oracle: `.MyRe~new('[')`
-        // over `RegExp_Init` is `Error 38 ... Invalid template or pattern.` at
-        // rc 218, and the extension returned zero on that path.
+        // The condition first, because it is raised in the caller's frame once
+        // the call has returned and before anything is done with the value the
+        // extension wrote. For example, `.MyRe~new('[')` over `RegExp_Init` is
+        // `Error 38 ... Invalid template or pattern.` at rc 218, and the
+        // extension returned zero on that path.
         if let Some(number) = pending {
             self.activity.native_reraise = true;
             return Err(condition_of(number));
@@ -165,9 +165,9 @@ impl Interp {
     }
 
     /// Applies a call site's [`crate::run::Repin`]: a `Routine` copy stays
-    /// rooted while any call site keeps it, and a kept `::ROUTINE`'s program
-    /// is held by the package of the program owning the site, as the oracle's
-    /// instruction keeps its routine for the instruction's life.
+    /// rooted while any call site keeps it, and a kept `::ROUTINE`'s program is
+    /// held by the package of the program owning the site, as the instruction
+    /// keeps its routine for the instruction's life.
     #[inline]
     pub(crate) fn repin(&mut self, repin: crate::run::Repin) {
         if repin.pin == ObjRef::NIL && repin.unpin == ObjRef::NIL && repin.program.is_none() {
@@ -264,8 +264,8 @@ impl Interp {
     }
 
     /// `StackFrame~executable` for a library routine's frame that held `ran`
-    /// and ran library code `code`: measured, oracle rc 0, the object `~call`
-    /// was sent to or a call by name found.
+    /// and ran library code `code`: the object `~call` was sent to or a call by
+    /// name found.
     pub(crate) fn routine_executable(
         &mut self,
         ran: crate::RoutineObject,
@@ -397,15 +397,15 @@ impl Interp {
         }
     }
 
-    /// Marks `failure`, a condition a native call ended with, as re-raised in
-    /// the call's caller when it is a `SYNTAX` condition, as
-    /// [`Interp::raise_held_condition`] does: its POSITION, PROGRAM, PACKAGE
-    /// and report line become the caller's clause's, PROPAGATED is 1, and its
-    /// traceback keeps the raising line. Measured, oracle, over `RxCalcSqrt`
-    /// (by name and through `::routine ... external`), `RegExp_Match` and
-    /// `RegExp_Parse`: the boundary's refusal of an argument (88.921, 88.909)
-    /// and a raise in the argument's MAKESTRING (40.1) alike
-    /// (`lang/library_refusal_reraised.rex`, `lang/library_string_argument.rex`).
+    /// Marks `failure`, a condition a native call ended with, as re-raised in the
+    /// call's caller when it is a `SYNTAX` condition, as
+    /// [`Interp::raise_held_condition`] does: its POSITION, PROGRAM, PACKAGE and
+    /// report line become the caller's clause's, PROPAGATED is 1, and its
+    /// traceback keeps the raising line. For example, over `RxCalcSqrt` (by name
+    /// and through `::routine ... external`), `RegExp_Match` and `RegExp_Parse`:
+    /// the boundary's refusal of an argument (88.921, 88.909) and a raise in the
+    /// argument's MAKESTRING (40.1) alike (`lang/library_refusal_reraised.rex`,
+    /// `lang/library_string_argument.rex`).
     fn reraise_in_caller(&mut self, failure: &Failure) {
         if !matches!(failure, Failure::Raised(held) if held.condition != "SYNTAX") {
             self.activity.native_reraise = true;
@@ -765,11 +765,11 @@ impl Interp {
     /// Rexx code: the last-chance `UNINIT`s, then the package unloaders.
     /// Answers the refusals they met.
     ///
-    /// Both run on a thread context of their own, as the oracle's run on the
-    /// instance it creates to terminate on: the running activity's context is
-    /// retired ([`interrexx_api::ffi::ThreadContext::retire`]) and set aside
-    /// for the length of the two steps, so the first native call or hook among
-    /// them makes a new one.
+    /// Both run on a thread context of their own, as they run on the instance
+    /// created to terminate on: the running activity's context is retired
+    /// ([`interrexx_api::ffi::ThreadContext::retire`]) and set aside for the
+    /// length of the two steps, so the first native call or hook among them
+    /// makes a new one.
     pub(crate) fn terminate(&mut self) -> Vec<Loud> {
         let running = self.activity.thread.take();
         if let Some(running) = &running {
@@ -784,12 +784,11 @@ impl Interp {
         refused
     }
 
-    /// each held library's unloader, in the order the oracle's table walks
-    /// them, each library closed straight after its own, answering the refusal
-    /// that ended the walk if one did. Measured, oracle: a condition raised
-    /// inside an unloader ends the walk, reports nothing, leaves the exit
-    /// status alone and leaves that library and every later one open. A
-    /// refusal ends it too.
+    /// each held library's unloader, in the order the library table walks them,
+    /// each library closed straight after its own, answering the refusal that
+    /// ended the walk if one did. For example, a condition raised inside an
+    /// unloader ends the walk, reports nothing, leaves the exit status alone
+    /// and leaves that library and every later one open. A refusal ends it too.
     fn run_package_unloaders(&mut self) -> Option<Loud> {
         for (_, library) in self.libraries.in_unload_order() {
             match self.run_package_hook(&library, Hook::Unloader) {
@@ -1039,8 +1038,8 @@ impl Interp {
         self.end_native_frame(&mut frame);
         self.activity.native_spares.push(frame);
         // A request the call made of this interpreter -- `RexxSetHalt` naming the thread it
-        // runs on -- is served at the end of the clause that made the call, where the oracle's
-        // clause boundary takes it, rather than when the countdown next runs out.
+        // runs on -- is served at the end of the clause that made the call, where the clause
+        // boundary takes it, rather than when the countdown next runs out.
         if self.timer.requests().pending(crate::timer::BOUNDARY) {
             self.timer.requests().clear(crate::timer::BOUNDARY);
             self.boundary_posts = Some(self.activation_depth());
@@ -1152,10 +1151,10 @@ impl Interp {
                 Raised::native_argument_needs_a_string_value(position)
             }
             // `found` is the argument's `stringValue()`, which is not its string
-            // conversion: measured, oracle, an array is `found "an Array".` for
-            // 88.921 and 88.905 where its string conversion joins its items.
-            // `NotLogical` below is the exception: its `found` is the string
-            // the conversion answered, `found "1\n2"` for that same array.
+            // conversion: an array is `found "an Array".` for 88.921 and 88.905
+            // where its string conversion joins its items. `NotLogical` below is
+            // the exception: its `found` is the string the conversion answered,
+            // `found "1\n2"` for that same array.
             Refused::InvalidDouble { position, argument } => {
                 let found = self.native_found(argument);
                 Raised::native_argument_not_a_double(position, &found)

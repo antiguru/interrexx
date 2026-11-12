@@ -160,8 +160,8 @@ struct TimedWait {
 }
 
 /// Parks the running activity on `wait`'s timer for `days` whole days and
-/// `millis` milliseconds, taken modulo 2^32 as the oracle's `uint32_t`
-/// timeout takes them, with `woken` as the native's answer after.
+/// `millis` milliseconds, taken modulo 2^32 as a `uint32_t` timeout takes them,
+/// with `woken` as the native's answer after.
 fn timed_wait(
     interp: &mut Interp,
     wait: TimedWait,
@@ -236,8 +236,8 @@ fn set_object_variable(
     Ok(())
 }
 
-/// Whether the receiver's `CANCELED` of `scope` is `.true`. The oracle tests
-/// identity with `.true`; a string's identity here is its bytes (D15), so
+/// Whether the receiver's `CANCELED` of `scope` is `.true`. Identity with
+/// `.true` is what is tested; a string's identity here is its bytes (D15), so
 /// any `1` passes.
 fn is_cancelled(interp: &mut Interp, receiver: ObjRef, scope: ObjRef) -> Result<bool, Failure> {
     let owner = interp.pool_owner(receiver)?;

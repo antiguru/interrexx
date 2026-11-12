@@ -82,7 +82,7 @@ fn calculate_bucket_size(capacity: usize) -> usize {
     if capacity < MINIMUM_BUCKET_SIZE {
         return MINIMUM_BUCKET_SIZE;
     }
-    // `(capacity & 1) == 0` upstream: an odd bucket count is preferred.
+    // `(capacity & 1) == 0`: an odd bucket count is preferred.
     if capacity.is_multiple_of(2) {
         capacity + 1
     } else {
@@ -207,10 +207,9 @@ fn refusal_outside(
     }
 }
 
-/// Records a write to a package's `.ROUTINES` table, which is what the
-/// oracle resolves that package's routine names through from then on, and
-/// which a call site that kept an answer looked up again on every call has
-/// to see.
+/// Records a write to a package's `.ROUTINES` table, which is what that
+/// package's routine names are resolved through from then on, and which a call
+/// site that kept an answer looked up again on every call has to see.
 fn note_routines_write(interp: &mut Interp, receiver: ObjRef) {
     if let Some(package) = interp.routines_table_package(receiver)
         && let Some(data) = interp.package_data_mut(package)
@@ -420,13 +419,13 @@ fn store_of(interp: &mut Interp, receiver: ObjRef) -> Result<Store, Failure> {
         return Ok(store);
     }
     // **A `Body::Native` receiver is not this store's**, and the check has to
-    // be here because the two are one method. The oracle donates
-    // `IdentityTable`'s `At`, `Put` and `[]` rows to `StringTable` and then
-    // `StringTable`'s whole set to `Directory`, so all four classes share one
-    // method identity and one body -- which is why registering these names for
-    // `Table` alone reached a `StringTable` during the bootstrap. `Directory`,
-    // `StringTable` and `Properties` keep the entry map they already have
-    // until the task that owns them.
+    // be here because the two are one method. `IdentityTable`'s `At`, `Put` and
+    // `[]` rows are donated to `StringTable` and then `StringTable`'s whole set
+    // to `Directory`, so all four classes share one method identity and one
+    // body -- which is why registering these names for `Table` alone reached a
+    // `StringTable` during the bootstrap. `Directory`, `StringTable` and
+    // `Properties` keep the entry map they already have until the task that
+    // owns them.
     if matches!(
         interp.heap.get(receiver).map(|object| &object.body),
         Some(Body::Native(_))
@@ -461,8 +460,8 @@ fn slot_at(interp: &Interp, array: ObjRef, slot: usize) -> Result<Option<ObjRef>
 /// The item at `slot`, for a read that answers it or compares it rather than
 /// moving it.
 ///
-/// Refuses an entry `.environment` or `.local` holds on the oracle and this
-/// crate does not build.
+/// Refuses an entry `.environment` or `.local` holds that this crate does not
+/// build.
 fn item_at(interp: &mut Interp, store: &Store, slot: usize) -> Result<Option<ObjRef>, Failure> {
     let item = slot_at(interp, store.items, slot)?;
     if let Some(held) = item
@@ -816,12 +815,11 @@ fn insert_in(
 ) -> Result<(), Failure> {
     // `.local['OUTPUT'] = x` moves a route's far end.
     interp.bump_route_generation();
-    // **The fullness test comes first, and it is the free chain rather than
-    // the item count**: a table can run its overflow dry while primary buckets
-    // stand empty, and upstream expands before every `put` rather than only
-    // when one needs a slot. Measured through the simulation this was written
-    // from: testing the item count instead runs the free chain out on the
-    // forty-integer case.
+    // **The fullness test comes first, and it is the free chain rather than the
+    // item count**: a table can run its overflow dry while primary buckets
+    // stand empty, and the table expands before every `put` rather than only
+    // when one needs a slot. In the simulation this was written from, testing
+    // the item count instead runs the free chain out on the forty-integer case.
     let store = store_in(interp, receiver, half)?;
     if store.free >= store.total {
         expand(interp, receiver, half)?;
@@ -1509,7 +1507,7 @@ pub(crate) fn directory_put_method_value(
 /// What `Directory~get` finds for a name.
 pub(crate) enum DirectoryEntry {
     Found(ObjRef),
-    /// An entry the oracle holds and this crate does not build.
+    /// An entry the reference run holds that this crate does not build.
     Owed,
     Absent,
 }
@@ -1732,12 +1730,11 @@ fn hash_at(
     args: &[Option<ObjRef>],
     name: &[u8],
 ) -> Result<Option<ObjRef>, Failure> {
-    // **One body, two stores.** The oracle donates `IdentityTable`'s `At`,
-    // `Put` and `[]` rows to `StringTable` and that whole set on to
-    // `Directory`, so `Table`, `IdentityTable`, `StringTable` and `Directory`
-    // share one method identity here exactly as they share one function there.
-    // A table this crate built on `NativeObject`'s map reads that map;
-    // everything else reads the store.
+    // **One body, two stores.** `IdentityTable`'s `At`, `Put` and `[]` rows are
+    // donated to `StringTable` and that whole set on to `Directory`, so
+    // `Table`, `IdentityTable`, `StringTable` and `Directory` share one method
+    // identity. A table this crate built on `NativeObject`'s map reads that
+    // map; everything else reads the store.
     if !matches!(
         interp.heap.get(receiver).map(|object| &object.body),
         Some(Body::Native(_))
@@ -1847,7 +1844,7 @@ pub(super) fn native_hash_unknown(
     })
 }
 
-/// [`native_hash_unknown`]'s work, which the oracle also runs without a send.
+/// [`native_hash_unknown`]'s work, which runs without a send too.
 pub(super) fn hash_unknown(
     interp: &mut Interp,
     receiver: ObjRef,

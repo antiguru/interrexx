@@ -16,14 +16,14 @@ use crate::{Failure, Interp, Loud};
 /// Answer type of every entry point here.
 type Answer = Result<Option<ObjRef>, Failure>;
 
-/// 88.901 for argument `at` (zero-based) left out, as the oracle's native
-/// signature check raises it for these entry points: numbered, and reported
-/// at the sending clause's line (measured, `.CommandHandler~handler`).
+/// 88.901 for argument `at` (zero-based) left out, as a native signature check
+/// raises it for these entry points: numbered, and reported at the sending
+/// clause's line (`.CommandHandler~handler`).
 fn missing(at: usize) -> Failure {
     Raised::missing_named_argument(&(at + 1).to_string()).into()
 }
 
-/// Argument `at` (zero-based), which the C++ entry declares as a required
+/// Argument `at` (zero-based), which the native entry declares as a required
 /// string (`CSTRING` or `RexxStringObject`).
 fn string_argument(
     interp: &mut Interp,

@@ -23,9 +23,9 @@ enum Target {
         stem: Vec<u8>,
         key: Vec<u8>,
     },
-    /// An environment symbol named symbolically, which no request changes and
-    /// a fetch answers as unassigned (measured, oracle: `RXSHV_SYFET` of
-    /// `.nil` answers `RXSHV_NEWV`, `RXSHV_FETCH` of `.NIL` `RXSHV_BADN`).
+    /// An environment symbol named symbolically, which no request changes and a
+    /// fetch answers as unassigned (`RXSHV_SYFET` of `.nil` answers
+    /// `RXSHV_NEWV`, `RXSHV_FETCH` of `.NIL` `RXSHV_BADN`).
     Constant,
 }
 
@@ -373,10 +373,10 @@ impl Interp {
         }
     }
 
-    /// Every variable of the running activation as `RXSHV_NEXTV` answers it.
-    /// A stem answers its default under its own name where it has one, then
-    /// each tail holding a value; measured, the oracle answers a stem with a
-    /// default and no such tail twice.
+    /// Every variable of the running activation as `RXSHV_NEXTV` answers it. A
+    /// stem answers its default under its own name where it has one, then each
+    /// tail holding a value; a stem with a default and no such tail is answered
+    /// twice.
     pub(crate) fn pool_variables(&mut self) -> Vec<(Vec<u8>, Vec<u8>)> {
         let entries = match crate::dispatch::context::local_variable_entries(self, 0) {
             Ok(entries) => entries,
