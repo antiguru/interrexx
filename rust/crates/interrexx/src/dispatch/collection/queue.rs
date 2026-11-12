@@ -2,10 +2,9 @@
 //! keeps.
 
 use super::{
-    Arity, Body, Cleared, DEFAULT_ARRAY_SIZE, Failure, IndexUse, Interp, NativeMethod, ObjRef,
-    QUEUE_CAPACITY, Raised, append_slot, array_position, array_slots, array_splice,
-    array_splice_slot, item_argument, native_array_delete, pool_variable, queue_bound, queue_index,
-    read_slots, store_of, store_scope,
+    Arity, Body, Cleared, Failure, IndexUse, Interp, NativeMethod, ObjRef, Raised, append_slot,
+    array_position, array_slots, array_splice, array_splice_slot, item_argument,
+    native_array_delete, queue_bound, queue_index, read_slots, store_of,
 };
 
 // ---- Queue ----
@@ -18,21 +17,9 @@ fn native_queue_init(
     receiver: ObjRef,
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
-    let asked = super::optional_length_argument(interp, args, 0)?.unwrap_or(0);
-    // **Keeps the contents and the extent a second `INIT` finds.** Measured,
-    // `q~init` on a two-item queue still answers `items 2`, and on a
-    // `.Queue~new(50)` holding one item `put('m', 50)` is still 93.966 --
-    // inside the extent, past the last item -- where a reset extent would
-    // have made it 93.918.
+    super::optional_length_argument(interp, args, 0)?;
+    // A second `INIT` keeps the contents the instance already holds.
     store_of(interp, receiver)?;
-    let scope = store_scope(interp);
-    if pool_variable(interp, receiver, scope, QUEUE_CAPACITY).is_none() {
-        // Measured: `.Queue~new(5)` bounds at 16 and `.Queue~new(50)` at 50,
-        // so the requested extent is floored at the default rather than
-        // replacing it.
-        let capacity = interp.counted(asked.max(DEFAULT_ARRAY_SIZE));
-        interp.set_pool_variable(receiver, scope, QUEUE_CAPACITY, capacity);
-    }
     Ok(None)
 }
 
@@ -126,11 +113,10 @@ fn native_queue_put(
         Failure::from(Raised::incorrect_list_index(&written))
     };
     let subscript = queue_index(interp, receiver, index, 2)?;
-    // `putRexx` calls `checkInsertIndex` before anything else can refuse, so
-    // an index past the last item is 93.966 and never the 93.918 an unheld
-    // index would answer.
+    // An index past the last item is 93.966 before anything else can refuse,
+    // and never the 93.918 an unheld index would answer.
     let position = super::positive_index(interp, subscript, 2)?;
-    queue_bound(interp, receiver, index, position)?;
+    queue_bound(interp, receiver, position)?;
     let Some(position) = array_position(interp, store, &[Some(subscript)], IndexUse::Get)? else {
         return Err(refuse(interp));
     };
