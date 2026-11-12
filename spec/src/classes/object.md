@@ -2033,7 +2033,7 @@ exit
 bad: say 'SYNTAX' condition('o')~code
 ```
 
-```output
+```output no-oracle
 SYNTAX 93.900
 ```
 
@@ -2052,10 +2052,28 @@ bad: say 'SYNTAX' condition('o')~code
   self~setMethod('ITEMS', arg(1))
 ```
 
-```output
+```output no-oracle
 before
 after
 SYNTAX 93.900
+```
+
+r[class.object.deviation.28]
+A metaclass `new` that answers something other than a class, while a class
+with that metaclass is made by `subclass`, and a `.ROUTINES` entry that is
+not a routine, are refused: the program ends with exit code 120. ooRexx casts
+the answer unchecked and crashes. A native method run on a receiver of the
+wrong kind is another matter: [its rule](r:class.object.borrowed-native)
+raises a condition.
+
+```rexx
+say 'id' .object~subclass("k", .MyMeta)~id
+::class MyMeta subclass Class
+::method new class
+  return 'x'
+```
+
+```output rc=120
 ```
 
 r[class.object.deviation.30]

@@ -964,11 +964,13 @@ fn oracle_gate_on() -> bool {
     std::env::var_os("REXX_SPEC_ORACLE").is_some_and(|v| !v.is_empty() && v != "0")
 }
 
-/// Whether `example` is under a deviation rule its page lists: the rule's ID
-/// ends `.deviation.N` and `N` is in the page's `deviations`.
+/// Whether `example` is marked `no-oracle`, or is under a deviation rule its
+/// page lists: the rule's ID ends `.deviation.N` and `N` is in the page's
+/// `deviations`.
 fn exempt_from_the_oracle(page: &interrexx_spec::Page, example: &interrexx_spec::Example) -> bool {
-    interrexx_spec::deviation_number(&example.rule)
-        .is_some_and(|n| page.front.deviations.contains(&n))
+    example.no_oracle
+        || interrexx_spec::deviation_number(&example.rule)
+            .is_some_and(|n| page.front.deviations.contains(&n))
 }
 
 /// `PATH` with the oracle's `bin` directory in front, so that a spec example's
