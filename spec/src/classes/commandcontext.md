@@ -25,17 +25,18 @@ their own under names that no host has, so that nothing depends on the host.
 ## The class
 
 r[class.commandcontext.creation]
-`CommandContext` has the instance methods `[]`, `[]=`, `dropVar`, `environment`,
-`error`, `getVar`, `hasVar`, `input`, `isRedirected`, `isValid`, `output`,
-`raise`, `raiseError`, `raiseFailure`, `setVar` and `variables`, besides the
-methods that every class has. Its only superclass is `Object` and it inherits no
-mixin class ([the hierarchy rule](r:class.index.hierarchy)). The interpreter
-makes one for each command that is sent to a handler written in Rexx, and a
-program receives it as the second argument of `command`; a program does not make
-one. What the `new` of a program makes, and the method `init` that it sends, is
-the subject of [the next rule](r:class.commandcontext.init). The class has other
-methods, `finish` and `pending` among them, that the interpreter uses; they are
-not part of this specification.
+`CommandContext` has the instance methods `[]`, `[]=`, `dropVar`,
+`environment`, `error`, `getVar`, `hasVar`, `init`, `input`, `isRedirected`,
+`isValid`, `output`, `raise`, `raiseError`, `raiseFailure`, `setVar` and
+`variables`, besides the methods that every class has. Its only superclass is
+`Object` and it inherits no mixin class ([the hierarchy
+rule](r:class.index.hierarchy)). The interpreter makes one for each command
+that is sent to a handler written in Rexx, and a program receives it as the
+second argument of `command`; a program does not make one. What the `new` of a
+program makes, and the method `init` that it sends, is the subject of [the next
+rule](r:class.commandcontext.init). The class has other methods, `finish` and
+`pending` among them, that the interpreter uses; they are not part of this
+specification.
 
 ```rexx
 say .commandcontext~id .commandcontext~superclasses~items,
@@ -83,18 +84,23 @@ arguments: `SYNTAX 93.901` when fewer are present, a trailing omitted argument
 not counting, `SYNTAX 93.902` when more than two are given, and `SYNTAX 93.903`
 when the first is omitted and the second is present. Both can be any object,
 `.nil` among them, and neither is converted or sent a message. The first
-argument is not used. The second becomes what [`environment`](r:class.commandcontext.environment)
-answers, the same object that was given, so that an array stays an array and
-the null string stays the null string. A context that `new` makes belongs to no
-command: `isValid` answers `0` from the start, and the methods that [the
-validity rule](r:class.commandcontext.valid) lists as working with the code
-that sent a command raise `SYNTAX 98.900` as they do once the command has ended,
-while `environment`, `isValid` and `copy` work. A message `init` that is sent
-to a context a second time replaces what `environment` answers and answers
-nothing, so that using its answer as a value raises `SYNTAX 91.999`. A subclass
-of `CommandContext` gets the same, through its own `init` when it has one and
-`forward class (super)` or `self~init:super(first, name)`. What a hand-made
-context may be passed to is not specified.
+argument is not used. The second becomes what
+[`environment`](r:class.commandcontext.environment) answers, the same object
+that was given, so that an array stays an array and the null string stays the
+null string. A context that `new` makes belongs to no command: `isValid`
+answers `0` from the start, and the methods that [the validity
+rule](r:class.commandcontext.valid) lists as working with the code that sent a
+command raise `SYNTAX 98.900` as they do once the command has ended, while
+`environment`, `isValid` and `copy` work. A message `init` that is sent to a
+context a second time replaces what `environment` answers and answers nothing,
+so that using its answer as a value raises `SYNTAX 91.999`. When the context
+belongs to a command that is running, the second `init` also detaches it from
+the command: `isValid` answers `0` from then on, and the methods of [the
+validity rule](r:class.commandcontext.valid) raise `SYNTAX 98.900`, as they do
+once the command has ended. A subclass of `CommandContext` gets the same,
+through its own `init` when it has one and `forward class (super)` or
+`self~init:super(first, name)`. What a hand-made context may be passed to is
+not specified.
 
 ```rexx
 c = .commandcontext~new(1, 'Env')
@@ -164,7 +170,28 @@ SUB Own 0 set
 .sub~new(1) 93.901
 ```
 
+```rexx
+x = .commandhandler~register('spec_cc_reinit', .again~new)
+address spec_cc_reinit 'go'
+x = .commandhandler~deregister('spec_cc_reinit')
+::class again inherit CommandHandler
+::method command
+  use arg command, caller
+  say caller~isValid caller~environment caller~hasVar('v')
+  caller~init(1, 'Z')
+  say caller~isValid caller~environment
+  signal on syntax name bad
+  say caller~getVar('v')
+  return 0
+bad: say 'getVar' condition('o')~code
+  return 0
+```
 
+```output
+1 SPEC_CC_REINIT 0
+0 Z
+getVar 98.900
+```
 
 r[class.commandcontext.valid]
 A context is good for the command that it stands for, on the activity that is
@@ -309,21 +336,24 @@ d sent to SPEC_CC_TWO
 
 r[class.commandcontext.name]
 The `name` that `[]`, `getVar`, `[]=`, `setVar`, `hasVar` and `dropVar` take
-names a variable of the code that sent the command, a simple variable, a stem or
-a compound variable, as [a variable symbol](r:lex.symbols.variable) does, and
-its case plays no part. A string is the name as it is; another object, an
-instance of a subclass of `String` apart ([the deviation
-rule](r:class.commandcontext.deviation.109)), is replaced by what it answers to
-the message `request` with the argument `String`. The `request` of `Object`
-answers what `makeString` answers, so an object with a `makeString`, an `Array`
-or a `MutableBuffer` is read through it. A name is refused with `SYNTAX 93.900`
-when it is no variable name: the null string, a string that starts with a digit
-or with a period, a string with a blank or with a character that no symbol can
-have, a number, and an object that does not answer a string. A name of a
-compound variable has its tail resolved in the code that sent the command, as
-[the tail rule](r:expr.variables.tail) says for a program; the example sets
-`c.i` while `i` holds `3`, and reads the variable back as `c.3`. Special names
-such as `RC`, `RESULT` and `SIGL` are names of variables like the others.
+names a variable of the code that sent the command, a simple variable, a stem
+or a compound variable, as [a variable symbol](r:lex.symbols.variable) does,
+and its case plays no part. The number of the arguments is checked before the
+name is read: `getVar('1x', 2)`, `hasVar('1x', 2)` and `dropVar('1x', 2)` raise
+`SYNTAX 93.902`, and `setVar('1x')` raises `SYNTAX 93.901`, not `93.900`. A
+string is the name as it is; another object, an instance of a subclass of
+`String` apart ([the deviation rule](r:class.commandcontext.deviation.109)), is
+replaced by what it answers to the message `request` with the argument
+`String`. The `request` of `Object` answers what `makeString` answers, so an
+object with a `makeString`, an `Array` or a `MutableBuffer` is read through it.
+A name is refused with `SYNTAX 93.900` when it is no variable name: the null
+string, a string that starts with a digit or with a period, a string with a
+blank or with a character that no symbol can have, a number, and an object that
+does not answer a string. A name of a compound variable has its tail resolved
+in the code that sent the command, as [the tail rule](r:expr.variables.tail)
+says for a program; the example sets `c.i` while `i` holds `3`, and reads the
+variable back as `c.3`. Special names such as `RC`, `RESULT` and `SIGL` are
+names of variables like the others.
 
 ```rexx
 x = .commandhandler~register('spec_cc_name', .namer~new)
@@ -412,7 +442,8 @@ x = .commandhandler~deregister('spec_cc_getvar')
     caller['nosuch.1']
   say caller['nilvar']~isNil caller['nothing'] caller['nothing.k']
   do x over .array~of("caller~getVar", "caller~'[]'",,
-      "caller~getVar('a', 'b')", "caller~'[]'('a', 'b')")
+      "caller~getVar('a', 'b')", "caller~'[]'('a', 'b')",,
+      "caller~getVar('1x', 2)")
     self~try(caller, x)
   end
   return 0
@@ -434,6 +465,7 @@ caller~getVar 93.901
 caller~'[]' 93.901
 caller~getVar('a', 'b') 93.902
 caller~'[]'('a', 'b') 93.902
+caller~getVar('1x', 2) 93.902
 3
 ```
 
@@ -499,7 +531,10 @@ object it is: a string, `.nil` or any other object, not a string made from it.
 The two methods are not two spellings of one: **the order of the arguments
 differs**, the value first for the bracket form, which is what the assignment
 `c[name] = value` sends, and the name first for `setVar`. Both need two
-arguments (`SYNTAX 93.901`), and a third raises `SYNTAX 93.902`. The name is
+arguments (`SYNTAX 93.901`, a trailing omitted argument not counting), a third
+raises `SYNTAX 93.902`, and `SYNTAX 93.903` is raised when the name is the
+omitted argument and the value is present: `setVar(, 1)` and `[]=(, 'x')`, while
+`setVar('x', )` and `[]=(1, )` raise `93.901`. The name is
 read as [the name rule](r:class.commandcontext.name) says, and the value is not
 read at all. Both answer nothing, so that using the answer as a value raises
 `SYNTAX 91.999`. A name that is no variable name raises `SYNTAX 93.900`, and
@@ -527,6 +562,8 @@ x = .commandhandler~deregister('spec_cc_setvar')
   do x over .array~of("caller~setVar('a')", "caller~'[]='('a')",,
       "caller~setVar", "caller~setVar('a', 1, 2)", "caller~setVar('1x', 1)",,
       "caller~'[]='(1, '1x')", "caller~setVar('', 1)",,
+      "caller~setVar(, 1)", "caller~'[]='(, 'x')", "caller~setVar('x', )",,
+      "caller~'[]='(1, )", "caller~setVar('1x')",,
       "x = caller~setVar('zz', 1)", "x = caller~'[]='(1, 'zz')")
     self~try(caller, x)
   end
@@ -550,6 +587,11 @@ caller~setVar('a', 1, 2) 93.902
 caller~setVar('1x', 1) 93.900
 caller~'[]='(1, '1x') 93.900
 caller~setVar('', 1) 93.900
+caller~setVar(, 1) 93.903
+caller~'[]='(, 'x') 93.903
+caller~setVar('x', ) 93.901
+caller~'[]='(1, ) 93.901
+caller~setVar('1x') 93.901
 x = caller~setVar('zz', 1) 91.999
 x = caller~'[]='(1, 'zz') 91.999
 by setVar | by bracket | compound | cleared cleared cleared
@@ -660,19 +702,24 @@ seen by the program set later LIT
 r[class.commandcontext.isredirected]
 `isRedirected(which)` answers `1` when the command was sent with the
 redirection that the first letter of `which` names, and `0` when it was not.
-The letter is `I` for `WITH INPUT`, `O` for `WITH OUTPUT`, `E` for
-`WITH ERROR` and `S` for output and error that go to the same target, and it
-may be in either case; only the first letter is read, so `Input`, `Ixyz` and
-`I` are the same. A redirection that names a stem, a stream or an object to
+The letter is `I` for `WITH INPUT`, `O` for `WITH OUTPUT`, `E` for `WITH ERROR`
+and `S` for output and error that go to the same target, and it may be in
+either case; only the first letter is read, so `Input`, `Ixyz` and `I` are the
+same. A redirection that names a stem, a stream or an object to
 [`USING`](r:instr.address.with.using) is a redirection, and `NORMAL` is none.
 The target is the same when both redirections name the same stem, the same
-stream, or the same object, whether either appends or replaces. `S` is `0`
-when only one of them is redirected. `which` is required (`SYNTAX 88.901`) and
-one more argument raises `SYNTAX 88.922`. A `which` that starts with another
-letter or has none, the null string and a number among them, raises
-`SYNTAX 93.900`. An object that is not a string and answers no string to
-`request` with `STRING`, `.nil` and an `Object` among them, raises
-`SYNTAX 88.909`.
+stream, or the same object, whether either appends or replaces. `S` is `0` when
+only one of them is redirected. `which` is required (`SYNTAX 88.901`) and one
+more argument raises `SYNTAX 88.922`. A `which` that starts with another letter
+or has none, the null string and a number among them, raises `SYNTAX 93.900`.
+An object that is not a string and answers no string to `request` with
+`STRING`, `.nil` and an `Object` among them, raises `SYNTAX 88.909`. The checks
+run in this order: `which` is present (`88.901`), then it is a string or
+answers one (`88.909`), then the number of arguments is right (`88.922`), then
+the letter is one of those above (`93.900`). So `isRedirected(, 1)` raises
+`88.901` and `isRedirected(.nil, 1)` raises `88.909`, however many arguments
+follow, while `isRedirected('Q', 1)` raises `88.922`. interrexx raises `88.922`
+for the first two today (issue #429).
 
 ```rexx
 x = .commandhandler~register('spec_cc_redir', .asker~new)
@@ -771,6 +818,34 @@ bad: say x '=>' condition('o')~code
 caller~isRedirected(.nil) => 88.909
 caller~isRedirected(.object~new) => 88.909
 caller~isRedirected(.named~new) => 0
+```
+
+```rexx
+x = .commandhandler~register('spec_cc_redir_order', .asker~new)
+address spec_cc_redir_order 'go'
+x = .commandhandler~deregister('spec_cc_redir_order')
+::class asker inherit CommandHandler
+::method command
+  use arg command, caller
+  do x over .array~of("caller~isRedirected(, 1)",,
+      "caller~isRedirected(.nil, 1)", "caller~isRedirected('Q', 1)")
+    self~try(caller, x)
+  end
+  return 0
+::method try
+  use arg caller, x
+  signal on syntax name bad
+  interpret 'y =' x
+  say x '=>' y
+  return
+bad: say x '=>' condition('o')~code
+  return
+```
+
+```output defect=#429
+caller~isRedirected(, 1) => 88.901
+caller~isRedirected(.nil, 1) => 88.909
+caller~isRedirected('Q', 1) => 88.922
 ```
 
 r[class.commandcontext.input]
@@ -908,13 +983,13 @@ it is, whatever object it is, the number or the text, `.nil` too, so a handler
 may return the answer of the call or anything else. A HALT is delayed like any
 HALT ([the HALT rule](r:cond.halt.raise)), so the clause after the command is
 run before a trap for it. `condition` is a string: `ERROR`, `FAILURE`, `HALT`,
-`LOSTDIGITS`, `NOMETHOD`, `NOSTRING`, `NOTREADY`, `NOVALUE`, or `USER`
-followed by a name of one word, in either case; `SYNTAX` is the other form,
-which [the next rule](r:class.commandcontext.raise.syntax) states. The string
-is read as words separated by [whitespace](r:conv.string.whitespace), so the
-blanks and tabs around and between the words play no part, and the name after
-`USER` may be any word; the condition is named in upper case (`USER 1X`). A
-command that raises ERROR or FAILURE has the status `.RS` of the [status
+`LOSTDIGITS`, `NOMETHOD`, `NOSTRING`, `NOTREADY`, `NOVALUE`, or `USER` followed
+by a name of one word, in either case; `SYNTAX` is the other form, which [the
+next rule](r:class.commandcontext.raise.syntax) states. The string is read as
+words separated by [whitespace](r:conv.string.whitespace), so the blanks and
+tabs around and between the words play no part, and the name after `USER` may
+be any word; the condition is named in upper case (`USER 1X`). A command that
+raises ERROR or FAILURE has the status `.RS` of the [status
 rule](r:instr.command.status). `description` is what `CONDITION('D')` answers
 and the `DESCRIPTION` entry of the condition object holds; when it is omitted
 or `.nil`, it is the command, and the null string is a description like
@@ -928,11 +1003,13 @@ entry of the condition object, the object as it was given, and when it is
 omitted or `.nil` the condition object has no such entry. The condition object
 has `RC`, holding the `rc` object. `condition` and `rc` are required: `SYNTAX
 93.901` when they are fewer than two, `SYNTAX 93.903` when an omitted place
-stands for one of them, and `SYNTAX 93.902` for more than four arguments. A
-`condition` that is none of the forms above, `ANY`, `NONE`, `PROPAGATE`,
-`USER` with no name or with more than one, any other text, the null string and
-`.nil` among them, raises `SYNTAX 93.900`. A call that raises an error does
-not use up the command's one condition, which [the second
+stands for one of them, and `SYNTAX 93.902` for more than four arguments. The
+number of arguments is checked before the `condition` is read, so that
+`raise('BOGUS')` raises `SYNTAX 93.901`, not `93.900`. A `condition` that is
+none of the forms above, `ANY`, `NONE`, `PROPAGATE`, `USER` with no name or
+with more than one, any other text, the null string and `.nil` among them,
+raises `SYNTAX 93.900`. A call that raises an error does not use up the
+command's one condition, which [the second
 rule](r:class.commandcontext.raise.once) says.
 
 ```rexx
@@ -1012,8 +1089,9 @@ x = .commandhandler~deregister('spec_cc_raise_args')
 ::class tries inherit CommandHandler
 ::method command
   use arg command, caller
-  do x over .array~of("raise", "raise('ERROR')", "raise(, 1)",,
-      "raise('ERROR', , 'text')", "raise('ERROR', 1, 'd', 'a', 'x')",,
+  do x over .array~of("raise", "raise('ERROR')", "raise('BOGUS')",,
+      "raise(, 1)", "raise('ERROR', , 'text')",,
+      "raise('ERROR', 1, 'd', 'a', 'x')",,
       "raise('FOO', 1)", "raise('ANY', 1)", "raise('NONE', 1)",,
       "raise('PROPAGATE', 1)", "raise('USER', 1)", "raise('USER a b', 1)",,
       "raise('', 1)", "raise(.nil, 1)", "raise('SYNTAX', 98.900, 1, 2)",,
@@ -1034,6 +1112,7 @@ bad: say x condition('o')~code
 ```output
 raise 93.901
 raise('ERROR') 93.901
+raise('BOGUS') 93.901
 raise(, 1) 93.903
 raise('ERROR', , 'text') 93.903
 raise('ERROR', 1, 'd', 'a', 'x') 93.902

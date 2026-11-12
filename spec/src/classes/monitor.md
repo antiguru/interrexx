@@ -259,7 +259,9 @@ the destination has on its class side is not reached. A destination that has
 an `unknown` method of its own gets that message in turn, with the name in
 upper case. Called directly, `unknown` needs both arguments (`SYNTAX 93.901`),
 takes no more (`SYNTAX 93.902`), and needs the name to be present
-(`SYNTAX 93.903`).
+(`SYNTAX 93.903`). The second argument of a direct call is any object, and it
+is sent `request` with `ARRAY` before anything is forwarded; [the arguments
+rule](r:class.monitor.unknown.arguments) says what that makes of it.
 
 ```rexx
 a = .target~new('A')
@@ -340,9 +342,11 @@ The second argument of a direct `unknown` need not be an `Array`: it is any
 object, and it is sent `request` with `ARRAY` before anything is forwarded, as
 [the unknown rule](r:class.monitor.unknown) says. The items of what that
 answers, in order and with their holes, are the arguments of the forwarded
-message. A string answers an array of one item, itself, so that a string is one
-argument and the null string is none; a number, `.true` and a `MutableBuffer`
-are one argument each, as their strings; a `List` or a `Set` answers its items;
+message. A string answers the array of its lines, so that a string without a
+line end is one argument, the null string is none, and a string with line ends
+is as many arguments as it has lines; a `MutableBuffer` likewise, by its
+string; a number and `.true` are one argument each, as their strings;
+a `List` or a `Set` answers its items;
 and an object that answers no array to `request`, `.nil` and an `Object` among
 them, raises `SYNTAX 98.946` and forwards nothing.
 
@@ -359,6 +363,9 @@ call try "m~unknown('echo', .nil)"
 call try "m~unknown('echo', .true)"
 call try "m~unknown('echo', .array~of('p', , 'r'))"
 call try "m~unknown('echo', .mutablebuffer~new('q'))"
+call try "m~unknown('echo', 'a'||'0a'x||'b')"
+call try "m~unknown('echo', .mutablebuffer~new('c'||'0d0a'x||'d'))"
+call try "m~unknown('echo', 'a'||'0a'x)"
 exit
 try:
   signal on syntax name bad
@@ -384,6 +391,9 @@ m~unknown('echo', .nil) => 98.946
 m~unknown('echo', .true) => 1 [1] [] []
 m~unknown('echo', .array~of('p', , 'r')) => 3 [p] [] [r]
 m~unknown('echo', .mutablebuffer~new('q')) => 1 [q] [] []
+m~unknown('echo', 'a'||'0a'x||'b') => 2 [a] [b] []
+m~unknown('echo', .mutablebuffer~new('c'||'0d0a'x||'d')) => 2 [c] [d] []
+m~unknown('echo', 'a'||'0a'x) => 1 [a] [] []
 ```
 
 r[class.monitor.object]
