@@ -120,11 +120,7 @@ impl ObjRef {
         if bytes.len() > INLINE_TEXT {
             return None;
         }
-        let mut buf = [0u8; 8];
-        for (slot, byte) in buf.iter_mut().zip(bytes) {
-            *slot = *byte;
-        }
-        let data = u64::from_le_bytes(buf);
+        let data = pack_short(bytes);
         Some(ObjRef(
             (data << TEXT_DATA_SHIFT) | ((bytes.len() as u64) << TEXT_LEN_SHIFT) | TAG_TEXT,
             PhantomData,
@@ -169,6 +165,38 @@ impl ObjRef {
     }
 }
 
+/// `bytes`, at most eight of them, as a little-endian `u64` with the bytes
+/// past the end zero.
+///
+/// Two loads that may overlap, of the widest power of two the length holds,
+/// rather than a copy per byte or a `memcpy` call: a short slice is what
+/// every handle-sized string is built from.
+#[inline(always)]
+fn pack_short(bytes: &[u8]) -> u64 {
+    let len = bytes.len();
+    debug_assert!(len <= 8);
+    if len >= 4 {
+        let low = u64::from(u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]));
+        let at = len - 4;
+        let high = u64::from(u32::from_le_bytes([
+            bytes[at],
+            bytes[at + 1],
+            bytes[at + 2],
+            bytes[at + 3],
+        ]));
+        low | (high << (8 * at))
+    } else if len >= 2 {
+        let low = u64::from(u16::from_le_bytes([bytes[0], bytes[1]]));
+        let at = len - 2;
+        let high = u64::from(u16::from_le_bytes([bytes[at], bytes[at + 1]]));
+        low | (high << (8 * at))
+    } else if len == 1 {
+        u64::from(bytes[0])
+    } else {
+        0
+    }
+}
+
 #[cfg(test)]
 mod inline_byte_tests {
     use super::*;
@@ -183,6 +211,29 @@ mod inline_byte_tests {
                 ObjRef::inline_text(&[byte]),
                 "byte {byte} disagrees between the const and the slice route"
             );
+        }
+    }
+
+    /// Every length a handle holds packs to the bytes in order with zeros
+    /// past the end, which is what decoding reads back.
+    #[test]
+    fn short_slices_pack_byte_for_byte() {
+        let source = [0x11u8, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88];
+        for len in 0..=8 {
+            let mut expected = [0u8; 8];
+            expected[..len].copy_from_slice(&source[..len]);
+            assert_eq!(
+                pack_short(&source[..len]),
+                u64::from_le_bytes(expected),
+                "length {len}"
+            );
+        }
+        for len in 0..=INLINE_TEXT {
+            let handle = ObjRef::inline_text(&source[..len]).expect("a handle-sized slice");
+            let Decoded::Text(text) = handle.decode() else {
+                panic!("an inline text handle decoded as something else");
+            };
+            assert_eq!(&*text, &source[..len]);
         }
     }
 }
