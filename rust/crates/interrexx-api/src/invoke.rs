@@ -1,8 +1,7 @@
 //! The two-call protocol: ask the stub for its signature, then call it with
 //! the arguments that signature declares.
 //!
-//! `NativeActivation::run` (`interpreter/execution/NativeActivation.cpp:1264-1310`)
-//! is the reference.
+//! The oracle's native call is the reference.
 
 use interrexx_core::ObjRef;
 
@@ -17,8 +16,7 @@ use crate::values::{
     self, ARGUMENT_TERMINATOR, Activation, Converted, Failure, ResultRead, Value, Written,
 };
 
-/// `NativeActivation::MaxNativeArguments`
-/// (`interpreter/execution/NativeActivation.hpp:209`), the length of the
+/// The length of the
 /// descriptor array, whose first element is the return value.
 pub const MAX_NATIVE_ARGUMENTS: usize = 16;
 
@@ -30,11 +28,9 @@ pub const MAX_NATIVE_ARGUMENTS: usize = 16;
 /// answers `OREF_NULL`.
 ///
 /// The result is read whatever the call did with it: an extension that raises
-/// a condition returns normally and still writes element zero
-/// (`interpreter/api/ThreadContextStubs.cpp:1863-1885`). A condition it
-/// raised is left on `cx` for the caller to raise once the call has returned,
-/// which is where `NativeActivation::checkConditions`
-/// (`interpreter/execution/NativeActivation.cpp:1787`) raises it.
+/// a condition returns normally and still writes element zero.
+/// A condition it raised is left on `cx` for the caller to raise once the call
+/// has returned, which is where the oracle raises it.
 ///
 /// The halves are [`prepare`], [`call_method`] and [`finish`], with
 /// [`Host::between_halves`](crate::values::Host::between_halves) run between
@@ -91,9 +87,8 @@ pub fn held_method(
 }
 
 /// Run the native routine `entry` against `arguments`, as [`method`] runs a
-/// method: `NativeActivation::callNativeRoutine`
-/// (`interpreter/execution/NativeActivation.cpp:1379`) shares
-/// `processArguments` with the method call.
+/// method: the oracle shares
+/// its argument conversion with the method call.
 ///
 /// # Errors
 /// [`method`]'s, and [`Failure::ClassicStyle`] for a
@@ -166,8 +161,7 @@ pub fn hook(
 
 /// Run the command handler `handler` for `command`, issued to the environment
 /// `address`, with the exit context `contexts` links and, for a redirecting
-/// handler, `redirector` (`ContextCommandHandlerDispatcher::run` and its
-/// redirecting sibling, `interpreter/concurrency/CommandHandler.cpp:231-295`).
+/// handler, `redirector`.
 ///
 /// The answer is the object the handler returned, `None` for a null or a
 /// handle this call does not hold. A condition it raised, a `Throw` member's
@@ -202,13 +196,11 @@ pub fn command(
     Ok(cx.conversion().host.resolve(answered))
 }
 
-/// Run the system exit `handler` for `request`, with the exit context `contexts` links
-/// (`ExitHandlerDispatcher::run` and `ContextExitHandlerDispatcher::run`,
-/// `interpreter/concurrency/ExitHandler.cpp`). Each object `request` carries is handed as a
+/// Run the system exit `handler` for `request`, with the exit context `contexts` links.
+/// Each object `request` carries is handed as a
 /// handle of the call's frame, `None` a null one, and an object the handler answers is
 /// resolved, `None` for a null or a handle this call does not hold. A condition a context
 /// handler raised, a `Throw` member's included, is left on `cx`, as [`method`] leaves one.
-///
 /// # Errors
 /// [`Failure::UnfilledSlot`] for the first interface member the handler reached that this
 /// phase has not written, which also forgets any condition it raised.
@@ -273,7 +265,7 @@ const _: () = {
     require_send::<Completion>();
 };
 
-/// `processArguments`: `arguments` converted into `native`'s descriptors as
+/// `arguments` converted into `native`'s descriptors as
 /// `signature` declares them. `native` is filled in place rather than
 /// answered, which keeps the descriptor array from being copied.
 ///
@@ -292,15 +284,14 @@ pub fn prepare(
     let returns = signature.first().copied().unwrap_or(ARGUMENT_TERMINATOR);
     native.returns = returns;
     let descriptors = &mut native.descriptors;
-    // The result word as declared, optional bit and all
-    // (`NativeActivation.cpp:228`).
+    // The result word as declared, optional bit and all.
     descriptors[0].r#type = returns;
 
-    // The oracle's `inputIndex`: a special argument fills a descriptor
+    // A special argument fills a descriptor
     // without consuming one of these, which is why the position an error
-    // reports counts only the arguments (`NativeActivation.cpp:327`).
+    // reports counts only the arguments.
     let mut input = 0;
-    // The oracle's `usedArglist` (`NativeActivation.cpp:311`).
+    // Whether an argument list was taken.
     let mut takes_list = false;
     for (output, declared) in signature.iter().copied().enumerate().skip(1) {
         let consumes = values::consumes_argument(declared);
@@ -393,7 +384,7 @@ fn call(
     }
 }
 
-/// `valueToObject`: the object `completion`'s result describes, resolved in
+/// The object `completion`'s result describes, resolved in
 /// `cx`.
 ///
 /// # Errors
@@ -485,12 +476,12 @@ fn bounded(read: impl FnOnce(usize) -> Option<Vec<u16>>) -> Result<Vec<u16>, Fai
     // The words are the return type, the parameters the array has room for,
     // and the terminator, so a signature that fits is one word longer than
     // the array. Reading no further is this crate's form of the oracle's
-    // bound check (`NativeActivation.cpp:238-241`).
+    // bound check.
     read(MAX_NATIVE_ARGUMENTS + 1).ok_or(Failure::Signature)
 }
 
 /// A descriptor holding nothing, which is what the oracle's `type` of zero
-/// and zeroed value word describe (`NativeActivation.cpp:228-229`).
+/// and zeroed value word describe.
 fn empty() -> ValueDescriptor {
     values::descriptor(
         ARGUMENT_TERMINATOR,

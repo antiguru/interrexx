@@ -1,6 +1,6 @@
 // The `allow` is for the frozen header's own spellings (D5): the interface
 // tables, the context structs, `RexxCondition` and `ValueDescriptor` carry the
-// member names `api/oorexxapi.h` gives them. The entry structs moved here from
+// member names the header gives them. The entry structs moved here from
 // `load.rs` and keep the Rust spellings they arrived with.
 #![allow(non_camel_case_types, non_snake_case)]
 
@@ -10,20 +10,20 @@
 use std::cell::Cell;
 use std::ffi::{c_char, c_int, c_void};
 
-/// `wholenumber_t` (`api/rexx.h:237`).
+/// `wholenumber_t`.
 pub type wholenumber_t = isize;
-/// `stringsize_t` (`api/rexx.h:236`).
+/// `stringsize_t`.
 pub type stringsize_t = usize;
-/// `logical_t` (`api/rexx.h:238`).
+/// `logical_t`.
 pub type logical_t = usize;
-/// `CSTRING` (`api/rexx.h:78`).
+/// `CSTRING`.
 pub type CSTRING = *const c_char;
-/// `POINTER` (`api/rexx.h:79`).
+/// `POINTER`.
 pub type POINTER = *mut c_void;
-/// `REXXPFN` (`api/platform/unix/rexxapitypes.h:64`).
+/// `REXXPFN`.
 pub type REXXPFN = *mut c_void;
 
-/// `_RexxObjectPtr` and `RexxObjectPtr` (`api/rexx.h:117-159`).
+/// `_RexxObjectPtr` and `RexxObjectPtr`.
 #[repr(C)]
 pub struct RexxObjectPtr_ {
     _opaque: [u8; 0],
@@ -31,7 +31,7 @@ pub struct RexxObjectPtr_ {
 /// A handle to an object of that shape; opaque to an extension.
 pub type RexxObjectPtr = *mut RexxObjectPtr_;
 
-/// `_RexxStringObject` and `RexxStringObject` (`api/rexx.h:117-159`).
+/// `_RexxStringObject` and `RexxStringObject`.
 #[repr(C)]
 pub struct RexxStringObject_ {
     _opaque: [u8; 0],
@@ -39,7 +39,7 @@ pub struct RexxStringObject_ {
 /// A handle to an object of that shape; opaque to an extension.
 pub type RexxStringObject = *mut RexxStringObject_;
 
-/// `_RexxBufferStringObject` and `RexxBufferStringObject` (`api/rexx.h:117-159`).
+/// `_RexxBufferStringObject` and `RexxBufferStringObject`.
 #[repr(C)]
 pub struct RexxBufferStringObject_ {
     _opaque: [u8; 0],
@@ -47,7 +47,7 @@ pub struct RexxBufferStringObject_ {
 /// A handle to an object of that shape; opaque to an extension.
 pub type RexxBufferStringObject = *mut RexxBufferStringObject_;
 
-/// `_RexxArrayObject` and `RexxArrayObject` (`api/rexx.h:117-159`).
+/// `_RexxArrayObject` and `RexxArrayObject`.
 #[repr(C)]
 pub struct RexxArrayObject_ {
     _opaque: [u8; 0],
@@ -55,7 +55,7 @@ pub struct RexxArrayObject_ {
 /// A handle to an object of that shape; opaque to an extension.
 pub type RexxArrayObject = *mut RexxArrayObject_;
 
-/// `_RexxBufferObject` and `RexxBufferObject` (`api/rexx.h:117-159`).
+/// `_RexxBufferObject` and `RexxBufferObject`.
 #[repr(C)]
 pub struct RexxBufferObject_ {
     _opaque: [u8; 0],
@@ -63,7 +63,7 @@ pub struct RexxBufferObject_ {
 /// A handle to an object of that shape; opaque to an extension.
 pub type RexxBufferObject = *mut RexxBufferObject_;
 
-/// `_RexxPointerObject` and `RexxPointerObject` (`api/rexx.h:117-159`).
+/// `_RexxPointerObject` and `RexxPointerObject`.
 #[repr(C)]
 pub struct RexxPointerObject_ {
     _opaque: [u8; 0],
@@ -71,7 +71,7 @@ pub struct RexxPointerObject_ {
 /// A handle to an object of that shape; opaque to an extension.
 pub type RexxPointerObject = *mut RexxPointerObject_;
 
-/// `_RexxMethodObject` and `RexxMethodObject` (`api/rexx.h:117-159`).
+/// `_RexxMethodObject` and `RexxMethodObject`.
 #[repr(C)]
 pub struct RexxMethodObject_ {
     _opaque: [u8; 0],
@@ -79,7 +79,7 @@ pub struct RexxMethodObject_ {
 /// A handle to an object of that shape; opaque to an extension.
 pub type RexxMethodObject = *mut RexxMethodObject_;
 
-/// `_RexxRoutineObject` and `RexxRoutineObject` (`api/rexx.h:117-159`).
+/// `_RexxRoutineObject` and `RexxRoutineObject`.
 #[repr(C)]
 pub struct RexxRoutineObject_ {
     _opaque: [u8; 0],
@@ -87,7 +87,7 @@ pub struct RexxRoutineObject_ {
 /// A handle to an object of that shape; opaque to an extension.
 pub type RexxRoutineObject = *mut RexxRoutineObject_;
 
-/// `_RexxPackageObject` and `RexxPackageObject` (`api/rexx.h:117-159`).
+/// `_RexxPackageObject` and `RexxPackageObject`.
 #[repr(C)]
 pub struct RexxPackageObject_ {
     _opaque: [u8; 0],
@@ -95,7 +95,7 @@ pub struct RexxPackageObject_ {
 /// A handle to an object of that shape; opaque to an extension.
 pub type RexxPackageObject = *mut RexxPackageObject_;
 
-/// `_RexxClassObject` and `RexxClassObject` (`api/rexx.h:117-159`).
+/// `_RexxClassObject` and `RexxClassObject`.
 #[repr(C)]
 pub struct RexxClassObject_ {
     _opaque: [u8; 0],
@@ -103,7 +103,7 @@ pub struct RexxClassObject_ {
 /// A handle to an object of that shape; opaque to an extension.
 pub type RexxClassObject = *mut RexxClassObject_;
 
-/// `_RexxDirectoryObject` and `RexxDirectoryObject` (`api/rexx.h:117-159`).
+/// `_RexxDirectoryObject` and `RexxDirectoryObject`.
 #[repr(C)]
 pub struct RexxDirectoryObject_ {
     _opaque: [u8; 0],
@@ -111,7 +111,7 @@ pub struct RexxDirectoryObject_ {
 /// A handle to an object of that shape; opaque to an extension.
 pub type RexxDirectoryObject = *mut RexxDirectoryObject_;
 
-/// `_RexxStringTableObject` and `RexxStringTableObject` (`api/rexx.h:117-159`).
+/// `_RexxStringTableObject` and `RexxStringTableObject`.
 #[repr(C)]
 pub struct RexxStringTableObject_ {
     _opaque: [u8; 0],
@@ -119,7 +119,7 @@ pub struct RexxStringTableObject_ {
 /// A handle to an object of that shape; opaque to an extension.
 pub type RexxStringTableObject = *mut RexxStringTableObject_;
 
-/// `_RexxSupplierObject` and `RexxSupplierObject` (`api/rexx.h:117-159`).
+/// `_RexxSupplierObject` and `RexxSupplierObject`.
 #[repr(C)]
 pub struct RexxSupplierObject_ {
     _opaque: [u8; 0],
@@ -127,7 +127,7 @@ pub struct RexxSupplierObject_ {
 /// A handle to an object of that shape; opaque to an extension.
 pub type RexxSupplierObject = *mut RexxSupplierObject_;
 
-/// `_RexxStemObject` and `RexxStemObject` (`api/rexx.h:117-159`).
+/// `_RexxStemObject` and `RexxStemObject`.
 #[repr(C)]
 pub struct RexxStemObject_ {
     _opaque: [u8; 0],
@@ -135,7 +135,7 @@ pub struct RexxStemObject_ {
 /// A handle to an object of that shape; opaque to an extension.
 pub type RexxStemObject = *mut RexxStemObject_;
 
-/// `_RexxMutableBufferObject` and `RexxMutableBufferObject` (`api/rexx.h:117-159`).
+/// `_RexxMutableBufferObject` and `RexxMutableBufferObject`.
 #[repr(C)]
 pub struct RexxMutableBufferObject_ {
     _opaque: [u8; 0],
@@ -143,7 +143,7 @@ pub struct RexxMutableBufferObject_ {
 /// A handle to an object of that shape; opaque to an extension.
 pub type RexxMutableBufferObject = *mut RexxMutableBufferObject_;
 
-/// `_RexxVariableReferenceObject` and `RexxVariableReferenceObject` (`api/rexx.h:117-159`).
+/// `_RexxVariableReferenceObject` and `RexxVariableReferenceObject`.
 #[repr(C)]
 pub struct RexxVariableReferenceObject_ {
     _opaque: [u8; 0],
@@ -151,20 +151,20 @@ pub struct RexxVariableReferenceObject_ {
 /// A handle to an object of that shape; opaque to an extension.
 pub type RexxVariableReferenceObject = *mut RexxVariableReferenceObject_;
 
-/// `INSTANCE_INTERFACE_VERSION` (`api/oorexxapi.h:478`).
+/// `INSTANCE_INTERFACE_VERSION`.
 pub const INSTANCE_INTERFACE_VERSION: wholenumber_t = 102;
-/// `THREAD_INTERFACE_VERSION` (`api/oorexxapi.h:503`).
+/// `THREAD_INTERFACE_VERSION`.
 pub const THREAD_INTERFACE_VERSION: wholenumber_t = 104;
-/// `METHOD_INTERFACE_VERSION` (`api/oorexxapi.h:680`).
+/// `METHOD_INTERFACE_VERSION`.
 pub const METHOD_INTERFACE_VERSION: wholenumber_t = 102;
-/// `CALL_INTERFACE_VERSION` (`api/oorexxapi.h:716`).
+/// `CALL_INTERFACE_VERSION`.
 pub const CALL_INTERFACE_VERSION: wholenumber_t = 101;
-/// `EXIT_INTERFACE_VERSION` (`api/oorexxapi.h:747`).
+/// `EXIT_INTERFACE_VERSION`.
 pub const EXIT_INTERFACE_VERSION: wholenumber_t = 101;
-/// `REDIRECT_INTERFACE_VERSION` (`api/oorexxapi.h:768`).
+/// `REDIRECT_INTERFACE_VERSION`.
 pub const REDIRECT_INTERFACE_VERSION: wholenumber_t = 100;
 
-/// `RXSTRING` (`api/rexx.h:164-167`).
+/// `RXSTRING`.
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct RXSTRING {
@@ -172,7 +172,7 @@ pub struct RXSTRING {
     pub strptr: *mut c_char,
 }
 
-/// `CONSTRXSTRING` (`api/rexx.h:169-172`).
+/// `CONSTRXSTRING`.
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct CONSTRXSTRING {
@@ -180,7 +180,7 @@ pub struct CONSTRXSTRING {
     pub strptr: *const c_char,
 }
 
-/// `RXSYSEXIT` (`api/rexx.h:198-201`).
+/// `RXSYSEXIT`.
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct RXSYSEXIT {
@@ -188,7 +188,7 @@ pub struct RXSYSEXIT {
     pub sysexit_code: c_int,
 }
 
-/// `RexxContextExit` (`api/oorexxapi.h:183-187`).
+/// `RexxContextExit`.
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct RexxContextExit {
@@ -197,11 +197,10 @@ pub struct RexxContextExit {
 }
 
 /// The flag word that begins an exit's parameter block: the C bit fields
-/// (`RXFNC_FLAGS` and its siblings, `api/rexx.h:489-641`), the first field
-/// in bit 0.
+/// (`RXFNC_FLAGS` and its siblings), the first field in bit 0.
 pub type ExitFlags = u32;
 
-/// `RXFNCCAL_PARM` (`api/rexx.h:495-504`).
+/// `RXFNCCAL_PARM`.
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct RXFNCCAL_PARM {
@@ -215,7 +214,7 @@ pub struct RXFNCCAL_PARM {
     pub rxfnc_retc: RXSTRING,
 }
 
-/// `RXOFNCCAL_PARM` and `RXEXFCAL_PARM` (`api/rexx.h:515-539`), which share
+/// `RXOFNCCAL_PARM` and `RXEXFCAL_PARM`, which share
 /// one shape.
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
@@ -227,7 +226,7 @@ pub struct RXOFNCCAL_PARM {
     pub rxfnc_retc: RexxObjectPtr,
 }
 
-/// `RXCMDHST_PARM` (`api/rexx.h:548-556`).
+/// `RXCMDHST_PARM`.
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct RXCMDHST_PARM {
@@ -240,7 +239,7 @@ pub struct RXCMDHST_PARM {
     pub rxcmd_retc: RXSTRING,
 }
 
-/// `RXMSQPSH_PARM` (`api/rexx.h:573-576`).
+/// `RXMSQPSH_PARM`.
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct RXMSQPSH_PARM {
@@ -248,7 +247,7 @@ pub struct RXMSQPSH_PARM {
     pub rxmsq_value: CONSTRXSTRING,
 }
 
-/// `RXSIOSAY_PARM` and `RXSIOTRC_PARM` (`api/rexx.h:596-606`). The blocks
+/// `RXSIOSAY_PARM` and `RXSIOTRC_PARM`. The blocks
 /// of one `RXSTRING` (`RXMSQPLL_PARM`, `RXMSQNAM_PARM`, `RXSIOTRD_PARM`,
 /// `RXSIODTR_PARM`), of one `size_t` (`RXMSQSIZ_PARM`) and of one flag word
 /// (`RXHLTTST_PARM`, `RXTRCTST_PARM`) are that member alone.
@@ -258,7 +257,7 @@ pub struct RXSIOSAY_PARM {
     pub rxsio_string: CONSTRXSTRING,
 }
 
-/// `RXVALCALL_PARM` (`api/rexx.h:650-654`); `RXVARNOVALUE_PARM` is its last
+/// `RXVALCALL_PARM`; `RXVARNOVALUE_PARM` is its last
 /// two members.
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
@@ -268,7 +267,7 @@ pub struct RXVALCALL_PARM {
     pub value: RexxObjectPtr,
 }
 
-/// `RXVARNOVALUE_PARM` (`api/rexx.h:644-647`).
+/// `RXVARNOVALUE_PARM`.
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct RXVARNOVALUE_PARM {
@@ -276,7 +275,7 @@ pub struct RXVARNOVALUE_PARM {
     pub value: RexxObjectPtr,
 }
 
-/// `SHVBLOCK` (`api/rexx.h:212-220`).
+/// `SHVBLOCK`.
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct SHVBLOCK {
@@ -289,7 +288,7 @@ pub struct SHVBLOCK {
     pub shvret: u8,
 }
 
-/// `RexxQueueTime` (`api/rexx.h:245-256`).
+/// `RexxQueueTime`.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default)]
 pub struct RexxQueueTime {
@@ -305,7 +304,7 @@ pub struct RexxQueueTime {
     pub yearday: u32,
 }
 
-/// `REXXDATETIME` (`api/platform/unix/rexxplatformapis.h:42-54`).
+/// `REXXDATETIME`.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default)]
 pub struct REXXDATETIME {
@@ -322,10 +321,10 @@ pub struct REXXDATETIME {
     pub valid: u16,
 }
 
-/// `RexxReturnCode` (`api/rexx.h:73`).
+/// `RexxReturnCode`.
 pub type RexxReturnCode = c_int;
 
-/// `RexxCondition` (`api/oorexxapi.h:462-473`).
+/// `RexxCondition`.
 #[repr(C)]
 pub struct RexxCondition {
     pub code: wholenumber_t,
@@ -339,7 +338,7 @@ pub struct RexxCondition {
     pub additional: RexxArrayObject,
 }
 
-/// The anonymous union inside `ValueDescriptor` (`api/oorexxapi.h:287-364`).
+/// The anonymous union inside `ValueDescriptor`.
 ///
 /// Every member is a view of the same word, so which one is live is what
 /// `ValueDescriptor::type` records.
@@ -417,7 +416,7 @@ pub union ValueUnion {
     pub value_OPTIONAL_nonnegative_wholenumber_t: wholenumber_t,
 }
 
-/// `ValueDescriptor` (`api/oorexxapi.h:281-394`).
+/// `ValueDescriptor`.
 #[repr(C)]
 pub struct ValueDescriptor {
     pub value: ValueUnion,
@@ -425,10 +424,10 @@ pub struct ValueDescriptor {
     pub flags: u16,
 }
 
-/// `RexxPackageLoader` and `RexxPackageUnloader` (`api/oorexxapi.h:257-258`).
+/// `RexxPackageLoader` and `RexxPackageUnloader`.
 pub type PackageHook = unsafe extern "C-unwind" fn(*mut RexxThreadContext_);
 
-/// `RexxRoutineEntry` (`api/oorexxapi.h:190-198`).
+/// `RexxRoutineEntry`.
 #[repr(C)]
 #[derive(Debug)]
 pub struct RexxRoutineEntry {
@@ -440,7 +439,7 @@ pub struct RexxRoutineEntry {
     pub reserved3: c_int,
 }
 
-/// `RexxMethodEntry` (`api/oorexxapi.h:211-219`).
+/// `RexxMethodEntry`.
 #[repr(C)]
 #[derive(Debug)]
 pub struct RexxMethodEntry {
@@ -452,7 +451,7 @@ pub struct RexxMethodEntry {
     pub reserved3: c_int,
 }
 
-/// `RexxPackageEntry` (`api/oorexxapi.h:262-273`).
+/// `RexxPackageEntry`.
 #[repr(C)]
 #[derive(Debug)]
 pub struct RexxPackageEntry {
@@ -467,21 +466,21 @@ pub struct RexxPackageEntry {
     pub methods: *mut RexxMethodEntry,
 }
 
-/// `RexxInstance_` (`api/oorexxapi.h:788-791`).
+/// `RexxInstance_`.
 #[repr(C)]
 pub struct RexxInstance_ {
     pub functions: *mut RexxInstanceInterface,
     pub applicationData: *mut c_void,
 }
 
-/// `RexxThreadContext_` (`api/oorexxapi.h:825-828`).
+/// `RexxThreadContext_`.
 #[repr(C)]
 pub struct RexxThreadContext_ {
     pub instance: *mut RexxInstance_,
     pub functions: *mut RexxThreadInterface,
 }
 
-/// `RexxMethodContext_` (`api/oorexxapi.h:1666-1670`).
+/// `RexxMethodContext_`.
 #[repr(C)]
 pub struct RexxMethodContext_ {
     pub threadContext: *mut RexxThreadContext_,
@@ -489,7 +488,7 @@ pub struct RexxMethodContext_ {
     pub arguments: *mut ValueDescriptor,
 }
 
-/// `RexxCallContext_` (`api/oorexxapi.h:2518-2522`).
+/// `RexxCallContext_`.
 #[repr(C)]
 pub struct RexxCallContext_ {
     pub threadContext: *mut RexxThreadContext_,
@@ -497,7 +496,7 @@ pub struct RexxCallContext_ {
     pub arguments: *mut ValueDescriptor,
 }
 
-/// `RexxExitContext_` (`api/oorexxapi.h:3349-3353`).
+/// `RexxExitContext_`.
 #[repr(C)]
 pub struct RexxExitContext_ {
     pub threadContext: *mut RexxThreadContext_,
@@ -505,7 +504,7 @@ pub struct RexxExitContext_ {
     pub arguments: *mut ValueDescriptor,
 }
 
-/// `RexxIORedirectorContext_` (`api/oorexxapi.h:4138-4140`).
+/// `RexxIORedirectorContext_`.
 #[repr(C)]
 pub struct RexxIORedirectorContext_ {
     pub functions: *mut IORedirectorInterface,
@@ -514,9 +513,7 @@ pub struct RexxIORedirectorContext_ {
 /// A context we handed out, together with the state that owns it.
 ///
 /// `C` is first by value, so the address of the wrapper is the address of the
-/// public struct and `ffi::owner_of` recovers `owner` by casting back
-/// (`interpreter/concurrency/ActivationApiContexts.hpp:58-95`,
-/// `interpreter/concurrency/Activity.hpp:503`).
+/// public struct and `ffi::owner_of` recovers `owner` by casting back.
 #[repr(C)]
 pub struct Owned<C, T> {
     pub context: C,
@@ -575,8 +572,8 @@ pub(crate) fn recording_refusals<R>(call: impl FnOnce() -> R) -> (R, Option<&'st
 }
 
 /// What a refusing stub answers after recording itself: the value the
-/// oracle's own stubs answer on their failure paths, a null handle
-/// (`interpreter/api/ThreadContextStubs.cpp:986-997`), a zero or `false`, with
+/// oracle's own stubs answer on their failure paths, a null handle,
+/// a zero or `false`, with
 /// any other value named at its member.
 trait RefusedValue {
     const REFUSED: Self;
@@ -759,7 +756,7 @@ macro_rules! interface {
 }
 
 interface! {
-    /// `RexxInstanceInterface` (`api/oorexxapi.h:483-496`).
+    /// `RexxInstanceInterface`.
     RexxInstanceInterface, populated {
         interfaceVersion: { value wholenumber_t = INSTANCE_INTERFACE_VERSION },
         Terminate: { call(*mut RexxInstance_) },
@@ -774,7 +771,7 @@ interface! {
 }
 
 interface! {
-    /// `RexxThreadInterface` (`api/oorexxapi.h:506-680`).
+    /// `RexxThreadInterface`.
     RexxThreadInterface, populated {
         interfaceVersion: { value wholenumber_t = THREAD_INTERFACE_VERSION },
         DetachThread: { call(*mut RexxThreadContext_) },
@@ -904,8 +901,8 @@ interface! {
         RexxFalse: { value RexxObjectPtr = std::ptr::null_mut() },
         RexxNullString: { value RexxStringObject = std::ptr::null_mut() },
         ObjectToCSelfScoped: { aborts call(*mut RexxThreadContext_, RexxObjectPtr, RexxObjectPtr) -> POINTER },
-        // `Error_Interpretation/1000` (`interpreter/api/ThreadContextStubs.cpp:1948`), where
-        // `Error_Interpretation` is 49000 (`interpreter/messages/RexxErrorCodes.h:456`).
+        // `Error_Interpretation/1000`, where
+        // `Error_Interpretation` is 49000.
         DisplayCondition: { call(*mut RexxThreadContext_) -> wholenumber_t, failing 49 },
         MutableBufferData: { aborts call(*mut RexxThreadContext_, RexxMutableBufferObject) -> POINTER },
         MutableBufferLength: { call(*mut RexxThreadContext_, RexxMutableBufferObject) -> usize },
@@ -930,7 +927,7 @@ interface! {
 }
 
 interface! {
-    /// `MethodContextInterface` (`api/oorexxapi.h:682-712`).
+    /// `MethodContextInterface`.
     MethodContextInterface, populated {
         interfaceVersion: { value wholenumber_t = METHOD_INTERFACE_VERSION },
         GetArguments: { call(*mut RexxMethodContext_) -> RexxArrayObject },
@@ -963,7 +960,7 @@ interface! {
 }
 
 interface! {
-    /// `CallContextInterface` (`api/oorexxapi.h:718-743`).
+    /// `CallContextInterface`.
     CallContextInterface, populated {
         interfaceVersion: { value wholenumber_t = CALL_INTERFACE_VERSION },
         GetArguments: { call(*mut RexxCallContext_) -> RexxArrayObject },
@@ -991,7 +988,7 @@ interface! {
 }
 
 interface! {
-    /// `ExitContextInterface` (`api/oorexxapi.h:749-763`).
+    /// `ExitContextInterface`.
     ExitContextInterface, populated {
         interfaceVersion: { value wholenumber_t = EXIT_INTERFACE_VERSION },
         SetContextVariable: { call(*mut RexxExitContext_, CSTRING, RexxObjectPtr) },
@@ -1009,7 +1006,7 @@ interface! {
 }
 
 interface! {
-    /// `IORedirectorInterface` (`api/oorexxapi.h:769-784`).
+    /// `IORedirectorInterface`.
     IORedirectorInterface, populated {
         interfaceVersion: { value wholenumber_t = REDIRECT_INTERFACE_VERSION },
         ReadInput: { call(*mut RexxIORedirectorContext_, *mut CSTRING, *mut usize) },
@@ -1031,6 +1028,6 @@ pub static METHOD_CONTEXT_INTERFACE: MethodContextInterface = MethodContextInter
 
 // The thread table has no `static` beside it: its object members are raw
 // pointers, so the type is not `Sync`, and the C++ fills them once the constant
-// objects exist (`interpreter/concurrency/Activity.cpp:1844-1849`). Whatever
+// objects exist. Whatever
 // hands out a thread context owns the table, which is also what keeps this
 // phase from mutating a global.

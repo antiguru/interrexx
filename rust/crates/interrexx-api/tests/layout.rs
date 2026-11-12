@@ -1,6 +1,6 @@
 //! The `#[repr(C)]` surface measured against the frozen header.
 //!
-//! Member names and interface versions are read out of `api/oorexxapi.h` here
+//! Member names and interface versions are read out of the frozen header here
 //! rather than written down, because an omitted member is what a written list
 //! cannot see. The sizes and offsets are what `g++` reports for the same
 //! header on this platform.
@@ -127,7 +127,7 @@ fn every_interface_declares_the_members_the_header_does() {
 /// **A refusing member aborts exactly where returning is unsafe**: it answers
 /// a data pointer the extension dereferences (`POINTER`, `CSTRING` or a
 /// `RexxInstance *`), or it is one of the `Throw` members, which the oracle
-/// leaves by a C++ throw (`interpreter/api/CallContextStubs.cpp:207-213`).
+/// leaves by a C++ throw.
 /// Every other member records itself and returns. Derived from the header's
 /// return types, so a member the header adds is classified here.
 #[test]
@@ -499,7 +499,7 @@ fn without_parameter_name(c: &str) -> &str {
 
 /// The ABI a member is declared with here. The header states only
 /// `RexxEntry`, the C convention; the `Throw` members leave the extension by
-/// C++ `throw` (`interpreter/api/CallContextStubs.cpp:207-213`), which is an
+/// C++ `throw`, which is an
 /// unwind through its frames, and one thrown in a library's loader leaves
 /// through the `LoadLibrary` or `RegisterLibrary` that ran the loader, so
 /// here all of them are `C-unwind`. Arguments and result are the header's

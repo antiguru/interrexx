@@ -108,8 +108,7 @@ fn a_handle_that_outlived_its_activation_misses_the_slots_next_occupant() {
 
 /// A release takes that handle alone out of the roots; it still resolves
 /// while its object lives; a second release, or one of a handle the table
-/// does not hold, changes nothing (`NativeActivation::removeLocalReference`,
-/// `interpreter/execution/NativeActivation.cpp:1219`).
+/// does not hold, changes nothing.
 #[test]
 fn release_unroots_one_registration_and_clear_drops_them_all() {
     let mut heap = Heap::new();

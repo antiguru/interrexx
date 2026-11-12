@@ -23,65 +23,60 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
-/// The C signature of the stub the `RexxMethodN` macros generate
-/// (`api/oorexxapi.h:4286`).
+/// The C signature of the stub the `RexxMethodN` macros generate.
 ///
 /// A null `arguments` is the signature request and answers the static type
-/// array; an array is the call, and answers null (`:4282`).
+/// array; an array is the call, and answers null.
 pub(crate) type NativeMethod = Stub<RexxMethodContext_>;
 
-/// The C signature of the stub the `RexxRoutineN` macros generate
-/// (`api/oorexxapi.h:4562`), answering as [`NativeMethod`] does.
+/// The C signature of the stub the `RexxRoutineN` macros generate, answering as [`NativeMethod`] does.
 pub type NativeRoutine = Stub<RexxCallContext_>;
 
 /// A generated stub over the context struct `C`. It may unwind: a `Throw`
 /// member leaves the extension that way, and [`call_stub`] catches it.
 pub type Stub<C> = unsafe extern "C-unwind" fn(*mut C, *mut ValueDescriptor) -> *mut u16;
 
-/// `ROUTINE_TYPED_STYLE` (`api/oorexxapi.h:200`).
+/// `ROUTINE_TYPED_STYLE`.
 pub const ROUTINE_TYPED_STYLE: c_int = 1;
 
-/// `ROUTINE_CLASSIC_STYLE` (`api/oorexxapi.h:201`).
+/// `ROUTINE_CLASSIC_STYLE`.
 pub const ROUTINE_CLASSIC_STYLE: c_int = 2;
 
 /// The interpreter version an extension's `requiredVersion` is measured
-/// against, `REXX_CURRENT_INTERPRETER_VERSION` (`api/oorexxapi.h:242`).
+/// against, `REXX_CURRENT_INTERPRETER_VERSION`.
 ///
-/// Two hex digits each for major, minor and revision (`:229`).
+/// Two hex digits each for major, minor and revision.
 /// `tests/load.rs` re-reads the header and asserts this value against it.
 pub const CURRENT_INTERPRETER_VERSION: c_int = 0x0005_0300;
 
-/// `REXX_CURRENT_LANGUAGE_LEVEL` (`api/oorexxapi.h:249`), which the instance
-/// table's `LanguageLevel` answers (`interpreter/api/InterpreterInstanceStubs.cpp:84`,
-/// through `Interpreter::getLanguageLevel`). `tests/load.rs` re-reads the
+/// `REXX_CURRENT_LANGUAGE_LEVEL`, which the instance
+/// table's `LanguageLevel` answers. `tests/load.rs` re-reads the
 /// header and asserts this value against it.
 pub const CURRENT_LANGUAGE_LEVEL: usize = 0x0606;
 
-/// The symbol `OOREXX_GET_PACKAGE` publishes (`api/oorexxapi.h:253-256`).
+/// The symbol `OOREXX_GET_PACKAGE` publishes.
 const GET_PACKAGE_SYMBOL: &[u8] = b"RexxGetPackage\0";
 
-/// `SysLibrary::load` refuses a longer name before it reaches `dlopen`
-/// (`common/platform/unix/SysLibrary.cpp:56`, `:83-86`).
+/// The oracle refuses a longer name before it reaches `dlopen`.
 const MAX_LIBRARY_NAME_LENGTH: usize = 250;
 
-/// Where the name search looks after the undecorated attempt
-/// (`common/platform/unix/SysLibrary.cpp:94`).
+/// Where the name search looks after the undecorated attempt.
 const SECOND_ATTEMPT_DIRECTORY: &str = "/usr/lib";
 
 /// A condition the load path raises, for the caller to render.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Failure {
     /// `Error_Execution_library_version`, raised where the package entry asks
-    /// for a newer interpreter than this one
-    /// (`interpreter/package/LibraryPackage.cpp:232-235`). The payload is the
+    /// for a newer interpreter than this one.
+    /// The payload is the
     /// library name the message interpolates.
     LibraryVersion(String),
 }
 
 /// A library whose package entry [`check_version`] refused, with the library as
-/// `LibraryPackage::loadPackage` leaves it once the check has raised: loaded,
-/// its method table resolving, and its routine table never read, because
-/// `loadRoutines` follows the check (`interpreter/package/LibraryPackage.cpp:232-237`).
+/// the oracle leaves it once the check has raised: loaded, its method table
+/// resolving, and its routine table never read, because the routines load
+/// after the check.
 #[derive(Debug)]
 pub struct Refused {
     pub failure: Failure,
@@ -191,8 +186,7 @@ impl Eq for Mapping {}
 /// ```
 #[derive(Debug, PartialEq, Eq)]
 pub struct NativeMethodEntry {
-    /// `METHOD_TYPED_STYLE` (`api/oorexxapi.h:221`); never zero, which is the
-    /// terminator.
+    /// `METHOD_TYPED_STYLE`; never zero, which is the terminator.
     pub style: c_int,
     pub name: Vec<u8>,
     entry_point: *mut c_void,
@@ -221,7 +215,7 @@ impl NativeMethodEntry {
             return None;
         }
         // SAFETY: `REXX_METHOD_ENTRY` fills `entryPoint` with the stub the
-        // `RexxMethodN` macro generated (`api/oorexxapi.h:223`), whose C
+        // `RexxMethodN` macro generated, whose C
         // signature is `NativeMethod`'s. D5 freezes that header and makes it
         // the declaration both sides compile against, so the code at this
         // address has this type. The two are the same width, which
@@ -230,7 +224,7 @@ impl NativeMethodEntry {
     }
 }
 
-/// `METHOD_TYPED_STYLE` (`api/oorexxapi.h:221`).
+/// `METHOD_TYPED_STYLE`.
 #[cfg(test)]
 const METHOD_TYPED_STYLE: c_int = 1;
 
@@ -1259,8 +1253,8 @@ pub(crate) fn hooked_library(
 /// Shaped as [`NativeMethodEntry`] and for the same reason.
 #[derive(Debug, PartialEq, Eq)]
 pub struct NativeRoutineEntry {
-    /// `ROUTINE_TYPED_STYLE` or `ROUTINE_CLASSIC_STYLE`
-    /// (`api/oorexxapi.h:200-201`); never zero, which is the terminator.
+    /// `ROUTINE_TYPED_STYLE` or `ROUTINE_CLASSIC_STYLE`; never zero, which is
+    /// the terminator.
     pub style: c_int,
     pub name: Vec<u8>,
     entry_point: *mut c_void,
@@ -1280,7 +1274,7 @@ impl NativeRoutineEntry {
     ///
     /// A style that is neither classic nor typed is therefore refused as an
     /// unreadable signature, where the oracle calls any non-classic row as a
-    /// typed routine (`interpreter/package/LibraryPackage.cpp:279-286`).
+    /// typed routine.
     fn stub(&self) -> Option<NativeRoutine> {
         if self.entry_point.is_null()
             || self.style != ROUTINE_TYPED_STYLE
@@ -1289,9 +1283,8 @@ impl NativeRoutineEntry {
             return None;
         }
         // SAFETY: the row is `ROUTINE_TYPED_STYLE`, which `REXX_TYPED_ROUTINE`
-        // fills with the stub the `RexxRoutineN` macro generated
-        // (`api/oorexxapi.h:205`), whose C signature is `NativeRoutine`'s,
-        // under the same D5 argument as `NativeMethodEntry::stub`.
+        // fills with the stub the `RexxRoutineN` macro generated, whose C
+        // signature is `NativeRoutine`'s, under the same D5 argument as `NativeMethodEntry::stub`.
         Some(unsafe { std::mem::transmute::<*mut c_void, NativeRoutine>(self.entry_point) })
     }
 
@@ -1410,7 +1403,7 @@ impl HeldRoutine {
 }
 
 /// The entry point of a classic handler: a `RexxFunctionHandler`, `RexxSubcomHandler` or
-/// `RexxExitHandler` (`api/rexx.h`), as its registry declares it.
+/// `RexxExitHandler`, as its registry declares it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ClassicEntry(std::ptr::NonNull<c_void>);
 
@@ -1437,8 +1430,8 @@ impl ClassicEntry {
     }
 
     /// Calls a `RexxFunctionHandler` with `name`, `arguments` (`None` an omitted one) and the
-    /// current queue's name, as `NativeActivation::callRegisteredRoutine` does
-    /// (`interpreter/execution/NativeActivation.cpp:1466`): each string NUL-terminated beyond its
+    /// current queue's name, as the oracle does:
+    /// each string NUL-terminated beyond its
     /// length, and the result in a `DEFRXSTRING` buffer the handler may replace with a block
     /// `free` releases. `None` where a `RexxCallBack` the handler made ended it, unwinding
     /// through it, with the condition or `EXIT` kept by the host.
@@ -1473,7 +1466,7 @@ impl ClassicEntry {
             strlength: buffer.len(),
             strptr: buffer.as_mut_ptr().cast(),
         };
-        // SAFETY: `new`'s caller guaranteed a `RexxFunctionHandler` (`api/rexx.h`), mapped for
+        // SAFETY: `new`'s caller guaranteed a `RexxFunctionHandler`, mapped for
         // the process's life. Every string is NUL-terminated and outlives the call, `argv`
         // holds `arguments.len()` elements, and `result` addresses a buffer of its length.
         let called = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| unsafe {
@@ -1496,9 +1489,8 @@ impl ClassicEntry {
         Some(ClassicResult { rc, value })
     }
 
-    /// Calls a `RexxSubcomHandler` with `command`, as `CommandHandlerDispatcher::run` does
-    /// (`interpreter/concurrency/CommandHandler.cpp`), answering its return code, its flags and
-    /// its result.
+    /// Calls a `RexxSubcomHandler` with `command`, answering its return code,
+    /// its flags and its result.
     #[must_use]
     pub fn call_subcom(self, command: &[u8]) -> (ClassicResult<c_int>, u16) {
         let command = terminated(command);
@@ -1512,7 +1504,7 @@ impl ClassicEntry {
             strlength: buffer.len(),
             strptr: buffer.as_mut_ptr().cast(),
         };
-        // SAFETY: `new`'s caller guaranteed a `RexxSubcomHandler` (`api/rexx.h`), mapped for the
+        // SAFETY: `new`'s caller guaranteed a `RexxSubcomHandler`, mapped for the
         // process's life. The command is NUL-terminated and outlives the call, and `result`
         // addresses a buffer of its length.
         let rc = unsafe {
@@ -1528,7 +1520,7 @@ impl ClassicEntry {
 /// `DEFRXSTRING`, the result buffer a classic handler is handed.
 const DEFAULT_RESULT_BUFFER: usize = 256;
 
-/// `RexxFunctionHandler` (`api/rexx.h`). It may unwind as a [`Stub`] may.
+/// `RexxFunctionHandler`. It may unwind as a [`Stub`] may.
 type FunctionHandler = unsafe extern "C-unwind" fn(
     *const c_char,
     usize,
@@ -1537,7 +1529,7 @@ type FunctionHandler = unsafe extern "C-unwind" fn(
     *mut RXSTRING,
 ) -> usize;
 
-/// `RexxSubcomHandler` (`api/rexx.h`).
+/// `RexxSubcomHandler`.
 type SubcomHandler =
     unsafe extern "C-unwind" fn(*const CONSTRXSTRING, *mut u16, *mut RXSTRING) -> c_int;
 
@@ -1573,7 +1565,7 @@ unsafe fn take_result(result: &RXSTRING, buffer: *mut u8) -> Option<Vec<u8>> {
     Some(value)
 }
 
-/// `RexxContextExitHandler` (`api/oorexxapi.h:179`): an exit an embedding names in
+/// `RexxContextExitHandler`: an exit an embedding names in
 /// `RexxCreateInterpreter`'s `DIRECT_EXITS` option.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ContextExit(std::ptr::NonNull<c_void>);
@@ -1596,7 +1588,7 @@ impl ContextExit {
     }
 }
 
-/// A system exit's handler (`ExitHandler`, `concurrency/ExitHandler.hpp`): a classic
+/// A system exit's handler: a classic
 /// `RexxExitHandler` a registration resolved, or a context handler.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ExitHandler {
@@ -1604,7 +1596,7 @@ pub enum ExitHandler {
     Context(ContextExit),
 }
 
-/// The exit function codes (`api/rexxapidefs.h:171-207`).
+/// The exit function codes.
 pub mod exit_code {
     use std::ffi::c_int;
 
@@ -1637,8 +1629,7 @@ pub mod exit_code {
     /// `RXNOOFEXITS`: one more than the largest code.
     pub const COUNT: usize = 16;
 
-    /// The name `Error_System_service_service` reports for `code`
-    /// (`Activity::callExit`'s `exitName`).
+    /// The name `Error_System_service_service` reports for `code`.
     #[must_use]
     pub fn name(code: c_int) -> &'static str {
         match code {
@@ -1659,7 +1650,7 @@ pub mod exit_code {
     }
 }
 
-/// One exit call's inputs, by the block it fills (`api/rexx.h:489-654`). `O` is an object as
+/// One exit call's inputs, by the block it fills. `O` is an object as
 /// the caller holds it: an object-valued block carries it as a handle.
 #[derive(Debug)]
 pub enum ExitRequest<'a, O> {
@@ -1816,7 +1807,7 @@ pub struct ExitReply<O> {
     pub size: usize,
 }
 
-/// How an exit call ended (`Activity::callExit`).
+/// How an exit call ended.
 #[derive(Debug)]
 pub enum ExitOutcome<O> {
     /// `RXEXIT_HANDLED`.
@@ -1846,16 +1837,16 @@ impl<O> ExitOutcome<O> {
     }
 }
 
-/// `RexxExitHandler` (`api/rexx.h:657`).
+/// `RexxExitHandler`.
 type ExitFunction = unsafe extern "C-unwind" fn(c_int, c_int, *mut c_char) -> c_int;
 
-/// `RexxContextExitHandler` (`api/oorexxapi.h:179`).
+/// `RexxContextExitHandler`.
 type ContextExitFunction =
     unsafe extern "C-unwind" fn(*mut RexxExitContext_, c_int, c_int, *mut c_char) -> c_int;
 
 impl ExitHandler {
-    /// Calls the handler with `request`'s block, as `ExitHandler::call` does
-    /// (`concurrency/ExitHandler.cpp`), a context handler with `exit`; answers how it ended
+    /// Calls the handler with `request`'s block, or
+    /// a context handler with `exit`; answers how it ended
     /// and what it wrote back. Each string it is handed is NUL-terminated beyond its length,
     /// and a result buffer is `DEFRXSTRING` bytes, which it may replace with a block `free`
     /// releases.
@@ -2123,13 +2114,13 @@ pub fn classic_procedure(
     Some(entry)
 }
 
-/// `DIRECT_COMMAND_ENVIRONMENT` (`api/oorexxapi.h:479`).
+/// `DIRECT_COMMAND_ENVIRONMENT`.
 pub const DIRECT_COMMAND_ENVIRONMENT: c_int = 1;
 
-/// `REDIRECTING_COMMAND_ENVIRONMENT` (`api/oorexxapi.h:480`).
+/// `REDIRECTING_COMMAND_ENVIRONMENT`.
 pub const REDIRECTING_COMMAND_ENVIRONMENT: c_int = 2;
 
-/// `RexxContextCommandHandler` (`api/oorexxapi.h:425`). It may unwind as a
+/// `RexxContextCommandHandler`. It may unwind as a
 /// [`Stub`] may.
 type DirectHandler = unsafe extern "C-unwind" fn(
     *mut RexxExitContext_,
@@ -2137,7 +2128,7 @@ type DirectHandler = unsafe extern "C-unwind" fn(
     RexxStringObject,
 ) -> RexxObjectPtr;
 
-/// `RexxRedirectingCommandHandler` (`api/oorexxapi.h:428`).
+/// `RexxRedirectingCommandHandler`.
 type RedirectingHandler = unsafe extern "C-unwind" fn(
     *mut RexxExitContext_,
     RexxStringObject,
@@ -2145,8 +2136,7 @@ type RedirectingHandler = unsafe extern "C-unwind" fn(
     *mut RexxIORedirectorContext_,
 ) -> RexxObjectPtr;
 
-/// A command handler an extension registered through `AddCommandEnvironment`
-/// (`interpreter/runtime/InterpreterInstance.cpp:913-917`).
+/// A command handler an extension registered through `AddCommandEnvironment`.
 ///
 /// Nothing ties the address to a mapping, so the interpreter that holds one
 /// must drop it before it closes any library; neither `Clone` nor holder of
@@ -2206,8 +2196,7 @@ impl SentPackage {
 impl CommandHandler {
     /// The handler at `entry_point`, of the environment type `kind`, or
     /// `None` for a null address or a type the header does not define, which
-    /// `AddCommandEnvironment` registers nothing for
-    /// (`interpreter/api/InterpreterInstanceStubs.cpp:93-100`).
+    /// `AddCommandEnvironment` registers nothing for.
     pub(crate) fn new(entry_point: *mut c_void, kind: c_int) -> Option<CommandHandler> {
         if entry_point.is_null() {
             return None;
@@ -2308,8 +2297,7 @@ impl CommandHandler {
 unsafe fn signature_of<C>(stub: Stub<C>, context: *mut C, limit: usize) -> Option<Vec<u16>> {
     // SAFETY: the caller guarantees the stub and the context. A null
     // `arguments` is the signature request, which returns the static array
-    // without running any of the extension's own code
-    // (`api/oorexxapi.h:4342-4350`).
+    // without running any of the extension's own code.
     let types = unsafe { stub(context, std::ptr::null_mut()) };
     if types.is_null() {
         return None;
@@ -2317,10 +2305,9 @@ unsafe fn signature_of<C>(stub: Stub<C>, context: *mut C, limit: usize) -> Optio
     let mut words = Vec::new();
     for offset in 0..limit {
         // SAFETY: the invariant is the macro's, not this loop's: the array
-        // it emits ends in `REXX_ARGUMENT_TERMINATOR` (`api/oorexxapi.h:4338`),
-        // so every offset up to the first terminator is inside it. `limit`
+        // it emits ends in `REXX_ARGUMENT_TERMINATOR`, so every offset up to the first terminator is inside it. `limit`
         // bounds how far a malformed array is followed, which the oracle does
-        // not bound at all (`NativeActivation.cpp:235`).
+        // not bound at all.
         let word = unsafe { *types.add(offset) };
         if word == ARGUMENT_TERMINATOR {
             return Some(words);
@@ -2347,8 +2334,7 @@ unsafe fn call_stub<C>(
     if let Some(stub) = stub {
         let array = arguments.as_mut_ptr();
         // `argumentExists` reads the array through the context rather than
-        // through the parameter (`api/oorexxapi.h:4276`), which is why the
-        // oracle publishes it (`NativeActivation.cpp:1291`).
+        // through the parameter, which is why the oracle publishes it.
         //
         // SAFETY: the caller's context wrapper holds the only borrow of the
         // live struct for its lifetime and is neither `Clone` nor `Sync`, so
@@ -2386,9 +2372,8 @@ unsafe fn call_stub<C>(
             } else {
                 // SAFETY: a `CSTRING` result is a NUL-terminated string that
                 // outlives the stub's return, which is the extension's side of
-                // the header's contract and what `valueToObject` relies on when
-                // it copies the string after the call
-                // (`interpreter/execution/NativeActivation.cpp:825-833`). The
+                // the header's contract and what the result conversion relies on
+                // when it copies the string after the call. The
                 // bytes are copied here, before anything else runs.
                 let bytes = unsafe { CStr::from_ptr(pointer) }.to_bytes().to_vec();
                 Written::Text(Some(bytes))
@@ -2416,11 +2401,9 @@ pub(crate) fn noting_hook_throws<R>(load: impl FnOnce() -> R) -> (R, bool) {
 /// Which of a package entry's hooks to run.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Hook {
-    /// `loader`, which `LibraryPackage::loadPackage` runs once the routines
-    /// have registered (`interpreter/package/LibraryPackage.cpp:237-245`).
+    /// `loader`, which the oracle runs once the routines have registered.
     Loader,
-    /// `unloader`, which `LibraryPackage::unload` runs at termination
-    /// (`interpreter/package/LibraryPackage.cpp:166-174`).
+    /// `unloader`, which the oracle runs at termination.
     Unloader,
 }
 
@@ -2465,7 +2448,7 @@ impl Library {
     }
 
     /// The entry's `packageVersion`; `NO_VERSION_YET` is a null pointer
-    /// (`api/oorexxapi.h:243`) and answers `None`.
+    /// and answers `None`.
     #[must_use]
     pub fn version(&self) -> Option<&[u8]> {
         self.version.as_deref()
@@ -2491,8 +2474,8 @@ impl Library {
             return;
         };
         // SAFETY: the address is the package entry's own `loader` or
-        // `unloader`, a `RexxPackageLoader`/`RexxPackageUnloader`
-        // (`api/oorexxapi.h:257-258`), in a mapping found open after this
+        // `unloader`, a `RexxPackageLoader`/`RexxPackageUnloader`,
+        // in a mapping found open after this
         // call was counted, which a close then leaves open; the thread
         // context is the one `contexts` links, live for the call.
         let ran = self.mapping.hold(|| {
@@ -2514,7 +2497,7 @@ impl Library {
         }
     }
 
-    /// `SysLibrary::unload`: closes the library, after which none of its rows
+    /// Closes the library, after which none of its rows
     /// or hooks calls in, and answers whether it closed, which it does not
     /// while a call into it is in flight.
     pub fn close(&self) -> bool {
@@ -2545,28 +2528,27 @@ impl Library {
     }
 
     /// The method row `name` names, matched without regard to case as
-    /// `LibraryPackage::locateMethodEntry` matches it
-    /// (`interpreter/package/LibraryPackage.cpp:320-325`).
+    /// the oracle matches it.
     ///
     /// The row is borrowed from `self`, which is what stops it outliving the
     /// mapping its address points into.
     ///
     /// ```no_run
     /// # use interrexx_api::load;
-    /// let library = load::open_path(std::path::Path::new("librxregexp.so"), "rxregexp")
-    ///     .unwrap()
-    ///     .unwrap();
+    /// let library = load::open_path(std::path::Path::new("librxregexp.so"), "rxregexp").
+    /// unwrap().
+    /// unwrap();
     /// let row = library.method(b"RegExp_Parse").unwrap();
     /// assert!(row.has_entry_point());
     /// ```
     ///
     /// ```compile_fail
     /// # use interrexx_api::load;
-    /// let row = load::open_path(std::path::Path::new("librxregexp.so"), "rxregexp")
-    ///     .unwrap()
-    ///     .unwrap()
-    ///     .method(b"RegExp_Parse")
-    ///     .unwrap();
+    /// let row = load::open_path(std::path::Path::new("librxregexp.so"), "rxregexp").
+    /// unwrap().
+    /// unwrap().
+    /// method(b"RegExp_Parse").
+    /// unwrap();
     /// assert!(row.has_entry_point());
     /// ```
     #[must_use]
@@ -2591,14 +2573,12 @@ impl Library {
         self.methods.get(index)
     }
 
-    /// The routine row `name` names, found as `LibraryPackage::resolveRoutine`
-    /// finds it (`interpreter/package/LibraryPackage.cpp:410-435`), and
+    /// The routine row `name` names, found as the oracle finds it, and
     /// borrowed from `self` for [`Library::method`]'s reason.
     ///
     /// The spelling is `name` byte for byte where a row has it, and otherwise
-    /// that of the first row matching `name` without regard to case (`:420`,
-    /// `:428`); of rows spelled alike, the answer is the last, which is the
-    /// one `loadRoutines` leaves in its table (`:291`).
+    /// that of the first row matching `name` without regard to case; of rows spelled alike, the answer is the last, which
+    /// is the one the oracle's package load leaves in its table.
     #[must_use]
     pub fn routine(&self, name: &[u8]) -> Option<&NativeRoutineEntry> {
         self.routine_at(self.routine_index(name)?)
@@ -2629,10 +2609,8 @@ impl Library {
     }
 
     /// Each upper-cased routine name with the spelling whose row answers it
-    /// through `PackageManager::packageRoutines`, in the order
-    /// `LibraryPackage::loadRoutines` puts them
-    /// (`interpreter/package/LibraryPackage.cpp:270-299`): a later row whose
-    /// name upper-cases alike replaces an earlier one.
+    /// through the oracle's package routine table, in the order it puts them:
+    /// a later row whose name upper-cases alike replaces an earlier one.
     #[must_use]
     pub fn package_routines(&self) -> Vec<(Vec<u8>, &[u8])> {
         let mut registered: Vec<(Vec<u8>, &[u8])> = Vec::new();
@@ -2647,8 +2625,7 @@ impl Library {
     }
 }
 
-/// Open the library `name` names, searching as `SysLibrary::load` searches
-/// (`common/platform/unix/SysLibrary.cpp:75-102`).
+/// Open the library `name` names, searching as the oracle searches.
 ///
 /// `search` is tried, in order, before the undecorated name, which the loader
 /// resolves, and `cwd`, the interpreter's current directory, is tried after that. The loader reads
@@ -2659,8 +2636,7 @@ impl Library {
 ///
 /// `Ok(None)` is the answer where no library of that name loads, and where one
 /// loads but publishes no `RexxGetPackage`. Neither is an error here: the C++
-/// leaves that decision to the caller at both sites
-/// (`interpreter/package/LibraryPackage.cpp:199-204`, `:211-215`).
+/// leaves that decision to the caller at both sites.
 ///
 /// # Errors
 /// [`Refused`] where the package entry asks for a newer interpreter than this
@@ -2699,8 +2675,7 @@ pub fn loads(path: &Path) -> bool {
     dlopen(path).is_some()
 }
 
-/// The version gate `LibraryPackage::loadPackage` applies before it registers
-/// anything (`interpreter/package/LibraryPackage.cpp:232-235`).
+/// The version gate the oracle applies before it registers anything.
 ///
 /// `name` is the library name the raised message interpolates.
 ///
@@ -2727,14 +2702,13 @@ fn dlopen_by_name(file: &str, search: &[PathBuf], cwd: &Path) -> Option<libloadi
 
 fn dlopen(path: &Path) -> Option<libloading::Library> {
     // `Library::new` is `dlopen(path, RTLD_LAZY | RTLD_LOCAL)`, and glibc
-    // resolves the oracle's bare `RTLD_LAZY` (`SysLibrary.cpp:90`) to that
-    // same pair.
+    // resolves the oracle's bare `RTLD_LAZY` to that same pair.
     //
     // SAFETY: `dlopen` runs the library's initialisers, which is code this
     // process cannot vet, so no property of `path` makes the call sound. What
     // establishes it is the interpreter's own contract: a Rexx program that
     // names a library is authorised to load it, exactly the trust the oracle
-    // extends at `SysLibrary.cpp:90`. D-U1 puts the `unsafe` here so that
+    // extends. D-U1 puts the `unsafe` here so that
     // `open`, `open_path` and `loads` stay safe for the rest of the tree.
     unsafe { libloading::Library::new(path) }.ok()
 }
@@ -2744,15 +2718,15 @@ fn package_of(handle: libloading::Library, name: &str) -> Result<Option<Library>
 
     let get_package = {
         // SAFETY: the symbol is read at the signature `OOREXX_GET_PACKAGE`
-        // expands to, a nullary function answering a `RexxPackageEntry *`
-        // (`api/oorexxapi.h:255`). D5 freezes that header and makes it the
+        // expands to, a nullary function answering a `RexxPackageEntry *`.
+        // D5 freezes that header and makes it the
         // declaration both sides compile against, so an extension exporting
         // the name at another signature is outside the contract.
         let symbol: libloading::Symbol<'_, GetPackage> =
             match unsafe { handle.get(GET_PACKAGE_SYMBOL) } {
                 Ok(symbol) => symbol,
                 // A library without the exporter is a classic registration
-                // rather than a failure (`LibraryPackage.cpp:211-215`).
+                // rather than a failure.
                 Err(_) => return Ok(None),
             };
         *symbol
@@ -2760,12 +2734,10 @@ fn package_of(handle: libloading::Library, name: &str) -> Result<Option<Library>
 
     // SAFETY: the address came from `dlsym` on a library `handle` still holds,
     // so the code it names stays mapped across the call. The function answers
-    // the address of a static in that library and does nothing else
-    // (`api/oorexxapi.h:255`).
+    // the address of a static in that library and does nothing else.
     let entry = unsafe { get_package() };
     if entry.is_null() {
-        // `LibraryPackage::load` treats a null table as "not a package"
-        // (`LibraryPackage.cpp:148-155`).
+        // The oracle treats a null table as "not a package".
         return Ok(None);
     }
 
@@ -2778,9 +2750,8 @@ fn package_of(handle: libloading::Library, name: &str) -> Result<Option<Library>
     unsafe { library_of(&*entry, handle, name) }
 }
 
-/// The library a package entry an extension registers describes
-/// (`PackageManager::registerPackage`), its code in whatever this process
-/// already has mapped, or `None` for a null entry.
+/// The library a package entry an extension registers describes, its code in
+/// whatever this process already has mapped, or `None` for a null entry.
 ///
 /// # Errors
 /// [`Refused`] where the entry asks for a newer interpreter than this one.
@@ -2879,16 +2850,14 @@ unsafe fn method_table(
         // SAFETY: `at` starts at the caller's array and advances only past a
         // row that was not the terminator, so it stays inside it.
         let row = unsafe { &*at };
-        // The oracle ends on `style == 0` and not on a null name
-        // (`LibraryPackage.cpp:320`).
+        // The oracle ends on `style == 0` and not on a null name.
         if row.style == 0 {
             return rows;
         }
         rows.push(NativeMethodEntry {
             style: row.style,
-            // SAFETY: `REXX_METHOD_ENTRY` stringizes the name
-            // (`api/oorexxapi.h:223`), so a row the terminator check admits
-            // carries a non-null one, held in the library's own image.
+            // SAFETY: `REXX_METHOD_ENTRY` stringizes the name, so a row the
+            // terminator check admits carries a non-null one, held in the library's own image.
             name: unsafe { CStr::from_ptr(row.name) }.to_bytes().to_vec(),
             entry_point: row.entry_point,
             mapping: Arc::clone(mapping),
@@ -2916,15 +2885,14 @@ unsafe fn routine_table(
         // SAFETY: `at` starts at the caller's array and advances only past a
         // row that was not the terminator, so it stays inside it.
         let row = unsafe { &*at };
-        // `loadRoutines` ends on `style == 0` (`LibraryPackage.cpp:270`).
+        // The routine table ends on `style == 0`.
         if row.style == 0 {
             return rows;
         }
         rows.push(NativeRoutineEntry {
             style: row.style,
-            // SAFETY: `REXX_ROUTINE` stringizes the name
-            // (`api/oorexxapi.h:203`), so a row the terminator check admits
-            // carries a non-null one, held in the library's own image.
+            // SAFETY: `REXX_ROUTINE` stringizes the name, so a row the
+            // terminator check admits carries a non-null one, held in the library's own image.
             name: unsafe { CStr::from_ptr(row.name) }.to_bytes().to_vec(),
             entry_point: row.entry_point,
             mapping: Arc::clone(mapping),
@@ -2977,8 +2945,8 @@ mod tests {
 
     /// A library refused for its version keeps its unloader and not its
     /// loader: measured, oracle, such a library's unloader runs at
-    /// termination and its loader never does, since `loadPackage` raises
-    /// before it (`interpreter/package/LibraryPackage.cpp:232-245`).
+    /// termination and its loader never does, since the version check raises
+    /// before it.
     #[test]
     #[cfg(unix)]
     #[cfg_attr(miri, ignore = "opens the running image")]
@@ -3011,7 +2979,7 @@ mod tests {
         assert!(accepted.has_hook(Hook::Unloader));
     }
 
-    /// `ROUTINE_TYPED_STYLE` (`api/oorexxapi.h:200`).
+    /// `ROUTINE_TYPED_STYLE`.
     const ROUTINE_TYPED_STYLE: std::ffi::c_int = 1;
 
     /// A routine row whose entry point is `tag`, which is never called.
