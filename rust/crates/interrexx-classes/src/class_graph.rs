@@ -949,6 +949,17 @@ impl ClassGraph {
         self.rebuild_behaviour(class, Side::Instance);
     }
 
+    /// The full subclass update of every subclass of `class`, leaving `class`
+    /// itself alone: what a change to `class`'s own dictionary that did not
+    /// cascade ([`Self::inherit_instance_methods`]) needs for subclasses that
+    /// already exist to see it.
+    pub fn update_subclasses_of(&mut self, class: ObjRef) {
+        let subclasses = self.classes[&class].subclasses.clone();
+        for sub in subclasses {
+            self.update_sub_classes(sub);
+        }
+    }
+
     /// The ancestor chain a class-graph assertion reads. Two classes can answer
     /// identically here despite [`Self::inherit_instance_methods`] having
     /// donated different methods to each: that is the exact blind spot this

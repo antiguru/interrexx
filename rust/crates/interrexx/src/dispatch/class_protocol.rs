@@ -984,7 +984,10 @@ pub(super) fn native_define_class_method(
 
 /// `Class~inheritInstanceMethods(source)`: copy `source`'s own instance methods
 /// into the receiver's dictionary at the receiver's scope, with no superclass
-/// edge added -- the "phony inherit".
+/// edge added -- the "phony inherit". The receiver's existing subclasses are
+/// updated too: the library program declares every class, `StreamSupplier`
+/// under `Supplier` among them, before its main code copies the methods in.
+/// The method is setup-only, so no program can send it.
 pub(super) fn native_inherit_instance_methods(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1002,6 +1005,7 @@ pub(super) fn native_inherit_instance_methods(
     };
     let source = class_receiver(interp, source)?;
     interp.classes().inherit_instance_methods(class, source);
+    interp.classes().update_subclasses_of(class);
     interp.classes().check_uninit(class);
     interp.flag_class_uninit(class);
     Ok(None)

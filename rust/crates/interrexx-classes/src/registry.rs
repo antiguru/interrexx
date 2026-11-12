@@ -721,6 +721,11 @@ impl ClassRegistry {
         self.graph.inherit_instance_methods(class, source);
     }
 
+    /// See [`ClassGraph::update_subclasses_of`].
+    pub fn update_subclasses_of(&mut self, class: ObjRef) {
+        self.graph.update_subclasses_of(class);
+    }
+
     /// The bootstrap's instance-method donation -- see
     /// [`ClassGraph::donate_instance_methods`], which carries why it is not
     /// [`Self::inherit_instance_methods`].
