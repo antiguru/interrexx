@@ -412,6 +412,13 @@ fn install_store(interp: &mut Interp, receiver: ObjRef, half: Half, buckets: usi
         &interp.hash_names.methods
     };
     let [n_indexes, n_items, n_next, n_buckets, n_free] = names.clone();
+    // A bucket count [`initialize_store`] left pending goes, so that the five
+    // entries are bound together in their order, as [`shared_run`] reads them.
+    if pool_variable(interp, receiver, scope, half.indexes).is_none()
+        && pool_variable(interp, receiver, scope, half.buckets).is_some()
+    {
+        interp.clear_pool_variable(receiver, scope, half.buckets);
+    }
     interp.set_pool_variables(
         receiver,
         scope,
@@ -573,9 +580,46 @@ fn store_in(interp: &mut Interp, receiver: ObjRef, half: Half) -> Result<Store, 
 }
 
 fn store_of(interp: &mut Interp, receiver: ObjRef) -> Result<Store, Failure> {
-    if let Some(store) = read_store(interp, receiver, CONTENTS)? {
+    let parts = read_parts(interp, receiver);
+    if let Some(store) = parts.contents.store(interp)? {
         return Ok(store);
     }
+    refuse_storeless(interp, receiver)?;
+    // The bucket count [`initialize_store`] left pending, if it left one.
+    let buckets = parts.contents.buckets.unwrap_or(MINIMUM_BUCKET_SIZE);
+    Ok(install_store(interp, receiver, CONTENTS, buckets))
+}
+
+/// The contents' store, or `None` for a receiver [`store_of`] would build an
+/// empty one for: what a read that finds nothing in an empty store answers
+/// the same without building it. Refuses as [`store_of`] does.
+fn store_if_built(interp: &mut Interp, receiver: ObjRef) -> Result<Option<Store>, Failure> {
+    let parts = read_parts(interp, receiver);
+    if let Some(store) = parts.contents.store(interp)? {
+        return Ok(Some(store));
+    }
+    refuse_storeless(interp, receiver)?;
+    if parts.contents.buckets.is_none() {
+        keep_bucket_count(interp, receiver, MINIMUM_BUCKET_SIZE);
+    }
+    Ok(None)
+}
+
+/// Leaves `buckets` as the size [`store_of`] builds `receiver`'s store at,
+/// for a receiver that has neither a store nor a size kept for one. Taking
+/// the place of building the store, it is what makes a later `INIT` find the
+/// size already decided, as it would find a store built.
+fn keep_bucket_count(interp: &mut Interp, receiver: ObjRef, buckets: usize) {
+    let scope = hash_scope(interp);
+    let buckets = interp.counted(buckets);
+    let [_, _, _, name, _] = &interp.hash_names.contents;
+    let name = Rc::clone(name);
+    interp.set_pool_variables(receiver, scope, &[(&name, buckets)]);
+}
+
+/// [`store_of`]'s refusal of a receiver that has no store and is not given
+/// one.
+fn refuse_storeless(interp: &mut Interp, receiver: ObjRef) -> Result<(), Failure> {
     // **A `Body::Native` receiver is not this store's**, and the check has to
     // be here because the two are one method. `IdentityTable`'s `At`, `Put` and
     // `[]` rows are donated to `StringTable` and then `StringTable`'s whole set
@@ -591,12 +635,7 @@ fn store_of(interp: &mut Interp, receiver: ObjRef) -> Result<Store, Failure> {
     {
         return Err(crate::Raised::receiver_kind("a value that is not a hash collection").into());
     }
-    Ok(install_store(
-        interp,
-        receiver,
-        CONTENTS,
-        MINIMUM_BUCKET_SIZE,
-    ))
+    Ok(())
 }
 
 fn set_free(interp: &mut Interp, receiver: ObjRef, half: Half, free: usize) {
@@ -1205,8 +1244,10 @@ fn method_count(interp: &mut Interp, receiver: ObjRef) -> Result<usize, Failure>
 
 /// How many entries the contents hold: [`walk`]'s length.
 fn count_in_store(interp: &mut Interp, receiver: ObjRef) -> Result<usize, Failure> {
-    let store = store_of(interp, receiver)?;
-    count_in(interp, &store)
+    match store_if_built(interp, receiver)? {
+        Some(store) => count_in(interp, &store),
+        None => Ok(0),
+    }
 }
 
 /// The contents' entries and the method table's together, which is what
@@ -1214,13 +1255,19 @@ fn count_in_store(interp: &mut Interp, receiver: ObjRef) -> Result<usize, Failur
 /// [`method_count`], in that order.
 fn entry_count(interp: &mut Interp, receiver: ObjRef) -> Result<usize, Failure> {
     let parts = read_parts(interp, receiver);
-    // Installing the contents' store, as `store_of` does for a receiver
-    // without one, leaves the method table's entries as they were read.
-    let contents = match parts.contents.store(interp)? {
-        Some(store) => store,
-        None => store_of(interp, receiver)?,
+    // A receiver `store_of` would build an empty store for holds nothing, and
+    // is left without one until something is put in it, with the size that
+    // store would have had kept.
+    let count = match parts.contents.store(interp)? {
+        Some(store) => count_in(interp, &store)?,
+        None => {
+            refuse_storeless(interp, receiver)?;
+            if parts.contents.buckets.is_none() {
+                keep_bucket_count(interp, receiver, MINIMUM_BUCKET_SIZE);
+            }
+            0
+        }
     };
-    let count = count_in(interp, &contents)?;
     match parts.methods.store(interp)? {
         Some(methods) => Ok(count + count_in(interp, &methods)?),
         None => Ok(count),
@@ -1558,13 +1605,19 @@ pub(super) fn initialize_store(
 ) -> Result<(), Failure> {
     let scope = hash_scope(interp);
     let class = match interp.heap.get(receiver).map(|object| &object.body) {
-        Some(Body::Instance { class, pools, .. }) if pools.get(scope, HASH_INDEXES).is_none() => {
+        Some(Body::Instance { class, pools, .. })
+            if pools.get(scope, HASH_INDEXES).is_none()
+                && pools.get(scope, HASH_BUCKETS).is_none() =>
+        {
             *class
         }
         _ => return Ok(()),
     };
     if kind_of_class(interp, class).has(HashKind::STORE_HOLDER) {
-        install_store(interp, receiver, CONTENTS, calculate_bucket_size(capacity));
+        // Only the bucket count is kept: [`store_of`] builds the store at that
+        // size when something first needs one, and a read that finds nothing
+        // answers the same without it.
+        keep_bucket_count(interp, receiver, calculate_bucket_size(capacity));
     }
     Ok(())
 }

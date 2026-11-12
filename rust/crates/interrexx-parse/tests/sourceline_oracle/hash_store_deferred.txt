@@ -1,0 +1,58 @@
+count 57
+/* A hash collection's store sized by its INIT capacity and first needed only
+   later: the iteration order a capacity decides, through ITEMS, ISEMPTY,
+   COPY, a second INIT and the readers that find nothing. */
+keys = .array~of('k1', 'k2', 'k3', 'k4', 'k5', 'k6', 'k7', 'k8', 'alpha', 'beta', 'gamma')
+classes = .array~of(.Table, .IdentityTable, .Directory, .StringTable, .Set, .Bag, .Relation)
+do c over classes
+  do size over .array~of('', 1, 40, 100)
+    if size == '' then h = c~new
+    else h = c~new(size)
+    say c~id size 'items' h~items 'empty' h~isEmpty
+    call fill h, keys
+    say '  ' order(h)
+  end
+  /* Readers on a collection nothing was put in yet. */
+  h = c~new(100)
+  say '  readers' h~allIndexes~items h~allItems~items h~makeArray~items h~hasIndex('k1') ,
+    h~at('k1') h~supplier~available h~index('x')
+  call fill h, keys
+  say '  after readers' order(h)
+  /* A copy taken before the first put, and filled on its own. */
+  h = c~new(100)
+  g = h~copy
+  call fill g, keys
+  say '  copy' order(g) 'original' h~items
+  call fill h, keys~section(1, 3)
+  say '  original' order(h)
+end
+/* A subclass whose INIT runs the inherited one twice, with two sizes. */
+t = .Twice~new
+call fill t, keys
+say 'twice' order(t)
+d = .directory~new(60)
+d~alpha = 1
+d~setMethod('M', 'return 2')
+say 'directory' d~items d~alpha d~m
+exit
+
+fill: procedure
+  use arg h, keys
+  do k over keys
+    if h~isA(.Set) | h~isA(.Bag) then h~put(k)
+    else h~put(k~upper, k)
+  end
+  return
+
+order: procedure
+  use arg h
+  line = ''
+  do i over h~allIndexes
+    line = line i
+  end
+  return strip(line)
+
+::class Twice subclass Table
+::method init
+  self~init:super(100)
+  self~init:super(3)
