@@ -1,0 +1,53 @@
+# Set: the argument-count errors of the operations that read a
+# collection. The operand errors and the errors of the reading are in the
+# examples of the page.
+
+error
+.set~new~putAll
+----
+93.901
+
+error
+.set~new~putAll(1, 2)
+----
+93.902
+
+error
+.set~new~union
+----
+93.901
+
+error
+.set~new~union(1, 2)
+----
+93.902
+
+error
+.set~new~intersection
+----
+93.901
+
+error
+.set~new~intersection(1, 2)
+----
+93.902
+
+error
+.set~new~xor
+----
+93.901
+
+error
+.set~new~xor(1, 2)
+----
+93.902
+
+error
+.set~new~subset
+----
+93.901
+
+error
+.set~new~subset(1, 2)
+----
+93.902
