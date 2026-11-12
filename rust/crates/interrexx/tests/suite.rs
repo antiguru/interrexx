@@ -11,6 +11,8 @@
 //! refusal, a crash, a timeout or the memory cap ends has its last started test
 //! renamed out, and runs again.
 
+#[path = "../../interrexx-capi-rxapi/tests/support/cdylibs.rs"]
+mod cdylibs;
 #[path = "suite/launch/mod.rs"]
 mod launch;
 pub use launch::{
@@ -405,16 +407,11 @@ pub fn crate_side_environment(run: &Path) -> Vec<(Vec<u8>, Vec<u8>)> {
 }
 
 /// ooRexx's native-API test libraries and drivers, built once by
-/// `scripts/build-testbinaries.sh` from the shared objects cargo left beside
-/// this test, as `classic_api.rs` builds them.
+/// `scripts/build-testbinaries.sh` from the shared objects cargo built, as `classic_api.rs` builds them.
 pub fn testbinaries() -> &'static Path {
     static BUILT: std::sync::OnceLock<PathBuf> = std::sync::OnceLock::new();
     BUILT.get_or_init(|| {
-        let deps = std::env::current_exe()
-            .expect("the test's path")
-            .parent()
-            .expect("the deps directory")
-            .to_path_buf();
+        let deps = cdylibs::libs_dir(Path::new(env!("CARGO_TARGET_TMPDIR")));
         let out = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("suite-testbinaries");
         let output = Command::new(worktree().join("scripts/build-testbinaries.sh"))
             .arg("--libs")
@@ -434,15 +431,11 @@ pub fn testbinaries() -> &'static Path {
 }
 
 /// `hostemu` and `orxncurses`, built once by `scripts/build-extensions.sh`
-/// from the shared objects cargo left beside this test.
+/// from the shared objects cargo built.
 fn extensions() -> &'static Path {
     static BUILT: std::sync::OnceLock<PathBuf> = std::sync::OnceLock::new();
     BUILT.get_or_init(|| {
-        let deps = std::env::current_exe()
-            .expect("the test's path")
-            .parent()
-            .expect("the deps directory")
-            .to_path_buf();
+        let deps = cdylibs::libs_dir(Path::new(env!("CARGO_TARGET_TMPDIR")));
         let out = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("suite-extensions");
         let output = Command::new(worktree().join("scripts/build-extensions.sh"))
             .arg("--libs")

@@ -1,16 +1,18 @@
 //! `librexxapi.so`'s SONAME and exported names.
 
+#[path = "support/cdylibs.rs"]
+mod cdylibs;
 #[path = "support/names.rs"]
 mod names;
 
 use names::{
-    LIBREXX, LIBREXXAPI, NOT_EXPORTED, deps_dir, dynamic_entries, exported_rexx_functions,
-    oracle_lib, set, symbol_table,
+    LIBREXX, LIBREXXAPI, NOT_EXPORTED, dynamic_entries, exported_rexx_functions, oracle_lib, set,
+    symbol_table,
 };
 
 #[test]
 fn the_library_names_itself_as_extensions_need_it() {
-    let library = deps_dir().join("librexxapi.so");
+    let library = cdylibs::librexxapi();
     assert_eq!(dynamic_entries(&library, "SONAME"), ["librexxapi.so.4"]);
 }
 
@@ -18,7 +20,7 @@ fn the_library_names_itself_as_extensions_need_it() {
 /// needs and finds beside itself.
 #[test]
 fn the_library_needs_librexx_beside_it() {
-    let library = deps_dir().join("librexxapi.so");
+    let library = cdylibs::librexxapi();
     assert!(
         dynamic_entries(&library, "NEEDED").contains(&"librexx.so.4".to_owned()),
         "{:?}",
@@ -31,7 +33,7 @@ fn the_library_needs_librexx_beside_it() {
 /// linked into it, so nothing here can register or queue apart from `librexx.so.4`.
 #[test]
 fn the_library_carries_no_interpreter_code() {
-    let table = symbol_table(&deps_dir().join("librexxapi.so"));
+    let table = symbol_table(&cdylibs::librexxapi());
     for crate_name in ["interrexx", "interrexx_rxapi", "interrexx_core"] {
         let found: Vec<&str> = table
             .lines()
@@ -44,7 +46,7 @@ fn the_library_carries_no_interpreter_code() {
 
 #[test]
 fn the_library_exports_its_api_names_and_no_others() {
-    let exported = exported_rexx_functions(&deps_dir().join("librexxapi.so"));
+    let exported = exported_rexx_functions(&cdylibs::librexxapi());
     assert_eq!(exported, set(LIBREXXAPI));
     for name in LIBREXX.iter().chain(NOT_EXPORTED) {
         assert!(!exported.contains(*name), "{name} is exported");

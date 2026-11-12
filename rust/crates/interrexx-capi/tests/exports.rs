@@ -1,15 +1,16 @@
 //! `librexx.so`'s SONAME, `NEEDED` entry, search path and exported names.
 
+#[path = "../../interrexx-capi-rxapi/tests/support/cdylibs.rs"]
+mod cdylibs;
 #[path = "../../interrexx-capi-rxapi/tests/support/names.rs"]
 mod names;
 
 use names::{
-    LIBREXX, LIBREXXAPI, NOT_EXPORTED, deps_dir, dynamic_entries, exported_rexx_functions,
-    oracle_lib, set,
+    LIBREXX, LIBREXXAPI, NOT_EXPORTED, dynamic_entries, exported_rexx_functions, oracle_lib, set,
 };
 
 fn library() -> std::path::PathBuf {
-    deps_dir().join("librexx.so")
+    cdylibs::librexx()
 }
 
 /// `librexx.so.4` owns the API's state and needs no library of
