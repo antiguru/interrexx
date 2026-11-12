@@ -285,18 +285,11 @@ fn sort_by(
         crate::pinning::PinKind::SortComparator,
         merge_sort(interp, order, items)
     )?;
-    // **The sort runs in place, so a comparator that changes the receiver under
-    // the sort loses the sort's writes.** This crate sorts a copy, so it has to
-    // notice: `sortWith` over a comparator that empties the array leaves it
-    // holding nothing, where writing the copy back would restore the pre-sort
-    // contents. Approximated by the item count, which is what a callback that
-    // empties or refills moves; a callback that swaps one item for another is
-    // not distinguished. Matches the reference implementation; not yet
-    // specified.
-    let after = read_slots(interp, receiver, |slots| slots.iter().flatten().count())?;
-    if after == before {
-        write_back(interp, receiver, sorted)?;
-    }
+    // The sorted items go back over the receiver's slots as they are now: a
+    // comparator that changed the receiver while the sort ran leaves contents
+    // the specification does not fix (r[class.array.sort]), and this writes
+    // only items the receiver held before the sort, into slots it still has.
+    write_back(interp, receiver, sorted)?;
     Ok(Some(receiver))
 }
 

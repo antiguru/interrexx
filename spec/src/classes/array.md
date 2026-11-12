@@ -1349,6 +1349,11 @@ and `stableSort` still make the slot check, so `.array~of(, 5)~sort` raises
 not understand its message raises `SYNTAX 97.1`. The comparator's answer must
 be a whole number: another answer raises `SYNTAX 26.903`; the answer of an
 item's `compareTo` raises `SYNTAX 26.902` in the same case.
+A comparator, or a `compareTo`, that changes the receiver while the sort runs
+(removes items, adds some or empties it) leaves the contents of the array
+unspecified: the sort ends, no error is raised for the change, and every item
+the array holds afterwards is one that it held before the sort or that the
+comparator put there.
 
 ```rexx
 a = .array~of('b', 'A', 'a', '10', '9')
@@ -1416,6 +1421,28 @@ a b c d
 1
 1
 ```
+```rexx
+a = .array~of(3, 1, 2)
+a~sortWith(.emptier~new(a))
+ok = a~items <= 3
+do i over a~allItems
+  if \ (i = 1 | i = 2 | i = 3) then ok = 0
+end
+say a~class~id ok
+::class emptier
+::method init
+  expose target
+  use arg target
+::method compare
+  expose target
+  target~empty
+  return 0
+```
+
+```output
+Array 1
+```
+
 r[class.array.sort.sends]
 `sort` and `stableSort` send `compareTo` to items, with another item of the
 array as the argument, and `sortWith` and `stableSortWith` send `compare` to
