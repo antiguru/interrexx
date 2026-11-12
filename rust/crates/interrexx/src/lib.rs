@@ -1384,7 +1384,7 @@ struct Interp {
     /// minted names -- the "bodies are stored" half of R9, addressed by the
     /// same identity `ClassRegistry::add_instance_method`/`add_class_method`
     /// already returns.
-    method_bodies: NameMap<MethodId, InstalledMethodBody>,
+    method_bodies: MethodBodies,
     /// Whether the interpreter's own Rexx-written library is running.
     library_bootstrap: bool,
     /// How many collections the heap had performed when the library
@@ -1916,6 +1916,51 @@ struct InstalledMethodBody {
     directive: usize,
 }
 
+/// [`Interp::method_bodies`]' map, read through `Deref` and written only
+/// through the methods here, each of which takes a new
+/// [`MethodBodies::version`]: what a send site's memo of a body checks.
+#[derive(Default)]
+struct MethodBodies {
+    map: NameMap<MethodId, InstalledMethodBody>,
+    version: u64,
+}
+
+impl std::ops::Deref for MethodBodies {
+    type Target = NameMap<MethodId, InstalledMethodBody>;
+
+    #[inline(always)]
+    fn deref(&self) -> &Self::Target {
+        &self.map
+    }
+}
+
+impl MethodBodies {
+    fn insert(
+        &mut self,
+        method: MethodId,
+        body: InstalledMethodBody,
+    ) -> Option<InstalledMethodBody> {
+        self.version += 1;
+        self.map.insert(method, body)
+    }
+
+    fn remove(&mut self, method: &MethodId) {
+        self.version += 1;
+        self.map.remove(method);
+    }
+
+    fn retain(&mut self, keep: impl FnMut(&MethodId, &mut InstalledMethodBody) -> bool) {
+        self.version += 1;
+        self.map.retain(keep);
+    }
+
+    /// A count that changes whenever an entry may have.
+    #[inline(always)]
+    fn version(&self) -> u64 {
+        self.version
+    }
+}
+
 /// An equality rather than a bound, for the reason `crate::ir::Op`'s own
 /// width assertion is one: every send to a `::METHOD` body copies one of
 /// these out of [`Interp::method_bodies`], and a field added here costs that
@@ -2293,7 +2338,7 @@ impl Interp {
             pinning: pinning::Pinning::default(),
             activities: scheduler::Activities::new(thread_table),
             library_programs: Vec::new(),
-            method_bodies: NameMap::default(),
+            method_bodies: MethodBodies::default(),
             compiled_method_names: FxHashMap::default(),
             object_methods: false,
             executable_objects: method_rows::MethodRows::new(),

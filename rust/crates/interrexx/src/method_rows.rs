@@ -10,6 +10,9 @@ pub(crate) struct MethodRows<T> {
     dense: Vec<Option<T>>,
     sealed: bool,
     minted: FxHashMap<MethodId, T>,
+    /// Bumped by every write a row can change through: see
+    /// [`MethodRows::version`].
+    version: u64,
 }
 
 impl<T: Copy> MethodRows<T> {
@@ -18,7 +21,15 @@ impl<T: Copy> MethodRows<T> {
             dense: Vec::new(),
             sealed: false,
             minted: FxHashMap::default(),
+            version: 0,
         }
+    }
+
+    /// A count that changes whenever a row may have: every insert, removal,
+    /// retain and mutable borrow takes a new one.
+    #[inline]
+    pub(crate) fn version(&self) -> u64 {
+        self.version
     }
 
     /// Stops the vector growing: every later row past its end goes in the map.
@@ -37,6 +48,7 @@ impl<T: Copy> MethodRows<T> {
 
     pub(crate) fn get_mut(&mut self, method: MethodId) -> Option<&mut T> {
         self.debug_assert_not_minted_below(method);
+        self.version += 1;
         match self.dense.get_mut(method.0 as usize) {
             Some(row) => row.as_mut(),
             None => self.minted.get_mut(&method),
@@ -53,6 +65,7 @@ impl<T: Copy> MethodRows<T> {
     }
 
     pub(crate) fn insert(&mut self, method: MethodId, row: T) {
+        self.version += 1;
         let index = method.0 as usize;
         if index < self.dense.len() {
             self.dense[index] = Some(row);
@@ -73,6 +86,7 @@ impl<T: Copy> MethodRows<T> {
 
     pub(crate) fn remove(&mut self, method: MethodId) {
         self.debug_assert_not_minted_below(method);
+        self.version += 1;
         match self.dense.get_mut(method.0 as usize) {
             Some(row) => *row = None,
             None => {
@@ -88,6 +102,7 @@ impl<T: Copy> MethodRows<T> {
 
     /// Drops every identity and row `keep` answers false for.
     pub(crate) fn retain_entries(&mut self, mut keep: impl FnMut(MethodId, &T) -> bool) {
+        self.version += 1;
         for (index, row) in self.dense.iter_mut().enumerate() {
             if row
                 .as_ref()

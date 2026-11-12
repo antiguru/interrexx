@@ -14,7 +14,7 @@ impl Interp {
         _cleared: Cleared,
         installed: crate::InstalledMethodBody,
         resolution: Resolution,
-        behaviour: Option<Behaviour>,
+        super_scope: SuperScope,
         receiver: ObjRef,
         name: &[u8],
         args: &[Option<ObjRef>],
@@ -59,9 +59,10 @@ impl Interp {
         let reserve_at_once =
             guarded && !plan.traces_entry_early && !self.activities.guards.is_live();
         let callee_id = self.next_activation_id();
-        let super_scope = match behaviour {
-            Some(behaviour) => self.super_scope_in(behaviour, resolution.scope),
-            None => self.super_scope_for(receiver, resolution),
+        let super_scope = match super_scope {
+            SuperScope::In(behaviour) => self.super_scope_in(behaviour, resolution.scope),
+            SuperScope::Known(super_scope) => super_scope,
+            SuperScope::OfReceiver => self.super_scope_for(receiver, resolution),
         };
         // **The calling convention, entered before anything reads it.** The
         // receiver goes in here and is read back out below, so the identity
