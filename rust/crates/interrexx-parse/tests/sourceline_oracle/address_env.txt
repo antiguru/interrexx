@@ -5,9 +5,9 @@ count 134
 
    WHAT THE ENVIRONMENT'S READERS ARE, STATED FIRST BECAUSE IT SHAPED THE
    BLOCKS THAT CAME BEFORE D. The environment an ADDRESS instruction sets has
-   exactly five readers, and the enumeration is the C++'s rather than a guess:
-   `settings.currentAddress` is read by `RexxActivation::toggleAddress`, by
-   `RexxActivation::setAddress`, by `CommandInstruction`'s dispatch, by the
+   exactly five readers, and the enumeration is the oracle's rather than a guess:
+   `settings.currentAddress` is read by the two ADDRESS toggles, by the
+   command instruction's dispatch, by the
    ADDRESS() builtin, and by the default environment handed to an external
    .rex called as a routine. Of those, the two a Rexx program can observe are
    ADDRESS() and issuing a command. Blocks A, B and C were written when this
@@ -48,7 +48,7 @@ count 134
    The line before A is the other half of the same question: with no ADDRESS
    instruction executed yet, ADDRESS() names the PLATFORM DEFAULT. That is a
    host-dependent constant -- `sh` here and `CMD` on a Windows build, from
-   SYSINITIALADDRESS in platform/<os>/PlatformDefinitions.h -- and it is
+   SYSINITIALADDRESS in the platform definitions -- and it is
    in this corpus for the reason `LINUX COMMAND` is: it is fixed when the
    interpreter is built and does not move under it, unlike PARSE VERSION's
    build date, which is why that one is kept out of every corpus program.

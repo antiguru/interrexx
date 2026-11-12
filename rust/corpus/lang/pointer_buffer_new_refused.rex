@@ -1,6 +1,6 @@
 /* `.Pointer~new` and `.Buffer~new` refuse rather than building an instance.
-   `PointerClass::newRexx` (`classes/PointerClass.cpp:139`-`:143`) and
-   `BufferClass::newRexx` (`classes/BufferClass.cpp:86`-`:90`) are the raise and
+   Pointer's `new` and Buffer's `new`
+   (each a native method) are the raise and
    nothing else, so no argument list is looked at, and the substitution is the
    RECEIVER class's own `getId()`.  Both classes are documented as
    native-code-only (`utilityclasses.xml:429`, `:6910`). */

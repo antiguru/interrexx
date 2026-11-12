@@ -1,7 +1,7 @@
 /* The Directory entry-method mechanism: an entry answers a message of its own
  * name without being in the behaviour at all.
  *
- * StringHashCollection::unknown reads the message name as an entry, and a
+ * A string table's UNKNOWN reads the message name as an entry, and a
  * name ending in `=` stores instead. .environment~local is the shipped case
  * -- the interpreter's own startup gives that entry a method -- and
  * hasMethod("LOCAL") answering 0 beside it is what says the behaviour is not

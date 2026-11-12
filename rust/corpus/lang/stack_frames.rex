@@ -24,7 +24,7 @@
    C1's clause indented and C3's at the wrong width.
 
    X: `~string` and `~makeString` are bound to the same function as
-   `~traceLine` (Setup.cpp), so all three are one string; an engine
+   `~traceLine`, so all three are one string; an engine
    implementing them separately can print `[0]` in either of the last two
    fields. `~context` is a RexxContext on EVERY frame, including the three
    that never named `.context` -- building a frame creates one.

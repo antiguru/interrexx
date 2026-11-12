@@ -1,8 +1,8 @@
 count 68
 /* Method~scope answers the class a method object was defined at, and .nil for
- * one no class has taken (MethodClass::getScopeRexx, classes/MethodClass.cpp:361,
- * which is resultOrNil(getScope()), bound at Method alone by
- * memory/Setup.cpp:1113).
+ * one no class has taken (the answer is the scope or .nil,
+ * and the method is bound at Method
+ * alone).
  *
  * gate-tables/concepts/xscope.rex is the pair that pins the answer to the
  * scope rather than to the ancestor a name is also defined at. What this file
@@ -12,11 +12,11 @@ count 68
  *   - an unattached ::METHOD, which .METHODS holds and no class has taken;
  *   - ~define with that object, which fills its scope in place;
  *   - ~define with an object that already carries a scope, which copies;
- *   - ~defineMethods (createMethodDictionary at classes/ClassClass.cpp:1265
- *     and replaceMethods at MethodDictionary.cpp:233);
+ *   - ~defineMethods (which builds a method dictionary and replaces the
+ *     methods);
  *   - ::ATTRIBUTE's two accessors and ::CONSTANT, whose names no ::METHOD in
  *     this file spells;
- *   - a class Setup.cpp builds, and a name donated to one class out of
+ *   - a class built natively, and a name donated to one class out of
  *     another's dictionary, whose scope is the receiving class.
  *
  * The .nil row is what a build that fills the scope in unconditionally gets
@@ -49,7 +49,7 @@ say 'constant' .base~method('C')~scope~id
 say 'render' .base~method('M')~scope
 
 /* APPEND is .Array's own, and AT is .StringTable's, donated into .Directory's
-   own dictionary by InheritInstanceMethods(StringTable), memory/Setup.cpp:933. */
+   own dictionary by inheriting StringTable's instance methods. */
 say 'library' .Array~method('APPEND')~scope~id
 say 'donated' .Directory~method('AT')~scope~id
 

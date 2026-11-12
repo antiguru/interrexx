@@ -3,8 +3,8 @@ count 33
  * method itself cannot fail, every receiver having either a value hash or an
  * identity one.
  *
- * Class carries its own row (`AddMethod("HashCode", RexxClass::hashCode, 0)`,
- * memory/Setup.cpp:495) rather than inheriting Object's, so its arity is
+ * Class carries its own HashCode method (declared at arity 0)
+ * rather than inheriting Object's, so its arity is
  * witnessed separately.
  *
  * The untrapped tail is a class receiver's arity error. rc 163.

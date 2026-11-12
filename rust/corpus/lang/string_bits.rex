@@ -1,5 +1,5 @@
-/* BITAND, BITOR and BITXOR as methods: `AddMethod("BitAnd", RexxString::bitAnd,
- * 2)` and its two siblings (memory/Setup.cpp:631-:633).
+/* BITAND, BITOR and BITXOR as methods, each declared at arity 2 (one
+ * operand and one pad).
  *
  * The operation runs byte for byte over the two strings, and the SHORTER one
  * is extended with the pad -- so the longer string's tail passes through the

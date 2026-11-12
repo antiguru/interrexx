@@ -1,7 +1,7 @@
 count 49
 /* `Class~defineMethods` handed source text: the second caller of
- * `newMethodObject`, reached through `createMethodDictionary`
- * (classes/ClassClass.cpp:1242-:1269).
+ * method creation, reached through the
+ * method-dictionary construction.
  *
  * Its table is walked by supplier, so the entry's own index is the method's
  * name and the dictionary is keyed by that name upcased -- the same pair

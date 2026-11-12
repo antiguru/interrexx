@@ -7,7 +7,7 @@ count 71
  *
  * The comma-separated expression list over a line continuation is the second
  * shape and is a different construct from a variable holding an array: it
- * folds into a plain Array at the OVER position. CoreClasses.orx:70 writes it.
+ * folds into a plain Array at the OVER position. The embedded library writes it.
  *
  * FOR is checked after the item is bound, not before, so the control variable
  * outlives the loop holding the item the terminating pass bound.

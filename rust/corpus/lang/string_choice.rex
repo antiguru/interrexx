@@ -1,6 +1,6 @@
 /* `?`, the one method String registers beside the operators that is not an
- * operator the parser has: `AddMethod("?", RexxString::choiceRexx, 2)`
- * (memory/Setup.cpp:678). There is no expression form for it to agree with,
+ * operator the parser has, declared at arity 2.
+ * There is no expression form for it to agree with,
  * so this dispatch is the only one there is.
  *
  * The oracle's body is three lines -- both arguments required and named, then

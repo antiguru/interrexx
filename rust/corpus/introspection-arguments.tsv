@@ -83,7 +83,7 @@ Method	setProtected	instance	--
 Method	setSecurityManager	instance	.Object~new
 Method	setUnguarded	instance	--
 Method	source	instance	--
-Object	new	class	EXEMPT:the oracle refuses an argument here -- measured, .Object~new('x') raises 93.902 while .Object~new answers, so Setup.cpp's A_COUNT is a maximum and not a minimum
+Object	new	class	EXEMPT:the oracle refuses an argument here -- measured, .Object~new('x') raises 93.902 while .Object~new answers, so a declared A_COUNT is a maximum and not a minimum
 Object	(abuttal)	instance	EXEMPT:the book's displayed name is not a message name -- measured, o~'(abuttal)'('x') raises 97.1 while o~''('x') answers
 Object	(blank)	instance	EXEMPT:the book's displayed name is not a message name -- measured, o~'(blank)'('x') raises 97.1 while o~' '('x') answers
 Object	<>	instance	.Object~new

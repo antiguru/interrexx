@@ -18,7 +18,7 @@ call extra 'DIMENSIONS'
 say 'all five raised SYNTAX'
 
 /* Four methods, and only these four, refuse a multi-dimensional receiver:
-   `checkMultiDimensional`'s callers upstream are APPEND, INSERT, DELETE and
+   the multi-dimension check's callers in the oracle are APPEND, INSERT, DELETE and
    SECTION.  `fill`, `first` and the rest take any shape. */
 m = .Array~new(2, 3)
 call onMulti 'APPEND', 'q'

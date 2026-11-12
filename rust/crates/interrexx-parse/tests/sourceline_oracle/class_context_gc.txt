@@ -2,7 +2,7 @@ count 25
 /* A forced collection does not take the running
    activation's context object with it.
 
-   `GC('force')` reached `Heap::collect` directly, past the sweep that names
+   `GC('force')` reached the collector directly, past the sweep that names
    an activation's context object, so the object was freed under a live
    activation and the send after it refused. The rename is what makes the row
    read the cached object rather than a fresh one: a build that mints per

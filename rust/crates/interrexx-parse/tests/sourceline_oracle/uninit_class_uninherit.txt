@@ -1,7 +1,7 @@
 count 21
 /* ~uninherit takes the class-side UNINIT back off QQ.  The registration is
-   never undone -- RexxClass::checkUninit only ever sets -- so the termination
-   sweep still reaches QQ, and RexxObject::uninit's own hasMethod(UNINIT) test
+   never undone -- the class-side check only ever sets it -- so the termination
+   sweep still reaches QQ, and the object's own hasMethod(UNINIT) test
    is what makes it run nothing.  QQ's UNKNOWN is what tells the two apart:
    a sweep that sends the message without testing first resolves it to
    UNKNOWN and prints a line the oracle never prints. */

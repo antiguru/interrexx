@@ -1,8 +1,8 @@
 /* RAISE with one of these objects in a substitution position.
  *
  *
- * RaiseInstruction::execute calls requestArray on the additional information
- * exactly once, and only inside if (errorCode->strCompare(SYNTAX)). So
+ * RAISE requests an array of the additional information
+ * exactly once, and only when the condition is SYNTAX. So
  * RAISE SYNTAX ... ADDITIONAL is the one position that array-converts, and
  * this crate refuses it -- a refusal cannot be witnessed by a corpus file,
  * and eval.rs's object_operand_tests carries that half.

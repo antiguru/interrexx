@@ -1,6 +1,6 @@
-/* `String~upper([n [, length]])` -- `RexxString::upperRexx`
- * (`classes/StringClass.cpp:1765`), bound at `memory/Setup.cpp:681` with a
- * declared count of 2.
+/* `String~upper([n [, length]])`, declared with a count of 2: a start
+ * position and a length, both optional.
+ * Both default to the whole string.
  *
  * The rows that answer come first and the ladder of refusals follows, because
  * the no-op cases are what separate this from a range check that refuses: a
@@ -11,7 +11,7 @@
  * The receiver is a string by dispatch, so a number answers its own text.
  * The `'e9'x` row is a comparison rather than a `SAY` of the byte, so that
  * every byte of this file stays ASCII: what it asks is that the fold is
- * `Utilities::toUpper` and leaves a byte outside `a`-`z` alone.
+ * a plain ASCII upper-casing and leaves a byte outside `a`-`z` alone.
  *
  * The refusals are 93.924 for a position and 93.923 for a length, and `found`
  * is the argument object's own string value rather than the converted number

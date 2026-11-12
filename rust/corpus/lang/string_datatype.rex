@@ -1,5 +1,5 @@
-/* DATATYPE as a method: `AddMethod("Datatype", RexxString::dataType, 1)`
- * (memory/Setup.cpp:584).
+/* DATATYPE as a method, declared at arity 1: the one optional argument
+ * is the type option.
  *
  * With no option it answers the word NUM or CHAR; with one it answers the text
  * 1 or 0. Only the option's FIRST letter is read, case-insensitively, so

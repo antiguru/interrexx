@@ -1,8 +1,8 @@
 /* A generated getter takes no arguments, and the refusal carries no frame of
    its own: the report is the sending clause and the two catalogue lines, with
-   no `Compiled method` line above them, because `AttributeGetterCode::run`
+   no `Compiled method` line above them, because a generated attribute getter
    raises directly where a primitive method raises from inside a
-   `NativeActivation`. */
+   native activation. */
 
 say .K~a(1)
 

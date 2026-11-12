@@ -1,6 +1,6 @@
 # Where the builtin implemented/not-implemented boundary sits, measured.
 # One `NAME<TAB>STATUS` row per name in `interrexx_inventory::builtins::NAMES`, in
-# that table's own order (which is `BuiltinFunctions.cpp`'s order, not
+# that table's own order (which is the oracle's builtin table order, not
 # alphabetical). Lines starting with # are comments; blank lines are ignored.
 #
 # NOT HAND-MAINTAINED. `crates/interrexx/tests/builtin_status.rs` derives every

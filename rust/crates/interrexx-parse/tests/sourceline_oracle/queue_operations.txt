@@ -1,5 +1,5 @@
 count 49
-/* Queue.  Upstream a Queue IS an array -- Setup.cpp copies Array's whole
+/* Queue.  Upstream a Queue IS an array -- the oracle copies Array's whole
    native behaviour into it and then overrides a handful -- so most of what is
    exercised here is Array's body reaching a Queue's store.
 
@@ -43,7 +43,7 @@ say 'sort' t~sort~allItems~makeString('L', ',')
 say 'isEmpty' t~isEmpty '/' .Queue~new~isEmpty
 
 /* A section of a Queue is a QUEUE and not an Array, which is
-   `allocateArrayOfClass` upstream.  The proof is that the result does NOT
+   what the oracle allocates.  The proof is that the result does NOT
    answer `makeString`: RemoveMethod stripped it from Queue. */
 sec = t~section(1, 1)
 say 'section class' sec~class~id 'items' sec~items

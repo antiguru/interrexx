@@ -1,6 +1,6 @@
 count 24
-/* MAX and MIN as methods: `AddMethod("Max", RexxString::Max, A_COUNT)` and
- * `AddMethod("Min", RexxString::Min, A_COUNT)` (memory/Setup.cpp:646-:647).
+/* MAX and MIN as methods, both declared with a counted argument list,
+ * so any number of further arguments is accepted.
  *
  * A_COUNT, so the whole argument list reaches the body and nothing is refused
  * ahead of it. The receiver is the first value compared, so an empty list

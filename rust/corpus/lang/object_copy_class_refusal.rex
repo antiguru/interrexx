@@ -1,4 +1,4 @@
-/* `Setup.cpp` gives Class its own COPY, and it is a refusal rather than a
+/* The oracle gives Class its own COPY, and it is a refusal rather than a
    copy: the class object never reaches Object's. Untrapped, so that the
    message carries its substitution and the traceback carries the frame,
    which names Class and not Object. */

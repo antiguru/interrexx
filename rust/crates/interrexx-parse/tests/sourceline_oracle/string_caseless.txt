@@ -1,10 +1,10 @@
 count 24
 /* EQUALS, CASELESSEQUALS, COMPARETO, CASELESSCOMPARETO, CASELESSABBREV and
- * CASELESSCOMPARE (memory/Setup.cpp:686-:689, :613, :617).
+ * CASELESSCOMPARE.
  *
  * EQUALS and CASELESSEQUALS answer the text 1 or 0. COMPARETO answers -1, 0 or
- * 1 over a region: `RexxString::primitiveCompareTo`
- * (classes/StringClassMisc.cpp:1097) takes a 1-based start and a length that
+ * 1 over a region: COMPARETO
+ * takes a 1-based start and a length that
  * defaults to max(mine, theirs) - start + 1, and where the compared regions
  * are equal but of different lengths the longer one is the greater.
  *

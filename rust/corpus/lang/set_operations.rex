@@ -4,7 +4,7 @@
  *
  * The set operations below are the reason this file is not just a `put`
  * test.  `SetMixin` installs `union xor intersection difference subSet` at
- * the class's own scope (`RexxClasses/CoreClasses.orx:85`), each of them
+ * the class's own scope (from the embedded core library), each of them
  * Rexx running over the native surface, and `union` is `self~copy` followed
  * by a loop of `put`.  A `copy` that hands back the same store makes `union`
  * mutate its receiver, which is invisible until a later operation reads the

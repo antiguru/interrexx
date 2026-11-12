@@ -1,6 +1,6 @@
 /* A Directory's own argument refusals, which are a different set from the
- * Array's for the same three message names: the rows are AddMethod counts
- * rather than A_COUNT, so an extra argument is 93.902 from the send where an
+ * Array's for the same three message names: the rows are fixed declared counts
+ * rather than counted lists, so an extra argument is 93.902 from the send where an
  * Array's is 93.926 from the body, and the index is a stringArgument, so a
  * value with no string value is 88.909 and an omitted one is 88.901.
  *

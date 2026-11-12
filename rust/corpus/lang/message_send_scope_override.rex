@@ -3,7 +3,7 @@
  *
  * SUPER outside a method is an ordinary uninitialised variable, so the scope
  * expression comes to the string "SUPER" and the isInstanceOf check in
- * RexxExpressionMessage::evaluate (ExpressionMessage.cpp:166) refuses it.
+ * the message expression refuses it.
  * Measured, rc 168.
  */
 

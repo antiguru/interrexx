@@ -1,9 +1,9 @@
 count 33
 /* What a ::CONSTANT expression's own activation carries. It runs as a method
-   against the class object: ClassDirective::resolveConstants builds a
-   MethodClass over the class's expressions
-   (instructions/ClassDirective.cpp:271), gives it the class object as its
-   scope (:273), and runs it with the class object as the receiver (:276).
+   against the class object: the oracle builds a method over the class's
+   expressions, gives it the class object as its
+   scope, and runs it with the class object as
+   the receiver.
 
    SELF is the class the constant attaches to, and SUPER is that class's own
    super scope: K answers "K / Class" and J answers "J / K". Two classes are
@@ -14,10 +14,10 @@ count 33
    A build that binds neither raises 97.1 on the name SELF at that same row.
 
    The private class method is the receiver half, which SELF alone does not
-   reach: checkPrivate reads the sending activation's own receiver
-   (classes/ObjectClass.cpp:616), and an expression run with none takes the
-   refusal at :622-:626 where this one takes the sender-is-the-receiver arm
-   above it at :617-:620. The constant reading it is K's, so the row answers
+   reach: the private check reads the sending activation's own receiver,
+   and an expression run with none takes the
+   refusal where this one takes the sender-is-the-receiver arm
+   above it. The constant reading it is K's, so the row answers
    through the same class the private method is declared in. */
 say .K~c
 say .J~c

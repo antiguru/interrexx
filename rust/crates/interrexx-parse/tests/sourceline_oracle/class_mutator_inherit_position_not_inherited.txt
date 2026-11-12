@@ -1,5 +1,5 @@
 count 12
-/* `~inherit`'s position is not type-checked. The C++
+/* `~inherit`'s position is not type-checked. The oracle
    uses it in one place, `superClasses->indexOf(position)`, so a value that is
    not in the list falls out as 98.945 whatever kind of object it is -- the
    second argument's error, not the first's. The successful shapes are in

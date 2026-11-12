@@ -4,7 +4,7 @@
    own `==`, `\==`, `=`, `<>` and `><` are identity, and it understands no
    other operator -- so an ordering or arithmetic operator against it is 97.1
    rather than a comparison of its string value.  And on the other side,
-   `RexxString::primitiveIsEqual` refuses `.nil` before it looks at any bytes,
+   a string's own equality test refuses `.nil` before it looks at any bytes,
    so a string is never EQUAL to it however the string reads.
 
    Everything here turns on the text `The NIL object`, which is what `.nil`

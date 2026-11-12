@@ -200,7 +200,7 @@ Raised	missing_internal_argument	body+send	crates/interrexx/src/error.rs	agrees	
 Raised	missing_method_argument	body+send	crates/interrexx/src/error.rs	agrees	yes	93.903	o~hasMethod
 Raised	missing_named_argument	body+send	crates/interrexx/src/error.rs	agrees	yes	88.901	self~setMethod with no arguments
 Raised	missing_native_argument	body+send	crates/interrexx/src/error.rs	agrees	yes	88.901	r~parse() over ::requires rxregexp.cls
-Loud	missing_rexx_class	body+send	crates/interrexx/src/lib.rs	agrees	no	no route: CommandClasses.orx installs CommandContext and NativeCommandHandler with the REXX package	.CommandHandler~handler('sh')~kind
+Loud	missing_rexx_class	body+send	crates/interrexx/src/lib.rs	agrees	no	no route: the embedded command library installs CommandContext and NativeCommandHandler with the REXX package	.CommandHandler~handler('sh')~kind
 Raised	named_argument_invalid_length	send	crates/interrexx/src/error.rs	agrees	yes	88.911	.MutableBuffer~new('abcdef')~replaceAt('a', 1, -1) -- ~'[]='('a', 1, -1) is the same message
 Raised	named_argument_invalid_pad	send	crates/interrexx/src/error.rs	agrees	yes	88.910	.MutableBuffer~new('abcdef')~replaceAt('a', 1, 3, 'xx') -- []= passes no pad and cannot reach it
 Raised	named_argument_invalid_position	send	crates/interrexx/src/error.rs	agrees	yes	88.912	.MutableBuffer~new('abcdef')~replaceAt('a', 0) -- buf['x'] = 'a' is the same message
@@ -306,7 +306,7 @@ Raised	scope_override_not_a_class	body+send	crates/interrexx/src/error.rs	agrees
 Raised	scope_override_not_a_scope	send	crates/interrexx/src/error.rs	agrees	yes	93.957	o~m:.Array
 Loud	select_op_off_its_node	ir	crates/interrexx/src/lib.rs	off-send-surface	-	-	-
 Raised	separator_not_a_char	body	crates/interrexx/src/error.rs	off-send-surface	-	-	-
-Loud	setup_method	send	crates/interrexx/src/lib.rs	agrees	no	no route: Setup.cpp removes both before an image ships	.Class~defineClassMethod('Z', .nil)
+Loud	setup_method	send	crates/interrexx/src/lib.rs	agrees	no	no route: the oracle removes both before an image ships	.Class~defineClassMethod('Z', .nil)
 Loud	signal_op_off_its_node	ir	crates/interrexx/src/lib.rs	off-send-surface	-	-	-
 Loud	sim_blocked_command	body	crates/interrexx/src/sim.rs	off-send-surface	-	-	-
 Loud	sim_blocked_native	body	crates/interrexx/src/sim.rs	off-send-surface	-	-	-

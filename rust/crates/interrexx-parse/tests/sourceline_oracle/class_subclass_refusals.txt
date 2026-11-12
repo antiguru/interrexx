@@ -2,11 +2,11 @@ count 60
 /* The argument refusals of Class~subclass and Class~mixinClass, and the
  * successful shapes they are read against.
  *
- * The order inside RexxClass::subclass is what decides which refusal a send
+ * The order of the checks inside Class~subclass is what decides which refusal a send
  * owing more than one gets, and rows 1 and 5 are that boundary: the metaclass
- * is tested first (ClassClass.cpp:1572), so a send with no class id and a bad
+ * is tested first, so a send with no class id and a bad
  * metaclass reports the metaclass. Row 4 is why the test is not "omitted or
- * .nil" -- the C++ tests meta_class == OREF_NULL, which an omitted argument
+ * .nil" -- the oracle tests for a null metaclass, which an omitted argument
  * is and a supplied .nil is not.
  *
  * 93.902 comes from the declared parameter count and not from the body, and
@@ -20,8 +20,8 @@ count 60
  *
  * The last send is untrapped so the 88.901 text and the frame lines are
  * compared as bytes. The frame pair is the point: the class id is checked
- * inside RexxClass::newRexx, which subclass reaches by sending NEW to the
- * metaclass (ClassClass.cpp:1576), so the report carries NEW's frame under
+ * inside Class~new, which subclass reaches by sending NEW to the
+ * metaclass, so the report carries NEW's frame under
  * SUBCLASS's own. rc 168.
  */
 

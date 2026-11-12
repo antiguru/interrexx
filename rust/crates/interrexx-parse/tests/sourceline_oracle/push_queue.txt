@@ -8,8 +8,8 @@ count 39
 /* their own expression, render it to string form -- a string literal, a     */
 /* concatenation, and a number (`queue 42`: a number renders through a       */
 /* different path than a literal does) -- and trace the result exactly like  */
-/* SAY does (the oracle's own RexxInstructionQueue::execute shares SAY's     */
-/* evaluateStringExpression). A bare PUSH/QUEUE with no expression traces a  */
+/* SAY does (the oracle's PUSH and QUEUE share SAY's expression evaluation   */
+/* path). A bare PUSH/QUEUE with no expression traces a                      */
 /* null string rather than being skipped or erroring. Without TRACE R this   */
 /* program would produce empty stdout, empty stderr, rc 0 whether PUSH/QUEUE */
 /* store anything at all -- a test that cannot fail -- so the >>> lines below*/

@@ -2,7 +2,7 @@ count 23
 /* .METHODS is the package's table of methods attached to no class.
  *
  *
- * LanguageParser::addMethod files a method under the package rather than
+ * The parser files a method under the package rather than
  * under a class exactly while activeClass is still unset, so a ::METHOD
  * ahead of every ::CLASS is an unattached one and the package's table is
  * non-empty. .ROUTINES beside it is the same rule for ::ROUTINE.

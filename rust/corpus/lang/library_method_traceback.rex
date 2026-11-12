@@ -1,9 +1,9 @@
 /* A condition raised inside the interpreter's own library.
  *
  * The oracle runs these methods out of a saved image, which carries no
- * source, so `PackageClass::traceBack` cannot echo a clause and calls
- * `RexxActivation::formatSourcelessTraceLine` instead
- * (`classes/PackageClass.cpp:589`). This crate has the library's text --
+ * source, so its traceback cannot echo a clause and uses the
+ * sourceless trace-line format instead.
+ * This crate has the library's text --
  * it runs the file rather than loading an image -- and has to answer the
  * same bytes anyway.
  *

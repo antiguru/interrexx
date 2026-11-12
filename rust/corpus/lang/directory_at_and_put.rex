@@ -1,8 +1,8 @@
 /* A Directory's ~put, [] and ~at -- .environment and .local, the two
  * directories this interpreter builds.
  *
- * The index is stored and matched verbatim: the entries Setup.cpp registers
- * are uppercase because completeSystemClass upcases the name it registers,
+ * The index is stored and matched verbatim: the entries registered natively
+ * are uppercase because the registration upcases the name,
  * not because a lookup folds case. So a lower-case index finds nothing, and
  * an index put in lower case is not found in upper.
  *

@@ -3,7 +3,7 @@ count 68
  * Directory a program makes does.
  *
  * The whole-collection reads are compared as ordered output: the contents
- * come back in bucket order and LOCAL comes last, because Setup.cpp installs
+ * come back in bucket order and LOCAL comes last, because the oracle installs
  * it with setMethod and a Directory appends its method table after its
  * contents. A program-added entry lands where its hash puts it.
  *

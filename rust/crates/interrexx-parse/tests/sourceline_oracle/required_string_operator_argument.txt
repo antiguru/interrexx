@@ -14,7 +14,7 @@ count 90
  * arithmetic clause after `done`. A logical operator reports the *conversion*
  * -- `andOp` converts and then checks the string's truth value -- and a
  * trapped row cannot show a message at all, which is why the arithmetic one is
- * the untrapped clause: it reports the *object*, because `StringClass::arith`
+ * the untrapped clause: it reports the *object*, because string arithmetic
  * is handed `otherObj` and never the string it converted to.
  *
  *.

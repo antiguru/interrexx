@@ -1,7 +1,7 @@
 count 39
 /* Which operand receives the `==` when a collection searches for an item.
 
-   `ArrayClass::findSingleIndexItem` is `item->equalValue(test)`: the value
+   The item search sends `==` to the searched-for item: the value
    being SEARCHED FOR receives the message and the slot's contents is its
    argument.  Every line below reverses if the two are swapped, and a witness
    that puts a K in and asks for a K cannot see the difference because both

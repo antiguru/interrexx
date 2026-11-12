@@ -1,6 +1,6 @@
 /* ::METHOD ... EXTERNAL 'LIBRARY REXX name' binding to the REXX package's
    own method table. The private class method read back through a
-   ::CONSTANT expression is StreamClasses.orx:546-549's own shape, which is
+   ::CONSTANT expression is the embedded stream library's own shape, which is
    what makes the entry point resolvable at install rather than at a send.
    The remaining directives are the other ways the entry point can be named:
    no third word at all, whose default is the method's upcased name, and a

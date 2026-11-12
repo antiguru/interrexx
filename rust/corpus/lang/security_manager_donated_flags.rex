@@ -1,4 +1,4 @@
-/* setProtected and setPrivate on a method Setup.cpp shares between classes
+/* setProtected and setPrivate on a method the oracle shares between classes
    mark only the class asked about, and its subclasses. */
 .Bag~method('PUT')~setProtected
 do c over .array~of(.Directory, .Table, .IdentityTable, .Relation, .Set, .StringTable, .Bag)

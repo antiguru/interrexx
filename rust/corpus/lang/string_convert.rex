@@ -1,5 +1,5 @@
 /* The eight base conversions as methods: B2X, C2X, X2B, X2C at no arguments
- * and C2D, D2C, D2X, X2D at one (memory/Setup.cpp:634-:641).
+ * and C2D, D2C, D2X, X2D at one.
  *
  * A hexadecimal or binary string is grouped, and the rule is a residue rather
  * than a length: the FIRST group fixes the remainder and every group after it

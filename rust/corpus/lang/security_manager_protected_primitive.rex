@@ -1,4 +1,4 @@
-/* A primitive Setup.cpp defines protected sends the security manager a
+/* A primitive the oracle defines protected sends the security manager a
    METHOD event, from a Routine, a Package prolog and a Method; the manager
    may answer the send itself, with or without a result. An unprotected
    primitive sends none. */

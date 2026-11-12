@@ -1,4 +1,4 @@
-/* Array's sort family.  All four names land on two C++ bodies -- the
+/* Array's sort family.  All four names land on two bodies -- the
    interpreter maps the unstable spellings onto the stable ones -- so there is
    one algorithm here and not two.
 

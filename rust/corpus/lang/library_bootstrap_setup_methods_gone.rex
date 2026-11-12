@@ -1,8 +1,8 @@
 /* The two methods the image build puts on `.Class` and `removeSetupMethods`
- * strips (`memory/Setup.cpp:1809`).
+ * strips.
  *
  * They exist while the interpreter's own library runs -- `.String~nl` is
- * there because `CoreClasses.orx:73` sent `defineClassMethod`, and
+ * there because the embedded core library sent `defineClassMethod`, and
  * `.Supplier`'s donated methods because its prologue sent
  * `inheritInstanceMethods` -- and a program can reach neither.
  *
