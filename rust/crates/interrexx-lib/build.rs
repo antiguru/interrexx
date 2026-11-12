@@ -51,7 +51,7 @@ const SOURCES: &[Source] = &[
 
 /// The replacement files under `rexx/`, in order. Adding a file here is the
 /// swap: every class it declares replaces the host's class of that name.
-const REPLACEMENTS: &[&str] = &["ordering.rex"];
+const REPLACEMENTS: &[&str] = &["ordering.rex", "supplier.rex"];
 
 /// One host member a replacement may leave out.
 struct Allowed {

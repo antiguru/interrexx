@@ -24,6 +24,8 @@ use crate::internal_routines::Package;
 pub(crate) enum Family {
     /// The timers `.Alarm` and `.Ticker` drive.
     Timer,
+    /// `.Supplier`'s collected arrays.
+    Supplier,
     /// `.Stream`'s body.
     Stream,
     /// `.RexxQueue`'s body.
@@ -41,6 +43,7 @@ impl Family {
     pub(crate) fn label(self) -> &'static str {
         match self {
             Family::Timer => "timer",
+            Family::Supplier => "supplier",
             Family::Stream => "stream",
             Family::Queue => "queue",
             Family::File => "file",
@@ -100,6 +103,12 @@ const fn scoped(
 
 /// The `REXX` package's exported method table.
 static LIBRARY_REXX_METHODS: &[NativeExternal] = &[
+    implemented(
+        "interrexx_supplier_collected",
+        Family::Supplier,
+        Arity::Counted,
+        super::collection::supplier::collected,
+    ),
     scoped(
         "alarm_startTimer",
         Family::Timer,

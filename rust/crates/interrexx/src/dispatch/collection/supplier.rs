@@ -15,6 +15,13 @@ const SUPPLIER_INDEXES: &[u8] = b"INDEXES";
 
 const SUPPLIER_POSITION: &[u8] = b"POSITION";
 
+/// The pair of arrays `allItems` or `allIndexes` collected, held by the
+/// library's Rexx code through [`collected`]; `.nil` or absent before the
+/// first call and after every `init` (r[class.supplier.init],
+/// r[class.supplier.deviation.138]). A copy carries it, so the two answer the
+/// same arrays (r[class.supplier.copy]).
+const SUPPLIER_COLLECTED: &[u8] = b"COLLECTED";
+
 // ---- Supplier ----
 
 /// A `Supplier` over `items` and `indexes`, positioned at the first pair.
@@ -206,7 +213,39 @@ fn native_supplier_init(
         sides.push(supplier_array(interp, value)?);
     }
     store_supplier(interp, receiver, sides[0], sides[1], 0);
+    let scope = interp
+        .classes()
+        .lookup("Supplier")
+        .expect("Supplier is a native class");
+    interp.set_pool_variable(receiver, scope, SUPPLIER_COLLECTED, ObjRef::NIL);
     Ok(None)
+}
+
+/// `interrexx_supplier_collected([pair])`: the library's cache of what
+/// `allItems` and `allIndexes` collected (r[class.supplier.allitems]). With
+/// no argument it answers the pair stored last, or `.nil` when there is none;
+/// with one it stores it, and `.nil` drops what was stored. It reads no other
+/// state, so a `StreamSupplier`, whose entries are not in the arrays of this
+/// file, keeps its pair the same way.
+pub(in crate::dispatch) fn collected(
+    interp: &mut Interp,
+    _cleared: Cleared,
+    receiver: ObjRef,
+    args: &[Option<ObjRef>],
+) -> Result<Option<ObjRef>, Failure> {
+    let scope = interp
+        .classes()
+        .lookup("Supplier")
+        .expect("Supplier is a native class");
+    match args.first().copied().flatten() {
+        Some(pair) => {
+            interp.set_pool_variable(receiver, scope, SUPPLIER_COLLECTED, pair);
+            Ok(None)
+        }
+        None => Ok(Some(
+            pool_variable(interp, receiver, scope, SUPPLIER_COLLECTED).unwrap_or(ObjRef::NIL),
+        )),
+    }
 }
 
 /// `Supplier`'s primitive methods, chained into `ObjectModel::build` beside
