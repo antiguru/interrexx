@@ -2189,7 +2189,7 @@ src = 'nop' || '0A'x || 'return 1'
 say p~loadPackage('class_package_split_zq.cls', src)~sourceSize
 ```
 
-```output defect=#148
+```output
 2
 ```
 
