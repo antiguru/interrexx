@@ -372,6 +372,132 @@ new path, string dir:  separator
 absoluteFile:  separator
 a d#a/b
 </code></pre>
+<div class="rule" id="r-class.file.string-args"><a href="#r-class.file.string-args">[class.file.string-args]</a></div>
+<p>A <code>path</code>, a <code>dir</code>, a <code>name</code>, a directory of a search path and the string that
+<code>writeChars</code> writes are read as <a href="index.html#r-class.index.string">a string argument</a> when
+the method does not read them as a <code>File</code>: the object is sent <code>request</code> with
+<code>STRING</code>, and when that does not answer a string its <code>makeString</code> is sent. The
+example prints what a probe object is sent in each place.</p>
+<pre><code class="language-rexx">.environment~log = .array~new
+f = 'spec-file-str.tmp'
+call lineout f, 'x'
+call lineout f
+x = .file~new(.spy~new)
+call show 'new path'
+x = .file~new('a', .spy~new)
+call show 'new dir'
+x = .file~searchPath(.spy~new, '.')
+call show 'searchPath name'
+x = .file~searchPath(f, .array~of(.spy~new))
+call show 'searchPath item'
+x = .file~readChars(.spy~new)
+call show 'readChars name'
+x = .file~readLines(.spy~new)
+call show 'readLines name'
+.file~writeChars(.spy~new, 'y', 'Replace')
+call show 'writeChars name'
+.file~writeChars(f, .spy~new, 'Replace')
+call show 'writeChars string'
+junk = .file~new(f)~delete
+exit
+show:
+  say arg(1)~left(18) '['.environment~log~toString(,' ')']'
+  .environment~log~empty
+  return
+::class spy
+::method request
+  .environment~log~append('request' arg(1))
+  forward class (.object)
+::method makeString
+  .environment~log~append('makeString')
+  return 'spec-file-str.tmp'
+</code></pre>
+<pre><code class="language-output defect=#164">new path           [request STRING makeString]
+new dir            [request STRING makeString]
+searchPath name    [request STRING makeString]
+searchPath item    [request STRING makeString]
+readChars name     [request STRING makeString]
+readLines name     [request STRING makeString]
+writeChars name    [request STRING makeString]
+writeChars string  [request STRING makeString]
+</code></pre>
+<div class="rule" id="r-class.file.args.order"><a href="#r-class.file.args.order">[class.file.args.order]</a></div>
+<p>A method of <code>File</code> checks the number of its arguments before it reads an
+argument or sends a message to one. More arguments than the method takes raise
+<code>SYNTAX 93.902</code> and fewer than it needs <code>93.901</code>, and an omitted argument that
+the method needs before a given one raises <code>93.903</code> for <code>new</code>, <code>writeChars</code>,
+<code>writeLines</code> and <code>searchPath</code>. An omitted place at the end adds nothing to the
+count, so <code>.file~readChars(, )</code> has no argument. The values are checked after
+the count: in the example no probe is sent a message, and the log is empty.</p>
+<pre><code class="language-rexx">.environment~log = .array~new
+f = 'spec-file-args.tmp'
+o = .file~new(f)
+call try 'o~renameTo(.spy~new, 1)'
+call try 'o~compareTo(.spy~new, 1)'
+call try 'o~"LASTMODIFIED="(.spy~new, 1)'
+call try 'o~"LASTACCESSED="(.spy~new, 1)'
+call try '.file~new(.spy~new, .spy~new, 1)'
+call try '.file~readChars(.spy~new, 1)'
+call try '.file~readLines(.spy~new, 1)'
+call try '.file~searchPath(.spy~new, .spy~new, 1)'
+call try '.file~writeChars(.spy~new, .spy~new, .spy~new, 1)'
+call try '.file~writeLines(.spy~new, .spy~new, .spy~new, 1)'
+call try '.file~writeChars(.spy~new)'
+call try '.file~writeLines(.spy~new)'
+call try '.file~writeChars(, "x")'
+call try '.file~writeChars(f, , "A")'
+call try '.file~writeLines(, .array~of("x"))'
+call try '.file~writeLines(f, , "A")'
+call try '.file~searchPath(, ".")'
+call try '.file~readChars(, )'
+call try 'o~renameTo(, )'
+say '['.environment~log~toString(,' ')']'
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  say arg(1) '=&gt; no error'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class spy
+::method isA
+  .environment~log~append('isA')
+  return 0
+::method strip
+  .environment~log~append('strip')
+  return 'A'
+::method absolutePath
+  .environment~log~append('absolutePath')
+  return 'x'
+::method makeString
+  .environment~log~append('makeString')
+  return 'x'
+::method request
+  .environment~log~append('request')
+  return .nil
+</code></pre>
+<pre><code class="language-output">o~renameTo(.spy~new, 1) =&gt; 93.902
+o~compareTo(.spy~new, 1) =&gt; 93.902
+o~"LASTMODIFIED="(.spy~new, 1) =&gt; 93.902
+o~"LASTACCESSED="(.spy~new, 1) =&gt; 93.902
+.file~new(.spy~new, .spy~new, 1) =&gt; 93.902
+.file~readChars(.spy~new, 1) =&gt; 93.902
+.file~readLines(.spy~new, 1) =&gt; 93.902
+.file~searchPath(.spy~new, .spy~new, 1) =&gt; 93.902
+.file~writeChars(.spy~new, .spy~new, .spy~new, 1) =&gt; 93.902
+.file~writeLines(.spy~new, .spy~new, .spy~new, 1) =&gt; 93.902
+.file~writeChars(.spy~new) =&gt; 93.901
+.file~writeLines(.spy~new) =&gt; 93.901
+.file~writeChars(, "x") =&gt; 93.903
+.file~writeChars(f, , "A") =&gt; 93.903
+.file~writeLines(, .array~of("x")) =&gt; 93.903
+.file~writeLines(f, , "A") =&gt; 93.903
+.file~searchPath(, ".") =&gt; 93.903
+.file~readChars(, ) =&gt; 93.901
+o~renameTo(, ) =&gt; 93.901
+[]
+</code></pre>
 <h2 id="the-path-and-its-text"><a class="header" href="#the-path-and-its-text">The path and its text</a></h2>
 <div class="rule" id="r-class.file.path"><a href="#r-class.file.path">[class.file.path]</a></div>
 <p><code>path</code> answers the path as <code>init</code> made it (<a href="#r-class.file.new">the new rule</a>):
@@ -446,6 +572,9 @@ junk = .file~new(d)~delete
 signal on syntax name bad
 say f~absolutePath(1)
 bad: say condition('o')~code
+signal on syntax name bad2
+say f~absoluteFile(1)
+bad2: say condition('o')~code
 </code></pre>
 <pre><code class="language-output">/a/b/d /a/b
 / /
@@ -457,6 +586,7 @@ bad: say condition('o')~code
 File 1 1
 1 1
 1 x
+93.902
 93.902
 </code></pre>
 <div class="rule" id="r-class.file.separators"><a href="#r-class.file.separators">[class.file.separators]</a></div>
@@ -660,6 +790,167 @@ say line~strip
 <pre><code class="language-output">parent separator
 parent separator
 </code></pre>
+<div class="rule" id="r-class.file.sends"><a href="#r-class.file.sends">[class.file.sends]</a></div>
+<p>The messages that a <code>File</code> sends to its receiver are those that the rules of
+<code>init</code>, <code>absoluteFile</code>, <code>name</code>, <code>extension</code>, <code>parent</code>, <code>parentFile</code>, <code>delete</code>,
+<code>makeDirs</code>, <code>listFiles</code> and <code>compareTo</code> state. No other instance method sends
+its receiver a message: not <code>absolutePath</code>, <code>canRead</code>, <code>canWrite</code>, <code>exists</code>,
+<code>hashCode</code>, <code>isCaseSensitive</code>, <code>isDirectory</code>, <code>isFile</code>, <code>isHidden</code>,
+<code>lastAccessed</code>, <code>lastAccessed=</code>, <code>lastModified</code>, <code>lastModified=</code>, <code>length</code>,
+<code>list</code>, <code>makeDir</code>, <code>makeString</code>, <code>path</code>, <code>pathSeparator</code>, <code>renameTo</code>,
+<code>separator</code>, <code>setReadOnly</code>, <code>setWritable</code> and <code>string</code>. A class method sends the receiver no message either, except
+<code>searchPath</code>, which sends it <code>pathSeparator</code> (<a href="#r-class.file.searchpath">the searchPath
+rule</a>), and <code>temporaryPath</code>, which sends it <code>new</code>.
+The messages that a method sends to its arguments are those of its own rule.
+In the examples a subclass logs each message that it is sent, and each line
+shows the log without its first entry, the message that the example sent.</p>
+<pre><code class="language-rexx">.environment~log = .array~new
+names = 'absoluteFile absolutePath canRead canWrite compareTo delete exists',
+  'extension hashCode isCaseSensitive isDirectory isFile isHidden',
+  'lastAccessed lastAccessed= lastModified lastModified= length list',
+  'listFiles makeDir makeDirs makeString name parent parentFile path',
+  'pathSeparator renameTo separator setReadOnly setWritable string'
+sub = .file~subclass('SENDS')
+do n over names~makearray(' ')
+  sub~define(n, .method~new(n, ".environment~log~append('"n"');",
+    || " forward class (super)"))
+end
+d = 'spec-file-sends.tmp'
+junk = .file~new(d)~makeDir
+f = sub~new(d'/f')
+call lineout f~path, 'x'
+call lineout f~path
+dir = sub~new(d)
+none = sub~new(d'/none')
+other = .file~new(d'/f')
+t = .datetime~new(2003, 1, 15, 12, 5, 6, 0, 0)
+call run f, 'absolutePath'
+call run f, 'canRead'
+call run f, 'canWrite'
+call run f, 'exists'
+call run f, 'hashCode'
+call run f, 'isCaseSensitive'
+call run f, 'isDirectory'
+call run f, 'isFile'
+call run f, 'isHidden'
+call run f, 'lastAccessed'
+call run f, 'lastAccessed=', t
+call run f, 'lastModified'
+call run f, 'lastModified=', t
+call run f, 'length'
+call run dir, 'list'
+call run f, 'makeDir'
+call run f, 'makeString'
+call run f, 'path'
+call run f, 'pathSeparator'
+call run none, 'renameTo', other
+call run f, 'separator'
+call run f, 'setReadOnly'
+call run f, 'setWritable'
+call run f, 'string'
+junk = f~delete
+junk = dir~delete
+exit
+run:
+  .environment~log~empty
+  m = .message~new(arg(1), arg(2), 'Array', arg(3, 'A')~section(1, arg() - 2))
+  m~start
+  junk = m~result
+  say arg(2)~left(16) '['.environment~log~section(2)~toString(,' ')']'
+  return
+</code></pre>
+<pre><code class="language-output">absolutePath     []
+canRead          []
+canWrite         []
+exists           []
+hashCode         []
+isCaseSensitive  []
+isDirectory      []
+isFile           []
+isHidden         []
+lastAccessed     []
+lastAccessed=    []
+lastModified     []
+lastModified=    []
+length           []
+list             []
+makeDir          []
+makeString       []
+path             []
+pathSeparator    []
+renameTo         []
+separator        []
+setReadOnly      []
+setWritable      []
+string           []
+</code></pre>
+<pre><code class="language-rexx">.environment~log = .array~new
+f = 'spec-file-csends.tmp'
+call run 'readChars', f
+call run 'readLines', f
+call run 'writeChars', f, 'x', 'Replace'
+call run 'writeLines', f, .array~of('y'), 'Replace'
+call run 'isCaseSensitive'
+call run 'listRoots'
+call run 'separator'
+call run 'pathSeparator'
+call run 'temporaryPath'
+call run 'searchPath', f, '.'
+junk = .file~new(f)~delete
+exit
+run:
+  .environment~log~empty
+  m = .message~new(.sends, arg(1), 'Array', arg(2, 'A')~section(1, arg() - 1))
+  m~start
+  junk = m~result
+  say arg(1)~left(16) '['.environment~log~section(2)~toString(,' ')']'
+  return
+::class sends subclass file
+::method isCaseSensitive class
+  .environment~log~append('isCaseSensitive')
+  forward class (super)
+::method listRoots class
+  .environment~log~append('listRoots')
+  forward class (super)
+::method pathSeparator class
+  .environment~log~append('pathSeparator')
+  forward class (super)
+::method readChars class
+  .environment~log~append('readChars')
+  forward class (super)
+::method readLines class
+  .environment~log~append('readLines')
+  forward class (super)
+::method searchPath class
+  .environment~log~append('searchPath')
+  forward class (super)
+::method separator class
+  .environment~log~append('separator')
+  forward class (super)
+::method temporaryPath class
+  .environment~log~append('temporaryPath')
+  forward class (super)
+::method writeChars class
+  .environment~log~append('writeChars')
+  forward class (super)
+::method writeLines class
+  .environment~log~append('writeLines')
+  forward class (super)
+::method new class
+  .environment~log~append('new')
+  forward class (super)
+</code></pre>
+<pre><code class="language-output">readChars        []
+readLines        []
+writeChars       []
+writeLines       []
+isCaseSensitive  []
+listRoots        []
+separator        []
+pathSeparator    []
+temporaryPath    [new]
+searchPath       [pathSeparator]
+</code></pre>
 <h2 id="asking-about-a-file"><a class="header" href="#asking-about-a-file">Asking about a file</a></h2>
 <div class="rule" id="r-class.file.exists"><a href="#r-class.file.exists">[class.file.exists]</a></div>
 <p><code>exists</code> answers 1 when something, a file or a directory, is at the absolute
@@ -774,8 +1065,9 @@ isDirectory
 <p><code>makeDir</code> makes the directory that the last component of the absolute path
 names, and answers 1. It makes no directory above it: it answers 0 when a
 parent is missing, when something is at the path already, a file or a
-directory, and when it cannot make it. <code>makeDirs</code> answers 0 without making
-anything when something is at the path. Otherwise it sends the receiver
+directory, and when it cannot make it. <code>makeDirs</code> sends the receiver <code>exists</code>
+and answers 0 without making anything when that answers true, as it does when
+something is at the path. Otherwise it sends the receiver
 <code>makeDir</code>, and answers 1 when that answers 1. When it does not, it sends the
 receiver <code>parentFile</code> and <code>makeDirs</code> to what that answers, and then sends
 <code>makeDir</code> to the receiver again and answers what that answers; so it makes
@@ -989,6 +1281,9 @@ b1: say condition('o')~code
 signal on syntax name b2
 f~setWritable(1)
 b2: say condition('o')~code
+signal on syntax name b3
+f~setReadOnly(1)
+b3: say condition('o')~code
 f~setWritable
 junk = f~delete
 exit
@@ -1006,6 +1301,7 @@ from 644: -r--r--r--
 again: -rw-rw-rw-
 0
 91.999
+93.902
 93.902
 </code></pre>
 <h2 id="times"><a class="header" href="#times">Times</a></h2>
@@ -1579,6 +1875,68 @@ show:
 1
 88.909
 </code></pre>
+<div class="rule" id="r-class.file.searchpath.order"><a href="#r-class.file.searchpath.order">[class.file.searchpath.order]</a></div>
+<p><code>searchPath</code> reads its <code>path</code> before its <code>name</code>. A <code>path</code> that is no string is
+sent <code>request</code> with <code>ARRAY</code> first, and an answer that is no array raises
+<code>SYNTAX 98.913</code> whatever the <code>name</code> is, so <code>.nil</code> as <code>name</code> raises <code>88.909</code>
+only after the <code>path</code> was read. All the items of an array <code>path</code> are read as
+strings before any directory is searched, so a <code>.nil</code> item raises <code>SYNTAX 88.909</code> even when a directory before it holds the file. A string <code>path</code> that
+is not empty is read after the class is sent <code>pathSeparator</code>, and before the
+<code>name</code> is read. How often an array <code>path</code> sends <code>pathSeparator</code> is not
+specified.</p>
+<pre><code class="language-rexx">junk = .file~new('spec-file-sp-order.tmp')
+call lineout 'spec-file-sp-order.tmp', 'x'
+call lineout 'spec-file-sp-order.tmp'
+call try '.file~searchPath(.nil, .object~new)'
+call try '.file~searchPath(.nil, ".")'
+call try '.file~searchPath(.nil, .array~of("."))'
+call try '.file~searchPath("spec-file-sp-order.tmp", .array~of(".", .nil))'
+call try '.file~searchPath("spec-file-sp-order.tmp", .array~of(.nil, "."))'
+call try '.file~searchPath("spec-file-sp-order.tmp", .array~of(".", .object~new))'
+.environment~log = .array~new
+call try '.file~searchPath(.logname~new, .logpath~new)'
+say .environment~log~toString(,' ')
+.environment~log~empty
+call try '.logfile~searchPath(.logname~new, ".")'
+say .environment~log~toString(,' ')
+.environment~log~empty
+call try '.logfile~searchPath(.nil, ".")'
+say .environment~log~toString(,' ')
+junk = .file~new('spec-file-sp-order.tmp')~delete
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r~path~right(22)
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class logfile subclass file
+::method pathSeparator class
+  .environment~log~append('pathSeparator')
+  forward class (super)
+::class logpath
+::method request
+  .environment~log~append('path')
+  return .array~of('.')
+::class logname
+::method makeString
+  .environment~log~append('name')
+  return 'spec-file-sp-order.tmp'
+</code></pre>
+<pre><code class="language-output">.file~searchPath(.nil, .object~new) =&gt; 98.913
+.file~searchPath(.nil, ".") =&gt; 88.909
+.file~searchPath(.nil, .array~of(".")) =&gt; 88.909
+.file~searchPath("spec-file-sp-order.tmp", .array~of(".", .nil)) =&gt; 88.909
+.file~searchPath("spec-file-sp-order.tmp", .array~of(.nil, ".")) =&gt; 88.909
+.file~searchPath("spec-file-sp-order.tmp", .array~of(".", .object~new)) =&gt; 88.909
+.file~searchPath(.logname~new, .logpath~new) =&gt; spec-file-sp-order.tmp
+path name
+.logfile~searchPath(.logname~new, ".") =&gt; spec-file-sp-order.tmp
+pathSeparator name
+.logfile~searchPath(.nil, ".") =&gt; 88.909
+pathSeparator
+</code></pre>
 <div class="rule" id="r-class.file.readchars"><a href="#r-class.file.readchars">[class.file.readchars]</a></div>
 <p><code>readChars</code> takes the name of a file, and answers the whole content of the
 file as a string, bytes unchanged, line ends included. The name is a <code>File</code>
@@ -1659,6 +2017,19 @@ say .file~readLines(f)~items
 z = .file~readLines(f)
 say z~items '['z[1]']'
 junk = .file~new(f)~delete
+call try '.file~readLines'
+call try '.file~readLines(f, 1)'
+call try '.file~readLines(.nil)'
+call try '.file~readLines(.object~new)'
+call try '.file~readLines(.nil, 1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt; no error'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
 </code></pre>
 <pre><code class="language-output">Array 5 1
 1 61
@@ -1670,6 +2041,11 @@ junk = .file~new(f)~delete
 0 0
 0
 1 []
+.file~readLines =&gt; 93.901
+.file~readLines(f, 1) =&gt; 93.902
+.file~readLines(.nil) =&gt; 93.938
+.file~readLines(.object~new) =&gt; 93.938
+.file~readLines(.nil, 1) =&gt; 93.902
 </code></pre>
 <div class="rule" id="r-class.file.writechars"><a href="#r-class.file.writechars">[class.file.writechars]</a></div>
 <p><code>writeChars</code> takes the name of a file, a string and an optional <code>mode</code>, and
