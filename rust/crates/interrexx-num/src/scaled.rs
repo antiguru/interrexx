@@ -48,15 +48,31 @@ impl Number {
     }
 }
 
-/// How many decimal digits `magnitude` has, `1` for zero.
+/// `10^n` for every `n` a [`WIDEST`]-digit value can be shifted by.
+const POWERS: [i64; WIDEST as usize + 1] = {
+    let mut powers = [1i64; WIDEST as usize + 1];
+    let mut n = 1;
+    while n < powers.len() {
+        powers[n] = powers[n - 1] * 10;
+        n += 1;
+    }
+    powers
+};
+
+/// How many decimal digits `magnitude` has, `1` for zero; `magnitude` is
+/// below `10^WIDEST`.
 fn digit_length(magnitude: u64) -> u32 {
-    magnitude.checked_ilog10().map_or(1, |log| log + 1)
+    let mut length = 1;
+    while length < WIDEST && magnitude >= POWERS[length as usize] as u64 {
+        length += 1;
+    }
+    length
 }
 
 /// `value * 10^shift`, where the caller has bounded the result to [`WIDEST`]
 /// digits.
 fn shifted(value: i64, shift: u32) -> i64 {
-    value * 10i64.pow(shift)
+    value * POWERS[shift as usize]
 }
 
 impl Scaled {

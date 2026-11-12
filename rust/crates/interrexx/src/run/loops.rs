@@ -2179,7 +2179,19 @@ impl Interp {
                                 current <= to
                             }
                         }
-                        _ => self.controlled_within_wide(current, to, by, digits, fuzz)?,
+                        _ => match (&*current, *to_scaled) {
+                            (ControlValue::Scaled { value, .. }, Some(limit))
+                                if fuzz == 0
+                                    && let Some(order) = value.order(limit, digits) =>
+                            {
+                                if by.signum() < 0 {
+                                    order != std::cmp::Ordering::Less
+                                } else {
+                                    order != std::cmp::Ordering::Greater
+                                }
+                            }
+                            _ => self.controlled_within_wide(current, to, by, digits, fuzz)?,
+                        },
                     };
                     if !within {
                         return Ok(false);
