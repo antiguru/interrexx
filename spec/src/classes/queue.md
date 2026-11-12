@@ -921,7 +921,7 @@ say s~items
   forward class (super)
 ```
 
-```output defect=#128
+```output
 new 1
 init 1
 MANY 4

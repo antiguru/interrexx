@@ -3,13 +3,13 @@
 //! `insert`, `section`, ...), over the Array-shaped store collection.rs keeps.
 
 use super::collection::{
-    QUEUE_ITEMS, append_slot, array_grow, array_of, array_splice, array_splice_slot, dimensions_of,
-    is_queue, item_argument, last_item, new_supplier, occupied, ordered_pairs, position_in,
-    queue_index, read_slots, same_item, slots_of, store_of, store_scope, subscript_object,
+    append_slot, array_grow, array_of, array_splice, array_splice_slot, dimensions_of, is_queue,
+    item_argument, last_item, new_supplier, occupied, ordered_pairs, position_in, queue_index,
+    read_slots, same_item, slots_of, store_of, subscript_object,
 };
 use super::{
     Arity, BehaviourId, Body, Cleared, Failure, IndexUse, Interp, Loud, NativeMethod, ObjRef,
-    Raised, array_slots, new_instance,
+    Raised, array_slots,
 };
 
 // ---- Array's shared collection surface ----
@@ -590,18 +590,35 @@ fn same_class_array(
     receiver: ObjRef,
     slots: Vec<Option<ObjRef>>,
 ) -> Result<ObjRef, Failure> {
-    let store = interp.alloc_charged(BehaviourId::ARRAY, Body::array(slots));
-    interp.roots.activity_mut().push_temp(store);
     if interp.array_slots(receiver).is_some() {
+        let store = interp.alloc_charged(BehaviourId::ARRAY, Body::array(slots));
+        interp.roots.activity_mut().push_temp(store);
         return Ok(store);
     }
     let class = interp
         .class_of_value(receiver)
         .ok_or_else(|| Failure::from(Loud::receiver_class("a value that is not an array")))?;
-    let object = new_instance(interp, class)?;
+    // The receiver's class is sent `new` with the size, as `new` for an
+    // `Array` or a `Queue` makes the object and sends its `init`; the slots
+    // then go into the object's store.
+    let size = interp.counted(slots.len());
+    let caller = interp.caller();
+    let object = interp
+        .send_message(class, b"NEW", None, &[Some(size)], caller)?
+        .ok_or_else(|| Failure::from(Raised::no_result(b"NEW")))?;
     interp.roots.activity_mut().push_temp(object);
-    let scope = store_scope(interp);
-    interp.set_pool_variable(object, scope, QUEUE_ITEMS, store);
+    let store = store_of(interp, object)?;
+    let Some(body) = interp.heap.get_mut(store).map(|object| &mut object.body) else {
+        return Err(Loud::receiver_class("a value that is not an array").into());
+    };
+    if !matches!(body, Body::Array { .. }) {
+        return Err(Loud::receiver_class("a value that is not an array").into());
+    }
+    let before = body.held_bytes();
+    *body = Body::array(slots);
+    let after = body.held_bytes();
+    interp.charge_growth(after.saturating_sub(before));
+    interp.heap.release_body_bytes(before.saturating_sub(after));
     Ok(object)
 }
 

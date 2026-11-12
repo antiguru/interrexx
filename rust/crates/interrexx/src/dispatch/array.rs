@@ -5,7 +5,6 @@ use super::{
     class_receiver, collection, required_string_argument,
 };
 
-use super::new_instance;
 use super::{Arity, NativeMethod};
 use interrexx_core::ArraySlots;
 

@@ -1100,7 +1100,7 @@ say s~items
   forward class (super)
 ```
 
-```output defect=#128
+```output
 init 0
 new 2
 init 0
