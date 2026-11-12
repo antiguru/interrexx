@@ -52,7 +52,9 @@ The answer is two whole numbers, a blank between them: the first names the end
 of the pipe that is read, the second the end that is written. They are numbers
 of open files of the program, which stay open for the rest of its run: a
 command that ADDRESS starts has them too, and can write to the second number
-and read from the first, as a shell does with `>&` and `<&` and a number. What
+and read from the first, as a shell does with `>&` and `<&` and a number (the example runs its
+commands through `bash`, because some shells, `dash` among them, refuse a
+number of 10 or more). What
 is written is read in the order in which it was written. Two calls make two
 pipes, whose four numbers are all different, and what is written to one is not
 read from the other. Which numbers a call answers is not specified.
@@ -62,17 +64,17 @@ parse value SysCreatePipe() with r w
 parse value SysCreatePipe() with r2 w2
 say words(r w) datatype(r, 'W') datatype(w, 'W') (r \= w)
 say (r2 \= r) (r2 \= w) (w2 \= r) (w2 \= w) (r2 \= w2)
-address system 'echo through >&'w
-address system 'echo other >&'w2
-address system 'read x <&'r2'; echo "got $x"' with output stem out.
+address system "bash -c 'echo through >&"w"'"
+address system "bash -c 'echo other >&"w2"'"
+address system "bash -c 'read x <&"r2"; echo got $x'" with output stem out.
 say out.0 out.1
-address system 'read x <&'r'; echo "got $x"' with output stem out.
+address system "bash -c 'read x <&"r"; echo got $x'" with output stem out.
 say out.0 out.1
-address system 'echo first >&'w
-address system 'echo second >&'w
-address system 'read x <&'r'; echo "got $x"' with output stem out.
+address system "bash -c 'echo first >&"w"'"
+address system "bash -c 'echo second >&"w"'"
+address system "bash -c 'read x <&"r"; echo got $x'" with output stem out.
 say out.1
-address system 'read x <&'r'; echo "got $x"' with output stem out.
+address system "bash -c 'read x <&"r"; echo got $x'" with output stem out.
 say out.1
 ```
 
