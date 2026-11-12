@@ -2059,21 +2059,23 @@ SYNTAX 93.900
 ```
 
 r[class.object.deviation.28]
-A metaclass `new` that answers something other than a class, while a class
-with that metaclass is made by `subclass`, and a `.ROUTINES` entry that is
-not a routine, are refused: the program ends with exit code 120. ooRexx casts
-the answer unchecked and crashes. A native method run on a receiver of the
-wrong kind is another matter: [its rule](r:class.object.borrowed-native)
-raises a condition.
+A `.ROUTINES` entry that is not a routine is refused when it is called: the
+program ends with exit code 120. ooRexx casts the entry unchecked and crashes.
+A metaclass `new` that answers something other than a class raises a
+condition instead ([Deviation 114](r:class.class.deviation.114)), and so does
+a native method run on a receiver of the wrong kind ([its
+rule](r:class.object.borrowed-native)).
 
 ```rexx
-say 'id' .object~subclass("k", .MyMeta)~id
-::class MyMeta subclass Class
-::method new class
-  return 'x'
+.routines['F'] = 'x'
+say 'set'
+call f
+say 'after'
+::routine r
 ```
 
-```output rc=120
+```output no-oracle rc=120
+set
 ```
 
 r[class.object.deviation.30]
