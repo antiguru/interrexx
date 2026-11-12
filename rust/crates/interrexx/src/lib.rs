@@ -4624,6 +4624,9 @@ pub(crate) fn run_instance(
 }
 
 #[cfg(test)]
+mod library_shape;
+
+#[cfg(test)]
 mod tests;
 
 #[cfg(test)]
