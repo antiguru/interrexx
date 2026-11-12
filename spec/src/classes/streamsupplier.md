@@ -1,6 +1,7 @@
 ---
 element: "StreamSupplier"
 kind: class
+deviations: [138]
 rexxref: "Builtin Classes > Utility Classes > StreamSupplier Class; Builtin Classes > Utility Classes > StreamSupplier Class > available; Builtin Classes > Utility Classes > StreamSupplier Class > index; Builtin Classes > Utility Classes > StreamSupplier Class > init; Builtin Classes > Utility Classes > StreamSupplier Class > item; Builtin Classes > Utility Classes > StreamSupplier Class > next"
 ---
 
@@ -372,7 +373,8 @@ The methods that `StreamSupplier` inherits work on the lines that are left.
 `allItems` answers an `Array` of the texts of the lines from the one the
 supplier is at to the last, `allIndexes` an `Array` of their numbers, and both
 leave the supplier at its end and answer the same arrays whenever they are
-sent again, as [the rule of `Supplier`](r:class.supplier.allitems) says.
+sent again, as [the rule of `Supplier`](r:class.supplier.allitems) says, until
+a second `init` ([Deviation 138](r:class.streamsupplier.deviation.138)).
 `supplier` answers the supplier itself. `copy` answers another supplier of the
 same class at the same line, over the same stream: each of the two moves on
 its own, and every line after the first is read by its number, so after the
@@ -412,4 +414,38 @@ l1
 l3 l1
 l2 l3
 l4 l2
+```
+
+r[class.streamsupplier.deviation.138]
+`init` sent again to a `StreamSupplier` drops the arrays that an earlier
+`allItems` or `allIndexes` collected, as it does for a
+[`Supplier`](r:class.supplier.deviation.138): the next call of either collects
+the lines that are left of the new stream ([Deviation 138](../deviations.md)).
+ooRexx answers the arrays collected before the `init`, so the example is not
+run against it.
+
+```rexx
+f = 'spec-streamsupplier-d138-a.tmp'
+g = 'spec-streamsupplier-d138-b.tmp'
+call sysfiledelete f
+call sysfiledelete g
+do l over .array~of('l1', 'l2', 'l3')
+  call lineout f, l
+end
+call lineout f
+do l over .array~of('x1', 'x2')
+  call lineout g, l
+end
+call lineout g
+s = .streamsupplier~new(.stream~new(f))
+say s~allItems~makeString('L', ',')
+s~init(.stream~new(g))
+say s~item s~allItems~makeString('L', ',')
+call sysfiledelete f
+call sysfiledelete g
+```
+
+```output defect=#430
+l1,l2,l3
+x1 x1,x2
 ```
