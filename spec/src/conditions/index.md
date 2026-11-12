@@ -213,6 +213,8 @@ report of the error, whose text is not specified, to its standard error stream
 exit code is `256` minus the number of the error, so that the error `97.1`
 gives 159 and `42.3` gives 214. The output that the clauses before the error
 wrote stays written. The subcode does not enter the exit code.
+The line that the report names is not specified where the error was raised in
+the class library, as [the library rule](r:cond.information.library) says.
 
 ```rexx
 say 'before'

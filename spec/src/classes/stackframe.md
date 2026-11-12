@@ -255,7 +255,8 @@ clause that holds the text, as [the line of a trace line](r:instr.trace.line)
 is. A frame is a snapshot of the moment it was made: the running code goes on,
 and the line of the frame's context, [asked with
 `line`](r:class.rexxcontext.line), moves with it. `line` answers `.nil` for a
-built-in method.
+built-in method. The number that it answers for a method of the class library
+is not specified, as [the library rule](r:cond.information.library) says.
 
 ```rexx
 call r
@@ -292,6 +293,8 @@ indentation that a program reads back. The string of a built-in method's frame
 is seven blanks, `*-*`, a blank and `Compiled method "NAME" with scope
 "Class".`, with the method's name in upper case and the id of the class that
 defines it.
+The number in the line of a method of the class library is not specified, as
+[the library rule](r:cond.information.library) says.
 
 ```rexx
 call show

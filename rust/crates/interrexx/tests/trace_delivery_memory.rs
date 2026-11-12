@@ -60,14 +60,21 @@ fn a_destination_failing_deep_for_every_report_line_runs_under_the_oracles_memor
         .output()
         .expect("the capped run spawns");
     let path = file.to_string_lossy().into_owned();
-    let stdout = String::from_utf8_lossy(&output.stdout).replace(&path, "PROGRAM");
+    // A line number in the class library is unspecified
+    // (`r[cond.information.library]`), so it is compared as a placeholder.
+    let stdout = String::from_utf8_lossy(&support::normalize_library_lines(
+        String::from_utf8_lossy(&output.stdout)
+            .replace(&path, "PROGRAM")
+            .as_bytes(),
+    ))
+    .into_owned();
     let mut expected = String::from("    13 *-*     return 1/0\n");
     for _ in 0..DEPTH {
         expected.push_str("    14 *-* call spin k - 1\n");
     }
     expected.push_str(&format!(
         "     9 *-* call spin {DEPTH}\n\
-         \x20 1459 *-* Method UNKNOWN with scope \"Monitor\" in package \"REXX\" \
+         \x20    N *-* Method UNKNOWN with scope \"Monitor\" in package \"REXX\" \
          (no source available).\n\
          \x20    3 *-* x = 1\n\
          Error 42 running PROGRAM line 13:  Arithmetic overflow/underflow.\n\
