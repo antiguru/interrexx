@@ -135,16 +135,6 @@ pub fn dynamic_entries(path: &Path, kind: &str) -> Vec<String> {
         .collect()
 }
 
-/// The profile's `deps` directory this test binary runs from, where cargo leaves the workspace's
-/// shared objects.
-pub fn deps_dir() -> PathBuf {
-    std::env::current_exe()
-        .expect("the test binary's path")
-        .parent()
-        .expect("the test binary is in deps")
-        .to_path_buf()
-}
-
 /// The oracle's `lib` directory, where it is built.
 pub fn oracle_lib() -> Option<PathBuf> {
     let root = std::env::var_os("REXX_ORACLE_ROOT")?;

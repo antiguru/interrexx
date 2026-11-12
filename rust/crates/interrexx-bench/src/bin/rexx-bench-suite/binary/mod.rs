@@ -16,32 +16,47 @@ fn rust_binary_candidates_for(
     exe: &Path,
     manifest: &Path,
 ) -> [PathBuf; 2] {
-    let parent = exe.parent();
-    let under_deps = parent.is_some_and(|path| path.file_name().is_some_and(|name| name == "deps"));
-    let profile = parent.and_then(|path| {
-        if under_deps {
-            path.parent()
-        } else {
-            Some(path)
-        }
-    });
-    let executable_target = profile
-        .filter(|path| {
-            path.file_name()
-                .is_some_and(|name| name == "release" || name == "debug")
-        })
-        .and_then(Path::parent);
+    let (profile, under_cargo) = cargo_profile_dir(exe);
+    let executable_target = profile.and_then(Path::parent);
     let target = match target_dir {
         Some(target) if Path::new(target).is_absolute() => PathBuf::from(target),
         // Cargo runs tests from the package directory, losing the origin
         // against which it resolved a relative target directory.
-        Some(_) if under_deps && executable_target.is_some() => executable_target
+        Some(_) if under_cargo && executable_target.is_some() => executable_target
             .expect("recognized test profile")
             .to_path_buf(),
         Some(target) => cwd.join(target),
         None => executable_target.map_or_else(|| manifest.join("../../target"), Path::to_path_buf),
     };
     [target.join("release/rexx"), target.join("debug/rexx")]
+}
+
+/// The `debug` or `release` directory an executable was built under, and whether
+/// cargo placed it there as a test or intermediate artifact. Cargo puts a final
+/// binary directly in the profile directory, a test binary in `deps/` (before
+/// Rust 1.100), or under `build/<package>/<hash>/out/` (from Rust 1.100 on).
+fn cargo_profile_dir(exe: &Path) -> (Option<&Path>, bool) {
+    let is_profile = |path: &Path| {
+        path.file_name()
+            .is_some_and(|name| name == "release" || name == "debug")
+    };
+    let parent = exe.parent();
+    if let Some(dir) = parent.filter(|path| is_profile(path)) {
+        return (Some(dir), false);
+    }
+    for profile in exe.ancestors().skip(2).take(4) {
+        if !is_profile(profile) {
+            continue;
+        }
+        let below = exe
+            .strip_prefix(profile)
+            .ok()
+            .and_then(|rest| rest.iter().next());
+        if below.is_some_and(|first| first == "deps" || first == "build") {
+            return (Some(profile), true);
+        }
+    }
+    (None, false)
 }
 
 #[cfg(test)]

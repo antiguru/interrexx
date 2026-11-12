@@ -10,6 +10,9 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::OnceLock;
 
+#[path = "../../interrexx-capi-rxapi/tests/support/cdylibs.rs"]
+mod cdylibs;
+
 const REXX: &str = env!("CARGO_BIN_EXE_rexx");
 
 fn repository() -> PathBuf {
@@ -41,15 +44,11 @@ fn bin_dir() -> PathBuf {
     dir.to_path_buf()
 }
 
-/// The compiled test libraries, built once from the shared objects cargo left beside this test.
+/// The compiled test libraries, built once from the shared objects cargo built.
 fn testbinaries() -> &'static Path {
     static BUILT: OnceLock<PathBuf> = OnceLock::new();
     BUILT.get_or_init(|| {
-        let deps = std::env::current_exe()
-            .expect("the test's path")
-            .parent()
-            .expect("the deps directory")
-            .to_path_buf();
+        let deps = cdylibs::libs_dir(scratch());
         let out = scratch().join("testbinaries");
         let output = Command::new(repository().join("scripts/build-testbinaries.sh"))
             .arg("--libs")
@@ -69,15 +68,11 @@ fn testbinaries() -> &'static Path {
 }
 
 /// `hostemu` and `orxncurses`, built once by `scripts/build-extensions.sh` from the shared
-/// objects cargo left beside this test.
+/// objects cargo built.
 fn extensions() -> &'static Path {
     static BUILT: OnceLock<PathBuf> = OnceLock::new();
     BUILT.get_or_init(|| {
-        let deps = std::env::current_exe()
-            .expect("the test's path")
-            .parent()
-            .expect("the deps directory")
-            .to_path_buf();
+        let deps = cdylibs::libs_dir(scratch());
         let out = scratch().join("extensions");
         let output = Command::new(repository().join("scripts/build-extensions.sh"))
             .arg("--libs")
@@ -1378,11 +1373,7 @@ fn the_extension_check_refuses_the_oracles_librexx() {
         extensions().as_os_str(),
     ]);
     assert!(passing.status.success(), "{passing:?}");
-    let deps = std::env::current_exe()
-        .expect("the test's path")
-        .parent()
-        .expect("the deps directory")
-        .to_path_buf();
+    let deps = cdylibs::libs_dir(scratch());
     let out = scratch().join("extensions-without-librexx");
     let _ = std::fs::remove_dir_all(&out);
     let built = script(&[
