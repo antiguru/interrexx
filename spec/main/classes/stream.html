@@ -881,7 +881,7 @@ bad: say arg(1) '=&gt;' condition('o')~code
   expose v
   return v
 </code></pre>
-<pre><code class="language-output defect=#206">s~charin(1, .ms~new(2)) =&gt; [ab]
+<pre><code class="language-output">s~charin(1, .ms~new(2)) =&gt; [ab]
 s~linein(.ms~new(1)) =&gt; [abc]
 s~linein(1, .ms~new(1)) =&gt; [abc]
 s~charin(.os~new(2), 1) =&gt; [b]
@@ -2532,10 +2532,34 @@ a~close
 b~close
 call sysfiledelete f
 </code></pre>
-<pre><code class="language-output defect=#209">one
+<pre><code class="language-output">one
 4 0 0
 8 4 1
 14 10 2
+</code></pre>
+<pre><code class="language-rexx">f = 'spec-stream-dev139-lines-zq.tmp'
+call lineout f, 'one'
+call lineout f
+a = .stream~new(f)
+b = .stream~new(f)
+say b~lines
+x = a~lineout('two')
+a~flush
+say b~lines('C') b~chars
+x = a~lineout('three')
+a~flush
+say b~lines('C') b~chars
+say b~linein
+say b~lines('C') b~chars
+a~close
+b~close
+call sysfiledelete f
+</code></pre>
+<pre><code class="language-output">1
+2 8
+3 14
+one
+2 10
 </code></pre>
 <div class="rule" id="r-class.stream.deviation.140"><a href="#r-class.stream.deviation.140">[class.stream.deviation.140]</a></div>
 <p>A supplier starts at the read position of the stream: its first item is what a
