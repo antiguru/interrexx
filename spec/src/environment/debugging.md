@@ -609,6 +609,7 @@ end
      8 *-* exit
 ```
 
+r[env.debugging.pause.reply]
 A REPLY is stopped at after the activity has replied, as any clause is, and the
 continuation of the method goes on from that stop. The notice
 is shown there, once: the clauses of the continuation do not show it again. In
