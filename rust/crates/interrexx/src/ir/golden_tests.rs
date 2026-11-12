@@ -111,38 +111,35 @@ fn a_call_promotes_at_the_root_and_below_it() {
     let root = compile_for_test(b"zz = length('abc')").expect("the chunk fits");
     assert_eq!(
         render(&root),
-        "0: CallingClause index=0 end=6\n\
+        "0: CallingClause index=0 end=5\n\
          1: Const dst=1 konst=0\n\
          2: PushArg src=1\n\
          3: CallArgs slot=0 path=root site=0 argc=1 dst=0\n\
-         4: TraceFunction index=0 slot=0 path=root src=0\n\
-         5: Store index=0 at=0 src=0\n"
+         4: Store index=0 at=0 src=0\n"
     );
 
     let left = compile_for_test(b"zz = length('abc') + 1").expect("the chunk fits");
     assert_eq!(
         render(&left),
-        "0: CallingClause index=0 end=8\n\
+        "0: CallingClause index=0 end=7\n\
          1: Const dst=1 konst=0\n\
          2: PushArg src=1\n\
          3: CallArgs slot=0 path=root.L site=0 argc=1 dst=0\n\
-         4: TraceFunction index=0 slot=0 path=root.L src=0\n\
-         5: LoadConstant dst=1\n\
-         6: Arith op=+ hint=0 lhs=0 rhs=1 dst=0\n\
-         7: Store index=0 at=0 src=0\n"
+         4: LoadConstant dst=1\n\
+         5: Arith op=+ hint=0 lhs=0 rhs=1 dst=0\n\
+         6: Store index=0 at=0 src=0\n"
     );
 
     let right = compile_for_test(b"zz = 1 + length('abc')").expect("the chunk fits");
     assert_eq!(
         render(&right),
-        "0: CallingClause index=0 end=8\n\
+        "0: CallingClause index=0 end=7\n\
          1: LoadConstant dst=0\n\
          2: Const dst=2 konst=0\n\
          3: PushArg src=2\n\
          4: CallArgs slot=0 path=root.R site=0 argc=1 dst=1\n\
-         5: TraceFunction index=0 slot=0 path=root.R src=1\n\
-         6: Arith op=+ hint=0 lhs=0 rhs=1 dst=0\n\
-         7: Store index=0 at=0 src=0\n"
+         5: Arith op=+ hint=0 lhs=0 rhs=1 dst=0\n\
+         6: Store index=0 at=0 src=0\n"
     );
 
     // Two calls over one operator: a register each for the two results, and
@@ -681,17 +678,16 @@ fn a_header_bound_that_is_a_symbol_and_one_that_is_a_call_take_their_own_ops() {
     let call = compile_for_test(b"do i = 1 to length(zs)\n  nop\nend\n").expect("compiles");
     assert_eq!(
         render(&call),
-        "0: CallingClause index=0 end=9\n\
+        "0: CallingClause index=0 end=8\n\
          1: LoadConstant dst=0\n\
          2: LoopHeaderValue role=Initial src=0\n\
          3: Load read=Simple at=1 dst=2\n\
          4: PushArg src=2\n\
          5: CallArgs slot=1 path=root site=0 argc=1 dst=1\n\
-         6: TraceFunction index=0 slot=1 path=root src=1\n\
-         7: LoopHeaderValue role=To src=1\n\
-         8: LoopRun index=0\n\
-         9: Clause index=1 end=10\n\
-         10: LoopNext index=0\n"
+         6: LoopHeaderValue role=To src=1\n\
+         7: LoopRun index=0\n\
+         8: Clause index=1 end=9\n\
+         9: LoopNext index=0\n"
     );
 }
 
@@ -1114,20 +1110,19 @@ fn a_call_in_a_whens_condition_is_addressed_at_the_conditions_slot() {
          2: Store index=0 at=0 src=0\n\
          3: Clause index=1 end=4\n\
          4: SelectCaseText index=1 case=-\n\
-         5: CallingClause index=2 end=13\n\
+         5: CallingClause index=2 end=12\n\
          6: Load read=Simple at=0 dst=1\n\
          7: PushArg src=1\n\
          8: CallArgs slot=0 path=root.L site=0 argc=1 dst=0\n\
-         9: TraceFunction index=2 slot=0 path=root.L src=0\n\
-         10: LoadConstant dst=1\n\
-         11: Binary op=> lhs=0 rhs=1 dst=0\n\
-         12: ConditionJump index=2 reg=0 keyword=WHEN target=17\n\
-         13: EnterWhen select=1 when=2\n\
-         14: Clause index=3 end=15\n\
-         15: Clause index=4 end=16\n\
-         16: EndWhen\n\
-         17: Clause index=5 end=19\n\
-         18: Exec index=5\n"
+         9: LoadConstant dst=1\n\
+         10: Binary op=> lhs=0 rhs=1 dst=0\n\
+         11: ConditionJump index=2 reg=0 keyword=WHEN target=16\n\
+         12: EnterWhen select=1 when=2\n\
+         13: Clause index=3 end=14\n\
+         14: Clause index=4 end=15\n\
+         15: EndWhen\n\
+         16: Clause index=5 end=18\n\
+         17: Exec index=5\n"
     );
 }
 
@@ -1427,15 +1422,14 @@ fn a_call_argument_that_is_a_call_compiles_to_ops_of_its_own() {
     let nested = compile_for_test(b"call zsub 1, length('x')\n").expect("compiles");
     assert_eq!(
         render(&nested),
-        "0: CallingClause index=0 end=9\n\
+        "0: CallingClause index=0 end=8\n\
          1: LoadConstant dst=0\n\
          2: PushArg src=0\n\
          3: Const dst=2 konst=0\n\
          4: PushArg src=2\n\
          5: CallArgs slot=1 path=root site=0 argc=1 dst=1\n\
-         6: TraceFunction index=0 slot=1 path=root src=1\n\
-         7: PushArg src=1\n\
-         8: CallNamed index=0 site=1 argc=2\n"
+         6: PushArg src=1\n\
+         7: CallNamed index=0 site=1 argc=2\n"
     );
 }
 
@@ -1634,12 +1628,11 @@ fn a_call_in_a_returns_expression_is_addressed_at_the_returns_slot() {
     let chunk = compile_for_test(b"return length(zs)\n").expect("compiles");
     assert_eq!(
         render(&chunk),
-        "0: CallingClause index=0 end=6\n\
+        "0: CallingClause index=0 end=5\n\
          1: Load read=Simple at=0 dst=1\n\
          2: PushArg src=1\n\
          3: CallArgs slot=0 path=root site=0 argc=1 dst=0\n\
-         4: TraceFunction index=0 slot=0 path=root src=0\n\
-         5: Return index=0 src=0 keyword=RETURN\n"
+         4: Return index=0 src=0 keyword=RETURN\n"
     );
 }
 
@@ -1656,4 +1649,33 @@ fn a_traced_exit_carries_its_clause_echo_op() {
          2: LoadConstant dst=0\n\
          3: Return index=0 src=0 keyword=EXIT\n"
     );
+}
+
+/// **A call's `>F>` echo is compiled only where the clause echoes values**,
+/// as every other value echo is: under `TRACE I` it follows the call op and
+/// repeats its address, and under `TRACE R` and the default setting it is not
+/// there at all (the goldens above), rather than being dispatched and refused
+/// on every execution.
+#[test]
+fn a_calls_echo_is_compiled_only_under_a_setting_that_echoes_values() {
+    let source = b"zz = length('abc') + 1";
+    let chunk = compile_for_test_under(source, intermediates()).expect("the chunk fits");
+    assert_eq!(
+        render(&chunk),
+        "0: CallingClause index=0 end=13\n\
+         1: TraceClause index=0\n\
+         2: Const dst=1 konst=0\n\
+         3: TraceLiteral src=1\n\
+         4: PushArg src=1\n\
+         5: TraceArgument src=1\n\
+         6: CallArgs slot=0 path=root.L site=0 argc=1 dst=0\n\
+         7: TraceFunction index=0 slot=0 path=root.L src=0\n\
+         8: LoadConstant dst=1\n\
+         9: TraceLiteral src=1\n\
+         10: Arith op=+ hint=0 lhs=0 rhs=1 dst=0\n\
+         11: TraceOperator op=+ src=0\n\
+         12: Store index=0 at=0 src=0\n"
+    );
+    let results = compile_for_test_under(source, traced()).expect("the chunk fits");
+    assert!(!render(&results).contains("TraceFunction"));
 }
