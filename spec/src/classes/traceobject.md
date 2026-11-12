@@ -550,6 +550,177 @@ tx => T
 T
 ```
 
+r[class.traceobject.sends]
+These are the messages that the methods of `TraceObject` send to objects that a
+subclass can observe. `new` sends the new object `init` with the arguments of `new`, as [the `new` of
+`Class`](r:class.index.new) does; then, when the object is made, it sends the
+object `[]=` three times, for `TIMESTAMP`, `OPTION` and `NUMBER` in this order,
+with the value first and the name second, and then, if there is a `collector`,
+sends that `append`. It does not send the class `counter`, `option` or
+`collector`: it reads the attributes of its own class directly, so that an
+override of those methods in a subclass is not run by `new`, and the `notify`
+object is sent `append` only for the objects that [the interpreter
+makes](r:class.traceobject.lines) for lines of trace output. The `makeString` of
+an instance, and every conversion of the object to a string that is not a call
+of `string`, send the class of the object `makeStringImpl` with the object
+and no other argument, so that a subclass is asked first; `makeStringImpl` then
+sends the object the messages that [its sends
+rule](r:class.traceobject.makestringimpl.sends) gives. `compareTo` sends `[]`
+with `NUMBER` to each of the two objects. `string` sends nothing. The example
+subclass shows each message by a line that its overriding method writes.
+
+```rexx
+.sub~collector = .log~new
+.sub~notify = .log~new
+say 'new'
+o = .sub~new
+say 'new(7)'
+o2 = .sub~new(7)
+say 'makeString'
+say o~makeString
+say 'concatenation'
+say 'x'o
+say 'string'
+say o~string
+say 'compareTo'
+say o~compareTo(o2)
+say 'class attributes read directly'
+say .sub~counter .sub~option
+say 'after setMakeString'
+.sub~setMakeString('return "custom"')
+say o~makeString
+::class sub subclass traceobject
+::method makeStringImpl class
+  say '  makeStringImpl' self~id arg(1)~class~id arg()
+  forward class (super)
+::method counter class
+  say '  counter'
+  forward class (super)
+::method option class
+  say '  option'
+  forward class (super)
+::method collector class
+  say '  collector'
+  forward class (super)
+::method notify class
+  say '  notify'
+  forward class (super)
+::method init
+  say '  init' arg()
+  forward class (super)
+::method '[]='
+  say '  []=' arg(2)
+  forward class (super)
+::method '[]'
+  say '  []' arg(1)
+  forward class (super)
+::method put
+  say '  put'
+  forward class (super)
+::class log
+::method append
+  say '  append' arg(1)~items
+```
+
+```output
+new
+  init 0
+  []= TIMESTAMP
+  []= OPTION
+  []= NUMBER
+  append 3
+new(7)
+  init 1
+  []= TIMESTAMP
+  []= OPTION
+  []= NUMBER
+  append 3
+makeString
+  makeStringImpl SUB SUB 1
+  [] TRACELINE
+?
+concatenation
+  makeStringImpl SUB SUB 1
+  [] TRACELINE
+x?
+string
+a SUB
+compareTo
+  [] NUMBER
+  [] NUMBER
+-1
+class attributes read directly
+  counter
+  option
+2 N
+after setMakeString
+  makeStringImpl SUB SUB 1
+custom
+```
+
+r[class.traceobject.arguments]
+`collector`, `notify`, `counter`, `option` and `unsetMakeString` take no
+argument: any argument, an omitted one in front of another included, raises
+`SYNTAX 93.902`. `option=` needs one argument and reads the first, as [the
+option rule](r:class.traceobject.option) says, so that it raises `SYNTAX 93.914`
+for no argument and for an omitted first argument, the way it does for the null
+string, and takes a good first argument with any second one, an omitted one
+too, without a message. The example makes each call and shows its error code, or
+that there was none; the setters `collector=` and `notify=` are in the rules of
+[the collector](r:class.traceobject.collector) and [the
+notify](r:class.traceobject.notify) attributes.
+
+```rexx
+t = .traceobject
+do m over 'collector notify counter option unsetMakeString'~makeArray(' ')
+  call try 't~'m
+  call try 't~'m'(1)'
+  call try 't~'m'(, 1)'
+end
+call try 't~"OPTION="'
+call try 't~"OPTION="(,)'
+call try 't~"OPTION="(, "F")'
+call try 't~"OPTION="("F", 2)'
+call try 't~"OPTION="("x", 2)'
+call try 't~"OPTION="("F", )'
+say t~option
+t~option = 'N'
+exit
+try:
+  signal on syntax name bad
+  interpret 'rr =' arg(1)
+  say arg(1) '=> no error, answers' rr
+  return
+bad: if condition('o')~code == 91.999 then say arg(1) '=> no error, no answer'
+  else say arg(1) '=>' condition('o')~code
+  return
+```
+
+```output
+t~collector => no error, answers The NIL object
+t~collector(1) => 93.902
+t~collector(, 1) => 93.902
+t~notify => no error, answers The NIL object
+t~notify(1) => 93.902
+t~notify(, 1) => 93.902
+t~counter => no error, answers 0
+t~counter(1) => 93.902
+t~counter(, 1) => 93.902
+t~option => no error, answers N
+t~option(1) => 93.902
+t~option(, 1) => 93.902
+t~unsetMakeString => no error, no answer
+t~unsetMakeString(1) => 93.902
+t~unsetMakeString(, 1) => 93.902
+t~"OPTION=" => 93.914
+t~"OPTION="(,) => 93.914
+t~"OPTION="(, "F") => 93.914
+t~"OPTION="("F", 2) => no error, no answer
+t~"OPTION="("x", 2) => 93.914
+t~"OPTION="("F", ) => no error, no answer
+F
+```
+
 r[class.traceobject.makestringimpl]
 `makeStringImpl` answers the text of one `TraceObject`, which it takes as its
 one argument, in the format that the `option` names. With `N` it is the
