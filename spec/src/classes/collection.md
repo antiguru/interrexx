@@ -1950,7 +1950,7 @@ bad: say condition('o')~code
   return 1
 ```
 
-```output defect=#154
+```output
 hasItem a
 hasItem The NIL object
 hasItem b
