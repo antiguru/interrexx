@@ -144,3 +144,16 @@ fn a_timed_wait_tests_the_post_again_after_a_pulse() {
         "pulse 1 0 1 0\n",
     );
 }
+
+/// A `MutexSemaphore` after a direct `uninit` refuses every `acquire`, the
+/// untimed, the zero and the timed one alike, and holds no lock: its
+/// `release` answers 0.
+#[test]
+fn a_closed_mutex_refuses_every_acquire() {
+    answers(
+        "m = .MutexSemaphore~new\nm~uninit\n\
+         say m~acquire(0) m~release\nsay m~acquire(0.01) m~release\n\
+         say m~acquire m~release\nsay m~release\n",
+        "0 0\n0 0\n0 0\n0\n",
+    );
+}
