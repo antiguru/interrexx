@@ -388,20 +388,23 @@ pub(super) fn compile_method_source(
     position: &'static str,
     taker: SourceTaker,
 ) -> Result<ObjRef, Failure> {
-    compile_method_source_in(interp, name, source, position, taker, None)
+    compile_method_source_in(interp, name, source, position, taker, |_| Ok(None))
 }
 
 /// [`compile_method_source`] whose directives install into a package whose
-/// parent is `parent`, or the caller's where it is `None`.
+/// parent `parent` resolves, or the caller's where it answers `None`. The
+/// source is checked before `parent` runs, so a bad source and a bad context
+/// together raise the source's fault (`r[class.method.new.order]`).
 pub(super) fn compile_method_source_in(
     interp: &mut Interp,
     name: &[u8],
     source: ObjRef,
     position: &'static str,
     taker: SourceTaker,
-    parent: Option<ObjRef>,
+    parent: impl FnOnce(&mut Interp) -> Result<Option<ObjRef>, Failure>,
 ) -> Result<ObjRef, Failure> {
     let lines = method_source_lines(interp, source, position, taker)?;
+    let parent = parent(interp)?;
     let borrowed: Vec<&[u8]> = lines.iter().map(Vec::as_slice).collect();
     let parsed = parse_source_lines(interp, name, &borrowed)?;
     method_from_program(interp, name, parsed, parent)
@@ -454,9 +457,10 @@ pub(super) fn compile_routine_source(
     name: &[u8],
     source: ObjRef,
     position: &'static str,
-    parent: Option<ObjRef>,
+    parent: impl FnOnce(&mut Interp) -> Result<Option<ObjRef>, Failure>,
 ) -> Result<ObjRef, Failure> {
     let lines = method_source_lines(interp, source, position, SourceTaker::Executable)?;
+    let parent = parent(interp)?;
     let borrowed: Vec<&[u8]> = lines.iter().map(Vec::as_slice).collect();
     let parsed = parse_source_lines(interp, name, &borrowed)?;
     routine_from_program(interp, name, parsed, parent)

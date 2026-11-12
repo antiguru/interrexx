@@ -143,9 +143,10 @@ pub(super) fn native_executable_new(
         return Err(Raised::missing_named_argument("source").into());
     };
     let (routine, base) = executable_base(interp, class);
-    let parent = match args.get(2).copied().flatten() {
-        Some(context) => executable_context(interp, context, b"NEW", 3)?,
-        None => None,
+    let context = args.get(2).copied().flatten();
+    let parent = |interp: &mut Interp| match context {
+        Some(context) => executable_context(interp, context, b"NEW", 3),
+        None => Ok(None),
     };
     let name = interp.to_text(name).to_vec();
     // Its directives install under the method's own level.
