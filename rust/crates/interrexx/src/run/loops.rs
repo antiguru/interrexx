@@ -883,7 +883,7 @@ impl Interp {
             // gate runs rather than probed once.
             debug_assert_eq!(
                 Ok(&shortcut),
-                round_via_unary_plus(&Number::from_i64(small), entry_digits).as_ref(),
+                round_via_unary_plus(Number::from_i64(small), entry_digits).as_ref(),
                 "a tagged integer within DIGITS {entry_digits} is not its own unary +"
             );
             return Ok(Some(shortcut));
@@ -1031,7 +1031,7 @@ impl Interp {
         // DIGITS 3.
         self.lostdigits_check(&operand, value)?;
         Ok(Some(
-            round_via_unary_plus(&operand, entry_digits).map_err(Raised::from)?,
+            round_via_unary_plus(operand, entry_digits).map_err(Raised::from)?,
         ))
     }
 
@@ -2596,8 +2596,8 @@ pub(super) fn numeric_less(
 /// do i = 1.23456 to 3; say i; numeric digits 9; end` is `1.23 / 2.23 / 3.23`, the header
 /// values having been rounded once, at entry, under digits 3, and staying that width even
 /// after digits widens.
-fn round_via_unary_plus(number: &Number, digits: u64) -> Result<Number, ArithError> {
-    Number::zero().add(number, digits)
+fn round_via_unary_plus(number: Number, digits: u64) -> Result<Number, ArithError> {
+    number.plus(digits)
 }
 
 /// Whether a failed advance is a message-driven loop's first test, which is

@@ -68,3 +68,27 @@ fn alignment_adjustment_changes_which_digit_rounding_sees() {
     assert_eq!(sub("12.3400", "9.999999995", 3), "2.4");
     assert_eq!(sub("9.999999995", "12.3400", 3), "-2.4");
 }
+
+/// `Number::plus` is `0 + x`, including its range failures, for values on
+/// both sides of the precision.
+#[test]
+fn prefix_plus_is_zero_plus() {
+    let spellings = [
+        "0", "0.00", "-0", "1", "-1", "1.10", "-2.5", "0.000123", "123456789", "1234567891",
+        "-9.99999999E+5", "99999999999", "1E+999999999", "9.9E999999999", "1E-999999999",
+        "0.1E-999999999", "12.3456789012345",
+    ];
+    for spelling in spellings {
+        // Out-of-range spellings do not parse at all.
+        let Some(value) = Number::parse(spelling) else {
+            continue;
+        };
+        for digits in [1, 3, 9, 10, 20] {
+            assert_eq!(
+                value.clone().plus(digits),
+                Number::zero().add(&value, digits),
+                "+{spelling} at DIGITS {digits}"
+            );
+        }
+    }
+}
