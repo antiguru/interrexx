@@ -500,7 +500,7 @@ pub fn crate_environment_with_path(run: &Path, rest: Vec<PathBuf>) -> Vec<(Vec<u
         .filter(|(name, _)| {
             !matches!(
                 name.as_str(),
-                "LD_LIBRARY_PATH" | "PATH" | "REXX_SWITCH_MODE"
+                "LD_LIBRARY_PATH" | "PATH" | "REXX_SWITCH_MODE" | "TZ"
             ) && !name.starts_with("REXX_SIM_")
         })
         .map(|(name, value)| (name.into_bytes(), value.into_bytes()))
@@ -512,6 +512,11 @@ pub fn crate_environment_with_path(run: &Path, rest: Vec<PathBuf>) -> Vec<(Vec<u
     environment.push((
         b"PATH".to_vec(),
         path.to_string_lossy().into_owned().into_bytes(),
+    ));
+    // The oracle side of the group run is pinned to this zone too.
+    environment.push((
+        b"TZ".to_vec(),
+        crate::support::PINNED_ZONE.as_bytes().to_vec(),
     ));
     environment
 }

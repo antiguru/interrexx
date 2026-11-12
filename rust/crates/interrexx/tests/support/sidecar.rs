@@ -247,21 +247,11 @@ pub fn invocation(
     if let Some(bytes) = stdin {
         invocation = invocation.with_input(interrexx::ProgramInput::Bytes(bytes.to_vec()));
     }
-    if !overrides.is_empty() {
-        // Laid over the inherited environment rather than replacing it,
-        // because `Oracle::run_in` sets its overrides on a spawned process
-        // that inherits everything else, and the two sides have to read the
-        // same environment.
-        let mut environment: Vec<(Vec<u8>, Vec<u8>)> = env::vars()
-            .filter(|(name, _)| !overrides.iter().any(|(over, _)| over == name))
-            .map(|(name, value)| (name.into_bytes(), value.into_bytes()))
-            .collect();
-        environment.extend(
-            overrides
-                .iter()
-                .map(|(name, value)| (name.clone().into_bytes(), value.clone().into_bytes())),
-        );
-        invocation = invocation.with_environment(environment);
-    }
+    // Laid over the inherited environment rather than replacing it, because
+    // `Oracle::run_in` sets its overrides on a spawned process that inherits
+    // everything else, and the two sides have to read the same environment --
+    // `TZ` included, which both sides read as `super::PINNED_ZONE` unless an
+    // override says otherwise.
+    invocation = invocation.with_environment(super::zone_pinned_environment(overrides));
     invocation
 }

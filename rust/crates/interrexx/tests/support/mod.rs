@@ -5,6 +5,37 @@
 //! for no reason. Renaming it to `support.rs` would add that extra binary
 //! back.
 
+/// The zone every differential comparison reads under unless it asks for
+/// another. A `DateTime` answer, including its `hashCode`, is computed from
+/// the instant and the zone, so a comparison that left the zone to the
+/// developer's machine would agree in UTC and nowhere else.
+pub const PINNED_ZONE: &str = "UTC";
+
+/// The process's environment with `TZ` set to [`PINNED_ZONE`], for the crate
+/// side of a comparison. Entries named in `overrides` replace the inherited
+/// ones, `TZ` included, matching what `Oracle::run_in` does to the spawned
+/// oracle.
+pub fn zone_pinned_environment(overrides: &[(String, String)]) -> Vec<(Vec<u8>, Vec<u8>)> {
+    let mut environment: Vec<(Vec<u8>, Vec<u8>)> = std::env::vars_os()
+        .filter(|(name, _)| {
+            name != "TZ" && !overrides.iter().any(|(over, _)| over.as_str() == name)
+        })
+        .map(|(name, value)| {
+            use std::os::unix::ffi::OsStringExt as _;
+            (name.into_vec(), value.into_vec())
+        })
+        .collect();
+    if !overrides.iter().any(|(name, _)| name == "TZ") {
+        environment.push((b"TZ".to_vec(), PINNED_ZONE.as_bytes().to_vec()));
+    }
+    environment.extend(
+        overrides
+            .iter()
+            .map(|(name, value)| (name.clone().into_bytes(), value.clone().into_bytes())),
+    );
+    environment
+}
+
 /// The arity probe both `collection_arity.rs` and `introspection_arity.rs`
 /// drive: one machine, two tables, parameterised by the four files each
 /// reads and writes. Its own module doc carries the verdicts and the rule

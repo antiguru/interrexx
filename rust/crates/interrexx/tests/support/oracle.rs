@@ -326,7 +326,12 @@ impl Oracle {
             .args(args)
             .current_dir(path.parent().unwrap_or(Path::new(".")))
             .env("LD_LIBRARY_PATH", &self.lib_dir)
-            .env("XDG_RUNTIME_DIR", super::oracle_runtime::dir());
+            .env("XDG_RUNTIME_DIR", super::oracle_runtime::dir())
+            // The zone a comparison reads under is part of the comparison, so
+            // it is the one the crate side is given (`super::PINNED_ZONE`),
+            // not the developer's. A caller that asks about another zone
+            // sets `TZ` after this and wins.
+            .env("TZ", super::PINNED_ZONE);
         command
     }
 
