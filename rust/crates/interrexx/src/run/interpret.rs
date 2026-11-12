@@ -528,8 +528,10 @@ pub(crate) enum Pause {
 /// is done, as the oracle's `execute` ends in `pauseInstruction` or a block
 /// header's in `conditionalPauseInstruction`. `INTERPRET` pauses before its
 /// fragment instead. `CALL ON` and `CALL OFF` do not pause
-/// (`RexxInstructionCallOn::execute`). `REPLY` answers false: the oracle
-/// pauses on the continuation's thread, and this crate does not pause there.
+/// (`RexxInstructionCallOn::execute`). `REPLY` pauses once the activation is
+/// marked as having replied and before the caller goes on, so its banner comes
+/// there and the continuation, which shares the activation's debug state,
+/// does not print it again.
 pub(crate) fn pauses_after(kind: &InstructionKind) -> bool {
     !matches!(
         kind,
@@ -543,6 +545,5 @@ pub(crate) fn pauses_after(kind: &InstructionKind) -> bool {
             | InstructionKind::Raise(_)
             | InstructionKind::Guard(_)
             | InstructionKind::Interpret { .. }
-            | InstructionKind::Reply { .. }
     ) && !matches!(kind, InstructionKind::Call(call) if matches!(**call, interrexx_parse::Call::Trap(_)))
 }
