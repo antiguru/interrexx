@@ -282,6 +282,40 @@ h: say condition('o')~code
 88.902
 ```
 
+r[cond.information.library.trace]
+The [trace line](r:class.stackframe.traceline) of a level that runs a method of
+the class library, and so each such entry of `TRACEBACK`, holds no text of the
+class library's code. It is the number of the line, `*-*`, one or more
+blanks, and
+`Method NAME with scope "Class" in package "REXX" (no source available).`,
+with the method's name in upper case and the id of the class that defines it;
+the number and how many blanks follow `*-*` are not specified, as [the library
+rule](r:cond.information.library) says. `SOURCE` of such a method has no lines
+([the source rule](r:class.method.source)), and the [report of an
+error](r:cond.index.syntax) raised inside the library prints no line of that
+code.
+
+```rexx
+signal on syntax name h
+x = .Validate~number('N', 'x')
+exit
+h:
+n = 0
+ok = 1
+do f over condition('o')~stackframes
+  if f~type == 'METHOD', f~executable~package~name == 'REXX' then do
+    n += 1
+    t = f~traceLine
+    ok = ok & (t~word(2) == '*-*') & (t~pos('in package "REXX" (no source available).') > 0)
+  end
+end
+say (n > 0) ok
+```
+
+```output
+1 1
+```
+
 r[cond.information.object.values]
 For a SYNTAX condition, `CODE` is the string `m.n` of the error number and
 subcode, `RC` is `m`, `ERRORTEXT` equals what the `ERRORTEXT` builtin answers

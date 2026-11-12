@@ -1,5 +1,18 @@
 # Messages sent from Rust in files that reach a library class by name. Generated: see library_shape.rs.
 builtin/queues.rs rxqueue message
+builtin/state.rs queued b"QUEUED"
+builtin/stream.rs charin b"CHARIN"
+builtin/stream.rs charout b"CHAROUT"
+builtin/stream.rs chars b"CHARS"
+builtin/stream.rs linein b"LINEIN"
+builtin/stream.rs lineout b"LINEOUT"
+builtin/stream.rs lineout b"QUEUE"
+builtin/stream.rs lines b"LINES"
+builtin/stream.rs lines b"QUEUED"
+builtin/stream.rs stream b"COMMAND"
+builtin/stream.rs stream b"DESCRIPTION"
+builtin/stream.rs stream b"STATE"
+classic.rs current_queue_name b"GET"
 command/environments.rs run_rexx_command b"COMMAND"
 command/environments.rs run_rexx_command b"FINISH"
 command/environments.rs run_rexx_command b"NEW"
@@ -18,9 +31,13 @@ environment/route.rs deliver_trace_line b"NEW"
 environment/route.rs deliver_trace_line b"NOTIFY"
 environment/route.rs deliver_trace_line b"[]"
 environment/route.rs deliver_trace_line crate::dispatch::LINEOUT
-environment/route.rs frame_entry_into name
+environment/route.rs frame_table b"TARGET"
+environment/route.rs frame_table name
 environment/route.rs trace_object_put b"PUT"
-install.rs send_directive_message name
+input.rs linein_line crate::dispatch::LINEIN
+input.rs pull_line b"PULL"
+install.rs install_class_at dispatch::INIT
+install.rs install_directives dispatch::ACTIVATE
 redirect.rs begin_target b"EMPTY"
 redirect.rs close_named b"CLOSE"
 redirect.rs file_object_path b"ABSOLUTEPATH"
@@ -37,3 +54,5 @@ run.rs exec_forward message
 run.rs queue_evaluated message
 run.rs resolve_stream b"NEW"
 run.rs say_evaluated crate::dispatch::SAY
+run/condition.rs novalue_hook b"NOVALUE"
+run/interpret.rs debug_input_line crate::dispatch::LINEIN

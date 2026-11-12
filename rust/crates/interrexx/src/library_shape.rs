@@ -13,9 +13,15 @@
 //!   point), `host:<program>` (a directive of an embedded program),
 //!   `replacement:<file>` (a directive of interrexx's own source, inside a
 //!   splice range), or `same-as:<row>` (the method object is the same one an
-//!   earlier row holds, which is what a donation leaves).
+//!   earlier row holds, which is what a donation leaves). There is no
+//!   separate `rust` origin: a method that moves from a host directive to a
+//!   native one (String's constants, say) changes from `host:` to `native`,
+//!   which is an expected change of that swap's rows.
 //! * `library-sends.txt`: every message the Rust side sends in a file that
-//!   reaches a library class by name, so that a new send shows in review.
+//!   reaches a library class by name or through a lookup helper (stream and
+//!   queue resolution included), with the literal message of each call of a
+//!   wrapper that sends its parameter (`WRAPPERS`), so that a new send shows
+//!   in review.
 //!
 //! **Regenerating** is local: run
 //! `REXX_UPDATE_GOLDEN=1 cargo nextest run -p interrexx library_shape`
@@ -165,7 +171,7 @@ impl Probe {
         }
     }
 
-    /// Where `method` comes from, or `None` for a primitive.
+    /// Where `method` comes from: `"native"` for a method with no program.
     fn origin(&self, method: ObjRef) -> String {
         let Some(record) = self.interp.executable_sources.get(&method).copied() else {
             return "native".into();
@@ -453,12 +459,15 @@ fn tables() -> (String, String) {
             }
         }
     }
-    let _ = writeln!(
-        shape,
-        "environment: {}",
-        probe.texts(".ENVIRONMENT").join(" ")
-    );
-    let _ = writeln!(shape, "local: {}", probe.texts(".LOCAL").join(" "));
+    // Directory iteration order is a hash order, so the names are sorted: one
+    // row each, and an added or removed name is one line of diff.
+    for (table, directory) in [("environment", ".ENVIRONMENT"), ("local", ".LOCAL")] {
+        let mut names = probe.texts(directory);
+        names.sort();
+        for entry in names {
+            let _ = writeln!(shape, "{table} {entry}");
+        }
+    }
     probe.interp.roots.activity_mut().pop_frame(frame);
     (shape, origin)
 }
@@ -472,16 +481,37 @@ fn library_shape_and_origin_match_the_goldens() {
     check_golden("library-origin.txt", &origin);
 }
 
-/// The REXX package holds each class once, and `.environment`, the package
-/// table and each program's table name the same object.
+/// The tables are not empty and name the CoreClasses host.
 #[test]
 fn library_shape_is_not_empty() {
     let (shape, origin) = tables();
     assert!(shape.lines().filter(|l| l.starts_with("class ")).count() > 40);
     assert!(origin.lines().count() > 500);
-    assert!(shape.contains("environment: "));
+    assert!(shape.lines().any(|l| l.starts_with("environment ")));
+    assert!(shape.lines().any(|l| l.starts_with("local ")));
     assert!(origin.contains(" host:CoreClasses"));
 }
+
+/// Calls that hand back a library object by name or by route; a file that
+/// makes one is scanned for sends.
+const LOOKUPS: &[&str] = &[
+    "rexx_package_class(",
+    "dot_variable(b\".",
+    "EnvScope::",
+    "resolve_stream(",
+    "local_route(",
+    "standard_stream(",
+];
+
+/// Functions that send their own parameter as the message: the function and
+/// the zero-based index of that parameter. Each call site is listed with its
+/// literal message instead of the wrapper's own send.
+const WRAPPERS: &[(&str, usize)] = &[
+    ("send_to_stream", 2),
+    ("send_to_queue", 1),
+    ("frame_entry_into", 2),
+    ("send_directive_message", 3),
+];
 
 /// Files that reach a library class by name, and the messages they send.
 fn rust_sends() -> String {
@@ -502,47 +532,15 @@ fn rust_sends() -> String {
         }
     }
     files.sort();
-    let lookups = ["rexx_package_class(", "dot_variable(b\".", "EnvScope::"];
     let mut rows = BTreeSet::new();
     for path in files {
         let text = std::fs::read_to_string(&path).expect("a source file");
-        let live = text
-            .split_once("#[cfg(test)]\nmod tests {")
-            .map_or(text.as_str(), |(live, _)| live);
-        if !lookups.iter().any(|l| live.contains(l)) {
-            continue;
-        }
         let name = path
             .strip_prefix(&root)
             .expect("under src")
             .to_string_lossy()
             .into_owned();
-        let mut function = String::from("-");
-        let mut at = 0;
-        while at < live.len() {
-            let line_end = live[at..].find('\n').map_or(live.len(), |n| at + n);
-            let line = live[at..line_end].trim_start();
-            if let Some(rest) = line
-                .strip_prefix("pub(crate) fn ")
-                .or_else(|| line.strip_prefix("pub(super) fn "))
-                .or_else(|| line.strip_prefix("pub fn "))
-                .or_else(|| line.strip_prefix("fn "))
-            {
-                function = rest
-                    .chars()
-                    .take_while(|c| c.is_alphanumeric() || *c == '_')
-                    .collect();
-            }
-            for call in ["send_message(", "send_message_as_given("] {
-                let mut from = at;
-                while let Some(found) = live[from..line_end.max(from)].find(call) {
-                    let start = from + found + call.len();
-                    rows.insert(format!("{name} {function} {}", message_of(&live[start..])));
-                    from = start;
-                }
-            }
-            at = line_end + 1;
-        }
+        rows.extend(sends_in(&name, &text));
     }
     let mut out = String::from(
         "# Messages sent from Rust in files that reach a library class by name. Generated: see \
@@ -555,9 +553,106 @@ fn rust_sends() -> String {
     out
 }
 
+/// The function a source line declares, if it does: any visibility, then
+/// `const`, `async`, `unsafe` and `extern "..."` qualifiers, then `fn`.
+fn declared_function(line: &str) -> Option<String> {
+    let mut rest = line.trim_start();
+    if let Some(after) = rest.strip_prefix("pub") {
+        rest = match after.strip_prefix('(') {
+            Some(inner) => inner.split_once(')').map_or(after, |(_, r)| r),
+            None => after,
+        }
+        .trim_start();
+    }
+    loop {
+        let before = rest;
+        for qualifier in ["const ", "async ", "unsafe ", "default "] {
+            if let Some(after) = rest.strip_prefix(qualifier) {
+                rest = after.trim_start();
+            }
+        }
+        if let Some(after) = rest.strip_prefix("extern ") {
+            let after = after.trim_start();
+            rest = match after.strip_prefix('"') {
+                Some(quoted) => quoted.split_once('"').map_or(after, |(_, r)| r),
+                None => after,
+            }
+            .trim_start();
+        }
+        if rest == before {
+            break;
+        }
+    }
+    let rest = rest.strip_prefix("fn ")?;
+    Some(
+        rest.chars()
+            .take_while(|c| c.is_alphanumeric() || *c == '_')
+            .collect(),
+    )
+}
+
+/// The rows (`file function message`) for one source file's text: every send
+/// in a file that reaches a library object, and every call of a wrapper that
+/// sends its parameter.
+fn sends_in(name: &str, text: &str) -> BTreeSet<String> {
+    let mut rows = BTreeSet::new();
+    let live = text
+        .split_once("#[cfg(test)]\nmod tests {")
+        .map_or(text, |(live, _)| live);
+    let reaches = |l: &&str| live.contains(l);
+    if !LOOKUPS.iter().any(reaches) && !WRAPPERS.iter().any(|(w, _)| live.contains(w)) {
+        return rows;
+    }
+    let mut function = String::from("-");
+    let mut at = 0;
+    while at < live.len() {
+        let line_end = live[at..].find('\n').map_or(live.len(), |n| at + n);
+        let line = &live[at..line_end];
+        if let Some(declared) = declared_function(line) {
+            function = declared;
+        }
+        let wrapper = WRAPPERS.iter().any(|(w, _)| *w == function);
+        if !wrapper {
+            for call in ["send_message(", "send_message_as_given("] {
+                let mut from = at;
+                while let Some(found) = live[from..line_end.max(from)].find(call) {
+                    let start = from + found + call.len();
+                    rows.insert(format!("{name} {function} {}", message_of(&live[start..])));
+                    from = start;
+                }
+            }
+        }
+        for (wrapper, index) in WRAPPERS {
+            let call = format!("{wrapper}(");
+            let mut from = at;
+            while let Some(found) = live[from..line_end.max(from)].find(&call) {
+                let position = from + found;
+                let start = position + call.len();
+                from = start;
+                let word_start = live[..position]
+                    .chars()
+                    .next_back()
+                    .is_none_or(|c| !(c.is_alphanumeric() || c == '_'));
+                if word_start && declared_function(line).is_none() {
+                    let message = nth_argument(&live[start..], *index);
+                    rows.insert(format!("{name} {function} {message}"));
+                }
+            }
+        }
+        at = line_end + 1;
+    }
+    rows
+}
+
 /// The second argument of the call whose text starts at `after`, spaces
 /// squashed.
 fn message_of(after: &str) -> String {
+    nth_argument(after, 1)
+}
+
+/// The `index`th (zero-based) argument of the call whose text starts at
+/// `after`, spaces squashed.
+fn nth_argument(after: &str, index: usize) -> String {
     let mut depth = 0usize;
     let mut commas = 0;
     let mut token = String::new();
@@ -568,14 +663,14 @@ fn message_of(after: &str) -> String {
             ')' | ']' => depth -= 1,
             ',' if depth == 0 => {
                 commas += 1;
-                if commas == 2 {
+                if commas > index {
                     break;
                 }
                 continue;
             }
             _ => {}
         }
-        if commas == 1 && !c.is_whitespace() {
+        if commas == index && !c.is_whitespace() {
             token.push(c);
         }
     }
@@ -585,6 +680,47 @@ fn message_of(after: &str) -> String {
     } else {
         token.to_string()
     }
+}
+
+/// A send reached through a lookup helper, and a call of a wrapper, are listed
+/// with their literal message; a send in a file that reaches nothing is not.
+#[test]
+fn the_sends_scan_sees_helper_reached_objects() {
+    let reached = "\
+fn probe(interp: &mut Interp) {
+    let stream = interp.resolve_stream(&name, true, true)?;
+    interp.send_message(stream, b\"PLANTED\", None, &[], caller)?;
+    send_to_stream(
+        interp,
+        args,
+        b\"PLANTEDWRAP\",
+        true,
+    )?;
+}
+fn send_to_stream(interp: &mut Interp, message: &[u8]) {
+    interp.send_message(stream, message, None, &[], caller);
+}
+pub(crate) uns\
+afe fn after() {
+    interp.send_message(stream, b\"ATTRIBUTED\", None, &[], caller);
+}
+";
+    let rows = sends_in("planted.rs", reached);
+    assert!(rows.contains("planted.rs probe b\"PLANTED\""), "{rows:?}");
+    assert!(
+        rows.contains("planted.rs probe b\"PLANTEDWRAP\""),
+        "{rows:?}"
+    );
+    assert!(
+        rows.contains("planted.rs after b\"ATTRIBUTED\""),
+        "{rows:?}"
+    );
+    assert!(
+        !rows.iter().any(|r| r.ends_with(" message")),
+        "a wrapper's own send is listed: {rows:?}"
+    );
+    let unreached = "fn probe() { interp.send_message(x, b\"PLANTED\", None, &[], caller); }";
+    assert!(sends_in("other.rs", unreached).is_empty());
 }
 
 /// A Rust send to a library class shows up in the committed list, so a new one
@@ -608,21 +744,33 @@ fn library_source_lines() -> BTreeSet<String> {
     lines
 }
 
-/// The library source lines that `output` contains.
-fn leaked(output: &str, user_program: &str) -> Vec<usize> {
-    let mut found = Vec::new();
-    for (n, line) in library_source_lines().iter().enumerate() {
-        if !user_program.contains(line.as_str()) && output.contains(line.as_str()) {
-            found.push(n);
+/// How many lines of `output` are library source lines that no line of
+/// `user_program` is, and `output` with each of those replaced by a marker.
+/// Library text is never printed: a failure message shows only this.
+fn redacted(output: &str, user_program: &str) -> (usize, String) {
+    let library = library_source_lines();
+    let mut count = 0;
+    let mut shown = String::new();
+    for line in output.lines() {
+        let mut line = line.to_string();
+        for source in &library {
+            if !user_program.contains(source.as_str()) && line.contains(source.as_str()) {
+                count += 1;
+                line = line.replace(source.as_str(), "<library line>");
+            }
         }
+        shown.push_str(&line);
+        shown.push('\n');
     }
-    found
+    (count, shown)
 }
 
 /// A library frame names its method and scope and says no source is
 /// available, whether the error is caught or reaches the top level, and
-/// `Method~source` of a library method holds no lines. No library source text
-/// appears in anything a program can read about a failure inside the library.
+/// `Method~source` of a library method holds no lines
+/// (`r[class.method.source]`). No library source text appears in anything a
+/// program can read about a failure inside the library
+/// (`r[cond.information.library.trace]`).
 #[test]
 fn a_failure_inside_the_library_renders_no_library_source() {
     let caught = "\
@@ -640,6 +788,7 @@ do l over c~traceback; say 'TB>' l; end
 say 'D>' c~message c~errorText c~position c~program
 ";
     let uncaught = "x = .timespan~fromDays('a')\n";
+    let user = format!("{caught}{uncaught}");
     let mut output = String::new();
     for program in [caught, uncaught] {
         let outcome = crate::run_program(
@@ -650,20 +799,45 @@ say 'D>' c~message c~errorText c~position c~program
         output.push_str(&String::from_utf8_lossy(&outcome.stdout));
         output.push_str(&String::from_utf8_lossy(&outcome.stderr));
     }
-    // The run is a failure that crossed library frames, or the check below
-    // has nothing to read.
+    let (count, shown) = redacted(&output, &user);
+    assert_eq!(
+        count, 0,
+        "{count} library source line(s) reached the output (redacted):\n{shown}"
+    );
+    // Both probes of `Method~source` answer no lines.
+    let source_rows = output.lines().filter(|l| *l == "S> 0").count();
+    assert_eq!(
+        source_rows, 2,
+        "a library method held source (redacted):\n{shown}"
+    );
+    // Every frame and traceback entry that is not a line of the user's own
+    // program is a library frame and says no source is available. The run
+    // must have produced some.
+    let mut library_frames = 0;
+    for line in output.lines() {
+        let body = line
+            .strip_prefix("F> ")
+            .or_else(|| line.strip_prefix("TB> "));
+        let Some(body) = body else { continue };
+        let is_user = user
+            .lines()
+            .any(|u| !u.trim().is_empty() && body.contains(u.trim()));
+        if is_user {
+            continue;
+        }
+        library_frames += 1;
+        assert!(
+            body.ends_with("(no source available)."),
+            "a library frame renders text (redacted):\n{shown}"
+        );
+    }
+    assert!(
+        library_frames > 0,
+        "no library frame was rendered (redacted):\n{shown}"
+    );
     assert!(
         output.contains("(no source available)"),
-        "no library frame was rendered:\n{output}"
-    );
-    assert!(
-        output.contains("S> 0"),
-        "a library method held source:\n{output}"
-    );
-    let user = format!("{caught}{uncaught}");
-    assert!(
-        leaked(&output, &user).is_empty(),
-        "library source text reached the output:\n{output}"
+        "the uncaught run rendered no library frame (redacted):\n{shown}"
     );
 }
 
@@ -673,8 +847,11 @@ fn the_leak_check_finds_a_planted_library_line() {
     let lines = library_source_lines();
     assert!(lines.len() > 500, "the library source set is empty");
     let planted = lines.iter().next().expect("a line").clone();
-    assert!(!leaked(&format!("x\n{planted}\n"), "").is_empty());
-    assert!(leaked("nothing of the library here", "").is_empty());
+    let (count, shown) = redacted(&format!("x\n{planted}\n"), "");
+    assert_eq!(count, 1);
+    assert!(!shown.contains(&planted), "the redaction printed the line");
+    assert!(shown.contains("<library line>"));
+    assert_eq!(redacted("nothing of the library here", "").0, 0);
 }
 
 /// The first-run report: which embedded program declares which class, the
