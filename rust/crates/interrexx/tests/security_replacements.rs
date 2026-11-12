@@ -58,7 +58,8 @@ fn a_stream_replacement_that_is_not_a_stream_is_the_target() {
 }
 
 /// A `NAME` replacement that is not a string is read as its string value:
-/// 3.1 naming `an Object`, after both `REQUIRES` events.
+/// 3.1 naming `an Object`, after both `REQUIRES` events. The replacement is
+/// made at the second event, because one made at the first chooses the file.
 #[test]
 fn a_requires_name_that_is_not_a_string_names_its_string_value() {
     let dir = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join("security_replacements");
@@ -80,7 +81,7 @@ fn a_requires_name_that_is_not_a_string_names_its_string_value() {
          use arg name, args\n  \
          if name \\= 'REQUIRES' then return 0\n  \
          count += 1\n  \
-         args[1]['NAME'] = .object~new\n  \
+         if count = 2 then args[1]['NAME'] = .object~new\n  \
          return 1\n",
         file.display()
     );
