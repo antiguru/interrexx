@@ -816,6 +816,6 @@ say trace()
 ::options trace ?
 ```
 
-```output defect=#113
+```output
 ?N
 ```
