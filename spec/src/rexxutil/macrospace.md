@@ -1,6 +1,7 @@
 ---
 element: "Macrospace"
 kind: concept
+deviations: [86]
 rexxref: "Rexx Utilities (RexxUtil) > SysAddRexxMacro; Rexx Utilities (RexxUtil) > SysDropRexxMacro; Rexx Utilities (RexxUtil) > SysQueryRexxMacro; Rexx Utilities (RexxUtil) > SysReorderRexxMacro"
 ---
 
@@ -62,17 +63,19 @@ child: B from the parent x
 parent: [] [A]
 ```
 
-r[util.macrospace.directory]
-The service keeps its files in a directory, which the environment variable
-`REXX_API_DIR` names where it is set. The directory has to belong to the user
+r[util.macrospace.deviation.86]
+The service prints its own messages ([Deviation 86](../deviations.md)), and the
+refusal of its directory is one of them. The service keeps its files in a
+directory, which the environment variable `REXX_API_DIR` names where it is set. The directory has to belong to the user
 who runs the program and to give no access to anyone else: a directory that
 the group or others can use is refused, and no service is started or reached in
 it, so that every function that works on the macrospace answers its code for no
 service (`1004` for SysAddRexxMacro, `2` for SysDropRexxMacro). The refusal is
 reported: a program that is refused writes a line to standard error that says
-the service directory is not private to the user. A directory that only the
-user can use is accepted. In the example a program is run with a directory that
-the group can write to, and its standard error is read for the line.
+the service directory is not private to the user. ooRexx does not refuse such
+a directory: its calls answer `0`. A directory that only the user can use is
+accepted. In the example a program is run with a directory that the group can
+write to, and its standard error is read for the line.
 
 ```rexx
 call SysMkDir 'c4zqapi'
