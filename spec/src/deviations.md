@@ -1253,3 +1253,17 @@ when its offset is out of range, with the offset stored as given, and a
 `TimeSpan` keeps an argument that is not a number as its span, so that the
 span then raises errors of its own. interrexx's `TimeSpan` does the same
 until #47's `TimeSpan` task lands (#441).
+
+## 164. The error number of SysGeterrno and SockSock_Errno
+
+The error number that `SysGeterrno` and `SockSock_Errno` answer belongs to
+the activity. A failing call of the library sets the number of its activity, a
+call that does not fail leaves it as it is (a lookup of a user, group, service
+or host sets it to `0` first), and nothing else changes it: not a later clause
+of the activity that is no call of the library, and not any call on another
+activity. A program may read it in a later clause after a failed call, and
+cannot lose it to another activity between the two. ooRexx answers the C
+library's raw error number of the process, which any later clause on any
+activity can overwrite, even after a successful call: the number a program
+reads in a later clause, or while another activity runs, is whatever call set
+it last.

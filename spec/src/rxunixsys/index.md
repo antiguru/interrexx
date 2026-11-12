@@ -1,6 +1,7 @@
 ---
 element: "rxunixsys"
 kind: chapter
+deviations: [164]
 rexxref: "Unix extensions"
 ---
 
@@ -335,8 +336,9 @@ call that fails sets it; a call that does not fail leaves it as it is, and the
 lookups of users, groups and services set it to `0` before they look. The
 number is that of the failed call when `SysGeterrno` is called in the same
 clause, after the failed call and after nothing else that fails, as in the
-examples: what a call that does not fail leaves, and what a later clause finds,
-is not specified. `SysGeterrnomsg` answers
+examples; what a later clause finds, and what another activity does to it, is
+the subject of [Deviation 164](r:rxunixsys.index.deviation.164).
+`SysGeterrnomsg` answers
 `Ok` for `0` and `Unknown` for a number without a text. It takes the number as
 a [whole number](r:rxunixsys.index.whole), and the numbers of the table that
 the examples show are fixed: the text of another number is that of the system.
@@ -365,4 +367,55 @@ say SysGeterrnomsg(39) '|' SysGeterrnomsg(2147483647) '|' SysGeterrnomsg(1000)
 Ok | Operation not permitted | No such file or directory | Permission denied
 File exists | Not a directory | Is a directory | Invalid argument
 Directory not empty | Unknown | Unknown
+```
+
+## Deviations
+
+r[rxunixsys.index.deviation.164]
+The error number belongs to the activity that made the call: each activity has
+its own, which is `0` until a call of the library fails on it. A call of the
+library that fails sets the number of its activity; a call that does not fail
+leaves it as it is, except that a lookup of a user, a group or a service sets
+it to `0` before it looks. No other clause changes it, whether it fails or
+not, and no call on another activity does: after a failed call, a later clause
+of the same activity reads the number of that call, however many clauses that
+do not set it come between, and however many other activities make calls of
+the library meanwhile. A program therefore cannot lose the number to another
+activity between the failed call and the clause that reads it. In the example
+the main activity's call fails with `2`; the method that `start` runs begins
+with `0`, fails with `17`, and keeps `17` after a call that does not fail,
+while the main activity still reads `2` and then `0` after a lookup.
+
+```rexx
+call SysMkdirUnix 'c1zqd1', 493
+say SysUnlink('c1zqnone') SysGeterrno()
+x = 1 + 2
+say 'later' SysGeterrno()
+m = .k~new~start('work')
+say 'result' m~result
+say 'after' SysGeterrno()
+call SysGetpwnam 'c1zqnouser', 'n'
+say 'lookup' SysGeterrno()
+call SysRmdirUnix 'c1zqd1'
+exit
+::requires 'rxunixsys' library
+::class k
+::method work
+  say 'b start' SysGeterrno()
+  say SysMkdirUnix('c1zqd1', 493) SysGeterrno()
+  call SysMkdirUnix 'c1zqd1x', 493
+  say 'b ok' SysGeterrno()
+  call SysRmdirUnix 'c1zqd1x'
+  return SysGeterrno()
+```
+
+```output
+-1 2
+later 2
+b start 0
+-1 17
+b ok 17
+result 17
+after 2
+lookup 0
 ```
