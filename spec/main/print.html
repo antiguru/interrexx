@@ -13979,6 +13979,19 @@ R6 SYNTAX 97.1
 r7 itself 4.1 20
 R7 ignored
 </code></pre>
+<div class="rule" id="r-instr.raise.untrapped.description"><a href="instructions/raise.html#r-instr.raise.untrapped.description">[instr.raise.untrapped.description]</a></div>
+<p>The message that the <code>SYNTAX 97.1</code> names is the description of the clause. A
+description that is an object is named by its default name, as the object's
+<code>DEFAULTNAME</code> gives it, and not by what its <code>MAKESTRING</code> answers.</p>
+<pre><code class="language-rexx">signal on syntax name s
+raise nomethod additional ('obj') description (.key~new)
+s: say condition('o')~message
+::class key
+::method makestring
+  return 'description'
+</code></pre>
+<pre><code class="language-output">Object "obj" does not understand message "a KEY".
+</code></pre>
 <pre><code class="language-rexx">call on error name e
 call r1
 call r2
@@ -21904,7 +21917,7 @@ default. ooRexx answers the null string.</p>
 <pre><code class="language-rexx">say trace()
 ::options trace ?
 </code></pre>
-<pre><code class="language-output defect=#113">?N
+<pre><code class="language-output">?N
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="resource"><a class="header" href="#resource">::RESOURCE</a></h1>
 <pre><code>::RESOURCE name [END delimiter]
