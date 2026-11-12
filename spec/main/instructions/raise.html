@@ -371,7 +371,7 @@ h: c = condition('o')
 ::routine r2
   raise failure (arg(1))
 </code></pre>
-<pre><code class="language-output defect=#124">ERROR The Array class The Array class
+<pre><code class="language-output">ERROR The Array class The Array class
 FAILURE The String class The String class
 </code></pre>
 <pre><code class="language-rexx">call on error name e
@@ -517,7 +517,7 @@ il: procedure
 inner: say '  inner' sigl condition('o')~code; return 'inner'
 unit: say '  unit' sigl condition('o')~code; return 'unit'
 </code></pre>
-<pre><code class="language-output defect=#119">  inner 8 33.904
+<pre><code class="language-output">  inner 8 33.904
 inner
 </code></pre>
 <div class="rule" id="r-instr.raise.syntax"><a href="#r-instr.raise.syntax">[instr.raise.syntax]</a></div>
@@ -673,7 +673,7 @@ h: o = condition('o')
 ::routine r1; raise user a description 'da' additional ('x')
 ::routine r2; raise user b
 </code></pre>
-<pre><code class="language-output defect=#114">USER B 0
+<pre><code class="language-output">USER B 0
 </code></pre>
 <div class="rule" id="r-instr.raise.order"><a href="#r-instr.raise.order">[instr.raise.order]</a></div>
 <p>The expressions of the clause are evaluated before anything is raised, in the
@@ -718,7 +718,7 @@ exit
 t: say 'evaluate' arg(1)
   return arg(1)
 </code></pre>
-<pre><code class="language-output defect=#125">evaluate abc
+<pre><code class="language-output">evaluate abc
 SYNTAX 33.904
 </code></pre>
 <h2 id="where-the-condition-is-raised"><a class="header" href="#where-the-condition-is-raised">Where the condition is raised</a></h2>
@@ -1399,7 +1399,7 @@ lbl: raise propagate array ('p', 'q') description 'd4'
 ::routine src
   raise user foo description 'orig' additional ('orig add')
 </code></pre>
-<pre><code class="language-output defect=#115">1 [orig] orig add
+<pre><code class="language-output">1 [orig] orig add
 2 [new] orig add
 3 [orig] new add
 4 [d4] array p,q
