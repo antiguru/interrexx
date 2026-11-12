@@ -488,13 +488,32 @@ fn block_source_lines(
     // body and one blank, at the end of the file and before a following
     // directive alike; and a `::method` with nothing after it but one blank
     // line answers `Array(0)`.
-    let (last, upto) = match text.line_span(last) {
+    let (last, upto, stepped_back) = match text.line_span(last) {
         Some(span) if span.is_empty() => {
             let stepped = last.saturating_sub(1);
-            (stepped, text.line_span(stepped).map_or(0, |span| span.end))
+            (
+                stepped,
+                text.line_span(stepped).map_or(0, |span| span.end),
+                true,
+            )
         }
-        _ => (last, upto),
+        _ => (last, upto, false),
     };
+    // A body that starts after a `;` and ends on the same line, with nothing
+    // between them, holds no line (`r[class.method.source]`): `::method f ;`
+    // at the end of the text, or before the next directive, is a source of no
+    // lines. A blank line after it that stepped back leaves its one empty
+    // line.
+    if directive.is_some()
+        && !stepped_back
+        && last == first
+        && from > 0
+        && text
+            .line_span(first)
+            .is_some_and(|span| span.start.max(from) >= upto.min(span.end))
+    {
+        return Ok(Vec::new());
+    }
     Ok((first..=last)
         .map_while(|line| {
             let span = text.line_span(line)?;

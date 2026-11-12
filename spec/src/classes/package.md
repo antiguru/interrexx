@@ -2179,7 +2179,7 @@ p = .package~new('n', 'nop')
 say p~loadPackage('class_package_empty_zq.cls', '')~sourceSize
 ```
 
-```output defect=#147
+```output
 0
 ```
 
