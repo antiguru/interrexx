@@ -528,18 +528,25 @@ wholeNumberRange 5 1.5 9.5 - => ok
 ```
 
 r[class.validate.sends]
-The number checks read the value as a string with one `makeString` (as [the
-conversion rule](r:conv.string.object) says, apart from [the
-deviation](r:class.validate.deviation.109)), and then ask the value itself, the
-object that was given and not the string, to compare. `positiveNumber`,
-`positiveWholeNumber` and `position` send it `>` with `0`;
-`nonNegativeNumber`, `nonNegativeWholeNumber` and `length` send it `>=` with
-`0`; `numberRange` and `wholeNumberRange` send it `>=` with `min` and, only
-when that answers true, `<=` with `max`. A comparison that answers `0` raises the error of the check. `number` and
-`wholeNumber` send nothing more, and the bounds and `digits` are read as
-strings and are sent no comparison. The example has an object whose
-`makeString` and `unknown` write a line, and whose comparisons answer `1` and
-then `0`.
+The number checks convert the value to a string once, as [the conversion
+rule](r:conv.string.object) says (apart from [the
+deviation](r:class.validate.deviation.109)); for an object without a `request`
+of its own that is one `makeString`. The string is checked first as a number,
+and as a whole number for the whole-number checks, and only a value that passes
+that check is asked, as the object that was given and not the string, to
+compare. `positiveNumber`, `positiveWholeNumber` and `position` send it `>`
+with `0`; `nonNegativeNumber`, `nonNegativeWholeNumber` and `length` send it
+`>=` with `0`; `numberRange` and `wholeNumberRange` send it `>=` with `min`
+and, only when that answers true, `<=` with `max`. A comparison that answers
+`0` raises the error of the check, one that answers neither `0` nor `1` raises
+`SYNTAX 34.6`, and a value whose class has no such comparison method raises
+`SYNTAX 97.1`, so that an object with only a `makeString` is refused by
+`positiveNumber`, `nonNegativeNumber` and `numberRange`, which a number check
+alone would have passed. A value that fails the number check raises that error
+and is sent no comparison. `number` and `wholeNumber` send nothing more, and
+the bounds and `digits` are read as strings and are sent no comparison. The
+example has an object whose `makeString` and `unknown` write a line, and whose
+comparisons answer `1` and then `0`.
 
 ```rexx
 checks = 'number positiveNumber nonNegativeNumber wholeNumber positiveWholeNumber',
@@ -633,6 +640,63 @@ numberRange: => 88.907
   makeString
   >= 1
 wholeNumberRange: => 88.907
+```
+
+```rexx
+call t 'positiveNumber', .ms~new(5)
+call t 'nonNegativeNumber', .ms~new(5)
+call t 'numberRange', .ms~new(5), 1, 9
+call t 'positiveNumber', .cmp~new('x', 'x')
+call t 'positiveNumber', .cmp~new('5.5', 0)
+call t 'positiveWholeNumber', .cmp~new('5.5', 1)
+call t 'wholeNumberRange', .cmp~new('5.5', 1), 1, 9
+call t 'numberRange', .cmp~new('abc', 1), 1, 9
+call t 'numberRange', .cmp~new(5, 'x'), 1, 9
+call t 'positiveNumber', .cmp~new(5, .true)
+exit
+t: procedure
+  signal on syntax name bad
+  if arg() == 2 then .validate~send(arg(1), 'N', arg(2))
+  else .validate~send(arg(1), 'N', arg(2), arg(3), arg(4))
+  say arg(1) 'ok'
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
+::class ms
+::method init
+  expose v
+  use arg v
+::method makeString
+  expose v
+  return v
+::class cmp
+::method init
+  expose v a
+  use arg v, a
+::method makeString
+  expose v
+  return v
+::method unknown
+  expose a
+  use arg name
+  say '  sent' name
+  return a
+```
+
+```output
+positiveNumber => 97.1
+nonNegativeNumber => 97.1
+numberRange => 97.1
+positiveNumber => 88.926
+  sent >
+positiveNumber => 88.926
+positiveWholeNumber => 88.905
+wholeNumberRange => 88.907
+numberRange => 88.907
+  sent >=
+numberRange => 34.6
+  sent >
+positiveNumber ok
 ```
 
 ## Logical values and classes

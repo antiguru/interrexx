@@ -552,19 +552,19 @@ T
 
 r[class.traceobject.sends]
 These are the messages that the methods of `TraceObject` send to objects that a
-subclass can observe. `new` sends the new object `init` with the arguments of `new`, as [the `new` of
-`Class`](r:class.index.new) does; then, when the object is made, it sends the
-object `[]=` three times, for `TIMESTAMP`, `OPTION` and `NUMBER` in this order,
-with the value first and the name second, and then, if there is a `collector`,
-sends that `append`. It does not send the class `counter`, `option` or
-`collector`: it reads the attributes of its own class directly, so that an
-override of those methods in a subclass is not run by `new`, and the `notify`
-object is sent `append` only for the objects that [the interpreter
-makes](r:class.traceobject.lines) for lines of trace output. The `makeString` of
-an instance, and every conversion of the object to a string that is not a call
-of `string`, send the class of the object `makeStringImpl` with the object
-and no other argument, so that a subclass is asked first; `makeStringImpl` then
-sends the object the messages that [its sends
+subclass can observe. `new` sends the new object `init` with the arguments of
+`new`, as [the `new` of `Class`](r:class.index.new) does; then, when the object
+is made, it sends the object `[]=` three times, for `TIMESTAMP`, `OPTION` and
+`NUMBER` in this order, with the value first and the name second, and then, if
+there is a `collector`, sends that `append`. It does not send the class
+`counter`, `option` or `collector`: it reads the attributes of its own class
+directly, so that an override of those methods in a subclass is not run by
+`new`, and the `notify` object is sent `append` only for the objects that [the
+interpreter makes](r:class.traceobject.lines) for lines of trace output. The
+`makeString` of an instance, and every conversion of the object to a string
+that is not a call of `string`, send the class of the object `makeStringImpl`
+with the object and no other argument, so that a subclass is asked first;
+`makeStringImpl` then sends the object the messages that [its sends
 rule](r:class.traceobject.makestringimpl.sends) gives. `compareTo` sends `[]`
 with `NUMBER` to each of the two objects. `string` sends nothing. The example
 subclass shows each message by a line that its overriding method writes.
@@ -740,7 +740,8 @@ and any other value, the lower-case letters and the null string included, that
 of `F`; an object without an `OPTION` entry is formatted like `N`. [The line of
 a method](r:class.traceobject.makestringimpl.method) carries more fields in the
 prefix. `makeStringImpl` raises `SYNTAX 93.901` with no argument, `93.902` with
-two and `93.924` for a string argument; [the next
+two and `93.924` for a string argument, in this order: the number of arguments
+is checked first, so that `makeStringImpl('x', 1)` raises `93.902`; [the next
 rule](r:class.traceobject.makestringimpl.sends) gives the reading of the
 argument. A `StringTable` without entries gives `?`.
 
@@ -764,6 +765,7 @@ say '['t~makeStringImpl(n)']' '['t~makeStringImpl(.stringtable~new)']'
 call try 't~makeStringImpl'
 call try 't~makeStringImpl(n, n)'
 call try 't~makeStringImpl(1)'
+call try "t~makeStringImpl('x', 1)"
 exit
 try:
   signal on syntax name bad
@@ -824,6 +826,7 @@ option P
 t~makeStringImpl => 93.901
 t~makeStringImpl(n, n) => 93.902
 t~makeStringImpl(1) => 93.924
+t~makeStringImpl('x', 1) => 93.902
 ```
 
 > **Note.** The option applies to the lines a program traces, as the next
@@ -1206,7 +1209,8 @@ objects in the order they were made. It reads the argument's entry by sending it
 compares the two numbers under NUMERIC DIGITS 9, whatever the caller's setting.
 A missing entry, the receiver's or the argument's, counts as smaller than any
 number, and two missing entries are equal. An entry that is not a number raises
-`SYNTAX 41.1`. A string argument, and a missing one, raises `SYNTAX 93.924`;
+`SYNTAX 41.1`. Arguments after the first are ignored. A string argument, and a
+missing one, raises `SYNTAX 93.924`;
 another object raises the error of `[]`, such as `93.907` for an `Array` and
 `97.1` for `.nil`.
 
@@ -1221,6 +1225,7 @@ say a~compareTo(.stringtable~new~~put(2, 'NUMBER'))
 call try 'a~compareTo(.stringtable~new~~put("x", "NUMBER"))'
 call try 'a~compareTo(1)'
 call try 'a~compareTo'
+call try 'a~compareTo(b, 1)'
 y = .array~of(b, a)~sort
 say y[1]~number y[2]~number
 exit
@@ -1241,6 +1246,7 @@ bad: say arg(1) '=>' condition('o')~code
 a~compareTo(.stringtable~new~~put("x", "NUMBER")) => 41.1
 a~compareTo(1) => 93.924
 a~compareTo => 93.924
+a~compareTo(b, 1) => -1
 1 2
 ```
 
