@@ -249,13 +249,11 @@ pub(super) fn method_source_lines(
     position: &'static str,
     taker: SourceTaker,
 ) -> Result<Vec<Vec<u8>>, Failure> {
-    if is_source_line(interp, source) {
-        // The null string has no lines for `loadPackage`
-        // (`r[class.package.loadpackage]`), where `Package~new` takes it as
-        // one empty line.
-        if matches!(taker, SourceTaker::Package) && interp.to_text(source).is_empty() {
-            return Ok(Vec::new());
-        }
+    // `Package~loadPackage` splits a string at its line ends, as the
+    // string's `makeArray` does, so one string can hold several lines and the
+    // null string none (`r[class.package.loadpackage]`); every other taker
+    // reads a string as one line.
+    if !matches!(taker, SourceTaker::Package) && is_source_line(interp, source) {
         return Ok(vec![interp.to_text(source).to_vec()]);
     }
     // `requestArray`, then `makeString` for a value that is not a primitive.
