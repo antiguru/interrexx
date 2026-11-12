@@ -183,7 +183,7 @@ say d~at(.asker~new)
   return 'req'
 ```
 
-```output defect=#164
+```output
 v
 ```
 
@@ -1173,7 +1173,7 @@ say d~at('abc') (d~at('other') == .nil) d~hasIndex(.sub~new('abc'))
   return 'other'
 ```
 
-```output defect=#140
+```output
 0
 v 1 1
 ```

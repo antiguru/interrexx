@@ -581,7 +581,7 @@ t~cancel
   return '-1'
 ```
 
-```output defect=#140
+```output
 00:01:00.000000 sends 0
 ```
 

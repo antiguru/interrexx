@@ -184,7 +184,7 @@ say s~allIndexes[1] s['REQ']
   return 'REQ'
 ```
 
-```output defect=#164
+```output
 REQ v
 ```
 
@@ -1087,7 +1087,7 @@ say s~allIndexes[1] s['i'] s['other']
   return 'other'
 ```
 
-```output defect=#140
+```output
 N.
 i 5 N.other
 ```

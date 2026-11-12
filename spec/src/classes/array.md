@@ -1688,7 +1688,7 @@ say a~makeString(.mode~new('C'))
   return 'L'
 ```
 
-```output defect=#140
+```output
 second
 first-second
 firstsecond

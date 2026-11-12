@@ -903,7 +903,7 @@ bad: say arg(1) '=>' condition('o')~code
   return 'p/q'
 ```
 
-```output defect=#164
+```output
 "abc"~left(5, .ask~new) => abc--
 "abc"~left(5, .askstr~new) => 88.909
 "abc"~left(5, .askobj~new) => 88.909
@@ -1129,7 +1129,7 @@ say 'sends' .local~sent
   return 'MADE'
 ```
 
-```output defect=#140
+```output
 2 2 xab
 sends 0
 ```

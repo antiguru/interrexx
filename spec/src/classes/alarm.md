@@ -784,7 +784,7 @@ a~cancel
   return '-1'
 ```
 
-```output defect=#140
+```output
 1 sends 0
 ```
 

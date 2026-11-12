@@ -869,7 +869,7 @@ say 'sends' .local~sent
   return 'zzz'
 ```
 
-```output defect=#140
+```output
 -1 1
 0
 -1

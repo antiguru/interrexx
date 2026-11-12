@@ -2249,7 +2249,7 @@ say k~method('HI')~class~id k~new~hi
   return 'other'
 ```
 
-```output defect=#140
+```output
 Foo
 Method hi
 ```

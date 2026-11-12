@@ -424,7 +424,7 @@ say e~wait(.timeout~new) .log
   return '0.05'
 ```
 
-```output defect=#164
+```output
 1 sent: request STRING
 ```
 
@@ -488,6 +488,6 @@ say e~wait(.digits~new('0.01')) 'sends' .environment~sent
   return '0'
 ```
 
-```output defect=#140
+```output
 0 sends 0
 ```

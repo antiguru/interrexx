@@ -963,7 +963,7 @@ say t~at('abc') (t~at('other') == .nil) t~hasIndex(.sub~new('abc'))
   return 'other'
 ```
 
-```output defect=#140
+```output
 0
 v 1 1
 ```

@@ -358,7 +358,7 @@ say m~acquire(.timeout~new) m~release .log
   return '0.05'
 ```
 
-```output defect=#164
+```output
 1 1 sent: request STRING
 ```
 
@@ -422,7 +422,7 @@ say m~acquire(.digits~new('0.01')) 'sends' .environment~sent
   return '0'
 ```
 
-```output defect=#140
+```output
 1 sends 0
 ```
 

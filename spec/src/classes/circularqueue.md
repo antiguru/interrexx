@@ -1853,7 +1853,7 @@ say q~makeString(.sep~new('-'))
   return '+'
 ```
 
-```output defect=#140
+```output
 first
 1
 1

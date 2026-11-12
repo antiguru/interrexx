@@ -1931,7 +1931,7 @@ probe:
   forward to (v) message (name) arguments (args)
 ```
 
-```output defect=#164
+```output
 year:
   REQUEST:STRING MAKESTRING >= <= RIGHT
 offset:
@@ -2280,7 +2280,7 @@ failed: say '=>' condition('o')~code
   return 'zzz'
 ```
 
-```output defect=#140
+```output
 0001-01-06T00:00:00.000000 2017-01-05T00:00:00.000000
 2017-06-03T00:00:00.000000
 1970-01-01T00:00:05.000000 2017-01-05T00:00:00.000000
