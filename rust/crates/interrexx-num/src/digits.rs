@@ -35,6 +35,15 @@ impl Digits {
         }
     }
 
+    /// `source` itself, moved to the heap arm unless it fits inline.
+    pub(crate) fn from_vec(source: Vec<u8>) -> Self {
+        if source.len() <= INLINE_DIGITS {
+            Digits::from_slice(&source)
+        } else {
+            Digits::Heap(source)
+        }
+    }
+
     /// `count` zero digits, which is what an aligned addition or a
     /// multiplication accumulator starts from.
     pub(crate) fn zeros(count: usize) -> Self {

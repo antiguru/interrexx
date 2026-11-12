@@ -117,24 +117,58 @@ fn exact_integer_product(left: &Number, right: &Number, digits: u64) -> Option<N
     Some(product)
 }
 
+/// The widest digit string a `u64` holds whatever its digits are.
+const WORD_DIGITS: usize = 19;
+
+/// The whole number a digit string of at most [`WORD_DIGITS`] spells.
+fn fold_digits(digits: &[u8]) -> u64 {
+    digits
+        .iter()
+        .fold(0u64, |acc, digit| acc * 10 + u64::from(*digit))
+}
+
 /// Exact product of two digit vectors, most significant first.
 fn mul_magnitudes(a: &[u8], b: &[u8]) -> Digits {
-    let mut out = vec![0u16; a.len() + b.len()];
-    for (i, x) in a.iter().rev().enumerate() {
-        for (j, y) in b.iter().rev().enumerate() {
-            out[a.len() + b.len() - 1 - (i + j)] += (*x as u16) * (*y as u16);
+    if a.len() <= WORD_DIGITS && b.len() <= WORD_DIGITS {
+        return word_product(a, b);
+    }
+    let product = crate::limbs::mul(
+        &crate::limbs::from_digits(a, 0),
+        &crate::limbs::from_digits(b, 0),
+    );
+    Digits::from_vec(crate::limbs::to_digits(&product))
+}
+
+/// [`mul_magnitudes`] for operands a `u64` holds each, whose product a
+/// `u128` holds.
+fn word_product(a: &[u8], b: &[u8]) -> Digits {
+    let product = u128::from(fold_digits(a)) * u128::from(fold_digits(b));
+    let mut buf = [0u8; 2 * WORD_DIGITS];
+    // Most products fit one word, and converting one word needs no `u128`
+    // division at all.
+    let (mut word, mut end) = match u64::try_from(product) {
+        Ok(word) => (word, buf.len()),
+        Err(_) => {
+            // Two words of nineteen digits each, so each half converts in
+            // `u64`: the low half to all its digits, the high half below.
+            const SPLIT: u128 = 10_000_000_000_000_000_000;
+            let mut low = (product % SPLIT) as u64;
+            for slot in buf[WORD_DIGITS..].iter_mut().rev() {
+                *slot = (low % 10) as u8;
+                low /= 10;
+            }
+            ((product / SPLIT) as u64, WORD_DIGITS)
+        }
+    };
+    loop {
+        end -= 1;
+        buf[end] = (word % 10) as u8;
+        word /= 10;
+        if word == 0 {
+            break;
         }
     }
-    let mut carry = 0u16;
-    for slot in out.iter_mut().rev() {
-        let v = *slot + carry;
-        *slot = v % 10;
-        carry = v / 10;
-    }
-    debug_assert_eq!(carry, 0, "the output vector is wide enough for any product");
-    let lead = out.iter().take_while(|d| **d == 0).count();
-    let lead = lead.min(out.len() - 1);
-    out[lead..].iter().map(|d| *d as u8).collect()
+    Digits::from_slice(&buf[end..])
 }
 
 /// Which division the caller wants. All three share one algorithm in the
@@ -623,6 +657,45 @@ mod mul_shortcut_tests {
         // A shortcut that declined everything would satisfy the loop above
         // without saying anything.
         assert!(taken > 0, "the shortcut never fired");
+    }
+
+    /// The word product answers what the limb product answers, at every
+    /// width either side of what a word holds, including the all-nines
+    /// operands whose product needs every digit of a `u128`'s two halves.
+    #[test]
+    fn the_word_product_answers_what_the_limb_product_answers() {
+        let mut state = 0x9E37_79B9_7F4A_7C15u64;
+        let mut next = || {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            state
+        };
+        for la in 1..=super::WORD_DIGITS {
+            for lb in 1..=super::WORD_DIGITS {
+                for style in 0..4 {
+                    // All nines, a power of ten, or random digits.
+                    let mut make = |len: usize| -> Vec<u8> {
+                        (0..len)
+                            .map(|i| match style {
+                                0 => 9,
+                                1 => u8::from(i == 0),
+                                _ => (next() % 10) as u8,
+                            })
+                            .collect()
+                    };
+                    let mut a = make(la);
+                    let mut b = make(lb);
+                    a[0] = a[0].max(1);
+                    b[0] = b[0].max(1);
+                    let limbs = crate::limbs::to_digits(&crate::limbs::mul(
+                        &crate::limbs::from_digits(&a, 0),
+                        &crate::limbs::from_digits(&b, 0),
+                    ));
+                    assert_eq!(super::word_product(&a, &b).to_vec(), limbs, "{a:?} x {b:?}");
+                }
+            }
+        }
     }
 
     /// The shortcut declines every operand it must, so that the assertion
