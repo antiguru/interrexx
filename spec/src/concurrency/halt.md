@@ -586,9 +586,9 @@ cancelled, and a ticker that an error in its target's `triggered` stopped
 cancelled alarm or ticker with a delay of a minute does not make the program
 last a minute. An activity that waits for something that nothing can bring
 about any more keeps the program for ever. interrexx refuses such a wait
-([Deviation 20](r:conc.activities.deviation.20)), but once the main program
-has ended it does not refuse it yet, and the program hangs (#249), which no
-example here tests. A main program that interrexx ends with a refusal does not
+([Deviation 20](r:conc.activities.deviation.20)), also once the main program
+has ended: the program ends with exit code 120 and does not wait for the other
+activities, where ooRexx hangs. A main program that interrexx ends with a refusal does not
 wait for any of them ([the Deviation 21 rule](r:conc.halt.deviation.21)). The
 status of the command is the main program's ([the next
 rule](r:conc.halt.end.status)).
