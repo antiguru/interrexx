@@ -1077,3 +1077,23 @@ fn unstarted_native_failure_releases_kept_objects_and_lent_storage() {
         interp.collect_now();
     }
 }
+
+/// **A native `Buffer`'s bytes are charged to the collector's trigger** and
+/// reported as held by the buffer's body.
+#[test]
+fn a_native_buffers_bytes_are_charged_and_held() {
+    use interrexx_api::callbacks::Surface;
+    const N: usize = 1 << 20;
+    let mut interp = Interp::new();
+    let before = interp.heap.bytes_since();
+    let buffer = interp.new_buffer(N);
+    assert!(
+        interp.heap.bytes_since() >= before + N,
+        "the trigger's count rose by at least the buffer's size"
+    );
+    let held = interp.heap.get(buffer).expect("a buffer").body.held_bytes();
+    assert!(
+        held >= N,
+        "held_bytes reports the buffer's {N} bytes, got {held}"
+    );
+}
