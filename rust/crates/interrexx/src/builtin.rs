@@ -882,7 +882,11 @@ fn optional_string(interp: &mut Interp, args: Args<'_>, position: usize) -> Opti
 
 /// An argument the builtin declared as an integer, converted as an optional or
 /// required integer argument is.
-#[inline]
+///
+/// **Inlined into each builtin for its two common answers**, an omitted
+/// argument and a tagged integer, which are a few instructions against a call
+/// whose prologue and epilogue alone were more than that.
+#[inline(always)]
 fn whole_number(
     interp: &mut Interp,
     name: &[u8],
@@ -902,6 +906,19 @@ fn whole_number(
     {
         return Ok(Some(whole));
     }
+    whole_number_converted(interp, name, args, position, value)
+}
+
+/// [`whole_number`] of a present argument that is not a tagged integer in
+/// range.
+#[inline(never)]
+fn whole_number_converted(
+    interp: &mut Interp,
+    name: &[u8],
+    args: Args<'_>,
+    position: usize,
+    value: ObjRef,
+) -> Result<Option<i64>, Failure> {
     // `to_number` hands back an owned `Number`, so the borrow of `interp` is
     // over before `to_text` below needs its own.
     if let Ok(number) = interp.to_number(value)
