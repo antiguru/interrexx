@@ -275,7 +275,8 @@ and <a href="index.html#r-lex.index.read-first">ends</a> with the exit code 221.
 <a href="../instructions/do.html">DO</a>, <a href="../instructions/if.html">IF</a> or
 <a href="../instructions/select.html">SELECT</a> body raises <code>SYNTAX 47.2</code>, <code>47.3</code> or
 <code>47.4</code> when the program is read, and a label in the text given to
-<a href="../instructions/interpret.html#r-instr.interpret.labels">INTERPRET</a> raises <code>SYNTAX 47.1</code>.</p>
+<a href="../instructions/interpret.html#r-instr.interpret.labels">INTERPRET</a> raises <code>SYNTAX 47.1</code>. A program that holds only labels has no clause to
+run, so it ends at once with no output and the exit code 0.</p>
 <pre><code class="language-rexx">go : /* c */ say 'a'
 1: say 'b'
 .x: y.1: say 'c'
@@ -301,6 +302,11 @@ found
 first
 16.1
 </code></pre>
+<pre><code class="language-rexx">first:
+second: /* c */
+"third":
+</code></pre>
+<pre><code class="language-output"></code></pre>
 <pre><code class="language-rexx">say 'before'
 x: = 3
 </code></pre>
