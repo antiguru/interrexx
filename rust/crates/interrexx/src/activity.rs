@@ -5,7 +5,7 @@ use std::rc::Rc;
 
 use interrexx_core::ObjRef;
 
-use crate::activation::Activation;
+use crate::activation::{Activation, ActivationId};
 use crate::clause::ClauseState;
 use crate::error::{Failure, FailureSite};
 use crate::plan::Package;
@@ -204,6 +204,12 @@ pub(crate) struct Activity {
     /// pause echoes at the indent of the loop level it reached, not the one
     /// it is nested at. Taken by the clause that uses it.
     pub(crate) rerun_indent: Option<usize>,
+    /// The activation, clause index and indent [`Activity::rerun_indent`] gave a
+    /// clause that ran again, which the error report echoes the clause at too
+    /// if it raises. Other clauses run in between (a debug destination's own
+    /// methods), so it is matched by activation and index and cleared when that
+    /// clause next starts without a rerun.
+    pub(crate) rerun_failure_indent: Option<(ActivationId, usize, usize)>,
     /// The absolute printed indent every clause of the **current activation
     /// level** starts from -- `0` for a program's own body, and an
     /// `INTERPRET` fragment's enclosing clause's own printed indent for the
@@ -529,6 +535,7 @@ impl Activity {
             pending_rc: None,
             indent_offset: 0,
             rerun_indent: None,
+            rerun_failure_indent: None,
             activation_indent: 0,
             failure_site: None,
             failure_sites: Vec::new(),
@@ -695,6 +702,7 @@ impl Activity {
             pending_rc,
             indent_offset: _,
             rerun_indent: _,
+            rerun_failure_indent: _,
             activation_indent: _,
             failure_site: _,
             failure_sites: _,

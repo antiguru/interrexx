@@ -1515,6 +1515,56 @@ exit
      8 *-* exit
 ```
 
+r[env.debugging.input.leave]
+A LEAVE that `=` runs again is shown at the indent of the DO, which is the
+level outside the loop the first LEAVE ended, and so is the clause in the
+error report when the second LEAVE finds no loop and raises `SYNTAX 28.1`.
+
+```rexx
+.debuginput~destination(.in~new(.array~of('', '', '=', '', '', '', '', '', '', '')))
+.traceoutput~destination(.show~new)
+.error~destination(.show~new)
+trace ?a
+do i = 1 to 3
+  if i = 1 then leave
+  say i
+end
+exit
+::class in
+::method init
+  expose a i
+  use arg a
+  i = 0
+::method linein
+  expose a i
+  i += 1
+  if i > a~items then return ''
+  say '[read' i':' a[i]']'
+  return a[i]
+::class show
+::method lineout
+  use arg l
+  l = '' || l
+  if l~pos(' running ') > 0 then l = l~left(l~pos(' running ') - 1)
+  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  return 0
+```
+
+```output rc=228
+     5 *-* do i = 1 to 3
++++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+[read 1: ]
+     6 *-*   if i = 1 
+[read 2: ]
+     6 *-*     then
+     6 *-*       leave
+[read 3: =]
+     6 *-* leave
+     6 *-* leave
+Error 28
+Error 28.1:  LEAVE is valid only within a repetitive loop or labeled block instruction.
+```
+
 r[env.debugging.input.trace]
 A TRACE instruction that a line runs takes effect, unlike one in the
 program, and so does a call of the TRACE function with an argument; either
