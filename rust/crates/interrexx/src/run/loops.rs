@@ -1130,6 +1130,15 @@ impl Interp {
                     ClauseOutcome::Ended(exit) => return Ok(Flow::Exit(exit.value())),
                     ClauseOutcome::Ran(ran) => ran?,
                 }
+                // The pause after the header, ahead of the body: this arm
+                // runs the whole block, so the region's own pause cannot.
+                if self.chunk_trace().debugging() {
+                    match self.debug_pause_after_clause(code, index, instruction, source, None)? {
+                        super::interpret::Pause::Go => {}
+                        super::interpret::Pause::Again => return Ok(Flow::Goto(index)),
+                        super::interpret::Pause::Transfer(flow) => return Ok(flow),
+                    }
+                }
                 let flow = self.run_bounded(code, body_start, end_index, source, engine)?;
                 return match self.do_body_outcome(code, index, label, false, resume, flow)? {
                     DoOutcome::Escaped(escape) => Ok(escape),
