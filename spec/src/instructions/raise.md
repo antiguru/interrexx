@@ -1439,7 +1439,7 @@ lbl: raise propagate array ('p', 'q') description 'd4'
   raise user foo description 'orig' additional ('orig add')
 ```
 
-```output defect=#115
+```output
 1 [orig] orig add
 2 [new] orig add
 3 [orig] new add
