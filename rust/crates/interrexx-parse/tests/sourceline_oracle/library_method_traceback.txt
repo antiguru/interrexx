@@ -12,8 +12,8 @@ count 29
  * other is built:
  *
  *   - the frame is the catalogue's 101.24, `Method &1 with scope "&2" in
- *     package "&3" (no source available).`, under the method's own line
- *     number and at the same indent the clause would have had;
+ *     package "&3" (no source available).`, under a library line number
+ *     (unspecified, r[cond.information.library]) at the clause's indent;
  *   - the report names the **package** and not a file, because the innermost
  *     frame with a line is the library's.
  *
