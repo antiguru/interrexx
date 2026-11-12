@@ -196,7 +196,9 @@ With the operation `C`, STREAM carries out `command`, which begins with a
 word that names the command: `OPEN`, `CLOSE`, `FLUSH`, `SEEK`, `POSITION`
 or `QUERY`. The word may be in any case, and may be shortened to any of its
 leading letters down to the first. What is after the word is the command's
-own, and the rules for each say what it is. A first word
+own, and the rules for each say what it is. A later word that reads `OPEN` or
+`CLOSE` does not make the command an OPEN or a CLOSE: a `QUERY` that has one
+raises `SYNTAX 93.0` and leaves the stream open at its position. A first word
 that no command begins with raises `SYNTAX 93.914`, and anything the
 command does not take after it, `SYNTAX 93.0`. A `command` that is the null
 string, or only blanks, has no first word and closes the stream, as `CLOSE`
@@ -247,6 +249,30 @@ READY: READY
 [READY:] UNKNOWN
 [] UNKNOWN
 READY: [READY:] UNKNOWN
+```
+
+```rexx
+f = 'spec-stream-command-first.tmp'
+call sysfiledelete f
+call charout f, 'abcdef'
+call charout f
+say stream(f, 'c', 'open read') charin(f, , 2)
+signal on syntax name a
+say stream(f, 'c', 'query position close')
+a: say condition('o')~code stream(f) stream(f, 'c', 'query position read')
+signal on syntax name b
+say stream(f, 'c', 'query position read open')
+b: say condition('o')~code stream(f) stream(f, 'c', 'query position read')
+signal off syntax
+say stream(f, 'c', 'cl') stream(f)
+call sysfiledelete f
+```
+
+```output
+READY: ab
+93.0 READY 3
+93.0 READY 3
+READY: UNKNOWN
 ```
 
 ### OPEN
