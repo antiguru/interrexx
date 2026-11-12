@@ -189,7 +189,7 @@ fn parse(source: &ProgramSource, checked: bool) -> Result<Parsed, (ParseError, V
         tokens: &scanned.tokens,
         symbols: &scanned.symbols,
         selectors: &selectors,
-        keywords: &scanned.keywords,
+        keywords: scanned.keywords,
         resources: &scanned.resources,
     };
 

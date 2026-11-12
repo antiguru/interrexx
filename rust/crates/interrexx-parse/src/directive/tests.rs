@@ -41,7 +41,7 @@ fn parse_with_symbols(
             tokens: &scanned.tokens,
             symbols: &scanned.symbols,
             selectors: &selectors,
-            keywords: &scanned.keywords,
+            keywords: scanned.keywords,
             resources: &scanned.resources,
         };
         let mut cursor = ClauseCursor::new(split_clauses(ctx.tokens)?);

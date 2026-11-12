@@ -1,6 +1,7 @@
 //! The pre-interned keyword tables.
 
 use super::{SymbolId, SymbolTable};
+use std::sync::LazyLock;
 
 /// One table: the interned spellings, in table order, so a hit yields that
 /// table's own index and the caller maps the index to its own enum.
@@ -46,6 +47,19 @@ pub struct Keywords {
 }
 
 impl Keywords {
+    /// The process-wide keyword tables, interned once into a frozen table,
+    /// and a fresh table over it. Every id the tables hold is the id
+    /// `Keywords::new` on an empty table would have handed out.
+    pub fn shared() -> (SymbolTable, &'static Keywords) {
+        static SHARED: LazyLock<(SymbolTable, Keywords)> = LazyLock::new(|| {
+            let mut symbols = SymbolTable::default();
+            let keywords = Keywords::new(&mut symbols);
+            (symbols, keywords)
+        });
+        let (base, keywords) = &*SHARED;
+        (SymbolTable::over(base), keywords)
+    }
+
     /// Interns all six tables into `symbols`.
     pub fn new(symbols: &mut SymbolTable) -> Self {
         Keywords {

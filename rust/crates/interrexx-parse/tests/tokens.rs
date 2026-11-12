@@ -153,3 +153,44 @@ fn blank_significance_depends_on_the_class_of_the_token_before_it() {
     assert!(!TokenKind::Eoc.makes_blank_significant());
     assert!(!TokenKind::Comma.makes_blank_significant());
 }
+
+#[test]
+fn a_table_over_the_shared_keywords_hands_out_the_ids_a_fresh_table_does() {
+    // The scanner interns every chunk over one process-wide keyword table.
+    // Ids are dense and in interning order, so the layered table must agree
+    // id for id with a table that interned the keywords itself and then the
+    // same source symbols -- keywords met again, new names, a case variant,
+    // a name past the upcasing buffer, and enough names to grow the index.
+    let mut plain = SymbolTable::default();
+    let plain_keywords = Keywords::new(&mut plain);
+    let (mut layered, shared_keywords) = Keywords::shared();
+    assert_eq!(layered.len(), plain.len());
+
+    let long = "a".repeat(100);
+    let mut texts: Vec<String> = ["say", "x", "Say", "END", "t", "length", "x", &long, "value"]
+        .iter()
+        .map(|t| t.to_string())
+        .collect();
+    texts.extend((0..500).map(|i| format!("v{i}")));
+    texts.extend((0..500).map(|i| format!("V{i}")));
+    for text in &texts {
+        let (a, b) = (plain.intern(text), layered.intern(text));
+        assert_eq!(a, b, "{text}");
+        assert_eq!(plain.name(a), layered.name(b));
+        assert_eq!(layered.name(b), text.to_ascii_uppercase());
+    }
+    assert_eq!(layered.len(), plain.len());
+    assert_eq!(
+        shared_keywords
+            .sub_keywords
+            .index_of(layered.intern("value")),
+        plain_keywords.sub_keywords.index_of(plain.intern("value")),
+    );
+
+    // A second table over the same base does not see the first one's names.
+    let (mut other, _) = Keywords::shared();
+    let before = other.len();
+    let v0 = other.intern("v0");
+    assert_eq!(v0.index(), before);
+    assert_eq!(other.name(v0), "V0");
+}
