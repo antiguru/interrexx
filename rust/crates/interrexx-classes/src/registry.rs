@@ -401,6 +401,14 @@ impl ClassRegistry {
         self.graph.subclasses(class)
     }
 
+    /// The stamp an answer derived from the superclass lists or from the
+    /// registered names is valid against -- see [`ClassGraph::ancestry_stamp`].
+    /// Every change to [`Self::lookup`]'s table also moves it, since a name is
+    /// only registered by a define and only dropped by an expunge.
+    pub fn ancestry_stamp(&self) -> u64 {
+        self.graph.ancestry_stamp()
+    }
+
     /// `~isA`/`~isSubclassOf` -- the same test as `~isA`: `class == other`, or
     /// any of `class`'s ancestors is compatible with `other`, recursively over
     /// the same `superClasses` list `~superClasses` reads (not the flattened

@@ -1348,3 +1348,4 @@ lang/method_table_supplier_boundaries.rex
 lang/raise_additional_return_mutation.rex
 lang/raise_untraced_renders_nothing.rex
 lang/reference_conversion_raises_in_clause.rex
+lang/hash_class_kinds_runtime.rex

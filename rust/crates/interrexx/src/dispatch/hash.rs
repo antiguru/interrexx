@@ -9,6 +9,8 @@ use removal::{
     Removal, native_hash_empty, native_hash_remove_item, take, take_at, take_in, take_merged,
 };
 
+use interrexx_core::NameMap;
+
 use super::collection;
 use super::required_string_named_argument;
 use super::{
@@ -115,12 +117,42 @@ const INDEX_ONLY: &[&str] = &["Set", "Bag"];
 /// of replacing it: the multi-value contents, whose `put` adds at the front.
 const MULTI_VALUE: &[&str] = &["Relation", "Bag"];
 
-/// Whether `receiver` holds more than one item per index.
-fn multi_value(interp: &mut Interp, receiver: ObjRef) -> bool {
-    let Some(class) = interp.class_of_value(receiver) else {
-        return false;
-    };
-    for name in MULTI_VALUE {
+/// The answers of this file's class tests for one class, as bits.
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
+pub(crate) struct HashKind(u8);
+
+impl HashKind {
+    /// [`OWNED`].
+    const OWNED: u8 = 1;
+    /// [`INDEX_ONLY`].
+    const INDEX_ONLY: u8 = 1 << 1;
+    /// [`MULTI_VALUE`].
+    const MULTI_VALUE: u8 = 1 << 2;
+    /// [`STRING_KEYED`].
+    const STRING_KEYED: u8 = 1 << 3;
+    /// `IdentityTable`.
+    const IDENTITY: u8 = 1 << 4;
+    /// [`STORE_HOLDERS`].
+    const STORE_HOLDER: u8 = 1 << 5;
+
+    fn has(self, bit: u8) -> bool {
+        self.0 & bit != 0
+    }
+}
+
+/// Each class's [`HashKind`], valid while the class registry's ancestry stamp
+/// is `stamp`. Every answer is a function of the superclass lists and the
+/// registered names alone, and the stamp moves with either, so a class that
+/// `inherit`s, `uninherit`s or is defined at run time is classified afresh.
+#[derive(Default)]
+pub(crate) struct HashKinds {
+    stamp: u64,
+    kinds: NameMap<ObjRef, HashKind>,
+}
+
+/// Whether `class` is or inherits from the class registered as one of `names`.
+fn class_is_a_named(interp: &mut Interp, class: ObjRef, names: &[&str]) -> bool {
+    for name in names {
         let Some(base) = interp.classes().lookup(name) else {
             continue;
         };
@@ -131,20 +163,59 @@ fn multi_value(interp: &mut Interp, receiver: ObjRef) -> bool {
     false
 }
 
-/// Whether `receiver`'s `put` is the index-only one.
-fn index_only(interp: &mut Interp, receiver: ObjRef) -> bool {
-    let Some(class) = interp.class_of_value(receiver) else {
-        return false;
-    };
-    for name in INDEX_ONLY {
-        let Some(base) = interp.classes().lookup(name) else {
-            continue;
-        };
-        if interp.classes().is_a(class, base) {
-            return true;
+/// `class`'s answers to every class test here, worked out from the class
+/// graph.
+#[cold]
+fn classify(interp: &mut Interp, class: ObjRef) -> HashKind {
+    let mut kind = 0;
+    for (bit, names) in [
+        (HashKind::OWNED, OWNED),
+        (HashKind::INDEX_ONLY, INDEX_ONLY),
+        (HashKind::MULTI_VALUE, MULTI_VALUE),
+        (HashKind::STRING_KEYED, STRING_KEYED),
+        (HashKind::IDENTITY, &["IdentityTable"][..]),
+    ] {
+        if class_is_a_named(interp, class, names) {
+            kind |= bit;
         }
     }
-    false
+    if holds_store_class(interp, class) {
+        kind |= HashKind::STORE_HOLDER;
+    }
+    HashKind(kind)
+}
+
+/// `class`'s [`HashKind`], from [`HashKinds`] while the ancestry stamp holds.
+fn kind_of_class(interp: &mut Interp, class: ObjRef) -> HashKind {
+    let stamp = interp.classes().ancestry_stamp();
+    if interp.hash_kinds.stamp != stamp {
+        interp.hash_kinds.kinds.clear();
+        interp.hash_kinds.stamp = stamp;
+    } else if let Some(&kind) = interp.hash_kinds.kinds.get(&class) {
+        return kind;
+    }
+    let kind = classify(interp, class);
+    interp.hash_kinds.kinds.insert(class, kind);
+    kind
+}
+
+/// The [`HashKind`] of `receiver`'s class; none of the bits for a value with
+/// no class.
+fn kind_of(interp: &mut Interp, receiver: ObjRef) -> HashKind {
+    match interp.class_of_value(receiver) {
+        Some(class) => kind_of_class(interp, class),
+        None => HashKind::default(),
+    }
+}
+
+/// Whether `receiver` holds more than one item per index.
+fn multi_value(interp: &mut Interp, receiver: ObjRef) -> bool {
+    kind_of(interp, receiver).has(HashKind::MULTI_VALUE)
+}
+
+/// Whether `receiver`'s `put` is the index-only one.
+fn index_only(interp: &mut Interp, receiver: ObjRef) -> bool {
+    kind_of(interp, receiver).has(HashKind::INDEX_ONLY)
 }
 
 /// Whether `receiver`'s class is one of [`OWNED`].
@@ -157,7 +228,7 @@ pub(crate) fn owns(interp: &mut Interp, receiver: ObjRef) -> bool {
     ) {
         return false;
     }
-    class_is_one_of(interp, receiver, OWNED)
+    kind_of(interp, receiver).has(HashKind::OWNED)
 }
 
 /// Whether `receiver`'s class is or inherits from one of `names`.
@@ -165,15 +236,7 @@ fn class_is_one_of(interp: &mut Interp, receiver: ObjRef, names: &[&str]) -> boo
     let Some(class) = interp.class_of_value(receiver) else {
         return false;
     };
-    for name in names {
-        let Some(base) = interp.classes().lookup(name) else {
-            continue;
-        };
-        if interp.classes().is_a(class, base) {
-            return true;
-        }
-    }
-    false
+    class_is_a_named(interp, class, names)
 }
 
 /// The refusal for a receiver [`owns`] declines: a collection of one of
@@ -236,10 +299,7 @@ pub(super) const STORE_HOLDERS: &[&str] = &[
 
 /// Whether `receiver` is an instance of a class this file gives a store to.
 fn holds_hash_store(interp: &mut Interp, receiver: ObjRef) -> bool {
-    let Some(class) = interp.class_of_value(receiver) else {
-        return false;
-    };
-    holds_store_class(interp, class)
+    kind_of(interp, receiver).has(HashKind::STORE_HOLDER)
 }
 
 /// Whether `class` is one of [`STORE_HOLDERS`] or a subclass of one.
@@ -518,36 +578,14 @@ const STRING_KEYED: &[&str] = &["Directory", "StringTable", "Properties"];
 
 /// Whether `receiver`'s class is one of [`STRING_KEYED`].
 pub(crate) fn string_keyed(interp: &mut Interp, receiver: ObjRef) -> bool {
-    let Some(class) = interp.class_of_value(receiver) else {
-        return false;
-    };
-    for name in STRING_KEYED {
-        let Some(base) = interp.classes().lookup(name) else {
-            continue;
-        };
-        if interp.classes().is_a(class, base) {
-            return true;
-        }
-    }
-    false
+    kind_of(interp, receiver).has(HashKind::STRING_KEYED)
 }
 
 fn keys_of(interp: &mut Interp, receiver: ObjRef) -> Keys {
-    let Some(class) = interp.class_of_value(receiver) else {
-        return Keys::Equality;
-    };
-    for name in STRING_KEYED {
-        let Some(base) = interp.classes().lookup(name) else {
-            continue;
-        };
-        if interp.classes().is_a(class, base) {
-            return Keys::StringValue;
-        }
-    }
-    let Some(identity) = interp.classes().lookup("IdentityTable") else {
-        return Keys::Equality;
-    };
-    if interp.classes().is_a(class, identity) {
+    let kind = kind_of(interp, receiver);
+    if kind.has(HashKind::STRING_KEYED) {
+        Keys::StringValue
+    } else if kind.has(HashKind::IDENTITY) {
         Keys::Identity
     } else {
         Keys::Equality
@@ -1375,7 +1413,7 @@ pub(super) fn initialize_store(
         }
         _ => return Ok(()),
     };
-    if holds_store_class(interp, class) {
+    if kind_of_class(interp, class).has(HashKind::STORE_HOLDER) {
         install_store(interp, receiver, CONTENTS, calculate_bucket_size(capacity));
     }
     Ok(())

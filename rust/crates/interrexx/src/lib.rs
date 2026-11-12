@@ -1638,6 +1638,9 @@ struct Interp {
     store_generation: u64,
     /// Bumped by every slot a hash store's arrays are written at.
     store_writes: u64,
+    /// Each class's answers to the hash collections' class tests, as of a
+    /// class-graph ancestry stamp -- see `dispatch::hash::kind_of_class`.
+    hash_kinds: dispatch::hash::HashKinds,
     /// `SAY`'s route as of [`Interp::route_generation`]: `None` writes
     /// straight to the buffer. Deciding it afresh costs 764 instructions a
     /// line -- measured, `sayloop` at 1.40x -- and both halves of that are
@@ -2418,6 +2421,7 @@ impl Interp {
             route_generation: 0,
             store_generation: 0,
             store_writes: 0,
+            hash_kinds: Default::default(),
             output_route: None,
             collect_at: COLLECT_FLOOR,
             bytes_due: COLLECT_BYTES_FLOOR,
@@ -3523,6 +3527,8 @@ impl Interp {
             route_generation: _,
             store_generation: _,
             store_writes: _,
+            // Keyed by class, dropped with the stamp rather than keeping one.
+            hash_kinds: _,
             // The route it names is `.local`'s own entry, which that global
             // root holds; this caches the decision, not the object.
             output_route: _,

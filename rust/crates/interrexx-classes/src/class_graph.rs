@@ -168,6 +168,12 @@ pub struct ClassGraph {
     /// built, which says whether [`ClassGraph::define`] may recompute only
     /// the names it changed.
     inputs: InputTicks,
+    /// Bumped by every change to which classes exist or to any class's
+    /// `superclasses`: a define, a reparent, an `inherit`, an `uninherit` and
+    /// an expunge. An answer derived from the ancestry ([`Self::ancestors`]
+    /// read transitively, as `is_a` does) holds while this stays put. A define
+    /// counts because an identity an expunge freed can be minted again.
+    ancestry: u64,
 }
 
 /// A clock over the cascade's instance-side inputs -- each class's own
@@ -233,6 +239,16 @@ impl ClassGraph {
         self.epoch = Epoch::fresh();
     }
 
+    /// See [`ClassGraph::ancestry`]: the stamp an answer derived from the
+    /// superclass lists is valid against.
+    pub fn ancestry_stamp(&self) -> u64 {
+        self.ancestry
+    }
+
+    fn ancestry_changed(&mut self) {
+        self.ancestry = self.ancestry.wrapping_add(1);
+    }
+
     fn alloc_behaviour(&mut self) -> BehaviourHandle {
         if let Some(handle) = self.free_behaviours.pop() {
             return handle;
@@ -269,6 +285,7 @@ impl ClassGraph {
                 )
             }
         };
+        self.ancestry_changed();
         let instance_behaviour = self.alloc_behaviour();
         let class_behaviour = self.alloc_behaviour();
         self.classes.insert(
@@ -314,6 +331,7 @@ impl ClassGraph {
         metaclass: ObjRef,
     ) {
         self.bump_epoch();
+        self.ancestry_changed();
         let instance_behaviour = self.alloc_behaviour();
         let class_behaviour = self.alloc_behaviour();
         self.classes.insert(
@@ -397,6 +415,7 @@ impl ClassGraph {
             ClassKind::Mixin => self.classes[&superclass].base_class,
         };
         let parent_has_uninit = self.uninit_reaches(superclass);
+        self.ancestry_changed();
         let old = std::mem::take(&mut self.classes.get_mut(&id).unwrap().superclasses);
         for sup in old {
             if let Some(def) = self.classes.get_mut(&sup) {
@@ -520,6 +539,7 @@ impl ClassGraph {
     /// lists of the classes that survive.
     pub fn expunge(&mut self, dead: &[ObjRef]) {
         self.bump_epoch();
+        self.ancestry_changed();
         let ClassGraph {
             classes,
             behaviours,
@@ -529,6 +549,7 @@ impl ClassGraph {
             uninit_classes,
             epoch: _,
             inputs,
+            ancestry: _,
         } = self;
         for class in dead {
             // The dictionaries are the weight: a flattened behaviour holds
@@ -1238,6 +1259,7 @@ impl ClassGraph {
             .superclasses
             .insert(at, mixin);
         self.inputs.touch(class);
+        self.ancestry_changed();
         self.classes.get_mut(&mixin).unwrap().subclasses.push(class);
         self.update_sub_classes(class);
         if self.uninit_reaches(mixin) {
@@ -1267,6 +1289,7 @@ impl ClassGraph {
             .superclasses
             .remove(at);
         self.inputs.touch(class);
+        self.ancestry_changed();
         // The subclass-list removal takes out the one entry it finds, and a
         // class reaches a mixin's subclass list once: a second `~inherit` of
         // the same mixin is the recursive refusal above.
