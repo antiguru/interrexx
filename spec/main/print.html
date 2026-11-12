@@ -82412,7 +82412,7 @@ try:
 bad: say arg(1) '=&gt;' condition('o')~code
   return
 </code></pre>
-<pre><code class="language-output defect=#201">20,30 0
+<pre><code class="language-output">20,30 0
 20,30
 b,c 1
 s~item =&gt; 93.937
@@ -82501,7 +82501,7 @@ say v~sa v~si
 ::method si
   return self~item:super
 </code></pre>
-<pre><code class="language-output defect=#201">2,3 0
+<pre><code class="language-output">2,3 0
 9 sends
 b,c 0
 11,22 A,B
@@ -82535,7 +82535,7 @@ bad: say arg(1) '=&gt;' condition('o')~code
 ::method item
   return
 </code></pre>
-<pre><code class="language-output defect=#201">.stuck~new(.array~of(1), .array~of(2))~allItems =&gt; 93.937
+<pre><code class="language-output">.stuck~new(.array~of(1), .array~of(2))~allItems =&gt; 93.937
 .odd~new(.array~of(1), .array~of(2))~allItems =&gt; 34.3
 .odd2~new(.array~of(1), .array~of(2))~allItems =&gt; 34.3
 .noitem~new(.array~of(1), .array~of(2))~allItems =&gt; 91.999
