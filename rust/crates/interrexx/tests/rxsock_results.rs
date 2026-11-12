@@ -60,7 +60,7 @@ fn eval_program(lines: &[&str], requires: &str) -> String {
 /// `rexx` under a time limit, so that a call that waits for ever fails the
 /// case rather than the run.
 fn bounded(rexx: &Path) -> Command {
-    let mut command = Command::new("timeout");
+    let mut command = Command::new(env!("CARGO_BIN_EXE_bounded-run"));
     command.args(["-k", "5", "60"]).arg(rexx);
     command
 }

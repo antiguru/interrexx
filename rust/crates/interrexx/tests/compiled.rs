@@ -69,7 +69,7 @@ impl Side {
     /// A command running `program` from this side's directory under
     /// `timeout`, the oracle's under its address-space cap.
     fn command(&self, program: &Path) -> Command {
-        let mut command = Command::new("timeout");
+        let mut command = Command::new(env!("CARGO_BIN_EXE_bounded-run"));
         command.args(["-k", "5", "20"]);
         if self.oracle {
             command

@@ -144,7 +144,7 @@ fn check_owned_stdout(case: &str, source: &[u8], expected: &[u8], errors: &[u8],
         .open(directory.join("captured-output.bin"))
         .unwrap();
     let child = Command::new("memcap")
-        .args(["2G", "timeout", "20"])
+        .args(["2G", env!("CARGO_BIN_EXE_bounded-run"), "20"])
         .arg(env!("CARGO_BIN_EXE_rexx"))
         .arg(&program)
         .current_dir(&directory)

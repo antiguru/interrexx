@@ -35,7 +35,7 @@ fn run_rexx(arguments: &[&str], cwd: &Path, library_path: Option<&Path>) -> Outp
         std::env::split_paths(&std::env::var_os("PATH").unwrap_or_default()),
     ))
     .expect("a PATH");
-    let mut command = Command::new("timeout");
+    let mut command = Command::new(env!("CARGO_BIN_EXE_bounded-run"));
     command
         .args(["-k", "5", "300"])
         .arg(REXX)

@@ -276,7 +276,7 @@ fn run(
     case: &datadriven::TestCase,
     oracle: bool,
 ) -> String {
-    let mut command = Command::new("timeout");
+    let mut command = Command::new(env!("CARGO_BIN_EXE_bounded-run"));
     command.args(["-k", "5", "20"]);
     if oracle {
         command
@@ -416,7 +416,7 @@ fn a_dash_e_program_gets_its_argument_as_a_file_does() {
     let text = "say '[' || arg(1) || ']' arg()";
     std::fs::write(dir.join("echo.rex"), format!("{text}\n")).expect("the program");
     let stdout = |args: &[&str]| {
-        let output = Command::new("timeout")
+        let output = Command::new(env!("CARGO_BIN_EXE_bounded-run"))
             .args(["-k", "5", "20"])
             .arg(ours)
             .args(args)
