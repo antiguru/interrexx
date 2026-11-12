@@ -628,7 +628,16 @@ impl Interp {
             return Err(crate::run::raised_for_code(code, texts).into());
         }
         let text = match item(2) {
-            Some(description) => self.string_value_text(description)?,
+            // A `String` subclass instance is read by its own characters
+            // (spec: class.commandcontext.deviation.109); any other object
+            // by its string value, not named as a message insert names it.
+            Some(description) if crate::dispatch::subclass_text(self, description).is_some() => {
+                self.string_value_text(description)?
+            }
+            Some(description) => {
+                let text = self.required_string_value(description)?;
+                self.string_value_text(text)?
+            }
             None => command.to_vec(),
         };
         if name == b"HALT" {
