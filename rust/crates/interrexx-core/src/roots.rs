@@ -83,6 +83,9 @@ struct Segment {
 pub struct RootSet {
     /// By name; a name added again replaces its value.
     globals: crate::NameMap<String, ObjRef>,
+    /// The value the last activation to end with one ended with, `.nil`
+    /// before the first, which is no root: see [`RootSet::hold_ended_value`].
+    ended_value: ObjRef,
     /// Storage for variables a `>name` reference has been taken to, outside
     /// every frame. A cell lives as long as its [`crate::Body::Cell`]
     /// object, which the collector reaches from what holds the cell.
@@ -140,6 +143,7 @@ impl RootSet {
     pub fn new() -> Self {
         RootSet {
             globals: crate::NameMap::default(),
+            ended_value: ObjRef::NIL,
             cells: Vec::new(),
             free_cells: Vec::new(),
             next_serial: 0,
@@ -154,6 +158,15 @@ impl RootSet {
                 self.globals.insert(name.to_string(), value);
             }
         }
+    }
+
+    /// Holds `value`, replacing the value this held before: the root that
+    /// carries an activation's `RETURN` or `EXIT` value past the frames that
+    /// rooted it, written once per value-returning activation, so a slot of
+    /// its own rather than a named global.
+    #[inline]
+    pub fn hold_ended_value(&mut self, value: ObjRef) {
+        self.ended_value = value;
     }
 
     /// The name of every global root.
@@ -384,7 +397,11 @@ impl RootSet {
     /// popped frame's slots are already gone, truncated out of `slots` by
     /// `pop_slots`, so nothing here needs to filter them out again by frame.
     pub fn iter(&self) -> impl Iterator<Item = ObjRef> + '_ {
-        self.globals.values().copied().chain(self.activity.iter())
+        self.globals
+            .values()
+            .copied()
+            .chain((self.ended_value != ObjRef::NIL).then_some(self.ended_value))
+            .chain(self.activity.iter())
     }
 }
 

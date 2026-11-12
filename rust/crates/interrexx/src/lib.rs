@@ -353,11 +353,6 @@ fn ends_a_line(bytes: &[u8]) -> bool {
     bytes.iter().any(|&byte| byte == b'\n' || byte == b'\r')
 }
 
-/// The globals entry [`Interp::root_exit_value`] writes. A name rather than an
-/// index because `RootSet::add_global` is keyed by name and replaces in place,
-/// which is the behaviour wanted here.
-const EXIT_VALUE_ROOT: &str = "the program's exit value";
-
 /// What one interpreter run produced.
 #[derive(Debug)]
 pub struct Outcome {
@@ -3191,7 +3186,7 @@ impl Interp {
     /// Roots a value that has to outlive the clause that produced it, all the
     /// way to [`Interp::exit_code_for`].
     fn root_exit_value(&mut self, value: ObjRef) {
-        self.roots.add_global(EXIT_VALUE_ROOT, value);
+        self.roots.hold_ended_value(value);
     }
 
     /// Turns on the collect-on-every-allocation stress mode. Only
