@@ -2981,6 +2981,24 @@ say (10 ** 999999999) (2e333333333 ** 3) (3e-333333333 ** 3)
 4.33559593523E-301029996 1.13679261102E+176091259 1
 1E+999999999 8E+999999999 2.7E-999999998
 </code></pre>
+<div class="rule" id="r-num.arithmetic.power.message"><a href="numbers/arithmetic.html#r-num.arithmetic.power.message">[num.arithmetic.power.message]</a></div>
+<p>The message of the <code>SYNTAX 42.1</code> error names the base and the exponent as the
+program wrote them, not as the numbers they denote, with <code>**</code> between them.</p>
+<pre><code class="language-rexx">signal on syntax name a
+say 1e3 ** 999999999
+a: say condition('o')~message
+signal on syntax name b
+say ' 100 ' ** '999999999'
+b: say condition('o')~message
+x = 1e3
+signal on syntax name c
+say x ** 99999999e1
+c: say condition('o')~message
+</code></pre>
+<pre><code class="language-output">Arithmetic overflow detected at:  "1E3**999999999".
+Arithmetic overflow detected at:  " 100 **999999999".
+Arithmetic overflow detected at:  "1E3**99999999E1".
+</code></pre>
 <h2 id="errors-in-the-multiplicative-and-additive-operators"><a class="header" href="#errors-in-the-multiplicative-and-additive-operators">Errors in the multiplicative and additive operators</a></h2>
 <div class="rule" id="r-num.arithmetic.range"><a href="numbers/arithmetic.html#r-num.arithmetic.range">[num.arithmetic.range]</a></div>
 <p>A result of <code>+</code>, <code>-</code>, <code>*</code> or <code>/</code> that is out of the exponent range raises the
@@ -77636,7 +77654,7 @@ x = .commandhandler~deregister('spec_nch_fwd')
   use arg command, caller
   return target~command(command, caller)
 </code></pre>
-<pre><code class="language-output defect=#183">0 NativeCommandHandler REDIRECTING SYSTEM
+<pre><code class="language-output">0 NativeCommandHandler REDIRECTING SYSTEM
 1
 through the name
 rc 0
@@ -78552,7 +78570,6 @@ call on error name trap
 address spec_cc_desc 'a'
 address spec_cc_desc 'b'
 address spec_cc_desc 'c'
-address spec_cc_desc 'd'
 x = .commandhandler~deregister('spec_cc_desc')
 exit
 trap:
@@ -78563,9 +78580,7 @@ trap:
   use arg command, caller
   if command = 'a' then return caller~raise('ERROR', 1, .lg~new)
   if command = 'b' then return caller~raise('ERROR', 1, .ms~new)
-  if command = 'c' then
-    return caller~raise('ERROR', 1, .mutablebuffer~new('mb'))
-  return caller~raise('ERROR', 1, .rq~new)
+  return caller~raise('ERROR', 1, .mutablebuffer~new('mb'))
 ::class lg
 ::method string
   say '  lg string'
@@ -78574,6 +78589,29 @@ trap:
 ::method makestring
   say '  ms makestring'
   return 'mstext'
+</code></pre>
+<pre><code class="language-output">  lg string
+  trap &lt;lgtext&gt; String
+  ms makestring
+  trap &lt;mstext&gt; String
+  trap &lt;mb&gt; String
+</code></pre>
+<blockquote>
+<p>A description whose class has a <code>request</code> method of its own is read through
+<code>request('STRING')</code>.</p>
+</blockquote>
+<pre><code class="language-rexx">x = .commandhandler~register('spec_cc_descreq', .raiser~new)
+call on error name trap
+address spec_cc_descreq 'd'
+x = .commandhandler~deregister('spec_cc_descreq')
+exit
+trap:
+  say '  trap &lt;'condition('d')'&gt;' condition('o')~description~class~id
+  return
+::class raiser inherit CommandHandler
+::method command
+  use arg command, caller
+  return caller~raise('ERROR', 1, .rq~new)
 ::class rq
 ::method request
   say '  rq request' arg(1)
@@ -78582,12 +78620,7 @@ trap:
   say '  rq makestring'
   return 'mstext'
 </code></pre>
-<pre><code class="language-output defect=#184">  lg string
-  trap &lt;lgtext&gt; String
-  ms makestring
-  trap &lt;mstext&gt; String
-  trap &lt;mb&gt; String
-  rq request STRING
+<pre><code class="language-output defect=#164">  rq request STRING
   trap &lt;rqtext&gt; String
 </code></pre>
 <pre><code class="language-rexx">x = .commandhandler~register('spec_cc_any', .h~new)
@@ -81887,7 +81920,7 @@ bad: say arg(1) '=&gt;' condition('o')~code
   return
 ::requires "rxregexp.cls"
 </code></pre>
-<pre><code class="language-output defect=#202">.RegularExpression~new(.nil, , 3) =&gt; 88.909
+<pre><code class="language-output">.RegularExpression~new(.nil, , 3) =&gt; 88.909
 re~parse(.nil, , 1) =&gt; 88.909
 re~match(.nil, 1) =&gt; 88.909
 re~match(, 1) =&gt; 88.901

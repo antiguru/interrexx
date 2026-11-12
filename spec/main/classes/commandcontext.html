@@ -1082,7 +1082,6 @@ call on error name trap
 address spec_cc_desc 'a'
 address spec_cc_desc 'b'
 address spec_cc_desc 'c'
-address spec_cc_desc 'd'
 x = .commandhandler~deregister('spec_cc_desc')
 exit
 trap:
@@ -1093,9 +1092,7 @@ trap:
   use arg command, caller
   if command = 'a' then return caller~raise('ERROR', 1, .lg~new)
   if command = 'b' then return caller~raise('ERROR', 1, .ms~new)
-  if command = 'c' then
-    return caller~raise('ERROR', 1, .mutablebuffer~new('mb'))
-  return caller~raise('ERROR', 1, .rq~new)
+  return caller~raise('ERROR', 1, .mutablebuffer~new('mb'))
 ::class lg
 ::method string
   say '  lg string'
@@ -1104,6 +1101,29 @@ trap:
 ::method makestring
   say '  ms makestring'
   return 'mstext'
+</code></pre>
+<pre><code class="language-output">  lg string
+  trap &lt;lgtext&gt; String
+  ms makestring
+  trap &lt;mstext&gt; String
+  trap &lt;mb&gt; String
+</code></pre>
+<blockquote>
+<p>A description whose class has a <code>request</code> method of its own is read through
+<code>request('STRING')</code>.</p>
+</blockquote>
+<pre><code class="language-rexx">x = .commandhandler~register('spec_cc_descreq', .raiser~new)
+call on error name trap
+address spec_cc_descreq 'd'
+x = .commandhandler~deregister('spec_cc_descreq')
+exit
+trap:
+  say '  trap &lt;'condition('d')'&gt;' condition('o')~description~class~id
+  return
+::class raiser inherit CommandHandler
+::method command
+  use arg command, caller
+  return caller~raise('ERROR', 1, .rq~new)
 ::class rq
 ::method request
   say '  rq request' arg(1)
@@ -1112,12 +1132,7 @@ trap:
   say '  rq makestring'
   return 'mstext'
 </code></pre>
-<pre><code class="language-output defect=#184">  lg string
-  trap &lt;lgtext&gt; String
-  ms makestring
-  trap &lt;mstext&gt; String
-  trap &lt;mb&gt; String
-  rq request STRING
+<pre><code class="language-output defect=#164">  rq request STRING
   trap &lt;rqtext&gt; String
 </code></pre>
 <pre><code class="language-rexx">x = .commandhandler~register('spec_cc_any', .h~new)
