@@ -320,11 +320,17 @@ fn native_relation_remove_item(
         return Err(not_this_task(interp, receiver, b"REMOVEITEM"));
     }
     let wanted = super::collection::item_argument(args)?;
-    let under = args
-        .get(1)
-        .copied()
-        .flatten()
-        .or_else(|| super::index_only(interp, receiver).then_some(wanted));
+    let bag = super::index_only(interp, receiver);
+    let supplied_index = args.get(1).copied().flatten();
+    // Bag's item is its index. Its optional argument is compared before
+    // hashing, as hasItem does, and a mismatch removes nothing.
+    if bag
+        && let Some(index) = supplied_index
+        && !super::collection::same_item(interp, wanted, index)?
+    {
+        return Ok(Some(ObjRef::NIL));
+    }
+    let under = if bag { Some(wanted) } else { supplied_index };
     let keys = keys_of(interp, receiver);
     let hash = under
         .map(|index| super::hash_of(interp, keys, index))
@@ -353,7 +359,8 @@ fn native_relation_remove_item(
             let Some(item) = slot_at(interp, store.items, slot)? else {
                 continue;
             };
-            if super::collection::same_item(interp, wanted, item)? {
+            // A Bag's item is its index, which already matched.
+            if bag || super::collection::same_item(interp, wanted, item)? {
                 if let Some(removed) = super::take_at(interp, receiver, &store, slot, bucket)? {
                     return Ok(Some(removed));
                 }

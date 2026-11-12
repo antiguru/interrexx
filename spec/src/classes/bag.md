@@ -680,7 +680,7 @@ say b~removeItem(.k~new('s1'), .k~new('s1'))~tag '|',
   return 'same'
 ```
 
-```output defect=#170
+```output
 1 | == A B
 s1 | == s1 s1 | hash s1 | == s1 s1
 ```
