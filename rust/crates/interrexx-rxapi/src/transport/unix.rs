@@ -180,7 +180,17 @@ fn unavailable(error: &io::Error) -> TransportError {
 }
 
 fn private(dir: &Path) -> Result<PathBuf, TransportError> {
-    prepare_dir(dir).map_err(|error| unavailable(&error))
+    prepare_dir(dir).map_err(|error| {
+        // A directory that is there and refused for its owner or mode, as against one that
+        // could not be made.
+        if error.kind() == io::ErrorKind::PermissionDenied && fs::symlink_metadata(dir).is_ok() {
+            TransportError::NotPrivate {
+                dir: dir.display().to_string(),
+            }
+        } else {
+            unavailable(&error)
+        }
+    })
 }
 
 #[expect(clippy::disallowed_methods, reason = "a real start's real deadline")]
