@@ -19,6 +19,16 @@ fn is_blank(byte: u8) -> bool {
     byte == b' ' || byte == b'\t'
 }
 
+/// Whether `PARSE UPPER`'s or `PARSE LOWER`'s fold leaves `bytes` as they
+/// are.
+fn unfolded(parse: &Parse, bytes: &[u8]) -> bool {
+    if parse.upper {
+        !bytes.iter().any(u8::is_ascii_lowercase)
+    } else {
+        !bytes.iter().any(u8::is_ascii_uppercase)
+    }
+}
+
 /// Where one `PARSE` clause's templates get their strings.
 enum ParseStrings {
     /// A single-string source. The slot empties on the first take, so a
@@ -386,8 +396,9 @@ impl Interp {
     /// `Body::Text`'s bytes are written once, by the `alloc` that builds the
     /// object, and no other body in the value model holds bytes that are
     /// immutable for a whole clause -- a `MutableBuffer`'s contents are not.
-    /// A folding `PARSE` always copies, because it rewrites the parse string
-    /// in place.
+    /// A folding `PARSE` copies a string the fold would change, because it
+    /// rewrites the parse string in place.
+    #[inline(always)]
     fn source_text(&mut self, value: ObjRef, parse: &Parse) -> SourceText {
         if !parse.upper && !parse.lower {
             match value.decode() {
@@ -404,6 +415,32 @@ impl Interp {
                 }
                 _ => {}
             }
+            return SourceText::Owned(self.rendered_into_parse_buffer(value));
+        }
+        self.folded_source_text(value, parse)
+    }
+
+    /// [`Interp::source_text`] under `UPPER` or `LOWER`. A string the fold
+    /// leaves as it is is read in place, which is ooRexx's answer as well:
+    /// `parse upper var u b` over an already upper-case `u` leaves `b` and
+    /// `u` one object.
+    #[inline(never)]
+    fn folded_source_text(&mut self, value: ObjRef, parse: &Parse) -> SourceText {
+        match value.decode() {
+            Decoded::Text(inline) if unfolded(parse, &inline) => {
+                return SourceText::Inline(inline);
+            }
+            Decoded::Heap { .. } => {
+                if let Some(bytes) = self.heap.body_text(value)
+                    && unfolded(parse, bytes)
+                {
+                    let length = bytes.len();
+                    // Rooted as `Interp::source_text` roots it.
+                    self.roots.activity_mut().push_temp(value);
+                    return SourceText::Text { value, length };
+                }
+            }
+            _ => {}
         }
         SourceText::Owned(self.rendered_into_parse_buffer(value))
     }
@@ -434,6 +471,15 @@ impl Interp {
         let bytes = &string[piece.start..piece.end];
         if let Some(inline) = ObjRef::inline_text(bytes) {
             return (piece, inline);
+        }
+        // **A piece that is the whole parse string is the parse string**,
+        // where that is an object: what ooRexx assigns too (`parse var a b`
+        // leaves `b` and `a` one object in an `IdentityTable`), and no copy.
+        if let SourceText::Text { value, length } = *source
+            && piece.start == 0
+            && piece.end == length
+        {
+            return (piece, value);
         }
         let value = self.text_bytes(Bytes::from_slice(bytes));
         self.charge_text(piece.len());
@@ -512,12 +558,11 @@ impl Interp {
                 self.argument_text(at, parse)?
             }
         };
-        if parse.upper || parse.lower {
-            // A folding source owns its bytes; `Interp::source_text` is where
-            // that is decided.
-            let SourceText::Owned(buffer) = &mut source else {
-                unreachable!("a folding PARSE reached a borrowed parse string")
-            };
+        // A borrowed string is one the fold leaves unchanged;
+        // `Interp::source_text` is where that is decided.
+        if (parse.upper || parse.lower)
+            && let SourceText::Owned(buffer) = &mut source
+        {
             if parse.upper {
                 buffer.make_ascii_uppercase();
             } else {
