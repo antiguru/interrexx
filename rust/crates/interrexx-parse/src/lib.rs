@@ -79,9 +79,9 @@ pub struct Fragment {
 pub struct Rejected {
     pub error: ParseError,
     pub source: ProgramSource,
-    /// The directives whose `EXTERNAL` the parse passed the oracle's resolution
-    /// point for before it failed, in that order. A failure to resolve one of
-    /// them is reported in place of `error`.
+    /// The directives whose `EXTERNAL` the parse passed the resolution point
+    /// for before it failed, in that order. A failure to resolve one of them is
+    /// reported in place of `error`.
     pub binds: Vec<Directive>,
 }
 
@@ -220,8 +220,8 @@ fn parse(source: &ProgramSource, checked: bool) -> Result<Parsed, (ParseError, V
 }
 
 /// The grammar over the clauses `cursor` holds: the main body, then the
-/// directives into `directives`, with the index of each one whose `EXTERNAL`
-/// the oracle resolves while translating in `binds`.
+/// directives into `directives`, with the index of each one whose `EXTERNAL` is
+/// resolved while translating in `binds`.
 fn translate<'a>(
     ctx: &'a ParseCtx<'a>,
     cursor: &mut ClauseCursor,
@@ -289,5 +289,5 @@ pub(crate) fn directive_body(kind: &mut DirectiveKind) -> Option<&mut CodeBody> 
 
 // The label table used to be built here, in a pass over the finished
 // instruction list. It is built by `Block::add_clause` now, which is where
-// the oracle adds labels, because a body's labels have to be its own and only
-// the assembler knows where one body ends and the next begins.
+// labels are added, because a body's labels have to be its own and only the
+// assembler knows where one body ends and the next begins.

@@ -29,7 +29,7 @@ const _: () = assert!(
      and a deep expression aborts the process instead of raising 11.1"
 );
 
-/// Dyadic operator precedence, ported from the oracle's precedence table.
+/// Dyadic operator precedence, from the precedence table.
 fn precedence(op: Operator) -> u8 {
     match op {
         Operator::Backslash => 8,
@@ -67,9 +67,9 @@ pub(crate) struct Terminators(u32);
 // Tasks 3.6 and 3.7 pick a set per instruction. Only `EOC`, `RIGHT` and
 // `SQRIGHT` have a caller inside the grammar itself.
 impl Terminators {
-    /// End of clause. Carried for fidelity with the oracle and never read: the
-    /// oracle's terminator test returns true for an end of clause and for a
-    /// comma whatever the flags say.
+    /// End of clause. Carried for completeness and never read: the terminator
+    /// test is true for an end of clause and for a comma whatever the flags
+    /// say.
     pub(crate) const EOC: Terminators = Terminators(0x0000_0001);
     pub(crate) const RIGHT: Terminators = Terminators(0x0000_0002);
     pub(crate) const SQRIGHT: Terminators = Terminators(0x0000_0004);
@@ -89,8 +89,7 @@ impl Terminators {
         Terminators(Self::KEYWORD.0 | Self::TO.0 | Self::BY.0 | Self::FOR.0 | Self::WHILE.0);
     /// A `WHILE`/`UNTIL` conditional.
     pub(crate) const COND: Terminators = Terminators(Self::KEYWORD.0 | Self::WHILE.0);
-    /// A `DO ... OVER` collection expression. `OVER` itself is not a terminator:
-    /// the oracle's terminator test has no case for it.
+    /// A `DO ... OVER` collection expression. `OVER` itself is not a terminator.
     pub(crate) const OVER: Terminators = Terminators(Self::KEYWORD.0 | Self::FOR.0 | Self::WHILE.0);
     /// An `IF` or `WHEN` condition.
     pub(crate) const IF: Terminators = Terminators(Self::KEYWORD.0 | Self::THEN.0);
@@ -102,7 +101,7 @@ impl Terminators {
     }
 
     /// The union of two sets. Every real set is a named constant, so this
-    /// exists only for the test that builds one the C++ never would.
+    /// exists only for the test that builds one no real set is.
     #[cfg(test)]
     pub(super) const fn with(self, flag: Terminators) -> Terminators {
         Terminators(self.0 | flag.0)
@@ -251,17 +250,17 @@ pub(crate) fn parse_variable_or_message_term(
 ) -> Result<Option<Expr>, ParseError> {
     // The message-term attempt runs on a cursor of its own, because it may
     // consume tokens and come back empty and the fallback below has to see the
-    // first token again. The C++ resets its position for the same reason.
+    // first token again.
     let mut trial = TokenCursor::new(cursor.start()..cursor.end());
     while trial.position() < cursor.position() {
         trial.advance();
     }
     if let Some(term) = Parser::new(ctx, &mut trial).message_term()? {
         *cursor = trial;
-        // The C++ converts the message into an assignment message here. That
-        // rewrite belongs to whoever executes it: the name it would append
-        // `=` to is `ExprKind::Message::name`, and the instruction node
-        // already records that this term is an assignment target.
+        // Converting the message into an assignment message belongs to whoever
+        // executes it: the name it would append `=` to is
+        // `ExprKind::Message::name`, and the instruction node already records
+        // that this term is an assignment target.
         return Ok(Some(term));
     }
     let mut parser = Parser::new(ctx, cursor);
@@ -367,7 +366,7 @@ impl<'a, 'c> Parser<'a, 'c> {
     }
 
     /// Error 36's two sub-numbers, for the token at index `opener` with no
-    /// matching closer: the oracle inserts its 1-based offset in its line, then
+    /// matching closer: the inserts are its 1-based offset in its line, then
     /// the line.
     #[cold]
     #[inline(never)]
@@ -552,18 +551,18 @@ impl<'a, 'c> Parser<'a, 'c> {
                 return Ok(left);
             }
             let op = match &token.kind {
-                // A term where an operator was expected is an abuttal. The
-                // C++ synthesises a zero-length operator token and pushes the
-                // term back, so nothing is consumed here either.
+                // A term where an operator was expected is an abuttal. A
+                // zero-length operator token is synthesised and the term pushed
+                // back, so nothing is consumed here either.
                 TokenKind::Symbol { .. } | TokenKind::Literal { .. } | TokenKind::LeftParen => {
                     Operator::Abuttal
                 }
                 TokenKind::Blank => {
-                    // A blank next to a terminator is not an operator, which
-                    // is what stops `do i = 1 to 3 while x` concatenating `3`
-                    // with `WHILE`. The C++ consumes the blank even then,
-                    // because the next-real read moved past it, so the blanks are
-                    // skipped rather than left for the caller.
+                    // A blank next to a terminator is not an operator, which is
+                    // what stops `do i = 1 to 3 while x` concatenating `3` with
+                    // `WHILE`. The blank is consumed even then, because the
+                    // next-real read moved past it, so the blanks are skipped
+                    // rather than left for the caller.
                     if self.is_terminator(self.peek_real(), term) {
                         self.skip_blanks();
                         return Ok(left);
@@ -576,13 +575,13 @@ impl<'a, 'c> Parser<'a, 'c> {
                     return Err(self.invalid_at(Some(token)));
                 }
                 TokenKind::Operator(op) => *op,
-                // The C++'s TILDE, DTILDE and SQLEFT cases, which reattach the
+                // The TILDE, DTILDE and SQLEFT cases, which reattach the
                 // message to the term already parsed. Reached whenever the left
                 // term did not come back through `message_subterm`'s own
                 // cascade loop, which is what a prefix `>` or `<` does:
                 // `variable_reference_term` returns straight to the caller, so
-                // the `~` in `>a~b` arrives here. Measured, `r = >a~b` and
-                // `r = >a[1]` both translate.
+                // the `~` in `>a~b` arrives here. So `r = >a~b` and `r = >a[1]`
+                // both translate.
                 TokenKind::Tilde | TokenKind::DTilde | TokenKind::LeftBracket => {
                     left = self.cascade(left, term)?;
                     continue;
@@ -649,9 +648,9 @@ impl<'a, 'c> Parser<'a, 'c> {
         let Some(atom) = self.subterm(term)? else {
             return Ok(None);
         };
-        // A message cascade is part of the same expression term, and the C++
-        // parses its message names with the end-of-clause terminator rather than
-        // the caller's set.
+        // A message cascade is part of the same expression term, and its message
+        // names are parsed with the end-of-clause terminator rather than the
+        // caller's set.
         self.cascade(atom, Terminators::EOC).map(Some)
     }
 
@@ -678,11 +677,10 @@ impl<'a, 'c> Parser<'a, 'c> {
     fn collection_message(&mut self, target: Expr, from: usize) -> Result<Expr, ParseError> {
         let args = self.arg_list(Some(Tag::RightBracket))?;
         let extent = self.extent(from);
-        // Interned like a written name, where the oracle reaches for
-        // `GlobalNames::BRACKETS`: its pool of pre-made names is a second pool
-        // this crate does not have, and one pool that holds the spelling however
-        // it was written is the same answer for a reader that compares
-        // selectors.
+        // Interned like a written name, where a pool of pre-made names would be
+        // a second pool this crate does not have, and one pool that holds the
+        // spelling however it was written is the same answer for a reader that
+        // compares selectors.
         let name = self.ctx.selectors.borrow_mut().intern(b"[]");
         Ok(Expr::new(
             ExprKind::Message {
@@ -705,18 +703,18 @@ impl<'a, 'c> Parser<'a, 'c> {
         from: usize,
         term: Terminators,
     ) -> Result<Expr, ParseError> {
-        // No blank is ever skipped here, and the C++ does not skip one either:
-        // it uses the next-token read. A blank is only a token when the next
-        // real character starts a symbol, a literal, `(` or `[`, and the
-        // previous token was a symbol, a literal, `)` or `]`, so a `~` can have
-        // a blank on neither side. Measured, `"abc" ~ length` is 3.
+        // No blank is ever skipped here, and the next-token read does not skip
+        // one either. A blank is only a token when the next real character
+        // starts a symbol, a literal, `(` or `[`, and the previous token was a
+        // symbol, a literal, `)` or `]`, so a `~` can have a blank on neither
+        // side. So `"abc" ~ length` is 3.
         let name = match self.peek() {
             Some(token) if !self.is_terminator(Some(token), term) => match &token.kind {
                 // Already upcased by the scanner.
                 TokenKind::Symbol { id, .. } => self.ctx.symbols.name(*id).as_bytes().to_vec(),
-                // The oracle upcases a literal name too, per byte and so ASCII
-                // only. Measured, `"abc"~'length'`, `"abc"~'LENGTH'` and
-                // `"abc"~"lEnGtH"` all give 3.
+                // A literal name is upcased too, per byte and so ASCII only:
+                // `"abc"~'length'`, `"abc"~'LENGTH'` and `"abc"~"lEnGtH"` all
+                // give 3.
                 TokenKind::Literal { value } => {
                     value.iter().map(|b| b.to_ascii_uppercase()).collect()
                 }
@@ -725,7 +723,7 @@ impl<'a, 'c> Parser<'a, 'c> {
             },
             _ => return Err(self.raise(E19_909, [])),
         };
-        // Interned upcased, which is where the oracle interns it.
+        // Interned upcased, which is where it is interned.
         let name = self.ctx.selectors.borrow_mut().intern(&name);
         self.advance();
 
@@ -878,11 +876,11 @@ impl<'a, 'c> Parser<'a, 'c> {
         if self.is_terminator(Some(token), Terminators::EOC) {
             return Ok(None);
         }
-        // The C++'s fast path, and it exists to avoid allocating a variable
-        // slot for every keyword instruction name in every code block. It is
-        // reproduced because it also decides the answer: a simple variable
-        // followed by neither a message operator nor a `(` is rejected here
-        // rather than parsed and thrown away.
+        // A fast path that exists to avoid allocating a variable slot for every
+        // keyword instruction name in every code block. It is reproduced
+        // because it also decides the answer: a simple variable followed by
+        // neither a message operator nor a `(` is rejected here rather than
+        // parsed and thrown away.
         if matches!(
             &token.kind,
             TokenKind::Symbol {
@@ -938,12 +936,11 @@ impl<'a, 'c> Parser<'a, 'c> {
         match &token.kind {
             TokenKind::LeftParen => {
                 self.advance();
-                // One more level would recurse past MAX_EXPR_DEPTH,
-                // so raise the same condition the oracle raises somewhere
-                // past its own, differently-sized cliff, rather than
-                // descending into `full_subexpression` at all. See
-                // `MAX_EXPR_DEPTH`'s own doc comment for the two measured
-                // cliffs this sits between.
+                // One more level would recurse past MAX_EXPR_DEPTH, so raise
+                // the same condition as the reference implementation does past
+                // its own, differently-sized cliff, rather than descending into
+                // `full_subexpression` at all. See `MAX_EXPR_DEPTH`'s own doc
+                // comment for the two cliffs this sits between.
                 if self.expr_depth >= MAX_EXPR_DEPTH {
                     return Err(self.raise(E11_1, []));
                 }
@@ -1008,7 +1005,7 @@ impl<'a, 'c> Parser<'a, 'c> {
             TokenKind::Operator(op) => match op {
                 // Not this function's business: `message_subterm` handles a
                 // prefix operator, so report nothing found rather than an
-                // error. Unreachable from there, mirrored from the C++.
+                // error. Unreachable from there.
                 Operator::Plus | Operator::Subtract | Operator::Backslash => Ok(None),
                 Operator::LessThan | Operator::GreaterThan => {
                     self.advance();

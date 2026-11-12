@@ -179,14 +179,14 @@ pub(crate) fn parse_instruction(
     // assignment tests rather than inside the keyword dispatch: measured, `if 1
     // = 1` followed by `then = 7` is an error rather than an assignment.
     if let Some((which, byte)) = cursor.take_expected_then() {
-        // A label clause is excluded, which is the one place this diverges
-        // from the C++. There the label is still one clause with whatever
-        // follows the colon, so a label spelled THEN becomes the THEN and the
-        // leftover `:` then fails with 35.1. The colon is already split
-        // off here, leaving nothing that can fail, so the missing-THEN
-        // error fires instead. Both reject `if 1 = 1` followed by
-        // `then: nop`, measured 35.1 for both the IF and the WHEN spelling,
-        // and only the number differs.
+        // A label clause is excluded, which is the one place this differs from
+        // a plain reading of the clause. There the label is still one clause
+        // with whatever follows the colon, so a label spelled THEN becomes the
+        // THEN and the leftover `:` then fails with 35.1. The colon is already
+        // split off here, leaving nothing that can fail, so the missing-THEN
+        // error fires instead. Both reject `if 1 = 1` followed by `then: nop`,
+        // with 35.1 for both the IF and the WHEN spelling, and only the number
+        // differs.
         if parser.clause.label.is_some() || parser.first_keyword() != Some(KW_THEN) {
             // Reported against THIS clause, the offending one, naming the IF's
             // line: measured, `nop` / `if 1 = 1` / blank / blank / `nop`
@@ -238,8 +238,8 @@ impl<'a> Inst<'a> {
         ParseError::raise(msg, self.clause_byte, inserts)
     }
 
-    /// `msg` naming `token` as the oracle displays it, `None` being the end of
-    /// the clause.
+    /// `msg` naming `token` as it is displayed, `None` being the end of the
+    /// clause.
     #[cold]
     #[inline(never)]
     fn found(&self, msg: Msg<1>, token: Option<&Token>) -> ParseError {
@@ -266,7 +266,7 @@ impl<'a> Inst<'a> {
     }
 
     /// 24.1 for a `TRACE` setting `check_trace_setting` refused, naming its
-    /// first letter that is not `?` (the oracle's rejected-option position).
+    /// first letter that is not `?` (the rejected-option position).
     #[cold]
     #[inline(never)]
     fn bad_trace_setting(&self, value: &[u8]) -> ParseError {
@@ -494,8 +494,8 @@ impl<'a> Inst<'a> {
         need_variable(self.ctx, id, class, self.clause_byte)?;
         self.seek(self.cursor.position() + 2);
         let value = self.expr(Terminators::EOC, E35_918)?;
-        // The oracle expands `a += b` into `a = a + b` at parse time, building
-        // the binary node itself, so there is one instruction form and not two.
+        // `a += b` is expanded into `a = a + b` at parse time, building the
+        // binary node itself, so there is one instruction form and not two.
         let target = Expr::new(symbol_kind(id, class), target_span);
         let value = match op {
             None => value,
@@ -523,10 +523,9 @@ impl<'a> Inst<'a> {
             }
             Some(TokenKind::Operator(Operator::Equal)) => None,
             Some(TokenKind::Assignment(op)) => Some(*op),
-            // Anything else means this was not a message instruction after
-            // all, so the clause goes back to keyword processing with its
-            // position reset, which is what the oracle does by falling through
-            // to the first token.
+            // Anything else means this was not a message instruction after all,
+            // so the clause goes back to keyword processing with its position
+            // reset, by falling through to the first token.
             _ => {
                 self.cursor = TokenCursor::new(self.clause.tokens.clone());
                 return Ok(None);
@@ -539,8 +538,8 @@ impl<'a> Inst<'a> {
         };
         let value = match op {
             None => value,
-            // The oracle keeps a copy of the message term as the left operand
-            // and turns the original into the assignment.
+            // A copy of the message term is kept as the left operand and the
+            // original is turned into the assignment.
             Some(op) => Expr::binary(op, term.clone(), value),
         };
         Ok(Some(InstructionKind::Message {
@@ -620,8 +619,8 @@ impl<'a> Inst<'a> {
             }
             // `SAY`, `PUSH` and `QUEUE` are the same two lines: an optional
             // expression to the end of the clause. PUSH and QUEUE share one
-            // instruction class in the oracle and differ only in the instruction
-            // type, which is why they are separate variants here.
+            // instruction class and differ only in the instruction type, which
+            // is why they are separate variants here.
             KW_SAY => {
                 self.next_real();
                 let expression = self.opt_expr(Terminators::EOC)?;
@@ -644,9 +643,9 @@ impl<'a> Inst<'a> {
             }
             KW_EXPOSE => {
                 self.next_real();
-                // The oracle rejects this inside INTERPRET. Measured at run
-                // time, because rexxc never parses the string: `interpret
-                // "expose a"` is rc 157, Error 99.908.
+                // This is rejected inside INTERPRET, which happens at run time,
+                // because `rexxc` never parses the string: `interpret "expose
+                // a"` is rc 157, Error 99.908.
                 if self.ctx.source.kind() == SourceKind::Interpret {
                     return Err(self.error(E99_908, []));
                 }
@@ -791,10 +790,10 @@ impl<'a> Inst<'a> {
                 let kind = self.select()?;
                 Ok(self.finish(cursor, kind))
             }
-            // The oracle builds both, and both parse bare: measured, `leave`
-            // alone is rc 0 under rexxc and Error 28.1 only at run time, because
-            // the interpreter raises it. A parser that rejected it would diverge
-            // on every program holding an unreachable LEAVE.
+            // Both are built, and both parse bare: `leave` alone is rc 0 under
+            // `rexxc` and Error 28.1 only at run time, because the interpreter
+            // raises it. A parser that rejected it would diverge on every
+            // program holding an unreachable LEAVE.
             KW_LEAVE => {
                 self.next_real();
                 let name = self.block_name(E20_907, E21_907)?;
@@ -806,12 +805,10 @@ impl<'a> Inst<'a> {
                 Ok(self.finish(cursor, InstructionKind::Iterate { name }))
             }
             // A THEN that reaches the keyword dispatch is always misplaced,
-            // because a real one is consumed above. The oracle's own arm is the
-            // same unconditional error.
+            // because a real one is consumed above.
             KW_THEN => Err(self.error(E8_1, [])),
-            // Unreachable: `index` came from the keyword table and every entry
-            // has an arm above, which `tests::keyword_indices_still_name_their_own_spellings`
-            // pins. The oracle's own default is the same.
+            // Unreachable: `index` came from the keyword table and every entry has an arm
+            // above, which `tests::keyword_indices_still_name_their_own_spellings` pins.
             _ => Err(self.unreachable_switch("keyword", self.peek_real())),
         }
     }
@@ -956,13 +953,13 @@ impl<'a> Inst<'a> {
                 // other logical list the empty case is 35.929 first.
                 let condition = self.logical(Terminators::EOC, E35_929)?;
                 // A GUARD expression that names no exposed variable can never be
-                // woken again, so it is rejected. The C++ collects the names as
-                // it evaluates the expression, through its guard-variable
-                // capture on the simple-variable and stem paths, then counts
-                // what it captured. Walking the finished tree is equivalent
-                // because capture is unconditional over the whole expression and
-                // those two paths are reached for exactly the variable
-                // references in it.
+                // woken again, so it is rejected. The names could be collected
+                // while the expression is evaluated, through guard-variable
+                // capture on the simple-variable and stem paths, and then
+                // counted. Walking the finished tree is equivalent because
+                // capture is unconditional over the whole expression and those
+                // two paths are reached for exactly the variable references in
+                // it.
                 self.guard_exposes(&condition, block, &mut watched);
                 if watched.is_empty() {
                     return Err(self.error(E99_913, []));
@@ -1322,7 +1319,7 @@ impl<'a> Inst<'a> {
     }
 
     /// `CALL` and the three constructors above it, which are four distinct
-    /// instruction objects in the C++.
+    /// instruction objects.
     fn call(&mut self) -> Result<Call, ParseError> {
         // Measured as 19.2 for a bare `call`.
         let Some(token) = self.next_real() else {
@@ -1366,7 +1363,7 @@ impl<'a> Inst<'a> {
                 }
             }
             // `CALL "name"` never resolves to an internal label, which is what
-            // the oracle's no-internal flag records.
+            // the no-internal flag records.
             TokenKind::Literal { value } => {
                 let name = value.clone();
                 let args = self.arg_list(None)?;
@@ -1510,8 +1507,8 @@ impl<'a> Inst<'a> {
                 self.required_end(E21_903)?;
             }
         } else {
-            // The OFF form has no label at all, which is how the C++ tells the
-            // two apart at run time.
+            // The OFF form has no label at all, which is how the two are told
+            // apart at run time.
             label = None;
             // Measured as 21.904 for `call off error x`.
             self.required_end(E21_904)?;
@@ -1587,8 +1584,7 @@ impl<'a> Inst<'a> {
     }
 
     /// An optional `LABEL name`, then an optional `CASE expr`, which is a
-    /// different instruction class in the C++ and a different `WHEN` grammar
-    /// under it.
+    /// different instruction class and a different `WHEN` grammar under it.
     fn select(&mut self) -> Result<InstructionKind, ParseError> {
         let mut label = None;
         let mut case = None;
@@ -1651,8 +1647,7 @@ impl<'a> Inst<'a> {
         }
     }
 
-    /// `IF` and the `SELECT` half of `WHEN`, which share one instruction class
-    /// in the oracle.
+    /// `IF` and the `SELECT` half of `WHEN`, which share one instruction class.
     fn if_instruction(
         mut self,
         cursor: &mut ClauseCursor,
@@ -1667,9 +1662,9 @@ impl<'a> Inst<'a> {
                 condition: self.logical(Terminators::IF, E35_929)?,
                 false_target: None,
             },
-            // The oracle asks the control stack which SELECT it is in, and the
-            // answer decides three things: whether the clause is legal, which
-            // grammar it follows, and which instruction class it becomes.
+            // The control stack is asked which SELECT it is in, and the answer
+            // decides three things: whether the clause is legal, which grammar
+            // it follows, and which instruction class it becomes.
             PendingThen::When => match block.enclosing_select() {
                 // Measured for a `WHEN` with nothing open at all and for one
                 // inside a `DO` that is itself inside a `SELECT`, which is 9.1
@@ -1711,10 +1706,10 @@ impl<'a> Inst<'a> {
             ExprKind::Compound(id) => {
                 let name = self.ctx.symbols.name(*id);
                 // A compound contributes NOTHING if this exact spelling was
-                // already referenced earlier in the body: the oracle returns the
-                // cached retriever before it reaches the calls that would
-                // capture. Measured, and it is the earlier reference that
-                // disqualifies the later guard, not the other way round.
+                // already referenced earlier in the body: the cached retriever
+                // is returned before the calls that would capture are reached,
+                // and it is the earlier reference that disqualifies the later
+                // guard, not the other way round.
                 if !block.compound_is_cached(name.as_bytes()) {
                     let (stem, tails) = compound_parts(name);
                     watch(stem);

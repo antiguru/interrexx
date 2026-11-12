@@ -1,5 +1,5 @@
-//! The text conversions both grammars need, ported from the runtime services
-//! the C++ parser reaches into rather than from either parser.
+//! The text conversions both grammars need, built from the runtime services the
+//! parsers reach into rather than from either parser.
 
 use interrexx_num::Number;
 // The precision `::OPTIONS DIGITS` and `::OPTIONS FUZZ` convert under, which is

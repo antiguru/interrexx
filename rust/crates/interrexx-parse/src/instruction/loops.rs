@@ -126,7 +126,7 @@ impl<'a> Inst<'a> {
                         self.plain_loop(label, counter, LoopKind::Forever)
                     }
                     // `DO WHILE` and `DO UNTIL` are a FOREVER loop with the
-                    // conditional attached, which is what the oracle's
+                    // conditional attached, which is what the
                     // loop-with-condition forms build.
                     Some(SUB_WHILE | SUB_UNTIL) => {
                         self.plain_loop(label, counter, LoopKind::Forever)
@@ -302,8 +302,7 @@ impl<'a> Inst<'a> {
         }
         if index.is_none() && item.is_none() {
             // Unreachable through the loop header, which only comes here when
-            // the token after WITH is INDEX or ITEM, and kept because the oracle
-            // checks it.
+            // the token after WITH is INDEX or ITEM, and kept as a check.
             return Err(self.error(E27_903, []));
         }
         // Measured: `do with index i x` is rc 229, Error 27.904.
@@ -351,8 +350,8 @@ impl<'a> Inst<'a> {
                     break;
                 }
                 // Only a `TO` or `BY` that ended the FOR expression gets here.
-                // Deviation 38: the oracle raises 49.2 with an internal enum
-                // value.
+                // Deviation 38: the reference implementation raises 49.2 with
+                // an internal enum value.
                 _ => {
                     return Err(
                         self.error(E25_927, [b"FOR".to_vec(), self.value_of(token).into_vec()])
