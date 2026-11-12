@@ -18,13 +18,20 @@ fn list_index_argument(args: &[Option<ObjRef>], at: usize) -> Result<ObjRef, Fai
         .ok_or_else(|| Raised::missing_method_argument(2).into())
 }
 
-/// A `List`'s three pool entries, under the `List` class as scope: the items
-/// in order, the handle of each, and the stack of handles removal has freed.
+/// A `List`'s four pool entries, under the `List` class as scope: the items
+/// in order, the handle of each, the stack of handles removal has freed, and
+/// a position hint per handle number.
 const LIST_ITEMS: &[u8] = b"ITEMS";
 
 const LIST_HANDLES: &[u8] = b"HANDLES";
 
 const LIST_FREE: &[u8] = b"FREE";
+
+/// Slot `h` holds the position the entry with handle `h` was last seen at.
+/// Only a hint: an insert or a removal before an entry moves it without
+/// touching the hint, so a lookup checks the hint against the handles and
+/// searches outward from it when it is stale ([`list_position`]).
+const LIST_POSITIONS: &[u8] = b"POS";
 
 /// The `List` class, which is the scope its three entries are bound under.
 fn list_scope(interp: &mut Interp) -> ObjRef {
@@ -40,23 +47,24 @@ pub(super) fn list_state(
     receiver: ObjRef,
 ) -> Result<(ObjRef, ObjRef, ObjRef), Failure> {
     let scope = list_scope(interp);
-    if let (Some(items), Some(handles), Some(free)) = (
+    if let (Some(items), Some(handles), Some(free), Some(_)) = (
         pool_variable(interp, receiver, scope, LIST_ITEMS),
         pool_variable(interp, receiver, scope, LIST_HANDLES),
         pool_variable(interp, receiver, scope, LIST_FREE),
+        pool_variable(interp, receiver, scope, LIST_POSITIONS),
     ) {
         return Ok((items, handles, free));
     }
     // Built on demand for [`store_of`]'s reason: the contents belong to the
     // allocated object, so a subclass `INIT` that does not forward still has
     // them: a `List` subclass whose `INIT` only sets an exposed variable
-    // answers `items 1` after `append('a')`. The three are only ever written
+    // answers `items 1` after `append('a')`. The four are only ever written
     // together, so a partial set is not a state this can meet.
     if !is_list(interp, receiver) {
         return Err(crate::Raised::receiver_kind("a value that is not a list").into());
     }
     let mut built = Vec::with_capacity(3);
-    for name in [LIST_ITEMS, LIST_HANDLES, LIST_FREE] {
+    for name in [LIST_ITEMS, LIST_HANDLES, LIST_FREE, LIST_POSITIONS] {
         let store = interp.alloc_charged(BehaviourId::ARRAY, Body::array(Vec::new()));
         interp.roots.activity_mut().push_temp(store);
         interp.set_pool_variable(receiver, scope, name, store);
@@ -77,8 +85,54 @@ pub(super) fn is_list(interp: &mut Interp, receiver: ObjRef) -> bool {
     interp.classes().is_a(class, list)
 }
 
+/// The whole number a stored handle is, which is always an inline integer.
+fn stored_handle(slot: Option<ObjRef>) -> Option<usize> {
+    match slot?.decode() {
+        crate::dispatch::Decoded::SmallInt(small) => {
+            interrexx_num::whole_i64(small, interrexx_num::ARGUMENT_DIGITS)
+                .and_then(|whole| usize::try_from(whole).ok())
+        }
+        _ => None,
+    }
+}
+
+/// The hint for handle number `wanted`, if the list has one.
+fn position_hint(interp: &mut Interp, receiver: ObjRef, wanted: usize) -> Option<usize> {
+    let scope = interp.classes().lookup("List")?;
+    let hints = pool_variable(interp, receiver, scope, LIST_POSITIONS)?;
+    let slot = array_slots(interp, hints).ok()?.get(wanted).copied()?;
+    stored_handle(slot)
+}
+
+/// Records that handle number `wanted` was seen at `at`.
+fn note_position(interp: &mut Interp, receiver: ObjRef, wanted: usize, at: usize) {
+    let Some(small) = i64::try_from(at).ok().and_then(ObjRef::small_int) else {
+        return;
+    };
+    let scope = list_scope(interp);
+    let Some(hints) = pool_variable(interp, receiver, scope, LIST_POSITIONS) else {
+        return;
+    };
+    let grown = match interp.heap.get_mut(hints).map(|object| &mut object.body) {
+        Some(Body::Array { slots, .. }) => {
+            let before = slots.capacity();
+            if wanted >= slots.len() {
+                slots.resize(wanted + 1);
+            }
+            slots.set(wanted, Some(small));
+            slots.capacity().saturating_sub(before)
+        }
+        _ => return,
+    };
+    interp.charge_growth(grown * interrexx_core::SLOT_BYTES);
+}
+
 /// Where in the list `handle` sits, or `None` for an index the list does not
 /// hold.
+///
+/// The position hint of the handle is tried first, and when it is stale the
+/// handles are searched outward from it, so the cost is the distance the
+/// entry has moved since it was last seen and not the length of the list.
 fn list_position(
     interp: &mut Interp,
     receiver: ObjRef,
@@ -89,22 +143,50 @@ fn list_position(
         return Err(Raised::incorrect_list_index(&written).into());
     };
     let (items, handles, _) = list_state(interp, receiver)?;
-    let held = array_slots_owned(interp, handles)?;
-    let stored = array_slots_owned(interp, items)?;
-    for (offset, slot) in held.iter().enumerate() {
-        if let Some(slot) = *slot
-            && super::unsigned_index(interp, slot)? == Some(wanted)
-        {
-            // `isIndexValid` is `isInUse`, so `validateIndex` answers NoLink
-            // for an entry holding nothing and every lookup reads it as
-            // absent. Measured over `l~put(, 1)`: `hasIndex(1)` is `0`,
-            // `at(1)` and `next(1)` are `.nil`, and `section(1,1)` raises --
-            // while the chain still walks through the entry, which is
-            // [`list_pairs`]'s business and not this function's.
-            return Ok(stored.get(offset).copied().flatten().map(|_| offset));
+    let start = position_hint(interp, receiver, wanted);
+    let found = {
+        let held = array_slots(interp, handles)?;
+        let is_wanted = |at: usize| stored_handle(held.get(at).copied().flatten()) == Some(wanted);
+        match start {
+            Some(start) if is_wanted(start) => Some(start),
+            _ => {
+                let centre = start.unwrap_or(0).min(held.len());
+                let mut found = None;
+                for distance in 0..=held.len() {
+                    let ahead = centre + distance;
+                    let behind = centre.checked_sub(distance);
+                    if ahead >= held.len() && behind.is_none() {
+                        break;
+                    }
+                    found = [Some(ahead), behind]
+                        .into_iter()
+                        .flatten()
+                        .find(|at| is_wanted(*at));
+                    if found.is_some() {
+                        break;
+                    }
+                }
+                found
+            }
         }
+    };
+    let Some(at) = found else {
+        return Ok(None);
+    };
+    if start != Some(at) {
+        note_position(interp, receiver, wanted, at);
     }
-    Ok(None)
+    // `isIndexValid` is `isInUse`, so `validateIndex` answers NoLink
+    // for an entry holding nothing and every lookup reads it as
+    // absent. Measured over `l~put(, 1)`: `hasIndex(1)` is `0`,
+    // `at(1)` and `next(1)` are `.nil`, and `section(1,1)` raises --
+    // while the chain still walks through the entry, which is
+    // [`list_pairs`]'s business and not this function's.
+    Ok(array_slots(interp, items)?
+        .get(at)
+        .copied()
+        .flatten()
+        .map(|_| at))
 }
 
 /// The handle a new item takes: the last one removal freed, or a fresh one.
@@ -135,6 +217,9 @@ pub(super) fn list_insert_at(
     let (items, handles, _) = list_state(interp, receiver)?;
     array_splice_slot(interp, items, at, item)?;
     array_splice_slot(interp, handles, at, Some(handle))?;
+    if let Some(number) = stored_handle(Some(handle)) {
+        note_position(interp, receiver, number, at);
+    }
     Ok(handle)
 }
 
@@ -366,7 +451,8 @@ fn native_list_items(
     receiver: ObjRef,
     _args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
-    let count = list_pairs(interp, receiver)?.len();
+    let (_, handles, _) = list_state(interp, receiver)?;
+    let count = array_slots(interp, handles)?.len();
     Ok(Some(interp.counted(count)))
 }
 
@@ -376,7 +462,8 @@ fn native_list_is_empty(
     receiver: ObjRef,
     _args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
-    let empty = list_pairs(interp, receiver)?.is_empty();
+    let (_, handles, _) = list_state(interp, receiver)?;
+    let empty = array_slots(interp, handles)?.is_empty();
     Ok(Some(crate::eval::logical(empty)))
 }
 
@@ -389,7 +476,9 @@ fn native_list_empty(
     _args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
     let (items, handles, free) = list_state(interp, receiver)?;
-    for store in [items, handles, free] {
+    let scope = list_scope(interp);
+    let hints = pool_variable(interp, receiver, scope, LIST_POSITIONS);
+    for store in [items, handles, free].into_iter().chain(hints) {
         match interp.heap.get_mut(store).map(|object| &mut object.body) {
             Some(Body::Array { slots, .. }) => slots.clear(),
             _ => return Err(crate::Raised::receiver_kind("a value that is not a list").into()),
@@ -408,15 +497,20 @@ fn list_end(
     take_last: bool,
     want_item: bool,
 ) -> Result<Option<ObjRef>, Failure> {
-    let pairs = list_pairs(interp, receiver)?;
-    let found = if take_last {
-        pairs.last()
+    let (items, handles, _) = list_state(interp, receiver)?;
+    let held = array_slots(interp, handles)?;
+    let at = if take_last {
+        held.len().checked_sub(1)
     } else {
-        pairs.first()
+        Some(0)
     };
-    let Some((handle, item)) = found.copied() else {
+    let Some(at) = at else {
         return Ok(Some(ObjRef::NIL));
     };
+    let Some(handle) = held.get(at).copied().flatten() else {
+        return Ok(Some(ObjRef::NIL));
+    };
+    let item = array_slots(interp, items)?.get(at).copied().flatten();
     Ok(Some(match want_item {
         // `firstItem` over an entry holding nothing is `.nil`, not the first
         // entry that holds something -- measured, and likewise `lastItem`.
@@ -473,16 +567,18 @@ fn list_step(
     let Some(at) = list_position(interp, receiver, handle)? else {
         return Ok(Some(ObjRef::NIL));
     };
-    let pairs = list_pairs(interp, receiver)?;
+    let (_, handles, _) = list_state(interp, receiver)?;
+    let held = array_slots(interp, handles)?;
     let neighbour = if forward {
-        at.checked_add(1).filter(|next| *next < pairs.len())
+        at.checked_add(1).filter(|next| *next < held.len())
     } else {
         at.checked_sub(1)
     };
-    Ok(Some(match neighbour {
-        Some(offset) => pairs[offset].0,
-        None => ObjRef::NIL,
-    }))
+    Ok(Some(
+        neighbour
+            .and_then(|offset| held.get(offset).copied().flatten())
+            .unwrap_or(ObjRef::NIL),
+    ))
 }
 
 fn native_list_next(

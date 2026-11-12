@@ -771,6 +771,7 @@ pub(super) const COLLECTION_STORES: &[(&str, &[u8])] = &[
     ("List", b"ITEMS"),
     ("List", b"HANDLES"),
     ("List", b"FREE"),
+    ("List", b"POS"),
     ("Table", b"HASHINDEXES"),
     ("Table", b"HASHITEMS"),
     ("Table", b"HASHNEXT"),

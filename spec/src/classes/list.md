@@ -217,6 +217,26 @@ m~insert("t", gone) => 93.918
 m~section(gone) => 93.918
 ```
 
+Entries keep their handles when others are inserted or removed before them:
+
+```rexx
+l = .list~new
+h = .array~new
+do i = 1 to 8; h[i] = l~append(i); end
+l~remove(h[2]); l~remove(h[5])
+x = l~insert('x', .nil)
+y = l~insert('y', h[3])
+say l~at(h[8]) l~at(h[6]) l~at(h[3]) l~at(x) l~at(y)
+say l~at(l~next(h[3])) l~at(l~previous(h[6])) l~hasIndex(h[2]) l~items
+l~put('z', h[8]); say l~lastItem l~at(h[8])
+```
+
+```output
+8 6 3 x y
+y 4 1 8
+z z
+```
+
 ## Reading and writing entries
 
 r[class.list.at]
