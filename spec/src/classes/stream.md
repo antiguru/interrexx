@@ -2099,7 +2099,7 @@ s~close
 call sysfiledelete f
 ```
 
-```output defect=#208
+```output
 2 wo
 3 three
 ```
@@ -2116,7 +2116,7 @@ s~close
 call sysfiledelete f
 ```
 
-```output defect=#207
+```output
 one two READY
 0 NOTREADY
 ```
@@ -2128,8 +2128,9 @@ was read part of the way into a line, so that its answer is the rest of that
 line as [Deviation 140](r:class.stream.deviation.140) says, and otherwise with
 one argument, the number of the line to read. For each `next` it sends
 `lineIn` with the number of the next line; the other methods of the supplier
-send nothing. `supplier` sends nothing else. The first answer of `state` is
-not used. When the second is `READY`, the supplier starts at the line that the
+send nothing. `supplier` sends nothing else, apart from the `close` that
+[the rule of `StreamSupplier`](r:class.streamsupplier.sends) says. The first
+answer of `state` is used for that `close` only. When the second is `READY`, the supplier starts at the line that the
 read position is in, which it learns from the stream by messages that are not part of this
 specification, and otherwise
 at line 1; when the second answer is `READY` for a stream that is not open,
@@ -2710,7 +2711,7 @@ s~close
 call sysfiledelete f
 ```
 
-```output defect=#208
+```output
 1 e [two]
 2 two
 ```
@@ -2746,7 +2747,7 @@ exit
   forward class (super)
 ```
 
-```output defect=#208
+```output
 2 wo  state state lineIn()
 3 three  lineIn(3)
 ```

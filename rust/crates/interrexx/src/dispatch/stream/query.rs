@@ -217,6 +217,41 @@ pub(in crate::dispatch) fn query_handle(
     Ok(Some(interp.text(answer)))
 }
 
+/// `interrexx_stream_mid_line(stream)`: whether the read position of `stream`
+/// lies inside a line and not at its start, as `1` or `0`. A supplier made
+/// there starts with the rest of that line (r[class.stream.deviation.140]),
+/// and one made at the end of a last line that has no line end is made inside
+/// that line, so it has nothing left to read (r[class.stream.supplier]). An
+/// unopened stream, and a transient one, answer `0`: neither has a position to
+/// be inside a line.
+pub(in crate::dispatch) fn supplier_mid_line(
+    interp: &mut Interp,
+    _cleared: Cleared,
+    _receiver: ObjRef,
+    args: &[Option<ObjRef>],
+) -> Result<Option<ObjRef>, Failure> {
+    let stream = args.first().copied().flatten().unwrap_or(ObjRef::NIL);
+    let mode = require(interp, stream)?.mode;
+    let record_length = if mode.record_based {
+        mode.record_length
+    } else {
+        0
+    };
+    let open = match standard_input_file(interp, stream)? {
+        true => interp.input_file(),
+        false => require_mut(interp, stream)?.open.as_mut(),
+    };
+    let mut inside = false;
+    if let Some(open) = open.filter(|open| !open.transient) {
+        let position = open.read_position;
+        if let Ok(line) = line_of(open, position, record_length) {
+            let (_, start) = seek_line(open, line, record_length);
+            inside = start != position;
+        }
+    }
+    Ok(Some(interp.text(if inside { b"1" } else { b"0" })))
+}
+
 /// `stream_query_position`: `SYS` answers the descriptor's own offset, and
 /// the rest answer a logical position. An unopened stream answers the null
 /// string, a transient one answers `1`.

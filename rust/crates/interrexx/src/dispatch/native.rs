@@ -109,6 +109,12 @@ static LIBRARY_REXX_METHODS: &[NativeExternal] = &[
         Arity::Counted,
         super::collection::supplier::collected,
     ),
+    implemented(
+        "interrexx_stream_mid_line",
+        Family::Stream,
+        Arity::Fixed(1),
+        super::stream::supplier_mid_line,
+    ),
     scoped(
         "alarm_startTimer",
         Family::Timer,
