@@ -1,0 +1,257 @@
+# Properties: the errors of its methods, as the page lists them. Each answer is the
+# code with its subcode.
+
+error
+.properties~new~"[]="('x')
+----
+93.901
+
+error
+.properties~new~"[]="('x', 'y', 'z')
+----
+93.902
+
+error
+.properties~new~"[]="(, 'y')
+----
+93.903
+
+error
+.properties~new~"[]="(.nil, 'y')
+----
+93.938
+
+error
+.properties~new~"[]="('x', .nil)
+----
+88.909
+
+error
+.properties~new~put('x')
+----
+93.901
+
+error
+.properties~new~put(, 'y')
+----
+93.903
+
+error
+.properties~new~put('x', 'y', 'z')
+----
+93.902
+
+error
+.properties~new~put(.object~new, 'k')
+----
+93.938
+
+error
+.properties~new~put('x', .nil)
+----
+88.909
+
+error
+.properties~new~setProperty('x')
+----
+93.901
+
+error
+.properties~new~setProperty(, 'y')
+----
+93.903
+
+error
+.properties~new~setProperty('x', 'y', 'z')
+----
+93.902
+
+error
+.properties~new~setProperty('k', .nil)
+----
+93.938
+
+error
+.properties~new~getProperty
+----
+93.901
+
+error
+.properties~new~getProperty(, 1)
+----
+93.903
+
+error
+.properties~new~getProperty('a', 'b', 'c')
+----
+93.902
+
+error
+.properties~new~getProperty(.nil)
+----
+88.909
+
+error
+.properties~new~getLogical
+----
+93.901
+
+error
+.properties~new~getLogical('a', 1, 2)
+----
+93.902
+
+error
+.properties~new~getLogical('missing')
+----
+34.904
+
+error
+.properties~new~getLogical('missing', 'junk')
+----
+34.904
+
+error
+.properties~new~~put('TRUE', 'k')~getLogical('k')
+----
+34.904
+
+error
+.properties~new~getWhole
+----
+93.901
+
+error
+.properties~new~getWhole('a', 1, 2)
+----
+93.902
+
+error
+.properties~new~getWhole('missing')
+----
+26.901
+
+error
+.properties~new~getWhole('missing', 1.5)
+----
+26.901
+
+error
+.properties~new~~put('1000000000', 'k')~getWhole('k')
+----
+26.901
+
+error
+.properties~new~setLogical('k')
+----
+93.901
+
+error
+.properties~new~setLogical('k', 1, 2)
+----
+93.902
+
+error
+.properties~new~setLogical(, 1)
+----
+93.903
+
+error
+.properties~new~setLogical('k', 'true')
+----
+34.901
+
+error
+.properties~new~setLogical('k', .nil)
+----
+97.1
+
+error
+.properties~new~setLogical(.nil, 1)
+----
+88.909
+
+error
+.properties~new~setWhole('k')
+----
+93.901
+
+error
+.properties~new~setWhole('k', 1, 2)
+----
+93.902
+
+error
+.properties~new~setWhole(, 1)
+----
+93.903
+
+error
+.properties~new~setWhole('k', '1.5')
+----
+93.905
+
+error
+.properties~new~setWhole('k', .nil)
+----
+97.1
+
+error
+.properties~new~setWhole(.nil, 1)
+----
+88.909
+
+error
+.properties~load
+----
+93.901
+
+error
+.properties~load('f', 1)
+----
+93.902
+
+error
+.properties~load(.nil)
+----
+97.1
+
+error
+.properties~new~load
+----
+93.901
+
+error
+.properties~new~load('f', 1)
+----
+93.902
+
+error
+.properties~new~load(.nil)
+----
+97.1
+
+error
+.properties~new~save
+----
+93.901
+
+error
+.properties~new~save('f', 1)
+----
+93.902
+
+error
+.properties~new~~put('v', 'k')~save(.nil)
+----
+97.1
+
+error
+.properties~new(-1)
+----
+93.923
+
+error
+.properties~new(1, 2)
+----
+93.902

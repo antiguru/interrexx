@@ -13,15 +13,6 @@ class ALARMNOTIFICATION public=1 mixin=1 abstract=0 metaclass=CLASS supers=OBJEC
   instance CANCEL private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance TRIGGERED private=0 protected=0 guarded=1 abstract=1 constant=0 attribute=0 package=0 entry=-
 class ARGUTIL public=1 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1
-  class VALIDATECLASS private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-  class VALIDATELENGTH private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-  class VALIDATENONNEGATIVE private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-  class VALIDATENUMBER private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-  class VALIDATENUMBERRANGE private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-  class VALIDATEPOSITION private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-  class VALIDATEPOSITIVE private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-  class VALIDATEWHOLE private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
-  class VALIDATEWHOLERANGE private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
 class ARRAY public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,ORDEREDCOLLECTION annotations=- identity=1
   instance ALLINDEXES private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance ALLITEMS private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
@@ -1277,6 +1268,8 @@ class TRACEOBJECT public=1 mixin=0 abstract=0 metaclass=CLASS supers=STRINGTABLE
   class SETMAKESTRING private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   class UNSETMAKESTRING private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
 class VALIDATE public=1 mixin=0 abstract=0 metaclass=CLASS supers=OBJECT annotations=- identity=1
+  class !RUN private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
+  class !TEXT private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   class CLASSTYPE private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   class LENGTH private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   class LOGICAL private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-

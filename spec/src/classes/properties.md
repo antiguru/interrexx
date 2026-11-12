@@ -401,7 +401,7 @@ say p~getWhole('B')
   return .nil
 ```
 
-```output defect=#164
+```output
 12
 ```
 
@@ -421,7 +421,7 @@ say p~getWhole('B') .local~n
   return .nil
 ```
 
-```output defect=#164
+```output
 12 1
 ```
 
@@ -899,7 +899,7 @@ say t~lines~makeString('L', '|')
   return lines
 ```
 
-```output defect=#164
+```output
 O=val
 ```
 
@@ -1124,7 +1124,7 @@ say p['k'] p['k2'] p['w'] p['l']
   return 'other'
 ```
 
-```output defect=#140
+```output
 abc def 12 true
 ```
 
