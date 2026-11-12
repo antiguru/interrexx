@@ -87,9 +87,12 @@ standard stream.) A name that is not a string is read as the string value its
 `makeString` method answers, which is sent once, when the stream is made, and
 never again, so a later change in what the object answers does not change the
 name. An argument that has no `makeString` method, `.nil` among them, raises
-`SYNTAX 93.938`; a `string` method alone does not do. A `MutableBuffer`, an
-`Array` and a `File` have a `makeString` method, and the name of the stream is
-its answer.
+`SYNTAX 93.938`; a `string` method alone does not do. A `MutableBuffer` and an
+`Array` have a `makeString` method, and the name of the stream is its answer. A
+`File`, or an instance of a subclass of `File`, is not read through
+`makeString`: the name of the stream is the answer of its `absolutePath`, so it
+is absolute, and a subclass that changes one of the two methods changes the
+name only by `absolutePath`.
 
 ```rexx
 f = 'spec-stream-new-zq.tmp'
@@ -156,12 +159,51 @@ made-name made-name 1
 1 1
 ```
 
+```rexx
+f = 'spec-stream-newfile-zq.tmp'
+call sysfiledelete f
+fl = .file~new(f)
+say (fl~absolutePath == qualify(f)) (.stream~new(fl)~string == fl~absolutePath) (.stream~new(f)~string == f)
+say .stream~new(.abs_file~new(f))~string
+say .stream~new(.make_file~new(f))~string == fl~absolutePath
+say .stream~new(.not_file~new)~string
+s = .stream~new(.abs_file~new(f))
+say s~open s~charout('xy') s~close s~state
+say .file~new('spec-stream-newfile-abs.tmp')~exists
+say .file~new(f)~exists
+call sysfiledelete f
+call sysfiledelete 'spec-stream-newfile-abs.tmp'
+exit
+::class abs_file subclass file
+::method absolutePath
+  return 'spec-stream-newfile-abs.tmp'
+::class make_file subclass file
+::method makeString
+  return 'spec-stream-newfile-made.tmp'
+::class not_file
+::method makeString
+  return 'made-name'
+::method absolutePath
+  return 'abs-name'
+```
+
+```output
+1 1 1
+spec-stream-newfile-abs.tmp
+1
+made-name
+READY: 0 READY: UNKNOWN
+1
+0
+```
+
 r[class.stream.new.sends]
 `new` sends `init` to the new instance, with the arguments of `new` and no
 others, so a subclass that declares `init` receives them all and decides what
 the superclass `init` is given. The `init` of `Stream` checks the count of its
-arguments, and then sends `makeString` to the name when it is not a string,
-once, and it sends no other message. A subclass whose `init` does not send
+arguments, and then, when the name is not a string, sends it `isA` with the class
+`File`, and then `absolutePath` if the answer is true and `makeString` if it is
+not, once, and it sends no other message. A subclass whose `init` does not send
 `init` to its superclass has an instance that was never initialized: see
 [Deviation 135](r:class.stream.deviation.135).
 
@@ -206,6 +248,49 @@ init gets 0 argument(s)
 .loud~new => 93.901
 init gets 2 argument(s)
 .loud~new(.nil, 2) => 93.902
+```
+
+```rexx
+o = .counted~new
+t = .stream~new(o)
+say t~string o~log
+p = .counted2~new
+t = .stream~new(p)
+say t~string p~log
+t~init(o)
+say o~log
+::class counted
+::attribute log
+::method init
+  self~log = ''
+::method makestring
+  self~log = self~log 'makestring'
+  return 'counted-name'
+::method isA
+  use arg c
+  self~log = self~log 'isA' c~id
+  return self~isA:super(c)
+::class counted2 subclass file
+::attribute log
+::method init
+  self~log = ''
+  forward class (super) continue arguments ('zq.tmp')
+::method makestring
+  self~log = self~log 'makestring'
+  return 'counted-name'
+::method absolutePath
+  self~log = self~log 'absolutePath'
+  return 'abs.tmp'
+::method isA
+  use arg c
+  self~log = self~log 'isA' c~id
+  return self~isA:super(c)
+```
+
+```output
+counted-name  isA File makestring
+abs.tmp  isA File absolutePath
+ isA File makestring isA File makestring
 ```
 
 r[class.stream.init]
@@ -1170,7 +1255,8 @@ r[class.stream.query]
 `query` answers what [QUERY](r:bif.stream.query.words) answers for the word in
 its one argument, a string: the position, the size, the type, the file name
 that exists, the times and the handle, with the options and the shortenings
-that the rules of QUERY give. A word that is none of those, and words after it
+that the rules of QUERY give. The word `SEEK` is `POSITION`, and an argument that is the null string or only
+blanks answers as `DATETIME` does. A word that is none of those, and words after it
 that the query does not take, raise `SYNTAX 93.0`; a missing argument raises
 `SYNTAX 93.901`. The answers are strings, the null string where the function
 answers it. It sends no message.
@@ -1291,8 +1377,7 @@ so the name of another method, raises `SYNTAX 93.914`; words after `CLOSE` or
 93.0`, and `SEEK` or `POSITION` without an offset `SYNTAX 93.903`. A missing
 argument raises `SYNTAX 93.901`. The answer is the answer of the method that
 carries the command out, [which the next rule
-names](r:class.stream.command.sends). What `command` does with a command that
-is the null string or only blanks is not specified.
+names](r:class.stream.command.sends). A command that is the null string or only blanks closes the stream, as `close` does, and answers what `close` answers.
 
 ```rexx
 f = 'spec-stream-command-zq.tmp'
@@ -1348,6 +1433,41 @@ s~command(1) => 93.914
 s~command("query size", 2) => 93.902
 ```
 
+```rexx
+f = 'spec-stream-cmdq-zq.tmp'
+call charout f, 'abcdef'
+call charout f
+s = .stream~new(f)
+say s~command('open read') s~command('seek 3 read') s~command('query seek') s~command('QUERY SEEK write')
+say (s~command('query') == s~query('datetime')) (s~query('') == s~query('datetime')) (s~query('  ') == s~query('datetime'))
+say '['s~command('')']' s~state
+say '['s~command('')']' s~state
+say s~open s~state '['s~command('  ')']' s~state
+say s~query('seek') '['s~query('seek read')']' length(s~query(''))
+call try 's~query("seek read write")'
+call try 's~query("seeker")'
+call sysfiledelete f
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=> [' || r || ']'
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
+```
+
+```output
+READY: 3 3 0
+1 1 1
+[READY:] UNKNOWN
+[] UNKNOWN
+READY: READY [READY:] UNKNOWN
+ [] 17
+s~query("seek read write") => 93.0
+s~query("seeker") => 93.0
+```
+
 r[class.stream.command.sends]
 `command` sends one message to the receiver for a command that it carries out,
 after it has split the first word from the rest, and none for a command it
@@ -1358,7 +1478,9 @@ one blank, in upper case, with the other blanks as they were. `SEEK` sends
 `position`, not `seek`. The answer of the message is the answer of `command`,
 whatever it is, and an error that the message raises is the error of
 `command`. A command that has words after `CLOSE` or `FLUSH`, or an unknown
-first word, sends nothing. In the example a log lists each message as its
+first word, sends nothing. A command that is the null string or only blanks
+sends `close` with no argument, and `QUERY` with nothing after it sends `query`
+with the null string. In the example a log lists each message as its
 name, the number of its arguments after a `#`, and the argument in brackets.
 
 ```rexx
@@ -1471,6 +1593,41 @@ open bogus           => 93.0  open#1[BOGUS]
 seek:  seek#1[2]
 query:  query#1[size]
 uninit: []
+```
+
+```rexx
+s = .spy~new('spec-stream-spy-zq.tmp')
+say '['s~command('')']' s~log
+s~log = ''
+say '['s~command('   ')']' s~log
+s~log = ''
+say '['s~command('query')']' s~log
+s~log = ''
+say '['s~command('query ')']' s~log
+s~log = ''
+say '['s~command('query seek')']' s~log
+::class spy subclass stream
+::attribute log
+::method init
+  self~log = ''
+  forward class (super) continue
+::method close
+  self~log = self~log 'close#'arg()
+  forward class (super)
+::method query
+  self~log = self~log 'query#'arg() || '['arg(1)']'
+  forward class (super)
+::method position
+  self~log = self~log 'position#'arg() || '['arg(1)']'
+  forward class (super)
+```
+
+```output
+[]  close#0
+[]  close#0
+[]  query#1[]
+[]  query#1[]
+[]  query#1[SEEK]
 ```
 
 ## Writing lines and arrays
