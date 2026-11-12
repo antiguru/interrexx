@@ -621,54 +621,145 @@ fn assertions_differential() {
     );
 }
 
-/// Polices [`EXEMPT`] itself, in every mode, independent of `{GATE_ENV}`:
-/// the current not-passing set must equal the committed list **exactly**,
-/// same identity check `exempt_entry` uses (`group`, `method`,
-/// `occurrence`, `expr`, `expected`). `assertions_differential`'s STRICT mode
-/// is the *use* of the committed list (deciding what to forgive); this is
-/// the check that the list still describes reality, and it runs whether or
-/// not anyone ever sets `{GATE_ENV}`.
-#[test]
-fn the_exempt_set_matches_the_current_blocked_rows() {
-    let (rows, _) = collect_all();
+/// How many tests the exempt-set check is spread over: the unit nextest runs in
+/// parallel is a test function. A row belongs to the shard its index in the
+/// sorted file order, modulo this count, names.
+const EXEMPT_SHARDS: usize = 4;
+
+/// The rows of one shard, each with its occurrence number among the rows of the
+/// whole suite sharing its `group` and `method` (counted over every row, not
+/// the shard's, so the identity a row has does not depend on the sharding).
+fn exempt_shard_rows(rows: &[AssertionRow], shard: usize) -> Vec<(&AssertionRow, usize)> {
     let mut occurrence_counts: std::collections::HashMap<(String, String), usize> =
         std::collections::HashMap::new();
-    let outcomes: Vec<RowOutcome> = rows.par_iter().map(evaluate_row).collect();
-    let mut still_blocked: Vec<(String, String, usize, String, String)> = Vec::new();
-    for (row, outcome) in rows.iter().zip(outcomes) {
+    let mut out = Vec::new();
+    for (index, row) in rows.iter().enumerate() {
         let occurrence = occurrence_of(&mut occurrence_counts, row);
+        if index % EXEMPT_SHARDS == shard {
+            out.push((row, occurrence));
+        }
+    }
+    out
+}
+
+fn matches_entry(e: &ExemptRow, row: &AssertionRow, occurrence: usize) -> bool {
+    e.group == row.group
+        && e.method == row.method
+        && e.occurrence == occurrence
+        && e.expr == row.expr
+        && e.expected == row.expected
+}
+
+/// Every shard index below `EXEMPT_SHARDS` has a test running it.
+#[test]
+fn every_exempt_shard_has_a_test() {
+    let source = include_str!("assertions.rs");
+    for shard in 0..EXEMPT_SHARDS {
+        let call = format!("\n    exempt_set_shard({shard});\n");
+        assert_eq!(source.matches(&call).count(), 1, "{call:?}");
+    }
+}
+
+/// The part of the exempt-set check no one shard can make: the shards hold every
+/// row once, every [`EXEMPT`] entry is its own entry, and each names a row of
+/// the suite. With each shard's two-way check of the entries of its own rows,
+/// the not-passing rows and the entries are in one-to-one correspondence, which
+/// is what one count comparison over the whole suite used to say.
+#[test]
+fn every_exempt_entry_names_one_row_and_the_shards_hold_every_row_once() {
+    let (rows, _) = collect_all();
+    let held: usize = (0..EXEMPT_SHARDS)
+        .map(|shard| exempt_shard_rows(&rows, shard).len())
+        .sum();
+    assert_eq!(held, rows.len(), "a row is in no shard or in more than one");
+    assert!(
+        rows.len() >= EXEMPT_SHARDS,
+        "fewer rows than shards leaves a shard that checks nothing"
+    );
+
+    let mut all = Vec::new();
+    for shard in 0..EXEMPT_SHARDS {
+        all.extend(exempt_shard_rows(&rows, shard));
+    }
+    for e in EXEMPT {
+        let named = all
+            .iter()
+            .filter(|(row, occurrence)| matches_entry(e, row, *occurrence))
+            .count();
+        assert_eq!(
+            named, 1,
+            "{}::{} occurrence {} (expr={:?}, expected={:?}) names {named} rows of the suite, \
+             not one",
+            e.group, e.method, e.occurrence, e.expr, e.expected
+        );
+    }
+}
+
+/// Polices [`EXEMPT`] itself, in every mode, independent of `{GATE_ENV}`, for
+/// one shard of the rows: the shard's not-passing set must equal the committed
+/// entries naming its rows **exactly**, same identity check `exempt_entry` uses
+/// (`group`, `method`, `occurrence`, `expr`, `expected`).
+/// `assertions_differential`'s STRICT mode is the *use* of the committed list
+/// (deciding what to forgive); this is the check that the list still describes
+/// reality.
+fn exempt_set_shard(shard: usize) {
+    let (rows, _) = collect_all();
+    let shard_rows = exempt_shard_rows(&rows, shard);
+    let outcomes: Vec<RowOutcome> = shard_rows
+        .par_iter()
+        .map(|(row, _)| evaluate_row(row))
+        .collect();
+    let mut still_blocked: Vec<(&AssertionRow, usize)> = Vec::new();
+    for ((row, occurrence), outcome) in shard_rows.iter().zip(outcomes) {
         if !matches!(outcome, RowOutcome::Pass) {
-            still_blocked.push((
-                row.group.clone(),
-                row.method.clone(),
-                occurrence,
-                row.expr.clone(),
-                row.expected.clone(),
-            ));
+            still_blocked.push((row, *occurrence));
         }
     }
 
+    let listed = EXEMPT
+        .iter()
+        .filter(|e| {
+            shard_rows
+                .iter()
+                .any(|(row, occurrence)| matches_entry(e, row, *occurrence))
+        })
+        .count();
     assert_eq!(
         still_blocked.len(),
-        EXEMPT.len(),
-        "the not-passing row count no longer matches EXEMPT's length -- a row was added to or \
-         removed from reality without EXEMPT being updated to match"
+        listed,
+        "the not-passing row count of shard {shard} no longer matches the number of EXEMPT \
+         entries naming its rows -- a row was added to or removed from reality without EXEMPT \
+         being updated to match"
     );
-    for (group, method, occurrence, expr, expected) in &still_blocked {
-        let found = EXEMPT.iter().any(|e| {
-            e.group == *group
-                && e.method == *method
-                && e.occurrence == *occurrence
-                && e.expr == *expr
-                && e.expected == *expected
-        });
+    for (row, occurrence) in &still_blocked {
+        let found = EXEMPT.iter().any(|e| matches_entry(e, row, *occurrence));
         assert!(
             found,
-            "{group}::{method} occurrence {occurrence} (expr={expr:?}, expected={expected:?}) \
-             is not passing but has no EXEMPT entry -- add one, naming what \
-             actually unblocks it"
+            "{}::{} occurrence {occurrence} (expr={:?}, expected={:?}) is not passing but has \
+             no EXEMPT entry -- add one, naming what actually unblocks it",
+            row.group, row.method, row.expr, row.expected
         );
     }
+}
+
+#[test]
+fn the_exempt_set_matches_the_current_blocked_rows_shard_0() {
+    exempt_set_shard(0);
+}
+
+#[test]
+fn the_exempt_set_matches_the_current_blocked_rows_shard_1() {
+    exempt_set_shard(1);
+}
+
+#[test]
+fn the_exempt_set_matches_the_current_blocked_rows_shard_2() {
+    exempt_set_shard(2);
+}
+
+#[test]
+fn the_exempt_set_matches_the_current_blocked_rows_shard_3() {
+    exempt_set_shard(3);
 }
 
 /// The falsification proof: perturbing one row's
