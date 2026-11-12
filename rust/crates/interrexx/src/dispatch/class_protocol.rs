@@ -12,8 +12,7 @@ mod method_table;
 use method_table::method_table_pairs;
 pub(super) use method_table::native_define_methods;
 
-/// `Class~baseClass`: `RexxClass::getBaseClass`, bound as a method of
-/// `.Class` by `Setup.cpp:455`.
+/// `Class~baseClass`, bound as a method of `.Class`.
 pub(super) fn native_base_class(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -34,10 +33,9 @@ pub(super) fn class_receiver(interp: &Interp, receiver: ObjRef) -> Result<ObjRef
     }
 }
 
-/// The argument a method that requires a class object was given --
-/// `classArgument(other, TheClassClass, "class")`
-/// (`runtime/MethodArguments.hpp:727`), which refuses an omitted argument
-/// with 88.901 and a value that is not a class object with 88.914.
+/// The argument a method that requires a class object was given, which refuses
+/// an omitted argument with 88.901 and a value that is not a class object with
+/// 88.914.
 pub(super) fn class_argument(interp: &Interp, args: &[Option<ObjRef>]) -> Result<ObjRef, Failure> {
     let Some(Some(argument)) = args.first().copied() else {
         return Err(Raised::missing_named_argument("class").into());
@@ -48,8 +46,7 @@ pub(super) fn class_argument(interp: &Interp, args: &[Option<ObjRef>]) -> Result
     }
 }
 
-/// `Class~id`: the name the class was declared with, case unmodified --
-/// `RexxClass::getId` (`classes/ClassClass.cpp:385`).
+/// `Class~id`: the name the class was declared with, case unmodified.
 pub(super) fn native_id(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -61,8 +58,7 @@ pub(super) fn native_id(
     Ok(Some(interp.text_built(id)))
 }
 
-/// `Class~defaultName`: `The <id> class` -- `RexxClass::defaultNameRexx`
-/// (`classes/ClassClass.cpp:614`).
+/// `Class~defaultName`: `The <id> class`.
 pub(super) fn native_class_default_name(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -74,7 +70,7 @@ pub(super) fn native_class_default_name(
     Ok(Some(interp.text_built(name)))
 }
 
-/// `Class~metaClass`: `RexxClass::getMetaClass` (`classes/ClassClass.cpp:419`).
+/// `Class~metaClass`.
 pub(super) fn native_metaclass(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -86,9 +82,8 @@ pub(super) fn native_metaclass(
 }
 
 /// `Class~superClass`: the class's own direct superclass, or `.nil` for
-/// `.Object` -- `RexxClass::getSuperClass` (`classes/ClassClass.cpp:441`),
-/// whose body is `superClasses->getFirstItem()`, so it reads the **first** entry
-/// of the superclass list and not its last.
+/// `.Object`. It reads the **first** entry of the superclass list and not its
+/// last.
 pub(super) fn native_superclass(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -102,9 +97,7 @@ pub(super) fn native_superclass(
 }
 
 /// `Class~superClasses`: a **fresh** array of the class's own direct
-/// superclasses -- `RexxClass::getSuperClasses`
-/// (`classes/ClassClass.cpp:458`), whose body is `superClasses->copy()`, so it
-/// hands out a copy rather than the class's own list.
+/// superclasses, so it hands out a copy rather than the class's own list.
 pub(super) fn native_superclasses(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -127,8 +120,7 @@ pub(super) fn native_superclasses(
 }
 
 /// `Class~isSubclassOf(class)`: whether the receiver **is** `class` or derives
-/// from it -- `RexxClass::isSubclassOf` (`classes/ClassClass.cpp:1692`),
-/// which asks `isCompatibleWith` on the receiver itself.
+/// from it, so the receiver counts as compatible with itself.
 pub(super) fn native_is_subclass_of(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -210,7 +202,7 @@ pub(super) fn native_method(
 
 /// `Method~scope`: the class the method object was defined at, `.nil` for a
 /// method object no class has taken -- [`Interp::method_scope`] carries the
-/// C++ and the measurements.
+/// measurements.
 pub(super) fn native_scope(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -220,21 +212,16 @@ pub(super) fn native_scope(
     Ok(Some(interp.method_scope(receiver)?))
 }
 
-/// The `REXX_DEFINED` refusal every class mutator opens with --
-/// `isRexxDefined()` and its `reportException(Error_Execution_rexx_defined_class)`
-/// (`classes/ClassClass.cpp:823`, `:522`, `:955`, `:1290`, `:1382`, one per
-/// mutator).
+/// The `REXX_DEFINED` refusal every class mutator opens with, one per mutator.
 fn rexx_defined_lock(interp: &mut Interp, class: ObjRef) -> Result<(), Failure> {
     // **Open while the interpreter's own library runs**, which is the state
-    // `Setup.cpp` builds the image in: `CoreClasses.orx:93` onwards is a run
-    // of `~inherit` clauses against exactly the classes this flag guards,
-    // and the C++ sets `REXX_DEFINED` on them at image-save time
-    // (`RexxClass::liveGeneral`, `ClassClass.cpp:136`-`:142`) rather than
-    // before. This crate flags each library class as `Interp::install_class`
-    // creates it, so the bypass is not a convenience: it is what lets the
-    // prologue's own `~inherit` clauses run at all. See
-    // `Interp::library_bootstrap` for what else the same flag opens and for
-    // why no program can be inside it.
+    // the library image is built in: its prologue is a run of `~inherit`
+    // clauses against exactly the classes this flag guards, and the oracle
+    // sets `REXX_DEFINED` on them at image-save time rather than before. This
+    // crate flags each library class as `Interp::install_class` creates it, so
+    // the bypass is not a convenience: it is what lets the prologue's own
+    // `~inherit` clauses run at all. See `Interp::library_bootstrap` for what
+    // else the same flag opens and for why no program can be inside it.
     if !interp.library_bootstrap && interp.classes().is_rexx_defined(class) {
         return Err(Raised::rexx_defined_class().into());
     }
@@ -245,21 +232,17 @@ fn rexx_defined_lock(interp: &mut Interp, class: ObjRef) -> Result<(), Failure> 
 /// that is neither a string nor an array raises.
 #[derive(Copy, Clone)]
 pub(super) enum SourceTaker {
-    /// `processNewExecutableArgs` and `PackageClass::newRexx`, which take
-    /// those two alone: 93.961 (`execution/BaseExecutable.cpp:244`,
-    /// `classes/PackageClass.cpp:224`).
+    /// The class-creation arguments of `Package~new` take those two alone:
+    /// 93.961.
     Executable,
-    /// `MethodClass::newMethodObject`, which takes a `Method` object too:
-    /// 93.974 (`classes/MethodClass.cpp:468`).
+    /// `Method~new` takes a `Method` object too: 93.974.
     Method,
-    /// `PackageClass::loadPackage`, whose `arrayArgument` is 88.913
-    /// (`classes/PackageClass.cpp:1855`).
+    /// `Package~load`'s array argument is 88.913.
     Package,
 }
 
 /// The physical lines a method source is compiled from, or the raise for a
-/// value that is not one -- `processExecutableSource`
-/// (`execution/BaseExecutable.cpp:169`).
+/// value that is not one -- `processExecutableSource`.
 pub(super) fn method_source_lines(
     interp: &mut Interp,
     source: ObjRef,
@@ -351,9 +334,8 @@ fn array_item_line(
     Err(Raised::method_source_not_all_strings(position).into())
 }
 
-/// Whether one value is a source line -- the C++'s `isString(source)` for
-/// the whole source and its `makeString()` for an array's items
-/// (`execution/BaseExecutable.cpp:174`, `classes/StringClassUtil.cpp:428`).
+/// Whether one value is a source line: a string for the whole source, and its
+/// string conversion for an array's items.
 fn is_source_line(interp: &Interp, value: ObjRef) -> bool {
     matches!(
         interp.receiver_kind(value),
@@ -399,8 +381,7 @@ fn executable_parent(
     }
 }
 
-/// `MethodClass::newMethodObject`'s compiling arm
-/// (`classes/MethodClass.cpp:462`-`:485`): the `Method` object a source text
+/// The compiling arm of `Method~new`: the `Method` object a source text
 /// becomes, carrying no scope, for a caller that is about to install it.
 pub(super) fn compile_method_source(
     interp: &mut Interp,
@@ -447,7 +428,7 @@ pub(crate) fn method_in_package(
     parsed: interrexx_parse::Program,
     parent: Option<ObjRef>,
 ) -> Result<ObjRef, Failure> {
-    // `generateMethod` installs them as `generateRoutine` does; see
+    // The method generation installs them as routine generation does; see
     // [`compile_routine_source`].
     if !parsed.directives.is_empty() {
         return interp.install_executable(parsed, name, false, parent, false, |interp, id| {
@@ -469,8 +450,8 @@ pub(crate) fn method_in_package(
     Ok(object)
 }
 
-/// `RoutineClass::newRexx`'s compiling arm (`classes/RoutineClass.cpp:379`):
-/// [`compile_method_source_in`] answering a `Routine` instead.
+/// The compiling arm of `Routine~new`: [`compile_method_source_in`] answering
+/// a `Routine` instead.
 pub(super) fn compile_routine_source(
     interp: &mut Interp,
     name: &[u8],
@@ -492,10 +473,9 @@ fn routine_from_program(
     parsed: interrexx_parse::Program,
     parent: Option<ObjRef>,
 ) -> Result<ObjRef, Failure> {
-    // `generateRoutine` installs them into the routine's own package, whose
-    // parent is the caller's: measured, oracle rc 0,
-    // `.Routine~new('T', .array~of('::class a1'))~package~classes~hasIndex('A1')`
-    // is `1`.
+    // Routine generation installs them into the routine's own package, whose
+    // parent is the caller's: measured, oracle rc 0, `.Routine~new('T',
+    // .array~of('::class a1'))~package~classes~hasIndex('A1')` is `1`.
     let parent = executable_parent(interp, &parsed, parent)?;
     routine_in_package(interp, name, parsed, parent)
 }
@@ -533,9 +513,7 @@ pub(super) fn scoped_method(
 }
 
 /// The `method name` argument `~define`, `~delete` and `~method` share:
-/// required, string-valued, and upcased before it reaches a dictionary --
-/// `stringArgument(method_name, "method name")->upper()`
-/// (`classes/ClassClass.cpp:831`-`:832`, `:961`, `:987`).
+/// required, string-valued, and upcased before it reaches a dictionary.
 pub(super) fn method_name_argument(
     interp: &mut Interp,
     args: &[Option<ObjRef>],
@@ -558,8 +536,7 @@ fn method_name_pair(
     Ok((written, key))
 }
 
-/// `Class~define(name, method)`: install one instance method on the receiver
-/// -- `RexxClass::defineMethod` (`classes/ClassClass.cpp:819`).
+/// `Class~define(name, method)`: install one instance method on the receiver.
 pub(super) fn native_define(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -599,10 +576,9 @@ pub(super) fn native_define(
 }
 
 /// `Class~subclass(id, metaclass, classMethods)`: build a class derived from
-/// the receiver and answer it -- `RexxClass::subclassRexx`
-/// (`classes/ClassClass.cpp:1543`), which forwards to the same
-/// `RexxClass::subclass` a `::CLASS` directive calls, with `OREF_NULL` where
-/// the directive passes its package (`:1546`).
+/// the receiver and answer it. It forwards to the same construction a
+/// `::CLASS` directive performs, with no package where the directive passes
+/// its own.
 pub(super) fn native_subclass(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -613,8 +589,7 @@ pub(super) fn native_subclass(
 }
 
 /// `Class~mixinClass(id, metaclass, classMethods)`: the same factory, marking
-/// what it builds a mixin -- `RexxClass::mixinClassRexx`
-/// (`classes/ClassClass.cpp:1493`).
+/// what it builds a mixin.
 pub(super) fn native_mixin_class_factory(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -624,13 +599,12 @@ pub(super) fn native_mixin_class_factory(
     class_factory(interp, receiver, args, ClassKind::Mixin)
 }
 
-/// `Class~new(id, ...)`: `RexxClass::newRexx` (`classes/ClassClass.cpp:1776`),
-/// a copy of the receiver that answers the receiver's instance methods,
-/// derives its instances from `Object` alone and is in no subclass list,
-/// sent `INIT` with the arguments after the id. Measured, oracle rc 0:
-/// `.class~new('FooBar')` answers `FooBar Object 0 The REXX Package` for
-/// its id, superclass, membership of `.object~subclasses` and package, and
-/// its own `~new` is 97.1.
+/// `Class~new(id, ...)`: a copy of the receiver that answers the receiver's
+/// instance methods, derives its instances from `Object` alone and is in no
+/// subclass list, sent `INIT` with the arguments after the id. Measured,
+/// oracle rc 0: `.class~new('FooBar')` answers `FooBar Object 0 The REXX
+/// Package` for its id, superclass, membership of `.object~subclasses` and
+/// package, and its own `~new` is 97.1.
 pub(super) fn native_new_class(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -688,9 +662,9 @@ pub(super) fn begin_init(
     })
 }
 
-/// `RexxClass::completeNewObject` (`classes/ClassClass.cpp:1882`) up to but
-/// not including the `INIT` send: the abstract check, the behaviour, the
-/// rooting and the `UNINIT` registration, in that order.
+/// Object completion up to but not including the `INIT` send: the abstract
+/// check, the behaviour, the rooting and the `UNINIT` registration, in that
+/// order.
 pub(super) fn new_instance(interp: &mut Interp, class: ObjRef) -> Result<ObjRef, Failure> {
     if interp.classes().is_abstract(class) {
         let id = interp.classes().id_string(class).as_bytes().to_vec();
@@ -711,8 +685,8 @@ pub(super) fn new_instance(interp: &mut Interp, class: ObjRef) -> Result<ObjRef,
             native: None,
         },
     );
-    // `ProtectedObject p(newObj)` (`ObjectClass.cpp:2637`): the `INIT` send
-    // allocates, and nothing else holds the object until it returns.
+    // `ProtectedObject p(newObj)`: the `INIT` send allocates, and nothing else
+    // holds the object until it returns.
     interp.roots.activity_mut().push_temp(object);
     // See `Interp::reqstr_armed` for why an instance arms the protocol
     // outright rather than by the name a directive installed.
@@ -723,7 +697,7 @@ pub(super) fn new_instance(interp: &mut Interp, class: ObjRef) -> Result<ObjRef,
     Ok(object)
 }
 
-/// `RexxClass::subclass` (`classes/ClassClass.cpp:1562`), in its own order.
+/// Class creation, in its own order.
 fn class_factory(
     interp: &mut Interp,
     receiver: ObjRef,
@@ -760,11 +734,11 @@ fn class_factory(
 const CLASS_BYTES_PER_NAME: usize = 200;
 const CLASS_BYTES_PER_OWN_METHOD: usize = 8 << 10;
 
-/// `RexxClass::subclass` up to its enhancing methods (`:1579`-`:1626`): the
-/// class `metaclass`'s `NEW` answers for `name`, made a subclass of `class`,
-/// rooted. Where `NEW` is `Class`'s own and the metaclass's instances take
-/// `Object`'s `INIT`, the class is built in place, which nothing can tell
-/// from the clone `Class~new` makes and the rewiring that follows.
+/// Class creation up to its enhancing methods: the class `metaclass`'s `NEW`
+/// answers for `name`, made a subclass of `class`, rooted. Where `NEW` is
+/// `Class`'s own and the metaclass's instances take `Object`'s `INIT`, the
+/// class is built in place, which nothing can tell from the clone `Class~new`
+/// makes and the rewiring that follows.
 pub(crate) fn new_subclass(
     interp: &mut Interp,
     class: ObjRef,
@@ -833,8 +807,8 @@ pub(crate) fn builds_in_place(interp: &mut Interp, metaclass: ObjRef) -> bool {
             == classes.lookup_instance_method(object, "INIT")
 }
 
-/// `RexxClass::subclass`'s own tail, in its order (`:1628`-`:1637`), which is
-/// the same sequence `Interp::install_class_at` makes for a directive.
+/// The tail of class creation, in its order, which is the same sequence
+/// `Interp::install_class_at` makes for a directive.
 fn finish_subclass(interp: &mut Interp, id: ObjRef) -> Result<(), Failure> {
     interp.classes().check_uninit(id);
     interp.flag_class_uninit(id);
@@ -845,8 +819,7 @@ fn finish_subclass(interp: &mut Interp, id: ObjRef) -> Result<(), Failure> {
 }
 
 /// The metaclass a class factory builds from: the second argument, or the
-/// receiver's own where the send omits it (`classes/ClassClass.cpp:1566`-
-/// `:1569`), which has to be a metaclass (`:1572`).
+/// receiver's own where the send omits it, which has to be a metaclass.
 fn factory_metaclass(
     interp: &mut Interp,
     class: ObjRef,
@@ -893,9 +866,8 @@ fn required_class_id(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<Vec
     Ok(interp.to_text(argument).to_vec())
 }
 
-/// The third argument: class-side methods the new class is built with --
-/// `createMethodDictionary(enhancing_methods, new_class)` merged into
-/// `classMethodDictionary` (`classes/ClassClass.cpp:1602`-`:1608`).
+/// The third argument: class-side methods the new class is built with, merged
+/// into the class method dictionary.
 fn enhance_class_methods(
     interp: &mut Interp,
     class: ObjRef,
@@ -936,8 +908,7 @@ fn install_enhancing_class_methods(
     Ok(())
 }
 
-/// `Class~delete(name)`: take one instance method back off the receiver --
-/// `RexxClass::deleteMethod` (`classes/ClassClass.cpp:952`).
+/// `Class~delete(name)`: take one instance method back off the receiver.
 pub(super) fn native_delete(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -955,10 +926,9 @@ pub(super) fn native_delete(
     Ok(None)
 }
 
-/// `Class~inherit(mixin, position)`: add a mixin to the receiver's
-/// superclass list -- `RexxClass::inherit` (`classes/ClassClass.cpp:1287`),
-/// the same function the `INHERIT` keyword of a `::CLASS` directive reaches
-/// by sending this message ([`Interp::inherit_mixin`]).
+/// `Class~inherit(mixin, position)`: add a mixin to the receiver's superclass
+/// list. The `INHERIT` keyword of a `::CLASS` directive reaches the same
+/// function by sending this message ([`Interp::inherit_mixin`]).
 pub(super) fn native_class_inherit(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -968,14 +938,13 @@ pub(super) fn native_class_inherit(
     let class = class_receiver(interp, receiver)?;
     rexx_defined_lock(interp, class)?;
     let mixin = mixin_class_argument(interp, args)?;
-    // **The position is not type-checked, and that is the oracle's shape.**
-    // `RexxClass::inherit` uses it in one place, `superClasses->indexOf(position)`
-    // (`classes/ClassClass.cpp:1346`), and a value that is not in the list gives
-    // index 0 and `Error_Execution_uninherit` at `:1350` whatever kind of
-    // object it was. Measured at rc 158, `::class K` inheriting `.M1`:
-    // `.K~inherit(.M2, "abc")` is `98.945`, `Class "The K class" has not
-    // inherited class "abc".` -- the second argument's error and not the
-    // first's.
+    // **The position is not type-checked, and that is the oracle's shape.** It
+    // is used in one place, to find the position in the superclass list, and a
+    // value that is not in the list gives index 0 and the "has not inherited"
+    // error whatever kind of object it was. Measured at rc 158, `::class K`
+    // inheriting `.M1`: `.K~inherit(.M2, "abc")` is `98.945`, `Class "The K
+    // class" has not inherited class "abc".` -- the second argument's error
+    // and not the first's.
     let position = args.get(1).copied().flatten();
     match interp.classes().inherit_at(class, mixin, position) {
         Ok(()) => Ok(None),
@@ -984,9 +953,8 @@ pub(super) fn native_class_inherit(
 }
 
 /// `Class~defineClassMethod(name, method)`: install `method` as a class-side
-/// method of the receiver -- `RexxClass::defineClassMethod`
-/// (`classes/ClassClass.cpp:883`), which writes the class behaviour and
-/// `classMethodDictionary` from one `newScope` copy.
+/// method of the receiver, writing the class behaviour and the class method
+/// dictionary from one scope copy.
 pub(super) fn native_define_class_method(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1011,9 +979,7 @@ pub(super) fn native_define_class_method(
 
 /// `Class~inheritInstanceMethods(source)`: copy `source`'s own instance
 /// methods into the receiver's dictionary at the receiver's scope, with no
-/// superclass edge added -- `RexxClass::inheritInstanceMethods`
-/// (`classes/ClassClass.cpp:558`), the "phony inherit" `CoreClasses.orx:77`
-/// names in its own comment.
+/// superclass edge added -- the "phony inherit" of the oracle's class library.
 pub(super) fn native_inherit_instance_methods(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1037,7 +1003,7 @@ pub(super) fn native_inherit_instance_methods(
 }
 
 /// `Class~uninherit(mixin)`: take a mixin back out of the receiver's
-/// superclass list -- `RexxClass::uninherit` (`classes/ClassClass.cpp:1379`).
+/// superclass list.
 pub(super) fn native_uninherit(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1053,9 +1019,8 @@ pub(super) fn native_uninherit(
     }
 }
 
-/// The `mixin class` argument `~inherit` and `~uninherit` share: required,
-/// and a `MIXINCLASS` class object or 98.942 naming the value
-/// (`classes/ClassClass.cpp:1298`-`:1301`, `:1391`-`:1394`).
+/// The `mixin class` argument `~inherit` and `~uninherit` share: required, and
+/// a `MIXINCLASS` class object or 98.942 naming the value.
 fn mixin_class_argument(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<ObjRef, Failure> {
     let Some(Some(argument)) = args.first().copied() else {
         return Err(Raised::missing_named_argument("mixin class").into());
@@ -1106,10 +1071,8 @@ fn inherit_refusal(
     }
 }
 
-/// `Package~addClass(name, class)` and `Package~addPublicClass(name, class)`
-/// -- `PackageClass::addClassRexx` (`classes/PackageClass.cpp:1926`) and
-/// `addPublicClassRexx` (`:1944`), which differ only in the flag they hand
-/// `addInstalledClass`.
+/// `Package~addClass(name, class)` and `Package~addPublicClass(name, class)`,
+/// which differ only in the public flag they hand on.
 pub(super) fn native_package_add_class(
     interp: &mut Interp,
     cleared: Cleared,
@@ -1159,8 +1122,7 @@ fn add_installed_class(
     Ok(Some(receiver))
 }
 
-/// `Class~package`: the package the class was defined in --
-/// `RexxClass::getPackage` (`classes/ClassClass.cpp:1732`).
+/// `Class~package`: the package the class was defined in.
 pub(super) fn native_package(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1171,9 +1133,8 @@ pub(super) fn native_package(
     Ok(Some(interp.package_object_for(class)?))
 }
 
-/// `Class~copy`: the refusal `memory/Setup.cpp:483` puts over [`super::native_copy`]
-/// -- `RexxClass::copyRexx` (`classes/ClassClass.cpp:166`), whose whole body
-/// is the raise.
+/// `Class~copy`: the refusal the oracle puts over [`super::native_copy`]; its
+/// whole body is the raise.
 pub(super) fn native_class_copy(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1185,10 +1146,9 @@ pub(super) fn native_class_copy(
 }
 
 /// `Class~enhanced(methods, ...)`: an instance of the receiver carrying
-/// methods of its own -- `RexxClass::enhanced`
-/// (`classes/ClassClass.cpp:1440`): `NEW` sent to a subclass whose instance
-/// behaviour holds the methods at scope `.nil`, and the object it answers
-/// then reporting the receiver as its class.
+/// methods of its own: `NEW` sent to a subclass whose instance behaviour holds
+/// the methods at scope `.nil`, and the object it answers then reporting the
+/// receiver as its class.
 pub(super) fn native_enhanced(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1196,12 +1156,11 @@ pub(super) fn native_enhanced(
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
     let class = class_receiver(interp, receiver)?;
-    // The refusals are different errors and the C++ checks them in this
-    // order (`:1443`-`:1451`). Measured: `.K~enhanced` and `.K~enhanced()`
-    // are both `93.901 Not enough arguments for method; 1 expected.` at rc
-    // 163, the second because a trailing omission is dropped from the count,
-    // while `.K~enhanced(, 'x')` is `88.901 Missing argument; argument
-    // methods is required.` at rc 168.
+    // The refusals are different errors and the C++ checks them in this order.
+    // Measured: `.K~enhanced` and `.K~enhanced()` are both `93.901 Not enough
+    // arguments for method; 1 expected.` at rc 163, the second because a
+    // trailing omission is dropped from the count, while `.K~enhanced(, 'x')`
+    // is `88.901 Missing argument; argument methods is required.` at rc 168.
     if args.is_empty() {
         return Err(Raised::not_enough_method_arguments(1).into());
     }
@@ -1234,11 +1193,10 @@ pub(super) fn native_enhanced(
     Ok(Some(answer))
 }
 
-/// `setOwningClass(this)` and `setEnhanced()` on what the dummy's `NEW`
-/// answered (`:1474`-`:1476`), where the dummy built it. An answer built
-/// from anywhere else is handed back untouched, where the oracle writes into
-/// whatever behaviour that object shares with every other of its class
-/// (Deviation 32).
+/// The owning class and the enhanced mark are set on what the dummy's `NEW`
+/// answered, where the dummy built it. An answer built from anywhere else is
+/// handed back untouched, where the oracle writes into whatever behaviour that
+/// object shares with every other of its class (Deviation 32).
 fn mark_enhanced(interp: &mut Interp, answer: ObjRef, dummy: ObjRef, class: ObjRef) {
     if interp.heap.is_class(answer) {
         if interp.classes().class_of(answer) == dummy {
@@ -1284,7 +1242,7 @@ fn install_enhancing_methods(
     for (name, value) in pairs {
         let value = *value;
         let name_text = String::from_utf8_lossy(name).to_ascii_uppercase();
-        // A `.nil` item hides the name (`ClassClass.cpp:1260`-`:1262`).
+        // A `.nil` item hides the name.
         if value == ObjRef::NIL {
             methods.push((name_text, None));
             continue;
@@ -1295,7 +1253,7 @@ fn install_enhancing_methods(
             compile_method_source(interp, name, value, "method source", SourceTaker::Method)?
         };
         // `createMethodDictionary`'s `newMethodObject`, which takes a copy of
-        // a method object some class already holds (`ClassClass.cpp:1265`).
+        // a method object some class already holds.
         let (executable, method) = scoped_method(interp, source, ObjRef::NIL)?;
         interp.roots.activity_mut().push_temp(executable);
         methods.push((name_text, Some(method)));

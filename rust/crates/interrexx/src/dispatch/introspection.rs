@@ -1,7 +1,5 @@
-//! `Class`'s readers over its own graph and `Object`'s three over a
-//! receiver's behaviour -- `classes/ClassClass.cpp` and
-//! `classes/ObjectClass.cpp`, bound by `memory/Setup.cpp:462`-`:477` and
-//! `:538`-`:541`.
+//! `Class`'s readers over its own graph and `Object`'s three over a receiver's
+//! behaviour.
 
 use super::{
     Arity, Behaviour, Cleared, Failure, Interp, NativeMethod, ObjRef, Raised, class_receiver,
@@ -33,8 +31,7 @@ pub(super) static NATIVE_METHODS: &[(&str, &str, Arity, NativeMethod)] = &[
     ("Object", "ISINSTANCEOF", Arity::Fixed(1), is_instance_of),
 ];
 
-/// `Class~isAbstract`: `RexxClass::isAbstractRexx`
-/// (`classes/ClassClass.cpp:314`).
+/// `Class~isAbstract`.
 fn is_abstract(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -45,8 +42,7 @@ fn is_abstract(
     Ok(Some(logical(interp.classes().is_abstract(class))))
 }
 
-/// `Class~isMetaClass`: `RexxClass::isMetaClassRexx`
-/// (`classes/ClassClass.cpp:303`).
+/// `Class~isMetaClass`.
 fn is_metaclass(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -57,8 +53,7 @@ fn is_metaclass(
     Ok(Some(logical(interp.classes().is_metaclass(class))))
 }
 
-/// `Class~queryMixinClass`: `RexxClass::queryMixinClass`
-/// (`classes/ClassClass.cpp:292`).
+/// `Class~queryMixinClass`.
 fn query_mixin_class(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -69,9 +64,8 @@ fn query_mixin_class(
     Ok(Some(logical(interp.classes().is_mixin(class))))
 }
 
-/// `Class~subclasses`: `RexxClass::getSubClasses`
-/// (`classes/ClassClass.cpp:470`), the reverse edge `subclass` and `inherit`
-/// maintain. The newest subclass comes first.
+/// `Class~subclasses`: the reverse edge `subclass` and `inherit` maintain. The
+/// newest subclass comes first.
 fn subclasses(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -84,8 +78,7 @@ fn subclasses(
     Ok(Some(array_of(interp, items)))
 }
 
-/// `Class~methods(scope)`: `RexxClass::methods`
-/// (`classes/ClassClass.cpp:1018`).
+/// `Class~methods(scope)`.
 fn methods(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -93,8 +86,8 @@ fn methods(
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
     let class = class_receiver(interp, receiver)?;
-    // `.nil` selects the receiving class, which is the whole of what this
-    // adds over `Object~instanceMethods` (`:1022`-`:1025`).
+    // `.nil` selects the receiving class, which is the whole of what this adds
+    // over `Object~instanceMethods`.
     let scope = match args.first().copied().flatten() {
         Some(ObjRef::NIL) => Some(class),
         other => other,
@@ -105,9 +98,8 @@ fn methods(
     supplier_of(interp, selection, class, entries)
 }
 
-/// `Object~isInstanceOf(class)`: `RexxObject::isInstanceOfRexx`
-/// (`classes/ObjectClass.cpp:258`), which is the receiver's class compared
-/// against `class` through `isCompatibleWith`.
+/// `Object~isInstanceOf(class)`: the receiver's class compared against `class`
+/// for compatibility.
 fn is_instance_of(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -126,8 +118,7 @@ fn is_instance_of(
     Ok(Some(logical(interp.classes().is_a(class, argument))))
 }
 
-/// `Object~instanceMethod(name)`: `RexxObject::instanceMethodRexx`
-/// (`classes/ObjectClass.cpp:370`).
+/// `Object~instanceMethod(name)`.
 fn instance_method(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -158,8 +149,7 @@ fn instance_method(
     )?))
 }
 
-/// `Object~instanceMethods(scope)`: `RexxObject::instanceMethodsRexx`
-/// (`classes/ObjectClass.cpp:387`).
+/// `Object~instanceMethods(scope)`.
 fn instance_methods(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -211,8 +201,7 @@ struct Listed {
 }
 
 /// Every method entry of `selection`, shadowed ones included, filtered to
-/// `scope` when one is given: `MethodDictionary::getMethods`
-/// (`behaviour/MethodDictionary.cpp:507`).
+/// `scope` when one is given: `MethodDictionary::getMethods`.
 fn behaviour_entries(
     interp: &mut Interp,
     selection: Selection,

@@ -1,6 +1,4 @@
-//! `RexxContext`'s and `StackFrame`'s readers -- `classes/ContextClass.cpp`
-//! and `classes/StackFrameClass.cpp`, bound by `memory/Setup.cpp:1211`-`:1238`
-//! and `:1700`-`:1723`.
+//! `RexxContext`'s and `StackFrame`'s readers.
 
 use super::{Arity, Cleared, Failure, Interp, Loud, NativeMethod, ObjRef, Raised, hash};
 use crate::activation::{Activation, Entry};
@@ -135,8 +133,7 @@ impl Interp {
             .position(|activation| activation.context_object == Some(receiver))
     }
 
-    /// `RexxActivation::getIdntfr` (`execution/RexxActivation.cpp:94`): this
-    /// activation's `~invocation`, minted on the first ask.
+    /// This activation's `~invocation`, minted on the first ask.
     pub(crate) fn invocation_of(&mut self, depth: usize) -> Option<u32> {
         if let Some(found) = self.frame_at(depth)?.invocation {
             return Some(found);
@@ -150,9 +147,8 @@ impl Interp {
 
 /// `read`'s answer for the activation the `RexxContext` `receiver` names, at
 /// its depth in its own activity, which is swapped in where it is idle.
-/// `RexxContext::checkValid` (`classes/ContextClass.cpp:145`) tests only that
-/// the activation has not ended, so `98.981` is the answer where no activity
-/// holds it.
+/// `RexxContext::checkValid` tests only that the activation has not ended, so
+/// `98.981` is the answer where no activity holds it.
 fn at_context(
     interp: &mut Interp,
     receiver: ObjRef,
@@ -183,8 +179,7 @@ fn frame(interp: &Interp, depth: usize) -> Result<&Activation, Failure> {
         .ok_or_else(|| Failure::from(Raised::context_not_active()))
 }
 
-/// `RexxContext::getDigits`: `activation->digits()`, the setting **in force**
-/// at that context.
+/// The digits setting **in force** at that context.
 fn context_digits(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -197,8 +192,7 @@ fn context_digits(
     })
 }
 
-/// `RexxContext::getFuzz`: `activation->fuzz()`, in force -- see
-/// [`context_digits`].
+/// The fuzz setting in force -- see [`context_digits`].
 fn context_fuzz(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -211,8 +205,8 @@ fn context_fuzz(
     })
 }
 
-/// `RexxContext::getForm`: `activation->form()` as one of the two global
-/// names, in force -- see [`context_digits`].
+/// The form as one of the two global names, in force -- see
+/// [`context_digits`].
 fn context_form(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -228,8 +222,7 @@ fn context_form(
     })
 }
 
-/// `RexxContext::getLine`: `activation->getContextLine()`, the line of the
-/// clause that context is **currently executing**.
+/// The line of the clause that context is **currently executing**.
 fn context_line(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -242,8 +235,8 @@ fn context_line(
     })
 }
 
-/// `RexxContext::getName`: `activation->getCallname()` -- the name this
-/// context was invoked under, and the program's own path at the top level.
+/// The name this context was invoked under, and the program's own path at the
+/// top level.
 fn context_name(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -256,7 +249,7 @@ fn context_name(
     })
 }
 
-/// `RexxContext::getInvocation`: `activation->getIdntfr()`.
+/// The identifier of the context's activation.
 fn context_invocation(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -271,7 +264,7 @@ fn context_invocation(
     })
 }
 
-/// `RexxContext::getThread`: `activation->getActivity()->getIdntfr()`.
+/// The identifier of the context's activity.
 fn context_thread(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -284,8 +277,7 @@ fn context_thread(
     })
 }
 
-/// `RexxContext::getInterpreter`:
-/// `activation->getActivity()->getInstance()->getIdntfr()`.
+/// The identifier of the context's interpreter instance.
 fn context_interpreter(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -295,8 +287,7 @@ fn context_interpreter(
     at_context(interp, receiver, |interp, _| Ok(Some(interp.counted(1))))
 }
 
-/// `RexxContext::getRS`: `activation->getContextReturnStatus()`, which is
-/// `.nil` unless `settings.isReturnStatusSet()`.
+/// The return status, which is `.nil` unless one has been set.
 fn context_rs(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -312,8 +303,8 @@ fn context_rs(
     })
 }
 
-/// `RexxContext::getCondition`: a **copy** of the condition object the
-/// activation is handling, and `.nil` when it is handling none.
+/// A **copy** of the condition object the activation is handling, and `.nil`
+/// when it is handling none.
 fn context_condition(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -331,8 +322,7 @@ fn context_condition(
     })
 }
 
-/// `RexxContext::getPackage`: the package of the program **the receiver's own
-/// activation** belongs to (`ContextClass.cpp:160`).
+/// The package of the program **the receiver's own activation** belongs to.
 fn context_package(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -347,8 +337,8 @@ fn context_package(
     })
 }
 
-/// `RexxContext::getArgs`: the arguments the context's activation was entered
-/// with, as a fresh `Array`.
+/// The arguments the context's activation was entered with, as a fresh
+/// `Array`.
 fn context_args(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -361,8 +351,7 @@ fn context_args(
     })
 }
 
-/// `RexxContext::getVariables`: `activation->getAllLocalVariables()`, a fresh
-/// `Directory` of the context's own variable pool.
+/// A fresh `Directory` of the context's own variable pool.
 fn context_variables(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -374,8 +363,8 @@ fn context_variables(
     })
 }
 
-/// `RexxActivation::getAllLocalVariables`: a `Directory` of every variable
-/// the activation at `depth` has set, a stem under its name with the period.
+/// A `Directory` of every variable the activation at `depth` has set, a stem
+/// under its name with the period.
 pub(crate) fn local_variables(interp: &mut Interp, depth: usize) -> Result<ObjRef, Failure> {
     let entries = local_variable_entries(interp, depth)?;
     hash::directory_of(interp, entries)
@@ -415,8 +404,7 @@ fn context_copy(
     Err(Raised::copy_not_supported(&target).into())
 }
 
-/// `RexxContext::getExecutable`: `activation->getExecutable()`, the `Method`
-/// or `Routine` object this context is running.
+/// The `Method` or `Routine` object this context is running.
 fn context_executable(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -562,8 +550,7 @@ fn routine_entry_name(
     }
 }
 
-/// `RexxContext::getStackFrames`: every frame of the stack of the context's
-/// activity, innermost first.
+/// Every frame of the stack of the context's activity, innermost first.
 fn context_stack_frames(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -775,25 +762,23 @@ fn fragment_invocation(interp: &mut Interp, row: usize) -> u32 {
     minted
 }
 
-/// One `StackFrame` for the activation at `depth` --
-/// `RexxActivation::createStackFrame` (`RexxActivation.cpp:5006`).
+/// One `StackFrame` for the activation at `depth`.
 pub(crate) fn build_frame(interp: &mut Interp, depth: usize) -> Result<ObjRef, Failure> {
     build_frame_with(interp, depth, true)
 }
 
-/// [`build_frame`], with the arguments left out where `arguments` is false:
-/// an internal call a tail-less `RAISE` left has had its argument list
-/// cleared by the time the oracle's frame is taken (`RexxActivation::
-/// raiseExit`). Measured, oracle rc 0: a call with two arguments reports
-/// none in the condition object.
+/// [`build_frame`], with the arguments left out where `arguments` is false: an
+/// internal call a tail-less `RAISE` left has had its argument list cleared by
+/// the time the oracle's frame is taken. Measured, oracle rc 0: a call with
+/// two arguments reports none in the condition object.
 pub(crate) fn build_frame_with(
     interp: &mut Interp,
     depth: usize,
     arguments: bool,
 ) -> Result<ObjRef, Failure> {
     let invocation = interp.invocation_of(depth);
-    // Created here when the activation never asked for one, which is what
-    // `createStackFrame`'s own `getContextObject()` does -- see
+    // Created here when the activation never asked for one, which is what the
+    // oracle's frame creation does for the context object -- see
     // `Interp::context_object_at`.
     let context = interp.context_object_at(depth);
     let executable = executable_at(interp, depth).ok();
@@ -811,9 +796,9 @@ pub(crate) fn build_frame_with(
     interp.roots.activity_mut().push_temp(name);
     let line = interp.counted(snapshot.clause.line);
     let invocation = match invocation {
-        // `StackFrameClass::getInvocation` answers `.nil` for a zero id,
-        // which is the frame kinds a native activation builds and which this
-        // crate has none of; the id is minted here rather than left at zero.
+        // A zero id answers `.nil` for the invocation, which is the frame
+        // kinds a native activation builds and which this crate has none of;
+        // the id is minted here rather than left at zero.
         None => ObjRef::NIL,
         Some(id) => interp.counted(id as usize),
     };
@@ -863,12 +848,11 @@ fn frame_object(
     for &(name, value) in entries {
         native.set_entry(name, value);
     }
-    // `StackFrameClass::stringValue`/`makeString`, which answer the traceback
-    // line where `defaultName` answers `a StackFrame` -- the one native class
-    // in this crate that separates the two. Without it an `Array` holding a
-    // frame joins on the default name: measured, oracle rc 0,
-    // `say .array~of(f)` is the traceback line where `f~objectName` is
-    // `a StackFrame`.
+    // `StackFrame` answers the traceback line for `string` and `makeString`
+    // where `defaultName` answers `a StackFrame` -- the one native class in
+    // this crate that separates the two. Without it an `Array` holding a frame
+    // joins on the default name: measured, oracle rc 0, `say .array~of(f)` is
+    // the traceback line where `f~objectName` is `a StackFrame`.
     native.set_string_value(trace_text);
     interp.roots.activity_mut().pop_frame(frame);
     // Re-pushed above the frame that has just closed, which is the shape
@@ -880,11 +864,11 @@ fn frame_object(
 }
 
 /// The `StackFrame` of an `INTERPRET` fragment of the running activation,
-/// executing `line`, whose traceback line is `trace_text`: `FRAME_INTERPRET`
-/// with no name, target or arguments, and an invocation and a context of its
-/// own (`RexxActivation::createStackFrame`, `RexxActivation.cpp:5006`). The
-/// context is one whose activation has ended, as the fragment's has by the
-/// time anything reads it; the executable is the running activation's.
+/// executing `line`, whose traceback line is `trace_text`: an interpret-kind
+/// frame with no name, target or arguments, and an invocation and a context of
+/// its own. The context is one whose activation has ended, as the fragment's
+/// has by the time anything reads it; the executable is the running
+/// activation's.
 pub(crate) fn build_interpret_frame(
     interp: &mut Interp,
     line: usize,
@@ -979,10 +963,7 @@ pub(crate) fn build_ended_frame(
 
 /// The `StackFrame` of a native method or routine that `target` (`.nil` for a
 /// routine) was sent with `arguments`, with no line or invocation and its
-/// `Compiled method` or `Compiled routine` line as its traceback
-/// (`InternalActivationFrame::createStackFrame`,
-/// `concurrency/ActivationFrame.cpp:100`, and `NativeActivation::
-/// createStackFrame`, `execution/NativeActivation.cpp:3620`). A routine's
+/// `Compiled method` or `Compiled routine` line as its traceback. A routine's
 /// context is the calling activation's and a method's is `.nil`: measured,
 /// oracle rc 0, `SysSleep`, `FILESPEC` and an `EXTERNAL` routine answer one,
 /// `SUBSTR` and an `EXTERNAL` method none. `caller` is `None` for a method,
@@ -1047,10 +1028,9 @@ pub(crate) fn native_method_executable(
 }
 
 /// The `StackFrame` of the native call in row `row` of
-/// [`Activity::native_handles`] -- `NativeActivation::createStackFrame`
-/// (`execution/NativeActivation.cpp:3620`): no line and no invocation, the
-/// calling activation's context, and the `Compiled routine` or `Compiled
-/// method` line as its traceback.
+/// [`Activity::native_handles`]: no line and no invocation, the calling
+/// activation's context, and the `Compiled routine` or `Compiled method` line
+/// as its traceback.
 ///
 /// # Panics
 /// If no native call is in that row.
@@ -1080,8 +1060,7 @@ pub(crate) fn build_native_frame_at(interp: &mut Interp, row: usize) -> Result<O
             Raised::compiled_routine_line(&name),
         )
     };
-    // Only a routine with a calling activation has a context
-    // (`NativeActivation::accessCallerContext` runs for a routine alone).
+    // Only a routine with a calling activation has a context.
     let context = match method || callerless {
         true => None,
         false => {
@@ -1172,11 +1151,10 @@ fn read_snapshot(interp: &Interp, depth: usize) -> Result<Snapshot, Failure> {
     let activation = interp
         .frame_at(depth)
         .ok_or_else(|| Failure::from(Raised::context_not_active()))?;
-    // `RexxActivation::createStackFrame`'s own cascade, whose whole value set
-    // is `StackFrameClass.cpp`'s `FRAME_*` constants. `FRAME_INTERPRET` is a
-    // fragment's, which `run_fragment` pushes no activation for and
-    // `live_levels` lists beside them, and `FRAME_COMPILE` belongs to the parser
-    // (`LanguageParser::createStackFrame`, `parser/LanguageParser.cpp:866`).
+    // The cascade whose whole value set is the frame-kind constants. The
+    // interpret kind is a fragment's, which `run_fragment` pushes no
+    // activation for and `live_levels` lists beside them, and the compile kind
+    // belongs to the parser.
     let (kind, target) = match activation.entry {
         Entry::TopLevel
             if matches!(
@@ -1218,9 +1196,8 @@ fn read_snapshot(interp: &Interp, depth: usize) -> Result<Snapshot, Failure> {
     })
 }
 
-/// `RexxActivation::getTraceBack`: this frame's own clause as `TRACE` prints
-/// it -- `PackageClass::traceBack` (`classes/PackageClass.cpp:561`) over the
-/// instruction's source location and the trace indent in force.
+/// This frame's own clause as `TRACE` prints it, over the instruction's source
+/// location and the trace indent in force.
 fn trace_line_text(interp: &mut Interp, depth: usize, snapshot: &Snapshot) -> Vec<u8> {
     let traceable = interp
         .programs
@@ -1305,9 +1282,8 @@ fn frame_entry(interp: &Interp, receiver: ObjRef, name: &[u8]) -> Result<ObjRef,
     }
 }
 
-/// `StackFrameClass::getType`: `PROGRAM`, `INTERNALCALL`, `ROUTINE` or
-/// `METHOD` -- see [`read_snapshot`] for the two of the C++'s six this crate
-/// cannot reach.
+/// `PROGRAM`, `INTERNALCALL`, `ROUTINE` or `METHOD` -- see [`read_snapshot`]
+/// for the two of the C++'s six this crate cannot reach.
 fn frame_type(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1317,8 +1293,8 @@ fn frame_type(
     frame_entry(interp, receiver, key::TYPE).map(Some)
 }
 
-/// `StackFrameClass::getName`: the routine or method name this frame was
-/// invoked under, and the program's own path for a `PROGRAM` frame.
+/// The routine or method name this frame was invoked under, and the program's
+/// own path for a `PROGRAM` frame.
 fn frame_name(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1328,8 +1304,7 @@ fn frame_name(
     frame_entry(interp, receiver, key::NAME).map(Some)
 }
 
-/// `StackFrameClass::getLine`: the line the frame was executing when the
-/// snapshot was taken.
+/// The line the frame was executing when the snapshot was taken.
 fn frame_line(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1339,7 +1314,6 @@ fn frame_line(
     frame_entry(interp, receiver, key::LINE).map(Some)
 }
 
-/// `StackFrameClass::getInvocation`.
 fn frame_invocation(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1349,8 +1323,8 @@ fn frame_invocation(
     frame_entry(interp, receiver, key::INVOCATION).map(Some)
 }
 
-/// `StackFrameClass::getTarget`: the receiver of the send, and `.nil` on any
-/// frame that is not a `METHOD` one.
+/// The receiver of the send, and `.nil` on any frame that is not a `METHOD`
+/// one.
 fn frame_target(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1360,8 +1334,8 @@ fn frame_target(
     frame_entry(interp, receiver, key::TARGET).map(Some)
 }
 
-/// `StackFrameClass::getArguments`, whose `OREF_NULL` answers an empty array
-/// rather than `.nil`.
+/// The arguments, where an absent list answers an empty array rather than
+/// `.nil`.
 fn frame_arguments(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1371,10 +1345,10 @@ fn frame_arguments(
     frame_entry(interp, receiver, key::ARGUMENTS).map(Some)
 }
 
-/// `StackFrameClass::getExecutable`: the `Method` or `Routine` the frame's
-/// level was running, `.nil` for a `COMPILE` frame. A frame built without
-/// one refuses: a package hook's, one built from a failure's site rather
-/// than from an activation, and one whose [`executable_at`] failed.
+/// The `Method` or `Routine` the frame's level was running, `.nil` for a
+/// `COMPILE` frame. A frame built without one refuses: a package hook's, one
+/// built from a failure's site rather than from an activation, and one whose
+/// [`executable_at`] failed.
 fn frame_executable(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1390,9 +1364,9 @@ fn frame_executable(
     }
 }
 
-/// `StackFrameClass::getContext`: the `RexxContext` of the activation this
-/// frame was taken from -- which may since have ended, and then raises
-/// `98.981` on its own next send while this frame goes on answering.
+/// The `RexxContext` of the activation this frame was taken from -- which may
+/// since have ended, and then raises `98.981` on its own next send while this
+/// frame goes on answering.
 fn frame_context(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1402,9 +1376,8 @@ fn frame_context(
     frame_entry(interp, receiver, key::CONTEXT).map(Some)
 }
 
-/// `StackFrameClass::getTraceLine`, which `String` and `MakeString` are bound
-/// to as well (`Setup.cpp:1713`, `:1716`, `:1717` -- one function under three
-/// names, so the three cannot disagree).
+/// The trace line, which `String` and `MakeString` are bound to as well -- one
+/// function under three names, so the three cannot disagree.
 fn frame_trace_line(
     interp: &mut Interp,
     _cleared: Cleared,

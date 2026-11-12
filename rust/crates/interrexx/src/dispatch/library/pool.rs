@@ -1,6 +1,6 @@
 //! The classic API's reach into a running program from a handler it called:
-//! `RexxVariablePool` and `RexxCallBack` (`api/rexx.h`), and the native frame
-//! a classic handler runs in so that they find it.
+//! `RexxVariablePool` and `RexxCallBack`, and the native frame a classic
+//! handler runs in so that they find it.
 
 use interrexx_api::callbacks::{CallBack, PoolAnswer, PoolRequest};
 use interrexx_api::values::{Activation, CStringPool, Conversion};
@@ -31,11 +31,9 @@ enum Target {
 
 impl Interp {
     /// Runs `call`, a classic handler's, in a native frame of its own whose
-    /// call opens the variable pool to the running activation, as
-    /// `NativeActivation::callRegisteredRoutine` runs one
-    /// (`execution/NativeActivation.cpp:1466`). `call` answers `None` where
-    /// a `RexxCallBack` ended it, and the condition or `EXIT` that did is the
-    /// error.
+    /// call opens the variable pool to the running activation. `call` answers
+    /// `None` where a `RexxCallBack` ended it, and the condition or `EXIT`
+    /// that did is the error.
     pub(crate) fn run_classic_handler<R>(
         &mut self,
         name: &[u8],
@@ -74,11 +72,11 @@ impl Interp {
         }
     }
 
-    /// Runs the system exit `handler` for `request` in a native frame of its own whose call
-    /// opens the variable pool to the running activation, as `Activity::run` runs an
-    /// `ExitHandlerDispatcher` or a `ContextExitHandlerDispatcher`
-    /// (`concurrency/ExitHandler.cpp`). A condition a context handler raised is raised once it
-    /// has returned, as `NativeActivation::checkConditions` raises one.
+    /// Runs the system exit `handler` for `request` in a native frame of its
+    /// own whose call opens the variable pool to the running activation, as
+    /// `Activity::run` runs an exit-handler dispatcher. A condition a context
+    /// handler raised is raised once it has returned, as a native call raises
+    /// one.
     ///
     /// # Errors
     /// The condition the handler raised, and [`Loud`] for an interface member it reached that

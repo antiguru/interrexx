@@ -12,15 +12,15 @@ use super::{
 /// `Pointer`'s and `WeakReference`'s instance methods. Chained into
 /// `ObjectModel::build` beside [`super::NATIVE_METHODS`].
 pub(super) static NATIVE_METHODS: &[(&str, &str, Arity, NativeMethod)] = &[
-    // `memory/Setup.cpp:1645`-`:1649`. `=` and `==` name one function and
-    // `\\=` and `\\==` name the other, each a row rather than a second
-    // implementation for the reason `Object`'s pairs give.
+    // `=` and `==` name one function and `\\=` and `\\==` name the other, each
+    // a row rather than a second implementation for the reason `Object`'s
+    // pairs give.
     ("Pointer", "=", Arity::Fixed(1), native_pointer_equal),
     ("Pointer", "==", Arity::Fixed(1), native_pointer_equal),
     ("Pointer", "\\=", Arity::Fixed(1), native_pointer_not_equal),
     ("Pointer", "\\==", Arity::Fixed(1), native_pointer_not_equal),
     ("Pointer", "ISNULL", Arity::Fixed(0), native_pointer_is_null),
-    // `AddMethod("Value", WeakReference::value, 0)`, `memory/Setup.cpp:1686`.
+    // `WeakReference`'s `Value` is bound with no arguments.
     (
         "WeakReference",
         "VALUE",
@@ -29,10 +29,8 @@ pub(super) static NATIVE_METHODS: &[(&str, &str, Arity, NativeMethod)] = &[
     ),
 ];
 
-/// `StringTable~new` and `Directory~new`: an empty hash collection --
-/// `StringTable::newRexx` and `DirectoryClass::newRexx`
-/// (`memory/Setup.cpp:875`, `:928`), each of which allocates and then sends
-/// `INIT` with the whole argument list.
+/// `StringTable~new` and `Directory~new`: an empty hash collection, each of
+/// which allocates and then sends `INIT` with the whole argument list.
 pub(super) fn native_hash_collection_new(
     interp: &mut Interp,
     cleared: Cleared,
@@ -65,8 +63,7 @@ pub(super) fn native_directory_new(
 }
 
 /// A hash collection's `~init(size)`: the store sized for the initial-size
-/// argument, as `HashCollection::initRexx`
-/// (`classes/support/HashCollection.cpp:63`) sizes it.
+/// argument.
 pub(super) fn native_capacity_init(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -79,7 +76,7 @@ pub(super) fn native_capacity_init(
 }
 
 /// `Message~new(target, message, ...)`: a message object whose send has not
-/// been made -- `MessageClass::newRexx` (`classes/MessageClass.cpp:828`).
+/// been made.
 pub(super) fn native_message_new(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -130,12 +127,10 @@ pub(super) fn native_message_new(
     super::begin_init(interp, object, &[])
 }
 
-/// `Method~new(name, source [, context] ...)` and `Routine~new(name, source
-/// [, context] ...)`: the first two are required, the context is resolved as
-/// `newFile`'s is, and `INIT` gets the arguments after it. The arguments are
-/// `BaseExecutable::processNewExecutableArgs`'s
-/// (`execution/BaseExecutable.cpp:225`), which `MethodClass::newRexx` and
-/// `RoutineClass::newRexx` share.
+/// `Method~new(name, source [, context] ...)` and `Routine~new(name, source [,
+/// context] ...)`: the first two are required, the context is resolved as
+/// `newFile`'s is, and `INIT` gets the arguments after it. The two
+/// constructors share one argument handling.
 pub(super) fn native_executable_new(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -178,11 +173,10 @@ pub(super) fn native_executable_new(
 /// that holds a subclass instance's annotation table.
 pub(super) const SUBCLASS_ANNOTATIONS: &[u8] = b"ANNOTATIONS";
 
-/// `RexxClass::completeNewObject` (`classes/ClassClass.cpp:1882`) for an
-/// executable or package `object` that `base`'s constructor built: it becomes
-/// an instance of `class`, a subclass of `base`, keeping its identity, so
-/// every record kept against the object still reaches it. An object an
-/// earlier call already made an instance takes `class`'s behaviour.
+/// Completion of an executable or package `object` that `base`'s constructor
+/// built: it becomes an instance of `class`, a subclass of `base`, keeping its
+/// identity, so every record kept against the object still reaches it. An
+/// object an earlier call already made an instance takes `class`'s behaviour.
 pub(super) fn native_as_instance(
     interp: &mut Interp,
     object: ObjRef,
@@ -238,9 +232,7 @@ pub(super) fn native_as_instance(
 }
 
 /// `Method~newFile(name [, context])` and `Routine~newFile(name [, context])`:
-/// the executable a file's own text becomes, then `INIT` with no arguments,
-/// as `MethodClass::newFileRexx` (`classes/MethodClass.cpp:521`) and
-/// `RoutineClass::newFileRexx` (`classes/RoutineClass.cpp:341`) do.
+/// the executable a file's own text becomes, then `INIT` with no arguments.
 pub(super) fn native_new_file(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -316,10 +308,8 @@ fn executable_context(
     }
 }
 
-/// `MethodClass::loadExternalMethod(name, descriptor)` and
-/// `RoutineClass::loadExternalRoutine` (`memory/Setup.cpp:1093`, `:1130`).
-/// Neither completes a subclass's object: sent to one, each answers the base
-/// class's.
+/// The external-method and external-routine loaders. Neither completes a
+/// subclass's object: sent to one, each answers the base class's.
 pub(super) fn native_load_external(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -344,8 +334,7 @@ pub(super) fn native_load_external(
     // answer a `Method`, while `LIBRARY rexx file_separator` and
     // `LIBRARY Rexx file_separator` answer `.nil`.
     if let Some(package) = crate::internal_routines::Package::named(&library) {
-        // An internal package's routine table is not this registry
-        // (`runtime/InternalPackage.cpp:230`).
+        // An internal package's routine table is not this registry.
         if routine {
             let Some(row) = crate::internal_routines::package_routine(package, &entry) else {
                 return Ok(Some(ObjRef::NIL));
@@ -430,8 +419,7 @@ fn executable_name_argument(
     }
 }
 
-/// `String~new(value, ...)`: a string carrying `value`'s own bytes --
-/// `RexxString::newRexx` (`classes/StringClass.cpp:2352`).
+/// `String~new(value, ...)`: a string carrying `value`'s own bytes.
 pub(super) fn native_string_new(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -464,8 +452,7 @@ pub(super) fn native_string_new(
     super::begin_init(interp, object, &args[1..])
 }
 
-/// `Stem~new(name, ...)`: a stem object whose name is the optional argument
-/// -- `StemClass::newRexx` (`classes/StemClass.cpp:92`).
+/// `Stem~new(name, ...)`: a stem object whose name is the optional argument.
 pub(super) fn native_stem_new(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -502,9 +489,7 @@ pub(super) fn native_stem_new(
     super::begin_init(interp, object, rest)
 }
 
-/// `Pointer~new` and `Buffer~new`: the raise that is the whole body of
-/// `PointerClass::newRexx` (`classes/PointerClass.cpp:139`-`:143`) and
-/// `BufferClass::newRexx` (`classes/BufferClass.cpp:86`-`:90`).
+/// `Pointer~new` and `Buffer~new`: the raise that is their whole body.
 pub(super) fn native_unsupported_new(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -527,9 +512,8 @@ pub(crate) fn pointer_address(interp: &Interp, value: ObjRef) -> Option<*mut std
     }
 }
 
-/// `PointerClass::equal` and `PointerClass::notEqual`
-/// (`classes/PointerClass.cpp:71`, `:91`): anything that is not a `.Pointer`
-/// compares unequal, and two `.Pointer`s compare on their addresses.
+/// Anything that is not a `.Pointer` compares unequal, and two `.Pointer`s
+/// compare on their addresses.
 fn pointers_are_equal(
     interp: &Interp,
     receiver: ObjRef,
@@ -566,7 +550,6 @@ fn native_pointer_not_equal(
     Ok(Some(interp.counted(usize::from(!equal))))
 }
 
-/// `PointerClass::isNull` (`classes/PointerClass.cpp:163`).
 fn native_pointer_is_null(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -589,7 +572,7 @@ fn weak_referent_cell(interp: &mut Interp, referent: ObjRef) -> ObjRef {
 }
 
 /// `WeakReference~new(value, ...)`: a reference that does not keep `value`
-/// alive -- `WeakReference::newRexx` (`classes/WeakReferenceClass.cpp:231`).
+/// alive.
 pub(super) fn native_weak_reference_new(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -609,8 +592,7 @@ pub(super) fn native_weak_reference_new(
 }
 
 /// `WeakReference~value`: the referent, or `.nil` once the collector has
-/// cleared it -- `WeakReference::value` (`classes/WeakReferenceClass.cpp:217`),
-/// whose whole body is `resultOrNil(referentObject)`.
+/// cleared it.
 fn native_weak_reference_value(
     interp: &mut Interp,
     _cleared: Cleared,

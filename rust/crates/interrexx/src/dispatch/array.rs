@@ -84,8 +84,7 @@ pub(super) fn array_dimensions(
     }
 }
 
-/// `ArrayClass::isFixedDimension` (`classes/ArrayClass.hpp:223`): an array
-/// that can no longer take a shape from a subscript list.
+/// An array that can no longer take a shape from a subscript list.
 fn array_is_fixed_dimension(interp: &Interp, receiver: ObjRef) -> Result<bool, Failure> {
     let receiver = collection_store(interp, receiver);
     match interp.array_body(receiver) {
@@ -94,7 +93,6 @@ fn array_is_fixed_dimension(interp: &Interp, receiver: ObjRef) -> Result<bool, F
     }
 }
 
-/// `ArrayClass::MaxFixedArraySize` (`classes/ArrayClass.hpp:329`).
 pub(super) const MAX_FIXED_ARRAY_SIZE: usize = 100_000_000_000_000_000;
 
 /// `size` empty slots, or the 5.0 the oracle raises when the allocator refuses
@@ -114,11 +112,11 @@ fn empty_array_slots(size: usize) -> Result<ArraySlots, Failure> {
     ArraySlots::empty(size).map_err(|_| Failure::from(Raised::system_resources()))
 }
 
-/// The bounds policy a subscript list is validated under -- `IndexAccess`
-/// and `IndexUpdate` (`classes/ArrayClass.hpp:62`-`:63`).
+/// The bounds policy a subscript list is validated under -- `IndexAccess` and
+/// `IndexUpdate`.
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub(super) enum IndexUse {
-    /// `getRexx`: a subscript past the end answers `.nil`.
+    /// `Array~at`: a subscript past the end answers `.nil`.
     Get,
     /// `putRexx`: a subscript past the end grows the array.
     Put,
@@ -126,8 +124,8 @@ pub(super) enum IndexUse {
 
 impl IndexUse {
     /// The argument list position the subscript list starts at, which every
-    /// refusal a subscript raises counts from: `putRexx`'s first argument is
-    /// the value, so its list starts one later than `getRexx`'s.
+    /// refusal a subscript raises counts from: `put`'s first argument is the
+    /// value, so its list starts one later than `at`'s.
     pub(super) fn arg_position(self) -> usize {
         match self {
             IndexUse::Get => 1,
@@ -136,9 +134,8 @@ impl IndexUse {
     }
 }
 
-/// `ArrayClass::validateIndex` (`classes/ArrayClass.cpp:1211`): the flattened
-/// 1-based slot `args` names in `receiver`, or `None` for a subscript out of
-/// bounds under [`IndexUse::Get`].
+/// The flattened 1-based slot `args` names in `receiver`, or `None` for a
+/// subscript out of bounds under [`IndexUse::Get`].
 pub(super) fn array_position(
     interp: &mut Interp,
     receiver: ObjRef,
@@ -164,11 +161,10 @@ pub(super) fn array_position(
     }
 }
 
-/// A lone `Array` argument read as the subscript list it stands for, or
-/// `None` for any other argument (`classes/ArrayClass.cpp:1226`-`:1239`). The
-/// list is every slot of a single-dimensional array, so a hole in it is
-/// 98.975 naming the hole, and an array of more dimensions is 93.939 naming
-/// `position`.
+/// A lone `Array` argument read as the subscript list it stands for, or `None`
+/// for any other argument. The list is every slot of a single-dimensional
+/// array, so a hole in it is 98.975 naming the hole, and an array of more
+/// dimensions is 93.939 naming `position`.
 pub(super) fn index_list(
     interp: &Interp,
     value: ObjRef,
@@ -186,7 +182,6 @@ pub(super) fn index_list(
     Ok(Some(slots.to_vec()))
 }
 
-/// `ArrayClass::validateSingleDimensionIndex` (`classes/ArrayClass.cpp:1258`).
 fn single_dimension_position(
     interp: &mut Interp,
     receiver: ObjRef,
@@ -230,9 +225,7 @@ fn single_dimension_position(
     }
 }
 
-/// `ArrayClass::validateMultiDimensionIndex` (`classes/ArrayClass.cpp:1361`),
-/// whose offset takes the **first** subscript as the fastest-moving one
-/// (`:1408`-`:1410`).
+/// The offset takes the **first** subscript as the fastest-moving one.
 fn multi_dimension_position(
     interp: &mut Interp,
     receiver: ObjRef,
@@ -265,9 +258,9 @@ fn multi_dimension_position(
     Ok(Some(offset + 1))
 }
 
-/// A subscript converted under `Numerics::ARGUMENT_DIGITS` rather than under
-/// the activation's own `NUMERIC DIGITS`, or `None` for one that is not a
-/// whole number of at least 1.
+/// A subscript converted at the argument precision rather than under the
+/// activation's own `NUMERIC DIGITS`, or `None` for one that is not a whole
+/// number of at least 1.
 pub(super) fn whole_index(interp: &mut Interp, value: ObjRef) -> Result<Option<usize>, Failure> {
     if let Some(index) = small_index(value) {
         return Ok(Some(index));
@@ -306,10 +299,8 @@ fn index_number(
 }
 
 /// [`whole_index`]'s conversion admitting zero, for the one index in the
-/// language that counts from it: `ListClass::validateIndex`
-/// (`classes/ListClass.cpp:195`) reads a list handle with
-/// `unsignedNumberValue` under the same `Numerics::ARGUMENT_DIGITS`, and a
-/// list's first handle is `0`.
+/// language that counts from it: a list handle is read under the same argument
+/// precision, and a list's first handle is `0`.
 pub(super) fn unsigned_index(interp: &mut Interp, value: ObjRef) -> Result<Option<usize>, Failure> {
     if let Decoded::SmallInt(small) = value.decode()
         && let Some(whole) = interrexx_num::whole_i64(small, interrexx_num::ARGUMENT_DIGITS)
@@ -321,10 +312,9 @@ pub(super) fn unsigned_index(interp: &mut Interp, value: ObjRef) -> Result<Optio
         .and_then(|whole| usize::try_from(whole).ok()))
 }
 
-/// A comparison result as `numberValue` reads it -- the conversion both sort
-/// comparators make on what the Rexx method answered
-/// (`classes/ArrayClass.cpp:2907`, `classes/ObjectClass.cpp:243`), at
-/// `Numerics::DEFAULT_DIGITS` rather than at the subscript precision.
+/// A comparison result as a number is read -- the conversion both sort
+/// comparators make on what the Rexx method answered, at the default precision
+/// rather than at the subscript precision.
 fn whole_comparison(interp: &mut Interp, value: ObjRef) -> Option<i64> {
     let digits = interrexx_num::DEFAULT_DIGITS as usize;
     if let Decoded::SmallInt(small) = value.decode() {
@@ -333,9 +323,8 @@ fn whole_comparison(interp: &mut Interp, value: ObjRef) -> Option<i64> {
     interp.to_number(value).ok()?.whole_value(digits)
 }
 
-/// One subscript as `RexxInternalObject::requiredPositive`
-/// (`classes/ObjectClass.cpp:1564`) reads it, `position` naming its place in
-/// the method's own argument list.
+/// One subscript as a required positive whole number, `position` naming its
+/// place in the method's own argument list.
 pub(super) fn positive_index(
     interp: &mut Interp,
     value: ObjRef,
@@ -353,9 +342,9 @@ pub(super) fn positive_index(
     }
 }
 
-/// One subscript of a multidimensional index as `positionArgument`
-/// (`classes/StringClassUtil.cpp:209`) reads it -- the same conversion
-/// [`positive_index`] makes, under a different pair of errors.
+/// One subscript of a multidimensional index as a position argument is read --
+/// the same conversion [`positive_index`] makes, under a different pair of
+/// errors.
 fn position_index(
     interp: &mut Interp,
     subscript: Option<ObjRef>,
@@ -373,8 +362,7 @@ fn position_index(
     }
 }
 
-/// `ArrayClass::extend` (`classes/ArrayClass.cpp:2034`): grow the receiver to
-/// `size` slots, the added ones empty.
+/// Grow the receiver to `size` slots, the added ones empty.
 fn array_resize(interp: &mut Interp, receiver: ObjRef, size: usize) -> Result<(), Failure> {
     let receiver = collection_store(interp, receiver);
     let grown = match interp.heap.get_mut(receiver).map(|object| &mut object.body) {
@@ -394,9 +382,8 @@ fn array_resize(interp: &mut Interp, receiver: ObjRef, size: usize) -> Result<()
     Ok(())
 }
 
-/// `ArrayClass::extendMulti` (`classes/ArrayClass.cpp:2434`): grow the
-/// receiver so that every subscript is within bounds, answering the shape it
-/// now has.
+/// Grow the receiver so that every subscript is within bounds, answering the
+/// shape it now has.
 fn array_extend_multi(
     interp: &mut Interp,
     receiver: ObjRef,
@@ -422,8 +409,8 @@ fn array_extend_multi(
     Ok(dimensions)
 }
 
-/// The element move `ArrayClass::extendMulti` performs: each filled slot goes
-/// to the offset its multidimensional index has under `dimensions`.
+/// The element move array growth performs: each filled slot goes to the offset
+/// its multidimensional index has under `dimensions`.
 fn array_reshape(
     interp: &mut Interp,
     receiver: ObjRef,
@@ -474,9 +461,7 @@ fn array_reshape(
 }
 
 /// `Array~at(index)` and `Array~[index]`: the item at `index`, or `.nil` for
-/// an empty slot and for a subscript past the end -- `ArrayClass::getRexx`
-/// (`classes/ArrayClass.cpp:979`), whose out-of-bounds answer is
-/// `TheNilObject` and whose in-bounds answer is `resultOrNil(get(position))`.
+/// an empty slot and for a subscript past the end.
 pub(super) fn native_array_at(
     interp: &mut Interp,
     cleared: Cleared,
@@ -507,10 +492,9 @@ pub(super) fn native_array_at_for(
     }))
 }
 
-/// `Array~put(value, index...)` and `Array~[index...] = value`:
-/// `ArrayClass::putRexx` (`classes/ArrayClass.cpp:590`), which requires the
-/// value, validates the rest as the subscript list under `IndexUpdate` and
-/// answers nothing.
+/// `Array~put(value, index...)` and `Array~[index...] = value`: requires the
+/// value, validates the rest as the subscript list for an update and answers
+/// nothing.
 pub(super) fn native_array_put(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -535,10 +519,8 @@ pub(super) fn native_array_put(
     }
 }
 
-/// `Array~dimension([n])`: how many dimensions the array has, or the extent
-/// of dimension `n` -- `ArrayClass::dimensionRexx`
-/// (`classes/ArrayClass.cpp:1103`), which answers `0` for a dimension the
-/// array does not have.
+/// `Array~dimension([n])`: how many dimensions the array has, or the extent of
+/// dimension `n`, which is `0` for a dimension the array does not have.
 pub(super) fn native_array_dimension(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -567,8 +549,7 @@ pub(super) fn native_array_dimension(
     Ok(Some(interp.counted(answer)))
 }
 
-/// `.Array~new([size])` and `.Array~new(dimension...)`:
-/// `ArrayClass::newRexx` (`classes/ArrayClass.cpp:89`).
+/// `.Array~new([size])` and `.Array~new(dimension...)`.
 pub(super) fn native_array_new(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -589,9 +570,9 @@ pub(super) fn native_array_new(
                 let size = array_size_argument(interp, *only, 1)?;
                 Body::Array {
                     slots: empty_array_slots(size)?,
-                    // `newRexx`'s own `if (totalSize == 0)` (`:125`-`:128`),
-                    // whose one entry nothing reads: an explicit zero size
-                    // fixes the shape, and the entry is not the extent.
+                    // `newRexx`'s own `if (totalSize == 0)`, whose one entry
+                    // nothing reads: an explicit zero size fixes the shape,
+                    // and the entry is not the extent.
                     dimensions: (size == 0).then(|| Box::from([0].as_slice())),
                 }
             }
@@ -613,9 +594,8 @@ fn array_of_class(interp: &mut Interp, class: ObjRef, body: Body) -> Result<ObjR
     collection::instance_over_store(interp, class, store)
 }
 
-/// `.Array~of(item, ...)`: the arguments as an array's slots, in order --
-/// `ArrayClass::ofRexx` (`classes/ArrayClass.cpp:150`), whose `INIT` send
-/// carries no arguments.
+/// `.Array~of(item, ...)`: the arguments as an array's slots, in order. Its
+/// `INIT` send carries no arguments.
 pub(super) fn native_array_of(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -633,8 +613,7 @@ pub(super) fn native_array_of(
     Ok(Some(object))
 }
 
-/// `ArrayClass::createMultidimensional` (`classes/ArrayClass.cpp:199`): a
-/// body whose shape is `dimensions` and whose slots are all empty.
+/// A body whose shape is `dimensions` and whose slots are all empty.
 fn multidimensional_body(
     interp: &mut Interp,
     dimensions: &[Option<ObjRef>],
@@ -655,9 +634,8 @@ fn multidimensional_body(
     })
 }
 
-/// `ArrayClass::validateSize` (`classes/ArrayClass.cpp:178`) over
-/// `nonNegativeArgument` (`classes/StringClassUtil.cpp:167`): a whole number
-/// of at least zero, `MaxFixedArraySize` its upper bound.
+/// A size check: a whole number of at least zero, with the fixed-array maximum
+/// as its upper bound.
 fn array_size_argument(
     interp: &mut Interp,
     argument: Option<ObjRef>,
@@ -679,8 +657,7 @@ fn array_size_argument(
     }
 }
 
-/// `Array~size`: how many slots the array has, empty ones included --
-/// `ArrayClass::sizeRexx`.
+/// `Array~size`: how many slots the array has, empty ones included.
 pub(super) fn native_array_size(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -691,7 +668,7 @@ pub(super) fn native_array_size(
     Ok(Some(interp.counted(size)))
 }
 
-/// `Array~items`: how many slots hold an object -- `ArrayClass::itemsRexx`.
+/// `Array~items`: how many slots hold an object.
 pub(super) fn native_array_items(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -703,18 +680,17 @@ pub(super) fn native_array_items(
 }
 
 /// `Array~makeString(format, separator)` and `Array~toString(format,
-/// separator)`: the array's items as one string -- `ArrayClass::toString`
-/// (`classes/ArrayClass.cpp:1856`), which `MakeString` and `ToString` both
-/// name at the same arity (`memory/Setup.cpp:733`-`:734`), which is why one
-/// function answers both rows.
+/// separator)`: the array's items as one string. `MakeString` and `ToString`
+/// both name one function at the same arity, which is why one function answers
+/// both rows.
 pub(super) fn native_array_make_string(
     interp: &mut Interp,
     _cleared: Cleared,
     receiver: ObjRef,
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
-    // `optionalOptionArgument(format, 'L', ARG_ONE)`: the option's first
-    // character, upcased, with the whole argument omitted meaning `L`.
+    // The option argument: its first character, upcased, with the whole
+    // argument omitted meaning `L`.
     let form = match args.first().copied().flatten() {
         None => b'L',
         Some(argument) => {

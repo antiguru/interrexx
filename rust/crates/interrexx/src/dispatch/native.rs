@@ -22,16 +22,15 @@ use crate::internal_routines::Package;
 /// Which part of the interpreter an entry point belongs to.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub(crate) enum Family {
-    /// `platform/unix/TimeSupport.cpp`: the timers `.Alarm` and `.Ticker`
-    /// drive.
+    /// The timers `.Alarm` and `.Ticker` drive.
     Timer,
-    /// `streamLibrary/StreamNative.cpp`: `.Stream`'s body.
+    /// `.Stream`'s body.
     Stream,
-    /// `classes/RexxQueueMethods.cpp`: `.RexxQueue`'s body.
+    /// `.RexxQueue`'s body.
     Queue,
-    /// `streamLibrary/FileNative.cpp`: `.File`'s body.
+    /// `.File`'s body.
     File,
-    /// `concurrency/CommandHandler.cpp`: `.CommandHandler`'s body.
+    /// `.CommandHandler`'s body.
     Command,
 }
 
@@ -52,9 +51,9 @@ impl Family {
 
 /// One entry point the `REXX` package exports to `::METHOD ... EXTERNAL`.
 pub(crate) struct NativeExternal {
-    /// The name, spelled as `interpreter/runtime/NativeMethods.h` spells it.
-    /// Matched caselessly, so the spelling is the C++'s for a reader's sake
-    /// and never for the lookup's.
+    /// The name, spelled as the oracle's native-method table spells it.
+    /// Matched caselessly, so the spelling is for a reader's sake and never
+    /// for the lookup's.
     pub(crate) name: &'static str,
     pub(crate) family: Family,
     /// **Not `pub(crate)`**: `dispatch::Interp::invoke` is the only reader,
@@ -752,10 +751,10 @@ fn attribute_accessors(
 pub(crate) fn method_external(method: &MethodDirective) -> Option<MethodExternal> {
     let spec = method.external.as_ref()?;
     let upper = method.name.to_ascii_uppercase();
-    // Before the `ATTRIBUTE` question, because `resolveMethod` loads the
+    // Before the `ATTRIBUTE` question, because method resolution loads the
     // library before it looks for either accessor's procedure in it. Measured,
-    // oracle: `::method m attribute external 'LIBRARY nosuchlib x'` is
-    // `98.903 Unable to load library "nosuchlib"` at rc 158 and not 90.998.
+    // oracle: `::method m attribute external 'LIBRARY nosuchlib x'` is `98.903
+    // Unable to load library "nosuchlib"` at rc 158 and not 90.998.
     let Some(package) = Package::named(&spec.library) else {
         let style = method.attribute.then_some(AttributeStyle::Both);
         return Some(other_library(&upper, style, spec));
@@ -796,8 +795,8 @@ pub(crate) fn attribute_external(attribute: &AttributeDirective) -> Option<Metho
 
 /// [`MethodExternal`] for one `::ROUTINE` naming a shared library, or `None`
 /// for `REGISTERED` and for the internal packages, whose routine tables are
-/// not the method registry above (`runtime/InternalPackage.cpp:230`) and
-/// whose entries [`internal_routine_entry`] names.
+/// not the method registry above and whose entries [`internal_routine_entry`]
+/// names.
 ///
 /// The entry defaults to the routine's own name, which the parser upcases for
 /// a symbol and keeps as written for a string -- measured, oracle: `::routine

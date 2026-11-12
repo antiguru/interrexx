@@ -14,8 +14,7 @@ use super::{
 
 // ---- Array's shared collection surface ----
 
-/// `Array~allItems`: every item, holes skipped, in index order --
-/// `ArrayClass::allItems`.
+/// `Array~allItems`: every item, holes skipped, in index order.
 fn native_array_all_items(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -29,8 +28,7 @@ fn native_array_all_items(
     Ok(Some(array_of(interp, items)))
 }
 
-/// `Array~allIndexes`: the index of every item, in the same order --
-/// `ArrayClass::allIndexes`.
+/// `Array~allIndexes`: the index of every item, in the same order.
 fn native_array_all_indexes(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -44,8 +42,8 @@ fn native_array_all_indexes(
     Ok(Some(array_of(interp, indexes)))
 }
 
-/// `Array~makeArray`: `RexxObject::makeArrayRexx`, which is
-/// `return makeArray();` and therefore a **virtual**.
+/// `Array~makeArray`: answers an array of the items and is therefore a
+/// **virtual**.
 fn native_array_make_array(
     interp: &mut Interp,
     cleared: Cleared,
@@ -55,7 +53,7 @@ fn native_array_make_array(
     native_array_all_items(interp, cleared, receiver, args)
 }
 
-/// `Array~isEmpty`: whether the array holds no item -- `ArrayClass::isEmptyRexx`.
+/// `Array~isEmpty`: whether the array holds no item.
 fn native_array_is_empty(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -66,8 +64,7 @@ fn native_array_is_empty(
     Ok(Some(crate::eval::logical(empty)))
 }
 
-/// `Array~empty`: drops every item and keeps the array's shape --
-/// `ArrayClass::empty`.
+/// `Array~empty`: drops every item and keeps the array's shape.
 fn native_array_empty(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -81,7 +78,7 @@ fn native_array_empty(
     Ok(Some(receiver))
 }
 
-/// `Array~hasItem(item)`: whether any slot holds it -- `ArrayClass::hasItemRexx`.
+/// `Array~hasItem(item)`: whether any slot holds it.
 fn native_array_has_item(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -105,8 +102,7 @@ fn native_array_has_item(
     }
 }
 
-/// `Array~index(item)`: the index of the first slot holding it, or `.nil` --
-/// `ArrayClass::indexRexx`.
+/// `Array~index(item)`: the index of the first slot holding it, or `.nil`.
 fn native_array_index(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -122,9 +118,9 @@ fn native_array_index(
     Ok(Some(ObjRef::NIL))
 }
 
-/// `Array~hasIndex(index...)`: whether that slot holds an item --
-/// `ArrayClass::hasIndexRexx`, `A_COUNT` because a multi-dimensional
-/// subscript arrives as several arguments.
+/// `Array~hasIndex(index...)`: whether that slot holds an item. It takes any
+/// number of arguments because a multi-dimensional subscript arrives as
+/// several.
 fn native_array_has_index(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -142,7 +138,7 @@ fn native_array_has_index(
 }
 
 /// `Array~remove(index...)`: takes the item out of that slot and answers it,
-/// or `.nil` -- `ArrayClass::removeRexx`.
+/// or `.nil`.
 fn native_array_remove(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -161,10 +157,9 @@ fn native_array_remove(
 }
 
 /// `Array~removeItem(item)`: clears the first slot holding it and answers it,
-/// or `.nil` -- `ArrayClass::removeItemRexx`. On a `Queue` the slot is
-/// deleted and the items after it close up, because `removeItem` reaches the
-/// virtual `remove` that `QueueClass::remove` redefines as `deleteItem`
-/// (`classes/QueueClass.cpp:222`).
+/// or `.nil`. On a `Queue` the slot is deleted and the items after it close
+/// up, because `removeItem` reaches the virtual `remove`, which `Queue`
+/// redefines as `deleteItem`.
 fn native_array_remove_item(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -187,8 +182,7 @@ fn native_array_remove_item(
     Ok(Some(ObjRef::NIL))
 }
 
-/// `Array~supplier`: a `Supplier` over this array's items and indexes --
-/// `ArrayClass::supplier`.
+/// `Array~supplier`: a `Supplier` over this array's items and indexes.
 fn native_array_supplier(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -219,8 +213,7 @@ fn clear_array_slot(interp: &mut Interp, receiver: ObjRef, offset: usize) -> Res
 
 // ---- Array's own surface ----
 
-/// `ArrayClass::checkMultiDimensional` (`classes/ArrayClass.cpp:426`): the
-/// four methods that only work on a single-dimensional array.
+/// The four methods that only work on a single-dimensional array.
 fn single_dimension_only(
     interp: &mut Interp,
     receiver: ObjRef,
@@ -234,7 +227,7 @@ fn single_dimension_only(
 }
 
 /// `Array~first` and `Array~last`: the INDEX of the outermost occupied slot,
-/// or `.nil` -- `ArrayClass::firstRexx`, `ArrayClass::lastRexx`.
+/// or `.nil`.
 fn array_end(
     interp: &mut Interp,
     receiver: ObjRef,
@@ -303,8 +296,7 @@ fn native_array_last_item(
 }
 
 /// `Array~next(index...)` and `Array~previous(index...)`: the nearest occupied
-/// index on that side, or `.nil` -- `ArrayClass::nextRexx`,
-/// `ArrayClass::previousRexx`.
+/// index on that side, or `.nil`.
 fn array_step(
     interp: &mut Interp,
     receiver: ObjRef,
@@ -385,8 +377,7 @@ fn native_array_previous(
     array_step(interp, receiver, args, false)
 }
 
-/// `Array~append(item)`: puts `item` past the last slot and answers its index
-/// -- `ArrayClass::appendRexx`.
+/// `Array~append(item)`: puts `item` past the last slot and answers its index.
 fn native_array_append(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -400,8 +391,7 @@ fn native_array_append(
 }
 
 /// `Array~insert(item [, index])`: puts `item` **after** `index` and shifts
-/// the rest along, answering the index it landed on --
-/// `ArrayClass::insertRexx`.
+/// the rest along, answering the index it landed on.
 fn native_array_insert(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -409,23 +399,22 @@ fn native_array_insert(
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
     single_dimension_only(interp, receiver, "INSERT")?;
-    // **The item is optional**, unlike `append`'s: `insertRexx` has no
-    // `requiredArgument` for it. Measured, `.Array~of('x','y')~insert`
-    // answers `3` and leaves size 3 with items 2 -- an empty slot.
+    // **The item is optional**, unlike `append`'s: `insert` requires no
+    // argument for it. Measured, `.Array~of('x','y')~insert` answers `3` and
+    // leaves size 3 with items 2 -- an empty slot.
     let item = args.first().copied().flatten();
     let at = match args.get(1).copied() {
-        // `.nil` is the front, which is the one spelling that is not an
-        // index at all (`classes/ArrayClass.cpp:755`).
+        // `.nil` is the front, which is the one spelling that is not an index
+        // at all.
         Some(Some(index)) if index == ObjRef::NIL => 0,
         Some(Some(index)) => {
             let position = single_subscript(interp, receiver, index, 2)?;
-            // `QueueClass::checkInsertIndex` (`classes/QueueClass.cpp:113`):
             // "the position must be location of an existing item within the
             // bounds of the queue, unlike an array which can insert at empty
-            // slots or beyond the existing bounds". `insertRexx` validates
-            // the index under `IndexUpdate`, which extends rather than
-            // refusing, so a position past the queue's extent is 93.966 too
-            // and never `putRexx`'s 93.918.
+            // slots or beyond the existing bounds". `insert` validates the
+            // index for an update, which extends rather than refusing, so a
+            // position past the queue's extent is 93.966 too and never `put`'s
+            // 93.918.
             if is_queue(interp, receiver) && position > last_item(interp, receiver)? {
                 return Err(Raised::incorrect_queue_index(position).into());
             }
@@ -439,15 +428,15 @@ fn native_array_insert(
 }
 
 /// `Array~delete(index...)`: takes the slot out, closes the gap and answers
-/// the item -- `ArrayClass::deleteRexx`.
+/// the item.
 pub(in crate::dispatch) fn native_array_delete(
     interp: &mut Interp,
     _cleared: Cleared,
     receiver: ObjRef,
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
-    // `requiredArgument(index, ARG_ONE)` comes FIRST and is 93.903, where
-    // the index-validating family is 93.901 -- `classes/ArrayClass.cpp:822`.
+    // A required-argument check on the index comes FIRST and is 93.903, where
+    // the index-validating family is 93.901.
     item_argument(args)?;
     single_dimension_only(interp, receiver, "DELETE")?;
     let Some(position) = position_in(interp, receiver, args, IndexUse::Get)? else {
@@ -461,8 +450,7 @@ pub(in crate::dispatch) fn native_array_delete(
     Ok(Some(held.unwrap_or(ObjRef::NIL)))
 }
 
-/// `Array~fill(item)`: puts `item` in every slot and answers the receiver --
-/// `ArrayClass::fillRexx`.
+/// `Array~fill(item)`: puts `item` in every slot and answers the receiver.
 fn native_array_fill(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -483,11 +471,10 @@ fn native_array_fill(
     }
 }
 
-/// The one subscript `insert` and `section` take, as
-/// `ArrayClass::validateIndex` (`classes/ArrayClass.cpp:1211`) reads it for a
-/// single-dimensional receiver: an `Array` argument stands for the
-/// subscripts it holds, and exactly one of them is a position. `position` is
-/// the argument's place in the method's argument list.
+/// The one subscript `insert` and `section` take, as a single-dimensional
+/// receiver reads it: an `Array` argument stands for the subscripts it holds,
+/// and exactly one of them is a position. `position` is the argument's place
+/// in the method's argument list.
 ///
 /// A queue reads an `Array` index by [`queue_index`] instead.
 fn single_subscript(
@@ -518,8 +505,7 @@ fn single_subscript(
     }
 }
 
-/// `Array~section(start [, count])`: a new array over that run --
-/// `ArrayClass::sectionRexx`.
+/// `Array~section(start [, count])`: a new array over that run.
 fn native_array_section(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -527,14 +513,13 @@ fn native_array_section(
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
     // The dimension check comes FIRST here and the required argument second,
-    // which is the opposite order from `delete` -- `:1502` against `:822`.
+    // which is the opposite order from `delete`.
     single_dimension_only(interp, receiver, "SECTION")?;
     let start = item_argument(args)?;
     let start = single_subscript(interp, receiver, start, 1)?;
-    // `optionalLengthArgument`, so a count that is not a non-negative whole
-    // number is 93.923 (`classes/ArrayClass.cpp:1512`). It reads an `Array`
-    // as `requestString` does, as its items' lines, and a refusal names the
-    // Array.
+    // The count is an optional length argument, so one that is not a
+    // non-negative whole number is 93.923. It reads an `Array` as the string
+    // request does, as its items' lines, and a refusal names the Array.
     let count = match args.get(1).copied().flatten() {
         Some(count) if interp.array_slots(count).is_some() => {
             let lines = interp.required_string_value(count)?;
@@ -559,8 +544,7 @@ fn native_array_section(
     Ok(Some(same_class_array(interp, receiver, taken)?))
 }
 
-/// `Array~dimensions`: an `Array` of the extents --
-/// `ArrayClass::getDimensionsRexx`.
+/// `Array~dimensions`: an `Array` of the extents.
 fn native_array_dimensions(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -568,11 +552,11 @@ fn native_array_dimensions(
     _args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
     // **A single-dimensional array answers its SIZE, not the extent it was
-    // fixed at.** `getDimensionsRexx` is `new_array(new_integer(size()))` for
-    // one (`classes/ArrayClass.cpp:1084`), and only a multi-dimensional array
-    // reports the stored shape. Measured: `.Array~new(0)~append('q')` then
-    // `~dimensions` is `1` -- and `.Array~of()` the same -- where reading the
-    // fixed list answered the stale `0`.
+    // fixed at.** For one, `dimensions` is `new_array(new_integer(size()))`,
+    // and only a multi-dimensional array reports the stored shape. Measured:
+    // `.Array~new(0)~append('q')` then `~dimensions` is `1` -- and
+    // `.Array~of()` the same -- where reading the fixed list answered the
+    // stale `0`.
     let extents = match dimensions_of(interp, receiver)? {
         Some(shape) if shape.len() > 1 => shape,
         _ => vec![read_slots(interp, receiver, <[_]>::len)?],

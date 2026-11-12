@@ -36,7 +36,7 @@ fn native_queue_init(
     Ok(None)
 }
 
-/// `Queue~queue(item)`: adds at the **end** -- `QueueClass::queueRexx`.
+/// `Queue~queue(item)`: adds at the **end**.
 fn native_queue_queue(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -50,7 +50,7 @@ fn native_queue_queue(
     Ok(None)
 }
 
-/// `Queue~push(item)`: adds at the **front** -- `QueueClass::pushRexx`.
+/// `Queue~push(item)`: adds at the **front**.
 fn native_queue_push(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -64,7 +64,7 @@ fn native_queue_push(
 }
 
 /// `Queue~peek`: the front item without removing it, or `.nil` for an empty
-/// queue -- `QueueClass::peek`.
+/// queue.
 fn native_queue_peek(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -78,8 +78,7 @@ fn native_queue_peek(
     }))
 }
 
-/// `Queue~pull`: takes the front item off and answers it, or `.nil` --
-/// `QueueClass::pullRexx`.
+/// `Queue~pull`: takes the front item off and answers it, or `.nil`.
 fn native_queue_pull(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -96,7 +95,7 @@ fn native_queue_pull(
 }
 
 /// `Queue~delete(index)` and `Queue~remove(index)`, which are **one body**
-/// upstream (`QueueClass::deleteRexx`) where `Array` has two.
+/// upstream where `Array` has two.
 fn native_queue_delete(
     interp: &mut Interp,
     cleared: Cleared,
@@ -106,8 +105,8 @@ fn native_queue_delete(
     native_array_delete(interp, cleared, receiver, args)
 }
 
-/// `Queue~put(item, index)` and `Queue~[index] = item`:
-/// `QueueClass::putRexx`, which replaces rather than growing.
+/// `Queue~put(item, index)` and `Queue~[index] = item`: replaces rather than
+/// growing.
 fn native_queue_put(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -127,9 +126,9 @@ fn native_queue_put(
         Failure::from(Raised::incorrect_list_index(&written))
     };
     let subscript = queue_index(interp, receiver, index, 2)?;
-    // `putRexx` calls `checkInsertIndex` (`classes/QueueClass.cpp:205`)
-    // before anything else can refuse, so an index past the last item is
-    // 93.966 and never the 93.918 an unheld index would answer.
+    // `putRexx` calls `checkInsertIndex` before anything else can refuse, so
+    // an index past the last item is 93.966 and never the 93.918 an unheld
+    // index would answer.
     let position = super::positive_index(interp, subscript, 2)?;
     queue_bound(interp, receiver, index, position)?;
     let Some(position) = array_position(interp, store, &[Some(subscript)], IndexUse::Get)? else {
@@ -144,8 +143,7 @@ fn native_queue_put(
     }
 }
 
-/// `Queue~at(index)` and `Queue~[index]`: `ArrayClass::getRexx` over the
-/// store.
+/// `Queue~at(index)` and `Queue~[index]`: `Array`'s `at` over the store.
 fn native_queue_at(
     interp: &mut Interp,
     cleared: Cleared,
@@ -171,10 +169,9 @@ fn native_queue_items(
     Ok(Some(interp.counted(items)))
 }
 
-/// `Queue~size`: how many slots the store has.
-/// **`Setup.cpp:789` maps it to `ArrayClass::itemsRexx`**, so a `Queue`'s
-/// size is its item count and not its slot count -- measured, a queue emptied
-/// after holding two answers `size 0`.
+/// `Queue~size`: a queue's size is its item count and not its slot count,
+/// because `Size` is bound to `items` -- measured, a queue emptied after
+/// holding two answers `size 0`.
 fn native_queue_size(
     interp: &mut Interp,
     cleared: Cleared,

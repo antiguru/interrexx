@@ -1,7 +1,7 @@
 use super::*;
 
-/// `HashContents::remove`: unlinks the entry and returns its slot to the free
-/// chain, answering the item it held.
+/// Unlinks the entry and returns its slot to the free chain, answering the
+/// item it held.
 pub(super) fn take(
     interp: &mut Interp,
     receiver: ObjRef,
@@ -74,8 +74,8 @@ pub(super) fn remove_at(
     let item = slot_at(interp, store.items, slot)?;
     let next = link_at(interp, store, slot)?;
     if slot < store.buckets {
-        // A bucket slot cannot be freed, so the chain is closed by copying
-        // the next entry into it -- `HashContents::closeChain`.
+        // A bucket slot cannot be freed, so the chain is closed by copying the
+        // next entry into it.
         if next < store.total {
             let moved_index = slot_at(interp, store.indexes, next)?;
             let moved_item = slot_at(interp, store.items, next)?;
@@ -115,8 +115,8 @@ pub(super) enum Removal {
     Discarded,
 }
 
-/// `DirectoryClass::remove`: answers what `get` would -- which may run a
-/// method, or the unknown method -- and then drops the name from both halves.
+/// Answers what `get` would -- which may run a method, or the unknown method
+/// -- and then drops the name from both halves.
 ///
 /// An [`Removal::Answered`] removal refuses an owed entry; a discarded one
 /// takes it without reading it.
@@ -151,7 +151,7 @@ pub(super) fn take_merged(
     Ok(old)
 }
 
-/// `HashCollection::emptyRexx`: drops every entry and answers the receiver.
+/// Drops every entry and answers the receiver.
 pub(super) fn native_hash_empty(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -163,8 +163,8 @@ pub(super) fn native_hash_empty(
         return Err(not_this_task(interp, receiver, b"EMPTY"));
     }
     let store = store_of(interp, receiver)?;
-    // Active lookups retain these contents through callbacks and growth.
-    // EMPTY clears that contents in place, as HashContents::empty does.
+    // Active lookups retain these contents through callbacks and growth. EMPTY
+    // clears that contents in place.
     for slot in 0..store.total {
         write_slot(interp, store.indexes, slot, None);
         write_slot(interp, store.items, slot, None);

@@ -129,11 +129,9 @@ impl Interp {
             });
         }
 
-        // `SELF` and `SUPER`, the two locals `RexxActivation::run` sets on a
-        // method activation before its first instruction
-        // (`RexxActivation.cpp:535`-`536`). Measured in a class method of
-        // `::class K`: `say self` is `The K class` and `say super` is
-        // `The Class class`.
+        // `SELF` and `SUPER`, the two locals set on a method activation before
+        // its first instruction. Measured in a class method of `::class K`:
+        // `say self` is `The K class` and `say super` is `The Class class`.
         let self_slot = match self_slot {
             Some(slot) => slot,
             None => self.slot_of(b"SELF"),

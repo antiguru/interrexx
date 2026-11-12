@@ -13,8 +13,7 @@ use super::{
     required_string_argument, required_string_named_argument, scoped_method,
 };
 
-/// `RexxObject::initRexx` (`classes/ObjectClass.cpp:2546`-`:2549`): it takes
-/// no arguments, does nothing, and answers `OREF_NULL`.
+/// It takes no arguments, does nothing, and answers nothing.
 pub(super) fn native_no_op(
     _interp: &mut Interp,
     _cleared: Cleared,
@@ -64,9 +63,7 @@ pub(super) fn native_has_method(
     Ok(Some(interp.counted(usize::from(answers))))
 }
 
-/// `Object~defaultName`: the receiver's class id with an article in front --
-/// `RexxObject::defaultNameRexx` (`classes/ObjectClass.cpp:2868`) over
-/// `RexxObject::defaultName` (`:1760`).
+/// `Object~defaultName`: the receiver's class id with an article in front.
 pub(super) fn native_default_name(
     interp: &mut Interp,
     cleared: Cleared,
@@ -77,9 +74,8 @@ pub(super) fn native_default_name(
         return Err(Loud::unknown_receiver("a value with no class of its own").into());
     };
     // **An enhanced object takes no article**, returning before the `a`/`an`
-    // choice -- `RexxObject::defaultName` (`classes/ObjectClass.cpp:1763`).
-    // Measured, oracle rc 0: `.Object~subclass('K')~enhanced(t)~defaultName`
-    // is `enhanced K`.
+    // choice. Measured, oracle rc 0:
+    // `.Object~subclass('K')~enhanced(t)~defaultName` is `enhanced K`.
     let enhanced = is_enhanced_instance(interp, receiver);
     let id = interp.classes().id_string(class);
     let name = if enhanced {
@@ -90,9 +86,8 @@ pub(super) fn native_default_name(
     Ok(Some(interp.text_built(name.into_bytes())))
 }
 
-/// `Object~class`: the class whose behaviour answers this receiver's
-/// messages -- `RexxObject::classObject` (`classes/ObjectClass.cpp:1814`),
-/// whose whole body is `behaviour->getOwningClass()`.
+/// `Object~class`: the class whose behaviour answers this receiver's messages
+/// -- the behaviour's owning class.
 pub(super) fn native_class(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -125,9 +120,7 @@ pub(super) fn native_class(
 }
 
 /// `Object~isA(class)`: whether the receiver's **class** is `class` or a
-/// subclass of it -- `RexxObject::isInstanceOfRexx`
-/// (`classes/ObjectClass.cpp:286`), which asks `classObject()` and not the
-/// receiver.
+/// subclass of it. It asks the class and not the receiver.
 pub(super) fn native_is_a(
     interp: &mut Interp,
     cleared: Cleared,
@@ -157,12 +150,11 @@ pub(super) fn native_identity_hash(
     Ok(Some(interp.text_built(bits)))
 }
 
-/// `RexxNilObject::getHashValue` (`classes/ObjectClass.cpp:2916`), whose
-/// member is stamped with this sentinel rather than derived from anything.
+/// `RexxNilObject::getHashValue`, whose member is stamped with this sentinel
+/// rather than derived from anything.
 const NIL_HASH: u64 = 0xdead_beef;
 
-/// The string hash `RexxString::getStringHash` computes
-/// (`classes/StringClass.hpp:328`), over the bytes rather than the text.
+/// The string hash computed over the bytes rather than the text.
 pub(super) fn string_hash(bytes: &[u8]) -> u64 {
     let mut hash: u64 = 0;
     for byte in bytes {
@@ -173,8 +165,8 @@ pub(super) fn string_hash(bytes: &[u8]) -> u64 {
     hash
 }
 
-/// `Object~hashCode`, `RexxObject::hashCode` (`classes/ObjectClass.cpp:398`):
-/// `getHashValue()` rendered as its own eight bytes, little-endian.
+/// `Object~hashCode`: the hash value rendered as its own eight bytes,
+/// little-endian.
 pub(super) fn native_hash_code(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -185,9 +177,9 @@ pub(super) fn native_hash_code(
     Ok(Some(interp.text_built(value.to_le_bytes().to_vec())))
 }
 
-/// `RexxInternalObject::getHashValue()` as a number, which is what
-/// [`native_hash_code`] renders and what the mapped collections' store hashes
-/// an index by. Split out for the second caller, not changed.
+/// The hash value as a number, which is what [`native_hash_code`] renders and
+/// what the mapped collections' store hashes an index by. Split out for the
+/// second caller, not changed.
 pub(super) fn hash_value(interp: &mut Interp, receiver: ObjRef) -> u64 {
     if receiver == ObjRef::NIL {
         return NIL_HASH;
@@ -195,8 +187,8 @@ pub(super) fn hash_value(interp: &mut Interp, receiver: ObjRef) -> u64 {
     match interp.receiver_kind(receiver) {
         Ok(Primitive::String | Primitive::SmallInt) => string_hash(&interp.to_text(receiver)),
         Ok(Primitive::Class(class)) => string_hash(interp.classes().id_string(class).as_bytes()),
-        // `RexxString::getHashValue` is the bytes' hash for a subclass
-        // instance as well, and a copy of `.nil` keeps `.nil`'s member.
+        // A string's hash value is the bytes' hash for a subclass instance as
+        // well, and a copy of `.nil` keeps `.nil`'s member.
         Ok(Primitive::Instance { behaviour, .. }) => {
             let nil = interp.object_model().nil_behaviour;
             match super::string::subclass_text(interp, receiver) {
@@ -217,9 +209,8 @@ pub(super) fn operator_argument(args: &[Option<ObjRef>]) -> Result<ObjRef, Failu
     }
 }
 
-/// `Object~"="` and `Object~"=="`: `RexxObject::equal` and
-/// `RexxObject::strictEqual` (`classes/ObjectClass.cpp:464`, `:448`), each a
-/// direct identity test rather than a comparison of renderings.
+/// `Object~"="` and `Object~"=="`: each a direct identity test rather than a
+/// comparison of renderings.
 pub(super) fn native_object_identical(
     _interp: &mut Interp,
     _cleared: Cleared,
@@ -230,9 +221,8 @@ pub(super) fn native_object_identical(
     Ok(Some(crate::eval::logical(receiver == other)))
 }
 
-/// `Object~"\="`, `"\=="`, `"<>"` and `"><"`: `RexxObject::notEqual` and
-/// `RexxObject::strictNotEqual` (`classes/ObjectClass.cpp:492`, `:478`),
-/// [`native_object_identical`]'s negation.
+/// `Object~"\="`, `"\=="`, `"<>"` and `"><"`: [`native_object_identical`]'s
+/// negation.
 pub(super) fn native_object_different(
     _interp: &mut Interp,
     _cleared: Cleared,
@@ -243,9 +233,8 @@ pub(super) fn native_object_different(
     Ok(Some(crate::eval::logical(receiver != other)))
 }
 
-/// `Object~"||"` and `Object~""`: `RexxObject::concatRexx`
-/// (`classes/ObjectClass.cpp:2807`), which is `requestString()` on the
-/// receiver and then that string's own concatenation.
+/// `Object~"||"` and `Object~""`: the string request on the receiver and then
+/// that string's own concatenation.
 pub(super) fn native_object_concat(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -255,8 +244,7 @@ pub(super) fn native_object_concat(
     concat_through_string_value(interp, Operator::Concatenate, receiver, args)
 }
 
-/// `Object~" "`: `RexxObject::concatBlank` (`classes/ObjectClass.cpp:2823`),
-/// [`native_object_concat`] with the one separating space.
+/// `Object~" "`: [`native_object_concat`] with the one separating space.
 pub(super) fn native_object_concat_blank(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -267,9 +255,9 @@ pub(super) fn native_object_concat_blank(
 }
 
 /// The shared body of the two above: the receiver's string value, then
-/// [`Interp::apply_binary`] on it, which is the C++'s
-/// `alias->concatRexx(otherObj)` and converts the other operand exactly as
-/// every other concatenation does.
+/// [`Interp::apply_binary`] on it, which concatenates the receiver's string
+/// with the other operand and converts the other operand exactly as every
+/// other concatenation does.
 fn concat_through_string_value(
     interp: &mut Interp,
     op: Operator,
@@ -289,8 +277,7 @@ fn concat_through_string_value(
     joined
 }
 
-/// `Object~string`: the receiver's readable string representation --
-/// `RexxObject::stringValue` (`classes/ObjectClass.cpp:1157`), which is an
+/// `Object~string`: the receiver's readable string representation, which is an
 /// `OBJECTNAME` send, except for a `String`, whose own override answers
 /// itself.
 pub(super) fn native_string(
@@ -299,8 +286,8 @@ pub(super) fn native_string(
     receiver: ObjRef,
     _args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
-    // `RexxString::stringValue` answers a `String` subclass instance's bytes,
-    // and `StemClass::stringValue` a `Stem` subclass instance's stem's.
+    // A `String` subclass instance answers its bytes, and a `Stem` subclass
+    // instance its stem's.
     if super::string::subclass_text(interp, receiver).is_some() {
         return Ok(Some(super::string::base_string(interp, receiver)));
     }
@@ -308,9 +295,8 @@ pub(super) fn native_string(
         let text = interp.stem_string_representation(store)?;
         return Ok(Some(interp.text_built(text)));
     }
-    // `PointerClass::stringValue` (`classes/PointerClass.cpp:152`) overrides
-    // the send below: measured, oracle rc 0, `p~objectName = 'zzz'` leaves
-    // `p~string` answering the address.
+    // `Pointer` overrides the send below: measured, oracle rc 0, `p~objectName
+    // = 'zzz'` leaves `p~string` answering the address.
     if pointer_address(interp, receiver).is_some() {
         let text = interp.default_string_value_text(receiver);
         return Ok(Some(interp.text_built(text)));
@@ -351,9 +337,9 @@ pub(super) fn native_string(
 
 /// Whether `class` is one a program made rather than one of the language's
 /// own. Only such a class can carry its own `DEFAULTNAME` on its class side
-/// (98.985 refuses additions to the language's classes), so only its
-/// rendering sends one, as `RexxObject::objectName` does for a class whose
-/// behaviour is not primitive (`classes/ObjectClass.cpp:1706`).
+/// (98.985 refuses additions to the language's classes), so only its rendering
+/// sends one, as `objectName` does for a class whose behaviour is not
+/// primitive.
 fn declared_class(interp: &mut Interp, class: ObjRef) -> bool {
     let id = interp.classes().id_string(class).to_string();
     interp.classes().system_lookup(&id) != Some(class)
@@ -371,9 +357,8 @@ fn default_name_sent(interp: &mut Interp, receiver: ObjRef) -> Result<Option<Obj
     }
 }
 
-/// `Object~objectName`: the name something gave this object, or
-/// `RexxObject::defaultName` for one nothing has named
-/// (`classes/ObjectClass.cpp:1696`, `:1760`).
+/// `Object~objectName`: the name something gave this object, or the default
+/// name for one nothing has named.
 pub(super) fn native_object_name(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -460,8 +445,7 @@ pub(super) fn native_object_name(
 }
 
 /// `Object~objectName=`: replaces what `~objectName` answers, and with it
-/// every rendering of the object -- `RexxObject::objectNameEquals`
-/// (`classes/ObjectClass.cpp:1733`), whose own return is `OREF_NULL`.
+/// every rendering of the object. It answers nothing.
 pub(super) fn native_object_name_set(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -528,7 +512,7 @@ pub(super) fn native_object_name_set(
 }
 
 /// `Object~setMethod(name, method, scope)`: attach one method to this object
-/// alone -- `RexxObject::setMethod` (`classes/ObjectClass.cpp:1829`).
+/// alone.
 pub(super) fn native_set_method(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -547,10 +531,9 @@ pub(super) fn native_set_method(
             SourceTaker::Method,
         )?),
     };
-    // `newMethodObject(msgname, methobj, TheNilObject)` ahead of the checks,
-    // then `defineInstanceMethod`'s own `newScope(targetScope)`
-    // (`classes/ObjectClass.cpp:1847`, `:2302`): measured, oracle rc 0, the
-    // method's `.context~executable` is not the object `setMethod` was given.
+    // The method object is built ahead of the checks, then the instance method
+    // is defined over a fresh scope copy: measured, oracle rc 0, the method's
+    // `.context~executable` is not the object `setMethod` was given.
     let source = match source {
         None => None,
         Some(object) => {
@@ -576,8 +559,7 @@ pub(super) fn native_set_method(
     Ok(None)
 }
 
-/// `Object~unsetMethod(name)`: take back a `setMethod` definition --
-/// `RexxObject::unsetMethod` (`classes/ObjectClass.cpp:1891`).
+/// `Object~unsetMethod(name)`: take back a `setMethod` definition.
 pub(super) fn native_unset_method(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -613,30 +595,26 @@ fn set_method_scope(
     Err(Raised::not_one_of(3, b"\"FLOAT\" or \"OBJECT\"", &text).into())
 }
 
-/// `RexxObject::checkRestrictedMethod` (`classes/ObjectClass.cpp:697`), the
-/// fourth access check: `run`, `setMethod` and `unsetMethod` may be
-/// sent only from a method of the receiving object itself or from a class
-/// method of a class it is an instance of.
+/// The fourth access check: `run`, `setMethod` and `unsetMethod` may be sent
+/// only from a method of the receiving object itself or from a class method of
+/// a class it is an instance of.
 fn check_restricted_method(
     interp: &mut Interp,
     receiver: ObjRef,
     name: &[u8],
 ) -> Result<(), Failure> {
     let caller = interp.caller();
-    // `sender == OREF_NULL` at `:715`-`:719`, a routine or program context,
-    // which the private check refuses first: `run`, `setMethod` and
-    // `unsetMethod` are each private, so `check_private`'s own
-    // `caller.receiver()` arm has already answered for a caller with no
-    // receiver.
+    // A routine or program context has no sender, which the private check
+    // refuses first: `run`, `setMethod` and `unsetMethod` are each private, so
+    // `check_private`'s own `caller.receiver()` arm has already answered for a
+    // caller with no receiver.
     let Some(sender) = caller.receiver() else {
         return Err(Raised::restricted_method(name).into());
     };
     if sender == receiver {
         return Ok(());
     }
-    // `isOfClassType(Class, sender)` then `isInstanceOf((RexxClass *)sender)`
-    // (`:722`-`:729`): a class method of a class this object is an instance
-    // of.
+    // A class method of a class this object is an instance of.
     if interp.is_class_object(sender)
         && let Some(class) = interp.class_of_value(receiver)
         && interp.classes().is_a(class, sender)
@@ -647,8 +625,7 @@ fn check_restricted_method(
 }
 
 /// `Object~copy`: a new object with the receiver's methods and an equivalent
-/// set of object variables holding the same values -- `RexxObject::copyRexx`
-/// (`classes/ObjectClass.cpp:2879`).
+/// set of object variables holding the same values.
 pub(super) fn native_copy(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -689,15 +666,14 @@ fn copy_object(interp: &mut Interp, receiver: ObjRef) -> Result<ObjRef, Failure>
                 .ok_or_else(|| Failure::from(Loud::unrecorded_executable()))?;
             return Ok(copy);
         }
-        // `PackageClass::copy`: a field copy, then `deepCopy`'s tables.
+        // A field copy, then the deep copy's tables.
         Ok(Primitive::Package) => interrexx_core::BehaviourId::OBJECT,
         // Reached only through a scope override, `.nil`'s own behaviour
         // hiding `COPY`.
         Ok(Primitive::Object) => return Ok(copy_nil(interp)),
-        // rexxref forbids copying each of these on every route
-        // (`fundclasses.xml:63-65`, `utilityclasses.xml:7934-7942`, `:7549`):
-        // the oracle's own `copyRexx` raises 93.970 for a plain send, and a
-        // scope override reaches `RexxObject::copy`, which copies.
+        // rexxref forbids copying each of these on every route: the oracle's
+        // own `copy` raises 93.970 for a plain send, and a scope override
+        // reaches the generic copy, which copies.
         Ok(Primitive::Class(_) | Primitive::Context | Primitive::RexxInfo) => {
             let target = interp.string_value_text(receiver)?;
             return Err(Raised::copy_not_supported(&target).into());
@@ -720,8 +696,8 @@ fn copy_object(interp: &mut Interp, receiver: ObjRef) -> Result<ObjRef, Failure>
         return Err(Loud::unknown_receiver("a value whose object is no longer live").into());
     };
     let mut body = source.body.clone();
-    // `CompoundVariableTable::copyFrom` copies each tail's own value, so an
-    // exposed tail comes over as one that holds none.
+    // A stem copy copies each tail's own value, so an exposed tail comes over
+    // as one that holds none.
     if let Body::Stem { exposed, .. } = &mut body {
         *exposed = None;
     }
@@ -760,10 +736,9 @@ fn copy_object(interp: &mut Interp, receiver: ObjRef) -> Result<ObjRef, Failure>
     Ok(copy)
 }
 
-/// `.nil`'s copy, left on the temps: a distinct `Object` with `.nil`'s
-/// methods and its name, as `RexxObject::copy` clones it
-/// (`classes/ObjectClass.cpp:554`). Measured, oracle rc 0: the copy is not
-/// `.nil`, renders `The NIL object` and answers `an Object` for
+/// `.nil`'s copy, left on the temps: a distinct `Object` with `.nil`'s methods
+/// and its name, as a generic copy clones it. Measured, oracle rc 0: the copy
+/// is not `.nil`, renders `The NIL object` and answers `an Object` for
 /// `~defaultName`.
 fn copy_nil(interp: &mut Interp) -> ObjRef {
     let model = interp.object_model();
@@ -781,8 +756,8 @@ fn copy_nil(interp: &mut Interp) -> ObjRef {
     copy
 }
 
-/// `MessageClass::copy` (`classes/MessageClass.cpp:182`): a copy keeps no
-/// outcome and has its own array of the objects `~notify` named.
+/// A copy keeps no outcome and has its own array of the objects `~notify`
+/// named.
 fn reset_copied_message(interp: &mut Interp, copy: ObjRef) {
     interp.remove_native_entry(copy, MESSAGE_RESULT);
     interp.remove_native_entry(copy, MESSAGE_CONDITION);
@@ -808,9 +783,9 @@ pub(super) const COLLECTION_STORES: &[(&str, &[u8])] = &[
     ("Table", b"HASHINDEXES"),
     ("Table", b"HASHITEMS"),
     ("Table", b"HASHNEXT"),
-    // A `Directory`'s method table travels with the copy and is its own --
-    // `DirectoryClass::copy` copies it rather than sharing it. Measured:
-    // `g = f~copy` then `g~unsetMethod('M')` leaves `f['M']` answering.
+    // A `Directory`'s method table travels with the copy and is its own: the
+    // copy duplicates it rather than sharing it. Measured: `g = f~copy` then
+    // `g~unsetMethod('M')` leaves `f['M']` answering.
     ("Table", b"METHODINDEXES"),
     ("Table", b"METHODITEMS"),
     ("Table", b"METHODNEXT"),
@@ -837,7 +812,7 @@ fn duplicate_collection_stores(interp: &mut Interp, copy: ObjRef) {
 }
 
 /// Replaces a `Stem` subclass instance's stem on `copy` with one of its own,
-/// whose tails hold the same values, as `StemClass::copy` makes it.
+/// whose tails hold the same values.
 fn duplicate_stem_store(interp: &mut Interp, copy: ObjRef) {
     let Some(store) = interp.stem_subclass_store(copy) else {
         return;
@@ -877,10 +852,9 @@ fn duplicate_executable(interp: &mut Interp, original: ObjRef, copy: ObjRef) {
     }
 }
 
-/// `PackageClass::deepCopy` (`classes/PackageClass.cpp:381`): `copy`'s
-/// `.ROUTINES` table and annotation table become copies of their own. Every
-/// other table the copy holds it shares, and its routine, class and import
-/// fields are copies already, being the body's own.
+/// `copy`'s `.ROUTINES` table and annotation table become copies of their own.
+/// Every other table the copy holds it shares, and its routine, class and
+/// import fields are copies already, being the body's own.
 fn duplicate_package_tables(interp: &mut Interp, copy: ObjRef) -> Result<(), Failure> {
     let routines = crate::environment::PackageTable::Routines.index();
     if let Some(table) = interp
@@ -919,8 +893,7 @@ fn duplicate_package_tables(interp: &mut Interp, copy: ObjRef) -> Result<(), Fai
 }
 
 /// `Object~run(method [, option [, argument ...]])`: run a method on this
-/// object as if the object had defined it -- `RexxObject::run`
-/// (`classes/ObjectClass.cpp:2185`).
+/// object as if the object had defined it.
 pub(super) fn native_run(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -975,10 +948,9 @@ pub(super) fn invoke_executable(
     interp.complete_send(started)
 }
 
-/// [`invoke_executable`] once a manager has been installed.
-/// `MethodClass::run` is not a send, so this call's pass through the seam
-/// asks no manager. The seam consumes the mark on this call's own pass, so
-/// it reaches no other send.
+/// [`invoke_executable`] once a manager has been installed. `Method~run` is
+/// not a send, so this call's pass through the seam asks no manager. The seam
+/// consumes the mark on this call's own pass, so it reaches no other send.
 #[cold]
 #[inline(never)]
 fn invoke_armed_executable(
@@ -1002,8 +974,7 @@ fn invoke_armed_executable(
 }
 
 /// The `Method` object `~run`'s first argument becomes and the identity it
-/// runs under -- `MethodClass::newMethodObject(GlobalNames::RUN, methobj,
-/// TheNilObject, "method")` (`classes/ObjectClass.cpp:2201`).
+/// runs under: the name `RUN`, no scope and the kind `method`.
 fn run_method(
     interp: &mut Interp,
     source: ObjRef,
@@ -1016,8 +987,7 @@ fn run_method(
     scoped_method(interp, object, ObjRef::NIL)
 }
 
-/// `~run`'s `Individual`/`Array` option and the arguments behind it
-/// (`classes/ObjectClass.cpp:2207`-`:2235`).
+/// `~run`'s `Individual`/`Array` option and the arguments behind it.
 fn run_arguments(
     interp: &mut Interp,
     args: &[Option<ObjRef>],
@@ -1049,9 +1019,8 @@ fn run_arguments(
     }
 }
 
-/// `Object~send(messagename [, argument ...])`: invoke a method on this
-/// object under a name built at run time -- `RexxObject::send`
-/// (`classes/ObjectClass.cpp:2008`).
+/// `Object~send(messagename [, argument ...])`: invoke a method on this object
+/// under a name built at run time.
 pub(super) fn native_send(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1063,8 +1032,7 @@ pub(super) fn native_send(
 }
 
 /// `Object~sendWith(messagename, arguments)`: [`native_send`] with the
-/// arguments in an array -- `RexxObject::sendWith`
-/// (`classes/ObjectClass.cpp:1972`).
+/// arguments in an array.
 pub(super) fn native_send_with(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1076,9 +1044,8 @@ pub(super) fn native_send_with(
     dynamic_send(interp, receiver, &name, scope, &values)
 }
 
-/// `Object~start(messagename [, argument ...])`: a `Message` object whose
-/// send has been made -- `RexxObject::start`
-/// (`classes/ObjectClass.cpp:2067`) through `startCommon` (`:2094`).
+/// `Object~start(messagename [, argument ...])`: a `Message` object whose send
+/// has been made.
 pub(super) fn native_start(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1092,8 +1059,7 @@ pub(super) fn native_start(
 }
 
 /// `Object~startWith(messagename, arguments)`: [`native_start`] with the
-/// arguments in an array -- `RexxObject::startWith`
-/// (`classes/ObjectClass.cpp:2046`).
+/// arguments in an array.
 pub(super) fn native_start_with(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1129,8 +1095,7 @@ fn dynamic_send(
 }
 
 /// The `Message` object `~start` and `~startWith` answer, its send made by a
-/// new activity -- `RexxObject::startCommon` (`classes/ObjectClass.cpp:2094`)
-/// and `MessageClass::start` (`classes/MessageClass.cpp:522`).
+/// new activity.
 fn started_message(
     interp: &mut Interp,
     receiver: ObjRef,
@@ -1191,8 +1156,7 @@ pub(super) fn record_started(
 }
 
 /// `Message~send([receiver] [, argument ...])`: the send a `Message~new`
-/// object holds, to a new receiver and with new arguments where given --
-/// `MessageClass::sendRexx` (`classes/MessageClass.cpp:308`).
+/// object holds, to a new receiver and with new arguments where given.
 pub(super) fn native_message_send(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1210,8 +1174,7 @@ pub(super) fn native_message_send(
 }
 
 /// `Message~sendWith(receiver, arguments)`: [`native_message_send`] with the
-/// arguments required, in an array -- `MessageClass::sendWithRexx`
-/// (`classes/MessageClass.cpp:340`).
+/// arguments required, in an array.
 pub(super) fn native_message_send_with(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1227,10 +1190,9 @@ pub(super) fn native_message_send_with(
     dispatch_held_message(interp, receiver, Then::Held(receiver))
 }
 
-/// `MessageClass::send` and `dispatch` (`classes/MessageClass.cpp:401`,
-/// `:421`): the held send made, its answer or its condition recorded for
-/// `result`, `completed` and `hasError`, and the condition raised here too.
-/// `then` is the work left where the send enters a Rexx activation.
+/// The held send made, its answer or its condition recorded for `result`,
+/// `completed` and `hasError`, and the condition raised here too. `then` is
+/// the work left where the send enters a Rexx activation.
 fn dispatch_held_message(
     interp: &mut Interp,
     message: ObjRef,
@@ -1275,17 +1237,17 @@ pub(super) fn record_held(
                 interp.set_native_entry(message, MESSAGE_RESULT, answer);
             }
             // An error a send of the same message made during this one stays:
-            // `flagResultReturned` and `flagRaiseError` are separate flags.
+            // the result-returned and raise-error flags are separate.
             interp.message_outcomes.entry(message).or_insert(None);
             interp.message_completed(message);
             interp.notify_parties(message)?;
             Ok(answer)
         }
         // Only a `SYNTAX` condition notifies the message, and only the one in
-        // the activation's single slot (`execution/RexxActivation.cpp:2470`):
-        // a send made later from the same activation took it over. Any other
-        // leaves the message uncompleted. The slot keeps it for the
-        // activation's trap search ([`Interp::notify_slot_failure`]).
+        // the activation's single slot: a send made later from the same
+        // activation took it over. Any other leaves the message uncompleted.
+        // The slot keeps it for the activation's trap search
+        // ([`Interp::notify_slot_failure`]).
         Err(Failure::Raised(raised))
             if raised.condition == "SYNTAX" && interp.notify_slot() == Some(message) =>
         {
@@ -1300,8 +1262,7 @@ pub(super) fn record_held(
     }
 }
 
-/// `MessageClass::clearCompletion` (`classes/MessageClass.cpp:382`): the
-/// outcome of an earlier send forgotten.
+/// The outcome of an earlier send forgotten.
 fn clear_completion(interp: &mut Interp, message: ObjRef) {
     interp.message_outcomes.remove(&message);
     interp.unnotified_messages.remove(&message);
@@ -1311,8 +1272,7 @@ fn clear_completion(interp: &mut Interp, message: ObjRef) {
 
 /// `Message~start([receiver] [, argument ...])`: the send a `Message~new`
 /// object holds, made by a new activity, to a new receiver and with new
-/// arguments where given -- `MessageClass::startRexx`
-/// (`classes/MessageClass.cpp:465`).
+/// arguments where given.
 pub(super) fn native_message_start(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1329,9 +1289,8 @@ pub(super) fn native_message_start(
     start_held_message(interp, receiver)
 }
 
-/// `Message~startWith(receiver, arguments)`: [`native_message_start`] with
-/// the arguments required, in an array -- `MessageClass::startWithRexx`
-/// (`classes/MessageClass.cpp:497`).
+/// `Message~startWith(receiver, arguments)`: [`native_message_start`] with the
+/// arguments required, in an array.
 pub(super) fn native_message_start_with(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1347,8 +1306,8 @@ pub(super) fn native_message_start_with(
     start_held_message(interp, receiver)
 }
 
-/// `MessageClass::start` (`classes/MessageClass.cpp:522`): the held send
-/// handed to a new activity, which records its outcome on `message`.
+/// The held send handed to a new activity, which records its outcome on
+/// `message`.
 fn start_held_message(interp: &mut Interp, message: ObjRef) -> Result<Option<ObjRef>, Failure> {
     if !interp.started_messages.insert(message) {
         return Err(Raised::message_reuse().into());
@@ -1396,7 +1355,7 @@ fn spawn_send(interp: &mut Interp, send: StartedSend, message: ObjRef) -> Result
 
 /// `Message~reply([receiver] [, argument ...])`: a copy of the message whose
 /// send a new activity makes, to a new receiver and with new arguments where
-/// given -- `MessageClass::replyRexx` (`classes/MessageClass.cpp:565`).
+/// given.
 pub(super) fn native_message_reply(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1413,9 +1372,8 @@ pub(super) fn native_message_reply(
     reply_held_message(interp, receiver)
 }
 
-/// `Message~replyWith(receiver, arguments)`: [`native_message_reply`] with
-/// the arguments required, in an array -- `MessageClass::replyWithRexx`
-/// (`classes/MessageClass.cpp:597`).
+/// `Message~replyWith(receiver, arguments)`: [`native_message_reply`] with the
+/// arguments required, in an array.
 pub(super) fn native_message_reply_with(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1431,9 +1389,8 @@ pub(super) fn native_message_reply_with(
     reply_held_message(interp, receiver)
 }
 
-/// `MessageClass::reply` (`classes/MessageClass.cpp:622`): the held send
-/// started on a copy of `message`, which is answered; `message` itself stays
-/// reusable.
+/// The held send started on a copy of `message`, which is answered; `message`
+/// itself stays reusable.
 fn reply_held_message(interp: &mut Interp, message: ObjRef) -> Result<Option<ObjRef>, Failure> {
     if interp.started_messages.contains(&message) {
         return Err(Raised::message_reuse().into());
@@ -1450,8 +1407,7 @@ fn reply_held_message(interp: &mut Interp, message: ObjRef) -> Result<Option<Obj
 }
 
 /// `Message~notify(target)`: `target` is sent `messageComplete` when the send
-/// completes, and at once where it already has -- `MessageClass::notify`
-/// (`classes/MessageClass.cpp:209`).
+/// completes, and at once where it already has.
 pub(super) fn native_message_notify(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1502,8 +1458,7 @@ pub(super) fn native_message_notify(
 }
 
 /// `Message~messageComplete(source)` and `Message~triggered(source)`: the held
-/// send made, answering nothing -- `MessageClass::messageCompleted`
-/// (`classes/MessageClass.cpp:693`), which ignores `source`.
+/// send made, answering nothing. `source` is ignored.
 pub(super) fn native_message_message_complete(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1526,10 +1481,9 @@ const MESSAGE_COMPLETE: &[u8] = b"MESSAGECOMPLETE";
 const NOT_A_MESSAGE: &str = "a value that is not a message";
 
 impl Interp {
-    /// Puts `message` in the running activation's notify slot and answers
-    /// what it held; a native call above that activation has no slot
-    /// (`ActivationBase::setObjNotify`), and neither has an activity with no
-    /// activation.
+    /// Puts `message` in the running activation's notify slot and answers what
+    /// it held; a native call above that activation has no slot, and neither
+    /// has an activity with no activation.
     fn set_notify_message(&mut self, message: Option<ObjRef>) -> Option<ObjRef> {
         if !self.has_notify_slot() {
             return None;
@@ -1558,11 +1512,11 @@ impl Interp {
             .is_some_and(|native| native.caller == Some(running.id))
     }
 
-    /// `RexxActivation::trap`'s `notifyObject->error` (`execution/RexxActivation.cpp:2470`)
-    /// as a `SYNTAX` failure reaches the running activation: the message in
-    /// its slot, failed by this condition, is given the condition object
-    /// and its notifiers run, the levels the failure left below them. A
-    /// notifier's failure is answered, to be offered in place of this one.
+    /// A notifier's error as a `SYNTAX` failure reaches the running
+    /// activation: the message in its slot, failed by this condition, is given
+    /// the condition object and its notifiers run, the levels the failure left
+    /// below them. A notifier's failure is answered, to be offered in place of
+    /// this one.
     pub(crate) fn notify_slot_failure(&mut self, raised: &Raised) -> Option<Failure> {
         let message = self
             .activity
@@ -1626,10 +1580,9 @@ impl Interp {
         }
     }
 
-    /// `MessageClass::sendNotification` (`classes/MessageClass.cpp:645`) once
-    /// the waiters are woken: `messageComplete` sent to each object `~notify`
-    /// had named when it began, in order. `message` stays unnotified where
-    /// one of them fails.
+    /// The notification once the waiters are woken: `messageComplete` sent to
+    /// each object `~notify` had named when it began, in order. `message`
+    /// stays unnotified where one of them fails.
     pub(crate) fn notify_parties(&mut self, message: ObjRef) -> Result<(), Failure> {
         if let Some(parties) = self.native_entry(message, MESSAGE_PARTIES) {
             self.unnotified_messages.insert(message);
@@ -1663,10 +1616,9 @@ impl Interp {
     }
 }
 
-/// `Message~result`: the value the send answered, `.nil` for one that
-/// answered none, and the send's own condition raised again where it failed
-/// -- `MessageClass::result` (`classes/MessageClass.cpp:279`). A send not yet
-/// completed parks the activity until it is.
+/// `Message~result`: the value the send answered, `.nil` for one that answered
+/// none, and the send's own condition raised again where it failed. A send not
+/// yet completed parks the activity until it is.
 pub(super) fn native_message_result(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1682,9 +1634,8 @@ pub(super) fn native_message_result(
     interp.park_native(ParkReason::MessageResult(id), message_result, receiver)
 }
 
-/// 98.905 where the activity running `message`'s send waits, through a
-/// chain of waits, on the running one (`MessageClass::wait`,
-/// `classes/MessageClass.cpp:250-253`).
+/// 98.905 where the activity running `message`'s send waits, through a chain
+/// of waits, on the running one.
 fn check_message_deadlock(interp: &Interp, message: ObjRef) -> Result<(), Failure> {
     match interp.message_runner(message) {
         Some(runner) if interp.deadlocks(runner) => Err(crate::error::Raised::deadlock().into()),
@@ -1694,7 +1645,7 @@ fn check_message_deadlock(interp: &Interp, message: ObjRef) -> Result<(), Failur
 
 impl Interp {
     /// The condition object's `TRACEBACK` lines, which `Activity::display`
-    /// prints (`concurrency/Activity.cpp:1417`).
+    /// prints.
     pub(crate) fn traceback_lines(&mut self, object: ObjRef) -> Result<Vec<Vec<u8>>, Failure> {
         let lines = match self.condition_entry(object, b"TRACEBACK") {
             Some(traceback) => super::collection::list_items(self, traceback)?,
@@ -1728,8 +1679,7 @@ fn message_result(interp: &mut Interp, message: ObjRef) -> Result<Option<ObjRef>
     }
 }
 
-/// `Message~wait`: nothing, once the send has completed --
-/// `MessageClass::wait` (`classes/MessageClass.cpp:240`).
+/// `Message~wait`: nothing, once the send has completed.
 pub(super) fn native_message_wait(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1746,8 +1696,7 @@ pub(super) fn native_message_wait(
 }
 
 /// `Message~completed`: whether the send has ended, with a result or with an
-/// error -- `MessageClass::completed` (`classes/MessageClass.cpp:722`), which
-/// is `resultReturned() || raiseError()`.
+/// error.
 pub(super) fn native_message_completed(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1758,8 +1707,7 @@ pub(super) fn native_message_completed(
     Ok(Some(interp.counted(usize::from(completed))))
 }
 
-/// `Message~hasError`: whether the send ended by raising --
-/// `MessageClass::hasError` (`classes/MessageClass.cpp:736`).
+/// `Message~hasError`: whether the send ended by raising.
 pub(super) fn native_message_has_error(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1770,8 +1718,8 @@ pub(super) fn native_message_has_error(
     Ok(Some(interp.counted(usize::from(failed))))
 }
 
-/// `Message~halt(description)`: asks the activity a start gave the message
-/// to raise `HALT` -- `MessageClass::halt` (`classes/MessageClass.cpp:806`).
+/// `Message~halt(description)`: asks the activity a start gave the message to
+/// raise `HALT`.
 pub(super) fn native_message_halt(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1789,8 +1737,7 @@ pub(super) fn native_message_halt(
     Ok(Some(interp.counted(usize::from(halted))))
 }
 
-/// `Message~hasResult`: whether the send has answered a value --
-/// `MessageClass::hasResult` (`classes/MessageClass.cpp:750`).
+/// `Message~hasResult`: whether the send has answered a value.
 pub(super) fn native_message_has_result(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1802,7 +1749,7 @@ pub(super) fn native_message_has_result(
 }
 
 /// `Message~errorCondition`: the condition object the send failed with, or
-/// `.nil` -- `MessageClass::errorCondition` (`classes/MessageClass.cpp:764`).
+/// `.nil`.
 pub(super) fn native_message_error_condition(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1812,8 +1759,7 @@ pub(super) fn native_message_error_condition(
     Ok(Some(interp.hash_entry_read(receiver, MESSAGE_CONDITION)))
 }
 
-/// `Message~target` -- `MessageClass::messageTarget`
-/// (`classes/MessageClass.cpp:777`).
+/// `Message~target`.
 pub(super) fn native_message_target(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1823,8 +1769,7 @@ pub(super) fn native_message_target(
     Ok(Some(interp.hash_entry_read(receiver, MESSAGE_TARGET)))
 }
 
-/// `Message~messageName` -- `MessageClass::messageName`
-/// (`classes/MessageClass.cpp:789`).
+/// `Message~messageName`.
 pub(super) fn native_message_name(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1834,8 +1779,7 @@ pub(super) fn native_message_name(
     Ok(Some(interp.hash_entry_read(receiver, MESSAGE_NAME)))
 }
 
-/// `Message~arguments`: a copy of the argument array --
-/// `MessageClass::arguments` (`classes/MessageClass.cpp:800`).
+/// `Message~arguments`: a copy of the argument array.
 pub(super) fn native_message_arguments(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1847,8 +1791,7 @@ pub(super) fn native_message_arguments(
     Ok(Some(interp.security_arguments_array(&slots)))
 }
 
-/// `RexxObject::decodeMessageName` (`classes/ObjectClass.cpp:2125`): a
-/// message name, or a two-item array of a name and the class to start the
+/// A message name, or a two-item array of a name and the class to start the
 /// method search from.
 pub(super) fn decode_message_name(
     interp: &mut Interp,
@@ -1857,7 +1800,7 @@ pub(super) fn decode_message_name(
     let Some(message) = message else {
         return Err(Raised::missing_named_argument("message name").into());
     };
-    // `isString(message)` first, so a value that merely has a string value --
+    // A string check first, so a value that merely has a string value --
     // `.nil` is the reachable one -- takes the array path and its own 93.972
     // rather than being converted.
     if matches!(
@@ -1886,8 +1829,7 @@ pub(super) fn decode_message_name(
     let Some(slots) = interp.array_slots_of(answered) else {
         return Err(Raised::message_array_shape().into());
     };
-    // `messageArgCount() != 2` (`classes/ObjectClass.cpp:2143`), which is
-    // `lastItem` (`classes/ArrayClass.hpp:305`) and not the slot count: a
+    // `messageArgCount() != 2`, which is `lastItem` and not the slot count: a
     // trailing empty slot is not an element. Measured, oracle rc 163,
     // `o~send(('M',))` is 93.946 where the same array is `~size` 2.
     let slots = &slots[..message_argument_count(&slots)];
@@ -1910,9 +1852,9 @@ pub(super) fn decode_message_name(
     Ok((name, scope))
 }
 
-/// `ArrayClass::messageArgCount` (`classes/ArrayClass.hpp:305`), which is the
-/// array's `lastItem`: the position of the last filled slot, so a trailing
-/// empty slot is not an argument and an interior one is an omitted argument.
+/// The message's argument count, which is the array's `lastItem`: the position
+/// of the last filled slot, so a trailing empty slot is not an argument and an
+/// interior one is an omitted argument.
 fn message_argument_count(slots: &[Option<ObjRef>]) -> usize {
     slots
         .iter()
@@ -1921,7 +1863,7 @@ fn message_argument_count(slots: &[Option<ObjRef>]) -> usize {
 }
 
 /// The argument array `~sendWith` requires -- `arrayArgument(args, "message
-/// arguments")` (`classes/ObjectClass.cpp:1980`).
+/// arguments")`.
 fn message_arguments(
     interp: &mut Interp,
     arguments: Option<ObjRef>,
@@ -1935,11 +1877,11 @@ fn message_arguments(
 /// Which `arrayArgument` overload a site calls, which is what decides the
 /// refusal a multi-dimensional array takes.
 pub(super) enum ArrayArgument {
-    /// `arrayArgument(object, const char *name)`
-    /// (`runtime/MethodArguments.hpp:703`), whose raise names the argument.
+    /// `arrayArgument(object, const char *name)`, whose raise names the
+    /// argument.
     Named(&'static str),
-    /// `arrayArgument(object, size_t position)`
-    /// (`runtime/MethodArguments.hpp:675`), whose raise renders the object.
+    /// `arrayArgument(object, size_t position)`, whose raise renders the
+    /// object.
     Positional,
 }
 
@@ -2022,8 +1964,7 @@ fn converted_array_argument(
     })
 }
 
-/// `Object~request(class)`: the receiver converted to `class`, or `.nil` --
-/// `RexxObject::requestRexx` (`classes/ObjectClass.cpp:1912`).
+/// `Object~request(class)`: the receiver converted to `class`, or `.nil`.
 pub(super) fn native_request(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -2033,9 +1974,9 @@ pub(super) fn native_request(
     let Some(Some(argument)) = args.first().copied() else {
         return Err(Raised::missing_method_argument(1).into());
     };
-    // `stringArgument(name, ARG_ONE)->upper()`, which is `requestRexx`'s own
-    // first line -- so a class name with no string value is 88.909 here and
-    // not `.nil`.
+    // The class name is read as an upcased required string, which is the
+    // request's own first step -- so a class name with no string value is
+    // 88.909 here and not `.nil`.
     let argument = required_string_argument(interp, argument, 1)?;
     let wanted = interp.to_text(argument).to_ascii_uppercase();
     let mut make = b"MAKE".to_vec();

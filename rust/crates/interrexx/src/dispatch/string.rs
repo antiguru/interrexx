@@ -18,7 +18,6 @@ use crate::builtin::numeric;
 use crate::error::Raised;
 use interrexx_parse::Operator;
 
-/// `RexxString::posRexx` (`classes/StringClassMisc.cpp:581`).
 fn native_string_pos(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -29,7 +28,6 @@ fn native_string_pos(
     Ok(Some(interp.counted(found)))
 }
 
-/// `RexxString::caselessPosRexx` (`classes/StringClassMisc.cpp:612`).
 fn native_string_caselesspos(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -45,8 +43,7 @@ fn native_string_caselesspos(
     Ok(Some(interp.counted(found)))
 }
 
-/// `RexxString::containsRexx` (`classes/StringClassMisc.cpp:597`): `POS`'s
-/// search reported as a boolean.
+/// `POS`'s search reported as a boolean.
 fn native_string_contains(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -57,7 +54,6 @@ fn native_string_contains(
     Ok(Some(crate::eval::logical(found > 0)))
 }
 
-/// `RexxString::caselessContains` (`classes/StringClassMisc.cpp:632`).
 fn native_string_caselesscontains(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -89,7 +85,6 @@ fn string_pos(
     Ok(found)
 }
 
-/// `RexxString::lastPosRexx` (`classes/StringClassMisc.cpp:352`).
 fn native_string_lastpos(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -105,7 +100,6 @@ fn native_string_lastpos(
     Ok(Some(interp.counted(found)))
 }
 
-/// `RexxString::caselessLastPosRexx` (`classes/StringClassMisc.cpp:366`).
 fn native_string_caselesslastpos(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -137,7 +131,6 @@ fn string_lastpos(
     Ok(found)
 }
 
-/// `RexxString::countStrRexx` (`classes/StringClassMisc.cpp:419`).
 fn native_string_countstr(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -153,7 +146,6 @@ fn native_string_countstr(
     Ok(Some(interp.counted(count)))
 }
 
-/// `RexxString::caselessCountStrRexx` (`classes/StringClassMisc.cpp:434`).
 fn native_string_caselesscountstr(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -185,7 +177,6 @@ fn string_countstr(
     Ok(found)
 }
 
-/// `RexxString::wordPos` (`classes/StringClassWord.cpp:256`).
 fn native_string_wordpos(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -196,7 +187,6 @@ fn native_string_wordpos(
     Ok(Some(interp.counted(found)))
 }
 
-/// `RexxString::caselessWordPos` (`classes/StringClassWord.cpp:284`).
 fn native_string_caselesswordpos(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -212,8 +202,7 @@ fn native_string_caselesswordpos(
     Ok(Some(interp.counted(found)))
 }
 
-/// `RexxString::containsWord` (`classes/StringClassWord.cpp:270`): `WORDPOS`'s
-/// search reported as a boolean.
+/// `WORDPOS`'s search reported as a boolean.
 fn native_string_containsword(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -224,7 +213,6 @@ fn native_string_containsword(
     Ok(Some(crate::eval::logical(found > 0)))
 }
 
-/// `RexxString::caselessContainsWord` (`classes/StringClassWord.cpp:298`).
 fn native_string_caselesscontainsword(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -256,7 +244,6 @@ fn string_wordpos(
     Ok(found)
 }
 
-/// `RexxString::startsWithRexx` (`classes/StringClassMisc.cpp:874`).
 fn native_string_startswith(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -266,7 +253,6 @@ fn native_string_startswith(
     string_at_an_end(interp, receiver, args, starts_with, <[u8]>::eq)
 }
 
-/// `RexxString::caselessStartsWithRexx` (`classes/StringClassMisc.cpp:888`).
 fn native_string_caselessstartswith(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -282,7 +268,6 @@ fn native_string_caselessstartswith(
     )
 }
 
-/// `RexxString::endsWithRexx` (`classes/StringClassMisc.cpp:902`).
 fn native_string_endswith(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -292,7 +277,6 @@ fn native_string_endswith(
     string_at_an_end(interp, receiver, args, ends_with, <[u8]>::eq)
 }
 
-/// `RexxString::caselessEndsWithRexx` (`classes/StringClassMisc.cpp:923`).
 fn native_string_caselessendswith(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -325,7 +309,6 @@ fn string_at_an_end(
     Ok(Some(crate::eval::logical(answer)))
 }
 
-/// `RexxString::match` (`classes/StringClassMisc.cpp:792`).
 fn native_string_match(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -335,7 +318,6 @@ fn native_string_match(
     string_match(interp, receiver, args, <[u8]>::eq)
 }
 
-/// `RexxString::caselessMatch` (`classes/StringClassMisc.cpp:837`).
 fn native_string_caselessmatch(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -366,7 +348,6 @@ fn string_match(
     Ok(Some(crate::eval::logical(answer)))
 }
 
-/// `RexxString::matchChar` (`classes/StringClassMisc.cpp:1001`).
 fn native_string_matchchar(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -376,7 +357,6 @@ fn native_string_matchchar(
     string_matchchar(interp, receiver, args, u8::eq)
 }
 
-/// `RexxString::caselessMatchChar` (`classes/StringClassMisc.cpp:1038`).
 fn native_string_caselessmatchchar(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -408,7 +388,6 @@ fn string_matchchar(
     Ok(Some(crate::eval::logical(answer)))
 }
 
-/// `RexxString::substr` (`classes/StringClassSub.cpp:598`).
 fn native_string_substr(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -424,9 +403,8 @@ fn native_string_substr(
     Ok(Some(interp.text_built(out)))
 }
 
-/// `RexxString::brackets` (`classes/StringClassSub.cpp:615`): `substr`'s
-/// two-argument form, the length defaulting to one byte, capped at the end of
-/// the receiver, and never padding.
+/// `substr`'s two-argument form, the length defaulting to one byte, capped at
+/// the end of the receiver, and never padding.
 fn native_string_brackets(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -444,8 +422,7 @@ fn native_string_brackets(
     Ok(Some(interp.text_built(out)))
 }
 
-/// `RexxString::subchar` (`classes/StringClassSub.cpp:635`): the one byte at
-/// `position`, or the empty string past the end.
+/// The one byte at `position`, or the empty string past the end.
 fn native_string_subchar(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -461,7 +438,6 @@ fn native_string_subchar(
     Ok(Some(interp.text_built(out)))
 }
 
-/// `RexxString::subWord` (`classes/StringClassWord.cpp:180`).
 fn native_string_subword(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -479,7 +455,6 @@ fn native_string_subword(
     Ok(Some(interp.text_built(out)))
 }
 
-/// `RexxString::subWords` (`classes/StringClassWord.cpp:200`).
 fn native_string_subwords(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -500,7 +475,6 @@ fn native_string_subwords(
     Ok(Some(super::array_of_texts(interp, words)?))
 }
 
-/// `RexxString::word` (`classes/StringClassWord.cpp:214`).
 fn native_string_word(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -517,8 +491,7 @@ fn native_string_word(
     Ok(Some(interp.text_built(out)))
 }
 
-/// `RexxString::wordIndex` (`classes/StringClassWord.cpp:228`): the 1-based
-/// byte at which the word starts, or 0.
+/// The 1-based byte at which the word starts, or 0.
 fn native_string_wordindex(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -533,7 +506,6 @@ fn native_string_wordindex(
     Ok(Some(interp.counted(index)))
 }
 
-/// `RexxString::wordLength` (`classes/StringClassWord.cpp:242`).
 fn native_string_wordlength(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -548,7 +520,6 @@ fn native_string_wordlength(
     Ok(Some(interp.counted(length)))
 }
 
-/// `RexxString::words` (`classes/StringClassWord.cpp:309`).
 fn native_string_words(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -562,7 +533,6 @@ fn native_string_words(
     Ok(Some(interp.counted(count)))
 }
 
-/// `RexxString::verify` (`classes/StringClassMisc.cpp:771`).
 fn native_string_verify(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -578,7 +548,6 @@ fn native_string_verify(
     Ok(Some(interp.counted(answer)))
 }
 
-/// `RexxString::insert` (`classes/StringClassSub.cpp:170`).
 fn native_string_insert(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -595,7 +564,6 @@ fn native_string_insert(
     Ok(Some(interp.text_built(out)))
 }
 
-/// `RexxString::overlay` (`classes/StringClassSub.cpp:292`).
 fn native_string_overlay(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -612,7 +580,6 @@ fn native_string_overlay(
     Ok(Some(interp.text_built(out)))
 }
 
-/// `RexxString::replaceAt` (`classes/StringClassSub.cpp:376`).
 fn native_string_replaceat(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -633,7 +600,6 @@ fn native_string_replaceat(
     Ok(Some(interp.text_built(out)))
 }
 
-/// `RexxString::delstr` (`classes/StringClassSub.cpp:117`).
 fn native_string_delstr(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -653,7 +619,6 @@ fn native_string_delstr(
     Ok(Some(interp.text_built(out)))
 }
 
-/// `RexxString::delWord` (`classes/StringClassWord.cpp:58`).
 fn native_string_delword(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -676,7 +641,6 @@ fn native_string_delword(
     Ok(Some(interp.text_built(out)))
 }
 
-/// `RexxString::changeStr` (`classes/StringClassMisc.cpp:451`).
 fn native_string_changestr(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -692,7 +656,6 @@ fn native_string_changestr(
     )
 }
 
-/// `RexxString::caselessChangeStr` (`classes/StringClassMisc.cpp:516`).
 fn native_string_caselesschangestr(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -723,8 +686,8 @@ fn string_changestr(
     let mut out = interp.take_result_buffer();
     {
         let bytes = interp.to_text(receiver);
-        // `RexxString::changeStr` answers the receiver itself when it
-        // changes nothing.
+        // `String~changeStr` answers the receiver itself when it changes
+        // nothing.
         if limit == 0 || find(&bytes, &needle, 0, bytes.len()) == 0 {
             drop(bytes);
             interp.give_result_buffer(out);
@@ -739,7 +702,6 @@ fn string_changestr(
     Ok(Some(interp.text_built(out)))
 }
 
-/// `RexxString::translate` (`classes/StringClassMisc.cpp:681`).
 fn native_string_translate(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -759,9 +721,8 @@ fn native_string_translate(
         out.extend_from_slice(&bytes);
     }
     // A supplied input table is one even when it is empty, which matches no
-    // byte: `RexxString::translate` reads the table only where it was
-    // omitted (`classes/StringClassMisc.cpp:730`), where `MutableBuffer`'s
-    // reads its length.
+    // byte: `String~translate` reads the table only where it was omitted,
+    // where `MutableBuffer`'s reads its length.
     let supplied = args.get(1).copied().flatten().is_some();
     crate::builtin::string::translate_bytes(
         &mut out,
@@ -774,7 +735,6 @@ fn native_string_translate(
     Ok(Some(interp.text_built(out)))
 }
 
-/// `RexxString::lowerRexx` (`classes/StringClass.cpp:1732`).
 fn native_string_lower(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -805,7 +765,6 @@ fn string_case_shift(
     Ok(Some(interp.text_built(out)))
 }
 
-/// `RexxString::space` (`classes/StringClassWord.cpp:121`).
 fn native_string_space(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -821,13 +780,11 @@ fn native_string_space(
     Ok(Some(interp.text_built(out)))
 }
 
-/// `String~append`, which is **`RexxString::concatRexx` under a second name**
-/// -- `AddMethod("Append", RexxString::concatRexx, 1)`
-/// (`memory/Setup.cpp:578`), so it concatenates and takes exactly one
-/// argument. It routes to [`Interp::apply_binary`] for that reason rather
-/// than reading its argument as a string: concatenation *renders* what it is
-/// given, so `.nil` becomes `The NIL object` where a string argument would be
-/// refused at 88.909.
+/// `String~append`, which is **`String~concat` under a second name**, so it
+/// concatenates and takes exactly one argument. It routes to
+/// [`Interp::apply_binary`] for that reason rather than reading its argument
+/// as a string: concatenation *renders* what it is given, so `.nil` becomes
+/// `The NIL object` where a string argument would be refused at 88.909.
 fn native_string_append(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1241,8 +1198,7 @@ fn string_binary_operator(
 }
 
 /// `op` applied to `receiver`'s string value and `other`, where a
-/// concatenation that adds nothing answers the receiver itself, as
-/// `RexxString::concatRexx` (`classes/StringClass.cpp:1361`) does.
+/// concatenation that adds nothing answers the receiver itself.
 fn concatenation_or_this(
     interp: &mut Interp,
     op: Operator,
@@ -1260,9 +1216,8 @@ fn concatenation_or_this(
     Ok(Some(answer))
 }
 
-/// Whether a range of `length` bytes from 0-based `start` changes nothing:
-/// the case `RexxString::upperRexx`, `lowerRexx` and `translate` answer the
-/// receiver itself for.
+/// Whether a range of `length` bytes from 0-based `start` changes nothing: the
+/// case `upper`, `lower` and `translate` answer the receiver itself for.
 fn untouched_window(length: usize, start: usize, range: Option<usize>) -> bool {
     start >= length || range == Some(0)
 }
@@ -1280,7 +1235,7 @@ fn native_string_op_not(
     ))
 }
 
-/// `String~"?"`, `RexxString::choiceRexx` (`classes/StringClass.cpp:2017`).
+/// `String~"?"`.
 fn native_string_op_choice(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1301,8 +1256,7 @@ fn native_string_op_choice(
     Ok(Some(if holds { on_true } else { on_false }))
 }
 
-/// `String~"CENTER"` and `String~"CENTRE"`, `RexxString::center`
-/// (`classes/StringClassSub.cpp:59`).
+/// `String~"CENTER"` and `String~"CENTRE"`.
 fn native_string_center(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1317,7 +1271,7 @@ fn native_string_center(
     }
 }
 
-/// `String~"LEFT"`, `RexxString::left` (`classes/StringClassSub.cpp:248`).
+/// `String~"LEFT"`.
 fn native_string_left(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1330,7 +1284,7 @@ fn native_string_left(
     Ok(Some(interp.text_built(out)))
 }
 
-/// `String~"RIGHT"`, `RexxString::right` (`classes/StringClassSub.cpp:485`).
+/// `String~"RIGHT"`.
 fn native_string_right(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1345,7 +1299,7 @@ fn native_string_right(
     }
 }
 
-/// `String~"COPIES"`, `RexxString::copies` (`classes/StringClassMisc.cpp:288`).
+/// `String~"COPIES"`.
 fn native_string_copies(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1360,7 +1314,7 @@ fn native_string_copies(
     }
 }
 
-/// `String~"STRIP"`, `RexxString::strip` (`classes/StringClassSub.cpp:529`).
+/// `String~"STRIP"`.
 fn native_string_strip(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1376,8 +1330,7 @@ fn native_string_strip(
     Ok(Some(interp.text(kept)))
 }
 
-/// `String~"ABBREV"`, `RexxString::abbrev`
-/// (`classes/StringClassMisc.cpp:75`).
+/// `String~"ABBREV"`.
 fn native_string_abbrev(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1392,8 +1345,7 @@ fn native_string_abbrev(
     Ok(Some(answer))
 }
 
-/// `String~"COMPARE"`, `RexxString::compare`
-/// (`classes/StringClassMisc.cpp:159`).
+/// `String~"COMPARE"`.
 fn native_string_compare(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1408,7 +1360,7 @@ fn native_string_compare(
     Ok(Some(answer))
 }
 
-/// `String~"B2X"`, `RexxString::b2x`.
+/// `String~"B2X"`.
 fn native_string_b2x(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1420,7 +1372,7 @@ fn native_string_b2x(
     Ok(Some(interp.text_built(out)))
 }
 
-/// `String~"C2X"`, `RexxString::c2x`.
+/// `String~"C2X"`.
 fn native_string_c2x(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1432,7 +1384,7 @@ fn native_string_c2x(
     Ok(Some(interp.text_built(out)))
 }
 
-/// `String~"X2B"`, `RexxString::x2b`.
+/// `String~"X2B"`.
 fn native_string_x2b(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1444,7 +1396,7 @@ fn native_string_x2b(
     Ok(Some(interp.text_built(out)))
 }
 
-/// `String~"X2C"`, `RexxString::x2c`.
+/// `String~"X2C"`.
 fn native_string_x2c(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1456,7 +1408,7 @@ fn native_string_x2c(
     Ok(Some(interp.text_built(out)))
 }
 
-/// `String~"C2D"`, `RexxString::c2d`.
+/// `String~"C2D"`.
 fn native_string_c2d(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1469,7 +1421,7 @@ fn native_string_c2d(
     Ok(Some(value))
 }
 
-/// `String~"X2D"`, `RexxString::x2d`.
+/// `String~"X2D"`.
 fn native_string_x2d(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1482,7 +1434,7 @@ fn native_string_x2d(
     Ok(Some(value))
 }
 
-/// `String~"D2C"`, `RexxString::d2c`.
+/// `String~"D2C"`.
 fn native_string_d2c(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1492,7 +1444,7 @@ fn native_string_d2c(
     string_d2x_d2c(interp, receiver, args, true)
 }
 
-/// `String~"D2X"`, `RexxString::d2x`.
+/// `String~"D2X"`.
 fn native_string_d2x(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1519,7 +1471,7 @@ fn string_d2x_d2c(
     Ok(Some(value))
 }
 
-/// `String~"BITAND"`, `RexxString::bitAnd`.
+/// `String~"BITAND"`.
 fn native_string_bitand(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1529,7 +1481,7 @@ fn native_string_bitand(
     string_bit_operation(interp, receiver, args, |a, b| a & b, convert::BITAND_PAD)
 }
 
-/// `String~"BITOR"`, `RexxString::bitOr`.
+/// `String~"BITOR"`.
 fn native_string_bitor(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1539,7 +1491,7 @@ fn native_string_bitor(
     string_bit_operation(interp, receiver, args, |a, b| a | b, convert::BITOR_PAD)
 }
 
-/// `String~"BITXOR"`, `RexxString::bitXor`.
+/// `String~"BITXOR"`.
 fn native_string_bitxor(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1571,7 +1523,7 @@ fn string_bit_operation(
     Ok(Some(answer))
 }
 
-/// `String~"DATATYPE"`, `RexxString::dataType`.
+/// `String~"DATATYPE"`.
 fn native_string_datatype(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1610,7 +1562,7 @@ fn numeric_receiver(
     }
 }
 
-/// `String~"ABS"`, `RexxString::abs`.
+/// `String~"ABS"`.
 fn native_string_abs(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1621,7 +1573,7 @@ fn native_string_abs(
     crate::builtin::numeric::abs_of(interp, &value).map(Some)
 }
 
-/// `String~"TRUNC"`, `RexxString::trunc`.
+/// `String~"TRUNC"`.
 fn native_string_trunc(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1634,7 +1586,7 @@ fn native_string_trunc(
     Ok(Some(answer))
 }
 
-/// `String~"ENCODEBASE64"`, `RexxString::encodeBase64`.
+/// `String~"ENCODEBASE64"`.
 fn native_string_encode_base64(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1646,7 +1598,7 @@ fn native_string_encode_base64(
     Ok(Some(interp.text_built(answer)))
 }
 
-/// `String~"DECODEBASE64"`, `RexxString::decodeBase64`.
+/// `String~"DECODEBASE64"`.
 fn native_string_decode_base64(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1660,7 +1612,7 @@ fn native_string_decode_base64(
     Ok(Some(interp.text_built(answer)))
 }
 
-/// `String~"FLOOR"`, `RexxString::floor`.
+/// `String~"FLOOR"`.
 fn native_string_floor(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1675,7 +1627,7 @@ fn native_string_floor(
     )))
 }
 
-/// `String~"CEILING"`, `RexxString::ceiling`.
+/// `String~"CEILING"`.
 fn native_string_ceiling(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1690,7 +1642,7 @@ fn native_string_ceiling(
     )))
 }
 
-/// `String~"ROUND"`, `RexxString::round`.
+/// `String~"ROUND"`.
 fn native_string_round(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1705,7 +1657,7 @@ fn native_string_round(
     )))
 }
 
-/// `String~"MODULO"`, `RexxString::modulo`.
+/// `String~"MODULO"`.
 fn native_string_modulo(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1731,7 +1683,7 @@ fn native_string_modulo(
     Ok(Some(numeric::modulo_over(interp, &value, &divisor)?))
 }
 
-/// `String~"FORMAT"`, `RexxString::format`.
+/// `String~"FORMAT"`.
 fn native_string_format(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1747,7 +1699,7 @@ fn native_string_format(
     Ok(Some(answer))
 }
 
-/// `String~"MAX"`, `RexxString::Max`.
+/// `String~"MAX"`.
 fn native_string_max(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1757,7 +1709,7 @@ fn native_string_max(
     string_max_min(interp, receiver, args, b"MAX", numeric::Extreme::Max)
 }
 
-/// `String~"MIN"`, `RexxString::Min`.
+/// `String~"MIN"`.
 fn native_string_min(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1781,7 +1733,7 @@ fn string_max_min(
     Ok(Some(answer))
 }
 
-/// `String~"EQUALS"`, `RexxString::equals`.
+/// `String~"EQUALS"`.
 fn native_string_equals(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1791,7 +1743,7 @@ fn native_string_equals(
     string_equals(interp, receiver, args, false)
 }
 
-/// `String~"CASELESSEQUALS"`, `RexxString::caselessEquals`.
+/// `String~"CASELESSEQUALS"`.
 fn native_string_caseless_equals(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1820,7 +1772,7 @@ fn string_equals(
     Ok(Some(interp.text(if holds { b"1" } else { b"0" })))
 }
 
-/// `String~"CASELESSABBREV"`, `RexxString::caselessAbbrev`.
+/// `String~"CASELESSABBREV"`.
 fn native_string_caseless_abbrev(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1835,7 +1787,7 @@ fn native_string_caseless_abbrev(
     Ok(Some(answer))
 }
 
-/// `String~"CASELESSCOMPARE"`, `RexxString::caselessCompare`.
+/// `String~"CASELESSCOMPARE"`.
 fn native_string_caseless_compare(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1850,8 +1802,7 @@ fn native_string_caseless_compare(
     Ok(Some(answer))
 }
 
-/// `String~"COMPARETO"`, `RexxString::compareToRexx`
-/// (`classes/StringClassMisc.cpp:1075`).
+/// `String~"COMPARETO"`.
 fn native_string_compare_to(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1861,8 +1812,7 @@ fn native_string_compare_to(
     string_compare_to(interp, receiver, args, false)
 }
 
-/// `String~"CASELESSCOMPARETO"`, `RexxString::caselessCompareToRexx`
-/// (`classes/StringClassMisc.cpp:1204`).
+/// `String~"CASELESSCOMPARETO"`.
 fn native_string_caseless_compare_to(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1898,9 +1848,7 @@ fn string_compare_to(
     Ok(Some(answer))
 }
 
-/// `String~sign`: `RexxString::sign`, which is
-/// `ArithmeticMethod(Sign(), "SIGN")` (`classes/StringClass.cpp:1084`) and so
-/// is the `SIGN` builtin's own computation on the receiver.
+/// `String~sign`: the `SIGN` builtin's own computation on the receiver.
 pub(super) fn native_string_sign(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1914,11 +1862,10 @@ pub(super) fn native_string_sign(
     crate::builtin::numeric::sign_of(interp, &value).map(Some)
 }
 
-/// `String~makeString`: a string is its own string value --
-/// `RexxString::makeString` (`classes/StringClass.hpp`), which
-/// `Object~request("STRING")` is what finds.
-/// A `String` subclass instance answers a new `String` holding its bytes,
-/// since only a base-class string is its own string value.
+/// `String~makeString`: a string is its own string value, which
+/// `Object~request("STRING")` is what finds. A `String` subclass instance
+/// answers a new `String` holding its bytes, since only a base-class string is
+/// its own string value.
 pub(super) fn native_string_make_string(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1954,9 +1901,8 @@ pub(super) fn base_string(interp: &mut Interp, value: ObjRef) -> ObjRef {
     text
 }
 
-/// `String~upper([n [, length]])`: the receiver with a range of it
-/// uppercased -- `RexxString::upperRexx` (`classes/StringClass.cpp:1765`),
-/// bound at `memory/Setup.cpp:681` with a declared count of 2.
+/// `String~upper([n [, length]])`: the receiver with a range of it uppercased,
+/// bound with a declared count of 2.
 pub(super) fn native_string_upper(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -2015,8 +1961,7 @@ pub(super) fn native_length(
 }
 
 /// `String~makeArray`: the receiver's lines, one array element each, or its
-/// pieces between `separator`s where one is given (`StringUtil::makearray`,
-/// `classes/support/StringUtil.cpp:545`).
+/// pieces between `separator`s where one is given.
 pub(super) fn native_string_makearray(
     interp: &mut Interp,
     _cleared: Cleared,

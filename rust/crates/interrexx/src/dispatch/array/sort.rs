@@ -9,9 +9,9 @@ use super::{
 
 // ---- the sort family ----
 
-/// The receiver's first `items` slots, which are what the sort family sorts
-/// (`ArrayClass::stableSortRexx`, `classes/ArrayClass.cpp:2840`): 98.975 at
-/// the first of them that is empty. Slots past them are left as they are.
+/// The receiver's first `items` slots, which are what the sort family sorts:
+/// 98.975 at the first of them that is empty. Slots past them are left as they
+/// are.
 fn leading_items(interp: &mut Interp, receiver: ObjRef) -> Result<Vec<ObjRef>, Failure> {
     let receiver = store_of(interp, receiver)?;
     let slots = array_slots(interp, receiver)?;
@@ -30,8 +30,7 @@ fn leading_items(interp: &mut Interp, receiver: ObjRef) -> Result<Vec<ObjRef>, F
 enum Order {
     /// The default: send `compareTo` to the first item.
     CompareTo,
-    /// `sortWith`: send `compare(first, second)` to the comparator
-    /// (`:2897`).
+    /// `sortWith`: send `compare(first, second)` to the comparator.
     With(ObjRef),
 }
 
@@ -62,12 +61,11 @@ fn order_of(
         return Err(Raised::no_result(name).into());
     };
     // **The answer is converted, not read for a sign.** Both comparators put
-    // it through `numberValue` and raise for a result that is not a whole
-    // number -- `WithSortComparator` 26.903 (`classes/ArrayClass.cpp:2909`)
-    // and `compareTo` 26.902 (`classes/ObjectClass.cpp:245`). Measured: a
-    // comparator answering `'-1.0'`, `'1.0'` and `'0.0'` sorts `b,a,c` into
-    // `a,b,c`, where parsing the text left it untouched; one answering
-    // `'abc'` raises, where this crate ran to completion.
+    // it through the number conversion and raise for a result that is not a
+    // whole number -- 26.903 for `sortWith` and 26.902 for `compareTo`.
+    // Measured: a comparator answering `'-1.0'`, `'1.0'` and `'0.0'` sorts
+    // `b,a,c` into `a,b,c`, where parsing the text left it untouched; one
+    // answering `'abc'` raises, where this crate ran to completion.
     let Some(value) = whole_comparison(interp, answer) else {
         let found = interp.string_value_text(answer)?;
         return Err(match order {
@@ -97,7 +95,7 @@ fn merge_sort(
     Ok(one)
 }
 
-/// `ArrayClass::mergeSort` over the inclusive one-based range `left..=right`.
+/// A merge sort over the inclusive one-based range `left..=right`.
 fn sort_range(
     interp: &mut Interp,
     order: &Order,
@@ -138,8 +136,7 @@ fn sort_range(
     merge(interp, order, items, working, left, mid + 1, right)
 }
 
-/// `ArrayClass::merge` (`classes/ArrayClass.cpp:2669`): the two partitions
-/// `left..mid` and `mid..=right`, merged through `working`.
+/// The two partitions `left..mid` and `mid..=right`, merged through `working`.
 fn merge(
     interp: &mut Interp,
     order: &Order,
@@ -194,8 +191,8 @@ fn merge(
     if left_cursor < mid {
         copy_run(items, left_cursor, working, position, mid - left_cursor);
     } else {
-        // `right - rightCursor + 1` upstream, where both are `size_t` and the
-        // loop can leave `rightCursor` one past `right` -- which wraps to
+        // `right - rightCursor + 1` in the oracle, where both are unsigned and
+        // the loop can leave `rightCursor` one past `right` -- which wraps to
         // zero there and would panic here.
         copy_run(
             items,
@@ -209,8 +206,8 @@ fn merge(
     Ok(())
 }
 
-/// `ArrayClass::find` (`classes/ArrayClass.cpp:2773`): where `value` belongs
-/// in the sorted run `left..=right`, by exponential search then bisection.
+/// Where `value` belongs in the sorted run `left..=right`, by exponential
+/// search then bisection.
 fn find(
     interp: &mut Interp,
     order: &Order,
@@ -244,7 +241,6 @@ fn find(
     Ok(left - 1)
 }
 
-/// `ArrayClass::arraycopy` (`classes/ArrayClass.cpp:2745`).
 fn copy_run(source: &[ObjRef], start: usize, target: &mut [ObjRef], index: usize, count: usize) {
     target[index..index + count].copy_from_slice(&source[start..start + count]);
 }
@@ -264,8 +260,8 @@ fn write_back(interp: &mut Interp, receiver: ObjRef, items: Vec<ObjRef>) -> Resu
 }
 
 /// Sorts the receiver's leading items in place. `unsorted` is the most items
-/// the method answers for without looking at its slots: none for `sort`
-/// (`:2841`), one for `sortWith` (`:2878`).
+/// the method answers for without looking at its slots: none for `sort` and
+/// one for `sortWith`.
 fn sort_by(
     interp: &mut Interp,
     receiver: ObjRef,
@@ -303,7 +299,7 @@ fn sort_by(
     Ok(Some(receiver))
 }
 
-/// `Array~sort` and `Array~stableSort`, both `ArrayClass::stableSortRexx`.
+/// `Array~sort` and `Array~stableSort`, which share one body.
 fn native_array_sort(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -327,8 +323,8 @@ fn native_array_stable_sort(
     })
 }
 
-/// `Array~sortWith(comparator)` and `Array~stableSortWith(comparator)`, both
-/// `ArrayClass::stableSortWithRexx`.
+/// `Array~sortWith(comparator)` and `Array~stableSortWith(comparator)`, which
+/// share one body.
 fn native_array_sort_with(
     interp: &mut Interp,
     _cleared: Cleared,

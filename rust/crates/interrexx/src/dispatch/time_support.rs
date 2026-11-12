@@ -1,6 +1,6 @@
-//! The timers `.Alarm` and `.Ticker` drive (`platform/unix/TimeSupport.cpp`).
-//! Each waits on a timer of the scheduler's, whose number the
-//! `EVENTSEMHANDLE` pointer holds, as a park that a post ends early.
+//! The timers `.Alarm` and `.Ticker` drive. Each waits on a timer of the
+//! scheduler's, whose number the `EVENTSEMHANDLE` pointer holds, as a park
+//! that a post ends early.
 
 use std::time::{Duration, Instant};
 
@@ -274,8 +274,8 @@ fn pointer_argument(
     Ok(timer_of(interp, value))
 }
 
-/// A `wholenumber_t` argument: 88.901 where it is missing, 88.907 where it is
-/// not a whole number within `Numerics::MAX_WHOLENUMBER`.
+/// A whole-number argument: 88.901 where it is missing, 88.907 where it is not
+/// a whole number within the maximum whole number.
 fn whole_number_argument(
     interp: &mut Interp,
     args: &[Option<ObjRef>],

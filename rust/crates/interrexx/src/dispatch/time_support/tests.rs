@@ -2,8 +2,9 @@ use std::time::{Duration, Instant};
 
 use crate::{Invocation, Outcome, SwitchMode, run_program, run_program_collect_every_alloc};
 
-/// A class whose methods are the timer natives, unguarded as `CoreClasses.orx`
-/// binds them, with readers of the variables they set in its scope.
+/// A class whose methods are the timer natives, unguarded as the oracle's
+/// class library binds them, with readers of the variables they set in its
+/// scope.
 const NATIVES: &str = "\n::class t\n\
     ::method alarmStart unguarded external 'LIBRARY REXX alarm_startTimer'\n\
     ::method alarmStop unguarded external 'LIBRARY REXX alarm_stopTimer'\n\
