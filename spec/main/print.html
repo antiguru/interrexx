@@ -23659,6 +23659,35 @@ h: say condition('o')~code
 </code></pre>
 <pre><code class="language-output">88.902
 </code></pre>
+<div class="rule" id="r-cond.information.library.trace"><a href="conditions/information.html#r-cond.information.library.trace">[cond.information.library.trace]</a></div>
+<p>The <a href="conditions/../classes/stackframe.html#r-class.stackframe.traceline">trace line</a> of a level that runs a method of
+the class library, and so each such entry of <code>TRACEBACK</code>, holds no text of the
+class library's code. It is the number of the line, <code>*-*</code>, one or more
+blanks, and
+<code>Method NAME with scope "Class" in package "REXX" (no source available).</code>,
+with the method's name in upper case and the id of the class that defines it;
+the number and how many blanks follow <code>*-*</code> are not specified, as <a href="conditions/information.html#r-cond.information.library">the library
+rule</a> says. <code>SOURCE</code> of such a method has no lines
+(<a href="conditions/../classes/method.html#r-class.method.source">the source rule</a>), and the <a href="conditions/index.html#r-cond.index.syntax">report of an
+error</a> raised inside the library prints no line of that
+code.</p>
+<pre><code class="language-rexx">signal on syntax name h
+x = .Validate~number('N', 'x')
+exit
+h:
+n = 0
+ok = 1
+do f over condition('o')~stackframes
+  if f~type == 'METHOD', f~executable~package~name == 'REXX' then do
+    n += 1
+    t = f~traceLine
+    ok = ok &amp; (t~word(2) == '*-*') &amp; (t~pos('in package "REXX" (no source available).') &gt; 0)
+  end
+end
+say (n &gt; 0) ok
+</code></pre>
+<pre><code class="language-output">1 1
+</code></pre>
 <div class="rule" id="r-cond.information.object.values"><a href="conditions/information.html#r-cond.information.object.values">[cond.information.object.values]</a></div>
 <p>For a SYNTAX condition, <code>CODE</code> is the string <code>m.n</code> of the error number and
 subcode, <code>RC</code> is <code>m</code>, <code>ERRORTEXT</code> equals what the <code>ERRORTEXT</code> builtin answers
