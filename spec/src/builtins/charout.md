@@ -195,7 +195,7 @@ nr: n = n + 1
 return
 ```
 
-```output defect=#91
+```output
 1 0
 3 1
 0 2
