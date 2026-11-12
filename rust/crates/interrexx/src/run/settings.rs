@@ -109,9 +109,9 @@ impl Interp {
                     "VALUE",
                     &shown,
                 );
-                // The string request, and 24.1 names the conversion: measured, oracle
-                // rc 232, `trace value .K` with a class-side `makeString`
-                // returning `'ZZ'` reports `found "Z"`.
+                // The string request, and 24.1 names the conversion: `trace value .K`
+                // with a class-side `makeString` returning `'ZZ'` reports `found
+                // "Z"`.
                 let value = self.required_string_value(value)?;
                 let text = self.to_text(value).to_vec();
                 if is_whole_number(&text) {
@@ -132,20 +132,18 @@ impl Interp {
                 self.apply_trace_request(&request);
             }
         }
-        // The oracle announces the entry right after
-        // installing the new flags, which is the
-        // route every `>I>` takes. `Trace::Skip` never gets here
-        // -- it returned above -- and the oracle agrees: its own arm sets no
-        // flags and calls nothing.
+        // The entry is announced right after the new flags are installed, which
+        // is the route every `>I>` takes. `Trace::Skip` never gets here -- it
+        // returned above -- and sets no flags and calls nothing.
         self.allow_entry_after_exposes(code);
         self.trace_invocation_entry();
         Ok(())
     }
 
-    /// The oracle keeps the entry announcement allowed past an `EXPOSE`, so a
-    /// `TRACE` that only `EXPOSE`s precede in the body may still announce
-    /// `>I>`. Nothing but those `EXPOSE`s can have run before it: any other
-    /// way to reach it passes a label, a `DO` or another instruction first.
+    /// The entry announcement stays allowed past an `EXPOSE`, so a `TRACE` that
+    /// only `EXPOSE`s precede in the body may still announce `>I>`. Nothing but
+    /// those `EXPOSE`s can have run before it: any other way to reach it passes
+    /// a label, a `DO` or another instruction first.
     fn allow_entry_after_exposes(&mut self, code: &Code<'_>) {
         if self.activation().trace_entry != TraceEntry::Spent
             || self.activity.clause_line_override.is_some()
@@ -238,7 +236,7 @@ impl Interp {
             });
         }
         // A program called as a routine is announced under its package name, and
-        // so is a prologue, which the oracle runs as an `EXTERNALCALL`.
+        // so is a prologue, which runs as an external call.
         if self.activation().entry == crate::activation::Entry::TopLevel
             && matches!(
                 self.activation().call_type,
@@ -274,9 +272,9 @@ impl Interp {
         code: &Code<'_>,
         address: &interrexx_parse::Address,
     ) -> Result<(), Failure> {
-        // `environment` before `dynamic`, mirroring the oracle, which tests the
-        // environment ahead of its `ADDRESS VALUE` arm. The
-        // parser never fills both, so the order decides nothing today.
+        // `environment` before `dynamic`, because the environment is tested
+        // ahead of the `ADDRESS VALUE` arm. The parser never fills both, so the
+        // order decides nothing today.
         match (&address.environment, &address.dynamic) {
             (None, None) => {
                 self.activation_mut().address.toggle();
@@ -453,15 +451,12 @@ impl Interp {
             &text,
         );
         // **The required-string protocol runs after the `>K>` and its answer
-        // replaces the bytes**, which is the oracle's own
-        // string request. The trace above
-        // names the object and the parse below reads the conversion --
-        // measured, `numeric digits .K` with a class-side `makeString`
-        // returning `12` traces `>K>   "DIGITS" => "The K class"` and then
-        // answers `12` to `DIGITS()`.
-        // A `STRING` answer with no string value converts to `.nil`, and
-        // the refusal names the object: measured, oracle rc 230, 26.5
-        // `found "a SN"`.
+        // replaces the bytes**, which is the string request. The trace above
+        // names the object and the parse below reads the conversion: `numeric
+        // digits .K` with a class-side `makeString` returning `12` traces `>K>
+        // "DIGITS" => "The K class"` and then answers `12` to `DIGITS()`. A
+        // `STRING` answer with no string value converts to `.nil`, and the
+        // refusal names the object: 26.5 `found "a SN"`.
         let converted = self.required_string_or_nil(value)?;
         if converted != value && converted != ObjRef::NIL {
             text.clear();

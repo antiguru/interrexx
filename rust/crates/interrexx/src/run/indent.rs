@@ -158,17 +158,16 @@ fn indent_in_range(instructions: &[Instruction], start: usize, end: usize, targe
                 let false_target = false_target.unwrap_or(len);
                 let then_start = pc + 1;
                 // `then_start` is the `Then` marker's *own* index, not its
-                // body's first instruction -- measured against the oracle
-                // (the oracle indents, traces, then indents again), a marker
-                // clause sits at exactly two spaces,
-                // half of what its own body gets (four). Before this check
-                // existed, `target == then_start` fell into the body branch
-                // below and got the wrong answer (4, not 2) because that
-                // branch's own recursive call happens to return 0 for the
-                // very first position of its range -- silently, since
-                // nothing before this task ever asked for a `Then`'s own
-                // indent (a marker clause carries no expression, so it can
-                // never be a `FailureSite`, only ever a `TRACE` echo).
+                // body's first instruction -- the marker is indented, traced,
+                // then indented again, so a marker clause sits at exactly two
+                // spaces, half of what its own body gets (four). Before this
+                // check existed, `target == then_start` fell into the body
+                // branch below and got the wrong answer (4, not 2) because that
+                // branch's own recursive call happens to return 0 for the very
+                // first position of its range -- silently, since nothing before
+                // this task ever asked for a `Then`'s own indent (a marker
+                // clause carries no expression, so it can never be a
+                // `FailureSite`, only ever a `TRACE` echo).
                 if target == then_start {
                     return 2;
                 }
@@ -179,16 +178,15 @@ fn indent_in_range(instructions: &[Instruction], start: usize, end: usize, targe
                     Some(InstructionKind::Else { then_exit }) => {
                         let else_end = then_exit.unwrap_or(len);
                         // Same shape as `Then`, and the same measurement
-                        // (the oracle's `ELSE` does the same indent, trace,
-                        // indent dance). Before this
-                        // check, `target == false_target` fell all the way
-                        // through this whole arm (the body check below is
-                        // strict `>`) to `pc = else_end; continue`, which
-                        // advances `pc` *past* `target` in the enclosing
-                        // walk -- the `Else` marker's own index was never
-                        // revisited by anything, silently returning
-                        // whatever the *enclosing* level happened to be
-                        // (0 too shallow) rather than erroring.
+                        // (`ELSE` does the same indent, trace, indent
+                        // sequence). Before this check, `target ==
+                        // false_target` fell all the way through this whole arm
+                        // (the body check below is strict `>`) to `pc =
+                        // else_end; continue`, which advances `pc` *past*
+                        // `target` in the enclosing walk -- the `Else` marker's
+                        // own index was never revisited by anything, silently
+                        // returning whatever the *enclosing* level happened to
+                        // be (0 too shallow) rather than erroring.
                         if target == false_target {
                             return 2;
                         }
@@ -262,15 +260,14 @@ fn indent_in_range(instructions: &[Instruction], start: usize, end: usize, targe
                             // trading a wrong indent for a dead process.
                             _ => continue,
                         };
-                        // `body_start` is the WHEN's own `Then` marker,
-                        // sharing `InstructionKind::Then` with `IF` (both go
-                        // through `instruction.rs`'s `if_instruction`) --
-                        // measured against the oracle exactly like `IF`'s
-                        // own: the marker sits at half its body's indent
+                        // `body_start` is the WHEN's own `Then` marker, sharing
+                        // `InstructionKind::Then` with `IF` (both go through
+                        // `instruction.rs`'s `if_instruction`) -- exactly like
+                        // `IF`'s own: the marker sits at half its body's indent
                         // (four, not six). Before this check, `target ==
-                        // body_start` matched the `>=` below and returned
-                        // six, the body's own value -- again invisible
-                        // before `TRACE`, since a `Then` marker never raises.
+                        // body_start` matched the `>=` below and returned six,
+                        // the body's own value -- again invisible before
+                        // `TRACE`, since a `Then` marker never raises.
                         if target == body_start {
                             return 4;
                         }
@@ -279,19 +276,16 @@ fn indent_in_range(instructions: &[Instruction], start: usize, end: usize, targe
                         }
                     }
                     if let Some(otherwise_index) = otherwise {
-                        // `OTHERWISE` traces its own clause once (no double
-                        // indent: the oracle traces, then indents, rather than
-                        // indenting, tracing and indenting) at the SELECT's own scan level,
-                        // the same two spaces a `WHEN`'s condition gets, and
-                        // only its body gets the further two. Before this
-                        // check, `target == *otherwise_index` matched
-                        // neither this arm's `>` check nor anything in the
-                        // `whens` loop, and fell all the way to the
-                        // `unreachable!` below -- **a live panic**, not
-                        // merely a wrong number, confirmed by directly
-                        // calling `static_indent` on `select\nwhen 1 = 0
-                        // then nop\notherwise\nsay 'y'\nend`'s own
-                        // `otherwise_index` before this fix existed.
+                        // `OTHERWISE` traces its own clause once (no double indent: it
+                        // traces, then indents, rather than indenting, tracing and
+                        // indenting) at the SELECT's own scan level, the same two spaces a
+                        // `WHEN`'s condition gets, and only its body gets the further two.
+                        // Before this check, `target == *otherwise_index` matched neither
+                        // this arm's `>` check nor anything in the `whens` loop, and fell
+                        // all the way to the `unreachable!` below -- **a live panic**, not
+                        // merely a wrong number, confirmed by directly calling
+                        // `static_indent` on `select\nwhen 1 = 0 then nop\notherwise\nsay
+                        // 'y'\nend`'s own `otherwise_index` before this fix existed.
                         if target == *otherwise_index {
                             return 2;
                         }

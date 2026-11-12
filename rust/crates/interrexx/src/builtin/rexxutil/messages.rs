@@ -96,7 +96,7 @@ fn strerror(number: i32) -> Vec<u8> {
         .to_vec()
 }
 
-/// A positive whole-number argument as the oracle passes it on, to an `int`.
+/// A positive whole-number argument as it is passed on, to an `int`.
 #[allow(
     clippy::cast_possible_truncation,
     reason = "the oracle truncates: SysGetMessage(4294967301) is message 5"
@@ -163,11 +163,11 @@ impl Substitutions<'_> {
 /// substitution values from position `first` on, a reference past them
 /// replaced by nothing. 40.1 where there are more than nine values.
 ///
-/// Every value is converted before the message is read, an omitted one as
-/// the null string. A conversion that raises does not stop the others, and
-/// the last raise is the routine's answer. The oracle reads a raising value
-/// that the message refers to as a null pointer and dies
-/// (`corpus/oracle-crashes.txt` entry 41).
+/// Every value is converted before the message is read, an omitted one as the
+/// null string. A conversion that raises does not stop the others, and the last
+/// raise is the routine's answer. The reference run reads a raising value that
+/// the message refers to as a null pointer and dies (oracle defect,
+/// `corpus/oracle-crashes.txt` entry 41).
 fn format_message(
     interp: &mut Interp,
     message: &[u8],
@@ -219,9 +219,9 @@ fn substitute(message: &[u8], values: &[Vec<u8>]) -> Vec<u8> {
     out
 }
 
-/// `ObjectToStringValue`: the value's requested string, as the C string the
-/// oracle measures with `strlen`. A string request answering `.nil` is read as
-/// the null string, measured.
+/// `ObjectToStringValue`: the value's requested string, as the C string
+/// measured with `strlen`. A string request answering `.nil` is read as the
+/// null string.
 fn substitution_text(interp: &mut Interp, value: ObjRef) -> Result<Vec<u8>, Failure> {
     let string = interp.required_string_or_nil(value)?;
     if string == ObjRef::NIL {
@@ -263,14 +263,14 @@ const CATALOG_MAGIC: u32 = 0x9604_08de;
 /// `sizeof (struct catalog_obj)`: the magic and the table's two dimensions.
 const HEADER_BYTES: usize = 12;
 
-/// `catopen(name, 0)` and `catgets(set, number)`: the message, or the
-/// oracle's text for a catalog that does not open or a message it does not
-/// hold. An empty message reads as one that is not there.
+/// `catopen(name, 0)` and `catgets(set, number)`: the message, or the fixed
+/// text for a catalog that does not open or a message it does not hold. An
+/// empty message reads as one that is not there.
 ///
-/// Where `catgets` answers its default the oracle reads `errno` and answers
+/// Where `catgets` answers its default, `errno` is read and the answer is
 /// "Error: Invalid message catalog" for `EBADF`. glibc's `catgets` sets
-/// `ENOMSG` or nothing, so that text answers only to a stale `errno`, and
-/// here it is never the answer.
+/// `ENOMSG` or nothing, so that text answers only to a stale `errno`, and here
+/// it is never the answer.
 fn catalog_message(interp: &Interp, name: &[u8], set: i32, number: i32) -> Vec<u8> {
     let Some(catalog) = open_catalog(interp, name).and_then(Catalog::new) else {
         return CATALOG_NOT_FOUND.to_vec();
@@ -413,9 +413,8 @@ fn search_candidates(path: &[u8], name: &[u8], locale: &[u8]) -> Vec<Vec<u8>> {
     candidates
 }
 
-/// A catalog file as the oracle maps it: its bytes, then zeros to the end of
-/// its last page. Past that the oracle faults, and a read there answers
-/// `None`.
+/// A catalog file as it is mapped: its bytes, then zeros to the end of its last
+/// page. Past that the mapping faults, and a read there answers `None`.
 struct CatalogImage {
     bytes: Vec<u8>,
     mapped: usize,
@@ -489,11 +488,11 @@ struct Catalog {
 }
 
 impl Catalog {
-    /// `__open_catalog`'s checks after the magic, its arithmetic kept: the
-    /// size test counts the tables' words as bytes, and the scan for the
-    /// last message's NUL may run into the zeros past the file's end. `None`
-    /// is a file glibc rejects, and also a table whose bounds overflow or
-    /// that reaches past the mapping, where the oracle faults.
+    /// `__open_catalog`'s checks after the magic, its arithmetic kept: the size
+    /// test counts the tables' words as bytes, and the scan for the last
+    /// message's NUL may run into the zeros past the file's end. `None` is a
+    /// file glibc rejects, and also a table whose bounds overflow or that
+    /// reaches past the mapping, where the mapping faults.
     fn new(image: CatalogImage) -> Option<Catalog> {
         let swapped = image.word(0)? != CATALOG_MAGIC;
         let header = |at| {
@@ -543,9 +542,9 @@ impl Catalog {
         })
     }
 
-    /// `catgets`: the message, or `None` where the catalog holds none for
-    /// `set` and `number`. `None` too where the oracle faults: a table of no
-    /// buckets (`corpus/oracle-crashes.txt` entry 42) or a read past the
+    /// `catgets`: the message, or `None` where the catalog holds none for `set`
+    /// and `number`. `None` too where the mapping faults: a table of no buckets
+    /// (oracle defect, `corpus/oracle-crashes.txt` entry 42) or a read past the
     /// mapping.
     fn message(&self, set: i32, number: i32) -> Option<Vec<u8>> {
         let set = set.wrapping_add(1);

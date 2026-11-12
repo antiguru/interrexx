@@ -28,7 +28,7 @@ fn is_blank(byte: u8) -> bool {
     byte == b' ' || byte == b'\t'
 }
 
-/// The hexadecimal digits the oracle writes, which are upper case.
+/// The hexadecimal digits written, which are upper case.
 const HEX_DIGITS: &[u8; 16] = b"0123456789ABCDEF";
 
 /// The value of one hexadecimal digit, in either case.
@@ -388,7 +388,7 @@ pub(crate) fn b2x_bytes(interp: &Interp, string: &[u8]) -> Result<Vec<u8>, Failu
 
 // ---- the numeric four ----
 
-/// The slack the oracle adds to a conversion's working buffer.
+/// The slack added to a conversion's working buffer.
 const OVERFLOW_SPACE: usize = 2;
 
 /// The `NUMERIC DIGITS` in force at the call.
@@ -503,8 +503,7 @@ pub(crate) fn x2d_c2d_over(
         }
     }
 
-    // A copy, because both the negation and the mask write into it. The
-    // oracle copies here too, and for the same reason.
+    // A copy, because both the negation and the mask write into it.
     let mut window = buffer(interp, bytes.len() - window_start)?;
     window.extend_from_slice(&bytes[window_start..]);
     if negative {
@@ -525,8 +524,8 @@ pub(crate) fn x2d_c2d_over(
         *top &= 0x0f;
     }
 
-    // The oracle asks for this buffer before it accumulates anything, so an
-    // absurd `NUMERIC DIGITS` is refused rather than computed.
+    // This buffer is asked for before anything accumulates, so an absurd
+    // `NUMERIC DIGITS` is refused rather than computed.
     drop(buffer(
         interp,
         usize::try_from(digits)
@@ -656,9 +655,9 @@ fn scan_decimal(text: &[u8]) -> Option<Decimal> {
         return None;
     }
 
-    // Every spelling of zero is the same value, and the oracle's canonical
-    // one has a single digit and no exponent -- which is what makes `d2x(0)`
-    // and `d2x('0.00000')` both `0`.
+    // Every spelling of zero is the same value, and the canonical one has a
+    // single digit and no exponent -- which is what makes `d2x(0)` and
+    // `d2x('0.00000')` both `0`.
     if significand.iter().all(|digit| *digit == 0) {
         return Some(Decimal {
             negative: false,
@@ -683,11 +682,9 @@ fn has_significant_decimals(value: &Decimal, digits: u64) -> bool {
         .unwrap_or(i64::MAX)
         .saturating_add(value.exponent);
     if start < 0 {
-        // The oracle's scan pointer runs off the front of the digit array
-        // here. Every value that reaches it is a non-zero magnitude below
-        // 0.1, which no rounding makes whole, and the oracle refuses each one
-        // measured -- `d2x('0.01')` at `DIGITS 1`, `d2x('1E-100')` and
-        // `d2x('0.0000000001')` are all 93.928.
+        // Every value that reaches here is a non-zero magnitude below 0.1,
+        // which no rounding makes whole, and each is refused: `d2x('0.01')` at
+        // `DIGITS 1`, `d2x('1E-100')` and `d2x('0.0000000001')` are all 93.928.
         return true;
     }
     let mut index = usize::try_from(start).expect("start is not negative");
@@ -804,9 +801,9 @@ pub(crate) fn d2x_d2c_over(
     let mut pad = b'0';
     if value.negative {
         pad = b'F';
-        // The oracle's own in-place negation: subtract one, borrowing through
-        // the low-order zeros, then complement every nibble. The accumulator
-        // is least significant first, so that borrow walks forwards.
+        // In-place negation: subtract one, borrowing through the low-order
+        // zeros, then complement every nibble. The accumulator is least
+        // significant first, so that borrow walks forwards.
         let mut index = 0usize;
         while accumulator.get(index).copied() == Some(0) {
             accumulator[index] = 0x0f;
@@ -860,8 +857,8 @@ pub(crate) fn d2c(
 
 // ---- XRANGE ----
 
-/// The twelve POSIX character classes `XRANGE` names, in the byte order the
-/// oracle returns them.
+/// The twelve POSIX character classes `XRANGE` names, in the byte order they
+/// are returned.
 const CHARACTER_CLASSES: &[(&[u8], &[u8])] = &[
     (
         b"alnum",
@@ -954,11 +951,11 @@ pub(crate) fn xrange(
             let Some(table) = character_class(text) else {
                 return Err(Raised::argument_not_a_pad_or_class_name(name, position, text).into());
             };
-            // The oracle answers a lone class name from here without running
-            // its second pass. That shortcut is not reproduced: it is an
-            // allocation the two-pass path makes anyway, and unlike the
-            // start/end shortcut below it changes no answer -- a one-argument
-            // call leaves the loop immediately and builds the same bytes.
+            // A lone class name could be answered from here without a second
+            // pass. That shortcut is not taken: it is an allocation the
+            // two-pass path makes anyway, and unlike the start/end shortcut
+            // below it changes no answer -- a one-argument call leaves the loop
+            // immediately and builds the same bytes.
             pieces.push(Piece::Class(table));
             continue;
         }
@@ -974,8 +971,8 @@ pub(crate) fn xrange(
         };
         let length = usize::from(end.wrapping_sub(start)) + 1;
 
-        // The oracle's own early return, taken only for a range that is
-        // the first and only piece: `xrange('digit','z')` keeps the digits.
+        // The early return, taken only for a range that is the first and only
+        // piece: `xrange('digit','z')` keeps the digits.
         if count <= 2 && position == 2 {
             let mut out = buffer(interp, length)?;
             Piece::Range(start, length).write(&mut out);

@@ -237,12 +237,12 @@ pub(crate) fn format_over(
     // Measured, `format(1,,,,999999999999999999)` is `1`.
     let expt = expt.map(|value| u32::try_from(value).unwrap_or(u32::MAX));
 
-    // `expp` is the one width the interpreter does not always write: it pads
-    // an exponent, and there is not always an exponent. So it is reserved
-    // only once `interrexx-num` says the field will be written, which is the same
-    // line the oracle draws -- measured, at the identical width,
-    // `format(1,,,3000000000)` is `1` at rc 0 while `format(1,,,3000000000,0)`
-    // is `System resources exhausted.` at rc 251.
+    // `expp` is the one width the interpreter does not always write: it pads an
+    // exponent, and there is not always an exponent. So it is reserved only once
+    // `interrexx-num` says the field will be written, which is the same line
+    // `format` draws: at the identical width, `format(1,,,3000000000)` is `1` at
+    // rc 0 while `format(1,,,3000000000,0)` is `System resources exhausted.` at
+    // rc 251.
     let displayed = value
         .format_exponent(
             digits,
@@ -371,9 +371,9 @@ pub(crate) fn max_min_over(
             };
             return Err(Raised::method_argument_not_a_number(index + 1, &named).into());
         };
-        // The description is the number unrounded, rendered at DIGITS:
-        // measured against the oracle, `' 4444444444 '` names `4444444444`
-        // and `44444444440E-1` names `4.4444444440E+9`.
+        // The description is the number unrounded, rendered at DIGITS: `'
+        // 4444444444 '` names `4444444444` and `44444444440E-1` names
+        // `4.4444444440E+9`.
         if !quiet {
             interp.lostdigits_check_with(&number, |_| {
                 number.render_unrounded(digits, form).into_bytes()
@@ -502,7 +502,7 @@ const DEFAULT_MIN: i64 = 0;
 const DEFAULT_MAX: i64 = 999;
 const MAX_RANGE: i64 = 999_999_999;
 
-/// `RANDOMIZE`, wrapping because the oracle multiplies `uint64_t`.
+/// `RANDOMIZE`, wrapping because the multiplication is on `uint64_t`.
 fn randomize(seed: u64) -> u64 {
     seed.wrapping_mul(RANDOM_FACTOR).wrapping_add(RANDOM_ADDER)
 }
@@ -517,9 +517,9 @@ pub(crate) fn random(
     let maximum = whole_number(interp, name, args, 2)?;
     let seed = whole_number(interp, name, args, 3)?;
 
-    // The seed is validated and *applied* before the range is looked at,
-    // which is what the oracle does first. A call that
-    // then fails its range check has still moved the stream on.
+    // The seed is validated and *applied* before the range is looked at, which
+    // is done first. A call that then fails its range check has still moved the
+    // stream on.
     if let Some(seed) = seed
         && seed < 0
     {
@@ -542,9 +542,9 @@ pub(crate) fn random(
         (None, None, _) => (DEFAULT_MIN, DEFAULT_MAX),
     };
 
-    // An argument the call omitted substitutes as the null string, because
-    // the oracle passes no object -- measured, `random(-1)` reports
-    // `argument 1 ("-1")` and `argument 2 ("")`.
+    // An argument the call omitted substitutes as the null string, because no
+    // object is passed: `random(-1)` reports `argument 1 ("-1")` and `argument
+    // 2 ("")`.
     let written = |value: Option<i64>| value.map_or(Vec::new(), |v| v.to_string().into_bytes());
     if high < low {
         return Err(Raised::random_bounds_reversed(&written(minimum), &written(maximum)).into());
@@ -557,11 +557,10 @@ pub(crate) fn random(
         let spread = u64::try_from(high - low + 1).expect("the range check bounded this");
         low += i64::try_from(reverse_bits(scrambled) % spread).expect("a value below the spread");
     }
-    // **Text, not a number.** the oracle answers
-    // the minimum as an integer object, whose spelling is its own
-    // decimal digits and is never re-rendered under a later `DIGITS` or
-    // `FORM`. Measured: `numeric digits 3 ; say random(12345,12345)` is
-    // `12345`, where a value carrying the D15 pair would render `1.23E+4` --
+    // **Text, not a number.** the minimum is answered as an integer object,
+    // whose spelling is its own decimal digits and is never re-rendered under a
+    // later `DIGITS` or `FORM`. So `numeric digits 3 ; say random(12345,12345)`
+    // is `12345`, where a value carrying the D15 pair would render `1.23E+4` --
     // and `say random(12345,12345) + 0` at the same setting *is* `1.23E+4`,
     // because that is the addition's own result rather than this one.
     Ok(interp.text_built(low.to_string().into_bytes()))
@@ -625,8 +624,8 @@ fn initial_seed(interp: &mut Interp) -> u64 {
     u64::from(nanos) << 32 ^ u64::from(std::process::id())
 }
 
-/// The bit reversal the oracle does before taking the modulus:
-/// the seed's bits, most significant first.
+/// The bit reversal done before taking the modulus: the seed's bits, most
+/// significant first.
 fn reverse_bits(seed: u64) -> u64 {
     let mut work = 0u64;
     let mut seed = seed;

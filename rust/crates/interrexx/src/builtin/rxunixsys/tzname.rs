@@ -7,17 +7,17 @@
 //!   empty.
 //! * From a TZif file: walking the transitions from the last back, the first
 //!   standard type's designation and the first daylight type's; with no
-//!   transitions the first type's, for both. Measured, oracle:
-//!   `Asia/Tokyo` is `JST JDT` and `Europe/Dublin` `IST GMT`.
+//!   transitions the first type's, for both. For example, `Asia/Tokyo` is `JST
+//!   JDT` and `Europe/Dublin` `IST GMT`.
 //! * Otherwise the text is a POSIX rule: `XYZ3` is `XYZ XYZ`, `XYZ3ABC` is
 //!   `XYZ ABC`, `XYZ` (no offset) is `XYZ` and the null string, and a name of
 //!   fewer than three letters that is not `<...>` is two null strings.
 //!
-//! Where the oracle has called `localtime` since its `TZ` last changed (its
-//! own `TIME` or `DATE`, or a `SysStat` time), glibc's `tzname` holds the
-//! names of the rule in force then instead, and `tzset` with the same `TZ`
-//! does not reset it: measured, `Asia/Tokyo` answers `JST JST` after
-//! `time()`. This answers as a program that has not.
+//! Where `localtime` has been called since `TZ` last changed (by `TIME` or
+//! `DATE`, or a `SysStat` time), glibc's `tzname` holds the names of the rule
+//! in force then instead, and `tzset` with the same `TZ` does not reset it:
+//! `Asia/Tokyo` answers `JST JST` after `time()`. This answers as a program
+//! that has not.
 
 /// `(tzname[0], tzname[1])` for `tz`, the program's `TZ` (`None` where unset),
 /// with `tzdir` its `TZDIR`.
@@ -162,7 +162,7 @@ mod tests {
         )
     }
 
-    /// Measured, oracle, each as `TZ`, none of them a file under
+    /// For example, each as `TZ`, none of them a file under
     /// `/usr/share/zoneinfo`.
     #[test]
     fn a_posix_rule_names_as_glibc_parses_it() {

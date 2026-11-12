@@ -227,8 +227,8 @@ pub(crate) fn insert(
 /// `count` elements of `from` from `start` over `to` from `at`, or inserts
 /// them there under mode `I`.
 ///
-/// A missing source element is 40.924 naming its offset into the copy, not
-/// its index, as the oracle passes its loop counter.
+/// A missing source element is 40.924 naming its offset into the copy, not its
+/// index, as the loop counter is what is passed.
 pub(crate) fn copy(
     interp: &mut Interp,
     _name: &'static [u8],
@@ -325,8 +325,8 @@ impl SortOrder {
     }
 }
 
-/// One byte as the oracle's caseless comparison reads it: upcased, then taken as
-/// a signed `char`, so a byte from `0x80` up orders below every ASCII byte.
+/// One byte as the caseless comparison reads it: upcased, then taken as a signed
+/// `char`, so a byte from `0x80` up orders below every ASCII byte.
 fn caseless_byte(byte: u8) -> i8 {
     i8::from_ne_bytes([byte.to_ascii_uppercase()])
 }
@@ -365,8 +365,8 @@ fn compare_whole(left: &[u8], right: &[u8], caseless: bool) -> Ordering {
 
 /// The column forms of the same two comparisons.
 ///
-/// The run compared reaches one byte past the shorter value, where the oracle
-/// reads the string's terminating NUL.
+/// The run compared reaches one byte past the shorter value, where the string's
+/// terminating NUL is read.
 fn compare_columns(
     left: &[u8],
     right: &[u8],
@@ -396,10 +396,9 @@ fn terminated(value: &[u8], start: usize, count: usize) -> impl Iterator<Item = 
     (start..start + count).map(|at| value.get(at).copied().unwrap_or(0))
 }
 
-/// A merge sort over `order`, one index per element: the oracle's
-/// own algorithm, an insertion sort below eight elements and an exponential
-/// search in the merge, so the order it leaves is the oracle's whatever the
-/// comparator answers.
+/// A merge sort over `order`, one index per element: an insertion sort below
+/// eight elements and an exponential search in the merge, so the order it
+/// leaves is fixed whatever the comparator answers (`util.sysstemsort.order`).
 fn merge_sort(
     order: &mut [usize],
     working: &mut [usize],
@@ -497,8 +496,8 @@ fn find(
     right: usize,
     compare: &dyn Fn(usize, usize) -> i32,
 ) -> usize {
-    // Signed, because the oracle's step back from the check point may pass below
-    // `left` and the loops end on that.
+    // Signed, because the step back from the check point may pass below `left`
+    // and the loops end on that.
     let (mut left, mut right) = (left as isize, right as isize);
     let mut check = left;
     let mut delta = 1;
@@ -558,8 +557,8 @@ fn sort_target(interp: &mut Interp, argument: ObjRef) -> Result<(ObjRef, Vec<u8>
 /// lastcol]]]]]])`: sorts elements `first` to `last` by their string values,
 /// which replace them.
 ///
-/// `last` and `lastcol` of `999999999999999999` mean "to the end" whether
-/// given or defaulted, as in the oracle, which marks the default with that value.
+/// `last` and `lastcol` of `999999999999999999` mean "to the end" whether given
+/// or defaulted, the default being marked with that value.
 pub(crate) fn sort(
     interp: &mut Interp,
     _name: &'static [u8],
@@ -750,7 +749,7 @@ pub(crate) fn dump_variables(
 
 /// Writes one `Name=..., Value='...'` line to `file`, or to standard output
 /// where there is none, as soon as the value's string value is in hand: a
-/// `STRING` method's own output lands between the lines, as on the oracle.
+/// `STRING` method's own output lands between the lines.
 fn dump_line(
     interp: &mut Interp,
     file: &mut Option<std::fs::File>,
@@ -768,7 +767,7 @@ fn dump_line(
     match file {
         Some(file) => {
             use std::io::Write as _;
-            // The oracle ignores a failed write.
+            // A failed write is ignored.
             let _ = file.write_all(&line);
         }
         None => interp.write_out(&line),

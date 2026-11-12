@@ -1,12 +1,12 @@
 //! The `rxsock` extension library, run in Rust: the IPv4 socket routines
 //! `docs/design/extensions.md` describes.
 //!
-//! A socket is its descriptor number, as on the oracle. Each call borrows the
-//! number for the call ([`rxsock_sys::with_socket`]) and makes its OS calls
-//! through `rustix` or `nix` on the borrow; the options neither names go
-//! through [`rxsock_sys`]'s raw `getsockopt` and `setsockopt`. Most routines set
-//! `errno` and `h_errno` in the caller's variables ([`report`]); the `errno`
-//! is also kept on the activity for `SockSock_Errno`.
+//! A socket is its descriptor number. Each call borrows the number for the call
+//! ([`rxsock_sys::with_socket`]) and makes its OS calls through `rustix` or
+//! `nix` on the borrow; the options neither names go through [`rxsock_sys`]'s
+//! raw `getsockopt` and `setsockopt`. Most routines set `errno` and `h_errno` in
+//! the caller's variables ([`report`]); the `errno` is also kept on the activity
+//! for `SockSock_Errno`.
 //!
 //! `SockAccept`, `SockConnect`, `SockRecv`, `SockRecvFrom` and `SockSelect`
 //! wait without holding up the other activities: a call that would block
@@ -591,17 +591,17 @@ fn resume(interp: &mut Interp, receiver: ObjRef) -> Result<Option<ObjRef>> {
             lost,
             accepted,
         } => {
-            // At the deadline, the one try answers `EAGAIN` where nothing
-            // came: measured, oracle, `SO_RCVTIMEO` 500 then `SockAccept`
-            // gives -1 with `errno` 11 after half a second.
+            // At the deadline, the one try answers `EAGAIN` where nothing came:
+            // `SO_RCVTIMEO` 500 then `SockAccept` gives -1 with `errno` 11
+            // after half a second.
             let accepted = accepted.unwrap_or_else(|| try_accept(fd));
             let target = stem(interp, 0, prefix);
             finish_accept(interp, accepted, target.as_ref(), lost)
         }
         Pending::Connect { fd, to } => {
-            // Not writable is the deadline: measured, oracle, `SO_SNDTIMEO`
-            // 500 then a `SockConnect` that cannot complete gives -1 with
-            // `errno` 115 after half a second, and the connection goes on.
+            // Not writable is the deadline: `SO_SNDTIMEO` 500 then a
+            // `SockConnect` that cannot complete gives -1 with `errno` 115
+            // after half a second, and the connection goes on.
             let result = if any_ready(&[(fd, PollFlags::OUT)]) {
                 with_socket(fd, |socket| finish_connect(socket, to))
             } else {
@@ -983,9 +983,8 @@ fn host_answer(interp: &mut Interp, stem: &Stem, found: Os<Option<hosts::Host>>)
         Ok(found) => (found, 0),
         Err(errno) => (None, errno),
     };
-    // A lookup sets C's `errno` to 0 first: measured, oracle,
-    // `SockSock_Errno()` is 0 after a successful `SockGetHostByName`
-    // that followed a failing call.
+    // A lookup sets C's `errno` to 0 first: `SockSock_Errno()` is 0 after a
+    // successful `SockGetHostByName` that followed a failing call.
     interp.activity.rxsock_errno = 0;
     report(interp, errno);
     match found {
@@ -1109,9 +1108,9 @@ pub(crate) fn send(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<ObjRe
     let bytes = data(interp, args, 2)?;
     let flags = optional_string(interp, args, 3)?.unwrap_or_default();
     let flags = send_flags(&flags, true);
-    // A blocking send takes a halting signal on this thread, which ends it,
-    // and the halt is served at this clause: measured, oracle, SIGINT during
-    // a blocked `SockSend` raises HALT on the `SockSend` line.
+    // A blocking send takes a halting signal on this thread, which ends it, and
+    // the halt is served at this clause: SIGINT during a blocked `SockSend`
+    // raises HALT on the `SockSend` line.
     let sent = crate::signal::unblocked(|| {
         with_socket(fd, |socket| {
             rustix::net::send(socket, &bytes, flags)
@@ -1507,8 +1506,8 @@ fn set_of(interp: &mut Interp, args: &[Option<ObjRef>], position: usize) -> Resu
     let Some(value) = args.get(position - 1).copied().flatten() else {
         return Ok(None);
     };
-    // Measured, oracle: a name with a tail (`'q.x'`) takes no part, whatever
-    // `Q.0` or `Q.X0` hold.
+    // For example, a name with a tail (`'q.x'`) takes no part, whatever `Q.0`
+    // or `Q.X0` hold.
     let Some(stem) = stem_of(interp, value, position)?.filter(|stem| stem.prefix.is_empty()) else {
         return Ok(None);
     };
@@ -1546,9 +1545,9 @@ fn descriptor_table_size() -> i32 {
         .unwrap_or(i32::MAX)
 }
 
-/// Whether `select` looks at `fd`: measured, oracle, a negative entry or one
-/// past the descriptor table is never ready and no error, while a closed one
-/// below it answers -1 with `EBADF`.
+/// Whether `select` looks at `fd`: a negative entry or one past the descriptor
+/// table is never ready and no error, while a closed one below it answers -1
+/// with `EBADF`.
 fn selectable(fd: i32, table: i32) -> bool {
     (0..table).contains(&fd)
 }

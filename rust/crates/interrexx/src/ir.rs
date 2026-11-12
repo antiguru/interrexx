@@ -475,8 +475,7 @@ const CALL_SITE_CACHE: bool = true;
 /// One call site's kept resolution, or none yet, with the
 /// `Interp::routine_generation` it was made under. A `Routine` copy the kept
 /// resolution names is pinned, and the program of a `::ROUTINE` it names in
-/// another program is held ([`Interp::repin`]), while the site keeps it, as
-/// the oracle's instruction keeps its routine.
+/// another program is held ([`Interp::repin`]), while the site keeps it.
 struct CallSite {
     resolved: Cell<Option<Resolved>>,
     generation: Cell<u32>,
@@ -497,8 +496,8 @@ impl CallSite {
         self.resolved.get().map_or(ObjRef::NIL, Resolved::copy)
     }
 
-    /// The kept resolution, or `None` where it is one the oracle looks up
-    /// on every call and `generation` has moved on.
+    /// The kept resolution, or `None` where it is one looked up on every call
+    /// and `generation` has moved on.
     fn get(&self, generation: u32) -> Option<Resolved> {
         let resolved = self.resolved.get()?;
         if resolved.kept_until_routines_change() && self.generation.get() != generation {

@@ -15,12 +15,12 @@ impl Interp {
     ) -> Result<(), Failure> {
         match use_ {
             Use::Local { variables } => {
-                // 98.993 is "this is not a method invocation" and 99.910 is
-                // "it is one, but this is not its first instruction", so
-                // what decides between them is the entry kind rather than
-                // whether there was a call. Measured on the oracle: `use
-                // local` first in a `::ROUTINE` is 98.993 at rc 158, the
-                // same answer the top-level shape gets.
+                // 98.993 is "this is not a method invocation" and 99.910 is "it
+                // is one, but this is not its first instruction", so what
+                // decides between them is the entry kind rather than whether
+                // there was a call. For example, `use local` first in a
+                // `::ROUTINE` is 98.993 at rc 158, the same answer the
+                // top-level shape gets.
                 let method_invocation = match self.activation().entry {
                     Entry::TopLevel | Entry::InternalCall | Entry::Routine => false,
                     Entry::Method => true,
@@ -321,11 +321,10 @@ impl Interp {
                 }
                 Ok(())
             }
-            // `USE STRICT ARG` refuses an omitted position that has no
-            // default of its own, where `USE ARG` drops the target.
-            // The position is the target's,
-            // not the last one supplied -- measured, oracle rc 216, `call r,
-            // 2` into `use strict arg a, b` reports `argument 1`.
+            // `USE STRICT ARG` refuses an omitted position that has no default
+            // of its own, where `USE ARG` drops the target. The position is the
+            // target's, not the last one supplied: `call r, 2` into `use strict
+            // arg a, b` reports `argument 1`.
             None if strict => Err(if in_method {
                 Raised::missing_method_argument(position).into()
             } else {
@@ -344,10 +343,10 @@ impl Interp {
         }
     }
 
-    /// Whether a `USE ARG >name` target is in the uninitialised state the
-    /// oracle requires of it: a local variable,
-    /// so never one an `EXPOSE` or `USE LOCAL` bound to the object's pool, and
-    /// for a stem one named as the variable that owns the slot's storage.
+    /// Whether a `USE ARG >name` target is in the uninitialised state it
+    /// requires: a local variable, so never one an `EXPOSE` or `USE LOCAL`
+    /// bound to the object's pool, and for a stem one named as the variable
+    /// that owns the slot's storage.
     fn target_is_uninitialised(&self, name: &[u8], frame: SlotFrame, index: usize) -> bool {
         if self.exposure(frame, index).is_some() {
             return false;

@@ -1543,12 +1543,10 @@ macro_rules! region_ops {
                         .unwrap_or(ObjRef::NIL);
                     $registers.set(*dst, value);
                 }
-                // The `>K>` line of one header value. **The
-                // emission is its own op**, which is what lets
-                // the stream reproduce the order the oracle
-                // evaluates and echoes a loop header in:
-                // evaluate `TO`, echo it, evaluate `BY`, echo
-                // it.
+                // The `>K>` line of one header value. **The emission is its own
+                // op**, which is what lets the stream reproduce the order a
+                // loop header is evaluated and echoed in: evaluate `TO`, echo
+                // it, evaluate `BY`, echo it.
                 Op::TraceKeyword { role, src } => {
                     debug_assert!(
                         $chunk.holds_register(*src),
@@ -2549,9 +2547,9 @@ impl Interp {
     }
 
     /// The debug pause a clause region owes on its cold exit, ahead of the
-    /// clause boundary as the oracle pauses ahead of its trap
-    /// check. `=` answers the region's own first op, and a failure the pause
-    /// raises is the clause's.
+    /// clause boundary as the pause comes ahead of the trap check. `=` answers
+    /// the region's own first op, and a failure the pause raises is the
+    /// clause's.
     #[cold]
     #[inline(never)]
     fn debug_pause_in_region(
@@ -2571,9 +2569,9 @@ impl Interp {
         match self.debug_pause_after_clause(code, index, clause, source, flow) {
             Ok(Pause::Again) => Ok(RegionEnd::At(clause_pc)),
             Ok(Pause::Transfer(flow)) => Ok(RegionEnd::Flowed(flow)),
-            // A `DO`/`LOOP` header owes no boundary of its own, but the oracle
-            // checks its traps after the header's pause as after any clause,
-            // so a condition the pause's read queued is delivered here.
+            // A `DO`/`LOOP` header owes no boundary of its own, but its traps
+            // are checked after the header's pause as after any clause, so a
+            // condition the pause's read queued is delivered here.
             Ok(Pause::Go)
                 if matches!(
                     clause.kind,
@@ -4173,8 +4171,8 @@ impl Interp {
             }
         };
         let flow = self.leave_select(code, frame.select, frame.label, frame.resume, flow)?;
-        // A matched `WHEN`'s branch is one the oracle closes with a synthetic
-        // instruction, so it owes that instruction's boundary.
+        // A matched `WHEN`'s branch is one closed with a synthetic instruction,
+        // so it owes that instruction's boundary.
         self.end_promoted_branch(flow)
     }
 
@@ -4286,15 +4284,13 @@ fn op_at(chunk: &Chunk, target: usize) -> Result<u32, Failure> {
 impl Interp {
     /// A call op's resolution before its arguments run, for an op that
     /// evaluates them itself: the site's kept answer, or the part of the
-    /// resolution the oracle decides before the arguments, kept when it
-    /// decides one.
+    /// resolution decided before the arguments, kept when it decides one.
     ///
     /// **A raise is deliberately not recorded**: `resolve_fixed_call` answers
     /// `Err` for a name it refuses, and a site that raised asks again. An
-    /// answer of a kind the oracle searches for on every call is read again
-    /// once the arguments have run, since they can write a routine table or
-    /// call through this site before it is used, as the oracle reads
-    /// the external target after them.
+    /// answer of a kind searched for on every call is read again once the
+    /// arguments have run, since they can write a routine table or call through
+    /// this site before it is used.
     fn site_resolution_before_arguments<'c>(
         &mut self,
         chunk: &'c Chunk,
@@ -4327,9 +4323,9 @@ impl Interp {
     }
 
     /// What call site `site` does with `resolved`, which a call that found
-    /// nothing kept there resolved under `generation`: a label or a builtin
-    /// is kept at once, as the oracle fixes both when the clause resolves,
-    /// and anything else is a [`SiteKeep`] for when the call returns.
+    /// nothing kept there resolved under `generation`: a label or a builtin is
+    /// kept at once, as both are fixed when the clause resolves, and anything
+    /// else is a [`SiteKeep`] for when the call returns.
     #[inline(always)]
     fn missed_site(
         &mut self,

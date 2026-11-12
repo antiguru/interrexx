@@ -1,9 +1,8 @@
-//! `DATE` and `TIME`: the calendar, modelled on the oracle's
-//! rather than on either builtin's
-//! documentation, because the two option lists documentation gives disagree
-//! with the error inserts the oracle actually raises -- `DATE('C')` and
-//! `DATE('J')` exist in other Rexx dialects and are rejected with 40.904 on
-//! this build, measured.
+//! `DATE` and `TIME`: the calendar, following `bif.date.args` and
+//! `bif.time.args` rather than either builtin's documentation, because the two
+//! option lists documentation gives disagree with the error inserts actually
+//! raised -- `DATE('C')` and `DATE('J')` exist in other Rexx dialects and are
+//! rejected with 40.904.
 //! ```text
 //! first time('R')            0
 //! time('E') after ~0.11s     0.109014
@@ -40,10 +39,10 @@ const MICROSECONDS: i64 = 1_000_000;
 pub(crate) const MICROSECONDS_IN_DAY: i64 = SECONDS_IN_DAY * MICROSECONDS;
 
 /// The largest basedate `DATE`/`TIME` accept: the days from 0001-01-01 to
-/// 9999-12-31, both dates this crate can otherwise render. Measured against
-/// the oracle -- `date('B', '31 Dec 9999', 'N')` -- rather than derived,
-/// because it is the one constant [`Timestamp::set_base_date`] needs before
-/// it has computed a single field to derive it *from*.
+/// 9999-12-31, both dates this crate can otherwise render. The value of
+/// `date('B', '31 Dec 9999', 'N')`, taken as a constant rather than derived,
+/// because it is the one constant [`Timestamp::set_base_date`] needs before it
+/// has computed a single field to derive it *from*.
 const MAX_BASE_DATE: i64 = 3_652_058;
 /// The basetime at the last representable instant, `9999-12-31T23:59:59.999999`.
 /// Computed rather than measured: [`MAX_BASE_DATE`] already fixes the day,
@@ -51,10 +50,10 @@ const MAX_BASE_DATE: i64 = 3_652_058;
 /// [`Timestamp::base_time`] runs everywhere else.
 const MAX_BASE_TIME: i64 =
     MAX_BASE_DATE * MICROSECONDS_IN_DAY + (23 * 3600 + 59 * 60 + 59) * MICROSECONDS + 999_999;
-/// Days from 0001-01-01 to the Unix epoch, 1970-01-01. Measured against the
-/// oracle (`date('B', '1 Jan 1970', 'N')`) and confirmed by [`base_days`]:
-/// `base_days(1969) + 1 - 1 == 719_162`, the well-known .NET epoch constant,
-/// since both systems count from the identical proleptic 0001-01-01.
+/// Days from 0001-01-01 to the Unix epoch, 1970-01-01. The value of `date('B',
+/// '1 Jan 1970', 'N')`, confirmed by [`base_days`]: `base_days(1969) + 1 - 1 ==
+/// 719_162`, the well-known .NET epoch constant, since both systems count from
+/// the identical proleptic 0001-01-01.
 const UNIX_BASE_DATE: i64 = 719_162;
 pub(crate) const UNIX_BASE_TIME: i64 = UNIX_BASE_DATE * MICROSECONDS_IN_DAY;
 
@@ -93,10 +92,9 @@ fn is_leap_year(year: i64) -> bool {
     year % 4 == 0 && (year % 100 != 0 || year % 400 == 0)
 }
 
-/// One calendar timestamp: modelled on the oracle's own fields and
-/// arithmetic, over `i64` throughout rather than mixing `int`/`int64_t` as
-/// the oracle does, since nothing here needs the narrower width and a single
-/// type is one fewer cast to get wrong.
+/// One calendar timestamp: over `i64` throughout rather than mixing `int` and
+/// `int64_t`, since nothing here needs the narrower width and a single type is
+/// one fewer cast to get wrong.
 #[derive(Clone, Copy, Debug)]
 struct Timestamp {
     year: i64,
@@ -112,10 +110,10 @@ struct Timestamp {
 }
 
 impl Timestamp {
-    /// The oracle's own cleared state, less one field: year, month
-    /// and day start at `1/1/1` rather than `0/0/0` -- the module doc's own
-    /// "a defined answer where the oracle's own is undefined" explains why a
-    /// cleared timestamp here is never asked to render a zero calendar date.
+    /// The cleared state, less one field: year, month and day start at `1/1/1`
+    /// rather than `0/0/0` -- the module doc's "a defined answer where the
+    /// reference is undefined" explains why a cleared timestamp here is never
+    /// asked to render a zero calendar date.
     fn clear() -> Timestamp {
         Timestamp {
             year: 1,
@@ -262,8 +260,8 @@ impl Timestamp {
         }
         let basedays = basetime / MICROSECONDS_IN_DAY;
         let mut remainder = basetime - basedays * MICROSECONDS_IN_DAY;
-        // Setting the basedate clears every other field first, matching the
-        // oracle's own note at the identical call site.
+        // Setting the basedate clears every other field first, as at every call
+        // site.
         self.set_base_date(basedays);
         self.microseconds = remainder % MICROSECONDS;
         remainder /= MICROSECONDS;
@@ -364,14 +362,13 @@ impl Timestamp {
 
     // ---- parsing an input conversion argument ----
 
-    /// `date` against a fixed template,
-    /// `sep` substituted at each `/`. See the format alphabet at each of
-    /// this method's own callers -- `m`/`d`/`D`/`H`/`i`/`s`/`u`/`y`/`Y`/`M`/
-    /// `C`/`c`/`/`/`:`/`.`, the oracle's own thirteen -- ported field by
-    /// field from the oracle's behaviour rather than from prose, because the
-    /// variable-width fields (`D`, `c`, `u`) and the two-digit year's
-    /// sliding century window are exactly the parts documentation never
-    /// states precisely enough to reproduce.
+    /// `date` against a fixed template, `sep` substituted at each `/`. See the
+    /// format alphabet at each of this method's own callers --
+    /// `m`/`d`/`D`/`H`/`i`/`s`/`u`/`y`/`Y`/`M`/ `C`/`c`/`/`/`:`/`.`, the
+    /// thirteen letters -- built field by field rather than from prose, because
+    /// the variable-width fields (`D`, `c`, `u`) and the two-digit year's
+    /// sliding century window are exactly the parts documentation never states
+    /// precisely enough to reproduce.
     fn parse(&mut self, date: &[u8], format: &[u8], sep: &[u8], current_year: i64) -> bool {
         self.day = 1;
         self.month = 1;
@@ -738,8 +735,8 @@ fn get_number_capped(date: &[u8], start: usize, len: usize, max: i64) -> Option<
 /// ARGUMENT_DIGITS` -- the same precision `whole_number` (`builtin.rs`)
 /// converts a typed builtin argument under, reused here because `DATE`'s
 /// `B`/`F`/`T`/`D` and `TIME`'s `H`/`S`/`M`/`F`/`T`/`O` input styles convert
-/// their own `indate`/`intime` the identical way -- the oracle also
-/// caps these rather than reading unbounded digits.
+/// their own `indate`/`intime` the identical way -- these are capped as well
+/// rather than read as unbounded digits.
 fn whole_number_of(text: &[u8]) -> Option<i64> {
     std::str::from_utf8(text)
         .ok()
@@ -859,9 +856,9 @@ fn now(interp: &mut Interp) -> Timestamp {
 /// `TIME('E')`/`TIME('R')`'s own reading: elapsed microseconds, formatted,
 /// since the running activation's elapsed anchor -- lazily anchored to
 /// `reading` on its first call. A reset (`reset` set, or the clock read
-/// backward) does **not** move the anchor here -- it only sets the
-/// activation's elapsed-reset flag, which [`now_base_time`]'s own cache-miss
-/// path consumes, matching the oracle's own lazy order.
+/// backward) does **not** move the anchor here -- it only sets the activation's
+/// elapsed-reset flag, which [`now_base_time`]'s own cache-miss path consumes,
+/// so the anchor is taken lazily, in the order of the reads.
 fn elapsed_reading(interp: &mut Interp, reading: i64, reset: bool) -> Vec<u8> {
     let activation = interp.activation_mut();
     if activation.elapsed_anchor == NO_CLOCK {
@@ -897,10 +894,9 @@ const TIME_OPTIONS2: &str = "CFHLMNOST";
 
 /// Reads the option-letter argument at `position`, upcasing its first byte.
 /// `default` when the argument is omitted; a present-but-empty argument is
-/// always 40.904, never treated as omitted -- measured, `date('')` and
-/// `time('')` both report `found ""`, and this raises directly rather than
-/// falling through to the letter switch, matching the oracle's own separate
-/// early check for that case.
+/// always 40.904, never treated as omitted: `date('')` and `time('')` both
+/// report `found ""`, and this raises directly rather than falling through to
+/// the letter switch.
 fn style_byte(
     interp: &mut Interp,
     args: Args<'_>,
@@ -922,16 +918,15 @@ fn style_byte(
 /// membership test.
 const ALPHANUM: &[u8] = b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
-/// Membership as the oracle's own `strchr(set, byte)` computes it, its
-/// C-string quirk included: `strchr` finds the byte `0` in **any** string,
-/// because a C string's own terminator is a `0` byte and `strchr` treats
-/// that as ordinary membership, checked or not against `set`'s own
-/// contents. Every `strchr`-based membership test `BUILTIN(DATE)`/
+/// Membership as `strchr(set, byte)` computes it, its C-string quirk included
+/// (matches the reference implementation; not yet specified): `strchr` finds
+/// the byte `0` in **any** string, because a C string's own terminator is a `0`
+/// byte and `strchr` treats that as ordinary membership, checked or not against
+/// `set`'s own contents. Every `strchr`-based membership test `BUILTIN(DATE)`/
 /// `BUILTIN(TIME)` runs therefore reports "found" for a `0` byte against
-/// *every* set, including one that itself carries no zero -- measured,
-/// two call sites, both rc 216 and neither what `set.contains(&0)` alone
-/// would answer since neither `"EINOSU"` nor `"BDFLMTW"` contains a literal
-/// zero:
+/// *every* set, including one that itself carries no zero -- at two call sites,
+/// both 40.904 and neither what `set.contains(&0)` alone would answer since
+/// neither `"EINOSU"` nor `"BDFLMTW"` contains a literal zero:
 /// ```text
 /// date('00'x,,,'-')                  40.904  (the EINOSU osep-compatibility check;
 ///                                              0 counts as "found", so as
@@ -946,11 +941,10 @@ fn strchr_matches(set: &[u8], byte: u8) -> bool {
     byte == 0 || set.contains(&byte)
 }
 
-/// A separator argument (`DATE`'s `osep`/`isep`): exactly one non-
-/// alphanumeric byte, or the null string. The
-/// oracle tests membership with `memchr` over [`ALPHANUM`]'s own length, so
-/// a `0x00` byte is a valid separator -- unlike the style checks, which
-/// still use [`strchr_matches`].
+/// A separator argument (`DATE`'s `osep`/`isep`): exactly one non- alphanumeric
+/// byte, or the null string. Membership is tested with `memchr` over
+/// [`ALPHANUM`]'s own length, so a `0x00` byte is a valid separator -- unlike
+/// the style checks, which still use [`strchr_matches`].
 fn check_separator(name: &[u8], position: usize, sep: &[u8]) -> Result<(), Failure> {
     let bad = sep.len() > 1 || sep.first().is_some_and(|byte| ALPHANUM.contains(byte));
     if bad {
@@ -1013,11 +1007,11 @@ pub(crate) fn date(
             }
         };
         timestamp = Timestamp::clear();
-        // Immediately after `clear()` the oracle sets the current timezone
-        // offset: "everything is done using the current timezone offset". Without
-        // this the parsed timestamp carries offset `0` and `TIME('O')`'s
-        // input style answers the wrong zone -- invisible while every "now"
-        // was fixed at UTC, and a silent wrong answer the moment it is not.
+        // Immediately after `clear()` the current timezone offset is set:
+        // "everything is done using the current timezone offset". Without this
+        // the parsed timestamp carries offset `0` and `TIME('O')`'s input style
+        // answers the wrong zone -- invisible while every "now" was fixed at UTC,
+        // and a silent wrong answer the moment it is not.
         timestamp.time_zone_offset = current.time_zone_offset;
         let valid = match style2 {
             b'N' => timestamp.parse_normal_date(indate_bytes, input_sep),
@@ -1127,9 +1121,9 @@ pub(crate) fn time(
         b'E' | b'R' => {
             // **The raw clock.** The anchor this is differenced against is
             // [`Activation::cached_clock`], which is what
-            // [`real_clock_base_time`] returned, so the reading is the same
-            // UTC quantity and the difference carries no zone -- what the
-            // oracle's UTC base time answers.
+            // [`real_clock_base_time`] returned, so the reading is the same UTC
+            // quantity and the difference carries no zone -- what the UTC base
+            // time answers.
             let reading = now_base_time(interp);
             let text = elapsed_reading(interp, reading, style == b'R');
             Ok(interp.text(&text))

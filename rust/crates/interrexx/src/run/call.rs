@@ -55,18 +55,18 @@ pub(crate) enum CallResolution<'a> {
     /// Decided before the arguments: a label or a builtin, a namespace-qualified
     /// routine, or a routine-search answer a call site keeps.
     Settled(Resolved),
-    /// Searched for once the arguments have run, as the oracle's external call is:
-    /// what `site` keeps by
-    /// then, or a search whose answer `site` keeps once the call returns.
+    /// Searched for once the arguments have run, as an external call's are: what
+    /// `site` keeps by then, or a search whose answer `site` keeps once the call
+    /// returns.
     AfterArguments {
         site: Option<crate::ir::CallSiteSlot<'a>>,
     },
 }
 
-/// What a call site keeps once the call through it that found `resolved`
-/// under `generation` returns: the oracle sets its external target only after
-/// the external call comes back, so a call that raised keeps
-/// nothing. The copy `resolved` names is pinned until the call ends.
+/// What a call site keeps once the call through it that found `resolved` under
+/// `generation` returns: the external target is set only after the external
+/// call comes back, so a call that raised keeps nothing. The copy `resolved`
+/// names is pinned until the call ends.
 #[derive(Clone, Copy)]
 pub(crate) struct SiteKeep {
     pub(crate) site: u16,
@@ -235,10 +235,9 @@ impl Interp {
         }
     }
 
-    /// The half of a call's resolution the oracle decides before its
-    /// arguments run: a label or a builtin (the parser's
-    /// builtin index), or the refusal of a builtin this crate excludes. `None`
-    /// for a name that is none of those.
+    /// The half of a call's resolution decided before the arguments run: a
+    /// label or a builtin (the parser's builtin index), or the refusal of a
+    /// builtin this crate excludes. `None` for a name that is none of those.
     pub(crate) fn resolve_fixed_call(
         &self,
         name: &[u8],
@@ -248,11 +247,11 @@ impl Interp {
         // body a caller is walking, and the two differ inside an `INTERPRET`
         // fragment.** A fragment's `labels` is always empty -- a label in
         // interpreted text is error 47.1 -- so searching the walked body would
-        // make every `CALL` inside a fragment unresolvable. Measured on the
-        // oracle: `interpret "call sub"` runs the enclosing program's `sub:`.
-        // Found by running the composition rather than by reading the code:
-        // the first version of this searched the walked body and passed every
-        // test that had no `INTERPRET` in it.
+        // make every `CALL` inside a fragment unresolvable. For example,
+        // `interpret "call sub"` runs the enclosing program's `sub:`. Found by
+        // running the composition rather than by reading the code: the first
+        // version of this searched the walked body and passed every test that
+        // had no `INTERPRET` in it.
         let program = Rc::clone(&self.activation().program);
         let selector = self.activation().body;
         let Some(activation_body) = body_of(&program, selector) else {
@@ -284,19 +283,16 @@ impl Interp {
         Ok(Some(resolved))
     }
 
-    /// The half of a call's resolution the oracle searches once the
-    /// arguments have run, for a name
-    /// [`Interp::resolve_fixed_call`] answered `None` for.
+    /// The half of a call's resolution searched once the arguments have run,
+    /// for a name [`Interp::resolve_fixed_call`] answered `None` for.
     pub(crate) fn resolve_routine_call(&mut self, name: &[u8]) -> Result<Resolved, Failure> {
         let resolved = match self.package_routine_lookup(name)? {
             Some(resolved) => resolved,
-            // **Ahead of the external file search and behind
-            // everything above it.** The oracle resolves the core class
-            // library's two `CALL`s against the interpreter's
-            // own directory, which is neither a label, a builtin nor a
-            // `::ROUTINE`; this crate embeds those files instead. Gated
-            // on the bootstrap running, so the names mean nothing to a
-            // program.
+            // **Ahead of the external file search and behind everything above
+            // it.** The core class library's two `CALL`s resolve against the
+            // interpreter's own directory, which is neither a label, a builtin
+            // nor a `::ROUTINE`; this crate embeds those files instead. Gated
+            // on the bootstrap running, so the names mean nothing to a program.
             None if self.library_bootstrap
                 && let Some(program) = interrexx_lib::lookup(&String::from_utf8_lossy(name)) =>
             {
@@ -308,28 +304,25 @@ impl Interp {
             {
                 Resolved::Macro
             }
-            // **A routine of the oracle's own internal packages**, which
-            // it consults here -- after the running package's routines and
-            // before the external file search. Answering 43.1 for one of
-            // these says "no such routine" for a name the oracle does
-            // have, which a program cannot tell from its own typo.
+            // **A routine of the interpreter's own internal packages**, which
+            // is consulted here -- after the running package's routines and
+            // before the external file search. Answering 43.1 for one of these
+            // says "no such routine" for a name that does exist, which a
+            // program cannot tell from its own typo.
             None if let Some(row) = crate::internal_routines::lookup(name) => match row.body {
                 Some(_) => Resolved::Internal(row),
                 None => return Err(Loud::internal_routine(name).into()),
             },
-            // **A routine a loaded library exports**, whichever load
-            // registered it. The oracle keeps these in the table the
-            // internal packages' routines are in, where a library routine
-            // replaces an internal one of the same name; here the internal
-            // one is found first.
+            // **A routine a loaded library exports**, whichever load registered
+            // it. These are kept in the table the internal packages' routines
+            // are in, where a library routine replaces an internal one of the
+            // same name; here the internal one is found first.
             None if let Some(slot) = self.package_routine(name) => Resolved::LibraryRoutine(slot),
-            // **The external file search, which the oracle performs
-            // before answering 43.1.** Only whether it resolves is
-            // decided here; the path is searched for again where the
-            // file is entered, because a `Resolved` is `Copy` and this
-            // resolver is `&self`.
-            // **A registered classic function**, which the oracle
-            // tries after the macros searched first and before the external file search.
+            // **The external file search, which is performed before answering 43.1.**
+            // Only whether it resolves is decided here; the path is searched for again
+            // where the file is entered, because a `Resolved` is `Copy` and this
+            // resolver is `&self`. **A registered classic function**, which is tried
+            // after the macros searched first and before the external file search.
             None if self.classic_function(name).is_some() => Resolved::Registered,
             None if self.external_program(name).is_some() => Resolved::External,
             None if crate::builtin::rexxutil::macros::macro_position(name)
@@ -770,10 +763,10 @@ impl Interp {
         Ok(Some(result))
     }
 
-    /// One internal-package routine over the evaluated arguments in `args`
-    /// from `from`. No activation, no `SIGL`, no depth guard -- the builtin
-    /// discipline, since the oracle runs these as native code too. `Entered`
-    /// where it parked the activity, with the park on its record.
+    /// One internal-package routine over the evaluated arguments in `args` from
+    /// `from`. No activation, no `SIGL`, no depth guard -- the builtin
+    /// discipline, since these run as native code too. `Entered` where it
+    /// parked the activity, with the park on its record.
     fn run_internal(
         &mut self,
         row: &'static crate::internal_routines::InternalRoutine,
@@ -842,9 +835,9 @@ impl Interp {
             lend_arguments(&mut level.arguments, args);
         }
         if let Err(failure) = &outcome {
-            // The oracle reports one of these under its own routine line,
-            // whether the argument marshalling or the body raised -- measured,
-            // `filespec('D')` and `SysSleep('abc')` both carry it.
+            // One of these is reported under its own routine line, whether the
+            // argument marshalling or the body raised: `filespec('D')` and
+            // `SysSleep('abc')` both carry it.
             let values = &args[from..];
             match name {
                 InternalName::Upper => {
@@ -890,8 +883,8 @@ impl Interp {
             self.site_call(slot, keep, SiteCall::of(&started));
             return started;
         }
-        // Kept before the callee's value is checked: the oracle keeps a
-        // routine that returned nothing to a function call.
+        // Kept before the callee's value is checked: a routine that returned
+        // nothing to a function call is kept.
         let begun = self.begin_call(
             resolved,
             name,
@@ -1055,22 +1048,20 @@ impl Interp {
     ) -> Result<Begun, Failure> {
         // **The builtin outcome ends here**, before `SIGL`, before the depth
         // guard and before any activation is pushed -- each of those three is
-        // the label path's, and the oracle answers that the builtin path has
-        // none of them (`builtin`'s own module doc carries the probe for
-        // each). Every argument is still rooted by the loop above, so the
-        // allocation a builtin's result costs happens with the inputs
-        // reachable, and the value handed back is rooted by whichever caller
-        // receives it exactly as a callee's `RETURN` value already is.
-        // **The library outcome ends here too**, and for a reason unlike the
-        // builtin's: an embedded `.orx` source is a whole program, with its
-        // own directives to install and its own `ProgramId`, so it is
-        // entered the way the command line's program is rather than the way
-        // a routine is. `Entered` has no arm for it because none of the
-        // decisions that enum exists to carry -- `SIGL`, the callee's pool,
-        // the indent, the calling convention's receiver -- is a question
-        // about it.
-        // **Every arm below the running package's own `::ROUTINE`s passes
-        // the manager first**, an unresolvable name included.
+        // the label path's, and the builtin path has none of them (`builtin`'s
+        // own module doc carries the probe for each). Every argument is still
+        // rooted by the loop above, so the allocation a builtin's result costs
+        // happens with the inputs reachable, and the value handed back is
+        // rooted by whichever caller receives it exactly as a callee's `RETURN`
+        // value already is. **The library outcome ends here too**, and for a
+        // reason unlike the builtin's: an embedded `.orx` source is a whole
+        // program, with its own directives to install and its own `ProgramId`,
+        // so it is entered the way the command line's program is rather than
+        // the way a routine is. `Entered` has no arm for it because none of the
+        // decisions that enum exists to carry -- `SIGL`, the callee's pool, the
+        // indent, the calling convention's receiver -- is a question about it.
+        // **Every arm below the running package's own `::ROUTINE`s passes the
+        // manager first**, an unresolvable name included.
         if matches!(
             resolved,
             Resolved::Library(_)
@@ -1172,25 +1163,23 @@ impl Interp {
             Resolved::Unresolved => unreachable!("an unresolved name raises just above"),
         };
 
-        // `SIGL`, set here rather than before the argument loop above: the
-        // oracle's internal call
-        // receives its arguments already evaluated by its caller, so they
-        // are evaluated under whatever `SIGL` was already in force, and only
-        // then does the transfer overwrite it. Measured: `signal there` /
-        // `there: call sub sigl` into `sub: use arg a` reports the argument
-        // as `1` (the `SIGNAL`'s own line, still in force during evaluation)
-        // and `sub`'s own `SIGL` as the `CALL`'s line -- a version setting
-        // `SIGL` before evaluating arguments would report the argument as
-        // the `CALL`'s own line instead.
+        // `SIGL`, set here rather than before the argument loop above: an
+        // internal call receives its arguments already evaluated by its caller,
+        // so they are evaluated under whatever `SIGL` was already in force, and
+        // only then does the transfer overwrite it. So `signal there` / `there:
+        // call sub sigl` into `sub: use arg a` reports the argument as `1` (the
+        // `SIGNAL`'s own line, still in force during evaluation) and `sub`'s
+        // own `SIGL` as the `CALL`'s line -- a version setting `SIGL` before
+        // evaluating arguments would report the argument as the `CALL`'s own
+        // line instead.
         if matches!(entered, Entered::Label(_)) {
             self.set_sigl(self.activity.clause_state.line());
         }
 
-        // One Rust frame per activation, plus this counter, so an
-        // unbounded recursion becomes a reportable condition instead of a
-        // native abort. `Raised::insufficient_stack` already existed
-        // (`error.rs`); measured, the oracle answers the same 11.1 at rc 245
-        // for the same program, at its own depth of 27,314.
+        // One Rust frame per activation, plus this counter, so an unbounded
+        // recursion becomes a reportable condition instead of a native abort.
+        // `Raised::insufficient_stack` already existed (`error.rs`); the same
+        // 11.1 is answered at rc 245 for the same program.
         let probe = 0u8;
         if self.activation_depth() >= MAX_ACTIVATION_DEPTH || self.stack_exhausted(&raw const probe)
         {
@@ -1281,8 +1270,8 @@ impl Interp {
                         trace_mode,
                         address,
                         // The refcount, not the table: a write in the callee
-                        // clones first, which is how the oracle keeps the
-                        // inheritance one-way.
+                        // clones first, which is how the inheritance stays
+                        // one-way.
                         io_configs: caller_io_configs,
                         traps,
                         cold,
@@ -1456,10 +1445,9 @@ impl Interp {
         {
             self.guard_off_at_end();
         }
-        // Before the pop, because both halves of `<I<`'s gate are the
-        // callee's own -- its `trace_entry` state and its `TRACE` setting.
-        // The oracle puts it in termination, which is
-        // likewise inside the activation.
+        // Before the pop, because both halves of `<I<`'s gate are the callee's
+        // own -- its `trace_entry` state and its `TRACE` setting. It is part of
+        // termination, which is likewise inside the activation.
         self.trace_invocation_exit(|| match &ended {
             Ok(ended) => ended.value_ref(),
             Err(Failure::Exited(value)) => *value,
@@ -1515,11 +1503,11 @@ impl Interp {
             LentStack::Emptied => self.activity.value_buffer.clear(),
             LentStack::Lent(values) => self.activity.value_buffer = values,
         }
-        // A returning activation runs the `UNINIT`s a collection readied
-        // (the oracle checks its uninit queue here). A
-        // method's run in `Interp::finish_send`, once the primitive methods
-        // waiting on it have finished, since an `UNINIT`'s own send would
-        // otherwise find their tails at its depth.
+        // A returning activation runs the `UNINIT`s a collection readied (the
+        // uninit queue is checked here). A method's run in
+        // `Interp::finish_send`, once the primitive methods waiting on it have
+        // finished, since an `UNINIT`'s own send would otherwise find their
+        // tails at its depth.
         if !self.uninit_ready.is_empty()
             && kind != TailKind::Method
             && let Ok(Ended::Returned(value) | Ended::Exited(value)) = &ended
@@ -1528,12 +1516,11 @@ impl Interp {
         }
 
         // **`EXIT` inside a `::ROUTINE` ends the routine, not the program**,
-        // where `EXIT` inside a `CALL`ed label ends the program. The oracle
-        // sets `RETURNED` outright for a program-level call
-        // activation and only otherwise walks up,
-        // and a routine invocation is one
-        // of those. Measured on the oracle, rc 0 every time, and the shapes
-        // matter because the exit arrives here by three different routes:
+        // where `EXIT` inside a `CALL`ed label ends the program. `RETURNED` is
+        // set outright for a program-level call activation and only otherwise
+        // does the walk go up, and a routine invocation is one of those. For
+        // example, rc 0 every time, and the shapes matter because the exit
+        // arrives here by three different routes:
         // ```text
         // call rtn / say result       ::routine rtn ; exit 5      ->  5, and main runs on
         // n1 = rtn() / say n1         ::routine rtn ; exit 7      ->  7
@@ -1553,13 +1540,13 @@ impl Interp {
             Ok(ended) => Ok(ended),
             Err(failure) => {
                 // Seal before the failure leaves the callee, never after --
-                // `seal_site_level`'s own rule, and the same one
-                // `run_fragment` follows. Without it the callee's clause
-                // would win `record_failure_at`'s first-wins race outright
-                // and the call would never be echoed. Measured, the oracle
-                // prints one echo per level, innermost first: a `say 1/0` in
-                // a routine called from a routine called from a `DO` gives
-                // three lines, at indents 6, 4 and 2.
+                // `seal_site_level`'s own rule, and the same one `run_fragment`
+                // follows. Without it the callee's clause would win
+                // `record_failure_at`'s first-wins race outright and the call
+                // would never be echoed. One echo is printed per level,
+                // innermost first: a `say 1/0` in a routine called from a
+                // routine called from a `DO` gives three lines, at indents 6, 4
+                // and 2.
                 self.seal_site_level();
                 Err(failure)
             }
@@ -1681,8 +1668,8 @@ impl Interp {
         Ok(argument)
     }
 
-    /// A call's resolution, held back until its arguments have run: the oracle
-    /// evaluates a call's arguments before its external search.
+    /// A call's resolution, held back until its arguments have run: a call's
+    /// arguments are evaluated before its external search.
     #[inline(always)]
     pub(crate) fn resolved_after_arguments<T>(
         &mut self,
@@ -1940,12 +1927,11 @@ fn function_value(ended: Ended, name: &[u8]) -> Result<ObjRef, Failure> {
         // handling to still unwind every nested `CALL` correctly.
         Ended::Exited(value) => Err(Failure::Exited(value)),
         Ended::Returned(Some(value)) => Ok(value),
-        // Measured on the oracle: a routine reached through the
-        // expression form and returning nothing (a bare `RETURN`) is
-        // Error 44.1 rc 212, "No data returned from function "NAME""
-        // -- the expression form's own answer to "nothing to use here",
-        // which `CALL` never has to give since its own value only ever
-        // reaches `RESULT`, unset or not.
+        // For example, a routine reached through the expression form and
+        // returning nothing (a bare `RETURN`) is Error 44.1 rc 212, "No data
+        // returned from function "NAME"" -- the expression form's own answer to
+        // "nothing to use here", which `CALL` never has to give since its own
+        // value only ever reaches `RESULT`, unset or not.
         Ended::Returned(None) => Err(Raised::no_data_returned(name).into()),
     }
 }

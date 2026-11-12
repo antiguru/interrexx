@@ -246,10 +246,9 @@ fn compile_settled(
     // op sits in front of, rather than a stack, because each entry belongs to
     // exactly one construct -- an `ELSE` to one `THEN`, an `OTHERWISE` to one
     // `SELECT` -- and the `debug_assert`s below are what say so rather than
-    // assuming it.
-    // A list per instruction, not one entry: nested `IF`s whose branches end
-    // at the same instruction each owe a boundary of their own, which the
-    // oracle runs as one synthetic instruction per branch. `len + 1` entries,
+    // assuming it. A list per instruction, not one entry: nested `IF`s whose
+    // branches end at the same instruction each owe a boundary of their own,
+    // which runs as one synthetic instruction per branch. `len + 1` entries,
     // because a branch can end at the body's own end and still owe one.
     let mut before: Vec<Vec<Before>> = Vec::new();
     before.resize_with(len + 1, Vec::new);
@@ -295,8 +294,8 @@ fn compile_settled(
         // This clause's own answers, which is where a per-body `bool` used to
         // stand. The `>K>` op asks a different bit than the value echoes:
         // `TraceMode::results`' own doc names `>>>`/`>K>` as the pair it owns,
-        // and the oracle prints `>K>` under `R` and `I` and under neither `A`
-        // nor `N` (measured, `do i = 1 to 2`).
+        // and `>K>` is printed under `R` and `I` and under neither `A` nor `N`
+        // (`do i = 1 to 2`).
         let pool = super::trace_flow::for_emission(plan, index, settings[index]);
         let echoes_values = pool.echoes_values();
         let echoes_keyword = pool.echoes_keyword();
