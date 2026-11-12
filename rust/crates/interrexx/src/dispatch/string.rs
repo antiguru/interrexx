@@ -1618,7 +1618,7 @@ fn native_string_abs(
     _args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
     let value = numeric_receiver(interp, receiver, b"ABS")?;
-    Ok(Some(crate::builtin::numeric::abs_of(interp, &value)))
+    crate::builtin::numeric::abs_of(interp, &value).map(Some)
 }
 
 /// `String~"TRUNC"`, `RexxString::trunc`.
@@ -1911,7 +1911,7 @@ pub(super) fn native_string_sign(
         let found = interp.string_value_text(receiver)?;
         return Err(Raised::method_target_not_a_number(b"SIGN", &found).into());
     };
-    Ok(Some(crate::builtin::numeric::sign_of(interp, &value)))
+    crate::builtin::numeric::sign_of(interp, &value).map(Some)
 }
 
 /// `String~makeString`: a string is its own string value --

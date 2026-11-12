@@ -1002,6 +1002,9 @@ too, for the same numbers, although its answer does not otherwise depend on
 NUMERIC DIGITS. In TRUNC and FORMAT the error comes after the checks of the
 arguments that their pages list, and in FORMAT before the checks of the fit
 of its result.
+In MAX and MIN it is the rounding of the receiver, and it comes before the
+checks of the other arguments, so a later argument that is not a number does
+not hide it. The same holds for the method forms of these calls.
 
 ```rexx
 numeric digits 1
@@ -1024,12 +1027,51 @@ say abs('9.999999995e999999999')
 e: say condition('o')~code
 ```
 
-```output defect=#78
+```output
 9E+999999999 1
 42.901
 42.901
 42.901
 93.906
+42.901
+```
+
+```rexx
+numeric digits 1
+signal on syntax name a
+say trunc('99999e999999995')
+a: say condition('o')~code
+signal on syntax name b
+say max('95e999999998')
+b: say condition('o')~code
+signal on syntax name c
+say min('95e999999998', 'x')
+c: say condition('o')~code
+signal on syntax name d
+say '99999e999999995'~abs
+d: say condition('o')~code
+signal on syntax name e
+say '95e999999998'~sign
+e: say condition('o')~code
+signal on syntax name f
+say '99999e999999995'~format
+f: say condition('o')~code
+signal on syntax name g
+say '99999e999999995'~trunc
+g: say condition('o')~code
+signal on syntax name h
+say '95e999999998'~max('x')
+h: say condition('o')~code
+```
+
+```output
+42.901
+42.901
+42.901
+42.901
+42.901
+42.901
+42.901
 42.901
 ```
 
