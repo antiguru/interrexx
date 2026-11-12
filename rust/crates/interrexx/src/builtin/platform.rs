@@ -52,8 +52,7 @@ pub(crate) fn qualify_name(interp: &Interp, name: &[u8]) -> Vec<u8> {
 
 /// `SysFileSystem::resolveTilde`: a leading `~` replaced by the environment's
 /// `HOME`, a leading `~user` by that account's home directory, and `None`
-/// where no account has that name. Accounts are read from `/etc/passwd`, so
-/// one that lives only in NSS (LDAP and the like) is not found.
+/// where no account has that name.
 pub(crate) fn expand_tilde(interp: &Interp, name: &[u8]) -> Option<Vec<u8>> {
     let rest = &name[1..];
     if rest.is_empty() || rest[0] == b'/' {
@@ -70,13 +69,28 @@ pub(crate) fn expand_tilde(interp: &Interp, name: &[u8]) -> Option<Vec<u8>> {
     Some(out)
 }
 
-/// The home directory `/etc/passwd` gives the account `user`.
+/// The home directory the system's user database gives the account `user`,
+/// found as `getpwnam` finds it, so an account that only an NSS source
+/// (LDAP, sssd, systemd-homed) holds is found too.
 pub(crate) fn passwd_home(user: &[u8]) -> Option<Vec<u8>> {
-    let passwd = std::fs::read("/etc/passwd").ok()?;
-    passwd.split(|byte| *byte == b'\n').find_map(|line| {
-        let fields: Vec<&[u8]> = line.split(|byte| *byte == b':').collect();
-        (fields.len() > 5 && fields[0] == user).then(|| fields[5].to_vec())
+    home_through(user, |name| {
+        nix::unistd::User::from_name(name)
+            .ok()
+            .flatten()
+            .map(|account| account.dir)
     })
+}
+
+/// [`passwd_home`] over `lookup`, which answers the home directory of the
+/// account it is given the name of. A name that is not UTF-8 is no account's:
+/// `lookup` takes text, as the user database's own names are.
+fn home_through(
+    user: &[u8],
+    lookup: impl FnOnce(&str) -> Option<std::path::PathBuf>,
+) -> Option<Vec<u8>> {
+    use std::os::unix::ffi::OsStringExt as _;
+    let name = std::str::from_utf8(user).ok()?;
+    lookup(name).map(|home| home.into_os_string().into_vec())
 }
 
 /// `USERID()`: the effective user's login name
@@ -401,6 +415,34 @@ fn process_environment(
 
 #[cfg(test)]
 mod tests {
+    use std::path::PathBuf;
+
+    use super::{home_through, passwd_home};
+
+    /// **A home directory comes from the user database lookup, not from
+    /// `/etc/passwd`**: an account only an NSS source holds, which no file of
+    /// this host lists, is found through the lookup it is given, and an account
+    /// the lookup does not know is not found. The adjacent success is the
+    /// real lookup, which finds `root` where `/etc/passwd` lists it.
+    #[test]
+    fn a_home_directory_comes_from_the_user_database_lookup() {
+        let ldap_only = |name: &str| (name == "ldapuser").then(|| PathBuf::from("/home/ldap/u"));
+        assert_eq!(
+            home_through(b"ldapuser", ldap_only),
+            Some(b"/home/ldap/u".to_vec())
+        );
+        assert_eq!(home_through(b"nobodyhere", ldap_only), None);
+        assert_eq!(home_through(b"ldap\xffuser", ldap_only), None);
+        let passwd = std::fs::read_to_string("/etc/passwd").expect("the passwd file");
+        let listed = passwd
+            .lines()
+            .find_map(|line| line.strip_prefix("root:"))
+            .and_then(|rest| rest.split(':').nth(4))
+            .map(|home| home.as_bytes().to_vec());
+        assert_eq!(passwd_home(b"root"), listed);
+        assert_eq!(passwd_home(b"no-such-account-zq"), None);
+    }
+
     /// **A `~` with `HOME` unset qualifies to the null string, and `~/x` to
     /// `/x`**, the empty home read as no directory at all. The oracle runs
     /// `strlen` on the null `getenv("HOME")` there (`corpus/oracle-crashes.txt`
