@@ -977,6 +977,8 @@ class STREAMSUPPLIER public=1 mixin=0 abstract=0 metaclass=CLASS supers=SUPPLIER
   instance AVAILABLE private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance INDEX private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance INIT private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
+  instance INTERREXX_MID_LINE private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=interrexx_stream_mid_line
+  instance INTERREXX_STREAMCOLLECTED private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=interrexx_supplier_collected
   instance ITEM private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance NEXT private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
 class STRING public=native mixin=0 abstract=0 metaclass=CLASS supers=OBJECT,COMPARABLE annotations=- identity=1

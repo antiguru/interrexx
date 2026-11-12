@@ -7,6 +7,7 @@
 mod query;
 pub(super) use query::{
     query_exists, query_handle, query_position, query_size, query_streamtype, query_time,
+    supplier_mid_line,
 };
 
 mod read;

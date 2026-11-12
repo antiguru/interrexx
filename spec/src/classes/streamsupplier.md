@@ -213,7 +213,11 @@ entry is the answer of a `lineIn` that does not raise NOTREADY, as it is, not
 converted: a `lineIn` that answers an `Array` makes an item that is that
 `Array`. A `lineIn` that raises NOTREADY ends the supplier, whether it was
 sent by `init` or by `next`: the supplier is then not available, and what the
-`lineIn` answered is not an item. The supplier traps that NOTREADY itself: a
+`lineIn` answered is not an item. When the first answer of `state` was
+`UNKNOWN`, the stream was not open when the supplier was made, and the supplier
+then sends the stream `close`, once, after that `lineIn`; with any other first
+answer it sends nothing more, so the stream is left in the state that the
+`lineIn` gave it. The supplier traps that NOTREADY itself: a
 `CALL ON NOTREADY` or `SIGNAL ON NOTREADY` of the code that sent `new` or
 `next` is not run. A `lineIn` that answers no value raises `SYNTAX 91.999`
 from the method that sent it, and any other error that the stream raises is
@@ -368,6 +372,41 @@ trap: trapped += 1
 0 0
 ```
 
+```rexx
+f = 'spec-streamsupplier-close-zq.tmp'
+call sysfiledelete f
+call lineout f, 'one'
+call lineout f
+do opened over 0, 1
+  s = .spy~new(f)
+  if opened then x = s~open
+  s~log = ''
+  p = .streamsupplier~new(s)
+  do while p~available
+    p~next
+  end
+  say opened || ':' strip(s~log) s~state
+end
+call sysfiledelete f
+exit
+::class spy subclass stream
+::attribute log
+::method state
+  self~log = self~log 'state'
+  forward class (super)
+::method linein
+  self~log = self~log 'lineIn(' || arg(1) || ')'
+  forward class (super)
+::method close
+  self~log = self~log 'close'
+  forward class (super)
+```
+
+```output
+0: state state lineIn(1) lineIn(2) close UNKNOWN
+1: state state lineIn(1) lineIn(2) NOTREADY
+```
+
 r[class.streamsupplier.rest]
 The methods that `StreamSupplier` inherits work on the lines that are left.
 `allItems` answers an `Array` of the texts of the lines from the one the
@@ -445,7 +484,7 @@ call sysfiledelete f
 call sysfiledelete g
 ```
 
-```output defect=#430
+```output
 l1,l2,l3
 x1 x1,x2
 ```
