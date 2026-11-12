@@ -349,6 +349,18 @@ impl ClassGraph {
         self.rebuild_behaviour(id, Side::Class);
     }
 
+    /// Takes `id` out of its superclasses' subclass lists, as a `subclass`
+    /// that raised before its second `init` leaves the receiver: the class
+    /// itself is kept, but nothing lists it.
+    pub fn unlist_subclass(&mut self, id: ObjRef) {
+        let superclasses = self.classes[&id].superclasses.clone();
+        for sup in superclasses {
+            if let Some(def) = self.classes.get_mut(&sup) {
+                def.subclasses.retain(|sub| *sub != id);
+            }
+        }
+    }
+
     /// `RexxClass::enhanced`'s merge of its methods into the dummy subclass's
     /// own instance dictionary, each defined at `scope`, `None` hiding the
     /// name, then the instance behaviour rebuilt in place
