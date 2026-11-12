@@ -551,7 +551,7 @@ in the case it was written in.
 ```rexx
 s = .spy~new
 .input~destination(s)
-do v over '0', '00', ' 0 ', '-0', '0E5', '0.1'
+do v over '0', '00', ' 0 ', '-0', '0E5', '1'
   s~answer = v
   say '['v']' lines()
 end
@@ -579,7 +579,7 @@ say s~log~makeString('l', ' ')
 [ 0 ] 0
 [-0] 0
 [0E5] 0
-[0.1] 1
+[1] 1
 LINES(NORMAL) LINES(NORMAL) LINES(NORMAL) LINES(NORMAL) LINES(NORMAL) LINES(NORMAL) LINES(c) LINES(n)
 ```
 
