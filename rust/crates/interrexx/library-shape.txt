@@ -121,6 +121,11 @@ class CIRCULARQUEUE public=1 mixin=0 abstract=0 metaclass=CLASS supers=QUEUE ann
   instance APPEND private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance INIT private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance INSERT private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
+  instance INTERREXX_ASK private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
+  instance INTERREXX_ITEMS private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
+  instance INTERREXX_OPERAND private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
+  instance INTERREXX_ORDER private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
+  instance INTERREXX_SIZE private=1 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance INTERSECTION private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance MAKEARRAY private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
   instance MAKESTRING private=0 protected=0 guarded=1 abstract=0 constant=0 attribute=0 package=0 entry=-
