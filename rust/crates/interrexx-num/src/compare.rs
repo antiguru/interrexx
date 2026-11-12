@@ -120,9 +120,8 @@ pub fn compare_decoded(
     match (a_number, b_number) {
         (Some(na), Some(nb)) => Ok(op.holds(numeric_order(na, nb, digits, fuzz)?)),
         // If either side doesn't convert, this drops to a string comparison --
-        // not an error. The oracle's number comparison does the same thing
-        // symmetrically (comparing the string values) when only its own
-        // right-hand argument fails to convert.
+        // not an error. The same happens symmetrically (comparing the string
+        // values) when only the right-hand argument fails to convert.
         _ => Ok(compare_strings(a, b, op)),
     }
 }
@@ -159,7 +158,7 @@ fn parse_bytes(bytes: &[u8]) -> Option<Number> {
     Number::parse_bytes(bytes)
 }
 
-/// Numeric ordering, as the oracle's number comparison gives it.
+/// Numeric ordering.
 fn numeric_order(a: &Number, b: &Number, digits: u64, fuzz: u64) -> Result<Ordering, ArithError> {
     let sign = |n: &Number| {
         if n.is_zero() {
@@ -220,10 +219,9 @@ fn numeric_order(a: &Number, b: &Number, digits: u64, fuzz: u64) -> Result<Order
 /// the pair does not fit the working precision and only the subtraction
 /// decides.
 fn magnitude_order(a: &Number, b: &Number, working_digits: u64) -> Option<Ordering> {
-    // In i64 like the C++'s `wholenumber_t`, and saturating for `working_
-    // digits`: a `DIGITS` setting legitimately reaches 10^18 - 1, which no
-    // narrower comparison holds, and the adjusted lengths below span the
-    // whole exponent range twice over.
+    // In i64, and saturating for `working_ digits`: a `DIGITS` setting
+    // legitimately reaches 10^18 - 1, which no narrower comparison holds, and
+    // the adjusted lengths below span the whole exponent range twice over.
     let min_exponent = i64::from(a.exponent.min(b.exponent));
     let adjusted = |n: &Number| i64::from(n.exponent) - min_exponent + n.digits.len() as i64;
     let (adjusted_a, adjusted_b) = (adjusted(a), adjusted(b));
@@ -263,7 +261,7 @@ fn digit_prefix_order(a: &[u8], b: &[u8]) -> Ordering {
     Ordering::Equal
 }
 
-/// String fallback, as the oracle's string comparison gives it.
+/// String fallback.
 fn string_order(a: &[u8], b: &[u8]) -> Ordering {
     fn is_blank(byte: u8) -> bool {
         byte == b' ' || byte == b'\t'

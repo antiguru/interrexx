@@ -348,7 +348,7 @@ pub(super) fn string_object_to_native(
         .host
         .string_value(argument)?
         .ok_or(Failure::NoStringValue { position })?;
-    // The C++ registers a local reference only for a string the conversion
+    // A local reference could be registered only for a string the conversion
     // had to create. Minting a handle is registering it, so here every one is
     // rooted and the "was it created" question does not arise.
     Ok(Value::Object(cx.host.register_local(string)))

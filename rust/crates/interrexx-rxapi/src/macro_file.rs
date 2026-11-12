@@ -5,7 +5,8 @@
 use crate::message::Macro;
 use crate::message::code::{MACRO_FILE_ERROR, OK};
 
-/// The header's text. The oracle's differs, so its files fail the check.
+/// The header's text. The reference implementation's differs, so its files fail
+/// the check.
 const TEXT: &[u8; 16] = b"interrexx macros";
 const SIGNATURE: u64 = 0x6d61_6372_6f31;
 /// The header's size: a file shorter than this cannot be read.

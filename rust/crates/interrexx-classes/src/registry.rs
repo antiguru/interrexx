@@ -20,18 +20,17 @@ pub struct ClassRegistry {
     /// `~objectName=`'s store for a class object, keyed by identity, holding
     /// only the classes something has renamed.
     object_names: NameMap<ObjRef, String>,
-    /// Uppercased name -> identity, the registry's own lookup direction --
-    /// the oracle puts each class into `.environment` under its uppercased name.
+    /// Uppercased name -> identity, the registry's own lookup direction -- each
+    /// class is put into `.environment` under its uppercased name.
     by_name: NameMap<String, ObjRef>,
-    /// The same direction for the kernel directory -- oracle's
-    /// system registration, a second table `.NAME` never reaches.
-    /// See [`ClassRegistry::define_system_class`].
+    /// The same direction for the kernel directory, a second table `.NAME`
+    /// never reaches. See [`ClassRegistry::define_system_class`].
     by_system_name: NameMap<String, ObjRef>,
-    /// The oracle bootstrap's private-method rows, in mint order -- see
+    /// The bootstrap's private-method rows, in mint order -- see
     /// [`ClassRegistry::private_native_methods`].
     private_native_methods: Vec<MethodId>,
-    /// The oracle bootstrap's protected instance- and class-method
-    /// rows, in mint order -- see [`ClassRegistry::protected_native_methods`].
+    /// The bootstrap's protected instance- and class-method rows, in mint order
+    /// -- see [`ClassRegistry::protected_native_methods`].
     protected_native_methods: Vec<MethodId>,
 }
 
@@ -63,10 +62,9 @@ impl ClassRegistry {
     }
 
     /// Register `id` (already allocated by [`Self::reserve_id`]) as a class
-    /// named `name`, and build its graph entry -- oracle's
-    /// `~subclass`/bootstrap construction plus
-    /// the oracle's environment registration, fused into one
-    /// call since this crate models no separate install step.
+    /// named `name`, and build its graph entry -- `~subclass`/bootstrap
+    /// construction plus the environment registration, fused into one call
+    /// since this crate models no separate install step.
     pub fn define_reserved(
         &mut self,
         id: ObjRef,
@@ -179,9 +177,8 @@ impl ClassRegistry {
     }
 
     /// Allocate a fresh identity and give it an id string, registered in the
-    /// **kernel** directory rather than the environment one -- oracle's
-    /// `addToSystem(name, currentClass)`, which is what
-    /// the oracle's special (system) class definition does.
+    /// **kernel** directory rather than the environment one, which is what a
+    /// special (system) class definition does.
     pub fn define_system_class(
         &mut self,
         id: ObjRef,
@@ -354,7 +351,7 @@ impl ClassRegistry {
     }
 
     /// The class objects with a class-side `UNINIT`, in the order the
-    /// oracle's termination sweep runs them, **taken out of the registry**.
+    /// termination sweep runs them, **taken out of the registry**.
     pub fn take_uninit_classes_in_sweep_order(&mut self) -> Vec<ObjRef> {
         let mut sweep = self.graph.take_uninit_classes();
         sweep.sort_by_key(|&class| uninit_bucket(self.id_string(class).as_bytes()));
@@ -382,8 +379,8 @@ impl ClassRegistry {
         self.graph.is_abstract(class)
     }
 
-    /// `~superClass` -- the first entry of `~superClasses`, oracle's
-    /// `superClass` field (singular), or `None` for `.Object`.
+    /// `~superClass` -- the first entry of `~superClasses`, or `None` for
+    /// `.Object`.
     pub fn superclass(&self, class: ObjRef) -> Option<ObjRef> {
         self.graph.ancestors(class).first().copied()
     }
@@ -393,19 +390,17 @@ impl ClassRegistry {
         self.graph.ancestors(class)
     }
 
-    /// `~subClasses` -- oracle's `subClasses`, the reverse edge every
-    /// `define_class`/`inherit` call maintains alongside `superclasses`.
+    /// `~subClasses`, the reverse edge every `define_class`/`inherit` call
+    /// maintains alongside `superclasses`.
     pub fn subclasses(&self, class: ObjRef) -> &[ObjRef] {
         self.graph.subclasses(class)
     }
 
-    /// `~isA`/`~isSubclassOf` -- the same test as `~isA`:
-    /// `class == other`, or any of `class`'s
-    /// ancestors is compatible with `other`, recursively over the same
-    /// `superClasses` list `~superClasses` reads (not the flattened
-    /// behaviour -- a mixin donated only through
-    /// `inheritInstanceMethods` does **not** make `~isA` true, matching the
-    /// oracle exactly).
+    /// `~isA`/`~isSubclassOf` -- the same test as `~isA`: `class == other`, or
+    /// any of `class`'s ancestors is compatible with `other`, recursively over
+    /// the same `superClasses` list `~superClasses` reads (not the flattened
+    /// behaviour -- a mixin donated only through `inheritInstanceMethods` does
+    /// **not** make `~isA` true).
     pub fn is_a(&self, class: ObjRef, other: ObjRef) -> bool {
         class == other
             || self
@@ -429,12 +424,10 @@ impl ClassRegistry {
         self.graph.own_instance_method_names(class)
     }
 
-    /// `~method`'s own lookup: whether `name` is in `class`'s own,
-    /// unflattened instance-method dictionary -- oracle's
-    /// `~method`, which retrieves from that dictionary
-    /// directly and so answers nothing for an
-    /// inherited, donated or class-side name. See
-    /// [`ClassGraph::has_own_instance_method`].
+    /// `~method`'s own lookup: whether `name` is in `class`'s own, unflattened
+    /// instance-method dictionary, which retrieves from that dictionary
+    /// directly and so answers nothing for an inherited, donated or class-side
+    /// name. See [`ClassGraph::has_own_instance_method`].
     pub fn has_own_instance_method(&self, class: ObjRef, name: &str) -> bool {
         self.graph.has_own_instance_method(class, name)
     }
@@ -485,8 +478,7 @@ impl ClassRegistry {
 
     /// An ordinary (unscoped) message resolution against `class`'s current
     /// instance behaviour: the scope the winning entry came from, and the
-    /// method it names -- the oracle's behaviour method lookup, which
-    /// every message send calls.
+    /// method it names, which every message send calls.
     pub fn lookup_instance_method(&self, class: ObjRef, name: &str) -> Option<(ObjRef, MethodId)> {
         self.graph
             .lookup_at(self.graph.instance_behaviour_handle(class), name)
@@ -499,17 +491,14 @@ impl ClassRegistry {
         self.graph.instance_behaviour_handle(class)
     }
 
-    /// An ordinary (unscoped) resolution against a behaviour a receiver
-    /// holds -- the oracle's behaviour method lookup, which
-    /// every message send calls on
-    /// `behaviour` and not on the class.
+    /// An ordinary (unscoped) resolution against a behaviour a receiver holds,
+    /// which every message send calls on `behaviour` and not on the class.
     pub fn lookup_at(&self, handle: BehaviourHandle, name: &str) -> Option<(ObjRef, MethodId)> {
         self.graph.lookup_at(handle, name)
     }
 
-    /// A scope-override resolution against a behaviour a receiver holds --
-    /// the oracle's super-method lookup, which a scope-override
-    /// message send calls. See
+    /// A scope-override resolution against a behaviour a receiver holds, which
+    /// a scope-override message send calls. See
     /// [`MethodDict::lookup_from_scope`](crate::MethodDict::lookup_from_scope)
     /// for what `start_scope` selects.
     pub fn lookup_from_scope_at(
@@ -546,15 +535,14 @@ impl ClassRegistry {
     }
 
     /// True once `scope` is folded into a behaviour a receiver holds -- what
-    /// the oracle's scope-override validation
-    /// asks before a `target~name:scope` send may start its lookup at
-    /// `scope`.
+    /// the scope-override validation asks before a `target~name:scope` send may
+    /// start its lookup at `scope`.
     pub fn behaviour_has_scope(&self, handle: BehaviourHandle, scope: ObjRef) -> bool {
         self.graph.has_scope_at(handle, scope)
     }
 
-    /// The scope a `SUPER` reference resolves to for a method found at
-    /// `scope` in a behaviour a receiver holds -- the oracle's super-scope resolution.
+    /// The scope a `SUPER` reference resolves to for a method found at `scope` in a
+    /// behaviour a receiver holds.
     pub fn super_scope_at(&self, handle: BehaviourHandle, scope: ObjRef) -> Option<ObjRef> {
         self.graph.resolve_super_scope_at(handle, scope)
     }
@@ -596,24 +584,22 @@ impl ClassRegistry {
         self.graph.class_has_method(class, name)
     }
 
-    /// Install a directly-added instance method with a freshly minted
-    /// [`MethodId`] -- a bootstrap convenience standing in for
-    /// the oracle bootstrap's method-adding forms, none of whose visibility distinctions
-    /// this crate models (no probe needs them). Unlike
-    /// [`ClassGraph::define`] (`~define`, which allocates a fresh handle so
-    /// a pre-existing instance is unaffected), this is bootstrap-time
-    /// population before any instance can exist, so the handle churn
-    /// `define` costs is spent for no reason here -- accepted rather than
-    /// building a second populate-then-cascade-once primitive, since nothing
-    /// after bootstrap calls it.
+    /// Install a directly-added instance method with a freshly minted [`MethodId`] -- a
+    /// bootstrap convenience standing in for the bootstrap's method-adding forms, none
+    /// of whose visibility distinctions this crate models. Unlike [`ClassGraph::define`]
+    /// (`~define`, which allocates a fresh handle so a pre-existing instance is
+    /// unaffected), this is bootstrap-time population before any instance can exist, so
+    /// the handle churn `define` costs is spent for no reason here -- accepted rather
+    /// than building a second populate-then-cascade-once primitive, since nothing after
+    /// bootstrap calls it.
     pub fn add_instance_method(&mut self, class: ObjRef, name: &str) -> MethodId {
         let method = self.next_method_id();
         self.graph.define(class, name, method);
         method
     }
 
-    /// [`Self::add_instance_method`] for one of the oracle bootstrap's
-    /// private-method rows, which additionally records the minted identity in
+    /// [`Self::add_instance_method`] for one of the bootstrap's private-method
+    /// rows, which additionally records the minted identity in
     /// [`Self::private_native_methods`].
     pub fn add_private_instance_method(&mut self, class: ObjRef, name: &str) -> MethodId {
         let method = self.add_instance_method(class, name);
@@ -621,25 +607,24 @@ impl ClassRegistry {
         method
     }
 
-    /// The native methods the oracle's bootstrap marks private, in mint order.
+    /// The native methods the bootstrap marks private, in mint order.
     pub fn private_native_methods(&self) -> &[MethodId] {
         &self.private_native_methods
     }
 
-    /// Records `method` as one of the oracle bootstrap's protected-method
-    /// rows.
+    /// Records `method` as one of the bootstrap's protected-method rows.
     pub fn mark_protected_native(&mut self, method: MethodId) {
         self.protected_native_methods.push(method);
     }
 
-    /// The native methods the oracle's bootstrap marks protected, in mint order.
+    /// The native methods the bootstrap marks protected, in mint order.
     pub fn protected_native_methods(&self) -> &[MethodId] {
         &self.protected_native_methods
     }
 
-    /// Install a directly-added class (static) method -- oracle's
-    /// `AddClassMethod`, matching [`ClassGraph::class_define`]'s own
-    /// bootstrap-only semantics (no cascade, no handle reallocation).
+    /// Install a directly-added class (static) method, matching
+    /// [`ClassGraph::class_define`]'s own bootstrap-only semantics (no cascade,
+    /// no handle reallocation).
     pub fn add_class_method(&mut self, class: ObjRef, name: &str) -> MethodId {
         let method = self.next_method_id();
         self.graph.class_define(class, name, method);
@@ -647,8 +632,8 @@ impl ClassRegistry {
     }
 
     /// The dictionary half of `~defineClassMethod`: a class-side entry under
-    /// `name` naming a [`MethodId`] the caller already holds. The
-    /// oracle writes both the class behaviour and the class-method dictionary.
+    /// `name` naming a [`MethodId`] the caller already holds. Both the class
+    /// behaviour and the class-method dictionary are written.
     pub fn define_class_method(&mut self, class: ObjRef, name: &str, method: MethodId) {
         self.graph.class_define(class, name, method);
     }
@@ -684,8 +669,8 @@ impl ClassRegistry {
         self.graph.define(class, name, method);
     }
 
-    /// `~define` with the method omitted, and the oracle bootstrap's method hiding --
-    /// see [`ClassGraph::hide`].
+    /// `~define` with the method omitted, and the bootstrap's method hiding -- see
+    /// [`ClassGraph::hide`].
     pub fn hide_instance_method(&mut self, class: ObjRef, name: &str) {
         self.graph.hide(class, name);
     }
@@ -695,7 +680,7 @@ impl ClassRegistry {
         self.graph.withdraw(class, name);
     }
 
-    /// `~delete`, and the oracle bootstrap's method removal -- see
+    /// `~delete`, and the bootstrap's method removal -- see
     /// [`ClassGraph::delete`].
     pub fn delete_instance_method(&mut self, class: ObjRef, name: &str) -> bool {
         self.graph.delete(class, name)
@@ -718,26 +703,25 @@ impl ClassRegistry {
         self.next_method_id()
     }
 
-    /// Oracle's `isRexxDefined` -- see [`ClassGraph::is_rexx_defined`].
+    /// Whether the class is Rexx-defined; see [`ClassGraph::is_rexx_defined`].
     pub fn is_rexx_defined(&self, class: ObjRef) -> bool {
         self.graph.is_rexx_defined(class)
     }
 
-    /// Oracle's Rexx-defined marking -- see [`ClassGraph::set_rexx_defined`].
+    /// The Rexx-defined marking; see [`ClassGraph::set_rexx_defined`].
     pub fn set_rexx_defined(&mut self, class: ObjRef) {
         self.graph.set_rexx_defined(class);
     }
 
-    /// `Class~inheritInstanceMethods`, the Rexx-callable method -- oracle's
-    /// `~inheritInstanceMethods`, which
-    /// donates from `source`'s own *unflattened* dictionary and rewrites
-    /// that dictionary's scopes as it goes. See
+    /// `Class~inheritInstanceMethods`, the Rexx-callable method, which donates
+    /// from `source`'s own *unflattened* dictionary and rewrites that
+    /// dictionary's scopes as it goes. See
     /// [`ClassGraph::inherit_instance_methods`].
     pub fn inherit_instance_methods(&mut self, class: ObjRef, source: ObjRef) {
         self.graph.inherit_instance_methods(class, source);
     }
 
-    /// The oracle bootstrap's instance-method donation -- see
+    /// The bootstrap's instance-method donation -- see
     /// [`ClassGraph::donate_instance_methods`], which carries why it is not
     /// [`Self::inherit_instance_methods`].
     pub fn donate_instance_methods(&mut self, class: ObjRef, source: ObjRef) {
@@ -757,11 +741,10 @@ impl ClassRegistry {
     }
 }
 
-/// Which bucket of the oracle's uninit table a class object with id `id`
-/// lands in.
+/// Which bucket of the uninit table a class object with id `id` lands in.
 fn uninit_bucket(id: &[u8]) -> usize {
-    /// The oracle's default hash-table size, which `new_identity_table` builds
-    /// the uninit table at.
+    /// The default hash-table size, which `new_identity_table` builds the
+    /// uninit table at.
     const BUCKETS: u64 = 17;
     let hash = id.iter().fold(0u64, |hash, &byte| {
         hash.wrapping_mul(31)

@@ -57,7 +57,7 @@ pub const CURRENT_LANGUAGE_LEVEL: usize = 0x0606;
 /// The symbol `OOREXX_GET_PACKAGE` publishes.
 const GET_PACKAGE_SYMBOL: &[u8] = b"RexxGetPackage\0";
 
-/// The oracle refuses a longer name before it reaches `dlopen`.
+/// A longer name is refused before `dlopen` is reached.
 const MAX_LIBRARY_NAME_LENGTH: usize = 250;
 
 /// Where the name search looks after the undecorated attempt.
@@ -74,9 +74,8 @@ pub enum Failure {
 }
 
 /// A library whose package entry [`check_version`] refused, with the library as
-/// the oracle leaves it once the check has raised: loaded, its method table
-/// resolving, and its routine table never read, because the routines load
-/// after the check.
+/// it is left once the check has raised: loaded, its method table resolving,
+/// and its routine table never read, because the routines load after the check.
 #[derive(Debug)]
 pub struct Refused {
     pub failure: Failure,
@@ -1273,8 +1272,8 @@ impl NativeRoutineEntry {
     /// a row whose library has been closed.
     ///
     /// A style that is neither classic nor typed is therefore refused as an
-    /// unreadable signature, where the oracle calls any non-classic row as a
-    /// typed routine.
+    /// unreadable signature, where any non-classic row is called as a typed
+    /// routine.
     fn stub(&self) -> Option<NativeRoutine> {
         if self.entry_point.is_null()
             || self.style != ROUTINE_TYPED_STYLE
@@ -1430,11 +1429,10 @@ impl ClassicEntry {
     }
 
     /// Calls a `RexxFunctionHandler` with `name`, `arguments` (`None` an omitted one) and the
-    /// current queue's name, as the oracle does:
-    /// each string NUL-terminated beyond its
-    /// length, and the result in a `DEFRXSTRING` buffer the handler may replace with a block
-    /// `free` releases. `None` where a `RexxCallBack` the handler made ended it, unwinding
-    /// through it, with the condition or `EXIT` kept by the host.
+    /// current queue's name: each string NUL-terminated beyond its length, and the result in
+    /// a `DEFRXSTRING` buffer the handler may replace with a block `free` releases. `None`
+    /// where a `RexxCallBack` the handler made ended it, unwinding through it, with the
+    /// condition or `EXIT` kept by the host.
     #[must_use]
     pub fn call_function(
         self,
@@ -2304,10 +2302,10 @@ unsafe fn signature_of<C>(stub: Stub<C>, context: *mut C, limit: usize) -> Optio
     }
     let mut words = Vec::new();
     for offset in 0..limit {
-        // SAFETY: the invariant is the macro's, not this loop's: the array
-        // it emits ends in `REXX_ARGUMENT_TERMINATOR`, so every offset up to the first terminator is inside it. `limit`
-        // bounds how far a malformed array is followed, which the oracle does
-        // not bound at all.
+        // SAFETY: the invariant is the macro's, not this loop's: the array it emits ends in
+        // `REXX_ARGUMENT_TERMINATOR`, so every offset up to the first terminator is inside it.
+        // `limit` bounds how far a malformed array is followed, which the reference implementation
+        // does not bound at all.
         let word = unsafe { *types.add(offset) };
         if word == ARGUMENT_TERMINATOR {
             return Some(words);
@@ -2334,7 +2332,7 @@ unsafe fn call_stub<C>(
     if let Some(stub) = stub {
         let array = arguments.as_mut_ptr();
         // `argumentExists` reads the array through the context rather than
-        // through the parameter, which is why the oracle publishes it.
+        // through the parameter, which is why it is published.
         //
         // SAFETY: the caller's context wrapper holds the only borrow of the
         // live struct for its lifetime and is neither `Clone` nor `Sync`, so
@@ -2401,9 +2399,9 @@ pub(crate) fn noting_hook_throws<R>(load: impl FnOnce() -> R) -> (R, bool) {
 /// Which of a package entry's hooks to run.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Hook {
-    /// `loader`, which the oracle runs once the routines have registered.
+    /// `loader`, which runs once the routines have registered.
     Loader,
-    /// `unloader`, which the oracle runs at termination.
+    /// `unloader`, which runs at termination.
     Unloader,
 }
 
@@ -2413,8 +2411,8 @@ pub struct Library {
     version: Option<Vec<u8>>,
     methods: Vec<NativeMethodEntry>,
     routines: Vec<NativeRoutineEntry>,
-    /// Private for the reason `entry_point` is. Never set on a library
-    /// refused for its version, whose loader the oracle never reaches.
+    /// Private for the reason `entry_point` is. Never set on a library refused
+    /// for its version, whose loader is never reached.
     loader: Option<PackageHook>,
     unloader: Option<PackageHook>,
     /// The mapping every address above points into. No safe code outside
@@ -2487,8 +2485,8 @@ impl Library {
             }))
         });
         // A `Throw` on a call context the hook reached leaves the hook as it
-        // leaves a stub, with its condition recorded; the member that ran
-        // the hook is told, because the oracle's unwind does not stop here.
+        // leaves a stub, with its condition recorded; the member that ran the
+        // hook is told, because the unwind does not stop here.
         if let Err(payload) = ran {
             if !payload.is::<crate::ffi::Thrown>() {
                 std::panic::resume_unwind(payload);
@@ -2527,8 +2525,7 @@ impl Library {
         &self.routines
     }
 
-    /// The method row `name` names, matched without regard to case as
-    /// the oracle matches it.
+    /// The method row `name` names, matched without regard to case.
     ///
     /// The row is borrowed from `self`, which is what stops it outliving the
     /// mapping its address points into.
@@ -2573,12 +2570,12 @@ impl Library {
         self.methods.get(index)
     }
 
-    /// The routine row `name` names, found as the oracle finds it, and
-    /// borrowed from `self` for [`Library::method`]'s reason.
+    /// The routine row `name` names, found as a routine is found, and borrowed
+    /// from `self` for [`Library::method`]'s reason.
     ///
-    /// The spelling is `name` byte for byte where a row has it, and otherwise
-    /// that of the first row matching `name` without regard to case; of rows spelled alike, the answer is the last, which
-    /// is the one the oracle's package load leaves in its table.
+    /// The spelling is `name` byte for byte where a row has it, and otherwise that of the first row
+    /// matching `name` without regard to case; of rows spelled alike, the answer is the last, which
+    /// is the one the package load leaves in the table.
     #[must_use]
     pub fn routine(&self, name: &[u8]) -> Option<&NativeRoutineEntry> {
         self.routine_at(self.routine_index(name)?)
@@ -2609,8 +2606,8 @@ impl Library {
     }
 
     /// Each upper-cased routine name with the spelling whose row answers it
-    /// through the oracle's package routine table, in the order it puts them:
-    /// a later row whose name upper-cases alike replaces an earlier one.
+    /// through the package routine table, in the order it puts them: a later
+    /// row whose name upper-cases alike replaces an earlier one.
     #[must_use]
     pub fn package_routines(&self) -> Vec<(Vec<u8>, &[u8])> {
         let mut registered: Vec<(Vec<u8>, &[u8])> = Vec::new();
@@ -2625,7 +2622,7 @@ impl Library {
     }
 }
 
-/// Open the library `name` names, searching as the oracle searches.
+/// Open the library `name` names, searching as library names are searched.
 ///
 /// `search` is tried, in order, before the undecorated name, which the loader
 /// resolves, and `cwd`, the interpreter's current directory, is tried after that. The loader reads
@@ -2635,8 +2632,8 @@ impl Library {
 /// variable names.
 ///
 /// `Ok(None)` is the answer where no library of that name loads, and where one
-/// loads but publishes no `RexxGetPackage`. Neither is an error here: the C++
-/// leaves that decision to the caller at both sites.
+/// loads but publishes no `RexxGetPackage`. Neither is an error here: that
+/// decision is left to the caller at both sites.
 ///
 /// # Errors
 /// [`Refused`] where the package entry asks for a newer interpreter than this
@@ -2675,7 +2672,7 @@ pub fn loads(path: &Path) -> bool {
     dlopen(path).is_some()
 }
 
-/// The version gate the oracle applies before it registers anything.
+/// The version gate applied before anything is registered.
 ///
 /// `name` is the library name the raised message interpolates.
 ///
@@ -2702,14 +2699,14 @@ fn dlopen_by_name(file: &str, search: &[PathBuf], cwd: &Path) -> Option<libloadi
 
 fn dlopen(path: &Path) -> Option<libloading::Library> {
     // `Library::new` is `dlopen(path, RTLD_LAZY | RTLD_LOCAL)`, and glibc
-    // resolves the oracle's bare `RTLD_LAZY` to that same pair.
+    // resolves a bare `RTLD_LAZY` to that same pair.
     //
     // SAFETY: `dlopen` runs the library's initialisers, which is code this
     // process cannot vet, so no property of `path` makes the call sound. What
     // establishes it is the interpreter's own contract: a Rexx program that
-    // names a library is authorised to load it, exactly the trust the oracle
-    // extends. D-U1 puts the `unsafe` here so that
-    // `open`, `open_path` and `loads` stay safe for the rest of the tree.
+    // names a library is authorised to load it, the same trust a Rexx program
+    // is given elsewhere. D-U1 puts the `unsafe` here so that `open`,
+    // `open_path` and `loads` stay safe for the rest of the tree.
     unsafe { libloading::Library::new(path) }.ok()
 }
 
@@ -2737,7 +2734,7 @@ fn package_of(handle: libloading::Library, name: &str) -> Result<Option<Library>
     // the address of a static in that library and does nothing else.
     let entry = unsafe { get_package() };
     if entry.is_null() {
-        // The oracle treats a null table as "not a package".
+        // A null table is "not a package".
         return Ok(None);
     }
 
@@ -2850,7 +2847,7 @@ unsafe fn method_table(
         // SAFETY: `at` starts at the caller's array and advances only past a
         // row that was not the terminator, so it stays inside it.
         let row = unsafe { &*at };
-        // The oracle ends on `style == 0` and not on a null name.
+        // The table ends on `style == 0` and not on a null name.
         if row.style == 0 {
             return rows;
         }
@@ -2943,10 +2940,9 @@ mod tests {
         }
     }
 
-    /// A library refused for its version keeps its unloader and not its
-    /// loader: measured, oracle, such a library's unloader runs at
-    /// termination and its loader never does, since the version check raises
-    /// before it.
+    /// A library refused for its version keeps its unloader and not its loader:
+    /// such a library's unloader runs at termination and its loader never does,
+    /// since the version check raises before it.
     #[test]
     #[cfg(unix)]
     #[cfg_attr(miri, ignore = "opens the running image")]
@@ -2997,8 +2993,8 @@ mod tests {
         library.routine(name).map(|row| row.entry_point.addr())
     }
 
-    /// No extension the C++ tree builds has two routines whose names differ
-    /// only in case, so the table is built here.
+    /// No extension built here has two routines whose names differ only in
+    /// case, so the table is built here.
     #[test]
     #[cfg(unix)]
     #[cfg_attr(miri, ignore = "opens the running image")]

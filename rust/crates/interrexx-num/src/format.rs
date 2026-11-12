@@ -137,18 +137,17 @@ impl Number {
         // `before` check -- then operates on that plain rendering.
         let expt = trigger(digits, expp, expt);
 
-        // The C++ side checks `expp` *twice*. The first check
-        // runs against the exponent it derives from `this` alone, before the
-        // section that applies `after` and can carry -- it has no notion yet of
-        // the value carry will eventually produce. So this first check (and its
-        // substitution) needs the uncarried trigger/grouping --
-        // `initial_exponent`, which is also `resolve_exponential_shape`'s first
-        // guess -- not the final, carry-resolved one that drives the
-        // successful-render path below. Confirmed by forcing a carry that bumps
-        // the exponent from 20 to 21 digits (`9.996E+20` rounded to 0 decimals)
-        // while `expp` is too narrow for either: the reported mantissa is
-        // `"9.996"` (reframed at the pre-carry 20), not `"0.9996"` (reframed at
-        // the post-carry 21).
+        // `expp` is checked *twice*. The first check runs against the exponent
+        // derived from the number alone, before the section that applies
+        // `after` and can carry -- it has no notion yet of the value carry will
+        // eventually produce. So this first check (and its substitution) needs
+        // the uncarried trigger/grouping -- `initial_exponent`, which is also
+        // `resolve_exponential_shape`'s first guess -- not the final,
+        // carry-resolved one that drives the successful-render path below. This
+        // is shown by forcing a carry that bumps the exponent from 20 to 21
+        // digits (`9.996E+20` rounded to 0 decimals) while `expp` is too narrow
+        // for either: the reported mantissa is `"9.996"` (reframed at the
+        // pre-carry 20), not `"0.9996"` (reframed at the post-carry 21).
         let initial_eng_exp = initial_exponent(Shape::of(&n1), form, expt);
         if let Some(width) = expp {
             if let Some(exp0) = initial_eng_exp {
@@ -160,20 +159,18 @@ impl Number {
                     });
                 }
             }
-            // The C++ redoes the whole trigger/width check a *second* time,
-            // right after the decimal-rounding carry that the first check
-            // couldn't have known about (a workaround for an upstream bug
-            // report). Two shapes need it: a carry that grows an *already*
-            // -triggered exponent's digit count (`9.996E+99` rounded to 0
-            // decimals at DIGITS 9, `expp` 2 -- pre-carry exponent 99 fits,
-            // post-carry 100 does not), and a carry that triggers exponential
-            // form for the first time on a value that started plain
+            // The whole trigger/width check is redone a *second* time, right
+            // after the decimal-rounding carry that the first check couldn't
+            // have known about. Two shapes need it: a carry that grows an
+            // *already* -triggered exponent's digit count (`9.996E+99` rounded
+            // to 0 decimals at DIGITS 9, `expp` 2 -- pre-carry exponent 99
+            // fits, post-carry 100 does not), and a carry that triggers
+            // exponential form for the first time on a value that started plain
             // (`9999999999.6` at DIGITS 15, `expt` 10, `after` 0, `expp` 1 --
             // adjusted exponent 9 does not clear the trigger, but rounding away
-            // the ".6" carries it to 10, which does). Both confirmed against
-            // `build/bin/rexx`; the first was this crate's own regression,
-            // caught by review, not by any of the 21,296 cases the four curated
-            // FORMAT sets already ran.
+            // the ".6" carries it to 10, which does). The first was a
+            // regression caught by review, not by any of the 21,296 cases the
+            // four curated FORMAT sets already ran.
             if let Some(err) =
                 post_carry_exponent_error(&n1, initial_eng_exp, form, expt, after, width)
             {
@@ -409,13 +406,12 @@ fn resolve_exponential_state<'a>(
     (eng_exp, rounded)
 }
 
-/// Redoes the exponent-width trigger/check after the decimal-place cut
-/// `after` makes, the way the oracle does right after its own rounding call --
-/// see the call site's doc comment for *why* a second check exists at all.
-/// Returns `None` when no cut is even possible (`after` omitted), when the
-/// number has no decimals to cut, or when nothing is actually dropped -- the
-/// interpreter's own decimals section only reaches its redo under the same
-/// conditions.
+/// Redoes the exponent-width trigger/check after the decimal-place cut `after`
+/// makes, as is done right after the rounding call -- see the call site's doc
+/// comment for *why* a second check exists at all. Returns `None` when no cut
+/// is even possible (`after` omitted), when the number has no decimals to cut,
+/// or when nothing is actually dropped -- the interpreter's own decimals
+/// section only reaches its redo under the same conditions.
 fn post_carry_exponent_error(
     n1: &Number,
     eng_exp0: Option<i32>,
@@ -425,9 +421,9 @@ fn post_carry_exponent_error(
     width: u32,
 ) -> Option<FormatError> {
     let after = after?;
-    // The state the oracle's rounding actually rounds: reframed to mantissa
-    // scale by the first check's exponent if it triggered, `n1` itself (a no-op
-    // reframe) otherwise.
+    // The state the rounding actually rounds: reframed to mantissa scale by the
+    // first check's exponent if it triggered, `n1` itself (a no-op reframe)
+    // otherwise.
     let pre_round = reframe(n1, eng_exp0.unwrap_or(0));
     if pre_round.exponent >= 0 {
         return None; // no decimal places to cut
@@ -443,10 +439,10 @@ fn post_carry_exponent_error(
         // branch, which does not redo the trigger/width check at all.
         return None;
     }
-    // `Number::round_to`'s carry -- bump the exponent, keep the digit count
-    // -- is the oracle's rounding; `round_to_places` (used for the successful
-    // render) grows the digit vector instead. See this function's doc
-    // comment for why that difference matters here specifically.
+    // `Number::round_to`'s carry -- bump the exponent, keep the digit count --
+    // is the rounding here; `round_to_places` (used for the successful render)
+    // grows the digit vector instead. See this function's doc comment for why
+    // that difference matters here specifically.
     let rounded = pre_round.into_round((len - excess) as u64);
     // Back to true scale: `rounded` is still relative to `eng_exp0`.
     let true_scale = Number {
@@ -477,7 +473,7 @@ fn post_carry_exponent_error(
     })
 }
 
-/// The number the oracle's formatting is holding by the time it reports
+/// The number the formatting is holding by the time it reports
 /// `BeforeOversize`, which is neither the operand nor the rendered result.
 fn reported_value(
     n1: &Number,
@@ -498,7 +494,7 @@ fn reported_value(
     reframe(&true_scale, eng_exp.unwrap_or(0))
 }
 
-/// The decimals cut the oracle's formatting makes, digit for digit.
+/// The decimals cut the formatting makes, digit for digit.
 fn math_round_places(n: Number, places: u32) -> Number {
     if n.exponent >= 0 {
         return n;

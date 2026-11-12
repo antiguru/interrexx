@@ -175,12 +175,11 @@ fn unsigned_whole_number(text: &str, digits: u64) -> Option<u64> {
     create_unsigned_value(&kept[..length - decimals as usize], carry, 0, max_value)
 }
 
-/// Mirrors the oracle's unsigned-value conversion: accumulate the integer
-/// digits, add the rounding carry, scale by the exponent's trailing zeros, and
-/// reject anything past `max_value`. The checked u64 arithmetic stands in for
-/// the C++ wrap tests -- and bounds the scaling loop the same way, since any
-/// nonzero value overflows u64 within twenty scalings however large `exponent`
-/// is.
+/// The unsigned-value conversion: accumulate the integer digits, add the
+/// rounding carry, scale by the exponent's trailing zeros, and reject anything
+/// past `max_value`. The checked u64 arithmetic stands in for wrap tests, and
+/// bounds the scaling loop the same way, since any nonzero value overflows u64
+/// within twenty scalings however large `exponent` is.
 fn create_unsigned_value(digits: &[u8], carry: bool, exponent: i64, max_value: u64) -> Option<u64> {
     let mut value: u64 = 0;
     for &d in digits {
@@ -196,9 +195,9 @@ fn create_unsigned_value(digits: &[u8], carry: bool, exponent: i64, max_value: u
 }
 
 impl Settings {
-    /// The three settings as given, unchecked: the oracle's package digits and
-    /// fuzz setters store without the check `NUMERIC` makes. The caller owns
-    /// `digits >= 1`; `fuzz >= digits` is allowed through.
+    /// The three settings as given, unchecked: the package digits and fuzz
+    /// setters store without the check `NUMERIC` makes. The caller owns `digits
+    /// >= 1`; `fuzz >= digits` is allowed through.
     pub fn from_parts(digits: u64, fuzz: u64, form: Form) -> Settings {
         Settings { digits, fuzz, form }
     }

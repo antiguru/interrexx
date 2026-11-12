@@ -1,5 +1,5 @@
 /// How many written bytes a buffered stream holds before it writes them: the
-/// oracle's `DEFAULT_BUFFER_SIZE`.
+/// default buffer size.
 pub const STREAM_BUFFER: usize = 4096;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -11,9 +11,9 @@ enum WriteBuffering {
 }
 
 /// The descriptor an open stream holds, with the logical positions one
-/// descriptor serves. The character positions are 1-based "next byte", as the
-/// oracle's are. A SEEK that would move one below 1 fails, so a write
-/// position is 0 only on a stream opened READ, which has none.
+/// descriptor serves. The character positions are 1-based "next byte", . A SEEK
+/// that would move one below 1 fails, so a write position is 0 only on a stream
+/// opened READ, which has none.
 ///
 /// A stream is buffered unless it was opened `NOBUFFER` or is a terminal
 /// (rexxref streamclasses.xml, `NOBUFFER`): its writes reach the file when
@@ -152,9 +152,9 @@ impl OpenFile {
         &self.file
     }
 
-    /// The descriptor once the held writes are in it, for anything that
-    /// reads, measures or positions it. A failed write is dropped here, as
-    /// the oracle's `SysFile::flush` from a read drops it.
+    /// The descriptor once the held writes are in it, for anything that reads,
+    /// measures or positions it. A failed write is dropped here, as a flush
+    /// from a read drops it.
     pub fn flushed(&mut self) -> &mut std::fs::File {
         let _ = self.flush();
         &mut self.file
@@ -243,7 +243,7 @@ impl OpenFile {
 }
 
 /// Writes what is held, except while a panic unwinds: a crash loses held
-/// writes, as the oracle's does.
+/// writes.
 impl Drop for OpenFile {
     fn drop(&mut self) {
         if !std::thread::panicking() {

@@ -571,10 +571,9 @@ pub(crate) fn recording_refusals<R>(call: impl FnOnce() -> R) -> (R, Option<&'st
     (answered, refused)
 }
 
-/// What a refusing stub answers after recording itself: the value the
-/// oracle's own stubs answer on their failure paths, a null handle,
-/// a zero or `false`, with
-/// any other value named at its member.
+/// What a refusing stub answers after recording itself: the value a stub
+/// answers on its failure path, a null handle, a zero or `false`, with any
+/// other value named at its member.
 trait RefusedValue {
     const REFUSED: Self;
 }
@@ -615,10 +614,10 @@ macro_rules! entry_type {
 
 /// The value one interface member holds in a table nothing has built yet.
 ///
-/// A function member records itself and returns, unless it is marked
-/// `aborts`, which answers a data pointer the extension dereferences, or
-/// `unwinds`, which leaves the extension by unwinding as the oracle's C++
-/// throw does: no value either could return is safe.
+/// A function member records itself and returns, unless it is marked `aborts`,
+/// which answers a data pointer the extension dereferences, or `unwinds`, which
+/// leaves the extension by unwinding as an exception does: no value either could
+/// return is safe.
 macro_rules! entry_stub {
     ($entry:expr, value $ty:ty = $value:expr) => {
         $value
@@ -1027,7 +1026,6 @@ interface! {
 pub static METHOD_CONTEXT_INTERFACE: MethodContextInterface = MethodContextInterface::REFUSING;
 
 // The thread table has no `static` beside it: its object members are raw
-// pointers, so the type is not `Sync`, and the C++ fills them once the constant
-// objects exist. Whatever
-// hands out a thread context owns the table, which is also what keeps this
-// phase from mutating a global.
+// pointers, so the type is not `Sync`, and they are filled once the constant
+// objects exist. Whatever hands out a thread context owns the table, which is
+// also what keeps this phase from mutating a global.

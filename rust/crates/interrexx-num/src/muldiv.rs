@@ -2,8 +2,8 @@
 
 use crate::{ArithError, Digits, Number};
 
-/// Below this working size the C++ divides in stack buffers and can never fail
-/// an allocation, so the reservation probe in `div` is skipped the same way.
+/// Below this working size division uses stack buffers and can never fail an
+/// allocation, so the reservation probe in `div` is skipped the same way.
 const FAST_BUFFER: u64 = 48;
 
 impl Number {
@@ -185,21 +185,20 @@ impl Number {
         }
 
         // Division's working storage is sized by DIGITS itself rather than by
-        // its operands: the oracle's division allocates `3 * ((digits + 1) * 2 +
-        // 1)` bytes up front, before the first quotient digit, and a failed
-        // allocation is error 5, "System resources exhausted". That allocation
-        // *is* the whole bound -- there is no fixed threshold. Confirmed against
-        // `build/bin/rexx`: `4.0 / 2` and `123456.0 % 2` both fail with 5.0 at
-        // DIGITS 999999999999999999 even though their results are tiny, because
-        // the buffer is sized before anyone looks at the operands; `1 / 7`
-        // computes at DIGITS 1e10 but is 5.0 at 1e11 on the same machine (the
-        // boundary is what malloc will grant, so it moves with the machine).
-        // Mirrored here with a fallible reservation of the same request, so the
-        // same boundary falls out of the same cause -- and, like the C++
-        // (`FAST_BUFFER`), only past a small-size cutoff, so ordinary divisions
-        // never pay for an allocation probe. This sits after the `calc_exp < 0`
-        // early returns above because the C++ allocates after its equivalent
-        // ones: a `%`/`//` whose quotient has no integer part never reaches the
+        // its operands: division allocates `3 * ((digits + 1) * 2 + 1)` bytes up
+        // front, before the first quotient digit, and a failed allocation is
+        // error 5, "System resources exhausted". That allocation *is* the whole
+        // bound -- there is no fixed threshold. So `4.0 / 2` and `123456.0 % 2`
+        // both fail with 5.0 at DIGITS 999999999999999999 even though their
+        // results are tiny, because the buffer is sized before anyone looks at
+        // the operands; `1 / 7` computes at DIGITS 1e10 but is 5.0 at 1e11 on
+        // the same machine (the boundary is what malloc will grant, so it moves
+        // with the machine). Mirrored here with a fallible reservation of the
+        // same request, so the same boundary falls out of the same cause -- and
+        // only past a small-size cutoff, so ordinary divisions never pay for an
+        // allocation probe. This sits after the `calc_exp < 0` early returns
+        // above because the allocation comes after the equivalent ones: a
+        // `%`/`//` whose quotient has no integer part never reaches the
         // allocation at all.
         let total_digits = digits.saturating_add(1).saturating_mul(2).saturating_add(1);
         if total_digits > FAST_BUFFER {
@@ -477,9 +476,8 @@ pub(crate) fn strip_leading(v: &mut Vec<u8>) {
 }
 
 /// `left -= m * divisor`, aligned at the low-order ends. The guess `m` is
-/// correct or low, never high, so the result cannot go negative. Ported from
-/// the oracle's divisor subtraction; shared by `long_divide` and `pow`'s
-/// `divide_power`.
+/// correct or low, never high, so the result cannot go negative. Shared by
+/// `long_divide` and `pow`'s `divide_power`.
 pub(crate) fn subtract_multiple(left: &mut [u8], divisor: &[u8], m: i32) {
     let mut carry: i32 = 0;
     for i in 0..left.len() {

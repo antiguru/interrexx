@@ -52,12 +52,11 @@ impl Number {
         // and `len + digits_usize` must compare large, not wrap.
         let digits_usize = usize::try_from(digits).unwrap_or(usize::MAX);
 
-        // Fast paths, ported from the oracle's addition. Each returns one
-        // operand essentially untouched, and they are not an optimisation: going
-        // through the general path produces a leading zero that rounding then
-        // turns into a different number. `0 + 123456789` is 123456789, but
-        // computing it yields `0123456789`, which rounds to
-        // 123456790.
+        // Fast paths. Each returns one operand essentially untouched, and they
+        // are not an optimisation: going through the general path produces a
+        // leading zero that rounding then turns into a different number. `0 +
+        // 123456789` is 123456789, but computing it yields `0123456789`, which
+        // rounds to 123456790.
         let fast = if left.is_zero() {
             Some((&right, right_negative))
         } else if right.is_zero() {
@@ -167,9 +166,8 @@ impl Number {
         Ok(result)
     }
 
-    /// Shortens an over-long operand to the working precision, as
-    /// the oracle's addition and its operand check both do. Truncation, not
-    /// rounding.
+    /// Shortens an over-long operand to the working precision, as the addition
+    /// and its operand check both do. Truncation, not rounding.
     pub(crate) fn truncated_to(&self, max_length: usize) -> Cow<'_, Number> {
         if self.digits.len() <= max_length {
             return Cow::Borrowed(self);
@@ -295,8 +293,8 @@ fn sub_magnitudes(a: &[u8], b: &[u8]) -> Digits {
     out
 }
 
-/// Removes `count` digits from the low end, as the C++ does by walking the
-/// end pointer backwards. Never empties the vector.
+/// Removes `count` digits from the low end, by walking the end pointer
+/// backwards. Never empties the vector.
 fn drop_low_digits(digits: &mut Digits, count: i64) {
     let count = count.max(0) as usize;
     let keep = digits.len().saturating_sub(count).max(1);

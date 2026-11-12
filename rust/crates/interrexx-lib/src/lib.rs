@@ -1,13 +1,12 @@
-//! The Rexx-written part of the interpreter's own library: the Rexx sources
-//! the oracle runs to finish building its image, embedded at build
-//! time from this repository's tracked copies.
+//! The Rexx-written part of the interpreter's own library: the Rexx sources run
+//! to finish building the image, embedded at build time from this repository's
+//! tracked copies.
 
 /// One embedded program.
 pub struct Program {
-    /// The name the oracle resolves it by, which is what a `CALL` inside the
-    /// bootstrap writes (a quoted program name followed by the package).
-    /// Compared case-insensitively by
-    /// [`lookup`], because the oracle's own program-name resolution is.
+    /// The name it is resolved by, which is what a `CALL` inside the bootstrap
+    /// writes (a quoted program name followed by the package). Compared
+    /// case-insensitively by [`lookup`], because program-name resolution is.
     pub name: &'static str,
     /// The file's bytes, exactly as tracked.
     pub source: &'static [u8],
@@ -17,8 +16,8 @@ pub struct Program {
 
 include!(concat!(env!("OUT_DIR"), "/programs.rs"));
 
-/// The program the bootstrap starts at: the oracle resolves it and runs it
-/// with the Rexx package as its one argument.
+/// The program the bootstrap starts at: it is resolved and run with the Rexx
+/// package as its one argument.
 pub const ENTRY: &str = "CoreClasses.orx";
 
 /// The embedded program a `CALL` target names, or `None` for a name that is

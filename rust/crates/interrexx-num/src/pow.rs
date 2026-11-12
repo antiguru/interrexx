@@ -147,8 +147,7 @@ impl Number {
     }
 }
 
-/// The reciprocal `1 / accum` for a negative power, ported from
-/// the oracle's power division.
+/// The reciprocal `1 / accum` for a negative power.
 fn divide_power(accum: &Number, digits: u64) -> Number {
     debug_assert!(!accum.is_zero(), "pow never inverts a zero accumulator");
     let divisor = &accum.digits;
@@ -158,9 +157,8 @@ fn divide_power(accum: &Number, digits: u64) -> Number {
     let mut left: Vec<u8> = vec![0; n];
     left[0] = 1;
 
-    // The expected exponent of the result's last digit; every extension of
-    // the dividend below moves it down one. Carried wide because the C++
-    // works in a 64-bit wholenumber_t.
+    // The expected exponent of the result's last digit; every extension of the
+    // dividend below moves it down one. Carried wide, as a 64-bit whole number.
     let mut calc_exp = -(accum.exponent as i64) - n as i64 + 1;
 
     // Digit guesses divide by the divisor's first two digits plus one, so a
