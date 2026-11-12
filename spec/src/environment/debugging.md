@@ -1550,7 +1550,7 @@ exit
   return 0
 ```
 
-```output
+```output rc=228
      5 *-* do i = 1 to 3
 +++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
 [read 1: ]
