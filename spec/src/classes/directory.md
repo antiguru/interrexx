@@ -579,7 +579,7 @@ say d~hasItem('x') .local~c
 say d~removeItem('y') .local~c d~items
 ```
 
-```output defect=#166
+```output
 1 0
 later 2 1
 ```
