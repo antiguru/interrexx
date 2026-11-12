@@ -1467,10 +1467,11 @@ impl Interp {
                 }
             }
         }
-        if self.debug_pause_after_command(outcome.status)? {
-            return Ok(Flow::Goto(index));
+        match self.debug_pause_after_command(outcome.status)? {
+            crate::run::interpret::Pause::Go => Ok(Flow::Next),
+            crate::run::interpret::Pause::Again => Ok(Flow::Goto(index)),
+            crate::run::interpret::Pause::Transfer(flow) => Ok(flow),
         }
-        Ok(Flow::Next)
     }
 
     /// The `SYNTAX` error the `::OPTIONS` for `condition` makes of a

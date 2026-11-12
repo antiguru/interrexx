@@ -1099,12 +1099,46 @@ lab: say 'at lab'
   return ''
 ```
 
-```output defect=#217 rc=4
+```output rc=4
 probe return 7 result 7
 at lab
 probe signal lab result from lab
 1
 probe say 1; return 8 result 8
+```
+
+r[env.debugging.input.sigl]
+A line is run at the line of the clause that the stop follows, so a routine
+that a `CALL` in it enters reads that line in `SIGL`. In the example `SIGL`
+is 4, the line of the `nop`.
+
+```rexx
+.traceoutput~destination(.quiet~new)
+.debuginput~destination(.feed~new('call sub'))
+trace ?a
+nop
+say 'done'
+exit
+sub: say 'sigl' sigl
+return
+::class quiet
+::method lineout
+  return 0
+::class feed
+::method init
+  expose line n
+  use arg line
+  n = 0
+::method linein
+  expose line n
+  n += 1
+  if n = 1 then return line
+  return ''
+```
+
+```output
+sigl 4
+done
 ```
 
 r[env.debugging.input.equals]

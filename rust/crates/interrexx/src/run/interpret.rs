@@ -243,7 +243,7 @@ impl Interp {
         clause: &Instruction,
         source: Option<&ProgramSource>,
         flow: Option<&Flow>,
-    ) -> Result<bool, Failure> {
+    ) -> Result<Pause, Failure> {
         let kind = &clause.kind;
         if let Some(flow) = flow
             && (matches!(
@@ -262,7 +262,7 @@ impl Interp {
                     if matches!(body.kind, interrexx_parse::LoopKind::Simple)
             ))
         {
-            return Ok(false);
+            return Ok(Pause::Go);
         }
         let mode = self.pausing_mode();
         let pausing = match kind {
@@ -272,7 +272,7 @@ impl Interp {
             _ => mode.all && pauses_after(kind),
         };
         if !pausing {
-            return Ok(false);
+            return Ok(Pause::Go);
         }
         self.debug_pause_now()
             .inspect_err(|_| self.record_failure_site(code, index, source, clause))
@@ -281,10 +281,10 @@ impl Interp {
     /// `conditionalPauseInstruction`: the pause an instruction takes from
     /// inside its own work: `INTERPRET`'s before its fragment, and `LEAVE`'s
     /// and `ITERATE`'s once their loop has taken them. Answers whether the instruction is to run again.
-    pub(crate) fn debug_pause_instruction(&mut self) -> Result<bool, Failure> {
+    pub(crate) fn debug_pause_instruction(&mut self) -> Result<Pause, Failure> {
         let mode = self.pausing_mode();
         if !(mode.debug && mode.all) {
-            return Ok(false);
+            return Ok(Pause::Go);
         }
         self.debug_pause_now()
     }
@@ -295,7 +295,7 @@ impl Interp {
     pub(crate) fn debug_pause_after_command(
         &mut self,
         status: crate::command::ReturnStatus,
-    ) -> Result<bool, Failure> {
+    ) -> Result<Pause, Failure> {
         let mode = self.pausing_mode();
         let traced = mode.all
             || mode.commands
@@ -305,7 +305,7 @@ impl Interp {
                 crate::command::ReturnStatus::Normal => false,
             };
         if !(mode.debug && traced) {
-            return Ok(false);
+            return Ok(Pause::Go);
         }
         self.debug_pause_now()
     }
@@ -324,13 +324,13 @@ impl Interp {
     /// The prompt is printed once per activation, and a line that is neither
     /// empty nor `=` runs as an `INTERPRET` fragment; the pause ends when the
     /// fragment ended debug or changed a setting from inside it.
-    pub(crate) fn debug_pause_now(&mut self) -> Result<bool, Failure> {
+    pub(crate) fn debug_pause_now(&mut self) -> Result<Pause, Failure> {
         if self.debug_pause() {
-            return Ok(false);
+            return Ok(Pause::Go);
         }
         if self.activation().debug.bypass {
             self.activation_mut().debug.bypass = false;
-            return Ok(false);
+            return Ok(Pause::Go);
         }
         let skip = self.activation().debug.skip;
         if skip > 0 {
@@ -341,10 +341,10 @@ impl Interp {
             {
                 self.set_trace_mode(saved);
             }
-            return Ok(false);
+            return Ok(Pause::Go);
         }
         if self.untraceable_code() {
-            return Ok(false);
+            return Ok(Pause::Go);
         }
         if !self.activation().debug.prompt_issued {
             self.activation_mut().debug.prompt_issued = true;
@@ -357,18 +357,20 @@ impl Interp {
         loop {
             let line = self.debug_input_line()?;
             if line.is_empty() {
-                return Ok(false);
+                return Ok(Pause::Go);
             }
             if line == b"=" {
-                return Ok(true);
+                return Ok(Pause::Again);
             }
-            self.run_debug_fragment(line)?;
+            if let Some(flow) = self.run_debug_fragment(line)? {
+                return Ok(Pause::Transfer(flow));
+            }
             if self.activation().debug.bypass {
                 self.activation_mut().debug.bypass = false;
-                return Ok(false);
+                return Ok(Pause::Go);
             }
             if !self.trace_mode().debug {
-                return Ok(false);
+                return Ok(Pause::Go);
             }
         }
     }
@@ -403,7 +405,7 @@ impl Interp {
     /// `+++ Interactive trace.` lines and swallowed, and the pause goes on --
     /// measured, `zz = 1/0` at a pause reports 42.3 and the next line still
     /// runs.
-    fn run_debug_fragment(&mut self, text: Vec<u8>) -> Result<(), Failure> {
+    fn run_debug_fragment(&mut self, text: Vec<u8>) -> Result<Option<Flow>, Failure> {
         let saved_pause = self.replace_debug_pause(true);
         // The paused clause's line and indent, which a condition it queued
         // reads at its boundary after the pause.
@@ -420,12 +422,18 @@ impl Interp {
             self.activity.clause_state.current_value_indent,
         );
         self.enter_fragment_level(line, indent);
-        let saved_entry = self.enter_fragment(self.activity.clause_line_override.is_some());
+        let nested = self.activity.clause_line_override.is_some();
+        let saved_entry = self.enter_fragment(nested);
+        // The clauses of the line answer to the paused clause's line, as the
+        // clauses of an `INTERPRET` do: a `CALL` of a label in the line sets
+        // `SIGL` to it.
+        let saved_override = self.activity.clause_line_override.replace(line);
         let outcome = pinned!(
             self,
             crate::pinning::PinKind::Interpret,
             self.run_fragment(text)
         );
+        self.activity.clause_line_override = saved_override;
         let depth = self.activity.fragment_depth;
         self.activity
             .pending_traps
@@ -437,11 +445,14 @@ impl Interp {
         self.restore_clause_state(saved_clause);
         self.activation_mut().current_case = saved_case;
         match outcome {
-            Ok(_) => Ok(()),
+            // An `EXIT`, `RETURN` or `SIGNAL` the line ran leaves the paused
+            // clause as it would from the program.
+            Ok(flow @ (Flow::Exit(_) | Flow::Return(_) | Flow::Signal(_))) => Ok(Some(flow)),
+            Ok(_) => Ok(None),
             Err(Failure::Raised(raised)) => {
                 self.report_debug_error(&raised);
                 self.clear_failure_levels();
-                Ok(())
+                Ok(None)
             }
             Err(other) => Err(other),
         }
@@ -500,6 +511,17 @@ impl Interp {
             self.activation_mut().trace_entry = enclosing;
         }
     }
+}
+
+/// How a debug pause ended.
+pub(crate) enum Pause {
+    /// The program goes on with its next clause.
+    Go,
+    /// `=`: the paused clause runs again.
+    Again,
+    /// A line typed at the pause ran `EXIT`, `RETURN` or `SIGNAL`: the paused
+    /// clause is left with this flow.
+    Transfer(Flow),
 }
 
 /// Whether a debug pause follows an instruction of `kind` once its own work

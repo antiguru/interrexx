@@ -59,7 +59,7 @@ pub(crate) use select::{
 };
 
 // `INTERPRET` fragments, `DROP`, and the interactive debug pause.
-mod interpret;
+pub(crate) mod interpret;
 
 // `ADDRESS`, `NUMERIC` and `TRACE`, and the `>I>`/`<I<` invocation lines.
 mod settings;
@@ -879,8 +879,10 @@ impl Interp {
                 //      3 *-* nop
                 // ```
                 self.trace_result(self.activity.clause_state.current_value_indent, &text);
-                if self.debug_pause_instruction()? {
-                    return Ok(Flow::Goto(index));
+                match self.debug_pause_instruction()? {
+                    interpret::Pause::Go => {}
+                    interpret::Pause::Again => return Ok(Flow::Goto(index)),
+                    interpret::Pause::Transfer(flow) => return Ok(flow),
                 }
                 // **The fragment's level, with delta 0.** Measured: a
                 // fragment's clauses print at the enclosing `INTERPRET`

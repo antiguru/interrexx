@@ -13,6 +13,7 @@ use crate::activation::{CallType, body_of};
 use crate::clause::{ClauseOutcome, ClauseValue};
 use crate::eval::{SymbolRead, call_target_name};
 use crate::plan::Plan;
+use crate::run::interpret::Pause;
 use crate::run::{
     Absorbed, CallEntry, CallResolution, ConditionTrace, Echo, Ended, Flow, LoopHeaderValues,
     QueueKeyword, Resolved, ReturnKeyword, SelectEscape, SelectResume, SiteCall, SiteKeep, Started,
@@ -2568,11 +2569,12 @@ impl Interp {
             Err(_) => return ran,
         };
         match self.debug_pause_after_clause(code, index, clause, source, flow) {
-            Ok(true) => Ok(RegionEnd::At(clause_pc)),
+            Ok(Pause::Again) => Ok(RegionEnd::At(clause_pc)),
+            Ok(Pause::Transfer(flow)) => Ok(RegionEnd::Flowed(flow)),
             // A `DO`/`LOOP` header owes no boundary of its own, but the oracle
             // checks its traps after the header's pause as after any clause,
             // so a condition the pause's read queued is delivered here.
-            Ok(false)
+            Ok(Pause::Go)
                 if matches!(
                     clause.kind,
                     InstructionKind::Do(_) | InstructionKind::Loop(_)
@@ -2583,7 +2585,7 @@ impl Interp {
                     None => ran,
                 }
             }
-            Ok(false) => ran,
+            Ok(Pause::Go) => ran,
             Err(failure) => Err(failure),
         }
     }
@@ -2632,11 +2634,22 @@ impl Interp {
         let stepped = self.save_clause_state();
         self.restore_clause_state(paused_clause);
         let queued_before_pause = self.activity.pending_traps.len();
-        if self.debug_pause_instruction()? {
-            return Ok(match step {
-                crate::run::FlatStep::Body(_) => crate::run::FlatStep::Body(op_at(chunk, index)?),
-                crate::run::FlatStep::Done(_) => crate::run::FlatStep::Done(Flow::Goto(index)),
-            });
+        match self.debug_pause_instruction()? {
+            Pause::Go => {}
+            Pause::Again => {
+                return Ok(match step {
+                    crate::run::FlatStep::Body(_) => {
+                        crate::run::FlatStep::Body(op_at(chunk, index)?)
+                    }
+                    crate::run::FlatStep::Done(_) => crate::run::FlatStep::Done(Flow::Goto(index)),
+                });
+            }
+            Pause::Transfer(flow) => {
+                if let crate::run::FlatStep::Body(_) = step {
+                    self.close_flat_top();
+                }
+                return Ok(crate::run::FlatStep::Done(flow));
+            }
         }
         let exit = if self.activity.pending_traps.is_empty()
             || (boundary_done && self.activity.pending_traps.len() == queued_before_pause)
