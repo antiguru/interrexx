@@ -11,7 +11,7 @@
 //! Every error names classes, members, files, line numbers and error codes
 //! only; no source text is rendered.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 use std::ops::Range;
 
@@ -40,13 +40,16 @@ pub struct Host<'a> {
 pub struct Dropped<'a> {
     pub class: &'a str,
     pub member: &'a str,
+    /// Which side of the class the member is on: `true` for the class side.
+    pub class_side: bool,
     /// Why nothing needs it.
     pub reason: &'a str,
-    /// The member's name is also a message some host code sends to something
-    /// else (a common name such as `init`), which the entry's reason has
-    /// settled in review. Without this, a dropped member that is still sent is
-    /// an error.
-    pub sent_elsewhere: bool,
+    /// How many places across all spliced hosts send a message of the
+    /// member's name (a message term, or a word of a string literal), as
+    /// counted when the entry was reviewed. Those sends go to something else
+    /// (a common name such as `init`). The build fails when the count differs,
+    /// so a new send of the name is seen, and a count that fell is tightened.
+    pub sent_sites: usize,
 }
 
 /// Where one replaced class's text sits in a spliced host.
@@ -80,11 +83,15 @@ pub enum SpliceError {
     },
     /// A replacement file holds something other than class blocks, at `line`.
     NotClassBlocks { file: String, line: usize },
+    /// A replacement file declares no class, so it replaces nothing.
+    NoClass { file: String },
     /// Two replacement blocks declare one class.
     DuplicateReplacement { class: String },
     /// A host does not parse, as spliced or as given. `file` and `line` are
-    /// the replacement file's when the position is inside a splice, and the
-    /// host's own otherwise.
+    /// the replacement file's when the position is inside a splice. Otherwise
+    /// they are the host's name and a line of the host as spliced, which is
+    /// below where the host's own line was whenever a replacement block that
+    /// lies above it is longer than what it replaced.
     HostParse {
         file: String,
         line: usize,
@@ -105,14 +112,32 @@ pub enum SpliceError {
     },
     /// A host member a replacement leaves out, with no `Dropped` entry.
     MemberDropped { class: String, member: String },
-    /// A `Dropped` entry whose member is still sent.
-    DroppedStillSent {
+    /// A `Dropped` entry whose count of send sites is not what the spliced
+    /// hosts hold.
+    DroppedSendCount {
         class: String,
         member: String,
-        host: String,
+        expected: usize,
+        found: usize,
     },
     /// A `Dropped` entry for a member the replacement keeps.
-    DroppedKept { class: String, member: String },
+    DroppedKept {
+        class: String,
+        member: String,
+        class_side: bool,
+    },
+    /// A `Dropped` entry that matches no member a replacement drops.
+    UnusedDropped {
+        class: String,
+        member: String,
+        class_side: bool,
+    },
+    /// A `Dropped` entry with no reason.
+    EmptyReason {
+        class: String,
+        member: String,
+        class_side: bool,
+    },
 }
 
 impl fmt::Display for SpliceError {
@@ -127,6 +152,7 @@ impl fmt::Display for SpliceError {
             SpliceError::NotClassBlocks { file, line } => {
                 write!(f, "{file}:{line}: not a class block")
             }
+            SpliceError::NoClass { file } => write!(f, "{file}: declares no class"),
             SpliceError::DuplicateReplacement { class } => {
                 write!(f, "class {class} is replaced twice")
             }
@@ -164,24 +190,54 @@ impl fmt::Display for SpliceError {
                 "{class}~{member}: the host declares it, the replacement does not, and no \
                  entry allows dropping it"
             ),
-            SpliceError::DroppedStillSent {
+            SpliceError::DroppedSendCount {
                 class,
                 member,
-                host,
+                expected,
+                found,
             } => write!(
                 f,
-                "{class}~{member}: allowed to be dropped, but a message of that name is \
-                 still sent in {host}"
+                "{class}~{member}: allowed to be dropped with {expected} send sites of its \
+                 name, and the hosts hold {found}; review them and set the entry to {found}"
             ),
-            SpliceError::DroppedKept { class, member } => write!(
+            SpliceError::DroppedKept {
+                class,
+                member,
+                class_side,
+            } => write!(
                 f,
-                "{class}~{member}: an entry allows dropping it, and the replacement keeps it"
+                "{class}~{member} ({}): an entry allows dropping it, and the replacement \
+                 keeps it",
+                side_name(*class_side)
+            ),
+            SpliceError::UnusedDropped {
+                class,
+                member,
+                class_side,
+            } => write!(
+                f,
+                "{class}~{member} ({}): an entry allows dropping it, and no replaced \
+                 class drops it",
+                side_name(*class_side)
+            ),
+            SpliceError::EmptyReason {
+                class,
+                member,
+                class_side,
+            } => write!(
+                f,
+                "{class}~{member} ({}): the entry has no reason",
+                side_name(*class_side)
             ),
         }
     }
 }
 
 impl std::error::Error for SpliceError {}
+
+fn side_name(class_side: bool) -> &'static str {
+    if class_side { "class" } else { "instance" }
+}
 
 /// A member by the name a send finds it under: the side and the upcased name,
 /// an attribute's setter spelled with its `=`.
@@ -225,10 +281,20 @@ struct Analysed {
 /// The keys of the members a directive defines, if it defines any.
 fn member_keys(kind: &DirectiveKind) -> Option<Vec<MemberKey>> {
     match kind {
-        DirectiveKind::Method(method) => Some(vec![(
-            method.class_method,
-            method.name.to_ascii_uppercase(),
-        )]),
+        DirectiveKind::Method(method) => {
+            let getter = method.name.to_ascii_uppercase();
+            if method.attribute {
+                // `::METHOD x ATTRIBUTE` defines the getter and the setter.
+                let mut setter = getter.clone();
+                setter.push(b'=');
+                Some(vec![
+                    (method.class_method, getter),
+                    (method.class_method, setter),
+                ])
+            } else {
+                Some(vec![(method.class_method, getter)])
+            }
+        }
         DirectiveKind::Attribute(attribute) => {
             let getter = attribute.name.to_ascii_uppercase();
             let mut setter = getter.clone();
@@ -240,8 +306,10 @@ fn member_keys(kind: &DirectiveKind) -> Option<Vec<MemberKey>> {
                 AttributeStyle::Both => vec![(side, getter), (side, setter)],
             })
         }
+        // A constant is found on the class and on its instances.
         DirectiveKind::Constant(constant) => {
-            Some(vec![(false, constant.name.to_ascii_uppercase())])
+            let name = constant.name.to_ascii_uppercase();
+            Some(vec![(false, name.clone()), (true, name)])
         }
         _ => None,
     }
@@ -277,13 +345,6 @@ fn blocks_of(replacement: &Replacement<'_>) -> Result<Vec<Block>, SpliceError> {
     }
     let directives = &program.directives;
     let mut blocks: Vec<Block> = Vec::new();
-    // The line start of the next class directive ends the block before it.
-    let line_start = |at: usize| {
-        text[..at]
-            .iter()
-            .rposition(|&b| b == b'\n' || b == b'\r')
-            .map_or(0, |i| i + 1)
-    };
     let mut starts: Vec<usize> = Vec::new();
     for directive in directives {
         let start = directive.clause_span.start;
@@ -306,11 +367,16 @@ fn blocks_of(replacement: &Replacement<'_>) -> Result<Vec<Block>, SpliceError> {
             },
         }
     }
+    if blocks.is_empty() {
+        return Err(SpliceError::NoClass {
+            file: file.to_string(),
+        });
+    }
     for (index, block) in blocks.iter_mut().enumerate() {
         let from = starts[index];
-        let to = starts
-            .get(index + 1)
-            .map_or(text.len(), |&next| line_start(next));
+        // A block ends where the next class directive starts, so a clause
+        // that shares a line with that directive stays with its own block.
+        let to = starts.get(index + 1).copied().unwrap_or(text.len());
         let mut body = text[from..to].to_vec();
         if !matches!(body.last(), Some(b'\n' | b'\r')) {
             body.push(b'\n');
@@ -405,6 +471,7 @@ fn apply(host: &[u8], analysed: &Analysed, blocks: &[&Block]) -> Spliced {
 
 /// Splices one host. A replacement class the host does not declare is left
 /// out; `splice_all` is what checks that every class is declared once.
+#[cfg(test)]
 pub fn splice(host: &[u8], replacements: &[Replacement<'_>]) -> Result<Spliced, SpliceError> {
     let mut blocks = Vec::new();
     for replacement in replacements {
@@ -418,15 +485,19 @@ pub fn splice(host: &[u8], replacements: &[Replacement<'_>]) -> Result<Spliced, 
     Ok(apply(host, &analysed, &refs))
 }
 
-/// The upcased names a host sends as messages, or names in a string literal
-/// outside the directives that declare things (message names are passed as
-/// strings to `SEND`, `START`, `METHOD` and the like).
-fn sent_names(bytes: &[u8]) -> BTreeSet<Vec<u8>> {
+/// How many times a host sends each upcased name as a message: a name after
+/// `~` or `~~`, and each word of a string literal outside the directives that
+/// declare things (message names are passed as strings to `SEND`, `START`,
+/// `METHOD`, `INTERPRET` and the like). A word is a run of the characters a
+/// symbol or a setter's `=` is made of, so `'o~hello'` holds `O` and `HELLO`.
+/// A send by an operator (`"="`, `"[]"`) is found only as a literal's word.
+fn sent_names(bytes: &[u8]) -> BTreeMap<Vec<u8>, usize> {
     let source = ProgramSource::new(bytes.to_vec(), SourceKind::Program);
-    let mut names = BTreeSet::new();
+    let mut names: BTreeMap<Vec<u8>, usize> = BTreeMap::new();
     let Ok(scanned) = scan(&source) else {
         return names;
     };
+    let is_word = |b: &u8| b.is_ascii_alphanumeric() || b"._!?@#$=".contains(b);
     let mut after_tilde = false;
     let mut skip_literals = false;
     let mut after_colons = false;
@@ -445,18 +516,15 @@ fn sent_names(bytes: &[u8]) -> BTreeSet<Vec<u8>> {
             TokenKind::Symbol { id, .. } => {
                 let name = scanned.symbols.name(*id);
                 if after_tilde {
-                    names.insert(name.as_bytes().to_vec());
+                    *names.entry(name.as_bytes().to_vec()).or_default() += 1;
                 }
                 if after_colons {
                     skip_literals = !matches!(name, "CONSTANT");
                 }
             }
             TokenKind::Literal { value } if !skip_literals => {
-                for word in value
-                    .split(|b| b.is_ascii_whitespace() || *b == b',')
-                    .filter(|w| !w.is_empty())
-                {
-                    names.insert(word.to_ascii_uppercase());
+                for word in value.split(|b| !is_word(b)).filter(|w| !w.is_empty()) {
+                    *names.entry(word.to_ascii_uppercase()).or_default() += 1;
                 }
             }
             TokenKind::Eoc => skip_literals = false,
@@ -468,13 +536,11 @@ fn sent_names(bytes: &[u8]) -> BTreeSet<Vec<u8>> {
     names
 }
 
-/// Whether `sent` holds `member`'s name, or the attribute's it is the setter
-/// of.
-fn is_sent(sent: &BTreeSet<Vec<u8>>, member: &[u8]) -> bool {
-    sent.contains(member)
-        || member
-            .strip_suffix(b"=")
-            .is_some_and(|stem| sent.contains(stem))
+/// How many send sites `sent` holds for `member`'s name, and for the
+/// attribute's it is the setter of.
+fn send_sites(sent: &BTreeMap<Vec<u8>, usize>, member: &[u8]) -> usize {
+    let count = |name: &[u8]| sent.get(name).copied().unwrap_or(0);
+    count(member) + member.strip_suffix(b"=").map_or(0, count)
 }
 
 fn text_of(bytes: &[u8]) -> String {
@@ -508,6 +574,15 @@ pub fn splice_all(
             });
         }
     }
+    for entry in dropped {
+        if entry.reason.is_empty() {
+            return Err(SpliceError::EmptyReason {
+                class: entry.class.to_string(),
+                member: entry.member.to_string(),
+                class_side: entry.class_side,
+            });
+        }
+    }
     let analysed: Vec<Analysed> = hosts.iter().map(analyse).collect::<Result<_, _>>()?;
 
     // The one host each block lands in.
@@ -531,18 +606,8 @@ pub fn splice_all(
                 },
             );
         };
-        // A host that declares the class twice is "several" too.
-        if analysed[first.0]
-            .classes
-            .iter()
-            .filter(|c| c.upper == block.upper)
-            .count()
-            > 1
-        {
-            return Err(SpliceError::ClassInSeveralHosts {
-                class: block.class.clone(),
-            });
-        }
+        // A host that declares one class twice does not parse, so `first` is
+        // the only declaration.
         landing.push(first);
     }
 
@@ -596,19 +661,18 @@ pub fn splice_all(
     }
 
     // Members the host declared and the replacement does not.
-    let mut dropped_here: Vec<(&Block, MemberKey, Option<&Dropped<'_>>)> = Vec::new();
+    let mut used = vec![false; dropped.len()];
+    let mut dropped_here: Vec<(&Block, MemberKey, &Dropped<'_>)> = Vec::new();
     for (block, &(h, c)) in blocks.iter().zip(&landing) {
         let class = &analysed[h].classes[c];
         for key in &class.members {
-            // An entry without its reason does not count: the reason is what
-            // a reviewer reads.
-            let entry = dropped.iter().find(|d| {
-                !d.reason.is_empty()
+            let found = dropped.iter().position(|d| {
+                d.class_side == key.0
                     && d.class.eq_ignore_ascii_case(&block.class)
                     && d.member.as_bytes().eq_ignore_ascii_case(&key.1)
             });
             let kept = block.members.contains(key);
-            match (kept, entry) {
+            match (kept, found) {
                 (false, None) => {
                     return Err(SpliceError::MemberDropped {
                         class: block.class.clone(),
@@ -619,12 +683,24 @@ pub fn splice_all(
                     return Err(SpliceError::DroppedKept {
                         class: block.class.clone(),
                         member: text_of(&key.1),
+                        class_side: key.0,
                     });
                 }
-                (false, Some(_)) => dropped_here.push((block, key.clone(), entry)),
+                (false, Some(i)) => {
+                    used[i] = true;
+                    dropped_here.push((block, key.clone(), &dropped[i]));
+                }
                 (true, None) => {}
             }
         }
+    }
+    // An entry that settled nothing has outlived its reason.
+    if let Some(i) = used.iter().position(|&u| !u) {
+        return Err(SpliceError::UnusedDropped {
+            class: dropped[i].class.to_string(),
+            member: dropped[i].member.to_string(),
+            class_side: dropped[i].class_side,
+        });
     }
 
     let mut out = Vec::new();
@@ -645,17 +721,20 @@ pub fn splice_all(
     }
 
     if !dropped_here.is_empty() {
-        let sent: Vec<BTreeSet<Vec<u8>>> = out.iter().map(|s| sent_names(&s.bytes)).collect();
-        for (block, key, entry) in dropped_here {
-            let Some(entry) = entry else { continue };
-            if entry.sent_elsewhere {
-                continue;
+        let mut sent: BTreeMap<Vec<u8>, usize> = BTreeMap::new();
+        for spliced in &out {
+            for (name, count) in sent_names(&spliced.bytes) {
+                *sent.entry(name).or_default() += count;
             }
-            if let Some(h) = sent.iter().position(|names| is_sent(names, &key.1)) {
-                return Err(SpliceError::DroppedStillSent {
+        }
+        for (block, key, entry) in dropped_here {
+            let found = send_sites(&sent, &key.1);
+            if found != entry.sent_sites {
+                return Err(SpliceError::DroppedSendCount {
                     class: block.class.clone(),
                     member: text_of(&key.1),
-                    host: hosts[h].name.to_string(),
+                    expected: entry.sent_sites,
+                    found,
                 });
             }
         }

@@ -21,8 +21,17 @@ fn allow<'a>(class: &'a str, member: &'a str) -> Dropped<'a> {
     Dropped {
         class,
         member,
+        class_side: false,
         reason: "test",
-        sent_elsewhere: false,
+        sent_sites: 0,
+    }
+}
+
+/// An entry that settles `sent_sites` send sites of the member's name.
+fn allow_sent<'a>(class: &'a str, member: &'a str, sent_sites: usize) -> Dropped<'a> {
+    Dropped {
+        sent_sites,
+        ..allow(class, member)
     }
 }
 
@@ -69,13 +78,7 @@ fn a_splice_keeps_order_and_the_cut_lines() {
     let out = splice_all(&[host("A", HOST_A)], &[rep("alpha.rex", replacement)], &[]).unwrap();
     let spliced = &out[0];
     assert_eq!(classes_of(&spliced.bytes), ["ALPHA", "BETA", "LAST"]);
-    let block_lines = line_breaks(&spliced.splices[0].range.clone().fold(
-        Vec::new(),
-        |mut v, i| {
-            v.push(spliced.bytes[i]);
-            v
-        },
-    ));
+    let block_lines = line_breaks(&spliced.bytes[spliced.splices[0].range.clone()]);
     assert_eq!(
         line_of(&spliced.bytes, "::class Beta"),
         line_of(HOST_A, "::class Beta") + block_lines
@@ -118,10 +121,7 @@ fn the_last_class_of_a_host_is_replaced_to_the_end() {
     assert!(!spliced.contains("host final"));
     assert_eq!(classes_of(&out.bytes), ["ALPHA", "BETA", "LAST"]);
     // The host has the same number of lines, plus the block's.
-    let block_breaks = line_breaks(&out.splices[0].range.clone().fold(Vec::new(), |mut v, i| {
-        v.push(out.bytes[i]);
-        v
-    }));
+    let block_breaks = line_breaks(&out.bytes[out.splices[0].range.clone()]);
     assert_eq!(line_breaks(&out.bytes), line_breaks(HOST_A) + block_breaks);
 }
 
@@ -389,7 +389,8 @@ fn an_entry_for_a_member_the_replacement_keeps_is_refused() {
         err,
         SpliceError::DroppedKept {
             class: "ALPHA".into(),
-            member: "KEEP".into()
+            member: "KEEP".into(),
+            class_side: false
         }
     );
 }
@@ -405,10 +406,11 @@ fn a_dropped_member_sent_by_a_message_term_is_refused() {
     .unwrap_err();
     assert_eq!(
         err,
-        SpliceError::DroppedStillSent {
+        SpliceError::DroppedSendCount {
             class: "ALPHA".into(),
             member: "HELLO".into(),
-            host: "S".into()
+            expected: 0,
+            found: 1
         }
     );
 }
@@ -425,7 +427,7 @@ fn a_dropped_member_sent_by_a_string_is_refused() {
         let err = splice_all(&hosts, &[rep("a.rex", ALPHA_WITHOUT)], &[allow("Alpha", "hello")])
             .unwrap_err();
         assert!(
-            matches!(err, SpliceError::DroppedStillSent { .. }),
+            matches!(err, SpliceError::DroppedSendCount { .. }),
             "{}",
             text(sender)
         );
@@ -446,7 +448,7 @@ fn a_send_in_the_hosts_own_or_the_replacements_code_counts() {
         &[allow("Alpha", "hello")],
     )
     .unwrap_err();
-    assert!(matches!(err, SpliceError::DroppedStillSent { .. }));
+    assert!(matches!(err, SpliceError::DroppedSendCount { .. }));
     let own: &[u8] = b"::class Alpha public\n::method keep\n  return self~hello\n";
     let err = splice_all(
         &[host("A", ALPHA_WITH_HELLO)],
@@ -454,7 +456,7 @@ fn a_send_in_the_hosts_own_or_the_replacements_code_counts() {
         &[allow("Alpha", "hello")],
     )
     .unwrap_err();
-    assert!(matches!(err, SpliceError::DroppedStillSent { .. }));
+    assert!(matches!(err, SpliceError::DroppedSendCount { .. }));
 }
 
 /// A name in a declaration is not a send, and the host code a dropped member
@@ -475,19 +477,155 @@ fn declarations_and_the_cut_code_do_not_count_as_sends() {
     .unwrap();
 }
 
-/// A name that something else is sent is settled in the entry.
+/// An entry settles the sends that exist, by their count: one more send of
+/// the name, or one fewer, fails the build.
 #[test]
-fn an_entry_can_settle_a_name_that_is_sent_to_something_else() {
+fn an_entry_settles_the_send_sites_it_counted() {
     let hosts = [host("A", ALPHA_WITH_HELLO), host("S", SENDER)];
-    splice_all(
-        &hosts,
+    let run = |hosts: &[Host<'_>], sites| {
+        splice_all(
+            hosts,
+            &[rep("a.rex", ALPHA_WITHOUT)],
+            &[allow_sent("Alpha", "hello", sites)],
+        )
+    };
+    run(&hosts, 1).unwrap();
+    let two: Vec<u8> = [
+        SENDER,
+        &b"::method again\n  use arg o\n  return o~hello\n"[..],
+    ]
+    .concat();
+    let err = run(&[host("A", ALPHA_WITH_HELLO), host("S", &two)], 1).unwrap_err();
+    assert_eq!(
+        err,
+        SpliceError::DroppedSendCount {
+            class: "ALPHA".into(),
+            member: "HELLO".into(),
+            expected: 1,
+            found: 2
+        }
+    );
+    // A count that fell is refused too, so the entry gets tightened.
+    let err = run(&[host("A", ALPHA_WITH_HELLO)], 1).unwrap_err();
+    assert!(matches!(
+        err,
+        SpliceError::DroppedSendCount {
+            expected: 1,
+            found: 0,
+            ..
+        }
+    ));
+}
+
+/// A name inside a string literal is found wherever the string's own syntax
+/// puts it, not only between blanks.
+#[test]
+fn a_send_inside_a_string_of_code_is_counted() {
+    for code in [
+        "interpret 'o~hello'",
+        "interpret \"r = o~hello(1)\"",
+        "interpret 'o~hello;'",
+        "call value 'x:hello'",
+    ] {
+        let sender = format!("::class Caller public\n::method go\n  use arg o\n  {code}\n");
+        let err = splice_all(
+            &[host("A", ALPHA_WITH_HELLO), host("S", sender.as_bytes())],
+            &[rep("a.rex", ALPHA_WITHOUT)],
+            &[allow("Alpha", "hello")],
+        )
+        .unwrap_err();
+        assert!(
+            matches!(err, SpliceError::DroppedSendCount { .. }),
+            "{code}"
+        );
+    }
+}
+
+/// An entry that matches no dropped member is refused, whatever the reason.
+#[test]
+fn an_entry_that_matches_nothing_is_refused() {
+    let hosts = [host("A", ALPHA_WITH_HELLO)];
+    let entry_for = |class, member| {
+        splice_all(
+            &hosts,
+            &[rep("a.rex", ALPHA_WITHOUT)],
+            &[allow("Alpha", "hello"), allow(class, member)],
+        )
+        .unwrap_err()
+    };
+    // A class that is not replaced, and a member the class never had.
+    assert_eq!(
+        entry_for("Nosuch", "zz"),
+        SpliceError::UnusedDropped {
+            class: "Nosuch".into(),
+            member: "zz".into(),
+            class_side: false
+        }
+    );
+    assert!(matches!(
+        entry_for("Alpha", "nosuchmember"),
+        SpliceError::UnusedDropped { .. }
+    ));
+    // A duplicate of a used entry matches nothing the first did not.
+    assert!(matches!(
+        entry_for("Alpha", "hello"),
+        SpliceError::UnusedDropped { .. }
+    ));
+}
+
+#[test]
+fn an_entry_without_a_reason_is_refused_as_such() {
+    let err = splice_all(
+        &[host("A", ALPHA_WITH_HELLO)],
         &[rep("a.rex", ALPHA_WITHOUT)],
         &[Dropped {
-            sent_elsewhere: true,
+            reason: "",
             ..allow("Alpha", "hello")
         }],
     )
+    .unwrap_err();
+    assert_eq!(
+        err,
+        SpliceError::EmptyReason {
+            class: "Alpha".into(),
+            member: "hello".into(),
+            class_side: false
+        }
+    );
+}
+
+/// An entry names a side: dropping the class-side `new` leaves the instance
+/// one in place, and an entry for the wrong side does not match.
+#[test]
+fn an_entry_drops_one_side_only() {
+    let host_a =
+        b"::class Alpha public\n::method new class\n  return 1\n::method new\n  return 2\n";
+    let replacement = b"::class Alpha public\n::method new\n  return 2\n";
+    let class_side = Dropped {
+        class_side: true,
+        ..allow("Alpha", "new")
+    };
+    splice_all(
+        &[host("A", host_a)],
+        &[rep("a.rex", replacement)],
+        &[class_side],
+    )
     .unwrap();
+    // The instance-side entry names a member the replacement keeps.
+    let err = splice_all(
+        &[host("A", host_a)],
+        &[rep("a.rex", replacement)],
+        &[allow("Alpha", "new")],
+    )
+    .unwrap_err();
+    assert_eq!(
+        err,
+        SpliceError::DroppedKept {
+            class: "ALPHA".into(),
+            member: "NEW".into(),
+            class_side: false
+        }
+    );
 }
 
 /// An attribute's getter and setter are two members, and a send of the
@@ -521,4 +659,79 @@ fn line_helpers_count_cr_lf_and_crlf_as_one_end_each() {
     assert_eq!(line_breaks(b"a\nb\rc\r\nd"), 3);
     assert_eq!(line_at(b"a\nb\rc\r\nd", 8), 4);
     assert_eq!(line_at(b"abc", 2), 1);
+}
+
+/// `::METHOD x ATTRIBUTE` defines the getter and the setter.
+#[test]
+fn a_method_attribute_defines_a_setter_too() {
+    let host_a = b"::class Alpha public\n::method size attribute\n::method keep\n  return 2\n";
+    let replacement =
+        b"::class Alpha public\n::method size\n  return 1\n::method keep\n  return 2\n";
+    let err = splice_all(&[host("A", host_a)], &[rep("a.rex", replacement)], &[]).unwrap_err();
+    assert_eq!(
+        err,
+        SpliceError::MemberDropped {
+            class: "ALPHA".into(),
+            member: "SIZE=".into()
+        }
+    );
+}
+
+/// A constant is found on the class and on its instances, so a replacement
+/// that keeps only the instance side drops the class side.
+#[test]
+fn a_constant_is_a_member_of_both_sides() {
+    let host_a = b"::class Alpha public\n::constant k 1\n";
+    let replacement = b"::class Alpha public\n::method k\n  return 1\n";
+    let err = splice_all(&[host("A", host_a)], &[rep("a.rex", replacement)], &[]).unwrap_err();
+    assert_eq!(
+        err,
+        SpliceError::MemberDropped {
+            class: "ALPHA".into(),
+            member: "K".into()
+        }
+    );
+    // Both sides kept: accepted.
+    let both = b"::class Alpha public\n::constant k 1\n";
+    splice_all(&[host("A", host_a)], &[rep("a.rex", both)], &[]).unwrap();
+}
+
+/// A clause that shares a line with the next class directive belongs to the
+/// block before it.
+#[test]
+fn a_clause_before_the_next_class_on_its_line_stays_in_its_block() {
+    let host_a = b"::class A public\n::method x\n  return 'old'\n::class B public\n";
+    let replacement = b"::class A public\n::method x\n  return 'XBODY'; ::class B public\n";
+    let out = splice_all(&[host("H", host_a)], &[rep("r.rex", replacement)], &[]).unwrap();
+    assert!(text(&out[0].bytes).contains("XBODY"));
+}
+
+/// A file that declares no class replaces nothing, which is a mistake.
+#[test]
+fn a_replacement_without_a_class_is_refused() {
+    for bytes in [&b"/* nothing */"[..], b""] {
+        let err = splice_all(&[host("A", HOST_A)], &[rep("empty.rex", bytes)], &[]).unwrap_err();
+        assert_eq!(
+            err,
+            SpliceError::NoClass {
+                file: "empty.rex".into()
+            }
+        );
+    }
+}
+
+/// The host's class being non-public splits a file's classes just as the
+/// replacement's being non-public does.
+#[test]
+fn a_non_public_host_class_blocks_a_split_too() {
+    let a = b"::class Alpha public\n::method m\n  return 1\n";
+    let b = b"::class Beta private\n::method m\n  return 1\n";
+    let both = b"::class Alpha public\n::method m\n  return 2\n::class Beta public\n::method m\n  return 2\n";
+    let err = splice_all(&[host("A", a), host("B", b)], &[rep("two.rex", both)], &[]).unwrap_err();
+    assert_eq!(
+        err,
+        SpliceError::SplitNonPublic {
+            file: "two.rex".into()
+        }
+    );
 }

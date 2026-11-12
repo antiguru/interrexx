@@ -11,7 +11,6 @@ mod lines;
 #[allow(dead_code)]
 #[path = "src/sha256.rs"]
 mod sha256;
-#[allow(dead_code)]
 #[path = "src/splice.rs"]
 mod splice;
 
@@ -54,15 +53,26 @@ const SOURCES: &[Source] = &[
 /// swap: every class it declares replaces the host's class of that name.
 const REPLACEMENTS: &[&str] = &[];
 
-/// Host members a replacement may leave out: class, member, why nothing needs
-/// it, and whether a message of that name is sent to something else.
-const ALLOW_DROPPED: &[(&str, &str, &str, bool)] = &[];
+/// One host member a replacement may leave out.
+struct Allowed {
+    class: &'static str,
+    member: &'static str,
+    /// `true` for a class-side member.
+    class_side: bool,
+    /// Why nothing needs it.
+    reason: &'static str,
+    /// How many places in the spliced hosts send a message of that name, as
+    /// reviewed: the build fails when the count differs.
+    sent_sites: usize,
+}
+
+/// Host members a replacement may leave out. Every entry must match a dropped
+/// member of a replaced class, and carry a reason.
+const ALLOW_DROPPED: &[Allowed] = &[];
 
 fn main() {
     let out = PathBuf::from(std::env::var("OUT_DIR").expect("cargo sets OUT_DIR"));
     println!("cargo::rerun-if-changed=rexx");
-    println!("cargo::rerun-if-changed=src/splice.rs");
-    println!("cargo::rerun-if-changed=src/splice");
     let mut inputs: Vec<Vec<u8>> = Vec::new();
     for source in SOURCES {
         println!("cargo::rerun-if-changed={}", source.path);
@@ -96,11 +106,12 @@ fn main() {
         .collect();
     let dropped: Vec<Dropped<'_>> = ALLOW_DROPPED
         .iter()
-        .map(|&(class, member, reason, sent_elsewhere)| Dropped {
-            class,
-            member,
-            reason,
-            sent_elsewhere,
+        .map(|entry| Dropped {
+            class: entry.class,
+            member: entry.member,
+            class_side: entry.class_side,
+            reason: entry.reason,
+            sent_sites: entry.sent_sites,
         })
         .collect();
     let hosts: Vec<Host<'_>> = SOURCES

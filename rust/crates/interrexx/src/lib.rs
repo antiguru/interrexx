@@ -741,7 +741,7 @@ impl Loud {
     /// bootstrap.
     fn library_source(site: &str) -> Loud {
         Loud {
-            message: owned_message(&format!("{site} does not parse here")),
+            message: owned_message(&format!("does not parse here: {site}")),
         }
     }
 

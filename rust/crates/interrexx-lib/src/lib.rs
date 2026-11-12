@@ -86,7 +86,7 @@ const REXX_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/rexx");
 /// text, and always `None` unless the build has debug assertions and
 /// [`DEBUG_VARIABLE`] is set, so a release build never reads the sources.
 pub fn debug_frame(program: &str, line: usize) -> Option<String> {
-    if !cfg!(debug_assertions) || std::env::var_os(DEBUG_VARIABLE).is_none() {
+    if !debug_on(std::env::var_os(DEBUG_VARIABLE).is_some()) {
         return None;
     }
     let found = lookup(program)?;
@@ -97,6 +97,12 @@ pub fn debug_frame(program: &str, line: usize) -> Option<String> {
         line,
         std::path::Path::new(REXX_DIR),
     )
+}
+
+/// Whether [`debug_frame`] may read the replacement sources: only in a build
+/// with debug assertions, and only with the variable set.
+fn debug_on(variable_set: bool) -> bool {
+    cfg!(debug_assertions) && variable_set
 }
 
 fn debug_frame_in(
@@ -114,14 +120,14 @@ fn debug_frame_in(
     }
     let in_file: usize = in_file.parse().ok()?;
     let text = std::fs::read(dir.join(file)).ok()?;
-    let shown = text
-        .split(|b| *b == b'\n')
-        .nth(in_file.checked_sub(1)?)
-        .map(|l| {
-            String::from_utf8_lossy(l)
-                .trim_end_matches('\r')
-                .to_string()
-        })?;
+    // The same line ends as the rest of the crate counts.
+    let from = lines::line_start(&text, in_file)?;
+    let rest = &text[from..];
+    let end = rest
+        .iter()
+        .position(|&b| b == b'\n' || b == b'\r')
+        .unwrap_or(rest.len());
+    let shown = String::from_utf8_lossy(&rest[..end]).into_owned();
     Some(format!("{site}: {shown}"))
 }
 
@@ -129,12 +135,14 @@ fn debug_frame_in(
 mod tests {
     use super::*;
 
-    /// With no replacement, every program is its input byte for byte, and no
-    /// splice is recorded.
+    /// A program no replacement touches is its input byte for byte: its
+    /// bytes still hash to its pin, after any swap.
     #[test]
-    fn with_no_replacement_every_program_is_its_input() {
-        assert!(SPLICES.is_empty());
-        for program in PROGRAMS {
+    fn an_untouched_program_is_its_input() {
+        for program in PROGRAMS
+            .iter()
+            .filter(|p| !SPLICES.iter().any(|s| s.program == p.name))
+        {
             assert_eq!(
                 crate::sha256::sha256_hex(program.source),
                 program.sha256,
@@ -169,14 +177,21 @@ mod tests {
         assert_eq!(shown(4).as_deref(), Some("r.rex:3: three"));
         assert_eq!(shown(5), None);
         assert_eq!(shown(9), None);
+        // A replacement file with CR line ends shows the same lines.
+        std::fs::write(dir.join("r.rex"), "one\rtwo\r\nthree").unwrap();
+        assert_eq!(shown(3).as_deref(), Some("r.rex:2: two"));
+        assert_eq!(shown(4).as_deref(), Some("r.rex:3: three"));
         assert_eq!(site_in("P", source, &splices, 7), "r.rex:2");
         assert_eq!(site_in("P", source, &[], 7), "P:3");
         std::fs::remove_dir_all(&dir).unwrap();
-        // The embedded host stays sourceless: no splice covers it.
-        assert_eq!(
-            debug_frame_in(ENTRY, lookup(ENTRY).unwrap().source, SPLICES, 10, &dir),
-            None
-        );
+    }
+
+    /// The switch is off unless the variable is set (and in a release build
+    /// it is off regardless).
+    #[test]
+    fn the_debug_gate_needs_the_variable() {
+        assert!(!debug_on(false));
+        assert_eq!(debug_on(true), cfg!(debug_assertions));
     }
 
     /// Every embedded source is non-empty and reachable by its own name.
