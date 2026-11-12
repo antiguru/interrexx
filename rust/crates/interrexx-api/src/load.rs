@@ -2095,17 +2095,14 @@ pub fn classic_procedure(
     library: &[u8],
     procedure: &[u8],
     search: &[PathBuf],
+    cwd: &Path,
 ) -> Option<ClassicEntry> {
     let name = std::str::from_utf8(library).ok()?;
     if name.len() > MAX_LIBRARY_NAME_LENGTH {
         return None;
     }
     let file = format!("lib{name}{}", std::env::consts::DLL_SUFFIX);
-    let handle = search
-        .iter()
-        .find_map(|directory| dlopen(&directory.join(&file)))
-        .or_else(|| dlopen(Path::new(&file)))
-        .or_else(|| dlopen(&Path::new(SECOND_ATTEMPT_DIRECTORY).join(&file)))?;
+    let handle = dlopen_by_name(&file, search, cwd)?;
     let lookup = |symbol: &[u8]| {
         let symbol = terminated(symbol);
         // SAFETY: the symbol is read as an address only. A classic registration names a handler
@@ -2653,7 +2650,8 @@ impl Library {
 /// Open the library `name` names, searching as `SysLibrary::load` searches
 /// (`common/platform/unix/SysLibrary.cpp:75-102`).
 ///
-/// `search` is tried, in order, before the undecorated name. The loader reads
+/// `search` is tried, in order, before the undecorated name, which the loader
+/// resolves, and `cwd`, the interpreter's current directory, is tried after that. The loader reads
 /// `LD_LIBRARY_PATH` once at process start, so a directory the interpreter
 /// learned of afterwards is unreachable through the undecorated attempt and
 /// has to be spelled out here; the caller supplies the directories that
@@ -2667,16 +2665,12 @@ impl Library {
 /// # Errors
 /// [`Refused`] where the package entry asks for a newer interpreter than this
 /// one.
-pub fn open(name: &str, search: &[PathBuf]) -> Result<Option<Library>, Refused> {
+pub fn open(name: &str, search: &[PathBuf], cwd: &Path) -> Result<Option<Library>, Refused> {
     if name.len() > MAX_LIBRARY_NAME_LENGTH {
         return Ok(None);
     }
     let file = format!("lib{name}{}", std::env::consts::DLL_SUFFIX);
-    let handle = search
-        .iter()
-        .find_map(|directory| dlopen(&directory.join(&file)))
-        .or_else(|| dlopen(Path::new(&file)))
-        .or_else(|| dlopen(&Path::new(SECOND_ATTEMPT_DIRECTORY).join(&file)));
+    let handle = dlopen_by_name(&file, search, cwd);
     let Some(handle) = handle else {
         return Ok(None);
     };
@@ -2718,6 +2712,17 @@ pub fn check_version(entry: &RexxPackageEntry, name: &str) -> Result<(), Failure
         return Err(Failure::LibraryVersion(name.to_owned()));
     }
     Ok(())
+}
+
+/// The file `file` names, tried in `search`, then as the loader finds it, then in `cwd`, the
+/// interpreter's current directory, then in [`SECOND_ATTEMPT_DIRECTORY`].
+fn dlopen_by_name(file: &str, search: &[PathBuf], cwd: &Path) -> Option<libloading::Library> {
+    search
+        .iter()
+        .find_map(|directory| dlopen(&directory.join(file)))
+        .or_else(|| dlopen(Path::new(file)))
+        .or_else(|| dlopen(&cwd.join(file)))
+        .or_else(|| dlopen(&Path::new(SECOND_ATTEMPT_DIRECTORY).join(file)))
 }
 
 fn dlopen(path: &Path) -> Option<libloading::Library> {

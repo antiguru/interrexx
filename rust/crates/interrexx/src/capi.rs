@@ -289,13 +289,14 @@ pub fn deregister(registry: Registry, name: &[u8], library: Option<&[u8]>) -> u6
 /// The handler `name` resolves to in `registry`, as `RexxResolveSubcom` and its siblings find
 /// it: this process's entry point, else the registration's library loaded in this process and
 /// its procedure found, first as registered and then uppercased, with `search` tried before the
-/// loader's own path. `Ok(None)` for a registration naming no library; `RXSUBCOM_NOTREG` where
+/// loader's own path and `cwd` after it. `Ok(None)` for a registration naming no library; `RXSUBCOM_NOTREG` where
 /// nothing is registered or the library or procedure is not found. `start` lets the lookup start
 /// a service; without it, no running service means nothing is registered.
 pub fn resolve(
     registry: Registry,
     name: &[u8],
     search: &[std::path::PathBuf],
+    cwd: &std::path::Path,
     start: bool,
 ) -> Result<Option<ClassicEntry>, u64> {
     if let Some(entry) = registered_entry(registry, name) {
@@ -325,14 +326,14 @@ pub fn resolve(
     if registered.library.is_empty() {
         return Ok(None);
     }
-    interrexx_api::load::classic_procedure(&registered.library, &registered.procedure, search)
+    interrexx_api::load::classic_procedure(&registered.library, &registered.procedure, search, cwd)
         .map(Some)
         .ok_or(NOT_REGISTERED)
 }
 
 /// `RexxLoadSubcom`: whether `name`'s handler resolves. The library argument is ignored.
 pub fn load_subcom(name: &[u8]) -> u64 {
-    match resolve(Registry::Subcom, name, &[], true) {
+    match resolve(Registry::Subcom, name, &[], std::path::Path::new("."), true) {
         Ok(_) => OK,
         Err(status) => status,
     }

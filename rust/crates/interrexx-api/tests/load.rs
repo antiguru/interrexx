@@ -86,7 +86,8 @@ fn a_method_is_found_without_regard_to_case() {
 
 #[test]
 fn a_library_that_is_nowhere_is_not_an_error() {
-    let answer = load::open("zorkolib", &[]).expect("a library that is not there is not an error");
+    let answer = load::open("zorkolib", &[], std::path::Path::new("."))
+        .expect("a library that is not there is not an error");
     assert!(answer.is_none());
 }
 
@@ -97,13 +98,13 @@ fn a_library_that_is_nowhere_is_not_an_error() {
 fn a_search_directory_resolves_a_name_the_undecorated_attempt_misses() {
     let directory = repository_root().join("build/lib");
     assert!(
-        load::open("rxregexp", &[])
+        load::open("rxregexp", &[], std::path::Path::new("."))
             .expect("a library that is not there is not an error")
             .is_none(),
         "librxregexp.so is already on the loader's own path, so the search \
          directory below is not what this test would be reading"
     );
-    let found = load::open("rxregexp", &[directory])
+    let found = load::open("rxregexp", &[directory], std::path::Path::new("."))
         .expect("the extension asks for 4.0.0, which is below this interpreter")
         .expect("checkout-local extension missing or invalid: run python3 rust/scripts/test_preflight.py");
     assert_eq!(found.name(), Some(b"rxregexp".as_slice()));

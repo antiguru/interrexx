@@ -70,10 +70,11 @@ impl Interp {
             }
         };
         for (code, name) in registered {
-            let handler = capi::resolve(Registry::Exit, name, &self.library_search, true)
-                .ok()
-                .flatten()
-                .map(ExitHandler::Registered);
+            let handler =
+                capi::resolve(Registry::Exit, name, &self.library_search, &self.cwd, true)
+                    .ok()
+                    .flatten()
+                    .map(ExitHandler::Registered);
             set(*code, handler);
         }
         for (code, handler) in context {

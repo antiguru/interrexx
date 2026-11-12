@@ -108,6 +108,7 @@ fn status(reply: Reply, load: bool) -> u64 {
                     &registered.library,
                     &registered.procedure,
                     &[],
+                    std::path::Path::new("."),
                 )
                 .is_some();
             if loads { OK } else { NOT_REGISTERED }

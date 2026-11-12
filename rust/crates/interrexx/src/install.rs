@@ -2257,7 +2257,7 @@ impl Interp {
             }
         }
         let spelling = String::from_utf8_lossy(name).into_owned();
-        let opened = interrexx_api::load::open(&spelling, &self.library_search);
+        let opened = interrexx_api::load::open(&spelling, &self.library_search, &self.cwd);
         self.settle_library(name, opened)
     }
 

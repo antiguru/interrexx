@@ -6,8 +6,8 @@
 //!
 //! A case's input is its words, one per line: `\xHH` is a byte, and a line
 //! `<empty>` is the empty word. `rexx_path=DIR` sets `REXX_PATH` to the
-//! fixture's `DIR`, `path=DIR` puts it in front of `PATH`, and `cwd=DIR` runs
-//! from it. `DIR` is a name [`directory`] spells. `env=NAME.VALUE`, which may
+//! fixture's `DIR`, `path=DIR` puts it in front of `PATH`, `ldpath=DIR` puts it
+//! in front of `LD_LIBRARY_PATH`, and `cwd=DIR` runs from it. `DIR` is a name [`directory`] spells. `env=NAME.VALUE`, which may
 //! list several words, sets each environment variable `NAME` to `VALUE` for
 //! both binaries and leaves the rest of the environment as it is, `RXTRACE`
 //! apart, which every run starts without; a case file word holds only
@@ -41,6 +41,26 @@ fn lay_fixture(dir: &Path) {
         std::fs::create_dir_all(dir.join(sub)).expect("a fixture directory");
     }
     file(b"t.rex", "say 'hi from t'\n");
+    // A native library under three directories, for the lookup of a library by name: the
+    // current directory (`libcwd`), the loader path (`libldp`) and the program's own
+    // directory (`libbeside`).
+    let math = Path::new(ORACLE_ROOT).join("lib/librxmath.so");
+    for (sub, name) in [
+        ("libcwd", "libzqcwdlib1.so"),
+        ("libldp", "libzqldplib1.so"),
+        ("libbeside", "libzqbesidelib1.so"),
+    ] {
+        std::fs::create_dir_all(dir.join(sub)).expect("a fixture directory");
+        std::fs::copy(&math, dir.join(sub).join(name)).expect("a library file");
+    }
+    file(
+        b"loadlib.rex",
+        "say .package~new('n', 'return 1')~loadLibrary(arg(1))\n",
+    );
+    file(
+        b"libbeside/loadlib.rex",
+        "say .package~new('n', 'return 1')~loadLibrary(arg(1))\n",
+    );
     // The search rules: endings, case, places and the caller's directory.
     file(b"ord.rex", "say 'ord rex'\n");
     file(b"ord.REX", "say 'ord REX'\n");
@@ -287,6 +307,14 @@ fn run(
         match key.as_str() {
             "cwd" => command.current_dir(entry),
             "rexx_path" => command.env("REXX_PATH", entry),
+            "ldpath" => {
+                let mut path = entry.into_os_string();
+                if oracle {
+                    path.push(":");
+                    path.push(Path::new(ORACLE_ROOT).join("lib"));
+                }
+                command.env("LD_LIBRARY_PATH", path)
+            }
             "path" => {
                 let mut path = entry.into_os_string();
                 path.push(":");
