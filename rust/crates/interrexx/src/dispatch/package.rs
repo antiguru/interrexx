@@ -994,13 +994,17 @@ fn load_package(
     // the file form does -- measured, `loadPackage('nm', .array~of(...))` with
     // a `::routine lpf public` prints the prologue's line, answers `nm` for
     // `~name`, and leaves `lpf` callable in the caller.
-    let loaded = match args.get(1).copied().flatten() {
-        Some(source) => {
+    let reloaded = interp.package_loaded_as(&name);
+    let loaded = match (args.get(1).copied().flatten(), reloaded) {
+        // A name that is already loaded answers its package, and the new
+        // source is not read, translated or run (`r[class.package.loadpackage]`).
+        (Some(_), Some(loaded)) => loaded,
+        (Some(source), None) => {
             let lines =
                 super::method_source_lines(interp, source, "source", super::SourceTaker::Package)?;
-            interp.package_from_source(&name, &lines, None, false)?
+            interp.package_from_source(&name, &lines, None, true)?
         }
-        None => interp.load_package(program, &name)?,
+        (None, _) => interp.load_package(program, &name)?,
     };
     let loaded = interp.package_object(Package::Program(loaded))?;
     if interp.add_imported_package(receiver, loaded) {
