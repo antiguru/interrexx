@@ -345,8 +345,8 @@ fn the_corrected_28x_indent_rule_matches_all_fourteen_probed_shapes() {
 /// own doc comment.** A `DO` with an `ITERATE` in its body, nested
 /// inside an `IF`'s `THEN`, run enough times that a version which
 /// implemented repetition as a `Goto` back to the loop's own top
-/// (rather than an internal `run_repeating` loop that never returns
-/// mid-construct) would have that `Goto`'s target absorbed by the
+/// (rather than a pass loop driven from the loop's own frame that never
+/// returns mid-construct) would have that `Goto`'s target absorbed by the
 /// enclosing `IF`'s own `run_bounded` -- which owns the whole `THEN`
 /// range the `DO` sits inside -- and re-enter the `DO`'s own arm as a
 /// fresh first pass, with its running total reset to `Simple`/`Count`'s

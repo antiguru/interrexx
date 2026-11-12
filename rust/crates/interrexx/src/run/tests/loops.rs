@@ -121,7 +121,7 @@ fn a_bare_repeat_count_traces_as_for_the_same_as_an_explicit_one() {
     // `>K>` fires exactly once, on the first pass, matching every
     // other single-evaluation control-setup keyword (`TO`/`BY`/
     // `OVER`) -- the third `do 2` re-echo is the exit-check pass
-    // `run_repeating`'s own per-pass re-echo already covers, verified
+    // the per-pass re-echo of `flat_loop_step` already covers, verified
     // by running this exact assertion once and reading the bytes
     // back rather than hand-composing them (`this file's own report
     // has the trap: a hand-guessed expectation here was short by
@@ -805,7 +805,7 @@ fn until_is_attributed_to_the_end_clause_while_while_is_attributed_to_the_do_cla
 /// obvious reason a hang cannot be asserted against, but predicted and
 /// confirmed absent by construction: `do_body_outcome`'s own `Iterate`
 /// arm answers `Ok(None)`, the *same* value `Flow::Next` answers, so
-/// `run_repeating`'s own `UNTIL` check below it runs on both paths
+/// `flat_loop_step`'s `UNTIL` check below it runs on both paths
 /// identically.
 #[test]
 fn iterate_reaches_untils_own_bottom_of_iteration_test_rather_than_skipping_it() {

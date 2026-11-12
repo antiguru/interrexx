@@ -1,13 +1,12 @@
 //! `DO`/`LOOP`: the header, each kind of repetition, and the flat-loop path the op driver takes.
 
 use super::{
-    ArithError, BehaviourId, Body, BodyEngine, ClauseOutcome, ClauseValue, Code, CompareOp,
-    ConditionTrace, ControlExpr, Cow, Decoded, Expr, ExprKind, Failure, Flow, Instruction,
-    InstructionKind, Interp, Loop, LoopConditional, LoopKind, Loud, NameShape, Novalue, Number,
-    ObjRef, ProgramSource, Raised, RegFrame, SymbolId, compare_decoded, exact_small_int,
-    raised_available_not_logical, raised_for_count_not_whole, raised_iterate_wrong_kind,
-    raised_repetition_count_not_whole, raised_until_not_logical, raised_while_not_logical,
-    shape_of, within_digits,
+    ArithError, BehaviourId, Body, ClauseOutcome, Code, CompareOp, ConditionTrace, ControlExpr,
+    Cow, Decoded, Expr, ExprKind, Failure, Flow, Instruction, InstructionKind, Interp, Loop,
+    LoopConditional, LoopKind, Loud, NameShape, Novalue, Number, ObjRef, ProgramSource, Raised,
+    RegFrame, SymbolId, compare_decoded, exact_small_int, raised_available_not_logical,
+    raised_for_count_not_whole, raised_iterate_wrong_kind, raised_repetition_count_not_whole,
+    raised_until_not_logical, raised_while_not_logical, shape_of, within_digits,
 };
 use crate::clause::DeadlineCounted;
 
@@ -26,29 +25,6 @@ enum DoOutcome {
     },
     /// Stop: this `Flow` is the whole construct's final answer.
     Escaped(Flow),
-}
-
-/// What a repeating `DO`/`LOOP`'s own header clause decided: run the body
-/// once more, or stop.
-enum HeaderOutcome {
-    Continue,
-    Stop,
-}
-
-impl HeaderOutcome {
-    /// Whether the loop's block is still open once this header clause has
-    /// finished -- what [`Interp::settle_block_indent`] takes.
-    fn entered(&self) -> bool {
-        matches!(self, HeaderOutcome::Continue)
-    }
-}
-
-impl ClauseValue for HeaderOutcome {
-    /// Nothing to root: a loop header produces a decision, never a value
-    /// whose only root was this clause's own temps frame.
-    fn rooted(&self) -> Option<ObjRef> {
-        None
-    }
 }
 
 /// Which clause a repeating `DO`/`LOOP`'s own header evaluation -- the
@@ -81,8 +57,8 @@ enum HeaderClause {
 type IterateSite = Option<(usize, Vec<u8>)>;
 
 /// One repeating loop being driven from the op
-/// driver's own frame: the state `run_repeating` holds in locals, held here
-/// instead because the pass loop is the driver's rather than its own.
+/// driver's own frame: the state a pass loop needs between passes, held here
+/// because the pass loop is the driver's.
 pub(crate) struct FlatLoop {
     /// The first op of the body, where every pass starts.
     pub(crate) op_body: u32,
@@ -220,10 +196,6 @@ pub(crate) enum FlatStart {
     /// naming the label leaves it through, and which the compiled op in front
     /// of the `END` closes (`r[instr.reply.group]`).
     LabelledBlock,
-    /// Not a shape the flat path drives: take the nested path, with the header
-    /// values handed back so that the nested path can move them rather than
-    /// this one copying them.
-    Fallback(LoopHeaderValues),
 }
 
 /// What one pass boundary decided.
@@ -236,8 +208,8 @@ pub(crate) enum FlatStep {
 
 /// What drives one repeating `DO`/`LOOP`'s own iteration, once its header
 /// has already been evaluated and validated -- everything `LoopKind` can be
-/// except `Simple` (a block, never repeats, and `run_loop_with_header`'s own
-/// `Simple` arm never builds one of these at all).
+/// except `Simple` (a block, which never repeats and never builds one of
+/// these).
 enum LoopState {
     Forever,
     /// `DO expr`: a fixed repeat count, decremented to zero.
@@ -278,7 +250,7 @@ enum LoopState {
         /// is exactly the "not the first pass" test: it selects between "read the
         /// value the header computed" and "increment it, tracing on both sides of
         /// the addition". A `bool` on the state rather than a flag threaded through
-        /// `run_repeating` because `loop_advance` is the only reader and the only
+        /// the pass loop because `loop_advance` is the only reader and the only
         /// writer, and because it has to survive an `ITERATE`, which re-enters that
         /// function without passing through the top of the driver's loop.
         stepped: bool,
@@ -1063,203 +1035,6 @@ impl Interp {
         ))
     }
 
-    /// A `DO`/`LOOP` past its header: the construct itself, driven from the
-    /// values whichever engine evaluated that header produced.
-    #[allow(
-        clippy::too_many_arguments,
-        reason = "the same argument `run_repeating`'s own allow makes: every parameter is state one DO/LOOP needs"
-    )]
-    pub(crate) fn run_loop_with_header(
-        &mut self,
-        code: &Code<'_>,
-        index: usize,
-        instruction: &Instruction,
-        body: &Loop,
-        source: Option<&ProgramSource>,
-        engine: BodyEngine<'_>,
-        values: LoopHeaderValues,
-    ) -> Result<Flow, Failure> {
-        let body_start = index + 1;
-        let end_index = body
-            .end
-            .expect("an unclosed DO/LOOP is error 14.1/14.5, so a body that parsed has this set");
-        let resume = end_index + 1;
-        let label = body.label;
-
-        let state = match &body.kind {
-            // A block, not a loop: exactly one pass, and `WHILE`/`UNTIL`
-            // can never be present (`create_loop`'s own parser only reaches
-            // `LoopKind::Simple` through the bare, at-end-of-clause `DO`
-            // arm, before any conditional is even looked for). Still
-            // leavable by an explicit `DO LABEL`, never by a bare `LEAVE`
-            // (`do_body_outcome`'s own `is_loop: false`) -- measured, a
-            // labelled simple block is leavable but an unlabelled one is
-            // 28.1 on a bare `LEAVE` reaching it.
-            LoopKind::Simple => {
-                // Captured before the body runs, for the same reason
-                // `run_repeating` captures it: this is the `DO`'s own indent,
-                // and `current_value_indent` holds whatever the last body
-                // clause left once `run_bounded` has returned.
-                let do_indent = self.activity.clause_state.current_value_indent;
-                // **The block's own clause, opened and ended before any body
-                // instruction runs.** The instruction is traced, the block
-                // opened and the body not yet run, so a condition queued before
-                // the `DO` is delivered here, at the `DO`'s own line and with
-                // the block open. With a handler that requeues ahead of `do` /
-                // `say 'body'` / `end`, the requeued handler runs with `SIGL`
-                // naming the `DO` and prints its output ahead of `body`.
-                let do_line = self
-                    .clause_line_at(code, index, instruction, source)
-                    .unwrap_or_else(|| self.activity.clause_state.line());
-                match self.in_clause(do_line, |it| {
-                    // A block that opened, so the boundary's own handler runs
-                    // one level in -- the `select case raiser()` row of
-                    // `settle_block_indent`'s table, and the same call.
-                    it.settle_block_indent(true, do_indent);
-                    Ok(())
-                })? {
-                    ClauseOutcome::Ended(exit) => return Ok(Flow::Exit(exit.value())),
-                    ClauseOutcome::Ran(ran) => ran?,
-                }
-                // The pause after the header, ahead of the body: this arm
-                // runs the whole block, so the region's own pause cannot.
-                if self.chunk_trace().debugging() {
-                    match self.debug_pause_after_clause(code, index, instruction, source, None)? {
-                        super::interpret::Pause::Go => {}
-                        super::interpret::Pause::Again => return Ok(Flow::Goto(index)),
-                        super::interpret::Pause::Transfer(flow) => return Ok(flow),
-                    }
-                }
-                let flow = self.run_bounded(code, body_start, end_index, source, engine)?;
-                return match self.do_body_outcome(code, index, label, false, resume, flow)? {
-                    DoOutcome::Escaped(escape) => Ok(escape),
-                    // Falls through to `END`, which `run_bounded`'s own
-                    // `[body_start, end_index)` range never visits (the
-                    // `Goto(resume)` below jumps straight past it) --
-                    // unlike a repeating loop, a `Simple` block never runs
-                    // this arm again, so one explicit echo here is the
-                    // whole story, not a per-pass one the way
-                    // `run_repeating`'s own is. Measured: `if 1 = 1 then do / say 'x' / end` traces
-                    // `end` on its own line even though the block never
-                    // repeats.
-                    DoOutcome::FellThrough | DoOutcome::Iterated { .. } => {
-                        // **`END` is a clause of its own, and its boundary is
-                        // where a condition queued by the block's last body
-                        // clause is delivered.** `END` is executed as an
-                        // instruction, so a handler requeued inside the block
-                        // runs there rather than after the whole construct.
-                        // With `do` / `end` and a handler that requeues twice,
-                        // the second handler's `SIGL` is `END`'s line, ahead of
-                        // the `SAY` that follows the block.
-                        let end_instruction = &code.body.instructions[end_index];
-                        let end_line = self
-                            .clause_line_at(code, end_index, end_instruction, source)
-                            .unwrap_or_else(|| self.activity.clause_state.line());
-                        // A fresh computation, not `current_value_indent` --
-                        // `run_bounded`, just above, has already stepped this
-                        // block's own body, so that field now holds whatever
-                        // the *last* body instruction left it at, not this
-                        // `DO`'s own. `printed_indent` for the same reason
-                        // every other site on this page uses it: consistency
-                        // if this `Simple` block's own `END` is ever itself
-                        // the direct landing point of an escape (untested,
-                        // but cheap to keep uniform rather than silently
-                        // exempt).
-                        let end_indent = self.printed_indent(code, index);
-                        match self.in_clause(end_line, |it| {
-                            if it.trace_mode().all
-                                && let Some((line, text)) = it.clause_site(source, end_instruction)
-                            {
-                                it.trace_clause(line, end_indent, &text);
-                            }
-                            // The block is closed by the time this clause's
-                            // boundary runs, so its handler sits back out at
-                            // the `DO`'s own level.
-                            it.settle_block_indent(false, do_indent);
-                            Ok(())
-                        })? {
-                            ClauseOutcome::Ended(exit) => return Ok(Flow::Exit(exit.value())),
-                            ClauseOutcome::Ran(ran) => ran?,
-                        }
-                        Ok(Flow::Goto(resume))
-                    }
-                };
-            }
-            LoopKind::Forever => LoopState::Forever,
-            // A bare `DO` with no expression at all runs a single pass,
-            // matching `Simple`'s own behaviour -- see `loop_header_plan`'s
-            // own note on why nothing in this crate's tests reaches it.
-            LoopKind::Count(_) => LoopState::Count {
-                remaining: values.count.unwrap_or(1),
-            },
-            // `flat_loop_start` answers every kind itself, and this function is
-            // reached only from its `Fallback`, so a loop driven by message
-            // sends never gets here to be held and left unreleased.
-            LoopKind::Controlled(_) if values.objects.is_some() => {
-                unreachable!("a loop over objects never falls back to the nested path")
-            }
-            LoopKind::Controlled(ctrl) => LoopState::Controlled {
-                control: ctrl.control,
-                at: control_slot(code, ctrl.control),
-                // The header's own value, in the representation the header
-                // produced it in. The first re-test replaces it, computing its
-                // own representation the same way.
-                current: values
-                    .initial
-                    .expect("a controlled loop's plan always names its initial value"),
-                to: values.to,
-                by: match values.by {
-                    Some(by) => by,
-                    // No `round_via_unary_plus` needed on the default: a bare
-                    // literal `1` is already whole at any width, so rounding
-                    // it at the header's digits could only ever answer `1`
-                    // again.
-                    None => Number::one(),
-                },
-                for_remaining: values.for_remaining,
-                cached_digits: u64::MAX,
-                to_int: None,
-                by_int: None,
-                shape: shape_of(code.symbols.name(ctrl.control).as_bytes()),
-                stepped: false,
-            },
-            LoopKind::Over { control, .. } => {
-                let (snapshot, items) = self.over_snapshot(
-                    values
-                        .over
-                        .expect("a DO OVER's plan always names its target"),
-                )?;
-                LoopState::OverItems {
-                    control: *control,
-                    at: control_slot(code, *control),
-                    snapshot,
-                    items,
-                    next: 0,
-                    remaining: values.for_remaining,
-                }
-            }
-            LoopKind::With {
-                index: with_index,
-                item,
-                ..
-            } => self.with_state(*with_index, *item, &values),
-        };
-        self.run_repeating(
-            code,
-            index,
-            instruction,
-            body_start,
-            end_index,
-            resume,
-            label,
-            body.conditional.as_ref(),
-            source,
-            state,
-            LoopCounter::of(code, body),
-            engine,
-        )
-    }
-
     /// A `DO WITH`'s state, from the supplier its header filed.
     fn with_state(
         &self,
@@ -1299,287 +1074,8 @@ impl Interp {
         };
     }
 
-    /// The shared driver for every repeating `LoopKind` (everything but
-    /// `Simple`, which never repeats and runs through `run_loop_with_header`'s
-    /// own arm directly): advance-test-run-test-advance, in this order: `WHILE`
-    /// tested before the body, `UNTIL` after, and a `LEAVE`/ `ITERATE` handled
-    /// identically to falling off the bottom of the body normally, because that
-    /// is what `ITERATE` does (`do until n = 1 / n = n + 1 / if n = 1 then
-    /// iterate / ...` terminates immediately rather than skipping straight to
-    /// the next pass's top, because `ITERATE` jumps to the loop's own
-    /// bottom-of-iteration bookkeeping, which for an `UNTIL` loop includes
-    /// testing `UNTIL` right there).
-    #[allow(
-        clippy::too_many_arguments,
-        reason = "every parameter is load-bearing state one repeating DO/LOOP needs"
-    )]
-    fn run_repeating(
-        &mut self,
-        code: &Code<'_>,
-        do_index: usize,
-        do_instruction: &Instruction,
-        body_start: usize,
-        end_index: usize,
-        resume: usize,
-        label: Option<SymbolId>,
-        conditional: Option<&LoopConditional>,
-        source: Option<&ProgramSource>,
-        mut state: LoopState,
-        mut counter: Option<LoopCounter>,
-        engine: BodyEngine<'_>,
-    ) -> Result<Flow, Failure> {
-        // The loop's own two spaces of indent, added once here rather than
-        // per-check: `static_indent(&code.body.instructions, do_index)` is
-        // what a control-setup failure at `do_index` itself already
-        // reports (measured: `do i = 1 to 3 for 1/0` is unindented at top
-        // level), and `WHILE`/`UNTIL` both report two spaces *more* than
-        // that (measured: `do while 1/0` at top level is indented two).
-        // Captured from `current_value_indent` once, here, rather than
-        // recomputed: `Op::Clause`'s region already set it to exactly this
-        // value (`indent_offset` included) for this same `DO`/`LOOP`
-        // instruction, and every caller into this function reaches it
-        // through nothing but `self.eval` calls in between (never another
-        // instruction step), so it has not moved.
-        let do_indent = self.activity.clause_state.current_value_indent;
-        let loop_indent = do_indent + 2;
-        // `TRACE`'s own per-iteration re-echo: the `DO`/`LOOP` instruction is re-executed once per
-        // pass, so its own clause -- and `END`'s -- echo again on every pass, unlike every other
-        // construct in this crate, which resolves its whole repetition inside one `step` call and
-        // so is stepped, and echoed, exactly once (`Op::Clause`'s own doc comment). `false` on
-        // entry because the *first* pass's echo already happened there, before
-        // `run_loop_with_header` ever called into this function.
-        let is_until_loop = matches!(conditional, Some(cond) if cond.until);
-        let mut first_pass = true;
-        // Which clause the loop header's own evaluation belongs to on this pass
-        // -- `HeaderClause`'s own doc comment has the mechanism and the three
-        // transcripts.
-        let mut header_clause = HeaderClause::Do;
-        let mut iterate_site: IterateSite = None;
-        let end_line = self
-            .clause_line_at(code, end_index, &code.body.instructions[end_index], source)
-            .unwrap_or(0);
-        // Hoisted out of the loop body: the header's own
-        // failure path needs it one statement *before* the body.
-        // Derived from `code`, so it borrows nothing this function
-        // mutates.
-        let end_instruction = &code.body.instructions[end_index];
-
-        loop {
-            if !first_pass
-                && !is_until_loop
-                && self.trace_mode().all
-                && let Some((line, text)) = self.clause_site(source, do_instruction)
-            {
-                self.trace_clause(line, do_indent, &text);
-            }
-            first_pass = false;
-
-            // **The `DO` clause, entered and ended like any other** (fix
-            // round 3). The header's control expressions and a `WHILE` test
-            // are Rexx clauses in their own right: measured, `do while zn <
-            // sub()` reports `SIGL` 4 -- the `DO` clause's own line -- for
-            // the first test, and delivers a `CALL ON` handler queued by
-            // `sub()` right there rather than after the whole loop.
-            let do_line = self
-                .clause_line_at(code, do_index, do_instruction, source)
-                .unwrap_or_else(|| self.activity.clause_state.line());
-            let header_line = match header_clause {
-                HeaderClause::Do => do_line,
-                HeaderClause::End => end_line,
-                HeaderClause::Iterate { line } => line,
-            };
-            let header = self.in_clause(header_line, |it| {
-                // **A header that fails is blamed on the clause that
-                // transferred control back here, at the loop body's indent**
-                // -- not on the `DO` clause, which is where the enclosing
-                // `Op::Clause`'s region would put it.
-                // Reachable since the control variable is genuinely re-read:
-                // a body that leaves it non-numeric fails the `BY` addition
-                // on the next re-test. Measured, three shapes, all `trace r`
-                // with `ii = 'abc'` in a `do ii = 1 to 3` body:
-                let outcome = 'header: {
-                    let advanced = match it.loop_advance(code, &mut state, do_indent, loop_indent) {
-                        Ok(advanced) => advanced,
-                        Err(failure) => {
-                            match header_clause {
-                                HeaderClause::Do => {}
-                                HeaderClause::End => {
-                                    it.record_failure_at(source, end_instruction, loop_indent);
-                                }
-                                HeaderClause::Iterate { .. } => {
-                                    it.record_failure_site_at(iterate_site.clone(), loop_indent);
-                                }
-                            }
-                            return Err(failure);
-                        }
-                    };
-                    if !advanced {
-                        break 'header HeaderOutcome::Stop;
-                    }
-                    if let Some(cond) = conditional
-                        && !cond.until
-                    {
-                        // Overrides `Op::Clause`'s region's own setting of
-                        // `current_value_indent` (to `do_indent`, from stepping
-                        // the `DO`/`LOOP` instruction itself) -- `WHILE`'s own
-                        // condition is evaluated here, inside that same `step`
-                        // call, never through a `Op::Clause`'s region of its own.
-                        it.activity.clause_state.current_value_indent = loop_indent;
-                        match it.eval_condition(
-                            code,
-                            &cond.condition,
-                            ConditionTrace::Keyword(loop_indent, "WHILE"),
-                            raised_while_not_logical,
-                        ) {
-                            Ok(true) => {}
-                            Ok(false) => break 'header HeaderOutcome::Stop,
-                            Err(failure) => {
-                                it.record_failure_at(source, do_instruction, loop_indent);
-                                return Err(failure);
-                            }
-                        }
-                    }
-                    if let Some(counter) = counter.as_mut() {
-                        it.count_pass(code, counter, loop_indent)?;
-                    }
-                    HeaderOutcome::Continue
-                };
-                it.settle_block_indent(outcome.entered(), do_indent);
-                Ok(outcome)
-            })?;
-            match header {
-                ClauseOutcome::Ended(exit) => return Ok(Flow::Exit(exit.value())),
-                ClauseOutcome::Ran(Err(failure)) => return Err(failure),
-                ClauseOutcome::Ran(Ok(HeaderOutcome::Stop)) => return Ok(Flow::Goto(resume)),
-                ClauseOutcome::Ran(Ok(HeaderOutcome::Continue)) => {}
-            }
-
-            let flow = self.run_bounded(code, body_start, end_index, source, engine)?;
-            // The pass boundary is an instruction of its own (`END`, or the
-            // `ITERATE` that jumped to it), and the clock is stale after it, so
-            // a loop with no body clause still reads a fresh `TIME('E')` per
-            // test.
-            self.activation_mut().clock_stale = true;
-            match self.do_body_outcome(code, do_index, label, true, resume, flow)? {
-                DoOutcome::Escaped(escape) => return Ok(escape),
-                // **`END` is not reached at all when an `ITERATE` ended the
-                // pass**, so it neither echoes nor owns the re-test. Under
-                // `trace r`, `do while zn < 2 / zn = zn + 1 / iterate / end`
-                // echoes `iterate` and then the `do` clause again, with no
-                // `end` line between them, where the same loop without the
-                // `ITERATE` does echo `end`. The reason is structural: `END`
-                // itself is what re-executes the loop on a fall-through, and
-                // `ITERATE` re-executes it directly -- `END` is jumped straight
-                // over.
-                DoOutcome::Iterated { line, site } => {
-                    header_clause = HeaderClause::Iterate { line };
-                    iterate_site = site;
-                }
-                // Reached only when the body fell off its end. **Not**
-                // reached on a matched `LEAVE`, which returns above instead
-                // -- measured, this task's report (`DO FOREVER` with a
-                // `LEAVE` on the second pass): `END` never echoes for that
-                // final pass, only for a pass that genuinely falls through
-                // to it.
-                DoOutcome::FellThrough => {
-                    header_clause = HeaderClause::End;
-                    if self.trace_mode().all
-                        && let Some((line, text)) = self.clause_site(source, end_instruction)
-                    {
-                        self.trace_clause(line, do_indent, &text);
-                    }
-                }
-            }
-
-            if let Some(cond) = conditional
-                && cond.until
-            {
-                // **`UNTIL`'s own check needs a *second*, unconditional re-echo
-                // of the `DO`/`LOOP` clause here, not only the top-of-loop one
-                // above.** For example `do until n = 1 / n = n + 1 / end`
-                // re-echoes `do until ...` a second time, after `END`, before
-                // testing `UNTIL` at all -- even on the very first test, which
-                // runs after the body's only pass and before the top-of-loop
-                // re-echo (gated on `!first_pass`) would ever fire again. The
-                // `DO`/`LOOP` instruction is re-entered to make *this* decision
-                // too, exactly like it is to test `WHILE` or advance a
-                // `Controlled` loop -- `UNTIL`'s decision point is not the same
-                // event as the top-of-loop one, so it needs its own echo
-                // unconditionally rather than sharing `first_pass`'s gate.
-                if self.trace_mode().all
-                    && let Some((line, text)) = self.clause_site(source, do_instruction)
-                {
-                    self.trace_clause(line, do_indent, &text);
-                }
-                // Same override as `WHILE`'s own, above -- the re-echoed
-                // `END` clause just before this point left
-                // `current_value_indent` untouched (its own `trace_clause`
-                // call does not set it), so without this `UNTIL`'s
-                // intermediates would otherwise still read `do_indent`.
-                self.activity.clause_state.current_value_indent = loop_indent;
-                // `UNTIL`'s test belongs to the same clause the *next* top-of-loop re-test
-                // does, and for the same reason: they are one event, a re-execution of the
-                // loop started by whichever instruction transferred control back to the
-                // loop. With an `ITERATE` in the body, which is what tells the two
-                // candidates apart, `do until zs() >= 2` with `if zn = 1 then iterate` on
-                // line 4 reports `4` for the first test and `6` (the `END` line) for the
-                // second.
-                let until_line = match header_clause {
-                    HeaderClause::Do => do_line,
-                    HeaderClause::End => end_line,
-                    HeaderClause::Iterate { line } => line,
-                };
-                // **This clause's boundary is unobservable on every probe
-                // tried, and it is here because it cannot be separated from
-                // the line.**
-                // Round 3 shipped the line and the boundary as two calls, and
-                // re-review 3 measured that replacing the boundary half alone
-                // changed nothing on any of its 38 probes: between this test
-                // and the next top-of-loop test no user clause runs and
-                // nothing re-sets the clause line, so whichever of the two
-                // boundaries fires first delivers at the same line. With
-                // `in_clause` there is no half to remove -- the mutation
-                // "keep the line, drop the boundary" is not expressible, and
-                // dropping both is what `a_while_retest_belongs_to_the_do_
-                // clause_then_to_the_end_clause` and `a_loop_retest_after_
-                // an_iterate_belongs_to_the_iterate_clause` fail on.
-                let tested = self.in_clause(until_line, |it| {
-                    // The pass's own temps frame, as the flat path's.
-                    let pass = it.roots.activity_mut().push_frame();
-                    let held = it.eval_condition(
-                        code,
-                        &cond.condition,
-                        ConditionTrace::Keyword(loop_indent, "UNTIL"),
-                        raised_until_not_logical,
-                    )?;
-                    it.roots.activity_mut().pop_frame(pass);
-                    // An `UNTIL` that held ends the loop, so this clause's
-                    // own boundary sits outside the block -- the mirror of
-                    // the top-of-loop test's, and the same call.
-                    it.settle_block_indent(!held, do_indent);
-                    Ok(held)
-                })?;
-                match tested {
-                    ClauseOutcome::Ended(exit) => return Ok(Flow::Exit(exit.value())),
-                    ClauseOutcome::Ran(Ok(true)) => return Ok(Flow::Goto(resume)),
-                    ClauseOutcome::Ran(Ok(false)) => {}
-                    ClauseOutcome::Ran(Err(failure)) => {
-                        self.record_failure_at(source, end_instruction, loop_indent);
-                        return Err(failure);
-                    }
-                }
-            }
-            // Nothing happens at the bottom of a pass: a `Controlled` loop's
-            // `BY` increment is `loop_advance`'s, where it belongs, because the
-            // two `>>>` lines traced straddle that addition and the value on
-            // the near side of it is gone by the time the next `loop_advance`
-            // runs.
-        }
-    }
-
     /// What one repeating `Do`/`Loop`'s own body just produced, translated
-    /// into what `run_repeating`/`run_loop_with_header`'s own `Simple` arm
-    /// does next.
+    /// into what the construct does next.
     fn do_body_outcome(
         &mut self,
         code: &Code<'_>,
@@ -1642,11 +1138,11 @@ impl Interp {
     }
 
     /// Sets a repeating loop up to be driven from
-    /// the op driver's own frame instead of a nested `run_ops` entry, or
-    /// declines and leaves the caller to take the nested path.
+    /// the op driver's own frame, or finishes the construct at once (a header
+    /// that says zero passes, a block).
     #[allow(
         clippy::too_many_arguments,
-        reason = "the same argument `run_loop_with_header`'s own allow makes: every parameter is state one DO/LOOP needs"
+        reason = "every parameter is state one DO/LOOP needs"
     )]
     pub(crate) fn flat_loop_start(
         &mut self,
@@ -1718,7 +1214,7 @@ impl Interp {
                 ..
             } => self.with_state(*with_index, *item, &values),
             // A block, which returned above.
-            LoopKind::Simple => return Ok(FlatStart::Fallback(values)),
+            LoopKind::Simple => unreachable!("a block returned above"),
         };
         // **The snapshot's only root once this answers `Flat`**: the driver
         // then closes this clause and pops the temps frame `over_snapshot`
@@ -1805,8 +1301,7 @@ impl Interp {
         }
     }
 
-    /// The block's own clause, run inside the `DO`'s as `run_loop_with_header`'s
-    /// `Simple` arm runs it, so a condition queued before the `DO` is
+    /// The block's own clause, run inside the `DO`'s, so a condition queued before the `DO` is
     /// delivered with the block open.
     fn flat_block_start(
         &mut self,
@@ -1932,7 +1427,7 @@ impl Interp {
             DoOutcome::FellThrough => {
                 flat.header_clause = HeaderClause::End;
                 // `END` echoes for a pass that fell through to it and for no
-                // other, exactly as `run_repeating`'s own arm does.
+                // other, as every repeating loop's trace requires.
                 if echoing
                     && let Some((line, text)) =
                         self.clause_site(source, &code.body.instructions[flat.end_index])
@@ -1942,7 +1437,7 @@ impl Interp {
             }
         }
         // **`UNTIL`'s own test, and its own re-echo of the `DO`/`LOOP`
-        // clause.** `run_repeating`'s own arm has the transcript: the loop
+        // clause.** The loop
         // instruction is re-entered to make this decision as much as to test
         // `WHILE` or advance a control variable, so the echo here is
         // unconditional rather than sharing the top-of-loop one below -- which
@@ -1954,8 +1449,7 @@ impl Interp {
             {
                 self.trace_clause(line, flat.do_indent, &text);
             }
-            // The clock is stale after the pass boundary, as `run_repeating`'s
-            // own store says. Only an `UNTIL` or a `WHILE` re-evaluates an
+            // The clock is stale after the pass boundary. Only an `UNTIL` or a `WHILE` re-evaluates an
             // expression here, so a plain loop's pass skips the store.
             self.activation_mut().clock_stale = true;
             let counted = counted(self)?;

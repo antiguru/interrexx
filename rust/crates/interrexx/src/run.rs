@@ -3658,8 +3658,8 @@ impl Interp {
                 // all -- see `test_case_when`'s own trace calls instead.
                 ConditionTrace::Result(indent) => self.trace_result(indent, &text),
                 // `WHILE`/`UNTIL`'s own `>K>` -- re-fires every pass because the
-                // condition is re-evaluated every pass, which `run_repeating`'s
-                // own call site already does without any change from this task.
+                // condition is re-evaluated every pass, which the flat loop's
+                // own call site already does.
                 ConditionTrace::Keyword(indent, keyword) => {
                     self.trace_keyword(indent, keyword, &text);
                 }

@@ -202,7 +202,6 @@ mod counter {
         RedirectWrapper,
         SecurityManager,
         LoopHeader,
-        NestedLoop,
         Interpret,
         TreeEval,
         TreeSend,
