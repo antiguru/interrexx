@@ -12,19 +12,14 @@ repository = "https://github.com/antiguru/interrexx"
 [workspace.dependencies]
 interrexx = { path = "crates/interrexx", version = "0.1.0" }
 interrexx-api = { path = "crates/interrexx-api", version = "0.1.0" }
-interrexx-bench = { path = "crates/interrexx-bench", version = "0.1.0" }
-interrexx-capi = { path = "crates/interrexx-capi", version = "0.1.0" }
-interrexx-capi-rxapi = { path = "crates/interrexx-capi-rxapi", version = "0.1.0" }
 interrexx-classes = { path = "crates/interrexx-classes", version = "0.1.0" }
 interrexx-core = { path = "crates/interrexx-core", version = "0.1.0" }
-interrexx-extract = { path = "crates/interrexx-extract", version = "0.1.0" }
 interrexx-inventory = { path = "crates/interrexx-inventory", version = "0.1.0" }
 interrexx-lib = { path = "crates/interrexx-lib", version = "0.1.0" }
 interrexx-num = { path = "crates/interrexx-num", version = "0.1.0" }
 interrexx-oracle = { path = "crates/interrexx-oracle", version = "0.1.0" }
 interrexx-parse = { path = "crates/interrexx-parse", version = "0.1.0" }
 interrexx-rxapi = { path = "crates/interrexx-rxapi", version = "0.1.0" }
-interrexx-spec = { path = "crates/interrexx-spec", version = "0.1.0" }
 
 [workspace.lints.rust]
 # `deny` and not `forbid`.

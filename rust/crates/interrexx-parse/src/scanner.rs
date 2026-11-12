@@ -882,8 +882,12 @@ impl<'a> Scanner<'a> {
         // Either shape has at most five, so this needs no growth.
         let mut real = [0usize; 5];
         let mut count = 0;
-        for index in self.clause_first..eoc {
-            if self.tokens[index].kind.tag() == Tag::Blank {
+        for (index, token) in self.tokens[..eoc]
+            .iter()
+            .enumerate()
+            .skip(self.clause_first)
+        {
+            if token.kind.tag() == Tag::Blank {
                 continue;
             }
             if count == real.len() {
