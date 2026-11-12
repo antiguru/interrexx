@@ -301,7 +301,7 @@ pub(crate) fn stream(
     // `&added`: STATE and DESCRIPTION never populate the table, and neither
     // does a command that is not an OPEN, CLOSE or SEEK -- which is why
     // `stream(n,'S')` on an unknown name leaves nothing behind.
-    let touches = command.as_deref().is_some_and(repositions);
+    let touches = command.as_deref().and_then(first_command).is_some();
     // The direction is unreachable here and measured so: `stream('')` and
     // `stream('','S')` are both 40.27 above, so the empty name never gets
     // this far and no default stream is ever chosen for `STREAM`.
@@ -332,28 +332,41 @@ pub(crate) fn stream(
     };
     let answer = answer.ok_or_else(|| Failure::from(Raised::no_result(b"COMMAND")))?;
     // A CLOSE drops the entry, and an OPEN drops it when the answer is not
-    // `READY:`. The word scan is over the whole upper-cased command, so `query
-    // open` takes the OPEN branch (matches the reference implementation; not
-    // yet specified).
-    if let Some(command) = command.as_deref() {
-        let upper = command.to_ascii_uppercase();
-        let words: Vec<&[u8]> = upper.split(|byte| byte.is_ascii_whitespace()).collect();
-        let closed = words.contains(&&b"CLOSE"[..]);
-        let failed_open =
-            words.contains(&&b"OPEN"[..]) && interp.to_text(answer).as_ref() != b"READY:";
-        if closed || failed_open {
+    // `READY:`; the command is the one its first word names
+    // (r[bif.stream.deviation.166]).
+    match command.as_deref().and_then(first_command) {
+        Some(StreamCommand::Close) => interp.forget_stream(&stream_name),
+        Some(StreamCommand::Open) if interp.to_text(answer).as_ref() != b"READY:" => {
             interp.forget_stream(&stream_name);
         }
+        _ => {}
     }
     Ok(answer)
 }
 
-/// Whether a `STREAM` command is one the table follows: the whole upper-cased
-/// string is scanned for the words rather than reading the first one (matches
-/// the reference implementation; not yet specified).
-fn repositions(command: &[u8]) -> bool {
-    let upper = command.to_ascii_uppercase();
-    upper
+/// The commands the stream table follows.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum StreamCommand {
+    Open,
+    Close,
+    Seek,
+}
+
+/// The command a `STREAM` command string names: its first word, in any case,
+/// shortened to any of its leading letters (r[bif.stream.command]). Words
+/// later in the string never count, so `query position close` is a `QUERY`
+/// (r[bif.stream.deviation.166]).
+fn first_command(command: &[u8]) -> Option<StreamCommand> {
+    let word = command
         .split(|byte| byte.is_ascii_whitespace())
-        .any(|word| word == b"OPEN" || word == b"CLOSE" || word == b"SEEK")
+        .find(|word| !word.is_empty())?;
+    let upper = word.to_ascii_uppercase();
+    [
+        (&b"OPEN"[..], StreamCommand::Open),
+        (&b"CLOSE"[..], StreamCommand::Close),
+        (&b"SEEK"[..], StreamCommand::Seek),
+    ]
+    .into_iter()
+    .find(|(name, _)| name.starts_with(&upper))
+    .map(|(_, kind)| kind)
 }

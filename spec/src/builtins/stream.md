@@ -4,7 +4,7 @@ kind: builtin
 syntax: "STREAM(name [, operation [, command]])"
 ansi: "9.7.8"
 rexxref: "Functions > Built-in Functions > STREAM"
-deviations: [34, 35, 49, 55, 57, 59, 62, 74, 79, 98, 100, 145]
+deviations: [34, 35, 49, 55, 57, 59, 62, 74, 79, 98, 100, 145, 166]
 ---
 
 # STREAM
@@ -1535,4 +1535,39 @@ call sysfiledelete f
 ```output
 missing 93.0 UNKNOWN
 empty 93.0 UNKNOWN
+```
+
+r[bif.stream.deviation.166]
+Which command a `command` is, for everything the call does with a stream of
+that name besides what the command itself does, is decided by its first word
+alone, as [the command rule](r:bif.stream.command) says: a later word that
+reads `OPEN` or `CLOSE` does not make the command an OPEN or a CLOSE. A
+`QUERY` whose words include `OPEN` or `CLOSE` is a `QUERY` that raises
+`SYNTAX 93.0` for the word it does not take, and leaves the stream as it was,
+at its position and open. ooRexx searches the whole command for the words
+`OPEN` and `CLOSE` and treats the command as an OPEN or a CLOSE where it finds
+one, so that its bookkeeping of the stream differs from interrexx's.
+
+```rexx
+f = 'spec-stream-route166-zq.tmp'
+call sysfiledelete f
+call charout f, 'abcdef'
+call charout f
+say stream(f, 'c', 'open read') charin(f, , 2)
+signal on syntax name a
+say stream(f, 'c', 'query position close')
+a: say condition('o')~code stream(f) stream(f, 'c', 'query position read')
+signal on syntax name b
+say stream(f, 'c', 'query position read open')
+b: say condition('o')~code stream(f) stream(f, 'c', 'query position read')
+signal off syntax
+say stream(f, 'c', 'cl') stream(f)
+call sysfiledelete f
+```
+
+```output
+READY: ab
+93.0 READY 3
+93.0 READY 3
+READY: UNKNOWN
 ```
