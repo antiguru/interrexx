@@ -366,6 +366,54 @@ bad: say arg(1) '=>' condition('o')~code
 .datetime~new(9999, 12, 31, 23, 59, 59, 999999) => 9999-12-31T23:59:59.999999
 ```
 
+r[class.datetime.new.init-again]
+`init` is an ordinary message that can be sent again ([the init
+rule](r:class.index.new.init-again)): it gives the instance the moment that
+`new` with the same arguments would make, with the same forms, the same checks
+in the same order and the same codes, and answers nothing. The offset is the
+one the arguments give, or the default offset when they give none, whatever
+the instance had. What an instance holds after an `init` that raised an error
+is not specified.
+
+```rexx
+d = .datetime~new(2017, 6, 30, 5, 6, 7, 8, 60)
+d~init(2018, 1, 2)
+say d (d~offset == .datetime~new~offset)
+d~init(2019, 3, 4, 5, 6, 7, 8, 120)
+say d d~offset
+d~init(5, 30)
+say d d~offset
+d~init(2020, 2, 29, 0, 0, , , .timespan~fromHours(-1))
+say d d~offset
+call try 'd~init(1, 2, 3, 4, 5, 6, 7, 8, 9)'
+call try 'd~init(2017, , 30)'
+call try 'd~init(2017, 13, 1)'
+call try 'd~init(2017, 2, 30)'
+call try 'd~init(-1)'
+call try 'd~init(2017, 6, 30, 0, 0, 0, 0, 901)'
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  say arg(1) '=> no error'
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
+```
+
+```output
+2018-01-02T00:00:00.000000 1
+2019-03-04T05:06:07.000008 02:00:00.000000
+0001-01-01T00:00:00.000005 00:30:00.000000
+2020-02-29T00:00:00.000000 -01:00:00.000000
+d~init(1, 2, 3, 4, 5, 6, 7, 8, 9) => 93.902
+d~init(2017, , 30) => 93.903
+d~init(2017, 13, 1) => 88.907
+d~init(2017, 2, 30) => 40.19
+d~init(-1) => 40.19
+d~init(2017, 6, 30, 0, 0, 0, 0, 901) => 88.907
+```
+
 ## Class methods
 
 r[class.datetime.limits]
@@ -403,7 +451,8 @@ r[class.datetime.today]
 `today` answers the current day of the host, at 00:00:00.000000, with the
 default offset or the one its optional argument gives ([the offset
 rule](r:class.datetime.offset)). The day is the current one and is not
-specified, so the example checks the time of day and the offset only.
+specified, so the example checks the time of day and the offset only. It takes
+at most one argument: a second raises `SYNTAX 93.902`, whatever the first is.
 
 ```rexx
 t = .datetime~today
@@ -412,12 +461,16 @@ say .datetime~today(90)~offset .datetime~today(.timespan~fromHours(-3))~offset
 signal on syntax name bad
 say .datetime~today(901)
 bad: say condition('o')~code
+signal on syntax name bad2
+say .datetime~today(901, 1)
+bad2: say condition('o')~code
 ```
 
 ```output
 00:00:00 0 1
 01:30:00.000000 -03:00:00.000000
 88.918
+93.902
 ```
 
 r[class.datetime.fromdate]
