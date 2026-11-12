@@ -2,7 +2,7 @@
    variable pool of the class that receives the message, so a subclass counts,
    collects and formats on its own. */
 
-::class "TraceObject" public subclass StringTable
+::class "TraceObject" subclass StringTable public
 
 /* r[class.traceobject.collector], r[class.traceobject.notify],
    r[class.traceobject.counter], r[class.traceobject.option]: an unset

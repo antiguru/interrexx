@@ -329,12 +329,19 @@ impl Interp {
             .is_some_and(|exits| exits.root == Some(program))
     }
 
-    /// The running Rexx frame's external trace, `TRACE ?R` on and `TRACE O` off. An
-    /// idle activity's frame is not reached.
+    /// The external trace of the innermost frame that is the program's own, `TRACE ?R` on and
+    /// `TRACE O` off. A request is served at a clause boundary wherever the activity is, which
+    /// can be a library method that a trace line's delivery or a send is running; that code
+    /// keeps its own setting, and the program's takes the request. An idle activity's frame is
+    /// not reached.
     pub(crate) fn set_external_trace(&mut self, on: bool) {
-        if self.running_activation().is_none() {
+        let program = (0..self.activation_depth()).find(|&depth| {
+            self.frame_at(depth)
+                .is_some_and(|frame| !self.library_programs.contains(&frame.program_id))
+        });
+        let Some(depth) = program else {
             return;
-        }
+        };
         let mode = if on {
             crate::trace::TraceMode {
                 debug: true,
@@ -343,7 +350,12 @@ impl Interp {
         } else {
             crate::trace::TraceMode::OFF
         };
-        self.set_trace_mode(mode);
+        if depth == 0 {
+            self.set_trace_mode(mode);
+        } else if let Some(frame) = self.frame_at_mut(depth) {
+            // The running frame's cache is its own; resuming this one reads its mode.
+            frame.trace_mode = mode;
+        }
     }
 
     /// The halt exit's clear, once a trap has taken a `HALT`, unless the trap is the instance
