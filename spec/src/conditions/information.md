@@ -285,10 +285,11 @@ h: say condition('o')~code
 r[cond.information.library.trace]
 The [trace line](r:class.stackframe.traceline) of a level that runs a method of
 the class library, and so each such entry of `TRACEBACK`, holds no text of the
-class library's code. It is the number of the line, `*-*`, a blank, and
+class library's code. It is the number of the line, `*-*`, one or more
+blanks, and
 `Method NAME with scope "Class" in package "REXX" (no source available).`,
 with the method's name in upper case and the id of the class that defines it;
-the number and the indentation before `*-*` are not specified, as [the library
+the number and how many blanks follow `*-*` are not specified, as [the library
 rule](r:cond.information.library) says. `SOURCE` of such a method has no lines
 ([the source rule](r:class.method.source)), and the [report of an
 error](r:cond.index.syntax) raised inside the library prints no line of that
