@@ -823,7 +823,7 @@ say b~index(7)~makeString('L', ',')
 b~removeItem(7)
 say b~first~makeString('L', ',')
 </code></pre>
-<pre><code class="language-output defect=#159">q,r
+<pre><code class="language-output">q,r
 2,1 q
 1,2 r
 2,1 q
@@ -914,7 +914,7 @@ b[2, 1] = 'p'
 say (b~next(3, 1) == .nil) (b~next(1, 3) == .nil)
 say (b~next(.array~of(3, 1)) == .nil) (b~next(.array~of(5, 5)) == .nil)
 </code></pre>
-<pre><code class="language-output defect=#188">3 1 1 1
+<pre><code class="language-output">3 1 1 1
 1 1
 1 1
 1 1
@@ -1672,7 +1672,7 @@ b = .array~new(3, 3)
 do i = 1 to 3; do j = 1 to 3; b[i, j] = i||j; end; end
 say b~previous(4, 1)~makeString('L', ',') b~previous(1, 5)~makeString('L', ',')
 </code></pre>
-<pre><code class="language-output defect=#160">2,2 2,2
+<pre><code class="language-output">2,2 2,2
 2,2 2,2
 3,3 3,3
 </code></pre>
