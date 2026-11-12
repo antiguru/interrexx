@@ -23,7 +23,7 @@ use crate::Interp;
 use crate::error::{Failure, Notation, Raised};
 
 /// The two bytes that may separate the groups of a hexadecimal or binary
-/// string: `RexxString::ch_SPACE` and `ch_TAB`.
+/// string: space and tab.
 fn is_blank(byte: u8) -> bool {
     byte == b' ' || byte == b'\t'
 }
@@ -308,8 +308,7 @@ pub(crate) fn base64_digit(byte: u8) -> Option<u8> {
     }
 }
 
-/// `String~encodeBase64`, `RexxString::encodeBase64`
-/// (`classes/StringClassConversion.cpp:90`).
+/// `String~encodeBase64`.
 pub(crate) fn encode_base64_bytes(source: &[u8]) -> Vec<u8> {
     let mut out = Vec::with_capacity(source.len().div_ceil(3) * 4);
     for group in source.chunks(3) {
@@ -332,7 +331,7 @@ pub(crate) fn encode_base64_bytes(source: &[u8]) -> Vec<u8> {
     out
 }
 
-/// `String~decodeBase64`, `RexxString::decodeBase64` (`:153`). `None` is
+/// `String~decodeBase64`. `None` is
 /// 93.962, which is the method's only refusal.
 pub(crate) fn decode_base64_bytes(source: &[u8]) -> Option<Vec<u8>> {
     if !source.len().is_multiple_of(4) {
@@ -389,8 +388,7 @@ pub(crate) fn b2x_bytes(interp: &Interp, string: &[u8]) -> Result<Vec<u8>, Failu
 
 // ---- the numeric four ----
 
-/// The slack the oracle adds to a conversion's working buffer,
-/// `NumberString::OVERFLOWSPACE`.
+/// The slack the oracle adds to a conversion's working buffer.
 const OVERFLOW_SPACE: usize = 2;
 
 /// The `NUMERIC DIGITS` in force at the call.
@@ -432,7 +430,7 @@ fn render_decimal(accumulator: &[u8], negative: bool) -> Vec<u8> {
     out
 }
 
-/// The body `C2D` and `X2D` share, `RexxString::x2dC2d`.
+/// The body `C2D` and `X2D` share.
 fn x2d_c2d(
     interp: &mut Interp,
     name: &'static [u8],
@@ -675,8 +673,7 @@ fn scan_decimal(text: &[u8]) -> Option<Decimal> {
     })
 }
 
-/// Whether `value` has a non-zero decimal within `digits` significant digits,
-/// `NumberString::hasSignificantDecimals`.
+/// Whether `value` has a non-zero decimal within `digits` significant digits.
 fn has_significant_decimals(value: &Decimal, digits: u64) -> bool {
     if value.exponent >= 0 {
         return false;
@@ -708,7 +705,7 @@ fn has_significant_decimals(value: &Decimal, digits: u64) -> bool {
     remaining > 0 && significand.get(index).copied().unwrap_or(0) >= 5
 }
 
-/// The body `D2X` and `D2C` share, `NumberString::d2xD2c`.
+/// The body `D2X` and `D2C` share.
 fn d2x_d2c(
     interp: &mut Interp,
     name: &'static [u8],

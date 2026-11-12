@@ -179,7 +179,7 @@ fn the_raw_argument_table_re_derives_from_the_oracles_own_source() {
         "optional_big_integer",
         "optional_pad",
     ];
-    /// The accessors that are `stack->peek` and convert nothing.
+    /// The accessors that only peek at the stack and convert nothing.
     const RAW: &[&str] = &["get_arg", "optional_argument", "arg_exists", "arg_omitted"];
 
     let path = std::path::PathBuf::from(concat!(

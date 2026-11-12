@@ -430,8 +430,7 @@ fn use_strict_arg_checks_arity_at_both_ends() {
 }
 
 /// `USE STRICT ARG`'s three refusals report the method catalogue rows inside a
-/// method and the call ones outside -- `UseInstruction.cpp`'s three
-/// `inMethod()` switches (`:103`, `:292`, `:305`).
+/// method and the call ones outside.
 #[test]
 fn use_strict_arg_reports_method_errors_in_a_method_and_call_errors_outside() {
     for (source, status, catalogue) in [
@@ -977,7 +976,7 @@ fn a_variable_reference_outlives_its_frame() {
 }
 
 /// A message the class does not define reaches `UNKNOWN`, which sends it to
-/// the referenced value -- `VariableReference::unknownRexx`. Measured, oracle
+/// the referenced value. Measured, oracle
 /// rc 0: `p = 'abc'; say (>p)~length` is `3`.
 #[test]
 fn a_variable_reference_forwards_an_unknown_message() {

@@ -128,8 +128,8 @@ impl Interp {
     }
 
     /// An `INTERPRET` activation leaves through the `RETURNED` block that runs
-    /// the `UNINIT`s a collection readied (`RexxActivation.cpp:676-705`), a
-    /// `SIGNAL` out of it too (`signalTo`, `:2096-2100`).
+    /// the `UNINIT`s a collection readied, a
+    /// `SIGNAL` out of it too.
     #[cold]
     #[inline(never)]
     fn drain_leaving_fragment(&mut self, flow: &Flow) -> Result<(), Failure> {
@@ -222,8 +222,8 @@ impl Interp {
     /// Answers whether the clause is to run again, which is what `=` asks for.
     /// A failure the pause raises is recorded against `clause`.
     ///
-    /// The oracle decides per instruction class (`pauseInstruction`,
-    /// `pauseLabel`) against flags `TraceSetting::setDebug` derives from the
+    /// The oracle decides per instruction class
+    /// against flags the trace setting derives from the
     /// letter: an instruction pauses under `A`, `R` and `I` and a label
     /// wherever labels trace. A command pauses from
     /// [`Interp::debug_pause_after_command`] instead. A negative skip count
@@ -278,9 +278,10 @@ impl Interp {
             .inspect_err(|_| self.record_failure_site(code, index, source, clause))
     }
 
-    /// `conditionalPauseInstruction`: the pause an instruction takes from
+    /// The pause an instruction takes from
     /// inside its own work: `INTERPRET`'s before its fragment, and `LEAVE`'s
-    /// and `ITERATE`'s once their loop has taken them. Answers whether the instruction is to run again.
+    /// and `ITERATE`'s once their loop has taken them. Answers whether the
+    /// instruction is to run again.
     pub(crate) fn debug_pause_instruction(&mut self) -> Result<Pause, Failure> {
         let mode = self.pausing_mode();
         if !(mode.debug && mode.all) {
@@ -289,7 +290,7 @@ impl Interp {
         self.debug_pause_now()
     }
 
-    /// The pause `RexxActivation::command` takes once a command it traced
+    /// The pause taken once a command it traced
     /// has settled `RC` and raised its condition. Answers whether the command
     /// is to run again.
     pub(crate) fn debug_pause_after_command(
@@ -318,7 +319,7 @@ impl Interp {
         }
     }
 
-    /// `doDebugPause` (`RexxActivation.cpp:4199`-`4283`). Answers whether the
+    /// Answers whether the
     /// clause is to run again.
     ///
     /// The prompt is printed once per activation, and a line that is neither
@@ -375,11 +376,11 @@ impl Interp {
         }
     }
 
-    /// `Activity::traceInput` (`Activity.cpp:3240`-`3263`): `LINEIN` sent to
+    /// The debug input line: `LINEIN` sent to
     /// `.local~DEBUGINPUT`, an absent entry or a `.nil` answer read as the
     /// null string. A condition the send raises is the pause's failure.
     fn debug_input_line(&mut self) -> Result<Vec<u8>, Failure> {
-        // The I/O exit's first pass (`Activity::traceInput`).
+        // The I/O exit's first pass.
         if self.exits.is_some()
             && let Some(line) = self.debug_read_exit()?
         {
@@ -525,13 +526,12 @@ pub(crate) enum Pause {
 }
 
 /// Whether a debug pause follows an instruction of `kind` once its own work
-/// is done, as the oracle's `execute` ends in `pauseInstruction` or a block
-/// header's in `conditionalPauseInstruction`. `INTERPRET` pauses before its
-/// fragment instead. `CALL ON` and `CALL OFF` do not pause
-/// (`RexxInstructionCallOn::execute`). `REPLY` pauses once the activation is
-/// marked as having replied and before the caller goes on, so its banner comes
-/// there and the continuation, which shares the activation's debug state,
-/// does not print it again.
+/// is done, as the oracle's instructions end in a pause, or a block header's
+/// in a conditional one. `INTERPRET` pauses before its fragment instead.
+/// `CALL ON` and `CALL OFF` do not pause. `REPLY` pauses once the activation
+/// is marked as having replied and before the caller goes on, so its banner
+/// comes there and the continuation, which shares the activation's debug
+/// state, does not print it again.
 pub(crate) fn pauses_after(kind: &InstructionKind) -> bool {
     !matches!(
         kind,

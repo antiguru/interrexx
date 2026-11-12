@@ -2549,7 +2549,7 @@ impl Interp {
     }
 
     /// The debug pause a clause region owes on its cold exit, ahead of the
-    /// clause boundary as the oracle's `execute` pauses ahead of its trap
+    /// clause boundary as the oracle pauses ahead of its trap
     /// check. `=` answers the region's own first op, and a failure the pause
     /// raises is the clause's.
     #[cold]
@@ -2592,7 +2592,7 @@ impl Interp {
 
     /// [`Interp::flat_loop_step_top`] for a flow that escaped to a flat
     /// loop's frame, with the pause a `LEAVE` or an `ITERATE` owes once the
-    /// loop has taken it (`RexxInstructionLeave::execute`). `=` runs the
+    /// loop has taken it. `=` runs the
     /// instruction again.
     #[inline(never)]
     fn flat_loop_step_escaped(
@@ -3266,8 +3266,7 @@ impl Interp {
 
     /// The continuation of `callee`, a replied activation just popped whose
     /// body ended before its next clause: an activity with no level to
-    /// resume, which announces its `>I>` and `<I<` there
-    /// (`RexxActivation::run`'s `REPLIED` arm). `callee` is the running
+    /// resume, which announces its `>I>` and `<I<` there. `callee` is the running
     /// level again while its frame is recorded as the spawner's.
     #[cold]
     #[inline(never)]
@@ -4295,7 +4294,7 @@ impl Interp {
     /// answer of a kind the oracle searches for on every call is read again
     /// once the arguments have run, since they can write a routine table or
     /// call through this site before it is used, as the oracle reads
-    /// `externalTarget` after them (`expression/ExpressionFunction.cpp:184-189`).
+    /// the external target after them.
     fn site_resolution_before_arguments<'c>(
         &mut self,
         chunk: &'c Chunk,

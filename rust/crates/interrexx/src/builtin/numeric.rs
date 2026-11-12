@@ -225,7 +225,7 @@ pub(crate) fn format_over(
     let Numeric { digits, form, .. } = current(interp);
     let value = &rounded_target(value.clone(), digits)?;
     // `before` and `after` are always materialised -- the interpreter's
-    // `leadingSpaces` and `trailingDecimalZeros` are computed on every path
+    // leading spaces and trailing decimal zeros are computed on every path
     // -- so both are reserved from the allocator before anything is built.
     let before = before.map(padding_width).transpose()?;
     let after = after.map(padding_width).transpose()?;
@@ -494,19 +494,15 @@ fn written_whole(interp: &mut Interp, target: &[u8], rest: &[Option<ObjRef>], di
 
 // ---- RANDOM ----
 
-/// `RexxActivation::RANDOM_FACTOR` and `RANDOM_ADDER`
-/// (`execution/RexxActivation.hpp:593`).
 const RANDOM_FACTOR: u64 = 25_214_903_917;
 const RANDOM_ADDER: u64 = 11;
 
-/// `DefaultRandomMin`/`DefaultRandomMax`/`MaxRandomRange`
-/// (`execution/RexxActivation.hpp:601`).
+/// `DefaultRandomMin`/`DefaultRandomMax`/`MaxRandomRange`.
 const DEFAULT_MIN: i64 = 0;
 const DEFAULT_MAX: i64 = 999;
 const MAX_RANGE: i64 = 999_999_999;
 
-/// `RANDOMIZE` (`execution/RexxActivation.hpp:596`), wrapping because the
-/// C++ multiplies `uint64_t`.
+/// `RANDOMIZE`, wrapping because the oracle multiplies `uint64_t`.
 fn randomize(seed: u64) -> u64 {
     seed.wrapping_mul(RANDOM_FACTOR).wrapping_add(RANDOM_ADDER)
 }
@@ -522,7 +518,7 @@ pub(crate) fn random(
     let seed = whole_number(interp, name, args, 3)?;
 
     // The seed is validated and *applied* before the range is looked at,
-    // which is `RexxActivation::random`'s own first statement. A call that
+    // which is what the oracle does first. A call that
     // then fails its range check has still moved the stream on.
     if let Some(seed) = seed
         && seed < 0
@@ -547,7 +543,7 @@ pub(crate) fn random(
     };
 
     // An argument the call omitted substitutes as the null string, because
-    // the C++ passes `OREF_NULL` -- measured, `random(-1)` reports
+    // the oracle passes no object -- measured, `random(-1)` reports
     // `argument 1 ("-1")` and `argument 2 ("")`.
     let written = |value: Option<i64>| value.map_or(Vec::new(), |v| v.to_string().into_bytes());
     if high < low {
@@ -561,8 +557,8 @@ pub(crate) fn random(
         let spread = u64::try_from(high - low + 1).expect("the range check bounded this");
         low += i64::try_from(reverse_bits(scrambled) % spread).expect("a value below the spread");
     }
-    // **Text, not a number.** `RexxActivation::random` answers
-    // `new_integer(minimum)`, a `RexxInteger`, whose spelling is its own
+    // **Text, not a number.** the oracle answers
+    // the minimum as an integer object, whose spelling is its own
     // decimal digits and is never re-rendered under a later `DIGITS` or
     // `FORM`. Measured: `numeric digits 3 ; say random(12345,12345)` is
     // `12345`, where a value carrying the D15 pair would render `1.23E+4` --
@@ -571,7 +567,7 @@ pub(crate) fn random(
     Ok(interp.text_built(low.to_string().into_bytes()))
 }
 
-/// `RexxActivation::getRandomSeed`: install a supplied seed, then advance the
+/// Install a supplied seed, then advance the
 /// stream once and answer the new state.
 /// The state is the nearest top-level activation's, seeded on its first
 /// unseeded draw from the activity's generator.
@@ -597,7 +593,7 @@ fn next_seed(interp: &mut Interp, seed: Option<i64>) -> u64 {
     state
 }
 
-/// `Activity::getRandomSeed`: a new activation's seed, advancing the
+/// A new activation's seed, advancing the
 /// activity's generator once. A splitmix64 step, so successive activations'
 /// streams are not shifted copies of one another.
 fn activation_seed(interp: &mut Interp) -> u64 {
@@ -629,7 +625,7 @@ fn initial_seed(interp: &mut Interp) -> u64 {
     u64::from(nanos) << 32 ^ u64::from(std::process::id())
 }
 
-/// The bit reversal `RexxActivation::random` does before taking the modulus:
+/// The bit reversal the oracle does before taking the modulus:
 /// the seed's bits, most significant first.
 fn reverse_bits(seed: u64) -> u64 {
     let mut work = 0u64;

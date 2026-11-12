@@ -1,5 +1,5 @@
-//! `DATE` and `TIME`: the calendar, ported from `RexxDateTime`
-//! (`classes/support/RexxDateTime.cpp`) rather than from either builtin's
+//! `DATE` and `TIME`: the calendar, modelled on the oracle's
+//! rather than on either builtin's
 //! documentation, because the two option lists documentation gives disagree
 //! with the error inserts the oracle actually raises -- `DATE('C')` and
 //! `DATE('J')` exist in other Rexx dialects and are rejected with 40.904 on
@@ -21,10 +21,10 @@ use crate::Interp;
 use crate::activation::NO_CLOCK;
 use crate::error::{Failure, Raised};
 
-// ---- the calendar, ported from `RexxDateTime` ----
+// ---- the calendar ----
 
 /// Days in a `years`-year span of the proleptic Gregorian calendar, counting
-/// from year 0 -- `RexxDateTime.hpp`'s `BASE_DAYS` macro. `years` is always a
+/// from year 0. `years` is always a
 /// multiple of 4, 100 or 400 at every call site below, but the formula does
 /// not require that.
 const fn base_days(years: i64) -> i64 {
@@ -73,7 +73,7 @@ const MONTH_NAMES: [&[u8]; 12] = [
     b"December",
 ];
 
-/// `RexxDateTime::dayNames`, Monday first -- `getWeekDay`'s own `%7` is
+/// The day names, Monday first -- the weekday's own `%7` is
 /// indexed against this order, not against a locale's own week start.
 const DAY_NAMES: [&[u8]; 7] = [
     b"Monday",
@@ -93,9 +93,9 @@ fn is_leap_year(year: i64) -> bool {
     year % 4 == 0 && (year % 100 != 0 || year % 400 == 0)
 }
 
-/// One calendar timestamp: a direct port of `RexxDateTime`'s own fields and
+/// One calendar timestamp: modelled on the oracle's own fields and
 /// arithmetic, over `i64` throughout rather than mixing `int`/`int64_t` as
-/// the C++ does, since nothing here needs the narrower width and a single
+/// the oracle does, since nothing here needs the narrower width and a single
 /// type is one fewer cast to get wrong.
 #[derive(Clone, Copy, Debug)]
 struct Timestamp {
@@ -107,12 +107,12 @@ struct Timestamp {
     seconds: i64,
     microseconds: i64,
     /// Microseconds this timestamp's own fields are offset from UTC,
-    /// positive east of Greenwich -- `RexxDateTime::timeZoneOffset`.
+    /// positive east of Greenwich.
     time_zone_offset: i64,
 }
 
 impl Timestamp {
-    /// `RexxDateTime::clear`'s own zero state, less one field: year, month
+    /// The oracle's own cleared state, less one field: year, month
     /// and day start at `1/1/1` rather than `0/0/0` -- the module doc's own
     /// "a defined answer where the oracle's own is undefined" explains why a
     /// cleared timestamp here is never asked to render a zero calendar date.
@@ -134,7 +134,7 @@ impl Timestamp {
     }
 
     /// The day-of-year (`DATE('D')`), 1-based, leap day counted from March
-    /// onward -- `RexxDateTime::getYearDay`.
+    /// onward.
     fn year_day(&self) -> i64 {
         let mut yearday = MONTH_STARTS
             .get((self.month - 1) as usize)
@@ -147,7 +147,7 @@ impl Timestamp {
         yearday
     }
 
-    /// Days since 0001-01-01 (`DATE('B')`) -- `RexxDateTime::getBaseDate`.
+    /// Days since 0001-01-01 (`DATE('B')`).
     fn base_date(&self) -> i64 {
         let temp_year = self.year - 1;
         let mut basedate = temp_year * 365 + temp_year / 4 - temp_year / 100 + temp_year / 400;
@@ -160,7 +160,7 @@ impl Timestamp {
     }
 
     /// Microseconds since 0001-01-01T00:00:00 (`DATE('F')`) --
-    /// `RexxDateTime::getBaseTime`.
+    /// Microseconds since 0001-01-01.
     fn base_time(&self) -> i64 {
         let mut time = self.base_date();
         time *= SECONDS_IN_DAY;
@@ -171,14 +171,14 @@ impl Timestamp {
     }
 
     /// Seconds since 1970-01-01T00:00:00, negative before it
-    /// (`DATE('T')`/`TIME('T')`) -- `RexxDateTime::getUnixTime`, which
+    /// (`DATE('T')`/`TIME('T')`), which
     /// rounds a negative count down rather than toward zero.
     fn unix_time(&self) -> i64 {
         (self.base_time() - UNIX_BASE_TIME).div_euclid(MICROSECONDS)
     }
 
     /// Sets year/month/day from a day count since 0001-01-01, clearing every
-    /// other field -- `RexxDateTime::setBaseDate`. `false` for a `basedays`
+    /// other field. `false` for a `basedays`
     /// outside `0..=MAX_BASE_DATE`.
     fn set_base_date(&mut self, basedays: i64) -> bool {
         if !(0..=MAX_BASE_DATE).contains(&basedays) {
@@ -220,7 +220,7 @@ impl Timestamp {
 
     /// Sets month/day from a 1-based day-of-year, using this timestamp's own
     /// (already-set) year to choose the leap-aware month table --
-    /// `RexxDateTime::setDay`.
+    /// Sets the calendar fields from a day count.
     fn set_day(&mut self, basedays: i64) {
         if basedays < 1 {
             self.month = 0;
@@ -248,14 +248,14 @@ impl Timestamp {
     }
 
     /// Sets year, then month/day from a day-of-year within it --
-    /// `RexxDateTime::setDate`, `DATE('D')`'s own input style.
+    /// `DATE('D')`'s own input style.
     fn set_date(&mut self, year: i64, day_of_year: i64) {
         self.year = year;
         self.set_day(day_of_year);
     }
 
-    /// Sets every field from a microsecond count since 0001-01-01T00:00:00
-    /// -- `RexxDateTime::setBaseTime`. `false` outside `0..=MAX_BASE_TIME`.
+    /// Sets every field from a microsecond count since 0001-01-01T00:00:00.
+    /// `false` outside `0..=MAX_BASE_TIME`.
     fn set_base_time(&mut self, basetime: i64) -> bool {
         if !(0..=MAX_BASE_TIME).contains(&basetime) {
             return false;
@@ -274,7 +274,7 @@ impl Timestamp {
         true
     }
 
-    /// `RexxDateTime::setUnixTime`: seconds since 1970-01-01T00:00:00,
+    /// Seconds since 1970-01-01T00:00:00,
     /// negative before it.
     fn set_unix_time(&mut self, seconds: i64) -> bool {
         match seconds
@@ -286,7 +286,7 @@ impl Timestamp {
         }
     }
 
-    /// `RexxDateTime::setHours`: sets the hour, zeroing minutes/seconds/
+    /// Sets the hour, zeroing minutes/seconds/
     /// microseconds. `false` outside `0..24`.
     fn set_hours(&mut self, h: i64) -> bool {
         if !(0..24).contains(&h) {
@@ -299,7 +299,7 @@ impl Timestamp {
         true
     }
 
-    /// `RexxDateTime::setMinutes`. `false` outside `0..1440`.
+    /// `false` outside `0..1440`.
     fn set_minutes(&mut self, m: i64) -> bool {
         if !(0..1_440).contains(&m) {
             return false;
@@ -311,7 +311,7 @@ impl Timestamp {
         true
     }
 
-    /// `RexxDateTime::setSeconds`. `false` outside `0..86400`.
+    /// `false` outside `0..86400`.
     fn set_seconds(&mut self, s: i64) -> bool {
         if !(0..86_400).contains(&s) {
             return false;
@@ -324,7 +324,7 @@ impl Timestamp {
         true
     }
 
-    /// `RexxDateTime::adjustTimeZone` (`TIME('O')`'s own input style): keeps
+    /// `TIME('O')`'s own input style: keeps
     /// this timestamp's UTC instant fixed while moving its own zone offset
     /// to `offset` microseconds from UTC, which is what shifts the local
     /// wall-clock fields. The offset is local minus
@@ -346,8 +346,7 @@ impl Timestamp {
     }
 
     /// `DATE('M')`'s own month name (and `'L'`'s, through [`Timestamp::
-    /// format_language`]) -- `RexxDateTime::getMonthName`, `monthNames
-    /// [month - 1]`.
+    /// format_language`]).
     fn month_name(&self) -> &'static [u8] {
         MONTH_NAMES
             .get((self.month - 1) as usize)
@@ -365,11 +364,11 @@ impl Timestamp {
 
     // ---- parsing an input conversion argument ----
 
-    /// `RexxDateTime::parseDateTimeFormat`: `date` against a fixed template,
+    /// `date` against a fixed template,
     /// `sep` substituted at each `/`. See the format alphabet at each of
     /// this method's own callers -- `m`/`d`/`D`/`H`/`i`/`s`/`u`/`y`/`Y`/`M`/
     /// `C`/`c`/`/`/`:`/`.`, the oracle's own thirteen -- ported field by
-    /// field from the C++ source rather than from prose, because the
+    /// field from the oracle's behaviour rather than from prose, because the
     /// variable-width fields (`D`, `c`, `u`) and the two-digit year's
     /// sliding century window are exactly the parts documentation never
     /// states precisely enough to reproduce.
@@ -716,7 +715,7 @@ fn push_decimal(out: &mut Vec<u8>, n: i64, width: usize) {
 
 /// `date[start..start+len]` parsed as an unsigned decimal integer, or `None`
 /// if any of those bytes is missing or is not an ASCII digit --
-/// `RexxDateTime::getNumber`'s first overload.
+/// The digits of `date` at `start..start + len` as a number.
 fn get_number(date: &[u8], start: usize, len: usize) -> Option<i64> {
     let slice = date.get(start..start + len)?;
     let mut value = 0i64;
@@ -730,7 +729,7 @@ fn get_number(date: &[u8], start: usize, len: usize) -> Option<i64> {
 }
 
 /// [`get_number`], rejected if the parsed value exceeds `max` --
-/// `RexxDateTime::getNumber`'s second overload.
+/// [`get_number`], refusing a value above `max`.
 fn get_number_capped(date: &[u8], start: usize, len: usize, max: i64) -> Option<i64> {
     get_number(date, start, len).filter(|&value| value <= max)
 }
@@ -739,9 +738,8 @@ fn get_number_capped(date: &[u8], start: usize, len: usize, max: i64) -> Option<
 /// ARGUMENT_DIGITS` -- the same precision `whole_number` (`builtin.rs`)
 /// converts a typed builtin argument under, reused here because `DATE`'s
 /// `B`/`F`/`T`/`D` and `TIME`'s `H`/`S`/`M`/`F`/`T`/`O` input styles convert
-/// their own `indate`/`intime` the identical way -- `RexxString::
-/// numberValue`/`Numerics::objectToInt64`, both of which the oracle also
-/// caps rather than reading unbounded digits.
+/// their own `indate`/`intime` the identical way -- the oracle also
+/// caps these rather than reading unbounded digits.
 fn whole_number_of(text: &[u8]) -> Option<i64> {
     std::str::from_utf8(text)
         .ok()
@@ -889,8 +887,7 @@ fn elapsed_reading(interp: &mut Interp, reading: i64, reset: bool) -> Vec<u8> {
 // ---- option validation ----
 
 /// `DATE`'s output-style letters, exactly as its own 40.904 message spells
-/// them (`Error_Incorrect_call_list`'s `"BDEFILMNOSTUW"` literal,
-/// `expression/BuiltinFunctions.cpp`).
+/// them.
 const DATE_OPTIONS1: &str = "BDEFILMNOSTUW";
 /// `DATE`'s input-style letters -- ten, not thirteen: no `L`, `M` or `W`,
 /// since a month or weekday *name* is not itself a parseable date.
@@ -921,8 +918,8 @@ fn style_byte(
     }
 }
 
-/// `expression/BuiltinFunctions.hpp`'s own `ALPHANUM` macro, spelled out for
-/// [`check_separator`]'s membership test.
+/// The alphanumeric characters, spelled out for [`check_separator`]'s
+/// membership test.
 const ALPHANUM: &[u8] = b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
 /// Membership as the oracle's own `strchr(set, byte)` computes it, its
@@ -1016,8 +1013,8 @@ pub(crate) fn date(
             }
         };
         timestamp = Timestamp::clear();
-        // `BuiltinFunctions.cpp:1114`, immediately after its own `clear()`:
-        // "everything is done using the current timezone offset". Without
+        // Immediately after `clear()` the oracle sets the current timezone
+        // offset: "everything is done using the current timezone offset". Without
         // this the parsed timestamp carries offset `0` and `TIME('O')`'s
         // input style answers the wrong zone -- invisible while every "now"
         // was fixed at UTC, and a silent wrong answer the moment it is not.
@@ -1102,7 +1099,7 @@ pub(crate) fn time(
             return Err(Raised::invalid_conversion(name, style).into());
         }
         timestamp = Timestamp::clear();
-        // `BuiltinFunctions.cpp:1375`, the same port as `DATE`'s above.
+        // The same as `DATE`'s above.
         timestamp.time_zone_offset = current.time_zone_offset;
         let valid = match style2 {
             b'N' => timestamp.parse_normal_time(intime_bytes),
@@ -1132,7 +1129,7 @@ pub(crate) fn time(
             // [`Activation::cached_clock`], which is what
             // [`real_clock_base_time`] returned, so the reading is the same
             // UTC quantity and the difference carries no zone -- what the
-            // oracle's `getUTCBaseTime` answers.
+            // oracle's UTC base time answers.
             let reading = now_base_time(interp);
             let text = elapsed_reading(interp, reading, style == b'R');
             Ok(interp.text(&text))

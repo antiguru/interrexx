@@ -11,20 +11,18 @@ use crate::value::Rendered;
 use crate::{Interp, Loud};
 
 /// Crate-visible because the eight base conversions are methods on `String`
-/// as well as builtins -- `AddMethod("B2X", RexxString::b2x, 0)` and the rest
-/// of `memory/Setup.cpp:634`-`:641` -- and the cores here are what keep the
-/// two forms from coming to disagree about a grouping rule or a sign.
+/// as well as builtins -- `B2X` and the rest of the eight -- and the cores
+/// here are what keep the two forms from coming to disagree about a grouping
+/// rule or a sign.
 pub(crate) mod convert;
-/// Crate-visible because `String~dataType` is the same test `DATATYPE` is --
-/// `AddMethod("Datatype", RexxString::dataType, 1)` (`memory/Setup.cpp:584`)
-/// -- and the thirteen letters are what the two forms must not come to
+/// Crate-visible because `String~dataType` is the same test `DATATYPE` is,
+/// and the thirteen letters are what the two forms must not come to
 /// disagree about. The refusal is not shared: only the letter test is.
 pub(crate) mod datatype;
 pub(crate) mod datetime;
-/// Crate-visible because `String~sign` is the same computation `SIGN` is --
-/// `RexxString::sign` is `ArithmeticMethod(Sign(), "SIGN")`
-/// (`classes/StringClass.cpp:1084`) -- and [`numeric::sign_of`] is what keeps
-/// the builtin and the method from coming to disagree.
+/// Crate-visible because `String~sign` is the same computation `SIGN` is, and
+/// [`numeric::sign_of`] is what keeps the builtin and the method from coming
+/// to disagree.
 pub(crate) mod numeric;
 pub(crate) mod queues;
 pub(crate) mod registrations;
@@ -59,7 +57,7 @@ type Run = fn(&mut Interp, &'static [u8], Args<'_>) -> Result<ObjRef, Failure>;
 
 /// One builtin this crate runs: its name, its arity, and the code.
 struct Builtin {
-    /// The name as `BuiltinFunctions.cpp` spells it, which is upper case.
+    /// The name as the language spells it, which is upper case.
     /// Compared against the call site's own bytes without upcasing either
     /// side -- see [`dispatch`] for the measurement that makes that the rule
     /// rather than a shortcut.
@@ -269,7 +267,7 @@ const IMPLEMENTED: &[Builtin] = &[
         // A minimum of 1, not 2: the second argument is the type option,
         // and it is optional -- measured, `datatype('12.5')` succeeds with
         // no second argument at all, answering `NUM`/`CHAR` rather than
-        // 40.3. `DATATYPE_Min`/`DATATYPE_Max`, `BuiltinFunctions.cpp:780`.
+        // 40.3.
         name: b"DATATYPE",
         min: 1,
         max: Some(2),
@@ -278,7 +276,7 @@ const IMPLEMENTED: &[Builtin] = &[
     Builtin {
         // A minimum of 0 and a maximum of 5: `date()` and `date('S')` both
         // succeed with no other arguments at all, and `DATE_Min`/
-        // `DATE_Max` (`BuiltinFunctions.cpp:1003`-`1004`) name 5 as the top
+        // `DATE_Max` name 5 as the top
         // -- `osep`/`isep`, positions 4 and 5, following the input/output
         // style pair. This module's own doc comment on the count check
         // names the conditional-required quirk `(min, max)` cannot express
@@ -512,8 +510,8 @@ const IMPLEMENTED: &[Builtin] = &[
         run: datatype::symbol,
     },
     Builtin {
-        // A minimum of 0 and a maximum of 3: `TIME_Min`/`TIME_Max`
-        // (`BuiltinFunctions.cpp:1315`-`1316`). `option2` (position 3)
+        // A minimum of 0 and a maximum of 3: `TIME_Min`/`TIME_Max`.
+        // `option2` (position 3)
         // requires `intime` (position 2) the same way `DATE`'s own
         // conditional pair does, measured, `time(,,'n')` is 40.5 naming
         // argument 2.
@@ -553,8 +551,7 @@ const IMPLEMENTED: &[Builtin] = &[
         run: string::upper,
     },
     Builtin {
-        // `VALUE_Min`/`VALUE_Max`, `BuiltinFunctions.cpp:1812`-`1813`: the
-        // new-value and selector positions are both optional, so
+        // The new-value and selector positions are both optional, so
         // `value('name')` alone is legal.
         name: b"VALUE",
         min: 1,
@@ -594,7 +591,7 @@ const IMPLEMENTED: &[Builtin] = &[
     Builtin {
         // The search phrase is argument 1 and the string searched is argument
         // 2, which is the reverse of every other builtin here that takes both
-        // (`BUILTIN(WORDPOS)`, `expression/BuiltinFunctions.cpp`). Measured,
+        // in the oracle). Measured,
         // the message numbers them the same way round: `wordpos('a','a b','q')`
         // is `WORDPOS argument 3 must be a whole number`.
         name: b"WORDPOS",
@@ -913,9 +910,9 @@ fn whole_number(
     {
         return Ok(Some(whole));
     }
-    // **`stringValue()` on the *object*, not on the value the conversion
+    // **The string value of the *object*, not of the value the conversion
     // above read**, which is the rule for every object substitution in an
-    // error message: `reportException` is handed the object and the catalogue
+    // error message: the report is handed the object and the catalogue
     // renders it. Measured, three descriptors: `substr('abcdef',(1,2))` is
     // 40.12 `found "an Array"` where `substr('abcdef',(2,))` answers `bcdef`,
     // so the same argument converts through one rendering and is quoted
@@ -939,8 +936,8 @@ fn pad_byte(
         return Ok(None);
     };
     // **The string value, and quoted as the string value too** -- the
-    // opposite of [`whole_number`] above, because `padArgument` converts with
-    // `stringArgument` and then quotes the *converted string* rather than the
+    // opposite of [`whole_number`] above, because the padding argument is converted
+    // to a string and the oracle then quotes the *converted string* rather than the
     // object. Measured, `translate('abc','x','y',(1,2))` is 40.23 `found "1`
     // and `2"` on two lines, where `substr('abcdef',(1,2))` quotes
     // `"an Array"`.

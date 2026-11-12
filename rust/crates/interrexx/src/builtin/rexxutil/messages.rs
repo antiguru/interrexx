@@ -1,6 +1,5 @@
-//! The `REXXUTIL` message routines: `getErrorMessage` and the `SysGetMessage`
-//! pair in `interpreter/platform/unix/SysRexxUtil.cpp`, `formatMessage` in
-//! `runtime/RexxUtilCommon.cpp`, and `SysGetErrorText`. A catalog other than
+//! The `REXXUTIL` message routines: the error-message lookups, the
+//! `SysGetMessage` pair and `SysGetErrorText`. A catalog other than
 //! the interpreter's own is read as glibc 2.43's `catopen` and `catgets` read
 //! it (`catgets/catgets.c`, `catgets/open_catalog.c`).
 
@@ -22,11 +21,11 @@ const MESSAGE_NOT_FOUND: &[u8] = b"Error: Message not found";
 
 const CATALOG_NOT_FOUND: &[u8] = b"Error: Message catalog not found";
 
-/// The most substitution values `formatMessage` takes.
+/// The most substitution values a message formats.
 const SUBSTITUTION_LIMIT: usize = 9;
 
-/// The `Message_map_table` bound: messages whose major code is below this
-/// have a message number `RexxGetErrorMessageByNumber` finds.
+/// The bound on the mapped messages: messages whose major code is below this
+/// have a message number the lookup finds.
 const MAPPED_MAJOR_LIMIT: u16 = 102;
 
 /// `SysGetMessage(number [, catalog] [, substitution...])`: message `number`
@@ -97,7 +96,7 @@ fn strerror(number: i32) -> Vec<u8> {
         .to_vec()
 }
 
-/// A positive whole-number argument as the C++ passes it on, to an `int`.
+/// A positive whole-number argument as the oracle passes it on, to an `int`.
 #[allow(
     clippy::cast_possible_truncation,
     reason = "the oracle truncates: SysGetMessage(4294967301) is message 5"
@@ -106,7 +105,7 @@ fn native_int(value: i64) -> i32 {
     value as i32
 }
 
-/// `getErrorMessage`: the interpreter's own message where `catalog` is
+/// The interpreter's own message where `catalog` is
 /// omitted or is `rexx.cat`, else the catalog's.
 fn error_message(interp: &Interp, catalog: Option<&[u8]>, set: i32, number: i32) -> Vec<u8> {
     match catalog.map(c_string) {
@@ -118,7 +117,7 @@ fn error_message(interp: &Interp, catalog: Option<&[u8]>, set: i32, number: i32)
     }
 }
 
-/// `RexxGetErrorMessageByNumber`: the text of the message whose message
+/// The text of the message whose message
 /// number is `number`.
 fn rexx_message(number: i32) -> Option<&'static str> {
     mapped_message(number).map(|message| message.text)
@@ -131,7 +130,7 @@ pub(crate) fn mapped_message(number: i32) -> Option<&'static interrexx_inventory
         .find(|message| message.major < MAPPED_MAJOR_LIMIT && i32::from(message.number) == number)
 }
 
-/// Where `formatMessage` reads its substitution values.
+/// Where message formatting reads its substitution values.
 enum Substitutions<'a> {
     /// The routine's own arguments.
     Arguments(&'a [Option<ObjRef>]),
@@ -160,7 +159,7 @@ impl Substitutions<'_> {
     }
 }
 
-/// `formatMessage`: `message` with `&1` to `&9` replaced by the
+/// `message` with `&1` to `&9` replaced by the
 /// substitution values from position `first` on, a reference past them
 /// replaced by nothing. 40.1 where there are more than nine values.
 ///
@@ -221,7 +220,7 @@ fn substitute(message: &[u8], values: &[Vec<u8>]) -> Vec<u8> {
 }
 
 /// `ObjectToStringValue`: the value's requested string, as the C string the
-/// C++ measures with `strlen`. A string request answering `.nil` is read as
+/// oracle measures with `strlen`. A string request answering `.nil` is read as
 /// the null string, measured.
 fn substitution_text(interp: &mut Interp, value: ObjRef) -> Result<Vec<u8>, Failure> {
     let string = interp.required_string_or_nil(value)?;
@@ -231,7 +230,7 @@ fn substitution_text(interp: &mut Interp, value: ObjRef) -> Result<Vec<u8>, Fail
     Ok(c_string(&interp.to_text(string)).to_vec())
 }
 
-/// A `RexxArrayObject` argument: the array itself, or what `requestArray`
+/// A `RexxArrayObject` argument: the array itself, or what an array request
 /// answers, rooted. 98.913 where that is not a single-dimensional array.
 fn substitution_array(interp: &mut Interp, value: ObjRef) -> Result<ObjRef, Failure> {
     let array = if interp.array_slots(value).is_some() {
@@ -268,7 +267,7 @@ const HEADER_BYTES: usize = 12;
 /// oracle's text for a catalog that does not open or a message it does not
 /// hold. An empty message reads as one that is not there.
 ///
-/// Where `catgets` answers its default the C++ reads `errno` and answers
+/// Where `catgets` answers its default the oracle reads `errno` and answers
 /// "Error: Invalid message catalog" for `EBADF`. glibc's `catgets` sets
 /// `ENOMSG` or nothing, so that text answers only to a stale `errno`, and
 /// here it is never the answer.

@@ -159,8 +159,8 @@ fn indent_in_range(instructions: &[Instruction], start: usize, end: usize, targe
                 let then_start = pc + 1;
                 // `then_start` is the `Then` marker's *own* index, not its
                 // body's first instruction -- measured against the oracle
-                // (`ThenInstruction.cpp`'s `execute`: `indent(); trace;
-                // indent();`), a marker clause sits at exactly two spaces,
+                // (the oracle indents, traces, then indents again), a marker
+                // clause sits at exactly two spaces,
                 // half of what its own body gets (four). Before this check
                 // existed, `target == then_start` fell into the body branch
                 // below and got the wrong answer (4, not 2) because that
@@ -179,8 +179,8 @@ fn indent_in_range(instructions: &[Instruction], start: usize, end: usize, targe
                     Some(InstructionKind::Else { then_exit }) => {
                         let else_end = then_exit.unwrap_or(len);
                         // Same shape as `Then`, and the same measurement
-                        // (`ElseInstruction.cpp`'s `execute` is byte-for-byte
-                        // the same two-`indent()`-calls dance). Before this
+                        // (the oracle's `ELSE` does the same indent, trace,
+                        // indent dance). Before this
                         // check, `target == false_target` fell all the way
                         // through this whole arm (the body check below is
                         // strict `>`) to `pc = else_end; continue`, which
@@ -280,9 +280,8 @@ fn indent_in_range(instructions: &[Instruction], start: usize, end: usize, targe
                     }
                     if let Some(otherwise_index) = otherwise {
                         // `OTHERWISE` traces its own clause once (no double
-                        // `indent()` -- `OtherwiseInstruction.cpp`'s
-                        // `execute` is `trace; indent();`, not `indent();
-                        // trace; indent();`) at the SELECT's own scan level,
+                        // indent: the oracle traces, then indents, rather than
+                        // indenting, tracing and indenting) at the SELECT's own scan level,
                         // the same two spaces a `WHEN`'s condition gets, and
                         // only its body gets the further two. Before this
                         // check, `target == *otherwise_index` matched

@@ -1,6 +1,4 @@
-//! The `REXXUTIL` routines over files and search paths:
-//! `interpreter/runtime/RexxUtilCommon.cpp`, `platform/unix/SysRexxUtil.cpp`
-//! and the `platform/unix/SysFileSystem.cpp` calls they make.
+//! The `REXXUTIL` routines over files and search paths.
 
 use chrono::{Datelike as _, NaiveDate, TimeDelta, Timelike as _};
 use interrexx_core::ObjRef;
@@ -26,12 +24,12 @@ fn file_type(path: &[u8]) -> Option<FileType> {
     Some(FileType::from_raw_mode(stat.st_mode))
 }
 
-/// `SysFileSystem::fileExists`: whether `path` names a regular file.
+/// Whether `path` names a regular file.
 fn is_regular(path: &[u8]) -> bool {
     file_type(path) == Some(FileType::RegularFile)
 }
 
-/// `samePaths`: whether both names exist and resolve to one path. Every
+/// Whether both names exist and resolve to one path. Every
 /// file system is taken to be case-sensitive.
 fn same_paths(first: &[u8], second: &[u8]) -> bool {
     let Ok(first) = std::fs::canonicalize(os_path(first)) else {
@@ -48,7 +46,7 @@ fn whole_second(seconds: i64) -> Timespec {
     }
 }
 
-/// `copyFileDereferenceSymbolicLinks`: `from`'s data written over `to`, a
+/// Copy following links: `from`'s data written over `to`, a
 /// link at either end followed. Answers `0` or the errno of the step that
 /// failed, and a target opened before a failed read keeps what was written.
 fn copy_following_links(from: &[u8], to: &[u8], preserve_mode: bool) -> i32 {
@@ -106,7 +104,7 @@ fn copy_following_links(from: &[u8], to: &[u8], preserve_mode: bool) -> i32 {
     0
 }
 
-/// `copyFileDontDereferenceSymbolicLinks` as the move calls it, never
+/// Copy keeping links, as the move calls it, never
 /// replacing a target: a link is copied as a link, and an existing target
 /// where either end is a link answers `EEXIST`.
 fn copy_keeping_links(from: &[u8], to: &[u8]) -> i32 {
@@ -138,7 +136,7 @@ fn copy_keeping_links(from: &[u8], to: &[u8]) -> i32 {
     }
 }
 
-/// `temporaryFilename`: `path` with six digits appended, naming no regular
+/// `path` with six digits appended, naming no regular
 /// file, or `None` where every one does.
 fn spare_name(path: &[u8]) -> Option<Vec<u8>> {
     let start = random() % 1_000_000;
@@ -162,7 +160,7 @@ fn random() -> u64 {
     std::hash::RandomState::new().hash_one(0u8)
 }
 
-/// `SysFileCopy(from, to)`: `SysFileSystem::copyFile`, which keeps the
+/// `SysFileCopy(from, to)`: keeps the
 /// source's times to the second and gives a target it creates the source's
 /// mode. Answers `0` or an errno.
 pub(crate) fn file_copy(
@@ -177,7 +175,7 @@ pub(crate) fn file_copy(
     Ok(answer(interp, code.into()))
 }
 
-/// `SysFileMove(from, to)`: `SysFileSystem::moveFile`. A target that is a
+/// `SysFileMove(from, to)`. A target that is a
 /// regular file already, or the source itself, is `EEXIST`. Across file
 /// systems it copies, keeping links, and then unlinks the source, and a
 /// failed unlink there answers `-1` rather than an errno.
@@ -494,7 +492,7 @@ pub(crate) fn set_file_date_time(
     Ok(answer(interp, if set.is_ok() { 0 } else { -1 }))
 }
 
-/// `SysTempFileName(template [, filler])`: `getUniqueFileName`. Each filler
+/// `SysTempFileName(template [, filler])`. Each filler
 /// character in the template becomes a digit, the first the lowest, from a
 /// random start counting up until the qualified name names nothing. The null
 /// string where the template has no filler or more than nine, or every name
@@ -599,7 +597,7 @@ pub(crate) fn search_path(
     Ok(interp.text_built(found))
 }
 
-/// `SysFileSystem::searchPath`. A name starting `/`, `./`, `../` or `~` is
+/// The search-path lookup. A name starting `/`, `./`, `../` or `~` is
 /// only qualified. Otherwise each non-empty entry of `path` is tried in turn,
 /// and the first that names anything ends the search: a regular file is the
 /// answer, anything else is not found.
@@ -638,7 +636,7 @@ fn search(interp: &Interp, file: &[u8], path: &[u8]) -> Vec<u8> {
     Vec::new()
 }
 
-/// Where `SysFileSearch` and `SysFileTree` put what they find: `StemHandler`.
+/// Where `SysFileSearch` and `SysFileTree` put what they find.
 #[derive(Clone, Copy)]
 pub(super) enum Found {
     /// An `Array`, emptied first and appended to.
@@ -649,7 +647,7 @@ pub(super) enum Found {
 }
 
 impl Found {
-    /// The argument at `position` as `StemHandler::setStem` resolves it: an
+    /// The argument at `position` as a stem handler resolves it: an
     /// instance of `Array` itself, a stem, or a string naming a stem variable.
     /// 40.925 for anything else.
     pub(super) fn resolve(
@@ -694,7 +692,7 @@ impl Found {
         Ok(())
     }
 
-    /// `StemHandler::complete`: a stem's count, into tail 0.
+    /// Stores a stem's count into tail 0.
     pub(super) fn complete(self, interp: &mut Interp, count: usize) {
         if let Found::Stem(stem) = self {
             let count = answer(interp, i64::try_from(count).unwrap_or(i64::MAX));

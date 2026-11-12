@@ -30,9 +30,8 @@ pub(crate) fn raised_if_not_logical(found: &[u8]) -> Raised {
 /// 34.902: a `GUARD ... WHEN` condition is not exactly `0` or `1`.
 /// `Error_Logical_value_guard`, catalogue text "Value of expression following
 /// GUARD keyword must be exactly \"0\" or \"1\"; found \"...\"", one
-/// substitution, the operand's own rendered text. `truthValue(Error_Logical_
-/// value_guard)` at `instructions/GuardInstruction.cpp:167` is what selects
-/// this sub-number over `IF`'s and `WHEN`'s.
+/// substitution, the operand's own rendered text. This sub-number is selected
+/// over `IF`'s and `WHEN`'s.
 pub(super) fn raised_guard_not_logical(found: &[u8]) -> Raised {
     Raised::syntax(34, 902, vec![found.to_vec()])
 }
@@ -48,14 +47,12 @@ pub(crate) fn raised_when_not_logical(found: &[u8]) -> Raised {
     Raised::syntax(34, 2, vec![found.to_vec()])
 }
 
-/// 34.905: a `SELECT CASE` value's `==` answer is not exactly `0` or `1`
-/// (`Error_Logical_value_when_case`, `WhenCaseInstruction.cpp:164`).
+/// 34.905: a `SELECT CASE` value's `==` answer is not exactly `0` or `1`.
 pub(super) fn raised_when_case_not_logical(found: &[u8]) -> Raised {
     Raised::syntax(34, 905, vec![found.to_vec()])
 }
 
-/// 34.906: a supplier's `AVAILABLE` answer is not exactly `0` or `1`
-/// (`Error_Logical_value_supplier`, `SupplierClass.cpp:158`).
+/// 34.906: a supplier's `AVAILABLE` answer is not exactly `0` or `1`.
 pub(crate) fn raised_available_not_logical(found: &[u8]) -> Raised {
     Raised::syntax(34, 906, vec![found.to_vec()])
 }
@@ -91,7 +88,7 @@ pub(super) fn raise_syntax_condition(text: &[u8], additional: Vec<Vec<u8>>) -> R
 /// The error code, `major * 1000 + sub`, that the argument of `RAISE SYNTAX`
 /// names, or `None` where the argument is not a valid error number.
 pub(super) fn syntax_code(text: &[u8]) -> Option<u64> {
-    /// One half of the argument as a Rexx number: `numberValue`, then a
+    /// One half of the argument as a Rexx number, then a
     /// whole-number check. `None` for anything that is not a whole number.
     fn whole(text: &str) -> Option<i64> {
         Number::parse(text)?.whole_value(interrexx_num::DEFAULT_DIGITS as usize)
@@ -117,9 +114,7 @@ pub(super) fn syntax_code(text: &[u8]) -> Option<u64> {
 
 /// The `SYNTAX` condition for error `code`, `major * 1000 + sub`, or 98.941
 /// where the catalogue has no text for it: naming the code as a whole number
-/// where the major has text, and as `major.sub` where it has none
-/// (`Activity::createExceptionObject` and `Activity::buildMessage`,
-/// `interpreter/concurrency/Activity.cpp:1017`, `:1229`).
+/// where the major has text, and as `major.sub` where it has none.
 pub(crate) fn raised_for_code(code: u64, additional: Vec<Vec<u8>>) -> Raised {
     let (major, sub) = (code / 1000, code % 1000);
     let entry = |major: u64, sub: u64| {

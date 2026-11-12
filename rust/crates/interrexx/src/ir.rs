@@ -101,8 +101,7 @@ pub(crate) enum Op {
     PushArg { src: u16 },
     /// The `>A>` line one argument owes, for the value now in `src`, or the
     /// **empty** value line an omitted position owes when `src` is
-    /// [`Op::ARG_OMITTED`] -- which is not the absence of a line
-    /// (`RexxInstruction.cpp:161`).
+    /// [`Op::ARG_OMITTED`] -- which is not the absence of a line.
     TraceArgument { src: u16 },
     /// A call over the `argc` arguments now on top of the driver's argument
     /// stack.

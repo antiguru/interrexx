@@ -8,7 +8,7 @@ use super::{Args, arg, optional_string, required_string};
 use crate::error::{Failure, Raised};
 use crate::{Interp, Novalue};
 
-/// What `LanguageParser::scanSymbol` classifies a piece of text as.
+/// What the parser's symbol scan classifies a piece of text as.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub(crate) enum SymbolKind {
     /// Empty, over 250 bytes, or containing a byte outside `!.?_0-9A-Za-z`
@@ -31,19 +31,18 @@ pub(crate) enum SymbolKind {
     Name,
 }
 
-/// The longest text `scanSymbol` still calls a symbol
-/// (`LanguageParser::MAX_SYMBOL_LENGTH`, `parser/LanguageParser.hpp:458`).
+/// The longest text the parser's symbol scan still calls a symbol.
 const MAX_SYMBOL_LENGTH: usize = 250;
 
-/// Whether `byte` is one `LanguageParser::isSymbolCharacter` accepts
-/// (`parser/Scanner.cpp:60`'s ASCII half): `!.?_0-9A-Za-z`, and nothing at or
+/// Whether `byte` is a symbol character (the ASCII half of what the parser
+/// accepts): `!.?_0-9A-Za-z`, and nothing at or
 /// above `0x80` -- every high byte is a symbol character in no code page
 /// this crate reads.
 fn is_symbol_byte(byte: u8) -> bool {
     matches!(byte, b'!' | b'.' | b'?' | b'_' | b'0'..=b'9' | b'A'..=b'Z' | b'a'..=b'z')
 }
 
-/// Ports `LanguageParser::scanSymbol` (`parser/Scanner.cpp:1792`) onto raw
+/// Ports the parser's symbol scan onto raw
 /// bytes rather than an interned, already-validated source token, because
 /// this is the one caller that has to classify text a running program built
 /// at any byte value.
@@ -135,14 +134,12 @@ fn parse_number(text: &[u8]) -> Option<Number> {
     std::str::from_utf8(text).ok().and_then(Number::parse)
 }
 
-/// `StringUtil::validateGroupedSetQuiet` (`classes/support/StringUtil.cpp:974`):
 /// whether every byte of `text` is in `set`, in groups of `modulus` bytes
 /// optionally separated by a blank or tab -- the first group may be
 /// shorter than `modulus`, every later one must match the first group's own
 /// remainder exactly, and neither a leading nor a trailing blank is
 /// admitted. The empty-string case is the caller's, matching the oracle's
-/// own `len == 0 || validateGroupedSetQuiet(...)` at each of its two call
-/// sites.
+/// own empty-string test at each of its two call sites.
 fn grouped(text: &[u8], set: fn(u8) -> bool, modulus: usize) -> bool {
     if matches!(text.first(), Some(b' ') | Some(b'\t')) {
         return false;
@@ -173,7 +170,7 @@ fn grouped(text: &[u8], set: fn(u8) -> bool, modulus: usize) -> bool {
 }
 
 /// The 13 letters `DATATYPE`'s option argument accepts, spelled exactly as
-/// `StringUtil::dataType`'s own 93.915 message does.
+/// the oracle's own 93.915 message does.
 pub(crate) const DATATYPE_OPTIONS: &str = "ABILMNOSUVWX9";
 
 /// `DATATYPE(string)` / `DATATYPE(string, type)`: what kind of data a string
@@ -232,10 +229,10 @@ pub(crate) fn datatype_matches(
             SymbolKind::Name | SymbolKind::Stem | SymbolKind::CompoundName
         ),
         // `W`'s precision is the *running* `NUMERIC DIGITS`, where `I`'s and
-        // `9`'s are the two fixed ones -- `StringUtil::dataType`'s `'W'` arm
-        // rounds through `NumberString::plus(IntegerZero)` under the current
-        // settings and asks `NumberString::isInteger` of the result, with no
-        // bound from a machine integer (`classes/support/StringUtil.cpp:1076`).
+        // `9`'s are the two fixed ones -- the oracle's `'W'` test
+        // rounds through a plus of zero under the current
+        // settings and asks whether the result is an integer, with no
+        // bound from a machine integer.
         // That `plus` is an operator, so it raises LOSTDIGITS and 42 as one.
         b'W' => match parse_number(text) {
             Some(number) => {
@@ -341,7 +338,7 @@ pub(crate) fn var(interp: &mut Interp, _name: &[u8], args: Args<'_>) -> Result<O
 }
 
 /// A constant name's read answer: a dot-prefixed name resolved the way
-/// `RexxDotVariable::getValue` resolves one, and the upcased text itself for
+/// an environment symbol is, and the upcased text itself for
 /// every other constant shape.
 fn literal_value(interp: &mut Interp, upper: &[u8]) -> Result<ObjRef, Failure> {
     if upper.first() == Some(&b'.') {
@@ -363,7 +360,7 @@ pub(crate) fn value(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result<
     match classify(&upper) {
         // `found` is the call's own spelling, not the upcased text just
         // used to classify it -- see `Raised::argument_not_a_symbol`'s own
-        // doc for the C++ pointer-aliasing mistake that makes those two
+        // doc for the oracle pointer-aliasing mistake that makes those two
         // different call sites in the oracle and one call site here.
         SymbolKind::Bad => Err(Raised::argument_not_a_symbol(name, 1, &text).into()),
         SymbolKind::Numeric | SymbolKind::Literal | SymbolKind::LiteralDot => {
@@ -455,9 +452,8 @@ mod tests {
         (condition.number, condition.sub, condition.additional)
     }
 
-    /// [`classify`] against `SYMBOL.testGroup`'s 26 distinct inputs across
-    /// `test001`-`test028` (`test007`/`test015` and `test019`/`test026`
-    /// each repeat the other's input), which is the exponent-tail
+    /// [`classify`] against 26 distinct inputs of the oracle's own
+    /// `SYMBOL` tests (some of the 28 repeat another's input), which is the exponent-tail
     /// grammar's own adversarial corpus -- every row was measured on the
     /// oracle by the ooTest suite's authors, not by this task.
     #[test]
@@ -545,9 +541,8 @@ mod tests {
         }
     }
 
-    /// `SYMBOL.testGroup`'s `test_SYMBOL` method, all nine of its
-    /// assertions (five documented examples, then its own "new tests"
-    /// comment introduces four more), which exercise the variable pool
+    /// The oracle's own `SYMBOL` test, all nine of its
+    /// assertions (five documented examples, then four more), which exercise the variable pool
     /// rather than the classifier alone: a plain assigned name, a compound
     /// whose tail resolves through a variable, a bare digit constant, an
     /// invalid symbol, and four dot/empty/blank edge cases.
@@ -561,7 +556,7 @@ mod tests {
         );
     }
 
-    /// The `VAR.testGroup` case, unabridged: an assigned simple variable, a
+    /// The oracle's own `VAR` test, unabridged: an assigned simple variable, a
     /// numeric constant, a compound whose tail resolves through a
     /// variable, an invalid symbol, and an environment symbol (which is
     /// never a variable regardless of what it resolves to).
@@ -579,7 +574,7 @@ mod tests {
     /// including tails never individually assigned -- `s.9` itself
     /// classifies as `SymbolKind::CompoundName` (one period, not trailing),
     /// and the stem rule this pins is that its existence check falls back
-    /// to `StemClass::realCompoundVariableValue`'s stem-level default
+    /// to the stem-level default
     /// rather than to `tails.is_empty()`.
     #[test]
     fn a_stems_default_value_makes_every_tail_report_var() {
@@ -594,7 +589,7 @@ mod tests {
     }
 
     /// `DATATYPE`'s one-argument form and its documented option letters,
-    /// against the transcripts `DATATYPE.testGroup` and Step 0(b) of the
+    /// against the transcripts of the oracle's own `DATATYPE` test and Step 0(b) of the
     /// brief both give.
     #[test]
     fn datatype_answers_the_one_argument_form_and_every_option_letter() {
@@ -651,7 +646,7 @@ mod tests {
     /// `DATATYPE`'s option is read as one byte, and the omitted argument is
     /// not an empty one: an omitted second argument selects the one-argument
     /// form, while an empty one is 93.915 with `found "?"` -- the NUL byte
-    /// an empty option's `getChar(0)` reads, turned into `?` by the report
+    /// an empty option's first-character read gives, turned into `?` by the report
     /// line's own control-byte substitution (`error.rs`'s `displayable`).
     #[test]
     fn datatype_tells_an_omitted_option_from_an_empty_one() {

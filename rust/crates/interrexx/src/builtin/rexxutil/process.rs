@@ -1,6 +1,4 @@
-//! The `REXXUTIL` routines over the process and its terminal:
-//! `interpreter/platform/unix/SysRexxUtil.cpp` and
-//! `interpreter/runtime/RexxUtilCommon.cpp`.
+//! The `REXXUTIL` routines over the process and its terminal.
 
 use std::os::fd::{AsFd, BorrowedFd, IntoRawFd as _};
 
@@ -261,7 +259,7 @@ impl Usage {
     /// `%2d:%.2d:%.2d:%.3d` hours, minutes, seconds and milliseconds, the
     /// total's milliseconds the sum of the two truncated parts.
     fn cpu_summary(&self) -> String {
-        // The C++ works in `unsigned int`.
+        // The oracle works in `unsigned int`.
         let narrow = |value: u64| value as u32;
         let mut milliseconds = narrow(self.user.1 / 1000) + narrow(self.system.1 / 1000);
         let mut seconds = 0;
@@ -395,7 +393,7 @@ pub(crate) fn create_pipe(
     Ok(interp.text_built(text.into_bytes()))
 }
 
-/// The C++'s `perror` of `what` on standard error, and the null string.
+/// The oracle `perror` of `what` on standard error, and the null string.
 fn pipe_failed(interp: &mut Interp, what: &str, error: &std::io::Error) -> ObjRef {
     let message = std::io::Error::from_raw_os_error(error.raw_os_error().unwrap_or(0)).to_string();
     let message = message

@@ -59,9 +59,8 @@ fn signal_out_of_a_select_unwinds_it_and_lands_on_its_label() {
     assert_eq!(interp.out, b"before\nreached there sigl: 3\n".to_vec());
 }
 
-/// `SIGL`. The oracle's own `RexxActivation::
-/// signalTo`/`internalCall` (`execution/RexxActivation.cpp`, read
-/// directly) both call `new_integer(lineNum)` at the point of transfer
+/// `SIGL`. The oracle's `SIGNAL` and internal call both
+/// create an integer object from the line number at the point of transfer
 /// -- an integer object, which is why `set_sigl` uses `self.text`
 /// rather than `self.number`: measured, a `SIGL` value of `22` still
 /// renders `22` under `NUMERIC DIGITS 1`, where the identical magnitude
@@ -100,7 +99,7 @@ fn sigl_is_set_at_every_control_transfer() {
 
     // From inside an `INTERPRET` fragment, `SIGL` reads the *enclosing*
     // `INTERPRET` clause's own line, not any line internal to the
-    // fragment -- matching the oracle's own `signalTo`, which delegates
+    // fragment -- matching the oracle, which delegates
     // a `SIGNAL` fired inside an interpret-created activation to its
     // parent, whose own currently-executing instruction is the
     // `INTERPRET` itself (this crate reproduces the observable answer

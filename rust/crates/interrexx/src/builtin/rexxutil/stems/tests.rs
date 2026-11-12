@@ -78,7 +78,7 @@ fn a_stem_named_by_its_variable_outlives_the_variable() {
 }
 
 /// **`SysDumpVariables` holds the tail values it read before it writes any
-/// of them**, as the oracle's `toDirectory` snapshot does: a `STRING` method
+/// of them**, as the oracle's directory snapshot does: a `STRING` method
 /// that empties the stem midway leaves the rest of the dump intact. Measured,
 /// oracle rc 0, these lines in hash order. This crate writes tail 2 first, so
 /// the emptying runs before tail 1 is written, and collecting at every

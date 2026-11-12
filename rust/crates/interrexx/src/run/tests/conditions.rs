@@ -850,7 +850,7 @@ fn a_while_retest_belongs_to_the_do_clause_then_to_the_end_clause() {
 /// When an
 /// `ITERATE` ends a pass, the re-test that follows belongs to the
 /// `ITERATE`'s own clause -- the oracle re-enters the loop from inside
-/// `RexxActivation::iterate`, so `END` is never reached and never owns
+/// the `ITERATE`, so `END` is never reached and never owns
 /// anything.
 #[test]
 fn a_loop_retest_after_an_iterate_belongs_to_the_iterate_clause() {
