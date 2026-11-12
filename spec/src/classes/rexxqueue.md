@@ -1231,7 +1231,7 @@ bad: say arg(1) '=>' condition('o')~code
   nop
 ```
 
-```output defect=#197
+```output
 o~delete => 98.901
 o~empty => 98.901
 o~get => 98.901

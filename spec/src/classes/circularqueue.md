@@ -367,10 +367,49 @@ r~queue("n", .nil) => 97.1
 r~push("n", .nil) => 97.1
 ```
 
+r[class.circularqueue.queue.zero]
+On a queue of size 0, `queue`, `push` and `append` hold nothing: after the
+argument checks of their own rules they answer `.nil` and add nothing, and
+they send no message to the receiver. The `option` of `queue` and `push` is
+not read, `Unique` included, so that an option that does not understand
+`caselessMatchChar` raises no error. `insert` is not covered: it adds the item
+and takes it out again by [the insert rule](r:class.circularqueue.insert). A
+queue that `resize(0)` made size 0 behaves so too.
+
+```rexx
+q = .circularqueue~new(0)
+say (q~queue('a') == .nil) (q~push('b') == .nil) (q~append('c') == .nil) q~items
+say (q~queue('d', .object~new) == .nil) (q~push('e', 'U') == .nil) q~items
+call try 'q~queue'
+call try 'q~push(, "U")'
+call try 'q~append(1, 2)'
+r = .circularqueue~of(1, 2, 3)
+r~resize(0)
+say (r~queue('x') == .nil) r~size r~items
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=>' r
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
+```
+
+```output
+1 1 1 0
+1 1 0
+q~queue => 93.901
+q~push(, "U") => 93.903
+q~append(1, 2) => 93.902
+1 0 0
+```
+
 r[class.circularqueue.queue.sends]
-`queue` and `push` send, to the receiver, `items` and then, when the answer is
-greater than the size, `pull` for `queue` or, for `push`, `items` again and
-`remove` with the answer as the index. With the option `Unique` they send
+`queue` and `push` send, to the receiver, `items` before the item is added and,
+when the answer is not less than the size, `pull` for `queue` or, for `push`,
+`items` again and `remove` with that answer as the index; then the item is added.
+With the option `Unique` they send
 `hasItem` with the item first and, for as long as it answers true, `removeItem`
 with the item and `hasItem` again, and only then the `items`. The strict `==` of
 that search is the one of [the Queue search
@@ -467,8 +506,8 @@ r[class.circularqueue.append]
 number of items afterwards; a queue of size 0 holds nothing, and `append` then
 answers `.nil`. A full queue takes out the item at its head first, so the
 index is the size then. It takes exactly one argument: none raises
-`SYNTAX 93.901`, and a second raises `SYNTAX 93.902`. After the item is added,
-`append` sends `items` to the receiver, and `pull` when the answer is greater
+`SYNTAX 93.901`, and a second raises `SYNTAX 93.902`. Before the item is added,
+`append` sends `items` to the receiver, and `pull` when the answer is not less
 than the size.
 
 ```rexx
@@ -1549,6 +1588,11 @@ call run 3, 'a~resize(5)'
 call run 3, 'a~resize(2)'
 call run 3, 'a~resize(2, "L")'
 call run 3, 'a~resize(0)'
+say 'size 0'
+call run 0, 'a~append("d")'
+call run 0, 'a~queue("d")'
+call run 0, 'a~push("d")'
+call run 0, 'a~insert("d")'
 exit
 run:
   use arg n, c
@@ -1640,6 +1684,18 @@ a~resize(0) 3
   items()
   remove(1)
   remove(1)
+  remove(1)
+size 0
+a~append("d") 0
+  append(d)
+a~queue("d") 0
+  queue(d)
+a~push("d") 0
+  push(d)
+a~insert("d") 0
+  insert(d)
+  items()
+  last()
   remove(1)
 ```
 
