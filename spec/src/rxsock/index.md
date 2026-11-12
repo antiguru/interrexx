@@ -1,6 +1,7 @@
 ---
 element: "rxsock"
 kind: chapter
+deviations: [164]
 rexxref: "Rexx Socket Functions Library (rxsock) > Functions"
 ---
 
@@ -189,8 +190,10 @@ those names, and for any other error the number of the error as a Linux system
 gives it, as `9` for a socket that is not open and `22` for an argument the
 system found invalid. A call that succeeds sets `errno` to `0`. `SockSock_Errno()`
 answers the number of the error of the last call that failed, which the
-variable shows as a name; what it answers after a call that succeeded, or before
-any failed, is not specified.
+variable shows as a name. What it answers after a call that succeeded, or in a
+later clause, or after another activity made calls, is the subject of
+[Deviation 164](r:rxsock.index.deviation.164); the example below reads it in
+the clause of the call.
 
 ```rexx
 say SockClose(999) errno h_errno SockSock_Errno()
@@ -245,4 +248,55 @@ call sysfiledelete 'c1zqs1.rex'
 []
 [RxSOCK Error: first]
 [RxSOCK Error: ]
+```
+
+## Deviations
+
+r[rxsock.index.deviation.164]
+The number that `SockSock_Errno()` answers belongs to the activity that made
+the call: each activity has its own, which is `0` until a call of the library
+fails on it. A call of the library that fails sets the number of its activity;
+a call that succeeds leaves it as it is, except that a lookup of a host sets it
+to `0` before it looks. No other clause changes it, and no call on another
+activity does: after a failed call, a later clause of the same activity reads
+the number of that call, however many clauses that do not set it come between,
+and however many other activities make calls of the library meanwhile. The
+variables `errno` and `h_errno` are not the subject: they are variables of the
+program that made the call, as [the rule on errors](r:rxsock.index.errors)
+says. In the example the main activity's call fails with `9`; the method that
+`start` runs begins with `0`, fails with `107` and keeps it after a call that
+succeeds, while the main activity still reads `9` after a clause that sets
+nothing, and after a successful call that is not a lookup, and reads `0` after a
+lookup.
+
+```rexx
+say SockClose(999) SockSock_Errno()
+y = 5
+say 'later' SockSock_Errno()
+m = .k~new~start('work')
+say 'result' m~result
+say 'after' SockSock_Errno()
+say SockInit() SockSock_Errno()
+say SockGetHostByName('localhost', 'h.') SockSock_Errno()
+exit
+::requires 'rxsock' library
+::class k
+::method work
+  say 'b start' SockSock_Errno()
+  s = SockSocket('AF_INET', 'SOCK_STREAM', 0)
+  say SockGetPeerName(s, 'p.') SockSock_Errno()
+  say SockClose(s) SockSock_Errno()
+  return SockSock_Errno()
+```
+
+```output
+-1 9
+later 9
+b start 0
+-1 107
+0 107
+result 107
+after 9
+0 9
+1 0
 ```
