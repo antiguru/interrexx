@@ -3,6 +3,7 @@ use crate::{ArraySlots, ObjRef, SlotRef};
 use interrexx_num::{Form, Number};
 use rustc_hash::FxHashMap;
 use std::collections::TryReserveError;
+use std::rc::Rc;
 
 /// Identifies the behaviour (class + method dictionary) an object responds to.
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
@@ -864,8 +865,10 @@ pub struct ScopePools {
     /// entry, and a reader cannot tell the two apart -- measured, a class
     /// method exposing `v`, assigning it, and dropping it leaves a later
     /// `expose v` reading the derived name `V`, which is what a never-bound
-    /// name reads as.
-    pools: Vec<(ObjRef, Vec<(Box<[u8]>, ObjRef)>)>,
+    /// name reads as. A name is shared rather than owned so that a caller
+    /// binding the same names on many objects (a hash store's five) can hand
+    /// over a copy of one it keeps instead of allocating each afresh.
+    pools: Vec<(ObjRef, Vec<(Rc<[u8]>, ObjRef)>)>,
 }
 
 impl ScopePools {
@@ -898,6 +901,24 @@ impl ScopePools {
         }
     }
 
+    /// [`Self::set`] for each of `entries` in turn, with each name a copy of
+    /// the caller's own, and room made for all of them at once.
+    pub fn set_all(&mut self, scope: ObjRef, entries: &[(&Rc<[u8]>, ObjRef)]) {
+        let pool = match self.pools.iter().position(|(s, _)| *s == scope) {
+            Some(index) => &mut self.pools[index].1,
+            None => {
+                self.pools.push((scope, Vec::with_capacity(entries.len())));
+                &mut self.pools.last_mut().expect("the pool just pushed").1
+            }
+        };
+        for &(name, value) in entries {
+            match pool.iter_mut().find(|(bound, _)| *bound == *name) {
+                Some(entry) => entry.1 = value,
+                None => pool.push((Rc::clone(name), value)),
+            }
+        }
+    }
+
     /// Returns `name` to the uninitialised state in `scope`'s pool, which is
     /// what `DROP` on an exposed variable does. A name the pool never held is
     /// a no-op, exactly as `DROP` on a never-assigned local is.
@@ -919,11 +940,11 @@ impl ScopePools {
     }
 
     /// Every name `scope`'s pool binds, with its value, in binding order.
-    pub fn entries(&self, scope: ObjRef) -> &[(Box<[u8]>, ObjRef)] {
+    pub fn entries(&self, scope: ObjRef) -> &[(Rc<[u8]>, ObjRef)] {
         self.pool(scope).map_or(&[], Vec::as_slice)
     }
 
-    fn pool(&self, scope: ObjRef) -> Option<&Vec<(Box<[u8]>, ObjRef)>> {
+    fn pool(&self, scope: ObjRef) -> Option<&Vec<(Rc<[u8]>, ObjRef)>> {
         self.pools
             .iter()
             .find(|(s, _)| *s == scope)

@@ -9,6 +9,8 @@ use removal::{
     Removal, native_hash_empty, native_hash_remove_item, take, take_at, take_in, take_merged,
 };
 
+use std::rc::Rc;
+
 use interrexx_core::NameMap;
 
 use super::collection;
@@ -344,6 +346,24 @@ fn counted(value: ObjRef) -> Option<usize> {
     }
 }
 
+/// The five names of each half, as the pool keeps them, made once.
+pub(crate) struct PoolNames {
+    contents: [Rc<[u8]>; 5],
+    methods: [Rc<[u8]>; 5],
+}
+
+impl Default for PoolNames {
+    fn default() -> PoolNames {
+        let names = |half: Half| {
+            [half.indexes, half.items, half.next, half.buckets, half.free].map(Rc::from)
+        };
+        PoolNames {
+            contents: names(CONTENTS),
+            methods: names(METHODS),
+        }
+    }
+}
+
 /// Builds a store of `buckets` primary slots and as many overflow slots, and
 /// binds it to `receiver`.
 fn install_store(interp: &mut Interp, receiver: ObjRef, half: Half, buckets: usize) -> Store {
@@ -368,11 +388,23 @@ fn install_store(interp: &mut Interp, receiver: ObjRef, half: Half, buckets: usi
     interp.roots.activity_mut().push_temp(next);
     let buckets_value = interp.counted(buckets);
     let free_value = interp.counted(buckets);
-    interp.set_pool_variable(receiver, scope, half.indexes, indexes);
-    interp.set_pool_variable(receiver, scope, half.items, items);
-    interp.set_pool_variable(receiver, scope, half.next, next);
-    interp.set_pool_variable(receiver, scope, half.buckets, buckets_value);
-    interp.set_pool_variable(receiver, scope, half.free, free_value);
+    let names = if half == CONTENTS {
+        &interp.hash_names.contents
+    } else {
+        &interp.hash_names.methods
+    };
+    let [n_indexes, n_items, n_next, n_buckets, n_free] = names.clone();
+    interp.set_pool_variables(
+        receiver,
+        scope,
+        &[
+            (&n_indexes, indexes),
+            (&n_items, items),
+            (&n_next, next),
+            (&n_buckets, buckets_value),
+            (&n_free, free_value),
+        ],
+    );
     bump_store_generation(interp);
     Store {
         indexes,

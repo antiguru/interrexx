@@ -147,6 +147,24 @@ impl Interp {
         Interp::pools_in(object).clear(var.scope, &var.name);
     }
 
+    /// [`Interp::set_pool_variable`] for each of `entries` in turn, with each
+    /// name a copy of the caller's own.
+    pub(super) fn set_pool_variables(
+        &mut self,
+        owner: ObjRef,
+        scope: ObjRef,
+        entries: &[(&std::rc::Rc<[u8]>, ObjRef)],
+    ) {
+        let object = Interp::pool_object(&mut self.heap, owner);
+        if object.watched() {
+            for &(name, value) in entries {
+                self.set_pool_variable(owner, scope, name, value);
+            }
+            return;
+        }
+        Interp::pools_in(object).set_all(scope, entries);
+    }
+
     /// Assigns one name in one scope's pool on `owner`, outside any
     /// activation's exposure list -- what a generated `::ATTRIBUTE` setter
     /// writes through.
