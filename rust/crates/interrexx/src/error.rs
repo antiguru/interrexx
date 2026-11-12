@@ -187,6 +187,16 @@ impl Raised {
         Raised::syntax(26, 8, vec![found.to_vec()])
     }
 
+    /// 42.1: a power the pre-test refuses. The inserts are the base, `**`
+    /// and the exponent, each operand as the program wrote it.
+    pub(crate) fn power_overflow(base: &[u8], exponent: &[u8]) -> Raised {
+        Raised::syntax(
+            42,
+            1,
+            vec![base.to_vec(), b"**".to_vec(), exponent.to_vec()],
+        )
+    }
+
     /// 34.901: the prefix `\` operator's operand is not a logical value.
     /// A logical value is *exactly* the one-byte string `0` or `1`, no
     /// coercion -- this is a text check, never a numeric one, which is
