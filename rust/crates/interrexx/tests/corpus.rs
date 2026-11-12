@@ -928,6 +928,7 @@ const NON_LANG_PROGRAMS: &[&str] = &[
     "num/fuzz.rex",
     "num/operators.rex",
     "num/settings.rex",
+    "num/prefix_integer.rex",
     "gate-tables/directives/method__external__subkeyword.rex",
     "gate-tables/directives/attribute__external__subkeyword.rex",
     "gate-tables/concepts/creo.rex",

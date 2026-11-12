@@ -96,6 +96,7 @@ num/form_notation.rex
 num/fuzz.rex
 num/operators.rex
 num/settings.rex
+num/prefix_integer.rex
 lang/do_loop_forms.rex
 lang/do_label.rex
 lang/leave_nested_outer.rex
