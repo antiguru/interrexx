@@ -244,6 +244,7 @@ lang/raise_keyword_object_traces.rex
 lang/raise_array_nested.rex
 lang/raise_additional_nested.rex
 lang/message_send_unknown_forward.rex
+lang/message_send_site_method_changes.rex
 lang/condition_nomethod.rex
 lang/method_access_private.rex
 lang/method_access_private_refused.rex

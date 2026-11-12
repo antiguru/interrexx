@@ -521,13 +521,20 @@ impl CallSite {
     }
 }
 
+/// One [`Op::Send`]'s message name, and the method the site last resolved
+/// it to.
+struct SendSite {
+    name: Box<[u8]>,
+    memo: Cell<Option<crate::dispatch::SendMemo>>,
+}
+
 /// One chunk's resolution table: a slot per call op -- [`Op::Call`] and
 /// [`Op::CallExpr`] alike -- indexed by that op's own `site` field, and the
-/// message name each [`Op::Send`]'s `site` names.
+/// send site each [`Op::Send`]'s `site` names.
 struct Calls {
     /// One slot per call op, or **empty** when [`CALL_SITE_CACHE`] is off.
     slots: Vec<CallSite>,
-    sends: Vec<Box<[u8]>>,
+    sends: Vec<SendSite>,
     /// How many call ops have taken a slot, kept separately from `slots.len()`
     /// so that the indices the ops carry are the same whether or not the table
     /// exists -- [`Hints::next`]'s own reason, so that a golden op stream reads
@@ -549,7 +556,10 @@ impl Calls {
         let at = u32::try_from(self.sends.len()).map_err(|_| ChunkTooLarge {
             what: "send sites past u32",
         })?;
-        self.sends.push(name);
+        self.sends.push(SendSite {
+            name,
+            memo: Cell::new(None),
+        });
         Ok(at)
     }
 
@@ -821,7 +831,18 @@ impl Chunk {
     /// The message name send site `at` sends, or `None` for a site this
     /// chunk does not have.
     pub(crate) fn send_name(&self, at: u32) -> Option<&[u8]> {
-        self.calls.sends.get(at as usize).map(|name| &name[..])
+        self.calls.sends.get(at as usize).map(|site| &site.name[..])
+    }
+
+    /// Send site `at`'s message name and the memo of its last resolution.
+    pub(crate) fn send_site(
+        &self,
+        at: u32,
+    ) -> Option<(&[u8], &Cell<Option<crate::dispatch::SendMemo>>)> {
+        self.calls
+            .sends
+            .get(at as usize)
+            .map(|site| (&site.name[..], &site.memo))
     }
 
     /// Call site `at`, lent to a call that resolves after its arguments.

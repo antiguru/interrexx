@@ -2374,8 +2374,8 @@ impl Interp {
         else {
             return Err(Loud::call_op_off_its_node().into());
         };
-        let (Some(name), Some(mark)) = (
-            chunk.send_name(site),
+        let (Some((name, memo)), Some(mark)) = (
+            chunk.send_site(site),
             self.activity
                 .value_buffer
                 .len()
@@ -2388,7 +2388,7 @@ impl Interp {
         self.enter_eval_node(&raw const probe)?;
         let caller = self.caller();
         let mut values = std::mem::take(&mut self.activity.value_buffer);
-        let started = self.begin_send(receiver, name, None, &values[mark..], caller);
+        let started = self.begin_send_at(receiver, name, memo, &values[mark..], caller);
         values.truncate(mark);
         self.lend_stack(
             matches!(started, Ok(Started::Entered)) && self.activity.native_park.is_none(),
