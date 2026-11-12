@@ -547,10 +547,14 @@ parse value 'abcdefghij' with u &gt;(arr) v
 say u'|'v
 parse value 'abcdefghij' with u =(arr) v
 say u'|'v
+buf = .mutablebuffer~new('3')
+parse value 'abcdef' with u =(buf) v
+say u'|'v
 </code></pre>
-<pre><code class="language-output defect=#105">ab|cdefghij
+<pre><code class="language-output">ab|cdefghij
 ab|cdefghij
 a|bcdefghij
+ab|cdef
 </code></pre>
 <h2 id="errors-in-the-template"><a class="header" href="#errors-in-the-template">Errors in the template</a></h2>
 <div class="rule" id="r-parse.patterns.syntax"><a href="#r-parse.patterns.syntax">[parse.patterns.syntax]</a></div>

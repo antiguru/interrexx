@@ -17689,10 +17689,14 @@ parse value 'abcdefghij' with u &gt;(arr) v
 say u'|'v
 parse value 'abcdefghij' with u =(arr) v
 say u'|'v
+buf = .mutablebuffer~new('3')
+parse value 'abcdef' with u =(buf) v
+say u'|'v
 </code></pre>
-<pre><code class="language-output defect=#105">ab|cdefghij
+<pre><code class="language-output">ab|cdefghij
 ab|cdefghij
 a|bcdefghij
+ab|cdef
 </code></pre>
 <h2 id="errors-in-the-template"><a class="header" href="#errors-in-the-template">Errors in the template</a></h2>
 <div class="rule" id="r-parse.patterns.syntax"><a href="parsing/patterns.html#r-parse.patterns.syntax">[parse.patterns.syntax]</a></div>
@@ -18172,7 +18176,7 @@ e: say 'init b self' condition('o')~code
 ::routine r
   return 'r'
 </code></pre>
-<pre><code class="language-output defect=#112">init a sees .B r
+<pre><code class="language-output">init a sees .B r
 init a self 97.1
 init b sees A
 init b self 97.1
@@ -78523,7 +78527,7 @@ trap: say 'trap' condition('c'); return
   r = ctx~raise(cmd, 2, 'nv')
   return 0
 </code></pre>
-<pre><code class="language-output defect=#203">went on 2
+<pre><code class="language-output">went on 2
 </code></pre>
 <div class="rule" id="r-class.commandcontext.raise.syntax"><a href="classes/commandcontext.html#r-class.commandcontext.raise.syntax">[class.commandcontext.raise.syntax]</a></div>
 <p><code>raise('SYNTAX', code, additional)</code> makes the command raise a <code>SYNTAX</code> error
