@@ -537,6 +537,19 @@ fn read_parts(interp: &mut Interp, receiver: ObjRef) -> Parts {
     parts
 }
 
+/// The contents' entries when they are the first the pool binds, which is
+/// where [`install_store`] puts them in a store built before anything else
+/// is bound: [`read_parts`]'s first step, without the rest of its pass.
+#[inline]
+fn leading_contents(interp: &mut Interp, receiver: ObjRef) -> Option<Found> {
+    let scope = hash_scope(interp);
+    let Some(Body::Instance { pools, .. }) = interp.heap.get(receiver).map(|object| &object.body)
+    else {
+        return None;
+    };
+    shared_run(pools.entries(scope), &interp.hash_names.contents)
+}
+
 /// One half's entries, when `entries` starts with that half's five shared
 /// names in [`install_store`]'s order. A pool binds a name once, so what this
 /// finds is what the byte-by-byte reading would.
@@ -580,6 +593,11 @@ fn store_in(interp: &mut Interp, receiver: ObjRef, half: Half) -> Result<Store, 
 }
 
 fn store_of(interp: &mut Interp, receiver: ObjRef) -> Result<Store, Failure> {
+    if let Some(found) = leading_contents(interp, receiver)
+        && let Some(store) = found.store(interp)?
+    {
+        return Ok(store);
+    }
     let parts = read_parts(interp, receiver);
     if let Some(store) = parts.contents.store(interp)? {
         return Ok(store);
@@ -594,6 +612,11 @@ fn store_of(interp: &mut Interp, receiver: ObjRef) -> Result<Store, Failure> {
 /// empty one for: what a read that finds nothing in an empty store answers
 /// the same without building it. Refuses as [`store_of`] does.
 fn store_if_built(interp: &mut Interp, receiver: ObjRef) -> Result<Option<Store>, Failure> {
+    if let Some(found) = leading_contents(interp, receiver)
+        && let Some(store) = found.store(interp)?
+    {
+        return Ok(Some(store));
+    }
     let parts = read_parts(interp, receiver);
     if let Some(store) = parts.contents.store(interp)? {
         return Ok(Some(store));
