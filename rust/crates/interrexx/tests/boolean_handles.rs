@@ -17,7 +17,8 @@ use interrexx::{Invocation, run_program};
 const GATE_ENV: &str = "REXX_CORPUS_GATE";
 
 const EXPECTED: &str = "argument_true T\nargument_false F\nhasentry_missing F\n\
-hasentry_present T\ncompare T\nisa T\nrexx_method T\n";
+hasentry_present T\ncompare T\nisa T\nrexx_method T\n\
+argument_routine_true T\nargument_routine_false F\nargument_method_true T\n";
 
 fn gate_mode() -> bool {
     env::var(GATE_ENV).is_ok_and(|value| !value.is_empty() && value != "0")
