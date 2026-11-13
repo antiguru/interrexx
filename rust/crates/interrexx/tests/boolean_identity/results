@@ -37,7 +37,8 @@ eval
 true
 false
 
-# semaphore.rs: EventSemaphore, MutexSemaphore.
+# semaphore.rs: EventSemaphore, MutexSemaphore. `request(0)` is answered as a
+# number, so that site keeps `counted`.
 eval
 .EventSemaphore~new~isPosted
 .EventSemaphore~new~wait(0)
@@ -99,13 +100,25 @@ true
 
 # package.rs: Package~loadLibrary, ~setSecurityManager.
 eval
-.context~package~setSecurityManager(.nil)
 .context~package~loadLibrary('nosuchlibrary')
 .context~package~loadLibrary('rxunixsys')
 ----
+false
 true
-ERR 97.1
-ERR 97.1
+
+# Installing `.nil` as the security manager makes every later message on the
+# context fail, so it is a case of its own.
+eval
+.context~package~setSecurityManager(.nil)
+----
+true
+
+# regexp.rs: RegularExpression~match answers a position count (a number, not
+# a boolean); that site keeps `counted`.
+eval_regexp
+.RegularExpression~new~~parse('a')~match('a')
+----
+other
 
 # rexx_info.rs: RexxInfo.
 eval
