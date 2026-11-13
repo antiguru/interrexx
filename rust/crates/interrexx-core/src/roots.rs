@@ -121,10 +121,15 @@ pub struct ActivityRoots {
     segments: Vec<Segment>,
     /// The top record's `start`.
     top_start: usize,
-    /// The top record's `serial` while `alias_count` is zero, else
-    /// `u64::MAX`, which no frame has: the one frame the fast accessors serve
-    /// by `top_start` alone.
+    /// The top record's `serial` while no slot of the top frame is an alias,
+    /// else `u64::MAX`, which no frame has: the one frame the fast accessors
+    /// serve by `top_start` alone. An alias in a frame below does not take
+    /// the top one off it.
     fast_serial: u64,
+    /// The top record's `serial`, or `u64::MAX` with no frame open: the frame
+    /// whose slots the accessors serve by `top_start` and a look at the one
+    /// slot's alias entry, where the top frame holds an alias somewhere.
+    top_serial: u64,
     /// How many entries of `aliases` are `Some`.
     alias_count: usize,
     /// Values an activation that is **not** on any stack still owns.
@@ -292,7 +297,13 @@ impl RootSet {
     #[cold]
     #[inline(never)]
     pub fn frame_slot_of(&self, frame: SlotFrame, index: usize) -> Option<ObjRef> {
-        self.at(self.activity.resolve(frame, index))
+        let activity = &self.activity;
+        let position = activity.top_start + index;
+        if activity.unaliased_top(frame, position) {
+            activity.debug_assert_top(frame);
+            return activity.slots[position];
+        }
+        self.at(activity.resolve(frame, index))
     }
 
     /// Writes slot `index` within `frame`.
@@ -317,6 +328,13 @@ impl RootSet {
     #[cold]
     #[inline(never)]
     pub fn set_frame_slot_of(&mut self, frame: SlotFrame, index: usize, value: ObjRef) {
+        let activity = &mut self.activity;
+        let position = activity.top_start + index;
+        if activity.unaliased_top(frame, position) {
+            activity.debug_assert_top(frame);
+            activity.slots[position] = Some(value);
+            return;
+        }
         let target = self.activity.resolve(frame, index);
         self.write(target, Some(value));
     }
@@ -346,6 +364,13 @@ impl RootSet {
     #[cold]
     #[inline(never)]
     pub fn clear_frame_slot_of(&mut self, frame: SlotFrame, index: usize) {
+        let activity = &mut self.activity;
+        let position = activity.top_start + index;
+        if activity.unaliased_top(frame, position) {
+            activity.debug_assert_top(frame);
+            activity.slots[position] = None;
+            return;
+        }
         let target = self.activity.resolve(frame, index);
         self.write(target, None);
     }
@@ -415,6 +440,7 @@ impl ActivityRoots {
             segments: Vec::new(),
             top_start: 0,
             fast_serial: u64::MAX,
+            top_serial: u64::MAX,
             alias_count: 0,
             parked: Vec::new(),
             parked_free: Vec::new(),
@@ -680,12 +706,27 @@ impl ActivityRoots {
         }
     }
 
-    /// Recomputes `fast_serial` from the top record and `alias_count`.
+    /// Recomputes `fast_serial` and `top_serial` from the top record and the
+    /// alias entries from its start on.
     fn refresh_fast_serial(&mut self) {
-        self.fast_serial = match self.segments.last() {
-            Some(top) if self.alias_count == 0 => top.serial,
-            _ => u64::MAX,
+        self.top_serial = self.segments.last().map_or(u64::MAX, |top| top.serial);
+        let top_aliases = self.alias_count != 0
+            && self
+                .aliases
+                .get(self.top_start..)
+                .is_some_and(|tail| tail.iter().any(Option::is_some));
+        self.fast_serial = if top_aliases {
+            u64::MAX
+        } else {
+            self.top_serial
         };
+    }
+
+    /// Whether slot `position` of the top frame is its own storage, for an
+    /// accessor that has found `frame` is the top one but holds an alias.
+    #[inline(always)]
+    fn unaliased_top(&self, frame: SlotFrame, position: usize) -> bool {
+        frame.serial == self.top_serial && self.aliases.get(position).is_none_or(Option::is_none)
     }
 
     /// `frame`'s slot `index`, following an alias if one is in force. The
