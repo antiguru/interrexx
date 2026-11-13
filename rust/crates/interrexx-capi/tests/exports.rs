@@ -38,11 +38,11 @@ fn the_library_exports_both_libraries_names() {
     }
 }
 
+/// Needs the oracle build: it fails loudly without one, and the `standalone` nextest profile
+/// filters it out instead.
 #[test]
 fn the_list_is_the_oracles_names() {
-    let Some(lib) = oracle_lib() else {
-        return;
-    };
+    let lib = oracle_lib().expect("the oracle's lib directory is missing (REXX_ORACLE_ROOT)");
     assert_eq!(
         exported_rexx_functions(&lib.join("librexx.so.4")),
         set(LIBREXX)

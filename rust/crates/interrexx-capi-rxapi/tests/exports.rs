@@ -54,12 +54,11 @@ fn the_library_exports_its_api_names_and_no_others() {
 }
 
 /// The list is the oracle's `librexxapi.so.4` exports without its internal resolvers, read where
-/// the oracle is built.
+/// the oracle is built. It fails loudly without the oracle build, and the `standalone` nextest
+/// profile filters it out instead.
 #[test]
 fn the_list_is_the_oracles_public_names() {
-    let Some(lib) = oracle_lib() else {
-        return;
-    };
+    let lib = oracle_lib().expect("the oracle's lib directory is missing (REXX_ORACLE_ROOT)");
     let mut theirs = exported_rexx_functions(&lib.join("librexxapi.so.4"));
     for name in NOT_EXPORTED {
         assert!(theirs.remove(*name), "the oracle no longer exports {name}");
