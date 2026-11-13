@@ -2510,7 +2510,11 @@ impl Interp {
         // the only site that counts them all. Before the move, `if 1=1 then
         // trace l` as a routine's first clause announced the pair here where it
         // should announce nothing.
-        activation.trace_entry = activation.trace_entry.stepped();
+        // Written only where it changes: past an activation's second clause
+        // the state is settled, and a store per clause is what it would cost.
+        if activation.trace_entry.steps() {
+            activation.trace_entry = activation.trace_entry.stepped();
+        }
         // `TRACE`'s own `*-*` clause echo, and the single insertion point for
         // it -- exactly the analogue of `eval`'s own split from `eval_node`,
         // since this is the one place `run_bounded`'s loop (this function's

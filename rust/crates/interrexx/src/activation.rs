@@ -193,6 +193,13 @@ impl TraceEntry {
         }
     }
 
+    /// Whether one more stepped clause changes this, which is so only before
+    /// an activation's second clause.
+    #[inline(always)]
+    pub(crate) fn steps(self) -> bool {
+        matches!(self, TraceEntry::Pending | TraceEntry::Allowed)
+    }
+
     /// Whether a `TRACE` executing right now may announce `>I>`.
     pub(crate) fn may_announce(self) -> bool {
         matches!(self, TraceEntry::Allowed)
