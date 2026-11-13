@@ -1787,8 +1787,9 @@ impl Host for Interp {
     fn constants(&mut self) -> Constants<ObjRef> {
         Constants {
             nil: ObjRef::NIL,
-            true_object: self.counted(1),
-            false_object: self.counted(0),
+            // #599, ruling D15: the handles of `.true` and `.false`.
+            true_object: crate::eval::LOGICAL_TRUE,
+            false_object: crate::eval::LOGICAL_FALSE,
             null_string: self.text(b""),
         }
     }
