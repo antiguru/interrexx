@@ -4,7 +4,7 @@ kind: builtin
 syntax: "STREAM(name [, operation [, command]])"
 ansi: "9.7.8"
 rexxref: "Functions > Built-in Functions > STREAM"
-deviations: [34, 35, 49, 55, 57, 59, 62, 74, 79, 98, 100, 145]
+deviations: [34, 35, 49, 55, 57, 59, 62, 74, 79, 98, 100, 145, 167, 168]
 ---
 
 # STREAM
@@ -1006,9 +1006,6 @@ stream(f, 'c', 'query position write sys')       => 93.0
 stream(f, 'c', 'query position 1')               => 93.0
 stream(f, 'c', 'query position bogus')           => 93.0
 ```
-
-The answer of `SYS` for a stream just opened for reading follows from what it
-says: the host offset counts characters from 0, and nothing has been read.
 
 ```rexx
 f = 'spec-stream-qpossys.tmp'
