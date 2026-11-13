@@ -11,6 +11,10 @@ use interrexx_rxapi::message::code::{
 use interrexx_rxapi::message::{FIFO, LIFO, Reply, Request};
 use interrexx_rxapi::transport::Transport;
 use interrexx_rxapi::transport::unix::Unix;
+use interrexx_rxapi::utility::{
+    QUEUE_ACCESS, QUEUE_EXIST, QUEUE_NAME, QUEUE_NO_MEMORY, QUEUE_NOT_INITIALISED, QUEUE_SIZE,
+    QUEUE_SYNTAX, message,
+};
 
 /// The longest line kept; the excess is discarded.
 const MAX_LINE: usize = 65472;
@@ -61,18 +65,23 @@ fn parse(arguments: &[Vec<u8>]) -> Option<(Option<Vec<u8>>, Action)> {
     Some((name, action.unwrap_or(Action::Add(FIFO))))
 }
 
+/// The message for `status` on the queue `name`.
+fn failure_text(status: u64, name: &[u8]) -> String {
+    let sub = match status {
+        QUEUE_BAD_NAME => QUEUE_NAME,
+        QUEUE_NOT_REGISTERED => QUEUE_EXIST,
+        QUEUE_PRIORITY => QUEUE_ACCESS,
+        SIZE => QUEUE_SIZE,
+        NO_SERVICE => QUEUE_NOT_INITIALISED,
+        MEMORY_FAILURE => QUEUE_NO_MEMORY,
+        _ => QUEUE_SYNTAX,
+    };
+    message(sub, &[name])
+}
+
 /// Reports `status` for `name` and answers the exit status.
 fn fail(status: u64, name: &[u8]) -> ExitCode {
-    let name = String::from_utf8_lossy(name);
-    match status {
-        QUEUE_BAD_NAME => say(&format!("The name {name} is not a valid queue name.")),
-        QUEUE_NOT_REGISTERED => say(&format!("The queue {name} does not exist.")),
-        QUEUE_PRIORITY => say("The queue access mode is not correct."),
-        SIZE => say("The size of the data is incorrect."),
-        NO_SERVICE => say("The REXX rxapi queuing system is not available."),
-        MEMORY_FAILURE => say("Storage for data queues is exhausted."),
-        _ => say("The syntax of the command is incorrect."),
-    }
+    say(&failure_text(status, name));
     ExitCode::from((status % 256) as u8)
 }
 
@@ -138,7 +147,7 @@ fn main() -> ExitCode {
         .map(OsStringExt::into_vec)
         .collect();
     let Some((name, action)) = parse(&arguments) else {
-        say("The syntax of the command is incorrect.");
+        say(&message(QUEUE_SYNTAX, &[]));
         return ExitCode::SUCCESS;
     };
     let name = name
@@ -221,6 +230,34 @@ mod tests {
         assert_eq!(lines(b"\x1aab\n"), list(&[b""]));
         assert_eq!(lines(b"\r\r\n\n"), list(&[b"", b"\r", b""]));
         assert_eq!(lines(b"\r\0a\n"), list(&[b"", b"a"]));
+    }
+
+    #[test]
+    fn each_failure_prints_its_catalogue_message() {
+        use interrexx_inventory::errors::{lookup, substitute};
+        let expected = |sub, inserts: &[&[u8]]| {
+            let entry = lookup(999, sub).expect("catalogued");
+            String::from_utf8_lossy(&substitute(entry.text, inserts)).into_owned()
+        };
+        let cases: [(u64, u16); 7] = [
+            (QUEUE_BAD_NAME, 7),
+            (QUEUE_NOT_REGISTERED, 10),
+            (QUEUE_PRIORITY, 8),
+            (SIZE, 5),
+            (NO_SERVICE, 4),
+            (MEMORY_FAILURE, 6),
+            (u64::MAX, 16),
+        ];
+        for (status, sub) in cases {
+            assert_eq!(
+                failure_text(status, b"qq-probe"),
+                expected(sub, &[b"qq-probe"]),
+                "status {status}"
+            );
+        }
+        // The names reach the two messages that carry one.
+        assert!(failure_text(QUEUE_BAD_NAME, b"qq-probe").contains("qq-probe"));
+        assert!(failure_text(QUEUE_NOT_REGISTERED, b"qq-probe").contains("qq-probe"));
     }
 
     #[test]

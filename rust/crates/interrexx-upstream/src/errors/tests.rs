@@ -144,3 +144,49 @@ fn a_duplicate_key_is_refused() {
         <SymbolicName>B</SymbolicName><Text>y</Text></Message></Messages>"#,
     );
 }
+
+/// An invented utility catalogue: its inserts are written `%k`, not `<Sub>`.
+const UTILITY: &str = r#"<?xml version="1.0"?>
+<Messages>
+  <Message>
+    <Code>999</Code>
+    <MessageNumber>300</MessageNumber>
+    <SymbolicName>Error_Utility_general</SymbolicName>
+    <Text>Invented utility failure.</Text>
+    <Subcodes>
+      <SubMessage>
+        <Code>999</Code>
+        <Subcode>1</Subcode>
+        <MessageNumber>301</MessageNumber>
+        <SymbolicName>Error_Utility_named</SymbolicName>
+        <Text>Thing %1 is 100% odd, or %2.</Text>
+      </SubMessage>
+    </Subcodes>
+  </Message>
+  <Message>
+    <Code>91</Code>
+    <MessageNumber>302</MessageNumber>
+    <SymbolicName>Error_Invented_percent</SymbolicName>
+    <Text>Kept %1 as written.</Text>
+  </Message>
+</Messages>
+"#;
+
+#[test]
+fn utility_percent_inserts_count_as_inserts() {
+    let table = Table::parse(UTILITY);
+    // Only the utility major's `%k` is an insert, and a `%` not followed by a
+    // digit is text.
+    assert_eq!(row(&table, 999, 1).inserts, 2);
+    assert_eq!(row(&table, 999, 1).rendered, [1, 2]);
+    assert_eq!(row(&table, 91, 0).inserts, 0);
+    let messages = parse_messages(UTILITY);
+    let text = |major, sub| {
+        messages
+            .iter()
+            .find(|m| (m.major, m.sub) == (major, sub))
+            .map(|m| m.text.as_str())
+    };
+    assert_eq!(text(999, 1), Some("Thing &1 is 100% odd, or &2."));
+    assert_eq!(text(91, 0), Some("Kept %1 as written."));
+}

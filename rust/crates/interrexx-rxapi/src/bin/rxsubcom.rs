@@ -8,6 +8,9 @@ use interrexx_rxapi::client::connect;
 use interrexx_rxapi::message::code::{NOT_REGISTERED, OK};
 use interrexx_rxapi::message::{Registry, Reply, Request};
 use interrexx_rxapi::transport::Transport;
+use interrexx_rxapi::utility::{
+    SUBCOM_DROP, SUBCOM_GENERAL, SUBCOM_LOAD, SUBCOM_QUERY, SUBCOM_REGISTER, message,
+};
 
 /// The exit status of a usage error, -1 as a byte.
 const USAGE: u8 = 255;
@@ -32,15 +35,15 @@ enum Action {
     },
 }
 
-/// The action the arguments name, or the usage message.
-fn parse(arguments: &[Vec<u8>]) -> Result<Action, &'static str> {
+/// The action the arguments name, or the subcode of the usage message to print.
+fn parse(arguments: &[Vec<u8>]) -> Result<Action, u16> {
     let Some((action, operands)) = arguments.split_first() else {
-        return Err("The RXSUBCOM parameters are incorrect.");
+        return Err(SUBCOM_GENERAL);
     };
-    let name_and_library = |message| match operands {
+    let name_and_library = |sub| match operands {
         [name] => Ok((name.clone(), Vec::new())),
         [name, library] => Ok((name.clone(), library.clone())),
-        _ => Err(message),
+        _ => Err(sub),
     };
     match action.to_ascii_uppercase().as_slice() {
         b"REGISTER" => match operands {
@@ -49,15 +52,16 @@ fn parse(arguments: &[Vec<u8>]) -> Result<Action, &'static str> {
                 library: library.clone(),
                 procedure: procedure.clone(),
             }),
-            _ => Err("The RXSUBCOM REGISTER parameters are incorrect."),
+            _ => Err(SUBCOM_REGISTER),
         },
-        b"QUERY" => name_and_library("The RXSUBCOM QUERY parameters are incorrect.")
-            .map(|(name, library)| Action::Query { name, library }),
-        b"DROP" => name_and_library("The RXSUBCOM DROP parameters are incorrect.")
-            .map(|(name, library)| Action::Drop { name, library }),
-        b"LOAD" => name_and_library("The RXSUBCOM LOAD parameters are incorrect.")
-            .map(|(name, _)| Action::Load { name }),
-        _ => Err("The RXSUBCOM parameters are incorrect."),
+        b"QUERY" => {
+            name_and_library(SUBCOM_QUERY).map(|(name, library)| Action::Query { name, library })
+        }
+        b"DROP" => {
+            name_and_library(SUBCOM_DROP).map(|(name, library)| Action::Drop { name, library })
+        }
+        b"LOAD" => name_and_library(SUBCOM_LOAD).map(|(name, _)| Action::Load { name }),
+        _ => Err(SUBCOM_GENERAL),
     }
 }
 
@@ -126,9 +130,9 @@ fn main() -> ExitCode {
         .collect();
     let action = match parse(&arguments) {
         Ok(action) => action,
-        Err(message) => {
+        Err(sub) => {
             let mut out = std::io::stdout();
-            let _ = writeln!(out, "{message}");
+            let _ = writeln!(out, "{}", message(sub, &[]));
             let _ = out.flush();
             return ExitCode::from(USAGE);
         }
@@ -189,32 +193,14 @@ mod tests {
 
     #[test]
     fn wrong_operands_name_the_action() {
-        let message = |line| parse(&words(line)).unwrap_err();
-        assert_eq!(message(""), "The RXSUBCOM parameters are incorrect.");
-        assert_eq!(
-            message("bogus env"),
-            "The RXSUBCOM parameters are incorrect."
-        );
-        assert_eq!(
-            message("register env"),
-            "The RXSUBCOM REGISTER parameters are incorrect."
-        );
-        assert_eq!(
-            message("query"),
-            "The RXSUBCOM QUERY parameters are incorrect."
-        );
-        assert_eq!(
-            message("query a b c"),
-            "The RXSUBCOM QUERY parameters are incorrect."
-        );
-        assert_eq!(
-            message("drop"),
-            "The RXSUBCOM DROP parameters are incorrect."
-        );
-        assert_eq!(
-            message("load"),
-            "The RXSUBCOM LOAD parameters are incorrect."
-        );
+        let sub = |line| parse(&words(line)).unwrap_err();
+        assert_eq!(sub(""), SUBCOM_GENERAL);
+        assert_eq!(sub("bogus env"), SUBCOM_GENERAL);
+        assert_eq!(sub("register env"), SUBCOM_REGISTER);
+        assert_eq!(sub("query"), SUBCOM_QUERY);
+        assert_eq!(sub("query a b c"), SUBCOM_QUERY);
+        assert_eq!(sub("drop"), SUBCOM_DROP);
+        assert_eq!(sub("load"), SUBCOM_LOAD);
     }
 
     #[test]

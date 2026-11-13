@@ -468,6 +468,7 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "interrexx-api",
+ "interrexx-inventory",
  "libc",
  "rustix",
 ]
