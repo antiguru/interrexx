@@ -138,3 +138,4 @@ lang/trace_destination_waits_on_thread.rex
 lang/trace_destinations_two_threads.rex
 lang/trace_destination_waits_calling_a_method.rex
 lang/trace_destination_waits_calling_a_label.rex
+lang/trace_guarded_destination_two_tracers.rex
