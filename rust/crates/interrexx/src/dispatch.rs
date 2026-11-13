@@ -1312,6 +1312,25 @@ const RETIRED_ENTRY_BYTES: usize = 128;
 /// The message the last install pass sends every class the package built.
 pub(crate) const ACTIVATE: &[u8] = b"ACTIVATE";
 
+/// Which primitive `UNKNOWN` runs without a level of its own -- see
+/// [`Interp::frameless_unknown`].
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Frameless {
+    Stem,
+    Reference,
+    Hash,
+}
+
+impl Frameless {
+    fn run(self) -> Unsent {
+        match self {
+            Frameless::Stem => hash::stem::stem_unknown,
+            Frameless::Reference => reference_unknown,
+            Frameless::Hash => hash::hash_unknown,
+        }
+    }
+}
+
 /// The classes whose primitive `UNKNOWN` runs without a level of its own,
 /// each as `.NAME` or the kernel directory resolves it, valid while the class
 /// registry's ancestry stamp is `stamp`: only a define or an expunge changes
@@ -4080,6 +4099,20 @@ impl Interp {
         let Some(resolution) = self.lookup(receiver, UNKNOWN, None) else {
             return Err(self.nomethod(receiver, name, miss));
         };
+        let frameless = self.frameless_unknown(resolution, receiver);
+        // A read of an entry a `Directory` or `StringTable` of the base class
+        // answers through its primitive `UNKNOWN` uses neither the forwarded
+        // arguments nor the message name as an object, so neither is built.
+        if frameless == Some(Frameless::Hash) && !name.ends_with(b"=") {
+            let frame = self.roots.activity_mut().push_frame();
+            let read = pinned!(
+                self,
+                crate::pinning::PinKind::Unknown,
+                hash::unknown_entry_read(self, receiver, name)
+            );
+            self.roots.activity_mut().pop_frame(frame);
+            return read;
+        }
         // **Each of the forward's arguments is rooted, and only the array's
         // root has a witness.** `alloc_with` collects *before* it allocates,
         // so the array's root is what carries it across the `text` below -- a
@@ -4104,7 +4137,7 @@ impl Interp {
         let missed = self.text(name);
         self.roots.activity_mut().push_temp(missed);
         let unknown_args = [Some(missed), Some(arguments)];
-        let forwarded = match self.frameless_unknown(resolution, receiver) {
+        let forwarded = match frameless.map(Frameless::run) {
             Some(run) => pinned!(
                 self,
                 crate::pinning::PinKind::Unknown,
@@ -4132,20 +4165,20 @@ impl Interp {
     /// without a level of its own: `processUnknown` calls it directly for a
     /// `Stem`, a `VariableReference`, and a `Directory` or `StringTable` of
     /// the base class.
-    fn frameless_unknown(&mut self, resolution: Resolution, receiver: ObjRef) -> Option<Unsent> {
+    fn frameless_unknown(&mut self, resolution: Resolution, receiver: ObjRef) -> Option<Frameless> {
         self.object_model().natives.get(resolution.method)?;
         let named = self.frameless_classes();
         let scope = Some(resolution.scope);
         if named.stem == scope {
-            return Some(hash::stem::stem_unknown);
+            return Some(Frameless::Stem);
         }
         if named.variable_reference == scope {
-            return Some(reference_unknown);
+            return Some(Frameless::Reference);
         }
         if !(named.directory == scope || named.string_table == scope) {
             return None;
         }
-        (self.class_of_value(receiver) == Some(resolution.scope)).then_some(hash::hash_unknown)
+        (self.class_of_value(receiver) == Some(resolution.scope)).then_some(Frameless::Hash)
     }
 
     /// [`FramelessClasses`], resolved again whenever the class registry's

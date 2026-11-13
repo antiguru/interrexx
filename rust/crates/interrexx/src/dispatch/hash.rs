@@ -2089,6 +2089,43 @@ pub(super) fn native_hash_unknown(
     })
 }
 
+/// [`hash_unknown`] for a message `name` that does not end in `=`, sent with
+/// whatever arguments, for a receiver whose `UNKNOWN` is that primitive: the
+/// read, which uses neither the forwarded arguments nor the message name as
+/// an object, so the caller builds neither.
+pub(super) fn unknown_entry_read(
+    interp: &mut Interp,
+    receiver: ObjRef,
+    name: &[u8],
+) -> Result<Option<ObjRef>, Failure> {
+    let store = !matches!(
+        interp.heap.get(receiver).map(|object| &object.body),
+        Some(Body::Native(_))
+    ) && owns(interp, receiver);
+    let mut upper = interp.take_result_buffer();
+    upper.extend_from_slice(name);
+    upper.make_ascii_uppercase();
+    entry_read_upper(interp, receiver, upper, store)
+}
+
+/// The entry an upper-cased `name` reads: from the store when `store`, and
+/// otherwise from `NativeObject`'s map.
+fn entry_read_upper(
+    interp: &mut Interp,
+    receiver: ObjRef,
+    name: Vec<u8>,
+    store: bool,
+) -> Result<Option<ObjRef>, Failure> {
+    if store {
+        // Rooted for the write's reason in [`hash_unknown`]: a read may build
+        // the store.
+        let index = interp.text_built(name);
+        interp.roots.activity_mut().push_temp(index);
+        return store_entry_read(interp, receiver, index);
+    }
+    Ok(Some(interp.hash_entry_read(receiver, &name)))
+}
+
 /// [`native_hash_unknown`]'s work, which runs without a send too.
 pub(super) fn hash_unknown(
     interp: &mut Interp,
@@ -2117,13 +2154,7 @@ pub(super) fn hash_unknown(
     ) && owns(interp, receiver);
     name.make_ascii_uppercase();
     if name.pop_if(|last| *last == b'=').is_none() {
-        if store {
-            // Rooted for the write's reason below: a read may build the store.
-            let index = interp.text_built(name);
-            interp.roots.activity_mut().push_temp(index);
-            return store_entry_read(interp, receiver, index);
-        }
-        return Ok(Some(interp.hash_entry_read(receiver, &name)));
+        return entry_read_upper(interp, receiver, name, store);
     }
     let index = name;
     let Some(Some(item)) = interp
