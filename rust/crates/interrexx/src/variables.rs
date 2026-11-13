@@ -95,10 +95,15 @@ impl Interp {
     #[cold]
     #[inline(never)]
     fn exposed_variable(&self, frame: SlotFrame, slot: usize) -> Option<ObjRef> {
-        match self.exposure(frame, slot) {
-            Some(var) => self
-                .pools_of(var.owner)
-                .and_then(|pools| pools.get(var.scope, &var.name)),
+        let activation = self.activation();
+        match Interp::exposure_in(activation, frame, slot) {
+            Some(var) => {
+                let pools = self.pools_of(var.owner)?;
+                match activation.plan.pool_hints.get(slot) {
+                    Some(hint) => pools.get_hinted(var.scope, &var.name, hint),
+                    None => pools.get(var.scope, &var.name),
+                }
+            }
             None => self.roots.frame_slot(frame, slot),
         }
     }
@@ -124,7 +129,11 @@ impl Interp {
         if object.watched() {
             return self.store_watched_exposed(frame, slot, Some(value));
         }
-        Interp::pools_in(object).set(var.scope, &var.name, value);
+        let pools = Interp::pools_in(object);
+        match activation.plan.pool_hints.get(slot) {
+            Some(hint) => pools.set_hinted(var.scope, &var.name, value, hint),
+            None => pools.set(var.scope, &var.name, value),
+        }
     }
 
     /// [`Interp::clear_variable`]'s exposed half.
@@ -282,7 +291,7 @@ impl Interp {
         let Some(var) = self.exposure(frame, slot) else {
             return;
         };
-        let (owner, scope, name) = (var.owner, var.scope, var.name.clone());
+        let (owner, scope, name) = (var.owner, var.scope, std::rc::Rc::clone(&var.name));
         self.store_watched(owner, scope, &name, value);
     }
 

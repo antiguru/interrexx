@@ -375,6 +375,16 @@ pub(crate) struct Plan {
     /// is a `TRACE` naming a label-tracing letter, whose `>I>` is traced before
     /// the method's guard lock is reserved.
     pub(crate) traces_entry_early: bool,
+    /// Per slot, where the name an `EXPOSE` bound it to last sat in an
+    /// object's pools. On the plan rather than on the binding so that it
+    /// outlives the activation: every object of a class keeps its pools in
+    /// one order, so the place a method body found a name on one receiver is
+    /// where the next receiver holds it too. Sized to the plan's own slots; a
+    /// slot past them, or a fragment's, goes without.
+    pub(crate) pool_hints: Box<[interrexx_core::PoolHint]>,
+    /// The spelling an `EXPOSE` binds each symbol under, made once and shared
+    /// by every binding of it.
+    exposed_names: BySymbol<std::cell::OnceCell<Rc<[u8]>>>,
     last_chunk: LastChunk,
 }
 
@@ -462,6 +472,16 @@ impl Plan {
         &self.trace_events
     }
 
+    /// The spelling `id` is exposed under, shared rather than copied per
+    /// binding.
+    pub(crate) fn exposed_name(&self, id: SymbolId, symbols: &SymbolTable) -> Rc<[u8]> {
+        let spelled = || Rc::from(symbols.name(id).as_bytes());
+        match self.exposed_names.get(id) {
+            Some(cell) => Rc::clone(cell.get_or_init(spelled)),
+            None => spelled(),
+        }
+    }
+
     /// How the compound `id` names splits, if this plan's pass saw it.
     pub(crate) fn compound(&self, id: SymbolId) -> Option<&CompoundName> {
         self.compounds.get(id)?.as_ref()
@@ -484,6 +504,7 @@ impl Plan {
             // same way: `bind` writes it by `SymbolId::index()`, and an id is
             // only an index into a table of that table's own length.
             by_symbol: BySymbol::for_table(symbols),
+            exposed_names: BySymbol::for_table(symbols),
             ..Plan::default()
         };
         let mut trace_events = Vec::with_capacity(body.instructions.len());
@@ -523,6 +544,9 @@ impl Plan {
             plan.super_slot = Some(plan.slot_for(b"SUPER"));
             plan.traces_entry_early = traces_entry_early(body);
         }
+        plan.pool_hints = std::iter::repeat_with(interrexx_core::PoolHint::default)
+            .take(plan.names.len())
+            .collect();
         plan.indents = crate::run::all_indents(&body.instructions);
         if let Some(source) = source {
             plan.lines = body

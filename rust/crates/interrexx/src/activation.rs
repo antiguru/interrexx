@@ -659,7 +659,9 @@ pub(crate) struct InstanceVar {
     /// Which of the owner's pools -- the running method's declaring class.
     pub(crate) scope: ObjRef,
     /// The name the pool is keyed on, upcased as every variable name here is.
-    pub(crate) name: Box<[u8]>,
+    /// Shared: an `EXPOSE` of a symbol binds the one its plan holds
+    /// ([`crate::plan::Plan::exposed_name`]).
+    pub(crate) name: Rc<[u8]>,
 }
 
 impl Activation {
@@ -1828,7 +1830,7 @@ mod method_tests {
             InstanceVar {
                 owner: ObjRef::NIL,
                 scope: ObjRef::NIL,
-                name: Box::from(&b"V"[..]),
+                name: Rc::from(&b"V"[..]),
             },
         ));
         activation.reply = ReplyState::Issued;

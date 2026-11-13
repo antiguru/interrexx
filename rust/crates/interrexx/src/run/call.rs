@@ -1589,7 +1589,7 @@ impl Interp {
                     owner: var.owner,
                     scope: var.scope,
                 },
-                var.name.clone(),
+                Box::from(&*var.name),
             ),
             None => {
                 let cell = self.promote_slot(frame, slot, spelling);

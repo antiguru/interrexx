@@ -858,6 +858,37 @@ impl BufferState {
 /// Every variable pool one object holds: one per scope that has bound a name in
 /// it, found by walking the list (a list of variable dictionaries searched in
 /// order).
+/// Where one exposed name last sat in a [`ScopePools`]: the index of its
+/// scope's pool and of its entry there. Only ever a guess, which the pools
+/// check against the scope and the name before trusting it, so an entry
+/// dropped or a pool reordered since costs a search and never a wrong
+/// variable.
+#[derive(Clone, Debug)]
+pub struct PoolHint(std::cell::Cell<u32>);
+
+impl Default for PoolHint {
+    fn default() -> PoolHint {
+        PoolHint(std::cell::Cell::new(u32::MAX))
+    }
+}
+
+impl PoolHint {
+    #[inline]
+    fn get(&self) -> (usize, usize) {
+        let at = self.0.get();
+        ((at >> 16) as usize, (at & 0xffff) as usize)
+    }
+
+    /// Records `pool` and `entry`, or nothing where either is too wide to
+    /// pack.
+    #[inline]
+    fn set(&self, pool: usize, entry: usize) {
+        if let (Ok(pool), Ok(entry)) = (u16::try_from(pool), u16::try_from(entry)) {
+            self.0.set((u32::from(pool) << 16) | u32::from(entry));
+        }
+    }
+}
+
 #[derive(Clone, Debug, Default)]
 pub struct ScopePools {
     /// The scope's class identity, and the names it has bound. A name with no
@@ -883,6 +914,57 @@ impl ScopePools {
         pool.iter()
             .find(|(bound, _)| **bound == *name)
             .map(|(_, value)| *value)
+    }
+
+    /// [`ScopePools::get`], tried first where `hint` says the name last was.
+    #[inline]
+    pub fn get_hinted(&self, scope: ObjRef, name: &[u8], hint: &PoolHint) -> Option<ObjRef> {
+        let (at, entry) = hint.get();
+        if let Some((held, pool)) = self.pools.get(at)
+            && *held == scope
+            && let Some((bound, value)) = pool.get(entry)
+            && **bound == *name
+        {
+            return Some(*value);
+        }
+        let at = self.pools.iter().position(|(held, _)| *held == scope)?;
+        let pool = &self.pools[at].1;
+        let entry = pool.iter().position(|(bound, _)| **bound == *name)?;
+        hint.set(at, entry);
+        Some(pool[entry].1)
+    }
+
+    /// [`ScopePools::set`], tried first where `hint` says the name last was.
+    #[inline]
+    pub fn set_hinted(&mut self, scope: ObjRef, name: &[u8], value: ObjRef, hint: &PoolHint) {
+        let (at, entry) = hint.get();
+        if let Some((held, pool)) = self.pools.get_mut(at)
+            && *held == scope
+            && let Some((bound, slot)) = pool.get_mut(entry)
+            && **bound == *name
+        {
+            *slot = value;
+            return;
+        }
+        let at = match self.pools.iter().position(|(held, _)| *held == scope) {
+            Some(at) => at,
+            None => {
+                self.pools.push((scope, Vec::new()));
+                self.pools.len() - 1
+            }
+        };
+        let pool = &mut self.pools[at].1;
+        let entry = match pool.iter().position(|(bound, _)| **bound == *name) {
+            Some(entry) => {
+                pool[entry].1 = value;
+                entry
+            }
+            None => {
+                pool.push((name.into(), value));
+                pool.len() - 1
+            }
+        };
+        hint.set(at, entry);
     }
 
     /// Binds `name` in `scope`'s pool, creating the pool and the entry if

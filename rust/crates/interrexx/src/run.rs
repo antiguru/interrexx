@@ -1533,7 +1533,10 @@ impl Interp {
         for variable in variables {
             match variable {
                 VariableRef::Direct(id) => {
-                    let name: Box<[u8]> = code.symbols.name(*id).as_bytes().into();
+                    let name = match code.plan {
+                        Some(plan) => plan.exposed_name(*id, code.symbols),
+                        None => code.symbols.name(*id).as_bytes().into(),
+                    };
                     match simple_slot(code, *id) {
                         Some(slot) => self.expose_slot(slot, InstanceVar { owner, scope, name }),
                         None => self.bind_exposed(owner, scope, name)?,
@@ -1576,7 +1579,7 @@ impl Interp {
         &mut self,
         owner: ObjRef,
         scope: ObjRef,
-        name: Box<[u8]>,
+        name: Rc<[u8]>,
     ) -> Result<(), Failure> {
         // A whole stem is one value in one pool entry, so it binds like any
         // other name; a single tail is aliasing *inside* a stem object. For
@@ -1600,7 +1603,7 @@ impl Interp {
     #[inline(never)]
     fn expose_object_stem(&mut self, var: InstanceVar) -> Result<(), Failure> {
         let slot = self.slot_of(&var.name);
-        let name = var.name.clone();
+        let name = Rc::clone(&var.name);
         self.expose_slot(slot, var);
         let frame = self.activation().frame;
         if self.variable(frame, slot).is_none() {

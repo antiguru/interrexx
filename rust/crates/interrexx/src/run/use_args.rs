@@ -92,7 +92,7 @@ impl Interp {
             InstanceVar {
                 owner: auto.owner,
                 scope: auto.scope,
-                name,
+                name: name.into(),
             },
         );
     }
@@ -217,7 +217,7 @@ impl Interp {
                     let var = InstanceVar {
                         owner,
                         scope,
-                        name: reference.clone(),
+                        name: reference.clone().into(),
                     };
                     let activation = self.activation_mut();
                     match activation.exposed.iter_mut().find(|(at, _)| *at == index) {
