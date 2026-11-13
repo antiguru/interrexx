@@ -579,6 +579,12 @@ between instances through the native API is refused. ooRexx shares one
 The rxapi daemon starts only when a program first needs it, and prints its
 own messages. ooRexx starts it with every interpreter.
 
+Its directory (`REXX_API_DIR`) has to belong to the user and give no access
+to anyone else. A directory the group or others can use is refused, and the
+first attempt to reach the service, for a queue, a registration or the
+macrospace, writes a line to standard error that says so
+([the rule](r:util.macrospace.deviation.86)). ooRexx accepts such a directory.
+
 ## 87. rxregexp follows its documented grammar
 
 rxregexp matches the documented pattern language and always terminates; a
