@@ -403,7 +403,7 @@ fn an_expression_that_only_contains_a_symbol_is_more_than_that_symbols_read() {
     assert_eq!(
         render(&dotvar),
         "0: Clause index=0 end=3\n\
-         1: Load read=Environment at=- dst=0\n\
+         1: Load read=Environment site=0 dst=0\n\
          2: Store index=0 at=0 src=0\n"
     );
     let reference = compile_for_test(b"zw = >zv\n").expect("compiles");

@@ -158,9 +158,12 @@ impl Interp {
             .downcast_ref::<PackageData>()
     }
 
-    /// [`Interp::package_data`] for a caller that changes them.
+    /// [`Interp::package_data`] for a caller that changes them. Every such
+    /// write moves [`Interp::class_lookup_stamp`], because a package's class
+    /// tables and parent are what a `.NAME` read's memo was answered from.
     #[inline]
     pub(crate) fn package_data_mut(&mut self, package: ObjRef) -> Option<&mut PackageData> {
+        self.class_lookup_stamp += 1;
         self.heap
             .get_mut(package)?
             .body

@@ -205,6 +205,7 @@ impl Interp {
             Package::Rexx => {
                 self.roots.add_global(&package_root_key(package), object);
                 self.rexx_package = Some(object);
+                self.class_lookup_stamp += 1;
             }
             Package::Program(program) => {
                 self.roots.activity_mut().push_temp(object);

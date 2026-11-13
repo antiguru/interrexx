@@ -155,7 +155,9 @@ pub(crate) enum Op {
     /// `src`.
     TraceLiteral { src: u16 },
     /// Loads the value of the bare symbol `symbol` into register `dst`, by the
-    /// read [`SymbolRead`] names.
+    /// read [`SymbolRead`] names. `at` is the symbol's frame slot, except for
+    /// [`SymbolRead::Environment`], which has none: there it is the chunk's
+    /// memo site for the read ([`Chunk::environment_site`]).
     Load {
         symbol: SymbolId,
         read: SymbolRead,
@@ -535,6 +537,8 @@ struct Calls {
     /// One slot per call op, or **empty** when [`CALL_SITE_CACHE`] is off.
     slots: Vec<CallSite>,
     sends: Vec<SendSite>,
+    /// One memo per `.NAME` read, indexed by its [`Op::Load`]'s `at`.
+    environments: Vec<Cell<Option<crate::environment::EnvMemo>>>,
     /// How many call ops have taken a slot, kept separately from `slots.len()`
     /// so that the indices the ops carry are the same whether or not the table
     /// exists -- [`Hints::next`]'s own reason, so that a golden op stream reads
@@ -547,6 +551,7 @@ impl Calls {
         Calls {
             slots: Vec::new(),
             sends: Vec::new(),
+            environments: Vec::new(),
             next: 0,
         }
     }
@@ -561,6 +566,15 @@ impl Calls {
             memo: Cell::new(None),
         });
         Ok(at)
+    }
+
+    /// Files one `.NAME` read's memo, answering the site its load carries.
+    fn reserve_environment(&mut self) -> PlanSlot {
+        let at = PlanSlot::of(self.environments.len());
+        if at != PlanSlot::UNRESOLVED {
+            self.environments.push(Cell::new(None));
+        }
+        at
     }
 
     /// Reserves the slot for one call op, answering the index it carries.
@@ -843,6 +857,15 @@ impl Chunk {
             .sends
             .get(at as usize)
             .map(|site| (&site.name[..], &site.memo))
+    }
+
+    /// The memo of `.NAME` read site `at`, or `None` for a site this chunk
+    /// does not have.
+    pub(crate) fn environment_site(
+        &self,
+        at: usize,
+    ) -> Option<&Cell<Option<crate::environment::EnvMemo>>> {
+        self.calls.environments.get(at)
     }
 
     /// Call site `at`, lent to a call that resolves after its arguments.

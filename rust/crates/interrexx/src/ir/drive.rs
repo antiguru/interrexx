@@ -780,7 +780,9 @@ macro_rules! region_ops {
                     // than fail, which is a wrong value found by
                     // chasing it.
                     debug_assert!(
-                        at.is_none() || $code.slot_for(*symbol) == at,
+                        at.is_none()
+                            || matches!(read, SymbolRead::Environment)
+                            || $code.slot_for(*symbol) == at,
                         "a compiled read names a slot this body's plan does not \
                      give its symbol"
                     );
@@ -814,7 +816,7 @@ macro_rules! region_ops {
                             value
                         }
                         SymbolRead::Stem | SymbolRead::Compound | SymbolRead::Environment => {
-                            match $self.read_symbol($code, *read, *symbol, at) {
+                            match $self.read_symbol($code, Some($chunk), *read, *symbol, at) {
                                 Ok(value) => value,
                                 Err(failure) => break $cold Err(failure),
                             }

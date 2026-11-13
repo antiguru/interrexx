@@ -3,6 +3,7 @@
 //! are read through.
 
 use rustc_hash::FxHashMap;
+use std::cell::Cell;
 
 use interrexx_core::{BehaviourId, Body, NativeObject, ObjRef};
 
@@ -480,14 +481,71 @@ impl Interp {
     /// `.NAME`'s value: the class lookup's order, then the activation's
     /// reflection names, then the name's own text.
     pub(crate) fn dot_variable(&mut self, dotted: &[u8]) -> Result<ObjRef, Failure> {
-        let bare = dotted.strip_prefix(b".").unwrap_or(dotted);
+        self.dot_variable_in(dotted, None, None)
+    }
 
-        if let Some(found) = self.running_package_class(bare) {
-            return Ok(found);
+    /// [`Interp::dot_variable`] for a compiled read, which keeps what the
+    /// class lookup answered -- a class, or that it found none -- in `memo`.
+    /// The memo is the running program's, and holds while
+    /// [`Interp::class_lookup_stamp`] and the class graph's epoch stand: the
+    /// class lookup reads the running package's tables and its parents', the
+    /// REXX package's, and the class registry's names, and a write to any of
+    /// them moves one or the other (the registry's names change only with a
+    /// class defined or collected, each of which moves the epoch). What
+    /// follows the class lookup is never kept: it searches directories whose
+    /// entries change with no stamp to say so.
+    pub(crate) fn dot_variable_memoized(
+        &mut self,
+        dotted: &[u8],
+        memo: &Cell<Option<EnvMemo>>,
+    ) -> Result<ObjRef, Failure> {
+        let known = memo
+            .get()
+            .filter(|held| {
+                held.stamp == self.class_lookup_stamp
+                    && held.epoch == self.classes().epoch()
+                    && held.program == self.running_program()
+            })
+            .map(|held| held.class);
+        if let Some(Some(class)) = known {
+            return Ok(class);
         }
+        self.dot_variable_in(dotted, Some(memo), known)
+    }
 
-        if let Some(found) = self.rexx_package_class(bare) {
-            return Ok(found);
+    /// The one body behind [`Interp::dot_variable`] and
+    /// [`Interp::dot_variable_memoized`]: `known` is the class lookup's
+    /// answer where a memo still holds it, and `memo` is filled with a fresh
+    /// one.
+    #[inline(never)]
+    fn dot_variable_in(
+        &mut self,
+        dotted: &[u8],
+        memo: Option<&Cell<Option<EnvMemo>>>,
+        known: Option<Option<ObjRef>>,
+    ) -> Result<ObjRef, Failure> {
+        let bare = dotted.strip_prefix(b".").unwrap_or(dotted);
+        let class = match known {
+            Some(class) => class,
+            None => {
+                let class = self
+                    .running_package_class(bare)
+                    .or_else(|| self.rexx_package_class(bare));
+                // Stamped after the lookup, which writes no package and no
+                // class: `rexx_package_class` only fills its own cache.
+                if let Some(memo) = memo {
+                    memo.set(Some(EnvMemo {
+                        program: self.running_program(),
+                        stamp: self.class_lookup_stamp,
+                        epoch: self.classes().epoch(),
+                        class,
+                    }));
+                }
+                class
+            }
+        };
+        if let Some(class) = class {
+            return Ok(class);
         }
 
         if self.package_locals
@@ -833,6 +891,7 @@ impl Interp {
 
     /// Drops every cached `.NAME` answer.
     pub(crate) fn invalidate_rexx_class_cache(&mut self) {
+        self.class_lookup_stamp += 1;
         self.rexx_class_cache.clear();
     }
 
@@ -1455,6 +1514,16 @@ impl Interp {
     pub(crate) fn running_program(&self) -> Option<ProgramId> {
         self.running_activation().map(|frame| frame.program_id)
     }
+}
+
+/// A compiled `.NAME` read's last class answer: see
+/// [`Interp::dot_variable_memoized`].
+#[derive(Copy, Clone)]
+pub(crate) struct EnvMemo {
+    program: Option<ProgramId>,
+    stamp: u64,
+    epoch: interrexx_classes::Epoch,
+    class: Option<ObjRef>,
 }
 
 /// The [`interrexx_core::RootSet::add_global`] key one package object is held
