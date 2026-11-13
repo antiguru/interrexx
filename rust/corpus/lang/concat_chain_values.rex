@@ -55,6 +55,17 @@ say ss || 'x' || 'y'
 /* a stem and a variable reference on the left */
 st. = 'stemdefault'
 say st. || '-' || 'tail'
+/* a loop condition whose chain runs on every pass */
+cnt = 0
+do while (a || b || cnt) \== (a || b || 3)
+  cnt = cnt + 1
+end
+say cnt
+lc = ''
+do until (lc || '-' || lc || '-' || c) == '333-333-gamma'
+  lc = lc || cnt
+end
+say lc
 /* trace intermediates shows each step */
 trace i
 v = a || b || c
