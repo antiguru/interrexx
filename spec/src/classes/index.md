@@ -963,9 +963,10 @@ alpha-default | beta-name
 r[class.index.deviation.30]
 When the `string` method of an object answers an object that is not a
 string, interrexx gives ooRexx's answer wherever that is defined, and
-elsewhere, as for `say`, a joining operator or a builtin argument, ends the
-program with exit code 120 after raising NOSTRING if it is trapped. ooRexx
-reads `.nil` as a string there, with garbage results or a crash. [The
+elsewhere, as for `say`, a joining operator or a builtin argument, raises
+`SYNTAX 98.973` ([Deviation 169](r:conv.string.deviation.169)) after raising
+NOSTRING if it is trapped. ooRexx reads `.nil` as a string there, with garbage
+results or a crash. [The
 conventions](r:conv.string.deviation.30) and [the NOSTRING
 rule](r:cond.nostring.deviation.30) state it for builtin arguments and for
 the condition.
@@ -978,7 +979,7 @@ say 'x' .weird~new
   return .directory~new
 ```
 
-```output rc=120
+```output rc=158
 before
 ```
 

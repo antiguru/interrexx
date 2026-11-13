@@ -1,9 +1,9 @@
 //! A builtin argument whose user `STRING` method answers an object with no
-//! string value (Deviation 30). Each `call` and `refuses` case runs
+//! string value (Deviations 30 and 169). Each `call` and `refuses` case runs
 //! `say <call>` with `o` an instance whose `STRING` answers the `string=`
 //! object; `program` runs its input as the whole program. A `call` or
 //! `program` case records the oracle's rc, stdout and stderr. A `refuses`
-//! case records this crate's refusal, and its comment the oracle's answer.
+//! case records this crate's SYNTAX 98.973, and its comment the oracle's answer.
 
 use interrexx::Invocation;
 

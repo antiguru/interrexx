@@ -1,7 +1,7 @@
 //! The required-string protocol: `request("STRING")`, `makeString`, and the
 //! fallbacks behind them.
 
-use super::{Body, Decoded, Failure, Interp, Loud, ObjRef, Primitive, Raised};
+use super::{Body, Decoded, Failure, Interp, ObjRef, Primitive, Raised};
 use crate::value::Referent;
 
 /// What the protocol's conversion limbs answered, before anything is built.
@@ -242,10 +242,13 @@ impl Interp {
             return Err(Raised::nostring_syntax(&readable).into());
         }
         if no_string {
+            // Consumers of bytes raise the SYNTAX condition that a NOSTRING
+            // turned into SYNTAX raises, trappable and untrapped alike
+            // (Deviation 169).
             return if nil {
                 Ok(ObjRef::NIL)
             } else {
-                Err(Loud::string_answer_not_a_string().into())
+                Err(Raised::nostring_syntax(&readable).into())
             };
         }
         let readable = self.text_built(readable);
@@ -257,7 +260,7 @@ impl Interp {
     /// string conversion. A string or a number is itself, an array (not a
     /// queue) is its items joined by a newline, and a buffer is its text. Any
     /// other object is `None`: `.nil` there, which a consumer of bytes reads
-    /// as a string (Deviation 30).
+    /// as a string (Deviations 30 and 169).
     fn string_answer_text(&mut self, answered: ObjRef) -> Result<Option<Vec<u8>>, Failure> {
         let joined = match answered.decode() {
             Decoded::SmallInt(_) | Decoded::Text(_) => None,

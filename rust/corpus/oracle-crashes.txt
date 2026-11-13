@@ -1075,7 +1075,7 @@ object with a `STRING` method that answers a non-string object:
 SIGSEGV, rc 139. `expose v (v)` inside a method and `drop (v)` crash the same way. The oracle's
 `primitiveMakeString` turns the answer into `.nil`, and the list is then read through the string
 layout. Run 2 times on the oracle. This crate
-refuses each loudly (Deviation 30). No upstream ticket.
+raises SYNTAX 98.973 for each (Deviations 30 and 169). No upstream ticket.
 
 ## 34. An `arrayArgument` whose `MAKEARRAY` answers a List, or a string of some contents
 

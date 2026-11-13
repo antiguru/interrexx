@@ -2103,7 +2103,7 @@ set
 r[class.object.deviation.30]
 When the `string` method of an object answers an object that is not a string,
 interrexx gives the answer ooRexx gives wherever that is defined, and
-elsewhere ends the program with exit code 120, as [the chapter
+elsewhere raises `SYNTAX 98.973`, as [the chapter
 rule](r:class.index.deviation.30) says. The `string` method of `Object` is not
 affected: it answers the name.
 
@@ -2117,7 +2117,7 @@ say 'x' a
   return .directory~new
 ```
 
-```output rc=120
+```output rc=158
 Directory
 before
 ```

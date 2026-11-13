@@ -3,7 +3,7 @@ element: "Conventions"
 kind: concept
 ansi: "9.2.1"
 rexxref: "Functions > Built-in Functions"
-deviations: [30, 109]
+deviations: [30, 109, 169]
 ---
 
 # Conventions
@@ -518,15 +518,15 @@ say '['substr('abc', 2)']' '['substr(' a ', 1)']'
 ## Deviations
 
 r[conv.string.deviation.30]
-interrexx does not convert an argument whose `STRING` method answers an
-object that is not a string, such as a `Directory`. When a builtin receives
-such an argument where its page calls for a string, interrexx ends the
-program with exit code 120 and a message that this is not implemented,
-after raising [`NOSTRING`](r:cond.nostring.raise) when a trap for it is set.
-ooRexx reads the answer as a string, and what it does then depends on the
-builtin: `UPPER` ends the program with Error 5, `LENGTH` answers an unrelated
-number, and `STRIP` crashes the interpreter. A program can rely on none of
-these answers.
+interrexx does not convert an argument whose `STRING` method answers an object
+that is not a string, such as a `Directory`, by reading the answer as a
+string. When a builtin receives such an argument where its page calls for a
+string, interrexx raises `SYNTAX 98.973`, as [Deviation
+169](r:conv.string.deviation.169) says, after raising
+[`NOSTRING`](r:cond.nostring.raise) when a trap for it is set. ooRexx reads
+the answer as a string, and what it does then depends on the builtin: `UPPER`
+ends the program with Error 5, `LENGTH` answers an unrelated number, and
+`STRIP` crashes the interpreter. A program can rely on none of these answers.
 
 ```rexx
 o = .weird~new
@@ -538,8 +538,45 @@ say 'after'
   return .directory~new
 ```
 
-```output rc=120
+```output rc=158
 before
+```
+
+r[conv.string.deviation.169]
+Where a clause needs the bytes of an object's string value, the `STRING` method
+of the object answers an object with no string value, and no trap took the
+NOSTRING condition that the answer raises, the clause raises `SYNTAX 98.973`,
+the condition that `::OPTIONS NOSTRING SYNTAX` makes of NOSTRING. The
+condition is an ordinary SYNTAX condition: `SIGNAL ON SYNTAX` and `CALL ON
+SYNTAX` take it, `RC` is 98 there, and untrapped it ends the program with exit
+code 158. The clauses that do this include `SAY`, the three concatenation
+operators, the ordering comparisons, `PARSE VALUE`, `PARSE ARG`, `OPTIONS` and
+a builtin with a string argument. A clause that reads the answer as an object,
+such as a truth value, a logical operator or an equality comparison, takes it
+as `.nil`. ooRexx reads the answer as a string in all of these, with garbage
+results or a crash, so no answer of it is specified. The text of the message
+is not specified.
+
+```rexx
+o = .weird~new
+signal on syntax name s
+say length(o)
+s: say condition('o')~code rc
+signal on syntax name t
+say 'a' || o
+t: say condition('o')~code rc
+signal on syntax name u
+parse value o with a b
+u: say condition('o')~code rc
+::class weird
+::method string
+  return .directory~new
+```
+
+```output
+98.973 98
+98.973 98
+98.973 98
 ```
 
 r[conv.string.deviation.109]

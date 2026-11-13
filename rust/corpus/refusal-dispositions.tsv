@@ -65,7 +65,6 @@ sim_replay_diverged	LIMIT	docs/design/architecture.md, "Simulation mode" (trace 
 sim_trace_unwritten	LIMIT	docs/design/architecture.md, "Simulation mode" (trace and replay): a run asked for a decision trace that it cannot write fails, so a harness that checks the status learns it has none
 stale_handle	DEVIATION	Deviation 95: a local reference protects its object only until the call that made it ends
 store_op_off_its_node	GUARD	compiler invariant: a Store op names its own assignment (census d-guard)
-string_answer_not_a_string	DEVIATION	Deviation 30: a user STRING method answering an object with no string value, which the oracle converts to .nil, read by a consumer of its bytes
 unbound_method	GUARD	a sweep sent every documented method with its required arguments and every scope override, and Interp::invocable found each resolved method in a table
 unfilled_slot	GUARD	no populated interface table keeps a refusing stub: interrexx-api tests/layout.rs no_populated_table_member_refuses compares every member of every populated table with its stub
 unknown_receiver	GUARD	context and weak reference sends (b_weakref_*, b2_run_hasmethod_on_weakref) and a Method copy passed to define, setMethod and run answer; the rest are handles whose object is gone or kinds receiver_kind has no arm for

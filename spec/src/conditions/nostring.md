@@ -353,8 +353,9 @@ NOSTRING [a PLAIN] The Stem class
 
 r[cond.nostring.deviation.30]
 When the `STRING` method of an object answers an object with no string value,
-interrexx gives ooRexx's answer wherever that is defined, and elsewhere ends
-the program with exit code 120 after raising NOSTRING if it is trapped. For a
+interrexx gives ooRexx's answer wherever that is defined, and elsewhere raises
+`SYNTAX 98.973` ([Deviation
+169](r:conv.string.deviation.169)) after raising NOSTRING if it is trapped. For a
 NOSTRING raised for such an object, the description is not specified. ooRexx
 reads `.nil` as a string there, with garbage results or a crash. [The
 conventions](r:conv.string.deviation.30) state it for builtin arguments.
@@ -370,6 +371,6 @@ say 'not reached'
   return .directory~new
 ```
 
-```output rc=120
+```output rc=158
 trapped NOSTRING The WEIRD class
 ```
