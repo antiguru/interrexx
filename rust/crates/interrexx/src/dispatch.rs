@@ -1,6 +1,7 @@
 //! Message dispatch: the object model this crate resolves against, the
 //! `resolve`/`invoke` pair, and the one chokepoint every invocation passes.
 
+use std::cell::Cell;
 use std::rc::Rc;
 
 use interrexx_classes::{ClassKind, ClassRegistry, InheritRefusal, MethodId, MethodSlot};
@@ -1668,6 +1669,19 @@ enum Primitive {
     },
 }
 
+/// One compiled send site's last resolution: what
+/// [`Interp::lookup_behaviour`] answered for the site's name, with no scope
+/// override, against `behaviour` while the class graph stood at `epoch`. The
+/// lookup reads nothing else, so the answer holds while both match; the
+/// receiver's own methods, the access check and what the method runs are
+/// asked on every send.
+#[derive(Copy, Clone)]
+pub(crate) struct SendMemo {
+    epoch: interrexx_classes::Epoch,
+    behaviour: Behaviour,
+    resolution: Resolution,
+}
+
 /// The behaviour a receiver's messages resolve against.
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 enum Behaviour {
@@ -2241,6 +2255,33 @@ impl Interp {
         }
         let behaviour = self.receiver_behaviour(receiver).ok()?;
         self.lookup_behaviour(behaviour, name, start_scope)
+    }
+
+    /// [`Interp::lookup_behaviour`] with no scope override, answered from
+    /// `memo` while the class graph's epoch and the behaviour are the ones it
+    /// was filled under. A miss is not kept: it goes on to `UNKNOWN`, which
+    /// is a send of its own.
+    #[inline]
+    fn lookup_memoized(
+        &mut self,
+        behaviour: Behaviour,
+        name: &[u8],
+        memo: &Cell<Option<SendMemo>>,
+    ) -> Option<Resolution> {
+        let epoch = self.classes().epoch();
+        if let Some(kept) = memo.get()
+            && kept.epoch == epoch
+            && kept.behaviour == behaviour
+        {
+            return Some(kept.resolution);
+        }
+        let resolution = self.lookup_behaviour(behaviour, name, None)?;
+        memo.set(Some(SendMemo {
+            epoch,
+            behaviour,
+            resolution,
+        }));
+        Some(resolution)
     }
 
     /// What `receiver`'s own methods answer for `name` ahead of its
@@ -3818,6 +3859,36 @@ impl Interp {
             Err(kind) => return Err(Loud::unknown_receiver(kind).into()),
         };
         match self.resolve_in(receiver, behaviour, name, start_scope, caller) {
+            Ok(resolution) => self.begin_invoke(resolution, Some(behaviour), receiver, name, args),
+            Err(miss) => self
+                .unknown_or_nomethod(receiver, name, args, miss)
+                .map(Started::Ran),
+        }
+    }
+
+    /// [`Interp::begin_send`] from a compiled send site with no scope
+    /// override, whose `memo` keeps the method the site last resolved.
+    pub(crate) fn begin_send_at(
+        &mut self,
+        receiver: ObjRef,
+        name: &[u8],
+        memo: &Cell<Option<SendMemo>>,
+        args: &[Option<ObjRef>],
+        caller: Caller,
+    ) -> Result<Started<Option<ObjRef>>, Failure> {
+        let behaviour = match self.receiver_behaviour(receiver) {
+            Ok(behaviour) => behaviour,
+            Err(kind) => return Err(Loud::unknown_receiver(kind).into()),
+        };
+        let found = match self.own_lookup(receiver, name, None) {
+            Some(found) => found,
+            None => self.lookup_memoized(behaviour, name, memo),
+        };
+        let resolved = match found {
+            Some(resolution) => self.admit(resolution, receiver, caller),
+            None => Err(Miss::NoMethod),
+        };
+        match resolved {
             Ok(resolution) => self.begin_invoke(resolution, Some(behaviour), receiver, name, args),
             Err(miss) => self
                 .unknown_or_nomethod(receiver, name, args, miss)

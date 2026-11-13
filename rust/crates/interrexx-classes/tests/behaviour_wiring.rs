@@ -851,3 +851,126 @@ fn a_new_class_reuses_an_expunged_classs_behaviours() {
     assert!(g.has_method_at(instance, "NEW") && g.has_method_at(instance, "BASE"));
     assert!(!g.has_method_at(instance, "OLD"));
 }
+
+/// Every write to a behaviour's dictionary bumps that behaviour's version,
+/// including the writes outside the cascade: `class_define`'s direct add, a
+/// hiding copy's install, and the clear that frees a handle for reuse. A
+/// stamp `(handle, version)` taken before any of them no longer matches.
+#[test]
+fn every_write_to_a_behaviour_bumps_its_version() {
+    let object = id(1);
+    let class = id(2);
+    let fresh = id(3);
+    let mut g = ClassGraph::new();
+    g.define_class(object, None, ClassKind::Regular, object);
+    g.define_class(class, Some(object), ClassKind::Regular, object);
+
+    let class_side = g.class_behaviour_handle(class);
+    let before = g.version_at(class_side);
+    g.class_define(class, "M", MethodId(1));
+    assert!(g.lookup_at(class_side, "M").is_some());
+    assert!(
+        g.version_at(class_side) > before,
+        "class_define left the version"
+    );
+
+    let hiding = g.hiding_behaviour(class, &["M"]);
+    assert!(
+        g.version_at(hiding) > 0,
+        "a hiding copy kept a written handle's version"
+    );
+
+    let instance = g.instance_behaviour_handle(class);
+    let stamps = [instance, class_side].map(|handle| (handle, g.version_at(handle)));
+    g.expunge(&[class]);
+    g.define_class(fresh, Some(object), ClassKind::Regular, object);
+    for (handle, version) in stamps {
+        assert!(
+            g.version_at(handle) > version,
+            "{handle:?} was freed and reused without a version change"
+        );
+    }
+}
+
+/// The graph's epoch changes on every mutator that can change what a lookup,
+/// a super-scope resolution or a class's identity answers, and on nothing a
+/// lookup does not read.
+#[test]
+fn every_dispatch_visible_mutation_changes_the_epoch() {
+    let object = id(1);
+    let base = id(2);
+    let sub = id(3);
+    let mixin = id(4);
+    let other = id(5);
+    let cloned = id(6);
+    let mut g = ClassGraph::new();
+    let mut last = g.epoch();
+    let mut changed = |g: &ClassGraph, what: &str| {
+        assert_ne!(g.epoch(), last, "{what} left the epoch");
+        last = g.epoch();
+    };
+    g.define_class(object, None, ClassKind::Regular, object);
+    changed(&g, "define_class");
+    g.define_class(base, Some(object), ClassKind::Regular, object);
+    g.define_class(sub, Some(base), ClassKind::Regular, object);
+    g.define_class(mixin, Some(object), ClassKind::Mixin, object);
+    g.define_class(other, Some(object), ClassKind::Regular, object);
+    changed(&g, "define_class");
+    g.define(base, "A", MethodId(1));
+    changed(&g, "define");
+    g.define_methods(base, &[("B".to_owned(), Some(MethodId(2)))]);
+    changed(&g, "define_methods");
+    g.hide(base, "B");
+    changed(&g, "hide");
+    g.withdraw(base, "B");
+    changed(&g, "withdraw");
+    g.delete(base, "B");
+    changed(&g, "delete");
+    g.class_define(base, "C", MethodId(3));
+    changed(&g, "class_define");
+    g.inherit(sub, mixin).expect("a legal inherit");
+    changed(&g, "inherit");
+    g.uninherit(sub, mixin).expect("a legal uninherit");
+    changed(&g, "uninherit");
+    g.enhance_instance_methods(sub, sub, &[("E".to_owned(), Some(MethodId(4)))]);
+    changed(&g, "enhance_instance_methods");
+    g.set_owning_class(sub, other);
+    changed(&g, "set_owning_class");
+    g.repoint_instance_method(base, "A", MethodId(1), MethodId(5));
+    changed(&g, "repoint_instance_method");
+    g.donate_instance_methods(other, base);
+    changed(&g, "donate_instance_methods");
+    g.inherit_instance_methods(other, base);
+    changed(&g, "inherit_instance_methods");
+    g.update_subclasses_of(base);
+    changed(&g, "update_subclasses_of");
+    g.refresh_class_behaviour(base);
+    changed(&g, "refresh_class_behaviour");
+    g.hiding_behaviour(base, &["A"]);
+    changed(&g, "hiding_behaviour");
+    g.define_cloned_class(cloned, base, object, object);
+    changed(&g, "define_cloned_class");
+    g.reparent(cloned, object, ClassKind::Regular, object);
+    changed(&g, "reparent");
+    g.unlist_subclass(cloned);
+    changed(&g, "unlist_subclass");
+    g.free_unheld_behaviours(std::iter::empty());
+    changed(&g, "free_unheld_behaviours");
+    g.expunge(&[cloned]);
+    changed(&g, "expunge");
+
+    // The flags a lookup never reads keep the stamp.
+    g.check_uninit(base);
+    g.make_abstract(base);
+    g.set_rexx_defined(other);
+    g.refresh_parent_has_uninit(sub);
+    g.take_retired_entries();
+    assert_eq!(
+        g.epoch(),
+        last,
+        "a lookup-neutral mutator changed the epoch"
+    );
+
+    // Two graphs never share a stamp.
+    assert_ne!(ClassGraph::new().epoch(), ClassGraph::new().epoch());
+}

@@ -5,7 +5,7 @@ mod method_dict;
 mod native_classes;
 mod registry;
 
-pub use class_graph::{ClassGraph, ClassKind, InheritRefusal};
+pub use class_graph::{ClassGraph, ClassKind, Epoch, InheritRefusal};
 pub use interrexx_core::{BehaviourHandle, MethodId};
 pub use method_dict::{MethodDict, MethodSlot};
 pub use native_classes::{

@@ -5,6 +5,27 @@ use interrexx_core::MethodId;
 use interrexx_core::NameMap;
 use interrexx_core::{BehaviourHandle, ObjRef};
 use std::collections::BTreeSet;
+use std::sync::atomic::{AtomicU64, Ordering};
+
+/// The source of every [`ClassGraph::epoch`] value in the process, so that two
+/// graphs never share one: a stamp taken from one graph cannot match another.
+static NEXT_EPOCH: AtomicU64 = AtomicU64::new(1);
+
+/// A stamp of a graph's dispatch-visible state: see [`ClassGraph::epoch`].
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+pub struct Epoch(u64);
+
+impl Epoch {
+    fn fresh() -> Epoch {
+        Epoch(NEXT_EPOCH.fetch_add(1, Ordering::Relaxed))
+    }
+}
+
+impl Default for Epoch {
+    fn default() -> Epoch {
+        Epoch::fresh()
+    }
+}
 
 /// Whether a class was declared with `SUBCLASS`/plain inheritance or with
 /// `MIXINCLASS`. The only difference this makes is `base_class`: a
@@ -48,8 +69,9 @@ enum Side {
     Class,
 }
 
-/// One flattened behaviour, plus a monotonic version bumped by every
-/// cascade, which a per-call-site cache can check.
+/// One flattened behaviour, plus a monotonic version bumped by every write to
+/// its dictionary, a handle's reuse included: the dictionary of a freed
+/// handle is cleared, which is a write.
 struct Behaviour {
     dict: MethodDict,
     version: u64,
@@ -140,11 +162,28 @@ pub struct ClassGraph {
     /// The uninit table restricted to class objects: the entries the uninit
     /// check makes, in the order it makes them.
     uninit_classes: Vec<ObjRef>,
+    /// See [`ClassGraph::epoch`].
+    epoch: Epoch,
 }
 
 impl ClassGraph {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// A stamp that changes whenever anything a method lookup, a super-scope
+    /// resolution or a class's identity can answer may have changed: every
+    /// public mutator takes a new one, except the few that touch only the
+    /// uninit and abstract flags, the retirement counters and the
+    /// Rexx-defined mark. Unique across every graph in the process, so a
+    /// per-site cache filled under one stamp is valid exactly while the graph
+    /// still answers it.
+    pub fn epoch(&self) -> Epoch {
+        self.epoch
+    }
+
+    fn bump_epoch(&mut self) {
+        self.epoch = Epoch::fresh();
     }
 
     fn alloc_behaviour(&mut self) -> BehaviourHandle {
@@ -169,6 +208,7 @@ impl ClassGraph {
         kind: ClassKind,
         metaclass: ObjRef,
     ) {
+        self.bump_epoch();
         let derived_from_metaclass = superclass.filter(|sup| self.classes[sup].is_metaclass);
         let owning_class = metaclass;
         let metaclass = derived_from_metaclass.unwrap_or(metaclass);
@@ -225,6 +265,7 @@ impl ClassGraph {
         root: ObjRef,
         metaclass: ObjRef,
     ) {
+        self.bump_epoch();
         let instance_behaviour = self.alloc_behaviour();
         let class_behaviour = self.alloc_behaviour();
         self.classes.insert(
@@ -261,13 +302,16 @@ impl ClassGraph {
     /// each of `hidden` hidden in front, as `defineInstanceMethod` with a
     /// `.nil` method does to one object's behaviour copy.
     pub fn hiding_behaviour(&mut self, class: ObjRef, hidden: &[&str]) -> BehaviourHandle {
+        self.bump_epoch();
         let source = self.classes[&class].instance_behaviour;
         let mut dict = self.behaviours[source.index()].dict.clone();
         for name in hidden {
             dict.add_hidden(name);
         }
         let handle = self.alloc_behaviour();
-        self.behaviours[handle.index()].dict = dict;
+        let behaviour = &mut self.behaviours[handle.index()];
+        behaviour.dict = dict;
+        behaviour.version += 1;
         handle
     }
 
@@ -297,6 +341,7 @@ impl ClassGraph {
     /// `metaclass` owns its class behaviour, and both behaviours are rebuilt
     /// in place. Its own method dictionaries are kept.
     pub fn reparent(&mut self, id: ObjRef, superclass: ObjRef, kind: ClassKind, metaclass: ObjRef) {
+        self.bump_epoch();
         let derived_from_metaclass = self.classes[&superclass].is_metaclass;
         let base_class = match kind {
             ClassKind::Regular => id,
@@ -333,6 +378,7 @@ impl ClassGraph {
     /// the step `mixinClass` takes once the second `init` has run, which
     /// gives it the superclass's base class.
     pub fn complete_mixin(&mut self, id: ObjRef) {
+        self.bump_epoch();
         let superclass = self.classes[&id].superclasses[0];
         let base_class = self.classes[&superclass].base_class;
         let def = self.classes.get_mut(&id).unwrap();
@@ -344,6 +390,7 @@ impl ClassGraph {
     /// that raised before its second `init` leaves the receiver: the class
     /// itself is kept, but nothing lists it.
     pub fn unlist_subclass(&mut self, id: ObjRef) {
+        self.bump_epoch();
         let superclasses = self.classes[&id].superclasses.clone();
         for sup in superclasses {
             if let Some(def) = self.classes.get_mut(&sup) {
@@ -361,6 +408,7 @@ impl ClassGraph {
         scope: ObjRef,
         methods: &[(String, Option<MethodId>)],
     ) {
+        self.bump_epoch();
         let def = self
             .classes
             .get_mut(&class)
@@ -377,6 +425,7 @@ impl ClassGraph {
     /// `~enhanced` sets the owning class of an enhanced object that is a class:
     /// what its `~class` answers.
     pub fn set_owning_class(&mut self, class: ObjRef, owner: ObjRef) {
+        self.bump_epoch();
         self.classes
             .get_mut(&class)
             .expect("set_owning_class: unknown class")
@@ -419,6 +468,7 @@ impl ClassGraph {
     /// Drops every trace of `dead` from the graph, and scrubs the subclass
     /// lists of the classes that survive.
     pub fn expunge(&mut self, dead: &[ObjRef]) {
+        self.bump_epoch();
         let ClassGraph {
             classes,
             behaviours,
@@ -426,6 +476,7 @@ impl ClassGraph {
             retired,
             retired_entries: _,
             uninit_classes,
+            epoch: _,
         } = self;
         for class in dead {
             // The dictionaries are the weight: a flattened behaviour holds
@@ -437,7 +488,9 @@ impl ClassGraph {
                     .iter()
                     .chain(&def.retired_behaviours)
                 {
-                    behaviours[handle.index()].dict.clear();
+                    let behaviour = &mut behaviours[handle.index()];
+                    behaviour.dict.clear();
+                    behaviour.version += 1;
                     debug_assert!(!free_behaviours.contains(handle), "{handle:?} freed twice");
                     free_behaviours.push(*handle);
                 }
@@ -482,6 +535,7 @@ impl ClassGraph {
         &mut self,
         held: impl Iterator<Item = BehaviourHandle>,
     ) -> Vec<(ObjRef, MethodId)> {
+        self.bump_epoch();
         let ClassGraph {
             classes,
             behaviours,
@@ -499,9 +553,10 @@ impl ClassGraph {
                 if is_held[handle.index()] {
                     return true;
                 }
-                let dict = &mut behaviours[handle.index()].dict;
-                unnamed.extend(dict.methods().map(|method| (*class, method)));
-                dict.clear();
+                let behaviour = &mut behaviours[handle.index()];
+                unnamed.extend(behaviour.dict.methods().map(|method| (*class, method)));
+                behaviour.dict.clear();
+                behaviour.version += 1;
                 debug_assert!(!free_behaviours.contains(handle), "{handle:?} freed twice");
                 free_behaviours.push(*handle);
                 *retired -= 1;
@@ -678,6 +733,7 @@ impl ClassGraph {
     /// [`BehaviourHandle`] and the old one is never written to again, while
     /// every subclass keeps its own existing handle and is rebuilt in place.
     pub fn define(&mut self, class: ObjRef, name: &str, method: MethodId) {
+        self.bump_epoch();
         let def = self.classes.get_mut(&class).expect("define: unknown class");
         def.own_instance_methods.replace_method(name, class, method);
         if name.eq_ignore_ascii_case("UNINIT") {
@@ -690,6 +746,7 @@ impl ClassGraph {
     /// `~define` with the method argument omitted, and the bootstrap hiding of
     /// a method: a `.nil` tombstone under `name`.
     pub fn hide(&mut self, class: ObjRef, name: &str) {
+        self.bump_epoch();
         self.classes
             .get_mut(&class)
             .expect("hide: unknown class")
@@ -702,6 +759,7 @@ impl ClassGraph {
     /// `~define` with `.nil` as the method: [`ClassGraph::hide`] with the
     /// mark [`MethodSlot::Withdrawn`], which `Class~method` does not answer.
     pub fn withdraw(&mut self, class: ObjRef, name: &str) {
+        self.bump_epoch();
         self.classes
             .get_mut(&class)
             .expect("withdraw: unknown class")
@@ -717,6 +775,7 @@ impl ClassGraph {
     /// behaviour is copied unconditionally and subclasses are updated only when
     /// something was removed.
     pub fn delete(&mut self, class: ObjRef, name: &str) -> bool {
+        self.bump_epoch();
         let removed = self
             .classes
             .get_mut(&class)
@@ -739,6 +798,7 @@ impl ClassGraph {
     /// `~defineMethods`, which replaces one method per entry and copies the behaviour and
     /// cascades once for the whole table rather than once per name.
     pub fn define_methods(&mut self, class: ObjRef, methods: &[(String, Option<MethodId>)]) {
+        self.bump_epoch();
         let def = self
             .classes
             .get_mut(&class)
@@ -801,6 +861,7 @@ impl ClassGraph {
     /// mixin's class-side method before any class `inherit`s it, which is
     /// exactly that restriction in miniature.
     pub fn class_define(&mut self, class: ObjRef, name: &str, method: MethodId) {
+        self.bump_epoch();
         let handle = {
             let def = self
                 .classes
@@ -809,9 +870,9 @@ impl ClassGraph {
             def.own_class_methods.add_method(name, class, method);
             def.class_behaviour
         };
-        self.behaviours[handle.index()]
-            .dict
-            .add_method(name, class, method);
+        let behaviour = &mut self.behaviours[handle.index()];
+        behaviour.dict.add_method(name, class, method);
+        behaviour.version += 1;
     }
 
     /// `~inherit` does **no** copy: it appends to the superclass list and runs
@@ -831,6 +892,7 @@ impl ClassGraph {
         mixin: ObjRef,
         position: Option<ObjRef>,
     ) -> Result<(), InheritRefusal> {
+        self.bump_epoch();
         if !matches!(self.classes[&mixin].kind, ClassKind::Mixin) {
             return Err(InheritRefusal::NotAMixin);
         }
@@ -876,6 +938,7 @@ impl ClassGraph {
     /// `~uninherit`: take a mixin back out of the superclass list --
     /// `~uninherit`.
     pub fn uninherit(&mut self, class: ObjRef, mixin: ObjRef) -> Result<(), InheritRefusal> {
+        self.bump_epoch();
         if !matches!(self.classes[&mixin].kind, ClassKind::Mixin) {
             return Err(InheritRefusal::NotAMixin);
         }
@@ -910,6 +973,7 @@ impl ClassGraph {
     /// own methods into this class's dictionary under this class's scope,
     /// **leaving the donor alone**.
     pub fn donate_instance_methods(&mut self, class: ObjRef, donor: ObjRef) {
+        self.bump_epoch();
         let donor_methods = self
             .classes
             .get(&donor)
@@ -932,6 +996,7 @@ impl ClassGraph {
     /// cascade** to `class`'s own subclasses (unlike [`Self::define`] and
     /// [`Self::inherit`], it runs neither of the two subclass updates).
     pub fn inherit_instance_methods(&mut self, class: ObjRef, donor: ObjRef) {
+        self.bump_epoch();
         let mut donor_methods = std::mem::take(
             &mut self
                 .classes
@@ -954,6 +1019,7 @@ impl ClassGraph {
     /// cascade ([`Self::inherit_instance_methods`]) needs for subclasses that
     /// already exist to see it.
     pub fn update_subclasses_of(&mut self, class: ObjRef) {
+        self.bump_epoch();
         let subclasses = self.classes[&class].subclasses.clone();
         for sub in subclasses {
             self.update_sub_classes(sub);
@@ -1011,6 +1077,7 @@ impl ClassGraph {
     /// hatch [`ClassGraph::define`]/[`ClassGraph::class_define`] don't need
     /// and don't provide.
     pub fn refresh_class_behaviour(&mut self, class: ObjRef) {
+        self.bump_epoch();
         self.rebuild_behaviour(class, Side::Class);
     }
 
@@ -1018,6 +1085,7 @@ impl ClassGraph {
     /// class-behaviour, bypassing [`ClassGraph::cascade_build`]'s
     /// `Side::Class` "is this the root" guard entirely.
     pub fn bootstrap_root_class_behaviour(&mut self, root: ObjRef, metaclass: ObjRef) {
+        self.bump_epoch();
         let meta_instance = self.classes[&metaclass].instance_behaviour;
         let meta_dict = self.behaviours[meta_instance.index()].dict.clone();
         let handle = self.behaviour_handle(root, Side::Class);
@@ -1029,6 +1097,7 @@ impl ClassGraph {
     /// class-behaviour build marks `.Class` itself as a metaclass, which is
     /// where the chain [`ClassGraph::define_class`] propagates starts.
     pub fn bootstrap_metaclass(&mut self, class: ObjRef) {
+        self.bump_epoch();
         self.classes
             .get_mut(&class)
             .expect("bootstrap_metaclass: unknown class")
@@ -1086,6 +1155,7 @@ impl ClassGraph {
         old: MethodId,
         new: MethodId,
     ) {
+        self.bump_epoch();
         self.classes
             .get_mut(&class)
             .expect("repoint_instance_method: unknown class")
@@ -1191,8 +1261,8 @@ impl ClassGraph {
             .resolve_super_scope(scope)
     }
 
-    /// The monotonic version, bumped once per `rebuild_behaviour` call
-    /// against this handle.
+    /// The monotonic version, bumped once per write to this handle's
+    /// dictionary.
     pub fn version_at(&self, handle: BehaviourHandle) -> u64 {
         self.behaviours[handle.index()].version
     }
