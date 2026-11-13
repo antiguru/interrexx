@@ -1719,6 +1719,8 @@ struct Interp {
     /// reference to it, so it appends to it rather than copying it. Not a
     /// root: it is only ever compared with a register that roots it.
     pub(crate) fresh_concat: ObjRef,
+    /// `WORD`'s table of the string it was last asked about.
+    pub(crate) word_index: crate::builtin::word::WordIndex,
     /// One entry per activity inside a stem's forward ([`Interp::forwarded`]).
     forwardings: Vec<crate::value::Forwarding>,
     /// Whether anything in this run could take `LOSTDIGITS`: a `SIGNAL ON
@@ -2473,6 +2475,7 @@ impl Interp {
             reqstr_armed: false,
             held_trace_failure: None,
             fresh_concat: ObjRef::NIL,
+            word_index: crate::builtin::word::WordIndex::default(),
             forwardings: Vec::new(),
             lostdigits_armed: false,
             program_path: Vec::new(),
@@ -3583,6 +3586,8 @@ impl Interp {
             // Compared, never read through: the register it is compared with
             // is the root.
             fresh_concat: _,
+            // A handle compared, never followed, and dropped at collection.
+            word_index: _,
             // Each receiver is a forward's, rooted by that send too; handed
             // over so the handle it is compared with never names a slot the
             // collector has freed.
@@ -3659,6 +3664,8 @@ impl Interp {
     /// that what an allocation pays when nothing is due is the test alone.
     #[inline(never)]
     fn collect_now(&mut self) {
+        // Its key is a handle, and a collection frees the slots handles name.
+        self.word_index.clear();
         // Nothing a collection reads is the running activity's resolution.
         #[cfg(feature = "sharing")]
         self.heap.sharing_pause(true);
