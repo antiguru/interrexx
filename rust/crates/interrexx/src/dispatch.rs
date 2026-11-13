@@ -2227,11 +2227,9 @@ impl Interp {
         start_scope: Option<ObjRef>,
     ) -> Option<Resolution> {
         // **The object's own methods come first**, since an object's own
-        // methods sit ahead of its class's.
-        // A scope
-        // override starts inside the class hierarchy and so never reaches
-        // one: a lookup from a named scope searches the hierarchy only, and a
-        // one-off's scope is `.nil` or the class's own.
+        // methods sit ahead of its class's. A search that starts at a named
+        // scope reaches only the own method whose scope is that very class
+        // (r[class.methods.object.scope]).
         if let Some(found) = self.own_lookup(receiver, name, start_scope) {
             return found;
         }
@@ -2247,14 +2245,19 @@ impl Interp {
         name: &[u8],
         start_scope: Option<ObjRef>,
     ) -> Option<Option<Resolution>> {
-        if start_scope.is_none()
-            && let Some(entry) = self.own_method_entry(receiver, name)
-        {
-            return Some(
-                entry.map(|ObjectMethod { method, scope, .. }| Resolution { scope, method }),
-            );
+        let entry = self.own_method_entry(receiver, name)?;
+        match start_scope {
+            None => {
+                Some(entry.map(|ObjectMethod { method, scope, .. }| Resolution { scope, method }))
+            }
+            // A method set with the scope `OBJECT` takes the place of a method
+            // of the object's class, so a search that starts at that class
+            // finds it ahead of the class's own entry. A hiding mark and a
+            // method of another scope are not seen from a named scope.
+            Some(start) => entry
+                .filter(|own| own.scope == start)
+                .map(|ObjectMethod { method, scope, .. }| Some(Resolution { scope, method })),
         }
-        None
     }
 
     /// [`Interp::lookup`] in `behaviour`, past the receiver's own methods.

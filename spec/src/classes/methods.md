@@ -877,7 +877,7 @@ e: say 'hiding mark, plain:' condition('o')~code
   return 'sub w'
 ```
 
-```output defect=#131
+```output
 plain: own w | scoped k: own w | scoped base: base w
 forward class k: own w | send with array: own w
 float, scoped k: k w
