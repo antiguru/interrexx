@@ -1061,8 +1061,15 @@ impl Interp {
 
     /// Parses `inline` into [`TextNumbers`]' `slot` for `value`.
     fn text_numbers_fill(&mut self, slot: usize, value: ObjRef, inline: &[u8]) {
-        let parsed = Number::parse_bytes(inline).ok_or(NotNumeric);
         self.text_numbers.keys[slot] = value;
+        // A plain decimal, the spelling nearly every one has, is read
+        // straight into its `Scaled` and the `Number` is built from that.
+        if let Some(scaled) = Scaled::parse_plain(inline) {
+            self.text_numbers.scaled[slot] = Some(scaled);
+            self.text_numbers.parsed[slot] = Ok(scaled.to_number());
+            return;
+        }
+        let parsed = Number::parse_bytes(inline).ok_or(NotNumeric);
         self.text_numbers.scaled[slot] = parsed.as_ref().ok().and_then(Number::scaled);
         self.text_numbers.parsed[slot] = parsed;
     }

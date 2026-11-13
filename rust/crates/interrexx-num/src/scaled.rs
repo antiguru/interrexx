@@ -139,6 +139,46 @@ impl Scaled {
         }
     }
 
+    /// `bytes` as a `Scaled` where they are a plain nonzero decimal -- an
+    /// optional `-`, digits and at most one point, nothing else, no more
+    /// than [`WIDEST`] digits -- which is [`Number::parse_bytes`]'s answer
+    /// read without a [`Number`] built; `None` for every other spelling,
+    /// numeric or not.
+    pub fn parse_plain(bytes: &[u8]) -> Option<Scaled> {
+        let (negative, body) = match bytes.split_first() {
+            Some((b'-', rest)) => (true, rest),
+            _ => (false, bytes),
+        };
+        let mut magnitude = 0i64;
+        let mut count = 0u32;
+        let mut decimals = 0i32;
+        let mut seen_point = false;
+        for &byte in body {
+            match byte {
+                b'0'..=b'9' => {
+                    count += 1;
+                    if count > WIDEST {
+                        return None;
+                    }
+                    magnitude = magnitude * 10 + i64::from(byte - b'0');
+                    decimals += i32::from(seen_point);
+                }
+                b'.' if !seen_point => seen_point = true,
+                _ => return None,
+            }
+        }
+        if magnitude == 0 {
+            // No digit at all, or a zero, which `parse_bytes` spells its
+            // own way.
+            return None;
+        }
+        Some(Scaled {
+            mantissa: if negative { -magnitude } else { magnitude },
+            exponent: -decimals,
+            length: digit_length(magnitude as u64),
+        })
+    }
+
     /// `value` as a `Scaled`, as [`Number::from_i64`] spells it.
     pub fn from_i64(value: i64) -> Option<Scaled> {
         let magnitude = value.unsigned_abs();
@@ -451,7 +491,60 @@ impl Scaled {
 
 #[cfg(test)]
 mod tests {
+    use super::Scaled;
     use crate::Number;
+
+    /// `Scaled::parse_plain` answers what `Number::parse_bytes` answers
+    /// wherever it answers, and answers every plain short decimal.
+    #[test]
+    fn the_plain_parse_answers_what_the_number_parse_answers() {
+        let alphabet = b"0123456789.-+ eE";
+        let mut state = 0x1234_5678_9abc_def1u64;
+        let mut next = move |bound: u64| {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            state % bound
+        };
+        let mut taken = 0;
+        for _ in 0..200_000 {
+            let length = next(22) as usize;
+            let bytes: Vec<u8> = (0..length)
+                .map(|_| {
+                    // Mostly digits, so that plain spellings are common.
+                    if next(3) == 0 {
+                        alphabet[next(alphabet.len() as u64) as usize]
+                    } else {
+                        b'0' + next(10) as u8
+                    }
+                })
+                .collect();
+            let expected = Number::parse_bytes(&bytes);
+            match Scaled::parse_plain(&bytes) {
+                Some(scaled) => {
+                    taken += 1;
+                    assert_eq!(
+                        Some(scaled.to_number()),
+                        expected,
+                        "{}",
+                        String::from_utf8_lossy(&bytes)
+                    );
+                    assert_eq!(expected.as_ref().and_then(Number::scaled), Some(scaled));
+                }
+                None => {
+                    let plain = bytes.iter().filter(|b| b.is_ascii_digit()).count() <= 18
+                        && bytes.iter().all(|b| b.is_ascii_digit() || *b == b'.')
+                        && bytes.iter().filter(|b| **b == b'.').count() <= 1;
+                    assert!(
+                        !plain || expected.as_ref().is_none_or(Number::is_zero),
+                        "{} declined",
+                        String::from_utf8_lossy(&bytes)
+                    );
+                }
+            }
+        }
+        assert!(taken > 50_000, "the plain parse answered {taken} times");
+    }
 
     /// `Scaled::mul` answers what the long multiplication answers wherever
     /// it answers at all, rounding included.
