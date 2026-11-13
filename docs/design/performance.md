@@ -96,3 +96,7 @@ misses than ooRexx on every axis measured except L1i.
 * **`#[inline(never)]` on the byte-string constructors** to undo a layout shift: an out-of-line call
   on every string construction for a movement that was not attributable.
 * **A C allocator (mimalloc, jemalloc)**: not pursued; it links C into a pure-Rust build.
+* **A shared keyword `SymbolTable` behind a second `HashMap`** (look up the chunk's own map, then
+  the base's): hashing twice cost `startup` +0.8% instructions. The shared table is a copied
+  linear-probing index instead, one hash per lookup. Likewise a `BySymbol` table split into two
+  runs with a cold fallback cost `compound` +1.2%; one run with an offset costs +0.3%.
