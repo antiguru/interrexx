@@ -569,10 +569,10 @@ fn minted_method_identities_do_not_grow_the_method_rows() {
     );
 }
 
-/// A collection frees the behaviours `define` retired once no instance
-/// holds them, and keeps the one a live instance holds.
+/// Every instance follows each `define`, and a collection releases the
+/// methods the `define`s replaced.
 #[test]
-fn a_collection_frees_retired_behaviours_no_instance_holds() {
+fn a_collection_releases_the_methods_define_replaced() {
     let mut interp = Interp::new();
     interp.bootstrap_library().expect("library");
     let out = say_output_with_directives(
@@ -581,25 +581,18 @@ fn a_collection_frees_retired_behaviours_no_instance_holds() {
           do i = 1 to 20\n  o = .k~new\n  .k~define('FOO', 'return' i)\nend\n\
           say .local['OLD']~foo o~foo .k~new~foo\ndrop o\n::class k\n::method foo\n  return 0\n",
     );
-    assert_eq!(String::from_utf8_lossy(&out), "0 19 20\n");
+    assert_eq!(String::from_utf8_lossy(&out), "20 20 20\n");
     interp.collect_now();
     assert!(
-        interp.has_retired_behaviours(),
-        "the behaviour a held instance dispatches against was freed"
-    );
-    let out = say_output_with_directives(&mut interp, b".local['OLD'] = .nil\nsay 'gone'\n");
-    assert_eq!(String::from_utf8_lossy(&out), "gone\n");
-    interp.collect_now();
-    assert!(
-        !interp.has_retired_behaviours(),
-        "a retired behaviour no instance holds survived a collection"
+        !interp.has_dropped_methods(),
+        "a replaced method no activation runs survived a collection"
     );
 }
 
-/// A class lets go of the `Method` objects only freed behaviours named, so
+/// A class lets go of the `Method` objects no dictionary names any more, so
 /// `define` in a loop leaves the copies it made to the collector.
 #[test]
-fn a_class_lets_go_of_methods_only_freed_behaviours_named() {
+fn a_class_lets_go_of_methods_no_dictionary_names() {
     let mut interp = Interp::new();
     interp.bootstrap_library().expect("library");
     let baseline = interp.executable_sources.len();

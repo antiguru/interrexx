@@ -1,6 +1,6 @@
 //! `ClassGraph::define_all` against the `ClassGraph::define` calls it stands
-//! for: every behaviour the two leave answers alike, and the retired
-//! behaviours are charged alike.
+//! for: every behaviour the two leave answers alike, both update the class's
+//! behaviour in place, and both drop the same methods.
 
 use interrexx_classes::{ClassGraph, ClassKind, MethodId};
 use interrexx_core::ObjRef;
@@ -36,7 +36,7 @@ fn graph(rexx_defined: bool) -> ClassGraph {
             g.set_rexx_defined(id(class));
         }
     }
-    g.take_retired_entries();
+    g.take_unnamed_methods();
     g
 }
 
@@ -85,19 +85,17 @@ fn compare(class: u32, methods: &[(&str, u32)], rexx_defined: bool) {
         );
     }
     assert_eq!(
-        one_by_one.take_retired_entries(),
-        together.take_retired_entries(),
-        "retired entries after defining {methods:?} on {class}"
+        one_by_one.take_unnamed_methods(),
+        together.take_unnamed_methods(),
+        "methods dropped by defining {methods:?} on {class}"
     );
-    assert_eq!(
-        one_by_one.instance_behaviour_handle(id(class)) != before,
-        together.instance_behaviour_handle(id(class)) != before,
-        "an instance made before keeps the old behaviour"
-    );
-    assert_eq!(
-        one_by_one.has_retired_behaviours(),
-        together.has_retired_behaviours()
-    );
+    for g in [&one_by_one, &together] {
+        assert_eq!(
+            g.instance_behaviour_handle(id(class)),
+            before,
+            "an instance made before holds the behaviour the class has"
+        );
+    }
 }
 
 #[test]

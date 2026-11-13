@@ -2544,7 +2544,7 @@ impl Interp {
         self.library_bootstrap = false;
         self.special_methods.seal();
         self.executable_objects.seal();
-        self.classes().keep_retired_behaviours();
+        self.classes().forget_dropped_methods();
         interrexx_classes::remove_setup_methods(self.classes());
         if outcome.is_ok() {
             self.mint_local_directory();
@@ -3721,8 +3721,8 @@ impl Interp {
         if !stats.freed_classes.is_empty() {
             self.prune_freed_classes(&stats.freed_classes);
         }
-        if self.has_retired_behaviours() {
-            self.free_unheld_behaviours();
+        if self.has_dropped_methods() {
+            self.release_dropped_methods();
         }
         // **Not raised for the stress mode**, which collects on every
         // allocation by definition and must not have its watermark moved

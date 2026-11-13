@@ -164,12 +164,11 @@ fn a_diamond_still_prefers_the_first_listed_mixin_and_keeps_the_common_ancestors
 // ~define with an instance already created.
 // ---------------------------------------------------------------------
 
-/// `define_visibility.rex`: create `old = .Widget~new`, then
-/// `.Widget~define('FOO', ...)`, then create `new = .Widget~new`. Recorded:
-/// `old hasmethod FOO= 0`, `new hasmethod FOO= 1` -- the pre-existing
-/// instance must NOT see a `~define`.
+/// `define` updates the class's instance behaviour in place, so an instance
+/// made before it sees the method as one made after it does
+/// (`r[class.methods.late]`).
 #[test]
-fn define_does_not_reach_an_instance_created_before_it() {
+fn define_reaches_an_instance_created_before_it() {
     let object = id(1);
     let widget = id(2);
 
@@ -181,24 +180,18 @@ fn define_does_not_reach_an_instance_created_before_it() {
     g.define(widget, "FOO", MethodId(1));
     let new_handle = g.instance_behaviour_handle(widget); // "new = .Widget~new"
 
-    assert!(
-        !g.has_method_at(old_handle, "FOO"),
-        "define_visibility.rex recorded 'old hasmethod FOO= 0'"
+    assert_eq!(
+        old_handle, new_handle,
+        "define replaced the class's behaviour"
     );
-    assert!(
-        g.has_method_at(new_handle, "FOO"),
-        "define_visibility.rex recorded 'new hasmethod FOO= 1'"
-    );
+    assert!(g.has_method_at(old_handle, "FOO"));
 }
 
-/// `define_subclass_visibility.rex`: `Sub subclass Base`; create one
-/// instance of each, then `.Base~define('QUUX', ...)`. Recorded:
-/// `oldBase hasmethod QUUX= 0`, `oldSub hasmethod QUUX= 1` -- the
-/// asymmetry is isolated to the *direct* recipient. A subclass's
-/// already-created instance DOES see a superclass's `~define`, because
-/// only `Base`'s handle is replaced; `Sub`'s is rebuilt in place.
+/// `Sub subclass Base`; one instance of each exists, then
+/// `.Base~define('QUUX', ...)`: both instances answer `QUUX`
+/// (`r[class.methods.late]`).
 #[test]
-fn define_on_a_superclass_still_reaches_an_existing_subclass_instance() {
+fn define_on_a_superclass_reaches_existing_instances_of_both_classes() {
     let object = id(1);
     let base = id(2);
     let sub = id(3);
@@ -213,14 +206,41 @@ fn define_on_a_superclass_still_reaches_an_existing_subclass_instance() {
 
     g.define(base, "QUUX", MethodId(1));
 
-    assert!(
-        !g.has_method_at(old_base, "QUUX"),
-        "define_subclass_visibility.rex recorded 'oldBase hasmethod QUUX= 0'"
-    );
-    assert!(
-        g.has_method_at(old_sub, "QUUX"),
-        "define_subclass_visibility.rex recorded 'oldSub hasmethod QUUX= 1'"
-    );
+    assert!(g.has_method_at(old_base, "QUUX"));
+    assert!(g.has_method_at(old_sub, "QUUX"));
+}
+
+/// A class object follows every change to its metaclass's instance
+/// methods, a class `~new` made included (`r[class.methods.late]`).
+#[test]
+fn a_class_object_follows_its_metaclass() {
+    let object = id(1);
+    let meta = id(2);
+    let declared = id(3);
+    let made = id(4);
+    let below = id(5);
+
+    let mut g = ClassGraph::new();
+    g.define_class(object, None, ClassKind::Regular, object);
+    g.define_class(meta, Some(object), ClassKind::Regular, object);
+    g.define_class(declared, Some(object), ClassKind::Regular, meta);
+    g.define_class(below, Some(declared), ClassKind::Regular, object);
+    g.define_cloned_class(made, meta, object, meta);
+
+    g.define(meta, "LATER", MethodId(1));
+    for class in [declared, made, below] {
+        assert!(
+            g.class_has_method(class, "LATER"),
+            "{class:?} missed its metaclass's define"
+        );
+    }
+    g.delete(meta, "LATER");
+    for class in [declared, made, below] {
+        assert!(
+            !g.class_has_method(class, "LATER"),
+            "{class:?} missed its metaclass's delete"
+        );
+    }
 }
 
 // ---------------------------------------------------------------------
@@ -751,8 +771,8 @@ fn a_scope_rooted_lookup_can_disagree_with_the_ordinary_lookup() {
 /// Every behaviour carries a monotonic version, bumped by the cascade. Not
 /// an oracle fact (nothing in a running script reads it), checked here as
 /// a property of this crate's own bookkeeping: every cascade that touches
-/// a handle bumps its version by exactly one, and a handle `define`
-/// orphans stops advancing forever.
+/// a handle bumps its version by exactly one, `define` included, which
+/// keeps the class's handle.
 #[test]
 fn every_cascade_against_a_handle_bumps_its_version_by_exactly_one() {
     let object = id(1);
@@ -773,50 +793,30 @@ fn every_cascade_against_a_handle_bumps_its_version_by_exactly_one() {
     g.inherit(base, mixin1).expect("a legal inherit"); // cascades to sub in place
     assert_eq!(g.version_at(sub_handle), v0 + 1);
 
-    let orphaned = g.instance_behaviour_handle(base);
-    let v_base = g.version_at(orphaned);
-    g.define(base, "Y", MethodId(2)); // orphans `orphaned`, allocates a new handle
-    assert_eq!(
-        g.version_at(orphaned),
-        v_base,
-        "an orphaned handle's version is frozen -- nothing writes to it again"
-    );
-    // The fresh handle `define` allocates starts its own count at zero and
-    // is bumped once by its own rebuild -- it is a different entry, so its
-    // version is not comparable to the orphaned handle's.
-    let fresh = g.instance_behaviour_handle(base);
-    assert_ne!(fresh, orphaned);
-    assert_eq!(g.version_at(fresh), 1);
+    let base_handle = g.instance_behaviour_handle(base);
+    let v_base = g.version_at(base_handle);
+    g.define(base, "Y", MethodId(2));
+    assert_eq!(g.instance_behaviour_handle(base), base_handle);
+    assert_eq!(g.version_at(base_handle), v_base + 1);
 }
 
-/// A class's expunge empties every instance behaviour a `define` replaced,
-/// not only the two it held last.
+/// A class's expunge empties both of its behaviours.
 #[test]
-fn expunge_empties_the_behaviours_define_retired() {
+fn expunge_empties_the_classs_behaviours() {
     let object = id(1);
     let class = id(2);
     let mut g = ClassGraph::new();
     g.define_class(object, None, ClassKind::Regular, object);
     g.define(object, "BASE", MethodId(1));
     g.define_class(class, Some(object), ClassKind::Regular, object);
-    let first = g.instance_behaviour_handle(class);
     g.define(class, "X", MethodId(2));
-    let second = g.instance_behaviour_handle(class);
-    g.define(class, "Y", MethodId(3));
-    let last = g.instance_behaviour_handle(class);
-    for handle in [first, second, last] {
-        assert!(
-            g.has_method_at(handle, "BASE"),
-            "{handle:?} is not a full behaviour"
-        );
-    }
+    let handle = g.instance_behaviour_handle(class);
+    assert!(g.has_method_at(handle, "BASE") && g.has_method_at(handle, "X"));
     g.expunge(&[class]);
-    for handle in [first, second, last] {
-        assert!(
-            g.method_names_at(handle).is_empty(),
-            "{handle:?} keeps its dictionary after its class was expunged"
-        );
-    }
+    assert!(
+        g.method_names_at(handle).is_empty(),
+        "{handle:?} keeps its dictionary after its class was expunged"
+    );
     assert!(
         g.has_method_at(g.instance_behaviour_handle(object), "BASE"),
         "the surviving superclass lost its behaviour"
@@ -834,10 +834,8 @@ fn a_new_class_reuses_an_expunged_classs_behaviours() {
     g.define_class(object, None, ClassKind::Regular, object);
     g.define(object, "BASE", MethodId(1));
     g.define_class(dead, Some(object), ClassKind::Regular, object);
-    let retired = g.instance_behaviour_handle(dead);
     g.define(dead, "OLD", MethodId(2));
     let freed = [
-        retired,
         g.instance_behaviour_handle(dead),
         g.class_behaviour_handle(dead),
     ];
@@ -961,8 +959,6 @@ fn every_dispatch_visible_mutation_changes_the_epoch() {
     changed(&g, "reparent");
     g.unlist_subclass(cloned);
     changed(&g, "unlist_subclass");
-    g.free_unheld_behaviours(std::iter::empty());
-    changed(&g, "free_unheld_behaviours");
     g.expunge(&[cloned]);
     changed(&g, "expunge");
 
@@ -971,7 +967,8 @@ fn every_dispatch_visible_mutation_changes_the_epoch() {
     g.make_abstract(base);
     g.set_rexx_defined(other);
     g.refresh_parent_has_uninit(sub);
-    g.take_retired_entries();
+    g.take_unnamed_methods();
+    g.drop_later(base, MethodId(1));
     assert_eq!(
         g.epoch(),
         last,
@@ -982,11 +979,11 @@ fn every_dispatch_visible_mutation_changes_the_epoch() {
     assert_ne!(ClassGraph::new().epoch(), ClassGraph::new().epoch());
 }
 
-/// Freeing the behaviours `define` retired answers each method only a freed
-/// behaviour named: not an inherited one, not one a held behaviour still
-/// names, and not one another class's dictionary names, old or new.
+/// The methods a `define` replaced are answered once no dictionary names
+/// them: not an inherited one, and not one another class's dictionary names,
+/// old or new.
 #[test]
-fn freeing_retired_behaviours_answers_only_the_methods_nothing_else_names() {
+fn the_unnamed_methods_are_the_replaced_ones_nothing_else_names() {
     let object = id(1);
     let class = id(2);
     let other = id(3);
@@ -999,18 +996,16 @@ fn freeing_retired_behaviours_answers_only_the_methods_nothing_else_names() {
     g.define(other, "SHARED", MethodId(5));
     g.define(class, "SHARED", MethodId(5));
     g.define(class, "M", MethodId(10));
-    let held = g.instance_behaviour_handle(class);
     g.define(class, "M", MethodId(11));
     g.define(class, "M", MethodId(12));
     g.define(class, "N", MethodId(13));
     g.define(other, "LATER", MethodId(13));
     g.define(class, "N", MethodId(14));
-    let unnamed = g.free_unheld_behaviours([held].into_iter());
-    assert_eq!(unnamed, vec![(class, MethodId(11))]);
-    assert!(g.has_method_at(held, "M"), "a held behaviour was freed");
-    // Once nothing holds it, its method is answered too.
-    let unnamed = g.free_unheld_behaviours(std::iter::empty());
-    assert_eq!(unnamed, vec![(class, MethodId(10))]);
+    g.define(class, "SHARED", MethodId(15));
+    let unnamed = g.take_unnamed_methods();
+    assert_eq!(unnamed, vec![(class, MethodId(10)), (class, MethodId(11))]);
+    assert!(!g.has_dropped_methods());
+    assert!(g.take_unnamed_methods().is_empty());
 }
 
 /// A `define` reaches a subclass only through the subclass lists, so a class

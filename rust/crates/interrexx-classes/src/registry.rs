@@ -299,27 +299,24 @@ impl ClassRegistry {
         self.graph.check_uninit(class);
     }
 
-    /// See [`ClassGraph::has_retired_behaviours`].
-    pub fn has_retired_behaviours(&self) -> bool {
-        self.graph.has_retired_behaviours()
+    /// See [`ClassGraph::has_dropped_methods`].
+    pub fn has_dropped_methods(&self) -> bool {
+        self.graph.has_dropped_methods()
     }
 
-    /// See [`ClassGraph::keep_retired_behaviours`].
-    pub fn keep_retired_behaviours(&mut self) {
-        self.graph.keep_retired_behaviours();
+    /// See [`ClassGraph::forget_dropped_methods`].
+    pub fn forget_dropped_methods(&mut self) {
+        self.graph.forget_dropped_methods();
     }
 
-    /// See [`ClassGraph::take_retired_entries`].
-    pub fn take_retired_entries(&mut self) -> usize {
-        self.graph.take_retired_entries()
+    /// See [`ClassGraph::take_unnamed_methods`].
+    pub fn take_unnamed_methods(&mut self) -> Vec<(ObjRef, MethodId)> {
+        self.graph.take_unnamed_methods()
     }
 
-    /// See [`ClassGraph::free_unheld_behaviours`].
-    pub fn free_unheld_behaviours(
-        &mut self,
-        held: impl Iterator<Item = BehaviourHandle>,
-    ) -> Vec<(ObjRef, MethodId)> {
-        self.graph.free_unheld_behaviours(held)
+    /// See [`ClassGraph::drop_later`].
+    pub fn drop_later(&mut self, class: ObjRef, method: MethodId) {
+        self.graph.drop_later(class, method);
     }
 
     /// Drops every row keyed by a class the collector took.
