@@ -24,6 +24,8 @@ The pages of this chapter are:
 * [Threads and halting](threads.md): threads that native code starts and
   attaches, what program end does with them, the one interpreter instance
   every activity is given, and halting activities from native code.
+* [Command handlers](handlers.md): a command environment that native code
+  adds, and how its handler's answers and conditions reach the program.
 
 What a library's name means, and where the file is searched for, is [the
 library rule](r:env.search.library). The directives that name a library are
@@ -72,6 +74,7 @@ to the next.
 | `FxInstance` | none | the interpreter instance the calling activity is given, written as an address |
 | `FxHaltAll` | none | asks the interpreter to halt every activity |
 | `FxHaltThis` | none | asks the interpreter to halt the calling activity |
+| `FxAddHandler` | a name | adds the fixture's command handler as the environment of that name: the command `rc N` answers `N`, `text S` answers `S`, `none` answers nothing, `error N` and `failure N` raise that condition with the return code `N`, `var S` sets the program's variable `CMDVAR` to `S` and answers `0`, `address` answers the environment's name, and any other command raises FAILURE with `-1` |
 | `FxTwin`, `FXTWIN` | none | `first row` and `second row`: two rows whose names differ only in case |
 | `FxClassicJoin`, `FxClassicFail`, `FxClassicNone` | strings | the classic functions below, as rows of the package |
 
