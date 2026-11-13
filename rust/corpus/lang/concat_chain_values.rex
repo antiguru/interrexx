@@ -45,6 +45,10 @@ say .keeper~kept
 q = o 'three' 'four'
 say q
 say .keeper~kept
+/* a STRING method that concatenates while the right operand converts */
+e = 'pre-' || .strobj~new || '-mid-' || .strobj~new || '-end'
+say e
+say .strobj~last
 /* a string subclass is sent the operator */
 ss = .mystring~new('sub')
 say ss || 'x' || 'y'
@@ -86,3 +90,10 @@ f: procedure expose g
 ::method '||'
   use arg other
   return 'MY(' || self~string || ',' || other || ')'
+
+::class strobj
+::attribute last class
+::method string
+  v = 'strobj-' || 1 || '-value-' || 'past-the-handle'
+  self~class~last = v
+  return v
