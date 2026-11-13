@@ -1192,6 +1192,15 @@ struct Interp {
     activity: Activity,
     /// A buffer lent out for building a compound's tail key, and handed back.
     key_buffer: Vec<u8>,
+    /// The tail key a compound read in `t.k = t.k + 1` resolved, held for
+    /// the write of the same compound at the end of that clause
+    /// ([`crate::eval::SymbolRead::CompoundShared`]). `shared_key_for` is
+    /// the compound it is the key of, and `None` where nothing is held: a
+    /// read that does not share sets it so, and so does every activation
+    /// push, which is the one way code can run between the read and the
+    /// write that could change what a tail variable holds.
+    shared_key: Vec<u8>,
+    shared_key_for: Option<SymbolId>,
     /// What a `.local~novalue` hook a read sent came to, answered or failed,
     /// held from that read to the `novalue_check` after it.
     novalue_hooked: std::cell::Cell<Option<Result<(), Failure>>>,
@@ -2286,6 +2295,8 @@ impl Interp {
             roots: RootSet::new(),
             activity: Activity::new(),
             key_buffer: Vec::new(),
+            shared_key: Vec::new(),
+            shared_key_for: None,
             novalue_hooked: std::cell::Cell::new(None),
             parse_buffers: Vec::new(),
             text_scratch: [0; crate::value::TEXT_SCRATCH],
@@ -3336,6 +3347,8 @@ impl Interp {
             roots: _,
             activity,
             key_buffer: _,
+            shared_key: _,
+            shared_key_for: _,
             // Held only from a read to the check right after it, which
             // allocates nothing in between.
             novalue_hooked: _,

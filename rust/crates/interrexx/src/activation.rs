@@ -1466,6 +1466,10 @@ impl Interp {
 
     /// [`Interp::push_activation`] of an activation already in its box.
     pub(crate) fn push_boxed_activation(&mut self, boxed: Box<Activation>) {
+        // Code is about to run that could assign a tail variable, so a key a
+        // compound read is holding for its clause's write is no longer known
+        // to be the key that write would build.
+        self.shared_key_for = None;
         // `trace_cache`'s own invariant: the setting travels with whichever
         // activation is running, and this changes which one that is.
         self.activity.trace_cache =

@@ -45,6 +45,12 @@ pub(crate) enum SymbolRead {
     /// site, neither of which is the symbol's own slot -- which is why a
     /// compound is the kind a compiled read has no slot for.
     Compound,
+    /// A [`SymbolRead::Compound`] in the value of an assignment to the same
+    /// compound, whose write uses the key this read resolves rather than
+    /// resolving it again (`share_tail_key` in `ir/compile.rs` says
+    /// where). The read holds its key in `Interp::shared_key` for that
+    /// write.
+    CompoundShared,
     /// `ExprKind::DotVariable`: an environment symbol, which traces `>E>`.
     Environment,
 }
@@ -310,7 +316,7 @@ impl Interp {
             // full dotted text); the split decomposes it into the stem's own
             // name and the tail pieces `tail_key` (`stem.rs`) resolves into
             // the one key `stem_get` looks up.
-            SymbolRead::Compound => {
+            SymbolRead::Compound | SymbolRead::CompoundShared => {
                 debug_assert!(
                     at.is_none(),
                     "a compound read was handed a slot, and the slot it reads is the stem's"
@@ -320,9 +326,18 @@ impl Interp {
                 // -- see `Interp::key_buffer`. The `?` below is why the return
                 // is placed before it: an early exit there would lose the
                 // buffer, which is safe but forfeits the reuse.
+                // A shared read holds its key only where no activation was
+                // pushed from here to the end of the read: a tail's string
+                // request or a NOVALUE hook runs code, and that code could
+                // assign a tail variable. Set here, the push clears it.
+                let shared = read == SymbolRead::CompoundShared;
+                if shared {
+                    self.shared_key_for = Some(id);
+                }
                 let mut key = self.take_key_buffer();
                 if let Err(failure) = self.tail_key_into(code, id, &mut key) {
                     self.give_key_buffer(key);
+                    self.shared_key_for = None;
                     return Err(failure);
                 }
                 // `>C>`, here rather than in `echo_symbol_read_line`, so that
@@ -336,8 +351,21 @@ impl Interp {
                     self.trace_compound_name(indent, &tag, &printed);
                 }
                 let (value, novalue) = self.stem_get_at(stem_name, stem_at, &key);
+                // Held only untraced, so that a traced write resolves and
+                // prints its own name the way it always has.
+                if shared {
+                    if self.shared_key_for == Some(id) && !self.tracing_intermediates() {
+                        self.shared_key.clear();
+                        self.shared_key.extend_from_slice(&key);
+                    } else {
+                        self.shared_key_for = None;
+                    }
+                }
                 self.give_key_buffer(key);
-                self.novalue_check(novalue, value)?;
+                if let Err(failure) = self.novalue_check(novalue, value) {
+                    self.shared_key_for = None;
+                    return Err(failure);
+                }
                 Ok(value)
             }
             SymbolRead::Environment => match chunk {
