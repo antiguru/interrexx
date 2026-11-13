@@ -16,6 +16,7 @@
 
 #include <pthread.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -348,6 +349,63 @@ RexxRoutine0(RexxObjectPtr, FxHaltThis)
 }
 
 // ---------------------------------------------------------------------------------------------
+// A command handler.
+
+// Serves r[native.handlers.answer], r[native.handlers.condition], r[native.handlers.context].
+// Runs the command `WORD [VALUE]`: `rc N` answers N, `text S` answers the string S, `none`
+// answers nothing, `error N` and `failure N` raise that condition with the return code N, `var S`
+// sets the issuing program's variable `CMDVAR` to S and answers 0, and `address` answers the
+// environment's name. Any other command raises FAILURE with the return code -1.
+static RexxObjectPtr RexxEntry fixtureCommand(RexxExitContext *context, RexxStringObject address,
+                                              RexxStringObject command)
+{
+    char word[16] = "";
+    char value[64] = "";
+    sscanf(context->CString(command), "%15s %63[^\n]", word, value);
+    if (strcmp(word, "rc") == 0)
+    {
+        return context->WholeNumber(atol(value));
+    }
+    if (strcmp(word, "text") == 0)
+    {
+        return context->String(value);
+    }
+    if (strcmp(word, "none") == 0)
+    {
+        return NULLOBJECT;
+    }
+    if (strcmp(word, "error") == 0)
+    {
+        context->RaiseCondition("ERROR", command, NULLOBJECT, context->WholeNumber(atol(value)));
+        return NULLOBJECT;
+    }
+    if (strcmp(word, "failure") == 0)
+    {
+        context->RaiseCondition("FAILURE", command, NULLOBJECT, context->WholeNumber(atol(value)));
+        return NULLOBJECT;
+    }
+    if (strcmp(word, "var") == 0)
+    {
+        context->SetContextVariable("CMDVAR", context->String(value));
+        return context->WholeNumber(0);
+    }
+    if (strcmp(word, "address") == 0)
+    {
+        return address;
+    }
+    context->RaiseCondition("FAILURE", command, NULLOBJECT, context->WholeNumber(-1));
+    return NULLOBJECT;
+}
+
+// Serves r[native.handlers.add].
+// Adds the command handler above as the environment `name`.
+RexxRoutine1(RexxObjectPtr, FxAddHandler, CSTRING, name)
+{
+    context->AddCommandEnvironment(name, (REXXPFN)fixtureCommand, DIRECT_COMMAND_ENVIRONMENT);
+    return NULLOBJECT;
+}
+
+// ---------------------------------------------------------------------------------------------
 // Methods.
 
 // Serves r[native.calls.method].
@@ -431,6 +489,7 @@ static RexxRoutineEntry fixtureRoutines[] =
     REXX_TYPED_ROUTINE(FxOnThread, FxOnThread),
     REXX_TYPED_ROUTINE(FxOnThreadIdle, FxOnThreadIdle),
     REXX_TYPED_ROUTINE(FxInstance, FxInstance),
+    REXX_TYPED_ROUTINE(FxAddHandler, FxAddHandler),
     REXX_TYPED_ROUTINE(FxHaltAll, FxHaltAll),
     REXX_TYPED_ROUTINE(FxHaltThis, FxHaltThis),
     REXX_CLASSIC_ROUTINE(FxClassicJoin, FxClassicJoin),
