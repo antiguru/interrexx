@@ -260,9 +260,11 @@ fn exact_small_sum(
     Some(result)
 }
 
-/// The widest aligned operand [`aligned_wide_sum`] takes: thirty-eight
-/// digits always fit a `u128`, and so does the sum of two of them.
-const WIDE_DIGITS: usize = 38;
+/// The widest aligned operand [`aligned_wide_sum`] takes. The sum of two is
+/// below 2·10^37, so its digits above the nineteenth (the sum divided by
+/// 10^19) stay below 2·10^18 and fit the `u64` they are written out of; at
+/// thirty-eight digits the sum reaches 2·10^38 and that half does not.
+const WIDE_DIGITS: usize = 37;
 
 /// The general addition below, on `u128` magnitudes, for operands that
 /// after its alignment adjustment fit [`WIDE_DIGITS`] aligned to the lower
@@ -628,6 +630,27 @@ mod add_shortcut_tests {
             }
         }
         assert!(taken > 20_000, "the wide sum fired {taken} times");
+    }
+
+    /// The largest sums the wide path takes, whose digits above the
+    /// nineteenth come closest to the `u64` they are written out of, and the
+    /// widths just past it, which must decline to the digit addition.
+    #[test]
+    fn the_wide_sum_is_exact_at_its_widest() {
+        for (text, digits) in [
+            ("9999999999999999999999999999999999999", 40),
+            ("9.999999999999999999999999999999999999", 37),
+            ("99999999999999999999999999999999999999", 40),
+            ("92233720368547758080000000000000000000", 40),
+            ("9.9999999999999999999999999999999999999", 37),
+        ] {
+            let x = Number::parse(text).expect("a spelling that parses");
+            assert_eq!(
+                x.add(&x, digits),
+                the_long_way(&x, &x, digits, false),
+                "{text} + {text} at DIGITS {digits}"
+            );
+        }
     }
 
     /// The shortcut declines every operand it must, so that the assertion
