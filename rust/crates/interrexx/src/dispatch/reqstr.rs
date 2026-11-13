@@ -14,6 +14,9 @@ enum RequiredString {
 /// required-string protocol a program can write.
 pub(crate) const MAKESTRING: &[u8] = b"MAKESTRING";
 
+/// The message that asks an object for a value of a class.
+const REQUEST: &[u8] = b"REQUEST";
+
 /// What the default string value sends.
 pub(crate) const OBJECTNAME: &[u8] = b"OBJECTNAME";
 
@@ -455,6 +458,17 @@ impl Interp {
     /// has no string value here; [`Interp::conversion_subject`] refuses it.
     #[inline(never)]
     fn instance_conversion(&mut self, value: ObjRef) -> StringConversion {
+        // An instance of a `String` subclass is read by its own characters,
+        // and neither `request`, `makeString` nor `string` is sent to it
+        // (Deviation 109).
+        if let Some(Body::Instance {
+            native: Some(state),
+            ..
+        }) = self.heap.get(value).map(|object| &object.body)
+            && let interrexx_core::NativeState::Text(bytes) = &**state
+        {
+            return StringConversion::Bytes(bytes.to_vec());
+        }
         match self.stem_subclass_store(value) {
             Some(store) => self.chain_conversion(store),
             None => self.make_string_or_none(value),
@@ -483,8 +497,19 @@ impl Interp {
     fn make_string_or_none(&mut self, value: ObjRef) -> StringConversion {
         match self.lookup(value, MAKESTRING, None) {
             Some(_) => StringConversion::MakeString,
+            None if self.has_request_override(value) => StringConversion::MakeString,
             None => StringConversion::None,
         }
+    }
+
+    /// Whether the receiver has a `request` method that is not the primitive
+    /// one, which sends `makeString` itself: such a method is what a string
+    /// value is asked of (r[conv.string.object]).
+    fn has_request_override(&mut self, value: ObjRef) -> bool {
+        let Some(resolution) = self.lookup(value, REQUEST, None) else {
+            return false;
+        };
+        self.object_model().natives.get(resolution.method).is_none()
     }
 
     /// [`Interp::classify_string_conversion`] of a variable reference:
@@ -514,6 +539,18 @@ impl Interp {
 
     /// Sends `makeString` on the receiver's behalf.
     fn send_make_string(&mut self, receiver: ObjRef) -> Result<Option<ObjRef>, Failure> {
+        if self.has_request_override(receiver) {
+            // The receiver's own `request` is asked for the string value, as
+            // the primitive `request` would send `makeString`.
+            let wanted = self.text(STRING);
+            self.roots.activity_mut().push_temp(wanted);
+            let caller = self.caller();
+            return pinned!(
+                self,
+                crate::pinning::PinKind::Conversion,
+                self.send_message(receiver, REQUEST, None, &[Some(wanted)], caller)
+            );
+        }
         self.send_for_conversion(receiver, MAKESTRING)
     }
 

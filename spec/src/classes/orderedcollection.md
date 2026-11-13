@@ -1585,7 +1585,7 @@ say .fake~new(.name~new('7'))~subset(.array~new)
   return count
 ```
 
-```output defect=#140
+```output
 0
 ```
 

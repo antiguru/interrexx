@@ -206,7 +206,7 @@ say .string~new(.mk~new)~class~id
   return .strsub~new('ss')
 ```
 
-```output defect=#89
+```output
 ss
 String
 ```
@@ -1904,7 +1904,7 @@ say 'sends' .local~sent
   return 'str'
 ```
 
-```output defect=#140
+```output
 ab ab b b
 xab 2 2 0 1
 3 3 4 1 2 2

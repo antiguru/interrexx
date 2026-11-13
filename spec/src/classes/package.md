@@ -2786,7 +2786,7 @@ say .package~new('q', .name~new('nop'))~source[1]
   return 'other'
 ```
 
-```output defect=#140
+```output
 Foo
 0
 nop

@@ -118,7 +118,7 @@ say upper(.mk~new) upper(.strsub~new('abc'))
   return .strsub~new('ss')
 ```
 
-```output defect=#89
+```output
 SS ABC
 ```
 
@@ -175,7 +175,7 @@ p: say condition('o')~code
   return 'abc'
 ```
 
-```output defect=#164
+```output
 request STRING 1
 4
 3
@@ -562,7 +562,7 @@ say 'sends' .local~sent
   return 'MADE'
 ```
 
-```output defect=#140
+```output
 2 AB
 sends 0
 ```

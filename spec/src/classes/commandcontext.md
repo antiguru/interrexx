@@ -813,7 +813,7 @@ bad: say x '=>' condition('o')~code
   return 'Input'
 ```
 
-```output defect=#164
+```output
 caller~isRedirected(.nil) => 88.909
 caller~isRedirected(.object~new) => 88.909
 caller~isRedirected(.named~new) => 0
@@ -1228,7 +1228,7 @@ trap:
   return 'mstext'
 ```
 
-```output defect=#164
+```output
   rq request STRING
   trap <rqtext> String
 ```

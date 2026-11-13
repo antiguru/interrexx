@@ -1317,7 +1317,7 @@ wrap:
   forward to (v) message (name) arguments (args)
 ```
 
-```output defect=#164
+```output
 2 args: h:REQUEST h:MAKESTRING h:>=/0 h:<=/23 m:REQUEST m:MAKESTRING m:>=/0
   m:<=/59 h:*/3600 m:*/60
 3 args: h:REQUEST h:MAKESTRING h:>=/0 h:<=/23 m:REQUEST m:MAKESTRING m:>=/0
@@ -1545,7 +1545,7 @@ probe:
   forward to (v) message (name) arguments (args)
 ```
 
-```output defect=#164
+```output
 addDays: REQUEST:STRING MAKESTRING */86400000000
 addWeeks: REQUEST:STRING MAKESTRING */604800000000
 addHours: REQUEST:STRING MAKESTRING */3600000000
@@ -1653,7 +1653,7 @@ failed: say '=>' condition('o')~code
   return 'zzz'
 ```
 
-```output defect=#140
+```output
 5.00:00:00.000000 00:00:00.000005
 01:02:03.000000 02:02:02.000000
 10:00:00.000000 2.01:02:03.000000

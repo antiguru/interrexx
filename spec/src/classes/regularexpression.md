@@ -234,7 +234,7 @@ say re~match(.rq~new) re~position
 ::requires "rxregexp.cls"
 ```
 
-```output defect=#164
+```output
 1 2
 ```
 

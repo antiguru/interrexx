@@ -1414,7 +1414,7 @@ say b~string '|' .local~log
   return v
 ```
 
-```output defect=#164
+```output
 aXbc |  t-request:STRING t-makeString n-request:STRING n-makeString
 ```
 
@@ -1499,7 +1499,7 @@ say 'sends' .local~sent
   return 'REQ'
 ```
 
-```output defect=#140
+```output
 ab 2 2
 aabbab 6
 a 2 ab

@@ -310,7 +310,7 @@ call sysfiledelete f
   return n
 ```
 
-```output defect=#164
+```output
 init 0
 MINE
 request STRING
@@ -1422,7 +1422,7 @@ say r~package~name r~source[1]
   return 'other'
 ```
 
-```output defect=#140
+```output
 Foo say "src"
 ```
 

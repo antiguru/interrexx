@@ -168,7 +168,7 @@ n: return 'N' condition('d')
   return 'told'
 ```
 
-```output defect=#164
+```output
 1 N told - N told
 2 - - -
 3 N told - N told

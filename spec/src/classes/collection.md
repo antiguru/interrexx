@@ -2342,7 +2342,7 @@ say x~subset(.map~new('k', .name~new('b')))
   return d~items
 ```
 
-```output defect=#140
+```output
 0
 0
 ```
