@@ -169,11 +169,14 @@ fn application_data_reaches_a_started_activity() {
     fs::remove_dir_all(&dir).expect("the run's directory is removable");
 }
 
+/// What a run answered: stdout, stderr and the exit status.
+type Answer = (String, String, i32);
+
 /// Builds `halt_trace.cpp` as the extension `halttrace` into a fresh directory named for `name`
-/// and runs the fixture program `program` from it under `rexx`, answering stdout, stderr and the
-/// exit status. Under `REXX_CORPUS_GATE` the oracle runs the same program from the same
-/// directory and must answer the same three, unaltered.
-fn run_halt_trace(name: &str, program: &str) -> (String, String, i32) {
+/// and runs the fixture program `program` from it under `rexx`, answering `view` of its stdout,
+/// stderr and exit status. Under `REXX_CORPUS_GATE` the oracle runs the same program from the
+/// same directory, and `view` of its answer must be the same.
+fn run_halt_trace(name: &str, program: &str, view: fn(Answer) -> Answer) -> Answer {
     let dir = fresh_dir(name);
     compile(
         "halt_trace.cpp",
@@ -188,28 +191,33 @@ fn run_halt_trace(name: &str, program: &str) -> (String, String, i32) {
         ],
     );
     let program = fixture(program);
-    let ours = run(
+    let ours = view(run(
         Path::new(env!("CARGO_BIN_EXE_rexx")),
         &dir,
         Some(&program),
         None,
-    );
+    ));
     if gate_mode() {
         let oracle = support::oracle::locate();
         let library_path = format!("{}:{}", oracle.lib_dir().display(), dir.display());
         let theirs = oracle.run_in(&program, &dir, &[("LD_LIBRARY_PATH", &library_path)]);
         assert_eq!(
-            (
+            view((
                 String::from_utf8_lossy(&theirs.stdout).into_owned(),
                 String::from_utf8_lossy(&theirs.stderr).into_owned(),
                 theirs.expect_exit_code(),
-            ),
+            )),
             ours,
             "the oracle"
         );
     }
     fs::remove_dir_all(&dir).expect("the run's directory is removable");
     ours
+}
+
+/// An answer as it is.
+fn whole(answer: Answer) -> Answer {
+    answer
 }
 
 /// The trace lines of `stderr` with the program's path, which the first of them names, replaced
@@ -225,27 +233,32 @@ fn traced(stderr: &str, program: &str) -> String {
 #[test]
 fn halt_through_the_instance_reaches_a_started_activity() {
     assert_eq!(
-        run_halt_trace("halt-instance", "halt.rex"),
+        run_halt_trace("halt-instance", "halt.rex", whole),
         ("main HALT / worker halted\n".to_owned(), String::new(), 0)
     );
 }
 
 /// `SetTrace` through the instance from a thread that runs no Rexx code traces the activity
 /// `start` made, which is waiting when it is called. Only the worker's clauses after the wait are
-/// compared literally: the main activity's lines interleave with them in no fixed order.
+/// compared: the main activity's lines interleave with them in no fixed order.
 // spec: native.threads.trace
 #[test]
 fn set_trace_through_the_instance_traces_a_started_activity() {
-    let (stdout, stderr, code) = run_halt_trace("trace-started", "trace_started.rex");
-    assert_eq!((stdout.as_str(), code), ("worker ran\n", 0), "{stderr}");
-    let worker: Vec<&str> = stderr
-        .lines()
-        .filter(|line| line.contains("*-* say 'worker ran'") || line.contains("*-* done~post"))
-        .collect();
+    fn worker((stdout, stderr, code): Answer) -> Answer {
+        let lines: String = stderr
+            .lines()
+            .filter(|line| line.contains("*-* say 'worker ran'") || line.contains("*-* done~post"))
+            .map(|line| format!("{line}\n"))
+            .collect();
+        (stdout, lines, code)
+    }
     assert_eq!(
-        worker,
-        ["    24 *-* say 'worker ran'", "    25 *-* done~post"],
-        "{stderr}"
+        run_halt_trace("trace-started", "trace_started.rex", worker),
+        (
+            "worker ran\n".to_owned(),
+            "    24 *-* say 'worker ran'\n    25 *-* done~post\n".to_owned(),
+            0
+        )
     );
 }
 
@@ -254,7 +267,7 @@ fn set_trace_through_the_instance_traces_a_started_activity() {
 // spec: native.threads.trace
 #[test]
 fn set_trace_on_and_off_through_the_instance_traces_the_main_activity() {
-    let (stdout, stderr, code) = run_halt_trace("trace-main", "trace_main.rex");
+    let (stdout, stderr, code) = run_halt_trace("trace-main", "trace_main.rex", whole);
     assert_eq!((stdout.as_str(), code), ("end\n", 0), "{stderr}");
     assert_eq!(
         traced(&stderr, "trace_main.rex"),
@@ -277,7 +290,7 @@ fn set_trace_on_and_off_through_the_instance_traces_the_main_activity() {
 // spec: native.threads.trace
 #[test]
 fn set_trace_traces_a_body_compiled_before_the_extension_was_loaded() {
-    let (stdout, stderr, code) = run_halt_trace("trace-load", "trace_load.rex");
+    let (stdout, stderr, code) = run_halt_trace("trace-load", "trace_load.rex", whole);
     assert_eq!((stdout.as_str(), code), ("end\n", 0), "{stderr}");
     assert_eq!(
         traced(&stderr, "trace_load.rex"),
