@@ -886,14 +886,16 @@ impl Interp {
         let digits = self.activation().settings.digits();
         let form = self.activation().settings.form();
 
-        // **An addition, subtraction or multiplication of two short numbers
-        // on their scaled mantissas**, where `Scaled` answers exactly what
-        // the `Number` operation would. Neither operand can be an operator
-        // receiver or fail to convert (a plain string or number is all
-        // `scaled_operand` reads), and one that `Scaled` accepts is no longer
-        // than DIGITS, so LOSTDIGITS has nothing to say either. The answer
-        // is made into a value exactly as the general path makes its own.
-        if matches!(op, Operator::Plus | Operator::Subtract | Operator::Multiply)
+        // **An addition, subtraction, multiplication, `%` or `//` of two
+        // short numbers on their scaled mantissas**, where `Scaled` answers
+        // exactly what the `Number` operation would. Neither operand can be
+        // an operator receiver or fail to convert (a plain string or number
+        // is all `scaled_operand` reads). One that `+`, `-` or `*` accepts is
+        // no longer than DIGITS, so LOSTDIGITS has nothing to say; `%` and
+        // `//` accept one digit more and are not taken while LOSTDIGITS is
+        // trapped. The answer is made into a value exactly as the general
+        // path makes its own.
+        if !matches!(op, Operator::Divide | Operator::Power)
             && let Some(answer) = self.scaled_arith(op, left_value, right_value, digits)
         {
             return Ok(match crate::value::scaled_handle(answer, digits) {
@@ -973,7 +975,7 @@ impl Interp {
         Ok(self.number(result, saturate_digits(digits), form))
     }
 
-    /// [`Interp::arith_general_body`]'s `+`, `-` or `*` on two short
+    /// [`Interp::arith_general_body`]'s `+`, `-`, `*`, `%` or `//` on two short
     /// numbers, as [`Scaled`] answers it, or `None` where it is not that
     /// exact short case.
     #[inline(never)]
@@ -989,7 +991,9 @@ impl Interp {
         match op {
             Operator::Plus => left.add(right, digits),
             Operator::Subtract => left.add(right.negated(), digits),
-            _ => left.mul(right, digits),
+            Operator::Multiply => left.mul(right, digits),
+            _ if self.lostdigits_armed => None,
+            _ => left.div_integer(right, digits, op == Operator::Remainder),
         }
     }
 

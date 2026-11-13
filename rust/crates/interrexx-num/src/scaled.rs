@@ -445,6 +445,90 @@ impl Scaled {
         })
     }
 
+    /// [`Number::div`] for `%`, or for `//` where `remainder` is set, at
+    /// `digits`, where neither operand is truncated to the working length
+    /// and both, aligned, fit a `u128`; `None` otherwise, a zero divisor and
+    /// an integer part longer than DIGITS among them, both of which the
+    /// general path raises. The integer part is the exact one, as the long
+    /// division stopped at the units digit answers it, and the remainder is
+    /// the dividend less that many divisors, at the operands' smaller
+    /// exponent and rounded to DIGITS.
+    pub fn div_integer(self, other: Scaled, digits: u64, remainder: bool) -> Option<Scaled> {
+        if other.mantissa == 0 {
+            return None;
+        }
+        let working = digits.saturating_add(1);
+        if u64::from(self.length) > working || u64::from(other.length) > working {
+            return None;
+        }
+        if self.mantissa == 0 {
+            return Some(Scaled::ZERO);
+        }
+        // The quotient's first digit lands below the units: no integer
+        // part, and the dividend is its own remainder, unrounded.
+        let first = i64::from(self.exponent) - i64::from(other.exponent) + i64::from(self.length)
+            - i64::from(other.length);
+        if first < 0 {
+            return Some(if remainder { self } else { Scaled::ZERO });
+        }
+        let exponent = self.exponent.min(other.exponent);
+        let aligned = |value: Scaled| {
+            let shift = u32::try_from(i64::from(value.exponent) - i64::from(exponent)).ok()?;
+            u128::from(value.mantissa.unsigned_abs()).checked_mul(10u128.checked_pow(shift)?)
+        };
+        let (a, b) = (aligned(self)?, aligned(other)?);
+        let (quotient, residue) = (a / b, a % b);
+        let quotient_length = if quotient == 0 {
+            0
+        } else {
+            quotient.ilog10() + 1
+        };
+        if u64::from(quotient_length) > digits {
+            return None;
+        }
+        if !remainder {
+            if quotient == 0 {
+                return Some(Scaled::ZERO);
+            }
+            // A division that comes out even stops once the dividend's own
+            // digits are used up, and the quotient's trailing zeros past
+            // that point go to its exponent instead.
+            if (residue == 0 && quotient % 10 == 0) || quotient_length > WIDEST {
+                return None;
+            }
+            let magnitude = quotient as i64;
+            return Some(Scaled {
+                mantissa: if self.is_negative() != other.is_negative() {
+                    -magnitude
+                } else {
+                    magnitude
+                },
+                exponent: 0,
+                length: quotient_length,
+            });
+        }
+        // With no integer part the subtraction takes nothing away, and the
+        // dividend is answered as it stands, rounded.
+        let (magnitude, exponent) = if quotient == 0 {
+            (u128::from(self.mantissa.unsigned_abs()), self.exponent)
+        } else if residue == 0 {
+            return Some(Scaled::ZERO);
+        } else {
+            (residue, exponent)
+        };
+        let (kept, moved) = rounded(magnitude, digits)?;
+        let mantissa = kept as i64;
+        Some(Scaled {
+            mantissa: if self.is_negative() {
+                -mantissa
+            } else {
+                mantissa
+            },
+            exponent: exponent.checked_add(moved)?,
+            length: digit_length(kept),
+        })
+    }
+
     /// The numeric comparison at `digits` with `FUZZ` 0, where both values
     /// align within DIGITS digits and so compare exactly; `None` otherwise.
     pub fn order(self, other: Scaled, digits: u64) -> Option<Ordering> {
@@ -814,5 +898,98 @@ mod tests {
             "the scaled product rounded {rounded} times"
         );
         assert!(wide > 5_000, "the scaled product went wide {wide} times");
+    }
+
+    /// `Scaled::div_integer` answers what `Number::div` answers for `%` and
+    /// `//` wherever it answers at all, and declines every division the
+    /// general path refuses.
+    #[test]
+    fn the_scaled_integer_division_answers_what_the_long_division_answers() {
+        use crate::DivOp;
+        let mut state = 0x9e37_79b9_7f4a_7c15u64;
+        let mut next = move |bound: u64| {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            state % bound
+        };
+        let number = |next: &mut dyn FnMut(u64) -> u64| {
+            let length = 1 + next(12) as usize;
+            let mut text = String::new();
+            if next(2) == 0 {
+                text.push('-');
+            }
+            for i in 0..length {
+                let digit = match next(4) {
+                    0 => 9,
+                    1 => 0,
+                    _ => next(10) as u8,
+                };
+                text.push(char::from(b'0' + if i == 0 { digit.max(1) } else { digit }));
+            }
+            text.push_str(&format!("E{}", next(9) as i64 - 4));
+            if next(24) == 0 {
+                text = String::from("0");
+            }
+            Number::parse(&text).expect("a generated spelling parses")
+        };
+        let (mut taken, mut even, mut rounded, mut whole) = (0, 0, 0, 0);
+        for _ in 0..300_000 {
+            let mut left = number(&mut next);
+            let right = number(&mut next);
+            // A dividend that is a multiple of the divisor, now and then, so
+            // that divisions come out even.
+            if next(5) == 0
+                && let Ok(product) = right.mul(&number(&mut next), 40)
+            {
+                left = product;
+            }
+            let digits = 1 + next(14);
+            let (Some(l), Some(r)) = (left.scaled(), right.scaled()) else {
+                continue;
+            };
+            for (remainder, op) in [(false, DivOp::IntegerDivide), (true, DivOp::Remainder)] {
+                let Some(answer) = l.div_integer(r, digits, remainder) else {
+                    continue;
+                };
+                let expected = left
+                    .div(&right, digits, op)
+                    .expect("a division the scaled path answers succeeds");
+                assert_eq!(
+                    answer.to_number(),
+                    expected,
+                    "{} {} {} at DIGITS {digits}",
+                    left.format(40),
+                    if remainder { "//" } else { "%" },
+                    right.format(40)
+                );
+                taken += 1;
+                if answer.mantissa == 0 {
+                    even += 1;
+                }
+                if remainder && answer.exponent > l.exponent.min(r.exponent) {
+                    rounded += 1;
+                }
+                if !remainder && answer.mantissa != 0 {
+                    whole += 1;
+                }
+            }
+        }
+        assert!(
+            taken > 100_000,
+            "the scaled division answered {taken} times"
+        );
+        assert!(
+            even > 10_000,
+            "the scaled division came out even {even} times"
+        );
+        assert!(
+            rounded > 2_000,
+            "the scaled remainder rounded {rounded} times"
+        );
+        assert!(
+            whole > 30_000,
+            "the scaled division had an integer part {whole} times"
+        );
     }
 }
