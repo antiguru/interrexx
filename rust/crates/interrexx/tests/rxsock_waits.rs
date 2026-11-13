@@ -158,3 +158,25 @@ fn a_blocked_receive_does_not_wake_while_idle() {
     finish(child, &dir);
     assert!(woken < 20, "the idle wait was switched in {woken} times");
 }
+
+/// A `SockSelect` whose exception set holds an unconnected socket, which
+/// `poll` reports as hung up whatever it is asked, waits out its timeout
+/// without spinning: a hang-up answers no wait for priority data, and the
+/// wait must not wake on it again and again.
+#[test]
+fn a_hung_up_exception_entry_does_not_spin_a_select() {
+    let (mut child, dir) = start(
+        "hangup",
+        "s = SockSocket('AF_INET', 'SOCK_STREAM', 0)\nsay 'ready'\n\
+         e.0 = 1; e.1 = s\nn = SockSelect('', '', 'e.', 1)\nsay 'select' n e.0\n",
+    );
+    let mut out = BufReader::new(child.stdout.take().expect("piped stdout"));
+    assert_eq!(line(&mut out), "ready");
+    std::thread::sleep(Duration::from_millis(200));
+    let before = switches(child.id());
+    std::thread::sleep(Duration::from_millis(500));
+    let woken = switches(child.id()) - before;
+    assert_eq!(line(&mut out), "select 0 1");
+    finish(child, &dir);
+    assert!(woken < 100, "the select was switched in {woken} times");
+}

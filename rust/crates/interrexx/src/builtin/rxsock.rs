@@ -51,6 +51,10 @@ const EINPROGRESS: i32 = 115;
 /// How often a waiting call polls its sockets.
 const WAIT_POLL: Duration = Duration::from_millis(5);
 
+/// How often a socket wait's pool thread looks again at an entry it left
+/// out of its polls for reporting what does not answer its wait.
+const MUTED_RECHECK: Duration = Duration::from_millis(50);
+
 /// The `errno` values the variable names symbolically; any other is set in
 /// decimal.
 const ERRNO_NAMES: &[(i32, &str)] = &[
@@ -666,26 +670,67 @@ fn start_helper(interp: &mut Interp) -> bool {
 /// A pool thread's wait for `polls`: until any is ready or invalid, until
 /// `deadline`, or until `cancel` is written. A signal's interruption polls
 /// again for what is left.
+///
+/// `poll` reports hang-up and error whatever was asked, and those answer no
+/// wait for priority data alone, so an exception-set entry in that state
+/// would end every poll at once without ending the wait. Such an entry is
+/// left out of the polls that follow, and looked at again every
+/// [`MUTED_RECHECK`], since its socket may yet be connected.
 fn wait_off_baton(polls: &[(i32, PollFlags)], deadline: Option<Instant>, cancel: &OwnedFd) {
-    let numbers: Vec<i32> = polls.iter().map(|(fd, _)| *fd).collect();
+    let mut muted = vec![false; polls.len()];
     loop {
-        let timeout = deadline.map(|deadline| {
-            let left = deadline.saturating_duration_since(crate::sync::now());
-            rustix::time::Timespec {
-                tv_sec: i64::try_from(left.as_secs()).unwrap_or(i64::MAX),
-                tv_nsec: i64::from(left.subsec_nanos()),
-            }
+        let now = crate::sync::now();
+        if deadline.is_some_and(|deadline| now >= deadline) {
+            return;
+        }
+        let any_muted = muted.contains(&true);
+        let left = match (deadline, any_muted) {
+            (Some(deadline), true) => Some((deadline - now).min(MUTED_RECHECK)),
+            (Some(deadline), false) => Some(deadline - now),
+            (None, true) => Some(MUTED_RECHECK),
+            (None, false) => None,
+        };
+        let timeout = left.map(|left| rustix::time::Timespec {
+            tv_sec: i64::try_from(left.as_secs()).unwrap_or(i64::MAX),
+            tv_nsec: i64::from(left.subsec_nanos()),
         });
+        let live: Vec<usize> = (0..polls.len()).filter(|&i| !muted[i]).collect();
+        let numbers: Vec<i32> = live.iter().map(|&i| polls[i].0).collect();
         let polled = with_sockets(&numbers, |sockets| {
             let mut fds: Vec<PollFd<'_>> = sockets
                 .iter()
-                .zip(polls)
-                .map(|(fd, (_, events))| PollFd::new(fd, *events))
+                .zip(&live)
+                .map(|(fd, &i)| PollFd::new(fd, polls[i].1))
                 .collect();
             fds.push(PollFd::new(cancel, PollFlags::IN));
-            rustix::event::poll(&mut fds, timeout.as_ref()).map_err(os)
+            let ready = rustix::event::poll(&mut fds, timeout.as_ref()).map_err(os)?;
+            Ok((ready, fds.iter().map(PollFd::revents).collect::<Vec<_>>()))
         });
-        if polled != Err(EINTR) {
+        let (ready, revents) = match polled {
+            Err(EINTR) => continue,
+            Err(_) => return,
+            Ok(answer) => answer,
+        };
+        if ready == 0 {
+            // The deadline is tested above; a recheck's timeout unmutes.
+            muted.fill(false);
+            continue;
+        }
+        let Some((cancelled, entries)) = revents.split_last() else {
+            return;
+        };
+        if !cancelled.is_empty() {
+            return;
+        }
+        let mut answered = false;
+        for (&i, revents) in live.iter().zip(entries) {
+            if answers(polls[i].1, *revents) {
+                answered = true;
+            } else if !revents.is_empty() {
+                muted[i] = true;
+            }
+        }
+        if answered {
             return;
         }
     }
