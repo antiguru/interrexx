@@ -216,6 +216,42 @@ impl MethodDict {
             .insert(Self::key(name), Slots::One(MethodSlot::Withdrawn));
     }
 
+    /// Take out the entries under `name` that `scope` defined, leaving the
+    /// others in their order, and the name itself when that leaves none.
+    pub fn remove_scoped(&mut self, name: &str, scope: ObjRef) {
+        let key = name.to_ascii_uppercase();
+        let Some(list) = self.entries.get_mut(key.as_str()) else {
+            return;
+        };
+        let kept: Vec<MethodSlot> = list
+            .as_slice()
+            .iter()
+            .copied()
+            .filter(|slot| slot.scope() != Some(scope))
+            .collect();
+        match kept.as_slice() {
+            [] => {
+                self.entries.remove(key.as_str());
+            }
+            [only] => *list = Slots::One(*only),
+            _ => *list = Slots::Many(kept),
+        }
+    }
+
+    /// Whether the two hold the same entries under the same names, in the same
+    /// order under each name, and the same scopes in the same order: what makes
+    /// them answer every lookup alike.
+    pub fn same_as(&self, other: &MethodDict) -> bool {
+        self.scope_list == other.scope_list
+            && self.entries.len() == other.entries.len()
+            && self.entries.iter().all(|(name, slots)| {
+                other
+                    .entries
+                    .get(name)
+                    .is_some_and(|theirs| theirs.as_slice() == slots.as_slice())
+            })
+    }
+
     /// Take `name` out of the dictionary entirely, whose `bool` says whether
     /// there was anything to remove. `~delete` reads that answer: it propagates
     /// to the subclasses only when the dictionary actually changed.

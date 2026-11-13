@@ -1152,6 +1152,44 @@ impl ClassGraph {
         self.rebuild_behaviour(class, Side::Class);
     }
 
+    /// Take the entries `scope` defined under each of `names` out of `class`'s
+    /// class behaviour, in place: what rebuilding it answers once `scope` no
+    /// longer defines them, where nothing else changed since it was built.
+    pub fn remove_from_class_behaviour(&mut self, class: ObjRef, scope: ObjRef, names: &[String]) {
+        self.bump_epoch();
+        let handle = self.behaviour_handle(class, Side::Class);
+        let behaviour = &mut self.behaviours[handle.index()];
+        for name in names {
+            behaviour.dict.remove_scoped(name, scope);
+        }
+        behaviour.version += 1;
+    }
+
+    /// Whether `class`'s class behaviour holds what
+    /// [`Self::refresh_class_behaviour`] would build now, followed, for `root`,
+    /// by [`Self::bootstrap_root_class_behaviour`] with `metaclass`.
+    pub fn class_behaviour_is_rebuilt(
+        &self,
+        class: ObjRef,
+        root: ObjRef,
+        metaclass: ObjRef,
+    ) -> bool {
+        let mut rebuilt = MethodDict::new();
+        Self::cascade_build(
+            &self.classes,
+            &self.behaviours,
+            class,
+            &mut rebuilt,
+            Side::Class,
+        );
+        if class == root {
+            let meta_instance = self.classes[&metaclass].instance_behaviour;
+            rebuilt.merge(&self.behaviours[meta_instance.index()].dict);
+        }
+        let handle = self.behaviour_handle(class, Side::Class);
+        self.behaviours[handle.index()].dict.same_as(&rebuilt)
+    }
+
     /// Merge `metaclass`'s *current* instance behaviour into `root`'s
     /// class-behaviour, bypassing [`ClassGraph::cascade_build`]'s
     /// `Side::Class` "is this the root" guard entirely.
