@@ -12,6 +12,7 @@ mod convert;
 mod directive;
 mod error;
 mod expr;
+mod image;
 mod instruction;
 mod scanner;
 mod selector;
@@ -33,6 +34,7 @@ pub use ast::{
 /// as an AST, and it is the number a test or an embedder checks its own depths
 /// against rather than hardcoding 50,000 in two places.
 pub use expr::MAX_EXPR_DEPTH;
+pub use image::{program_from_image, program_image};
 pub use scanner::{ResourceBody, Scanned, scan};
 pub use selector::Selector;
 pub use source::{ProgramSource, SourceKind};

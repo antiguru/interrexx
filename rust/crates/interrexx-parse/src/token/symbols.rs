@@ -16,6 +16,11 @@ impl SymbolId {
     pub fn index(self) -> usize {
         self.0 as usize
     }
+
+    /// The id whose [`Self::index`] is `index`, where one can be.
+    pub(crate) fn from_index(index: usize) -> Option<Self> {
+        u32::try_from(index).ok().map(SymbolId)
+    }
 }
 
 /// Interns upcased symbol spellings. Owned by `ProgramSource`'s parse, handed
