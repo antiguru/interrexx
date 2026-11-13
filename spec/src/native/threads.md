@@ -273,13 +273,14 @@ so the tests that witness this rule compare them outside this page.
 r[native.threads.trace.deviation.166]
 Code that was already running when native code first turned the external trace
 of the interpreter, or of one activity, on or off ([Deviation
-166](../deviations.md)) may leave out some of the lines the trace asks for, up
-to the end of its run. That code is each run of a program, method, `::ROUTINE`
-or internal routine that an activity had begun, a caller that waits for a call
-to return included. The lines
-it may leave out are the `>K>` lines of a `DO` or `LOOP` header for `TO`, `BY`,
-`FOR`, `OVER` and `WITH`, and the `>L>`, `>V>`, `>E>`, `>O>`, `>P>` and `>A>`
-lines that `TRACE I`, set at an interactive pause, asks for. Code entered after
-that first request prints every line, as ooRexx does. ooRexx prints every line
-in code that was already running too. The trace lines name the program's path,
-so the tests that witness this rule compare them outside this page.
+166](../deviations.md#166-trace-lines-of-code-already-running-when-native-code-first-switches-the-trace))
+may leave out some of the lines the trace asks for, up to the end of its run.
+That code is each run of a program, method, `::ROUTINE` or internal routine
+that an activity had begun, a caller that waits for a call to return included.
+The lines it may leave out are the `>K>` lines of a `DO` or `LOOP` header for
+`TO`, `BY`, `FOR`, `OVER` and `WITH`, and the `>L>`, `>V>`, `>E>`, `>O>`, `>P>`
+and `>A>` lines that `TRACE I`, set at an interactive pause, asks for. Code
+entered after that first request prints every line, as ooRexx does. ooRexx
+prints every line in code that was already running too. The trace lines name
+the program's path, so the tests that witness this rule compare them outside
+this page.
