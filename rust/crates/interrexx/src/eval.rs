@@ -492,7 +492,8 @@ impl Interp {
                 // discards its operands here, where the `?` on an operand's
                 // evaluation above leaves them for `Op::Clause`'s region to
                 // truncate. The module doc has why both are safe.
-                let result = self.apply_binary(*op, left_value, right_value);
+                let text = compares_as_text(*op, left, right);
+                let result = self.apply_binary_op(*op, text, left_value, right_value);
                 self.roots.activity_mut().pop_frame(frame);
                 result
             }
@@ -1491,6 +1492,74 @@ impl Interp {
 
     /// `left op right` for every binary operator whose two operands are just
     /// values by the time it runs -- concatenation, comparison and logical.
+    /// [`Interp::apply_binary`] for an operator site `text` says compares
+    /// as strings ([`compares_as_text`]): two plain strings compare by the
+    /// string rule at once, and anything else takes the general path.
+    #[inline(always)]
+    pub(crate) fn apply_binary_op(
+        &mut self,
+        op: Operator,
+        text: bool,
+        left: ObjRef,
+        right: ObjRef,
+    ) -> Result<ObjRef, Failure> {
+        if text {
+            return self.apply_text_compare(op, left, right);
+        }
+        self.apply_binary(op, left, right)
+    }
+
+    /// [`Interp::apply_binary_op`]'s string-comparing site, out of line so
+    /// that the driver's frame carries none of it.
+    #[inline(never)]
+    fn apply_text_compare(
+        &mut self,
+        op: Operator,
+        left: ObjRef,
+        right: ObjRef,
+    ) -> Result<ObjRef, Failure> {
+        match self.compare_plain_strings(op, left, right) {
+            Some(holds) => Ok(logical(holds)),
+            None => self.apply_binary(op, left, right),
+        }
+    }
+
+    /// `left op right` by the string rule, where both are strings or numbers
+    /// in their own right -- a small integer, an inline string or a heap
+    /// string or number -- and `None` for any other operand, which
+    /// [`Interp::apply_binary`] has to judge. For an equality operator with
+    /// an operand that is not a number this is the answer `apply_binary`
+    /// gives: neither operand is an operator receiver or converts through
+    /// the required-string protocol, the numeric attempt fails on the
+    /// non-number, and the fallback compares the two renderings. Nothing
+    /// here can raise, which is why no blame is needed.
+    fn compare_plain_strings(&mut self, op: Operator, left: ObjRef, right: ObjRef) -> Option<bool> {
+        if !self.plain_string(left) || !self.plain_string(right) {
+            return None;
+        }
+        let left = self.render(left);
+        let right = self.render(right);
+        Some(interrexx_num::compare_strings(
+            left.text(self),
+            right.text(self),
+            compare_op(op),
+        ))
+    }
+
+    /// Whether `value` is a string or number in its own right, which is its
+    /// own string value and no operator's receiver.
+    #[inline]
+    fn plain_string(&self, value: ObjRef) -> bool {
+        match value.decode() {
+            Decoded::SmallInt(_) | Decoded::Text(_) => true,
+            Decoded::Heap { .. } => matches!(
+                self.heap.get(value).map(|object| &object.body),
+                Some(Body::Text { .. } | Body::Num { .. })
+            ),
+            _ => false,
+        }
+    }
+
     pub(crate) fn apply_binary(
         &mut self,
         op: Operator,
@@ -1779,6 +1848,29 @@ fn is_comparison(op: Operator) -> bool {
 
 /// Whether `op` asks whether two values are the same, as against how they
 /// order.
+/// Whether the comparison `left op right` compares as strings whatever the
+/// other operand is: `op` is an equality operator and one operand is a
+/// literal that is not a number, so the numeric rule, which needs both, never
+/// applies. Decided from the syntax alone.
+pub(crate) fn compares_as_text(op: Operator, left: &Expr, right: &Expr) -> bool {
+    is_equality(op)
+        && [left, right]
+            .iter()
+            .any(|side| matches!(&side.kind, ExprKind::Literal(bytes) if never_a_number(bytes)))
+}
+
+/// Whether `bytes` cannot be a number however `NUMERIC` is set: it is blank or
+/// empty, or holds a byte no number is spelled with. Conservative: `'ok'` and
+/// `'1x'` are caught, while `'e'` and `'--'`, which are not numbers either,
+/// are left to the full rule.
+pub(crate) fn never_a_number(bytes: &[u8]) -> bool {
+    bytes.iter().all(|byte| matches!(byte, b' ' | b'\t'))
+        || bytes.iter().any(|byte| {
+            !(byte.is_ascii_digit()
+                || matches!(byte, b'.' | b'+' | b'-' | b'e' | b'E' | b' ' | b'\t'))
+        })
+}
+
 pub(crate) fn is_equality(op: Operator) -> bool {
     use Operator::*;
     matches!(

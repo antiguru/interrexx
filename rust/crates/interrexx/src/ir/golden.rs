@@ -195,10 +195,17 @@ pub(crate) fn render(chunk: &Chunk) -> String {
             // No `hint` field to render, which is what a golden reading this
             // line beside an `Arith` one says: the two ops are the same shape
             // apart from the slot only arithmetic takes.
-            Op::Binary { op, lhs, rhs, dst } => {
+            Op::Binary {
+                op,
+                lhs,
+                rhs,
+                dst,
+                text,
+            } => {
                 out.push_str(&format!(
-                    "{index}: Binary op={} lhs={lhs} rhs={rhs} dst={dst}\n",
-                    render_operator(*op)
+                    "{index}: Binary op={} lhs={lhs} rhs={rhs} dst={dst}{}\n",
+                    render_operator(*op),
+                    if *text { " text" } else { "" }
                 ));
             }
             Op::TraceOperator { op, src } => {
