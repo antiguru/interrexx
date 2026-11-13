@@ -930,6 +930,7 @@ const NON_LANG_PROGRAMS: &[&str] = &[
     "num/settings.rex",
     "num/prefix_integer.rex",
     "num/big_digits.rex",
+    "num/null_string_compare.rex",
     "gate-tables/directives/method__external__subkeyword.rex",
     "gate-tables/directives/attribute__external__subkeyword.rex",
     "gate-tables/concepts/creo.rex",

@@ -14,6 +14,7 @@ pub use scaled::Scaled;
 
 pub use compare::{
     CompareOp, compare, compare_bytes, compare_decoded, compare_numbers, compare_strings,
+    compare_with_null,
 };
 pub(crate) use digits::Digits;
 pub use muldiv::DivOp;

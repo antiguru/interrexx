@@ -98,6 +98,7 @@ num/operators.rex
 num/settings.rex
 num/prefix_integer.rex
 num/big_digits.rex
+num/null_string_compare.rex
 lang/do_loop_forms.rex
 lang/do_label.rex
 lang/leave_nested_outer.rex
