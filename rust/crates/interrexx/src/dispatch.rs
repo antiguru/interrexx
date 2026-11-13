@@ -1672,14 +1672,40 @@ enum Primitive {
 /// One compiled send site's last resolution: what
 /// [`Interp::lookup_behaviour`] answered for the site's name, with no scope
 /// override, against `behaviour` while the class graph stood at `epoch`. The
-/// lookup reads nothing else, so the answer holds while both match; the
-/// receiver's own methods, the access check and what the method runs are
-/// asked on every send.
+/// lookup reads nothing else, so the answer holds while both match. The
+/// receiver's own methods are asked on every send, ahead of the memo.
 #[derive(Copy, Clone)]
 pub(crate) struct SendMemo {
     epoch: interrexx_classes::Epoch,
     behaviour: Behaviour,
     resolution: Resolution,
+    /// What the resolved method runs, where it is a `::METHOD` body that
+    /// any caller may send.
+    body: Option<MemoBody>,
+}
+
+/// A memo's `::METHOD` body: what [`Interp::invocable`] answered and the
+/// method's super scope in the memo's behaviour, read while the method
+/// tables stood at `rows` ([`Interp::method_rows`]). The super scope is the
+/// class graph's answer, which the memo's epoch covers; the body and the
+/// access check are the tables', which `rows` covers.
+#[derive(Copy, Clone)]
+struct MemoBody {
+    installed: crate::InstalledMethodBody,
+    super_scope: Option<ObjRef>,
+    rows: u64,
+}
+
+/// Where [`Interp::begin_method`] takes the method's super scope from.
+#[derive(Copy, Clone)]
+enum SuperScope {
+    /// Resolved in the receiver's behaviour, which the send already has.
+    In(Behaviour),
+    /// Already resolved.
+    Known(Option<ObjRef>),
+    /// Resolved from the receiver, whose behaviour the security manager may
+    /// have changed since the send found the method.
+    OfReceiver,
 }
 
 /// The behaviour a receiver's messages resolve against.
@@ -2259,29 +2285,73 @@ impl Interp {
 
     /// [`Interp::lookup_behaviour`] with no scope override, answered from
     /// `memo` while the class graph's epoch and the behaviour are the ones it
-    /// was filled under. A miss is not kept: it goes on to `UNKNOWN`, which
-    /// is a send of its own.
+    /// was filled under, with the memo's body where it still holds. A miss is
+    /// not kept: it goes on to `UNKNOWN`, which is a send of its own.
     #[inline]
     fn lookup_memoized(
         &mut self,
         behaviour: Behaviour,
         name: &[u8],
         memo: &Cell<Option<SendMemo>>,
-    ) -> Option<Resolution> {
+    ) -> Option<(Resolution, Option<MemoBody>)> {
         let epoch = self.classes().epoch();
-        if let Some(kept) = memo.get()
-            && kept.epoch == epoch
-            && kept.behaviour == behaviour
+        let kept = memo
+            .get()
+            .filter(|kept| kept.epoch == epoch && kept.behaviour == behaviour);
+        let rows = self.method_rows();
+        if let Some(kept) = kept
+            && let Some(body) = kept.body
+            && body.rows == rows
         {
-            return Some(kept.resolution);
+            return Some((kept.resolution, Some(body)));
         }
-        let resolution = self.lookup_behaviour(behaviour, name, None)?;
+        let resolution = match kept {
+            Some(kept) => kept.resolution,
+            None => self.lookup_behaviour(behaviour, name, None)?,
+        };
+        let body = self.memo_body(behaviour, resolution, rows);
         memo.set(Some(SendMemo {
             epoch,
             behaviour,
             resolution,
+            body,
         }));
-        Some(resolution)
+        Some((resolution, body))
+    }
+
+    /// The [`MemoBody`] for `resolution` in `behaviour`, where it runs a
+    /// `::METHOD` body and its access lets any caller send it.
+    #[inline(never)]
+    fn memo_body(
+        &mut self,
+        behaviour: Behaviour,
+        resolution: Resolution,
+        rows: u64,
+    ) -> Option<MemoBody> {
+        if let Some(scope) = self.access_scope_of(resolution.method)
+            && !matches!(scope.access, Access::Default | Access::Public)
+        {
+            return None;
+        }
+        let Ok(Invocable::Rexx(installed)) = self.invocable(resolution, b"") else {
+            return None;
+        };
+        Some(MemoBody {
+            installed,
+            super_scope: self.super_scope_in(behaviour, resolution.scope),
+            rows,
+        })
+    }
+
+    /// A stamp of the tables a [`MemoBody`] was read from: the primitive
+    /// rows, the method bodies and the access rows. Each only counts up, so
+    /// their sum changes whenever any of them does.
+    #[inline]
+    fn method_rows(&mut self) -> u64 {
+        let natives = self.object_model().natives.version();
+        natives
+            .wrapping_add(self.method_bodies.version())
+            .wrapping_add(self.special_methods.version())
     }
 
     /// What `receiver`'s own methods answer for `name` ahead of its
@@ -2726,12 +2796,12 @@ impl Interp {
         args: &[Option<ObjRef>],
     ) -> Result<Started<Option<ObjRef>>, Failure> {
         let invocable = self.invocable(resolution, name)?;
-        let (cleared, behaviour) = match seam::clear(self, receiver, name, args, resolution.method)?
-        {
-            seam::Clearance::Cleared(cleared) => (cleared, behaviour),
-            seam::Clearance::Checked(cleared) => (cleared, None),
-            seam::Clearance::Answered(result) => return Ok(Started::Ran(result)),
-        };
+        let super_scope = behaviour.map_or(SuperScope::OfReceiver, SuperScope::In);
+        let (cleared, super_scope) =
+            match self.clear_send(receiver, name, args, resolution.method, super_scope)? {
+                Ok(cleared) => cleared,
+                Err(answered) => return Ok(Started::Ran(answered)),
+            };
         if let Invocable::Rexx(installed) = invocable {
             // **Neither this path nor `Generated` blames the method**, and both
             // are observable. An untrapped `1/0` inside a `::METHOD` body
@@ -2747,7 +2817,13 @@ impl Interp {
             // and an abstract method raise directly where a primitive method
             // raises from inside an activation of its own.
             self.begin_method(
-                cleared, installed, resolution, behaviour, receiver, name, args,
+                cleared,
+                installed,
+                resolution,
+                super_scope,
+                receiver,
+                name,
+                args,
             )?;
             return Ok(Started::Entered);
         }
@@ -2807,6 +2883,54 @@ impl Interp {
             }
         };
         outcome.map(Started::Ran)
+    }
+
+    /// The security seam for one send, the one place it is asked: the
+    /// clearance and where the method's super scope comes from, `super_scope`
+    /// unless the security manager ran code that may have changed the
+    /// receiver, or the answer the manager gave in the method's place.
+    #[inline(always)]
+    fn clear_send(
+        &mut self,
+        receiver: ObjRef,
+        name: &[u8],
+        args: &[Option<ObjRef>],
+        method: MethodId,
+        super_scope: SuperScope,
+    ) -> Result<Result<(Cleared, SuperScope), Option<ObjRef>>, Failure> {
+        Ok(match seam::clear(self, receiver, name, args, method)? {
+            seam::Clearance::Cleared(cleared) => Ok((cleared, super_scope)),
+            seam::Clearance::Checked(cleared) => Ok((cleared, SuperScope::OfReceiver)),
+            seam::Clearance::Answered(result) => Err(result),
+        })
+    }
+
+    /// [`Interp::begin_invoke`] for the `::METHOD` body a send site's memo
+    /// keeps: the security seam, then the body, with no table read.
+    fn begin_memo_method(
+        &mut self,
+        resolution: Resolution,
+        body: MemoBody,
+        receiver: ObjRef,
+        name: &[u8],
+        args: &[Option<ObjRef>],
+    ) -> Result<Started<Option<ObjRef>>, Failure> {
+        let super_scope = SuperScope::Known(body.super_scope);
+        let (cleared, super_scope) =
+            match self.clear_send(receiver, name, args, resolution.method, super_scope)? {
+                Ok(cleared) => cleared,
+                Err(answered) => return Ok(Started::Ran(answered)),
+            };
+        self.begin_method(
+            cleared,
+            body.installed,
+            resolution,
+            super_scope,
+            receiver,
+            name,
+            args,
+        )?;
+        Ok(Started::Entered)
     }
 
     /// [`Interp::begin_invoke`] for a method whose body is neither Rexx nor
@@ -3882,7 +4006,12 @@ impl Interp {
         };
         let found = match self.own_lookup(receiver, name, None) {
             Some(found) => found,
-            None => self.lookup_memoized(behaviour, name, memo),
+            None => match self.lookup_memoized(behaviour, name, memo) {
+                Some((resolution, Some(body))) => {
+                    return self.begin_memo_method(resolution, body, receiver, name, args);
+                }
+                found => found.map(|(resolution, _)| resolution),
+            },
         };
         let resolved = match found {
             Some(resolution) => self.admit(resolution, receiver, caller),
