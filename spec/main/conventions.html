@@ -175,7 +175,7 @@
                     <main>
                         <h1 id="conventions"><a class="header" href="#conventions">Conventions</a></h1>
 <p class="references">ANSI: 9.2.1; rexxref: Functions &gt; Built-in Functions</p>
-<p class="deviations">Deviations: D30, D109</p>
+<p class="deviations">Deviations: D30, D109, D169</p>
 <p>The rules on this page hold on every page that links to them. A builtin
 page states what its arguments are (a string, a position, a length, a pad)
 and links here for what that means, instead of restating it.</p>
@@ -593,15 +593,16 @@ with no blanks added or removed.</p>
 </code></pre>
 <h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
 <div class="rule" id="r-conv.string.deviation.30"><a href="#r-conv.string.deviation.30">[conv.string.deviation.30]</a></div>
-<p>interrexx does not convert an argument whose <code>STRING</code> method answers an
-object that is not a string, such as a <code>Directory</code>. When a builtin receives
-such an argument where its page calls for a string, interrexx ends the
-program with exit code 120 and a message that this is not implemented,
-after raising <a href="conditions/nostring.html#r-cond.nostring.raise"><code>NOSTRING</code></a> when a trap for it is set.
-ooRexx reads the answer as a string, and what it does then depends on the
-builtin: <code>UPPER</code> ends the program with Error 5, <code>LENGTH</code> answers an unrelated
-number, and <code>STRIP</code> crashes the interpreter. A program can rely on none of
-these answers.</p>
+<p>interrexx does not convert an argument whose <code>STRING</code> method answers an object
+that is not a string, such as a <code>Directory</code>, by reading the answer as a
+string. When a builtin receives such an argument where its page calls for a
+string, interrexx raises <code>SYNTAX 98.973</code>, or <code>SYNTAX 88.909</code> for an argument
+the builtin reads as a string, as <a href="#r-conv.string.deviation.169">Deviation
+169</a> says, after raising
+<a href="conditions/nostring.html#r-cond.nostring.raise"><code>NOSTRING</code></a> when a trap for it is set. ooRexx reads
+the answer as a string, and what it does then depends on the builtin: <code>UPPER</code>
+ends the program with Error 5, <code>LENGTH</code> answers an unrelated number, and
+<code>STRIP</code> crashes the interpreter. A program can rely on none of these answers.</p>
 <pre><code class="language-rexx">o = .weird~new
 say 'before'
 say upper(o)
@@ -610,7 +611,81 @@ say 'after'
 ::method string
   return .directory~new
 </code></pre>
-<pre><code class="language-output rc=120">before
+<pre><code class="language-output rc=158">before
+</code></pre>
+<div class="rule" id="r-conv.string.deviation.169"><a href="#r-conv.string.deviation.169">[conv.string.deviation.169]</a></div>
+<p>Where a clause needs the bytes of an object's string value, the <code>STRING</code> method
+of the object answers an object with no string value, and no trap took the
+NOSTRING condition that the answer raises, the clause raises <code>SYNTAX 98.973</code>,
+the condition that <code>::OPTIONS NOSTRING SYNTAX</code> makes of NOSTRING. The
+condition is an ordinary SYNTAX condition: <code>SIGNAL ON SYNTAX</code> and <code>CALL ON SYNTAX</code> take it, <code>RC</code> is 98 there, and untrapped it ends the program with exit
+code 158. The clauses that do this include <code>SAY</code>, the three concatenation
+operators, the ordering comparisons, <code>PARSE VALUE</code>, <code>PARSE ARG</code>, <code>OPTIONS</code> and
+the receiver of a builtin, the string the builtin works on. A clause that reads
+the answer as an object, such as a truth value, a logical operator or an
+equality comparison, takes it as <code>.nil</code>. An argument of a builtin that the
+builtin reads as a string has its own error, which
+<a href="#r-conv.string.builtin-argument">the next rule</a> states. ooRexx reads the answer
+as a string in each of the clauses above, with garbage results or a crash, so
+no answer of it is specified. The text of the message is not specified.</p>
+<pre><code class="language-rexx">o = .weird~new
+signal on syntax name s
+say length(o)
+s: say condition('o')~code rc
+signal on syntax name t
+say 'a' || o
+t: say condition('o')~code rc
+signal on syntax name u
+parse value o with a b
+u: say condition('o')~code rc
+::class weird
+::method string
+  return .directory~new
+</code></pre>
+<pre><code class="language-output">98.973 98
+98.973 98
+98.973 98
+</code></pre>
+<div class="rule" id="r-conv.string.builtin-argument"><a href="#r-conv.string.builtin-argument">[conv.string.builtin-argument]</a></div>
+<p>Where the <code>STRING</code> method of a builtin's argument answers an object with no
+string value, and the builtin reads that argument as a string, the builtin
+raises <code>SYNTAX 88.909</code>, "Argument N must have a string value", as the method
+the builtin stands for does. <code>N</code> is the position of the argument among the
+arguments of that method, which does not count the receiver, the string the
+builtin works on. So <code>CHANGESTR(needle, haystack, new)</code> numbers the needle 1
+and the replacement 2, and <code>STRIP(string, option, char)</code> numbers the option 1
+and the character 2. The arguments that are read as strings are those named
+here, and the others keep <code>SYNTAX 98.973</code> (the previous rule): the needle of
+<code>CHANGESTR</code>, <code>COUNTSTR</code>, <code>POS</code>, <code>LASTPOS</code> and <code>WORDPOS</code> and the replacement of
+<code>CHANGESTR</code>; the inserted string of <code>INSERT</code> and <code>OVERLAY</code>; the second string
+of <code>ABBREV</code>, <code>COMPARE</code>, <code>BITAND</code>, <code>BITOR</code> and <code>BITXOR</code>; the type of
+<code>DATATYPE</code>; the option and the character of <code>STRIP</code>; the two tables of
+<code>TRANSLATE</code>; the reference and the option of <code>VERIFY</code>; and the data of
+<code>CHAROUT</code> and <code>LINEOUT</code>. The conversions run in argument order, before any other argument check, so the error names the first argument
+whose answer has no string value, even where a later argument is also in
+error. A method's argument and a native routine's argument that has no string
+value raise the same error with their own position.</p>
+<pre><code class="language-rexx">o = .weird~new
+signal on syntax name s
+say changestr('a', 'a', o)
+s: say condition('o')~code rc
+signal on syntax name t
+say pos(o, 'abc')
+t: say condition('o')~code rc
+signal on syntax name u
+say strip('xabx', 'B', o)
+u: say condition('o')~code rc
+signal on syntax name v
+say 'abc'~pos(o)
+v: say condition('o')~code rc
+::class weird
+::method string
+  return .directory~new
+</code></pre>
+<pre><code class="language-output">88.909 88
+88.909 88
+88.909 88
+88.909 88
 </code></pre>
 <div class="rule" id="r-conv.string.deviation.109"><a href="#r-conv.string.deviation.109">[conv.string.deviation.109]</a></div>
 <p>A builtin that takes a string works on the own characters of an instance of a

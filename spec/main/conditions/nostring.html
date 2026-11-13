@@ -486,8 +486,9 @@ NOSTRING [a PLAIN] The Stem class
 </code></pre>
 <div class="rule" id="r-cond.nostring.deviation.30"><a href="#r-cond.nostring.deviation.30">[cond.nostring.deviation.30]</a></div>
 <p>When the <code>STRING</code> method of an object answers an object with no string value,
-interrexx gives ooRexx's answer wherever that is defined, and elsewhere ends
-the program with exit code 120 after raising NOSTRING if it is trapped. For a
+interrexx gives ooRexx's answer wherever that is defined, and elsewhere raises
+<code>SYNTAX 98.973</code> (<a href="../conventions.html#r-conv.string.deviation.169">Deviation
+169</a>) after raising NOSTRING if it is trapped. For a
 NOSTRING raised for such an object, the description is not specified. ooRexx
 reads <code>.nil</code> as a string there, with garbage results or a crash. <a href="../conventions.html#r-conv.string.deviation.30">The
 conventions</a> state it for builtin arguments.</p>
@@ -500,7 +501,7 @@ say 'not reached'
 ::method string
   return .directory~new
 </code></pre>
-<pre><code class="language-output rc=120">trapped NOSTRING The WEIRD class
+<pre><code class="language-output rc=158">trapped NOSTRING The WEIRD class
 </code></pre>
 
                     </main>

@@ -1022,19 +1022,21 @@ say r~items r~allIndexes~items
 <div class="rule" id="r-class.index.deviation.30"><a href="#r-class.index.deviation.30">[class.index.deviation.30]</a></div>
 <p>When the <code>string</code> method of an object answers an object that is not a
 string, interrexx gives ooRexx's answer wherever that is defined, and
-elsewhere, as for <code>say</code>, a joining operator or a builtin argument, ends the
-program with exit code 120 after raising NOSTRING if it is trapped. ooRexx
-reads <code>.nil</code> as a string there, with garbage results or a crash. <a href="../conventions.html#r-conv.string.deviation.30">The
+elsewhere, as for <code>say</code>, a joining operator or the receiver of a builtin, raises
+<code>SYNTAX 98.973</code> (<a href="../conventions.html#r-conv.string.deviation.169">Deviation 169</a>) after raising
+NOSTRING if it is trapped. ooRexx reads <code>.nil</code> as a string there, with garbage
+results or a crash. <a href="../conventions.html#r-conv.string.deviation.30">The
 conventions</a> and <a href="../conditions/nostring.html#r-cond.nostring.deviation.30">the NOSTRING
 rule</a> state it for builtin arguments and for
-the condition.</p>
+the condition, and <a href="../conventions.html#r-conv.string.builtin-argument">the argument rule</a> gives
+the <code>SYNTAX 88.909</code> of an argument a builtin reads as a string.</p>
 <pre><code class="language-rexx">say 'before'
 say 'x' .weird~new
 ::class weird
 ::method string
   return .directory~new
 </code></pre>
-<pre><code class="language-output rc=120">before
+<pre><code class="language-output rc=158">before
 </code></pre>
 <div class="rule" id="r-class.index.deviation.32"><a href="#r-class.index.deviation.32">[class.index.deviation.32]</a></div>
 <p>When a class-side <code>new</code> reached through <code>enhanced</code> answers an object it did

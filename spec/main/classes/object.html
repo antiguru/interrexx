@@ -2054,7 +2054,7 @@ say 'after'
 <div class="rule" id="r-class.object.deviation.30"><a href="#r-class.object.deviation.30">[class.object.deviation.30]</a></div>
 <p>When the <code>string</code> method of an object answers an object that is not a string,
 interrexx gives the answer ooRexx gives wherever that is defined, and
-elsewhere ends the program with exit code 120, as <a href="index.html#r-class.index.deviation.30">the chapter
+elsewhere raises <code>SYNTAX 98.973</code>, as <a href="index.html#r-class.index.deviation.30">the chapter
 rule</a> says. The <code>string</code> method of <code>Object</code> is not
 affected: it answers the name.</p>
 <pre><code class="language-rexx">a = .weird~new
@@ -2065,7 +2065,7 @@ say 'x' a
 ::method string
   return .directory~new
 </code></pre>
-<pre><code class="language-output rc=120">Directory
+<pre><code class="language-output rc=158">Directory
 before
 </code></pre>
 <div class="rule" id="r-class.object.deviation.32"><a href="#r-class.object.deviation.32">[class.object.deviation.32]</a></div>
