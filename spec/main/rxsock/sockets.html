@@ -369,8 +369,8 @@ answers <code>0</code> with the null string where the other end has finished sen
 receiving or <code>2</code> for both, and answers <code>0</code>, or <code>-1</code> with the error <code>22</code> for
 another <code>how</code>. Stream sockets keep the order of the bytes and not the bounds of
 the calls, so that bytes that were sent by one call can be received by several.
-<code>SockRecv</code> on a stream socket that is not connected answers <code>-1</code> with the error
-<code>ENOTCONN</code>, and <code>SockSend</code> on one answers <code>-1</code> with the error <code>32</code>. The flags are the words <code>MSG_OOB</code>,
+<code>SockRecv</code> on a stream socket that is not connected, which includes one that listens, answers <code>-1</code> with the error
+<code>ENOTCONN</code> at once and does not wait, and <code>SockSend</code> on one answers <code>-1</code> with the error <code>32</code>. The flags are the words <code>MSG_OOB</code>,
 <code>MSG_PEEK</code> and <code>MSG_DONTROUTE</code>, in either case, with blanks between them.</p>
 <pre><code class="language-rexx">srv = SockSocket('AF_INET', 'SOCK_STREAM', 0)
 a.family = 'AF_INET'; a.port = 0; a.addr = '127.0.0.1'
@@ -393,6 +393,11 @@ fresh = SockSocket('AF_INET', 'SOCK_STREAM', 0)
 say SockRecv(fresh, 'v', 10) errno '['v']'
 say SockSend(fresh, 'x') errno
 say SockClose(fresh)
+lst = SockSocket('AF_INET', 'SOCK_STREAM', 0)
+call SockBind lst, 'a.'
+call SockListen lst, 5
+say SockRecv(lst, 'd', 10) errno
+say SockRecvFrom(lst, 'd', 10, 0, 'f.') errno
 ::requires 'rxsock' library
 </code></pre>
 <pre><code class="language-output">5 5 hello
@@ -407,6 +412,8 @@ say SockClose(fresh)
 -1 ENOTCONN []
 -1 32
 0
+-1 ENOTCONN
+-1 ENOTCONN
 </code></pre>
 <div class="rule" id="r-rxsock.sockets.datagram"><a href="#r-rxsock.sockets.datagram">[rxsock.sockets.datagram]</a></div>
 <p>Datagram sockets send messages that keep their bounds. <code>SockSendTo(socket, data [, flags], address)</code> sends <code>data</code> to the address in the stem <code>address</code> from a

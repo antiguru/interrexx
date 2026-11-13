@@ -483,7 +483,7 @@ say m~acquire(.timeout~new) m~release .log
   .environment~log = .log 'makeString'
   return '0.05'
 </code></pre>
-<pre><code class="language-output defect=#164">1 1 sent: request STRING
+<pre><code class="language-output">1 1 sent: request STRING
 </code></pre>
 <h2 id="cleaning-up"><a class="header" href="#cleaning-up">Cleaning up</a></h2>
 <div class="rule" id="r-class.mutexsemaphore.uninit"><a href="#r-class.mutexsemaphore.uninit">[class.mutexsemaphore.uninit]</a></div>
@@ -535,7 +535,7 @@ say m~acquire(.digits~new('0.01')) 'sends' .environment~sent
   .environment~sent = .environment~sent + 1
   return '0'
 </code></pre>
-<pre><code class="language-output defect=#140">1 sends 0
+<pre><code class="language-output">1 sends 0
 </code></pre>
 <div class="rule" id="r-class.mutexsemaphore.deviation.136"><a href="#r-class.mutexsemaphore.deviation.136">[class.mutexsemaphore.deviation.136]</a></div>
 <p>A copy of a semaphore is free whoever owns the original and however often. In

@@ -175,6 +175,7 @@
                     <main>
                         <h1 id="the-macrospace"><a class="header" href="#the-macrospace">The macrospace</a></h1>
 <p class="references">rexxref: Rexx Utilities (RexxUtil) &gt; SysAddRexxMacro; Rexx Utilities (RexxUtil) &gt; SysDropRexxMacro; Rexx Utilities (RexxUtil) &gt; SysQueryRexxMacro; Rexx Utilities (RexxUtil) &gt; SysReorderRexxMacro</p>
+<p class="deviations">Deviations: D86</p>
 <p>The macrospace is a table of named routines that the interpreter's service
 keeps for every program that uses it. A program puts a routine into it with
 <a href="sysaddrexxmacro.html">SysAddRexxMacro</a>, and a program calls the routine by its
@@ -225,6 +226,33 @@ call SysFileDelete 'c4zqchild.rex'
 <pre><code class="language-output">0
 child: B from the parent x
 parent: [] [A]
+</code></pre>
+<div class="rule" id="r-util.macrospace.deviation.86"><a href="#r-util.macrospace.deviation.86">[util.macrospace.deviation.86]</a></div>
+<p>The service prints its own messages (<a href="../deviations.html">Deviation 86</a>), and the
+refusal of its directory is one of them. The service keeps its files in a
+directory, which the environment variable <code>REXX_API_DIR</code> names where it is set. The directory has to belong to the user
+who runs the program and to give no access to anyone else: a directory that
+the group or others can use is refused, and no service is started or reached in
+it, so that every function that works on the macrospace answers its code for no
+service (<code>1004</code> for SysAddRexxMacro, <code>2</code> for SysDropRexxMacro). The refusal is
+reported: a program that is refused writes a line to standard error that says
+the service directory is not private to the user. ooRexx does not refuse such
+a directory: its calls answer <code>0</code>. A directory that only the user can use is
+accepted. In the example a program is run with a directory that the group can
+write to, and its standard error is read for the line.</p>
+<pre><code class="language-rexx">call SysMkDir 'c4zqapi'
+call SysChmod 'c4zqapi', 'rwxrwxr-x'
+call lineout 'c4zqapi.rex', 'say SysAddRexxMacro("C4ZQAPI", "c4zqapi.rex") SysDropRexxMacro("C4ZQAPI")'
+call lineout 'c4zqapi.rex'
+old = value('REXX_API_DIR', directory() || '/c4zqapi', 'ENVIRONMENT')
+address system 'rexx c4zqapi.rex 2&gt;&amp;1' with output stem got.
+call value 'REXX_API_DIR', old, 'ENVIRONMENT'
+say got.0 (pos('is not private to this user', got.1) &gt; 0) '['word(got.2, 1)']' got.2
+call SysFileDelete 'c4zqapi.rex'
+call SysRmDir 'c4zqapi'
+::requires 'rxunixsys' library
+</code></pre>
+<pre><code class="language-output">2 1 [1004] 1004 2
 </code></pre>
 <div class="rule" id="r-util.macrospace.names"><a href="#r-util.macrospace.names">[util.macrospace.names]</a></div>
 <p>The name of a macro is a string, and it is matched without regard to case: a

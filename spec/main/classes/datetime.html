@@ -1912,7 +1912,7 @@ probe:
   .local~log = .local~log name
   forward to (v) message (name) arguments (args)
 </code></pre>
-<pre><code class="language-output defect=#164">year:
+<pre><code class="language-output">year:
   REQUEST:STRING MAKESTRING &gt;= &lt;= RIGHT
 offset:
   ISA REQUEST:STRING MAKESTRING &gt;= &lt;= *
@@ -2231,7 +2231,7 @@ failed: say '=&gt;' condition('o')~code
   .local~sent = .local~sent + 1
   return 'zzz'
 </code></pre>
-<pre><code class="language-output defect=#140">0001-01-06T00:00:00.000000 2017-01-05T00:00:00.000000
+<pre><code class="language-output">0001-01-06T00:00:00.000000 2017-01-05T00:00:00.000000
 2017-06-03T00:00:00.000000
 1970-01-01T00:00:05.000000 2017-01-05T00:00:00.000000
 sends 0

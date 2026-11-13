@@ -352,7 +352,7 @@ b: say condition('o')~code
 ::method makestring
   return .strsub~new('ss')
 </code></pre>
-<pre><code class="language-output defect=#89">SS ABC
+<pre><code class="language-output">SS ABC
 </code></pre>
 <pre><code class="language-rexx">say length(.asks~new)
 say length(.asknil~new)
@@ -405,7 +405,7 @@ p: say condition('o')~code
 ::method string
   return 'abc'
 </code></pre>
-<pre><code class="language-output defect=#164">request STRING 1
+<pre><code class="language-output">request STRING 1
 4
 3
 2
@@ -713,7 +713,7 @@ say 'sends' .local~sent
   .local~sent = .local~sent + 1
   return 'MADE'
 </code></pre>
-<pre><code class="language-output defect=#140">2 AB
+<pre><code class="language-output">2 AB
 sends 0
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="lexical-structure"><a class="header" href="#lexical-structure">Lexical structure</a></h1>
@@ -18959,7 +18959,7 @@ read, so the program writes nothing, as
   return .nil
 ::class k metaclass meta
 </code></pre>
-<pre><code class="language-output defect=#156 rc=158"></code></pre>
+<pre><code class="language-output rc=158"></code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="method"><a class="header" href="#method">::METHOD</a></h1>
 <pre><code>::METHOD name [CLASS] [PUBLIC | PRIVATE | PACKAGE] [GUARDED | UNGUARDED] [PROTECTED | UNPROTECTED] [ATTRIBUTE | ABSTRACT | EXTERNAL spec | DELEGATE var]
 </code></pre>
@@ -24908,7 +24908,7 @@ n: return 'N' condition('d')
 ::method string
   return 'told'
 </code></pre>
-<pre><code class="language-output defect=#164">1 N told - N told
+<pre><code class="language-output">1 N told - N told
 2 - - -
 3 N told - N told
 </code></pre>
@@ -26984,7 +26984,7 @@ bad: say arg(1) '=&gt;' condition('o')~code
 ::method request
   return 'p/q'
 </code></pre>
-<pre><code class="language-output defect=#164">"abc"~left(5, .ask~new) =&gt; abc--
+<pre><code class="language-output">"abc"~left(5, .ask~new) =&gt; abc--
 "abc"~left(5, .askstr~new) =&gt; 88.909
 "abc"~left(5, .askobj~new) =&gt; 88.909
 "abc"~left(5, .nil) =&gt; 88.909
@@ -27130,7 +27130,7 @@ e: say arg(1) '=&gt;' condition('o')~code
   forward class (super)
 ::class k metaclass meta
 </code></pre>
-<pre><code class="language-output defect=#156">.k~subclass("S") =&gt; 98.900
+<pre><code class="language-output">.k~subclass("S") =&gt; 98.900
 .k~subclass("N") =&gt; 98.900
 .k~mixinclass("O") =&gt; 98.900
 </code></pre>
@@ -27166,7 +27166,7 @@ say 'sends' .local~sent
   .local~sent = .local~sent + 1
   return 'MADE'
 </code></pre>
-<pre><code class="language-output defect=#140">2 2 xab
+<pre><code class="language-output">2 2 xab
 sends 0
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="method-search"><a class="header" href="#method-search">Method search</a></h1>
@@ -27958,7 +27958,7 @@ e: say 'hiding mark, plain:' condition('o')~code
 ::method w
   return 'sub w'
 </code></pre>
-<pre><code class="language-output defect=#131">plain: own w | scoped k: own w | scoped base: base w
+<pre><code class="language-output">plain: own w | scoped k: own w | scoped base: base w
 forward class k: own w | send with array: own w
 float, scoped k: k w
 sub scoped sub: own w on sub | sub scoped k: k w
@@ -30633,7 +30633,7 @@ say (n == 12) (n~hashCode == 12~hashCode)
 <code>define</code>, <code>setMethod</code>, <code>enhanced</code> or <code>run</code>, and run on a receiver of a kind it
 cannot work on, raises <code>SYNTAX 93.900</code>, a condition a program can trap. The
 rule holds for every native method alike, <code>SORTWITH</code> and <code>ITEMS</code> of an Array,
-the methods of a Directory, a Package, a Supplier and the rest. The check
+the methods of a Directory, a Package, a Supplier, a String and the rest. The check
 happens when the method is run, so <code>define</code> and <code>setMethod</code> themselves
 succeed. ooRexx reads such a receiver with the layout of the other class and
 answers garbage or crashes.</p>
@@ -30664,19 +30664,40 @@ bad: say 'SYNTAX' condition('o')~code
 after
 SYNTAX 93.900
 </code></pre>
-<div class="rule" id="r-class.object.deviation.28"><a href="classes/object.html#r-class.object.deviation.28">[class.object.deviation.28]</a></div>
-<p>A metaclass <code>new</code> that answers something other than a class, while a class
-with that metaclass is made by <code>subclass</code>, and a <code>.ROUTINES</code> entry that is
-not a routine, are refused: the program ends with exit code 120. ooRexx casts
-the answer unchecked and crashes. A native method run on a receiver of the
-wrong kind is another matter: <a href="classes/object.html#r-class.object.borrowed-native">its rule</a>
-raises a condition.</p>
-<pre><code class="language-rexx">say 'id' .object~subclass("k", .MyMeta)~id
-::class MyMeta subclass Class
-::method new class
-  return 'x'
+<blockquote>
+<p><strong>Note.</strong> A <code>String</code> method is one of these: run on an object that is no
+string, it raises <code>SYNTAX 93.900</code> too, and does not work on the object's
+string value.</p>
+</blockquote>
+<pre><code class="language-rexx">o = .w~new
+o~sm(.string~method('LEFT'))
+signal on syntax name bad
+say '['o~left(2)']'
+exit
+bad: say 'SYNTAX' condition('o')~code
+::class w
+::method sm
+  self~setMethod('LEFT', arg(1))
+::method string
+  return 'a W'
 </code></pre>
-<pre><code class="language-output rc=120"></code></pre>
+<pre><code class="language-output no-oracle">SYNTAX 93.900
+</code></pre>
+<div class="rule" id="r-class.object.deviation.28"><a href="classes/object.html#r-class.object.deviation.28">[class.object.deviation.28]</a></div>
+<p>A <code>.ROUTINES</code> entry that is not a routine is refused when it is called: the
+program ends with exit code 120. ooRexx casts the entry unchecked and crashes.
+A metaclass <code>new</code> that answers something other than a class raises a
+condition instead (<a href="classes/class.html#r-class.class.deviation.114">Deviation 114</a>), and so does
+a native method run on a receiver of the wrong kind (<a href="classes/object.html#r-class.object.borrowed-native">its
+rule</a>).</p>
+<pre><code class="language-rexx">.routines['F'] = 'x'
+say 'set'
+call f
+say 'after'
+::routine r
+</code></pre>
+<pre><code class="language-output no-oracle rc=120">set
+</code></pre>
 <div class="rule" id="r-class.object.deviation.30"><a href="classes/object.html#r-class.object.deviation.30">[class.object.deviation.30]</a></div>
 <p>When the <code>string</code> method of an object answers an object that is not a string,
 interrexx gives the answer ooRexx gives wherever that is defined, and
@@ -30826,7 +30847,7 @@ bad: say arg(1) '=&gt;' condition('o')~code
 ::method makestring
   return 'other'
 </code></pre>
-<pre><code class="language-output defect=#140">o~send(n, 1) =&gt; count got 1
+<pre><code class="language-output">o~send(n, 1) =&gt; count got 1
 o~sendWith(n, .array~of(2)) =&gt; count got 1
 o~start(n, 3)~result =&gt; count got 1
 1 1
@@ -32760,7 +32781,7 @@ e2: say 'mixinclass' condition('o')~code
 ::method new class
   return .nil
 </code></pre>
-<pre><code class="language-output defect=#156">subclass 98.900
+<pre><code class="language-output">subclass 98.900
 mixinclass 98.900
 </code></pre>
 <div class="rule" id="r-class.class.deviation.33"><a href="classes/class.html#r-class.class.deviation.33">[class.class.deviation.33]</a></div>
@@ -32911,7 +32932,7 @@ say k~method('HI')~class~id k~new~hi
 ::method makestring
   return 'other'
 </code></pre>
-<pre><code class="language-output defect=#140">Foo
+<pre><code class="language-output">Foo
 Method hi
 </code></pre>
 <div class="rule" id="r-class.class.deviation.110"><a href="classes/class.html#r-class.class.deviation.110">[class.class.deviation.110]</a></div>
@@ -33099,7 +33120,7 @@ say .string~new(.mk~new)~class~id
 ::method makestring
   return .strsub~new('ss')
 </code></pre>
-<pre><code class="language-output defect=#89">ss
+<pre><code class="language-output">ss
 String
 </code></pre>
 <div class="rule" id="r-class.string.constants"><a href="classes/string.html#r-class.string.constants">[class.string.constants]</a></div>
@@ -34545,7 +34566,7 @@ say 'sends' .local~sent
   .local~sent = .local~sent + 1
   return 'str'
 </code></pre>
-<pre><code class="language-output defect=#140">ab ab b b
+<pre><code class="language-output">ab ab b b
 xab 2 2 0 1
 3 3 4 1 2 2
 1 1 0 y NUM NUM
@@ -35060,7 +35081,7 @@ call sysfiledelete f
   say 'makestring'
   return n
 </code></pre>
-<pre><code class="language-output defect=#164">init 0
+<pre><code class="language-output">init 0
 MINE
 request STRING
 makestring
@@ -35758,7 +35779,7 @@ say m~package~name m~source[1]
 ::method makestring
   return 'other'
 </code></pre>
-<pre><code class="language-output defect=#140">Foo say "src"
+<pre><code class="language-output">Foo say "src"
 </code></pre>
 <div class="rule" id="r-class.method.deviation.115"><a href="classes/method.html#r-class.method.deviation.115">[class.method.deviation.115]</a></div>
 <p>A source that answers <code>request</code> with <code>ARRAY</code> by an object that is neither an
@@ -36116,7 +36137,7 @@ call sysfiledelete f
   say 'makestring'
   return n
 </code></pre>
-<pre><code class="language-output defect=#164">init 0
+<pre><code class="language-output">init 0
 MINE
 request STRING
 makestring
@@ -37098,7 +37119,7 @@ say r~package~name r~source[1]
 ::method makestring
   return 'other'
 </code></pre>
-<pre><code class="language-output defect=#140">Foo say "src"
+<pre><code class="language-output">Foo say "src"
 </code></pre>
 <div class="rule" id="r-class.routine.deviation.115"><a href="classes/routine.html#r-class.routine.deviation.115">[class.routine.deviation.115]</a></div>
 <p>A <code>new</code> whose source answers <code>request</code> with <code>ARRAY</code> by an object that is neither
@@ -39236,7 +39257,7 @@ say q~source[1]
   say 'own2 request' arg(1)
   return .arr~of('nop', 'nop')
 </code></pre>
-<pre><code class="language-output defect=#151">arr request ARRAY
+<pre><code class="language-output">arr request ARRAY
 arr makearray
 2
 own request ARRAY
@@ -39729,7 +39750,7 @@ say .package~new('q', .name~new('nop'))~source[1]
 ::method makestring
   return 'other'
 </code></pre>
-<pre><code class="language-output defect=#140">Foo
+<pre><code class="language-output">Foo
 0
 nop
 </code></pre>
@@ -41640,7 +41661,7 @@ say m~messageName m~send
 ::method makestring
   return 'other'
 </code></pre>
-<pre><code class="language-output defect=#140">COUNT count got 0
+<pre><code class="language-output">COUNT count got 0
 </code></pre>
 <div class="rule" id="r-class.message.deviation.113"><a href="classes/message.html#r-class.message.deviation.113">[class.message.deviation.113]</a></div>
 <p><code>new</code> with the option <code>A</code> keeps a copy of the
@@ -44273,7 +44294,7 @@ say x~subset(.map~new('k', .name~new('b')))
   expose d
   return d~items
 </code></pre>
-<pre><code class="language-output defect=#140">0
+<pre><code class="language-output">0
 0
 </code></pre>
 <div class="rule" id="r-class.collection.deviation.118"><a href="classes/collection.html#r-class.collection.deviation.118">[class.collection.deviation.118]</a></div>
@@ -46330,7 +46351,7 @@ read. In the example <code>MAKESTRING</code> answers other characters.</p>
   expose count
   return count
 </code></pre>
-<pre><code class="language-output defect=#140">0
+<pre><code class="language-output">0
 </code></pre>
 <div class="rule" id="r-class.orderedcollection.deviation.118"><a href="classes/orderedcollection.html#r-class.orderedcollection.deviation.118">[class.orderedcollection.deviation.118]</a></div>
 <p>An instance of a subclass of <code>List</code> that <code>appendAll</code> or one of the operations
@@ -47954,7 +47975,7 @@ say a~makeString(.mode~new('C'))
 ::method makestring
   return 'L'
 </code></pre>
-<pre><code class="language-output defect=#140">second
+<pre><code class="language-output">second
 first-second
 firstsecond
 </code></pre>
@@ -51993,7 +52014,7 @@ say q~makeString(.sep~new('-'))
 ::method makestring
   return '+'
 </code></pre>
-<pre><code class="language-output defect=#140">first
+<pre><code class="language-output">first
 1
 1
 1
@@ -52182,7 +52203,7 @@ say d~at(.asker~new)
 ::method request
   return 'req'
 </code></pre>
-<pre><code class="language-output defect=#164">v
+<pre><code class="language-output">v
 </code></pre>
 <h2 id="reading-and-writing-entries-2"><a class="header" href="#reading-and-writing-entries-2">Reading and writing entries</a></h2>
 <div class="rule" id="r-class.directory.at"><a href="classes/directory.html#r-class.directory.at">[class.directory.at]</a></div>
@@ -53035,7 +53056,7 @@ say d~at('abc') (d~at('other') == .nil) d~hasIndex(.sub~new('abc'))
 ::method makestring
   return 'other'
 </code></pre>
-<pre><code class="language-output defect=#140">0
+<pre><code class="language-output">0
 v 1 1
 </code></pre>
 <div class="rule" id="r-class.directory.deviation.123"><a href="classes/directory.html#r-class.directory.deviation.123">[class.directory.deviation.123]</a></div>
@@ -53917,7 +53938,7 @@ say t~at('abc') (t~at('other') == .nil) t~hasIndex(.sub~new('abc'))
 ::method makestring
   return 'other'
 </code></pre>
-<pre><code class="language-output defect=#140">0
+<pre><code class="language-output">0
 v 1 1
 </code></pre>
 <div class="rule" id="r-class.stringtable.deviation.118"><a href="classes/stringtable.html#r-class.stringtable.deviation.118">[class.stringtable.deviation.118]</a></div>
@@ -59495,7 +59516,7 @@ say b~items b~makeArray~items
 ooRexx answers <code>.nil</code>. See <a href="classes/../deviations.html">Deviation 45</a>.</p>
 <pre><code class="language-rexx">say .bag~of(1, 1, 1)~hasItem(1, 2) .bag~of('a')~hasItem('a', 'A')
 </code></pre>
-<pre><code class="language-output defect=#172">0 0
+<pre><code class="language-output">0 0
 </code></pre>
 <div class="rule" id="r-class.bag.deviation.78"><a href="classes/bag.html#r-class.bag.deviation.78">[class.bag.deviation.78]</a></div>
 <p>A lookup, a <code>put</code> or a <code>remove</code> with the very object that is stored sends that
@@ -60999,7 +61020,7 @@ say s~allIndexes[1] s['REQ']
 ::method request
   return 'REQ'
 </code></pre>
-<pre><code class="language-output defect=#164">REQ v
+<pre><code class="language-output">REQ v
 </code></pre>
 <pre><code class="language-rexx">s = .stem~new('N.')
 s[] = 'D'
@@ -61761,7 +61782,7 @@ say s~allIndexes[1] s['i'] s['other']
 ::method makestring
   return 'other'
 </code></pre>
-<pre><code class="language-output defect=#140">N.
+<pre><code class="language-output">N.
 i 5 N.other
 </code></pre>
 <div class="rule" id="r-class.stem.deviation.118"><a href="classes/stem.html#r-class.stem.deviation.118">[class.stem.deviation.118]</a></div>
@@ -63548,7 +63569,7 @@ probe:
   .local~log = .local~log name
   forward to (v) message (name) arguments (args)
 </code></pre>
-<pre><code class="language-output defect=#164">year:
+<pre><code class="language-output">year:
   REQUEST:STRING MAKESTRING &gt;= &lt;= RIGHT
 offset:
   ISA REQUEST:STRING MAKESTRING &gt;= &lt;= *
@@ -63867,7 +63888,7 @@ failed: say '=&gt;' condition('o')~code
   .local~sent = .local~sent + 1
   return 'zzz'
 </code></pre>
-<pre><code class="language-output defect=#140">0001-01-06T00:00:00.000000 2017-01-05T00:00:00.000000
+<pre><code class="language-output">0001-01-06T00:00:00.000000 2017-01-05T00:00:00.000000
 2017-06-03T00:00:00.000000
 1970-01-01T00:00:05.000000 2017-01-05T00:00:00.000000
 sends 0
@@ -65451,7 +65472,7 @@ wrap:
   .local~log = .local~log t':'name'/'args[1]
   forward to (v) message (name) arguments (args)
 </code></pre>
-<pre><code class="language-output defect=#164">2 args: h:REQUEST h:MAKESTRING h:&gt;=/0 h:&lt;=/23 m:REQUEST m:MAKESTRING m:&gt;=/0
+<pre><code class="language-output">2 args: h:REQUEST h:MAKESTRING h:&gt;=/0 h:&lt;=/23 m:REQUEST m:MAKESTRING m:&gt;=/0
   m:&lt;=/59 h:*/3600 m:*/60
 3 args: h:REQUEST h:MAKESTRING h:&gt;=/0 h:&lt;=/23 m:REQUEST m:MAKESTRING m:&gt;=/0
   m:&lt;=/59 s:REQUEST s:MAKESTRING s:&gt;=/0 s:&lt;=/59 h:*/3600 m:*/60 s:REQUEST
@@ -65665,7 +65686,7 @@ probe:
   .local~log = .local~log name'/'args[1]
   forward to (v) message (name) arguments (args)
 </code></pre>
-<pre><code class="language-output defect=#164">addDays: REQUEST:STRING MAKESTRING */86400000000
+<pre><code class="language-output">addDays: REQUEST:STRING MAKESTRING */86400000000
 addWeeks: REQUEST:STRING MAKESTRING */604800000000
 addHours: REQUEST:STRING MAKESTRING */3600000000
 addMinutes: REQUEST:STRING MAKESTRING */60000000
@@ -65762,7 +65783,7 @@ failed: say '=&gt;' condition('o')~code
   .local~sent = .local~sent + 1
   return 'zzz'
 </code></pre>
-<pre><code class="language-output defect=#140">5.00:00:00.000000 00:00:00.000005
+<pre><code class="language-output">5.00:00:00.000000 00:00:00.000005
 01:02:03.000000 02:02:02.000000
 10:00:00.000000 2.01:02:03.000000
 1.02:03:04.000005
@@ -67249,7 +67270,7 @@ say 'sends' .local~sent
   .local~sent = .local~sent + 1
   return 'zzz'
 </code></pre>
-<pre><code class="language-output defect=#140">-1 1
+<pre><code class="language-output">-1 1
 0
 -1
 sends 0
@@ -68537,7 +68558,7 @@ say b~string '|' .local~log
   .local~log = .local~log n'-makeString'
   return v
 </code></pre>
-<pre><code class="language-output defect=#164">aXbc |  t-request:STRING t-makeString n-request:STRING n-makeString
+<pre><code class="language-output">aXbc |  t-request:STRING t-makeString n-request:STRING n-makeString
 </code></pre>
 <h2 id="deviations-54"><a class="header" href="#deviations-54">Deviations</a></h2>
 <div class="rule" id="r-class.mutablebuffer.deviation.4"><a href="classes/mutablebuffer.html#r-class.mutablebuffer.deviation.4">[class.mutablebuffer.deviation.4]</a></div>
@@ -68606,7 +68627,7 @@ say 'sends' .local~sent
   .local~sent = .local~sent + 1
   return 'REQ'
 </code></pre>
-<pre><code class="language-output defect=#140">ab 2 2
+<pre><code class="language-output">ab 2 2
 aabbab 6
 a 2 ab
 sends 0
@@ -75242,7 +75263,7 @@ say c~metaclass~id c~isMetaclass c~isA(.class)
 d = c~subclass('z')
 say d~class~id d~metaclass~id (d~new == d~new)
 </code></pre>
-<pre><code class="language-output defect=#200">Singleton 0 1
+<pre><code class="language-output">Singleton 0 1
 Singleton Singleton 1
 </code></pre>
 <div class="rule" id="r-class.singleton.inherit"><a href="classes/singleton.html#r-class.singleton.inherit">[class.singleton.inherit]</a></div>
@@ -76003,7 +76024,7 @@ a~cancel
   .environment~sent = .environment~sent + 1
   return '-1'
 </code></pre>
-<pre><code class="language-output defect=#140">1 sends 0
+<pre><code class="language-output">1 sends 0
 </code></pre>
 <div class="rule" id="r-class.alarm.deviation.119"><a href="classes/alarm.html#r-class.alarm.deviation.119">[class.alarm.deviation.119]</a></div>
 <p>A second <code>cancel</code> of an alarm that was cancelled sends its target nothing, as
@@ -76575,7 +76596,7 @@ t~cancel
   .environment~sent = .environment~sent + 1
   return '-1'
 </code></pre>
-<pre><code class="language-output defect=#140">00:01:00.000000 sends 0
+<pre><code class="language-output">00:01:00.000000 sends 0
 </code></pre>
 <div class="rule" id="r-class.ticker.deviation.119"><a href="classes/ticker.html#r-class.ticker.deviation.119">[class.ticker.deviation.119]</a></div>
 <p>A second <code>cancel</code> of a ticker that was cancelled sends its target nothing, as
@@ -77525,7 +77546,7 @@ say e~wait(.timeout~new) .log
   .environment~log = .log 'makeString'
   return '0.05'
 </code></pre>
-<pre><code class="language-output defect=#164">1 sent: request STRING
+<pre><code class="language-output">1 sent: request STRING
 </code></pre>
 <h2 id="cleaning-up"><a class="header" href="#cleaning-up">Cleaning up</a></h2>
 <div class="rule" id="r-class.eventsemaphore.uninit"><a href="classes/eventsemaphore.html#r-class.eventsemaphore.uninit">[class.eventsemaphore.uninit]</a></div>
@@ -77577,7 +77598,7 @@ say e~wait(.digits~new('0.01')) 'sends' .environment~sent
   .environment~sent = .environment~sent + 1
   return '0'
 </code></pre>
-<pre><code class="language-output defect=#140">0 sends 0
+<pre><code class="language-output">0 sends 0
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="mutexsemaphore"><a class="header" href="#mutexsemaphore">MutexSemaphore</a></h1>
 <p class="references">rexxref: Builtin Classes &gt; Utility Classes &gt; MutexSemaphore Class; Builtin Classes &gt; Utility Classes &gt; MutexSemaphore Class &gt; new (Class Method); Builtin Classes &gt; Utility Classes &gt; MutexSemaphore Class &gt; acquire; Builtin Classes &gt; Utility Classes &gt; MutexSemaphore Class &gt; release; Builtin Classes &gt; Utility Classes &gt; MutexSemaphore Class &gt; uninit</p>
@@ -77889,7 +77910,7 @@ say m~acquire(.timeout~new) m~release .log
   .environment~log = .log 'makeString'
   return '0.05'
 </code></pre>
-<pre><code class="language-output defect=#164">1 1 sent: request STRING
+<pre><code class="language-output">1 1 sent: request STRING
 </code></pre>
 <h2 id="cleaning-up-1"><a class="header" href="#cleaning-up-1">Cleaning up</a></h2>
 <div class="rule" id="r-class.mutexsemaphore.uninit"><a href="classes/mutexsemaphore.html#r-class.mutexsemaphore.uninit">[class.mutexsemaphore.uninit]</a></div>
@@ -77941,7 +77962,7 @@ say m~acquire(.digits~new('0.01')) 'sends' .environment~sent
   .environment~sent = .environment~sent + 1
   return '0'
 </code></pre>
-<pre><code class="language-output defect=#140">1 sends 0
+<pre><code class="language-output">1 sends 0
 </code></pre>
 <div class="rule" id="r-class.mutexsemaphore.deviation.136"><a href="classes/mutexsemaphore.html#r-class.mutexsemaphore.deviation.136">[class.mutexsemaphore.deviation.136]</a></div>
 <p>A copy of a semaphore is free whoever owns the original and however often. In
@@ -78549,7 +78570,7 @@ bad: say arg(1) condition('o')~code
   .environment~log = .environment~log 'request' arg(1)
   return 'SPEC_CH_NAME'
 </code></pre>
-<pre><code class="language-output defect=#164">ECHO | request STRING
+<pre><code class="language-output">ECHO | request STRING
 1 | request STRING
 ECHO | request String
 ECHO | request String
@@ -78645,7 +78666,7 @@ say .commandhandler~handler('spec_ch_dev109_reg')~isNil
   .environment~sent = .environment~sent + 1
   return 'other'
 </code></pre>
-<pre><code class="language-output defect=#140">1 0
+<pre><code class="language-output">1 0
 ECHO 1
 ECHO 0
 1
@@ -79650,7 +79671,7 @@ bad: say x '=&gt;' condition('o')~code
 ::method request
   return 'Input'
 </code></pre>
-<pre><code class="language-output defect=#164">caller~isRedirected(.nil) =&gt; 88.909
+<pre><code class="language-output">caller~isRedirected(.nil) =&gt; 88.909
 caller~isRedirected(.object~new) =&gt; 88.909
 caller~isRedirected(.named~new) =&gt; 0
 </code></pre>
@@ -80020,7 +80041,7 @@ trap:
   say '  rq makestring'
   return 'mstext'
 </code></pre>
-<pre><code class="language-output defect=#164">  rq request STRING
+<pre><code class="language-output">  rq request STRING
   trap &lt;rqtext&gt; String
 </code></pre>
 <pre><code class="language-rexx">x = .commandhandler~register('spec_cc_any', .h~new)
@@ -80364,7 +80385,7 @@ x = .commandhandler~deregister('spec_cc_dev109')
   .environment~sent = .environment~sent + 1
   return 'other'
 </code></pre>
-<pre><code class="language-output defect=#140">avalue 1 0
+<pre><code class="language-output">avalue 1 0
 changed 0 0
 changed
 </code></pre>
@@ -81229,7 +81250,7 @@ x = .commandhandler~deregister('spec_co_dev109')
   .environment~sent = .environment~sent + 1
   return 'other'
 </code></pre>
-<pre><code class="language-output defect=#140">2 &lt;own&gt; &lt;own&gt; 0
+<pre><code class="language-output">2 &lt;own&gt; &lt;own&gt; 0
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="rexxqueue"><a class="header" href="#rexxqueue">RexxQueue</a></h1>
 <p class="references">rexxref: Builtin Classes &gt; Utility Classes &gt; RexxQueue Class; Builtin Classes &gt; Utility Classes &gt; RexxQueue Class &gt; new (Inherited Class Method); Builtin Classes &gt; Utility Classes &gt; RexxQueue Class &gt; create (Class Method); Builtin Classes &gt; Utility Classes &gt; RexxQueue Class &gt; delete (Class Method); Builtin Classes &gt; Utility Classes &gt; RexxQueue Class &gt; exists (Class Method); Builtin Classes &gt; Utility Classes &gt; RexxQueue Class &gt; open (Class Method); Builtin Classes &gt; Utility Classes &gt; RexxQueue Class &gt; delete; Builtin Classes &gt; Utility Classes &gt; RexxQueue Class &gt; empty; Builtin Classes &gt; Utility Classes &gt; RexxQueue Class &gt; get; Builtin Classes &gt; Utility Classes &gt; RexxQueue Class &gt; init; Builtin Classes &gt; Utility Classes &gt; RexxQueue Class &gt; lineIn; Builtin Classes &gt; Utility Classes &gt; RexxQueue Class &gt; lineOut; Builtin Classes &gt; Utility Classes &gt; RexxQueue Class &gt; makeArray; Builtin Classes &gt; Utility Classes &gt; RexxQueue Class &gt; pull; Builtin Classes &gt; Utility Classes &gt; RexxQueue Class &gt; push; Builtin Classes &gt; Utility Classes &gt; RexxQueue Class &gt; queue; Builtin Classes &gt; Utility Classes &gt; RexxQueue Class &gt; queued; Builtin Classes &gt; Utility Classes &gt; RexxQueue Class &gt; say; Builtin Classes &gt; Utility Classes &gt; RexxQueue Class &gt; set</p>
@@ -81633,7 +81654,7 @@ bad: say arg(1) condition('o')~code
   expose name
   return name
 </code></pre>
-<pre><code class="language-output defect=#164">1 0 1
+<pre><code class="language-output">1 0 1
 &lt;from request&gt; &lt;a|b&gt;
 0 0 0
 .rexxqueue~exists(.nil) 88.909
@@ -82999,7 +83020,7 @@ bad: say arg(1) '=&gt;' condition('o')~code
 ::method init
   nop
 </code></pre>
-<pre><code class="language-output defect=#197">o~available =&gt; 98.901
+<pre><code class="language-output">o~available =&gt; 98.901
 o~allIndexes =&gt; 98.901
 o~allItems =&gt; 98.901
 o~index =&gt; 98.901
@@ -83027,7 +83048,7 @@ bad: say arg(1) '=&gt;' condition('o')~code
 ::method init
   nop
 </code></pre>
-<pre><code class="language-output defect=#197">o~available =&gt; 98.901
+<pre><code class="language-output">o~available =&gt; 98.901
 o~allIndexes =&gt; 98.901
 o~allItems =&gt; 98.901
 o~index =&gt; 98.901
@@ -83695,7 +83716,7 @@ say re~match(.rq~new) re~position
   return 'xy'
 ::requires "rxregexp.cls"
 </code></pre>
-<pre><code class="language-output defect=#164">1 2
+<pre><code class="language-output">1 2
 </code></pre>
 <div class="rule" id="r-class.regularexpression.mode"><a href="classes/regularexpression.html#r-class.regularexpression.mode">[class.regularexpression.mode]</a></div>
 <p>The mode decides what a match is when several are possible. In <code>MAXIMAL</code> mode
@@ -86725,7 +86746,7 @@ bad: say arg(1) '=&gt;' condition('o')~code
   .environment~sent = .environment~sent + 1
   return 'spec-stream-dev109-other-zq.tmp'
 </code></pre>
-<pre><code class="language-output defect=#140">s~string =&gt; [spec-stream-dev109-zq.tmp]
+<pre><code class="language-output">s~string =&gt; [spec-stream-dev109-zq.tmp]
 s~lineout(.digits~new("abc")) =&gt; [0]
 s~charout(.digits~new("def")) =&gt; [0]
 s~say(.digits~new("ghi")) =&gt; [0]
@@ -86778,7 +86799,7 @@ bad: say arg(1) '=&gt;' condition('o')~code
 ::method init
   nop
 </code></pre>
-<pre><code class="language-output defect=#197">o~state =&gt; 98.901
+<pre><code class="language-output">o~state =&gt; 98.901
 o~description =&gt; 98.901
 o~string =&gt; 98.901
 o~qualify =&gt; 98.901
@@ -90245,7 +90266,7 @@ address path 'unset A4ZQ_P'
 say rc '['value('A4ZQ_P', , e)']'
 call directory '/'
 </code></pre>
-<pre><code class="language-output defect=#219">0 /usr
+<pre><code class="language-output">0 /usr
 0 [1]
 0 []
 </code></pre>
@@ -91846,7 +91867,7 @@ exit
   info~result = 'replaced'
   return 1
 </code></pre>
-<pre><code class="language-output defect=#225">unknown ran NOSUCH
+<pre><code class="language-output">unknown ran NOSUCH
 </code></pre>
 <h2 id="answers-and-errors"><a class="header" href="#answers-and-errors">Answers and errors</a></h2>
 <div class="rule" id="r-env.security.answer"><a href="environment/security.html#r-env.security.answer">[env.security.answer]</a></div>
@@ -92139,7 +92160,7 @@ exit
   if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
   return 0
 </code></pre>
-<pre><code class="language-output defect=#222">a
+<pre><code class="language-output">a
        &gt;&gt;&gt;   "N"
 +++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
 [read 1: say "t1"]
@@ -92329,7 +92350,7 @@ exit
   if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
   return 0
 </code></pre>
-<pre><code class="language-output defect=#221">     4 *-* say 'p1'
+<pre><code class="language-output">     4 *-* say 'p1'
 p1
 +++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
 [read 1: ]
@@ -94787,7 +94808,10 @@ result of a message that has never been sent and that no activity can still
 send, or the original of a <code>reply</code>, whose copy ran; the same holds for <code>wait</code>.
 ooRexx waits for ever (<a href="concurrency/../deviations.html#20-a-wait-nothing-can-end">Deviation
 20</a>). The case of a <code>GUARD ... WHEN</code> that nothing can make true is <a href="concurrency/locks.html#r-conc.locks.deviation.20">the locks page's
-rule</a>.</p>
+rule</a>. The refusal holds after the main program has
+ended too, when every activity that remains waits for something nothing can
+bring about (<a href="concurrency/halt.html#r-conc.halt.end.alive">the end rule</a>); the second example is
+such a program.</p>
 <pre><code class="language-rexx">m = .message~new(.object~new, 'string')
 c = m~reply
 say 'a message that was never sent, and the original of a reply'
@@ -94799,6 +94823,18 @@ say 'not reached'
 <pre><code class="language-output rc=120">a message that was never sent, and the original of a reply
 waiting for the copy: an Object
 waiting for the original:
+</code></pre>
+<pre><code class="language-rexx">o = .o~new
+m = o~start('stuck')
+say 'main ends'
+::class o
+::method stuck unguarded
+  say 'stuck: waiting'
+  r = .message~new(.object~new, 'string')~result
+  say 'never'
+</code></pre>
+<pre><code class="language-output rc=120">main ends
+stuck: waiting
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="locks"><a class="header" href="#locks">Locks</a></h1>
 <p class="references">rexxref: Concurrency &gt; Default Concurrency; Concurrency &gt; Sending Messages within an Activity; Concurrency &gt; Using Additional Concurrency Mechanisms; Concurrency &gt; Using Additional Concurrency Mechanisms &gt; SETUNGUARDED Method and UNGUARDED Option; Concurrency &gt; Using Additional Concurrency Mechanisms &gt; GUARD ON and GUARD OFF; Concurrency &gt; Using Additional Concurrency Mechanisms &gt; Guarded Methods</p>
@@ -95740,7 +95776,7 @@ say o~outer(e)
 variable or a stem names the whole stem. The condition is evaluated again when
 another activity assigns a value to any tail of that stem or drops one, or
 assigns a value to the whole stem or drops it, for <code>GUARD ON WHEN</code> and <code>GUARD OFF WHEN</code> alike. ooRexx does not evaluate it again for a tail, so the wait
-does not end. interrexx does not evaluate it again for a tail yet (#239). As
+does not end. As
 for a simple symbol, a variable that only a method called by the condition
 reads does not cause it. In the first example three waiting methods are ended
 by the assignment to a tail, by the same for <code>GUARD OFF WHEN</code> and by the drop
@@ -95787,7 +95823,7 @@ say m4~result
   expose a.
   drop a.b
 </code></pre>
-<pre><code class="language-output defect=#239">start
+<pre><code class="language-output">start
 on tail
 off tail
 on drop
@@ -96383,9 +96419,9 @@ cancelled, and a ticker that an error in its target's <code>triggered</code> sto
 cancelled alarm or ticker with a delay of a minute does not make the program
 last a minute. An activity that waits for something that nothing can bring
 about any more keeps the program for ever. interrexx refuses such a wait
-(<a href="concurrency/activities.html#r-conc.activities.deviation.20">Deviation 20</a>), but once the main program
-has ended it does not refuse it yet, and the program hangs (#249), which no
-example here tests. A main program that interrexx ends with a refusal does not
+(<a href="concurrency/activities.html#r-conc.activities.deviation.20">Deviation 20</a>), also once the main program
+has ended: the program ends with exit code 120 and does not wait for the other
+activities, where ooRexx hangs. A main program that interrexx ends with a refusal does not
 wait for any of them (<a href="concurrency/halt.html#r-conc.halt.deviation.21">the Deviation 21 rule</a>). The
 status of the command is the main program's (<a href="concurrency/halt.html#r-conc.halt.end.status">the next
 rule</a>).</p>
@@ -98194,7 +98230,7 @@ e: return condition('o')~code
 ::method makestring
   return '0'
 </code></pre>
-<pre><code class="language-output defect=#230">0 88.907 0 0
+<pre><code class="language-output">0 88.907 0 0
 </code></pre>
 <div class="rule" id="r-util.sysmkdir.bits"><a href="rexxutil/sysmkdir.html#r-util.sysmkdir.bits">[util.sysmkdir.bits]</a></div>
 <p>The permission bits of the new directory come from the remainder of <code>mode</code>
@@ -102627,7 +102663,7 @@ e: say condition('o')~code
 ::method string
   return 's.'
 </code></pre>
-<pre><code class="language-output defect=#230">0 a b
+<pre><code class="language-output">0 a b
 40.919
 </code></pre>
 <h2 id="the-order"><a class="header" href="#the-order">The order</a></h2>
@@ -102956,6 +102992,7 @@ e: say condition('o')~code
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="the-macrospace"><a class="header" href="#the-macrospace">The macrospace</a></h1>
 <p class="references">rexxref: Rexx Utilities (RexxUtil) &gt; SysAddRexxMacro; Rexx Utilities (RexxUtil) &gt; SysDropRexxMacro; Rexx Utilities (RexxUtil) &gt; SysQueryRexxMacro; Rexx Utilities (RexxUtil) &gt; SysReorderRexxMacro</p>
+<p class="deviations">Deviations: D86</p>
 <p>The macrospace is a table of named routines that the interpreter's service
 keeps for every program that uses it. A program puts a routine into it with
 <a href="rexxutil/sysaddrexxmacro.html">SysAddRexxMacro</a>, and a program calls the routine by its
@@ -103006,6 +103043,33 @@ call SysFileDelete 'c4zqchild.rex'
 <pre><code class="language-output">0
 child: B from the parent x
 parent: [] [A]
+</code></pre>
+<div class="rule" id="r-util.macrospace.deviation.86"><a href="rexxutil/macrospace.html#r-util.macrospace.deviation.86">[util.macrospace.deviation.86]</a></div>
+<p>The service prints its own messages (<a href="rexxutil/../deviations.html">Deviation 86</a>), and the
+refusal of its directory is one of them. The service keeps its files in a
+directory, which the environment variable <code>REXX_API_DIR</code> names where it is set. The directory has to belong to the user
+who runs the program and to give no access to anyone else: a directory that
+the group or others can use is refused, and no service is started or reached in
+it, so that every function that works on the macrospace answers its code for no
+service (<code>1004</code> for SysAddRexxMacro, <code>2</code> for SysDropRexxMacro). The refusal is
+reported: a program that is refused writes a line to standard error that says
+the service directory is not private to the user. ooRexx does not refuse such
+a directory: its calls answer <code>0</code>. A directory that only the user can use is
+accepted. In the example a program is run with a directory that the group can
+write to, and its standard error is read for the line.</p>
+<pre><code class="language-rexx">call SysMkDir 'c4zqapi'
+call SysChmod 'c4zqapi', 'rwxrwxr-x'
+call lineout 'c4zqapi.rex', 'say SysAddRexxMacro("C4ZQAPI", "c4zqapi.rex") SysDropRexxMacro("C4ZQAPI")'
+call lineout 'c4zqapi.rex'
+old = value('REXX_API_DIR', directory() || '/c4zqapi', 'ENVIRONMENT')
+address system 'rexx c4zqapi.rex 2&gt;&amp;1' with output stem got.
+call value 'REXX_API_DIR', old, 'ENVIRONMENT'
+say got.0 (pos('is not private to this user', got.1) &gt; 0) '['word(got.2, 1)']' got.2
+call SysFileDelete 'c4zqapi.rex'
+call SysRmDir 'c4zqapi'
+::requires 'rxunixsys' library
+</code></pre>
+<pre><code class="language-output">2 1 [1004] 1004 2
 </code></pre>
 <div class="rule" id="r-util.macrospace.names"><a href="rexxutil/macrospace.html#r-util.macrospace.names">[util.macrospace.names]</a></div>
 <p>The name of a macro is a string, and it is matched without regard to case: a
@@ -103388,7 +103452,7 @@ call SysRmDir 'c4zqhome'
 call SysFileDelete 'c4zqhs'
 call SysFileDelete 'c4zqh.rex'
 </code></pre>
-<pre><code class="language-output defect=#232">7 7 7
+<pre><code class="language-output">7 7 7
 0 5 5
 0 0
 0 5 5
@@ -104481,7 +104545,7 @@ e: say condition('o')~code
   expose v
   return v
 </code></pre>
-<pre><code class="language-output defect=#230">0
+<pre><code class="language-output">0
 0
 </code></pre>
 <h2 id="the-answer-4"><a class="header" href="#the-answer-4">The answer</a></h2>
@@ -105115,7 +105179,7 @@ e: say condition('o')~code
   expose v
   return v
 </code></pre>
-<pre><code class="language-output defect=#230">121
+<pre><code class="language-output">121
 0
 0
 </code></pre>
@@ -105530,7 +105594,7 @@ e: say condition('o')~code
   expose v
   return v
 </code></pre>
-<pre><code class="language-output defect=#230">0
+<pre><code class="language-output">0
 121
 0
 </code></pre>
@@ -106044,7 +106108,7 @@ e: say condition('o')~code
 ::method string
   return '2'
 </code></pre>
-<pre><code class="language-output defect=#230">1
+<pre><code class="language-output">1
 </code></pre>
 <div class="rule" id="r-util.sysgeterrortext.number"><a href="rexxutil/sysgeterrortext.html#r-util.sysgeterrortext.number">[util.sysgeterrortext.number]</a></div>
 <p>The error number is read as a number in the sense of Rexx: a sign, leading
@@ -107800,7 +107864,7 @@ say SysAccess('c1zqf1', 8)
 call SysFileDelete 'c1zqf1'
 ::requires 'rxunixsys' library
 </code></pre>
-<pre><code class="language-output defect=#474">0 0 -1 0
+<pre><code class="language-output">0 0 -1 0
 -1
 </code></pre>
 <div class="rule" id="r-rxunixsys.files.chown"><a href="rxunixsys/files.html#r-rxunixsys.files.chown">[rxunixsys.files.chown]</a></div>
@@ -108746,8 +108810,8 @@ answers <code>0</code> with the null string where the other end has finished sen
 receiving or <code>2</code> for both, and answers <code>0</code>, or <code>-1</code> with the error <code>22</code> for
 another <code>how</code>. Stream sockets keep the order of the bytes and not the bounds of
 the calls, so that bytes that were sent by one call can be received by several.
-<code>SockRecv</code> on a stream socket that is not connected answers <code>-1</code> with the error
-<code>ENOTCONN</code>, and <code>SockSend</code> on one answers <code>-1</code> with the error <code>32</code>. The flags are the words <code>MSG_OOB</code>,
+<code>SockRecv</code> on a stream socket that is not connected, which includes one that listens, answers <code>-1</code> with the error
+<code>ENOTCONN</code> at once and does not wait, and <code>SockSend</code> on one answers <code>-1</code> with the error <code>32</code>. The flags are the words <code>MSG_OOB</code>,
 <code>MSG_PEEK</code> and <code>MSG_DONTROUTE</code>, in either case, with blanks between them.</p>
 <pre><code class="language-rexx">srv = SockSocket('AF_INET', 'SOCK_STREAM', 0)
 a.family = 'AF_INET'; a.port = 0; a.addr = '127.0.0.1'
@@ -108770,6 +108834,11 @@ fresh = SockSocket('AF_INET', 'SOCK_STREAM', 0)
 say SockRecv(fresh, 'v', 10) errno '['v']'
 say SockSend(fresh, 'x') errno
 say SockClose(fresh)
+lst = SockSocket('AF_INET', 'SOCK_STREAM', 0)
+call SockBind lst, 'a.'
+call SockListen lst, 5
+say SockRecv(lst, 'd', 10) errno
+say SockRecvFrom(lst, 'd', 10, 0, 'f.') errno
 ::requires 'rxsock' library
 </code></pre>
 <pre><code class="language-output">5 5 hello
@@ -108784,6 +108853,8 @@ say SockClose(fresh)
 -1 ENOTCONN []
 -1 32
 0
+-1 ENOTCONN
+-1 ENOTCONN
 </code></pre>
 <div class="rule" id="r-rxsock.sockets.datagram"><a href="rxsock/sockets.html#r-rxsock.sockets.datagram">[rxsock.sockets.datagram]</a></div>
 <p>Datagram sockets send messages that keep their bounds. <code>SockSendTo(socket, data [, flags], address)</code> sends <code>data</code> to the address in the stem <code>address</code> from a
@@ -110324,7 +110395,7 @@ call sysfiledelete f
   use arg f
   call lineout f, 'from method'
 </code></pre>
-<pre><code class="language-output defect=#122">size after call 12
+<pre><code class="language-output">size after call 12
 </code></pre>
 <div class="rule" id="r-bif.index.stream.lifetime.deviation.98"><a href="builtins/index.html#r-bif.index.stream.lifetime.deviation.98">[bif.index.stream.lifetime.deviation.98]</a></div>
 <p>A close of a standard stream is a logical one, as for a file: the <a href="builtins/index.html#r-bif.index.stream.lifetime">lifetime
@@ -125813,10 +125884,11 @@ and continues. ooRexx damages its record of open blocks and later raises
 any other object as its default string. ooRexx reads the object as if it
 were a string, running garbage or crashing.</p>
 <h2 id="28-a-written-entry-or-answer-of-the-wrong-class"><a class="header" href="#28-a-written-entry-or-answer-of-the-wrong-class">28. A written entry or answer of the wrong class</a></h2>
-<p>A <code>.ROUTINES</code> entry written to a package that is not a routine, and a
-metaclass <code>NEW</code> that answers something other than a class, are refused, exit
-code 120. ooRexx casts the object unchecked and crashes. A native method run
-on a receiver of the wrong kind is not covered: it raises a trappable
+<p>A <code>.ROUTINES</code> entry written to a package that is not a routine is refused when
+it is called, exit code 120. ooRexx casts the object unchecked and crashes.
+Not covered: a metaclass <code>NEW</code> that answers something other than a class
+raises <code>SYNTAX 98.900</code> (<a href="classes/class.html#r-class.class.deviation.114">Deviation 114</a>), and a
+native method run on a receiver of the wrong kind raises a trappable
 <code>SYNTAX 93.900</code>, as <a href="classes/object.html#r-class.object.borrowed-native">the rule</a> says.</p>
 <h2 id="29-an-entry-assignment-with-no-value"><a class="header" href="#29-an-entry-assignment-with-no-value">29. An entry assignment with no value</a></h2>
 <p><code>d~"A="()</code> on a Directory, a StringTable or a Properties, with no argument,
@@ -126079,6 +126151,11 @@ between instances through the native API is refused. ooRexx shares one
 <h2 id="86-the-api-daemon"><a class="header" href="#86-the-api-daemon">86. The API daemon</a></h2>
 <p>The rxapi daemon starts only when a program first needs it, and prints its
 own messages. ooRexx starts it with every interpreter.</p>
+<p>Its directory (<code>REXX_API_DIR</code>) has to belong to the user and give no access
+to anyone else. A directory the group or others can use is refused, and the
+first attempt to reach the service, for a queue, a registration or the
+macrospace, writes a line to standard error that says so
+(<a href="rexxutil/macrospace.html#r-util.macrospace.deviation.86">the rule</a>). ooRexx accepts such a directory.</p>
 <h2 id="87-rxregexp-follows-its-documented-grammar"><a class="header" href="#87-rxregexp-follows-its-documented-grammar">87. rxregexp follows its documented grammar</a></h2>
 <p>rxregexp matches the documented pattern language and always terminates; a
 pattern too large to compile is compile error 5. ooRexx answers some patterns
@@ -126577,8 +126654,7 @@ or removes the file depending on the calls the program made earlier.</p>
 <p>A condition of GUARD ON WHEN or GUARD OFF WHEN that names a compound variable
 or a stem names the whole stem: it is evaluated again when another activity
 assigns to or drops any tail of the stem or the whole stem. ooRexx does not
-evaluate it again for a tail, so the wait does not end. interrexx does not
-evaluate it again for a tail yet (#239).</p>
+evaluate it again for a tail, so the wait does not end.</p>
 <h2 id="161-syssleep-and-whitespace-after-the-sign"><a class="header" href="#161-syssleep-and-whitespace-after-the-sign">161. SysSleep and whitespace after the sign</a></h2>
 <p>SysSleep reads its delay as a Rexx number, so that whitespace (a blank or a
 tab) may follow the sign: <code>'+ 0.5'</code> pauses for at least half a second, and <code>'- 1'</code> is a negative delay, which raises <code>SYNTAX 88.907</code>. ooRexx answers <code>0</code> at

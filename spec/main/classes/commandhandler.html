@@ -736,7 +736,7 @@ bad: say arg(1) condition('o')~code
   .environment~log = .environment~log 'request' arg(1)
   return 'SPEC_CH_NAME'
 </code></pre>
-<pre><code class="language-output defect=#164">ECHO | request STRING
+<pre><code class="language-output">ECHO | request STRING
 1 | request STRING
 ECHO | request String
 ECHO | request String
@@ -832,7 +832,7 @@ say .commandhandler~handler('spec_ch_dev109_reg')~isNil
   .environment~sent = .environment~sent + 1
   return 'other'
 </code></pre>
-<pre><code class="language-output defect=#140">1 0
+<pre><code class="language-output">1 0
 ECHO 1
 ECHO 0
 1

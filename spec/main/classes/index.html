@@ -971,7 +971,7 @@ bad: say arg(1) '=&gt;' condition('o')~code
 ::method request
   return 'p/q'
 </code></pre>
-<pre><code class="language-output defect=#164">"abc"~left(5, .ask~new) =&gt; abc--
+<pre><code class="language-output">"abc"~left(5, .ask~new) =&gt; abc--
 "abc"~left(5, .askstr~new) =&gt; 88.909
 "abc"~left(5, .askobj~new) =&gt; 88.909
 "abc"~left(5, .nil) =&gt; 88.909
@@ -1117,7 +1117,7 @@ e: say arg(1) '=&gt;' condition('o')~code
   forward class (super)
 ::class k metaclass meta
 </code></pre>
-<pre><code class="language-output defect=#156">.k~subclass("S") =&gt; 98.900
+<pre><code class="language-output">.k~subclass("S") =&gt; 98.900
 .k~subclass("N") =&gt; 98.900
 .k~mixinclass("O") =&gt; 98.900
 </code></pre>
@@ -1153,7 +1153,7 @@ say 'sends' .local~sent
   .local~sent = .local~sent + 1
   return 'MADE'
 </code></pre>
-<pre><code class="language-output defect=#140">2 2 xab
+<pre><code class="language-output">2 2 xab
 sends 0
 </code></pre>
 

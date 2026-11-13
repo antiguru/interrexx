@@ -267,7 +267,7 @@ b: say condition('o')~code
 ::method makestring
   return .strsub~new('ss')
 </code></pre>
-<pre><code class="language-output defect=#89">SS ABC
+<pre><code class="language-output">SS ABC
 </code></pre>
 <pre><code class="language-rexx">say length(.asks~new)
 say length(.asknil~new)
@@ -320,7 +320,7 @@ p: say condition('o')~code
 ::method string
   return 'abc'
 </code></pre>
-<pre><code class="language-output defect=#164">request STRING 1
+<pre><code class="language-output">request STRING 1
 4
 3
 2
@@ -628,7 +628,7 @@ say 'sends' .local~sent
   .local~sent = .local~sent + 1
   return 'MADE'
 </code></pre>
-<pre><code class="language-output defect=#140">2 AB
+<pre><code class="language-output">2 AB
 sends 0
 </code></pre>
 

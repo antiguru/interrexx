@@ -306,10 +306,11 @@ and continues. ooRexx damages its record of open blocks and later raises
 any other object as its default string. ooRexx reads the object as if it
 were a string, running garbage or crashing.</p>
 <h2 id="28-a-written-entry-or-answer-of-the-wrong-class"><a class="header" href="#28-a-written-entry-or-answer-of-the-wrong-class">28. A written entry or answer of the wrong class</a></h2>
-<p>A <code>.ROUTINES</code> entry written to a package that is not a routine, and a
-metaclass <code>NEW</code> that answers something other than a class, are refused, exit
-code 120. ooRexx casts the object unchecked and crashes. A native method run
-on a receiver of the wrong kind is not covered: it raises a trappable
+<p>A <code>.ROUTINES</code> entry written to a package that is not a routine is refused when
+it is called, exit code 120. ooRexx casts the object unchecked and crashes.
+Not covered: a metaclass <code>NEW</code> that answers something other than a class
+raises <code>SYNTAX 98.900</code> (<a href="classes/class.html#r-class.class.deviation.114">Deviation 114</a>), and a
+native method run on a receiver of the wrong kind raises a trappable
 <code>SYNTAX 93.900</code>, as <a href="classes/object.html#r-class.object.borrowed-native">the rule</a> says.</p>
 <h2 id="29-an-entry-assignment-with-no-value"><a class="header" href="#29-an-entry-assignment-with-no-value">29. An entry assignment with no value</a></h2>
 <p><code>d~"A="()</code> on a Directory, a StringTable or a Properties, with no argument,
@@ -572,6 +573,11 @@ between instances through the native API is refused. ooRexx shares one
 <h2 id="86-the-api-daemon"><a class="header" href="#86-the-api-daemon">86. The API daemon</a></h2>
 <p>The rxapi daemon starts only when a program first needs it, and prints its
 own messages. ooRexx starts it with every interpreter.</p>
+<p>Its directory (<code>REXX_API_DIR</code>) has to belong to the user and give no access
+to anyone else. A directory the group or others can use is refused, and the
+first attempt to reach the service, for a queue, a registration or the
+macrospace, writes a line to standard error that says so
+(<a href="rexxutil/macrospace.html#r-util.macrospace.deviation.86">the rule</a>). ooRexx accepts such a directory.</p>
 <h2 id="87-rxregexp-follows-its-documented-grammar"><a class="header" href="#87-rxregexp-follows-its-documented-grammar">87. rxregexp follows its documented grammar</a></h2>
 <p>rxregexp matches the documented pattern language and always terminates; a
 pattern too large to compile is compile error 5. ooRexx answers some patterns
@@ -1070,8 +1076,7 @@ or removes the file depending on the calls the program made earlier.</p>
 <p>A condition of GUARD ON WHEN or GUARD OFF WHEN that names a compound variable
 or a stem names the whole stem: it is evaluated again when another activity
 assigns to or drops any tail of the stem or the whole stem. ooRexx does not
-evaluate it again for a tail, so the wait does not end. interrexx does not
-evaluate it again for a tail yet (#239).</p>
+evaluate it again for a tail, so the wait does not end.</p>
 <h2 id="161-syssleep-and-whitespace-after-the-sign"><a class="header" href="#161-syssleep-and-whitespace-after-the-sign">161. SysSleep and whitespace after the sign</a></h2>
 <p>SysSleep reads its delay as a Rexx number, so that whitespace (a blank or a
 tab) may follow the sign: <code>'+ 0.5'</code> pauses for at least half a second, and <code>'- 1'</code> is a negative delay, which raises <code>SYNTAX 88.907</code>. ooRexx answers <code>0</code> at

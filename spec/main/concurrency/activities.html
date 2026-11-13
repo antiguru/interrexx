@@ -923,7 +923,10 @@ result of a message that has never been sent and that no activity can still
 send, or the original of a <code>reply</code>, whose copy ran; the same holds for <code>wait</code>.
 ooRexx waits for ever (<a href="../deviations.html#20-a-wait-nothing-can-end">Deviation
 20</a>). The case of a <code>GUARD ... WHEN</code> that nothing can make true is <a href="locks.html#r-conc.locks.deviation.20">the locks page's
-rule</a>.</p>
+rule</a>. The refusal holds after the main program has
+ended too, when every activity that remains waits for something nothing can
+bring about (<a href="halt.html#r-conc.halt.end.alive">the end rule</a>); the second example is
+such a program.</p>
 <pre><code class="language-rexx">m = .message~new(.object~new, 'string')
 c = m~reply
 say 'a message that was never sent, and the original of a reply'
@@ -935,6 +938,18 @@ say 'not reached'
 <pre><code class="language-output rc=120">a message that was never sent, and the original of a reply
 waiting for the copy: an Object
 waiting for the original:
+</code></pre>
+<pre><code class="language-rexx">o = .o~new
+m = o~start('stuck')
+say 'main ends'
+::class o
+::method stuck unguarded
+  say 'stuck: waiting'
+  r = .message~new(.object~new, 'string')~result
+  say 'never'
+</code></pre>
+<pre><code class="language-output rc=120">main ends
+stuck: waiting
 </code></pre>
 
                     </main>

@@ -1986,7 +1986,7 @@ say (n == 12) (n~hashCode == 12~hashCode)
 <code>define</code>, <code>setMethod</code>, <code>enhanced</code> or <code>run</code>, and run on a receiver of a kind it
 cannot work on, raises <code>SYNTAX 93.900</code>, a condition a program can trap. The
 rule holds for every native method alike, <code>SORTWITH</code> and <code>ITEMS</code> of an Array,
-the methods of a Directory, a Package, a Supplier and the rest. The check
+the methods of a Directory, a Package, a Supplier, a String and the rest. The check
 happens when the method is run, so <code>define</code> and <code>setMethod</code> themselves
 succeed. ooRexx reads such a receiver with the layout of the other class and
 answers garbage or crashes.</p>
@@ -2017,19 +2017,40 @@ bad: say 'SYNTAX' condition('o')~code
 after
 SYNTAX 93.900
 </code></pre>
-<div class="rule" id="r-class.object.deviation.28"><a href="#r-class.object.deviation.28">[class.object.deviation.28]</a></div>
-<p>A metaclass <code>new</code> that answers something other than a class, while a class
-with that metaclass is made by <code>subclass</code>, and a <code>.ROUTINES</code> entry that is
-not a routine, are refused: the program ends with exit code 120. ooRexx casts
-the answer unchecked and crashes. A native method run on a receiver of the
-wrong kind is another matter: <a href="#r-class.object.borrowed-native">its rule</a>
-raises a condition.</p>
-<pre><code class="language-rexx">say 'id' .object~subclass("k", .MyMeta)~id
-::class MyMeta subclass Class
-::method new class
-  return 'x'
+<blockquote>
+<p><strong>Note.</strong> A <code>String</code> method is one of these: run on an object that is no
+string, it raises <code>SYNTAX 93.900</code> too, and does not work on the object's
+string value.</p>
+</blockquote>
+<pre><code class="language-rexx">o = .w~new
+o~sm(.string~method('LEFT'))
+signal on syntax name bad
+say '['o~left(2)']'
+exit
+bad: say 'SYNTAX' condition('o')~code
+::class w
+::method sm
+  self~setMethod('LEFT', arg(1))
+::method string
+  return 'a W'
 </code></pre>
-<pre><code class="language-output rc=120"></code></pre>
+<pre><code class="language-output no-oracle">SYNTAX 93.900
+</code></pre>
+<div class="rule" id="r-class.object.deviation.28"><a href="#r-class.object.deviation.28">[class.object.deviation.28]</a></div>
+<p>A <code>.ROUTINES</code> entry that is not a routine is refused when it is called: the
+program ends with exit code 120. ooRexx casts the entry unchecked and crashes.
+A metaclass <code>new</code> that answers something other than a class raises a
+condition instead (<a href="class.html#r-class.class.deviation.114">Deviation 114</a>), and so does
+a native method run on a receiver of the wrong kind (<a href="#r-class.object.borrowed-native">its
+rule</a>).</p>
+<pre><code class="language-rexx">.routines['F'] = 'x'
+say 'set'
+call f
+say 'after'
+::routine r
+</code></pre>
+<pre><code class="language-output no-oracle rc=120">set
+</code></pre>
 <div class="rule" id="r-class.object.deviation.30"><a href="#r-class.object.deviation.30">[class.object.deviation.30]</a></div>
 <p>When the <code>string</code> method of an object answers an object that is not a string,
 interrexx gives the answer ooRexx gives wherever that is defined, and
@@ -2179,7 +2200,7 @@ bad: say arg(1) '=&gt;' condition('o')~code
 ::method makestring
   return 'other'
 </code></pre>
-<pre><code class="language-output defect=#140">o~send(n, 1) =&gt; count got 1
+<pre><code class="language-output">o~send(n, 1) =&gt; count got 1
 o~sendWith(n, .array~of(2)) =&gt; count got 1
 o~start(n, 3)~result =&gt; count got 1
 1 1

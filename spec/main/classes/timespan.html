@@ -1377,7 +1377,7 @@ wrap:
   .local~log = .local~log t':'name'/'args[1]
   forward to (v) message (name) arguments (args)
 </code></pre>
-<pre><code class="language-output defect=#164">2 args: h:REQUEST h:MAKESTRING h:&gt;=/0 h:&lt;=/23 m:REQUEST m:MAKESTRING m:&gt;=/0
+<pre><code class="language-output">2 args: h:REQUEST h:MAKESTRING h:&gt;=/0 h:&lt;=/23 m:REQUEST m:MAKESTRING m:&gt;=/0
   m:&lt;=/59 h:*/3600 m:*/60
 3 args: h:REQUEST h:MAKESTRING h:&gt;=/0 h:&lt;=/23 m:REQUEST m:MAKESTRING m:&gt;=/0
   m:&lt;=/59 s:REQUEST s:MAKESTRING s:&gt;=/0 s:&lt;=/59 h:*/3600 m:*/60 s:REQUEST
@@ -1591,7 +1591,7 @@ probe:
   .local~log = .local~log name'/'args[1]
   forward to (v) message (name) arguments (args)
 </code></pre>
-<pre><code class="language-output defect=#164">addDays: REQUEST:STRING MAKESTRING */86400000000
+<pre><code class="language-output">addDays: REQUEST:STRING MAKESTRING */86400000000
 addWeeks: REQUEST:STRING MAKESTRING */604800000000
 addHours: REQUEST:STRING MAKESTRING */3600000000
 addMinutes: REQUEST:STRING MAKESTRING */60000000
@@ -1688,7 +1688,7 @@ failed: say '=&gt;' condition('o')~code
   .local~sent = .local~sent + 1
   return 'zzz'
 </code></pre>
-<pre><code class="language-output defect=#140">5.00:00:00.000000 00:00:00.000005
+<pre><code class="language-output">5.00:00:00.000000 00:00:00.000005
 01:02:03.000000 02:02:02.000000
 10:00:00.000000 2.01:02:03.000000
 1.02:03:04.000005
