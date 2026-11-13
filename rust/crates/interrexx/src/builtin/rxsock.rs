@@ -10,15 +10,20 @@
 //!
 //! `SockAccept`, `SockConnect`, `SockRecv`, `SockRecvFrom` and `SockSelect`
 //! wait without holding up the other activities: a call that would block
-//! parks its activity while a pool thread `poll`s its sockets together with
-//! a cancel descriptor ([`wait_off_baton`]), and the OS call is made once the
-//! thread has posted that they are ready or the deadline has passed. A halt
-//! or the interpreter's end writes the cancel descriptor, so the wait ends at
-//! once. Where no pool thread can be had (the pool configured inline, or the
-//! simulation mode), the activity parks on a short sleep whose re-test polls
-//! the sockets ([`wait_again`]).
+//! parks its activity and hands its sockets and deadline to the process's
+//! socket reactor ([`rxsock_wait`]), one thread serving every wait of every
+//! interpreter, and the OS call is made once the reactor has posted that
+//! the sockets are ready or the deadline has passed. A halt or the
+//! interpreter's end cancels the registration, so the wait ends at once.
+//! Where the platform has no reactor, a pool thread `poll`s the sockets
+//! together with a cancel descriptor instead ([`wait_off_baton`]); where no
+//! thread can be had either (the pool configured inline, or the simulation
+//! mode), the activity parks on a short sleep whose re-test polls the
+//! sockets ([`wait_again`]).
 
 mod hosts;
+
+use super::rxsock_wait;
 
 use std::net::{Ipv4Addr, SocketAddrV4};
 use std::os::fd::{BorrowedFd, IntoRawFd as _, OwnedFd};
@@ -451,30 +456,41 @@ pub(crate) struct SocketWait {
     /// When the wait ends whatever the sockets do.
     deadline: Option<Instant>,
     op: Pending,
-    /// The pool thread waiting for the sockets, where one is.
+    /// What waits for the sockets off the baton -- the reactor or a pool
+    /// thread -- where something does.
     helper: Option<Helper>,
 }
 
-/// A socket wait's pool thread: the token it posts its end under, whether
-/// that end has been drained, and the descriptor that tells it to stop,
-/// written when the wait is dropped.
+/// What waits for a socket wait off the baton: the token its end is posted
+/// under, whether that end has been drained, and how it is told to stop,
+/// which dropping the wait does.
 struct Helper {
     token: u64,
     ended: bool,
-    cancel: Arc<OwnedFd>,
+    stop: Stop,
+}
+
+/// How a [`Helper`] is told to stop.
+enum Stop {
+    /// A registration with the process's reactor.
+    Reactor(rxsock_wait::Wait),
+    /// A pool thread of its own, polling the canceller's descriptor.
+    Thread(Arc<rxsock_wait::Canceller>),
+}
+
+impl Stop {
+    fn cancel(&self) {
+        match self {
+            Stop::Reactor(wait) => wait.cancel(),
+            Stop::Thread(canceller) => canceller.signal(),
+        }
+    }
 }
 
 impl Drop for Helper {
     fn drop(&mut self) {
-        cancel(&self.cancel);
+        self.stop.cancel();
     }
-}
-
-/// Tells the thread polling `cancel` to stop. An eventfd's counter takes
-/// many writes before it would refuse one, and a refused write still leaves
-/// it readable, so the outcome is not needed.
-fn cancel(cancel: &OwnedFd) {
-    let _ = rustix::io::write(cancel, &1u64.to_ne_bytes());
 }
 
 /// What a waiting call does once its wait ends.
@@ -525,7 +541,7 @@ fn poll_now(polls: &[(i32, PollFlags)]) -> Option<Vec<PollFlags>> {
 
 /// Whether `revents` answers a wait for `events`, as `select` reads it:
 /// hang-up and error count as readable and error as writable.
-fn answers(events: PollFlags, revents: PollFlags) -> bool {
+pub(crate) fn answers(events: PollFlags, revents: PollFlags) -> bool {
     let readable = PollFlags::IN | PollFlags::HUP | PollFlags::ERR;
     let writable = PollFlags::OUT | PollFlags::ERR;
     (events.contains(PollFlags::IN) && revents.intersects(readable))
@@ -586,9 +602,10 @@ pub(crate) fn wait_again(interp: &mut Interp) -> Option<Instant> {
     Some(deadline.map_or(next, |deadline| deadline.min(next)))
 }
 
-/// The running activity's socket wait, re-tested once its pool thread has
-/// posted its end: `None` once it is over, or the reason to park again for,
-/// on a new thread where one can be had and on a polling sleep where not.
+/// The running activity's socket wait, re-tested once the reactor or its
+/// pool thread has posted its end: `None` once it is over, or the reason to
+/// park again for, off the baton where that can be had and on a polling
+/// sleep where not.
 pub(crate) fn block_again(interp: &mut Interp) -> Option<ParkReason> {
     if wait_over(interp) {
         return None;
@@ -626,45 +643,62 @@ pub(crate) fn cancel_helper(activity: &crate::activity::Activity) {
         .as_ref()
         .and_then(|wait| wait.helper.as_ref())
     {
-        cancel(&helper.cancel);
+        helper.stop.cancel();
     }
 }
 
-/// Starts a pool thread waiting for the running activity's socket wait,
-/// and answers whether one was started: not where the pool runs work
-/// inline, in the simulation mode, whose clock no thread may read, or where
-/// no thread or cancel descriptor can be had.
+/// Starts waiting off the baton for the running activity's socket wait,
+/// and answers whether that was done: with the process's reactor where it
+/// has one, and on a pool thread of its own where not. Neither in the
+/// simulation mode, whose clock no other thread may read, nor where the
+/// pool runs work inline or no thread or descriptor can be had.
 fn start_helper(interp: &mut Interp) -> bool {
-    if interp.sim.is_some() || interp.activity.socket_wait.is_none() {
+    if interp.sim.is_some() {
         return false;
     }
-    let Ok(cancel) = rustix::event::eventfd(
-        0,
-        rustix::event::EventfdFlags::CLOEXEC | rustix::event::EventfdFlags::NONBLOCK,
-    ) else {
-        return false;
-    };
-    let Ok(Some(worker)) = interp.pool.reserve() else {
-        return false;
-    };
-    let cancel = Arc::new(cancel);
     let Some(wait) = interp.activity.socket_wait.as_ref() else {
         return false;
     };
     let (polls, deadline) = (wait.polls.clone(), wait.deadline);
-    let polled = Arc::clone(&cancel);
-    let token = interp.exit_for_socket_wait(
-        worker,
-        Box::new(move || wait_off_baton(&polls, deadline, &polled)),
-    );
+    let registered = if rxsock_wait::reactor_available() {
+        interp.register_socket_wait(&polls, deadline)
+    } else {
+        None
+    };
+    let stop = match registered {
+        Some((token, registered)) => Some((token, Stop::Reactor(registered))),
+        None => start_thread(interp, polls, deadline),
+    };
+    let Some((token, stop)) = stop else {
+        return false;
+    };
     if let Some(wait) = interp.activity.socket_wait.as_mut() {
         wait.helper = Some(Helper {
             token,
             ended: false,
-            cancel,
+            stop,
         });
     }
     true
+}
+
+/// A pool thread polling `polls` until `deadline`, where there is no
+/// reactor: the token its end is posted under and how it is stopped.
+fn start_thread(
+    interp: &mut Interp,
+    polls: Vec<(i32, PollFlags)>,
+    deadline: Option<Instant>,
+) -> Option<(u64, Stop)> {
+    let canceller = Arc::new(rxsock_wait::Canceller::new()?);
+    let Ok(Some(worker)) = interp.pool.reserve() else {
+        return None;
+    };
+    let polled = Arc::clone(&canceller);
+    let token = interp.exit_for_socket_wait(
+        worker,
+        Box::new(move || wait_off_baton(&polls, deadline, &polled)),
+    );
+    Some((token, Stop::Thread(canceller)))
 }
 
 /// A pool thread's wait for `polls`: until any is ready or invalid, until
@@ -676,7 +710,11 @@ fn start_helper(interp: &mut Interp) -> bool {
 /// would end every poll at once without ending the wait. Such an entry is
 /// left out of the polls that follow, and looked at again every
 /// [`MUTED_RECHECK`], since its socket may yet be connected.
-fn wait_off_baton(polls: &[(i32, PollFlags)], deadline: Option<Instant>, cancel: &OwnedFd) {
+fn wait_off_baton(
+    polls: &[(i32, PollFlags)],
+    deadline: Option<Instant>,
+    cancel: &rxsock_wait::Canceller,
+) {
     let mut muted = vec![false; polls.len()];
     loop {
         let now = crate::sync::now();
@@ -702,7 +740,7 @@ fn wait_off_baton(polls: &[(i32, PollFlags)], deadline: Option<Instant>, cancel:
                 .zip(&live)
                 .map(|(fd, &i)| PollFd::new(fd, polls[i].1))
                 .collect();
-            fds.push(PollFd::new(cancel, PollFlags::IN));
+            fds.push(PollFd::from_borrowed_fd(cancel.polled(), PollFlags::IN));
             let ready = rustix::event::poll(&mut fds, timeout.as_ref()).map_err(os)?;
             Ok((ready, fds.iter().map(PollFd::revents).collect::<Vec<_>>()))
         });

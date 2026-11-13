@@ -39,6 +39,9 @@ pub(crate) mod rxsock;
 /// The `unsafe` `rxsock` is granted: descriptor borrows and raw socket
 /// options.
 mod rxsock_sys;
+/// Where an `rxsock` wait runs while its activity is parked: the process's
+/// socket reactor, behind a platform-neutral face.
+pub(crate) mod rxsock_wait;
 /// The `rxunixsys` extension library's routines, run in Rust.
 pub(crate) mod rxunixsys;
 pub(crate) mod state;

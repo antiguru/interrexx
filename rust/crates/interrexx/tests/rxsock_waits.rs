@@ -180,3 +180,195 @@ fn a_hung_up_exception_entry_does_not_spin_a_select() {
     finish(child, &dir);
     assert!(woken < 100, "the select was switched in {woken} times");
 }
+
+/// The threads of process `pid`.
+#[cfg(target_os = "linux")]
+fn threads(pid: u32) -> usize {
+    std::fs::read_dir(format!("/proc/{pid}/task"))
+        .expect("the process's threads")
+        .count()
+}
+
+/// `count` activities each blocked in `SockRecv` on a datagram socket of its
+/// own, started once the program has printed `base` and reported by `ready`
+/// once all are in their receive; run under a descriptor limit that has room
+/// for them.
+#[cfg(target_os = "linux")]
+fn start_receivers(name: &str, count: usize) -> (Child, PathBuf) {
+    let source = "parse arg n\nsay 'base'\ncall SysSleep 0.3\n\
+         do i = 1 to n\n  s = SockSocket('AF_INET', 'SOCK_DGRAM', 0)\n\
+         a.family = 'AF_INET'; a.port = 0; a.addr = '127.0.0.1'\n\
+         if SockBind(s, 'a.') \\= 0 then do; say 'bind' i errno; exit 1; end\n\
+         .receiver~new~start('receive', s)\nend\n\
+         do until .receiver~waiting = n; call SysSleep 0.05; end\n\
+         call SysSleep 0.3\nsay 'ready'\ncall SysSleep 60\n\
+         ::class receiver\n::method waiting class attribute\n\
+         ::method arrived class\n  expose waiting\n  if \\var('waiting') then waiting = 0\n  waiting += 1\n\
+         ::method receive\n  use arg s\n  .receiver~arrived\n  r = SockRecv(s, 'd', 10)\n";
+    let dir = PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
+        .join(format!("rxsock-waits-{name}-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).expect("the probe directory");
+    let file = dir.join(format!("{name}.rex"));
+    std::fs::write(&file, format!("{source}::requires 'rxsock' LIBRARY\n")).expect("the probe");
+    let child = Command::new("sh")
+        .arg("-c")
+        .arg("ulimit -n 8192 && exec \"$0\" \"$@\"")
+        .arg(env!("CARGO_BIN_EXE_rexx"))
+        .arg(&file)
+        .arg(count.to_string())
+        .current_dir(&dir)
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::inherit())
+        .spawn()
+        .expect("rexx starts");
+    (child, dir)
+}
+
+/// A thousand activities blocked in `SockRecv` at once are served by the
+/// one reactor thread the `rxsock` library started when it was loaded, not
+/// a thread each: the process has no more threads with them waiting than
+/// it had before the first. Linux only: elsewhere there is no reactor yet,
+/// and each wait takes a pool thread.
+#[cfg(target_os = "linux")]
+#[test]
+fn a_thousand_blocked_receives_share_one_thread() {
+    let (mut child, dir) = start_receivers("thousand", 1000);
+    let mut out = BufReader::new(child.stdout.take().expect("piped stdout"));
+    assert_eq!(line(&mut out), "base");
+    let base = threads(child.id());
+    assert_eq!(line(&mut out), "ready");
+    let waiting = threads(child.id());
+    finish(child, &dir);
+    assert!(
+        waiting <= base + 1,
+        "{base} threads before the receives and {waiting} with them waiting"
+    );
+}
+
+/// Two activities waiting on one socket -- a `SockSelect` for it to be
+/// readable and a `SockRecv` peeking at it -- are both served when data
+/// arrives: the reactor keeps one registration per descriptor with both
+/// waiters on it.
+#[test]
+fn two_waits_on_one_socket_both_end() {
+    let (mut child, dir) = start(
+        "shared",
+        &format!(
+            "{LISTEN}c = SockAccept(s)\n\
+             .both~new~start('selects', c)\n.both~new~start('peeks', c)\n\
+             call SysSleep 0.3\nsay 'waiting'\n\
+             ::class both\n\
+             ::method selects\n  use arg c\n  r.0 = 1; r.1 = c\n\
+               say 'select' SockSelect('r.', '', '') r.0\n\
+             ::method peeks\n  use arg c\n\
+               say 'peek' SockRecv(c, 'd', 100, 'MSG_PEEK') d\n"
+        ),
+    );
+    let mut out = BufReader::new(child.stdout.take().expect("piped stdout"));
+    let port: u16 = line(&mut out).parse().expect("a port");
+    let mut peer = TcpStream::connect(("127.0.0.1", port)).expect("a connection");
+    assert_eq!(line(&mut out), "waiting");
+    peer.write_all(b"hello").expect("the send");
+    let mut ended = [line(&mut out), line(&mut out)];
+    ended.sort();
+    drop(peer);
+    finish(child, &dir);
+    assert_eq!(ended, ["peek 5 hello", "select 1 1"]);
+}
+
+/// A socket closed while an activity waits on it, and its number taken by a
+/// new socket another activity then receives on, does not wedge the
+/// reactor: the receive answers when its datagram arrives, and the first
+/// wait still ends by its timeout. The receive waits in a `SockSelect`
+/// with a 3 s timeout first, so that a wedged reactor fails the test rather
+/// than hanging it.
+#[test]
+fn a_reused_descriptor_number_is_waited_on_afresh() {
+    let (mut child, dir) = start(
+        "reuse",
+        "a.family = 'AF_INET'; a.port = 0; a.addr = '127.0.0.1'\n\
+         old = SockSocket('AF_INET', 'SOCK_DGRAM', 0)\ncall SockBind old, 'a.'\n\
+         .waits~new~start('selects', old)\ncall SysSleep 0.2\ncall SockClose old\n\
+         new = SockSocket('AF_INET', 'SOCK_DGRAM', 0)\ncall SockBind new, 'a.'\n\
+         call SockGetSockName new, 'n.'\nsay (new = old) n.port\n\
+         .waits~new~start('receives', new)\n\
+         ::class waits\n\
+         ::method selects\n  use arg s\n  r.0 = 1; r.1 = s\n\
+           say 'select' SockSelect('r.', '', '', 2)\n\
+         ::method receives\n  use arg s\n  q.0 = 1; q.1 = s\n\
+           if SockSelect('q.', '', '', 3) = 0 then say 'recv timed out'\n\
+           else say 'recv' SockRecv(s, 'd', 100) d\n",
+    );
+    let mut out = BufReader::new(child.stdout.take().expect("piped stdout"));
+    let reused = line(&mut out);
+    let words: Vec<&str> = reused.split_whitespace().collect();
+    assert_eq!(
+        words[0], "1",
+        "the new socket took the old one's number: {reused}"
+    );
+    let port: u16 = words[1].parse().expect("a port");
+    std::thread::sleep(Duration::from_millis(100));
+    let peer = std::net::UdpSocket::bind("127.0.0.1:0").expect("a socket");
+    let sent = Instant::now();
+    peer.send_to(b"datagram", ("127.0.0.1", port))
+        .expect("the send");
+    let mut lines = Vec::new();
+    while lines.len() < 2 {
+        let next = line(&mut out);
+        if next.starts_with("recv") {
+            assert!(
+                sent.elapsed() < Duration::from_millis(500),
+                "the receive answered {:?} after its datagram",
+                sent.elapsed()
+            );
+        }
+        lines.push(next);
+    }
+    finish(child, &dir);
+    assert!(lines.contains(&"recv 8 datagram".to_string()), "{lines:?}");
+    assert!(
+        lines.iter().any(|line| line.starts_with("select")),
+        "{lines:?}"
+    );
+}
+
+/// A halt reaches every activity waiting on a socket: with a hundred
+/// receives and a `SockSelect` with no timeout all waiting at once, SIGINT
+/// ends the program within half a second.
+#[test]
+fn a_halt_ends_many_socket_waits_promptly() {
+    let (mut child, dir) = start(
+        "halt",
+        "do 100\n  s = SockSocket('AF_INET', 'SOCK_DGRAM', 0)\n\
+         a.family = 'AF_INET'; a.port = 0; a.addr = '127.0.0.1'\n\
+         call SockBind s, 'a.'\n  .halted~new~start('receive', s)\nend\n\
+         r.0 = 1; r.1 = s\ncall SysSleep 0.3\nsay 'ready'\n\
+         n = SockSelect('r.', '', '')\nsay 'after' n\n\
+         ::class halted\n::method receive\n  use arg s\n  r = SockRecv(s, 'd', 10)\n",
+    );
+    let mut out = BufReader::new(child.stdout.take().expect("piped stdout"));
+    assert_eq!(line(&mut out), "ready");
+    std::thread::sleep(Duration::from_millis(200));
+    let sent = Instant::now();
+    let signalled = Command::new("kill")
+        .args(["-INT", &child.id().to_string()])
+        .status()
+        .expect("kill runs");
+    assert!(signalled.success());
+    let mut ended = None;
+    while sent.elapsed() < Duration::from_secs(5) {
+        if let Some(status) = child.try_wait().expect("the child's state") {
+            ended = Some((status, sent.elapsed()));
+            break;
+        }
+        std::thread::sleep(Duration::from_millis(5));
+    }
+    let mut rest = String::new();
+    let _ = out.read_to_string(&mut rest);
+    finish(child, &dir);
+    let (status, took) = ended.expect("the program ended after the halt");
+    assert!(!status.success(), "a halted program fails: {status:?}");
+    assert!(!rest.contains("after"), "the select answered: {rest}");
+    assert!(took < Duration::from_millis(500), "the halt took {took:?}");
+}
