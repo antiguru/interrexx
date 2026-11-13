@@ -110403,7 +110403,8 @@ d: say condition('o')~code
 <div class="rule" id="r-bif.index.call.convert.deviation.170"><a href="builtins/index.html#r-bif.index.call.convert.deviation.170">[bif.index.call.convert.deviation.170]</a></div>
 <p>A builtin converts every argument that its page calls a string and that is an
 object other than a string, from left to right and after it has checked the
-number of its arguments, before it checks any argument: a <code>STRING</code> method of
+number of its arguments and that every argument it requires is there, before it
+checks any argument: a <code>STRING</code> method of
 a later argument runs even when an earlier argument is in error. The error the
 call raises is the one the checks give, as <a href="builtins/../conventions.html#r-conv.check.order">the order of the
 checks</a> says, whatever the conversions ran. ooRexx converts an argument as it checks
@@ -110413,12 +110414,17 @@ argument does not run.</p>
 signal on syntax
 say substr('abcdef', 'x', .c~new)
 syntax: say 'error' condition('o')~code 'STRING calls:' .local~n
+.local~n = 0
+signal on syntax name omitted
+say substr(, 1, .c~new)
+omitted: say 'error' condition('o')~code 'STRING calls:' .local~n
 ::class c
 ::method string
   .local~n = .local~n + 1
   return 2
 </code></pre>
 <pre><code class="language-output">error 40.12 STRING calls: 1
+error 40.5 STRING calls: 0
 </code></pre>
 <h2 id="words-1"><a class="header" href="#words-1">Words</a></h2>
 <div class="rule" id="r-bif.index.words.split"><a href="builtins/index.html#r-bif.index.words.split">[bif.index.words.split]</a></div>
@@ -127879,8 +127885,10 @@ with exit code 120 that Deviation 30 described.</p>
 <p>A builtin whose page calls an argument a string converts each such argument
 that is an object other than a string, sending <code>STRING</code> (or <code>REQUEST</code> and
 <code>MAKESTRING</code>, as <a href="conventions.html#r-conv.string.object">the conversion rule</a> says), from left
-to right, after it has checked the number of its arguments and before it
-checks any argument. A <code>STRING</code> method of a later argument therefore runs even
+to right, after it has checked the number of its arguments and that every
+argument it requires is there, and before it checks any argument. An omitted
+argument that the builtin requires is therefore reported before any conversion
+runs, as in ooRexx. A <code>STRING</code> method of a later argument therefore runs even
 when an earlier argument is in error, and the call raises the same error as in
 ooRexx, which converts an argument as it checks it and stops at the first one
 in error, so that the method of a later argument never runs. The difference
