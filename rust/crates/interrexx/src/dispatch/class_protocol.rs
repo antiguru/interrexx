@@ -621,11 +621,10 @@ pub(super) fn native_new_class(
         return Err(Raised::not_enough_method_arguments(1).into());
     }
     let name = required_class_id(interp, args)?;
-    let metaclass = if interp.is_primitive_class(class) {
-        interp.object_model().metaclass
-    } else {
-        class
-    };
+    // The class this makes is an instance of the receiver, and so has the
+    // receiver for its metaclass: `Class` for `Class~new`, and `Singleton` for
+    // `Singleton~new` (r[class.singleton.new.direct]).
+    let metaclass = class;
     let root = interp.object_model().object;
     let id = interp.mint_class();
     interp.classes().define_cloned_class(

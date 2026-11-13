@@ -80,12 +80,6 @@ impl Interp {
         }
     }
 
-    /// Whether `class` is one the interpreter's own bootstrap built, which no
-    /// program's install recorded (a primitive class).
-    pub(crate) fn is_primitive_class(&self, class: ObjRef) -> bool {
-        !self.class_packages.contains_key(&class)
-    }
-
     /// `Package~addClass` and `Package~addPublicClass`, which differ only in
     /// whether the public table gets the entry too: both `Package~addClass`
     /// and `Package~addPublicClass` reach this with the flag set differently.
