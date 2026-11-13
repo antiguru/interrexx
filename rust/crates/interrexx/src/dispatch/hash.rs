@@ -2114,7 +2114,9 @@ pub(super) fn hash_unknown(
     name.make_ascii_uppercase();
     if name.pop_if(|last| *last == b'=').is_none() {
         if store {
+            // Rooted for the write's reason below: a read may build the store.
             let index = interp.text_built(name);
+            interp.roots.activity_mut().push_temp(index);
             return store_entry_read(interp, receiver, index);
         }
         return Ok(Some(interp.hash_entry_read(receiver, &name)));
@@ -2127,7 +2129,11 @@ pub(super) fn hash_unknown(
         return Err(Loud::entry_method_without_a_value(&index).into());
     };
     if store {
+        // **Rooted**: a long name is an object of its own, and putting it in
+        // may build or grow the store, which allocates. The caller's frame
+        // pops it.
         let index = interp.text_built(index);
+        interp.roots.activity_mut().push_temp(index);
         return store_entry_write(interp, receiver, index, item);
     }
     interp.hash_entry_write(receiver, &index, item)?;
