@@ -247,7 +247,8 @@ d: say condition('o')~code
 r[bif.index.call.convert.deviation.170]
 A builtin converts every argument that its page calls a string and that is an
 object other than a string, from left to right and after it has checked the
-number of its arguments, before it checks any argument: a `STRING` method of
+number of its arguments and that every argument it requires is there, before it
+checks any argument: a `STRING` method of
 a later argument runs even when an earlier argument is in error. The error the
 call raises is the one the checks give, as [the order of the
 checks](r:conv.check.order) says, whatever the conversions ran. ooRexx converts an argument as it checks
@@ -259,6 +260,10 @@ argument does not run.
 signal on syntax
 say substr('abcdef', 'x', .c~new)
 syntax: say 'error' condition('o')~code 'STRING calls:' .local~n
+.local~n = 0
+signal on syntax name omitted
+say substr(, 1, .c~new)
+omitted: say 'error' condition('o')~code 'STRING calls:' .local~n
 ::class c
 ::method string
   .local~n = .local~n + 1
@@ -267,6 +272,7 @@ syntax: say 'error' condition('o')~code 'STRING calls:' .local~n
 
 ```output
 error 40.12 STRING calls: 1
+error 40.5 STRING calls: 0
 ```
 
 ## Words
