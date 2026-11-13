@@ -9,6 +9,10 @@ use removal::{
     Removal, native_hash_empty, native_hash_remove_item, take, take_at, take_in, take_merged,
 };
 
+use std::rc::Rc;
+
+use interrexx_core::NameMap;
+
 use super::collection;
 use super::required_string_named_argument;
 use super::{
@@ -115,12 +119,45 @@ const INDEX_ONLY: &[&str] = &["Set", "Bag"];
 /// of replacing it: the multi-value contents, whose `put` adds at the front.
 const MULTI_VALUE: &[&str] = &["Relation", "Bag"];
 
-/// Whether `receiver` holds more than one item per index.
-fn multi_value(interp: &mut Interp, receiver: ObjRef) -> bool {
-    let Some(class) = interp.class_of_value(receiver) else {
-        return false;
-    };
-    for name in MULTI_VALUE {
+/// The answers of this file's class tests for one class, as bits.
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
+pub(crate) struct HashKind(u8);
+
+impl HashKind {
+    /// [`OWNED`].
+    const OWNED: u8 = 1;
+    /// [`INDEX_ONLY`].
+    const INDEX_ONLY: u8 = 1 << 1;
+    /// [`MULTI_VALUE`].
+    const MULTI_VALUE: u8 = 1 << 2;
+    /// [`STRING_KEYED`].
+    const STRING_KEYED: u8 = 1 << 3;
+    /// `IdentityTable`.
+    const IDENTITY: u8 = 1 << 4;
+    /// [`STORE_HOLDERS`].
+    const STORE_HOLDER: u8 = 1 << 5;
+
+    fn has(self, bit: u8) -> bool {
+        self.0 & bit != 0
+    }
+}
+
+/// Each class's [`HashKind`], valid while the class registry's ancestry stamp
+/// is `stamp`. Every answer is a function of the superclass lists and the
+/// registered names alone, and the stamp moves with either, so a class that
+/// `inherit`s, `uninherit`s or is defined at run time is classified afresh.
+#[derive(Default)]
+pub(crate) struct HashKinds {
+    stamp: u64,
+    kinds: NameMap<ObjRef, HashKind>,
+    /// The class asked about last and its kind, ahead of the map: a loop over
+    /// one collection asks about one class several times a message.
+    last: Option<(ObjRef, HashKind)>,
+}
+
+/// Whether `class` is or inherits from the class registered as one of `names`.
+fn class_is_a_named(interp: &mut Interp, class: ObjRef, names: &[&str]) -> bool {
+    for name in names {
         let Some(base) = interp.classes().lookup(name) else {
             continue;
         };
@@ -131,20 +168,74 @@ fn multi_value(interp: &mut Interp, receiver: ObjRef) -> bool {
     false
 }
 
-/// Whether `receiver`'s `put` is the index-only one.
-fn index_only(interp: &mut Interp, receiver: ObjRef) -> bool {
-    let Some(class) = interp.class_of_value(receiver) else {
-        return false;
-    };
-    for name in INDEX_ONLY {
-        let Some(base) = interp.classes().lookup(name) else {
-            continue;
-        };
-        if interp.classes().is_a(class, base) {
-            return true;
+/// `class`'s answers to every class test here, worked out from the class
+/// graph.
+#[cold]
+fn classify(interp: &mut Interp, class: ObjRef) -> HashKind {
+    let mut kind = 0;
+    for (bit, names) in [
+        (HashKind::OWNED, OWNED),
+        (HashKind::INDEX_ONLY, INDEX_ONLY),
+        (HashKind::MULTI_VALUE, MULTI_VALUE),
+        (HashKind::STRING_KEYED, STRING_KEYED),
+        (HashKind::IDENTITY, &["IdentityTable"][..]),
+    ] {
+        if class_is_a_named(interp, class, names) {
+            kind |= bit;
         }
     }
-    false
+    if holds_store_class(interp, class) {
+        kind |= HashKind::STORE_HOLDER;
+    }
+    HashKind(kind)
+}
+
+/// `class`'s [`HashKind`], from [`HashKinds`] while the ancestry stamp holds.
+fn kind_of_class(interp: &mut Interp, class: ObjRef) -> HashKind {
+    let stamp = interp.classes().ancestry_stamp();
+    let kinds = &mut interp.hash_kinds;
+    if kinds.stamp != stamp {
+        kinds.kinds.clear();
+        kinds.last = None;
+        kinds.stamp = stamp;
+    } else if let Some((last, kind)) = kinds.last
+        && last == class
+    {
+        return kind;
+    } else if let Some(&kind) = kinds.kinds.get(&class) {
+        kinds.last = Some((class, kind));
+        return kind;
+    }
+    let kind = classify(interp, class);
+    interp.hash_kinds.kinds.insert(class, kind);
+    interp.hash_kinds.last = Some((class, kind));
+    kind
+}
+
+/// The [`HashKind`] of `receiver`'s class; none of the bits for a value with
+/// no class.
+fn kind_of(interp: &mut Interp, receiver: ObjRef) -> HashKind {
+    // An instance's class is in its body, which is where `class_of_value`
+    // would find it after classifying the receiver.
+    if let Some(Body::Instance { class, .. }) = interp.heap.get(receiver).map(|object| &object.body)
+    {
+        let class = *class;
+        return kind_of_class(interp, class);
+    }
+    match interp.class_of_value(receiver) {
+        Some(class) => kind_of_class(interp, class),
+        None => HashKind::default(),
+    }
+}
+
+/// Whether `receiver` holds more than one item per index.
+fn multi_value(interp: &mut Interp, receiver: ObjRef) -> bool {
+    kind_of(interp, receiver).has(HashKind::MULTI_VALUE)
+}
+
+/// Whether `receiver`'s `put` is the index-only one.
+fn index_only(interp: &mut Interp, receiver: ObjRef) -> bool {
+    kind_of(interp, receiver).has(HashKind::INDEX_ONLY)
 }
 
 /// Whether `receiver`'s class is one of [`OWNED`].
@@ -157,7 +248,7 @@ pub(crate) fn owns(interp: &mut Interp, receiver: ObjRef) -> bool {
     ) {
         return false;
     }
-    class_is_one_of(interp, receiver, OWNED)
+    kind_of(interp, receiver).has(HashKind::OWNED)
 }
 
 /// Whether `receiver`'s class is or inherits from one of `names`.
@@ -165,15 +256,7 @@ fn class_is_one_of(interp: &mut Interp, receiver: ObjRef, names: &[&str]) -> boo
     let Some(class) = interp.class_of_value(receiver) else {
         return false;
     };
-    for name in names {
-        let Some(base) = interp.classes().lookup(name) else {
-            continue;
-        };
-        if interp.classes().is_a(class, base) {
-            return true;
-        }
-    }
-    false
+    class_is_a_named(interp, class, names)
 }
 
 /// The refusal for a receiver [`owns`] declines: a collection of one of
@@ -236,10 +319,7 @@ pub(super) const STORE_HOLDERS: &[&str] = &[
 
 /// Whether `receiver` is an instance of a class this file gives a store to.
 fn holds_hash_store(interp: &mut Interp, receiver: ObjRef) -> bool {
-    let Some(class) = interp.class_of_value(receiver) else {
-        return false;
-    };
-    holds_store_class(interp, class)
+    kind_of(interp, receiver).has(HashKind::STORE_HOLDER)
 }
 
 /// Whether `class` is one of [`STORE_HOLDERS`] or a subclass of one.
@@ -284,6 +364,24 @@ fn counted(value: ObjRef) -> Option<usize> {
     }
 }
 
+/// The five names of each half, as the pool keeps them, made once.
+pub(crate) struct PoolNames {
+    contents: [Rc<[u8]>; 5],
+    methods: [Rc<[u8]>; 5],
+}
+
+impl Default for PoolNames {
+    fn default() -> PoolNames {
+        let names = |half: Half| {
+            [half.indexes, half.items, half.next, half.buckets, half.free].map(Rc::from)
+        };
+        PoolNames {
+            contents: names(CONTENTS),
+            methods: names(METHODS),
+        }
+    }
+}
+
 /// Builds a store of `buckets` primary slots and as many overflow slots, and
 /// binds it to `receiver`.
 fn install_store(interp: &mut Interp, receiver: ObjRef, half: Half, buckets: usize) -> Store {
@@ -308,11 +406,30 @@ fn install_store(interp: &mut Interp, receiver: ObjRef, half: Half, buckets: usi
     interp.roots.activity_mut().push_temp(next);
     let buckets_value = interp.counted(buckets);
     let free_value = interp.counted(buckets);
-    interp.set_pool_variable(receiver, scope, half.indexes, indexes);
-    interp.set_pool_variable(receiver, scope, half.items, items);
-    interp.set_pool_variable(receiver, scope, half.next, next);
-    interp.set_pool_variable(receiver, scope, half.buckets, buckets_value);
-    interp.set_pool_variable(receiver, scope, half.free, free_value);
+    let names = if half == CONTENTS {
+        &interp.hash_names.contents
+    } else {
+        &interp.hash_names.methods
+    };
+    let [n_indexes, n_items, n_next, n_buckets, n_free] = names.clone();
+    // A bucket count [`initialize_store`] left pending goes, so that the five
+    // entries are bound together in their order, as [`shared_run`] reads them.
+    if pool_variable(interp, receiver, scope, half.indexes).is_none()
+        && pool_variable(interp, receiver, scope, half.buckets).is_some()
+    {
+        interp.clear_pool_variable(receiver, scope, half.buckets);
+    }
+    interp.set_pool_variables(
+        receiver,
+        scope,
+        &[
+            (&n_indexes, indexes),
+            (&n_items, items),
+            (&n_next, next),
+            (&n_buckets, buckets_value),
+            (&n_free, free_value),
+        ],
+    );
     bump_store_generation(interp);
     Store {
         indexes,
@@ -383,7 +500,24 @@ fn read_parts(interp: &mut Interp, receiver: ObjRef) -> Parts {
     else {
         return parts;
     };
-    for (name, value) in pools.entries(scope) {
+    let names = &interp.hash_names;
+    let mut rest = pools.entries(scope);
+    while !rest.is_empty() {
+        // [`install_store`] binds a half's five names together, in this order
+        // and as copies of [`PoolNames`]' own, so a run of them is recognised
+        // by identity before any name is compared byte by byte.
+        if let Some(found) = shared_run(rest, &names.contents) {
+            parts.contents = found;
+            rest = &rest[5..];
+            continue;
+        }
+        if let Some(found) = shared_run(rest, &names.methods) {
+            parts.methods = found;
+            rest = &rest[5..];
+            continue;
+        }
+        let (name, value) = &rest[0];
+        rest = &rest[1..];
         let value = *value;
         match name.as_ref() {
             HASH_INDEXES => parts.contents.indexes = Some(value),
@@ -403,6 +537,37 @@ fn read_parts(interp: &mut Interp, receiver: ObjRef) -> Parts {
     parts
 }
 
+/// One half's entries, when `entries` starts with that half's five shared
+/// names in [`install_store`]'s order. A pool binds a name once, so what this
+/// finds is what the byte-by-byte reading would.
+#[inline]
+fn shared_run(entries: &[(Rc<[u8]>, ObjRef)], names: &[Rc<[u8]>; 5]) -> Option<Found> {
+    let [
+        (indexes_name, indexes),
+        (items_name, items),
+        (next_name, next),
+        (buckets_name, buckets),
+        (free_name, free),
+        ..,
+    ] = entries
+    else {
+        return None;
+    };
+    let [indexes_at, items_at, next_at, buckets_at, free_at] = names;
+    (Rc::ptr_eq(indexes_name, indexes_at)
+        && Rc::ptr_eq(items_name, items_at)
+        && Rc::ptr_eq(next_name, next_at)
+        && Rc::ptr_eq(buckets_name, buckets_at)
+        && Rc::ptr_eq(free_name, free_at))
+    .then(|| Found {
+        indexes: Some(*indexes),
+        items: Some(*items),
+        next: Some(*next),
+        buckets: counted(*buckets),
+        free: counted(*free),
+    })
+}
+
 /// The store `half` names, installing an empty one if it is not there yet.
 fn store_in(interp: &mut Interp, receiver: ObjRef, half: Half) -> Result<Store, Failure> {
     if half == CONTENTS {
@@ -415,9 +580,46 @@ fn store_in(interp: &mut Interp, receiver: ObjRef, half: Half) -> Result<Store, 
 }
 
 fn store_of(interp: &mut Interp, receiver: ObjRef) -> Result<Store, Failure> {
-    if let Some(store) = read_store(interp, receiver, CONTENTS)? {
+    let parts = read_parts(interp, receiver);
+    if let Some(store) = parts.contents.store(interp)? {
         return Ok(store);
     }
+    refuse_storeless(interp, receiver)?;
+    // The bucket count [`initialize_store`] left pending, if it left one.
+    let buckets = parts.contents.buckets.unwrap_or(MINIMUM_BUCKET_SIZE);
+    Ok(install_store(interp, receiver, CONTENTS, buckets))
+}
+
+/// The contents' store, or `None` for a receiver [`store_of`] would build an
+/// empty one for: what a read that finds nothing in an empty store answers
+/// the same without building it. Refuses as [`store_of`] does.
+fn store_if_built(interp: &mut Interp, receiver: ObjRef) -> Result<Option<Store>, Failure> {
+    let parts = read_parts(interp, receiver);
+    if let Some(store) = parts.contents.store(interp)? {
+        return Ok(Some(store));
+    }
+    refuse_storeless(interp, receiver)?;
+    if parts.contents.buckets.is_none() {
+        keep_bucket_count(interp, receiver, MINIMUM_BUCKET_SIZE);
+    }
+    Ok(None)
+}
+
+/// Leaves `buckets` as the size [`store_of`] builds `receiver`'s store at,
+/// for a receiver that has neither a store nor a size kept for one. Taking
+/// the place of building the store, it is what makes a later `INIT` find the
+/// size already decided, as it would find a store built.
+fn keep_bucket_count(interp: &mut Interp, receiver: ObjRef, buckets: usize) {
+    let scope = hash_scope(interp);
+    let buckets = interp.counted(buckets);
+    let [_, _, _, name, _] = &interp.hash_names.contents;
+    let name = Rc::clone(name);
+    interp.set_pool_variables(receiver, scope, &[(&name, buckets)]);
+}
+
+/// [`store_of`]'s refusal of a receiver that has no store and is not given
+/// one.
+fn refuse_storeless(interp: &mut Interp, receiver: ObjRef) -> Result<(), Failure> {
     // **A `Body::Native` receiver is not this store's**, and the check has to
     // be here because the two are one method. `IdentityTable`'s `At`, `Put` and
     // `[]` rows are donated to `StringTable` and then `StringTable`'s whole set
@@ -433,12 +635,7 @@ fn store_of(interp: &mut Interp, receiver: ObjRef) -> Result<Store, Failure> {
     {
         return Err(crate::Raised::receiver_kind("a value that is not a hash collection").into());
     }
-    Ok(install_store(
-        interp,
-        receiver,
-        CONTENTS,
-        MINIMUM_BUCKET_SIZE,
-    ))
+    Ok(())
 }
 
 fn set_free(interp: &mut Interp, receiver: ObjRef, half: Half, free: usize) {
@@ -518,36 +715,14 @@ const STRING_KEYED: &[&str] = &["Directory", "StringTable", "Properties"];
 
 /// Whether `receiver`'s class is one of [`STRING_KEYED`].
 pub(crate) fn string_keyed(interp: &mut Interp, receiver: ObjRef) -> bool {
-    let Some(class) = interp.class_of_value(receiver) else {
-        return false;
-    };
-    for name in STRING_KEYED {
-        let Some(base) = interp.classes().lookup(name) else {
-            continue;
-        };
-        if interp.classes().is_a(class, base) {
-            return true;
-        }
-    }
-    false
+    kind_of(interp, receiver).has(HashKind::STRING_KEYED)
 }
 
 fn keys_of(interp: &mut Interp, receiver: ObjRef) -> Keys {
-    let Some(class) = interp.class_of_value(receiver) else {
-        return Keys::Equality;
-    };
-    for name in STRING_KEYED {
-        let Some(base) = interp.classes().lookup(name) else {
-            continue;
-        };
-        if interp.classes().is_a(class, base) {
-            return Keys::StringValue;
-        }
-    }
-    let Some(identity) = interp.classes().lookup("IdentityTable") else {
-        return Keys::Equality;
-    };
-    if interp.classes().is_a(class, identity) {
+    let kind = kind_of(interp, receiver);
+    if kind.has(HashKind::STRING_KEYED) {
+        Keys::StringValue
+    } else if kind.has(HashKind::IDENTITY) {
         Keys::Identity
     } else {
         Keys::Equality
@@ -646,14 +821,42 @@ fn walk(interp: &mut Interp, receiver: ObjRef) -> Result<Vec<usize>, Failure> {
 /// [`walk`] over a store the caller has already read.
 fn walk_in(interp: &Interp, store: &Store) -> Result<Vec<usize>, Failure> {
     let mut order = Vec::new();
+    walk_each(interp, store, |slot| order.push(slot))?;
+    Ok(order)
+}
+
+/// How many entries [`walk_in`] would answer, without collecting them.
+fn count_in(interp: &Interp, store: &Store) -> Result<usize, Failure> {
+    let mut count = 0;
+    walk_each(interp, store, |_| count += 1)?;
+    Ok(count)
+}
+
+/// Calls `visit` with every occupied slot in [`walk_in`]'s order. The two
+/// arrays are borrowed once rather than looked up per slot, each at the
+/// point the slot-by-slot walk first reads it, so a store whose arrays are
+/// not arrays refuses where it did.
+fn walk_each(interp: &Interp, store: &Store, mut visit: impl FnMut(usize)) -> Result<(), Failure> {
+    if store.buckets == 0 || store.total == 0 {
+        return Ok(());
+    }
+    let indexes = array_slots(interp, store.indexes)?;
+    let mut next: Option<&[Option<ObjRef>]> = None;
     for bucket in 0..store.buckets {
         let mut slot = bucket;
-        while slot < store.total && slot_at(interp, store.indexes, slot)?.is_some() {
-            order.push(slot);
-            slot = link_at(interp, store, slot)?;
+        while slot < store.total && indexes.get(slot).copied().flatten().is_some() {
+            visit(slot);
+            let links = match next {
+                Some(links) => links,
+                None => *next.insert(array_slots(interp, store.next)?),
+            };
+            slot = match links.get(slot).copied().flatten().map(ObjRef::decode) {
+                Some(Decoded::SmallInt(link)) if link >= 0 => link as usize,
+                _ => store.no_more(),
+            };
         }
     }
-    Ok(order)
+    Ok(())
 }
 
 /// Occupied entries and their predecessors, restricted to a bucket when supplied.
@@ -1036,7 +1239,39 @@ fn method_count(interp: &mut Interp, receiver: ObjRef) -> Result<usize, Failure>
     let Some(store) = method_store(interp, receiver)? else {
         return Ok(0);
     };
-    Ok(walk_in(interp, &store)?.len())
+    count_in(interp, &store)
+}
+
+/// How many entries the contents hold: [`walk`]'s length.
+fn count_in_store(interp: &mut Interp, receiver: ObjRef) -> Result<usize, Failure> {
+    match store_if_built(interp, receiver)? {
+        Some(store) => count_in(interp, &store),
+        None => Ok(0),
+    }
+}
+
+/// The contents' entries and the method table's together, which is what
+/// `items` answers, from one read of the pool: [`walk`] then
+/// [`method_count`], in that order.
+fn entry_count(interp: &mut Interp, receiver: ObjRef) -> Result<usize, Failure> {
+    let parts = read_parts(interp, receiver);
+    // A receiver `store_of` would build an empty store for holds nothing, and
+    // is left without one until something is put in it, with the size that
+    // store would have had kept.
+    let count = match parts.contents.store(interp)? {
+        Some(store) => count_in(interp, &store)?,
+        None => {
+            refuse_storeless(interp, receiver)?;
+            if parts.contents.buckets.is_none() {
+                keep_bucket_count(interp, receiver, MINIMUM_BUCKET_SIZE);
+            }
+            0
+        }
+    };
+    match parts.methods.store(interp)? {
+        Some(methods) => Ok(count + count_in(interp, &methods)?),
+        None => Ok(count),
+    }
 }
 
 // ---- the shared surface ----
@@ -1237,7 +1472,7 @@ fn native_hash_items(
     if !owns(interp, receiver) {
         return Err(not_this_task(interp, receiver, b"ITEMS"));
     }
-    let count = walk(interp, receiver)?.len() + method_count(interp, receiver)?;
+    let count = entry_count(interp, receiver)?;
     Ok(Some(interp.counted(count)))
 }
 
@@ -1250,7 +1485,7 @@ fn native_hash_is_empty(
     if !owns(interp, receiver) {
         return Err(not_this_task(interp, receiver, b"ISEMPTY"));
     }
-    let empty = walk(interp, receiver)?.is_empty() && method_count(interp, receiver)? == 0;
+    let empty = count_in_store(interp, receiver)? == 0 && method_count(interp, receiver)? == 0;
     Ok(Some(crate::eval::logical(empty)))
 }
 
@@ -1370,13 +1605,19 @@ pub(super) fn initialize_store(
 ) -> Result<(), Failure> {
     let scope = hash_scope(interp);
     let class = match interp.heap.get(receiver).map(|object| &object.body) {
-        Some(Body::Instance { class, pools, .. }) if pools.get(scope, HASH_INDEXES).is_none() => {
+        Some(Body::Instance { class, pools, .. })
+            if pools.get(scope, HASH_INDEXES).is_none()
+                && pools.get(scope, HASH_BUCKETS).is_none() =>
+        {
             *class
         }
         _ => return Ok(()),
     };
-    if holds_store_class(interp, class) {
-        install_store(interp, receiver, CONTENTS, calculate_bucket_size(capacity));
+    if kind_of_class(interp, class).has(HashKind::STORE_HOLDER) {
+        // Only the bucket count is kept: [`store_of`] builds the store at that
+        // size when something first needs one, and a read that finds nothing
+        // answers the same without it.
+        keep_bucket_count(interp, receiver, calculate_bucket_size(capacity));
     }
     Ok(())
 }
@@ -1391,7 +1632,11 @@ fn entry_name(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<ObjRef, Fa
     };
     let name = super::required_string_named_argument(interp, name, "index")?;
     let upper = interp.to_text(name).to_ascii_uppercase();
-    Ok(interp.text_built(upper))
+    // Rooted: the store it is looked up or put in may be built or grown
+    // first, which allocates.
+    let index = interp.text_built(upper);
+    interp.roots.activity_mut().push_temp(index);
+    Ok(index)
 }
 
 /// Every index the receiver's store holds, in the store's own order, or an
@@ -1854,7 +2099,10 @@ pub(super) fn hash_unknown(
         return Err(Raised::missing_method_argument(1).into());
     };
     let message = required_string_argument(interp, message, 1)?;
-    let mut name = interp.to_text(message).to_vec();
+    // Built in the result buffer, which the short index it becomes hands
+    // back, rather than in a fresh allocation per send.
+    let mut name = interp.take_result_buffer();
+    name.extend_from_slice(&interp.to_text(message));
     let Some(Some(arguments)) = args.get(1).copied() else {
         return Err(Raised::missing_method_argument(2).into());
     };
@@ -1870,7 +2118,9 @@ pub(super) fn hash_unknown(
     name.make_ascii_uppercase();
     if name.pop_if(|last| *last == b'=').is_none() {
         if store {
+            // Rooted for the write's reason below: a read may build the store.
             let index = interp.text_built(name);
+            interp.roots.activity_mut().push_temp(index);
             return store_entry_read(interp, receiver, index);
         }
         return Ok(Some(interp.hash_entry_read(receiver, &name)));
@@ -1883,7 +2133,11 @@ pub(super) fn hash_unknown(
         return Err(Loud::entry_method_without_a_value(&index).into());
     };
     if store {
+        // **Rooted**: a long name is an object of its own, and putting it in
+        // may build or grow the store, which allocates. The caller's frame
+        // pops it.
         let index = interp.text_built(index);
+        interp.roots.activity_mut().push_temp(index);
         return store_entry_write(interp, receiver, index, item);
     }
     interp.hash_entry_write(receiver, &index, item)?;

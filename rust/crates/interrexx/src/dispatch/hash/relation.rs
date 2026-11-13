@@ -3,7 +3,7 @@
 
 use super::{
     Arity, Cleared, Failure, Interp, Keys, NativeMethod, ObjRef, keys_of, native_hash_supplier,
-    not_this_task, owns, pairs, same_index, slot_at, store_of, walk,
+    not_this_task, owns, pairs, same_index, slot_at, store_of,
 };
 
 /// Every matching slot in chain order, paired with the store it belongs to.
@@ -170,7 +170,7 @@ fn native_relation_items(
     }
     let count = match args.first().copied().flatten() {
         Some(index) => slots_for(interp, receiver, index)?.1.len(),
-        None => walk(interp, receiver)?.len(),
+        None => super::count_in_store(interp, receiver)?,
     };
     Ok(Some(interp.counted(count)))
 }

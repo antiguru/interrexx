@@ -107,3 +107,8 @@ misses than ooRexx on every axis measured except L1i.
   the base's): hashing twice cost `startup` +0.8% instructions. The shared table is a copied
   linear-probing index instead, one hash per lookup. Likewise a `BySymbol` table split into two
   runs with a cold fallback cost `compound` +1.2%; one run with an offset costs +0.3%.
+* **Upper-casing a class name on the stack in `ClassRegistry::lookup`**: it removed the `String`
+  allocation and still cost 2.6% more instructions on `dirread`; the hot callers keep their
+  resolved classes against the ancestry stamp instead.
+* **Memoising `ClassRegistry::is_a`**: once the hash collections classify a class once per
+  ancestry stamp, `is_a` is at most 0.4% of any bench program (`pingmsg`).
