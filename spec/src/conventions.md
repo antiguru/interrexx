@@ -71,7 +71,8 @@ directly or is what `REQUEST` answers: the builtin works on its own
 characters, and no message is sent to it for that ([Deviation
 109](r:class.string.deviation.109)). A builtin that reads several such
 arguments reads them from left to right, after it has checked the number of
-its arguments. An argument that a builtin reads as a whole number or as a
+its arguments and before it checks any of them ([Deviation
+170](r:bif.index.call.convert.deviation.170)). An argument that a builtin reads as a whole number or as a
 number is read this way too, and the replacement must then be a number. A
 builtin whose page links [the native call rule](r:bif.index.call.native) has
 no fallback to `STRING`, as that rule says, and the same holds for the string

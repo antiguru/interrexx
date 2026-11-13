@@ -1283,3 +1283,16 @@ or `TIME` is a character that is no letter, and is refused like any other: the
 letter against the set of letters as a search of a C string does, which finds
 a 0 byte in every set: a 0 byte `option` with an `osep` raises `SYNTAX 40.904`
 and a 0 byte `informat` with an `isep` raises `SYNTAX 40.44`.
+
+## 170. A builtin converts every argument before it checks any
+
+A builtin whose page calls an argument a string converts each such argument
+that is an object other than a string, sending `STRING` (or `REQUEST` and
+`MAKESTRING`, as [the conversion rule](r:conv.string.object) says), from left
+to right, after it has checked the number of its arguments and before it
+checks any argument. A `STRING` method of a later argument therefore runs even
+when an earlier argument is in error, and the call raises the same error as in
+ooRexx, which converts an argument as it checks it and stops at the first one
+in error, so that the method of a later argument never runs. The difference
+shows only in what such a method does: counting, input or output, or raising a
+condition of its own.
