@@ -3670,6 +3670,13 @@ impl Interp {
         #[cfg(feature = "sharing")]
         self.heap.sharing_pause(true);
         crate::scheduler::Scheduler::stop_the_world(self);
+        // Before the mark, so this sweep frees what the classes let go of:
+        // released after it, a loop of defines would leave every copy it
+        // made live at each collection, and the watermark taken from the
+        // live count would double from one collection to the next.
+        if self.has_dropped_methods() {
+            self.release_dropped_methods();
+        }
         // Everything the interpreter holds outside `RootSet`, handed to the
         // collector as temporaries for the length of the sweep.
         let mut anchor: Vec<ObjRef> = Vec::new();
@@ -3731,9 +3738,6 @@ impl Interp {
         // would cost the whole class population to find the few that died.
         if !stats.freed_classes.is_empty() {
             self.prune_freed_classes(&stats.freed_classes);
-        }
-        if self.has_dropped_methods() {
-            self.release_dropped_methods();
         }
         // **Not raised for the stress mode**, which collects on every
         // allocation by definition and must not have its watermark moved
@@ -3918,12 +3922,17 @@ impl Interp {
         }
     }
 
-    /// Undoes every [`Interp::class_owns`] of `object` by `class`.
-    fn class_disowns(&mut self, class: ObjRef, object: ObjRef) {
+    /// Undoes every [`Interp::class_owns`] by `class` of each of `objects`,
+    /// in one pass over what `class` owns.
+    pub(crate) fn class_disowns_all(
+        &mut self,
+        class: ObjRef,
+        objects: &std::collections::HashSet<ObjRef>,
+    ) {
         if let Some(interrexx_core::Body::Class { owned }) =
             self.heap.get_mut(class).map(|held| &mut held.body)
         {
-            owned.retain(|held| *held != object);
+            owned.retain(|held| !objects.contains(held));
         }
     }
 

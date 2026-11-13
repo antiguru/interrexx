@@ -139,6 +139,13 @@ struct ClassDef {
     /// Built by [`ClassGraph::define_cloned_class`] and not yet given a
     /// superclass by [`ClassGraph::reparent`].
     cloned: bool,
+    /// For a class [`ClassGraph::define_cloned_class`] built, the class whose
+    /// instance behaviour its class behaviour copies, which
+    /// [`ClassGraph::rebuild_class_side`] copies again. Kept apart from
+    /// `owning_class`, which `~enhanced` repoints from the dummy subclass
+    /// the copy came from to the class it enhanced. Every other class has
+    /// its own id here.
+    cloned_from: ObjRef,
 }
 
 /// The class graph and its behaviour storage.
@@ -154,7 +161,8 @@ pub struct ClassGraph {
     /// alive.
     free_behaviours: Vec<BehaviourHandle>,
     /// The methods a `define`, `defineMethods` or `delete` took out of a
-    /// class's own instance dictionary since [`ClassGraph::take_unnamed_methods`],
+    /// class's own instance dictionary, a `define` with no method or with
+    /// `.nil` included, since [`ClassGraph::take_unnamed_methods`],
     /// each with that class: a method no dictionary names any more can be let
     /// go of. The image's classes record none.
     dropped: HashSet<(ObjRef, MethodId)>,
@@ -226,7 +234,8 @@ impl ClassGraph {
     /// A stamp that changes whenever anything a method lookup, a super-scope
     /// resolution or a class's identity can answer may have changed: every
     /// public mutator takes a new one, except the few that touch only the
-    /// uninit and abstract flags, the retirement counters and the
+    /// uninit and abstract flags, the dropped methods
+    /// ([`Self::take_unnamed_methods`], [`Self::drop_later`]) and the
     /// Rexx-defined mark. Unique across every graph in the process, so a
     /// per-site cache filled under one stamp is valid exactly while the graph
     /// still answers it.
@@ -306,6 +315,7 @@ impl ClassGraph {
                 is_abstract: false,
                 rexx_defined: false,
                 cloned: false,
+                cloned_from: id,
             },
         );
         if let Some(sup) = superclass {
@@ -351,6 +361,7 @@ impl ClassGraph {
                 is_abstract: false,
                 rexx_defined: false,
                 cloned: true,
+                cloned_from: receiver,
             },
         );
         self.inputs.touch(id);
@@ -430,6 +441,7 @@ impl ClassGraph {
         def.owning_class = metaclass;
         def.parent_has_uninit = parent_has_uninit;
         def.cloned = false;
+        def.cloned_from = id;
         self.classes
             .get_mut(&superclass)
             .unwrap()
@@ -1013,7 +1025,7 @@ impl ClassGraph {
             .filter(|&class| {
                 self.classes
                     .values()
-                    .any(|def| def.metaclass == class || (def.cloned && def.owning_class == class))
+                    .any(|def| def.metaclass == class || (def.cloned && def.cloned_from == class))
             })
             .collect();
         if merged.is_empty() {
@@ -1043,7 +1055,7 @@ impl ClassGraph {
         let def = &self.classes[&class];
         let handle = def.class_behaviour;
         if def.cloned {
-            let source = self.classes[&def.owning_class].instance_behaviour;
+            let source = self.classes[&def.cloned_from].instance_behaviour;
             let dict = self.behaviours[source.index()].dict.clone();
             let behaviour = &mut self.behaviours[handle.index()];
             behaviour.dict = dict;
@@ -1391,9 +1403,14 @@ impl ClassGraph {
         };
         out.extend(def.superclasses.iter().copied());
         out.extend(
-            [def.metaclass, def.base_class, def.owning_class]
-                .into_iter()
-                .filter(|&held| held != class),
+            [
+                def.metaclass,
+                def.base_class,
+                def.owning_class,
+                def.cloned_from,
+            ]
+            .into_iter()
+            .filter(|&held| held != class),
         );
     }
 

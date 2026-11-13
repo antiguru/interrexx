@@ -160,8 +160,8 @@ fn a_diamond_still_prefers_the_first_listed_mixin_and_keeps_the_common_ancestors
 }
 
 // ---------------------------------------------------------------------
-// Probe: define_visibility.rex / define_subclass_visibility.rex --
-// ~define with an instance already created.
+// ~define with an instance already created: the instance follows it
+// (`r[class.methods.deviation.110]`).
 // ---------------------------------------------------------------------
 
 /// `define` updates the class's instance behaviour in place, so an instance

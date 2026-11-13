@@ -554,7 +554,12 @@ impl Interp {
             return Some((Err(refused), pending));
         }
         pin_leave!(self);
+        let method = match &held {
+            HeldCall::Method(_, method) => Some(*method),
+            HeldCall::Routine(_) => None,
+        };
         self.activity.native_call = Some(Box::new(NativeInFlight {
+            method,
             call: Some(Box::new(OffBaton {
                 pool: self.opens_variable_pool(&held),
                 held,
@@ -1256,6 +1261,10 @@ pub(crate) struct NativeInFlight {
     /// The activity's park while the call runs, so that a park recorded by
     /// Rexx code a callback runs is told apart from it.
     park: Option<Box<super::NativePark>>,
+    /// The method the call runs, kept while [`NativeInFlight::call`] is
+    /// away on the thread that runs it: a release must not let it go
+    /// (`r[class.methods.running]`). `None` for a routine.
+    method: Option<super::MethodId>,
 }
 
 /// The part of a native call its run off the baton takes.
@@ -1287,6 +1296,11 @@ enum Stage {
 }
 
 impl NativeInFlight {
+    /// The method the call runs; `None` for a routine.
+    pub(crate) fn method(&self) -> Option<super::MethodId> {
+        self.method
+    }
+
     /// Records failed worker creation before the call leaves its driver.
     pub(crate) fn spawn_failed(&mut self, failure: Failure) {
         debug_assert!(self.awaits_exit());

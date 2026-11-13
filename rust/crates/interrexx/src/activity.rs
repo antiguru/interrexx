@@ -366,6 +366,9 @@ pub(crate) struct Activity {
     /// A send to a guarded method other than a Rexx body, run once its
     /// guard lock is granted.
     pub(crate) guarded_send: Option<Box<crate::dispatch::GuardedSend>>,
+    /// The methods other than Rexx bodies and attributes that are running on
+    /// this activity's Rust stack, innermost last.
+    pub(crate) running_methods: Vec<interrexx_classes::MethodId>,
     /// A `GUARD` instruction parked for its lock or its `WHEN`.
     pub(crate) guard_exec: Option<Box<crate::guards::GuardExec>>,
     /// Whether a watched variable changed since the running `GUARD WHEN` last
@@ -624,6 +627,7 @@ impl Activity {
             failed_sends: Vec::new(),
             guard_waits: Vec::new(),
             guarded_send: None,
+            running_methods: Vec::new(),
             guard_exec: None,
             guard_posted: false,
             when_parked: false,
@@ -679,6 +683,15 @@ impl Activity {
                 .chain(self.suspended.iter().map(Box::as_ref))
                 .map(|activation| (activation.program_id, activation.body)),
         );
+    }
+
+    /// Appends every method other than a Rexx body that runs on this
+    /// activity or waits on it to run: one on its Rust stack, a native call
+    /// away on another thread, and a send parked for its guard lock.
+    pub(crate) fn running_methods(&self, out: &mut Vec<interrexx_classes::MethodId>) {
+        out.extend(self.running_methods.iter().copied());
+        out.extend(self.native_call.as_ref().and_then(|call| call.method()));
+        out.extend(self.guarded_send.as_ref().map(|send| send.method()));
     }
 
     /// Appends every `ObjRef` the activity must hand the collector to `out`,
@@ -801,6 +814,7 @@ impl Activity {
             // Each key's object is its waiting activation's receiver.
             guard_waits: _,
             guarded_send,
+            running_methods: _,
             guard_exec,
             guard_posted: _,
             when_parked: _,

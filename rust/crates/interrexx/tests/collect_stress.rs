@@ -1931,6 +1931,65 @@ fn a_dropped_method_copy_keeps_running() {
     );
 }
 
+/// A send parked for the guard lock of an external method keeps that method:
+/// the class deletes it while the send waits, collections run, and the send
+/// then runs it and blames its failure on it (`r[class.methods.running]`).
+/// Without the parked send listed as running, the copy `define` installed is
+/// let go of and swept while the send waits, and the blame finds its rows
+/// gone. The program forces two collections after the `delete`, so it shows
+/// this outside the stress mode as well. Measured, oracle rc 0 in 3 of 3 runs.
+#[test]
+fn a_send_parked_for_its_guard_keeps_its_method() {
+    assert_stress_prints(
+        "<parked-send-keeps-method>",
+        concat!(
+            ".k~define('SEP', .k~method('SEPSRC'))\n",
+            "o = .k~new\n",
+            "say o~sep\n",
+            "r = o~start('hold')\n",
+            "o~waitHeld\n",
+            "m = o~start('SEP', 1)\n",
+            "call syssleep 0.2\n",
+            ".k~delete('SEP')\n",
+            "call filler\n",
+            "x = gc('force') gc('force')\n",
+            "o~release\n",
+            "say r~result\n",
+            "signal on syntax\n",
+            "say m~result\n",
+            "exit\n",
+            "syntax:\n",
+            "  say condition('o')~code\n",
+            "  exit\n",
+            "filler: procedure\n",
+            "  do i = 1 to 3\n",
+            "    z = copies('x', 1000)\n",
+            "  end\n",
+            "  return\n",
+            "::class k\n",
+            "::method init\n",
+            "  expose held released\n",
+            "  held = 0\n",
+            "  released = 0\n",
+            "::method sepsrc external 'LIBRARY REXX file_separator'\n",
+            "::method hold\n",
+            "  expose held released\n",
+            "  held = 1\n",
+            "  do while released = 0\n",
+            "    call syssleep 0.01\n",
+            "  end\n",
+            "  return 'held'\n",
+            "::method waitHeld unguarded\n",
+            "  expose held\n",
+            "  guard off when held = 1\n",
+            "::method release unguarded\n",
+            "  expose released\n",
+            "  released = 1\n",
+        ),
+        "/\nheld\n88.922\n",
+    );
+}
+
 /// The `Method` object `.context~executable` builds for a body its class no
 /// longer reaches by name owns no identity: the body runs on after the
 /// `define` that replaced it (`r[class.methods.running]`), and the next send
