@@ -2445,7 +2445,9 @@ impl Interp {
     /// current_clause_line` at the call site (`lib.rs`'s own doc comment on
     /// that field has why it is a field and not a parameter here).
     fn set_sigl(&mut self, line: usize) {
-        let value = self.counted_text(line);
+        // A tagged integer, which renders its digits whatever `NUMERIC
+        // DIGITS` is, as the text of them does.
+        let value = self.counted(line);
         // Not through `assign_by_name`: that reads the name's shape and then
         // hashes it, and `SIGL` is a simple name whose slot the plan already
         // holds. The fallback covers a plan with no name map at all.
