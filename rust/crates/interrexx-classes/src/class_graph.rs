@@ -754,6 +754,7 @@ impl ClassGraph {
     /// given twice, a name `class` already defines, `UNINIT` -- the calls are made one
     /// by one.
     pub fn define_all(&mut self, class: ObjRef, methods: &[(String, MethodId)]) {
+        self.bump_epoch();
         let def = &self.classes[&class];
         let mut names: Vec<String> = methods
             .iter()

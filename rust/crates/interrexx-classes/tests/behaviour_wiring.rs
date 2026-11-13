@@ -920,6 +920,11 @@ fn every_dispatch_visible_mutation_changes_the_epoch() {
     changed(&g, "define");
     g.define_methods(base, &[("B".to_owned(), Some(MethodId(2)))]);
     changed(&g, "define_methods");
+    g.define_all(
+        base,
+        &[("F".to_owned(), MethodId(6)), ("G".to_owned(), MethodId(7))],
+    );
+    changed(&g, "define_all");
     g.hide(base, "B");
     changed(&g, "hide");
     g.withdraw(base, "B");
