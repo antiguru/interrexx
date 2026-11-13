@@ -133,6 +133,7 @@ lang/condition_traps.rex
 lang/push_queue.rex
 lang/raise_array_substitution.rex
 lang/loop_retest_blame.rex
+lang/loop_condition_compiled.rex
 lang/call_on_trap_rearms.rex
 lang/parse_triggers.rex
 lang/parse_sources.rex

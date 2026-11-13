@@ -1,0 +1,80 @@
+/* WHILE and UNTIL conditions built from reads, literals and operators, which
+   the header runs as compiled ops: their order against TO, BY and FOR, the
+   control variable after the loop, ITERATE and LEAVE, stems, nested loops,
+   INTERPRET, an unset variable read without and with NOVALUE trapped, and a
+   condition that is not a logical value. */
+n = 0
+do i = 1 to 10 by 2 for 4 while i < 6
+  n = n + 1; say 'pass' i n
+end
+say 'after' i n
+do j = 5 to 1 by -1 until j < 3
+  say 'j' j
+end
+say 'after j' j
+k = 0
+do while k < 3
+  k = k + 1
+  if k = 2 then iterate
+  say 'k' k
+end
+do until k = 0
+  k = k - 1
+  if k = 1 then leave
+end
+say 'k after' k
+s.1 = 3; s.2 = 0; x = 1
+do while s.x \= 0
+  say 'stem' x s.x
+  x = x + 1
+end
+a = 'p q r'
+do while a <> ''
+  parse var a w a
+  say '['w']'
+end
+do m = 1 to 3 while \(m > 2)
+  say 'not' m
+end
+z = 0
+do forever while z < 2
+  z = z + 1
+end
+say 'z' z
+do c = 1 to 3 while .true
+  nop
+end
+say 'c' c
+interpret 'q = 0; do while q < 2; q = q + 1; end; say "interp" q'
+do outer = 1 to 2
+  inner = 0
+  do while inner < outer
+    inner = inner + 1
+  end
+  say 'nest' outer inner
+end
+count = 0
+do while nosuch \= 'NOSUCH'
+  say 'never'
+end
+do until nosuch2 = 'NOSUCH2'
+  count = count + 1
+end
+say 'until' count
+signal on syntax
+y = 0
+do until y + 5
+  y = y + 1
+end
+say 'not reached'
+exit
+syntax:
+say 'SYNTAX' rc condition('c') y
+signal on novalue
+do while undefinedvar = 1
+  say 'never'
+end
+say 'not reached'
+exit
+novalue:
+say 'NOVALUE' condition('d')
