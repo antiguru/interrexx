@@ -417,7 +417,17 @@ fn probe(out: &mut String, sources: &Sources, row: &Row) -> Result<(), String> {
         .probes
         .join(format!("{}.{}.rex", row.major, row.sub));
     if !file.is_file() {
-        let _ = writeln!(out, "No probe program for this code.\n");
+        match unreachable_row(&sources.probes, row)? {
+            Some((class, reason)) => {
+                let _ = writeln!(
+                    out,
+                    "No probe program: no program run on interrexx raises this code ({class}: {reason}).\n"
+                );
+            }
+            None => {
+                let _ = writeln!(out, "No probe program for this code.\n");
+            }
+        }
         return Ok(());
     }
     let program = read(&file)?;
@@ -438,6 +448,44 @@ fn probe(out: &mut String, sources: &Sources, row: &Row) -> Result<(), String> {
         shown.trim_end()
     );
     Ok(())
+}
+
+/// The file in the probe directory that lists the codes no program reaches.
+pub const UNREACHABLE: &str = "unreachable.tsv";
+
+/// The rows of the list of codes no program reaches, as (code, class,
+/// reason). A line that is empty or starts with `#` is a comment. A missing
+/// file is an empty list; a row that does not have three fields is an error.
+pub fn unreachable(probes: &Path) -> Result<Vec<(String, String, String)>, String> {
+    let path = probes.join(UNREACHABLE);
+    if !path.is_file() {
+        return Ok(Vec::new());
+    }
+    let mut rows = Vec::new();
+    for (n, line) in read(&path)?.lines().enumerate() {
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+        let fields: Vec<&str> = line.split('\t').collect();
+        let [code, class, reason] = fields[..] else {
+            return Err(format!(
+                "{}:{}: a row is code, class and reason",
+                path.display(),
+                n + 1
+            ));
+        };
+        rows.push((code.to_string(), class.to_string(), reason.to_string()));
+    }
+    Ok(rows)
+}
+
+/// The class and reason the list gives for `row`'s code, if it lists it.
+fn unreachable_row(probes: &Path, row: &Row) -> Result<Option<(String, String)>, String> {
+    let code = format!("{}.{}", row.major, row.sub);
+    Ok(unreachable(probes)?
+        .into_iter()
+        .find(|(c, _, _)| *c == code)
+        .map(|(_, class, reason)| (class, reason)))
 }
 
 /// Runs `program` on `rexx` in an empty scratch directory with no input,

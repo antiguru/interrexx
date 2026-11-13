@@ -1,0 +1,167 @@
+# Codes of errors.tsv that no program run on interrexx raises, one row per code.
+# code<TAB>class<TAB>reason. A code with a probe program is not listed.
+# The class is one of: launcher, ansi, deviation, unreached, native, environment,
+# message-only, utility, platform, no-site. A `no-site` row asserts that the
+# interpreter sources have no raise site for the code; a test keeps that true.
+3.901	launcher	reported by the rexx and rexxc commands before any program runs (spec rules env.invocation.notfound and env.invocation.rexxc.output); a program that calls a missing file raises 43.1 or 43.901 instead
+3.902	launcher	reported by the rexx and rexxc commands before any program runs (spec rules env.invocation.notfound and env.invocation.rexxc.output); a program that calls a missing file raises 43.1 or 43.901 instead
+10.5	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+10.6	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+17.901	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+19.1	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+19.6	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+19.7	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+19.911	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+19.912	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+19.922	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+20.913	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+21.902	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+21.912	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+22.1	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+22.901	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+27.903	unreached	the raise site follows an earlier check that catches every input; its source comment says so, and no program reaches it
+31.1	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+33.2	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+33.901	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+33.902	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+33.903	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+34.5	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+35.902	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+35.903	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+35.908	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+35.909	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+35.919	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+35.921	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+37.1	unreached	the raise site follows an earlier check that catches every input; its source comment says so, and no program reaches it
+40.11	ansi	raised by the ANSI draft only; interrexx raises 93.943 for a string that is not a number (spec builtins/index.md)
+40.22	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+40.24	ansi	raised by the ANSI draft only; interrexx raises a 93.9xx code for an invalid binary or hexadecimal string (spec builtins/index.md)
+40.25	ansi	raised by the ANSI draft only; interrexx raises a 93.9xx code for an invalid binary or hexadecimal string (spec builtins/index.md)
+40.35	ansi	raised by the ANSI draft only; interrexx raises 93.936 for C2D and 93.935 for X2D (spec builtins/index.md)
+40.901	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+40.902	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+40.905	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+40.912	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+40.913	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+40.916	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+40.917	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+40.918	native	raised when a compiled extension declares a method or routine signature the interpreter refuses; needs a compiled extension
+41.3	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+41.4	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+41.5	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+41.6	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+41.7	ansi	raised by the ANSI draft only; interrexx raises 41.1 for the operand and 42.902 for an underflow (spec numbers/limits.md)
+41.901	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+42.2	ansi	raised by the ANSI draft only; interrexx raises 41.1 for the operand and 42.902 for an underflow (spec numbers/limits.md)
+45.1	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+49.1	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+49.2	deviation	interrexx raises 25.927 instead (spec deviations.md, TO or BY after the FOR of DO OVER or DO WITH)
+88.906	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+88.908	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+88.915	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+88.917	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+88.919	native	raised for a pointer or stem argument of a compiled extension that is not one; needs a compiled extension
+88.920	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+88.932	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+88.933	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+89.2	unreached	the raise site is reached only for a token that is not a symbol, and the clause reads symbols there; no program reaches it
+90.997	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+92.901	platform	OLE automation, which interrexx does not provide on Unix
+92.902	platform	OLE automation, which interrexx does not provide on Unix
+92.903	platform	OLE automation, which interrexx does not provide on Unix
+92.904	platform	OLE automation, which interrexx does not provide on Unix
+92.905	platform	OLE automation, which interrexx does not provide on Unix
+92.906	platform	OLE automation, which interrexx does not provide on Unix
+92.907	platform	OLE automation, which interrexx does not provide on Unix
+92.908	platform	OLE automation, which interrexx does not provide on Unix
+92.909	platform	OLE automation, which interrexx does not provide on Unix
+92.910	platform	OLE automation, which interrexx does not provide on Unix
+92.911	platform	OLE automation, which interrexx does not provide on Unix
+92.912	platform	OLE automation, which interrexx does not provide on Unix
+93.908	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+93.909	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+93.911	native	raised by a native API callback only
+93.912	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+93.913	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+93.917	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+93.919	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+93.921	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+93.944	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+93.945	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+93.947	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+93.956	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+93.968	native	raised when a compiled extension declares a method or routine signature the interpreter refuses; needs a compiled extension
+93.969	native	raised for a pointer or stem argument of a compiled extension that is not one; needs a compiled extension
+93.971	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+93.975	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+93.978	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+98.902	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+98.904	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+98.906	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+98.907	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+98.914	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+98.916	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+98.917	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+98.919	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+98.921	native	needs a registered native subcommand handler that does not redirect
+98.923	environment	raised only when the operating system refuses to create or drive the pipe of a redirection
+98.938	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+98.951	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+98.978	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+98.979	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+98.980	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+98.982	native	needs a compiled extension library whose entry asks for a newer interpreter (spec native/loading.md)
+98.983	native	raised by the native API when a call context is used from another activity (spec deviations.md)
+99.904	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+99.909	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+99.918	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+99.921	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+99.922	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+99.926	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+99.928	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+99.929	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+99.941	no-site	interrexx has no raise site for this code; only RAISE SYNTAX produces it
+101.1	message-only	a fragment of the error report or the debug output, never the code of a condition
+101.2	message-only	a fragment of the error report or the debug output, never the code of a condition
+101.3	message-only	a fragment of the error report or the debug output, never the code of a condition
+101.4	message-only	the prefix of each debug error line, never the code of a condition
+101.5	message-only	the debug notice, never the code of a condition
+101.6	message-only	a fragment of the error report or the debug output, never the code of a condition
+101.7	message-only	a fragment of the error report or the debug output, never the code of a condition
+101.8	message-only	a fragment of the error report or the debug output, never the code of a condition
+101.9	message-only	a fragment of the error report or the debug output, never the code of a condition
+101.10	message-only	a fragment of the error report or the debug output, never the code of a condition
+101.11	message-only	a fragment of the error report or the debug output, never the code of a condition
+101.12	message-only	a fragment of the error report or the debug output, never the code of a condition
+101.13	message-only	a fragment of the error report or the debug output, never the code of a condition
+101.14	message-only	a fragment of the error report or the debug output, never the code of a condition
+101.15	message-only	a fragment of the error report or the debug output, never the code of a condition
+101.16	message-only	a fragment of the error report or the debug output, never the code of a condition
+101.17	message-only	a fragment of the error report or the debug output, never the code of a condition
+101.18	message-only	a fragment of the error report or the debug output, never the code of a condition
+101.19	message-only	a fragment of the error report or the debug output, never the code of a condition
+101.20	message-only	a fragment of the error report or the debug output, never the code of a condition
+101.21	message-only	a fragment of the error report or the debug output, never the code of a condition
+101.22	message-only	a fragment of the error report or the debug output, never the code of a condition
+101.23	message-only	a fragment of the error report or the debug output, never the code of a condition
+101.24	message-only	a fragment of the error report or the debug output, never the code of a condition
+101.25	message-only	a fragment of the error report or the debug output, never the code of a condition
+101.26	message-only	a fragment of the error report or the debug output, never the code of a condition
+101.0	message-only	a fragment of the error report or the debug output, never the code of a condition
+999.1	utility	printed by rxqueue, rxsubcom or rexxc, never the code of a condition
+999.2	utility	printed by rxqueue, rxsubcom or rexxc, never the code of a condition
+999.3	utility	printed by rxqueue, rxsubcom or rexxc, never the code of a condition
+999.4	utility	printed by rxqueue, rxsubcom or rexxc, never the code of a condition
+999.5	utility	printed by rxqueue, rxsubcom or rexxc, never the code of a condition
+999.6	utility	printed by rxqueue, rxsubcom or rexxc, never the code of a condition
+999.7	utility	printed by rxqueue, rxsubcom or rexxc, never the code of a condition
+999.8	utility	printed by rxqueue, rxsubcom or rexxc, never the code of a condition
+999.10	utility	printed by rxqueue, rxsubcom or rexxc, never the code of a condition
+999.11	utility	printed by rxqueue, rxsubcom or rexxc, never the code of a condition
+999.12	utility	printed by rxqueue, rxsubcom or rexxc, never the code of a condition
+999.13	utility	printed by rxqueue, rxsubcom or rexxc, never the code of a condition
+999.14	utility	printed by rxqueue, rxsubcom or rexxc, never the code of a condition
+999.15	utility	printed by rxqueue, rxsubcom or rexxc, never the code of a condition
+999.16	utility	printed by rxqueue, rxsubcom or rexxc, never the code of a condition
+999.17	utility	printed by rxqueue, rxsubcom or rexxc, never the code of a condition
+999.0	utility	printed by rxqueue, rxsubcom or rexxc, never the code of a condition
