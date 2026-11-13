@@ -1834,13 +1834,192 @@ impl Interp {
         flat_header_outcome(header, resume)
     }
 
-    /// Decides whether one more candidate iteration of `state` should run,
-    /// consuming whatever budget (`FOR`, a bare count) applies and binding
+    /// The passes [`Interp::loop_advance`] answers without reaching
+    /// [`Interp::loop_advance_general`], or `None` for every other:
+    /// `FOREVER`, a bare count, and the ordinary counted pass of a controlled
+    /// loop.
+    #[inline(always)]
+    fn loop_advance_quick(&mut self, code: &Code<'_>, state: &mut LoopState) -> Option<bool> {
+        match state {
+            LoopState::Forever => Some(true),
+            LoopState::Count { remaining } => {
+                if *remaining == 0 {
+                    return Some(false);
+                }
+                *remaining -= 1;
+                Some(true)
+            }
+            LoopState::Controlled {
+                control,
+                at,
+                current,
+                to,
+                by,
+                for_remaining,
+                cached_digits,
+                to_int,
+                by_int,
+                to_scaled,
+                by_scaled,
+                shape,
+                stepped,
+                ..
+            } => {
+                let digits = self.activation().settings.digits();
+                // **The ordinary counted pass, answered without reaching any
+                // of the code below.** Every branch of the arm from here on
+                // exists for a shape this test excludes: a control variable
+                // that is not a plain name, a value or a bound too wide for
+                // the tag, a `FOR` budget, a `TRACE` that has to render the
+                // value, or the first pass, whose value the header already
+                // computed. What is left is read the slot, add, write the
+                // slot, compare -- and, because both handles are tagged
+                // integers rather than heap objects, no temporaries frame
+                // for the collector to walk.
+                if *stepped
+                    && *shape == NameShape::Simple
+                    && *cached_digits == digits
+                    && for_remaining.is_none()
+                    && let Some(slot) = *at
+                    && let Some(step) = *by_int
+                    && let Some(bound) = *to_int
+                    && let ControlValue::Small(running) = current
+                {
+                    let mode = self.trace_mode();
+                    // `FUZZ` sits here rather than in the conjunction above so
+                    // a pass that fails an earlier test never reads it: the
+                    // arm below is the only one that answers the bound test
+                    // without consulting it, and the general path reads it once
+                    // on its own account.
+                    if !mode.results
+                        && !mode.intermediates
+                        && self.activation().settings.fuzz() == 0
+                    {
+                        let frame = self.activation().frame;
+                        // The read is `Interp::variable` rather than
+                        // `read_at`: the shape is `Simple` and the slot is
+                        // the loop's own, so the two agree, and an
+                        // uninitialised slot answers `None` here instead of
+                        // building a derived name -- which is one of the
+                        // shapes this path declines, since it goes on to
+                        // fail 41.1 below.
+                        if let Some(previous) = self.variable(frame, slot)
+                            && let Decoded::SmallInt(value) = previous.decode()
+                            && within_digits(value, digits)
+                            && let Some(sum) = value.checked_add(step)
+                            && within_digits(sum, digits)
+                            && let Some(handle) = exact_small_int(sum, digits)
+                        {
+                            debug_assert_eq!(
+                                *shape,
+                                shape_of(code.symbols.name(*control).as_bytes()),
+                                "the loop's cached control-variable shape is not the one its name gives"
+                            );
+                            debug_assert_eq!(
+                                *to_int,
+                                to.as_ref().and_then(|bound| bound.plain_integer(digits)),
+                                "the loop's cached TO disagrees with DIGITS {digits}"
+                            );
+                            debug_assert_eq!(
+                                *by_int,
+                                by.plain_integer(digits),
+                                "the loop's cached BY disagrees with DIGITS {digits}"
+                            );
+                            // In place: the arm is known, so there is no old
+                            // value to drop.
+                            *running = sum;
+                            self.set_variable(frame, slot, handle);
+                            return Some(if step < 0 { sum >= bound } else { sum <= bound });
+                        }
+                    }
+                }
+                // **The same pass for control values in `Scaled` form**, the
+                // decimal steps `Number::plain_integer` refuses (`do j = 1.1
+                // to 2.2 by 1.1`).
+                if *stepped
+                    && *shape == NameShape::Simple
+                    && *cached_digits == digits
+                    && for_remaining.is_none()
+                    && let Some(slot) = *at
+                    && let Some(bound) = to.as_ref()
+                {
+                    let mode = self.trace_mode();
+                    if !mode.results
+                        && !mode.intermediates
+                        && self.activation().settings.fuzz() == 0
+                    {
+                        let frame = self.activation().frame;
+                        // **The step, the bound test and the rendering on
+                        // machine integers**, while the variable still holds
+                        // what the last pass bound and each operation is one
+                        // `Scaled` answers exactly. Any of them declining
+                        // sends the pass down the `Number` route below.
+                        if let Some(previous) = self.variable(frame, slot)
+                            && let ControlValue::Scaled { value, handle } = current
+                            && previous == *handle
+                            && let Some(step) = *by_scaled
+                            && let Some(limit) = *to_scaled
+                            && let Some(sum) = value.add(step, digits)
+                            && let Some(order) = sum.order(limit, digits)
+                            && let Some(next) = crate::value::scaled_handle(sum, digits)
+                        {
+                            debug_assert_eq!(
+                                Ok(sum.to_number()),
+                                value.to_number().add(by, digits),
+                                "a scaled step disagrees with the addition"
+                            );
+                            debug_assert_eq!(
+                                Ok(order != std::cmp::Ordering::Greater),
+                                numeric_less(bound, &sum.to_number(), digits, 0).map(|past| !past),
+                                "a scaled bound test disagrees with the comparison"
+                            );
+                            self.set_variable(frame, slot, next);
+                            *current = ControlValue::Scaled {
+                                value: sum,
+                                handle: next,
+                            };
+                            return Some(if step.is_negative() {
+                                order != std::cmp::Ordering::Less
+                            } else {
+                                order != std::cmp::Ordering::Greater
+                            });
+                        }
+                    }
+                }
+                None
+            }
+            _ => None,
+        }
+    }
+
+    /// Decides whether one more candidate iteration of `state` should run:
+    /// [`Interp::loop_advance_quick`]'s answer, or
+    /// [`Interp::loop_advance_general`]'s for a pass it does not answer.
+    /// **Split so that the ordinary pass does not pay for the general one's
+    /// frame**: one function holding both saved its registers and reserved
+    /// a frame sized for the general arms on every call, which was a large
+    /// share of what an ordinary counted pass cost.
+    fn loop_advance(
+        &mut self,
+        code: &Code<'_>,
+        state: &mut LoopState,
+        do_indent: usize,
+        loop_indent: usize,
+    ) -> Result<bool, Failure> {
+        match self.loop_advance_quick(code, state) {
+            Some(advanced) => Ok(advanced),
+            None => self.loop_advance_general(code, state, do_indent, loop_indent),
+        }
+    }
+
+    /// [`Interp::loop_advance`] for a pass [`Interp::loop_advance_quick`]
+    /// did not answer, consuming whatever budget (`FOR`, a bare count) applies and binding
     /// a control variable **before** the decision is answered, not after --
     /// measured, `do i = 5 to 3 / say never / end / say i` prints `5`: the
     /// control variable is bound to its own value even for a loop that ends
     /// up running zero iterations.
-    fn loop_advance(
+    #[inline(never)]
+    fn loop_advance_general(
         &mut self,
         code: &Code<'_>,
         state: &mut LoopState,
@@ -1906,7 +2085,7 @@ impl Interp {
                 to_int,
                 by_int,
                 to_scaled,
-                by_scaled,
+                by_scaled: _,
                 shape,
                 stepped,
             } => {
@@ -1923,73 +2102,6 @@ impl Interp {
                 //   >=>     II <= "2"
                 // ```
                 let digits = self.activation().settings.digits();
-                // **The ordinary counted pass, answered without reaching any
-                // of the code below.** Every branch of the arm from here on
-                // exists for a shape this test excludes: a control variable
-                // that is not a plain name, a value or a bound too wide for
-                // the tag, a `FOR` budget, a `TRACE` that has to render the
-                // value, or the first pass, whose value the header already
-                // computed. What is left is read the slot, add, write the
-                // slot, compare -- and, because both handles are tagged
-                // integers rather than heap objects, no temporaries frame
-                // for the collector to walk.
-                if *stepped
-                    && *shape == NameShape::Simple
-                    && *cached_digits == digits
-                    && for_remaining.is_none()
-                    && let Some(slot) = *at
-                    && let Some(step) = *by_int
-                    && let Some(bound) = *to_int
-                    && let ControlValue::Small(running) = current
-                {
-                    let mode = self.trace_mode();
-                    // `FUZZ` sits here rather than in the conjunction above so
-                    // a pass that fails an earlier test never reads it: the
-                    // arm below is the only one that answers the bound test
-                    // without consulting it, and the general path reads it once
-                    // on its own account.
-                    if !mode.results
-                        && !mode.intermediates
-                        && self.activation().settings.fuzz() == 0
-                    {
-                        let frame = self.activation().frame;
-                        // The read is `Interp::variable` rather than
-                        // `read_at`: the shape is `Simple` and the slot is
-                        // the loop's own, so the two agree, and an
-                        // uninitialised slot answers `None` here instead of
-                        // building a derived name -- which is one of the
-                        // shapes this path declines, since it goes on to
-                        // fail 41.1 below.
-                        if let Some(previous) = self.variable(frame, slot)
-                            && let Decoded::SmallInt(value) = previous.decode()
-                            && within_digits(value, digits)
-                            && let Some(sum) = value.checked_add(step)
-                            && within_digits(sum, digits)
-                            && let Some(handle) = exact_small_int(sum, digits)
-                        {
-                            debug_assert_eq!(
-                                *shape,
-                                shape_of(code.symbols.name(*control).as_bytes()),
-                                "the loop's cached control-variable shape is not the one its name gives"
-                            );
-                            debug_assert_eq!(
-                                *to_int,
-                                to.as_ref().and_then(|bound| bound.plain_integer(digits)),
-                                "the loop's cached TO disagrees with DIGITS {digits}"
-                            );
-                            debug_assert_eq!(
-                                *by_int,
-                                by.plain_integer(digits),
-                                "the loop's cached BY disagrees with DIGITS {digits}"
-                            );
-                            // In place: the arm is known, so there is no old
-                            // value to drop.
-                            *running = sum;
-                            self.set_variable(frame, slot, handle);
-                            return Ok(if step < 0 { sum >= bound } else { sum <= bound });
-                        }
-                    }
-                }
                 // **The same shortcut for the control values the arm above
                 // cannot take.** `Number::plain_integer` opens by rejecting a
                 // negative exponent, so a bound written `1.0` is refused as
@@ -2011,41 +2123,6 @@ impl Interp {
                     let fuzz = self.activation().settings.fuzz();
                     if !mode.results && !mode.intermediates && fuzz == 0 {
                         let frame = self.activation().frame;
-                        // **The step, the bound test and the rendering on
-                        // machine integers**, while the variable still holds
-                        // what the last pass bound and each operation is one
-                        // `Scaled` answers exactly. Any of them declining
-                        // sends the pass down the `Number` route below.
-                        if let Some(previous) = self.variable(frame, slot)
-                            && let ControlValue::Scaled { value, handle } = current
-                            && previous == *handle
-                            && let Some(step) = *by_scaled
-                            && let Some(limit) = *to_scaled
-                            && let Some(sum) = value.add(step, digits)
-                            && let Some(order) = sum.order(limit, digits)
-                            && let Some(next) = crate::value::scaled_handle(sum, digits)
-                        {
-                            debug_assert_eq!(
-                                Ok(sum.to_number()),
-                                value.to_number().add(by, digits),
-                                "a scaled step disagrees with the addition"
-                            );
-                            debug_assert_eq!(
-                                Ok(order != std::cmp::Ordering::Greater),
-                                numeric_less(bound, &sum.to_number(), digits, 0).map(|past| !past),
-                                "a scaled bound test disagrees with the comparison"
-                            );
-                            self.set_variable(frame, slot, next);
-                            *current = ControlValue::Scaled {
-                                value: sum,
-                                handle: next,
-                            };
-                            return Ok(if step.is_negative() {
-                                order != std::cmp::Ordering::Less
-                            } else {
-                                order != std::cmp::Ordering::Greater
-                            });
-                        }
                         if let Some(previous) = self.variable(frame, slot)
                             && matches!(previous.decode(), Decoded::Heap { .. } | Decoded::Text(_))
                             && let Some(sum) = self.controlled_step_wide(previous, by, digits)?
