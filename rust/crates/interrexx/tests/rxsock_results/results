@@ -342,6 +342,23 @@ unconnected -1 ENOTCONN
 0 0 0 0 0 0
 [stderr]
 
+# A receive on a blocking stream socket that is listening does not wait for
+# a connection: it fails at once with ENOTCONN, as on one never bound.
+program
+srv = SockSocket("AF_INET", "SOCK_STREAM", 0)
+a.family = "AF_INET"; a.port = 0; a.addr = "127.0.0.1"
+call SockBind srv, "a."
+call SockListen srv, 5
+say SockRecv(srv, "d", 10) errno
+say SockRecvFrom(srv, "d", 10, 0, "f.") errno
+::requires 'rxsock' LIBRARY
+----
+rc 0
+[stdout]
+-1 ENOTCONN
+-1 ENOTCONN
+[stderr]
+
 # The stream data path: NULs kept, MSG_PEEK, FIONREAD into a variable,
 # a compound variable as the target, FIONBIO's EWOULDBLOCK, end of file
 # after a shutdown, EPIPE without dying, and a negative length.
