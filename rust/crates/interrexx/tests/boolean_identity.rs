@@ -17,15 +17,17 @@
 //! oracle (`REXX_ORACLE_ROOT`), each with an `XDG_RUNTIME_DIR` of its own; the
 //! `rxapi` daemons it starts are left running and are the recorder's to stop.
 
+mod support;
+
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
+
+use support::rexx_service;
 
 const CASES: &str = "tests/boolean_identity";
 
 fn scratch() -> PathBuf {
-    let dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join("boolean_identity");
-    std::fs::create_dir_all(&dir).expect("a scratch directory");
-    dir
+    rexx_service::scratch("boolean_identity")
 }
 
 /// The program an `eval` case runs.
@@ -60,25 +62,16 @@ fn run(name: usize, program: &str, oracle: bool) -> (i32, String, String) {
         let package = Path::new(env!("CARGO_MANIFEST_DIR")).join("packages/rxregexp.cls");
         std::fs::copy(package, dir.join("rxregexp.cls")).expect("the package");
     }
-    let api = root.join(format!("api{name}"));
-    let _ = std::fs::remove_dir_all(&api);
-    std::fs::create_dir_all(&api).expect("a service directory");
-    // The service refuses a directory that others can use, and says so.
-    std::fs::set_permissions(&api, std::os::unix::fs::PermissionsExt::from_mode(0o700))
-        .expect("a private service directory");
-    let mut command;
-    if oracle {
-        let oracle_root = Path::new(env!("REXX_ORACLE_ROOT"));
-        command = Command::new(oracle_root.join("bin/rexx"));
-        command
-            .env("LD_LIBRARY_PATH", oracle_root.join("lib"))
-            .env("XDG_RUNTIME_DIR", &api);
-    } else {
-        command = Command::new(env!("CARGO_BIN_EXE_rexx"));
-        command
-            .env("REXX_API_DIR", &api)
-            .env_remove("LD_LIBRARY_PATH");
-    }
+    let api = rexx_service::service_dir(&root, name);
+    let mut command = rexx_service::with_service(
+        Command::new(if oracle {
+            rexx_service::oracle_rexx()
+        } else {
+            rexx_service::own_rexx().to_path_buf()
+        }),
+        oracle,
+        &api,
+    );
     let output = command
         .arg("probe.rex")
         .current_dir(&dir)
@@ -86,11 +79,7 @@ fn run(name: usize, program: &str, oracle: bool) -> (i32, String, String) {
         .output()
         .expect("rexx runs");
     if !oracle {
-        let _ = Command::new(Path::new(env!("CARGO_BIN_EXE_rexx")).with_file_name("rxapi"))
-            .arg("--stop")
-            .env("REXX_API_DIR", &api)
-            .output();
-        let _ = std::fs::remove_dir_all(&api);
+        rexx_service::stop_own_service(&api);
     }
     let _ = std::fs::remove_dir_all(&dir);
     (

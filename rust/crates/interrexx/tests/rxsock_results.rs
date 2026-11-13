@@ -27,17 +27,19 @@
 //! oracle's `rxapi` daemons it starts are left running and are the
 //! recorder's to stop.
 
-use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+mod support;
+
+use std::path::PathBuf;
+use std::process::Stdio;
+
+use support::rexx_service;
 
 const CASES: &str = "tests/rxsock_results";
 
 /// The scratch directory every run of this test binary works under: short,
 /// because the API service's socket lives in it.
 fn scratch() -> PathBuf {
-    let dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join("rxsock");
-    std::fs::create_dir_all(&dir).expect("a scratch directory");
-    dir
+    rexx_service::scratch("rxsock")
 }
 
 /// The program an `eval` case runs, requiring `requires`.
@@ -57,14 +59,6 @@ fn eval_program(lines: &[&str], requires: &str) -> String {
     program
 }
 
-/// `rexx` under a time limit, so that a call that waits for ever fails the
-/// case rather than the run.
-fn bounded(rexx: &Path) -> Command {
-    let mut command = Command::new(env!("CARGO_BIN_EXE_bounded-run"));
-    command.args(["-k", "5", "60"]).arg(rexx);
-    command
-}
-
 /// Runs `program` from a fresh directory, on the oracle where `oracle`.
 fn run(name: usize, program: &str, oracle: bool) -> (i32, String, String) {
     let root = scratch();
@@ -75,31 +69,19 @@ fn run(name: usize, program: &str, oracle: bool) -> (i32, String, String) {
     let program = program.replace("{dir}", &dir.display().to_string());
     let path = dir.join("probe.rex");
     std::fs::write(&path, &program).expect("the program");
-    let api = root.join(format!("api{name}"));
-    let _ = std::fs::remove_dir_all(&api);
-    std::fs::create_dir_all(&api).expect("a service directory");
-    // The service refuses a directory that others can use, and says so.
-    std::fs::set_permissions(&api, std::os::unix::fs::PermissionsExt::from_mode(0o700))
-        .expect("a private service directory");
-    let mut command;
-    if oracle {
-        let oracle_root = Path::new(env!("REXX_ORACLE_ROOT"));
-        command = bounded(&oracle_root.join("bin/rexx"));
-        command
-            .env("LD_LIBRARY_PATH", oracle_root.join("lib"))
-            // The packages' links, which `::REQUIRES` finds on the `PATH`.
-            .env("PATH", {
-                let path = std::env::var_os("PATH").unwrap_or_default();
-                let mut directories = vec![oracle_root.join("bin")];
-                directories.extend(std::env::split_paths(&path));
-                std::env::join_paths(directories).expect("a PATH")
-            })
-            .env("XDG_RUNTIME_DIR", &api);
+    let api = rexx_service::service_dir(&root, name);
+    let rexx = if oracle {
+        rexx_service::oracle_rexx()
     } else {
-        command = bounded(Path::new(env!("CARGO_BIN_EXE_rexx")));
-        command
-            .env("REXX_API_DIR", &api)
-            .env_remove("LD_LIBRARY_PATH");
+        rexx_service::own_rexx().to_path_buf()
+    };
+    let mut command = rexx_service::with_service(rexx_service::bounded(&rexx), oracle, &api);
+    if oracle {
+        // The packages' links, which `::REQUIRES` finds on the `PATH`.
+        let path = std::env::var_os("PATH").unwrap_or_default();
+        let mut directories = vec![rexx_service::oracle_root().join("bin")];
+        directories.extend(std::env::split_paths(&path));
+        command.env("PATH", std::env::join_paths(directories).expect("a PATH"));
     }
     let output = command
         .arg("probe.rex")
@@ -110,11 +92,7 @@ fn run(name: usize, program: &str, oracle: bool) -> (i32, String, String) {
         .output()
         .expect("rexx runs");
     if !oracle {
-        let _ = Command::new(Path::new(env!("CARGO_BIN_EXE_rexx")).with_file_name("rxapi"))
-            .arg("--stop")
-            .env("REXX_API_DIR", &api)
-            .output();
-        let _ = std::fs::remove_dir_all(&api);
+        rexx_service::stop_own_service(&api);
     }
     let _ = std::fs::remove_dir_all(&dir);
     (
