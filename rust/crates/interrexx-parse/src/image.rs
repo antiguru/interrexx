@@ -45,9 +45,12 @@ pub fn program_from_image(image: &[u8], text: &[u8]) -> Option<Program> {
     read_program(image, None, text)
 }
 
-/// [`program_from_image`] for an image that lives as long as the program,
-/// such as one built into the interpreter: each code body is left encoded
-/// until it is first read (see [`Body`]).
+/// [`program_from_image`] for an image built into the interpreter together with
+/// `text`, by the one build step that wrote both: each code body is left encoded
+/// until it is first read (see [`Body`]), and only a debug build hashes `text` to
+/// check the image is its image, which is a quarter of what an empty program's
+/// startup spends reading the image. The format and the text's length are checked
+/// either way.
 pub fn program_from_static_image(image: &'static [u8], text: &[u8]) -> Option<Program> {
     read_program(image, Some(image), text)
 }
@@ -59,11 +62,14 @@ fn read_program(image: &[u8], whole: Option<&'static [u8]>, text: &[u8]) -> Opti
         selectors: SelectorTable::new(),
         text: None,
     };
+    let built_in = whole.is_some() && !cfg!(debug_assertions);
     if input.take(MAGIC.len())? != MAGIC
         || u32::from_le_bytes(input.take(4)?.try_into().ok()?) != FORMAT
-        || u64::from_le_bytes(input.take(8)?.try_into().ok()?) != fingerprint(text)
-        || input.usize()? != text.len()
     {
+        return None;
+    }
+    let fingerprinted = u64::from_le_bytes(input.take(8)?.try_into().ok()?);
+    if (!built_in && fingerprinted != fingerprint(text)) || input.usize()? != text.len() {
         return None;
     }
     input.text = Some(text.to_vec());
