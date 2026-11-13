@@ -433,8 +433,8 @@ crashes, with a signal that ends the program, for a closed handle
 SysPostEventSem, and for a number that no call answered; SysRequestMutexSem
 with an event semaphore's handle hangs. The handle of an open event semaphore
 is such a number too: these calls answer `6` for it and change neither
-semaphore (issue #247 for interrexx, which accepts it today; [the event
-semaphore rule](r:util.syseventsem.deviation.158) has the example). The first
+semaphore ([the event semaphore rule](r:util.syseventsem.deviation.158) has
+the example and says what a handle is). The first
 example is a rounded handle and a closed one, the second a number that no call
 answered.
 

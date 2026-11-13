@@ -14,7 +14,7 @@ use interrexx_num::{DIGITS64, Number};
 use crate::error::Raised;
 use crate::paths::os_path;
 use crate::scheduler::ParkReason;
-use crate::semaphores::{SEM_POLL, SemaphoreKey, SemaphoreWait, WaitKind};
+use crate::semaphores::{HandleKind, NO_HANDLE, SEM_POLL, SemaphoreKey, SemaphoreWait, WaitKind};
 use crate::{Failure, Interp, Loud};
 
 /// A raise the argument marshalling makes, reported at the sending clause.
@@ -315,7 +315,7 @@ pub(crate) fn create_event_sem(
     if let Some(Some(value)) = args.first().copied() {
         return refuse_name(interp, name, value);
     }
-    let handle = interp.create_counting(0);
+    let handle = interp.create_counting(HandleKind::Event, 0);
     Ok(handle_answer(interp, handle))
 }
 
@@ -337,7 +337,7 @@ pub(crate) fn create_mutex_sem(
     {
         return refuse_name(interp, name, value);
     }
-    let handle = interp.create_counting(1);
+    let handle = interp.create_counting(HandleKind::Mutex, 1);
     Ok(handle_answer(interp, handle))
 }
 
@@ -381,7 +381,7 @@ pub(crate) fn post_event_sem(
     _name: &'static [u8],
     args: &[Option<ObjRef>],
 ) -> Result<ObjRef, Failure> {
-    let handle = only_handle(interp, args)?;
+    let handle = only_handle(interp, args, HandleKind::Event)?;
     let code = if interp.post_counting(handle) {
         0
     } else {
@@ -397,7 +397,7 @@ pub(crate) fn reset_event_sem(
     _name: &'static [u8],
     args: &[Option<ObjRef>],
 ) -> Result<ObjRef, Failure> {
-    let handle = only_handle(interp, args)?;
+    let handle = only_handle(interp, args, HandleKind::Event)?;
     let code = if interp.reset_counting(handle) {
         0
     } else {
@@ -413,7 +413,7 @@ pub(crate) fn release_mutex_sem(
     _name: &'static [u8],
     args: &[Option<ObjRef>],
 ) -> Result<ObjRef, Failure> {
-    let handle = only_handle(interp, args)?;
+    let handle = only_handle(interp, args, HandleKind::Mutex)?;
     let code = match interp.counting_value(handle) {
         None => INVALID_HANDLE,
         Some(0) => {
@@ -428,10 +428,10 @@ pub(crate) fn release_mutex_sem(
 /// `SysCloseEventSem(handle)` and `SysCloseMutexSem(handle)`, one body.
 pub(crate) fn close_sem(
     interp: &mut Interp,
-    _name: &'static [u8],
+    name: &'static [u8],
     args: &[Option<ObjRef>],
 ) -> Result<ObjRef, Failure> {
-    let handle = only_handle(interp, args)?;
+    let handle = only_handle(interp, args, kind_of_routine(name))?;
     let code = if interp.close_counting(handle) {
         0
     } else {
@@ -447,13 +447,13 @@ pub(crate) fn close_sem(
 /// after its last try where nothing was taken.
 pub(crate) fn wait_sem(
     interp: &mut Interp,
-    _name: &'static [u8],
+    name: &'static [u8],
     args: &[Option<ObjRef>],
 ) -> Result<ObjRef, Failure> {
     if args.len() > 2 {
         return Err(Raised::too_many_internal_arguments(2).into());
     }
-    let handle = handle_argument(interp, args)?;
+    let handle = handle_argument(interp, args, kind_of_routine(name))?;
     let timeout = match args.get(1).copied().flatten() {
         None => 0,
         Some(value) => int_argument(interp, value, 2)?,
@@ -493,16 +493,39 @@ fn handle_answer(interp: &mut Interp, handle: u64) -> ObjRef {
 }
 
 /// The one handle argument of a routine that takes nothing else.
-fn only_handle(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<u64, Failure> {
+fn only_handle(
+    interp: &mut Interp,
+    args: &[Option<ObjRef>],
+    kind: HandleKind,
+) -> Result<u64, Failure> {
     if args.len() > 1 {
         return Err(Raised::too_many_internal_arguments(1).into());
     }
-    handle_argument(interp, args)
+    handle_argument(interp, args, kind)
 }
 
-/// The first argument as a `uintptr_t`: 88.901 where it is missing, 88.907
-/// where it is not a whole number from zero to `2^64 - 1`.
-fn handle_argument(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<u64, Failure> {
+/// The kind of semaphore the routine `name` works on.
+fn kind_of_routine(name: &[u8]) -> HandleKind {
+    if name
+        .windows(5)
+        .any(|window| window.eq_ignore_ascii_case(b"mutex"))
+    {
+        HandleKind::Mutex
+    } else {
+        HandleKind::Event
+    }
+}
+
+/// The first argument as a handle of a semaphore of kind `kind`: 88.901 where
+/// it is missing, 88.907 where it is not a whole number from zero to
+/// `2^64 - 1`. A number that is not the exact decimal text a create answered
+/// (rounded, signed, padded) or that is a handle of the other kind is
+/// [`NO_HANDLE`], which names no semaphore (r[util.sysmutexsem.deviation.158]).
+fn handle_argument(
+    interp: &mut Interp,
+    args: &[Option<ObjRef>],
+    kind: HandleKind,
+) -> Result<u64, Failure> {
     let Some(Some(value)) = args.first().copied() else {
         return Err(Raised::missing_internal_argument("1").into());
     };
@@ -512,12 +535,18 @@ fn handle_argument(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<u64, 
         _ => Number::parse_bytes(&interp.to_text(source))
             .and_then(|number| number.unsigned_int64_value(DIGITS64)),
     };
-    handle.ok_or_else(|| {
+    let handle = handle.ok_or_else(|| {
         let found = match interp.string_value_text(value) {
             Ok(found) => found,
             Err(failure) => return failure,
         };
         outside_range(1, 0, u64::MAX.into(), &found)
+    })?;
+    let exact = interp.to_text(source).as_ref() == handle.to_string().as_bytes();
+    Ok(if exact && kind.owns(handle) {
+        handle
+    } else {
+        NO_HANDLE
     })
 }
 

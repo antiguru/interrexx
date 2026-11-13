@@ -529,8 +529,16 @@ answered. SysResetEventSem answers `6` for such a handle like the others, as
 the third example shows. The handle
 of an open semaphore of the other kind, a mutex semaphore's handle given to an
 event function or an event semaphore's handle given to a mutex function, is
-such a number too: the call answers `6` and changes neither semaphore.
-interrexx accepts it today (issue #247), as the fourth example shows.
+such a number too: the call answers `6` and changes neither semaphore, as the
+fourth example shows.
+
+The spelling of a handle is unspecified: it is a string that carries the kind
+of its semaphore and a generation, so that the handle of a closed semaphore
+never names a semaphore that is created later. A call answers `6` for any
+whole number whose text is not exactly a handle that a create answered and
+that is still open, a handle that is spelled again (with a sign, a blank or an
+exponent) included. Programs compare the answers of the calls and do not
+depend on the text of a handle.
 
 ```rexx
 h = SysCreateEventSem()
@@ -571,8 +579,25 @@ say SysRequestMutexSem(e, 10) SysReleaseMutexSem(e) SysCloseMutexSem(e)
 say SysCloseEventSem(e) SysCloseMutexSem(m)
 ```
 
-```output defect=#247
+```output
 6 6 6
 6 6 6
 0 0
+```
+
+The next example spells a handle again, and gives the handle of a closed
+semaphore after a new one is created. Both answer `6` and change nothing; the
+new semaphore is still open.
+
+```rexx
+h = SysCreateEventSem()
+say SysPostEventSem('+'h) SysPostEventSem(h' ') SysPostEventSem(' 'h)
+call SysCloseEventSem h
+n = SysCreateEventSem()
+say SysPostEventSem(h) SysCloseEventSem(h) SysPostEventSem(n)
+```
+
+```output
+6 6 6
+6 6 0
 ```
