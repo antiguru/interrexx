@@ -181,13 +181,19 @@ yes
 2
 [stderr]
 
-# semaphore.rs: a mutex another activity holds, and an acquire that times out.
+# semaphore.rs: a mutex another activity holds; a refused acquire and one that
+# times out. The holder signals once it owns the mutex and keeps it until main
+# is done, so the outcome does not depend on scheduling.
 program
 m=.MutexSemaphore~new
+ready=.EventSemaphore~new
+done=.EventSemaphore~new
 o=.holder~new
-o~hold(m)
-call syssleep 0.2
+o~hold(m, ready, done)
+ready~wait
+call show m~acquire(0)
 call show m~acquire(0.05)
+done~post
 exit
 show: procedure
   use arg v
@@ -198,14 +204,16 @@ show: procedure
   return
 ::class holder
 ::method hold
-  use arg m
+  use arg m, ready, done
   reply
   m~acquire
-  call syssleep 1
+  ready~post
+  done~wait
   m~release
 ----
 rc 0
 [stdout]
+false
 false
 [stderr]
 
