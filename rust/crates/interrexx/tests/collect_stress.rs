@@ -101,11 +101,15 @@ const NO_ALLOCATION_PROGRAMS: &[&str] = &[
 /// `requires_manager_rename.rex` prints `second load 1 4 events` where it
 /// stands at `2 events`. `uninit_drain_trace_line.rex` prints whether an
 /// `UNINIT` ran between two clauses, and a collection at every allocation runs
-/// it inside the earlier clause. Each still exits and writes stderr as its
-/// plain run does.
+/// it inside the earlier clause. `uninit_after_report_stackframes.rex` prints
+/// the frames of a condition its `UNINIT` traps, which the plain run raises in
+/// the termination sweep and a collection at every allocation raises while
+/// the main program's error report is still being delivered. Each still exits
+/// and writes stderr as its plain run does.
 const COLLECTION_TIMED_PROGRAMS: &[&str] = &[
     "lang/library_package_retried.rex",
     "lang/requires_manager_rename.rex",
+    "lang/uninit_after_report_stackframes.rex",
     "lang/uninit_drain_trace_line.rex",
 ];
 

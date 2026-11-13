@@ -371,6 +371,10 @@ pub struct Outcome {
     /// `Heap::peak_body_bytes` at the end of the run, for this crate's tests.
     #[cfg(test)]
     pub peak_body_bytes: usize,
+    /// How many objects copies of the failure levels pushed as temps during
+    /// the run, for this crate's tests.
+    #[cfg(test)]
+    pub failure_level_roots: usize,
     /// How many times the run declined to compile a body because it does not
     /// fit the compiled stream's index widths. Such a body raises
     /// [`Loud::chunk_refused`]; there is no second engine to run it.
@@ -1290,6 +1294,9 @@ struct Interp {
     deadline: Option<crate::clause::Deadline>,
     /// Clauses left before `Interp::countdown_reached` runs.
     clause_countdown: u32,
+    /// See [`Outcome::failure_level_roots`].
+    #[cfg(test)]
+    failure_level_roots: usize,
     /// The address of a local at the base of the thread running this
     /// interpreter, and how far below it the stack may reach before
     /// [`Interp::stack_exhausted`]; `usize::MAX` where the thread's stack is
@@ -2333,6 +2340,8 @@ impl Interp {
             last_plan: None,
             deadline: None,
             clause_countdown: crate::clause::Deadline::CLAUSES_PER_CHECK,
+            #[cfg(test)]
+            failure_level_roots: 0,
             stack_base: 0,
             stack_room: usize::MAX,
             timer,
@@ -3397,6 +3406,8 @@ impl Interp {
             last_plan: _,
             deadline: _,
             clause_countdown: _,
+            #[cfg(test)]
+                failure_level_roots: _,
             stack_base: _,
             stack_room: _,
             timer: _,
@@ -4229,6 +4240,8 @@ fn parse_failure_outcome(path: &[u8], rejected: &interrexx_parse::Rejected) -> O
         collections: 0,
         #[cfg(test)]
         peak_body_bytes: 0,
+        #[cfg(test)]
+        failure_level_roots: 0,
         chunks_refused: 0,
         sim: None,
         #[cfg(feature = "pinning")]
@@ -4255,6 +4268,8 @@ fn unrestorable_outcome(raised: Raised) -> Outcome {
         collections: 0,
         #[cfg(test)]
         peak_body_bytes: 0,
+        #[cfg(test)]
+        failure_level_roots: 0,
         chunks_refused: 0,
         sim: None,
         #[cfg(feature = "pinning")]
@@ -4584,6 +4599,8 @@ fn execute_kept(
         collections,
         #[cfg(test)]
         peak_body_bytes: interp.heap.peak_body_bytes(),
+        #[cfg(test)]
+        failure_level_roots: interp.failure_level_roots,
         chunks_refused,
         sim: interp.sim_report(),
         #[cfg(feature = "pinning")]
@@ -4739,6 +4756,8 @@ pub(crate) fn run_instance(
         collections: 0,
         #[cfg(test)]
         peak_body_bytes: 0,
+        #[cfg(test)]
+        failure_level_roots: 0,
         chunks_refused: 0,
         sim: None,
         #[cfg(feature = "pinning")]

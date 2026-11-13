@@ -1360,3 +1360,4 @@ lang/reference_conversion_raises_in_clause.rex
 lang/hash_class_kinds_runtime.rex
 lang/hash_store_deferred.rex
 lang/hash_string_chain_mixed.rex
+lang/uninit_after_report_stackframes.rex

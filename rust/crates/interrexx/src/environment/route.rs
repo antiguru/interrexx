@@ -387,7 +387,12 @@ impl Interp {
 
     /// [`Interp::write_trace_report`] over the report's own lines, each
     /// delivered whole, with any line end it holds.
+    ///
+    /// **The levels the failure left are cleared first.** The lines are
+    /// already rendered and hold all they report, and nothing reads the levels
+    /// after the report, so delivering a line has no levels left to copy.
     pub(crate) fn write_trace_report_lines(&mut self, lines: &[Vec<u8>]) {
+        self.clear_failure_levels();
         for line in lines {
             self.write_trace_report_line(line);
         }
