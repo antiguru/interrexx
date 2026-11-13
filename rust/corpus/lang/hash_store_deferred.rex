@@ -33,6 +33,16 @@ d = .directory~new(60)
 d~alpha = 1
 d~setMethod('M', 'return 2')
 say 'directory' d~items d~alpha d~m
+/* Names too long to be held in a handle, put into and read from stores
+   nothing has built yet. */
+d = .directory~new(60)
+d~setEntry('an_entry_name_well_past_inline_length', 1)
+e = .directory~new(60)
+e~another_entry_name_well_past_inline_length = 2
+f = .directory~new(60)
+say 'long' d~entry('an_entry_name_well_past_inline_length') ,
+  e~another_entry_name_well_past_inline_length f~yet_another_entry_name_past_inline_length ,
+  f~hasEntry('one_more_entry_name_well_past_inline_length')
 exit
 
 fill: procedure

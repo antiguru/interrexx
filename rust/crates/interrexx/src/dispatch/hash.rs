@@ -1632,7 +1632,11 @@ fn entry_name(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<ObjRef, Fa
     };
     let name = super::required_string_named_argument(interp, name, "index")?;
     let upper = interp.to_text(name).to_ascii_uppercase();
-    Ok(interp.text_built(upper))
+    // Rooted: the store it is looked up or put in may be built or grown
+    // first, which allocates.
+    let index = interp.text_built(upper);
+    interp.roots.activity_mut().push_temp(index);
+    Ok(index)
 }
 
 /// Every index the receiver's store holds, in the store's own order, or an
