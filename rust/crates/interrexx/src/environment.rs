@@ -383,9 +383,9 @@ impl Interp {
             .map(|(name, id)| (name.as_bytes().into(), id))
             .collect();
         // `addToEnvironment` registers these by hand.
-        let true_value = self.text(b"1");
+        let true_value = crate::eval::LOGICAL_TRUE;
         self.roots.activity_mut().push_temp(true_value);
-        let false_value = self.text(b"0");
+        let false_value = crate::eval::LOGICAL_FALSE;
         self.roots.activity_mut().push_temp(false_value);
         // `REXXINFO` is a pre-built *instance* of a class no environment name
         // reaches, which is why the entry renders as `a RexxInfo` and answers

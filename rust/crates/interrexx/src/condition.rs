@@ -164,7 +164,7 @@ impl Interp {
         self.condition_put(object, key::PROGRAM, program)?;
         let package = self.package_object(package)?;
         self.condition_put(object, key::PACKAGE, package)?;
-        let propagated = self.text(b"1");
+        let propagated = crate::eval::LOGICAL_TRUE;
         self.condition_put(object, key::PROPAGATED, propagated)?;
         Ok(object)
     }
@@ -376,7 +376,7 @@ impl Interp {
         object: ObjRef,
     ) -> Result<ObjRef, Failure> {
         self.roots.activity_mut().push_temp(object);
-        let propagated = self.text(b"1");
+        let propagated = crate::eval::LOGICAL_TRUE;
         self.condition_put(object, key::PROPAGATED, propagated)?;
         let instruction = self.text(b"SIGNAL");
         self.condition_put(object, key::INSTRUCTION, instruction)?;
@@ -399,7 +399,7 @@ impl Interp {
     /// Marks a condition object `PROPAGATED` and taken by a `CALL ON` trap,
     /// as `RAISE PROPAGATE` passes it to the caller's trap.
     pub(crate) fn propagate_to_call_trap(&mut self, object: ObjRef) -> Result<(), Failure> {
-        let propagated = self.text(b"1");
+        let propagated = crate::eval::LOGICAL_TRUE;
         self.condition_put(object, key::PROPAGATED, propagated)?;
         let instruction = self.text(b"CALL");
         self.condition_put(object, key::INSTRUCTION, instruction)
@@ -539,8 +539,8 @@ impl Interp {
         self.roots.activity_mut().push_temp(program);
         entries.push((key::PROGRAM, program));
         let propagated = match unwound.is_some_and(|unwound| unwound.propagated) {
-            true => self.text(b"1"),
-            false => self.text(b"0"),
+            true => crate::eval::LOGICAL_TRUE,
+            false => crate::eval::LOGICAL_FALSE,
         };
         self.roots.activity_mut().push_temp(propagated);
         entries.push((key::PROPAGATED, propagated));

@@ -239,13 +239,13 @@ fn is_protected(
 /// One flag reader's answer. `negated` is `isGuarded`'s, the one reader whose
 /// question is the stored bit's complement.
 fn answer_flag(
-    interp: &mut Interp,
+    interp: &Interp,
     receiver: ObjRef,
     which: Flag,
     negated: bool,
 ) -> Result<Option<ObjRef>, Failure> {
     let set = flag(interp, receiver, which)?;
-    Ok(Some(interp.counted(usize::from(set != negated))))
+    Ok(Some(crate::eval::logical(set != negated)))
 }
 
 /// `Method~setUnguarded`, `setGuarded`, `setPrivate` and `setProtected`: each
@@ -336,7 +336,7 @@ fn set_security_manager(
         let package = interp.package_object(crate::plan::Package::Program(program))?;
         interp.install_security_manager(package, args.first().copied().flatten());
     }
-    Ok(Some(interp.counted(usize::from(rexx_code))))
+    Ok(Some(crate::eval::logical(rexx_code)))
 }
 
 /// Whether this executable's body is Rexx source -- the distinction

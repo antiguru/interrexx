@@ -35,7 +35,12 @@ RexxRoutine3(RexxObjectPtr, BoolHandles, CSTRING, which, RexxObjectPtr, a, RexxO
     if (strcmp(which, "rexx_method") == 0) {
         return mark(context, which, context->SendMessage0(a, "YES"));
     }
-    return mark(context, which, a);
+    if (strcmp(which, "argument_true") == 0 || strcmp(which, "argument_false") == 0) {
+        return mark(context, which, a);
+    }
+    char line[64];
+    snprintf(line, sizeof line, "%s unknown", which);
+    return context->String(line);
 }
 
 RexxRoutineEntry routines[] = {

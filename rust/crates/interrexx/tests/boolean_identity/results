@@ -1,0 +1,168 @@
+# object_protocol.rs: Object~hasMethod, ~isA, ~isNil; Message~completed,
+# ~hasError, ~halt, ~hasResult.
+eval
+.object~hasMethod('CLASS')
+.object~new~hasMethod('NOPE')
+1~isA(.string)
+1~isA(.array)
+.nil~isNil
+1~isNil
+.message~new(.object,'class')~completed
+.message~new(.object,'class')~hasError
+.message~new(.object,'class')~hasResult
+.message~new(.object,'class')~halt
+.message~new(.object,'class')~~send~completed
+.message~new(.object,'class')~~send~hasResult
+.message~new(.object,'class')~~send~hasError
+----
+true
+false
+true
+false
+true
+false
+false
+false
+false
+false
+true
+true
+false
+
+# class_protocol.rs: Class~isSubclassOf.
+eval
+.string~isSubclassOf(.object)
+.object~isSubclassOf(.string)
+----
+true
+false
+
+# semaphore.rs: EventSemaphore, MutexSemaphore.
+eval
+.EventSemaphore~new~isPosted
+.EventSemaphore~new~wait(0)
+.MutexSemaphore~new~request(0)
+.MutexSemaphore~new~release
+.EventSemaphore~new~~post~isPosted
+.EventSemaphore~new~~post~wait(0)
+----
+false
+false
+other
+false
+true
+true
+
+# executable.rs: Method/Routine flag readers and setSecurityManager.
+eval
+.method~new('x','return 1')~isPrivate
+.method~new('x','return 1')~isProtected
+.method~new('x','return 1')~isGuarded
+.method~new('x','return 1')~setSecurityManager(.nil)
+.routine~new('x','return 1')~setSecurityManager(.nil)
+----
+false
+false
+true
+true
+true
+
+# buffer.rs: MutableBuffer predicates.
+eval
+.mutablebuffer~new('abc')~endsWith('c')
+.mutablebuffer~new('abc')~caselessEndsWith('C')
+.mutablebuffer~new('abc')~contains('b')
+.mutablebuffer~new('abc')~contains('x')
+.mutablebuffer~new('abc')~caselessContains('B')
+.mutablebuffer~new('a b')~containsWord('b')
+.mutablebuffer~new('a b')~caselessContainsWord('B')
+.mutablebuffer~new('abc')~startsWith('a')
+.mutablebuffer~new('abc')~caselessStartsWith('A')
+.mutablebuffer~new('abc')~match(2,'b')
+.mutablebuffer~new('abc')~caselessMatch(2,'B')
+.mutablebuffer~new('abc')~matchChar(2,'b')
+.mutablebuffer~new('abc')~caselessMatchChar(2,'B')
+----
+true
+true
+true
+false
+true
+true
+true
+true
+true
+true
+true
+true
+true
+
+# package.rs: Package~loadLibrary, ~setSecurityManager.
+eval
+.context~package~setSecurityManager(.nil)
+.context~package~loadLibrary('nosuchlibrary')
+.context~package~loadLibrary('rxunixsys')
+----
+true
+ERR 97.1
+ERR 97.1
+
+# rexx_info.rs: RexxInfo.
+eval
+.rexxinfo~caseSensitiveFiles
+.rexxinfo~debug
+----
+true
+false
+
+# platform.rs: SETLOCAL(), ENDLOCAL().
+eval
+setlocal()
+endlocal()
+----
+true
+true
+
+# state.rs: GC().
+eval
+gc()
+gc('F')
+----
+false
+true
+
+# The environment's entries, comparisons, collections.
+eval
+.environment~true
+.environment~false
+(1=1)
+(1=2)
+.directory~new~hasEntry('x')
+.true
+.false
+----
+true
+false
+true
+false
+false
+true
+false
+
+program
+t=.identityTable~new; t[.true]='x'; say t[1=1]
+----
+rc 0
+[stdout]
+x
+[stderr]
+
+program
+d=.directory~of(('a',1)); if d~items then say 'yes'
+n=2; do while n-1; say n; n-=1; end
+----
+rc 0
+[stdout]
+yes
+2
+[stderr]

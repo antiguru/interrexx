@@ -130,7 +130,7 @@ pub(super) fn native_is_subclass_of(
     let other = class_argument(interp, args)?;
     let class = class_receiver(interp, receiver)?;
     let answer = interp.classes().is_a(class, other);
-    Ok(Some(interp.counted(usize::from(answer))))
+    Ok(Some(crate::eval::logical(answer)))
 }
 
 /// `Class~annotation(name)`, and the same method at `Method`, `Routine` and

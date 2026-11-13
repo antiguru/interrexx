@@ -528,7 +528,7 @@ fn set_security_manager(
 ) -> Result<Option<ObjRef>, Failure> {
     writable_package_of(interp, receiver)?;
     interp.install_security_manager(receiver, args.first().copied().flatten());
-    Ok(Some(interp.counted(1)))
+    Ok(Some(crate::eval::logical(true)))
 }
 
 /// A `dlopen` of a native library, answering whether it loaded.
@@ -552,7 +552,7 @@ fn load_library(
     let name = interp.to_text(name).into_owned();
     writable_package_of(interp, receiver)?;
     if crate::internal_routines::Package::named(&name).is_some() {
-        return Ok(Some(interp.counted(1)));
+        return Ok(Some(crate::eval::logical(true)));
     }
     // A version refusal raises here as it does at a directive: `loadLibrary` of
     // a package entry asking for a newer interpreter is 98.982 on the first ask
@@ -563,7 +563,7 @@ fn load_library(
         crate::LibraryLoad::Version => return Err(Raised::library_version(&name).into()),
         crate::LibraryLoad::Raised(failure) => return Err(failure),
     };
-    Ok(Some(interp.counted(usize::from(loaded))))
+    Ok(Some(crate::eval::logical(loaded)))
 }
 
 /// The classes this package's own `::CLASS` directives and `~addClass`

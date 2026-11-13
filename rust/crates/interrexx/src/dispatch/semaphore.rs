@@ -39,7 +39,7 @@ pub(super) fn native_event_is_posted(
     _args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
     let posted = interp.event_posted(receiver);
-    Ok(Some(interp.counted(usize::from(posted))))
+    Ok(Some(crate::eval::logical(posted)))
 }
 
 /// `EventSemaphore~wait(timeout)`: `1` at once where posted, the post itself
@@ -53,9 +53,7 @@ pub(super) fn native_event_wait(
     let timeout = timeout_argument(interp, b"WAIT", args)?;
     let posted = interp.event_posted(receiver);
     if posted || timeout == Some(Duration::ZERO) {
-        return Ok(NativeStarted::Ran(Some(
-            interp.counted(usize::from(posted)),
-        )));
+        return Ok(NativeStarted::Ran(Some(crate::eval::logical(posted))));
     }
     park_point!(interp, crate::pinning::ParkKind::SemaphoreWait);
     let wait = semaphore_wait(interp, receiver, WaitKind::Event, timeout);
@@ -65,7 +63,7 @@ pub(super) fn native_event_wait(
 /// A woken wait's answer, which its re-test kept.
 fn woken(interp: &mut Interp, _receiver: ObjRef) -> Result<Option<ObjRef>, Failure> {
     let answer = interp.take_semaphore_answer();
-    Ok(Some(interp.counted(usize::from(answer))))
+    Ok(Some(crate::eval::logical(answer)))
 }
 
 /// `MutexSemaphore~request(timeout)`, the method `ACQUIRE`: the lock where it
@@ -99,7 +97,7 @@ pub(super) fn native_mutex_release(
     _args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
     let released = interp.release_mutex(receiver);
-    Ok(Some(interp.counted(usize::from(released))))
+    Ok(Some(crate::eval::logical(released)))
 }
 
 /// `MutexSemaphore~close`, the method `UNINIT`.

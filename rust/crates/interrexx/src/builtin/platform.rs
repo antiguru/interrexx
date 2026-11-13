@@ -130,7 +130,7 @@ pub(crate) fn setlocal(
     _args: Args<'_>,
 ) -> Result<ObjRef, Failure> {
     let saved = interp.push_local_environment();
-    Ok(interp.counted(usize::from(saved)))
+    Ok(crate::eval::logical(saved))
 }
 
 /// `ENDLOCAL()`: restores the innermost saved pair, answering 1 when there was
@@ -148,7 +148,7 @@ pub(crate) fn endlocal(
     _args: Args<'_>,
 ) -> Result<ObjRef, Failure> {
     let restored = interp.pop_local_environment();
-    Ok(interp.counted(usize::from(restored)))
+    Ok(crate::eval::logical(restored))
 }
 
 /// `DIRECTORY([new])`: a native routine of the `REXX` package, not a builtin

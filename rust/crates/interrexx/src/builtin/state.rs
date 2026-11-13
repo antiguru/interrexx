@@ -111,7 +111,7 @@ pub(crate) fn queued(
 pub(crate) fn gc(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result<ObjRef, Failure> {
     const VALID: &str = "\"force\", \"Force\", \"f\", \"F\"";
     let Some(text) = optional_string(interp, args, 1) else {
-        return Ok(interp.text(b"0"));
+        return Ok(crate::eval::logical(false));
     };
     if !matches!(text.first(), Some(b'f' | b'F')) {
         return Err(Raised::argument_not_in_list(name, 1, VALID, &text).into());
@@ -132,7 +132,7 @@ pub(crate) fn gc(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result<Obj
     if let Some(loud) = interp.run_ready_uninits().into_iter().next() {
         return Err(Failure::Loud(Box::new(loud)));
     }
-    Ok(interp.text(b"1"))
+    Ok(crate::eval::logical(true))
 }
 
 /// `ERRORTEXT(n)`: the major error message for `n`, or the null string when
