@@ -1095,6 +1095,40 @@ impl Interp {
         }
     }
 
+    /// `value` as an arithmetic operand's [`Scaled`], where it is a plain
+    /// string or number whose digits fit one: what [`Interp::to_number`]
+    /// answers, without a [`Number`] copied out. `None` for every other
+    /// value, which the general path then reads.
+    #[inline]
+    pub(crate) fn scaled_operand(&mut self, value: ObjRef) -> Option<Scaled> {
+        match self.quick_operand(value) {
+            QuickOperand::Scaled(scaled, _) => Some(scaled),
+            QuickOperand::NotNumber(_) => None,
+            QuickOperand::Unknown => match value.decode() {
+                Decoded::Heap { .. } => self.heap_scaled(value),
+                _ => None,
+            },
+        }
+    }
+
+    /// [`Interp::scaled_operand`]'s arm for a value in the arena: a number
+    /// object, or a string whose parse its `num` cache keeps (filled here
+    /// as [`Interp::to_number`] fills it).
+    #[inline(never)]
+    fn heap_scaled(&mut self, value: ObjRef) -> Option<Scaled> {
+        match &mut self.heap.get_mut(value)?.body {
+            Body::Num { value, .. } => value.scaled(),
+            Body::Text { bytes, num } => {
+                let bytes = bytes.as_slice();
+                let cached = num.get_or_insert_with(|| {
+                    Number::parse_bytes(bytes).map(Box::new).ok_or(NotNumeric)
+                });
+                cached.as_ref().ok()?.scaled()
+            }
+            _ => None,
+        }
+    }
+
     /// [`to_number`]'s arm for a value that lives in the arena.
     #[inline(never)]
     fn heap_to_number(&mut self, value: ObjRef, receiver: bool) -> Result<Number, NotNumeric> {
