@@ -20,6 +20,14 @@ pub fn scratch(name: &str) -> PathBuf {
     dir
 }
 
+/// Removes the scratch directory [`scratch`] made for `name`, once every case
+/// has run. A test calls it only after it has passed, so the directory of a
+/// failing run stays for diagnosis.
+pub fn remove_scratch(name: &str) {
+    let dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("{name}-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(dir);
+}
+
 /// A fresh service directory `api<case>` under `root`, private to the owner:
 /// the service refuses a directory that others can use, and says so.
 pub fn service_dir(root: &Path, case: usize) -> PathBuf {

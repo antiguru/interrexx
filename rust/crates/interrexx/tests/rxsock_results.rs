@@ -132,4 +132,5 @@ fn rxsock_answers_as_the_oracle_does() {
         });
     });
     assert!(cases > 0, "no case ran");
+    rexx_service::remove_scratch("rxsock");
 }

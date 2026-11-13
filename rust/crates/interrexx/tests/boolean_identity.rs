@@ -114,4 +114,5 @@ fn built_in_booleans_are_the_handles_the_oracle_answers() {
         });
     });
     assert!(cases > 0, "no case ran");
+    rexx_service::remove_scratch("boolean_identity");
 }
