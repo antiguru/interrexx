@@ -80,6 +80,18 @@ misses than ooRexx on every axis measured except L1i.
 * **Cutting op dispatch or fusing ops**: removing a third of all executed ops is worth under 2%.
 * **Stripping per-clause bookkeeping**: bounded at 19% on `varlookup` and about 5% elsewhere, and it
   breaks `rexxcps`.
+* **Clearing only the registers the previous clause wrote** (a per-clause bound on the register
+  clear at clause opening): -0.1% instructions on a 20k-line word count. The clear is already a
+  four-wide SSE store loop over about four registers per clause, so its cost is per-clause setup,
+  not width.
+* **Folding a clause's opening (line, indent, register top) into `Op::Clause`**: `Op` is held at
+  16 bytes, and the line and indent need 8 bytes where 4 are spare, so the table lookup stays.
+* **Passing the clause's trace-all flag in from the clause opening's read of the setting** instead
+  of reading it again on entry: `emptyloop` +0.9%, `rexxcps` +0.3%. Holding the value live across
+  the opening costs more than the second read.
+* **A cached frame and exposure for variable reads**: a read is about 19 instructions already, so
+  the ceiling is about 0.3% on a word count, and every site that takes the activation mutably
+  would have to invalidate the copy.
 * **Cheaper temp rooting**: removing it outright is a 1.4% ceiling.
 * **Pointer-based heap addressing** and a **columnar heap layout**: heap representation is low
   single digits of ordinary programs.
