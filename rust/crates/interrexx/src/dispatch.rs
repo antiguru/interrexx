@@ -1309,13 +1309,6 @@ pub(crate) const ACTIVATE: &[u8] = b"ACTIVATE";
 
 /// The class model this crate dispatches against, and the implementations
 /// its `MethodId`s name.
-impl ObjectModel {
-    /// What `class` keeps alive through the class graph, for the collector.
-    pub(crate) fn class_references(&self, class: ObjRef, out: &mut Vec<ObjRef>) {
-        self.classes.class_references(class, out);
-    }
-}
-
 pub(crate) struct ObjectModel {
     classes: ClassRegistry,
     natives: MethodRows<NativeEntry>,
@@ -1364,6 +1357,11 @@ pub(crate) struct ObjectModel {
 }
 
 impl ObjectModel {
+    /// What `class` keeps alive through the class graph, for the collector.
+    pub(crate) fn class_references(&self, class: ObjRef, out: &mut Vec<ObjRef>) {
+        self.classes.class_references(class, out);
+    }
+
     /// The hash-collection class a `DO OVER` target may be, for a caller
     /// asking whether an object is one.
     pub(crate) fn iterable_collection_class(&self) -> ObjRef {
