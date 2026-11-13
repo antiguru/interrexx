@@ -1805,7 +1805,8 @@ fn push_native<'a>(
 /// nothing: no function, no message, no environment symbol. Its operators
 /// can still run code, an operator being a message to an object, and so can
 /// a tail's string request and a NOVALUE hook, but each of those pushes an
-/// activation, which drops the key the read holds. Where the answer is yes,
+/// activation or enters a native call, and either drops the key the read
+/// holds, as a switch to another activity does. Where the answer is yes,
 /// the reads of the compound among `ops`, the ops compiled for `value`, are
 /// marked [`SymbolRead::CompoundShared`].
 pub(crate) fn share_tail_key(ops: &mut [Op], target: &Expr, value: &Expr) -> bool {

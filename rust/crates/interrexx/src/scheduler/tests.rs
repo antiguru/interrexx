@@ -390,6 +390,28 @@ fn started_activities_interleave_under_every_opportunity() {
     assert_eq!(stdout(&outcome), "a 1\na 2\na 3\nb 1\nb 2\nb 3\ndone\n");
 }
 
+/// Another activity assigns an exposed tail variable in the middle of a
+/// clause `t.k = t.k + 1`, while the `+` that clause sends waits for it: the
+/// write takes its key from the tail variable as it is then, not from the
+/// key the read resolved.
+#[test]
+fn a_tail_assigned_by_another_activity_mid_clause_moves_the_write() {
+    let outcome = run_with(
+        "say .c~new~run\n\
+         ::class c\n::attribute done unguarded\n\
+         ::method run unguarded\n  expose k t. done\n  done = 0\n  k = 'A'\n  \
+         t. = .waiter~new(self)\n  t.k = t.k + 1\n  \
+         return t.A~class~id t.B k\n\
+         ::method setK unguarded\n  expose k done\n  k = 'B'\n  done = 1\n\
+         ::class waiter\n::method init\n  expose owner\n  use arg owner\n\
+         ::method '+'\n  expose owner\n  owner~start('setK')\n  \
+         do while \\owner~done\n  end\n  return 1\n",
+        Invocation::none().with_deadline(std::time::Duration::from_secs(60)),
+    );
+    assert_eq!(outcome.exit_code, 0, "{}", stderr(&outcome));
+    assert_eq!(stdout(&outcome), "WAITER 1 B\n");
+}
+
 /// A busy loop with no park point in it ends only because the timer ends its
 /// slice and the activity that sets the flag runs; the loop's body is empty,
 /// so the slice ends at the loop's own step.

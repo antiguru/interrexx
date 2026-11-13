@@ -1195,10 +1195,10 @@ struct Interp {
     /// The tail key a compound read in `t.k = t.k + 1` resolved, held for
     /// the write of the same compound at the end of that clause
     /// ([`crate::eval::SymbolRead::CompoundShared`]). `shared_key_for` is
-    /// the compound it is the key of, and `None` where nothing is held: a
-    /// read that does not share sets it so, and so does every activation
-    /// push, which is the one way code can run between the read and the
-    /// write that could change what a tail variable holds.
+    /// the compound it is the key of, and `None` where nothing is held. An
+    /// activation push, a native call and an activity switch each set it
+    /// so: those are the ways code can run between the read and the write
+    /// that could assign a tail variable.
     shared_key: Vec<u8>,
     shared_key_for: Option<SymbolId>,
     /// What a `.local~novalue` hook a read sent came to, answered or failed,

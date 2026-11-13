@@ -968,6 +968,9 @@ impl Interp {
         args: &[Option<ObjRef>],
         code: Option<usize>,
     ) {
+        // A native call pushes no activation, and through `SetObjectVariable`
+        // or `SetContextVariable` it can assign a tail variable all the same.
+        self.shared_key_for = None;
         let mut frame = self.activity.native_spares.pop().unwrap_or_else(|| {
             Box::new(NativeFrame {
                 owner: ObjRef::NIL,
