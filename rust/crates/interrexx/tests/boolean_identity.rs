@@ -82,10 +82,19 @@ fn run(name: usize, program: &str, oracle: bool) -> (i32, String, String) {
         rexx_service::stop_own_service(&api);
     }
     let _ = std::fs::remove_dir_all(&dir);
+    // The oracle's message lines are mapped to this crate's texts first.
+    let channel = |bytes: &[u8]| {
+        let bytes = if oracle {
+            support::messages::oracle_output(bytes)
+        } else {
+            bytes.to_vec()
+        };
+        String::from_utf8_lossy(&bytes).into_owned()
+    };
     (
         output.status.code().unwrap_or(-1),
-        String::from_utf8_lossy(&output.stdout).into_owned(),
-        String::from_utf8_lossy(&output.stderr).into_owned(),
+        channel(&output.stdout),
+        channel(&output.stderr),
     )
 }
 

@@ -117,6 +117,17 @@ pub struct CppOutcome {
 }
 
 impl CppOutcome {
+    /// An outcome whose two channels have the oracle's message lines mapped
+    /// to this crate's texts (`messages`), so that every comparison with
+    /// this crate's output sees one wording.
+    fn mapped(stdout: Vec<u8>, stderr: Vec<u8>, termination: Termination) -> CppOutcome {
+        CppOutcome {
+            stdout: super::messages::oracle_output(&stdout),
+            stderr: super::messages::oracle_output(&stderr),
+            termination,
+        }
+    }
+
     /// The process's own exit status.
     pub fn expect_exit_code(&self) -> i32 {
         match self.termination {
@@ -213,11 +224,7 @@ impl Oracle {
             write_stdin(&mut child, bytes);
         }
         let (stdout, stderr, termination) = wait_with_deadline(child, path, deadline);
-        CppOutcome {
-            stdout,
-            stderr,
-            termination,
-        }
+        CppOutcome::mapped(stdout, stderr, termination)
     }
 
     /// [`Oracle::run_with`], given a **descriptor** for standard input instead
@@ -243,11 +250,7 @@ impl Oracle {
         // same trap by dropping its own `sink` after writing.
         drop(child.stdin.take());
         let (stdout, stderr, termination) = wait_with_deadline(child, path, ORACLE_DEADLINE);
-        CppOutcome {
-            stdout,
-            stderr,
-            termination,
-        }
+        CppOutcome::mapped(stdout, stderr, termination)
     }
 
     /// [`Oracle::run`] with `TZ` set, for a caller asking whether a program's
@@ -263,11 +266,7 @@ impl Oracle {
             .spawn()
             .unwrap_or_else(|e| panic!("failed to spawn the oracle for {}: {e}", path.display()));
         let (stdout, stderr, termination) = wait_with_deadline(child, path, ORACLE_DEADLINE);
-        CppOutcome {
-            stdout,
-            stderr,
-            termination,
-        }
+        CppOutcome::mapped(stdout, stderr, termination)
     }
 
     /// [`Oracle::run`] from a chosen working directory and with chosen
@@ -305,11 +304,7 @@ impl Oracle {
             write_stdin(&mut child, bytes);
         }
         let (stdout, stderr, termination) = wait_with_deadline(child, path, ORACLE_DEADLINE);
-        CppOutcome {
-            stdout,
-            stderr,
-            termination,
-        }
+        CppOutcome::mapped(stdout, stderr, termination)
     }
 
     /// The `sh -c 'ulimit … && exec "$0" "$@"'` invocation, the library path

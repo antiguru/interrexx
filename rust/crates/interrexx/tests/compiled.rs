@@ -11,6 +11,8 @@
 //! bytes after its end, so no test here hands it an image that was cut,
 //! extended or changed in its header.
 
+#[path = "support/messages.rs"]
+mod messages;
 #[path = "support/oracle_runtime.rs"]
 mod oracle_runtime;
 
@@ -106,12 +108,16 @@ impl Side {
             command.stdin(file);
         }
         let output = command.output().expect("the binary starts");
-        let rendered = render(
-            &self.dir,
-            &output.stdout,
-            &output.stderr,
-            output.status.code(),
-        );
+        // The oracle's message lines are mapped to this crate's texts first.
+        let (stdout, stderr) = if self.oracle {
+            (
+                messages::oracle_output(&output.stdout),
+                messages::oracle_output(&output.stderr),
+            )
+        } else {
+            (output.stdout.clone(), output.stderr.clone())
+        };
+        let rendered = render(&self.dir, &stdout, &stderr, output.status.code());
         if case.directive == "compile" {
             assert_eq!(output.status.code(), Some(0), "{words:?}: {rendered}");
             let image = std::fs::read(self.dir.join(words[1])).expect("the image");

@@ -16,6 +16,8 @@
 
 #[path = "support/banner.rs"]
 mod banner;
+#[path = "support/messages.rs"]
+mod messages;
 #[path = "support/oracle_runtime.rs"]
 mod oracle_runtime;
 
@@ -258,7 +260,13 @@ fn render(dir: &Path, stdout: &[u8], stderr: &[u8], status: Option<i32>, oracle:
         None => "rc> none\n".to_string(),
     };
     for (tag, bytes) in [("out", stdout), ("err", stderr)] {
-        for line in escaped(bytes).replace(&dir, "DIR").lines() {
+        // The oracle's message lines are mapped to this crate's texts first.
+        let bytes = if oracle {
+            messages::oracle_output(bytes)
+        } else {
+            bytes.to_vec()
+        };
+        for line in escaped(&bytes).replace(&dir, "DIR").lines() {
             let Some(line) = banner::recorded(line, oracle) else {
                 continue;
             };

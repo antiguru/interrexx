@@ -7,6 +7,9 @@
 //! the clean tree's links in its `bin` directory, with an `XDG_RUNTIME_DIR`
 //! of its own whose `rxapi` daemon is the caller's to stop.
 
+#[path = "support/messages.rs"]
+mod messages;
+
 use std::io::{BufRead as _, BufReader, Write as _};
 use std::net::TcpListener;
 use std::path::Path;
@@ -107,8 +110,9 @@ fn reply(line: &[u8], in_data: &mut bool) -> Option<&'static [u8]> {
 }
 
 /// Runs the session with `rexx`, answering as a scripted server, and answers
-/// the bytes the client sent and what the program printed.
-fn session(mut rexx: Command) -> (String, String) {
+/// the bytes the client sent and what the program printed. `oracle` says
+/// `rexx` is the oracle, whose message lines are mapped to this crate's texts.
+fn session(mut rexx: Command, oracle: bool) -> (String, String) {
     let listener = TcpListener::bind("127.0.0.1:0").expect("a loopback listener");
     let port = listener.local_addr().expect("its address").port();
     let server = std::thread::spawn(move || {
@@ -146,10 +150,12 @@ fn session(mut rexx: Command) -> (String, String) {
         "{}",
         String::from_utf8_lossy(&output.stderr)
     );
-    (
-        received,
-        String::from_utf8_lossy(&output.stdout).into_owned(),
-    )
+    let printed = if oracle {
+        messages::oracle_output(&output.stdout)
+    } else {
+        output.stdout
+    };
+    (received, String::from_utf8_lossy(&printed).into_owned())
 }
 
 fn crate_rexx() -> Command {
@@ -178,7 +184,7 @@ fn stop_crate_service() {
 
 #[test]
 fn smtp_and_mime_send_the_oracles_bytes_to_a_scripted_server() {
-    let (received, printed) = session(crate_rexx());
+    let (received, printed) = session(crate_rexx(), false);
     stop_crate_service();
     assert_eq!(received, CLIENT_BYTES);
     assert_eq!(printed, PRINTED);
@@ -196,7 +202,7 @@ fn smtp_and_mime_send_the_oracles_bytes_to_a_scripted_server() {
             .env("LD_LIBRARY_PATH", oracle.join("lib"))
             .env("PATH", std::env::join_paths(directories).expect("a PATH"))
             .env("XDG_RUNTIME_DIR", &runtime);
-        let (received, printed) = session(command);
+        let (received, printed) = session(command, true);
         assert_eq!(received, CLIENT_BYTES, "oracle");
         assert_eq!(printed, PRINTED, "oracle");
     }
