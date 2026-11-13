@@ -10,7 +10,6 @@
 //! path is the interpreter's own directory's, not the process's. `SysCrypt` is
 //! not provided (Rulings).
 
-mod messages;
 mod tzname;
 
 use interrexx_core::{BehaviourId, Body, Decoded, ObjRef};
@@ -977,16 +976,29 @@ pub(crate) fn geterrno(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<O
     Ok(number(interp, errno))
 }
 
-/// `SysGeterrnomsg(n)`: the message for `n`, `Unknown` outside the table.
+/// `SysGeterrnomsg(n)`: `Ok` for 0, else the platform's text for error number
+/// `n` (`r[rxunixsys.index.errno]`), never the null string.
 pub(crate) fn geterrnomsg(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<ObjRef> {
     check_arity(args, 1)?;
     let errno = int(interp, args, 1)?;
-    let message = usize::try_from(errno)
-        .ok()
-        .and_then(|index| messages::MESSAGES.get(index))
-        .copied()
-        .unwrap_or("Unknown");
+    let message = errno_message(errno);
     Ok(string(interp, message.as_bytes()))
+}
+
+/// The text of error number `errno`: `Ok` for 0, otherwise what the C
+/// library's `strerror` answers at run time, which the platform words.
+fn errno_message(errno: i32) -> String {
+    if errno == 0 {
+        return "Ok".to_owned();
+    }
+    // `std` reads the text through the C library's thread-safe `strerror`
+    // and appends ` (os error N)`, which is cut off again here.
+    let text = std::io::Error::from_raw_os_error(errno).to_string();
+    let suffix = format!(" (os error {errno})");
+    match text.strip_suffix(&suffix) {
+        Some(plain) => plain.to_owned(),
+        None => text,
+    }
 }
 
 #[cfg(test)]
