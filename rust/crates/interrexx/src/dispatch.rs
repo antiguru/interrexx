@@ -1390,6 +1390,7 @@ impl ObjectModel {
         extra: &[(&str, &str, Arity, NativeMethod)],
     ) -> ObjectModel {
         let mut natives = MethodRows::new();
+        let string = classes.lookup("String").expect("String is a native class");
         for (class_id, method_name, arity, body) in NATIVE_METHODS
             .iter()
             .chain(buffer::NATIVE_METHODS)
@@ -1437,7 +1438,7 @@ impl ObjectModel {
                 .unwrap_or_else(|| {
                     panic!("NATIVE_METHODS names class {class_id:?}, which is not in the registry")
                 });
-            let (_, method) = classes
+            let (definer, method) = classes
                 .lookup_instance_method(class, method_name)
                 .unwrap_or_else(|| {
                     panic!(
@@ -1450,7 +1451,9 @@ impl ObjectModel {
                 NativeEntry {
                     arity: *arity,
                     body,
-                    string_only: *class_id == "String",
+                    // The class that defines the method, whichever table
+                    // its row sits in and whatever name the row gives.
+                    string_only: definer == string,
                 },
             );
         }
