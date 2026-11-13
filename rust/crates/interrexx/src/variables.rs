@@ -73,7 +73,7 @@ impl Interp {
     #[inline(always)]
     fn activation_exposes(&self, frame: SlotFrame) -> bool {
         let activation = self.activation();
-        !activation.exposed.is_empty() && activation.frame == frame
+        activation.exposed.is_some() && activation.frame == frame
     }
 
     /// [`Interp::variable`] for a **named** activation rather than the running
@@ -359,14 +359,10 @@ impl Interp {
     /// [`Interp::exposure`] over one activation, so that a caller holding a
     /// `&mut` borrow of another `Interp` field can still ask.
     fn exposure_in(activation: &Activation, frame: SlotFrame, slot: usize) -> Option<&InstanceVar> {
-        if activation.exposed.is_empty() || activation.frame != frame {
+        if activation.frame != frame {
             return None;
         }
-        activation
-            .exposed
-            .iter()
-            .find(|(at, _)| *at == slot)
-            .map(|(_, var)| var)
+        activation.exposed.as_deref()?.find(slot)
     }
 
     /// The scope pools `owner` holds, for a reader.

@@ -277,8 +277,12 @@ pub(crate) struct Activation {
     /// `>I>`/`<I<` lines name.
     pub(crate) method_identity: Option<MethodIdentity>,
     /// Every name an `EXPOSE` in this activation bound to a scope pool on the
-    /// receiving object, by the slot index that name resolves to here.
-    pub(crate) exposed: Vec<(usize, InstanceVar)>,
+    /// receiving object, by the slot index that name resolves to here. `None`
+    /// where it bound none: never an empty list, so that `is_some` is the
+    /// whole test a variable access makes for an activation that exposes
+    /// nothing. Boxed so that the mask beside the list costs the activation
+    /// nothing.
+    pub(crate) exposed: Option<Box<Exposures>>,
     /// How far this activation is through a `REPLY`, which is the reply-issued
     /// flag plus the `REPLIED` execution state as one value.
     pub(crate) reply: ReplyState,
@@ -482,7 +486,7 @@ pub(crate) struct ActivationFlags(u8);
 
 /// Every call pushes one, so the size is pinned: a field that grows it has to
 /// pay for itself on the call path (ruling R4).
-const _: () = assert!(size_of::<Activation>() == 472);
+const _: () = assert!(size_of::<Activation>() == 456);
 
 impl ActivationFlags {
     const FORWARDED: u8 = 1;
@@ -664,6 +668,66 @@ pub(crate) struct InstanceVar {
     pub(crate) name: Rc<[u8]>,
 }
 
+/// An activation's exposures ([`Activation::exposed`]): each slot an `EXPOSE`
+/// bound and the variable it bound it to, with a bit set in `mask` for each
+/// such slot below 64, so that a read of an ordinary local in a method that
+/// exposes something skips the list.
+#[derive(Clone, Debug, Default)]
+pub(crate) struct Exposures {
+    list: Vec<(usize, InstanceVar)>,
+    /// Bit `s` set exactly where `list` names slot `s`, for `s` below 64.
+    mask: u64,
+}
+
+impl Exposures {
+    /// `list` with its mask.
+    pub(crate) fn from_list(list: Vec<(usize, InstanceVar)>) -> Exposures {
+        let mask = list
+            .iter()
+            .filter(|(slot, _)| *slot < 64)
+            .fold(0, |mask, (slot, _)| mask | (1 << slot));
+        Exposures { list, mask }
+    }
+
+    /// The variable slot `slot` is bound to.
+    #[inline]
+    pub(crate) fn find(&self, slot: usize) -> Option<&InstanceVar> {
+        if slot < 64 && self.mask & (1 << slot) == 0 {
+            return None;
+        }
+        self.list
+            .iter()
+            .find(|(at, _)| *at == slot)
+            .map(|(_, var)| var)
+    }
+
+    /// Binds `slot` to `var`. Replaced rather than appended: `expose v v` is
+    /// legal, and two entries for one slot would leave every later read
+    /// deciding between them by list order.
+    pub(crate) fn bind(&mut self, slot: usize, var: InstanceVar) {
+        match self.list.iter_mut().find(|(at, _)| *at == slot) {
+            Some(bound) => bound.1 = var,
+            None => {
+                self.list.push((slot, var));
+                if slot < 64 {
+                    self.mask |= 1 << slot;
+                }
+            }
+        }
+    }
+
+    /// Every binding, in the order the slots were first bound.
+    pub(crate) fn iter(&self) -> std::slice::Iter<'_, (usize, InstanceVar)> {
+        self.list.iter()
+    }
+
+    /// Unbinds every slot, keeping the list's capacity.
+    pub(crate) fn clear(&mut self) {
+        self.list.clear();
+        self.mask = 0;
+    }
+}
+
 impl Activation {
     /// A fresh top-level activation: no run-time bindings yet, default
     /// `NUMERIC` settings, `TRACE` off. What `Interp::run` starts every
@@ -690,7 +754,7 @@ impl Activation {
             // as `RXCOMMAND`, whose string is `COMMAND`.
             call_type: CallType::Command,
             method_identity: None,
-            exposed: Vec::new(),
+            exposed: None,
             reply: ReplyState::None,
             replied_a_value: false,
             replied: None,
@@ -763,7 +827,7 @@ impl Activation {
             rs: inherited.rs,
             call_type: inherited.call_type,
             method_identity: None,
-            exposed: Vec::new(),
+            exposed: None,
             reply: ReplyState::None,
             replied_a_value: false,
             replied: None,
@@ -828,7 +892,7 @@ impl Activation {
             rs: None,
             call_type,
             method_identity: None,
-            exposed: Vec::new(),
+            exposed: None,
             reply: ReplyState::None,
             replied_a_value: false,
             replied: None,
@@ -884,7 +948,7 @@ impl Activation {
             rs: None,
             call_type: CallType::Method,
             method_identity: Some(identity),
-            exposed: Vec::new(),
+            exposed: None,
             reply: ReplyState::None,
             replied_a_value: false,
             replied: None,
@@ -988,7 +1052,7 @@ impl Activation {
         *rs = None;
         *call_type = CallType::Method;
         *method_identity = Some(identity);
-        *exposed = Vec::new();
+        *exposed = None;
         *reply = ReplyState::None;
         *replied_a_value = false;
         *replied = None;
@@ -1186,7 +1250,7 @@ impl Activation {
                 scope,
                 name: _,
             },
-        ) in exposed
+        ) in exposed.iter().flat_map(|exposed| exposed.iter())
         {
             out.push(*owner);
             out.push(*scope);
@@ -1829,14 +1893,14 @@ mod method_tests {
             scope: ObjRef::NIL,
             receiver: ObjRef::NIL,
         });
-        activation.exposed.push((
+        activation.exposed.get_or_insert_default().bind(
             0,
             InstanceVar {
                 owner: ObjRef::NIL,
                 scope: ObjRef::NIL,
                 name: Rc::from(&b"V"[..]),
             },
-        ));
+        );
         activation.reply = ReplyState::Issued;
         activation.replied_a_value = true;
         activation.replied = Some(Box::new(Replied {
@@ -1932,14 +1996,9 @@ mod method_tests {
             identity(method_identity) == identity(&b.method_identity),
             "method_identity"
         );
-        // The capacity too: `Interp::expose_slot` takes the spare list only
-        // into an activation whose list has none.
-        assert!(
-            exposed.is_empty()
-                && b.exposed.is_empty()
-                && exposed.capacity() == b.exposed.capacity(),
-            "exposed"
-        );
+        // None rather than an empty list: `Interp::expose_slot` takes the
+        // spare list only into an activation that has none.
+        assert!(exposed.is_none() && b.exposed.is_none(), "exposed");
         assert!(*reply == b.reply, "reply");
         assert!(*replied_a_value == b.replied_a_value, "replied_a_value");
         assert!(replied.is_none() && b.replied.is_none(), "replied");

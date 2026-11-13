@@ -1504,7 +1504,8 @@ impl Interp {
         // ordinary local here. Measured -- a class method exposing `v` and
         // calling `inner: procedure` with no list, which assigns `v` -- the
         // object variable is unchanged.
-        activation.exposed = exposed;
+        activation.exposed = (!exposed.is_empty())
+            .then(|| Box::new(crate::activation::Exposures::from_list(exposed)));
         if let Some(cold) = activation.cold.as_deref_mut() {
             cold.auto_expose = None;
         }
@@ -1614,17 +1615,14 @@ impl Interp {
 
     /// Binds slot `slot` of the running activation to `var`.
     fn expose_slot(&mut self, slot: usize, var: InstanceVar) {
-        if self.activation().exposed.capacity() == 0 {
-            self.activation_mut().exposed = std::mem::take(&mut self.activity.spare_exposed);
-        }
-        let activation = self.activation_mut();
-        // Replaced rather than appended: `expose v v` is legal, and two entries
-        // for one slot would leave every later read deciding between them by
-        // list order.
-        match activation.exposed.iter_mut().find(|(at, _)| *at == slot) {
-            Some(bound) => bound.1 = var,
-            None => activation.exposed.push((slot, var)),
-        }
+        let spare = match self.activation().exposed {
+            None => self.activity.spare_exposed.take(),
+            Some(_) => None,
+        };
+        self.activation_mut()
+            .exposed
+            .get_or_insert_with(|| spare.unwrap_or_default())
+            .bind(slot, var);
     }
 
     /// The tail `name` spells becomes the same
