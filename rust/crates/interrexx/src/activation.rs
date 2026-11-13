@@ -1728,3 +1728,235 @@ mod address_tests {
         );
     }
 }
+
+#[cfg(test)]
+mod method_tests {
+    use super::{
+        Activation, CallType, Entry, InstanceVar, IoConfigs, MethodIdentity, Replied, ReplyState,
+        TraceEntry,
+    };
+    use crate::Interp;
+    use crate::plan::Plan;
+    use crate::trace::TraceMode;
+    use interrexx_core::ObjRef;
+    use interrexx_parse::parse_program;
+    use std::rc::Rc;
+
+    /// **[`Activation::reset_method`] leaves what [`Activation::method`]
+    /// builds**: the two keep separate copies of a method activation's
+    /// starting values (one a struct literal, the other the same values
+    /// written field by field over a recycled box), and nothing but this
+    /// test ties them together. The recycled activation starts as a
+    /// top-level one with every field it could carry over moved off its
+    /// default, so a value `reset_method` forgets to write shows up here.
+    #[test]
+    fn reset_method_writes_what_method_builds() {
+        let mut interp = Interp::new();
+        let program = Rc::new(parse_program(b"say 1\n::method m\nreturn 2\n".to_vec()).unwrap());
+        let program_id = interp.programs.insert(Rc::clone(&program));
+        let plan = Rc::new(Plan::default());
+        let old_frame = interp.roots.push_slots(1);
+        let frame = interp.roots.push_slots(2);
+        let identity = || MethodIdentity {
+            name: Rc::from(&b"M"[..]),
+            scope: ObjRef::NIL,
+            receiver: ObjRef::NIL,
+        };
+        let id = interp.next_activation_id();
+
+        let built = Activation::method(
+            id,
+            Rc::clone(&program),
+            program_id,
+            0,
+            Rc::clone(&plan),
+            frame,
+            identity(),
+        );
+
+        let old_id = interp.next_activation_id();
+        let mut reset = Activation::new(
+            old_id,
+            Rc::clone(&program),
+            program_id,
+            Rc::new(Plan::default()),
+            old_frame,
+        );
+        dirty(&mut reset);
+        reset.reset_method(
+            id,
+            Rc::clone(&program),
+            program_id,
+            0,
+            Rc::clone(&plan),
+            frame,
+            identity(),
+        );
+        assert_same(&built, &reset);
+    }
+
+    /// Moves every field of `activation` that a run can change off the
+    /// value a fresh one holds.
+    fn dirty(activation: &mut Activation) {
+        activation.extra.insert(Box::from(&b"X"[..]), 7);
+        activation.owns_frame = false;
+        activation.entry = Entry::InternalCall;
+        activation.rs = Some(1);
+        activation.call_type = CallType::Function;
+        activation.method_identity = Some(MethodIdentity {
+            name: Rc::from(&b"OLD"[..]),
+            scope: ObjRef::NIL,
+            receiver: ObjRef::NIL,
+        });
+        activation.exposed.push((
+            0,
+            InstanceVar {
+                owner: ObjRef::NIL,
+                scope: ObjRef::NIL,
+                name: Box::from(&b"V"[..]),
+            },
+        ));
+        activation.reply = ReplyState::Issued;
+        activation.replied_a_value = true;
+        activation.replied = Some(Box::new(Replied {
+            value: None,
+            continuation: None,
+        }));
+        activation.flags.set_forwarded(true);
+        activation.flags.set_reserved(true);
+        activation.first_instruction_pending = false;
+        activation.trace_entry = TraceEntry::Allowed;
+        activation.pc = 5;
+        activation.settings.set_digits(5).unwrap();
+        activation.trace_mode = TraceMode::RESULTS;
+        activation.debug.skip = 3;
+        activation.address.set_bytes(b"OTHER");
+        activation.io_configs = Some(Rc::new(IoConfigs::default()));
+        activation.traps.builtin = Some(Rc::default());
+        activation.cold_mut();
+        activation.cached_clock = 1;
+        activation.elapsed_anchor = 1;
+        activation.current_case = Some(ObjRef::NIL);
+        activation.clock_stale = false;
+        activation.context_object = Some(ObjRef::NIL);
+        activation.notify_message = Some(ObjRef::NIL);
+        activation.clause.line = 9;
+        activation.invocation = Some(1);
+        activation.call_name = Some(Rc::from(&b"F"[..]));
+        activation.call_arguments = Some(Rc::from(Vec::new()));
+        activation.streams.insert(Box::from(&b"S"[..]), ObjRef::NIL);
+    }
+
+    /// Compares `a` and `b` field by field. The destructuring names every
+    /// field, so a field added to [`Activation`] does not compile here until
+    /// it is compared.
+    fn assert_same(a: &Activation, b: &Activation) {
+        let Activation {
+            id,
+            program,
+            program_id,
+            body,
+            plan,
+            extra,
+            frame,
+            owns_frame,
+            entry,
+            rs,
+            call_type,
+            method_identity,
+            exposed,
+            reply,
+            replied_a_value,
+            replied,
+            flags,
+            first_instruction_pending,
+            trace_entry,
+            pc,
+            settings,
+            condition_syntax,
+            trace_mode,
+            debug,
+            address,
+            io_configs,
+            traps,
+            cold,
+            cached_clock,
+            elapsed_anchor,
+            current_case,
+            clock_stale,
+            context_object,
+            notify_message,
+            clause,
+            invocation,
+            call_name,
+            call_arguments,
+            streams,
+        } = a;
+        assert!(*id == b.id, "id");
+        assert!(Rc::ptr_eq(program, &b.program), "program");
+        assert!(*program_id == b.program_id, "program_id");
+        assert!(*body == b.body, "body");
+        assert!(Rc::ptr_eq(plan, &b.plan), "plan");
+        assert!(*extra == b.extra, "extra");
+        assert!(*frame == b.frame, "frame");
+        assert!(*owns_frame == b.owns_frame, "owns_frame");
+        assert!(*entry == b.entry, "entry");
+        assert!(*rs == b.rs, "rs");
+        assert!(*call_type == b.call_type, "call_type");
+        let identity = |m: &Option<MethodIdentity>| {
+            m.as_ref()
+                .map(|m| (Rc::clone(&m.name), m.scope, m.receiver))
+        };
+        assert!(
+            identity(method_identity) == identity(&b.method_identity),
+            "method_identity"
+        );
+        // The capacity too: `Interp::expose_slot` takes the spare list only
+        // into an activation whose list has none.
+        assert!(
+            exposed.is_empty()
+                && b.exposed.is_empty()
+                && exposed.capacity() == b.exposed.capacity(),
+            "exposed"
+        );
+        assert!(*reply == b.reply, "reply");
+        assert!(*replied_a_value == b.replied_a_value, "replied_a_value");
+        assert!(replied.is_none() && b.replied.is_none(), "replied");
+        assert!(flags.0 == b.flags.0, "flags");
+        assert!(
+            *first_instruction_pending == b.first_instruction_pending,
+            "first_instruction_pending"
+        );
+        assert!(*trace_entry == b.trace_entry, "trace_entry");
+        assert!(*pc == b.pc, "pc");
+        assert!(*settings == b.settings, "settings");
+        assert!(*condition_syntax == b.condition_syntax, "condition_syntax");
+        assert!(*trace_mode == b.trace_mode, "trace_mode");
+        assert!(*debug == b.debug, "debug");
+        assert!(*address == b.address, "address");
+        assert!(io_configs.is_none() && b.io_configs.is_none(), "io_configs");
+        assert!(
+            traps.builtin.is_none()
+                && b.traps.builtin.is_none()
+                && traps.user.is_none()
+                && b.traps.user.is_none(),
+            "traps"
+        );
+        assert!(cold.is_none() && b.cold.is_none(), "cold");
+        assert!(*cached_clock == b.cached_clock, "cached_clock");
+        assert!(*elapsed_anchor == b.elapsed_anchor, "elapsed_anchor");
+        assert!(*current_case == b.current_case, "current_case");
+        assert!(*clock_stale == b.clock_stale, "clock_stale");
+        assert!(*context_object == b.context_object, "context_object");
+        assert!(*notify_message == b.notify_message, "notify_message");
+        assert!(
+            (clause.line, clause.indent, clause.index)
+                == (b.clause.line, b.clause.indent, b.clause.index),
+            "clause"
+        );
+        assert!(*invocation == b.invocation, "invocation");
+        assert!(*call_name == b.call_name, "call_name");
+        assert!(*call_arguments == b.call_arguments, "call_arguments");
+        assert!(*streams == b.streams, "streams");
+    }
+}
