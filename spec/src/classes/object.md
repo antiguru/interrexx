@@ -804,7 +804,7 @@ call show o~instanceMethods(.nil), 'own'
 t = o~instanceMethods(.sub)
 .sub~define('M3', 'return 3')
 call show t, 'snapshot'
-call show o~instanceMethods(.sub), 'after'
+call show .sub~new~instanceMethods(.sub), 'after'
 n = 0
 t = .sub~new~instanceMethods
 do while t~available
@@ -866,7 +866,7 @@ class cm: 1 ONLY=Method
 cm object: 0 
 own: 1 OWN=Method
 snapshot: 2 HELLO=Method M2=Method
-after: 2 HELLO=Method M2=Method
+after: 3 HELLO=Method M2=Method M3=Method
 HELLO listed 2 times
 hidden HELLO listed 2 times 0
 ```

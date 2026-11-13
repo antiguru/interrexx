@@ -1858,9 +1858,9 @@ fn an_installed_loaded_method_survives_its_dropped_object() {
 }
 
 /// A `Method` copy keeps running after the program drops it: one that unsets
-/// its own entry, a private one, a primitive one, one `run` runs, and one an
-/// instance's behaviour kept after `define` replaced it, while fresh private
-/// copies come and go. Measured, oracle rc 0 in 3 of 3 runs, with 300 passes
+/// its own entry, a private one, a primitive one, one `run` runs, and the
+/// one a second `define` gives an instance made before it, while fresh
+/// private copies come and go. Measured, oracle rc 0 in 3 of 3 runs, with 300 passes
 /// of `copies('x', 100000)` in both fillers.
 #[test]
 fn a_dropped_method_copy_keeps_running() {
@@ -1923,13 +1923,14 @@ fn a_dropped_method_copy_keeps_running() {
             "  end\n",
             "  return\n",
         ),
-        "unset ran Method h 0\nprivate h 1\nnative a K\nrun r Method\nold h\nagain h 0 a K\n",
+        "unset ran Method h 0\nprivate h 1\nnative a K\nrun r Method\nold r Method\nagain h 0 a K\n",
     );
 }
 
 /// The `Method` object `.context~executable` builds for a body its class no
-/// longer reaches by name owns no identity: once it is swept, an instance
-/// whose behaviour predates the `define` still runs that body. Measured,
+/// longer reaches by name owns no identity: the body runs on after the
+/// `define` that replaced it (`r[class.methods.running]`), and the next send
+/// runs the replacement. Measured,
 /// oracle rc 0 in 3 of 3 runs, with 300 passes of `copies('x', 100000)` as
 /// the filler.
 #[test]
@@ -1954,7 +1955,7 @@ fn a_swept_rebuilt_executable_leaves_its_identity_alone() {
             "::method other\n",
             "  return 'other'\n",
         ),
-        "foo Method\nfoo Method other\n",
+        "foo Method\nother other\n",
     );
 }
 
@@ -2084,7 +2085,8 @@ fn a_held_literal_outlives_its_chunk() {
 /// Classes made after others were collected take the collected classes'
 /// behaviour slots, and every live instance still answers its own class's
 /// methods: one whose class a dropped package made, an enhanced object, one
-/// made before a `define`, and fresh ones. Measured, oracle rc 0 in 3 of 3
+/// made before a `define`, which answers as one made after it does, and
+/// fresh ones. Measured, oracle rc 0 in 3 of 3
 /// runs, with 300 passes of `copies('x', 100000)` as the filler.
 #[test]
 fn a_reused_behaviour_slot_leaves_live_instances_alone() {
@@ -2120,7 +2122,7 @@ fn a_reused_behaviour_slot_leaves_live_instances_alone() {
             "::method who\n",
             "  return 'k1'\n",
         ),
-        "a e r k1 k2\n",
+        "a e r k2 k2\n",
     );
 }
 
@@ -2151,15 +2153,16 @@ fn a_run_activation_holds_the_copy_it_runs() {
     );
 }
 
-/// A behaviour `define` retired is kept while an instance holds it and
-/// freed once none does: the running receiver and a held instance keep
-/// theirs while a dropped instance's slot goes to classes made after it.
+/// Every instance answers the method the last `define` gave its class while
+/// collections release the methods it replaced: the running receiver, a held
+/// instance and fresh ones, while a dropped instance's class's slots go to
+/// classes made after it.
 /// Measured, oracle rc 0 in 3 of 3 runs, with 300 passes of
 /// `copies('x', 100000)` as the filler.
 #[test]
-fn a_retired_behaviour_outlives_none_of_its_instances() {
+fn every_instance_follows_define_while_collections_run() {
     assert_stress_prints(
-        "<retired-behaviour>",
+        "<define-while-collecting>",
         concat!(
             "say .k~new~go\n",
             "exit\n",
@@ -2189,17 +2192,17 @@ fn a_retired_behaviour_outlives_none_of_its_instances() {
             "  end\n",
             "  return\n",
         ),
-        "f3\nf1 f2 f4 s 3 0\n",
+        "f4\nf4 f4 f4 s 3 1\n",
     );
 }
 
-/// An instance waiting for its `UNINIT` keeps the behaviour `define` retired
-/// from under it, and the finalizer answers through it. Measured, oracle rc
+/// An instance waiting for its `UNINIT` answers its class as it stands: the
+/// finalizer sees the method a `define` made after the instance. Measured, oracle rc
 /// 0 in 3 of 3 runs, with 300 passes of `copies('x', 100000)` as the filler.
 #[test]
-fn a_finalized_instance_keeps_its_retired_behaviour() {
+fn a_finalized_instance_answers_its_class_as_it_stands() {
     assert_stress_prints(
-        "<retired-behaviour-uninit>",
+        "<define-before-uninit>",
         concat!(
             ".local['SEEN'] = ''\n",
             "o = .u~new\n",
@@ -2226,12 +2229,12 @@ fn a_finalized_instance_keeps_its_retired_behaviour() {
             "  end\n",
             "  return\n",
         ),
-        "seen  u1 s u2\n",
+        "seen  u2 s u2\n",
     );
 }
 
 /// A method `define` replaced while an instance of a subclass runs it keeps
-/// its `Method` object once the replaced behaviour is freed: the running
+/// its `Method` object through the collections after it is dropped: the running
 /// activation answers that object's flags, not a rebuilt one's. Measured,
 /// oracle rc 0 in 3 of 3 runs, with 300 passes of `copies('x', 100000)` as
 /// the filler.
