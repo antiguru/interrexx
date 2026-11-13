@@ -175,7 +175,7 @@
                     <main>
                         <h1 id="built-in-functions"><a class="header" href="#built-in-functions">Built-in functions</a></h1>
 <p class="references">ANSI: 9.2.1; rexxref: Functions &gt; Built-in Functions</p>
-<p class="deviations">Deviations: D4, D98, D99, D101</p>
+<p class="deviations">Deviations: D4, D98, D99, D101, D170</p>
 <p>This chapter has a page for each builtin function, and each page specifies the
 function call. The rules here hold for every builtin call, except that a
 builtin whose page links <a href="#r-bif.index.call.native">the native call rule</a>
@@ -365,6 +365,26 @@ d: say condition('o')~code
 88.922
 88.922
 88.922
+</code></pre>
+<div class="rule" id="r-bif.index.call.convert.deviation.170"><a href="#r-bif.index.call.convert.deviation.170">[bif.index.call.convert.deviation.170]</a></div>
+<p>A builtin converts every argument that its page calls a string and that is an
+object other than a string, from left to right and after it has checked the
+number of its arguments, before it checks any argument: a <code>STRING</code> method of
+a later argument runs even when an earlier argument is in error. The error the
+call raises is the one the checks give, as <a href="../conventions.html#r-conv.check.order">the order of the
+checks</a> says, whatever the conversions ran. ooRexx converts an argument as it checks
+it and stops at the first that is in error, so a <code>STRING</code> method of a later
+argument does not run.</p>
+<pre><code class="language-rexx">.local~n = 0
+signal on syntax
+say substr('abcdef', 'x', .c~new)
+syntax: say 'error' condition('o')~code 'STRING calls:' .local~n
+::class c
+::method string
+  .local~n = .local~n + 1
+  return 2
+</code></pre>
+<pre><code class="language-output">error 40.12 STRING calls: 1
 </code></pre>
 <h2 id="words"><a class="header" href="#words">Words</a></h2>
 <div class="rule" id="r-bif.index.words.split"><a href="#r-bif.index.words.split">[bif.index.words.split]</a></div>

@@ -312,7 +312,8 @@ directly or is what <code>REQUEST</code> answers: the builtin works on its own
 characters, and no message is sent to it for that (<a href="classes/string.html#r-class.string.deviation.109">Deviation
 109</a>). A builtin that reads several such
 arguments reads them from left to right, after it has checked the number of
-its arguments. An argument that a builtin reads as a whole number or as a
+its arguments and before it checks any of them (<a href="builtins/index.html#r-bif.index.call.convert.deviation.170">Deviation
+170</a>). An argument that a builtin reads as a whole number or as a
 number is read this way too, and the replacement must then be a number. A
 builtin whose page links <a href="builtins/index.html#r-bif.index.call.native">the native call rule</a> has
 no fallback to <code>STRING</code>, as that rule says, and the same holds for the string
@@ -109066,7 +109067,7 @@ say datatype(p1, 'W') datatype(p2, 'W') datatype(p3, 'W') datatype(p4, 'W')
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="built-in-functions"><a class="header" href="#built-in-functions">Built-in functions</a></h1>
 <p class="references">ANSI: 9.2.1; rexxref: Functions &gt; Built-in Functions</p>
-<p class="deviations">Deviations: D4, D98, D99, D101</p>
+<p class="deviations">Deviations: D4, D98, D99, D101, D170</p>
 <p>This chapter has a page for each builtin function, and each page specifies the
 function call. The rules here hold for every builtin call, except that a
 builtin whose page links <a href="builtins/index.html#r-bif.index.call.native">the native call rule</a>
@@ -109256,6 +109257,26 @@ d: say condition('o')~code
 88.922
 88.922
 88.922
+</code></pre>
+<div class="rule" id="r-bif.index.call.convert.deviation.170"><a href="builtins/index.html#r-bif.index.call.convert.deviation.170">[bif.index.call.convert.deviation.170]</a></div>
+<p>A builtin converts every argument that its page calls a string and that is an
+object other than a string, from left to right and after it has checked the
+number of its arguments, before it checks any argument: a <code>STRING</code> method of
+a later argument runs even when an earlier argument is in error. The error the
+call raises is the one the checks give, as <a href="builtins/../conventions.html#r-conv.check.order">the order of the
+checks</a> says, whatever the conversions ran. ooRexx converts an argument as it checks
+it and stops at the first that is in error, so a <code>STRING</code> method of a later
+argument does not run.</p>
+<pre><code class="language-rexx">.local~n = 0
+signal on syntax
+say substr('abcdef', 'x', .c~new)
+syntax: say 'error' condition('o')~code 'STRING calls:' .local~n
+::class c
+::method string
+  .local~n = .local~n + 1
+  return 2
+</code></pre>
+<pre><code class="language-output">error 40.12 STRING calls: 1
 </code></pre>
 <h2 id="words-1"><a class="header" href="#words-1">Words</a></h2>
 <div class="rule" id="r-bif.index.words.split"><a href="builtins/index.html#r-bif.index.words.split">[bif.index.words.split]</a></div>
@@ -126695,6 +126716,17 @@ or <code>TIME</code> is a character that is no letter, and is refused like any o
 letter against the set of letters as a search of a C string does, which finds
 a 0 byte in every set: a 0 byte <code>option</code> with an <code>osep</code> raises <code>SYNTAX 40.904</code>
 and a 0 byte <code>informat</code> with an <code>isep</code> raises <code>SYNTAX 40.44</code>.</p>
+<h2 id="170-a-builtin-converts-every-argument-before-it-checks-any"><a class="header" href="#170-a-builtin-converts-every-argument-before-it-checks-any">170. A builtin converts every argument before it checks any</a></h2>
+<p>A builtin whose page calls an argument a string converts each such argument
+that is an object other than a string, sending <code>STRING</code> (or <code>REQUEST</code> and
+<code>MAKESTRING</code>, as <a href="conventions.html#r-conv.string.object">the conversion rule</a> says), from left
+to right, after it has checked the number of its arguments and before it
+checks any argument. A <code>STRING</code> method of a later argument therefore runs even
+when an earlier argument is in error, and the call raises the same error as in
+ooRexx, which converts an argument as it checks it and stops at the first one
+in error, so that the method of a later argument never runs. The difference
+shows only in what such a method does: counting, input or output, or raising a
+condition of its own.</p>
 
                     </main>
 

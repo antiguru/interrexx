@@ -227,7 +227,8 @@ directly or is what <code>REQUEST</code> answers: the builtin works on its own
 characters, and no message is sent to it for that (<a href="classes/string.html#r-class.string.deviation.109">Deviation
 109</a>). A builtin that reads several such
 arguments reads them from left to right, after it has checked the number of
-its arguments. An argument that a builtin reads as a whole number or as a
+its arguments and before it checks any of them (<a href="builtins/index.html#r-bif.index.call.convert.deviation.170">Deviation
+170</a>). An argument that a builtin reads as a whole number or as a
 number is read this way too, and the replacement must then be a number. A
 builtin whose page links <a href="builtins/index.html#r-bif.index.call.native">the native call rule</a> has
 no fallback to <code>STRING</code>, as that rule says, and the same holds for the string
