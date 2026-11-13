@@ -12,7 +12,7 @@ use super::{
     Calls, Chunk, ChunkTooLarge, ClauseOpening, ClausePosition, ConditionKeyword, ConditionOps,
     Hints, NodePath, Op, PlanSlot, SendForm,
 };
-use crate::eval::{SymbolRead, is_arithmetic, is_native_binary};
+use crate::eval::{SymbolRead, is_arithmetic, is_concatenation, is_native_binary};
 use crate::plan::Plan;
 use crate::run::{
     HeaderRole, QueueKeyword, ReturnKeyword, if_targets, loop_header_plan, loop_header_slot,
@@ -1687,6 +1687,13 @@ fn push_native<'a>(
                     rhs,
                     dst,
                     text: crate::eval::compares_as_text(*op, left, right),
+                    // The left operand compiled into `dst` ends in its own
+                    // concatenation op, which is what `onto` claims.
+                    onto: is_concatenation(*op)
+                        && matches!(
+                            &left.kind,
+                            ExprKind::Binary { op: inner, .. } if is_concatenation(*inner)
+                        ),
                 }
             });
             // Behind the operation rather than in front of it, because

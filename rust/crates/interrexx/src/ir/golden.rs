@@ -201,11 +201,13 @@ pub(crate) fn render(chunk: &Chunk) -> String {
                 rhs,
                 dst,
                 text,
+                onto,
             } => {
                 out.push_str(&format!(
-                    "{index}: Binary op={} lhs={lhs} rhs={rhs} dst={dst}{}\n",
+                    "{index}: Binary op={} lhs={lhs} rhs={rhs} dst={dst}{}{}\n",
                     render_operator(*op),
-                    if *text { " text" } else { "" }
+                    if *text { " text" } else { "" },
+                    if *onto { " onto" } else { "" }
                 ));
             }
             Op::TraceOperator { op, src } => {

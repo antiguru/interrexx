@@ -1815,6 +1815,15 @@ impl Interp {
 }
 
 impl Rendered {
+    /// The bytes, where they were carried in the handle -- which is the
+    /// whole string, and at most [`interrexx_core::INLINE_TEXT`] bytes.
+    pub(crate) fn inline(&self) -> Option<&[u8]> {
+        match &self.carried {
+            Carried::Inline(inline) => Some(inline),
+            _ => None,
+        }
+    }
+
     /// The bytes, borrowed from the interpreter's heap wherever
     /// [`Interp::render`] left them there.
     pub(crate) fn text<'a>(&'a self, interp: &'a Interp) -> &'a [u8] {

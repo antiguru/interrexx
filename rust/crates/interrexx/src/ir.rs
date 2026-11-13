@@ -198,6 +198,14 @@ pub(crate) enum Op {
         /// op is compiled: two plain strings then compare by the string rule
         /// at once, the answer the numeric attempt would come to.
         text: bool,
+        /// A concatenation whose left operand is the concatenation compiled
+        /// just before it in the same chain, `(a || b) || c`: what is in `lhs`
+        /// is the string that op built, if it built one, and this op may
+        /// append to it ([`Interp::concat_onto`]) rather than copy it. The
+        /// driver checks that it is that string before relying on it.
+        ///
+        /// [`Interp::concat_onto`]: crate::Interp::concat_onto
+        onto: bool,
     },
     /// Echoes the `>O>` line of the operator result in register `src`.
     TraceOperator { op: Operator, src: u16 },

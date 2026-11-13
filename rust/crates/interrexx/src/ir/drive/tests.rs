@@ -801,6 +801,14 @@ fn loop_conditions_run_from_their_compiled_ops() {
         runs(b"k = 3\ndo until k = 0\n  k = k - 1\nend\nsay k\n", "0\n"),
         3
     );
+    // A chain whose links are marked to append, run here as copies.
+    assert_eq!(
+        runs(
+            b"s = ''\ndo until s || '-' || s || '-' || s == 'xx-xx-xx'\n  s = s || 'x'\nend\nsay s\n",
+            "xx\n"
+        ),
+        2
+    );
     assert_eq!(
         runs(
             b"t = 'ab'\ndo while length(t) > 0\n  t = substr(t, 2)\nend\nsay t'.'\n",
