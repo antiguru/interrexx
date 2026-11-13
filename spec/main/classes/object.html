@@ -2212,17 +2212,29 @@ class or to the classes behind it that is made afterwards in ooRexx, and sees
 every change in interrexx, as
 <a href="methods.html#r-class.methods.deviation.110">the Deviation 110 rule of the search page</a>
 states for the objects that exist already; in ooRexx the object keeps missing
-later changes after <code>unsetMethod</code> too. In the example a <code>define</code> follows the
-<code>setMethod</code>.</p>
+later changes after <code>unsetMethod</code> too. The listing of
+<a href="#r-class.object.instancemethods"><code>instanceMethods</code></a> and the answer of
+<code>hasMethod</code> follow the change as the search does. In the example a <code>define</code>
+follows the <code>setMethod</code>.</p>
 <pre><code class="language-rexx">o = .k~new
 o~sm('own', 'return "own"')
 .k~define('later', 'return "later"')
 say o~own o~later
+say o~hasMethod('LATER') o~instanceMethod('LATER')~class~id
+t = o~instanceMethods(.k)
+a = .array~new
+do while t~available
+  a~append(t~index)
+  t~next
+end
+say a~items a~sort~makestring('l', ' ')
 ::class k
 ::method sm
   self~setMethod(arg(1), arg(2))
 </code></pre>
 <pre><code class="language-output">own later
+1 Method
+2 LATER SM
 </code></pre>
 <div class="rule" id="r-class.object.deviation.118"><a href="#r-class.object.deviation.118">[class.object.deviation.118]</a></div>
 <p><code>sendWith</code> and <code>startWith</code> send an instance of a subclass of <code>List</code> given as

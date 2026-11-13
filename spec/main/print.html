@@ -28367,15 +28367,22 @@ base define two again:
 it runs, and an <code>inherit</code> or <code>uninherit</code> that changes the method a name finds,
 made on the same activity or on another, leaves that run as it is: it goes on
 to its end as the method it started as. The change applies to the sends that
-start after it. In the example, the method <code>M</code> replaces itself and returns
-what it started with, and the method <code>GO</code>, which runs on another activity
-while its class deletes it, runs to its end.</p>
+start after it. In the example, the method <code>M</code> replaces itself, has a
+collection forced, and returns what it started with; the method <code>TWO</code>, which
+the class finds in a mixin class, has the class <code>uninherit</code> that mixin class
+and runs to its end; and the method <code>GO</code>, which runs on another activity while
+its class deletes it and a collection is forced, runs to its end.
+<a href="classes/methods.html#r-class.methods.deviation.110">Deviation 110</a> gives the example with one
+object made before the changes.</p>
 <pre><code class="language-rexx">say .k~new~m
 say .k~new~m
+say .k~new~two
+say t(.k~new, 'TWO')
 w = .w~new
 r = w~start('go')
 w~waitStarted
 .w~delete('GO')
+x = gc('force')
 w~release
 say r~result
 say t(.w~new, 'GO')
@@ -28384,10 +28391,18 @@ t:
   signal on syntax name e
   return arg(1)~send(arg(2))
 e: return '-'
-::class k
+::class k inherit mx
 ::method m
   .k~define('M', 'return "new"')
-  return 'old'
+  x = gc('force')
+  return 'old' self~helper
+::method helper
+  return 'h'
+::class mx mixinclass object
+::method two
+  .k~uninherit(.mx)
+  x = gc('force')
+  return 'two ran on'
 ::class w
 ::method init
   expose started released
@@ -28405,8 +28420,10 @@ e: return '-'
   expose released
   released = 1
 </code></pre>
-<pre><code class="language-output">old
+<pre><code class="language-output">old h
 new
+two ran on
+-
 go ran on
 -
 </code></pre>
@@ -28416,9 +28433,12 @@ to the methods of a class, by one <code>define</code>, <code>defineMethods</code
 <code>inherit</code> or <code>uninherit</code>, is seen by a send entirely or not at all: never a
 part of the table of a <code>defineMethods</code>, and never a part of the order an
 <code>inherit</code> or <code>uninherit</code> builds. Every send that starts after the change has
-completed sees it. In the example, the method that runs on another activity
-sends <code>A</code> and <code>B</code> before the table that replaces both is defined and again
-after it.</p>
+completed sees it. The example shows that last sentence: the method that
+runs on another activity sends <code>A</code> and <code>B</code> before the table that replaces both
+is defined and again after it. That no send sees a part of a change is not
+shown by an example: a program has no point between two parts of one change at
+which a send could start. <a href="classes/methods.html#r-class.methods.deviation.110">Deviation 110</a>
+gives the example with one object made before the change.</p>
 <pre><code class="language-rexx">w = .w~new
 r = w~start('watch')
 w~waitStarted
@@ -29022,8 +29042,14 @@ class itself (<a href="classes/../deviations.html">Deviation 110</a>). The first
 of the rule on changes, with a <code>define</code> sent to <code>K</code> itself and an instance <code>B</code>
 that is made after it: <code>A</code>, <code>B</code> and <code>S</code> answer alike after every change. The
 second example gives an object an own method with <code>setMethod</code> and another with
-<code>enhanced</code>, and changes the class afterwards. The third follows a class object
-over changes to its metaclass.</p>
+<code>enhanced</code>, and changes the class afterwards. The third follows class objects
+over changes to their metaclass: two that name it with <code>METACLASS</code>, and one
+that <code>enhanced</code> made from it, which keeps its own method <code>HELLO</code> beside the
+methods the changes add. The fourth runs the examples of
+<a href="classes/methods.html#r-class.methods.running">the rule on a running method</a> and
+<a href="classes/methods.html#r-class.methods.whole">the rule on a change seen whole</a> on one object <code>O</code>
+made before the changes: its second <code>M</code> runs the replacement, and the method
+on the other activity finds the new <code>A</code> and <code>B</code> for it.</p>
 <pre><code class="language-rexx">a = .k~new
 s = .sub~new
 call show 'start'
@@ -29125,14 +29151,18 @@ x: return '-'
 en - t h
 k1
 </code></pre>
-<pre><code class="language-rexx">say t(.c, 'who') t(.c, 'later') t(.d, 'later')
-.meta~define('later', 'return "meta later"')
+<pre><code class="language-rexx">e = .meta~enhanced(.directory~new~~put('return "hi"', 'HELLO'), 'E')
+say t(.c, 'who') t(.c, 'later') t(.d, 'later')
+say t(e, 'hello') t(e, 'later')
+.meta~define('later', 'return "later"')
 say t(.c, 'later') t(.d, 'later')
+say t(e, 'hello') t(e, 'later')
 .sbase~define('later2', 'return "sbase later2"')
 .mxm~define('later3', 'return "mxm later3"')
 say t(.c, 'later2') t(.d, 'later3')
+say t(e, 'hello') t(e, 'later2') t(e, 'later3')
 .meta~inherit(.my)
-say t(.c, 'four') t(.d, 'four')
+say t(.c, 'four') t(.d, 'four') t(e, 'four')
 exit
 t:
   signal on syntax name e
@@ -29150,9 +29180,70 @@ e: return '-'
 ::class d metaclass meta
 </code></pre>
 <pre><code class="language-output">meta who - -
-meta later meta later
+hi -
+later later
+hi later
 sbase later2 mxm later3
-four four
+hi sbase later2 mxm later3
+four four four
+</code></pre>
+<pre><code class="language-rexx">o = .k~new
+say o~m
+say o~m
+say o~two
+say t(o, 'TWO')
+w = .w~new
+r = w~start('watch', o)
+w~waitStarted
+table = .directory~new
+table['A'] = 'return "a2"'
+table['B'] = 'return "b2"'
+.k~defineMethods(table)
+w~release
+say r~result
+exit
+t:
+  signal on syntax name e
+  return arg(1)~send(arg(2))
+e: return '-'
+::class k inherit mx
+::method m
+  .k~define('M', 'return "new"')
+  x = gc('force')
+  return 'old'
+::method a
+  return 'a1'
+::method b
+  return 'b1'
+::class mx mixinclass object
+::method two
+  .k~uninherit(.mx)
+  x = gc('force')
+  return 'two ran on'
+::class w
+::method init
+  expose started released
+  started = 0
+  released = 0
+::method watch unguarded
+  expose started released
+  use arg o
+  before = o~a o~b
+  started = 1
+  guard on when released = 1
+  return before '-&gt;' o~a o~b
+::method waitStarted unguarded
+  expose started
+  guard on when started = 1
+::method release unguarded
+  expose released
+  released = 1
+</code></pre>
+<pre><code class="language-output">old
+new
+two ran on
+-
+a1 b1 -&gt; a2 b2
 </code></pre>
 <div class="rule" id="r-class.methods.deviation.117"><a href="classes/methods.html#r-class.methods.deviation.117">[class.methods.deviation.117]</a></div>
 <p><code>delete</code> of a name that <code>define</code> hid with <code>.nil</code> as the method ends the hiding
@@ -31221,17 +31312,29 @@ class or to the classes behind it that is made afterwards in ooRexx, and sees
 every change in interrexx, as
 <a href="classes/methods.html#r-class.methods.deviation.110">the Deviation 110 rule of the search page</a>
 states for the objects that exist already; in ooRexx the object keeps missing
-later changes after <code>unsetMethod</code> too. In the example a <code>define</code> follows the
-<code>setMethod</code>.</p>
+later changes after <code>unsetMethod</code> too. The listing of
+<a href="classes/object.html#r-class.object.instancemethods"><code>instanceMethods</code></a> and the answer of
+<code>hasMethod</code> follow the change as the search does. In the example a <code>define</code>
+follows the <code>setMethod</code>.</p>
 <pre><code class="language-rexx">o = .k~new
 o~sm('own', 'return "own"')
 .k~define('later', 'return "later"')
 say o~own o~later
+say o~hasMethod('LATER') o~instanceMethod('LATER')~class~id
+t = o~instanceMethods(.k)
+a = .array~new
+do while t~available
+  a~append(t~index)
+  t~next
+end
+say a~items a~sort~makestring('l', ' ')
 ::class k
 ::method sm
   self~setMethod(arg(1), arg(2))
 </code></pre>
 <pre><code class="language-output">own later
+1 Method
+2 LATER SM
 </code></pre>
 <div class="rule" id="r-class.object.deviation.118"><a href="classes/object.html#r-class.object.deviation.118">[class.object.deviation.118]</a></div>
 <p><code>sendWith</code> and <code>startWith</code> send an instance of a subclass of <code>List</code> given as
