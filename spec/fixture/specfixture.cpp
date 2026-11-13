@@ -132,7 +132,7 @@ RexxRoutine1(size_t, FxItems, RexxArrayObject, a)
 }
 
 // Answers the argument, or `omitted` where the caller left it out.
-// Serves r[native.calls.optional].
+// Serves r[native.calls.count].
 RexxRoutine1(RexxObjectPtr, FxOptional, OPTIONAL_int32_t, n)
 {
     if (argumentOmitted(1))

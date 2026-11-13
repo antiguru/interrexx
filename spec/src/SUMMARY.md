@@ -160,6 +160,7 @@
   - [Halt and program end](concurrency/halt.md)
 - [Native libraries](native/index.md)
   - [Loading](native/loading.md)
+  - [Native routines and methods](native/calls.md)
 - [RexxUtil](rexxutil/index.md)
   - [SysFileDelete](rexxutil/sysfiledelete.md)
   - [SysFileExists](rexxutil/sysfileexists.md)
