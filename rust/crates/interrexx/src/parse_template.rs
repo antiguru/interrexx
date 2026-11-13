@@ -572,6 +572,30 @@ impl Interp {
         parse: &Parse,
         evaluated: Option<ObjRef>,
     ) -> Result<(), Failure> {
+        // **`PARSE VAR name w1 ... rest`, untraced, has a walk of its own**,
+        // out of line so that it leaves this one's code as it was.
+        if let ParseSource::Var(id) = parse.source
+            && let [Some(trigger)] = parse.template.as_slice()
+            && trigger.kind == TriggerKind::End
+            && !(parse.upper || parse.lower)
+        {
+            let traced = self.traced_mode();
+            if !(traced.results || traced.intermediates) {
+                return self.parse_var_words(code, parse, id, trigger);
+            }
+        }
+        self.exec_parse_general(code, parse, evaluated)
+    }
+
+    /// [`Interp::exec_parse`] for every shape [`Interp::parse_var_words`]
+    /// does not take.
+    #[inline(never)]
+    fn exec_parse_general(
+        &mut self,
+        code: &Code<'_>,
+        parse: &Parse,
+        evaluated: Option<ObjRef>,
+    ) -> Result<(), Failure> {
         let indent = self.activity.clause_state.current_value_indent;
         let mut strings = self.parse_strings(code, parse, indent, evaluated)?;
         let (mut source, mut cursor) = self.next_template(&mut strings, parse, indent)?;
@@ -597,6 +621,85 @@ impl Interp {
         self.give_source(source);
         self.give_parse_strings(strings);
         Ok(())
+    }
+
+    /// [`Interp::exec_parse`] for `PARSE VAR name t1 t2 ...` with nothing
+    /// traced: one string, no fold, and a template of words alone. The steps
+    /// the general walk takes for that shape, in the same order -- the read,
+    /// the required-string protocol, the implicit end trigger, then each
+    /// target's piece and assignment -- with none of the machinery for the
+    /// shapes this one is not: several strings, a fold, a trigger to
+    /// evaluate, a line to trace. A stem or compound name goes to the general
+    /// walk, which has their reads.
+    ///
+    /// The carving repeats [`Interp::take_piece`]'s rather than calling it:
+    /// a second caller stops that helper being inlined into the general walk,
+    /// and `bench-programs/parse.rex` measured +4.6% instructions for it.
+    #[inline(never)]
+    fn parse_var_words(
+        &mut self,
+        code: &Code<'_>,
+        parse: &Parse,
+        id: interrexx_parse::SymbolId,
+        trigger: &ParseTrigger,
+    ) -> Result<(), Failure> {
+        let name = code.symbols.name(id).as_bytes();
+        if !matches!(crate::run::shape_of(name), crate::run::NameShape::Simple) {
+            return self.exec_parse_general(code, parse, None);
+        }
+        let indent = self.activity.clause_state.current_value_indent;
+        let (value, novalue) = self.read(code, id);
+        self.novalue_check(novalue, value)?;
+        self.roots.activity_mut().push_temp(value);
+        let converted = self.required_string_value(value)?;
+        let (source, origin) = self.source_text(converted, parse);
+        let mut cursor = Cursor::new(source.len());
+        cursor.origin = origin;
+        cursor.move_to_end();
+        let last = trigger.targets.len().saturating_sub(1);
+        for (index, target) in trigger.targets.iter().enumerate() {
+            let string = source.bytes(self);
+            let piece = if index == last {
+                cursor.remainder()
+            } else {
+                cursor.next_word(string)
+            };
+            // A `.` consumes its field and assigns nothing.
+            let Some(target) = target else { continue };
+            let value = if piece.start == 0 && piece.end == string.len() {
+                match source {
+                    SourceText::Text { value, .. } => value,
+                    _ => cursor
+                        .origin
+                        .unwrap_or_else(|| self.piece_value(&source, piece)),
+                }
+            } else {
+                self.piece_value(&source, piece)
+            };
+            self.roots.activity_mut().push_temp(value);
+            let bound = match &target.kind {
+                ExprKind::Variable(id) => code.slot_for(*id).map(|slot| (*id, slot)),
+                _ => None,
+            };
+            match bound {
+                Some((id, slot)) => self.assign_bound_variable(code, id, slot, value, None, indent),
+                None => self.assign_expr_target(code, target, value, indent, None)?,
+            }
+        }
+        self.give_source(source);
+        Ok(())
+    }
+
+    /// [`Interp::parse_var_words`]'s value for a piece that has no object to
+    /// share: inline when it fits the handle, else a fresh text.
+    fn piece_value(&mut self, source: &SourceText, piece: std::ops::Range<usize>) -> ObjRef {
+        let bytes = &source.bytes(self)[piece.start..piece.end];
+        if let Some(inline) = ObjRef::inline_text(bytes) {
+            return inline;
+        }
+        let value = self.text_bytes(Bytes::from_slice(bytes));
+        self.charge_text(piece.len());
+        value
     }
 
     /// Steps to the next parse string, applying `UPPER`/`LOWER` and tracing
