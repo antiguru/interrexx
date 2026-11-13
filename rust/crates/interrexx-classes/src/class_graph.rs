@@ -743,6 +743,66 @@ impl ClassGraph {
         self.update_instance_sub_classes(class, name.eq_ignore_ascii_case("UNINIT"));
     }
 
+    /// [`ClassGraph::define`] of each of `methods` in turn, with one copy of the instance
+    /// behaviour and one cascade instead of one each.
+    ///
+    /// The two differ only in what nothing can see: the behaviours the calls in between
+    /// would have built and retired at once, which nothing can hold because nothing runs
+    /// between the calls, and how often a rebuilt behaviour's version moves. What a
+    /// retired behaviour counts toward the next collection is charged as the separate
+    /// calls charge it. Where that equivalence needs more than this checks -- a name
+    /// given twice, a name `class` already defines, `UNINIT` -- the calls are made one
+    /// by one.
+    pub fn define_all(&mut self, class: ObjRef, methods: &[(String, MethodId)]) {
+        self.bump_epoch();
+        let def = &self.classes[&class];
+        let mut names: Vec<String> = methods
+            .iter()
+            .map(|(name, _)| name.to_ascii_uppercase())
+            .collect();
+        let together = methods.len() > 1
+            && names
+                .iter()
+                .all(|name| name != "UNINIT" && !def.own_instance_methods.contains(name))
+            && {
+                names.sort_unstable();
+                names.windows(2).all(|pair| pair[0] != pair[1])
+            };
+        if !together {
+            for (name, method) in methods {
+                self.define(class, name, *method);
+            }
+            return;
+        }
+        let def = self
+            .classes
+            .get_mut(&class)
+            .expect("define_all: unknown class");
+        for (name, method) in methods {
+            def.own_instance_methods
+                .replace_method(name, class, *method);
+        }
+        let rexx_defined = def.rexx_defined;
+        self.copy_instance_behaviour(class);
+        self.update_instance_sub_classes(class, false);
+        if !rexx_defined {
+            // The separate calls retire the behaviour each of them replaces: the one
+            // `class` had, then the one each call but the last built. The one call `i`
+            // built (counting from 1) lacks just the names after it that `class` alone
+            // supplies, the ones whose list holds `class`'s own entry and nothing else.
+            let built = &self.behaviours[self.classes[&class].instance_behaviour.index()].dict;
+            let mut entries = built.len();
+            let mut retired = 0;
+            for (name, _) in methods[1..].iter().rev() {
+                if built.entry_count(&name.to_ascii_uppercase()) == 1 {
+                    entries -= 1;
+                }
+                retired += entries;
+            }
+            self.retired_entries += retired;
+        }
+    }
+
     /// `~define` with the method argument omitted, and the bootstrap hiding of
     /// a method: a `.nil` tombstone under `name`.
     pub fn hide(&mut self, class: ObjRef, name: &str) {

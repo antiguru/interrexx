@@ -1410,6 +1410,14 @@ impl Interp {
         attached: &[usize],
         class_side: bool,
     ) {
+        // No code runs while a class's members install, so nothing can tell the
+        // instance side's defines made one by one from made together.
+        let outer = if class_side {
+            None
+        } else {
+            self.instance_installs.replace(Vec::new())
+        };
+        debug_assert!(outer.is_none(), "class members install one class at a time");
         for &index in attached {
             match &program.directives[index].kind {
                 DirectiveKind::Method(method) if method.class_method == class_side => {
@@ -1423,6 +1431,11 @@ impl Interp {
                 }
                 _ => {}
             }
+        }
+        if !class_side {
+            let installs = self.instance_installs.take().unwrap_or_default();
+            self.classes()
+                .define_instance_methods_in_turn(class, &installs);
         }
     }
 
@@ -1628,6 +1641,12 @@ impl Interp {
         let name = String::from_utf8_lossy(name).into_owned();
         let method_id = if class_method {
             self.classes().add_class_method(class, &name)
+        } else if self.instance_installs.is_some() {
+            let method = self.classes().mint_method_id();
+            if let Some(installs) = &mut self.instance_installs {
+                installs.push((name, method));
+            }
+            method
         } else {
             self.classes().add_instance_method(class, &name)
         };

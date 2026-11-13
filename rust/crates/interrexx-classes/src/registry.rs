@@ -589,27 +589,18 @@ impl ClassRegistry {
         self.graph.class_has_method(class, name)
     }
 
-    /// Install a directly-added instance method with a freshly minted [`MethodId`] -- a
-    /// bootstrap convenience standing in for the bootstrap's method-adding forms, none
-    /// of whose visibility distinctions this crate models. Unlike [`ClassGraph::define`]
-    /// (`~define`, which allocates a fresh handle so a pre-existing instance is
-    /// unaffected), this is bootstrap-time population before any instance can exist, so
-    /// the handle churn `define` costs is spent for no reason here -- accepted rather
-    /// than building a second populate-then-cascade-once primitive, since nothing after
-    /// bootstrap calls it.
+    /// [`ClassGraph::define`] of an instance method with a freshly minted [`MethodId`]. A
+    /// caller installing several at once mints them with [`Self::mint_method_id`] and
+    /// defines them with [`Self::define_instance_methods_in_turn`].
     pub fn add_instance_method(&mut self, class: ObjRef, name: &str) -> MethodId {
         let method = self.next_method_id();
         self.graph.define(class, name, method);
         method
     }
 
-    /// [`Self::add_instance_method`] for one of the bootstrap's private-method
-    /// rows, which additionally records the minted identity in
-    /// [`Self::private_native_methods`].
-    pub fn add_private_instance_method(&mut self, class: ObjRef, name: &str) -> MethodId {
-        let method = self.add_instance_method(class, name);
+    /// Records `method` as one of the bootstrap's private-method rows.
+    pub fn mark_private_native(&mut self, method: MethodId) {
         self.private_native_methods.push(method);
-        method
     }
 
     /// The native methods the bootstrap marks private, in mint order.
@@ -672,6 +663,16 @@ impl ClassRegistry {
     /// [`Self::add_instance_method`]'s bootstrap population.
     pub fn define_instance_method(&mut self, class: ObjRef, name: &str, method: MethodId) {
         self.graph.define(class, name, method);
+    }
+
+    /// [`Self::define_instance_method`] of each of `methods` in turn -- see
+    /// [`ClassGraph::define_all`].
+    pub fn define_instance_methods_in_turn(
+        &mut self,
+        class: ObjRef,
+        methods: &[(String, MethodId)],
+    ) {
+        self.graph.define_all(class, methods);
     }
 
     /// `~define` with the method omitted, and the bootstrap's method hiding -- see
