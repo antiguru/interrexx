@@ -3808,13 +3808,14 @@ fn list_step(first: bool, rest: &mut impl Iterator<Item = bool>) -> Option<usize
 }
 
 pub(crate) fn shape_of(name: &[u8]) -> NameShape {
-    let dots = name.iter().filter(|&&b| b == b'.').count();
-    if dots == 0 {
-        NameShape::Simple
-    } else if dots == 1 && name.last() == Some(&b'.') {
-        NameShape::Stem
-    } else {
-        NameShape::Compound
+    // The first dot decides it: none is a simple name, one in the last
+    // position is the only dot there is, and anywhere else makes a tail.
+    // Found by a search that stops there rather than by counting every dot,
+    // which compiled to a vectorised count on every variable read by name.
+    match name.iter().position(|&b| b == b'.') {
+        None => NameShape::Simple,
+        Some(at) if at + 1 == name.len() => NameShape::Stem,
+        Some(_) => NameShape::Compound,
     }
 }
 

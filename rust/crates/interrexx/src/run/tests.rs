@@ -761,3 +761,22 @@ fn a_dead_programs_site_holds_leave_the_count() {
         "the main body's site is the one live hold"
     );
 }
+
+/// The first dot decides a name's shape: none, a single trailing one, or
+/// any other placement.
+#[test]
+fn shape_of_reads_the_dots() {
+    for (name, shape) in [
+        (&b"x"[..], NameShape::Simple),
+        (b"ABC_9", NameShape::Simple),
+        (b"", NameShape::Simple),
+        (b".", NameShape::Stem),
+        (b"S.", NameShape::Stem),
+        (b"S.I", NameShape::Compound),
+        (b"S..", NameShape::Compound),
+        (b"S.I.", NameShape::Compound),
+        (b".I", NameShape::Compound),
+    ] {
+        assert_eq!(shape_of(name), shape, "{}", String::from_utf8_lossy(name));
+    }
+}

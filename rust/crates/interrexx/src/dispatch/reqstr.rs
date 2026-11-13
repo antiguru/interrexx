@@ -301,25 +301,35 @@ impl Interp {
         if !self.reqstr_armed {
             return Ok(None);
         }
-        // Looked up behind the latch, not in front of it: an ordinary call
-        // pays one bool test here and nothing else, where a lookup at the call
-        // site would scan the exemption table on every builtin call in every
-        // program.
-        let raw = crate::builtin::raw_argument_positions(name);
         // **Scanned before anything is built.** `None` means "the arguments
         // stand as they are", so a call whose every argument is already its
         // own string value can answer that instead of allocating a vector to
         // hold copies of what the caller already has. An armed interpreter
         // otherwise allocated one `Vec` per builtin call for the whole run,
         // and being armed is not rare: any instance of a Rexx class arms it.
-        if !args.iter().enumerate().any(|(index, argument)| {
-            argument.is_some_and(|value| {
-                !raw.contains(&(index + 1))
-                    && !matches!(value.decode(), Decoded::SmallInt(_) | Decoded::Text(_))
-            })
-        }) {
+        //
+        // A heap string or number is its own string value too, which is
+        // [`Interp::required_string_or`]'s answer for it; that answer roots
+        // it, so it is rooted here as well. Only a position whose conversion
+        // could answer another object makes the list worth copying, and only
+        // then is the exemption table asked: an exempt position copied
+        // unconverted is the list the caller had.
+        let stands = args.iter().flatten().all(|&value| match value.decode() {
+            Decoded::SmallInt(_) | Decoded::Text(_) => true,
+            _ if matches!(
+                self.heap.get(value).map(|object| &object.body),
+                Some(Body::Text { .. } | Body::Num { .. })
+            ) =>
+            {
+                self.roots.activity_mut().push_temp(value);
+                true
+            }
+            _ => false,
+        });
+        if stands {
             return Ok(None);
         }
+        let raw = crate::builtin::raw_argument_positions(name);
         let mut converted = Vec::with_capacity(args.len());
         for (index, argument) in args.iter().enumerate() {
             let position = index + 1;

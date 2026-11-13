@@ -135,6 +135,8 @@ lang/call_on_trap_rearms.rex
 lang/parse_triggers.rex
 lang/parse_sources.rex
 lang/parse_template.rex
+lang/parse_whole_piece_identity.rex
+lang/parse_operand_changes_trace.rex
 lang/pull_queue.rex
 lang/address_env.rex
 lang/state_builtins.rex

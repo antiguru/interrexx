@@ -89,6 +89,12 @@ misses than ooRexx on every axis measured except L1i.
 * **A side arena or out-of-line storage for long strings**: helps 7 of 12 million string creations
   on `rexxcps`.
 * **Pooling `PARSE` buffers**: every probe about 3% slower.
+* **A separate untraced `PARSE` walk** (source, triggers and targets with every trace gate
+  dropped): `parse.rex` +4.4% instructions. What a `PARSE` costs past its logic is the template
+  loop's preheader, where the compiler hoists and spills addresses into the interpreter; moving
+  the per-trigger or traced per-target work out of line moves that cost rather than removing it.
+* **Inlining `try_text`'s heap-string case** into its callers: `strings` -0.3%, `parse` +0.65%,
+  `rexxcps` +1.2%.
 * **Atomic quickening slots**: a cost per pass on `arith` for a `Sync` property `Chunk` does not
   have anyway.
 * **Boxing a rarely populated `Activation` field**: it was hot, and boxing cost 2%; a better hasher
