@@ -21,6 +21,9 @@ The pages of this chapter are:
 * [Native routines and methods](calls.md): how arguments are converted and
   results written, how native code raises errors and conditions, and what it
   sees of its caller and, for a method, of its object.
+* [Threads and halting](threads.md): threads that native code starts and
+  attaches, what program end does with them, and halting activities from
+  native code.
 
 What a library's name means, and where the file is searched for, is [the
 library rule](r:env.search.library). The directives that name a library are

@@ -275,7 +275,7 @@ static void *runJob(void *arg)
 
 // Starts a thread that attaches to the interpreter, sends `message` to `target`, and detaches.
 // Answers at once, without waiting for the thread: 1 where it started, 0 otherwise.
-// Serves r[native.threads.attach].
+// Serves r[native.threads.attach], r[native.threads.end].
 RexxRoutine2(logical_t, FxOnThread, RexxObjectPtr, target, CSTRING, message)
 {
     ThreadJob *job = new ThreadJob;
