@@ -20,7 +20,7 @@ use std::ops::Range;
 
 use interrexx_core::ObjRef;
 
-use super::{Args, length_of, position_of, required_render, required_string, whole_number};
+use super::{Args, arg, length_of, position_of, required_render, required_string, whole_number};
 use crate::Interp;
 use crate::error::Failure;
 
@@ -104,12 +104,97 @@ pub(crate) fn word_count(text: &[u8]) -> usize {
 /// `WORD`, `WORDINDEX` and `WORDLENGTH`'s body: where the `position`th
 /// (1-based) word of `text` lies, or `None` past the last.
 pub(crate) fn word_range(text: &[u8], position: usize) -> Option<Range<usize>> {
-    let mut scan = Words::new(text);
-    if scan.skip(position) {
-        Some(scan.word.clone())
-    } else {
-        None
+    if position == 0 {
+        return Some(0..0);
     }
+    let start = nth_word_start(text, position)?;
+    Some(start..first_blank_from(text, start))
+}
+
+/// One in the lowest bit of every byte lane of a `u64`.
+const LANES: u64 = u64::from_le_bytes([1; 8]);
+/// The high bit of every byte lane.
+const HIGH: u64 = LANES << 7;
+
+/// Eight bytes of `text` from `at`, as a little-endian word, with the lanes
+/// past the end of `text` read as blanks -- which neither start a word nor
+/// end one early, since nothing follows them.
+#[inline(always)]
+fn chunk_at(text: &[u8], at: usize) -> u64 {
+    match text.get(at..at + 8) {
+        Some(eight) => u64::from_le_bytes(eight.try_into().expect("eight bytes")),
+        None => {
+            let mut padded = [b' '; 8];
+            let rest = &text[at..];
+            padded[..rest.len()].copy_from_slice(rest);
+            u64::from_le_bytes(padded)
+        }
+    }
+}
+
+/// The high bit of each lane of `chunk` that holds `byte`, exactly: the
+/// carry-free form, so no lane's answer leaks into the next.
+#[inline(always)]
+fn lanes_equal(chunk: u64, byte: u8) -> u64 {
+    let x = chunk ^ (LANES * u64::from(byte));
+    !(((x & !HIGH).wrapping_add(!HIGH)) | x | !HIGH)
+}
+
+/// The high bit of each lane of `chunk` that [`is_blank`] answers true for.
+#[inline(always)]
+fn blank_lanes(chunk: u64) -> u64 {
+    lanes_equal(chunk, b' ') | lanes_equal(chunk, b'\t')
+}
+
+/// How many lanes have their high bit set in `lanes`, which has no other bit
+/// set. A multiply rather than `count_ones`, which is a library loop on the
+/// baseline target.
+#[inline(always)]
+fn count_lanes(lanes: u64) -> usize {
+    ((lanes >> 7).wrapping_mul(LANES) >> 56) as usize
+}
+
+/// Where the `n`th (1-based, `n >= 1`) word of `text` starts, or `None`
+/// when it has fewer words. Eight bytes at a time: a word starts at a
+/// non-blank byte whose predecessor is blank, the byte before the text
+/// counting as blank, so the starts in a chunk are its non-blank lanes
+/// masked by its blank lanes shifted up one lane.
+fn nth_word_start(text: &[u8], n: usize) -> Option<usize> {
+    debug_assert!(n >= 1, "words are counted from 1");
+    let mut remaining = n;
+    // The high bit of the lowest lane: the byte before this chunk was blank.
+    let mut blank_before = 0x80u64;
+    let mut at = 0;
+    while at < text.len() {
+        let blanks = blank_lanes(chunk_at(text, at));
+        let starts = !blanks & HIGH & ((blanks << 8) | blank_before);
+        let found = count_lanes(starts);
+        if found >= remaining {
+            let mut starts = starts;
+            for _ in 1..remaining {
+                starts &= starts - 1;
+            }
+            return Some(at + (starts.trailing_zeros() / 8) as usize);
+        }
+        remaining -= found;
+        blank_before = blanks >> 56;
+        at += 8;
+    }
+    None
+}
+
+/// The offset of the first blank of `text` at or after `from`, or its length
+/// when there is none.
+fn first_blank_from(text: &[u8], from: usize) -> usize {
+    let mut at = from;
+    while at < text.len() {
+        let blanks = blank_lanes(chunk_at(text, at));
+        if blanks != 0 {
+            return (at + (blanks.trailing_zeros() / 8) as usize).min(text.len());
+        }
+        at += 8;
+    }
+    text.len()
 }
 
 /// `SUBWORD`'s body: the slice of `text` from the `position`th (1-based) word
@@ -210,18 +295,145 @@ fn converted_position(
 /// `WORD(string, n)`: the `n`th word, or the null string if there is no such
 /// word.
 pub(crate) fn word(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result<ObjRef, Failure> {
-    // The position is converted first so that the string can be read through
-    // `required_render`, which borrows the bytes where they are instead of
-    // copying them out; that function's own doc comment carries the ordering
-    // rule and why the reordering is not observable. The word is then built
-    // in the lent result buffer, so a word short enough to live in the handle
-    // costs no allocation at all.
     let position = position_of(converted_position(interp, name, args, 2)?)?;
+    let value = arg(args, 1).expect("check_arity admitted the string");
     let string = required_render(interp, args, 1);
-    let found = word_range(string.text(interp), position).unwrap_or(0..0);
+    let bytes = string.text(interp);
+    // **The same string asked about again is answered from its word table**
+    // ([`WordIndex`]), which is built the second time running it is asked
+    // about.
+    let (found, step) = match interp.word_index.lookup(value, position) {
+        Some(found) => (found, None),
+        None => {
+            let found = word_range(bytes, position).unwrap_or(0..0);
+            let table = interp.word_index.wants(value).then(|| word_table(bytes));
+            (found, Some(table))
+        }
+    };
+    // A word short enough for the handle is answered from the one borrow of
+    // the string; only a longer one reads it again past the buffer loan.
+    let inline = ObjRef::inline_text(&bytes[found.clone()]);
+    match step {
+        Some(Some(table)) => {
+            let text = matches!(
+                interp.heap.get(value).map(|object| &object.body),
+                Some(interrexx_core::Body::Text { .. })
+            );
+            interp.word_index.tabled(value, table.filter(|_| text));
+        }
+        Some(None) => interp.word_index.note(value),
+        None => {}
+    }
+    if let Some(inline) = inline {
+        return Ok(inline);
+    }
     let mut out = interp.take_result_buffer();
     out.extend_from_slice(&string.text(interp)[found]);
     Ok(interp.text_built(out))
+}
+
+/// The most words [`WordIndex`] tables for one string; a string with more is
+/// scanned on every call, as it always was.
+const WORD_TABLE_LIMIT: usize = 4096;
+
+/// Every word of `text` as a byte range, or `None` past
+/// [`WORD_TABLE_LIMIT`] words.
+fn word_table(text: &[u8]) -> Option<Vec<(u32, u32)>> {
+    let mut scan = Words::new(text);
+    let mut table = Vec::new();
+    while scan.step() {
+        if table.len() == WORD_TABLE_LIMIT {
+            return None;
+        }
+        let (Ok(start), Ok(end)) = (u32::try_from(scan.word.start), u32::try_from(scan.word.end))
+        else {
+            return None;
+        };
+        table.push((start, end));
+    }
+    Some(table)
+}
+
+/// The word boundaries of one string `WORD` keeps being asked about:
+/// `word(list, k)` over a list held in a variable, for each `k`, scans the
+/// list from its start on every call without one.
+///
+/// **Keyed by the object**, which is a sound key only because a text body's
+/// bytes never change once it is built -- `Interp::concat_onto` grows only a
+/// string its chain's register alone holds, which no call can be passed --
+/// and because the whole index is dropped at every collection, before any
+/// slot it could name is handed out again. **Built on the second call in a
+/// row about the same string**, so that a program asking once about each of
+/// many strings never pays for a table it will not read.
+#[derive(Debug)]
+pub(crate) struct WordIndex {
+    /// The string the last call asked about, or `NIL`.
+    string: ObjRef,
+    table: WordTable,
+}
+
+#[derive(Debug)]
+enum WordTable {
+    /// Not built yet: the string has been asked about once.
+    Unbuilt,
+    /// Every word of the string.
+    Built(Vec<(u32, u32)>),
+    /// Never to be built: too many words, or not a text body.
+    Declined,
+}
+
+impl Default for WordIndex {
+    fn default() -> Self {
+        WordIndex {
+            string: ObjRef::NIL,
+            table: WordTable::Unbuilt,
+        }
+    }
+}
+
+impl WordIndex {
+    /// The `position`th (1-based) word of `string` from its table, where it
+    /// has one.
+    fn lookup(&self, string: ObjRef, position: usize) -> Option<Range<usize>> {
+        if string != self.string {
+            return None;
+        }
+        let WordTable::Built(table) = &self.table else {
+            return None;
+        };
+        Some(match position.checked_sub(1).and_then(|at| table.get(at)) {
+            Some(&(start, end)) => start as usize..end as usize,
+            None => 0..0,
+        })
+    }
+
+    /// Whether a table should be built for `string`: it is the string the
+    /// call before asked about, and nothing has been decided for it yet.
+    fn wants(&self, string: ObjRef) -> bool {
+        string == self.string && string != ObjRef::NIL && matches!(self.table, WordTable::Unbuilt)
+    }
+
+    /// The table built for `string`, or `None` where it is declined.
+    fn tabled(&mut self, string: ObjRef, table: Option<Vec<(u32, u32)>>) {
+        self.string = string;
+        self.table = match table {
+            Some(table) => WordTable::Built(table),
+            None => WordTable::Declined,
+        };
+    }
+
+    /// Notes a call about `string` that built nothing.
+    fn note(&mut self, string: ObjRef) {
+        if string != self.string {
+            self.string = string;
+            self.table = WordTable::Unbuilt;
+        }
+    }
+
+    /// Forgets everything, at a collection.
+    pub(crate) fn clear(&mut self) {
+        *self = WordIndex::default();
+    }
 }
 
 /// `WORDINDEX(string, n)`: the 1-based byte offset the `n`th word starts at,
@@ -298,6 +510,61 @@ pub(crate) fn word_pos(
 #[cfg(test)]
 mod tests {
     use super::super::dispatch;
+
+    /// The table answers what the scan answers, at every position and past
+    /// the last word, and a string with too many words gets none.
+    #[test]
+    fn a_word_table_answers_what_the_scan_does() {
+        let text = b" ab\tc  def ghij ";
+        let table = super::word_table(text).expect("few words");
+        let mut index = super::WordIndex::default();
+        let key = interrexx_core::ObjRef::small_int(7).expect("small");
+        index.tabled(key, Some(table));
+        for position in 1..8 {
+            assert_eq!(
+                index.lookup(key, position),
+                Some(super::word_range(text, position).unwrap_or(0..0)),
+                "word {position}"
+            );
+        }
+        assert_eq!(index.lookup(interrexx_core::ObjRef::NIL, 1), None);
+        let many: Vec<u8> = b"w ".repeat(super::WORD_TABLE_LIMIT + 1);
+        assert!(super::word_table(&many).is_none());
+        assert!(super::word_table(&many[..2 * super::WORD_TABLE_LIMIT]).is_some());
+    }
+
+    /// The chunked scan against the byte-at-a-time one, over strings that put
+    /// word boundaries at every lane and across chunk edges.
+    #[test]
+    fn the_chunked_word_scan_agrees_with_the_byte_scan() {
+        let pieces: [&[u8]; 6] = [b"a", b"bc", b"defghijkl", b" ", b"\t", b"  \t "];
+        let mut texts: Vec<Vec<u8>> = vec![Vec::new()];
+        for _ in 0..4 {
+            let mut next = Vec::new();
+            for text in &texts {
+                for piece in pieces {
+                    let mut grown = text.clone();
+                    grown.extend_from_slice(piece);
+                    next.push(grown);
+                }
+            }
+            texts.extend(next);
+            texts.sort();
+            texts.dedup();
+        }
+        texts.push(b"x\x0b\xa0\x00 y \xff\xdf\x89".to_vec());
+        for text in &texts {
+            for position in 1..12 {
+                let mut scan = super::Words::new(text);
+                let expected = scan.skip(position).then(|| scan.word.clone());
+                assert_eq!(
+                    super::word_range(text, position),
+                    expected,
+                    "word {position} of {text:?}"
+                );
+            }
+        }
+    }
     use crate::error::Failure;
     use crate::{Interp, error::Raised};
 

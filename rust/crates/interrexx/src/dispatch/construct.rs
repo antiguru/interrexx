@@ -538,7 +538,7 @@ fn native_pointer_equal(
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
     let equal = pointers_are_equal(interp, receiver, args)?;
-    Ok(Some(interp.counted(usize::from(equal))))
+    Ok(Some(crate::eval::logical(equal)))
 }
 
 fn native_pointer_not_equal(
@@ -548,7 +548,7 @@ fn native_pointer_not_equal(
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
     let equal = pointers_are_equal(interp, receiver, args)?;
-    Ok(Some(interp.counted(usize::from(!equal))))
+    Ok(Some(crate::eval::logical(!equal)))
 }
 
 fn native_pointer_is_null(
@@ -558,7 +558,7 @@ fn native_pointer_is_null(
     _args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
     let null = pointer_address(interp, receiver).is_none_or(|address| address.is_null());
-    Ok(Some(interp.counted(usize::from(null))))
+    Ok(Some(crate::eval::logical(null)))
 }
 
 /// The entry `WeakReference`'s scope pool binds the referent cell to, in the

@@ -1,0 +1,110 @@
+/* A chain of concatenations builds one string: what each operator answers
+   is still a value of its own, so no variable, table or object that holds
+   an earlier string of the chain sees a later operand. */
+a = 'alpha-alpha-alpha'; b = 'beta-beta-beta'; c = 'gamma'
+x = a || b || c
+y = x || '+' || x
+say x; say y
+z = (a || b) || (c || a) || b
+say z
+s = a b c 'delta' 'epsilon'
+say s length(s)
+/* past the inline width and well beyond it */
+long = ''
+do i = 1 to 3
+  long = long || copies(i, 30) || '|' || copies('x', 25) || '|'
+end
+say long length(long)
+w = long || long || long
+say length(w) length(long)
+/* literals only: each pass builds its own string */
+do i = 1 to 3
+  lit = 'a-long-literal-string-' || 'another-long-literal-' || i
+  say lit
+end
+interpret "iv = a || b || c || 'interpreted'"
+say iv
+/* small strings and numbers along the chain */
+say 1 || 2 || 3 || 4 || 5 || 6 || 7 || 8 || 9 || 10 || 11
+n = 7; say n || n || n || n * 2 || n / 2
+/* a function between the steps, which builds strings of its own */
+t = a || f(b) || c || f(a || b || c) || c
+say t
+say g
+/* the chain's strings are values: a table keyed by one keeps its key */
+tab = .table~new
+k = a || b
+tab[k] = 'k'
+m = k || c || a
+say tab[a || b] tab~hasIndex(k) k
+/* an object whose || answers a string it keeps */
+o = .keeper~new
+r = o || 'one' || 'two'
+say r
+say .keeper~kept
+q = o 'three' 'four'
+say q
+say .keeper~kept
+/* a STRING method that concatenates while the right operand converts */
+e = 'pre-' || .strobj~new || '-mid-' || .strobj~new || '-end'
+say e
+say .strobj~last
+/* a string subclass is sent the operator */
+ss = .mystring~new('sub')
+say ss || 'x' || 'y'
+/* a stem and a variable reference on the left */
+st. = 'stemdefault'
+say st. || '-' || 'tail'
+/* a loop condition whose chain runs on every pass */
+cnt = 0
+do while (a || b || cnt) \== (a || b || 3)
+  cnt = cnt + 1
+end
+say cnt
+lc = ''
+do until (lc || '-' || lc || '-' || c) == '333-333-gamma'
+  lc = lc || cnt
+end
+say lc
+/* trace intermediates shows each step */
+trace i
+v = a || b || c
+trace o
+say v
+/* a failure part way leaves the earlier value alone */
+signal on novalue
+before = a || b
+u = before || c || undefinedvariable || a
+exit
+novalue:
+  say 'novalue at' sigl before
+  exit
+
+f: procedure expose g
+  g = arg(1) || '!' || arg(1)
+  return '<' || arg(1) || '>'
+
+::class keeper
+::method kept class attribute
+::method '||'
+  use arg other
+  r = 'kept-' || other || '-' || 'value-padded-out-to-beyond-seven'
+  .keeper~kept = r
+  return r
+::method ' '
+  use arg other
+  r = 'blank-' || other || '-' || 'value-padded-out-to-beyond-seven'
+  .keeper~kept = r
+  return r
+
+::class mystring subclass string
+::method '||'
+  use arg other
+  return 'MY(' || self~string || ',' || other || ')'
+
+::class strobj
+::attribute last class
+::method string
+  v = 'strobj-' || 1 || '-value-' || 'past-the-handle'
+  self~class~last = v
+  return v

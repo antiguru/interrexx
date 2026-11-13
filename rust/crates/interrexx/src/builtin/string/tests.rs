@@ -341,6 +341,17 @@ fn the_case_shifting_builtins_answer_the_oracles_own_bytes() {
     assert_eq!(answer(b"LOWER", &[b"ABCDEF", b"3", b"99"]), b"ABcdef");
     assert_eq!(answer(b"UPPER", &[b"abcDEF"]), b"ABCDEF");
     assert_eq!(answer(b"UPPER", &[b"abcdef", b"3", b"2"]), b"abCDef");
+    // Past what a handle holds, which is built in the result buffer instead.
+    assert_eq!(
+        answer(b"UPPER", &[b"abcdefghij", b"3", b"5"]),
+        b"abCDEFGhij"
+    );
+    assert_eq!(
+        answer(b"LOWER", &[b"ABCDEFGHIJKLMNOPQRSTUVWXYZ"]),
+        b"abcdefghijklmnopqrstuvwxyz"
+    );
+    assert_eq!(answer(b"TRANSLATE", &[b"abcdefghij"]), b"ABCDEFGHIJ");
+    assert_eq!(answer(b"TRANSLATE", &[b"abc"]), b"ABC");
     // Only ASCII folds; measured, `upper('e9'x)` is its own argument.
     assert_eq!(answer(b"UPPER", &[&[0xe9]]), &[0xe9]);
     assert_eq!(answer(b"LOWER", &[&[0xc9]]), &[0xc9]);

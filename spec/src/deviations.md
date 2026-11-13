@@ -1215,8 +1215,10 @@ A RexxUtil semaphore function called with a whole number that is not the
 handle of an open semaphore, such as the handle of a closed semaphore, a
 handle that arithmetic has rounded, a number that no call answered or the
 handle of an open semaphore of the other kind, answers `6` and changes no
-semaphore (interrexx accepts a handle of the other kind today: issue #247).
-ooRexx uses the number as an address and crashes for a closed handle, in every
+semaphore. A handle carries the kind of its semaphore and a generation, so
+that a stale handle never names a semaphore that reuses its place, and a
+number whose text is not exactly a live handle, a handle that is spelled again
+included, names no semaphore. ooRexx uses the number as an address and crashes for a closed handle, in every
 function but a second SysCloseEventSem or SysCloseMutexSem, which answers `6`,
 for a rounded one, as SysPostEventSem shows, and for a number that no call
 answered; SysRequestMutexSem with an event semaphore's handle hangs.
@@ -1300,3 +1302,16 @@ there interrexx raises what ooRexx raises, `SYNTAX 88.909` with the argument's
 position ([the rule](r:conv.string.builtin-argument)). The
 [conventions](r:conv.string.deviation.169) state it. It replaces the refusal
 with exit code 120 that Deviation 30 described.
+
+## 170. A builtin converts every argument before it checks any
+
+A builtin whose page calls an argument a string converts each such argument
+that is an object other than a string, sending `STRING` (or `REQUEST` and
+`MAKESTRING`, as [the conversion rule](r:conv.string.object) says), from left
+to right, after it has checked the number of its arguments and before it
+checks any argument. A `STRING` method of a later argument therefore runs even
+when an earlier argument is in error, and the call raises the same error as in
+ooRexx, which converts an argument as it checks it and stops at the first one
+in error, so that the method of a later argument never runs. The difference
+shows only in what such a method does: counting, input or output, or raising a
+condition of its own.

@@ -12,7 +12,7 @@ use super::{
     Calls, Chunk, ChunkTooLarge, ClauseOpening, ClausePosition, ConditionKeyword, ConditionOps,
     Hints, NodePath, Op, PlanSlot, SendForm,
 };
-use crate::eval::{SymbolRead, is_arithmetic, is_native_binary};
+use crate::eval::{SymbolRead, is_arithmetic, is_concatenation, is_native_binary};
 use crate::plan::Plan;
 use crate::run::{
     HeaderRole, QueueKeyword, ReturnKeyword, if_targets, loop_header_plan, loop_header_slot,
@@ -1687,6 +1687,13 @@ fn push_native<'a>(
                     rhs,
                     dst,
                     text: crate::eval::compares_as_text(*op, left, right),
+                    // The left operand compiled into `dst` ends in its own
+                    // concatenation op, which is what `onto` claims.
+                    onto: is_concatenation(*op)
+                        && matches!(
+                            &left.kind,
+                            ExprKind::Binary { op: inner, .. } if is_concatenation(*inner)
+                        ),
                 }
             });
             // Behind the operation rather than in front of it, because
@@ -1880,18 +1887,6 @@ fn push_native<'a>(
 /// the reads of the compound among `ops`, the ops compiled for `value`, are
 /// marked [`SymbolRead::CompoundShared`].
 pub(crate) fn share_tail_key(ops: &mut [Op], target: &Expr, value: &Expr) -> bool {
-    fn calls_nothing(expr: &Expr) -> bool {
-        match &expr.kind {
-            ExprKind::Literal(_)
-            | ExprKind::Constant(_)
-            | ExprKind::Variable(_)
-            | ExprKind::Stem(_)
-            | ExprKind::Compound(_) => true,
-            ExprKind::Prefix { operand, .. } => calls_nothing(operand),
-            ExprKind::Binary { left, right, .. } => calls_nothing(left) && calls_nothing(right),
-            _ => false,
-        }
-    }
     let ExprKind::Compound(id) = target.kind else {
         return false;
     };
@@ -1919,6 +1914,29 @@ pub(crate) fn share_tail_key(ops: &mut [Op], target: &Expr, value: &Expr) -> boo
         }
     }
     shared
+}
+
+/// Whether `expr` is literals, symbols and operators only. Walked with a
+/// worklist rather than by recursion, so that an operator chain as deep as
+/// the parser accepts costs heap rather than stack.
+fn calls_nothing(expr: &Expr) -> bool {
+    let mut pending = vec![expr];
+    while let Some(expr) = pending.pop() {
+        match &expr.kind {
+            ExprKind::Literal(_)
+            | ExprKind::Constant(_)
+            | ExprKind::Variable(_)
+            | ExprKind::Stem(_)
+            | ExprKind::Compound(_) => {}
+            ExprKind::Prefix { operand, .. } => pending.push(operand),
+            ExprKind::Binary { left, right, .. } => {
+                pending.push(right);
+                pending.push(left);
+            }
+            _ => return false,
+        }
+    }
+    true
 }
 
 /// The slot one assignment *target* resolves to, or [`PlanSlot::UNRESOLVED`]

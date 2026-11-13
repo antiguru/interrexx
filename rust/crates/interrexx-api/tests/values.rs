@@ -149,8 +149,8 @@ impl Host for Interpreter {
     fn constants(&mut self) -> Constants<ObjRef> {
         Constants {
             nil: ObjRef::NIL,
-            true_object: ObjRef::small_int(1).expect("one is a small integer"),
-            false_object: ObjRef::small_int(0).expect("zero is a small integer"),
+            true_object: ObjRef::inline_byte(b'1'),
+            false_object: ObjRef::inline_byte(b'0'),
             null_string: self.text(b""),
         }
     }
@@ -1755,6 +1755,13 @@ fn the_logical_row_converts_zero_and_one_and_any_non_zero_back_as_one() {
             .expect("converts back")
             .expect("to an object");
         assert_eq!(host.rendered(object), answer, "written {written}");
+        let constants = host.constants();
+        let handle = if written == 0 {
+            constants.false_object
+        } else {
+            constants.true_object
+        };
+        assert_eq!(object, handle, "written {written}");
     }
 }
 

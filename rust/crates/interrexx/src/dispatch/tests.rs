@@ -213,7 +213,7 @@ fn a_class_identity_used_as_a_receiver_answers_from_the_class_side() {
         interp
             .send_message(class, b"HASMETHOD", None, &[Some(name)], no_caller())
             .expect("Object's HASMETHOD reaches a class object"),
-        Some(interp.counted(0)),
+        Some(crate::eval::logical(false)),
         "a class object was asked about its instances' behaviour instead of its own"
     );
 }
@@ -280,11 +280,11 @@ fn a_null_pointer_renders_as_zero_and_answers_is_null() {
     let null = pointer(&mut interp, 0);
     let held = pointer(&mut interp, 0x1234);
     assert_eq!(interp.to_text(null).into_owned(), b"0x0");
-    for (object, expected) in [(null, 1usize), (held, 0)] {
+    for (object, expected) in [(null, true), (held, false)] {
         let answer = interp
             .send_message(object, b"ISNULL", None, &[], no_caller())
             .expect("a Pointer answers ISNULL");
-        assert_eq!(answer, Some(interp.counted(expected)));
+        assert_eq!(answer, Some(crate::eval::logical(expected)));
     }
 }
 
@@ -297,8 +297,8 @@ fn a_pointer_compares_on_its_address_and_nothing_else() {
     let same = pointer(&mut interp, 0x1234);
     let other = pointer(&mut interp, 0x5678);
     let string = interp.text(b"abc");
-    let yes = interp.counted(1);
-    let no = interp.counted(0);
+    let yes = crate::eval::logical(true);
+    let no = crate::eval::logical(false);
 
     for name in [b"=".as_slice(), b"=="] {
         for (against, expected) in [(object, yes), (same, yes), (other, no), (string, no)] {

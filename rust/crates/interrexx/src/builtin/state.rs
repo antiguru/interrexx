@@ -111,12 +111,12 @@ pub(crate) fn queued(
 pub(crate) fn gc(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result<ObjRef, Failure> {
     const VALID: &str = "\"force\", \"Force\", \"f\", \"F\"";
     let Some(text) = optional_string(interp, args, 1) else {
-        return Ok(interp.text(b"0"));
+        return Ok(crate::eval::logical(false));
     };
     if !matches!(text.first(), Some(b'f' | b'F')) {
         return Err(Raised::argument_not_in_list(name, 1, VALID, &text).into());
     }
-    // Really collect, the way a collect-and-uninit does, rather than report `1`
+    // Really collect, the way a collect-and-uninit does, rather than report `.true`
     // for something that did not happen. Safe at exactly the point every
     // allocation is: this crate's own collect-stress mode
     // (`Interp::alloc_with`) runs a collection immediately before every
@@ -132,7 +132,7 @@ pub(crate) fn gc(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result<Obj
     if let Some(loud) = interp.run_ready_uninits().into_iter().next() {
         return Err(Failure::Loud(Box::new(loud)));
     }
-    Ok(interp.text(b"1"))
+    Ok(crate::eval::logical(true))
 }
 
 /// `ERRORTEXT(n)`: the major error message for `n`, or the null string when
@@ -546,7 +546,7 @@ mod tests {
         );
     }
 
-    /// `GC()` answers 0 and `GC('Force')` answers 1 after really running a
+    /// `GC()` answers `.false` and `GC('Force')` answers `.true` after really running a
     /// collection -- the count of collections performed is what separates
     /// "returned 1" from "collected".
     #[test]

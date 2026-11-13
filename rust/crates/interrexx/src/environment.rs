@@ -383,10 +383,8 @@ impl Interp {
             .map(|(name, id)| (name.as_bytes().into(), id))
             .collect();
         // `addToEnvironment` registers these by hand.
-        let true_value = self.text(b"1");
-        self.roots.activity_mut().push_temp(true_value);
-        let false_value = self.text(b"0");
-        self.roots.activity_mut().push_temp(false_value);
+        let true_value = crate::eval::LOGICAL_TRUE;
+        let false_value = crate::eval::LOGICAL_FALSE;
         // `REXXINFO` is a pre-built *instance* of a class no environment name
         // reaches, which is why the entry renders as `a RexxInfo` and answers
         // `~class~id` `RexxInfo`. So `.RexxInfo~isA(.Class)` is `0` and

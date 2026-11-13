@@ -1701,6 +1701,15 @@ struct Interp {
     /// the activity: measured by callgrind, a field there costs `pingguard`
     /// +0.30% and `pingsem` +0.26%.
     pub(crate) held_trace_failure: Option<Failure>,
+    /// The string [`Interp::concat_values`] built last, or [`ObjRef::NIL`]
+    /// once an operator was sent to an object instead. A concatenation op
+    /// whose left operand is this and is the previous concatenation of its
+    /// own chain ([`crate::ir::Op::Binary`]'s `onto`) holds the only
+    /// reference to it, so it appends to it rather than copying it. Not a
+    /// root: it is only ever compared with a register that roots it.
+    pub(crate) fresh_concat: ObjRef,
+    /// `WORD`'s table of the string it was last asked about.
+    pub(crate) word_index: crate::builtin::word::WordIndex,
     /// One entry per activity inside a stem's forward ([`Interp::forwarded`]).
     forwardings: Vec<crate::value::Forwarding>,
     /// Whether anything in this run could take `LOSTDIGITS`: a `SIGNAL ON
@@ -2454,6 +2463,8 @@ impl Interp {
             command_words_base: Some(1),
             reqstr_armed: false,
             held_trace_failure: None,
+            fresh_concat: ObjRef::NIL,
+            word_index: crate::builtin::word::WordIndex::default(),
             forwardings: Vec::new(),
             lostdigits_armed: false,
             program_path: Vec::new(),
@@ -3561,6 +3572,11 @@ impl Interp {
             reqstr_armed: _,
             // A condition, whose ADDITIONAL `pending_additional` roots.
             held_trace_failure: _,
+            // Compared, never read through: the register it is compared with
+            // is the root.
+            fresh_concat: _,
+            // A handle compared, never followed, and dropped at collection.
+            word_index: _,
             // Each receiver is a forward's, rooted by that send too; handed
             // over so the handle it is compared with never names a slot the
             // collector has freed.
@@ -3637,6 +3653,8 @@ impl Interp {
     /// that what an allocation pays when nothing is due is the test alone.
     #[inline(never)]
     fn collect_now(&mut self) {
+        // Its key is a handle, and a collection frees the slots handles name.
+        self.word_index.clear();
         // Nothing a collection reads is the running activity's resolution.
         #[cfg(feature = "sharing")]
         self.heap.sharing_pause(true);

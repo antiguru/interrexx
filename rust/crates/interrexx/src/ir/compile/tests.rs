@@ -3,7 +3,7 @@ use interrexx_parse::{SymbolId, SymbolTable};
 use super::{
     Op, PlanSlot, Registers, SymbolRead, assert_exec_regions_hold_nothing_else,
     assert_literal_echoes_follow_their_load, assert_read_echoes_follow_their_load,
-    assert_region_ops_name_their_clause, assert_trace_ops_open_a_clause_region,
+    assert_region_ops_name_their_clause, assert_trace_ops_open_a_clause_region, calls_nothing,
 };
 
 /// Two sibling clauses reuse the same registers, and a clause nested
@@ -416,4 +416,52 @@ fn ops_naming_their_own_region_clause_are_accepted() {
             src: Some(0),
         },
     ]);
+}
+
+/// An operator chain of `depth` levels over `leaf`, left-deep for a binary
+/// chain and nested for a prefix one.
+fn chain(depth: usize, prefix: bool, leaf: interrexx_parse::ExprKind) -> interrexx_parse::Expr {
+    use interrexx_parse::{Expr, ExprKind, Operator, PrefixOp};
+    let mut expr = Expr::new(leaf, 0..0);
+    for _ in 0..depth {
+        let kind = if prefix {
+            ExprKind::Prefix {
+                op: PrefixOp::Minus,
+                operand: Box::new(expr),
+            }
+        } else {
+            ExprKind::Binary {
+                op: Operator::Plus,
+                left: Box::new(expr),
+                right: Box::new(Expr::new(ExprKind::Literal(Box::from(&b"1"[..])), 0..0)),
+            }
+        };
+        expr = Expr::new(kind, 0..0);
+    }
+    expr
+}
+
+/// `calls_nothing` walks a chain far deeper than a small stack holds frames
+/// for, binary and prefix, and still finds a call at its bottom.
+#[test]
+fn calls_nothing_walks_a_deep_chain_on_a_small_stack() {
+    std::thread::Builder::new()
+        .stack_size(256 * 1024)
+        .spawn(|| {
+            let mut symbols = SymbolTable::default();
+            let dot = symbols.intern(".ZV");
+            for prefix in [false, true] {
+                let plain = chain(
+                    200_000,
+                    prefix,
+                    interrexx_parse::ExprKind::Literal(Box::from(&b"1"[..])),
+                );
+                assert!(calls_nothing(&plain));
+                let called = chain(200_000, prefix, interrexx_parse::ExprKind::DotVariable(dot));
+                assert!(!calls_nothing(&called));
+            }
+        })
+        .expect("a test thread")
+        .join()
+        .expect("the walk did not overflow");
 }

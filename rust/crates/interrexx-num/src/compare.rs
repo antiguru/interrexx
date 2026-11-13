@@ -137,6 +137,21 @@ pub fn compare_strings(a: &[u8], b: &[u8], op: CompareOp) -> bool {
     }
 }
 
+/// [`compare_strings`] against the null string, on either side, for the
+/// operators that need no ordering: equal by the string rule is all blanks,
+/// equal strictly is empty. `None` for an ordering operator, which
+/// [`compare_strings`] answers.
+pub fn compare_with_null(a: &[u8], op: CompareOp) -> Option<bool> {
+    let blank = || a.iter().all(|byte| is_blank(*byte));
+    match op {
+        CompareOp::Equal => Some(blank()),
+        CompareOp::NotEqual => Some(!blank()),
+        CompareOp::StrictEqual => Some(a.is_empty()),
+        CompareOp::StrictNotEqual => Some(!a.is_empty()),
+        _ => None,
+    }
+}
+
 /// [`compare_decoded`]'s numeric arm alone: both operands already parsed, and
 /// **no bytes at all**.
 pub fn compare_numbers(
@@ -261,11 +276,13 @@ fn digit_prefix_order(a: &[u8], b: &[u8]) -> Ordering {
     Ordering::Equal
 }
 
+/// The bytes the string rule strips before comparing.
+fn is_blank(byte: u8) -> bool {
+    byte == b' ' || byte == b'\t'
+}
+
 /// String fallback.
 fn string_order(a: &[u8], b: &[u8]) -> Ordering {
-    fn is_blank(byte: u8) -> bool {
-        byte == b' ' || byte == b'\t'
-    }
     fn skip_leading_blanks(s: &[u8]) -> &[u8] {
         let lead = s.iter().take_while(|b| is_blank(**b)).count();
         &s[lead..]
@@ -302,6 +319,47 @@ fn string_order(a: &[u8], b: &[u8]) -> Ordering {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Against the null string, on either side, the shortcut answers what
+    /// the string rule answers, and declines exactly the ordering operators.
+    #[test]
+    fn a_comparison_with_the_null_string_answers_what_the_string_rule_answers() {
+        use CompareOp::*;
+        let ops = [
+            Equal,
+            NotEqual,
+            Greater,
+            Less,
+            GreaterEqual,
+            LessEqual,
+            StrictEqual,
+            StrictNotEqual,
+            StrictGreater,
+            StrictLess,
+            StrictGreaterEqual,
+            StrictLessEqual,
+        ];
+        let texts: &[&[u8]] = &[
+            b"", b" ", b"\t", b"  \t ", b"a", b" a", b"a ", b"\ta\t", b"\n", b"\r", b"\x0b",
+            b"\x0c", b"\0", b" \n ", b"0", b"\xa0", b"\x1f",
+        ];
+        let mut answered = 0;
+        for text in texts {
+            for op in ops {
+                if let Some(holds) = compare_with_null(text, op) {
+                    answered += 1;
+                    assert_eq!(holds, compare_strings(text, b"", op), "{text:?} {op:?} ''");
+                    assert_eq!(holds, compare_strings(b"", text, op), "'' {op:?} {text:?}");
+                } else {
+                    assert!(!matches!(
+                        op,
+                        Equal | NotEqual | StrictEqual | StrictNotEqual
+                    ));
+                }
+            }
+        }
+        assert_eq!(answered, texts.len() * 4);
+    }
 
     /// Spellings, not values. The two routes can only disagree on a pair
     /// whose digit arrays differ while their values do not -- a trailing

@@ -528,13 +528,13 @@ fn set_security_manager(
 ) -> Result<Option<ObjRef>, Failure> {
     writable_package_of(interp, receiver)?;
     interp.install_security_manager(receiver, args.first().copied().flatten());
-    Ok(Some(interp.counted(1)))
+    Ok(Some(crate::eval::logical(true)))
 }
 
 /// A `dlopen` of a native library, answering whether it loaded.
 ///
-/// For example, `.context~package~loadLibrary('rxregexp')` is `1` and the same
-/// call naming `zorkolib` is `0`, so a library that is not there is an answer
+/// For example, `.context~package~loadLibrary('rxregexp')` is `.true` and the same
+/// call naming `zorkolib` is `.false`, so a library that is not there is an answer
 /// here rather than the 98.903 a directive gets.
 fn load_library(
     interp: &mut Interp,
@@ -552,18 +552,18 @@ fn load_library(
     let name = interp.to_text(name).into_owned();
     writable_package_of(interp, receiver)?;
     if crate::internal_routines::Package::named(&name).is_some() {
-        return Ok(Some(interp.counted(1)));
+        return Ok(Some(crate::eval::logical(true)));
     }
     // A version refusal raises here as it does at a directive: `loadLibrary` of
     // a package entry asking for a newer interpreter is 98.982 on the first ask
-    // and answers `1` on the next.
+    // and answers `.true` on the next.
     let loaded = match interp.resolve_library(&name) {
         crate::LibraryLoad::Loaded(_) => true,
         crate::LibraryLoad::Missing => false,
         crate::LibraryLoad::Version => return Err(Raised::library_version(&name).into()),
         crate::LibraryLoad::Raised(failure) => return Err(failure),
     };
-    Ok(Some(interp.counted(usize::from(loaded))))
+    Ok(Some(crate::eval::logical(loaded)))
 }
 
 /// The classes this package's own `::CLASS` directives and `~addClass`

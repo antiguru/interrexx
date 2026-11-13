@@ -3,7 +3,7 @@ element: "Built-in functions"
 kind: chapter
 ansi: "9.2.1"
 rexxref: "Functions > Built-in Functions"
-deviations: [4, 98, 99, 101]
+deviations: [4, 98, 99, 101, 170]
 ---
 
 # Built-in functions
@@ -242,6 +242,31 @@ d: say condition('o')~code
 88.922
 88.922
 88.922
+```
+
+r[bif.index.call.convert.deviation.170]
+A builtin converts every argument that its page calls a string and that is an
+object other than a string, from left to right and after it has checked the
+number of its arguments, before it checks any argument: a `STRING` method of
+a later argument runs even when an earlier argument is in error. The error the
+call raises is the one the checks give, as [the order of the
+checks](r:conv.check.order) says, whatever the conversions ran. ooRexx converts an argument as it checks
+it and stops at the first that is in error, so a `STRING` method of a later
+argument does not run.
+
+```rexx
+.local~n = 0
+signal on syntax
+say substr('abcdef', 'x', .c~new)
+syntax: say 'error' condition('o')~code 'STRING calls:' .local~n
+::class c
+::method string
+  .local~n = .local~n + 1
+  return 2
+```
+
+```output
+error 40.12 STRING calls: 1
 ```
 
 ## Words

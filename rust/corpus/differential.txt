@@ -98,6 +98,7 @@ num/operators.rex
 num/settings.rex
 num/prefix_integer.rex
 num/big_digits.rex
+num/null_string_compare.rex
 lang/do_loop_forms.rex
 lang/do_label.rex
 lang/leave_nested_outer.rex
@@ -140,6 +141,8 @@ lang/parse_sources.rex
 lang/parse_template.rex
 lang/parse_whole_piece_identity.rex
 lang/parse_operand_changes_trace.rex
+lang/concat_chain_values.rex
+lang/word_repeated_string.rex
 lang/pull_queue.rex
 lang/address_env.rex
 lang/state_builtins.rex

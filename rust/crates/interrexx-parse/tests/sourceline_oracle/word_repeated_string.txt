@@ -1,0 +1,42 @@
+count 41
+/* WORD asked about the same string over and over, and about strings that
+   change between calls: each answer is the word of the string as it is at
+   that call. */
+list = 'alpha  beta' || '09'x || 'gamma delta   epsilon '
+do k = 0 + 1 to 7
+  say k '['word(list, k)']'
+end
+other = 'one two three'
+do k = 1 to 4
+  say word(list, k) word(other, k) word(list, k + 1)
+end
+/* the variable takes a new value between calls */
+s = 'a b c'
+do i = 1 to 4
+  say i word(s, i) word(s, 1) word(s, i + 1)
+  s = s || ' ' || 'w'i || ' x' || i
+end
+say s
+/* a long word, past what a handle holds */
+long = 'short' copies('L', 40) 'tail'
+say word(long, 2) word(long, 2) word(long, 3) word(long, 9)
+/* more words than a table holds */
+many = ''
+do i = 1 to 5000
+  many = many i
+end
+say word(many, 1) word(many, 4097) word(many, 5000) word(many, 5001) word(many, 4097)
+/* a stem whose default changes between calls */
+st. = 'p q r'
+say word(st., 2) word(st., 2)
+st. = 'x y z'
+say word(st., 2) word(st., 3)
+/* a mutable buffer */
+mb = .mutableBuffer~new('m1 m2 m3')
+say word(mb, 2) word(mb, 2)
+mb~append(' m4')
+say word(mb, 4) word(mb, 4)
+/* numbers */
+n = 12345678901234
+say word(n, 1) word(n, 1) word(n, 2)
+say word('', 1) word('', 1) word(' ', 1)
