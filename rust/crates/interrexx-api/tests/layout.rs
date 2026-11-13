@@ -105,25 +105,6 @@ fn defined(header: &str, name: &str) -> isize {
         .unwrap_or_else(|e| panic!("{name}: {e}"))
 }
 
-#[test]
-fn every_interface_declares_the_members_the_header_does() {
-    let header = header();
-    for (name, fields) in [
-        ("RexxInstanceInterface", RexxInstanceInterface::FIELDS),
-        ("RexxThreadInterface", RexxThreadInterface::FIELDS),
-        ("MethodContextInterface", MethodContextInterface::FIELDS),
-        ("CallContextInterface", CallContextInterface::FIELDS),
-        ("ExitContextInterface", ExitContextInterface::FIELDS),
-        ("IORedirectorInterface", IORedirectorInterface::FIELDS),
-    ] {
-        assert_eq!(
-            members_of(&header, name),
-            fields,
-            "{name} does not declare what the frozen header declares"
-        );
-    }
-}
-
 /// **A refusing member aborts exactly where returning is unsafe**: it answers
 /// a data pointer the extension dereferences (`POINTER`, `CSTRING` or a
 /// `RexxInstance *`), or it is one of the `Throw` members, which the oracle
@@ -440,63 +421,6 @@ fn a_wrapper_puts_the_public_context_first() {
     );
 }
 
-/// The Rust type the header's C type `c` is, as `std::any::type_name` spells
-/// it once module paths are dropped.
-fn rust_type(c: &str) -> String {
-    let mut stars = c.matches('*').count();
-    let words: Vec<&str> = c
-        .split(|ch: char| ch == '*' || ch.is_whitespace())
-        .filter(|word| !word.is_empty())
-        .collect();
-    let mut rust = match words.as_slice() {
-        ["const", "char"] => {
-            stars -= 1;
-            "*const i8".to_string()
-        }
-        [name] => match *name {
-            "void" => String::new(),
-            "CSTRING" => "*const i8".to_string(),
-            "POINTER" | "REXXPFN" => "*mut c_void".to_string(),
-            "size_t" | "stringsize_t" | "logical_t" | "uintptr_t" => "usize".to_string(),
-            "wholenumber_t" | "intptr_t" => "isize".to_string(),
-            "int" | "int32_t" => "i32".to_string(),
-            "uint32_t" => "u32".to_string(),
-            "int64_t" => "i64".to_string(),
-            "uint64_t" => "u64".to_string(),
-            "double" => "f64".to_string(),
-            "float" => "f32".to_string(),
-            "RexxCondition" | "ValueDescriptor" | "RexxPackageEntry" => (*name).to_string(),
-            "RexxInstance" => "RexxInstance_".to_string(),
-            name if name.starts_with("Rexx") && name.ends_with("Context") => format!("{name}_"),
-            name if name.starts_with("Rexx")
-                && (name.ends_with("Object") || name.ends_with("ObjectPtr")) =>
-            {
-                format!("*mut {name}_")
-            }
-            other => panic!("{c}: {other} is not a type this test knows"),
-        },
-        _ => panic!("{c}: not a type this test knows"),
-    };
-    for _ in 0..stars {
-        rust = format!("*mut {rust}");
-    }
-    rust
-}
-
-/// `c` without the parameter name the header gives some arguments, which is
-/// a trailing word after a complete type.
-fn without_parameter_name(c: &str) -> &str {
-    let c = c.trim();
-    match c.rsplit_once(' ') {
-        Some((head, name))
-            if !name.contains('*') && head != "const" && !head.trim_end().ends_with("const") =>
-        {
-            head.trim_end()
-        }
-        _ => c,
-    }
-}
-
 /// The ABI a member is declared with here. The header states only
 /// `RexxEntry`, the C convention; the `Throw` members leave the extension by
 /// C++ `throw`, which is an
@@ -512,90 +436,11 @@ fn abi_of(member: &str) -> &'static str {
     }
 }
 
-/// Each member's type as the header declares it, in the spelling
-/// [`rust_type`] gives, with the ABI [`abi_of`] names.
-fn header_types(header: &str, name: &str) -> Vec<(String, String)> {
-    let lines: Vec<&str> = header.lines().collect();
-    let close = format!("}} {name};");
-    let end = lines
-        .iter()
-        .position(|line| line.trim() == close)
-        .expect("the struct closes");
-    let start = lines[..end]
-        .iter()
-        .rposition(|line| line.trim() == "typedef struct")
-        .expect("the struct opens");
-    let mut found = Vec::new();
-    for line in &lines[start + 1..end] {
-        let code = code_of(line).trim();
-        if code.is_empty() || code == "{" {
-            continue;
-        }
-        let declaration = code.strip_suffix(';').expect("a member declaration");
-        if let Some(at) = declaration.find("(RexxEntry") {
-            let returns = rust_type(&declaration[..at]);
-            let rest = &declaration[at + "(RexxEntry".len()..];
-            let close = rest.find(')').expect("the pointer declarator closes");
-            let member = rest[..close]
-                .trim()
-                .trim_start_matches('*')
-                .trim()
-                .to_string();
-            let arguments = rest[close + 1..]
-                .trim()
-                .strip_prefix('(')
-                .and_then(|a| a.strip_suffix(')'))
-                .expect("a parameter list");
-            let arguments: Vec<String> = arguments
-                .split(',')
-                .map(|argument| rust_type(without_parameter_name(argument)))
-                .collect();
-            let tail = if returns.is_empty() {
-                String::new()
-            } else {
-                format!(" -> {returns}")
-            };
-            let abi = abi_of(&member);
-            found.push((
-                member,
-                format!("unsafe extern \"{abi}\" fn({}){tail}", arguments.join(", ")),
-            ));
-        } else {
-            let member = trailing_name(declaration);
-            let ty = declaration[..declaration.len() - member.len()].trim();
-            found.push((member, rust_type(ty)));
-        }
-    }
-    found
-}
-
-/// `type_name`'s spelling with every module path dropped.
-fn unqualified(type_name: &str) -> String {
-    let mut out = String::new();
-    let mut word = String::new();
-    let mut chars = type_name.chars().peekable();
-    while let Some(ch) = chars.next() {
-        if ch.is_ascii_alphanumeric() || ch == '_' {
-            word.push(ch);
-        } else if ch == ':' && chars.peek() == Some(&':') {
-            chars.next();
-            word.clear();
-        } else {
-            out.push_str(&word);
-            word.clear();
-            out.push(ch);
-        }
-    }
-    out.push_str(&word);
-    out
-}
-
-/// **Every member's type is the header's**, arguments and result, not only
-/// its name: a slot declared with the wrong width or one argument short
-/// would link and be called with the header's arguments.
+/// **A member unwinds exactly where an extension leaves it by exception**: the `Throw` members
+/// and the two that run a library's loader are `C-unwind`, every other member `C`. The ABI
+/// dump cannot see it (a compiler ignores language linkage), so it is read off the Rust types.
 #[test]
-fn every_member_has_the_type_the_header_declares() {
-    let header = header();
+fn only_the_throwing_members_are_declared_to_unwind() {
     for (name, fields, types) in [
         (
             "RexxInstanceInterface",
@@ -628,58 +473,15 @@ fn every_member_has_the_type_the_header_declares() {
             IORedirectorInterface::member_types(),
         ),
     ] {
-        let ours: Vec<(String, String)> = fields
-            .iter()
-            .zip(types)
-            .map(|(field, ty)| ((*field).to_string(), unqualified(ty)))
-            .collect();
-        assert_eq!(ours, header_types(&header, name), "{name}");
+        for (member, ty) in fields.iter().zip(types) {
+            let declared = ty.split("fn(").next().expect("a type spelling");
+            let expected = format!("unsafe extern \"{}\" ", abi_of(member));
+            // Data members have no ABI.
+            if ty.contains("fn(") {
+                assert_eq!(declared, expected, "{name}.{member}");
+            }
+        }
     }
-}
-
-/// The negative control for the comparison above: the spellings it compares
-/// are the ones a wrong member would change.
-#[test]
-fn the_type_comparison_sees_a_width_and_an_argument() {
-    assert_eq!(
-        rust_type("RexxThreadContext **"),
-        "*mut *mut RexxThreadContext_"
-    );
-    assert_eq!(rust_type(without_parameter_name("size_t count")), "usize");
-    assert_eq!(without_parameter_name("CSTRING *"), "CSTRING *");
-    assert_ne!(rust_type("int32_t"), rust_type("int64_t"));
-    assert_eq!(
-        unqualified(std::any::type_name::<
-            unsafe extern "C" fn(
-                *mut RexxThreadContext_,
-                i32,
-            ) -> interrexx_api::layout::RexxObjectPtr,
-        >()),
-        "unsafe extern \"C\" fn(*mut RexxThreadContext_, i32) -> *mut RexxObjectPtr_"
-    );
-    let thread = header_types(&header(), "RexxThreadInterface");
-    let (_, append) = thread
-        .iter()
-        .find(|(member, _)| member == "ArrayAppendString")
-        .expect("the header declares ArrayAppendString");
-    assert_eq!(
-        append,
-        "unsafe extern \"C\" fn(*mut RexxThreadContext_, *mut RexxArrayObject_, *const i8, usize) -> usize"
-    );
-    let call = header_types(&header(), "CallContextInterface");
-    let (_, throw) = call
-        .iter()
-        .find(|(member, _)| member == "ThrowException1")
-        .expect("the header declares ThrowException1");
-    assert_eq!(
-        throw,
-        "unsafe extern \"C-unwind\" fn(*mut RexxCallContext_, usize, *mut RexxObjectPtr_)"
-    );
-    assert_ne!(
-        unqualified(std::any::type_name::<unsafe extern "C" fn(usize)>()),
-        unqualified(std::any::type_name::<unsafe extern "C-unwind" fn(usize)>()),
-        "the spelling does not tell the two ABIs apart"
-    );
 }
 
 /// For each table something hands an extension, the members whose address is
