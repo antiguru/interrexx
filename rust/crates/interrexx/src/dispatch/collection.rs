@@ -103,10 +103,10 @@ pub(super) const QUEUE_ITEMS: &[u8] = b"ITEMS";
 
 /// The scope the Array-shaped store is bound under.
 pub(super) fn store_scope(interp: &mut Interp) -> ObjRef {
-    interp
-        .classes()
-        .lookup("Array")
-        .expect("Array is a native class")
+    // The `Array` class the object model resolved at bootstrap, which is what
+    // a lookup of the name answers: the registry's names change only with a
+    // class defined or collected, and `Array` is never collected.
+    interp.object_model().array
 }
 
 // ---- the contents protocol ----
