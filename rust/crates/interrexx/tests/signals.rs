@@ -534,6 +534,62 @@ fn sigint_ends_a_command_wait() {
     );
 }
 
+/// A listening socket with nothing to accept, for the `rxsock` witnesses
+/// below; `n.` is its address.
+const LISTENING: &str = "s = SockSocket('AF_INET', 'SOCK_STREAM', 0)\n\
+     a.family = 'AF_INET'; a.port = 0; a.addr = '127.0.0.1'\n\
+     call SockBind s, 'a.'\ncall SockListen s, 1\ncall SockGetSockName s, 'n.'\n";
+
+/// A halt ends an `rxsock` accept that is waiting for a connection, as the
+/// oracle's: the wait, off the baton, is cancelled and the halt raised at
+/// once.
+#[test]
+fn sigint_ends_a_socket_accept() {
+    halts(
+        "accept",
+        &format!(
+            "{LISTENING}say 'ready'\nc = SockAccept(s)\nsay 'after' c\n\
+             ::requires 'rxsock' LIBRARY\n"
+        ),
+        "ready\n",
+        "INT",
+        Launch::Plain,
+        &Ended {
+            code: Some(252),
+            stdout: "ready\n".to_string(),
+            stderr: "     7 *-* c = SockAccept(s)\n\
+                     Error 4 running PROGRAM line 7:  Program interrupted.\n\
+                     Error 4.1:  Program interrupted with HALT condition.\n"
+                .to_string(),
+        },
+    );
+}
+
+/// As [`sigint_ends_a_socket_accept`], for a receive on a connected socket
+/// no data arrives on.
+#[test]
+fn sigint_ends_a_socket_receive() {
+    halts(
+        "receive",
+        &format!(
+            "{LISTENING}c = SockSocket('AF_INET', 'SOCK_STREAM', 0)\n\
+             call SockConnect c, 'n.'\nsay 'ready'\nr = SockRecv(c, 'd', 10)\nsay 'after' r\n\
+             ::requires 'rxsock' LIBRARY\n"
+        ),
+        "ready\n",
+        "INT",
+        Launch::Plain,
+        &Ended {
+            code: Some(252),
+            stdout: "ready\n".to_string(),
+            stderr: "     9 *-* r = SockRecv(c, 'd', 10)\n\
+                     Error 4 running PROGRAM line 9:  Program interrupted.\n\
+                     Error 4.1:  Program interrupted with HALT condition.\n"
+                .to_string(),
+        },
+    );
+}
+
 /// Ctrl-C at a terminal signals the process group: the child dies of it, and
 /// the script halts rather than running its next command.
 #[test]

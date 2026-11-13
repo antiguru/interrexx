@@ -246,7 +246,9 @@ mod counter {
                 crate::scheduler::ParkReason::GuardWhen => ParkKind::GuardWhen,
                 crate::scheduler::ParkReason::MessageResult(_) => ParkKind::MessageResult,
                 crate::scheduler::ParkReason::MessageWait(_) => ParkKind::MessageWait,
-                crate::scheduler::ParkReason::Sleep { .. } => ParkKind::SysSleep,
+                // A socket wait is reached where its polling sleep was.
+                crate::scheduler::ParkReason::Sleep { .. }
+                | crate::scheduler::ParkReason::Socket => ParkKind::SysSleep,
                 crate::scheduler::ParkReason::Timer { .. } => ParkKind::Timer,
                 crate::scheduler::ParkReason::Semaphore(wait) => match wait.key {
                     crate::semaphores::SemaphoreKey::Object(_) => ParkKind::SemaphoreWait,

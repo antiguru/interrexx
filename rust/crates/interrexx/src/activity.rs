@@ -389,6 +389,10 @@ pub(crate) struct Activity {
     /// the clause runs again; `None` while it runs or is parked on anything
     /// else.
     pub(crate) parked_block: Option<u64>,
+    /// The token of the socket wait it is parked on, until that wait's
+    /// thread has posted its end; `None` while it runs or is parked on
+    /// anything else.
+    pub(crate) parked_socket: Option<u64>,
     /// For a `>K>` line of a `GUARD`'s `WHEN` being routed, whether its value
     /// starts with `0`: the `TraceObject`'s `ISWAITING`.
     pub(crate) waiting_traced: Option<bool>,
@@ -629,6 +633,7 @@ impl Activity {
             scoped_guard: None,
             semaphore_wait: None,
             parked_block: None,
+            parked_socket: None,
             waiting_traced: None,
             trace_cache: crate::trace::TraceCache::of(crate::trace::TraceMode::OFF, false),
             #[cfg(feature = "pinning")]
@@ -805,6 +810,7 @@ impl Activity {
             scoped_guard: _,
             semaphore_wait: _,
             parked_block: _,
+            parked_socket: _,
             waiting_traced: _,
             #[cfg(feature = "pinning")]
                 pins: _,
