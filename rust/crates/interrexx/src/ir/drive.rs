@@ -1726,7 +1726,8 @@ macro_rules! open_clause {
         $stale:ident,
         $debugging:ident,
         $entry:ident,
-        $from:ident
+        $from:ident,
+        $registers:ident
     ) => {
         if $granting_instance && !$granting {
             return Ok(Exit::At($pc));
@@ -1809,6 +1810,9 @@ macro_rules! open_clause {
         // clause after it, and only the second would leave `TRACE
         // N` unable to switch one off.
         let echo = if $stale { Echo::Gated } else { Echo::Compiled };
+        let opening = $chunk.opening_at($index);
+        // Every register at or above the clause's top is dead as it opens.
+        $registers.clear_from(opening.register_top);
         // **The clause unit, entered by its two halves rather than
         // by its closure form**, which is what puts the region's
         // ops in this function's own frame instead of a callee's.
@@ -1824,7 +1828,7 @@ macro_rules! open_clause {
             $index,
             $clause,
             $source,
-            $chunk.position_at($index),
+            (opening.tabled, opening.position),
             counted,
         );
         // Taken on entry exactly as `step` takes it, because a
@@ -3905,9 +3909,8 @@ impl Interp {
                             open_clause!(
                                 self, code, chunk, source, pc, op_index, op_end, granting,
                                 GRANTING, TOP, clause_pc, index, region_end, clause, stale,
-                                debugging, entry, from
+                                debugging, entry, from, registers
                             );
-                            registers.clear_from(chunk.register_top_at(index));
                             let end = region_end;
                             break 'step clause_region!(
                                 self, code, chunk, registers, source, pc, clause_pc, index, clause,
@@ -3921,9 +3924,8 @@ impl Interp {
                             open_clause!(
                                 self, code, chunk, source, pc, op_index, op_end, granting,
                                 GRANTING, TOP, clause_pc, index, region_end, clause, stale,
-                                debugging, entry, from
+                                debugging, entry, from, registers
                             );
-                            registers.clear_from(chunk.register_top_at(index));
                             header = None;
                         }
                         // **A jump past this range's end is loud rather than a

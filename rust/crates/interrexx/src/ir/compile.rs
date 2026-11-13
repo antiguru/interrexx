@@ -9,8 +9,8 @@ use interrexx_parse::{
 };
 
 use super::{
-    Calls, Chunk, ChunkTooLarge, ClausePosition, ConditionKeyword, Hints, NodePath, Op, PlanSlot,
-    SendForm,
+    Calls, Chunk, ChunkTooLarge, ClauseOpening, ClausePosition, ConditionKeyword, Hints, NodePath,
+    Op, PlanSlot, SendForm,
 };
 use crate::eval::{SymbolRead, is_arithmetic, is_native_binary};
 use crate::plan::Plan;
@@ -1297,8 +1297,7 @@ fn compile_settled(
         ops: super::valid::ValidOps::new(ops, registers)?,
         op_of,
         registers,
-        register_tops: register_tops.into_boxed_slice(),
-        positions: clause_positions(body, plan),
+        openings: clause_openings(body, plan, &register_tops),
         interned: vec![std::cell::Cell::new(interrexx_core::ObjRef::NIL); consts.len()],
         interned_symbols: vec![
             std::cell::Cell::new(interrexx_core::ObjRef::NIL);
@@ -1958,21 +1957,43 @@ fn close_region(ops: &mut [Op], at: u32) -> Result<(), ChunkTooLarge> {
     Ok(())
 }
 
-/// Every clause's [`ClausePosition`], or an empty table where the plan cannot
-/// supply one for each.
-fn clause_positions(body: &CodeBody, plan: &Plan) -> Box<[ClausePosition]> {
+/// Every clause's [`ClauseOpening`]: its register top from `register_tops`,
+/// and its position where the plan can supply one for every clause.
+fn clause_openings(body: &CodeBody, plan: &Plan, register_tops: &[u16]) -> Box<[ClauseOpening]> {
+    let positions = clause_positions(body, plan);
+    register_tops
+        .iter()
+        .enumerate()
+        .map(|(index, &register_top)| match &positions {
+            Some(positions) => ClauseOpening {
+                position: positions[index],
+                tabled: true,
+                register_top,
+            },
+            None => ClauseOpening {
+                position: ClausePosition { line: 0, indent: 0 },
+                tabled: false,
+                register_top,
+            },
+        })
+        .collect()
+}
+
+/// Every clause's [`ClausePosition`], or `None` where the plan cannot supply
+/// one for each.
+fn clause_positions(body: &CodeBody, plan: &Plan) -> Option<Vec<ClausePosition>> {
     let len = body.instructions.len();
     if plan.lines.len() != len || plan.indents.len() != len {
-        return Box::default();
+        return None;
     }
     let mut positions = Vec::with_capacity(len);
     for (line, indent) in plan.lines.iter().zip(plan.indents.iter()) {
         let (Ok(line), Ok(indent)) = (u32::try_from(*line), u32::try_from(*indent)) else {
-            return Box::default();
+            return None;
         };
         positions.push(ClausePosition { line, indent });
     }
-    positions.into_boxed_slice()
+    Some(positions)
 }
 
 /// The index the next op will be pushed at, refused rather than wrapped.
