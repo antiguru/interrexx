@@ -2219,7 +2219,7 @@ impl Interp {
     /// and `~loadLibrary` sends ask for it.
     ///
     /// **The name is matched byte for byte**, so `::method m external "LIBRARY
-    /// RXREGEXP RegExp_Init"` is `98.903 Unable to load library "RXREGEXP"`
+    /// RXREGEXP RegExp_Init"` is `98.903`, naming `RXREGEXP`,
     /// where the same directive spelling the name in lower case loads.
     pub(crate) fn resolve_library(&mut self, name: &[u8]) -> LibraryLoad {
         if let Some(held) = self.libraries.get(name) {
@@ -2465,8 +2465,8 @@ impl Interp {
         let loaded = self.require_library(&library)?;
         // A routine's procedure is in the routine table and a method's in the
         // method table, and the two are separate exports: `::routine zzz
-        // external "LIBRARY rxmath"` is `90.999 Unable to find external routine
-        // "ZZZ"`.
+        // external "LIBRARY rxmath"` is `90.999`, naming
+        // `ZZZ`.
         let mut keys = Vec::with_capacity(binds.len());
         for bind in &binds {
             let procedure = if routine {

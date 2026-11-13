@@ -1,10 +1,11 @@
 //! Finds copies of the catalogue's message texts in a repository.
 //!
 //! A text is found by its longest literal piece (the stretch between two
-//! inserts, at least [`PIECE`] characters) or by its whole template (its
+//! inserts, at least [`PIECE`] characters and [`PIECE_WORDS`] words, so a
+//! stock phrase of two words does not count) or by its whole template (its
 //! literals in order, each insert standing for a short stretch of anything).
 //! The template catches a text made mostly of inserts whose literals are
-//! each short. A text with neither kind of literal (for example `&1`) cannot
+//! each short; it needs two literals with an insert between them. A text with neither kind of literal (for example `&1`) cannot
 //! be found, and [`unfindable`] lists those codes.
 //!
 //! Text is compared lower-case with every run of white space as one blank,
@@ -19,6 +20,8 @@ use crate::errors::Message;
 
 /// The least length of the literal piece that finds a text on its own.
 pub const PIECE: usize = 12;
+/// The fewest words of that piece.
+pub const PIECE_WORDS: usize = 3;
 /// The most characters one insert may stand for in a template match.
 const GAP: usize = 60;
 /// The least total length of a template's literals.
@@ -32,8 +35,8 @@ pub struct Pattern {
     pub symbol: String,
     /// The longest literal, when it is at least [`PIECE`] long.
     piece: Option<String>,
-    /// The literals in order, when the text has an insert and the literals
-    /// are long enough together.
+    /// The literals in order, when there are at least two (so an insert
+    /// lies between) and they are long enough together.
     template: Option<Vec<String>>,
 }
 
@@ -42,12 +45,13 @@ impl Pattern {
         let literals = literals(&message.text);
         let piece = literals
             .iter()
+            .filter(|l| l.len() >= PIECE && l.split(' ').count() >= PIECE_WORDS)
             .max_by_key(|l| l.len())
-            .filter(|l| l.len() >= PIECE)
             .cloned();
-        let has_insert = !crate::errors::rendered_positions(&message.text).is_empty();
-        let total: usize = literals.iter().map(String::len).sum();
-        let template = (has_insert && total >= TEMPLATE_LITERALS).then_some(literals);
+        // One literal is the piece's business: a template needs an insert
+        // between two literals.
+        let template =
+            (literals.len() >= 2 && total_len(&literals) >= TEMPLATE_LITERALS).then_some(literals);
         Pattern {
             major: message.major,
             sub: message.sub,
@@ -65,10 +69,10 @@ impl Pattern {
     /// The byte offset in `haystack` (normalised) and the way the text
     /// matches, or `None`.
     pub fn find(&self, haystack: &str) -> Option<(usize, Kind)> {
-        if let Some(piece) = &self.piece {
-            if let Some(at) = haystack.find(piece.as_str()) {
-                return Some((at, Kind::Piece));
-            }
+        if let Some(piece) = &self.piece
+            && let Some(at) = haystack.find(piece.as_str())
+        {
+            return Some((at, Kind::Piece));
         }
         let template = self.template.as_ref()?;
         let first = template.first()?;
@@ -141,6 +145,10 @@ fn normalise_line(line: &str) -> String {
         .collect::<Vec<_>>()
         .join(" ")
         .to_lowercase()
+}
+
+fn total_len(literals: &[String]) -> usize {
+    literals.iter().map(String::len).sum()
 }
 
 /// The codes whose text no pattern can find.

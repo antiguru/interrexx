@@ -1133,8 +1133,8 @@ impl Interp {
                 // label search sees. Both halves are measured and they pull
                 // in opposite directions from the quoted form: `nm = 'SUB';
                 // call (nm)` runs `sub:`, so this form *does* search labels,
-                // while `nm = 'sub'; call (nm)` is Error 43.1 `Could not find
-                // routine "sub"`, so the value is not upcased on the way in.
+                // while `nm = 'sub'; call (nm)` is Error 43.1 naming `sub`,
+                // so the value is not upcased on the way in.
                 interrexx_parse::Call::Dynamic { target, args } => {
                     let value = self.eval(code, target)?;
                     self.roots.activity_mut().push_temp(value);
@@ -4085,7 +4085,7 @@ impl Interp {
 /// `.INPUT`, `.OUTPUT` and `.ERROR`, so a redirected route is followed: with
 /// `.output~destination(.stderr)` pushed, `SAY`, `LINEOUT(,)` and `CHAROUT(,)`
 /// go to stderr while `.stdout~lineout` stays on stdout. Note `STDERR` reaches
-/// `.ERROR` rather than an `.STDERR` monitor, which does not exist.
+/// `.ERROR` rather than an `.STDERR` monitor, which is absent.
 fn standard_stream_name(name: &[u8], input: bool) -> Option<&'static [u8]> {
     let bare = name.strip_suffix(b":").unwrap_or(name);
     // An omitted or empty name is the default input or output, and which one

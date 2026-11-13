@@ -343,10 +343,10 @@ fn spec_rules(out: &mut String, sources: &Sources, files: &[PathBuf], row: &Row)
                         cited.len() - 1
                     }
                 };
-                if let Some(example) = example {
-                    if !cited[at].1.examples.contains(&example) {
-                        cited[at].1.examples.push(example);
-                    }
+                if let Some(example) = example
+                    && !cited[at].1.examples.contains(&example)
+                {
+                    cited[at].1.examples.push(example);
                 }
             }
         }
@@ -442,6 +442,10 @@ fn probe(out: &mut String, sources: &Sources, row: &Row) -> Result<(), String> {
 
 /// Runs `program` on `rexx` in an empty scratch directory with no input,
 /// the error output discarded, and returns how it ended and what it wrote.
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a tool that runs a child process waits on real time"
+)]
 fn run_probe(rexx: &Path, program: &Path) -> Result<(String, String), String> {
     static RUNS: AtomicUsize = AtomicUsize::new(0);
     let scratch = std::env::temp_dir().join(format!(

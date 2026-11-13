@@ -77,8 +77,7 @@ say "after directive"
 /// ::routine r
 /// if 1 = 1
 /// ```
-/// gives `Error 18.1: IF instruction on line 3 requires matching THEN
-/// clause.` -- the same missing-THEN check the main body gets.
+/// gives error 18.1, naming line 3 -- the same missing-THEN check the main body gets.
 #[test]
 fn a_body_directives_body_is_validated_not_merely_skipped_missing_then() {
     let result = parse_program(b"say \"main\"\n::routine r\nif 1 = 1\n".to_vec());
@@ -87,7 +86,7 @@ fn a_body_directives_body_is_validated_not_merely_skipped_missing_then() {
 
 /// As above, for an ordinary expression-grammar error inside the body.
 /// Measured against `build/bin/rexxc`: `::routine r` / `say )` gives
-/// `Error 37.2: Unmatched ")" in expression.`
+/// error 37.2, naming the parenthesis.
 #[test]
 fn a_body_directives_body_is_validated_not_merely_skipped_unmatched_paren() {
     let result = parse_program(b"::routine r\nsay )\n".to_vec());
@@ -249,8 +248,7 @@ fn a_label_inside_a_directive_body_is_not_in_the_programs_own_label_map() {
 // ---- parse_interpret: directives and labels are both rejected ----
 
 /// Measured via a `signal on syntax` trap around `interpret "::routine r"`:
-/// `condition('o')~code` is `99.914`, "INTERPRET data must not contain
-/// directive instructions." One check, not per-directive: a fragment with
+/// `condition('o')~code` is `99.914`. One check, not per-directive: a fragment with
 /// other content before the `::` still raises it.
 #[test]
 fn interpret_rejects_a_directive_with_99_914() {

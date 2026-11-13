@@ -18,6 +18,7 @@ fn patterns() -> Vec<Pattern> {
         message(91, 2, "&1 clashes &2 near &3"),
         message(91, 3, "&1"),
         message(91, 4, "Odd"),
+        message(91, 5, "Frobnication failed &1"),
     ]
     .iter()
     .map(Pattern::new)
@@ -65,7 +66,10 @@ fn a_template_of_short_literals_is_found_by_its_whole_shape() {
 
 #[test]
 fn a_text_with_no_findable_literal_is_listed_and_not_found() {
-    assert_eq!(unfindable(&patterns()), vec![(91, 3), (91, 4)]);
+    // A two-word stock phrase with one insert is no evidence of a copy
+    // either, and neither is a single short literal.
+    assert_eq!(unfindable(&patterns()), vec![(91, 3), (91, 4), (91, 5)]);
+    assert!(found("Frobnication failed 7", false).is_empty());
     assert!(found("&1 Odd", false).is_empty());
 }
 

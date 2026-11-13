@@ -586,10 +586,10 @@ impl Interp {
     /// `>I>`/`<I<` (`TRACE_PREFIX_INVOCATION`/`_INVOCATION_EXIT`): a routine
     /// activation's own entry and exit announcement.
     /// ```text
-    ///        >I> Routine "RTN" in package "/abs/path/own_a.rex".$
-    ///        <I< Routine "RTN" in package "/abs/path/own_a.rex".$
-    ///        >I> Method "M" with scope "K" in package "/abs/path/p5.rex".$
-    ///        <I< Method "M" with scope "K" in package "/abs/path/p5.rex".$
+    ///        >I> <101.18: RTN, /abs/path/own_a.rex>$
+    ///        <I< <101.18: RTN, /abs/path/own_a.rex>$
+    ///        >I> <101.19: M, K, /abs/path/p5.rex>$
+    ///        <I< <101.19: M, K, /abs/path/p5.rex>$
     /// ```
     pub(crate) fn trace_invocation(&mut self, prefix: &str, subject: &Announced, package: &[u8]) {
         let line_start = self.trace.len();

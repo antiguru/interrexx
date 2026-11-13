@@ -1494,7 +1494,7 @@ impl Interp {
         // crate's own 34.901 quotes the object's rendering -- so an operand
         // this names refuses however it renders, and a rendering that is itself
         // `0` or `1` is not an answer: `o & 1` for an instance named `'1'` is
-        // `97.1 Object "1" does not understand message "&".`
+        // `97.1`, naming the object `1` and the message `&`.
         if let Some(kind) = self.operator_operand_gap(left_value) {
             return Err(Loud::operator_operand(op.spelling(), kind).into());
         }
@@ -1620,8 +1620,8 @@ impl Interp {
             // rather than a comparison of `1` against `1`.
             Body::Array { .. } => Some("an array"),
             // The operator is sent as a message here too, and it is the send
-            // that fails: `o + 1` on an instance is `97.1 Object "a K" does not
-            // understand message "+".`, and the same after `o~objectName =
+            // that fails: `o + 1` on an instance is `97.1`, naming the object `a K` and
+            // the message `+`, and the same after `o~objectName =
             // '123'` -- the rendering being numeric does not make it a
             // conversion.
             Body::Instance { .. } => Some("an instance of a user class"),
@@ -1640,8 +1640,8 @@ impl Interp {
             // The redirect one arm up, for the same reason: every operator
             // reaches the referenced value through `UNKNOWN`, so it is that
             // value the message is sent to. For example, `zz = .array~new(2);
-            // say (>zz) + 1` is `97.1 Object "an Array" does not understand
-            // message "+".` -- the array's own answer, substituting the array
+            // say (>zz) + 1` is `97.1` naming the array and the message `+`
+            // -- the array's own answer, substituting the array
             // rather than the reference.
             Body::VarRef(_) => self.reference_operand_gap(value),
             _ => None,

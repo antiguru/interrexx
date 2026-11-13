@@ -680,7 +680,7 @@ pub(crate) enum MethodExternal {
     /// with the dictionary key each of its procedures fills.
     OtherLibrary {
         /// The library name as written. Matched byte for byte: `LIBRARY
-        /// RXREGEXP` is `98.903 Unable to load library "RXREGEXP"` where
+        /// RXREGEXP` is `98.903`, naming `RXREGEXP`, where
         /// `LIBRARY rxregexp` loads.
         library: Vec<u8>,
         binds: Vec<LibraryBind>,
@@ -786,8 +786,8 @@ pub(crate) fn method_external(method: &MethodDirective) -> Option<MethodExternal
     let upper = method.name.to_ascii_uppercase();
     // Before the `ATTRIBUTE` question, because method resolution loads the
     // library before it looks for either accessor's procedure in it. For
-    // example, `::method m attribute external 'LIBRARY nosuchlib x'` is `98.903
-    // Unable to load library "nosuchlib"` at rc 158 and not 90.998.
+    // example, `::method m attribute external 'LIBRARY nosuchlib x'` is `98.903`
+    // naming `nosuchlib`, at rc 158 and not 90.998.
     let Some(package) = Package::named(&spec.library) else {
         let style = method.attribute.then_some(AttributeStyle::Both);
         return Some(other_library(&upper, style, spec));
@@ -833,7 +833,7 @@ pub(crate) fn attribute_external(attribute: &AttributeDirective) -> Option<Metho
 ///
 /// The entry defaults to the routine's own name, which the parser upcases for a
 /// symbol and keeps as written for a string: `::routine zzz external "LIBRARY
-/// rxmath"` is `90.999 Unable to find external routine "ZZZ"` and `::routine
+/// rxmath"` is `90.999`, naming `ZZZ`, and `::routine
 /// 'zq' external "LIBRARY rxmath"` names `"zq"`.
 pub(crate) fn routine_external(routine: &RoutineDirective) -> Option<MethodExternal> {
     let spec = routine.external.as_ref()?;

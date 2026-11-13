@@ -190,8 +190,8 @@ pub(crate) fn sourceline(
 /// `TRACE()` / `TRACE(setting)`: the setting in force, and optionally a new
 /// one.
 /// ```text
-/// trace value 5     24.901  Numeric TRACE requests are valid only from interactive debugging.
-/// say trace('5')    24.1    TRACE request letter must be one of "ACEFILNOR"; found "5".
+/// trace value 5     24.901  a numeric request outside interactive debugging.
+/// say trace('5')    24.1    names the valid letters and the value 5.
 /// ```
 pub(crate) fn trace(interp: &mut Interp, _name: &[u8], args: Args<'_>) -> Result<ObjRef, Failure> {
     let before = interp.trace_mode();
@@ -238,7 +238,7 @@ pub(crate) fn trace(interp: &mut Interp, _name: &[u8], args: Args<'_>) -> Result
 /// arg('x','q')   40.12  argument 1 must be a whole number
 /// arg(,'')       40.5   argument 1 is required     (an empty option is still an option)
 /// arg(0,'')      40.14  argument 1 must be positive
-/// arg(1,'')      40.904 argument 2 must be one of AENO; found ""
+/// arg(1,'')      40.904 names argument 2, the valid letters AENO and the empty value
 /// ```
 pub(crate) fn arg(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result<ObjRef, Failure> {
     const VALID: &str = "AENO";

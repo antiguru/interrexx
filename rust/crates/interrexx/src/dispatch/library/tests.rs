@@ -529,8 +529,7 @@ fn a_refusal_before_the_call_is_lineless_and_one_after_it_is_not() {
 
 /// A signature refusal is 93.968 in a method and 40.918 in a routine.
 /// Measured through a forged routine library, oracle rc 216: a routine
-/// declaring `CSELF` is `Error 40.918:  Invalid native function signature
-/// specification.` with no line where a directive bound it, and a result
+/// declaring `CSELF` is error 40.918 with no line where a directive bound it, and a result
 /// word carrying the optional bit the same with the sending clause's line.
 #[test]
 fn a_signature_refusal_is_numbered_for_a_method_or_a_routine() {

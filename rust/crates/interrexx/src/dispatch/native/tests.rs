@@ -254,8 +254,8 @@ fn an_attribute_external_resolves_the_procedure_the_oracle_names() {
 /// directive naming another library carries that library's own name and
 /// never a procedure this registry could not find. The accessor spelling
 /// is still the attribute shape's: measured, oracle, `::attribute at
-/// external "LIBRARY rxregexp NoSuchGet"` is `90.998 Unable to find
-/// external method "GETNoSuchGet".`
+/// external "LIBRARY rxregexp NoSuchGet"` is `90.998`,
+/// naming `GETNoSuchGet`.
 #[test]
 fn a_library_other_than_rexx_names_itself_and_its_own_accessors() {
     let cases: &[(&str, &[&str])] = &[

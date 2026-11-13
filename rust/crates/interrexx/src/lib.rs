@@ -1117,7 +1117,7 @@ enum Novalue {
 /// ```text
 ///      8 *-*   say 1/0          <- line 8 raised; line 12 propagated
 ///      3 *-* call fun
-/// Error 42:  Arithmetic overflow/underflow.
+/// Error 42:  <text of 42>
 /// ```
 struct ActiveCondition {
     raised: Raised,
@@ -2226,8 +2226,7 @@ enum InstallBody {
 #[derive(Default)]
 struct CallContext {
     /// The resolved routine name, as errors 40.3 and 40.4 spell it --
-    /// measured, `Not enough arguments in invocation of SUB2`, the label's
-    /// own upcased spelling.
+    /// measured, the label's own upcased spelling.
     name: Rc<[u8]>,
     /// The arguments in source order, an omitted position (`call sub 1,,3`)
     /// left as `None` rather than closed up. Measured: that call into `use

@@ -978,8 +978,7 @@ fn load_package(
 ) -> Result<Option<ObjRef>, Failure> {
     // `stringArgument(name, 1)`, which numbers the argument where every other
     // reader here names it: measured at rc 163, `p~loadPackage` is 93.903
-    // `argument 1 is required` and `p~loadPackage(.nil)` is 88.909
-    // `Argument 1 must have a string value.`
+    // (argument 1) and `p~loadPackage(.nil)` is 88.909 (argument 1).
     let Some(name) = args.first().copied().flatten() else {
         return Err(Raised::missing_method_argument(1).into());
     };

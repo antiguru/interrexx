@@ -236,8 +236,7 @@ fn translate<'a>(
     // `translate` raises 99.914 exactly here, once, before the next directive is
     // ever called: `INTERPRET` text may not carry a directive at all, so this is
     // not a per-directive check. Measured via a `signal on syntax` trap around
-    // `interpret "::routine r"`: `condition('o')~code` is `99.914` with message
-    // "INTERPRET data must not contain directive instructions."
+    // `interpret "::routine r"`: `condition('o')~code` is `99.914`.
     if let Some(clause) = cursor.peek()
         && ctx.source.kind() == SourceKind::Interpret
     {

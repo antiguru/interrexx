@@ -126,7 +126,7 @@ fn max_value_for_digits(digits: u64) -> u64 {
 /// cap. The value is rounded at that DIGITS boundary first (half-up on the
 /// first dropped digit), every decimal digit that remains must reduce to
 /// zero -- literal zeros, or all nines consumed by the carry -- and the
-/// result must not exceed `max_value_for_digits(digits)`.
+/// result must be at most `max_value_for_digits(digits)`.
 fn unsigned_whole_number(text: &str, digits: u64) -> Option<u64> {
     let n = Number::parse(text)?;
     if n.is_zero() {
