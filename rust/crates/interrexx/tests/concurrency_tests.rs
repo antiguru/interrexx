@@ -1310,9 +1310,11 @@ mod measured {
     /// One program per frame kind reachable from Rexx, each reaching `SysSleep`
     /// under that kind.
     const FRAME_PROBES: &[(&str, &str)] = &[
+        // A stem's primitive `UNKNOWN` forwards to the stem's value, whose
+        // own `UNKNOWN` then runs beneath that primitive's frame.
         (
             "Unknown",
-            ".c~new~foo\n::class c\n::method unknown\n  call SysSleep 0\n",
+            "s. = .c~new\ns.~foo\n::class c\n::method unknown\n  call SysSleep 0\n",
         ),
         (
             "Forward",
@@ -1440,6 +1442,8 @@ mod measured {
             "x = .message~new(.c~new, 'M')~send\n",
             "x = .c~new~send('M')\n",
             "x = .c~new~start('M')\n",
+            "x = .d~new~foo\n::class d\n::method unknown\n  call SysSleep 0\n  return 1\n",
+            ".d~new~foo\n::class d\n::method unknown\n  call SysSleep 0\n",
             "x = .context~package~findRoutine('R')~call\n::routine r\n  call SysSleep 0\n",
             "if 1 then do\n  x = g()\n  y = .c~new~m\n  call g\nend\nexit\ng:\n  call SysSleep 0\n  return 2\n",
             "do i = 1 to 2\n  do\n    x = g()\n  end\nend\nexit\ng:\n  call SysSleep 0\n  return 2\n",
@@ -1452,6 +1456,26 @@ mod measured {
             }
         }
         assert!(pinned.is_empty(), "{pinned:#?}");
+    }
+
+    /// A line traced to a destination behind `.traceOutput`'s `Monitor`
+    /// reaches it through the `Monitor`'s Rexx `UNKNOWN`, which the send
+    /// begins with no Rust frame of its own: a park in the destination is
+    /// under the trace delivery's frame and not under an `Unknown` one.
+    #[test]
+    fn a_park_in_a_trace_destination_is_under_no_unknown_frame() {
+        let report = report_of(
+            ".traceOutput~destination(.c~new)\ntrace r\nx = 1\n\
+             ::class c\n::method lineout\n  call SysSleep 0\n",
+        );
+        let frames = frames_at(&report, ParkKind::SysSleep);
+        assert!(
+            !frames.is_empty()
+                && frames.iter().all(|frames| {
+                    frames.contains(&PinKind::TraceWrapper) && !frames.contains(&PinKind::Unknown)
+                }),
+            "{frames:?}"
+        );
     }
 
     /// A `DELEGATE` method and the `OF` factories still run the Rexx body on

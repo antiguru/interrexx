@@ -4012,7 +4012,7 @@ impl Interp {
     }
 
     /// [`Interp::resolve_in`] then [`Interp::invoke`], with
-    /// [`Interp::unknown_or_nomethod`] behind them for a name the receiver's
+    /// [`Interp::begin_unknown_or_nomethod`] behind them for a name the receiver's
     /// behaviour does not answer.
     pub(crate) fn send_message(
         &mut self,
@@ -4079,8 +4079,8 @@ impl Interp {
         match self.resolve_in(receiver, behaviour, name, start_scope, caller) {
             Ok(resolution) => self.begin_invoke(resolution, Some(behaviour), receiver, name, args),
             Err(miss) => self
-                .unknown_or_nomethod(receiver, name, args, miss)
-                .map(Started::Ran),
+                .begin_unknown_or_nomethod(receiver, name, args, miss, true)
+                .map(|ran| ran.map_or(Started::Entered, Started::Ran)),
         }
     }
 
@@ -4117,16 +4117,16 @@ impl Interp {
         match resolved {
             Ok(resolution) => self.begin_invoke(resolution, Some(behaviour), receiver, name, args),
             Err(miss) => self
-                .unknown_or_nomethod(receiver, name, args, miss)
-                .map(Started::Ran),
+                .begin_unknown_or_nomethod(receiver, name, args, miss, true)
+                .map(|ran| ran.map_or(Started::Entered, Started::Ran)),
         }
     }
 
     /// **What the documented search order has left after the class chain**:
     /// `UNKNOWN` on the receiver's own behaviour, and the `NOMETHOD`
     /// condition beneath it when the behaviour answers no `UNKNOWN` either.
-    #[cold]
-    #[inline(never)]
+    /// Run to its end here, for a Rust caller that cannot take an entered
+    /// body.
     fn unknown_or_nomethod(
         &mut self,
         receiver: ObjRef,
@@ -4134,6 +4134,31 @@ impl Interp {
         args: &[Option<ObjRef>],
         miss: Miss,
     ) -> Result<Option<ObjRef>, Failure> {
+        match self.begin_unknown_or_nomethod(receiver, name, args, miss, false)? {
+            Some(value) => Ok(value),
+            None => self.complete_send(Started::Entered),
+        }
+    }
+
+    /// [`Interp::unknown_or_nomethod`], with a method `UNKNOWN` resolves to
+    /// only begun where `begun` holds: `None` then says its body was entered
+    /// and runs as the send's own callee, with no Rust frame of this send
+    /// beneath it, so a wait inside it parks the activity as a wait in any
+    /// method does. The answer is an `Option` rather than a [`Started`]
+    /// because the send sites, which inline their own result handling, then
+    /// keep the hit path's code as it was. `begun` is a parameter rather
+    /// than a const generic so that one copy of this body exists, and the
+    /// `Directory` read path below keeps its callees inlined.
+    #[cold]
+    #[inline(never)]
+    fn begin_unknown_or_nomethod(
+        &mut self,
+        receiver: ObjRef,
+        name: &[u8],
+        args: &[Option<ObjRef>],
+        miss: Miss,
+        begun: bool,
+    ) -> Result<Option<Option<ObjRef>>, Failure> {
         let Some(resolution) = self.lookup(receiver, UNKNOWN, None) else {
             return Err(self.nomethod(receiver, name, miss));
         };
@@ -4149,7 +4174,7 @@ impl Interp {
                 hash::unknown_entry_read(self, receiver, name)
             );
             self.roots.activity_mut().pop_frame(frame);
-            return read;
+            return read.map(Some);
         }
         // **Each of the forward's arguments is rooted, and only the array's
         // root has a witness.** `alloc_with` collects *before* it allocates,
@@ -4180,21 +4205,35 @@ impl Interp {
                 self,
                 crate::pinning::PinKind::Unknown,
                 run(self, receiver, &unknown_args)
-            ),
+            )
+            .map(Some),
             None => {
                 // The fallback to `UNKNOWN` is not a send of the program, and
                 // the message it was sent for named no protected method, so
-                // no manager is asked about it (r[env.security.method]).
+                // no manager is asked about it (r[env.security.method]). The
+                // seam consumes the flag before the method's activation is
+                // pushed, so it never outlives this begin.
                 self.unasked_run = true;
-                let sent = pinned!(
-                    self,
-                    crate::pinning::PinKind::Unknown,
-                    self.invoke(resolution, receiver, UNKNOWN, &unknown_args)
-                );
+                let sent = if begun {
+                    self.begin_invoke(resolution, None, receiver, UNKNOWN, &unknown_args)
+                        .map(|started| match started {
+                            Started::Ran(value) => Some(value),
+                            Started::Entered => None,
+                        })
+                } else {
+                    pinned!(
+                        self,
+                        crate::pinning::PinKind::Unknown,
+                        self.invoke(resolution, receiver, UNKNOWN, &unknown_args)
+                    )
+                    .map(Some)
+                };
                 self.unasked_run = false;
                 sent
             }
         };
+        // An entered `UNKNOWN` holds the name and the array in its own
+        // calling convention from here on, so the frame goes with the begin.
         self.roots.activity_mut().pop_frame(frame);
         forwarded
     }
