@@ -1090,9 +1090,7 @@ worker:
 r[instr.trace.delivery.owner]
 The destination's `LINEOUT` runs as part of the activity that wrote the line,
 with everything that activity owns. A guarded message that the destination
-sends to an object whose guard the traced code holds does not wait for it. A
-mutex semaphore that the traced code holds is acquired again by the
-destination without waiting, and the traced code still owns it after the line.
+sends to an object whose guard the traced code holds does not wait for it.
 
 ```rexx
 .local~o = .obj~new
@@ -1118,9 +1116,12 @@ say 'done' .local~n
 done 4
 ```
 
-The second example has a second activity that asks for the semaphore while the
-destination holds it and while the traced code does. It gets it only when the
-traced code lets go.
+r[instr.trace.delivery.mutex]
+A mutex semaphore that the traced code holds is acquired again by the
+destination without waiting, and the traced code still owns it after the line.
+In the example a second activity asks for the semaphore while the destination
+holds it and while the traced code does. It gets it only when the traced code
+lets go.
 
 ```rexx
 .local~m = .mutexsemaphore~new
