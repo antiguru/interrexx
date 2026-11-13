@@ -984,3 +984,59 @@ fn a_body_that_can_reach_the_trace_setting_is_the_one_that_says_so() {
     // guard falls rather than asserting it must not block.
     let _ = retraces(b"trace_var = 1");
 }
+
+/// **A keyword spelling used as a variable** lands below the body's own ids,
+/// in the shared keyword run of the symbol table, which moves the by-symbol
+/// tables' first id down (`BySymbol::entry`). Every name must still resolve
+/// to the slot the plan's name map holds, whichever side of `base_len` its id
+/// is on, and a compound beside it must keep its split.
+#[test]
+fn a_keyword_spelling_used_as_a_variable_moves_the_tables_first_id_down() {
+    let source = b"x = 2\nvalue = 1\nto.x = 3\nwith = value + to.x + x\n";
+    let program = parse_program(source.to_vec()).expect("test program parses");
+    let plan = Plan::build(
+        &program.main,
+        &program.symbols,
+        Some(&program.source),
+        BodyKind::Plain,
+    );
+    let base_len = program.symbols.base_len();
+    let targets: Vec<SymbolId> = program
+        .main
+        .instructions
+        .iter()
+        .map(|instruction| match &instruction.kind {
+            InstructionKind::Assignment { target, .. } => match target.kind {
+                ExprKind::Variable(id) | ExprKind::Compound(id) => id,
+                ref other => panic!("unexpected target {other:?}"),
+            },
+            other => panic!("not an assignment: {other:?}"),
+        })
+        .collect();
+    let [x, value, to_x, with] = targets[..] else {
+        panic!("four assignments, got {}", targets.len());
+    };
+
+    // The premise: `VALUE` and `WITH` are keyword spellings, so their ids are
+    // in the shared run; `X` and `TO.X` are the body's own.
+    assert!(value.index() < base_len && with.index() < base_len);
+    assert!(x.index() >= base_len && to_x.index() >= base_len);
+    let lowest = value.index().min(with.index());
+    assert_eq!(
+        plan.by_symbol.first, lowest,
+        "first moved down to the lowest keyword id"
+    );
+    assert_eq!(plan.by_symbol.items.len(), program.symbols.len() - lowest);
+
+    for (id, name) in [(x, "X"), (value, "VALUE"), (with, "WITH")] {
+        assert_eq!(
+            plan.slot_for_symbol(id),
+            plan.names.get(name.as_bytes()).copied(),
+            "{name}"
+        );
+        assert!(plan.slot_for_symbol(id).is_some(), "{name} is bound");
+    }
+    let compound = plan.compound(to_x).expect("TO.X keeps its split");
+    assert_eq!(&*compound.stem, b"TO.");
+    assert_eq!(compound.stem_at, plan.names.get(b"TO.".as_slice()).copied());
+}
