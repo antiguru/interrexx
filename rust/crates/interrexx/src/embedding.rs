@@ -332,7 +332,7 @@ struct OtherEntry {
     inbox: ClassicInbox,
     /// The calls in flight.
     in_flight: AtomicUsize,
-    /// The thread's [`OtherThread::entered`] count when the innermost call in flight was
+    /// The thread's [`OtherLocal::entered`] count when the innermost call in flight was
     /// entered, which orders this interpreter's calls against the other interpreters' on the
     /// thread.
     entered: AtomicU64,

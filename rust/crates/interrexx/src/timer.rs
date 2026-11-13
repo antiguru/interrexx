@@ -316,12 +316,12 @@ impl Registration {
         self.inbox.requests()
     }
 
-    /// The inbox, for a thread that posts to it.
-    /// [`Timer::inbox`] without the count a clone costs.
+    /// The inbox, borrowed: [`Registration::inbox`] without the count a clone costs.
     pub(crate) fn inbox_ref(&self) -> &Arc<Inbox<Posted>> {
         &self.inbox
     }
 
+    /// The inbox, for a thread that posts to it.
     pub(crate) fn inbox(&self) -> Arc<Inbox<Posted>> {
         Arc::clone(&self.inbox)
     }
