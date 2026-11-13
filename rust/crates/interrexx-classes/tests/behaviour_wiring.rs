@@ -951,6 +951,8 @@ fn every_dispatch_visible_mutation_changes_the_epoch() {
     changed(&g, "update_subclasses_of");
     g.refresh_class_behaviour(base);
     changed(&g, "refresh_class_behaviour");
+    g.remove_from_class_behaviour(base, base, &["C".to_owned()]);
+    changed(&g, "remove_from_class_behaviour");
     g.hiding_behaviour(base, &["A"]);
     changed(&g, "hiding_behaviour");
     g.define_cloned_class(cloned, base, object, object);

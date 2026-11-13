@@ -1156,6 +1156,7 @@ impl ClassGraph {
     /// class behaviour, in place: what rebuilding it answers once `scope` no
     /// longer defines them, where nothing else changed since it was built.
     pub fn remove_from_class_behaviour(&mut self, class: ObjRef, scope: ObjRef, names: &[String]) {
+        self.bump_epoch();
         let handle = self.behaviour_handle(class, Side::Class);
         let behaviour = &mut self.behaviours[handle.index()];
         for name in names {
