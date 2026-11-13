@@ -123,7 +123,7 @@ fn name_through(uid: u32, lookup: impl FnOnce(u32) -> Option<String>) -> Option<
     lookup(uid).map(String::into_bytes)
 }
 
-/// `SETLOCAL()`: saves the directory and the environment, answering 1.
+/// `SETLOCAL()`: saves the directory and the environment, answering `.true`.
 pub(crate) fn setlocal(
     interp: &mut Interp,
     _name: &'static [u8],
@@ -133,8 +133,8 @@ pub(crate) fn setlocal(
     Ok(crate::eval::logical(saved))
 }
 
-/// `ENDLOCAL()`: restores the innermost saved pair, answering 1 when there was
-/// one and 0 when there was not.
+/// `ENDLOCAL()`: restores the innermost saved pair, answering `.true` when there was
+/// one and `.false` when there was not.
 ///
 /// **This crate does not crash past the end** (oracle defect,
 /// `corpus/oracle-crashes.txt` entry 10): an `ENDLOCAL` with nothing

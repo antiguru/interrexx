@@ -542,7 +542,6 @@ impl Interp {
             true => crate::eval::LOGICAL_TRUE,
             false => crate::eval::LOGICAL_FALSE,
         };
-        self.roots.activity_mut().push_temp(propagated);
         entries.push((key::PROPAGATED, propagated));
         self.roots.activity_mut().push_temp(frames);
         entries.push((key::STACKFRAMES, frames));

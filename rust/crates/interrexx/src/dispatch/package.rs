@@ -533,8 +533,8 @@ fn set_security_manager(
 
 /// A `dlopen` of a native library, answering whether it loaded.
 ///
-/// For example, `.context~package~loadLibrary('rxregexp')` is `1` and the same
-/// call naming `zorkolib` is `0`, so a library that is not there is an answer
+/// For example, `.context~package~loadLibrary('rxregexp')` is `.true` and the same
+/// call naming `zorkolib` is `.false`, so a library that is not there is an answer
 /// here rather than the 98.903 a directive gets.
 fn load_library(
     interp: &mut Interp,
@@ -556,7 +556,7 @@ fn load_library(
     }
     // A version refusal raises here as it does at a directive: `loadLibrary` of
     // a package entry asking for a newer interpreter is 98.982 on the first ask
-    // and answers `1` on the next.
+    // and answers `.true` on the next.
     let loaded = match interp.resolve_library(&name) {
         crate::LibraryLoad::Loaded(_) => true,
         crate::LibraryLoad::Missing => false,

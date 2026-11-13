@@ -42,7 +42,7 @@ pub(super) fn native_event_is_posted(
     Ok(Some(crate::eval::logical(posted)))
 }
 
-/// `EventSemaphore~wait(timeout)`: `1` at once where posted, the post itself
+/// `EventSemaphore~wait(timeout)`: `.true` at once where posted, the post itself
 /// for a timeout of zero, else parked until a post or the timeout.
 pub(super) fn native_event_wait(
     interp: &mut Interp,

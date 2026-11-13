@@ -36,18 +36,18 @@ pub(super) fn native_has_method(
     let argument = required_string_argument(interp, argument, 1)?;
     let name = String::from_utf8_lossy(&interp.to_text(argument).to_ascii_uppercase()).into_owned();
     // **The object's own dictionary answers first**, so a `setMethod` name
-    // reports `1` and a hidden one reports `0` even where the class defines it
-    // -- the first answers `1` and a send after the second raises.
+    // reports `.true` and a hidden one reports `.false` even where the class
+    // defines it -- the first answers `.true` and a send after the second raises.
     if let Some(entry) = interp.own_method_entry(receiver, name.as_bytes()) {
         return Ok(Some(crate::eval::logical(entry.is_some())));
     }
-    // **A receiver with no class here is loud, not `0`.** `send_message`
+    // **A receiver with no class here is loud, not `.false`.** `send_message`
     // screens for it before any method runs, so this arm is unreachable today;
-    // answering `0` from it anyway would make this the one place in the module
+    // answering `.false` from it anyway would make this the one place in the module
     // where a gap becomes an answer, and the answer would be wrong. **Which
     // dictionary is asked follows the receiver**: with `::class K` plus
-    // `::method m class`: `.K~hasMethod('M')` is `1` and
-    // `.K~hasMethod('LENGTH')` is `0`, so a class object is asked about its
+    // `::method m class`: `.K~hasMethod('M')` is `.true` and
+    // `.K~hasMethod('LENGTH')` is `.false`, so a class object is asked about its
     // class behaviour and not about `.Class`'s instances.
     let behaviour = match interp.receiver_behaviour(receiver) {
         Ok(behaviour) => behaviour,
@@ -1991,7 +1991,7 @@ pub(super) fn native_request(
     }))
 }
 
-/// `Object~isNil`: `1` for `.nil` and `0` for everything else.
+/// `Object~isNil`: `.true` for `.nil` and `.false` for everything else.
 pub(super) fn native_is_nil(
     _interp: &mut Interp,
     _cleared: Cleared,
