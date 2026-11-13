@@ -16,6 +16,19 @@ cargo build --release
 
 The build reads ooRexx sources from the `third_party/ooRexx` submodule. Binaries are `rexx` and `rexxc`.
 
+### Debian package
+
+[cargo-deb](https://github.com/kornelski/cargo-deb) builds a `.deb` from the same tree:
+
+```sh
+cargo install cargo-deb --locked
+cd interrexx/rust
+cargo deb -p interrexx
+sudo apt install ./target/debian/interrexx_*.deb
+```
+
+The package installs `rexx`, `rexxc`, `rexx-ir`, `rxapi`, `rxqueue` and `rxsubcom` into `/usr/bin` and `librexx.so` and `librexxapi.so`, with their `.so.4` SONAME links, into `/usr/lib`. Debug symbols go into a separate `interrexx-dbgsym_*.ddeb` package beside it. The `[package.metadata.deb]` table in `rust/crates/interrexx/Cargo.toml` lists the contents.
+
 ## Testing
 
 Tests compare against an ooRexx build and run ooTest:

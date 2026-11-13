@@ -106,6 +106,51 @@ dns-lookup = "4"
 name = "bounded-run"
 path = "tests/support/bounded_run.rs"
 
+# The Debian package `cargo deb -p interrexx` builds, run from `rust/`.
+#
+# Assets name `target/release/` whatever the real target directory is: cargo-deb
+# rewrites the prefix, and an asset built by another workspace member makes it
+# build with `--workspace`. `rxapi`, `rxqueue` and `rxsubcom` come from
+# `interrexx-rxapi`, and a client looks for `rxapi` beside its own executable
+# first, so all of them go to `usr/bin/`. The two shared libraries are what a
+# native extension links against. `librexxapi.so.4` and the extensions name
+# `librexx.so.4` in `NEEDED`, so each SONAME is a link to its library. The
+# library itself keeps the `.so` name because cargo-deb strips and splits debug
+# info only from files whose name ends in `.so`.
+# `bounded-run` is test support and stays out.
+#
+# The release profile keeps full debug info for profiling. `dbgsym` moves it
+# into a separate `interrexx-dbgsym` package, so the main package ships
+# stripped binaries.
+[package.metadata.deb]
+maintainer = "Moritz Hoffmann <antiguru@gmail.com>"
+copyright = "2026, Moritz Hoffmann"
+section = "interpreters"
+priority = "optional"
+depends = "$auto"
+dbgsym = true
+extended-description = """\
+interrexx is a Rust implementation of the Open Object Rexx language. \
+It provides the rexx interpreter, the rexxc compiler, the rexx-ir op-stream \
+printer, the rxapi service with its rxqueue and rxsubcom clients, and the \
+librexx and librexxapi shared libraries for native extensions."""
+assets = [
+    ["target/release/rexx", "usr/bin/", "755"],
+    ["target/release/rexxc", "usr/bin/", "755"],
+    ["target/release/rexx-ir", "usr/bin/", "755"],
+    ["target/release/rxapi", "usr/bin/", "755"],
+    ["target/release/rxqueue", "usr/bin/", "755"],
+    ["target/release/rxsubcom", "usr/bin/", "755"],
+    ["target/release/librexx.so", "usr/lib/", "644"],
+    ["target/release/librexxapi.so", "usr/lib/", "644"],
+    { dest = "usr/lib/librexx.so.4", link_name = "librexx.so" },
+    { dest = "usr/lib/librexxapi.so.4", link_name = "librexxapi.so" },
+    ["../../../README.md", "usr/share/doc/interrexx/", "644"],
+    ["../../../NOTICE", "usr/share/doc/interrexx/", "644"],
+    ["../../../LICENSE-MIT", "usr/share/doc/interrexx/", "644"],
+    ["../../../LICENSE-APACHE", "usr/share/doc/interrexx/", "644"],
+]
+
 [features]
 # The pinned-park counter, `src/pinning.rs`.
 pinning = []
