@@ -770,6 +770,10 @@ struct Innermost {
     requester: Option<Requester>,
     /// Whether [`ThreadContext::retire`] retired the context.
     retired: Cell<bool>,
+    /// Whether the context is an attached activity's
+    /// ([`ThreadContext::make_attached`]): a callback through it with no
+    /// native call in flight opens an entry of its own.
+    attached: Cell<bool>,
     /// The instance the context links.
     instance: *mut RexxInstance_,
     /// The context itself.
@@ -810,15 +814,20 @@ fn attach_here(context: usize) {
 /// Ends one attach of this thread to `context`, answering whether it was
 /// attached.
 fn detach_here(context: usize) -> bool {
+    detach_counted(context).is_some()
+}
+
+/// Ends one attach of this thread to `context`, answering the attaches left,
+/// or `None` where it was not attached.
+fn detach_counted(context: usize) -> Option<usize> {
     ATTACHED.with_borrow_mut(|attached| {
-        let Some(at) = attached.iter().position(|(at, _)| *at == context) else {
-            return false;
-        };
+        let at = attached.iter().position(|(at, _)| *at == context)?;
         attached[at].1 -= 1;
-        if attached[at].1 == 0 {
+        let left = attached[at].1;
+        if left == 0 {
             attached.remove(at);
         }
-        true
+        Some(left)
     })
 }
 
@@ -924,6 +933,7 @@ impl ThreadContext {
                 call: Cell::new(std::ptr::null()),
                 requester: table.requester.clone(),
                 retired: Cell::new(false),
+                attached: Cell::new(false),
                 instance,
                 context: std::ptr::null_mut(),
             },
@@ -971,6 +981,20 @@ impl ThreadContext {
         // covers only the cell, which is written on the baton, as the
         // innermost pointer beside it is.
         unsafe { (*raw).innermost.retired.set(true) };
+    }
+
+    /// Makes this context an attached activity's (`r[native.threads.attach]`):
+    /// a callback through it from the thread attached to it, with no native
+    /// call in flight on it, opens an entry of its own for the length of the
+    /// member it calls. The context is kept ([`ThreadContext::keep`]), as the
+    /// thread holds its address until it detaches, whenever that is.
+    pub fn make_attached(&self) {
+        let raw = self.home.0.as_ptr();
+        // SAFETY: the allocation is live while `self` is; the reference
+        // covers only the cell, which is written on the baton before the
+        // context's address is handed to any thread.
+        unsafe { (*raw).innermost.attached.set(true) };
+        self.keep();
     }
 
     /// The address an extension is handed, as a number.
@@ -1085,15 +1109,8 @@ impl ThreadContext {
         debug_assert_eq!(self.constants(), constants, "a constant's handle moved");
         // SAFETY: as above; the reference covers only the cell.
         let innermost = unsafe { &(*raw).innermost };
-        let entered = Entered {
-            innermost,
-            activation: std::ptr::from_ref(activation).cast::<Activation<'static>>(),
-            outer: CALLING.get(),
-            below: Cell::new(innermost.call.get()),
-        };
-        let at = std::ptr::from_ref(&entered).cast::<Entered<'static>>();
-        innermost.call.set(at);
-        CALLING.set(at);
+        let entered = Entered::new(innermost, activation);
+        entered.link();
         let mut contexts = Contexts {
             thread: self.pointer(),
             method: Owned {
@@ -1163,6 +1180,27 @@ struct Entered<'a> {
     /// abandoned while it runs ends after the next call of that activity was
     /// entered, so this is rewritten when a call below ends first.
     below: Cell<*const Entered<'static>>,
+}
+
+impl<'a> Entered<'a> {
+    /// An entry of `activation`'s call on `innermost`'s context, not yet
+    /// linked.
+    fn new(innermost: &'a Innermost, activation: &Activation<'_>) -> Entered<'a> {
+        Entered {
+            innermost,
+            activation: std::ptr::from_ref(activation).cast::<Activation<'static>>(),
+            outer: CALLING.get(),
+            below: Cell::new(innermost.call.get()),
+        }
+    }
+
+    /// Makes this entry, at the address it keeps until its drop unlinks it,
+    /// the innermost call of its context and of this OS thread.
+    fn link(&self) {
+        let at = std::ptr::from_ref(self).cast::<Entered<'static>>();
+        self.innermost.call.set(at);
+        CALLING.set(at);
+    }
 }
 
 impl Drop for Entered<'_> {
@@ -1402,7 +1440,7 @@ unsafe fn addressed<'a, C: CallLinked>(context: *mut C) -> Addressed<'a> {
         };
     }
     // SAFETY: the caller guarantees the link to a live thread context.
-    match unsafe { reached(C::thread_of(context), "nested call") } {
+    match unsafe { reached(C::thread_of(context), "nested call", None) } {
         Addressed::Here(reached, _) => Addressed::Here(reached, own.frame()),
         Addressed::Elsewhere(reached, _) => Addressed::Elsewhere(reached, own.frame()),
         Addressed::Refused => Addressed::Refused,
@@ -1461,12 +1499,13 @@ unsafe fn variables_of<'a, C: CallLinked>(context: *mut C) -> Option<(Reached<'a
 /// `context` is a thread context a [`ThreadContext`] handed out, some clone
 /// of which is alive. A caller holding the innermost call's conversion state
 /// on its own activity is caught by its `RefCell`, a panic.
-unsafe fn innermost_activation<'a>(
+unsafe fn innermost_activation<'a, 'c: 'a>(
+    room: &'a mut Room<'c, 'a>,
     context: *mut RexxThreadContext_,
     slot: &str,
 ) -> Option<Reached<'a>> {
     // SAFETY: as the caller guarantees.
-    match unsafe { reached(context, slot) } {
+    match unsafe { reached(context, slot, Some(room)) } {
         Addressed::Here(innermost, _) => Some(innermost),
         Addressed::Elsewhere(running, _) => {
             raise_invalid_thread(&running);
@@ -1541,22 +1580,27 @@ macro_rules! or_nothing {
 /// The innermost native call of `context`'s activity, under the baton: `Here`
 /// where it is the call this thread runs; else `Elsewhere`, with the call to
 /// be given 98.983, which is this thread's own call, or, on a thread running
-/// none, that innermost call.
+/// none, that innermost call. A callback through an attached activity's
+/// context opens its entry in `room` ([`attached_call`]).
 ///
 /// # Panics
 /// Where no native call is in flight on `context`.
 ///
 /// # Safety
 /// As [`innermost_activation`].
-unsafe fn reached<'a>(context: *mut RexxThreadContext_, slot: &str) -> Addressed<'a> {
+unsafe fn reached<'a, 'c: 'a>(
+    context: *mut RexxThreadContext_,
+    slot: &str,
+    room: Option<&'a mut Room<'c, 'a>>,
+) -> Addressed<'a> {
     // SAFETY: the caller guarantees `context` came from a live
     // `ThreadContext`, whose wrapper's `owner` is its `Innermost`, a field of
     // the same allocation.
-    let cell = unsafe { &*owner_of::<RexxThreadContext_, Innermost>(context) };
+    let cell: &'c Innermost = unsafe { &*owner_of::<RexxThreadContext_, Innermost>(context) };
     if attached_here(context as usize)
         && !calls_here().any(|entry| std::ptr::eq(entry.innermost, cell))
     {
-        return attached_call(context, cell, slot);
+        return attached_call(context, cell, slot, room);
     }
     // SAFETY: a call in flight on this thread outlives the callback it makes.
     let calling = unsafe { CALLING.get().cast::<Entered<'a>>().as_ref() };
@@ -1616,20 +1660,35 @@ unsafe fn reached<'a>(context: *mut RexxThreadContext_, slot: &str) -> Addressed
 /// The innermost call of `cell`'s activity, reached from a thread attached to
 /// its context that runs none of its calls: the attached thread acts as that
 /// call, as the attached thread is its activity, under the baton the context's
-/// requester takes.
+/// requester takes. An attached activity's context with no call in flight
+/// opens an entry in `room` for the member's length ([`open_attached`]); with
+/// no room, or where the host refuses the callback
+/// ([`crate::values::Baton::refuses_foreign`]), the member does nothing.
 ///
 /// # Panics
-/// Where no native call of the activity is in flight, as [`reached`].
-fn attached_call<'a>(
+/// Where no native call of the activity is in flight and the context is no
+/// attached activity's, as [`reached`].
+fn attached_call<'a, 'c: 'a>(
     context: *mut RexxThreadContext_,
-    cell: &'a Innermost,
+    cell: &'c Innermost,
     slot: &str,
+    room: Option<&'a mut Room<'c, 'a>>,
 ) -> Addressed<'a> {
     let held = match &cell.requester {
+        Some(requester) if requester.refuses_foreign() => return Addressed::Refused,
         Some(requester) => crate::values::BatonHold::take_for(&**requester, context as usize),
         None => crate::values::BatonHold::none(),
     };
     let innermost = cell.call.get();
+    // Read with the baton held, as the cell beside it is.
+    if innermost.is_null() && cell.attached.get() {
+        return match (room, &cell.requester) {
+            (Some(room), Some(requester)) => {
+                Addressed::Here(open_attached(room, cell, &**requester, held), None)
+            }
+            _ => Addressed::Refused,
+        };
+    }
     assert!(
         !innermost.is_null(),
         "RexxThreadInterface.{slot} was called with no native call in flight"
@@ -1639,6 +1698,59 @@ fn attached_call<'a>(
     // the baton is held, so nothing else reaches it meanwhile.
     let innermost = unsafe { &*(*innermost).activation.cast::<Activation<'a>>() };
     Addressed::Here(Reached::checked(innermost, held), None)
+}
+
+/// Room in a member's own frame for the native entry a callback through an
+/// attached activity's context opens (`r[native.threads.attach]`): the entry
+/// lasts as long as the member, on the calling thread's stack, and runs
+/// against an activation of its own, whose baton is the context's requester
+/// and whose host is the one lent with it. The fields drop in order: the
+/// entry is unlinked while the baton is still held, then the baton is given
+/// back.
+pub(crate) struct Room<'c, 'p> {
+    entered: Option<Entered<'c>>,
+    held: Option<crate::values::BatonHold<'c>>,
+    activation: Option<Activation<'p>>,
+    strings: crate::values::CStringPool,
+}
+
+impl Room<'_, '_> {
+    /// An empty room, which a member that reaches no attached activity's
+    /// context leaves empty.
+    fn new() -> Self {
+        Room {
+            entered: None,
+            held: None,
+            activation: None,
+            strings: crate::values::CStringPool::new(),
+        }
+    }
+}
+
+/// Opens the entry of a callback through `cell`, an attached activity's
+/// context with no call in flight, in `room`, under the baton `held` that
+/// `requester` took: the attached activity is the host's running one while
+/// the member runs, and its base native frame holds what the member makes.
+fn open_attached<'a, 'c: 'a>(
+    room: &'a mut Room<'c, 'a>,
+    cell: &'c Innermost,
+    requester: &'c (dyn Baton + Send + Sync),
+    held: crate::values::BatonHold<'c>,
+) -> Reached<'a> {
+    let Room {
+        entered,
+        held: kept,
+        activation,
+        strings,
+    } = room;
+    *kept = Some(held);
+    let activation: &'a Activation<'a> =
+        activation.insert(Activation::new(crate::values::Conversion {
+            host: crate::values::HostRef::through(requester),
+            strings,
+        }));
+    entered.insert(Entered::new(cell, activation)).link();
+    Reached::checked(activation, crate::values::BatonHold::none())
 }
 
 ///
@@ -1690,9 +1802,11 @@ unsafe extern "C" fn whole_number_to_object(
     context: *mut RexxThreadContext_,
     value: wholenumber_t,
 ) -> RexxObjectPtr {
+    let mut room = Room::new();
     // SAFETY: the caller guarantees the context, and `invoke::call` and
     // `invoke::hook` hold no conversion state across the call they make.
-    or_nothing!(unsafe { innermost_activation(context, "WholeNumberToObject") }).whole_number(value)
+    or_nothing!(unsafe { innermost_activation(&mut room, context, "WholeNumberToObject") })
+        .whole_number(value)
 }
 
 /// # Safety
@@ -1701,8 +1815,10 @@ unsafe extern "C" fn string_data(
     context: *mut RexxThreadContext_,
     string: RexxStringObject,
 ) -> CSTRING {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    or_nothing!(unsafe { innermost_activation(context, "StringData") }).string_data(string.cast())
+    or_nothing!(unsafe { innermost_activation(&mut room, context, "StringData") })
+        .string_data(string.cast())
 }
 
 /// # Safety
@@ -1711,8 +1827,9 @@ unsafe extern "C" fn string_length(
     context: *mut RexxThreadContext_,
     string: RexxStringObject,
 ) -> usize {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    or_nothing!(unsafe { innermost_activation(context, "StringLength") })
+    or_nothing!(unsafe { innermost_activation(&mut room, context, "StringLength") })
         .string_length(string.cast())
 }
 
@@ -1722,8 +1839,9 @@ unsafe extern "C" fn new_pointer(
     context: *mut RexxThreadContext_,
     value: POINTER,
 ) -> RexxPointerObject {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    or_nothing!(unsafe { innermost_activation(context, "NewPointer") })
+    or_nothing!(unsafe { innermost_activation(&mut room, context, "NewPointer") })
         .new_pointer(value)
         .cast()
 }
@@ -1748,8 +1866,9 @@ unsafe extern "C" fn double_to_object_with_precision(
     value: f64,
     precision: usize,
 ) -> RexxObjectPtr {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    or_nothing!(unsafe { innermost_activation(context, "DoubleToObjectWithPrecision") })
+    or_nothing!(unsafe { innermost_activation(&mut room, context, "DoubleToObjectWithPrecision") })
         .double_object(value, precision)
 }
 
@@ -1811,8 +1930,10 @@ unsafe fn numeric_of(context: *mut RexxCallContext_) -> crate::values::Numeric {
 /// # Safety
 /// As [`whole_number_to_object`].
 unsafe extern "C" fn raise_exception0(context: *mut RexxThreadContext_, number: usize) {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    or_nothing!(unsafe { innermost_activation(context, "RaiseException0") }).raise_syntax(number);
+    or_nothing!(unsafe { innermost_activation(&mut room, context, "RaiseException0") })
+        .raise_syntax(number);
 }
 
 /// # Safety
@@ -1822,8 +1943,9 @@ unsafe extern "C" fn raise_exception1(
     number: usize,
     first: RexxObjectPtr,
 ) {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    or_nothing!(unsafe { innermost_activation(context, "RaiseException1") }).raise_with(
+    or_nothing!(unsafe { innermost_activation(&mut room, context, "RaiseException1") }).raise_with(
         "RexxThreadInterface.RaiseException1",
         number,
         &[first],
@@ -1838,8 +1960,9 @@ unsafe extern "C" fn raise_exception2(
     first: RexxObjectPtr,
     second: RexxObjectPtr,
 ) {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    or_nothing!(unsafe { innermost_activation(context, "RaiseException2") }).raise_with(
+    or_nothing!(unsafe { innermost_activation(&mut room, context, "RaiseException2") }).raise_with(
         "RexxThreadInterface.RaiseException2",
         number,
         &[first, second],
@@ -1853,8 +1976,9 @@ unsafe extern "C" fn raise_exception(
     number: usize,
     substitutions: RexxArrayObject,
 ) {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    or_nothing!(unsafe { innermost_activation(context, "RaiseException") })
+    or_nothing!(unsafe { innermost_activation(&mut room, context, "RaiseException") })
         .raise_with_array(number, substitutions.cast());
 }
 
@@ -1867,8 +1991,10 @@ unsafe extern "C" fn raise_condition(
     additional: RexxObjectPtr,
     result: RexxObjectPtr,
 ) {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    let activation = or_nothing!(unsafe { innermost_activation(context, "RaiseCondition") });
+    let activation =
+        or_nothing!(unsafe { innermost_activation(&mut room, context, "RaiseCondition") });
     // SAFETY: the caller guarantees the terminator.
     let name = unsafe { name_of(name) }.unwrap_or_default();
     activation.raise_condition(name, description.cast(), additional, result);
@@ -2006,24 +2132,29 @@ unsafe extern "C-unwind" fn throw_condition<C: CallLinked>(
 /// # Safety
 /// As [`whole_number_to_object`].
 unsafe extern "C" fn check_condition(context: *mut RexxThreadContext_) -> logical_t {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
     logical_t::from(
-        or_nothing!(unsafe { innermost_activation(context, "CheckCondition") }).check_condition(),
+        or_nothing!(unsafe { innermost_activation(&mut room, context, "CheckCondition") })
+            .check_condition(),
     )
 }
 
 /// # Safety
 /// As [`whole_number_to_object`].
 unsafe extern "C" fn clear_condition(context: *mut RexxThreadContext_) {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    or_nothing!(unsafe { innermost_activation(context, "ClearCondition") }).clear_condition();
+    or_nothing!(unsafe { innermost_activation(&mut room, context, "ClearCondition") })
+        .clear_condition();
 }
 
 /// # Safety
 /// As [`whole_number_to_object`].
 unsafe extern "C" fn get_condition_info(context: *mut RexxThreadContext_) -> RexxDirectoryObject {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    or_nothing!(unsafe { innermost_activation(context, "GetConditionInfo") })
+    or_nothing!(unsafe { innermost_activation(&mut room, context, "GetConditionInfo") })
         .condition_info()
         .cast()
 }
@@ -2031,8 +2162,10 @@ unsafe extern "C" fn get_condition_info(context: *mut RexxThreadContext_) -> Rex
 /// # Safety
 /// As [`whole_number_to_object`].
 unsafe extern "C" fn display_condition(context: *mut RexxThreadContext_) -> wholenumber_t {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    or_nothing!(unsafe { innermost_activation(context, "DisplayCondition") }).display_condition()
+    or_nothing!(unsafe { innermost_activation(&mut room, context, "DisplayCondition") })
+        .display_condition()
 }
 
 /// # Safety
@@ -2043,8 +2176,10 @@ unsafe extern "C" fn decode_condition_info(
     directory: RexxDirectoryObject,
     condition: *mut RexxCondition,
 ) {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    let activation = or_nothing!(unsafe { innermost_activation(context, "DecodeConditionInfo") });
+    let activation =
+        or_nothing!(unsafe { innermost_activation(&mut room, context, "DecodeConditionInfo") });
     if condition.is_null() {
         return;
     }
@@ -2099,8 +2234,9 @@ unsafe extern "C" fn uintptr_to_object(
     context: *mut RexxThreadContext_,
     value: usize,
 ) -> RexxObjectPtr {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    or_nothing!(unsafe { innermost_activation(context, "UintptrToObject") })
+    or_nothing!(unsafe { innermost_activation(&mut room, context, "UintptrToObject") })
         .unsigned_object(value as u64)
 }
 
@@ -2110,8 +2246,9 @@ unsafe extern "C" fn intptr_to_object(
     context: *mut RexxThreadContext_,
     value: isize,
 ) -> RexxObjectPtr {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    or_nothing!(unsafe { innermost_activation(context, "IntptrToObject") })
+    or_nothing!(unsafe { innermost_activation(&mut room, context, "IntptrToObject") })
         .signed_object(value as i64)
 }
 
@@ -2121,8 +2258,9 @@ unsafe extern "C" fn string_size_to_object(
     context: *mut RexxThreadContext_,
     value: stringsize_t,
 ) -> RexxObjectPtr {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    or_nothing!(unsafe { innermost_activation(context, "StringSizeToObject") })
+    or_nothing!(unsafe { innermost_activation(&mut room, context, "StringSizeToObject") })
         .unsigned_object(value as u64)
 }
 
@@ -2132,8 +2270,10 @@ unsafe extern "C" fn int64_to_object(
     context: *mut RexxThreadContext_,
     value: i64,
 ) -> RexxObjectPtr {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    or_nothing!(unsafe { innermost_activation(context, "Int64ToObject") }).signed_object(value)
+    or_nothing!(unsafe { innermost_activation(&mut room, context, "Int64ToObject") })
+        .signed_object(value)
 }
 
 /// # Safety
@@ -2142,8 +2282,9 @@ unsafe extern "C" fn unsigned_int64_to_object(
     context: *mut RexxThreadContext_,
     value: u64,
 ) -> RexxObjectPtr {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    or_nothing!(unsafe { innermost_activation(context, "UnsignedInt64ToObject") })
+    or_nothing!(unsafe { innermost_activation(&mut room, context, "UnsignedInt64ToObject") })
         .unsigned_object(value)
 }
 
@@ -2153,8 +2294,9 @@ unsafe extern "C" fn int32_to_object(
     context: *mut RexxThreadContext_,
     value: i32,
 ) -> RexxObjectPtr {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    or_nothing!(unsafe { innermost_activation(context, "Int32ToObject") })
+    or_nothing!(unsafe { innermost_activation(&mut room, context, "Int32ToObject") })
         .signed_object(i64::from(value))
 }
 
@@ -2164,8 +2306,9 @@ unsafe extern "C" fn unsigned_int32_to_object(
     context: *mut RexxThreadContext_,
     value: u32,
 ) -> RexxObjectPtr {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    or_nothing!(unsafe { innermost_activation(context, "UnsignedInt32ToObject") })
+    or_nothing!(unsafe { innermost_activation(&mut room, context, "UnsignedInt32ToObject") })
         .unsigned_object(u64::from(value))
 }
 
@@ -2177,9 +2320,11 @@ unsafe extern "C" fn object_to_whole_number(
     object: RexxObjectPtr,
     result: *mut wholenumber_t,
 ) -> logical_t {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    let found = or_nothing!(unsafe { innermost_activation(context, "ObjectToWholeNumber") })
-        .signed_value(object, -MAX_WHOLENUMBER, MAX_WHOLENUMBER);
+    let found =
+        or_nothing!(unsafe { innermost_activation(&mut room, context, "ObjectToWholeNumber") })
+            .signed_value(object, -MAX_WHOLENUMBER, MAX_WHOLENUMBER);
     // SAFETY: the caller guarantees `result`; the value is within the range.
     unsafe { answer_through(result, found.map(|number| number as isize)) }
 }
@@ -2191,9 +2336,11 @@ unsafe extern "C" fn object_to_string_size(
     object: RexxObjectPtr,
     result: *mut stringsize_t,
 ) -> logical_t {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    let found = or_nothing!(unsafe { innermost_activation(context, "ObjectToStringSize") })
-        .unsigned_value(object, MAX_WHOLENUMBER.unsigned_abs());
+    let found =
+        or_nothing!(unsafe { innermost_activation(&mut room, context, "ObjectToStringSize") })
+            .unsigned_value(object, MAX_WHOLENUMBER.unsigned_abs());
     // SAFETY: the caller guarantees `result`; the value is within the range.
     unsafe { answer_through(result, found.map(|number| number as usize)) }
 }
@@ -2205,8 +2352,9 @@ unsafe extern "C" fn object_to_int64(
     object: RexxObjectPtr,
     result: *mut i64,
 ) -> logical_t {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    let found = or_nothing!(unsafe { innermost_activation(context, "ObjectToInt64") })
+    let found = or_nothing!(unsafe { innermost_activation(&mut room, context, "ObjectToInt64") })
         .signed_value(object, i64::MIN, i64::MAX);
     // SAFETY: the caller guarantees `result`.
     unsafe { answer_through(result, found) }
@@ -2219,9 +2367,11 @@ unsafe extern "C" fn object_to_unsigned_int64(
     object: RexxObjectPtr,
     result: *mut u64,
 ) -> logical_t {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    let found = or_nothing!(unsafe { innermost_activation(context, "ObjectToUnsignedInt64") })
-        .unsigned_value(object, u64::MAX);
+    let found =
+        or_nothing!(unsafe { innermost_activation(&mut room, context, "ObjectToUnsignedInt64") })
+            .unsigned_value(object, u64::MAX);
     // SAFETY: the caller guarantees `result`.
     unsafe { answer_through(result, found) }
 }
@@ -2233,8 +2383,9 @@ unsafe extern "C" fn object_to_int32(
     object: RexxObjectPtr,
     result: *mut i32,
 ) -> logical_t {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    let found = or_nothing!(unsafe { innermost_activation(context, "ObjectToInt32") })
+    let found = or_nothing!(unsafe { innermost_activation(&mut room, context, "ObjectToInt32") })
         .signed_value(object, i64::from(i32::MIN), i64::from(i32::MAX));
     // SAFETY: the caller guarantees `result`; the value is within the range.
     unsafe { answer_through(result, found.map(|number| number as i32)) }
@@ -2247,9 +2398,11 @@ unsafe extern "C" fn object_to_unsigned_int32(
     object: RexxObjectPtr,
     result: *mut u32,
 ) -> logical_t {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    let found = or_nothing!(unsafe { innermost_activation(context, "ObjectToUnsignedInt32") })
-        .unsigned_value(object, u64::from(u32::MAX));
+    let found =
+        or_nothing!(unsafe { innermost_activation(&mut room, context, "ObjectToUnsignedInt32") })
+            .unsigned_value(object, u64::from(u32::MAX));
     // SAFETY: the caller guarantees `result`; the value is within the range.
     unsafe { answer_through(result, found.map(|number| number as u32)) }
 }
@@ -2261,8 +2414,9 @@ unsafe extern "C" fn object_to_uintptr(
     object: RexxObjectPtr,
     result: *mut usize,
 ) -> logical_t {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    let found = or_nothing!(unsafe { innermost_activation(context, "ObjectToUintptr") })
+    let found = or_nothing!(unsafe { innermost_activation(&mut room, context, "ObjectToUintptr") })
         .unsigned_value(object, u64::MAX);
     // SAFETY: the caller guarantees `result`; a pointer is 64 bits.
     unsafe { answer_through(result, found.map(|number| number as usize)) }
@@ -2275,8 +2429,9 @@ unsafe extern "C" fn object_to_intptr(
     object: RexxObjectPtr,
     result: *mut isize,
 ) -> logical_t {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    let found = or_nothing!(unsafe { innermost_activation(context, "ObjectToIntptr") })
+    let found = or_nothing!(unsafe { innermost_activation(&mut room, context, "ObjectToIntptr") })
         .signed_value(object, i64::MIN, i64::MAX);
     // SAFETY: the caller guarantees `result`; a pointer is 64 bits.
     unsafe { answer_through(result, found.map(|number| number as isize)) }
@@ -2289,8 +2444,9 @@ unsafe extern "C" fn object_to_logical(
     object: RexxObjectPtr,
     result: *mut logical_t,
 ) -> logical_t {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    let found = or_nothing!(unsafe { innermost_activation(context, "ObjectToLogical") })
+    let found = or_nothing!(unsafe { innermost_activation(&mut room, context, "ObjectToLogical") })
         .logical_value(object);
     // SAFETY: the caller guarantees `result`.
     unsafe { answer_through(result, found.map(logical_t::from)) }
@@ -2302,8 +2458,9 @@ unsafe extern "C" fn logical_to_object(
     context: *mut RexxThreadContext_,
     value: logical_t,
 ) -> RexxObjectPtr {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    or_nothing!(unsafe { innermost_activation(context, "LogicalToObject") })
+    or_nothing!(unsafe { innermost_activation(&mut room, context, "LogicalToObject") })
         .logical_object(value != 0)
 }
 
@@ -2313,8 +2470,9 @@ unsafe extern "C" fn double_to_object(
     context: *mut RexxThreadContext_,
     value: f64,
 ) -> RexxObjectPtr {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    or_nothing!(unsafe { innermost_activation(context, "DoubleToObject") })
+    or_nothing!(unsafe { innermost_activation(&mut room, context, "DoubleToObject") })
         .double_default_object(value)
 }
 
@@ -2325,8 +2483,9 @@ unsafe extern "C" fn object_to_double(
     object: RexxObjectPtr,
     result: *mut f64,
 ) -> logical_t {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    let found = or_nothing!(unsafe { innermost_activation(context, "ObjectToDouble") })
+    let found = or_nothing!(unsafe { innermost_activation(&mut room, context, "ObjectToDouble") })
         .double_value(object);
     // SAFETY: the caller guarantees `result`.
     unsafe { answer_through(result, found) }
@@ -2353,8 +2512,9 @@ unsafe extern "C" fn new_string(
     data: CSTRING,
     length: usize,
 ) -> RexxStringObject {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    let activation = or_nothing!(unsafe { innermost_activation(context, "NewString") });
+    let activation = or_nothing!(unsafe { innermost_activation(&mut room, context, "NewString") });
     // SAFETY: the caller guarantees the range.
     match unsafe { bytes_of(data, length) } {
         Some(bytes) => activation.string_object(bytes).cast(),
@@ -2368,8 +2528,10 @@ unsafe extern "C" fn new_string_from_asciiz(
     context: *mut RexxThreadContext_,
     text: CSTRING,
 ) -> RexxStringObject {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    let activation = or_nothing!(unsafe { innermost_activation(context, "NewStringFromAsciiz") });
+    let activation =
+        or_nothing!(unsafe { innermost_activation(&mut room, context, "NewStringFromAsciiz") });
     // SAFETY: the caller guarantees the terminator.
     match unsafe { name_of(text) } {
         Some(bytes) => activation.string_object(bytes).cast(),
@@ -2407,8 +2569,10 @@ unsafe extern "C" fn value_to_object(
     context: *mut RexxThreadContext_,
     descriptor: *mut ValueDescriptor,
 ) -> RexxObjectPtr {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    let activation = or_nothing!(unsafe { innermost_activation(context, "ValueToObject") });
+    let activation =
+        or_nothing!(unsafe { innermost_activation(&mut room, context, "ValueToObject") });
     if descriptor.is_null() {
         return std::ptr::null_mut();
     }
@@ -2425,8 +2589,10 @@ unsafe extern "C" fn values_to_object(
     descriptors: *mut ValueDescriptor,
     count: usize,
 ) -> RexxArrayObject {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    let activation = or_nothing!(unsafe { innermost_activation(context, "ValuesToObject") });
+    let activation =
+        or_nothing!(unsafe { innermost_activation(&mut room, context, "ValuesToObject") });
     if descriptors.is_null() && count != 0 {
         return std::ptr::null_mut();
     }
@@ -2445,8 +2611,10 @@ unsafe extern "C" fn object_to_value(
     object: RexxObjectPtr,
     descriptor: *mut ValueDescriptor,
 ) -> logical_t {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    let activation = or_nothing!(unsafe { innermost_activation(context, "ObjectToValue") });
+    let activation =
+        or_nothing!(unsafe { innermost_activation(&mut room, context, "ObjectToValue") });
     if descriptor.is_null() {
         return 0;
     }
@@ -2467,8 +2635,9 @@ unsafe extern "C" fn object_to_string(
     context: *mut RexxThreadContext_,
     object: RexxObjectPtr,
 ) -> RexxStringObject {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    or_nothing!(unsafe { innermost_activation(context, "ObjectToString") })
+    or_nothing!(unsafe { innermost_activation(&mut room, context, "ObjectToString") })
         .object_to_string(object)
         .cast()
 }
@@ -2479,8 +2648,9 @@ unsafe extern "C" fn object_to_string_value(
     context: *mut RexxThreadContext_,
     object: RexxObjectPtr,
 ) -> CSTRING {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    or_nothing!(unsafe { innermost_activation(context, "ObjectToStringValue") })
+    or_nothing!(unsafe { innermost_activation(&mut room, context, "ObjectToStringValue") })
         .object_to_string_value(object)
 }
 
@@ -2494,8 +2664,9 @@ unsafe extern "C" fn string_get(
     buffer: POINTER,
     length: usize,
 ) -> usize {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    let activation = or_nothing!(unsafe { innermost_activation(context, "StringGet") });
+    let activation = or_nothing!(unsafe { innermost_activation(&mut room, context, "StringGet") });
     let Some(bytes) = activation.string_bytes(string.cast()) else {
         return 0;
     };
@@ -2519,8 +2690,9 @@ unsafe extern "C" fn string_upper(
     context: *mut RexxThreadContext_,
     string: RexxStringObject,
 ) -> RexxStringObject {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    or_nothing!(unsafe { innermost_activation(context, "StringUpper") })
+    or_nothing!(unsafe { innermost_activation(&mut room, context, "StringUpper") })
         .string_case(string.cast(), true)
         .cast()
 }
@@ -2531,8 +2703,9 @@ unsafe extern "C" fn string_lower(
     context: *mut RexxThreadContext_,
     string: RexxStringObject,
 ) -> RexxStringObject {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    or_nothing!(unsafe { innermost_activation(context, "StringLower") })
+    or_nothing!(unsafe { innermost_activation(&mut room, context, "StringLower") })
         .string_case(string.cast(), false)
         .cast()
 }
@@ -2543,9 +2716,11 @@ unsafe extern "C" fn is_string(
     context: *mut RexxThreadContext_,
     object: RexxObjectPtr,
 ) -> logical_t {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
     logical_t::from(
-        or_nothing!(unsafe { innermost_activation(context, "IsString") }).is_string(object),
+        or_nothing!(unsafe { innermost_activation(&mut room, context, "IsString") })
+            .is_string(object),
     )
 }
 
@@ -2555,8 +2730,9 @@ unsafe extern "C" fn new_buffer_string(
     context: *mut RexxThreadContext_,
     length: usize,
 ) -> RexxBufferStringObject {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    or_nothing!(unsafe { innermost_activation(context, "NewBufferString") })
+    or_nothing!(unsafe { innermost_activation(&mut room, context, "NewBufferString") })
         .new_buffer_string(length)
         .cast()
 }
@@ -2567,8 +2743,9 @@ unsafe extern "C" fn buffer_string_length(
     context: *mut RexxThreadContext_,
     string: RexxBufferStringObject,
 ) -> usize {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    or_nothing!(unsafe { innermost_activation(context, "BufferStringLength") })
+    or_nothing!(unsafe { innermost_activation(&mut room, context, "BufferStringLength") })
         .buffer_string_length(string.cast())
 }
 
@@ -2578,8 +2755,9 @@ unsafe extern "C" fn buffer_string_data(
     context: *mut RexxThreadContext_,
     string: RexxBufferStringObject,
 ) -> POINTER {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    or_nothing!(unsafe { innermost_activation(context, "BufferStringData") })
+    or_nothing!(unsafe { innermost_activation(&mut room, context, "BufferStringData") })
         .buffer_string_data(string.cast())
 }
 
@@ -2590,8 +2768,9 @@ unsafe extern "C" fn finish_buffer_string(
     string: RexxBufferStringObject,
     length: usize,
 ) -> RexxStringObject {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    or_nothing!(unsafe { innermost_activation(context, "FinishBufferString") })
+    or_nothing!(unsafe { innermost_activation(&mut room, context, "FinishBufferString") })
         .finish_buffer_string(string.cast(), length)
         .cast()
 }
@@ -2602,8 +2781,9 @@ unsafe extern "C" fn new_buffer(
     context: *mut RexxThreadContext_,
     length: usize,
 ) -> RexxBufferObject {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    or_nothing!(unsafe { innermost_activation(context, "NewBuffer") })
+    or_nothing!(unsafe { innermost_activation(&mut room, context, "NewBuffer") })
         .new_buffer(length)
         .cast()
 }
@@ -2614,8 +2794,9 @@ unsafe extern "C" fn buffer_data(
     context: *mut RexxThreadContext_,
     buffer: RexxBufferObject,
 ) -> POINTER {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    or_nothing!(unsafe { innermost_activation(context, "BufferData") })
+    or_nothing!(unsafe { innermost_activation(&mut room, context, "BufferData") })
         .buffer_data("RexxThreadInterface.BufferData", buffer.cast())
         .map_or(std::ptr::null_mut(), |(address, _)| address)
 }
@@ -2626,8 +2807,9 @@ unsafe extern "C" fn buffer_length(
     context: *mut RexxThreadContext_,
     buffer: RexxBufferObject,
 ) -> usize {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    or_nothing!(unsafe { innermost_activation(context, "BufferLength") })
+    or_nothing!(unsafe { innermost_activation(&mut room, context, "BufferLength") })
         .buffer_data("RexxThreadInterface.BufferLength", buffer.cast())
         .map_or(0, |(_, length)| length)
 }
@@ -2638,9 +2820,10 @@ unsafe extern "C" fn is_buffer(
     context: *mut RexxThreadContext_,
     object: RexxObjectPtr,
 ) -> logical_t {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
     logical_t::from(
-        or_nothing!(unsafe { innermost_activation(context, "IsBuffer") }).is_of_class(
+        or_nothing!(unsafe { innermost_activation(&mut room, context, "IsBuffer") }).is_of_class(
             "RexxThreadInterface.IsBuffer",
             object,
             "Buffer",
@@ -2654,8 +2837,9 @@ unsafe extern "C" fn pointer_value(
     context: *mut RexxThreadContext_,
     pointer: RexxPointerObject,
 ) -> POINTER {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    or_nothing!(unsafe { innermost_activation(context, "PointerValue") })
+    or_nothing!(unsafe { innermost_activation(&mut room, context, "PointerValue") })
         .pointer_value(pointer.cast())
 }
 
@@ -2665,9 +2849,10 @@ unsafe extern "C" fn is_pointer(
     context: *mut RexxThreadContext_,
     object: RexxObjectPtr,
 ) -> logical_t {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
     logical_t::from(
-        or_nothing!(unsafe { innermost_activation(context, "IsPointer") }).is_of_class(
+        or_nothing!(unsafe { innermost_activation(&mut room, context, "IsPointer") }).is_of_class(
             "RexxThreadInterface.IsPointer",
             object,
             "Pointer",
@@ -2681,8 +2866,9 @@ unsafe extern "C" fn new_mutable_buffer(
     context: *mut RexxThreadContext_,
     capacity: usize,
 ) -> RexxMutableBufferObject {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    or_nothing!(unsafe { innermost_activation(context, "NewMutableBuffer") })
+    or_nothing!(unsafe { innermost_activation(&mut room, context, "NewMutableBuffer") })
         .new_mutable_buffer(capacity)
         .cast()
 }
@@ -2693,8 +2879,9 @@ unsafe extern "C" fn mutable_buffer_data(
     context: *mut RexxThreadContext_,
     buffer: RexxMutableBufferObject,
 ) -> POINTER {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    or_nothing!(unsafe { innermost_activation(context, "MutableBufferData") })
+    or_nothing!(unsafe { innermost_activation(&mut room, context, "MutableBufferData") })
         .mutable_buffer("RexxThreadInterface.MutableBufferData", buffer.cast())
         .map_or(std::ptr::null_mut(), |(address, _, _)| address)
 }
@@ -2705,8 +2892,9 @@ unsafe extern "C" fn mutable_buffer_length(
     context: *mut RexxThreadContext_,
     buffer: RexxMutableBufferObject,
 ) -> usize {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    or_nothing!(unsafe { innermost_activation(context, "MutableBufferLength") })
+    or_nothing!(unsafe { innermost_activation(&mut room, context, "MutableBufferLength") })
         .mutable_buffer("RexxThreadInterface.MutableBufferLength", buffer.cast())
         .map_or(0, |(_, length, _)| length)
 }
@@ -2717,8 +2905,9 @@ unsafe extern "C" fn mutable_buffer_capacity(
     context: *mut RexxThreadContext_,
     buffer: RexxMutableBufferObject,
 ) -> usize {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    or_nothing!(unsafe { innermost_activation(context, "MutableBufferCapacity") })
+    or_nothing!(unsafe { innermost_activation(&mut room, context, "MutableBufferCapacity") })
         .mutable_buffer("RexxThreadInterface.MutableBufferCapacity", buffer.cast())
         .map_or(0, |(_, _, capacity)| capacity)
 }
@@ -2730,8 +2919,9 @@ unsafe extern "C" fn set_mutable_buffer_length(
     buffer: RexxMutableBufferObject,
     length: usize,
 ) -> usize {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    or_nothing!(unsafe { innermost_activation(context, "SetMutableBufferLength") })
+    or_nothing!(unsafe { innermost_activation(&mut room, context, "SetMutableBufferLength") })
         .set_mutable_buffer_length(buffer.cast(), length)
 }
 
@@ -2742,8 +2932,9 @@ unsafe extern "C" fn set_mutable_buffer_capacity(
     buffer: RexxMutableBufferObject,
     capacity: usize,
 ) -> POINTER {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    or_nothing!(unsafe { innermost_activation(context, "SetMutableBufferCapacity") })
+    or_nothing!(unsafe { innermost_activation(&mut room, context, "SetMutableBufferCapacity") })
         .set_mutable_buffer_capacity(buffer.cast(), capacity)
 }
 
@@ -2753,13 +2944,15 @@ unsafe extern "C" fn is_mutable_buffer(
     context: *mut RexxThreadContext_,
     object: RexxObjectPtr,
 ) -> logical_t {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
     logical_t::from(
-        or_nothing!(unsafe { innermost_activation(context, "IsMutableBuffer") }).is_of_class(
-            "RexxThreadInterface.IsMutableBuffer",
-            object,
-            "MutableBuffer",
-        ),
+        or_nothing!(unsafe { innermost_activation(&mut room, context, "IsMutableBuffer") })
+            .is_of_class(
+                "RexxThreadInterface.IsMutableBuffer",
+                object,
+                "MutableBuffer",
+            ),
     )
 }
 
@@ -2769,8 +2962,9 @@ unsafe extern "C" fn object_to_cself(
     context: *mut RexxThreadContext_,
     object: RexxObjectPtr,
 ) -> POINTER {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    or_nothing!(unsafe { innermost_activation(context, "ObjectToCSelf") })
+    or_nothing!(unsafe { innermost_activation(&mut room, context, "ObjectToCSelf") })
         .object_cself(object, None)
 }
 
@@ -2781,8 +2975,9 @@ unsafe extern "C" fn object_to_cself_scoped(
     object: RexxObjectPtr,
     scope: RexxObjectPtr,
 ) -> POINTER {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    or_nothing!(unsafe { innermost_activation(context, "ObjectToCSelfScoped") })
+    or_nothing!(unsafe { innermost_activation(&mut room, context, "ObjectToCSelfScoped") })
         .object_cself(object, Some(scope))
 }
 
@@ -2800,7 +2995,7 @@ unsafe extern "C" fn get_cself(context: *mut RexxMethodContext_) -> POINTER {
 /// callback on the innermost activation; `name` arguments are
 /// NUL-terminated strings the caller keeps for the call.
 mod collections {
-    use super::{innermost_activation, name_of};
+    use super::{Room, innermost_activation, name_of};
     use crate::callbacks::Argument;
     use crate::layout::{
         CSTRING, RexxArrayObject, RexxDirectoryObject, RexxObjectPtr, RexxStemObject,
@@ -2816,10 +3011,11 @@ mod collections {
         item: RexxObjectPtr,
         name: CSTRING,
     ) {
+        let mut room = Room::new();
         // SAFETY: as `whole_number_to_object`; the caller guarantees `name`.
         let (activation, name) = unsafe {
             (
-                innermost_activation(context, "DirectoryPut"),
+                innermost_activation(&mut room, context, "DirectoryPut"),
                 name_of(name).unwrap_or_default(),
             )
         };
@@ -2834,10 +3030,11 @@ mod collections {
         table: RexxDirectoryObject,
         name: CSTRING,
     ) -> RexxObjectPtr {
+        let mut room = Room::new();
         // SAFETY: as `directory_put`.
         let (activation, name) = unsafe {
             (
-                innermost_activation(context, "DirectoryAt"),
+                innermost_activation(&mut room, context, "DirectoryAt"),
                 name_of(name).unwrap_or_default(),
             )
         };
@@ -2852,10 +3049,11 @@ mod collections {
         table: RexxDirectoryObject,
         name: CSTRING,
     ) -> RexxObjectPtr {
+        let mut room = Room::new();
         // SAFETY: as `directory_put`.
         let (activation, name) = unsafe {
             (
-                innermost_activation(context, "DirectoryRemove"),
+                innermost_activation(&mut room, context, "DirectoryRemove"),
                 name_of(name).unwrap_or_default(),
             )
         };
@@ -2868,8 +3066,9 @@ mod collections {
     pub(super) unsafe extern "C" fn new_directory(
         context: *mut RexxThreadContext_,
     ) -> RexxDirectoryObject {
+        let mut room = Room::new();
         // SAFETY: as `whole_number_to_object`.
-        or_nothing!(unsafe { innermost_activation(context, "NewDirectory") })
+        or_nothing!(unsafe { innermost_activation(&mut room, context, "NewDirectory") })
             .new_instance_of("RexxThreadInterface.NewDirectory", "Directory", &[])
             .cast()
     }
@@ -2880,13 +3079,11 @@ mod collections {
         context: *mut RexxThreadContext_,
         object: RexxObjectPtr,
     ) -> logical_t {
+        let mut room = Room::new();
         // SAFETY: as `whole_number_to_object`.
         logical_t::from(
-            or_nothing!(unsafe { innermost_activation(context, "IsDirectory") }).is_of_class(
-                "RexxThreadInterface.IsDirectory",
-                object,
-                "Directory",
-            ),
+            or_nothing!(unsafe { innermost_activation(&mut room, context, "IsDirectory") })
+                .is_of_class("RexxThreadInterface.IsDirectory", object, "Directory"),
         )
     }
 
@@ -2898,10 +3095,11 @@ mod collections {
         item: RexxObjectPtr,
         name: CSTRING,
     ) {
+        let mut room = Room::new();
         // SAFETY: as `directory_put`.
         let (activation, name) = unsafe {
             (
-                innermost_activation(context, "StringTablePut"),
+                innermost_activation(&mut room, context, "StringTablePut"),
                 name_of(name).unwrap_or_default(),
             )
         };
@@ -2921,10 +3119,11 @@ mod collections {
         table: RexxStringTableObject,
         name: CSTRING,
     ) -> RexxObjectPtr {
+        let mut room = Room::new();
         // SAFETY: as `directory_put`.
         let (activation, name) = unsafe {
             (
-                innermost_activation(context, "StringTableAt"),
+                innermost_activation(&mut room, context, "StringTableAt"),
                 name_of(name).unwrap_or_default(),
             )
         };
@@ -2939,10 +3138,11 @@ mod collections {
         table: RexxStringTableObject,
         name: CSTRING,
     ) -> RexxObjectPtr {
+        let mut room = Room::new();
         // SAFETY: as `directory_put`.
         let (activation, name) = unsafe {
             (
-                innermost_activation(context, "StringTableRemove"),
+                innermost_activation(&mut room, context, "StringTableRemove"),
                 name_of(name).unwrap_or_default(),
             )
         };
@@ -2955,8 +3155,9 @@ mod collections {
     pub(super) unsafe extern "C" fn new_string_table(
         context: *mut RexxThreadContext_,
     ) -> RexxStringTableObject {
+        let mut room = Room::new();
         // SAFETY: as `whole_number_to_object`.
-        or_nothing!(unsafe { innermost_activation(context, "NewStringTable") })
+        or_nothing!(unsafe { innermost_activation(&mut room, context, "NewStringTable") })
             .new_instance_of("RexxThreadInterface.NewStringTable", "StringTable", &[])
             .cast()
     }
@@ -2967,13 +3168,11 @@ mod collections {
         context: *mut RexxThreadContext_,
         object: RexxObjectPtr,
     ) -> logical_t {
+        let mut room = Room::new();
         // SAFETY: as `whole_number_to_object`.
         logical_t::from(
-            or_nothing!(unsafe { innermost_activation(context, "IsStringTable") }).is_of_class(
-                "RexxThreadInterface.IsStringTable",
-                object,
-                "StringTable",
-            ),
+            or_nothing!(unsafe { innermost_activation(&mut room, context, "IsStringTable") })
+                .is_of_class("RexxThreadInterface.IsStringTable", object, "StringTable"),
         )
     }
 
@@ -2984,8 +3183,9 @@ mod collections {
         array: RexxArrayObject,
         index: usize,
     ) -> RexxObjectPtr {
+        let mut room = Room::new();
         // SAFETY: as `whole_number_to_object`.
-        or_nothing!(unsafe { innermost_activation(context, "ArrayAt") })
+        or_nothing!(unsafe { innermost_activation(&mut room, context, "ArrayAt") })
             .array_at(array.cast(), index)
     }
 
@@ -2997,8 +3197,9 @@ mod collections {
         item: RexxObjectPtr,
         index: usize,
     ) {
+        let mut room = Room::new();
         // SAFETY: as `whole_number_to_object`.
-        or_nothing!(unsafe { innermost_activation(context, "ArrayPut") }).array_put(
+        or_nothing!(unsafe { innermost_activation(&mut room, context, "ArrayPut") }).array_put(
             array.cast(),
             item,
             index,
@@ -3012,12 +3213,14 @@ mod collections {
         array: RexxArrayObject,
         item: RexxObjectPtr,
     ) -> usize {
+        let mut room = Room::new();
         // SAFETY: as `whole_number_to_object`.
-        or_nothing!(unsafe { innermost_activation(context, "ArrayAppend") }).array_append(
-            "RexxThreadInterface.ArrayAppend",
-            array.cast(),
-            Argument::Handle(item),
-        )
+        or_nothing!(unsafe { innermost_activation(&mut room, context, "ArrayAppend") })
+            .array_append(
+                "RexxThreadInterface.ArrayAppend",
+                array.cast(),
+                Argument::Handle(item),
+            )
     }
 
     /// # Safety
@@ -3029,8 +3232,10 @@ mod collections {
         data: CSTRING,
         length: usize,
     ) -> usize {
+        let mut room = Room::new();
         // SAFETY: as `whole_number_to_object`.
-        let activation = or_nothing!(unsafe { innermost_activation(context, "ArrayAppendString") });
+        let activation =
+            or_nothing!(unsafe { innermost_activation(&mut room, context, "ArrayAppendString") });
         // SAFETY: the caller guarantees the range.
         let Some(bytes) = (unsafe { super::bytes_of(data, length) }) else {
             return 0;
@@ -3048,8 +3253,9 @@ mod collections {
         context: *mut RexxThreadContext_,
         array: RexxArrayObject,
     ) -> usize {
+        let mut room = Room::new();
         // SAFETY: as `whole_number_to_object`.
-        or_nothing!(unsafe { innermost_activation(context, "ArraySize") }).array_count(
+        or_nothing!(unsafe { innermost_activation(&mut room, context, "ArraySize") }).array_count(
             "RexxThreadInterface.ArraySize",
             array.cast(),
             b"SIZE",
@@ -3062,8 +3268,9 @@ mod collections {
         context: *mut RexxThreadContext_,
         array: RexxArrayObject,
     ) -> usize {
+        let mut room = Room::new();
         // SAFETY: as `whole_number_to_object`.
-        or_nothing!(unsafe { innermost_activation(context, "ArrayItems") }).array_count(
+        or_nothing!(unsafe { innermost_activation(&mut room, context, "ArrayItems") }).array_count(
             "RexxThreadInterface.ArrayItems",
             array.cast(),
             b"ITEMS",
@@ -3076,8 +3283,9 @@ mod collections {
         context: *mut RexxThreadContext_,
         array: RexxArrayObject,
     ) -> usize {
+        let mut room = Room::new();
         // SAFETY: as `whole_number_to_object`.
-        or_nothing!(unsafe { innermost_activation(context, "ArrayDimension") })
+        or_nothing!(unsafe { innermost_activation(&mut room, context, "ArrayDimension") })
             .array_dimension(array.cast())
     }
 
@@ -3087,8 +3295,9 @@ mod collections {
         context: *mut RexxThreadContext_,
         size: usize,
     ) -> RexxArrayObject {
+        let mut room = Room::new();
         // SAFETY: as `whole_number_to_object`.
-        or_nothing!(unsafe { innermost_activation(context, "NewArray") })
+        or_nothing!(unsafe { innermost_activation(&mut room, context, "NewArray") })
             .new_array_sized(size)
             .cast()
     }
@@ -3099,8 +3308,9 @@ mod collections {
         context: *mut RexxThreadContext_,
         first: RexxObjectPtr,
     ) -> RexxArrayObject {
+        let mut room = Room::new();
         // SAFETY: as `whole_number_to_object`.
-        or_nothing!(unsafe { innermost_activation(context, "ArrayOfOne") })
+        or_nothing!(unsafe { innermost_activation(&mut room, context, "ArrayOfOne") })
             .array_of("RexxThreadInterface.ArrayOfOne", &[first])
             .cast()
     }
@@ -3112,8 +3322,9 @@ mod collections {
         first: RexxObjectPtr,
         second: RexxObjectPtr,
     ) -> RexxArrayObject {
+        let mut room = Room::new();
         // SAFETY: as `whole_number_to_object`.
-        or_nothing!(unsafe { innermost_activation(context, "ArrayOfTwo") })
+        or_nothing!(unsafe { innermost_activation(&mut room, context, "ArrayOfTwo") })
             .array_of("RexxThreadInterface.ArrayOfTwo", &[first, second])
             .cast()
     }
@@ -3126,8 +3337,9 @@ mod collections {
         second: RexxObjectPtr,
         third: RexxObjectPtr,
     ) -> RexxArrayObject {
+        let mut room = Room::new();
         // SAFETY: as `whole_number_to_object`.
-        or_nothing!(unsafe { innermost_activation(context, "ArrayOfThree") })
+        or_nothing!(unsafe { innermost_activation(&mut room, context, "ArrayOfThree") })
             .array_of("RexxThreadInterface.ArrayOfThree", &[first, second, third])
             .cast()
     }
@@ -3141,8 +3353,9 @@ mod collections {
         third: RexxObjectPtr,
         fourth: RexxObjectPtr,
     ) -> RexxArrayObject {
+        let mut room = Room::new();
         // SAFETY: as `whole_number_to_object`.
-        or_nothing!(unsafe { innermost_activation(context, "ArrayOfFour") })
+        or_nothing!(unsafe { innermost_activation(&mut room, context, "ArrayOfFour") })
             .array_of(
                 "RexxThreadInterface.ArrayOfFour",
                 &[first, second, third, fourth],
@@ -3156,13 +3369,11 @@ mod collections {
         context: *mut RexxThreadContext_,
         object: RexxObjectPtr,
     ) -> logical_t {
+        let mut room = Room::new();
         // SAFETY: as `whole_number_to_object`.
         logical_t::from(
-            or_nothing!(unsafe { innermost_activation(context, "IsArray") }).is_of_class(
-                "RexxThreadInterface.IsArray",
-                object,
-                "Array",
-            ),
+            or_nothing!(unsafe { innermost_activation(&mut room, context, "IsArray") })
+                .is_of_class("RexxThreadInterface.IsArray", object, "Array"),
         )
     }
 
@@ -3172,12 +3383,10 @@ mod collections {
         context: *mut RexxThreadContext_,
         supplier: RexxSupplierObject,
     ) -> RexxObjectPtr {
+        let mut room = Room::new();
         // SAFETY: as `whole_number_to_object`.
-        or_nothing!(unsafe { innermost_activation(context, "SupplierItem") }).supplier_object(
-            "RexxThreadInterface.SupplierItem",
-            supplier.cast(),
-            b"ITEM",
-        )
+        or_nothing!(unsafe { innermost_activation(&mut room, context, "SupplierItem") })
+            .supplier_object("RexxThreadInterface.SupplierItem", supplier.cast(), b"ITEM")
     }
 
     /// # Safety
@@ -3186,12 +3395,14 @@ mod collections {
         context: *mut RexxThreadContext_,
         supplier: RexxSupplierObject,
     ) -> RexxObjectPtr {
+        let mut room = Room::new();
         // SAFETY: as `whole_number_to_object`.
-        or_nothing!(unsafe { innermost_activation(context, "SupplierIndex") }).supplier_object(
-            "RexxThreadInterface.SupplierIndex",
-            supplier.cast(),
-            b"INDEX",
-        )
+        or_nothing!(unsafe { innermost_activation(&mut room, context, "SupplierIndex") })
+            .supplier_object(
+                "RexxThreadInterface.SupplierIndex",
+                supplier.cast(),
+                b"INDEX",
+            )
     }
 
     /// # Safety
@@ -3200,9 +3411,10 @@ mod collections {
         context: *mut RexxThreadContext_,
         supplier: RexxSupplierObject,
     ) -> logical_t {
+        let mut room = Room::new();
         // SAFETY: as `whole_number_to_object`.
         logical_t::from(
-            or_nothing!(unsafe { innermost_activation(context, "SupplierAvailable") })
+            or_nothing!(unsafe { innermost_activation(&mut room, context, "SupplierAvailable") })
                 .supplier_available(supplier.cast()),
         )
     }
@@ -3213,8 +3425,9 @@ mod collections {
         context: *mut RexxThreadContext_,
         supplier: RexxSupplierObject,
     ) {
+        let mut room = Room::new();
         // SAFETY: as `whole_number_to_object`.
-        or_nothing!(unsafe { innermost_activation(context, "SupplierNext") })
+        or_nothing!(unsafe { innermost_activation(&mut room, context, "SupplierNext") })
             .supplier_next(supplier.cast());
     }
 
@@ -3225,8 +3438,9 @@ mod collections {
         values: RexxArrayObject,
         names: RexxArrayObject,
     ) -> RexxSupplierObject {
+        let mut room = Room::new();
         // SAFETY: as `whole_number_to_object`.
-        or_nothing!(unsafe { innermost_activation(context, "NewSupplier") })
+        or_nothing!(unsafe { innermost_activation(&mut room, context, "NewSupplier") })
             .new_supplier(values.cast(), names.cast())
             .cast()
     }
@@ -3237,9 +3451,14 @@ mod collections {
         context: *mut RexxThreadContext_,
         name: CSTRING,
     ) -> RexxStemObject {
+        let mut room = Room::new();
         // SAFETY: as `directory_put`.
-        let (activation, name) =
-            unsafe { (innermost_activation(context, "NewStem"), name_of(name)) };
+        let (activation, name) = unsafe {
+            (
+                innermost_activation(&mut room, context, "NewStem"),
+                name_of(name),
+            )
+        };
         let activation = or_nothing!(activation);
         let arguments: &[Argument<'_>] = match &name {
             Some(name) => &[Argument::Text(name)],
@@ -3258,10 +3477,11 @@ mod collections {
         tail: CSTRING,
         value: RexxObjectPtr,
     ) {
+        let mut room = Room::new();
         // SAFETY: as `directory_put`.
         let (activation, tail) = unsafe {
             (
-                innermost_activation(context, "SetStemElement"),
+                innermost_activation(&mut room, context, "SetStemElement"),
                 name_of(tail).unwrap_or_default(),
             )
         };
@@ -3281,10 +3501,11 @@ mod collections {
         stem: RexxStemObject,
         tail: CSTRING,
     ) -> RexxObjectPtr {
+        let mut room = Room::new();
         // SAFETY: as `directory_put`.
         let (activation, tail) = unsafe {
             (
-                innermost_activation(context, "GetStemElement"),
+                innermost_activation(&mut room, context, "GetStemElement"),
                 name_of(tail).unwrap_or_default(),
             )
         };
@@ -3303,10 +3524,11 @@ mod collections {
         stem: RexxStemObject,
         tail: CSTRING,
     ) {
+        let mut room = Room::new();
         // SAFETY: as `directory_put`.
         let (activation, tail) = unsafe {
             (
-                innermost_activation(context, "DropStemElement"),
+                innermost_activation(&mut room, context, "DropStemElement"),
                 name_of(tail).unwrap_or_default(),
             )
         };
@@ -3326,13 +3548,15 @@ mod collections {
         index: usize,
         value: RexxObjectPtr,
     ) {
+        let mut room = Room::new();
         // SAFETY: as `whole_number_to_object`.
-        or_nothing!(unsafe { innermost_activation(context, "SetStemArrayElement") }).stem_set(
-            "RexxThreadInterface.SetStemArrayElement",
-            stem.cast(),
-            Argument::Number(index),
-            value,
-        );
+        or_nothing!(unsafe { innermost_activation(&mut room, context, "SetStemArrayElement") })
+            .stem_set(
+                "RexxThreadInterface.SetStemArrayElement",
+                stem.cast(),
+                Argument::Number(index),
+                value,
+            );
     }
 
     /// # Safety
@@ -3342,12 +3566,14 @@ mod collections {
         stem: RexxStemObject,
         index: usize,
     ) -> RexxObjectPtr {
+        let mut room = Room::new();
         // SAFETY: as `whole_number_to_object`.
-        or_nothing!(unsafe { innermost_activation(context, "GetStemArrayElement") }).stem_get(
-            "RexxThreadInterface.GetStemArrayElement",
-            stem.cast(),
-            Argument::Number(index),
-        )
+        or_nothing!(unsafe { innermost_activation(&mut room, context, "GetStemArrayElement") })
+            .stem_get(
+                "RexxThreadInterface.GetStemArrayElement",
+                stem.cast(),
+                Argument::Number(index),
+            )
     }
 
     /// # Safety
@@ -3357,12 +3583,14 @@ mod collections {
         stem: RexxStemObject,
         index: usize,
     ) {
+        let mut room = Room::new();
         // SAFETY: as `whole_number_to_object`.
-        or_nothing!(unsafe { innermost_activation(context, "DropStemArrayElement") }).stem_drop(
-            "RexxThreadInterface.DropStemArrayElement",
-            stem.cast(),
-            Argument::Number(index),
-        );
+        or_nothing!(unsafe { innermost_activation(&mut room, context, "DropStemArrayElement") })
+            .stem_drop(
+                "RexxThreadInterface.DropStemArrayElement",
+                stem.cast(),
+                Argument::Number(index),
+            );
     }
 
     /// # Safety
@@ -3371,8 +3599,9 @@ mod collections {
         context: *mut RexxThreadContext_,
         stem: RexxStemObject,
     ) -> RexxDirectoryObject {
+        let mut room = Room::new();
         // SAFETY: as `whole_number_to_object`.
-        or_nothing!(unsafe { innermost_activation(context, "GetAllStemElements") })
+        or_nothing!(unsafe { innermost_activation(&mut room, context, "GetAllStemElements") })
             .stem_whole(
                 "RexxThreadInterface.GetAllStemElements",
                 stem.cast(),
@@ -3387,8 +3616,9 @@ mod collections {
         context: *mut RexxThreadContext_,
         stem: RexxStemObject,
     ) -> RexxObjectPtr {
+        let mut room = Room::new();
         // SAFETY: as `whole_number_to_object`.
-        or_nothing!(unsafe { innermost_activation(context, "GetStemValue") }).stem_whole(
+        or_nothing!(unsafe { innermost_activation(&mut room, context, "GetStemValue") }).stem_whole(
             "RexxThreadInterface.GetStemValue",
             stem.cast(),
             b"[]",
@@ -3401,9 +3631,10 @@ mod collections {
         context: *mut RexxThreadContext_,
         object: RexxObjectPtr,
     ) -> logical_t {
+        let mut room = Room::new();
         // SAFETY: as `whole_number_to_object`.
         logical_t::from(
-            or_nothing!(unsafe { innermost_activation(context, "IsStem") }).is_of_class(
+            or_nothing!(unsafe { innermost_activation(&mut room, context, "IsStem") }).is_of_class(
                 "RexxThreadInterface.IsStem",
                 object,
                 "Stem",
@@ -3416,7 +3647,9 @@ mod collections {
 /// context, the running method's object variables through a method context,
 /// and a `VariableReference` through the thread table.
 mod variables {
-    use super::{ContextVariables, activation_of, innermost_activation, name_of, variables_of};
+    use super::{
+        ContextVariables, Room, activation_of, innermost_activation, name_of, variables_of,
+    };
     use crate::layout::{
         CSTRING, RexxCallContext_, RexxDirectoryObject, RexxMethodContext_, RexxObjectPtr,
         RexxStemObject, RexxStringObject, RexxThreadContext_, RexxVariableReferenceObject,
@@ -3607,8 +3840,9 @@ mod variables {
         context: *mut RexxThreadContext_,
         reference: RexxVariableReferenceObject,
     ) -> RexxStringObject {
+        let mut room = Room::new();
         // SAFETY: as `whole_number_to_object`.
-        or_nothing!(unsafe { innermost_activation(context, "VariableReferenceName") })
+        or_nothing!(unsafe { innermost_activation(&mut room, context, "VariableReferenceName") })
             .reference_answer(
                 "RexxThreadInterface.VariableReferenceName",
                 reference.cast(),
@@ -3623,8 +3857,9 @@ mod variables {
         context: *mut RexxThreadContext_,
         reference: RexxVariableReferenceObject,
     ) -> RexxObjectPtr {
+        let mut room = Room::new();
         // SAFETY: as `whole_number_to_object`.
-        or_nothing!(unsafe { innermost_activation(context, "VariableReferenceValue") })
+        or_nothing!(unsafe { innermost_activation(&mut room, context, "VariableReferenceValue") })
             .reference_answer(
                 "RexxThreadInterface.VariableReferenceValue",
                 reference.cast(),
@@ -3639,9 +3874,12 @@ mod variables {
         reference: RexxVariableReferenceObject,
         value: RexxObjectPtr,
     ) {
+        let mut room = Room::new();
         // SAFETY: as `whole_number_to_object`.
-        or_nothing!(unsafe { innermost_activation(context, "SetVariableReferenceValue") })
-            .set_reference_value(reference.cast(), value);
+        or_nothing!(unsafe {
+            innermost_activation(&mut room, context, "SetVariableReferenceValue")
+        })
+        .set_reference_value(reference.cast(), value);
     }
 
     /// # Safety
@@ -3650,9 +3888,10 @@ mod variables {
         context: *mut RexxThreadContext_,
         object: RexxObjectPtr,
     ) -> logical_t {
+        let mut room = Room::new();
         // SAFETY: as `whole_number_to_object`.
         logical_t::from(
-            or_nothing!(unsafe { innermost_activation(context, "IsVariableReference") })
+            or_nothing!(unsafe { innermost_activation(&mut room, context, "IsVariableReference") })
                 .is_of_class(
                     "RexxThreadInterface.IsVariableReference",
                     object,
@@ -3665,7 +3904,7 @@ mod variables {
 /// The members that send messages, find classes and describe the running
 /// call: the thread table's, and the method and call contexts' own.
 mod messages {
-    use super::{CallLinked, activation_of, innermost_activation, name_of};
+    use super::{CallLinked, Room, activation_of, innermost_activation, name_of};
     use crate::callbacks::MethodObject;
     use crate::layout::{
         CSTRING, RexxArrayObject, RexxCallContext_, RexxClassObject, RexxDirectoryObject,
@@ -3682,9 +3921,14 @@ mod messages {
         name: CSTRING,
         arguments: RexxArrayObject,
     ) -> RexxObjectPtr {
+        let mut room = Room::new();
         // SAFETY: as `whole_number_to_object`; the caller guarantees `name`.
-        let (activation, name) =
-            unsafe { (innermost_activation(context, "SendMessage"), name_of(name)) };
+        let (activation, name) = unsafe {
+            (
+                innermost_activation(&mut room, context, "SendMessage"),
+                name_of(name),
+            )
+        };
         let activation = or_nothing!(activation);
         let (Some(name), Some(arguments)) = (name, activation.arguments_of(arguments.cast()))
         else {
@@ -3708,10 +3952,11 @@ mod messages {
         scope: RexxClassObject,
         arguments: RexxArrayObject,
     ) -> RexxObjectPtr {
+        let mut room = Room::new();
         // SAFETY: as `send_message`.
         let (activation, name) = unsafe {
             (
-                innermost_activation(context, "SendMessageScoped"),
+                innermost_activation(&mut room, context, "SendMessageScoped"),
                 name_of(name),
             )
         };
@@ -3736,9 +3981,14 @@ mod messages {
         receiver: RexxObjectPtr,
         name: CSTRING,
     ) -> RexxObjectPtr {
+        let mut room = Room::new();
         // SAFETY: as `send_message`.
-        let (activation, name) =
-            unsafe { (innermost_activation(context, "SendMessage0"), name_of(name)) };
+        let (activation, name) = unsafe {
+            (
+                innermost_activation(&mut room, context, "SendMessage0"),
+                name_of(name),
+            )
+        };
         let activation = or_nothing!(activation);
         let Some(name) = name else {
             return std::ptr::null_mut();
@@ -3760,9 +4010,14 @@ mod messages {
         name: CSTRING,
         first: RexxObjectPtr,
     ) -> RexxObjectPtr {
+        let mut room = Room::new();
         // SAFETY: as `send_message`.
-        let (activation, name) =
-            unsafe { (innermost_activation(context, "SendMessage1"), name_of(name)) };
+        let (activation, name) = unsafe {
+            (
+                innermost_activation(&mut room, context, "SendMessage1"),
+                name_of(name),
+            )
+        };
         let activation = or_nothing!(activation);
         let Some(name) = name else {
             return std::ptr::null_mut();
@@ -3786,9 +4041,14 @@ mod messages {
         first: RexxObjectPtr,
         second: RexxObjectPtr,
     ) -> RexxObjectPtr {
+        let mut room = Room::new();
         // SAFETY: as `send_message`.
-        let (activation, name) =
-            unsafe { (innermost_activation(context, "SendMessage2"), name_of(name)) };
+        let (activation, name) = unsafe {
+            (
+                innermost_activation(&mut room, context, "SendMessage2"),
+                name_of(name),
+            )
+        };
         let activation = or_nothing!(activation);
         let Some(name) = name else {
             return std::ptr::null_mut();
@@ -3808,8 +4068,9 @@ mod messages {
     pub(super) unsafe extern "C" fn get_local_environment(
         context: *mut RexxThreadContext_,
     ) -> RexxDirectoryObject {
+        let mut room = Room::new();
         // SAFETY: as `whole_number_to_object`.
-        or_nothing!(unsafe { innermost_activation(context, "GetLocalEnvironment") })
+        or_nothing!(unsafe { innermost_activation(&mut room, context, "GetLocalEnvironment") })
             .environment("RexxThreadInterface.GetLocalEnvironment", true)
             .cast()
     }
@@ -3819,8 +4080,9 @@ mod messages {
     pub(super) unsafe extern "C" fn get_global_environment(
         context: *mut RexxThreadContext_,
     ) -> RexxDirectoryObject {
+        let mut room = Room::new();
         // SAFETY: as `whole_number_to_object`.
-        or_nothing!(unsafe { innermost_activation(context, "GetGlobalEnvironment") })
+        or_nothing!(unsafe { innermost_activation(&mut room, context, "GetGlobalEnvironment") })
             .environment("RexxThreadInterface.GetGlobalEnvironment", false)
             .cast()
     }
@@ -3832,9 +4094,10 @@ mod messages {
         object: RexxObjectPtr,
         class: RexxClassObject,
     ) -> logical_t {
+        let mut room = Room::new();
         // SAFETY: as `whole_number_to_object`.
         logical_t::from(
-            or_nothing!(unsafe { innermost_activation(context, "IsInstanceOf") })
+            or_nothing!(unsafe { innermost_activation(&mut room, context, "IsInstanceOf") })
                 .is_instance_of(object, class.cast()),
         )
     }
@@ -3846,9 +4109,14 @@ mod messages {
         object: RexxObjectPtr,
         name: CSTRING,
     ) -> logical_t {
+        let mut room = Room::new();
         // SAFETY: as `send_message`.
-        let (activation, name) =
-            unsafe { (innermost_activation(context, "IsOfType"), name_of(name)) };
+        let (activation, name) = unsafe {
+            (
+                innermost_activation(&mut room, context, "IsOfType"),
+                name_of(name),
+            )
+        };
         let activation = or_nothing!(activation);
         logical_t::from(name.is_some_and(|name| activation.is_of_type(object, name)))
     }
@@ -3860,9 +4128,14 @@ mod messages {
         object: RexxObjectPtr,
         name: CSTRING,
     ) -> logical_t {
+        let mut room = Room::new();
         // SAFETY: as `send_message`.
-        let (activation, name) =
-            unsafe { (innermost_activation(context, "HasMethod"), name_of(name)) };
+        let (activation, name) = unsafe {
+            (
+                innermost_activation(&mut room, context, "HasMethod"),
+                name_of(name),
+            )
+        };
         let activation = or_nothing!(activation);
         logical_t::from(name.is_some_and(|name| activation.has_method(object, name)))
     }
@@ -3873,9 +4146,14 @@ mod messages {
         context: *mut RexxThreadContext_,
         name: CSTRING,
     ) -> RexxClassObject {
+        let mut room = Room::new();
         // SAFETY: as `send_message`.
-        let (activation, name) =
-            unsafe { (innermost_activation(context, "FindClass"), name_of(name)) };
+        let (activation, name) = unsafe {
+            (
+                innermost_activation(&mut room, context, "FindClass"),
+                name_of(name),
+            )
+        };
         let activation = or_nothing!(activation);
         name.map_or(std::ptr::null_mut(), |name| {
             activation
@@ -3891,10 +4169,11 @@ mod messages {
         package: RexxPackageObject,
         name: CSTRING,
     ) -> RexxClassObject {
+        let mut room = Room::new();
         // SAFETY: as `send_message`.
         let (activation, name) = unsafe {
             (
-                innermost_activation(context, "FindPackageClass"),
+                innermost_activation(&mut room, context, "FindPackageClass"),
                 name_of(name),
             )
         };
@@ -3910,9 +4189,10 @@ mod messages {
         context: *mut RexxThreadContext_,
         object: RexxObjectPtr,
     ) -> logical_t {
+        let mut room = Room::new();
         // SAFETY: as `whole_number_to_object`.
         logical_t::from(
-            or_nothing!(unsafe { innermost_activation(context, "IsMethod") })
+            or_nothing!(unsafe { innermost_activation(&mut room, context, "IsMethod") })
                 .is_executable(object, "Method"),
         )
     }
@@ -3923,9 +4203,10 @@ mod messages {
         context: *mut RexxThreadContext_,
         object: RexxObjectPtr,
     ) -> logical_t {
+        let mut room = Room::new();
         // SAFETY: as `whole_number_to_object`.
         logical_t::from(
-            or_nothing!(unsafe { innermost_activation(context, "IsRoutine") })
+            or_nothing!(unsafe { innermost_activation(&mut room, context, "IsRoutine") })
                 .is_executable(object, "Routine"),
         )
     }
@@ -4153,7 +4434,7 @@ mod messages {
 
 /// The members over packages, libraries, routines and methods.
 mod packages {
-    use super::{bytes_of, innermost_activation, name_of};
+    use super::{Room, bytes_of, innermost_activation, name_of};
     use crate::layout::{
         CSTRING, RexxArrayObject, RexxDirectoryObject, RexxMethodObject, RexxObjectPtr,
         RexxPackageObject, RexxRoutineObject, RexxThreadContext_, logical_t,
@@ -4166,9 +4447,14 @@ mod packages {
         context: *mut RexxThreadContext_,
         name: CSTRING,
     ) -> RexxPackageObject {
+        let mut room = Room::new();
         // SAFETY: as `whole_number_to_object`; the caller guarantees `name`.
-        let (activation, name) =
-            unsafe { (innermost_activation(context, "LoadPackage"), name_of(name)) };
+        let (activation, name) = unsafe {
+            (
+                innermost_activation(&mut room, context, "LoadPackage"),
+                name_of(name),
+            )
+        };
         let activation = or_nothing!(activation);
         name.map_or(std::ptr::null_mut(), |name| {
             activation.load_package(name).cast()
@@ -4184,10 +4470,11 @@ mod packages {
         data: CSTRING,
         length: usize,
     ) -> RexxPackageObject {
+        let mut room = Room::new();
         // SAFETY: as `load_package`; the caller guarantees the range.
         let (activation, name, source) = unsafe {
             (
-                innermost_activation(context, "LoadPackageFromData"),
+                innermost_activation(&mut room, context, "LoadPackageFromData"),
                 name_of(name),
                 bytes_of(data, length),
             )
@@ -4208,10 +4495,15 @@ mod packages {
         context: *mut RexxThreadContext_,
         name: CSTRING,
     ) -> logical_t {
+        let mut room = Room::new();
         super::loading(|| {
             // SAFETY: as `load_package`.
-            let (activation, name) =
-                unsafe { (innermost_activation(context, "LoadLibrary"), name_of(name)) };
+            let (activation, name) = unsafe {
+                (
+                    innermost_activation(&mut room, context, "LoadLibrary"),
+                    name_of(name),
+                )
+            };
             let activation = or_nothing!(activation);
             logical_t::from(name.is_some_and(|name| activation.load_library(name)))
         })
@@ -4226,8 +4518,9 @@ mod packages {
                 context: *mut RexxThreadContext_,
                 package: RexxPackageObject,
             ) -> RexxDirectoryObject {
+                let mut room = Room::new();
                 // SAFETY: as `whole_number_to_object`.
-                or_nothing!(unsafe { innermost_activation(context, $member) })
+                or_nothing!(unsafe { innermost_activation(&mut room, context, $member) })
                     .package_answer(
                         concat!("RexxThreadInterface.", $member),
                         package.cast(),
@@ -4258,8 +4551,9 @@ mod packages {
         context: *mut RexxThreadContext_,
         routine: RexxRoutineObject,
     ) -> RexxPackageObject {
+        let mut room = Room::new();
         // SAFETY: as `whole_number_to_object`.
-        or_nothing!(unsafe { innermost_activation(context, "GetRoutinePackage") })
+        or_nothing!(unsafe { innermost_activation(&mut room, context, "GetRoutinePackage") })
             .package_answer(
                 "RexxThreadInterface.GetRoutinePackage",
                 routine.cast(),
@@ -4274,8 +4568,9 @@ mod packages {
         context: *mut RexxThreadContext_,
         method: RexxMethodObject,
     ) -> RexxPackageObject {
+        let mut room = Room::new();
         // SAFETY: as `whole_number_to_object`.
-        or_nothing!(unsafe { innermost_activation(context, "GetMethodPackage") })
+        or_nothing!(unsafe { innermost_activation(&mut room, context, "GetMethodPackage") })
             .package_answer(
                 "RexxThreadInterface.GetMethodPackage",
                 method.cast(),
@@ -4291,8 +4586,9 @@ mod packages {
         routine: RexxRoutineObject,
         arguments: RexxArrayObject,
     ) -> RexxObjectPtr {
+        let mut room = Room::new();
         // SAFETY: as `whole_number_to_object`.
-        or_nothing!(unsafe { innermost_activation(context, "CallRoutine") })
+        or_nothing!(unsafe { innermost_activation(&mut room, context, "CallRoutine") })
             .call_routine(routine.cast(), arguments.cast())
     }
 
@@ -4303,9 +4599,14 @@ mod packages {
         name: CSTRING,
         arguments: RexxArrayObject,
     ) -> RexxObjectPtr {
+        let mut room = Room::new();
         // SAFETY: as `load_package`.
-        let (activation, name) =
-            unsafe { (innermost_activation(context, "CallProgram"), name_of(name)) };
+        let (activation, name) = unsafe {
+            (
+                innermost_activation(&mut room, context, "CallProgram"),
+                name_of(name),
+            )
+        };
         let activation = or_nothing!(activation);
         name.map_or(std::ptr::null_mut(), |name| {
             activation.call_program(name, arguments.cast())
@@ -4320,10 +4621,11 @@ mod packages {
         source: CSTRING,
         length: usize,
     ) -> RexxMethodObject {
+        let mut room = Room::new();
         // SAFETY: as `load_package_from_data`.
         let (activation, name, source) = unsafe {
             (
-                innermost_activation(context, "NewMethod"),
+                innermost_activation(&mut room, context, "NewMethod"),
                 name_of(name),
                 bytes_of(source, length),
             )
@@ -4345,10 +4647,11 @@ mod packages {
         source: CSTRING,
         length: usize,
     ) -> RexxRoutineObject {
+        let mut room = Room::new();
         // SAFETY: as `load_package_from_data`.
         let (activation, name, source) = unsafe {
             (
-                innermost_activation(context, "NewRoutine"),
+                innermost_activation(&mut room, context, "NewRoutine"),
                 name_of(name),
                 bytes_of(source, length),
             )
@@ -4369,8 +4672,9 @@ unsafe extern "C" fn request_global_reference(
     context: *mut RexxThreadContext_,
     object: RexxObjectPtr,
 ) -> RexxObjectPtr {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    or_nothing!(unsafe { innermost_activation(context, "RequestGlobalReference") })
+    or_nothing!(unsafe { innermost_activation(&mut room, context, "RequestGlobalReference") })
         .global_reference("RexxThreadInterface.RequestGlobalReference", object)
 }
 
@@ -4380,8 +4684,9 @@ unsafe extern "C" fn release_global_reference(
     context: *mut RexxThreadContext_,
     object: RexxObjectPtr,
 ) {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    or_nothing!(unsafe { innermost_activation(context, "ReleaseGlobalReference") })
+    or_nothing!(unsafe { innermost_activation(&mut room, context, "ReleaseGlobalReference") })
         .global_reference("RexxThreadInterface.ReleaseGlobalReference", object);
 }
 
@@ -4391,8 +4696,9 @@ unsafe extern "C" fn release_local_reference(
     context: *mut RexxThreadContext_,
     object: RexxObjectPtr,
 ) {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    or_nothing!(unsafe { innermost_activation(context, "ReleaseLocalReference") })
+    or_nothing!(unsafe { innermost_activation(&mut room, context, "ReleaseLocalReference") })
         .release_local_reference(object);
 }
 
@@ -4407,11 +4713,12 @@ unsafe extern "C-unwind" fn register_library(
     name: CSTRING,
     entry: *mut RexxPackageEntry,
 ) -> logical_t {
+    let mut room = Room::new();
     loading(|| {
         // SAFETY: as `whole_number_to_object`; the caller guarantees `name`.
         let (activation, name) = unsafe {
             (
-                innermost_activation(context, "RegisterLibrary"),
+                innermost_activation(&mut room, context, "RegisterLibrary"),
                 name_of(name),
             )
         };
@@ -4464,6 +4771,23 @@ unsafe fn root_of(instance: *mut RexxInstance_) -> Option<*mut RexxThreadContext
     (!root.is_null()).then_some(root)
 }
 
+/// The thread context of the interpreter whose instance is `instance` that
+/// this thread is attached to, where it is attached to one.
+fn attached_to(instance: *mut RexxInstance_) -> Option<*mut RexxThreadContext_> {
+    ATTACHED.with_borrow(|attached| {
+        attached
+            .iter()
+            .map(|(context, _)| *context as *mut RexxThreadContext_)
+            .find(|&context| {
+                // SAFETY: a context stays on this thread's list only while it
+                // is attached, and an attached context is kept: the root by
+                // `make_root`, an attached activity's by `make_attached`. Its
+                // `instance` link is written only by `linking`.
+                unsafe { (*context).instance == instance }
+            })
+    })
+}
+
 /// The thread context of the innermost native call this thread runs of the
 /// interpreter whose instance is `instance`, where it runs one.
 fn call_here(instance: *mut RexxInstance_) -> Option<*mut RexxThreadContext_> {
@@ -4473,15 +4797,20 @@ fn call_here(instance: *mut RexxInstance_) -> Option<*mut RexxThreadContext_> {
 }
 
 /// `AttachThread`: a thread running a native call of the instance's
-/// interpreter is answered that call's context, and is not attached. Any
-/// other thread is attached to the interpreter's root context, once more
-/// where it already is, so its callbacks reach the root activity's innermost
-/// call until it detaches: every attached thread shares that one activity,
-/// its calls serialized by the baton. The root context is kept
-/// ([`ThreadContext::make_root`]), so a `DetachThread` after the interpreter
-/// has ended reads live memory and finds the thread attached. Where the
-/// interpreter has no root context, nothing is attached and the answer is
-/// false.
+/// interpreter is answered that call's context, and is not attached. A thread
+/// already attached to a context of the interpreter, as the thread that
+/// created an embedding is to its root, is attached to it once more. Any
+/// other thread is attached to an activity of its own, which the interpreter
+/// files for it (`r[native.threads.attach]`): its callbacks run as that
+/// activity until it detaches. An attached activity's context is kept
+/// ([`ThreadContext::make_attached`]), so a `DetachThread` at any time reads
+/// live memory. A thread the interpreter refuses
+/// ([`crate::values::Baton::refuses_foreign`]) is not attached, and the answer
+/// is false.
+///
+/// An instance whose table has no requester attaches the thread to the
+/// interpreter's root context, which is kept ([`ThreadContext::make_root`]);
+/// where it has none, nothing is attached and the answer is false.
 ///
 /// # Safety
 /// `instance` is an instance a [`ThreadTable`] made, and a non-null
@@ -4492,8 +4821,22 @@ unsafe extern "C" fn attach_thread(
 ) -> logical_t {
     let context = match call_here(instance) {
         Some(context) => Some(context),
-        // SAFETY: the caller guarantees `instance`.
-        None => unsafe { root_of(instance) }.inspect(|&root| attach_here(root as usize)),
+        None => match attached_to(instance) {
+            Some(context) => {
+                attach_here(context as usize);
+                Some(context)
+            }
+            // SAFETY: the caller guarantees `instance`.
+            None => match unsafe { live_requester(instance) } {
+                Some(requester) if requester.refuses_foreign() => None,
+                Some(requester) => requester.attach_activity().map(|address| {
+                    attach_here(address);
+                    address as *mut RexxThreadContext_
+                }),
+                // SAFETY: the caller guarantees `instance`.
+                None => unsafe { root_of(instance) }.inspect(|&root| attach_here(root as usize)),
+            },
+        },
     };
     if !attached.is_null() {
         // SAFETY: the caller guarantees the write.
@@ -4542,9 +4885,10 @@ unsafe extern "C" fn stack_command_environment(
 }
 
 /// The two command-environment members: on the context of the native call
-/// this thread runs of the instance's interpreter, and from any other thread
-/// on the root context, attached for the length of the call where it is not
-/// already. Answers whether a handler was added.
+/// this thread runs of the instance's interpreter, or else on the context of
+/// it this thread is attached to, and from any other thread on the root
+/// context, attached for the length of the call where it is not already.
+/// Answers whether a handler was added.
 ///
 /// # Safety
 /// As [`add_command_environment`].
@@ -4555,7 +4899,7 @@ unsafe fn command_environment(
     kind: std::ffi::c_int,
     stack: bool,
 ) -> bool {
-    let (context, visiting) = match call_here(instance) {
+    let (context, visiting) = match call_here(instance).or_else(|| attached_to(instance)) {
         Some(context) => (context, false),
         // SAFETY: the caller guarantees `instance`.
         None => match unsafe { root_of(instance) } {
@@ -4567,6 +4911,7 @@ unsafe fn command_environment(
         attach_here(context as usize);
     }
     let added = (|| {
+        let mut room = Room::new();
         // SAFETY: the caller guarantees the terminator.
         let (Some(name), Some(handler)) = (
             unsafe { name_of(name) },
@@ -4577,7 +4922,8 @@ unsafe fn command_environment(
         // SAFETY: `context` is a live context: that of a call in flight on
         // this thread, or the root, which `make_root` kept, so it is never
         // freed.
-        let activation = unsafe { innermost_activation(context, "AddCommandEnvironment") };
+        let activation =
+            unsafe { innermost_activation(&mut room, context, "AddCommandEnvironment") };
         let Some(activation) = activation else {
             return false;
         };
@@ -4848,18 +5194,33 @@ mod redirector {
 }
 
 /// `DetachThread`: ends one attach of this thread to the context
-/// [`attach_thread`] answered. A thread that runs a call of the context's
-/// activity holds it still, so nothing is released.
+/// [`attach_thread`] answered. The last one of an attached activity's context
+/// ends that activity (`r[native.threads.attach]`), unless this thread runs a
+/// call of it, which holds it still, so nothing is released.
 ///
 /// # Safety
 /// As [`whole_number_to_object`].
 unsafe extern "C" fn detach_thread(context: *mut RexxThreadContext_) {
-    if detach_here(context as usize) {
-        return;
+    let mut room = Room::new();
+    match detach_counted(context as usize) {
+        Some(0) => {
+            // SAFETY: the context was attached, so it is kept and live, and
+            // its wrapper's `owner` is its `Innermost`.
+            let cell = unsafe { &*owner_of::<RexxThreadContext_, Innermost>(context) };
+            if cell.attached.get()
+                && !calls_here().any(|entry| std::ptr::eq(entry.innermost, cell))
+                && let Some(requester) = &cell.requester
+            {
+                requester.detach_activity(context as usize);
+            }
+            return;
+        }
+        Some(_) => return,
+        None => {}
     }
     // SAFETY: as `whole_number_to_object`; the call aborts where no native
     // call is in flight.
-    or_nothing!(unsafe { innermost_activation(context, "DetachThread") });
+    or_nothing!(unsafe { innermost_activation(&mut room, context, "DetachThread") });
 }
 
 /// `HaltThread`: the context's
@@ -4868,8 +5229,9 @@ unsafe extern "C" fn detach_thread(context: *mut RexxThreadContext_) {
 /// # Safety
 /// As [`whole_number_to_object`].
 unsafe extern "C" fn halt_thread(context: *mut RexxThreadContext_) {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    or_nothing!(unsafe { innermost_activation(context, "HaltThread") }).halt(false);
+    or_nothing!(unsafe { innermost_activation(&mut room, context, "HaltThread") }).halt(false);
 }
 
 /// `SetThreadTrace`: external
@@ -4878,8 +5240,9 @@ unsafe extern "C" fn halt_thread(context: *mut RexxThreadContext_) {
 /// # Safety
 /// As [`whole_number_to_object`].
 unsafe extern "C" fn set_thread_trace(context: *mut RexxThreadContext_, setting: logical_t) {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    or_nothing!(unsafe { innermost_activation(context, "SetThreadTrace") })
+    or_nothing!(unsafe { innermost_activation(&mut room, context, "SetThreadTrace") })
         .set_trace(false, setting != 0);
 }
 
@@ -4891,8 +5254,9 @@ unsafe extern "C" fn raise_condition_object(
     context: *mut RexxThreadContext_,
     condition: RexxDirectoryObject,
 ) {
+    let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
-    or_nothing!(unsafe { innermost_activation(context, "RaiseConditionObject") })
+    or_nothing!(unsafe { innermost_activation(&mut room, context, "RaiseConditionObject") })
         .raise_condition_object(condition.cast());
 }
 

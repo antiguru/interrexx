@@ -783,6 +783,10 @@ impl Interp {
     /// length of the two steps, so the first native call or hook among them
     /// makes a new one.
     pub(crate) fn terminate(&mut self) -> Vec<Loud> {
+        // A thread that attaches or detaches from now on is not served: the
+        // attached activities end with the interpreter (`r[native.threads.end]`).
+        // A `Halt` or `SetTrace` through the instance posts nothing.
+        self.timer.inbox().close();
         let running = self.activity.thread.take();
         if let Some(running) = &running {
             running.retire();
@@ -793,9 +797,6 @@ impl Interp {
         if terminated.is_some() {
             self.termination_thread = terminated;
         }
-        // Nothing serves the inbox from here on: a `Halt` or `SetTrace` through
-        // the instance posts nothing (`r[native.threads.trace]`).
-        self.timer.inbox().close();
         refused
     }
 
@@ -1064,6 +1065,22 @@ impl Interp {
             self.clause_exits = true;
         }
         answer
+    }
+
+    /// Pushes the base native frame of an attached activity, the running one,
+    /// which has no Rexx caller: the frame every callback through its thread
+    /// context runs in, holding the references they make and the condition
+    /// one leaves (`r[native.threads.attach]`).
+    pub(crate) fn push_attached_frame(&mut self) {
+        self.push_native_frame(ObjRef::NIL, ObjRef::NIL, None, b"", &[], None);
+    }
+
+    /// Pops [`Interp::push_attached_frame`]'s frame off the running activity,
+    /// releasing what it holds.
+    pub(crate) fn pop_attached_frame(&mut self) {
+        if let Some(mut frame) = self.activity.native_handles.pop() {
+            self.end_native_frame(&mut frame);
+        }
     }
 
     /// Releases what the native frame of an abandoned call, named by the
@@ -1693,6 +1710,40 @@ impl interrexx_api::values::Baton for Requester {
 
     fn post_trace(&self, on: bool) {
         self.inbox.post_trace_all(on);
+    }
+
+    /// Recalls the baton as a callback does, with the running activity left
+    /// as it is, and files the attached activity under the lend.
+    fn attach_activity(&self) -> Option<usize> {
+        let mut lent = self.lend_here()?;
+        Some(lent.interp().attach_activity())
+    }
+
+    /// Recalls the baton as [`Requester::attach_activity`] does, and ends the
+    /// attached activity under the lend.
+    fn detach_activity(&self, context: usize) {
+        if let Some(mut lent) = self.lend_here() {
+            lent.interp().detach_activity(context);
+        }
+    }
+}
+
+impl Requester {
+    /// The baton, recalled from its holder and lent to this thread with the
+    /// running activity left as it is, until the answer drops; `None` where
+    /// this thread holds it already, or the interpreter has terminated, so
+    /// nothing would lend it.
+    fn lend_here(&self) -> Option<Lent<'_>> {
+        if self.baton.held_here() {
+            return None;
+        }
+        let posted = self.inbox.post_unless_closed(Posted::Recall(Recall {
+            by: Recaller::Context(0),
+            thread: std::thread::current().id(),
+            base: None,
+            room: None,
+        }));
+        posted.then(|| Lent::wait(&self.baton))
     }
 }
 

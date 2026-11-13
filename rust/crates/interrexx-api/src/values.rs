@@ -718,6 +718,20 @@ pub trait Baton {
         false
     }
 
+    /// `AttachThread` from a thread that has no activity of the host's: the
+    /// host files an attached activity for the thread
+    /// (`r[native.threads.attach]`) and answers its thread context's
+    /// address; `None` where the host makes none.
+    fn attach_activity(&self) -> Option<usize> {
+        None
+    }
+
+    /// The last `DetachThread` of the attached activity whose thread context
+    /// is at `context`: the host ends that activity.
+    fn detach_activity(&self, context: usize) {
+        let _ = context;
+    }
+
     /// Asks every activity of the host to halt (`r[native.threads.halt]`),
     /// from any thread and without taking the baton: the request is served
     /// at the holder's next boundary. A host that cannot be asked does

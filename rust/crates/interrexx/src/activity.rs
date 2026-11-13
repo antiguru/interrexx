@@ -91,6 +91,10 @@ pub(crate) struct Activity {
     /// which an extension may keep for as long as this interpreter runs;
     /// made by the first ([`crate::Interp::thread_context`]).
     pub(crate) thread: Option<interrexx_api::ffi::ThreadContext>,
+    /// Whether this is an attached activity (`r[native.threads.attach]`):
+    /// driven by the thread attached to its thread context, which runs it for
+    /// each callback, and idle between them, which is its wake source.
+    pub(crate) attached: bool,
     /// `current_value_indent` and `current_clause_line`, bundled -- see
     /// `ClauseState`'s own doc comment for what the two share, the property
     /// that decides what belongs alongside them, and why they are one field
@@ -552,6 +556,7 @@ impl Activity {
             spare_activations: Vec::new(),
             spare_exposed: None,
             thread: None,
+            attached: false,
             native_handles: Vec::new(),
             native_spares: Vec::new(),
             internal_levels: Vec::new(),
@@ -718,6 +723,7 @@ impl Activity {
             // Handles for constants that are not heap objects, and the
             // innermost native call, whose frame `native_handles` roots.
             thread: _,
+            attached: _,
             native_handles,
             // A pop clears the buffers that held objects, and a push
             // overwrites the handle fields before anything reads them, so a
