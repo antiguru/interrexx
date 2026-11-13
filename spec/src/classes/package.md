@@ -2231,7 +2231,7 @@ say q~source[1]
   return .arr~of('nop', 'nop')
 ```
 
-```output defect=#151
+```output
 arr request ARRAY
 arr makearray
 2
