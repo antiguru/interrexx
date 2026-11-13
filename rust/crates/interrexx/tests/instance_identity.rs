@@ -45,12 +45,6 @@ fn fresh_dir(name: &str) -> PathBuf {
     dir
 }
 
-/// Whether `name` is an executable file on this process's `PATH`.
-fn on_path(name: &str) -> bool {
-    std::env::var_os("PATH")
-        .is_some_and(|path| std::env::split_paths(&path).any(|dir| dir.join(name).is_file()))
-}
-
 /// `g++` compiling the fixture against this worktree's `api/`, with `arguments` after the source.
 fn compile(arguments: &[&str]) {
     let api = worktree().join("third_party/ooRexx/api");
@@ -64,17 +58,12 @@ fn compile(arguments: &[&str]) {
     assert!(built.success(), "the fixture did not build: {arguments:?}");
 }
 
-/// Runs `program` with `argument` under `binary` (memory-capped where `memcap` is on `PATH`) from
-/// `dir`, with `dir` on the library path, answering stdout, stderr and the exit status.
+/// Runs `program` with `argument` under `binary`, memory-capped by `memcap`, from `dir`, with `dir`
+/// on the library path, answering stdout, stderr and the exit status.
 fn run(binary: &Path, dir: &Path, program: &Path, argument: Option<&str>) -> (String, String, i32) {
-    let mut command = if on_path("memcap") {
-        let mut command = Command::new("memcap");
-        command.arg(MEMORY).arg(binary);
-        command
-    } else {
-        Command::new(binary)
-    };
-    let output = command
+    let output = Command::new("memcap")
+        .arg(MEMORY)
+        .arg(binary)
         .arg(program)
         .args(argument)
         .current_dir(dir)
@@ -82,7 +71,7 @@ fn run(binary: &Path, dir: &Path, program: &Path, argument: Option<&str>) -> (St
         .env("REXX_API_DIR", dir.join("api"))
         .stdin(Stdio::null())
         .output()
-        .expect("the run spawns");
+        .expect("memcap runs, which every run of this test is under");
     let _ = Command::new(Path::new(env!("CARGO_BIN_EXE_rexx")).with_file_name("rxapi"))
         .arg("--stop")
         .env("REXX_API_DIR", dir.join("api"))
