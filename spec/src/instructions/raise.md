@@ -1281,20 +1281,22 @@ R7 ignored
 
 r[instr.raise.untrapped.description]
 The message that the `SYNTAX 97.1` names is the description of the clause. A
-description that is an object is named by its default name, as the object's
-`DEFAULTNAME` gives it, and not by what its `MAKESTRING` answers.
+description that is an object is not asked for a string value: its `MAKESTRING`
+method does not run, and the wording of the message is not specified (see
+[the rule on error messages](r:conv.error.text)).
 
 ```rexx
 signal on syntax name s
 raise nomethod additional ('obj') description (.key~new)
-s: say condition('o')~message
+s: say condition('o')~code (condition('o')~message \== '')
 ::class key
 ::method makestring
+  say 'makestring ran'
   return 'description'
 ```
 
 ```output
-Object "obj" does not understand message "a KEY".
+97.1 1
 ```
 
 ```rexx

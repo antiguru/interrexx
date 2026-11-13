@@ -75,7 +75,11 @@ exit
 ::method lineout
   use arg l
   l = '' || l
-  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  select
+    when l~strip~left(5) = '+++ "' then nop
+    when l~strip~left(3) = '+++' then .stdout~lineout('<notice>')
+    otherwise .stdout~lineout(l)
+  end
   return 0
 ```
 
@@ -83,7 +87,7 @@ exit
 before
      5 *-* say 'one'
 one
-+++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+<notice>
 [read 1: ]
      6 *-* say 'two'
 two
@@ -113,7 +117,11 @@ call trace 'o'
 ::method lineout
   use arg l
   l = '' || l
-  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  select
+    when l~strip~left(5) = '+++ "' then nop
+    when l~strip~left(3) = '+++' then .stdout~lineout('<notice>')
+    otherwise .stdout~lineout(l)
+  end
   return 0
 ```
 
@@ -122,7 +130,7 @@ a
      5 *-* say 'b'
        >>>   "b"
 b
-+++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+<notice>
 [read 1: say "typed"]
 typed
 [read 2: ]
@@ -153,14 +161,18 @@ exit
 ::method lineout
   use arg l
   l = '' || l
-  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  select
+    when l~strip~left(5) = '+++ "' then nop
+    when l~strip~left(3) = '+++' then .stdout~lineout('<notice>')
+    otherwise .stdout~lineout(l)
+  end
   return 0
 ```
 
 ```output
 a
        >>>   "N"
-+++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+<notice>
 [read 1: say "t1"]
 t1
 [read 2: ]
@@ -198,7 +210,11 @@ exit
 ::method lineout
   use arg l
   l = '' || l
-  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  select
+    when l~strip~left(5) = '+++ "' then nop
+    when l~strip~left(3) = '+++' then .stdout~lineout('<notice>')
+    otherwise .stdout~lineout(l)
+  end
   return 0
 ```
 
@@ -207,7 +223,7 @@ exit
      5 *-* say 'b'
        >>>   "b"
 b
-+++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+<notice>
 [read 1: ]
      6 *-* call trace 'o'
 ```
@@ -244,6 +260,7 @@ exit
   use arg l
   l = '' || l
   if l = '       +++ "' || src || '"' then l = '<source line>'
+  else if l~strip~left(3) = '+++' then l = '<notice>'
   .stdout~lineout(l)
   return 0
 ::class in
@@ -264,7 +281,7 @@ before
 <source line>
      6 *-* say 'one'
 one
-+++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+<notice>
 [read 1]
 typed
 [read 2]
@@ -308,7 +325,7 @@ r1:
   use arg l
   l = '' || l
   if l = '       +++ "' || src || '"' then l = '<source line>'
-  if l~word(2) \= 'Interactive' then .stdout~lineout(l)
+  if l~strip~left(3) \= '+++' then .stdout~lineout(l)
   return 0
 ```
 
@@ -328,9 +345,11 @@ main
 ```
 
 r[env.debugging.notice]
-Each time interactive tracing is turned on where it was off, the line
-`+++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++` is
-written just before the first stop that follows. Turning it off and on again
+Each time interactive tracing is turned on where it was off, the notice is
+written just before the first stop that follows. The notice is one line that
+starts with `+++` and tells how to end the debugging; its wording is not
+specified, as [the rule on error messages](r:conv.error.text) says, except that
+none of its words ends in a colon. The examples show it as `<notice>`. Turning it off and on again
 in the same code, in the program or by a line typed at a stop, writes it
 again. In the example it is written before the first stop of each of the two
 periods in which interactive tracing is on.
@@ -361,20 +380,24 @@ exit
 ::method lineout
   use arg l
   l = '' || l
-  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  select
+    when l~strip~left(5) = '+++ "' then nop
+    when l~strip~left(3) = '+++' then .stdout~lineout('<notice>')
+    otherwise .stdout~lineout(l)
+  end
   return 0
 ```
 
 ```output
      4 *-* say 'p1'
 p1
-+++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+<notice>
 [read 1: ]
      5 *-* call trace 'o'
 p2
      8 *-* say 'p3'
 p3
-+++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+<notice>
 [read 2: ]
      9 *-* say 'p4'
 p4
@@ -407,8 +430,13 @@ call trace 'o'
   s = '' || l
   select
     when s~strip~left(5) = '+++ "' then kind = 'source line'
-    when s~word(2) = 'Interactive' & s~word(4) = '"Trace' then kind = 'notice'
-    when s~word(2) = 'Interactive' & s~word(4) = 'Error' then kind = 'error line'
+    when s~strip~left(3) = '+++' then do
+      do k = 2 to s~words
+        if s~word(k)~right(1) = ':' then leave
+      end
+      if k > s~words then kind = 'notice'
+      else kind = 'error line'
+    end
     when s~pos('*-*') > 0 then kind = 'clause'
     when s~left(10) = '       >>>' then kind = 'value'
     otherwise kind = '?'
@@ -479,14 +507,18 @@ sub: say 'in sub'
 ::method lineout
   use arg l
   l = '' || l
-  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  select
+    when l~strip~left(5) = '+++ "' then nop
+    when l~strip~left(3) = '+++' then .stdout~lineout('<notice>')
+    otherwise .stdout~lineout(l)
+  end
   return 0
 ```
 
 ```output
      4 *-* n = 1
        >>>   "1"
-+++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+<notice>
 [read 1: ]
      5 *-* call sub
      8 *-*   sub:
@@ -538,13 +570,17 @@ h: say 'h' sigl
 ::method lineout
   use arg l
   l = '' || l
-  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  select
+    when l~strip~left(5) = '+++ "' then nop
+    when l~strip~left(3) = '+++' then .stdout~lineout('<notice>')
+    otherwise .stdout~lineout(l)
+  end
   return 0
 ```
 
 ```output
      5 *-* do i = 1 to length(linein('/nonexistent/dh')) + 1
-+++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+<notice>
 [read 1: ]
     10 *-*     h:
 [read 2: ]
@@ -592,13 +628,17 @@ exit
 ::method lineout
   use arg l
   l = '' || l
-  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  select
+    when l~strip~left(5) = '+++ "' then nop
+    when l~strip~left(3) = '+++' then .stdout~lineout('<notice>')
+    otherwise .stdout~lineout(l)
+  end
   return 0
 ```
 
 ```output
      4 *-* do label lbl
-+++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+<notice>
 [read 1: ]
      5 *-*   nop
 [read 2: ]
@@ -645,13 +685,17 @@ exit
 ::method lineout
   use arg l
   l = '' || l
-  if l~strip~left(5) \= '+++ "' & l~word(1) \= '>I>' & l~word(1) \= '<I<' then .stdout~lineout(l)
+  select
+    when l~strip~left(5) = '+++ "' | l~word(1) = '>I>' | l~word(1) = '<I<' then nop
+    when l~strip~left(3) = '+++' then .stdout~lineout('<notice>')
+    otherwise .stdout~lineout(l)
+  end
   return 0
 ```
 
 ```output
     10 *-* reply 5
-+++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+<notice>
 [read 1: ]
     11 *-* say 'after reply'
 after reply
@@ -720,13 +764,17 @@ sub: return
 ::method lineout
   use arg l
   l = '' || l
-  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  select
+    when l~strip~left(5) = '+++ "' then nop
+    when l~strip~left(3) = '+++' then .stdout~lineout('<notice>')
+    otherwise .stdout~lineout(l)
+  end
   return 0
 ```
 
 ```output
      4 *-* n = 1
-+++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+<notice>
 [read 1: ]
      5 *-* if n = 1 
 [read 2: ]
@@ -1050,7 +1098,11 @@ exit
 ::method lineout
   use arg l
   l = '' || l
-  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  select
+    when l~strip~left(5) = '+++ "' then nop
+    when l~strip~left(3) = '+++' then .stdout~lineout('<notice>')
+    otherwise .stdout~lineout(l)
+  end
   return 0
 ```
 
@@ -1058,7 +1110,7 @@ exit
      5 *-* say 'prog' x
        >>>   "prog 1"
 prog 1
-+++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+<notice>
 [read 1: x = 5; y = x * 2]
 [read 2: say x y]
 5 10
@@ -1078,10 +1130,10 @@ prog 5
 
 r[env.debugging.input.error]
 An error in a line does not end the program. It is reported by two lines that
-reach `.traceoutput` like the others, which start with
-`+++ Interactive trace.  Error`, the number and then the subcode of the error,
-followed by text that is not specified; the interpreter then stops again and
-reads another line. Errors that are found when the line is read, such as an
+reach `.traceoutput` like the others. Each starts with `+++`. The first holds
+the number of the error and the second its number and subcode as `N.M`, each as
+the first word of the line that ends in a colon, and the other words are not
+specified; the interpreter then stops again and reads another line. Errors that are found when the line is read, such as an
 expression that cannot be parsed or a DO that is not closed, and errors that
 happen when it runs, such as a division by zero or a call of a routine that
 does not exist, are all reported that way, and so is one that RAISE SYNTAX
@@ -1118,8 +1170,12 @@ trapped: say 'trapped' condition('c')
   l = '' || l
   select
     when l~strip~left(5) = '+++ "' then nop
-    when l~word(2) = 'Interactive' & l~word(4) = 'Error' then do
-      say 'error' l~word(5)~strip('T', ':')
+    when l~strip~left(3) = '+++' then do
+      do k = 2 to l~words
+        if l~word(k)~right(1) = ':' then leave
+      end
+      if k > l~words then .stdout~lineout('<notice>')
+      else say 'error' l~word(k)~strip('T', ':')
     end
     otherwise .stdout~lineout(l)
   end
@@ -1129,7 +1185,7 @@ trapped: say 'trapped' condition('c')
 ```output
      5 *-* say 'one'
 one
-+++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+<notice>
 [read 1: say 1 +]
 error 35
 error 35.1
@@ -1191,14 +1247,18 @@ return
 ::method lineout
   use arg l
   l = '' || l
-  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  select
+    when l~strip~left(5) = '+++ "' then nop
+    when l~strip~left(3) = '+++' then .stdout~lineout('<notice>')
+    otherwise .stdout~lineout(l)
+  end
   return 0
 ```
 
 ```output
      5 *-* say 'one'
 one
-+++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+<notice>
 [read 1: signal on syntax name hs]
 [read 2: rc = 7; address system "exit 5"]
 [read 3: say rc]
@@ -1331,14 +1391,18 @@ exit
 ::method lineout
   use arg l
   l = '' || l
-  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  select
+    when l~strip~left(5) = '+++ "' then nop
+    when l~strip~left(3) = '+++' then .stdout~lineout('<notice>')
+    otherwise .stdout~lineout(l)
+  end
   return 0
 ```
 
 ```output
      5 *-* n = n + 1
        >>>   "1"
-+++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+<notice>
 [read 1: =]
      5 *-* n = n + 1
        >>>   "2"
@@ -1382,22 +1446,32 @@ exit
 ::method lineout
   use arg l
   l = '' || l
-  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  select
+    when l~strip~left(5) = '+++ "' then nop
+    when l~strip~left(3) = '+++' then do
+      do k = 2 to l~words
+        if l~word(k)~right(1) = ':' then leave
+      end
+      if k > l~words then .stdout~lineout('<notice>')
+      else say 'error' l~word(k)~strip('T', ':')
+    end
+    otherwise .stdout~lineout(l)
+  end
   return 0
 ```
 
 ```output
      5 *-* n = n + 1
-+++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+<notice>
 [read 1:  =]
-+++ Interactive trace.  Error 35:   Invalid expression.
-+++ Interactive trace.  Error 35.1:  Incorrect expression detected at "=".
+error 35
+error 35.1
 [read 2: = ]
-+++ Interactive trace.  Error 35:   Invalid expression.
-+++ Interactive trace.  Error 35.1:  Incorrect expression detected at "=".
+error 35
+error 35.1
 [read 3: ==]
-+++ Interactive trace.  Error 35:   Invalid expression.
-+++ Interactive trace.  Error 35.1:  Incorrect expression detected at "==".
+error 35
+error 35.1
 [read 4: say n]
 1
 [read 5: ]
@@ -1431,13 +1505,17 @@ sub: n += 1
 ::method lineout
   use arg l
   l = '' || l
-  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  select
+    when l~strip~left(5) = '+++ "' then nop
+    when l~strip~left(3) = '+++' then .stdout~lineout('<notice>')
+    otherwise .stdout~lineout(l)
+  end
   return 0
 ```
 
 ```output
      4 *-* n = 0
-+++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+<notice>
 [read 1: ]
      5 *-* call sub
      8 *-*   sub:
@@ -1488,13 +1566,17 @@ exit
 ::method lineout
   use arg l
   l = '' || l
-  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  select
+    when l~strip~left(5) = '+++ "' then nop
+    when l~strip~left(3) = '+++' then .stdout~lineout('<notice>')
+    otherwise .stdout~lineout(l)
+  end
   return 0
 ```
 
 ```output
      4 *-* do i = 1 to 3
-+++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+<notice>
 [read 1: ]
      5 *-*   if i = 1 
 [read 2: ]
@@ -1546,13 +1628,18 @@ exit
   use arg l
   l = '' || l
   if l~pos(' running ') > 0 then l = l~left(l~pos(' running ') - 1)
-  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  if l~left(6) = 'Error ' & l~pos(':') > 0 then l = l~left(l~pos(':'))
+  select
+    when l~strip~left(5) = '+++ "' then nop
+    when l~strip~left(3) = '+++' then .stdout~lineout('<notice>')
+    otherwise .stdout~lineout(l)
+  end
   return 0
 ```
 
 ```output rc=228
      5 *-* do i = 1 to 3
-+++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+<notice>
 [read 1: ]
      6 *-*   if i = 1 
 [read 2: ]
@@ -1562,7 +1649,7 @@ exit
      6 *-* leave
      6 *-* leave
 Error 28
-Error 28.1:  LEAVE is valid only within a repetitive loop or labeled block instruction.
+Error 28.1:
 ```
 
 r[env.debugging.input.trace]
@@ -1722,14 +1809,18 @@ exit
 ::method lineout
   use arg l
   l = '' || l
-  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  select
+    when l~strip~left(5) = '+++ "' then nop
+    when l~strip~left(3) = '+++' then .stdout~lineout('<notice>')
+    otherwise .stdout~lineout(l)
+  end
   return 0
 ```
 
 ```output
      4 *-* say 'one'
 one
-+++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+<notice>
 [read 1: trace 2]
      5 *-* say 'two'
 two
@@ -1769,14 +1860,18 @@ exit
 ::method lineout
   use arg l
   l = '' || l
-  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  select
+    when l~strip~left(5) = '+++ "' then nop
+    when l~strip~left(3) = '+++' then .stdout~lineout('<notice>')
+    otherwise .stdout~lineout(l)
+  end
   return 0
 ```
 
 ```output
      4 *-* say 'one'
 one
-+++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+<notice>
 [read 1: trace -2]
 two
 three
@@ -1815,13 +1910,17 @@ exit
 ::method lineout
   use arg l
   l = '' || l
-  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  select
+    when l~strip~left(5) = '+++ "' then nop
+    when l~strip~left(3) = '+++' then .stdout~lineout('<notice>')
+    otherwise .stdout~lineout(l)
+  end
   return 0
 ```
 
 ```output
      4 *-* nop
-+++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+<notice>
 [read 1: trace -4]
 x
      9 *-* say 'y'
@@ -1854,13 +1953,17 @@ exit
 ::method lineout
   use arg l
   l = '' || l
-  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  select
+    when l~strip~left(5) = '+++ "' then nop
+    when l~strip~left(3) = '+++' then .stdout~lineout('<notice>')
+    otherwise .stdout~lineout(l)
+  end
   return 0
 ```
 
 ```output
      4 *-* nop
-+++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+<notice>
 [read 1: trace 0]
      5 *-* say 'x'
 x
@@ -2066,8 +2169,12 @@ exit
   l = '' || l
   select
     when l~strip~left(5) = '+++ "' then nop
-    when l~word(2) = 'Interactive' & l~word(4) = 'Error' then do
-      say 'error' l~word(5)~strip('T', ':')
+    when l~strip~left(3) = '+++' then do
+      do k = 2 to l~words
+        if l~word(k)~right(1) = ':' then leave
+      end
+      if k > l~words then .stdout~lineout('<notice>')
+      else say 'error' l~word(k)~strip('T', ':')
     end
     otherwise .stdout~lineout(l)
   end
@@ -2077,7 +2184,7 @@ exit
 ```output
      4 *-* say 'one'
 one
-+++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+<notice>
 [read 1: interpret 'say 7']
 7
 [read 2: ]
@@ -2122,8 +2229,12 @@ exit
   l = '' || l
   select
     when l~strip~left(5) = '+++ "' then nop
-    when l~word(2) = 'Interactive' & l~word(4) = 'Error' then do
-      say 'error' l~word(5)~strip('T', ':')
+    when l~strip~left(3) = '+++' then do
+      do k = 2 to l~words
+        if l~word(k)~right(1) = ':' then leave
+      end
+      if k > l~words then .stdout~lineout('<notice>')
+      else say 'error' l~word(k)~strip('T', ':')
     end
     otherwise .stdout~lineout(l)
   end
@@ -2133,7 +2244,7 @@ exit
 ```output
      4 *-* say 'one'
 one
-+++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+<notice>
 [read 1: raise syntax 93.900]
 error 93
 error 93.900
@@ -2180,8 +2291,12 @@ exit
   l = '' || l
   select
     when l~strip~left(5) = '+++ "' then nop
-    when l~word(2) = 'Interactive' & l~word(4) = 'Error' then do
-      say 'error' l~word(5)~strip('T', ':')
+    when l~strip~left(3) = '+++' then do
+      do k = 2 to l~words
+        if l~word(k)~right(1) = ':' then leave
+      end
+      if k > l~words then .stdout~lineout('<notice>')
+      else say 'error' l~word(k)~strip('T', ':')
     end
     otherwise .stdout~lineout(l)
   end
@@ -2191,7 +2306,7 @@ exit
 ```output
      4 *-* say 'one'
 one
-+++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+<notice>
 [read 1: trace 1.5]
 error 24
 error 24.1

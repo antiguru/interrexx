@@ -100,29 +100,29 @@ bad: say arg(1) '=>' condition('o')~code
 ```
 
 r[expr.arithmetic.exponent.message]
-The message of the `SYNTAX 26.8` error names the exponent as the program wrote
-it, not as the number it denotes.
+The `ADDITIONAL` array of the `SYNTAX 26.8` error holds the exponent as the
+program wrote it, not as the number it denotes.
 
 ```rexx
 signal on syntax name a
 say 2 ** 0.5e0
-a: say condition('o')~message
+a: say condition('o')~additional~items '['condition('o')~additional[1]']'
 signal on syntax name b
 say 2 ** ' 0.50 '
-b: say condition('o')~message
+b: say condition('o')~additional~items '['condition('o')~additional[1]']'
 signal on syntax name c
 say 2 ** 00.5
-c: say condition('o')~message
+c: say condition('o')~additional~items '['condition('o')~additional[1]']'
 signal on syntax name d
 say '3'~'**'(' 0.5E+0')
-d: say condition('o')~message
+d: say condition('o')~additional~items '['condition('o')~additional[1]']'
 ```
 
 ```output
-Operand to the right of the power operator (**) must be a whole number; found "0.5E0".
-Operand to the right of the power operator (**) must be a whole number; found " 0.50 ".
-Operand to the right of the power operator (**) must be a whole number; found "00.5".
-Operand to the right of the power operator (**) must be a whole number; found " 0.5E+0".
+1 [0.5E0]
+1 [ 0.50 ]
+1 [00.5]
+1 [ 0.5E+0]
 ```
 
 ## Operands that are not numbers

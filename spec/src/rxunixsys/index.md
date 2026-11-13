@@ -184,9 +184,9 @@ call try "SysGeterrnomsg('+2')"
 call try "SysGeterrnomsg('1E0')"
 call try "SysGeterrnomsg(2*3)"
 call try "SysGeterrnomsg(1.5)"
-call try "(SysGeterrnomsg(2147483647) \= '')"
-call try "(SysGeterrnomsg('-2147483647') \= '')"
-call try "(SysGeterrnomsg('-2147483648') \= '')"
+call try "SysGeterrnomsg(2147483647)"
+call try "SysGeterrnomsg('-2147483647')"
+call try "SysGeterrnomsg('-2147483648')"
 call try "SysGeterrnomsg('2147483648')"
 call try "SysGeterrnomsg('-2147483649')"
 call try "SysGeterrnomsg('')"
@@ -199,10 +199,15 @@ call try "SysKill(0, 'x')"
 call try "SysUmask('x')"
 call try "SysGetpwuid('x', 'n')"
 call try "SysClose('x')"
+say (SysGeterrnomsg(2.0) == SysGeterrnomsg(2)) (SysGeterrnomsg(' 2 ') == SysGeterrnomsg(2)),
+    (SysGeterrnomsg('+2') == SysGeterrnomsg(2)) (SysGeterrnomsg('1E0') == SysGeterrnomsg(1)),
+    (SysGeterrnomsg(2*3) == SysGeterrnomsg(6)) (SysGeterrnomsg(.mutablebuffer~new('2')) == SysGeterrnomsg(2)),
+    (SysGeterrnomsg(2) \== SysGeterrnomsg(1))
 exit
 try:
   signal on syntax name e
-  interpret 'say arg(1) ''=>'' ' arg(1)
+  interpret 'r =' arg(1)
+  say arg(1) '=>' (r \== '')
   return
 e: say arg(1) '->' condition('o')~code
   return
@@ -210,27 +215,28 @@ e: say arg(1) '->' condition('o')~code
 ```
 
 ```output
-SysGeterrnomsg(2.0) => No such file or directory
-SysGeterrnomsg(' 2 ') => No such file or directory
-SysGeterrnomsg('+2') => No such file or directory
-SysGeterrnomsg('1E0') => Operation not permitted
-SysGeterrnomsg(2*3) => No such device or address
+SysGeterrnomsg(2.0) => 1
+SysGeterrnomsg(' 2 ') => 1
+SysGeterrnomsg('+2') => 1
+SysGeterrnomsg('1E0') => 1
+SysGeterrnomsg(2*3) => 1
 SysGeterrnomsg(1.5) -> 88.907
-(SysGeterrnomsg(2147483647) \= '') => 1
-(SysGeterrnomsg('-2147483647') \= '') => 1
-(SysGeterrnomsg('-2147483648') \= '') => 1
+SysGeterrnomsg(2147483647) => 1
+SysGeterrnomsg('-2147483647') => 1
+SysGeterrnomsg('-2147483648') => 1
 SysGeterrnomsg('2147483648') -> 88.907
 SysGeterrnomsg('-2147483649') -> 88.907
 SysGeterrnomsg('') -> 88.907
 SysGeterrnomsg('x') -> 88.907
 SysGeterrnomsg(.nil) -> 88.907
 SysGeterrnomsg(.object~new) -> 88.907
-SysGeterrnomsg(.mutablebuffer~new('2')) => No such file or directory
+SysGeterrnomsg(.mutablebuffer~new('2')) => 1
 SysKill('x', 0) -> 88.907
 SysKill(0, 'x') -> 88.907
 SysUmask('x') -> 88.907
 SysGetpwuid('x', 'n') -> 88.907
 SysClose('x') -> 88.907
+1 1 1 1 1 1 1
 ```
 
 r[rxunixsys.index.option]
@@ -271,29 +277,29 @@ try:
   signal on syntax name e
   interpret 'say arg(1) ''=>'' ' arg(1)
   return
-e: say arg(1) '->' condition('o')~code condition('o')~errortext
+e: say arg(1) '->' condition('o')~code
   return
 ::requires 'rxunixsys' library
 ```
 
 ```output
-SysStat('c1zqf1', 'x') -> 40.1 Incorrect call to routine.
-SysStat('c1zqf1', '') -> 40.1 Incorrect call to routine.
-SysStat('', 'p') -> 40.1 Incorrect call to routine.
-SysStat('x', 'x', 3) -> 88.922 Invalid argument.
+SysStat('c1zqf1', 'x') -> 40.1
+SysStat('c1zqf1', '') -> 40.1
+SysStat('', 'p') -> 40.1
+SysStat('x', 'x', 3) -> 88.922
 SysStat('c1zqf1', 'p') => -rw-r-----
 SysStat('c1zqf1', 'Perm') => -rw-r-----
 SysStat('c1zqf1', 'PX') => -rw-r-----
-SysUname('x') -> 40.1 Incorrect call to routine.
-SysUname('') -> 40.1 Incorrect call to routine.
+SysUname('x') -> 40.1
+SysUname('') -> 40.1
 SysChmod('', 'rw-rw-rw-') => -1
-SysChmod('c1zqnone', '') -> 40.1 Incorrect call to routine.
-SysSignal(0, 'x') -> 40.1 Incorrect call to routine.
-SysSignal(0, '') -> 40.1 Incorrect call to routine.
-SysSignal('x', 'x') -> 88.907 Invalid argument.
-SysGetpwnam('', 'n') -> 40.1 Incorrect call to routine.
-SysGetpwnam('root', '') -> 40.1 Incorrect call to routine.
-SysGetpwnam('root', 'x') -> 40.1 Incorrect call to routine.
+SysChmod('c1zqnone', '') -> 40.1
+SysSignal(0, 'x') -> 40.1
+SysSignal(0, '') -> 40.1
+SysSignal('x', 'x') -> 88.907
+SysGetpwnam('', 'n') -> 40.1
+SysGetpwnam('root', '') -> 40.1
+SysGetpwnam('root', 'x') -> 40.1
 ```
 
 ## What the functions answer
@@ -338,13 +344,13 @@ number is that of the failed call when `SysGeterrno` is called in the same
 clause, after the failed call and after nothing else that fails, as in the
 examples; what a later clause finds, and what another activity does to it, is
 the subject of [Deviation 164](r:rxunixsys.index.deviation.164).
-`SysGeterrnomsg` answers
-`Ok` for `0` and, for every other number, the text that the platform gives that
-error number, as C's `strerror` words it at run time, so that the wording
-differs between platforms. The answer is never the null string, also for a
-number that is no error number of the platform, or is negative. It takes the
-number as a [whole number](r:rxunixsys.index.whole). The examples show the
-texts that Linux gives.
+`SysGeterrnomsg` takes the number as a [whole
+number](r:rxunixsys.index.whole) and answers a string that is not null for every
+number, `0` and a number that no error has included: the system's description
+of the error, as C's `strerror` gives it at run time, so that two numbers of
+different errors answer different strings. The wording is that of the platform
+and is not specified (see [the rule on error messages](r:conv.error.text)), and
+the examples look only at whether strings are alike.
 
 ```rexx
 say SysUnlink('c1zqnone') SysGeterrno()
@@ -355,9 +361,13 @@ call lineout 'c1zqf1', 'x'
 call lineout 'c1zqf1'
 say SysMkdirUnix('c1zqf1', 493) SysGeterrno() SysRmdirUnix('c1zqf1') SysGeterrno()
 call SysFileDelete 'c1zqf1'
-say SysGeterrnomsg(0) '|' SysGeterrnomsg(1) '|' SysGeterrnomsg(2) '|' SysGeterrnomsg(13)
-say SysGeterrnomsg(17) '|' SysGeterrnomsg(20) '|' SysGeterrnomsg(21) '|' SysGeterrnomsg(22)
-say SysGeterrnomsg(39) '|' (SysGeterrnomsg(2147483647) \= '') '|' (SysGeterrnomsg(1000) \= '') '|' (SysGeterrnomsg(-1) \= '')
+say (SysGeterrnomsg(0) \== '') (SysGeterrnomsg(2147483647) \== '') (SysGeterrnomsg(1000) \== '')
+do n over .array~of(1, 2, 13, 17, 20, 21, 22, 39)
+  do m over .array~of(1, 2, 13, 17, 20, 21, 22, 39)
+    if n \= m, SysGeterrnomsg(n) == SysGeterrnomsg(m) then say 'alike' n m
+  end
+end
+say 'checked'
 ::requires 'rxunixsys' library
 ```
 
@@ -367,9 +377,8 @@ say SysGeterrnomsg(39) '|' (SysGeterrnomsg(2147483647) \= '') '|' (SysGeterrnoms
 0 -1 17
 0 -1 2
 -1 17 -1 20
-Ok | Operation not permitted | No such file or directory | Permission denied
-File exists | Not a directory | Is a directory | Invalid argument
-Directory not empty | 1 | 1 | 1
+1 1 1
+checked
 ```
 
 ## Deviations

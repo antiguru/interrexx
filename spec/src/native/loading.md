@@ -302,7 +302,7 @@ the end. It receives the name of the function in capitals, however the call
 spelled it. Its answer is the result of the call. A function that leaves no
 result makes a function call raise `SYNTAX 44.1` and a CALL drop the variable
 `RESULT`, and a function that refuses the call raises `SYNTAX 40.1`, whose
-message names the function as it was registered, in capitals.
+`ADDITIONAL` holds the name of the function as it was registered, in capitals.
 
 ```rexx
 call rxfuncadd 'MyJoin', 'specclassic', 'FxClassicJoin'
@@ -320,7 +320,7 @@ call mynone
 say symbol('RESULT')
 signal on syntax name b
 say myfail()
-b: say condition('o')~code condition('o')~message
+b: say condition('o')~code condition('o')~additional[1]
 call rxfuncdrop 'MyJoin'
 call rxfuncdrop 'MyNone'
 call rxfuncdrop 'MyFail'
@@ -331,7 +331,7 @@ MYJOIN:3:1,(),3 MYJOIN:1:1 MYJOIN:2:(),2
 MYJOIN:2:a,b
 44.1
 LIT
-40.1 External routine "MYFAIL" failed.
+40.1 MYFAIL
 ```
 
 ```rexx
