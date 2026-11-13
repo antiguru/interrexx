@@ -981,24 +981,12 @@ pub(crate) fn geterrno(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<O
 pub(crate) fn geterrnomsg(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<ObjRef> {
     check_arity(args, 1)?;
     let errno = int(interp, args, 1)?;
-    let message = errno_message(errno);
-    Ok(string(interp, message.as_bytes()))
-}
-
-/// The text of error number `errno`: `Ok` for 0, otherwise what the C
-/// library's `strerror` answers at run time, which the platform words.
-fn errno_message(errno: i32) -> String {
     if errno == 0 {
-        return "Ok".to_owned();
+        return Ok(string(interp, b"Ok"));
     }
-    // `std` reads the text through the C library's thread-safe `strerror`
-    // and appends ` (os error N)`, which is cut off again here.
-    let text = std::io::Error::from_raw_os_error(errno).to_string();
-    let suffix = format!(" (os error {errno})");
-    match text.strip_suffix(&suffix) {
-        Some(plain) => plain.to_owned(),
-        None => text,
-    }
+    // The platform words every other number, read at run time.
+    let message = super::rexxutil::messages::strerror(errno);
+    Ok(string(interp, &message))
 }
 
 #[cfg(test)]
