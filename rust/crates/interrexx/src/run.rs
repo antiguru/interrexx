@@ -2518,12 +2518,16 @@ impl Interp {
         // steps, markers (`Then`/`Else`/ `Otherwise`/`When`/`WhenCase`/`Label`)
         // included, so every one of those is traced from its own execution.
         let (tabled, position) = position;
-        let rerun = self.activity.rerun_indent.take();
-        // Both halves are about a clause an interactive-debug `=` re-runs,
-        // so the running activation is asked for only where one is pending.
-        if rerun.is_some() || self.activity.rerun_failure_indent.is_some() {
-            self.note_rerun(rerun, index);
-        }
+        // Both halves are about a clause an interactive-debug `=` re-runs, so
+        // a clause with neither pending reads the two fields and writes
+        // nothing.
+        let rerun = if self.activity.rerun_indent.is_some()
+            || self.activity.rerun_failure_indent.is_some()
+        {
+            self.note_rerun(index)
+        } else {
+            None
+        };
         let shortcut = tabled
             && source.is_some()
             && self.activity.clause_line_override.is_none()
@@ -2599,11 +2603,12 @@ impl Interp {
     }
 
     /// [`Interp::enter_stepped_clause`]'s bookkeeping for a clause an
-    /// interactive-debug `=` re-runs: the indent it is re-run at, or the
-    /// end of the one recorded for an earlier clause.
+    /// interactive-debug `=` re-runs: takes and answers the indent it is
+    /// re-run at, or ends the one recorded for an earlier clause.
     #[cold]
     #[inline(never)]
-    fn note_rerun(&mut self, rerun: Option<usize>, index: usize) {
+    fn note_rerun(&mut self, index: usize) -> Option<usize> {
+        let rerun = self.activity.rerun_indent.take();
         let here = self.running_activation().map(|activation| activation.id);
         match (rerun, here) {
             (Some(indent), Some(program)) => {
@@ -2619,6 +2624,7 @@ impl Interp {
                 }
             }
         }
+        rerun
     }
 
     /// Makes the instruction at `index` the clause the frame readers see:
