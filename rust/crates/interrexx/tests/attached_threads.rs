@@ -3,7 +3,7 @@
 //! directory of this run's own, starts threads that attach to the interpreter through the
 //! instance a call's thread context links, send messages, and detach. The programs beside it start
 //! them and run Rexx code, waiting with `SysSleep` until every thread has detached, then print what
-//! the messages did. Each expectation is literal; under `REXX_CORPUS_GATE` the oracle runs the same
+//! the messages did. Each expectation is literal. Under `REXX_CORPUS_GATE` the oracle runs the same
 //! program from the same directory and must print the same.
 
 #![cfg(target_os = "linux")]
@@ -16,6 +16,10 @@ use std::process::{Command, Stdio};
 
 /// The `memcap` limit each run is under.
 const MEMORY: &str = "2G";
+
+/// The seconds `timeout` gives each run before it kills it, so a run that deadlocks fails
+/// instead of hanging. It runs inside `memcap`, so the signal reaches `rexx` itself.
+const SECONDS: &str = "120";
 
 const GATE_ENV: &str = "REXX_CORPUS_GATE";
 
@@ -61,14 +65,16 @@ fn build(name: &str) -> PathBuf {
 /// What a run answered: stdout, stderr and the exit status.
 type Answer = (String, String, i32);
 
-/// Runs the fixture program `program` under `rexx`, memory-capped by `memcap`, from a directory
-/// holding the extension, answering its stdout, stderr and exit status. Under `REXX_CORPUS_GATE`
-/// the oracle runs the same program from the same directory and must answer the same.
+/// Runs the fixture program `program` under `rexx`, memory-capped by `memcap` and limited in time
+/// by `timeout`, from a directory holding the extension, answering its stdout, stderr and exit
+/// status. Under `REXX_CORPUS_GATE` the oracle runs the same program from the same directory and
+/// must answer the same.
 fn run(name: &str, program: &str) -> Answer {
     let dir = build(name);
     let program = fixture(program);
     let output = Command::new("memcap")
         .arg(MEMORY)
+        .args(["timeout", "-s", "KILL", SECONDS])
         .arg(env!("CARGO_BIN_EXE_rexx"))
         .arg(&program)
         .current_dir(&dir)
@@ -160,5 +166,39 @@ fn a_local_reference_survives_between_callbacks() {
     assert_eq!(
         run("attach-local", "local.rex"),
         ("shown kept\nticked 1\n".to_owned(), String::new(), 0)
+    );
+}
+
+/// The address `StringData` answers on an attached thread stays readable after a later callback
+/// of the attachment: the thread reads the bytes after a `TICK`.
+// spec: native.threads.attach
+#[test]
+fn string_data_on_an_attached_thread_outlives_its_callback() {
+    assert_eq!(
+        run("attach-string", "string.rex"),
+        ("string abc\nticked 1\n".to_owned(), String::new(), 0)
+    );
+}
+
+/// A buffer string an attached thread makes with `NewBufferString` is written through the
+/// address a later `BufferStringData` answers, finished at three of its four bytes, and passed to
+/// a method, which says it. `BufferStringLength` then answers the finished length.
+// spec: native.threads.attach
+#[test]
+fn a_buffer_string_on_an_attached_thread_is_written_and_finished() {
+    assert_eq!(
+        run("attach-buffer", "buffer.rex"),
+        ("shown abc\nbuffer 3\n".to_owned(), String::new(), 0)
+    );
+}
+
+/// A native call starts a thread that attaches and detaches, and joins it before it returns:
+/// the attach answers, with the only activity in that call, and the call answers 1.
+// spec: native.threads.attach
+#[test]
+fn a_thread_a_native_call_joins_attaches_and_detaches() {
+    assert_eq!(
+        run("attach-join", "join.rex"),
+        ("1\n".to_owned(), String::new(), 0)
     );
 }

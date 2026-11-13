@@ -592,10 +592,12 @@ pub struct ThreadContext {
 /// one instance, which every context linking the table links too
 /// (`r[native.threads.instance]`). A clone addresses the same table; the
 /// table's allocation lives until the last clone, or the last context linking
-/// it, is dropped, and the instance's is never freed.
+/// it, is dropped, and the instance's is never freed. A thread other than the
+/// interpreter's reaches the table through the instance while a clone lives
+/// (`AttachThread`), so clones are shared between threads.
 #[derive(Clone)]
 pub struct ThreadTable {
-    home: Rc<TableHome>,
+    home: std::sync::Arc<TableHome>,
     /// The baton a callback from a thread running no native call of the
     /// interpreter's takes.
     requester: Option<Requester>,
@@ -608,6 +610,18 @@ pub type Requester = std::sync::Arc<dyn crate::values::Baton + Send + Sync>;
 /// contexts linking it, and addresses its instance block, which it does not
 /// own.
 struct TableHome(NonNull<RexxThreadInterface>, NonNull<InstanceBlock>);
+
+// SAFETY: the table a `TableHome` owns is written only while its data members
+// are still null, before any extension holds a context linking it, and read
+// afterwards, so threads share it as they share any value written before it
+// was published. The instance block it addresses is never freed, and its
+// owner is reached only through shared references to fields that synchronise
+// themselves (an atomic, a mutex, a `Weak` of a `Send + Sync` baton). Freeing
+// the table on whichever thread drops the last clone is what a `Box` does on
+// any thread.
+unsafe impl Send for TableHome {}
+// SAFETY: as for `Send`, nothing writes through a shared `TableHome`.
+unsafe impl Sync for TableHome {}
 
 /// One interpreter's instance and its owner, in one allocation that is never
 /// freed: an extension may keep the instance pointer and call
@@ -632,7 +646,21 @@ struct InstanceOwner {
     /// native call of the interpreter attaches to. Once set it is never
     /// cleared, and the context it addresses is kept, so it is never freed.
     root: std::sync::atomic::AtomicPtr<RexxThreadContext_>,
+    /// The table, while a clone of it lives: a thread attaching to the
+    /// interpreter builds its context from it without the baton.
+    table: std::sync::Weak<TableHome>,
+    /// The contexts `AttachThread` built that no callback has filed as an
+    /// attached activity yet ([`ThreadTable::take_pending`]).
+    pending: std::sync::Mutex<Vec<Pending>>,
 }
+
+/// A context `AttachThread` built, which the interpreter has not filed yet.
+struct Pending(NonNull<Thread>);
+
+// SAFETY: the allocation is kept, so it lives for the rest of the process.
+// Whichever thread takes it from the pending list reads and writes it on the
+// baton, as every thread reaches a context.
+unsafe impl Send for Pending {}
 
 impl Drop for TableHome {
     fn drop(&mut self) {
@@ -671,20 +699,23 @@ impl ThreadTable {
             owner: InstanceOwner {
                 requester: requester.as_ref().map(std::sync::Arc::downgrade),
                 root: std::sync::atomic::AtomicPtr::new(std::ptr::null_mut()),
+                table: std::sync::Weak::new(),
+                pending: std::sync::Mutex::new(Vec::new()),
             },
         }));
+        let home = std::sync::Arc::new(TableHome(
+            NonNull::new(raw).expect("Box::into_raw answers a non-null pointer"),
+            NonNull::new(block).expect("Box::into_raw answers a non-null pointer"),
+        ));
         // SAFETY: `block` is the allocation just made and nothing else
         // addresses it yet. The link is taken from `block` itself, so its
         // provenance is the whole allocation's, which is what lets `owner_of`
         // read `owner` beside the public struct.
-        unsafe { (*block).instance.owner = &raw mut (*block).owner };
-        ThreadTable {
-            home: Rc::new(TableHome(
-                NonNull::new(raw).expect("Box::into_raw answers a non-null pointer"),
-                NonNull::new(block).expect("Box::into_raw answers a non-null pointer"),
-            )),
-            requester,
+        unsafe {
+            (*block).instance.owner = &raw mut (*block).owner;
+            (*block).owner.table = std::sync::Arc::downgrade(&home);
         }
+        ThreadTable { home, requester }
     }
 
     fn pointer(&self) -> *mut RexxThreadInterface {
@@ -714,6 +745,103 @@ impl ThreadTable {
             ((*(*instance).functions).SetTrace)(instance, logical_t::from(trace));
         }
     }
+
+    /// The context at `address` that `AttachThread` built from this table
+    /// and no callback has filed yet, taken off the pending list
+    /// (`r[native.threads.attach]`), or `None` where `address` is no such
+    /// context. The interpreter files it as an attached activity.
+    #[must_use]
+    pub fn take_pending(&self, address: usize) -> Option<ThreadContext> {
+        // SAFETY: the instance is this table's, which `with` made.
+        let owner = unsafe { owner_of_instance(self.instance()) }?;
+        let mut pending = owner
+            .pending
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        let at = pending
+            .iter()
+            .position(|Pending(raw)| context_of(*raw) as usize == address)?;
+        let Pending(raw) = pending.swap_remove(at);
+        Some(ThreadContext {
+            home: Rc::new(Home(raw)),
+        })
+    }
+}
+
+/// The address of the public struct of the context `raw` holds.
+fn context_of(raw: NonNull<Thread>) -> *mut RexxThreadContext_ {
+    let raw = raw.as_ptr();
+    // SAFETY: naming a field's address reads and writes nothing, and every
+    // `Thread` this is called on is kept, so it is live.
+    unsafe { (&raw mut (*raw).thread).cast() }
+}
+
+/// The context `AttachThread` builds for a thread with no activity of the
+/// interpreter whose instance is `instance`, without the baton
+/// (`r[native.threads.attach]`): an attached activity's context linking the
+/// interpreter's table, on the instance's pending list until a callback
+/// through it files it ([`ThreadTable::take_pending`]). A callback through it
+/// from the thread attached to it, with no native call in flight on it, opens
+/// an entry of its own for the length of the member it calls. The context is
+/// kept ([`ThreadContext::keep`]), as the thread holds its address until it
+/// detaches, whenever that is. `None` where the interpreter's table is gone.
+///
+/// # Safety
+/// As [`owner_of_instance`].
+unsafe fn build_attached(
+    instance: *mut RexxInstance_,
+    requester: Requester,
+) -> Option<*mut RexxThreadContext_> {
+    // SAFETY: the caller's guarantee.
+    let owner = unsafe { owner_of_instance(instance) }?;
+    let table = ThreadTable {
+        home: owner.table.upgrade()?,
+        requester: Some(requester),
+    };
+    let raw = Thread::allocate(&table);
+    // SAFETY: `raw` is the allocation just made, and no other thread has its
+    // address yet.
+    unsafe {
+        (*raw.as_ptr()).innermost.attached.set(true);
+        (*raw.as_ptr())
+            .kept
+            .store(true, std::sync::atomic::Ordering::Release);
+    }
+    let context = context_of(raw);
+    owner
+        .pending
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+        .push(Pending(raw));
+    Some(context)
+}
+
+/// Takes the context at `context` off its instance's pending list, answering
+/// whether it was there. No callback filed it, so its `DetachThread` has
+/// nothing of the interpreter's to end.
+///
+/// # Safety
+/// `context` is a thread context a [`ThreadContext`] or [`build_attached`]
+/// made, and is live.
+unsafe fn drop_pending(context: *mut RexxThreadContext_) -> bool {
+    // SAFETY: the caller guarantees the context, whose `instance` link is
+    // written only when it is built, from a table whose instance block is
+    // never freed.
+    let Some(owner) = (unsafe { owner_of_instance((*context).instance) }) else {
+        return false;
+    };
+    let mut pending = owner
+        .pending
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+    let Some(at) = pending
+        .iter()
+        .position(|Pending(raw)| context_of(*raw) == context)
+    else {
+        return false;
+    };
+    pending.swap_remove(at);
+    true
 }
 
 impl Default for ThreadTable {
@@ -756,6 +884,45 @@ struct Thread {
     kept: std::sync::atomic::AtomicBool,
 }
 
+impl Thread {
+    /// A new allocation for a context with no native call in flight, linking
+    /// `table`, which nothing frees but a [`Home`].
+    fn allocate(table: &ThreadTable) -> NonNull<Thread> {
+        let instance = table.instance();
+        let raw = Box::into_raw(Box::new(Thread {
+            thread: Owned {
+                context: RexxThreadContext_ {
+                    instance,
+                    functions: std::ptr::null_mut(),
+                },
+                owner: std::ptr::null_mut(),
+            },
+            table: table.clone(),
+            innermost: Innermost {
+                call: Cell::new(std::ptr::null()),
+                requester: table.requester.clone(),
+                retired: Cell::new(false),
+                attached: Cell::new(false),
+                strings: std::cell::RefCell::new(crate::values::CStringPool::new()),
+                instance,
+                context: std::ptr::null_mut(),
+            },
+            kept: std::sync::atomic::AtomicBool::new(false),
+        }));
+        // SAFETY: `raw` is the allocation just made and nothing else addresses
+        // it yet. Every link is taken from `raw` itself, so its provenance is
+        // the whole allocation's, which is what lets `owner_of` read `owner`
+        // beside a public struct.
+        unsafe {
+            let innermost = &raw mut (*raw).innermost;
+            (*raw).thread.context.functions = (*raw).table.pointer();
+            (*raw).thread.owner = innermost;
+            (*raw).innermost.context = (&raw mut (*raw).thread).cast();
+        }
+        NonNull::new(raw).expect("Box::into_raw answers a non-null pointer")
+    }
+}
+
 /// What a callback through a thread context reaches: the native call in
 /// flight on it and what the context links.
 struct Innermost {
@@ -771,9 +938,15 @@ struct Innermost {
     /// Whether [`ThreadContext::retire`] retired the context.
     retired: Cell<bool>,
     /// Whether the context is an attached activity's
-    /// ([`ThreadContext::make_attached`]): a callback through it with no
+    /// ([`build_attached`]): a callback through it with no
     /// native call in flight opens an entry of its own.
     attached: Cell<bool>,
+    /// The C strings and buffer strings the callbacks of an attached
+    /// activity's context make with no native call in flight, which last
+    /// until its thread detaches, as the references they make do. Only the
+    /// thread attached to the context borrows it ([`open_attached`],
+    /// [`detach_thread`]).
+    strings: std::cell::RefCell<crate::values::CStringPool>,
     /// The instance the context links.
     instance: *mut RexxInstance_,
     /// The context itself.
@@ -919,40 +1092,8 @@ impl ThreadContext {
     /// A thread context with no native call in flight, linking `table`.
     #[must_use]
     pub fn linking(table: &ThreadTable) -> ThreadContext {
-        let instance = table.instance();
-        let raw = Box::into_raw(Box::new(Thread {
-            thread: Owned {
-                context: RexxThreadContext_ {
-                    instance,
-                    functions: std::ptr::null_mut(),
-                },
-                owner: std::ptr::null_mut(),
-            },
-            table: table.clone(),
-            innermost: Innermost {
-                call: Cell::new(std::ptr::null()),
-                requester: table.requester.clone(),
-                retired: Cell::new(false),
-                attached: Cell::new(false),
-                instance,
-                context: std::ptr::null_mut(),
-            },
-            kept: std::sync::atomic::AtomicBool::new(false),
-        }));
-        // SAFETY: `raw` is the allocation just made and nothing else addresses
-        // it yet. Every link is taken from `raw` itself, so its provenance is
-        // the whole allocation's, which is what lets `owner_of` read `owner`
-        // beside a public struct.
-        unsafe {
-            let innermost = &raw mut (*raw).innermost;
-            (*raw).thread.context.functions = (*raw).table.pointer();
-            (*raw).thread.owner = innermost;
-            (*raw).innermost.context = (&raw mut (*raw).thread).cast();
-        }
         ThreadContext {
-            home: Rc::new(Home(
-                NonNull::new(raw).expect("Box::into_raw answers a non-null pointer"),
-            )),
+            home: Rc::new(Home(Thread::allocate(table))),
         }
     }
 
@@ -983,20 +1124,6 @@ impl ThreadContext {
         unsafe { (*raw).innermost.retired.set(true) };
     }
 
-    /// Makes this context an attached activity's (`r[native.threads.attach]`):
-    /// a callback through it from the thread attached to it, with no native
-    /// call in flight on it, opens an entry of its own for the length of the
-    /// member it calls. The context is kept ([`ThreadContext::keep`]), as the
-    /// thread holds its address until it detaches, whenever that is.
-    pub fn make_attached(&self) {
-        let raw = self.home.0.as_ptr();
-        // SAFETY: the allocation is live while `self` is; the reference
-        // covers only the cell, which is written on the baton before the
-        // context's address is handed to any thread.
-        unsafe { (*raw).innermost.attached.set(true) };
-        self.keep();
-    }
-
     /// The address an extension is handed, as a number.
     #[must_use]
     pub fn address(&self) -> usize {
@@ -1017,7 +1144,7 @@ impl ThreadContext {
     pub fn instance_address(&self) -> usize {
         let raw = self.home.0.as_ptr();
         // SAFETY: the allocation is live while `self` is; the link is written
-        // only by `linking`.
+        // only by `Thread::allocate`.
         unsafe { (*raw).thread.context.instance as usize }
     }
 
@@ -1043,7 +1170,7 @@ impl ThreadContext {
     pub fn make_root(&self) {
         let raw = self.home.0.as_ptr();
         // SAFETY: the allocation is live while `self` is; the link is written
-        // only by `linking`, from a table whose instance block is never
+        // only by `Thread::allocate`, from a table whose instance block is never
         // freed.
         let owner = unsafe { owner_of_instance((*raw).thread.context.instance) };
         if let Some(owner) = owner {
@@ -1497,8 +1624,9 @@ unsafe fn variables_of<'a, C: CallLinked>(context: *mut C) -> Option<(Reached<'a
 ///
 /// # Safety
 /// `context` is a thread context a [`ThreadContext`] handed out, some clone
-/// of which is alive. A caller holding the innermost call's conversion state
-/// on its own activity is caught by its `RefCell`, a panic.
+/// of which is alive, or a kept one, as every context [`attach_thread`]
+/// answers is. A caller holding the innermost call's conversion state on its
+/// own activity is caught by its `RefCell`, a panic.
 unsafe fn innermost_activation<'a, 'c: 'a>(
     room: &'a mut Room<'c, 'a>,
     context: *mut RexxThreadContext_,
@@ -1594,8 +1722,13 @@ unsafe fn reached<'a, 'c: 'a>(
     room: Option<&'a mut Room<'c, 'a>>,
 ) -> Addressed<'a> {
     // SAFETY: the caller guarantees `context` came from a live
-    // `ThreadContext`, whose wrapper's `owner` is its `Innermost`, a field of
-    // the same allocation.
+    // `ThreadContext` or is kept, and its wrapper's `owner` is its
+    // `Innermost`, a field of the same allocation. `owner_of` bounds no
+    // lifetime, and `'c` is the lifetime of the room the member declares in
+    // its own frame, or shorter where it passes none. A context some clone
+    // keeps alive is alive for the member's length, as the caller guarantees,
+    // and a kept one for the rest of the process, so `'c` ends before the
+    // allocation can.
     let cell: &'c Innermost = unsafe { &*owner_of::<RexxThreadContext_, Innermost>(context) };
     if attached_here(context as usize)
         && !calls_here().any(|entry| std::ptr::eq(entry.innermost, cell))
@@ -1625,9 +1758,11 @@ unsafe fn reached<'a, 'c: 'a>(
         !innermost.is_null(),
         "RexxThreadInterface.{slot} was called with no native call in flight"
     );
-    // SAFETY: a non-null pointer is a call `ThreadContext::enter` is running,
-    // whose activation is borrowed for as long as the pointer is there. The
-    // reference is shared, as in `addressed`.
+    // SAFETY: a non-null pointer is an entry linked from the cell until its
+    // drop: a call `ThreadContext::enter` is running, or a callback's entry in
+    // a `Room` on an attached thread's stack ([`open_attached`]), whose member
+    // runs. Either borrows its activation for as long as the pointer is
+    // there. The reference is shared, as in `addressed`.
     let innermost = unsafe { &*(*innermost).activation.cast::<Activation<'a>>() };
     debug_assert!(
         innermost.baton_held(),
@@ -1661,7 +1796,7 @@ unsafe fn reached<'a, 'c: 'a>(
 /// its context that runs none of its calls: the attached thread acts as that
 /// call, as the attached thread is its activity, under the baton the context's
 /// requester takes. An attached activity's context with no call in flight
-/// opens an entry in `room` for the member's length ([`open_attached`]); with
+/// opens an entry in `room` for the member's length ([`open_attached`]). With
 /// no room, or where the host refuses the callback
 /// ([`crate::values::Baton::refuses_foreign`]), the member does nothing.
 ///
@@ -1693,9 +1828,12 @@ fn attached_call<'a, 'c: 'a>(
         !innermost.is_null(),
         "RexxThreadInterface.{slot} was called with no native call in flight"
     );
-    // SAFETY: a non-null pointer is a call `ThreadContext::enter` is running,
-    // whose activation is borrowed for as long as the pointer is there, and
-    // the baton is held, so nothing else reaches it meanwhile.
+    // SAFETY: a non-null pointer is an entry linked from the cell until its
+    // drop. It is no `Room` entry ([`open_attached`]): only the thread
+    // attached to an attached activity's context opens one, and this thread
+    // runs no entry of the cell. So it is a call `ThreadContext::enter` is
+    // running, whose activation is borrowed for as long as the pointer is
+    // there, and the baton is held, so nothing else reaches it meanwhile.
     let innermost = unsafe { &*(*innermost).activation.cast::<Activation<'a>>() };
     Addressed::Here(Reached::checked(innermost, held), None)
 }
@@ -1704,14 +1842,15 @@ fn attached_call<'a, 'c: 'a>(
 /// attached activity's context opens (`r[native.threads.attach]`): the entry
 /// lasts as long as the member, on the calling thread's stack, and runs
 /// against an activation of its own, whose baton is the context's requester
-/// and whose host is the one lent with it. The fields drop in order: the
-/// entry is unlinked while the baton is still held, then the baton is given
-/// back.
+/// and whose host is the one lent with it. Its C strings and buffer strings
+/// are the context's, which outlive the member until the thread detaches. The
+/// fields drop in order: the entry is unlinked while the baton is still held,
+/// then the baton is given back.
 pub(crate) struct Room<'c, 'p> {
     entered: Option<Entered<'c>>,
     held: Option<crate::values::BatonHold<'c>>,
     activation: Option<Activation<'p>>,
-    strings: crate::values::CStringPool,
+    strings: Option<std::cell::RefMut<'c, crate::values::CStringPool>>,
 }
 
 impl Room<'_, '_> {
@@ -1722,7 +1861,7 @@ impl Room<'_, '_> {
             entered: None,
             held: None,
             activation: None,
-            strings: crate::values::CStringPool::new(),
+            strings: None,
         }
     }
 }
@@ -1730,7 +1869,8 @@ impl Room<'_, '_> {
 /// Opens the entry of a callback through `cell`, an attached activity's
 /// context with no call in flight, in `room`, under the baton `held` that
 /// `requester` took: the attached activity is the host's running one while
-/// the member runs, and its base native frame holds what the member makes.
+/// the member runs, its base native frame holds the references the member
+/// makes, and the context's string pool the strings.
 fn open_attached<'a, 'c: 'a>(
     room: &'a mut Room<'c, 'a>,
     cell: &'c Innermost,
@@ -1744,6 +1884,7 @@ fn open_attached<'a, 'c: 'a>(
         strings,
     } = room;
     *kept = Some(held);
+    let strings = strings.insert(cell.strings.borrow_mut());
     let activation: &'a Activation<'a> =
         activation.insert(Activation::new(crate::values::Conversion {
             host: crate::values::HostRef::through(requester),
@@ -1797,7 +1938,8 @@ unsafe extern "C" fn drop_object_variable(context: *mut RexxMethodContext_, name
 }
 
 /// # Safety
-/// `context` is a thread context a live [`ThreadContext`] handed out.
+/// `context` is a thread context a live [`ThreadContext`] handed out, or one
+/// [`attach_thread`] answered.
 unsafe extern "C" fn whole_number_to_object(
     context: *mut RexxThreadContext_,
     value: wholenumber_t,
@@ -4781,8 +4923,8 @@ fn attached_to(instance: *mut RexxInstance_) -> Option<*mut RexxThreadContext_> 
             .find(|&context| {
                 // SAFETY: a context stays on this thread's list only while it
                 // is attached, and an attached context is kept: the root by
-                // `make_root`, an attached activity's by `make_attached`. Its
-                // `instance` link is written only by `linking`.
+                // `make_root`, an attached activity's by `build_attached`. Its
+                // `instance` link is written only when it is built.
                 unsafe { (*context).instance == instance }
             })
     })
@@ -4800,17 +4942,20 @@ fn call_here(instance: *mut RexxInstance_) -> Option<*mut RexxThreadContext_> {
 /// interpreter is answered that call's context, and is not attached. A thread
 /// already attached to a context of the interpreter, as the thread that
 /// created an embedding is to its root, is attached to it once more. Any
-/// other thread is attached to an activity of its own, which the interpreter
-/// files for it (`r[native.threads.attach]`): its callbacks run as that
-/// activity until it detaches. An attached activity's context is kept
-/// ([`ThreadContext::make_attached`]), so a `DetachThread` at any time reads
-/// live memory. A thread the interpreter refuses
+/// other thread is attached to an activity of its own
+/// (`r[native.threads.attach]`): its callbacks run as that activity until it
+/// detaches. The context is built without the baton, and the interpreter files
+/// the activity at the first callback through it ([`build_attached`]), so an
+/// attach answers while the interpreter's only activity runs a native call
+/// that waits for the attaching thread. An attached activity's context is
+/// kept, so a `DetachThread` at any time reads live memory. A thread the
+/// interpreter refuses
 /// ([`crate::values::Baton::refuses_foreign`]) is not attached, and the answer
 /// is false.
 ///
 /// An instance whose table has no requester attaches the thread to the
-/// interpreter's root context, which is kept ([`ThreadContext::make_root`]);
-/// where it has none, nothing is attached and the answer is false.
+/// interpreter's root context, which is kept ([`ThreadContext::make_root`]).
+/// Where it has none, nothing is attached and the answer is false.
 ///
 /// # Safety
 /// `instance` is an instance a [`ThreadTable`] made, and a non-null
@@ -4829,10 +4974,9 @@ unsafe extern "C" fn attach_thread(
             // SAFETY: the caller guarantees `instance`.
             None => match unsafe { live_requester(instance) } {
                 Some(requester) if requester.refuses_foreign() => None,
-                Some(requester) => requester.attach_activity().map(|address| {
-                    attach_here(address);
-                    address as *mut RexxThreadContext_
-                }),
+                // SAFETY: the caller guarantees `instance`.
+                Some(requester) => unsafe { build_attached(instance, requester) }
+                    .inspect(|&context| attach_here(context as usize)),
                 // SAFETY: the caller guarantees `instance`.
                 None => unsafe { root_of(instance) }.inspect(|&root| attach_here(root as usize)),
             },
@@ -5196,7 +5340,8 @@ mod redirector {
 /// `DetachThread`: ends one attach of this thread to the context
 /// [`attach_thread`] answered. The last one of an attached activity's context
 /// ends that activity (`r[native.threads.attach]`), unless this thread runs a
-/// call of it, which holds it still, so nothing is released.
+/// call of it, which holds it still, so nothing is released. It releases the
+/// strings and buffers the context's callbacks made for the thread.
 ///
 /// # Safety
 /// As [`whole_number_to_object`].
@@ -5207,11 +5352,18 @@ unsafe extern "C" fn detach_thread(context: *mut RexxThreadContext_) {
             // SAFETY: the context was attached, so it is kept and live, and
             // its wrapper's `owner` is its `Innermost`.
             let cell = unsafe { &*owner_of::<RexxThreadContext_, Innermost>(context) };
-            if cell.attached.get()
-                && !calls_here().any(|entry| std::ptr::eq(entry.innermost, cell))
-                && let Some(requester) = &cell.requester
+            if cell.attached.get() && !calls_here().any(|entry| std::ptr::eq(entry.innermost, cell))
             {
-                requester.detach_activity(context as usize);
+                // A context no callback filed has no activity to end, so its
+                // detach takes no baton and answers while the interpreter
+                // waits for this thread.
+                // SAFETY: as for `cell`.
+                if !unsafe { drop_pending(context) }
+                    && let Some(requester) = &cell.requester
+                {
+                    requester.detach_activity(context as usize);
+                }
+                cell.strings.take();
             }
             return;
         }

@@ -12,8 +12,15 @@
 //   the send left, and sends `TICK`.
 // * `AtLocal(target)` makes a string, sends `TICK`, then sends `SHOW` with that string as its
 //   argument: a local reference made in one callback of the attachment and used in a later one.
+// * `AtString(target)` takes `StringData` of a string it makes, sends `TICK`, and reports the
+//   bytes it reads through that pointer afterwards.
+// * `AtBuffer(target)` makes a buffer string, writes its bytes through `BufferStringData`,
+//   finishes it, and sends `SHOW` with it as its argument.
+// * `AtJoin()` starts a thread that attaches and detaches, joins it while the call runs, and
+//   answers whether it attached.
 #include <atomic>
 #include <pthread.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include "oorexxapi.h"
@@ -22,7 +29,9 @@ enum Job
 {
     TICKER,
     RAISING,
-    LOCAL
+    LOCAL,
+    STRING_DATA,
+    BUFFER_STRING
 };
 
 struct Thread
@@ -63,6 +72,28 @@ static void run(RexxThreadContext *thread, Thread *self)
             thread->SendMessage1(self->target, "SHOW", kept);
             break;
         }
+        case STRING_DATA:
+        {
+            CSTRING data = thread->StringData(thread->NewStringFromAsciiz("abc"));
+            thread->SendMessage0(self->target, "TICK");
+            snprintf(report, sizeof report, "string %s", data != NULL ? data : "null");
+            break;
+        }
+        case BUFFER_STRING:
+        {
+            RexxBufferStringObject buffer = thread->NewBufferString(4);
+            POINTER data = thread->BufferStringData(buffer);
+            if (data == NULL)
+            {
+                snprintf(report, sizeof report, "buffer null");
+                break;
+            }
+            memcpy(data, "abcd", 4);
+            RexxStringObject finished = thread->FinishBufferString(buffer, 3);
+            thread->SendMessage1(self->target, "SHOW", finished);
+            snprintf(report, sizeof report, "buffer %zu", thread->BufferStringLength(buffer));
+            break;
+        }
     }
 }
 
@@ -81,7 +112,7 @@ static void *body(void *argument)
     return NULL;
 }
 
-// Starts a detached thread doing `job`; answers 1 where it started.
+// Starts a detached thread doing `job`, and answers 1 where it started.
 static logical_t start(RexxCallContext *context, RexxObjectPtr target, Job job, size_t count)
 {
     Thread *self = new Thread;
@@ -119,6 +150,39 @@ RexxRoutine1(logical_t, AtLocal, RexxObjectPtr, target)
     return start(context, target, LOCAL, 0);
 }
 
+RexxRoutine1(logical_t, AtString, RexxObjectPtr, target)
+{
+    return start(context, target, STRING_DATA, 0);
+}
+
+RexxRoutine1(logical_t, AtBuffer, RexxObjectPtr, target)
+{
+    return start(context, target, BUFFER_STRING, 0);
+}
+
+static void *attach_and_detach(void *argument)
+{
+    RexxThreadContext *thread = NULL;
+    logical_t attached = ((RexxInstance *)argument)->AttachThread(&thread);
+    if (attached)
+    {
+        thread->DetachThread();
+    }
+    return (void *)(intptr_t)attached;
+}
+
+RexxRoutine0(int, AtJoin)
+{
+    pthread_t thread;
+    if (pthread_create(&thread, NULL, attach_and_detach, context->threadContext->instance) != 0)
+    {
+        return -1;
+    }
+    void *attached = NULL;
+    pthread_join(thread, &attached);
+    return (int)(intptr_t)attached;
+}
+
 RexxRoutine0(int, AtDone)
 {
     return finished;
@@ -133,6 +197,9 @@ static RexxRoutineEntry routines[] = {
     REXX_TYPED_ROUTINE(AtTicker, AtTicker),
     REXX_TYPED_ROUTINE(AtRaising, AtRaising),
     REXX_TYPED_ROUTINE(AtLocal, AtLocal),
+    REXX_TYPED_ROUTINE(AtString, AtString),
+    REXX_TYPED_ROUTINE(AtBuffer, AtBuffer),
+    REXX_TYPED_ROUTINE(AtJoin, AtJoin),
     REXX_TYPED_ROUTINE(AtDone, AtDone),
     REXX_TYPED_ROUTINE(AtReport, AtReport),
     REXX_LAST_ROUTINE()

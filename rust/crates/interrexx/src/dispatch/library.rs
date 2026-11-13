@@ -1713,14 +1713,7 @@ impl interrexx_api::values::Baton for Requester {
     }
 
     /// Recalls the baton as a callback does, with the running activity left
-    /// as it is, and files the attached activity under the lend.
-    fn attach_activity(&self) -> Option<usize> {
-        let mut lent = self.lend_here()?;
-        Some(lent.interp().attach_activity())
-    }
-
-    /// Recalls the baton as [`Requester::attach_activity`] does, and ends the
-    /// attached activity under the lend.
+    /// as it is, and ends the attached activity under the lend.
     fn detach_activity(&self, context: usize) {
         if let Some(mut lent) = self.lend_here() {
             lent.interp().detach_activity(context);
@@ -1730,7 +1723,7 @@ impl interrexx_api::values::Baton for Requester {
 
 impl Requester {
     /// The baton, recalled from its holder and lent to this thread with the
-    /// running activity left as it is, until the answer drops; `None` where
+    /// running activity left as it is, until the answer drops. `None` where
     /// this thread holds it already, or the interpreter has terminated, so
     /// nothing would lend it.
     fn lend_here(&self) -> Option<Lent<'_>> {

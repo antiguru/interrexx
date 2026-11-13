@@ -364,7 +364,7 @@ pub(crate) struct Activities {
     /// Whether the program's end found activities that nothing can wake any
     /// more and refused their wait (Deviation 20).
     ended_stuck: bool,
-    /// The attached activities filed ([`Interp::attach_activity`]).
+    /// The attached activities filed ([`Interp::file_attached`]).
     attached: usize,
 }
 
@@ -1346,12 +1346,14 @@ impl Interp {
                     // semaphore's post or release, a native call's or a
                     // command's end) or a guard (its release, a store a
                     // `GUARD WHEN` watches); a halt ends each of these.
+                    // An attached activity idle between its callbacks is woken
+                    // by the next callback its thread makes.
                     let wakes = parked[index]
                         || record.when_parked
                         || table.semaphores.queues(activity)
                         || record.native_call.is_some()
                         || !record.blocked.is_empty()
-                        || record.attached;
+                        || record.attached && record.running.is_none();
                     if !ready[index] && !finished && !wakes {
                         return fail("a parked activity with no wake source");
                     }
@@ -1819,7 +1821,9 @@ impl Interp {
                 .and_then(|idle| idle.activity.native_call.as_ref())
                 .is_some_and(|call| call.frame() == frame)
                 .then_some(activity),
-            Recaller::Context(address) => self.context_owner(address),
+            Recaller::Context(address) => self
+                .context_owner(address)
+                .or_else(|| self.file_attached(address)),
         }
         .filter(|activity| *activity != outgoing);
         if let Some(activity) = activity {
@@ -1832,7 +1836,7 @@ impl Interp {
         }
         // An attached activity runs nothing between its callbacks, so what a
         // callback rooted as a temporary is dropped once it gives the baton
-        // back; the references it made are in the base frame's table.
+        // back. The references it made are in the base frame's table.
         let temps = (self.activity.attached).then(|| self.roots.activity_mut().push_frame());
         pin_enter!(self, crate::pinning::PinKind::NativeApiCallback);
         self.activities.runs_below += 1;
@@ -1862,18 +1866,18 @@ impl Interp {
         self.activities.attached
     }
 
-    /// `AttachThread` from a thread with no activity of this interpreter
-    /// (`r[native.threads.attach]`): files an attached activity, idle until a
-    /// callback through its thread context runs it, with a base native frame
-    /// for what those callbacks make, and answers that context's address.
-    /// As a spawn does, it makes guards live and numbers the running activity.
-    pub(crate) fn attach_activity(&mut self) -> usize {
+    /// The first callback through the context at `address` that `AttachThread`
+    /// built for a thread with no activity of this interpreter
+    /// (`r[native.threads.attach]`): files the attached activity whose context
+    /// it is, idle until a callback through it runs it, with a base native
+    /// frame for what those callbacks make, and answers its handle. `None`
+    /// where `address` is no such context. As a spawn does, it makes guards
+    /// live and numbers the running activity.
+    fn file_attached(&mut self, address: usize) -> Option<ActivityId> {
+        let thread = self.activities.thread_table.take_pending(address)?;
         self.guards_go_live(None);
         self.activity_number();
         let mut idle = self.new_activity();
-        let thread = interrexx_api::ffi::ThreadContext::linking(&self.activities.thread_table);
-        thread.make_attached();
-        let address = thread.address();
         idle.activity.thread = Some(thread);
         idle.activity.attached = true;
         let table = &mut self.activities;
@@ -1887,13 +1891,13 @@ impl Interp {
         table.idle[id.index()] = Some(idle);
         table.attached += 1;
         self.with_idle_activity(id, Interp::push_attached_frame);
-        address
+        Some(id)
     }
 
     /// The last `DetachThread` of the attached activity whose thread context
     /// is at `context`, idle: its base frame's references are released, and
     /// its handle and number are freed. The context, which the thread holds
-    /// the address of, is kept ([`interrexx_api::ffi::ThreadContext::make_attached`]).
+    /// the address of, is kept, as `AttachThread` built it.
     /// Anything else, an activity running or not attached, is left as it is.
     pub(crate) fn detach_activity(&mut self, context: usize) {
         let Some(id) = self.context_owner(context) else {
@@ -2025,7 +2029,7 @@ impl Interp {
             let table = &self.activities;
             let me = table.running.0 as usize;
             // An attached activity idle between its callbacks does not hold
-            // the end (`r[native.threads.end]`); one running a callback holds
+            // the end (`r[native.threads.end]`). One running a callback holds
             // the baton, so the end comes after it.
             let others = (table.idle.iter().enumerate()).any(|(index, idle)| {
                 index != me && idle.as_ref().is_some_and(|idle| !idle.activity.attached)
