@@ -3846,11 +3846,19 @@ impl Interp {
                 crate::pinning::PinKind::Unknown,
                 run(self, receiver, &unknown_args)
             ),
-            None => pinned!(
-                self,
-                crate::pinning::PinKind::Unknown,
-                self.invoke(resolution, receiver, UNKNOWN, &unknown_args)
-            ),
+            None => {
+                // The fallback to `UNKNOWN` is not a send of the program, and
+                // the message it was sent for named no protected method, so
+                // no manager is asked about it (r[env.security.method]).
+                self.unasked_run = true;
+                let sent = pinned!(
+                    self,
+                    crate::pinning::PinKind::Unknown,
+                    self.invoke(resolution, receiver, UNKNOWN, &unknown_args)
+                );
+                self.unasked_run = false;
+                sent
+            }
         };
         self.roots.activity_mut().pop_frame(frame);
         forwarded
