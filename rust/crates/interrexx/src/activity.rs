@@ -203,13 +203,17 @@ pub(crate) struct Activity {
     /// position gives: a `LEAVE` or `ITERATE` that `=` runs again at a debug
     /// pause echoes at the indent of the loop level it reached, not the one
     /// it is nested at. Taken by the clause that uses it.
-    pub(crate) rerun_indent: Option<usize>,
+    rerun_indent: Option<usize>,
     /// The activation, clause index and indent [`Activity::rerun_indent`] gave a
     /// clause that ran again, which the error report echoes the clause at too
     /// if it raises. Other clauses run in between (a debug destination's own
     /// methods), so it is matched by activation and index and cleared when that
     /// clause next starts without a rerun.
-    pub(crate) rerun_failure_indent: Option<(ActivationId, usize, usize)>,
+    rerun_failure_indent: Option<(ActivationId, usize, usize)>,
+    /// Whether `rerun_indent` or `rerun_failure_indent` is set: the one test
+    /// a clause's opening makes for an interactive-debug re-run. Kept by the
+    /// two fields' setters, which are their only writers.
+    rerun_pending: bool,
     /// The absolute printed indent every clause of the **current activation
     /// level** starts from -- `0` for a program's own body, and an
     /// `INTERPRET` fragment's enclosing clause's own printed indent for the
@@ -481,6 +485,32 @@ pub(crate) enum Spawner {
 }
 
 impl Activity {
+    /// Whether an interactive-debug re-run's indent is pending for some
+    /// clause: [`Activity::rerun_indent`] or
+    /// [`Activity::rerun_failure_indent`] is set.
+    #[inline(always)]
+    pub(crate) fn rerun_pending(&self) -> bool {
+        self.rerun_pending
+    }
+
+    /// Sets [`Activity::rerun_indent`], answering the one it replaces.
+    pub(crate) fn replace_rerun_indent(&mut self, indent: Option<usize>) -> Option<usize> {
+        let old = std::mem::replace(&mut self.rerun_indent, indent);
+        self.rerun_pending = self.rerun_indent.is_some() || self.rerun_failure_indent.is_some();
+        old
+    }
+
+    /// The clause a re-run's indent also applies to in an error report.
+    pub(crate) fn rerun_failure_indent(&self) -> Option<(ActivationId, usize, usize)> {
+        self.rerun_failure_indent
+    }
+
+    /// Sets [`Activity::rerun_failure_indent`].
+    pub(crate) fn set_rerun_failure_indent(&mut self, at: Option<(ActivationId, usize, usize)>) {
+        self.rerun_failure_indent = at;
+        self.rerun_pending = self.rerun_indent.is_some() || self.rerun_failure_indent.is_some();
+    }
+
     /// `name` for an invocation's calling convention, shared with the last
     /// invocation's when the bytes are the same.
     #[inline]
@@ -541,6 +571,7 @@ impl Activity {
             indent_offset: 0,
             rerun_indent: None,
             rerun_failure_indent: None,
+            rerun_pending: false,
             activation_indent: 0,
             failure_site: None,
             failure_sites: Vec::new(),
@@ -709,6 +740,7 @@ impl Activity {
             indent_offset: _,
             rerun_indent: _,
             rerun_failure_indent: _,
+            rerun_pending: _,
             activation_indent: _,
             failure_site: _,
             failure_sites: _,

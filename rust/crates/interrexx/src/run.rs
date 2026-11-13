@@ -2525,9 +2525,7 @@ impl Interp {
         // Both halves are about a clause an interactive-debug `=` re-runs, so
         // a clause with neither pending reads the two fields and writes
         // nothing.
-        let rerun = if self.activity.rerun_indent.is_some()
-            || self.activity.rerun_failure_indent.is_some()
-        {
+        let rerun = if self.activity.rerun_pending() {
             self.note_rerun(index)
         } else {
             None
@@ -2612,19 +2610,20 @@ impl Interp {
     #[cold]
     #[inline(never)]
     fn note_rerun(&mut self, index: usize) -> Option<usize> {
-        let rerun = self.activity.rerun_indent.take();
+        let rerun = self.activity.replace_rerun_indent(None);
         let here = self.running_activation().map(|activation| activation.id);
         match (rerun, here) {
             (Some(indent), Some(program)) => {
-                self.activity.rerun_failure_indent = Some((program, index, indent));
+                self.activity
+                    .set_rerun_failure_indent(Some((program, index, indent)));
             }
             _ => {
                 if self
                     .activity
-                    .rerun_failure_indent
+                    .rerun_failure_indent()
                     .is_some_and(|(program, at, _)| Some(program) == here && at == index)
                 {
-                    self.activity.rerun_failure_indent = None;
+                    self.activity.set_rerun_failure_indent(None);
                 }
             }
         }
@@ -2750,7 +2749,7 @@ impl Interp {
     /// (`r[env.debugging.input.iterate]`), else its own printed indent.
     fn failure_indent(&self, code: &Code<'_>, index: usize) -> usize {
         let here = self.running_activation().map(|activation| activation.id);
-        match self.activity.rerun_failure_indent {
+        match self.activity.rerun_failure_indent() {
             Some((program, at, indent)) if Some(program) == here && at == index => indent,
             _ => self.printed_indent(code, index),
         }

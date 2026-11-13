@@ -2686,8 +2686,11 @@ impl Interp {
                 // it reached: the body's for an `ITERATE`, the `DO`'s for a
                 // `LEAVE`.
                 if let Some((do_indent, loop_indent)) = indents {
-                    self.activity.rerun_indent =
-                        Some(if is_leave { do_indent } else { loop_indent });
+                    self.activity.replace_rerun_indent(Some(if is_leave {
+                        do_indent
+                    } else {
+                        loop_indent
+                    }));
                 }
                 return Ok(match step {
                     crate::run::FlatStep::Body(_) => {
