@@ -317,13 +317,19 @@ fn check(spec_root: &Path, repo: &Path, cited: &Citations) -> Vec<Problem> {
         .lock()
         .unwrap_or_else(std::sync::PoisonError::into_inner);
     let run_dir = Scratch::new("run");
-    for page in &pages {
+    let mut skipped = Vec::new();
+    for page in pages.iter().filter(|p| examples_selected(spec_root, p)) {
         for example in &page.examples {
+            if needs_absent_fixture(example) {
+                skipped.push(format!("{}:{}", page.path.display(), example.line));
+                continue;
+            }
             if let Some(message) = run_example(page, example, &run_dir.0) {
                 problems.push(problem(&page.path, example.line, message));
             }
         }
     }
+    report_skipped(&skipped);
 
     // 6: deviations.
     let table = fs::read_to_string(repo.join(support::deviations::TABLE)).unwrap_or_default();
@@ -381,6 +387,22 @@ fn check(spec_root: &Path, repo: &Path, cited: &Citations) -> Vec<Problem> {
     }
 
     problems
+}
+
+/// Whether the examples of `page`, under `spec_root`, are run. Every page's are, unless
+/// `REXX_SPEC_ONLY` is set and not empty: then only those of the pages whose path under
+/// `spec_root/src` starts with its value, such as `native/`, for a local run of a few pages. The
+/// other checks hold for every page either way.
+fn examples_selected(spec_root: &Path, page: &interrexx_spec::Page) -> bool {
+    let Some(only) = std::env::var_os("REXX_SPEC_ONLY").filter(|v| !v.is_empty()) else {
+        return true;
+    };
+    let src = spec_root.join("src");
+    page.path
+        .strip_prefix(&src)
+        .unwrap_or(&page.path)
+        .to_string_lossy()
+        .starts_with(&*only.to_string_lossy())
 }
 
 /// Points this process's API connection at a service of its own, so the
@@ -607,9 +629,11 @@ fn environment_with_tools() -> Vec<(Vec<u8>, Vec<u8>)> {
     // The zone the oracle run of an example reads under.
     environment.push((b"TZ".to_vec(), support::PINNED_ZONE.as_bytes().to_vec()));
     // The oracle's library directory is on `LD_LIBRARY_PATH` of an oracle run, so an example that
-    // looks for a native library there finds it on this side too.
+    // looks for a native library there finds it on this side too; the fixture's directory is on
+    // both sides' path.
     let oracle_lib = Path::new(env!("REXX_ORACLE_ROOT")).join("lib");
     let mut loader_path = vec![oracle_lib];
+    loader_path.extend(spec_fixture().map(Path::to_path_buf));
     if let Some(inherited) = std::env::var_os("LD_LIBRARY_PATH") {
         loader_path.extend(std::env::split_paths(&inherited));
     }
@@ -627,6 +651,70 @@ fn environment_with_tools() -> Vec<(Vec<u8>, Vec<u8>)> {
         service_dir().as_os_str().as_bytes().to_vec(),
     ));
     environment
+}
+
+/// The directory holding the spec's fixture libraries (`spec/fixture/specfixture.cpp`), built
+/// once per process by `scripts/build-spec-fixture.sh`, which leaves an up-to-date build alone.
+/// The examples of the native chapter load them by name, so the directory is on the loader path
+/// of both the interpreter's and the oracle's runs.
+///
+/// `None` only where the ooRexx API headers the fixture compiles against are absent (a checkout
+/// without the `third_party/ooRexx` submodule): the examples that load a fixture library are then
+/// skipped and named ([`report_skipped`]). With the headers present the fixture is always built,
+/// so no example is skipped, and a failed build fails the run.
+///
+/// # Panics
+/// If the headers are present and the script cannot run or fails.
+fn spec_fixture() -> Option<&'static Path> {
+    static BUILT: std::sync::OnceLock<Option<PathBuf>> = std::sync::OnceLock::new();
+    BUILT
+        .get_or_init(|| {
+            let headers = repo_root().join("third_party/ooRexx/api/oorexxapi.h");
+            if !headers.is_file() {
+                return None;
+            }
+            let out = Path::new(env!("CARGO_TARGET_TMPDIR")).join("spec-fixture");
+            let output = Command::new(repo_root().join("scripts/build-spec-fixture.sh"))
+                .arg("--out")
+                .arg(&out)
+                .stdin(std::process::Stdio::null())
+                .output()
+                .expect("running build-spec-fixture.sh");
+            assert!(
+                output.status.success(),
+                "build-spec-fixture.sh failed:\n{}{}",
+                String::from_utf8_lossy(&output.stdout),
+                String::from_utf8_lossy(&output.stderr)
+            );
+            Some(out)
+        })
+        .as_deref()
+}
+
+/// Whether `example` loads a fixture library, by naming one of them, and the fixture could not
+/// be built because the API headers are absent.
+fn needs_absent_fixture(example: &interrexx_spec::Example) -> bool {
+    const LIBRARIES: [&str; 3] = ["specfixture", "specclassic", "specnewer"];
+    spec_fixture().is_none()
+        && LIBRARIES
+            .iter()
+            .any(|name| example.program.to_ascii_lowercase().contains(name))
+}
+
+/// Says on standard error how many examples were skipped, which, and why: a skip is never
+/// silent.
+fn report_skipped(skipped: &[String]) {
+    if skipped.is_empty() {
+        return;
+    }
+    eprintln!(
+        "note: {} example(s) skipped: the fixture needs the ooRexx api headers \
+         (third_party/ooRexx/api), which are absent:",
+        skipped.len()
+    );
+    for place in skipped {
+        eprintln!("  {place}");
+    }
 }
 
 /// A scratch directory removed on drop.
@@ -1013,6 +1101,12 @@ fn path_with_oracle_bin(oracle: &Oracle) -> std::ffi::OsString {
     std::env::join_paths(dirs).expect("joining PATH")
 }
 
+/// The oracle's library directory, then the fixture's, as an oracle run's `LD_LIBRARY_PATH`.
+fn loader_path_with_fixture(oracle: &Oracle) -> std::ffi::OsString {
+    std::env::join_paths(std::iter::once(oracle.lib_dir()).chain(spec_fixture()))
+        .expect("joining LD_LIBRARY_PATH")
+}
+
 /// Runs every example under `spec_root` on the oracle, with empty standard
 /// input, and reports each whose stdout is not exactly the output block or
 /// whose exit code is not `rc`. An example under a rule `….deviation.N`
@@ -1028,9 +1122,14 @@ fn oracle_disagreements(spec_root: &Path, oracle: &Oracle) -> Vec<Problem> {
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).expect("creating the oracle program directory");
     let mut n = 0;
-    for page in &pages {
+    let mut skipped = Vec::new();
+    for page in pages.iter().filter(|p| examples_selected(spec_root, p)) {
         for example in &page.examples {
             if exempt_from_the_oracle(page, example) {
+                continue;
+            }
+            if needs_absent_fixture(example) {
+                skipped.push(format!("{}:{}", page.path.display(), example.line));
                 continue;
             }
             n += 1;
@@ -1041,7 +1140,10 @@ fn oracle_disagreements(spec_root: &Path, oracle: &Oracle) -> Vec<Problem> {
                 &[],
                 None,
                 support::oracle::ORACLE_DEADLINE,
-                &[("PATH", path_with_oracle_bin(oracle))],
+                &[
+                    ("PATH", path_with_oracle_bin(oracle)),
+                    ("LD_LIBRARY_PATH", loader_path_with_fixture(oracle)),
+                ],
             );
             let message = match outcome.termination {
                 Termination::Exited(code) => {
@@ -1078,6 +1180,7 @@ fn oracle_disagreements(spec_root: &Path, oracle: &Oracle) -> Vec<Problem> {
         }
     }
     let _ = fs::remove_dir_all(&dir);
+    report_skipped(&skipped);
     problems
 }
 

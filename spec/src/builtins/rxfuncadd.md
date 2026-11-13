@@ -143,9 +143,9 @@ package, as `rxmath` does, `procedure` is not consulted: it may be omitted,
 may be the null string, or may name anything, and the answer depends only on
 `name`. A `name` that the library does not provide, which is the case of an
 unknown entry point, answers `1`, and registers nothing, so the name is not
-available afterwards. Whether a library that can be found but does not provide
-its functions as a package can be loaded, and what `procedure` means for it,
-is not specified.
+available afterwards. For a library that can be found but does not provide its
+functions as a package, `procedure` names the function, as [the classic
+rule](r:native.loading.classic) says.
 
 ```rexx
 say rxfuncadd('RxCalcSinH', 'rxmath', '')
