@@ -172,6 +172,10 @@ sharing = ["interrexx-core/sharing"]
 interrexx-capi = { path = "../interrexx-capi" }
 interrexx-capi-rxapi = { path = "../interrexx-capi-rxapi" }
 
+# The native class table's reader, which `tests/support/native_table.rs` joins onto the oracle's
+# scope answers. Test-only.
+interrexx-upstream = { path = "../interrexx-upstream" }
+
 # Case tables as data files rather than `const` arrays in Rust sources, for
 # tables. Test-only.
 # `default-features = false` drops its `async` feature, which is the whole of

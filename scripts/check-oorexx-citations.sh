@@ -20,17 +20,14 @@ cd "$(git rev-parse --show-toplevel)"
 # One path (or path prefix ending in /) per line.
 ALLOW='
 rust/corpus/docs/directive-options.txt
-rust/corpus/collection-scopes.tsv
-rust/corpus/introspection-scopes.tsv
 rust/corpus/refusal-sites.tsv
 rust/corpus/lang/method_introspection.rex
 rust/corpus/lang/package_rexx.rex
 rust/crates/interrexx-parse/tests/sourceline_oracle/method_introspection.txt
 rust/crates/interrexx-parse/tests/sourceline_oracle/package_rexx.txt
-rust/crates/interrexx-classes/build.rs
-rust/crates/interrexx-classes/src/native_classes.rs
 rust/crates/interrexx-classes/tests/
 rust/crates/interrexx-inventory/build.rs
+rust/crates/interrexx-upstream/src/main.rs
 rust/crates/interrexx-extract/src/docs.rs
 rust/crates/interrexx-extract/src/docs/directives.rs
 rust/crates/interrexx-parse/tests/errors.rs
