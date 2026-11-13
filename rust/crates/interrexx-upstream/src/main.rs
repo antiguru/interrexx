@@ -15,7 +15,9 @@
 //! * `brief MAJOR OUTDIR` writes the writer's briefs for one major outside
 //!   the repository. Run it under a memory cap (`memcap 8G cargo run ...`):
 //!   it runs the probe programs on `$REXX_BIN` (default
-//!   `rust/target/debug/rexx`).
+//!   `rust/target/debug/rexx`). `data/probes/<major>.<sub>.rex` is the probe
+//!   of one code, and `data/probes/unreachable.tsv` lists, with a reason, each
+//!   code that no program reaches; every code of `errors.tsv` is in one of the two.
 
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
