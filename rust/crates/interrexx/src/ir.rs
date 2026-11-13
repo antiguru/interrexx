@@ -642,6 +642,27 @@ pub(crate) struct ClausePosition {
     pub(crate) indent: u32,
 }
 
+/// What [`Chunk::opening_at`] answers for one clause.
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+pub(crate) struct ClauseOpening {
+    /// The clause's line and indent, meaningful only where `tabled`.
+    pub(crate) position: ClausePosition,
+    /// Whether `position` holds the clause's own answer. **False for every
+    /// clause of a body whose plan cannot supply every entry** -- a body
+    /// planned without source has no line table, and a clause line or indent
+    /// too wide for a `u32` has no entry either -- and then the driver reads
+    /// the tables as it always did, so this is a shortcut and never the only
+    /// route to an answer.
+    pub(crate) tabled: bool,
+    /// The register top when the clause opens: every register at or above it
+    /// is dead there, because the allocator is a stack and what an enclosing
+    /// construct keeps live across its clauses (a loop header's values, a
+    /// `SELECT CASE` value) sits below it. The driver clears them as the
+    /// clause opens, so that no value a finished clause computed stays rooted
+    /// by its register.
+    pub(crate) register_top: u16,
+}
+
 pub(crate) struct Chunk {
     /// The trace setting this stream's ops were emitted for, which is half of
     /// the key it is cached under and the thing the driver compares the
@@ -663,20 +684,11 @@ pub(crate) struct Chunk {
     /// chunk and truncates them away on the way out, and `Interp::run_fragment`
     /// does the same for the chunk an `INTERPRET` compiles.
     pub(crate) registers: u16,
-    /// Instruction index -> the register top when its clause opens: every
-    /// register at or above it is dead there, because the allocator is a
-    /// stack and what an enclosing construct keeps live across its clauses
-    /// (a loop header's values, a `SELECT CASE` value) sits below it. The
-    /// driver clears them as the clause opens, so that no value a finished
-    /// clause computed stays rooted by its register.
-    register_tops: Box<[u16]>,
-    /// One entry per instruction, in instruction order, or **empty when this
-    /// body's plan cannot supply every entry** -- a body planned without
-    /// source has no line table, and a clause line or indent too wide for a
-    /// `u32` has no entry either. Empty means the driver reads the tables as
-    /// it always did, so this is a shortcut and never the only route to an
-    /// answer.
-    positions: Box<[ClausePosition]>,
+    /// Instruction index -> what the driver reads as that clause opens, one
+    /// entry per instruction in instruction order. One table rather than one
+    /// per field, so opening a clause pays for one bounds check and one base
+    /// pointer.
+    openings: Box<[ClauseOpening]>,
     /// The literal values [`Op::Const`] loads, **one entry per distinct
     /// literal** rather than one per occurrence.
     consts: Vec<Box<[u8]>>,
@@ -705,24 +717,18 @@ impl Chunk {
         self.op_of.get(index).copied()
     }
 
-    /// The register top of the clause at instruction index `index`
-    /// ([`Chunk::register_tops`]), or the whole file for an index past the
-    /// table, which clears nothing.
+    /// The clause at instruction index `index`'s own [`ClauseOpening`], or,
+    /// for an index past the table, an untabled one whose register top is
+    /// the whole file, which clears nothing.
     #[inline(always)]
-    pub(crate) fn register_top_at(&self, index: usize) -> u16 {
-        self.register_tops
-            .get(index)
-            .copied()
-            .unwrap_or(self.registers)
-    }
-
-    /// The clause at instruction index `index`'s own [`ClausePosition`] and
-    /// `true`, or `false` and a zero position where this chunk carries no
-    /// table.
-    pub(crate) fn position_at(&self, index: usize) -> (bool, ClausePosition) {
-        match self.positions.get(index) {
-            Some(position) => (true, *position),
-            None => (false, ClausePosition { line: 0, indent: 0 }),
+    pub(crate) fn opening_at(&self, index: usize) -> ClauseOpening {
+        match self.openings.get(index) {
+            Some(opening) => *opening,
+            None => ClauseOpening {
+                position: ClausePosition { line: 0, indent: 0 },
+                tabled: false,
+                register_top: self.registers,
+            },
         }
     }
 

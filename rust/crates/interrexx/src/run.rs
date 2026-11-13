@@ -2510,7 +2510,11 @@ impl Interp {
         // the only site that counts them all. Before the move, `if 1=1 then
         // trace l` as a routine's first clause announced the pair here where it
         // should announce nothing.
-        activation.trace_entry = activation.trace_entry.stepped();
+        // Written only where it changes: past an activation's second clause
+        // the state is settled, and a store per clause is what it would cost.
+        if activation.trace_entry.steps() {
+            activation.trace_entry = activation.trace_entry.stepped();
+        }
         // `TRACE`'s own `*-*` clause echo, and the single insertion point for
         // it -- exactly the analogue of `eval`'s own split from `eval_node`,
         // since this is the one place `run_bounded`'s loop (this function's
@@ -2518,25 +2522,16 @@ impl Interp {
         // steps, markers (`Then`/`Else`/ `Otherwise`/`When`/`WhenCase`/`Label`)
         // included, so every one of those is traced from its own execution.
         let (tabled, position) = position;
-        let rerun = match self.activity.rerun_indent {
-            Some(_) => self.activity.rerun_indent.take(),
-            None => None,
+        // Both halves are about a clause an interactive-debug `=` re-runs, so
+        // a clause with neither pending reads the two fields and writes
+        // nothing.
+        let rerun = if self.activity.rerun_indent.is_some()
+            || self.activity.rerun_failure_indent.is_some()
+        {
+            self.note_rerun(index)
+        } else {
+            None
         };
-        let here = self.running_activation().map(|activation| activation.id);
-        match (rerun, here) {
-            (Some(indent), Some(program)) => {
-                self.activity.rerun_failure_indent = Some((program, index, indent));
-            }
-            _ => {
-                if self
-                    .activity
-                    .rerun_failure_indent
-                    .is_some_and(|(program, at, _)| Some(program) == here && at == index)
-                {
-                    self.activity.rerun_failure_indent = None;
-                }
-            }
-        }
         let shortcut = tabled
             && source.is_some()
             && self.activity.clause_line_override.is_none()
@@ -2609,6 +2604,31 @@ impl Interp {
             frame,
             temps_at_entry,
         }
+    }
+
+    /// [`Interp::enter_stepped_clause`]'s bookkeeping for a clause an
+    /// interactive-debug `=` re-runs: takes and answers the indent it is
+    /// re-run at, or ends the one recorded for an earlier clause.
+    #[cold]
+    #[inline(never)]
+    fn note_rerun(&mut self, index: usize) -> Option<usize> {
+        let rerun = self.activity.rerun_indent.take();
+        let here = self.running_activation().map(|activation| activation.id);
+        match (rerun, here) {
+            (Some(indent), Some(program)) => {
+                self.activity.rerun_failure_indent = Some((program, index, indent));
+            }
+            _ => {
+                if self
+                    .activity
+                    .rerun_failure_indent
+                    .is_some_and(|(program, at, _)| Some(program) == here && at == index)
+                {
+                    self.activity.rerun_failure_indent = None;
+                }
+            }
+        }
+        rerun
     }
 
     /// Makes the instruction at `index` the clause the frame readers see:
