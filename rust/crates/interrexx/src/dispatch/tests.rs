@@ -33,6 +33,37 @@ fn a_program_with_no_send_and_no_class_never_builds_the_object_model() {
     assert!(interp.object_model.is_none());
 }
 
+/// `string_only` marks exactly the primitives `String` itself defines
+/// (r[class.object.borrowed-native]): every one of them, and no primitive
+/// of another class.
+#[test]
+fn string_only_marks_exactly_the_primitives_string_defines() {
+    let mut interp = Interp::new();
+    let string = interp.classes().lookup("String").expect("String is native");
+    let classes = interp.classes();
+    let own: Vec<_> = classes
+        .own_instance_method_names(string)
+        .iter()
+        .filter_map(|name| classes.lookup_instance_method(string, name))
+        .filter(|(definer, _)| *definer == string)
+        .map(|(_, method)| method)
+        .collect();
+    let defined: std::collections::BTreeSet<_> = own
+        .into_iter()
+        .filter(|method| interp.object_model().natives.get(*method).is_some())
+        .map(|method| method.0)
+        .collect();
+    let marked: std::collections::BTreeSet<_> = interp
+        .object_model()
+        .natives
+        .entries()
+        .filter(|(_, entry)| entry.string_only)
+        .map(|(method, _)| method.0)
+        .collect();
+    assert!(defined.len() > 50, "String's primitives were not found");
+    assert_eq!(marked, defined);
+}
+
 /// An ordinary resolution answers the class the definition came from,
 /// which is not always the receiver's own class: `LENGTH` is `String`'s
 /// and `ISNIL` is `Object`'s, and one string receiver reaches both.
