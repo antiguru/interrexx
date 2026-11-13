@@ -169,6 +169,7 @@ fn a_read_echo_in_front_of_its_load_is_refused() {
             index: 0,
             at: PlanSlot::UNRESOLVED,
             src: 0,
+            shared: false,
         },
     ]);
 }
@@ -196,6 +197,7 @@ fn a_read_echo_reading_another_register_is_refused() {
             index: 0,
             at: PlanSlot::UNRESOLVED,
             src: 0,
+            shared: false,
         },
     ]);
 }
@@ -225,6 +227,7 @@ fn a_read_echo_naming_another_symbol_is_refused() {
             index: 0,
             at: PlanSlot::UNRESOLVED,
             src: 0,
+            shared: false,
         },
     ]);
 }
@@ -252,6 +255,7 @@ fn a_read_echo_of_another_kind_is_refused() {
             index: 0,
             at: PlanSlot::UNRESOLVED,
             src: 0,
+            shared: false,
         },
     ]);
 }
@@ -279,6 +283,7 @@ fn a_read_echo_behind_its_own_load_is_accepted() {
             index: 0,
             at: PlanSlot::UNRESOLVED,
             src: 0,
+            shared: false,
         },
     ]);
 }
@@ -336,6 +341,7 @@ fn a_region_op_naming_a_neighbouring_instruction_is_refused() {
             index: 0,
             at: PlanSlot::UNRESOLVED,
             src: 0,
+            shared: false,
         },
     ]);
 }
@@ -398,6 +404,7 @@ fn ops_naming_their_own_region_clause_are_accepted() {
             index: 0,
             at: PlanSlot::UNRESOLVED,
             src: 0,
+            shared: false,
         },
         Op::SelectCaseText {
             index: 7,

@@ -1194,6 +1194,7 @@ lang/string_compare_nil.rex
 lang/compare_literal_text.rex
 lang/compare_literal_text_trace.rex
 lang/compare_with_empty_string.rex
+lang/compound_shared_tail_key.rex
 lang/collection_queue_array_index.rex
 lang/collection_array_grow_refused.rex
 lang/variable_list_selector_trace.rex

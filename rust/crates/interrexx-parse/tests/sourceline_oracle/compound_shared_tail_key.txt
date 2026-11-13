@@ -1,0 +1,78 @@
+count 77
+/* A compound read in the value of an assignment to the same compound:
+   the write resolves the same tail key the read did, unless code ran
+   between the two that changed a tail variable. */
+t. = 0
+do i = 1 to 5
+  k = i // 2
+  t.k = t.k + 1
+end
+say 't.0='t.0 't.1='t.1
+
+/* Several tails, and the compound read twice. */
+s. = 1
+do i = 1 to 3
+  do j = 1 to 2
+    s.i.j = s.i.j + i * j
+    s.i.j = s.i.j * s.i.j
+  end
+end
+say s.1.1 s.1.2 s.2.1 s.2.2 s.3.1 s.3.2
+
+/* A different compound in the value too. */
+u. = 2
+p = 'X'; q = 'Y'
+u.p = u.q + u.p
+say u.x u.y
+
+/* An operator whose method assigns the tail variable through a reference:
+   the write resolves its key after the method ran. */
+k = 'A'
+v. = '?'
+v.A = .Adder~new(>k)
+v.k = v.k + 1
+say 'v.A is' v.A~class~id 'v.B='v.B 'k='k
+
+/* A tail whose string request assigns the tail variable. */
+k = .Renamer~new(>k)
+w. = 'w'
+w.k = w.k || '!'
+say 'w.NAME1='w.NAME1 'w.Z='w.Z 'k='k
+
+/* A clause that fails between the read and the write, and the same
+   compound written afterwards by a clause that does not read it. */
+signal on syntax name failed
+k = 1
+z. = 5
+z.k = z.k + 'nan'
+say 'not reached'
+failed:
+k = 2
+z.k = 7
+say 'z.1='z.1 'z.2='z.2
+
+/* Traced: the read and the write each print the resolved name. */
+k = 3
+trace i
+z.k = z.k + 1
+trace o
+say 'z.3='z.3
+exit
+
+::class Adder
+::method init
+  expose ref
+  use arg ref
+::method '+'
+  expose ref
+  ref~value = 'B'
+  return 'added'
+
+::class Renamer
+::method init
+  expose ref
+  use arg ref
+::method makestring
+  expose ref
+  ref~value = 'Z'
+  return 'NAME1'

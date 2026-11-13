@@ -207,8 +207,15 @@ pub(crate) enum Op {
     /// Echoes the `>P>` line of the prefix-operator result in register `src`.
     TracePrefix { op: PrefixOp, src: u16 },
     /// Writes register `src` through the target of the `Assignment` at
-    /// `index`, and traces the write.
-    Store { index: u32, at: PlanSlot, src: u16 },
+    /// `index`, and traces the write. `shared` says that the target is a
+    /// compound its value reads with [`SymbolRead::CompoundShared`], whose
+    /// key the write uses.
+    Store {
+        index: u32,
+        at: PlanSlot,
+        src: u16,
+        shared: bool,
+    },
     /// Prints the `SAY` at `index` from register `src`, or a blank line when
     /// it has no expression at all.
     Say { index: u32, src: Option<u16> },

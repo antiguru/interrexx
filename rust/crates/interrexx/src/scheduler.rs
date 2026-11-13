@@ -1140,6 +1140,10 @@ impl Interp {
         };
         std::mem::swap(&mut self.activity, &mut idle.activity);
         std::mem::swap(self.roots.activity_mut(), &mut idle.roots);
+        // The key a compound read holds is the outgoing activity's, and the
+        // incoming one may be in the middle of a clause of its own: one
+        // waiting off the baton for a native call, which pushed nothing.
+        self.shared_key_for = None;
         #[cfg(feature = "sharing")]
         self.heap.share_as(self.activity.sharing_tag);
         let outgoing = std::mem::replace(&mut table.running, next);
@@ -1768,6 +1772,10 @@ impl Interp {
         };
         std::mem::swap(&mut self.activity, &mut idle.activity);
         std::mem::swap(self.roots.activity_mut(), &mut idle.roots);
+        // The key a compound read holds is the outgoing activity's, and the
+        // incoming one may be in the middle of a clause of its own: one
+        // waiting off the baton for a native call, which pushed nothing.
+        self.shared_key_for = None;
         #[cfg(feature = "sharing")]
         self.heap.share_as(self.activity.sharing_tag);
         table.idle[running.0 as usize] = Some(idle);

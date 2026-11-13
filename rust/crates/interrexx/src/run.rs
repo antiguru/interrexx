@@ -779,7 +779,7 @@ impl Interp {
                 let value = self.eval(code, value)?;
                 // `None`: this engine resolves nothing ahead of time, so the
                 // write resolves its own slot the way it always has.
-                self.assign_evaluated(code, target, value, None)?;
+                self.assign_evaluated(code, target, value, None, false)?;
                 Ok(Flow::Next)
             }
 

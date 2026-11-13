@@ -10,6 +10,7 @@ impl Interp {
         target: &Expr,
         value: ObjRef,
         at: Option<usize>,
+        shared_key: bool,
     ) -> Result<(), Failure> {
         self.roots.activity_mut().push_temp(value);
         // `>>>` fires before the assignment itself
@@ -30,7 +31,61 @@ impl Interp {
         {
             self.trace_result(indent, &rendered);
         }
+        if shared_key && let ExprKind::Compound(id) = &target.kind {
+            return self.assign_compound(code, *id, value, indent, true);
+        }
         self.assign_expr_target(code, target, value, indent, at)
+    }
+
+    /// Writes `value` through the compound target `id`, and traces the
+    /// write. `shared_key` says that the value expression read this same
+    /// compound with [`crate::eval::SymbolRead::CompoundShared`], whose key
+    /// is used here where that read still holds it.
+    fn assign_compound(
+        &mut self,
+        code: &Code<'_>,
+        id: SymbolId,
+        value: ObjRef,
+        indent: usize,
+        shared_key: bool,
+    ) -> Result<(), Failure> {
+        // **Borrowed, not copied.** `Code::stem` and `SymbolTable::name`
+        // both answer with the lifetime of the `Code`, which is the program
+        // rather than this `Interp`, so neither needs an owned copy to
+        // survive the `&mut self` calls below. The `Variable` arm of
+        // `assign_expr_target` has always passed its name borrowed; this arm
+        // copied both, and measured with `heaptrack` on
+        // `samples/rexxcps.rex` that cost two allocations per compound
+        // write.
+        let tag = code.symbols.name(id).as_bytes();
+        let (stem_name, stem_at) = code.stem(id);
+        let mut key = self.take_key_buffer();
+        // The read's key is the key this write would build: the read held
+        // it only where no activation ran after it began, and the value
+        // expression between it and here calls nothing.
+        if shared_key && self.shared_key_for.take() == Some(id) {
+            std::mem::swap(&mut key, &mut self.shared_key);
+        } else if let Err(failure) = self.tail_key_into(code, id, &mut key) {
+            self.give_key_buffer(key);
+            return Err(failure);
+        }
+        self.stem_set_at(stem_name, stem_at, &key, value);
+        // **The resolved name is built only when a line will print it.**
+        // `trace_compound_name` returns at once unless intermediates are on,
+        // so joining the stem to the tail key ahead of that check allocated a
+        // name to discard. This is the rule the value rendering below
+        // follows -- `trace.rs`'s own doc comment gives the reasoning for the
+        // value half, and the name half is the same argument.
+        if self.tracing_intermediates() {
+            let mut resolved = stem_name.to_vec();
+            resolved.extend_from_slice(&key);
+            self.trace_compound_name(indent, tag, &resolved);
+        }
+        if let Some(rendered) = self.intermediate_text(value)? {
+            self.trace_assignment(indent, tag, &rendered, value);
+        }
+        self.give_key_buffer(key);
+        Ok(())
     }
 
     /// Writes `value` into the slot a plain-variable target is already bound
@@ -126,38 +181,7 @@ impl Interp {
                     at.is_none(),
                     "a compound write was handed a slot, and the slot it writes is the stem's"
                 );
-                // **Borrowed, not copied.** `Code::stem` and `SymbolTable::
-                // name` both answer with the lifetime of the `Code`, which is
-                // the program rather than this `Interp`, so neither needs an
-                // owned copy to survive the `&mut self` calls below. The
-                // `Variable` arm above has always passed its name borrowed;
-                // this arm copied both, and measured with `heaptrack` on
-                // `samples/rexxcps.rex` that cost two allocations per compound
-                // write.
-                let tag = code.symbols.name(*id).as_bytes();
-                let (stem_name, stem_at) = code.stem(*id);
-                let mut key = self.take_key_buffer();
-                if let Err(failure) = self.tail_key_into(code, *id, &mut key) {
-                    self.give_key_buffer(key);
-                    return Err(failure);
-                }
-                self.stem_set_at(stem_name, stem_at, &key, value);
-                // **The resolved name is built only when a line will print
-                // it.** `trace_compound_name` returns at once unless
-                // intermediates are on, so joining the stem to the tail key
-                // ahead of that check allocated a name to discard. This is the
-                // rule the value rendering below follows -- `trace.rs`'s own
-                // doc comment gives the reasoning for the value half, and the
-                // name half is the same argument.
-                if self.tracing_intermediates() {
-                    let mut resolved = stem_name.to_vec();
-                    resolved.extend_from_slice(&key);
-                    self.trace_compound_name(indent, tag, &resolved);
-                }
-                if let Some(rendered) = self.intermediate_text(value)? {
-                    self.trace_assignment(indent, tag, &rendered, value);
-                }
-                self.give_key_buffer(key);
+                self.assign_compound(code, *id, value, indent, false)?;
             }
             // the term's `NAME=` sent with the value ahead of its own
             // arguments, each argument traced as a result.

@@ -728,10 +728,12 @@ fn compile_settled(
                     0,
                     dst,
                 )?;
+                let shared = share_tail_key(&mut ops[at as usize..], target, value);
                 ops.push(Op::Store {
                     index: instruction_index(index)?,
                     at: write_slot(plan, target),
                     src: dst,
+                    shared,
                 });
                 close_region(&mut ops, at)?;
                 registers.release(mark);
@@ -1798,6 +1800,57 @@ fn push_native<'a>(
     Ok(())
 }
 
+/// Whether the write of `target = value` can use the tail key a read of the
+/// same compound in `value` resolves, which is so where `value` calls
+/// nothing: no function, no message, no environment symbol. Its operators
+/// can still run code, an operator being a message to an object, and so can
+/// a tail's string request and a NOVALUE hook, but each of those pushes an
+/// activation or enters a native call, and either drops the key the read
+/// holds, as a switch to another activity does. Where the answer is yes,
+/// the reads of the compound among `ops`, the ops compiled for `value`, are
+/// marked [`SymbolRead::CompoundShared`].
+pub(crate) fn share_tail_key(ops: &mut [Op], target: &Expr, value: &Expr) -> bool {
+    fn calls_nothing(expr: &Expr) -> bool {
+        match &expr.kind {
+            ExprKind::Literal(_)
+            | ExprKind::Constant(_)
+            | ExprKind::Variable(_)
+            | ExprKind::Stem(_)
+            | ExprKind::Compound(_) => true,
+            ExprKind::Prefix { operand, .. } => calls_nothing(operand),
+            ExprKind::Binary { left, right, .. } => calls_nothing(left) && calls_nothing(right),
+            _ => false,
+        }
+    }
+    let ExprKind::Compound(id) = target.kind else {
+        return false;
+    };
+    // The write takes the key of the last read before it, so every read of
+    // the compound has to run before the write does, unconditionally.
+    if !calls_nothing(value)
+        || ops.iter().any(|op| {
+            matches!(
+                op,
+                Op::Jump { .. } | Op::JumpUnless { .. } | Op::ConditionJump { .. }
+            )
+        })
+    {
+        return false;
+    }
+    // The echo behind a read repeats its kind, so it is marked with it.
+    let mut shared = false;
+    for op in ops {
+        if let Op::Load { symbol, read, .. } | Op::TraceRead { symbol, read, .. } = op
+            && *symbol == id
+            && *read == SymbolRead::Compound
+        {
+            *read = SymbolRead::CompoundShared;
+            shared = true;
+        }
+    }
+    shared
+}
+
 /// The slot one assignment *target* resolves to, or [`PlanSlot::UNRESOLVED`]
 /// for a target that does not write a slot by name.
 fn write_slot(plan: &Plan, target: &Expr) -> PlanSlot {
@@ -1823,7 +1876,7 @@ fn push_read(
         SymbolRead::Simple | SymbolRead::Stem => plan
             .slot_for_symbol(symbol)
             .map_or(PlanSlot::UNRESOLVED, PlanSlot::of),
-        SymbolRead::Compound => PlanSlot::UNRESOLVED,
+        SymbolRead::Compound | SymbolRead::CompoundShared => PlanSlot::UNRESOLVED,
         SymbolRead::Environment => unreachable!("a `.NAME` read is compiled with its memo site"),
     };
     ops.push(Op::Load {

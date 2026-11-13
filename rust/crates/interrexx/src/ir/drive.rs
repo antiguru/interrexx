@@ -815,7 +815,10 @@ macro_rules! region_ops {
                             }
                             value
                         }
-                        SymbolRead::Stem | SymbolRead::Compound | SymbolRead::Environment => {
+                        SymbolRead::Stem
+                        | SymbolRead::Compound
+                        | SymbolRead::CompoundShared
+                        | SymbolRead::Environment => {
                             match $self.read_symbol($code, Some($chunk), *read, *symbol, at) {
                                 Ok(value) => value,
                                 Err(failure) => break $cold Err(failure),
@@ -1046,7 +1049,7 @@ macro_rules! region_ops {
                 // the `>>>`/`>C>`/`>=>` lines and the stem and
                 // compound dispatch are that arm's rather than a
                 // second copy.
-                Op::Store { $index, at, src } => {
+                Op::Store { $index, at, src, shared } => {
                     debug_assert!(
                         $chunk.holds_register(*src),
                         "op reads register {src} outside the region the chunk \
@@ -1096,7 +1099,7 @@ macro_rules! region_ops {
                             );
                         };
                         if let Err(failure) =
-                            $self.assign_evaluated($code, target, value, at)
+                            $self.assign_evaluated($code, target, value, at, *shared)
                         {
                             break $cold Err(failure);
                         }

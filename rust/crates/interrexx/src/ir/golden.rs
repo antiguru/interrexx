@@ -234,10 +234,12 @@ pub(crate) fn render(chunk: &Chunk) -> String {
                 index: node,
                 at,
                 src,
+                shared,
             } => {
                 out.push_str(&format!(
-                    "{index}: Store index={node} at={} src={src}\n",
-                    render_slot(*at)
+                    "{index}: Store index={node} at={} src={src}{}\n",
+                    render_slot(*at),
+                    if *shared { " shared" } else { "" }
                 ));
             }
             Op::Say { index: at, src } => {

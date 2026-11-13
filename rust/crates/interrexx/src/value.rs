@@ -285,11 +285,27 @@ impl Interp {
 
     /// Converts any value to text.
     pub(crate) fn write_text(&mut self, value: ObjRef, out: &mut Vec<u8>) {
-        if let Decoded::SmallInt(n) = value.decode() {
-            let mut buffer = [0u8; TEXT_SCRATCH];
-            let at = write_small_int(&mut buffer, n);
-            out.extend_from_slice(&buffer[at..]);
-            return;
+        match value.decode() {
+            Decoded::SmallInt(n) => {
+                let mut buffer = [0u8; TEXT_SCRATCH];
+                let at = write_small_int(&mut buffer, n);
+                out.extend_from_slice(&buffer[at..]);
+                return;
+            }
+            // Appended straight from the handle and the arena, the two arms of
+            // `to_text` that answer a string's own bytes, without the scratch
+            // copy and the second arena lookup that function makes for them.
+            Decoded::Text(inline) => {
+                out.extend_from_slice(&inline);
+                return;
+            }
+            Decoded::Heap { .. } => {
+                if let Some(Body::Text { bytes, .. }) = self.heap.get(value).map(|o| &o.body) {
+                    out.extend_from_slice(bytes);
+                    return;
+                }
+            }
+            Decoded::Nil => {}
         }
         out.extend_from_slice(&self.to_text(value));
     }
