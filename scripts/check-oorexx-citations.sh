@@ -29,7 +29,6 @@ rust/crates/interrexx-classes/tests/
 rust/crates/interrexx-upstream/src/main.rs
 rust/crates/interrexx-extract/src/docs.rs
 rust/crates/interrexx-extract/src/docs/directives.rs
-rust/crates/interrexx-parse/tests/errors.rs
 rust/crates/interrexx-api/tests/
 rust/crates/interrexx/tests/
 rust/crates/interrexx/src/builtin/tests.rs
