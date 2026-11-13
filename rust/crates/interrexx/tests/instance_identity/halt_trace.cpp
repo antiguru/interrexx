@@ -1,6 +1,6 @@
 // The instance members `Halt` and `SetTrace` from a thread that runs no Rexx code of the
 // interpreter. Built as the extension `halttrace`, which the programs load with
-// `::requires 'halttrace' LIBRARY`. `HtSave` keeps the instance its thread context links,
+// `::requires 'halttrace' LIBRARY` or, part-way through a run, with `loadLibrary`. `HtSave` keeps the instance its thread context links,
 // `HtHalt` and `HtTrace` call `Halt` and `SetTrace` through it from a thread of their own and
 // wait for that thread.
 #include <pthread.h>
@@ -68,3 +68,27 @@ RexxPackageEntry halttrace_package_entry = {
 };
 
 OOREXX_GET_PACKAGE(halttrace);
+
+#ifdef DRIVER
+#include <stdio.h>
+
+// Built with -DDRIVER it is a program: it creates an interpreter, terminates it, and then calls
+// `Halt`, `SetTrace(1)` and `SetTrace(0)` through the instance that has ended.
+int main()
+{
+    setvbuf(stdout, NULL, _IONBF, 0);
+    RexxInstance *instance;
+    RexxThreadContext *thread;
+    if (!RexxCreateInterpreter(&instance, &thread, NULL))
+    {
+        printf("create failed\n");
+        return 1;
+    }
+    instance->Terminate();
+    instance->Halt();
+    instance->SetTrace(1);
+    instance->SetTrace(0);
+    printf("returned\n");
+    return 0;
+}
+#endif

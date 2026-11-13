@@ -252,3 +252,16 @@ h: how = 'halted'
 ```output
 main HALT / worker not halted
 ```
+
+## Tracing
+
+r[native.threads.trace]
+Native code may turn the external trace of the interpreter on or off from any
+thread, whether or not that thread runs a call of the interpreter. Turned on,
+every activity of the interpreter that runs Rexx code, the main one and the
+ones that [`start`](r:conc.activities.creation) made, idle or not, traces from
+its next clause as under `TRACE ?R`, with the pause of interactive trace.
+Turned off, every activity runs on untraced from its next clause. A request
+made after the interpreter has ended does nothing. The trace lines name the
+program's path, so the tests that witness this rule compare them outside this
+page.

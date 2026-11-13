@@ -185,11 +185,30 @@ pub(crate) enum Posted {
     /// `RexxSetTrace` (`true`) or `RexxResetTrace` named this run's thread: the running Rexx
     /// frame's external trace ([`Interp::set_external_trace`]).
     Trace(bool),
-    /// `Trace` of an instance: every activity's external trace, on or off
+    /// `SetTrace` of an instance: every activity's external trace, on or off
     /// ([`Interp::set_external_trace_all`]).
     TraceAll(bool),
     /// A chunk of standard input, empty at its end.
     Input(Vec<u8>),
+}
+
+impl crate::timer::Inbox<Posted> {
+    /// Asks every activity of the interpreter to halt at its next clause
+    /// (`r[native.threads.halt]`): `Halt` of an instance, from any thread, and
+    /// `RexxSetHalt` naming a run. A native call that finds the request pending when
+    /// it returns has the calling clause's boundary serve it.
+    pub(crate) fn post_halt(&self) {
+        self.post(Posted::Halt);
+        self.requests()
+            .set(crate::timer::HALT | crate::timer::BOUNDARY);
+    }
+
+    /// Asks every activity of the interpreter to turn its external trace on or off
+    /// (`r[native.threads.trace]`), served as [`Self::post_halt`]'s request is.
+    pub(crate) fn post_trace_all(&self, on: bool) {
+        self.post(Posted::TraceAll(on));
+        self.requests().set(crate::timer::BOUNDARY);
+    }
 }
 
 // Another thread posts it, so it holds no `ObjRef`.
@@ -2858,9 +2877,12 @@ impl Interp {
     }
 
     /// [`Interp::set_external_trace`] for every activity of the interpreter, as a halt
-    /// reaches them (`r[native.threads.halt]`): the running one and each idle one, whose
+    /// reaches them (`r[native.threads.trace]`): the running one and each idle one, whose
     /// frames are reached by putting it in the running one's place, as a read of it is.
+    /// From the first such request on, every body compiles without settling a clause's
+    /// trace setting ([`Interp::make_trace_switchable`]).
     pub(crate) fn set_external_trace_all(&mut self, on: bool) {
+        self.make_trace_switchable();
         self.set_external_trace(on);
         for index in 0..self.activities.idle.len() {
             if self.activities.idle[index].is_some() {

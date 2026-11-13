@@ -1317,6 +1317,10 @@ struct Interp {
     /// The chunk cache, under `plans`' own `BodyKey` **paired with the trace
     /// setting the chunk was compiled under**.
     chunks: NameMap<(BodyKey, ChunkTrace), Rc<crate::ir::Chunk>>,
+    /// The chunks [`Interp::make_trace_switchable`] took out of `chunks`, kept until their
+    /// program is freed: a frame may still run one, and its interned literals, pinned copies
+    /// and call-site holds are released with the program's rows, as a cached chunk's are.
+    retired_chunks: Vec<(BodyKey, Rc<crate::ir::Chunk>)>,
     /// How many times `chunk_for` has refused a body because it does not fit
     /// the index widths the compiled stream commits to (`ChunkTooLarge`) --
     /// never because a body contains a construct the compiler does not
@@ -1515,8 +1519,8 @@ struct Interp {
     /// boundary.
     pub(crate) clause_exits: bool,
     /// Whether another thread can switch the trace of this run at a clause boundary
-    /// (`RexxSetTrace`, or `SetTrace` through the instance a loaded native extension or an
-    /// embedding holds), so that no chunk may settle a clause's trace setting at compile time.
+    /// (`RexxSetTrace`, or `SetTrace` through the instance once it has been served), so that
+    /// no chunk compiled from then on settles a clause's trace setting at compile time.
     pub(crate) trace_switchable: bool,
     /// A native call posted to this interpreter's own inbox, which the clause boundary that
     /// ends the calling clause serves: the activation depth of that clause. It sets
@@ -2356,6 +2360,7 @@ impl Interp {
             sim: None,
             slice_deferred: false,
             chunks: NameMap::default(),
+            retired_chunks: Vec::new(),
             chunks_refused: 0,
             routines_written: false,
             routines_tables: false,
@@ -3442,6 +3447,7 @@ impl Interp {
             // A chunk's interned literals are allocated immortal, and
             // released when the chunk is dropped.
             chunks: _,
+            retired_chunks: _,
             chunks_refused: _,
             routines_written: _,
             routines_tables: _,
@@ -3841,12 +3847,22 @@ impl Interp {
         let mut interned = Vec::new();
         let mut pinned = Vec::new();
         let mut holds = 0;
+        let mut release = |chunk: &crate::ir::Chunk| {
+            interned.extend(chunk.interned_values());
+            pinned.extend(chunk.pinned_copies());
+            holds += chunk.site_holds().count() as u32;
+        };
         self.chunks.retain(|(key, _), chunk| {
             let keep = !dead(&key.program);
             if !keep {
-                interned.extend(chunk.interned_values());
-                pinned.extend(chunk.pinned_copies());
-                holds += chunk.site_holds().count() as u32;
+                release(chunk);
+            }
+            keep
+        });
+        self.retired_chunks.retain(|(key, chunk)| {
+            let keep = !dead(&key.program);
+            if !keep {
+                release(chunk);
             }
             keep
         });
@@ -4760,8 +4776,6 @@ pub(crate) fn run_instance(
                 .subcom_aliases
                 .insert(name.to_ascii_uppercase(), registered);
         }
-        // The embedder's `SetTrace` reaches every activity at a clause boundary.
-        interp.trace_switchable = true;
         for (name, package) in options.registered_libraries {
             let library = package.into_library(&String::from_utf8_lossy(&name));
             interp.register_library(&name, library);

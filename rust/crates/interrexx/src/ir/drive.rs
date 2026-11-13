@@ -1831,9 +1831,14 @@ macro_rules! open_clause {
         // than as a program that silently stops tracing.
         // `debug_pause` is excluded because
         // [`Interp::traced_mode`] answers `OFF` under it by
-        // design, which is not the program's own setting.
+        // design, which is not the program's own setting. So is a
+        // run another thread's `SetTrace` has reached
+        // (`r[native.threads.trace]`): a frame that was running a
+        // settled chunk then runs it to its end under the setting
+        // switched from outside, which the claim did not foresee.
         #[cfg(debug_assertions)]
         if !$self.debug_pause()
+            && !$self.trace_switchable
             && let Some(crate::ir::trace_flow::Setting::Known(claimed)) = $chunk.setting_at($index)
         {
             debug_assert_eq!(

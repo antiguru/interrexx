@@ -506,10 +506,7 @@ pub fn classic_halt(thread: usize) -> bool {
     let Some(inbox) = inbox else {
         return thread == current && interrexx_api::ffi::classic::halt_calling();
     };
-    inbox.post(crate::timer::Posted::Halt);
-    inbox
-        .requests()
-        .set(crate::timer::HALT | crate::timer::BOUNDARY);
+    inbox.post_halt();
     true
 }
 
@@ -688,9 +685,11 @@ pub(crate) fn wait_in_root(context: usize) {
         };
         starting.remove(at).1
     };
-    if let Some(&address) = shared.instance.get() {
-        instances().push((address, std::sync::Arc::clone(&shared)));
-    }
+    let address = *shared
+        .instance
+        .get()
+        .expect("the interpreter thread sets the instance before its root waits here");
+    instances().push((address, std::sync::Arc::clone(&shared)));
     let mut state = shared.state();
     state.context = Some(context);
     shared.changed.notify_all();
@@ -748,8 +747,7 @@ impl interrexx_api::ffi::Embedder for Embedder {
             return false;
         };
         if let Some(inbox) = shared.inbox.get() {
-            inbox.post(crate::timer::Posted::Halt);
-            inbox.requests().set(crate::timer::HALT);
+            inbox.post_halt();
         }
         true
     }
@@ -759,8 +757,7 @@ impl interrexx_api::ffi::Embedder for Embedder {
             return false;
         };
         if let Some(inbox) = shared.inbox.get() {
-            inbox.post(crate::timer::Posted::TraceAll(on));
-            inbox.requests().set(crate::timer::BOUNDARY);
+            inbox.post_trace_all(on);
         }
         true
     }

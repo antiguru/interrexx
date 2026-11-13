@@ -1680,15 +1680,11 @@ impl interrexx_api::values::Baton for Requester {
     }
 
     fn post_halt(&self) {
-        self.inbox.post(Posted::Halt);
-        self.inbox
-            .requests()
-            .set(crate::timer::HALT | crate::timer::BOUNDARY);
+        self.inbox.post_halt();
     }
 
     fn post_trace(&self, on: bool) {
-        self.inbox.post(Posted::TraceAll(on));
-        self.inbox.requests().set(crate::timer::BOUNDARY);
+        self.inbox.post_trace_all(on);
     }
 }
 
