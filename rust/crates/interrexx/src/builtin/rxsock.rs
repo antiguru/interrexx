@@ -1205,8 +1205,14 @@ fn receive(interp: &mut Interp, args: &[Option<ObjRef>], from: bool) -> Result<O
         return Ok(number(interp, 0));
     }
     let flags = recv_flags(&flags);
+    // A listening socket is not connected: the receive fails at once with
+    // ENOTCONN (r[rxsock.sockets.stream]) instead of waiting for data that
+    // can never come.
     let waits = !flags.contains(RecvFlags::OOB)
-        && with_socket(fd, |socket| Ok(blocks(socket))).unwrap_or(false)
+        && with_socket(fd, |socket| {
+            Ok(blocks(socket) && !rustix::net::sockopt::socket_acceptconn(socket).unwrap_or(false))
+        })
+        .unwrap_or(false)
         && !any_ready(&[(fd, PollFlags::IN)]);
     if waits {
         let deadline = socket_deadline(interp, fd, rustix::net::sockopt::Timeout::Recv);

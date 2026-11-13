@@ -225,8 +225,8 @@ answers `0` with the null string where the other end has finished sending, which
 receiving or `2` for both, and answers `0`, or `-1` with the error `22` for
 another `how`. Stream sockets keep the order of the bytes and not the bounds of
 the calls, so that bytes that were sent by one call can be received by several.
-`SockRecv` on a stream socket that is not connected answers `-1` with the error
-`ENOTCONN`, and `SockSend` on one answers `-1` with the error `32`. The flags are the words `MSG_OOB`,
+`SockRecv` on a stream socket that is not connected, which includes one that listens, answers `-1` with the error
+`ENOTCONN` at once and does not wait, and `SockSend` on one answers `-1` with the error `32`. The flags are the words `MSG_OOB`,
 `MSG_PEEK` and `MSG_DONTROUTE`, in either case, with blanks between them.
 
 ```rexx
@@ -251,6 +251,11 @@ fresh = SockSocket('AF_INET', 'SOCK_STREAM', 0)
 say SockRecv(fresh, 'v', 10) errno '['v']'
 say SockSend(fresh, 'x') errno
 say SockClose(fresh)
+lst = SockSocket('AF_INET', 'SOCK_STREAM', 0)
+call SockBind lst, 'a.'
+call SockListen lst, 5
+say SockRecv(lst, 'd', 10) errno
+say SockRecvFrom(lst, 'd', 10, 0, 'f.') errno
 ::requires 'rxsock' library
 ```
 
@@ -267,6 +272,8 @@ say SockClose(fresh)
 -1 ENOTCONN []
 -1 32
 0
+-1 ENOTCONN
+-1 ENOTCONN
 ```
 
 r[rxsock.sockets.datagram]
