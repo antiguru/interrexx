@@ -1312,8 +1312,6 @@ const RETIRED_ENTRY_BYTES: usize = 128;
 /// The message the last install pass sends every class the package built.
 pub(crate) const ACTIVATE: &[u8] = b"ACTIVATE";
 
-/// The class model this crate dispatches against, and the implementations
-/// its `MethodId`s name.
 /// The classes whose primitive `UNKNOWN` runs without a level of its own,
 /// each as `.NAME` or the kernel directory resolves it, valid while the class
 /// registry's ancestry stamp is `stamp`: only a define or an expunge changes
@@ -1327,6 +1325,8 @@ pub(crate) struct FramelessClasses {
     string_table: Option<ObjRef>,
 }
 
+/// The class model this crate dispatches against, and the implementations
+/// its `MethodId`s name.
 pub(crate) struct ObjectModel {
     classes: ClassRegistry,
     natives: MethodRows<NativeEntry>,
