@@ -1100,8 +1100,11 @@ impl Interp {
         frame.arguments.clear();
         frame.argument_list = None;
         frame.locals.clear();
-        for object in frame.kept.drain() {
-            self.release_kept(object);
+        // A drain walks every bucket of a table that once held a kept string, empty or not.
+        if !frame.kept.is_empty() {
+            for object in frame.kept.drain() {
+                self.release_kept(object);
+            }
         }
         for buffer in frame.lent.drain(..) {
             if let Some(state) = self.buffer_mut(buffer) {
