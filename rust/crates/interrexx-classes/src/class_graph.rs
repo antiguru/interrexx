@@ -686,6 +686,17 @@ impl ClassGraph {
         let handle = self.behaviour_handle(class, side);
         let mut dict = std::mem::take(&mut self.behaviours[handle.index()].dict);
         dict.clear();
+        let def = &self.classes[&class];
+        let own = match side {
+            Side::Instance => def.own_instance_methods.len(),
+            Side::Class => def.own_class_methods.len(),
+        };
+        let inherited = def.superclasses.first().map_or(0, |sup| {
+            self.behaviours[self.behaviour_handle(*sup, side).index()]
+                .dict
+                .len()
+        });
+        dict.reserve(inherited + own);
         Self::cascade_build(&self.classes, &self.behaviours, class, &mut dict, side);
         let behaviour = &mut self.behaviours[handle.index()];
         behaviour.dict = dict;
