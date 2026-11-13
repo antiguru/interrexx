@@ -1679,3 +1679,29 @@ fn a_calls_echo_is_compiled_only_under_a_setting_that_echoes_values() {
     let results = compile_for_test_under(source, traced()).expect("the chunk fits");
     assert!(!render(&results).contains("TraceFunction"));
 }
+
+/// A concatenation whose left operand is a concatenation is marked `onto`,
+/// and neither the first of a chain nor one whose left operand is anything
+/// else -- a variable, a comparison, a parenthesised arithmetic -- is.
+#[test]
+fn a_concatenation_chain_marks_every_link_after_the_first() {
+    let chunk = compile_for_test(b"za = zb || zc zd || ze\n").expect("compiles");
+    assert_eq!(
+        render(&chunk),
+        "0: Clause index=0 end=9\n\
+         1: Load read=Simple at=1 dst=0\n\
+         2: Load read=Simple at=2 dst=1\n\
+         3: Binary op=|| lhs=0 rhs=1 dst=0\n\
+         4: Load read=Simple at=3 dst=1\n\
+         5: Binary op=blank lhs=0 rhs=1 dst=0 onto\n\
+         6: Load read=Simple at=4 dst=1\n\
+         7: Binary op=|| lhs=0 rhs=1 dst=0 onto\n\
+         8: Store index=0 at=0 src=0\n"
+    );
+    let chunk = compile_for_test(b"za = (zb = zc) || zd\n").expect("compiles");
+    assert!(
+        !render(&chunk).contains("onto"),
+        "a comparison on the left is not a link of a chain\n{}",
+        render(&chunk)
+    );
+}

@@ -81,9 +81,11 @@ impl Bytes {
                 // setting `len`, so the first `len` elements of `buf` are
                 // initialised. `len` is a `u8` and `INLINE_BYTES` is 54, and
                 // the assertion above holds it inside the array on every debug
-                // run of the suite. Nothing between construction and here can
-                // shorten the array or lengthen `len`: `Repr` is private to
-                // this file and neither field is written anywhere else.
+                // run of the suite. The only other writer is
+                // `extend_from_slice`, which writes the bytes past `len` before
+                // it lengthens `len` over them, and only while the sum stays
+                // within `INLINE_BYTES`: `Repr` is private to this file and
+                // neither field is written anywhere else.
                 unsafe { std::slice::from_raw_parts(buf.as_ptr().cast::<u8>(), len) }
             }
             Repr::Heap(v) => v,
@@ -97,6 +99,32 @@ impl Bytes {
         match &self.0 {
             Repr::Inline { .. } => 0,
             Repr::Heap(v) => v.len(),
+        }
+    }
+
+    /// Appends `more`, moving the bytes out to a separate allocation once they
+    /// no longer fit inline. **For a body nothing else can read yet** -- the
+    /// one caller is a concatenation growing the string it has just built,
+    /// which no variable, table or other register holds -- since everywhere
+    /// else a string is a value and these bytes are its identity.
+    pub fn extend_from_slice(&mut self, more: &[u8]) {
+        match &mut self.0 {
+            Repr::Inline { len, buf } if usize::from(*len) + more.len() <= INLINE_BYTES => {
+                let at = usize::from(*len);
+                for (slot, byte) in buf[at..].iter_mut().zip(more) {
+                    slot.write(*byte);
+                }
+                // The new length is set only after the bytes it covers are
+                // written, which is `as_slice`'s invariant.
+                *len = (at + more.len()) as u8;
+            }
+            Repr::Inline { .. } => {
+                let mut grown = Vec::with_capacity(2 * (self.as_slice().len() + more.len()));
+                grown.extend_from_slice(self.as_slice());
+                grown.extend_from_slice(more);
+                self.0 = Repr::Heap(grown);
+            }
+            Repr::Heap(vec) => vec.extend_from_slice(more),
         }
     }
 
@@ -127,6 +155,31 @@ impl fmt::Debug for Bytes {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Appending answers the bytes a copy of the whole would, on both sides
+    /// of the inline capacity and across it.
+    #[test]
+    fn extending_answers_the_joined_bytes() {
+        for first in [0, 1, 20, INLINE_BYTES - 1, INLINE_BYTES, INLINE_BYTES + 3] {
+            for more in [0, 1, 7, INLINE_BYTES, 100] {
+                let a: Vec<u8> = (0..first).map(|i| (i % 251) as u8).collect();
+                let b: Vec<u8> = (0..more).map(|i| (i % 13) as u8 + 100).collect();
+                let mut grown = Bytes::from_slice(&a);
+                grown.extend_from_slice(&b);
+                let joined = [a.as_slice(), b.as_slice()].concat();
+                assert_eq!(grown.as_slice(), &joined[..], "{first} + {more}");
+                assert_eq!(
+                    grown.is_inline(),
+                    joined.len() <= INLINE_BYTES,
+                    "{first} + {more}"
+                );
+                assert_eq!(
+                    grown.heap_len(),
+                    if grown.is_inline() { 0 } else { joined.len() }
+                );
+            }
+        }
+    }
 
     /// The capacity is a boundary and both sides of it have to answer the
     /// same bytes, including the two lengths that bracket it exactly.

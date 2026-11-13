@@ -1149,7 +1149,9 @@ impl Interp {
                 None => rest,
             };
             rest[..right_bytes.len()].copy_from_slice(right_bytes);
-            return Ok(self.text(&buffer[..total]));
+            let joined = self.text(&buffer[..total]);
+            self.fresh_concat = joined;
+            return Ok(joined);
         }
         // **Built in the lent buffer and finished with `text_built`**, which
         // is what makes the one remaining allocation conditional rather than
@@ -1167,8 +1169,66 @@ impl Interp {
         }
         bytes.extend_from_slice(right_bytes);
         let joined = self.text_built(bytes);
-
+        self.fresh_concat = joined;
         Ok(joined)
+    }
+
+    /// `left op right` for a concatenation op whose left operand is the
+    /// string the previous concatenation of the same chain built: `right` is
+    /// appended to `left` itself, which is answered. The caller has checked
+    /// that `left` is [`Interp::fresh_concat`], which is what makes it a
+    /// string nothing else holds -- so the append is the concatenation's own
+    /// answer, and the copy of `left` it saves is invisible. Anything other
+    /// than a plain text body takes [`Interp::apply_binary`] instead.
+    pub(crate) fn concat_onto(
+        &mut self,
+        op: Operator,
+        left: ObjRef,
+        right: ObjRef,
+    ) -> Result<ObjRef, Failure> {
+        debug_assert!(
+            is_concatenation(op),
+            "concat_onto is for the concatenation operators"
+        );
+        debug_assert_eq!(
+            left, self.fresh_concat,
+            "concat_onto on a string not just built"
+        );
+        if !matches!(
+            self.heap
+                .get(left)
+                .map(|object| (&object.body, object.behaviour)),
+            Some((Body::Text { .. }, interrexx_core::BehaviourId::STRING))
+        ) {
+            return self.apply_binary(op, left, right);
+        }
+        // `apply_binary`'s own sequence for a string receiver: the right
+        // operand through the required-string protocol, then the join.
+        let right = self.required_string_operand(right, op)?;
+        let rendered = self.render(right);
+        let mut piece = self.take_result_buffer();
+        if op == Operator::Blank {
+            piece.push(b' ');
+        }
+        piece.extend_from_slice(rendered.text(self));
+        let Some(object) = self.heap.get_mut(left) else {
+            unreachable!("a register roots the string a chain is building");
+        };
+        let Body::Text { bytes, num } = &mut object.body else {
+            unreachable!("checked to be a text body above");
+        };
+        let before = bytes.heap_len();
+        bytes.extend_from_slice(&piece);
+        *num = None;
+        let after = bytes.heap_len();
+        self.give_result_buffer(piece);
+        if after > before {
+            self.charge_body_bytes(after - before);
+        }
+        // Set again: evaluating the right operand may have built strings of
+        // its own.
+        self.fresh_concat = left;
+        Ok(left)
     }
 
     /// The comparison operators (numeric-or-string `= \= <> >< > < >= <= \> \<`, and strict
@@ -1624,7 +1684,11 @@ impl Interp {
             {
                 return self.concat_reference(op, left, right);
             }
-            return self.send_operator(op.spelling(), target, &[Some(right)]);
+            let answer = self.send_operator(op.spelling(), target, &[Some(right)]);
+            // Whatever the method answered may be held anywhere, including a
+            // string it built itself, so no chain may append to it.
+            self.fresh_concat = ObjRef::NIL;
+            return answer;
         }
         // **A string or number compared with `.nil` answers without reading it.** String
         // equality returns false for `.nil` before it looks at any bytes, and every other
@@ -1859,7 +1923,7 @@ pub(crate) fn is_arithmetic(op: Operator) -> bool {
 /// Whether `op` is one of the operators [`Interp::concat_values`] joins bytes
 /// for: `||`, the abuttal the parser synthesises between two adjacent terms,
 /// and the blank between two terms with whitespace in it.
-fn is_concatenation(op: Operator) -> bool {
+pub(crate) fn is_concatenation(op: Operator) -> bool {
     use Operator::*;
     matches!(op, Concatenate | Abuttal | Blank)
 }

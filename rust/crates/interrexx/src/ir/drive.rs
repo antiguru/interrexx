@@ -934,6 +934,7 @@ macro_rules! region_ops {
                     rhs,
                     dst,
                     text,
+                    onto,
                 } => {
                     debug_assert!(
                         $chunk.holds_register(*lhs)
@@ -960,7 +961,17 @@ macro_rules! region_ops {
                     // the evaluation of the operand after them,
                     // and this op's operands were rooted before
                     // it ran.
-                    let value = match $self.apply_binary_op(*op, *text, left, right) {
+                    // **A chain appends to the string it is building**
+                    // where the op before it built one: `onto` says the
+                    // left operand came from that op, and the comparison
+                    // says it is still the string that op made rather than
+                    // an object's answer to the operator.
+                    let applied = if *onto && left == $self.fresh_concat {
+                        $self.concat_onto(*op, left, right)
+                    } else {
+                        $self.apply_binary_op(*op, *text, left, right)
+                    };
+                    let value = match applied {
                         Ok(value) => value,
                         Err(failure) => break $cold Err(failure),
                     };
@@ -2730,6 +2741,11 @@ impl Interp {
                     rhs,
                     dst,
                     text,
+                    // A condition's chain copies at every link rather than
+                    // appending: `concat_onto` is the region arm's, and
+                    // `apply_binary_op` keeps `fresh_concat` as every other
+                    // concatenation does.
+                    onto: _,
                 } => {
                     let left = registers.get(*lhs);
                     let right = registers.get(*rhs);

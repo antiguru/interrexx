@@ -1712,6 +1712,13 @@ struct Interp {
     /// the activity: measured by callgrind, a field there costs `pingguard`
     /// +0.30% and `pingsem` +0.26%.
     pub(crate) held_trace_failure: Option<Failure>,
+    /// The string [`Interp::concat_values`] built last, or [`ObjRef::NIL`]
+    /// once an operator was sent to an object instead. A concatenation op
+    /// whose left operand is this and is the previous concatenation of its
+    /// own chain ([`crate::ir::Op::Binary`]'s `onto`) holds the only
+    /// reference to it, so it appends to it rather than copying it. Not a
+    /// root: it is only ever compared with a register that roots it.
+    pub(crate) fresh_concat: ObjRef,
     /// One entry per activity inside a stem's forward ([`Interp::forwarded`]).
     forwardings: Vec<crate::value::Forwarding>,
     /// Whether anything in this run could take `LOSTDIGITS`: a `SIGNAL ON
@@ -2465,6 +2472,7 @@ impl Interp {
             command_words_base: Some(1),
             reqstr_armed: false,
             held_trace_failure: None,
+            fresh_concat: ObjRef::NIL,
             forwardings: Vec::new(),
             lostdigits_armed: false,
             program_path: Vec::new(),
@@ -3572,6 +3580,9 @@ impl Interp {
             reqstr_armed: _,
             // A condition, whose ADDITIONAL `pending_additional` roots.
             held_trace_failure: _,
+            // Compared, never read through: the register it is compared with
+            // is the root.
+            fresh_concat: _,
             // Each receiver is a forward's, rooted by that send too; handed
             // over so the handle it is compared with never names a slot the
             // collector has freed.
