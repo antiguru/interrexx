@@ -694,11 +694,11 @@ impl Interp {
         &mut self,
         names: &[Box<[u8]>],
     ) -> Vec<crate::activation::InstanceVar> {
-        let exposed = &self.activation().exposed;
+        let exposed = self.activation().exposed.as_deref();
         let watched: Vec<crate::activation::InstanceVar> = names
             .iter()
             .filter_map(|name| {
-                exposed
+                exposed?
                     .iter()
                     .find(|(_, var)| *var.name == **name)
                     .map(|(_, var)| var.clone())

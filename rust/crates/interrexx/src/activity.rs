@@ -57,8 +57,8 @@ pub(crate) struct Activity {
     )]
     pub(crate) spare_activations: Vec<Box<Activation>>,
     /// An ended method activation's emptied `EXPOSE` list, kept for its
-    /// capacity until the next `EXPOSE` takes it.
-    pub(crate) spare_exposed: Vec<(usize, crate::activation::InstanceVar)>,
+    /// allocations until the next `EXPOSE` takes it.
+    pub(crate) spare_exposed: Option<Box<crate::activation::Exposures>>,
     /// The native activations on the stack, innermost last. Each carries the
     /// objects an extension's handles name (D5), rooted by
     /// [`Activity::object_roots`] for exactly as long as the frame is on this
@@ -541,7 +541,7 @@ impl Activity {
             running: None,
             suspended: Vec::new(),
             spare_activations: Vec::new(),
-            spare_exposed: Vec::new(),
+            spare_exposed: None,
             thread: None,
             native_handles: Vec::new(),
             native_spares: Vec::new(),

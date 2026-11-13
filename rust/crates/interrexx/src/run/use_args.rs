@@ -219,11 +219,7 @@ impl Interp {
                         scope,
                         name: reference.clone().into(),
                     };
-                    let activation = self.activation_mut();
-                    match activation.exposed.iter_mut().find(|(at, _)| *at == index) {
-                        Some(bound) => bound.1 = var,
-                        None => activation.exposed.push((index, var)),
-                    }
+                    self.expose_slot(index, var);
                 }
             }
             // `>R>`, the alias's own line and the **only** trace line this
