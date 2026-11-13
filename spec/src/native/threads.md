@@ -47,10 +47,15 @@ posted
 ```
 
 r[native.threads.end]
-The end of a program waits for an activity that an attached thread is running,
-as it waits for [any other activity](r:conc.halt.end.alive), and the program's
-return code is that of its main program. In the example the attached thread's
-message has started before the main program ends, and finishes after it.
+The end of a program waits for an attached thread only while that thread's
+activity runs a message, as it waits for [any other
+activity](r:conc.halt.end.alive), and the program's return code is that of its
+main program. A thread that is attached but sends nothing does not keep the
+program running: the program ends without it, and the thread does not get to
+detach. In the first example the attached thread's message has started
+before the main program ends, and finishes after it; in the second the thread
+has finished its message and stays attached, idle, for three seconds, and the
+program ends at once.
 
 ```rexx
 src = .array~of( -
@@ -84,6 +89,73 @@ call sysfiledelete 'n3zqend.rex'
 ```output defect=#621
 rc 0
 thread ran
+```
+
+```rexx
+src = .array~of( -
+  "sem = .eventsemaphore~new", -
+  "call fxonthreadidle sem, 'POST', 3", -
+  "sem~wait", -
+  "say 'main ends'", -
+  "::requires 'specfixture' LIBRARY")
+call sysfiledelete 'n3zqidle.rex'
+do line over src
+  call lineout 'n3zqidle.rex', line
+end
+call lineout 'n3zqidle.rex'
+call time 'R'
+address system 'rexx n3zqidle.rex 2>/dev/null' with output stem out.
+say 'rc' rc 'waited' (time('E') >= 2)
+do i = 1 to out.0
+  say out.i
+end
+call sysfiledelete 'n3zqidle.rex'
+```
+
+```output defect=#621
+rc 0 waited 0
+main ends
+```
+
+r[native.threads.instance]
+Every activity of one interpreter is given the same interpreter instance by
+the native API: the main program's, one that [`REPLY`](../instructions/reply.md)
+or [`start`](r:conc.activities.creation) makes, and an attached thread's. So
+native code that keeps something for an interpreter finds it again from any
+of its activities, and what native code asks of the instance, such as halting
+every activity ([the halt rule](r:native.threads.halt)) or attaching a thread,
+acts on the whole interpreter, not on the activity that asked. The fixture's
+`FxInstance` writes the instance it is given as an address, which the example
+compares.
+
+```rexx
+main = fxinstance()
+o = .n3zqi~new
+o~replied
+o~done~wait
+say 'main' (fxinstance() == main)
+say 'reply' (o~seen == main)
+say 'start' (o~start('plain')~result == main)
+::requires 'specfixture' LIBRARY
+::class n3zqi
+::attribute done
+::attribute seen
+::method init
+  expose done
+  done = .eventsemaphore~new
+::method replied
+  expose done seen
+  reply
+  seen = fxinstance()
+  done~post
+::method plain
+  return fxinstance()
+```
+
+```output defect=#628
+main 1
+reply 1
+start 1
 ```
 
 > **Note.** A thread may use only the contexts it was given: the one that its attachment

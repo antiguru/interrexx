@@ -17,6 +17,7 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 // ---------------------------------------------------------------------------------------------
 // Classic function handlers: in every variant, so that the package can list one as a classic
@@ -251,12 +252,14 @@ RexxRoutine0(CSTRING, FxTwinSecond)
 // ---------------------------------------------------------------------------------------------
 // Threads.
 
-// A job for a thread the fixture starts: send `message` to `target` from an activity of its own.
+// A job for a thread the fixture starts: send `message` to `target` from an activity of its own,
+// then stay attached, sending nothing, for `idle` seconds.
 struct ThreadJob
 {
     RexxInstance *instance;
     RexxObjectPtr target;
     char message[64];
+    unsigned idle;
 };
 
 static void *runJob(void *arg)
@@ -267,21 +270,25 @@ static void *runJob(void *arg)
     {
         thread->SendMessage0(job->target, job->message);
         thread->ReleaseGlobalReference(job->target);
+        if (job->idle > 0)
+        {
+            sleep(job->idle);
+        }
         thread->DetachThread();
     }
     delete job;
     return NULL;
 }
 
-// Starts a thread that attaches to the interpreter, sends `message` to `target`, and detaches.
-// Answers at once, without waiting for the thread: 1 where it started, 0 otherwise.
-// Serves r[native.threads.attach], r[native.threads.end].
-RexxRoutine2(logical_t, FxOnThread, RexxObjectPtr, target, CSTRING, message)
+// Starts a detached thread for a job. Answers 1 where it started, 0 otherwise.
+static logical_t startJob(RexxCallContext *context, RexxObjectPtr target, CSTRING message,
+                          unsigned idle)
 {
     ThreadJob *job = new ThreadJob;
     job->instance = context->threadContext->instance;
     job->target = context->RequestGlobalReference(target);
     snprintf(job->message, sizeof job->message, "%s", message);
+    job->idle = idle;
     pthread_t thread;
     pthread_attr_t attributes;
     pthread_attr_init(&attributes);
@@ -295,6 +302,33 @@ RexxRoutine2(logical_t, FxOnThread, RexxObjectPtr, target, CSTRING, message)
         return 0;
     }
     return 1;
+}
+
+// Starts a thread that attaches to the interpreter, sends `message` to `target`, and detaches.
+// Answers at once, without waiting for the thread: 1 where it started, 0 otherwise.
+// Serves r[native.threads.attach], r[native.threads.end].
+RexxRoutine2(logical_t, FxOnThread, RexxObjectPtr, target, CSTRING, message)
+{
+    return startJob(context, target, message, 0);
+}
+
+// As FxOnThread, but after the message the thread stays attached, idle, for `seconds` seconds
+// before it detaches.
+// Serves r[native.threads.end].
+RexxRoutine3(logical_t, FxOnThreadIdle, RexxObjectPtr, target, CSTRING, message,
+             nonnegative_wholenumber_t, seconds)
+{
+    return startJob(context, target, message, (unsigned)seconds);
+}
+
+// Answers the interpreter instance the calling activity is given, written as an address, so
+// that activities can compare theirs.
+// Serves r[native.threads.instance].
+RexxRoutine0(RexxObjectPtr, FxInstance)
+{
+    char text[32];
+    snprintf(text, sizeof text, "%p", (void *)context->threadContext->instance);
+    return context->String(text);
 }
 
 // Asks the interpreter to halt every activity.
@@ -395,6 +429,8 @@ static RexxRoutineEntry fixtureRoutines[] =
     REXX_TYPED_ROUTINE(FxDropVar, FxDropVar),
     REXX_TYPED_ROUTINE(FxNumeric, FxNumeric),
     REXX_TYPED_ROUTINE(FxOnThread, FxOnThread),
+    REXX_TYPED_ROUTINE(FxOnThreadIdle, FxOnThreadIdle),
+    REXX_TYPED_ROUTINE(FxInstance, FxInstance),
     REXX_TYPED_ROUTINE(FxHaltAll, FxHaltAll),
     REXX_TYPED_ROUTINE(FxHaltThis, FxHaltThis),
     REXX_CLASSIC_ROUTINE(FxClassicJoin, FxClassicJoin),
