@@ -2241,6 +2241,12 @@ impl Interp {
         }
         let spelling = String::from_utf8_lossy(name).into_owned();
         let opened = interrexx_api::load::open(&spelling, &self.library_search, &self.cwd);
+        // A native extension holds the instance, whose `SetTrace` switches the trace of every
+        // activity at a clause boundary, so no chunk compiled from here on may settle a
+        // clause's trace setting at compile time.
+        if matches!(opened, Ok(Some(_))) {
+            self.trace_switchable = true;
+        }
         self.settle_library(name, opened)
     }
 

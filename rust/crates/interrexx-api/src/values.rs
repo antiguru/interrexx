@@ -711,6 +711,18 @@ pub trait Baton {
     fn refuses_foreign(&self) -> bool {
         false
     }
+
+    /// Asks every activity of the host to halt (`r[native.threads.halt]`),
+    /// from any thread and without taking the baton: the request is served
+    /// at the holder's next boundary. A host that cannot be asked does
+    /// nothing.
+    fn post_halt(&self) {}
+
+    /// Asks every activity of the host to turn external tracing on or off,
+    /// served as [`Baton::post_halt`] is.
+    fn post_trace(&self, on: bool) {
+        let _ = on;
+    }
 }
 
 pub use crate::ffi::HostRef;

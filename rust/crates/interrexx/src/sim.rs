@@ -1216,7 +1216,9 @@ impl Interp {
         };
         for post in posted {
             let what = match post {
-                Posted::Completed(_) | Posted::Halt | Posted::Trace(_) => continue,
+                Posted::Completed(_) | Posted::Halt | Posted::Trace(_) | Posted::TraceAll(_) => {
+                    continue;
+                }
                 Posted::Recall(_) => "a recall of the baton",
                 Posted::Output { .. } | Posted::Captured { .. } => "a command's output",
                 Posted::Unblocked { .. } => "a command's end",

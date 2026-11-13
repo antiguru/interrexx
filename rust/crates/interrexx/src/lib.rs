@@ -1515,7 +1515,8 @@ struct Interp {
     /// boundary.
     pub(crate) clause_exits: bool,
     /// Whether another thread can switch the trace of this run at a clause boundary
-    /// (`RexxSetTrace`), so that no chunk may settle a clause's trace setting at compile time.
+    /// (`RexxSetTrace`, or `SetTrace` through the instance a loaded native extension or an
+    /// embedding holds), so that no chunk may settle a clause's trace setting at compile time.
     pub(crate) trace_switchable: bool,
     /// A native call posted to this interpreter's own inbox, which the clause boundary that
     /// ends the calling clause serves: the activation depth of that clause. It sets
@@ -4705,12 +4706,12 @@ const INSTANCE_LIBRARY: &[u8] = b"REXXEMBEDDING";
 
 /// Everything an embedding instance's interpreter thread does: the
 /// interpreter is built and bootstrapped, `options` applied, `started` told
-/// the root thread context and the inbox, and the root activity waits in a
+/// the root thread context, the instance and the inbox, and the root activity waits in a
 /// native call that leaves the driver free to serve the attached threads'
 /// callbacks; once it returns, the run ends as a program's does.
 pub(crate) fn run_instance(
     options: embedding::InstanceOptions,
-    started: Box<dyn FnOnce(usize, crate::sync::Arc<timer::Inbox<timer::Posted>>) + Send>,
+    started: Box<dyn FnOnce(usize, usize, crate::sync::Arc<timer::Inbox<timer::Posted>>) + Send>,
 ) -> (Outcome, Option<Interp>) {
     use interrexx_api::callbacks::Surface as _;
     let probe = 0u8;
@@ -4759,6 +4760,8 @@ pub(crate) fn run_instance(
                 .subcom_aliases
                 .insert(name.to_ascii_uppercase(), registered);
         }
+        // The embedder's `SetTrace` reaches every activity at a clause boundary.
+        interp.trace_switchable = true;
         for (name, package) in options.registered_libraries {
             let library = package.into_library(&String::from_utf8_lossy(&name));
             interp.register_library(&name, library);
@@ -4772,7 +4775,11 @@ pub(crate) fn run_instance(
         let thread = interp.thread_context();
         thread.keep();
         thread.set_application_data(options.application_data);
-        started(thread.address(), interp.timer.inbox());
+        started(
+            thread.address(),
+            thread.instance_address(),
+            interp.timer.inbox(),
+        );
         interp.leave_next_native = true;
         let program = Rc::new(program);
         let program_id = interp.load_program(Rc::clone(&program));

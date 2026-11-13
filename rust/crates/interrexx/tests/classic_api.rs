@@ -1178,6 +1178,137 @@ fn a_halt_from_another_thread_reaches_a_native_calls_activity() {
     );
 }
 
+/// Compiles `tests/classic_api/halt_trace.cpp` into a directory of this run's own as the
+/// extension `halttrace` and runs `program` from it under `rexx`, answering stdout, stderr and
+/// the exit code.
+fn run_halt_trace(name: &str, program: &str) -> (String, String, i32) {
+    let dir = scratch().join(format!("halt-trace-{name}"));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).expect("a directory of this run's own");
+    let api = repository().join("third_party/ooRexx/api");
+    let built = Command::new("c++")
+        .args([
+            "-shared",
+            "-fPIC",
+            "-O1",
+            "-static-libstdc++",
+            "-pthread",
+            "-o",
+        ])
+        .arg(dir.join("libhalttrace.so"))
+        .arg(Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/classic_api/halt_trace.cpp"))
+        .arg(format!("-I{}", api.display()))
+        .arg(format!("-I{}", api.join("platform/unix").display()))
+        .output()
+        .expect("c++ runs");
+    assert!(
+        built.status.success(),
+        "{}",
+        String::from_utf8_lossy(&built.stderr)
+    );
+    std::fs::write(dir.join("program.rex"), program).expect("the program written");
+    let service = scratch().join(format!("api-halt-trace-{name}"));
+    let output = rexx(
+        &["program.rex"],
+        &dir,
+        &service,
+        std::env::join_paths([&dir]).expect("a library path"),
+    )
+    .output()
+    .expect("rexx runs");
+    stop_service(&service);
+    (
+        String::from_utf8_lossy(&output.stdout).into_owned(),
+        String::from_utf8_lossy(&output.stderr).into_owned(),
+        output.status.code().unwrap_or(-1),
+    )
+}
+
+/// `Halt` through the instance from a thread that runs no Rexx code reaches every activity of a
+/// program `rexx` runs: the main activity, which a native call has left to wait for that thread,
+/// and the activity `start` made (`r[native.threads.halt]`).
+#[test]
+fn halt_through_the_instance_reaches_a_started_activity() {
+    let program = "call htsave\n\
+        w = .htw~new\n\
+        w~start('spin')\n\
+        w~ready~wait\n\
+        signal on halt name h\n\
+        call hthalt\n\
+        do i = 1 to 1000000; nop; end\n\
+        say 'main not halted'\n\
+        h: w~done~wait\n\
+        say 'main' condition('c') '/ worker' w~how\n\
+        ::requires 'halttrace' LIBRARY\n\
+        ::class htw\n\
+        ::attribute ready\n\
+        ::attribute done\n\
+        ::attribute how\n\
+        ::method init\n\
+        \x20 expose ready done how\n\
+        \x20 ready = .eventsemaphore~new\n\
+        \x20 done = .eventsemaphore~new\n\
+        \x20 how = 'running'\n\
+        ::method spin unguarded\n\
+        \x20 expose ready done how\n\
+        \x20 signal on halt name h\n\
+        \x20 ready~post\n\
+        \x20 do 200\n\
+        \x20   call syssleep 0.01\n\
+        \x20 end\n\
+        \x20 how = 'not halted'\n\
+        \x20 done~post\n\
+        \x20 return\n\
+        h: how = 'halted'\n\
+        \x20 done~post\n";
+    assert_eq!(
+        run_halt_trace("halt", program),
+        ("main HALT / worker halted\n".to_owned(), String::new(), 0)
+    );
+}
+
+/// `SetTrace` through the instance from a thread that runs no Rexx code traces the activity
+/// `start` made, which is waiting when it is called.
+#[test]
+fn set_trace_through_the_instance_traces_a_started_activity() {
+    let program = "call htsave\n\
+        w = .htt~new\n\
+        w~start('spin')\n\
+        w~ready~wait\n\
+        call httrace 1\n\
+        w~go~post\n\
+        w~done~wait\n\
+        ::requires 'halttrace' LIBRARY\n\
+        ::class htt\n\
+        ::attribute ready\n\
+        ::attribute go\n\
+        ::attribute done\n\
+        ::method init\n\
+        \x20 expose ready go done\n\
+        \x20 ready = .eventsemaphore~new\n\
+        \x20 go = .eventsemaphore~new\n\
+        \x20 done = .eventsemaphore~new\n\
+        ::method spin unguarded\n\
+        \x20 expose ready go done\n\
+        \x20 ready~post\n\
+        \x20 go~wait\n\
+        \x20 say 'worker ran'\n\
+        \x20 done~post\n";
+    let (stdout, stderr, code) = run_halt_trace("trace", program);
+    assert_eq!((stdout.as_str(), code), ("worker ran\n", 0), "{stderr}");
+    // The worker's own clauses are traced, with their line numbers in the program; the lines
+    // that name the program's path and the main activity's clauses are not compared.
+    let traced: Vec<&str> = stderr
+        .lines()
+        .filter(|line| line.contains("*-* say 'worker ran'") || line.contains("*-* done~post"))
+        .collect();
+    assert_eq!(
+        traced,
+        ["    22 *-* say 'worker ran'", "    23 *-* done~post"],
+        "{stderr}"
+    );
+}
+
 /// `callrexx1`, the classic sample (`samples/api/classic/unix/callrexx`), built against our
 /// libraries and run from a copy of its directory with every prompt answered: each `RexxStart`
 /// answers as on the oracle -- results the program returns into a null, a large enough and a

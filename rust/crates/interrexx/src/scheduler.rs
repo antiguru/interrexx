@@ -185,6 +185,9 @@ pub(crate) enum Posted {
     /// `RexxSetTrace` (`true`) or `RexxResetTrace` named this run's thread: the running Rexx
     /// frame's external trace ([`Interp::set_external_trace`]).
     Trace(bool),
+    /// `Trace` of an instance: every activity's external trace, on or off
+    /// ([`Interp::set_external_trace_all`]).
+    TraceAll(bool),
     /// A chunk of standard input, empty at its end.
     Input(Vec<u8>),
 }
@@ -1722,6 +1725,7 @@ impl Interp {
                     self.halt_all();
                 }
                 Posted::Trace(on) => self.set_external_trace(on),
+                Posted::TraceAll(on) => self.set_external_trace_all(on),
                 Posted::Input(chunk) => self.input.receive(chunk),
                 Posted::Unblocked {
                     activity,
@@ -2849,6 +2853,19 @@ impl Interp {
             };
             if request_halt(record, None) == Some(true) {
                 self.wake_for_halt(activity);
+            }
+        }
+    }
+
+    /// [`Interp::set_external_trace`] for every activity of the interpreter, as a halt
+    /// reaches them (`r[native.threads.halt]`): the running one and each idle one, whose
+    /// frames are reached by putting it in the running one's place, as a read of it is.
+    pub(crate) fn set_external_trace_all(&mut self, on: bool) {
+        self.set_external_trace(on);
+        for index in 0..self.activities.idle.len() {
+            if self.activities.idle[index].is_some() {
+                let activity = ActivityId(u32::try_from(index).expect("handles fit u32"));
+                self.with_idle_activity(activity, |interp| interp.set_external_trace(on));
             }
         }
     }

@@ -621,11 +621,8 @@ struct InstanceBlock {
 /// on any thread ([`owner_of_instance`]).
 struct InstanceOwner {
     /// The baton of the interpreter, while it is live: a thread running no
-    /// native call of the interpreter takes it.
-    #[expect(
-        dead_code,
-        reason = "the members that post to the interpreter from any thread read it"
-    )]
+    /// native call of the interpreter takes it, and `Halt` and `SetTrace`
+    /// post their requests through it.
     requester: Option<std::sync::Weak<dyn crate::values::Baton + Send + Sync>>,
     /// The address of the root activity's thread context
     /// ([`ThreadContext::make_root`]), null while there is none: the key an
@@ -848,18 +845,18 @@ pub fn forget_attached(context: usize) {
 
 /// What an embedding serves for the instance members that act on a whole
 /// instance rather than on a native call: its interpreter is reached by the
-/// address of its root thread context, from any thread.
+/// address of its instance ([`ThreadTable::instance`]), from any thread.
 pub trait Embedder: Send + Sync {
-    /// `Terminate`: ends the instance whose root context is at `context`,
-    /// answering once it has ended; `false` where `context` is no instance's
-    /// or the instance cannot end now.
-    fn terminate(&self, context: usize) -> bool;
-    /// `Halt`: asks every activity of the instance to halt; `false` where
-    /// `context` is no instance's.
-    fn halt(&self, context: usize) -> bool;
+    /// `Terminate`: ends the interpreter whose instance is at `instance`,
+    /// answering once it has ended; `false` where `instance` is no
+    /// embedding's or the interpreter cannot end now.
+    fn terminate(&self, instance: usize) -> bool;
+    /// `Halt`: asks every activity of the interpreter to halt; `false` where
+    /// `instance` is no embedding's.
+    fn halt(&self, instance: usize) -> bool;
     /// `SetTrace`: turns external tracing of every activity on or off;
-    /// `false` where `context` is no instance's.
-    fn set_trace(&self, context: usize, on: bool) -> bool;
+    /// `false` where `instance` is no embedding's.
+    fn set_trace(&self, instance: usize, on: bool) -> bool;
 }
 
 static EMBEDDER: std::sync::OnceLock<&'static dyn Embedder> = std::sync::OnceLock::new();
@@ -4467,8 +4464,9 @@ fn call_here(instance: *mut RexxInstance_) -> Option<*mut RexxThreadContext_> {
 /// call until it detaches: every attached thread shares that one activity,
 /// its calls serialized by the baton. The root context is kept
 /// ([`ThreadContext::make_root`]), so a `DetachThread` after the interpreter
-/// has ended reads live memory and finds the thread attached. Where the interpreter has no root context, nothing is
-/// attached and the answer is false.
+/// has ended reads live memory and finds the thread attached. Where the
+/// interpreter has no root context, nothing is attached and the answer is
+/// false.
 ///
 /// # Safety
 /// `instance` is an instance a [`ThreadTable`] made, and a non-null
@@ -4596,60 +4594,54 @@ unsafe extern "C" fn terminate(instance: *mut RexxInstance_) {
     let Some(root) = (unsafe { root_of(instance) }) else {
         return;
     };
-    let context = root as usize;
-    if embedder().is_some_and(|embedder| embedder.terminate(context)) {
-        forget_attached(context);
+    if embedder().is_some_and(|embedder| embedder.terminate(instance as usize)) {
+        forget_attached(root as usize);
     }
 }
 
-/// The context a member acting on the instance's interpreter reaches it
-/// through, from a thread that may reach a call of it: that of the call this
-/// thread runs, else the root context where this thread is attached to it.
-fn reaching(
-    instance: *mut RexxInstance_,
-    root: Option<*mut RexxThreadContext_>,
-) -> Option<*mut RexxThreadContext_> {
-    call_here(instance).or(root.filter(|&root| attached_here(root as usize)))
-}
-
-/// `Halt`: every activity
-/// of the instance is asked to halt, from any thread.
+/// `Halt`: every activity of the instance's interpreter is asked to halt
+/// (`r[native.threads.halt]`), from any thread, whether or not it runs a call
+/// of the interpreter. A request after the interpreter ended does nothing.
 ///
 /// # Safety
 /// `instance` is an instance a [`ThreadTable`] made.
 unsafe extern "C" fn halt(instance: *mut RexxInstance_) {
-    // SAFETY: the caller guarantees `instance`.
-    let root = unsafe { root_of(instance) };
-    if let Some(root) = root
-        && embedder().is_some_and(|embedder| embedder.halt(root as usize))
-    {
+    if embedder().is_some_and(|embedder| embedder.halt(instance as usize)) {
         return;
     }
-    if let Some(context) = reaching(instance, root) {
-        // SAFETY: `context` is that of a call in flight on this thread, or
-        // the root, which `make_root` kept, so it is never freed.
-        or_nothing!(unsafe { innermost_activation(context, "Halt") }).halt(true);
+    // SAFETY: the caller guarantees `instance`.
+    if let Some(requester) = unsafe { live_requester(instance) } {
+        requester.post_halt();
     }
 }
 
-/// `SetTrace`: external
-/// tracing of every activity of the instance on or off.
+/// `SetTrace`: external tracing of every activity of the instance's
+/// interpreter on or off, from any thread, as [`halt`] reaches them.
 ///
 /// # Safety
 /// As [`halt`].
 unsafe extern "C" fn set_trace(instance: *mut RexxInstance_, setting: logical_t) {
-    // SAFETY: the caller guarantees `instance`.
-    let root = unsafe { root_of(instance) };
-    if let Some(root) = root
-        && embedder().is_some_and(|embedder| embedder.set_trace(root as usize, setting != 0))
-    {
+    let on = setting != 0;
+    if embedder().is_some_and(|embedder| embedder.set_trace(instance as usize, on)) {
         return;
     }
-    if let Some(context) = reaching(instance, root) {
-        // SAFETY: as in `halt`.
-        or_nothing!(unsafe { innermost_activation(context, "SetTrace") })
-            .set_trace(true, setting != 0);
+    // SAFETY: the caller guarantees `instance`.
+    if let Some(requester) = unsafe { live_requester(instance) } {
+        requester.post_trace(on);
     }
+}
+
+/// The requester of the interpreter whose instance is `instance`, while the
+/// interpreter is live.
+///
+/// # Safety
+/// As [`owner_of_instance`].
+unsafe fn live_requester(instance: *mut RexxInstance_) -> Option<Requester> {
+    // SAFETY: the caller's guarantee.
+    unsafe { owner_of_instance(instance) }?
+        .requester
+        .as_ref()?
+        .upgrade()
 }
 
 /// The members a redirecting command handler reads and writes its streams

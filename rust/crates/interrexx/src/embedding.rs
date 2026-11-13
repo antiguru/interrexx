@@ -570,6 +570,9 @@ struct Shared {
     state: std::sync::Mutex<State>,
     changed: std::sync::Condvar,
     inbox: std::sync::OnceLock<crate::sync::Arc<crate::timer::Inbox<crate::timer::Posted>>>,
+    /// The address of the interpreter's instance, which the instance members
+    /// name it by.
+    instance: std::sync::OnceLock<usize>,
     /// What the interpreter thread left unwritten, once it has ended.
     outcome: std::sync::Mutex<Option<crate::Outcome>>,
 }
@@ -591,7 +594,7 @@ impl Shared {
     }
 }
 
-/// The live instances, by root thread context address.
+/// The live instances, by instance address.
 static INSTANCES: std::sync::Mutex<Vec<(usize, std::sync::Arc<Shared>)>> =
     std::sync::Mutex::new(Vec::new());
 
@@ -601,10 +604,10 @@ fn instances() -> std::sync::MutexGuard<'static, Vec<(usize, std::sync::Arc<Shar
         .unwrap_or_else(std::sync::PoisonError::into_inner)
 }
 
-fn instance(context: usize) -> Option<std::sync::Arc<Shared>> {
+fn instance(address: usize) -> Option<std::sync::Arc<Shared>> {
     instances()
         .iter()
-        .find(|(at, _)| *at == context)
+        .find(|(at, _)| *at == address)
         .map(|(_, shared)| std::sync::Arc::clone(shared))
 }
 
@@ -632,8 +635,9 @@ pub fn create_instance(options: InstanceOptions) -> Option<usize> {
             crate::signal::receive();
             let (outcome, kept) = crate::run_instance(
                 options,
-                Box::new(move |context, inbox| {
+                Box::new(move |context, instance, inbox| {
                     let _ = starting.inbox.set(inbox);
+                    let _ = starting.instance.set(instance);
                     STARTING
                         .lock()
                         .unwrap_or_else(std::sync::PoisonError::into_inner)
@@ -684,7 +688,9 @@ pub(crate) fn wait_in_root(context: usize) {
         };
         starting.remove(at).1
     };
-    instances().push((context, std::sync::Arc::clone(&shared)));
+    if let Some(&address) = shared.instance.get() {
+        instances().push((address, std::sync::Arc::clone(&shared)));
+    }
     let mut state = shared.state();
     state.context = Some(context);
     shared.changed.notify_all();
@@ -720,8 +726,8 @@ struct Embedder;
 static EMBEDDER: Embedder = Embedder;
 
 impl interrexx_api::ffi::Embedder for Embedder {
-    fn terminate(&self, context: usize) -> bool {
-        let Some(shared) = instance(context) else {
+    fn terminate(&self, address: usize) -> bool {
+        let Some(shared) = instance(address) else {
             return false;
         };
         {
@@ -733,12 +739,12 @@ impl interrexx_api::ffi::Embedder for Embedder {
             shared.changed.notify_all();
         }
         end(&shared);
-        instances().retain(|(at, _)| *at != context);
+        instances().retain(|(at, _)| *at != address);
         true
     }
 
-    fn halt(&self, context: usize) -> bool {
-        let Some(shared) = instance(context) else {
+    fn halt(&self, address: usize) -> bool {
+        let Some(shared) = instance(address) else {
             return false;
         };
         if let Some(inbox) = shared.inbox.get() {
@@ -748,7 +754,14 @@ impl interrexx_api::ffi::Embedder for Embedder {
         true
     }
 
-    fn set_trace(&self, _context: usize, _on: bool) -> bool {
-        false
+    fn set_trace(&self, address: usize, on: bool) -> bool {
+        let Some(shared) = instance(address) else {
+            return false;
+        };
+        if let Some(inbox) = shared.inbox.get() {
+            inbox.post(crate::timer::Posted::TraceAll(on));
+            inbox.requests().set(crate::timer::BOUNDARY);
+        }
+        true
     }
 }
