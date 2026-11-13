@@ -301,7 +301,7 @@ e: say condition('o')~code
   return v
 ```
 
-```output defect=#230
+```output
 0
 121
 0

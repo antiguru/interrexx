@@ -168,7 +168,7 @@ e: return condition('o')~code
   return '0'
 ```
 
-```output defect=#230
+```output
 0 88.907 0 0
 ```
 
