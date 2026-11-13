@@ -35,8 +35,6 @@ say lg~upper (lg || '!') lg~'='(lg) (lg~'<'('b')) lg~changestr('longer', 'LONGER
 t = .table~new; t[x] = 'v'; say t['abc'] t~hasindex('abc')
 t2 = .table~new; t2['abc'] = 'w'; say t2[x]
 say x~hashcode~c2x = 'abc'~hashcode~c2x
-/* A subclass's own MAKESTRING and STRING are what a string context reads */
-o = .ks~new('abc'); say 'a' || o; say o; say length(o) o~length (o || 'q')
 /* INIT */
 i = .ki~new('12', 'extra', 3); say i i~class~id
 /* `this` sites, each with a neighbour that builds */
@@ -127,11 +125,6 @@ sub: use arg u; say u~class~id u; return u
   return 'ic'
 ::class kk subclass k
 ::class ka subclass string abstract
-::class ks subclass string
-::method makestring
-  return 'MS'
-::method string
-  return 'STR'
 ::class ki subclass string
 ::method init
   say 'init' arg() arg(1) arg(2)

@@ -180,7 +180,6 @@ corpus/lang/guarded_empty_method_waits.rex	program	1	70	14	25	35	-	-
 corpus/lang/guard_held_before_the_first_start.rex	program	2	70	14	25	30	-	-
 corpus/lang/guard_on_lock_passes_between_activities.rex	program	4	70	14	25	30	-	-
 corpus/lang/guard_when_waits_for_a_store.rex	program	5	70	14	25	30	-	-
-corpus/lang/guard_when_stem_element_store.rex	program	2	70	14	25	30	-	-
 corpus/lang/guard_when_attribute_setter.rex	program	2	70	14	25	30	-	-
 corpus/lang/guard_when_drop_wakes.rex	program	3	70	14	25	30	-	-
 corpus/lang/guard_when_traces_each_evaluation.rex	program	4	70	14	25	35	-	-

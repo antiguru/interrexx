@@ -31,12 +31,14 @@ do i = 1 to 6
 end
 say 'list hasItem' d~hasItem(.Emptier~new(d)) 'and it now holds' d~items
 
-/* And a comparator that empties the array it is sorting. */
+/* And a comparator that empties the array it is sorting: the sort ends,
+   without an error, and answers the array; what the array holds after it is
+   unspecified. */
 e = .Array~new
 do i = 1 to 4
   e~append('made' || (9 - i) || '-' || (i * 17))
 end
-say 'sortWith' e~sortWith(.Shrinker~new(e))~items 'and it now holds' e~items
+say 'sortWith' (e~sortWith(.Shrinker~new(e)) == e)
 
 ::CLASS Emptier
 ::METHOD init
