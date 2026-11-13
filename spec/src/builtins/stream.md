@@ -4,7 +4,7 @@ kind: builtin
 syntax: "STREAM(name [, operation [, command]])"
 ansi: "9.7.8"
 rexxref: "Functions > Built-in Functions > STREAM"
-deviations: [34, 35, 49, 55, 57, 59, 62, 74, 79, 98, 100, 145]
+deviations: [34, 35, 49, 55, 57, 59, 62, 74, 79, 98, 100, 145, 167, 168, 171]
 ---
 
 # STREAM
@@ -195,13 +195,16 @@ r[bif.stream.command]
 With the operation `C`, STREAM carries out `command`, which begins with a
 word that names the command: `OPEN`, `CLOSE`, `FLUSH`, `SEEK`, `POSITION`
 or `QUERY`. The word may be in any case, and may be shortened to any of its
-leading letters down to the first. What is after the word is the command's
-own, and the rules for each say what it is. A later word that reads `OPEN` or
+leading letters down to the first. The words of a command are separated by
+[whitespace](r:conv.string.whitespace), the blank and the horizontal tab, and
+a command may begin and end with whitespace. What is after the word is the command's
+own, and the rules for each say what it is; a tab between the options of a
+command is [Deviation 168](r:bif.stream.deviation.168). A later word that reads `OPEN` or
 `CLOSE` does not make the command an OPEN or a CLOSE: a `QUERY` that has one
 raises `SYNTAX 93.0` and leaves the stream open at its position. A first word
 that no command begins with raises `SYNTAX 93.914`, and anything the
 command does not take after it, `SYNTAX 93.0`. A `command` that is the null
-string, or only blanks, has no first word and closes the stream, as `CLOSE`
+string, or only whitespace, has no first word and closes the stream, as `CLOSE`
 does: it answers `READY:` for a stream that was open and the null string for
 one that was not.
 
@@ -210,6 +213,7 @@ f = 'spec-stream-command.tmp'
 call sysfiledelete f
 call charout f, 'abc'
 say stream(f, 'c', 'seek 2') stream(f, 'c', 'SEEK 2') stream(f, 'c', 's 2') stream(f, 'c', 'se 2')
+say stream(f, 'c', 'seek' || '09'x || '3') stream(f, 'c', '09'x || 'q' || '09'x || 'size' || '09'x)
 say stream(f, 'c', 'position 3') stream(f, 'c', 'p 3') stream(f, 'c', 'f') stream(f, 'c', 'q size')
 signal on syntax name a
 say stream(f, 'c', 'seeker 2')
@@ -226,6 +230,7 @@ call sysfiledelete f
 
 ```output
 2 2 2 2
+3 3
 3 3 READY: 3
 93.914
 93.0
@@ -527,8 +532,9 @@ that is longer than the rest of that record raises `SYNTAX 93.0` and writes
 nothing, and the stream stays `READY`. `RECLENGTH` that does not come after
 `BINARY`, an `n` that is not a whole number of 1 or more, `BINARY` or
 `RECLENGTH` given twice, and `BINARY` with `REPLACE` and no `RECLENGTH` raise
-`SYNTAX 93.0`. The option `BINARY` without `RECLENGTH`
-is not specified, and neither is `BINARY RECLENGTH` without `n`, except that
+`SYNTAX 93.0`; so does `RECLENGTH` with no `n` after it, and the stream is
+`UNKNOWN` afterwards, as after any open that fails. The option `BINARY` without
+`RECLENGTH` is not specified, except that
 when `BINARY` without `RECLENGTH` raises `SYNTAX 93.0`, as it does for a file
 that is missing or empty, the stream is `UNKNOWN` afterwards ([Deviation
 145](r:bif.stream.deviation.145)).
@@ -596,6 +602,9 @@ call try "stream(f, 'c', 'open reclength 4 binary')"
 call try "stream(f, 'c', 'open binary binary reclength 4')"
 call try "stream(f, 'c', 'open binary reclength 4 reclength 5')"
 call try "stream(f, 'c', 'open binary reclength 4 5')"
+call try "stream(f, 'c', 'open binary reclength') stream(f)"
+call try "stream(f, 'c', 'open binary reclength  ') stream(f)"
+call try "stream(f, 'c', 'open binary reclength 4 reclength') stream(f)"
 call try "stream(f, 'c', 'open replace binary')"
 call try "stream(f, 'c', 'open binary replace reclength 3')"
 call try "lineout(f, 'abc') stream(f, 'c', 'query size')"
@@ -626,6 +635,9 @@ stream(f, 'c', 'open reclength 4 binary')                      => 93.0
 stream(f, 'c', 'open binary binary reclength 4')               => 93.0
 stream(f, 'c', 'open binary reclength 4 reclength 5')          => 93.0
 stream(f, 'c', 'open binary reclength 4 5')                    => 93.0
+stream(f, 'c', 'open binary reclength') stream(f)              => 93.0
+stream(f, 'c', 'open binary reclength  ') stream(f)            => 93.0
+stream(f, 'c', 'open binary reclength 4 reclength') stream(f)  => 93.0
 stream(f, 'c', 'open replace binary')                          => 93.0
 stream(f, 'c', 'open binary replace reclength 3')              => [READY:]
 lineout(f, 'abc') stream(f, 'c', 'query size')                 => [0 3]
@@ -849,7 +861,9 @@ characters: `=` counts from the first line, being line 1, and `+` and `-`
 from the line the position is in. The position is set to the start of the
 line, and the answer is the line number. A line number past the last line
 sets the position to the end of the data, and the answer is the number of
-the line that position is in. The prefix `<` with `LINE` is not specified.
+the line that position is in, which is [one more than the line ends before
+it](r:bif.stream.query.position) whether or not the last line has a line
+end. The prefix `<` with `LINE` is not specified.
 A `SEEK` by line of a text stream that was opened for writing only answers 0
 and raises NOTREADY; see [Deviation 55](r:bif.stream.deviation.55).
 
@@ -885,9 +899,17 @@ r[bif.stream.query.position]
 stream open for reading and writing answers its read position, and one open
 for one thing the position that it has. The option `CHAR` counts characters
 and is the default; `LINE` counts lines, and the answer is the number of the
-line that the position is in. Each option may be shortened to its first
-letter. The option `SYS` may be given alone, and what it answers is not
-specified. A stream that is not open has no positions, and the answer is the
+line that the position is in: one more than the number of line ends before the
+position, for the read position and the write position alike, so that the
+position after the last character of a last line that has no line end is in
+that line, not in a line after it ([Deviation
+167](r:bif.stream.deviation.167)). Each option may be shortened to its first
+letter. The option `SYS` may be given alone, and it answers the position of the
+host's own file offset in characters, counted from 0 as the host counts, where
+the other positions count from 1. For a stream that has just been opened for
+reading, with nothing read and nothing positioned, nothing has been consumed,
+so the answer is 0 ([Deviation 171](r:bif.stream.deviation.171)); after a read or a positioning it is not specified, because
+it depends on how much the stream has read ahead. A stream that is not open has no positions, and the answer is the
 null string; so is the answer for a standard stream that is
 [transient](r:bif.index.stream.transient) (see [Deviation
 100](r:bif.stream.deviation.100)). On a stream opened `APPEND`, the write
@@ -1123,7 +1145,7 @@ of its leading letters, as far as to its first letter for `EXISTS`, `HANDLE`,
 `TIMESTAMP` and `DATETIME`, to `SI` for `SIZE`, to `ST` for `STREAMTYPE` and
 to `P` for `POSITION`; what a shorter word answers is not specified. `SEEK` is a second name for
 `POSITION`, with its options and its answers; what a shortening of it answers
-is not specified. A `QUERY` with no word, or with only blanks, answers as
+is not specified. A `QUERY` with no word, or with only whitespace, answers as
 `DATETIME` does. A word that is none of them, and words after it
 that the query does not take, raise `SYNTAX 93.0`.
 
@@ -1561,4 +1583,124 @@ call sysfiledelete f
 ```output
 missing 93.0 UNKNOWN
 empty 93.0 UNKNOWN
+```
+
+r[bif.stream.deviation.167]
+The line that a position is in is one more than the number of line ends
+before it, for the write position as for the read position, and so it is for a
+position just after the last character of a last line that has no line end: it
+is in that line. `QUERY POSITION WRITE LINE` answers 3 there for data `ab`, `cd`
+and `ef` with no line end after `ef`, and so does a `SEEK` by `LINE` past the
+last line, with `READ` or `WRITE`. A `LINEOUT` at that write position continues
+the line. ooRexx answers 4 for the write position, and 3 for the read position
+at the same character.
+
+```rexx
+f = 'spec-stream-lastline.tmp'
+call sysfiledelete f
+call charout f, 'ab' || '0a'x || 'cd' || '0a'x || 'ef'
+call charout f
+say stream(f, 'c', 'open')
+say stream(f, 'c', 'query position write') stream(f, 'c', 'query position write line') stream(f, 'c', 'query position read line')
+say stream(f, 'c', 'seek =20 write line') stream(f, 'c', 'query position write') stream(f, 'c', 'seek =20 read line')
+say stream(f, 'c', 'seek 9 read') stream(f, 'c', 'query position read line') stream(f, 'c', 'query position write line')
+say lineout(f, 'X') stream(f, 'c', 'query position write line')
+say stream(f, 'c', 'close')
+say translate(charin(f, 1, 100), '/', '0a'x)
+call stream f, 'c', 'close'
+call sysfiledelete f
+call charout f, 'ab' || '0a'x || 'cd' || '0a'x || 'ef'
+call charout f
+s = .stream~new(f)
+say s~open('both') s~position('9 write') s~query('position write line') s~position('=20 write line') s~query('position write line')
+say s~close
+call sysfiledelete f
+```
+
+```output
+READY:
+9 3 1
+3 9 3
+9 3 3
+0 4
+READY:
+ab/cd/efX/
+READY: 9 3 3 3
+READY:
+```
+
+r[bif.stream.deviation.168]
+A tab is whitespace in every part of a command, as a blank is
+([the rule](r:conv.string.whitespace)): the words of a command of `STREAM`,
+and the words of the options that `open`, `position`, `seek` and `query` of a
+`Stream` take, may be separated by blanks, by tabs, or by both, and a command
+may begin and end with a tab. ooRexx accepts a tab after the word that names a
+command, and raises `SYNTAX 93.0` for a tab anywhere in the options that follow
+it, between them or around them, whether the command is that of `STREAM` or of
+`command`, or the option string is the argument of `open`, `position`, `seek`
+or `query`.
+
+```rexx
+f = 'spec-stream-tab.tmp'
+call sysfiledelete f
+call charout f, 'abcdef'
+call charout f
+t = '09'x
+say stream(f, 'c', 'open' || t || 'read' || t || 'shared')
+say stream(f, 'c', 'query' || t || 'position' || t || 'read' || t || 'line')
+say stream(f, 'c', 'seek' || t || '=' || t || '3' || t || 'read')
+say stream(f, 'c', t || 'q' || t || 'size' || t)
+say stream(f, 'c', 'close')
+s = .stream~new(f)
+say s~command('open' || t || 'read')
+say s~command('seek' || t || '2' || t || 'read') s~query('position' || t || 'read' || t || 'char')
+say s~position('4' || t || 'read') s~seek(t || '5' || t)
+say s~open('read' || t || 'shared')
+say s~close s~command('open' || t || 'write' || t || 'append') s~close
+say '['s~query(t)~length']' '['s~command(t || t)']'
+signal on syntax name a
+say s~command('close' || t || 'now')
+a: say condition('o')~code
+signal on syntax name b
+say s~command('frob' || t || 'x')
+b: say condition('o')~code
+call sysfiledelete f
+```
+
+```output
+READY:
+1
+3
+6
+READY:
+READY:
+2 2
+4 5
+READY:
+READY: READY: READY:
+[17] []
+93.0
+93.914
+```
+
+r[bif.stream.deviation.171]
+`QUERY POSITION SYS` of a stream that has just been opened for reading, with
+nothing read and nothing positioned, answers 0: the host has consumed nothing
+from the file yet ([the rule](r:bif.stream.query.position)). ooRexx answers the
+size of the file there, the offset at which it leaves the file after opening
+it.
+
+```rexx
+f = 'spec-stream-qpossys.tmp'
+call sysfiledelete f
+call charout f, 'abcdefghij'
+call charout f
+say stream(f, 'c', 'open read') stream(f, 'c', 'query position sys') stream(f, 'c', 'query position')
+say stream(f, 'c', 'close')
+call sysfiledelete f
+```
+
+```output
+READY: 0 1
+READY:
 ```

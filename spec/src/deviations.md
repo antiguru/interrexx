@@ -1287,6 +1287,23 @@ letter against the set of letters as a search of a C string does, which finds
 a 0 byte in every set: a 0 byte `option` with an `osep` raises `SYNTAX 40.904`
 and a 0 byte `informat` with an `isep` raises `SYNTAX 40.44`.
 
+## 167. The line of a position after a last line with no line end
+
+The line that a position is in is one more than the number of line ends before
+it, for the write position as for the read position. For data `ab`, `cd` and
+`ef` with no line end after `ef`, `QUERY POSITION WRITE LINE` at the write
+position just after `ef` answers 3, and so does a `SEEK` by `LINE` past the
+last line. ooRexx answers 4 for the write position, and 3 for the read position
+at the same character; its `LINEOUT` at that write position continues line 3.
+
+## 168. A tab between the options of a stream command
+
+A tab is whitespace in every part of a command of `STREAM` and of the
+`Stream` methods `command`, `open`, `position`, `seek` and `query`: it separates
+the words of the options as a blank does, and a command may begin and end with
+one. ooRexx accepts a tab after the word that names a command, and raises
+`SYNTAX 93.0` for a tab between or around the options that follow it.
+
 ## 169. A STRING method answering a non-string where its bytes are read
 
 Where a clause needs the bytes of the string value of an object, and the
@@ -1317,3 +1334,9 @@ ooRexx, which converts an argument as it checks it and stops at the first one
 in error, so that the method of a later argument never runs. The difference
 shows only in what such a method does: counting, input or output, or raising a
 condition of its own.
+
+## 171. QUERY POSITION SYS of a stream just opened for reading
+
+`QUERY POSITION SYS` of a stream that has just been opened for reading, before
+anything is read or positioned, answers 0, the host's offset when nothing has
+been consumed. ooRexx answers the size of the file.

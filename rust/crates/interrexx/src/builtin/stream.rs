@@ -358,7 +358,7 @@ enum StreamCommand {
 /// (r[bif.stream.command]).
 fn first_command(command: &[u8]) -> Option<StreamCommand> {
     let word = command
-        .split(|byte| byte.is_ascii_whitespace())
+        .split(|byte| matches!(byte, b' ' | b'\t'))
         .find(|word| !word.is_empty())?;
     let upper = word.to_ascii_uppercase();
     [
