@@ -1833,9 +1833,10 @@ macro_rules! open_clause {
         // [`Interp::traced_mode`] answers `OFF` under it by
         // design, which is not the program's own setting. So is a
         // run another thread's `SetTrace` has reached
-        // (`r[native.threads.trace]`): a frame that was running a
-        // settled chunk then runs it to its end under the setting
-        // switched from outside, which the claim did not foresee.
+        // (`r[native.threads.trace]`), or a `SetThreadTrace`: a frame
+        // that was running a settled chunk then runs it to its end
+        // under the setting switched from outside, which the claim
+        // did not foresee (`r[native.threads.trace.deviation.166]`).
         #[cfg(debug_assertions)]
         if !$self.debug_pause()
             && !$self.trace_switchable

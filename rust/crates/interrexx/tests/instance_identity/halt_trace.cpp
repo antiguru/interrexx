@@ -1,8 +1,9 @@
 // The instance members `Halt` and `SetTrace` from a thread that runs no Rexx code of the
 // interpreter. Built as the extension `halttrace`, which the programs load with
-// `::requires 'halttrace' LIBRARY` or, part-way through a run, with `loadLibrary`. `HtSave` keeps the instance its thread context links,
-// `HtHalt` and `HtTrace` call `Halt` and `SetTrace` through it from a thread of their own and
-// wait for that thread.
+// `::requires 'halttrace' LIBRARY` or, part-way through a run, with `loadLibrary`. `HtSave`
+// keeps the instance its thread context links, `HtHalt` and `HtTrace` call `Halt` and
+// `SetTrace` through it from a thread of their own and wait for that thread. `HtThreadTrace`
+// calls the thread context member `SetThreadTrace` on the thread of the call.
 #include <pthread.h>
 #include "oorexxapi.h"
 
@@ -49,10 +50,17 @@ RexxRoutine1(int, HtTrace, int, on)
     return 0;
 }
 
+RexxRoutine1(int, HtThreadTrace, int, on)
+{
+    context->threadContext->SetThreadTrace(on != 0);
+    return 0;
+}
+
 static RexxRoutineEntry routines[] = {
     REXX_TYPED_ROUTINE(HtSave, HtSave),
     REXX_TYPED_ROUTINE(HtHalt, HtHalt),
     REXX_TYPED_ROUTINE(HtTrace, HtTrace),
+    REXX_TYPED_ROUTINE(HtThreadTrace, HtThreadTrace),
     REXX_LAST_ROUTINE()
 };
 

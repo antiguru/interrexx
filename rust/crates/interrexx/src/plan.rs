@@ -1054,10 +1054,11 @@ impl Interp {
         }
     }
 
-    /// The first `SetTrace` served on the instance (`r[native.threads.trace]`): from here on
-    /// every body compiles unsettled, and each cached chunk is retired, so a body compiles
-    /// again the next time it is entered. A frame running a retired chunk keeps it to the
-    /// end of that run.
+    /// The first `SetTrace` served on the instance (`r[native.threads.trace]`), or the first
+    /// `SetThreadTrace`: from here on every body compiles unsettled, and each cached chunk is
+    /// retired, so a body compiles again the next time it is entered. A frame running a
+    /// retired chunk keeps it to the end of that run, which is what
+    /// `r[native.threads.trace.deviation.166]` declares.
     #[cold]
     pub(crate) fn make_trace_switchable(&mut self) {
         if self.trace_switchable {

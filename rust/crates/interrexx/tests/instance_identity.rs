@@ -172,11 +172,9 @@ fn application_data_reaches_a_started_activity() {
 /// What a run answered: stdout, stderr and the exit status.
 type Answer = (String, String, i32);
 
-/// Builds `halt_trace.cpp` as the extension `halttrace` into a fresh directory named for `name`
-/// and runs the fixture program `program` from it under `rexx`, answering `view` of its stdout,
-/// stderr and exit status. Under `REXX_CORPUS_GATE` the oracle runs the same program from the
-/// same directory, and `view` of its answer must be the same.
-fn run_halt_trace(name: &str, program: &str, view: fn(Answer) -> Answer) -> Answer {
+/// Builds `halt_trace.cpp` as the extension `halttrace` into a fresh directory named for `name`,
+/// answering that directory.
+fn build_halt_trace(name: &str) -> PathBuf {
     let dir = fresh_dir(name);
     compile(
         "halt_trace.cpp",
@@ -190,6 +188,15 @@ fn run_halt_trace(name: &str, program: &str, view: fn(Answer) -> Answer) -> Answ
             &dir.join("libhalttrace.so").to_string_lossy(),
         ],
     );
+    dir
+}
+
+/// Builds `halt_trace.cpp` as the extension `halttrace` into a fresh directory named for `name`
+/// and runs the fixture program `program` from it under `rexx`, answering `view` of its stdout,
+/// stderr and exit status. Under `REXX_CORPUS_GATE` the oracle runs the same program from the
+/// same directory, and `view` of its answer must be the same.
+fn run_halt_trace(name: &str, program: &str, view: fn(Answer) -> Answer) -> Answer {
+    let dir = build_halt_trace(name);
     let program = fixture(program);
     let ours = view(run(
         Path::new(env!("CARGO_BIN_EXE_rexx")),
@@ -284,28 +291,130 @@ fn set_trace_on_and_off_through_the_instance_traces_the_main_activity() {
     );
 }
 
-/// A body run before the extension is loaded, and so compiled before any `SetTrace`, is traced
-/// when it is entered again after one: the library is loaded part-way through the run, the first
-/// `SetTrace` turns tracing off, and the second, inside `sub`, traces the rest of `sub`.
-// spec: native.threads.trace
+/// A `::ROUTINE` run before the extension is loaded, and so compiled before any `SetTrace`, prints
+/// every trace line when it is entered again after one: the library is loaded part-way through the
+/// run, the first `SetTrace` turns tracing off, and the second, inside `r`, traces the rest of `r`,
+/// the `>K>` lines of its `DO` header among them. A body compiled before the first `SetTrace`
+/// would leave those out, which is what this witnesses being compiled again.
+// spec: native.threads.trace, native.threads.trace.deviation.166
 #[test]
 fn set_trace_traces_a_body_compiled_before_the_extension_was_loaded() {
     let (stdout, stderr, code) = run_halt_trace("trace-load", "trace_load.rex", whole);
     assert_eq!((stdout.as_str(), code), ("end\n", 0), "{stderr}");
     assert_eq!(
         traced(&stderr, "trace_load.rex"),
-        "       +++ \"LINUX COMMAND PROGRAM\"\n\
-         \x20   13 *-*   x = 1 + 2\n\
-         \x20      >>>     \"3\"\n\
+        "       +++ \"LINUX SUBROUTINE PROGRAM\"\n\
+         \x20   14 *-* do i = 1 to 2 by 1 for 2\n\
+         \x20      >K>   \"TO\" => \"2\"\n\
+         \x20      >K>   \"BY\" => \"1\"\n\
+         \x20      >K>   \"FOR\" => \"2\"\n\
          +++ Interactive trace. \"Trace Off\" to end debug, ENTER to continue. +++\n\
-         \x20   14 *-*   return\n"
+         \x20   15 *-*   nop\n\
+         \x20   16 *-* end\n\
+         \x20   14 *-* do i = 1 to 2 by 1 for 2\n\
+         \x20      >>>     \"1\"\n\
+         \x20      >>>     \"2\"\n\
+         \x20   15 *-*   nop\n\
+         \x20   16 *-* end\n\
+         \x20   14 *-* do i = 1 to 2 by 1 for 2\n\
+         \x20      >>>     \"2\"\n\
+         \x20      >>>     \"3\"\n\
+         \x20   17 *-* if arg(1) \n\
+         \x20      >>>   \"1\"\n\
+         \x20   17 *-*   then\n\
+         \x20   17 *-*     call httrace 0\n\
+         \x20      >>>       \"0\"\n"
+    );
+}
+
+/// The `::ROUTINE` `r` is running when the first `SetTrace` is served, so it runs on with the body
+/// compiled before it, which leaves out the `>K>` lines of its `DO` header for `TO`, `BY` and
+/// `FOR` and prints the one for `WHILE`. Not compared with the oracle, which prints all four: this
+/// pins the difference the Deviation declares.
+// spec: native.threads.trace.deviation.166
+#[test]
+fn set_trace_leaves_header_lines_out_of_a_routine_already_running() {
+    let dir = build_halt_trace("trace-running");
+    let (stdout, stderr, code) = run(
+        Path::new(env!("CARGO_BIN_EXE_rexx")),
+        &dir,
+        Some(&fixture("trace_running.rex")),
+        None,
+    );
+    fs::remove_dir_all(&dir).expect("the run's directory is removable");
+    assert_eq!((stdout.as_str(), code), ("end\n", 0), "{stderr}");
+    assert_eq!(
+        traced(&stderr, "trace_running.rex"),
+        "       +++ \"LINUX SUBROUTINE PROGRAM\"\n\
+         \x20   12 *-* do i = 1 to 2 by 1 for 2 while i < 5\n\
+         \x20      >K>     \"WHILE\" => \"1\"\n\
+         +++ Interactive trace. \"Trace Off\" to end debug, ENTER to continue. +++\n\
+         \x20   13 *-*   nop\n\
+         \x20   14 *-* end\n\
+         \x20   12 *-* do i = 1 to 2 by 1 for 2 while i < 5\n\
+         \x20      >>>     \"1\"\n\
+         \x20      >>>     \"2\"\n\
+         \x20      >K>     \"WHILE\" => \"1\"\n\
+         \x20   13 *-*   nop\n\
+         \x20   14 *-* end\n\
+         \x20   12 *-* do i = 1 to 2 by 1 for 2 while i < 5\n\
+         \x20      >>>     \"2\"\n\
+         \x20      >>>     \"3\"\n\
+         \x20   15 *-* call httrace 0\n\
+         \x20      >>>   \"0\"\n"
+    );
+}
+
+/// `SetThreadTrace`, the thread context's own member, switches the trace as `SetTrace` does: its
+/// first call, from the main program, comes before `r` is entered, so `r`, which turns its trace
+/// on with a second call, prints every line, the `>K>` lines of its `DO` header among them. Only
+/// the `>K>` lines are compared: the `>>>` line of each call's own clause is printed under a
+/// different setting on the two sides.
+// spec: native.threads.trace.deviation.166
+#[test]
+fn set_thread_trace_traces_a_routine_entered_after_its_first_call() {
+    fn keyword_lines((stdout, stderr, code): Answer) -> Answer {
+        let lines: String = stderr
+            .lines()
+            .filter(|line| line.contains(">K>"))
+            .map(|line| format!("{line}\n"))
+            .collect();
+        (stdout, lines, code)
+    }
+    assert_eq!(
+        run_halt_trace("trace-thread", "trace_thread.rex", keyword_lines),
+        (
+            "end\n".to_owned(),
+            "       >K>   \"TO\" => \"2\"\n\
+             \x20      >K>   \"BY\" => \"1\"\n\
+             \x20      >K>   \"FOR\" => \"2\"\n"
+                .to_owned(),
+            0
+        )
+    );
+}
+
+/// `SetTrace(1)` traces the main program, and a `::ROUTINE` it calls afterwards starts with its
+/// own setting: none of its clauses is traced, and the main program's are again after it returns.
+// spec: native.threads.trace
+#[test]
+fn set_trace_leaves_a_routine_called_afterwards_its_own_setting() {
+    let (stdout, stderr, code) = run_halt_trace("trace-callee", "trace_callee.rex", whole);
+    assert_eq!((stdout.as_str(), code), ("end\n", 0), "{stderr}");
+    assert_eq!(
+        traced(&stderr, "trace_callee.rex"),
+        "       +++ \"LINUX COMMAND PROGRAM\"\n\
+         \x20    6 *-* call r\n\
+         +++ Interactive trace. \"Trace Off\" to end debug, ENTER to continue. +++\n\
+         \x20    7 *-* call httrace 0\n\
+         \x20      >>>   \"0\"\n"
     );
 }
 
 /// `Halt` and `SetTrace` through the instance of an interpreter that has ended do nothing and
 /// return: the driver creates an interpreter, terminates it, calls the three and prints
-/// `returned`. Not compared with the oracle: a member called through an ended instance is
-/// outside what native code may do (`r[native.threads.instance]`).
+/// `returned`, as `r[native.threads.trace]` says a request made after the interpreter has ended
+/// does nothing. Not compared with the oracle.
 // spec: native.threads.trace
 #[test]
 fn halt_and_set_trace_after_the_interpreter_ended_return() {
