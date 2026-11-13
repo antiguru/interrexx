@@ -251,12 +251,13 @@ fn native_relation_has_item(
     let bag = super::index_only(interp, receiver);
     let supplied_index = args.get(1).copied().flatten();
     // Bag's item is its index. Its optional argument is compared before
-    // hashing, and a successful lookup sends only the index comparison.
+    // hashing, and a successful lookup sends only the index comparison. An
+    // index unequal to the item answers 0 (r[class.bag.deviation.45]).
     if bag
         && let Some(index) = supplied_index
         && !super::collection::same_item(interp, wanted, index)?
     {
-        return Ok(Some(ObjRef::NIL));
+        return Ok(Some(crate::eval::logical(false)));
     }
     let under = if bag { Some(wanted) } else { supplied_index };
     let keys = keys_of(interp, receiver);

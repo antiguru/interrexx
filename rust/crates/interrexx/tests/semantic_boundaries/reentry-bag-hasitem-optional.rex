@@ -2,7 +2,7 @@ b = .bag~new
 b~put(.key~new('held'))
 q = .key~new('query')
 say 'allowed' b~hasItem(q, .key~new('allowed'))
-say 'blocked' (b~hasItem(q, .key~new('blocked')) == .nil)
+say 'blocked' (b~hasItem(q, .key~new('blocked')) == 0)
 say 'calls' q~hashes q~equals
 exit
 ::class key
