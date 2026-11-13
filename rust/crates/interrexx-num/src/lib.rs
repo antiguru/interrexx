@@ -5,6 +5,7 @@ use std::borrow::Cow;
 mod addsub;
 mod compare;
 mod digits;
+mod limbs;
 mod muldiv;
 mod pow;
 mod rounding;

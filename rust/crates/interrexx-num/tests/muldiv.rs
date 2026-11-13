@@ -156,3 +156,23 @@ fn a_literal_outside_the_representable_range_is_not_a_number_at_all() {
     assert_eq!(Number::parse("0e1000000996").unwrap().format(9), "0");
     assert_eq!(Number::parse("-0e-1000000246").unwrap().format(9), "0");
 }
+
+/// Long products carry correctly: a digit column of `(10^n - 1)^2` sums
+/// `81 * n` before carrying, which passed what a 16-bit accumulator holds once
+/// `n` reached 810. The expected values are the oracle's, at DIGITS 1000.
+#[test]
+fn a_product_of_a_thousand_nines_carries_every_column() {
+    let nines = |count: usize| "9".repeat(count);
+    // (10^999 - 1)^2 = 998 nines, 8, 998 zeros, 1; the first 1000 digits
+    // need no rounding.
+    assert_eq!(
+        mul(&nines(999), &nines(999), 1000),
+        format!("9.{}80E+1997", "9".repeat(997))
+    );
+    // With 1001 nines the digit after the first 1000 is an 8, which rounds
+    // the run of nines up into a power of ten.
+    assert_eq!(
+        mul(&nines(1001), &nines(1001), 1000),
+        format!("1.{}E+2002", "0".repeat(999))
+    );
+}
