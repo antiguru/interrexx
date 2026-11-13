@@ -104,12 +104,97 @@ pub(crate) fn word_count(text: &[u8]) -> usize {
 /// `WORD`, `WORDINDEX` and `WORDLENGTH`'s body: where the `position`th
 /// (1-based) word of `text` lies, or `None` past the last.
 pub(crate) fn word_range(text: &[u8], position: usize) -> Option<Range<usize>> {
-    let mut scan = Words::new(text);
-    if scan.skip(position) {
-        Some(scan.word.clone())
-    } else {
-        None
+    if position == 0 {
+        return Some(0..0);
     }
+    let start = nth_word_start(text, position)?;
+    Some(start..first_blank_from(text, start))
+}
+
+/// One in the lowest bit of every byte lane of a `u64`.
+const LANES: u64 = u64::from_le_bytes([1; 8]);
+/// The high bit of every byte lane.
+const HIGH: u64 = LANES << 7;
+
+/// Eight bytes of `text` from `at`, as a little-endian word, with the lanes
+/// past the end of `text` read as blanks -- which neither start a word nor
+/// end one early, since nothing follows them.
+#[inline(always)]
+fn chunk_at(text: &[u8], at: usize) -> u64 {
+    match text.get(at..at + 8) {
+        Some(eight) => u64::from_le_bytes(eight.try_into().expect("eight bytes")),
+        None => {
+            let mut padded = [b' '; 8];
+            let rest = &text[at..];
+            padded[..rest.len()].copy_from_slice(rest);
+            u64::from_le_bytes(padded)
+        }
+    }
+}
+
+/// The high bit of each lane of `chunk` that holds `byte`, exactly: the
+/// carry-free form, so no lane's answer leaks into the next.
+#[inline(always)]
+fn lanes_equal(chunk: u64, byte: u8) -> u64 {
+    let x = chunk ^ (LANES * u64::from(byte));
+    !(((x & !HIGH).wrapping_add(!HIGH)) | x | !HIGH)
+}
+
+/// The high bit of each lane of `chunk` that [`is_blank`] answers true for.
+#[inline(always)]
+fn blank_lanes(chunk: u64) -> u64 {
+    lanes_equal(chunk, b' ') | lanes_equal(chunk, b'\t')
+}
+
+/// How many lanes have their high bit set in `lanes`, which has no other bit
+/// set. A multiply rather than `count_ones`, which is a library loop on the
+/// baseline target.
+#[inline(always)]
+fn count_lanes(lanes: u64) -> usize {
+    ((lanes >> 7).wrapping_mul(LANES) >> 56) as usize
+}
+
+/// Where the `n`th (1-based, `n >= 1`) word of `text` starts, or `None`
+/// when it has fewer words. Eight bytes at a time: a word starts at a
+/// non-blank byte whose predecessor is blank, the byte before the text
+/// counting as blank, so the starts in a chunk are its non-blank lanes
+/// masked by its blank lanes shifted up one lane.
+fn nth_word_start(text: &[u8], n: usize) -> Option<usize> {
+    debug_assert!(n >= 1, "words are counted from 1");
+    let mut remaining = n;
+    // The high bit of the lowest lane: the byte before this chunk was blank.
+    let mut blank_before = 0x80u64;
+    let mut at = 0;
+    while at < text.len() {
+        let blanks = blank_lanes(chunk_at(text, at));
+        let starts = !blanks & HIGH & ((blanks << 8) | blank_before);
+        let found = count_lanes(starts);
+        if found >= remaining {
+            let mut starts = starts;
+            for _ in 1..remaining {
+                starts &= starts - 1;
+            }
+            return Some(at + (starts.trailing_zeros() / 8) as usize);
+        }
+        remaining -= found;
+        blank_before = blanks >> 56;
+        at += 8;
+    }
+    None
+}
+
+/// The offset of the first blank of `text` at or after `from`, or its length
+/// when there is none.
+fn first_blank_from(text: &[u8], from: usize) -> usize {
+    let mut at = from;
+    while at < text.len() {
+        let blanks = blank_lanes(chunk_at(text, at));
+        if blanks != 0 {
+            return (at + (blanks.trailing_zeros() / 8) as usize).min(text.len());
+        }
+        at += 8;
+    }
+    text.len()
 }
 
 /// `SUBWORD`'s body: the slice of `text` from the `position`th (1-based) word
@@ -298,6 +383,39 @@ pub(crate) fn word_pos(
 #[cfg(test)]
 mod tests {
     use super::super::dispatch;
+
+    /// The chunked scan against the byte-at-a-time one, over strings that put
+    /// word boundaries at every lane and across chunk edges.
+    #[test]
+    fn the_chunked_word_scan_agrees_with_the_byte_scan() {
+        let pieces: [&[u8]; 6] = [b"a", b"bc", b"defghijkl", b" ", b"\t", b"  \t "];
+        let mut texts: Vec<Vec<u8>> = vec![Vec::new()];
+        for _ in 0..4 {
+            let mut next = Vec::new();
+            for text in &texts {
+                for piece in pieces {
+                    let mut grown = text.clone();
+                    grown.extend_from_slice(piece);
+                    next.push(grown);
+                }
+            }
+            texts.extend(next);
+            texts.sort();
+            texts.dedup();
+        }
+        texts.push(b"x\x0b\xa0\x00 y \xff\xdf\x89".to_vec());
+        for text in &texts {
+            for position in 1..12 {
+                let mut scan = super::Words::new(text);
+                let expected = scan.skip(position).then(|| scan.word.clone());
+                assert_eq!(
+                    super::word_range(text, position),
+                    expected,
+                    "word {position} of {text:?}"
+                );
+            }
+        }
+    }
     use crate::error::Failure;
     use crate::{Interp, error::Raised};
 
