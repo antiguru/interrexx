@@ -276,6 +276,15 @@ impl Interp {
                 None => Ok(()),
             };
         }
+        // A simple variable the plan bound a slot to is assigned through the
+        // slot, which is the one `assign_by_name` finds by the name's shape
+        // and hash.
+        if let ExprKind::Variable(id) = &target.target.kind
+            && let Some(slot) = code.slot_for(*id)
+            && let Some(value) = value
+        {
+            return self.use_into_slot(code, *id, slot, value);
+        }
         let mut name = self.use_target_name(code, target)?;
         // A compound target's tail takes the values its variables have now,
         // so an earlier target of this `USE` that set one counts.
@@ -341,6 +350,33 @@ impl Interp {
                 Ok(())
             }
         }
+    }
+
+    /// [`Interp::bind_use_target`]'s present-value arm for a simple
+    /// variable at plan slot `slot`: the same two trace lines, then the
+    /// assignment.
+    fn use_into_slot(
+        &mut self,
+        code: &Code<'_>,
+        id: SymbolId,
+        slot: usize,
+        value: ObjRef,
+    ) -> Result<(), Failure> {
+        let indent = self.activity.clause_state.current_value_indent;
+        let rendered = self.result_text(value)?;
+        if let Some(rendered) = &rendered {
+            self.trace_result(indent, rendered);
+        }
+        if matches!(value.decode(), Decoded::Heap { .. }) {
+            self.roots.activity_mut().push_temp(value);
+        }
+        let frame = self.activation().frame;
+        self.set_variable(frame, slot, value);
+        if let Some(rendered) = self.intermediate_text(value)? {
+            let name = code.symbols.name(id).as_bytes();
+            self.trace_assignment(indent, name, &rendered, value);
+        }
+        Ok(())
     }
 
     /// Whether a `USE ARG >name` target is in the uninitialised state it
