@@ -415,6 +415,7 @@ lang/forward_phantom_trap.rex
 lang/forward_class_scope.rex
 lang/forward_arguments_converted.rex
 lang/forward_class_trace.rex
+lang/forward_target_frames.rex
 lang/object_copy.rex
 lang/object_copy_class_refusal.rex
 lang/object_run.rex

@@ -1317,10 +1317,6 @@ mod measured {
             "s. = .c~new\ns.~foo\n::class c\n::method unknown\n  call SysSleep 0\n",
         ),
         (
-            "Forward",
-            ".c~new~m\n::class c\n::method m\n  forward message('N')\n::method n\n  call SysSleep 0\n",
-        ),
-        (
             "Delegate",
             ".k~new~m\n::class k\n::method init\n  expose d\n  d = .c~new\n::method m delegate d\n\
              ::class c\n::method m\n  call SysSleep 0\n",
@@ -1447,6 +1443,10 @@ mod measured {
             "x = .context~package~findRoutine('R')~call\n::routine r\n  call SysSleep 0\n",
             "if 1 then do\n  x = g()\n  y = .c~new~m\n  call g\nend\nexit\ng:\n  call SysSleep 0\n  return 2\n",
             "do i = 1 to 2\n  do\n    x = g()\n  end\nend\nexit\ng:\n  call SysSleep 0\n  return 2\n",
+            "x = .f~new~f\n::class f\n::method f\n  forward to (.c~new) message('M')\n",
+            "x = .f~new~f\n::class f\n::method f\n  forward continue to (.c~new) message('M')\n  \
+             return result\n",
+            "x = .f~new~f\n::class f\n::method f\n  forward to (.c~new) message('M') array()\n",
         ] {
             let source = format!("{program}{CLASS}");
             let report = report_of(&source);
@@ -1473,6 +1473,25 @@ mod measured {
             !frames.is_empty()
                 && frames.iter().all(|frames| {
                     frames.contains(&PinKind::TraceWrapper) && !frames.contains(&PinKind::Unknown)
+                }),
+            "{frames:?}"
+        );
+    }
+
+    /// The default `.TRACEOUTPUT` monitor's `UNKNOWN` forwards a line to its
+    /// destination, and that `FORWARD` enters the destination's `LINEOUT` on
+    /// the driver: a park there is under no `Forward` frame.
+    #[test]
+    fn a_trace_destination_behind_the_monitor_parks_under_no_forward_frame() {
+        let report = report_of(
+            ".traceOutput~destination(.c~new)\ntrace r\nx = 1\n\
+             ::class c\n::method lineout\n  call SysSleep 0\n  return 0\n",
+        );
+        let frames = frames_at(&report, ParkKind::SysSleep);
+        assert!(
+            !frames.is_empty()
+                && frames.iter().all(|frames| {
+                    frames.contains(&PinKind::TraceWrapper) && !frames.contains(&PinKind::Forward)
                 }),
             "{frames:?}"
         );
