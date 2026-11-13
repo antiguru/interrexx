@@ -34,7 +34,7 @@ enum ParseStrings {
     /// A single-string source. The slot empties on the first take, so a
     /// template past the first parses the null string -- which is the rule
     /// [`Interp::next_template`] wants and gets here for free.
-    One(Option<SourceText>),
+    One(Option<(SourceText, Option<ObjRef>)>),
     /// `PARSE ARG`: the index of the argument the next template reads.
     Arg(usize),
 }
@@ -115,6 +115,9 @@ pub(crate) struct Cursor {
     pattern_end: usize,
     /// How far into `start..end` the word carving has got.
     subcurrent: usize,
+    /// The number a rendered parse string was made from, which a piece
+    /// covering the whole string assigns; see `Interp::rendered_source`.
+    origin: Option<ObjRef>,
 }
 
 impl Cursor {
@@ -128,6 +131,7 @@ impl Cursor {
             pattern_start: 0,
             pattern_end: 0,
             subcurrent: 0,
+            origin: None,
         }
     }
 
@@ -390,7 +394,7 @@ impl Interp {
     /// Hands back the string a template walk did not consume.
     fn give_parse_strings(&mut self, strings: ParseStrings) {
         match strings {
-            ParseStrings::One(Some(source)) => self.give_source(source),
+            ParseStrings::One(Some((source, _))) => self.give_source(source),
             ParseStrings::One(None) | ParseStrings::Arg(_) => {}
         }
     }
@@ -404,10 +408,10 @@ impl Interp {
     /// A folding `PARSE` copies a string the fold would change, because it
     /// rewrites the parse string in place.
     #[inline(always)]
-    fn source_text(&mut self, value: ObjRef, parse: &Parse) -> SourceText {
+    fn source_text(&mut self, value: ObjRef, parse: &Parse) -> (SourceText, Option<ObjRef>) {
         if !parse.upper && !parse.lower {
             match value.decode() {
-                Decoded::Text(inline) => return SourceText::Inline(inline),
+                Decoded::Text(inline) => return (SourceText::Inline(inline), None),
                 Decoded::Heap { .. } => {
                     if let Some(length) = self.heap.body_text(value).map(<[u8]>::len) {
                         // Rooted where the borrow is taken, since from here
@@ -415,12 +419,12 @@ impl Interp {
                         // The temporary lives until this clause ends, which
                         // outlasts the walk.
                         self.roots.activity_mut().push_temp(value);
-                        return SourceText::Text { value, length };
+                        return (SourceText::Text { value, length }, None);
                     }
                 }
                 _ => {}
             }
-            return SourceText::Owned(self.rendered_into_parse_buffer(value));
+            return self.rendered_source(value, None);
         }
         self.folded_source_text(value, parse)
     }
@@ -430,10 +434,10 @@ impl Interp {
     /// `parse upper var u b` over an already upper-case `u` leaves `b` and
     /// `u` one object.
     #[inline(never)]
-    fn folded_source_text(&mut self, value: ObjRef, parse: &Parse) -> SourceText {
+    fn folded_source_text(&mut self, value: ObjRef, parse: &Parse) -> (SourceText, Option<ObjRef>) {
         match value.decode() {
             Decoded::Text(inline) if unfolded(parse, &inline) => {
-                return SourceText::Inline(inline);
+                return (SourceText::Inline(inline), None);
             }
             Decoded::Heap { .. } => {
                 if let Some(bytes) = self.heap.body_text(value)
@@ -442,12 +446,40 @@ impl Interp {
                     let length = bytes.len();
                     // Rooted as `Interp::source_text` roots it.
                     self.roots.activity_mut().push_temp(value);
-                    return SourceText::Text { value, length };
+                    return (SourceText::Text { value, length }, None);
                 }
             }
             _ => {}
         }
-        SourceText::Owned(self.rendered_into_parse_buffer(value))
+        self.rendered_source(value, Some(parse))
+    }
+
+    /// `value`'s rendering in a pool buffer, and for a number whose rendering
+    /// `fold`, if any, leaves unchanged, the number itself: what a piece
+    /// covering the whole string assigns, as the `Text` arm's object is, so
+    /// how a value is held does not decide whether it keeps its identity.
+    #[inline(never)]
+    fn rendered_source(
+        &mut self,
+        value: ObjRef,
+        fold: Option<&Parse>,
+    ) -> (SourceText, Option<ObjRef>) {
+        let buffer = self.rendered_into_parse_buffer(value);
+        let number = match value.decode() {
+            Decoded::SmallInt(_) => true,
+            Decoded::Heap { .. } => matches!(
+                self.heap.get(value).map(|object| &object.body),
+                Some(interrexx_core::Body::Num { .. })
+            ),
+            _ => false,
+        };
+        if number && fold.is_none_or(|parse| unfolded(parse, &buffer)) {
+            // Rooted as `Interp::source_text` roots a borrowed string; a
+            // tagged integer is in no arena and the root is harmless.
+            self.roots.activity_mut().push_temp(value);
+            return (SourceText::Owned(buffer), Some(value));
+        }
+        (SourceText::Owned(buffer), None)
     }
 
     /// One piece of the parse string in a buffer from the pool, for a caller
@@ -473,18 +505,22 @@ impl Interp {
         } else {
             cursor.next_word(string)
         };
-        let bytes = &string[piece.start..piece.end];
-        if let Some(inline) = ObjRef::inline_text(bytes) {
-            return (piece, inline);
-        }
         // **A piece that is the whole parse string is the parse string**,
         // where that is an object: what ooRexx assigns too (`parse var a b`
         // leaves `b` and `a` one object in an `IdentityTable`), and no copy.
-        if let SourceText::Text { value, length } = *source
-            && piece.start == 0
-            && piece.end == length
-        {
-            return (piece, value);
+        // Ahead of the inline test, so a short number keeps its identity as
+        // a long one does.
+        if piece.start == 0 && piece.end == string.len() {
+            if let SourceText::Text { value, .. } = *source {
+                return (piece, value);
+            }
+            if let Some(value) = cursor.origin {
+                return (piece, value);
+            }
+        }
+        let bytes = &string[piece.start..piece.end];
+        if let Some(inline) = ObjRef::inline_text(bytes) {
+            return (piece, inline);
         }
         let value = self.text_bytes(Bytes::from_slice(bytes));
         self.charge_text(piece.len());
@@ -492,7 +528,11 @@ impl Interp {
     }
 
     /// `PARSE ARG`'s string for the template at argument position `at`.
-    fn argument_text(&mut self, at: usize, parse: &Parse) -> Result<SourceText, Failure> {
+    fn argument_text(
+        &mut self,
+        at: usize,
+        parse: &Parse,
+    ) -> Result<(SourceText, Option<ObjRef>), Failure> {
         let argument = match self.activity.call_context.arguments.get(at) {
             Some(Some(argument)) => Some(*argument),
             Some(None) | None => None,
@@ -505,7 +545,7 @@ impl Interp {
                 let value = self.required_string_value(value)?;
                 Ok(self.source_text(value, parse))
             }
-            None => Ok(SourceText::Owned(self.take_parse_buffer())),
+            None => Ok((SourceText::Owned(self.take_parse_buffer()), None)),
         }
     }
 
@@ -551,12 +591,14 @@ impl Interp {
         parse: &Parse,
         indent: usize,
     ) -> Result<(SourceText, Cursor), Failure> {
-        let mut source = match strings {
+        let (mut source, origin) = match strings {
             // A template past the single string parses the null string, and
             // an empty `Vec` is that with nothing taken from the pool -- one
             // of zero capacity is what `give_parse_buffer` declines to park
             // anyway.
-            ParseStrings::One(source) => source.take().unwrap_or(SourceText::Owned(Vec::new())),
+            ParseStrings::One(source) => source
+                .take()
+                .unwrap_or((SourceText::Owned(Vec::new()), None)),
             ParseStrings::Arg(index) => {
                 let at = *index;
                 *index += 1;
@@ -574,7 +616,8 @@ impl Interp {
                 buffer.make_ascii_lowercase();
             }
         }
-        let cursor = Cursor::new(source.len());
+        let mut cursor = Cursor::new(source.len());
+        cursor.origin = origin;
         if self.traced_mode().results {
             let whole = self.copied_piece(&source, 0..cursor.length);
             self.trace_result(indent, &whole);
@@ -668,7 +711,7 @@ impl Interp {
         let value = match value {
             Subject::Bytes(bytes) => {
                 self.trace_keyword(indent, keyword, &bytes);
-                SourceText::Owned(bytes)
+                (SourceText::Owned(bytes), None)
             }
             // **`>K>` names the object and the template walks the conversion.**
             // `value` is traced and the same object is handed to the target,

@@ -22,8 +22,14 @@ parse upper var a b; call show 'upper changes', b
 parse upper var u b; call show 'upper keeps', b
 parse lower var u b; call show 'lower changes', b
 parse lower var a b; call show 'lower keeps', b
-n = 12345678901
-parse var n b; say 'number' (b == n) t~hasIndex(b)
+x = '12345678901234'; y = '12345'; z = '1234567890123x'; e = '1E5'
+t[x] = 'x'; t[y] = 'y'; t[z] = 'z'; t[e] = 'e'
+parse var x b; call show 'long digits', b
+parse var y b; call show 'short digits', b
+parse var z b; call show 'digits and a letter', b
+parse upper var x b; call show 'upper digits', b
+parse lower var e b; call show 'lower exponent', b
+parse var x b 3 c; call show 'part of the digits', b, c
 exit
 sub: parse arg b; call show 'arg', b; return
 show:
