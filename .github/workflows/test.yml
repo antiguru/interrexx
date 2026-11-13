@@ -182,20 +182,65 @@ jobs:
           cache-workspaces: rust
       - run: cargo test --locked --workspace --doc
 
+  # The `pinning` feature's reports, which the archive above is not built with: the
+  # PinReport witnesses (which Rust frames keep an activity pinned where it parks), the
+  # scheduler's unit tests under the feature, and the pinning report over the corpus.
+  pinning:
+    name: pinning reports
+    needs: [third-party]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+      - uses: actions-rust-lang/setup-rust-toolchain@v2
+        with:
+          components: clippy
+          cache-workspaces: rust
+      - uses: actions/cache/restore@v6
+        with:
+          path: |
+            third_party/oracle
+            build
+            ootest
+            oodocs
+          key: ${{ needs.third-party.outputs.key }}
+          fail-on-cache-miss: true
+      - name: Provide memcap
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          printf '#!/bin/sh\nshift\nexec "$@"\n' > "$HOME/.local/bin/memcap"
+          chmod +x "$HOME/.local/bin/memcap"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: Install nextest
+        uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
+        with:
+          tool: nextest@0.9.150
+      - name: Install svn
+        run: sudo apt-get update && sudo apt-get install -y subversion
+      - name: Cargo clippy with pinning
+        run: cargo clippy --locked -p interrexx --all-targets --features pinning -- -D warnings
+      - name: Pinning tests
+        run: >
+          cargo nextest run --locked -p interrexx --features pinning --profile ci
+          --lib --test concurrency_tests --test corpus
+          -E 'kind(lib) | (binary(concurrency_tests) & test(/^measured::/)) | (binary(corpus) & test(=pinning_report_over_the_corpus))'
+
   # The check branch protection requires; it passes when every job above did.
   test:
     name: cargo test # the name branch protection requires; keep it
     if: always()
-    needs: [shard, spec-oracle, doctest]
+    needs: [shard, spec-oracle, doctest, pinning]
     runs-on: ubuntu-24.04
     steps:
       - name: Every test job succeeded
         working-directory: .
         run: |
-          echo "shards: ${{ needs.shard.result }}, spec oracle: ${{ needs.spec-oracle.result }}, doc tests: ${{ needs.doctest.result }}"
+          echo "shards: ${{ needs.shard.result }}, spec oracle: ${{ needs.spec-oracle.result }}, doc tests: ${{ needs.doctest.result }}, pinning: ${{ needs.pinning.result }}"
           test "${{ needs.shard.result }}" = success
           test "${{ needs.spec-oracle.result }}" = success
           test "${{ needs.doctest.result }}" = success
+          test "${{ needs.pinning.result }}" = success
 
   fmt:
     name: Cargo fmt
