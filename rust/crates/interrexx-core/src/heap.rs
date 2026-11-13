@@ -209,6 +209,19 @@ impl Heap {
 
     /// Marks from the roots, then sweeps everything unmarked.
     pub fn collect(&mut self, roots: &RootSet) -> CollectStats {
+        self.collect_with(roots, &mut |_, _| {})
+    }
+
+    /// [`Heap::collect`], with `class_refs` naming what a live class object
+    /// keeps alive beyond its body: the class graph a caller keeps outside
+    /// the heap, which holds a class's superclasses, mixins and metaclass by
+    /// handle. It is called once for each marked [`Body::Class`] object, with
+    /// that object's handle, and appends to the vector it is given.
+    pub fn collect_with(
+        &mut self,
+        roots: &RootSet,
+        class_refs: &mut dyn FnMut(ObjRef, &mut Vec<ObjRef>),
+    ) -> CollectStats {
         self.collections += 1;
         self.marks.clear();
         // Resized every time: the heap grows between collections.
@@ -261,6 +274,9 @@ impl Heap {
                 body => {
                     reached.clear();
                     body.trace(&mut reached);
+                    if let Body::Class { .. } = body {
+                        class_refs(r, &mut reached);
+                    }
                     work.extend(reached.iter().copied());
                     body.held_bytes()
                 }
@@ -348,8 +364,10 @@ impl Heap {
             survivor_bytes += object.body.held_bytes();
             reached.clear();
             object.body.trace(&mut reached);
-            if let Body::Cell(cell, _) = object.body {
-                reached.extend(roots.cell_value(cell));
+            match object.body {
+                Body::Cell(cell, _) => reached.extend(roots.cell_value(cell)),
+                Body::Class { .. } => class_refs(r, &mut reached),
+                _ => {}
             }
             resurrect.extend(reached.iter().copied());
         }
@@ -940,5 +958,53 @@ mod body_bytes_tests {
         assert_eq!(heap.peak_body_bytes(), 600);
         heap.charge_body_bytes(500);
         assert_eq!(heap.peak_body_bytes(), 950);
+    }
+}
+
+#[cfg(test)]
+mod class_refs_tests {
+    use super::*;
+    use crate::RootSet;
+
+    fn class(heap: &mut Heap) -> ObjRef {
+        heap.alloc(Body::Class { owned: Vec::new() })
+    }
+
+    /// A class reached only through what `class_refs` names for a marked
+    /// class survives, transitively, and goes once its holder does.
+    #[test]
+    fn a_class_named_only_by_a_live_class_survives_and_goes_with_it() {
+        let mut heap = Heap::new();
+        let mut roots = RootSet::new();
+        let grand = class(&mut heap);
+        let parent = class(&mut heap);
+        let child = class(&mut heap);
+        let stray = class(&mut heap);
+        roots.add_global("child", child);
+        let mut refs = |class: ObjRef, out: &mut Vec<ObjRef>| {
+            if class == child {
+                out.push(parent);
+            } else if class == parent {
+                out.push(grand);
+            }
+        };
+        let stats = heap.collect_with(&roots, &mut refs);
+        assert_eq!(stats.freed_classes, vec![stray]);
+        for kept in [child, parent, grand] {
+            assert!(heap.peek(kept).is_some());
+        }
+
+        // Without the holder, all three go.
+        let roots = RootSet::new();
+        let stats = heap.collect_with(&roots, &mut refs);
+        assert_eq!(stats.freed_classes.len(), 3);
+        // `collect` names nothing beyond the body, so a held class's parent
+        // would go: what `collect_with` exists to prevent.
+        let mut heap = Heap::new();
+        let mut roots = RootSet::new();
+        let parent = class(&mut heap);
+        let child = class(&mut heap);
+        roots.add_global("child", child);
+        assert_eq!(heap.collect(&roots).freed_classes, vec![parent]);
     }
 }

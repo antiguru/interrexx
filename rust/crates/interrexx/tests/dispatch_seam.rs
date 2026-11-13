@@ -65,12 +65,17 @@ fn code_occurrences(needle: &str) -> Vec<String> {
 }
 
 /// Every collection in this crate goes through `Interp::collect_now`, which
-/// is where the root set is completed before `Heap::collect` is handed it.
+/// is where the root set is completed before `Heap::collect` (or
+/// `Heap::collect_with`, which also takes the class graph's references) is
+/// handed it.
 #[test]
 fn heap_collect_is_called_from_collect_now_alone() {
     // Built rather than written literally, so this file's own text does not
     // contribute to the count it takes.
-    let call = format!("{}.{}(", "heap", "collect");
+    let calls = [
+        format!("{}.{}(", "heap", "collect"),
+        format!("{}.{}_with(", "heap", "collect"),
+    ];
 
     // Whitespace-collapsed, so a wrapped call is still one match. Comment
     // lines go first, so that a comment cannot satisfy the assertion.
@@ -83,15 +88,17 @@ fn heap_collect_is_called_from_collect_now_alone() {
             .collect::<Vec<_>>()
             .join(" ");
         let collapsed: String = code.split_whitespace().collect::<Vec<_>>().join("");
-        for _ in collapsed.matches(&call) {
-            sites.push(path.display().to_string());
+        for call in &calls {
+            for _ in collapsed.matches(call.as_str()) {
+                sites.push(path.display().to_string());
+            }
         }
     }
     assert_eq!(
         sites.len(),
         1,
         "every collection must go through `Interp::collect_now`, which is \
-         what completes the root set; {call} appears in {sites:?}"
+         what completes the root set; {calls:?} appear in {sites:?}"
     );
     assert!(
         sites[0].contains("lib.rs"),
@@ -119,7 +126,7 @@ fn heap_collect_is_called_from_collect_now_alone() {
         .find("\n    }\n")
         .expect("the function has a closing brace at its own indentation");
     assert!(
-        body[..end].contains(&call),
+        calls.iter().any(|call| body[..end].contains(call.as_str())),
         "the one `Heap::collect` call in this crate is in `lib.rs` but not \
          inside `collect_now`, so it does not get the swept root set"
     );

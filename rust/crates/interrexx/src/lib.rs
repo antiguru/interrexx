@@ -3622,7 +3622,14 @@ impl Interp {
         for object in anchor {
             self.roots.activity_mut().push_temp(object);
         }
-        let stats = self.heap.collect(&self.roots);
+        // A class keeps its superclasses, mixins and metaclass alive through
+        // the class graph, which names them outside the heap.
+        let model = self.object_model.as_ref();
+        let stats = self.heap.collect_with(&self.roots, &mut |class, out| {
+            if let Some(model) = model {
+                model.class_references(class, out);
+            }
+        });
         self.roots.activity_mut().pop_frame(frame);
         self.roots.release_cells(&stats.freed_cells);
         let heap = &self.heap;

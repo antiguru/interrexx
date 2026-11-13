@@ -258,6 +258,11 @@ impl ClassRegistry {
         self.graph.owning_class(class)
     }
 
+    /// See [`ClassGraph::class_references`].
+    pub fn class_references(&self, class: ObjRef, out: &mut Vec<ObjRef>) {
+        self.graph.class_references(class, out);
+    }
+
     /// `~metaClass`.
     pub fn metaclass(&self, class: ObjRef) -> ObjRef {
         self.graph.metaclass(class)
