@@ -74,6 +74,17 @@ fn num_rendering<'a>(
     })
 }
 
+/// A tagged integer's rendering as handle-held text, when it is short
+/// enough to be one.
+pub(crate) fn small_int_inline_text(value: i64) -> Option<InlineText> {
+    let mut buffer = [0u8; TEXT_SCRATCH];
+    let at = write_small_int(&mut buffer, value);
+    match ObjRef::inline_text(&buffer[at..])?.decode() {
+        Decoded::Text(text) => Some(text),
+        _ => None,
+    }
+}
+
 fn write_small_int(buffer: &mut [u8; TEXT_SCRATCH], value: i64) -> usize {
     let mut at = buffer.len();
     let mut magnitude = value.unsigned_abs();

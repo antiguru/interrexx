@@ -412,6 +412,14 @@ impl Interp {
         if !parse.upper && !parse.lower {
             match value.decode() {
                 Decoded::Text(inline) => return (SourceText::Inline(inline), None),
+                // A tagged integer's digits, rendered where the walk reads
+                // them rather than through a pool buffer, beside the number a
+                // whole-string piece assigns.
+                Decoded::SmallInt(number) => {
+                    if let Some(inline) = crate::value::small_int_inline_text(number) {
+                        return (SourceText::Inline(inline), Some(value));
+                    }
+                }
                 Decoded::Heap { .. } => {
                     if let Some(length) = self.heap.body_text(value).map(<[u8]>::len) {
                         // Rooted where the borrow is taken, since from here
@@ -438,6 +446,12 @@ impl Interp {
         match value.decode() {
             Decoded::Text(inline) if unfolded(parse, &inline) => {
                 return (SourceText::Inline(inline), None);
+            }
+            // Digits and a sign, which no fold changes.
+            Decoded::SmallInt(number) => {
+                if let Some(inline) = crate::value::small_int_inline_text(number) {
+                    return (SourceText::Inline(inline), Some(value));
+                }
             }
             Decoded::Heap { .. } => {
                 if let Some(bytes) = self.heap.body_text(value)
