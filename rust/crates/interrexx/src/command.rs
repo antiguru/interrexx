@@ -839,8 +839,9 @@ impl Interp {
                 return Ok(Commanded::Done(CommandOutcome::of_failure(NOT_REGISTERED)));
             }
         };
-        // `PATH` names no shell, so a `cd` under it is a program to find
-        // rather than a directory to move to.
+        // `cd`, `export`, `set` and `unset` are done by the interpreter under
+        // every native environment, `PATH` included
+        // (`r[env.commands.inprocess]`).
         //
         // **A redirected command never takes this path either.**
         // `handleCommandInternally` sits in the branch `ioCommandHandler`
@@ -848,7 +849,6 @@ impl Interp {
         // `ADDRESS ... WITH` is a child like any other command and moves no
         // directory of this interpreter's.
         if io.is_none()
-            && matches!(handler, Handler::Shell(_))
             && let Some(outcome) = run_internally(self, command)
         {
             return Ok(Commanded::Done(outcome));

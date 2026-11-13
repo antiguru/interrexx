@@ -572,7 +572,7 @@ say rc '['value('A4ZQ_P', , e)']'
 call directory '/'
 ```
 
-```output defect=#219
+```output
 0 /usr
 0 [1]
 0 []
