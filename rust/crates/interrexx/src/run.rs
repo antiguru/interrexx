@@ -1533,8 +1533,11 @@ impl Interp {
         for variable in variables {
             match variable {
                 VariableRef::Direct(id) => {
-                    let name = code.symbols.name(*id).as_bytes().into();
-                    self.bind_exposed(owner, scope, name)?;
+                    let name: Box<[u8]> = code.symbols.name(*id).as_bytes().into();
+                    match simple_slot(code, *id) {
+                        Some(slot) => self.expose_slot(slot, InstanceVar { owner, scope, name }),
+                        None => self.bind_exposed(owner, scope, name)?,
+                    }
                 }
                 // **The selector's own name is bound before its value is
                 // read**, and the order is observable rather than tidy.
@@ -1567,7 +1570,8 @@ impl Interp {
     }
 
     /// Binds one name to `scope`'s pool on `owner`, for the rest of this
-    /// activation.
+    /// activation. A simple symbol the body's plan bound a slot to goes
+    /// straight to [`Interp::expose_slot`] instead: see [`simple_slot`].
     fn bind_exposed(
         &mut self,
         owner: ObjRef,
@@ -3981,4 +3985,17 @@ fn standard_stream_name(name: &[u8], input: bool) -> Option<&'static [u8]> {
         return Some(b".ERROR");
     }
     None
+}
+
+/// The slot `code`'s plan bound symbol `id` to, where `id` is a simple name:
+/// what [`Interp::bind_exposed`] finds by the name's shape and
+/// [`Interp::slot_of`], answered from the plan. The plan splits every name
+/// with a period, a stem's included, so a symbol with a slot and no split
+/// is simple.
+fn simple_slot(code: &Code<'_>, id: SymbolId) -> Option<usize> {
+    let plan = code.plan?;
+    if plan.compounds.get(id.index())?.is_some() {
+        return None;
+    }
+    code.slots.get(id.index()).copied().flatten()
 }
