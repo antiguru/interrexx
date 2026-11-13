@@ -1,0 +1,47 @@
+/* PARSE VAR with a template of words alone: the pieces, the placeholders,
+   the targets that are not plain variables, and the sources that are not. */
+text = '  alpha  beta gamma   delta  '
+parse var text a b rest
+say '<' || a || '|' || b || '|' || rest || '>'
+parse var text . . c .
+say '<' || c || '>'
+parse var text w text
+say '<' || w || '|' || text || '>'
+parse var text x
+say '<' || x || '>'
+whole = 'a-long-single-word-value'
+parse var whole one
+say (one~identityHash == whole~identityHash) '<' || one || '>'
+n = 12345678901234567890
+parse var n m
+say (m~identityHash == n~identityHash) '<' || m || '>'
+empty = ''
+parse var empty p q
+say '<' || p || '|' || q || '>'
+s. = 'stem default'
+parse var s. u v
+say '<' || u || '|' || v || '>'
+i = 2
+t.i = 'x y z'
+parse var t.i j k
+say '<' || j || '|' || k || '>'
+parse var text r.1 r.2
+say '<' || r.1 || '|' || r.2 || '>'
+o = .stringy~new
+parse var o g h
+say '<' || g || '|' || h || '>'
+parse var o whole2
+say whole2~class~id '<' || whole2 || '>'
+call ex
+exit
+ex: procedure
+  signal on novalue
+  parse var undefined_one a b
+  say 'no' a b
+  exit
+novalue:
+  say 'novalue' condition('d')
+  return
+::class stringy
+::method string
+  return 'from string method'
