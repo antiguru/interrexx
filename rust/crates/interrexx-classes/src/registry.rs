@@ -745,6 +745,22 @@ impl ClassRegistry {
         self.graph.refresh_class_behaviour(class);
     }
 
+    /// See [`ClassGraph::remove_from_class_behaviour`].
+    pub fn remove_from_class_behaviour(&mut self, class: ObjRef, scope: ObjRef, names: &[String]) {
+        self.graph.remove_from_class_behaviour(class, scope, names);
+    }
+
+    /// See [`ClassGraph::class_behaviour_is_rebuilt`].
+    pub fn class_behaviour_is_rebuilt(
+        &self,
+        class: ObjRef,
+        root: ObjRef,
+        metaclass: ObjRef,
+    ) -> bool {
+        self.graph
+            .class_behaviour_is_rebuilt(class, root, metaclass)
+    }
+
     /// See [`ClassGraph::bootstrap_root_class_behaviour`] -- bootstrapping
     /// `.Object` needs this once, nothing else does.
     pub fn bootstrap_root_class_behaviour(&mut self, root: ObjRef, metaclass: ObjRef) {

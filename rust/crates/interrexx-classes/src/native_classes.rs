@@ -277,6 +277,12 @@ fn build(keep_setup_methods: bool, mint: &mut dyn FnMut() -> ObjRef) -> ClassReg
 
 /// The setup-method removal: delete [`REMOVED_BY_IMAGE_SAVE`]'s names from `.Class`'s own instance
 /// dictionary, and from every behaviour that merged them.
+///
+/// Every class behaviour from `.Object` down merged `.Class`'s instance behaviour, and so
+/// holds the two names as `.Class` defined them. Rebuilding each of them would answer what
+/// it holds now less those entries, so those entries are taken out of it instead, which
+/// costs a few lookups where a rebuild re-merges some sixty names. A debug build checks
+/// each behaviour against its rebuild.
 pub fn remove_setup_methods(registry: &mut ClassRegistry) {
     let class = registry
         .lookup("Class")
@@ -284,18 +290,13 @@ pub fn remove_setup_methods(registry: &mut ClassRegistry) {
     let object = registry
         .lookup("Object")
         .expect("the registry always holds .Object");
-    for name in &setup_method_names() {
+    let names = setup_method_names();
+    for name in &names {
         registry.delete_instance_method(class, name);
     }
-    // The same three steps [`build`] wires the two bootstrap classes with, in
-    // the same order, because the walk in the middle passes through both of
-    // them and the ordinary cascade is wrong for each: `.Class`'s class
-    // behaviour is its own instance behaviour merged into itself, and
-    // `.Object`'s needs the root merge the cascade's is-this-the-root guard
-    // deliberately withholds. With the root merge left out,
-    // `.Object~superClass` would be 97.1 `does not understand message
-    // "SUPERCLASS"` where `The NIL object` is right.
-    registry.refresh_class_behaviour(class);
+    // The walk passes through `.Class` too, whose class behaviour is its own instance
+    // behaviour merged into itself, and through `.Object`, whose class behaviour also
+    // holds the root merge [`build`] gives it.
     let mut pending = vec![object];
     let mut seen = Vec::new();
     while let Some(next) = pending.pop() {
@@ -304,9 +305,12 @@ pub fn remove_setup_methods(registry: &mut ClassRegistry) {
         }
         seen.push(next);
         pending.extend_from_slice(registry.subclasses(next));
-        registry.refresh_class_behaviour(next);
+        registry.remove_from_class_behaviour(next, class, &names);
+        debug_assert!(
+            registry.class_behaviour_is_rebuilt(next, object, class),
+            "the setup methods' removal leaves {next:?}'s class behaviour as a rebuild would"
+        );
     }
-    registry.bootstrap_root_class_behaviour(object, class);
 }
 
 #[cfg(test)]
