@@ -1153,6 +1153,7 @@ lang/package_library_binder_kept.rex
 lang/package_external_merge_held.rex
 lang/package_class_collected.rex
 lang/class_new_collected.rex
+lang/class_superclass_kept_alive.rex
 lang/package_external_merge_class_held.rex
 lang/parse_error_unused_insert.rex
 lang/parse_error_directive_insert.rex

@@ -58,3 +58,15 @@ fn a_loop_of_package_new_collects_its_classes_and_packages() {
 fn a_loop_of_class_new_collects_its_classes() {
     agrees("class_new_collected.rex", "class cleared: 1\n");
 }
+
+/// A class reached only through another live class -- its superclass, its
+/// `INHERIT`ed mixin, its metaclass -- survives a collection, and is freed
+/// with that class once nothing holds it (#535).
+#[test]
+fn a_class_keeps_its_superclasses_mixins_and_metaclass_alive() {
+    agrees(
+        "class_superclass_kept_alive.rex",
+        "superclass: C1 1 2\nsubclass only: A2 1\nmixin: greeting 2\n\
+         metaclass: hello from X4 M4\nheld: 4\nafter drop: 0\n",
+    );
+}

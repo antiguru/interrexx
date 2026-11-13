@@ -968,6 +968,26 @@ impl ClassGraph {
         &self.classes[&class].superclasses
     }
 
+    /// Every other class `class` keeps alive: its superclasses (the
+    /// `INHERIT`ed mixins among them), its metaclass, its base class and its
+    /// owning class. The graph names them by handle, outside the heap, so the
+    /// collector asks here when it marks a class object; a class reached only
+    /// this way -- a superclass no variable holds -- would otherwise be freed
+    /// under a live subclass. Its subclasses are not among them: that list is
+    /// weak (see [`ClassGraph::expunge`]). Appends nothing for a class the
+    /// graph does not know.
+    pub fn class_references(&self, class: ObjRef, out: &mut Vec<ObjRef>) {
+        let Some(def) = self.classes.get(&class) else {
+            return;
+        };
+        out.extend(def.superclasses.iter().copied());
+        out.extend(
+            [def.metaclass, def.base_class, def.owning_class]
+                .into_iter()
+                .filter(|&held| held != class),
+        );
+    }
+
     /// Every class registered as a direct subclass or `INHERIT` recipient of
     /// `class`, what a cascade (`update_sub_classes` /
     /// `update_instance_sub_classes`) walks. Exposed for assertions that need
