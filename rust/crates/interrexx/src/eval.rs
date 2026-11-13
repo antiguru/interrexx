@@ -8,7 +8,7 @@ use crate::run::{CallResolution, Resolved, Started, function_started};
 use crate::value::{QuickOperand, Referent, canonical_small_int, exact_small_int, within_digits};
 use crate::{Code, Failure, Interp, Loud, StackSpan};
 use interrexx_core::{Body, Decoded, INLINE_BYTES, NotNumeric, ObjRef};
-use interrexx_num::{ArithError, CompareOp, DivOp, Number};
+use interrexx_num::{ArithError, CompareOp, DivOp, Number, Scaled};
 use interrexx_parse::{CallTarget, Expr, ExprKind, Operator, PrefixOp, SymbolId};
 
 /// The evaluation-depth limit: `eval`'s own recursion, one level per
@@ -857,18 +857,20 @@ impl Interp {
         let digits = self.activation().settings.digits();
         let form = self.activation().settings.form();
 
-        // **An addition, subtraction or multiplication of two operands
-        // carried in their handles, on their scaled mantissas**, where the
-        // answer is exact and fits a handle again. Neither operand can be an
-        // operator receiver or fail to convert, and one that `Scaled` accepts
-        // is no longer than DIGITS, so LOSTDIGITS has nothing to say either.
-        // The tag test is all a wide operand pays.
+        // **An addition, subtraction or multiplication of two short numbers
+        // on their scaled mantissas**, where `Scaled` answers exactly what
+        // the `Number` operation would. Neither operand can be an operator
+        // receiver or fail to convert (a plain string or number is all
+        // `scaled_operand` reads), and one that `Scaled` accepts is no longer
+        // than DIGITS, so LOSTDIGITS has nothing to say either. The answer
+        // is made into a value exactly as the general path makes its own.
         if matches!(op, Operator::Plus | Operator::Subtract | Operator::Multiply)
-            && !matches!(left_value.decode(), Decoded::Heap { .. })
-            && !matches!(right_value.decode(), Decoded::Heap { .. })
-            && let Some(handle) = self.scaled_arith(op, left_value, right_value, digits)
+            && let Some(answer) = self.scaled_arith(op, left_value, right_value, digits)
         {
-            return Ok(handle);
+            return Ok(match crate::value::scaled_handle(answer, digits) {
+                Some(handle) => handle,
+                None => self.number(answer.to_number(), saturate_digits(digits), form),
+            });
         }
 
         let left_number = match self.arith_left_operand(op.spelling(), left_value)? {
@@ -942,9 +944,9 @@ impl Interp {
         Ok(self.number(result, saturate_digits(digits), form))
     }
 
-    /// [`Interp::arith_general_body`]'s `+`, `-` or `*` on two operands
-    /// carried in their handles, or `None` where it is not that exact short
-    /// case.
+    /// [`Interp::arith_general_body`]'s `+`, `-` or `*` on two short
+    /// numbers, as [`Scaled`] answers it, or `None` where it is not that
+    /// exact short case.
     #[inline(never)]
     fn scaled_arith(
         &mut self,
@@ -952,19 +954,14 @@ impl Interp {
         left_value: ObjRef,
         right_value: ObjRef,
         digits: u64,
-    ) -> Option<ObjRef> {
-        let QuickOperand::Scaled(left, _) = self.quick_operand(left_value) else {
-            return None;
-        };
-        let QuickOperand::Scaled(right, _) = self.quick_operand(right_value) else {
-            return None;
-        };
-        let answer = match op {
-            Operator::Plus => left.add(right, digits)?,
-            Operator::Subtract => left.add(right.negated(), digits)?,
-            _ => left.mul(right, digits)?,
-        };
-        crate::value::scaled_handle(answer, digits)
+    ) -> Option<Scaled> {
+        let left = self.scaled_operand(left_value)?;
+        let right = self.scaled_operand(right_value)?;
+        match op {
+            Operator::Plus => left.add(right, digits),
+            Operator::Subtract => left.add(right.negated(), digits),
+            _ => left.mul(right, digits),
+        }
     }
 
     /// Converts an arithmetic operand to a `Number`, or 41.1 with the

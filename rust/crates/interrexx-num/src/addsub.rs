@@ -632,6 +632,71 @@ mod add_shortcut_tests {
         assert!(taken > 20_000, "the wide sum fired {taken} times");
     }
 
+    /// `Scaled::add` answers what the digit addition answers wherever it
+    /// answers at all: operands of at most eighteen digits at DIGITS around
+    /// theirs, where its alignment adjustment and rounding both run.
+    #[test]
+    fn the_scaled_sum_answers_what_the_digit_addition_answers() {
+        let mut state = 0x9e37_79b9_7f4a_7c15u64;
+        let mut next = move |bound: u64| {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            state % bound
+        };
+        let number = |next: &mut dyn FnMut(u64) -> u64| {
+            let length = 1 + next(18) as usize;
+            let mut text = String::new();
+            if next(2) == 0 {
+                text.push('-');
+            }
+            for i in 0..length {
+                let digit = match next(4) {
+                    0 => 9,
+                    1 => 0,
+                    _ => next(10) as u8,
+                };
+                text.push(char::from(b'0' + if i == 0 { digit.max(1) } else { digit }));
+            }
+            let spread = if next(4) == 0 { 60 } else { 20 };
+            text.push_str(&format!("E{}", next(spread) as i64 - spread as i64 / 2));
+            if next(16) == 0 {
+                text = String::from("0");
+            }
+            Number::parse(&text).expect("a generated spelling parses")
+        };
+        let (mut taken, mut rounded) = (0, 0);
+        for _ in 0..200_000 {
+            let left = number(&mut next);
+            let right = number(&mut next);
+            let digits = 1 + next(20);
+            let subtract = next(2) == 0;
+            let (Some(l), Some(r)) = (left.scaled(), right.scaled()) else {
+                continue;
+            };
+            let Some(sum) = l.add(if subtract { r.negated() } else { r }, digits) else {
+                continue;
+            };
+            let expected = the_long_way(&left, &right, digits, subtract)
+                .expect("a sum the scaled path answers is in range");
+            assert_eq!(
+                sum.to_number(),
+                expected,
+                "{} {} {} at DIGITS {digits}",
+                left.format(40),
+                if subtract { "-" } else { "+" },
+                right.format(40)
+            );
+            taken += 1;
+            let width = |n: &Number| n.digits.len() as i64 + i64::from(n.exponent);
+            if (width(&left) - i64::from(left.exponent.min(right.exponent))) as u64 > digits {
+                rounded += 1;
+            }
+        }
+        assert!(taken > 50_000, "the scaled sum answered {taken} times");
+        assert!(rounded > 10_000, "the scaled sum rounded {rounded} times");
+    }
+
     /// The largest sums the wide path takes, whose digits above the
     /// nineteenth come closest to the `u64` they are written out of, and the
     /// widths just past it, which must decline to the digit addition.

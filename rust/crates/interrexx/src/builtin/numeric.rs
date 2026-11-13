@@ -200,6 +200,26 @@ pub(crate) fn format(
     let after = whole_number(interp, name, args, 3)?;
     let expp = whole_number(interp, name, args, 4)?;
     let expt = whole_number(interp, name, args, 5)?;
+    // **A short number laid out plainly, without a `Number` built**: no
+    // exponent arguments, a target whose digits fit a `Scaled`, and a
+    // result that is plain and short. The target converted, the widths'
+    // range checks are the next and last things that can fail.
+    if expp.is_none()
+        && expt.is_none()
+        && let Some(scaled) = interp
+            .scaled_operand(arg(args, 1).expect("check_arity admitted the required first argument"))
+    {
+        let before = non_negative(before, 1)?;
+        let after = non_negative(after, 2)?;
+        let mut out = [0u8; 48];
+        let width = |value: Option<i64>| value.map(u32::try_from).transpose().ok();
+        if let (Some(before), Some(after)) = (width(before), width(after))
+            && let Some(written) =
+                scaled.format_plain(current(interp).digits, before, after, &mut out)
+        {
+            return Ok(interp.text(&out[..written]));
+        }
+    }
     let value = target_number(interp, name, args)?;
 
     format_over(
