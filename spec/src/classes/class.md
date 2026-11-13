@@ -2270,6 +2270,6 @@ say o~one o~two
 ::class k
 ```
 
-```output defect=#141
+```output
 one two
 ```

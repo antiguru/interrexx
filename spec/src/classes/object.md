@@ -2309,7 +2309,7 @@ say o~own o~later
   self~setMethod(arg(1), arg(2))
 ```
 
-```output defect=#141
+```output
 own later
 ```
 

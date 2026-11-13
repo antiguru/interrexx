@@ -1023,6 +1023,109 @@ base define two again:
   FOUR f/f
 ```
 
+r[class.methods.running]
+A change to the methods of a class does not reach a method that is running. A
+`define`, `defineMethods` or `delete` that replaces or removes a method while
+it runs, and an `inherit` or `uninherit` that changes the method a name finds,
+made on the same activity or on another, leaves that run as it is: it goes on
+to its end as the method it started as. The change applies to the sends that
+start after it. In the example, the method `M` replaces itself and returns
+what it started with, and the method `GO`, which runs on another activity
+while its class deletes it, runs to its end.
+
+```rexx
+say .k~new~m
+say .k~new~m
+w = .w~new
+r = w~start('go')
+w~waitStarted
+.w~delete('GO')
+w~release
+say r~result
+say t(.w~new, 'GO')
+exit
+t:
+  signal on syntax name e
+  return arg(1)~send(arg(2))
+e: return '-'
+::class k
+::method m
+  .k~define('M', 'return "new"')
+  return 'old'
+::class w
+::method init
+  expose started released
+  started = 0
+  released = 0
+::method go unguarded
+  expose started released
+  started = 1
+  guard on when released = 1
+  return 'go ran on'
+::method waitStarted unguarded
+  expose started
+  guard on when started = 1
+::method release unguarded
+  expose released
+  released = 1
+```
+
+```output
+old
+new
+go ran on
+-
+```
+
+r[class.methods.whole]
+A send finds its method at one moment. A change that another activity makes
+to the methods of a class, by one `define`, `defineMethods`, `delete`,
+`inherit` or `uninherit`, is seen by a send entirely or not at all: never a
+part of the table of a `defineMethods`, and never a part of the order an
+`inherit` or `uninherit` builds. Every send that starts after the change has
+completed sees it. In the example, the method that runs on another activity
+sends `A` and `B` before the table that replaces both is defined and again
+after it.
+
+```rexx
+w = .w~new
+r = w~start('watch')
+w~waitStarted
+table = .directory~new
+table['A'] = 'return "a2"'
+table['B'] = 'return "b2"'
+.k~defineMethods(table)
+w~release
+say r~result
+exit
+::class k
+::method a
+  return 'a1'
+::method b
+  return 'b1'
+::class w
+::method init
+  expose started released
+  started = 0
+  released = 0
+::method watch unguarded
+  expose started released
+  before = .k~new~a .k~new~b
+  started = 1
+  guard on when released = 1
+  return before '->' .k~new~a .k~new~b
+::method waitStarted unguarded
+  expose started
+  guard on when started = 1
+::method release unguarded
+  expose released
+  released = 1
+```
+
+```output
+a1 b1 -> a2 b2
+```
+
 r[class.methods.library]
 The classes of the class library accept no change to their methods or their
 lists of superclasses: `define`, `defineMethods`, `delete`, `inherit` and
@@ -1649,7 +1752,7 @@ private answer
 ```
 
 r[class.methods.deviation.110]
-This Deviation is provisional. An object sees every change made, at any time,
+An object sees every change made, at any time,
 to the methods of its class, of that class's superclasses and of their mixin
 classes, by `define`, `defineMethods`, `delete`, `inherit` and `uninherit`
 ([the rule on changes](r:class.methods.late)): also when the object has
@@ -1707,7 +1810,7 @@ e: return '-'
 ::class sub subclass k
 ```
 
-```output defect=#141
+```output
 start:
   ONE -/-/-
   TWO -/-/-
@@ -1772,7 +1875,7 @@ x: return '-'
   self~unsetMethod(arg(1))
 ```
 
-```output defect=#141
+```output
 own a one t h
 en - t h
 k1
@@ -1804,7 +1907,7 @@ e: return '-'
 ::class d metaclass meta
 ```
 
-```output defect=#141
+```output
 meta who - -
 meta later meta later
 sbase later2 mxm later3

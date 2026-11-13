@@ -575,14 +575,12 @@ pub(super) fn native_define(
                 .classes()
                 .hide_instance_method(class, &String::from_utf8_lossy(&name));
             interp.drop_method_object(class, &name);
-            interp.charge_retired_behaviours();
         }
         Some(ObjRef::NIL) => {
             interp
                 .classes()
                 .withdraw_instance_method(class, &String::from_utf8_lossy(&name));
             interp.drop_method_object(class, &name);
-            interp.charge_retired_behaviours();
         }
         Some(source) => {
             let source = if interp.receiver_kind(source) == Ok(Primitive::Method) {
@@ -941,7 +939,6 @@ pub(super) fn native_delete(
         .classes()
         .delete_instance_method(class, &String::from_utf8_lossy(&name));
     interp.drop_method_object(class, &name);
-    interp.charge_retired_behaviours();
     Ok(None)
 }
 

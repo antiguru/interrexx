@@ -735,7 +735,6 @@ impl Interp {
         self.classes()
             .define_instance_method(class, &String::from_utf8_lossy(name), method);
         self.hold_method_object(class, false, name, object);
-        self.charge_retired_behaviours();
         Some(())
     }
 
@@ -828,7 +827,6 @@ impl Interp {
         for (name, object) in objects {
             self.hold_method_object(class, false, &name, object);
         }
-        self.charge_retired_behaviours();
         self.roots.activity_mut().pop_frame(frame);
         Some(())
     }

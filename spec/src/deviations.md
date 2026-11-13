@@ -791,7 +791,7 @@ ooRexx sends it `request('ARRAY')` instead and raises `SYNTAX 93.946`.
 
 ## 110. Instances follow every change to their class
 
-Provisional. An object sees every change made, at any time, to the methods of
+An object sees every change made, at any time, to the methods of
 its class, of that class's superclasses and of their mixin classes, by
 `define`, `defineMethods`, `delete`, `inherit` and `uninherit`, also when the
 object has methods of its own from `setMethod` or `enhanced` and when the

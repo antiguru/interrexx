@@ -1305,11 +1305,6 @@ const UNINIT: &[u8] = b"UNINIT";
 /// [`Interp::run_termination_uninits`](Interp::run_termination_uninits).
 const SWEEPS: usize = 2;
 
-/// The bytes a retired behaviour is charged per method entry, an estimate:
-/// measured, 80000 `define`s of one class with nothing freeing them peaked at
-/// 628364 kB.
-const RETIRED_ENTRY_BYTES: usize = 128;
-
 /// The message the last install pass sends every class the package built.
 pub(crate) const ACTIVATE: &[u8] = b"ACTIVATE";
 
@@ -1933,41 +1928,25 @@ impl Interp {
         &mut self.object_model().classes
     }
 
-    /// Charges the behaviours a mutator just retired toward the next
-    /// collection, which is what frees them, and collects if that made one
-    /// due: a loop of mutators may allocate nothing else.
-    pub(crate) fn charge_retired_behaviours(&mut self) {
-        let entries = self.classes().take_retired_entries();
-        if entries > 0 {
-            self.charge_unheld(entries * RETIRED_ENTRY_BYTES);
-            self.collect_if_due();
-        }
-    }
-
-    /// Whether a live class keeps a behaviour `define` retired.
-    pub(crate) fn has_retired_behaviours(&self) -> bool {
+    /// Whether a `define`, `defineMethods` or `delete` took a method out of a
+    /// class's own dictionary since the last collection.
+    pub(crate) fn has_dropped_methods(&self) -> bool {
         self.object_model
             .as_ref()
-            .is_some_and(|model| model.classes.has_retired_behaviours())
+            .is_some_and(|model| model.classes.has_dropped_methods())
     }
 
-    /// Frees the behaviours `define` retired that no live instance holds, and
-    /// lets go of the `Method` objects only those behaviours named, unless
-    /// an activation is running one.
+    /// Lets go of the `Method` objects a class dropped that no method
+    /// dictionary names any more. One an activation is running is kept until
+    /// a later collection finds it no longer running: a running method runs
+    /// on (`r[class.methods.running]`).
     #[cold]
     #[inline(never)]
-    pub(crate) fn free_unheld_behaviours(&mut self) {
+    pub(crate) fn release_dropped_methods(&mut self) {
         let Some(model) = self.object_model.as_mut() else {
             return;
         };
-        let held = self
-            .heap
-            .live_objects()
-            .filter_map(|object| match object.body {
-                Body::Instance { behaviour, .. } => Some(behaviour),
-                _ => None,
-            });
-        let unnamed = model.classes.free_unheld_behaviours(held);
+        let unnamed = model.classes.take_unnamed_methods();
         if unnamed.is_empty() {
             return;
         }
@@ -1980,6 +1959,7 @@ impl Interp {
                 .get(&method)
                 .is_some_and(|body| running.contains(&(body.program, Some(body.directive))))
             {
+                self.classes().drop_later(class, method);
                 continue;
             }
             if let Some(object) = self.executable_objects.get(method).copied() {
