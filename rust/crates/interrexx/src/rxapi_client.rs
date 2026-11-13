@@ -69,9 +69,10 @@ fn connect_client() -> Result<ApiClient, u64> {
         return Err(NO_SERVICE);
     }
     let transport = match SERVICE.get() {
-        Some((dir, daemon)) => {
-            Unix::connect_or_start_with(dir, daemon).map_err(|error| error.status())?
-        }
+        Some((dir, daemon)) => Unix::connect_or_start_with(dir, daemon).map_err(|error| {
+            interrexx_rxapi::client::report_refusal(&error);
+            error.status()
+        })?,
         None => connect()?,
     };
     let client = ApiClient {

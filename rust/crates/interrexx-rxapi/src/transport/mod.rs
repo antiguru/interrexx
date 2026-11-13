@@ -66,6 +66,9 @@ pub enum TransportError {
     Refused { ours: u32, theirs: u32 },
     /// The service belongs to another user.
     Foreign { uid: u32 },
+    /// The service directory exists but is not private to this user, so no service is started
+    /// or reached in it.
+    NotPrivate { dir: String },
 }
 
 impl TransportError {
@@ -86,6 +89,11 @@ impl fmt::Display for TransportError {
                 )
             }
             TransportError::Foreign { uid } => write!(formatter, "service run by user {uid}"),
+            TransportError::NotPrivate { dir } => write!(
+                formatter,
+                "the service directory {dir} is not private to this user: it must belong to this \
+                 user and give no access to anyone else"
+            ),
         }
     }
 }

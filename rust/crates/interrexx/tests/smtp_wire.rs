@@ -156,6 +156,9 @@ fn crate_rexx() -> Command {
     let api = Path::new(env!("CARGO_TARGET_TMPDIR")).join("smtp-wire-api");
     let _ = std::fs::remove_dir_all(&api);
     std::fs::create_dir_all(&api).expect("a service directory");
+    // The service refuses a directory that others can use, and says so.
+    std::fs::set_permissions(&api, std::os::unix::fs::PermissionsExt::from_mode(0o700))
+        .expect("a private service directory");
     let mut command = Command::new(env!("CARGO_BIN_EXE_bounded-run"));
     command
         .args(["-k", "5", "60"])

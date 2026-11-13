@@ -1,5 +1,6 @@
 //! What every client process shares: its session queue's handle and its connection.
 
+use crate::transport::TransportError;
 use crate::transport::unix::{Unix, service_dir};
 
 /// The environment variable a session queue's handle travels in.
@@ -61,7 +62,20 @@ impl Session {
 /// Connects to this user's service, starting it if nothing answers, or the API code for the
 /// failure.
 pub fn connect() -> Result<Unix, u64> {
-    Unix::connect_or_start(&service_dir()).map_err(|error| error.status())
+    Unix::connect_or_start(&service_dir()).map_err(|error| {
+        report_refusal(&error);
+        error.status()
+    })
+}
+
+/// Says on standard error why a service directory is refused, which the API code alone
+/// (`NO_SERVICE`) cannot: the refusal is deliberate, and a user who sees only the code cannot
+/// tell why the service does not work.
+pub fn report_refusal(error: &TransportError) {
+    use std::io::Write as _;
+    if matches!(error, TransportError::NotPrivate { .. }) {
+        let _ = writeln!(std::io::stderr(), "interrexx: no API service: {error}");
+    }
 }
 
 #[cfg(test)]
