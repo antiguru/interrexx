@@ -28,6 +28,9 @@ impl Interp {
                 None => return Err(Loud::parse_trigger_operand().into()),
             },
         };
+        // Read before the operand only to gate the literal search, which
+        // evaluates nothing; the `>>>` line below reads it again, after an
+        // operand that may have changed it (`(trace('R'))`).
         let results = self.trace_mode().results;
         // **A literal pattern is searched for as the bytes it spells** when
         // no line will show it: its value would be a string holding exactly
@@ -60,7 +63,7 @@ impl Interp {
         // `samples/rexxcps.rex` made -- one per trigger, on a program whose
         // templates are mostly numeric triggers that never look at the bytes
         // at all.
-        if results {
+        if self.trace_mode().results {
             let rendered = self.traced_string_value_text(value)?;
             self.trace_result(indent, &rendered);
         }
