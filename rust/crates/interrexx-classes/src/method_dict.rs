@@ -2,6 +2,8 @@
 
 use interrexx_core::{MethodId, NameMap, ObjRef};
 use std::collections::BTreeSet;
+use std::collections::hash_map::Entry;
+use std::rc::Rc;
 
 /// One entry under one name. Several of these can share a name when more
 /// than one class in the ancestor chain defines it -- that is exactly the
@@ -33,13 +35,51 @@ impl MethodSlot {
     }
 }
 
+/// The entries under one name, highest priority first. Most names hold one,
+/// which is kept inline.
+#[derive(Clone, Debug)]
+enum Slots {
+    One(MethodSlot),
+    Many(Vec<MethodSlot>),
+}
+
+impl Slots {
+    fn as_slice(&self) -> &[MethodSlot] {
+        match self {
+            Slots::One(slot) => std::slice::from_ref(slot),
+            Slots::Many(slots) => slots,
+        }
+    }
+
+    fn as_mut_slice(&mut self) -> &mut [MethodSlot] {
+        match self {
+            Slots::One(slot) => std::slice::from_mut(slot),
+            Slots::Many(slots) => slots,
+        }
+    }
+
+    /// Puts `slot` ahead of every entry already here.
+    fn push_front(&mut self, slot: MethodSlot) {
+        match self {
+            Slots::One(only) => *self = Slots::Many(vec![slot, *only]),
+            Slots::Many(slots) => slots.insert(0, slot),
+        }
+    }
+}
+
+/// A name as a dictionary keys it: upper case, and shared by every dictionary
+/// the name is merged into.
+type Name = Rc<str>;
+
 /// A flat name-to-method(s) map, plus the scope ordering a scope-override
 /// send needs to resolve correctly.
 #[derive(Clone, Default)]
 pub struct MethodDict {
-    entries: NameMap<String, Vec<MethodSlot>>,
+    entries: NameMap<Name, Slots>,
+    /// Every scope folded in, in the order it was. What a scope sees past
+    /// itself is the scopes folded in before it, the part of this list ahead
+    /// of it, so its position is all a scope-override send needs.
     scope_list: Vec<ObjRef>,
-    scope_orders: NameMap<ObjRef, Vec<ObjRef>>,
 }
 
 impl MethodDict {
@@ -53,54 +93,94 @@ impl MethodDict {
         *self = Self::new();
     }
 
+    /// The scopes folded in before `scope`, or `None` when `scope` never was.
+    fn scopes_before(&self, scope: ObjRef) -> Option<&[ObjRef]> {
+        let at = self.scope_list.iter().position(|folded| *folded == scope)?;
+        Some(&self.scope_list[..at])
+    }
+
     /// True once `scope` has been folded into this dictionary. This is the
     /// cascade's own de-duplication guard: the instance- and class-behaviour
     /// construction both skip a superclass already merged, which is what makes a
     /// diamond ancestor safe to reach by more than one path.
     pub fn has_scope(&self, scope: ObjRef) -> bool {
-        self.scope_orders.contains_key(&scope)
+        self.scope_list.contains(&scope)
     }
 
-    /// Fold a new scope into the ordering, unconditionally taking a snapshot of
-    /// everything folded in so far. A repeat is a no-op,
+    /// Fold a new scope into the ordering, after everything folded in so far.
+    /// A repeat is a no-op.
     pub fn add_scope(&mut self, scope: ObjRef) {
-        if self.scope_orders.contains_key(&scope) {
+        if !self.has_scope(scope) {
+            self.scope_list.push(scope);
+        }
+    }
+
+    /// The entries under `key` where it holds some, and otherwise `None`, having
+    /// entered `slot` as its only entry.
+    fn add_slot(&mut self, key: &Name, slot: MethodSlot) -> Option<&mut Slots> {
+        match self.entries.entry(Rc::clone(key)) {
+            Entry::Occupied(slots) => Some(slots.into_mut()),
+            Entry::Vacant(vacant) => {
+                vacant.insert(Slots::One(slot));
+                None
+            }
+        }
+    }
+
+    /// [`Self::add_method`] for a key already upper case.
+    fn add_method_key(&mut self, key: &Name, scope: ObjRef, method: MethodId) {
+        let slot = MethodSlot::Defined { scope, method };
+        let Some(list) = self.add_slot(key, slot) else {
+            return;
+        };
+        if let Some(existing) = list
+            .as_mut_slice()
+            .iter_mut()
+            .find(|e| e.scope() == Some(scope))
+        {
+            *existing = slot;
             return;
         }
-        self.scope_orders.insert(scope, self.scope_list.clone());
-        self.scope_list.push(scope);
+        list.push_front(slot);
+    }
+
+    /// [`Self::add_hidden`] for a key already upper case.
+    fn add_hidden_key(&mut self, key: &Name) {
+        if let Some(list) = self.add_slot(key, MethodSlot::Hidden) {
+            list.push_front(MethodSlot::Hidden);
+        }
+    }
+
+    /// `name` in upper case, as a key.
+    fn key(name: &str) -> Name {
+        Rc::from(name.to_ascii_uppercase())
     }
 
     /// Add one method under `name`. A pre-existing entry from the same `scope`
     /// is replaced in place; otherwise the new entry becomes the
     /// highest-priority entry for `name`.
     pub fn add_method(&mut self, name: &str, scope: ObjRef, method: MethodId) {
-        let key = name.to_ascii_uppercase();
-        let list = self.entries.entry(key).or_default();
-        if let Some(existing) = list.iter_mut().find(|e| e.scope() == Some(scope)) {
-            *existing = MethodSlot::Defined { scope, method };
-            return;
-        }
-        list.insert(0, MethodSlot::Defined { scope, method });
+        self.add_method_key(&Self::key(name), scope, method);
     }
 
     /// Replace everything under `name` with one entry, which is a bare `put`:
     /// the replaced name may have been inherited from another class, so any
     /// existing method by that name is completely removed.
     pub fn replace_method(&mut self, name: &str, scope: ObjRef, method: MethodId) {
-        let key = name.to_ascii_uppercase();
-        self.entries
-            .insert(key, vec![MethodSlot::Defined { scope, method }]);
+        self.entries.insert(
+            Self::key(name),
+            Slots::One(MethodSlot::Defined { scope, method }),
+        );
     }
 
     /// Repoint the entry under `name` that `scope` defines as `old` to
     /// `new`, leaving its place in the list, and answer whether there was one.
     pub fn repoint(&mut self, name: &str, scope: ObjRef, old: MethodId, new: MethodId) -> bool {
-        let Some(list) = self.entries.get_mut(&name.to_ascii_uppercase()) else {
+        let Some(list) = self.entries.get_mut(name.to_ascii_uppercase().as_str()) else {
             return false;
         };
         let mut found = false;
-        for entry in list.iter_mut() {
+        for entry in list.as_mut_slice() {
             if *entry == (MethodSlot::Defined { scope, method: old }) {
                 *entry = MethodSlot::Defined { scope, method: new };
                 found = true;
@@ -113,36 +193,31 @@ impl MethodDict {
     /// whatever was already there behind it -- the no-method branch of adding a
     /// method, which is an unconditional push of `.nil`.
     pub fn add_hidden(&mut self, name: &str) {
-        let key = name.to_ascii_uppercase();
-        self.entries
-            .entry(key)
-            .or_default()
-            .insert(0, MethodSlot::Hidden);
+        self.add_hidden_key(&Self::key(name));
     }
 
     /// Replace everything under `name` with a tombstone, and the
     /// omitted-second-argument arm of `~define`, which reaches the same
     /// replacing `put` with the same `.nil`.
     pub fn hide_method(&mut self, name: &str) {
-        let key = name.to_ascii_uppercase();
-        self.entries.insert(key, vec![MethodSlot::Hidden]);
+        self.entries
+            .insert(Self::key(name), Slots::One(MethodSlot::Hidden));
     }
 
     /// Replace everything under `name` with a [`MethodSlot::Withdrawn`]
     /// mark.
     pub fn withdraw_method(&mut self, name: &str) {
-        let key = name.to_ascii_uppercase();
-        self.entries.insert(key, vec![MethodSlot::Withdrawn]);
+        self.entries
+            .insert(Self::key(name), Slots::One(MethodSlot::Withdrawn));
     }
 
     /// Take `name` out of the dictionary entirely, whose `bool` says whether
     /// there was anything to remove. `~delete` reads that answer: it propagates
     /// to the subclasses only when the dictionary actually changed.
     pub fn remove_method(&mut self, name: &str) -> bool {
-        let key = name.to_ascii_uppercase();
         self.entries
-            .remove(&key)
-            .is_some_and(|list| !list.is_empty())
+            .remove(name.to_ascii_uppercase().as_str())
+            .is_some()
     }
 
     /// The highest-priority entry under `name`, tombstone included, which
@@ -153,11 +228,11 @@ impl MethodDict {
         // holds an ASCII lower-case byte, so the two arms answer alike and
         // the common one -- a name the scanner already upcased -- borrows.
         let list = if name.bytes().any(|b| b.is_ascii_lowercase()) {
-            self.entries.get(&name.to_ascii_uppercase())
+            self.entries.get(name.to_ascii_uppercase().as_str())
         } else {
             self.entries.get(name)
         };
-        list.and_then(|l| l.first()).copied()
+        list.and_then(|l| l.as_slice().first()).copied()
     }
 
     /// Overlay `source`'s methods on top of this dictionary's own. Iterating
@@ -167,12 +242,12 @@ impl MethodDict {
     /// relative order that they appear in the source directory.
     pub fn merge_methods(&mut self, source: &MethodDict) {
         for (name, list) in &source.entries {
-            for entry in list.iter().rev() {
+            for entry in list.as_slice().iter().rev() {
                 match *entry {
                     MethodSlot::Defined { scope, method } => {
-                        self.add_method(name, scope, method);
+                        self.add_method_key(name, scope, method);
                     }
-                    MethodSlot::Hidden | MethodSlot::Withdrawn => self.add_hidden(name),
+                    MethodSlot::Hidden | MethodSlot::Withdrawn => self.add_hidden_key(name),
                 }
             }
         }
@@ -202,14 +277,14 @@ impl MethodDict {
     /// filtered by scope.
     pub fn replace_methods_from(&mut self, source: &MethodDict, filter: ObjRef, scope: ObjRef) {
         for (name, list) in &source.entries {
-            for entry in list.iter().rev() {
+            for entry in list.as_slice().iter().rev() {
                 match *entry {
                     MethodSlot::Defined {
                         scope: defined_at,
                         method,
-                    } if defined_at == filter => self.add_method(name, scope, method),
+                    } if defined_at == filter => self.add_method_key(name, scope, method),
                     MethodSlot::Defined { .. } => {}
-                    MethodSlot::Hidden | MethodSlot::Withdrawn => self.add_hidden(name),
+                    MethodSlot::Hidden | MethodSlot::Withdrawn => self.add_hidden_key(name),
                 }
             }
         }
@@ -220,7 +295,7 @@ impl MethodDict {
     /// under the recipient's own identity rather than the donor's.
     pub fn set_method_scope(&mut self, scope: ObjRef) {
         for list in self.entries.values_mut() {
-            for entry in list.iter_mut() {
+            for entry in list.as_mut_slice() {
                 if let MethodSlot::Defined { method, .. } = *entry {
                     *entry = MethodSlot::Defined { scope, method };
                 }
@@ -236,7 +311,9 @@ impl MethodDict {
     /// How many entries `name`, already upper case, holds, every scope's and
     /// tombstones included.
     pub fn entry_count(&self, name: &str) -> usize {
-        self.entries.get(name).map_or(0, Vec::len)
+        self.entries
+            .get(name)
+            .map_or(0, |list| list.as_slice().len())
     }
 
     /// How many names hold an entry, tombstones included.
@@ -248,7 +325,7 @@ impl MethodDict {
     pub fn methods(&self) -> impl Iterator<Item = MethodId> + '_ {
         self.entries
             .values()
-            .flatten()
+            .flat_map(Slots::as_slice)
             .filter_map(|slot| match slot {
                 MethodSlot::Defined { method, .. } => Some(*method),
                 MethodSlot::Hidden | MethodSlot::Withdrawn => None,
@@ -274,8 +351,8 @@ impl MethodDict {
     pub fn method_names(&self) -> BTreeSet<String> {
         self.entries
             .iter()
-            .filter(|(_, l)| matches!(l.first(), Some(MethodSlot::Defined { .. })))
-            .map(|(name, _)| name.clone())
+            .filter(|(_, l)| matches!(l.as_slice().first(), Some(MethodSlot::Defined { .. })))
+            .map(|(name, _)| name.to_string())
             .collect()
     }
 
@@ -283,8 +360,8 @@ impl MethodDict {
     /// tombstone included -- what a whole-dictionary method walk visits.
     pub fn defined_entries(&self) -> impl Iterator<Item = (&str, ObjRef, MethodId)> + '_ {
         self.entries.iter().flat_map(|(name, list)| {
-            list.iter().filter_map(move |slot| match *slot {
-                MethodSlot::Defined { scope, method } => Some((name.as_str(), scope, method)),
+            list.as_slice().iter().filter_map(move |slot| match *slot {
+                MethodSlot::Defined { scope, method } => Some((&**name, scope, method)),
                 MethodSlot::Hidden | MethodSlot::Withdrawn => None,
             })
         })
@@ -301,13 +378,14 @@ impl MethodDict {
 
     /// Resolve `name` as a scope-override send starting at `start_scope`, as a
     /// super-method lookup does: the first (highest priority) entry whose scope
-    /// is `start_scope` itself, or appears in `start_scope`'s own snapshot.
+    /// is `start_scope` itself, or one folded in before it.
     /// Returns `None` if `start_scope` was never folded into this dictionary,
     /// as a scope-table miss does.
     pub fn lookup_from_scope(&self, name: &str, start_scope: ObjRef) -> Option<(ObjRef, MethodId)> {
-        let visible = self.scope_orders.get(&start_scope)?;
-        let list = self.entries.get(&name.to_ascii_uppercase())?;
-        list.iter()
+        let visible = self.scopes_before(start_scope)?;
+        let list = self.entries.get(name.to_ascii_uppercase().as_str())?;
+        list.as_slice()
+            .iter()
             .filter_map(|e| match *e {
                 MethodSlot::Defined { scope, method } => Some((scope, method)),
                 MethodSlot::Hidden | MethodSlot::Withdrawn => None,
@@ -315,9 +393,9 @@ impl MethodDict {
             .find(|(scope, _)| *scope == start_scope || visible.contains(scope))
     }
 
-    /// The immediate superscope for `scope`: the last entry of `scope`'s own
-    /// snapshot, or `None` for the topmost scope .
+    /// The immediate superscope for `scope`: the scope folded in just before
+    /// it, or `None` for the topmost scope .
     pub fn resolve_super_scope(&self, scope: ObjRef) -> Option<ObjRef> {
-        self.scope_orders.get(&scope)?.last().copied()
+        self.scopes_before(scope)?.last().copied()
     }
 }
