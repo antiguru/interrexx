@@ -1,0 +1,32 @@
+count 31
+/* String-keyed stores whose bucket chains mix plain strings, short and
+   long, with indexes that are not plain strings: numbers, a MutableBuffer
+   and lookups by a value of another kind. Also a Queue that grows and
+   shrinks at both ends, and an attribute read and written in turn. */
+d = .directory~new
+s = .stringtable~new
+do i = 1 to 40
+  d[i] = 'n'i
+  d['k'i'longer-than-seven'] = 'l'i
+  s[i] = 'sn'i
+  s['k'i] = 'sk'i
+end
+d[3.0] = 'three-point-oh'
+say d[3] d['3'] d[3.0] d['3.0'] d[' 3']
+say d[17] d['k17longer-than-seven'] d['K17LONGER-THAN-SEVEN']
+say s[12] s['12'] s['k12'] s['K12']
+m = .mutablebuffer~new('k5longer-than-seven')
+say d[m] s[.mutablebuffer~new('k5')] d~hasIndex(m) d~items s~items
+q = .queue~new
+do i = 1 to 30
+  q~queue(i)
+  if q~items > 4 then q~pull
+end
+say q~items q[1] q~peek q~makearray~tostring('L', ',')
+a = .Acc~new
+a~v = 'x'
+say a~v
+a~v = a~v'y'
+say a~v
+::class Acc
+::attribute v
