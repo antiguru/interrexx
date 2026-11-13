@@ -152,7 +152,7 @@ say 'start' (o~start('plain')~result == main)
   return fxinstance()
 ```
 
-```output defect=#628
+```output
 main 1
 reply 1
 start 1

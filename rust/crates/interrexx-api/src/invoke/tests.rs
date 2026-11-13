@@ -1035,6 +1035,20 @@ fn contexts_linking_one_table_share_its_constants() {
     assert!(ThreadContext::new().constants().nil.is_null());
 }
 
+/// Contexts linking one table link one instance, as every activity of one
+/// interpreter is given the same instance (`r[native.threads.instance]`);
+/// a context linking another table links another instance.
+#[test]
+fn two_contexts_linking_one_table_share_their_instance() {
+    let table = crate::ffi::ThreadTable::new();
+    let first = ThreadContext::linking(&table);
+    let second = ThreadContext::linking(&table);
+    assert_ne!(first.address(), second.address());
+    assert_eq!(first.instance_address(), second.instance_address());
+    let other = ThreadContext::linking(&crate::ffi::ThreadTable::new());
+    assert_ne!(other.instance_address(), first.instance_address());
+}
+
 /// A native call nested inside a callback enters the same thread context,
 /// and once it returns the outer call is the innermost again: the outer
 /// stub's raise, made through the thread context after the nested call,

@@ -937,12 +937,20 @@ impl Interp {
     }
 
     /// The running activity's thread context, made at its first native call
-    /// or package hook.
+    /// or package hook. The main activity's first one is the interpreter's
+    /// root context, which a thread running no native call of the
+    /// interpreter attaches to (`r[native.threads.instance]`).
     pub(crate) fn thread_context(&mut self) -> interrexx_api::ffi::ThreadContext {
+        let main = self.activities.running == MAIN;
         self.activity
             .thread
             .get_or_insert_with(|| {
-                interrexx_api::ffi::ThreadContext::linking(&self.activities.thread_table)
+                let thread =
+                    interrexx_api::ffi::ThreadContext::linking(&self.activities.thread_table);
+                if main {
+                    thread.make_root();
+                }
+                thread
             })
             .clone()
     }

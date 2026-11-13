@@ -588,9 +588,11 @@ pub struct ThreadContext {
 }
 
 /// One thread table, which every [`ThreadContext`] built from it links: its
-/// data members are one interpreter's constants. A clone addresses the same
-/// table; the allocation lives until the last clone, or the last context
-/// linking it, is dropped.
+/// data members are one interpreter's constants. It carries the interpreter's
+/// one instance, which every context linking the table links too
+/// (`r[native.threads.instance]`). A clone addresses the same table; the
+/// table's allocation lives until the last clone, or the last context linking
+/// it, is dropped, and the instance's is never freed.
 #[derive(Clone)]
 pub struct ThreadTable {
     home: Rc<TableHome>,
@@ -603,8 +605,34 @@ pub struct ThreadTable {
 pub type Requester = std::sync::Arc<dyn crate::values::Baton + Send + Sync>;
 
 /// Owns a [`ThreadTable`]'s allocation, which extensions read through the
-/// contexts linking it.
-struct TableHome(NonNull<RexxThreadInterface>);
+/// contexts linking it, and addresses its instance block, which it does not
+/// own.
+struct TableHome(NonNull<RexxThreadInterface>, NonNull<InstanceBlock>);
+
+/// One interpreter's instance and its owner, in one allocation that is never
+/// freed: an extension may keep the instance pointer and call
+/// `InterpreterVersion` through it after the interpreter has ended.
+struct InstanceBlock {
+    instance: Owned<RexxInstance_, InstanceOwner>,
+    owner: InstanceOwner,
+}
+
+/// What the instance members act through, reached from the instance pointer
+/// on any thread ([`owner_of_instance`]).
+struct InstanceOwner {
+    /// The baton of the interpreter, while it is live: a thread running no
+    /// native call of the interpreter takes it.
+    #[expect(
+        dead_code,
+        reason = "the members that post to the interpreter from any thread read it"
+    )]
+    requester: Option<std::sync::Weak<dyn crate::values::Baton + Send + Sync>>,
+    /// The address of the root activity's thread context
+    /// ([`ThreadContext::make_root`]), null while there is none: the key an
+    /// embedding knows its interpreter by, and the context a thread running no
+    /// native call of the interpreter attaches to.
+    root: std::sync::atomic::AtomicPtr<RexxThreadContext_>,
+}
 
 impl Drop for TableHome {
     fn drop(&mut self) {
@@ -620,27 +648,58 @@ impl ThreadTable {
     /// [`ThreadContext::enter`] of a context linking it.
     #[must_use]
     pub fn new() -> ThreadTable {
-        let raw = Box::into_raw(Box::new(THREAD));
-        ThreadTable {
-            home: Rc::new(TableHome(
-                NonNull::new(raw).expect("Box::into_raw answers a non-null pointer"),
-            )),
-            requester: None,
-        }
+        ThreadTable::with(None)
     }
 
     /// A table whose contexts' callbacks from a thread running no native
     /// call take `requester`.
     #[must_use]
     pub fn requesting(requester: Requester) -> ThreadTable {
+        ThreadTable::with(Some(requester))
+    }
+
+    fn with(requester: Option<Requester>) -> ThreadTable {
+        let raw = Box::into_raw(Box::new(THREAD));
+        let block = Box::into_raw(Box::new(InstanceBlock {
+            instance: Owned {
+                context: RexxInstance_ {
+                    functions: std::ptr::from_ref(&INSTANCE).cast_mut(),
+                    applicationData: std::ptr::null_mut(),
+                },
+                owner: std::ptr::null_mut(),
+            },
+            owner: InstanceOwner {
+                requester: requester.as_ref().map(std::sync::Arc::downgrade),
+                root: std::sync::atomic::AtomicPtr::new(std::ptr::null_mut()),
+            },
+        }));
+        // SAFETY: `block` is the allocation just made and nothing else
+        // addresses it yet. The link is taken from `block` itself, so its
+        // provenance is the whole allocation's, which is what lets `owner_of`
+        // read `owner` beside the public struct.
+        unsafe { (*block).instance.owner = &raw mut (*block).owner };
         ThreadTable {
-            requester: Some(requester),
-            ..ThreadTable::new()
+            home: Rc::new(TableHome(
+                NonNull::new(raw).expect("Box::into_raw answers a non-null pointer"),
+                NonNull::new(block).expect("Box::into_raw answers a non-null pointer"),
+            )),
+            requester,
         }
     }
 
     fn pointer(&self) -> *mut RexxThreadInterface {
         self.home.0.as_ptr()
+    }
+
+    /// The interpreter's instance, which every context linking this table
+    /// links, at one address for the rest of the process.
+    #[must_use]
+    pub fn instance(&self) -> *mut RexxInstance_ {
+        let block = self.home.1.as_ptr();
+        // SAFETY: the block is never freed, and naming a field's address
+        // reads and writes nothing; the pointer keeps the whole block's
+        // provenance.
+        unsafe { (&raw mut (*block).instance).cast() }
     }
 }
 
@@ -663,6 +722,21 @@ impl Drop for Home {
         if unsafe { (*raw).kept.load(std::sync::atomic::Ordering::Acquire) } {
             return;
         }
+        // A root context that is freed is no longer the root, so the
+        // instance never hands a thread a freed context.
+        // SAFETY: as above; `thread` and its `instance` link were written by
+        // `linking` from a table, whose instance block is never freed.
+        unsafe {
+            let context = (&raw mut (*raw).thread).cast();
+            if let Some(owner) = owner_of_instance((*raw).thread.context.instance) {
+                let _ = owner.root.compare_exchange(
+                    context,
+                    std::ptr::null_mut(),
+                    std::sync::atomic::Ordering::AcqRel,
+                    std::sync::atomic::Ordering::Acquire,
+                );
+            }
+        }
         // SAFETY: the pointer came from `Box::into_raw` in
         // `ThreadContext::new`, and only this `Home`, which is not `Clone`,
         // frees it.
@@ -674,25 +748,29 @@ impl Drop for Home {
 /// call its callbacks reach.
 struct Thread {
     thread: Owned<RexxThreadContext_, Innermost>,
-    instance: Owned<RexxInstance_, Innermost>,
     table: ThreadTable,
     innermost: Innermost,
     /// The allocation, and the table it links, are never freed: a thread
-    /// other than the interpreter's holds the context or its instance and
-    /// may call through them after the interpreter has ended
-    /// (`DetachThread` after `Terminate`). Set by [`ThreadContext::keep`]
-    /// and by `AttachThread`.
+    /// other than the interpreter's holds the context and may call through
+    /// it after the interpreter has ended (`DetachThread` after
+    /// `Terminate`). Set by [`ThreadContext::keep`] and by `AttachThread`.
     kept: std::sync::atomic::AtomicBool,
 }
 
 /// The innermost native call in flight on this context, null where none is,
-/// the table's requester, and whether [`ThreadContext::retire`] retired the
-/// context.
+/// the table's requester, whether [`ThreadContext::retire`] retired the
+/// context, the instance the context links, and the context itself.
 ///
 /// The lifetime is erased: the pointer is written only by
 /// [`ThreadContext::enter`] and [`Entered`]'s drop, on the baton, for the
 /// length of a borrow of the activation.
-struct Innermost(Cell<*const Entered<'static>>, Option<Requester>, Cell<bool>);
+struct Innermost(
+    Cell<*const Entered<'static>>,
+    Option<Requester>,
+    Cell<bool>,
+    *mut RexxInstance_,
+    *mut RexxThreadContext_,
+);
 
 thread_local! {
     /// The native call entered last on this OS thread and not yet returned,
@@ -828,18 +906,12 @@ impl ThreadContext {
     /// A thread context with no native call in flight, linking `table`.
     #[must_use]
     pub fn linking(table: &ThreadTable) -> ThreadContext {
+        let instance = table.instance();
         let raw = Box::into_raw(Box::new(Thread {
             thread: Owned {
                 context: RexxThreadContext_ {
-                    instance: std::ptr::null_mut(),
+                    instance,
                     functions: std::ptr::null_mut(),
-                },
-                owner: std::ptr::null_mut(),
-            },
-            instance: Owned {
-                context: RexxInstance_ {
-                    functions: std::ptr::null_mut(),
-                    applicationData: std::ptr::null_mut(),
                 },
                 owner: std::ptr::null_mut(),
             },
@@ -848,6 +920,8 @@ impl ThreadContext {
                 Cell::new(std::ptr::null()),
                 table.requester.clone(),
                 Cell::new(false),
+                instance,
+                std::ptr::null_mut(),
             ),
             kept: std::sync::atomic::AtomicBool::new(false),
         }));
@@ -857,11 +931,9 @@ impl ThreadContext {
         // beside a public struct.
         unsafe {
             let innermost = &raw mut (*raw).innermost;
-            (*raw).thread.context.instance = (&raw mut (*raw).instance).cast();
             (*raw).thread.context.functions = (*raw).table.pointer();
             (*raw).thread.owner = innermost;
-            (*raw).instance.context.functions = std::ptr::from_ref(&INSTANCE).cast_mut();
-            (*raw).instance.owner = innermost;
+            (*raw).innermost.4 = (&raw mut (*raw).thread).cast();
         }
         ThreadContext {
             home: Rc::new(Home(
@@ -870,10 +942,10 @@ impl ThreadContext {
         }
     }
 
-    /// Keeps this context's allocation, the instance it links and the
-    /// table it links for the rest of the process, as an embedding's root
-    /// context is kept: the thread that created the instance, and any thread
-    /// still attached when it terminates, call through them afterwards.
+    /// Keeps this context's allocation and the table it links for the rest
+    /// of the process, as an embedding's root context is kept: the thread
+    /// that created the instance, and any thread still attached when it
+    /// terminates, call through them afterwards.
     pub fn keep(&self) {
         let raw = self.home.0.as_ptr();
         // SAFETY: the allocation is live while `self` is; the flag is atomic.
@@ -912,24 +984,44 @@ impl ThreadContext {
     }
 
     /// The address of the instance this context links, as an embedding
-    /// hands it out.
+    /// hands it out: its interpreter's one instance.
     #[must_use]
     pub fn instance_address(&self) -> usize {
         let raw = self.home.0.as_ptr();
-        // SAFETY: the allocation is live while `self` is, and naming a
-        // field's address reads and writes nothing.
-        unsafe { (&raw mut (*raw).instance) as usize }
+        // SAFETY: the allocation is live while `self` is; the link is written
+        // only by `linking`.
+        unsafe { (*raw).thread.context.instance as usize }
     }
 
     /// Sets the `applicationData` the instance this context links carries
-    /// (`APPLICATION_DATA`), before any extension is handed it.
+    /// (`APPLICATION_DATA`), before any extension is handed it: every
+    /// context of the interpreter reads it, as they link one instance.
     pub fn set_application_data(&self, data: usize) {
         let raw = self.home.0.as_ptr();
-        // SAFETY: the allocation is live while `self` is; the field is plain
-        // data, written before the instance is handed out, so nothing reads
-        // it meanwhile.
+        // SAFETY: the allocation is live while `self` is, and the instance it
+        // links is never freed; the field is plain data, written before the
+        // instance is handed out, so nothing reads it meanwhile.
         unsafe {
-            (*raw).instance.context.applicationData = data as *mut std::ffi::c_void;
+            (*(*raw).thread.context.instance).applicationData = data as *mut std::ffi::c_void;
+        }
+    }
+
+    /// Makes this context its interpreter's root where none is yet: the
+    /// context an embedding knows its interpreter by, and the one a thread
+    /// running no native call of the interpreter attaches to.
+    pub fn make_root(&self) {
+        let raw = self.home.0.as_ptr();
+        // SAFETY: the allocation is live while `self` is; the link is written
+        // only by `linking`, from a table whose instance block is never
+        // freed.
+        let owner = unsafe { owner_of_instance((*raw).thread.context.instance) };
+        if let Some(owner) = owner {
+            let _ = owner.root.compare_exchange(
+                std::ptr::null_mut(),
+                self.pointer(),
+                std::sync::atomic::Ordering::AcqRel,
+                std::sync::atomic::Ordering::Acquire,
+            );
         }
     }
 
@@ -4330,76 +4422,96 @@ unsafe extern "C" fn get_interpreter_instance(
     unsafe { (*context).instance }
 }
 
-/// Whether this thread runs a native call of `thread`'s activity.
+/// The owner of the instance at `instance`, `None` where it is null.
 ///
 /// # Safety
-/// `thread` is a live `Thread`.
-unsafe fn runs_here(thread: *const Thread) -> bool {
-    // SAFETY: the caller guarantees `thread`; naming a field reads nothing.
-    let cell = unsafe { &raw const (*thread).innermost };
-    calls_here().any(|entry| std::ptr::eq(entry.innermost, cell))
+/// A non-null `instance` is an instance a [`ThreadTable`] made, as
+/// [`ThreadTable::instance`] answers it.
+unsafe fn owner_of_instance(instance: *mut RexxInstance_) -> Option<&'static InstanceOwner> {
+    if instance.is_null() {
+        return None;
+    }
+    // SAFETY: the caller guarantees `instance` is the public struct of a
+    // block's `Owned`, taken from the whole block, whose `owner` addresses
+    // the owner beside it. The block is never freed, and its owner is only
+    // read through shared references.
+    unsafe { owner_of::<RexxInstance_, InstanceOwner>(instance).as_ref() }
 }
 
-/// The [`Thread`] whose `instance` field `instance` is.
+/// The root thread context of the interpreter whose instance is `instance`,
+/// where it has one.
 ///
 /// # Safety
-/// `instance` is an instance a live [`ThreadContext`] links.
-unsafe fn thread_of_instance(instance: *mut RexxInstance_) -> *mut Thread {
-    // SAFETY: the caller guarantees `instance` is the `instance` field of a
-    // live `Thread`, and it was taken from that whole allocation, so stepping
-    // back to the allocation's start stays inside its provenance.
+/// As [`owner_of_instance`].
+unsafe fn root_of(instance: *mut RexxInstance_) -> Option<*mut RexxThreadContext_> {
+    // SAFETY: the caller's guarantee.
+    let owner = unsafe { owner_of_instance(instance) }?;
+    let root = owner.root.load(std::sync::atomic::Ordering::Acquire);
+    (!root.is_null()).then_some(root)
+}
+
+/// The thread context of the innermost native call this thread runs of the
+/// interpreter whose instance is `instance`, where it runs one.
+fn call_here(instance: *mut RexxInstance_) -> Option<*mut RexxThreadContext_> {
+    calls_here()
+        .find(|entry| entry.innermost.3 == instance)
+        .map(|entry| entry.innermost.4)
+}
+
+/// Keeps the [`Thread`] whose context is `context` for the rest of the
+/// process, as [`ThreadContext::keep`] does.
+///
+/// # Safety
+/// `context` is the thread context of a live `Thread`, taken from the whole
+/// allocation.
+unsafe fn keep_context(context: *mut RexxThreadContext_) {
+    // SAFETY: the caller guarantees `context` is the `thread` field of a live
+    // `Thread`, taken from that whole allocation, so stepping back to the
+    // allocation's start stays inside its provenance; the flag is atomic.
     unsafe {
-        instance
+        let thread = context
             .cast::<u8>()
-            .sub(std::mem::offset_of!(Thread, instance))
-            .cast::<Thread>()
+            .sub(std::mem::offset_of!(Thread, thread))
+            .cast::<Thread>();
+        (*thread)
+            .kept
+            .store(true, std::sync::atomic::Ordering::Release);
     }
 }
 
-/// The thread context of the [`Thread`] `thread`.
+/// `AttachThread`: a thread running a native call of the instance's
+/// interpreter is answered that call's context, and is not attached. Any
+/// other thread is attached to the interpreter's root context, once more
+/// where it already is, so its callbacks reach the root activity's innermost
+/// call until it detaches: every attached thread shares that one activity,
+/// its calls serialized by the baton. The context is kept, so a
+/// `DetachThread` after the interpreter has ended reads live memory and finds
+/// the thread attached. Where the interpreter has no root context, nothing is
+/// attached and the answer is false.
 ///
 /// # Safety
-/// `thread` is a live `Thread`.
-unsafe fn context_of_thread(thread: *mut Thread) -> *mut RexxThreadContext_ {
-    // SAFETY: the caller guarantees `thread`; naming a field reads nothing.
-    unsafe { (&raw mut (*thread).thread).cast() }
-}
-
-/// `AttachThread`: the
-/// instance's context, which a thread running a native call of its activity
-/// already has. Any other thread is attached to it, so its callbacks reach
-/// that activity's innermost call, until it detaches: every attached thread
-/// shares the one activity, its calls serialized by the baton. The context is
-/// kept, so a `DetachThread` after the interpreter has ended reads live
-/// memory and finds the thread attached.
-///
-/// # Safety
-/// `instance` is an instance a live [`ThreadContext`] links, and a non-null
+/// `instance` is an instance a [`ThreadTable`] made, and a non-null
 /// `attached` is valid for a write.
 unsafe extern "C" fn attach_thread(
     instance: *mut RexxInstance_,
     attached: *mut *mut RexxThreadContext_,
 ) -> logical_t {
-    // SAFETY: the caller guarantees `instance`.
-    let thread = unsafe { thread_of_instance(instance) };
-    // SAFETY: as above.
-    let context = unsafe { context_of_thread(thread) };
-    // SAFETY: as above.
-    if !unsafe { runs_here(thread) } {
-        // SAFETY: as above; the flag is atomic, and set before this thread
-        // is handed the context it keeps past the interpreter's end.
-        unsafe {
-            (*thread)
-                .kept
-                .store(true, std::sync::atomic::Ordering::Release)
-        };
-        attach_here(context as usize);
-    }
+    let context = match call_here(instance) {
+        Some(context) => Some(context),
+        // SAFETY: the caller guarantees `instance`.
+        None => unsafe { root_of(instance) }.inspect(|&root| {
+            // SAFETY: a root context is live, as one freed stops being the
+            // root (`Home`'s drop); it is kept before this thread is handed
+            // the context it keeps past the interpreter's end.
+            unsafe { keep_context(root) };
+            attach_here(root as usize);
+        }),
+    };
     if !attached.is_null() {
         // SAFETY: the caller guarantees the write.
-        unsafe { attached.write(context) };
+        unsafe { attached.write(context.unwrap_or(std::ptr::null_mut())) };
     }
-    1
+    logical_t::from(context.is_some())
 }
 
 /// `AddCommandEnvironment`: `handler` becomes the handler of the environment
@@ -4407,10 +4519,10 @@ unsafe extern "C" fn attach_thread(
 /// that name had, built-in ones included. A type the header does not define,
 /// a null name or a null handler registers nothing.
 /// # Panics
-/// Called from a thread running no native call of the instance's activity
-/// and attached to none, where no call of that activity is in flight.
+/// Called from a thread running no native call of the instance's interpreter,
+/// where no call of the root activity is in flight.
 /// # Safety
-/// `instance` is an instance a live [`ThreadContext`] links, a non-null
+/// `instance` is an instance a [`ThreadTable`] made, a non-null
 /// `name` is NUL-terminated, and a non-null `handler` is a function of the
 /// type `kind` names.
 unsafe extern "C" fn add_command_environment(
@@ -4441,9 +4553,10 @@ unsafe extern "C" fn stack_command_environment(
     logical_t::from(unsafe { command_environment(instance, name, handler, kind, true) })
 }
 
-/// The two command-environment members: from a thread running no call of the
-/// instance's activity, attached for the length of the call, . Answers whether
-/// a handler was added.
+/// The two command-environment members: on the context of the native call
+/// this thread runs of the instance's interpreter, and from any other thread
+/// on the root context, attached for the length of the call where it is not
+/// already. Answers whether a handler was added.
 ///
 /// # Safety
 /// As [`add_command_environment`].
@@ -4454,12 +4567,14 @@ unsafe fn command_environment(
     kind: std::ffi::c_int,
     stack: bool,
 ) -> bool {
-    // SAFETY: the caller guarantees `instance`.
-    let thread = unsafe { thread_of_instance(instance) };
-    // SAFETY: as above.
-    let context = unsafe { context_of_thread(thread) };
-    // SAFETY: as above.
-    let visiting = !unsafe { runs_here(thread) } && !attached_here(context as usize);
+    let (context, visiting) = match call_here(instance) {
+        Some(context) => (context, false),
+        // SAFETY: the caller guarantees `instance`.
+        None => match unsafe { root_of(instance) } {
+            Some(root) => (root, !attached_here(root as usize)),
+            None => return false,
+        },
+    };
     if visiting {
         attach_here(context as usize);
     }
@@ -4471,7 +4586,8 @@ unsafe fn command_environment(
         ) else {
             return false;
         };
-        // SAFETY: `context` is the live allocation's own `thread` field.
+        // SAFETY: `context` is a live context: a call's in flight, or the
+        // root, which is live while it is the root.
         let activation = unsafe { innermost_activation(context, "AddCommandEnvironment") };
         let Some(activation) = activation else {
             return false;
@@ -4491,41 +4607,50 @@ unsafe fn command_environment(
 
 /// `Terminate`: ends the instance and returns once it has ended. A thread still attached is not
 /// waited for unless it is inside a callback (a thread attached and idle detaches after `Terminate`
-/// has returned). From a thread running a call of its activity, and for an interpreter no embedding
-/// created, it does nothing, as `terminate` refuses while the root activity is active.
+/// has returned). From a thread running a call of its interpreter, and for an interpreter no
+/// embedding created, it does nothing, as `terminate` refuses while the root activity is active.
 ///
 /// # Safety
-/// `instance` is an instance a live [`ThreadContext`] links.
+/// `instance` is an instance a [`ThreadTable`] made.
 unsafe extern "C" fn terminate(instance: *mut RexxInstance_) {
-    // SAFETY: the caller guarantees `instance`.
-    let thread = unsafe { thread_of_instance(instance) };
-    // SAFETY: as above.
-    if unsafe { runs_here(thread) } {
+    if call_here(instance).is_some() {
         return;
     }
-    // SAFETY: as above.
-    let context = unsafe { context_of_thread(thread) } as usize;
+    // SAFETY: the caller guarantees `instance`.
+    let Some(root) = (unsafe { root_of(instance) }) else {
+        return;
+    };
+    let context = root as usize;
     if embedder().is_some_and(|embedder| embedder.terminate(context)) {
         forget_attached(context);
     }
+}
+
+/// The context a member acting on the instance's interpreter reaches it
+/// through, from a thread that may reach a call of it: that of the call this
+/// thread runs, else the root context where this thread is attached to it.
+fn reaching(
+    instance: *mut RexxInstance_,
+    root: Option<*mut RexxThreadContext_>,
+) -> Option<*mut RexxThreadContext_> {
+    call_here(instance).or(root.filter(|&root| attached_here(root as usize)))
 }
 
 /// `Halt`: every activity
 /// of the instance is asked to halt, from any thread.
 ///
 /// # Safety
-/// `instance` is an instance a live [`ThreadContext`] links.
+/// `instance` is an instance a [`ThreadTable`] made.
 unsafe extern "C" fn halt(instance: *mut RexxInstance_) {
     // SAFETY: the caller guarantees `instance`.
-    let thread = unsafe { thread_of_instance(instance) };
-    // SAFETY: as above.
-    let context = unsafe { context_of_thread(thread) };
-    if embedder().is_some_and(|embedder| embedder.halt(context as usize)) {
+    let root = unsafe { root_of(instance) };
+    if let Some(root) = root
+        && embedder().is_some_and(|embedder| embedder.halt(root as usize))
+    {
         return;
     }
-    // SAFETY: as above; only a thread that reaches a call of the activity.
-    if unsafe { runs_here(thread) } || attached_here(context as usize) {
-        // SAFETY: as above.
+    if let Some(context) = reaching(instance, root) {
+        // SAFETY: a context this thread reaches a call through is live.
         or_nothing!(unsafe { innermost_activation(context, "Halt") }).halt(true);
     }
 }
@@ -4537,15 +4662,14 @@ unsafe extern "C" fn halt(instance: *mut RexxInstance_) {
 /// As [`halt`].
 unsafe extern "C" fn set_trace(instance: *mut RexxInstance_, setting: logical_t) {
     // SAFETY: the caller guarantees `instance`.
-    let thread = unsafe { thread_of_instance(instance) };
-    // SAFETY: as above.
-    let context = unsafe { context_of_thread(thread) };
-    if embedder().is_some_and(|embedder| embedder.set_trace(context as usize, setting != 0)) {
+    let root = unsafe { root_of(instance) };
+    if let Some(root) = root
+        && embedder().is_some_and(|embedder| embedder.set_trace(root as usize, setting != 0))
+    {
         return;
     }
-    // SAFETY: as in `halt`.
-    if unsafe { runs_here(thread) } || attached_here(context as usize) {
-        // SAFETY: as above.
+    if let Some(context) = reaching(instance, root) {
+        // SAFETY: a context this thread reaches a call through is live.
         or_nothing!(unsafe { innermost_activation(context, "SetTrace") })
             .set_trace(true, setting != 0);
     }
