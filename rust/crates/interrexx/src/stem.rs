@@ -440,6 +440,7 @@ impl Interp {
                         tails.insert(key.to_vec(), (next, Some(value)));
                     }
                 }
+                self.stem_changed(stem_value);
             }
             None => {
                 let mut tails = interrexx_core::NameMap::default();
@@ -490,6 +491,7 @@ impl Interp {
         let next = tails.len();
         let ordinal = tails.get(key).map_or(next, |(at, _)| *at);
         tails.insert(key.to_vec(), (ordinal, None));
+        self.stem_changed(stem_value);
     }
 
     /// `stem. = expr`: replaces the whole object and rebinds the variable.
@@ -708,6 +710,7 @@ impl Interp {
             let next = tails.len();
             let ordinal = tails.get(key).map_or(next, |(at, _)| *at);
             tails.insert(key.to_vec(), (ordinal, value));
+            self.stem_changed(stem);
         }
     }
 

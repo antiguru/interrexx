@@ -292,6 +292,38 @@ impl Interp {
         }
     }
 
+    /// A tail of `stem` was assigned or dropped: every activity that watches
+    /// an exposed stem variable holding it is posted, as a store to the
+    /// variable posts it (r[conc.locks.deviation.160]). Costs one test where
+    /// no `GUARD WHEN` watches a stem.
+    #[inline]
+    pub(crate) fn stem_changed(&mut self, stem: ObjRef) {
+        if self.activities.guards.watches_a_stem() {
+            self.wake_stem_watchers(stem);
+        }
+    }
+
+    #[cold]
+    #[inline(never)]
+    fn wake_stem_watchers(&mut self, stem: ObjRef) {
+        let mut watchers = Vec::new();
+        for (owner, scope, name, who) in self.activities.guards.stem_watches() {
+            let held = self
+                .pools_of(owner)
+                .and_then(|pools| pools.get(scope, &name));
+            if held == Some(stem) {
+                watchers.extend(who);
+            }
+        }
+        let mark = self.activities.ready.len();
+        for watcher in watchers {
+            self.post_guard(watcher);
+        }
+        if self.sim.is_some() {
+            self.sim_order_event(mark);
+        }
+    }
+
     /// What an `EXPOSE` bound slot `slot` of `frame` to, if anything.
     pub(super) fn exposure(&self, frame: SlotFrame, slot: usize) -> Option<&InstanceVar> {
         Interp::exposure_in(self.activation(), frame, slot)

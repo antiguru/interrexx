@@ -1047,7 +1047,7 @@ variable or a stem names the whole stem. The condition is evaluated again when
 another activity assigns a value to any tail of that stem or drops one, or
 assigns a value to the whole stem or drops it, for `GUARD ON WHEN` and `GUARD
 OFF WHEN` alike. ooRexx does not evaluate it again for a tail, so the wait
-does not end. interrexx does not evaluate it again for a tail yet (#239). As
+does not end. As
 for a simple symbol, a variable that only a method called by the condition
 reads does not cause it. In the first example three waiting methods are ended
 by the assignment to a tail, by the same for `GUARD OFF WHEN` and by the drop
@@ -1098,7 +1098,7 @@ say m4~result
   drop a.b
 ```
 
-```output defect=#239
+```output
 start
 on tail
 off tail

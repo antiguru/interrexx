@@ -1225,8 +1225,7 @@ or removes the file depending on the calls the program made earlier.
 A condition of GUARD ON WHEN or GUARD OFF WHEN that names a compound variable
 or a stem names the whole stem: it is evaluated again when another activity
 assigns to or drops any tail of the stem or the whole stem. ooRexx does not
-evaluate it again for a tail, so the wait does not end. interrexx does not
-evaluate it again for a tail yet (#239).
+evaluate it again for a tail, so the wait does not end.
 
 ## 161. SysSleep and whitespace after the sign
 

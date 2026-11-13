@@ -706,6 +706,7 @@ fn stem_write(interp: &mut Interp, receiver: ObjRef, tail: Vec<u8>, value: Optio
         let next = tails.len();
         let ordinal = tails.get(&tail).map_or(next, |(at, _)| *at);
         tails.insert(tail, (ordinal, value));
+        interp.stem_changed(receiver);
     }
 }
 
