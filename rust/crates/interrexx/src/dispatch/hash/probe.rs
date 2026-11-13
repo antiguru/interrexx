@@ -45,19 +45,35 @@ fn probe_string_value(
     index: ObjRef,
 ) -> Result<(Store, Probe), Failure> {
     let inline;
+    let plain: Option<&[u8]> = match index.decode() {
+        Decoded::Text(text) => {
+            inline = text;
+            Some(&inline)
+        }
+        Decoded::Heap { .. } => match interp.heap.get(index).map(|object| &object.body) {
+            Some(Body::Text { bytes, .. }) => Some(bytes.as_slice()),
+            _ => None,
+        },
+        _ => None,
+    };
+    if let Some(wanted) = plain
+        && let Some(probe) = probe_plain_strings(interp, &store, wanted)
+    {
+        return Ok((store, probe));
+    }
+    let short;
     let owned;
     let wanted: &[u8] = match index.decode() {
         Decoded::Text(text) => {
-            inline = text;
-            &inline
+            short = text;
+            &short
         }
         _ => {
             owned = interp.to_text(index).into_owned();
             &owned
         }
     };
-    let hash = super::super::string_hash(wanted);
-    let bucket = (hash % store.buckets as u64) as usize;
+    let bucket = bucket_of(&store, wanted);
     if slot_at(interp, store.indexes, bucket)?.is_none() {
         return Ok((
             store,
@@ -160,5 +176,70 @@ fn probe_by_protocol(
                 ));
             }
         }
+    }
+}
+
+/// The bucket a string-keyed store files `wanted` under.
+fn bucket_of(store: &Store, wanted: &[u8]) -> usize {
+    (super::super::string_hash(wanted) % store.buckets as u64) as usize
+}
+
+/// [`probe_string_value`]'s chain walk with both arrays borrowed once, for a
+/// plain string `wanted` and a chain whose every index is one too: inline or
+/// a `Body::Text`, whose bytes are what `to_text` would answer. `None`, and
+/// the slot-by-slot walk instead, for anything else -- an index of another
+/// kind on the chain, or an array that is not one, which that walk refuses.
+fn probe_plain_strings(interp: &Interp, store: &Store, wanted: &[u8]) -> Option<Probe> {
+    let bucket = bucket_of(store, wanted);
+    let indexes = super::array_slots(interp, store.indexes).ok()?;
+    let index_at = |slot: usize| indexes.get(slot).copied().flatten();
+    if index_at(bucket).is_none() {
+        return Some(Probe {
+            bucket,
+            found: None,
+            last: None,
+        });
+    }
+    let links = super::array_slots(interp, store.next).ok()?;
+    let mut slot = bucket;
+    let mut last = bucket;
+    loop {
+        let matches = match index_at(slot) {
+            Some(held) => plain_text_is(interp, held, wanted)?,
+            None => false,
+        };
+        if matches {
+            return Some(Probe {
+                bucket,
+                found: Some(slot),
+                last: Some(last),
+            });
+        }
+        last = slot;
+        slot = match links.get(slot).copied().flatten().map(ObjRef::decode) {
+            Some(Decoded::SmallInt(link)) if link >= 0 => link as usize,
+            _ => store.no_more(),
+        };
+        if slot >= store.total {
+            return Some(Probe {
+                bucket,
+                found: None,
+                last: Some(last),
+            });
+        }
+    }
+}
+
+/// Whether `held`'s string value is `wanted`, for a plain string only: the
+/// bytes in the handle, or a `Body::Text`'s own, which no redirect applies
+/// to. `None` for any other value.
+fn plain_text_is(interp: &Interp, held: ObjRef, wanted: &[u8]) -> Option<bool> {
+    match held.decode() {
+        Decoded::Text(text) => Some(*text == *wanted),
+        Decoded::Heap { .. } => match &interp.heap.get(held)?.body {
+            Body::Text { bytes, .. } => Some(bytes.as_slice() == wanted),
+            _ => None,
+        },
+        _ => None,
     }
 }
