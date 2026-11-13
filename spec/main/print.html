@@ -28173,6 +28173,99 @@ base define two again:
   THREE -/-
   FOUR f/f
 </code></pre>
+<div class="rule" id="r-class.methods.running"><a href="classes/methods.html#r-class.methods.running">[class.methods.running]</a></div>
+<p>A change to the methods of a class does not reach a method that is running. A
+<code>define</code>, <code>defineMethods</code> or <code>delete</code> that replaces or removes a method while
+it runs, and an <code>inherit</code> or <code>uninherit</code> that changes the method a name finds,
+made on the same activity or on another, leaves that run as it is: it goes on
+to its end as the method it started as. The change applies to the sends that
+start after it. In the example, the method <code>M</code> replaces itself and returns
+what it started with, and the method <code>GO</code>, which runs on another activity
+while its class deletes it, runs to its end.</p>
+<pre><code class="language-rexx">say .k~new~m
+say .k~new~m
+w = .w~new
+r = w~start('go')
+w~waitStarted
+.w~delete('GO')
+w~release
+say r~result
+say t(.w~new, 'GO')
+exit
+t:
+  signal on syntax name e
+  return arg(1)~send(arg(2))
+e: return '-'
+::class k
+::method m
+  .k~define('M', 'return "new"')
+  return 'old'
+::class w
+::method init
+  expose started released
+  started = 0
+  released = 0
+::method go unguarded
+  expose started released
+  started = 1
+  guard on when released = 1
+  return 'go ran on'
+::method waitStarted unguarded
+  expose started
+  guard on when started = 1
+::method release unguarded
+  expose released
+  released = 1
+</code></pre>
+<pre><code class="language-output">old
+new
+go ran on
+-
+</code></pre>
+<div class="rule" id="r-class.methods.whole"><a href="classes/methods.html#r-class.methods.whole">[class.methods.whole]</a></div>
+<p>A send finds its method at one moment. A change that another activity makes
+to the methods of a class, by one <code>define</code>, <code>defineMethods</code>, <code>delete</code>,
+<code>inherit</code> or <code>uninherit</code>, is seen by a send entirely or not at all: never a
+part of the table of a <code>defineMethods</code>, and never a part of the order an
+<code>inherit</code> or <code>uninherit</code> builds. Every send that starts after the change has
+completed sees it. In the example, the method that runs on another activity
+sends <code>A</code> and <code>B</code> before the table that replaces both is defined and again
+after it.</p>
+<pre><code class="language-rexx">w = .w~new
+r = w~start('watch')
+w~waitStarted
+table = .directory~new
+table['A'] = 'return "a2"'
+table['B'] = 'return "b2"'
+.k~defineMethods(table)
+w~release
+say r~result
+exit
+::class k
+::method a
+  return 'a1'
+::method b
+  return 'b1'
+::class w
+::method init
+  expose started released
+  started = 0
+  released = 0
+::method watch unguarded
+  expose started released
+  before = .k~new~a .k~new~b
+  started = 1
+  guard on when released = 1
+  return before '-&gt;' .k~new~a .k~new~b
+::method waitStarted unguarded
+  expose started
+  guard on when started = 1
+::method release unguarded
+  expose released
+  released = 1
+</code></pre>
+<pre><code class="language-output">a1 b1 -&gt; a2 b2
+</code></pre>
 <div class="rule" id="r-class.methods.library"><a href="classes/methods.html#r-class.methods.library">[class.methods.library]</a></div>
 <p>The classes of the class library accept no change to their methods or their
 lists of superclasses: <code>define</code>, <code>defineMethods</code>, <code>delete</code>, <code>inherit</code> and
@@ -28724,7 +28817,7 @@ started PACKAGE message.</p>
 <pre><code class="language-output">private answer
 </code></pre>
 <div class="rule" id="r-class.methods.deviation.110"><a href="classes/methods.html#r-class.methods.deviation.110">[class.methods.deviation.110]</a></div>
-<p>This Deviation is provisional. An object sees every change made, at any time,
+<p>An object sees every change made, at any time,
 to the methods of its class, of that class's superclasses and of their mixin
 classes, by <code>define</code>, <code>defineMethods</code>, <code>delete</code>, <code>inherit</code> and <code>uninherit</code>
 (<a href="classes/methods.html#r-class.methods.late">the rule on changes</a>): also when the object has
@@ -28779,7 +28872,7 @@ e: return '-'
 ::class k subclass base inherit mx
 ::class sub subclass k
 </code></pre>
-<pre><code class="language-output defect=#141">start:
+<pre><code class="language-output">start:
   ONE -/-/-
   TWO -/-/-
   THREE -/-/-
@@ -28840,7 +28933,7 @@ x: return '-'
 ::method drop
   self~unsetMethod(arg(1))
 </code></pre>
-<pre><code class="language-output defect=#141">own a one t h
+<pre><code class="language-output">own a one t h
 en - t h
 k1
 </code></pre>
@@ -28868,7 +28961,7 @@ e: return '-'
 ::class c metaclass meta
 ::class d metaclass meta
 </code></pre>
-<pre><code class="language-output defect=#141">meta who - -
+<pre><code class="language-output">meta who - -
 meta later meta later
 sbase later2 mxm later3
 four four
@@ -29610,7 +29703,7 @@ call show o~instanceMethods(.nil), 'own'
 t = o~instanceMethods(.sub)
 .sub~define('M3', 'return 3')
 call show t, 'snapshot'
-call show o~instanceMethods(.sub), 'after'
+call show .sub~new~instanceMethods(.sub), 'after'
 n = 0
 t = .sub~new~instanceMethods
 do while t~available
@@ -29670,7 +29763,7 @@ class cm: 1 ONLY=Method
 cm object: 0 
 own: 1 OWN=Method
 snapshot: 2 HELLO=Method M2=Method
-after: 2 HELLO=Method M2=Method
+after: 3 HELLO=Method M2=Method M3=Method
 HELLO listed 2 times
 hidden HELLO listed 2 times 0
 </code></pre>
@@ -30950,7 +31043,7 @@ say o~own o~later
 ::method sm
   self~setMethod(arg(1), arg(2))
 </code></pre>
-<pre><code class="language-output defect=#141">own later
+<pre><code class="language-output">own later
 </code></pre>
 <div class="rule" id="r-class.object.deviation.118"><a href="classes/object.html#r-class.object.deviation.118">[class.object.deviation.118]</a></div>
 <p><code>sendWith</code> and <code>startWith</code> send an instance of a subclass of <code>List</code> given as
@@ -33029,7 +33122,7 @@ ooRexx raises <code>97.1</code> for the first message.</p>
 say o~one o~two
 ::class k
 </code></pre>
-<pre><code class="language-output defect=#141">one two
+<pre><code class="language-output">one two
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="string"><a class="header" href="#string">String</a></h1>
 <p class="references">rexxref: Builtin Classes &gt; Fundamental Classes &gt; String Class; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; new (Class Method); Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; alnum (Class Method); Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; alpha (Class Method); Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; blank (Class Method); Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; cntrl (Class Method); Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; cr (Class Method); Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; digit (Class Method); Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; graph (Class Method); Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; lower (Class Method); Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; nl (Class Method); Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; null (Class Method); Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; print (Class Method); Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; punct (Class Method); Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; space (Class Method); Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; tab (Class Method); Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; upper (Class Method); Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; xdigit (Class Method); Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; Arithmetic Methods; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; Comparison Methods; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; Concatenation Methods; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; Logical Methods; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; []; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; ? (inline if); Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; abbrev; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; abs; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; append; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; b2x; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; bitAnd; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; bitOr; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; bitXor; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; c2d; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; c2x; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; caselessAbbrev; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; caselessChangeStr; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; caselessCompare; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; caselessCompareTo; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; caselessContains; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; caselessContainsWord; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; caselessCountStr; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; caselessEndsWith; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; caselessEquals; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; caselessLastPos; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; caselessMatch; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; caselessMatchChar; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; caselessPos; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; caselessStartsWith; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; caselessWordPos; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; ceiling; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; center/centre; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; changeStr; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; compare; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; compareTo; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; contains; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; containsWord; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; copies; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; countStr; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; d2c; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; d2x; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; dataType; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; decodeBase64; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; delStr; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; delWord; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; encodeBase64; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; endsWith; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; equals; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; floor; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; format; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; hashCode; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; insert; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; lastPos; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; left; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; length; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; lower; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; makeArray; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; makeString; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; match; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; matchChar; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; max; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; min; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; modulo; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; overlay; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; pos; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; replaceAt; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; reverse; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; right; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; round; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; sign; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; space; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; startsWith; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; strip; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; subChar; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; substr; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; subWord; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; subWords; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; translate; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; trunc; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; upper; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; verify; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; word; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; wordIndex; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; wordLength; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; wordPos; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; words; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; x2b; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; x2c; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; x2d</p>
@@ -127386,7 +127479,7 @@ reads the instance's own characters, so one instance can answer differently to
 message name of <code>send</code>, <code>sendWith</code>, <code>start</code>, <code>startWith</code> or <code>Message~new</code>,
 ooRexx sends it <code>request('ARRAY')</code> instead and raises <code>SYNTAX 93.946</code>.</p>
 <h2 id="110-instances-follow-every-change-to-their-class"><a class="header" href="#110-instances-follow-every-change-to-their-class">110. Instances follow every change to their class</a></h2>
-<p>Provisional. An object sees every change made, at any time, to the methods of
+<p>An object sees every change made, at any time, to the methods of
 its class, of that class's superclasses and of their mixin classes, by
 <code>define</code>, <code>defineMethods</code>, <code>delete</code>, <code>inherit</code> and <code>uninherit</code>, also when the
 object has methods of its own from <code>setMethod</code> or <code>enhanced</code> and when the

@@ -1096,6 +1096,99 @@ base define two again:
   THREE -/-
   FOUR f/f
 </code></pre>
+<div class="rule" id="r-class.methods.running"><a href="#r-class.methods.running">[class.methods.running]</a></div>
+<p>A change to the methods of a class does not reach a method that is running. A
+<code>define</code>, <code>defineMethods</code> or <code>delete</code> that replaces or removes a method while
+it runs, and an <code>inherit</code> or <code>uninherit</code> that changes the method a name finds,
+made on the same activity or on another, leaves that run as it is: it goes on
+to its end as the method it started as. The change applies to the sends that
+start after it. In the example, the method <code>M</code> replaces itself and returns
+what it started with, and the method <code>GO</code>, which runs on another activity
+while its class deletes it, runs to its end.</p>
+<pre><code class="language-rexx">say .k~new~m
+say .k~new~m
+w = .w~new
+r = w~start('go')
+w~waitStarted
+.w~delete('GO')
+w~release
+say r~result
+say t(.w~new, 'GO')
+exit
+t:
+  signal on syntax name e
+  return arg(1)~send(arg(2))
+e: return '-'
+::class k
+::method m
+  .k~define('M', 'return "new"')
+  return 'old'
+::class w
+::method init
+  expose started released
+  started = 0
+  released = 0
+::method go unguarded
+  expose started released
+  started = 1
+  guard on when released = 1
+  return 'go ran on'
+::method waitStarted unguarded
+  expose started
+  guard on when started = 1
+::method release unguarded
+  expose released
+  released = 1
+</code></pre>
+<pre><code class="language-output">old
+new
+go ran on
+-
+</code></pre>
+<div class="rule" id="r-class.methods.whole"><a href="#r-class.methods.whole">[class.methods.whole]</a></div>
+<p>A send finds its method at one moment. A change that another activity makes
+to the methods of a class, by one <code>define</code>, <code>defineMethods</code>, <code>delete</code>,
+<code>inherit</code> or <code>uninherit</code>, is seen by a send entirely or not at all: never a
+part of the table of a <code>defineMethods</code>, and never a part of the order an
+<code>inherit</code> or <code>uninherit</code> builds. Every send that starts after the change has
+completed sees it. In the example, the method that runs on another activity
+sends <code>A</code> and <code>B</code> before the table that replaces both is defined and again
+after it.</p>
+<pre><code class="language-rexx">w = .w~new
+r = w~start('watch')
+w~waitStarted
+table = .directory~new
+table['A'] = 'return "a2"'
+table['B'] = 'return "b2"'
+.k~defineMethods(table)
+w~release
+say r~result
+exit
+::class k
+::method a
+  return 'a1'
+::method b
+  return 'b1'
+::class w
+::method init
+  expose started released
+  started = 0
+  released = 0
+::method watch unguarded
+  expose started released
+  before = .k~new~a .k~new~b
+  started = 1
+  guard on when released = 1
+  return before '-&gt;' .k~new~a .k~new~b
+::method waitStarted unguarded
+  expose started
+  guard on when started = 1
+::method release unguarded
+  expose released
+  released = 1
+</code></pre>
+<pre><code class="language-output">a1 b1 -&gt; a2 b2
+</code></pre>
 <div class="rule" id="r-class.methods.library"><a href="#r-class.methods.library">[class.methods.library]</a></div>
 <p>The classes of the class library accept no change to their methods or their
 lists of superclasses: <code>define</code>, <code>defineMethods</code>, <code>delete</code>, <code>inherit</code> and
@@ -1647,7 +1740,7 @@ started PACKAGE message.</p>
 <pre><code class="language-output">private answer
 </code></pre>
 <div class="rule" id="r-class.methods.deviation.110"><a href="#r-class.methods.deviation.110">[class.methods.deviation.110]</a></div>
-<p>This Deviation is provisional. An object sees every change made, at any time,
+<p>An object sees every change made, at any time,
 to the methods of its class, of that class's superclasses and of their mixin
 classes, by <code>define</code>, <code>defineMethods</code>, <code>delete</code>, <code>inherit</code> and <code>uninherit</code>
 (<a href="#r-class.methods.late">the rule on changes</a>): also when the object has
@@ -1702,7 +1795,7 @@ e: return '-'
 ::class k subclass base inherit mx
 ::class sub subclass k
 </code></pre>
-<pre><code class="language-output defect=#141">start:
+<pre><code class="language-output">start:
   ONE -/-/-
   TWO -/-/-
   THREE -/-/-
@@ -1763,7 +1856,7 @@ x: return '-'
 ::method drop
   self~unsetMethod(arg(1))
 </code></pre>
-<pre><code class="language-output defect=#141">own a one t h
+<pre><code class="language-output">own a one t h
 en - t h
 k1
 </code></pre>
@@ -1791,7 +1884,7 @@ e: return '-'
 ::class c metaclass meta
 ::class d metaclass meta
 </code></pre>
-<pre><code class="language-output defect=#141">meta who - -
+<pre><code class="language-output">meta who - -
 meta later meta later
 sbase later2 mxm later3
 four four
