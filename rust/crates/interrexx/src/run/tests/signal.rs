@@ -61,10 +61,11 @@ fn signal_out_of_a_select_unwinds_it_and_lands_on_its_label() {
 
 /// `SIGL`. The oracle's `SIGNAL` and internal call both
 /// create an integer object from the line number at the point of transfer
-/// -- an integer object, which is why `set_sigl` uses `self.text`
-/// rather than `self.number`: measured, a `SIGL` value of `22` still
-/// renders `22` under `NUMERIC DIGITS 1`, where the identical magnitude
-/// as an arithmetic result would round to `2E+1`.
+/// -- an integer object, which is why `set_sigl` uses `self.counted`
+/// (a tagged integer, rendered in full) rather than `self.number`:
+/// measured, a `SIGL` value of `22` still renders `22` under `NUMERIC
+/// DIGITS 1`, where the identical magnitude as an arithmetic result would
+/// round to `2E+1`.
 #[test]
 fn sigl_is_set_at_every_control_transfer() {
     // Uninitialised until the first transfer, like any other variable;
