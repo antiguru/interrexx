@@ -7,21 +7,15 @@ use super::{
 
 // ---- `Stem` ----
 
-/// The stem's tails, as (name, value) pairs in the map's own order, with a
-/// dropped tail's `None` kept.
+/// The stem's tails, as (name, value) pairs in insertion order, which is
+/// what the tree is built from, with a dropped tail's `None` kept.
 fn stem_tails(interp: &Interp, receiver: ObjRef) -> Vec<(Vec<u8>, Option<ObjRef>)> {
     match interp.heap.get(receiver).map(|object| &object.body) {
-        Some(Body::Stem { tails, .. }) => {
-            let mut held: Vec<(usize, Vec<u8>, Option<ObjRef>)> = tails
-                .iter()
-                .map(|(name, (at, value))| (*at, name.clone(), *value))
-                .collect();
-            // Insertion order, which is what the tree was built from.
-            held.sort_by_key(|(at, ..)| *at);
-            held.into_iter()
-                .map(|(_, name, value)| (name, value))
-                .collect()
-        }
+        Some(Body::Stem { tails, .. }) => tails
+            .in_order()
+            .into_iter()
+            .map(|(name, value)| (name.to_vec(), value))
+            .collect(),
         _ => Vec::new(),
     }
 }
@@ -39,7 +33,7 @@ fn stem_read(interp: &mut Interp, receiver: ObjRef, tail: &[u8]) -> ObjRef {
                 // The compound-variable lookup answers the exposed tail's real
                 // variable, as the variable read does.
                 Some(home) => Some(interp.tail_value(home, tail)),
-                None => tails.get(tail).map(|(_, value)| *value),
+                None => tails.get(tail),
             },
             *default,
             name.as_ref().to_vec(),
@@ -117,7 +111,7 @@ fn native_stem_put(
         }) = interp.heap.get_mut(receiver).map(|held| &mut held.body)
         {
             *default = Some(value);
-            *tails = interrexx_core::NameMap::default();
+            tails.clear();
             *exposed = None;
         }
         return Ok(None);
@@ -703,9 +697,7 @@ fn stem_write(interp: &mut Interp, receiver: ObjRef, tail: Vec<u8>, value: Optio
     if let Some(Body::Stem { tails, .. }) = interp.heap.get_mut(receiver).map(|held| &mut held.body)
     {
         // The ordinal survives a drop and an overwrite -- see `Body::Stem`.
-        let next = tails.len();
-        let ordinal = tails.get(&tail).map_or(next, |(at, _)| *at);
-        tails.insert(tail, (ordinal, value));
+        tails.set(&tail, value);
         interp.stem_changed(receiver);
     }
 }
@@ -795,7 +787,7 @@ fn native_stem_empty(
     if let Some(Body::Stem { tails, exposed, .. }) =
         interp.heap.get_mut(store).map(|held| &mut held.body)
     {
-        *tails = interrexx_core::NameMap::default();
+        tails.clear();
         *exposed = None;
     }
     let _ = default;

@@ -391,8 +391,8 @@ impl Interp {
                 Some(Body::Stem { default, tails, .. }) => {
                     let mut held: Vec<(usize, Vec<u8>, ObjRef)> = tails
                         .iter()
-                        .filter_map(|(tail, (ordinal, value))| {
-                            value.map(|value| (*ordinal, tail.clone(), value))
+                        .filter_map(|(tail, ordinal, value)| {
+                            value.map(|value| (ordinal, tail.to_vec(), value))
                         })
                         .collect();
                     held.sort_by_key(|(ordinal, _, _)| *ordinal);

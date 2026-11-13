@@ -63,13 +63,19 @@ impl Interp {
         // The read's key is the key this write would build: the read held
         // it only where no activation ran after it began, and the value
         // expression between it and here calls nothing.
+        let mut held = None;
         if shared_key && self.shared_key_for.take() == Some(id) {
             std::mem::swap(&mut key, &mut self.shared_key);
+            held = self.shared_tail.take();
         } else if let Err(failure) = self.tail_key_into(code, id, &mut key) {
             self.give_key_buffer(key);
             return Err(failure);
         }
-        self.stem_set_at(stem_name, stem_at, &key, value);
+        // The tail the read found, written by its ordinal where it is still
+        // that tail, and by its key otherwise.
+        if !held.is_some_and(|held| self.stem_set_held(stem_name, stem_at, held, &key, value)) {
+            self.stem_set_at(stem_name, stem_at, &key, value);
+        }
         // **The resolved name is built only when a line will print it.**
         // `trace_compound_name` returns at once unless intermediates are on,
         // so joining the stem to the tail key ahead of that check allocated a

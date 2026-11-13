@@ -2304,8 +2304,8 @@ impl Interp {
         };
         let mut names: Vec<Vec<u8>> = tails
             .iter()
-            .filter(|(_, (_, held))| held.is_some())
-            .map(|(name, _)| name.clone())
+            .filter(|(_, _, held)| held.is_some())
+            .map(|(name, _, _)| name.to_vec())
             .collect();
         names.sort_by(|left, right| left.len().cmp(&right.len()).then_with(|| left.cmp(right)));
         names

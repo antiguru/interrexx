@@ -474,7 +474,7 @@ pub(super) fn native_stem_new(
         Body::Stem {
             name: name.into(),
             default: None,
-            tails: interrexx_core::NameMap::default(),
+            tails: interrexx_core::Tails::new(),
             exposed: None,
         },
     );

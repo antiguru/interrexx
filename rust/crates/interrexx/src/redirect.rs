@@ -1099,10 +1099,7 @@ impl Interp {
         if let Some(home) = crate::stem::exposed_home(exposed, key) {
             return self.tail_value(home, key);
         }
-        match tails.get(key) {
-            Some((_, value)) => *value,
-            None => None,
-        }
+        tails.get(key).flatten()
     }
 
     /// One tail as `getFullElement` answers it: its own value, else the
@@ -1130,8 +1127,7 @@ impl Interp {
             match crate::stem::exposed_home(exposed, key) {
                 Some(home) => self.tail_value(home, key),
                 None => match tails.get(key) {
-                    Some((_, Some(value))) => Some(*value),
-                    Some((_, None)) => None,
+                    Some(value) => value,
                     None => *default,
                 },
             }
@@ -1158,13 +1154,7 @@ impl Interp {
             self.set_tail(home, key, Some(value));
             return;
         }
-        let next = tails.len();
-        match tails.get_mut(key) {
-            Some((_, existing)) => *existing = Some(value),
-            None => {
-                tails.insert(key.to_vec(), (next, Some(value)));
-            }
-        }
+        tails.set(key, Some(value));
     }
 
     /// Drops every tail **in place**, leaving the stem's default and the
