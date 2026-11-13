@@ -1310,8 +1310,10 @@ call sysfiledelete f
 <p><code>query</code> answers what <a href="../builtins/stream.html#r-bif.stream.query.words">QUERY</a> answers for the word in
 its one argument, a string: the position, the size, the type, the file name
 that exists, the times and the handle, with the options and the shortenings
-that the rules of QUERY give. The word <code>SEEK</code> is <code>POSITION</code>, and an argument that is the null string or only
-blanks answers as <code>DATETIME</code> does. A word that is none of those, and words after it
+that the rules of QUERY give; its words are separated by
+<a href="../conventions.html#r-conv.string.whitespace">whitespace</a>, and a tab between the options is <a href="../builtins/stream.html#r-bif.stream.deviation.168">Deviation
+168</a>. The word <code>SEEK</code> is <code>POSITION</code>, and an argument that is the null string or only
+whitespace answers as <code>DATETIME</code> does. A word that is none of those, and words after it
 that the query does not take, raise <code>SYNTAX 93.0</code>; a missing argument raises
 <code>SYNTAX 93.901</code>. The answers are strings, the null string where the function
 answers it. It sends no message.</p>
@@ -1361,7 +1363,8 @@ s~query("size", 1) =&gt; 93.902
 <div class="rule" id="r-class.stream.seek"><a href="#r-class.stream.seek">[class.stream.seek]</a></div>
 <p><code>seek</code> and <code>position</code> do the same: they set a position of the stream and
 answer the new one, as <a href="../builtins/stream.html#r-bif.stream.seek">SEEK</a> does, with the offset and the
-options in their one argument, a string. A missing argument raises <code>SYNTAX 88.901</code>, an offset that is not a whole number or an option that is none of
+options in their one argument, a string; a tab between them is <a href="../builtins/stream.html#r-bif.stream.deviation.168">Deviation
+168</a>. A missing argument raises <code>SYNTAX 88.901</code>, an offset that is not a whole number or an option that is none of
 those of SEEK <code>SYNTAX 93.0</code>, and an argument that holds no offset, the null
 string for one, <code>SYNTAX 93.903</code>. Neither method sends a message, and neither
 sends the other; <a href="#r-class.stream.command.sends"><code>command</code></a> sends <code>position</code>
@@ -1420,7 +1423,7 @@ so the name of another method, raises <code>SYNTAX 93.914</code>; words after <c
 <code>FLUSH</code>, an option or a word that the command does not know raise <code>SYNTAX 93.0</code>, and <code>SEEK</code> or <code>POSITION</code> without an offset <code>SYNTAX 93.903</code>. A missing
 argument raises <code>SYNTAX 93.901</code>. The answer is the answer of the method that
 carries the command out, <a href="#r-class.stream.command.sends">which the next rule
-names</a>. A command that is the null string or only blanks closes the stream, as <code>close</code> does, and answers what <code>close</code> answers.</p>
+names</a>. A command that is the null string or only whitespace closes the stream, as <code>close</code> does, and answers what <code>close</code> answers.</p>
 <pre><code class="language-rexx">f = 'spec-stream-command-zq.tmp'
 call charout f, 'abcdef'
 call charout f
@@ -1508,11 +1511,11 @@ after it has split the first word from the rest, and none for a command it
 refuses. <code>CLOSE</code> sends <code>close</code> and <code>FLUSH</code> sends <code>flush</code>, with no argument.
 <code>OPEN</code> sends <code>open</code>, <code>SEEK</code> and <code>POSITION</code> send <code>position</code>, and <code>QUERY</code> sends
 <code>query</code>, each with one argument: the rest of the command after the word and
-one blank, in upper case, with the other blanks as they were. <code>SEEK</code> sends
+one blank, in upper case, with the other blanks and tabs as they were. <code>SEEK</code> sends
 <code>position</code>, not <code>seek</code>. The answer of the message is the answer of <code>command</code>,
 whatever it is, and an error that the message raises is the error of
 <code>command</code>. A command that has words after <code>CLOSE</code> or <code>FLUSH</code>, or an unknown
-first word, sends nothing. A command that is the null string or only blanks
+first word, sends nothing. A command that is the null string or only whitespace
 sends <code>close</code> with no argument, and <code>QUERY</code> with nothing after it sends <code>query</code>
 with the null string. In the example a log lists each message as its
 name, the number of its arguments after a <code>#</code>, and the argument in brackets.</p>

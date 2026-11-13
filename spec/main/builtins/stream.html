@@ -177,7 +177,7 @@
 <pre><code>STREAM(name [, operation [, command]])
 </code></pre>
 <p class="references">ANSI: 9.7.8; rexxref: Functions &gt; Built-in Functions &gt; STREAM</p>
-<p class="deviations">Deviations: D34, D35, D49, D55, D57, D59, D62, D74, D79, D98, D100, D145</p>
+<p class="deviations">Deviations: D34, D35, D49, D55, D57, D59, D62, D74, D79, D98, D100, D145, D167, D168, D171</p>
 <p>STREAM asks a <a href="index.html#r-bif.index.stream.name">stream</a> for its state, describes the
 state, or carries out a command on the stream: opening and closing it,
 moving its positions, and asking about the file behind it. The other stream
@@ -337,19 +337,23 @@ ERROR: 1
 <p>With the operation <code>C</code>, STREAM carries out <code>command</code>, which begins with a
 word that names the command: <code>OPEN</code>, <code>CLOSE</code>, <code>FLUSH</code>, <code>SEEK</code>, <code>POSITION</code>
 or <code>QUERY</code>. The word may be in any case, and may be shortened to any of its
-leading letters down to the first. What is after the word is the command's
-own, and the rules for each say what it is. A later word that reads <code>OPEN</code> or
+leading letters down to the first. The words of a command are separated by
+<a href="../conventions.html#r-conv.string.whitespace">whitespace</a>, the blank and the horizontal tab, and
+a command may begin and end with whitespace. What is after the word is the command's
+own, and the rules for each say what it is; a tab between the options of a
+command is <a href="#r-bif.stream.deviation.168">Deviation 168</a>. A later word that reads <code>OPEN</code> or
 <code>CLOSE</code> does not make the command an OPEN or a CLOSE: a <code>QUERY</code> that has one
 raises <code>SYNTAX 93.0</code> and leaves the stream open at its position. A first word
 that no command begins with raises <code>SYNTAX 93.914</code>, and anything the
 command does not take after it, <code>SYNTAX 93.0</code>. A <code>command</code> that is the null
-string, or only blanks, has no first word and closes the stream, as <code>CLOSE</code>
+string, or only whitespace, has no first word and closes the stream, as <code>CLOSE</code>
 does: it answers <code>READY:</code> for a stream that was open and the null string for
 one that was not.</p>
 <pre><code class="language-rexx">f = 'spec-stream-command.tmp'
 call sysfiledelete f
 call charout f, 'abc'
 say stream(f, 'c', 'seek 2') stream(f, 'c', 'SEEK 2') stream(f, 'c', 's 2') stream(f, 'c', 'se 2')
+say stream(f, 'c', 'seek' || '09'x || '3') stream(f, 'c', '09'x || 'q' || '09'x || 'size' || '09'x)
 say stream(f, 'c', 'position 3') stream(f, 'c', 'p 3') stream(f, 'c', 'f') stream(f, 'c', 'q size')
 signal on syntax name a
 say stream(f, 'c', 'seeker 2')
@@ -364,6 +368,7 @@ call stream f, 'c', 'close'
 call sysfiledelete f
 </code></pre>
 <pre><code class="language-output">2 2 2 2
+3 3
 3 3 READY: 3
 93.914
 93.0
@@ -633,8 +638,9 @@ that is longer than the rest of that record raises <code>SYNTAX 93.0</code> and 
 nothing, and the stream stays <code>READY</code>. <code>RECLENGTH</code> that does not come after
 <code>BINARY</code>, an <code>n</code> that is not a whole number of 1 or more, <code>BINARY</code> or
 <code>RECLENGTH</code> given twice, and <code>BINARY</code> with <code>REPLACE</code> and no <code>RECLENGTH</code> raise
-<code>SYNTAX 93.0</code>. The option <code>BINARY</code> without <code>RECLENGTH</code>
-is not specified, and neither is <code>BINARY RECLENGTH</code> without <code>n</code>, except that
+<code>SYNTAX 93.0</code>; so does <code>RECLENGTH</code> with no <code>n</code> after it, and the stream is
+<code>UNKNOWN</code> afterwards, as after any open that fails. The option <code>BINARY</code> without
+<code>RECLENGTH</code> is not specified, except that
 when <code>BINARY</code> without <code>RECLENGTH</code> raises <code>SYNTAX 93.0</code>, as it does for a file
 that is missing or empty, the stream is <code>UNKNOWN</code> afterwards (<a href="#r-bif.stream.deviation.145">Deviation
 145</a>).</p>
@@ -692,6 +698,9 @@ call try "stream(f, 'c', 'open reclength 4 binary')"
 call try "stream(f, 'c', 'open binary binary reclength 4')"
 call try "stream(f, 'c', 'open binary reclength 4 reclength 5')"
 call try "stream(f, 'c', 'open binary reclength 4 5')"
+call try "stream(f, 'c', 'open binary reclength') stream(f)"
+call try "stream(f, 'c', 'open binary reclength  ') stream(f)"
+call try "stream(f, 'c', 'open binary reclength 4 reclength') stream(f)"
 call try "stream(f, 'c', 'open replace binary')"
 call try "stream(f, 'c', 'open binary replace reclength 3')"
 call try "lineout(f, 'abc') stream(f, 'c', 'query size')"
@@ -720,6 +729,9 @@ stream(f, 'c', 'open reclength 4 binary')                      =&gt; 93.0
 stream(f, 'c', 'open binary binary reclength 4')               =&gt; 93.0
 stream(f, 'c', 'open binary reclength 4 reclength 5')          =&gt; 93.0
 stream(f, 'c', 'open binary reclength 4 5')                    =&gt; 93.0
+stream(f, 'c', 'open binary reclength') stream(f)              =&gt; 93.0
+stream(f, 'c', 'open binary reclength  ') stream(f)            =&gt; 93.0
+stream(f, 'c', 'open binary reclength 4 reclength') stream(f)  =&gt; 93.0
 stream(f, 'c', 'open replace binary')                          =&gt; 93.0
 stream(f, 'c', 'open binary replace reclength 3')              =&gt; [READY:]
 lineout(f, 'abc') stream(f, 'c', 'query size')                 =&gt; [0 3]
@@ -918,7 +930,9 @@ characters: <code>=</code> counts from the first line, being line 1, and <code>+
 from the line the position is in. The position is set to the start of the
 line, and the answer is the line number. A line number past the last line
 sets the position to the end of the data, and the answer is the number of
-the line that position is in. The prefix <code>&lt;</code> with <code>LINE</code> is not specified.
+the line that position is in, which is <a href="#r-bif.stream.query.position">one more than the line ends before
+it</a> whether or not the last line has a line
+end. The prefix <code>&lt;</code> with <code>LINE</code> is not specified.
 A <code>SEEK</code> by line of a text stream that was opened for writing only answers 0
 and raises NOTREADY; see <a href="#r-bif.stream.deviation.55">Deviation 55</a>.</p>
 <pre><code class="language-rexx">f = 'spec-stream-line.tmp'
@@ -949,9 +963,17 @@ call sysfiledelete f
 stream open for reading and writing answers its read position, and one open
 for one thing the position that it has. The option <code>CHAR</code> counts characters
 and is the default; <code>LINE</code> counts lines, and the answer is the number of the
-line that the position is in. Each option may be shortened to its first
-letter. The option <code>SYS</code> may be given alone, and what it answers is not
-specified. A stream that is not open has no positions, and the answer is the
+line that the position is in: one more than the number of line ends before the
+position, for the read position and the write position alike, so that the
+position after the last character of a last line that has no line end is in
+that line, not in a line after it (<a href="#r-bif.stream.deviation.167">Deviation
+167</a>). Each option may be shortened to its first
+letter. The option <code>SYS</code> may be given alone, and it answers the position of the
+host's own file offset in characters, counted from 0 as the host counts, where
+the other positions count from 1. For a stream that has just been opened for
+reading, with nothing read and nothing positioned, nothing has been consumed,
+so the answer is 0 (<a href="#r-bif.stream.deviation.171">Deviation 171</a>); after a read or a positioning it is not specified, because
+it depends on how much the stream has read ahead. A stream that is not open has no positions, and the answer is the
 null string; so is the answer for a standard stream that is
 <a href="index.html#r-bif.index.stream.transient">transient</a> (see <a href="#r-bif.stream.deviation.100">Deviation
 100</a>). On a stream opened <code>APPEND</code>, the write
@@ -1152,7 +1174,7 @@ of its leading letters, as far as to its first letter for <code>EXISTS</code>, <
 <code>TIMESTAMP</code> and <code>DATETIME</code>, to <code>SI</code> for <code>SIZE</code>, to <code>ST</code> for <code>STREAMTYPE</code> and
 to <code>P</code> for <code>POSITION</code>; what a shorter word answers is not specified. <code>SEEK</code> is a second name for
 <code>POSITION</code>, with its options and its answers; what a shortening of it answers
-is not specified. A <code>QUERY</code> with no word, or with only blanks, answers as
+is not specified. A <code>QUERY</code> with no word, or with only whitespace, answers as
 <code>DATETIME</code> does. A word that is none of them, and words after it
 that the query does not take, raise <code>SYNTAX 93.0</code>.</p>
 <pre><code class="language-rexx">f = 'spec-stream-words.tmp'
@@ -1511,6 +1533,111 @@ call sysfiledelete f
 </code></pre>
 <pre><code class="language-output">missing 93.0 UNKNOWN
 empty 93.0 UNKNOWN
+</code></pre>
+<div class="rule" id="r-bif.stream.deviation.167"><a href="#r-bif.stream.deviation.167">[bif.stream.deviation.167]</a></div>
+<p>The line that a position is in is one more than the number of line ends
+before it, for the write position as for the read position, and so it is for a
+position just after the last character of a last line that has no line end: it
+is in that line. <code>QUERY POSITION WRITE LINE</code> answers 3 there for data <code>ab</code>, <code>cd</code>
+and <code>ef</code> with no line end after <code>ef</code>, and so does a <code>SEEK</code> by <code>LINE</code> past the
+last line, with <code>READ</code> or <code>WRITE</code>. A <code>LINEOUT</code> at that write position continues
+the line. ooRexx answers 4 for the write position, and 3 for the read position
+at the same character.</p>
+<pre><code class="language-rexx">f = 'spec-stream-lastline.tmp'
+call sysfiledelete f
+call charout f, 'ab' || '0a'x || 'cd' || '0a'x || 'ef'
+call charout f
+say stream(f, 'c', 'open')
+say stream(f, 'c', 'query position write') stream(f, 'c', 'query position write line') stream(f, 'c', 'query position read line')
+say stream(f, 'c', 'seek =20 write line') stream(f, 'c', 'query position write') stream(f, 'c', 'seek =20 read line')
+say stream(f, 'c', 'seek 9 read') stream(f, 'c', 'query position read line') stream(f, 'c', 'query position write line')
+say lineout(f, 'X') stream(f, 'c', 'query position write line')
+say stream(f, 'c', 'close')
+say translate(charin(f, 1, 100), '/', '0a'x)
+call stream f, 'c', 'close'
+call sysfiledelete f
+call charout f, 'ab' || '0a'x || 'cd' || '0a'x || 'ef'
+call charout f
+s = .stream~new(f)
+say s~open('both') s~position('9 write') s~query('position write line') s~position('=20 write line') s~query('position write line')
+say s~close
+call sysfiledelete f
+</code></pre>
+<pre><code class="language-output">READY:
+9 3 1
+3 9 3
+9 3 3
+0 4
+READY:
+ab/cd/efX/
+READY: 9 3 3 3
+READY:
+</code></pre>
+<div class="rule" id="r-bif.stream.deviation.168"><a href="#r-bif.stream.deviation.168">[bif.stream.deviation.168]</a></div>
+<p>A tab is whitespace in every part of a command, as a blank is
+(<a href="../conventions.html#r-conv.string.whitespace">the rule</a>): the words of a command of <code>STREAM</code>,
+and the words of the options that <code>open</code>, <code>position</code>, <code>seek</code> and <code>query</code> of a
+<code>Stream</code> take, may be separated by blanks, by tabs, or by both, and a command
+may begin and end with a tab. ooRexx accepts a tab after the word that names a
+command, and raises <code>SYNTAX 93.0</code> for a tab anywhere in the options that follow
+it, between them or around them, whether the command is that of <code>STREAM</code> or of
+<code>command</code>, or the option string is the argument of <code>open</code>, <code>position</code>, <code>seek</code>
+or <code>query</code>.</p>
+<pre><code class="language-rexx">f = 'spec-stream-tab.tmp'
+call sysfiledelete f
+call charout f, 'abcdef'
+call charout f
+t = '09'x
+say stream(f, 'c', 'open' || t || 'read' || t || 'shared')
+say stream(f, 'c', 'query' || t || 'position' || t || 'read' || t || 'line')
+say stream(f, 'c', 'seek' || t || '=' || t || '3' || t || 'read')
+say stream(f, 'c', t || 'q' || t || 'size' || t)
+say stream(f, 'c', 'close')
+s = .stream~new(f)
+say s~command('open' || t || 'read')
+say s~command('seek' || t || '2' || t || 'read') s~query('position' || t || 'read' || t || 'char')
+say s~position('4' || t || 'read') s~seek(t || '5' || t)
+say s~open('read' || t || 'shared')
+say s~close s~command('open' || t || 'write' || t || 'append') s~close
+say '['s~query(t)~length']' '['s~command(t || t)']'
+signal on syntax name a
+say s~command('close' || t || 'now')
+a: say condition('o')~code
+signal on syntax name b
+say s~command('frob' || t || 'x')
+b: say condition('o')~code
+call sysfiledelete f
+</code></pre>
+<pre><code class="language-output">READY:
+1
+3
+6
+READY:
+READY:
+2 2
+4 5
+READY:
+READY: READY: READY:
+[17] []
+93.0
+93.914
+</code></pre>
+<div class="rule" id="r-bif.stream.deviation.171"><a href="#r-bif.stream.deviation.171">[bif.stream.deviation.171]</a></div>
+<p><code>QUERY POSITION SYS</code> of a stream that has just been opened for reading, with
+nothing read and nothing positioned, answers 0: the host has consumed nothing
+from the file yet (<a href="#r-bif.stream.query.position">the rule</a>). ooRexx answers the
+size of the file there, the offset at which it leaves the file after opening
+it.</p>
+<pre><code class="language-rexx">f = 'spec-stream-qpossys.tmp'
+call sysfiledelete f
+call charout f, 'abcdefghij'
+call charout f
+say stream(f, 'c', 'open read') stream(f, 'c', 'query position sys') stream(f, 'c', 'query position')
+say stream(f, 'c', 'close')
+call sysfiledelete f
+</code></pre>
+<pre><code class="language-output">READY: 0 1
+READY:
 </code></pre>
 
                     </main>

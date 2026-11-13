@@ -1120,6 +1120,19 @@ or <code>TIME</code> is a character that is no letter, and is refused like any o
 letter against the set of letters as a search of a C string does, which finds
 a 0 byte in every set: a 0 byte <code>option</code> with an <code>osep</code> raises <code>SYNTAX 40.904</code>
 and a 0 byte <code>informat</code> with an <code>isep</code> raises <code>SYNTAX 40.44</code>.</p>
+<h2 id="167-the-line-of-a-position-after-a-last-line-with-no-line-end"><a class="header" href="#167-the-line-of-a-position-after-a-last-line-with-no-line-end">167. The line of a position after a last line with no line end</a></h2>
+<p>The line that a position is in is one more than the number of line ends before
+it, for the write position as for the read position. For data <code>ab</code>, <code>cd</code> and
+<code>ef</code> with no line end after <code>ef</code>, <code>QUERY POSITION WRITE LINE</code> at the write
+position just after <code>ef</code> answers 3, and so does a <code>SEEK</code> by <code>LINE</code> past the
+last line. ooRexx answers 4 for the write position, and 3 for the read position
+at the same character; its <code>LINEOUT</code> at that write position continues line 3.</p>
+<h2 id="168-a-tab-between-the-options-of-a-stream-command"><a class="header" href="#168-a-tab-between-the-options-of-a-stream-command">168. A tab between the options of a stream command</a></h2>
+<p>A tab is whitespace in every part of a command of <code>STREAM</code> and of the
+<code>Stream</code> methods <code>command</code>, <code>open</code>, <code>position</code>, <code>seek</code> and <code>query</code>: it separates
+the words of the options as a blank does, and a command may begin and end with
+one. ooRexx accepts a tab after the word that names a command, and raises
+<code>SYNTAX 93.0</code> for a tab between or around the options that follow it.</p>
 <h2 id="169-a-string-method-answering-a-non-string-where-its-bytes-are-read"><a class="header" href="#169-a-string-method-answering-a-non-string-where-its-bytes-are-read">169. A STRING method answering a non-string where its bytes are read</a></h2>
 <p>Where a clause needs the bytes of the string value of an object, and the
 <code>STRING</code> method of the object answers an object with no string value (<code>.nil</code>, a
@@ -1147,6 +1160,10 @@ ooRexx, which converts an argument as it checks it and stops at the first one
 in error, so that the method of a later argument never runs. The difference
 shows only in what such a method does: counting, input or output, or raising a
 condition of its own.</p>
+<h2 id="171-query-position-sys-of-a-stream-just-opened-for-reading"><a class="header" href="#171-query-position-sys-of-a-stream-just-opened-for-reading">171. QUERY POSITION SYS of a stream just opened for reading</a></h2>
+<p><code>QUERY POSITION SYS</code> of a stream that has just been opened for reading, before
+anything is read or positioned, answers 0, the host's offset when nothing has
+been consumed. ooRexx answers the size of the file.</p>
 
                     </main>
 
