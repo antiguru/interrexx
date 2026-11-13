@@ -112,6 +112,26 @@ fn rounded(product: u128, digits: u64) -> Option<(u64, i32)> {
     Some((kept, moved))
 }
 
+/// [`Scaled::format_plain`]'s output, written left to right into a buffer
+/// already known to be long enough.
+struct Writer<'a> {
+    out: &'a mut [u8],
+    at: usize,
+}
+
+impl Writer<'_> {
+    fn put(&mut self, bytes: &[u8]) {
+        self.out[self.at..self.at + bytes.len()].copy_from_slice(bytes);
+        self.at += bytes.len();
+    }
+
+    fn repeat(&mut self, byte: u8, count: i64) {
+        let count = count as usize;
+        self.out[self.at..self.at + count].fill(byte);
+        self.at += count;
+    }
+}
+
 impl Scaled {
     const ZERO: Scaled = Scaled {
         mantissa: 0,
@@ -442,6 +462,128 @@ impl Scaled {
         Some(shifted(self.mantissa, left_shift).cmp(&shifted(other.mantissa, right_shift)))
     }
 
+    /// [`Number::format_with`] at `digits` with no `expp` and no `expt`,
+    /// written into `out`, where the value needs no rounding to DIGITS and
+    /// the result is plain; `None` otherwise, and wherever `before` is too
+    /// narrow (the error is the general path's to raise) or `out` is too
+    /// short. Answers the length written.
+    pub fn format_plain(
+        self,
+        digits: u64,
+        before: Option<u32>,
+        after: Option<u32>,
+        out: &mut [u8],
+    ) -> Option<usize> {
+        let trigger = i64::try_from(digits).unwrap_or(i64::MAX);
+        if i64::from(self.length) > trigger || (self.mantissa == 0 && self.exponent != 0) {
+            return None;
+        }
+        // Exponential form as the value stands.
+        let adjusted = i64::from(self.exponent) + i64::from(self.length) - 1;
+        if adjusted >= trigger
+            || (adjusted < 0 && i64::from(self.exponent).abs() > trigger.saturating_mul(2))
+        {
+            return None;
+        }
+        // `after` decimal places, rounded half up; a value that rounds away
+        // entirely is an unsigned zero at that many places.
+        let (mut negative, mut magnitude, mut length, mut exponent) = (
+            self.mantissa < 0,
+            self.mantissa.unsigned_abs(),
+            self.length,
+            self.exponent,
+        );
+        if let Some(places) = after {
+            let target = -i64::from(places);
+            if i64::from(exponent) < target {
+                let drop = target - i64::from(exponent);
+                if drop > i64::from(length) {
+                    magnitude = 0;
+                } else {
+                    let drop = drop as u32;
+                    let tail = magnitude / POWERS[drop as usize - 1] as u64;
+                    magnitude = tail / 10 + u64::from(tail % 10 >= 5);
+                }
+                if magnitude == 0 {
+                    negative = false;
+                }
+                length = digit_length(magnitude);
+                exponent = target as i32;
+                // A carry into exponential form.
+                if i64::from(exponent) + i64::from(length) > trigger {
+                    return None;
+                }
+            }
+        }
+        // The layout: the whole part (or its `0`), then the point and the
+        // fraction's digits, then the zeros `after` asks for.
+        let point = i64::from(length) + i64::from(exponent);
+        let whole = if exponent >= 0 { point } else { point.max(1) };
+        let natural = if exponent >= 0 {
+            None
+        } else {
+            Some(-i64::from(exponent))
+        };
+        let decimals = match after {
+            None => natural.map(|natural| (natural, 0)),
+            Some(0) => None,
+            Some(places) => {
+                let natural = natural.unwrap_or(0);
+                Some((natural, (i64::from(places) - natural).max(0)))
+            }
+        };
+        let sign = i64::from(negative);
+        let pad = match before {
+            None => 0,
+            Some(before) => {
+                let available = i64::from(before) - sign;
+                if available < whole {
+                    return None;
+                }
+                available - whole
+            }
+        };
+        let total = pad + sign + whole + decimals.map_or(0, |(natural, extra)| 1 + natural + extra);
+        if total > out.len() as i64 {
+            return None;
+        }
+        let mut spelled = [0u8; WIDEST as usize];
+        let spelled = &mut spelled[..length as usize];
+        let mut rest = magnitude;
+        for slot in spelled.iter_mut().rev() {
+            *slot = b'0' + (rest % 10) as u8;
+            rest /= 10;
+        }
+        let mut writer = Writer { out, at: 0 };
+        writer.repeat(b' ', pad);
+        if negative {
+            writer.put(b"-");
+        }
+        if exponent >= 0 {
+            writer.put(spelled);
+            writer.repeat(b'0', i64::from(exponent));
+        } else if point > 0 {
+            writer.put(&spelled[..point as usize]);
+        } else {
+            writer.put(b"0");
+        }
+        if let Some((_, extra)) = decimals {
+            writer.put(b".");
+            if exponent < 0 {
+                if point > 0 {
+                    writer.put(&spelled[point as usize..]);
+                } else {
+                    writer.repeat(b'0', -point);
+                    writer.put(spelled);
+                }
+            }
+            writer.repeat(b'0', extra);
+        }
+        let at = writer.at;
+        debug_assert_eq!(at as i64, total);
+        Some(at)
+    }
+
     /// [`Number::write_short_fraction`] of the number this spells.
     pub fn write_short_fraction(self, digits: u64, out: &mut [u8]) -> Option<usize> {
         if self.exponent >= 0 || u64::from(self.length) > digits {
@@ -544,6 +686,64 @@ mod tests {
             }
         }
         assert!(taken > 50_000, "the plain parse answered {taken} times");
+    }
+
+    /// `Scaled::format_plain` writes what `Number::format_with` answers
+    /// wherever it answers at all.
+    #[test]
+    fn the_plain_format_answers_what_format_answers() {
+        let mut state = 0x0bad_cafe_dead_beefu64;
+        let mut next = move |bound: u64| {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            state % bound
+        };
+        let (mut taken, mut rounded) = (0, 0);
+        for _ in 0..200_000 {
+            let length = 1 + next(12) as usize;
+            let mut text = String::new();
+            if next(2) == 0 {
+                text.push('-');
+            }
+            for i in 0..length {
+                let digit = match next(3) {
+                    0 => 9,
+                    1 => next(5) as u8 + 4,
+                    _ => next(10) as u8,
+                };
+                text.push(char::from(b'0' + if i == 0 { digit.max(1) } else { digit }));
+            }
+            text.push_str(&format!("E{}", next(30) as i64 - 18));
+            if next(20) == 0 {
+                text = String::from("0");
+            }
+            let number = Number::parse(&text).expect("a generated spelling parses");
+            let Some(scaled) = number.scaled() else {
+                continue;
+            };
+            let digits = 1 + next(20);
+            let before = (next(3) != 0).then(|| next(14) as u32);
+            let after = (next(4) != 0).then(|| next(10) as u32);
+            let mut out = [0u8; 48];
+            let Some(written) = scaled.format_plain(digits, before, after, &mut out) else {
+                continue;
+            };
+            let expected = number
+                .format_with(digits, crate::Form::Scientific, before, after, None, None)
+                .expect("a value the plain format answers formats");
+            assert_eq!(
+                std::str::from_utf8(&out[..written]).unwrap(),
+                expected,
+                "format({text}, {before:?}, {after:?}) at DIGITS {digits}"
+            );
+            taken += 1;
+            if after.is_some_and(|places| i64::from(number.exponent) < -i64::from(places)) {
+                rounded += 1;
+            }
+        }
+        assert!(taken > 40_000, "the plain format answered {taken} times");
+        assert!(rounded > 10_000, "the plain format rounded {rounded} times");
     }
 
     /// `Scaled::mul` answers what the long multiplication answers wherever
