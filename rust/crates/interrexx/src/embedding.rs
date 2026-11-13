@@ -3,6 +3,8 @@
 //! write the answers back.
 
 use std::io::{IsTerminal, Write};
+use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 
 use crate::invocation::{ProgramInput, Sinks, StartType};
 use crate::{Invocation, launcher, run_program_named};
@@ -320,35 +322,174 @@ fn classic_inbox(thread: usize) -> Option<ClassicInbox> {
         .map(|(_, inbox)| std::sync::Arc::clone(inbox))
 }
 
-/// The native calls in flight, each under the thread running it with its interpreter's inbox,
-/// innermost last.
-fn other_runs() -> std::sync::MutexGuard<'static, Vec<(usize, ClassicInbox)>> {
-    static RUNS: std::sync::Mutex<Vec<(usize, ClassicInbox)>> = std::sync::Mutex::new(Vec::new());
-    RUNS.lock()
+/// One interpreter's native calls on one thread: whether any is in flight, and when the
+/// innermost of them was entered.
+///
+/// Only the thread the entry is for writes it, so entering and leaving a call costs no
+/// read-modify-write and takes no lock; another thread reads it only to halt the call, which
+/// races with the call ending however it is read.
+struct OtherEntry {
+    inbox: ClassicInbox,
+    /// The calls in flight.
+    in_flight: AtomicUsize,
+    /// The thread's [`OtherThread::entered`] count when the innermost call in flight was
+    /// entered, which orders this interpreter's calls against the other interpreters' on the
+    /// thread.
+    entered: AtomicU64,
+}
+
+/// The [`OtherEntry`]s of one thread, reachable by `RexxSetHalt` from any thread while the
+/// thread lives.
+struct OtherThread {
+    thread: usize,
+    entries: std::sync::Mutex<Vec<Arc<OtherEntry>>>,
+}
+
+/// Every live thread that has made a native call, with its entries.
+fn other_threads() -> std::sync::MutexGuard<'static, Vec<Arc<OtherThread>>> {
+    static THREADS: std::sync::Mutex<Vec<Arc<OtherThread>>> = std::sync::Mutex::new(Vec::new());
+    THREADS
+        .lock()
         .unwrap_or_else(std::sync::PoisonError::into_inner)
 }
 
+/// This thread's side of its [`OtherThread`]: the entries without the lock, and the count
+/// that orders its calls. Dropped when the thread ends, which takes the thread off the list.
+struct OtherLocal {
+    shared: Arc<OtherThread>,
+    entries: std::cell::RefCell<Vec<Arc<OtherEntry>>>,
+    entered: std::cell::Cell<u64>,
+}
+
+impl OtherLocal {
+    fn new() -> OtherLocal {
+        let shared = Arc::new(OtherThread {
+            thread: crate::signal::current_thread(),
+            entries: std::sync::Mutex::new(Vec::new()),
+        });
+        other_threads().push(Arc::clone(&shared));
+        OtherLocal {
+            shared,
+            entries: std::cell::RefCell::new(Vec::new()),
+            entered: std::cell::Cell::new(0),
+        }
+    }
+
+    /// The index of the entry for `inbox`'s interpreter, made where this thread has none.
+    /// A new entry takes the place of one whose interpreter is gone, whose inbox only the
+    /// entry holds, so the list stays as long as the interpreters this thread calls for; an
+    /// entry with a call in flight keeps its place.
+    fn entry(&self, inbox: &ClassicInbox) -> usize {
+        let mut entries = self.entries.borrow_mut();
+        if let Some(at) = entries
+            .iter()
+            .position(|entry| Arc::ptr_eq(&entry.inbox, inbox))
+        {
+            return at;
+        }
+        let gone = |entry: &Arc<OtherEntry>| {
+            entry.in_flight.load(Ordering::Relaxed) == 0 && Arc::strong_count(&entry.inbox) == 1
+        };
+        let entry = Arc::new(OtherEntry {
+            inbox: Arc::clone(inbox),
+            in_flight: AtomicUsize::new(0),
+            entered: AtomicU64::new(0),
+        });
+        let mut shared = self
+            .shared
+            .entries
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        shared.retain(|entry| !gone(entry));
+        shared.push(Arc::clone(&entry));
+        match entries.iter().position(gone) {
+            Some(at) => {
+                entries[at] = entry;
+                at
+            }
+            None => {
+                entries.push(entry);
+                entries.len() - 1
+            }
+        }
+    }
+}
+
+impl Drop for OtherLocal {
+    fn drop(&mut self) {
+        other_threads().retain(|thread| !Arc::ptr_eq(thread, &self.shared));
+    }
+}
+
+thread_local! {
+    static OTHER_LOCAL: OtherLocal = OtherLocal::new();
+}
+
 /// A native call in flight on this thread, reachable by `RexxSetHalt` from another thread
-/// until this is dropped.
-pub(crate) struct OtherRun(usize);
+/// until this is dropped, which is on this thread.
+pub(crate) struct OtherRun {
+    /// The place of this thread's entry for the call's interpreter, which keeps it while a
+    /// call is in flight; `None` where the thread is ending and has no list.
+    entry: Option<usize>,
+    /// The entry's `entered` before this call, which its end puts back.
+    outer: u64,
+    /// Dropped on the thread that made it, whose list `entry` indexes.
+    _thread: std::marker::PhantomData<*const ()>,
+}
 
 impl OtherRun {
     /// Registers the native call this thread is entering, of the interpreter whose inbox is
     /// `inbox`.
-    pub(crate) fn enter(inbox: ClassicInbox) -> OtherRun {
-        let thread = crate::signal::current_thread();
-        other_runs().push((thread, inbox));
-        OtherRun(thread)
+    pub(crate) fn enter(inbox: &ClassicInbox) -> OtherRun {
+        let entered = OTHER_LOCAL.try_with(|local| {
+            let at = local.entry(inbox);
+            let entered = local.entered.get() + 1;
+            local.entered.set(entered);
+            let entries = local.entries.borrow();
+            let held = &entries[at];
+            let outer = held.entered.load(Ordering::Relaxed);
+            held.entered.store(entered, Ordering::Relaxed);
+            let in_flight = held.in_flight.load(Ordering::Relaxed);
+            held.in_flight.store(in_flight + 1, Ordering::Release);
+            (at, outer)
+        });
+        OtherRun {
+            entry: entered.as_ref().ok().map(|(at, _)| *at),
+            outer: entered.map_or(0, |(_, outer)| outer),
+            _thread: std::marker::PhantomData,
+        }
     }
 }
 
 impl Drop for OtherRun {
     fn drop(&mut self) {
-        let mut runs = other_runs();
-        if let Some(at) = runs.iter().rposition(|(thread, _)| *thread == self.0) {
-            runs.remove(at);
-        }
+        let Some(at) = self.entry else {
+            return;
+        };
+        let _ = OTHER_LOCAL.try_with(|local| {
+            let entries = local.entries.borrow();
+            let held = &entries[at];
+            held.entered.store(self.outer, Ordering::Relaxed);
+            let in_flight = held.in_flight.load(Ordering::Relaxed);
+            held.in_flight.store(in_flight - 1, Ordering::Release);
+        });
     }
+}
+
+/// The inbox of the interpreter whose native call is innermost on `thread`, if one is in
+/// flight there.
+fn other_inbox(thread: usize) -> Option<ClassicInbox> {
+    let threads = other_threads();
+    let on = threads.iter().find(|on| on.thread == thread)?;
+    let entries = on
+        .entries
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+    entries
+        .iter()
+        .filter(|entry| entry.in_flight.load(Ordering::Acquire) != 0)
+        .max_by_key(|entry| entry.entered.load(Ordering::Relaxed))
+        .map(|entry| Arc::clone(&entry.inbox))
 }
 
 /// `RexxSetHalt`: the run on `thread` halted at its next clause; `false` where no run is in
@@ -359,17 +500,8 @@ impl Drop for OtherRun {
 /// function started).
 pub fn classic_halt(thread: usize) -> bool {
     let current = crate::signal::current_thread();
-    let inbox = classic_inbox(thread).or_else(|| {
-        (thread != current)
-            .then(|| {
-                other_runs()
-                    .iter()
-                    .rev()
-                    .find(|(on, _)| *on == thread)
-                    .map(|(_, inbox)| std::sync::Arc::clone(inbox))
-            })
-            .flatten()
-    });
+    let inbox = classic_inbox(thread)
+        .or_else(|| (thread != current).then(|| other_inbox(thread)).flatten());
     let Some(inbox) = inbox else {
         return thread == current && interrexx_api::ffi::classic::halt_calling();
     };
