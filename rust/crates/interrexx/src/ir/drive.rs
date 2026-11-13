@@ -2693,7 +2693,10 @@ impl Interp {
                             self.novalue_check(novalue, value)?;
                             value
                         }
-                        SymbolRead::Stem | SymbolRead::Compound | SymbolRead::Environment => {
+                        SymbolRead::Stem
+                        | SymbolRead::Compound
+                        | SymbolRead::CompoundShared
+                        | SymbolRead::Environment => {
                             self.read_symbol(code, Some(chunk), *read, *symbol, at)?
                         }
                     };
