@@ -21,7 +21,15 @@ pub struct Table {
     entries: FxHashMap<usize, ObjRef>,
     /// `None` until the first [`Table::release`].
     released: Option<Box<Released>>,
+    /// The interpreter's constants, registered on every native call
+    /// ([`Table::register_constants`]): held apart from `entries`, so that
+    /// registering them hashes nothing. Empty until then, and again after
+    /// [`Table::clear`].
+    constants: Option<[ObjRef; CONSTANTS]>,
 }
+
+/// How many objects [`Table::register_constants`] holds.
+pub const CONSTANTS: usize = 4;
 
 /// The handles [`Table::release`] dropped, which root nothing and resolve
 /// while their object lives.
@@ -55,6 +63,29 @@ impl Table {
         std::ptr::without_provenance_mut(address)
     }
 
+    /// The handles for `objects`, the interpreter's constants, held until
+    /// [`Table::clear`], as [`Table::register`] holds an object.
+    ///
+    /// A constant is never collected, so releasing its handle changes nothing
+    /// [`Table::resolve`] answers, and none is kept for it.
+    pub fn register_constants(
+        &mut self,
+        objects: [ObjRef; CONSTANTS],
+    ) -> [RexxObjectPtr; CONSTANTS] {
+        self.constants = Some(objects);
+        objects.map(|object| std::ptr::without_provenance_mut(address_of(object)))
+    }
+
+    /// The constant `address` names, if [`Table::register_constants`] holds
+    /// one.
+    fn constant(&self, address: usize) -> Option<ObjRef> {
+        self.constants
+            .as_ref()?
+            .iter()
+            .copied()
+            .find(|object| address_of(*object) == address)
+    }
+
     /// The object `handle` names, held or released, or `None` if this table
     /// has neither.
     pub fn resolve(&self, handle: RexxObjectPtr) -> Option<ObjRef> {
@@ -70,6 +101,9 @@ impl Table {
     ) -> Option<ObjRef> {
         let address = handle.addr();
         self.entries.get(&address).copied().or_else(|| {
+            if let Some(object) = self.constant(address) {
+                return Some(object);
+            }
             self.released
                 .as_ref()?
                 .handles
@@ -81,7 +115,8 @@ impl Table {
 
     /// Whether this table holds `object`.
     pub fn holds(&self, object: ObjRef) -> bool {
-        self.entries.contains_key(&address_of(object))
+        let address = address_of(object);
+        self.entries.contains_key(&address) || self.constant(address).is_some()
     }
 
     /// Drops `handle`'s registration, so it no longer roots its object. A
@@ -105,6 +140,7 @@ impl Table {
     /// the end of an activation does.
     pub fn clear(&mut self) {
         self.entries.clear();
+        self.constants = None;
         if let Some(released) = &mut self.released {
             released.handles.clear();
             released.limit = 0;
@@ -113,7 +149,10 @@ impl Table {
 
     /// Every object this table holds, for the collector.
     pub fn roots(&self) -> impl Iterator<Item = ObjRef> + '_ {
-        self.entries.values().copied()
+        self.entries
+            .values()
+            .copied()
+            .chain(self.constants.into_iter().flatten())
     }
 }
 
@@ -130,4 +169,34 @@ fn address_of(object: ObjRef) -> usize {
     let biased = object.bits().wrapping_add(1);
     assert!(biased != 0, "an ObjRef with every bit set has no handle");
     biased as usize
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The constants resolve like any registration, survive a release of
+    /// their handle, are counted as roots, and are forgotten by a clear.
+    #[test]
+    fn constants_resolve_until_the_table_is_cleared() {
+        let objects = [0, 1, 2, 3].map(|slot| ObjRef::heap(slot, 7));
+        let other = ObjRef::heap(9, 7);
+        let mut table = Table::new();
+        let handles = table.register_constants(objects);
+        let plain = table.register(other);
+        for (handle, object) in handles.iter().zip(objects) {
+            assert_eq!(table.resolve(*handle), Some(object));
+            assert!(table.holds(object));
+        }
+        assert_eq!(handles[0], table.register(objects[0]));
+        table.release(handles[0], |_| true);
+        assert_eq!(table.resolve(handles[0]), Some(objects[0]));
+        let mut roots: Vec<ObjRef> = table.roots().collect();
+        roots.sort_by_key(|object| object.bits());
+        assert_eq!(roots, [objects.as_slice(), &[other]].concat());
+        table.clear();
+        assert_eq!(table.resolve(handles[1]), None);
+        assert_eq!(table.resolve(plain), None);
+        assert!(!table.holds(objects[1]));
+    }
 }
