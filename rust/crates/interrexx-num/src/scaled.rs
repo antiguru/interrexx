@@ -186,6 +186,41 @@ impl Scaled {
         Some(result)
     }
 
+    /// [`Number::mul`] at `digits`, where the product needs no rounding and
+    /// no operand is shortened; `None` otherwise. The product keeps every
+    /// digit, trailing zeros included, as the long multiplication does.
+    pub fn mul(self, other: Scaled, digits: u64) -> Option<Scaled> {
+        if u64::from(self.length) > digits || u64::from(other.length) > digits {
+            return None;
+        }
+        if self.mantissa == 0 || other.mantissa == 0 {
+            return Some(Scaled {
+                mantissa: 0,
+                exponent: 0,
+                length: 1,
+            });
+        }
+        // Eighteen digits between them bound the product to an `i64`.
+        if self.length + other.length > WIDEST {
+            return None;
+        }
+        let product = self.mantissa * other.mantissa;
+        let length = digit_length(product.unsigned_abs());
+        if u64::from(length) > digits {
+            return None;
+        }
+        let exponent = self.exponent.checked_add(other.exponent)?;
+        let adjusted = i64::from(exponent) + i64::from(length) - 1;
+        if adjusted > i64::from(MAX_EXPONENT) || exponent < MIN_EXPONENT {
+            return None;
+        }
+        Some(Scaled {
+            mantissa: product,
+            exponent,
+            length,
+        })
+    }
+
     /// The numeric comparison at `digits` with `FUZZ` 0, where both values
     /// align within DIGITS digits and so compare exactly; `None` otherwise.
     pub fn order(self, other: Scaled, digits: u64) -> Option<Ordering> {
