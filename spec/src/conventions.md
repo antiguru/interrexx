@@ -3,7 +3,7 @@ element: "Conventions"
 kind: concept
 ansi: "9.2.1"
 rexxref: "Functions > Built-in Functions"
-deviations: [30, 109, 170]
+deviations: [30, 109]
 ---
 
 # Conventions
