@@ -361,11 +361,17 @@ impl Heap {
         let mut freed_bytes = 0;
         let mut freed_classes = Vec::new();
         let mut freed_cells = Vec::new();
-        for slot in 0..self.slots.len() {
-            if self.marks[slot] {
+        // Walked as one pass over the slots beside their marks, with the
+        // free list's head and the live count in locals, so a slot costs no
+        // bound check and no write back to `self` until the end.
+        debug_assert_eq!(self.marks.len(), self.slots.len(), "a slot has no mark");
+        let mut free_head = self.free_head;
+        let mut live = self.live;
+        for (slot, (entry, &marked)) in self.slots.iter_mut().zip(&self.marks).enumerate() {
+            if marked {
                 continue;
             }
-            let Slot::Live { object, generation } = &self.slots[slot] else {
+            let Slot::Live { object, generation } = &*entry else {
                 continue;
             };
             let generation = *generation;
@@ -392,17 +398,17 @@ impl Heap {
                 }
             }
             swept += 1;
-            self.live -= 1;
+            live -= 1;
             // A slot whose generation would overflow is retired, not reused:
             // wrapping would let a stale handle alias a live object again,
             // which is the whole reason the generation exists.
-            self.slots[slot] = match generation.checked_add(1) {
+            *entry = match generation.checked_add(1) {
                 Some(next) if next <= crate::GENERATION_MAX => {
                     let free = Slot::Free {
-                        next: self.free_head,
+                        next: free_head,
                         generation: next,
                     };
-                    self.free_head = Some(slot as u32);
+                    free_head = Some(slot as u32);
                     free
                 }
                 _ => Slot::Free {
@@ -411,6 +417,8 @@ impl Heap {
                 },
             };
         }
+        self.free_head = free_head;
+        self.live = live;
         // The running figure less the freed bytes must equal the survivors'
         // sum. A charge site that missed `hold_body_bytes` or its release
         // shows up here.
