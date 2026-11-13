@@ -9,6 +9,7 @@ use super::{
     raised_until_not_logical, raised_while_not_logical, shape_of, within_digits,
 };
 use crate::clause::DeadlineCounted;
+use interrexx_num::Scaled;
 
 /// What one pass of a `DO`/`LOOP` body just did, from `do_body_outcome`.
 enum DoOutcome {
@@ -244,6 +245,9 @@ enum LoopState {
         cached_digits: u64,
         to_int: Option<i64>,
         by_int: Option<i64>,
+        /// `TO`/`BY` as [`Scaled`] values, where their digits fit one.
+        to_scaled: Option<Scaled>,
+        by_scaled: Option<Scaled>,
         /// Whether the control variable is spelled simple, stem or compound.
         shape: NameShape,
         /// Whether at least one candidate iteration has already been decided, which
@@ -346,6 +350,13 @@ impl LoopCounter {
 enum ControlValue {
     Small(i64),
     Wide(Number),
+    /// A short value, with the inline handle the pass that made it bound:
+    /// while the control variable still holds that handle, the value is
+    /// this one without the variable being read as a number.
+    Scaled {
+        value: Scaled,
+        handle: ObjRef,
+    },
 }
 
 impl ControlValue {
@@ -354,7 +365,20 @@ impl ControlValue {
         match self {
             ControlValue::Small(value) => Cow::Owned(Number::from_i64(*value)),
             ControlValue::Wide(number) => Cow::Borrowed(number),
+            ControlValue::Scaled { value, .. } => Cow::Owned(value.to_number()),
         }
+    }
+
+    /// `number` as the value a pass bound as `handle`: kept as a [`Scaled`]
+    /// where the handle carries the value's rendering, so the next pass can
+    /// recognise it.
+    fn bound(number: Number, handle: ObjRef) -> ControlValue {
+        if let Decoded::Text(_) = handle.decode()
+            && let Some(value) = number.scaled()
+        {
+            return ControlValue::Scaled { value, handle };
+        }
+        ControlValue::Wide(number)
     }
 
     /// The value as an integer the bound test may compare exactly, or `None`
@@ -363,7 +387,7 @@ impl ControlValue {
     fn small(&self, digits: u64) -> Option<i64> {
         match self {
             ControlValue::Small(value) => within_digits(*value, digits).then_some(*value),
-            ControlValue::Wide(_) => None,
+            ControlValue::Wide(_) | ControlValue::Scaled { .. } => None,
         }
     }
 }
@@ -883,7 +907,7 @@ impl Interp {
             // gate runs rather than probed once.
             debug_assert_eq!(
                 Ok(&shortcut),
-                round_via_unary_plus(&Number::from_i64(small), entry_digits).as_ref(),
+                round_via_unary_plus(Number::from_i64(small), entry_digits).as_ref(),
                 "a tagged integer within DIGITS {entry_digits} is not its own unary +"
             );
             return Ok(Some(shortcut));
@@ -1031,7 +1055,7 @@ impl Interp {
         // DIGITS 3.
         self.lostdigits_check(&operand, value)?;
         Ok(Some(
-            round_via_unary_plus(&operand, entry_digits).map_err(Raised::from)?,
+            round_via_unary_plus(operand, entry_digits).map_err(Raised::from)?,
         ))
     }
 
@@ -1176,6 +1200,11 @@ impl Interp {
                 self.object_control_state(code, ctrl.control, &values, objects)
             }
             LoopKind::Controlled(ctrl) => LoopState::Controlled {
+                to_scaled: values.to.as_ref().and_then(Number::scaled),
+                by_scaled: match &values.by {
+                    Some(by) => by.scaled(),
+                    None => Number::one().scaled(),
+                },
                 control: ctrl.control,
                 at: control_slot(code, ctrl.control),
                 current: values
@@ -1828,6 +1857,8 @@ impl Interp {
                 cached_digits,
                 to_int,
                 by_int,
+                to_scaled,
+                by_scaled,
                 shape,
                 stepped,
             } => {
@@ -1861,7 +1892,7 @@ impl Interp {
                     && let Some(slot) = *at
                     && let Some(step) = *by_int
                     && let Some(bound) = *to_int
-                    && let ControlValue::Small(_) = current
+                    && let ControlValue::Small(running) = current
                 {
                     let mode = self.trace_mode();
                     // `FUZZ` sits here rather than in the conjunction above so
@@ -1903,7 +1934,9 @@ impl Interp {
                                 by.plain_integer(digits),
                                 "the loop's cached BY disagrees with DIGITS {digits}"
                             );
-                            *current = ControlValue::Small(sum);
+                            // In place: the arm is known, so there is no old
+                            // value to drop.
+                            *running = sum;
                             self.set_variable(frame, slot, handle);
                             return Ok(if step < 0 { sum >= bound } else { sum <= bound });
                         }
@@ -1930,8 +1963,43 @@ impl Interp {
                     let fuzz = self.activation().settings.fuzz();
                     if !mode.results && !mode.intermediates && fuzz == 0 {
                         let frame = self.activation().frame;
+                        // **The step, the bound test and the rendering on
+                        // machine integers**, while the variable still holds
+                        // what the last pass bound and each operation is one
+                        // `Scaled` answers exactly. Any of them declining
+                        // sends the pass down the `Number` route below.
                         if let Some(previous) = self.variable(frame, slot)
-                            && matches!(previous.decode(), Decoded::Heap { .. })
+                            && let ControlValue::Scaled { value, handle } = current
+                            && previous == *handle
+                            && let Some(step) = *by_scaled
+                            && let Some(limit) = *to_scaled
+                            && let Some(sum) = value.add(step, digits)
+                            && let Some(order) = sum.order(limit, digits)
+                            && let Some(next) = crate::value::scaled_handle(sum, digits)
+                        {
+                            debug_assert_eq!(
+                                Ok(sum.to_number()),
+                                value.to_number().add(by, digits),
+                                "a scaled step disagrees with the addition"
+                            );
+                            debug_assert_eq!(
+                                Ok(order != std::cmp::Ordering::Greater),
+                                numeric_less(bound, &sum.to_number(), digits, 0).map(|past| !past),
+                                "a scaled bound test disagrees with the comparison"
+                            );
+                            self.set_variable(frame, slot, next);
+                            *current = ControlValue::Scaled {
+                                value: sum,
+                                handle: next,
+                            };
+                            return Ok(if step.is_negative() {
+                                order != std::cmp::Ordering::Less
+                            } else {
+                                order != std::cmp::Ordering::Greater
+                            });
+                        }
+                        if let Some(previous) = self.variable(frame, slot)
+                            && matches!(previous.decode(), Decoded::Heap { .. } | Decoded::Text(_))
                             && let Some(sum) = self.controlled_step_wide(previous, by, digits)?
                         {
                             let stepped_value = ControlValue::Wide(sum);
@@ -1945,7 +2013,10 @@ impl Interp {
                             let form = self.activation().settings.form();
                             let handle = self.controlled_value_wide(&stepped_value, digits, form);
                             self.set_variable(frame, slot, handle);
-                            *current = stepped_value;
+                            let ControlValue::Wide(sum) = stepped_value else {
+                                unreachable!("built as Wide above");
+                            };
+                            *current = ControlValue::bound(sum, handle);
                             return Ok(within);
                         }
                     }
@@ -2081,6 +2152,12 @@ impl Interp {
                     self.trace_result(loop_indent, &rendered);
                 }
                 self.bind_control(code, *control, bind_indent, value, *at, shape)?;
+                if let ControlValue::Wide(number) = current
+                    && let Decoded::Text(_) = value.decode()
+                {
+                    let number = std::mem::replace(number, Number::zero());
+                    *current = ControlValue::bound(number, value);
+                }
                 // The control variable's own storage now roots `value`, and
                 // `previous` is dead, so the pass's frame goes here. The three
                 // `return Ok(false)` paths below end the loop, whose enclosing
@@ -2105,7 +2182,19 @@ impl Interp {
                                 current <= to
                             }
                         }
-                        _ => self.controlled_within_wide(current, to, by, digits, fuzz)?,
+                        _ => match (&*current, *to_scaled) {
+                            (ControlValue::Scaled { value, .. }, Some(limit))
+                                if fuzz == 0
+                                    && let Some(order) = value.order(limit, digits) =>
+                            {
+                                if by.signum() < 0 {
+                                    order != std::cmp::Ordering::Less
+                                } else {
+                                    order != std::cmp::Ordering::Greater
+                                }
+                            }
+                            _ => self.controlled_within_wide(current, to, by, digits, fuzz)?,
+                        },
                     };
                     if !within {
                         return Ok(false);
@@ -2596,8 +2685,8 @@ pub(super) fn numeric_less(
 /// do i = 1.23456 to 3; say i; numeric digits 9; end` is `1.23 / 2.23 / 3.23`, the header
 /// values having been rounded once, at entry, under digits 3, and staying that width even
 /// after digits widens.
-fn round_via_unary_plus(number: &Number, digits: u64) -> Result<Number, ArithError> {
-    Number::zero().add(number, digits)
+fn round_via_unary_plus(number: Number, digits: u64) -> Result<Number, ArithError> {
+    number.plus(digits)
 }
 
 /// Whether a failed advance is a message-driven loop's first test, which is

@@ -250,7 +250,7 @@ fn text_len_agrees_with_to_text() {
         },
     );
     values.push(bare);
-    let default = interp.number(n("1.50"), 9, Form::Scientific);
+    let default = interp.number(n("1.5000000"), 9, Form::Scientific);
     let defaulted = interp.alloc_with(
         BehaviourId::STEM,
         Body::Stem {
@@ -674,8 +674,8 @@ fn the_borrowing_accessor_answers_what_to_text_answers() {
     let short = interp.text(b"abc");
     let long = interp.text(&[b'z'; INLINE_BYTES + 40]);
     let small = interp.number(n("7"), 9, Form::Scientific);
-    let heap_number = interp.number(n("1.5"), 9, Form::Scientific);
-    let rendered_number = interp.number(n("2.5"), 9, Form::Scientific);
+    let heap_number = interp.number(n("1.2345678"), 9, Form::Scientific);
+    let rendered_number = interp.number(n("2.2345678"), 9, Form::Scientific);
     let _ = interp.to_text(rendered_number);
 
     let five = interp.number(n("5"), 9, Form::Scientific);
@@ -750,10 +750,11 @@ fn try_text_answers_only_where_the_bytes_already_exist() {
 
     // Cause two: a heap number's `text` cache is empty until something
     // fills it, and filling it is the `&mut` this pair exists to move.
-    let number = interp.number(n("1.5"), 9, Form::Scientific);
+    // Wider than a handle: a short fraction lives in the handle instead.
+    let number = interp.number(n("1.2345678"), 9, Form::Scientific);
     assert_eq!(interp.try_text(number), None);
     let _ = interp.to_text(number);
-    assert_eq!(interp.try_text(number), Some(&b"1.5"[..]));
+    assert_eq!(interp.try_text(number), Some(&b"1.2345678"[..]));
 
     // And a stem chasing a default is answered by the *default's* bytes,
     // which is what `to_text` has to copy and this does not -- so it
@@ -968,4 +969,30 @@ fn to_number_on_a_stem_aliasing_another_stem_chases_through_both() {
     let value = interp.to_number(b).unwrap();
     let sum = interp.number(value.add(&n("1"), 9).unwrap(), 9, Form::Scientific);
     assert_eq!(&*interp.to_text(sum), b"6");
+}
+
+/// A short fractional result is carried in its handle as the text it renders,
+/// and a wider one is still an arena number.
+#[test]
+fn a_short_fraction_is_its_rendering_in_the_handle() {
+    let mut interp = Interp::new();
+    for (value, digits, inline) in [
+        ("1.5", 9, true),
+        ("-0.25", 9, true),
+        ("3.0", 9, true),
+        ("123.456", 9, true),
+        ("1.2345678", 9, false),
+        ("0.0001", 1, false),
+        ("1E-5", 9, true),
+        ("1E-6", 9, false),
+    ] {
+        let handle = interp.number(n(value), digits, Form::Scientific);
+        let rendered = n(value).format_form(u64::from(digits), Form::Scientific);
+        assert_eq!(
+            matches!(handle.decode(), Decoded::Text(_)),
+            inline,
+            "{value} at DIGITS {digits}"
+        );
+        assert_eq!(interp.to_text(handle).as_ref(), rendered.as_bytes());
+    }
 }

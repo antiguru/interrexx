@@ -23,6 +23,17 @@ impl Number {
         self.add_signed(other, false, digits)
     }
 
+    /// Prefix `+`: `0 + self`. A value no longer than `digits` is its own
+    /// answer, range check aside, and is handed back without being copied.
+    #[inline]
+    pub fn plus(self, digits: u64) -> Result<Number, ArithError> {
+        if self.digits.len() as u64 <= digits {
+            self.check_range()?;
+            return Ok(self);
+        }
+        Number::zero().add(&self, digits)
+    }
+
     #[inline]
     pub fn sub(&self, other: &Number, digits: u64) -> Result<Number, ArithError> {
         self.add_signed(other, true, digits)

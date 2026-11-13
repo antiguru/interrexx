@@ -6,8 +6,20 @@ use interrexx_core::{
     BehaviourId, Body, BufferState, Bytes, Decoded, INLINE_BYTES, InlineText, NotNumeric, ObjRef,
     SMALL_INT_MAX, SMALL_INT_MIN, VarRef, VarRefHome,
 };
-use interrexx_num::{Form, Number};
+use interrexx_num::{Form, Number, Scaled};
 use std::borrow::Cow;
+
+/// What an operand is, as far as a comparison can tell without a [`Number`]
+/// built: see [`Interp::quick_operand`].
+pub(crate) enum QuickOperand {
+    /// A number whose digits fit a [`Scaled`], with its bytes where the
+    /// handle carries them.
+    Scaled(Scaled, Option<InlineText>),
+    /// Text carried in the handle that is not a number.
+    NotNumber(InlineText),
+    /// Anything else: the general path decides.
+    Unknown,
+}
 
 /// Parses already answered for values whose bytes live in the handle.
 pub(crate) struct TextNumbers {
@@ -15,17 +27,22 @@ pub(crate) struct TextNumbers {
     /// every one carries the inline-text tag, which `.nil` does not.
     keys: [ObjRef; TEXT_NUMBERS],
     parsed: [Result<Number, NotNumeric>; TEXT_NUMBERS],
+    /// Each `Ok` parse as a [`Scaled`], where its digits fit one.
+    scaled: [Option<Scaled>; TEXT_NUMBERS],
 }
 
 /// How many parses [`TextNumbers`] remembers. A power of two, so the slot is
-/// a mask rather than a division.
-const TEXT_NUMBERS: usize = 32;
+/// a mask rather than a division. Measured on `rexxcps`, whose loop compares
+/// a few dozen short values: at 32 one lookup in five missed and reparsed,
+/// and 64 retires 1.3% fewer instructions; 128 adds less than 0.1% more.
+const TEXT_NUMBERS: usize = 64;
 
 impl TextNumbers {
     pub(crate) fn new() -> Self {
         TextNumbers {
             keys: [ObjRef::NIL; TEXT_NUMBERS],
             parsed: std::array::from_fn(|_| Err(NotNumeric)),
+            scaled: [None; TEXT_NUMBERS],
         }
     }
 
@@ -220,6 +237,7 @@ impl Interp {
     }
 
     /// Creates a number value, applying the `SmallInt` admissibility rule.
+    #[inline]
     pub(crate) fn number(
         &mut self,
         value: Number,
@@ -229,6 +247,17 @@ impl Interp {
         if let Some(small) = small_int_for(&value, created_digits) {
             return ObjRef::small_int(small)
                 .expect("small_int_for already checked SMALL_INT_MIN/MAX");
+        }
+        // **A short fraction is its rendering**, carried in the handle: the
+        // bytes are exactly what the object would render, and they parse back
+        // to the same digits and exponent, so no operation can tell the two
+        // apart -- the position a tagged integer is in. The digit count is
+        // the test a wide result fails without leaving this function: the
+        // point takes one of the handle's bytes.
+        if value.digit_count() < interrexx_core::INLINE_TEXT
+            && let Some(handle) = short_fraction(&value, created_digits, created_form)
+        {
+            return handle;
         }
         self.alloc_with(
             BehaviourId::STRING,
@@ -1015,9 +1044,44 @@ impl Interp {
         // Stored before it is handed back, so the parse is moved into the
         // table and only the answer is copied -- filling it the other way
         // round would clone twice for one miss.
-        self.text_numbers.keys[slot] = value;
-        self.text_numbers.parsed[slot] = Number::parse_bytes(inline).ok_or(NotNumeric);
+        self.text_numbers_fill(slot, value, inline);
         self.text_numbers.parsed[slot].clone()
+    }
+
+    /// Parses `inline` into [`TextNumbers`]' `slot` for `value`.
+    fn text_numbers_fill(&mut self, slot: usize, value: ObjRef, inline: &[u8]) {
+        let parsed = Number::parse_bytes(inline).ok_or(NotNumeric);
+        self.text_numbers.keys[slot] = value;
+        self.text_numbers.scaled[slot] = parsed.as_ref().ok().and_then(Number::scaled);
+        self.text_numbers.parsed[slot] = parsed;
+    }
+
+    /// `value` as a comparison's operand where no [`Number`] needs building:
+    /// a tagged integer, or text in the handle whose parse [`TextNumbers`]
+    /// holds. The same answers `to_number` gives, read without a copy.
+    #[inline]
+    pub(crate) fn quick_operand(&mut self, value: ObjRef) -> QuickOperand {
+        match value.decode() {
+            Decoded::SmallInt(small) => match Scaled::from_i64(small) {
+                Some(scaled) => QuickOperand::Scaled(scaled, None),
+                None => QuickOperand::Unknown,
+            },
+            Decoded::Text(inline) => {
+                let slot = TextNumbers::slot(value);
+                if self.text_numbers.keys[slot] != value {
+                    self.text_numbers_fill(slot, value, &inline);
+                }
+                match (
+                    &self.text_numbers.parsed[slot],
+                    self.text_numbers.scaled[slot],
+                ) {
+                    (Err(_), _) => QuickOperand::NotNumber(inline),
+                    (Ok(_), Some(scaled)) => QuickOperand::Scaled(scaled, Some(inline)),
+                    (Ok(_), None) => QuickOperand::Unknown,
+                }
+            }
+            Decoded::Heap { .. } | Decoded::Nil => QuickOperand::Unknown,
+        }
     }
 
     /// [`to_number`]'s arm for a value that lives in the arena.
@@ -1670,6 +1734,38 @@ impl Rendered {
                 .expect("`render` carried no bytes, so it left them borrowable"),
         }
     }
+}
+
+/// [`Interp::number`]'s inline handle for a value with a fractional part
+/// whose rendering fits the handle, or `None`.
+#[inline(never)]
+fn short_fraction(value: &Number, created_digits: u32, created_form: Form) -> Option<ObjRef> {
+    let mut short = [0u8; interrexx_core::INLINE_TEXT];
+    let length = value.write_short_fraction(u64::from(created_digits), &mut short)?;
+    debug_assert_eq!(
+        &short[..length],
+        value
+            .format_form(u64::from(created_digits), created_form)
+            .as_bytes()
+    );
+    ObjRef::inline_text(&short[..length])
+}
+
+/// The handle [`Interp::number`] makes of `value` at `digits` where that is a
+/// tagged integer or a short fraction's inline rendering, built from the
+/// scaled parts; `None` where it would be anything else.
+pub(crate) fn scaled_handle(value: Scaled, digits: u64) -> Option<ObjRef> {
+    let (mantissa, exponent) = value.parts();
+    if exponent == 0 {
+        // A value of at most DIGITS digits with no exponent renders as the
+        // integer it is.
+        return (digits >= u64::from(value.digit_count()))
+            .then(|| ObjRef::small_int(mantissa))
+            .flatten();
+    }
+    let mut short = [0u8; interrexx_core::INLINE_TEXT];
+    let length = value.write_short_fraction(digits, &mut short)?;
+    ObjRef::inline_text(&short[..length])
 }
 
 fn small_int_for(value: &Number, created_digits: u32) -> Option<i64> {

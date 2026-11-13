@@ -40,7 +40,7 @@ impl CompareOp {
     /// Turns an already-computed `Ordering` into the boolean this operator
     /// asks for. Shared by both families: numeric and strict comparisons
     /// differ in how the `Ordering` is produced, not in how it is read.
-    fn holds(self, ord: Ordering) -> bool {
+    pub(crate) fn holds(self, ord: Ordering) -> bool {
         use CompareOp::*;
         match self {
             Equal | StrictEqual => ord.is_eq(),
