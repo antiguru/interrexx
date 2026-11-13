@@ -3629,9 +3629,10 @@ impl Interp {
         if !args.is_empty() {
             return Err(Raised::too_many_method_arguments(0).into());
         }
-        let variable = self.accessor_variable(generated)?;
-        let owner = self.pool_owner(receiver)?;
-        Ok(Some(self.pool_value(owner, resolution.scope, &variable)))
+        self.with_accessor_variable(generated, |interp, variable| {
+            let owner = interp.pool_owner(receiver)?;
+            Ok(Some(interp.pool_value(owner, resolution.scope, variable)))
+        })
     }
 
     /// A generated setter: assigns the attribute's variable in the declaring
@@ -3650,10 +3651,11 @@ impl Interp {
         let Some(Some(value)) = args.first().copied() else {
             return Err(Raised::missing_method_argument(1).into());
         };
-        let variable = self.accessor_variable(generated)?;
-        let owner = self.pool_owner(receiver)?;
-        self.set_pool_value(owner, resolution.scope, &variable, value);
-        Ok(None)
+        self.with_accessor_variable(generated, |interp, variable| {
+            let owner = interp.pool_owner(receiver)?;
+            interp.set_pool_value(owner, resolution.scope, variable, value);
+            Ok(None)
+        })
     }
 
     /// A `::CONSTANT` accessor: the value the resolve-constants pass recorded
@@ -3743,21 +3745,27 @@ impl Interp {
         Ok(program.symbols.name(symbol).as_bytes().into())
     }
 
-    /// The variable a generated accessor addresses.
-    fn accessor_variable(&self, generated: crate::GeneratedMethod) -> Result<Box<[u8]>, Failure> {
+    /// `run` over the variable a generated accessor addresses.
+    fn with_accessor_variable<R>(
+        &mut self,
+        generated: crate::GeneratedMethod,
+        run: impl FnOnce(&mut Interp, &[u8]) -> Result<R, Failure>,
+    ) -> Result<R, Failure> {
         // `get` rather than an index, and `None` rather than a panic, for the
-        // reason `Interp::begin_method`'s own reads carry.
-        let Some(directive) = self
-            .programs
-            .get(generated.program)
-            .and_then(|program| program.directives.get(generated.directive))
+        // reason `Interp::begin_method`'s own reads carry. The program is
+        // held by a count rather than the name copied out, so that `run` has
+        // the interpreter while the name stays borrowed.
+        let Some(program) = self.programs.get(generated.program).cloned() else {
+            return Err(Loud::missing_body().into());
+        };
+        let Some(variable) = program
+            .directives
+            .get(generated.directive)
+            .and_then(|directive| crate::accessor_variable(&directive.kind))
         else {
             return Err(Loud::missing_body().into());
         };
-        let Some(variable) = crate::accessor_variable(&directive.kind) else {
-            return Err(Loud::missing_body().into());
-        };
-        Ok(variable.into())
+        run(self, variable)
     }
 
     /// Closes each of `streams`, which a method activation opened by name and
