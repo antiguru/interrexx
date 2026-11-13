@@ -66,8 +66,8 @@ fn woken(interp: &mut Interp, _receiver: ObjRef) -> Result<Option<ObjRef>, Failu
     Ok(Some(crate::eval::logical(answer)))
 }
 
-/// `MutexSemaphore~request(timeout)`, the method `ACQUIRE`: the lock where it
-/// is free or the activity's own, `0` for a timeout of zero, else parked until
+/// `MutexSemaphore~acquire(timeout)`: `.true` where the lock is free or the
+/// activity's own, `.false` for a timeout of zero, else parked until
 /// a release hands it over or the timeout.
 pub(super) fn native_mutex_acquire(
     interp: &mut Interp,
@@ -85,9 +85,7 @@ pub(super) fn native_mutex_acquire(
             return interp.park_native(ParkReason::Semaphore(wait), woken, receiver);
         }
     };
-    Ok(NativeStarted::Ran(Some(
-        interp.counted(usize::from(acquired)),
-    )))
+    Ok(NativeStarted::Ran(Some(crate::eval::logical(acquired))))
 }
 
 pub(super) fn native_mutex_release(

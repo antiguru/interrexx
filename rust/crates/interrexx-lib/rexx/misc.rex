@@ -76,8 +76,8 @@
   forward message 'GETPROPERTY' continue
   value = result
   if value~isInstanceOf(.string) then do
-    if value == '1' | value == 'true' then return 1
-    if value == '0' | value == 'false' then return 0
+    if value == '1' | value == 'true' then return .true
+    if value == '0' | value == 'false' then return .false
   end
   raise syntax 34.904 array (value)
 

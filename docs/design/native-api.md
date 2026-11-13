@@ -39,8 +39,9 @@ statics of `unsafe extern "C" fn` slots.
   reference table, not an address. The table is released when the activation ends.
 * A handle that outlives its activation is a lookup miss, never another object: heap slots carry a
   generation that moves on when a slot is reused.
-* `True()` and `False()` are the handles of `.true` and `.false`, and a boolean answered by any
-  message is one of those two handles, so an extension may compare a result to them by handle.
+* `True()` and `False()` are the handles of `.true` and `.false`, and a boolean answered by a built-in
+  class or the interpreter is one of those two handles, so an extension may compare such a
+  result to them by handle. A user method that does `return 1` answers a number, as on ooRexx.
 * `RequestGlobalReference` holds an object in a separate table until `ReleaseGlobalReference`.
 * Memory lent to a native call (a `CSTRING` argument, `BufferData`, `MutableBufferData`) stays
   valid until that call completes. A buffer that grows during the call gets new storage, and the

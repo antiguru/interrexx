@@ -37,19 +37,20 @@ eval
 true
 false
 
-# semaphore.rs: EventSemaphore, MutexSemaphore. `request(0)` is answered as a
-# number, so that site keeps `counted`.
+# semaphore.rs: EventSemaphore, MutexSemaphore.
 eval
 .EventSemaphore~new~isPosted
 .EventSemaphore~new~wait(0)
-.MutexSemaphore~new~request(0)
+.MutexSemaphore~new~acquire(0)
+.MutexSemaphore~new~acquire(0.05)
 .MutexSemaphore~new~release
 .EventSemaphore~new~~post~isPosted
 .EventSemaphore~new~~post~wait(0)
 ----
 false
 false
-other
+true
+true
 false
 true
 true
@@ -113,8 +114,8 @@ eval
 ----
 true
 
-# regexp.rs: RegularExpression~match answers a position count (a number, not
-# a boolean); that site keeps `counted`.
+# regexp.rs: RegularExpression~match answers 1 or 0 as a number, not a
+# boolean; that site keeps `counted`.
 eval_regexp
 .RegularExpression~new~~parse('a')~match('a')
 ----
@@ -178,4 +179,99 @@ rc 0
 [stdout]
 yes
 2
+[stderr]
+
+# semaphore.rs: a mutex another activity holds, and an acquire that times out.
+program
+m=.MutexSemaphore~new
+o=.holder~new
+o~hold(m)
+call syssleep 0.2
+call show m~acquire(0.05)
+exit
+show: procedure
+  use arg v
+  h = v~identityHash
+  if h == .true~identityHash then say 'true'
+  else if h == .false~identityHash then say 'false'
+  else say 'other'
+  return
+::class holder
+::method hold
+  use arg m
+  reply
+  m~acquire
+  call syssleep 1
+  m~release
+----
+rc 0
+[stdout]
+false
+[stderr]
+
+# Library methods written in Rexx: Properties~getLogical, Collection~subset
+# and ~equivalent.
+eval
+.properties~new~~setProperty('a','true')~getLogical('a')
+.properties~new~~setProperty('a','0')~getLogical('a')
+.directory~new~subset(.directory~of(('a',1)))
+.directory~of(('a',1))~subset(.directory~new)
+.directory~of(('a',1))~subset(.directory~of(('a',1)))
+.directory~of(('a',1))~subset(.directory~of(('a',2)))
+.set~of(1)~equivalent(.set~of(1))
+.set~of(1)~equivalent(.set~of(1,2))
+.set~of(1)~equivalent(.set~of(2))
+----
+true
+false
+true
+false
+true
+false
+true
+false
+false
+
+# File~makeDirs: a new path, then the same path, which exists.
+program
+call show .file~new('d1/d2')~makeDirs
+call show .file~new('d1/d2')~makeDirs
+exit
+show: procedure
+  use arg v
+  h = v~identityHash
+  if h == .true~identityHash then say 'true'
+  else if h == .false~identityHash then say 'false'
+  else say 'other'
+  return
+----
+rc 0
+[stdout]
+true
+false
+[stderr]
+
+# Orderable~= and ~\= answer for `.nil` without comparing.
+program
+o=.foo~new
+call show o~'='(.nil)
+call show o~'=='(.nil)
+call show o~'\='(.nil)
+call show o~'\=='(.nil)
+exit
+show: procedure
+  use arg v
+  h = v~identityHash
+  if h == .true~identityHash then say 'true'
+  else if h == .false~identityHash then say 'false'
+  else say 'other'
+  return
+::class foo inherit Orderable
+----
+rc 0
+[stdout]
+other
+other
+other
+other
 [stderr]

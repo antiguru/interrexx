@@ -285,18 +285,18 @@ asarray: procedure
   if receiver~class \== .Array then raise syntax 98.913 array('object')
   checked = ''
   last = receiver~last
-  if last == .nil then return 1
+  if last == .nil then return .true
   do i = 1 to last
     item = receiver~at(i)
     checked = require(answer, 'HASITEM', checked)
-    if \ answer~hasItem(item) then return 0
+    if \ answer~hasItem(item) then return .false
     if map & \ setlike then do
       mine = self[item]
       theirs = other[item]
-      if mine \= theirs, 1 then return 0
+      if mine \= theirs, 1 then return .false
     end
   end
-  return 1
+  return .true
 
 require: procedure
   use arg object, name, checked
@@ -317,7 +317,7 @@ require: procedure
   mine = self~items
   theirs = other~items
   if mine = theirs, 1 then nop
-  else return 0
+  else return .false
   answer = self~subset(other)
   if answer, 1 then nop
   return answer
