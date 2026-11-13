@@ -247,10 +247,6 @@ call try "SysCloseMutexSem()"
 call try "SysCloseMutexSem(h, 1)"
 call try "SysCloseMutexSem('x')"
 call try "SysReleaseMutexSem('1.0000000000000000001')"
-say SysRequestMutexSem(' ' || h || ' ', 20) SysReleaseMutexSem('+' || h)
-say SysRequestMutexSem(h || '.0', 20) SysReleaseMutexSem(.mutablebuffer~new(h))
-say SysRequestMutexSem(h || '.00000000000000000001', 20) SysReleaseMutexSem(h)
-say SysCloseMutexSem(' ' || h || ' ')
 exit
 try:
   signal on syntax name e
@@ -274,10 +270,6 @@ e: say condition('o')~code
 88.922
 88.907
 88.907
-0 0
-0 0
-0 0
-0
 ```
 
 ```rexx
@@ -457,4 +449,23 @@ say SysRequestMutexSem(12345, 10) SysReleaseMutexSem(12345) SysCloseMutexSem(123
 
 ```output
 6 6 6
+```
+
+A handle that is spelled again, with blanks, a sign or a fraction of zeros,
+names no semaphore; a string value that is exactly the handle does.
+
+```rexx
+numeric digits 20
+h = SysCreateMutexSem('')
+say SysRequestMutexSem(' ' || h || ' ', 20) SysReleaseMutexSem('+' || h)
+say SysRequestMutexSem(h || '.0', 20) SysReleaseMutexSem(.mutablebuffer~new(h))
+say SysRequestMutexSem(h || '.00000000000000000001', 20) SysReleaseMutexSem(h)
+say SysCloseMutexSem(' ' || h || ' ')
+```
+
+```output
+6 6
+6 0
+6 0
+6
 ```
