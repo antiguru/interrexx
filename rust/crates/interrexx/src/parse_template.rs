@@ -402,8 +402,10 @@ impl Interp {
     /// `value` as a parse string: its own bytes where nothing can move them
     /// out from under the walk, and a copy in a pool buffer where they can.
     ///
-    /// `Body::Text`'s bytes are written once, by the `alloc` that builds the
-    /// object, and no other body in the value model holds bytes that are
+    /// `Body::Text`'s bytes are written by the `alloc` that builds the object
+    /// and otherwise only by `Interp::concat_onto`, which appends to a string
+    /// that nothing but its own chain's register holds -- never one a `PARSE`
+    /// has in hand. No other body in the value model holds bytes that are
     /// immutable for a whole clause -- a `MutableBuffer`'s contents are not.
     /// A folding `PARSE` copies a string the fold would change, because it
     /// rewrites the parse string in place.

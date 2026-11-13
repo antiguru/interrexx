@@ -14,8 +14,9 @@ pub const INLINE_BYTES: usize = 54;
 /// produced them.
 const _: () = assert!(size_of::<Bytes>() <= 56);
 
-/// An immutable byte string, stored inline when it is at most
-/// [`INLINE_BYTES`] long.
+/// A byte string, stored inline when it is at most [`INLINE_BYTES`] long.
+/// Immutable but for [`Bytes::extend_from_slice`], whose doc says when that
+/// is allowed.
 #[derive(Clone)]
 pub struct Bytes(Repr);
 
