@@ -338,6 +338,42 @@ fn long_divide(n: &[u8], d: &[u8], want: usize) -> (Digits, i32) {
 /// division: one hardware divide per quotient digit, and no working storage
 /// at all.
 fn short_divide(n: &[u8], divisor: u64, divisor_len: usize, want: usize) -> (Digits, i32) {
+    // **A quotient of a working length that fits the stack is written there
+    // and built once**, where pushing digit by digit re-tests the storage
+    // arm and the capacity per digit. The loop is the one below.
+    const STACK_QUOTIENT: usize = 64;
+    if want <= STACK_QUOTIENT {
+        let mut quotient = [0u8; STACK_QUOTIENT];
+        let mut length = 0usize;
+        let mut remainder = 0u64;
+        let mut shift = 0i32;
+        let mut i = 0usize;
+        let exhausted = n.len().saturating_add(want).saturating_add(divisor_len);
+        while length < want {
+            let next = if i < n.len() {
+                n[i]
+            } else {
+                shift += 1;
+                0
+            };
+            i += 1;
+            remainder = remainder * 10 + u64::from(next);
+            let digit = (remainder / divisor) as u8;
+            remainder %= divisor;
+            if length == 0 && digit == 0 {
+                if i > exhausted {
+                    break;
+                }
+                continue;
+            }
+            quotient[length] = digit;
+            length += 1;
+            if remainder == 0 && i >= n.len() {
+                break;
+            }
+        }
+        return (Digits::from_slice(&quotient[..length]), shift);
+    }
     let mut remainder = 0u64;
     let mut q = Digits::new();
     let mut shift = 0i32;
