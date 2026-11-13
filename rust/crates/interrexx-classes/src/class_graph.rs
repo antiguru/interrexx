@@ -986,11 +986,14 @@ impl ClassGraph {
         if cascade {
             self.inputs.touch(class);
         }
+        let uninit = cascade && names.iter().any(|name| name.eq_ignore_ascii_case("UNINIT"));
         // A table may name one method twice; each name is recomputed once.
-        let mut keys: Vec<String> = names.iter().map(|name| name.to_ascii_uppercase()).collect();
-        keys.sort_unstable();
-        keys.dedup();
-        let uninit = cascade && keys.iter().any(|key| key == "UNINIT");
+        let mut keys: Vec<String> = Vec::new();
+        if kept {
+            keys = names.iter().map(|name| name.to_ascii_uppercase()).collect();
+            keys.sort_unstable();
+            keys.dedup();
+        }
         let old = self.classes[&class].instance_behaviour;
         let current = kept && self.built_from_current(old, class, class, prior);
         self.copy_instance_behaviour(class);
@@ -1017,9 +1020,12 @@ impl ClassGraph {
     /// Whether `class`'s own instance dictionary holds an entry under `name`,
     /// tombstone included.
     fn has_own_entry(&self, class: ObjRef, name: &str) -> bool {
-        self.classes[&class]
-            .own_instance_methods
-            .has_entry(&name.to_ascii_uppercase())
+        let own = &self.classes[&class].own_instance_methods;
+        if name.bytes().any(|b| b.is_ascii_lowercase()) {
+            own.has_entry(&name.to_ascii_uppercase())
+        } else {
+            own.has_entry(name)
+        }
     }
 
     /// The update of a subclass's instance behaviour, and its subclasses',
