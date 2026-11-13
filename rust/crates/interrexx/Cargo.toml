@@ -122,12 +122,19 @@ path = "tests/support/bounded_run.rs"
 # The release profile keeps full debug info for profiling. `dbgsym` moves it
 # into a separate `interrexx-dbgsym` package, so the main package ships
 # stripped binaries.
+#
+# The commands and library names are ooRexx's own, and ooRexx's Debian package
+# is named `oorexx`. This package takes its place rather than installing beside
+# it.
 [package.metadata.deb]
 maintainer = "Moritz Hoffmann <antiguru@gmail.com>"
 copyright = "2026, Moritz Hoffmann"
 section = "interpreters"
 priority = "optional"
 depends = "$auto"
+conflicts = "oorexx"
+replaces = "oorexx"
+provides = "oorexx"
 dbgsym = true
 extended-description = """\
 interrexx is a Rust implementation of the Open Object Rexx language. \

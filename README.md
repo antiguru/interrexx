@@ -27,7 +27,7 @@ cargo deb -p interrexx
 sudo apt install ./target/debian/interrexx_*.deb
 ```
 
-The package installs `rexx`, `rexxc`, `rexx-ir`, `rxapi`, `rxqueue` and `rxsubcom` into `/usr/bin` and `librexx.so` and `librexxapi.so`, with their `.so.4` SONAME links, into `/usr/lib`. Debug symbols go into a separate `interrexx-dbgsym_*.ddeb` package beside it. The `[package.metadata.deb]` table in `rust/crates/interrexx/Cargo.toml` lists the contents.
+The package installs `rexx`, `rexxc`, `rexx-ir`, `rxapi`, `rxqueue` and `rxsubcom` into `/usr/bin` and `librexx.so` and `librexxapi.so`, with their `.so.4` SONAME links, into `/usr/lib`. Debug symbols go into a separate `interrexx-dbgsym_*.ddeb` package beside it. It replaces an installed `oorexx` package, whose commands and library names it shares. The `[package.metadata.deb]` table in `rust/crates/interrexx/Cargo.toml` lists the contents.
 
 ## Testing
 
