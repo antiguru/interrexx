@@ -3995,8 +3995,8 @@ fn standard_stream_name(name: &[u8], input: bool) -> Option<&'static [u8]> {
 /// is simple.
 fn simple_slot(code: &Code<'_>, id: SymbolId) -> Option<usize> {
     let plan = code.plan?;
-    if plan.compounds.get(id.index())?.is_some() {
+    if plan.compounds.get(id)?.is_some() {
         return None;
     }
-    code.slots.get(id.index()).copied().flatten()
+    plan.slot_for_symbol(id)
 }

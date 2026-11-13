@@ -145,7 +145,13 @@ impl Interp {
                     return Ok(self.literal(code.symbols.name(*id).as_bytes()));
                 }
                 ExprKind::Variable(id) => {
-                    return self.read_symbol(code, crate::eval::SymbolRead::Simple, *id, None);
+                    return self.read_symbol(
+                        code,
+                        None,
+                        crate::eval::SymbolRead::Simple,
+                        *id,
+                        None,
+                    );
                 }
                 _ => {}
             }
