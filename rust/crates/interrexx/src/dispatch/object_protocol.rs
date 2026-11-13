@@ -768,10 +768,7 @@ fn reset_copied_message(interp: &mut Interp, copy: ObjRef) {
 /// The pool entries a collection's CONTENTS live in, as (scope class, name).
 pub(super) const COLLECTION_STORES: &[(&str, &[u8])] = &[
     ("Array", b"ITEMS"),
-    ("List", b"ITEMS"),
-    ("List", b"HANDLES"),
-    ("List", b"FREE"),
-    ("List", b"POS"),
+    ("List", b"CHAIN"),
     ("Table", b"HASHINDEXES"),
     ("Table", b"HASHITEMS"),
     ("Table", b"HASHNEXT"),

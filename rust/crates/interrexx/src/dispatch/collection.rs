@@ -13,7 +13,7 @@ use interrexx_parse::Operator;
 // `Queue`'s.
 pub(super) mod list;
 use super::array::surface::native_array_delete;
-use list::{is_list, list_insert_at, list_state};
+use list::{is_list, list_append};
 
 // `Queue`'s primitive methods, chained into `ObjectModel::build` ahead of
 // `Array`'s.
@@ -452,9 +452,7 @@ pub(super) fn native_collection_of(
     let list = is_list(interp, object);
     for argument in args.iter().flatten() {
         if list {
-            let (items, _, _) = list_state(interp, object)?;
-            let at = array_slots(interp, items)?.len();
-            list_insert_at(interp, object, at, Some(*argument))?;
+            list_append(interp, object, Some(*argument))?;
         } else {
             append_slot(interp, object, *argument)?;
         }

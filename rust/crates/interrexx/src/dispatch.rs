@@ -1350,6 +1350,9 @@ pub(crate) struct ObjectModel {
     /// The scope [`construct::WEAK_REFERENT`] is bound in, so that a subclass's instance
     /// keeps its referent where `WeakReference~value` looks for it.
     weak_reference: ObjRef,
+    /// The scope a `List`'s chain is bound under, which every `List`
+    /// method reaches.
+    list: ObjRef,
     /// The class `.Context~stackFrames` builds its elements from. Reached
     /// here rather than by name at every build, exactly as `context` beside
     /// it is.
@@ -1553,6 +1556,7 @@ impl ObjectModel {
         let weak_reference = classes
             .lookup("WeakReference")
             .expect("WeakReference is a native class");
+        let list = classes.lookup("List").expect("List is a native class");
         let stack_frame = classes
             .lookup("StackFrame")
             .expect("StackFrame is a native class");
@@ -1586,6 +1590,7 @@ impl ObjectModel {
             variable_reference,
             stem,
             weak_reference,
+            list,
             stack_frame,
             store_holders,
             nil_behaviour,

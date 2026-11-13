@@ -515,6 +515,7 @@ lang/nil_comparison.rex
 lang/list_index_conversion.rex
 lang/list_empty_entry.rex
 lang/list_empty_and_section.rex
+lang/list_chain_order.rex
 lang/supplier_bounds.rex
 lang/collection_construction.rex
 lang/sort_comparisons.rex

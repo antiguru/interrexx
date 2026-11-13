@@ -72,6 +72,9 @@ pub static PROGRAMS: &[&str] = &[
     // `Class~define` with instances live under each definition, which
     // retires behaviours a collection then frees.
     "define",
+    // `List` insertion, removal and stepping at the ends and after a handle
+    // in the middle of a long list, each constant time per operation.
+    "listops",
 ];
 
 /// Programs in `bench-programs/` that the criterion harness deliberately does
