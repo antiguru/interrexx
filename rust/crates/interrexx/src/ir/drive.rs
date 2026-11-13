@@ -3621,6 +3621,12 @@ impl Interp {
         clippy::too_many_arguments,
         reason = "one caller, and every argument is a value it already holds"
     )]
+    // Bundling the range-invariant arguments into a struct was tried and
+    // rejected (58fa69950). It does what it promises to `instructions:u` -- 6
+    // fewer per range entry, 1 fewer per `Op::Generic` clause -- and on
+    // `cycles:u` it moved `bench-programs/emptyloop.rex` the wrong way: the
+    // compiled arm from 8.63 to 9.12 billion cycles, while the tree-walking arm
+    // then beside it, which never entered this function, went from 8.61 to 7.96.
     // Reproduced across two sittings and two builds, with branch misses at
     // 70,000 out of 6.3 billion branches either way, so it is not prediction.
     // No mechanism below "the layout changed" was found, and a change with that
