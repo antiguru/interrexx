@@ -57,6 +57,40 @@ impl Bytes {
         }
     }
 
+    /// `left`, then `separator` if there is one, then `right`, inline when the
+    /// whole fits: a concatenation's result written straight into its body
+    /// rather than joined somewhere else and copied in.
+    pub fn joined(left: &[u8], separator: Option<u8>, right: &[u8]) -> Bytes {
+        let total = left.len() + usize::from(separator.is_some()) + right.len();
+        if total > INLINE_BYTES {
+            let mut joined = Vec::with_capacity(total);
+            joined.extend_from_slice(left);
+            joined.extend(separator);
+            joined.extend_from_slice(right);
+            return Bytes(Repr::Heap(joined));
+        }
+        let mut buf = [MaybeUninit::<u8>::uninit(); INLINE_BYTES];
+        for (slot, byte) in buf.iter_mut().zip(left) {
+            slot.write(*byte);
+        }
+        let mut at = left.len();
+        if let Some(byte) = separator {
+            buf[at].write(byte);
+            at += 1;
+        }
+        for (slot, byte) in buf[at..].iter_mut().zip(right) {
+            slot.write(*byte);
+        }
+        #[cfg(debug_assertions)]
+        for slot in &mut buf[total..] {
+            slot.write(POISON);
+        }
+        Bytes(Repr::Inline {
+            len: total as u8,
+            buf,
+        })
+    }
+
     /// [`from_slice`], for a caller that already owns the bytes.
     pub fn from_vec(source: Vec<u8>) -> Bytes {
         if source.len() <= INLINE_BYTES {
@@ -77,8 +111,8 @@ impl Bytes {
                 // inside the array, stated where the `unsafe` can see it
                 // rather than left to `len`'s type.
                 debug_assert!(len <= INLINE_BYTES, "an inline length past the buffer");
-                // SAFETY: `from_slice` is the only constructor of
-                // `Repr::Inline` and it writes exactly `len` bytes before
+                // SAFETY: `from_slice` and `joined` are the only constructors
+                // of `Repr::Inline`, and each writes exactly `len` bytes before
                 // setting `len`, so the first `len` elements of `buf` are
                 // initialised. `len` is a `u8` and `INLINE_BYTES` is 54, and
                 // the assertion above holds it inside the array on every debug
@@ -178,6 +212,38 @@ mod tests {
                     grown.heap_len(),
                     if grown.is_inline() { 0 } else { joined.len() }
                 );
+            }
+        }
+    }
+
+    /// A join answers the bytes of the concatenation and takes the arm its
+    /// whole length asks for, with and without the separator, on both sides
+    /// of the capacity and exactly at it.
+    #[test]
+    fn joining_answers_the_concatenation_on_the_arm_its_length_asks_for() {
+        let lengths = [0, 1, 7, 26, INLINE_BYTES - 1, INLINE_BYTES, 60];
+        for left in lengths {
+            for right in lengths {
+                for separator in [None, Some(b' ')] {
+                    let a: Vec<u8> = (0..left).map(|i| (i % 251) as u8).collect();
+                    let b: Vec<u8> = (0..right).map(|i| (i % 13) as u8 + 100).collect();
+                    let expected = [&a[..], separator.as_slice(), &b[..]].concat();
+                    let joined = Bytes::joined(&a, separator, &b);
+                    let shape = format!("{left} {separator:?} {right}");
+                    assert_eq!(joined.as_slice(), &expected[..], "{shape}");
+                    assert_eq!(
+                        joined.is_inline(),
+                        expected.len() <= INLINE_BYTES,
+                        "{shape}"
+                    );
+                    #[cfg(debug_assertions)]
+                    if joined.is_inline() {
+                        assert!(
+                            !joined.as_slice().contains(&POISON),
+                            "a read went past len at {shape}"
+                        );
+                    }
+                }
             }
         }
     }

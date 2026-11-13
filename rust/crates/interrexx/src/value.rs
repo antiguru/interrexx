@@ -1838,6 +1838,60 @@ impl Rendered {
     }
 }
 
+/// Where [`Interp::plain_bytes`] puts an operand's bytes when they live in
+/// the handle rather than in the heap.
+pub(crate) struct PieceSlot {
+    inline: Option<InlineText>,
+    digits: [u8; TEXT_SCRATCH],
+}
+
+impl PieceSlot {
+    #[inline]
+    pub(crate) fn new() -> PieceSlot {
+        PieceSlot {
+            inline: None,
+            digits: [0; TEXT_SCRATCH],
+        }
+    }
+
+    /// The bytes of an inline string or a tagged integer, which live in the
+    /// handle and so in this slot rather than anywhere in the heap, or `None`
+    /// for any other value.
+    #[inline]
+    pub(crate) fn handle_bytes(&mut self, value: ObjRef) -> Option<&[u8]> {
+        match value.decode() {
+            Decoded::Text(inline) => Some(self.inline.insert(inline)),
+            Decoded::SmallInt(int) => {
+                let at = write_small_int(&mut self.digits, int);
+                Some(&self.digits[at..])
+            }
+            Decoded::Heap { .. } | Decoded::Nil => None,
+        }
+    }
+}
+
+impl Interp {
+    /// The bytes of a string or a tagged integer, which is what nearly every
+    /// concatenation operand is, or `None` for any other value. These are the
+    /// bytes [`Interp::render`] answers for the same value; it reaches a heap
+    /// string's bytes once to decide they are borrowable and again when they
+    /// are read, where this reaches them once.
+    #[inline]
+    pub(crate) fn plain_bytes<'a>(
+        &'a self,
+        value: ObjRef,
+        slot: &'a mut PieceSlot,
+    ) -> Option<&'a [u8]> {
+        match value.decode() {
+            Decoded::Heap { .. } => match self.heap.get(value).map(|object| &object.body) {
+                Some(Body::Text { bytes, .. }) => Some(bytes),
+                _ => None,
+            },
+            _ => slot.handle_bytes(value),
+        }
+    }
+}
+
 /// [`Interp::number`]'s inline handle for a value with a fractional part
 /// whose rendering fits the handle, or `None`.
 #[inline(never)]
