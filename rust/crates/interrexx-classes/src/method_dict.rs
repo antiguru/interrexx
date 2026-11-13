@@ -80,6 +80,12 @@ pub struct MethodDict {
     /// itself is the scopes folded in before it, the part of this list ahead
     /// of it, so its position is all a scope-override send needs.
     scope_list: Vec<ObjRef>,
+    /// At least the largest method any entry names, and `None` while none
+    /// has been entered since the dictionary was built or cleared: an upper
+    /// bound, kept by every write that enters a method and never lowered by
+    /// one that takes a method out, so a search for a method newer than it
+    /// can pass the dictionary by without reading its entries.
+    newest: Option<MethodId>,
 }
 
 impl MethodDict {
@@ -134,6 +140,7 @@ impl MethodDict {
 
     /// [`Self::add_method`] for a key already upper case.
     fn add_method_key(&mut self, key: &Name, scope: ObjRef, method: MethodId) {
+        self.note_method(method);
         let slot = MethodSlot::Defined { scope, method };
         let Some(list) = self.add_slot(key, slot) else {
             return;
@@ -172,6 +179,7 @@ impl MethodDict {
     /// the replaced name may have been inherited from another class, so any
     /// existing method by that name is completely removed.
     pub fn replace_method(&mut self, name: &str, scope: ObjRef, method: MethodId) {
+        self.note_method(method);
         self.entries.insert(
             Self::key(name),
             Slots::One(MethodSlot::Defined { scope, method }),
@@ -191,7 +199,23 @@ impl MethodDict {
                 found = true;
             }
         }
+        if found {
+            self.note_method(new);
+        }
         found
+    }
+
+    /// Raise [`Self::newest`] to cover `method`.
+    fn note_method(&mut self, method: MethodId) {
+        if self.newest.is_none_or(|newest| newest.0 < method.0) {
+            self.newest = Some(method);
+        }
+    }
+
+    /// No entry names a method larger than this, and none names any method
+    /// where it is `None`; see the field.
+    pub fn newest(&self) -> Option<MethodId> {
+        self.newest
     }
 
     /// Add a tombstone under `name` as its highest-priority entry, leaving
@@ -292,6 +316,66 @@ impl MethodDict {
                 }
             }
         }
+    }
+
+    /// [`Self::merge_methods`] for the names in `keys` alone, each already
+    /// upper case: what the merge makes of every other name is left as it
+    /// stands, which is what a cascade that knows only `keys` changed needs.
+    pub fn merge_methods_named(&mut self, source: &MethodDict, keys: &[String]) {
+        for key in keys {
+            let Some((name, list)) = source.entries.get_key_value(key.as_str()) else {
+                continue;
+            };
+            for entry in list.as_slice().iter().rev() {
+                match *entry {
+                    MethodSlot::Defined { scope, method } => {
+                        self.add_method_key(name, scope, method);
+                    }
+                    MethodSlot::Hidden | MethodSlot::Withdrawn => self.add_hidden_key(name),
+                }
+            }
+        }
+    }
+
+    /// What `from` holds under `key` (upper case), moved here in place of
+    /// what was there, or no entry under it where `from` holds none.
+    pub fn adopt_entry(&mut self, from: &mut MethodDict, key: &str) {
+        let Some((name, list)) = from.entries.remove_entry(key) else {
+            self.entries.remove(key);
+            return;
+        };
+        for slot in list.as_slice() {
+            if let MethodSlot::Defined { method, .. } = *slot {
+                self.note_method(method);
+            }
+        }
+        match self.entries.get_mut(key) {
+            Some(held) => *held = list,
+            None => {
+                self.entries.insert(name, list);
+            }
+        }
+    }
+
+    /// Whether `key` (upper case) holds an entry, tombstone included.
+    pub fn has_entry(&self, key: &str) -> bool {
+        self.entries.contains_key(key)
+    }
+
+    /// Whether the two hold the same entries under every name and the same
+    /// scopes, and list them in the same order, which `Class~methods`
+    /// answers in: what a cascade over the same inputs in the same order
+    /// makes.
+    #[cfg(debug_assertions)]
+    pub fn same_contents(&self, other: &MethodDict) -> bool {
+        self.entries
+            .iter()
+            .map(|(name, list)| (name, list.as_slice()))
+            .eq(other
+                .entries
+                .iter()
+                .map(|(name, list)| (name, list.as_slice())))
+            && self.scope_list == other.scope_list
     }
 
     /// Overlay `source`'s methods **and its already-folded scope order** on top
