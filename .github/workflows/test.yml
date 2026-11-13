@@ -75,10 +75,11 @@ jobs:
         # Every test the `standalone` profile filters out must still exist in the archive, so a
         # renamed test cannot silently leave the upstream set. A step here, not a test, because
         # a test would build the workspace from within itself.
-        run: >
-          cargo nextest list --archive-file "$ARCHIVE" --extract-to "$RUNNER_TEMP/list"
-          --workspace-remap . --message-format json
-          | python3 scripts/check_standalone_filter.py .config/nextest.toml
+        run: |
+          mkdir "$RUNNER_TEMP/list"
+          cargo nextest list --archive-file "$ARCHIVE" --extract-to "$RUNNER_TEMP/list" \
+            --workspace-remap . --message-format json > "$RUNNER_TEMP/test-list.json"
+          python3 scripts/check_standalone_filter.py .config/nextest.toml < "$RUNNER_TEMP/test-list.json"
       - uses: actions/upload-artifact@v7
         with:
           name: nextest-archive
