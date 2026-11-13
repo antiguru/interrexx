@@ -91,6 +91,30 @@ pub(crate) struct Semaphores {
 /// wider than a whole number at the default digits; these are too.
 const FIRST_HANDLE: u64 = 1 << 40;
 
+/// The low bits of a handle that name its kind: an event semaphore's handle
+/// has none set, a mutex semaphore's has this one. Each create takes the next
+/// multiple of 16, so a handle is never answered twice, and no handle has all
+/// of its low four bits set.
+const MUTEX_BIT: u64 = 8;
+
+/// A handle that no create answers, standing for an argument that names no
+/// semaphore of the kind a function asks for.
+pub(crate) const NO_HANDLE: u64 = u64::MAX;
+
+/// The kind of unnamed `Sys*Sem` semaphore.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum HandleKind {
+    Event,
+    Mutex,
+}
+
+impl HandleKind {
+    /// Whether `handle` was answered for a semaphore of this kind.
+    pub(crate) fn owns(self, handle: u64) -> bool {
+        handle != NO_HANDLE && ((handle & MUTEX_BIT != 0) == (self == HandleKind::Mutex))
+    }
+}
+
 impl Semaphores {
     /// Files `waiter` on `key`'s queue; a closed handle has none.
     pub(crate) fn enqueue(&mut self, key: SemaphoreKey, waiter: Waiter) {
@@ -400,10 +424,17 @@ impl Interp {
         }
     }
 
-    /// A new unnamed counting semaphore of value `count`, by its handle.
-    pub(crate) fn create_counting(&mut self, count: u64) -> u64 {
+    /// A new unnamed counting semaphore of kind `kind` and value `count`, by
+    /// its handle.
+    pub(crate) fn create_counting(&mut self, kind: HandleKind, count: u64) -> u64 {
         let semaphores = &mut self.activities.semaphores;
-        let handle = FIRST_HANDLE + semaphores.handles * 16;
+        let handle = FIRST_HANDLE
+            + semaphores.handles * 16
+            + if kind == HandleKind::Mutex {
+                MUTEX_BIT
+            } else {
+                0
+            };
         semaphores.handles += 1;
         semaphores.table.insert(
             SemaphoreKey::Handle(handle),

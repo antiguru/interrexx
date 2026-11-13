@@ -247,10 +247,6 @@ call try "SysCloseMutexSem()"
 call try "SysCloseMutexSem(h, 1)"
 call try "SysCloseMutexSem('x')"
 call try "SysReleaseMutexSem('1.0000000000000000001')"
-say SysRequestMutexSem(' ' || h || ' ', 20) SysReleaseMutexSem('+' || h)
-say SysRequestMutexSem(h || '.0', 20) SysReleaseMutexSem(.mutablebuffer~new(h))
-say SysRequestMutexSem(h || '.00000000000000000001', 20) SysReleaseMutexSem(h)
-say SysCloseMutexSem(' ' || h || ' ')
 exit
 try:
   signal on syntax name e
@@ -274,10 +270,6 @@ e: say condition('o')~code
 88.922
 88.907
 88.907
-0 0
-0 0
-0 0
-0
 ```
 
 ```rexx
@@ -433,10 +425,12 @@ crashes, with a signal that ends the program, for a closed handle
 SysPostEventSem, and for a number that no call answered; SysRequestMutexSem
 with an event semaphore's handle hangs. The handle of an open event semaphore
 is such a number too: these calls answer `6` for it and change neither
-semaphore (issue #247 for interrexx, which accepts it today; [the event
-semaphore rule](r:util.syseventsem.deviation.158) has the example). The first
+semaphore ([the event semaphore rule](r:util.syseventsem.deviation.158) has
+the example and says what a handle is). The first
 example is a rounded handle and a closed one, the second a number that no call
-answered.
+answered. A handle that is spelled again, with blanks, a sign or a fraction of
+zeros, names no semaphore; a string value that is exactly the handle does, as
+the third example shows.
 
 ```rexx
 m = SysCreateMutexSem('')
@@ -457,4 +451,20 @@ say SysRequestMutexSem(12345, 10) SysReleaseMutexSem(12345) SysCloseMutexSem(123
 
 ```output
 6 6 6
+```
+
+```rexx
+numeric digits 20
+h = SysCreateMutexSem('')
+say SysRequestMutexSem(' ' || h || ' ', 20) SysReleaseMutexSem('+' || h)
+say SysRequestMutexSem(h || '.0', 20) SysReleaseMutexSem(.mutablebuffer~new(h))
+say SysRequestMutexSem(h || '.00000000000000000001', 20) SysReleaseMutexSem(h)
+say SysCloseMutexSem(' ' || h || ' ')
+```
+
+```output
+6 6
+6 0
+6 0
+6
 ```
