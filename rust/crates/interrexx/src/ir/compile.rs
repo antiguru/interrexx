@@ -1702,12 +1702,14 @@ fn push_native<'a>(
                     dst,
                 });
                 registers.release(mark);
-                ops.push(Op::TraceFunction {
-                    index,
-                    slot: slot16,
-                    path,
-                    src: dst,
-                });
+                if echoes_values {
+                    ops.push(Op::TraceFunction {
+                        index,
+                        slot: slot16,
+                        path,
+                        src: dst,
+                    });
+                }
                 return Ok(());
             }
             let slot = slot16;
@@ -1720,12 +1722,14 @@ fn push_native<'a>(
             });
             // Behind the call rather than in front of it, because `eval.rs`
             // emits this line post-order, with the value in hand.
-            ops.push(Op::TraceFunction {
-                index,
-                slot,
-                path,
-                src: dst,
-            });
+            if echoes_values {
+                ops.push(Op::TraceFunction {
+                    index,
+                    slot,
+                    path,
+                    src: dst,
+                });
+            }
         }
         // The receiver lands in `dst` itself, which the send reads before it
         // writes its answer there.
