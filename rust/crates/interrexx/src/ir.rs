@@ -193,6 +193,11 @@ pub(crate) enum Op {
         lhs: u16,
         rhs: u16,
         dst: u16,
+        /// A comparison operator one of whose operands is a literal that is
+        /// not a number ([`crate::eval::never_a_number`]), decided where the
+        /// op is compiled: two plain strings then compare by the string rule
+        /// at once, the answer the numeric attempt would come to.
+        text: bool,
     },
     /// Echoes the `>O>` line of the operator result in register `src`.
     TraceOperator { op: Operator, src: u16 },

@@ -1,0 +1,55 @@
+count 54
+/* A comparison against a literal that is not a number compares as strings, in
+   expressions, in conditions and in a DO WHILE header, with every operand
+   kind: inline and heap strings, numbers, .nil, objects, stems, references --
+   the equality operators, then the ordering ones, plain and strict. */
+long = 'a string longer than a handle carries inline'
+say (' ok ' = 'ok') ('ok' = ' ok ') (' ok ' == 'ok') ('ok' \== ' ok')
+say ('' = '   ') ('   ' = '') ('' == '   ') ('' \= ' ') ('' <> ' ') ('' >< ' ')
+say (long = 'ok') (long \= 'ok') (long == long'') (long = ' 'long' ')
+n = 5; say (n = 'ok') (n \= 'ok') (n = '') (n == 'x')
+h = 12345678901234567890; say (h = 'ok') (h \= 'ok')
+f = 1.50; say (f = '1.5x') (f \== 'x')
+say (.nil = '') (.nil \= '') ('' = .nil) ('' \= .nil) ('' == .nil)
+a = .array~new; say (a = '') (a \= '') ('' = a) ('' \== a)
+s. = 'ok'; say (s. = 'ok') ('ok' = s.) (s. == ' ok')
+t. = ''; say (t.x = '') (t.x == '')
+o = .ok~new; say (o = 'ok') ('ok' = o) (o \= 'xy')
+v = 'ok'; r = >v; say (r = 'ok') ('ok' == r)
+x = ' abc '; i = 0
+do while x \= ''
+  parse var x w x; i = i + 1
+end
+say i
+if 'yes' == 'yes' then say 'strict true'
+if 'yes' = 'yes ' then say 'stripped true'
+ops = '< > <= >= \< \> << >> <<= >>= \<< \>>'
+lefts = .array~of(' ok', 'ok ', '', '  ', 'b', 10, 1.5, long, 'OK')
+do l over lefts
+  line = ''
+  do w = 1 to words(ops)
+    op = word(ops, w)
+    interpret 'r = (l' op "'ok') ('ok'" op 'l) (l' op "'') (''" op 'l)'
+    line = line r
+  end
+  say line
+end
+say ('a' < 'b') ('b' > 'a ') (' a' << 'a') ('a ' >> 'a') (5 < 'x') ('x' > 10)
+say ('' < .nil) ('' >= .nil) ('' >> .nil)
+say (s. < 'p') ('p' >> s.) ('' <= a) ('' >> a)
+numeric digits 3
+say (1234567 = 'ok') ('ok' \= 1.23456789)
+signal on novalue
+say (undefined = 'UNDEFINED')
+say (zz = '')
+exit
+novalue: say 'NOVALUE' condition('D'); exit
+
+::class ok
+::method '='
+  say 'ok = called with' arg(1)
+  return 1
+::method '\='
+  return 0
+::method makestring
+  return 'ok'

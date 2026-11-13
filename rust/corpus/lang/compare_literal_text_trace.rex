@@ -1,0 +1,12 @@
+/* TRACE I over comparisons against a literal that is not a number. */
+long = 'a string longer than a handle carries inline'
+x = 'b'
+trace i
+y = (x = 'ok') (long \== '') (5 = ' ')
+do while x \= ''
+  x = ''
+end
+if x == '' then nop
+if long >> 'a' & x <= 'b' then nop
+trace o
+say y

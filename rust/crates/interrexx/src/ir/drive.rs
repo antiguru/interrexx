@@ -924,7 +924,13 @@ macro_rules! region_ops {
                 // front of this one are. It emits nothing --
                 // `Op::TraceOperator` below is what applying an
                 // operator owes.
-                Op::Binary { op, lhs, rhs, dst } => {
+                Op::Binary {
+                    op,
+                    lhs,
+                    rhs,
+                    dst,
+                    text,
+                } => {
                     debug_assert!(
                         $chunk.holds_register(*lhs)
                             && $chunk.holds_register(*rhs),
@@ -950,7 +956,7 @@ macro_rules! region_ops {
                     // the evaluation of the operand after them,
                     // and this op's operands were rooted before
                     // it ran.
-                    let value = match $self.apply_binary(*op, left, right) {
+                    let value = match $self.apply_binary_op(*op, *text, left, right) {
                         Ok(value) => value,
                         Err(failure) => break $cold Err(failure),
                     };

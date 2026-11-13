@@ -1615,6 +1615,7 @@ fn push_native<'a>(
                     lhs: dst,
                     rhs,
                     dst,
+                    text: crate::eval::compares_as_text(*op, left, right),
                 }
             });
             // Behind the operation rather than in front of it, because
