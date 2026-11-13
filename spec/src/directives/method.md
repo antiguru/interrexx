@@ -553,7 +553,7 @@ clause in the section raises `99.936` and not `98.903`. With ATTRIBUTE the
 library is looked for in the same way, and a clause after the directive raises
 `99.934`, as [the attribute rule](r:dir.method.attribute) says. How a library
 is searched for is [the library rule](r:env.search.library); which routine of
-it the method runs is not specified here.
+it the method runs is [the entry rule](r:native.loading.entry).
 
 ```rexx
 call try '::method m external "library spec_no_such_lib_xyz"'

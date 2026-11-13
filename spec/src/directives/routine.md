@@ -334,8 +334,10 @@ methods](r:dir.method.external) says how that order goes for the faults of
 other directives. The operand of the LIBRARY form is the one that
 [::METHOD](r:dir.method.external) takes. How a library is searched for is
 [the library rule](r:env.search.library). Which routine of a library the
-declaration binds is not specified here, except for the REGISTERED entry that
-[the rule of Deviation 143](r:dir.routine.deviation.143) refuses.
+declaration binds is [the entry rule](r:native.loading.entry) for LIBRARY and
+[the registered rule](r:native.loading.registered) for REGISTERED, except for
+the REGISTERED entry that [the rule of Deviation
+143](r:dir.routine.deviation.143) refuses.
 
 ```rexx
 call try '::routine r external "library spec_no_such_lib_xyz"'

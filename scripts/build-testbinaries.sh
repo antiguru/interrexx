@@ -43,7 +43,7 @@ stamp=
 if [ -n "$libs" ]; then
     exec 9>"$out.lock"
     flock 9
-    stamp=$(stat -c '%n %s %.9Y' "$libs/librexx.so" "$libs/librexxapi.so" "$0"
+    stamp=$(stat -c '%n %s %.9Y' "$libs/librexx.so" "$libs/librexxapi.so" "$0" "$root/scripts/api-flags.sh"
         git -C "$root/third_party/ooRexx" rev-parse HEAD
         c++ --version | head -n 1)
     if [ -f "$out/.stamp" ] && [ "$(cat "$out/.stamp")" = "$stamp" ]; then
@@ -58,7 +58,8 @@ for library in librexx librexxapi; do
     ln -sfn "$library.so.4" "$out/$library.so"
 done
 
-flags=(-I"$api" -I"$api/platform/unix" -fPIC -L"$out" -Wl,--disable-new-dtags -Wl,-rpath,"$out")
+. "$root/scripts/api-flags.sh"
+flags=("${api_flags[@]}" -L"$out" -Wl,--disable-new-dtags -Wl,-rpath,"$out")
 
 shared() {
     local compiler=$1 name=$2

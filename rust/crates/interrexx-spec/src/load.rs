@@ -34,6 +34,7 @@ pub fn prefix_for(relative: &Path) -> Option<String> {
         "rxunixsys" => "rxunixsys",
         "environment" => "env",
         "concurrency" => "conc",
+        "native" => "native",
         _ => return None,
     };
     let stem = file.strip_suffix(".md")?;

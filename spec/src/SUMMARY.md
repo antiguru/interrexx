@@ -158,6 +158,8 @@
   - [Activities](concurrency/activities.md)
   - [Locks](concurrency/locks.md)
   - [Halt and program end](concurrency/halt.md)
+- [Native libraries](native/index.md)
+  - [Loading](native/loading.md)
 - [RexxUtil](rexxutil/index.md)
   - [SysFileDelete](rexxutil/sysfiledelete.md)
   - [SysFileExists](rexxutil/sysfileexists.md)
