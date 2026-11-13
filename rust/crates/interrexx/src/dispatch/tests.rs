@@ -1827,12 +1827,11 @@ fn an_entry_method_send_with_no_value_is_loud() {
 }
 
 /// **A metaclass carrying its own `NEW` decides what `~subclass` builds**,
-/// and two answers are refused: one that is not a class, which the oracle
-/// casts unchecked (`oracle-crashes.txt` entry 8), and a class `Class~new`
-/// did not build or a subclass already took, which the oracle rewires in
-/// place (Deviation 32).
+/// and two answers are refused: one that is not a class raises 98.900
+/// (Deviation 114), and a class `Class~new` did not build or a subclass
+/// already took, which the oracle rewires in place (Deviation 32), is loud.
 #[test]
-fn a_metaclass_new_answering_no_new_class_is_loud() {
+fn a_metaclass_new_answering_no_new_class_is_refused() {
     let program = |body: &str| {
         format!(
             "say 'id' .object~subclass(\"k\", .MyMeta)~id\n\
@@ -1842,11 +1841,10 @@ fn a_metaclass_new_answering_no_new_class_is_loud() {
              ::CLASS Foo SUBCLASS Directory\n"
         )
     };
+    let (code, stdout, stderr) = run_source(&program("return 'x'"));
+    assert_eq!((code, stdout.as_str()), (158, ""));
+    assert!(stderr.contains("Error 98.900:"), "{stderr}");
     for (answer, refusal) in [
-        (
-            "return 'x'",
-            "a message send to a metaclass whose NEW answers something other than a class",
-        ),
         (
             "return .array",
             "a metaclass NEW answering a class Class~new did not build or a subclass already took",

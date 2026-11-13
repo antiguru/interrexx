@@ -669,5 +669,5 @@ say 'before'
 ::class k metaclass meta
 ```
 
-```output defect=#156 rc=158
+```output rc=158
 ```

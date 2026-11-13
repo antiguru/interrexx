@@ -195,10 +195,11 @@ were a string, running garbage or crashing.
 
 ## 28. A written entry or answer of the wrong class
 
-A `.ROUTINES` entry written to a package that is not a routine, and a
-metaclass `NEW` that answers something other than a class, are refused, exit
-code 120. ooRexx casts the object unchecked and crashes. A native method run
-on a receiver of the wrong kind is not covered: it raises a trappable
+A `.ROUTINES` entry written to a package that is not a routine is refused when
+it is called, exit code 120. ooRexx casts the object unchecked and crashes.
+Not covered: a metaclass `NEW` that answers something other than a class
+raises `SYNTAX 98.900` ([Deviation 114](r:class.class.deviation.114)), and a
+native method run on a receiver of the wrong kind raises a trappable
 `SYNTAX 93.900`, as [the rule](r:class.object.borrowed-native) says.
 
 ## 29. An entry assignment with no value
