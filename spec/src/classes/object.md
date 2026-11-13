@@ -2296,14 +2296,24 @@ class or to the classes behind it that is made afterwards in ooRexx, and sees
 every change in interrexx, as
 [the Deviation 110 rule of the search page](r:class.methods.deviation.110)
 states for the objects that exist already; in ooRexx the object keeps missing
-later changes after `unsetMethod` too. In the example a `define` follows the
-`setMethod`.
+later changes after `unsetMethod` too. The listing of
+[`instanceMethods`](r:class.object.instancemethods) and the answer of
+`hasMethod` follow the change as the search does. In the example a `define`
+follows the `setMethod`.
 
 ```rexx
 o = .k~new
 o~sm('own', 'return "own"')
 .k~define('later', 'return "later"')
 say o~own o~later
+say o~hasMethod('LATER') o~instanceMethod('LATER')~class~id
+t = o~instanceMethods(.k)
+a = .array~new
+do while t~available
+  a~append(t~index)
+  t~next
+end
+say a~items a~sort~makestring('l', ' ')
 ::class k
 ::method sm
   self~setMethod(arg(1), arg(2))
@@ -2311,6 +2321,8 @@ say o~own o~later
 
 ```output
 own later
+1 Method
+2 LATER SM
 ```
 
 r[class.object.deviation.118]

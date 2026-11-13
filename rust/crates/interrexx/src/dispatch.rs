@@ -550,6 +550,11 @@ pub(crate) struct GuardedSend {
 }
 
 impl GuardedSend {
+    /// The method the send runs once its guard lock is granted.
+    pub(crate) fn method(&self) -> MethodId {
+        self.resolution.method
+    }
+
     pub(crate) fn object_roots(&self, out: &mut Vec<ObjRef>) {
         out.push(self.receiver);
         out.extend(self.args.iter().flatten().copied());
@@ -1937,9 +1942,12 @@ impl Interp {
     }
 
     /// Lets go of the `Method` objects a class dropped that no method
-    /// dictionary names any more. One an activation is running is kept until
-    /// a later collection finds it no longer running: a running method runs
-    /// on (`r[class.methods.running]`).
+    /// dictionary names any more. One that is running is kept until a later
+    /// collection finds it no longer running: a running method runs on
+    /// (`r[class.methods.running]`). Running is a Rexx activation's body, a
+    /// method other than Rexx on an activity's stack or in a native call
+    /// away on another thread, and a send parked for its guard lock
+    /// ([`crate::activity::Activity::running_methods`]).
     #[cold]
     #[inline(never)]
     pub(crate) fn release_dropped_methods(&mut self) {
@@ -1953,17 +1961,36 @@ impl Interp {
         let mut running = Vec::new();
         self.activity.running_bodies(&mut running);
         self.activities.running_bodies(&mut running);
-        for (class, method) in unnamed {
-            if self
-                .method_bodies
-                .get(&method)
-                .is_some_and(|body| running.contains(&(body.program, Some(body.directive))))
+        let mut running_methods = Vec::new();
+        self.activity.running_methods(&mut running_methods);
+        self.activities.running_methods(&mut running_methods);
+        // `unnamed` is sorted by class: each class's `owned` list is walked
+        // once for all of its dropped objects, not once for each, so a loop
+        // of defines costs a collection time linear in what the class owns.
+        let mut disowned: std::collections::HashSet<ObjRef> = std::collections::HashSet::new();
+        let mut at = 0;
+        while at < unnamed.len() {
+            let class = unnamed[at].0;
+            disowned.clear();
+            while let Some(&(owner, method)) = unnamed.get(at)
+                && owner == class
             {
-                self.classes().drop_later(class, method);
-                continue;
+                at += 1;
+                if running_methods.contains(&method)
+                    || self
+                        .method_bodies
+                        .get(&method)
+                        .is_some_and(|body| running.contains(&(body.program, Some(body.directive))))
+                {
+                    self.classes().drop_later(class, method);
+                    continue;
+                }
+                if let Some(object) = self.executable_objects.get(method).copied() {
+                    disowned.insert(object);
+                }
             }
-            if let Some(object) = self.executable_objects.get(method).copied() {
-                self.class_disowns(class, object);
+            if !disowned.is_empty() {
+                self.class_disowns_all(class, &disowned);
             }
         }
     }
@@ -3130,6 +3157,43 @@ impl Interp {
         reason = "the send's own parts, and the lock it holds"
     )]
     fn run_other_guarded(
+        &mut self,
+        guard: Option<crate::guards::GuardKey>,
+        invocable: Invocable,
+        cleared: Cleared,
+        resolution: Resolution,
+        receiver: ObjRef,
+        name: &[u8],
+        args: &[Option<ObjRef>],
+    ) -> Result<Started<Option<ObjRef>>, Failure> {
+        // A method other than an attribute's may run Rexx code before it
+        // ends, through a callback or an argument's conversion, that
+        // replaces or deletes it: it is listed as running until it returns
+        // (`r[class.methods.running]`), and its failure is then blamed on
+        // its own rows.
+        let native = !matches!(invocable, Invocable::Generated(_));
+        if native {
+            self.activity.running_methods.push(resolution.method);
+        }
+        let outcome =
+            self.run_other_held(guard, invocable, cleared, resolution, receiver, name, args);
+        if native {
+            let popped = self.activity.running_methods.pop();
+            debug_assert_eq!(
+                popped,
+                Some(resolution.method),
+                "running methods unbalanced"
+            );
+        }
+        outcome
+    }
+
+    /// [`Interp::run_other_guarded`] past its running-method record.
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "the send's own parts, and the lock it holds"
+    )]
+    fn run_other_held(
         &mut self,
         guard: Option<crate::guards::GuardKey>,
         invocable: Invocable,
@@ -4442,6 +4506,13 @@ impl Interp {
         arguments: &[Option<ObjRef>],
         reraised: bool,
     ) {
+        // The method is still running: a release that dropped it from its
+        // class kept it (`r[class.methods.running]`), so its rows are there.
+        debug_assert!(
+            self.external_packages.contains_key(&method)
+                || self.defined_library_codes.contains_key(&method),
+            "an external method blamed after its identity was forgotten"
+        );
         let reported_on_return = std::mem::take(&mut self.activity.native_reported_on_return);
         let activation = Some(NativeActivationLevel {
             // A `LIBRARY REXX` entry's package is `REXX`.

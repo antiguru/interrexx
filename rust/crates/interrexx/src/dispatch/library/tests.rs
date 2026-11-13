@@ -952,6 +952,7 @@ fn an_abandoned_calls_frame_holds_until_its_completion() {
     interp.kept_c_string(carried, b"7").expect("a copy");
     let token = interp.native_token();
     interp.activity.native_call = Some(Box::new(super::NativeInFlight {
+        method: None,
         call: None,
         frame: token,
         pending: None,
@@ -1048,6 +1049,7 @@ fn unstarted_native_failure_releases_kept_objects_and_lent_storage() {
         interp.kept_c_string(carried, b"7").expect("copy");
         let token = interp.native_token();
         interp.activity.native_call = Some(Box::new(super::NativeInFlight {
+            method: None,
             call: None,
             frame: token,
             pending: None,

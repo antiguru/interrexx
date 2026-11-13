@@ -1029,17 +1029,24 @@ A change to the methods of a class does not reach a method that is running. A
 it runs, and an `inherit` or `uninherit` that changes the method a name finds,
 made on the same activity or on another, leaves that run as it is: it goes on
 to its end as the method it started as. The change applies to the sends that
-start after it. In the example, the method `M` replaces itself and returns
-what it started with, and the method `GO`, which runs on another activity
-while its class deletes it, runs to its end.
+start after it. In the example, the method `M` replaces itself, has a
+collection forced, and returns what it started with; the method `TWO`, which
+the class finds in a mixin class, has the class `uninherit` that mixin class
+and runs to its end; and the method `GO`, which runs on another activity while
+its class deletes it and a collection is forced, runs to its end.
+[Deviation 110](r:class.methods.deviation.110) gives the example with one
+object made before the changes.
 
 ```rexx
 say .k~new~m
 say .k~new~m
+say .k~new~two
+say t(.k~new, 'TWO')
 w = .w~new
 r = w~start('go')
 w~waitStarted
 .w~delete('GO')
+x = gc('force')
 w~release
 say r~result
 say t(.w~new, 'GO')
@@ -1048,10 +1055,18 @@ t:
   signal on syntax name e
   return arg(1)~send(arg(2))
 e: return '-'
-::class k
+::class k inherit mx
 ::method m
   .k~define('M', 'return "new"')
-  return 'old'
+  x = gc('force')
+  return 'old' self~helper
+::method helper
+  return 'h'
+::class mx mixinclass object
+::method two
+  .k~uninherit(.mx)
+  x = gc('force')
+  return 'two ran on'
 ::class w
 ::method init
   expose started released
@@ -1071,8 +1086,10 @@ e: return '-'
 ```
 
 ```output
-old
+old h
 new
+two ran on
+-
 go ran on
 -
 ```
@@ -1083,9 +1100,12 @@ to the methods of a class, by one `define`, `defineMethods`, `delete`,
 `inherit` or `uninherit`, is seen by a send entirely or not at all: never a
 part of the table of a `defineMethods`, and never a part of the order an
 `inherit` or `uninherit` builds. Every send that starts after the change has
-completed sees it. In the example, the method that runs on another activity
-sends `A` and `B` before the table that replaces both is defined and again
-after it.
+completed sees it. The example shows that last sentence: the method that
+runs on another activity sends `A` and `B` before the table that replaces both
+is defined and again after it. That no send sees a part of a change is not
+shown by an example: a program has no point between two parts of one change at
+which a send could start. [Deviation 110](r:class.methods.deviation.110)
+gives the example with one object made before the change.
 
 ```rexx
 w = .w~new
@@ -1769,8 +1789,14 @@ class itself ([Deviation 110](../deviations.md)). The first example is the one
 of the rule on changes, with a `define` sent to `K` itself and an instance `B`
 that is made after it: `A`, `B` and `S` answer alike after every change. The
 second example gives an object an own method with `setMethod` and another with
-`enhanced`, and changes the class afterwards. The third follows a class object
-over changes to its metaclass.
+`enhanced`, and changes the class afterwards. The third follows class objects
+over changes to their metaclass: two that name it with `METACLASS`, and one
+that `enhanced` made from it, which keeps its own method `HELLO` beside the
+methods the changes add. The fourth runs the examples of
+[the rule on a running method](r:class.methods.running) and
+[the rule on a change seen whole](r:class.methods.whole) on one object `O`
+made before the changes: its second `M` runs the replacement, and the method
+on the other activity finds the new `A` and `B` for it.
 
 ```rexx
 a = .k~new
@@ -1882,14 +1908,18 @@ k1
 ```
 
 ```rexx
+e = .meta~enhanced(.directory~new~~put('return "hi"', 'HELLO'), 'E')
 say t(.c, 'who') t(.c, 'later') t(.d, 'later')
-.meta~define('later', 'return "meta later"')
+say t(e, 'hello') t(e, 'later')
+.meta~define('later', 'return "later"')
 say t(.c, 'later') t(.d, 'later')
+say t(e, 'hello') t(e, 'later')
 .sbase~define('later2', 'return "sbase later2"')
 .mxm~define('later3', 'return "mxm later3"')
 say t(.c, 'later2') t(.d, 'later3')
+say t(e, 'hello') t(e, 'later2') t(e, 'later3')
 .meta~inherit(.my)
-say t(.c, 'four') t(.d, 'four')
+say t(.c, 'four') t(.d, 'four') t(e, 'four')
 exit
 t:
   signal on syntax name e
@@ -1909,9 +1939,74 @@ e: return '-'
 
 ```output
 meta who - -
-meta later meta later
+hi -
+later later
+hi later
 sbase later2 mxm later3
-four four
+hi sbase later2 mxm later3
+four four four
+```
+
+```rexx
+o = .k~new
+say o~m
+say o~m
+say o~two
+say t(o, 'TWO')
+w = .w~new
+r = w~start('watch', o)
+w~waitStarted
+table = .directory~new
+table['A'] = 'return "a2"'
+table['B'] = 'return "b2"'
+.k~defineMethods(table)
+w~release
+say r~result
+exit
+t:
+  signal on syntax name e
+  return arg(1)~send(arg(2))
+e: return '-'
+::class k inherit mx
+::method m
+  .k~define('M', 'return "new"')
+  x = gc('force')
+  return 'old'
+::method a
+  return 'a1'
+::method b
+  return 'b1'
+::class mx mixinclass object
+::method two
+  .k~uninherit(.mx)
+  x = gc('force')
+  return 'two ran on'
+::class w
+::method init
+  expose started released
+  started = 0
+  released = 0
+::method watch unguarded
+  expose started released
+  use arg o
+  before = o~a o~b
+  started = 1
+  guard on when released = 1
+  return before '->' o~a o~b
+::method waitStarted unguarded
+  expose started
+  guard on when started = 1
+::method release unguarded
+  expose released
+  released = 1
+```
+
+```output
+old
+new
+two ran on
+-
+a1 b1 -> a2 b2
 ```
 
 r[class.methods.deviation.117]
