@@ -584,7 +584,7 @@ fn a_value_the_operator_gap_names_parses_as_no_number() {
         interrexx_core::Body::Stem {
             name: b"A.".to_vec().into(),
             default: Some(array),
-            tails: interrexx_core::NameMap::default(),
+            tails: interrexx_core::Tails::new(),
             exposed: None,
         },
     );

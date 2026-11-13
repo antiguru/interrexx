@@ -1201,6 +1201,11 @@ struct Interp {
     /// that could assign a tail variable.
     shared_key: Vec<u8>,
     shared_key_for: Option<SymbolId>,
+    /// The stem and the tail's ordinal the same read found, where the tail
+    /// held a value of its own: what the write uses in place of the key, see
+    /// [`Interp::stem_set_held`]. Read only beside `shared_key_for`, so every
+    /// rule that drops the key drops this with it.
+    shared_tail: Option<(ObjRef, usize)>,
     /// What a `.local~novalue` hook a read sent came to, answered or failed,
     /// held from that read to the `novalue_check` after it.
     novalue_hooked: std::cell::Cell<Option<Result<(), Failure>>>,
@@ -2305,6 +2310,7 @@ impl Interp {
             key_buffer: Vec::new(),
             shared_key: Vec::new(),
             shared_key_for: None,
+            shared_tail: None,
             novalue_hooked: std::cell::Cell::new(None),
             parse_buffers: Vec::new(),
             text_scratch: [0; crate::value::TEXT_SCRATCH],
@@ -3360,6 +3366,9 @@ impl Interp {
             key_buffer: _,
             shared_key: _,
             shared_key_for: _,
+            // Compared with the stem variable's value before it is used, and
+            // never read through, so it keeps nothing alive.
+            shared_tail: _,
             // Held only from a read to the check right after it, which
             // allocates nothing in between.
             novalue_hooked: _,
