@@ -428,7 +428,9 @@ is such a number too: these calls answer `6` for it and change neither
 semaphore ([the event semaphore rule](r:util.syseventsem.deviation.158) has
 the example and says what a handle is). The first
 example is a rounded handle and a closed one, the second a number that no call
-answered.
+answered. A handle that is spelled again, with blanks, a sign or a fraction of
+zeros, names no semaphore; a string value that is exactly the handle does, as
+the third example shows.
 
 ```rexx
 m = SysCreateMutexSem('')
@@ -450,9 +452,6 @@ say SysRequestMutexSem(12345, 10) SysReleaseMutexSem(12345) SysCloseMutexSem(123
 ```output
 6 6 6
 ```
-
-A handle that is spelled again, with blanks, a sign or a fraction of zeros,
-names no semaphore; a string value that is exactly the handle does.
 
 ```rexx
 numeric digits 20

@@ -269,7 +269,9 @@ r[util.syseventsem.handle]
 The functions that take a handle read it as a whole number from `0` to
 `18446744073709551615`, in the form the creating call answered it. Blanks
 around it, a plus sign and a fraction that is only zeros once [the
-whole-number rule](r:util.index.whole) has rounded the number do no harm. A
+whole-number rule](r:util.index.whole) has rounded the number are read as the
+whole number, but the handle is then another spelling, which names no
+semaphore ([Deviation 158](r:util.syseventsem.deviation.158)). A
 handle that is missing raises `SYNTAX 88.901`, and one argument too many
 raises `SYNTAX 88.922`. A value that is not a whole number or is out of that
 range raises `SYNTAX 88.907`: a word, the null string, a negative number, a
@@ -302,11 +304,6 @@ call try "SysCloseEventSem()"
 call try "SysCloseEventSem(h, 1)"
 call try "SysCloseEventSem('x')"
 call try "SysPostEventSem('1.0000000000000000001')"
-say SysPostEventSem(' ' || h || ' ') SysPostEventSem('+' || h) SysPostEventSem(h || '.0')
-say SysPostEventSem(.mutablebuffer~new(h)) SysPostEventSem(h || '.00') SysPostEventSem(h || '.00000000000000000001')
-say SysWaitEventSem(' ' || h || ' ', 20) SysWaitEventSem('+' || h, 20)
-say SysResetEventSem(' ' || h || ' ') SysResetEventSem('+' || h)
-say SysCloseEventSem(' ' || h || ' ')
 exit
 try:
   signal on syntax name e
@@ -336,11 +333,6 @@ e: say condition('o')~code
 88.922
 88.907
 88.907
-0 0 0
-0 0 0
-0 0
-0 0
-0
 ```
 
 ```rexx
@@ -587,7 +579,11 @@ say SysCloseEventSem(e) SysCloseMutexSem(m)
 
 ```rexx
 h = SysCreateEventSem()
-say SysPostEventSem('+'h) SysPostEventSem(h' ') SysPostEventSem(' 'h)
+say SysPostEventSem(' ' || h || ' ') SysPostEventSem('+' || h) SysPostEventSem(h || '.0')
+say SysPostEventSem(.mutablebuffer~new(h)) SysPostEventSem(h || '.00') SysPostEventSem(h || '.00000000000000000001')
+say SysWaitEventSem(' ' || h || ' ', 20) SysWaitEventSem('+' || h, 20)
+say SysResetEventSem(' ' || h || ' ') SysResetEventSem('+' || h)
+say SysCloseEventSem(' ' || h || ' ')
 call SysCloseEventSem h
 n = SysCreateEventSem()
 say SysPostEventSem(h) SysCloseEventSem(h) SysPostEventSem(n)
@@ -595,5 +591,9 @@ say SysPostEventSem(h) SysCloseEventSem(h) SysPostEventSem(n)
 
 ```output
 6 6 6
+0 6 6
+6 6
+6 6
+6
 6 6 0
 ```
