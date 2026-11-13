@@ -227,6 +227,16 @@ fn whole(answer: Answer) -> Answer {
     answer
 }
 
+/// An answer with only the `>K>` lines of its stderr.
+fn keyword_lines((stdout, stderr, code): Answer) -> Answer {
+    let lines: String = stderr
+        .lines()
+        .filter(|line| line.contains(">K>"))
+        .map(|line| format!("{line}\n"))
+        .collect();
+    (stdout, lines, code)
+}
+
 /// The trace lines of `stderr` with the program's path, which the first of them names, replaced
 /// by `PROGRAM`.
 fn traced(stderr: &str, program: &str) -> String {
@@ -373,14 +383,6 @@ fn set_trace_leaves_header_lines_out_of_a_routine_already_running() {
 // spec: native.threads.trace.deviation.166
 #[test]
 fn set_thread_trace_traces_a_routine_entered_after_its_first_call() {
-    fn keyword_lines((stdout, stderr, code): Answer) -> Answer {
-        let lines: String = stderr
-            .lines()
-            .filter(|line| line.contains(">K>"))
-            .map(|line| format!("{line}\n"))
-            .collect();
-        (stdout, lines, code)
-    }
     assert_eq!(
         run_halt_trace("trace-thread", "trace_thread.rex", keyword_lines),
         (
@@ -388,6 +390,26 @@ fn set_thread_trace_traces_a_routine_entered_after_its_first_call() {
             "       >K>   \"TO\" => \"2\"\n\
              \x20      >K>   \"BY\" => \"1\"\n\
              \x20      >K>   \"FOR\" => \"2\"\n"
+                .to_owned(),
+            0
+        )
+    );
+}
+
+/// The first `SetTrace` is served in the `::ROUTINE` `r` while the main program waits for it, and
+/// an internal routine the main program calls afterwards prints every line: `sub` turns its trace
+/// on, and the `>K>` lines of its `DO` header are printed. An internal routine runs in its caller's
+/// body, and the chunk the caller was running when the first `SetTrace` was served leaves those
+/// lines out. Only the `>K>` lines are compared, as for `SetThreadTrace`.
+// spec: native.threads.trace, native.threads.trace.deviation.166
+#[test]
+fn set_trace_traces_an_internal_routine_entered_after_the_first() {
+    assert_eq!(
+        run_halt_trace("trace-internal", "trace_internal.rex", keyword_lines),
+        (
+            "end\n".to_owned(),
+            "       >K>     \"TO\" => \"2\"\n\
+             \x20      >K>     \"BY\" => \"1\"\n"
                 .to_owned(),
             0
         )

@@ -44,7 +44,7 @@ impl Setting {
     }
 
     /// Whether a clause under this answer carries the value-echo ops
-    /// (`>L>`/`>V>`/`>O>`/`>P>`/`>A>`/`>F>`). An instruction the analysis
+    /// (`>L>`/`>V>`/`>E>`/`>O>`/`>P>`/`>A>`). An instruction the analysis
     /// could not settle keeps them and keeps its run-time gate.
     pub(crate) fn echoes_values(self) -> bool {
         match self {

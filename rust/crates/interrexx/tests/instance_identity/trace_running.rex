@@ -1,5 +1,5 @@
 /* Deviation 166: the routine `r` is running when the first SetTrace is served, so the `>K>`
-   lines of its DO header for TO, BY and FOR are left out; the one for WHILE is printed.
+   lines of its DO header for TO, BY and FOR are left out. The one for WHILE is printed.
    spec: native.threads.trace.deviation.166 */
 call htsave
 call r

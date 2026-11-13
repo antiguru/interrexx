@@ -3621,9 +3621,14 @@ impl Interp {
     fn callee_level(&mut self, caller: &Level) -> Result<Option<Level>, Failure> {
         self.record_call_convention();
         let running = self.activation();
+        // An internal routine entered after the first `SetTrace` or
+        // `SetThreadTrace` prints every line (`r[native.threads.trace]`), so it
+        // does not run on a settled chunk its caller kept: only the caller's
+        // own run is what `r[native.threads.trace.deviation.166]` declares.
         if running.body == caller.selector
             && Rc::ptr_eq(&running.plan, &caller.plan)
             && caller.chunk.trace() == self.chunk_trace()
+            && !(self.trace_switchable && caller.chunk.settled())
         {
             return Ok(None);
         }

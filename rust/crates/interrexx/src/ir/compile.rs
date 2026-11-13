@@ -1345,6 +1345,7 @@ fn compile_settled(
     let registers = registers.high_water();
     Ok(Chunk {
         trace,
+        settled,
         #[cfg(debug_assertions)]
         settings,
         ops: super::valid::ValidOps::new(ops, registers)?,
