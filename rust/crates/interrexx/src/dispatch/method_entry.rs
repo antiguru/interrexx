@@ -96,19 +96,34 @@ impl Interp {
             installed.program,
             self.running_activation().map(|caller| &caller.settings),
         );
-        let mut callee = Activation::method(
-            callee_id,
-            program,
-            installed.program,
-            installed.directive,
-            plan,
-            frame,
-            MethodIdentity {
-                name,
-                scope: resolution.scope,
-                receiver,
-            },
-        );
+        let identity = MethodIdentity {
+            name,
+            scope: resolution.scope,
+            receiver,
+        };
+        let mut callee = match self.spare_activation() {
+            Some(mut spare) => {
+                spare.reset_method(
+                    callee_id,
+                    program,
+                    installed.program,
+                    installed.directive,
+                    plan,
+                    frame,
+                    identity,
+                );
+                spare
+            }
+            None => Box::new(Activation::method(
+                callee_id,
+                program,
+                installed.program,
+                installed.directive,
+                plan,
+                frame,
+                identity,
+            )),
+        };
         // Dictionary mutation must not replace the Method this invocation
         // entered. Existing registered objects use the activation's GC root.
         if let Some(executable) = self.executable_objects.get(resolution.method).copied() {
@@ -121,7 +136,7 @@ impl Interp {
         // here unless a package-traced `>I>` has to come first.
         let reserve_at_once = reserve_at_once && !callee.trace_mode.labels;
         callee.flags = crate::activation::ActivationFlags::method(guarded, reserve_at_once);
-        self.push_activation(callee);
+        self.push_boxed_activation(callee);
         self.trace_package_invocation_entry();
         if guarded && !reserve_at_once {
             self.reserve_for_method(crate::guards::GuardKey {
