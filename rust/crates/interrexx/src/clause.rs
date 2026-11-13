@@ -297,6 +297,23 @@ impl Interp {
         self.serve_requests(yields)
     }
 
+    /// Stops the timer's slices while this thread idles, and has the next
+    /// clause decide again whether they are wanted.
+    ///
+    /// A visit of the clause countdown arms the slices while work is in
+    /// flight off the baton, so that an activity its end readies gets its
+    /// turn; only a switch with nothing in flight disarmed them. An idle
+    /// interpreter runs no activity a slice could end, yet stayed armed for
+    /// as long as anything was in flight, and the timer thread woke every
+    /// slice (24 ms) to set a request nobody read: with a hundred activities
+    /// parked in socket waits, about 42 wakes a second of an otherwise idle
+    /// process (#591). Fewer showed none only because their clauses did not
+    /// add up to a countdown visit while a wait was in flight.
+    fn disarm_while_idle(&mut self) {
+        self.timer.disarm();
+        self.clause_countdown = 1;
+    }
+
     /// Blocks this thread until `due` or a post to the inbox, whose
     /// completions it files, or fails where the run's deadline comes first.
     #[expect(clippy::disallowed_methods, reason = "the run's deadline")]
@@ -304,6 +321,7 @@ impl Interp {
         if self.sim.is_some() {
             return self.sim_idle_until(due);
         }
+        self.disarm_while_idle();
         self.hand_over_output();
         if let Some(deadline) = &self.deadline
             && (deadline.expired || deadline.at <= due)
@@ -334,6 +352,7 @@ impl Interp {
         if let Some(deadline) = &self.deadline {
             return self.idle_until(deadline.at);
         }
+        self.disarm_while_idle();
         self.hand_over_output();
         let posted = self.timer.idle();
         self.file_completions(posted);
