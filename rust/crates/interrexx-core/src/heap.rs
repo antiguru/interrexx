@@ -415,12 +415,21 @@ impl Heap {
                     }
                 }
             }
+            // **A string whose bytes are its own and which caches no number
+            // owns nothing to free**, and most of what a sweep frees is such a
+            // string: the intermediates of string work. Its slot is
+            // overwritten without running `Body`'s drop glue, which would
+            // only rediscover that, at a match over every variant per slot.
+            let owns_nothing = matches!(
+                &object.body,
+                Body::Text { bytes, num: None } if bytes.is_inline()
+            );
             swept += 1;
             live -= 1;
             // A slot whose generation would overflow is retired, not reused:
             // wrapping would let a stale handle alias a live object again,
             // which is the whole reason the generation exists.
-            *entry = match generation.checked_add(1) {
+            let free = match generation.checked_add(1) {
                 Some(next) if next <= crate::GENERATION_MAX => {
                     let free = Slot::Free {
                         next: free_head,
@@ -434,6 +443,11 @@ impl Heap {
                     generation,
                 },
             };
+            if owns_nothing {
+                std::mem::forget(std::mem::replace(entry, free));
+            } else {
+                *entry = free;
+            }
         }
         self.free_head = free_head;
         self.live = live;
