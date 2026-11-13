@@ -212,10 +212,11 @@ value for the first and removes the entry for the second.
 ## 30. A STRING method answering a non-string
 
 When an object's `STRING` method answers an object with no string value,
-interrexx gives ooRexx's answer wherever that is defined, and elsewhere ends
-the program with exit code 120 after raising NOSTRING if it is trapped.
-ooRexx reads `.nil` as a string there, with garbage results or a crash. The
-[conventions](r:conv.string.deviation.30) state it for builtin arguments.
+interrexx gives ooRexx's answer wherever that is defined, and elsewhere raises
+`SYNTAX 98.973` after raising NOSTRING if it is trapped, as [Deviation
+169](#169-a-string-method-answering-a-non-string-where-its-bytes-are-read)
+says. ooRexx reads `.nil` as a string there, with garbage results or a crash.
+The [conventions](r:conv.string.deviation.30) state it for builtin arguments.
 
 ## 31. Withdrawn
 
@@ -1285,6 +1286,22 @@ or `TIME` is a character that is no letter, and is refused like any other: the
 letter against the set of letters as a search of a C string does, which finds
 a 0 byte in every set: a 0 byte `option` with an `osep` raises `SYNTAX 40.904`
 and a 0 byte `informat` with an `isep` raises `SYNTAX 40.44`.
+
+## 169. A STRING method answering a non-string where its bytes are read
+
+Where a clause needs the bytes of the string value of an object, and the
+`STRING` method of the object answers an object with no string value (`.nil`, a
+`Directory`, a `Queue`, an `Object`), interrexx raises `SYNTAX 98.973`, the
+error that `::OPTIONS NOSTRING SYNTAX` makes of NOSTRING, whether or not the
+program asked for it. It is an ordinary SYNTAX condition that a trap takes, and
+untrapped it ends the program with exit code 158. A NOSTRING trap, if set,
+takes the condition first. ooRexx reads the answer as a string, so a program
+sees an address-like number, a different error or a crash. A builtin's
+argument that the builtin reads as a string is not part of this Deviation:
+there interrexx raises what ooRexx raises, `SYNTAX 88.909` with the argument's
+position ([the rule](r:conv.string.builtin-argument)). The
+[conventions](r:conv.string.deviation.169) state it. It replaces the refusal
+with exit code 120 that Deviation 30 described.
 
 ## 170. A builtin converts every argument before it checks any
 

@@ -3,7 +3,7 @@ element: "Conventions"
 kind: concept
 ansi: "9.2.1"
 rexxref: "Functions > Built-in Functions"
-deviations: [30, 109]
+deviations: [30, 109, 169]
 ---
 
 # Conventions
@@ -519,15 +519,16 @@ say '['substr('abc', 2)']' '['substr(' a ', 1)']'
 ## Deviations
 
 r[conv.string.deviation.30]
-interrexx does not convert an argument whose `STRING` method answers an
-object that is not a string, such as a `Directory`. When a builtin receives
-such an argument where its page calls for a string, interrexx ends the
-program with exit code 120 and a message that this is not implemented,
-after raising [`NOSTRING`](r:cond.nostring.raise) when a trap for it is set.
-ooRexx reads the answer as a string, and what it does then depends on the
-builtin: `UPPER` ends the program with Error 5, `LENGTH` answers an unrelated
-number, and `STRIP` crashes the interpreter. A program can rely on none of
-these answers.
+interrexx does not convert an argument whose `STRING` method answers an object
+that is not a string, such as a `Directory`, by reading the answer as a
+string. When a builtin receives such an argument where its page calls for a
+string, interrexx raises `SYNTAX 98.973`, or `SYNTAX 88.909` for an argument
+the builtin reads as a string, as [Deviation
+169](r:conv.string.deviation.169) says, after raising
+[`NOSTRING`](r:cond.nostring.raise) when a trap for it is set. ooRexx reads
+the answer as a string, and what it does then depends on the builtin: `UPPER`
+ends the program with Error 5, `LENGTH` answers an unrelated number, and
+`STRIP` crashes the interpreter. A program can rely on none of these answers.
 
 ```rexx
 o = .weird~new
@@ -539,8 +540,93 @@ say 'after'
   return .directory~new
 ```
 
-```output rc=120
+```output rc=158
 before
+```
+
+r[conv.string.deviation.169]
+Where a clause needs the bytes of an object's string value, the `STRING` method
+of the object answers an object with no string value, and no trap took the
+NOSTRING condition that the answer raises, the clause raises `SYNTAX 98.973`,
+the condition that `::OPTIONS NOSTRING SYNTAX` makes of NOSTRING. The
+condition is an ordinary SYNTAX condition: `SIGNAL ON SYNTAX` and `CALL ON
+SYNTAX` take it, `RC` is 98 there, and untrapped it ends the program with exit
+code 158. The clauses that do this include `SAY`, the three concatenation
+operators, the ordering comparisons, `PARSE VALUE`, `PARSE ARG`, `OPTIONS` and
+the receiver of a builtin, the string the builtin works on. A clause that reads
+the answer as an object, such as a truth value, a logical operator or an
+equality comparison, takes it as `.nil`. An argument of a builtin that the
+builtin reads as a string has its own error, which
+[the next rule](r:conv.string.builtin-argument) states. ooRexx reads the answer
+as a string in each of the clauses above, with garbage results or a crash, so
+no answer of it is specified. The text of the message is not specified.
+
+```rexx
+o = .weird~new
+signal on syntax name s
+say length(o)
+s: say condition('o')~code rc
+signal on syntax name t
+say 'a' || o
+t: say condition('o')~code rc
+signal on syntax name u
+parse value o with a b
+u: say condition('o')~code rc
+::class weird
+::method string
+  return .directory~new
+```
+
+```output
+98.973 98
+98.973 98
+98.973 98
+```
+
+r[conv.string.builtin-argument]
+Where the `STRING` method of a builtin's argument answers an object with no
+string value, and the builtin reads that argument as a string, the builtin
+raises `SYNTAX 88.909`, "Argument N must have a string value", as the method
+the builtin stands for does. `N` is the position of the argument among the
+arguments of that method, which does not count the receiver, the string the
+builtin works on. So `CHANGESTR(needle, haystack, new)` numbers the needle 1
+and the replacement 2, and `STRIP(string, option, char)` numbers the option 1
+and the character 2. The arguments that are read as strings are those named
+here, and the others keep `SYNTAX 98.973` (the previous rule): the needle of
+`CHANGESTR`, `COUNTSTR`, `POS`, `LASTPOS` and `WORDPOS` and the replacement of
+`CHANGESTR`; the inserted string of `INSERT` and `OVERLAY`; the second string
+of `ABBREV`, `COMPARE`, `BITAND`, `BITOR` and `BITXOR`; the type of
+`DATATYPE`; the option and the character of `STRIP`; the two tables of
+`TRANSLATE`; the reference and the option of `VERIFY`; and the data of
+`CHAROUT` and `LINEOUT`. The conversions run in argument order, before any other argument check, so the error names the first argument
+whose answer has no string value, even where a later argument is also in
+error. A method's argument and a native routine's argument that has no string
+value raise the same error with their own position.
+
+```rexx
+o = .weird~new
+signal on syntax name s
+say changestr('a', 'a', o)
+s: say condition('o')~code rc
+signal on syntax name t
+say pos(o, 'abc')
+t: say condition('o')~code rc
+signal on syntax name u
+say strip('xabx', 'B', o)
+u: say condition('o')~code rc
+signal on syntax name v
+say 'abc'~pos(o)
+v: say condition('o')~code rc
+::class weird
+::method string
+  return .directory~new
+```
+
+```output
+88.909 88
+88.909 88
+88.909 88
+88.909 88
 ```
 
 r[conv.string.deviation.109]

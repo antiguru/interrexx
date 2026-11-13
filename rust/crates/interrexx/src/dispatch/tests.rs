@@ -633,7 +633,7 @@ fn a_write_to_a_packages_routines_table_moves_call_resolution() {
 /// conversion: an array (or an `Array` subclass) joins its items and a buffer
 /// is its text. A `Queue`, `.nil` or any other object is `.nil` there: a truth
 /// value and a logical operator judge `.nil`, and a consumer of its bytes
-/// (concatenation, `LENGTH`) refuses (Deviation 30).
+/// (concatenation, `LENGTH`) raises SYNTAX 98.973 (Deviations 30 and 169).
 #[test]
 fn a_string_answer_reads_as_primitive_make_string_reads_it() {
     let program = |answer: &str| {
@@ -654,38 +654,32 @@ fn a_string_answer_reads_as_primitive_make_string_reads_it() {
             "{answer}"
         );
     }
-    let refusal = "interrexx: a STRING method answering an object with no string value \
-                   is not implemented\n";
+    // A consumer of the bytes raises SYNTAX 98.973, which a trap takes
+    // (Deviation 169).
     for answer in [".directory~new", ".queue~of('a')", ".nil", ".object~new"] {
-        assert_eq!(
-            run_source(&program(answer)),
-            (120, String::new(), refusal.to_owned()),
-            "{answer}"
-        );
-        // The ordering operators, PARSE and OPTIONS read `.nil` through the
-        // oracle's string layout, so they refuse with the bytes consumers.
         for statement in [
+            "say 'x' .k~new",
             "say '' << .k~new",
             "say 'abc' < .k~new",
             "parse value .k~new with p",
             "parse value .k~new with p q",
-            "call r .k~new\nexit\nr: parse arg p\nreturn",
+            "call r .k~new\nexit\nr: signal on syntax name s\nparse arg p\nreturn",
             "options .k~new",
+            "say length(.k~new)",
         ] {
-            let program =
-                format!("{statement}\nexit\n::class k\n::method string\n  return {answer}\n");
+            let program = format!(
+                "signal on syntax name s\n{statement}\nexit\n\
+                 s: say condition('O')~code\n::class k\n::method string\n  return {answer}\n"
+            );
             assert_eq!(
                 run_source(&program),
-                (120, String::new(), refusal.to_owned()),
+                (0, "98.973\n".to_owned(), String::new()),
                 "{statement} over {answer}"
             );
         }
-        let length = format!("say length(.k~new)\n::class k\n::method string\n  return {answer}\n");
-        assert_eq!(
-            run_source(&length),
-            (120, String::new(), refusal.to_owned()),
-            "length over {answer}"
-        );
+        let untrapped =
+            format!("say length(.k~new)\n::class k\n::method string\n  return {answer}\n");
+        assert_eq!(run_source(&untrapped).0, 158, "untrapped over {answer}");
         let judged = format!(
             "o = .k~new\nsignal on syntax name s1\nif o then nop\n\
              s1: say condition('O')~code condition('O')~message\n\

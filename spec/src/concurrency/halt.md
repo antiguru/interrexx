@@ -1209,7 +1209,7 @@ g = .gate~new
 m = g~start('later')
 say 'main: before the refusal'
 g~open
-say upper(.weird~new)
+say .local~sendWith('ZZZ=', .array~new(1))
 ::class gate
 ::method init
   expose up
@@ -1221,9 +1221,6 @@ say upper(.weird~new)
   expose up
   guard on when up
   say 'the started message ran'
-::class weird
-::method string
-  return .directory~new
 ```
 
 ```output rc=120
