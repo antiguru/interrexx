@@ -183,10 +183,10 @@
 
 ::method makeDirs
   use strict arg
-  if self~exists then return 0
-  if self~makeDir then return 1
+  if self~exists then return .false
+  if self~makeDir then return .true
   parent = self~parentFile
-  if .nil == parent then return 0
+  if .nil == parent then return .false
   parent~makeDirs
   return self~makeDir
 

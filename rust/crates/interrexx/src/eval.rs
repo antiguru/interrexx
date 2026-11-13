@@ -388,10 +388,11 @@ impl Interp {
         match code.symbols.name(id) {
             ".NIL" => Ok(ObjRef::NIL),
             // `.true`/`.false` need no representation of their own (D15):
-            // they are the one-byte strings "1" and "0", built fresh here the
-            // same way any other text value is.
+            // they are the shared one-byte strings "1" and "0", the
+            // `LOGICAL_TRUE`/`LOGICAL_FALSE` constants every built-in boolean
+            // answers as well.
             ".TRUE" => Ok(LOGICAL_TRUE),
-            ".FALSE" => Ok(self.text(b"0")),
+            ".FALSE" => Ok(LOGICAL_FALSE),
             other => self.dot_variable(other.as_bytes()),
         }
     }
@@ -414,7 +415,7 @@ impl Interp {
         match code.symbols.name(id) {
             ".NIL" => Ok(ObjRef::NIL),
             ".TRUE" => Ok(LOGICAL_TRUE),
-            ".FALSE" => Ok(self.text(b"0")),
+            ".FALSE" => Ok(LOGICAL_FALSE),
             other => self.dot_variable_memoized(other.as_bytes(), memo),
         }
     }

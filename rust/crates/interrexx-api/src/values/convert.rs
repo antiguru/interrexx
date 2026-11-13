@@ -630,7 +630,8 @@ pub(super) fn usize_from_native(
 }
 
 /// The object a `REXX_VALUE_logical_t` value becomes:
-/// any value but zero is true.
+/// any value but zero is `.true`, zero is `.false`: the handles
+/// `True()` and `False()` answer, not numbers (D15).
 pub(super) fn logical_from_native(
     cx: &mut Conversion<'_>,
     value: Value,
@@ -638,7 +639,12 @@ pub(super) fn logical_from_native(
     let Value::Usize(number) = value else {
         return Err(Failure::ResultSignature);
     };
-    Ok(Some(cx.host.whole_number(isize::from(number != 0))))
+    let constants = cx.host.constants();
+    Ok(Some(if number != 0 {
+        constants.true_object
+    } else {
+        constants.false_object
+    }))
 }
 
 /// The object a `REXX_VALUE_double` value becomes.

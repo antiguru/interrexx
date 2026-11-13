@@ -446,10 +446,10 @@ fn native_mutable_buffer_endswith(
     let state = buffer_state(interp, receiver)?;
     let answer = ends_with(&state.bytes, &needle, <[u8]>::eq);
     interp.give_result_buffer(needle);
-    Ok(Some(interp.counted(usize::from(answer))))
+    Ok(Some(crate::eval::logical(answer)))
 }
 
-/// `ENDSWITH`'s region compare, folded, an empty `match` likewise `0`.
+/// `ENDSWITH`'s region compare, folded, an empty `match` likewise `.false`.
 fn native_mutable_buffer_caselessendswith(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -460,7 +460,7 @@ fn native_mutable_buffer_caselessendswith(
     let state = buffer_state(interp, receiver)?;
     let answer = ends_with(&state.bytes, &needle, crate::builtin::string::caseless_eq);
     interp.give_result_buffer(needle);
-    Ok(Some(interp.counted(usize::from(answer))))
+    Ok(Some(crate::eval::logical(answer)))
 }
 
 /// Every argument a required string, appended in turn; answers the receiver.
@@ -833,7 +833,7 @@ fn native_mutable_buffer_contains(
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
     let found = buffer_pos(interp, receiver, args, crate::builtin::string::find_forward)?;
-    Ok(Some(interp.counted(usize::from(found > 0))))
+    Ok(Some(crate::eval::logical(found > 0)))
 }
 
 fn native_mutable_buffer_caselesspos(
@@ -863,7 +863,7 @@ fn native_mutable_buffer_caselesscontains(
         args,
         crate::builtin::string::caseless_find_forward,
     )?;
-    Ok(Some(interp.counted(usize::from(found > 0))))
+    Ok(Some(crate::eval::logical(found > 0)))
 }
 
 /// `MutableBuffer~lastPos`: the start and the range each default to the whole
@@ -1119,7 +1119,7 @@ fn native_mutable_buffer_containsword(
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
     let found = buffer_wordpos(interp, receiver, args, crate::builtin::word::wordpos_bytes)?;
-    Ok(Some(interp.counted(usize::from(found > 0))))
+    Ok(Some(crate::eval::logical(found > 0)))
 }
 
 fn native_mutable_buffer_caselesswordpos(
@@ -1149,11 +1149,11 @@ fn native_mutable_buffer_caselesscontainsword(
         args,
         crate::builtin::word::caseless_wordpos_bytes,
     )?;
-    Ok(Some(interp.counted(usize::from(found > 0))))
+    Ok(Some(crate::eval::logical(found > 0)))
 }
 
 /// `STARTSWITH` and its caseless twin over any bytes: an empty `match`
-/// answers `0` on both, which is why this is not `slice::starts_with`.
+/// answers `.false` on both, which is why this is not `slice::starts_with`.
 pub(super) fn starts_with(
     haystack: &[u8],
     needle: &[u8],
@@ -1174,7 +1174,7 @@ pub(super) fn ends_with(haystack: &[u8], needle: &[u8], matches: fn(&[u8], &[u8]
             .is_some_and(|at| matches(&haystack[at..], needle))
 }
 
-/// `ENDSWITH`'s twin, an empty `match` likewise `0`.
+/// `ENDSWITH`'s twin, an empty `match` likewise `.false`.
 fn native_mutable_buffer_startswith(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1185,10 +1185,10 @@ fn native_mutable_buffer_startswith(
     let state = buffer_state(interp, receiver)?;
     let answer = starts_with(&state.bytes, &needle, <[u8]>::eq);
     interp.give_result_buffer(needle);
-    Ok(Some(interp.counted(usize::from(answer))))
+    Ok(Some(crate::eval::logical(answer)))
 }
 
-/// `STARTSWITH`'s region compare, folded, an empty `match` likewise `0`.
+/// `STARTSWITH`'s region compare, folded, an empty `match` likewise `.false`.
 fn native_mutable_buffer_caselessstartswith(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1199,11 +1199,11 @@ fn native_mutable_buffer_caselessstartswith(
     let state = buffer_state(interp, receiver)?;
     let answer = starts_with(&state.bytes, &needle, crate::builtin::string::caseless_eq);
     interp.give_result_buffer(needle);
-    Ok(Some(interp.counted(usize::from(answer))))
+    Ok(Some(crate::eval::logical(answer)))
 }
 
-/// A start past the contents is `0` before `other` is looked at:
-/// `.MutableBuffer~new('abcabc')~match(99, .nil)` is `0`.
+/// A start past the contents is `.false` before `other` is looked at:
+/// `.MutableBuffer~new('abcabc')~match(99, .nil)` is `.false`.
 fn native_mutable_buffer_match(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1212,16 +1212,16 @@ fn native_mutable_buffer_match(
 ) -> Result<Option<ObjRef>, Failure> {
     let start = required_position_argument(interp, args, 0)?;
     if start > buffer_state(interp, receiver)?.bytes.len() {
-        return Ok(Some(interp.counted(0)));
+        return Ok(Some(crate::eval::logical(false)));
     }
     let other = string_method_argument(interp, args, 1)?;
     let answer = match_region(interp, receiver, args, start, &other, <[u8]>::eq);
     interp.give_result_buffer(other);
-    Ok(Some(interp.counted(usize::from(answer?))))
+    Ok(Some(crate::eval::logical(answer?)))
 }
 
 /// `MATCH`'s scan, the caseless comparison the only difference, and the same
-/// order: `.MutableBuffer~new('aBcaBc')~caselessMatch(99, .nil)` is `0`.
+/// order: `.MutableBuffer~new('aBcaBc')~caselessMatch(99, .nil)` is `.false`.
 fn native_mutable_buffer_caselessmatch(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1230,7 +1230,7 @@ fn native_mutable_buffer_caselessmatch(
 ) -> Result<Option<ObjRef>, Failure> {
     let start = required_position_argument(interp, args, 0)?;
     if start > buffer_state(interp, receiver)?.bytes.len() {
-        return Ok(Some(interp.counted(0)));
+        return Ok(Some(crate::eval::logical(false)));
     }
     let other = string_method_argument(interp, args, 1)?;
     let answer = match_region(
@@ -1242,12 +1242,12 @@ fn native_mutable_buffer_caselessmatch(
         crate::builtin::string::caseless_eq,
     );
     interp.give_result_buffer(other);
-    Ok(Some(interp.counted(usize::from(answer?))))
+    Ok(Some(crate::eval::logical(answer?)))
 }
 
 /// The rest of `match`'s arguments once `start` is inside the receiver: an
-/// explicit offset past `other` is `0` before the length is looked at, and a
-/// length past `other` is `0`: `~match(1, 'abc', 4, -1)` is `0`. `None` is
+/// explicit offset past `other` is `.false` before the length is looked at, and a
+/// length past `other` is `.false`: `~match(1, 'abc', 4, -1)` is `.false`. `None` is
 /// those two answers; `Some` is the region of `other` to compare.
 pub(super) fn match_region_arguments(
     interp: &mut Interp,
@@ -1305,8 +1305,8 @@ fn match_region(
     ))
 }
 
-/// A position past the contents is `0` before the set is looked at:
-/// `.MutableBuffer~new('abcabc')~matchChar(99, .nil)` is `0`.
+/// A position past the contents is `.false` before the set is looked at:
+/// `.MutableBuffer~new('abcabc')~matchChar(99, .nil)` is `.false`.
 fn native_mutable_buffer_matchchar(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1315,7 +1315,7 @@ fn native_mutable_buffer_matchchar(
 ) -> Result<Option<ObjRef>, Failure> {
     let position = required_position_argument(interp, args, 0)?;
     if position > buffer_state(interp, receiver)?.bytes.len() {
-        return Ok(Some(interp.counted(0)));
+        return Ok(Some(crate::eval::logical(false)));
     }
     let set = string_method_argument(interp, args, 1)?;
     let state = buffer_state(interp, receiver)?;
@@ -1324,11 +1324,11 @@ fn native_mutable_buffer_matchchar(
         .get(position - 1)
         .is_some_and(|byte| set.contains(byte));
     interp.give_result_buffer(set);
-    Ok(Some(interp.counted(usize::from(answer))))
+    Ok(Some(crate::eval::logical(answer)))
 }
 
 /// `MATCHCHAR`'s scan with both sides folded, and the same order:
-/// `.MutableBuffer~new('aBcaBc')~caselessMatchChar(99, .nil)` is `0`.
+/// `.MutableBuffer~new('aBcaBc')~caselessMatchChar(99, .nil)` is `.false`.
 fn native_mutable_buffer_caselessmatchchar(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1337,7 +1337,7 @@ fn native_mutable_buffer_caselessmatchchar(
 ) -> Result<Option<ObjRef>, Failure> {
     let position = required_position_argument(interp, args, 0)?;
     if position > buffer_state(interp, receiver)?.bytes.len() {
-        return Ok(Some(interp.counted(0)));
+        return Ok(Some(crate::eval::logical(false)));
     }
     let set = string_method_argument(interp, args, 1)?;
     let state = buffer_state(interp, receiver)?;
@@ -1346,7 +1346,7 @@ fn native_mutable_buffer_caselessmatchchar(
         set.iter().any(|member| member.to_ascii_uppercase() == byte)
     });
     interp.give_result_buffer(set);
-    Ok(Some(interp.counted(usize::from(answer))))
+    Ok(Some(crate::eval::logical(answer)))
 }
 
 /// The one byte at the position, or the null string past the end.

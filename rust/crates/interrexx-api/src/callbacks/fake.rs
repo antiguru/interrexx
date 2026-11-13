@@ -136,8 +136,8 @@ impl Host for FakeHost {
     fn constants(&mut self) -> Constants<ObjRef> {
         Constants {
             nil: ObjRef::NIL,
-            true_object: ObjRef::small_int(1).expect("one is a small integer"),
-            false_object: ObjRef::small_int(0).expect("zero is a small integer"),
+            true_object: ObjRef::inline_byte(b'1'),
+            false_object: ObjRef::inline_byte(b'0'),
             null_string: self.text(b""),
         }
     }
@@ -193,10 +193,13 @@ impl Host for FakeHost {
     }
 
     fn logical(&mut self, object: ObjRef) -> Result<Result<bool, ObjRef>, Raised> {
-        Ok(match self.number::<i64>(object) {
-            Some(0) => Ok(false),
-            Some(1) => Ok(true),
-            _ => Err(object),
+        let constants = self.constants();
+        Ok(if object == constants.true_object {
+            Ok(true)
+        } else if object == constants.false_object {
+            Ok(false)
+        } else {
+            Err(object)
         })
     }
 

@@ -65,6 +65,10 @@ pub mod oracle_runtime;
 /// same way by every harness that runs corpus programs.
 pub mod sidecar;
 
+/// What the differential tests that run one `rexx` process per case share: scratch and
+/// service directories, the command for either side, the service's stop.
+pub mod rexx_service;
+
 /// The oracle's trace prefix table, all nineteen -- not only the subset this
 /// crate has an emitter for. See the module doc for why the markers nothing
 /// here has ever produced are carried anyway: the alternative is a list that

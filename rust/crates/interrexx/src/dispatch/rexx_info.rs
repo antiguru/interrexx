@@ -95,12 +95,12 @@ fn architecture(
 
 /// Whether the root directory's file system is case sensitive.
 fn case_sensitive_files(
-    interp: &mut Interp,
+    _interp: &mut Interp,
     _cleared: Cleared,
     _receiver: ObjRef,
     _args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
-    Ok(Some(interp.counted(1)))
+    Ok(Some(crate::eval::logical(true)))
 }
 
 /// `RexxInfo::copyRexx`, whose whole body is the 93.970 raise.
@@ -177,12 +177,12 @@ fn date(
 
 /// `#ifdef _DEBUG`.
 fn debug(
-    interp: &mut Interp,
+    _interp: &mut Interp,
     _cleared: Cleared,
     _receiver: ObjRef,
     _args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
-    Ok(Some(interp.counted(0)))
+    Ok(Some(crate::eval::logical(false)))
 }
 
 /// The default digits, read here off the settings a program starts with rather

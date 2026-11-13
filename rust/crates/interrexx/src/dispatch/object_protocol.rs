@@ -36,18 +36,18 @@ pub(super) fn native_has_method(
     let argument = required_string_argument(interp, argument, 1)?;
     let name = String::from_utf8_lossy(&interp.to_text(argument).to_ascii_uppercase()).into_owned();
     // **The object's own dictionary answers first**, so a `setMethod` name
-    // reports `1` and a hidden one reports `0` even where the class defines it
-    // -- the first answers `1` and a send after the second raises.
+    // reports `.true` and a hidden one reports `.false` even where the class
+    // defines it -- the first answers `.true` and a send after the second raises.
     if let Some(entry) = interp.own_method_entry(receiver, name.as_bytes()) {
-        return Ok(Some(interp.counted(usize::from(entry.is_some()))));
+        return Ok(Some(crate::eval::logical(entry.is_some())));
     }
-    // **A receiver with no class here is loud, not `0`.** `send_message`
+    // **A receiver with no class here is loud, not `.false`.** `send_message`
     // screens for it before any method runs, so this arm is unreachable today;
-    // answering `0` from it anyway would make this the one place in the module
+    // answering `.false` from it anyway would make this the one place in the module
     // where a gap becomes an answer, and the answer would be wrong. **Which
     // dictionary is asked follows the receiver**: with `::class K` plus
-    // `::method m class`: `.K~hasMethod('M')` is `1` and
-    // `.K~hasMethod('LENGTH')` is `0`, so a class object is asked about its
+    // `::method m class`: `.K~hasMethod('M')` is `.true` and
+    // `.K~hasMethod('LENGTH')` is `.false`, so a class object is asked about its
     // class behaviour and not about `.Class`'s instances.
     let behaviour = match interp.receiver_behaviour(receiver) {
         Ok(behaviour) => behaviour,
@@ -58,7 +58,7 @@ pub(super) fn native_has_method(
         Behaviour::Instance { methods, .. } => classes.has_method_at(methods, &name),
         Behaviour::ClassSide(class) => classes.class_has_method(class, &name),
     };
-    Ok(Some(interp.counted(usize::from(answers))))
+    Ok(Some(crate::eval::logical(answers)))
 }
 
 /// `Object~defaultName`: the receiver's class id with an article in front.
@@ -134,7 +134,7 @@ pub(super) fn native_is_a(
         return Err(Loud::unknown_receiver("a value with no class of its own").into());
     };
     let answer = interp.classes().is_a(own, other);
-    Ok(Some(interp.counted(usize::from(answer))))
+    Ok(Some(crate::eval::logical(answer)))
 }
 
 /// `Object~identityHash`.
@@ -1693,7 +1693,7 @@ pub(super) fn native_message_completed(
     _args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
     let completed = interp.message_outcomes.contains_key(&receiver);
-    Ok(Some(interp.counted(usize::from(completed))))
+    Ok(Some(crate::eval::logical(completed)))
 }
 
 /// `Message~hasError`: whether the send ended by raising.
@@ -1704,7 +1704,7 @@ pub(super) fn native_message_has_error(
     _args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
     let failed = matches!(interp.message_outcomes.get(&receiver), Some(Some(_)));
-    Ok(Some(interp.counted(usize::from(failed))))
+    Ok(Some(crate::eval::logical(failed)))
 }
 
 /// `Message~halt(description)`: asks the activity a start gave the message to
@@ -1723,7 +1723,7 @@ pub(super) fn native_message_halt(
         None => None,
     };
     let halted = interp.halt_message(receiver, description);
-    Ok(Some(interp.counted(usize::from(halted))))
+    Ok(Some(crate::eval::logical(halted)))
 }
 
 /// `Message~hasResult`: whether the send has answered a value.
@@ -1734,7 +1734,7 @@ pub(super) fn native_message_has_result(
     _args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
     let answered = interp.native_entry(receiver, MESSAGE_RESULT).is_some();
-    Ok(Some(interp.counted(usize::from(answered))))
+    Ok(Some(crate::eval::logical(answered)))
 }
 
 /// `Message~errorCondition`: the condition object the send failed with, or
@@ -1991,12 +1991,12 @@ pub(super) fn native_request(
     }))
 }
 
-/// `Object~isNil`: `1` for `.nil` and `0` for everything else.
+/// `Object~isNil`: `.true` for `.nil` and `.false` for everything else.
 pub(super) fn native_is_nil(
-    interp: &mut Interp,
+    _interp: &mut Interp,
     _cleared: Cleared,
     receiver: ObjRef,
     _args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
-    Ok(Some(interp.counted(usize::from(receiver == ObjRef::NIL))))
+    Ok(Some(crate::eval::logical(receiver == ObjRef::NIL)))
 }

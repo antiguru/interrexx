@@ -146,7 +146,7 @@ fn declared_flag(interp: &Interp, source: ExecutableSource, which: Flag) -> bool
             // The attribute getter and the method an `::ATTRIBUTE ... GET` with
             // a body takes both mark the attribute state. For example,
             // `::attribute ATT` and `::attribute ATT get` with a body each
-            // answer `isAttribute` `1`.
+            // answer `isAttribute` `.true`.
             Flag::Attribute => true,
             Flag::Constant => false,
             Flag::Unguarded => attribute.guard == GuardOption::Unguarded,
@@ -157,7 +157,7 @@ fn declared_flag(interp: &Interp, source: ExecutableSource, which: Flag) -> bool
         // A constant getter is marked constant and unguarded outright, taking
         // no access or protection option. For example, `::constant CON 5`
         // answers `0 0 1 0 0 0 0`, and it is the one directive whose
-        // `isGuarded` is `0` without an `UNGUARDED` keyword.
+        // `isGuarded` is `.false` without an `UNGUARDED` keyword.
         DirectiveKind::Constant(_) => matches!(which, Flag::Constant | Flag::Unguarded),
         // A `::ROUTINE` is not a `Method` and answers none of these; the rows
         // are not bound at `Routine`.
@@ -239,13 +239,13 @@ fn is_protected(
 /// One flag reader's answer. `negated` is `isGuarded`'s, the one reader whose
 /// question is the stored bit's complement.
 fn answer_flag(
-    interp: &mut Interp,
+    interp: &Interp,
     receiver: ObjRef,
     which: Flag,
     negated: bool,
 ) -> Result<Option<ObjRef>, Failure> {
     let set = flag(interp, receiver, which)?;
-    Ok(Some(interp.counted(usize::from(set != negated))))
+    Ok(Some(crate::eval::logical(set != negated)))
 }
 
 /// `Method~setUnguarded`, `setGuarded`, `setPrivate` and `setProtected`: each
@@ -336,7 +336,7 @@ fn set_security_manager(
         let package = interp.package_object(crate::plan::Package::Program(program))?;
         interp.install_security_manager(package, args.first().copied().flatten());
     }
-    Ok(Some(interp.counted(usize::from(rexx_code))))
+    Ok(Some(crate::eval::logical(rexx_code)))
 }
 
 /// Whether this executable's body is Rexx source -- the distinction
