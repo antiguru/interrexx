@@ -1313,16 +1313,6 @@ const RETIRED_ENTRY_BYTES: usize = 128;
 /// The message the last install pass sends every class the package built.
 pub(crate) const ACTIVATE: &[u8] = b"ACTIVATE";
 
-/// How [`Interp::unknown_send`] treats an `UNKNOWN` method that is not
-/// frameless.
-#[derive(Clone, Copy)]
-enum UnknownEntry {
-    /// Run to its end, beneath the caller's own Rust frame.
-    Nested,
-    /// Begun only, for a caller that runs the body it enters.
-    Begun,
-}
-
 /// Which primitive `UNKNOWN` runs without a level of its own -- see
 /// [`Interp::frameless_unknown`].
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -4100,7 +4090,9 @@ impl Interp {
         };
         match self.resolve_in(receiver, behaviour, name, start_scope, caller) {
             Ok(resolution) => self.begin_invoke(resolution, Some(behaviour), receiver, name, args),
-            Err(miss) => self.begin_unknown_or_nomethod(receiver, name, args, miss),
+            Err(miss) => self
+                .begin_unknown_or_nomethod(receiver, name, args, miss, true)
+                .map(|ran| ran.map_or(Started::Entered, Started::Ran)),
         }
     }
 
@@ -4136,7 +4128,9 @@ impl Interp {
         };
         match resolved {
             Ok(resolution) => self.begin_invoke(resolution, Some(behaviour), receiver, name, args),
-            Err(miss) => self.begin_unknown_or_nomethod(receiver, name, args, miss),
+            Err(miss) => self
+                .begin_unknown_or_nomethod(receiver, name, args, miss, true)
+                .map(|ran| ran.map_or(Started::Entered, Started::Ran)),
         }
     }
 
@@ -4152,14 +4146,21 @@ impl Interp {
         args: &[Option<ObjRef>],
         miss: Miss,
     ) -> Result<Option<ObjRef>, Failure> {
-        let started = self.unknown_send(receiver, name, args, miss, UnknownEntry::Nested)?;
-        self.complete_send(started)
+        match self.begin_unknown_or_nomethod(receiver, name, args, miss, false)? {
+            Some(value) => Ok(value),
+            None => self.complete_send(Started::Entered),
+        }
     }
 
-    /// [`Interp::unknown_or_nomethod`] up to the point a Rexx `UNKNOWN` body
-    /// it enters would run. The body then runs as the send's own callee, with
-    /// no Rust frame of this send beneath it, so a wait inside it parks the
-    /// activity as a wait in any method does.
+    /// [`Interp::unknown_or_nomethod`], with a method `UNKNOWN` resolves to
+    /// only begun where `begun` holds: `None` then says its body was entered
+    /// and runs as the send's own callee, with no Rust frame of this send
+    /// beneath it, so a wait inside it parks the activity as a wait in any
+    /// method does. The answer is an `Option` rather than a [`Started`]
+    /// because the send sites, which inline their own result handling, then
+    /// keep the hit path's code as it was. `begun` is a parameter rather
+    /// than a const generic so that one copy of this body exists, and the
+    /// `Directory` read path below keeps its callees inlined.
     #[cold]
     #[inline(never)]
     fn begin_unknown_or_nomethod(
@@ -4168,23 +4169,8 @@ impl Interp {
         name: &[u8],
         args: &[Option<ObjRef>],
         miss: Miss,
-    ) -> Result<Started<Option<ObjRef>>, Failure> {
-        self.unknown_send(receiver, name, args, miss, UnknownEntry::Begun)
-    }
-
-    /// The miss arm both [`Interp::unknown_or_nomethod`] and
-    /// [`Interp::begin_unknown_or_nomethod`] share, `entry` saying whether a
-    /// method `UNKNOWN` resolves to is run here or only begun.
-    #[cold]
-    #[inline(never)]
-    fn unknown_send(
-        &mut self,
-        receiver: ObjRef,
-        name: &[u8],
-        args: &[Option<ObjRef>],
-        miss: Miss,
-        entry: UnknownEntry,
-    ) -> Result<Started<Option<ObjRef>>, Failure> {
+        begun: bool,
+    ) -> Result<Option<Option<ObjRef>>, Failure> {
         let Some(resolution) = self.lookup(receiver, UNKNOWN, None) else {
             return Err(self.nomethod(receiver, name, miss));
         };
@@ -4200,7 +4186,7 @@ impl Interp {
                 hash::unknown_entry_read(self, receiver, name)
             );
             self.roots.activity_mut().pop_frame(frame);
-            return read.map(Started::Ran);
+            return read.map(Some);
         }
         // **Each of the forward's arguments is rooted, and only the array's
         // root has a witness.** `alloc_with` collects *before* it allocates,
@@ -4232,7 +4218,7 @@ impl Interp {
                 crate::pinning::PinKind::Unknown,
                 run(self, receiver, &unknown_args)
             )
-            .map(Started::Ran),
+            .map(Some),
             None => {
                 // The fallback to `UNKNOWN` is not a send of the program, and
                 // the message it was sent for named no protected method, so
@@ -4240,16 +4226,19 @@ impl Interp {
                 // seam consumes the flag before the method's activation is
                 // pushed, so it never outlives this begin.
                 self.unasked_run = true;
-                let sent = match entry {
-                    UnknownEntry::Nested => pinned!(
+                let sent = if begun {
+                    self.begin_invoke(resolution, None, receiver, UNKNOWN, &unknown_args)
+                        .map(|started| match started {
+                            Started::Ran(value) => Some(value),
+                            Started::Entered => None,
+                        })
+                } else {
+                    pinned!(
                         self,
                         crate::pinning::PinKind::Unknown,
                         self.invoke(resolution, receiver, UNKNOWN, &unknown_args)
                     )
-                    .map(Started::Ran),
-                    UnknownEntry::Begun => {
-                        self.begin_invoke(resolution, None, receiver, UNKNOWN, &unknown_args)
-                    }
+                    .map(Some)
                 };
                 self.unasked_run = false;
                 sent
