@@ -14,6 +14,7 @@ mod handle;
 mod heap;
 mod roots;
 mod slots;
+mod tails;
 
 pub use behaviour::BehaviourTable;
 pub use body::{
@@ -33,6 +34,7 @@ pub use heap::SharingCount;
 pub use heap::{CollectStats, Heap};
 pub use roots::{ActivityRoots, FrameAliases, FrameId, Parked, RootSet, SlotFrame, SlotRef};
 pub use slots::ArraySlots;
+pub use tails::Tails;
 
 /// The hasher behind [`NameMap`].
 pub type NameHasher = rustc_hash::FxBuildHasher;

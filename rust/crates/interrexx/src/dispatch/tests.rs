@@ -1310,7 +1310,7 @@ fn a_stem_forwards_a_message_it_has_no_method_for_to_its_value() {
         Body::Stem {
             name: b"A."[..].into(),
             default: None,
-            tails: interrexx_core::NameMap::default(),
+            tails: interrexx_core::Tails::new(),
             exposed: None,
         },
     );

@@ -245,7 +245,7 @@ fn text_len_agrees_with_to_text() {
         Body::Stem {
             name: b"Q.".to_vec().into(),
             default: None,
-            tails: interrexx_core::NameMap::default(),
+            tails: interrexx_core::Tails::new(),
             exposed: None,
         },
     );
@@ -256,7 +256,7 @@ fn text_len_agrees_with_to_text() {
         Body::Stem {
             name: b"W.".to_vec().into(),
             default: Some(default),
-            tails: interrexx_core::NameMap::default(),
+            tails: interrexx_core::Tails::new(),
             exposed: None,
         },
     );
@@ -684,7 +684,7 @@ fn the_borrowing_accessor_answers_what_to_text_answers() {
         Body::Stem {
             name: b"A.".to_vec().into(),
             default: Some(five),
-            tails: interrexx_core::NameMap::default(),
+            tails: interrexx_core::Tails::new(),
             exposed: None,
         },
     );
@@ -693,7 +693,7 @@ fn the_borrowing_accessor_answers_what_to_text_answers() {
         Body::Stem {
             name: b"Q.".to_vec().into(),
             default: None,
-            tails: interrexx_core::NameMap::default(),
+            tails: interrexx_core::Tails::new(),
             exposed: None,
         },
     );
@@ -702,7 +702,7 @@ fn the_borrowing_accessor_answers_what_to_text_answers() {
         Body::Stem {
             name: b"B.".to_vec().into(),
             default: Some(with_default),
-            tails: interrexx_core::NameMap::default(),
+            tails: interrexx_core::Tails::new(),
             exposed: None,
         },
     );
@@ -764,7 +764,7 @@ fn try_text_answers_only_where_the_bytes_already_exist() {
         Body::Stem {
             name: b"A.".to_vec().into(),
             default: Some(small),
-            tails: interrexx_core::NameMap::default(),
+            tails: interrexx_core::Tails::new(),
             exposed: None,
         },
     );
@@ -777,7 +777,7 @@ fn try_text_answers_only_where_the_bytes_already_exist() {
         Body::Stem {
             name: b"B.".to_vec().into(),
             default: Some(text),
-            tails: interrexx_core::NameMap::default(),
+            tails: interrexx_core::Tails::new(),
             exposed: None,
         },
     );
@@ -907,7 +907,7 @@ fn to_number_on_a_stem_redirects_through_its_numeric_default() {
         Body::Stem {
             name: b"A.".to_vec().into(),
             default: Some(five),
-            tails: interrexx_core::NameMap::default(),
+            tails: interrexx_core::Tails::new(),
             exposed: None,
         },
     );
@@ -929,7 +929,7 @@ fn to_number_on_a_defaultless_stem_parses_its_own_name_and_fails() {
         Body::Stem {
             name: b"Q.".to_vec().into(),
             default: None,
-            tails: interrexx_core::NameMap::default(),
+            tails: interrexx_core::Tails::new(),
             exposed: None,
         },
     );
@@ -953,7 +953,7 @@ fn to_number_on_a_stem_aliasing_another_stem_chases_through_both() {
         Body::Stem {
             name: b"A.".to_vec().into(),
             default: Some(five),
-            tails: interrexx_core::NameMap::default(),
+            tails: interrexx_core::Tails::new(),
             exposed: None,
         },
     );
@@ -962,7 +962,7 @@ fn to_number_on_a_stem_aliasing_another_stem_chases_through_both() {
         Body::Stem {
             name: b"B.".to_vec().into(),
             default: Some(a),
-            tails: interrexx_core::NameMap::default(),
+            tails: interrexx_core::Tails::new(),
             exposed: None,
         },
     );

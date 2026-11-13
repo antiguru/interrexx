@@ -279,7 +279,8 @@ impl Interp {
     /// stem itself has ever been assigned. This read sends the `.local~novalue`
     /// hook nothing: it is an inquiry's (`SYMBOL`, `VALUE`, the native API's).
     pub(crate) fn stem_get(&mut self, stem_name: &[u8], key: &[u8]) -> (ObjRef, Novalue) {
-        self.stem_lookup::<false>(stem_name, None, key)
+        let (value, novalue, _) = self.stem_lookup::<false>(stem_name, None, key);
+        (value, novalue)
     }
 
     /// [`Interp::stem_get`] with the stem's slot already in hand, which is
@@ -293,7 +294,51 @@ impl Interp {
         at: Option<usize>,
         key: &[u8],
     ) -> (ObjRef, Novalue) {
+        let (value, novalue, _) = self.stem_lookup::<true>(stem_name, at, key);
+        (value, novalue)
+    }
+
+    /// [`Interp::stem_get_at`], also answering the stem and the tail's
+    /// ordinal where the tail holds a value of its own: what a later write of
+    /// the same tail can use in place of the key ([`Interp::stem_set_held`]).
+    pub(crate) fn stem_get_holding(
+        &mut self,
+        stem_name: &[u8],
+        at: Option<usize>,
+        key: &[u8],
+    ) -> (ObjRef, Novalue, Option<(ObjRef, usize)>) {
         self.stem_lookup::<true>(stem_name, at, key)
+    }
+
+    /// Writes `value` to the tail at `ordinal` of `stem`, the pair
+    /// [`Interp::stem_get_holding`] answered, where that is still the tail
+    /// `key` names: the stem variable still holds `stem` (the handle carries
+    /// its generation), the tail is not exposed, and the slot still holds a
+    /// value. Answers `false`, writing nothing, where any of that fails.
+    pub(crate) fn stem_set_held(
+        &mut self,
+        stem_name: &[u8],
+        at: Option<usize>,
+        (stem, ordinal): (ObjRef, usize),
+        key: &[u8],
+        value: ObjRef,
+    ) -> bool {
+        let slot = self.stem_slot(stem_name, at);
+        let frame = self.activation().frame;
+        if self.variable(frame, slot) != Some(stem) {
+            return false;
+        }
+        let Some(Body::Stem { tails, exposed, .. }) =
+            self.heap.get_mut(stem).map(|object| &mut object.body)
+        else {
+            return false;
+        };
+        if exposed_home(exposed, key).is_some() || tails.value_at(ordinal).is_none() {
+            return false;
+        }
+        tails.set_at(ordinal, Some(value));
+        self.stem_changed(stem);
+        true
     }
 
     /// [`Interp::stem_get_at`], sending the hook only where `HOOK` holds.
@@ -303,7 +348,7 @@ impl Interp {
         stem_name: &[u8],
         at: Option<usize>,
         key: &[u8],
-    ) -> (ObjRef, Novalue) {
+    ) -> (ObjRef, Novalue, Option<(ObjRef, usize)>) {
         let slot = self.stem_slot(stem_name, at);
         let frame = self.activation().frame;
         let stem_value = match self.variable(frame, slot) {
@@ -312,6 +357,7 @@ impl Interp {
                 return (
                     self.tail_of_unused_stem::<HOOK>(stem_name, key),
                     Novalue::Unset,
+                    None,
                 );
             }
         };
@@ -333,22 +379,26 @@ impl Interp {
                 );
             };
             if let Some(home) = exposed_home(exposed, key) {
-                self.tail_value(home, key)
+                (self.tail_value(home, key), None)
             } else {
-                match tails.get(key) {
-                    Some((_, Some(value))) => Some(*value),
-                    Some((_, None)) => None, // the tombstone: absent from the default too
-                    None => *default,        // an untouched tail falls back to the default
+                match tails.lookup(key) {
+                    Some((ordinal, Some(value))) => (Some(value), Some((stem_value, ordinal))),
+                    Some((_, None)) => (None, None), // the tombstone: absent from the default too
+                    None => (*default, None),        // an untouched tail falls back to the default
                 }
             }
         };
 
         match resolved {
-            Some(value) => (value, Novalue::Set),
+            (Some(value), held) => (value, Novalue::Set, held),
             // An object exists but this key does not resolve: derive from
             // the OBJECT's own name, not the read site's -- see this
             // function's doc comment for why the two can differ.
-            None => (self.unset_tail::<HOOK>(stem_value, key), Novalue::Unset),
+            (None, _) => (
+                self.unset_tail::<HOOK>(stem_value, key),
+                Novalue::Unset,
+                None,
+            ),
         }
     }
 
@@ -424,27 +474,12 @@ impl Interp {
                     self.set_tail(home, key, Some(value));
                     return;
                 }
-                // **Looked up before it is inserted, because the key is
-                // already there on all but the first write to a tail.**
-                // `insert` needs an owned key whether or not it keeps it, so
-                // an unconditional one allocates a copy on every assignment
-                // and drops it again the moment the map finds the key it
-                // already holds. Measured with `heaptrack` on
-                // `bench-programs/compound.rex`, which writes 500 tails five
-                // million times: this was one allocation per iteration and
-                // essentially the whole of what that program allocated.
-                let next = tails.len();
-                match tails.get_mut(key) {
-                    Some((_, existing)) => *existing = Some(value),
-                    None => {
-                        tails.insert(key.to_vec(), (next, Some(value)));
-                    }
-                }
+                tails.set(key, Some(value));
                 self.stem_changed(stem_value);
             }
             None => {
-                let mut tails = interrexx_core::NameMap::default();
-                tails.insert(key.to_vec(), (0, Some(value)));
+                let mut tails = interrexx_core::Tails::new();
+                tails.set(key, Some(value));
                 let stem = self.alloc_with(
                     BehaviourId::STEM,
                     Body::Stem {
@@ -488,9 +523,7 @@ impl Interp {
             return;
         }
         // A drop keeps the tail's place, so the ordinal survives it.
-        let next = tails.len();
-        let ordinal = tails.get(key).map_or(next, |(at, _)| *at);
-        tails.insert(key.to_vec(), (ordinal, None));
+        tails.set(key, None);
         self.stem_changed(stem_value);
     }
 
@@ -537,7 +570,7 @@ impl Interp {
             Body::Stem {
                 name: stem_name.into(),
                 default,
-                tails: interrexx_core::NameMap::default(),
+                tails: interrexx_core::Tails::new(),
                 exposed: None,
             },
         );
@@ -558,10 +591,8 @@ impl Interp {
         };
         if let Some(Body::Stem { default, tails, .. }) =
             self.heap.get_mut(home).map(|object| &mut object.body)
-            && !tails.contains_key(key)
         {
-            let next = tails.len();
-            tails.insert(key.to_vec(), (next, *default));
+            tails.insert_if_absent(key, *default);
         }
         let local = self.read_stem(stem_name);
         // `expose a. a.1`: the local stem is the object's own.
@@ -573,8 +604,7 @@ impl Interp {
         {
             // Held as a tail with no value of its own, which keeps its place
             // among the stem's tails and leaves it out of `items`.
-            let next = tails.len();
-            tails.entry(key.to_vec()).or_insert((next, None));
+            tails.insert_if_absent(key, None);
             exposed
                 .get_or_insert_with(Default::default)
                 .insert(key.to_vec(), home);
@@ -694,7 +724,7 @@ impl Interp {
     pub(crate) fn tail_value(&self, stem: ObjRef, key: &[u8]) -> Option<ObjRef> {
         match self.heap.get(stem).map(|object| &object.body) {
             Some(Body::Stem { default, tails, .. }) => match tails.get(key) {
-                Some((_, value)) => *value,
+                Some(value) => value,
                 None => *default,
             },
             _ => None,
@@ -707,9 +737,7 @@ impl Interp {
         if let Some(Body::Stem { tails, .. }) =
             self.heap.get_mut(stem).map(|object| &mut object.body)
         {
-            let next = tails.len();
-            let ordinal = tails.get(key).map_or(next, |(at, _)| *at);
-            tails.insert(key.to_vec(), (ordinal, value));
+            tails.set(key, value);
             self.stem_changed(stem);
         }
     }
@@ -732,7 +760,7 @@ impl Interp {
             Body::Stem {
                 name: stem_name.into(),
                 default: None,
-                tails: interrexx_core::NameMap::default(),
+                tails: interrexx_core::Tails::new(),
                 exposed: None,
             },
         )
@@ -750,7 +778,7 @@ impl Interp {
             Body::Stem {
                 name: stem_name.into(),
                 default: Some(value),
-                tails: interrexx_core::NameMap::default(),
+                tails: interrexx_core::Tails::new(),
                 exposed: None,
             },
         )
@@ -795,7 +823,7 @@ impl Interp {
                     default: None,
                     tails,
                     ..
-                }) if **own == *name && tails.values().all(|(_, tail)| tail.is_none())
+                }) if **own == *name && tails.values().all(|tail| tail.is_none())
             ),
             _ => false,
         }
@@ -851,6 +879,69 @@ mod tests {
             interp,
             parse_program(b"nop".to_vec()).expect("a trivial program parses"),
         );
+    }
+
+    /// A read that found a tail's own value answers the stem and the
+    /// ordinal, and a write by that pair lands on the same tail.
+    #[test]
+    fn a_held_tail_is_written_by_its_ordinal() {
+        let mut interp = Interp::new();
+        activated(&mut interp);
+        let one = interp.text(b"one");
+        let two = interp.text(b"two");
+        interp.stem_set(b"T.", b"A", one);
+        interp.stem_set(b"T.", b"B", one);
+        let (_, _, held) = interp.stem_get_holding(b"T.", None, b"B");
+        let held = held.expect("a tail with a value is held");
+        assert!(interp.stem_set_held(b"T.", None, held, b"B", two));
+        assert_eq!(interp.stem_get(b"T.", b"B").0, two);
+        assert_eq!(interp.stem_get(b"T.", b"A").0, one);
+    }
+
+    /// A miss holds nothing: an unset tail, a tail read through the
+    /// default, and a dropped tail.
+    #[test]
+    fn a_tail_without_its_own_value_is_not_held() {
+        let mut interp = Interp::new();
+        activated(&mut interp);
+        let zero = interp.text(b"0");
+        assert_eq!(interp.stem_get_holding(b"T.", None, b"A").2, None);
+        interp.stem_assign(b"T.", zero);
+        assert_eq!(interp.stem_get_holding(b"T.", None, b"A").2, None);
+        interp.stem_set(b"T.", b"A", zero);
+        interp.stem_drop_tail(b"T.", b"A");
+        assert_eq!(interp.stem_get_holding(b"T.", None, b"A").2, None);
+    }
+
+    /// The write by ordinal refuses, writing nothing, where the pair no
+    /// longer names the tail: the stem variable holds another stem, the
+    /// tail was dropped, or the stem was emptied in place.
+    #[test]
+    fn a_held_tail_that_changed_is_not_written_by_its_ordinal() {
+        let mut interp = Interp::new();
+        activated(&mut interp);
+        let one = interp.text(b"one");
+        let two = interp.text(b"two");
+
+        interp.stem_set(b"T.", b"A", one);
+        let held = interp.stem_get_holding(b"T.", None, b"A").2.expect("held");
+        interp.stem_assign(b"T.", one);
+        assert!(!interp.stem_set_held(b"T.", None, held, b"A", two));
+        assert_eq!(interp.stem_get(b"T.", b"A").0, one);
+
+        interp.stem_set(b"T.", b"A", one);
+        let held = interp.stem_get_holding(b"T.", None, b"A").2.expect("held");
+        interp.stem_drop_tail(b"T.", b"A");
+        assert!(!interp.stem_set_held(b"T.", None, held, b"A", two));
+        assert_eq!(interp.stem_get(b"T.", b"A").1, Novalue::Unset);
+
+        interp.stem_set(b"T.", b"A", one);
+        let held = interp.stem_get_holding(b"T.", None, b"A").2.expect("held");
+        let stem = held.0;
+        if let Some(Body::Stem { tails, .. }) = interp.heap.get_mut(stem).map(|o| &mut o.body) {
+            tails.clear();
+        }
+        assert!(!interp.stem_set_held(b"T.", None, held, b"A", two));
     }
 
     /// Parses `text` (one `SAY` of a compound expression) and returns its

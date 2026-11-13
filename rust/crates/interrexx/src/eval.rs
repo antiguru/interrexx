@@ -350,13 +350,14 @@ impl Interp {
                     let indent = self.activity.clause_state.current_value_indent;
                     self.trace_compound_name(indent, &tag, &printed);
                 }
-                let (value, novalue) = self.stem_get_at(stem_name, stem_at, &key);
+                let (value, novalue, held) = self.stem_get_holding(stem_name, stem_at, &key);
                 // Held only untraced, so that a traced write resolves and
                 // prints its own name the way it always has.
                 if shared {
                     if self.shared_key_for == Some(id) && !self.tracing_intermediates() {
                         self.shared_key.clear();
                         self.shared_key.extend_from_slice(&key);
+                        self.shared_tail = held;
                     } else {
                         self.shared_key_for = None;
                     }

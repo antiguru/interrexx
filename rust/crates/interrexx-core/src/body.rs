@@ -78,16 +78,15 @@ pub enum Body {
     Stem {
         name: Box<[u8]>,
         default: Option<ObjRef>,
-        /// **The `usize` is the tail's insertion ordinal, and it is
-        /// load-bearing.** A stem's tails are held in a balanced tree keyed
+        /// **Each tail's insertion ordinal is load-bearing.** A stem's tails are held in a balanced tree keyed
         /// on (length, bytes) and walked in POST-ORDER, so the order
         /// `allIndexes` and `supplier` answer in depends on the shape the
         /// insertions built and not on the tail names alone -- measured, the
         /// same five tails inserted forwards and backwards answer
         /// `Q,MANGO,LONGKEYNAME,ZEBRA,APPLE` and
         /// `APPLE,Q,ZEBRA,LONGKEYNAME,MANGO`. A `HashMap` cannot say which came
-        /// first, so the ordinal rides with the value.
-        tails: crate::NameMap<Vec<u8>, (usize, Option<ObjRef>)>,
+        /// first, so [`crate::Tails`] keeps the ordinal with the value.
+        tails: crate::Tails,
         /// The tails an `EXPOSE` or `PROCEDURE EXPOSE` made another stem's,
         /// each naming that stem: an exposed compound element's real element.
         /// Such a tail is also in `tails`, as a tombstone, so that it keeps its
@@ -1451,7 +1450,7 @@ impl Body {
                 out.extend(default.iter().copied());
                 // A tombstone (`None`) reaches nothing, same as a weak
                 // reference clearing to `.nil` -- it is present but dead.
-                out.extend(tails.values().filter_map(|(_, tail)| *tail));
+                out.extend(tails.values().flatten());
                 out.extend(exposed.iter().flat_map(|exposed| exposed.values().copied()));
             }
             // An empty slot reaches nothing, the same as a stem's tombstone
