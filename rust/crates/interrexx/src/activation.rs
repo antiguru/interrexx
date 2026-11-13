@@ -98,7 +98,8 @@ pub(crate) struct AddressState {
 pub(crate) struct DebugState {
     /// `wasSourceTraced`: the banner is printed once per activation.
     pub(crate) source_traced: bool,
-    /// `wasDebugPromptIssued`: so is the prompt.
+    /// `wasDebugPromptIssued`: the prompt is printed once per period of
+    /// interactive tracing in the activation.
     pub(crate) prompt_issued: bool,
     /// `settings.traceSkip`: how many further pauses to skip, from a numeric
     /// `TRACE` given at a pause.
@@ -1430,7 +1431,14 @@ impl Interp {
     /// and this crate's own tests call it; a callee inherits its starting
     /// value through [`Activation::nested`] instead, never through here.
     pub(crate) fn set_trace_mode(&mut self, mode: TraceMode) {
-        self.activation_mut().trace_mode = mode;
+        let activation = self.activation_mut();
+        // r[env.debugging.notice]: interactive tracing turned off ends the
+        // period the notice was written for, so the next period writes it
+        // again.
+        if activation.trace_mode.debug && !mode.debug {
+            activation.debug.prompt_issued = false;
+        }
+        activation.trace_mode = mode;
         self.activity.trace_cache = crate::trace::TraceCache::of(mode, self.debug_pause());
     }
 }
