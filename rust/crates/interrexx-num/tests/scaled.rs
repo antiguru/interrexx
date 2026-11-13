@@ -80,6 +80,29 @@ fn addition_agrees_with_number_add_wherever_it_answers() {
 }
 
 #[test]
+fn multiplication_agrees_with_number_mul_wherever_it_answers() {
+    let mut answered = 0;
+    for left in numbers() {
+        for right in numbers() {
+            let (Some(a), Some(b)) = (left.scaled(), right.scaled()) else {
+                continue;
+            };
+            for &digits in DIGITS {
+                if let Some(product) = a.mul(b, digits) {
+                    answered += 1;
+                    assert_eq!(
+                        Ok(product.to_number()),
+                        left.mul(&right, digits),
+                        "{left:?} * {right:?} at {digits}"
+                    );
+                }
+            }
+        }
+    }
+    assert!(answered > 500, "only {answered} products answered");
+}
+
+#[test]
 fn ordering_agrees_with_the_numeric_comparison_wherever_it_answers() {
     let mut answered = 0;
     for left in numbers() {

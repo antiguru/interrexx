@@ -812,16 +812,16 @@ impl Interp {
         let digits = self.activation().settings.digits();
         let form = self.activation().settings.form();
 
-        // **An addition or subtraction of two operands carried in their
-        // handles, on their scaled mantissas**, where the sum is exact and its
-        // value fits a handle again. Neither operand can be an operator
-        // receiver or fail to convert, and one that `Scaled::add` accepts is
-        // no longer than DIGITS, so LOSTDIGITS has nothing to say either.
+        // **An addition, subtraction or multiplication of two operands
+        // carried in their handles, on their scaled mantissas**, where the
+        // answer is exact and fits a handle again. Neither operand can be an
+        // operator receiver or fail to convert, and one that `Scaled` accepts
+        // is no longer than DIGITS, so LOSTDIGITS has nothing to say either.
         // The tag test is all a wide operand pays.
-        if matches!(op, Operator::Plus | Operator::Subtract)
+        if matches!(op, Operator::Plus | Operator::Subtract | Operator::Multiply)
             && !matches!(left_value.decode(), Decoded::Heap { .. })
             && !matches!(right_value.decode(), Decoded::Heap { .. })
-            && let Some(handle) = self.scaled_sum(op, left_value, right_value, digits)
+            && let Some(handle) = self.scaled_arith(op, left_value, right_value, digits)
         {
             return Ok(handle);
         }
@@ -897,10 +897,11 @@ impl Interp {
         Ok(self.number(result, saturate_digits(digits), form))
     }
 
-    /// [`Interp::arith_general_body`]'s `+` or `-` on two operands carried
-    /// in their handles, or `None` where it is not that exact short case.
+    /// [`Interp::arith_general_body`]'s `+`, `-` or `*` on two operands
+    /// carried in their handles, or `None` where it is not that exact short
+    /// case.
     #[inline(never)]
-    fn scaled_sum(
+    fn scaled_arith(
         &mut self,
         op: Operator,
         left_value: ObjRef,
@@ -913,12 +914,12 @@ impl Interp {
         let QuickOperand::Scaled(right, _) = self.quick_operand(right_value) else {
             return None;
         };
-        let right = if op == Operator::Subtract {
-            right.negated()
-        } else {
-            right
+        let answer = match op {
+            Operator::Plus => left.add(right, digits)?,
+            Operator::Subtract => left.add(right.negated(), digits)?,
+            _ => left.mul(right, digits)?,
         };
-        crate::value::scaled_handle(left.add(right, digits)?, digits)
+        crate::value::scaled_handle(answer, digits)
     }
 
     /// Converts an arithmetic operand to a `Number`, or 41.1 with the
