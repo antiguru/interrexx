@@ -802,7 +802,7 @@ bad: say arg(1) '=>' condition('o')~code
   nop
 ```
 
-```output defect=#197
+```output
 o~available => 98.901
 o~allIndexes => 98.901
 o~allItems => 98.901
@@ -834,7 +834,7 @@ bad: say arg(1) '=>' condition('o')~code
   nop
 ```
 
-```output defect=#197
+```output
 o~available => 98.901
 o~allIndexes => 98.901
 o~allItems => 98.901

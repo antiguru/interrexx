@@ -953,6 +953,7 @@ STREAMSUPPLIER.instance.INTERREXX_MID_LINE entry:interrexx_stream_mid_line
 STREAMSUPPLIER.instance.INTERREXX_STREAMCOLLECTED entry:interrexx_supplier_collected
 STREAMSUPPLIER.instance.ITEM replacement:streamsupplier.rex
 STREAMSUPPLIER.instance.NEXT replacement:streamsupplier.rex
+STREAMSUPPLIER.instance.SUPPLIER replacement:streamsupplier.rex
 STRING.instance. native
 STRING.instance.  native
 STRING.instance.% native
@@ -1116,6 +1117,7 @@ SUPPLIER.instance.AVAILABLE native
 SUPPLIER.instance.GETARRAYS same-as:SUPPLIERMIXIN.instance.GETARRAYS
 SUPPLIER.instance.INDEX native
 SUPPLIER.instance.INIT native
+SUPPLIER.instance.INTERREXX_CHECK entry:interrexx_supplier_check
 SUPPLIER.instance.INTERREXX_COLLECTED entry:interrexx_supplier_collected
 SUPPLIER.instance.ITEM native
 SUPPLIER.instance.NEXT native
@@ -1124,6 +1126,7 @@ SUPPLIER.class.NEW native
 SUPPLIERMIXIN.instance.ALLINDEXES replacement:supplier.rex
 SUPPLIERMIXIN.instance.ALLITEMS replacement:supplier.rex
 SUPPLIERMIXIN.instance.GETARRAYS replacement:supplier.rex
+SUPPLIERMIXIN.instance.INTERREXX_CHECK same-as:SUPPLIER.instance.INTERREXX_CHECK
 SUPPLIERMIXIN.instance.INTERREXX_COLLECTED same-as:SUPPLIER.instance.INTERREXX_COLLECTED
 SUPPLIERMIXIN.instance.SUPPLIER replacement:supplier.rex
 TABLE.instance.ALLINDEXES same-as:BAG.instance.ALLINDEXES

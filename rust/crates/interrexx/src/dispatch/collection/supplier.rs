@@ -72,6 +72,14 @@ fn supplier_state(
         pool_variable(interp, receiver, scope, SUPPLIER_INDEXES),
         pool_variable(interp, receiver, scope, SUPPLIER_POSITION),
     ) else {
+        // An instance of a subclass whose `init` never reached `Supplier`'s
+        // has no state yet (r[class.supplier.deviation.135]); a receiver that
+        // is no supplier at all is a borrowed method.
+        let supplier = interp.class_of_value(receiver);
+        if supplier.is_some_and(|class| interp.classes().is_a(class, scope)) {
+            let shown = interp.string_value_text(receiver)?;
+            return Err(crate::Raised::syntax(98, 901, vec![shown]).into());
+        }
         return Err(crate::Raised::receiver_kind("a value that is not a supplier").into());
     };
     let Decoded::SmallInt(position) = position.decode() else {
@@ -246,6 +254,19 @@ pub(in crate::dispatch) fn collected(
             pool_variable(interp, receiver, scope, SUPPLIER_COLLECTED).unwrap_or(ObjRef::NIL),
         )),
     }
+}
+
+/// `interrexx_supplier_check`: nothing where the supplier is set up, and the
+/// refusal of one that is not (r[class.supplier.deviation.135]). It sends
+/// nothing.
+pub(in crate::dispatch) fn check_set_up(
+    interp: &mut Interp,
+    _cleared: Cleared,
+    receiver: ObjRef,
+    _args: &[Option<ObjRef>],
+) -> Result<Option<ObjRef>, Failure> {
+    supplier_state(interp, receiver)?;
+    Ok(None)
 }
 
 /// `Supplier`'s primitive methods, chained into `ObjectModel::build` beside

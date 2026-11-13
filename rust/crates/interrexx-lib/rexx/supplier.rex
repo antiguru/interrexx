@@ -39,7 +39,11 @@
    (r[class.supplier.copy]). With the argument .nil it drops the pair. */
 ::method interrexx_collected private external 'LIBRARY REXX interrexx_supplier_collected'
 
-/* r[class.supplier.supplier] */
+/* r[class.supplier.supplier], r[class.supplier.deviation.135]: a supplier that
+   is not set up raises, which the check does without sending anything. */
 ::method supplier
   if arg() > 0 then raise syntax 93.902 array (0)
+  self~interrexx_check
   return self
+
+::method interrexx_check private external 'LIBRARY REXX interrexx_supplier_check'
