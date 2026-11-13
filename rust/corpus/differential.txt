@@ -142,6 +142,7 @@ lang/parse_template.rex
 lang/parse_whole_piece_identity.rex
 lang/parse_operand_changes_trace.rex
 lang/concat_chain_values.rex
+lang/concat_operand_shapes.rex
 lang/word_repeated_string.rex
 lang/pull_queue.rex
 lang/address_env.rex

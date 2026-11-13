@@ -5,9 +5,12 @@ use crate::activation::CallType;
 use crate::error::Raised;
 use crate::run::CallEntry;
 use crate::run::{CallResolution, Resolved, Started, function_started};
-use crate::value::{QuickOperand, Referent, canonical_small_int, exact_small_int, within_digits};
+use crate::value::{
+    PieceSlot, QuickOperand, Referent, TEXT_SCRATCH, canonical_small_int, exact_small_int,
+    within_digits,
+};
 use crate::{Code, Failure, Interp, Loud, StackSpan};
-use interrexx_core::{Body, Decoded, INLINE_BYTES, NotNumeric, ObjRef};
+use interrexx_core::{Body, Bytes, Decoded, INLINE_BYTES, INLINE_TEXT, NotNumeric, ObjRef};
 use interrexx_num::{ArithError, CompareOp, DivOp, Number, Scaled};
 use interrexx_parse::{CallTarget, Expr, ExprKind, Operator, PrefixOp, SymbolId};
 
@@ -1117,13 +1120,40 @@ impl Interp {
         right_value: ObjRef,
         separator: Option<u8>,
     ) -> Result<ObjRef, Failure> {
-        // Both operands' bytes are read through shared borrows, which can be
-        // live at once -- and that is the whole change here. The left operand
-        // used to be copied into an owned buffer for no reason except that
-        // reading the right one needed its own `&mut`, so a two-operand join
-        // allocated three times: the copy, the buffer it grew into, and the
-        // result. It allocates once now, into a buffer sized before anything
-        // is written and handed straight to the value.
+        // **Nearly every operand is a string or a whole number**, whose bytes
+        // `plain_bytes` reaches with one look, and the join is written
+        // straight into the handle or into the new string's body. Any other
+        // value is rendered first.
+        let (mut left_slot, mut right_slot) = (PieceSlot::new(), PieceSlot::new());
+        if let (Some(left), Some(right)) = (
+            self.plain_bytes(left_value, &mut left_slot),
+            self.plain_bytes(right_value, &mut right_slot),
+        ) {
+            let total = left.len() + usize::from(separator.is_some()) + right.len();
+            let joined = if total <= INLINE_TEXT {
+                let mut buffer = [0u8; INLINE_TEXT];
+                buffer[..left.len()].copy_from_slice(left);
+                let mut at = left.len();
+                if let Some(byte) = separator {
+                    buffer[at] = byte;
+                    at += 1;
+                }
+                buffer[at..total].copy_from_slice(right);
+                ObjRef::inline_text(&buffer[..total]).expect("a join no longer than the handle")
+            } else {
+                // Handed to `text_bytes` as `Bytes::joined` built it, which
+                // is that function's own condition for a body built in its
+                // slot rather than copied there.
+                let bytes = Bytes::joined(left, separator, right);
+                let joined = self.text_bytes(bytes);
+                self.charge_text(total);
+                joined
+            };
+            self.fresh_concat = joined;
+            return Ok(joined);
+        }
+        // Any other operand is rendered, and both operands' bytes are read
+        // through shared borrows, which can be live at once.
         let left_rendered = self.render(left_value);
         let right_rendered = self.render(right_value);
         let left_bytes = left_rendered.text(self);
@@ -1158,10 +1188,6 @@ impl Interp {
         // is what makes the one remaining allocation conditional rather than
         // certain. Only a result too long to live inline reaches here, and it
         // keeps the buffer, which is the same trade `text_built` always makes.
-        // Measured with `heaptrack` on `bench-programs/strings.rex`, where
-        // this was one of the two allocations left per iteration and 99.6% of
-        // what that program allocated was freed with nothing allocated in
-        // between.
         let mut bytes = self.take_result_buffer();
         bytes.reserve(left_bytes.len() + usize::from(separator.is_some()) + right_bytes.len());
         bytes.extend_from_slice(left_bytes);
@@ -1206,12 +1232,32 @@ impl Interp {
         // `apply_binary`'s own sequence for a string receiver: the right
         // operand through the required-string protocol, then the join.
         let right = self.required_string_operand(right, op)?;
-        let rendered = self.render(right);
-        let mut piece = self.take_result_buffer();
-        if op == Operator::Blank {
-            piece.push(b' ');
-        }
-        piece.extend_from_slice(rendered.text(self));
+        // An operand whose bytes live in its handle is appended from a local
+        // copy; one in the heap goes through the lent buffer, because its
+        // bytes cannot be borrowed while the string they join is written.
+        let mut slot = PieceSlot::new();
+        let mut held = [0u8; 1 + TEXT_SCRATCH];
+        let mut piece = None;
+        let joined: &[u8] = if let Some(right) = slot.handle_bytes(right) {
+            let start = usize::from(op != Operator::Blank);
+            held[0] = b' ';
+            held[1..=right.len()].copy_from_slice(right);
+            &held[start..=right.len()]
+        } else {
+            let mut buffer = self.take_result_buffer();
+            if op == Operator::Blank {
+                buffer.push(b' ');
+            }
+            let mut heap_slot = PieceSlot::new();
+            match self.plain_bytes(right, &mut heap_slot) {
+                Some(bytes) => buffer.extend_from_slice(bytes),
+                None => {
+                    let rendered = self.render(right);
+                    buffer.extend_from_slice(rendered.text(self));
+                }
+            }
+            piece.insert(buffer)
+        };
         let Some(object) = self.heap.get_mut(left) else {
             unreachable!("a register roots the string a chain is building");
         };
@@ -1219,10 +1265,12 @@ impl Interp {
             unreachable!("checked to be a text body above");
         };
         let before = bytes.heap_len();
-        bytes.extend_from_slice(&piece);
+        bytes.extend_from_slice(joined);
         *num = None;
         let after = bytes.heap_len();
-        self.give_result_buffer(piece);
+        if let Some(buffer) = piece {
+            self.give_result_buffer(buffer);
+        }
         if after > before {
             self.charge_body_bytes(after - before);
         }
