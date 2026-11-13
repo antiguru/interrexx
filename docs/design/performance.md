@@ -89,6 +89,17 @@ misses than ooRexx on every axis measured except L1i.
 * **A side arena or out-of-line storage for long strings**: helps 7 of 12 million string creations
   on `rexxcps`.
 * **Pooling `PARSE` buffers**: every probe about 3% slower.
+* **Reusing the byte buffers of swept long strings** (wordfreq frees 0.64M strings of 70 to 130
+  bytes): the drop is a real `free()`, and three ways of keeping the buffer cost more than they
+  saved.
+  * A pool the sweep fills and string construction draws from: wordfreq -1.1% only when
+    concatenation draws from it too, but churn +2.3% and heapshape +1.0%. That cost is the sweep
+    loop's code generation, not its work: carrying the pool through the loop with the loop body
+    unchanged already costs heapshape +1.0%.
+  * A thread-local pool filled by a `Drop` impl on `Bytes`, which leaves the sweep alone: slower
+    everywhere (strproc +1.0%, heapshape +1.0%).
+  * Refilling an empty `take_result_buffer` from the pool: churn +2.7%, since a small reused
+    buffer then grows to the 10 KB `copies` result.
 * **A separate untraced `PARSE` walk** (source, triggers and targets with every trace gate
   dropped): `parse.rex` +4.4% instructions. What a `PARSE` costs past its logic is the template
   loop's preheader, where the compiler hoists and spills addresses into the interpreter; moving
