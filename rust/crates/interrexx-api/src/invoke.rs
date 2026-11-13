@@ -10,7 +10,7 @@ use crate::ffi::{CallContext, Contexts, MethodContext, RedirectorContext};
 use crate::layout::ValueDescriptor;
 use crate::load::{
     CommandHandler, ExitHandler, ExitOutcome, ExitRequest, HeldMethod, HeldRoutine, Hook, Library,
-    NativeMethodEntry, NativeRoutineEntry, ROUTINE_CLASSIC_STYLE,
+    NativeMethodEntry, NativeRoutineEntry, ROUTINE_CLASSIC_STYLE, Signature,
 };
 use crate::redirect::Redirector;
 use crate::values::{
@@ -431,7 +431,7 @@ pub fn signature(
     entry: &NativeMethodEntry,
     context: &MethodContext<'_>,
 ) -> Result<Vec<u16>, Failure> {
-    held_signature(&entry.held(), context)
+    held_signature(&entry.held(), context).map(|signature| signature.to_vec())
 }
 
 /// [`signature`] for a held method row.
@@ -439,7 +439,10 @@ pub fn signature(
 /// # Errors
 /// As [`signature`].
 #[inline(always)]
-pub fn held_signature(held: &HeldMethod, context: &MethodContext<'_>) -> Result<Vec<u16>, Failure> {
+pub fn held_signature(
+    held: &HeldMethod,
+    context: &MethodContext<'_>,
+) -> Result<Signature, Failure> {
     bounded(|limit| held.signature(context, limit))
 }
 
@@ -453,7 +456,7 @@ pub fn routine_signature(
     entry: &NativeRoutineEntry,
     context: &CallContext<'_>,
 ) -> Result<Vec<u16>, Failure> {
-    held_routine_signature(&entry.held(), context)
+    held_routine_signature(&entry.held(), context).map(|signature| signature.to_vec())
 }
 
 /// [`routine_signature`] for a held routine row.
@@ -464,7 +467,7 @@ pub fn routine_signature(
 pub fn held_routine_signature(
     held: &HeldRoutine,
     context: &CallContext<'_>,
-) -> Result<Vec<u16>, Failure> {
+) -> Result<Signature, Failure> {
     if held.style == ROUTINE_CLASSIC_STYLE {
         return Err(Failure::ClassicStyle);
     }
@@ -472,7 +475,7 @@ pub fn held_routine_signature(
 }
 
 /// The signature `read` answers when it may read at most `limit` words.
-fn bounded(read: impl FnOnce(usize) -> Option<Vec<u16>>) -> Result<Vec<u16>, Failure> {
+fn bounded(read: impl FnOnce(usize) -> Option<Signature>) -> Result<Signature, Failure> {
     // The words are the return type, the parameters the array has room for, and
     // the terminator, so a signature that fits is one word longer than the
     // array. Reading no further is this crate's form of a bound check.
