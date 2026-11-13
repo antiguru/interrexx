@@ -2089,7 +2089,6 @@ pub(super) fn native_hash_unknown(
     })
 }
 
-/// [`native_hash_unknown`]'s work, which runs without a send too.
 /// [`hash_unknown`] for a message `name` that does not end in `=`, sent with
 /// whatever arguments, for a receiver whose `UNKNOWN` is that primitive: the
 /// read, which uses neither the forwarded arguments nor the message name as
@@ -2127,6 +2126,7 @@ fn entry_read_upper(
     Ok(Some(interp.hash_entry_read(receiver, &name)))
 }
 
+/// [`native_hash_unknown`]'s work, which runs without a send too.
 pub(super) fn hash_unknown(
     interp: &mut Interp,
     receiver: ObjRef,

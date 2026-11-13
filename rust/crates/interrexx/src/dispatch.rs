@@ -4099,19 +4099,6 @@ impl Interp {
         let Some(resolution) = self.lookup(receiver, UNKNOWN, None) else {
             return Err(self.nomethod(receiver, name, miss));
         };
-        // **Each of the forward's arguments is rooted, and only the array's
-        // root has a witness.** `alloc_with` collects *before* it allocates,
-        // so the array's root is what carries it across the `text` below -- a
-        // message name too long for a handle allocates there, and
-        // `corpus/lang/message_send_unknown_forward.rex`'s last row is that
-        // name. Measured with `collect_stress.rs`'s
-        // collect-on-every-allocation and this root removed: that row's own
-        // `a~items` then sends to a collected array and
-        // `Interp::receiver_kind` refuses it, so the stress run exits 120
-        // with `a message send to a value whose object is no longer live`
-        // where the plain run prints the row. A message name of seven bytes
-        // or fewer leaves the subset green, because `Interp::text` inlines it
-        // and nothing allocates between the array and the send.
         let frameless = self.frameless_unknown(resolution, receiver);
         // A read of an entry a `Directory` or `StringTable` of the base class
         // answers through its primitive `UNKNOWN` uses neither the forwarded
@@ -4126,6 +4113,19 @@ impl Interp {
             self.roots.activity_mut().pop_frame(frame);
             return read;
         }
+        // **Each of the forward's arguments is rooted, and only the array's
+        // root has a witness.** `alloc_with` collects *before* it allocates,
+        // so the array's root is what carries it across the `text` below -- a
+        // message name too long for a handle allocates there, and
+        // `corpus/lang/message_send_unknown_forward.rex`'s last row is that
+        // name. Measured with `collect_stress.rs`'s
+        // collect-on-every-allocation and this root removed: that row's own
+        // `a~items` then sends to a collected array and
+        // `Interp::receiver_kind` refuses it, so the stress run exits 120
+        // with `a message send to a value whose object is no longer live`
+        // where the plain run prints the row. A message name of seven bytes
+        // or fewer leaves the subset green, because `Interp::text` inlines it
+        // and nothing allocates between the array and the send.
         let frame = self.roots.activity_mut().push_frame();
         // No arguments make the one-dimension empty array `.array~of()` does.
         let body = Body::Array {
