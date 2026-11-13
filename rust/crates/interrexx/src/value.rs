@@ -26,7 +26,9 @@ pub(crate) struct TextNumbers {
     /// [`ObjRef::NIL`] marks an empty slot. No key stored here can equal it:
     /// every one carries the inline-text tag, which `.nil` does not.
     keys: [ObjRef; TEXT_NUMBERS],
-    parsed: [Result<Number, NotNumeric>; TEXT_NUMBERS],
+    /// The parse, or `None` where `scaled` holds it and the [`Number`] is
+    /// built from that only when one is asked for.
+    parsed: [Option<Result<Number, NotNumeric>>; TEXT_NUMBERS],
     /// Each `Ok` parse as a [`Scaled`], where its digits fit one.
     scaled: [Option<Scaled>; TEXT_NUMBERS],
 }
@@ -41,7 +43,7 @@ impl TextNumbers {
     pub(crate) fn new() -> Self {
         TextNumbers {
             keys: [ObjRef::NIL; TEXT_NUMBERS],
-            parsed: std::array::from_fn(|_| Err(NotNumeric)),
+            parsed: std::array::from_fn(|_| None),
             scaled: [None; TEXT_NUMBERS],
         }
     }
@@ -1049,29 +1051,52 @@ impl Interp {
         inline: &[u8],
     ) -> Result<Number, NotNumeric> {
         let slot = TextNumbers::slot(value);
-        if self.text_numbers.keys[slot] == value {
-            return self.text_numbers.parsed[slot].clone();
+        if self.text_numbers.keys[slot] == value
+            && let Some(parsed) = &self.text_numbers.parsed[slot]
+        {
+            return parsed.clone();
         }
-        // Stored before it is handed back, so the parse is moved into the
-        // table and only the answer is copied -- filling it the other way
-        // round would clone twice for one miss.
-        self.text_numbers_fill(slot, value, inline);
-        self.text_numbers.parsed[slot].clone()
+        self.text_number_built(slot, value, inline)
+    }
+
+    /// [`Interp::inline_text_to_number`] where the slot holds no `Number`
+    /// for `value` yet: filled, and a plain decimal's `Number` built from
+    /// its `Scaled` and kept. Stored before it is handed back, so the parse
+    /// is moved into the table and only the answer is copied.
+    #[inline(never)]
+    fn text_number_built(
+        &mut self,
+        slot: usize,
+        value: ObjRef,
+        inline: &[u8],
+    ) -> Result<Number, NotNumeric> {
+        if self.text_numbers.keys[slot] != value {
+            self.text_numbers_fill(slot, value, inline);
+        }
+        let scaled = self.text_numbers.scaled[slot];
+        self.text_numbers.parsed[slot]
+            .get_or_insert_with(|| {
+                Ok(scaled
+                    .expect("a filled slot holds its parse one way or the other")
+                    .to_number())
+            })
+            .clone()
     }
 
     /// Parses `inline` into [`TextNumbers`]' `slot` for `value`.
     fn text_numbers_fill(&mut self, slot: usize, value: ObjRef, inline: &[u8]) {
         self.text_numbers.keys[slot] = value;
         // A plain decimal, the spelling nearly every one has, is read
-        // straight into its `Scaled` and the `Number` is built from that.
+        // straight into its `Scaled`, and a `Number` is built from that
+        // only for a caller that asks for one.
         if let Some(scaled) = Scaled::parse_plain(inline) {
             self.text_numbers.scaled[slot] = Some(scaled);
-            self.text_numbers.parsed[slot] = Ok(scaled.to_number());
+            self.text_numbers.parsed[slot] = None;
             return;
         }
         let parsed = Number::parse_bytes(inline).ok_or(NotNumeric);
         self.text_numbers.scaled[slot] = parsed.as_ref().ok().and_then(Number::scaled);
-        self.text_numbers.parsed[slot] = parsed;
+        self.text_numbers.parsed[slot] = Some(parsed);
     }
 
     /// `value` as a comparison's operand where no [`Number`] needs building:
@@ -1090,12 +1115,12 @@ impl Interp {
                     self.text_numbers_fill(slot, value, &inline);
                 }
                 match (
-                    &self.text_numbers.parsed[slot],
                     self.text_numbers.scaled[slot],
+                    &self.text_numbers.parsed[slot],
                 ) {
-                    (Err(_), _) => QuickOperand::NotNumber(inline),
-                    (Ok(_), Some(scaled)) => QuickOperand::Scaled(scaled, Some(inline)),
-                    (Ok(_), None) => QuickOperand::Unknown,
+                    (Some(scaled), _) => QuickOperand::Scaled(scaled, Some(inline)),
+                    (None, Some(Err(_))) => QuickOperand::NotNumber(inline),
+                    (None, _) => QuickOperand::Unknown,
                 }
             }
             Decoded::Heap { .. } | Decoded::Nil => QuickOperand::Unknown,
