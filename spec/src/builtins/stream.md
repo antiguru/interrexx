@@ -4,7 +4,7 @@ kind: builtin
 syntax: "STREAM(name [, operation [, command]])"
 ansi: "9.7.8"
 rexxref: "Functions > Built-in Functions > STREAM"
-deviations: [34, 35, 49, 55, 57, 59, 62, 74, 79, 98, 100, 145, 167, 168]
+deviations: [34, 35, 49, 55, 57, 59, 62, 74, 79, 98, 100, 145, 167, 168, 171]
 ---
 
 # STREAM
@@ -908,7 +908,7 @@ letter. The option `SYS` may be given alone, and it answers the position of the
 host's own file offset in characters, counted from 0 as the host counts, where
 the other positions count from 1. For a stream that has just been opened for
 reading, with nothing read and nothing positioned, nothing has been consumed,
-so the answer is 0; after a read or a positioning it is not specified, because
+so the answer is 0 ([Deviation 171](r:bif.stream.deviation.171)); after a read or a positioning it is not specified, because
 it depends on how much the stream has read ahead. A stream that is not open has no positions, and the answer is the
 null string; so is the answer for a standard stream that is
 [transient](r:bif.index.stream.transient) (see [Deviation
@@ -1005,21 +1005,6 @@ stream(f, 'c', 'query position sys read')        => 93.0
 stream(f, 'c', 'query position write sys')       => 93.0
 stream(f, 'c', 'query position 1')               => 93.0
 stream(f, 'c', 'query position bogus')           => 93.0
-```
-
-```rexx
-f = 'spec-stream-qpossys.tmp'
-call sysfiledelete f
-call charout f, 'abcdefghij'
-call charout f
-say stream(f, 'c', 'open read') stream(f, 'c', 'query position sys') stream(f, 'c', 'query position')
-say stream(f, 'c', 'close')
-call sysfiledelete f
-```
-
-```output no-oracle
-READY: 0 1
-READY:
 ```
 
 ## Asking about the file
@@ -1696,4 +1681,26 @@ READY: READY: READY:
 [17] []
 93.0
 93.914
+```
+
+r[bif.stream.deviation.171]
+`QUERY POSITION SYS` of a stream that has just been opened for reading, with
+nothing read and nothing positioned, answers 0: the host has consumed nothing
+from the file yet ([the rule](r:bif.stream.query.position)). ooRexx answers the
+size of the file there, the offset at which it leaves the file after opening
+it.
+
+```rexx
+f = 'spec-stream-qpossys.tmp'
+call sysfiledelete f
+call charout f, 'abcdefghij'
+call charout f
+say stream(f, 'c', 'open read') stream(f, 'c', 'query position sys') stream(f, 'c', 'query position')
+say stream(f, 'c', 'close')
+call sysfiledelete f
+```
+
+```output
+READY: 0 1
+READY:
 ```

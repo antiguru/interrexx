@@ -1334,3 +1334,9 @@ ooRexx, which converts an argument as it checks it and stops at the first one
 in error, so that the method of a later argument never runs. The difference
 shows only in what such a method does: counting, input or output, or raising a
 condition of its own.
+
+## 171. QUERY POSITION SYS of a stream just opened for reading
+
+`QUERY POSITION SYS` of a stream that has just been opened for reading, before
+anything is read or positioned, answers 0, the host's offset when nothing has
+been consumed. ooRexx answers the size of the file.
