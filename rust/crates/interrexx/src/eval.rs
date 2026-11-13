@@ -697,6 +697,25 @@ impl Interp {
 
     /// `op value` for the prefix operators `+`, `-` and `\`.
     pub(crate) fn apply_prefix(&mut self, op: PrefixOp, value: ObjRef) -> Result<ObjRef, Failure> {
+        // **An integer operand within DIGITS stays on the tagged integers**,
+        // as `0 + a` does through [`Interp::arith_small_int`]: `+a` is `0 + a`
+        // and `-a` is `0 - a`, the operand needs no rounding so there is no
+        // lost-digits check to make, and the answer is the one the general
+        // path below renders. Anything else -- a value spelled with blanks, a
+        // sign, an exponent or more digits than DIGITS -- falls through.
+        let dyadic = match op {
+            PrefixOp::Plus => Some(Operator::Plus),
+            PrefixOp::Minus => Some(Operator::Subtract),
+            PrefixOp::Not => None,
+        };
+        if let Some(dyadic) = dyadic
+            && let Some(operand) = small_int_operand(value)
+        {
+            let digits = self.activation().settings.digits();
+            if let Some(result) = small_int_arith(dyadic, 0, operand, digits) {
+                return Ok(result);
+            }
+        }
         let result = self.apply_prefix_body(op, value);
         // Blamed on any failure, the same reason `Interp::arith_general`
         // gives: measured, `s. = 'abc'; say \s.` is 34.901 with the frame,
