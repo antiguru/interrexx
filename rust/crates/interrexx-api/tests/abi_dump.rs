@@ -7,8 +7,11 @@
 //! compares what the compiler measured with what Rust reports. The headers are read by the
 //! compiler alone: nothing here parses their text.
 //!
-//! Until the repository carries its own headers (`include/`), the dump compiles against the
-//! pinned upstream tree through `REXX_UPSTREAM`, which makes this a source-tier test.
+//! The dump compiles against the repository's own headers (`include/`, generated from the same
+//! Rust definitions by `src/header.rs`), so the generator is checked against Rust. The tests named
+//! `..._upstream_headers_...` compile it against the pinned upstream tree through `REXX_UPSTREAM`
+//! instead, which makes them source-tier tests: they check that the Rust layout, and so the
+//! generated headers, keep the upstream interface.
 //!
 //! The Rust-to-C type mapping below keys on `std::any::type_name`, so `usize` stands for
 //! `size_t`, `stringsize_t` and `logical_t` alike; they are one C type on this platform, and
@@ -63,14 +66,39 @@ impl Language {
     }
 }
 
-/// The directory of the API headers, `$REXX_UPSTREAM/api`.
-fn api_dir() -> PathBuf {
-    let upstream = std::env::var_os("REXX_UPSTREAM").expect(
-        "REXX_UPSTREAM names the upstream tree whose api/ directory the dump compiles against",
-    );
-    let api = PathBuf::from(upstream).join("api");
-    assert!(api.is_dir(), "{} is not a directory", api.display());
-    api
+/// The header set a dump compiles against.
+#[derive(Clone, Copy)]
+enum Headers {
+    /// The repository's `include/`.
+    Ours,
+    /// The pinned upstream tree's `api/`, `$REXX_UPSTREAM/api`.
+    Upstream,
+}
+
+impl Headers {
+    /// The directories to put on the include path: the headers and this platform's headers.
+    fn dirs(self) -> [PathBuf; 2] {
+        let api = match self {
+            Headers::Ours => PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../include"),
+            Headers::Upstream => {
+                let upstream = std::env::var_os("REXX_UPSTREAM").expect(
+                    "REXX_UPSTREAM names the upstream tree whose api/ directory the dump \
+                     compiles against",
+                );
+                PathBuf::from(upstream).join("api")
+            }
+        };
+        assert!(api.is_dir(), "{} is not a directory", api.display());
+        let platform = api.join("platform/unix");
+        [api, platform]
+    }
+
+    fn name(self) -> &'static str {
+        match self {
+            Headers::Ours => "include",
+            Headers::Upstream => "upstream",
+        }
+    }
 }
 
 /// A scratch directory for one test's sources and binaries.
@@ -82,8 +110,14 @@ fn scratch(test: &str) -> PathBuf {
     dir
 }
 
-/// Compiles `source` as `language` into `dir`, runs it and answers its standard output.
-fn compile_and_run(language: Language, dir: &Path, source: &str, headers: bool) -> String {
+/// Compiles `source` as `language` into `dir`, against `headers` if given, runs it and answers its
+/// standard output.
+fn compile_and_run(
+    language: Language,
+    dir: &Path,
+    source: &str,
+    headers: Option<Headers>,
+) -> String {
     let path = dir.join(language.source_name());
     std::fs::write(&path, source).unwrap_or_else(|e| panic!("{}: {e}", path.display()));
     let program = dir.join(format!("dump-{}", language.name().replace('+', "x")));
@@ -92,13 +126,10 @@ fn compile_and_run(language: Language, dir: &Path, source: &str, headers: bool) 
     if matches!(language, Language::Cxx) {
         command.arg("-std=c++17");
     }
-    if headers {
-        let api = api_dir();
-        command
-            .arg("-I")
-            .arg(&api)
-            .arg("-I")
-            .arg(api.join("platform/unix"));
+    if let Some(headers) = headers {
+        for dir in headers.dirs() {
+            command.arg("-I").arg(dir);
+        }
     }
     let built = command
         .arg(&path)
@@ -837,13 +868,23 @@ fn differences(measured: &Facts, expected: &Facts) -> Vec<String> {
     found
 }
 
-fn check(language: Language) {
-    let dir = scratch(language.name().replace('+', "x").as_str());
-    let measured = parse(&compile_and_run(language, &dir, &dump_program(), true));
+fn check(language: Language, headers: Headers) {
+    let dir = scratch(&format!(
+        "{}-{}",
+        headers.name(),
+        language.name().replace('+', "x")
+    ));
+    let measured = parse(&compile_and_run(
+        language,
+        &dir,
+        &dump_program(),
+        Some(headers),
+    ));
     let found = differences(&measured, &rust_facts());
     assert!(
         found.is_empty(),
-        "the Rust layout differs from the header as {} sees it:\n{}",
+        "the Rust layout differs from the {} headers as {} sees them:\n{}",
+        headers.name(),
         language.name(),
         found.join("\n")
     );
@@ -851,16 +892,28 @@ fn check(language: Language) {
 
 /// **The Rust surface is the header's, as a C compiler measures it**: every struct's size,
 /// alignment, field offsets and field sizes, every exit flag's bit, every typedef's width,
-/// alignment and signedness, and every table member's type.
+/// alignment and signedness, and every table member's type, measured on `include/`.
 #[test]
 fn the_rust_layout_is_the_headers_as_c_measures_it() {
-    check(Language::C);
+    check(Language::C, Headers::Ours);
 }
 
 /// The same facts, as a C++ compiler measures them (the types by `typeid`).
 #[test]
 fn the_rust_layout_is_the_headers_as_cxx_measures_it() {
-    check(Language::Cxx);
+    check(Language::Cxx, Headers::Ours);
+}
+
+/// The same facts measured on the upstream headers, as C.
+#[test]
+fn the_rust_layout_is_the_upstream_headers_as_c_measures_it() {
+    check(Language::C, Headers::Upstream);
+}
+
+/// The same facts measured on the upstream headers, as C++.
+#[test]
+fn the_rust_layout_is_the_upstream_headers_as_cxx_measures_it() {
+    check(Language::Cxx, Headers::Upstream);
 }
 
 /// The dump covers what it claims to: a struct from every group, the typedefs that share a Rust
@@ -892,7 +945,12 @@ fn the_dump_names_what_it_measures() {
 #[test]
 fn a_swapped_pair_of_members_is_reported() {
     let dir = scratch("control-swap");
-    let measured = parse(&compile_and_run(Language::C, &dir, &dump_program(), true));
+    let measured = parse(&compile_and_run(
+        Language::C,
+        &dir,
+        &dump_program(),
+        Some(Headers::Ours),
+    ));
     let mut mutated = rust_facts();
     let first = "field RexxCondition.conditionName offset".to_string();
     let second = "field RexxCondition.message offset".to_string();
@@ -937,7 +995,7 @@ int main(void) {{
             "control-types-{}",
             language.name().replace('+', "x")
         ));
-        let facts = parse(&compile_and_run(language, &dir, &program, false));
+        let facts = parse(&compile_and_run(language, &dir, &program, None));
         for (key, expected) in [
             ("same", "1"),
             ("width", "0"),
