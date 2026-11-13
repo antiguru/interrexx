@@ -2208,6 +2208,7 @@ impl Interp {
                 super::NativeEntry {
                     arity: Arity::Fixed(0),
                     body: super::NativeBody::Run(body),
+                    string_only: false,
                 },
             );
             self.method_objects

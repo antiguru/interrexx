@@ -2018,7 +2018,7 @@ A native method of a built-in class, given to an object of another class by
 `define`, `setMethod`, `enhanced` or `run`, and run on a receiver of a kind it
 cannot work on, raises `SYNTAX 93.900`, a condition a program can trap. The
 rule holds for every native method alike, `SORTWITH` and `ITEMS` of an Array,
-the methods of a Directory, a Package, a Supplier and the rest. The check
+the methods of a Directory, a Package, a Supplier, a String and the rest. The check
 happens when the method is run, so `define` and `setMethod` themselves
 succeed. ooRexx reads such a receiver with the layout of the other class and
 answers garbage or crashes.
@@ -2055,6 +2055,28 @@ bad: say 'SYNTAX' condition('o')~code
 ```output no-oracle
 before
 after
+SYNTAX 93.900
+```
+
+> **Note.** A `String` method is one of these: run on an object that is no
+> string, it raises `SYNTAX 93.900` too, and does not work on the object's
+> string value.
+
+```rexx
+o = .w~new
+o~sm(.string~method('LEFT'))
+signal on syntax name bad
+say '['o~left(2)']'
+exit
+bad: say 'SYNTAX' condition('o')~code
+::class w
+::method sm
+  self~setMethod('LEFT', arg(1))
+::method string
+  return 'a W'
+```
+
+```output no-oracle
 SYNTAX 93.900
 ```
 
