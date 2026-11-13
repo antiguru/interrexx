@@ -265,21 +265,22 @@ say 'not reached'
     );
 }
 
-/// A started activity whose wait nothing can end keeps the program's end
-/// waiting, as the oracle's does, until the run's deadline; main's output
-/// stands.
+/// A started activity whose wait nothing can end is refused once main has
+/// ended (Deviation 20, where the oracle waits for ever): exit code 120, and
+/// main's output stands.
 #[test]
-fn a_started_wait_nothing_can_end_keeps_the_programs_end_waiting() {
-    let began = std::time::Instant::now();
+fn a_started_wait_nothing_can_end_is_refused_at_the_programs_end() {
     let outcome = run_with(
         ".w~new~start('WAITON', .message~new('abc', 'length'))\nsay 'main done'\n\
          ::class w\n::method waiton\n  use arg m\n  say 'waits'\n  return m~result\n",
-        Invocation::none().with_deadline(std::time::Duration::from_millis(300)),
+        Invocation::none().with_deadline(std::time::Duration::from_secs(30)),
     );
-    assert!(began.elapsed() >= std::time::Duration::from_millis(300));
-    assert_eq!(outcome.exit_code, crate::DEADLINE_EXIT);
+    assert_eq!(outcome.exit_code, 120);
     assert_eq!(stdout(&outcome), "main done\nwaits\n");
-    assert_eq!(outcome.stderr, crate::DEADLINE_REPORT);
+    assert_eq!(
+        stderr(&outcome),
+        "interrexx: a wait that nothing left to run can end is not implemented\n"
+    );
 }
 
 /// An ended activity's thread context stays with the interpreter, so an
@@ -1427,21 +1428,22 @@ fn a_refusal_in_main_does_not_wait_for_the_other_activities() {
     );
 }
 
-/// A started activity blocked in a `GUARD WHEN` nothing can make true keeps
-/// the program's end waiting, as the oracle's does, until the run's deadline;
-/// main alone blocked there is the wait nothing left can end.
+/// A started activity blocked in a `GUARD WHEN` nothing can make true is
+/// refused once main has ended, as main alone blocked there is (Deviation 20,
+/// where the oracle waits for ever).
 #[test]
-fn a_blocked_guard_when_keeps_the_programs_end_waiting() {
-    let began = std::time::Instant::now();
+fn a_blocked_guard_when_is_refused_at_the_programs_end() {
     let outcome = run_with(
         "m = .k~new~start('m')\nsay 'main done'\n\
          ::class k\n::method m\n  expose v\n  v = 0\n  say 'waits'\n  guard on when v = 1\n",
-        Invocation::none().with_deadline(std::time::Duration::from_millis(300)),
+        Invocation::none().with_deadline(std::time::Duration::from_secs(30)),
     );
-    assert!(began.elapsed() >= std::time::Duration::from_millis(300));
-    assert_eq!(outcome.exit_code, crate::DEADLINE_EXIT);
+    assert_eq!(outcome.exit_code, 120);
     assert_eq!(stdout(&outcome), "main done\nwaits\n");
-    assert_eq!(outcome.stderr, crate::DEADLINE_REPORT);
+    assert_eq!(
+        stderr(&outcome),
+        "interrexx: a wait that nothing left to run can end is not implemented\n"
+    );
     let outcome =
         run("say .k~new~m\n::class k\n::method m\n  expose v\n  v = 0\n  guard on when v = 1\n");
     assert_eq!(

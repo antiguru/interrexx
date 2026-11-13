@@ -1,6 +1,6 @@
 //! Program end with an activity that never finishes: the oracle waits for ever, and so does
-//! `rexx`, with main's output written and without spinning. Each test
-//! kills the process once it has seen that.
+//! `rexx` for a timer that is still to go off, with main's output written and without spinning.
+//! Each such test kills the process once it has seen that. A wait nothing can end is refused.
 
 #![expect(
     clippy::disallowed_methods,
@@ -81,14 +81,60 @@ fn kill(child: &mut Child) {
     let _ = child.wait();
 }
 
+/// A started message that waits for its own result, after main has ended, is a wait nothing can
+/// end: the process is refused with exit code 120 where the oracle waits for ever (Deviation 20).
 #[test]
-fn a_started_message_waiting_on_itself_keeps_the_process_alive() {
-    stays_alive_after(
-        "self-wait",
+fn a_started_message_waiting_on_itself_is_refused_after_main_ends() {
+    let dir = PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
+        .join(format!("program-end-self-wait-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).expect("the probe directory");
+    let file = dir.join("self-wait.rex");
+    std::fs::write(
+        &file,
         "o = .w~new\nm = .message~new(o, 'selfwait')\no~m = m\nm~start\nsay 'main done'\n\
          ::class w\n::attribute m\n::method selfwait\n  expose m\n  say 'waiting on itself'\n\
          \x20 r = m~result\n  say 'not reached'\n",
-        "main done\nwaiting on itself\n",
+    )
+    .expect("the probe");
+    let mut child = Command::new(env!("CARGO_BIN_EXE_rexx"))
+        .arg(&file)
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("rexx starts");
+    let began = Instant::now();
+    let status = loop {
+        if let Some(status) = child.try_wait().expect("the child's status") {
+            break Some(status);
+        }
+        if began.elapsed() > OUTPUT_WAIT {
+            kill(&mut child);
+            break None;
+        }
+        std::thread::sleep(Duration::from_millis(20));
+    };
+    let mut out = String::new();
+    let mut err = String::new();
+    child
+        .stdout
+        .take()
+        .expect("piped stdout")
+        .read_to_string(&mut out)
+        .expect("stdout");
+    child
+        .stderr
+        .take()
+        .expect("piped stderr")
+        .read_to_string(&mut err)
+        .expect("stderr");
+    std::fs::remove_dir_all(&dir).expect("the probe directory is removed");
+    let status = status.expect("the process ended where the oracle waits for ever");
+    assert_eq!(status.code(), Some(120));
+    assert_eq!(out, "main done\nwaiting on itself\n");
+    assert_eq!(
+        err,
+        "interrexx: a wait that nothing left to run can end is not implemented\n"
     );
 }
 

@@ -829,7 +829,10 @@ send, or the original of a `reply`, whose copy ran; the same holds for `wait`.
 ooRexx waits for ever ([Deviation
 20](../deviations.md#20-a-wait-nothing-can-end)). The case of a `GUARD ...
 WHEN` that nothing can make true is [the locks page's
-rule](r:conc.locks.deviation.20).
+rule](r:conc.locks.deviation.20). The refusal holds after the main program has
+ended too, when every activity that remains waits for something nothing can
+bring about ([the end rule](r:conc.halt.end.alive)); the second example is
+such a program.
 
 ```rexx
 m = .message~new(.object~new, 'string')
@@ -845,4 +848,20 @@ say 'not reached'
 a message that was never sent, and the original of a reply
 waiting for the copy: an Object
 waiting for the original:
+```
+
+```rexx
+o = .o~new
+m = o~start('stuck')
+say 'main ends'
+::class o
+::method stuck unguarded
+  say 'stuck: waiting'
+  r = .message~new(.object~new, 'string')~result
+  say 'never'
+```
+
+```output rc=120
+main ends
+stuck: waiting
 ```

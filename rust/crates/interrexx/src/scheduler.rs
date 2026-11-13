@@ -318,6 +318,9 @@ pub(crate) struct Activities {
     /// Whether main's program has ended, so main waits for the others as an
     /// activity that has finished.
     main_finished: bool,
+    /// Whether the program's end found activities that nothing can wake any
+    /// more and refused their wait (Deviation 20).
+    ended_stuck: bool,
 }
 
 /// Milliseconds in a day: a timer's wait is whole days of this, then a
@@ -383,6 +386,7 @@ impl Activities {
             semaphores: crate::semaphores::Semaphores::default(),
             switches: 0,
             main_finished: false,
+            ended_stuck: false,
         }
     }
 
@@ -1709,7 +1713,9 @@ impl Interp {
     pub(crate) fn run_started_to_end(&mut self) -> Vec<(Failure, Vec<crate::FailureSite>)> {
         let mut failures = self.take_late_failures();
         while let Err(failure) = self.run_started_activities() {
-            let last = matches!(failure, Failure::Deadline) || self.sim_is_stuck();
+            let last = matches!(failure, Failure::Deadline)
+                || self.sim_is_stuck()
+                || std::mem::take(&mut self.activities.ended_stuck);
             failures.push((failure, Vec::new()));
             if last {
                 break;
@@ -1746,9 +1752,11 @@ impl Interp {
         self.activities.late_failures.push(failure);
     }
 
-    /// Runs every started activity to its end, for the end of the program. One
-    /// that nothing left can wake keeps the program waiting, as termination
-    /// does, until the run's deadline or a signal's halt wakes it.
+    /// Runs every started activity to its end, for the end of the program.
+    /// Where the activities that remain wait for something nothing left can
+    /// bring about, the wait is refused as it is while the main program runs
+    /// (`r[conc.halt.end.alive]`, Deviation 20), and the program ends without
+    /// waiting for them (`r[conc.halt.deviation.21]`).
     pub(crate) fn run_started_activities(&mut self) -> Result<(), Failure> {
         self.activities.main_finished = true;
         self.cancel_wait();
@@ -1765,21 +1773,13 @@ impl Interp {
                 && table.sleepers.is_empty()
                 && table.in_flight == table.runs_below
             {
-                self.idle_for_good()?;
+                if self.sim.is_some() {
+                    return Err(self.sim_endless_wait());
+                }
+                self.activities.ended_stuck = true;
+                return Err(Loud::unsatisfiable_wait().into());
             }
         }
-    }
-
-    /// Idles this thread with nothing left that can wake an activity but a
-    /// signal's halt; the run's deadline ends it.
-    fn idle_for_good(&mut self) -> Result<(), Failure> {
-        if self.sim.is_some() {
-            return Err(self.sim_endless_wait());
-        }
-        while self.activities.ready.is_empty() {
-            self.idle_until(self.now() + TIMER_DAY)?;
-        }
-        Ok(())
     }
 
     /// Runs ready activities with the running one set aside, until it is
