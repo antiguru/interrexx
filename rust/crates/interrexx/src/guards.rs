@@ -568,7 +568,6 @@ impl Interp {
         let code = crate::Code {
             body,
             symbols: &program.symbols,
-            slots: &plan.by_symbol,
             plan: Some(&plan),
         };
         self.record_failure_site(&code, index, Some(&program.source), instruction);

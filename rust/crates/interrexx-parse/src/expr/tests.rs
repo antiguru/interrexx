@@ -48,7 +48,7 @@ pub(super) fn parse(text: &str, entry: Entry) -> Result<(Expr, SymbolTable), Par
             tokens: &scanned.tokens,
             symbols: &scanned.symbols,
             selectors: &selectors,
-            keywords: &scanned.keywords,
+            keywords: scanned.keywords,
             resources: &scanned.resources,
         };
         let mut cursor = TokenCursor::new(clauses[0].tokens.clone());
@@ -655,7 +655,7 @@ fn an_empty_required_expression_raises_the_sub_number_the_caller_supplied() {
         tokens: &scanned.tokens,
         symbols: &scanned.symbols,
         selectors: &selectors,
-        keywords: &scanned.keywords,
+        keywords: scanned.keywords,
         resources: &scanned.resources,
     };
     for msg in [E35_918, E35_912] {

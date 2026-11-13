@@ -1058,12 +1058,9 @@ fn owned_message(name: &str) -> String {
 struct Code<'a> {
     body: &'a CodeBody,
     symbols: &'a SymbolTable,
-    /// Slot per `SymbolId` **of this code's own table**. For a fragment those
-    /// ids are the fragment's, resolved against the enclosing frame, which is
-    /// why this is a field of `Code` rather than something read back off the
-    /// activation.
-    slots: &'a [Option<usize>],
-    /// The upfront pass's answers about **this** body: its clause indents
+    /// The upfront pass's answers about **this** body: the slot per
+    /// `SymbolId` of this code's own table (`Plan::by_symbol` -- for a
+    /// fragment, the fragment's ids resolved against the enclosing frame), its clause indents
     /// (`Plan::indents`), the line each of its clauses sits on
     /// (`Plan::lines`), and how each of its compound names splits
     /// (`Plan::compounds`).
@@ -1074,7 +1071,7 @@ impl<'a> Code<'a> {
     /// The slot this body's upfront pass bound `id` to, or `None` when it
     /// bound it none.
     pub(crate) fn slot_for(&self, id: SymbolId) -> Option<usize> {
-        let at = self.slots.get(id.index()).copied().flatten();
+        let at = self.plan?.slot_for_symbol(id);
         debug_assert!(
             at.is_none()
                 || self.plan.is_none_or(|plan| {
@@ -1111,7 +1108,6 @@ fn planned_code<'a>(program: &'a Program, plan: &'a Plan) -> Code<'a> {
     Code {
         body: &program.main,
         symbols: &program.symbols,
-        slots: &plan.by_symbol,
         plan: Some(plan),
     }
 }

@@ -28,11 +28,10 @@ impl Interp {
         if let Some(level) = self.activity.fragments.last_mut() {
             level.fragment = Some(Rc::clone(&fragment));
         }
-        let (slots, fragment_plan) = self.fragment_plan(&fragment);
+        let fragment_plan = self.fragment_plan(&fragment);
         let code = Code {
             body: &fragment.body,
             symbols: &fragment.symbols,
-            slots: &slots,
             // **A fragment carries its own plan, with every slot translated
             // into the enclosing frame** (`Interp::fragment_plan`). It used to
             // carry none, so its clause indents and compound splits were

@@ -36,7 +36,7 @@ pub struct Scanned {
     /// Every token, in source order.
     pub tokens: Vec<Token>,
     pub symbols: SymbolTable,
-    pub keywords: Keywords,
+    pub keywords: &'static Keywords,
     /// The `::RESOURCE` bodies, in source order. Empty for almost every
     /// program.
     pub resources: Vec<ResourceBody>,
@@ -55,8 +55,7 @@ pub fn scan(source: &ProgramSource) -> Result<Scanned, ParseError> {
 /// parse of them meets every earlier clause as a parse reading one clause at a
 /// time does.
 pub(crate) fn scan_to_error(source: &ProgramSource) -> (Scanned, Option<ParseError>) {
-    let mut symbols = SymbolTable::default();
-    let keywords = Keywords::new(&mut symbols);
+    let (symbols, keywords) = Keywords::shared();
     let mut scanner = Scanner::new(source, symbols);
     let error = scanner.run().err().map(|error| {
         let end = scanner.absolute();

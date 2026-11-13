@@ -38,7 +38,7 @@ fn parse_kind(text: &str, kind: SourceKind) -> Result<(Vec<Instruction>, SymbolT
             tokens: &scanned.tokens,
             symbols: &scanned.symbols,
             selectors: &selectors,
-            keywords: &scanned.keywords,
+            keywords: scanned.keywords,
             resources: &scanned.resources,
         };
         // A fresh split over the full token vector, then one code body. Going

@@ -116,7 +116,6 @@ impl Interp {
                 let code = Code {
                     body: &empty_body,
                     symbols: &program.symbols,
-                    slots: &[],
                     plan: None,
                 };
                 self.eval(&code, expr)
