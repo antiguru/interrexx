@@ -3360,6 +3360,13 @@ impl Interp {
         {
             temps.push_temp(object);
         }
+        #[cfg(test)]
+        {
+            self.failure_level_roots += kept.frames.len()
+                + usize::from(kept.frame.is_some())
+                + usize::from(kept.reraised_object.is_some())
+                + kept.failed_sends.len();
+        }
     }
 
     pub(crate) fn restore_failure_levels(&mut self, kept: FailureLevels) {

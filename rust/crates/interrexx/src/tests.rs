@@ -1953,3 +1953,34 @@ fn an_ended_runs_memory_is_freed_after_its_outcome() {
     assert_eq!(outcome.stdout, b"ran\n");
     assert!(!held(), "a run answered here frees its own");
 }
+
+/// The traceback of a failure `depth` `INTERPRET` levels deep, and how many
+/// objects copies of the failure levels pushed as temps during the run.
+fn deep_report_roots(depth: usize) -> usize {
+    let program = format!(
+        "n = 0\nzs = 'n = n + 1; if n < {depth} then interpret zs; else x = 1/0'\ninterpret zs\n"
+    );
+    let outcome = run_program(TEST_PATH, program.into_bytes(), crate::Invocation::none());
+    let report = String::from_utf8_lossy(&outcome.stderr);
+    assert!(report.contains("Error 42 "), "stderr: {report:?}");
+    assert!(
+        report.lines().filter(|line| line.contains("*-*")).count() >= depth,
+        "stderr: {report:?}"
+    );
+    outcome.failure_level_roots
+}
+
+/// **A deep failure's report roots its levels a number of times linear in
+/// its depth.** Each line of the report is delivered on its own, and none of
+/// them may root the levels the failure unwound through. The work is counted
+/// rather than timed, so the bound holds on a loaded machine: four times the
+/// depth may root at most four times the objects.
+#[test]
+fn a_deep_failures_report_roots_its_levels_a_linear_number_of_times() {
+    let shallow = deep_report_roots(250);
+    let deep = deep_report_roots(1000);
+    assert!(
+        deep <= 4 * shallow.max(1000),
+        "{shallow} objects rooted for 250 levels, {deep} for 1000"
+    );
+}
