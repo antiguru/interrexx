@@ -1544,7 +1544,19 @@ fn push_native<'a>(
             push_read(ops, echoes_values, plan, SymbolRead::Compound, *id, dst)
         }
         ExprKind::DotVariable(id) => {
-            push_read(ops, echoes_values, plan, SymbolRead::Environment, *id, dst)
+            ops.push(Op::Load {
+                symbol: *id,
+                read: SymbolRead::Environment,
+                at: calls.reserve_environment(),
+                dst,
+            });
+            if echoes_values {
+                ops.push(Op::TraceRead {
+                    symbol: *id,
+                    read: SymbolRead::Environment,
+                    src: dst,
+                });
+            }
         }
         ExprKind::Binary { op, left, right } => {
             // **The left operand lands in `dst` itself and only the right one
@@ -1807,7 +1819,8 @@ fn push_read(
         SymbolRead::Simple | SymbolRead::Stem => plan
             .slot_for_symbol(symbol)
             .map_or(PlanSlot::UNRESOLVED, PlanSlot::of),
-        SymbolRead::Compound | SymbolRead::Environment => PlanSlot::UNRESOLVED,
+        SymbolRead::Compound => PlanSlot::UNRESOLVED,
+        SymbolRead::Environment => unreachable!("a `.NAME` read is compiled with its memo site"),
     };
     ops.push(Op::Load {
         symbol,

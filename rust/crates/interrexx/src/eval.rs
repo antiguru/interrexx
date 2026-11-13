@@ -289,10 +289,12 @@ impl Interp {
 
     /// One bare symbol's read: the whole of what `eval_node`'s own
     /// `Variable`/`Stem`/`Compound` arms do, entered from there and from
-    /// `crate::ir::Op::Load`.
+    /// `crate::ir::Op::Load`. `chunk` is the load's own, which holds the
+    /// memo an environment read's `at` names; the tree walk has none.
     pub(crate) fn read_symbol(
         &mut self,
         code: &Code<'_>,
+        chunk: Option<&crate::ir::Chunk>,
         read: SymbolRead,
         id: SymbolId,
         at: Option<usize>,
@@ -338,7 +340,10 @@ impl Interp {
                 self.novalue_check(novalue, value)?;
                 Ok(value)
             }
-            SymbolRead::Environment => self.environment_symbol(code, id),
+            SymbolRead::Environment => match chunk {
+                Some(chunk) => self.load_environment(code, chunk, id, at),
+                None => self.environment_symbol(code, id),
+            },
         }
     }
 
@@ -359,6 +364,29 @@ impl Interp {
             ".TRUE" => Ok(LOGICAL_TRUE),
             ".FALSE" => Ok(self.text(b"0")),
             other => self.dot_variable(other.as_bytes()),
+        }
+    }
+
+    /// [`Interp::environment_symbol`] for a compiled read, whose class
+    /// answer the memo at `chunk`'s site `at` keeps: see
+    /// [`Interp::dot_variable_memoized`]. Out of line, so the op loop pays
+    /// one call for it as it did for [`Interp::read_symbol`].
+    #[inline(never)]
+    pub(crate) fn load_environment(
+        &mut self,
+        code: &Code<'_>,
+        chunk: &crate::ir::Chunk,
+        id: SymbolId,
+        at: Option<usize>,
+    ) -> Result<ObjRef, Failure> {
+        let Some(memo) = at.and_then(|site| chunk.environment_site(site)) else {
+            return self.environment_symbol(code, id);
+        };
+        match code.symbols.name(id) {
+            ".NIL" => Ok(ObjRef::NIL),
+            ".TRUE" => Ok(LOGICAL_TRUE),
+            ".FALSE" => Ok(self.text(b"0")),
+            other => self.dot_variable_memoized(other.as_bytes(), memo),
         }
     }
 
@@ -423,9 +451,9 @@ impl Interp {
             // not one operation under three spellings -- `read_symbol`'s own
             // doc comment has what separates them -- so the dispatch is on a
             // kind rather than absent.
-            ExprKind::Variable(id) => self.read_symbol(code, SymbolRead::Simple, *id, None),
-            ExprKind::Stem(id) => self.read_symbol(code, SymbolRead::Stem, *id, None),
-            ExprKind::Compound(id) => self.read_symbol(code, SymbolRead::Compound, *id, None),
+            ExprKind::Variable(id) => self.read_symbol(code, None, SymbolRead::Simple, *id, None),
+            ExprKind::Stem(id) => self.read_symbol(code, None, SymbolRead::Stem, *id, None),
+            ExprKind::Compound(id) => self.read_symbol(code, None, SymbolRead::Compound, *id, None),
 
             ExprKind::DotVariable(id) => self.environment_symbol(code, *id),
 

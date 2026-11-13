@@ -1,0 +1,29 @@
+/* One .NAME read site, reached again after every change that moves what it
+   answers: a class added to the running package, a .local entry, a package
+   added, a public class added, and a .local entry under a class name. */
+p = .package~new('extra', .array~of('::class baz public', '::method hi; return "baz hi"'))
+do i = 1 to 6
+  call show i
+  select
+    when i = 1 then .context~package~addClass('FOO', .array)
+    when i = 2 then .local~bar = 'local bar'
+    when i = 3 then .context~package~addPackage(p)
+    when i = 4 then .context~package~addPublicClass('BAR', .list)
+    when i = 5 then .local~foo = 'local foo'
+    otherwise nop
+  end
+end
+say r1() r2()
+exit
+show: procedure
+  arg i
+  foo = .foo; bar = .bar; baz = .baz
+  if foo~isA(.class) then foo = foo~id
+  if bar~isA(.class) then bar = bar~id
+  if baz~isA(.class) then baz = baz~new~hi
+  say i foo bar baz .array~id .nil~class~id
+  return
+::routine r1
+  return .foo~id
+::routine r2
+  return .context~package~findClass('FOO')~id

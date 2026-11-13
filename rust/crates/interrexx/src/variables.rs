@@ -363,7 +363,7 @@ impl Interp {
             NameShape::Stem => SymbolRead::Stem,
             NameShape::Compound => SymbolRead::Compound,
         };
-        let value = self.read_symbol(code, read, id, None)?;
+        let value = self.read_symbol(code, None, read, id, None)?;
         self.echo_symbol_read(code, id, value)?;
         Ok(value)
     }

@@ -155,9 +155,15 @@ pub(crate) fn render(chunk: &Chunk) -> String {
             // `a_compiled_read_names_the_symbol_its_expression_does` is what
             // pins the id itself, against the parsed expression rather than
             // against a number.
+            // An environment read's `at` is its memo site rather than a
+            // slot, and is named as one.
             Op::Load { read, at, dst, .. } => {
+                let field = match read {
+                    crate::eval::SymbolRead::Environment => "site",
+                    _ => "at",
+                };
                 out.push_str(&format!(
-                    "{index}: Load read={read:?} at={} dst={dst}\n",
+                    "{index}: Load read={read:?} {field}={} dst={dst}\n",
                     render_slot(*at)
                 ));
             }

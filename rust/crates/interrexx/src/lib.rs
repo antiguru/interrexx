@@ -1325,6 +1325,11 @@ struct Interp {
     /// `.NAME` answers [`Interp::rexx_package_class`] has already found,
     /// keyed by the bare uppercased name.
     rexx_class_cache: NameMap<Box<[u8]>, ObjRef>,
+    /// Moves whenever an answer the `.NAME` class lookup gave may have
+    /// changed: on every write to a package's fields and wherever
+    /// [`Interp::rexx_class_cache`] is cleared. A compiled `.NAME` read's
+    /// memo ([`crate::environment::EnvMemo`]) holds while it stands.
+    class_lookup_stamp: u64,
     /// Whether any package's local directory has been built, which is the
     /// one test a `.NAME` makes before probing the running package's.
     package_locals: bool,
@@ -2317,6 +2322,7 @@ impl Interp {
             routines_written: false,
             routines_tables: false,
             rexx_class_cache: NameMap::default(),
+            class_lookup_stamp: 0,
             package_locals: false,
             package_local_view: None,
             package_local_miss: environment::PackageLocalMiss::default(),
@@ -3376,6 +3382,10 @@ impl Interp {
             // `Interp::collect_now` clears the cache on every collection, and
             // every write to a table it is derived from clears it too.
             rexx_class_cache: _,
+            // A counter. The class handles the memos it guards hold are not
+            // roots, for `rexx_class_cache`'s reason: every collection clears
+            // that cache, which moves this stamp past every memo filled before.
+            class_lookup_stamp: _,
             package_locals: _,
             // The directory is a package's local, and its view's store
             // arrays are held as `environment`'s views' are.
