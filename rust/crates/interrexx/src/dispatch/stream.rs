@@ -364,8 +364,9 @@ fn notready(
     Ok(Some(answer))
 }
 
-/// One token of an options string: runs of non-blanks, except that `=`, `+`,
-/// `-` and `<` are single-character tokens and also end the run before them.
+/// One token of an options string: runs of non-whitespace (blank and tab,
+/// r[conv.string.whitespace]), except that `=`, `+`, `-` and `<` are
+/// single-character tokens and also end the run before them.
 struct Tokens<'a> {
     source: &'a [u8],
     offset: usize,
@@ -386,7 +387,7 @@ impl<'a> Tokens<'a> {
 
     fn next(&mut self) -> Option<&'a [u8]> {
         self.offset += self.length;
-        while self.source.get(self.offset) == Some(&b' ') {
+        while matches!(self.source.get(self.offset), Some(b' ' | b'\t')) {
             self.offset += 1;
         }
         let Some(&first) = self.source.get(self.offset) else {
@@ -398,15 +399,10 @@ impl<'a> Tokens<'a> {
         } else {
             self.source[self.offset..]
                 .iter()
-                .take_while(|byte| **byte != b' ' && !SPECIAL.contains(byte))
+                .take_while(|byte| !matches!(**byte, b' ' | b'\t') && !SPECIAL.contains(byte))
                 .count()
         };
         Some(&self.source[self.offset..self.offset + self.length])
-    }
-
-    /// The previous token: the next scan re-reads the token just returned.
-    fn back(&mut self) {
-        self.length = 0;
     }
 }
 
@@ -535,16 +531,18 @@ fn parse_open_options(options: &[u8]) -> Result<Parsed, ()> {
                 if !parsed.record_based {
                     return Err(());
                 }
-                match tokens.next() {
-                    Some(number) if parsed.record_length == 0 => {
-                        match to_number(number).filter(|length| *length != 0) {
-                            Some(length) => parsed.record_length = length,
-                            None => return Err(()),
-                        }
-                    }
-                    // A length already set, or nothing left: the record length
-                    // defaults and the token goes back.
-                    _ => tokens.back(),
+                // The length is required (r[bif.stream.open.binary]), and a
+                // second RECLENGTH is a repeat whether or not it has one.
+                if parsed.record_length != 0 {
+                    return Err(());
+                }
+                match tokens
+                    .next()
+                    .and_then(to_number)
+                    .filter(|length| *length != 0)
+                {
+                    Some(length) => parsed.record_length = length,
+                    None => return Err(()),
                 }
             }
             OpenOption::Shared => {

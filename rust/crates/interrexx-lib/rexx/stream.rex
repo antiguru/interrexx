@@ -140,7 +140,7 @@ done:
    entry points. */
 ::method query
   use strict arg request
-  text = self~interrexx_value(request)
+  text = self~interrexx_value(request)~translate(' ', '09'x)
   parse upper var text word rest
   rest = rest~strip
   select
@@ -165,8 +165,14 @@ done:
 /* r[class.stream.command] and r[class.stream.command.sends] */
 ::method command
   use strict arg command
-  text = self~interrexx_value(command)~strip('L')
-  blank = text~pos(' ')
+  /* A tab separates words as a blank does (r[bif.stream.command]); what
+     follows the word goes on as it was written. */
+  white = ' ' || '09'x
+  text = self~interrexx_value(command)
+  start = text~verify(white, 'N')
+  if start = 0 then text = ''
+  else text = text~substr(start)
+  blank = text~verify(white, 'M')
   if blank = 0 then do
     word = text
     rest = ''
@@ -180,11 +186,11 @@ done:
     when word == '' then forward message 'CLOSE' arguments (.array~new)
     when 'OPEN'~abbrev(word, 1) then forward message 'OPEN' arguments (.array~of(rest~translate))
     when 'CLOSE'~abbrev(word, 1) then do
-      if rest~strip \== '' then raise syntax 93.0
+      if rest~translate(' ', '09'x)~strip \== '' then raise syntax 93.0
       forward message 'CLOSE' arguments (.array~new)
     end
     when 'FLUSH'~abbrev(word, 1) then do
-      if rest~strip \== '' then raise syntax 93.0
+      if rest~translate(' ', '09'x)~strip \== '' then raise syntax 93.0
       forward message 'FLUSH' arguments (.array~new)
     end
     when 'SEEK'~abbrev(word, 1) then forward message 'POSITION' arguments (.array~of(rest~translate))

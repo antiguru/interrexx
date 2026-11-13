@@ -1255,8 +1255,10 @@ r[class.stream.query]
 `query` answers what [QUERY](r:bif.stream.query.words) answers for the word in
 its one argument, a string: the position, the size, the type, the file name
 that exists, the times and the handle, with the options and the shortenings
-that the rules of QUERY give. The word `SEEK` is `POSITION`, and an argument that is the null string or only
-blanks answers as `DATETIME` does. A word that is none of those, and words after it
+that the rules of QUERY give; its words are separated by
+[whitespace](r:conv.string.whitespace), and a tab between the options is [Deviation
+168](r:bif.stream.deviation.168). The word `SEEK` is `POSITION`, and an argument that is the null string or only
+whitespace answers as `DATETIME` does. A word that is none of those, and words after it
 that the query does not take, raise `SYNTAX 93.0`; a missing argument raises
 `SYNTAX 93.901`. The answers are strings, the null string where the function
 answers it. It sends no message.
@@ -1311,7 +1313,8 @@ s~query("size", 1) => 93.902
 r[class.stream.seek]
 `seek` and `position` do the same: they set a position of the stream and
 answer the new one, as [SEEK](r:bif.stream.seek) does, with the offset and the
-options in their one argument, a string. A missing argument raises `SYNTAX
+options in their one argument, a string; a tab between them is [Deviation
+168](r:bif.stream.deviation.168). A missing argument raises `SYNTAX
 88.901`, an offset that is not a whole number or an option that is none of
 those of SEEK `SYNTAX 93.0`, and an argument that holds no offset, the null
 string for one, `SYNTAX 93.903`. Neither method sends a message, and neither
@@ -1377,7 +1380,7 @@ so the name of another method, raises `SYNTAX 93.914`; words after `CLOSE` or
 93.0`, and `SEEK` or `POSITION` without an offset `SYNTAX 93.903`. A missing
 argument raises `SYNTAX 93.901`. The answer is the answer of the method that
 carries the command out, [which the next rule
-names](r:class.stream.command.sends). A command that is the null string or only blanks closes the stream, as `close` does, and answers what `close` answers.
+names](r:class.stream.command.sends). A command that is the null string or only whitespace closes the stream, as `close` does, and answers what `close` answers.
 
 ```rexx
 f = 'spec-stream-command-zq.tmp'
@@ -1474,11 +1477,11 @@ after it has split the first word from the rest, and none for a command it
 refuses. `CLOSE` sends `close` and `FLUSH` sends `flush`, with no argument.
 `OPEN` sends `open`, `SEEK` and `POSITION` send `position`, and `QUERY` sends
 `query`, each with one argument: the rest of the command after the word and
-one blank, in upper case, with the other blanks as they were. `SEEK` sends
+one blank, in upper case, with the other blanks and tabs as they were. `SEEK` sends
 `position`, not `seek`. The answer of the message is the answer of `command`,
 whatever it is, and an error that the message raises is the error of
 `command`. A command that has words after `CLOSE` or `FLUSH`, or an unknown
-first word, sends nothing. A command that is the null string or only blanks
+first word, sends nothing. A command that is the null string or only whitespace
 sends `close` with no argument, and `QUERY` with nothing after it sends `query`
 with the null string. In the example a log lists each message as its
 name, the number of its arguments after a `#`, and the argument in brackets.
