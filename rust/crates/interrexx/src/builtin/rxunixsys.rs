@@ -430,7 +430,11 @@ pub(crate) fn close(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<ObjR
 fn access_with(interp: &mut Interp, args: &[Option<ObjRef>], effective: bool) -> Result<ObjRef> {
     check_arity(args, 2)?;
     let name = path(interp, args, 1)?;
-    let mode = rustix::fs::Access::from_bits_retain(unsigned(int(interp, args, 2)?));
+    let requested = unsigned(int(interp, args, 2)?);
+    // r[rxunixsys.files.euidaccess]: SysEuidaccess reads only bits 1, 2 and 4
+    // of its mode; SysAccess passes the mode on and so refuses other bits.
+    let mode =
+        rustix::fs::Access::from_bits_retain(if effective { requested & 7 } else { requested });
     let flags = if effective {
         rustix::fs::AtFlags::EACCESS
     } else {
