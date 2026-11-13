@@ -1921,7 +1921,7 @@ macro_rules! clause_region {
                     }
                     Ok(RegionEnd::At(next))
                 };
-                let ran = if $debugging {
+                let ran = if $debugging || $self.activity.debug_stop_owed.is_some() {
                     $self.debug_pause_in_region(ran, $code, $index, $clause, $source, $clause_pc)
                 } else {
                     ran
@@ -2585,6 +2585,16 @@ impl Interp {
         source: Option<&ProgramSource>,
         clause_pc: u32,
     ) -> Result<RegionEnd, Failure> {
+        // A call of the `TRACE` function that turned interactive tracing on
+        // in this clause owes the stop at once, but not to an assignment,
+        // which the first stop follows (`r[env.debugging.start]`).
+        if self.activity.debug_stop_owed == Some(self.activation().id) {
+            self.activity.debug_stop_owed = None;
+            self.restore_clause_exits();
+            if matches!(clause.kind, InstructionKind::Assignment { .. }) {
+                return ran;
+            }
+        }
         let flow = match &ran {
             Ok(RegionEnd::At(_)) => None,
             Ok(RegionEnd::Flowed(flow)) => Some(flow),
@@ -3565,7 +3575,7 @@ impl Interp {
         let Some(clause) = code.body.instructions.get(index) else {
             return Err(Loud::chunk_map_too_short().into());
         };
-        let ran = if debugging {
+        let ran = if debugging || self.activity.debug_stop_owed.is_some() {
             self.debug_pause_in_region(ran, code, index, clause, source, clause_pc)
         } else {
             ran

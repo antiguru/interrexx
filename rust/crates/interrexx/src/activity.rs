@@ -270,6 +270,11 @@ pub(crate) struct Activity {
     /// How many `INTERPRET` fragments are running, counted from zero outside
     /// any of them.
     pub(crate) fragment_depth: usize,
+    /// The activation whose running clause turned interactive tracing on
+    /// through a call of the `TRACE` function, so that the clause owes a stop
+    /// at its end (`r[env.debugging.start]`). Keyed by activation because the
+    /// lines the clause traces can run another activation's clauses first.
+    pub(crate) debug_stop_owed: Option<crate::activation::ActivationId>,
     /// Each running fragment, outermost first.
     pub(crate) fragments: Vec<FragmentLevel>,
     /// The index, in the innermost running fragment's body, of its clause
@@ -552,6 +557,7 @@ impl Activity {
             input_dispatch_syntax: None,
             clause_line_override: None,
             fragment_depth: 0,
+            debug_stop_owed: None,
             fragments: Vec::new(),
             fragment_clause: 0,
             routing_trace: false,
@@ -723,6 +729,7 @@ impl Activity {
             input_dispatch_syntax: _,
             clause_line_override: _,
             fragment_depth: _,
+            debug_stop_owed: _,
             fragments: _,
             fragment_clause: _,
             routing_trace: _,
