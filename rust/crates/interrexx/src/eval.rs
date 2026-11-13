@@ -1527,7 +1527,7 @@ impl Interp {
     /// `left op right` by the string rule, where both are strings or numbers
     /// in their own right -- a small integer, an inline string or a heap
     /// string or number -- and `None` for any other operand, which
-    /// [`Interp::apply_binary`] has to judge. For an equality operator with
+    /// [`Interp::apply_binary`] has to judge. For a comparison operator with
     /// an operand that is not a number this is the answer `apply_binary`
     /// gives: neither operand is an operator receiver or converts through
     /// the required-string protocol, the numeric attempt fails on the
@@ -1849,11 +1849,12 @@ fn is_comparison(op: Operator) -> bool {
 /// Whether `op` asks whether two values are the same, as against how they
 /// order.
 /// Whether the comparison `left op right` compares as strings whatever the
-/// other operand is: `op` is an equality operator and one operand is a
+/// other operand is: `op` is a comparison operator and one operand is a
 /// literal that is not a number, so the numeric rule, which needs both, never
-/// applies. Decided from the syntax alone.
+/// applies -- and a strict operator never applies it at all. Decided from the
+/// syntax alone.
 pub(crate) fn compares_as_text(op: Operator, left: &Expr, right: &Expr) -> bool {
-    is_equality(op)
+    is_comparison(op)
         && [left, right]
             .iter()
             .any(|side| matches!(&side.kind, ExprKind::Literal(bytes) if never_a_number(bytes)))

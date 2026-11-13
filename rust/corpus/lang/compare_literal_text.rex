@@ -1,6 +1,7 @@
-/* Equality against a literal that is not a number compares as strings, in
+/* A comparison against a literal that is not a number compares as strings, in
    expressions, in conditions and in a DO WHILE header, with every operand
-   kind: inline and heap strings, numbers, .nil, objects, stems, references. */
+   kind: inline and heap strings, numbers, .nil, objects, stems, references --
+   the equality operators, then the ordering ones, plain and strict. */
 long = 'a string longer than a handle carries inline'
 say (' ok ' = 'ok') ('ok' = ' ok ') (' ok ' == 'ok') ('ok' \== ' ok')
 say ('' = '   ') ('   ' = '') ('' == '   ') ('' \= ' ') ('' <> ' ') ('' >< ' ')
@@ -21,6 +22,20 @@ end
 say i
 if 'yes' == 'yes' then say 'strict true'
 if 'yes' = 'yes ' then say 'stripped true'
+ops = '< > <= >= \< \> << >> <<= >>= \<< \>>'
+lefts = .array~of(' ok', 'ok ', '', '  ', 'b', 10, 1.5, long, 'OK')
+do l over lefts
+  line = ''
+  do w = 1 to words(ops)
+    op = word(ops, w)
+    interpret 'r = (l' op "'ok') ('ok'" op 'l) (l' op "'') (''" op 'l)'
+    line = line r
+  end
+  say line
+end
+say ('a' < 'b') ('b' > 'a ') (' a' << 'a') ('a ' >> 'a') (5 < 'x') ('x' > 10)
+say ('' < .nil) ('' >= .nil) ('' >> .nil)
+say (s. < 'p') ('p' >> s.) ('' <= a) ('' >> a)
 numeric digits 3
 say (1234567 = 'ok') ('ok' \= 1.23456789)
 signal on novalue
