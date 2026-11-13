@@ -105092,7 +105092,9 @@ call SysCloseEventSem h
 <p>The functions that take a handle read it as a whole number from <code>0</code> to
 <code>18446744073709551615</code>, in the form the creating call answered it. Blanks
 around it, a plus sign and a fraction that is only zeros once <a href="rexxutil/index.html#r-util.index.whole">the
-whole-number rule</a> has rounded the number do no harm. A
+whole-number rule</a> has rounded the number are read as the
+whole number, but the handle is then another spelling, which names no
+semaphore (<a href="rexxutil/syseventsem.html#r-util.syseventsem.deviation.158">Deviation 158</a>). A
 handle that is missing raises <code>SYNTAX 88.901</code>, and one argument too many
 raises <code>SYNTAX 88.922</code>. A value that is not a whole number or is out of that
 range raises <code>SYNTAX 88.907</code>: a word, the null string, a negative number, a
@@ -105123,11 +105125,6 @@ call try "SysCloseEventSem()"
 call try "SysCloseEventSem(h, 1)"
 call try "SysCloseEventSem('x')"
 call try "SysPostEventSem('1.0000000000000000001')"
-say SysPostEventSem(' ' || h || ' ') SysPostEventSem('+' || h) SysPostEventSem(h || '.0')
-say SysPostEventSem(.mutablebuffer~new(h)) SysPostEventSem(h || '.00') SysPostEventSem(h || '.00000000000000000001')
-say SysWaitEventSem(' ' || h || ' ', 20) SysWaitEventSem('+' || h, 20)
-say SysResetEventSem(' ' || h || ' ') SysResetEventSem('+' || h)
-say SysCloseEventSem(' ' || h || ' ')
 exit
 try:
   signal on syntax name e
@@ -105155,11 +105152,6 @@ e: say condition('o')~code
 88.922
 88.907
 88.907
-0 0 0
-0 0 0
-0 0
-0 0
-0
 </code></pre>
 <pre><code class="language-rexx">h = SysCreateEventSem()
 call try "SysWaitEventSem(h, .sv~new('10'))"
@@ -105300,8 +105292,7 @@ function of this page and of <a href="rexxutil/sysmutexsem.html">the mutex semap
 that takes a handle answer <code>6</code>, and use no semaphore: the handle of a
 semaphore that is closed, a handle that arithmetic has rounded, as the sum `h</p>
 <ul>
-<li>0<code>of a handle of thirteen digits is under</code>NUMERIC DIGITS 9<code>, and a number that no call answered. ooRexx uses the number as the address of the semaphore and crashes, with a signal that ends the program, for a closed handle (all calls but SysCloseEventSem, which answers </code>6<code>), for a rounded one, as SysPostEventSem shows, and for a number that no call answered; SysRequestMutexSem with an event semaphore's handle hangs. The first example is a rounded handle and a closed one, the second a number that no call answered. SysResetEventSem answers </code>6<code>for such a handle like the others, as the third example shows. The handle of an open semaphore of the other kind, a mutex semaphore's handle given to an event function or an event semaphore's handle given to a mutex function, is such a number too: the call answers</code>6` and changes neither semaphore.
-interrexx accepts it today (issue #247), as the fourth example shows.</li>
+<li>0<code>of a handle of thirteen digits is under</code>NUMERIC DIGITS 9<code>, and a number that no call answered. ooRexx uses the number as the address of the semaphore and crashes, with a signal that ends the program, for a closed handle (all calls but SysCloseEventSem, which answers </code>6<code>), for a rounded one, as SysPostEventSem shows, and for a number that no call answered; SysRequestMutexSem with an event semaphore's handle hangs. The first example is a rounded handle and a closed one, the second a number that no call answered. SysResetEventSem answers </code>6<code>for such a handle like the others, as the third example shows. The handle of an open semaphore of the other kind, a mutex semaphore's handle given to an event function or an event semaphore's handle given to a mutex function, is such a number too: the call answers</code>6<code>and changes neither semaphore, as the fourth example shows. The spelling of a handle is unspecified: it is a string that carries the kind of its semaphore and a generation, so that the handle of a closed semaphore never names a semaphore that is created later. A call answers</code>6<code>for any whole number whose text is not exactly a handle that a create answered and that is still open, a handle that is spelled again (with a sign, a blank or an exponent) included. Programs compare the answers of the calls and do not depend on the text of a handle. The fifth example spells a handle again, and gives the handle of a closed semaphore after a new one is created: both answer</code>6` and change nothing, and the new semaphore is still open.</li>
 </ul>
 <pre><code class="language-rexx">h = SysCreateEventSem()
 r = h + 0
@@ -105328,9 +105319,26 @@ say SysPostEventSem(m) SysResetEventSem(m) SysCloseEventSem(m)
 say SysRequestMutexSem(e, 10) SysReleaseMutexSem(e) SysCloseMutexSem(e)
 say SysCloseEventSem(e) SysCloseMutexSem(m)
 </code></pre>
-<pre><code class="language-output defect=#247">6 6 6
+<pre><code class="language-output">6 6 6
 6 6 6
 0 0
+</code></pre>
+<pre><code class="language-rexx">h = SysCreateEventSem()
+say SysPostEventSem(' ' || h || ' ') SysPostEventSem('+' || h) SysPostEventSem(h || '.0')
+say SysPostEventSem(.mutablebuffer~new(h)) SysPostEventSem(h || '.00') SysPostEventSem(h || '.00000000000000000001')
+say SysWaitEventSem(' ' || h || ' ', 20) SysWaitEventSem('+' || h, 20)
+say SysResetEventSem(' ' || h || ' ') SysResetEventSem('+' || h)
+say SysCloseEventSem(' ' || h || ' ')
+call SysCloseEventSem h
+n = SysCreateEventSem()
+say SysPostEventSem(h) SysCloseEventSem(h) SysPostEventSem(n)
+</code></pre>
+<pre><code class="language-output">6 6 6
+0 6 6
+6 6
+6 6
+6
+6 6 0
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="the-mutex-semaphore-functions"><a class="header" href="#the-mutex-semaphore-functions">The mutex semaphore functions</a></h1>
 <pre><code>SysCreateMutexSem(name); SysOpenMutexSem(name); SysRequestMutexSem(handle, [timeout]); SysReleaseMutexSem(handle); SysCloseMutexSem(handle)
@@ -105546,10 +105554,6 @@ call try "SysCloseMutexSem()"
 call try "SysCloseMutexSem(h, 1)"
 call try "SysCloseMutexSem('x')"
 call try "SysReleaseMutexSem('1.0000000000000000001')"
-say SysRequestMutexSem(' ' || h || ' ', 20) SysReleaseMutexSem('+' || h)
-say SysRequestMutexSem(h || '.0', 20) SysReleaseMutexSem(.mutablebuffer~new(h))
-say SysRequestMutexSem(h || '.00000000000000000001', 20) SysReleaseMutexSem(h)
-say SysCloseMutexSem(' ' || h || ' ')
 exit
 try:
   signal on syntax name e
@@ -105571,10 +105575,6 @@ e: say condition('o')~code
 88.922
 88.907
 88.907
-0 0
-0 0
-0 0
-0
 </code></pre>
 <pre><code class="language-rexx">m = SysCreateMutexSem('')
 call try "SysRequestMutexSem(.sv~new(m), 10)"
@@ -105699,10 +105699,12 @@ crashes, with a signal that ends the program, for a closed handle
 SysPostEventSem, and for a number that no call answered; SysRequestMutexSem
 with an event semaphore's handle hangs. The handle of an open event semaphore
 is such a number too: these calls answer <code>6</code> for it and change neither
-semaphore (issue #247 for interrexx, which accepts it today; <a href="rexxutil/syseventsem.html#r-util.syseventsem.deviation.158">the event
-semaphore rule</a> has the example). The first
+semaphore (<a href="rexxutil/syseventsem.html#r-util.syseventsem.deviation.158">the event semaphore rule</a> has
+the example and says what a handle is). The first
 example is a rounded handle and a closed one, the second a number that no call
-answered.</p>
+answered. A handle that is spelled again, with blanks, a sign or a fraction of
+zeros, names no semaphore; a string value that is exactly the handle does, as
+the third example shows.</p>
 <pre><code class="language-rexx">m = SysCreateMutexSem('')
 r = m + 0
 say (r \== m) SysRequestMutexSem(r, 10) SysReleaseMutexSem(r) SysCloseMutexSem(r)
@@ -105715,6 +105717,18 @@ say SysRequestMutexSem(m, 10) SysReleaseMutexSem(m)
 <pre><code class="language-rexx">say SysRequestMutexSem(12345, 10) SysReleaseMutexSem(12345) SysCloseMutexSem(12345)
 </code></pre>
 <pre><code class="language-output">6 6 6
+</code></pre>
+<pre><code class="language-rexx">numeric digits 20
+h = SysCreateMutexSem('')
+say SysRequestMutexSem(' ' || h || ' ', 20) SysReleaseMutexSem('+' || h)
+say SysRequestMutexSem(h || '.0', 20) SysReleaseMutexSem(.mutablebuffer~new(h))
+say SysRequestMutexSem(h || '.00000000000000000001', 20) SysReleaseMutexSem(h)
+say SysCloseMutexSem(' ' || h || ' ')
+</code></pre>
+<pre><code class="language-output">6 6
+6 0
+6 0
+6
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="syscls"><a class="header" href="#syscls">SysCls</a></h1>
 <pre><code>SysCls()
@@ -126662,8 +126676,10 @@ answers a number that nothing set, which differs from run to run.</p>
 handle of an open semaphore, such as the handle of a closed semaphore, a
 handle that arithmetic has rounded, a number that no call answered or the
 handle of an open semaphore of the other kind, answers <code>6</code> and changes no
-semaphore (interrexx accepts a handle of the other kind today: issue #247).
-ooRexx uses the number as an address and crashes for a closed handle, in every
+semaphore. A handle carries the kind of its semaphore and a generation, so
+that a stale handle never names a semaphore that reuses its place, and a
+number whose text is not exactly a live handle, a handle that is spelled again
+included, names no semaphore. ooRexx uses the number as an address and crashes for a closed handle, in every
 function but a second SysCloseEventSem or SysCloseMutexSem, which answers <code>6</code>,
 for a rounded one, as SysPostEventSem shows, and for a number that no call
 answered; SysRequestMutexSem with an event semaphore's handle hangs.</p>
