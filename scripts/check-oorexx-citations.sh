@@ -26,7 +26,6 @@ rust/corpus/lang/package_rexx.rex
 rust/crates/interrexx-parse/tests/sourceline_oracle/method_introspection.txt
 rust/crates/interrexx-parse/tests/sourceline_oracle/package_rexx.txt
 rust/crates/interrexx-classes/tests/
-rust/crates/interrexx-inventory/build.rs
 rust/crates/interrexx-upstream/src/main.rs
 rust/crates/interrexx-extract/src/docs.rs
 rust/crates/interrexx-extract/src/docs/directives.rs

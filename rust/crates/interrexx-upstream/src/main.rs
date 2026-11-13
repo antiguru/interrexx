@@ -6,7 +6,7 @@
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
 
-use interrexx_upstream::{classes, difference};
+use interrexx_upstream::{builtins, classes, difference, errors};
 
 /// One checked-in table: where it lives (relative to the `crates` directory)
 /// and how to derive its text from the source tree.
@@ -15,15 +15,37 @@ struct Table {
     derive: fn(upstream: &Path, sha: &str) -> String,
 }
 
-const TABLES: &[Table] = &[Table {
-    path: "interrexx-classes/data/classes.tsv",
-    derive: |upstream, sha| {
-        let source = upstream.join("interpreter/memory/Setup.cpp");
-        let text = std::fs::read_to_string(&source)
-            .unwrap_or_else(|e| panic!("cannot read {}: {e}", source.display()));
-        classes::Table::parse(&text).to_tsv(sha)
+const TABLES: &[Table] = &[
+    Table {
+        path: "interrexx-classes/data/classes.tsv",
+        derive: |upstream, sha| {
+            classes::Table::parse(&read(upstream, "interpreter/memory/Setup.cpp")).to_tsv(sha)
+        },
     },
-}];
+    Table {
+        path: "interrexx-inventory/data/errors.tsv",
+        derive: |upstream, sha| {
+            errors::Table::parse(&read(upstream, "interpreter/messages/rexxmsg.xml")).to_tsv(sha)
+        },
+    },
+    Table {
+        path: "interrexx-inventory/data/builtins.txt",
+        derive: |upstream, sha| {
+            let names = builtins::parse(&read(
+                upstream,
+                "interpreter/expression/BuiltinFunctions.cpp",
+            ));
+            builtins::to_text(&names, sha)
+        },
+    },
+];
+
+/// The text of `file` under the source tree.
+fn read(upstream: &Path, file: &str) -> String {
+    let source = upstream.join(file);
+    std::fs::read_to_string(&source)
+        .unwrap_or_else(|e| panic!("cannot read {}: {e}", source.display()))
+}
 
 fn main() -> ExitCode {
     let mode = std::env::args().nth(1);
@@ -45,6 +67,10 @@ fn main() -> ExitCode {
         let want = (table.derive)(&upstream, &sha);
         let path = crates.join(table.path);
         if write {
+            if let Some(dir) = path.parent() {
+                std::fs::create_dir_all(dir)
+                    .unwrap_or_else(|e| panic!("cannot create {}: {e}", dir.display()));
+            }
             std::fs::write(&path, &want)
                 .unwrap_or_else(|e| panic!("cannot write {}: {e}", path.display()));
             println!("wrote {}", table.path);

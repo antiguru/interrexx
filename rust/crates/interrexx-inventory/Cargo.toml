@@ -8,7 +8,12 @@ repository.workspace = true
 description = "Builtin function and error message tables for interrexx"
 
 [build-dependencies]
-quick-xml = "0.42"
+# Reads `data/*` and, until texts are our own, the message texts.
+interrexx-upstream.workspace = true
+
+[dev-dependencies]
+# Reads `data/errors.tsv` for the arity tests.
+interrexx-upstream.workspace = true
 
 [lints]
 workspace = true

@@ -1,224 +1,61 @@
-//! Derives Rust tables from the C++ tree at build time.
+//! Derives Rust tables from the checked-in interface tables in `data/`.
+//!
+//! The error messages' texts are the one input still read from the pinned
+//! ooRexx tree, through `$REXX_UPSTREAM`, until they are replaced by texts
+//! of our own.
 
-use quick_xml::Reader;
-use quick_xml::events::Event;
+use interrexx_upstream::{builtins, errors};
+use std::collections::HashMap;
 use std::fmt::Write as _;
-use std::path::{Path, PathBuf};
-
-const MESSAGES_XML: &str = "../../../third_party/ooRexx/interpreter/messages/rexxmsg.xml";
-const BUILTINS_CPP: &str =
-    "../../../third_party/ooRexx/interpreter/expression/BuiltinFunctions.cpp";
-
-/// Messages the oracle raises with more inserts than their text uses, each with
-/// that count. The extra inserts reach a trapped condition's `ADDITIONAL`.
-const ARITY_OVERRIDES: &[((u16, u16), usize)] = &[
-    // CALL with a namespace: the token after `ns:` is named.
-    ((20, 922), 1),
-    // A clause that does not end where it should: the token found is named.
-    ((27, 1), 1),
-    // An expression term that cannot be completed: the token the term
-    // started at is named.
-    ((89, 1), 1),
-    // The directive errors below name the token found (for a class
-    // reference, the token at which it was parsed).
-    ((19, 902), 1),
-    ((19, 903), 1),
-    ((19, 904), 1),
-    ((19, 905), 1),
-    ((19, 906), 1),
-    ((19, 907), 1),
-    ((19, 908), 1),
-    ((19, 913), 1),
-    ((19, 914), 1),
-    ((19, 915), 1),
-    ((19, 916), 1),
-    ((19, 917), 1),
-    ((19, 918), 1),
-    ((19, 919), 1),
-    ((19, 920), 1),
-    ((19, 921), 1),
-    ((20, 924), 1),
-    ((20, 925), 1),
-    ((20, 926), 1),
-    ((20, 935), 1),
-    // A `::CONSTANT` outside a class: the constant's name, in upper case, as
-    // the oracle answers.
-    ((99, 906), 1),
-];
+use std::path::PathBuf;
 
 fn main() {
-    println!("cargo::rerun-if-changed={MESSAGES_XML}");
-    println!("cargo::rerun-if-changed={BUILTINS_CPP}");
+    println!("cargo::rerun-if-env-changed=REXX_UPSTREAM");
+    println!("cargo::rerun-if-changed=data/errors.tsv");
+    println!("cargo::rerun-if-changed=data/builtins.txt");
+    let messages_xml = PathBuf::from(
+        std::env::var_os("REXX_UPSTREAM")
+            .expect("REXX_UPSTREAM names the directory holding interpreter/messages/rexxmsg.xml"),
+    )
+    .join("interpreter/messages/rexxmsg.xml");
+    println!("cargo::rerun-if-changed={}", messages_xml.display());
     let out = PathBuf::from(std::env::var("OUT_DIR").expect("cargo sets OUT_DIR"));
-    std::fs::write(
-        out.join("errors.rs"),
-        generate_errors(Path::new(MESSAGES_XML)),
-    )
-    .expect("writing errors.rs");
-    std::fs::write(
-        out.join("builtins.rs"),
-        generate_builtins(Path::new(BUILTINS_CPP)),
-    )
-    .expect("writing builtins.rs");
+    let table = errors::Table::from_tsv(&read("data/errors.tsv"));
+    let xml = std::fs::read_to_string(&messages_xml)
+        .unwrap_or_else(|e| panic!("cannot read {}: {e}", messages_xml.display()));
+    std::fs::write(out.join("errors.rs"), generate_errors(&table, &xml))
+        .expect("writing errors.rs");
+    let names = builtins::from_text(&read("data/builtins.txt"));
+    std::fs::write(out.join("builtins.rs"), generate_builtins(&names))
+        .expect("writing builtins.rs");
+}
+
+fn read(path: &str) -> String {
+    std::fs::read_to_string(path).unwrap_or_else(|e| panic!("cannot read {path}: {e}"))
 }
 
 // ---------------------------------------------------------------- messages --
 
-#[derive(Default, Clone)]
-struct Message {
-    major: u16,
-    sub: u16,
-    number: u16,
-    symbol: String,
-    text: String,
-}
-
-/// Which `<Message>`/`<SubMessage>` child we are currently accumulating.
-#[derive(PartialEq)]
-enum Field {
-    None,
-    Code,
-    Subcode,
-    Number,
-    Symbol,
-    Text,
-}
-
-fn apply_text(stack: &mut [Message], field: &Field, raw: &str) {
-    if let Some(m) = stack.last_mut() {
-        match field {
-            Field::Code => m.major = parse_num(raw, "Code"),
-            Field::Subcode => m.sub = parse_num(raw, "Subcode"),
-            Field::Number => m.number = parse_num(raw, "MessageNumber"),
-            Field::Symbol => m.symbol.push_str(raw.trim()),
-            Field::Text => m.text.push_str(raw),
-            Field::None => {}
-        }
-    }
-}
-
-fn generate_errors(path: &Path) -> String {
-    let xml = std::fs::read_to_string(path)
-        .unwrap_or_else(|e| panic!("cannot read {}: {e}", path.display()));
-    let mut reader = Reader::from_str(&xml);
-    let mut messages: Vec<Message> = Vec::new();
-
-    // A <Message> may contain <Subcodes><SubMessage>..., and a SubMessage has
-    // the same child element names as its parent. Keep a stack so a
-    // submessage's <Code> never overwrites the major's.
-    let mut stack: Vec<Message> = Vec::new();
-    let mut field = Field::None;
-    // <Text> holds mixed content: character data interleaved with <q>, <sq/>,
-    // <dq/> and <Sub/>. Accumulate rendered pieces rather than raw text.
-    let mut depth_in_text = 0usize;
-
-    loop {
-        match reader.read_event() {
-            Err(e) => panic!("malformed XML in {}: {e}", path.display()),
-            Ok(Event::Eof) => break,
-            Ok(Event::Start(e)) => match e.name().as_ref() {
-                "Message" | "SubMessage" => {
-                    stack.push(Message::default());
-                    field = Field::None;
-                }
-                "Code" => field = Field::Code,
-                "Subcode" => field = Field::Subcode,
-                "MessageNumber" => field = Field::Number,
-                "SymbolicName" => field = Field::Symbol,
-                "Text" => {
-                    field = Field::Text;
-                    depth_in_text = 0;
-                }
-                // Rendering rules follow the oracle's message-rendering stylesheet.
-                // <q> keeps its quotes -- it is not documentation-only markup.
-                "q" if field == Field::Text => {
-                    depth_in_text += 1;
-                    if let Some(m) = stack.last_mut() {
-                        m.text.push('"');
-                    }
-                }
-                _ => {}
-            },
-            Ok(Event::Empty(e)) if field == Field::Text => {
-                let rendered = match e.name().as_ref() {
-                    "Sub" => {
-                        let pos = e
-                            .attributes()
-                            .flatten()
-                            .find(|a| a.key.as_ref() == "position")
-                            .map(|a| a.value.into_owned())
-                            .expect("every <Sub> carries a position");
-                        format!("&{pos}")
-                    }
-                    "sq" => "'".to_string(),
-                    "dq" => "\"".to_string(),
-                    _ => String::new(),
-                };
-                if let Some(m) = stack.last_mut() {
-                    m.text.push_str(&rendered);
-                }
-            }
-            Ok(Event::Text(t)) => {
-                // Entity references arrive as separate `GeneralRef` events,
-                // so `t` is already literal character data.
-                apply_text(&mut stack, &field, &t);
-            }
-            Ok(Event::GeneralRef(r)) => {
-                let resolved = match r.resolve_char_ref().expect("well-formed char ref") {
-                    Some(c) => c.to_string(),
-                    None => match &*r {
-                        "lt" => "<".to_string(),
-                        "gt" => ">".to_string(),
-                        "amp" => "&".to_string(),
-                        "apos" => "'".to_string(),
-                        "quot" => "\"".to_string(),
-                        other => panic!("unknown entity &{other}; in {}", path.display()),
-                    },
-                };
-                apply_text(&mut stack, &field, &resolved);
-            }
-            Ok(Event::End(e)) => match e.name().as_ref() {
-                "q" if field == Field::Text && depth_in_text > 0 => {
-                    depth_in_text -= 1;
-                    if let Some(m) = stack.last_mut() {
-                        m.text.push('"');
-                    }
-                }
-                "Message" | "SubMessage" => {
-                    let done = stack.pop().expect("balanced start/end");
-                    if done.symbol.is_empty() {
-                        panic!("message {}.{:03} has no SymbolicName", done.major, done.sub);
-                    }
-                    if done.text.is_empty() {
-                        panic!("message {}.{:03} has no Text", done.major, done.sub);
-                    }
-                    messages.push(done);
-                    field = Field::None;
-                }
-                "Code" | "Subcode" | "MessageNumber" | "SymbolicName" | "Text" => {
-                    field = Field::None;
-                }
-                _ => {}
-            },
-            _ => {}
-        }
-    }
-
-    if messages.is_empty() {
-        panic!("no messages parsed from {}", path.display());
-    }
-    // A silently colliding key would let a harness report false
-    // conformance, so refuse to emit a table that has one.
-    let mut keys: Vec<(u16, u16)> = messages.iter().map(|m| (m.major, m.sub)).collect();
-    keys.sort_unstable();
-    for pair in keys.windows(2) {
-        if pair[0] == pair[1] {
-            panic!("duplicate message key {}.{:03}", pair[0].0, pair[0].1);
-        }
-    }
+/// The Rust tables for `table`'s messages, each with its text from `xml`.
+fn generate_errors(table: &errors::Table, xml: &str) -> String {
+    let texts: HashMap<(u16, u16), String> = errors::parse_messages(xml)
+        .into_iter()
+        .map(|m| ((m.major, m.sub), m.text))
+        .collect();
+    // The table fixes which messages exist; a catalogue that gained or lost
+    // one has outrun the table, which `interrexx-upstream write` refreshes.
+    let mut have: Vec<(u16, u16)> = table.rows.iter().map(|r| (r.major, r.sub)).collect();
+    let mut want: Vec<(u16, u16)> = texts.keys().copied().collect();
+    have.sort_unstable();
+    want.sort_unstable();
+    assert!(
+        have == want,
+        "data/errors.tsv and the message catalogue list different messages; \
+         run `cargo run -p interrexx-upstream -- write`"
+    );
 
     let mut out = String::from(
-        "// Generated by build.rs from interpreter/messages/rexxmsg.xml. Do not edit.\n\
+        "// Generated by build.rs from data/errors.tsv and the message texts. Do not edit.\n\
          pub struct Message {\n\
          \x20   pub major: u16,\n\
          \x20   pub sub: u16,\n\
@@ -231,11 +68,15 @@ fn generate_errors(path: &Path) -> String {
          }\n\n\
          pub static MESSAGES: &[Message] = &[\n",
     );
-    for m in &messages {
+    for r in &table.rows {
         writeln!(
             out,
             "    Message {{ major: {}, sub: {}, number: {}, symbol: {:?}, text: {:?} }},",
-            m.major, m.sub, m.number, m.symbol, m.text
+            r.major,
+            r.sub,
+            r.number,
+            r.symbol,
+            texts[&(r.major, r.sub)]
         )
         .expect("writing to a String cannot fail");
     }
@@ -259,13 +100,13 @@ fn generate_errors(path: &Path) -> String {
          \x20   }\n\
          }\n\n",
     );
-    for m in &messages {
+    for r in &table.rows {
         writeln!(
             out,
             "pub const E{major}_{sub}: Msg<{n}> = Msg {{ major: {major}, sub: {sub} }};",
-            major = m.major,
-            sub = m.sub,
-            n = arity(m),
+            major = r.major,
+            sub = r.sub,
+            n = r.inserts,
         )
         .expect("writing to a String cannot fail");
     }
@@ -273,12 +114,12 @@ fn generate_errors(path: &Path) -> String {
         "\n/// Every message constant's (major, sub) pair and arity.\n\
          pub const ARITIES: &[((u16, u16), usize)] = &[\n",
     );
-    for m in &messages {
+    for r in &table.rows {
         writeln!(
             out,
             "    (E{major}_{sub}.code(), E{major}_{sub}.arity()),",
-            major = m.major,
-            sub = m.sub,
+            major = r.major,
+            sub = r.sub,
         )
         .expect("writing to a String cannot fail");
     }
@@ -286,72 +127,23 @@ fn generate_errors(path: &Path) -> String {
         "];\n\n/// The messages whose arity exceeds their text's highest `&k`.\n\
          pub const ARITY_OVERRIDES: &[((u16, u16), usize)] = &[\n",
     );
-    for ((major, sub), n) in ARITY_OVERRIDES {
+    for ((major, sub), n) in errors::ARITY_OVERRIDES {
         writeln!(out, "    (({major}, {sub}), {n}),").expect("writing to a String cannot fail");
     }
     out.push_str("];\n");
     out
 }
 
-/// The insert count `m`'s constant takes: its override, or its text's highest
-/// `&k`.
-fn arity(m: &Message) -> usize {
-    ARITY_OVERRIDES
-        .iter()
-        .find(|(code, _)| *code == (m.major, m.sub))
-        .map_or_else(|| highest_insert(&m.text), |&(_, n)| n)
-}
-
-/// The highest `k` of any `&k` in `text`, or zero for none.
-fn highest_insert(text: &str) -> usize {
-    let bytes = text.as_bytes();
-    bytes
-        .windows(2)
-        .filter(|pair| pair[0] == b'&' && pair[1].is_ascii_digit())
-        .map(|pair| usize::from(pair[1] - b'0'))
-        .max()
-        .unwrap_or(0)
-}
-
-fn parse_num(raw: &str, what: &str) -> u16 {
-    raw.trim()
-        .parse()
-        .unwrap_or_else(|e| panic!("{what} {raw:?} is not a number: {e}"))
-}
-
 // ---------------------------------------------------------------- builtins --
 
-fn generate_builtins(path: &Path) -> String {
-    let src = std::fs::read_to_string(path)
-        .unwrap_or_else(|e| panic!("cannot read {}: {e}", path.display()));
-    let start = src
-        .find("pbuiltin LanguageParser::builtinTable[] =")
-        .expect("the builtin table is still declared in BuiltinFunctions.cpp");
-    let table = &src[start..];
-    let end = table.find("\n};").expect("the builtin table is terminated");
-
-    let names: Vec<&str> = table[..end]
-        .lines()
-        .filter_map(|line| line.trim().strip_prefix("&builtin_function_"))
-        .map(|rest| rest.trim_end_matches(&[' ', ',', '\t'][..]).trim())
-        .collect();
-
-    // 81 entries as of 8c880bdd. The floor catches a broken parse without
-    // tripping on the real count; it is deliberately well below it.
-    if names.len() < 50 {
-        panic!(
-            "only {} builtin names parsed -- the table format changed",
-            names.len()
-        );
-    }
-
+fn generate_builtins(names: &[String]) -> String {
     let mut out = String::from(
-        "// Generated by build.rs from interpreter/expression/BuiltinFunctions.cpp.\n\
+        "// Generated by build.rs from data/builtins.txt.\n\
          // Do not edit. Order is table order, which is the index the parser\n\
          // resolves builtins through -- do not sort it.\n\
          pub static NAMES: &[&str] = &[\n",
     );
-    for n in &names {
+    for n in names {
         writeln!(out, "    {n:?},").expect("writing to a String cannot fail");
     }
     out.push_str("];\n");
