@@ -21,7 +21,7 @@ mod token;
 
 pub use ast::{
     Access, Address, AddressIo, Annotate, Annotation, AnnotationTarget, AttributeDirective,
-    AttributeStyle, Call, CallTarget, ClassDirective, ClassRef, CodeBody, ConditionOption,
+    AttributeStyle, Body, Call, CallTarget, ClassDirective, ClassRef, CodeBody, ConditionOption,
     ConditionTrap, ConstantDirective, ConstantValue, ControlExpr, Controlled, Directive,
     DirectiveKind, EndStyle, EndTarget, Expr, ExprKind, ExternalSpec, Forward, Guard, GuardOption,
     Instruction, InstructionKind, Loop, LoopConditional, LoopKind, MethodDirective, NumericSetting,
@@ -34,7 +34,7 @@ pub use ast::{
 /// as an AST, and it is the number a test or an embedder checks its own depths
 /// against rather than hardcoding 50,000 in two places.
 pub use expr::MAX_EXPR_DEPTH;
-pub use image::{program_from_image, program_image};
+pub use image::{program_from_image, program_from_static_image, program_image};
 pub use scanner::{ResourceBody, Scanned, scan};
 pub use selector::Selector;
 pub use source::{ProgramSource, SourceKind};
@@ -277,9 +277,9 @@ fn translate<'a>(
 /// The body slot of a directive that carries one, for the assembler to fill.
 pub(crate) fn directive_body(kind: &mut DirectiveKind) -> Option<&mut CodeBody> {
     match kind {
-        DirectiveKind::Method(method) => method.body.as_mut(),
-        DirectiveKind::Attribute(attribute) => attribute.body.as_mut(),
-        DirectiveKind::Routine(routine) => routine.body.as_mut(),
+        DirectiveKind::Method(method) => method.body.as_deref_mut(),
+        DirectiveKind::Attribute(attribute) => attribute.body.as_deref_mut(),
+        DirectiveKind::Routine(routine) => routine.body.as_deref_mut(),
         DirectiveKind::Annotate(_)
         | DirectiveKind::Class(_)
         | DirectiveKind::Constant(_)

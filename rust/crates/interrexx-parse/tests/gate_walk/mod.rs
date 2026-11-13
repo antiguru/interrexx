@@ -266,9 +266,9 @@ fn exprs_of_parse<'a>(p: &'a Parse, f: &mut impl FnMut(&'a Expr)) {
 /// The code body a directive carries, if it carries one.
 pub fn body_of_directive(kind: &DirectiveKind) -> Option<&CodeBody> {
     match kind {
-        DirectiveKind::Method(m) => m.body.as_ref(),
-        DirectiveKind::Attribute(a) => a.body.as_ref(),
-        DirectiveKind::Routine(r) => r.body.as_ref(),
+        DirectiveKind::Method(m) => m.body.as_deref(),
+        DirectiveKind::Attribute(a) => a.body.as_deref(),
+        DirectiveKind::Routine(r) => r.body.as_deref(),
         DirectiveKind::Annotate(_)
         | DirectiveKind::Class(_)
         | DirectiveKind::Constant(_)

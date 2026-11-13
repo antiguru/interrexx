@@ -1,4 +1,5 @@
-use super::{FORMAT, MAGIC, program_from_image, program_image};
+use super::{FORMAT, MAGIC, program_from_image, program_from_static_image, program_image};
+use crate::DirectiveKind;
 use crate::token::SymbolId;
 use crate::{Program, parse_known_program, parse_program};
 
@@ -36,6 +37,30 @@ fn the_librarys_embedded_image_reads_back_as_it_parses() {
         .expect("the embedded image is this build's image of the library");
     assert_same(&read, &parsed, "the embedded library image");
     round_trip(library.source, &parsed, "the library");
+}
+
+/// Read from the image built in, the library's code bodies stay encoded until
+/// each is first read, and each then reads as the parse has it.
+#[test]
+fn the_librarys_bodies_decode_when_first_read() {
+    let library = &interrexx_lib::LIBRARY;
+    let read = program_from_static_image(library.image, library.source)
+        .expect("the embedded image is accepted");
+    let bodies = || {
+        read.directives
+            .iter()
+            .filter_map(|directive| match &directive.kind {
+                DirectiveKind::Method(method) => method.body.as_ref(),
+                DirectiveKind::Attribute(attribute) => attribute.body.as_ref(),
+                DirectiveKind::Routine(routine) => routine.body.as_ref(),
+                _ => None,
+            })
+    };
+    assert!(bodies().count() > 100);
+    assert!(bodies().all(|body| !body.is_decoded()));
+    let parsed = parse_known_program(library.source.to_vec()).expect("the library parses");
+    assert_same(&read, &parsed, "the lazily read library");
+    assert!(bodies().all(|body| body.is_decoded()));
 }
 
 /// Every corpus program that parses reads back from its image as it parses,

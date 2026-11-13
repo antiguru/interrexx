@@ -1756,7 +1756,7 @@ impl Interp {
                     guard: GuardOption::default(),
                     external: None,
                     delegate: None,
-                    body: Some(main),
+                    body: Some(interrexx_parse::Body::new(main)),
                 })),
                 clause_span: 0..0,
             }],
@@ -1896,7 +1896,7 @@ impl Interp {
                     name: routine_name,
                     access: Access::default(),
                     external: None,
-                    body: Some(main),
+                    body: Some(interrexx_parse::Body::new(main)),
                 })),
                 clause_span: 0..0,
             }],
@@ -1988,7 +1988,7 @@ impl Interp {
                     name: source.image_name().unwrap_or(name).into(),
                     access: Access::default(),
                     external: None,
-                    body: Some(main),
+                    body: Some(interrexx_parse::Body::new(main)),
                 }))
             } else {
                 DirectiveKind::Method(Box::new(MethodDirective {
@@ -2001,7 +2001,7 @@ impl Interp {
                     guard: GuardOption::default(),
                     external: None,
                     delegate: None,
-                    body: Some(main),
+                    body: Some(interrexx_parse::Body::new(main)),
                 }))
             },
             clause_span: 0..0,

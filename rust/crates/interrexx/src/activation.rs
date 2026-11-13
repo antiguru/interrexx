@@ -1213,9 +1213,9 @@ pub(crate) fn body_of(program: &Program, selector: Option<usize>) -> Option<&Cod
     match selector {
         None => Some(&program.main),
         Some(index) => match &program.directives.get(index)?.kind {
-            DirectiveKind::Routine(routine) => routine.body.as_ref(),
-            DirectiveKind::Method(method) => method.body.as_ref(),
-            DirectiveKind::Attribute(attribute) => attribute.body.as_ref(),
+            DirectiveKind::Routine(routine) => routine.body.as_deref(),
+            DirectiveKind::Method(method) => method.body.as_deref(),
+            DirectiveKind::Attribute(attribute) => attribute.body.as_deref(),
             _ => None,
         },
     }
