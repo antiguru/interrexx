@@ -2553,28 +2553,33 @@ impl Interp {
 
     /// The library and the routine row [`Interp::library_codes`] row `code`
     /// is, resolved by name on the first call, or `None` where its library
-    /// is not held or exports no such routine.
+    /// is not held or exports no such routine. Both are kept once found: a
+    /// held library is never replaced and its tables never change, so the
+    /// name finds the same library and row on every later call.
     #[inline]
     pub(crate) fn library_code_routine(
         &mut self,
         code: usize,
     ) -> Option<(&interrexx_api::load::Library, usize)> {
-        let key = &self.library_code_keys[code];
-        let library = self.libraries.get(&key.library)?;
-        let index = match self.library_code_routines[code] {
-            Some(index) => index as usize,
-            None => {
-                let index = library.routine_index(&key.procedure)?;
-                self.library_code_routines[code] = u32::try_from(index).ok();
-                index
-            }
-        };
+        if self.library_code_routines[code].is_none() {
+            let key = &self.library_code_keys[code];
+            let library = Rc::clone(self.libraries.get(&key.library)?);
+            let index = library.routine_index(&key.procedure)?;
+            self.library_code_routines[code] = Some((library, index));
+        }
+        let (library, index) = self.library_code_routines[code].as_ref()?;
+        debug_assert!(
+            self.libraries
+                .get(&self.library_code_keys[code].library)
+                .is_some_and(|held| Rc::ptr_eq(held, library)),
+            "a library code's cached library is not the one its name finds"
+        );
         debug_assert_eq!(
-            Some(index),
-            library.routine_index(&key.procedure),
+            Some(*index),
+            library.routine_index(&self.library_code_keys[code].procedure),
             "a library code's cached routine row is not the one its name finds"
         );
-        Some((library, index))
+        Some((&**library, *index))
     }
 
     /// The procedure [`Interp::library_codes`] row `code` is.
