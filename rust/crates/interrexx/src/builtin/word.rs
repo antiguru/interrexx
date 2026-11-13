@@ -303,7 +303,13 @@ pub(crate) fn word(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result<O
     // costs no allocation at all.
     let position = position_of(converted_position(interp, name, args, 2)?)?;
     let string = required_render(interp, args, 1);
-    let found = word_range(string.text(interp), position).unwrap_or(0..0);
+    let bytes = string.text(interp);
+    let found = word_range(bytes, position).unwrap_or(0..0);
+    // A word short enough for the handle is answered from the one borrow of
+    // the string; only a longer one reads it again past the buffer loan.
+    if let Some(inline) = ObjRef::inline_text(&bytes[found.clone()]) {
+        return Ok(inline);
+    }
     let mut out = interp.take_result_buffer();
     out.extend_from_slice(&string.text(interp)[found]);
     Ok(interp.text_built(out))
