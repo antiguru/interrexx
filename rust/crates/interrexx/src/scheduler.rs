@@ -823,6 +823,11 @@ impl Scheduler for Interp {
 /// The clauses an activation runs before it may give up the kernel.
 const DELIVERY_YIELD_CLAUSES: u32 = 50;
 
+/// The slices that fall due while a trace delivery holds a guard, with another
+/// activity ready, before the delivery is refused as an inverted wait: about
+/// six seconds, past what a destination that is doing work takes.
+const GUARDED_DELIVERY_SLICES: u32 = 250;
+
 impl Interp {
     /// Registers a wait for `polls` until `deadline` with the process's
     /// socket reactor ([`crate::builtin::rxsock_wait`]) for the running
@@ -2467,6 +2472,24 @@ impl Interp {
             self.slice_deferred = false;
             return self.pinned_yield();
         }
+        // A delivery that holds a guard never yields (a second delivery
+        // waiting for that guard would be an inverted wait), so one that
+        // waits for another activity to act spins. After a bound of slices
+        // it is refused as the inverted wait it is (Deviation 14).
+        if fresh
+            && self.slice_deferred
+            && self.activity.routing_trace
+            && self.activity.pin_depth > 0
+            && self.delivery_holds_a_guard()
+            && let Some(delivery) = self.deliveries.last_mut()
+        {
+            delivery.guarded_slices += 1;
+            if delivery.guarded_slices > GUARDED_DELIVERY_SLICES {
+                self.slice_deferred = false;
+                inverted_wait!(self, ParkReason::GuardWhen);
+                return Err(Loud::inverted_wait("a guard").into());
+            }
+        }
         if fresh && !self.slice_deferred {
             if self.activity.routing_trace
                 && let Some(delivery) = self.deliveries.last_mut()
@@ -2521,21 +2544,31 @@ impl Interp {
         let Some(delivery) = self.deliveries.last() else {
             return false;
         };
-        let Some(floor) = delivery.floor else {
+        if delivery.floor.is_none() {
             return false;
-        };
-        let holds_a_guard = activity
-            .suspended
-            .iter()
-            .map(Box::as_ref)
-            .chain(activity.running.as_deref())
-            .skip(floor)
-            .any(|activation| activation.flags.reserved());
+        }
+        let holds_a_guard = self.delivery_holds_a_guard();
         let running = activity.running.as_deref().map(|activation| activation.id);
         !holds_a_guard
             && delivery.counts.last().is_some_and(|&(id, clauses)| {
                 Some(id) == running && clauses > DELIVERY_YIELD_CLAUSES
             })
+    }
+
+    /// Whether an activation of the running delivery's destination holds a
+    /// guard.
+    fn delivery_holds_a_guard(&self) -> bool {
+        let activity = &self.activity;
+        let Some(floor) = self.deliveries.last().and_then(|delivery| delivery.floor) else {
+            return false;
+        };
+        activity
+            .suspended
+            .iter()
+            .map(Box::as_ref)
+            .chain(activity.running.as_deref())
+            .skip(floor)
+            .any(|activation| activation.flags.reserved())
     }
 
     /// Counts a clause of the running activation toward

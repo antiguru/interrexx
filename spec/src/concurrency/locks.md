@@ -977,6 +977,37 @@ say h~result
 start
 ```
 
+The same holds for the destination of a trace line (an object set with
+`.traceoutput~destination`) whose guarded `LINEOUT` method waits for a change
+that only another activity can make: a delivery that holds a guard does not
+give the kernel to another activity, so such a wait is refused after the delivery
+has gone on for several seconds with another activity ready, and the program
+ends with exit code 120. In the example the destination loops until a started
+activity sets a flag.
+
+```rexx
+.environment~flag = 0
+.traceoutput~destination(.sink~new)
+m = .setter~new~start('go')
+say 'start'
+trace r
+x = 1
+trace off
+say 'done'
+::class sink
+::method lineout guarded
+  do while .environment~flag \= 1; end
+  return 0
+::class setter
+::method go
+  call syssleep 0.2
+  .environment~flag = 1
+```
+
+```output rc=120
+start
+```
+
 r[conc.locks.deviation.20]
 A wait that no activity, timer or call can end is refused, and the program
 ends with exit code 120. ooRexx waits for ever. This holds for the waits that
