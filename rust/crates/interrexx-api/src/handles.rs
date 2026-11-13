@@ -139,7 +139,10 @@ impl Table {
     /// Drops every registration and every released handle, which is what
     /// the end of an activation does.
     pub fn clear(&mut self) {
-        self.entries.clear();
+        // Clearing an empty table that has capacity still rewrites its control bytes.
+        if !self.entries.is_empty() {
+            self.entries.clear();
+        }
         self.constants = None;
         if let Some(released) = &mut self.released {
             released.handles.clear();
