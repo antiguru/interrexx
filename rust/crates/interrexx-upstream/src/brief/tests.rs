@@ -275,10 +275,48 @@ fn a_major_without_codes_is_an_error() {
 
 #[test]
 fn raising_is_recognised_by_constant_and_by_call() {
-    assert!(raises("Raised::raise(E40_9, [a])", 40, 9));
-    assert!(!raises("Raised::raise(E40_90, [a])", 40, 9));
-    assert!(!raises("use x::E40_9;", 40, 9));
-    assert!(raises("    Raised::syntax(40, 9, vec![])", 40, 9));
-    assert!(!raises("    Raised::syntax(40, 90, vec![])", 40, 9));
-    assert!(!raises("    point(40, 9)", 40, 9));
+    let found = |text: &str, major, sub| sites(text, major, sub);
+    assert_eq!(found("Raised::raise(E40_9, [a])", 40, 9), [(0, 0)]);
+    assert!(found("Raised::raise(E40_90, [a])", 40, 9).is_empty());
+    assert!(found("use x::E40_9;", 40, 9).is_empty());
+    assert_eq!(found("    Raised::syntax(40, 9, vec![])", 40, 9), [(0, 0)]);
+    assert!(found("    Raised::syntax(40, 90, vec![])", 40, 9).is_empty());
+    assert!(found("    Raised::syntax(140, 9, vec![])", 40, 9).is_empty());
+    assert!(found("    point(40, 9)", 40, 9).is_empty());
+}
+
+#[test]
+fn a_call_wrapped_over_lines_is_a_site_and_its_context_covers_the_call() {
+    let wrapped =
+        "fn f() {\n    Raised::syntax(\n        88,\n        919,\n        [x],\n    )\n}\n";
+    assert_eq!(sites(wrapped, 88, 919), [(1, 3)]);
+    assert!(sites(wrapped, 88, 91).is_empty());
+    let fx = Fixture::new("wrapped");
+    let path = fx.sources.root.join("rust/crates/x/src/wrapped.rs");
+    std::fs::write(&path, wrapped.replace("88", "91").replace("919", "2")).expect("writes");
+    let (_, two) = build(&fx.sources, 91).expect("builds").remove(1);
+    assert!(!two.contains("No raise site found"), "{two}");
+    assert!(two.contains("wrapped.rs:2"), "{two}");
+    assert!(two.contains("[x],"), "the whole call is shown: {two}");
+}
+
+#[test]
+fn a_path_in_the_probe_output_becomes_a_placeholder() {
+    let fx = Fixture::new("paths");
+    let probe = fx.sources.probes.join("91.1.rex");
+    let root = fx.sources.root.canonicalize().expect("resolves the root");
+    // The stand-in interpreter prints its argument, the root and its working
+    // directory.
+    std::fs::write(
+        &fx.sources.rexx,
+        "#!/bin/sh\necho \"path $1\"\necho \"root %ROOT%/x\"\necho \"cwd $(pwd)\"\n"
+            .replace("%ROOT%", &root.display().to_string()),
+    )
+    .expect("writes the stand-in interpreter");
+    let (_, one) = build(&fx.sources, 91).expect("builds").remove(0);
+    assert!(one.contains("path <probe>"), "{one}");
+    assert!(one.contains("root <repo>/x"), "{one}");
+    assert!(one.contains("cwd <scratch>"), "{one}");
+    assert!(!one.contains(&root.display().to_string()), "{one}");
+    assert!(!one.contains(&probe.display().to_string()), "{one}");
 }
