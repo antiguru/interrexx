@@ -285,10 +285,12 @@ pub(super) fn append_slot(
         Some(Body::Array { slots, .. }) => (slots.last_item(), slots.len()),
         _ => return Err(crate::Raised::receiver_kind("a value that is not an array").into()),
     };
+    // The store and not the receiver, which each of these would only look
+    // the same store up for again.
     if at >= length {
-        array_grow(interp, receiver, at + 1)?;
+        array_grow(interp, store, at + 1)?;
     }
-    write_slot(interp, receiver, at, Some(item))?;
+    write_slot(interp, store, at, Some(item))?;
     Ok(at + 1)
 }
 
