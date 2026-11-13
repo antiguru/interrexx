@@ -2434,6 +2434,19 @@ impl Interp {
         digits: u64,
         form: interrexx_num::Form,
     ) -> ObjRef {
+        // A value whose digits fit a `Scaled` and whose handle is a tagged
+        // integer or a short fraction is that handle, made without a
+        // `Number` copied or rendered.
+        let scaled = match current {
+            ControlValue::Scaled { value, .. } => Some(*value),
+            ControlValue::Wide(number) => number.scaled(),
+            ControlValue::Small(_) => None,
+        };
+        if let Some(scaled) = scaled
+            && let Some(handle) = crate::value::scaled_handle(scaled, digits)
+        {
+            return handle;
+        }
         let number = current.number().into_owned();
         self.number(number, crate::eval::saturate_digits(digits), form)
     }
