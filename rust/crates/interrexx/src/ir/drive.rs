@@ -131,8 +131,8 @@ enum Deliver {
     /// A `FORWARD`'s answer, as the forwarding activation's `RETURN`.
     ForwardReturn,
     /// A `FORWARD CONTINUE`'s answer, as `RESULT`, its `>>>` line traced at
-    /// this indent.
-    ForwardContinue(usize),
+    /// the clause's value indent, which resuming the clause restores.
+    ForwardContinue,
 }
 
 /// What [`Interp::exec_suspends`] makes of an [`Op::Exec`] outcome other
@@ -140,8 +140,14 @@ enum Deliver {
 enum Suspended {
     /// The region's answer.
     Region(Result<RegionEnd, Failure>),
-    /// The region parks at the op and resumes through this.
-    Entered(Deliver),
+    /// The region parks at the op and resumes through [`Deliver::Exec`].
+    Parked,
+    /// The region parks at the op and resumes through
+    /// [`Deliver::ForwardReturn`].
+    ForwardReturn,
+    /// The region parks at the op and resumes through
+    /// [`Deliver::ForwardContinue`].
+    ForwardContinue,
 }
 
 /// Where [`Interp::drive`] goes on with the level it holds.
@@ -1462,7 +1468,13 @@ macro_rules! region_ops {
                             outcome, $top, $code, $index, $clause, $source,
                         ) {
                             Suspended::Region(region) => break $cold region,
-                            Suspended::Entered(deliver) => break 'entered deliver,
+                            Suspended::Parked => break 'entered Deliver::Exec,
+                            Suspended::ForwardReturn => {
+                                break 'entered Deliver::ForwardReturn
+                            }
+                            Suspended::ForwardContinue => {
+                                break 'entered Deliver::ForwardContinue
+                            }
                         },
                         Err(failure) => break $cold Err(failure),
                     }
@@ -2910,15 +2922,14 @@ impl Interp {
         });
     }
 
-    /// An [`Op::Exec`] outcome other than `Done`, as its region's answer, or
-    /// [`Suspended::Entered`] where the region parks at the op. An
-    /// instruction that parked its activity at a level of a root driver
-    /// (`top`) that nothing pins parks the region, and the op runs the
-    /// instruction again once the activity wakes. Anywhere else a park is a
-    /// pinned wait, after which the instruction runs again. A split is
-    /// recorded on the replying activation and served at the next countdown
-    /// visit, which this makes the next clause boundary. A `FORWARD` is sent
-    /// by [`Interp::begin_forward`].
+    /// An [`Op::Exec`] outcome other than `Done`, as its region's answer, or,
+    /// where the region parks at the op, how it resumes. An instruction that
+    /// parked its activity at a level of a root driver (`top`) that nothing
+    /// pins parks the region, and the op runs the instruction again once the
+    /// activity wakes. Anywhere else a park is a pinned wait, after which the
+    /// instruction runs again. A split is recorded on the replying activation
+    /// and served at the next countdown visit, which this makes the next
+    /// clause boundary. A `FORWARD` is sent by [`Interp::begin_forward`].
     #[cold]
     #[inline(never)]
     fn exec_suspends(
@@ -2933,7 +2944,7 @@ impl Interp {
         while let ExecOutcome::Park(reason) = outcome {
             if top && self.activity.pin_depth == 0 {
                 self.park_instruction(reason);
-                return Suspended::Entered(Deliver::Exec);
+                return Suspended::Parked;
             }
             if let Some(failure) = self.pinned_wait(reason) {
                 self.abandon_guard_exec();
@@ -2995,17 +3006,39 @@ impl Interp {
             values,
         );
         match started {
-            Ok(Started::Entered) => Suspended::Entered(if continue_ {
-                Deliver::ForwardContinue(indent)
-            } else {
-                Deliver::ForwardReturn
-            }),
+            Ok(Started::Entered) if continue_ => Suspended::ForwardContinue,
+            Ok(Started::Entered) => Suspended::ForwardReturn,
             Ok(Started::Ran(sent)) => Suspended::Region(
                 self.settle_forwarded(sent, continue_, indent)
                     .map(RegionEnd::Flowed),
             ),
             Err(failure) => Suspended::Region(Err(failure)),
         }
+    }
+
+    /// The level [`Interp::drive`] has just taken back, run on from
+    /// `parked`, a `FORWARD` whose target's body has ended `ended`. Reached
+    /// through [`Interp::resume_region`], so that the driver loop every call
+    /// op resumes through keeps its two-way dispatch on [`Deliver`].
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "one caller, and every argument is a value it already holds"
+    )]
+    #[cold]
+    #[inline(never)]
+    fn resume_forward(
+        &mut self,
+        code: &Code<'_>,
+        chunk: &Chunk,
+        source: Option<&ProgramSource>,
+        base: usize,
+        len: usize,
+        parked: ParkedCall,
+        ended: Result<Ended, Failure>,
+    ) -> Result<Exit, Failure> {
+        let sent = self.finish_send(ended);
+        let ran = self.settle_parked_forward(parked.deliver, sent);
+        self.leave_parked(code, chunk, source, base, len, parked, ran)
     }
 
     /// The `FORWARD` a parked region answers through `deliver`, given what
@@ -3015,10 +3048,8 @@ impl Interp {
         deliver: Deliver,
         sent: Result<Option<ObjRef>, Failure>,
     ) -> Result<RegionEnd, Failure> {
-        let (continue_, indent) = match deliver {
-            Deliver::ForwardContinue(indent) => (true, indent),
-            _ => (false, 0),
-        };
+        let continue_ = matches!(deliver, Deliver::ForwardContinue);
+        let indent = self.activity.clause_state.current_value_indent;
         sent.and_then(|sent| self.settle_forwarded(sent, continue_, indent))
             .map(RegionEnd::Flowed)
     }
@@ -3260,18 +3291,11 @@ impl Interp {
                                                 base_indent,
                                                 ended,
                                             ),
-                                            Deliver::ForwardReturn
-                                            | Deliver::ForwardContinue(_) => {
-                                                let sent = self.finish_send(ended);
-                                                let ran = self
-                                                    .settle_parked_forward(parked.deliver, sent);
-                                                self.leave_parked(
-                                                    code, chunk, source, base, len, parked, ran,
-                                                )
-                                            }
                                             Deliver::Register(_)
                                             | Deliver::Send
-                                            | Deliver::Exec => self.resume_region(
+                                            | Deliver::Exec
+                                            | Deliver::ForwardReturn
+                                            | Deliver::ForwardContinue => self.resume_region(
                                                 code, chunk, registers, source, base, len, parked,
                                                 ended,
                                             ),
@@ -3630,7 +3654,8 @@ impl Interp {
 
     /// The level [`Interp::drive`] has just taken back from
     /// [`Activity::parked_levels`](crate::activity::Activity), run on from
-    /// `parked`, a function call or send op, with `ended`, what the callee's
+    /// `parked`, a function call or send op (or a `FORWARD`, which
+    /// [`Interp::resume_forward`] takes), with `ended`, what the callee's
     /// body answered: the answer delivered, then the rest of its clause
     /// region in [`Interp::ops_loop_steady`].
     #[expect(
@@ -3660,8 +3685,8 @@ impl Interp {
             Deliver::Send => self.finish_send_op(chunk, registers, parked.at, ended),
             Deliver::Flow(_) => Err(Loud::op_not_driven("a parked CALL resumed mid-region").into()),
             Deliver::Exec => Err(Loud::op_not_driven("a parked instruction with a callee").into()),
-            Deliver::ForwardReturn | Deliver::ForwardContinue(_) => {
-                Err(Loud::op_not_driven("a parked FORWARD resumed mid-region").into())
+            Deliver::ForwardReturn | Deliver::ForwardContinue => {
+                return self.resume_forward(code, chunk, source, base, len, parked, ended);
             }
         };
         match delivered {
@@ -3752,7 +3777,7 @@ impl Interp {
                     .map(RegionEnd::Flowed);
                 return self.leave_parked(code, chunk, source, base, len, parked, ran);
             }
-            Deliver::ForwardReturn | Deliver::ForwardContinue(_) => {
+            Deliver::ForwardReturn | Deliver::ForwardContinue => {
                 let ran = self.settle_parked_forward(parked.deliver, sent);
                 return self.leave_parked(code, chunk, source, base, len, parked, ran);
             }

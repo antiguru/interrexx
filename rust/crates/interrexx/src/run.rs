@@ -2036,7 +2036,10 @@ impl Interp {
     }
 
     /// `FORWARD`, with any of `TO`, `MESSAGE`, `CLASS`, `ARGUMENTS`, `ARRAY`
-    /// and `CONTINUE`.
+    /// and `CONTINUE`, up to its send. Kept out of line so that
+    /// [`Interp::exec_instruction`], which every [`crate::ir::Op::Exec`]
+    /// instruction enters, does not carry its frame.
+    #[inline(never)]
     fn exec_forward(&mut self, code: &Code<'_>, forward: &Forward) -> Result<ExecOutcome, Failure> {
         let Some(identity) = self.activation().method_identity.as_ref() else {
             return Err(Raised::forward_outside_method().into());
