@@ -221,3 +221,23 @@ pub(super) fn count_exec_split() {
 pub(super) fn exec_splits() -> usize {
     EXEC_SPLITS.with(std::cell::Cell::get)
 }
+
+// Test-only instrumentation: how many loop conditions this thread has run
+// from a chunk's compiled condition ops rather than by walking them.
+#[cfg(test)]
+thread_local! {
+    static CONDITION_RUNS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
+#[cfg(test)]
+pub(super) fn count_condition_run() {
+    if !counting() {
+        return;
+    }
+    CONDITION_RUNS.with(|runs| runs.set(runs.get() + 1));
+}
+
+#[cfg(test)]
+pub(super) fn condition_runs() -> usize {
+    CONDITION_RUNS.with(std::cell::Cell::get)
+}

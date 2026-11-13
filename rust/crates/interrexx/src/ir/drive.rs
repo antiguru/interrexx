@@ -8,7 +8,7 @@ use interrexx_parse::{
     Call, ExprKind, Instruction, InstructionKind, Program, ProgramSource, SymbolId,
 };
 
-use super::{Chunk, ConditionKeyword, Op, SendForm};
+use super::{Chunk, ConditionKeyword, ConditionOps, Op, SendForm};
 use crate::activation::{CallType, body_of};
 use crate::clause::{ClauseOutcome, ClauseValue};
 use crate::eval::{SymbolRead, call_target_name};
@@ -25,11 +25,12 @@ use crate::{Code, Failure, Interp, Loud, Raised};
 
 #[cfg(test)]
 use super::counters::{
-    arith_hint_skips, call_site_hits, clause_op_entries, const_builds, count_arith_hint_skip,
-    count_call_site_hit, count_clause_op_entry, count_const_build, count_exec_split,
-    count_load_constant_build, count_run_chunk_entry, count_stackless_entry, count_trace_op_echo,
-    exec_splits, frame_floor_high_water, load_constant_builds, record_frame_floor,
-    run_chunk_entries, stackless_entries, trace_op_echoes,
+    arith_hint_skips, call_site_hits, clause_op_entries, condition_runs, const_builds,
+    count_arith_hint_skip, count_call_site_hit, count_clause_op_entry, count_condition_run,
+    count_const_build, count_exec_split, count_load_constant_build, count_run_chunk_entry,
+    count_stackless_entry, count_trace_op_echo, exec_splits, frame_floor_high_water,
+    load_constant_builds, record_frame_floor, run_chunk_entries, stackless_entries,
+    trace_op_echoes,
 };
 #[cfg(test)]
 pub(crate) use super::counters::{counting, resume_counters, suspend_counters};
@@ -1642,7 +1643,7 @@ macro_rules! region_ops {
                     // which is the op after this region.
                     match $self.flat_loop_start(
                         $code, $index, $clause, body, $source, values, $end,
-                        $registers,
+                        $chunk, $registers,
                     ) {
                         Ok(crate::run::FlatStart::Flat {
                             body_start,
@@ -2637,6 +2638,111 @@ impl Interp {
         }
     }
 
+    /// Runs the compiled `WHILE`/`UNTIL` condition `condition` of
+    /// [`Chunk::conditions`] and answers its value, which it leaves in its
+    /// register too. **The same ops, run the same way, as the region arms of
+    /// the same names**: a condition holds nothing else, which `compile`
+    /// checks as it emits one, and nothing here echoes, because a condition
+    /// is only run from here while `TRACE` shows no intermediates.
+    pub(crate) fn run_condition(
+        &mut self,
+        code: &Code<'_>,
+        chunk: &Chunk,
+        registers: RegFrame<'_>,
+        condition: ConditionOps,
+    ) -> Result<ObjRef, Failure> {
+        let Some(ops) = chunk.condition_ops(condition) else {
+            return Err(Loud::op_not_driven("a loop condition outside the chunk").into());
+        };
+        #[cfg(test)]
+        count_condition_run();
+        for op in ops {
+            match op {
+                Op::Const { dst, konst } => {
+                    let mut value = chunk.interned_konst(*konst);
+                    if value == ObjRef::NIL {
+                        let Some(bytes) = chunk.konst(*konst) else {
+                            return Err(Loud::constant_out_of_range().into());
+                        };
+                        value = self.interned_literal(bytes);
+                        chunk.remember_konst(*konst, value);
+                    }
+                    registers.set(*dst, value);
+                }
+                Op::LoadConstant { symbol, dst } => {
+                    let mut value = chunk.interned_symbol(*symbol);
+                    if value == ObjRef::NIL {
+                        value = self.interned_literal(code.symbols.name(*symbol).as_bytes());
+                        chunk.remember_symbol(*symbol, value);
+                    }
+                    registers.set(*dst, value);
+                }
+                Op::Load {
+                    symbol,
+                    read,
+                    at,
+                    dst,
+                } => {
+                    let at = at.resolved();
+                    let value = match read {
+                        SymbolRead::Simple => {
+                            let (value, novalue) = match at {
+                                Some(slot) => self.read_slot(code, *symbol, slot),
+                                None => self.read_at(code, *symbol, None),
+                            };
+                            self.novalue_check(novalue, value)?;
+                            value
+                        }
+                        SymbolRead::Stem | SymbolRead::Compound | SymbolRead::Environment => {
+                            self.read_symbol(code, Some(chunk), *read, *symbol, at)?
+                        }
+                    };
+                    registers.set(*dst, value);
+                }
+                Op::Arith {
+                    op,
+                    hint,
+                    lhs,
+                    rhs,
+                    dst,
+                } => {
+                    let left = registers.get(*lhs);
+                    let right = registers.get(*rhs);
+                    let mut quick = None;
+                    if chunk.tries_small_int(*hint) {
+                        quick = self.arith_small_int(*op, left, right);
+                        if quick.is_none() {
+                            chunk.saw_general(*hint);
+                        }
+                    }
+                    let value = match quick {
+                        Some(value) => value,
+                        None => self.arith_general(*op, left, right)?,
+                    };
+                    registers.set(*dst, value);
+                }
+                Op::Binary {
+                    op,
+                    lhs,
+                    rhs,
+                    dst,
+                    text,
+                } => {
+                    let left = registers.get(*lhs);
+                    let right = registers.get(*rhs);
+                    let value = self.apply_binary_op(*op, *text, left, right)?;
+                    registers.set(*dst, value);
+                }
+                Op::Prefix { op, src, dst } => {
+                    let value = self.apply_prefix(*op, registers.get(*src))?;
+                    registers.set(*dst, value);
+                }
+                other => return Err(Loud::op_not_driven(undriven_op_name(other)).into()),
+            }
+        }
+        Ok(registers.get(condition.dst))
+    }
+
     /// [`Interp::flat_loop_step_top`] for a flow that escaped to a flat
     /// loop's frame, with the pause a `LEAVE` or an `ITERATE` owes once the
     /// loop has taken it. `=` runs the
@@ -2665,7 +2771,7 @@ impl Interp {
             .flat_top
             .as_ref()
             .map(|flat| (flat.do_indent, flat.loop_indent));
-        let step = self.flat_loop_step_top(code, source, arrival, |it| {
+        let step = self.flat_loop_step_top(code, source, chunk, None, arrival, |it| {
             it.count_clause_against_deadline(false)
         })?;
         let Some(index) = iterated else {
@@ -4038,9 +4144,14 @@ impl Interp {
                                 Err(Failure::Slice) => return Ok(Exit::Slice(pc)),
                                 Err(failure) => return Err(failure),
                             };
-                            match self
-                                .flat_loop_step_top(code, source, Flow::Next, |_| Ok(counted))?
-                            {
+                            match self.flat_loop_step_top(
+                                code,
+                                source,
+                                chunk,
+                                Some(registers),
+                                Flow::Next,
+                                |_| Ok(counted),
+                            )? {
                                 crate::run::FlatStep::Body(op_body) => {
                                     pc = op_body;
                                     continue 'ops;

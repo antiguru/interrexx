@@ -2,7 +2,7 @@
 
 use super::super::{CALL_SITE_CACHE, QUICKENING};
 use super::{
-    arith_hint_skips, call_site_hits, clause_op_entries, const_builds, exec_splits,
+    arith_hint_skips, call_site_hits, clause_op_entries, condition_runs, const_builds, exec_splits,
     frame_floor_high_water, load_constant_builds, run_chunk_entries, stackless_entries,
     trace_op_echoes,
 };
@@ -771,4 +771,50 @@ fn a_reply_splits_once() {
     assert_eq!(outcome.exit_code, 0, "stderr: {:?}", outcome.stderr);
     assert_eq!(String::from_utf8_lossy(&outcome.stdout), "1\nrest\n");
     assert_eq!(splits, 1);
+}
+
+/// A loop's `WHILE` and `UNTIL` run from the chunk's compiled condition ops on
+/// every test, the `DO`'s own first one included; a condition holding a call
+/// does not compile there, and `TRACE I` walks the expression instead.
+#[test]
+fn loop_conditions_run_from_their_compiled_ops() {
+    let runs = |program: &[u8], expected_stdout: &str| {
+        let before = condition_runs();
+        let outcome = execute(
+            TEST_PATH,
+            program.to_vec(),
+            false,
+            Invocation::none().with_deadline(RUN_DEADLINE),
+        );
+        let ran = condition_runs() - before;
+        assert_eq!(outcome.exit_code, 0, "stderr: {:?}", outcome.stderr);
+        assert_eq!(String::from_utf8_lossy(&outcome.stdout), expected_stdout);
+        ran
+    };
+    // Tested at k = 0, 1, 2 and 3: four tests, the last ending the loop.
+    assert_eq!(
+        runs(b"k = 0\ndo while k < 3\n  k = k + 1\nend\nsay k\n", "3\n"),
+        4
+    );
+    // Tested after each of three passes.
+    assert_eq!(
+        runs(b"k = 3\ndo until k = 0\n  k = k - 1\nend\nsay k\n", "0\n"),
+        3
+    );
+    assert_eq!(
+        runs(
+            b"t = 'ab'\ndo while length(t) > 0\n  t = substr(t, 2)\nend\nsay t'.'\n",
+            ".\n"
+        ),
+        0,
+        "a condition that calls a function compiled to the condition ops"
+    );
+    assert_eq!(
+        runs(
+            b"trace i\nk = 0\ndo while k < 1\n  k = k + 1\nend\ntrace o\nsay k\n",
+            "1\n"
+        ),
+        0,
+        "a condition run from ops under TRACE I would drop its intermediate lines"
+    );
 }

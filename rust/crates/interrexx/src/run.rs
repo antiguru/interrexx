@@ -3631,6 +3631,42 @@ impl Interp {
         }
     }
 
+    /// [`Interp::eval_condition`] for the `WHILE`/`UNTIL` of the loop at
+    /// `do_index`, running the ops its condition compiled to
+    /// ([`crate::ir::Chunk::conditions`]) instead of walking it, where the
+    /// header has the register file in hand and `TRACE` shows no
+    /// intermediates. `registers` is `None` for a pass boundary reached
+    /// through `Interp::settle`, an `ITERATE` or a `LEAVE`, which has no
+    /// register file to give, and that pass walks the expression. The chunk
+    /// is asked on every pass rather than once at the loop's start, because a
+    /// `TRACE` in the body can put a recompiled one in its place.
+    #[inline(always)]
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "the chunk and register file the compiled condition runs against, beside \
+                  everything `eval_condition` takes"
+    )]
+    pub(crate) fn loop_condition(
+        &mut self,
+        code: &Code<'_>,
+        chunk: &crate::ir::Chunk,
+        registers: Option<RegFrame<'_>>,
+        do_index: usize,
+        condition: &Expr,
+        trace: ConditionTrace<'_>,
+        raise: fn(&[u8]) -> Raised,
+    ) -> Result<bool, Failure> {
+        if let Some(registers) = registers
+            && let Some(compiled) = chunk.condition_at(do_index)
+            && !self.tracing_intermediates()
+        {
+            let value = self.run_condition(code, chunk, registers, compiled)?;
+            // Never a comma list, which `compile` does not compile.
+            return self.condition_value(value, trace, false, raise);
+        }
+        self.eval_condition(code, condition, trace, raise)
+    }
+
     /// Evaluates `condition` and answers whether it holds, for `IF`/`WHEN`.
     fn eval_condition(
         &mut self,

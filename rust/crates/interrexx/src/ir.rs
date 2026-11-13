@@ -670,6 +670,16 @@ pub(crate) struct ClauseOpening {
     pub(crate) register_top: u16,
 }
 
+/// Where a loop's `WHILE` or `UNTIL` condition sits in
+/// [`Chunk::conditions`]: the ops of `[start, end)` leave its value in
+/// register `dst`.
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct ConditionOps {
+    pub(crate) start: u32,
+    pub(crate) end: u32,
+    pub(crate) dst: u16,
+}
+
 pub(crate) struct Chunk {
     /// The trace setting this stream's ops were emitted for, which is half of
     /// the key it is cached under and the thing the driver compares the
@@ -715,6 +725,16 @@ pub(crate) struct Chunk {
     hints: Hints,
     /// The resolutions [`Op::Call`] reads and writes, one per such op.
     calls: Calls,
+    /// **The `WHILE`/`UNTIL` conditions, outside the stream.** A loop's
+    /// condition is evaluated inside its header's own clause, which the flat
+    /// loop opens and closes around it, so it is not a region the driver
+    /// walks: `Interp::run_condition` runs these ops for it. Value ops only
+    /// -- loads, constants and operators -- and no trace op, so a condition
+    /// is run from here only while `TRACE` shows no intermediates.
+    conditions: valid::ValidOps,
+    /// Instruction index -> the range of [`Chunk::conditions`] its loop's
+    /// condition compiled to, for a `DO`/`LOOP` whose condition did.
+    condition_of: Box<[Option<ConditionOps>]>,
 }
 
 impl Chunk {
@@ -751,6 +771,20 @@ impl Chunk {
     /// stream.
     fn ops_in(&self, at: u32, end: u32) -> Option<&[Op]> {
         self.ops.get(at as usize..end as usize)
+    }
+
+    /// The compiled condition of the loop at instruction `index`, if it
+    /// compiled to [`Chunk::conditions`].
+    pub(crate) fn condition_at(&self, index: usize) -> Option<ConditionOps> {
+        self.condition_of.get(index).copied().flatten()
+    }
+
+    /// The ops of `condition`, or `None` when its range is not one of
+    /// [`Chunk::conditions`].
+    #[inline]
+    pub(crate) fn condition_ops(&self, condition: ConditionOps) -> Option<&[Op]> {
+        self.conditions
+            .get(condition.start as usize..condition.end as usize)
     }
 
     /// The setting this chunk's trace ops were emitted for.

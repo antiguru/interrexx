@@ -9,8 +9,8 @@ use interrexx_parse::{
 };
 
 use super::{
-    Calls, Chunk, ChunkTooLarge, ClauseOpening, ClausePosition, ConditionKeyword, Hints, NodePath,
-    Op, PlanSlot, SendForm,
+    Calls, Chunk, ChunkTooLarge, ClauseOpening, ClausePosition, ConditionKeyword, ConditionOps,
+    Hints, NodePath, Op, PlanSlot, SendForm,
 };
 use crate::eval::{SymbolRead, is_arithmetic, is_native_binary};
 use crate::plan::Plan;
@@ -288,6 +288,11 @@ fn compile_settled(
     // ([`Chunk::register_tops`]).
     let mut register_tops: Vec<u16> = Vec::with_capacity(len);
 
+    // The loop conditions [`Chunk::conditions`] holds, and which loop each
+    // belongs to.
+    let mut conditions: Vec<Op> = Vec::new();
+    let mut condition_of: Vec<Option<ConditionOps>> = vec![None; len];
+
     for (index, instruction) in body.instructions.iter().enumerate() {
         op_of.push(op_index(&ops)?);
         if let Some(mark) = release_at[index] {
@@ -400,6 +405,52 @@ fn compile_settled(
                     index: instruction_index(index)?,
                 });
                 close_region(&mut ops, at)?;
+                // **The `WHILE`/`UNTIL` condition, compiled beside the stream
+                // rather than in it**, for the header to run in place of
+                // walking the expression each pass. Its registers are taken
+                // after the header's and held as theirs are, to past the
+                // `END`: the body's clauses allocate above them, so a pass
+                // boundary finds them untouched. No echo op is emitted; the
+                // header walks the expression instead whenever `TRACE` shows
+                // intermediates.
+                if let Some(conditional) = &body_node.conditional
+                    && value_only(&conditional.condition)
+                    && native_shape(&conditional.condition, Some(NodePath::ROOT))
+                {
+                    let dst = registers.alloc()?;
+                    let start = op_index(&conditions)?;
+                    push_native(
+                        &mut conditions,
+                        false,
+                        &mut consts,
+                        &mut registers,
+                        &mut hints,
+                        &mut calls,
+                        plan,
+                        &conditional.condition,
+                        instruction_index(index)?,
+                        0,
+                        Some(NodePath::ROOT),
+                        dst,
+                    )?;
+                    debug_assert!(
+                        conditions[start as usize..].iter().all(|op| matches!(
+                            op,
+                            Op::Const { .. }
+                                | Op::LoadConstant { .. }
+                                | Op::Load { .. }
+                                | Op::Arith { .. }
+                                | Op::Binary { .. }
+                                | Op::Prefix { .. }
+                        )),
+                        "a compiled loop condition holds an op `Interp::run_condition` does not run"
+                    );
+                    condition_of[index] = Some(ConditionOps {
+                        start,
+                        end: op_index(&conditions)?,
+                        dst,
+                    });
+                }
                 // A repeating loop's `END` carries the op that ends
                 // a pass. `Simple` has no pass to end, and its `END` stays the
                 // delegating `Op::Exec` region, a no-op clause.
@@ -1308,7 +1359,26 @@ fn compile_settled(
         consts,
         hints,
         calls,
+        conditions: super::valid::ValidOps::new(conditions, registers)?,
+        condition_of: condition_of.into_boxed_slice(),
     })
+}
+
+/// Whether `expr` is built from reads, literals and operators alone, which is
+/// what [`Chunk::conditions`] may hold: no call, which would have to park the
+/// driver, and no comma list, whose elements are judged one by one.
+fn value_only(expr: &Expr) -> bool {
+    match &expr.kind {
+        ExprKind::Literal(_)
+        | ExprKind::Constant(_)
+        | ExprKind::Variable(_)
+        | ExprKind::Stem(_)
+        | ExprKind::Compound(_)
+        | ExprKind::DotVariable(_) => true,
+        ExprKind::Binary { left, right, .. } => value_only(left) && value_only(right),
+        ExprKind::Prefix { operand, .. } => value_only(operand),
+        _ => false,
+    }
 }
 
 /// The ops that leave expression `slot` of instruction `index` in register

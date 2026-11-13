@@ -9,6 +9,7 @@ use super::{
     raised_until_not_logical, raised_while_not_logical, shape_of, within_digits,
 };
 use crate::clause::DeadlineCounted;
+use crate::ir::Chunk;
 use interrexx_num::Scaled;
 
 /// What one pass of a `DO`/`LOOP` body just did, from `do_body_outcome`.
@@ -1193,6 +1194,7 @@ impl Interp {
         source: Option<&ProgramSource>,
         values: LoopHeaderValues,
         op_body: u32,
+        chunk: &Chunk,
         registers: RegFrame<'_>,
     ) -> Result<FlatStart, Failure> {
         // A block runs inline. A labelled one is left by a `LEAVE` naming it,
@@ -1314,7 +1316,14 @@ impl Interp {
             counter: LoopCounter::of(code, body),
             state,
         };
-        let header = match self.flat_loop_header(code, source, &mut boxed, counted) {
+        let header = match self.flat_loop_header(
+            code,
+            source,
+            chunk,
+            Some(registers),
+            &mut boxed,
+            counted,
+        ) {
             Ok(header) => header,
             Err(failure) => {
                 self.release_loop_objects(&boxed);
@@ -1375,6 +1384,8 @@ impl Interp {
         &mut self,
         code: &Code<'_>,
         source: Option<&ProgramSource>,
+        chunk: &Chunk,
+        registers: Option<RegFrame<'_>>,
         arrival: Flow,
         counted: impl FnOnce(&mut Self) -> Result<DeadlineCounted, Failure>,
     ) -> Result<FlatStep, Failure> {
@@ -1385,7 +1396,7 @@ impl Interp {
         // or `UNTIL` calling a routine that loops) ends by uncovering the
         // loop enclosing `top` into `flat_top`, so each arm below finds either
         // `None` or that enclosing loop there.
-        match self.flat_loop_step(code, source, &mut top, arrival, counted) {
+        match self.flat_loop_step(code, source, chunk, registers, &mut top, arrival, counted) {
             Ok(FlatStep::Body(op_body)) => {
                 if let Some(enclosing) = self.activity.flat_top.replace(top) {
                     self.cover_enclosing_loop(enclosing);
@@ -1440,10 +1451,17 @@ impl Interp {
     /// One pass boundary: what the body just answered, then the
     /// next pass's header test, whose first clause `counted` counts.
     #[inline(always)]
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "the chunk and register file a compiled loop condition runs against travel \
+                  as two arguments: one struct of them cost every pass a store of it"
+    )]
     fn flat_loop_step(
         &mut self,
         code: &Code<'_>,
         source: Option<&ProgramSource>,
+        chunk: &Chunk,
+        registers: Option<RegFrame<'_>>,
         flat: &mut FlatLoop,
         arrival: Flow,
         counted: impl FnOnce(&mut Self) -> Result<DeadlineCounted, Failure>,
@@ -1498,11 +1516,13 @@ impl Interp {
             // expression here, so a plain loop's pass skips the store.
             self.activation_mut().clock_stale = true;
             let counted = counted(self)?;
-            if let Some(flow) = self.flat_loop_until(code, source, flat, counted)? {
+            if let Some(flow) =
+                self.flat_loop_until(code, source, chunk, registers, flat, counted)?
+            {
                 return Ok(FlatStep::Done(flow));
             }
             let counted = self.count_clause_against_deadline(false)?;
-            return match self.flat_loop_header(code, source, flat, counted)? {
+            return match self.flat_loop_header(code, source, chunk, registers, flat, counted)? {
                 Some(flow) => Ok(FlatStep::Done(flow)),
                 None => Ok(FlatStep::Body(flat.op_body)),
             };
@@ -1519,7 +1539,7 @@ impl Interp {
             self.trace_clause(line, flat.do_indent, &text);
         }
         let counted = counted(self)?;
-        match self.flat_loop_header(code, source, flat, counted)? {
+        match self.flat_loop_header(code, source, chunk, registers, flat, counted)? {
             Some(flow) => Ok(FlatStep::Done(flow)),
             None => Ok(FlatStep::Body(flat.op_body)),
         }
@@ -1531,6 +1551,8 @@ impl Interp {
         &mut self,
         code: &Code<'_>,
         source: Option<&ProgramSource>,
+        chunk: &Chunk,
+        registers: Option<RegFrame<'_>>,
         flat: &FlatLoop,
         counted: DeadlineCounted,
     ) -> Result<Option<Flow>, Failure> {
@@ -1555,8 +1577,11 @@ impl Interp {
             let held = pinned!(
                 it,
                 crate::pinning::PinKind::LoopHeader,
-                it.eval_condition(
+                it.loop_condition(
                     code,
+                    chunk,
+                    registers,
+                    flat.do_index,
                     &cond.condition,
                     ConditionTrace::Keyword(loop_indent, "UNTIL"),
                     raised_until_not_logical,
@@ -1644,11 +1669,13 @@ impl Interp {
         &mut self,
         code: &Code<'_>,
         source: Option<&ProgramSource>,
+        chunk: &Chunk,
+        registers: Option<RegFrame<'_>>,
         flat: &mut FlatLoop,
         counted: DeadlineCounted,
     ) -> Result<Option<Flow>, Failure> {
         if flat.test.general() {
-            return self.flat_loop_header_general(code, source, flat, counted);
+            return self.flat_loop_header_general(code, source, chunk, registers, flat, counted);
         }
         let header_line = flat.header_line();
         let do_indent = flat.do_indent;
@@ -1700,6 +1727,8 @@ impl Interp {
         &mut self,
         code: &Code<'_>,
         source: Option<&ProgramSource>,
+        chunk: &Chunk,
+        registers: Option<RegFrame<'_>>,
         flat: &mut FlatLoop,
         counted: DeadlineCounted,
     ) -> Result<Option<Flow>, Failure> {
@@ -1749,8 +1778,11 @@ impl Interp {
                 let held = match pinned!(
                     it,
                     crate::pinning::PinKind::LoopHeader,
-                    it.eval_condition(
+                    it.loop_condition(
                         code,
+                        chunk,
+                        registers,
+                        do_index,
                         &cond.condition,
                         ConditionTrace::Keyword(loop_indent, "WHILE"),
                         raised_while_not_logical,
