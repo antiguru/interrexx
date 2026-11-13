@@ -1943,8 +1943,8 @@ fn a_send_parked_for_its_guard_keeps_its_method() {
     assert_stress_prints(
         "<parked-send-keeps-method>",
         concat!(
-            "o = .k~new\n",
             ".k~define('SEP', .k~method('SEPSRC'))\n",
+            "o = .k~new\n",
             "say o~sep\n",
             "r = o~start('hold')\n",
             "o~waitHeld\n",
