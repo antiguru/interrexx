@@ -25,7 +25,8 @@ max-threads = 1
 [[profile.default.overrides]]
 filter = '''
 (binary(signals) | binary(stdin_contention) | binary(program_end) | binary(prompt_before_read)
-| binary(oracle_deadline) | binary(deadline) | binary(sim_processes)) & !test(/^support::/)
+| binary(oracle_deadline) | binary(deadline) | binary(sim_processes) | binary(rxsock_waits))
+  & !test(/^support::/)
 | test(a_run_ending_with_a_call_in_flight_serves_the_call_then_drops_the_interpreter)
 | (binary(classic_api) & test(/sigint|halt|group_signal|the_classic_family_answers/))
 '''

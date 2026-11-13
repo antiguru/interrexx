@@ -118,6 +118,9 @@ pub(crate) enum ParkReason {
     Native,
     /// A blocking operation run off the baton, until it has ended.
     Block,
+    /// An `rxsock` call's wait for its sockets, run on a pool thread
+    /// ([`crate::builtin::rxsock`]), until that thread has posted its end.
+    Socket,
 }
 
 impl ParkReason {
@@ -132,6 +135,7 @@ impl ParkReason {
             ParkReason::Semaphore(_) => "a semaphore",
             ParkReason::Native => "a native call's return",
             ParkReason::Block => "a command's end",
+            ParkReason::Socket => "a socket",
         }
     }
 }
@@ -152,6 +156,12 @@ pub(crate) enum Posted {
         activity: ActivityId,
         token: u64,
         bytes: Vec<u8>,
+    },
+    /// `activity`'s socket wait, started under `token`, has ended: its
+    /// sockets are ready, its deadline has passed, or it was cancelled.
+    SocketWaited {
+        activity: ActivityId,
+        token: u64,
     },
     /// What a command's child off the baton wrote, to standard error where
     /// `error`, written to the interpreter's own as it arrives.
@@ -610,6 +620,7 @@ impl Scheduler for Interp {
         self.activity.woken_by_halt = false;
         self.activity.semaphore_wait = None;
         self.activity.parked_block = None;
+        self.activity.parked_socket = None;
         match reason {
             ParkReason::Guard(_) => {}
             ParkReason::GuardWhen => self.activity.when_parked = true,
@@ -646,6 +657,11 @@ impl Scheduler for Interp {
             ParkReason::Block => {
                 self.activity.parked_block = self.activity.blocked.innermost_token()
             }
+            ParkReason::Socket => match crate::builtin::rxsock::helper_state(&self.activity) {
+                // Its end was drained before the park: woken at once.
+                Some((_, true)) | None => self.unpark(running),
+                Some((token, false)) => self.activity.parked_socket = Some(token),
+            },
             ParkReason::Semaphore(wait) => {
                 let order = wait.deadline.map(|deadline| {
                     table.next_sleeper += 1;
@@ -807,6 +823,29 @@ impl Scheduler for Interp {
 const DELIVERY_YIELD_CLAUSES: u32 = 50;
 
 impl Interp {
+    /// Runs `wait` on `worker`, a pool thread, for the running activity,
+    /// and answers the token its end is posted under
+    /// ([`Posted::SocketWaited`]).
+    pub(crate) fn exit_for_socket_wait(
+        &mut self,
+        worker: Worker,
+        wait: Box<dyn FnOnce() + Send>,
+    ) -> u64 {
+        self.activities.in_flight += 1;
+        self.activities.next_block += 1;
+        let token = self.activities.next_block;
+        let inbox = self.timer.inbox();
+        let baton = crate::sync::Arc::clone(&self.baton);
+        let activity = self.activities.running;
+        worker.run(Box::new(move || {
+            pool::posting_panics(&inbox, &baton, || {
+                wait();
+                inbox.post(Posted::SocketWaited { activity, token });
+            });
+        }));
+        token
+    }
+
     /// A record for a new activity, with an empty arena of the running one's
     /// block size and the oldest pooled number.
     pub(crate) fn new_activity(&mut self) -> Box<Idle> {
@@ -1502,6 +1541,12 @@ impl Interp {
     /// a pool thread's recall to end its call, a completion, a command's
     /// end -- until none is in flight, then drops the interpreter.
     pub(crate) fn wind_down(mut self) {
+        // A socket wait's thread ends only when told to or when its sockets
+        // are ready; nothing will take up its answer now.
+        crate::builtin::rxsock::cancel_helper(&self.activity);
+        for idle in self.activities.idle.iter().flatten() {
+            crate::builtin::rxsock::cancel_helper(&idle.activity);
+        }
         while self.activities.in_flight() {
             let posted = self.timer.idle();
             self.file_completions(posted);
@@ -1564,6 +1609,20 @@ impl Interp {
                     // other park it is in keeps its own wake.
                     let woken = self.record_of(activity).is_some_and(|record| {
                         record.blocked.capture(token, bytes) && record.parked_block == Some(token)
+                    });
+                    if woken {
+                        self.unpark(activity);
+                    }
+                }
+                Posted::SocketWaited { activity, token } => {
+                    self.activities.in_flight -= 1;
+                    let woken = self.record_of(activity).is_some_and(|record| {
+                        crate::builtin::rxsock::helper_ended(record, token);
+                        let parked = record.parked_socket == Some(token);
+                        if parked {
+                            record.parked_socket = None;
+                        }
+                        parked
                     });
                     if woken {
                         self.unpark(activity);
@@ -2139,6 +2198,9 @@ impl Interp {
                 crate::builtin::rxsock::wait_again(self)
                     .map(|deadline| ParkReason::Sleep { deadline })
             }
+            ParkReason::Socket if !self.activity.woken_by_halt => {
+                crate::builtin::rxsock::block_again(self)
+            }
             _ => None,
         }
     }
@@ -2663,6 +2725,11 @@ impl Interp {
             table.in_flight -= 1;
             table.abandoned_blocks.push(token);
             self.unpark(activity);
+        } else if record.parked_socket.is_some() {
+            // Its thread is told to stop, and the activity wakes when that
+            // thread posts its end.
+            record.woken_by_halt = true;
+            crate::builtin::rxsock::cancel_helper(record);
         } else if let Some(order) = record.semaphore_wait.take() {
             let before = table.sleepers.len();
             if let Some(order) = order {

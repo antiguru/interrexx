@@ -1220,6 +1220,7 @@ impl Interp {
                 Posted::Recall(_) => "a recall of the baton",
                 Posted::Output { .. } | Posted::Captured { .. } => "a command's output",
                 Posted::Unblocked { .. } => "a command's end",
+                Posted::SocketWaited { .. } => "a socket wait's end",
                 Posted::Input(_) => "a standard input chunk",
                 Posted::Panicked(_) => "a pool thread's panic",
             };
