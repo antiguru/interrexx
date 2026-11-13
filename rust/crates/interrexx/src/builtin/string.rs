@@ -5,7 +5,7 @@
 //! say verify('a','b','X','q')         40.12 argument 4  (not the bad option)
 //! ```
 
-use interrexx_core::ObjRef;
+use interrexx_core::{INLINE_TEXT, ObjRef};
 
 use super::{
     Args, arg, buffer, count_of, length_of, optional_string, pad_byte, position_of,
@@ -13,6 +13,7 @@ use super::{
 };
 use crate::Interp;
 use crate::error::{Failure, Raised};
+use crate::value::Rendered;
 
 /// What `STRIP` strips when no character set is given: blank and horizontal
 /// tab. Measured, a tab
@@ -968,7 +969,7 @@ pub(crate) fn translate(
     name: &[u8],
     args: Args<'_>,
 ) -> Result<ObjRef, Failure> {
-    let mut string = required_string(interp, args, 1);
+    let string = required_render(interp, args, 1);
     let out_table = optional_string(interp, args, 2);
     let in_table = optional_string(interp, args, 3);
     let pad = pad_byte(interp, name, args, 4)?;
@@ -976,8 +977,9 @@ pub(crate) fn translate(
     let range = whole_number(interp, name, args, 6)?;
 
     if out_table.is_none() && in_table.is_none() && pad.is_none() {
-        return case_shifted(interp, string, start, range, u8::to_ascii_uppercase);
+        return case_shifted(interp, &string, start, range, u8::to_ascii_uppercase);
     }
+    let mut string = string.text(interp).to_vec();
     let out_table = out_table.unwrap_or_default();
     let pad = pad.unwrap_or(b' ');
 
@@ -1087,24 +1089,28 @@ pub(crate) fn verify_bytes(
 
 /// `LOWER(string [,n] [,length])`.
 pub(crate) fn lower(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result<ObjRef, Failure> {
-    let string = required_string(interp, args, 1);
+    let string = required_render(interp, args, 1);
     let start = whole_number(interp, name, args, 2)?;
     let range = whole_number(interp, name, args, 3)?;
-    case_shifted(interp, string, start, range, u8::to_ascii_lowercase)
+    case_shifted(interp, &string, start, range, u8::to_ascii_lowercase)
 }
 
 /// `UPPER(string [,n] [,length])`.
 pub(crate) fn upper(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result<ObjRef, Failure> {
-    let string = required_string(interp, args, 1);
+    let string = required_render(interp, args, 1);
     let start = whole_number(interp, name, args, 2)?;
     let range = whole_number(interp, name, args, 3)?;
-    case_shifted(interp, string, start, range, u8::to_ascii_uppercase)
+    case_shifted(interp, &string, start, range, u8::to_ascii_uppercase)
 }
 
-/// The body `LOWER`, `UPPER` and `TRANSLATE`'s no-table form share.
+/// The body `LOWER`, `UPPER` and `TRANSLATE`'s no-table form share, built in
+/// the lent result buffer from the string where it lives rather than from a
+/// copy of it. Inlined so that `shift` is a known function and not a call
+/// per byte.
+#[inline(always)]
 fn case_shifted(
     interp: &mut Interp,
-    mut string: Vec<u8>,
+    string: &Rendered,
     start: Option<i64>,
     range: Option<i64>,
     shift: fn(&u8) -> u8,
@@ -1114,8 +1120,19 @@ fn case_shifted(
         None => 1,
     } - 1;
     let range = range.map(length_of).transpose()?;
-    case_shift_bytes(&mut string, start, range, shift);
-    Ok(interp.text_built(string))
+    // A string held in the handle is shifted in a local and answered as a
+    // handle again, with no buffer to lend and take back.
+    if let Some(bytes) = string.inline() {
+        let mut short = [0u8; INLINE_TEXT];
+        let short = &mut short[..bytes.len()];
+        short.copy_from_slice(bytes);
+        case_shift_bytes(short, start, range, shift);
+        return Ok(ObjRef::inline_text(short).expect("as long as the handle it came from"));
+    }
+    let mut out = interp.take_result_buffer();
+    out.extend_from_slice(string.text(interp));
+    case_shift_bytes(&mut out, start, range, shift);
+    Ok(interp.text_built(out))
 }
 
 /// `UPPER` and `LOWER`'s body: `shift` applied to the bytes within `range` of
