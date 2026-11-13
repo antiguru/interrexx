@@ -2724,6 +2724,10 @@ impl Interp {
 
     /// What a resolved [`MethodId`] runs, or the refusal for one no table
     /// below names.
+    ///
+    /// The two tables nearly every send hits are read inline, so the answer
+    /// stays in registers; the rest is out of line.
+    #[inline(always)]
     fn invocable(&mut self, resolution: Resolution, name: &[u8]) -> Result<Invocable, Failure> {
         if let Some(&entry) = self.object_model().natives.get(resolution.method) {
             return Ok(Invocable::Native(entry));
@@ -2731,6 +2735,16 @@ impl Interp {
         if let Some(installed) = self.method_bodies.get(&resolution.method).copied() {
             return Ok(Invocable::Rexx(installed));
         }
+        self.invocable_rare(resolution, name)
+    }
+
+    /// [`Interp::invocable`] past the primitive and body tables.
+    #[inline(never)]
+    fn invocable_rare(
+        &mut self,
+        resolution: Resolution,
+        name: &[u8],
+    ) -> Result<Invocable, Failure> {
         // **After the body table and never before it**, so a send to a
         // written body reads exactly the one table it read before generated
         // methods existed -- see `crate::GeneratedMethod`'s own doc for what
