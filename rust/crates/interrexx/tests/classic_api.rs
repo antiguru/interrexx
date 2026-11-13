@@ -852,6 +852,22 @@ fn an_embedders_registered_library_serves_its_programs() {
     );
 }
 
+/// A native `+` that assigns its receiver's object variable `K` with `SetObjectVariable`, sent
+/// from `t.k = t.k + 1` in a method of the same class that exposes `k`: the write takes its tail
+/// from `k` as the native left it, so it lands on `t.B` and `t.A` keeps the stem's default.
+/// Measured on the oracle with the same driver.
+#[test]
+fn a_native_operator_that_assigns_the_tail_variable_moves_the_write() {
+    let output = run_driver("tailvar", &[], &[]);
+    assert!(output.status.success(), "{output:?}");
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout),
+        "ADDER 1 B\n",
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
 /// A C program's stdio output and the output of the programs it runs with `RexxStart` land in
 /// the order they were written, with standard output and error sent to files, where stdio holds
 /// the C program's lines back until something flushes them. Measured on the oracle with the same
