@@ -3488,6 +3488,24 @@ impl Interp {
         Ok(variable.into())
     }
 
+    /// Closes each of `streams`, which a method activation opened by name and
+    /// has now returned from. A close that fails is of no concern to the
+    /// caller, which did not ask for it.
+    #[cold]
+    #[inline(never)]
+    fn close_opened_streams(&mut self, streams: impl Iterator<Item = ObjRef>) {
+        let frame = self.roots.activity_mut().push_frame();
+        let streams: Vec<ObjRef> = streams.collect();
+        for stream in &streams {
+            self.roots.activity_mut().push_temp(*stream);
+        }
+        for stream in streams {
+            let caller = self.caller();
+            let _ = self.send_message(stream, b"CLOSE", None, &[], caller);
+        }
+        self.roots.activity_mut().pop_frame(frame);
+    }
+
     /// [`Interp::finish_call`]'s release of a method activation that has
     /// just been popped, with `saved_context` the sender's convention. A
     /// `REPLY`'s activation answers its value, and moves with its slot frame
@@ -3516,7 +3534,13 @@ impl Interp {
             // time: measured on `bench-programs/dispatch.rex`, 5,000,089
             // misses and no hits, each one a `Box::new` of a 416-byte
             // `Activation` and the free that follows.
+            // The streams the call opened are closed when it returns, so what
+            // it wrote is in the file then (r[bif.index.stream.lifetime]).
+            let opened = std::mem::take(&mut callee.streams);
             self.recycle_activation(callee);
+            if !opened.is_empty() {
+                self.close_opened_streams(opened.into_values());
+            }
             return None;
         };
         let Replied {
