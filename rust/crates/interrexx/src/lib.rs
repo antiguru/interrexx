@@ -1553,10 +1553,10 @@ struct Interp {
     library_code_rows: FxHashMap<LibraryCodeKey, usize>,
     /// The procedure each [`Interp::library_codes`] row is, by row.
     library_code_keys: Vec<LibraryCodeKey>,
-    /// The routine row each [`Interp::library_codes`] row resolved to, once
-    /// called: a held library is never replaced and its tables never change,
-    /// so the row stays the one its name finds.
-    library_code_routines: Vec<Option<u32>>,
+    /// The library and routine row each [`Interp::library_codes`] row
+    /// resolved to, once called: a held library is never replaced and its
+    /// tables never change, so both stay the ones its names find.
+    library_code_routines: Vec<Option<(Rc<interrexx_api::load::Library>, usize)>>,
     /// The [`Interp::library_codes`] row each library-backed `::ROUTINE`
     /// directive bound, which is the package its routine reports.
     library_routine_codes: FxHashMap<InstalledRoutine, usize>,

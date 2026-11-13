@@ -53,7 +53,7 @@ impl Interp {
             });
             activation.set_frame(frame);
             activation.open_variable_pool();
-            let _reachable = crate::embedding::OtherRun::enter(inbox);
+            let _reachable = crate::embedding::OtherRun::enter(&inbox);
             let answered = thread.enter(&activation, |_| call());
             (answered, activation.pending())
         };
@@ -99,7 +99,7 @@ impl Interp {
             });
             activation.set_frame(frame);
             activation.open_variable_pool();
-            let _reachable = crate::embedding::OtherRun::enter(inbox);
+            let _reachable = crate::embedding::OtherRun::enter(&inbox);
             let answered = thread.enter(&activation, |contexts| {
                 interrexx_api::invoke::exit(handler, contexts, &activation, request)
             });

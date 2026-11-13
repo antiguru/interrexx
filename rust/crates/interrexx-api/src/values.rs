@@ -1073,12 +1073,17 @@ impl<'a> Activation<'a> {
     pub fn constants(&self) -> Constants<RexxObjectPtr> {
         let mut cx = self.conversion();
         let objects = cx.host.constants();
-        let locals = cx.host.locals();
+        let [nil, true_object, false_object, null_string] = cx.host.locals().register_constants([
+            objects.nil,
+            objects.true_object,
+            objects.false_object,
+            objects.null_string,
+        ]);
         Constants {
-            nil: locals.register(objects.nil),
-            true_object: locals.register(objects.true_object),
-            false_object: locals.register(objects.false_object),
-            null_string: locals.register(objects.null_string),
+            nil,
+            true_object,
+            false_object,
+            null_string,
         }
     }
 }

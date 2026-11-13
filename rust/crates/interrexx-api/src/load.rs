@@ -1337,7 +1337,7 @@ impl HeldMethod {
     /// At most `limit - 1` words are answered, which is what bounds the
     /// descriptor array the caller fills from them.
     #[inline(always)]
-    pub(crate) fn signature(&self, context: &MethodContext<'_>, limit: usize) -> Option<Vec<u16>> {
+    pub(crate) fn signature(&self, context: &MethodContext<'_>, limit: usize) -> Option<Signature> {
         let stub = self.held.stub?;
         // SAFETY: `stub` is the address the extension's own method table gave
         // for this row, resolved in an open mapping that this hold keeps
@@ -1378,7 +1378,7 @@ impl HeldRoutine {
     /// [`ROUTINE_TYPED_STYLE`] publishes none, since its address is a
     /// function of another signature.
     #[inline(always)]
-    pub(crate) fn signature(&self, context: &CallContext<'_>, limit: usize) -> Option<Vec<u16>> {
+    pub(crate) fn signature(&self, context: &CallContext<'_>, limit: usize) -> Option<Signature> {
         let stub = self.held.stub?;
         // SAFETY: as `HeldMethod::signature`; `stub` answers only for a typed
         // row.
@@ -2292,7 +2292,7 @@ impl CommandHandler {
 /// `stub` is a generated stub of this C signature in a library that stays
 /// mapped for the call, and `context` addresses a live struct of its context
 /// type.
-unsafe fn signature_of<C>(stub: Stub<C>, context: *mut C, limit: usize) -> Option<Vec<u16>> {
+unsafe fn signature_of<C>(stub: Stub<C>, context: *mut C, limit: usize) -> Option<Signature> {
     // SAFETY: the caller guarantees the stub and the context. A null
     // `arguments` is the signature request, which returns the static array
     // without running any of the extension's own code.
@@ -2300,8 +2300,8 @@ unsafe fn signature_of<C>(stub: Stub<C>, context: *mut C, limit: usize) -> Optio
     if types.is_null() {
         return None;
     }
-    let mut words = Vec::new();
-    for offset in 0..limit {
+    let mut words = Signature::new();
+    for offset in 0..limit.min(SIGNATURE_WORDS) {
         // SAFETY: the invariant is the macro's, not this loop's: the array it emits ends in
         // `REXX_ARGUMENT_TERMINATOR`, so every offset up to the first terminator is inside it.
         // `limit` bounds how far a malformed array is followed, which the reference implementation
@@ -2313,6 +2313,54 @@ unsafe fn signature_of<C>(stub: Stub<C>, context: *mut C, limit: usize) -> Optio
         words.push(word);
     }
     None
+}
+
+/// The most words [`signature_of`] reads: the return type, a parameter for
+/// every descriptor after it, and the terminator.
+const SIGNATURE_WORDS: usize = MAX_NATIVE_ARGUMENTS + 1;
+
+/// A stub's signature, terminator excluded, held inline: it is read on every
+/// call, and a heap vector for it would cost an allocation each time.
+#[derive(Clone, Copy)]
+pub struct Signature {
+    words: [u16; SIGNATURE_WORDS],
+    len: u8,
+}
+
+impl Signature {
+    fn new() -> Signature {
+        Signature {
+            words: [0; SIGNATURE_WORDS],
+            len: 0,
+        }
+    }
+
+    fn push(&mut self, word: u16) {
+        self.words[usize::from(self.len)] = word;
+        self.len += 1;
+    }
+}
+
+impl std::ops::Deref for Signature {
+    type Target = [u16];
+
+    fn deref(&self) -> &[u16] {
+        &self.words[..usize::from(self.len)]
+    }
+}
+
+impl PartialEq for Signature {
+    fn eq(&self, other: &Signature) -> bool {
+        **self == **other
+    }
+}
+
+impl Eq for Signature {}
+
+impl std::fmt::Debug for Signature {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        (**self).fmt(f)
+    }
 }
 
 /// Call `stub`, where there is one, with `arguments` published on `context`
