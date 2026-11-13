@@ -161,6 +161,7 @@
 - [Native libraries](native/index.md)
   - [Loading](native/loading.md)
   - [Native routines and methods](native/calls.md)
+  - [Threads and halting](native/threads.md)
 - [RexxUtil](rexxutil/index.md)
   - [SysFileDelete](rexxutil/sysfiledelete.md)
   - [SysFileExists](rexxutil/sysfileexists.md)

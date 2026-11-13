@@ -21,6 +21,9 @@ The pages of this chapter are:
 * [Native routines and methods](calls.md): how arguments are converted and
   results written, how native code raises errors and conditions, and what it
   sees of its caller and, for a method, of its object.
+* [Threads and halting](threads.md): threads that native code starts and
+  attaches, what program end does with them, the one interpreter instance
+  every activity is given, and halting activities from native code.
 
 What a library's name means, and where the file is searched for, is [the
 library rule](r:env.search.library). The directives that name a library are
@@ -65,6 +68,8 @@ to the next.
 | `FxSetVar`, `FxGetVar`, `FxDropVar` | a variable name, and for `FxSetVar` a value | set, get (or `(unset)`) and drop a variable of the caller |
 | `FxNumeric` | none | the caller's `DIGITS`, `FUZZ` and `FORM` |
 | `FxOnThread` | an object and a message name | starts a thread that attaches to the interpreter, sends the message to the object and detaches; answers `1` at once |
+| `FxOnThreadIdle` | an object, a message name and a number of seconds | as `FxOnThread`, but after the message the thread stays attached, sending nothing, for that many seconds before it detaches |
+| `FxInstance` | none | the interpreter instance the calling activity is given, written as an address |
 | `FxHaltAll` | none | asks the interpreter to halt every activity |
 | `FxHaltThis` | none | asks the interpreter to halt the calling activity |
 | `FxTwin`, `FXTWIN` | none | `first row` and `second row`: two rows whose names differ only in case |
