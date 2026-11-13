@@ -93,6 +93,10 @@ impl Number {
             sum.check_range()?;
             return Ok(sum);
         }
+        if let Some(sum) = aligned_wide_sum(&left, &right, left_negative, right_negative, digits) {
+            sum.check_range()?;
+            return Ok(sum);
+        }
         // Alignment adjustment, ported from addSub. When the two operands
         // together span more than the working precision, the less significant
         // one is shortened from its low end so the pair fits. Skipping this
@@ -256,6 +260,158 @@ fn exact_small_sum(
     Some(result)
 }
 
+/// The widest aligned operand [`aligned_wide_sum`] takes: thirty-eight
+/// digits always fit a `u128`, and so does the sum of two of them.
+const WIDE_DIGITS: usize = 38;
+
+/// The general addition below, on `u128` magnitudes, for operands that
+/// after its alignment adjustment fit [`WIDE_DIGITS`] aligned to the lower
+/// exponent. Within that bound the digit
+/// vectors the general path builds are these integers written out, with
+/// the raw length that path's rounding counts: the wider aligned operand,
+/// plus one for a carry out of an addition, and with the leading zeros a
+/// subtraction leaves.
+fn aligned_wide_sum(
+    left: &Number,
+    right: &Number,
+    left_negative: bool,
+    right_negative: bool,
+    digits: u64,
+) -> Option<Number> {
+    #[cfg(test)]
+    if SHORTCUT_OFF.with(std::cell::Cell::get) {
+        return None;
+    }
+    // The general path's alignment adjustment, on slices: where the pair
+    // spans more than the working length, the less significant operand's
+    // low digits go first and then both operands' -- truncated, never
+    // emptied, with the count folded into the exponent whatever was left.
+    let max_length = i64::try_from(crate::working_length(digits)).unwrap_or(i64::MAX);
+    let (mut left_digits, mut left_exp) = (left.digits.as_slice(), left.exponent);
+    let (mut right_digits, mut right_exp) = (right.digits.as_slice(), right.exponent);
+    let first_min = left_exp.min(right_exp);
+    let left_shift = i64::from(left_exp) - i64::from(first_min);
+    let right_shift = i64::from(right_exp) - i64::from(first_min);
+    let left_over = left_digits.len() as i64 + left_shift - max_length;
+    let right_over = right_digits.len() as i64 + right_shift - max_length;
+    if left_over > 0 || right_over > 0 {
+        let shorten = |slice: &[u8], count: i64| -> usize {
+            slice
+                .len()
+                .saturating_sub(usize::try_from(count.max(0)).unwrap_or(usize::MAX))
+                .max(1)
+        };
+        let mut adjust = left_over.max(right_over);
+        if left_shift != 0 {
+            let taken = adjust.min(left_shift);
+            right_digits = &right_digits[..shorten(right_digits, taken)];
+            right_exp = right_exp.saturating_add(taken as i32);
+            adjust -= taken;
+        } else if right_shift != 0 {
+            let taken = adjust.min(right_shift);
+            left_digits = &left_digits[..shorten(left_digits, taken)];
+            left_exp = left_exp.saturating_add(taken as i32);
+            adjust -= taken;
+        }
+        if adjust != 0 {
+            left_digits = &left_digits[..shorten(left_digits, adjust)];
+            left_exp = left_exp.saturating_add(adjust as i32);
+            right_digits = &right_digits[..shorten(right_digits, adjust)];
+            right_exp = right_exp.saturating_add(adjust as i32);
+        }
+    }
+    let min_exp = left_exp.min(right_exp);
+    let left_width =
+        left_digits.len() + usize::try_from(i64::from(left_exp) - i64::from(min_exp)).ok()?;
+    let right_width =
+        right_digits.len() + usize::try_from(i64::from(right_exp) - i64::from(min_exp)).ok()?;
+    let widest = left_width.max(right_width);
+    if widest > WIDE_DIGITS || widest as i64 > max_length {
+        return None;
+    }
+    // Folded in a `u64` while nineteen digits fit one, which is every
+    // operand of a DIGITS 18 or narrower addition.
+    let magnitude = |digits: &[u8], width: usize| {
+        let split = digits.len().min(19);
+        let head = digits[..split]
+            .iter()
+            .fold(0u64, |acc, digit| acc * 10 + u64::from(*digit));
+        let mut value = u128::from(head);
+        for digit in &digits[split..] {
+            value = value * 10 + u128::from(*digit);
+        }
+        value * 10u128.pow((width - digits.len()) as u32)
+    };
+    let a = magnitude(left_digits, left_width);
+    let b = magnitude(right_digits, right_width);
+    let (raw, negative, raw_length) = if left_negative == right_negative {
+        let sum = a + b;
+        let carried = sum >= 10u128.pow(widest as u32);
+        (sum, left_negative, widest + usize::from(carried))
+    } else {
+        match a.cmp(&b) {
+            std::cmp::Ordering::Equal => return Some(Number::zero()),
+            std::cmp::Ordering::Greater => (a - b, left_negative, widest),
+            std::cmp::Ordering::Less => (b - a, right_negative, widest),
+        }
+    };
+    // The raw digits, leading zeros included, written out through one
+    // division into two `u64` halves: a `u128` divided digit by digit is a
+    // library call per digit.
+    let mut buffer = [0u8; WIDE_DIGITS + 1];
+    let raw_digits = &mut buffer[..raw_length];
+    let split = 10u128.pow(19);
+    let (mut high, mut low) = if raw < split {
+        (0, raw as u64)
+    } else {
+        ((raw / split) as u64, (raw % split) as u64)
+    };
+    for (place, slot) in raw_digits.iter_mut().rev().enumerate() {
+        if place < 19 {
+            *slot = (low % 10) as u8;
+            low /= 10;
+        } else {
+            *slot = (high % 10) as u8;
+            high /= 10;
+        }
+    }
+    // `round_change` on those digits: keep the first DIGITS of them, leading
+    // zeros counted, half up on the first dropped digit, and an all-nines
+    // carry keeps the length and moves the exponent.
+    let keep = usize::try_from(digits).unwrap_or(usize::MAX);
+    let mut exponent = min_exp;
+    let kept = if keep != 0 && raw_length > keep {
+        exponent += (raw_length - keep) as i32;
+        let round_up = raw_digits[keep] >= 5;
+        let kept = &mut raw_digits[..keep];
+        if round_up {
+            match kept.iter().rposition(|digit| *digit != 9) {
+                Some(at) => {
+                    kept[at] += 1;
+                    kept[at + 1..].fill(0);
+                }
+                None => {
+                    kept.fill(0);
+                    kept[0] = 1;
+                    exponent += 1;
+                }
+            }
+        }
+        kept
+    } else {
+        raw_digits
+    };
+    let lead = kept.iter().take_while(|digit| **digit == 0).count();
+    if lead == kept.len() {
+        return Some(Number::zero());
+    }
+    Some(Number {
+        negative,
+        digits: Digits::from_slice(&kept[lead..]),
+        exponent,
+    })
+}
+
 /// Compares two digit vectors by value, ignoring leading zeros.
 fn compare_magnitudes(a: &[u8], b: &[u8]) -> std::cmp::Ordering {
     let a_start = a.iter().take_while(|d| **d == 0).count();
@@ -355,6 +511,13 @@ mod add_shortcut_tests {
             "12345",
             "999999999",
             "123456789012345678",
+            "0.333333333",
+            "0.11111111111111111111",
+            "-0.142857142857142857143",
+            "99999999999999999999",
+            "1.00000000000000000001",
+            "5.55555555555555555555E+5",
+            "9.99999999E-3",
         ]
         .iter()
         .map(|text| Number::parse(text).expect("a spelling in the population parses"))
@@ -369,7 +532,7 @@ mod add_shortcut_tests {
         let mut taken = 0;
         for left in &population {
             for right in &population {
-                for digits in [1u64, 2, 3, 5, 9, 18, 20, 40] {
+                for digits in [1u64, 2, 3, 5, 9, 10, 18, 20, 21, 37, 40] {
                     for subtract in [false, true] {
                         let shortcut = if subtract {
                             left.sub(right, digits)
@@ -402,6 +565,69 @@ mod add_shortcut_tests {
         // A shortcut that declined everything would satisfy the loop above
         // without saying anything.
         assert!(taken > 0, "the shortcut never fired");
+    }
+
+    /// Pseudo-random operands of up to forty digits at exponents near each
+    /// other, so that most pairs take [`super::aligned_wide_sum`] and its
+    /// rounding: both shortcuts on against both off.
+    #[test]
+    fn the_wide_sum_answers_what_the_digit_addition_answers() {
+        let mut state = 0x2545_f491_4f6c_dd1du64;
+        let mut next = move |bound: u64| {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            state % bound
+        };
+        let number = |next: &mut dyn FnMut(u64) -> u64| {
+            let length = 1 + next(40) as usize;
+            let mut text = String::new();
+            if next(2) == 0 {
+                text.push('-');
+            }
+            for i in 0..length {
+                // Runs of nines and zeros, which is where carries and
+                // cancellations live.
+                let digit = match next(4) {
+                    0 => 9,
+                    1 => 0,
+                    _ => next(10) as u8,
+                };
+                text.push(char::from(b'0' + if i == 0 { digit.max(1) } else { digit }));
+            }
+            // Mostly near each other, sometimes far apart, which is what
+            // makes the alignment adjustment shorten an operand.
+            let spread = if next(4) == 0 { 90 } else { 30 };
+            text.push_str(&format!("E{}", next(spread) as i64 - spread as i64 / 2));
+            Number::parse(&text).expect("a generated spelling parses")
+        };
+        let mut taken = 0;
+        for _ in 0..100_000 {
+            let left = number(&mut next);
+            let right = number(&mut next);
+            let digits = 1 + next(40);
+            let subtract = next(2) == 0;
+            let shortcut = if subtract {
+                left.sub(&right, digits)
+            } else {
+                left.add(&right, digits)
+            };
+            assert_eq!(
+                shortcut,
+                the_long_way(&left, &right, digits, subtract),
+                "{} {} {} at DIGITS {digits}",
+                left.format(40),
+                if subtract { "-" } else { "+" },
+                right.format(40)
+            );
+            let working = crate::working_length(digits);
+            let (l, r) = (left.truncated_to(working), right.truncated_to(working));
+            if super::aligned_wide_sum(&l, &r, l.negative, r.negative != subtract, digits).is_some()
+            {
+                taken += 1;
+            }
+        }
+        assert!(taken > 20_000, "the wide sum fired {taken} times");
     }
 
     /// The shortcut declines every operand it must, so that the assertion
