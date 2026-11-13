@@ -2518,24 +2518,11 @@ impl Interp {
         // steps, markers (`Then`/`Else`/ `Otherwise`/`When`/`WhenCase`/`Label`)
         // included, so every one of those is traced from its own execution.
         let (tabled, position) = position;
-        let rerun = match self.activity.rerun_indent {
-            Some(_) => self.activity.rerun_indent.take(),
-            None => None,
-        };
-        let here = self.running_activation().map(|activation| activation.id);
-        match (rerun, here) {
-            (Some(indent), Some(program)) => {
-                self.activity.rerun_failure_indent = Some((program, index, indent));
-            }
-            _ => {
-                if self
-                    .activity
-                    .rerun_failure_indent
-                    .is_some_and(|(program, at, _)| Some(program) == here && at == index)
-                {
-                    self.activity.rerun_failure_indent = None;
-                }
-            }
+        let rerun = self.activity.rerun_indent.take();
+        // Both halves are about a clause an interactive-debug `=` re-runs,
+        // so the running activation is asked for only where one is pending.
+        if rerun.is_some() || self.activity.rerun_failure_indent.is_some() {
+            self.note_rerun(rerun, index);
         }
         let shortcut = tabled
             && source.is_some()
@@ -2608,6 +2595,29 @@ impl Interp {
             entry,
             frame,
             temps_at_entry,
+        }
+    }
+
+    /// [`Interp::enter_stepped_clause`]'s bookkeeping for a clause an
+    /// interactive-debug `=` re-runs: the indent it is re-run at, or the
+    /// end of the one recorded for an earlier clause.
+    #[cold]
+    #[inline(never)]
+    fn note_rerun(&mut self, rerun: Option<usize>, index: usize) {
+        let here = self.running_activation().map(|activation| activation.id);
+        match (rerun, here) {
+            (Some(indent), Some(program)) => {
+                self.activity.rerun_failure_indent = Some((program, index, indent));
+            }
+            _ => {
+                if self
+                    .activity
+                    .rerun_failure_indent
+                    .is_some_and(|(program, at, _)| Some(program) == here && at == index)
+                {
+                    self.activity.rerun_failure_indent = None;
+                }
+            }
         }
     }
 
