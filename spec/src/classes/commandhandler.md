@@ -626,7 +626,7 @@ bad: say arg(1) condition('o')~code
   return 'SPEC_CH_NAME'
 ```
 
-```output defect=#164
+```output
 ECHO | request STRING
 1 | request STRING
 ECHO | request String
@@ -737,7 +737,7 @@ say .commandhandler~handler('spec_ch_dev109_reg')~isNil
   return 'other'
 ```
 
-```output defect=#140
+```output
 1 0
 ECHO 1
 ECHO 0

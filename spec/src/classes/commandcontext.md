@@ -1616,7 +1616,7 @@ x = .commandhandler~deregister('spec_cc_dev109')
   return 'other'
 ```
 
-```output defect=#140
+```output
 avalue 1 0
 changed 0 0
 changed

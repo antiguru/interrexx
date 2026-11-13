@@ -457,7 +457,7 @@ bad: say arg(1) condition('o')~code
   return name
 ```
 
-```output defect=#164
+```output
 1 0 1
 <from request> <a|b>
 0 0 0

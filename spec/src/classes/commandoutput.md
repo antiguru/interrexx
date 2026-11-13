@@ -474,6 +474,6 @@ x = .commandhandler~deregister('spec_co_dev109')
   return 'other'
 ```
 
-```output defect=#140
+```output
 2 <own> <own> 0
 ```

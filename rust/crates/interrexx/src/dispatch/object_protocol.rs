@@ -1801,6 +1801,12 @@ pub(super) fn decode_message_name(
     ) {
         return Ok((interp.to_text(message).to_ascii_uppercase(), None));
     }
+    // An instance of a `String` subclass is a name made of its characters
+    // (Deviation 109).
+    if interp.is_string_valued(message) {
+        let text = interp.required_string_value(message)?;
+        return Ok((interp.to_text(text).to_ascii_uppercase(), None));
+    }
     // A plain `Array` is read as it stands, holes and all. Any other object
     // is sent `request('ARRAY')`, so an `Array` subclass and an object that
     // answers an array name a message too. An answer of `.nil` is the 93.972;
