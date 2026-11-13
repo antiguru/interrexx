@@ -794,6 +794,44 @@ pub(crate) fn raw_argument_positions(name: &'static [u8]) -> &'static [usize] {
     }
 }
 
+/// The number a refusal names for the argument at 1-based `position` of the
+/// builtin `name` whose `STRING` answer has no string value
+/// (`r[conv.string.deviation.169]`): the argument's position among the
+/// arguments of the method the builtin stands for, which leaves the receiver
+/// out. `None` for an argument the builtin does not read as a string (a count,
+/// a pad or option character, a stream name), and for the receiver, which has
+/// no argument number.
+pub(crate) fn string_argument_number(name: &[u8], position: usize) -> Option<usize> {
+    STRING_ARGUMENT_NUMBERS
+        .iter()
+        .find(|(row, _)| *row == name)
+        .and_then(|(_, numbers)| numbers.iter().find(|(at, _)| *at == position))
+        .map(|&(_, number)| number)
+}
+
+/// Each builtin's string arguments as `(position in the call, number the
+/// refusal names)`, the table [`string_argument_number`] reads.
+static STRING_ARGUMENT_NUMBERS: &[(&[u8], &[(usize, usize)])] = &[
+    (b"ABBREV", &[(2, 1)]),
+    (b"BITAND", &[(2, 1)]),
+    (b"BITOR", &[(2, 1)]),
+    (b"BITXOR", &[(2, 1)]),
+    (b"CHANGESTR", &[(1, 1), (3, 2)]),
+    (b"CHAROUT", &[(2, 1)]),
+    (b"COMPARE", &[(2, 1)]),
+    (b"COUNTSTR", &[(1, 1)]),
+    (b"DATATYPE", &[(2, 1)]),
+    (b"INSERT", &[(1, 1)]),
+    (b"LASTPOS", &[(1, 1)]),
+    (b"LINEOUT", &[(2, 1)]),
+    (b"OVERLAY", &[(1, 1)]),
+    (b"POS", &[(1, 1)]),
+    (b"STRIP", &[(2, 1), (3, 2)]),
+    (b"TRANSLATE", &[(2, 1), (3, 2)]),
+    (b"VERIFY", &[(2, 1), (3, 2)]),
+    (b"WORDPOS", &[(1, 1)]),
+];
+
 /// The whole of what [`raw_argument_positions`] answers, as a table, so a
 /// second builtin joining it is one row rather than a second branch.
 static RAW_ARGUMENT_POSITIONS: &[(&[u8], &[usize])] = &[(b"VALUE", &[2])];

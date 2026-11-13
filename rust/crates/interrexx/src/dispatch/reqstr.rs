@@ -52,7 +52,7 @@ impl Interp {
     /// is the silent wrong answer the protocol exists to prevent.**
     #[inline]
     pub(crate) fn required_string_value(&mut self, value: ObjRef) -> Result<ObjRef, Failure> {
-        self.required_string_or(value, || false)
+        self.required_string_or(value, || false, None)
     }
 
     /// [`Interp::required_string_value`] for a consumer that reads the answer
@@ -61,7 +61,7 @@ impl Interp {
     /// string conversion makes it, where the bytes consumers refuse it.
     #[inline]
     pub(crate) fn required_string_or_nil(&mut self, value: ObjRef) -> Result<ObjRef, Failure> {
-        self.required_string_or(value, || true)
+        self.required_string_or(value, || true, None)
     }
 
     /// [`Interp::required_string_value`] for the right operand of `op`: a
@@ -75,20 +75,27 @@ impl Interp {
         op: interrexx_parse::Operator,
     ) -> Result<ObjRef, Failure> {
         use interrexx_parse::Operator;
-        self.required_string_or(value, || {
-            matches!(op, Operator::And | Operator::Or | Operator::Xor)
-                || crate::eval::is_equality(op)
-        })
+        self.required_string_or(
+            value,
+            || {
+                matches!(op, Operator::And | Operator::Or | Operator::Xor)
+                    || crate::eval::is_equality(op)
+            },
+            None,
+        )
     }
 
     /// The required-string protocol, with `nil` saying whether a user
     /// `STRING` answer with no string value is `.nil` or refused. It is asked
-    /// only where a `STRING` method runs.
+    /// only where a `STRING` method runs. `position` is the argument number
+    /// the refusal names where the value is a builtin's argument
+    /// (`r[conv.string.deviation.169]`), and `None` everywhere else.
     #[inline]
     fn required_string_or(
         &mut self,
         value: ObjRef,
         nil: impl FnOnce() -> bool,
+        position: Option<usize>,
     ) -> Result<ObjRef, Failure> {
         // **A string and a small integer are their own string value**, and
         // that is the answer whether the latch is armed or clear:
@@ -116,7 +123,7 @@ impl Interp {
                 self.roots.activity_mut().push_temp(value);
                 return Ok(value);
             }
-            return self.required_string_dispatch(value, nil());
+            return self.required_string_dispatch(value, nil(), position);
         }
         debug_assert!(
             unshared!(self, self.required_string_latch_holds(value)),
@@ -168,7 +175,12 @@ impl Interp {
     /// value.
     #[cold]
     #[inline(never)]
-    fn required_string_dispatch(&mut self, value: ObjRef, nil: bool) -> Result<ObjRef, Failure> {
+    fn required_string_dispatch(
+        &mut self,
+        value: ObjRef,
+        nil: bool,
+        position: Option<usize>,
+    ) -> Result<ObjRef, Failure> {
         match self.required_string_answer(value) {
             Ok(Some(RequiredString::Object(text))) => {
                 self.roots.activity_mut().push_temp(text);
@@ -247,6 +259,10 @@ impl Interp {
             // (Deviation 169).
             return if nil {
                 Ok(ObjRef::NIL)
+            } else if let Some(position) = position {
+                // A builtin's argument names its position, as the method
+                // argument of the same name does.
+                Err(Raised::argument_needs_a_string_value(position).into())
             } else {
                 Err(Raised::nostring_syntax(&readable).into())
             };
@@ -339,7 +355,11 @@ impl Interp {
             converted.push(match argument {
                 None => None,
                 Some(value) if raw.contains(&position) => Some(*value),
-                Some(value) => Some(self.required_string_value(*value)?),
+                Some(value) => Some(self.required_string_or(
+                    *value,
+                    || false,
+                    crate::builtin::string_argument_number(name, position),
+                )?),
             });
         }
         Ok(Some(converted))

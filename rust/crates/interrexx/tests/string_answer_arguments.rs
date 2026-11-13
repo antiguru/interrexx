@@ -3,7 +3,10 @@
 //! `say <call>` with `o` an instance whose `STRING` answers the `string=`
 //! object; `program` runs its input as the whole program. A `call` or
 //! `program` case records the oracle's rc, stdout and stderr. A `refuses`
-//! case records this crate's SYNTAX 98.973, and its comment the oracle's answer.
+//! case records this crate's answer, and its comment the oracle's: SYNTAX 88.909
+//! where the call's argument is one the builtin reads as a string, and SYNTAX
+//! 98.973 at a position the builtin reads as a number, a character or an
+//! option (`r[conv.string.deviation.169]`).
 
 use interrexx::Invocation;
 

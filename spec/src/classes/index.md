@@ -963,13 +963,14 @@ alpha-default | beta-name
 r[class.index.deviation.30]
 When the `string` method of an object answers an object that is not a
 string, interrexx gives ooRexx's answer wherever that is defined, and
-elsewhere, as for `say`, a joining operator or a builtin argument, raises
+elsewhere, as for `say`, a joining operator or the receiver of a builtin, raises
 `SYNTAX 98.973` ([Deviation 169](r:conv.string.deviation.169)) after raising
 NOSTRING if it is trapped. ooRexx reads `.nil` as a string there, with garbage
 results or a crash. [The
 conventions](r:conv.string.deviation.30) and [the NOSTRING
 rule](r:cond.nostring.deviation.30) state it for builtin arguments and for
-the condition.
+the condition, and [the argument rule](r:conv.string.builtin-argument) gives
+the `SYNTAX 88.909` of an argument a builtin reads as a string.
 
 ```rexx
 say 'before'

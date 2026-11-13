@@ -1294,6 +1294,9 @@ error that `::OPTIONS NOSTRING SYNTAX` makes of NOSTRING, whether or not the
 program asked for it. It is an ordinary SYNTAX condition that a trap takes, and
 untrapped it ends the program with exit code 158. A NOSTRING trap, if set,
 takes the condition first. ooRexx reads the answer as a string, so a program
-sees an address-like number, a different error or a crash. The
+sees an address-like number, a different error or a crash. A builtin's
+argument that the builtin reads as a string is not part of this Deviation:
+there interrexx raises what ooRexx raises, `SYNTAX 88.909` with the argument's
+position ([the rule](r:conv.string.builtin-argument)). The
 [conventions](r:conv.string.deviation.169) state it. It replaces the refusal
 with exit code 120 that Deviation 30 described.
