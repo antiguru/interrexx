@@ -70,7 +70,7 @@ chrono = { version = "0.4.45", default-features = false, features = ["clock", "s
 # `timerfd`. `net` is `rxsock`'s sockets, each borrowed by number for one
 # call (`src/builtin/rxsock_sys.rs`). Each
 # feature is a leaf here: they gate their modules and pull no further crate.
-rustix = { version = "1.1.4", features = ["event", "fs", "net", "param", "process", "system", "termios", "time"] }
+rustix = { version = "1.1.4", features = ["event", "fs", "net", "param", "pipe", "process", "system", "termios", "time"] }
 # `sigaction` and the async-signal-safe `write` the signal module needs
 # (D-U3, `src/signal.rs`), and `fcntl`, `getsockopt` and `setsockopt` for
 # `src/builtin/rxsock_sys.rs`. Already in the graph through `std`'s users.

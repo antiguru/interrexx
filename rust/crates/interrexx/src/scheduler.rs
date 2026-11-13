@@ -118,8 +118,9 @@ pub(crate) enum ParkReason {
     Native,
     /// A blocking operation run off the baton, until it has ended.
     Block,
-    /// An `rxsock` call's wait for its sockets, run on a pool thread
-    /// ([`crate::builtin::rxsock`]), until that thread has posted its end.
+    /// An `rxsock` call's wait for its sockets, run off the baton by the
+    /// socket reactor or a pool thread ([`crate::builtin::rxsock`]), until
+    /// its end has been posted.
     Socket,
 }
 
@@ -823,6 +824,32 @@ impl Scheduler for Interp {
 const DELIVERY_YIELD_CLAUSES: u32 = 50;
 
 impl Interp {
+    /// Registers a wait for `polls` until `deadline` with the process's
+    /// socket reactor ([`crate::builtin::rxsock_wait`]) for the running
+    /// activity, and answers the token its end is posted under
+    /// ([`Posted::SocketWaited`]) and the registration; `None` where there
+    /// is no reactor to take it. Counted in flight like a pool thread's
+    /// wait, so [`Interp::wind_down`] waits for its end, which a
+    /// cancellation posts too.
+    pub(crate) fn register_socket_wait(
+        &mut self,
+        polls: &[(i32, rustix::event::PollFlags)],
+        deadline: Option<std::time::Instant>,
+    ) -> Option<(u64, crate::builtin::rxsock_wait::Wait)> {
+        let token = self.activities.next_block + 1;
+        let inbox = self.timer.inbox();
+        let activity = self.activities.running;
+        let registered = crate::builtin::rxsock_wait::register(
+            polls,
+            deadline,
+            Box::new(move || inbox.post(Posted::SocketWaited { activity, token })),
+        )
+        .ok()?;
+        self.activities.next_block = token;
+        self.activities.in_flight += 1;
+        Some((token, registered))
+    }
+
     /// Runs `wait` on `worker`, a pool thread, for the running activity,
     /// and answers the token its end is posted under
     /// ([`Posted::SocketWaited`]).

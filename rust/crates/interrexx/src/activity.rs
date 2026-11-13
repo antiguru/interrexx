@@ -389,8 +389,8 @@ pub(crate) struct Activity {
     /// the clause runs again; `None` while it runs or is parked on anything
     /// else.
     pub(crate) parked_block: Option<u64>,
-    /// The token of the socket wait it is parked on, until that wait's
-    /// thread has posted its end; `None` while it runs or is parked on
+    /// The token of the socket wait it is parked on, until that wait's end
+    /// has been posted; `None` while it runs or is parked on
     /// anything else.
     pub(crate) parked_socket: Option<u64>,
     /// For a `>K>` line of a `GUARD`'s `WHEN` being routed, whether its value

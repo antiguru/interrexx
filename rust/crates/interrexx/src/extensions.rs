@@ -29,6 +29,9 @@ pub(crate) struct RustLibrary {
     name: &'static str,
     routines: &'static [(&'static str, RoutineBody)],
     methods: &'static [(&'static str, MethodBody)],
+    /// What loading the library prepares in the process, before any of its
+    /// rows runs.
+    opened: fn(),
 }
 
 impl RustLibrary {
@@ -36,6 +39,7 @@ impl RustLibrary {
     pub(crate) fn open(&self) -> interrexx_api::load::Library {
         let routines: Vec<&str> = self.routines.iter().map(|(name, _)| *name).collect();
         let methods: Vec<&str> = self.methods.iter().map(|(name, _)| *name).collect();
+        (self.opened)();
         interrexx_api::load::names_only(self.name, &routines, &methods)
     }
 }
@@ -44,6 +48,7 @@ impl RustLibrary {
 static LIBRARIES: &[RustLibrary] = &[
     RustLibrary {
         name: "rxmath",
+        opened: || {},
         routines: &[
             ("MathLoadFuncs", crate::builtin::rxmath::load_funcs),
             ("MathDropFuncs", crate::builtin::rxmath::drop_funcs),
@@ -68,6 +73,7 @@ static LIBRARIES: &[RustLibrary] = &[
     },
     RustLibrary {
         name: "rxregexp",
+        opened: || {},
         routines: &[],
         methods: &[
             ("RegExp_Init", crate::dispatch::regexp_methods::init),
@@ -82,6 +88,7 @@ static LIBRARIES: &[RustLibrary] = &[
     },
     RustLibrary {
         name: "rxsock",
+        opened: crate::builtin::rxsock_wait::prepare,
         routines: &[
             ("SockDropFuncs", crate::builtin::rxsock::drop_funcs),
             (
@@ -122,6 +129,7 @@ static LIBRARIES: &[RustLibrary] = &[
     },
     RustLibrary {
         name: "rxunixsys",
+        opened: || {},
         // The table order. `SysCrypt` is not provided (Rulings).
         routines: &[
             ("SysSignal", crate::builtin::rxunixsys::signal),
