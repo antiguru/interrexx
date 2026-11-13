@@ -2646,7 +2646,7 @@ impl Interp {
         &mut self,
         program: &'static interrexx_lib::Program,
     ) -> Result<Option<ObjRef>, Failure> {
-        let read = interrexx_parse::program_from_image(program.image, program.source);
+        let read = interrexx_parse::program_from_static_image(program.image, program.source);
         let parsed = match read.map_or_else(|| parse_known_program(program.source.to_vec()), Ok) {
             Ok(parsed) => parsed,
             // A parse failure here is the library's own source, not a

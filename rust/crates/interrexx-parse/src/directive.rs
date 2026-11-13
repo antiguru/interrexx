@@ -11,11 +11,12 @@ use interrexx_inventory::errors::{
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 
+use crate::Body;
 use crate::ast::{
     Access, Annotate, Annotation, AnnotationTarget, AttributeDirective, AttributeStyle,
-    ClassDirective, ClassRef, CodeBody, ConditionOption, ConstantDirective, ConstantValue,
-    Directive, DirectiveKind, Expr, ExternalSpec, GuardOption, MethodDirective, OptionsForm,
-    PackageOption, Protection, Requires, Resource, RoutineDirective,
+    ClassDirective, ClassRef, ConditionOption, ConstantDirective, ConstantValue, Directive,
+    DirectiveKind, Expr, ExternalSpec, GuardOption, MethodDirective, OptionsForm, PackageOption,
+    Protection, Requires, Resource, RoutineDirective,
 };
 use crate::clause::{Clause, ClauseCursor};
 use crate::convert::{ARGUMENT_DIGITS, check_trace_setting, is_number, whole_number};
@@ -736,7 +737,7 @@ impl<'a, 'd> Dir<'a, 'd> {
         } else if method.abstract_ {
             self.check_directive(cursor, E99_933)?;
         } else if external.is_none() {
-            method.body = Some(CodeBody::default());
+            method.body = Some(Body::default());
         } else {
             method.external = self.decode_external(external.as_deref(), false)?;
             self.check_directive(cursor, E99_936)?;
@@ -871,7 +872,7 @@ impl<'a, 'd> Dir<'a, 'd> {
                     self.require_variable_name(self.ctx.symbols.name(delegate).as_bytes())?;
                     self.check_directive(cursor, E99_947)?;
                 } else {
-                    attribute.body = self.has_body(cursor).then(CodeBody::default);
+                    attribute.body = self.has_body(cursor).then(Body::default);
                 }
             }
         }
@@ -1408,7 +1409,7 @@ impl<'a, 'd> Dir<'a, 'd> {
                 self.check_directive(cursor, E99_939)?;
                 self.bound = true;
             }
-            None => routine.body = Some(CodeBody::default()),
+            None => routine.body = Some(Body::default()),
         }
         Ok(DirectiveKind::Routine(Box::new(routine)))
     }

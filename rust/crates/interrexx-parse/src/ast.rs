@@ -430,6 +430,84 @@ pub struct CodeBody {
     pub labels: BTreeMap<Box<[u8]>, usize>,
 }
 
+/// A directive's code body. A program read from an image (see
+/// [`crate::program_from_static_image`]) holds each one still encoded until
+/// it is first read; reading it then decodes it, once. Every other body is
+/// built decoded. Either way it reads as the [`CodeBody`] it is.
+pub struct Body {
+    decoded: std::sync::OnceLock<CodeBody>,
+    /// The body's image, while it may not have been decoded yet.
+    encoded: Option<&'static [u8]>,
+}
+
+impl Body {
+    /// A body that is already decoded.
+    pub fn new(code: CodeBody) -> Self {
+        Body {
+            decoded: std::sync::OnceLock::from(code),
+            encoded: None,
+        }
+    }
+
+    /// A body to decode from `encoded` when it is first read.
+    pub(crate) fn encoded(encoded: &'static [u8]) -> Self {
+        Body {
+            decoded: std::sync::OnceLock::new(),
+            encoded: Some(encoded),
+        }
+    }
+
+    /// Whether the body has been decoded.
+    pub fn is_decoded(&self) -> bool {
+        self.decoded.get().is_some()
+    }
+}
+
+impl Default for Body {
+    fn default() -> Self {
+        Body::new(CodeBody::default())
+    }
+}
+
+impl std::ops::Deref for Body {
+    type Target = CodeBody;
+
+    fn deref(&self) -> &CodeBody {
+        self.decoded.get_or_init(|| {
+            let encoded = self.encoded.expect("a body is decoded or holds its image");
+            crate::image::decode_body(encoded)
+                .expect("a body image the program's image check accepted decodes")
+        })
+    }
+}
+
+impl std::ops::DerefMut for Body {
+    fn deref_mut(&mut self) -> &mut CodeBody {
+        let _ = std::ops::Deref::deref(self);
+        self.decoded.get_mut().expect("decoded just now")
+    }
+}
+
+impl Clone for Body {
+    fn clone(&self) -> Self {
+        Body::new(CodeBody::clone(self))
+    }
+}
+
+impl PartialEq for Body {
+    fn eq(&self, other: &Self) -> bool {
+        **self == **other
+    }
+}
+
+impl Eq for Body {}
+
+impl std::fmt::Debug for Body {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        CodeBody::fmt(self, f)
+    }
+}
+
 /// Which closure action an `END` performs, as the end style and `SELECT` end
 /// matching set it.
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
@@ -1157,7 +1235,7 @@ pub struct MethodDirective {
     /// A symbol only: measured, `::METHOD m DELEGATE "p"` is 20.926.
     pub delegate: Option<SymbolId>,
     /// This method's code body: the clauses after this directive, assembled.
-    pub body: Option<CodeBody>,
+    pub body: Option<Body>,
 }
 
 /// A `::ATTRIBUTE` directive.
@@ -1176,7 +1254,7 @@ pub struct AttributeDirective {
     pub delegate: Option<SymbolId>,
     /// This attribute method's code body: the clauses after this directive,
     /// assembled.
-    pub body: Option<CodeBody>,
+    pub body: Option<Body>,
 }
 
 /// Which of the attribute method pair a `::ATTRIBUTE` directive defines.
@@ -1329,7 +1407,7 @@ pub struct RoutineDirective {
     pub external: Option<ExternalSpec>,
     /// This routine's code body: the clauses after this directive, assembled.
     /// `Some` for every routine that is not external.
-    pub body: Option<CodeBody>,
+    pub body: Option<Body>,
 }
 
 #[cfg(test)]

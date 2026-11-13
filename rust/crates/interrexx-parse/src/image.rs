@@ -22,7 +22,7 @@ const MAGIC: &[u8; 8] = b"RXPARSED";
 
 /// The layout this module writes and reads. A change to what any type below
 /// writes changes it.
-const FORMAT: u32 = 1;
+const FORMAT: u32 = 2;
 
 /// `program`, which was parsed from its own source text, as an image.
 pub fn program_image(program: &Program) -> Vec<u8> {
@@ -42,8 +42,20 @@ pub fn program_image(program: &Program) -> Vec<u8> {
 /// The program `image` holds, given the text it was parsed from, or `None`
 /// where `image` is not this format's image of `text`.
 pub fn program_from_image(image: &[u8], text: &[u8]) -> Option<Program> {
+    read_program(image, None, text)
+}
+
+/// [`program_from_image`] for an image that lives as long as the program,
+/// such as one built into the interpreter: each code body is left encoded
+/// until it is first read (see [`Body`]).
+pub fn program_from_static_image(image: &'static [u8], text: &[u8]) -> Option<Program> {
+    read_program(image, Some(image), text)
+}
+
+fn read_program(image: &[u8], whole: Option<&'static [u8]>, text: &[u8]) -> Option<Program> {
     let mut input = Reader {
         bytes: image,
+        whole,
         selectors: SelectorTable::new(),
         text: None,
     };
@@ -62,6 +74,18 @@ pub fn program_from_image(image: &[u8], text: &[u8]) -> Option<Program> {
         directives: Image::get(&mut input)?,
     };
     input.bytes.is_empty().then_some(program)
+}
+
+/// The code body a [`Body`] left encoded holds.
+pub(crate) fn decode_body(encoded: &[u8]) -> Option<CodeBody> {
+    let mut input = Reader {
+        bytes: encoded,
+        whole: None,
+        selectors: SelectorTable::new(),
+        text: None,
+    };
+    let body = CodeBody::get(&mut input)?;
+    input.bytes.is_empty().then_some(body)
 }
 
 /// A 64-bit FNV-1a hash of `text`, which ties an image to the text it was
@@ -100,6 +124,9 @@ impl Writer {
 
 struct Reader<'a> {
     bytes: &'a [u8],
+    /// The whole image, where it lives as long as the program: `bytes` is
+    /// then its tail, and a body is left encoded as a slice of it.
+    whole: Option<&'static [u8]>,
     /// Interns every selector read, as the parser does.
     selectors: SelectorTable,
     /// The source text, until the program's source takes it.
@@ -294,6 +321,26 @@ impl Image for Selector {
     fn get(input: &mut Reader<'_>) -> Option<Self> {
         let name = input.bytes()?;
         Some(input.selectors.intern(name))
+    }
+}
+
+/// A body's image, behind its length, so a reader can leave it encoded.
+impl Image for Body {
+    fn put(&self, out: &mut Writer) {
+        let mut body = Writer(Vec::new());
+        CodeBody::put(self, &mut body);
+        out.bytes(&body.0);
+    }
+
+    fn get(input: &mut Reader<'_>) -> Option<Self> {
+        let encoded = input.bytes()?;
+        match input.whole {
+            Some(whole) => {
+                let end = whole.len() - input.bytes.len();
+                Some(Body::encoded(&whole[end - encoded.len()..end]))
+            }
+            None => Some(Body::new(decode_body(encoded)?)),
+        }
     }
 }
 
