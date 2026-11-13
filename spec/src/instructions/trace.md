@@ -1085,6 +1085,224 @@ worker:
 34 b2
 ```
 
+## The activity that delivers a line
+
+r[instr.trace.delivery.owner]
+The destination's `LINEOUT` runs as part of the activity that wrote the line,
+with everything that activity owns. A guarded message that the destination
+sends to an object whose guard the traced code holds does not wait for it.
+
+```rexx
+.local~o = .obj~new
+.local~n = 0
+.traceoutput~destination(.sink~new)
+.local~o~go
+.traceoutput~destination(.output)
+say 'done' .local~n
+::class obj
+::method go
+  trace r
+  x = 1
+  trace off
+::method poke
+  .local~n = .local~n + 1
+::class sink
+::method lineout
+  .local~o~poke
+  return 0
+```
+
+```output
+done 4
+```
+
+r[instr.trace.delivery.mutex]
+A mutex semaphore that the traced code holds is acquired again by the
+destination without waiting, and the traced code still owns it after the line.
+In the example a second activity asks for the semaphore while the destination
+holds it and while the traced code does. It gets it only when the traced code
+lets go.
+
+```rexx
+.local~m = .mutexsemaphore~new
+.traceoutput~destination(.sink~new)
+c = .other~new~start('run')
+.local~m~acquire
+trace r
+x = 1
+trace off
+say 'emitter after line'
+call SysSleep 0.3
+say 'emitter releasing'
+.local~m~release
+say 'c' c~result
+.traceoutput~destination(.output)
+::class other
+::method run
+  call SysSleep 0.1
+  .local~m~acquire
+  say 'C got mutex'
+  .local~m~release
+  return 'ok'
+::class sink
+::method lineout
+  .local~m~acquire
+  call SysSleep 0.2
+  .local~m~release
+  return 0
+```
+
+```output
+emitter after line
+emitter releasing
+C got mutex
+c ok
+```
+
+r[instr.trace.delivery.context]
+While the destination runs, the code that wrote the line is still active. The
+frames of `.CONTEXT~STACKFRAMES` in the destination are the destination's own
+first, then the frames of the traced code, and a context object that the
+traced code kept reads that code's variables.
+
+```rexx
+.local~first = .true
+.traceoutput~destination(.sink~new)
+call outer
+.traceoutput~destination(.output)
+::routine outer
+  call inner
+::routine inner
+  trace r
+  x = 1
+  trace off
+::class sink
+::method lineout
+  if .local~first then do
+    .local~first = .false
+    do fr over .context~stackFrames
+      if fr~type = 'METHOD' | fr~type = 'ROUTINE' then
+        if fr~name \= 'UNKNOWN' then say fr~type fr~name
+    end
+  end
+  return 0
+```
+
+```output
+METHOD LINEOUT
+ROUTINE INNER
+ROUTINE OUTER
+```
+
+```rexx
+.local~acc = .array~new
+.traceoutput~destination(.sink~new)
+call go
+.traceoutput~destination(.output)
+do l over .local~acc
+  say l
+end
+::routine go
+  y = 7
+  .local~ctx = .context
+  trace r
+  x = 42
+  trace off
+::class sink
+::method lineout
+  if pos('x = 42', arg(1)) > 0 then do
+    v = .local~ctx~variables
+    .local~acc~append('Y' v~at('Y') 'items' v~items)
+    .local~acc~append('name' .local~ctx~name)
+  end
+  return 0
+```
+
+```output
+Y 7 items 1
+name GO
+```
+
+r[instr.trace.delivery.wait]
+An activity that waits while a line of its own is delivered is not out of the
+program: a store that another activity makes to a variable a traced `GUARD WHEN`
+waits on, while the line is delivered, is not lost, and the wait ends.
+
+```rexx
+o = .obj~new
+.traceoutput~destination(.sink~new)
+w = o~start('waiter')
+call SysSleep 0.2
+o~setflag
+say 'waiter' w~result
+.traceoutput~destination(.output)
+::class obj
+::method init
+  expose flag
+  flag = 0
+::method setflag unguarded
+  expose flag
+  flag = 1
+::method waiter
+  expose flag
+  trace r
+  guard on when flag = 1
+  trace off
+  return 'ended'
+::class sink
+::method lineout
+  call SysSleep 0.3
+  return 0
+```
+
+```output
+waiter ended
+```
+
+r[instr.trace.delivery.depth]
+The destination runs on top of the activity's own nesting of calls, so a
+destination that recurses reaches a smaller depth before the nesting limit
+([`11.1`](r:expr.index.nesting)) when the code that wrote the line is itself nested
+deeper. The example compares a line written at the top of the program with one
+written 5000 calls down, and shows a loss of most of the 5000.
+
+```rexx
+.traceoutput~destination(.sink~new)
+call nest 0
+top = .local~dep
+call nest 5000
+deep = .local~dep
+.traceoutput~destination(.output)
+say (top - deep) > 3000
+exit
+nest: procedure
+  parse arg n
+  if n > 0 then do
+    call nest n - 1
+    return
+  end
+  trace r
+  x = 1
+  trace off
+  return
+::class sink
+::method lineout
+  signal on syntax name e
+  if pos('x = 1', arg(1)) > 0 then do
+    .local~dep = 0
+    call dive 1000000
+  end
+  return 0
+  e: return 0
+::routine dive
+  .local~dep = .local~dep + 1
+  if arg(1) > 1 then call dive arg(1) - 1
+```
+
+```output
+1
+```
+
 ## Deviations
 
 r[instr.trace.deviation.0]
