@@ -912,6 +912,22 @@ impl Interp {
             );
             return Ok(Some(shortcut));
         }
+        // **A short number spelled in the handle is its own rounding too**:
+        // no longer than DIGITS, so LOSTDIGITS has nothing to say and the
+        // unary `+` hands it back unchanged, and text in a handle is no
+        // object for an operator to be sent to.
+        if let Decoded::Text(_) = value.decode()
+            && let crate::value::QuickOperand::Scaled(scaled, _) = self.quick_operand(value)
+            && u64::from(scaled.digit_count()) <= entry_digits
+            && let Ok(number) = self.to_number(value)
+        {
+            debug_assert_eq!(
+                Ok(&number),
+                round_via_unary_plus(number.clone(), entry_digits).as_ref(),
+                "a short number within DIGITS {entry_digits} is not its own unary +"
+            );
+            return Ok(Some(number));
+        }
         let result = self.header_number_body(value, entry_digits);
         // Blamed on any failure past the object-position check above, not
         // only `arith_operand`'s own conversion -- the same reason
@@ -2418,6 +2434,19 @@ impl Interp {
         digits: u64,
         form: interrexx_num::Form,
     ) -> ObjRef {
+        // A value whose digits fit a `Scaled` and whose handle is a tagged
+        // integer or a short fraction is that handle, made without a
+        // `Number` copied or rendered.
+        let scaled = match current {
+            ControlValue::Scaled { value, .. } => Some(*value),
+            ControlValue::Wide(number) => number.scaled(),
+            ControlValue::Small(_) => None,
+        };
+        if let Some(scaled) = scaled
+            && let Some(handle) = crate::value::scaled_handle(scaled, digits)
+        {
+            return handle;
+        }
         let number = current.number().into_owned();
         self.number(number, crate::eval::saturate_digits(digits), form)
     }
