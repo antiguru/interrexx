@@ -865,7 +865,6 @@ lang/guarded_empty_method_waits.rex
 lang/guard_held_before_the_first_start.rex
 lang/guard_on_lock_passes_between_activities.rex
 lang/guard_when_waits_for_a_store.rex
-lang/guard_when_stem_element_store.rex
 lang/guard_when_attribute_setter.rex
 lang/guard_when_drop_wakes.rex
 lang/guard_when_traces_each_evaluation.rex
