@@ -1582,6 +1582,28 @@ impl Interp {
         if !self.plain_string(left) || !self.plain_string(right) {
             return None;
         }
+        // **Against the null string, equality needs no ordering**: by the
+        // string rule the other side is equal when it is all blanks, and
+        // strictly when it is empty, so only its own bytes are read.
+        // The handle every null string is made as, so one comparison of the
+        // bits finds it; a null string with any other handle takes the
+        // general route below, which answers the same.
+        let null_handle = ObjRef::inline_text(b"");
+        let null = |value: ObjRef| Some(value) == null_handle;
+        let other = if null(right) {
+            Some(left)
+        } else if null(left) {
+            Some(right)
+        } else {
+            None
+        };
+        if let Some(other) = other {
+            let other = self.render(other);
+            if let Some(holds) = interrexx_num::compare_with_null(other.text(self), compare_op(op))
+            {
+                return Some(holds);
+            }
+        }
         let left = self.render(left);
         let right = self.render(right);
         Some(interrexx_num::compare_strings(
