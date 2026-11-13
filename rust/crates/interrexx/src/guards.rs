@@ -700,7 +700,7 @@ impl Interp {
             .filter_map(|name| {
                 exposed
                     .iter()
-                    .find(|(_, var)| var.name == *name)
+                    .find(|(_, var)| *var.name == **name)
                     .map(|(_, var)| var.clone())
             })
             .collect();
