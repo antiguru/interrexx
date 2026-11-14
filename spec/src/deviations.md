@@ -1340,3 +1340,13 @@ condition of its own.
 `QUERY POSITION SYS` of a stream that has just been opened for reading, before
 anything is read or positioned, answers 0, the host's offset when nothing has
 been consumed. ooRexx answers the size of the file.
+
+## 172. A list's Array counts only the items it holds
+
+The Array that `allItems` and `makeArray` answer for a `List` with an entry
+that holds nothing has no item at that entry's place, and its `items` counts
+only the items it holds, so `items` and `isEmpty` agree with what the Array
+holds; `DO OVER` the list skips that entry. ooRexx counts the empty place as an
+item: `items` stays one higher than the items the Array holds, and `isEmpty`
+answers 0 after its last item is removed. Its `DO OVER` assigns `.nil` for the
+entry.
