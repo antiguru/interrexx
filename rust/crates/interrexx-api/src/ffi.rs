@@ -992,6 +992,7 @@ impl Thread {
                 attached: Cell::new(false),
                 detaching: Cell::new(false),
                 retry: Cell::new(false),
+                retryable: Cell::new(false),
                 strings: std::cell::RefCell::new(crate::values::CStringPool::new()),
                 instance,
                 context: std::ptr::null_mut(),
@@ -1044,6 +1045,11 @@ struct Innermost {
     /// attached to the context, which alone reads it, once its member's
     /// room has dropped.
     retry: Cell<bool>,
+    /// Whether the member in flight on the context runs its send through
+    /// [`retrying`], which alone sends again, so that the interpreter may ask
+    /// it to ([`ThreadContext::ask_retry`]). Only the thread attached to the
+    /// context reads or writes it.
+    retryable: Cell<bool>,
     /// The C strings and buffer strings the callbacks of an attached
     /// activity's context make with no native call in flight, which last
     /// until its thread detaches, as the references they make do. Only the
@@ -1232,13 +1238,20 @@ impl ThreadContext {
 
     /// Asks the callback in flight on this context, an attached activity's,
     /// to give the baton back once its send has failed, and to send again
-    /// (`r[native.threads.attach.deviation.174]`).
-    pub fn ask_retry(&self) {
+    /// (`r[native.threads.attach.deviation.174]`), answering whether it will.
+    /// It will only where the member in flight sends through [`retrying`]:
+    /// any other member answers its failure, and nothing is asked of it.
+    pub fn ask_retry(&self) -> bool {
         let raw = self.home.0.as_ptr();
+        // SAFETY: as below.
+        if !unsafe { (*raw).innermost.retryable.get() } {
+            return false;
+        }
         // SAFETY: the allocation is live while `self` is; the reference
         // covers only the cell, which only the thread attached to the context
         // reaches, as the caller runs on it under the baton.
         unsafe { (*raw).innermost.retry.set(true) };
+        true
     }
 
     /// The address an extension is handed, as a number.
@@ -1791,7 +1804,14 @@ unsafe fn retrying(
     mut send: impl FnMut() -> RexxObjectPtr,
 ) -> RexxObjectPtr {
     loop {
-        let answer = send();
+        let answer = {
+            // Restored however the run ends, so that no member outside this
+            // one is asked to send again. A member nested in the send, through
+            // a native call's context, restores what it found.
+            // SAFETY: as below.
+            let _retryable = unsafe { Retryable::open(context) };
+            send()
+        };
         // SAFETY: as the caller guarantees, `context` came from a live
         // `ThreadContext` or is kept, and its wrapper's `owner` is its
         // `Innermost`; the reference covers only the cell, which only this
@@ -1800,6 +1820,39 @@ unsafe fn retrying(
         if !cell.retry.replace(false) {
             return answer;
         }
+    }
+}
+
+/// A run of [`retrying`]'s send through `context`, during which the
+/// interpreter may ask the member to send again. Dropping it restores what
+/// the context answered before.
+struct Retryable {
+    context: *mut RexxThreadContext_,
+    was: bool,
+}
+
+impl Retryable {
+    /// # Safety
+    /// As [`retrying`], for as long as the answer lives.
+    unsafe fn open(context: *mut RexxThreadContext_) -> Self {
+        // SAFETY: as the caller guarantees, `context` came from a live
+        // `ThreadContext` or is kept, and its wrapper's `owner` is its
+        // `Innermost`. The reference covers only the cell, which only this
+        // thread reaches, and ends with the statement.
+        let was = unsafe { &*owner_of::<RexxThreadContext_, Innermost>(context) }
+            .retryable
+            .replace(true);
+        Self { context, was }
+    }
+}
+
+impl Drop for Retryable {
+    fn drop(&mut self) {
+        // SAFETY: as in `open`, whose caller keeps the context live while
+        // this lives.
+        unsafe { &*owner_of::<RexxThreadContext_, Innermost>(self.context) }
+            .retryable
+            .set(self.was);
     }
 }
 

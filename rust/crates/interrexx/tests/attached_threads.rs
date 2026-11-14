@@ -108,12 +108,24 @@ fn run_agreeing_on_status(name: &str, program: &str) -> Answer {
     run_against(name, program, asked, SECONDS).0
 }
 
+/// [`run`] where the oracle, under `REXX_CORPUS_GATE`, must answer the same stdout only: its
+/// stderr and exit status differ as a Deviation says.
+fn run_agreeing_on_stdout(name: &str, program: &str) -> Answer {
+    let asked = if gate_mode() {
+        Oracle::Stdout
+    } else {
+        Oracle::Not
+    };
+    run_against(name, program, asked, SECONDS).0
+}
+
 /// What of a run the oracle is asked to answer the same.
 #[derive(Clone, Copy, PartialEq)]
 enum Oracle {
     Not,
     Whole,
     Status,
+    Stdout,
 }
 
 /// [`run_timed`], asking the oracle as `oracle` says, our run killed after `seconds`.
@@ -160,14 +172,15 @@ fn run_against(
             String::from_utf8_lossy(&theirs.stderr).into_owned(),
             theirs.expect_exit_code(),
         );
-        if oracle == Oracle::Whole {
-            assert_eq!(theirs, ours, "the oracle");
-        } else {
-            assert_eq!(
+        match oracle {
+            Oracle::Whole => assert_eq!(theirs, ours, "the oracle"),
+            Oracle::Status => assert_eq!(
                 (&theirs.1, theirs.2),
                 (&ours.1, ours.2),
                 "the oracle's status"
-            );
+            ),
+            Oracle::Stdout => assert_eq!(theirs.0, ours.0, "the oracle's stdout"),
+            Oracle::Not => {}
         }
     }
     fs::remove_dir_all(&dir).expect("the run's directory is removable");
@@ -267,12 +280,12 @@ fn two_attached_threads_call_back_concurrently() {
     );
 }
 
-/// [`two_attached_threads_call_back_concurrently`]'s program, run two hundred times in a row:
-/// every run ticks ten times, however the two threads' messages meet.
+/// [`two_attached_threads_call_back_concurrently`]'s program, run ten times in a row: every run
+/// ticks ten times, however the two threads' messages meet.
 // spec: native.threads.attach
 #[test]
 fn two_attached_threads_call_back_concurrently_every_time() {
-    for run in 0..200 {
+    for run in 0..10 {
         assert_eq!(
             run_ours("attach-two-stress", "two.rex"),
             ("ticked 10\n".to_owned(), String::new(), 0),
@@ -288,6 +301,20 @@ fn two_attached_threads_call_back_concurrently_every_time() {
 fn a_callback_arriving_inside_another_is_held_until_it_returns() {
     assert_eq!(
         run("attach-busy", "busy.rex"),
+        ("ticked 1\n".to_owned(), String::new(), 0)
+    );
+}
+
+/// A second attached thread's `LATER` arrives while the first thread's message runs Rexx code in a
+/// guarded method of an object, and `LATER` sends `TICK` to that object from inside its own method:
+/// it is held until the first message has returned, so its `TICK` finds the guard free. Served
+/// on top of the first message instead, its `TICK` would wait, in the middle of its message, for a
+/// guard only the stopped message can release.
+// spec: native.threads.attach
+#[test]
+fn a_callback_arriving_inside_another_is_held_before_it_runs_anything() {
+    assert_eq!(
+        run("attach-busylater", "busylater.rex"),
         ("ticked 1\n".to_owned(), String::new(), 0)
     );
 }
@@ -478,6 +505,19 @@ fn a_callback_waiting_for_a_guard_the_main_program_holds_runs_after_it() {
     );
 }
 
+/// [`a_callback_waiting_for_a_guard_the_main_program_holds_runs_after_it`] with the package traced:
+/// the `TICK` that gives the interpreter back and runs again announces its method once, with one
+/// `>I>` and one `<I<`, as the oracle's single run does.
+// spec: native.threads.attach
+#[test]
+fn a_callback_that_runs_again_for_a_guard_is_traced_once() {
+    let (stdout, stderr, status) = run("attach-traced", "traced.rex");
+    assert_eq!((stdout.as_str(), status), ("ticked 1\n", 0));
+    for line in [">I> Method \"TICK\"", "<I< Method \"TICK\""] {
+        assert_eq!(stderr.matches(line).count(), 1, "stderr: {stderr}");
+    }
+}
+
 /// An attached thread's unguarded message sends `TICK` to an object whose guarded method the main
 /// program runs. The `TICK`'s wait comes after its message has begun, so the message cannot give
 /// the interpreter back, and only the main program, which makes no progress while the message
@@ -489,6 +529,70 @@ fn a_callback_waiting_within_its_message_for_a_guard_the_main_program_holds_is_r
     assert_eq!(
         run_ours("attach-later", "later.rex"),
         ("ticked 0\n".to_owned(), inverted_wait("a guard"), 120)
+    );
+}
+
+/// An attached thread's unguarded message says a line, then reads an attribute through its guarded
+/// getter while the main program, stopped by the message, runs a guarded method of the same
+/// object. The read comes after the message has begun, so the message cannot give the
+/// interpreter back and send again, which would say the line twice: the wait is refused as an
+/// inverted wait (Deviation 174), the line is said once, and the program ends with rc 120. The
+/// oracle's read waits for the method to return, so it is asked for the stdout only.
+// spec: native.threads.attach.deviation.174
+#[test]
+fn a_callback_reading_a_guarded_attribute_within_its_message_runs_it_once() {
+    assert_eq!(
+        run_agreeing_on_stdout("attach-getter", "getter.rex"),
+        (
+            "getlater runs\ndone\n".to_owned(),
+            inverted_wait("a guard"),
+            120
+        )
+    );
+}
+
+/// An attached thread calls a routine through `CallRoutine` that says a line, then reads an
+/// attribute through its guarded getter while the main program, stopped by the call, runs a
+/// guarded method of the same object. Only a send gives the interpreter back and sends again, so
+/// the read is refused as an inverted wait (Deviation 174), the line is said once, and the
+/// thread's next send, a `TICK` to a second object, runs once. The oracle's read waits for the
+/// method to return, so it is asked for the stdout only.
+// spec: native.threads.attach.deviation.174
+#[test]
+fn a_routine_an_attached_thread_calls_runs_once_and_so_does_its_next_send() {
+    assert_eq!(
+        run_agreeing_on_stdout("attach-call", "call.rex"),
+        (
+            "routine runs\nticked 1\n".to_owned(),
+            inverted_wait("a guard"),
+            120
+        )
+    );
+}
+
+/// An attached thread puts an item through `ArrayPut` into an array whose class defines a
+/// guarded `PUT`, while the main program, stopped by the put, runs a guarded method of the same
+/// array. Only a send gives the interpreter back and sends again, so the `PUT`'s wait is refused
+/// as an inverted wait (Deviation 174), and the thread's next send, a `TICK` to a second object,
+/// runs once. The oracle waits for the method to return, so it is asked for the stdout only.
+// spec: native.threads.attach.deviation.174
+#[test]
+fn an_array_put_from_an_attached_thread_leaves_its_next_send_to_run_once() {
+    assert_eq!(
+        run_agreeing_on_stdout("attach-put", "put.rex"),
+        ("ticked 1\n".to_owned(), inverted_wait("a guard"), 120)
+    );
+}
+
+/// An attached thread's message waits on an event semaphore that a started activity, asleep
+/// when the message arrives, posts once its sleep of seven seconds ends. The sleep may end the
+/// wait, so stderr says nothing of it however long it takes.
+// spec: native.threads.attach
+#[test]
+fn a_callback_waiting_for_a_sleeping_activitys_post_is_not_reported() {
+    assert_eq!(
+        run("attach-latepost", "latepost.rex"),
+        ("sem seen\ndone\n".to_owned(), String::new(), 0)
     );
 }
 

@@ -376,6 +376,10 @@ pub(crate) struct Activity {
     /// A send to a guarded method other than a Rexx body, run once its
     /// guard lock is granted.
     pub(crate) guarded_send: Option<Box<crate::dispatch::GuardedSend>>,
+    /// The guard lock of the method an attached activity's callback entered,
+    /// with its `>I>` written, before it gave the baton back to send again
+    /// (`Interp::retries_entry_guard`), until the send's next entry.
+    pub(crate) retraced: Option<crate::guards::GuardKey>,
     /// The methods other than Rexx bodies and attributes that are running on
     /// this activity's Rust stack, innermost last.
     pub(crate) running_methods: Vec<interrexx_classes::MethodId>,
@@ -638,6 +642,7 @@ impl Activity {
             failed_sends: Vec::new(),
             guard_waits: Vec::new(),
             guarded_send: None,
+            retraced: None,
             running_methods: Vec::new(),
             guard_exec: None,
             guard_posted: false,
@@ -826,6 +831,7 @@ impl Activity {
             // Each key's object is its waiting activation's receiver.
             guard_waits: _,
             guarded_send,
+            retraced,
             running_methods: _,
             guard_exec,
             guard_posted: _,
@@ -850,6 +856,7 @@ impl Activity {
         if let Some(send) = guarded_send {
             send.object_roots(out);
         }
+        out.extend(retraced.iter().flat_map(|key| [key.object, key.scope]));
         // The raise's own `ADDITIONAL`, alive between the raise and the
         // condition object that will hold it.
         out.extend(*pending_additional);

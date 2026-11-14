@@ -1265,9 +1265,10 @@ impl Interp {
         None
     }
 
-    /// Whether a wait for `reason` can never end: it waits on an activity a
-    /// lend to a callback stopped, and that activity is no callback holding
-    /// the guard lock waited for, whose own wait may end (Deviation 174).
+    /// Whether a wait for `reason` is refused at once: it waits on an activity
+    /// a lend to a callback stopped, unless it waits for a guard lock and
+    /// that activity is an attached activity's callback, a wait that goes on
+    /// (Deviation 174).
     fn waits_on_a_lender(&self, reason: ParkReason) -> bool {
         self.lender_waited_on(reason).is_some_and(|lender| {
             !matches!(reason, ParkReason::Guard(_))
@@ -1287,15 +1288,27 @@ impl Interp {
 
     /// Whether the guard lock `key` that a callback's top-level send waits
     /// for at its entry, before it has run anything, is held by an activity
-    /// a lend to a callback stopped. If so, the callback's thread is asked to
-    /// give the baton back and send again, and its next recall is held until
-    /// the lock is free, as ooRexx has the send wait for the lock
+    /// a lend to a callback stopped, and the callback's member sends again
+    /// when asked. If so, the callback's thread is asked to give the baton
+    /// back and send again, and its next recall is held until the lock is
+    /// free, as ooRexx has the send wait for the lock
     /// (`r[native.threads.attach.deviation.174]`). The caller then fails the
     /// send with [`Loud::retried_send`], which the send answers no one.
-    pub(crate) fn retries_entry_guard(&mut self, key: crate::guards::GuardKey) -> bool {
+    /// `entered` says whether the running activation is the method whose
+    /// entry waits, rather than one the wait comes in the middle of.
+    pub(crate) fn retries_entry_guard(
+        &mut self,
+        key: crate::guards::GuardKey,
+        entered: bool,
+    ) -> bool {
+        // Nothing of the callback's message has run only where no activation
+        // lies below the wait, and none is running but the one it enters: a
+        // send made by a running activation comes after that activation's
+        // earlier clauses, which a second send would run again.
         if !self.activity.attached
             || self.activity.native_handles.len() != 1
             || !self.activity.suspended.is_empty()
+            || self.activity.running.is_some() != entered
             || self.lender_waited_on(ParkReason::Guard(key)).is_none()
         {
             return false;
@@ -1303,10 +1316,35 @@ impl Interp {
         let Some(thread) = &self.activity.thread else {
             return false;
         };
-        thread.ask_retry();
+        if !thread.ask_retry() {
+            return false;
+        }
         let address = thread.address();
         self.activities.retrying.push((address, key));
+        // The send runs again from its entry, which announces the method once
+        // per message: this run leaves without `<I<`, and the next enters
+        // without `>I>`.
+        if entered && self.activation().trace_entry == crate::activation::TraceEntry::Done {
+            self.activation_mut().trace_entry = crate::activation::TraceEntry::Spent;
+            self.activity.retraced = Some(key);
+        }
         true
+    }
+
+    /// Whether the running activation enters the method whose `>I>` its
+    /// callback wrote before it gave the baton back to send again
+    /// ([`Interp::retries_entry_guard`]). The record ends at the send's
+    /// next announced entry, whichever method that is.
+    pub(crate) fn entry_traced_before_retry(&mut self) -> bool {
+        let Some(key) = self.activity.retraced.take() else {
+            return false;
+        };
+        self.activity.suspended.is_empty()
+            && (self.running_activation())
+                .and_then(|running| running.method_identity.as_ref())
+                .is_some_and(|identity| {
+                    identity.receiver == key.object && identity.scope == key.scope
+                })
     }
 
     /// Whether the running activity's send failed only to be sent again
@@ -1892,9 +1930,9 @@ impl Interp {
     }
 
     /// Starts watching a pinned wait for `reason` of the running activity,
-    /// where it is a callback's and only an activity its lend stopped may
-    /// end it, answering the watch it replaces. Waits that end by
-    /// themselves, a sleep's or a timed one's, are not watched.
+    /// where it is an attached activity's callback and only an activity its
+    /// lend stopped may end it, answering the watch it replaces. Waits that
+    /// end by themselves, a sleep's or a timed one's, are not watched.
     fn watch_stall(&mut self, reason: ParkReason) -> Option<Stall> {
         let previous = self.activities.stall;
         let endless = match reason {
@@ -1907,7 +1945,7 @@ impl Interp {
         };
         let running = self.activities.running;
         let lend = (self.activities.lends.iter().rev()).find(|lend| lend.lendee == running);
-        if let (true, Some(lend)) = (endless, lend) {
+        if let (true, true, Some(lend)) = (endless, self.activity.attached, lend) {
             let lender = lend.lender;
             self.activities.stall = Some(Stall {
                 due: self.now() + STALL_REPORT,
@@ -1918,14 +1956,15 @@ impl Interp {
         previous
     }
 
-    /// Writes one line on stderr for the watched wait once it is due, naming
-    /// what it waits for and the activity its callback stopped, and stops
-    /// watching it. The wait goes on.
+    /// Writes one line on stderr for the watched wait once it is due and
+    /// nothing but a stopped activity can end it any more, naming what it
+    /// waits for and the activity its callback stopped, and stops watching
+    /// it. The wait goes on.
     fn report_stall(&mut self) {
         let Some(stall) = self.activities.stall else {
             return;
         };
-        if self.now() < stall.due {
+        if self.now() < stall.due || !self.only_stopped_activities_remain() {
             return;
         }
         self.activities.stall = None;
@@ -1941,6 +1980,18 @@ impl Interp {
             stall.reason.waits_for(),
         );
         self.write_err(line.as_bytes());
+    }
+
+    /// Whether nothing the loop could run or wait for remains: no activity
+    /// ready, none asleep, no callback held, and no call in flight but those
+    /// a lend's callback runs above. Only an activity a lend stopped, or a
+    /// callback that is yet to arrive, can then end a wait.
+    fn only_stopped_activities_remain(&self) -> bool {
+        let table = &self.activities;
+        table.ready.is_empty()
+            && table.sleepers.is_empty()
+            && table.held.is_empty()
+            && table.in_flight <= table.runs_below
     }
 
     /// Serves the held callbacks, the earliest first, each once nothing
@@ -2654,13 +2705,17 @@ impl Interp {
                 self.activities.ready.pop_front()
             };
             let Some(ready) = next else {
-                let stall = self.activities.stall.map(|stall| stall.due);
                 let Some(Reverse((due, _, _))) = self.activities.sleepers.peek().copied() else {
                     if self.activities.in_flight == self.activities.runs_below
                         && self.activities.held.is_empty()
                     {
                         return Ok(None);
                     }
+                    // A watched wait is reported only once nothing else could
+                    // end it, so a sleeper, which may, keeps it unreported.
+                    let stall = (self.activities.stall)
+                        .filter(|_| self.only_stopped_activities_remain())
+                        .map(|stall| stall.due);
                     match stall {
                         Some(due) => self.idle_until(due)?,
                         None => self.idle_for_posts()?,
@@ -2668,8 +2723,7 @@ impl Interp {
                     self.report_stall();
                     continue;
                 };
-                self.idle_until(stall.map_or(due, |stall| stall.min(due)))?;
-                self.report_stall();
+                self.idle_until(due)?;
                 continue;
             };
             let buried = self

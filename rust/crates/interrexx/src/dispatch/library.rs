@@ -654,7 +654,7 @@ impl Interp {
     /// `frame` vacates it, recorded ([`Interp::push_vacancy`]) until
     /// [`Interp::pop_vacancy`]. The first thread that recalls the baton from
     /// elsewhere while it is vacated starts a pool thread to serve it
-    /// ([`crate::island::wait_served`]); a call nobody calls back from
+    /// ([`crate::island::wait_served`]). A call nobody calls back from
     /// elsewhere starts none.
     ///
     /// The interpreter is reached through the answer only, until it drops:
@@ -1767,6 +1767,10 @@ impl interrexx_api::values::Baton for Vacated {
         if self.baton.held_here() {
             return false;
         }
+        // A thread that claimed the vacancy may find no pool thread to hand it
+        // to and free it again. Only a thread that serves the vacancy, or
+        // holds a lend above it, serves a recall, so the recall is posted only
+        // then, and this thread, whose call the vacancy is, never claims it.
         if let Some(depth) = self.depth.get()
             && self.baton.take_vacancy(depth)
         {
@@ -1781,9 +1785,7 @@ impl interrexx_api::values::Baton for Vacated {
             base: Some(self.stack.0),
             room: Some(self.stack.1),
         }));
-        std::mem::forget(
-            crate::island::wait_served(&self.baton, false).expect("a wait that is never closed"),
-        );
+        std::mem::forget(crate::island::Lent::wait(&self.baton));
         true
     }
 

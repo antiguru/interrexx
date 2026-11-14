@@ -42,6 +42,10 @@
 // * `AtPause(milliseconds)` blocks for `milliseconds` and answers 1, starting no thread.
 // * `AtSendJoin(target)` sends `JOIN`, whose method calls `AtTickJoin` from inside the attached
 //   thread's message, so the call that joins is made while a callback runs.
+// * `AtCallTick(routine, argument, target)` calls `routine` with `argument` through `CallRoutine`,
+//   then sends `TICK` to `target`.
+// * `AtPutTick(array, target)` puts a string at index 1 of `array` through `ArrayPut`, then sends
+//   `TICK` to `target`.
 #include <atomic>
 #include <pthread.h>
 #include <stdint.h>
@@ -451,6 +455,81 @@ RexxRoutine1(int, AtTickJoin, RexxObjectPtr, target)
     return 1;
 }
 
+// What the thread `AtCallTick` or `AtPutTick` starts is given: the instance to attach to, and
+// global references to the routine or array it calls or puts to first, the routine's argument and
+// the object it then sends `TICK` to.
+struct Then
+{
+    RexxInstance *instance;
+    bool put;
+    RexxObjectPtr first;
+    RexxObjectPtr argument;
+    RexxObjectPtr target;
+};
+
+static void *call_or_put_then_tick(void *argument)
+{
+    Then *then = (Then *)argument;
+    RexxThreadContext *thread = NULL;
+    if (then->instance->AttachThread(&thread))
+    {
+        if (then->put)
+        {
+            thread->ArrayPut((RexxArrayObject)then->first, thread->NewStringFromAsciiz("put"), 1);
+        }
+        else
+        {
+            thread->CallRoutine((RexxRoutineObject)then->first, thread->ArrayOfOne(then->argument));
+        }
+        thread->SendMessage0(then->target, "TICK");
+        thread->ReleaseGlobalReference(then->first);
+        thread->ReleaseGlobalReference(then->argument);
+        thread->ReleaseGlobalReference(then->target);
+        thread->DetachThread();
+    }
+    delete then;
+    finished++;
+    return NULL;
+}
+
+// Starts a detached thread running `call_or_put_then_tick`, and answers 1 where it started.
+static logical_t start_then(RexxCallContext *context, bool put, RexxObjectPtr first,
+                            RexxObjectPtr argument, RexxObjectPtr target)
+{
+    Then *then = new Then;
+    then->instance = context->threadContext->instance;
+    then->put = put;
+    then->first = context->RequestGlobalReference(first);
+    then->argument = context->RequestGlobalReference(argument);
+    then->target = context->RequestGlobalReference(target);
+    pthread_t thread;
+    pthread_attr_t attributes;
+    pthread_attr_init(&attributes);
+    pthread_attr_setdetachstate(&attributes, PTHREAD_CREATE_DETACHED);
+    int started = pthread_create(&thread, &attributes, call_or_put_then_tick, then);
+    pthread_attr_destroy(&attributes);
+    if (started != 0)
+    {
+        context->ReleaseGlobalReference(then->first);
+        context->ReleaseGlobalReference(then->argument);
+        context->ReleaseGlobalReference(then->target);
+        delete then;
+        return 0;
+    }
+    return 1;
+}
+
+RexxRoutine3(logical_t, AtCallTick, RexxObjectPtr, routine, RexxObjectPtr, argument, RexxObjectPtr,
+             target)
+{
+    return start_then(context, false, routine, argument, target);
+}
+
+RexxRoutine2(logical_t, AtPutTick, RexxObjectPtr, array, RexxObjectPtr, target)
+{
+    return start_then(context, true, array, target, target);
+}
+
 // Detaches the thread running this call from the thread context of the call, and answers 1.
 RexxRoutine0(int, AtDetachHere)
 {
@@ -500,6 +579,8 @@ static RexxRoutineEntry routines[] = {
     REXX_TYPED_ROUTINE(AtPause, AtPause),
     REXX_TYPED_ROUTINE(AtSendJoin, AtSendJoin),
     REXX_TYPED_ROUTINE(AtTickJoin, AtTickJoin),
+    REXX_TYPED_ROUTINE(AtCallTick, AtCallTick),
+    REXX_TYPED_ROUTINE(AtPutTick, AtPutTick),
     REXX_TYPED_ROUTINE(AtDone, AtDone),
     REXX_TYPED_ROUTINE(AtReport, AtReport),
     REXX_LAST_ROUTINE()

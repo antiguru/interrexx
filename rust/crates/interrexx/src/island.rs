@@ -121,7 +121,7 @@ impl Drop for Lent<'_> {
 /// for it. Where the baton is vacated by a native call running off it
 /// ([`crate::baton::Baton::vacate`]) and nobody serves that recall, this
 /// thread claims the vacancy and hands it to a pool thread it starts to run
-/// the interpreter until the call returns, which serves the recall; where
+/// the interpreter until the call returns, which serves the recall. Where
 /// the pool gives none, the vacancy is freed again and this thread waits for
 /// the vacating thread to serve it. `None` where `unless_closed` and the
 /// interpreter is gone first, so nothing will lend the baton ([`Closing`]).
@@ -136,7 +136,7 @@ pub(crate) fn wait_served(baton: &InterpBaton, unless_closed: bool) -> Option<Le
                 // own `&mut Interp` ([`Island::of`]) before it vacated, and
                 // touches the interpreter again only once it has reclaimed
                 // the vacancy, which waits while this thread holds it by its
-                // claim; no other thread holds the baton meanwhile. The borrow
+                // claim. No other thread holds the baton meanwhile. The borrow
                 // ends before the vacancy is handed on or freed below.
                 let started = unsafe { island.0.as_ref() }.start_vacancy_server();
                 match started {

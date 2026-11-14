@@ -38,6 +38,9 @@ struct Lend<L> {
     lent: L,
     /// Whether it is a vacancy ([`Baton::vacate`]).
     vacancy: bool,
+    /// Whether a thread holds the vacancy by its claim
+    /// ([`Baton::await_lend_or_vacancy`]), until it hands it on or frees it.
+    claimed: bool,
 }
 
 impl<L> Lend<L> {
@@ -166,6 +169,7 @@ impl<L: Copy> Baton<L> {
             lendee: Some(to),
             lent,
             vacancy: false,
+            claimed: false,
         });
         state.holder = Some(to);
         self.changed.notify_all();
@@ -258,6 +262,7 @@ impl<L: Copy> Baton<L> {
             lendee: None,
             lent,
             vacancy: true,
+            claimed: false,
         });
         state.holder = None;
         drop(state);
@@ -267,10 +272,29 @@ impl<L: Copy> Baton<L> {
 
     /// Takes the vacancy at `depth` back for this thread, which vacated it,
     /// where it is free and innermost, until [`Baton::give_back_or_free`]:
-    /// whether it took it.
+    /// whether it took it. While a thread holds the vacancy by its claim, it
+    /// first blocks until that thread hands it on or frees it. It answers
+    /// `false` where a thread holds the baton otherwise, by the vacancy
+    /// handed to it or by a lend above it.
     pub(crate) fn take_vacancy(&self, depth: usize) -> bool {
         let me = thread::current().id();
         let mut state = lock(&self.state);
+        loop {
+            if Self::take_vacancy_locked(&mut state, depth, me) {
+                return true;
+            }
+            let claimed = state.lends.len() == depth + 1
+                && state.lends.last().is_some_and(|lend| lend.claimed);
+            if !claimed {
+                return false;
+            }
+            // A claimer either hands the vacancy on or frees it, whatever this
+            // thread does, so the wait never waits for this thread itself.
+            state = wait(&self.changed, state);
+        }
+    }
+
+    fn take_vacancy_locked(state: &mut State<L>, depth: usize, me: thread::ThreadId) -> bool {
         if state.holder.is_some() || state.lends.len() != depth + 1 {
             return false;
         }
@@ -325,6 +349,7 @@ impl<L: Copy> Baton<L> {
             .filter(|lend| lend.vacancy && lend.lendee == Some(me))
             .expect("a thread freed a vacancy it does not hold");
         lend.lendee = None;
+        lend.claimed = false;
         state.holder = None;
         drop(state);
         self.changed.notify_all();
@@ -350,15 +375,16 @@ impl<L: Copy> Baton<L> {
             .filter(|lend| lend.vacancy && lend.lendee == Some(me))
             .expect("a thread handed a vacancy it does not hold");
         lend.lendee = Some(to);
+        lend.claimed = false;
         state.holder = Some(to);
         drop(state);
         self.changed.notify_all();
     }
 
     /// Blocks until the baton is lent to this thread, or, where `claim`, a
-    /// free vacancy is innermost, which this thread then claims; or, where
-    /// `unless_closed`, the baton is closed ([`Baton::close`]) with neither:
-    /// what this thread waits for will never come.
+    /// free vacancy is innermost, which this thread then claims, or, where
+    /// `unless_closed`, the baton is closed ([`Baton::close`]) with neither,
+    /// so that what this thread waits for will never come.
     pub(crate) fn await_lend_or_vacancy(&self, claim: bool, unless_closed: bool) -> Awaited<L> {
         let me = thread::current().id();
         let mut state = lock(&self.state);
@@ -375,6 +401,7 @@ impl<L: Copy> Baton<L> {
                 && lend.free()
             {
                 lend.lendee = Some(me);
+                lend.claimed = true;
                 let lent = lend.lent;
                 state.holder = Some(me);
                 return Awaited::Vacancy(lent);
@@ -440,5 +467,68 @@ impl<L: Copy> Baton<L> {
             }
             _ => None,
         }
+    }
+}
+
+#[cfg(all(test, not(loom)))]
+mod tests {
+    use super::{Awaited, Baton};
+
+    /// A thread claims the vacancy and frees it again, as one that finds no
+    /// pool thread to hand it to does: the vacating thread, taking it back
+    /// meanwhile, waits out the claim and then takes it.
+    #[test]
+    fn a_vacating_thread_takes_back_a_vacancy_a_claim_freed() {
+        let baton = Baton::<u8>::new();
+        baton.acquire();
+        let depth = baton.vacate(1);
+        let (claimed, seen) = std::sync::mpsc::channel();
+        std::thread::scope(|scope| {
+            scope.spawn(|| {
+                assert!(matches!(
+                    baton.await_lend_or_vacancy(true, false),
+                    Awaited::Vacancy(1)
+                ));
+                claimed.send(()).expect("the test waits for the claim");
+                std::thread::sleep(std::time::Duration::from_millis(50));
+                baton.free_vacancy();
+            });
+            seen.recv().expect("the claimer claims");
+            assert!(baton.take_vacancy(depth), "the vacancy was not taken back");
+            assert!(baton.held_here());
+            baton.give_back_or_free();
+        });
+        assert!(baton.reclaim_free(depth));
+        baton.release();
+    }
+
+    /// A thread claims the vacancy and hands it to a third: the vacating
+    /// thread does not take it back, and recalls it from that thread instead.
+    #[test]
+    fn a_vacating_thread_does_not_take_back_a_vacancy_handed_on() {
+        let baton = Baton::<u8>::new();
+        baton.acquire();
+        let depth = baton.vacate(1);
+        let (handed, seen) = std::sync::mpsc::channel();
+        std::thread::scope(|scope| {
+            let server = scope.spawn(|| {
+                assert_eq!(baton.await_lend(), 1);
+                handed.send(()).expect("the test waits for the hand");
+            });
+            let to = server.thread().id();
+            let claimer = &baton;
+            scope.spawn(move || {
+                assert!(matches!(
+                    claimer.await_lend_or_vacancy(true, false),
+                    Awaited::Vacancy(1)
+                ));
+                claimer.hand_vacancy(to);
+            });
+            seen.recv().expect("the server is handed the vacancy");
+            assert!(
+                !baton.take_vacancy(depth),
+                "a served vacancy was taken back"
+            );
+        });
     }
 }

@@ -520,7 +520,7 @@ impl Interp {
             self.blame_first_clause();
             return Err(Raised::deadlock().into());
         }
-        if self.retries_entry_guard(wait.key) {
+        if self.retries_entry_guard(wait.key, true) {
             return Err(crate::Loud::retried_send().into());
         }
         let me = self.running_activity();
