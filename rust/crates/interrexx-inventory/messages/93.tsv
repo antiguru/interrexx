@@ -1,0 +1,73 @@
+93	0	Invalid call to method.
+93	900	&1.
+93	901	Too few arguments for method; the minimum is &1.
+93	902	Too many arguments for method; the maximum is &1.
+93	903	Missing argument &1 in method invocation.
+93	904	Method argument &1 must be a number; found "&2".
+93	905	Method argument &1 must be a whole number; found "&2".
+93	906	Method argument &1 must be zero or a positive whole number; found "&2".
+93	907	Method argument &1 must be a positive whole number; found "&2".
+93	908	Method argument &1 must not exceed &2; found "&3".
+93	909	Method argument &1 must be in the range 0-99; found "&2".
+93	911	Method argument &1 must not be null.
+93	912	Method argument &1 must be a hexadecimal string; found "&2".
+93	913	Method argument &1 must be a valid symbol; found "&2".
+93	914	Method argument &1 must be one of &2; found "&3".
+93	915	Method option must be one of "&1"; found "&2".
+93	917	Method "&1" not found.
+93	918	Invalid list index "&1".
+93	919	Invalid array position "&1".
+93	921	Binary operator method requires an argument.
+93	922	Pad or character argument must be a single character; found "&1".
+93	923	Length argument must be zero or a positive whole number; found "&1".
+93	924	Position argument must be a positive whole number; found "&1".
+93	925	Too few subscripts for array; its number of dimensions is &1.
+93	926	Too many subscripts for array; its number of dimensions is &1.
+93	927	Conversion of a negative value requires a length.
+93	928	D2X value must be a valid whole number; found "&1".
+93	929	D2C value must be a valid whole number; found "&1".
+93	931	Invalid whitespace in position &1 of hexadecimal string.
+93	932	Invalid whitespace in position &1 of binary string.
+93	933	Characters of a hexadecimal string must be 0-9, a-f, A-F, or whitespace; found "&1".
+93	934	Characters of a binary string must be 0, 1, or whitespace; found "&1".
+93	935	X2D result cannot be expressed as a whole number with NUMERIC DIGITS &1.
+93	936	C2D result cannot be expressed as a whole number with NUMERIC DIGITS &1.
+93	937	Supplier is past its last item.
+93	938	Method argument &1 must have a string value.
+93	939	Method argument &1 must have a single-dimensional array value.
+93	940	&1 method target must be a whole number; found "&2".
+93	941	Exponent of "&1" requires more than &2 characters.
+93	942	Integer part of "&1" requires more than &2 characters.
+93	943	&1 method target must be a number; found "&2".
+93	944	Method argument &1 must be a message object.
+93	945	Missing item &1 in message array.
+93	946	A message array must be a single-dimensional array with 2 elements.
+93	947	SECTION method must not be used on a multi-dimensional array.
+93	948	Method argument &1 must be of the &2 class.
+93	949	PUT to an index-only collection requires the same object as value and index.
+93	951	Invalid alarm time "&1".
+93	952	Each item of method argument &1 must be a string.
+93	953	Method argument &1 cannot be converted to type &2.
+93	954	Method "&1" must not be used on a multi-dimensional array.
+93	956	Element &1 of the array must be a string.
+93	957	Message override scope &2 must be in the class hierarchy of target object "&1".
+93	958	Transient streams cannot be positioned.
+93	959	Array must not have more than &1 items.
+93	961	The &1 argument must be a string or array object.
+93	962	Invalid Base64 encoded string.
+93	963	Method is not supported.
+93	964	Application failure; &1.
+93	965	ABSTRACT method "&1" cannot be invoked.
+93	966	Invalid queue index "&1".
+93	967	The &1 class does not support the NEW method.
+93	968	Native method signature is invalid.
+93	969	Method argument &1 must have a stem object value; found "&2".
+93	970	Object &1 does not support the COPY method.
+93	971	Method argument &1 must not have more than one dimension.
+93	972	A message name argument must be a string or an array with 2 elements; found "&1".
+93	973	Argument of ORDERABLE comparison method "&1" must not be .nil.
+93	974	The &1 argument must be a string, array, or method object.
+93	975	Invalid &1 value; found "&2".
+93	976	Each group of a hexadecimal string must have an even number of digits.
+93	977	Each group of a binary string must have a multiple of four digits.
+93	978	Method argument &1 cannot be converted to type &2; found "&3".
