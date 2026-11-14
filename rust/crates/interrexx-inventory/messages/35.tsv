@@ -1,10 +1,10 @@
 35	0	Invalid expression.
 35	1	Invalid expression detected at "&1".
 35	900	&1.
-35	901	Prefix operator "&1" is not followed by an expression term.
+35	901	Expression term expected after prefix operator "&1".
 35	902	Missing conditional expression following IF keyword.
 35	903	Missing conditional expression following WHEN keyword.
-35	904	Missing initial expression for DO or LOOP control variable.
+35	904	Missing initial expression following DO or LOOP control variable.
 35	905	Missing expression following BY keyword.
 35	906	Missing expression following TO keyword.
 35	907	Missing expression following FOR keyword.
@@ -17,21 +17,21 @@
 35	915	Missing expression following VALUE keyword of a SIGNAL instruction.
 35	916	Missing expression following VALUE keyword of a TRACE instruction.
 35	917	Missing expression following VALUE keyword of a NUMERIC FORM instruction.
-35	918	Missing expression following assignment instruction.
-35	919	Operator "&1" is not followed by an expression term.
+35	918	Missing expression following "=" of assignment instruction.
+35	919	Expression term expected after operator "&1".
 35	921	Missing expression following GUARD keyword.
 35	922	Missing expression following DESCRIPTION keyword of a RAISE instruction.
 35	923	Missing expression following ADDITIONAL keyword of a RAISE instruction.
-35	924	Missing "(" on expression list of the ARRAY keyword.
+35	924	"(" expected after ARRAY keyword.
 35	925	Missing expression following TO keyword of a FORWARD instruction.
 35	926	Missing expression following ARGUMENTS keyword of a FORWARD instruction.
 35	927	Missing expression following MESSAGE keyword of a FORWARD instruction.
 35	928	Missing expression following CLASS keyword of a FORWARD instruction.
 35	929	Missing expression in logical expression list.
-35	930	Invalid or missing expression following "=" token of a USE ARG instruction.
-35	931	Missing expression following "(" of parse template.
-35	932	Missing expression for calculated CALL name.
+35	930	Missing or invalid expression following "=" of USE ARG instruction.
+35	931	Missing expression following "(" of parsing template.
+35	932	Missing expression following "(" of CALL instruction.
 35	933	Missing expression following CASE keyword of a SELECT instruction.
 35	934	Missing expression in WHEN case expression list.
 35	935	Missing expression following &1 keyword of a &2 instruction.
-35	936	Missing expression on ::CONSTANT directive.
+35	936	Missing expression in ::CONSTANT directive.

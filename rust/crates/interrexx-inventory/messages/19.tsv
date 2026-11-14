@@ -14,8 +14,8 @@
 19	906	String or symbol expected after METACLASS keyword.
 19	907	String or symbol expected after SUBCLASS keyword.
 19	908	String or symbol expected after INHERIT keyword.
-19	909	String or symbol expected after tilde (~).
-19	911	String or symbol expected after superclass colon (:).
+19	909	String or symbol expected after "~".
+19	911	String or symbol naming a superclass expected after ":".
 19	912	String or symbol expected after STREAM keyword.
 19	913	String or symbol expected after MIXINCLASS keyword.
 19	914	String or symbol expected as ::ATTRIBUTE directive name.
@@ -27,6 +27,6 @@
 19	920	String or symbol expected as ::RESOURCE directive name.
 19	921	String or symbol expected after ::RESOURCE END keyword.
 19	922	String or symbol expected after &1 keyword.
-19	923	Symbol or string expected as ::ANNOTATE attribute value; found "&1".
-19	924	Symbol or string expected as ::ANNOTATE attribute value.
-19	925	Symbol or string expected after &1 &2 keyword.
+19	923	String or symbol expected as ::ANNOTATE attribute value; found "&1".
+19	924	String or symbol expected as ::ANNOTATE attribute value.
+19	925	String or symbol expected after &1 &2 keyword.
