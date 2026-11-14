@@ -250,6 +250,18 @@ fine / no result / condition 40.900
 still running
 ```
 
+r[native.calls.condition-data]
+The interface declares a record of a condition with its texts as strings,
+`RexxConditionData`, which no function of the interface fills or reads. Its
+fields, in this order, are:
+
+* `code`, a `wholenumber_t`: the condition's code.
+* `rc`, a `wholenumber_t`: the condition's return code.
+* `message`, an `RXSTRING`: the condition's secondary message.
+* `errortext`, an `RXSTRING`: the condition's error text.
+* `position`, a `size_t`: the number of the line the condition was raised on.
+* `program`, an `RXSTRING`: the name of the program that was running.
+
 ## The caller's state
 
 r[native.calls.variables]

@@ -11,6 +11,10 @@
 //! type through [`c_type`], never from a C string kept beside the Rust one,
 //! so a change to a Rust definition changes the header and the ABI dump
 //! (`tests/abi_dump.rs`) measures the two against each other.
+//!
+//! The constants come from `constants.rs`, the exports from `exports.rs`, and
+//! the error codes of `oorexxerrors.h` from the error table
+//! (`interrexx-inventory/data/errors.tsv`), whose rows [`sections`] takes.
 
 use crate::constants::{
     API_VERSIONS, ARGUMENT_TYPES, CConstant, CLASSIC_CONSTANTS, CLASSIC_LIMITS, ENVIRONMENT_KINDS,

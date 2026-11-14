@@ -370,6 +370,7 @@ fn structs() -> Vec<Struct> {
                 valid
             }
         ),
+        // spec: native.calls.condition-data
         strukt!(
             "RexxConditionData" = RexxConditionData {
                 code,
