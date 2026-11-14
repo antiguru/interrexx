@@ -1980,23 +1980,34 @@ impl Interp {
         } else {
             format!("activity {}", stall.lender.0)
         };
+        // The time the wait has gone on, which is past the bound where
+        // something else that could end it, such as a call in flight, did
+        // not end it in time.
+        let began = stall.due.checked_sub(STALL_REPORT).unwrap_or(stall.due);
+        let waited = self.now().saturating_duration_since(began).as_secs();
         let line = format!(
-            "interrexx: a callback has waited {} s for {} while {stopped}, which it stopped, \
-             makes no progress\n",
-            STALL_REPORT.as_secs(),
+            "interrexx: a callback has waited {waited} s for {} while {stopped}, which it \
+             stopped, makes no progress\n",
             stall.reason.waits_for(),
         );
         self.write_err(line.as_bytes());
     }
 
     /// Whether nothing the loop could run or wait for remains: no activity
-    /// ready, none asleep, no callback held, and no call in flight but those
-    /// a lend's callback runs above. Only an activity a lend stopped, or a
-    /// callback that is yet to arrive, can then end a wait.
+    /// ready, none asleep but one a lend stopped, no callback held, and no
+    /// call in flight but those a lend's callback runs above. Only an
+    /// activity a lend stopped, or a callback that is yet to arrive, can then
+    /// end a wait.
     fn only_stopped_activities_remain(&self) -> bool {
         let table = &self.activities;
+        // A stopped activity's sleep ends with nothing it can do: the
+        // activity goes on only once the callback that stopped it has
+        // finished.
+        let stopped = |sleeper: ActivityId| {
+            (table.owners.iter()).any(|&(owner, buried)| owner == sleeper && buried)
+        };
         table.ready.is_empty()
-            && table.sleepers.is_empty()
+            && (table.sleepers.iter()).all(|Reverse((_, _, sleeper))| stopped(*sleeper))
             && table.held.is_empty()
             && table.in_flight == table.runs_below
     }
@@ -2746,26 +2757,27 @@ impl Interp {
                 self.activities.ready.pop_front()
             };
             let Some(ready) = next else {
-                let Some(Reverse((due, _, _))) = self.activities.sleepers.peek().copied() else {
-                    if self.activities.in_flight == self.activities.runs_below
-                        && self.activities.held.is_empty()
-                        && self.activities.callbacks_lent == 0
-                    {
-                        return Ok(None);
-                    }
-                    // A watched wait is reported only once nothing else could
-                    // end it, so a sleeper, which may, keeps it unreported.
-                    let stall = (self.activities.stall)
-                        .filter(|_| self.only_stopped_activities_remain())
-                        .map(|stall| stall.due);
-                    match stall {
-                        Some(due) => self.idle_until(due)?,
-                        None => self.idle_for_posts()?,
-                    }
-                    self.report_stall();
-                    continue;
-                };
-                self.idle_until(due)?;
+                let sleeper = (self.activities.sleepers.peek()).map(|Reverse((due, _, _))| *due);
+                if sleeper.is_none()
+                    && self.activities.in_flight == self.activities.runs_below
+                    && self.activities.held.is_empty()
+                    && self.activities.callbacks_lent == 0
+                {
+                    return Ok(None);
+                }
+                // A watched wait is reported only once nothing else could
+                // end it, so a sleeper, which may, keeps it unreported. A
+                // sleeper a lend stopped may not, so it does not hold the
+                // report back to its wake.
+                let stall = (self.activities.stall)
+                    .filter(|_| self.only_stopped_activities_remain())
+                    .map(|stall| stall.due);
+                match (sleeper, stall) {
+                    (Some(sleeper), Some(stall)) => self.idle_until(sleeper.min(stall))?,
+                    (Some(due), None) | (None, Some(due)) => self.idle_until(due)?,
+                    (None, None) => self.idle_for_posts()?,
+                }
+                self.report_stall();
                 continue;
             };
             let buried = self

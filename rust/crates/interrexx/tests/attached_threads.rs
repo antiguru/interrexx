@@ -678,11 +678,32 @@ fn a_callback_waiting_for_a_post_after_a_native_call_is_not_refused() {
 fn a_callback_waiting_for_a_flag_the_main_program_sets_waits_for_ever() {
     let (stdout, stderr, status) = run_ours_for("attach-flag", "flag.rex", "10");
     assert_eq!((stdout.as_str(), status), ("", 137));
+    assert_stalled_on_flag(&stderr);
+}
+
+/// [`a_callback_waiting_for_a_flag_the_main_program_sets_waits_for_ever`] with the message arriving
+/// while the main program sleeps for an hour before it sets the flag. The main program makes no
+/// progress while the message runs, so its sleep cannot end the wait either, and stderr says so
+/// after five seconds, as it does where the main program runs Rexx code.
+// spec: native.threads.attach.deviation.174
+#[test]
+fn a_callback_waiting_for_a_flag_a_sleeping_main_program_sets_is_reported() {
+    let (stdout, stderr, status) = run_ours_for("attach-flagsleep", "flagsleep.rex", "10");
+    assert_eq!((stdout.as_str(), status), ("", 137));
+    assert_stalled_on_flag(&stderr);
+}
+
+/// Asserts that `stderr` begins with the line that reports a callback's wait for a `GUARD WHEN`
+/// while the main program it stopped makes no progress, written once the wait was five seconds
+/// old and less than seven.
+fn assert_stalled_on_flag(stderr: &str) {
+    let waited = stderr
+        .strip_prefix("interrexx: a callback has waited ")
+        .and_then(|rest| rest.split_once(" s for a guard's WHEN while the main program, "))
+        .filter(|(_, rest)| rest.starts_with("which it stopped, makes no progress\n"))
+        .and_then(|(seconds, _)| seconds.parse::<u64>().ok());
     assert!(
-        stderr.starts_with(
-            "interrexx: a callback has waited 5 s for a guard's WHEN while the main program, \
-             which it stopped, makes no progress\n"
-        ),
+        waited.is_some_and(|seconds| (5..7).contains(&seconds)),
         "stderr: {stderr}"
     );
 }

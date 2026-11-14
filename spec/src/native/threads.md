@@ -69,8 +69,9 @@ Once a message has begun, a wait of it for something only a stopped activity
 can give never ends. A wait for a guard lock such an activity holds and no
 other message does, or for the completion of a message whose send it runs, is
 refused at once, and the program ends with exit code 120. Any other, such as a
-`GUARD WHEN`, goes on for ever, with a line on stderr once it has waited five
-seconds and nothing but a stopped activity is left to end it. In
+`GUARD WHEN`, goes on for ever, with a line on stderr, which says how long it
+has waited, once it has waited five seconds and nothing but a stopped activity
+is left to end it. In
 ooRexx the thread's messages run alongside the other activities. The tests of
 this rule need an extension of their own that sends messages by name, so they
 run outside this page.

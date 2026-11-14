@@ -1430,10 +1430,12 @@ the thread's send answers nothing, and the program, which runs on to its end,
 ends with exit code 120. Any other such wait, such as a `GUARD WHEN`, a
 semaphore's `wait` with no timeout, or a wait for a guard lock another message
 holds, goes on for ever. Once it has waited five seconds, and nothing else is
-left that could end it, a line on stderr says so: no activity is ready or
-asleep, no message is held, and no call is in flight but those the waiting
-messages run above. A wait that a sleeping activity or a call in flight may
-still end is not reported. A loop that polls for such a change runs for ever,
+left that could end it, a line on stderr says so and says how many seconds it
+has waited: no activity is ready, none is asleep but one a message stopped, no
+message is held, and no call is in flight but those the waiting messages run
+above. A stopped activity's sleep does not hold the line back, since the
+activity cannot go on when it wakes. A wait that another sleeping activity or a
+call in flight may still end is not reported until they are gone. A loop that polls for such a change runs for ever,
 and nothing is said. ooRexx
 runs each attached thread's messages on that thread, alongside the other
 activities, and each such program completes. Issue #681 tracks doing the same.
