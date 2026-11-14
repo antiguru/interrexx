@@ -509,8 +509,9 @@ The wording of a message is unspecified wherever it reaches a program: the
 result of the ERRORTEXT builtin, the `ERRORTEXT` and `MESSAGE` entries of a
 condition object and the text that `CONDITION('D')` carries where it holds a
 message, the report that an error writes to the error stream after its frame,
-the notice and the error lines of interactive tracing, the text of a trace
-line that names a library method, the answers of SysGetMessage for the
+the notice and the error lines of interactive tracing, a trace line that
+names a built-in method, which a build may not show at all ([the built-in
+rule](r:class.stackframe.builtin)), the answers of SysGetMessage for the
 interpreter's own catalog and of SysGeterrnomsg, the C API's functions that
 answer the text of an error, the usage texts of the commands, and the messages
 of the utility programs. What is specified is the code, and for the report

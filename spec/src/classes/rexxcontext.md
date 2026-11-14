@@ -544,8 +544,9 @@ r[class.rexxcontext.stackframes]
 `stackFrames` answers a new array of new `StackFrame` objects, one for each
 active level of code: the first item is the code that asked, the next its
 caller, and so on, with the main part of the program last. Each call of an
-internal routine, a routine, a method and an INTERPRET is a level, and so is a
-built-in method that runs code of the program, such as `send`. A condition's
+internal routine, a routine, a method and an INTERPRET is a level. Whether a
+built-in method that runs code of the program, such as `send`, is a level too is
+[not specified](r:class.stackframe.builtin). A condition's
 list is [specified with the condition object](r:cond.information.object); the
 methods of a frame are on [the `StackFrame` page](stackframe.md).
 
@@ -553,7 +554,7 @@ methods of a frame are on [the `StackFrame` page](stackframe.md).
 call outer
 exit
 outer: procedure
-  .o~new~send('m')
+  .o~new~m
   return
 ::class o
 ::method m
@@ -568,13 +569,12 @@ outer: procedure
 ```
 
 ```output
-Array 6 0
+Array 5 0
 1 ROUTINE 10
 2 INTERPRET 8
 3 METHOD 8
-4 METHOD The NIL object
-5 INTERNALCALL 4
-6 PROGRAM 1
+4 INTERNALCALL 4
+5 PROGRAM 1
 1 0
 ```
 
