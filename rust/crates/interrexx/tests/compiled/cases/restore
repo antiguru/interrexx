@@ -313,7 +313,6 @@ binary.rex
 ----
 rc> 243
 err>      2 *-* /**/@
-err>        *-* Compiled method "NEW" with scope "Routine".
 err>      1 *-* r = .Routine~new('rb', .stream~new('lib.rxo')~arrayin)
 err> Error 13 running rb line 2:
 err> Error 13.1:
@@ -380,7 +379,6 @@ prologue.rex
 rc> 159
 out> in fail
 out>      2 *-* Routine pk in package "pk" (no source available).
-out>        *-* Compiled method "NEW" with scope "Package".
 out>      2 *-* p = .Package~new('pk', .stream~new('faile.rxo')~arrayin)
 err>      4 *-* say .Routine~newFile('fail.rxo')~name
 err> Error 97 running DIR/prologue.rex line 4:
@@ -489,7 +487,6 @@ out> new DIR/named.rex | DIR/named.rex | rn
 out> call named.rxo | named.rxo | DIR/named.rxo
 out> in fail
 out>      2 *-* Routine DIR/fail.rex in package "fail.rxo" (no source available).
-out>        *-* Compiled method "CALL" with scope "Routine".
 out>      6 *-* .Routine~newFile('fail.rxo')~call
 
 # The string of -o goes to the first program translated from source: an image

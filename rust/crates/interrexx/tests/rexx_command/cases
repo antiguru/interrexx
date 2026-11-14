@@ -378,7 +378,6 @@ opts.rex
 ----
 rc> 231
 err>      1 *-* ::OPTIONS :options digits 12
-err>        *-* Compiled method "DEFAULTOPTIONS" with scope "Package".
 err> Error 25 running PackageSettingsFromOptionsDirectiveString line 1:
 err> Error 25.924:
 
@@ -388,7 +387,6 @@ x:options digits 12
 opts.rex
 ----
 rc> 163
-err>        *-* Compiled method "DEFAULTOPTIONS" with scope "Package".
 err> Error 93:
 err> Error 93.900:
 
@@ -417,7 +415,6 @@ run
 :x
 ----
 rc> 163
-err>        *-* Compiled method "DEFAULTOPTIONS" with scope "Package".
 err> Error 93:
 err> Error 93.900:
 
@@ -458,7 +455,6 @@ opts.rex
 ----
 rc> 231
 err>      1 *-* ::OPTIONS bogus 9
-err>        *-* Compiled method "DEFAULTOPTIONS" with scope "Package".
 err> Error 25 running PackageSettingsFromOptionsDirectiveString line 1:
 err> Error 25.924:
 
@@ -469,7 +465,6 @@ opts.rex
 ----
 rc> 230
 err>      1 *-* ::OPTIONS digits x
-err>        *-* Compiled method "DEFAULTOPTIONS" with scope "Package".
 err> Error 26 running PackageSettingsFromOptionsDirectiveString line 1:
 err> Error 26.5:
 
@@ -480,7 +475,6 @@ nonexist
 ----
 rc> 231
 err>      1 *-* ::OPTIONS bogus 9
-err>        *-* Compiled method "DEFAULTOPTIONS" with scope "Package".
 err> Error 25 running PackageSettingsFromOptionsDirectiveString line 1:
 err> Error 25.924:
 
@@ -1247,7 +1241,6 @@ opts.rex
 ----
 rc> 232
 err>      1 *-* ::OPTIONS trace x
-err>        *-* Compiled method "DEFAULTOPTIONS" with scope "Package".
 err> Error 24 running PackageSettingsFromOptionsDirectiveString line 1:
 err> Error 24.1:
 
@@ -1268,7 +1261,6 @@ run
 ::x
 ----
 rc> 163
-err>        *-* Compiled method "DEFAULTOPTIONS" with scope "Package".
 err> Error 93:
 err> Error 93.900:
 
