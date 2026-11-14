@@ -463,9 +463,10 @@ fn a_running_callback_holds_program_end() {
     );
 }
 
-/// A message an attached thread sent waits, parked, on an event semaphore when the main program
-/// ends, and a second thread posts it later: the parked message holds the program's end as a
-/// running one does, and says it saw the post. The oracle agrees under the gate.
+/// After the main program has ended, while the end waits for a started activity that naps, a
+/// message an attached thread sent waits, parked, on an event semaphore that a second thread posts
+/// after the nap: the parked message holds the program's end as a running one does, and says it
+/// saw the post. The oracle agrees under the gate.
 // spec: native.threads.end
 #[test]
 fn a_parked_callback_holds_program_end() {
@@ -1005,7 +1006,11 @@ fn a_wait_an_embedding_hosts_thread_ends_is_not_refused() {
 #[test]
 fn an_embedding_hosts_terminate_waits_for_a_wait_nothing_ends() {
     let (stdout, stderr, status) = run_driver_for("hostwait", &["terminate"], "3");
-    assert_eq!((stdout.as_str(), status), ("routine started\n", 137), "{stderr}");
+    assert_eq!(
+        (stdout.as_str(), status),
+        ("routine started\n", 137),
+        "{stderr}"
+    );
     assert!(!stderr.contains(UNENDING_WAIT), "{stderr}");
 }
 
