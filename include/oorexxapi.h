@@ -3,7 +3,9 @@
 /*
  * The object-oriented Rexx programming interface: the context structures an
  * extension or an embedding program receives, the tables of functions each
- * context reaches, and the structures those functions take.
+ * context reaches, the structures those functions take, the interface
+ * versions, value codes and option names, and the function that creates an
+ * interpreter instance.
  *
  * Each section between a BEGIN GENERATED and an END GENERATED line is written
  * from interrexx's Rust definitions by rust/crates/interrexx-api/src/header.rs:
@@ -15,6 +17,7 @@
 #define INTERREXX_OOREXXAPI_H
 
 #include "rexx.h"
+#include "oorexxerrors.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -48,10 +51,11 @@ typedef const struct RexxIORedirectorContext_ *RexxIORedirectorContext;
 typedef void (RexxEntry *RexxPackageLoader)(RexxThreadContext *);
 typedef void (RexxEntry *RexxPackageUnloader)(RexxThreadContext *);
 
-/* A context exit handler: it receives the exit context, the exit's function
- * and subfunction codes and the parameter block, and answers whether it
- * handled the exit. */
+/* BEGIN GENERATED handlers */
 typedef int REXXENTRY RexxContextExitHandler(RexxExitContext *, int, int, PEXIT);
+typedef RexxObjectPtr REXXENTRY RexxContextCommandHandler(RexxExitContext *, RexxStringObject, RexxStringObject);
+typedef RexxObjectPtr REXXENTRY RexxRedirectingCommandHandler(RexxExitContext *, RexxStringObject, RexxStringObject, RexxIORedirectorContext *);
+/* END GENERATED handlers */
 
 /* BEGIN GENERATED structs */
 typedef struct _ValueDescriptor ValueDescriptor;
@@ -183,6 +187,31 @@ struct _RexxPackageEntry {
     RexxRoutineEntry *routines;
     RexxMethodEntry *methods;
 };
+
+typedef struct {
+    RexxContextCommandHandler *handler;
+    const char *name;
+} RexxContextEnvironment;
+
+typedef struct {
+    RexxRedirectingCommandHandler *handler;
+    const char *name;
+} RexxRedirectingEnvironment;
+
+typedef struct {
+    const char *registeredName;
+    const char *name;
+} RexxRegisteredEnvironment;
+
+typedef struct {
+    const char *registeredName;
+    RexxPackageEntry *table;
+} RexxLibraryPackage;
+
+typedef struct {
+    const char *optionName;
+    ValueDescriptor option;
+} RexxOption;
 /* END GENERATED structs */
 
 /* BEGIN GENERATED tables */
@@ -1268,6 +1297,213 @@ struct RexxIORedirectorContext_ {
 #endif
 };
 /* END GENERATED context-structs */
+
+/* BEGIN GENERATED constants */
+#define INSTANCE_INTERFACE_VERSION_4_0_0 100
+#define INSTANCE_INTERFACE_VERSION_5_0_0 101
+#define INSTANCE_INTERFACE_VERSION_5_3_0 102
+#define INSTANCE_INTERFACE_VERSION 102
+#define THREAD_INTERFACE_VERSION_4_0_0 100
+#define THREAD_INTERFACE_VERSION_4_1_1 101
+#define THREAD_INTERFACE_VERSION_4_2_0 102
+#define THREAD_INTERFACE_VERSION_5_0_0 103
+#define THREAD_INTERFACE_VERSION_5_3_0 104
+#define THREAD_INTERFACE_VERSION 104
+#define METHOD_INTERFACE_VERSION_4_0_0 100
+#define METHOD_INTERFACE_VERSION_4_2_0 101
+#define METHOD_INTERFACE_VERSION_5_0_0 102
+#define METHOD_INTERFACE_VERSION 102
+#define CALL_INTERFACE_VERSION_4_0_0 100
+#define CALL_INTERFACE_VERSION_5_0_0 101
+#define CALL_INTERFACE_VERSION 101
+#define EXIT_INTERFACE_VERSION_4_0_0 100
+#define EXIT_INTERFACE_VERSION_5_0_0 101
+#define EXIT_INTERFACE_VERSION 101
+#define REDIRECT_INTERFACE_VERSION_5_0_0 100
+#define REDIRECT_INTERFACE_VERSION 100
+#define REXX_INTERPRETER_4_0_0 0x00040000
+#define REXX_INTERPRETER_4_0_1 0x00040001
+#define REXX_INTERPRETER_4_1_0 0x00040100
+#define REXX_INTERPRETER_4_1_1 0x00040101
+#define REXX_INTERPRETER_4_1_2 0x00040102
+#define REXX_INTERPRETER_4_1_3 0x00040103
+#define REXX_INTERPRETER_4_2_0 0x00040200
+#define REXX_INTERPRETER_4_3_0 0x00040300
+#define REXX_INTERPRETER_5_0_0 0x00050000
+#define REXX_INTERPRETER_5_1_0 0x00050100
+#define REXX_INTERPRETER_5_2_0 0x00050200
+#define REXX_INTERPRETER_5_3_0 0x00050300
+#define REXX_CURRENT_INTERPRETER_VERSION 0x00050300
+#define REXX_LANGUAGE_6_03 0x00000603
+#define REXX_LANGUAGE_6_04 0x00000604
+#define REXX_LANGUAGE_6_05 0x00000605
+#define REXX_LANGUAGE_6_06 0x00000606
+#define REXX_CURRENT_LANGUAGE_LEVEL 0x00000606
+
+#define REXX_OPTIONAL_ARGUMENT 0x8000
+#define REXX_VALUE_ARGLIST 2
+#define REXX_VALUE_NAME 3
+#define REXX_VALUE_SCOPE 4
+#define REXX_VALUE_CSELF 5
+#define REXX_VALUE_OSELF 6
+#define REXX_VALUE_SUPER 7
+#define REXX_VALUE_RexxObjectPtr 11
+#define REXX_VALUE_int 12
+#define REXX_VALUE_wholenumber_t 13
+#define REXX_VALUE_double 14
+#define REXX_VALUE_CSTRING 15
+#define REXX_VALUE_POINTER 16
+#define REXX_VALUE_RexxStringObject 17
+#define REXX_VALUE_stringsize_t 18
+#define REXX_VALUE_float 19
+#define REXX_VALUE_int8_t 20
+#define REXX_VALUE_int16_t 21
+#define REXX_VALUE_int32_t 22
+#define REXX_VALUE_int64_t 23
+#define REXX_VALUE_uint8_t 24
+#define REXX_VALUE_uint16_t 25
+#define REXX_VALUE_uint32_t 26
+#define REXX_VALUE_uint64_t 27
+#define REXX_VALUE_intptr_t 28
+#define REXX_VALUE_uintptr_t 29
+#define REXX_VALUE_logical_t 30
+#define REXX_VALUE_RexxArrayObject 31
+#define REXX_VALUE_RexxStemObject 32
+#define REXX_VALUE_size_t 33
+#define REXX_VALUE_ssize_t 34
+#define REXX_VALUE_POINTERSTRING 35
+#define REXX_VALUE_RexxClassObject 36
+#define REXX_VALUE_RexxMutableBufferObject 37
+#define REXX_VALUE_positive_wholenumber_t 38
+#define REXX_VALUE_nonnegative_wholenumber_t 39
+#define REXX_VALUE_RexxVariableReferenceObject 40
+#define REXX_VALUE___int32_t 22
+#define REXX_VALUE___int64_t 23
+#define REXX_VALUE___uint32_t 26
+#define REXX_VALUE___uint64_t 27
+#define REXX_VALUE___uintptr_t 29
+#define REXX_VALUE_OPTIONAL_RexxObjectPtr (REXX_OPTIONAL_ARGUMENT | REXX_VALUE_RexxObjectPtr)
+#define REXX_VALUE_OPTIONAL_int (REXX_OPTIONAL_ARGUMENT | REXX_VALUE_int)
+#define REXX_VALUE_OPTIONAL_wholenumber_t (REXX_OPTIONAL_ARGUMENT | REXX_VALUE_wholenumber_t)
+#define REXX_VALUE_OPTIONAL_double (REXX_OPTIONAL_ARGUMENT | REXX_VALUE_double)
+#define REXX_VALUE_OPTIONAL_CSTRING (REXX_OPTIONAL_ARGUMENT | REXX_VALUE_CSTRING)
+#define REXX_VALUE_OPTIONAL_POINTER (REXX_OPTIONAL_ARGUMENT | REXX_VALUE_POINTER)
+#define REXX_VALUE_OPTIONAL_RexxStringObject (REXX_OPTIONAL_ARGUMENT | REXX_VALUE_RexxStringObject)
+#define REXX_VALUE_OPTIONAL_stringsize_t (REXX_OPTIONAL_ARGUMENT | REXX_VALUE_stringsize_t)
+#define REXX_VALUE_OPTIONAL_float (REXX_OPTIONAL_ARGUMENT | REXX_VALUE_float)
+#define REXX_VALUE_OPTIONAL_int8_t (REXX_OPTIONAL_ARGUMENT | REXX_VALUE_int8_t)
+#define REXX_VALUE_OPTIONAL_int16_t (REXX_OPTIONAL_ARGUMENT | REXX_VALUE_int16_t)
+#define REXX_VALUE_OPTIONAL_int32_t (REXX_OPTIONAL_ARGUMENT | REXX_VALUE_int32_t)
+#define REXX_VALUE_OPTIONAL_int64_t (REXX_OPTIONAL_ARGUMENT | REXX_VALUE_int64_t)
+#define REXX_VALUE_OPTIONAL_uint8_t (REXX_OPTIONAL_ARGUMENT | REXX_VALUE_uint8_t)
+#define REXX_VALUE_OPTIONAL_uint16_t (REXX_OPTIONAL_ARGUMENT | REXX_VALUE_uint16_t)
+#define REXX_VALUE_OPTIONAL_uint32_t (REXX_OPTIONAL_ARGUMENT | REXX_VALUE_uint32_t)
+#define REXX_VALUE_OPTIONAL_uint64_t (REXX_OPTIONAL_ARGUMENT | REXX_VALUE_uint64_t)
+#define REXX_VALUE_OPTIONAL_intptr_t (REXX_OPTIONAL_ARGUMENT | REXX_VALUE_intptr_t)
+#define REXX_VALUE_OPTIONAL_uintptr_t (REXX_OPTIONAL_ARGUMENT | REXX_VALUE_uintptr_t)
+#define REXX_VALUE_OPTIONAL_logical_t (REXX_OPTIONAL_ARGUMENT | REXX_VALUE_logical_t)
+#define REXX_VALUE_OPTIONAL_RexxArrayObject (REXX_OPTIONAL_ARGUMENT | REXX_VALUE_RexxArrayObject)
+#define REXX_VALUE_OPTIONAL_RexxStemObject (REXX_OPTIONAL_ARGUMENT | REXX_VALUE_RexxStemObject)
+#define REXX_VALUE_OPTIONAL_size_t (REXX_OPTIONAL_ARGUMENT | REXX_VALUE_size_t)
+#define REXX_VALUE_OPTIONAL_ssize_t (REXX_OPTIONAL_ARGUMENT | REXX_VALUE_ssize_t)
+#define REXX_VALUE_OPTIONAL_POINTERSTRING (REXX_OPTIONAL_ARGUMENT | REXX_VALUE_POINTERSTRING)
+#define REXX_VALUE_OPTIONAL_RexxClassObject (REXX_OPTIONAL_ARGUMENT | REXX_VALUE_RexxClassObject)
+#define REXX_VALUE_OPTIONAL_RexxMutableBufferObject (REXX_OPTIONAL_ARGUMENT | REXX_VALUE_RexxMutableBufferObject)
+#define REXX_VALUE_OPTIONAL_positive_wholenumber_t (REXX_OPTIONAL_ARGUMENT | REXX_VALUE_positive_wholenumber_t)
+#define REXX_VALUE_OPTIONAL_nonnegative_wholenumber_t (REXX_OPTIONAL_ARGUMENT | REXX_VALUE_nonnegative_wholenumber_t)
+
+#define INITIAL_ADDRESS_ENVIRONMENT "InitialAddress"
+#define APPLICATION_DATA "ApplicationData"
+#define EXTERNAL_CALL_PATH "ExternalCallPath"
+#define EXTERNAL_CALL_EXTENSIONS "ExternalCallPathExt"
+#define REGISTERED_EXITS "RegisteredExits"
+#define DIRECT_EXITS "DirectExits"
+#define REGISTERED_ENVIRONMENTS "RegisteredEnvironments"
+#define DIRECT_ENVIRONMENTS "DirectEnvironments"
+#define REDIRECTING_ENVIRONMENTS "RedirectingEnvironments"
+#define LOAD_REQUIRED_LIBRARY "LoadRequiredLibrary"
+#define REGISTER_LIBRARY "RegisterLibrary"
+#define DIRECT_COMMAND_ENVIRONMENT 1
+#define REDIRECTING_COMMAND_ENVIRONMENT 2
+/* END GENERATED constants */
+
+/* BEGIN GENERATED argument-types */
+#define ARGUMENT_TYPE_ARGLIST RexxArrayObject
+#define ARGUMENT_TYPE_NAME CSTRING
+#define ARGUMENT_TYPE_SCOPE RexxObjectPtr
+#define ARGUMENT_TYPE_CSELF POINTER
+#define ARGUMENT_TYPE_OSELF RexxObjectPtr
+#define ARGUMENT_TYPE_SUPER RexxClassObject
+#define ARGUMENT_TYPE_RexxObjectPtr RexxObjectPtr
+#define ARGUMENT_TYPE_int int
+#define ARGUMENT_TYPE_wholenumber_t wholenumber_t
+#define ARGUMENT_TYPE_double double
+#define ARGUMENT_TYPE_CSTRING CSTRING
+#define ARGUMENT_TYPE_POINTER POINTER
+#define ARGUMENT_TYPE_RexxStringObject RexxStringObject
+#define ARGUMENT_TYPE_stringsize_t stringsize_t
+#define ARGUMENT_TYPE_float float
+#define ARGUMENT_TYPE_int8_t int8_t
+#define ARGUMENT_TYPE_int16_t int16_t
+#define ARGUMENT_TYPE_int32_t int32_t
+#define ARGUMENT_TYPE_int64_t int64_t
+#define ARGUMENT_TYPE___int32_t int32_t
+#define ARGUMENT_TYPE___int64_t int64_t
+#define ARGUMENT_TYPE_uint8_t uint8_t
+#define ARGUMENT_TYPE_uint16_t uint16_t
+#define ARGUMENT_TYPE_uint32_t uint32_t
+#define ARGUMENT_TYPE_uint64_t uint64_t
+#define ARGUMENT_TYPE___uint32_t uint32_t
+#define ARGUMENT_TYPE___uint64_t uint64_t
+#define ARGUMENT_TYPE_intptr_t intptr_t
+#define ARGUMENT_TYPE_uintptr_t uintptr_t
+#define ARGUMENT_TYPE___uintptr_t uintptr_t
+#define ARGUMENT_TYPE_logical_t logical_t
+#define ARGUMENT_TYPE_RexxArrayObject RexxArrayObject
+#define ARGUMENT_TYPE_RexxStemObject RexxStemObject
+#define ARGUMENT_TYPE_size_t size_t
+#define ARGUMENT_TYPE_ssize_t ssize_t
+#define ARGUMENT_TYPE_POINTERSTRING POINTER
+#define ARGUMENT_TYPE_RexxClassObject RexxClassObject
+#define ARGUMENT_TYPE_RexxMutableBufferObject RexxMutableBufferObject
+#define ARGUMENT_TYPE_positive_wholenumber_t wholenumber_t
+#define ARGUMENT_TYPE_nonnegative_wholenumber_t wholenumber_t
+#define ARGUMENT_TYPE_RexxVariableReferenceObject RexxVariableReferenceObject
+#define ARGUMENT_TYPE_OPTIONAL_RexxObjectPtr RexxObjectPtr
+#define ARGUMENT_TYPE_OPTIONAL_int int
+#define ARGUMENT_TYPE_OPTIONAL_wholenumber_t wholenumber_t
+#define ARGUMENT_TYPE_OPTIONAL_double double
+#define ARGUMENT_TYPE_OPTIONAL_CSTRING CSTRING
+#define ARGUMENT_TYPE_OPTIONAL_POINTER POINTER
+#define ARGUMENT_TYPE_OPTIONAL_RexxStringObject RexxStringObject
+#define ARGUMENT_TYPE_OPTIONAL_stringsize_t stringsize_t
+#define ARGUMENT_TYPE_OPTIONAL_float float
+#define ARGUMENT_TYPE_OPTIONAL_int8_t int8_t
+#define ARGUMENT_TYPE_OPTIONAL_int16_t int16_t
+#define ARGUMENT_TYPE_OPTIONAL_int32_t int32_t
+#define ARGUMENT_TYPE_OPTIONAL_int64_t int64_t
+#define ARGUMENT_TYPE_OPTIONAL_uint8_t uint8_t
+#define ARGUMENT_TYPE_OPTIONAL_uint16_t uint16_t
+#define ARGUMENT_TYPE_OPTIONAL_uint32_t uint32_t
+#define ARGUMENT_TYPE_OPTIONAL_uint64_t uint64_t
+#define ARGUMENT_TYPE_OPTIONAL_intptr_t intptr_t
+#define ARGUMENT_TYPE_OPTIONAL_uintptr_t uintptr_t
+#define ARGUMENT_TYPE_OPTIONAL_logical_t logical_t
+#define ARGUMENT_TYPE_OPTIONAL_RexxArrayObject RexxArrayObject
+#define ARGUMENT_TYPE_OPTIONAL_RexxStemObject RexxStemObject
+#define ARGUMENT_TYPE_OPTIONAL_size_t size_t
+#define ARGUMENT_TYPE_OPTIONAL_ssize_t ssize_t
+#define ARGUMENT_TYPE_OPTIONAL_POINTERSTRING POINTER
+#define ARGUMENT_TYPE_OPTIONAL_RexxClassObject RexxClassObject
+#define ARGUMENT_TYPE_OPTIONAL_RexxMutableBufferObject RexxMutableBufferObject
+#define ARGUMENT_TYPE_OPTIONAL_positive_wholenumber_t wholenumber_t
+#define ARGUMENT_TYPE_OPTIONAL_nonnegative_wholenumber_t wholenumber_t
+#define ARGUMENT_TYPE_OPTIONAL_RexxVariableReferenceObject RexxVariableReferenceObject
+/* END GENERATED argument-types */
+
+/* BEGIN GENERATED exports */
+RexxReturnCode REXXENTRY RexxCreateInterpreter(RexxInstance **, RexxThreadContext **, RexxOption *);
+/* END GENERATED exports */
 
 #ifdef __cplusplus
 }

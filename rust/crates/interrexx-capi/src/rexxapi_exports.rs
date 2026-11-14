@@ -444,7 +444,7 @@ pub unsafe extern "C" fn RexxDropMacro(name: *const c_char) -> RexxReturnCode {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn RexxSaveMacroSpace(
     count: usize,
-    names: *const *const c_char,
+    names: *mut *const c_char,
     file: *const c_char,
 ) -> RexxReturnCode {
     // SAFETY: the caller's guarantee, for each pointer.
@@ -458,7 +458,7 @@ pub unsafe extern "C" fn RexxSaveMacroSpace(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn RexxLoadMacroSpace(
     count: usize,
-    names: *const *const c_char,
+    names: *mut *const c_char,
     file: *const c_char,
 ) -> RexxReturnCode {
     // SAFETY: the caller's guarantee, for each pointer.
@@ -597,7 +597,7 @@ pub unsafe extern "C" fn RexxQueryQueue(name: *const c_char, count: *mut usize) 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn RexxAddQueue(
     name: *const c_char,
-    data: *const CONSTRXSTRING,
+    data: *mut CONSTRXSTRING,
     flag: usize,
 ) -> RexxReturnCode {
     // SAFETY: the caller's guarantee.
@@ -718,3 +718,43 @@ pub unsafe extern "C" fn RexxFreeMemory(block: *mut c_void) -> RexxReturnCode {
     unsafe { libc::free(block) };
     0
 }
+
+// Each export has the type `interrexx_api::exports` declares it with, which is what the
+// headers in `include/` declare.
+const _: () = {
+    use interrexx_api::exports::signatures as declared;
+    let _: declared::RexxRegisterSubcomDll = RexxRegisterSubcomDll;
+    let _: declared::RexxRegisterSubcomExe = RexxRegisterSubcomExe;
+    let _: declared::RexxQuerySubcom = RexxQuerySubcom;
+    let _: declared::RexxDeregisterSubcom = RexxDeregisterSubcom;
+    let _: declared::RexxLoadSubcom = RexxLoadSubcom;
+    let _: declared::RexxRegisterExitDll = RexxRegisterExitDll;
+    let _: declared::RexxRegisterExitExe = RexxRegisterExitExe;
+    let _: declared::RexxDeregisterExit = RexxDeregisterExit;
+    let _: declared::RexxQueryExit = RexxQueryExit;
+    let _: declared::RexxRegisterFunctionDll = RexxRegisterFunctionDll;
+    let _: declared::RexxRegisterFunctionExe = RexxRegisterFunctionExe;
+    let _: declared::RexxDeregisterFunction = RexxDeregisterFunction;
+    let _: declared::RexxQueryFunction = RexxQueryFunction;
+    let _: declared::RexxAddMacro = RexxAddMacro;
+    let _: declared::RexxDropMacro = RexxDropMacro;
+    let _: declared::RexxSaveMacroSpace = RexxSaveMacroSpace;
+    let _: declared::RexxLoadMacroSpace = RexxLoadMacroSpace;
+    let _: declared::RexxQueryMacro = RexxQueryMacro;
+    let _: declared::RexxReorderMacro = RexxReorderMacro;
+    let _: declared::RexxClearMacroSpace = RexxClearMacroSpace;
+    let _: declared::RexxCreateQueue = RexxCreateQueue;
+    let _: declared::RexxOpenQueue = RexxOpenQueue;
+    let _: declared::RexxQueueExists = RexxQueueExists;
+    let _: declared::RexxDeleteQueue = RexxDeleteQueue;
+    let _: declared::RexxQueryQueue = RexxQueryQueue;
+    let _: declared::RexxAddQueue = RexxAddQueue;
+    let _: declared::RexxPullFromQueue = RexxPullFromQueue;
+    let _: declared::RexxPullQueue = RexxPullQueue;
+    let _: declared::RexxClearQueue = RexxClearQueue;
+    let _: declared::RexxCreateSessionQueue = RexxCreateSessionQueue;
+    let _: declared::RexxDeleteSessionQueue = RexxDeleteSessionQueue;
+    let _: declared::RexxShutDownAPI = RexxShutDownAPI;
+    let _: declared::RexxAllocateMemory = RexxAllocateMemory;
+    let _: declared::RexxFreeMemory = RexxFreeMemory;
+};

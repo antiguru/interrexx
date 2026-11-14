@@ -1,6 +1,8 @@
 //! The C ABI boundary: inbound entry points and outbound library loading.
 
 pub mod callbacks;
+pub mod constants;
+pub mod exports;
 pub mod ffi;
 pub mod handles;
 pub mod header;
