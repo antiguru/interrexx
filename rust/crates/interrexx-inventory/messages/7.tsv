@@ -1,0 +1,4 @@
+7	0	WHEN or OTHERWISE expected.
+7	1	SELECT on line &1 requires WHEN.
+7	2	SELECT on line &1 requires WHEN, OTHERWISE, or END.
+7	3	All WHEN expressions of SELECT are false; OTHERWISE expected.

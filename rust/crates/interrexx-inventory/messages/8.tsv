@@ -1,0 +1,3 @@
+8	0	Unexpected THEN or ELSE.
+8	1	THEN has no corresponding IF or WHEN clause.
+8	2	ELSE has no corresponding THEN clause.

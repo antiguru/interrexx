@@ -1,0 +1,8 @@
+10	0	Unexpected or unmatched END.
+10	1	END has no corresponding DO, LOOP, or SELECT.
+10	2	END corresponding to the block on line &3 must be followed by its name ("&2") or by no symbol; found "&1".
+10	3	END corresponding to block on line &2 must not have a symbol following it because there is no LABEL or control variable; found "&1".
+10	4	END corresponding to SELECT on line &3 must be followed by its LABEL ("&2") or by no symbol; found "&1".
+10	5	END must not immediately follow THEN.
+10	6	END must not immediately follow ELSE.
+10	7	END corresponding to SELECT on line &2 must not have a symbol following it because there is no LABEL; found "&1".

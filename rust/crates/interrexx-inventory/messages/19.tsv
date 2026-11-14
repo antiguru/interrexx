@@ -1,0 +1,32 @@
+19	0	String or symbol expected.
+19	1	String or symbol expected after ADDRESS keyword.
+19	2	String or symbol expected after CALL keyword.
+19	3	String or symbol expected after NAME keyword.
+19	4	String or symbol expected after SIGNAL keyword.
+19	6	String or symbol expected after TRACE keyword.
+19	7	String or symbol expected after PARSE keyword.
+19	900	&1.
+19	901	String or symbol expected after ::CLASS keyword.
+19	902	String or symbol expected after ::METHOD keyword.
+19	903	String or symbol expected after ::ROUTINE keyword.
+19	904	String or symbol expected after ::REQUIRES keyword.
+19	905	String expected after EXTERNAL keyword.
+19	906	String or symbol expected after METACLASS keyword.
+19	907	String or symbol expected after SUBCLASS keyword.
+19	908	String or symbol expected after INHERIT keyword.
+19	909	String or symbol expected after tilde (~).
+19	911	String or symbol expected after superclass colon (:).
+19	912	String or symbol expected after STREAM keyword.
+19	913	String or symbol expected after MIXINCLASS keyword.
+19	914	String or symbol expected as ::ATTRIBUTE directive name.
+19	915	String or symbol expected as ::CONSTANT directive name.
+19	916	String or symbol expected as ::CONSTANT value.
+19	917	String or symbol expected as DIGITS value.
+19	918	String or symbol expected as FUZZ value.
+19	919	String or symbol expected as TRACE value.
+19	920	String or symbol expected as ::RESOURCE directive name.
+19	921	String or symbol expected after ::RESOURCE END keyword.
+19	922	String or symbol expected after &1 keyword.
+19	923	Symbol or string expected as ::ANNOTATE attribute value; found "&1".
+19	924	Symbol or string expected as ::ANNOTATE attribute value.
+19	925	Symbol or string expected after &1 &2 keyword.
