@@ -454,9 +454,10 @@ for <code>RC</code>, <code>PACKAGE</code> is the package that <code>.CONTEXT~PAC
 that raised it, <code>PROGRAM</code> is the name of that package, and <code>POSITION</code> is the
 line of the clause, and <code>PROPAGATED</code> is <code>0</code> when the code that raised it
 answers it, as <a href="#r-cond.information.propagated">the propagated rule</a> says for
-the other case. <code>ADDITIONAL</code> is an array of the
-values that the error message names, <code>a</code> for the nonnumeric value <code>'a'</code> of
-error <code>41.1</code>. The description of a SYNTAX condition is the null string.</p>
+the other case. <code>ADDITIONAL</code> is an array whose items are
+<a href="../conventions.html#r-conv.error.additional">unspecified</a> unless a rule states them: for error
+<code>41.1</code> it has one item, the nonnumeric value, <code>a</code> for the value <code>'a'</code>, which is the
+string that failed to parse. The description of a SYNTAX condition is the null string.</p>
 <pre><code class="language-rexx">signal on syntax name s
 x = 1 + 'a'
 s: o = condition('o')

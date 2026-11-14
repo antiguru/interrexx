@@ -763,8 +763,8 @@ has not ended, or ended without an error. The object has the entries of a
 SYNTAX condition, as <a href="../conditions/information.html#r-cond.information.object">the entries rule</a> lists
 them: for the division by zero of the example <code>CODE</code> is <code>42.3</code>, <code>RC</code> is <code>42</code>
 and <code>CONDITION</code> is <code>SYNTAX</code>; for a message that no method of the target
-understands <code>CODE</code> is <code>97.1</code> and the entry <code>ADDITIONAL</code> holds the string value
-of the target and the name. It takes no argument.</p>
+understands <code>CODE</code> is <code>97.1</code> and the last item of the entry <code>ADDITIONAL</code> is the
+name, which says what the target did not understand. It takes no argument.</p>
 <pre><code class="language-rexx">t = .t~new
 m = .message~new(t, 'boom')
 say m~errorCondition~isNil
@@ -774,8 +774,8 @@ c1: c = m~errorCondition
 say c~class~id c~code c~rc c~condition
 n = t~start('nosuchzz')
 n~wait
-say n~errorCondition~code n~errorCondition~additional[1],
-  n~errorCondition~additional[2]
+say n~errorCondition~code,
+  n~errorCondition~additional[n~errorCondition~additional~items]
 say .message~new(t, 'ok')~~send~errorCondition~isNil
 ::class t
 ::method boom
@@ -785,7 +785,7 @@ say .message~new(t, 'ok')~~send~errorCondition~isNil
 </code></pre>
 <pre><code class="language-output">1
 Directory 42.3 42 SYNTAX
-97.1 a T NOSUCHZZ
+97.1 NOSUCHZZ
 1
 </code></pre>
 <h3 id="running-the-message"><a class="header" href="#running-the-message">Running the message</a></h3>

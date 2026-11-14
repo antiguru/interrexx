@@ -251,8 +251,9 @@ bad: say arg(1) '=&gt;' condition('o')~code
 2 ** "x" =&gt; 26.8
 </code></pre>
 <div class="rule" id="r-expr.arithmetic.exponent.message"><a href="#r-expr.arithmetic.exponent.message">[expr.arithmetic.exponent.message]</a></div>
-<p>The <code>ADDITIONAL</code> array of the <code>SYNTAX 26.8</code> error holds the exponent as the
-program wrote it, not as the number it denotes.</p>
+<p>The <code>ADDITIONAL</code> array of the <code>SYNTAX 26.8</code> error has one item, the exponent
+as the program wrote it, not as the number it denotes, which is the string that
+failed to parse.</p>
 <pre><code class="language-rexx">signal on syntax name a
 say 2 ** 0.5e0
 a: say condition('o')~additional~items '['condition('o')~additional[1]']'

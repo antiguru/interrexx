@@ -233,16 +233,17 @@ Validate
 <div class="rule" id="r-class.validate.arguments"><a href="#r-class.validate.arguments">[class.validate.arguments]</a></div>
 <p>Every check takes the name of the argument as its first argument, the value as
 its second, and then its own further arguments. The name is only used in the
-error: it may be any string, a name or a text, and it is the first entry of the
-condition's <code>ADDITIONAL</code> array, whose other entries each rule below gives. The
-counts are fixed: two arguments for <code>number</code> and <code>logical</code>, two and an optional
+error: it may be any string, a name or a text. In the error of a failed check
+it is the first item of the condition's <code>ADDITIONAL</code> array, so that a program
+can tell which argument failed; each rule below says which other items are
+stated. The errors of the argument count and of <code>digits</code> below have no name
+among their items. The counts are fixed: two arguments for <code>number</code> and <code>logical</code>, two and an optional
 <code>digits</code> for the other number checks, three for <code>classType</code> and
 <code>requestClassType</code>, and four and an optional <code>digits</code> for the range checks. A
 call with fewer raises <code>SYNTAX 93.901</code>, one with more <code>93.902</code>, and one that
 leaves out a required argument before the last one given <code>93.903</code>; omitted
-arguments at the end count as not given. The <code>ADDITIONAL</code> array of the first
-holds the least number of arguments, that of the second the most, and that of
-the third the position of the first argument left out. The argument count is
+arguments at the end count as not given. The <code>ADDITIONAL</code> items of these three
+errors are <a href="../conventions.html#r-conv.error.additional">unspecified</a>. The argument count is
 checked first, then <code>digits</code>, and the value last. Every value and bound is read
 as a string as <a href="../conventions.html#r-conv.string.object">the conversion rule</a> says. A check that
 fails raises the <code>SYNTAX</code> error of its method, which the rules below give.
@@ -272,7 +273,8 @@ t: procedure
   say m 'ok'
   return
 bad: c = condition('o')
-  say m c~code c~additional~items c~additional[1]
+  if c~code~left(2) == 93 then say m c~code
+  else say m c~code c~additional~items c~additional[1]
   return
 u: procedure
   m = arg(1)
@@ -281,27 +283,27 @@ u: procedure
   say m 'ok'
   return
 bad2: c = condition('o')
-  say m c~code c~additional~items c~additional[1]
+  say m c~code
   return
 </code></pre>
 <pre><code class="language-output">number 88.902 2 N
 number 88.902 2 my arg
-number 93.901 1 2
-number 93.902 1 2
-number 93.903 1 1
-positiveNumber 93.903 1 2
-numberRange 93.903 1 3
-classType 93.903 1 2
-numberRange 93.901 1 4
-numberRange 93.902 1 5
+number 93.901
+number 93.902
+number 93.903
+positiveNumber 93.903
+numberRange 93.903
+classType 93.903
+numberRange 93.901
+numberRange 93.902
 wholeNumber 26.5 1 0
-wholeNumber 93.902 1 3
-classType 93.901 1 3
-number("N", ) 93.901 1 2
-numberRange("N", 5, 1, ) 93.901 1 4
+wholeNumber 93.902
+classType 93.901
+number("N", ) 93.901
+numberRange("N", 5, 1, ) 93.901
 </code></pre>
 <pre><code class="language-rexx">/* per check: no argument; one fewer than it needs; the first left out; one more
-   than it takes (code/number of ADDITIONAL entries/first entry) */
+   than it takes (code) */
 specs = .array~of('number 2 2', 'logical 2 2', 'positiveNumber 2 3',,
   'nonNegativeNumber 2 3', 'wholeNumber 2 3', 'positiveWholeNumber 2 3',,
   'nonNegativeWholeNumber 2 3', 'position 2 3', 'length 2 3', 'classType 3 3',,
@@ -324,21 +326,21 @@ try: procedure
   interpret '.validate~'arg(1)'('arg(2)')'
   return 'ok'
 bad: c = condition('o')
-  return c~code'/'c~additional~items'/'c~additional[1]
+  return c~code
 </code></pre>
-<pre><code class="language-output">number                 93.901/1/2 93.901/1/2 93.903/1/1 93.902/1/2
-logical                93.901/1/2 93.901/1/2 93.903/1/1 93.902/1/2
-positiveNumber         93.901/1/2 93.901/1/2 93.903/1/1 93.902/1/3
-nonNegativeNumber      93.901/1/2 93.901/1/2 93.903/1/1 93.902/1/3
-wholeNumber            93.901/1/2 93.901/1/2 93.903/1/1 93.902/1/3
-positiveWholeNumber    93.901/1/2 93.901/1/2 93.903/1/1 93.902/1/3
-nonNegativeWholeNumber 93.901/1/2 93.901/1/2 93.903/1/1 93.902/1/3
-position               93.901/1/2 93.901/1/2 93.903/1/1 93.902/1/3
-length                 93.901/1/2 93.901/1/2 93.903/1/1 93.902/1/3
-classType              93.901/1/3 93.901/1/3 93.903/1/1 93.902/1/3
-requestClassType       93.901/1/3 93.901/1/3 93.903/1/1 93.902/1/3
-numberRange            93.901/1/4 93.901/1/4 93.903/1/1 93.902/1/5
-wholeNumberRange       93.901/1/4 93.901/1/4 93.903/1/1 93.902/1/5
+<pre><code class="language-output">number                 93.901 93.901 93.903 93.902
+logical                93.901 93.901 93.903 93.902
+positiveNumber         93.901 93.901 93.903 93.902
+nonNegativeNumber      93.901 93.901 93.903 93.902
+wholeNumber            93.901 93.901 93.903 93.902
+positiveWholeNumber    93.901 93.901 93.903 93.902
+nonNegativeWholeNumber 93.901 93.901 93.903 93.902
+position               93.901 93.901 93.903 93.902
+length                 93.901 93.901 93.903 93.902
+classType              93.901 93.901 93.903 93.902
+requestClassType       93.901 93.901 93.903 93.902
+numberRange            93.901 93.901 93.903 93.902
+wholeNumberRange       93.901 93.901 93.903 93.902
 </code></pre>
 <div class="rule" id="r-class.validate.digits"><a href="#r-class.validate.digits">[class.validate.digits]</a></div>
 <p>The checks that take <code>digits</code> compare and round under that many digits and not
@@ -347,7 +349,8 @@ least 1 and at most 999999999 and defaults to <code>9</code>, except for <code>l
 <code>position</code>, whose default is <a href="rexxinfo.html#r-class.rexxinfo.limits">the number of digits that whole numbers have
 internally</a>. Any other value, a string that is no
 number included, raises <code>SYNTAX 26.5</code> before the value is read; its <code>ADDITIONAL</code>
-array holds the value of <code>digits</code>.
+array has one item, the value of <code>digits</code>, the string that is
+refused.
 The last example of this rule asks every check that takes <code>digits</code> for the cases
 that are refused, for the two limits that are not, and for a value that is no
 number under a refused <code>digits</code>.</p>
@@ -458,7 +461,8 @@ also needs the value to be greater than zero (<code>SYNTAX 88.926</code>) and
 <code>nonNegativeNumber</code> to be zero or greater (<code>SYNTAX 88.925</code>); a value that is no
 number raises the error of the method asked, so <code>88.926</code> or <code>88.925</code>. Both take
 <code>digits</code>, and negative zero and <code>0.00</code> count as zero. The <code>ADDITIONAL</code> array of
-every error holds the name and the value.</p>
+every error has two items, the name and then the value, which tell a program
+which argument failed and what it held.</p>
 <pre><code class="language-rexx">vals = '5 -5 0 -0 0.00 5.5 1e3 1e-3 +7 abc 1E 2e+'
 meths = 'number positiveNumber nonNegativeNumber'
 do v over vals~makearray(' ')
@@ -539,7 +543,8 @@ All take <code>digits</code>, whose default <a href="#r-class.validate.digits">d
 <code>length</code></a>. A value with a trailing period or zeros
 after the point, such as <code>5.</code> or <code>5.00</code>, and a value written with an exponent
 that makes it whole, such as <code>1e3</code>, count as whole; negative zero counts as
-zero. The <code>ADDITIONAL</code> array of every error holds the name and the value.</p>
+zero. The <code>ADDITIONAL</code> array of every error has two items, the name and then the
+value, which tell a program which argument failed and what it held.</p>
 <pre><code class="language-rexx">vals = '5 -5 0 -0 5. 5.00 5.5 1e3 1e-3 +7 abc 1234567890 1.0e9'~makearray(' ')
 vals~append('')
 meths = 'wholeNumber positiveWholeNumber nonNegativeWholeNumber position',
@@ -585,7 +590,9 @@ number takes part in the comparison as a string, so that <code>5</code> is below
 above <code>4x</code>, and a bound that is <code>.nil</code> raises <code>88.907</code>. <code>wholeNumberRange</code> has
 the same arguments and also needs the value to be a whole number as
 <code>wholeNumber</code> does; its bounds may have a fraction. The <code>ADDITIONAL</code> array of
-the error holds the name, <code>min</code>, <code>max</code> and the value.</p>
+the error states the first item, the name, and the last item, the value, which
+tell a program which argument failed and what it held; the other items are
+<a href="../conventions.html#r-conv.error.additional">unspecified</a>.</p>
 <pre><code class="language-rexx">call t 'numberRange', 5, 1, 10
 call t 'numberRange', 1, 1, 10
 call t 'numberRange', 10, 1, 10
@@ -620,29 +627,30 @@ t: procedure
   return
 bad: c = condition('o')
   if arg(5, 'E') then say m v lo hi d '=&gt;' c~code
-  else say m v lo hi '- =&gt;' c~code c~additional~makeString('l', ' ; ')
+  else say m v lo hi '- =&gt;' c~code c~additional[1] ';',
+    c~additional[c~additional~items]
   return
 </code></pre>
 <pre><code class="language-output">numberRange 5 1 10 - =&gt; ok
 numberRange 1 1 10 - =&gt; ok
 numberRange 10 1 10 - =&gt; ok
-numberRange 0 1 10 - =&gt; 88.907 N ; 1 ; 10 ; 0
-numberRange 11 1 10 - =&gt; 88.907 N ; 1 ; 10 ; 11
+numberRange 0 1 10 - =&gt; 88.907 N ; 0
+numberRange 11 1 10 - =&gt; 88.907 N ; 11
 numberRange 5.5 1 10 - =&gt; ok
-numberRange x 1 10 - =&gt; 88.907 N ; 1 ; 10 ; x
-numberRange 5 10 1 - =&gt; 88.907 N ; 10 ; 1 ; 5
+numberRange x 1 10 - =&gt; 88.907 N ; x
+numberRange 5 10 1 - =&gt; 88.907 N ; 5
 numberRange 5 5 5 - =&gt; ok
 wholeNumberRange 5 1 10 - =&gt; ok
-wholeNumberRange 5.5 1 10 - =&gt; 88.907 N ; 1 ; 10 ; 5.5
-wholeNumberRange 11 1 10 - =&gt; 88.907 N ; 1 ; 10 ; 11
-wholeNumberRange x 1 10 - =&gt; 88.907 N ; 1 ; 10 ; x
-wholeNumberRange 5 10 1 - =&gt; 88.907 N ; 10 ; 1 ; 5
+wholeNumberRange 5.5 1 10 - =&gt; 88.907 N ; 5.5
+wholeNumberRange 11 1 10 - =&gt; 88.907 N ; 11
+wholeNumberRange x 1 10 - =&gt; 88.907 N ; x
+wholeNumberRange 5 10 1 - =&gt; 88.907 N ; 5
 numberRange 1234567891 1234567890 1234567890 9 =&gt; ok
 numberRange 1234567891 1234567890 1234567890 12 =&gt; 88.907
 numberRange 5 1 x - =&gt; ok
-numberRange 5 x 9 - =&gt; 88.907 N ; x ; 9 ; 5
-numberRange 5 1 4x - =&gt; 88.907 N ; 1 ; 4x ; 5
-numberRange 5 1 The NIL object - =&gt; 88.907 N ; 1 ; The NIL object ; 5
+numberRange 5 x 9 - =&gt; 88.907 N ; 5
+numberRange 5 1 4x - =&gt; 88.907 N ; 5
+numberRange 5 1 The NIL object - =&gt; 88.907 N ; 5
 wholeNumberRange 5 1.5 9.5 - =&gt; ok
 </code></pre>
 <div class="rule" id="r-class.validate.sends"><a href="#r-class.validate.sends">[class.validate.sends]</a></div>
@@ -813,7 +821,8 @@ positiveNumber ok
 <p><code>logical</code> accepts exactly the strings <code>0</code> and <code>1</code>, or the objects <code>.true</code> and
 <code>.false</code>, and raises <code>SYNTAX 88.927</code> for any other value, such as <code>2</code>, a
 number written otherwise such as <code>1.0</code> or <code>01</code>, a string with blanks and the
-null string; the <code>ADDITIONAL</code> array holds the name and the value.</p>
+null string; the <code>ADDITIONAL</code> array has two items, the name and then the value,
+which tell a program which argument failed and what it held.</p>
 <pre><code class="language-rexx">call show .array~of('0', '1', .true, .false, '2')
 call show .array~of('1.0', '01', ' 1', 'yes', '', .nil)
 exit
@@ -844,15 +853,16 @@ bad: return condition('o')~code
 <div class="rule" id="r-class.validate.classtype"><a href="#r-class.validate.classtype">[class.validate.classtype]</a></div>
 <p><code>classType(name, object, class)</code> accepts an object that is an instance of
 <code>class</code>, a subclass or a class it inherits from included, as <code>isA</code> says, and
-raises <code>SYNTAX 88.914</code> otherwise, with <code>ADDITIONAL</code> holding the name and the id
-of the class. An argument <code>class</code> that is not a class raises <code>88.914</code> too,
-naming the argument <code>class</code>; <a href="#r-class.validate.classtype.sends">the sends rule</a>
-says where that error comes from. <code>requestClassType(name, object, class)</code> sends
+raises <code>SYNTAX 88.914</code> otherwise, whose first <code>ADDITIONAL</code> item is the name,
+which tells a program which argument failed. An argument <code>class</code> that is not a
+class raises <code>88.914</code> too, naming the argument <code>class</code>; <a href="#r-class.validate.classtype.sends">the sends
+rule</a> says where that error comes from. <code>requestClassType(name, object, class)</code> sends
 the object the message <code>request</code> with the id of the class as its argument, and
 answers the object that <code>request</code> answers when that is an instance of the class,
 and raises <code>SYNTAX 93.978</code> for an answer that is not, <code>.nil</code> being an instance
-of <code>Object</code> only; <code>ADDITIONAL</code> then holds the name, the id of the class and the
-object.</p>
+of <code>Object</code> only; the first <code>ADDITIONAL</code> item of both errors is the name, which
+tells a program which argument failed. The other items of both errors are
+<a href="../conventions.html#r-conv.error.additional">unspecified</a>.</p>
 <pre><code class="language-rexx">call c 'classType', 'abc', .string
 call c 'classType', 'abc', .array
 call c 'classType', .array~new, .collection
@@ -883,8 +893,7 @@ c: procedure
   end
   return
 bad: cd = condition('o')
-  say m k~string '=&gt;' cd~code cd~additional~items cd~additional[1],
-      cd~additional[2]~string
+  say m k~string '=&gt;' cd~code cd~additional[1]
   return
 ::class base
 ::class sub subclass base
@@ -899,25 +908,25 @@ bad: cd = condition('o')
   return .nil
 </code></pre>
 <pre><code class="language-output">classType The String class ok
-classType The Array class =&gt; 88.914 2 N Array
+classType The Array class =&gt; 88.914 N
 classType The Collection class ok
-classType The MIX class =&gt; 88.914 2 N MIX
+classType The MIX class =&gt; 88.914 N
 classType The MIX class ok
 classType The BASE class ok
-classType The SUB class =&gt; 88.914 2 N SUB
+classType The SUB class =&gt; 88.914 N
 classType The Object class ok
-classType string =&gt; 88.914 2 class Class
+classType string =&gt; 88.914 class
 requestClassType The String class answers String
   request Array
 requestClassType The Array class answers Array
   request String
 requestClassType The String class answers String
   request List
-requestClassType The List class =&gt; 93.978 3 N List
+requestClassType The List class =&gt; 93.978 N
   request Object
 requestClassType The Object class answers Object
 requestClassType The Array class answers Array
-requestClassType The String class =&gt; 93.978 3 N String
+requestClassType The String class =&gt; 93.978 N
 </code></pre>
 <div class="rule" id="r-class.validate.classtype.sends"><a href="#r-class.validate.classtype.sends">[class.validate.classtype.sends]</a></div>
 <p><code>classType</code> sends the object <code>isA</code> with <code>class</code> and accepts it when the answer

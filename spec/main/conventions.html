@@ -611,8 +611,10 @@ say (errortext(93) \== '') (o~errortext == errortext(93)) (o~message \== '')
 <div class="rule" id="r-conv.error.additional"><a href="#r-conv.error.additional">[conv.error.additional]</a></div>
 <p>For an error the interpreter raises, the <code>ADDITIONAL</code> entry of the condition
 object is an Array, and the number, order and values of its items are
-unspecified, except where a rule states an item. A rule that states one says
-which item it is and what it holds. An error that <code>RAISE</code> gives rise to is
+unspecified, except where a rule states an item. A rule states an item only where the item is
+needed to understand the error and the program cannot get it otherwise, as with
+a number parse error that carries the string that failed to parse. A rule that
+states one says which item it is and what it holds. An error that <code>RAISE</code> gives rise to is
 such an error; the objects the clause supplied are governed by the <a href="instructions/raise.html#r-instr.raise.untrapped">RAISE
 rules</a>.</p>
 <pre><code class="language-rexx">signal on syntax name e

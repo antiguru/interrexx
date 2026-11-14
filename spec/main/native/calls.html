@@ -246,17 +246,15 @@ t: parse arg expr
   interpret 'v =' expr
   say expr '=&gt;' v
   return
-e: l = ''
-  do v over condition('o')~additional; l = l'['v']'; end
-  say expr '=&gt;' condition('o')~code l
+e: say expr '=&gt;' condition('o')~code
   return
 ::requires 'specfixture' LIBRARY
 </code></pre>
-<pre><code class="language-output">fxadd(1) =&gt; 88.901 [2]
-fxadd(, 1) =&gt; 88.901 [1]
-fxadd(1, 2, 3) =&gt; 88.922 [2]
+<pre><code class="language-output">fxadd(1) =&gt; 88.901
+fxadd(, 1) =&gt; 88.901
+fxadd(1, 2, 3) =&gt; 88.922
 fxoptional() fxoptional(,) fxoptional(3) =&gt; omitted omitted 3
-fxoptional('x') =&gt; 88.907 [1][-2147483648][2147483647][x]
+fxoptional('x') =&gt; 88.907
 </code></pre>
 <div class="rule" id="r-native.calls.arglist"><a href="#r-native.calls.arglist">[native.calls.arglist]</a></div>
 <p>A routine may take its arguments as one Array, as <code>ARG(1, 'A')</code> would give
