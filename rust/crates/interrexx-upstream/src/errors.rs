@@ -57,6 +57,25 @@ pub struct Message {
     pub text: String,
 }
 
+/// The major of the utility messages (`rxqueue`, `rxsubcom`, `rexxc`).
+pub const UTILITY_MAJOR: u16 = 999;
+
+/// `text` with each `%k` (`k` one digit) written as `&k`. The utility messages
+/// mark an insert `%k` where every other message has a `<Sub>` element, and
+/// the table counts only `&k`, so without this a utility message that names
+/// a queue would read as taking no insert.
+pub fn percent_inserts_to_ampersand(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut chars = text.chars().peekable();
+    while let Some(c) = chars.next() {
+        match (c, chars.peek()) {
+            ('%', Some(d)) if d.is_ascii_digit() => out.push('&'),
+            _ => out.push(c),
+        }
+    }
+    out
+}
+
 /// The highest `k` of any `&k` in `text`, or zero for none.
 pub fn highest_insert(text: &str) -> usize {
     let bytes = text.as_bytes();
@@ -198,7 +217,10 @@ pub fn parse_messages(xml: &str) -> Vec<Message> {
                     }
                 }
                 "Message" | "SubMessage" => {
-                    let done = stack.pop().expect("balanced start/end");
+                    let mut done = stack.pop().expect("balanced start/end");
+                    if done.major == UTILITY_MAJOR {
+                        done.text = percent_inserts_to_ampersand(&done.text);
+                    }
                     if done.symbol.is_empty() {
                         panic!("message {}.{:03} has no SymbolicName", done.major, done.sub);
                     }

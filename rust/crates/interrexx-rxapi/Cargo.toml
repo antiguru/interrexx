@@ -18,6 +18,7 @@ chrono = { version = "0.4.45", default-features = false, features = ["clock", "s
 rustix = { version = "1.1.4", features = ["fs", "net", "process"] }
 # `classic_procedure`: `rxsubcom LOAD` loads a registration's library and finds its handler.
 interrexx-api.workspace = true
+interrexx-inventory.workspace = true
 
 [lints]
 workspace = true

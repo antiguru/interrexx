@@ -695,9 +695,9 @@
 999	4	119	Error_RXQUE_notinit	0	-
 999	5	120	Error_RXQUE_size	0	-
 999	6	121	Error_RXQUE_nomem	0	-
-999	7	122	Error_RXQUE_name	0	-
+999	7	122	Error_RXQUE_name	1	1
 999	8	123	Error_RXQUE_access	0	-
-999	10	124	Error_RXQUE_exist	0	-
+999	10	124	Error_RXQUE_exist	1	1
 999	11	125	Error_RXSUBC_query	0	-
 999	12	127	Error_REXXC_cmd_parm_incorrect	0	-
 999	13	128	Error_REXXC_outDifferent	0	-

@@ -2315,25 +2315,7 @@ fn message_text<const N: usize>(
 
 /// Replaces `&1`, `&2`, ... with the raiser's substitution values.
 fn substitute(text: &str, values: &[Substitution]) -> Vec<u8> {
-    let mut out = Vec::with_capacity(text.len());
-    let mut bytes = text.as_bytes().iter().copied().peekable();
-    while let Some(byte) = bytes.next() {
-        if byte != b'&' {
-            out.push(byte);
-            continue;
-        }
-        match bytes.peek().copied() {
-            Some(digit @ b'1'..=b'9') => {
-                bytes.next();
-                match values.get(usize::from(digit - b'1')) {
-                    Some(value) => out.extend_from_slice(value),
-                    None => out.extend_from_slice(&[b'&', digit]),
-                }
-            }
-            _ => out.push(b'&'),
-        }
-    }
-    out
+    interrexx_inventory::errors::substitute(text, values)
 }
 
 /// The rule for putting arbitrary Rexx bytes on a report line.
