@@ -668,6 +668,31 @@ e: say condition('c') condition('o')~code rc
 </code></pre>
 <pre><code class="language-output">SYNTAX 93.924 93
 </code></pre>
+<div class="rule" id="r-conv.error.text"><a href="conventions.html#r-conv.error.text">[conv.error.text]</a></div>
+<p>The wording of a message is unspecified wherever it reaches a program: the
+result of the ERRORTEXT builtin, the <code>ERRORTEXT</code> and <code>MESSAGE</code> entries of a
+condition object and the text that <code>CONDITION('D')</code> carries where it holds a
+message, the report that an error writes to the error stream after its frame,
+the notice and the error lines of interactive tracing, the text of a trace
+line that names a library method, the answers of SysGetMessage for the
+interpreter's own catalog and of SysGeterrnomsg, the C API's functions that
+answer the text of an error, the usage texts of the commands, and the messages
+of the utility programs. What is specified is the code, the number and the
+order of the inserts that <code>ADDITIONAL</code> holds, the values they hold, and for the
+report the frame that names the error number, the program and the line (<code>Error N running F line L:</code>, or <code>Error N.M:</code> where no line applies). A message exists
+for a number or it does not, as the <a href="builtins/errortext.html#r-bif.errortext.result">ERRORTEXT rules</a>
+say, and an example in this book shows a message only by whether it is the
+null string or equals another message, never by its words. The words <code>Error</code>,
+<code>running</code> and <code>line</code> of the frame and the names of the months are short names
+that stay as they are, not wording that is free.</p>
+<pre><code class="language-rexx">signal on syntax name e
+x = substr('abc', 0)
+e: o = condition('o')
+say (errortext(93) \== '') (o~errortext == errortext(93)) (o~message \== ''),
+    o~additional~items
+</code></pre>
+<pre><code class="language-output">1 1 1 1
+</code></pre>
 <div class="rule" id="r-conv.returns"><a href="conventions.html#r-conv.returns">[conv.returns]</a></div>
 <p>A rule that says a builtin "returns" a string means that the function
 call's value is exactly that string: the same characters in the same order,
@@ -734,7 +759,7 @@ u: say condition('o')~code rc
 <div class="rule" id="r-conv.string.builtin-argument"><a href="conventions.html#r-conv.string.builtin-argument">[conv.string.builtin-argument]</a></div>
 <p>Where the <code>STRING</code> method of a builtin's argument answers an object with no
 string value, and the builtin reads that argument as a string, the builtin
-raises <code>SYNTAX 88.909</code>, "Argument N must have a string value", as the method
+raises <code>SYNTAX 88.909</code>, as the method
 the builtin stands for does. <code>N</code> is the position of the argument among the
 arguments of that method, which does not count the receiver, the string the
 builtin works on. So <code>CHANGESTR(needle, haystack, new)</code> numbers the needle 1
@@ -3067,22 +3092,28 @@ say (10 ** 999999999) (2e333333333 ** 3) (3e-333333333 ** 3)
 1E+999999999 8E+999999999 2.7E-999999998
 </code></pre>
 <div class="rule" id="r-num.arithmetic.power.message"><a href="numbers/arithmetic.html#r-num.arithmetic.power.message">[num.arithmetic.power.message]</a></div>
-<p>The message of the <code>SYNTAX 42.1</code> error names the base and the exponent as the
-program wrote them, not as the numbers they denote, with <code>**</code> between them.</p>
+<p>The <code>ADDITIONAL</code> array of the <code>SYNTAX 42.1</code> error holds three items, the base
+and the exponent as the program wrote them, not as the numbers they denote, with
+the string <code>**</code> between them.</p>
 <pre><code class="language-rexx">signal on syntax name a
 say 1e3 ** 999999999
-a: say condition('o')~message
+a: call show
 signal on syntax name b
 say ' 100 ' ** '999999999'
-b: say condition('o')~message
+b: call show
 x = 1e3
 signal on syntax name c
 say x ** 99999999e1
-c: say condition('o')~message
+c: call show
+exit
+show: l = ''
+do v over condition('o')~additional; l = l'['v']'; end
+say l
+return
 </code></pre>
-<pre><code class="language-output">Arithmetic overflow detected at:  "1E3**999999999".
-Arithmetic overflow detected at:  " 100 **999999999".
-Arithmetic overflow detected at:  "1E3**99999999E1".
+<pre><code class="language-output">[1E3][**][999999999]
+[ 100 ][**][999999999]
+[1E3][**][99999999E1]
 </code></pre>
 <h2 id="errors-in-the-multiplicative-and-additive-operators"><a class="header" href="#errors-in-the-multiplicative-and-additive-operators">Errors in the multiplicative and additive operators</a></h2>
 <div class="rule" id="r-num.arithmetic.range"><a href="numbers/arithmetic.html#r-num.arithmetic.range">[num.arithmetic.range]</a></div>
@@ -4347,25 +4378,25 @@ bad: say arg(1) '=&gt;' condition('o')~code
 2 ** "x" =&gt; 26.8
 </code></pre>
 <div class="rule" id="r-expr.arithmetic.exponent.message"><a href="expressions/arithmetic.html#r-expr.arithmetic.exponent.message">[expr.arithmetic.exponent.message]</a></div>
-<p>The message of the <code>SYNTAX 26.8</code> error names the exponent as the program wrote
-it, not as the number it denotes.</p>
+<p>The <code>ADDITIONAL</code> array of the <code>SYNTAX 26.8</code> error holds the exponent as the
+program wrote it, not as the number it denotes.</p>
 <pre><code class="language-rexx">signal on syntax name a
 say 2 ** 0.5e0
-a: say condition('o')~message
+a: say condition('o')~additional~items '['condition('o')~additional[1]']'
 signal on syntax name b
 say 2 ** ' 0.50 '
-b: say condition('o')~message
+b: say condition('o')~additional~items '['condition('o')~additional[1]']'
 signal on syntax name c
 say 2 ** 00.5
-c: say condition('o')~message
+c: say condition('o')~additional~items '['condition('o')~additional[1]']'
 signal on syntax name d
 say '3'~'**'(' 0.5E+0')
-d: say condition('o')~message
+d: say condition('o')~additional~items '['condition('o')~additional[1]']'
 </code></pre>
-<pre><code class="language-output">Operand to the right of the power operator (**) must be a whole number; found "0.5E0".
-Operand to the right of the power operator (**) must be a whole number; found " 0.50 ".
-Operand to the right of the power operator (**) must be a whole number; found "00.5".
-Operand to the right of the power operator (**) must be a whole number; found " 0.5E+0".
+<pre><code class="language-output">1 [0.5E0]
+1 [ 0.50 ]
+1 [00.5]
+1 [ 0.5E+0]
 </code></pre>
 <h2 id="operands-that-are-not-numbers"><a class="header" href="#operands-that-are-not-numbers">Operands that are not numbers</a></h2>
 <div class="rule" id="r-expr.arithmetic.number"><a href="expressions/arithmetic.html#r-expr.arithmetic.number">[expr.arithmetic.number]</a></div>
@@ -14063,16 +14094,18 @@ R7 ignored
 </code></pre>
 <div class="rule" id="r-instr.raise.untrapped.description"><a href="instructions/raise.html#r-instr.raise.untrapped.description">[instr.raise.untrapped.description]</a></div>
 <p>The message that the <code>SYNTAX 97.1</code> names is the description of the clause. A
-description that is an object is named by its default name, as the object's
-<code>DEFAULTNAME</code> gives it, and not by what its <code>MAKESTRING</code> answers.</p>
+description that is an object is not asked for a string value: its <code>MAKESTRING</code>
+method does not run, and the wording of the message is not specified (see
+<a href="instructions/../conventions.html#r-conv.error.text">the rule on error messages</a>).</p>
 <pre><code class="language-rexx">signal on syntax name s
 raise nomethod additional ('obj') description (.key~new)
-s: say condition('o')~message
+s: say condition('o')~code (condition('o')~message \== '')
 ::class key
 ::method makestring
+  say 'makestring ran'
   return 'description'
 </code></pre>
-<pre><code class="language-output">Object "obj" does not understand message "a KEY".
+<pre><code class="language-output">97.1 1
 </code></pre>
 <pre><code class="language-rexx">call on error name e
 call r1
@@ -23974,11 +24007,9 @@ h: say condition('o')~code
 <p>The <a href="conditions/../classes/stackframe.html#r-class.stackframe.traceline">trace line</a> of a level that runs a method of
 the class library, and so each such entry of <code>TRACEBACK</code>, holds no text of the
 class library's code. It is the number of the line, <code>*-*</code>, one or more
-blanks, and
-<code>Method NAME with scope "Class" in package "REXX" (no source available).</code>,
-with the method's name in upper case and the id of the class that defines it;
-the number and how many blanks follow <code>*-*</code> are not specified, as <a href="conditions/information.html#r-cond.information.library">the library
-rule</a> says. <code>SOURCE</code> of such a method has no lines
+blanks, and a text that says that the code has no source; the text, the
+number and how many blanks follow <code>*-*</code> are not specified, as <a href="conditions/information.html#r-cond.information.library">the library rule</a> and <a href="conditions/../conventions.html#r-conv.error.name">the rule on
+error messages</a> say. <code>SOURCE</code> of such a method has no lines
 (<a href="conditions/../classes/method.html#r-class.method.source">the source rule</a>), and the <a href="conditions/index.html#r-cond.index.syntax">report of an
 error</a> raised inside the library prints no line of that
 code.</p>
@@ -23992,7 +24023,7 @@ do f over condition('o')~stackframes
   if f~type == 'METHOD', f~executable~package~name == 'REXX' then do
     n += 1
     t = f~traceLine
-    ok = ok &amp; (t~word(2) == '*-*') &amp; (t~pos('in package "REXX" (no source available).') &gt; 0)
+    ok = ok &amp; (t~word(2) == '*-*') &amp; (t~words &gt; 2)
   end
 end
 say (n &gt; 0) ok
@@ -73031,10 +73062,11 @@ number of its line in six columns, <code>*-*</code> and the clause, indented as 
 indentation rule</a> says, which counts one level for each
 active internal call. <a href="classes/stackframe.html#r-class.stackframe.deviation.0">Deviation 0</a> covers the
 indentation that a program reads back. The string of a built-in method's frame
-is seven blanks, <code>*-*</code>, a blank and <code>Compiled method "NAME" with scope "Class".</code>, with the method's name in upper case and the id of the class that
-defines it.
-The number in the line of a method of the class library, and its
-indentation, are not specified, as <a href="classes/../conditions/information.html#r-cond.information.library">the library rule</a>
+is seven blanks, <code>*-*</code>, a blank and a text that names the method; the text is not
+specified,
+as <a href="classes/../conventions.html#r-conv.error.text">the rule on error messages</a> says for text that the
+interpreter writes. The number in the line of a method of the class library, and
+its indentation, are not specified, as <a href="classes/../conditions/information.html#r-cond.information.library">the library rule</a>
 says.</p>
 <pre><code class="language-rexx">call show
 do i = 1 to 1
@@ -73064,11 +73096,12 @@ show:
 exit
 ::class o
 ::method m
-  say '['.context~stackFrames[2]~traceLine']'
+  t = .context~stackFrames[2]~traceLine
+  say (t~word(1) == '*-*') (t~words &gt; 1)
 </code></pre>
-<pre><code class="language-output">[       *-* Compiled method "SEND" with scope "Object".]
-[       *-* Compiled method "SENDWITH" with scope "Object".]
-[       *-* Compiled method "SEND" with scope "Message".]
+<pre><code class="language-output">1 1
+1 1
+1 1
 </code></pre>
 <div class="rule" id="r-class.stackframe.arguments"><a href="classes/stackframe.html#r-class.stackframe.arguments">[class.stackframe.arguments]</a></div>
 <p><code>arguments</code> answers an array of the arguments that the level was given, as
@@ -88982,7 +89015,8 @@ when it was started without words, and what happens when it ends.</p>
 <p>A command with no words, or whose words end before a program name or a string
 is found, runs nothing: it writes a usage text, a blank line and then three
 lines, to its standard error stream, and ends with the status 255. The text
-names the three forms. The words that lead up to the end are the option words
+names the three forms; its wording is not specified, as <a href="environment/../conventions.html#r-conv.error.text">the rule on error
+messages</a> says. The words that lead up to the end are the option words
 of the next rule, so <code>rexx -x</code>, <code>rexx -e</code>, <code>rexx -o</code> and <code>rexx -o</code> with its
 string and nothing more all give the usage text.</p>
 <div class="rule" id="r-env.invocation.words"><a href="environment/invocation.html#r-env.invocation.words">[env.invocation.words]</a></div>
@@ -89282,7 +89316,7 @@ errors, and so is a name after the first flag, as in <code>rexxc a.rex -s b.rxo<
 The command then writes a line that says its parameters are incorrect and the
 usage text, to its standard output stream, and ends with the status 255,
 before it looks for the program. With no words at all it writes the usage text
-alone, with the same status.</p>
+alone, with the same status. The wording of both is not specified.</p>
 <div class="rule" id="r-env.invocation.rexxc.check"><a href="environment/invocation.html#r-env.invocation.rexxc.check">[env.invocation.rexxc.check]</a></div>
 <p>Without an output name <code>rexxc</code> only translates the program and keeps nothing
 of the result: it ends with the status 0 when the program translates, and
@@ -89297,8 +89331,8 @@ banner. The banner is as <a href="environment/invocation.html#r-env.invocation.d
 states.</p>
 <div class="rule" id="r-env.invocation.rexxc.names"><a href="environment/invocation.html#r-env.invocation.rexxc.names">[env.invocation.rexxc.names]</a></div>
 <p>When the output name and the program name are the same string of bytes, the
-command ends with the status 254 and the line <code>Output file name must be different from input file name.</code> on its standard output stream, before it
-looks for the program, so that it ends so even when no such program exists.
+command ends with the status 254 and a line that says the two names must
+differ, on its standard output stream, before it looks for the program, so that it ends so even when no such program exists.
 Words that are in error (<a href="environment/invocation.html#r-env.invocation.rexxc.words">the words rule</a>) are
 reported before this check, so that <code>rexxc a a -x</code> ends with 255. The check
 compares the two words and not the files they name: for it <code>a</code> and <code>a.rex</code>, or
@@ -92555,13 +92589,17 @@ exit
 ::method lineout
   use arg l
   l = '' || l
-  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  select
+    when l~strip~left(5) = '+++ "' then nop
+    when l~strip~left(3) = '+++' then .stdout~lineout('&lt;notice&gt;')
+    otherwise .stdout~lineout(l)
+  end
   return 0
 </code></pre>
 <pre><code class="language-output">before
      5 *-* say 'one'
 one
-+++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+&lt;notice&gt;
 [read 1: ]
      6 *-* say 'two'
 two
@@ -92589,14 +92627,18 @@ call trace 'o'
 ::method lineout
   use arg l
   l = '' || l
-  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  select
+    when l~strip~left(5) = '+++ "' then nop
+    when l~strip~left(3) = '+++' then .stdout~lineout('&lt;notice&gt;')
+    otherwise .stdout~lineout(l)
+  end
   return 0
 </code></pre>
 <pre><code class="language-output">a
      5 *-* say 'b'
        &gt;&gt;&gt;   "b"
 b
-+++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+&lt;notice&gt;
 [read 1: say "typed"]
 typed
 [read 2: ]
@@ -92625,12 +92667,16 @@ exit
 ::method lineout
   use arg l
   l = '' || l
-  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  select
+    when l~strip~left(5) = '+++ "' then nop
+    when l~strip~left(3) = '+++' then .stdout~lineout('&lt;notice&gt;')
+    otherwise .stdout~lineout(l)
+  end
   return 0
 </code></pre>
 <pre><code class="language-output">a
        &gt;&gt;&gt;   "N"
-+++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+&lt;notice&gt;
 [read 1: say "t1"]
 t1
 [read 2: ]
@@ -92666,14 +92712,18 @@ exit
 ::method lineout
   use arg l
   l = '' || l
-  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  select
+    when l~strip~left(5) = '+++ "' then nop
+    when l~strip~left(3) = '+++' then .stdout~lineout('&lt;notice&gt;')
+    otherwise .stdout~lineout(l)
+  end
   return 0
 </code></pre>
 <pre><code class="language-output">     4 *-* trace ?r
      5 *-* say 'b'
        &gt;&gt;&gt;   "b"
 b
-+++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+&lt;notice&gt;
 [read 1: ]
      6 *-* call trace 'o'
 </code></pre>
@@ -92707,6 +92757,7 @@ exit
   use arg l
   l = '' || l
   if l = '       +++ "' || src || '"' then l = '&lt;source line&gt;'
+  else if l~strip~left(3) = '+++' then l = '&lt;notice&gt;'
   .stdout~lineout(l)
   return 0
 ::class in
@@ -92725,7 +92776,7 @@ exit
 &lt;source line&gt;
      6 *-* say 'one'
 one
-+++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+&lt;notice&gt;
 [read 1]
 typed
 [read 2]
@@ -92767,7 +92818,7 @@ r1:
   use arg l
   l = '' || l
   if l = '       +++ "' || src || '"' then l = '&lt;source line&gt;'
-  if l~word(2) \= 'Interactive' then .stdout~lineout(l)
+  if l~strip~left(3) \= '+++' then .stdout~lineout(l)
   return 0
 </code></pre>
 <pre><code class="language-output">&lt;source line&gt;
@@ -92784,9 +92835,11 @@ main
     13 *-*   return
 </code></pre>
 <div class="rule" id="r-env.debugging.notice"><a href="environment/debugging.html#r-env.debugging.notice">[env.debugging.notice]</a></div>
-<p>Each time interactive tracing is turned on where it was off, the line
-<code>+++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++</code> is
-written just before the first stop that follows. Turning it off and on again
+<p>Each time interactive tracing is turned on where it was off, the notice is
+written just before the first stop that follows. The notice is one line that
+starts with <code>+++</code> and tells how to end the debugging; its wording is not
+specified, as <a href="environment/../conventions.html#r-conv.error.text">the rule on error messages</a> says, except that
+none of its words ends in a colon. The examples show it as <code>&lt;notice&gt;</code>. Turning it off and on again
 in the same code, in the program or by a line typed at a stop, writes it
 again. In the example it is written before the first stop of each of the two
 periods in which interactive tracing is on.</p>
@@ -92815,18 +92868,22 @@ exit
 ::method lineout
   use arg l
   l = '' || l
-  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  select
+    when l~strip~left(5) = '+++ "' then nop
+    when l~strip~left(3) = '+++' then .stdout~lineout('&lt;notice&gt;')
+    otherwise .stdout~lineout(l)
+  end
   return 0
 </code></pre>
 <pre><code class="language-output">     4 *-* say 'p1'
 p1
-+++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+&lt;notice&gt;
 [read 1: ]
      5 *-* call trace 'o'
 p2
      8 *-* say 'p3'
 p3
-+++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+&lt;notice&gt;
 [read 2: ]
      9 *-* say 'p4'
 p4
@@ -92855,8 +92912,13 @@ call trace 'o'
   s = '' || l
   select
     when s~strip~left(5) = '+++ "' then kind = 'source line'
-    when s~word(2) = 'Interactive' &amp; s~word(4) = '"Trace' then kind = 'notice'
-    when s~word(2) = 'Interactive' &amp; s~word(4) = 'Error' then kind = 'error line'
+    when s~strip~left(3) = '+++' then do
+      do k = 2 to s~words
+        if s~word(k)~right(1) = ':' then leave
+      end
+      if k &gt; s~words then kind = 'notice'
+      else kind = 'error line'
+    end
     when s~pos('*-*') &gt; 0 then kind = 'clause'
     when s~left(10) = '       &gt;&gt;&gt;' then kind = 'value'
     otherwise kind = '?'
@@ -92921,12 +92983,16 @@ sub: say 'in sub'
 ::method lineout
   use arg l
   l = '' || l
-  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  select
+    when l~strip~left(5) = '+++ "' then nop
+    when l~strip~left(3) = '+++' then .stdout~lineout('&lt;notice&gt;')
+    otherwise .stdout~lineout(l)
+  end
   return 0
 </code></pre>
 <pre><code class="language-output">     4 *-* n = 1
        &gt;&gt;&gt;   "1"
-+++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+&lt;notice&gt;
 [read 1: ]
      5 *-* call sub
      8 *-*   sub:
@@ -92975,11 +93041,15 @@ h: say 'h' sigl
 ::method lineout
   use arg l
   l = '' || l
-  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  select
+    when l~strip~left(5) = '+++ "' then nop
+    when l~strip~left(3) = '+++' then .stdout~lineout('&lt;notice&gt;')
+    otherwise .stdout~lineout(l)
+  end
   return 0
 </code></pre>
 <pre><code class="language-output">     5 *-* do i = 1 to length(linein('/nonexistent/dh')) + 1
-+++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+&lt;notice&gt;
 [read 1: ]
     10 *-*     h:
 [read 2: ]
@@ -93024,11 +93094,15 @@ exit
 ::method lineout
   use arg l
   l = '' || l
-  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  select
+    when l~strip~left(5) = '+++ "' then nop
+    when l~strip~left(3) = '+++' then .stdout~lineout('&lt;notice&gt;')
+    otherwise .stdout~lineout(l)
+  end
   return 0
 </code></pre>
 <pre><code class="language-output">     4 *-* do label lbl
-+++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+&lt;notice&gt;
 [read 1: ]
      5 *-*   nop
 [read 2: ]
@@ -93072,11 +93146,15 @@ exit
 ::method lineout
   use arg l
   l = '' || l
-  if l~strip~left(5) \= '+++ "' &amp; l~word(1) \= '&gt;I&gt;' &amp; l~word(1) \= '&lt;I&lt;' then .stdout~lineout(l)
+  select
+    when l~strip~left(5) = '+++ "' | l~word(1) = '&gt;I&gt;' | l~word(1) = '&lt;I&lt;' then nop
+    when l~strip~left(3) = '+++' then .stdout~lineout('&lt;notice&gt;')
+    otherwise .stdout~lineout(l)
+  end
   return 0
 </code></pre>
 <pre><code class="language-output">    10 *-* reply 5
-+++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+&lt;notice&gt;
 [read 1: ]
     11 *-* say 'after reply'
 after reply
@@ -93142,11 +93220,15 @@ sub: return
 ::method lineout
   use arg l
   l = '' || l
-  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  select
+    when l~strip~left(5) = '+++ "' then nop
+    when l~strip~left(3) = '+++' then .stdout~lineout('&lt;notice&gt;')
+    otherwise .stdout~lineout(l)
+  end
   return 0
 </code></pre>
 <pre><code class="language-output">     4 *-* n = 1
-+++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+&lt;notice&gt;
 [read 1: ]
      5 *-* if n = 1 
 [read 2: ]
@@ -93436,13 +93518,17 @@ exit
 ::method lineout
   use arg l
   l = '' || l
-  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  select
+    when l~strip~left(5) = '+++ "' then nop
+    when l~strip~left(3) = '+++' then .stdout~lineout('&lt;notice&gt;')
+    otherwise .stdout~lineout(l)
+  end
   return 0
 </code></pre>
 <pre><code class="language-output">     5 *-* say 'prog' x
        &gt;&gt;&gt;   "prog 1"
 prog 1
-+++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+&lt;notice&gt;
 [read 1: x = 5; y = x * 2]
 [read 2: say x y]
 5 10
@@ -93461,10 +93547,10 @@ prog 5
 </code></pre>
 <div class="rule" id="r-env.debugging.input.error"><a href="environment/debugging.html#r-env.debugging.input.error">[env.debugging.input.error]</a></div>
 <p>An error in a line does not end the program. It is reported by two lines that
-reach <code>.traceoutput</code> like the others, which start with
-<code>+++ Interactive trace.  Error</code>, the number and then the subcode of the error,
-followed by text that is not specified; the interpreter then stops again and
-reads another line. Errors that are found when the line is read, such as an
+reach <code>.traceoutput</code> like the others. Each starts with <code>+++</code>. The first holds
+the number of the error and the second its number and subcode as <code>N.M</code>, each as
+the first word of the line that ends in a colon, and the other words are not
+specified; the interpreter then stops again and reads another line. Errors that are found when the line is read, such as an
 expression that cannot be parsed or a DO that is not closed, and errors that
 happen when it runs, such as a division by zero or a call of a routine that
 does not exist, are all reported that way, and so is one that RAISE SYNTAX
@@ -93499,8 +93585,12 @@ trapped: say 'trapped' condition('c')
   l = '' || l
   select
     when l~strip~left(5) = '+++ "' then nop
-    when l~word(2) = 'Interactive' &amp; l~word(4) = 'Error' then do
-      say 'error' l~word(5)~strip('T', ':')
+    when l~strip~left(3) = '+++' then do
+      do k = 2 to l~words
+        if l~word(k)~right(1) = ':' then leave
+      end
+      if k &gt; l~words then .stdout~lineout('&lt;notice&gt;')
+      else say 'error' l~word(k)~strip('T', ':')
     end
     otherwise .stdout~lineout(l)
   end
@@ -93508,7 +93598,7 @@ trapped: say 'trapped' condition('c')
 </code></pre>
 <pre><code class="language-output">     5 *-* say 'one'
 one
-+++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+&lt;notice&gt;
 [read 1: say 1 +]
 error 35
 error 35.1
@@ -93567,12 +93657,16 @@ return
 ::method lineout
   use arg l
   l = '' || l
-  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  select
+    when l~strip~left(5) = '+++ "' then nop
+    when l~strip~left(3) = '+++' then .stdout~lineout('&lt;notice&gt;')
+    otherwise .stdout~lineout(l)
+  end
   return 0
 </code></pre>
 <pre><code class="language-output">     5 *-* say 'one'
 one
-+++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+&lt;notice&gt;
 [read 1: signal on syntax name hs]
 [read 2: rc = 7; address system "exit 5"]
 [read 3: say rc]
@@ -93692,12 +93786,16 @@ exit
 ::method lineout
   use arg l
   l = '' || l
-  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  select
+    when l~strip~left(5) = '+++ "' then nop
+    when l~strip~left(3) = '+++' then .stdout~lineout('&lt;notice&gt;')
+    otherwise .stdout~lineout(l)
+  end
   return 0
 </code></pre>
 <pre><code class="language-output">     5 *-* n = n + 1
        &gt;&gt;&gt;   "1"
-+++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+&lt;notice&gt;
 [read 1: =]
      5 *-* n = n + 1
        &gt;&gt;&gt;   "2"
@@ -93739,20 +93837,30 @@ exit
 ::method lineout
   use arg l
   l = '' || l
-  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  select
+    when l~strip~left(5) = '+++ "' then nop
+    when l~strip~left(3) = '+++' then do
+      do k = 2 to l~words
+        if l~word(k)~right(1) = ':' then leave
+      end
+      if k &gt; l~words then .stdout~lineout('&lt;notice&gt;')
+      else say 'error' l~word(k)~strip('T', ':')
+    end
+    otherwise .stdout~lineout(l)
+  end
   return 0
 </code></pre>
 <pre><code class="language-output">     5 *-* n = n + 1
-+++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+&lt;notice&gt;
 [read 1:  =]
-+++ Interactive trace.  Error 35:   Invalid expression.
-+++ Interactive trace.  Error 35.1:  Incorrect expression detected at "=".
+error 35
+error 35.1
 [read 2: = ]
-+++ Interactive trace.  Error 35:   Invalid expression.
-+++ Interactive trace.  Error 35.1:  Incorrect expression detected at "=".
+error 35
+error 35.1
 [read 3: ==]
-+++ Interactive trace.  Error 35:   Invalid expression.
-+++ Interactive trace.  Error 35.1:  Incorrect expression detected at "==".
+error 35
+error 35.1
 [read 4: say n]
 1
 [read 5: ]
@@ -93784,11 +93892,15 @@ sub: n += 1
 ::method lineout
   use arg l
   l = '' || l
-  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  select
+    when l~strip~left(5) = '+++ "' then nop
+    when l~strip~left(3) = '+++' then .stdout~lineout('&lt;notice&gt;')
+    otherwise .stdout~lineout(l)
+  end
   return 0
 </code></pre>
 <pre><code class="language-output">     4 *-* n = 0
-+++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+&lt;notice&gt;
 [read 1: ]
      5 *-* call sub
      8 *-*   sub:
@@ -93836,11 +93948,15 @@ exit
 ::method lineout
   use arg l
   l = '' || l
-  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  select
+    when l~strip~left(5) = '+++ "' then nop
+    when l~strip~left(3) = '+++' then .stdout~lineout('&lt;notice&gt;')
+    otherwise .stdout~lineout(l)
+  end
   return 0
 </code></pre>
 <pre><code class="language-output">     4 *-* do i = 1 to 3
-+++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+&lt;notice&gt;
 [read 1: ]
      5 *-*   if i = 1 
 [read 2: ]
@@ -93889,11 +94005,16 @@ exit
   use arg l
   l = '' || l
   if l~pos(' running ') &gt; 0 then l = l~left(l~pos(' running ') - 1)
-  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  if l~left(6) = 'Error ' &amp; l~pos(':') &gt; 0 then l = l~left(l~pos(':'))
+  select
+    when l~strip~left(5) = '+++ "' then nop
+    when l~strip~left(3) = '+++' then .stdout~lineout('&lt;notice&gt;')
+    otherwise .stdout~lineout(l)
+  end
   return 0
 </code></pre>
 <pre><code class="language-output rc=228">     5 *-* do i = 1 to 3
-+++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+&lt;notice&gt;
 [read 1: ]
      6 *-*   if i = 1 
 [read 2: ]
@@ -93903,7 +94024,7 @@ exit
      6 *-* leave
      6 *-* leave
 Error 28
-Error 28.1:  LEAVE is valid only within a repetitive loop or labeled block instruction.
+Error 28.1:
 </code></pre>
 <div class="rule" id="r-env.debugging.input.trace"><a href="environment/debugging.html#r-env.debugging.input.trace">[env.debugging.input.trace]</a></div>
 <p>A TRACE instruction that a line runs takes effect, unlike one in the
@@ -94051,12 +94172,16 @@ exit
 ::method lineout
   use arg l
   l = '' || l
-  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  select
+    when l~strip~left(5) = '+++ "' then nop
+    when l~strip~left(3) = '+++' then .stdout~lineout('&lt;notice&gt;')
+    otherwise .stdout~lineout(l)
+  end
   return 0
 </code></pre>
 <pre><code class="language-output">     4 *-* say 'one'
 one
-+++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+&lt;notice&gt;
 [read 1: trace 2]
      5 *-* say 'two'
 two
@@ -94094,12 +94219,16 @@ exit
 ::method lineout
   use arg l
   l = '' || l
-  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  select
+    when l~strip~left(5) = '+++ "' then nop
+    when l~strip~left(3) = '+++' then .stdout~lineout('&lt;notice&gt;')
+    otherwise .stdout~lineout(l)
+  end
   return 0
 </code></pre>
 <pre><code class="language-output">     4 *-* say 'one'
 one
-+++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+&lt;notice&gt;
 [read 1: trace -2]
 two
 three
@@ -94136,11 +94265,15 @@ exit
 ::method lineout
   use arg l
   l = '' || l
-  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  select
+    when l~strip~left(5) = '+++ "' then nop
+    when l~strip~left(3) = '+++' then .stdout~lineout('&lt;notice&gt;')
+    otherwise .stdout~lineout(l)
+  end
   return 0
 </code></pre>
 <pre><code class="language-output">     4 *-* nop
-+++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+&lt;notice&gt;
 [read 1: trace -4]
 x
      9 *-* say 'y'
@@ -94171,11 +94304,15 @@ exit
 ::method lineout
   use arg l
   l = '' || l
-  if l~strip~left(5) \= '+++ "' then .stdout~lineout(l)
+  select
+    when l~strip~left(5) = '+++ "' then nop
+    when l~strip~left(3) = '+++' then .stdout~lineout('&lt;notice&gt;')
+    otherwise .stdout~lineout(l)
+  end
   return 0
 </code></pre>
 <pre><code class="language-output">     4 *-* nop
-+++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+&lt;notice&gt;
 [read 1: trace 0]
      5 *-* say 'x'
 x
@@ -94360,8 +94497,12 @@ exit
   l = '' || l
   select
     when l~strip~left(5) = '+++ "' then nop
-    when l~word(2) = 'Interactive' &amp; l~word(4) = 'Error' then do
-      say 'error' l~word(5)~strip('T', ':')
+    when l~strip~left(3) = '+++' then do
+      do k = 2 to l~words
+        if l~word(k)~right(1) = ':' then leave
+      end
+      if k &gt; l~words then .stdout~lineout('&lt;notice&gt;')
+      else say 'error' l~word(k)~strip('T', ':')
     end
     otherwise .stdout~lineout(l)
   end
@@ -94369,7 +94510,7 @@ exit
 </code></pre>
 <pre><code class="language-output">     4 *-* say 'one'
 one
-+++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+&lt;notice&gt;
 [read 1: interpret 'say 7']
 7
 [read 2: ]
@@ -94411,8 +94552,12 @@ exit
   l = '' || l
   select
     when l~strip~left(5) = '+++ "' then nop
-    when l~word(2) = 'Interactive' &amp; l~word(4) = 'Error' then do
-      say 'error' l~word(5)~strip('T', ':')
+    when l~strip~left(3) = '+++' then do
+      do k = 2 to l~words
+        if l~word(k)~right(1) = ':' then leave
+      end
+      if k &gt; l~words then .stdout~lineout('&lt;notice&gt;')
+      else say 'error' l~word(k)~strip('T', ':')
     end
     otherwise .stdout~lineout(l)
   end
@@ -94420,7 +94565,7 @@ exit
 </code></pre>
 <pre><code class="language-output">     4 *-* say 'one'
 one
-+++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+&lt;notice&gt;
 [read 1: raise syntax 93.900]
 error 93
 error 93.900
@@ -94464,8 +94609,12 @@ exit
   l = '' || l
   select
     when l~strip~left(5) = '+++ "' then nop
-    when l~word(2) = 'Interactive' &amp; l~word(4) = 'Error' then do
-      say 'error' l~word(5)~strip('T', ':')
+    when l~strip~left(3) = '+++' then do
+      do k = 2 to l~words
+        if l~word(k)~right(1) = ':' then leave
+      end
+      if k &gt; l~words then .stdout~lineout('&lt;notice&gt;')
+      else say 'error' l~word(k)~strip('T', ':')
     end
     otherwise .stdout~lineout(l)
   end
@@ -94473,7 +94622,7 @@ exit
 </code></pre>
 <pre><code class="language-output">     4 *-* say 'one'
 one
-+++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+&lt;notice&gt;
 [read 1: trace 1.5]
 error 24
 error 24.1
@@ -97910,7 +98059,7 @@ the end. It receives the name of the function in capitals, however the call
 spelled it. Its answer is the result of the call. A function that leaves no
 result makes a function call raise <code>SYNTAX 44.1</code> and a CALL drop the variable
 <code>RESULT</code>, and a function that refuses the call raises <code>SYNTAX 40.1</code>, whose
-message names the function as it was registered, in capitals.</p>
+<code>ADDITIONAL</code> holds the name of the function as it was registered, in capitals.</p>
 <pre><code class="language-rexx">call rxfuncadd 'MyJoin', 'specclassic', 'FxClassicJoin'
 call rxfuncadd 'MyNone', 'specclassic', 'FxClassicNone'
 call rxfuncadd 'MyFail', 'specclassic', 'FxClassicFail'
@@ -97926,7 +98075,7 @@ call mynone
 say symbol('RESULT')
 signal on syntax name b
 say myfail()
-b: say condition('o')~code condition('o')~message
+b: say condition('o')~code condition('o')~additional[1]
 call rxfuncdrop 'MyJoin'
 call rxfuncdrop 'MyNone'
 call rxfuncdrop 'MyFail'
@@ -97935,7 +98084,7 @@ call rxfuncdrop 'MyFail'
 MYJOIN:2:a,b
 44.1
 LIT
-40.1 External routine "MYFAIL" failed.
+40.1 MYFAIL
 </code></pre>
 <pre><code class="language-rexx">call rxfuncadd 'MyJoin', 'specclassic', 'FxClassicJoin'
 say 'MyJoin'('a') 'myjoin'()
@@ -98044,15 +98193,17 @@ t: parse arg expr
   interpret 'v =' expr
   say expr '=&gt;' v
   return
-e: say expr '=&gt;' condition('o')~code condition('o')~message
+e: l = ''
+  do v over condition('o')~additional; l = l'['v']'; end
+  say expr '=&gt;' condition('o')~code l
   return
 ::requires 'specfixture' LIBRARY
 </code></pre>
-<pre><code class="language-output">fxadd(1) =&gt; 88.901 Missing argument; argument 2 is required.
-fxadd(, 1) =&gt; 88.901 Missing argument; argument 1 is required.
-fxadd(1, 2, 3) =&gt; 88.922 Too many arguments in invocation; 2 expected.
+<pre><code class="language-output">fxadd(1) =&gt; 88.901 [2]
+fxadd(, 1) =&gt; 88.901 [1]
+fxadd(1, 2, 3) =&gt; 88.922 [2]
 fxoptional() fxoptional(,) fxoptional(3) =&gt; omitted omitted 3
-fxoptional('x') =&gt; 88.907 Argument 1 must be in the range -2147483648 to 2147483647; found "x".
+fxoptional('x') =&gt; 88.907 [1][-2147483648][2147483647][x]
 </code></pre>
 <div class="rule" id="r-native.calls.arglist"><a href="native/calls.html#r-native.calls.arglist">[native.calls.arglist]</a></div>
 <p>A routine may take its arguments as one Array, as <code>ARG(1, 'A')</code> would give
@@ -98104,8 +98255,9 @@ LIT
 <div class="rule" id="r-native.calls.raise"><a href="native/calls.html#r-native.calls.raise">[native.calls.raise]</a></div>
 <p>A routine or method may raise a <code>SYNTAX</code> error with a number and its
 substitutions. The code goes on running after it has raised the error, and the
-error is raised in the caller when the call returns, with the message that
-<code>RAISE SYNTAX</code> with that number and those substitutions would give; the
+error is raised in the caller when the call returns, with the substitutions
+that <code>RAISE SYNTAX</code> with that number and those substitutions would give in
+<code>ADDITIONAL</code>; the
 result of the call is not delivered. The fixture's routine raises <code>40.900</code> and
 then sets a variable of the caller, which shows that it ran on; its method
 raises <code>93.900</code>. An error that nothing traps ends the program as any <code>SYNTAX</code>
@@ -98113,17 +98265,17 @@ error does, and the traceback names the routine.</p>
 <pre><code class="language-rexx">after = 'unset'
 signal on syntax name s
 say fxraise('boom')
-s: say condition('o')~code '['condition('o')~message']' after symbol('RESULT')
+s: say condition('o')~code '['condition('o')~additional[1]']' after symbol('RESULT')
 o = .n2zqk~new
 signal on syntax name m
 say o~bad('bad thing')
-m: say condition('o')~code '['condition('o')~message']'
+m: say condition('o')~code '['condition('o')~additional[1]']'
 ::requires 'specfixture' LIBRARY
 ::class n2zqk
 ::method bad external "LIBRARY specfixture FxMethodRaise"
 </code></pre>
-<pre><code class="language-output">40.900 [boom.] ran on LIT
-93.900 [bad thing.]
+<pre><code class="language-output">40.900 [boom] ran on LIT
+93.900 [bad thing]
 </code></pre>
 <pre><code class="language-rexx">say fxraise('final')
 ::requires 'specfixture' LIBRARY
@@ -107859,39 +108011,37 @@ the call answers <a href="rexxutil/sysgetmessage.html#r-util.sysgetmessage.answe
 <pre><code class="language-rexx">say (SysGetMessage(100, 'rexx.cat', 'c6zqa', 'c6zqb', 'c6zqc') == SysGetMessage(100, , 'c6zqa', 'c6zqb', 'c6zqc'))
 m = SysGetMessage(100, , 'c6zqa', 'c6zqb', 'c6zqc')
 say (pos('c6zqa', m) &gt; 0) (pos('c6zqb', m) &gt; 0) (pos('c6zqc', m) &gt; 0) (pos('&amp;', m) = 0)
-say '['SysGetMessage(100, 'REXX.CAT')']'
-say '['SysGetMessage(100, 'rexx.cat ')']'
-say '['SysGetMessage(100, './rexx.cat')']'
-say '['SysGetMessage(100, '')']'
-say '['SysGetMessage(100, 'c6zqnone/x.cat')']'
-say '['SysGetMessage(100, 'c6zqnone.cat')']'
+nc = SysGetMessage(100, 'c6zqnone.cat')
+say (nc \== '') (nc \== m) (nc \== SysGetMessage(999999))
+say (SysGetMessage(100, 'REXX.CAT') == nc) (SysGetMessage(100, 'rexx.cat ') == nc),
+    (SysGetMessage(100, './rexx.cat') == nc) (SysGetMessage(100, '') == nc),
+    (SysGetMessage(100, 'c6zqnone/x.cat') == nc)
 </code></pre>
 <pre><code class="language-output">1
 1 1 1 1
-[Error: Message catalog not found]
-[Error: Message catalog not found]
-[Error: Message catalog not found]
-[Error: Message catalog not found]
-[Error: Message catalog not found]
-[Error: Message catalog not found]
+1 1 1
+1 1 1 1 1
 </code></pre>
 <h2 id="the-answer-9"><a class="header" href="#the-answer-9">The answer</a></h2>
 <div class="rule" id="r-util.sysgetmessage.answer"><a href="rexxutil/sysgetmessage.html#r-util.sysgetmessage.answer">[util.sysgetmessage.answer]</a></div>
 <p>The answer is the text of message <code>num</code> of the first set of the catalog, with
-the inserts put in. When the catalog has no such message the answer is
-<code>Error: Message not found</code>, and when no catalog is found the answer is
-<code>Error: Message catalog not found</code>, each with the inserts of the call ignored.
-A <code>CALL</code> leaves the answer in <code>RESULT</code>.</p>
-<pre><code class="language-rexx">say '['SysGetMessage(999999)']'
-say '['SysGetMessage(999999, 'rexx.cat', 'c6zqa')']'
-say '['SysGetMessage(100, 'c6zqnone.cat', 'c6zqa')']'
+the inserts put in. When the catalog has no such message the answer is a text
+that says so, and when no catalog is found the answer is another text that says
+so, each with the inserts of the call ignored. The two texts are not null and differ from each
+other, and their wording is not specified, as <a href="rexxutil/../conventions.html#r-conv.error.text">the rule on error
+messages</a> says. A <code>CALL</code> leaves the answer in <code>RESULT</code>.</p>
+<pre><code class="language-rexx">nm = SysGetMessage(999999)
+nc = SysGetMessage(100, 'c6zqnone.cat')
+say (nm \== '') (nc \== '') (nm \== nc)
+say (SysGetMessage(999999, 'rexx.cat', 'c6zqa') == nm)
+say (SysGetMessage(100, 'c6zqnone.cat', 'c6zqa') == nc)
 call SysGetMessage 999999
-say '['result']'
+say (result == nm)
 </code></pre>
-<pre><code class="language-output">[Error: Message not found]
-[Error: Message not found]
-[Error: Message catalog not found]
-[Error: Message not found]
+<pre><code class="language-output">1 1 1
+1
+1
+1
 </code></pre>
 <h2 id="the-inserts"><a class="header" href="#the-inserts">The inserts</a></h2>
 <div class="rule" id="r-util.sysgetmessage.inserts"><a href="rexxutil/sysgetmessage.html#r-util.sysgetmessage.inserts">[util.sysgetmessage.inserts]</a></div>
@@ -107913,6 +108063,8 @@ call lineout 'c6zqcat.msg', '1 other [&amp;1]'
 call lineout 'c6zqcat.msg', '3 third'
 call lineout 'c6zqcat.msg'
 address system 'gencat c6zqcat.cat c6zqcat.msg'
+nm = SysGetMessage(999999)
+nc = SysGetMessage(100, 'c6zqnone.cat')
 say SysGetMessage(1, './c6zqcat.cat', 'A', 'B')
 say SysGetMessage(1, './c6zqcat.cat', 'A')
 say SysGetMessage(1, './c6zqcat.cat')
@@ -107922,18 +108074,18 @@ say SysGetMessage(1, './c6zqcat.cat', '&amp;2', 'B')
 say SysGetMessage(1, './c6zqcat.cat', '', '')
 say SysGetMessage(1, './c6zqcat.cat', .c6zqs~new, .mutablebuffer~new('M'))
 say SysGetMessage(7, './c6zqcat.cat', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I')
-say SysGetMessage(3, './c6zqcat.cat')
-say SysGetMessage(2, './c6zqcat.cat')
+say (SysGetMessage(3, './c6zqcat.cat') == nm)
+say (SysGetMessage(2, './c6zqcat.cat') == nm)
 say SysGetMessage(1, directory() || '/c6zqcat.cat', 'A')
 say SysGetMessage(4294967297, './c6zqcat.cat', 'A')
-say SysGetMessage(4294967296, './c6zqcat.cat', 'A')
-say SysGetMessage(1, 'c6zqcat.cat', 'A')
+say (SysGetMessage(4294967296, './c6zqcat.cat', 'A') == nm)
+say (SysGetMessage(1, 'c6zqcat.cat', 'A') == nc)
 saved = value('NLSPATH', directory() || '/%N', 'ENVIRONMENT')
 say SysGetMessage(1, 'c6zqcat.cat', 'A')
-say SysGetMessage(1, 'c6zqnone.cat', 'A')
+say (SysGetMessage(1, 'c6zqnone.cat', 'A') == nc)
 if saved == '' then call value 'NLSPATH', .nil, 'ENVIRONMENT'
 else call value 'NLSPATH', saved, 'ENVIRONMENT'
-say SysGetMessage(1, 'c6zqcat.cat', 'A')
+say (SysGetMessage(1, 'c6zqcat.cat', 'A') == nc)
 call SysFileDelete 'c6zqcat.msg'
 call SysFileDelete 'c6zqcat.cat'
 exit
@@ -107950,15 +108102,15 @@ first [&amp;2] [B] %s
 first [] [] %s
 first [2] [M] %s
 seven I A0 &amp;0 &amp;A &amp;
-Error: Message not found
-Error: Message not found
+1
+1
 first [A] [] %s
 first [A] [] %s
-Error: Message not found
-Error: Message catalog not found
+1
+1
 first [A] [] %s
-Error: Message catalog not found
-Error: Message catalog not found
+1
+1
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="sysgetmessagex"><a class="header" href="#sysgetmessagex">SysGetMessageX</a></h1>
 <pre><code>SysGetMessageX(set, num [, filename [, str]...])
@@ -108899,9 +109051,9 @@ call try "SysGeterrnomsg('+2')"
 call try "SysGeterrnomsg('1E0')"
 call try "SysGeterrnomsg(2*3)"
 call try "SysGeterrnomsg(1.5)"
-call try "(SysGeterrnomsg(2147483647) \= '')"
-call try "(SysGeterrnomsg('-2147483647') \= '')"
-call try "(SysGeterrnomsg('-2147483648') \= '')"
+call try "SysGeterrnomsg(2147483647)"
+call try "SysGeterrnomsg('-2147483647')"
+call try "SysGeterrnomsg('-2147483648')"
 call try "SysGeterrnomsg('2147483648')"
 call try "SysGeterrnomsg('-2147483649')"
 call try "SysGeterrnomsg('')"
@@ -108914,36 +109066,42 @@ call try "SysKill(0, 'x')"
 call try "SysUmask('x')"
 call try "SysGetpwuid('x', 'n')"
 call try "SysClose('x')"
+say (SysGeterrnomsg(2.0) == SysGeterrnomsg(2)) (SysGeterrnomsg(' 2 ') == SysGeterrnomsg(2)),
+    (SysGeterrnomsg('+2') == SysGeterrnomsg(2)) (SysGeterrnomsg('1E0') == SysGeterrnomsg(1)),
+    (SysGeterrnomsg(2*3) == SysGeterrnomsg(6)) (SysGeterrnomsg(.mutablebuffer~new('2')) == SysGeterrnomsg(2)),
+    (SysGeterrnomsg(2) \== SysGeterrnomsg(1))
 exit
 try:
   signal on syntax name e
-  interpret 'say arg(1) ''=&gt;'' ' arg(1)
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' (r \== '')
   return
 e: say arg(1) '-&gt;' condition('o')~code
   return
 ::requires 'rxunixsys' library
 </code></pre>
-<pre><code class="language-output">SysGeterrnomsg(2.0) =&gt; No such file or directory
-SysGeterrnomsg(' 2 ') =&gt; No such file or directory
-SysGeterrnomsg('+2') =&gt; No such file or directory
-SysGeterrnomsg('1E0') =&gt; Operation not permitted
-SysGeterrnomsg(2*3) =&gt; No such device or address
+<pre><code class="language-output">SysGeterrnomsg(2.0) =&gt; 1
+SysGeterrnomsg(' 2 ') =&gt; 1
+SysGeterrnomsg('+2') =&gt; 1
+SysGeterrnomsg('1E0') =&gt; 1
+SysGeterrnomsg(2*3) =&gt; 1
 SysGeterrnomsg(1.5) -&gt; 88.907
-(SysGeterrnomsg(2147483647) \= '') =&gt; 1
-(SysGeterrnomsg('-2147483647') \= '') =&gt; 1
-(SysGeterrnomsg('-2147483648') \= '') =&gt; 1
+SysGeterrnomsg(2147483647) =&gt; 1
+SysGeterrnomsg('-2147483647') =&gt; 1
+SysGeterrnomsg('-2147483648') =&gt; 1
 SysGeterrnomsg('2147483648') -&gt; 88.907
 SysGeterrnomsg('-2147483649') -&gt; 88.907
 SysGeterrnomsg('') -&gt; 88.907
 SysGeterrnomsg('x') -&gt; 88.907
 SysGeterrnomsg(.nil) -&gt; 88.907
 SysGeterrnomsg(.object~new) -&gt; 88.907
-SysGeterrnomsg(.mutablebuffer~new('2')) =&gt; No such file or directory
+SysGeterrnomsg(.mutablebuffer~new('2')) =&gt; 1
 SysKill('x', 0) -&gt; 88.907
 SysKill(0, 'x') -&gt; 88.907
 SysUmask('x') -&gt; 88.907
 SysGetpwuid('x', 'n') -&gt; 88.907
 SysClose('x') -&gt; 88.907
+1 1 1 1 1 1 1
 </code></pre>
 <div class="rule" id="r-rxunixsys.index.option"><a href="rxunixsys/index.html#r-rxunixsys.index.option">[rxunixsys.index.option]</a></div>
 <p>An option of a function, such as the second argument of <code>SysStat</code>, is read by
@@ -108981,27 +109139,27 @@ try:
   signal on syntax name e
   interpret 'say arg(1) ''=&gt;'' ' arg(1)
   return
-e: say arg(1) '-&gt;' condition('o')~code condition('o')~errortext
+e: say arg(1) '-&gt;' condition('o')~code
   return
 ::requires 'rxunixsys' library
 </code></pre>
-<pre><code class="language-output">SysStat('c1zqf1', 'x') -&gt; 40.1 Incorrect call to routine.
-SysStat('c1zqf1', '') -&gt; 40.1 Incorrect call to routine.
-SysStat('', 'p') -&gt; 40.1 Incorrect call to routine.
-SysStat('x', 'x', 3) -&gt; 88.922 Invalid argument.
+<pre><code class="language-output">SysStat('c1zqf1', 'x') -&gt; 40.1
+SysStat('c1zqf1', '') -&gt; 40.1
+SysStat('', 'p') -&gt; 40.1
+SysStat('x', 'x', 3) -&gt; 88.922
 SysStat('c1zqf1', 'p') =&gt; -rw-r-----
 SysStat('c1zqf1', 'Perm') =&gt; -rw-r-----
 SysStat('c1zqf1', 'PX') =&gt; -rw-r-----
-SysUname('x') -&gt; 40.1 Incorrect call to routine.
-SysUname('') -&gt; 40.1 Incorrect call to routine.
+SysUname('x') -&gt; 40.1
+SysUname('') -&gt; 40.1
 SysChmod('', 'rw-rw-rw-') =&gt; -1
-SysChmod('c1zqnone', '') -&gt; 40.1 Incorrect call to routine.
-SysSignal(0, 'x') -&gt; 40.1 Incorrect call to routine.
-SysSignal(0, '') -&gt; 40.1 Incorrect call to routine.
-SysSignal('x', 'x') -&gt; 88.907 Invalid argument.
-SysGetpwnam('', 'n') -&gt; 40.1 Incorrect call to routine.
-SysGetpwnam('root', '') -&gt; 40.1 Incorrect call to routine.
-SysGetpwnam('root', 'x') -&gt; 40.1 Incorrect call to routine.
+SysChmod('c1zqnone', '') -&gt; 40.1
+SysSignal(0, 'x') -&gt; 40.1
+SysSignal(0, '') -&gt; 40.1
+SysSignal('x', 'x') -&gt; 88.907
+SysGetpwnam('', 'n') -&gt; 40.1
+SysGetpwnam('root', '') -&gt; 40.1
+SysGetpwnam('root', 'x') -&gt; 40.1
 </code></pre>
 <h2 id="what-the-functions-answer"><a class="header" href="#what-the-functions-answer">What the functions answer</a></h2>
 <div class="rule" id="r-rxunixsys.index.answer"><a href="rxunixsys/index.html#r-rxunixsys.index.answer">[rxunixsys.index.answer]</a></div>
@@ -109038,13 +109196,13 @@ number is that of the failed call when <code>SysGeterrno</code> is called in the
 clause, after the failed call and after nothing else that fails, as in the
 examples; what a later clause finds, and what another activity does to it, is
 the subject of <a href="rxunixsys/index.html#r-rxunixsys.index.deviation.164">Deviation 164</a>.
-<code>SysGeterrnomsg</code> answers
-<code>Ok</code> for <code>0</code> and, for every other number, the text that the platform gives that
-error number, as C's <code>strerror</code> words it at run time, so that the wording
-differs between platforms. The answer is never the null string, also for a
-number that is no error number of the platform, or is negative. It takes the
-number as a <a href="rxunixsys/index.html#r-rxunixsys.index.whole">whole number</a>. The examples show the
-texts that Linux gives.</p>
+<code>SysGeterrnomsg</code> takes the number as a <a href="rxunixsys/index.html#r-rxunixsys.index.whole">whole
+number</a> and answers a string that is not null for every
+number, <code>0</code> and a number that no error has included: the system's description
+of the error, as C's <code>strerror</code> gives it at run time, so that two numbers of
+different errors answer different strings. The wording is that of the platform
+and is not specified (see <a href="rxunixsys/../conventions.html#r-conv.error.text">the rule on error messages</a>), and
+the examples look only at whether strings are alike.</p>
 <pre><code class="language-rexx">say SysUnlink('c1zqnone') SysGeterrno()
 say SysMkdirUnix('c1zqnone/c1zqnone', 493) SysGeterrno()
 say SysMkdirUnix('c1zqd1', 493) SysMkdirUnix('c1zqd1', 493) SysGeterrno()
@@ -109053,9 +109211,13 @@ call lineout 'c1zqf1', 'x'
 call lineout 'c1zqf1'
 say SysMkdirUnix('c1zqf1', 493) SysGeterrno() SysRmdirUnix('c1zqf1') SysGeterrno()
 call SysFileDelete 'c1zqf1'
-say SysGeterrnomsg(0) '|' SysGeterrnomsg(1) '|' SysGeterrnomsg(2) '|' SysGeterrnomsg(13)
-say SysGeterrnomsg(17) '|' SysGeterrnomsg(20) '|' SysGeterrnomsg(21) '|' SysGeterrnomsg(22)
-say SysGeterrnomsg(39) '|' (SysGeterrnomsg(2147483647) \= '') '|' (SysGeterrnomsg(1000) \= '') '|' (SysGeterrnomsg(-1) \= '')
+say (SysGeterrnomsg(0) \== '') (SysGeterrnomsg(2147483647) \== '') (SysGeterrnomsg(1000) \== '')
+do n over .array~of(1, 2, 13, 17, 20, 21, 22, 39)
+  do m over .array~of(1, 2, 13, 17, 20, 21, 22, 39)
+    if n \= m, SysGeterrnomsg(n) == SysGeterrnomsg(m) then say 'alike' n m
+  end
+end
+say 'checked'
 ::requires 'rxunixsys' library
 </code></pre>
 <pre><code class="language-output">-1 2
@@ -109063,9 +109225,8 @@ say SysGeterrnomsg(39) '|' (SysGeterrnomsg(2147483647) \= '') '|' (SysGeterrnoms
 0 -1 17
 0 -1 2
 -1 17 -1 20
-Ok | Operation not permitted | No such file or directory | Permission denied
-File exists | Not a directory | Is a directory | Invalid argument
-Directory not empty | 1 | 1 | 1
+1 1 1
+checked
 </code></pre>
 <h2 id="deviations-88"><a class="header" href="#deviations-88">Deviations</a></h2>
 <div class="rule" id="r-rxunixsys.index.deviation.164"><a href="rxunixsys/index.html#r-rxunixsys.index.deviation.164">[rxunixsys.index.deviation.164]</a></div>
@@ -117013,8 +117174,11 @@ d0
 <pre><code>ERRORTEXT(n)
 </code></pre>
 <p class="references">ANSI: 9.5.5; rexxref: Functions &gt; Built-in Functions &gt; ERRORTEXT</p>
-<p>ERRORTEXT answers the message that goes with an error number: the sentence
-that names the kind of error, without the number, the program or the line.</p>
+<p>ERRORTEXT answers the message that goes with an error number: the text that
+names the kind of error, without the number, the program or the line. What
+the text says is not part of the book (see <a href="builtins/../conventions.html#r-conv.error.name">the rule on error
+messages</a>), so the examples of this page look at whether a
+message exists and at which numbers share one, never at its words.</p>
 <h2 id="arguments-77"><a class="header" href="#arguments-77">Arguments</a></h2>
 <div class="rule" id="r-bif.errortext.args"><a href="builtins/errortext.html#r-bif.errortext.args">[bif.errortext.args]</a></div>
 <p>ERRORTEXT takes one argument, <code>n</code>, and nothing else. The argument count is
@@ -117051,8 +117215,8 @@ whose magnitude is <a href="builtins/../conventions.html#r-conv.whole.digits">to
 DIGITS plays no part. The form is checked before the range, so a number that
 is both out of range and not whole, such as 100.5, raises <code>SYNTAX 40.12</code>.</p>
 <pre><code class="language-rexx">numeric digits 1
-say errortext(26) '/' errortext(26.0) '/' errortext(' 26 ') '/' errortext('026'),
-    '/' errortext(2.6e1) '/' errortext(99)
+say (errortext(26) \== '') (errortext(26.0) == errortext(26)) (errortext(' 26 ') == errortext(26)),
+    (errortext('026') == errortext(26)) (errortext(2.6e1) == errortext(26)) (errortext(99) \== '')
 say '['errortext('-0')']'
 signal on syntax name a
 say errortext(100)
@@ -117076,7 +117240,7 @@ signal on syntax name g
 say errortext(100.5)
 g: say condition('o')~code
 </code></pre>
-<pre><code class="language-output">Invalid whole number. / Invalid whole number. / Invalid whole number. / Invalid whole number. / Invalid whole number. / Translation error.
+<pre><code class="language-output">1 1 1 1 1 1
 []
 40.903
 40.903
@@ -117089,69 +117253,69 @@ g: say condition('o')~code
 <h2 id="the-result-43"><a class="header" href="#the-result-43">The result</a></h2>
 <div class="rule" id="r-bif.errortext.result"><a href="builtins/errortext.html#r-bif.errortext.result">[bif.errortext.result]</a></div>
 <p>For an error number <code>n</code> that has a message, ERRORTEXT returns the text of the
-message: a sentence that ends in a period, with no error number, no subcode
-and no values filled in. Error numbers are the major numbers of the
+message, which is not the null string, with no error number and no subcode.
+Its wording is unspecified. Error numbers are the major numbers of the
 <code>SYNTAX</code> conditions, and a subcode is not an argument: <code>ERRORTEXT(40)</code> is the
 text for every error <code>40.n</code>. The numbers 3 to 11, 13 to 31, 33 to 49, 88 to 93
-and 97 to 99 have a message, and the following lists them all.</p>
+and 97 to 99 have a message, and the example lists them all.</p>
 <pre><code class="language-rexx">do i = 0 to 99
-  if errortext(i) \== '' then say i errortext(i)
+  if errortext(i) \== '' then say i
 end
 </code></pre>
-<pre><code class="language-output">3 Failure during initialization.
-4 Program interrupted.
-5 System resources exhausted.
-6 Unmatched "/*" or quote.
-7 WHEN or OTHERWISE expected.
-8 Unexpected THEN or ELSE.
-9 Unexpected WHEN or OTHERWISE.
-10 Unexpected or unmatched END.
-11 Control stack full.
-13 Invalid character in program.
-14 Incomplete DO/LOOP/SELECT/IF.
-15 Invalid hexadecimal or binary string.
-16 Label not found.
-17 Unexpected PROCEDURE.
-18 THEN expected.
-19 String or symbol expected.
-20 Symbol expected.
-21 Invalid data on end of clause.
-22 Invalid character string.
-23 Invalid data string.
-24 Invalid TRACE request.
-25 Invalid subkeyword found.
-26 Invalid whole number.
-27 Invalid DO or LOOP syntax.
-28 Invalid LEAVE or ITERATE.
-29 Environment name too long.
-30 Name or symbol too long.
-31 Name starts with number or ".".
-33 Invalid expression result.
-34 Logical value not 0 or 1.
-35 Invalid expression.
-36 Unmatched "(" or "[" in expression.
-37 Unexpected ",", ")", or "]".
-38 Invalid template or pattern.
-39 Evaluation stack overflow.
-40 Incorrect call to routine.
-41 Bad arithmetic conversion.
-42 Arithmetic overflow/underflow.
-43 Routine not found.
-44 Function or message did not return data.
-45 No data specified on function RETURN.
-46 Invalid variable reference.
-47 Unexpected label.
-48 Failure in system service.
-49 Interpretation error.
-88 Invalid argument.
-89 Variable or message term expected.
-90 External name not found.
-91 No result object.
-92 OLE error.
-93 Incorrect call to method.
-97 Object method not found.
-98 Execution error.
-99 Translation error.
+<pre><code class="language-output">3
+4
+5
+6
+7
+8
+9
+10
+11
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+88
+89
+90
+91
+92
+93
+97
+98
+99
 </code></pre>
 <div class="rule" id="r-bif.errortext.undefined"><a href="builtins/errortext.html#r-bif.errortext.undefined">[bif.errortext.undefined]</a></div>
 <p>For an error number in the range 0 to 99 that has no message, ERRORTEXT
@@ -117175,15 +117339,15 @@ string as the condition's own.</p>
 x = 1 + 'a'
 h:
 c = condition('o')
-say c~rc errortext(c~rc) (errortext(c~rc) == c~errortext)
+say c~rc (errortext(c~rc) \== '') (errortext(c~rc) == c~errortext)
 </code></pre>
-<pre><code class="language-output">41 Bad arithmetic conversion. 1
+<pre><code class="language-output">41 1 1
 </code></pre>
 <blockquote>
 <p><strong>Note.</strong> The ANSI draft (9.5.5) gives ERRORTEXT a second argument, <code>S</code>,
 that selects the standard English text. ooRexx takes one argument only, and
 so does interrexx: a second argument raises <code>SYNTAX 40.4</code>. The texts are
-those of ooRexx's message catalogue, in English.</p>
+interrexx's own and are not specified.</p>
 </blockquote>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="filespec"><a class="header" href="#filespec">FILESPEC</a></h1>
 <pre><code>FILESPEC(option, filespec)

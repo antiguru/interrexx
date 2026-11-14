@@ -473,22 +473,28 @@ say (10 ** 999999999) (2e333333333 ** 3) (3e-333333333 ** 3)
 1E+999999999 8E+999999999 2.7E-999999998
 </code></pre>
 <div class="rule" id="r-num.arithmetic.power.message"><a href="#r-num.arithmetic.power.message">[num.arithmetic.power.message]</a></div>
-<p>The message of the <code>SYNTAX 42.1</code> error names the base and the exponent as the
-program wrote them, not as the numbers they denote, with <code>**</code> between them.</p>
+<p>The <code>ADDITIONAL</code> array of the <code>SYNTAX 42.1</code> error holds three items, the base
+and the exponent as the program wrote them, not as the numbers they denote, with
+the string <code>**</code> between them.</p>
 <pre><code class="language-rexx">signal on syntax name a
 say 1e3 ** 999999999
-a: say condition('o')~message
+a: call show
 signal on syntax name b
 say ' 100 ' ** '999999999'
-b: say condition('o')~message
+b: call show
 x = 1e3
 signal on syntax name c
 say x ** 99999999e1
-c: say condition('o')~message
+c: call show
+exit
+show: l = ''
+do v over condition('o')~additional; l = l'['v']'; end
+say l
+return
 </code></pre>
-<pre><code class="language-output">Arithmetic overflow detected at:  "1E3**999999999".
-Arithmetic overflow detected at:  " 100 **999999999".
-Arithmetic overflow detected at:  "1E3**99999999E1".
+<pre><code class="language-output">[1E3][**][999999999]
+[ 100 ][**][999999999]
+[1E3][**][99999999E1]
 </code></pre>
 <h2 id="errors-in-the-multiplicative-and-additive-operators"><a class="header" href="#errors-in-the-multiplicative-and-additive-operators">Errors in the multiplicative and additive operators</a></h2>
 <div class="rule" id="r-num.arithmetic.range"><a href="#r-num.arithmetic.range">[num.arithmetic.range]</a></div>

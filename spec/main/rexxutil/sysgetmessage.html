@@ -291,39 +291,37 @@ the call answers <a href="#r-util.sysgetmessage.answer">a text for each</a>.</p>
 <pre><code class="language-rexx">say (SysGetMessage(100, 'rexx.cat', 'c6zqa', 'c6zqb', 'c6zqc') == SysGetMessage(100, , 'c6zqa', 'c6zqb', 'c6zqc'))
 m = SysGetMessage(100, , 'c6zqa', 'c6zqb', 'c6zqc')
 say (pos('c6zqa', m) &gt; 0) (pos('c6zqb', m) &gt; 0) (pos('c6zqc', m) &gt; 0) (pos('&amp;', m) = 0)
-say '['SysGetMessage(100, 'REXX.CAT')']'
-say '['SysGetMessage(100, 'rexx.cat ')']'
-say '['SysGetMessage(100, './rexx.cat')']'
-say '['SysGetMessage(100, '')']'
-say '['SysGetMessage(100, 'c6zqnone/x.cat')']'
-say '['SysGetMessage(100, 'c6zqnone.cat')']'
+nc = SysGetMessage(100, 'c6zqnone.cat')
+say (nc \== '') (nc \== m) (nc \== SysGetMessage(999999))
+say (SysGetMessage(100, 'REXX.CAT') == nc) (SysGetMessage(100, 'rexx.cat ') == nc),
+    (SysGetMessage(100, './rexx.cat') == nc) (SysGetMessage(100, '') == nc),
+    (SysGetMessage(100, 'c6zqnone/x.cat') == nc)
 </code></pre>
 <pre><code class="language-output">1
 1 1 1 1
-[Error: Message catalog not found]
-[Error: Message catalog not found]
-[Error: Message catalog not found]
-[Error: Message catalog not found]
-[Error: Message catalog not found]
-[Error: Message catalog not found]
+1 1 1
+1 1 1 1 1
 </code></pre>
 <h2 id="the-answer"><a class="header" href="#the-answer">The answer</a></h2>
 <div class="rule" id="r-util.sysgetmessage.answer"><a href="#r-util.sysgetmessage.answer">[util.sysgetmessage.answer]</a></div>
 <p>The answer is the text of message <code>num</code> of the first set of the catalog, with
-the inserts put in. When the catalog has no such message the answer is
-<code>Error: Message not found</code>, and when no catalog is found the answer is
-<code>Error: Message catalog not found</code>, each with the inserts of the call ignored.
-A <code>CALL</code> leaves the answer in <code>RESULT</code>.</p>
-<pre><code class="language-rexx">say '['SysGetMessage(999999)']'
-say '['SysGetMessage(999999, 'rexx.cat', 'c6zqa')']'
-say '['SysGetMessage(100, 'c6zqnone.cat', 'c6zqa')']'
+the inserts put in. When the catalog has no such message the answer is a text
+that says so, and when no catalog is found the answer is another text that says
+so, each with the inserts of the call ignored. The two texts are not null and differ from each
+other, and their wording is not specified, as <a href="../conventions.html#r-conv.error.text">the rule on error
+messages</a> says. A <code>CALL</code> leaves the answer in <code>RESULT</code>.</p>
+<pre><code class="language-rexx">nm = SysGetMessage(999999)
+nc = SysGetMessage(100, 'c6zqnone.cat')
+say (nm \== '') (nc \== '') (nm \== nc)
+say (SysGetMessage(999999, 'rexx.cat', 'c6zqa') == nm)
+say (SysGetMessage(100, 'c6zqnone.cat', 'c6zqa') == nc)
 call SysGetMessage 999999
-say '['result']'
+say (result == nm)
 </code></pre>
-<pre><code class="language-output">[Error: Message not found]
-[Error: Message not found]
-[Error: Message catalog not found]
-[Error: Message not found]
+<pre><code class="language-output">1 1 1
+1
+1
+1
 </code></pre>
 <h2 id="the-inserts"><a class="header" href="#the-inserts">The inserts</a></h2>
 <div class="rule" id="r-util.sysgetmessage.inserts"><a href="#r-util.sysgetmessage.inserts">[util.sysgetmessage.inserts]</a></div>
@@ -345,6 +343,8 @@ call lineout 'c6zqcat.msg', '1 other [&amp;1]'
 call lineout 'c6zqcat.msg', '3 third'
 call lineout 'c6zqcat.msg'
 address system 'gencat c6zqcat.cat c6zqcat.msg'
+nm = SysGetMessage(999999)
+nc = SysGetMessage(100, 'c6zqnone.cat')
 say SysGetMessage(1, './c6zqcat.cat', 'A', 'B')
 say SysGetMessage(1, './c6zqcat.cat', 'A')
 say SysGetMessage(1, './c6zqcat.cat')
@@ -354,18 +354,18 @@ say SysGetMessage(1, './c6zqcat.cat', '&amp;2', 'B')
 say SysGetMessage(1, './c6zqcat.cat', '', '')
 say SysGetMessage(1, './c6zqcat.cat', .c6zqs~new, .mutablebuffer~new('M'))
 say SysGetMessage(7, './c6zqcat.cat', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I')
-say SysGetMessage(3, './c6zqcat.cat')
-say SysGetMessage(2, './c6zqcat.cat')
+say (SysGetMessage(3, './c6zqcat.cat') == nm)
+say (SysGetMessage(2, './c6zqcat.cat') == nm)
 say SysGetMessage(1, directory() || '/c6zqcat.cat', 'A')
 say SysGetMessage(4294967297, './c6zqcat.cat', 'A')
-say SysGetMessage(4294967296, './c6zqcat.cat', 'A')
-say SysGetMessage(1, 'c6zqcat.cat', 'A')
+say (SysGetMessage(4294967296, './c6zqcat.cat', 'A') == nm)
+say (SysGetMessage(1, 'c6zqcat.cat', 'A') == nc)
 saved = value('NLSPATH', directory() || '/%N', 'ENVIRONMENT')
 say SysGetMessage(1, 'c6zqcat.cat', 'A')
-say SysGetMessage(1, 'c6zqnone.cat', 'A')
+say (SysGetMessage(1, 'c6zqnone.cat', 'A') == nc)
 if saved == '' then call value 'NLSPATH', .nil, 'ENVIRONMENT'
 else call value 'NLSPATH', saved, 'ENVIRONMENT'
-say SysGetMessage(1, 'c6zqcat.cat', 'A')
+say (SysGetMessage(1, 'c6zqcat.cat', 'A') == nc)
 call SysFileDelete 'c6zqcat.msg'
 call SysFileDelete 'c6zqcat.cat'
 exit
@@ -382,15 +382,15 @@ first [&amp;2] [B] %s
 first [] [] %s
 first [2] [M] %s
 seven I A0 &amp;0 &amp;A &amp;
-Error: Message not found
-Error: Message not found
+1
+1
 first [A] [] %s
 first [A] [] %s
-Error: Message not found
-Error: Message catalog not found
+1
+1
 first [A] [] %s
-Error: Message catalog not found
-Error: Message catalog not found
+1
+1
 </code></pre>
 
                     </main>

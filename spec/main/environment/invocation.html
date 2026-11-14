@@ -200,7 +200,8 @@ when it was started without words, and what happens when it ends.</p>
 <p>A command with no words, or whose words end before a program name or a string
 is found, runs nothing: it writes a usage text, a blank line and then three
 lines, to its standard error stream, and ends with the status 255. The text
-names the three forms. The words that lead up to the end are the option words
+names the three forms; its wording is not specified, as <a href="../conventions.html#r-conv.error.text">the rule on error
+messages</a> says. The words that lead up to the end are the option words
 of the next rule, so <code>rexx -x</code>, <code>rexx -e</code>, <code>rexx -o</code> and <code>rexx -o</code> with its
 string and nothing more all give the usage text.</p>
 <div class="rule" id="r-env.invocation.words"><a href="#r-env.invocation.words">[env.invocation.words]</a></div>
@@ -500,7 +501,7 @@ errors, and so is a name after the first flag, as in <code>rexxc a.rex -s b.rxo<
 The command then writes a line that says its parameters are incorrect and the
 usage text, to its standard output stream, and ends with the status 255,
 before it looks for the program. With no words at all it writes the usage text
-alone, with the same status.</p>
+alone, with the same status. The wording of both is not specified.</p>
 <div class="rule" id="r-env.invocation.rexxc.check"><a href="#r-env.invocation.rexxc.check">[env.invocation.rexxc.check]</a></div>
 <p>Without an output name <code>rexxc</code> only translates the program and keeps nothing
 of the result: it ends with the status 0 when the program translates, and
@@ -515,8 +516,8 @@ banner. The banner is as <a href="#r-env.invocation.deviation.96">the version ru
 states.</p>
 <div class="rule" id="r-env.invocation.rexxc.names"><a href="#r-env.invocation.rexxc.names">[env.invocation.rexxc.names]</a></div>
 <p>When the output name and the program name are the same string of bytes, the
-command ends with the status 254 and the line <code>Output file name must be different from input file name.</code> on its standard output stream, before it
-looks for the program, so that it ends so even when no such program exists.
+command ends with the status 254 and a line that says the two names must
+differ, on its standard output stream, before it looks for the program, so that it ends so even when no such program exists.
 Words that are in error (<a href="#r-env.invocation.rexxc.words">the words rule</a>) are
 reported before this check, so that <code>rexxc a a -x</code> ends with 255. The check
 compares the two words and not the files they name: for it <code>a</code> and <code>a.rex</code>, or

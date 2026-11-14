@@ -583,6 +583,31 @@ e: say condition('c') condition('o')~code rc
 </code></pre>
 <pre><code class="language-output">SYNTAX 93.924 93
 </code></pre>
+<div class="rule" id="r-conv.error.text"><a href="#r-conv.error.text">[conv.error.text]</a></div>
+<p>The wording of a message is unspecified wherever it reaches a program: the
+result of the ERRORTEXT builtin, the <code>ERRORTEXT</code> and <code>MESSAGE</code> entries of a
+condition object and the text that <code>CONDITION('D')</code> carries where it holds a
+message, the report that an error writes to the error stream after its frame,
+the notice and the error lines of interactive tracing, the text of a trace
+line that names a library method, the answers of SysGetMessage for the
+interpreter's own catalog and of SysGeterrnomsg, the C API's functions that
+answer the text of an error, the usage texts of the commands, and the messages
+of the utility programs. What is specified is the code, the number and the
+order of the inserts that <code>ADDITIONAL</code> holds, the values they hold, and for the
+report the frame that names the error number, the program and the line (<code>Error N running F line L:</code>, or <code>Error N.M:</code> where no line applies). A message exists
+for a number or it does not, as the <a href="builtins/errortext.html#r-bif.errortext.result">ERRORTEXT rules</a>
+say, and an example in this book shows a message only by whether it is the
+null string or equals another message, never by its words. The words <code>Error</code>,
+<code>running</code> and <code>line</code> of the frame and the names of the months are short names
+that stay as they are, not wording that is free.</p>
+<pre><code class="language-rexx">signal on syntax name e
+x = substr('abc', 0)
+e: o = condition('o')
+say (errortext(93) \== '') (o~errortext == errortext(93)) (o~message \== ''),
+    o~additional~items
+</code></pre>
+<pre><code class="language-output">1 1 1 1
+</code></pre>
 <div class="rule" id="r-conv.returns"><a href="#r-conv.returns">[conv.returns]</a></div>
 <p>A rule that says a builtin "returns" a string means that the function
 call's value is exactly that string: the same characters in the same order,
@@ -649,7 +674,7 @@ u: say condition('o')~code rc
 <div class="rule" id="r-conv.string.builtin-argument"><a href="#r-conv.string.builtin-argument">[conv.string.builtin-argument]</a></div>
 <p>Where the <code>STRING</code> method of a builtin's argument answers an object with no
 string value, and the builtin reads that argument as a string, the builtin
-raises <code>SYNTAX 88.909</code>, "Argument N must have a string value", as the method
+raises <code>SYNTAX 88.909</code>, as the method
 the builtin stands for does. <code>N</code> is the position of the argument among the
 arguments of that method, which does not count the receiver, the string the
 builtin works on. So <code>CHANGESTR(needle, haystack, new)</code> numbers the needle 1
