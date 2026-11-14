@@ -314,7 +314,7 @@ fn a_routine_call_sets_no_sigl_where_a_called_label_does() {
 }
 
 /// Two `::ROUTINE` directives of the same name refuse the program before
-/// its first clause, with the oracle's own translation error.
+/// its first clause, with translation error 99.903.
 #[test]
 fn a_duplicate_routine_directive_is_99_903_before_the_first_clause() {
     let outcome = routine_program(
@@ -879,7 +879,7 @@ fn a_directive_naming_a_library_that_is_not_there_is_98_903() {
         // The `::REQUIRES` row spells the name unquoted and the rest quote
         // it inside the `EXTERNAL` string, which is the case difference the
         // message carries: measured, oracle, `::requires zzznolib library` is
-        // `Unable to load library "ZZZNOLIB".`
+        // 98.903 naming `ZZZNOLIB`.
         let upper = shown.contains("::requires");
         let named = if upper { "ZZZNOLIB" } else { "zzznolib" };
         assert!(
@@ -909,8 +909,8 @@ fn a_builtins_result_renders_independently_of_the_digits_in_force() {
 /// `say length()` produces the oracle's own 40.3 report, byte for byte.
 /// ```text
 ///      1 *-* say length()
-/// Error 40 running /.../p09.rex line 1:  Incorrect call to routine.
-/// Error 40.3:  Not enough arguments in invocation of LENGTH; minimum expected is 1.
+/// Error 40 running /.../p09.rex line 1:  <text of 40>
+/// Error 40.3:  <text of 40.3, naming LENGTH and the minimum, 1>
 /// ```
 #[test]
 fn a_builtin_called_with_too_few_arguments_reports_the_oracles_40_3() {

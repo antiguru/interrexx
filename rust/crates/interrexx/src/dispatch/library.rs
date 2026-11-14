@@ -133,8 +133,7 @@ impl Interp {
         // The condition first, because it is raised in the caller's frame once
         // the call has returned and before anything is done with the value the
         // extension wrote. For example, `.MyRe~new('[')` over `RegExp_Init` is
-        // `Error 38 ... Invalid template or pattern.` at rc 218, and the
-        // extension returned zero on that path.
+        // error 38 at rc 218, and the extension returned zero on that path.
         if let Some(number) = pending {
             self.activity.native_reraise = true;
             return Err(condition_of(number));

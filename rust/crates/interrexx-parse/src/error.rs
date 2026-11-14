@@ -1,8 +1,8 @@
 //! What a `ParseError` reports: its message, from the generated table, and the
 //! physical line it is reported on.
 //! ```text
-//! Error 7 running select.rex line 3:  WHEN or OTHERWISE expected.
-//! Error 7.1:  SELECT on line 3 requires WHEN.
+//! Error 7 running select.rex line 3:  <text of 7>
+//! Error 7.1:  <text of 7.1, naming line 3>
 //! ```
 
 use crate::ProgramSource;
@@ -34,7 +34,7 @@ impl ParseError {
 }
 
 impl std::fmt::Display for ParseError {
-    /// `8.2: ELSE has no corresponding THEN clause.`, the message lossily decoded.
+    /// The text of the message, lossily decoded, after its code: `8.2: <text>`.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,

@@ -90,9 +90,8 @@ fn the_metaclass_merge_carries_the_metaclasss_scope_not_just_its_methods() {
 // ---------------------------------------------------------------------
 
 /// `mixinclass_class1.rex`: `Mixin mixinclass class`; `MySingleton subclass
-/// object inherit Mixin`. Recorded: `Error 98.943: Class "The MySingleton
-/// class" is not a subclass of "The Mixin class" base class "The Class
-/// class"` -- an ordinary Object-hierarchy class can never `~inherit` a
+/// object inherit Mixin`. Recorded: error `98.943`, naming the class, the mixin and the
+/// base class -- an ordinary Object-hierarchy class can never `~inherit` a
 /// `mixinclass class` mixin, because its own *instance*-behaviour never has
 /// `.Class` in scope (only the class-behaviour does, via the metaclass
 /// merge every class gets).

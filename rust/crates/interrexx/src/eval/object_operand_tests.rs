@@ -227,8 +227,8 @@ fn an_object_as_a_do_over_target_is_array_requested() {
     );
     // A class object reaches `requestArray`, answers no `MAKEARRAY`, and
     // raises the oracle's own `Error_Execution_noarray` naming itself --
-    // measured, oracle rc 158, `Unable to convert object "The Array
-    // class" to a single-dimensional array value.`
+    // measured, oracle rc 158, error 98.913 naming the class `The Array
+    // class`.
     let (code, stdout, stderr) = run_source(b"do e over .array\nsay e\nend\n");
     assert_eq!((code, stdout.as_str()), (158, ""));
     assert!(

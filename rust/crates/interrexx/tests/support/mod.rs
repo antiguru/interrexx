@@ -175,7 +175,7 @@ const LIBRARY_REPORT_MARK: &[u8] = b" running REXX line ";
 /// `r[cond.information.library]` as a comparison: a line number in the class
 /// library, the indentation of its trace line, and the number of library
 /// levels, are not observable. Every traceback line of a library method
-/// (`<n> *-* Method ... in package "REXX" (no source available).`) has its
+/// (the `<n> *-*` line of 101.22 to 101.26 for a package without source) has its
 /// number replaced by a placeholder of the same width and the blanks after
 /// `*-*` replaced by one, a run of adjacent such lines is kept as its last line (the
 /// level nearest the code that sent the message), and the report's

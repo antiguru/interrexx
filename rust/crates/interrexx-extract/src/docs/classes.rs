@@ -12,8 +12,7 @@ use methods::{Listed, displayed_names, listed_members, method_sections, names_of
 
 /// The class the book documents but which this build cannot load: it is
 /// delivered by `::requires "rxregexp.cls"`, and that file is not on this
-/// build's search path -- measured, `43.901 Could not find file
-/// "rxregexp.cls" for ::REQUIRES`, rc 213. It is out of the class set
+/// build's search path -- measured, error `43.901` naming that file, rc 213. It is out of the class set
 /// entirely, so it has neither a class row nor a method row.
 pub const EXCLUDED_CLASS: &str = "RegularExpression";
 

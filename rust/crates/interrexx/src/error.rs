@@ -149,8 +149,7 @@ impl Raised {
         }
     }
 
-    /// 4.1, `HALT`'s own untrapped default action: "Program interrupted with
-    /// HALT condition", measured at rc 252 for `raise halt` with no trap
+    /// 4.1, `HALT`'s own untrapped default action, measured at rc 252 for `raise halt` with no trap
     /// enabled, and measured *again* with `signal on halt` enabled in the
     /// same (top-level) activation -- the tail-less `RAISE` terminates that
     /// activation before its own trap can see the condition, so the trap
@@ -199,7 +198,7 @@ impl Raised {
     /// coercion -- this is a text check, never a numeric one, which is
     /// why the caller passes the operand's own rendered text rather than
     /// anything from `to_number`. Measured: `say \'abc'` gives 34.901,
-    /// `Logical value must be exactly "0" or "1"; found "abc"`.
+    /// whose insert is `abc`.
     pub(crate) fn not_logical(found: &[u8]) -> Raised {
         Raised::syntax(34, 901, vec![found.to_vec()])
     }
@@ -222,8 +221,7 @@ impl Raised {
     /// value. A distinct sub-number from `not_logical`'s 34.901, and
     /// deliberately not shared with it even though the underlying check is
     /// identical (exactly `0` or `1`, text not numeric) -- measured, `if 1,
-    /// 'x' then` gives 34.6 ("Value of logical list expression element
-    /// must be exactly \"0\" or \"1\"; found \"x\""), a different message
+    /// 'x' then` gives 34.6, a different message
     /// from `&`'s 34.901 for the identical bad value. `IF`/`WHEN`/`WHILE`/
     /// `UNTIL`'s own 34.1/34.2/34.3/34.4 are for when the *whole* condition
     /// is a single expression, not a list, and are Tasks 9-11's to raise
@@ -239,8 +237,8 @@ impl Raised {
     /// value to hand back -- a bare `RETURN`: `say f(1)` into `f: return` gives
     /// rc 212 and
     /// ```text
-    /// Error 44 running .../f.rex line 1:  Function or message did not return data.
-    /// Error 44.1:  No data returned from function "F".
+    /// Error 44 running .../f.rex line 1:  <text of 44>
+    /// Error 44.1:  <text of 44.1, naming F>
     /// ```
     pub(crate) fn no_data_returned(name: &[u8]) -> Raised {
         Raised::syntax(44, 1, vec![name.to_vec()])
@@ -312,8 +310,8 @@ impl Raised {
     /// what is reported.
     pub(crate) fn missing_native_argument(position: usize) -> Raised {
         let mut raised = Raised::syntax(88, 901, vec![position.to_string().into_bytes()]);
-        // For example, `Error 88 running <path>: Invalid argument.` with no
-        // line, under the method's own traceback line.
+        // For example, `Error 88 running <path>: <text of 88>` with no line,
+        // under the method's own traceback line.
         raised.delivery.lineless = true;
         raised
     }
@@ -520,9 +518,8 @@ impl Raised {
     /// 99.945: an `::ANNOTATE` named a target the accumulated package does
     /// not hold. `kind` is the keyword's own lower-case spelling and `name`
     /// the upcased target name, which is how
-    /// `Error_Translation_missing_annotation_target` takes them: `::ANNOTATE
-    /// target &1 "&2" not found.` with the quotes in the template and a bare
-    /// string for `&1`.
+    /// `Error_Translation_missing_annotation_target` takes them: the kind as
+    /// a bare string for `&1` and the name for `&2`, which the text quotes.
     pub(crate) fn missing_annotation_target(kind: &str, name: &[u8]) -> Raised {
         Raised::syntax(99, 945, vec![kind.as_bytes().to_vec(), name.to_vec()])
     }
@@ -579,7 +576,7 @@ impl Raised {
     /// is the argument's own **rendered value**.
     /// ```text
     /// numeric digits 3 ; zz = 2 / 3 ; numeric digits 9 ; say left('ab', zz)
-    /// ->  40.12  LEFT argument 2 must be a whole number; found "0.667".
+    /// ->  40.12  names LEFT, argument 2 and the value 0.667.
     /// ```
     pub(crate) fn argument_not_whole(routine: &[u8], position: usize, found: &[u8]) -> Raised {
         Raised::syntax(
@@ -614,8 +611,8 @@ impl Raised {
     /// new value for it. `routine` and `position` as [`argument_not_whole`]'s;
     /// `found` is the argument's **own bytes, verbatim -- never upcased**.
     /// ```text
-    /// value('*')      Error 40.26:  VALUE argument 1 must be a valid symbol; found "*".
-    /// value('5','x')  Error 40.26:  VALUE argument 1 must be a valid symbol; found "5".
+    /// value('*')      Error 40.26, naming VALUE, argument 1 and the value `*`.
+    /// value('5','x')  Error 40.26, naming VALUE, argument 1 and the value `5`.
     /// ```
     pub(crate) fn argument_not_a_symbol(routine: &[u8], position: usize, found: &[u8]) -> Raised {
         Raised::syntax(
@@ -755,8 +752,8 @@ impl Raised {
     /// (`Error_Incorrect_call_format_invalid`, both builtins' own
     /// input-conversion blocks). `found` is the argument's own rendered text
     /// and `style` the single upcased input-style byte, never the whole
-    /// option string -- both measured, rc 216: `date(,'','f')` gives `DATE
-    /// argument 2, "", is not in the format described by argument 3, "F".`
+    /// option string -- both measured, rc 216: `date(,'','f')` gives 40.19,
+    /// naming argument 2, its value and the format of argument 3, `F`,
     /// and `date('D','367', 'D')` (2026 is not a leap year) gives the same
     /// shape naming `"D"`.
     pub(crate) fn date_format_invalid(routine: &[u8], found: &[u8], style: u8) -> Raised {
@@ -787,12 +784,9 @@ impl Raised {
     /// separator supplied elsewhere in the call. Three call sites share this
     /// one shape, each measured:
     /// ```text
-    /// date('b',,,'')                    DATE argument 1, "B", is a format incompatible
-    ///                                    with the separator specified in argument 4.
-    /// date(,'20070922','w',,'-')        DATE argument 3, "W", is a format incompatible
-    ///                                    with the separator specified in argument 5.
-    /// date(,'1 May 2022',,,'-')         DATE argument 2, "1 May 2022", is a format
-    ///                                    incompatible with the separator specified in
+    /// date('b',,,'')                    names DATE, argument 1, `B` and argument 4.
+    /// date(,'20070922','w',,'-')        names DATE, argument 3, `W` and argument 5.
+    /// date(,'1 May 2022',,,'-')         names DATE, argument 2, `1 May 2022` and
     ///                                    argument 5.
     /// ```
     pub(crate) fn format_incompatible_separator(
@@ -831,9 +825,9 @@ impl Raised {
     /// 93.922: a method's pad argument is a string that is not exactly one
     /// byte. `found` is the argument's own rendered bytes, at the same rc 163
     /// as [`invalid_length`] and [`invalid_position`] -- measured,
-    /// `.MutableBuffer~new('abcabc')~substr(1, 2, 'xx')` reports `Incorrect
-    /// pad or character argument specified; found "xx".`, and `''` and `12`
-    /// report `found ""` and `found "12"`.
+    /// `.MutableBuffer~new('abcabc')~substr(1, 2, 'xx')` reports 93.922
+    /// with the value `xx`, and `''` and `12` report the values `""` and
+    /// `12`.
     pub(crate) fn incorrect_pad(found: &[u8]) -> Raised {
         Raised::syntax(93, 922, vec![found.to_vec()])
     }
@@ -842,9 +836,9 @@ impl Raised {
     /// `position` is 1-based **in the underlying method's argument list**,
     /// which is the builtin's own list less the positions the method takes
     /// as its receiver and its earlier operands -- measured,
-    /// `copies('ab',-1)` reports `Method argument 1`, `insert('-','abc',-1)`
-    /// reports `Method argument 2` and `changestr('a','banana','X',-1)`
-    /// reports `Method argument 3`, from builtin positions 2, 3 and 4.
+    /// `copies('ab',-1)` names argument 1, `insert('-','abc',-1)`
+    /// names argument 2 and `changestr('a','banana','X',-1)`
+    /// names argument 3, from builtin positions 2, 3 and 4.
     pub(crate) fn argument_not_non_negative(position: usize, found: &[u8]) -> Raised {
         Raised::syntax(
             93,
@@ -866,7 +860,7 @@ impl Raised {
     /// sub of `0`: measured, `say left('ab','999999999999999999')` prints
     /// ```text
     ///      1 *-* say left('ab','999999999999999999')
-    /// Error 5 running /abs/p.rex line 1:  System resources exhausted.
+    /// Error 5 running /abs/p.rex line 1:  <text of 5>
     /// ```
     pub(crate) fn system_resources() -> Raised {
         Raised::syntax(5, 0, Vec::new())
@@ -1040,8 +1034,8 @@ impl Raised {
         Raised::syntax(93, 902, vec![arity.to_string().into_bytes()])
     }
 
-    /// 93.953: a method argument that has to be one of a set of classes is
-    /// none of them. `wanted` is the description the raise site supplies.
+    /// 93.953: an argument of a method that has to be one of a set of classes
+    /// is none of them. `wanted` is the description the raise site supplies.
     pub(crate) fn argument_not_convertible(position: usize, wanted: &str) -> Raised {
         Raised::syntax(
             93,
@@ -1084,7 +1078,7 @@ impl Raised {
         Raised::syntax(26, 900, vec![text.as_bytes().to_vec()])
     }
 
-    /// 93.905: a method argument that has to be a whole number is not one.
+    /// 93.905: an argument of a method that has to be a whole number is not one.
     pub(crate) fn method_argument_not_whole(position: usize, found: &[u8]) -> Raised {
         Raised::syntax(
             93,
@@ -1127,8 +1121,8 @@ impl Raised {
     }
 
     /// 93.939: an `Array` given as an index list has more than one dimension.
-    /// Under a trap, `(1,2)~at(.array~new(2,2))` gives `Method argument 1 must
-    /// have a single-dimensional array value.`
+    /// Under a trap, `(1,2)~at(.array~new(2,2))` gives 93.939, naming
+    /// argument 1.
     pub(crate) fn index_list_not_single_dimensional(position: usize) -> Raised {
         Raised::syntax(93, 939, vec![position.to_string().into_bytes()])
     }
@@ -1177,7 +1171,7 @@ impl Raised {
         Raised::syntax(93, 959, vec![max.to_string().into_bytes()])
     }
 
-    /// 93.907: a method argument is not a positive whole number.
+    /// 93.907: an argument of a method fails the positive-whole-number check.
     /// `position` is 1-based and `found` the argument's own rendered bytes.
     pub(crate) fn method_argument_not_positive(position: usize, found: &[u8]) -> Raised {
         Raised::syntax(
@@ -1311,7 +1305,7 @@ impl Raised {
 
     /// 88.921: a native argument declared `double` has no value as one. `found`
     /// is the argument's own rendered bytes. For example, `RxCalcSqrt('abc')`
-    /// is `Argument 1 must be a valid double value; found "abc".`
+    /// names argument 1 and the value `abc`.
     pub(crate) fn native_argument_not_a_double(position: usize, found: &[u8]) -> Raised {
         let mut raised = Raised::syntax(
             88,
@@ -1323,8 +1317,8 @@ impl Raised {
     }
 
     /// 88.905: a native argument declared `positive_wholenumber_t` is not a
-    /// whole number from one up. For example, `RxCalcSqrt(2, 0)` is `Argument 2
-    /// must be a positive whole number; found "0".`
+    /// whole number from one up. For example, `RxCalcSqrt(2, 0)` names argument 2
+    /// and the value `0`.
     pub(crate) fn native_argument_not_positive(position: usize, found: &[u8]) -> Raised {
         let mut raised = Raised::syntax(
             88,
@@ -1337,8 +1331,8 @@ impl Raised {
 
     /// 88.904: a native argument declared `nonnegative_wholenumber_t` is not a
     /// whole number from zero up. For example, through `orxmethod`'s
-    /// `TestNonnegativeWholeNumberArg(-1)`: `The 1 argument must be zero or a
-    /// positive whole number; found "-1".`
+    /// `TestNonnegativeWholeNumberArg(-1)` the error names argument 1 and the
+    /// value `-1`.
     pub(crate) fn native_argument_not_nonnegative(position: usize, found: &[u8]) -> Raised {
         let mut raised = Raised::syntax(
             88,
@@ -1351,8 +1345,8 @@ impl Raised {
 
     /// 88.907: a native argument declared as a C integer is not a whole number
     /// in that type's range. For example, through `orxmethod`'s
-    /// `TestIntArg('x')`: `Argument 1 must be in the range -2147483648 to
-    /// 2147483647; found "x".`
+    /// `TestIntArg('x')` the error names argument 1, the range of the type and
+    /// the value `x`.
     pub(crate) fn native_argument_outside_range(
         position: usize,
         min: i128,
@@ -1374,8 +1368,8 @@ impl Raised {
     }
 
     /// 34.901: a native argument declared `logical_t` is not exactly `0` or
-    /// `1`. For example, through `orxmethod`'s `TestLogicalArg(3)`: `Logical
-    /// value must be exactly "0" or "1"; found "3".`
+    /// `1`. For example, through `orxmethod`'s `TestLogicalArg(3)` the insert
+    /// is the value `3`.
     pub(crate) fn native_argument_not_logical(found: &[u8]) -> Raised {
         let mut raised = Raised::syntax(34, 901, vec![found.to_vec()]);
         raised.delivery.lineless = true;
@@ -1384,8 +1378,7 @@ impl Raised {
 
     /// 98.913: a native argument declared `RexxArrayObject` has no
     /// single-dimensional array value. For example, through `orxmethod`'s
-    /// `TestArrayArg(.object~new)`: `Unable to convert object "an Object" to a
-    /// single-dimensional array value.`
+    /// `TestArrayArg(.object~new)` the error names the object, `an Object`.
     pub(crate) fn native_argument_not_an_array(found: &[u8]) -> Raised {
         let mut raised = Raised::syntax(98, 913, vec![found.to_vec()]);
         raised.delivery.lineless = true;
@@ -1393,8 +1386,8 @@ impl Raised {
     }
 
     /// 88.914: a native argument is not an instance of the class its declared
-    /// type requires. For example, through `orxmethod`'s `TestClassArg(1)`:
-    /// `Argument 1 must be an instance of the Class class.`
+    /// type requires. For example, through `orxmethod`'s `TestClassArg(1)`
+    /// the error names argument 1 and the class `Class`.
     pub(crate) fn native_argument_not_an_instance(position: usize, class: &str) -> Raised {
         let mut raised = Raised::syntax(
             88,
@@ -1407,8 +1400,8 @@ impl Raised {
 
     /// 88.919: a native argument declared `POINTERSTRING` is not an address
     /// written after `0x`. For example, through `orxmethod`'s
-    /// `TestPointerStringArg('zz')`: `Argument 1 is not in valid pointer
-    /// format; found "zz".`
+    /// `TestPointerStringArg('zz')` the error names argument 1 and the value
+    /// `zz`.
     pub(crate) fn native_argument_not_a_pointer(position: usize, found: &[u8]) -> Raised {
         let mut raised = Raised::syntax(
             88,
@@ -1421,10 +1414,9 @@ impl Raised {
 
     /// A native argument declared `RexxStemObject` is not a stem, nor in a
     /// routine a stem's name: 93.969 in a method and 40.919 in a routine. For
-    /// example, through `orxmethod`'s `TestStemArg('zz')`, rc 163: `Method
-    /// argument 1 must have a stem object value; found "zz".`; through
-    /// `orxfunction`'s `TestStemArg('a.b')`: `Argument 1 must have a stem
-    /// object or stem name value; found "a.b".`
+    /// example, through `orxmethod`'s `TestStemArg('zz')`, rc 163, the error
+    /// names argument 1 and the value `zz`; through `orxfunction`'s
+    /// `TestStemArg('a.b')` it names argument 1 and the value `a.b`.
     pub(crate) fn native_argument_not_a_stem(
         method: bool,
         position: usize,
@@ -1665,8 +1657,8 @@ impl Raised {
     /// 98.970, what `::OPTIONS ERROR SYNTAX` turns a command's `ERROR` into:
     /// the condition's `DESCRIPTION` and `RC`. The catalogue quotes `&1`
     /// itself, so a command's description is the string as the program wrote
-    /// it and nothing more -- measured, `External command "sh -c 'exit 3'"
-    /// ended with return code 3.` at rc 158.
+    /// it and nothing more -- measured, for `sh -c 'exit 3'` the error names
+    /// that command and the return code 3, at rc 158.
     pub(crate) fn error_syntax(description: &[u8], rc: &[u8]) -> Raised {
         Raised::syntax(98, 970, vec![description.to_vec(), rc.to_vec()])
     }
@@ -1686,7 +1678,7 @@ impl Raised {
 
     /// 98.974, what `::OPTIONS NOTREADY SYNTAX` turns an untrapped NOTREADY
     /// into. `name` is the stream's name as the program wrote it, not the
-    /// qualified path -- measured, `Stream "n.txt" is not ready.` at rc 158.
+    /// qualified path -- measured, the error names `n.txt` at rc 158.
     /// From a command handler's condition (`command.rs`'s `escalated`), the
     /// condition's description instead.
     pub(crate) fn notready_syntax(name: &[u8]) -> Raised {
@@ -1939,8 +1931,8 @@ impl From<FormatError> for Raised {
 /// ```text
 ///      2 *-* do forever then
 ///      2 *-* interpret "do forever then"
-/// Error 27 running /abs/p1.rex line 2:  Invalid DO or LOOP syntax.
-/// Error 27.901:  Incorrect data following FOREVER keyword on the loop; found "THEN".
+/// Error 27 running /abs/p1.rex line 2:  <text of 27>
+/// Error 27.901:  <text of 27.901, naming THEN>
 /// ```
 impl From<&ParseError> for Raised {
     fn from(error: &ParseError) -> Raised {
@@ -2178,9 +2170,9 @@ impl Raised {
     }
 
     /// The lines a pause prints for a condition its own typed line raised:
-    /// `+++ Interactive trace.  Error` and then the same major and sub text
-    /// the report would carry. Measured, `+++ Interactive trace.  Error 42:
-    /// Arithmetic overflow/underflow.` and its `42.3` companion.
+    /// the debug prefix (101.4) and then the same major and sub text the
+    /// report would carry, as the error of a `1/0` typed at a stop shows: the
+    /// prefix, `42:` and the text of 42, then the same with `42.3`.
     pub(crate) fn debug_error_lines(&self) -> Vec<Vec<u8>> {
         let prefix = match interrexx_inventory::errors::lookup(101, 4) {
             Some(entry) => substitute(entry.text, &[]),
@@ -2203,8 +2195,8 @@ impl Raised {
     /// The exact bytes written to stderr for this condition.
     /// ```text
     ///      4 *-* end
-    /// Error 7 running /abs/path/f.rex line 4:  WHEN or OTHERWISE expected.
-    /// Error 7.3:  All WHEN expressions of SELECT are false; OTHERWISE expected.
+    /// Error 7 running /abs/path/f.rex line 4:  <text of 7>
+    /// Error 7.3:  <text of 7.3>
     /// ```
     pub(crate) fn report(&self, site: &ClauseSite<'_>) -> Vec<u8> {
         let mut out = Vec::new();

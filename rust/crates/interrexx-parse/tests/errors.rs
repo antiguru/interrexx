@@ -680,7 +680,7 @@ fn an_interpret_error_with_no_substitution_renders_the_condition_objects_message
     // 99.908's sub-message takes no substitution, so `message()` returns it, and
     // it is byte-identical to what the trapped program reads out of
     // `condition('o')~message`. Measured:
-    //     code=99.908  message=INTERPRET data must not contain EXPOSE.
+    //     code=99.908, no inserts.
     let error = parse_interpret(b"expose a".to_vec()).expect_err("EXPOSE is rejected");
     assert_eq!(error.message(), b"INTERPRET data must not contain EXPOSE.");
 }
@@ -688,7 +688,7 @@ fn an_interpret_error_with_no_substitution_renders_the_condition_objects_message
 #[test]
 fn an_interpret_label_error_names_the_label() {
     // 47.1's sub-message substitutes the label. Measured on the oracle:
-    //     code=47.1  message=INTERPRET data must not contain labels; found "X".
+    //     code=47.1  insert 1 is the label, X.
     let error = parse_interpret(b"x: nop".to_vec()).expect_err("a label is rejected");
     assert_eq!(
         error.message(),
