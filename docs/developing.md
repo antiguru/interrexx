@@ -45,8 +45,10 @@ allocate than ooRexx.
   `LD_LIBRARY_PATH=third_party/oracle/lib third_party/oracle/bin/rexx`; interrexx is
   `rust/target/release/rexx`.
 * Capture stdout, stderr and the exit status separately, never `2>&1`.
-* A program with more than one activity can give different results from run to run, on either
-  interpreter. One run that matches ooRexx does not show that the two agree.
+* ooRexx can give a program with more than one activity different results from run to run, so
+  one run that matches it does not show agreement. interrexx's simulation mode makes a schedule
+  reproducible from its seed; its gate compares against the set of outcomes recorded from ooRexx
+  (`docs/design/testing.md`).
 * Never `.Package~new` a file in the repository outside the source-line procedure below: it runs
   that file's prolog.
 * Do not run a program in `rust/corpus/oracle-crashes.txt` on ooRexx.
