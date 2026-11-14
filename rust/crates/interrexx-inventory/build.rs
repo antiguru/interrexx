@@ -4,7 +4,7 @@
 //! ooRexx tree, through `$REXX_UPSTREAM`, until they are replaced by texts
 //! of our own.
 
-use interrexx_upstream::{builtins, errors};
+use interrexx_upstream::{builtins, errors, messages};
 use std::collections::HashMap;
 use std::fmt::Write as _;
 use std::path::PathBuf;
@@ -13,6 +13,9 @@ fn main() {
     println!("cargo::rerun-if-env-changed=REXX_UPSTREAM");
     println!("cargo::rerun-if-changed=data/errors.tsv");
     println!("cargo::rerun-if-changed=data/builtins.txt");
+    // A new `messages/<major>.tsv` changes the directory, an edit changes a
+    // file.
+    println!("cargo::rerun-if-changed=messages");
     let messages_xml = PathBuf::from(
         std::env::var_os("REXX_UPSTREAM")
             .expect("REXX_UPSTREAM names the directory holding interpreter/messages/rexxmsg.xml"),
@@ -21,6 +24,7 @@ fn main() {
     println!("cargo::rerun-if-changed={}", messages_xml.display());
     let out = PathBuf::from(std::env::var("OUT_DIR").expect("cargo sets OUT_DIR"));
     let table = errors::Table::from_tsv(&read("data/errors.tsv"));
+    validate_messages(&table);
     let xml = std::fs::read_to_string(&messages_xml)
         .unwrap_or_else(|e| panic!("cannot read {}: {e}", messages_xml.display()));
     std::fs::write(out.join("errors.rs"), generate_errors(&table, &xml))
@@ -28,6 +32,23 @@ fn main() {
     let names = builtins::from_text(&read("data/builtins.txt"));
     std::fs::write(out.join("builtins.rs"), generate_builtins(&names))
         .expect("writing builtins.rs");
+}
+
+/// Checks the texts under `messages/` against the table. They are not used
+/// yet: the binary still takes its texts from the catalogue.
+fn validate_messages(table: &errors::Table) {
+    let dir = std::path::Path::new("messages");
+    let texts = messages::load_dir(dir)
+        .unwrap_or_else(|problems| panic!("messages/ is not sound:\n{}", problems.join("\n")));
+    for text in &texts {
+        println!("cargo::rerun-if-changed=messages/{}.tsv", text.major);
+    }
+    let problems = messages::validate(table, &texts);
+    assert!(
+        problems.is_empty(),
+        "messages/ does not fit data/errors.tsv:\n{}",
+        problems.join("\n")
+    );
 }
 
 fn read(path: &str) -> String {
