@@ -1,0 +1,15 @@
+21	0	Invalid data on end of clause.
+21	900	&1.
+21	901	Data must not follow the NOP keyword; found "&1".
+21	902	Data must not follow the SELECT keyword; found "&1".
+21	903	Data must not follow the NAME trap name; found "&1".
+21	904	Data must not follow the condition name; found "&1".
+21	905	Data must not follow the SIGNAL label name; found "&1".
+21	906	Data must not follow the TRACE setting; found "&1".
+21	907	Data must not follow the LEAVE name; found "&1".
+21	908	Data must not follow the ITERATE name; found "&1".
+21	909	Data must not follow the END name; found "&1".
+21	911	Data must not follow the NUMERIC FORM specification; found "&1".
+21	912	Data must not follow the GUARD OFF specification; found "&1".
+21	913	Data must not follow the ::CONSTANT value; found "&1".
+21	914	Data must not follow the ::RESOURCE directive; found "&1".
