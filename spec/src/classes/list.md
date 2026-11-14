@@ -2,7 +2,7 @@
 element: "List"
 kind: class
 rexxref: "Builtin Classes > Collection Classes > List Class; Builtin Classes > Collection Classes > List Class > new (Class Method); Builtin Classes > Collection Classes > List Class > of (Class Method); Builtin Classes > Collection Classes > List Class > []; Builtin Classes > Collection Classes > List Class > []=; Builtin Classes > Collection Classes > List Class > allIndexes; Builtin Classes > Collection Classes > List Class > allItems; Builtin Classes > Collection Classes > List Class > append; Builtin Classes > Collection Classes > List Class > at; Builtin Classes > Collection Classes > List Class > delete; Builtin Classes > Collection Classes > List Class > empty; Builtin Classes > Collection Classes > List Class > first; Builtin Classes > Collection Classes > List Class > firstItem; Builtin Classes > Collection Classes > List Class > hasIndex; Builtin Classes > Collection Classes > List Class > hasItem; Builtin Classes > Collection Classes > List Class > index; Builtin Classes > Collection Classes > List Class > insert; Builtin Classes > Collection Classes > List Class > isEmpty; Builtin Classes > Collection Classes > List Class > items; Builtin Classes > Collection Classes > List Class > last; Builtin Classes > Collection Classes > List Class > lastItem; Builtin Classes > Collection Classes > List Class > makeArray; Builtin Classes > Collection Classes > List Class > next; Builtin Classes > Collection Classes > List Class > previous; Builtin Classes > Collection Classes > List Class > put; Builtin Classes > Collection Classes > List Class > remove; Builtin Classes > Collection Classes > List Class > removeItem; Builtin Classes > Collection Classes > List Class > section; Builtin Classes > Collection Classes > List Class > supplier"
-deviations: [78, 109, 118]
+deviations: [78, 109, 118, 172]
 ---
 
 # List
@@ -290,8 +290,9 @@ value; the order of the list and the indexes do not change. `l[i] = v` is the
 message `[]=` and the same as `put`. The index must be the handle of an entry of
 the list, or `SYNTAX 93.918` is raised ([the index rule](r:class.list.indexes)).
 The method takes two arguments: fewer, or an omitted index, raise `SYNTAX
-93.903`, and a third raises `SYNTAX 93.902`. A `put` of a subclass is not asked
-for `[]=`, nor the other way round.
+93.903`, and a third raises `SYNTAX 93.902`. An omitted item leaves the entry
+holding nothing, as [the next rule](r:class.list.nothing) says. A `put` of a
+subclass is not asked for `[]=`, nor the other way round.
 
 ```rexx
 l = .list~of('a', 'b', 'c')
@@ -325,6 +326,44 @@ l~put("x", .nil) => 93.918
 l~put("x") => 93.903
 l~put => 93.903
 l~put("x", h[2], 0) => 93.902
+```
+
+r[class.list.nothing]
+An entry can hold nothing: `put` with the item omitted empties an entry, and
+`insert` with the item omitted adds one that holds nothing. Such an entry stays
+in the list. `items` counts it, and `next`, `previous` and `allIndexes` walk
+it. It is not taken for an entry by the methods that look up an index: `at`
+answers `.nil` for its handle, `hasIndex` answers 0, `remove` and `delete`
+answer `.nil` and leave it in the list, and `put` and `insert` raise `SYNTAX
+93.918` for its handle. What `allItems`, `makeArray` and `DO OVER` make of it
+is the [makeArray rule](r:class.list.makearray)'s.
+
+```rexx
+l = .list~of('a', 'b', 'c')
+h = l~allIndexes
+l~put(, h[2])
+e = l~insert(, h[3])
+say l~items l~hasIndex(h[2]) l~hasIndex(e) (l~at(h[2]) == .nil)
+say l~allIndexes~items (l~next(h[1]) == h[2]) (l~previous(h[3]) == h[2])
+say (l~remove(h[2]) == .nil) (l~delete(e) == .nil) l~items
+call try 'l~put("B", h[2])'
+call try 'l~insert("x", h[2])'
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  say arg(1) '=> no error'
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
+```
+
+```output
+4 0 0 1
+4 1 1
+1 1 4
+l~put("B", h[2]) => 93.918
+l~insert("x", h[2]) => 93.918
 ```
 
 r[class.list.append]
@@ -362,8 +401,9 @@ l~append(1, 2) => 93.902
 r[class.list.insert]
 `insert(item, index)` adds the item as a new entry directly after the entry
 with that index and answers the new index. An `index` of `.nil` makes the item
-the first entry, and an omitted `index` makes it the last. The index must name
-an entry, or `SYNTAX 93.918` is raised. The method takes one or two arguments:
+the first entry, and an omitted `index` makes it the last. An omitted item adds
+an entry that [holds nothing](r:class.list.nothing). The index must name an
+entry, or `SYNTAX 93.918` is raised. The method takes one or two arguments:
 a third raises `SYNTAX 93.902`. The indexes of the other entries do not
 change; only the order does.
 
@@ -514,7 +554,8 @@ q 2
 
 r[class.list.hasindex]
 `hasIndex(index)` answers 1 when an entry has that index and 0 when none has,
-including a handle whose entry is not in the list. The method takes exactly one
+including a handle whose entry is not in the list and one whose entry [holds
+nothing](r:class.list.nothing). The method takes exactly one
 argument: none raises `SYNTAX 93.903` and a second raises `SYNTAX 93.902`. A
 value that is not a handle is treated as [the index rule](r:class.list.indexes)
 says: `.nil` and `x` raise `SYNTAX 93.918`.
@@ -793,7 +834,10 @@ List
 r[class.list.makearray]
 `makeArray` and `allItems` answer a new `Array` that holds the items of the
 list in list order, the first at index 1, and `allIndexes` a new `Array` of
-the indexes of the entries in the same order. The answers are instances of
+the indexes of the entries in the same order. An entry that [holds
+nothing](r:class.list.nothing) keeps its place in the Array, which holds no
+item at that index, so the Array's size is the number of entries and its
+`items` the number of items ([Deviation 172](r:class.list.deviation.172)). The answers are instances of
 `Array` whatever the class of the receiver is, never the receiver, and do not
 follow later changes to the list. They take no argument: any argument raises
 `SYNTAX 93.902`.
@@ -1273,4 +1317,33 @@ makearray sent
 answered
 request ARRAY
 0
+```
+
+r[class.list.deviation.172]
+The Array that `allItems` and `makeArray` answer for a list with an entry that
+[holds nothing](r:class.list.nothing) counts only the items it holds, so its
+`items` and `isEmpty` agree with its contents, and `DO OVER` the list skips
+that entry ([Deviation 172](../deviations.md)). ooRexx counts the empty place
+as an item, so `items` stays one higher than the items the Array holds and
+`isEmpty` answers 0 once its last item is removed, and its `DO OVER` assigns
+`.nil` for that entry.
+
+```rexx
+l = .list~of('a', 'b', 'c')
+l~put(, l~next(l~first))
+a = l~allItems
+say a~items a~size a~hasIndex(2) l~makeArray~items
+a~remove(1)
+a~remove(3)
+say a~items a~isEmpty
+do x over l
+  say x
+end
+```
+
+```output
+2 3 0 2
+0 1
+a
+c
 ```
