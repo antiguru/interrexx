@@ -32,10 +32,10 @@ page records why they are the way they are.
 * **Method lookup is live** (2026-11-13, #141, #624, Deviation 110). An object sees every later
   change to its class, superclasses and mixins, as in Smalltalk, from which ooRexx's object model
   descends.
-* **Hash collections iterate in insertion order** (2026-11-12, #36). The hash function is seeded
-  against flooding and the seed is invisible to programs. Python reached the same pair of
-  decisions after randomised order proved noisy and users came to rely on insertion order. #36
-  tracks the change from today's bucket order.
+* **Hash collections are to iterate in insertion order** (2026-11-12, #36). This is not implemented
+  yet; #36 tracks it. The hash function is to be seeded against flooding, with the seed invisible to
+  programs. Python reached the same pair of decisions after randomised order proved noisy and
+  users came to rely on insertion order.
 * **When a finalizer runs is unspecified** (2026-09-01). Anything that depends on the order of
   garbage collection only has to be one of the possible orders.
 * **Behaviour when memory runs out is best effort** (2026-08-14). ooRexx's limits depend on the

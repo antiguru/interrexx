@@ -12,7 +12,9 @@ A comparison checks only what the specification fixes. For an error that is the 
 subcode (`r[conv.error.name]`): the wording of a message (`r[conv.error.text]`) and the items of
 `ADDITIONAL` for an error the interpreter raises (`r[conv.error.additional]`) are free, so a check
 that compares them tests behaviour nothing promises. A test that needs an error compares its
-`Error N.M`, or `condition('O')~code`, and not the text after it.
+`Error N.M`, or `condition('O')~code`, and not the text after it. The differential harnesses have
+no way to mark part of a program's output as unspecified and compare every byte, so a
+differential program prints only what the specification fixes.
 
 Where ooRexx is defective (a crash, an unbounded loop, an answer that depends on memory layout),
 interrexx does not reproduce the defect. `rust/corpus/oracle-crashes.txt` lists the programs that
@@ -28,8 +30,8 @@ two-way comparison against ANSI would report deliberate choices as defects.
 through `rexxc`), `expr/`, `num/`, `model/` and `gate-tables/`. `differential.txt` names
 the programs `tests/corpus.rs` runs under both interpreters. stdout and exit status compare byte for
 byte; stderr does too, apart from a narrow trace-indent normalisation that a program can opt out of.
-The error lines in stderr still compare their text, because interrexx's message texts equal
-ooRexx's until #388 switches them; from then on an error line compares its code.
+Comparing the text of stderr's error lines is stricter than the specification requires, a known
+gap in the harness (#388).
 A program here prints nothing that varies between runs of one interpreter.
 
 A program that needs files runs in a directory of its own at the same absolute path on both sides,

@@ -537,8 +537,9 @@ r[conv.error.additional]
 For an error the interpreter raises, the `ADDITIONAL` entry of the condition
 object is an Array, and the number, order and values of its items are
 unspecified, except where a rule states an item. A rule that states one says
-which item it is and what it holds. Objects that a program supplies to `RAISE`
-reach the condition as the [RAISE rules](r:instr.raise.untrapped) say.
+which item it is and what it holds. An error that `RAISE` gives rise to is
+such an error; the objects the clause supplied are governed by the [RAISE
+rules](r:instr.raise.untrapped).
 
 ```rexx
 signal on syntax name e
