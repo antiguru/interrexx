@@ -72,7 +72,7 @@ Table	class	clsTable	collclasses.xml:9048	covered	a bare ~new constructs an inst
 Alarm	class	clsAlarm	utilityclasses.xml:51	covered	a committed construction program answers an instance; a bare ~new raises 93.901 on the oracle	.Alarm~new(99999, .Message~new(.Object~new, 'STRING'))~~cancel	-	-
 AlarmNotification	class	clsAlarmNotification	utilityclasses.xml:322	covered	a bare ~new constructs an instance on the oracle	.AlarmNotification~new	-	-
 Buffer	class	clsBuffer	utilityclasses.xml:421	unreachable	the reference says instances come only from native code -- utilityclasses.xml:429 "can only be created using the native code application programming interfaces."	-	-	-
-CommandContext	class	clsCommandContext	utilityclasses.xml:482	not-covered	no construction program is committed; a bare ~new raises 93.901 on the oracle	-	-	-
+CommandContext	class	clsCommandContext	utilityclasses.xml:482	covered	a committed construction program answers an instance; a bare ~new raises 93.901 on the oracle	gatekc()	::routine gatekc; .CommandHandler~register('GATEKC', .gatekc~new); address GATEKC 'x'; return .local~gatekc; ::class gatekc subclass CommandHandler; ::method command; use arg , context; .local~gatekc = context; return 0	-
 CommandHandler	class	clsCommandHandler	utilityclasses.xml:927	covered	a bare ~new constructs an instance on the oracle	.CommandHandler~new	-	-
 CommandInput	class	clsCommandInput	utilityclasses.xml:1179	not-covered	no construction program is committed; a bare ~new raises 93.901 on the oracle	-	-	-
 CommandOutput	class	clsCommandOutput	utilityclasses.xml:1227	not-covered	no construction program is committed; a bare ~new raises 93.901 on the oracle	-	-	-
@@ -92,7 +92,7 @@ MessageNotification	class	clsMessageNotification	utilityclasses.xml:5428	covered
 Monitor	class	clsMonitor	utilityclasses.xml:5496	covered	a bare ~new constructs an instance on the oracle	.Monitor~new	-	-
 MutableBuffer	class	clsMutableBuffer	utilityclasses.xml:5624	covered	a bare ~new constructs an instance on the oracle	.MutableBuffer~new	-	-
 MutexSemaphore	class	clsMutexSemaphore	utilityclasses.xml:7246	covered	a bare ~new constructs an instance on the oracle	.MutexSemaphore~new	-	-
-NativeCommandHandler	class	clsNativeCommandHandler	utilityclasses.xml:7445	not-covered	no construction program is committed; a bare ~new raises 97.2 on the oracle	-	-	-
+NativeCommandHandler	class	clsNativeCommandHandler	utilityclasses.xml:7445	covered	a committed construction program answers an instance; a bare ~new raises 97.2 on the oracle	.CommandHandler~handler('SYSTEM')	-	-
 Orderable	class	clsOrderable	utilityclasses.xml:7583	covered	a bare ~new constructs an instance on the oracle	.Orderable~new	-	-
 Pointer	class	clsPointer	utilityclasses.xml:7836	unreachable	the reference says instances come only from native code -- utilityclasses.xml:7844 "can only be created using the native code application programming interfaces."	-	-	-
 RexxContext	class	clsRexxContext	utilityclasses.xml:8467	covered	a committed construction program answers an instance; the reference says the user cannot create one and names a Rexx-level route instead -- utilityclasses.xml:8479 "They cannot be directly created by the user."	.context	-	-

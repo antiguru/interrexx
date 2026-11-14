@@ -11,8 +11,8 @@ use std::path::{Path, PathBuf};
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Deviation {
     pub active: bool,
-    /// The model tests (`numeric_model`, `stream_model`) whose oracle
-    /// departures it licenses.
+    /// The model tests (`numeric_model`, `stream_model`) and gate tables
+    /// (`gate_table_c`) whose oracle departures it licenses.
     pub models: Vec<String>,
     /// Its rows in `licensed_divergences.rs`'s table, by name.
     pub witnesses: Vec<String>,

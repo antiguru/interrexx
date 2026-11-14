@@ -197,6 +197,10 @@ pub const CONSTRUCTION_PROGRAMS: &[(&str, &str)] = &[
     ("CIRCULARQUEUE", ".CircularQueue~new(5)"),
     ("CLASS", ".Object~subclass('k')"),
     ("COLUMNCOMPARATOR", ".ColumnComparator~new(3, 100)"),
+    // The second argument of a command handler's `command` method, kept after
+    // the command ends: `hasMethod`, all the probe sends, does not depend on
+    // whether the context is still valid.
+    ("COMMANDCONTEXT", "gatekc()"),
     ("FILE", ".File~new('/nonexistent-gate-table-c-file')"),
     (
         "INVERTINGCOMPARATOR",
@@ -204,6 +208,7 @@ pub const CONSTRUCTION_PROGRAMS: &[(&str, &str)] = &[
     ),
     ("MESSAGE", ".Message~new(.Object~new, 'STRING')"),
     ("METHOD", ".Object~method('objectName')"),
+    ("NATIVECOMMANDHANDLER", ".CommandHandler~handler('SYSTEM')"),
     ("PACKAGE", ".Class~package"),
     ("REXXCONTEXT", ".context"),
     ("REXXINFO", ".RexxInfo"),
@@ -227,7 +232,16 @@ pub const CONSTRUCTION_PROGRAMS: &[(&str, &str)] = &[
 
 /// The directive a committed construction program needs below the probe's
 /// readbacks, for a route whose expression reads what a directive defines.
-pub const CONSTRUCTION_DIRECTIVES: &[(&str, &str)] = &[("ROUTINE", "::routine r")];
+pub const CONSTRUCTION_DIRECTIVES: &[(&str, &str)] = &[
+    (
+        "COMMANDCONTEXT",
+        "::routine gatekc; .CommandHandler~register('GATEKC', .gatekc~new); \
+         address GATEKC 'x'; return .local~gatekc; \
+         ::class gatekc subclass CommandHandler; ::method command; \
+         use arg , context; .local~gatekc = context; return 0",
+    ),
+    ("ROUTINE", "::routine r"),
+];
 
 /// What `class-set.txt`'s construction and directives fields hold for a row
 /// that has none.
