@@ -114,7 +114,10 @@ starts while the first one waits finishes before the first goes on, even where
 the first one's wait ends sooner. An activity that runs meanwhile runs on the
 attached thread, so its Rexx code nests only as deeply as that thread's stack
 allows before error 11. A native call that returns while such a message waits
-goes on only once the message has finished.
+goes on only once the message has finished. A wait that native code makes, as
+an `::ATTRIBUTE` method does, for a guard such a waiting message holds is
+refused: in the main program it ends the run with return code 120, and in a
+message a later callback sends, the message does not run.
 
 > ooRexx runs each message beside the other activities. Which wait ends first
 > depends on timing, so there is no example. The tests of this rule order two

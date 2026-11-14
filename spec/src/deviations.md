@@ -1406,7 +1406,7 @@ A message an attached thread sends runs its Rexx code on that thread, and
 while that code waits, the program's other activities run on that thread too.
 The waits nest: a second callback that starts while the first waits must
 finish before the first can go on, even where the first one's wait ends
-sooner. Three differences follow from this:
+sooner. Four differences follow from this:
 
 * Two callbacks that wait finish last in, first out. The later one finishes
   first, however their waits end.
@@ -1416,7 +1416,13 @@ sooner. Three differences follow from this:
   error 11.
 * A native call during which a callback started, and which returns while
   that callback waits, goes on only once the callback has finished.
+* A wait for a guard that an earlier, waiting callback holds could end only
+  once that callback goes on, which it does only after the wait. Where native
+  code makes the wait, as a method `::ATTRIBUTE` defines does, it is refused.
+  In the main program this ends the run with return code 120. In a message a
+  later callback sends, the message does not run.
 
 ooRexx runs each attached thread's callbacks beside the other activities. A
 callback goes on as soon as its wait ends, every other activity runs on its
-own thread, and the code after a returning native call goes on at once.
+own thread, the code after a returning native call goes on at once, and a wait
+for a guard ends when the callback holding it releases it.
