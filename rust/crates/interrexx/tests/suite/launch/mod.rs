@@ -63,8 +63,12 @@ pub fn run_group_on_oracle_from(
     if let Some(temporary) = temporary {
         command.env("TMPDIR", temporary);
     }
-    let process = run_process(command, None, ORACLE_DEADLINE);
+    let mut process = run_process(command, None, ORACLE_DEADLINE);
     drop(service);
+    // The oracle's message lines are mapped to this crate's texts, as for every
+    // other run on the oracle, before the run is read or reported.
+    process.run.stdout = crate::support::messages::oracle_output(&process.run.stdout);
+    process.run.stderr = crate::support::messages::oracle_output(&process.run.stderr);
     let mut result = GroupRun::new(group_path(dir, group), CapKind::OracleUlimit);
     record(
         &mut result,

@@ -53,6 +53,11 @@ pub mod native_table;
 /// to invoke the oracle identically or their results are not comparable.
 pub mod oracle;
 
+/// Maps the oracle's message lines to this crate's texts. `oracle` applies it to
+/// every run's output; the harnesses that start the oracle themselves call it
+/// on what they read.
+pub mod messages;
+
 /// The Deviations table, `rust/corpus/deviations.tsv`, and the chapter
 /// headings it is held equal to.
 pub mod deviations;
