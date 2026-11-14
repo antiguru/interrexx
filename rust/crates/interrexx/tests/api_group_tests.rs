@@ -20,6 +20,14 @@
 
 #[path = "support/group_runner.rs"]
 mod group_runner;
+
+// The C API, compiled in and exported as `rexx` does (`build.rs`), so a test
+// library this process loads binds to this process's interpreter rather than
+// to the oracle's `librexx.so.4` and `librexxapi.so.4`.
+#[path = "../../interrexx-capi/src/exports.rs"]
+mod rexx_exports;
+#[path = "../../interrexx-capi/src/rexxapi_exports.rs"]
+mod rexxapi_exports;
 mod support;
 mod watchdog;
 

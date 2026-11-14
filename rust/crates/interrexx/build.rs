@@ -1,5 +1,6 @@
 //! The `rexx` executable exports the C API it compiles in, so an extension it loads binds to its
-//! interpreter rather than to a second copy in `librexx.so.4`. The build date `PARSE VERSION`
+//! interpreter rather than to a second copy in `librexx.so.4`; so does a test binary that compiles
+//! it in to run the interpreter in its own process. The build date `PARSE VERSION`
 //! carries is stamped here, from `SOURCE_DATE_EPOCH` when set; it is the date the build script
 //! last ran.
 
@@ -13,6 +14,7 @@ mod build_date;
 
 fn main() {
     println!("cargo:rustc-link-arg-bin=rexx=-Wl,--export-dynamic-symbol=Rexx*");
+    println!("cargo:rustc-link-arg-tests=-Wl,--export-dynamic-symbol=Rexx*");
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-changed=build_date.rs");
     println!("cargo:rerun-if-env-changed=SOURCE_DATE_EPOCH");
