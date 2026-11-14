@@ -1252,8 +1252,8 @@ impl Interp {
             Body::Native(_) => Err(NotNumeric),
             // **The marker whatever they render as**, because an operator is
             // sent to its left operand as a message and neither answers one: `a
-            // = (1,); say a + 1` and `o~objectName = '123'; say o + 1` are both
-            // `97.1 ... does not understand message "+".` even though each
+            // = (1,); say a + 1` and `o~objectName = '123'; say o + 1` both
+            // raise 97.1 even though each
             // renders as a number, and the comparisons `say (a = 1)` and `say
             // (o = 123)` are both `0` where parsing that rendering gives `1`.
             // `Interp::operator_operand_gap` is what reports them, and it is

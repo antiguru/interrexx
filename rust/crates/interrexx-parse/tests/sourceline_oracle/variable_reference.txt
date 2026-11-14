@@ -5,7 +5,7 @@ count 81
 /* variable's VALUE, which is what this crate did before this program:       */
 /*                                                                           */
 /*   object    -- ~class~id would be String, and ~name, ~value and ~value=   */
-/*                would each be 97.1 "does not understand message".          */
+/*                would each raise 97.1.                                     */
 /*   render    -- unchanged either way. SAY of a reference prints the        */
 /*                referenced value on both sides, which is why the           */
 /*                divergence was silent: it appears only once a message is   */

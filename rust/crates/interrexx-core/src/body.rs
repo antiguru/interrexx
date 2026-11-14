@@ -34,9 +34,8 @@ impl BehaviourHandle {
 /// A byte string that failed `Number::parse_bytes` (D15). One marker and no
 /// cause, which is not a simplification paid for later: nothing observable
 /// distinguishes one cause from another. A Rexx program that uses a
-/// non-numeric value in arithmetic gets error 41.1, "Nonnumeric value
-/// ("val") used in arithmetic operation", which substitutes the *value* and
-/// never says why it failed to parse. There is no separate `from_utf8` step
+/// non-numeric value in arithmetic gets error 41.1, whose first insert is
+/// the *value*; no insert says why it failed to parse. There is no separate `from_utf8` step
 /// able to fail on its own either -- a parse over bytes either yields a
 /// number or does not.
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]

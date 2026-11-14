@@ -56,8 +56,8 @@ pub enum InheritRefusal {
     /// `SYNTAX` 98.945: a class named as a position or as an `~uninherit`
     /// target is not one this class inherits. The class travels with the
     /// refusal because the message names it, and it is the *named* class rather
-    /// than the mixin: `.K~inherit(.M1, .M2)` reports `has not inherited class
-    /// "The M2 class"`.
+    /// than the mixin: `.K~inherit(.M1, .M2)` reports 98.945 with `.M2` as its
+    /// second insert.
     NotInherited(ObjRef),
 }
 

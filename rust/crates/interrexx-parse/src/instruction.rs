@@ -190,7 +190,7 @@ pub(crate) fn parse_instruction(
         if parser.clause.label.is_some() || parser.first_keyword() != Some(KW_THEN) {
             // Reported against THIS clause, the offending one, naming the IF's
             // line: measured, `nop` / `if 1 = 1` / blank / blank / `nop`
-            // reports `line 5: THEN expected` with `IF instruction on line 2`.
+            // reports 18.1 at line 5, naming line 2 as the IF's.
             return Err(parser.then_expected(which, byte));
         }
         let end_at = parser.keyword_end();
