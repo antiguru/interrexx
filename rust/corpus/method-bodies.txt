@@ -901,22 +901,22 @@ Alarm	triggered	instance	answers	rc 0
 AlarmNotification	cancel	instance	answers	rc 165
 AlarmNotification	triggered	instance	answers	rc 163
 Buffer	new	class	answers	rc 163
-CommandContext	[ ]	instance	unanswered	a bare `~new` raises; the method was never sent
-CommandContext	[ ]=	instance	unanswered	a bare `~new` raises; the method was never sent
-CommandContext	dropVar	instance	unanswered	a bare `~new` raises; the method was never sent
-CommandContext	environment	instance	unanswered	a bare `~new` raises; the method was never sent
-CommandContext	error	instance	unanswered	a bare `~new` raises; the method was never sent
-CommandContext	getVar	instance	unanswered	a bare `~new` raises; the method was never sent
-CommandContext	hasVar	instance	unanswered	a bare `~new` raises; the method was never sent
-CommandContext	input	instance	unanswered	a bare `~new` raises; the method was never sent
-CommandContext	isRedirected	instance	unanswered	a bare `~new` raises; the method was never sent
-CommandContext	isValid	instance	unanswered	a bare `~new` raises; the method was never sent
-CommandContext	output	instance	unanswered	a bare `~new` raises; the method was never sent
-CommandContext	raise	instance	unanswered	a bare `~new` raises; the method was never sent
-CommandContext	raiseError	instance	unanswered	a bare `~new` raises; the method was never sent
-CommandContext	raiseFailure	instance	unanswered	a bare `~new` raises; the method was never sent
-CommandContext	setVar	instance	unanswered	a bare `~new` raises; the method was never sent
-CommandContext	variables	instance	unanswered	a bare `~new` raises; the method was never sent
+CommandContext	[ ]	instance	answers	rc 159
+CommandContext	[ ]=	instance	answers	rc 159
+CommandContext	dropVar	instance	answers	rc 163
+CommandContext	environment	instance	answers	rc 0
+CommandContext	error	instance	answers	rc 158
+CommandContext	getVar	instance	answers	rc 163
+CommandContext	hasVar	instance	answers	rc 163
+CommandContext	input	instance	answers	rc 158
+CommandContext	isRedirected	instance	answers	rc 168
+CommandContext	isValid	instance	answers	rc 0
+CommandContext	output	instance	answers	rc 158
+CommandContext	raise	instance	answers	rc 163
+CommandContext	raiseError	instance	answers	rc 163
+CommandContext	raiseFailure	instance	answers	rc 163
+CommandContext	setVar	instance	answers	rc 163
+CommandContext	variables	instance	answers	rc 158
 CommandHandler	deregister	class	answers	rc 163
 CommandHandler	environments	class	answers	rc 0
 CommandHandler	handler	class	answers	rc 168
@@ -1157,9 +1157,9 @@ MutexSemaphore	new	class	answers	rc 0
 MutexSemaphore	acquire	instance	answers	rc 0
 MutexSemaphore	release	instance	answers	rc 0
 MutexSemaphore	uninit	instance	answers	rc 165
-NativeCommandHandler	command	instance	unanswered	a bare `~new` raises; the method was never sent
-NativeCommandHandler	kind	instance	unanswered	a bare `~new` raises; the method was never sent
-NativeCommandHandler	name	instance	unanswered	a bare `~new` raises; the method was never sent
+NativeCommandHandler	command	instance	answers	rc 163
+NativeCommandHandler	kind	instance	answers	rc 0
+NativeCommandHandler	name	instance	answers	rc 0
 Orderable	=	instance	answers	rc 163
 Orderable	==	instance	answers	rc 163
 Orderable	<	instance	answers	rc 163
