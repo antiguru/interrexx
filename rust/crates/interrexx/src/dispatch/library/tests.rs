@@ -1128,10 +1128,18 @@ fn a_pending_callback_at_end_is_refused() {
     assert_eq!(unserved.join().expect("no panic"), TakeFor::Refused);
 
     let mut interp = Interp::new();
-    let served = pending_callback(&interp, 1);
+    // A context `AttachThread` built, so that serving the recall as a live
+    // interpreter's would file an attached activity for it.
+    let context = interp
+        .pending_attached_context()
+        .expect("a live interpreter with a requester builds one");
+    let served = pending_callback(&interp, context);
     assert!(interp.terminate().is_empty());
     interp.drain_completions();
     assert_eq!(served.join().expect("no panic"), TakeFor::Refused);
+    // The refused recall filed no attached activity: serving it as one of a
+    // live interpreter would have.
+    assert_eq!(interp.attached_count(), 0);
     // One posted after the end is refused without a wait.
     let late = pending_callback_unposted(&interp, 1);
     assert_eq!(late, TakeFor::Refused);

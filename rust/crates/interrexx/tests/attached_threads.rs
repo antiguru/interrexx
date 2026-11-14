@@ -301,7 +301,9 @@ fn an_idle_attached_thread_does_not_hold_program_end() {
 }
 
 /// A message an attached thread sent before the main program ends, still running when it does,
-/// holds the program's end until it finishes, and the program ends with rc 0.
+/// holds the program's end until it finishes, and the program ends with rc 0. The callback buries
+/// the main activity while it runs, so the run does not separate the hold on the program's end
+/// from main waiting for the callback.
 // spec: native.threads.end
 #[test]
 fn a_running_callback_holds_program_end() {

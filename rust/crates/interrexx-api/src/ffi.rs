@@ -668,12 +668,17 @@ struct InstanceOwner {
 /// or one whose attached activity has ended, free for the next attach.
 struct Pending(NonNull<Thread>);
 
-// SAFETY: the allocation is kept, so it lives for the rest of the process.
-// Whichever thread takes it from the pending list reads and writes it on the
-// baton, as every thread reaches a context. One taken from the free list has
-// no thread attached and no call in flight, so the thread that takes it is
-// the only one that touches it until it hands the address out, and the
-// list's mutex orders what the last thread wrote before what the next reads.
+// SAFETY: the allocation is kept, so it lives for the rest of the process,
+// and the address stays valid for any thread that still holds it. A thread
+// that detached holds the address of a context the free list may have handed
+// to another attach, so exclusive access after reuse does not hold. What
+// does hold is that such a stale caller reads only `attached`, which
+// `build_attached` writes before the address is handed out and nothing
+// writes after, before `reached` refuses it. The rest of the context (`call`,
+// `strings`, `detaching`) is touched on the baton, as every thread reaches a
+// context, or only by the thread attached to it. The
+// list's mutex orders what the last thread wrote to the context before what
+// the next thread that takes it reads.
 unsafe impl Send for Pending {}
 
 impl Drop for TableHome {
@@ -773,6 +778,18 @@ impl ThreadTable {
             ((*(*instance).functions).Halt)(instance);
             ((*(*instance).functions).SetTrace)(instance, logical_t::from(trace));
         }
+    }
+
+    /// The address of a context built as `AttachThread` builds one for a
+    /// thread with no activity of this interpreter, on the pending list until
+    /// a callback through it files it, or `None` where the table has no
+    /// requester or the interpreter is gone. It attaches no thread, so the
+    /// interpreter's side of an attach can be driven without a foreign one.
+    #[must_use]
+    pub fn build_attached_context(&self) -> Option<usize> {
+        let requester = self.requester.clone()?;
+        // SAFETY: the instance is this table's, which `with` made.
+        unsafe { build_attached(self.instance(), requester) }.map(|context| context as usize)
     }
 
     /// The context at `address` that `AttachThread` built from this table
@@ -2013,6 +2030,7 @@ fn open_attached<'a, 'c: 'a>(
             host: crate::values::HostRef::through(requester),
             strings,
         }));
+    activation.keep_pool();
     entered.insert(Entered::new(cell, activation)).link();
     Reached::checked(activation, crate::values::BatonHold::none())
 }

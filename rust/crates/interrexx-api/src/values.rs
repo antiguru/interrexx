@@ -358,7 +358,7 @@ pub struct CStringPool {
     /// The bytes an extension writes a buffer string's value into, by string.
     /// A vector's elements are addressed through its own pointer, so moving
     /// the vector as this list grows does not move them.
-    writable: Vec<(ObjRef, Vec<u8>)>,
+    writable: std::collections::HashMap<ObjRef, Vec<u8>>,
 }
 
 impl CStringPool {
@@ -426,9 +426,9 @@ impl CStringPool {
     /// in place of any `string` had.
     pub fn writable(&mut self, string: ObjRef, length: usize) {
         // A string with an area here already is gone and its object reused:
-        // the lookups below answer the first area for an object.
-        self.writable.retain(|(key, _)| *key != string);
-        self.writable.push((string, vec![0; length]));
+        // the insert replaces that area, so the lookups below answer the new
+        // one, and it costs one probe however many areas the pool holds.
+        self.writable.insert(string, vec![0; length]);
     }
 
     /// Drops the copies and the writable area made for `object`, whose
@@ -437,31 +437,27 @@ impl CStringPool {
     /// areas of its own.
     pub fn forget(&mut self, object: ObjRef) {
         self.entries.retain(|(key, _)| *key != Some(object));
-        self.writable.retain(|(key, _)| *key != object);
+        self.writable.remove(&object);
     }
 
     /// The length [`CStringPool::writable`] made `string`'s bytes at.
     pub fn writable_length(&self, string: ObjRef) -> Option<usize> {
-        self.writable
-            .iter()
-            .find(|(key, _)| *key == string)
-            .map(|(_, bytes)| bytes.len())
+        self.writable.get(&string).map(Vec::len)
     }
 
     /// The address of `string`'s writable bytes, valid until the pool is
     /// cleared.
     pub fn writable_address(&mut self, string: ObjRef) -> Option<POINTER> {
         self.writable
-            .iter_mut()
-            .find(|(key, _)| *key == string)
-            .map(|(_, bytes)| bytes.as_mut_ptr().cast())
+            .get_mut(&string)
+            .map(|bytes| bytes.as_mut_ptr().cast())
     }
 
     /// Every byte written for `string`, and `length` capped at how many were
     /// made, which becomes the area's length. The area stays where it is
     /// until the pool is cleared.
     pub fn written(&mut self, string: ObjRef, length: usize) -> Option<(Vec<u8>, usize)> {
-        let (_, bytes) = self.writable.iter_mut().find(|(key, _)| *key == string)?;
+        let bytes = self.writable.get_mut(&string)?;
         let made = bytes.clone();
         bytes.truncate(length);
         Some((made, bytes.len()))
@@ -880,6 +876,9 @@ pub struct Activation<'a> {
     /// The variables an `RXSHV_NEXTV` sequence has still to answer, taken
     /// at its first request and dropped once it answers `RXSHV_LVAR`.
     pool_cursor: RefCell<Option<std::collections::VecDeque<(Vec<u8>, Vec<u8>)>>>,
+    /// Whether the string pool is the context's own, which outlives the
+    /// activation's calls ([`Activation::keep_pool`]).
+    pool_kept: Cell<bool>,
 }
 
 impl<'a> Activation<'a> {
@@ -893,7 +892,22 @@ impl<'a> Activation<'a> {
             between_halves: Cell::new(false),
             pool: Cell::new(false),
             pool_cursor: RefCell::new(None),
+            pool_kept: Cell::new(false),
         }
+    }
+
+    /// Marks the string pool as one that outlives the calls through this
+    /// activation, an attached activity's context pool, so that
+    /// `ReleaseLocalReference` drops what it holds for the object. An
+    /// ordinary native call's pool ends with the call, and what the
+    /// extension read stays valid until then.
+    pub fn keep_pool(&self) {
+        self.pool_kept.set(true);
+    }
+
+    /// Whether [`Activation::keep_pool`] was called.
+    pub fn pool_kept(&self) -> bool {
+        self.pool_kept.get()
     }
 
     /// Lets `RexxVariablePool` reach the calling activation's variables

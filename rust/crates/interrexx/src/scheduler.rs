@@ -1871,6 +1871,13 @@ impl Interp {
         }
     }
 
+    /// The address of a context `AttachThread` would have built for a foreign
+    /// thread, pending until a callback through it files it.
+    #[cfg(test)]
+    pub(crate) fn pending_attached_context(&self) -> Option<usize> {
+        self.activities.thread_table.build_attached_context()
+    }
+
     /// The attached activities filed and not yet ended.
     pub(crate) fn attached_count(&self) -> usize {
         self.activities.attached

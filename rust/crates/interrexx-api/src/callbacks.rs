@@ -1971,14 +1971,19 @@ impl Activation<'_> {
     }
 
     /// `ReleaseLocalReference`: the handle no longer roots its object, and
-    /// answers until a collection takes it. The copies and the writable area
-    /// the call made for the object are dropped with it.
+    /// answers until a collection takes it. Where the call's string pool
+    /// outlives the call ([`Activation::keep_pool`]), the copies and the
+    /// writable area made for the object are dropped with it.
     pub fn release_local_reference(&self, handle: RexxObjectPtr) {
         let mut cx = self.conversion();
         // An attached thread's pool lasts until it detaches, so what its
         // released strings left there would otherwise pile up, and a later
-        // object at the same reference would find them.
-        if let Some(object) = cx.host.resolve(handle) {
+        // object at the same reference would find them. An ordinary call's
+        // pool ends with the call, and an address the extension read stays
+        // valid until then.
+        if self.pool_kept()
+            && let Some(object) = cx.host.resolve(handle)
+        {
             cx.strings.forget(object);
         }
         cx.host.release_local(handle);
