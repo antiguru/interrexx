@@ -3,6 +3,7 @@
 
 use std::path::{Path, PathBuf};
 
+use interrexx_inventory::errors;
 use interrexx_parse::{
     ParseError, ProgramSource, SourceKind, parse_interpret, parse_program, program_from,
 };
@@ -29,8 +30,11 @@ struct Case {
     /// The line the oracle's main message named. `None` for an accepted
     /// program.
     line: Option<usize>,
-    /// The oracle's secondary message with its inserts filled, or `None` where
-    /// it printed none.
+    /// The inserts the oracle's secondary message showed, by position.
+    inserts: Vec<(usize, Vec<u8>)>,
+    /// interrexx's text of the oracle's code with those inserts filled in, or
+    /// `None` for an accepted program. It is what this parser must render
+    /// where it raises the same code.
     message: Option<Vec<u8>>,
     /// The `program` field as the corpus file spells it, escapes and all.
     source: String,
@@ -79,6 +83,19 @@ fn unescape(field: &str, row: usize) -> Vec<u8> {
     out
 }
 
+/// The text of `major.sub` from interrexx's table, with the inserts of the
+/// oracle's message at their positions.
+fn render(major: u16, sub: u16, inserts: &[(usize, Vec<u8>)], row: usize) -> Vec<u8> {
+    let text = interrexx_inventory::errors::lookup(major, sub)
+        .unwrap_or_else(|| panic!("row {row}: {major}.{sub} is not a message"))
+        .text;
+    let mut values = vec![Vec::new(); inserts.iter().map(|(k, _)| *k).max().unwrap_or(0)];
+    for (k, value) in inserts {
+        values[k - 1] = value.clone();
+    }
+    interrexx_inventory::errors::substitute(text, &values)
+}
+
 fn cases() -> Vec<Case> {
     let text = std::fs::read_to_string(corpus_path()).expect("the error corpus is readable");
     let mut cases = Vec::new();
@@ -97,7 +114,7 @@ fn cases() -> Vec<Case> {
         let class = field("class");
         let expect = field("expect");
         let at = field("line");
-        let message = field("message");
+        let inserts = field("inserts");
         let program = field("program");
         let class = match class.as_str() {
             "translation" => Class::Translation,
@@ -126,12 +143,16 @@ fn cases() -> Vec<Case> {
         let line = error
             .is_some()
             .then(|| at.parse().unwrap_or_else(|e| panic!("row {row}: {e}")));
+        let inserts = interrexx_upstream::corpus::decode_inserts(&inserts)
+            .unwrap_or_else(|e| panic!("row {row}: {e}"));
+        let message = error.map(|(code, sub)| render(code, sub, &inserts, row));
         cases.push(Case {
             program: unescape(&program, row),
             class,
             error,
             line,
-            message: (message != "-").then(|| unescape(&message, row)),
+            inserts,
+            message,
             source: program,
             row,
         });
@@ -430,7 +451,7 @@ fn message_mismatches() -> std::collections::BTreeMap<String, String> {
         let want = case
             .message
             .as_deref()
-            .unwrap_or_else(|| panic!("row {}: a translation row needs a message", case.row));
+            .unwrap_or_else(|| panic!("row {}: a translation row has a message", case.row));
         let pair = case.error.expect("a translation row has a number");
         let got = match parse(&case.program) {
             Ok(()) => b"<accepted>".to_vec(),
@@ -443,7 +464,7 @@ fn message_mismatches() -> std::collections::BTreeMap<String, String> {
         if got != want {
             wrong.entry(case.source.clone()).or_insert_with(|| {
                 format!(
-                    "row {}: {}.{} renders {:?}, the oracle {:?}",
+                    "row {}: {}.{} renders {:?}, the corpus records {:?}",
                     case.row,
                     pair.0,
                     pair.1,
@@ -532,12 +553,9 @@ fn the_label_colon_rule_covers_exactly_the_two_corpus_rows_it_was_written_for() 
             "row {}: the oracle now agrees",
             case.row
         );
-        assert_eq!(
-            case.message.as_deref(),
-            Some(&br#"Incorrect expression detected at ":"."#[..]),
-            "row {}",
-            case.row
-        );
+        // The oracle names the leftover colon: 35.1 with that insert.
+        assert_eq!(case.error, Some((35, 1)), "row {}", case.row);
+        assert_eq!(case.inserts, [(1, b":".to_vec())], "row {}", case.row);
         covered.push((case.source, error.message()));
     }
     assert_eq!(
@@ -545,11 +563,11 @@ fn the_label_colon_rule_covers_exactly_the_two_corpus_rows_it_was_written_for() 
         [
             (
                 r#"select\nwhen 1 = 1\nthen: nop\nend"#.to_string(),
-                b"WHEN instruction on line 2 requires matching THEN clause.".to_vec()
+                errors::render(errors::E18_2, ["2"]).into_bytes()
             ),
             (
                 r#"if 1 = 1\nthen: nop"#.to_string(),
-                b"IF instruction on line 1 requires matching THEN clause.".to_vec()
+                errors::render(errors::E18_1, ["1"]).into_bytes()
             ),
         ],
         "the label-colon deviation changed"
@@ -590,14 +608,15 @@ fn the_do_subkey_rows_differ_from_the_oracle_as_deviation_38_says() {
         if !do_subkey_deviation(Some((error.code(), error.sub())), oracle) {
             continue;
         }
-        let want = if case.source.contains(" by ") {
-            &b"Unknown keyword following \"FOR\"; found \"BY\"."[..]
+        let keyword = if case.source.contains(" by ") {
+            "BY"
         } else {
-            &b"Unknown keyword following \"FOR\"; found \"TO\"."[..]
+            "TO"
         };
+        let want = errors::render(errors::E25_927, ["FOR", keyword]);
         assert_eq!(
             String::from_utf8_lossy(&error.message()),
-            String::from_utf8_lossy(want),
+            want,
             "row {}",
             case.row
         );
@@ -682,7 +701,10 @@ fn an_interpret_error_with_no_substitution_renders_the_condition_objects_message
     // `condition('o')~message`. Measured:
     //     code=99.908, no inserts.
     let error = parse_interpret(b"expose a".to_vec()).expect_err("EXPOSE is rejected");
-    assert_eq!(error.message(), b"INTERPRET data must not contain EXPOSE.");
+    assert_eq!(
+        error.message(),
+        errors::render(errors::E99_908, []).as_bytes()
+    );
 }
 
 #[test]
@@ -692,7 +714,7 @@ fn an_interpret_label_error_names_the_label() {
     let error = parse_interpret(b"x: nop".to_vec()).expect_err("a label is rejected");
     assert_eq!(
         error.message(),
-        br#"INTERPRET data must not contain labels; found "X"."#
+        errors::render(errors::E47_1, ["X"]).as_bytes()
     );
 }
 

@@ -12,6 +12,9 @@
 //!   (`major.sub<TAB>reason` per line).
 //! * `scan [--comments-only] [PATH]` lists the tracked files holding a
 //!   catalogue text, and on stderr the codes it cannot look for.
+//! * `inserts MAJOR.SUB` reads from standard input the text the oracle printed
+//!   for that message (in the corpus field encoding) and prints the corpus
+//!   `inserts` field it shows.
 //! * `brief MAJOR OUTDIR` writes the writer's briefs for one major outside
 //!   the repository. Run it under a memory cap (`memcap 8G cargo run ...`):
 //!   it runs the probe programs on `$REXX_BIN` (default
@@ -23,7 +26,7 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
 
 use interrexx_upstream::{
-    brief, builtins, classes, difference, errors, messages, scan, similarity,
+    brief, builtins, classes, corpus, difference, errors, messages, scan, similarity,
 };
 
 /// One checked-in table: where it lives (relative to the `crates` directory)
@@ -65,8 +68,7 @@ fn read(upstream: &Path, file: &str) -> String {
         .unwrap_or_else(|e| panic!("cannot read {}: {e}", source.display()))
 }
 
-const USAGE: &str =
-    "usage: interrexx-upstream (write | check | similarity | scan | brief MAJOR OUTDIR)";
+const USAGE: &str = "usage: interrexx-upstream (write | check | similarity | scan | inserts MAJOR.SUB | brief MAJOR OUTDIR)";
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -76,6 +78,7 @@ fn main() -> ExitCode {
         Some("similarity") => return run_similarity(&args[1..]),
         Some("scan") => return run_scan(&args[1..]),
         Some("brief") => return run_brief(&args[1..]),
+        Some("inserts") => return run_inserts(&args[1..]),
         _ => {
             eprintln!("{USAGE}");
             return ExitCode::from(2);
@@ -126,6 +129,50 @@ fn repo_root() -> PathBuf {
 /// The catalogue's messages, texts included.
 fn catalogue() -> Vec<errors::Message> {
     errors::parse_messages(&read(&upstream(), "interpreter/messages/rexxmsg.xml"))
+}
+
+/// `inserts MAJOR.SUB`: the corpus `inserts` field of the oracle's text of
+/// that message, read from standard input.
+fn run_inserts(args: &[String]) -> ExitCode {
+    let [code] = args else {
+        eprintln!("usage: interrexx-upstream inserts MAJOR.SUB < TEXT");
+        return ExitCode::from(2);
+    };
+    let Some((major, sub)) = code
+        .split_once('.')
+        .and_then(|(major, sub)| Some((major.parse::<u16>().ok()?, sub.parse::<u16>().ok()?)))
+    else {
+        eprintln!("{code:?} is not MAJOR.SUB");
+        return ExitCode::from(2);
+    };
+    let mut field = String::new();
+    if let Err(e) = std::io::Read::read_to_string(&mut std::io::stdin(), &mut field) {
+        eprintln!("cannot read standard input: {e}");
+        return ExitCode::FAILURE;
+    }
+    let result = (|| {
+        let text = corpus::unescape(field.strip_suffix('\n').unwrap_or(&field))?;
+        let messages = catalogue();
+        let message = messages
+            .iter()
+            .find(|m| (m.major, m.sub) == (major, sub))
+            .ok_or_else(|| format!("{code} is not a message"))?;
+        let rendered = errors::rendered_positions(&message.text);
+        corpus::record_inserts(&message.text, &rendered, &text)
+    })();
+    match result {
+        Ok((items, ambiguous)) => {
+            if ambiguous {
+                eprintln!("{code}: the inserts split in more than one way, the first is kept");
+            }
+            println!("{}", corpus::encode_inserts(&items));
+            ExitCode::SUCCESS
+        }
+        Err(e) => {
+            eprintln!("{code}: {e}");
+            ExitCode::FAILURE
+        }
+    }
 }
 
 /// The value of `--name` among `args`, and the arguments without it.
