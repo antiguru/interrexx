@@ -38,6 +38,12 @@ fn oracle_messages() -> HashMap<String, String> {
                 Some(c) => text.push(c),
             }
         }
+        // The table writes the utility messages' `%k` inserts as `&k`, like every other insert.
+        let text = if symbol.starts_with("Error_RXQUE_") || symbol.starts_with("Error_RXSUBC_") {
+            interrexx_upstream::errors::percent_inserts_to_ampersand(&text)
+        } else {
+            text
+        };
         out.insert(symbol.to_string(), text);
     }
     out

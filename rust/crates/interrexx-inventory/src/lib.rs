@@ -5,7 +5,8 @@
 //!
 //! `messages/<major>.tsv` holds interrexx's own text for each error message
 //! of one major, one row per message: `major<TAB>sub<TAB>text`. A text writes
-//! insert `k` as `&k`, and only for a `k` in the row's `rendered` column of
+//! insert `k` as `&k` (the utility messages of major 999 too, though the
+//! source marks theirs `%k`), and only for a `k` in the row's `rendered` column of
 //! `data/errors.tsv`. A line that is empty or starts with `#` is a comment.
 //! A text has no tab and no line break. The build checks every file: its
 //! name is the major of each of its rows, each code is in `errors.tsv`, no
@@ -14,6 +15,30 @@
 
 pub mod errors {
     include!(concat!(env!("OUT_DIR"), "/errors.rs"));
+
+    /// `text` with `&1`, `&2`, ... replaced by the values of the same
+    /// position. A position with no value stays as written.
+    pub fn substitute<V: AsRef<[u8]>>(text: &str, values: &[V]) -> Vec<u8> {
+        let mut out = Vec::with_capacity(text.len());
+        let mut bytes = text.as_bytes().iter().copied().peekable();
+        while let Some(byte) = bytes.next() {
+            if byte != b'&' {
+                out.push(byte);
+                continue;
+            }
+            match bytes.peek().copied() {
+                Some(digit @ b'1'..=b'9') => {
+                    bytes.next();
+                    match values.get(usize::from(digit - b'1')) {
+                        Some(value) => out.extend_from_slice(value.as_ref()),
+                        None => out.extend_from_slice(&[b'&', digit]),
+                    }
+                }
+                _ => out.push(b'&'),
+            }
+        }
+        out
+    }
 }
 
 pub mod builtins {
