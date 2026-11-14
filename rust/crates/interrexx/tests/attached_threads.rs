@@ -119,6 +119,18 @@ fn run_agreeing_on_stdout(name: &str, program: &str) -> Answer {
     run_against(name, program, asked, SECONDS).0
 }
 
+/// [`run`] of a program that our run ends with the refusal of a wait nothing can end, where the
+/// oracle, under `REXX_CORPUS_GATE`, waits for ever: it must print the same up to that refusal and
+/// still be running when it is killed.
+fn run_up_to_refusal(name: &str, program: &str) -> Answer {
+    let asked = if gate_mode() {
+        Oracle::UpToRefusal
+    } else {
+        Oracle::Not
+    };
+    run_against(name, program, asked, SECONDS).0
+}
+
 /// What of a run the oracle is asked to answer the same.
 #[derive(Clone, Copy, PartialEq)]
 enum Oracle {
@@ -126,6 +138,9 @@ enum Oracle {
     Whole,
     Status,
     Stdout,
+    /// Everything our run printed before the refusal of a wait nothing can end, the oracle having
+    /// waited for ever instead.
+    UpToRefusal,
 }
 
 /// [`run_timed`], asking the oracle as `oracle` says, our run killed after `seconds`.
@@ -167,6 +182,26 @@ fn run_against(
         let located = support::oracle::locate();
         let library_path = format!("{}:{}", located.lib_dir().display(), dir.display());
         let theirs = located.run_in(&program, &dir, &[("LD_LIBRARY_PATH", &library_path)]);
+        if oracle == Oracle::UpToRefusal {
+            assert!(
+                support::oracle::did_not_finish(&theirs),
+                "the oracle ended its wait"
+            );
+            let before = ours
+                .1
+                .strip_suffix(UNENDING_WAIT)
+                .unwrap_or_else(|| panic!("our run did not end with the refusal: {}", ours.1));
+            assert_eq!(
+                (
+                    String::from_utf8_lossy(&theirs.stdout).as_ref(),
+                    String::from_utf8_lossy(&theirs.stderr).as_ref()
+                ),
+                (ours.0.as_str(), before),
+                "the oracle, up to the refusal"
+            );
+            fs::remove_dir_all(&dir).expect("the run's directory is removable");
+            return (ours, took);
+        }
         let theirs = (
             String::from_utf8_lossy(&theirs.stdout).into_owned(),
             String::from_utf8_lossy(&theirs.stderr).into_owned(),
@@ -180,7 +215,7 @@ fn run_against(
                 "the oracle's status"
             ),
             Oracle::Stdout => assert_eq!(theirs.0, ours.0, "the oracle's stdout"),
-            Oracle::Not => {}
+            Oracle::Not | Oracle::UpToRefusal => {}
         }
     }
     fs::remove_dir_all(&dir).expect("the run's directory is removable");
@@ -1000,11 +1035,12 @@ fn a_wait_an_embedding_hosts_thread_ends_is_not_refused() {
 }
 
 /// An embedding host's routine starts an activity that waits on an event semaphore nothing posts,
-/// and the host calls `Terminate`: the end of the run is not refused, as the host may still end
-/// the wait, and it waits for the activity for ever, as the oracle's does. The run is killed.
+/// and the host calls `Terminate`: the end of the run is not refused, and it waits for the
+/// activity for ever, as the oracle's does. The run is killed.
 // spec: conc.activities.deviation.20
 #[test]
 fn an_embedding_hosts_terminate_waits_for_a_wait_nothing_ends() {
+    // The host may still end the wait, so the end does not refuse it.
     let (stdout, stderr, status) = run_driver_for("hostwait", &["terminate"], "3");
     assert_eq!(
         (stdout.as_str(), status),
@@ -1015,10 +1051,11 @@ fn an_embedding_hosts_terminate_waits_for_a_wait_nothing_ends() {
 }
 
 /// A program `RexxStart` runs waits on an event semaphore nothing in it posts: the wait is not
-/// refused, as the host may still end it, and the halt the host sends later ends it.
+/// refused, and the halt the host sends later ends it.
 // spec: conc.activities.deviation.20
 #[test]
 fn a_wait_in_a_program_rexx_start_runs_is_not_refused() {
+    // The host may still end the wait, so it is not refused.
     let program = fixture("hostwait.rex");
     let program = program.to_str().expect("the fixture's path is UTF-8");
     assert_eq!(
@@ -1040,6 +1077,62 @@ fn a_deadlock_with_only_builtin_libraries_is_refused() {
     assert_eq!(
         run_ours("attach-builtins", "builtins.rex"),
         ("2\nwaiting\n".to_owned(), UNENDING_WAIT.to_owned(), 120)
+    );
+}
+
+/// After the extension's library loaded, a started method waits for its own message's result
+/// before it replies, while the main program has lines left to print: the main program prints them
+/// all, and the wait is then refused, rc 120. Under the gate the oracle prints the same and waits
+/// for ever.
+// spec: conc.activities.deviation.20
+#[test]
+fn a_wait_on_the_activitys_own_message_is_refused_after_the_others_ran() {
+    assert_eq!(
+        run_up_to_refusal("attach-early", "early.rex"),
+        (
+            "in run\nmain 1\nmain 2\nmain 3\nmain done\n".to_owned(),
+            UNENDING_WAIT.to_owned(),
+            120
+        )
+    );
+}
+
+/// After the extension's library loaded, a started method waits for its own message's result
+/// before it replies, and the main program then raises error 41: the error is reported, and the
+/// wait is then refused, rc 120. Under the gate the oracle prints the same and waits for ever.
+// spec: conc.activities.deviation.20
+#[test]
+fn a_wait_on_the_activitys_own_message_leaves_the_others_errors_reported() {
+    let (stdout, stderr, status) = run_up_to_refusal("attach-early2", "early2.rex");
+    assert_eq!(
+        (stdout.as_str(), status),
+        ("in run\nmain 1\n", 120),
+        "{stderr}"
+    );
+    let error = stderr
+        .strip_suffix(UNENDING_WAIT)
+        .unwrap_or_else(|| panic!("the run did not end with the refusal: {stderr}"));
+    assert!(
+        error.starts_with("    10 *-* x = 1 + 'a'\nError 41 running ")
+            && error
+                .ends_with("Error 41.1:  Nonnumeric value (\"a\") used in arithmetic operation.\n"),
+        "{stderr}"
+    );
+}
+
+/// A program `RexxStart` runs starts a method that waits for its own message's result before it
+/// replies, and the main program goes on to its end: the wait is refused once nothing else can
+/// run, before the halt the host sends later.
+// spec: conc.activities.deviation.20
+#[test]
+fn a_wait_on_the_activitys_own_message_is_refused_under_a_host() {
+    // A host turns off the refusal of other waits, but no native code can end this one.
+    let program = fixture("hostself.rex");
+    let program = program.to_str().expect("the fixture's path is UTF-8");
+    let (stdout, stderr, status) = run_driver("hostwait", &["start", program]);
+    assert_eq!(
+        (stdout.as_str(), stderr.as_str(), status),
+        ("in run\nmain done\nrc 0 result main\n", UNENDING_WAIT, 0)
     );
 }
 

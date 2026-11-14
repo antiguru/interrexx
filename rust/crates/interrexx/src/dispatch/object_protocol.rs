@@ -1624,19 +1624,16 @@ pub(super) fn native_message_result(
 }
 
 /// 98.905 where the activity running `message`'s send waits, through a chain
-/// of waits, on the running one. Refused as a wait nothing can end, whatever
-/// was loaded, where the running activity runs that send itself (Deviation
-/// 20).
+/// of waits, on the running one.
 fn check_message_deadlock(interp: &Interp, message: ObjRef) -> Result<(), Failure> {
     match interp.message_runner(message) {
-        // The send completes only when its method returns, and its method is
-        // what would wait, so no thread that attaches later can end the wait.
-        // A send whose method has replied has its result already and answers
-        // before this check.
-        Some(runner) if runner == interp.running_activity() => {
-            Err(Loud::unsatisfiable_wait().into())
+        // Where the running activity runs that send itself, the wait parks
+        // like any other, so the other activities still run, and it is
+        // refused once nothing else can run, whatever was loaded
+        // ([`Interp::waits_on_its_own_message`], Deviation 20).
+        Some(runner) if runner != interp.running_activity() && interp.deadlocks(runner) => {
+            Err(crate::error::Raised::deadlock().into())
         }
-        Some(runner) if interp.deadlocks(runner) => Err(crate::error::Raised::deadlock().into()),
         _ => Ok(()),
     }
 }

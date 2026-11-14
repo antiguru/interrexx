@@ -391,10 +391,11 @@ const LOADED_OR_NOT: [&str; 2] = ["::requires 'orxmethod' LIBRARY\n", ""];
 
 /// A wait, with `result` or `wait`, for a message whose send the waiting
 /// activity itself runs and has not replied to is refused, rc 120, whether or
-/// not an external native library has loaded (Deviation 20): the message
-/// completes only when its method returns, and its method is what waits.
+/// not an external native library has loaded (Deviation 20).
 #[test]
 fn a_wait_on_the_activitys_own_unreplied_message_is_refused_whatever_was_loaded() {
+    // The message completes only when its method returns, and its method is
+    // what waits, so a thread the library starts could not end the wait.
     for source in [
         "m = .message~new(.k~new, 'run')\n.environment~mm = m\nm~send\nsay 'not reached'\n\
          ::class k\n::method run\n  say 'in run'\n  say .environment~mm~result\n",
@@ -419,6 +420,44 @@ fn a_wait_on_the_activitys_own_unreplied_message_is_refused_whatever_was_loaded(
                 stdout(&outcome)
             );
         }
+    }
+}
+
+/// A started activity's wait on its own unreplied message lets the other
+/// activities run on, whether or not an external native library has loaded
+/// (Deviation 20): the main program prints all its lines, or reports its
+/// error, before the wait is refused, rc 120.
+#[test]
+fn a_wait_on_the_activitys_own_message_is_refused_once_nothing_else_runs() {
+    let method = "::class k\n::method run\n  say 'in run'\n  say .environment~mm~result\n";
+    let start = "m = .message~new(.k~new, 'run')\n.environment~mm = m\nm~start\n";
+    let printing = format!(
+        "{start}do i = 1 to 3\n  call SysSleep 0.1\n  say 'main' i\nend\nsay 'main done'\n{method}"
+    );
+    let raising = format!("{start}call SysSleep 0.2\nsay 'main' 1\nx = 1 + 'a'\n{method}");
+    let refusal = "interrexx: a wait that nothing left to run can end is not implemented\n";
+    for library in LOADED_OR_NOT {
+        let outcome = run_loading(&printing, library);
+        assert_eq!(
+            (outcome.exit_code, stdout(&outcome), stderr(&outcome)),
+            (
+                120,
+                "in run\nmain 1\nmain 2\nmain 3\nmain done\n".to_owned(),
+                refusal.to_owned()
+            ),
+            "{library}"
+        );
+        let outcome = run_loading(&raising, library);
+        let error = stderr(&outcome);
+        assert_eq!(
+            (outcome.exit_code, stdout(&outcome)),
+            (120, "in run\nmain 1\n".to_owned()),
+            "{library}: {error}"
+        );
+        assert!(
+            error.contains("Error 41.1:") && error.ends_with(refusal),
+            "{library}: {error}"
+        );
     }
 }
 

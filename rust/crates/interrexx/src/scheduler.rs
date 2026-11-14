@@ -1228,6 +1228,17 @@ impl Interp {
         false
     }
 
+    /// Whether some activity waits for the result or the completion of a
+    /// message whose send it runs itself and has not replied from: a wait
+    /// nothing can end, whatever was loaded (Deviation 20).
+    pub(crate) fn waits_on_its_own_message(&self) -> bool {
+        // The send completes only when its method returns, and its method is
+        // what waits, so no thread that attaches later can end the wait. A
+        // send whose method has replied has its result already, and its
+        // `result` and `wait` answer without a wait.
+        (self.activities.guards.waiters()).any(|waiter| self.waited_on(waiter) == Some(waiter))
+    }
+
     /// The activity `at` waits on, as [`Interp::waits_on`] names it.
     fn waited_on(&self, at: ActivityId) -> Option<ActivityId> {
         self.waits_on(self.activities.guards.waiting(at)?)
@@ -2602,7 +2613,8 @@ impl Interp {
     /// [`Interp::run_started_activities`]' loop. Where the activities that
     /// remain wait for something nothing left can bring about and waits are
     /// not refused as unending ([`Interp::refuses_unending_waits`]), it
-    /// waits for a post and runs them again.
+    /// waits for a post and runs them again, unless one of them waits on its
+    /// own message ([`Interp::waits_on_its_own_message`]), which is refused.
     fn run_to_end(&mut self) -> Result<(), Failure> {
         loop {
             self.run_others(false)?;
@@ -2630,7 +2642,7 @@ impl Interp {
                 if self.sim.is_some() {
                     return Err(self.sim_endless_wait());
                 }
-                if self.refuses_unending_waits() {
+                if self.refuses_unending_waits() || self.waits_on_its_own_message() {
                     self.activities.ended_stuck = true;
                     return Err(Loud::unsatisfiable_wait().into());
                 }
@@ -2787,8 +2799,10 @@ impl Interp {
     /// Whether the loop at `level`, with nothing to run and nothing in
     /// flight, waits for a post rather than answering that it is blocked:
     /// where waits are not refused as unending
-    /// ([`Interp::refuses_unending_waits`]), except for an inverted wait, the
-    /// loop of the program's end and the simulation mode.
+    /// ([`Interp::refuses_unending_waits`]), except for an inverted wait, a
+    /// wait on the waiting activity's own message
+    /// ([`Interp::waits_on_its_own_message`]), the loop of the program's end
+    /// and the simulation mode.
     fn waits_for_attaching_threads(&self, level: usize) -> bool {
         // A thread an external library started may attach later and end the
         // wait (Deviation 20). An inverted wait stays refused whatever was
@@ -2796,9 +2810,11 @@ impl Interp {
         // 14). The program's end loop answers that it is blocked, and waits
         // for posts itself only while an activity waits
         // ([`Interp::run_to_end`]). The simulation mode refuses every attach,
-        // so nothing can post there.
+        // so nothing can post there. No thread can end an activity's wait on
+        // its own message, so the loop refuses it whatever was loaded.
         !self.refuses_unending_waits()
             && self.sim.is_none()
+            && !self.waits_on_its_own_message()
             && self.activities.set_aside.is_empty()
             && self.activities.end_level != Some(level)
     }
