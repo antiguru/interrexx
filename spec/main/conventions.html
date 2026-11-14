@@ -589,8 +589,9 @@ e: say condition('c') condition('o')~code rc
 result of the ERRORTEXT builtin, the <code>ERRORTEXT</code> and <code>MESSAGE</code> entries of a
 condition object and the text that <code>CONDITION('D')</code> carries where it holds a
 message, the report that an error writes to the error stream after its frame,
-the notice and the error lines of interactive tracing, the text of a trace
-line that names a library method, the answers of SysGetMessage for the
+the notice and the error lines of interactive tracing, a trace line that
+names a built-in method, which a build may not show at all (<a href="classes/stackframe.html#r-class.stackframe.builtin">the built-in
+rule</a>), the answers of SysGetMessage for the
 interpreter's own catalog and of SysGeterrnomsg, the C API's functions that
 answer the text of an error, the usage texts of the commands, and the messages
 of the utility programs. What is specified is the code, and for the report

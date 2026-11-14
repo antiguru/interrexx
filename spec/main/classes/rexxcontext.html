@@ -641,14 +641,15 @@ The NIL object
 <p><code>stackFrames</code> answers a new array of new <code>StackFrame</code> objects, one for each
 active level of code: the first item is the code that asked, the next its
 caller, and so on, with the main part of the program last. Each call of an
-internal routine, a routine, a method and an INTERPRET is a level, and so is a
-built-in method that runs code of the program, such as <code>send</code>. A condition's
+internal routine, a routine, a method and an INTERPRET is a level. Whether a
+built-in method that runs code of the program, such as <code>send</code>, is a level too is
+<a href="stackframe.html#r-class.stackframe.builtin">not specified</a>. A condition's
 list is <a href="../conditions/information.html#r-cond.information.object">specified with the condition object</a>; the
 methods of a frame are on <a href="stackframe.html">the <code>StackFrame</code> page</a>.</p>
 <pre><code class="language-rexx">call outer
 exit
 outer: procedure
-  .o~new~send('m')
+  .o~new~m
   return
 ::class o
 ::method m
@@ -661,13 +662,12 @@ outer: procedure
   end
   say (fs[1]~context == .context) (fs[1] == .context~stackFrames[1])
 </code></pre>
-<pre><code class="language-output">Array 6 0
+<pre><code class="language-output">Array 5 0
 1 ROUTINE 10
 2 INTERPRET 8
 3 METHOD 8
-4 METHOD The NIL object
-5 INTERNALCALL 4
-6 PROGRAM 1
+4 INTERNALCALL 4
+5 PROGRAM 1
 1 0
 </code></pre>
 <div class="rule" id="r-class.rexxcontext.variables"><a href="#r-class.rexxcontext.variables">[class.rexxcontext.variables]</a></div>

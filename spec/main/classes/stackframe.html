@@ -284,18 +284,43 @@ exit
 2 PROGRAM 2
 Array 1 1 METHOD ACT
 </code></pre>
+<h2 id="built-in-methods"><a class="header" href="#built-in-methods">Built-in methods</a></h2>
+<div class="rule" id="r-class.stackframe.builtin"><a href="#r-class.stackframe.builtin">[class.stackframe.builtin]</a></div>
+<p>Whether a built-in method has a level of its own is not specified: a build may
+have no level for <code>send</code>, <code>sendWith</code> or <code>Message~send</code>, or for any other
+built-in method that runs code of the program. Its presence, how many such
+levels there are, their position, <code>type</code>, <code>line</code> and trace line are unspecified
+wherever levels are listed or shown: in the array of <code>stackFrames</code>, in the
+<code>STACKFRAMES</code> and <code>TRACEBACK</code> entries of a condition, in the traceback of the
+report of an error and in the output of tracing. A level of Rexx code, of a
+program or of the class library, is always there, so the level of a method that
+a built-in method ran is the first of its own <code>stackFrames</code>, and the main part
+of the program is the last.</p>
+<pre><code class="language-rexx">.o~new~send('m')
+.o~new~sendWith('m', .array~new)
+.message~new(.o~new, 'm')~send
+exit
+::class o
+::method m
+  fs = .context~stackFrames
+  say fs[1]~type fs[1]~name fs[fs~items]~type
+</code></pre>
+<pre><code class="language-output">METHOD M PROGRAM
+METHOD M PROGRAM
+METHOD M PROGRAM
+</code></pre>
 <h2 id="methods"><a class="header" href="#methods">Methods</a></h2>
 <div class="rule" id="r-class.stackframe.type"><a href="#r-class.stackframe.type">[class.stackframe.type]</a></div>
 <p><code>type</code> answers one of <code>PROGRAM</code> for the main part of a program, <code>ROUTINE</code>
 for a routine, <code>METHOD</code> for a method, <code>INTERNALCALL</code> for an internal routine,
 <code>INTERPRET</code> for the text of an INTERPRET and <code>COMPILE</code> for text that was being
 translated when a SYNTAX condition was raised. A frame of type <code>COMPILE</code> is
-the first of that condition's list. A built-in method that runs a program's
-code, such as <code>send</code>, is a level of type <code>METHOD</code>.</p>
+the first of that condition's list. Whether a built-in method has a level of its
+own is not specified (<a href="#r-class.stackframe.builtin">the built-in rule</a>).</p>
 <pre><code class="language-rexx">call ic
 exit
 ic:
-  .o~new~send('go')
+  .o~new~go
   return
 ::routine rt
   call dump
@@ -304,14 +329,14 @@ ic:
   interpret 'call rt'
 ::routine dump
   do f over .context~stackFrames
-    say f~type
+    if f~type == 'METHOD' then say f~type f~name
+    else say f~type
   end
 </code></pre>
 <pre><code class="language-output">ROUTINE
 ROUTINE
 INTERPRET
-METHOD
-METHOD
+METHOD GO
 INTERNALCALL
 PROGRAM
 </code></pre>
@@ -390,9 +415,8 @@ running starts, and for an INTERPRET level the number of the line of the
 clause that holds the text, as <a href="../instructions/trace.html#r-instr.trace.line">the line of a trace line</a>
 is. A frame is a snapshot of the moment it was made: the running code goes on,
 and the line of the frame's context, <a href="rexxcontext.html#r-class.rexxcontext.line">asked with
-<code>line</code></a>, moves with it. <code>line</code> answers <code>.nil</code> for a
-built-in method. The number that it answers for a method of the class library
-is not specified, as <a href="../conditions/information.html#r-cond.information.library">the library rule</a> says.</p>
+<code>line</code></a>, moves with it. The number that it
+answers for a method of the class library is not specified, as <a href="../conditions/information.html#r-cond.information.library">the library rule</a> says.</p>
 <pre><code class="language-rexx">call r
 exit
 r:
@@ -405,14 +429,12 @@ r:
   return
 ::class o
 ::method m
-  say .context~stackFrames[2]~line~isNil .context~stackFrames[2]~type
   interpret 'say .context~stackFrames[1]~type .context~stackFrames[1]~line'
 </code></pre>
 <pre><code class="language-output">4 5 5
 4 6 6
 1 1
-1 METHOD
-INTERPRET 14
+INTERPRET 13
 </code></pre>
 <div class="rule" id="r-class.stackframe.traceline"><a href="#r-class.stackframe.traceline">[class.stackframe.traceline]</a></div>
 <p><code>traceLine</code>, <code>string</code> and <code>makeString</code> all answer the same string, which is the
@@ -420,11 +442,7 @@ INTERPRET 14
 number of its line in six columns, <code>*-*</code> and the clause, indented as <a href="../instructions/trace.html#r-instr.trace.indent">the
 indentation rule</a> says, which counts one level for each
 active internal call. <a href="#r-class.stackframe.deviation.0">Deviation 0</a> covers the
-indentation that a program reads back. The string of a built-in method's frame
-is seven blanks, <code>*-*</code>, a blank and a text that names the method; the text is not
-specified,
-as <a href="../conventions.html#r-conv.error.text">the rule on error messages</a> says for text that the
-interpreter writes. The number in the line of a method of the class library, and
+indentation that a program reads back. The number in the line of a method of the class library, and
 its indentation, are not specified, as <a href="../conditions/information.html#r-cond.information.library">the library rule</a>
 says.</p>
 <pre><code class="language-rexx">call show
@@ -455,21 +473,19 @@ show:
 exit
 ::class o
 ::method m
-  t = .context~stackFrames[2]~traceLine
-  say (t~word(1) == '*-*') (t~words &gt; 1)
+  say '['.context~stackFrames[1]~traceLine']'
 </code></pre>
-<pre><code class="language-output">1 1
-1 1
-1 1
+<pre><code class="language-output">[     7 *-* say '['.context~stackFrames[1]~traceLine']']
+[     7 *-* say '['.context~stackFrames[1]~traceLine']']
+[     7 *-* say '['.context~stackFrames[1]~traceLine']']
 </code></pre>
 <div class="rule" id="r-class.stackframe.arguments"><a href="#r-class.stackframe.arguments">[class.stackframe.arguments]</a></div>
 <p><code>arguments</code> answers an array of the arguments that the level was given, as
 <a href="../builtins/arg.html#r-bif.arg.option.array">ARG with the option <code>A</code></a> answers for it: an omitted
 argument is a place with no item. The frame keeps the array, so asking again
 answers the same object, but it is a copy: changing it changes nothing the
-level sees and nothing that another frame of the level answers. A built-in
-method's frame holds the arguments of its message, and a frame of the main
-part of a program the arguments the program was started with.</p>
+level sees and nothing that another frame of the level answers. A frame of the main
+part of a program holds the arguments the program was started with.</p>
 <pre><code class="language-rexx">call r 'a1', , 'a3'
 exit
 r:
@@ -485,16 +501,15 @@ r:
 ::class o
 ::method m
   fs = .context~stackFrames
-  say fs[1]~arguments~items fs[2]~arguments~items fs[2]~arguments[1],
-      fs[2]~name fs[3]~arguments~items
+  say fs[1]~arguments~items fs[1]~arguments[1] fs[fs~items]~arguments~items
 </code></pre>
 <pre><code class="language-output">Array 3 2 1
 3 a1 3 0 a1
-2 3 m SEND 2
+2 7 0
 </code></pre>
 <div class="rule" id="r-class.stackframe.target"><a href="#r-class.stackframe.target">[class.stackframe.target]</a></div>
 <p><code>target</code> answers the object that received the message for a frame of type
-<code>METHOD</code>, a built-in method's frame included, and <code>.nil</code> for the frame of any
+<code>METHOD</code> and <code>.nil</code> for the frame of any
 other type.</p>
 <pre><code class="language-rexx">x = .o~new
 x~go
@@ -572,9 +587,8 @@ COMPILE 1
 <div class="rule" id="r-class.stackframe.context"><a href="#r-class.stackframe.context">[class.stackframe.context]</a></div>
 <p><code>context</code> answers the <a href="rexxcontext.html"><code>RexxContext</code></a> of the level: for the
 first frame of a context's own <code>stackFrames</code> it is that context itself, and
-asking one frame again answers the same object. A built-in method's frame and a
-frame of type <code>COMPILE</code> have no context and answer <code>.nil</code> (<a href="#r-class.stackframe.invocation">the example of
-<code>invocation</code></a> shows the second). Once the level
+asking one frame again answers the same object. A frame of type <code>COMPILE</code> has no context and answers <code>.nil</code> (<a href="#r-class.stackframe.invocation">the example of
+<code>invocation</code></a> shows it). Once the level
 has ended, its context answers no message, as <a href="rexxcontext.html#r-class.rexxcontext.active">the active
 rule</a> says, while the frame itself goes on
 answering.</p>
@@ -591,7 +605,6 @@ inner: procedure
   say fs[2]~context~name fs[2]~context~args[2],
       fs[2]~context~variables['OUTVAR']
   say fs[3]~context~variables~hasIndex('OUTVAR')
-  .o~new~send('m')
   call keep
   c = kept~context
   say kept~type kept~name
@@ -603,22 +616,17 @@ dead: say 'context of a finished level' condition('o')~code
 keep: procedure expose kept
   kept = .context~stackFrames[1]
   return
-::class o
-::method m
-  say .context~stackFrames[2]~context~isNil
 </code></pre>
 <pre><code class="language-output">3 1 1 0
 OUTER q outer value
 0
-1
 INTERNALCALL KEEP
 context of a finished level 98.981
 </code></pre>
 <div class="rule" id="r-class.stackframe.invocation"><a href="#r-class.stackframe.invocation">[class.stackframe.invocation]</a></div>
 <p><code>invocation</code> answers the number of the invocation of the level, which is the
 number that <a href="rexxcontext.html#r-class.rexxcontext.numbers">the <code>invocation</code> of its context</a>
-answers, and <code>.nil</code> for a built-in method's frame and for a frame of type
-<code>COMPILE</code>. Making the array of frames numbers the levels that have no number
+answers, and <code>.nil</code> for a frame of type <code>COMPILE</code>. Making the array of frames numbers the levels that have no number
 yet, the innermost first.</p>
 <pre><code class="language-rexx">call outer
 exit
@@ -629,14 +637,9 @@ inner: procedure
   fs = .context~stackFrames
   say fs[1]~invocation fs[2]~invocation fs[3]~invocation,
       (fs[1]~invocation == .context~invocation)
-  .o~new~send('m')
   return
-::class o
-::method m
-  say .context~stackFrames[2]~invocation~isNil
 </code></pre>
 <pre><code class="language-output">1 2 3 1
-1
 </code></pre>
 <pre><code class="language-rexx">signal on syntax name h1
 r = .routine~new('badone', 'x = = 1')
