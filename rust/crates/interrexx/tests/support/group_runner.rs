@@ -828,7 +828,7 @@ pub fn started(run: &Run) -> Vec<String> {
 }
 
 /// The tests [`mark_starts_in_file`]'s `marker` names, in order; none where
-/// it does not exist.
+/// it is absent.
 pub fn started_in_file(marker: &Path) -> Vec<String> {
     started_lines(&fs::read(marker).unwrap_or_default())
 }

@@ -656,7 +656,7 @@ fn a_padding_width_too_large_to_allocate_raises_error_5() {
     // only when the exponent field is actually written -- the same line
     // the oracle draws. The two calls below differ *only* in `expt`,
     // which is what decides whether there is an exponent to pad, and
-    // measured they answer `1` at rc 0 and `System resources exhausted.`
+    // measured they answer `1` at rc 0 and error 5
     // at rc 251 respectively.
     assert_eq!(
         call(

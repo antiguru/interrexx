@@ -462,8 +462,8 @@ pub(crate) fn is_whole_number(text: &[u8]) -> bool {
         .is_some()
 }
 
-/// 24.901, "Numeric TRACE requests are valid only from interactive
-/// debugging." -- unconditional, regardless of the number (measured: `trace
+/// 24.901, a numeric `TRACE` request outside interactive debugging --
+/// unconditional, regardless of the number (measured: `trace
 /// 0` raises it exactly like `trace 5`), because this runtime has no
 /// interactive debugging at all for a nonzero skip count to be valid *from*.
 /// No substitution value, matching the catalogue's `(24, 901)` entry.
@@ -471,7 +471,7 @@ pub(crate) fn raised_numeric_trace_interactive_only() -> Raised {
     Raised::syntax(24, 901, Vec::new())
 }
 
-/// 24.1, "TRACE request letter must be one of \"ACEFILNOR\"; found \"&1\"." --
+/// 24.1, an invalid `TRACE` request letter, the insert the letter --
 /// `mode_from_setting`'s `Err` case, reachable only through `TRACE VALUE` (a
 /// `Trace::Setting`'s own text is pre-validated, so this arm is unreachable
 /// from it; `run/settings.rs`'s own `Trace::Setting` call site `.expect()`s

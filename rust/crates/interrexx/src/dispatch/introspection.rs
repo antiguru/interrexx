@@ -108,8 +108,8 @@ fn is_instance_of(
 ) -> Result<Option<ObjRef>, Failure> {
     // **The one row here that validates its argument**, where `~methods` and
     // `~instanceMethods` answer an empty supplier for a non-class. For example,
-    // `.Object~new~isInstanceOf(1)` is `88.914 Argument class must be an
-    // instance of the Class class.` and the argumentless form is `88.901`,
+    // `.Object~new~isInstanceOf(1)` is `88.914`, naming the `class` argument,
+    // and the argumentless form is `88.901`,
     // which is `class_argument`'s pair.
     let argument = super::class_argument(interp, args)?;
     let Some(class) = interp.class_of_value(receiver) else {
@@ -126,9 +126,8 @@ fn instance_method(
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
     // 93.903 and not `Class~method`'s 88.901: `.Object~new~instanceMethod` is
-    // `93.903 Missing argument in method; argument 1 is required.` at rc 163
-    // where `.Array~method` is `88.901 Missing argument; argument method name
-    // is required.` at rc 168.
+    // `93.903` (argument 1) at rc 163 where `.Array~method` is `88.901`,
+    // naming `method name`, at rc 168.
     let Some(Some(argument)) = args.first().copied() else {
         return Err(Raised::missing_method_argument(1).into());
     };

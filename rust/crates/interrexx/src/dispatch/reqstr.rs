@@ -260,8 +260,8 @@ impl Interp {
             return if nil {
                 Ok(ObjRef::NIL)
             } else if let Some(position) = position {
-                // A builtin's argument names its position, as the method
-                // argument of the same name does.
+                // A builtin's argument is named by its position, as an
+                // argument of a method is.
                 Err(Raised::argument_needs_a_string_value(position).into())
             } else {
                 Err(Raised::nostring_syntax(&readable).into())
@@ -614,7 +614,7 @@ impl Interp {
     }
 }
 
-/// A method argument the method needs as text, converted through the
+/// An argument of a method that the method needs as text, converted through the
 /// required-string protocol, or 88.909 for a value that has no string value at
 /// all.
 /// ```text

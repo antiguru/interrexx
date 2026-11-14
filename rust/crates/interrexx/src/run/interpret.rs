@@ -458,7 +458,7 @@ impl Interp {
     }
 
     /// The two lines a failing pause line prints: the major and the sub, each
-    /// behind `+++ Interactive trace.  Error`.
+    /// behind the debug prefix (101.4).
     fn report_debug_error(&mut self, raised: &crate::error::Raised) {
         for line in raised.debug_error_lines() {
             let start = self.trace.len();

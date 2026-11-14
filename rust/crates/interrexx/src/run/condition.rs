@@ -1169,8 +1169,8 @@ impl Interp {
         // `>K>` names the object and the search reads the conversion, which is
         // the order of the steps: the `>K>` trace first, then the string
         // request. For example, `signal value .K` with a class-side
-        // `makeString` returning `'NOSUCH'` reports `Label "NOSUCH" not
-        // found.`, so 16.1 names the conversion where NUMERIC's own errors name
+        // `makeString` returning `'NOSUCH'` reports 16.1 naming `NOSUCH`,
+        // so 16.1 names the conversion where NUMERIC's own errors name
         // the object.
         self.trace_keyword(
             self.activity.clause_state.current_value_indent,

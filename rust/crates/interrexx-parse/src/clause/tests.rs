@@ -135,7 +135,7 @@ fn a_literal_or_a_constant_symbol_labels_a_clause_too() {
 #[test]
 fn a_double_colon_is_not_a_label() {
     // Measured: `here:: nop` traces as one clause and then fails with error
-    // 35.1, `Incorrect expression detected at "::"`, so it was never split.
+    // 35.1, naming the `::`, so it was never split.
     let src = "here:: nop\n";
     assert_eq!(traced(src), ["here:: nop"]);
     assert_eq!(clauses(src)[0].label, None);

@@ -914,8 +914,7 @@ fn install_enhancing_class_methods(
             value
         } else {
             // For example, a literal array `('return 1', , 'nop')` in this
-            // table is `93.952 Method argument method source is an array and
-            // does not contain all string values.`
+            // table is `93.952`, naming the `method source` argument.
             compile_method_source(interp, name, value, "method source", SourceTaker::Method)?
         };
         interp
@@ -958,8 +957,8 @@ pub(super) fn native_class_inherit(
     // the position in the superclass list, and a value that is not in the list
     // gives index 0 and the "has not inherited" error whatever kind of object
     // it was. With `::class K` inheriting `.M1`, `.K~inherit(.M2, "abc")` is
-    // `98.945`, `Class "The K class" has not inherited class "abc".` -- the
-    // second argument's error and not the first's.
+    // `98.945`, naming class K and the value `abc` -- the second argument's
+    // error and not the first's.
     let position = args.get(1).copied().flatten();
     match interp.classes().inherit_at(class, mixin, position) {
         Ok(()) => Ok(None),
@@ -1176,10 +1175,9 @@ pub(super) fn native_enhanced(
 ) -> Result<Option<ObjRef>, Failure> {
     let class = class_receiver(interp, receiver)?;
     // The refusals are different errors and are checked in this order:
-    // `.K~enhanced` and `.K~enhanced()` are both `93.901 Not enough arguments
-    // for method; 1 expected.` at rc 163, the second because a trailing
-    // omission is dropped from the count, while `.K~enhanced(, 'x')` is `88.901
-    // Missing argument; argument methods is required.` at rc 168.
+    // `.K~enhanced` and `.K~enhanced()` are both `93.901` (1 expected) at rc 163,
+    // the second because a trailing omission is dropped from the count, while
+    // `.K~enhanced(, 'x')` is `88.901`, naming `methods`, at rc 168.
     if args.is_empty() {
         return Err(Raised::not_enough_method_arguments(1).into());
     }

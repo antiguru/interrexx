@@ -870,9 +870,9 @@ impl<'a> Args<'a> {
 /// The 40.x incorrect-call checks every builtin shares, in the order they are
 /// applied.
 /// ```text
-/// say substr('abc')             40.3  Not enough arguments in invocation of SUBSTR; minimum expected is 2.
-/// say length('abc','x')         40.4  Too many arguments in invocation of LENGTH; maximum expected is 1.
-/// say substr('abc',,2)          40.5  Missing argument in invocation of SUBSTR; argument 2 is required.
+/// say substr('abc')             40.3  names SUBSTR and the minimum, 2.
+/// say length('abc','x')         40.4  names LENGTH and the maximum, 1.
+/// say substr('abc',,2)          40.5  names SUBSTR and the missing position, 2.
 /// ```
 fn check_arity(builtin: &Builtin, args: &[Option<ObjRef>]) -> Result<(), Failure> {
     if let Some(max) = builtin.max

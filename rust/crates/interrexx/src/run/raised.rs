@@ -20,18 +20,14 @@ pub(super) fn raised_dot_led(found: &[u8]) -> Raised {
 }
 
 /// 34.1: a single (non-list) `IF` condition is not exactly `0` or `1`.
-/// `Error_Logical_value_if`, catalogue text "Value of expression following
-/// IF keyword must be exactly \"0\" or \"1\"; found \"...\"", one
-/// substitution, the operand's own rendered text.
+/// `Error_Logical_value_if`, one insert, the operand's own rendered text.
 pub(crate) fn raised_if_not_logical(found: &[u8]) -> Raised {
     Raised::syntax(34, 1, vec![found.to_vec()])
 }
 
 /// 34.902: a `GUARD ... WHEN` condition is not exactly `0` or `1`.
-/// `Error_Logical_value_guard`, catalogue text "Value of expression following
-/// GUARD keyword must be exactly \"0\" or \"1\"; found \"...\"", one
-/// substitution, the operand's own rendered text. This sub-number is selected
-/// over `IF`'s and `WHEN`'s.
+/// `Error_Logical_value_guard`, one insert, the operand's own rendered text.
+/// This sub-number is selected over `IF`'s and `WHEN`'s.
 pub(super) fn raised_guard_not_logical(found: &[u8]) -> Raised {
     Raised::syntax(34, 902, vec![found.to_vec()])
 }
@@ -58,10 +54,7 @@ pub(crate) fn raised_available_not_logical(found: &[u8]) -> Raised {
 }
 
 /// 7.3: a `SELECT` reached its `END` with every `WHEN` false and no
-/// `OTHERWISE`. `Error_When_expected_nootherwise`, catalogue text "All WHEN
-/// expressions of SELECT are false; OTHERWISE expected.", no substitutions
-/// (measured against `interpreter/messages/rexxmsg.xml`'s own `<Text>` for
-/// major 7 sub 003, which carries no `<Sub>` tag).
+/// `OTHERWISE`. `Error_When_expected_nootherwise`, no inserts.
 pub(super) fn raised_select_no_when() -> Raised {
     Raised::syntax(7, 3, Vec::new())
 }

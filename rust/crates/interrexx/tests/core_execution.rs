@@ -179,8 +179,8 @@ fn records_the_stack_cost_of_one_eval_frame() {
 /// a
 /// b
 ///      3 *-* say 2 & 1
-/// Error 34 running /abs/pin.rex line 3:  Logical value not 0 or 1.
-/// Error 34.901:  Logical value must be exactly "0" or "1"; found "2".
+/// Error 34 running /abs/pin.rex line 3:  <text of 34>
+/// Error 34.901:  <text of 34.901, naming 2>
 /// ```
 #[test]
 fn a_raised_condition_reports_the_failing_clause() {

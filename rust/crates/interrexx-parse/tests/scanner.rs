@@ -636,8 +636,8 @@ fn a_semicolon_still_separates_interpret_clauses() {
 #[test]
 fn an_interpret_does_not_skip_a_shebang_line() {
     // `ArrayProgramSource::setup` guards the skip with `interpretAdjust == 0`.
-    // Measured both directions: `interpret "#! nothing here"` is error 13 with
-    // `Incorrect character in program "#" ('23'X)`, while the identical text as
+    // Measured both directions: `interpret "#! nothing here"` is error 13
+    // naming the `#` and its hex value, while the identical text as
     // line 1 of a file is accepted and `say "after"` on line 2 prints `after`.
     // Skipping unconditionally would silently accept an empty program.
     assert_eq!(scan_interpret("#! nothing here"), Err((13, 1)));

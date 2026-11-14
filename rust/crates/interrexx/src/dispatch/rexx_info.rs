@@ -292,8 +292,8 @@ fn major_version(
 }
 
 /// The fixed-array maximum, the same constant [`super::MAX_FIXED_ARRAY_SIZE`]
-/// bounds `.Array~new` by. Under a trap, `.Array~new(that + 1)` is `Error
-/// 93.959: An array cannot contain more than 100000000000000000 elements.`
+/// bounds `.Array~new` by. Under a trap, `.Array~new(that + 1)` is error
+/// 93.959, which names the limit.
 fn max_array_size(
     interp: &mut Interp,
     _cleared: Cleared,
