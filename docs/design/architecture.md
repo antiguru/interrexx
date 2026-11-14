@@ -67,8 +67,10 @@ A handle (`ObjRef`) is 64 bits with a 2-bit tag: a heap slot with a 30-bit gener
 integer, `.nil`, or a string of up to 7 bytes held inline. The heap is a vector of slots; a freed
 slot's generation moves on, so a stale handle misses instead of naming a new object. Collection is
 mark-and-sweep, triggered at allocation by slot count and by bytes allocated; every allocation is a
-potential collection point, and values in flight are held in rooted registers or temps. Tracing is
-one exhaustive match over the `Body` enum.
+potential collection point, and values in flight are held in rooted registers or temps. A Rust local
+or a Rust collection is not a root: an object held only there is swept by the next allocation, so a
+freshly allocated object is rooted before anything else allocates. Tracing is one exhaustive match
+over the `Body` enum.
 
 **Representation is never observable.** Every value behaves as an object of its class: identity,
 `objectName`, object variables, methods, `copy`, collection. Inline strings, small integers and any
