@@ -14,7 +14,8 @@ wording:
   adds (such as `LOOP` next to `DO`, or a message next to a function), give a location in the
   form below, and drop a part whose insert the row does not render. It is recast into a
   canonical phrase where only the form changes, not the meaning. Where ooRexx gives the
-  code a different meaning than ANSI does, ANSI's text does not apply.
+  code a different meaning than ANSI does, ANSI's text does not apply, and neither does an
+  ANSI text that does not read as a sentence once its inserts are placed.
 * It is one of the canonical phrases below, or `&1.`, with only names filled in.
 * It is the plain statement anyone given only the meaning of the code would write nearly word
   for word: a subject, then `must`, `must not`, `is` or `expected`, then an object. It has no
