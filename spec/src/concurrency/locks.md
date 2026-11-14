@@ -1011,7 +1011,8 @@ start
 
 r[conc.locks.deviation.20]
 A wait that no activity, timer or call can end is refused, and the program
-ends with exit code 120. ooRexx waits for ever. This holds for the waits that
+ends with exit code 120, while no external native library has been loaded
+([the activities rule](r:conc.activities.deviation.20)). ooRexx waits for ever. This holds for the waits that
 the refusal of a ring does not cover ([the rule](r:conc.locks.deadlock)): a
 `GUARD WHEN` whose condition only a method that is held back by the lock of
 the waiting activity's own caller could make true, and a method that holds a

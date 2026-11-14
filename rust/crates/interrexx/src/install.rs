@@ -2241,6 +2241,11 @@ impl Interp {
         }
         let spelling = String::from_utf8_lossy(name).into_owned();
         let opened = interrexx_api::load::open(&spelling, &self.library_search, &self.cwd);
+        // A library held, even one whose version check refused, is mapped and may have started
+        // threads that attach later (Deviation 20).
+        if !matches!(opened, Ok(None)) {
+            self.note_external_library();
+        }
         self.settle_library(name, opened)
     }
 

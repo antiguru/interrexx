@@ -148,7 +148,12 @@ that case too.
 
 A wait that no other activity, timer or call can end, such as the result of
 a message never sent or a GUARD WHEN nothing can make true, is refused, exit
-code 120. ooRexx blocks for ever.
+code 120, while no external native library has been loaded. ooRexx blocks for
+ever. A library that a program loads through `::REQUIRES ... LIBRARY`, an
+`EXTERNAL` directive or `RxFuncAdd` may start a thread that attaches later
+and ends the wait, so once one has loaded, interrexx waits as ooRexx does, for
+the rest of the run, also after the library is dropped. The libraries that
+come with interrexx, such as RexxUtil, start no such thread and do not count.
 
 ## 21. Activities at program end
 

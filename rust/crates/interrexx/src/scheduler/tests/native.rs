@@ -250,16 +250,17 @@ fn a_pinned_wait_is_satisfied_by_an_activity_returning_from_a_native_call() {
 }
 
 /// A wait nothing can end, made by Rexx code a callback runs during an
-/// off-baton call, is refused as it is where the call keeps the baton: the
-/// call under the callback cannot complete while the loop above it waits.
+/// off-baton call, goes on as it does where the call keeps the baton: the
+/// program loaded an external library, whose thread could end it, so it is
+/// not refused (Deviation 20), and the run's deadline ends it.
 #[test]
-fn a_callbacks_wait_on_a_call_below_it_is_refused() {
+fn a_callbacks_wait_on_a_call_below_it_goes_on() {
     let source = "m = .message~new('abc', 'length')\n\
                   say .k~new~send0(.w~new(m), 'wait')\nsay 'after'\n\
                   ::class w\n::method init\n  expose m\n  use arg m\n\
                   ::method wait\n  expose m\n  return m~result\n\
                   ::class k\n::method send0 external \"LIBRARY orxmethod TestSendMessage0\"\n";
-    let deadline = std::time::Duration::from_secs(5);
+    let deadline = std::time::Duration::from_secs(1);
     let kept = counted(source, false, Invocation::none().with_deadline(deadline));
     let left = counted(
         source,
@@ -270,13 +271,21 @@ fn a_callbacks_wait_on_a_call_below_it_is_refused() {
     );
     assert_eq!((kept.exits, left.exits), (0, 1));
     for run in [&kept, &left] {
-        assert_eq!(run.outcome.exit_code, 120);
-        assert_eq!(run.stdout(), "");
         assert_eq!(
-            run.stderr(),
-            "interrexx: a wait that nothing left to run can end is not implemented\n"
+            run.outcome.exit_code,
+            crate::DEADLINE_EXIT,
+            "{}",
+            run.stderr()
+        );
+        assert_eq!(run.stdout(), "");
+        assert!(
+            !run.stderr()
+                .contains("a wait that nothing left to run can end"),
+            "{}",
+            run.stderr()
         );
     }
+    assert_eq!(kept.outcome.stderr, left.outcome.stderr);
 }
 
 /// A function call whose routine left its driver and answered nothing is

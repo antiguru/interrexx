@@ -968,3 +968,108 @@ fn a_callback_after_terminate_is_refused() {
         )
     );
 }
+
+/// The line on stderr of a wait refused because nothing left to run can end it (Deviation 20).
+const UNENDING_WAIT: &str =
+    "interrexx: a wait that nothing left to run can end is not implemented\n";
+
+/// A program that loaded only libraries built into the interpreter, RexxUtil and rxmath, waits on
+/// an event semaphore that nothing posts: the wait is refused, rc 120, as no thread of an
+/// external library can attach and post it. The oracle waits for ever, so it is not asked.
+// spec: conc.activities.deviation.20, util.syseventsem.deviation.20
+#[test]
+fn a_deadlock_with_only_builtin_libraries_is_refused() {
+    assert_eq!(
+        run_ours("attach-builtins", "builtins.rex"),
+        ("2\nwaiting\n".to_owned(), UNENDING_WAIT.to_owned(), 120)
+    );
+}
+
+/// The main program waits on an event semaphore before the thread that posts it has attached:
+/// after the extension's library loaded, the wait is not refused, and it ends once the thread's
+/// message posts.
+// spec: conc.activities.deviation.20, native.threads.attach
+#[test]
+fn a_wait_ended_by_a_thread_that_attaches_later_succeeds() {
+    assert_eq!(
+        run("attach-postlater", "postlater.rex"),
+        ("sem seen\nposted\n".to_owned(), String::new(), 0)
+    );
+}
+
+/// `GUARD WHEN` and `Message~result` wait, each before the thread that ends the wait has
+/// attached, as a semaphore's wait does: the variable the thread's message sets ends the first,
+/// and the message the second thread's message sends ends the second.
+// spec: conc.activities.deviation.20, conc.locks.deviation.20
+#[test]
+fn guard_when_and_message_result_follow_the_switch() {
+    assert_eq!(
+        run("attach-whenlater", "whenlater.rex"),
+        ("flag seen\nanswered\n".to_owned(), String::new(), 0)
+    );
+}
+
+/// After `RxFuncAdd` loaded a classic library and `RxFuncDrop` dropped its function, a wait that
+/// nothing ends is not refused: the run is still going after two seconds, with nothing on stderr,
+/// and is killed. A classic library could have started a thread, so dropping it does not bring
+/// the refusal back. The oracle waits for ever too, and is not asked.
+// spec: conc.activities.deviation.20
+#[test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "the run must still be going after a while"
+)]
+fn the_switch_survives_rxfuncdrop() {
+    let dir = build("attach-classic");
+    let api = worktree().join("third_party/ooRexx/api");
+    let built = Command::new("g++")
+        .arg(format!("-I{}", api.display()))
+        .arg(format!("-I{}", api.join("platform/unix").display()))
+        .arg(fixture("classic.cpp"))
+        .args(["-shared", "-fPIC", "-O1", "-o"])
+        .arg(dir.join("libattachclassic.so"))
+        .status()
+        .expect("g++ runs, which this test needs to build its fixture");
+    assert!(built.success(), "the classic fixture did not build");
+    let mut child = Command::new("memcap")
+        .arg(MEMORY)
+        .args(["timeout", "-s", "KILL", SECONDS])
+        .arg(env!("CARGO_BIN_EXE_rexx"))
+        .arg(fixture("classic.rex"))
+        .current_dir(&dir)
+        .env("LD_LIBRARY_PATH", &dir)
+        .env("REXX_API_DIR", dir.join("api"))
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("memcap runs, which every run of this test is under");
+    std::thread::sleep(std::time::Duration::from_secs(2));
+    let still_running = child.try_wait().expect("the run's status").is_none();
+    // `memcap` runs `timeout` as its child, and `timeout` runs `rexx` as its own: killing `rexx`
+    // ends all three.
+    let children = |pid: u32| {
+        fs::read_to_string(format!("/proc/{pid}/task/{pid}/children")).unwrap_or_default()
+    };
+    for timeout in children(child.id()).split_whitespace() {
+        let timeout: u32 = timeout.parse().expect("a process id");
+        for rexx in children(timeout).split_whitespace() {
+            let _ = Command::new("kill").args(["-KILL", rexx]).status();
+        }
+    }
+    let output = child.wait_with_output().expect("the run's output");
+    let _ = Command::new(Path::new(env!("CARGO_BIN_EXE_rexx")).with_file_name("rxapi"))
+        .arg("--stop")
+        .env("REXX_API_DIR", dir.join("api"))
+        .output();
+    fs::remove_dir_all(&dir).expect("the run's directory is removable");
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        still_running,
+        "the wait ended: {:?} stdout {stdout:?} stderr {stderr:?}",
+        output.status
+    );
+    assert_eq!(stdout, "0\n1\n0\nwaiting\n");
+    assert!(!stderr.contains(UNENDING_WAIT), "stderr {stderr:?}");
+}

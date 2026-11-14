@@ -299,8 +299,36 @@ pub fn resolve(
     cwd: &std::path::Path,
     start: bool,
 ) -> Result<Option<ClassicEntry>, u64> {
+    match registration(registry, name, start)? {
+        Registration::Entry(entry) => Ok(Some(entry)),
+        Registration::Library { library, procedure } => {
+            interrexx_api::load::classic_procedure(&library, &procedure, search, cwd)
+                .map(Some)
+                .ok_or(NOT_REGISTERED)
+        }
+        Registration::Unbound => Ok(None),
+    }
+}
+
+/// Where a registration [`registration`] found points.
+pub enum Registration {
+    /// An entry point of this process's.
+    Entry(ClassicEntry),
+    /// A procedure of a library, which is not loaded yet.
+    Library {
+        library: Vec<u8>,
+        procedure: Vec<u8>,
+    },
+    /// A registration naming no library.
+    Unbound,
+}
+
+/// The registration `name` has in `registry`, as [`resolve`] looks it up, before any library is
+/// loaded: this process's entry point, else the service's registration. `RXSUBCOM_NOTREG` where
+/// nothing is registered. `start` lets the lookup start a service.
+pub fn registration(registry: Registry, name: &[u8], start: bool) -> Result<Registration, u64> {
     if let Some(entry) = registered_entry(registry, name) {
-        return Ok(Some(entry));
+        return Ok(Registration::Entry(entry));
     }
     let client = match start {
         true => rxapi_client::client()?,
@@ -324,11 +352,12 @@ pub fn resolve(
         }
     };
     if registered.library.is_empty() {
-        return Ok(None);
+        return Ok(Registration::Unbound);
     }
-    interrexx_api::load::classic_procedure(&registered.library, &registered.procedure, search, cwd)
-        .map(Some)
-        .ok_or(NOT_REGISTERED)
+    Ok(Registration::Library {
+        library: registered.library,
+        procedure: registered.procedure,
+    })
 }
 
 /// `RexxLoadSubcom`: whether `name`'s handler resolves. The library argument is ignored.

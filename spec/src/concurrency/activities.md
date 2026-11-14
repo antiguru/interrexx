@@ -833,6 +833,17 @@ rule](r:conc.locks.deviation.20). The refusal holds after the main program has
 ended too, when every activity that remains waits for something nothing can
 bring about ([the end rule](r:conc.halt.end.alive)); the second example is
 such a program.
+The refusal applies only while no external native library has been loaded,
+through `::REQUIRES ... LIBRARY`, an `EXTERNAL` directive or `RxFuncAdd`,
+since a thread such a library starts may [attach](r:native.threads.attach)
+later and end the wait. Once one has loaded, every such wait goes on, as in
+ooRexx, for the rest of the run, also after the library has been dropped. The
+libraries that come with interrexx, such as RexxUtil, do not count. In the
+third example the program loads [the fixture library
+`specfixture`](../native/index.md#the-fixture-libraries), whose thread may
+attach only after the main program has begun to wait on the semaphore it
+posts. The program runs as a separate `rexx` command, so that the outcome is
+that program's output and return code.
 
 ```rexx
 m = .message~new(.object~new, 'string')
@@ -864,4 +875,29 @@ say 'main ends'
 ```output rc=120
 main ends
 stuck: waiting
+```
+
+```rexx
+src = .array~of( -
+  "sem = .eventsemaphore~new", -
+  "call fxonthread sem, 'POST'", -
+  "sem~wait", -
+  "say 'posted'", -
+  "::requires 'specfixture' LIBRARY")
+call sysfiledelete 'a7zqlater.rex'
+do line over src
+  call lineout 'a7zqlater.rex', line
+end
+call lineout 'a7zqlater.rex'
+address system 'rexx a7zqlater.rex 2>/dev/null' with output stem out.
+say 'rc' rc
+do i = 1 to out.0
+  say out.i
+end
+call sysfiledelete 'a7zqlater.rex'
+```
+
+```output
+rc 0
+posted
 ```

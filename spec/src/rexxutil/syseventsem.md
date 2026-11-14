@@ -450,7 +450,8 @@ e: say condition('o')~code
 r[util.syseventsem.deviation.20]
 A call of SysWaitEventSem that has no limit, and finds no post, while no other
 activity or timer of the program can post the semaphore, ends the program at
-once, with exit code `120` and a message on the error stream ([Deviation
+once, with exit code `120` and a message on the error stream, unless an
+external native library has been loaded ([Deviation
 20](../deviations.md#20-a-wait-nothing-can-end)). ooRexx waits for ever.
 
 ```rexx

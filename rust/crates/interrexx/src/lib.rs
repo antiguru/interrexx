@@ -1501,6 +1501,9 @@ struct Interp {
     /// load and asked for again; a library whose version check refused is,
     /// because that check raises between the `put` and the `remove`.
     libraries: Libraries,
+    /// Whether an external native library has been loaded in this run, which
+    /// [`Interp::refuses_unending_waits`] answers the opposite of. Never reset.
+    external_library_loaded: bool,
     /// The thread context [`Interp::terminate`] ran on, which an extension
     /// may have kept. Declared after `libraries`, so a library's destructor
     /// run when they drop still finds it allocated.
@@ -2426,6 +2429,7 @@ impl Interp {
             native_externals: FxHashMap::default(),
             guarded_externals: rustc_hash::FxHashSet::default(),
             libraries: Libraries::new(),
+            external_library_loaded: false,
             termination_thread: None,
             #[cfg(test)]
             library_open_attempts: 0,
@@ -3555,6 +3559,7 @@ impl Interp {
             guarded_externals: _,
             // Library handles and procedure names, no `ObjRef` in either.
             libraries: _,
+            external_library_loaded: _,
             termination_thread: _,
             #[cfg(test)]
                 library_open_attempts: _,

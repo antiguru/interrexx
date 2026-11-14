@@ -392,6 +392,9 @@ pub(crate) struct Activities {
     /// Whether the program's end found activities that nothing can wake any
     /// more and refused their wait (Deviation 20).
     ended_stuck: bool,
+    /// The level of the loop [`Interp::run_started_activities`] runs the
+    /// other activities in at the program's end, while it does.
+    end_level: Option<usize>,
     /// The attached activities filed ([`Interp::file_attached`]).
     attached: usize,
     /// The native calls running with the baton vacated, innermost last.
@@ -501,6 +504,7 @@ impl Activities {
             switches: 0,
             main_finished: false,
             ended_stuck: false,
+            end_level: None,
             attached: 0,
             vacancies: Vec::new(),
             lends: Vec::new(),
@@ -2584,10 +2588,22 @@ impl Interp {
     /// Where the activities that remain wait for something nothing left can
     /// bring about, the wait is refused as it is while the main program runs
     /// (`r[conc.halt.end.alive]`, Deviation 20), and the program ends without
-    /// waiting for them (`r[conc.halt.deviation.21]`).
+    /// waiting for them (`r[conc.halt.deviation.21]`). Once waits are no
+    /// longer refused as unending, the end waits for them instead.
     pub(crate) fn run_started_activities(&mut self) -> Result<(), Failure> {
         self.activities.main_finished = true;
         self.cancel_wait();
+        self.activities.end_level = Some(self.activities.owners.len());
+        let ended = self.run_to_end();
+        self.activities.end_level = None;
+        ended
+    }
+
+    /// [`Interp::run_started_activities`]' loop. Where the activities that
+    /// remain wait for something nothing left can bring about and waits are
+    /// not refused as unending ([`Interp::refuses_unending_waits`]), it
+    /// waits for a post and runs them again.
+    fn run_to_end(&mut self) -> Result<(), Failure> {
         loop {
             self.run_others(false)?;
             let table = &self.activities;
@@ -2610,8 +2626,14 @@ impl Interp {
                 if self.sim.is_some() {
                     return Err(self.sim_endless_wait());
                 }
-                self.activities.ended_stuck = true;
-                return Err(Loud::unsatisfiable_wait().into());
+                if self.refuses_unending_waits() {
+                    self.activities.ended_stuck = true;
+                    return Err(Loud::unsatisfiable_wait().into());
+                }
+                // A thread an external native library started may attach
+                // and end the wait, so the end waits for it as ooRexx does
+                // (Deviation 20).
+                self.idle_for_posts()?;
             }
         }
     }
@@ -2731,6 +2753,43 @@ impl Interp {
             .is_some_and(|idle| idle.activity.root_end.is_some())
     }
 
+    /// Whether waits are refused where nothing left to run can end them
+    /// (Deviation 20): until an external native library has loaded, and
+    /// never again in the run once one has, also after it is dropped.
+    /// Libraries built into the interpreter do not count.
+    pub(crate) fn refuses_unending_waits(&self) -> bool {
+        // Only an external library can start a thread that attaches later
+        // and ends the wait, and dropping the library does not end the
+        // threads it started.
+        !self.external_library_loaded
+    }
+
+    /// Notes that an external native library has loaded, through
+    /// `::REQUIRES ... LIBRARY`, an `EXTERNAL` directive, `RxFuncAdd` or a
+    /// classic registration: waits are no longer refused as unending.
+    pub(crate) fn note_external_library(&mut self) {
+        self.external_library_loaded = true;
+    }
+
+    /// Whether the loop at `level`, with nothing to run and nothing in
+    /// flight, waits for a post rather than answering that it is blocked:
+    /// where waits are not refused as unending
+    /// ([`Interp::refuses_unending_waits`]), except for an inverted wait, the
+    /// loop of the program's end and the simulation mode.
+    fn waits_for_attaching_threads(&self, level: usize) -> bool {
+        // A thread an external library started may attach later and end the
+        // wait (Deviation 20). An inverted wait stays refused whatever was
+        // loaded, since only a loop below can run what it waits on (Deviation
+        // 14). The program's end loop answers that it is blocked, and waits
+        // for posts itself only while an activity waits
+        // ([`Interp::run_to_end`]). The simulation mode refuses every attach,
+        // so nothing can post there.
+        !self.refuses_unending_waits()
+            && self.sim.is_none()
+            && self.activities.set_aside.is_empty()
+            && self.activities.end_level != Some(level)
+    }
+
     /// The next ready activity the loop at `level` can run, or `me`; a buried
     /// activity is set aside. With none ready, this thread idles until the
     /// earliest sleeper is due; the run's deadline passing first fails it.
@@ -2763,6 +2822,7 @@ impl Interp {
                     && self.activities.in_flight == self.activities.runs_below
                     && self.activities.held.is_empty()
                     && self.activities.callbacks_lent == 0
+                    && !self.waits_for_attaching_threads(level)
                 {
                     return Ok(None);
                 }

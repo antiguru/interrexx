@@ -43,7 +43,7 @@ end
 call sysfiledelete 'n3zqattach.rex'
 ```
 
-```output defect=#621
+```output
 rc 0
 1
 posted
@@ -126,7 +126,7 @@ end
 call sysfiledelete 'n3zqend.rex'
 ```
 
-```output defect=#621
+```output
 rc 0
 thread ran
 ```
@@ -152,7 +152,7 @@ end
 call sysfiledelete 'n3zqidle.rex'
 ```
 
-```output defect=#621
+```output
 rc 0 waited 0
 main ends
 ```

@@ -306,10 +306,12 @@ impl Interp {
     }
 
     /// Whether the running activity's wait is for the in-process session queue, which no other
-    /// process can reach, while it is empty and no other activity is alive to add a line.
+    /// process can reach, while it is empty, no other activity is alive to add a line, and
+    /// waits are refused as unending ([`Interp::refuses_unending_waits`]).
     pub(crate) fn queue_wait_is_unending(&self) -> bool {
         self.activity.queue_wait.as_ref().is_some_and(|wait| {
-            wait.remote.is_none()
+            self.refuses_unending_waits()
+                && wait.remote.is_none()
                 && is_session(&wait.name)
                 && self.queue.sharing == Sharing::Local
                 && self.queue.lines.is_empty()

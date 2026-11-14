@@ -13,7 +13,7 @@ use interrexx_api::load::{ContextExit, ExitHandler, ExitReply, ExitRequest, exit
 use interrexx_core::ObjRef;
 
 use crate::activation::CallType;
-use crate::capi::{self, Registry};
+use crate::capi::Registry;
 use crate::command::{CommandOutcome, ReturnStatus, Supplied, whole_value};
 use crate::error::Raised;
 use crate::{Failure, Interp};
@@ -69,11 +69,11 @@ impl Interp {
             }
         };
         for (code, name) in registered {
-            let handler =
-                capi::resolve(Registry::Exit, name, &self.library_search, &self.cwd, true)
-                    .ok()
-                    .flatten()
-                    .map(ExitHandler::Registered);
+            let handler = self
+                .resolve_classic(Registry::Exit, name, true)
+                .ok()
+                .flatten()
+                .map(ExitHandler::Registered);
             set(*code, handler);
         }
         for (code, handler) in context {

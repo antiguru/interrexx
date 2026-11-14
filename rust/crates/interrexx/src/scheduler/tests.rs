@@ -284,6 +284,94 @@ fn a_started_wait_nothing_can_end_is_refused_at_the_programs_end() {
     );
 }
 
+/// The worktree's `build/lib`, which holds the extensions built from the
+/// oracle's test sources.
+fn build_libraries() -> std::path::PathBuf {
+    std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../../build/lib")
+        .canonicalize()
+        .expect("the worktree's build/lib is three directories above this crate")
+}
+
+/// Once an external native library has loaded, a wait nothing left to run
+/// can end is not refused (Deviation 20): a thread the library started may
+/// attach later and end it. The run goes on until its deadline, where a
+/// program that loaded no such library is refused at once
+/// ([`the_result_of_a_message_never_sent_is_refused`]), both by main's own
+/// wait and by a started activity's at the program's end.
+#[test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "the run must last until its deadline"
+)]
+fn a_wait_after_an_external_library_loaded_is_not_refused() {
+    let environment = vec![(
+        b"LD_LIBRARY_PATH".to_vec(),
+        build_libraries().into_os_string().into_encoded_bytes(),
+    )];
+    for source in [
+        "say 'waits'\nsay .message~new('abc', 'length')~result\n\
+         ::requires 'orxmethod' LIBRARY\n",
+        ".w~new~start('WAITON', .message~new('abc', 'length'))\nsay 'main done'\n\
+         ::requires 'orxmethod' LIBRARY\n\
+         ::class w\n::method waiton\n  use arg m\n  say 'waits'\n  return m~result\n",
+    ] {
+        let began = std::time::Instant::now();
+        let outcome = run_with(
+            source,
+            Invocation::none()
+                .with_environment(environment.clone())
+                .with_deadline(std::time::Duration::from_secs(2)),
+        );
+        assert!(
+            began.elapsed() >= std::time::Duration::from_secs(2),
+            "the wait ended before the deadline: {} {}",
+            outcome.exit_code,
+            stderr(&outcome)
+        );
+        assert!(
+            !stderr(&outcome).contains("a wait that nothing left to run can end"),
+            "{}",
+            stderr(&outcome)
+        );
+        assert!(stdout(&outcome).contains("waits\n"), "{}", stdout(&outcome));
+    }
+}
+
+/// Whether waits are refused as unending: a library built into the
+/// interpreter leaves it on, a classic library's load turns it off, and the
+/// interpreter's dropping of the function, which `RxFuncDrop` does besides
+/// the service's registration, does not turn it on again.
+#[test]
+fn the_switch_stays_off_after_a_classic_load_and_drop() {
+    let mut interp = Interp::new();
+    interp.adopt_environment(vec![(
+        b"LD_LIBRARY_PATH".to_vec(),
+        build_libraries().into_os_string().into_encoded_bytes(),
+    )]);
+    assert!(interp.refuses_unending_waits());
+    assert!(matches!(
+        interp.resolve_library(b"rxmath"),
+        crate::LibraryLoad::Loaded(_)
+    ));
+    assert!(
+        interp.refuses_unending_waits(),
+        "a library built into the interpreter counted"
+    );
+    let entry = interp.load_classic_procedure(b"orxclassic1", b"MyTestExtFunc");
+    assert!(
+        entry.is_some(),
+        "liborxclassic1.so did not load from build/lib"
+    );
+    assert!(!interp.refuses_unending_waits());
+    interp
+        .classic_functions
+        .insert(b"MYTESTEXTFUNC".to_vec(), entry.expect("loaded"));
+    interp.classic_functions.remove(b"MYTESTEXTFUNC".as_slice());
+    interp.routines_changed();
+    assert!(!interp.refuses_unending_waits());
+}
+
 /// An ended activity's thread context stays with the interpreter, so an
 /// address an extension took from it during a native call stays valid; a
 /// native call on a started activity reads the instance through it.
