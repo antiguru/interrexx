@@ -135,7 +135,7 @@ pub fn dynamic_entries(path: &Path, kind: &str) -> Vec<String> {
         .collect()
 }
 
-/// The oracle's `lib` directory, where it is built.
+/// The oracle's `lib` directory, where it is built; `None` when the oracle is not built there.
 pub fn oracle_lib() -> Option<PathBuf> {
     let root = std::env::var_os("REXX_ORACLE_ROOT")?;
     let lib = PathBuf::from(root).join("lib");
