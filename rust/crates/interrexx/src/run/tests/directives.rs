@@ -52,10 +52,10 @@ fn an_annotate_target_the_package_does_not_hold_is_the_oracles_own_refusal() {
     for (source, target) in rows {
         let (code, stdout, stderr) = annotate_outcome(source);
         assert_eq!((code, stdout.as_str()), (157, ""), "{source:?}: {stderr:?}");
+        // The code is the contract; the text is not (`r[conv.error.text]`),
+        // so the target (kind and name) is the only other thing the report must carry.
         assert!(
-            stderr.contains(&format!(
-                "Error 99.945:  ::ANNOTATE target {target} not found."
-            )),
+            stderr.contains("Error 99.945:") && stderr.contains(target),
             "{source:?}: stderr was {stderr:?}"
         );
     }

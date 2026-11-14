@@ -111,8 +111,8 @@ fn a_class_objects_operators_are_sent_as_messages() {
     }
 
     // Every other operator, at rc 159 rather than this crate's own
-    // refusal. Measured, oracle: `Object "The Array class" does not
-    // understand message`.
+    // refusal. Measured, oracle: 97.1 with `The Array class` as the
+    // receiver item.
     for (source, message) in [
         (&b"say (.array > .array)\n"[..], ">"),
         (b"say (.array < .string)\n", "<"),

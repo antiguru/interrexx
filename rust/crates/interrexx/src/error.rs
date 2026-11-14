@@ -161,9 +161,9 @@ impl Raised {
         Raised::syntax(4, 1, vec![b"HALT".to_vec()])
     }
 
-    /// 41.1: a nonnumeric value used in arithmetic. `value` is the
-    /// operand's own text, verbatim -- measured, `say 'abc' + 1` reports
-    /// `Nonnumeric value ("abc")`, the operand as it renders, not upcased
+    /// 41.1, raised when arithmetic meets an operand that is not a number.
+    /// `value` is the operand's own text, verbatim -- measured, `say 'abc' + 1`
+    /// carries `abc` as its item, the operand as it renders, not upcased
     /// or otherwise transformed.
     pub(crate) fn nonnumeric(value: &[u8]) -> Raised {
         Raised::syntax(41, 1, vec![value.to_vec()])

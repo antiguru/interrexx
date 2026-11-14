@@ -920,7 +920,7 @@ impl Interp {
         // the details, and the arithmetic reports the **original argument**
         // rather than the conversion when the converted string is not numeric:
         // `'2' + .K` with a class-side `makeString` returning `'xx'` is 41.1
-        // `Nonnumeric value ("The K class")`.
+        // with `The K class` as its item.
         let converted = self.required_string_or_nil(right_value)?;
 
         let result = if op == Operator::Power {
@@ -1518,8 +1518,8 @@ impl Interp {
         // **`.nil` is an operator receiver.** It answers `==`, `\\==`, `=`,
         // `<>` and `><` by identity and understands no other operator, so an
         // ordering or arithmetic operator against it is 97.1 -- measured,
-        // `.nil < 'x'` and `.nil + 1` both report `Object "The NIL object"
-        // does not understand message`. Reaching that through the send is
+        // `.nil < 'x'` and `.nil + 1` both raise it, with `The NIL object` as
+        // the receiver item. Reaching that through the send is
         // what `Object`'s own operator methods do; converting `.nil` to its
         // string value instead makes it equal to the text `The NIL object`
         // and orderable against anything.

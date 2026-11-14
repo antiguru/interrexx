@@ -127,10 +127,8 @@ fn render(dir: &Path, stdout: &[u8], stderr: &[u8], status: Option<i32>, oracle:
         // The message text of an error report is not specified, so a recorded
         // answer holds the code and subcode of each report and not its text.
         let bytes = error_text::cut_error_texts(bytes);
-        for line in escaped(&bytes).replace(&dir, "DIR").lines() {
-            let Some(line) = banner::recorded(line, oracle) else {
-                continue;
-            };
+        let text = escaped(&bytes).replace(&dir, "DIR");
+        for line in banner::recorded(text.lines(), oracle) {
             // The statuses 254 and 255 end a command that prints a message
             // or the usage text, whose wording is not specified
             // (`r[conv.error.text]`): each of their lines but the banner's

@@ -12,7 +12,7 @@ rc> 216
 err>        *-* Built-in routine "SYSSTEMSORT".
 err>      1 *-* call SysStemSort "s."
 err> Error 40 running /t.rex line 1:  Incorrect call to routine.
-err> Error 40.922:  Element 0 of stem argument must hold a valid item count.
+err> Error 40.922:
 
 # a stem default and no element 0
 program
@@ -23,7 +23,7 @@ rc> 216
 err>        *-* Built-in routine "SYSSTEMSORT".
 err>      2 *-* call SysStemSort "s."
 err> Error 40 running /t.rex line 2:  Incorrect call to routine.
-err> Error 40.922:  Element 0 of stem argument must hold a valid item count.
+err> Error 40.922:
 
 # elements from 4 up and no element 0
 program
@@ -34,7 +34,7 @@ rc> 216
 err>        *-* Built-in routine "SYSSTEMSORT".
 err>      2 *-* call SysStemSort "s."
 err> Error 40 running /t.rex line 2:  Incorrect call to routine.
-err> Error 40.922:  Element 0 of stem argument must hold a valid item count.
+err> Error 40.922:
 
 # a first element past the count
 program
@@ -45,7 +45,7 @@ rc> 216
 err>        *-* Built-in routine "SYSSTEMSORT".
 err>      2 *-* call SysStemSort "s.", , , 3
 err> Error 40 running /t.rex line 2:  Incorrect call to routine.
-err> Error 40.923:  Position is past the end of the stem array of size 2.
+err> Error 40.923:
 
 # a missing element below the count
 program
@@ -56,7 +56,7 @@ rc> 216
 err>        *-* Built-in routine "SYSSTEMSORT".
 err>      2 *-* call SysStemSort "s."
 err> Error 40 running /t.rex line 2:  Incorrect call to routine.
-err> Error 40.924:  Stem element at position "2" is not set.
+err> Error 40.924:
 
 # the adjacent success: a count of zero
 program
@@ -90,4 +90,4 @@ err>      6 *-* raise syntax 93.900 array('boom')
 err>        *-* Built-in routine "SYSSTEMSORT".
 err>      2 *-* call SysStemSort 's.'
 err> Error 93 running /t.rex line 2:  Invalid call to method.
-err> Error 93.900:  boom.
+err> Error 93.900:
