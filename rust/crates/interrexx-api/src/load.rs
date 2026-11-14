@@ -11,11 +11,11 @@ use crate::ffi::{
 };
 use crate::invoke::MAX_NATIVE_ARGUMENTS;
 use crate::layout::{
-    CONSTRXSTRING, ExitFlags, PackageHook, RXCMDHST_PARM, RXFNCCAL_PARM, RXMSQPSH_PARM,
-    RXOFNCCAL_PARM, RXSIOSAY_PARM, RXSTRING, RXVALCALL_PARM, RXVARNOVALUE_PARM, RexxCallContext_,
-    RexxExitContext_, RexxIORedirectorContext_, RexxMethodContext_, RexxMethodEntry, RexxObjectPtr,
-    RexxPackageEntry, RexxRoutineEntry, RexxStringObject, RexxThreadContext_, ValueDescriptor,
-    ValueUnion,
+    CONSTRXSTRING, ExitFlags, PackageHook, RXCMDHST_PARM, RXFFSUB_BIT, RXFMLIFO_BIT, RXFNCCAL_PARM,
+    RXMSQPSH_PARM, RXOFNCCAL_PARM, RXSIOSAY_PARM, RXSTRING, RXVALCALL_PARM, RXVARNOVALUE_PARM,
+    RexxCallContext_, RexxExitContext_, RexxIORedirectorContext_, RexxMethodContext_,
+    RexxMethodEntry, RexxObjectPtr, RexxPackageEntry, RexxRoutineEntry, RexxStringObject,
+    RexxThreadContext_, ValueDescriptor, ValueUnion,
 };
 use crate::values::{ARGUMENT_TERMINATOR, ResultRead, Written};
 use std::ffi::{CStr, c_char, c_int, c_void};
@@ -1895,7 +1895,7 @@ impl ExitHandler {
                     .collect();
                 argv.reserve(1);
                 let mut block = RXFNCCAL_PARM {
-                    rxfnc_flags: if subroutine { 4 } else { 0 },
+                    rxfnc_flags: if subroutine { 1 << RXFFSUB_BIT } else { 0 },
                     rxfnc_name: name.as_ptr().cast(),
                     rxfnc_namel: short_length(&name),
                     rxfnc_que: queue.as_ptr().cast(),
@@ -1918,7 +1918,7 @@ impl ExitHandler {
             } => {
                 let name = terminated(name);
                 let mut block = RXOFNCCAL_PARM {
-                    rxfnc_flags: if subroutine { 4 } else { 0 },
+                    rxfnc_flags: if subroutine { 1 << RXFFSUB_BIT } else { 0 },
                     rxfnc_name: string(&name),
                     rxfnc_argc: arguments.len(),
                     rxfnc_argv: arguments.as_mut_ptr(),
@@ -1973,7 +1973,7 @@ impl ExitHandler {
             ExitRequest::Push { line, lifo } => {
                 let line = terminated(line);
                 let mut block = RXMSQPSH_PARM {
-                    rxmsq_flags: u32::from(lifo),
+                    rxmsq_flags: u32::from(lifo) << RXFMLIFO_BIT,
                     rxmsq_value: string(&line),
                 };
                 self.invoke(exit, code, subcode, (&raw mut block).cast())

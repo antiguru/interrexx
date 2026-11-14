@@ -200,6 +200,36 @@ pub struct RexxContextExit {
 /// (`RXFNC_FLAGS` and its siblings), the first field in bit 0.
 pub type ExitFlags = u32;
 
+/// The bit of the `rxffsub` flag (a function exit's call was made as a
+/// subroutine) in the flag word of `RXFNC_FLAGS`.
+pub const RXFFSUB_BIT: u32 = 2;
+
+/// The bit of the `rxfmlifo` flag (the line is stacked LIFO) in the flag word of
+/// `RXMSQ_FLAGS`.
+pub const RXFMLIFO_BIT: u32 = 0;
+
+/// Each exit flag struct, as the header names it, with its one-bit members and
+/// the bit of the flag word each one occupies. The dump test checks every
+/// position against the header's bit fields.
+pub const EXIT_FLAG_BITS: &[(&str, &[(&str, u32)])] = &[
+    (
+        "RXFNC_FLAGS",
+        &[("rxfferr", 0), ("rxffnfnd", 1), ("rxffsub", RXFFSUB_BIT)],
+    ),
+    (
+        "RXOFNC_FLAGS",
+        &[("rxfferr", 0), ("rxffnfnd", 1), ("rxffsub", RXFFSUB_BIT)],
+    ),
+    (
+        "RXEXF_FLAGS",
+        &[("rxfferr", 0), ("rxffnfnd", 1), ("rxffsub", RXFFSUB_BIT)],
+    ),
+    ("RXCMD_FLAGS", &[("rxfcfail", 0), ("rxfcerr", 1)]),
+    ("RXMSQ_FLAGS", &[("rxfmlifo", RXFMLIFO_BIT)]),
+    ("RXHLT_FLAGS", &[("rxfhhalt", 0)]),
+    ("RXTRC_FLAGS", &[("rxftrace", 0)]),
+];
+
 /// `RXFNCCAL_PARM`.
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
@@ -338,82 +368,102 @@ pub struct RexxCondition {
     pub additional: RexxArrayObject,
 }
 
-/// The anonymous union inside `ValueDescriptor`.
-///
-/// Every member is a view of the same word, so which one is live is what
-/// `ValueDescriptor::type` records.
-#[repr(C)]
-pub union ValueUnion {
-    pub value_ARGLIST: RexxArrayObject,
-    pub value_NAME: CSTRING,
-    pub value_SCOPE: RexxObjectPtr,
-    pub value_CSELF: POINTER,
-    pub value_OSELF: RexxClassObject,
-    pub value_SUPER: RexxClassObject,
-    pub value_RexxObjectPtr: RexxObjectPtr,
-    pub value_RexxClassObject: RexxClassObject,
-    pub value_int: c_int,
-    pub value_wholenumber_t: wholenumber_t,
-    pub value_stringsize_t: stringsize_t,
-    pub value_logical_t: logical_t,
-    pub value_double: f64,
-    pub value_CSTRING: CSTRING,
-    pub value_POINTER: POINTER,
-    pub value_RexxStringObject: RexxStringObject,
-    pub value_float: f32,
-    pub value_int8_t: i8,
-    pub value_int16_t: i16,
-    pub value_int32_t: i32,
-    pub value___int32_t: i32,
-    pub value_int64_t: i64,
-    pub value___int64_t: i64,
-    pub value_uint8_t: u8,
-    pub value_uint16_t: u16,
-    pub value_uint32_t: u32,
-    pub value___uint32_t: u32,
-    pub value_uint64_t: u64,
-    pub value___uint64_t: u64,
-    pub value_intptr_t: isize,
-    pub value_uintptr_t: usize,
-    pub value___uintptr_t: usize,
-    pub value_size_t: usize,
-    pub value_ssize_t: isize,
-    pub value_RexxArrayObject: RexxArrayObject,
-    pub value_RexxStemObject: RexxStemObject,
-    pub value_POINTERSTRING: POINTER,
-    pub value_RexxMutableBufferObject: RexxMutableBufferObject,
-    pub value_RexxVariableReferenceObject: RexxVariableReferenceObject,
-    pub value_positive_wholenumber_t: wholenumber_t,
-    pub value_nonnegative_wholenumber_t: wholenumber_t,
-    pub value_OPTIONAL_RexxObjectPtr: RexxObjectPtr,
-    pub value_OPTIONAL_int: c_int,
-    pub value_OPTIONAL_wholenumber_t: wholenumber_t,
-    pub value_OPTIONAL_stringsize_t: stringsize_t,
-    pub value_OPTIONAL_logical_t: logical_t,
-    pub value_OPTIONAL_double: f64,
-    pub value_OPTIONAL_CSTRING: CSTRING,
-    pub value_OPTIONAL_RexxClassObject: RexxClassObject,
-    pub value_OPTIONAL_POINTER: POINTER,
-    pub value_OPTIONAL_RexxStringObject: RexxStringObject,
-    pub value_OPTIONAL_float: f32,
-    pub value_OPTIONAL_int8_t: i8,
-    pub value_OPTIONAL_int16_t: i16,
-    pub value_OPTIONAL_int32_t: i32,
-    pub value_OPTIONAL_int64_t: i64,
-    pub value_OPTIONAL_uint8_t: u8,
-    pub value_OPTIONAL_uint16_t: u16,
-    pub value_OPTIONAL_uint32_t: u32,
-    pub value_OPTIONAL_uint64_t: u64,
-    pub value_OPTIONAL_intptr_t: isize,
-    pub value_OPTIONAL_uintptr_t: usize,
-    pub value_OPTIONAL_ssize_t: isize,
-    pub value_OPTIONAL_size_t: usize,
-    pub value_OPTIONAL_RexxArrayObject: RexxArrayObject,
-    pub value_OPTIONAL_RexxStemObject: RexxStemObject,
-    pub value_OPTIONAL_POINTERSTRING: POINTER,
-    pub value_OPTIONAL_RexxMutableBufferObject: RexxMutableBufferObject,
-    pub value_OPTIONAL_positive_wholenumber_t: wholenumber_t,
-    pub value_OPTIONAL_nonnegative_wholenumber_t: wholenumber_t,
+/// Defines the anonymous union inside `ValueDescriptor` and, beside it, each
+/// member's name and Rust type, which the ABI dump test (`tests/abi_dump.rs`)
+/// measures against the header's union.
+macro_rules! value_union {
+    ($($member:ident : $ty:ty,)*) => {
+        /// The anonymous union inside `ValueDescriptor`.
+        ///
+        /// Every member is a view of the same word, so which one is live is what
+        /// `ValueDescriptor::type` records.
+        #[repr(C)]
+        pub union ValueUnion {
+            $(pub $member: $ty,)*
+        }
+
+        impl ValueUnion {
+            /// Each member's name and the Rust type it has, in declaration
+            /// order.
+            #[must_use]
+            pub fn member_types() -> Vec<(&'static str, &'static str)> {
+                vec![$((stringify!($member), std::any::type_name::<$ty>())),*]
+            }
+        }
+    };
+}
+
+value_union! {
+    value_ARGLIST: RexxArrayObject,
+    value_NAME: CSTRING,
+    value_SCOPE: RexxObjectPtr,
+    value_CSELF: POINTER,
+    value_OSELF: RexxClassObject,
+    value_SUPER: RexxClassObject,
+    value_RexxObjectPtr: RexxObjectPtr,
+    value_RexxClassObject: RexxClassObject,
+    value_int: c_int,
+    value_wholenumber_t: wholenumber_t,
+    value_stringsize_t: stringsize_t,
+    value_logical_t: logical_t,
+    value_double: f64,
+    value_CSTRING: CSTRING,
+    value_POINTER: POINTER,
+    value_RexxStringObject: RexxStringObject,
+    value_float: f32,
+    value_int8_t: i8,
+    value_int16_t: i16,
+    value_int32_t: i32,
+    value___int32_t: i32,
+    value_int64_t: i64,
+    value___int64_t: i64,
+    value_uint8_t: u8,
+    value_uint16_t: u16,
+    value_uint32_t: u32,
+    value___uint32_t: u32,
+    value_uint64_t: u64,
+    value___uint64_t: u64,
+    value_intptr_t: isize,
+    value_uintptr_t: usize,
+    value___uintptr_t: usize,
+    value_size_t: usize,
+    value_ssize_t: isize,
+    value_RexxArrayObject: RexxArrayObject,
+    value_RexxStemObject: RexxStemObject,
+    value_POINTERSTRING: POINTER,
+    value_RexxMutableBufferObject: RexxMutableBufferObject,
+    value_RexxVariableReferenceObject: RexxVariableReferenceObject,
+    value_positive_wholenumber_t: wholenumber_t,
+    value_nonnegative_wholenumber_t: wholenumber_t,
+    value_OPTIONAL_RexxObjectPtr: RexxObjectPtr,
+    value_OPTIONAL_int: c_int,
+    value_OPTIONAL_wholenumber_t: wholenumber_t,
+    value_OPTIONAL_stringsize_t: stringsize_t,
+    value_OPTIONAL_logical_t: logical_t,
+    value_OPTIONAL_double: f64,
+    value_OPTIONAL_CSTRING: CSTRING,
+    value_OPTIONAL_RexxClassObject: RexxClassObject,
+    value_OPTIONAL_POINTER: POINTER,
+    value_OPTIONAL_RexxStringObject: RexxStringObject,
+    value_OPTIONAL_float: f32,
+    value_OPTIONAL_int8_t: i8,
+    value_OPTIONAL_int16_t: i16,
+    value_OPTIONAL_int32_t: i32,
+    value_OPTIONAL_int64_t: i64,
+    value_OPTIONAL_uint8_t: u8,
+    value_OPTIONAL_uint16_t: u16,
+    value_OPTIONAL_uint32_t: u32,
+    value_OPTIONAL_uint64_t: u64,
+    value_OPTIONAL_intptr_t: isize,
+    value_OPTIONAL_uintptr_t: usize,
+    value_OPTIONAL_ssize_t: isize,
+    value_OPTIONAL_size_t: usize,
+    value_OPTIONAL_RexxArrayObject: RexxArrayObject,
+    value_OPTIONAL_RexxStemObject: RexxStemObject,
+    value_OPTIONAL_POINTERSTRING: POINTER,
+    value_OPTIONAL_RexxMutableBufferObject: RexxMutableBufferObject,
+    value_OPTIONAL_positive_wholenumber_t: wholenumber_t,
+    value_OPTIONAL_nonnegative_wholenumber_t: wholenumber_t,
 }
 
 /// `ValueDescriptor`.
