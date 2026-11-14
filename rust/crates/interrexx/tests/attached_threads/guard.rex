@@ -1,6 +1,6 @@
 /* An attached thread's TICK waits for the guard of an object whose guarded method the main
    program runs, a method that started the thread.
-   spec: native.threads.attach.deviation.174 */
+   spec: native.threads.attach */
 t = .ticks~new
 t~hold
 do while AtDone() < 1

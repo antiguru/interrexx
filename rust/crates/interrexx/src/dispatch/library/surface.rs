@@ -317,6 +317,8 @@ impl Surface for Interp {
                 }
                 Ok(answer)
             }
+            // A send retried once a guard lock is free leaves nothing behind.
+            Err(_) if self.send_retried() => Err(()),
             Err(failure) => {
                 self.hold_native_condition(failure);
                 Err(())

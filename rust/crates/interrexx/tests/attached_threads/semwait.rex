@@ -3,7 +3,7 @@
    spec: native.threads.attach.deviation.174 */
 t = .ticks~new
 call AtSendAfter t, 'POSTNAP', 200
-t~awaitsem
+t~mainwait
 do while AtDone() < 1
   call SysSleep 0.05
 end

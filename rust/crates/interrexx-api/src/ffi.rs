@@ -991,6 +991,7 @@ impl Thread {
                 retired: Cell::new(false),
                 attached: Cell::new(false),
                 detaching: Cell::new(false),
+                retry: Cell::new(false),
                 strings: std::cell::RefCell::new(crate::values::CStringPool::new()),
                 instance,
                 context: std::ptr::null_mut(),
@@ -1037,6 +1038,12 @@ struct Innermost {
     /// activity ends once that callback's member returns ([`Room`]). Only
     /// the thread attached to the context reads or writes it.
     detaching: Cell<bool>,
+    /// Whether the interpreter asked the callback in flight on an attached
+    /// activity's context to give the baton back and send again
+    /// ([`ThreadContext::ask_retry`]). Written on the baton by the thread
+    /// attached to the context, which alone reads it, once its member's
+    /// room has dropped.
+    retry: Cell<bool>,
     /// The C strings and buffer strings the callbacks of an attached
     /// activity's context make with no native call in flight, which last
     /// until its thread detaches, as the references they make do. Only the
@@ -1221,6 +1228,17 @@ impl ThreadContext {
         // covers only the cell, which is written on the baton, as the
         // innermost pointer beside it is.
         unsafe { (*raw).innermost.retired.set(true) };
+    }
+
+    /// Asks the callback in flight on this context, an attached activity's,
+    /// to give the baton back once its send has failed, and to send again
+    /// (`r[native.threads.attach.deviation.174]`).
+    pub fn ask_retry(&self) {
+        let raw = self.home.0.as_ptr();
+        // SAFETY: the allocation is live while `self` is; the reference
+        // covers only the cell, which only the thread attached to the context
+        // reaches, as the caller runs on it under the baton.
+        unsafe { (*raw).innermost.retry.set(true) };
     }
 
     /// The address an extension is handed, as a number.
@@ -1758,6 +1776,30 @@ fn raise_invalid_thread(running: &Reached<'_>) {
     }
     if !running.check_condition() {
         running.raise_syntax(INVALID_THREAD);
+    }
+}
+
+/// Runs `send`, a send member's body through `context`, again for as long as
+/// the interpreter asked it to give the baton back and send again
+/// ([`ThreadContext::ask_retry`]), answering the last answer. Each run's room
+/// has dropped, so the baton is given back, before the next takes it.
+///
+/// # Safety
+/// As [`innermost_activation`].
+unsafe fn retrying(
+    context: *mut RexxThreadContext_,
+    mut send: impl FnMut() -> RexxObjectPtr,
+) -> RexxObjectPtr {
+    loop {
+        let answer = send();
+        // SAFETY: as the caller guarantees, `context` came from a live
+        // `ThreadContext` or is kept, and its wrapper's `owner` is its
+        // `Innermost`; the reference covers only the cell, which only this
+        // thread reaches.
+        let cell = unsafe { &*owner_of::<RexxThreadContext_, Innermost>(context) };
+        if !cell.retry.replace(false) {
+            return answer;
+        }
     }
 }
 
@@ -4187,7 +4229,7 @@ mod variables {
 /// The members that send messages, find classes and describe the running
 /// call: the thread table's, and the method and call contexts' own.
 mod messages {
-    use super::{CallLinked, Room, activation_of, innermost_activation, name_of};
+    use super::{CallLinked, Room, activation_of, innermost_activation, name_of, retrying};
     use crate::callbacks::MethodObject;
     use crate::layout::{
         CSTRING, RexxArrayObject, RexxCallContext_, RexxClassObject, RexxDirectoryObject,
@@ -4204,26 +4246,30 @@ mod messages {
         name: CSTRING,
         arguments: RexxArrayObject,
     ) -> RexxObjectPtr {
-        let mut room = Room::new();
-        // SAFETY: as `whole_number_to_object`; the caller guarantees `name`.
-        let (activation, name) = unsafe {
-            (
-                innermost_activation(&mut room, context, "SendMessage"),
-                name_of(name),
+        let send = || {
+            let mut room = Room::new();
+            // SAFETY: as `whole_number_to_object`; the caller guarantees `name`.
+            let (activation, name) = unsafe {
+                (
+                    innermost_activation(&mut room, context, "SendMessage"),
+                    name_of(name),
+                )
+            };
+            let activation = or_nothing!(activation);
+            let (Some(name), Some(arguments)) = (name, activation.arguments_of(arguments.cast()))
+            else {
+                return std::ptr::null_mut();
+            };
+            activation.send_message(
+                "RexxThreadInterface.SendMessage",
+                receiver,
+                name,
+                None,
+                arguments,
             )
         };
-        let activation = or_nothing!(activation);
-        let (Some(name), Some(arguments)) = (name, activation.arguments_of(arguments.cast()))
-        else {
-            return std::ptr::null_mut();
-        };
-        activation.send_message(
-            "RexxThreadInterface.SendMessage",
-            receiver,
-            name,
-            None,
-            arguments,
-        )
+        // SAFETY: as `innermost_activation`, which each run of `send` calls.
+        unsafe { retrying(context, send) }
     }
 
     /// # Safety
@@ -4235,26 +4281,30 @@ mod messages {
         scope: RexxClassObject,
         arguments: RexxArrayObject,
     ) -> RexxObjectPtr {
-        let mut room = Room::new();
-        // SAFETY: as `send_message`.
-        let (activation, name) = unsafe {
-            (
-                innermost_activation(&mut room, context, "SendMessageScoped"),
-                name_of(name),
+        let send = || {
+            let mut room = Room::new();
+            // SAFETY: as `send_message`.
+            let (activation, name) = unsafe {
+                (
+                    innermost_activation(&mut room, context, "SendMessageScoped"),
+                    name_of(name),
+                )
+            };
+            let activation = or_nothing!(activation);
+            let (Some(name), Some(arguments)) = (name, activation.arguments_of(arguments.cast()))
+            else {
+                return std::ptr::null_mut();
+            };
+            activation.send_message(
+                "RexxThreadInterface.SendMessageScoped",
+                receiver,
+                name,
+                Some(scope.cast()),
+                arguments,
             )
         };
-        let activation = or_nothing!(activation);
-        let (Some(name), Some(arguments)) = (name, activation.arguments_of(arguments.cast()))
-        else {
-            return std::ptr::null_mut();
-        };
-        activation.send_message(
-            "RexxThreadInterface.SendMessageScoped",
-            receiver,
-            name,
-            Some(scope.cast()),
-            arguments,
-        )
+        // SAFETY: as `innermost_activation`, which each run of `send` calls.
+        unsafe { retrying(context, send) }
     }
 
     /// # Safety
@@ -4264,25 +4314,29 @@ mod messages {
         receiver: RexxObjectPtr,
         name: CSTRING,
     ) -> RexxObjectPtr {
-        let mut room = Room::new();
-        // SAFETY: as `send_message`.
-        let (activation, name) = unsafe {
-            (
-                innermost_activation(&mut room, context, "SendMessage0"),
-                name_of(name),
+        let send = || {
+            let mut room = Room::new();
+            // SAFETY: as `send_message`.
+            let (activation, name) = unsafe {
+                (
+                    innermost_activation(&mut room, context, "SendMessage0"),
+                    name_of(name),
+                )
+            };
+            let activation = or_nothing!(activation);
+            let Some(name) = name else {
+                return std::ptr::null_mut();
+            };
+            activation.send_message(
+                "RexxThreadInterface.SendMessage0",
+                receiver,
+                name,
+                None,
+                Vec::new(),
             )
         };
-        let activation = or_nothing!(activation);
-        let Some(name) = name else {
-            return std::ptr::null_mut();
-        };
-        activation.send_message(
-            "RexxThreadInterface.SendMessage0",
-            receiver,
-            name,
-            None,
-            Vec::new(),
-        )
+        // SAFETY: as `innermost_activation`, which each run of `send` calls.
+        unsafe { retrying(context, send) }
     }
 
     /// # Safety
@@ -4293,26 +4347,30 @@ mod messages {
         name: CSTRING,
         first: RexxObjectPtr,
     ) -> RexxObjectPtr {
-        let mut room = Room::new();
-        // SAFETY: as `send_message`.
-        let (activation, name) = unsafe {
-            (
-                innermost_activation(&mut room, context, "SendMessage1"),
-                name_of(name),
+        let send = || {
+            let mut room = Room::new();
+            // SAFETY: as `send_message`.
+            let (activation, name) = unsafe {
+                (
+                    innermost_activation(&mut room, context, "SendMessage1"),
+                    name_of(name),
+                )
+            };
+            let activation = or_nothing!(activation);
+            let Some(name) = name else {
+                return std::ptr::null_mut();
+            };
+            let arguments = activation.objects(&[first]);
+            activation.send_message(
+                "RexxThreadInterface.SendMessage1",
+                receiver,
+                name,
+                None,
+                arguments,
             )
         };
-        let activation = or_nothing!(activation);
-        let Some(name) = name else {
-            return std::ptr::null_mut();
-        };
-        let arguments = activation.objects(&[first]);
-        activation.send_message(
-            "RexxThreadInterface.SendMessage1",
-            receiver,
-            name,
-            None,
-            arguments,
-        )
+        // SAFETY: as `innermost_activation`, which each run of `send` calls.
+        unsafe { retrying(context, send) }
     }
 
     /// # Safety
@@ -4324,26 +4382,30 @@ mod messages {
         first: RexxObjectPtr,
         second: RexxObjectPtr,
     ) -> RexxObjectPtr {
-        let mut room = Room::new();
-        // SAFETY: as `send_message`.
-        let (activation, name) = unsafe {
-            (
-                innermost_activation(&mut room, context, "SendMessage2"),
-                name_of(name),
+        let send = || {
+            let mut room = Room::new();
+            // SAFETY: as `send_message`.
+            let (activation, name) = unsafe {
+                (
+                    innermost_activation(&mut room, context, "SendMessage2"),
+                    name_of(name),
+                )
+            };
+            let activation = or_nothing!(activation);
+            let Some(name) = name else {
+                return std::ptr::null_mut();
+            };
+            let arguments = activation.objects(&[first, second]);
+            activation.send_message(
+                "RexxThreadInterface.SendMessage2",
+                receiver,
+                name,
+                None,
+                arguments,
             )
         };
-        let activation = or_nothing!(activation);
-        let Some(name) = name else {
-            return std::ptr::null_mut();
-        };
-        let arguments = activation.objects(&[first, second]);
-        activation.send_message(
-            "RexxThreadInterface.SendMessage2",
-            receiver,
-            name,
-            None,
-            arguments,
-        )
+        // SAFETY: as `innermost_activation`, which each run of `send` calls.
+        unsafe { retrying(context, send) }
     }
 
     /// # Safety

@@ -520,6 +520,9 @@ impl Interp {
             self.blame_first_clause();
             return Err(Raised::deadlock().into());
         }
+        if self.retries_entry_guard(wait.key) {
+            return Err(crate::Loud::retried_send().into());
+        }
         let me = self.running_activity();
         self.activities.guards.enqueue(wait.key, me);
         if yields && self.activity.pin_depth == 0 {
@@ -619,6 +622,10 @@ impl Interp {
         }
         if let Some(next) = self.activities.guards.release(key) {
             self.unpark(next);
+        }
+        // A callback held for a lock is served at the next drain.
+        if !self.activities.held.is_empty() {
+            self.timer.requests().set(crate::timer::INBOX);
         }
     }
 

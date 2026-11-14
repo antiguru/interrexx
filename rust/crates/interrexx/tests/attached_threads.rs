@@ -83,13 +83,18 @@ fn run_timed(name: &str, program: &str) -> (Answer, std::time::Duration) {
     } else {
         Oracle::Not
     };
-    run_against(name, program, asked)
+    run_against(name, program, asked, SECONDS)
 }
 
 /// [`run`] where the oracle is not asked even under `REXX_CORPUS_GATE`: it aborts the program,
 /// or what the program reports is a property of our memory use that the oracle does not share.
 fn run_ours(name: &str, program: &str) -> Answer {
-    run_against(name, program, Oracle::Not).0
+    run_against(name, program, Oracle::Not, SECONDS).0
+}
+
+/// [`run_ours`], killed after `seconds` rather than [`SECONDS`]: the program waits for ever.
+fn run_ours_for(name: &str, program: &str, seconds: &str) -> Answer {
+    run_against(name, program, Oracle::Not, seconds).0
 }
 
 /// [`run`] where the oracle, under `REXX_CORPUS_GATE`, must answer the same stderr and exit status
@@ -100,7 +105,7 @@ fn run_agreeing_on_status(name: &str, program: &str) -> Answer {
     } else {
         Oracle::Not
     };
-    run_against(name, program, asked).0
+    run_against(name, program, asked, SECONDS).0
 }
 
 /// What of a run the oracle is asked to answer the same.
@@ -111,18 +116,23 @@ enum Oracle {
     Status,
 }
 
-/// [`run_timed`], asking the oracle as `oracle` says.
+/// [`run_timed`], asking the oracle as `oracle` says, our run killed after `seconds`.
 #[expect(
     clippy::disallowed_methods,
     reason = "the run's wall time is what an idle thread must not stretch"
 )]
-fn run_against(name: &str, program: &str, oracle: Oracle) -> (Answer, std::time::Duration) {
+fn run_against(
+    name: &str,
+    program: &str,
+    oracle: Oracle,
+    seconds: &str,
+) -> (Answer, std::time::Duration) {
     let dir = build(name);
     let program = fixture(program);
     let began = std::time::Instant::now();
     let output = Command::new("memcap")
         .arg(MEMORY)
-        .args(["timeout", "-s", "KILL", SECONDS])
+        .args(["timeout", "-s", "KILL", seconds])
         .arg(env!("CARGO_BIN_EXE_rexx"))
         .arg(&program)
         .current_dir(&dir)
@@ -245,30 +255,52 @@ fn an_attached_callback_has_its_own_thread_number() {
     );
 }
 
-/// Two threads attached at once each send `TICK` five times, each to an object of its own, while
-/// the main program sleeps: every message runs. Sent to one object, a `TICK` that arrives while
-/// the other thread's runs would wait for the guard it holds, as
-/// `a_callback_waiting_for_a_guard_another_callback_holds_is_refused` shows.
+/// Two threads attached at once each send `TICK` to one object five times while the main program
+/// sleeps: every message runs. A `TICK` that arrives while the other thread's runs is held until
+/// that one returns, so it never waits for the guard that one holds.
 // spec: native.threads.attach
 #[test]
 fn two_attached_threads_call_back_concurrently() {
     assert_eq!(
         run("attach-two", "two.rex"),
-        ("ticked 5 5\n".to_owned(), String::new(), 0)
+        ("ticked 10\n".to_owned(), String::new(), 0)
     );
 }
 
-/// A second attached thread's `TICK` arrives while the first thread's message runs Rexx code in a
-/// guarded method of the same object. The first message makes no progress while the `TICK` runs,
-/// so the `TICK`'s wait for its guard is refused at once (Deviation 174), and the program ends
-/// with rc 120. The oracle runs the `TICK` once the first message has finished and says
-/// `ticked 1`, so it is not asked.
-// spec: native.threads.attach.deviation.174
+/// [`two_attached_threads_call_back_concurrently`]'s program, run two hundred times in a row:
+/// every run ticks ten times, however the two threads' messages meet.
+// spec: native.threads.attach
 #[test]
-fn a_callback_waiting_for_a_guard_another_callback_holds_is_refused() {
+fn two_attached_threads_call_back_concurrently_every_time() {
+    for run in 0..200 {
+        assert_eq!(
+            run_ours("attach-two-stress", "two.rex"),
+            ("ticked 10\n".to_owned(), String::new(), 0),
+            "run {run}"
+        );
+    }
+}
+
+/// A second attached thread's `TICK` arrives while the first thread's message runs Rexx code in a
+/// guarded method of the same object: it is held until that message has returned, then runs.
+// spec: native.threads.attach
+#[test]
+fn a_callback_arriving_inside_another_is_held_until_it_returns() {
     assert_eq!(
-        run_ours("attach-busy", "busy.rex"),
-        ("ticked 0\n".to_owned(), inverted_wait("a guard"), 120)
+        run("attach-busy", "busy.rex"),
+        ("ticked 1\n".to_owned(), String::new(), 0)
+    );
+}
+
+/// A second attached thread's `TICK` arrives while the first thread's message sleeps in a guarded
+/// method of the same object: the `TICK` runs on top of the sleeping message, finds the guard
+/// held, gives the interpreter back, and runs once the first message has returned.
+// spec: native.threads.attach
+#[test]
+fn a_callback_waiting_for_a_guard_a_sleeping_callback_holds_runs_after_it() {
+    assert_eq!(
+        run("attach-sleepy", "sleepy.rex"),
+        ("ticked 1\n".to_owned(), String::new(), 0)
     );
 }
 
@@ -421,9 +453,9 @@ fn a_callback_during_a_wait_holds_its_wake() {
     );
 }
 
-/// A second attached thread's message starts while the first's sleeps, and sleeps as long: the
-/// first, whose sleep ends first, finishes only after the second, as messages are served one at
-/// a time, the later on top of the earlier (Deviation 174). The oracle finishes them in the order
+/// A second attached thread's message arrives while the first's sleeps, and sleeps as long: it runs
+/// on top of the sleeping one, and the first, whose sleep ends first, finishes only after the
+/// second (Deviation 174). The oracle finishes them in the order
 /// their sleeps end (`a b`), so it is asked for the exit status only.
 // spec: native.threads.attach.deviation.174
 #[test]
@@ -434,17 +466,47 @@ fn callbacks_are_served_one_on_top_of_another() {
     );
 }
 
-/// An attached thread's message waits for the guard of an object whose guarded method the main
-/// program runs. The main program makes no progress while the message runs, so the wait is
-/// refused at once as an inverted wait (Deviation 174): the message answers nothing, and the
-/// program, which runs to its end, ends with rc 120. The oracle waits for the method and says
-/// `ticked 1`, so it is not asked.
+/// An attached thread's `TICK` needs the guard of an object whose guarded method the main program
+/// runs, the method that started the thread. The `TICK` gives the interpreter back before it runs
+/// anything, and runs once the method has returned.
+// spec: native.threads.attach
+#[test]
+fn a_callback_waiting_for_a_guard_the_main_program_holds_runs_after_it() {
+    assert_eq!(
+        run("attach-guard", "guard.rex"),
+        ("ticked 1\n".to_owned(), String::new(), 0)
+    );
+}
+
+/// An attached thread's unguarded message sends `TICK` to an object whose guarded method the main
+/// program runs. The `TICK`'s wait comes after its message has begun, so the message cannot give
+/// the interpreter back, and only the main program, which makes no progress while the message
+/// runs, can end it: the wait is refused at once as an inverted wait (Deviation 174), and the
+/// program ends with rc 120. The oracle says `ticked 1`, so it is not asked.
 // spec: native.threads.attach.deviation.174
 #[test]
-fn a_callback_waiting_for_a_guard_the_main_program_holds_is_refused() {
+fn a_callback_waiting_within_its_message_for_a_guard_the_main_program_holds_is_refused() {
     assert_eq!(
-        run_ours("attach-guard", "guard.rex"),
+        run_ours("attach-later", "later.rex"),
         ("ticked 0\n".to_owned(), inverted_wait("a guard"), 120)
+    );
+}
+
+/// An attached thread's message waits with `GUARD OFF WHEN` for a flag the main program sets once
+/// it has run Rexx code for a second. The main program makes no progress while the message runs,
+/// so the wait never ends (Deviation 174). After five seconds stderr says so, and the wait goes on
+/// until the run is killed. The oracle says `flag seen`, so it is not asked.
+// spec: native.threads.attach.deviation.174
+#[test]
+fn a_callback_waiting_for_a_flag_the_main_program_sets_waits_for_ever() {
+    let (stdout, stderr, status) = run_ours_for("attach-flag", "flag.rex", "10");
+    assert_eq!((stdout.as_str(), status), ("", 137));
+    assert!(
+        stderr.starts_with(
+            "interrexx: a callback has waited 5 s for a guard's WHEN while the main program, \
+             which it stopped, makes no progress\n"
+        ),
+        "stderr: {stderr}"
     );
 }
 
@@ -466,7 +528,8 @@ fn a_callback_waiting_for_a_result_the_main_program_gives_is_refused() {
 
 /// An attached thread's message waits on an event semaphore that a second attached thread's
 /// message, sent a second later, posts. The first waits on nothing the main program would
-/// provide, so it is not refused, and the second message, served on top of it, ends its wait.
+/// provide, so it is not refused, and the second message, served on top of it, ends its wait
+/// before stderr would say that it waits.
 // spec: native.threads.attach
 #[test]
 fn attached_callbacks_wait_for_each_other() {

@@ -7,8 +7,11 @@
    and LIFOB sleeps two seconds and adds `b`. HOLD, guarded, has a thread send TICK and runs Rexx
    code for a second, and BUSY, guarded, runs Rexx code for a second. SERVE has a thread send
    AWAITREPLY, runs Rexx code for a second and answers `served`, and AWAITREPLY says the result of
-   the message MSG. AWAITSEM waits up to ten seconds on the event semaphore SEM and says so,
-   POSTSEM posts it, and POSTNAP posts it, sleeps a second and says it ends. */
+   the message MSG. AWAITSEM waits on the event semaphore SEM and says so, MAINWAIT does so for
+   up to ten seconds, POSTSEM posts it, and POSTNAP posts it, sleeps a second and says it ends.
+   SLEEPY, guarded, sleeps a second. HOLDLATER, guarded, has a thread send LATER and runs Rexx
+   code for a second, and LATER sends TICK, from inside its own method. AWAITFLAG waits, with
+   GUARD OFF WHEN, until the attribute FLAG is 1 and says so. */
 ::requires 'attach' LIBRARY
 ::class ticks public
 ::attribute count
@@ -76,6 +79,10 @@
   say 'got' msg~result
 ::method awaitsem unguarded
   expose sem
+  sem~wait
+  say 'sem seen'
+::method mainwait unguarded
+  expose sem
   sem~wait(10)
   say 'sem seen'
 ::method postsem unguarded
@@ -90,3 +97,17 @@
   call time 'R'
   do until time('E') > 1
   end
+::method sleepy
+  call SysSleep 1
+::method holdlater
+  call AtSend self, 'LATER'
+  call time 'R'
+  do until time('E') > 1
+  end
+::method later unguarded
+  return self~tick
+::attribute flag
+::method awaitflag unguarded
+  expose flag
+  guard off when flag = 1
+  say 'flag seen'

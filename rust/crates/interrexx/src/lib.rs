@@ -964,6 +964,15 @@ impl Loud {
         }
     }
 
+    /// A callback's send whose thread gives the baton back to send again
+    /// once a guard lock is free ([`Interp::retries_entry_guard`]). Nothing
+    /// reports it: the send answers no one.
+    fn retried_send() -> Loud {
+        Loud {
+            message: "a callback's send given back to wait for a guard lock".to_string(),
+        }
+    }
+
     /// A `REPLY` with Rust frames between its method body's driver and
     /// itself, which cannot move to a new activity.
     fn immovable_reply() -> Loud {

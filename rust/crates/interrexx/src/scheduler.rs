@@ -211,6 +211,10 @@ pub(crate) struct Vacancy {
     served: bool,
     /// Whether its call has returned ([`Posted::Returned`]).
     returned: bool,
+    /// Whether the callback whose call it is was marked waiting before it,
+    /// where its activity is the innermost lend's callback: a callback that
+    /// arrives during the call is served rather than held.
+    waiting: Option<bool>,
 }
 
 impl crate::timer::Inbox<Posted> {
@@ -389,11 +393,45 @@ pub(crate) struct Activities {
     attached: usize,
     /// The native calls running with the baton vacated, innermost last.
     pub(crate) vacancies: Vec<Vacancy>,
-    /// The activities a callback's lend set aside ([`Interp::serve_recall`]),
-    /// innermost last. Each runs again only once that lend has ended
+    /// The lends of the baton to a callback ([`Interp::serve_recall`]),
+    /// innermost last. Each lender runs again only once its lend has ended
     /// (Deviation 174).
-    lenders: Vec<ActivityId>,
+    lends: Vec<Lend>,
+    /// The callbacks held while the innermost lend's callback runs, in the
+    /// order they arrived, each with the guard lock it waits to find free
+    /// where it gave the baton back for one ([`Interp::retries_entry_guard`]).
+    pub(crate) held: VecDeque<(Recall, Option<crate::guards::GuardKey>)>,
+    /// The thread contexts whose callback gave the baton back to wait for a
+    /// guard lock, each with that lock, until the callback's next recall.
+    retrying: Vec<(usize, crate::guards::GuardKey)>,
+    /// When the innermost callback wait that only an activity a lend stopped
+    /// may end is reported on stderr, unless it has ended by then
+    /// ([`Interp::report_stall`]).
+    stall: Option<Stall>,
 }
+
+/// A lend of the baton to a callback: the activity it stopped, the one it
+/// runs, and whether that one waits, so that a callback arriving meanwhile is
+/// served on top of it rather than held.
+#[derive(Clone, Copy)]
+struct Lend {
+    lender: ActivityId,
+    lendee: ActivityId,
+    waiting: bool,
+}
+
+/// A callback's wait that only an activity a lend stopped may end, and when
+/// it is reported.
+#[derive(Clone, Copy)]
+struct Stall {
+    due: Instant,
+    reason: ParkReason,
+    lender: ActivityId,
+}
+
+/// How long a callback waits, for something only an activity a lend stopped
+/// can give, before stderr says so.
+const STALL_REPORT: std::time::Duration = std::time::Duration::from_secs(5);
 
 /// Milliseconds in a day: a timer's wait is whole days of this, then a
 /// remainder.
@@ -461,7 +499,10 @@ impl Activities {
             ended_stuck: false,
             attached: 0,
             vacancies: Vec::new(),
-            lenders: Vec::new(),
+            lends: Vec::new(),
+            held: VecDeque::new(),
+            retrying: Vec::new(),
+            stall: None,
         }
     }
 
@@ -1199,14 +1240,13 @@ impl Interp {
         }
     }
 
-    /// Whether a wait for `reason` waits, through a chain of waits, on an
-    /// activity a callback's lend has set aside below the running one. That
-    /// activity runs again only once the callback has ended, so the wait can
-    /// never end (Deviation 174).
-    fn waits_on_a_lender(&self, reason: ParkReason) -> bool {
-        let lenders = &self.activities.lenders;
-        if lenders.is_empty() {
-            return false;
+    /// The activity a lend to a callback stopped that a wait for `reason`
+    /// waits on, through a chain of waits. It runs again only once that
+    /// callback has ended (Deviation 174).
+    fn lender_waited_on(&self, reason: ParkReason) -> Option<ActivityId> {
+        let lends = &self.activities.lends;
+        if lends.is_empty() {
+            return None;
         }
         let mut at = match reason {
             ParkReason::Guard(key) => self.waits_on(crate::guards::Waiting::Guard(key)),
@@ -1216,15 +1256,67 @@ impl Interp {
             _ => None,
         };
         for _ in 0..self.activities.idle.len() {
-            let Some(next) = at else {
-                return false;
-            };
-            if lenders.contains(&next) {
-                return true;
+            let next = at?;
+            if lends.iter().any(|lend| lend.lender == next) {
+                return Some(next);
             }
             at = self.waited_on(next);
         }
-        false
+        None
+    }
+
+    /// Whether a wait for `reason` can never end: it waits on an activity a
+    /// lend to a callback stopped, and that activity is no callback holding
+    /// the guard lock waited for, whose own wait may end (Deviation 174).
+    fn waits_on_a_lender(&self, reason: ParkReason) -> bool {
+        self.lender_waited_on(reason).is_some_and(|lender| {
+            !matches!(reason, ParkReason::Guard(_))
+                || !self.record(lender).is_some_and(|record| record.attached)
+        })
+    }
+
+    /// `activity`'s record, running or idle.
+    fn record(&self, activity: ActivityId) -> Option<&Activity> {
+        if activity == self.activities.running {
+            return Some(&self.activity);
+        }
+        (self.activities.idle.get(activity.0 as usize))
+            .and_then(Option::as_ref)
+            .map(|idle| &idle.activity)
+    }
+
+    /// Whether the guard lock `key` that a callback's top-level send waits
+    /// for at its entry, before it has run anything, is held by an activity
+    /// a lend to a callback stopped. If so, the callback's thread is asked to
+    /// give the baton back and send again, and its next recall is held until
+    /// the lock is free, as ooRexx has the send wait for the lock
+    /// (`r[native.threads.attach.deviation.174]`). The caller then fails the
+    /// send with [`Loud::retried_send`], which the send answers no one.
+    pub(crate) fn retries_entry_guard(&mut self, key: crate::guards::GuardKey) -> bool {
+        if !self.activity.attached
+            || self.activity.native_handles.len() != 1
+            || !self.activity.suspended.is_empty()
+            || self.lender_waited_on(ParkReason::Guard(key)).is_none()
+        {
+            return false;
+        }
+        let Some(thread) = &self.activity.thread else {
+            return false;
+        };
+        thread.ask_retry();
+        let address = thread.address();
+        self.activities.retrying.push((address, key));
+        true
+    }
+
+    /// Whether the running activity's send failed only to be sent again
+    /// ([`Interp::retries_entry_guard`]).
+    pub(crate) fn send_retried(&self) -> bool {
+        let Some(thread) = &self.activity.thread else {
+            return false;
+        };
+        let address = thread.address();
+        (self.activities.retrying.iter()).any(|(context, _)| *context == address)
     }
 
     /// The activity running `message`'s send, started or sent, while it runs.
@@ -1482,7 +1574,14 @@ impl Interp {
         let waited = if self.waits_on_a_lender(reason) {
             Ok(Waited::Blocked { inverted: true })
         } else {
-            self.run_others(true)
+            let waiting = self.set_callback_waiting(true);
+            let stall = self.watch_stall(reason);
+            let waited = self.run_others(true);
+            self.activities.stall = stall;
+            if let Some(waiting) = waiting {
+                self.set_callback_waiting(waiting);
+            }
+            waited
         };
         pinned_unpark!(self);
         let failure = match waited {
@@ -1768,9 +1867,114 @@ impl Interp {
     /// call and readies that activity, and lends the baton to each thread
     /// that recalls it. What follows a recall goes back to the inbox before
     /// the lend, where a loop the lendee nests can drain it.
-    pub(crate) fn file_completions(&mut self, mut posted: VecDeque<Posted>, at: DrainAt) {
+    pub(crate) fn file_completions(&mut self, posted: VecDeque<Posted>, at: DrainAt) {
+        let hold = self.holds_callbacks();
+        self.file_posts(posted, at, hold);
+    }
+
+    /// Whether a callback that arrives now is held until the innermost
+    /// lend's callback returns or waits: that callback runs, so one served on
+    /// top of it would stop it between two of its clauses, holding what it
+    /// holds (`r[native.threads.attach.deviation.174]`).
+    fn holds_callbacks(&self) -> bool {
+        self.activities
+            .lends
+            .last()
+            .is_some_and(|lend| !lend.waiting)
+    }
+
+    /// Marks the innermost lend's callback, where it is the running activity,
+    /// as waiting or not, answering what it was.
+    fn set_callback_waiting(&mut self, waiting: bool) -> Option<bool> {
+        let running = self.activities.running;
+        let lend = (self.activities.lends.last_mut()).filter(|lend| lend.lendee == running)?;
+        Some(std::mem::replace(&mut lend.waiting, waiting))
+    }
+
+    /// Starts watching a pinned wait for `reason` of the running activity,
+    /// where it is a callback's and only an activity its lend stopped may
+    /// end it, answering the watch it replaces. Waits that end by
+    /// themselves, a sleep's or a timed one's, are not watched.
+    fn watch_stall(&mut self, reason: ParkReason) -> Option<Stall> {
+        let previous = self.activities.stall;
+        let endless = match reason {
+            ParkReason::Guard(_)
+            | ParkReason::GuardWhen
+            | ParkReason::MessageResult(_)
+            | ParkReason::MessageWait(_) => true,
+            ParkReason::Semaphore(wait) => wait.deadline.is_none(),
+            _ => false,
+        };
+        let running = self.activities.running;
+        let lend = (self.activities.lends.iter().rev()).find(|lend| lend.lendee == running);
+        if let (true, Some(lend)) = (endless, lend) {
+            let lender = lend.lender;
+            self.activities.stall = Some(Stall {
+                due: self.now() + STALL_REPORT,
+                reason,
+                lender,
+            });
+        }
+        previous
+    }
+
+    /// Writes one line on stderr for the watched wait once it is due, naming
+    /// what it waits for and the activity its callback stopped, and stops
+    /// watching it. The wait goes on.
+    fn report_stall(&mut self) {
+        let Some(stall) = self.activities.stall else {
+            return;
+        };
+        if self.now() < stall.due {
+            return;
+        }
+        self.activities.stall = None;
+        let stopped = if stall.lender == MAIN {
+            "the main program".to_owned()
+        } else {
+            format!("activity {}", stall.lender.0)
+        };
+        let line = format!(
+            "interrexx: a callback has waited {} s for {} while {stopped}, which it stopped, \
+             makes no progress\n",
+            STALL_REPORT.as_secs(),
+            stall.reason.waits_for(),
+        );
+        self.write_err(line.as_bytes());
+    }
+
+    /// Serves the held callbacks, the earliest first, each once nothing
+    /// holds it any more: one waiting for a guard lock once the lock is free.
+    /// `drain` is where the drain serving them finds the running activity.
+    fn serve_held(&mut self, drain: DrainAt) {
+        let mut at = 0;
+        while at < self.activities.held.len() && !self.holds_callbacks() {
+            let free = match self.activities.held[at].1 {
+                Some(key) => self.activities.guards.owner(key).is_none(),
+                None => true,
+            };
+            if !free {
+                at += 1;
+                continue;
+            }
+            let Some((recall, _)) = self.activities.held.remove(at) else {
+                break;
+            };
+            self.serve_recall(recall, drain);
+            at = 0;
+        }
+    }
+
+    /// [`Interp::file_completions`], holding a callback's recall where
+    /// `hold`, and serving the held ones first where not.
+    fn file_posts(&mut self, mut posted: VecDeque<Posted>, at: DrainAt, hold: bool) {
         if self.sim.is_some() {
             self.sim_screen_posts(&posted);
+        }
+        if !hold && !self.activities.held.is_empty() {
+            self.timer.requeue(std::mem::take(&mut posted));
+            self.serve_held(at);
+            posted = self.timer.drain();
         }
         while let Some(next) = posted.pop_front() {
             match next {
@@ -1792,8 +1996,24 @@ impl Interp {
                     }
                 }
                 Posted::Recall(recall) => {
+                    let context = match recall.by {
+                        Recaller::Context(address) => Some(address),
+                        Recaller::Call { .. } => None,
+                    };
+                    let retrying = (self.activities.retrying.iter())
+                        .position(|(held, _)| Some(*held) == context)
+                        .map(|at| self.activities.retrying.swap_remove(at).1);
+                    if hold && context.is_some() {
+                        self.activities.held.push_back((recall, retrying));
+                        continue;
+                    }
                     self.timer.requeue(std::mem::take(&mut posted));
-                    self.serve_recall(recall, at);
+                    if hold {
+                        self.serve_recall(recall, at);
+                    } else {
+                        self.activities.held.push_back((recall, retrying));
+                        self.serve_held(at);
+                    }
                     posted = self.timer.drain();
                     if self.sim.is_some() {
                         self.sim_screen_posts(&posted);
@@ -1932,7 +2152,11 @@ impl Interp {
                 DrainAt::Stopped => Below::Buried,
             };
             self.activities.owners.push((outgoing, below));
-            self.activities.lenders.push(outgoing);
+            self.activities.lends.push(Lend {
+                lender: outgoing,
+                lendee: activity,
+                waiting: false,
+            });
         }
         // An attached activity runs nothing between its callbacks, so what a
         // callback rooted as a temporary is dropped once it gives the baton
@@ -1956,7 +2180,7 @@ impl Interp {
             self.roots.activity_mut().pop_frame(frame);
         }
         if let Some(activity) = activity {
-            self.activities.lenders.pop();
+            self.activities.lends.pop();
             self.activities.owners.pop();
             self.swap_running(outgoing, activity);
         }
@@ -2121,11 +2345,13 @@ impl Interp {
         #[cfg(test)]
         VACATES.with(|vacates| vacates.set(vacates.get() + 1));
         let activity = self.activities.running;
+        let waiting = self.set_callback_waiting(true);
         self.activities.vacancies.push(Vacancy {
             activity,
             frame,
             served: false,
             returned: false,
+            waiting,
         });
     }
 
@@ -2134,9 +2360,14 @@ impl Interp {
     pub(crate) fn pop_vacancy(&mut self, frame: u64) {
         let popped = self.activities.vacancies.pop();
         debug_assert!(
-            popped.is_some_and(|vacancy| vacancy.frame == frame),
+            popped
+                .as_ref()
+                .is_some_and(|vacancy| vacancy.frame == frame),
             "a vacancy dropped out of order"
         );
+        if let Some(waiting) = popped.and_then(|vacancy| vacancy.waiting) {
+            self.set_callback_waiting(waiting);
+        }
     }
 
     /// The idle activity whose thread context is at `address`.
@@ -2390,7 +2621,9 @@ impl Interp {
         me: ActivityId,
         level: usize,
     ) -> Result<Option<ActivityId>, Failure> {
-        if self.timer.requests().pending(crate::timer::INBOX) {
+        if self.timer.requests().pending(crate::timer::INBOX)
+            || (!self.activities.held.is_empty() && !self.holds_callbacks())
+        {
             self.drain_completions(DrainAt::Stopped);
         }
         loop {
@@ -2403,14 +2636,20 @@ impl Interp {
                 self.activities.ready.pop_front()
             };
             let Some(ready) = next else {
+                let stall = self.activities.stall.map(|stall| stall.due);
                 let Some(Reverse((due, _, _))) = self.activities.sleepers.peek().copied() else {
                     if self.activities.in_flight == self.activities.runs_below {
                         return Ok(None);
                     }
-                    self.idle_for_posts()?;
+                    match stall {
+                        Some(due) => self.idle_until(due)?,
+                        None => self.idle_for_posts()?,
+                    }
+                    self.report_stall();
                     continue;
                 };
-                self.idle_until(due)?;
+                self.idle_until(stall.map_or(due, |stall| stall.min(due)))?;
+                self.report_stall();
                 continue;
             };
             let buried = self

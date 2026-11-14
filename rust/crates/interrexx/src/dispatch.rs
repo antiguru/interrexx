@@ -3132,6 +3132,9 @@ impl Interp {
         if self.deadlocks(owner) {
             return Err(Raised::deadlock().into());
         }
+        if self.retries_entry_guard(send.key) {
+            return Err(crate::Loud::retried_send().into());
+        }
         let (key, receiver) = (send.key, send.receiver);
         let me = self.running_activity();
         self.activities.guards.enqueue(key, me);

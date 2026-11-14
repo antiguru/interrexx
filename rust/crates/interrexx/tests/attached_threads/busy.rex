@@ -1,6 +1,6 @@
-/* A second attached thread's TICK waits for the guard of an object whose guarded method the first
-   thread's message runs.
-   spec: native.threads.attach.deviation.174 */
+/* A second attached thread's TICK arrives while the first thread's message runs Rexx code in a
+   guarded method of the same object.
+   spec: native.threads.attach */
 t = .ticks~new
 call AtSend t, 'BUSY'
 call AtSendAfter t, 'TICK', 200
