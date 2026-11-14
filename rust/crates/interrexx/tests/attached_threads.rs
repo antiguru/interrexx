@@ -463,6 +463,18 @@ fn a_running_callback_holds_program_end() {
     );
 }
 
+/// A message an attached thread sent waits, parked, on an event semaphore when the main program
+/// ends, and a second thread posts it later: the parked message holds the program's end as a
+/// running one does, and says it saw the post. The oracle agrees under the gate.
+// spec: native.threads.end
+#[test]
+fn a_parked_callback_holds_program_end() {
+    assert_eq!(
+        run("attach-parkedend", "parkedend.rex"),
+        ("main ends\nsem seen\n".to_owned(), String::new(), 0)
+    );
+}
+
 /// [`a_running_callback_holds_program_end`]'s program a hundred times in a row. Program end ends
 /// the attached thread's message and returns while the thread is still leaving the extension, so
 /// the extension has to stay mapped until the process exits, or a run in about thirty crashes in

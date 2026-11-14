@@ -249,10 +249,10 @@ fn a_pinned_wait_is_satisfied_by_an_activity_returning_from_a_native_call() {
     }
 }
 
-/// A wait nothing can end, made by Rexx code a callback runs during an
-/// off-baton call, goes on as it does where the call keeps the baton: the
-/// program loaded an external library, whose thread could end it, so it is
-/// not refused (Deviation 20), and the run's deadline ends it.
+/// A wait nothing in the program can end, made by Rexx code a callback runs
+/// during a call into an external library, is not refused (Deviation 20),
+/// whether the call keeps the baton or leaves its driver: the run's deadline
+/// ends it.
 #[test]
 fn a_callbacks_wait_on_a_call_below_it_goes_on() {
     let source = "m = .message~new('abc', 'length')\n\
@@ -261,6 +261,8 @@ fn a_callbacks_wait_on_a_call_below_it_goes_on() {
                   ::method wait\n  expose m\n  return m~result\n\
                   ::class k\n::method send0 external \"LIBRARY orxmethod TestSendMessage0\"\n";
     let deadline = std::time::Duration::from_secs(1);
+    // The program loaded an external library, and a thread it starts could
+    // attach later and end the wait.
     let kept = counted(source, false, Invocation::none().with_deadline(deadline));
     let left = counted(
         source,

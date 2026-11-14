@@ -2611,6 +2611,10 @@ impl Interp {
             // An attached activity idle between its callbacks does not hold
             // the end (`r[native.threads.end]`). One running a callback holds
             // the baton, so the end comes after it.
+            // One parked inside a callback holds it too: the callback's lend
+            // lasts until the callback returns, and this loop goes on only
+            // once the lend has ended, so an attached activity it finds here
+            // is between callbacks.
             let others = (table.idle.iter().enumerate()).any(|(index, idle)| {
                 index != me && idle.as_ref().is_some_and(|idle| !idle.activity.attached)
             });
