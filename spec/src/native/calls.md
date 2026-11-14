@@ -254,7 +254,6 @@ r[native.calls.condition-data]
 The interface declares a record of a condition with its texts as strings,
 `RexxConditionData`, which no function of the interface fills or reads. Its
 fields, in this order, are:
-
 * `code`, a `wholenumber_t`: the condition's code.
 * `rc`, a `wholenumber_t`: the condition's return code.
 * `message`, an `RXSTRING`: the condition's secondary message.
