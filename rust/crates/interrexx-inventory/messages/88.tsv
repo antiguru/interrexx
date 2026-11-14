@@ -1,0 +1,35 @@
+88	0	Invalid argument.
+88	900	&1.
+88	901	Missing argument &1.
+88	902	Argument &1 must be a number; found "&2".
+88	903	Argument &1 must be a whole number; found "&2".
+88	904	Argument &1 must be zero or a positive whole number; found "&2".
+88	905	Argument &1 must be a positive whole number; found "&2".
+88	906	Argument &1 must not exceed &2; found "&3".
+88	907	Argument &1 must be in the range &2 to &3; found "&4".
+88	908	Argument &1 must not be a null string.
+88	909	Argument &1 must have a string value.
+88	910	Argument &1 must be a single character; found "&2".
+88	911	Argument &1 must be a valid length; found "&2".
+88	912	Argument &1 must be a valid position; found "&2".
+88	913	Argument &1 must be a single-dimensional array.
+88	914	Argument &1 must be an instance of the &2 class.
+88	915	Argument &1 must be convertible to type &2.
+88	916	Argument &1 must be one of &2; found "&3".
+88	917	Argument &1 &2.
+88	918	Argument &1 must be in a valid format; found "&2".
+88	919	Argument &1 must be in pointer format; found "&2".
+88	920	Argument &1 must be a stem object or stem name; found "&2".
+88	921	Argument &1 must be a valid double value; found "&2".
+88	922	Too many arguments in invocation; maximum expected is &1.
+88	923	&1 argument &2 must be a single-dimensional array; found "&3".
+88	924	&1 argument &2 must be an array of &3 items.
+88	925	Argument &1 must be zero or a positive number; found "&2".
+88	926	Argument &1 must be a positive number; found "&2".
+88	927	Argument &1 must be exactly "0" or "1"; found "&2".
+88	928	Argument &1 must be a VariableReference; found "&2".
+88	929	Argument &1 must be a VariableReference to a stem variable; found "&2".
+88	930	Argument &1 must be a VariableReference to a simple variable; found "&2".
+88	931	Missing VariableReference argument &1.
+88	932	Date template &1 must contain only valid patterns; found "&2".
+88	933	Date "&1" does not match template "&2".

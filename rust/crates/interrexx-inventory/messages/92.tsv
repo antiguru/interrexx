@@ -1,0 +1,14 @@
+92	0	OLE error.
+92	900	&1.
+92	901	OLE error with HRESULT &1.
+92	902	OLE VARIANT type &1 cannot be converted to a Rexx object.
+92	903	&1 cannot be converted to an OLE VARIANT.
+92	904	Number of arguments does not match the number of parameters of the OLE method or property.
+92	905	A parameter has an invalid VARIANT type.
+92	906	OLE exception: &1.
+92	907	OLE method does not exist or property is read-only.
+92	908	A parameter cannot be converted to the required type.
+92	909	Argument &1 cannot be converted to the required type.
+92	910	Missing required parameter.
+92	911	OLE instance cannot be created.
+92	912	OLE object is disconnected from its clients.
