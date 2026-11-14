@@ -18,9 +18,12 @@ use crate::layout::{
 };
 use crate::load::{
     CURRENT_INTERPRETER_VERSION, CURRENT_LANGUAGE_LEVEL, DIRECT_COMMAND_ENVIRONMENT,
-    REDIRECTING_COMMAND_ENVIRONMENT, exit_code,
+    METHOD_TYPED_STYLE, PACKAGE_API_NO, REDIRECTING_COMMAND_ENVIRONMENT, ROUTINE_CLASSIC_STYLE,
+    ROUTINE_TYPED_STYLE, exit_code,
 };
-use crate::values::{OPTIONAL_ARGUMENT, rows};
+use crate::values::{
+    ARGUMENT_EXISTS, ARGUMENT_TERMINATOR, OPTIONAL_ARGUMENT, SPECIAL_ARGUMENT, rows,
+};
 
 /// How the header writes a constant's value.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -415,6 +418,37 @@ pub const ENVIRONMENT_KINDS: &[CConstant] = &[
         "REDIRECTING_COMMAND_ENVIRONMENT",
         REDIRECTING_COMMAND_ENVIRONMENT as i64,
     ),
+];
+
+/// The constants of a library's entry tables and of the argument descriptors its
+/// stubs read, in `oorexxapi.h`.
+pub const ENTRY_CONSTANTS: &[CConstant] = &[
+    // The type word that ends a stub's signature, and the one a result of no
+    // type carries.
+    decimal("REXX_ARGUMENT_TERMINATOR", ARGUMENT_TERMINATOR as i64),
+    // The flag bits of an argument descriptor.
+    hex("ARGUMENT_EXISTS", ARGUMENT_EXISTS as i64),
+    hex("SPECIAL_ARGUMENT", SPECIAL_ARGUMENT as i64),
+    // The styles of a routine row and of a method row.
+    decimal("ROUTINE_TYPED_STYLE", ROUTINE_TYPED_STYLE as i64),
+    decimal("ROUTINE_CLASSIC_STYLE", ROUTINE_CLASSIC_STYLE as i64),
+    decimal("METHOD_TYPED_STYLE", METHOD_TYPED_STYLE as i64),
+    // The `apiVersion` of a package entry.
+    decimal("REXX_PACKAGE_API_NO", PACKAGE_API_NO as i64),
+];
+
+/// The names a routine or method declaration may give as a special argument's
+/// type, and `BUFFER`, each with the tokens of the Rust type it names, in
+/// `oorexxapi.h`. Each special argument's name is the type of the argument
+/// its descriptor carries.
+pub const ARGUMENT_TYPEDEFS: &[(&str, &str)] = &[
+    ("OSELF", "RexxObjectPtr"),
+    ("CSELF", "POINTER"),
+    ("BUFFER", "POINTER"),
+    ("ARGLIST", "RexxArrayObject"),
+    ("SCOPE", "RexxObjectPtr"),
+    ("SUPER", "RexxClassObject"),
+    ("NAME", "CSTRING"),
 ];
 
 /// Defines [`ARGUMENT_TYPES`] and [`argument_type_names`] from each value

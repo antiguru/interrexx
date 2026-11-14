@@ -58,6 +58,16 @@ page records why they are the way they are.
   are checked in, with a CI job that checks them against the pinned revision. The C and C++
   headers in `include/` are generated from the Rust layout definitions, in a per-platform layout
   that holds Unix content only so far.
+* **C gets declarations, C++ gets contexts** (2026-11-14, #661). C code may use the headers'
+  declarations, entry tables and routines that need no context; a library that calls the
+  interpreter through a context is written in C++. ooRexx's own headers already stop C at the
+  same point.
+* **The headers fix three macros that are broken in ooRexx's** (2026-11-14, #691).
+  `SET_REXX_VALUE` sets the type code and the value, `SSIZE_MIN` is the least `ssize_t`, and the
+  routine and method macros cast each descriptor value to the parameter type, so a C method can
+  take `OSELF`. In ooRexx's headers the first does not compile, the second is 0 and the third
+  fails in C. Code that builds against ooRexx's headers keeps its meaning, except code that took
+  `SSIZE_MIN` to be 0. These are fixes, not Deviations.
 
 ## Performance
 

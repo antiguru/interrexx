@@ -42,6 +42,13 @@ pub const ROUTINE_TYPED_STYLE: c_int = 1;
 /// `ROUTINE_CLASSIC_STYLE`.
 pub const ROUTINE_CLASSIC_STYLE: c_int = 2;
 
+/// `METHOD_TYPED_STYLE`, the style of every method row.
+pub const METHOD_TYPED_STYLE: c_int = 1;
+
+/// `REXX_PACKAGE_API_NO`, the `apiVersion` that `STANDARD_PACKAGE_HEADER`
+/// writes into a package entry. The loader does not read the field.
+pub const PACKAGE_API_NO: c_int = 20_081_030;
+
 /// The interpreter version an extension's `requiredVersion` is measured
 /// against, `REXX_CURRENT_INTERPRETER_VERSION`.
 ///
@@ -222,10 +229,6 @@ impl NativeMethodEntry {
         Some(unsafe { std::mem::transmute::<*mut c_void, NativeMethod>(self.entry_point) })
     }
 }
-
-/// `METHOD_TYPED_STYLE`.
-#[cfg(test)]
-const METHOD_TYPED_STYLE: c_int = 1;
 
 /// A method row for a stub this image itself defines, for a caller that needs
 /// an entry point without a library.
