@@ -4,7 +4,7 @@
 35	901	Expression term expected after prefix operator "&1".
 35	902	Missing conditional expression following IF keyword.
 35	903	Missing conditional expression following WHEN keyword.
-35	904	Missing initial expression for DO or LOOP control variable.
+35	904	Missing initial expression following DO or LOOP control variable.
 35	905	Missing expression following BY keyword.
 35	906	Missing expression following TO keyword.
 35	907	Missing expression following FOR keyword.
@@ -34,4 +34,4 @@
 35	933	Missing expression following CASE keyword of a SELECT instruction.
 35	934	Missing expression in WHEN case expression list.
 35	935	Missing expression following &1 keyword of a &2 instruction.
-35	936	Missing expression on ::CONSTANT directive.
+35	936	Missing expression in ::CONSTANT directive.

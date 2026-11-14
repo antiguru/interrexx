@@ -16,16 +16,16 @@
 25	906	RAISE must be followed by one of the keywords ERROR, FAILURE, HALT, LOSTDIGITS, NOMETHOD, NOSTRING, NOTREADY, NOVALUE, PROPAGATE, SYNTAX, or USER; found "&1".
 25	907	Invalid sub-keyword on RAISE instruction; found "&1".
 25	908	DESCRIPTION keyword must not appear more than once.
-25	909	RAISE instruction must not have more than one ADDITIONAL or ARRAY keyword.
-25	911	RAISE instruction must not have more than one RETURN or EXIT keyword.
+25	909	ADDITIONAL or ARRAY keyword must not appear more than once.
+25	911	RETURN or EXIT keyword must not appear more than once.
 25	912	GUARD ON or GUARD OFF must be followed by the keyword WHEN; found "&1".
 25	913	GUARD must be followed by one of the keywords ON or OFF; found "&1".
 25	914	CALL ON condition must be followed by the keyword NAME; found "&1".
 25	915	SIGNAL ON condition must be followed by the keyword NAME; found "&1".
 25	916	Invalid sub-keyword on FORWARD instruction; found "&1".
 25	917	TO keyword must not appear more than once.
-25	918	FORWARD instruction must not have more than one ARGUMENTS or ARRAY keyword.
-25	919	FORWARD instruction must not have more than one RETURN or CONTINUE keyword.
+25	918	ARGUMENTS or ARRAY keyword must not appear more than once.
+25	919	RETURN or CONTINUE keyword must not appear more than once.
 25	921	CLASS keyword must not appear more than once.
 25	922	MESSAGE keyword must not appear more than once.
 25	923	SELECT must be followed by one of the keywords LABEL or CASE; found "&1".

@@ -1,4 +1,4 @@
 36	0	Unmatched "(" or "[" in expression.
 36	900	&1.
-36	901	"(" in position &1 on line &2 has no matching ")".
-36	902	"[" in position &1 on line &2 has no matching "]".
+36	901	Unmatched "(" in position &1 on line &2.
+36	902	Unmatched "[" in position &1 on line &2.

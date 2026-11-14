@@ -12,10 +12,10 @@ wording:
 * It is the text of the ANSI standard (X3.274-1996, the `#ErrorText.` table) for the code.
   Where ANSI and ooRexx both have a text, ANSI's is used. An ANSI text may name what ooRexx
   adds (such as `LOOP` next to `DO`, or a message next to a function), give a location in the
-  form below, and drop a part whose insert the row does not render. Where ooRexx gives the
+  form below, and drop a part whose insert the row does not render. It is recast into a
+  canonical phrase where only the form changes, not the meaning. Where ooRexx gives the
   code a different meaning than ANSI does, ANSI's text does not apply.
-* It is one of the patterns under Form with only names filled in: `X must be Y; found "&k".`,
-  `X must not Y.`, `X expected after Y keyword.`, `Missing X following Y keyword.` or `&1.`.
+* It is one of the canonical phrases below, or `&1.`, with only names filled in.
 * It is the plain statement anyone given only the meaning of the code would write nearly word
   for word: a subject, then `must`, `must not`, `is` or `expected`, then an object. It has no
   adverb, no parenthetical remark, no second clause and no turn of phrase peculiar to ooRexx.
@@ -31,14 +31,39 @@ that would break a rule below. When in doubt, a text is rewritten.
 * The text states the fault or the requirement that was not met, in the present tense.
   It gives no advice, does not address the reader and does not start with `Error`.
 * The text of a major number (subcode 0) is a short phrase naming the kind of fault.
-* A requirement reads `X must be Y; found "&k".`, with the value that broke it last.
-  A prohibition reads `X must not Y.`, and a repeated keyword reads
-  `X keyword must not appear more than once.`.
-  A missing part reads `X expected after Y keyword.` or `Missing X following Y keyword.`.
-  A keyword an instruction or directive does not accept reads
-  `Invalid sub-keyword on X; found "&k".`.
+* Texts that state the same kind of fault use the same phrase, listed under Canonical
+  phrases, even where ooRexx or ANSI word them differently.
 * The texts of the `.900` subcodes are `&1.`: the program supplies the whole message.
 * No word of the notice of interactive tracing ends in a colon (`r[env.debugging.notice]`).
+
+## Canonical phrases
+
+A text that states one of these kinds of fault uses its phrase. `X` and `Y` stand for names,
+and `; found "&k"` closes the text when the row renders the value that broke the rule.
+
+* A value or part that breaks a requirement: `X must be Y; found "&k".`
+  A choice of keywords reads `X must be followed by one of the keywords A, B, or C; found "&k".`
+* A construct used where it may not stand: `X must not be used in Y.`
+  Other prohibitions read `X must not Y.`, as in `Data must not follow ...`.
+* A construct that is valid in one place only: `X is valid only in Y.`
+* A keyword or condition given twice: `X must not appear more than once.`
+* A keyword a clause does not accept: `Invalid sub-keyword on X; found "&k".`
+* A part absent where the clause ends or another part follows: `Missing X following Y.`,
+  or `Missing X in Y.` for an item of a list, a directive or an invocation.
+* A token of the wrong kind where a part must stand: `X expected after Y.`, or
+  `X expected as Y.` where Y names the part's role rather than its position.
+* A construct that lacks a part it needs: `X requires Y.`, as in
+  `DO instruction on line &k requires a matching END.`
+* An opening or closing delimiter without its partner: `Unmatched D.`, with `in Y` and a
+  location where the row has them. `D` is the delimiter in double quotes, or the name of a
+  quote character.
+* A closing keyword without the instruction it closes: `X has no corresponding Y.`
+* A symbol after END that has nothing to match: `END corresponding to X on line &k must not
+  have a symbol following it because there is no Y; found "&k".`
+* A token where none of its kind may stand: `Unexpected X.`
+* A name that does not resolve: `X "&k" not found.`
+* An operation that failed on a value: `X cannot be Y.`
+* A malformed construct with no more to say: `Invalid X.`
 
 ## Words
 

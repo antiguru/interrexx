@@ -1,5 +1,5 @@
 6	0	Unmatched "/*" or quote.
-6	1	Unmatched comment delimiter ("/*") on line &1.
-6	2	Unmatched single quote (').
-6	3	Unmatched double quote (").
+6	1	Unmatched "/*" on line &1.
+6	2	Unmatched single quote.
+6	3	Unmatched double quote.
 6	900	&1.

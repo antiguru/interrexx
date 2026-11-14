@@ -5,4 +5,4 @@
 10	4	END corresponding to SELECT on line &3 must be followed by its LABEL ("&2") or by no symbol; found "&1".
 10	5	END must not immediately follow THEN.
 10	6	END must not immediately follow ELSE.
-10	7	END corresponding to SELECT on line &2 must not be followed by a symbol when the SELECT has no LABEL; found "&1".
+10	7	END corresponding to SELECT on line &2 must not have a symbol following it because there is no LABEL; found "&1".

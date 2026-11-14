@@ -1,6 +1,6 @@
 38	0	Invalid template or pattern.
 38	1	Invalid parsing template detected at "&1".
 38	2	Invalid parsing position detected at "&1".
-38	3	PARSE VALUE instruction requires WITH keyword.
+38	3	PARSE VALUE instruction requires a WITH keyword.
 38	900	&1.
-38	901	Missing relative position in parsing template.
+38	901	Missing relative position following "+" or "-" in parsing template.

@@ -1,7 +1,7 @@
 15	0	Invalid hexadecimal or binary string.
 15	1	Invalid location of whitespace character in position &1 in hexadecimal string.
 15	2	Invalid location of whitespace character in position &1 in binary string.
-15	3	Only 0-9, a-f, A-F, and whitespace characters are valid in a hexadecimal string; found "&1".
-15	4	Only 0, 1, and whitespace characters are valid in a binary string; found "&1".
+15	3	Characters of a hexadecimal string must be 0-9, a-f, A-F, or whitespace; found "&1".
+15	4	Characters of a binary string must be 0, 1, or whitespace; found "&1".
 15	5	Invalid grouping of digits in hexadecimal string.
 15	6	Invalid grouping of digits in binary string.

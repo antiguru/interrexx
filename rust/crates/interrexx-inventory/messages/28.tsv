@@ -1,6 +1,6 @@
 28	0	Invalid LEAVE or ITERATE.
-28	1	LEAVE is valid only within a repetitive loop or labeled block instruction.
-28	2	ITERATE is valid only within a repetitive loop.
+28	1	LEAVE is valid only in a repetitive loop or labeled block instruction.
+28	2	ITERATE is valid only in a repetitive loop.
 28	3	Symbol following LEAVE ("&1") must either match the label of a current loop or block instruction or be omitted.
 28	4	Symbol following ITERATE ("&1") must either match the label of a current loop or be omitted.
 28	5	Symbol following ITERATE ("&1") names a block that is not a loop.
