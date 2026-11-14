@@ -739,7 +739,7 @@ fn monitor_halted(clause: &str) -> Ended {
         code: Some(252),
         stdout: "ready\n".to_string(),
         stderr: expand(&format!(
-            "     N *-* ⟨101.24¦UNKNOWN¦Monitor¦REXX⟩\n\
+            "     N *-* <no source>\n\
              \x20    2 *-* {clause}\n\
              Error 4 running REXX line N:  ⟨4⟩\n\
              Error 4.1:  ⟨4.1¦HALT⟩\n"
