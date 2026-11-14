@@ -84,6 +84,21 @@ pub(crate) use loops::{
     FlatLoop, FlatStart, FlatStep, HeaderRole, LoopHeaderValues, loop_header_plan, loop_header_slot,
 };
 
+/// A `FORWARD` with its options evaluated and checked, whose send the driver
+/// begins: entering the target's Rexx body on its own level where it can, so
+/// that a park in that body is not pinned under the forwarding clause.
+pub(crate) struct ForwardSend {
+    pub(crate) target: ObjRef,
+    pub(crate) message: Rc<[u8]>,
+    pub(crate) start_scope: Option<ObjRef>,
+    /// Where the arguments start on the activity's value buffer.
+    pub(crate) mark: usize,
+    pub(crate) continue_: bool,
+    /// The clause's value indent, which the `>>>` line of a `CONTINUE`'s
+    /// result is traced at.
+    pub(crate) indent: usize,
+}
+
 /// Where control goes after one instruction (the design's "Control flow").
 pub(crate) enum Flow {
     Next,
@@ -686,6 +701,8 @@ impl Interp {
         match &instruction.kind {
             InstructionKind::Guard(guard) => self.exec_guard(code, index, guard),
             InstructionKind::Reply { expression } => self.exec_reply(code, expression.as_ref()),
+            // `FORWARD` and its options. See `exec_forward`.
+            InstructionKind::Forward(forward) => self.exec_forward(code, forward),
             InstructionKind::Command { .. } | InstructionKind::Address(_)
                 if self.blocked_command_woken(index) =>
             {
@@ -1284,9 +1301,6 @@ impl Interp {
             InstructionKind::Message { term, value } => {
                 self.exec_message(code, term, value.as_ref())
             }
-
-            // `FORWARD` and its options. See `exec_forward`.
-            InstructionKind::Forward(forward) => self.exec_forward(code, forward),
 
             // `OPTIONS`: the expression is evaluated, converted and traced, and
             // nothing else.
@@ -2022,8 +2036,11 @@ impl Interp {
     }
 
     /// `FORWARD`, with any of `TO`, `MESSAGE`, `CLASS`, `ARGUMENTS`, `ARRAY`
-    /// and `CONTINUE`.
-    fn exec_forward(&mut self, code: &Code<'_>, forward: &Forward) -> Result<Flow, Failure> {
+    /// and `CONTINUE`, up to its send. Kept out of line so that
+    /// [`Interp::exec_instruction`], which every [`crate::ir::Op::Exec`]
+    /// instruction enters, does not carry its frame.
+    #[inline(never)]
+    fn exec_forward(&mut self, code: &Code<'_>, forward: &Forward) -> Result<ExecOutcome, Failure> {
         let Some(identity) = self.activation().method_identity.as_ref() else {
             return Err(Raised::forward_outside_method().into());
         };
@@ -2072,26 +2089,63 @@ impl Interp {
         // carrying a value has answered it already.
         let owed = evaluated.and_then(|()| self.forward_after_reply(forward));
         // The activation is marked forwarded
-        // after the 98.937 above and before the send below, so a condition
+        // after the 98.937 above and before the send, so a condition
         // the send raises is not offered to this activation's own traps.
         // [`Activation::forwarded`] carries what that costs.
         if owed.is_ok() && !forward.continue_ {
             self.activation_mut().flags.set_forwarded(true);
         }
-        let caller = self.caller();
-        let sent = owed
-            .and_then(|()| self.validate_scope_override(target, start_scope))
-            .and_then(|()| {
-                pinned!(
-                    self,
-                    crate::pinning::PinKind::Forward,
-                    self.send_message(target, &message, start_scope, &values[mark..], caller)
-                )
-            });
-        self.give_value_buffer(values, mark);
-        let sent = sent?;
+        if let Err(failure) = owed.and_then(|()| self.validate_scope_override(target, start_scope))
+        {
+            self.give_value_buffer(values, mark);
+            return Err(failure);
+        }
+        // The arguments stay on the value buffer above `mark`, rooted by this
+        // clause's temps, for the driver to send them from.
+        self.activity.value_buffer = values;
+        Ok(ExecOutcome::Forward(Box::new(ForwardSend {
+            target,
+            message,
+            start_scope,
+            mark,
+            continue_: forward.continue_,
+            indent,
+        })))
+    }
 
-        if !forward.continue_ {
+    /// A `FORWARD`'s send run on this Rust stack, under a pinned frame, for a
+    /// driver that cannot enter the target's body itself.
+    pub(crate) fn send_forward_nested(&mut self, send: ForwardSend) -> Result<Flow, Failure> {
+        let ForwardSend {
+            target,
+            message,
+            start_scope,
+            mark,
+            continue_,
+            indent,
+        } = send;
+        let values = std::mem::take(&mut self.activity.value_buffer);
+        let caller = self.caller();
+        let sent = pinned!(
+            self,
+            crate::pinning::PinKind::Forward,
+            self.send_message(target, &message, start_scope, &values[mark..], caller)
+        );
+        self.give_value_buffer(values, mark);
+        self.settle_forwarded(sent?, continue_, indent)
+    }
+
+    /// A `FORWARD`'s answer `sent` as the forwarding clause's `Flow`: without
+    /// `CONTINUE` it is the activation's `RETURN` value; with it, it is set as
+    /// `RESULT` (dropped where the send answered nothing) after its `>>>` line,
+    /// traced at the clause's `indent`.
+    pub(crate) fn settle_forwarded(
+        &mut self,
+        sent: Option<ObjRef>,
+        continue_: bool,
+        indent: usize,
+    ) -> Result<Flow, Failure> {
+        if !continue_ {
             return Ok(Flow::Return(sent));
         }
         let slot = self.reserved_result_slot();

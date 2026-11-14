@@ -30,7 +30,15 @@ pub(crate) enum ExecOutcome {
     /// A `REPLY` with this value: the rest of its body goes to a new
     /// activity at the next clause boundary.
     Split(Option<ObjRef>),
+    /// A `FORWARD` whose send the driver begins. Boxed so that the outcome
+    /// every [`crate::ir::Op::Exec`] instruction answers keeps its size.
+    Forward(Box<crate::run::ForwardSend>),
 }
+
+// Every `Op::Exec` instruction (`CALL`, `NUMERIC`, `GUARD` and the rest)
+// answers this, so a variant that widened it would cost all of them.
+#[cfg(target_pointer_width = "64")]
+const _: () = assert!(std::mem::size_of::<Result<ExecOutcome, Failure>>() == 40);
 
 /// An activity's handle: its offset in the interpreter's activity table.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]

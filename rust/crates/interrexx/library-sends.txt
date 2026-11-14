@@ -50,9 +50,9 @@ redirect.rs using_input_lines b"REQUEST"
 redirect.rs write_target b"APPEND"
 redirect.rs write_target b"LINEOUT"
 redirect.rs write_target b"QUEUE"
-run.rs exec_forward message
 run.rs queue_evaluated message
 run.rs resolve_stream b"NEW"
 run.rs say_evaluated crate::dispatch::SAY
+run.rs send_forward_nested message
 run/condition.rs novalue_hook b"NOVALUE"
 run/interpret.rs debug_input_line crate::dispatch::LINEIN
