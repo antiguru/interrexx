@@ -255,6 +255,7 @@
   expose limit
   if arg() > 2 then raise syntax 93.902 array (2)
   if arg() == 0 then raise syntax 93.901 array (1)
+  if \arg(1, 'E') then raise syntax 93.903 array (1)
   numeric digits 40
   size = limit + 0
   count = size
