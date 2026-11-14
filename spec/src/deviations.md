@@ -1399,3 +1399,24 @@ answers its result.
 context does nothing, and so does a second `DetachThread` from the thread that
 attached it. The attachment stays as the first detach left it, or as it was.
 ooRexx aborts the process in both cases.
+
+## 174. Callbacks that wait nest
+
+A message an attached thread sends runs its Rexx code on that thread, and
+while that code waits, the program's other activities run on that thread too.
+The waits nest: a second callback that starts while the first waits must
+finish before the first can go on, even where the first one's wait ends
+sooner. Three differences follow from this:
+
+* Two callbacks that wait finish last in, first out. The later one finishes
+  first, however their waits end.
+* An activity that runs while a callback waits runs on the attached thread.
+  Native code it calls without leaving the interpreter runs on that thread,
+  and its Rexx code nests only as deeply as that thread's stack allows before
+  error 11.
+* A native call during which a callback started, and which returns while
+  that callback waits, goes on only once the callback has finished.
+
+ooRexx runs each attached thread's callbacks beside the other activities. A
+callback goes on as soon as its wait ends, every other activity runs on its
+own thread, and the code after a returning native call goes on at once.
