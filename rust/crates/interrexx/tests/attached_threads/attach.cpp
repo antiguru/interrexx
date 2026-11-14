@@ -46,6 +46,12 @@
 //   then sends `TICK` to `target`.
 // * `AtPutTick(array, target)` puts a string at index 1 of `array` through `ArrayPut`, then sends
 //   `TICK` to `target`.
+// * `AtMembers(array, stem, supplier, directory, table, object, package, routine, method)` starts
+//   no thread. Through the call's own context it stores into and fetches from each collection with
+//   the members of the thread interface that do so, asks the object `IsInstanceOf` and
+//   `HasMethod`, asks the package for its classes and routines, and the routine and the method
+//   for their packages. It answers an array of one line per member, the member's name and what it
+//   answered, `null` for a null object.
 #include <atomic>
 #include <pthread.h>
 #include <stdint.h>
@@ -531,6 +537,102 @@ RexxRoutine2(logical_t, AtPutTick, RexxObjectPtr, array, RexxObjectPtr, target)
 }
 
 // Detaches the thread running this call from the thread context of the call, and answers 1.
+// One line of `AtMembers`'s answer: `member`, then `text`.
+static void line(RexxCallContext *context, RexxArrayObject lines, const char *member,
+                 const char *text)
+{
+    char buffer[128];
+    snprintf(buffer, sizeof(buffer), "%s %s", member, text);
+    context->ArrayAppendString(lines, buffer, strlen(buffer));
+}
+
+// `line` with a whole number.
+static void number(RexxCallContext *context, RexxArrayObject lines, const char *member,
+                   size_t value)
+{
+    char buffer[32];
+    snprintf(buffer, sizeof(buffer), "%zu", value);
+    line(context, lines, member, buffer);
+}
+
+// `line` with an object that is null or a string, or with `present` for any other object.
+static void object(RexxCallContext *context, RexxArrayObject lines, const char *member,
+                   RexxObjectPtr value)
+{
+    if (value == NULLOBJECT)
+    {
+        line(context, lines, member, "null");
+    }
+    else if (context->IsString(value))
+    {
+        line(context, lines, member, context->CString(value));
+    }
+    else
+    {
+        line(context, lines, member, "present");
+    }
+}
+
+RexxRoutine9(RexxObjectPtr, AtMembers, RexxObjectPtr, array, RexxObjectPtr, stem, RexxObjectPtr,
+             supplier, RexxObjectPtr, directory, RexxObjectPtr, table, RexxObjectPtr, target,
+             RexxObjectPtr, package, RexxObjectPtr, routine, RexxObjectPtr, method)
+{
+    RexxArrayObject lines = context->NewArray(0);
+    RexxArrayObject a = (RexxArrayObject)array;
+    context->ArrayPut(a, context->String("v"), 1);
+    object(context, lines, "ArrayAt", context->ArrayAt(a, 1));
+    object(context, lines, "ArrayAt", context->ArrayAt(a, 2));
+    number(context, lines, "ArrayAppend", context->ArrayAppend(a, context->String("w")));
+    number(context, lines, "ArrayAppendString", context->ArrayAppendString(a, "x", 1));
+    number(context, lines, "ArraySize", context->ArraySize(a));
+    number(context, lines, "ArrayItems", context->ArrayItems(a));
+    number(context, lines, "ArrayDimension", context->ArrayDimension(a));
+
+    RexxStemObject s = (RexxStemObject)stem;
+    context->SetStemElement(s, "a", context->String("v"));
+    object(context, lines, "GetStemElement", context->GetStemElement(s, "a"));
+    context->DropStemElement(s, "a");
+    object(context, lines, "GetStemElement", context->GetStemElement(s, "a"));
+    context->SetStemArrayElement(s, 1, context->String("w"));
+    object(context, lines, "GetStemArrayElement", context->GetStemArrayElement(s, 1));
+    object(context, lines, "GetAllStemElements", context->GetAllStemElements(s));
+    context->DropStemArrayElement(s, 1);
+    object(context, lines, "GetStemArrayElement", context->GetStemArrayElement(s, 1));
+    object(context, lines, "GetStemValue", context->GetStemValue(s));
+
+    RexxSupplierObject p = (RexxSupplierObject)supplier;
+    number(context, lines, "SupplierAvailable", context->SupplierAvailable(p));
+    object(context, lines, "SupplierItem", context->SupplierItem(p));
+    object(context, lines, "SupplierIndex", context->SupplierIndex(p));
+    context->SupplierNext(p);
+    number(context, lines, "SupplierAvailable", context->SupplierAvailable(p));
+
+    RexxDirectoryObject d = (RexxDirectoryObject)directory;
+    context->DirectoryPut(d, context->String("v"), "K");
+    object(context, lines, "DirectoryAt", context->DirectoryAt(d, "K"));
+    object(context, lines, "DirectoryRemove", context->DirectoryRemove(d, "K"));
+    RexxStringTableObject t = (RexxStringTableObject)table;
+    context->StringTablePut(t, context->String("v"), "K");
+    object(context, lines, "StringTableAt", context->StringTableAt(t, "K"));
+    object(context, lines, "StringTableRemove", context->StringTableRemove(t, "K"));
+
+    RexxClassObject objectClass = context->FindClass("OBJECT");
+    number(context, lines, "IsInstanceOf", context->IsInstanceOf(target, objectClass));
+    number(context, lines, "HasMethod", context->HasMethod(target, "NOSUCH"));
+
+    RexxPackageObject k = (RexxPackageObject)package;
+    object(context, lines, "FindPackageClass", context->FindPackageClass(k, "NOSUCH"));
+    object(context, lines, "GetPackageRoutines", context->GetPackageRoutines(k));
+    object(context, lines, "GetPackagePublicRoutines", context->GetPackagePublicRoutines(k));
+    object(context, lines, "GetPackageClasses", context->GetPackageClasses(k));
+    object(context, lines, "GetPackagePublicClasses", context->GetPackagePublicClasses(k));
+    object(context, lines, "GetPackageMethods", context->GetPackageMethods(k));
+    object(context, lines, "GetRoutinePackage",
+           context->GetRoutinePackage((RexxRoutineObject)routine));
+    object(context, lines, "GetMethodPackage", context->GetMethodPackage((RexxMethodObject)method));
+    return lines;
+}
+
 RexxRoutine0(int, AtDetachHere)
 {
     context->threadContext->DetachThread();
@@ -581,6 +683,7 @@ static RexxRoutineEntry routines[] = {
     REXX_TYPED_ROUTINE(AtTickJoin, AtTickJoin),
     REXX_TYPED_ROUTINE(AtCallTick, AtCallTick),
     REXX_TYPED_ROUTINE(AtPutTick, AtPutTick),
+    REXX_TYPED_ROUTINE(AtMembers, AtMembers),
     REXX_TYPED_ROUTINE(AtDone, AtDone),
     REXX_TYPED_ROUTINE(AtReport, AtReport),
     REXX_LAST_ROUTINE()

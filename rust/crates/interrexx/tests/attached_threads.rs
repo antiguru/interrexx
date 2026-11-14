@@ -571,16 +571,77 @@ fn a_routine_an_attached_thread_calls_runs_once_and_so_does_its_next_send() {
 }
 
 /// An attached thread puts an item through `ArrayPut` into an array whose class defines a
-/// guarded `PUT`, while the main program, stopped by the put, runs a guarded method of the same
-/// array. Only a send gives the interpreter back and sends again, so the `PUT`'s wait is refused
-/// as an inverted wait (Deviation 174), and the thread's next send, a `TICK` to a second object,
-/// runs once. The oracle waits for the method to return, so it is asked for the stdout only.
-// spec: native.threads.attach.deviation.174
+/// guarded `PUT` that says it runs, while the main program, stopped by the put, runs a guarded
+/// method of the same array. `ArrayPut` stores into the array without sending `PUT`, so the
+/// method neither runs nor waits for the guard, and the thread's next send, a `TICK` to a second
+/// object, runs once.
+// spec: native.threads.attach
 #[test]
-fn an_array_put_from_an_attached_thread_leaves_its_next_send_to_run_once() {
+fn an_array_put_from_an_attached_thread_stores_without_a_send() {
     assert_eq!(
-        run_agreeing_on_stdout("attach-put", "put.rex"),
-        ("ticked 1\n".to_owned(), inverted_wait("a guard"), 120)
+        run("attach-put", "put.rex"),
+        ("ticked 1 items 1\n".to_owned(), String::new(), 0)
+    );
+}
+
+/// [`an_array_put_from_an_attached_thread_stores_without_a_send`] with the main program asleep in
+/// an unguarded method of the array: the array's `PUT`, which nothing keeps from running, does not
+/// run either.
+// spec: native.threads.attach
+#[test]
+fn an_array_put_from_an_attached_thread_runs_no_put_method() {
+    assert_eq!(
+        run("attach-putfree", "putfree.rex"),
+        ("ticked 1 items 1\n".to_owned(), String::new(), 0)
+    );
+}
+
+/// The members of the thread interface that store into or fetch from an array, a stem, a supplier,
+/// a directory or a string table, ask an object `IsInstanceOf` or `HasMethod`, or ask a package,
+/// a routine or a method for what it holds, act on the object itself: a method its class defines
+/// under the name of the matching message, which says that it runs, is never sent to. The
+/// program's own `a~items` afterwards is a message, so that method says it runs.
+// spec: native.threads.attach
+#[test]
+fn thread_interface_members_send_no_message_a_subclass_redefines() {
+    let expected = "\
+ArrayAt v
+ArrayAt null
+ArrayAppend 2
+ArrayAppendString 3
+ArraySize 3
+ArrayItems 3
+ArrayDimension 1
+GetStemElement v
+GetStemElement null
+GetStemArrayElement w
+GetAllStemElements present
+GetStemArrayElement null
+GetStemValue S.
+SupplierAvailable 1
+SupplierItem i1
+SupplierIndex x1
+SupplierAvailable 0
+DirectoryAt v
+DirectoryRemove v
+StringTableAt v
+StringTableRemove v
+IsInstanceOf 1
+HasMethod 0
+FindPackageClass null
+GetPackageRoutines present
+GetPackagePublicRoutines present
+GetPackageClasses present
+GetPackagePublicClasses present
+GetPackageMethods present
+GetRoutinePackage present
+GetMethodPackage present
+ITEMS runs
+array 3 directory 0 table 0
+";
+    assert_eq!(
+        run("attach-members", "members.rex"),
+        (expected.to_owned(), String::new(), 0)
     );
 }
 

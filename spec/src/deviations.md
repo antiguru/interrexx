@@ -1419,8 +1419,8 @@ the message has run yet, so the interpreter sends it again once the lock is
 free, and `TRACE` announces its method's entry once. Any other wait for a guard
 lock counts as one of a message that has begun: a wait in a method or routine
 the message's own code reaches, and a wait of a routine the thread calls with
-`CallRoutine` or of a method that another of the thread's API calls, such as
-`ArrayPut`, sends to. Once a message has begun, a wait of it for something only
+`CallRoutine` or of a method that another of the thread's API calls sends to,
+such as the `MAKESTRING` that `ObjectToString` sends. Once a message has begun, a wait of it for something only
 a stopped activity can give never ends. Where it waits for a guard lock that
 such an activity holds and no other message does, or for the completion of a
 message whose send such an activity runs, directly or through a chain of such

@@ -1,14 +1,14 @@
 /* An attached thread puts an item, through ArrayPut, into an array whose class defines a guarded
-   PUT, while the main program runs a guarded method of that array, the method that started the
-   thread. The thread then sends TICK to a second object.
-   spec: native.threads.attach.deviation.174 */
+   PUT that says it runs, while the main program runs a guarded method of that array, the method
+   that started the thread. The thread then sends TICK to a second object.
+   spec: native.threads.attach */
 a = .putter~new
 t = .ticks~new
 a~holdput(t)
 do while AtDone() < 1
   call SysSleep 0.05
 end
-say 'ticked' t~count
+say 'ticked' t~count 'items' a~items
 ::requires 'ticks.cls'
 ::requires 'attach' LIBRARY
 ::class putter subclass array
@@ -19,4 +19,5 @@ say 'ticked' t~count
   do until time('E') > 1
   end
 ::method put
+  say 'put runs'
   forward class (super)

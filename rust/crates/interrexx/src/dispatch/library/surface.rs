@@ -326,6 +326,23 @@ impl Surface for Interp {
         }
     }
 
+    fn send_own(
+        &mut self,
+        receiver: ObjRef,
+        id: &str,
+        name: &[u8],
+        arguments: &[Option<ObjRef>],
+    ) -> Option<Result<Option<ObjRef>, ()>> {
+        let class = self.classes().lookup(id)?;
+        if !self.receiver_has_scope(receiver, class) {
+            return None;
+        }
+        // A send whose search starts at the class itself finds the class's
+        // own method, which a subclass's method of the same name would
+        // otherwise come ahead of (r[class.methods.scoped]).
+        Some(self.send(receiver, name, Some(class), arguments))
+    }
+
     fn store_get(&mut self, table: ObjRef, index: &[u8]) -> Option<Result<Option<ObjRef>, ()>> {
         if !hash::owns(self, table) {
             return None;

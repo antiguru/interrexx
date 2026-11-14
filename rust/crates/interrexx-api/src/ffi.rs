@@ -4922,6 +4922,7 @@ mod packages {
                     .package_answer(
                         concat!("RexxThreadInterface.", $member),
                         package.cast(),
+                        "Package",
                         $message,
                     )
                     .cast()
@@ -4955,6 +4956,7 @@ mod packages {
             .package_answer(
                 "RexxThreadInterface.GetRoutinePackage",
                 routine.cast(),
+                "Routine",
                 b"PACKAGE",
             )
             .cast()
@@ -4972,6 +4974,7 @@ mod packages {
             .package_answer(
                 "RexxThreadInterface.GetMethodPackage",
                 method.cast(),
+                "Method",
                 b"PACKAGE",
             )
             .cast()

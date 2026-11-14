@@ -63,7 +63,8 @@ with `SendMessage` or one of its variants, whose method needs at its entry a
 guard lock a stopped activity holds, waits for it as in ooRexx, and `TRACE`
 announces the method's entry once. Any other wait counts as one of a message
 that has begun, including the wait of a routine the thread calls with
-`CallRoutine` or of a method another API call such as `ArrayPut` sends to.
+`CallRoutine` or of a method another API call sends to, such as the
+`MAKESTRING` that `ObjectToString` sends.
 Once a message has begun, a wait of it for something only a stopped activity
 can give never ends. A wait for a guard lock such an activity holds and no
 other message does, or for the completion of a message whose send it runs, is
