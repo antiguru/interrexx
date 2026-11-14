@@ -45,6 +45,8 @@ allocate than ooRexx.
   `LD_LIBRARY_PATH=third_party/oracle/lib third_party/oracle/bin/rexx`; interrexx is
   `rust/target/release/rexx`.
 * Capture stdout, stderr and the exit status separately, never `2>&1`.
+* A program with more than one activity can give different results from run to run, on either
+  interpreter. One run that matches ooRexx does not show that the two agree.
 * Never `.Package~new` a file in the repository outside the source-line procedure below: it runs
   that file's prolog.
 * Do not run a program in `rust/corpus/oracle-crashes.txt` on ooRexx.
@@ -87,6 +89,8 @@ module comment of `rust/crates/interrexx-parse/tests/sourceline_oracle.rs` has t
   there and checkable from that module alone, a safe alternative was measured, and a test fails if
   the invariant breaks.
 * Macros only for small mechanical code; prefer an `#[inline(always)]` function.
+* Tests that are a table of inputs and expected outputs are datadriven files, not cases written
+  out in Rust: a new case is a few lines of data, and a rewrite switch re-records the expectations.
 * Comments state the contract and properties the code does not show: no history, no task or phase
   references, no counts of a set in prose. A property that matters is asserted in a test.
 * Representation is never observable: a fast path or side table that a program can tell apart
