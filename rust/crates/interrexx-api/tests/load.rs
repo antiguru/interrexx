@@ -160,3 +160,19 @@ fn a_package_asking_for_this_interpreter_or_less_is_accepted() {
         );
     }
 }
+
+/// A closed library stays mapped until the process exits, so code of its own still running in it
+/// does not fault (`r[native.threads.end]`, #683).
+#[test]
+fn a_closed_library_stays_mapped() {
+    let mapped = || {
+        std::fs::read_to_string("/proc/self/maps")
+            .expect("the process's maps")
+            .contains("librxregexp.so")
+    };
+    let library = open_rxregexp();
+    assert!(mapped());
+    assert!(library.close());
+    assert!(!library.is_open());
+    assert!(mapped());
+}

@@ -458,6 +458,23 @@ fn a_running_callback_holds_program_end() {
     );
 }
 
+/// [`a_running_callback_holds_program_end`]'s program a hundred times in a row. Program end ends
+/// the attached thread's message and returns while the thread is still leaving the extension, so
+/// the extension has to stay mapped until the process exits, or a run in about thirty crashes in
+/// it (#683).
+// spec: native.threads.end
+#[test]
+#[ignore = "a hundred runs; CI runs it with --run-ignored ignored-only"]
+fn a_running_callback_holds_program_end_a_hundred_times() {
+    for run in 0..100 {
+        assert_eq!(
+            run_ours("attach-slow", "slow.rex"),
+            ("slow done\nmain ends\n".to_owned(), String::new(), 0),
+            "run {run}"
+        );
+    }
+}
+
 /// A message an attached thread sent sleeps a second while the main program loops on
 /// `SysSleep 0.05`: the main program makes no progress meanwhile, its sleeps included, and counts
 /// fewer than five (Deviation 176). The oracle runs it meanwhile and says `main ran`, so it is asked

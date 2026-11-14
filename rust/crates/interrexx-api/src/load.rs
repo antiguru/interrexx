@@ -148,13 +148,43 @@ impl Mapping {
             self.open.store(true, Ordering::SeqCst);
             return false;
         }
-        drop(
-            self.handle
-                .lock()
-                .unwrap_or_else(std::sync::PoisonError::into_inner)
-                .take(),
-        );
+        let handle = self
+            .handle
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .take();
+        if let Some(handle) = handle {
+            keep_mapped(handle);
+        }
         true
+    }
+}
+
+/// The `dlopen` handles of libraries closed and kept mapped, by address.
+static KEPT_MAPPED: Mutex<Vec<usize>> = Mutex::new(Vec::new());
+
+/// Leaves `handle`'s library mapped until the process exits, as classic
+/// libraries are, though nothing calls into it from here on. Code the library
+/// started on a thread of its own, such as an attached thread that is still
+/// returning from its last call, may still be running in it, and nothing here
+/// tracks that code, so the unmapping goes (`r[native.threads.end]`).
+///
+/// Loading the same file again answers the same `dlopen` handle, so a
+/// handle already kept is released instead, which leaves the number of
+/// references the process holds, and this list, at one per distinct library
+/// however many interpreters load it.
+fn keep_mapped(handle: libloading::Library) {
+    let raw = libloading::os::unix::Library::from(handle).into_raw();
+    let address = raw as usize;
+    let mut kept = KEPT_MAPPED
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+    if kept.contains(&address) {
+        // SAFETY: `raw` came from `into_raw` just above and is used once, here;
+        // a reference from an earlier close keeps the library mapped.
+        drop(unsafe { libloading::os::unix::Library::from_raw(raw) });
+    } else {
+        kept.push(address);
     }
 }
 
@@ -2661,7 +2691,8 @@ impl Library {
 
     /// Closes the library, after which none of its rows
     /// or hooks calls in, and answers whether it closed, which it does not
-    /// while a call into it is in flight.
+    /// while a call into it is in flight. The file stays mapped until the
+    /// process exits.
     pub fn close(&self) -> bool {
         self.mapping.close()
     }
@@ -3215,5 +3246,22 @@ mod tests {
             ]
         );
         assert_eq!(found(&library, b"Foo"), Some(3));
+    }
+
+    /// Loading and closing one file again and again keeps one entry in the list of kept
+    /// libraries, so a process that creates interpreters in a loop does not grow.
+    #[test]
+    fn closing_the_same_library_repeatedly_keeps_one_entry() {
+        let load_and_close = || {
+            // SAFETY: `libm` is a system library this process already links, so its
+            // initialisers have run.
+            let handle = unsafe { libloading::Library::new("libm.so.6") }.expect("libm opens");
+            assert!(super::Mapping::new(Some(handle)).close());
+            super::KEPT_MAPPED.lock().unwrap().len()
+        };
+        let first = load_and_close();
+        for _ in 0..50 {
+            assert_eq!(load_and_close(), first);
+        }
     }
 }
