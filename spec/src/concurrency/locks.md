@@ -977,6 +977,7 @@ say h~result
 start
 ```
 
+r[conc.locks.trace.deviation.14]
 The same holds for the destination of a trace line (an object set with
 `.traceoutput~destination`) whose guarded `LINEOUT` method waits for a change
 that only another activity can make: a delivery that holds a guard does not
