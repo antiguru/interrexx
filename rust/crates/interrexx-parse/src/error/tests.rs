@@ -1,9 +1,23 @@
 //! `message`, `line`, and how the inserts reach the message.
 
-use interrexx_inventory::errors::{E7_1, E8_2, E10_1, E13_1, E25_901, E36_901, E99_943};
+use interrexx_inventory::errors::{
+    E7_1, E8_2, E10_1, E13_1, E25_901, E36_901, E99_943, Msg, expand, lookup, substitute,
+};
 
 use crate::token::ParseError;
 use crate::{ProgramSource, SourceKind};
+
+/// The table's text of `message` with `inserts` filled in, as bytes (an
+/// insert may hold bytes that are not UTF-8).
+fn expected<const N: usize>(message: Msg<N>, inserts: [&[u8]; N]) -> Vec<u8> {
+    let (major, sub) = message.code();
+    substitute(
+        lookup(major, sub)
+            .expect("a message constant names a row")
+            .text,
+        &inserts,
+    )
+}
 
 #[test]
 fn a_sub_message_that_needs_no_substitution_is_the_message() {
@@ -11,17 +25,14 @@ fn a_sub_message_that_needs_no_substitution_is_the_message() {
     //     2 *-* else nop
     //     Error 8 running <file> line 2:  <text of 8>
     //     Error 8.2:  <text of 8.2>
-    assert_eq!(
-        ParseError::raise(E8_2, 0, []).message(),
-        b"ELSE has no corresponding THEN clause."
-    );
+    assert_eq!(ParseError::raise(E8_2, 0, []).message(), expected(E8_2, []));
 }
 
 #[test]
 fn a_second_sub_message_that_needs_no_substitution_is_also_the_message() {
     assert_eq!(
         ParseError::raise(E10_1, 0, []).message(),
-        b"END has no corresponding DO, LOOP, or SELECT."
+        expected(E10_1, [])
     );
 }
 
@@ -33,7 +44,7 @@ fn a_token_insert_fills_the_sub_message() {
     //     Error 25.901:  <text of 25.901, naming JUNK>
     assert_eq!(
         ParseError::raise(E25_901, 0, [b"JUNK".to_vec()]).message(),
-        br#"Unknown keyword on ::CLASS directive; found "JUNK"."#
+        expected(E25_901, [b"JUNK"])
     );
 }
 
@@ -45,7 +56,7 @@ fn a_line_insert_fills_the_sub_message() {
     //     Error 7.1:  <text of 7.1, naming line 3>
     assert_eq!(
         ParseError::raise(E7_1, 0, [b"3".to_vec()]).message(),
-        b"SELECT on line 3 requires WHEN."
+        expected(E7_1, [b"3"])
     );
 }
 
@@ -55,7 +66,7 @@ fn two_inserts_fill_in_order() {
     //     Error 36.901:  <text of 36.901, naming position 5 and line 1>
     assert_eq!(
         ParseError::raise(E36_901, 0, [b"5".to_vec(), b"1".to_vec()]).message(),
-        br#"Left parenthesis "(" in position 5 on line 1 requires a corresponding right parenthesis ")"."#
+        expected(E36_901, [b"5", b"1"])
     );
 }
 
@@ -63,7 +74,7 @@ fn two_inserts_fill_in_order() {
 fn an_insert_is_not_substituted_again() {
     assert_eq!(
         ParseError::raise(E99_943, 0, [b"&2".to_vec(), b"&1".to_vec()]).message(),
-        br#"Missing ::RESOURCE end marker "&2" for resource "&1"."#
+        expected(E99_943, [b"&2", b"&1"])
     );
 }
 
@@ -72,7 +83,7 @@ fn an_insert_reaches_the_message_unconverted() {
     // The oracle's 13.1 for a `'80'x` source byte prints that byte raw.
     assert_eq!(
         ParseError::raise(E13_1, 0, [vec![0x80], b"80".to_vec()]).message(),
-        b"Incorrect character in program \"\x80\" ('80'X)."
+        expected(E13_1, [&[0x80], b"80"])
     );
 }
 
@@ -139,7 +150,7 @@ fn a_byte_past_the_end_clamps_to_the_last_line() {
 fn display_names_the_number_the_sub_number_and_the_message() {
     assert_eq!(
         ParseError::raise(E8_2, 0, []).to_string(),
-        "8.2: ELSE has no corresponding THEN clause."
+        expand("8.2: ⟨8.2⟩")
     );
 }
 
@@ -150,7 +161,7 @@ fn display_does_not_zero_pad_a_three_digit_sub_number() {
     // two-digit ones to three.
     assert_eq!(
         ParseError::raise(E25_901, 0, [b"JUNK".to_vec()]).to_string(),
-        r#"25.901: Unknown keyword on ::CLASS directive; found "JUNK"."#
+        expand("25.901: ⟨25.901¦JUNK⟩")
     );
 }
 
@@ -158,6 +169,6 @@ fn display_does_not_zero_pad_a_three_digit_sub_number() {
 fn display_decodes_a_non_utf8_insert_lossily() {
     assert_eq!(
         ParseError::raise(E13_1, 0, [vec![0x80], b"80".to_vec()]).to_string(),
-        "13.1: Incorrect character in program \"\u{fffd}\" ('80'X)."
+        expand("13.1: ⟨13.1¦\u{fffd}¦80⟩")
     );
 }

@@ -1,3 +1,4 @@
+use interrexx_inventory::errors::expand;
 use interrexx_num::{Form, Settings, SettingsError};
 
 #[test]
@@ -271,28 +272,19 @@ fn each_error_carries_the_interpreters_number() {
 #[test]
 fn digits_not_whole_number_message_is_26_005() {
     let err = Settings::default().set_digits_str("abc").unwrap_err();
-    assert_eq!(
-        err.message(),
-        "DIGITS value must be a positive whole number; found \"abc\"."
-    );
+    assert_eq!(err.message(), expand("⟨26.5¦abc⟩"));
 }
 
 #[test]
 fn fuzz_not_whole_number_message_is_26_006() {
     let err = Settings::default().set_fuzz_str("-1").unwrap_err();
-    assert_eq!(
-        err.message(),
-        "FUZZ value must be zero or a positive whole number; found \"-1\"."
-    );
+    assert_eq!(err.message(), expand("⟨26.6¦-1⟩"));
 }
 
 #[test]
 fn invalid_form_message_is_25_011() {
     let err = Settings::default().set_form_str("bogus form").unwrap_err();
-    assert_eq!(
-        err.message(),
-        "NUMERIC FORM must be followed by one of the keywords SCIENTIFIC or ENGINEERING; found \"bogus form\"."
-    );
+    assert_eq!(err.message(), expand("⟨25.11¦bogus form⟩"));
 }
 
 #[test]
@@ -303,10 +295,7 @@ fn fuzz_not_below_digits_message_substitutes_the_pending_pair_not_the_stored_one
     let mut s = Settings::default();
     s.set_digits_str("5").unwrap();
     let err = s.set_fuzz_str("10").unwrap_err();
-    assert_eq!(
-        err.message(),
-        "Value of NUMERIC DIGITS (\"5\") must exceed value of NUMERIC FUZZ (\"10\")."
-    );
+    assert_eq!(err.message(), expand("⟨33.1¦5¦10⟩"));
 
     // Setting DIGITS too low: FUZZ is unchanged (still 5), DIGITS shows the
     // rejected candidate (3) -- confirmed with `NUMERIC FUZZ 5` then
@@ -314,10 +303,7 @@ fn fuzz_not_below_digits_message_substitutes_the_pending_pair_not_the_stored_one
     let mut s = Settings::default();
     s.set_fuzz_str("5").unwrap();
     let err = s.set_digits_str("3").unwrap_err();
-    assert_eq!(
-        err.message(),
-        "Value of NUMERIC DIGITS (\"3\") must exceed value of NUMERIC FUZZ (\"5\")."
-    );
+    assert_eq!(err.message(), expand("⟨33.1¦3¦5⟩"));
 }
 
 // ---- additional(): the raw substitution values, in interpreter order ------

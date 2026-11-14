@@ -1,4 +1,5 @@
 use super::*;
+use interrexx_inventory::errors::expand;
 
 // ---- PROCEDURE, PROCEDURE EXPOSE, USE and the variable reference ----
 
@@ -206,14 +207,12 @@ fn a_procedure_first_in_a_called_routine_is_17_1_with_the_calling_clause_second(
     assert_eq!(outcome.stdout, b"");
     assert_eq!(
         String::from_utf8_lossy(&outcome.stderr),
-        format!(
+        expand(&format!(
             "\x20    6 *-* procedure\n\
              \x20    1 *-* call sub\n\
-             Error 17 running {PATH} line 6:  Unexpected PROCEDURE.\n\
-             Error 17.1:  PROCEDURE is valid only when it is the first \
-             instruction executed after an internal CALL or function \
-             invocation.\n"
-        )
+             Error 17 running {PATH} line 6:  ⟨17⟩\n\
+             Error 17.1:  ⟨17.1⟩\n"
+        ))
     );
 }
 
@@ -236,14 +235,12 @@ fn a_procedure_first_in_a_routine_reached_as_a_function_is_17_1_too() {
     assert_eq!(outcome.stdout, b"");
     assert_eq!(
         String::from_utf8_lossy(&outcome.stderr),
-        format!(
+        expand(&format!(
             "\x20    5 *-* procedure\n\
              \x20    1 *-* qq = sub()\n\
-             Error 17 running {PATH} line 5:  Unexpected PROCEDURE.\n\
-             Error 17.1:  PROCEDURE is valid only when it is the first \
-             instruction executed after an internal CALL or function \
-             invocation.\n"
-        )
+             Error 17 running {PATH} line 5:  ⟨17⟩\n\
+             Error 17.1:  ⟨17.1⟩\n"
+        ))
     );
 }
 
@@ -437,32 +434,32 @@ fn use_strict_arg_reports_method_errors_in_a_method_and_call_errors_outside() {
         (
             "o = .K~new\n::class K\n::method init\nuse strict arg a\n",
             163,
-            "Error 93.901:  Not enough arguments for method; 1 expected.\n",
+            expand("Error 93.901:  ⟨93.901¦1⟩\n"),
         ),
         (
             "o = .K~new(1, 2)\n::class K\n::method init\nuse strict arg a\n",
             163,
-            "Error 93.902:  Too many arguments in invocation of method; 1 expected.\n",
+            expand("Error 93.902:  ⟨93.902¦1⟩\n"),
         ),
         (
             "o = .K~new(, 2)\n::class K\n::method init\nuse strict arg a, b\n",
             163,
-            "Error 93.903:  Missing argument in method; argument 1 is required.\n",
+            expand("Error 93.903:  ⟨93.903¦1⟩\n"),
         ),
         (
             "call sub\n::routine sub\nuse strict arg a\n",
             216,
-            "Error 40.3:  Not enough arguments in invocation of SUB; minimum expected is 1.\n",
+            expand("Error 40.3:  ⟨40.3¦SUB¦1⟩\n"),
         ),
         (
             "call sub 1, 2\n::routine sub\nuse strict arg a\n",
             216,
-            "Error 40.4:  Too many arguments in invocation of SUB; maximum expected is 1.\n",
+            expand("Error 40.4:  ⟨40.4¦SUB¦1⟩\n"),
         ),
         (
             "call sub , 2\n::routine sub\nuse strict arg a, b\n",
             216,
-            "Error 40.5:  Missing argument in invocation of SUB; argument 1 is required.\n",
+            expand("Error 40.5:  ⟨40.5¦SUB¦1⟩\n"),
         ),
     ] {
         let outcome = crate::run_program(
@@ -476,7 +473,7 @@ fn use_strict_arg_reports_method_errors_in_a_method_and_call_errors_outside() {
             "{source:?}"
         );
         let stderr = String::from_utf8_lossy(&outcome.stderr).into_owned();
-        assert!(stderr.ends_with(catalogue), "{source:?}: {stderr:?}");
+        assert!(stderr.ends_with(&catalogue), "{source:?}: {stderr:?}");
     }
     // The neighbouring successes: an omitted position without `STRICT` drops
     // the target, and one with a default of its own is filled rather than
@@ -1033,9 +1030,7 @@ fn use_local_as_a_programs_first_instruction_raises_98_993() {
     assert_eq!(outcome.exit_code, 158, "256 - 98");
     let stderr = String::from_utf8_lossy(&outcome.stderr);
     assert!(
-        stderr.contains("Error 98.993:")
-            && stderr
-                .contains("The USE LOCAL instruction may only be used from method invocations."),
+        stderr.contains("Error 98.993:") && stderr.contains(&expand("⟨98.993⟩")),
         "expected the oracle's own 98.993 report, got: {stderr}"
     );
 }
@@ -1062,10 +1057,7 @@ fn use_local_first_in_a_routine_raises_98_993_not_99_910() {
         assert_eq!(outcome.exit_code, 158, "256 - 98, {why}");
         let stderr = String::from_utf8_lossy(&outcome.stderr);
         assert!(
-            stderr.contains("Error 98.993:")
-                && stderr.contains(
-                    "The USE LOCAL instruction may only be used from method invocations."
-                ),
+            stderr.contains("Error 98.993:") && stderr.contains(&expand("⟨98.993⟩")),
             "{why}: expected the oracle's own 98.993 report, got: {stderr}"
         );
     }

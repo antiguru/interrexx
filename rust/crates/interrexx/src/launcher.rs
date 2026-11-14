@@ -374,6 +374,7 @@ impl Interp {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use interrexx_inventory::errors::expand;
 
     fn words(args: &[&str]) -> Vec<Vec<u8>> {
         args.iter().map(|arg| arg.as_bytes().to_vec()).collect()
@@ -463,9 +464,8 @@ mod tests {
             compile(&["a", "-s"]).map(|compile| compile.output),
             Ok(None)
         );
-        let usage = b"SYNTAX: rexxc inputfile [outputfile] [-s] [-e]\n\
-                      Without outputfile rexxc only performs a syntax check.\n";
-        assert_eq!(compile(&[]), Err(usage.to_vec()));
+        let usage = expand("⟨999.14⟩\n⟨999.15⟩\n").into_bytes();
+        assert_eq!(compile(&[]), Err(usage.clone()));
         for args in [
             &["a", "-x"][..],
             &["a", "-"],
@@ -474,7 +474,7 @@ mod tests {
         ] {
             assert_eq!(
                 compile(args),
-                Err([&b"The rexxc command parameters are incorrect.\n"[..], usage].concat()),
+                Err([expand("⟨999.12⟩\n").as_bytes(), &usage].concat()),
                 "{args:?}"
             );
         }

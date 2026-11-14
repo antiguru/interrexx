@@ -13,6 +13,7 @@
 
 mod support;
 
+use interrexx_inventory::errors::expand;
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -194,9 +195,7 @@ fn a_kept_call_context_used_by_another_activity_answers_or_raises() {
                 None => {
                     assert_eq!((stdout.as_ref(), ours.exit_code), ("", 158), "{context}");
                     assert!(
-                        stderr.contains(
-                            "Error 98.983:  Execution thread does not match API thread context."
-                        ),
+                        stderr.contains(&expand("Error 98.983:  ⟨98.983⟩")),
                         "{context}: {stderr}"
                     );
                 }

@@ -4,6 +4,7 @@
 /// the same line. Each of those is long enough to live in the arena, where
 /// `CODE` is not, which is why reading `CODE` alone could not see a
 /// missing root.
+use interrexx_inventory::errors::expand;
 #[test]
 fn a_syntax_condition_objects_entries_survive_a_collection_at_every_allocation() {
     let text = b"signal on syntax\n\
@@ -23,8 +24,7 @@ fn a_syntax_condition_objects_entries_survive_a_collection_at_every_allocation()
     );
     assert_eq!(
         String::from_utf8_lossy(&plain.stdout),
-        "42.3 | Arithmetic overflow; divisor must not be zero. | Arithmetic overflow/underflow. \
-         | 1\n"
+        expand("42.3 | ⟨42.3⟩ | ⟨42⟩ | 1\n")
     );
     let swept = crate::run_program_collect_every_alloc(name, text, crate::Invocation::none());
     assert_eq!(swept.exit_code, plain.exit_code);

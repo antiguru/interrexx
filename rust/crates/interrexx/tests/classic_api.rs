@@ -3,6 +3,7 @@
 //! `librexxapi.so.4`. Each run has a private `REXX_API_DIR` and stops its daemon after. `rxapi`
 //! and `rxsubcom` are the `interrexx-rxapi` binaries beside `rexx`, which a workspace build makes.
 
+use interrexx_inventory::errors::expand;
 use std::collections::BTreeSet;
 use std::ffi::OsString;
 use std::os::unix::process::CommandExt;
@@ -362,11 +363,11 @@ fn a_failing_classic_function_raises_40_1() {
     assert_eq!(output.status.code(), Some(216), "{stderr}");
     assert_eq!(
         stderr.lines().next(),
-        Some("       *-* Compiled routine \"TESTCALLBACK\"."),
+        Some(expand("⟨101.21¦TESTCALLBACK⟩").as_str()),
         "{stderr}"
     );
     assert!(
-        stderr.ends_with("Error 40.1:  External routine \"TESTCALLBACK\" failed.\n"),
+        stderr.ends_with(&expand("Error 40.1:  ⟨40.1¦TESTCALLBACK⟩\n")),
         "{stderr}"
     );
 }
@@ -1046,12 +1047,12 @@ fn the_classic_family_answers_as_the_oracle_does() {
     assert!(output.status.success(), "{output:?}");
     assert_eq!(
         String::from_utf8_lossy(&output.stdout),
-        FAMILY_STDOUT.replace("<version>", env!("CARGO_PKG_VERSION"))
+        expand(FAMILY_STDOUT).replace("<version>", env!("CARGO_PKG_VERSION"))
     );
     let dir = scratch().join("driver-family");
     assert_eq!(
         String::from_utf8_lossy(&output.stderr),
-        FAMILY_STDERR.replace("{dir}", &dir.display().to_string())
+        expand(&FAMILY_STDERR.replace("{dir}", &dir.display().to_string()))
     );
 }
 
@@ -1187,7 +1188,7 @@ fn a_sigint_during_rexx_start_halts_the_program_not_the_process() {
     );
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
-        stderr.ends_with("Error 4.1:  Program interrupted with HALT condition.\n"),
+        stderr.ends_with(&expand("Error 4.1:  ⟨4.1¦HALT⟩\n")),
         "{stderr}"
     );
     let output = run_driver("sigint", &files, &["sleeph.rex"]);
@@ -1200,16 +1201,16 @@ fn a_sigint_during_rexx_start_halts_the_program_not_the_process() {
 
 /// The family driver's standard output. The version line is the first line of interrexx's own banner (Deviation 96).
 const FAMILY_STDOUT: &str = r#"version interrexx <version> (Open Object Rexx 5.3.0 compatible)
-code 3001: Failure during initialization: File "&1" is unreadable.
-code 35929: Missing expression in logical expression list.
-code 40001: External routine "&1" failed.
+code 3001: ⟨3.1¦&1⟩
+code 35929: ⟨35.929⟩
+code 40001: ⟨40.1¦&1⟩
 code 0: (null)
 code 3: (null)
 code 99999: (null)
-code 999013: Output file name must be different from input file name.
+code 999013: ⟨999.13⟩
 number 1: (null)
-number 200: Failure during initialization: File "&1" is unreadable.
-number 534: Failure during initialization: Program "&1" was not found.
+number 200: ⟨3.1¦&1⟩
+number 534: ⟨3.901¦&1⟩
 number 0: (null)
 number 99999: (null)
 terminated 1
@@ -1252,28 +1253,28 @@ runner trace.rex: rc=0 short=0 result=0 0 O
 "#;
 
 /// The family driver's standard error on the oracle, `{dir}` the directory it ran in.
-const FAMILY_STDERR: &str = r#"Error 3:  Failure during initialization.
-Error 3.901:  Failure during initialization: Program "nothere.rex" was not found.
+const FAMILY_STDERR: &str = r#"Error 3:  ⟨3⟩
+Error 3.901:  ⟨3.901¦nothere.rex⟩
      2 *-* if then
-Error 35 running {dir}/bad.rex line 2:  Invalid expression.
-Error 35.929:  Missing expression in logical expression list.
+Error 35 running {dir}/bad.rex line 2:  ⟨35⟩
+Error 35.929:  ⟨35.929⟩
      2 *-* if then
-Error 35 running {dir}/bad.rex line 2:  Invalid expression.
-Error 35.929:  Missing expression in logical expression list.
-Error 3:  Failure during initialization.
-Error 3.1:  Failure during initialization: File "nores.rex" is unreadable.
+Error 35 running {dir}/bad.rex line 2:  ⟨35⟩
+Error 35.929:  ⟨35.929⟩
+Error 3:  ⟨3⟩
+Error 3.1:  ⟨3.1¦nores.rex⟩
      1 *-* if then
-Error 35 running ibad line 1:  Invalid expression.
-Error 35.929:  Missing expression in logical expression list.
+Error 35 running ibad line 1:  ⟨35⟩
+Error 35.929:  ⟨35.929⟩
      2 *-* if then
-Error 35 running {dir}/bad.rex line 2:  Invalid expression.
-Error 35.929:  Missing expression in logical expression list.
-Error 3:  Failure during initialization.
-Error 3.901:  Failure during initialization: Program "nothere.rex" was not found.
+Error 35 running {dir}/bad.rex line 2:  ⟨35⟩
+Error 35.929:  ⟨35.929⟩
+Error 3:  ⟨3⟩
+Error 3.901:  ⟨3.901¦nothere.rex⟩
        +++ "LINUX COMMAND {dir}/trace.rex"
      2 *-* a = 1 + 1
        >>>   "2"
-+++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+⟨101.5⟩
      3 *-* y = selftrace(1)
        >>>   "0"
 "#;
@@ -1537,38 +1538,40 @@ fn raise_condition_and_raise_condition_object_raise_as_the_oracle_does() {
     );
     assert_eq!(
         stdout,
-        "haltX HALT | The NIL object | The NIL object | halt description | The NIL object | The NIL object | 1 | The NIL object | The NIL object\n\
+        expand(
+            "haltX HALT | The NIL object | The NIL object | halt description | The NIL object | The NIL object | 1 | The NIL object | The NIL object\n\
          nomX NOMETHOD | The NIL object | The NIL object |  | The NIL object | The NIL object | 1 | The NIL object | The NIL object\n\
-         haltS SYNTAX | 4.1 | 4 |  | array 1 HALT | The NIL object | 1 | Program interrupted. | Program interrupted with HALT condition.\n\
-         nomS SYNTAX | 97.5 | 97 |  | array 0 The NIL object | The NIL object | 1 | Object method not found. | An unhandled NOMETHOD condition has been raised.\n\
-         nomS2 SYNTAX | 97.1 | 97 |  | array 2 receiver | The NIL object | 1 | Object method not found. | Object \"an Array\" does not understand message \"FOO\".\n\
+         haltS SYNTAX | 4.1 | 4 |  | array 1 HALT | The NIL object | 1 | ⟨4⟩ | ⟨4.1¦HALT⟩\n\
+         nomS SYNTAX | 97.5 | 97 |  | array 0 The NIL object | The NIL object | 1 | ⟨97⟩ | ⟨97.5⟩\n\
+         nomS2 SYNTAX | 97.1 | 97 |  | array 2 receiver | The NIL object | 1 | ⟨97⟩ | ⟨97.1¦an Array¦FOO⟩\n\
          userS NIL\n\
          continue 1\n\
-         syntaxX SYNTAX | 93.900 | 93 |  | array 1 RaiseCondition cannot raise a SYNTAX condition; use RaiseException or RaiseConditionObject | The NIL object | 1 | Incorrect call to method. | RaiseCondition cannot raise a SYNTAX condition; use RaiseException or RaiseConditionObject.\n\
+         syntaxX SYNTAX | 93.900 | 93 |  | array 1 RaiseCondition cannot raise a SYNTAX condition; use RaiseException or RaiseConditionObject | The NIL object | 1 | ⟨93⟩ | ⟨93.900¦RaiseCondition cannot raise a SYNTAX condition; use RaiseException or RaiseConditionObject⟩\n\
          ret1 0\n\
          ret2 7\n\
          ret3 0\n\
          \x20 handler ran\n\
          ret4 7\n\
          \x20 handler ran\n\
-         rcoSyntax SYNTAX | 40.1 | 40 | the description | array 1 XYZ | The NIL object | 1 | Incorrect call to routine. | External routine \"XYZ\" failed.\n\
+         rcoSyntax SYNTAX | 40.1 | 40 | the description | array 1 XYZ | The NIL object | 1 | ⟨40⟩ | ⟨40.1¦XYZ⟩\n\
          same 0 1\n\
          rcoErr ERROR | The NIL object | 127 | a command | The NIL object | The NIL object | 1 | The NIL object | The NIL object\n\
          rcErr ERROR | The NIL object | The NIL object | a command | The NIL object | The NIL object | 1 | The NIL object | The NIL object\n\
          hand1 USER MINE | The NIL object | The NIL object | hand made | The NIL object | The NIL object | 1 | The NIL object | The NIL object\n\
-         hand2 SYNTAX | 40.1 | 40 |  | array 1 HAND | The NIL object | 1 | Incorrect call to routine. | External routine \"HAND\" failed.\n\
+         hand2 SYNTAX | 40.1 | 40 |  | array 1 HAND | The NIL object | 1 | ⟨40⟩ | ⟨40.1¦HAND⟩\n\
          rcoHalt HALT | The NIL object | The NIL object | halt description | The NIL object | The NIL object | 1 | The NIL object | The NIL object\n\
-         rcoHaltS SYNTAX | 4.1 | 4 |  | array 1 HALT | The NIL object | 1 | Program interrupted. | Program interrupted with HALT condition.\n\
+         rcoHaltS SYNTAX | 4.1 | 4 |  | array 1 HALT | The NIL object | 1 | ⟨4⟩ | ⟨4.1¦HALT⟩\n\
          rcoNom NOMETHOD | The NIL object | The NIL object | NOSUCHMETHOD | an Object | The NIL object | 1 | The NIL object | The NIL object\n\
-         rcoNomS SYNTAX | 97.1 | 97 |  | array 2 an Object | The NIL object | 1 | Object method not found. | Object \"an Object\" does not understand message \"NOSUCHMETHOD\".\n\
-         opt1 SYNTAX | 98.970 | 98 |  | array 2 a command | The NIL object | 1 | Execution error. | External command \"a command\" ended with return code .\n\
+         rcoNomS SYNTAX | 97.1 | 97 |  | array 2 an Object | The NIL object | 1 | ⟨97⟩ | ⟨97.1¦an Object¦NOSUCHMETHOD⟩\n\
+         opt1 SYNTAX | 98.970 | 98 |  | array 2 a command | The NIL object | 1 | ⟨98⟩ | ⟨98.970¦a command¦⟩\n\
          opt2 NIL\n\
-         err1 SYNTAX | 93.911 | 93 |  | array 1 1 | The NIL object | 1 | Incorrect call to method. | Method argument 1 must not be null.\n\
-         err2 SYNTAX | 93.948 | 93 |  | array 2 1 | The NIL object | 1 | Incorrect call to method. | Method argument 1 must be of the Directory class.\n\
-         err3 SYNTAX | 93.900 | 93 |  | array 1 the condition object has no CONDITION name | The NIL object | 1 | Incorrect call to method. | the condition object has no CONDITION name.\n\
-         err4 SYNTAX | 93.900 | 93 |  | array 1 the CODE of a SYNTAX condition object must be a valid error number | The NIL object | 1 | Incorrect call to method. | the CODE of a SYNTAX condition object must be a valid error number.\n\
-         err5 SYNTAX | 93.900 | 93 |  | array 1 the CODE of a SYNTAX condition object must be a valid error number | The NIL object | 1 | Incorrect call to method. | the CODE of a SYNTAX condition object must be a valid error number.\n\
-         err6 SYNTAX | 93.900 | 93 |  | array 1 the ADDITIONAL of a SYNTAX condition object must be an array | The NIL object | 1 | Incorrect call to method. | the ADDITIONAL of a SYNTAX condition object must be an array.\n"
+         err1 SYNTAX | 93.911 | 93 |  | array 1 1 | The NIL object | 1 | ⟨93⟩ | ⟨93.911¦1⟩\n\
+         err2 SYNTAX | 93.948 | 93 |  | array 2 1 | The NIL object | 1 | ⟨93⟩ | ⟨93.948¦1¦Directory⟩\n\
+         err3 SYNTAX | 93.900 | 93 |  | array 1 the condition object has no CONDITION name | The NIL object | 1 | ⟨93⟩ | ⟨93.900¦the condition object has no CONDITION name⟩\n\
+         err4 SYNTAX | 93.900 | 93 |  | array 1 the CODE of a SYNTAX condition object must be a valid error number | The NIL object | 1 | ⟨93⟩ | ⟨93.900¦the CODE of a SYNTAX condition object must be a valid error number⟩\n\
+         err5 SYNTAX | 93.900 | 93 |  | array 1 the CODE of a SYNTAX condition object must be a valid error number | The NIL object | 1 | ⟨93⟩ | ⟨93.900¦the CODE of a SYNTAX condition object must be a valid error number⟩\n\
+         err6 SYNTAX | 93.900 | 93 |  | array 1 the ADDITIONAL of a SYNTAX condition object must be an array | The NIL object | 1 | ⟨93⟩ | ⟨93.900¦the ADDITIONAL of a SYNTAX condition object must be an array⟩\n"
+        )
     );
 }
 
@@ -1584,10 +1587,12 @@ fn new_array_refuses_a_size_above_the_largest_array() {
     );
     assert_eq!(
         stdout,
-        "2305843009213693953 93.959 An array cannot contain more than 100000000000000000 elements.\n\
-         2305843009213693952 93.959 An array cannot contain more than 100000000000000000 elements.\n\
-         18446744073709551615 93.959 An array cannot contain more than 100000000000000000 elements.\n\
+        expand(
+            "2305843009213693953 93.959 ⟨93.959¦100000000000000000⟩\n\
+         2305843009213693952 93.959 ⟨93.959¦100000000000000000⟩\n\
+         18446744073709551615 93.959 ⟨93.959¦100000000000000000⟩\n\
          5 ok 5\n"
+        )
     );
 }
 

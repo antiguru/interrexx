@@ -1,3 +1,4 @@
+use interrexx_inventory::errors::expand;
 use interrexx_num::{Form, FormatError, Number};
 
 fn n(s: &str) -> Number {
@@ -596,10 +597,7 @@ fn before_oversize_in_exponential_form_reports_the_engineering_mantissa() {
 #[test]
 fn before_oversize_message_substitutes_n1_not_the_padded_mantissa() {
     let err = fmt("-123.456", 9, Form::Scientific, Some(3), None, None, None).unwrap_err();
-    assert_eq!(
-        err.message(),
-        "Integer part of \"-123.456\" is too large for 3 spaces."
-    );
+    assert_eq!(err.message(), expand("⟨93.942¦-123.456¦3⟩"));
 }
 
 #[test]
@@ -615,10 +613,7 @@ fn before_oversize_message_reflects_rounding_to_the_current_digits() {
         None,
     )
     .unwrap_err();
-    assert_eq!(
-        err.message(),
-        "Integer part of \"12345.6789\" is too large for 3 spaces."
-    );
+    assert_eq!(err.message(), expand("⟨93.942¦12345.6789¦3⟩"));
 
     // Lowering DIGITS to 5 forces rounding that changes the value, and *that*
     // rounded-and-reformatted value is what shows up, in its own SCIENTIFIC
@@ -634,10 +629,7 @@ fn before_oversize_message_reflects_rounding_to_the_current_digits() {
         Some(20),
     )
     .unwrap_err();
-    assert_eq!(
-        err.message(),
-        "Integer part of \"1.2346E+5\" is too large for 3 spaces."
-    );
+    assert_eq!(err.message(), expand("⟨93.942¦1.2346E+5¦3⟩"));
 }
 
 #[test]
@@ -655,10 +647,7 @@ fn before_oversize_message_in_exponential_form_still_shows_the_unreframed_number
         None,
     )
     .unwrap_err();
-    assert_eq!(
-        err.message(),
-        "Integer part of \"123456.789\" is too large for 1 spaces."
-    );
+    assert_eq!(err.message(), expand("⟨93.942¦123456.789¦1⟩"));
 }
 
 #[test]

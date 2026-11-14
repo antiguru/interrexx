@@ -310,6 +310,7 @@ pub(crate) fn take_pending() -> bool {
 #[cfg(test)]
 #[expect(clippy::disallowed_methods, reason = "these tests time real signals")]
 mod tests {
+    use interrexx_inventory::errors::expand;
     /// Running a program installs no handler: only a process entry point
     /// does, so this test binary keeps its dispositions.
     #[test]
@@ -370,11 +371,11 @@ mod tests {
             assert_eq!(String::from_utf8_lossy(&outcome.stdout), "a\n", "{command}");
             assert_eq!(
                 String::from_utf8_lossy(&outcome.stderr),
-                format!(
+                expand(&format!(
                     "     2 *-* {command}\n\
-                     Error 4 running /no/such/dir/t.rex line 2:  Program interrupted.\n\
-                     Error 4.1:  Program interrupted with HALT condition.\n"
-                )
+                     Error 4 running /no/such/dir/t.rex line 2:  ⟨4⟩\n\
+                     Error 4.1:  ⟨4.1¦HALT⟩\n"
+                ))
             );
         }
     }
