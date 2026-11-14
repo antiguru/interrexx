@@ -333,7 +333,7 @@ fn attach_detach_cycles_stay_bounded() {
 /// A `DetachThread` from a thread not attached to the context, and a second `DetachThread` from
 /// the one that was, do nothing: the attachment's second message, sent between them, runs. The
 /// oracle aborts the process (rc 134), so it is not asked.
-// spec: native.threads.attach, native.threads.attach.deviation.168
+// spec: native.threads.attach, native.threads.attach.deviation.173
 #[test]
 fn detach_from_the_wrong_thread_or_twice_does_nothing() {
     assert_eq!(
@@ -390,7 +390,7 @@ fn buffer_strings_released_on_one_attachment_do_not_pile_up() {
 /// An embedding's thread, attached and idle when the creating thread calls `Terminate`, sends a
 /// message afterwards: the send answers nothing, `DetachThread` returns, and nothing aborts or
 /// hangs. The oracle, with the same driver, still runs the message (`after answered`).
-// spec: native.threads.end, native.threads.end.deviation.167
+// spec: native.threads.end, native.threads.end.deviation.172
 #[test]
 fn a_callback_after_terminate_is_refused() {
     assert_eq!(
