@@ -12,7 +12,8 @@ A comparison checks only what the specification fixes. For an error that is the 
 subcode (`r[conv.error.name]`): the wording of a message (`r[conv.error.text]`) and the items of
 `ADDITIONAL` for an error the interpreter raises (`r[conv.error.additional]`) are free, so a check
 that compares them tests behaviour nothing promises. A test that needs an error compares its
-`Error N.M`, or `condition('O')~code`, and not the text after it. The differential harnesses have
+`Error N.M`, or `condition('O')~code`, and not the text after it. The traceback lines of built-in
+methods (`r[class.stackframe.builtin]`) are not compared either. The differential harnesses have
 no way to mark part of a program's output as unspecified and compare every byte, so a
 differential program prints only what the specification fixes.
 

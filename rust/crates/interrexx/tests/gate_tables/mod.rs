@@ -114,12 +114,12 @@ pub fn run_gate_probe(abs: &Path) -> Outcome {
 }
 
 /// Compares a crate outcome against an oracle outcome on all three channels,
-/// with `stderr` compared **raw** apart from the message texts of error
-/// reports: a class-library error's code and subcode are its interface and
-/// its text is unspecified, so only the code and subcode are compared
-/// (`StderrComparison::ErrorCodes`). The exit status and `stdout` are exact.
+/// with `stderr` compared **raw**. The comparison cuts the message texts of
+/// error reports on both sides: an error's code and subcode are its interface
+/// and its text is unspecified. The exit status and the rest of `stdout` are
+/// exact.
 pub fn compare_raw(crate_side: &Outcome, oracle: &CppOutcome) -> Descriptors {
-    let diff = descriptor_diff_with(crate_side, oracle, StderrComparison::ErrorCodes);
+    let diff = descriptor_diff_with(crate_side, oracle, StderrComparison::Raw);
     Descriptors {
         status: diff.exit_code,
         stdout: diff.stdout,

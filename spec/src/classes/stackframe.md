@@ -133,6 +133,37 @@ List 0 2 3 1
 Array 1 1 METHOD ACT
 ```
 
+## Built-in methods
+
+r[class.stackframe.builtin]
+Whether a built-in method has a level of its own is not specified: a build may
+have no level for `send`, `sendWith` or `Message~send`, or for any other
+built-in method that runs code of the program. Its presence, how many such
+levels there are, their position, `type`, `line` and trace line are unspecified
+wherever levels are listed or shown: in the array of `stackFrames`, in the
+`STACKFRAMES` and `TRACEBACK` entries of a condition, in the traceback of the
+report of an error and in the output of tracing. A level of Rexx code, of a
+program or of the class library, is always there, so the level of a method that
+a built-in method ran is the first of its own `stackFrames`, and the main part
+of the program is the last.
+
+```rexx
+.o~new~send('m')
+.o~new~sendWith('m', .array~new)
+.message~new(.o~new, 'm')~send
+exit
+::class o
+::method m
+  fs = .context~stackFrames
+  say fs[1]~type fs[1]~name fs[fs~items]~type
+```
+
+```output
+METHOD M PROGRAM
+METHOD M PROGRAM
+METHOD M PROGRAM
+```
+
 ## Methods
 
 r[class.stackframe.type]
@@ -140,14 +171,14 @@ r[class.stackframe.type]
 for a routine, `METHOD` for a method, `INTERNALCALL` for an internal routine,
 `INTERPRET` for the text of an INTERPRET and `COMPILE` for text that was being
 translated when a SYNTAX condition was raised. A frame of type `COMPILE` is
-the first of that condition's list. A built-in method that runs a program's
-code, such as `send`, is a level of type `METHOD`.
+the first of that condition's list. Whether a built-in method has a level of its
+own is not specified ([the built-in rule](r:class.stackframe.builtin)).
 
 ```rexx
 call ic
 exit
 ic:
-  .o~new~send('go')
+  .o~new~go
   return
 ::routine rt
   call dump
@@ -156,7 +187,8 @@ ic:
   interpret 'call rt'
 ::routine dump
   do f over .context~stackFrames
-    say f~type
+    if f~type == 'METHOD' then say f~type f~name
+    else say f~type
   end
 ```
 
@@ -164,8 +196,7 @@ ic:
 ROUTINE
 ROUTINE
 INTERPRET
-METHOD
-METHOD
+METHOD GO
 INTERNALCALL
 PROGRAM
 ```
@@ -254,9 +285,8 @@ running starts, and for an INTERPRET level the number of the line of the
 clause that holds the text, as [the line of a trace line](r:instr.trace.line)
 is. A frame is a snapshot of the moment it was made: the running code goes on,
 and the line of the frame's context, [asked with
-`line`](r:class.rexxcontext.line), moves with it. `line` answers `.nil` for a
-built-in method. The number that it answers for a method of the class library
-is not specified, as [the library rule](r:cond.information.library) says.
+`line`](r:class.rexxcontext.line), moves with it. The number that it
+answers for a method of the class library is not specified, as [the library rule](r:cond.information.library) says.
 
 ```rexx
 call r
@@ -271,7 +301,6 @@ r:
   return
 ::class o
 ::method m
-  say .context~stackFrames[2]~line~isNil .context~stackFrames[2]~type
   interpret 'say .context~stackFrames[1]~type .context~stackFrames[1]~line'
 ```
 
@@ -279,8 +308,7 @@ r:
 4 5 5
 4 6 6
 1 1
-1 METHOD
-INTERPRET 14
+INTERPRET 13
 ```
 
 r[class.stackframe.traceline]
@@ -289,11 +317,7 @@ r[class.stackframe.traceline]
 number of its line in six columns, `*-*` and the clause, indented as [the
 indentation rule](r:instr.trace.indent) says, which counts one level for each
 active internal call. [Deviation 0](r:class.stackframe.deviation.0) covers the
-indentation that a program reads back. The string of a built-in method's frame
-is seven blanks, `*-*`, a blank and a text that names the method; the text is not
-specified,
-as [the rule on error messages](r:conv.error.text) says for text that the
-interpreter writes. The number in the line of a method of the class library, and
+indentation that a program reads back. The number in the line of a method of the class library, and
 its indentation, are not specified, as [the library rule](r:cond.information.library)
 says.
 
@@ -330,14 +354,13 @@ show:
 exit
 ::class o
 ::method m
-  t = .context~stackFrames[2]~traceLine
-  say (t~word(1) == '*-*') (t~words > 1)
+  say '['.context~stackFrames[1]~traceLine']'
 ```
 
 ```output
-1 1
-1 1
-1 1
+[     7 *-* say '['.context~stackFrames[1]~traceLine']']
+[     7 *-* say '['.context~stackFrames[1]~traceLine']']
+[     7 *-* say '['.context~stackFrames[1]~traceLine']']
 ```
 
 r[class.stackframe.arguments]
@@ -345,9 +368,8 @@ r[class.stackframe.arguments]
 [ARG with the option `A`](r:bif.arg.option.array) answers for it: an omitted
 argument is a place with no item. The frame keeps the array, so asking again
 answers the same object, but it is a copy: changing it changes nothing the
-level sees and nothing that another frame of the level answers. A built-in
-method's frame holds the arguments of its message, and a frame of the main
-part of a program the arguments the program was started with.
+level sees and nothing that another frame of the level answers. A frame of the main
+part of a program holds the arguments the program was started with.
 
 ```rexx
 call r 'a1', , 'a3'
@@ -365,19 +387,18 @@ r:
 ::class o
 ::method m
   fs = .context~stackFrames
-  say fs[1]~arguments~items fs[2]~arguments~items fs[2]~arguments[1],
-      fs[2]~name fs[3]~arguments~items
+  say fs[1]~arguments~items fs[1]~arguments[1] fs[fs~items]~arguments~items
 ```
 
 ```output
 Array 3 2 1
 3 a1 3 0 a1
-2 3 m SEND 2
+2 7 0
 ```
 
 r[class.stackframe.target]
 `target` answers the object that received the message for a frame of type
-`METHOD`, a built-in method's frame included, and `.nil` for the frame of any
+`METHOD` and `.nil` for the frame of any
 other type.
 
 ```rexx
@@ -469,9 +490,8 @@ COMPILE 1
 r[class.stackframe.context]
 `context` answers the [`RexxContext`](rexxcontext.md) of the level: for the
 first frame of a context's own `stackFrames` it is that context itself, and
-asking one frame again answers the same object. A built-in method's frame and a
-frame of type `COMPILE` have no context and answer `.nil` ([the example of
-`invocation`](r:class.stackframe.invocation) shows the second). Once the level
+asking one frame again answers the same object. A frame of type `COMPILE` has no context and answers `.nil` ([the example of
+`invocation`](r:class.stackframe.invocation) shows it). Once the level
 has ended, its context answers no message, as [the active
 rule](r:class.rexxcontext.active) says, while the frame itself goes on
 answering.
@@ -490,7 +510,6 @@ inner: procedure
   say fs[2]~context~name fs[2]~context~args[2],
       fs[2]~context~variables['OUTVAR']
   say fs[3]~context~variables~hasIndex('OUTVAR')
-  .o~new~send('m')
   call keep
   c = kept~context
   say kept~type kept~name
@@ -502,16 +521,12 @@ dead: say 'context of a finished level' condition('o')~code
 keep: procedure expose kept
   kept = .context~stackFrames[1]
   return
-::class o
-::method m
-  say .context~stackFrames[2]~context~isNil
 ```
 
 ```output
 3 1 1 0
 OUTER q outer value
 0
-1
 INTERNALCALL KEEP
 context of a finished level 98.981
 ```
@@ -519,8 +534,7 @@ context of a finished level 98.981
 r[class.stackframe.invocation]
 `invocation` answers the number of the invocation of the level, which is the
 number that [the `invocation` of its context](r:class.rexxcontext.numbers)
-answers, and `.nil` for a built-in method's frame and for a frame of type
-`COMPILE`. Making the array of frames numbers the levels that have no number
+answers, and `.nil` for a frame of type `COMPILE`. Making the array of frames numbers the levels that have no number
 yet, the innermost first.
 
 ```rexx
@@ -533,16 +547,11 @@ inner: procedure
   fs = .context~stackFrames
   say fs[1]~invocation fs[2]~invocation fs[3]~invocation,
       (fs[1]~invocation == .context~invocation)
-  .o~new~send('m')
   return
-::class o
-::method m
-  say .context~stackFrames[2]~invocation~isNil
 ```
 
 ```output
 1 2 3 1
-1
 ```
 
 ```rexx

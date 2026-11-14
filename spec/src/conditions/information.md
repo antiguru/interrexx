@@ -127,9 +127,10 @@ clause that raised the condition starts, in that code, and a NOTREADY that the
 interpreter raised has none. `PROPAGATED` is `1` when the condition left the
 level that raised it and `0` otherwise, as
 [the propagated rule](r:cond.information.propagated) specifies. `STACKFRAMES`
-and `TRACEBACK` are lists with one item for each active level of code at that
-time, the main program's included, and the text of a traceback line is not
-specified. `ADDITIONAL` is present for a SYNTAX, NOMETHOD, NOSTRING or
+and `TRACEBACK` are lists with one item for each active level of Rexx code at
+that time, the main program's included. Whether a built-in method has a level
+is not specified ([the built-in rule](r:class.stackframe.builtin)), and the text
+of a traceback line is not specified. `ADDITIONAL` is present for a SYNTAX, NOMETHOD, NOSTRING or
 NOTREADY that the interpreter raised. A condition that a RAISE instruction
 raised has `POSITION`, and has `ADDITIONAL` exactly when the instruction gave
 one, whatever the name of the condition, as
@@ -267,7 +268,9 @@ traceback line of such a level, which is the depth of the clause that it was
 running, is not specified either. The number of such levels
 between the level that sent the message and the level that raised the
 condition is not specified either, so the number of items of `STACKFRAMES` and
-`TRACEBACK` is not specified where library levels are among them. The code
+`TRACEBACK` is not specified where library levels are among them, nor where a
+built-in method may have a level ([the built-in
+rule](r:class.stackframe.builtin)). The code
 and subcode of an error that a library method raises are specified, as the
 page of the class says; its text is not, as [the object
 rule](r:cond.information.object) says for every message.

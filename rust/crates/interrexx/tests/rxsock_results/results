@@ -1083,8 +1083,8 @@ rc 252
 [stdout]
 [stderr]
      9 *-* n = SockSend(c, copies('x', 50000000))
-Error 4 running {dir}/probe.rex line 9:  Program interrupted.
-Error 4.1:  Program interrupted with HALT condition.
+Error 4 running {dir}/probe.rex line 9:
+Error 4.1:
 
 # Two activities accepting on one listening socket: each connection reaches
 # one of them, and the other waits on (PR 4 review M3).

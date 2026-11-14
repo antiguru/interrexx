@@ -541,10 +541,9 @@ rc 216
 [stdout]
 1
 [stderr]
-       *-* Compiled routine "SYSSTAT".
      2 *-* x = SysStat('', 'x')
-Error 40 running {dir}/probe.rex line 2:  Incorrect call to routine.
-Error 40.1:  External routine "SYSSTAT" failed.
+Error 40 running {dir}/probe.rex line 2:
+Error 40.1:
 
 program
 x = SysUmask('x')
@@ -553,10 +552,9 @@ x = SysUmask('x')
 rc 168
 [stdout]
 [stderr]
-       *-* Compiled routine "SYSUMASK".
      1 *-* x = SysUmask('x')
-Error 88 running {dir}/probe.rex line 1:  Invalid argument.
-Error 88.907:  Argument 1 must be in the range -2147483648 to 2147483647; found "x".
+Error 88 running {dir}/probe.rex line 1:
+Error 88.907:
 
 program
 x = SysStat(.nil, 'x')
@@ -565,10 +563,9 @@ x = SysStat(.nil, 'x')
 rc 168
 [stdout]
 [stderr]
-       *-* Compiled routine "SYSSTAT".
      1 *-* x = SysStat(.nil, 'x')
-Error 88 running {dir}/probe.rex line 1:  Invalid argument.
-Error 88.909:  Argument 1 must have a string value.
+Error 88 running {dir}/probe.rex line 1:
+Error 88.909:
 
 program
 x = SysGetpid(1)
@@ -577,10 +574,9 @@ x = SysGetpid(1)
 rc 168
 [stdout]
 [stderr]
-       *-* Compiled routine "SYSGETPID".
      1 *-* x = SysGetpid(1)
-Error 88 running {dir}/probe.rex line 1:  Invalid argument.
-Error 88.922:  Too many arguments in invocation; 0 expected.
+Error 88 running {dir}/probe.rex line 1:
+Error 88.922:
 
 # SysSignal and SysKill on this process. SIGINT, a halting signal the
 # interpreter handles, raises HALT at the SysKill's clause, before the
@@ -752,10 +748,9 @@ rc 216
 40.1 External routine "SYSGETGRNAM" failed.
 40.1 External routine "SYSGETGRGID" failed.
 [stderr]
-       *-* Compiled routine "SYSGETGRNAM".
      7 *-* x = SysGetgrnam('nosuchgroupq', 'p')
-Error 40 running {dir}/probe.rex line 7:  Incorrect call to routine.
-Error 40.1:  External routine "SYSGETGRNAM" failed.
+Error 40 running {dir}/probe.rex line 7:
+Error 40.1:
 
 # With SIGCHLD ignored every child is reaped before the interpreter waits for
 # it: a command's return code is negative, with no FAILURE trace (PR 4 review

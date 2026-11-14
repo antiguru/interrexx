@@ -404,10 +404,14 @@ fn run_rust(path: &Path, args: &[&str], stdin: Option<&[u8]>) -> CppOutcome {
 /// subprocesses.
 fn diffs(rust: &CppOutcome, cpp: &CppOutcome) -> Vec<&'static str> {
     let mut out = Vec::new();
-    if rust.stdout != cpp.stdout {
+    // The message text of an error report is not specified, so each side's
+    // error lines are cut to their code and subcode first.
+    let cut = support::error_text::cut_error_texts;
+    if cut(&rust.stdout) != cut(&cpp.stdout) {
         out.push("stdout");
     }
-    if support::normalize_stderr(&rust.stderr) != support::normalize_stderr(&cpp.stderr) {
+    if support::normalize_stderr(&cut(&rust.stderr)) != support::normalize_stderr(&cut(&cpp.stderr))
+    {
         out.push("stderr");
     }
     if rust.termination != cpp.termination {
