@@ -11,6 +11,18 @@ documentation (`oodocs/`) at a fixed revision. Then `python3 rust/scripts/test_p
 anything the tests still need; `test_preflight.py -- COMMAND` runs the command only if nothing is
 missing.
 
+Three tables are generated from the pinned sources and checked in: `classes.tsv`, `errors.tsv`
+and `builtins.txt`, in the `data/` directories of `interrexx-classes` and `interrexx-inventory`.
+After bumping the `third_party/ooRexx` submodule, regenerate them and commit the result:
+
+```sh
+REXX_UPSTREAM=$PWD/third_party/ooRexx cargo run -p interrexx-upstream -- write
+```
+
+`cargo run -p interrexx-upstream -- check` regenerates in memory and exits non-zero, printing the
+differing rows, when a checked-in file differs. The `upstream interface` CI job runs it, so a
+bump without regeneration and a hand-edited row both fail.
+
 These trees are read-only and under their own licences: never modify them. **Clean room:** the API
 service, `rxqueue`, `rxsubcom`, `librexxapi` and the extension libraries are written from
 behaviour descriptions, public headers (`api/`), `oodocs`, ooTest and running ooRexx, never from
