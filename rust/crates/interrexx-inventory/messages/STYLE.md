@@ -6,11 +6,22 @@ serves a reader who looks at a report. The rules below keep the texts in one voi
 
 ## Sources
 
-* A text that states a fact mechanically may keep ooRexx's wording, and a text of the ANSI
-  standard (X3.274-1996, the `#ErrorText.` table) may be used as it stands.
-* A text whose wording is distinctive prose, such as an explanation, advice or an idiom, is
-  written fresh.
-* Where a text would break a rule below, it is rewritten to follow the rule.
+A text is written fresh unless one of these three holds, and then it may match ooRexx's
+wording:
+
+* It is the text of the ANSI standard (X3.274-1996, the `#ErrorText.` table) for the code.
+  Where ANSI and ooRexx both have a text, ANSI's is used. An ANSI text may name the keywords
+  ooRexx adds (such as `LOOP` next to `DO`), give a location in the form below, and drop a
+  part whose insert the row does not render.
+* It is one of the patterns under Form with only names filled in: `X must be Y; found "&k".`,
+  `X must not Y.`, `X expected after Y keyword.`, `Missing X following Y keyword.` or `&1.`.
+* It is the plain statement anyone given only the meaning of the code would write nearly word
+  for word: a subject, then `must`, `must not`, `is` or `expected`, then an object. It has no
+  adverb, no parenthetical remark, no second clause and no turn of phrase peculiar to ooRexx.
+  `INTERPRET data must not contain directive instructions.` is such a text.
+
+Any other text is written fresh, even where ooRexx's sentence reads well, and so is a text
+that would break a rule below. When in doubt, a text is rewritten.
 
 ## Form
 
@@ -20,7 +31,11 @@ serves a reader who looks at a report. The rules below keep the texts in one voi
   It gives no advice, does not address the reader and does not start with `Error`.
 * The text of a major number (subcode 0) is a short phrase naming the kind of fault.
 * A requirement reads `X must be Y; found "&k".`, with the value that broke it last.
+  A prohibition reads `X must not Y.`, and a repeated keyword reads
+  `X keyword must not appear more than once.`.
   A missing part reads `X expected after Y keyword.` or `Missing X following Y keyword.`.
+  A keyword an instruction or directive does not accept reads
+  `Invalid sub-keyword on X; found "&k".`.
 * The texts of the `.900` subcodes are `&1.`: the program supplies the whole message.
 * No word of the notice of interactive tracing ends in a colon (`r[env.debugging.notice]`).
 

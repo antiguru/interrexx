@@ -3,4 +3,4 @@
 38	2	Invalid parsing position detected at "&1".
 38	3	PARSE VALUE instruction requires WITH keyword.
 38	900	&1.
-38	901	Missing PARSE relative position.
+38	901	Missing relative position in parsing template.

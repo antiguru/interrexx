@@ -1,4 +1,4 @@
-20	0	Symbol expected.
+20	0	Name expected.
 20	900	&1.
 20	901	Symbol expected after DROP keyword.
 20	902	Symbol expected after EXPOSE keyword.
@@ -15,22 +15,22 @@
 20	914	Symbol expected after RAISE keyword.
 20	915	Symbol expected after USER keyword.
 20	916	Symbol expected after ::.
-20	917	Symbol expected after superclass colon (:).
+20	917	Symbol naming a superclass expected after ":".
 20	918	Symbol expected after LABEL keyword.
 20	919	Symbol expected as ::ANNOTATE attribute name; found "&1".
 20	920	Symbol expected after NAMESPACE keyword.
 20	921	Symbol expected as the class name of a namespace-qualified class name.
 20	922	Symbol expected as the routine name of a namespace-qualified CALL instruction.
 20	923	Symbol expected as the name of a namespace-qualified symbol.
-20	924	Symbol expected for the ::ANNOTATE type.
-20	925	Symbol expected after the FORM keyword.
-20	926	Symbol expected after the DELEGATE keyword.
+20	924	Symbol expected as ::ANNOTATE type.
+20	925	Symbol expected after FORM keyword.
+20	926	Symbol expected after DELEGATE keyword.
 20	927	Symbol expected after USE LOCAL.
 20	928	Symbol expected as an indirect variable name; found "&1".
 20	929	Symbol expected after &1 keyword.
-20	930	Simple variable or stem symbol expected after > or < prefix operator; found &1.
-20	931	Simple variable or stem symbol expected after > or < USE ARG reference operator; found &1.
+20	930	Simple variable or stem symbol expected after ">" or "<" prefix operator; found "&1".
+20	931	Simple variable or stem symbol expected after ">" or "<" reference operator of USE ARG; found "&1".
 20	932	Stem symbol expected after STEM keyword.
 20	933	Symbol expected after WITH keyword.
 20	934	Symbol expected after COUNTER keyword.
-20	935	Symbol expected after the NUMERIC subdirective keyword.
+20	935	Symbol expected after NUMERIC keyword of ::OPTIONS directive.

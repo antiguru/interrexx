@@ -1,43 +1,43 @@
-25	0	Invalid subkeyword found.
+25	0	Invalid sub-keyword found.
 25	1	CALL ON must be followed by one of the keywords ERROR, FAILURE, HALT, NOTREADY, USER, or ANY; found "&1".
 25	2	CALL OFF must be followed by one of the keywords ERROR, FAILURE, HALT, NOTREADY, USER, or ANY; found "&1".
 25	3	SIGNAL ON must be followed by one of the keywords ERROR, FAILURE, HALT, LOSTDIGITS, NOTREADY, NOMETHOD, NOSTRING, NOVALUE, SYNTAX, USER, or ANY; found "&1".
 25	4	SIGNAL OFF must be followed by one of the keywords ERROR, FAILURE, HALT, LOSTDIGITS, NOTREADY, NOMETHOD, NOSTRING, NOVALUE, SYNTAX, USER, or ANY; found "&1".
 25	11	NUMERIC FORM must be followed by one of the keywords SCIENTIFIC or ENGINEERING; found "&1".
-25	12	PARSE must be followed by optional keywords LOWER or UPPER, by an optional keyword CASELESS, and by one of the keywords ARG, LINEIN, PULL, SOURCE, VALUE, VAR, or VERSION; found "&1".
+25	12	PARSE must be followed by one of the keywords ARG, LINEIN, PULL, SOURCE, VALUE, VAR, or VERSION, after any of UPPER, LOWER, and CASELESS; found "&1".
 25	15	NUMERIC must be followed by one of the keywords DIGITS, FORM, or FUZZ; found "&1".
 25	17	PROCEDURE must be followed by the keyword EXPOSE or nothing; found "&1".
 25	900	&1.
-25	901	Unknown keyword on ::CLASS directive; found "&1".
-25	902	Unknown keyword on ::METHOD directive; found "&1".
-25	903	Unknown keyword on ::ROUTINE directive; found "&1".
-25	904	Unknown keyword on ::REQUIRES directive; found "&1".
-25	905	USE must be followed by the keyword ARG, LOCAL or STRICT; found "&1".
+25	901	Invalid sub-keyword on ::CLASS directive; found "&1".
+25	902	Invalid sub-keyword on ::METHOD directive; found "&1".
+25	903	Invalid sub-keyword on ::ROUTINE directive; found "&1".
+25	904	Invalid sub-keyword on ::REQUIRES directive; found "&1".
+25	905	USE must be followed by one of the keywords ARG, LOCAL, or STRICT; found "&1".
 25	906	RAISE must be followed by one of the keywords ERROR, FAILURE, HALT, LOSTDIGITS, NOMETHOD, NOSTRING, NOTREADY, NOVALUE, PROPAGATE, SYNTAX, or USER; found "&1".
-25	907	Unknown keyword on RAISE instruction; found "&1".
-25	908	Duplicate DESCRIPTION keyword found.
-25	909	Duplicate ADDITIONAL or ARRAY keyword found.
-25	911	Duplicate RETURN or EXIT keyword found.
+25	907	Invalid sub-keyword on RAISE instruction; found "&1".
+25	908	DESCRIPTION keyword must not appear more than once.
+25	909	RAISE instruction must not have more than one ADDITIONAL or ARRAY keyword.
+25	911	RAISE instruction must not have more than one RETURN or EXIT keyword.
 25	912	GUARD ON or GUARD OFF must be followed by the keyword WHEN; found "&1".
-25	913	GUARD must be followed by the keyword ON or OFF; found "&1".
+25	913	GUARD must be followed by one of the keywords ON or OFF; found "&1".
 25	914	CALL ON condition must be followed by the keyword NAME; found "&1".
 25	915	SIGNAL ON condition must be followed by the keyword NAME; found "&1".
-25	916	Unknown keyword on FORWARD instruction; found "&1".
-25	917	Duplicate TO keyword found.
-25	918	Duplicate ARGUMENTS or ARRAY keyword found.
-25	919	Duplicate RETURN or CONTINUE keyword found.
-25	921	Duplicate CLASS keyword found.
-25	922	Duplicate MESSAGE keyword found.
-25	923	SELECT must be followed by the keyword LABEL or CASE; found "&1".
-25	924	Unknown keyword on ::OPTIONS directive; found "&1".
-25	925	Unknown keyword on ::ATTRIBUTE directive; found "&1".
-25	926	Unknown keyword on ::RESOURCE directive; found "&1".
-25	927	Unknown keyword following "&1"; found "&2".
-25	928	Unknown keyword on ::ANNOTATE directive; found "&1".
+25	916	Invalid sub-keyword on FORWARD instruction; found "&1".
+25	917	TO keyword must not appear more than once.
+25	918	FORWARD instruction must not have more than one ARGUMENTS or ARRAY keyword.
+25	919	FORWARD instruction must not have more than one RETURN or CONTINUE keyword.
+25	921	CLASS keyword must not appear more than once.
+25	922	MESSAGE keyword must not appear more than once.
+25	923	SELECT must be followed by one of the keywords LABEL or CASE; found "&1".
+25	924	Invalid sub-keyword on ::OPTIONS directive; found "&1".
+25	925	Invalid sub-keyword on ::ATTRIBUTE directive; found "&1".
+25	926	Invalid sub-keyword on ::RESOURCE directive; found "&1".
+25	927	Invalid sub-keyword following "&1"; found "&2".
+25	928	Invalid sub-keyword on ::ANNOTATE directive; found "&1".
 25	929	USE STRICT must be followed by the keyword ARG; found "&1".
-25	930	Duplicate INPUT keyword found.
-25	931	Duplicate OUTPUT keyword found.
-25	932	Duplicate ERROR keyword found.
+25	930	INPUT keyword must not appear more than once.
+25	931	OUTPUT keyword must not appear more than once.
+25	932	ERROR keyword must not appear more than once.
 25	933	ADDRESS WITH I/O type must be one of the keywords NORMAL, STEM, STREAM, or USING; found "&1".
 25	934	WITH must be followed by one of the keywords INPUT, OUTPUT, or ERROR; found "&1".
-25	935	Subdirective NUMERIC must be followed by one of the keywords INHERIT or NOINHERIT; found "&1".
+25	935	NUMERIC keyword of ::OPTIONS directive must be followed by one of the keywords INHERIT or NOINHERIT; found "&1".

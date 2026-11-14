@@ -1,7 +1,7 @@
 3	0	Failure during initialization.
-3	1	Failure during initialization: File "&1" is unreadable.
+3	1	Program file "&1" cannot be read.
 3	900	&1.
-3	901	Failure during initialization: Program "&1" was not found.
-3	902	Error writing output file "&1".
-3	903	Program "&1" cannot be run by this version of the REXX interpreter.
-3	905	Encoded compiled program "&1" cannot be decoded.
+3	901	Program "&1" not found.
+3	902	Output file "&1" cannot be written.
+3	903	Program "&1" is in a format this interpreter cannot run.
+3	905	Compiled program "&1" has an invalid encoding.
