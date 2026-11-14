@@ -88,3 +88,43 @@ fn a_message_with_no_placeholder_takes_no_inserts() {
     assert_eq!(highest_placeholder(errors::E8_2.code()), 0);
     assert_eq!(errors::E8_2.code(), (8, 2));
 }
+
+/// The checked-in table the constants' arities are generated from.
+fn table() -> interrexx_upstream::errors::Table {
+    let text = std::fs::read_to_string("data/errors.tsv").expect("data/errors.tsv is checked in");
+    interrexx_upstream::errors::Table::from_tsv(&text)
+}
+
+#[test]
+fn every_constants_arity_is_its_tables_insert_count() {
+    let table = table();
+    assert_eq!(errors::ARITIES.len(), table.rows.len());
+    for (row, &(code, n)) in table.rows.iter().zip(errors::ARITIES) {
+        assert_eq!(code, (row.major, row.sub));
+        assert_eq!(n, row.inserts, "{code:?}");
+    }
+}
+
+#[test]
+fn a_rendered_position_never_exceeds_the_insert_count() {
+    for row in &table().rows {
+        let code = (row.major, row.sub);
+        assert!(
+            row.rendered.iter().all(|&k| (1..=row.inserts).contains(&k)),
+            "{code:?}"
+        );
+    }
+}
+
+#[test]
+fn every_overridden_row_carries_its_override() {
+    let table = table();
+    for &(code, n) in errors::ARITY_OVERRIDES {
+        let row = table
+            .rows
+            .iter()
+            .find(|r| (r.major, r.sub) == code)
+            .expect("an override names a row");
+        assert_eq!(row.inserts, n, "{code:?}");
+    }
+}

@@ -428,7 +428,7 @@ version = "0.1.0"
 name = "interrexx-inventory"
 version = "0.1.0"
 dependencies = [
- "quick-xml",
+ "interrexx-upstream",
 ]
 
 [[package]]
@@ -481,6 +481,9 @@ dependencies = [
 [[package]]
 name = "interrexx-upstream"
 version = "0.1.0"
+dependencies = [
+ "quick-xml",
+]
 
 [[package]]
 name = "itertools"

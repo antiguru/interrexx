@@ -8,5 +8,9 @@ repository.workspace = true
 description = "Regenerates and checks the interface tables derived from the pinned ooRexx sources"
 publish = false
 
+[dependencies]
+# Reads the message catalogue.
+quick-xml = "0.42"
+
 [lints]
 workspace = true

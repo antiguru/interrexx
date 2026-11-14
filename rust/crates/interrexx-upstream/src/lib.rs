@@ -2,11 +2,15 @@
 //! ooRexx source tree, and compares a checked-in table with a fresh
 //! derivation.
 //!
-//! The build never reads the source tree: it reads the tables. Only the
-//! `interrexx-upstream` binary (`write` and `check`) reads the tree, through
-//! `$REXX_UPSTREAM`.
+//! The build never reads the source tree for these tables: it reads the
+//! tables. Only the `interrexx-upstream` binary (`write` and `check`) reads
+//! the tree, through `$REXX_UPSTREAM`. The message texts are the exception
+//! until they are replaced: `interrexx-inventory`'s build script still
+//! reads them through the same variable.
 
+pub mod builtins;
 pub mod classes;
+pub mod errors;
 
 /// The first line of every generated table. `sha` is the pinned source
 /// tree's revision, so a revision bump without regeneration fails `check`.
