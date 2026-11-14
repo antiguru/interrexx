@@ -16,6 +16,10 @@ page records why they are the way they are.
 * **A new Deviation needs the owner's ruling before it is written** (2026-10-19). That ooRexx is
   wrong decides what interrexx does; it does not license the difference. Implement the derived
   behaviour, then ask, citing the ruling in the entry.
+* **A rule pins an `ADDITIONAL` item only where the program needs it** (2026-11-14, #675). Like a
+  number parse error that carries the string that failed to parse, an item is stated only where it
+  is needed to understand the error and the program cannot get it otherwise; the rest is
+  unspecified under `r[conv.error.additional]`.
 * **Errors are checked in a precise order** (2026-11-12, #395). Operands are checked left before
   right and a builtin checks its argument count before its arguments, from the left (ANSI 7.4,
   9.2.1), with ooRexx's order where ANSI is silent. Which fault a program sees is part of the
