@@ -374,7 +374,7 @@ c_struct! {
         pub rxfnc_que: *const c_char,
         pub rxfnc_quel: c_ushort,
         pub rxfnc_argc: c_ushort,
-        pub rxfnc_argv: *const CONSTRXSTRING,
+        pub rxfnc_argv: *mut CONSTRXSTRING,
         pub rxfnc_retc: RXSTRING,
     }
 }

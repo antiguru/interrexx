@@ -51,17 +51,6 @@ EXCEPTIONS = [
         "macro INTERREXX_",
         "include guards and helper macros of include/, all under one prefix",
     ),
-    (
-        "upstream",
-        "field _RXFNCCAL_PARM::rxfnc_argv",
-        "KNOWN DIFFERENCE: upstream declares the argument list non-const (PCONSTRXSTRING), "
-        "include/ and the Rust layout declare it const. The entry goes when the field is fixed.",
-    ),
-    (
-        "ours",
-        "field _RXFNCCAL_PARM::rxfnc_argv",
-        "the other side of the same difference",
-    ),
 ]
 
 # The translation unit: every public header, as a program would include them.
