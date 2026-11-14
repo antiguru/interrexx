@@ -2,7 +2,7 @@
 40	1	External routine "&1" failed.
 40	3	Not enough arguments in invocation of &1; minimum expected is &2.
 40	4	Too many arguments in invocation of &1; maximum expected is &2.
-40	5	Missing argument in invocation of &1; argument &2 is required.
+40	5	Missing argument &2 in invocation of &1.
 40	11	&1 argument &2 must be a number; found "&3".
 40	12	&1 argument &2 must be a whole number; found "&3".
 40	13	&1 argument &2 must be zero or positive; found "&3".
@@ -16,7 +16,7 @@
 40	26	&1 argument &2 must be a valid symbol; found "&3".
 40	27	&1 argument 1 must be a valid stream name; found "&2".
 40	28	&1 argument &2 must be a character class name or a single character; found "&3".
-40	29	&1 conversion to format "&2" is not allowed.
+40	29	&1 must not be used for conversion to format "&2".
 40	32	RANDOM the difference between argument 1 ("&1") and argument 2 ("&2") must not exceed 999,999,999.
 40	33	RANDOM argument 1 ("&1") must be less than or equal to argument 2 ("&2").
 40	34	SOURCELINE argument 1 ("&1") must be less than or equal to the number of lines in the program (&2).
