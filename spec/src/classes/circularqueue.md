@@ -732,8 +732,7 @@ The `start` is read as [the Queue index rule](r:class.queue.indexes) says;
 raising `SYNTAX 97.1`. No `start` raises `SYNTAX 93.901`, an omitted one
 `SYNTAX 93.903`, and a third argument `SYNTAX 93.902`. The arguments are counted
 first, an omitted `start` among them, so that it is refused before `count` is
-sent anything. `count` is then checked with
-the messages and conditions of
+sent anything. `count` is then checked with the messages and conditions of
 [the new rule](r:class.circularqueue.new.sends), after which its string value
 is read once more; that second value is the count, and one below 0 or not a
 whole number raises `SYNTAX 93.906`, so a count whose string value is `-1` is
@@ -758,6 +757,7 @@ say q~items q~size q~allItems~makeString('L', ',')
 call try 'q~section'
 call try 'q~section(, 1)'
 call try 'q~section(, "x")'
+call try 'q~section(, .loud~new(0, "1"))'
 call try 'q~section(0)'
 call try 'q~section(.nil)'
 call try 'q~section("x")'
@@ -810,6 +810,7 @@ CircularQueue 5 5 [b|c|The NIL object|The NIL object|a]
 q~section => 93.901
 q~section(, 1) => 93.903
 q~section(, "x") => 93.903
+q~section(, .loud~new(0, "1")) => 93.903
 q~section(0) => 93.907
 q~section(.nil) => 93.907
 q~section("x") => 93.907
