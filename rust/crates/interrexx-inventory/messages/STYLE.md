@@ -10,9 +10,10 @@ A text is written fresh unless one of these three holds, and then it may match o
 wording:
 
 * It is the text of the ANSI standard (X3.274-1996, the `#ErrorText.` table) for the code.
-  Where ANSI and ooRexx both have a text, ANSI's is used. An ANSI text may name the keywords
-  ooRexx adds (such as `LOOP` next to `DO`), give a location in the form below, and drop a
-  part whose insert the row does not render.
+  Where ANSI and ooRexx both have a text, ANSI's is used. An ANSI text may name what ooRexx
+  adds (such as `LOOP` next to `DO`, or a message next to a function), give a location in the
+  form below, and drop a part whose insert the row does not render. Where ooRexx gives the
+  code a different meaning than ANSI does, ANSI's text does not apply.
 * It is one of the patterns under Form with only names filled in: `X must be Y; found "&k".`,
   `X must not Y.`, `X expected after Y keyword.`, `Missing X following Y keyword.` or `&1.`.
 * It is the plain statement anyone given only the meaning of the code would write nearly word
