@@ -1,0 +1,9 @@
+41	0	Bad arithmetic conversion.
+41	1	Non-numeric value ("&1") used in arithmetic operation.
+41	3	Non-numeric value ("&1") used with prefix operator.
+41	4	Value of TO expression in DO or LOOP instruction must be numeric; found "&1".
+41	5	Value of BY expression in DO or LOOP instruction must be numeric; found "&1".
+41	6	Value of control variable expression of DO or LOOP instruction must be numeric; found "&1".
+41	7	Exponent exceeds &1 digits; found "&2".
+41	900	&1.
+41	901	Value of SYNTAX expression of RAISE instruction must be numeric; found "&1".

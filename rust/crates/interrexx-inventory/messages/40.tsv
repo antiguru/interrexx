@@ -1,0 +1,45 @@
+40	0	Incorrect call to routine.
+40	1	External routine "&1" failed.
+40	3	Not enough arguments in invocation of &1; minimum expected is &2.
+40	4	Too many arguments in invocation of &1; maximum expected is &2.
+40	5	Missing argument in invocation of &1; argument &2 is required.
+40	11	&1 argument &2 must be a number; found "&3".
+40	12	&1 argument &2 must be a whole number; found "&3".
+40	13	&1 argument &2 must be zero or positive; found "&3".
+40	14	&1 argument &2 must be positive; found "&3".
+40	19	&1 argument 2, "&2", is not in the format described by argument 3, "&3".
+40	21	&1 argument &2 must not be null.
+40	22	&1 argument &2 must be a single character or null; found "&3".
+40	23	&1 argument &2 must be a single character; found "&3".
+40	24	&1 argument &2 must be a binary string; found "&3".
+40	25	&1 argument &2 must be a hexadecimal string; found "&3".
+40	26	&1 argument &2 must be a valid symbol; found "&3".
+40	27	&1 argument 1 must be a valid stream name; found "&2".
+40	28	&1 argument &2 must be a character class name or a single character; found "&3".
+40	29	&1 conversion to format "&2" is not allowed.
+40	32	RANDOM the difference between argument 1 ("&1") and argument 2 ("&2") must not exceed 999,999,999.
+40	33	RANDOM argument 1 ("&1") must be less than or equal to argument 2 ("&2").
+40	34	SOURCELINE argument 1 ("&1") must be less than or equal to the number of lines in the program (&2).
+40	35	X2D argument 1 cannot be expressed as a whole number; found "&1".
+40	43	&1 argument &2 must be a single non-alphanumeric character or the null string; found "&3".
+40	44	&1 argument &2 must be a format that allows the separator in argument &4; found "&3".
+40	900	&1.
+40	901	Result returned by "&1" is longer than &2 characters; found "&3".
+40	902	&1 argument &2 must not exceed the whole number limit.
+40	903	&1 argument &2 must be in the range 0-99; found "&3".
+40	904	&1 argument &2 must be one of &3; found "&4".
+40	905	TRACE setting letter must be one of "ACEFILNOR"; found "&1".
+40	912	&1 argument &2 must be a single-dimensional array; found "&3".
+40	913	&1 argument &2 must have a string value; found "&3".
+40	914	VALUE argument 3 must be the name of a pool; found "&1".
+40	915	&1 must not be used on the QUEUE: stream.
+40	916	Write-only property must not be read.
+40	917	Read-only property or type library element must not be written.
+40	918	Native function signature is invalid.
+40	919	Argument &1 must have a stem object or stem name value; found "&2".
+40	920	&1 argument &2 must be one of &3; found "&4".
+40	921	Argument &1 ("&2") must be greater than argument &3 ("&4").
+40	922	Element 0 of stem argument must hold a valid item count.
+40	923	Position is past the end of the stem array of size &1.
+40	924	Stem element at position "&1" is not set.
+40	925	Argument &1 must be an array object, a stem object, or a stem name value; found "&2".

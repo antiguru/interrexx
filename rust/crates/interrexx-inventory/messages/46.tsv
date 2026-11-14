@@ -1,0 +1,5 @@
+46	0	Invalid variable reference.
+46	1	Extra token ("&1") found in variable reference; ")" expected.
+46	900	&1.
+46	901	Missing ")" in variable reference.
+46	902	"," or end of instruction expected after USE ARG variable reference; found "&1".

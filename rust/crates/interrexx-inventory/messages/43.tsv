@@ -1,0 +1,5 @@
+43	0	Routine not found.
+43	1	Could not find routine "&1".
+43	900	&1.
+43	901	::REQUIRES file "&1" not found.
+43	902	Routine "&1" not found in namespace "&2".
