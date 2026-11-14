@@ -127,6 +127,12 @@ RexxRoutine1(logical_t, FxLogical, logical_t, b)
     return b;
 }
 
+// Serves r[native.calls.isstring].
+RexxRoutine1(logical_t, FxIsString, RexxObjectPtr, value)
+{
+    return context->IsString(value);
+}
+
 // Serves r[native.calls.conversion].
 RexxRoutine1(size_t, FxItems, RexxArrayObject, a)
 {
@@ -475,6 +481,7 @@ static RexxRoutineEntry fixtureRoutines[] =
     REXX_TYPED_ROUTINE(FxDouble, FxDouble),
     REXX_TYPED_ROUTINE(FxLogical, FxLogical),
     REXX_TYPED_ROUTINE(FxItems, FxItems),
+    REXX_TYPED_ROUTINE(FxIsString, FxIsString),
     REXX_TYPED_ROUTINE(FxOptional, FxOptional),
     REXX_TYPED_ROUTINE(FxArgs, FxArgs),
     REXX_TYPED_ROUTINE(FxName, FxName),

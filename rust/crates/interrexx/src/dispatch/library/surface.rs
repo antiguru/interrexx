@@ -173,18 +173,9 @@ impl Surface for Interp {
     }
 
     fn is_string(&mut self, object: ObjRef) -> bool {
-        // A number is a `RexxInteger` or a `NumberString`, which `isString`
-        // does not count: `IsString(1+1)` is `0` where `IsString('abc')` is
-        // `1`.
-        let text = match object.decode() {
-            Decoded::Text(_) => true,
-            Decoded::Heap { .. } => matches!(
-                self.heap.get(object).map(|held| &held.body),
-                Some(Body::Text { .. })
-            ),
-            _ => false,
-        };
-        text && self.is_of_class(object, "String")
+        // r[native.calls.isstring]: an instance of String itself, whatever
+        // holds it, a number an operator made included (Deviation 173).
+        self.is_of_class(object, "String")
     }
 
     fn new_raw_string(&mut self, length: usize) -> ObjRef {

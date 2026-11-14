@@ -1,6 +1,7 @@
 ---
 element: "Native routines and methods"
 kind: concept
+deviations: [173]
 ---
 
 # Native routines and methods
@@ -125,6 +126,44 @@ say fxname() FxName() 'fXnAmE'()
 
 ```output
 FXNAME FXNAME fXnAmE
+```
+
+r[native.calls.isstring]
+`IsString` answers whether an object is an instance of String: true for any
+such instance, a number that an operator made included, and false for any
+other object, an instance of a subclass of String among them. A true answer
+means the string accessors, such as `StringLength` and `StringData`, can read
+the object as it is.
+
+```rexx
+say fxIsString('abc') fxIsString(1.1) fxIsString(.string~new('x')),
+  fxIsString(.sub~new('y')) fxIsString(.array~new) fxIsString(.nil)
+::class sub subclass string
+::requires 'specfixture' LIBRARY
+```
+
+```output
+1 1 1 0 0 0
+```
+
+r[native.calls.deviation.173]
+`IsString` answers true for every instance of String, so equal strings get
+the same answer however they were made, and `DecodeConditionInfo` reports a
+condition's description whenever it is an instance of String ([Deviation
+173](../deviations.md)). ooRexx answers false for a number that an operator
+made and for some numbers written as literals, whose internal form is a number
+object rather than a string: `12`, `'12'` and `10000000000` among them, but not
+`3.5` or `'0'`. Its `DecodeConditionInfo` reports no description where the
+description is such a number, as for `RAISE USER BOOM DESCRIPTION (2 + 3)`.
+
+```rexx
+say fxIsString(80 + 1) fxIsString(1 + .1) fxIsString(1 / 3) fxIsString(-1.1),
+  fxIsString(12) fxIsString('12') fxIsString(3.5) (1 / 3)~class~id
+::requires 'specfixture' LIBRARY
+```
+
+```output
+1 1 1 1 1 1 1 String
 ```
 
 ## Results

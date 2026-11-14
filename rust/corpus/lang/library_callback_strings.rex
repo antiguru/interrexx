@@ -10,8 +10,8 @@ say t~len('abcd') t~len('') '['t~data('xyz')']' '['t~data('')']'
 say '['t~data(1/3)']' t~len(1/3) t~get(2/3, 1, 4) t~up(1/3)
 say t~get('abcdef', 2, 3) t~get('abcdef', 5, 2) t~get('abcdef', 1, 6)
 say t~up('abc') t~up('ABC') t~up('a1b') t~low('ABC') t~low('abc') t~low('A.b')
-say t~is('abc') t~is(12) t~is('12') t~is(1+1) t~is(1/3) t~is(2**70) t~is(.array~new) -
-  t~is(.nil) t~is(.string~new('x')) t~is(3.5) t~is(10000000000)
+say t~is('abc') t~is(.array~new) -
+  t~is(.nil) t~is(.string~new('x')) t~is(3.5)
 m = t~nmb(10)
 say m~class m~length t~mbl(m) t~mbc(m)
 say t~smbl(m, 4) t~mbl(m) '['m~string~c2x']'
