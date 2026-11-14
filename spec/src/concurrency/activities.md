@@ -836,10 +836,11 @@ such a program.
 The refusal applies only while no native code from outside the interpreter
 can run, since a thread such code starts may [attach](r:native.threads.attach)
 later and end the wait. That code is an external library, loaded through
-`::REQUIRES ... LIBRARY`, an `EXTERNAL` directive, `RxFuncAdd` or
-`~loadLibrary`, or behind a registered subcommand environment or a registered
-exit, and it is the host of an embedding, which runs the program through
-`RexxStart` or `RexxCreateInterpreter`, together with any library it
+`::REQUIRES ... LIBRARY`, an `EXTERNAL` directive, `RxFuncAdd`,
+`~loadLibrary` or a call by name of a function another process registered
+with the API service, or behind a registered subcommand environment or a
+registered exit, and it is the host of an embedding, which runs the program
+through `RexxStart` or `RexxCreateInterpreter`, together with any library it
 registers. Once such code is present, every such wait goes on, as in ooRexx,
 for the rest of the run, also after a library has been dropped. The libraries
 that come with interrexx, such as RexxUtil, do not count, and the `rexx`
@@ -848,10 +849,13 @@ own: a host's instance does not turn the refusal off for another interpreter
 in the same process.
 A wait for the result or the completion of a message whose method the waiting
 activity itself runs, and has not yet replied from, is refused whatever was
-loaded, since the message completes only when that method returns. The
-refusal claims only that the wait can never be satisfied, and it comes at the
-wait, before anything else, such as a halt, could end it. After a `reply` the
-result is settled, and the method's own `result` and `wait` answer at once.
+loaded, since the message completes only when that method returns. The other
+activities run on while it waits, and the refusal comes once nothing else can
+run, during the main program or at its end, so their output and their errors
+come first. It then ends the run even where native code could still end
+another activity's wait. The refusal claims only that the wait can never be
+satisfied. After a `reply` the result is settled, and the method's own
+`result` and `wait` answer at once.
 A wait that would close a ring of waits between activities raises `SYNTAX
 98.905` whatever was loaded ([the deadlock rule](r:conc.locks.deadlock)).
 In the third example the program loads [the fixture library
