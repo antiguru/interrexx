@@ -1,11 +1,15 @@
 //! The compiled program image `rexxc` writes: a `#!` line and a metadata header
-//! layout, with this build's own magic number and format version, then the name
-//! of the routine the image holds, as a 4-byte little-endian length and its
-//! bytes, then the checked source. No compatibility is promised between
+//! layout, with this build's own magic number and format version, then the
+//! SHA-256 digest of everything after it, then the name of the routine the
+//! image holds, as a 4-byte little-endian length and its bytes, then the
+//! checked source. An image whose bytes after the digest do not give it is
+//! refused (r[env.invocation.rexxc.damaged]), so an image changed after `rexxc`
+//! wrote it never runs as if `rexxc` had. No compatibility is promised between
 //! versions of this crate.
 
 use interrexx_inventory::errors::{E3_903, E3_905};
 use interrexx_parse::{ProgramSource, SourceKind};
+use sha2::{Digest, Sha256};
 
 use crate::builtin::convert::{base64_digit, encode_base64_bytes};
 use crate::error::Raised;
@@ -36,7 +40,10 @@ const LENGTH_AT: usize = 40;
 const MAGIC: u16 = 0x7273;
 
 /// This crate's image format.
-const FORMAT_VERSION: u16 = 2;
+const FORMAT_VERSION: u16 = 3;
+
+/// The width of the digest after the header.
+const DIGEST_BYTES: usize = 32;
 
 /// The width of the routine name's length.
 const NAME_LENGTH_BYTES: usize = 4;
@@ -77,15 +84,17 @@ fn header_prefix() -> [u8; LENGTH_AT] {
 /// image in lines of [`CHUNK`] digits. # Panics If `name` is longer than a
 /// `u32` counts.
 pub fn write_image(source: &[u8], name: &[u8], encode: bool) -> Vec<u8> {
-    let mut image =
-        Vec::with_capacity(HEADER_BYTES + NAME_LENGTH_BYTES + name.len() + source.len());
+    let mut body = Vec::with_capacity(NAME_LENGTH_BYTES + name.len() + source.len());
+    let name_length = u32::try_from(name.len()).expect("a program name fits a u32");
+    body.extend_from_slice(&name_length.to_le_bytes());
+    body.extend_from_slice(name);
+    body.extend_from_slice(source);
+    let mut image = Vec::with_capacity(HEADER_BYTES + DIGEST_BYTES + body.len());
     image.extend_from_slice(&header_prefix());
     let length = u64::try_from(source.len()).expect("a source length fits a u64");
     image.extend_from_slice(&length.to_le_bytes());
-    let name_length = u32::try_from(name.len()).expect("a program name fits a u32");
-    image.extend_from_slice(&name_length.to_le_bytes());
-    image.extend_from_slice(name);
-    image.extend_from_slice(source);
+    image.extend_from_slice(&Sha256::digest(&body));
+    image.extend_from_slice(&body);
     let mut out = SHEBANG.to_vec();
     if encode {
         out.extend_from_slice(ENCODED_TAG);
@@ -176,6 +185,12 @@ fn image_source(image: &[u8]) -> Restore {
     let (prefix, length) = header.split_at(LENGTH_AT);
     let length = u64::from_le_bytes(length.try_into().expect("an 8-byte length field"));
     if prefix != header_prefix() {
+        return Restore::Rejected;
+    }
+    let Some((digest, rest)) = rest.split_at_checked(DIGEST_BYTES) else {
+        return Restore::Rejected;
+    };
+    if Sha256::digest(rest).as_slice() != digest {
         return Restore::Rejected;
     }
     let Some((name_length, rest)) = rest.split_at_checked(NAME_LENGTH_BYTES) else {
@@ -269,8 +284,13 @@ mod tests {
     #[test]
     fn the_binary_form_is_the_oracle_layout() {
         let image = write_image(SOURCE, NAME, false);
-        let name_at = SHEBANG.len() + HEADER_BYTES + NAME_LENGTH_BYTES;
+        let digest_at = SHEBANG.len() + HEADER_BYTES;
+        let name_at = digest_at + DIGEST_BYTES + NAME_LENGTH_BYTES;
         assert_eq!(image.len(), name_at + NAME.len() + SOURCE.len());
+        assert_eq!(
+            &image[digest_at..digest_at + DIGEST_BYTES],
+            Sha256::digest(&image[digest_at + DIGEST_BYTES..]).as_slice()
+        );
         assert_eq!(&image[20..36], b"/**/@REXX\0\0\0\0\0\0\0");
         assert_ne!(u16::from_le_bytes([image[36], image[37]]), 11111);
         assert_eq!(&image[name_at - NAME_LENGTH_BYTES..name_at], &[8, 0, 0, 0]);
@@ -304,7 +324,7 @@ mod tests {
         past[SHEBANG.len() + LENGTH_AT] += 1;
         let mut short = image.clone();
         short[SHEBANG.len() + LENGTH_AT] -= 1;
-        let name_length = SHEBANG.len() + HEADER_BYTES;
+        let name_length = SHEBANG.len() + HEADER_BYTES + DIGEST_BYTES;
         let mut long_name = image.clone();
         long_name[name_length] += 1;
         let mut short_name = image.clone();
@@ -320,7 +340,8 @@ mod tests {
             SHEBANG.len() + 10,
             SHEBANG.len() + 30,
             SHEBANG.len() + HEADER_BYTES + 2,
-            SHEBANG.len() + HEADER_BYTES + NAME_LENGTH_BYTES + 3,
+            SHEBANG.len() + HEADER_BYTES + DIGEST_BYTES + 2,
+            SHEBANG.len() + HEADER_BYTES + DIGEST_BYTES + NAME_LENGTH_BYTES + 3,
             image.len() - 1,
         ] {
             assert_eq!(restore(&image[..cut]), Restore::Rejected, "cut at {cut}");
@@ -330,6 +351,34 @@ mod tests {
         foreign.extend_from_slice(b"QUJD\n");
         assert_eq!(restore(&foreign), Restore::Rejected);
         assert!(matches!(restore(&encoded), Restore::Compiled { .. }));
+    }
+
+    /// r[env.invocation.rexxc.damaged]: any one byte changed after the header,
+    /// in the digest, the name or the source, is refused, in either form.
+    #[test]
+    fn a_changed_byte_after_the_header_is_rejected() {
+        let image = write_image(SOURCE, NAME, false);
+        for at in SHEBANG.len() + HEADER_BYTES..image.len() {
+            for flip in [0x01, 0x80] {
+                let mut changed = image.clone();
+                changed[at] ^= flip;
+                assert_eq!(
+                    restore(&changed),
+                    Restore::Rejected,
+                    "byte {at} ^ {flip:#x}"
+                );
+            }
+        }
+        let mut decoded = image[SHEBANG.len()..].to_vec();
+        let last = decoded.len() - 1;
+        decoded[last] ^= 0x01;
+        let mut encoded = SHEBANG.to_vec();
+        encoded.extend_from_slice(ENCODED_TAG);
+        for line in encode_base64_bytes(&decoded).chunks(CHUNK) {
+            encoded.extend_from_slice(line);
+            encoded.push(b'\n');
+        }
+        assert_eq!(restore(&encoded), Restore::Rejected);
     }
 
     #[test]

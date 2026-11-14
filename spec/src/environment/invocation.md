@@ -597,9 +597,9 @@ An image that ends too early, one that has bytes after its end, and one that
 has a changed byte in its header, the second byte of 0 of the binary form
 included, are refused with the error `3.903` and the status 253, before any of
 its code runs. So is an image with any other byte changed: `rexxc` writes a
-SHA-256 digest of the image into it, and `rexx` refuses an image whose bytes
-do not give that digest. interrexx does not check the digest yet (issue #235),
-and no test covers that part. An encoded image whose base64 text does not decode whole,
+SHA-256 digest of everything after the image's header into it, and `rexx`
+refuses an image whose bytes do not give that digest. An encoded image whose
+base64 text does not decode whole,
 because characters follow the `=` that closes it, an `=` stands inside it, or
 it ends with a group of fewer than four characters, is refused with the error
 `3.905` and the status 253. ooRexx runs an image that has bytes after its end,
