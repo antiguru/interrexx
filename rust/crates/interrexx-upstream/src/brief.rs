@@ -214,26 +214,52 @@ fn has_word(line: &str, needle: &str) -> bool {
     })
 }
 
-/// Whether `line` raises `major.sub`: through its `E<major>_<sub>`
-/// constant, or by a call such as `syntax(<major>, <sub>, ...)` whose name
-/// says it raises or reports an error.
-fn raises(line: &str, major: u16, sub: u16) -> bool {
-    if line.trim_start().starts_with("use ") {
-        return false;
-    }
-    if has_word(line, &format!("E{major}_{sub}")) {
-        return true;
-    }
-    let args = format!("{major}, {sub}");
-    line.match_indices(&args).any(|(at, _)| {
-        let after = line[at + args.len()..].chars().next();
-        if after.is_some_and(|c| c.is_ascii_digit()) {
-            return false;
+/// The raise sites of `major.sub` in the source `text`, as (first line,
+/// last line), both 0-based, ordered by first line. A site is the constant
+/// `E<major>_<sub>` (not on a `use` line), or a call such as
+/// `syntax(<major>, <sub>, ...)` whose name says it raises or reports an
+/// error. The call's arguments are matched as tokens, so blanks and line
+/// breaks between them do not matter.
+fn sites(text: &str, major: u16, sub: u16) -> Vec<(usize, usize)> {
+    let mut found = std::collections::BTreeMap::new();
+    let constant = format!("E{major}_{sub}");
+    for (i, line) in text.lines().enumerate() {
+        if !line.trim_start().starts_with("use ") && has_word(line, &constant) {
+            found.insert(i, i);
         }
-        let Some(open) = line[..at].trim_end().strip_suffix('(') else {
-            return false;
-        };
-        let name: String = open
+    }
+    let bytes = text.as_bytes();
+    let skip_blanks = |mut at: usize| {
+        while bytes.get(at).is_some_and(u8::is_ascii_whitespace) {
+            at += 1;
+        }
+        at
+    };
+    // The decimal number at `at`, and where it ends.
+    let number = |at: usize| {
+        let end = at
+            + bytes[at..]
+                .iter()
+                .take_while(|b| b.is_ascii_digit())
+                .count();
+        (&text[at..end], end)
+    };
+    let line_of = |at: usize| bytes[..at].iter().filter(|b| **b == b'\n').count();
+    for (open, _) in text.match_indices('(') {
+        let (first, end_first) = number(skip_blanks(open + 1));
+        if first != major.to_string() {
+            continue;
+        }
+        let comma = skip_blanks(end_first);
+        if bytes.get(comma) != Some(&b',') {
+            continue;
+        }
+        let (second, end) = number(skip_blanks(comma + 1));
+        if second != sub.to_string() {
+            continue;
+        }
+        let name: String = text[..open]
+            .trim_end()
             .chars()
             .rev()
             .take_while(|c| c.is_alphanumeric() || *c == '_')
@@ -242,10 +268,16 @@ fn raises(line: &str, major: u16, sub: u16) -> bool {
             .rev()
             .collect::<String>()
             .to_lowercase();
-        ["syntax", "raise", "error"]
+        if ["syntax", "raise", "error"]
             .iter()
             .any(|k| name.contains(k))
-    })
+        {
+            let start = line_of(open);
+            let last = found.entry(start).or_insert(start);
+            *last = (*last).max(line_of(end));
+        }
+    }
+    found.into_iter().collect()
 }
 
 fn raise_sites(out: &mut String, sources: &Sources, files: &[PathBuf], row: &Row) {
@@ -257,22 +289,20 @@ fn raise_sites(out: &mut String, sources: &Sources, files: &[PathBuf], row: &Row
             continue;
         };
         let lines: Vec<&str> = text.lines().collect();
-        for (i, line) in lines.iter().enumerate() {
-            if !raises(line, row.major, row.sub) {
-                continue;
-            }
+        for (first, last) in sites(&text, row.major, row.sub) {
             total += 1;
             if shown == MOST_SITES {
                 continue;
             }
             shown += 1;
-            let from = i.saturating_sub(3);
-            let to = (i + 4).min(lines.len());
+            // The context covers the whole call, wrapped or not.
+            let from = first.saturating_sub(3);
+            let to = (last + 4).min(lines.len());
             let _ = writeln!(
                 out,
                 "`{}:{}`\n\n```rust",
                 relative(&sources.root, file),
-                i + 1
+                first + 1
             );
             for l in &lines[from..to] {
                 let _ = writeln!(out, "{l}");
@@ -417,13 +447,34 @@ fn probe(out: &mut String, sources: &Sources, row: &Row) -> Result<(), String> {
         .probes
         .join(format!("{}.{}.rex", row.major, row.sub));
     if !file.is_file() {
-        let _ = writeln!(out, "No probe program for this code.\n");
+        match unreachable_row(&sources.probes, row)? {
+            Some((class, reason)) => {
+                let _ = writeln!(
+                    out,
+                    "No probe program: no program run on interrexx raises this code ({class}: {reason}).\n"
+                );
+            }
+            None => {
+                let _ = writeln!(out, "No probe program for this code.\n");
+            }
+        }
         return Ok(());
     }
     let program = read(&file)?;
     let _ = writeln!(out, "```rexx\n{}\n```\n", program.trim_end());
     let (status, output) = run_probe(&sources.rexx, &file)?;
-    let mut shown = output;
+    // A probe may print a path (its own, or a name under the checkout).
+    // Fixed placeholders keep a brief the same on every machine; the
+    // probe's own path goes first because it lies under the root.
+    let mut shown = replace_paths(
+        &output,
+        &[
+            (&canonical(&file)?, "<probe>"),
+            (&file, "<probe>"),
+            (&canonical(&sources.root)?, "<repo>"),
+            (&sources.root, "<repo>"),
+        ],
+    );
     if shown.len() > MOST_OUTPUT {
         let mut cut = MOST_OUTPUT;
         while !shown.is_char_boundary(cut) {
@@ -438,6 +489,53 @@ fn probe(out: &mut String, sources: &Sources, row: &Row) -> Result<(), String> {
         shown.trim_end()
     );
     Ok(())
+}
+
+/// `text` with each path of `paths` replaced by its placeholder, in order.
+fn replace_paths(text: &str, paths: &[(&Path, &str)]) -> String {
+    let mut text = text.to_string();
+    for (path, placeholder) in paths {
+        text = text.replace(&path.display().to_string(), placeholder);
+    }
+    text
+}
+
+/// The file in the probe directory that lists the codes no program reaches.
+pub const UNREACHABLE: &str = "unreachable.tsv";
+
+/// The rows of the list of codes no program reaches, as (code, class,
+/// reason). A line that is empty or starts with `#` is a comment. A missing
+/// file is an empty list; a row that does not have three fields is an error.
+pub fn unreachable(probes: &Path) -> Result<Vec<(String, String, String)>, String> {
+    let path = probes.join(UNREACHABLE);
+    if !path.is_file() {
+        return Ok(Vec::new());
+    }
+    let mut rows = Vec::new();
+    for (n, line) in read(&path)?.lines().enumerate() {
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+        let fields: Vec<&str> = line.split('\t').collect();
+        let [code, class, reason] = fields[..] else {
+            return Err(format!(
+                "{}:{}: a row is code, class and reason",
+                path.display(),
+                n + 1
+            ));
+        };
+        rows.push((code.to_string(), class.to_string(), reason.to_string()));
+    }
+    Ok(rows)
+}
+
+/// The class and reason the list gives for `row`'s code, if it lists it.
+fn unreachable_row(probes: &Path, row: &Row) -> Result<Option<(String, String)>, String> {
+    let code = format!("{}.{}", row.major, row.sub);
+    Ok(unreachable(probes)?
+        .into_iter()
+        .find(|(c, _, _)| *c == code)
+        .map(|(_, class, reason)| (class, reason)))
 }
 
 /// Runs `program` on `rexx` in an empty scratch directory with no input,
@@ -479,6 +577,9 @@ fn run_probe(rexx: &Path, program: &Path) -> Result<(String, String), String> {
     };
     let output =
         String::from_utf8_lossy(&std::fs::read(&captured).unwrap_or_default()).into_owned();
+    // The scratch directory's name holds the process id, so it is replaced
+    // here, before it is gone.
+    let output = replace_paths(&output, &[(&scratch, "<scratch>")]);
     let _ = std::fs::remove_dir_all(&scratch);
     Ok((status, output))
 }

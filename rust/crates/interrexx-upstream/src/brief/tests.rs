@@ -56,6 +56,10 @@ impl Fixture {
             "91\t1\t100\tError_Invented_one\t1\t1\n91\t2\t101\tError_Invented_two\t0\t-\n101\t4\t102\tError_Invented_debug\t0\t-\n",
         );
         put("probes/91.1.rex", "say 'code 91.1'\n");
+        put(
+            "probes/unreachable.tsv",
+            "# a comment\n\n91.2\tno-site\tnothing raises it here\n",
+        );
         let rexx = base.join("rexx");
         std::fs::write(&rexx, "#!/bin/sh\necho \"ran $(basename \"$1\")\"\n")
             .expect("writes the stand-in interpreter");
@@ -106,6 +110,101 @@ fn a_brief_names_the_interface_the_site_the_rule_and_the_probe_output() {
     assert!(two.contains("No raise site found"));
     assert!(two.contains("No rule names this code"));
     assert!(two.contains("No probe program"));
+    assert!(
+        two.contains("no-site: nothing raises it here"),
+        "a listed code says why it has no probe: {two}"
+    );
+}
+
+#[test]
+fn a_code_missing_from_the_list_says_only_that_it_has_no_probe() {
+    let fx = Fixture::new("unlisted");
+    std::fs::remove_file(fx.sources.probes.join(UNREACHABLE)).expect("removes the list");
+    let (_, two) = build(&fx.sources, 91).expect("builds").remove(1);
+    assert!(two.contains("No probe program for this code."), "{two}");
+}
+
+#[test]
+fn a_list_row_without_three_fields_is_an_error() {
+    let fx = Fixture::new("badlist");
+    std::fs::write(fx.sources.probes.join(UNREACHABLE), "91.2\tno-site\n").expect("writes");
+    let error = build(&fx.sources, 91).expect_err("refuses");
+    assert!(error.contains("code, class and reason"), "{error}");
+}
+
+/// Whether the source `text` mentions `major.sub` as a raise site, however
+/// the call is wrapped: the constant `E<major>_<sub>`, or the number pair
+/// after an opening parenthesis (blanks and line breaks ignored).
+fn mentions_site(text: &str, major: u16, sub: u16) -> bool {
+    let squeezed: String = text.chars().filter(|c| !c.is_whitespace()).collect();
+    let bounded = |haystack: &str, needle: &str, before: fn(char) -> bool| {
+        haystack.match_indices(needle).any(|(at, _)| {
+            let after = haystack[at + needle.len()..].chars().next();
+            let first = haystack[..at].chars().next_back();
+            !after.is_some_and(|c| c.is_ascii_digit()) && !first.is_some_and(before)
+        })
+    };
+    bounded(&squeezed, &format!("E{major}_{sub}"), |c| {
+        c.is_alphanumeric() || c == '_'
+    }) || squeezed
+        .match_indices(&format!("({major},{sub}"))
+        .any(|(at, needle)| {
+            !squeezed[at + needle.len()..]
+                .chars()
+                .next()
+                .is_some_and(|c| c.is_ascii_digit())
+        })
+}
+
+#[test]
+fn a_site_is_found_whatever_the_line_breaks() {
+    assert!(mentions_site(
+        "Raised::syntax(\n    88,\n    919,\n x)",
+        88,
+        919
+    ));
+    assert!(mentions_site("Raised::raise(E88_919, [])", 88, 919));
+    assert!(!mentions_site("Raised::raise(E88_9190, [])", 88, 919));
+    assert!(!mentions_site("Raised::syntax(88, 9190, [])", 88, 919));
+    assert!(!mentions_site("fn f() { g(188, 919) }", 88, 919));
+    assert!(!mentions_site("Raised::raise(XE88_919, [])", 88, 919));
+}
+
+/// The list's `no-site` rows keep their claim: the interpreter sources
+/// mention none of those codes as a raise site.
+#[test]
+fn a_no_site_row_names_a_code_no_source_raises() {
+    let crates = Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
+    let probes = Path::new(env!("CARGO_MANIFEST_DIR")).join("data/probes");
+    let mut code: Vec<PathBuf> = std::fs::read_dir(&crates)
+        .expect("lists the crates")
+        .filter_map(Result::ok)
+        .filter(|e| e.file_name() != "interrexx-upstream")
+        .map(|e| e.path().join("src"))
+        .filter(|p| p.is_dir())
+        .collect();
+    code.sort();
+    let texts: Vec<String> = source_files(&code, "rs")
+        .expect("lists the sources")
+        .iter()
+        .map(|f| std::fs::read_to_string(f).expect("reads a source"))
+        .collect();
+    let mut raised = Vec::new();
+    for (code_name, class, _) in unreachable(&probes).expect("reads the list") {
+        if class != "no-site" {
+            continue;
+        }
+        let (major, sub) = code_name.split_once('.').expect("a code is major.sub");
+        let (major, sub): (u16, u16) =
+            (major.parse().expect("a major"), sub.parse().expect("a sub"));
+        if texts.iter().any(|t| mentions_site(t, major, sub)) {
+            raised.push(code_name);
+        }
+    }
+    assert!(
+        raised.is_empty(),
+        "listed as having no raise site, yet a source raises: {raised:?}"
+    );
 }
 
 #[test]
@@ -176,10 +275,48 @@ fn a_major_without_codes_is_an_error() {
 
 #[test]
 fn raising_is_recognised_by_constant_and_by_call() {
-    assert!(raises("Raised::raise(E40_9, [a])", 40, 9));
-    assert!(!raises("Raised::raise(E40_90, [a])", 40, 9));
-    assert!(!raises("use x::E40_9;", 40, 9));
-    assert!(raises("    Raised::syntax(40, 9, vec![])", 40, 9));
-    assert!(!raises("    Raised::syntax(40, 90, vec![])", 40, 9));
-    assert!(!raises("    point(40, 9)", 40, 9));
+    let found = |text: &str, major, sub| sites(text, major, sub);
+    assert_eq!(found("Raised::raise(E40_9, [a])", 40, 9), [(0, 0)]);
+    assert!(found("Raised::raise(E40_90, [a])", 40, 9).is_empty());
+    assert!(found("use x::E40_9;", 40, 9).is_empty());
+    assert_eq!(found("    Raised::syntax(40, 9, vec![])", 40, 9), [(0, 0)]);
+    assert!(found("    Raised::syntax(40, 90, vec![])", 40, 9).is_empty());
+    assert!(found("    Raised::syntax(140, 9, vec![])", 40, 9).is_empty());
+    assert!(found("    point(40, 9)", 40, 9).is_empty());
+}
+
+#[test]
+fn a_call_wrapped_over_lines_is_a_site_and_its_context_covers_the_call() {
+    let wrapped =
+        "fn f() {\n    Raised::syntax(\n        88,\n        919,\n        [x],\n    )\n}\n";
+    assert_eq!(sites(wrapped, 88, 919), [(1, 3)]);
+    assert!(sites(wrapped, 88, 91).is_empty());
+    let fx = Fixture::new("wrapped");
+    let path = fx.sources.root.join("rust/crates/x/src/wrapped.rs");
+    std::fs::write(&path, wrapped.replace("88", "91").replace("919", "2")).expect("writes");
+    let (_, two) = build(&fx.sources, 91).expect("builds").remove(1);
+    assert!(!two.contains("No raise site found"), "{two}");
+    assert!(two.contains("wrapped.rs:2"), "{two}");
+    assert!(two.contains("[x],"), "the whole call is shown: {two}");
+}
+
+#[test]
+fn a_path_in_the_probe_output_becomes_a_placeholder() {
+    let fx = Fixture::new("paths");
+    let probe = fx.sources.probes.join("91.1.rex");
+    let root = fx.sources.root.canonicalize().expect("resolves the root");
+    // The stand-in interpreter prints its argument, the root and its working
+    // directory.
+    std::fs::write(
+        &fx.sources.rexx,
+        "#!/bin/sh\necho \"path $1\"\necho \"root %ROOT%/x\"\necho \"cwd $(pwd)\"\n"
+            .replace("%ROOT%", &root.display().to_string()),
+    )
+    .expect("writes the stand-in interpreter");
+    let (_, one) = build(&fx.sources, 91).expect("builds").remove(0);
+    assert!(one.contains("path <probe>"), "{one}");
+    assert!(one.contains("root <repo>/x"), "{one}");
+    assert!(one.contains("cwd <scratch>"), "{one}");
+    assert!(!one.contains(&root.display().to_string()), "{one}");
+    assert!(!one.contains(&probe.display().to_string()), "{one}");
 }
