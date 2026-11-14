@@ -1,6 +1,7 @@
 // An embedding host whose program waits on something only the host can end.
 //
-// Usage: hostwait instance | hostwait terminate | hostwait self | hostwait start <program>.
+// Usage: hostwait instance | hostwait terminate | hostwait self | hostwait attached
+//        | hostwait start <program>.
 //
 // * `instance`: the host creates an instance, makes an event semaphore in it, and starts a thread
 //   that waits a while, attaches and posts the semaphore. The creating thread meanwhile calls a
@@ -10,6 +11,9 @@
 // * `self`: the host creates an instance and calls a routine that sends a message whose method
 //   waits for that message's own result before it replies. It prints what the routine answered
 //   and whether the call left a condition, and calls `Terminate`.
+// * `attached`: as `self`, but a thread the host starts attaches and calls the routine, while the
+//   creating thread waits for it outside any call. The thread prints what the routine answered and
+//   whether the call left a condition, and detaches. The creating thread then calls `Terminate`.
 // * `start`: the host starts a thread that waits a while and halts the thread `RexxStart` runs
 //   `<program>` on, then runs it there and prints what it answered.
 #include <chrono>
@@ -75,6 +79,14 @@ static int terminate_wait()
     return 0;
 }
 
+static const char *self_waiter = "m = .message~new(.k~new, 'RUN')\n"
+                                ".environment~mm = m\n"
+                                "return m~send\n"
+                                "::class k\n"
+                                "::method run\n"
+                                "  say 'in run'\n"
+                                "  return .environment~mm~result\n";
+
 static int self_wait()
 {
     RexxInstance *instance = NULL;
@@ -83,17 +95,46 @@ static int self_wait()
     {
         return 1;
     }
-    const char *source = "m = .message~new(.k~new, 'RUN')\n"
-                         ".environment~mm = m\n"
-                         "return m~send\n"
-                         "::class k\n"
-                         "::method run\n"
-                         "  say 'in run'\n"
-                         "  return .environment~mm~result\n";
-    RexxRoutineObject routine = context->NewRoutine("SELFWAIT", source, strlen(source));
+    RexxRoutineObject routine = context->NewRoutine("SELFWAIT", self_waiter, strlen(self_waiter));
     RexxObjectPtr result = context->CallRoutine(routine, context->NewArray(0));
     printf("routine %s condition %d\n", result == NULLOBJECT ? "(none)" : context->CString(result),
            context->CheckCondition() ? 1 : 0);
+    fflush(stdout);
+    instance->Terminate();
+    printf("terminated\n");
+    fflush(stdout);
+    return 0;
+}
+
+static void call_self_waiter(RexxInstance *instance)
+{
+    RexxThreadContext *context = NULL;
+    if (!instance->AttachThread(&context))
+    {
+        printf("attach failed\n");
+        fflush(stdout);
+        return;
+    }
+    RexxRoutineObject routine = context->NewRoutine("SELFWAIT", self_waiter, strlen(self_waiter));
+    RexxObjectPtr result = context->CallRoutine(routine, context->NewArray(0));
+    printf("thread routine %s condition %d\n",
+           result == NULLOBJECT ? "(none)" : context->CString(result),
+           context->CheckCondition() ? 1 : 0);
+    fflush(stdout);
+    context->DetachThread();
+}
+
+static int attached_self_wait()
+{
+    RexxInstance *instance = NULL;
+    RexxThreadContext *context = NULL;
+    if (RexxCreateInterpreter(&instance, &context, NULL) != 1)
+    {
+        return 1;
+    }
+    std::thread caller(call_self_waiter, instance);
+    caller.join();
+    printf("joined\n");
     fflush(stdout);
     instance->Terminate();
     printf("terminated\n");
@@ -133,6 +174,10 @@ int main(int argc, char **argv)
     if (argc >= 2 && strcmp(argv[1], "self") == 0)
     {
         return self_wait();
+    }
+    if (argc >= 2 && strcmp(argv[1], "attached") == 0)
+    {
+        return attached_self_wait();
     }
     if (argc >= 3 && strcmp(argv[1], "start") == 0)
     {

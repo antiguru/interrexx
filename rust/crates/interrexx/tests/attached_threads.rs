@@ -1154,10 +1154,39 @@ fn a_wait_on_the_activitys_own_message_in_a_hosts_call_is_refused() {
     );
 }
 
+/// A thread of an embedding host attaches to an instance the host created and calls a routine that
+/// sends a message whose method waits for that message's own result before it replies, while the
+/// thread that created the instance is outside any call: the wait is refused, the call answers no
+/// result with a condition pending, and the refusal is reported once the host calls `Terminate`.
+// spec: conc.activities.deviation.20
+#[test]
+fn a_wait_on_the_activitys_own_message_in_an_attached_hosts_call_is_refused() {
+    // The instance's root call stays in flight until `Terminate`, and its end resumes nothing
+    // before the callback returns, so it does not hold the refusal back.
+    let (stdout, stderr, status) = run_driver("hostwait", &["attached"]);
+    // The method's `SAY` reaches stdout once the interpreter's thread idles, which races the
+    // attached thread's own line after its call returns, so only the host's lines keep an order.
+    let host = stdout.replacen("in run\n", "", 1);
+    assert_eq!(
+        (
+            stdout.contains("in run\n"),
+            host.as_str(),
+            stderr.as_str(),
+            status
+        ),
+        (
+            true,
+            "thread routine (none) condition 1\njoined\nterminated\n",
+            UNENDING_WAIT,
+            0
+        )
+    );
+}
+
 /// After the extension's library loaded, an attached thread sends `SEND` to a message whose method
 /// waits for that message's own result before it replies, while the main program waits for the
-/// thread a while: the main program runs to its end, and the wait is refused, rc 120. Under the
-/// gate the oracle prints the same and waits for ever.
+/// method to post that it runs: the main program runs to its end, and the wait is refused, rc 120.
+/// Under the gate the oracle prints the same and waits for ever.
 // spec: conc.activities.deviation.20
 #[test]
 fn a_wait_on_the_activitys_own_message_in_an_attached_callback_is_refused() {

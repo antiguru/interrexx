@@ -334,7 +334,7 @@ impl Interp {
         }
         let held = HeldCall::Routine(entry.held());
         let exits = self.leaves_driver();
-        self.leave_next_native = false;
+        let root = std::mem::take(&mut self.leave_next_native);
         self.push_native_frame(ObjRef::NIL, ObjRef::NIL, None, name, args, Some(code));
         self.native_frame_mut().executable = executable;
         pin_enter!(self, crate::pinning::PinKind::NativeApiCallback);
@@ -343,6 +343,12 @@ impl Interp {
         let Some((answered, pending)) =
             self.native_call(held, args, exits, ObjRef::NIL, resume_library_routine)
         else {
+            // The call the root program makes first is the instance's root
+            // call, which `leave_next_native` sends off the baton.
+            if root && let Some(frame) = self.activity.native_call.as_ref().map(|call| call.frame())
+            {
+                self.note_root_call(frame);
+            }
             return Ok(Started::Entered);
         };
         self.end_library_routine(answered, pending, name, program, args)

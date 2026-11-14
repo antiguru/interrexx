@@ -372,8 +372,12 @@ pub(crate) struct Activities {
     abandoned: Vec<(u64, Box<crate::NativeFrame>)>,
     /// Those of the calls in flight whose run is below the running loop,
     /// under a callback, so that no loop above them can wait for their
-    /// completions.
-    runs_below: usize,
+    /// completions: each by its activity and native frame, once however
+    /// many lends nest above it.
+    runs_below: Vec<(ActivityId, u64)>,
+    /// An embedding instance's root call, by its activity and native frame,
+    /// once it has left its driver: it waits until `Terminate`.
+    root_call: Option<(ActivityId, u64)>,
     /// The lends that run an attached thread's callback.
     callbacks_lent: usize,
     /// The last token a blocking operation was posted under.
@@ -495,7 +499,8 @@ impl Activities {
             late_failures: Vec::new(),
             in_flight: 0,
             abandoned: Vec::new(),
-            runs_below: 0,
+            runs_below: Vec::new(),
+            root_call: None,
             callbacks_lent: 0,
             next_block: 0,
             abandoned_blocks: Vec::new(),
@@ -901,7 +906,7 @@ impl Scheduler for Interp {
             return;
         }
         pin_enter!(self, crate::pinning::PinKind::NativeApiCallback);
-        self.activities.runs_below += 1;
+        self.activities.runs_below.push((activity, frame));
         let watch = self.sim_watch_native();
         let pending = call.run(frame, pending, self, &baton, &thread, |completion| {
             Self::post_completion(&inbox, activity, frame, completion);
@@ -909,7 +914,7 @@ impl Scheduler for Interp {
         if let Some(watch) = watch {
             self.sim_end_watch(watch);
         }
-        self.activities.runs_below -= 1;
+        self.activities.runs_below.pop();
         pin_leave!(self);
         if let Some(record) = self.activity.native_call.as_mut() {
             self.activity.native_park = record.back(call, pending);
@@ -2027,7 +2032,7 @@ impl Interp {
         table.ready.is_empty()
             && (table.sleepers.iter()).all(|Reverse((_, _, sleeper))| stopped(*sleeper))
             && table.held.is_empty()
-            && table.in_flight == table.runs_below
+            && table.in_flight == table.runs_below.len()
     }
 
     /// Serves the held callbacks, the earliest first, each once nothing
@@ -2210,7 +2215,19 @@ impl Interp {
             return;
         }
         let outgoing = self.activities.running;
-        let below = self.recalled_call_in_flight(&by);
+        // An embedding instance's root call counts as run below for every
+        // lend, whoever calls back: only `Terminate` ends it, and its end
+        // can satisfy no wait a callback's loop refuses, a wait on the
+        // waiting activity's own message or an inverted one. A call a lend
+        // further down counts already is not counted again, so nested lends
+        // count each call once.
+        let below: Vec<_> = [
+            self.recalled_call_in_flight(&by),
+            self.root_call_in_flight(),
+        ]
+        .into_iter()
+        .flatten()
+        .collect();
         let callback = matches!(by, Recaller::Context(_));
         let activity = match by {
             Recaller::Call { activity, frame } => {
@@ -2252,7 +2269,12 @@ impl Interp {
         // back. The references it made are in the base frame's table.
         let temps = (self.activity.attached).then(|| self.roots.activity_mut().push_frame());
         pin_enter!(self, crate::pinning::PinKind::NativeApiCallback);
-        self.activities.runs_below += usize::from(below);
+        let counted = self.activities.runs_below.len();
+        for call in below {
+            if !self.activities.runs_below.contains(&call) {
+                self.activities.runs_below.push(call);
+            }
+        }
         self.activities.callbacks_lent += usize::from(callback);
         let stack = (self.stack_base, self.stack_room);
         self.stack_base = base.unwrap_or(self.stack_base);
@@ -2264,7 +2286,7 @@ impl Interp {
         let baton = crate::sync::Arc::clone(&self.baton);
         baton.lend(thread, crate::island::Island::of(self));
         (self.stack_base, self.stack_room) = stack;
-        self.activities.runs_below -= usize::from(below);
+        self.activities.runs_below.truncate(counted);
         self.activities.callbacks_lent -= usize::from(callback);
         pin_leave!(self);
         if let Some(frame) = temps {
@@ -2277,15 +2299,16 @@ impl Interp {
         }
     }
 
-    /// Whether the call `by` recalls the baton for counts in flight
-    /// ([`Activities::in_flight`]), so that a lend for its callback counts it
-    /// as run below ([`Activities::runs_below`]): a pool thread's call, which
-    /// counts from its exit, a vacated call while a thread serves its
-    /// vacancy, or the call in flight of the activity whose thread context a
-    /// thread calls back through, as the thread that created an embedding
-    /// instance does for the root's call. An attached thread's
-    /// callback recalls for no call.
-    fn recalled_call_in_flight(&self, by: &Recaller) -> bool {
+    /// The call `by` recalls the baton for, by its activity and native
+    /// frame, where it counts in flight ([`Activities::in_flight`]), so that
+    /// a lend for its callback counts it as run below
+    /// ([`Activities::runs_below`]): a pool thread's call, which counts from
+    /// its exit, a vacated call while a thread serves its vacancy, or the
+    /// call in flight of the activity whose thread context a thread calls
+    /// back through, as the thread that created an embedding instance does
+    /// for the root's call. An attached thread's callback recalls for no
+    /// call.
+    fn recalled_call_in_flight(&self, by: &Recaller) -> Option<(ActivityId, u64)> {
         // A lend that counted a call below which is not in flight would hide
         // an unrelated call in flight from the tests that compare the two,
         // and a wait that call may end would be refused.
@@ -2301,28 +2324,56 @@ impl Interp {
                 let pooled = record.is_some_and(|record| {
                     (record.native_call.as_ref()).is_some_and(|call| call.frame() == frame)
                 });
-                pooled
+                (pooled
                     || self.activities.vacancies.iter().any(|vacancy| {
                         vacancy.activity == activity && vacancy.frame == frame && vacancy.served
-                    })
+                    }))
+                .then_some((activity, frame))
             }
             // The callback runs as the activity whose call is out, so that
             // call's completion can resume nothing before the callback has
             // returned.
             Recaller::Context(address) => {
-                let record = match self.context_owner(address) {
-                    Some(owner) => (self.activities.idle.get(owner.0 as usize))
-                        .and_then(Option::as_ref)
-                        .map(|idle| &idle.activity),
-                    None => (self.activity.thread.as_ref())
-                        .is_some_and(|thread| thread.address() == address)
-                        .then_some(&self.activity),
+                let (activity, record) = match self.context_owner(address) {
+                    Some(owner) => (
+                        owner,
+                        (self.activities.idle.get(owner.0 as usize))
+                            .and_then(Option::as_ref)
+                            .map(|idle| &idle.activity),
+                    ),
+                    None => (
+                        self.activities.running,
+                        (self.activity.thread.as_ref())
+                            .is_some_and(|thread| thread.address() == address)
+                            .then_some(&self.activity),
+                    ),
                 };
-                record.is_some_and(|record| {
-                    (record.native_call.as_ref()).is_some_and(|call| call.left())
-                })
+                let call = record?.native_call.as_ref()?;
+                call.left().then_some((activity, call.frame()))
             }
         }
+    }
+
+    /// The embedding instance's root call, by its activity and native frame,
+    /// while it is in flight ([`Activities::in_flight`]).
+    fn root_call_in_flight(&self) -> Option<(ActivityId, u64)> {
+        let (activity, frame) = self.activities.root_call?;
+        let record = if activity == self.activities.running {
+            Some(&self.activity)
+        } else {
+            (self.activities.idle.get(activity.0 as usize))
+                .and_then(Option::as_ref)
+                .map(|idle| &idle.activity)
+        };
+        let call = record?.native_call.as_ref()?;
+        (call.frame() == frame && call.left()).then_some((activity, frame))
+    }
+
+    /// Notes that the running activity's native call, in its native frame
+    /// `frame`, is the embedding instance's root call, which waits until
+    /// `Terminate`.
+    pub(crate) fn note_root_call(&mut self, frame: u64) {
+        self.activities.root_call = Some((self.activities.running, frame));
     }
 
     /// Marks the running activity as a callback that runs, as a lend to it
@@ -2661,7 +2712,7 @@ impl Interp {
             if table.ready.is_empty()
                 && table.sleepers.is_empty()
                 && table.held.is_empty()
-                && table.in_flight == table.runs_below
+                && table.in_flight == table.runs_below.len()
             {
                 if self.sim.is_some() {
                     return Err(self.sim_endless_wait());
@@ -2880,7 +2931,7 @@ impl Interp {
                 // activity runs, so that wait is refused even inside a
                 // callback, a host's call included (Deviation 20).
                 if sleeper.is_none()
-                    && self.activities.in_flight == self.activities.runs_below
+                    && self.activities.in_flight == self.activities.runs_below.len()
                     && self.activities.held.is_empty()
                     && (self.waits_on_a_message_it_runs(me)
                         || (self.activities.callbacks_lent == 0
