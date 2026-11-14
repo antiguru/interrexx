@@ -294,7 +294,7 @@ fn two_attached_threads_call_back_concurrently_every_time() {
 /// for its seeds. CI runs it in a job of its own.
 // spec: native.threads.attach
 #[test]
-#[ignore = "two hundred runs of a minute in all; CI runs it with --run-ignored ignored-only"]
+#[ignore = "two hundred runs; CI runs it with --run-ignored ignored-only"]
 fn two_attached_threads_call_back_concurrently_two_hundred_times() {
     call_back_concurrently(200);
 }

@@ -1420,7 +1420,8 @@ free, and `TRACE` announces its method's entry once. Any other wait for a guard
 lock counts as one of a message that has begun: a wait in a method or routine
 the message's own code reaches, and a wait of a routine the thread calls with
 `CallRoutine` or of a method that another of the thread's API calls sends to,
-such as the `MAKESTRING` that `ObjectToString` sends. Once a message has begun, a wait of it for something only
+such as the `MAKESTRING` that `ObjectToString` sends. Once a message has
+begun, a wait of it for something only
 a stopped activity can give never ends. Where it waits for a guard lock that
 such an activity holds and no other message does, or for the completion of a
 message whose send such an activity runs, directly or through a chain of such
@@ -1435,7 +1436,8 @@ has waited: no activity is ready, none is asleep but one a message stopped, no
 message is held, and no call is in flight but those the waiting messages run
 above. A stopped activity's sleep does not hold the line back, since the
 activity cannot go on when it wakes. A wait that another sleeping activity or a
-call in flight may still end is not reported until they are gone. A loop that polls for such a change runs for ever,
+call in flight may still end is not reported until they are gone. A loop that
+polls for such a change runs for ever,
 and nothing is said. ooRexx
 runs each attached thread's messages on that thread, alongside the other
 activities, and each such program completes. Issue #681 tracks doing the same.

@@ -374,10 +374,7 @@ pub(crate) struct Activities {
     /// under a callback, so that no loop above them can wait for their
     /// completions.
     runs_below: usize,
-    /// The lends that run an attached thread's callback. While one runs, a
-    /// later callback may end a wait, so a loop with nothing else to run or
-    /// wait for idles for posts instead of refusing the wait
-    /// (`r[native.threads.attach.deviation.176]`).
+    /// The lends that run an attached thread's callback.
     callbacks_lent: usize,
     /// The last token a blocking operation was posted under.
     next_block: u64,
@@ -2758,6 +2755,10 @@ impl Interp {
             };
             let Some(ready) = next else {
                 let sleeper = (self.activities.sleepers.peek()).map(|Reverse((due, _, _))| *due);
+                // While an attached thread's callback runs, a later callback
+                // may end a wait, so a loop with nothing else to run or wait
+                // for idles for posts instead of refusing the wait
+                // (`r[native.threads.attach.deviation.176]`).
                 if sleeper.is_none()
                     && self.activities.in_flight == self.activities.runs_below
                     && self.activities.held.is_empty()
