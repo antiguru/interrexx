@@ -1986,7 +1986,7 @@ impl Interp {
     /// ([`Interp::serve_vacancy`]). Answers the thread, or `None` where the
     /// pool has none to give, so that the vacating thread serves what was
     /// posted once it has the baton back.
-    pub(crate) fn start_vacancy_server(&mut self) -> Option<std::thread::ThreadId> {
+    pub(crate) fn start_vacancy_server(&self) -> Option<std::thread::ThreadId> {
         let worker = self.pool.reserve().ok().flatten()?;
         let server = worker.thread();
         let baton = crate::sync::Arc::clone(&self.baton);

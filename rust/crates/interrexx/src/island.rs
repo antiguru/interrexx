@@ -138,7 +138,7 @@ pub(crate) fn wait_served(baton: &InterpBaton, unless_closed: bool) -> Option<Le
                 // the vacancy, which waits while this thread holds it by its
                 // claim; no other thread holds the baton meanwhile. The borrow
                 // ends before the vacancy is handed on or freed below.
-                let started = unsafe { &mut *island.0.as_ptr() }.start_vacancy_server();
+                let started = unsafe { island.0.as_ref() }.start_vacancy_server();
                 match started {
                     Some(server) => baton.hand_vacancy(server),
                     None => {
