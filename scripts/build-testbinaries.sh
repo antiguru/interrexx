@@ -1,12 +1,16 @@
 #!/usr/bin/env bash
 # Compiles ooRexx's native-API test libraries and drivers, unmodified, against this workspace's
-# librexx.so.4 and librexxapi.so.4, never the oracle's.
+# librexx.so.4 and librexxapi.so.4, never the oracle's, and against this repository's include/.
 #
-#   build-testbinaries.sh [--libs DIR] [--out DIR]
+#   build-testbinaries.sh [--libs DIR] [--out DIR] [--stage-only]
 #
-# --libs  a directory holding librexx.so and librexxapi.so as cargo built them. Default: build
-#         both with `cargo build` and use rust/target/debug (or $CARGO_TARGET_DIR/debug).
-# --out   where the libraries and binaries go. Default: rust/target/testbinaries.
+# --libs        a directory holding librexx.so and librexxapi.so as cargo built them. Default:
+#               build both with `cargo build` and use rust/target/debug (or
+#               $CARGO_TARGET_DIR/debug).
+# --out         where the libraries and binaries go. Default: rust/target/testbinaries.
+# --stage-only  put only librexx.so.4 and librexxapi.so.4 into --out and stop: no upstream
+#               source is read, so the mode runs in a checkout without the submodule. Drivers
+#               this repository owns link against that directory.
 #
 # Every product records only --out as its search path (DT_RPATH, which the loader consults before
 # LD_LIBRARY_PATH). The build fails if `ldd` resolves either library anywhere else, with or
@@ -16,10 +20,12 @@ set -euo pipefail
 root=$(cd "$(dirname "$0")/.." && pwd)
 libs=
 out=$root/rust/target/testbinaries
+stage_only=
 while [ $# -gt 0 ]; do
     case $1 in
         --libs) libs=$2; shift 2 ;;
         --out) out=$2; shift 2 ;;
+        --stage-only) stage_only=1; shift ;;
         *) echo "build-testbinaries.sh: unknown argument $1" >&2; exit 2 ;;
     esac
 done
@@ -30,7 +36,7 @@ if [ -z "$libs" ]; then
 fi
 
 src=$root/third_party/ooRexx/testbinaries
-api=$root/third_party/ooRexx/api
+api=$root/include
 samples=$root/third_party/ooRexx/samples/api/classic/unix/callrexx
 
 mkdir -p "$out"
@@ -43,8 +49,27 @@ stamp=
 if [ -n "$libs" ]; then
     exec 9>"$out.lock"
     flock 9
+fi
+stage() {
+    for library in librexx librexxapi; do
+        cp -f "$libs/$library.so" "$out/$library.so.4.tmp"
+        mv -f "$out/$library.so.4.tmp" "$out/$library.so.4"
+        ln -sfn "$library.so.4" "$out/$library.so"
+    done
+}
+if [ -n "$stage_only" ]; then
+    stage
+    echo "build-testbinaries.sh: staged the libraries into $out"
+    exit 0
+fi
+
+. "$root/scripts/api-flags.sh"
+if [ -n "$libs" ]; then
+    # The stamp names the inputs of the build: the libraries, this script, the headers, and the
+    # upstream sources it compiles (size and time, as a submodule update rewrites them).
     stamp=$(stat -c '%n %s %.9Y' "$libs/librexx.so" "$libs/librexxapi.so" "$0" "$root/scripts/api-flags.sh"
-        git -C "$root/third_party/ooRexx" rev-parse HEAD
+        api_stamp
+        find "$src" "$samples" -type f -print0 | LC_ALL=C sort -z | xargs -0 stat -c '%n %s %.9Y'
         c++ --version | head -n 1)
     if [ -f "$out/.stamp" ] && [ "$(cat "$out/.stamp")" = "$stamp" ]; then
         echo "build-testbinaries.sh: $out is up to date"
@@ -52,13 +77,8 @@ if [ -n "$libs" ]; then
     fi
     rm -f "$out/.stamp"
 fi
-for library in librexx librexxapi; do
-    cp -f "$libs/$library.so" "$out/$library.so.4.tmp"
-    mv -f "$out/$library.so.4.tmp" "$out/$library.so.4"
-    ln -sfn "$library.so.4" "$out/$library.so"
-done
+stage
 
-. "$root/scripts/api-flags.sh"
 flags=("${api_flags[@]}" -L"$out" -Wl,--disable-new-dtags -Wl,-rpath,"$out")
 
 shared() {

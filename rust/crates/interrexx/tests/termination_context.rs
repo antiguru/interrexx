@@ -5,7 +5,7 @@
 //! context kept from before termination answers nothing.
 //!
 //! The extension is the surface forge (a C++ extension under `tests/termination_context/`, its
-//! routines `Stash`, `UseStash` and `Same`), compiled with `g++` against this worktree's `api/`
+//! routines `Stash`, `UseStash` and `Same`), compiled with `g++` against this worktree's `include/`
 //! into a directory of this run's own, and the programs are run by this crate's `rexx` binary,
 //! because the forge's loader, unloader and destructor write to the process's own standard output.
 //! The expected lines are the oracle's, measured three times each with identical output, rc 0 and
@@ -27,10 +27,17 @@ fn worktree() -> PathBuf {
 
 /// Builds the forge as `libforgea.so` in `dir`.
 fn build_forge(dir: &Path) {
-    let api = worktree().join("third_party/ooRexx/api");
+    let api = worktree().join("include");
     let source = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/termination_context/forge.cpp");
     let built = Command::new("g++")
-        .args(["-shared", "-fPIC", "-O1", "-static-libstdc++"])
+        .args([
+            "-shared",
+            "-fPIC",
+            "-O1",
+            "-Wall",
+            "-Werror",
+            "-static-libstdc++",
+        ])
         .arg(format!("-I{}", api.display()))
         .arg(format!("-I{}", api.join("platform/unix").display()))
         .arg("-DTAG=\"forgea\"")

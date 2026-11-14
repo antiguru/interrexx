@@ -45,25 +45,45 @@ fn bin_dir() -> PathBuf {
     dir.to_path_buf()
 }
 
-/// The compiled test libraries, built once from the shared objects cargo built.
+/// Runs `scripts/build-testbinaries.sh` with the shared objects cargo built, into `out`, with
+/// `extra` arguments, and fails the test when it does.
+fn run_build_testbinaries(out: &Path, extra: &[&str]) {
+    let deps = cdylibs::libs_dir(scratch());
+    let output = Command::new(repository().join("scripts/build-testbinaries.sh"))
+        .arg("--libs")
+        .arg(&deps)
+        .arg("--out")
+        .arg(out)
+        .args(extra)
+        .output()
+        .expect("the build script runs");
+    assert!(
+        output.status.success(),
+        "build-testbinaries.sh failed:\n{}{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
+/// A directory holding only this workspace's `librexx.so.4` and `librexxapi.so.4`, staged once
+/// from the shared objects cargo built. It needs no upstream source, so the drivers this
+/// repository owns link against it.
+fn staged() -> &'static Path {
+    static STAGED: OnceLock<PathBuf> = OnceLock::new();
+    STAGED.get_or_init(|| {
+        let out = scratch().join("staged");
+        run_build_testbinaries(&out, &["--stage-only"]);
+        out
+    })
+}
+
+/// The compiled upstream test libraries, built once from the shared objects cargo built.
+/// Needs the `third_party/ooRexx` sources.
 fn testbinaries() -> &'static Path {
     static BUILT: OnceLock<PathBuf> = OnceLock::new();
     BUILT.get_or_init(|| {
-        let deps = cdylibs::libs_dir(scratch());
         let out = scratch().join("testbinaries");
-        let output = Command::new(repository().join("scripts/build-testbinaries.sh"))
-            .arg("--libs")
-            .arg(&deps)
-            .arg("--out")
-            .arg(&out)
-            .output()
-            .expect("the build script runs");
-        assert!(
-            output.status.success(),
-            "build-testbinaries.sh failed:\n{}{}",
-            String::from_utf8_lossy(&output.stdout),
-            String::from_utf8_lossy(&output.stderr)
-        );
+        run_build_testbinaries(&out, &[]);
         out
     })
 }
@@ -739,27 +759,28 @@ fn concurrent_instances_start_run_and_terminate() {
     );
 }
 
-/// A driver from `tests/classic_api/`, compiled against the test libraries' `librexx.so.4`.
+/// A driver from `tests/classic_api/`, compiled against the staged `librexx.so.4`.
 fn driver(name: &str) -> PathBuf {
     driver_linked(name, name, &["-lrexx", "-lrexxapi"])
 }
 
 /// The driver `name` from `tests/classic_api/`, built as `out` with `flags` ending the command
-/// line (`-l` options in that order), against the test libraries.
+/// line (`-l` options in that order), against the staged libraries and this repository's
+/// `include/`, with warnings fatal.
 fn driver_linked(name: &str, out: &str, flags: &[&str]) -> PathBuf {
     let source =
         Path::new(env!("CARGO_MANIFEST_DIR")).join(format!("tests/classic_api/{name}.cpp"));
-    let out = testbinaries().join(out);
-    let api = repository().join("third_party/ooRexx/api");
+    let out = staged().join(out);
+    let api = repository().join("include");
     let output = Command::new("c++")
         .arg("-o")
         .arg(&out)
         .arg(&source)
         .arg(format!("-I{}", api.display()))
         .arg(format!("-I{}", api.join("platform/unix").display()))
-        .arg(format!("-L{}", testbinaries().display()))
-        .arg(format!("-Wl,-rpath,{}", testbinaries().display()))
-        .arg("-pthread")
+        .arg(format!("-L{}", staged().display()))
+        .arg(format!("-Wl,-rpath,{}", staged().display()))
+        .args(["-Wall", "-Werror", "-pthread"])
         .args(flags)
         .output()
         .expect("c++ runs");

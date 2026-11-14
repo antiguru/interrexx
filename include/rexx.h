@@ -41,6 +41,7 @@ typedef char *PEXIT;
 
 /* BEGIN GENERATED handles */
 #ifdef __cplusplus
+}
 struct _RexxObjectPtr {};
 struct _RexxStringObject : public _RexxObjectPtr {};
 struct _RexxBufferStringObject : public _RexxStringObject {};
@@ -73,6 +74,7 @@ typedef _RexxSupplierObject *RexxSupplierObject;
 typedef _RexxStemObject *RexxStemObject;
 typedef _RexxMutableBufferObject *RexxMutableBufferObject;
 typedef _RexxVariableReferenceObject *RexxVariableReferenceObject;
+extern "C" {
 #else
 typedef struct _RexxObjectPtr *RexxObjectPtr;
 typedef struct _RexxStringObject *RexxStringObject;

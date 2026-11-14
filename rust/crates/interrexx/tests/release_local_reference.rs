@@ -1,5 +1,5 @@
 //! `ReleaseLocalReference` through extensions in `release_local_reference/`,
-//! each compiled with `c++` against this worktree's `api/` into a directory
+//! each compiled with `c++` against this worktree's `include/` into a directory
 //! of this run's own.
 
 #![cfg(target_os = "linux")]
@@ -28,11 +28,11 @@ fn worktree() -> PathBuf {
 /// Builds the extension `release_local_reference/<name>.cpp` into `dir` as
 /// `lib<name>.so`.
 fn build_library(dir: &Path, name: &str) {
-    let api = worktree().join("third_party/ooRexx/api");
+    let api = worktree().join("include");
     let source = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join(format!("tests/release_local_reference/{name}.cpp"));
     let built = Command::new("c++")
-        .args(["-shared", "-fPIC", "-O1"])
+        .args(["-shared", "-fPIC", "-O1", "-Wall", "-Werror"])
         .arg(format!("-I{}", api.display()))
         .arg(format!("-I{}", api.join("platform/unix").display()))
         .arg(&source)

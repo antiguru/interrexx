@@ -101,6 +101,8 @@ binary, or that it is alone.
   its `RexxQueue create` row is stable only against a service no other test holds open.
 * `scripts/build-testbinaries.sh` and `scripts/build-extensions.sh` take a lock and skip a build
   whose inputs are those of the build already present, so tests that need them may start at once.
+  Both compile against `include/`. `build-testbinaries.sh --stage-only` only stages `librexx` and
+  `librexxapi`, which needs no upstream source: the drivers this repository owns link against that.
 
 ## The specification checker
 
