@@ -710,25 +710,34 @@ GetMethodPackage present
     );
 }
 
-/// [`thread_interface_members_send_no_message_a_subclass_redefines`] on an instance of a class of
-/// the program that inherits `Comparable`, a mixin class of the interpreter's own library, ahead of
-/// a second class of the program that redefines the array's methods: the redefinitions behind the
-/// mixin do not run either.
+/// [`thread_interface_members_send_no_message_a_subclass_redefines`] for `IsInstanceOf` and
+/// `HasMethod` on an instance of a class of the program that inherits `Comparable`, a mixin class
+/// of the interpreter's own library, and then a mixin class of the program that redefines the
+/// methods of those names. `Comparable` comes ahead of that mixin in the instance's class order,
+/// and the redefinitions do not run either.
 // spec: native.threads.attach
 #[test]
-fn thread_interface_members_send_no_message_a_subclass_behind_a_library_mixin_redefines() {
-    let expected = "\
-ArrayAt v
-ArrayAt null
-ArrayAppend 2
-ArrayAppendString 3
-ArraySize 3
-ArrayItems 3
-ArrayDimension 1
-";
+fn thread_interface_members_send_no_message_a_mixin_behind_a_library_mixin_redefines() {
     assert_eq!(
         run("attach-mixin", "mixin.rex"),
-        (expected.to_owned(), String::new(), 0)
+        ("IsInstanceOf 1\nHasMethod 0\n".to_owned(), String::new(), 0)
+    );
+}
+
+/// [`thread_interface_members_send_no_message_a_subclass_redefines`] for `IsInstanceOf` and
+/// `HasMethod` on an instance of a subclass of a class that `Class~new` made, which takes the
+/// package of the interpreter's own library and was given methods of those names with `define`:
+/// those methods do not run either.
+// spec: native.threads.attach
+#[test]
+fn thread_interface_members_send_no_message_a_class_new_made_redefines() {
+    assert_eq!(
+        run("attach-cnew", "cnew.rex"),
+        (
+            "The M class\nISINSTANCEOF runs\n1\nIsInstanceOf 1\nHasMethod 0\n".to_owned(),
+            String::new(),
+            0
+        )
     );
 }
 

@@ -2598,8 +2598,9 @@ impl Interp {
         };
         // A scope sees past itself the scopes ahead of it in the list, so the
         // classes after `class` are the more derived ones. The run stops at
-        // the first class a program made, so a program's class that comes
-        // after a library mixin in the order is not searched either.
+        // the first class a program made, so a library mixin that a class of
+        // the program inherits ahead of another class of the program does not
+        // bring that other class into the search.
         scopes[at..]
             .iter()
             .take_while(|scope| self.is_library_class(**scope))
