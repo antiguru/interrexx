@@ -1183,6 +1183,34 @@ fn a_wait_on_the_activitys_own_message_in_an_attached_hosts_call_is_refused() {
     );
 }
 
+/// As in the attached case, but while the thread that created the instance is inside a routine
+/// that waits on an event semaphore: the wait is refused, and the call answers no result with a
+/// condition pending. The thread then clears the condition and posts the semaphore, so the host's
+/// routine answers, and the refusal is still reported once the host calls `Terminate`.
+// spec: conc.activities.deviation.20
+#[test]
+fn a_wait_on_the_activitys_own_message_in_a_call_nested_in_a_hosts_call_is_refused() {
+    // Two lends are out, the host's and the attached thread's, and the root call is counted below
+    // them once.
+    let (stdout, stderr, status) = run_driver("hostwait", &["nested"]);
+    // The method's `SAY` races the attached thread's line, as in the attached case.
+    let host = stdout.replacen("in run\n", "", 1);
+    assert_eq!(
+        (
+            stdout.contains("in run\n"),
+            host.as_str(),
+            stderr.as_str(),
+            status
+        ),
+        (
+            true,
+            "thread routine (none) condition 1\nroutine posted\nterminated\n",
+            UNENDING_WAIT,
+            0
+        )
+    );
+}
+
 /// After the extension's library loaded, an attached thread sends `SEND` to a message whose method
 /// waits for that message's own result before it replies, while the main program waits for the
 /// method to post that it runs: the main program runs to its end, and the wait is refused, rc 120.

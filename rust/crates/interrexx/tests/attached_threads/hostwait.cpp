@@ -1,7 +1,7 @@
 // An embedding host whose program waits on something only the host can end.
 //
 // Usage: hostwait instance | hostwait terminate | hostwait self | hostwait attached
-//        | hostwait start <program>.
+//        | hostwait nested | hostwait start <program>.
 //
 // * `instance`: the host creates an instance, makes an event semaphore in it, and starts a thread
 //   that waits a while, attaches and posts the semaphore. The creating thread meanwhile calls a
@@ -14,6 +14,10 @@
 // * `attached`: as `self`, but a thread the host starts attaches and calls the routine, while the
 //   creating thread waits for it outside any call. The thread prints what the routine answered and
 //   whether the call left a condition, and detaches. The creating thread then calls `Terminate`.
+// * `nested`: as `attached`, but the creating thread meanwhile calls a routine that waits on an
+//   event semaphore. Once its own call has answered, the attached thread clears the condition and
+//   posts the semaphore. The creating thread prints what its routine answered, and calls
+//   `Terminate`.
 // * `start`: the host starts a thread that waits a while and halts the thread `RexxStart` runs
 //   `<program>` on, then runs it there and prints what it answered.
 #include <chrono>
@@ -124,6 +128,50 @@ static void call_self_waiter(RexxInstance *instance)
     context->DetachThread();
 }
 
+static void call_self_waiter_then_post(RexxInstance *instance, RexxObjectPtr semaphore)
+{
+    RexxThreadContext *context = NULL;
+    if (!instance->AttachThread(&context))
+    {
+        printf("attach failed\n");
+        fflush(stdout);
+        return;
+    }
+    RexxRoutineObject routine = context->NewRoutine("SELFWAIT", self_waiter, strlen(self_waiter));
+    RexxObjectPtr result = context->CallRoutine(routine, context->NewArray(0));
+    printf("thread routine %s condition %d\n",
+           result == NULLOBJECT ? "(none)" : context->CString(result),
+           context->CheckCondition() ? 1 : 0);
+    fflush(stdout);
+    context->ClearCondition();
+    context->SendMessage0(semaphore, "POST");
+    context->DetachThread();
+}
+
+static int nested_self_wait()
+{
+    RexxInstance *instance = NULL;
+    RexxThreadContext *context = NULL;
+    if (RexxCreateInterpreter(&instance, &context, NULL) != 1)
+    {
+        return 1;
+    }
+    RexxObjectPtr semaphore = context->SendMessage0(context->FindClass("EVENTSEMAPHORE"), "NEW");
+    semaphore = context->RequestGlobalReference(semaphore);
+    const char *source = "use arg semaphore\nsemaphore~wait\nreturn 'posted'\n";
+    RexxRoutineObject routine = context->NewRoutine("WAITER", source, strlen(source));
+    RexxArrayObject arguments = context->ArrayOfOne(semaphore);
+    std::thread caller(call_self_waiter_then_post, instance, semaphore);
+    RexxObjectPtr result = context->CallRoutine(routine, arguments);
+    printf("routine %s\n", result == NULLOBJECT ? "(none)" : context->CString(result));
+    fflush(stdout);
+    caller.join();
+    instance->Terminate();
+    printf("terminated\n");
+    fflush(stdout);
+    return 0;
+}
+
 static int attached_self_wait()
 {
     RexxInstance *instance = NULL;
@@ -178,6 +226,10 @@ int main(int argc, char **argv)
     if (argc >= 2 && strcmp(argv[1], "attached") == 0)
     {
         return attached_self_wait();
+    }
+    if (argc >= 2 && strcmp(argv[1], "nested") == 0)
+    {
+        return nested_self_wait();
     }
     if (argc >= 3 && strcmp(argv[1], "start") == 0)
     {
