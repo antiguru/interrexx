@@ -291,6 +291,35 @@ typedef RXSYSEXIT *PRXSYSEXIT;
 typedef SHVBLOCK *PSHVBLOCK;
 /* END GENERATED pointers */
 
+/* In C++, BEGIN_EXTERN_C() opens a block of declarations with C linkage and
+ * END_EXTERN_C() closes it; in C both expand to nothing. */
+#ifdef __cplusplus
+#define BEGIN_EXTERN_C() extern "C" {
+#define END_EXTERN_C() }
+#else
+#define BEGIN_EXTERN_C()
+#define END_EXTERN_C()
+#endif
+
+/* The null object reference, the null string pointer, and two older names of
+ * the constant string types. */
+#define NULLOBJECT NULL
+#define NO_CSTRING NULL
+#define CONSTANT_STRING CSTRING
+#define CONSTANT_RXSTRING CONSTRXSTRING
+
+/* MAKERXSTRING(r, p, l) points the RXSTRING r at the l characters at p.
+ * RXSTRPTR(r) is its pointer and RXSTRLEN(r) its length, 0 when it is
+ * empty. An RXSTRING is empty (RXNULLSTRING) when its pointer is null, the
+ * null string (RXZEROLENSTRING) when its pointer is not null and its length
+ * is 0, and valid (RXVALIDSTRING) when it holds at least one character. */
+#define MAKERXSTRING(r, p, l) ((r).strptr = (p), (r).strlength = (l))
+#define RXSTRPTR(r) ((r).strptr)
+#define RXNULLSTRING(r) ((r).strptr == NULL)
+#define RXZEROLENSTRING(r) ((r).strptr != NULL && (r).strlength == 0)
+#define RXVALIDSTRING(r) ((r).strptr != NULL && (r).strlength != 0)
+#define RXSTRLEN(r) (RXNULLSTRING(r) ? (size_t)0 : (size_t)(r).strlength)
+
 /* BEGIN GENERATED handlers */
 typedef RexxReturnCode REXXENTRY RexxSubcomHandler(CONSTRXSTRING *, unsigned short *, RXSTRING *);
 typedef size_t REXXENTRY RexxRoutineHandler(CSTRING, size_t, CONSTRXSTRING *, CSTRING, RXSTRING *);

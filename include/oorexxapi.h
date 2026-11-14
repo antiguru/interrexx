@@ -139,6 +139,18 @@ struct _ValueDescriptor {
     } value;
     uint16_t type;
     uint16_t flags;
+#ifdef __cplusplus
+    void operator=(RexxObjectPtr v) { type = 11; value.value_RexxObjectPtr = v; }
+    void operator=(RexxStringObject v) { type = 17; value.value_RexxStringObject = v; }
+    void operator=(RexxArrayObject v) { type = 31; value.value_RexxArrayObject = v; }
+    void operator=(RexxStemObject v) { type = 32; value.value_RexxStemObject = v; }
+    void operator=(RexxMutableBufferObject v) { type = 37; value.value_RexxMutableBufferObject = v; }
+    void operator=(CSTRING v) { type = 15; value.value_CSTRING = v; }
+    void operator=(POINTER v) { type = 16; value.value_POINTER = v; }
+    void operator=(wholenumber_t v) { type = 13; value.value_wholenumber_t = v; }
+    void operator=(float v) { type = 19; value.value_float = v; }
+    void operator=(double v) { type = 14; value.value_double = v; }
+#endif
 };
 
 typedef struct {
@@ -1425,6 +1437,14 @@ struct RexxIORedirectorContext_ {
 #define REGISTER_LIBRARY "RegisterLibrary"
 #define DIRECT_COMMAND_ENVIRONMENT 1
 #define REDIRECTING_COMMAND_ENVIRONMENT 2
+
+#define REXX_ARGUMENT_TERMINATOR 0
+#define ARGUMENT_EXISTS 0x01
+#define SPECIAL_ARGUMENT 0x02
+#define ROUTINE_TYPED_STYLE 1
+#define ROUTINE_CLASSIC_STYLE 2
+#define METHOD_TYPED_STYLE 1
+#define REXX_PACKAGE_API_NO 20081030
 /* END GENERATED constants */
 
 /* BEGIN GENERATED argument-types */
@@ -1499,7 +1519,224 @@ struct RexxIORedirectorContext_ {
 #define ARGUMENT_TYPE_OPTIONAL_positive_wholenumber_t wholenumber_t
 #define ARGUMENT_TYPE_OPTIONAL_nonnegative_wholenumber_t wholenumber_t
 #define ARGUMENT_TYPE_OPTIONAL_RexxVariableReferenceObject RexxVariableReferenceObject
+
+typedef RexxObjectPtr OSELF;
+typedef POINTER CSELF;
+typedef POINTER BUFFER;
+typedef RexxArrayObject ARGLIST;
+typedef RexxObjectPtr SCOPE;
+typedef RexxClassObject SUPER;
+typedef CSTRING NAME;
 /* END GENERATED argument-types */
+
+/*
+ * Declaring a library's routines and methods.
+ *
+ * RexxRoutineN(returnType, name, t1, n1, ..., tN, nN) begins the definition of
+ * a routine of N parameters, for N from 0 to 10, and the function body that
+ * follows the macro is the routine's code. Each tK is the name of a value code
+ * (the part after REXX_VALUE_), and the parameter nK has the type
+ * ARGUMENT_TYPE_tK; returnType names the value code of the result in the same
+ * way. The body also sees the parameter context, the routine's call context.
+ * RexxMethodN declares a method in the same way, whose context is a method
+ * context.
+ *
+ * The macro defines two functions. name##_impl has the parameters the
+ * declaration lists, after context, and the body. name is the entry the
+ * routine table names: called with a null descriptor array it answers the
+ * declaration's signature (the result's code, each parameter's code, then
+ * REXX_ARGUMENT_TERMINATOR); called with an array, it calls name##_impl with
+ * the values of elements 1 to N, stores the result in element 0 and answers a
+ * null pointer. In C++ the entry has C linkage.
+ *
+ * The macros whose names begin with INTERREXX_ are this header's own and not
+ * part of the interface.
+ */
+
+#ifdef __cplusplus
+#define INTERREXX_C_LINKAGE extern "C"
+#else
+#define INTERREXX_C_LINKAGE
+#endif
+
+/* The items of a parenthesised list. */
+#define INTERREXX_LIST(...) __VA_ARGS__
+
+/* The value of descriptor i, as the type a parameter of code t has. */
+#define INTERREXX_READ(t, i) ((ARGUMENT_TYPE_##t)arguments[i].value.value_##t)
+
+/* The body's declaration, the entry, and the head of the body's definition,
+ * for a declaration over the context type ctx whose result has the code rt.
+ * codes, reads and params are parenthesised lists, each empty or starting
+ * with a comma: the parameters' codes, the entry's reads of the descriptors,
+ * and the body's parameters. */
+#define INTERREXX_DECLARE(ctx, rt, name, codes, reads, params) \
+    ARGUMENT_TYPE_##rt name##_impl(ctx *context INTERREXX_LIST params); \
+    INTERREXX_C_LINKAGE uint16_t *RexxEntry name(ctx *context, ValueDescriptor *arguments) \
+    { \
+        static uint16_t types[] = {REXX_VALUE_##rt INTERREXX_LIST codes, REXX_ARGUMENT_TERMINATOR}; \
+        if (arguments != NULL) \
+        { \
+            arguments[0].value.value_##rt = name##_impl(context INTERREXX_LIST reads); \
+            return NULL; \
+        } \
+        return types; \
+    } \
+    ARGUMENT_TYPE_##rt name##_impl(ctx *context INTERREXX_LIST params)
+
+#define RexxRoutine0(returnType, name) \
+    INTERREXX_DECLARE(RexxCallContext, returnType, name, (), (), ())
+#define RexxRoutine1(returnType, name, t1, n1) \
+    INTERREXX_DECLARE(RexxCallContext, returnType, name, \
+        (, REXX_VALUE_##t1), \
+        (, INTERREXX_READ(t1, 1)), \
+        (, ARGUMENT_TYPE_##t1 n1))
+#define RexxRoutine2(returnType, name, t1, n1, t2, n2) \
+    INTERREXX_DECLARE(RexxCallContext, returnType, name, \
+        (, REXX_VALUE_##t1, REXX_VALUE_##t2), \
+        (, INTERREXX_READ(t1, 1), INTERREXX_READ(t2, 2)), \
+        (, ARGUMENT_TYPE_##t1 n1, ARGUMENT_TYPE_##t2 n2))
+#define RexxRoutine3(returnType, name, t1, n1, t2, n2, t3, n3) \
+    INTERREXX_DECLARE(RexxCallContext, returnType, name, \
+        (, REXX_VALUE_##t1, REXX_VALUE_##t2, REXX_VALUE_##t3), \
+        (, INTERREXX_READ(t1, 1), INTERREXX_READ(t2, 2), INTERREXX_READ(t3, 3)), \
+        (, ARGUMENT_TYPE_##t1 n1, ARGUMENT_TYPE_##t2 n2, ARGUMENT_TYPE_##t3 n3))
+#define RexxRoutine4(returnType, name, t1, n1, t2, n2, t3, n3, t4, n4) \
+    INTERREXX_DECLARE(RexxCallContext, returnType, name, \
+        (, REXX_VALUE_##t1, REXX_VALUE_##t2, REXX_VALUE_##t3, REXX_VALUE_##t4), \
+        (, INTERREXX_READ(t1, 1), INTERREXX_READ(t2, 2), INTERREXX_READ(t3, 3), INTERREXX_READ(t4, 4)), \
+        (, ARGUMENT_TYPE_##t1 n1, ARGUMENT_TYPE_##t2 n2, ARGUMENT_TYPE_##t3 n3, ARGUMENT_TYPE_##t4 n4))
+#define RexxRoutine5(returnType, name, t1, n1, t2, n2, t3, n3, t4, n4, t5, n5) \
+    INTERREXX_DECLARE(RexxCallContext, returnType, name, \
+        (, REXX_VALUE_##t1, REXX_VALUE_##t2, REXX_VALUE_##t3, REXX_VALUE_##t4, REXX_VALUE_##t5), \
+        (, INTERREXX_READ(t1, 1), INTERREXX_READ(t2, 2), INTERREXX_READ(t3, 3), INTERREXX_READ(t4, 4), INTERREXX_READ(t5, 5)), \
+        (, ARGUMENT_TYPE_##t1 n1, ARGUMENT_TYPE_##t2 n2, ARGUMENT_TYPE_##t3 n3, ARGUMENT_TYPE_##t4 n4, ARGUMENT_TYPE_##t5 n5))
+#define RexxRoutine6(returnType, name, t1, n1, t2, n2, t3, n3, t4, n4, t5, n5, t6, n6) \
+    INTERREXX_DECLARE(RexxCallContext, returnType, name, \
+        (, REXX_VALUE_##t1, REXX_VALUE_##t2, REXX_VALUE_##t3, REXX_VALUE_##t4, REXX_VALUE_##t5, REXX_VALUE_##t6), \
+        (, INTERREXX_READ(t1, 1), INTERREXX_READ(t2, 2), INTERREXX_READ(t3, 3), INTERREXX_READ(t4, 4), INTERREXX_READ(t5, 5), INTERREXX_READ(t6, 6)), \
+        (, ARGUMENT_TYPE_##t1 n1, ARGUMENT_TYPE_##t2 n2, ARGUMENT_TYPE_##t3 n3, ARGUMENT_TYPE_##t4 n4, ARGUMENT_TYPE_##t5 n5, ARGUMENT_TYPE_##t6 n6))
+#define RexxRoutine7(returnType, name, t1, n1, t2, n2, t3, n3, t4, n4, t5, n5, t6, n6, t7, n7) \
+    INTERREXX_DECLARE(RexxCallContext, returnType, name, \
+        (, REXX_VALUE_##t1, REXX_VALUE_##t2, REXX_VALUE_##t3, REXX_VALUE_##t4, REXX_VALUE_##t5, REXX_VALUE_##t6, REXX_VALUE_##t7), \
+        (, INTERREXX_READ(t1, 1), INTERREXX_READ(t2, 2), INTERREXX_READ(t3, 3), INTERREXX_READ(t4, 4), INTERREXX_READ(t5, 5), INTERREXX_READ(t6, 6), INTERREXX_READ(t7, 7)), \
+        (, ARGUMENT_TYPE_##t1 n1, ARGUMENT_TYPE_##t2 n2, ARGUMENT_TYPE_##t3 n3, ARGUMENT_TYPE_##t4 n4, ARGUMENT_TYPE_##t5 n5, ARGUMENT_TYPE_##t6 n6, ARGUMENT_TYPE_##t7 n7))
+#define RexxRoutine8(returnType, name, t1, n1, t2, n2, t3, n3, t4, n4, t5, n5, t6, n6, t7, n7, t8, n8) \
+    INTERREXX_DECLARE(RexxCallContext, returnType, name, \
+        (, REXX_VALUE_##t1, REXX_VALUE_##t2, REXX_VALUE_##t3, REXX_VALUE_##t4, REXX_VALUE_##t5, REXX_VALUE_##t6, REXX_VALUE_##t7, REXX_VALUE_##t8), \
+        (, INTERREXX_READ(t1, 1), INTERREXX_READ(t2, 2), INTERREXX_READ(t3, 3), INTERREXX_READ(t4, 4), INTERREXX_READ(t5, 5), INTERREXX_READ(t6, 6), INTERREXX_READ(t7, 7), INTERREXX_READ(t8, 8)), \
+        (, ARGUMENT_TYPE_##t1 n1, ARGUMENT_TYPE_##t2 n2, ARGUMENT_TYPE_##t3 n3, ARGUMENT_TYPE_##t4 n4, ARGUMENT_TYPE_##t5 n5, ARGUMENT_TYPE_##t6 n6, ARGUMENT_TYPE_##t7 n7, ARGUMENT_TYPE_##t8 n8))
+#define RexxRoutine9(returnType, name, t1, n1, t2, n2, t3, n3, t4, n4, t5, n5, t6, n6, t7, n7, t8, n8, t9, n9) \
+    INTERREXX_DECLARE(RexxCallContext, returnType, name, \
+        (, REXX_VALUE_##t1, REXX_VALUE_##t2, REXX_VALUE_##t3, REXX_VALUE_##t4, REXX_VALUE_##t5, REXX_VALUE_##t6, REXX_VALUE_##t7, REXX_VALUE_##t8, REXX_VALUE_##t9), \
+        (, INTERREXX_READ(t1, 1), INTERREXX_READ(t2, 2), INTERREXX_READ(t3, 3), INTERREXX_READ(t4, 4), INTERREXX_READ(t5, 5), INTERREXX_READ(t6, 6), INTERREXX_READ(t7, 7), INTERREXX_READ(t8, 8), INTERREXX_READ(t9, 9)), \
+        (, ARGUMENT_TYPE_##t1 n1, ARGUMENT_TYPE_##t2 n2, ARGUMENT_TYPE_##t3 n3, ARGUMENT_TYPE_##t4 n4, ARGUMENT_TYPE_##t5 n5, ARGUMENT_TYPE_##t6 n6, ARGUMENT_TYPE_##t7 n7, ARGUMENT_TYPE_##t8 n8, ARGUMENT_TYPE_##t9 n9))
+#define RexxRoutine10(returnType, name, t1, n1, t2, n2, t3, n3, t4, n4, t5, n5, t6, n6, t7, n7, t8, n8, t9, n9, t10, n10) \
+    INTERREXX_DECLARE(RexxCallContext, returnType, name, \
+        (, REXX_VALUE_##t1, REXX_VALUE_##t2, REXX_VALUE_##t3, REXX_VALUE_##t4, REXX_VALUE_##t5, REXX_VALUE_##t6, REXX_VALUE_##t7, REXX_VALUE_##t8, REXX_VALUE_##t9, REXX_VALUE_##t10), \
+        (, INTERREXX_READ(t1, 1), INTERREXX_READ(t2, 2), INTERREXX_READ(t3, 3), INTERREXX_READ(t4, 4), INTERREXX_READ(t5, 5), INTERREXX_READ(t6, 6), INTERREXX_READ(t7, 7), INTERREXX_READ(t8, 8), INTERREXX_READ(t9, 9), INTERREXX_READ(t10, 10)), \
+        (, ARGUMENT_TYPE_##t1 n1, ARGUMENT_TYPE_##t2 n2, ARGUMENT_TYPE_##t3 n3, ARGUMENT_TYPE_##t4 n4, ARGUMENT_TYPE_##t5 n5, ARGUMENT_TYPE_##t6 n6, ARGUMENT_TYPE_##t7 n7, ARGUMENT_TYPE_##t8 n8, ARGUMENT_TYPE_##t9 n9, ARGUMENT_TYPE_##t10 n10))
+
+#define RexxMethod0(returnType, name) \
+    INTERREXX_DECLARE(RexxMethodContext, returnType, name, (), (), ())
+#define RexxMethod1(returnType, name, t1, n1) \
+    INTERREXX_DECLARE(RexxMethodContext, returnType, name, \
+        (, REXX_VALUE_##t1), \
+        (, INTERREXX_READ(t1, 1)), \
+        (, ARGUMENT_TYPE_##t1 n1))
+#define RexxMethod2(returnType, name, t1, n1, t2, n2) \
+    INTERREXX_DECLARE(RexxMethodContext, returnType, name, \
+        (, REXX_VALUE_##t1, REXX_VALUE_##t2), \
+        (, INTERREXX_READ(t1, 1), INTERREXX_READ(t2, 2)), \
+        (, ARGUMENT_TYPE_##t1 n1, ARGUMENT_TYPE_##t2 n2))
+#define RexxMethod3(returnType, name, t1, n1, t2, n2, t3, n3) \
+    INTERREXX_DECLARE(RexxMethodContext, returnType, name, \
+        (, REXX_VALUE_##t1, REXX_VALUE_##t2, REXX_VALUE_##t3), \
+        (, INTERREXX_READ(t1, 1), INTERREXX_READ(t2, 2), INTERREXX_READ(t3, 3)), \
+        (, ARGUMENT_TYPE_##t1 n1, ARGUMENT_TYPE_##t2 n2, ARGUMENT_TYPE_##t3 n3))
+#define RexxMethod4(returnType, name, t1, n1, t2, n2, t3, n3, t4, n4) \
+    INTERREXX_DECLARE(RexxMethodContext, returnType, name, \
+        (, REXX_VALUE_##t1, REXX_VALUE_##t2, REXX_VALUE_##t3, REXX_VALUE_##t4), \
+        (, INTERREXX_READ(t1, 1), INTERREXX_READ(t2, 2), INTERREXX_READ(t3, 3), INTERREXX_READ(t4, 4)), \
+        (, ARGUMENT_TYPE_##t1 n1, ARGUMENT_TYPE_##t2 n2, ARGUMENT_TYPE_##t3 n3, ARGUMENT_TYPE_##t4 n4))
+#define RexxMethod5(returnType, name, t1, n1, t2, n2, t3, n3, t4, n4, t5, n5) \
+    INTERREXX_DECLARE(RexxMethodContext, returnType, name, \
+        (, REXX_VALUE_##t1, REXX_VALUE_##t2, REXX_VALUE_##t3, REXX_VALUE_##t4, REXX_VALUE_##t5), \
+        (, INTERREXX_READ(t1, 1), INTERREXX_READ(t2, 2), INTERREXX_READ(t3, 3), INTERREXX_READ(t4, 4), INTERREXX_READ(t5, 5)), \
+        (, ARGUMENT_TYPE_##t1 n1, ARGUMENT_TYPE_##t2 n2, ARGUMENT_TYPE_##t3 n3, ARGUMENT_TYPE_##t4 n4, ARGUMENT_TYPE_##t5 n5))
+#define RexxMethod6(returnType, name, t1, n1, t2, n2, t3, n3, t4, n4, t5, n5, t6, n6) \
+    INTERREXX_DECLARE(RexxMethodContext, returnType, name, \
+        (, REXX_VALUE_##t1, REXX_VALUE_##t2, REXX_VALUE_##t3, REXX_VALUE_##t4, REXX_VALUE_##t5, REXX_VALUE_##t6), \
+        (, INTERREXX_READ(t1, 1), INTERREXX_READ(t2, 2), INTERREXX_READ(t3, 3), INTERREXX_READ(t4, 4), INTERREXX_READ(t5, 5), INTERREXX_READ(t6, 6)), \
+        (, ARGUMENT_TYPE_##t1 n1, ARGUMENT_TYPE_##t2 n2, ARGUMENT_TYPE_##t3 n3, ARGUMENT_TYPE_##t4 n4, ARGUMENT_TYPE_##t5 n5, ARGUMENT_TYPE_##t6 n6))
+#define RexxMethod7(returnType, name, t1, n1, t2, n2, t3, n3, t4, n4, t5, n5, t6, n6, t7, n7) \
+    INTERREXX_DECLARE(RexxMethodContext, returnType, name, \
+        (, REXX_VALUE_##t1, REXX_VALUE_##t2, REXX_VALUE_##t3, REXX_VALUE_##t4, REXX_VALUE_##t5, REXX_VALUE_##t6, REXX_VALUE_##t7), \
+        (, INTERREXX_READ(t1, 1), INTERREXX_READ(t2, 2), INTERREXX_READ(t3, 3), INTERREXX_READ(t4, 4), INTERREXX_READ(t5, 5), INTERREXX_READ(t6, 6), INTERREXX_READ(t7, 7)), \
+        (, ARGUMENT_TYPE_##t1 n1, ARGUMENT_TYPE_##t2 n2, ARGUMENT_TYPE_##t3 n3, ARGUMENT_TYPE_##t4 n4, ARGUMENT_TYPE_##t5 n5, ARGUMENT_TYPE_##t6 n6, ARGUMENT_TYPE_##t7 n7))
+#define RexxMethod8(returnType, name, t1, n1, t2, n2, t3, n3, t4, n4, t5, n5, t6, n6, t7, n7, t8, n8) \
+    INTERREXX_DECLARE(RexxMethodContext, returnType, name, \
+        (, REXX_VALUE_##t1, REXX_VALUE_##t2, REXX_VALUE_##t3, REXX_VALUE_##t4, REXX_VALUE_##t5, REXX_VALUE_##t6, REXX_VALUE_##t7, REXX_VALUE_##t8), \
+        (, INTERREXX_READ(t1, 1), INTERREXX_READ(t2, 2), INTERREXX_READ(t3, 3), INTERREXX_READ(t4, 4), INTERREXX_READ(t5, 5), INTERREXX_READ(t6, 6), INTERREXX_READ(t7, 7), INTERREXX_READ(t8, 8)), \
+        (, ARGUMENT_TYPE_##t1 n1, ARGUMENT_TYPE_##t2 n2, ARGUMENT_TYPE_##t3 n3, ARGUMENT_TYPE_##t4 n4, ARGUMENT_TYPE_##t5 n5, ARGUMENT_TYPE_##t6 n6, ARGUMENT_TYPE_##t7 n7, ARGUMENT_TYPE_##t8 n8))
+#define RexxMethod9(returnType, name, t1, n1, t2, n2, t3, n3, t4, n4, t5, n5, t6, n6, t7, n7, t8, n8, t9, n9) \
+    INTERREXX_DECLARE(RexxMethodContext, returnType, name, \
+        (, REXX_VALUE_##t1, REXX_VALUE_##t2, REXX_VALUE_##t3, REXX_VALUE_##t4, REXX_VALUE_##t5, REXX_VALUE_##t6, REXX_VALUE_##t7, REXX_VALUE_##t8, REXX_VALUE_##t9), \
+        (, INTERREXX_READ(t1, 1), INTERREXX_READ(t2, 2), INTERREXX_READ(t3, 3), INTERREXX_READ(t4, 4), INTERREXX_READ(t5, 5), INTERREXX_READ(t6, 6), INTERREXX_READ(t7, 7), INTERREXX_READ(t8, 8), INTERREXX_READ(t9, 9)), \
+        (, ARGUMENT_TYPE_##t1 n1, ARGUMENT_TYPE_##t2 n2, ARGUMENT_TYPE_##t3 n3, ARGUMENT_TYPE_##t4 n4, ARGUMENT_TYPE_##t5 n5, ARGUMENT_TYPE_##t6 n6, ARGUMENT_TYPE_##t7 n7, ARGUMENT_TYPE_##t8 n8, ARGUMENT_TYPE_##t9 n9))
+#define RexxMethod10(returnType, name, t1, n1, t2, n2, t3, n3, t4, n4, t5, n5, t6, n6, t7, n7, t8, n8, t9, n9, t10, n10) \
+    INTERREXX_DECLARE(RexxMethodContext, returnType, name, \
+        (, REXX_VALUE_##t1, REXX_VALUE_##t2, REXX_VALUE_##t3, REXX_VALUE_##t4, REXX_VALUE_##t5, REXX_VALUE_##t6, REXX_VALUE_##t7, REXX_VALUE_##t8, REXX_VALUE_##t9, REXX_VALUE_##t10), \
+        (, INTERREXX_READ(t1, 1), INTERREXX_READ(t2, 2), INTERREXX_READ(t3, 3), INTERREXX_READ(t4, 4), INTERREXX_READ(t5, 5), INTERREXX_READ(t6, 6), INTERREXX_READ(t7, 7), INTERREXX_READ(t8, 8), INTERREXX_READ(t9, 9), INTERREXX_READ(t10, 10)), \
+        (, ARGUMENT_TYPE_##t1 n1, ARGUMENT_TYPE_##t2 n2, ARGUMENT_TYPE_##t3 n3, ARGUMENT_TYPE_##t4 n4, ARGUMENT_TYPE_##t5 n5, ARGUMENT_TYPE_##t6 n6, ARGUMENT_TYPE_##t7 n7, ARGUMENT_TYPE_##t8 n8, ARGUMENT_TYPE_##t9 n9, ARGUMENT_TYPE_##t10 n10))
+
+/* Declarations of the entries a routine or method declaration defines, for a
+ * table in another source file than the declaration, and of a classic
+ * function. */
+#define REXX_TYPED_ROUTINE_PROTOTYPE(name) \
+    INTERREXX_C_LINKAGE uint16_t *RexxEntry name(RexxCallContext *, ValueDescriptor *)
+#define REXX_METHOD_PROTOTYPE(name) \
+    INTERREXX_C_LINKAGE uint16_t *RexxEntry name(RexxMethodContext *, ValueDescriptor *)
+#define REXX_CLASSIC_ROUTINE_PROTOTYPE(name) RexxRoutineHandler name
+
+/* The rows of a routine table and of a method table: the style, the name the
+ * row is found by (n, as written) and the entry e. A table ends with the row
+ * REXX_LAST_ROUTINE() or REXX_LAST_METHOD(), whose fields are all zero. */
+#define REXX_ROUTINE(s, n, e) {s, 0, #n, (void *)e, 0, 0}
+#define REXX_TYPED_ROUTINE(n, e) {ROUTINE_TYPED_STYLE, 0, #n, (void *)e, 0, 0}
+#define REXX_CLASSIC_ROUTINE(n, e) {ROUTINE_CLASSIC_STYLE, 0, #n, (void *)e, 0, 0}
+#define REXX_LAST_ROUTINE() {0, 0, NULL, NULL, 0, 0}
+#define REXX_METHOD_ENTRY(n, e) {METHOD_TYPED_STYLE, 0, #n, (void *)e, 0, 0}
+#define REXX_METHOD(n, e) {METHOD_TYPED_STYLE, 0, #n, (void *)e, 0, 0}
+#define REXX_LAST_METHOD() {0, 0, NULL, NULL, 0, 0}
+
+/* The first two fields of a package entry, each followed by a comma, and the
+ * package version of a package that gives none. */
+#define STANDARD_PACKAGE_HEADER sizeof(RexxPackageEntry), REXX_PACKAGE_API_NO,
+#define NO_VERSION_YET NULL
+
+/* Defines RexxGetPackage, the function the interpreter looks up in a library
+ * and which answers the address of the package entry name##_package_entry. */
+#define OOREXX_GET_PACKAGE(name) \
+    BEGIN_EXTERN_C() \
+    REXXEXPORT RexxPackageEntry *RexxEntry RexxGetPackage(void) { return &name##_package_entry; } \
+    END_EXTERN_C()
+
+/* The parts of a signature word: its value code without the optional bit, and
+ * whether the optional bit is set. */
+#define ARGUMENT_TYPE(t) ((t) & ~REXX_OPTIONAL_ARGUMENT)
+#define IS_OPTIONAL_ARGUMENT(t) (((t) & REXX_OPTIONAL_ARGUMENT) != 0)
+
+/* The value a descriptor v holds as the value code t, and the assignment of
+ * val to it as that code, which sets its type and leaves its flags. */
+#define GET_REXX_VALUE(v, t) ((v).value.value_##t)
+#define SET_REXX_VALUE(v, t, val) ((v).type = REXX_VALUE_##t, (v).value.value_##t = (val))
+
+/* In the code of a routine or method, whether its argument i (from 1, counted
+ * over the declaration's parameters) was given, and whether it was omitted.
+ * They read the context, so only C++ code can use them. */
+#define argumentExists(i) ((context->arguments[i].flags & ARGUMENT_EXISTS) != 0)
+#define argumentOmitted(i) (!argumentExists(i))
 
 /* BEGIN GENERATED exports */
 RexxReturnCode REXXENTRY RexxCreateInterpreter(RexxInstance **, RexxThreadContext **, RexxOption *);

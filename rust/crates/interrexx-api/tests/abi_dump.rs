@@ -22,8 +22,9 @@
 //! the dump's typedef facts check each of them separately.
 
 use interrexx_api::constants::{
-    API_VERSIONS, CConstant, CLASSIC_CONSTANTS, CLASSIC_LIMITS, ENVIRONMENT_KINDS, OPTION_NAMES,
-    argument_type_names, error_code, has_error_code, optional_argument_types, value_codes,
+    API_VERSIONS, ARGUMENT_TYPEDEFS, CConstant, CLASSIC_CONSTANTS, CLASSIC_LIMITS, ENTRY_CONSTANTS,
+    ENVIRONMENT_KINDS, OPTION_NAMES, argument_type_names, error_code, has_error_code,
+    optional_argument_types, value_codes,
 };
 use interrexx_api::exports::{Declared, EXPORTS, export_types, pointer_types};
 use interrexx_api::layout::{
@@ -641,6 +642,27 @@ fn type_checks() -> Vec<TypeCheck> {
             });
         }
     }
+    {
+        use interrexx_api::layout::{
+            CSTRING, POINTER, RexxArrayObject, RexxClassObject, RexxObjectPtr,
+        };
+        // spec: native.header.special-types
+        for (name, tokens) in ARGUMENT_TYPEDEFS {
+            let rust = match *tokens {
+                "RexxObjectPtr" => std::any::type_name::<RexxObjectPtr>(),
+                "POINTER" => std::any::type_name::<POINTER>(),
+                "RexxArrayObject" => std::any::type_name::<RexxArrayObject>(),
+                "RexxClassObject" => std::any::type_name::<RexxClassObject>(),
+                "CSTRING" => std::any::type_name::<CSTRING>(),
+                other => panic!("no Rust type for the tokens {other}"),
+            };
+            out.push(TypeCheck {
+                key: format!("type typedef {name}"),
+                expression: format!("({name})0"),
+                rust,
+            });
+        }
+    }
     let arguments = argument_type_names();
     for (name, rust) in &arguments {
         out.push(TypeCheck {
@@ -679,6 +701,8 @@ fn constants() -> Vec<CConstant> {
         .chain(CLASSIC_LIMITS)
         .chain(API_VERSIONS)
         .chain(ENVIRONMENT_KINDS)
+        // spec: native.header.entry-constants
+        .chain(ENTRY_CONSTANTS)
         .cloned()
         .collect();
     out.extend(value_codes());

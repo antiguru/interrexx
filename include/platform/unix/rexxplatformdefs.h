@@ -14,6 +14,7 @@
 
 /* BEGIN GENERATED platform-defs */
 #define REXXENTRY
+#define REXXEXPORT
 /* END GENERATED platform-defs */
 
 #endif

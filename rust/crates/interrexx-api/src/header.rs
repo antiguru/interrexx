@@ -17,8 +17,9 @@
 //! (`interrexx-inventory/data/errors.tsv`), whose rows [`sections`] takes.
 
 use crate::constants::{
-    API_VERSIONS, ARGUMENT_TYPES, CConstant, CLASSIC_CONSTANTS, CLASSIC_LIMITS, ENVIRONMENT_KINDS,
-    OPTION_NAMES, error_code, has_error_code, optional_argument_types, value_codes,
+    API_VERSIONS, ARGUMENT_TYPEDEFS, ARGUMENT_TYPES, CConstant, CLASSIC_CONSTANTS, CLASSIC_LIMITS,
+    ENTRY_CONSTANTS, ENVIRONMENT_KINDS, OPTION_NAMES, error_code, has_error_code,
+    optional_argument_types, value_codes,
 };
 use crate::exports::{Declared, EXPORTS, Export, pointer_types};
 use crate::layout::{
@@ -34,8 +35,9 @@ use crate::layout::{
     RexxRedirectingEnvironment, RexxRegisteredEnvironment, RexxRoutineEntry, RexxThreadContext_,
     RexxThreadInterface, SHVBLOCK, THREAD_ALIASES, THREAD_INSTANCE_FIELDS,
     THREAD_INSTANCE_FORWARDS, THREAD_ONLY, THREAD_RESPELLED, THREAD_UNNAMED,
-    THREAD_VALUE_ACCESSORS, ValueDescriptor, ValueUnion, c_type,
+    THREAD_VALUE_ACCESSORS, VALUE_ASSIGNMENTS, ValueDescriptor, ValueUnion, c_type,
 };
+use crate::values::rows;
 use std::fmt::Write as _;
 
 /// The directory of the platform headers of each platform, under `include/`.
@@ -54,7 +56,7 @@ pub struct Platform {
     /// The structs whose layout is this platform's: on another platform the
     /// name may stand for a system type.
     pub structs: &'static [Struct],
-    /// Each calling-convention macro: its name and its expansion.
+    /// Each calling-convention and export macro: its name and its expansion.
     pub defines: &'static [(&'static str, &'static str)],
 }
 
@@ -80,8 +82,9 @@ pub const PLATFORMS: &[Platform] = &[Platform {
         tag: Tag::Named("_REXXDATETIME"),
         fields: REXXDATETIME::C_FIELDS,
         retype: &[],
+        assignments: &[],
     }],
-    defines: &[("REXXENTRY", "")],
+    defines: &[("REXXENTRY", ""), ("REXXEXPORT", "")],
 }];
 
 /// How a struct is introduced.
@@ -105,6 +108,9 @@ pub struct Struct {
     /// Rust type tokens to read as other tokens, for a header struct that
     /// shares a Rust struct with another but names its own flag word.
     pub retype: &'static [(&'static str, &'static str)],
+    /// The C++ assignments the struct defines: for each, the Rust type tokens
+    /// of the value and the name of the value code it is stored as.
+    pub assignments: &'static [(&'static str, &'static str)],
 }
 
 /// A struct with a tag of its name preceded by an underscore.
@@ -114,6 +120,7 @@ const fn named(name: &'static str, tag: &'static str, fields: &'static [CField])
         tag: Tag::Named(tag),
         fields,
         retype: &[],
+        assignments: &[],
     }
 }
 
@@ -124,6 +131,7 @@ const fn anonymous(name: &'static str, fields: &'static [CField]) -> Struct {
         tag: Tag::Anonymous,
         fields,
         retype: &[],
+        assignments: &[],
     }
 }
 
@@ -155,6 +163,7 @@ const EXIT_STRUCTS: &[Struct] = &[
         tag: Tag::Named("_RXEXFCAL_PARM"),
         fields: RXOFNCCAL_PARM::C_FIELDS,
         retype: &[("RXOFNC_FLAGS", "RXEXF_FLAGS")],
+        assignments: &[],
     },
     named("RXCMDHST_PARM", "_RXCMDHST_PARM", RXCMDHST_PARM::C_FIELDS),
     named("RXMSQPSH_PARM", "_RXMSQPSH_PARM", RXMSQPSH_PARM::C_FIELDS),
@@ -181,11 +190,13 @@ const EXIT_STRUCTS: &[Struct] = &[
 
 /// The object-oriented API's data structs, in `oorexxapi.h`.
 const API_STRUCTS: &[Struct] = &[
-    named(
-        "ValueDescriptor",
-        "_ValueDescriptor",
-        ValueDescriptor::C_FIELDS,
-    ),
+    Struct {
+        name: "ValueDescriptor",
+        tag: Tag::Named("_ValueDescriptor"),
+        fields: ValueDescriptor::C_FIELDS,
+        retype: &[],
+        assignments: VALUE_ASSIGNMENTS,
+    },
     anonymous("RexxCondition", RexxCondition::C_FIELDS),
     named(
         "RexxContextExit",
@@ -477,11 +488,14 @@ fn api_constants() -> String {
         writeln!(out, "#define {name} \"{text}\"").unwrap();
     }
     out.push_str(&constants(ENVIRONMENT_KINDS));
+    out.push('\n');
+    out.push_str(&constants(ENTRY_CONSTANTS));
     out
 }
 
 /// `ARGUMENT_TYPE_<name>` for every value code and its optional form, each
-/// the C type of the argument an entry receives for it.
+/// the C type of the argument an entry receives for it, then the typedef of
+/// each special argument's name.
 fn argument_types() -> String {
     let mut out = String::new();
     for (name, tokens) in ARGUMENT_TYPES {
@@ -497,6 +511,10 @@ fn argument_types() -> String {
             c_type(tokens)
         )
         .unwrap();
+    }
+    out.push('\n');
+    for (name, tokens) in ARGUMENT_TYPEDEFS {
+        writeln!(out, "typedef {};", declarator(&c_type(tokens), name)).unwrap();
     }
     out
 }
@@ -617,6 +635,28 @@ fn fields(out: &mut String, fields: &[CField], retype: &[(&str, &str)], indent: 
     }
 }
 
+/// The C++ assignment operators of `list`, each storing its value in the union
+/// member of its value code and setting `type` to that code. The code is
+/// written as a number: the `REXX_VALUE_` names are defined after the structs.
+fn assignments(out: &mut String, list: &[(&str, &str)]) {
+    if list.is_empty() {
+        return;
+    }
+    out.push_str("#ifdef __cplusplus\n");
+    for (tokens, name) in list {
+        let Some((code, _)) = rows().find(|(_, row)| row == name) else {
+            panic!("the conversion table has no code {name}");
+        };
+        writeln!(
+            out,
+            "    void operator=({} v) {{ type = {code}; value.value_{name} = v; }}",
+            c_type(tokens)
+        )
+        .unwrap();
+    }
+    out.push_str("#endif\n");
+}
+
 /// Every struct of `list`: the typedefs of the tagged ones first, then each
 /// definition in order.
 fn structs(list: &[Struct]) -> String {
@@ -632,6 +672,7 @@ fn structs(list: &[Struct]) -> String {
             Tag::Named(tag) => {
                 writeln!(out, "struct {tag} {{").unwrap();
                 fields(&mut out, s.fields, s.retype, "    ");
+                assignments(&mut out, s.assignments);
                 out.push_str("};\n");
             }
             Tag::Anonymous => {

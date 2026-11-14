@@ -723,6 +723,23 @@ c_struct! {
     }
 }
 
+/// The C++ assignments to a `ValueDescriptor`: for each, the tokens of the
+/// Rust type of the value assigned and the name of the value code whose
+/// union member it stores. An assignment sets `type` to that code and leaves
+/// `flags` as it was.
+pub const VALUE_ASSIGNMENTS: &[(&str, &str)] = &[
+    ("RexxObjectPtr", "RexxObjectPtr"),
+    ("RexxStringObject", "RexxStringObject"),
+    ("RexxArrayObject", "RexxArrayObject"),
+    ("RexxStemObject", "RexxStemObject"),
+    ("RexxMutableBufferObject", "RexxMutableBufferObject"),
+    ("CSTRING", "CSTRING"),
+    ("POINTER", "POINTER"),
+    ("wholenumber_t", "wholenumber_t"),
+    ("f32", "float"),
+    ("f64", "double"),
+];
+
 /// Defines each handler type the header declares: a function the interpreter
 /// calls, whose C name is the function type and whose Rust name is the
 /// pointer to it. Beside them, in the table `$table`, each name with the

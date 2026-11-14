@@ -7,11 +7,17 @@
  * The section between the BEGIN GENERATED and END GENERATED lines is written
  * from the per-platform table of rust/crates/interrexx-api/src/header.rs:
  * change that, then run the headers_are_current test of interrexx-api with
- * REXX_HEADERS_REFRESH=1.
+ * REXX_HEADERS_REFRESH=1. The rest of this file is written by hand.
  */
 
 #ifndef INTERREXX_REXXAPITYPES_H
 #define INTERREXX_REXXAPITYPES_H
+
+/* Asks a C++ library older than C++11 for the limits of the fixed-width
+ * types, which __REXX64__ below reads. */
+#ifndef __STDC_LIMIT_MACROS
+#define __STDC_LIMIT_MACROS
+#endif
 
 /* BEGIN GENERATED platform-types */
 #include <stdlib.h>
@@ -42,5 +48,15 @@ struct _REXXDATETIME {
     uint16_t valid;
 };
 /* END GENERATED platform-types */
+
+/* Defined where a pointer has 64 bits. */
+#if UINTPTR_MAX > 0xffffffffu
+#define __REXX64__
+#endif
+
+/* The least value of ssize_t. */
+#ifndef SSIZE_MIN
+#define SSIZE_MIN (-SSIZE_MAX - 1)
+#endif
 
 #endif
