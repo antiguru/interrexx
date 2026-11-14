@@ -123,8 +123,8 @@ pub(crate) struct ClauseCursor {
     /// 3
     /// 4
     /// 5  nop
-    ///    Error 18 running ... line 5:  THEN expected.
-    ///    Error 18.1:  IF instruction on line 2 requires matching THEN clause.
+    ///    Error 18 running ... line 5:  <text of 18>
+    ///    Error 18.1:  <text of 18.1, naming line 2>
     /// ```
     pending_then: Option<(PendingThen, usize)>,
     /// Whether the parse has asked for a clause after the last one, which is

@@ -22,7 +22,7 @@ use crate::{Failure, Interp};
 /// A routine body.
 type Result<T> = std::result::Result<T, Failure>;
 
-/// `Error 40.1: External routine "NAME" failed.`, NAME the routine as called.
+/// Error 40.1, whose insert is the routine's name as called.
 pub(super) fn failed(interp: &Interp) -> Failure {
     Raised::routine_failed(&interp.native_frame().name.to_ascii_uppercase()).into()
 }

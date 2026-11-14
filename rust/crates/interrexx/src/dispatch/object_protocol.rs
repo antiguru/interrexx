@@ -1832,9 +1832,8 @@ pub(super) fn decode_message_name(
         return Err(Raised::message_array_shape().into());
     }
     // `stringArgument` distinguishes an empty slot from a value with no string
-    // value. For example, `o~send((, .K))` is `88.901 ... argument message name
-    // is required.` and `o~send((.nil, .K))` is `88.909 Argument message name
-    // must have a string value.`, both rc 168.
+    // value. For example, `o~send((, .K))` is `88.901`, naming `message name`,
+    // and `o~send((.nil, .K))` is `88.909`, naming the same, both rc 168.
     let Some(name) = slots[0] else {
         return Err(Raised::missing_named_argument("message name").into());
     };

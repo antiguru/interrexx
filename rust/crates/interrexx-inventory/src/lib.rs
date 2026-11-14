@@ -1,5 +1,16 @@
 //! Tables mechanically derived from the C++ tree, plus the one hand-written
 //! list that indexes into them.
+//!
+//! # Message texts
+//!
+//! `messages/<major>.tsv` holds interrexx's own text for each error message
+//! of one major, one row per message: `major<TAB>sub<TAB>text`. A text writes
+//! insert `k` as `&k`, and only for a `k` in the row's `rendered` column of
+//! `data/errors.tsv`. A line that is empty or starts with `#` is a comment.
+//! A text has no tab and no line break. The build checks every file: its
+//! name is the major of each of its rows, each code is in `errors.tsv`, no
+//! code has two texts, and no text uses an insert outside the rendered set.
+//! The texts are checked but not yet used.
 
 pub mod errors {
     include!(concat!(env!("OUT_DIR"), "/errors.rs"));

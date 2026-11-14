@@ -651,7 +651,7 @@ enum Arity {
     /// argument list and count and refuses nothing here.
     /// The body's own check is what
     /// reports, and its error is not always 93.902 -- measured,
-    /// `(1,2)~at(1,2)` is 93.926 `Too many subscripts for array; 1 expected.`
+    /// `(1,2)~at(1,2)` is 93.926 (1 subscript expected)
     /// where `.environment~at(1,2)`, whose row is a count, is 93.902.
     Counted,
 }
@@ -745,8 +745,8 @@ static NATIVE_METHODS: &[(&str, &str, Arity, NativeMethod)] = &[
     // The five mutators, each of which is protected except `Inherit`, and each of
     // which opens with the same refusal for a class defined by the system.
     // `Class~copy` is a refusal and not a copy: it overrides `Object`'s row with one
-    // that raises. For example, `.K~copy` is `93.970 COPY method is not supported for
-    // object The K class.`
+    // that raises. For example, `.K~copy` is `93.970`, naming the
+    // method and the object.
     ("Class", "COPY", Arity::Fixed(0), native_class_copy),
     ("Class", "DEFINE", Arity::Fixed(2), native_define),
     (
@@ -3247,9 +3247,8 @@ impl Interp {
         let outcome = match invocable {
             // The implemented arm blames the method for a refusal, because its
             // refusals are those of a native method: `.k~sep(1)` on a class
-            // method bound to `file_separator` is `88.922 Too many arguments in
-            // invocation; 0 expected.` at rc 168, under a `Compiled method
-            // "SEP" with scope "K".` line.
+            // method bound to `file_separator` is `88.922` (0 expected) at rc 168,
+            // under a compiled-method traceback line for `SEP` with scope `K`.
             Invocable::External(entry) => match &entry.body {
                 native::ExternalBody::Implemented { arity, run } => {
                     let ran =

@@ -69,7 +69,7 @@ pub fn highest_insert(text: &str) -> usize {
 }
 
 /// The distinct `k` of every `&k` in `text`, ascending.
-fn rendered_positions(text: &str) -> Vec<usize> {
+pub fn rendered_positions(text: &str) -> Vec<usize> {
     let mut seen: Vec<usize> = text
         .as_bytes()
         .windows(2)

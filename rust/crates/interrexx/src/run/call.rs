@@ -323,8 +323,8 @@ impl Interp {
             // 43.1, once the search above has found nothing, and
             // raised by the consumer rather than here. Measured in a
             // clean directory with nothing of that name beside the
-            // program: `call zorkolo` gives 43.1 rc 213 `Could not find
-            // routine "ZORKOLO".`
+            // program: `call zorkolo` gives 43.1 rc 213 naming
+            // `ZORKOLO`.
             None => Resolved::Unresolved,
         };
         Ok(resolved)
@@ -1902,8 +1902,7 @@ fn function_value(ended: Ended, name: &[u8]) -> Result<ObjRef, Failure> {
         Ended::Exited(value) => Err(Failure::Exited(value)),
         Ended::Returned(Some(value)) => Ok(value),
         // For example, a routine reached through the expression form and
-        // returning nothing (a bare `RETURN`) is Error 44.1 rc 212, "No data
-        // returned from function "NAME"" -- the expression form's own answer to
+        // returning nothing (a bare `RETURN`) is Error 44.1 rc 212, naming the function -- the expression form's own answer to
         // "nothing to use here", which `CALL` never has to give since its own
         // value only ever reaches `RESULT`, unset or not.
         Ended::Returned(None) => Err(Raised::no_data_returned(name).into()),

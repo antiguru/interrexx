@@ -560,7 +560,7 @@ fn the_three_concatenation_forms() {
     // Abuttal: two adjacent terms with no operator and no whitespace.
     // Not `'a'('b')` -- a quoted literal directly followed by `(...)`
     // is call syntax (`CallTarget::Literal`), measured: `say
-    // 'a'('b')` is Error 43.1, "Could not find routine \"a\"", not
+    // 'a'('b')` is Error 43.1 naming `a`, not
     // concatenation. `x'b'` (a variable directly followed by a
     // literal) is the real Abuttal shape, matching the oracle
     // transcript this task's report already verified (`x = 'a'; say
@@ -1065,7 +1065,7 @@ fn a_literal_call_target_never_reaches_the_label_table() {
 /// same event as falling off the routine's own end without one (the next
 /// test) -- raises Error 44.1 at rc 212. Measured on the oracle in a
 /// clean directory: `say f(1)` into `f: return` gives exactly this,
-/// "No data returned from function "F"." with the label's own upcased
+/// error 44.1 naming the function, in the label's own upcased
 /// spelling.
 #[test]
 fn a_routine_returning_no_value_in_expression_form_raises_44_1() {

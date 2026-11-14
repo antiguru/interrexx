@@ -63,8 +63,8 @@ fn a_select_with_no_when_is_7_1_reported_against_the_select() {
 
 #[test]
 fn a_non_when_directly_inside_a_select_is_7_2() {
-    // Measured: reported on line 5, the offending clause, with `SELECT on line
-    // 3` as a substitution. The two lines differ, which is why the blanks are
+    // Measured: reported on line 5, the offending clause, with line 3, the
+    // SELECT's, as a substitution. The two lines differ, which is why the blanks are
     // here.
     assert_eq!(err_at("nop\n\nselect\n\nnop\n\nend\n"), (7, 2, 5));
     // An IF and a DO are control instructions, which reach the check by the

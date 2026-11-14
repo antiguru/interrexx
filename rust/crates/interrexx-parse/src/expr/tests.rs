@@ -263,8 +263,8 @@ fn prefix_operators_chain() {
 
 #[test]
 fn prefix_not_applies_before_a_comparison() {
-    // build/bin/rexx with `a = 2`: `r = \a = 2` fails with error 34.901,
-    // `Logical value must be exactly "0" or "1"; found "2"`, so the `\` was
+    // build/bin/rexx with `a = 2`: `r = \a = 2` fails with error 34.901
+    // (the value 2 is named), so the `\` was
     // applied to a and not to the comparison's result. Parsing it as
     // \(a = 2) would have succeeded with 0.
     assert_eq!(shape("\\a = 2"), "(= (u\\ A) 2)");
@@ -332,8 +332,8 @@ fn a_leading_period_makes_an_environment_symbol() {
 
 #[test]
 fn a_call_name_from_a_literal_is_used_exactly_as_written() {
-    // build/bin/rexx: `r = 'abs'(-3)` fails with `Error 43.1: Could not find
-    // routine "abs"`, while `r = 'ABS'(-3)` => 3. So a literal call name is
+    // build/bin/rexx: `r = 'abs'(-3)` fails with error 43.1 naming `abs`,
+    // while `r = 'ABS'(-3)` => 3. So a literal call name is
     // not upcased and does not reach the builtin table unless it is already
     // upper case, where a symbol name was upcased by the scanner.
     assert_eq!(shape("'abs'(-3)"), "(call \"abs\" (u- 3))");
@@ -456,8 +456,8 @@ fn a_single_parenthesised_expression_is_not_a_list() {
 
 #[test]
 fn calls_nest() {
-    // build/bin/rexx: `r = f(g(h(2)))` fails with `Could not find routine
-    // "H"`, so the innermost call was the first attempted.
+    // build/bin/rexx: `r = f(g(h(2)))` fails with error 43.1 naming `H`,
+    // so the innermost call was the first attempted.
     assert_eq!(shape("f(g(h(2)))"), "(call F (call G (call H 2)))");
     assert_eq!(shape("a[1,2]"), "(msg~ A \"[]\" 1 2)");
     assert_eq!(shape("a[]"), "(msg~ A \"[]\")");

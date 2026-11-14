@@ -80,9 +80,8 @@ fn native_relation_all_at(
     // **93.903 and not 88.901.** `Relation`'s own methods take their index
     // positionally where the other hash collections' take it as a named
     // argument: measured on a `.Relation~new`, `allAt()` and `removeAll()`
-    // report `Missing argument in method; argument 1 is required.` where
-    // `at()` and `remove()` report `Missing argument; argument index is
-    // required.`
+    // report 93.903 (argument 1) where `at()` and
+    // `remove()` report 88.901, naming `index`.
     let index = super::collection::item_argument(args)?;
     let (store, slots) = slots_for(interp, receiver, index)?;
     let mut items = Vec::new();
@@ -190,9 +189,8 @@ fn native_relation_remove_all(
     // **93.903 and not 88.901.** `Relation`'s own methods take their index
     // positionally where the other hash collections' take it as a named
     // argument: measured on a `.Relation~new`, `allAt()` and `removeAll()`
-    // report `Missing argument in method; argument 1 is required.` where
-    // `at()` and `remove()` report `Missing argument; argument index is
-    // required.`
+    // report 93.903 (argument 1) where `at()` and
+    // `remove()` report 88.901, naming `index`.
     let index = super::collection::item_argument(args)?;
     // One lookup, one `hashCode`. Entries are taken last first: taking the
     // bucket's own slot copies its successor into it, which would move a

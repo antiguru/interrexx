@@ -875,8 +875,8 @@ impl ClassGraph {
         self.redefine(class, prior, false, &[], true);
     }
 
-    /// `~define` with the method argument omitted, and the bootstrap hiding of
-    /// a method: a `.nil` tombstone under `name`.
+    /// The bootstrap hiding of a method, and `~define` given no method: a
+    /// `.nil` tombstone under `name`.
     pub fn hide(&mut self, class: ObjRef, name: &str) {
         self.bump_epoch();
         let prior = self.inputs.changed(class);

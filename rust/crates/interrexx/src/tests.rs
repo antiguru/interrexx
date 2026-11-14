@@ -269,8 +269,8 @@ fn an_exit_inside_a_fragment_ends_the_program() {
 /// ```text
 ///      3 *-*       say 2 & 1;
 ///      3 *-*     interpret "do jj = 1 to 1; say 2 & 1; end"
-/// Error 34 running <path> line 3:  Logical value not 0 or 1.
-/// Error 34.901:  Logical value must be exactly "0" or "1"; found "2".
+/// Error 34 running <path> line 3:  <text of 34>
+/// Error 34.901:  <text of 34.901, naming 2>
 /// ```
 #[test]
 fn a_raise_inside_a_fragment_reports_both_clauses() {

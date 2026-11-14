@@ -1,9 +1,9 @@
 //! The numeric builtins: `ABS`, `FORMAT`, `MAX`, `MIN`, `RANDOM`, `SIGN` and
 //! `TRUNC`.
 //! ```text
-//! max('a',1,3)   93.943   MAX method target must be a number; found "a".
-//! max(1,'a',3)   93.904   Method argument 1 must be a number; found "a".
-//! max(1,2,'a')   93.904   Method argument 2 must be a number; found "a".
+//! max('a',1,3)   93.943   names MAX and the value a.
+//! max(1,'a',3)   93.904   names argument 1 and the value a.
+//! max(1,2,'a')   93.904   names argument 2 and the value a.
 //! ```
 //! ```rexx
 //! numeric digits 5 ; x = max(123456789,1) ; numeric digits 12 ; say x
@@ -163,9 +163,9 @@ pub(crate) fn sign_of(interp: &mut Interp, value: &Number) -> Result<ObjRef, Fai
 
 /// `TRUNC(number, decimals)`.
 /// ```text
-/// trunc('AB.CD','V')   40.12   TRUNC argument 2 must be a whole number; found "V".
-/// trunc('AB.CD',-1)    93.943  TRUNC method target must be a number; found "AB.CD".
-/// trunc(1.5,-1)        93.906  Method argument 1 must be zero or a positive whole number.
+/// trunc('AB.CD','V')   40.12   names TRUNC, argument 2 and the value V.
+/// trunc('AB.CD',-1)    93.943  names TRUNC and the value AB.CD.
+/// trunc(1.5,-1)        93.906  names argument 1.
 /// ```
 pub(crate) fn trunc(
     interp: &mut Interp,
@@ -261,7 +261,7 @@ pub(crate) fn format_over(
     // exponent, and there is not always an exponent. So it is reserved only once
     // `interrexx-num` says the field will be written, which is the same line
     // `format` draws: at the identical width, `format(1,,,3000000000)` is `1` at
-    // rc 0 while `format(1,,,3000000000,0)` is `System resources exhausted.` at
+    // rc 0 while `format(1,,,3000000000,0)` is error 5 at
     // rc 251.
     let displayed = value
         .format_exponent(

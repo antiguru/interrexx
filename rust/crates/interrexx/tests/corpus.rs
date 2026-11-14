@@ -253,7 +253,7 @@ const RAW_STDERR_COMPARISON: &[&str] = &[
     // The frame the required-string
     // protocol's own `REQUEST` activation contributes when a `makeString`
     // reached through it raises. The pair is one frame from a language context
-    // against two from a method argument, and the frame lines are indented and
+    // against two from an argument of a method. The frame lines are indented and
     // carry no line number, which is what raw mode asserts.
     "lang/required_string_make_string_raises.rex",
     "lang/required_string_argument_make_string_raises.rex",

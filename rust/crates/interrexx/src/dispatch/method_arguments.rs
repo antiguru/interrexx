@@ -123,8 +123,8 @@ pub(super) fn pad_method_argument(
 /// argument, 88.909 for one without a string value, and 93.915 for the null
 /// string or a first byte outside `valid`, compared case-folded; the `0x00`
 /// byte is admitted as the builtin's is:
-/// `.MutableBuffer~new('abcabc')~verify('a', 'X')` reports `must be one of
-/// "MN"; found "X"`, and rc 0: `~verify('abc', '00'x)` is `1`.
+/// `.MutableBuffer~new('abcabc')~verify('a', 'X')` reports 93.914 (the valid letters `MN` and
+/// the value `X`), and rc 0: `~verify('abc', '00'x)` is `1`.
 pub(super) fn option_method_argument(
     interp: &mut Interp,
     args: &[Option<ObjRef>],
@@ -180,8 +180,7 @@ pub(super) fn optional_string_or_none_argument(
 
 /// `None` for an omitted argument, and anything that is not a non-negative
 /// whole number in range is 93.906: `.MutableBuffer~new('abcdef')~insert('a',
-/// -1)` reports `Method argument 2 must be zero or a positive whole number;
-/// found "-1"`.
+/// -1)` reports 93.906, naming argument 2 and the value `-1`.
 pub(super) fn optional_non_negative_argument(
     interp: &mut Interp,
     args: &[Option<ObjRef>],

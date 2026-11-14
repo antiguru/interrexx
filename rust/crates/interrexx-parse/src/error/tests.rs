@@ -9,8 +9,8 @@ use crate::{ProgramSource, SourceKind};
 fn a_sub_message_that_needs_no_substitution_is_the_message() {
     // `build/bin/rexxc` on a file holding `nop` then `else nop` prints, verbatim:
     //     2 *-* else nop
-    //     Error 8 running <file> line 2:  Unexpected THEN or ELSE.
-    //     Error 8.2:  ELSE has no corresponding THEN clause.
+    //     Error 8 running <file> line 2:  <text of 8>
+    //     Error 8.2:  <text of 8.2>
     assert_eq!(
         ParseError::raise(E8_2, 0, []).message(),
         b"ELSE has no corresponding THEN clause."
@@ -29,8 +29,8 @@ fn a_second_sub_message_that_needs_no_substitution_is_also_the_message() {
 fn a_token_insert_fills_the_sub_message() {
     // `rexxc` on `::class c junk` prints, verbatim:
     //     1 *-* ::class c junk
-    //     Error 25 running <file> line 1:  Invalid subkeyword found.
-    //     Error 25.901:  Unknown keyword on ::CLASS directive; found "JUNK".
+    //     Error 25 running <file> line 1:  <text of 25>
+    //     Error 25.901:  <text of 25.901, naming JUNK>
     assert_eq!(
         ParseError::raise(E25_901, 0, [b"JUNK".to_vec()]).message(),
         br#"Unknown keyword on ::CLASS directive; found "JUNK"."#
@@ -41,8 +41,8 @@ fn a_token_insert_fills_the_sub_message() {
 fn a_line_insert_fills_the_sub_message() {
     // `rexxc` on `nop`, blank, `select`, blank, `end` prints, verbatim:
     //     3 *-* select
-    //     Error 7 running <file> line 3:  WHEN or OTHERWISE expected.
-    //     Error 7.1:  SELECT on line 3 requires WHEN.
+    //     Error 7 running <file> line 3:  <text of 7>
+    //     Error 7.1:  <text of 7.1, naming line 3>
     assert_eq!(
         ParseError::raise(E7_1, 0, [b"3".to_vec()]).message(),
         b"SELECT on line 3 requires WHEN."
@@ -52,8 +52,7 @@ fn a_line_insert_fills_the_sub_message() {
 #[test]
 fn two_inserts_fill_in_order() {
     // `rexxc` on `r = (a` prints, verbatim:
-    //     Error 36.901:  Left parenthesis "(" in position 5 on line 1 requires a
-    //     corresponding right parenthesis ")".
+    //     Error 36.901:  <text of 36.901, naming position 5 and line 1>
     assert_eq!(
         ParseError::raise(E36_901, 0, [b"5".to_vec(), b"1".to_vec()]).message(),
         br#"Left parenthesis "(" in position 5 on line 1 requires a corresponding right parenthesis ")"."#
