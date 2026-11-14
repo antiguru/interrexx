@@ -478,6 +478,10 @@ mod tests {
     /// pool thread to hand it to does: the vacating thread, taking it back
     /// meanwhile, waits out the claim and then takes it.
     #[test]
+    #[expect(
+        clippy::disallowed_methods,
+        reason = "the claim is held while the vacating thread comes to wait it out"
+    )]
     fn a_vacating_thread_takes_back_a_vacancy_a_claim_freed() {
         let baton = Baton::<u8>::new();
         baton.acquire();
