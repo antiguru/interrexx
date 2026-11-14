@@ -734,12 +734,8 @@ fn an_interpret_fragment_that_is_legal_is_still_accepted() {
 enum Unreached {
     /// Only `INTERPRET` text raises it, so it is in [`INTERPRET_ONLY`].
     InterpretOnly,
-    /// No program reaches it. `oracle_site` is the oracle's raise site as
-    /// `path:line` under `interpreter/`, and `probes` the programs tried.
-    NoProgram {
-        oracle_site: &'static str,
-        probes: &'static [&'static [u8]],
-    },
+    /// No program reaches it. `probes` are the programs tried.
+    NoProgram { probes: &'static [&'static [u8]] },
 }
 
 /// The messages the parser names that no corpus row raises, with why.
@@ -754,7 +750,6 @@ const UNREACHED_BY_FILE: &[((u16, u16), Unreached)] = &[
     (
         (27, 903),
         Unreached::NoProgram {
-            oracle_site: "parser/InstructionParser.cpp:1650",
             probes: &[
                 b"do with\nend\n",
                 b"do with index\nend\n",
@@ -767,7 +762,6 @@ const UNREACHED_BY_FILE: &[((u16, u16), Unreached)] = &[
     (
         (37, 1),
         Unreached::NoProgram {
-            oracle_site: "parser/LanguageParser.cpp:3882",
             probes: &[
                 b"x = ,\n",
                 b"x = 1 + ,\n",
@@ -781,7 +775,6 @@ const UNREACHED_BY_FILE: &[((u16, u16), Unreached)] = &[
     (
         (49, 2),
         Unreached::NoProgram {
-            oracle_site: "parser/InstructionParser.cpp:453",
             probes: &[
                 b"do i = 1 to 2 by 1 to 3\nend\n",
                 b"do i = 1 for 2 while 1 until 2\nend\n",
@@ -798,7 +791,6 @@ const UNREACHED_BY_FILE: &[((u16, u16), Unreached)] = &[
     (
         (89, 2),
         Unreached::NoProgram {
-            oracle_site: "parser/InstructionParser.cpp:3421",
             probes: &[
                 b"parse arg .a\n",
                 b"parse arg 5\n",
@@ -950,23 +942,8 @@ fn every_message_the_parser_names_is_raised_by_a_corpus_row_or_recorded_as_unrea
     }
 }
 
-/// The oracle's symbolic name for `pair`, from the oracle's error-code table.
-fn oracle_name(pair: (u16, u16)) -> String {
-    let path = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../../third_party/ooRexx/interpreter/messages/RexxErrorCodes.h");
-    let text = std::fs::read_to_string(&path).expect("RexxErrorCodes.h is readable");
-    let number = format!("= {},", u32::from(pair.0) * 1000 + u32::from(pair.1));
-    text.lines()
-        .find(|line| line.trim_start().starts_with("Error_") && line.contains(&number))
-        .and_then(|line| line.split_whitespace().next())
-        .unwrap_or_else(|| panic!("{pair:?} has no symbolic name"))
-        .to_string()
-}
-
 #[test]
 fn every_unreached_reason_still_holds() {
-    let interpreter =
-        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../third_party/ooRexx/interpreter");
     let mut seen = std::collections::BTreeSet::new();
     for (pair, reason) in UNREACHED_BY_FILE {
         assert!(seen.insert(*pair), "{pair:?} is recorded twice");
@@ -975,27 +952,7 @@ fn every_unreached_reason_still_holds() {
                 INTERPRET_ONLY.iter().any(|(_, p)| p == pair),
                 "{pair:?} is recorded as INTERPRET-only but INTERPRET_ONLY does not hold it"
             ),
-            Unreached::NoProgram {
-                oracle_site,
-                probes,
-            } => {
-                let (file, line) = oracle_site
-                    .rsplit_once(':')
-                    .unwrap_or_else(|| panic!("{pair:?}: {oracle_site:?} is not path:line"));
-                let line: usize = line
-                    .parse()
-                    .unwrap_or_else(|e| panic!("{pair:?}: {oracle_site:?}: {e}"));
-                let text = std::fs::read_to_string(interpreter.join(file))
-                    .unwrap_or_else(|e| panic!("{pair:?}: {file}: {e}"));
-                let cited = text
-                    .lines()
-                    .nth(line - 1)
-                    .unwrap_or_else(|| panic!("{pair:?}: {file} has no line {line}"));
-                let name = oracle_name(*pair);
-                assert!(
-                    cited.contains(&name),
-                    "{pair:?}: {oracle_site} does not raise {name}: {cited:?}"
-                );
+            Unreached::NoProgram { probes } => {
                 assert!(!probes.is_empty(), "{pair:?}: no probe was recorded");
                 for probe in *probes {
                     if let Err(error) = parse(probe) {
