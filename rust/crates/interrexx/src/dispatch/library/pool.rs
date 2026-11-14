@@ -45,8 +45,27 @@ impl Interp {
         let mut strings = CStringPool::new();
         let thread = self.thread_context();
         let inbox = self.timer.inbox();
-        let (answered, pending) = {
-            let frame = self.native_token();
+        let frame = self.native_token();
+        // A classic handler is external code, which runs with the baton
+        // vacated (`r[native.threads.attach]`), except in a deterministic
+        // switch mode, which runs every native call on the baton.
+        let (answered, pending) = if self.switch.is_none() {
+            let vacated = self.vacated(frame);
+            let ran = {
+                let activation = Activation::new(Conversion {
+                    host: interrexx_api::values::HostRef::through(&vacated),
+                    strings: &mut strings,
+                });
+                activation.set_frame(frame);
+                activation.open_variable_pool();
+                let _reachable = crate::embedding::OtherRun::enter(&inbox);
+                let answered = thread.enter(&activation, |_| vacated.around(call));
+                (answered, activation.pending())
+            };
+            drop(vacated);
+            self.pop_vacancy(frame);
+            ran
+        } else {
             let activation = Activation::new(Conversion {
                 host: self.into(),
                 strings: &mut strings,

@@ -517,6 +517,17 @@ impl Interp {
             let _reachable = crate::embedding::OtherRun::enter(self.timer.inbox_ref());
             let stress = self.stress_collect;
             let pool = self.opens_variable_pool(&held);
+            // A deterministic switch mode runs every native call on the baton.
+            if self.switch.is_none() {
+                return Some(self.vacated_native_call(
+                    &held,
+                    args,
+                    &thread,
+                    frame,
+                    (pool, stress),
+                    &mut strings,
+                ));
+            }
             let activation = Activation::new(Conversion {
                 host: self.into(),
                 strings: &mut strings,
@@ -584,6 +595,87 @@ impl Interp {
             thens: Vec::new(),
         }));
         None
+    }
+
+    /// [`Interp::native_call`]'s call `held` on the baton, in the native frame
+    /// `frame` of the running activity whose thread context is `thread`, with
+    /// the baton vacated while the stub runs (`r[native.threads.attach]`): a
+    /// thread the stub waits for may call back meanwhile. Its signature, its
+    /// arguments and its result are converted on the baton. `opens` says
+    /// whether the call opens the variable pool and whether it collects
+    /// between its halves.
+    fn vacated_native_call(
+        &mut self,
+        held: &HeldCall,
+        args: &[Option<ObjRef>],
+        thread: &interrexx_api::ffi::ThreadContext,
+        frame: u64,
+        opens: (bool, bool),
+        strings: &mut CStringPool,
+    ) -> (Result<Option<ObjRef>, Refused>, Option<usize>) {
+        let (pool, stress) = opens;
+        let vacated = self.vacated(frame);
+        let (answered, pending) = {
+            let activation = Activation::new(Conversion {
+                host: HostRef::through(&vacated),
+                strings,
+            });
+            activation.set_frame(frame);
+            activation.set_between_halves(stress);
+            if pool {
+                activation.open_variable_pool();
+            }
+            let answered = thread.enter(&activation, |contexts| {
+                let mut native = NativeCall::empty();
+                let signature = match held {
+                    HeldCall::Method(held, _) => invoke::held_signature(held, &contexts.method()),
+                    HeldCall::Routine(held) => {
+                        invoke::held_routine_signature(held, &contexts.call())
+                    }
+                }?;
+                invoke::prepare(&mut native, &signature, &activation, args)?;
+                if activation.between_halves() {
+                    activation.conversion().host.between_halves();
+                }
+                let completion = vacated.around(|| held.call(&mut native, contexts));
+                if activation.between_halves() {
+                    activation.conversion().host.between_halves();
+                }
+                invoke::finish(&activation, completion)
+            });
+            (answered, activation.pending())
+        };
+        drop(vacated);
+        self.pop_vacancy(frame);
+        (answered, pending)
+    }
+
+    /// The baton as the running activity's native call in the native frame
+    /// `frame` vacates it, recorded ([`Interp::push_vacancy`]) until
+    /// [`Interp::pop_vacancy`]. Where another activity is alive, a pool
+    /// thread is started to serve the vacancy from the start, so that the
+    /// others run while the call does; otherwise the first thread that calls
+    /// back from elsewhere starts one ([`crate::island::wait_served`]).
+    ///
+    /// The interpreter is reached through the answer only, until it drops:
+    /// its root pointer is derived last, from this borrow.
+    pub(crate) fn vacated(&mut self, frame: u64) -> Vacated {
+        self.push_vacancy(frame);
+        let server = if self.others_live() {
+            self.start_vacancy_server()
+        } else {
+            None
+        };
+        Vacated {
+            baton: Arc::clone(&self.baton),
+            inbox: self.timer.inbox(),
+            activity: self.running_activity(),
+            frame,
+            stack: (self.stack_base, self.stack_room),
+            server: std::cell::Cell::new(server),
+            depth: std::cell::Cell::new(None),
+            own: crate::island::Island::of(self),
+        }
     }
 
     /// Whether a native call made now leaves its driver: from a resumable entry nothing pins, and where another activity
@@ -1631,7 +1723,101 @@ impl<'p> Recalling<'p> {
             base: Some(self.base),
             room: None,
         }));
-        Lent::wait(self.baton)
+        crate::island::wait_served(self.baton, false).expect("a wait that is never closed")
+    }
+}
+
+/// The baton as a native call made on it reaches it while it runs with the
+/// baton vacated ([`Interp::vacated`]): the call's own thread takes the
+/// vacancy back for a callback where nobody holds it, as a kernel lock is
+/// taken, and recalls the baton from the thread serving the vacancy where one
+/// does, as a pool thread recalls it for a callback of its call.
+pub(crate) struct Vacated {
+    baton: Arc<InterpBaton>,
+    inbox: Arc<Inbox<Posted>>,
+    activity: ActivityId,
+    frame: u64,
+    /// The calling thread's stack base and room, for Rexx code a callback
+    /// runs under the serving thread's lend.
+    stack: (usize, usize),
+    /// The pool thread the vacancy is handed to as it is made, until it is.
+    server: std::cell::Cell<Option<std::thread::ThreadId>>,
+    /// The vacancy's depth while the stub runs.
+    depth: std::cell::Cell<Option<usize>>,
+    /// The interpreter's root pointer, derived from the calling thread's own
+    /// borrow, which reaches it until this drops.
+    own: crate::island::Island,
+}
+
+impl Vacated {
+    /// Runs `call`, which touches nothing of the interpreter's but through
+    /// callbacks, with the baton vacated, and takes it back: directly where
+    /// it is free, else once the thread it was handed to has seen the call
+    /// return and given it back.
+    pub(crate) fn around<R>(&self, call: impl FnOnce() -> R) -> R {
+        let depth = self.baton.vacate(self.own, self.server.take());
+        self.depth.set(Some(depth));
+        let answer = call();
+        if !self.baton.reclaim_free(depth) {
+            self.inbox.post(Posted::Returned {
+                activity: self.activity,
+                frame: self.frame,
+            });
+            self.baton.await_return(depth);
+        }
+        self.depth.set(None);
+        answer
+    }
+}
+
+impl Drop for Vacated {
+    /// A server started for a call that never ran its stub, which refused
+    /// before it, is handed a vacancy that returns at once.
+    fn drop(&mut self) {
+        if self.server.get().is_some() {
+            self.around(|| ());
+        }
+    }
+}
+
+impl interrexx_api::values::Baton for Vacated {
+    fn take_unless_held(&self) -> bool {
+        if self.baton.held_here() {
+            return false;
+        }
+        if let Some(depth) = self.depth.get()
+            && self.baton.take_vacancy(depth)
+        {
+            return true;
+        }
+        self.inbox.post(Posted::Recall(Recall {
+            by: Recaller::Call {
+                activity: self.activity,
+                frame: self.frame,
+            },
+            thread: std::thread::current().id(),
+            base: Some(self.stack.0),
+            room: Some(self.stack.1),
+        }));
+        std::mem::forget(
+            crate::island::wait_served(&self.baton, false).expect("a wait that is never closed"),
+        );
+        true
+    }
+
+    fn release(&self) {
+        self.baton.give_back_or_free();
+    }
+
+    fn held_here(&self) -> bool {
+        self.baton.held_here()
+    }
+
+    /// The host lent with a lend above the vacancy, a serving thread's for a
+    /// callback, else the calling thread's own.
+    fn host(&self) -> Option<std::ptr::NonNull<dyn interrexx_api::values::Host>> {
+        let lent = (self.depth.get()).and_then(|depth| self.baton.lent_above(depth));
+        Some(lent.unwrap_or(self.own).host())
     }
 }
 
@@ -1660,7 +1846,9 @@ impl interrexx_api::values::Baton for Requester {
         #[cfg(test)]
         self.baton.count_take();
         self.inbox.post(self.recall(0));
-        std::mem::forget(Lent::wait(&self.baton));
+        std::mem::forget(
+            crate::island::wait_served(&self.baton, false).expect("a wait that is never closed"),
+        );
         true
     }
 
@@ -1678,7 +1866,7 @@ impl interrexx_api::values::Baton for Requester {
         if !self.inbox.post_unless_closed(self.recall(context)) {
             return TakeFor::Refused;
         }
-        let Some(lent) = Lent::wait_unless_closed(&self.baton) else {
+        let Some(lent) = crate::island::wait_served(&self.baton, true) else {
             return TakeFor::Refused;
         };
         // The holder closes the inbox, and it lends nothing while it does, so
@@ -1768,7 +1956,7 @@ impl Requester {
         }
         // Posted just before the interpreter closed its inbox, and dropped
         // with it unserved: nothing lends the baton.
-        Lent::wait_unless_closed(&self.baton)
+        crate::island::wait_served(&self.baton, true)
     }
 }
 

@@ -190,6 +190,27 @@ pub(crate) enum Posted {
     TraceAll(bool),
     /// A chunk of standard input, empty at its end.
     Input(Vec<u8>),
+    /// `activity`'s native call in the native frame `frame`, which ran with
+    /// the baton vacated ([`Vacancy`]), has returned: the thread serving the
+    /// vacancy stops and gives the baton back.
+    Returned {
+        activity: ActivityId,
+        frame: u64,
+    },
+}
+
+/// A native call running with the baton vacated, from just before it
+/// prepares until it has finished: its activity, and its native frame as
+/// [`Interp::native_token`] names it. The calls nest, innermost last, as the
+/// vacancies on the baton do.
+pub(crate) struct Vacancy {
+    pub(crate) activity: ActivityId,
+    pub(crate) frame: u64,
+    /// Whether a thread serves it ([`Interp::serve_vacancy`]), which counts
+    /// it in flight.
+    served: bool,
+    /// Whether its call has returned ([`Posted::Returned`]).
+    returned: bool,
 }
 
 impl crate::timer::Inbox<Posted> {
@@ -366,6 +387,8 @@ pub(crate) struct Activities {
     ended_stuck: bool,
     /// The attached activities filed ([`Interp::file_attached`]).
     attached: usize,
+    /// The native calls running with the baton vacated, innermost last.
+    pub(crate) vacancies: Vec<Vacancy>,
 }
 
 /// Milliseconds in a day: a timer's wait is whole days of this, then a
@@ -433,6 +456,7 @@ impl Activities {
             main_finished: false,
             ended_stuck: false,
             attached: 0,
+            vacancies: Vec::new(),
         }
     }
 
@@ -1347,13 +1371,18 @@ impl Interp {
                     // command's end) or a guard (its release, a store a
                     // `GUARD WHEN` watches); a halt ends each of these.
                     // An attached activity idle between its callbacks is woken
-                    // by the next callback its thread makes.
+                    // by the next callback its thread makes, and one whose native
+                    // call runs with the baton vacated by that call's return.
                     let wakes = parked[index]
                         || record.when_parked
                         || table.semaphores.queues(activity)
                         || record.native_call.is_some()
                         || !record.blocked.is_empty()
-                        || record.attached && record.running.is_none();
+                        || record.attached && record.running.is_none()
+                        || table
+                            .vacancies
+                            .iter()
+                            .any(|vacancy| vacancy.activity == activity);
                     if !ready[index] && !finished && !wakes {
                         return fail("a parked activity with no wake source");
                     }
@@ -1761,6 +1790,7 @@ impl Interp {
                 Posted::Trace(on) => self.set_external_trace(on),
                 Posted::TraceAll(on) => self.set_external_trace_all(on),
                 Posted::Input(chunk) => self.input.receive(chunk),
+                Posted::Returned { activity, frame } => self.vacancy_returned(activity, frame),
                 Posted::Unblocked {
                     activity,
                     token,
@@ -1823,14 +1853,22 @@ impl Interp {
         }
         let outgoing = self.activities.running;
         let activity = match by {
-            Recaller::Call { activity, frame } => self
-                .activities
-                .idle
-                .get(activity.0 as usize)
-                .and_then(Option::as_ref)
-                .and_then(|idle| idle.activity.native_call.as_ref())
-                .is_some_and(|call| call.frame() == frame)
-                .then_some(activity),
+            Recaller::Call { activity, frame } => {
+                self.activities
+                    .idle
+                    .get(activity.0 as usize)
+                    .and_then(Option::as_ref)
+                    .is_some_and(|idle| {
+                        idle.activity
+                            .native_call
+                            .as_ref()
+                            .is_some_and(|call| call.frame() == frame)
+                            || self.activities.vacancies.iter().any(|vacancy| {
+                                vacancy.activity == activity && vacancy.frame == frame
+                            })
+                    })
+                    .then_some(activity)
+            }
             Recaller::Context(address) => self
                 .context_owner(address)
                 .or_else(|| self.file_attached(address)),
@@ -1939,6 +1977,113 @@ impl Interp {
         }
         table.attached -= 1;
         true
+    }
+
+    /// Starts a pool thread that serves the innermost vacancy, which the
+    /// calling thread has claimed from a native call running with the baton
+    /// vacated: it is handed the vacancy, runs the other activities and
+    /// serves the recalls posted meanwhile, until the call returns
+    /// ([`Interp::serve_vacancy`]). Answers the thread, or `None` where the
+    /// pool has none to give, so that the vacating thread serves what was
+    /// posted once it has the baton back.
+    pub(crate) fn start_vacancy_server(&mut self) -> Option<std::thread::ThreadId> {
+        let worker = self.pool.reserve().ok().flatten()?;
+        let server = worker.thread();
+        let baton = crate::sync::Arc::clone(&self.baton);
+        let inbox = self.timer.inbox();
+        worker.run(Box::new(move || {
+            pool::posting_panics(&inbox, &baton, || {
+                let probe = 0u8;
+                let mut lent = crate::island::Lent::wait(&baton);
+                lent.interp().serve_vacancy(&raw const probe as usize);
+            });
+        }));
+        Some(server)
+    }
+
+    /// On the thread the innermost vacancy was handed to, `base` the address
+    /// of a local near its stack's base: runs the other activities, with the
+    /// one whose call vacated the baton buried below, since its frames are on
+    /// the vacating thread's stack, and serves what is posted, until that
+    /// call has returned. The call counts in flight meanwhile, so a loop
+    /// idles for its return rather than refusing a wait. A failure the other
+    /// activities answer that is not a condition is kept for the program's
+    /// end, and only posts are served after it.
+    pub(crate) fn serve_vacancy(&mut self, base: usize) {
+        let Some(at) = self.activities.vacancies.len().checked_sub(1) else {
+            return;
+        };
+        let me = self.activities.running;
+        debug_assert!(
+            self.activities.vacancies[at].activity == me,
+            "a vacancy served with another activity running than its call's"
+        );
+        self.activities.vacancies[at].served = true;
+        self.activities.in_flight += 1;
+        let stack = (self.stack_base, self.stack_room);
+        self.stack_base = base;
+        self.stack_room = self.pool.stack().saturating_sub(STACK_MARGIN);
+        let mut running_others = true;
+        while !self.activities.vacancies[at].returned {
+            if running_others {
+                match self.run_others(true) {
+                    Ok(Waited::Woken) => continue,
+                    Ok(Waited::Blocked { .. }) => {}
+                    Err(failure) => {
+                        self.keep_late_failure(failure);
+                        running_others = false;
+                    }
+                }
+            }
+            if !self.activities.vacancies[at].returned {
+                let posted = self.timer.idle();
+                self.file_completions(posted);
+            }
+        }
+        // Readied by the return, where no loop took it.
+        self.activities.ready.retain(|ready| *ready != me);
+        (self.stack_base, self.stack_room) = stack;
+    }
+
+    /// The return of `activity`'s native call in the native frame `frame`,
+    /// which ran with the baton vacated: the thread serving the vacancy
+    /// stops. A return posted for a vacancy nobody served, or one already
+    /// reclaimed, changes nothing.
+    fn vacancy_returned(&mut self, activity: ActivityId, frame: u64) {
+        let Some(vacancy) = (self.activities.vacancies.iter_mut())
+            .find(|vacancy| vacancy.activity == activity && vacancy.frame == frame)
+        else {
+            return;
+        };
+        vacancy.returned = true;
+        if vacancy.served {
+            self.activities.in_flight -= 1;
+            self.activities.make_ready(activity);
+        }
+    }
+
+    /// Records the native call of the running activity in the native frame
+    /// `frame` as one about to run with the baton vacated.
+    pub(crate) fn push_vacancy(&mut self, frame: u64) {
+        #[cfg(test)]
+        VACATES.with(|vacates| vacates.set(vacates.get() + 1));
+        let activity = self.activities.running;
+        self.activities.vacancies.push(Vacancy {
+            activity,
+            frame,
+            served: false,
+            returned: false,
+        });
+    }
+
+    /// Drops the record [`Interp::push_vacancy`] made, once the call has
+    /// finished on the baton.
+    pub(crate) fn pop_vacancy(&mut self, frame: u64) {
+        let popped = self.activities.vacancies.pop();
+        debug_assert!(
+            popped.is_some_and(|vacancy| vacancy.frame == frame),
+            "a vacancy dropped out of order"
+        );
     }
 
     /// The idle activity whose thread context is at `address`.
@@ -3167,6 +3312,19 @@ pub(crate) fn abandoned_held() -> usize {
 #[cfg(test)]
 pub(crate) fn note_abandoned_held(activities: &Activities) {
     ABANDONED_HELD.with(|held| held.set(activities.abandoned.len()));
+}
+
+#[cfg(test)]
+thread_local! {
+    /// How many native calls this thread's interpreters ran with the baton
+    /// vacated.
+    static VACATES: std::cell::Cell<u64> = const { std::cell::Cell::new(0) };
+}
+
+/// [`VACATES`]'s count.
+#[cfg(test)]
+pub(crate) fn vacates() -> u64 {
+    VACATES.with(std::cell::Cell::get)
 }
 
 /// [`NATIVE_EXITS`]'s count.

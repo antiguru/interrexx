@@ -14,6 +14,8 @@ struct Counted {
     takes: u64,
     /// The pool threads the run spawned.
     spawned: u64,
+    /// The native calls it ran with the baton vacated.
+    vacates: u64,
 }
 
 impl Counted {
@@ -95,6 +97,7 @@ fn counted_watch(
                 exits: crate::scheduler::native_exits(),
                 takes: crate::dispatch::library::callback_takes(),
                 spawned: crate::scheduler::threads_spawned(),
+                vacates: crate::scheduler::vacates(),
             }
         })
         .expect("the interpreter thread")
@@ -136,6 +139,37 @@ fn a_lone_activitys_native_call_keeps_its_driver() {
     assert_eq!(run.outcome.exit_code, 0, "{}", run.stderr());
     assert_eq!(run.stdout(), "5\n");
     assert_eq!(run.exits, 0);
+}
+
+/// A lone activity's call into a loaded library runs its stub with the baton
+/// vacated, once, and spawns no pool thread: nobody called back from
+/// another thread.
+#[test]
+fn a_lone_activitys_external_call_vacates_the_baton() {
+    let run = counted(
+        "say TestIntArg(5)\n::requires 'orxfunction' LIBRARY\n",
+        false,
+        bounded(),
+    );
+    assert_eq!(run.outcome.exit_code, 0, "{}", run.stderr());
+    assert_eq!(run.stdout(), "5\n");
+    assert_eq!((run.vacates, run.spawned), (1, 0));
+}
+
+/// A program that loads no external library never vacates the baton: its
+/// RexxUtil calls, its sleeps and a started activity's work all run the
+/// native-call path as before.
+#[test]
+fn a_program_with_no_external_library_never_vacates_the_baton() {
+    let run = counted(
+        "m = .t~new~start('work')\ncall SysSleep 0.01\nsay SysGetErrorText(2) <> ''\n\
+         say m~result\n::class t\n::method work\n  call SysSleep 0.01\n  return 'worked'\n",
+        false,
+        bounded(),
+    );
+    assert_eq!(run.outcome.exit_code, 0, "{}", run.stderr());
+    assert_eq!(run.stdout(), "1\nworked\n");
+    assert_eq!(run.vacates, 0);
 }
 
 /// Collecting at every allocation across driver exits whose calls build

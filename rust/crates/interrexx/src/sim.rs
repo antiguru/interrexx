@@ -1225,6 +1225,7 @@ impl Interp {
                 Posted::SocketWaited { .. } => "a socket wait's end",
                 Posted::Input(_) => "a standard input chunk",
                 Posted::Panicked(_) => "a pool thread's panic",
+                Posted::Returned { .. } => "a native call's return off the baton",
             };
             sim.breach.get_or_insert(what);
         }

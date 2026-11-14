@@ -287,6 +287,30 @@ fn a_thread_a_native_call_joins_attaches_and_detaches() {
     );
 }
 
+/// A native call starts a thread that attaches, sends `TICK` and detaches, and joins it before it
+/// returns: the message runs while the call blocks, with main's the only activity, and the program
+/// says the count after the call.
+// spec: native.threads.attach
+#[test]
+fn a_callback_while_main_blocks_in_a_native_call() {
+    assert_eq!(
+        run("attach-block", "block.rex"),
+        ("ticked 1\n".to_owned(), String::new(), 0)
+    );
+}
+
+/// An attached thread's message calls the routine that starts a second thread and joins it, a
+/// call made while a callback runs and so pinned: the second thread's `TICK` runs while that call
+/// blocks.
+// spec: native.threads.attach
+#[test]
+fn a_callback_while_a_pinned_native_call_blocks() {
+    assert_eq!(
+        run("attach-pinned", "pinned.rex"),
+        ("ticked 1\n".to_owned(), String::new(), 0)
+    );
+}
+
 /// A thread that has sent its message and stays attached, idle, for two seconds does not hold the
 /// program's end: the run exits 0 well inside the thread's idle time. The oracle takes 0.28 s.
 // spec: native.threads.end

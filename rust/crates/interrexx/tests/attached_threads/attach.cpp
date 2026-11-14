@@ -34,6 +34,10 @@
 // * `AtBuffers(target, count)` makes a buffer string of 100000 bytes, writes and finishes it, and
 //   releases it, `count` times on one attachment, and reports how many times every step answered
 //   as it should.
+// * `AtTickJoin(target)` starts a thread that attaches, sends `TICK` to `target` and detaches, and
+//   joins it before it returns: the message runs while the call blocks.
+// * `AtSendJoin(target)` sends `JOIN`, whose method calls `AtTickJoin` from inside the attached
+//   thread's message, so the call that joins is made while a callback runs.
 #include <atomic>
 #include <pthread.h>
 #include <stdint.h>
@@ -54,7 +58,8 @@ enum Job
     WRONG,
     LATE,
     BUFFERS,
-    INNER
+    INNER,
+    JOIN
 };
 
 struct Thread
@@ -123,6 +128,9 @@ static void run(RexxThreadContext *thread, Thread *self)
             break;
         case SLOW:
             thread->SendMessage0(self->target, "SLOW");
+            break;
+        case JOIN:
+            thread->SendMessage0(self->target, "JOIN");
             break;
         case BUFFERS:
         {
@@ -368,6 +376,47 @@ RexxRoutine1(logical_t, AtInner, RexxObjectPtr, target)
     return start(context, target, INNER, 0);
 }
 
+RexxRoutine1(logical_t, AtSendJoin, RexxObjectPtr, target)
+{
+    return start(context, target, JOIN, 0);
+}
+
+// What the thread `AtTickJoin` starts is given: the instance to attach to, and a global reference
+// to the object it sends `TICK` to.
+struct Tick
+{
+    RexxInstance *instance;
+    RexxObjectPtr target;
+};
+
+static void *attach_and_tick(void *argument)
+{
+    Tick *tick = (Tick *)argument;
+    RexxThreadContext *thread = NULL;
+    if (tick->instance->AttachThread(&thread))
+    {
+        thread->SendMessage0(tick->target, "TICK");
+        thread->ReleaseGlobalReference(tick->target);
+        thread->DetachThread();
+    }
+    return NULL;
+}
+
+// Starts a thread that attaches, sends `TICK` to `target` and detaches, and joins it: answers 1,
+// or -1 where the thread did not start.
+RexxRoutine1(int, AtTickJoin, RexxObjectPtr, target)
+{
+    Tick tick = {context->threadContext->instance, context->RequestGlobalReference(target)};
+    pthread_t thread;
+    if (pthread_create(&thread, NULL, attach_and_tick, &tick) != 0)
+    {
+        context->ReleaseGlobalReference(tick.target);
+        return -1;
+    }
+    pthread_join(thread, NULL);
+    return 1;
+}
+
 // Detaches the thread running this call from the thread context of the call, and answers 1.
 RexxRoutine0(int, AtDetachHere)
 {
@@ -412,6 +461,8 @@ static RexxRoutineEntry routines[] = {
     REXX_TYPED_ROUTINE(AtBuffers, AtBuffers),
     REXX_TYPED_ROUTINE(AtInner, AtInner),
     REXX_TYPED_ROUTINE(AtDetachHere, AtDetachHere),
+    REXX_TYPED_ROUTINE(AtSendJoin, AtSendJoin),
+    REXX_TYPED_ROUTINE(AtTickJoin, AtTickJoin),
     REXX_TYPED_ROUTINE(AtDone, AtDone),
     REXX_TYPED_ROUTINE(AtReport, AtReport),
     REXX_LAST_ROUTINE()

@@ -95,15 +95,6 @@ impl<'b> Lent<'b> {
         }
     }
 
-    /// [`Lent::wait`], or `None` once the interpreter is gone and nothing
-    /// will lend the baton ([`Closing`]).
-    pub(crate) fn wait_unless_closed(baton: &'b InterpBaton) -> Option<Lent<'b>> {
-        Some(Lent {
-            island: baton.await_lend_unless_closed()?,
-            baton,
-        })
-    }
-
     /// The interpreter, for as long as this lend.
     pub(crate) fn interp(&mut self) -> &mut Interp {
         // SAFETY: the lender derived the pointer from its own `&mut Interp`
@@ -122,6 +113,40 @@ impl Drop for Lent<'_> {
     fn drop(&mut self) {
         if !std::thread::panicking() {
             self.baton.give_back();
+        }
+    }
+}
+
+/// Waits until the baton is lent to this thread, which has posted a recall
+/// for it. Where the baton is vacated by a native call running off it
+/// ([`crate::baton::Baton::vacate`]) and nobody serves that recall, this
+/// thread claims the vacancy and hands it to a pool thread it starts to run
+/// the interpreter until the call returns, which serves the recall; where
+/// the pool gives none, the vacancy is freed again and this thread waits for
+/// the vacating thread to serve it. `None` where `unless_closed` and the
+/// interpreter is gone first, so nothing will lend the baton ([`Closing`]).
+pub(crate) fn wait_served(baton: &InterpBaton, unless_closed: bool) -> Option<Lent<'_>> {
+    let mut claim = true;
+    loop {
+        match baton.await_lend_or_vacancy(claim, unless_closed) {
+            crate::baton::Awaited::Lent(island) => return Some(Lent { baton, island }),
+            crate::baton::Awaited::Closed => return None,
+            crate::baton::Awaited::Vacancy(island) => {
+                // SAFETY: the vacating thread derived the pointer from its
+                // own `&mut Interp` ([`Island::of`]) before it vacated, and
+                // touches the interpreter again only once it has reclaimed
+                // the vacancy, which waits while this thread holds it by its
+                // claim; no other thread holds the baton meanwhile. The borrow
+                // ends before the vacancy is handed on or freed below.
+                let started = unsafe { &mut *island.0.as_ptr() }.start_vacancy_server();
+                match started {
+                    Some(server) => baton.hand_vacancy(server),
+                    None => {
+                        baton.free_vacancy();
+                        claim = false;
+                    }
+                }
+            }
         }
     }
 }
