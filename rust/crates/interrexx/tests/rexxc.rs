@@ -131,6 +131,23 @@ fn render(dir: &Path, stdout: &[u8], stderr: &[u8], status: Option<i32>, oracle:
             let Some(line) = banner::recorded(line, oracle) else {
                 continue;
             };
+            // The statuses 254 and 255 end a command that prints a message
+            // or the usage text, whose wording is not specified
+            // (`r[conv.error.text]`): each of their lines but the banner's
+            // is recorded as `<message>`.
+            let banner_line = [
+                "interrexx ",
+                "Build date: ",
+                "Addressing mode: ",
+                "Licensed under ",
+            ]
+            .iter()
+            .any(|prefix| line.starts_with(prefix));
+            let line = if matches!(status, Some(254 | 255)) && tag == "out" && !banner_line {
+                "<message>".to_string()
+            } else {
+                line
+            };
             rendered.push_str(&format!("{tag}> {line}\n"));
         }
     }

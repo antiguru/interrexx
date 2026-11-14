@@ -155,11 +155,11 @@ out> rsrc 0
 out> in r
 out> cond 40.34
 out> tb 1
-out>     10 *-* Program "DIR/observe.rxo"; no source is available.
+out>     10 *-* <no source>
 out> 3
 out> raise
-err>     27 *-*   Program "DIR/observe.rxo"; no source is available.
-err>     17 *-* Program "DIR/observe.rxo"; no source is available.
+err>     27 *-*   <no source>
+err>     17 *-* <no source>
 err> Error 41 running DIR/observe.rxo line 27:
 err> Error 41.1:
 
@@ -175,11 +175,11 @@ out> rsrc 0
 out> in r
 out> cond 40.34
 out> tb 1
-out>     10 *-* Program "DIR/observee.rxo"; no source is available.
+out>     10 *-* <no source>
 out> 3
 out> raise
-err>     27 *-*   Program "DIR/observee.rxo"; no source is available.
-err>     17 *-* Program "DIR/observee.rxo"; no source is available.
+err>     27 *-*   <no source>
+err>     17 *-* <no source>
 err> Error 41 running DIR/observee.rxo line 27:
 err> Error 41.1:
 
@@ -200,11 +200,11 @@ out> 0
 out> rt
 err>      3 *-* say 1+1
 err>        >>>   "2"
-err>     17 *-* Method "BOOM", scope "C", package "DIR/levels.rxo"; no source is available.
-err>     20 *-* Routine "RT", package "DIR/levels.rxo"; no source is available.
+err>     17 *-* <no source>
+err>     20 *-* <no source>
 err>     25 *-* call rt
-err>     25 *-* Routine "RR", package "DIR/levels.rxo"; no source is available.
-err>      9 *-* Program "DIR/levels.rxo"; no source is available.
+err>     25 *-* <no source>
+err>      9 *-* <no source>
 err> Error 41 running DIR/levels.rxo line 17:
 err> Error 41.1:
 
@@ -252,7 +252,7 @@ out> lab
 out> back
 out> 3
 out>      5 *-* x = 1 + "z"
-out>      5 *-* Program "DIR/interpret.rxo"; no source is available.
+out>      5 *-* <no source>
 out> 5
 err>      2 *-* say sourceline();
 err>        >>>   "0"
@@ -331,14 +331,14 @@ method.rex
 rc> 0
 out> d 0
 out> trap2 43.1
-out>      1 *-* Method "ZZ", scope "K", package "d"; no source is available.
+out>      1 *-* <no source>
 out>      6 *-* say 'method rxo' .k~new~zz
 
 rexx
 install.rxo
 ----
 rc> 158
-err>      2 *-* Program "DIR/install.rxo"; no source is available.
+err>      2 *-* <no source>
 err> Error 98 running DIR/install.rxo line 2:
 err> Error 98.909:
 
@@ -346,20 +346,20 @@ rexx
 frames.rxo
 ----
 rc> 0
-out>      1 *-* Program "DIR/frames.rxo"; no source is available.
+out>      1 *-* <no source>
 out> 1
-out>      4 *-*   Program "DIR/frames.rxo"; no source is available.
-out>      2 *-* Program "DIR/frames.rxo"; no source is available.
+out>      4 *-*   <no source>
+out>      2 *-* <no source>
 
 rexx
 external.rex
 ----
 rc> 0
 out> in fail
-out>      2 *-* Routine "fail.rxo", package "DIR/fail.rxo"; no source is available.
+out>      2 *-* <no source>
 out>      2 *-* call 'fail.rxo'
 out> in fail
-out>      2 *-* Routine "FAIL.RXO", package "DIR/fail.rxo"; no source is available.
+out>      2 *-* <no source>
 out>      5 *-* x = fail.rxo()
 
 rexx
@@ -367,7 +367,7 @@ requires.rex
 ----
 rc> 215
 out> in fail
-err>      2 *-* Routine "DIR/fail.rxo", package "DIR/fail.rxo"; no source is available.
+err>      2 *-* <no source>
 err>      2 *-* ::requires 'fail.rxo'
 err> Error 41 running DIR/fail.rxo line 2:
 err> Error 41.1:
@@ -377,7 +377,7 @@ prologue.rex
 ----
 rc> 159
 out> in fail
-out>      2 *-* Routine "pk", package "pk"; no source is available.
+out>      2 *-* <no source>
 out>      2 *-* p = .Package~new('pk', .stream~new('faile.rxo')~arrayin)
 err>      4 *-* say .Routine~newFile('fail.rxo')~name
 err> Error 97 running DIR/prologue.rex line 4:
@@ -485,7 +485,7 @@ out> newfile DIR/named.rex | DIR/named.rex | named.rxo
 out> new DIR/named.rex | DIR/named.rex | rn
 out> call named.rxo | named.rxo | DIR/named.rxo
 out> in fail
-out>      2 *-* Routine "DIR/fail.rex", package "fail.rxo"; no source is available.
+out>      2 *-* <no source>
 out>      6 *-* .Routine~newFile('fail.rxo')~call
 
 # The string of -o goes to the first program translated from source: an image

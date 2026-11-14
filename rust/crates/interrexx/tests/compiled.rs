@@ -173,6 +173,51 @@ fn escaped(bytes: &[u8]) -> String {
     out
 }
 
+/// The text of every fixture program, to tell a clause that a trace line
+/// shows from the line that says its program has no source.
+fn fixture_text() -> &'static str {
+    static TEXT: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+    fn collect(dir: &Path, into: &mut String) {
+        for entry in std::fs::read_dir(dir).expect("the fixture directory") {
+            let entry = entry.expect("a fixture entry");
+            if entry.file_type().expect("its type").is_dir() {
+                collect(&entry.path(), into);
+            } else if let Ok(text) = std::fs::read_to_string(entry.path()) {
+                into.push_str(&text);
+            }
+        }
+    }
+    TEXT.get_or_init(|| {
+        let mut text = String::new();
+        collect(Path::new(PROGRAMS), &mut text);
+        text
+    })
+}
+
+/// `line` with the text of a trace line replaced by `<no source>`, when it is
+/// a clause line (a line number, `*-*` and the text) whose text is no part of
+/// a fixture program. A restored program has no source, so a clause line of
+/// its own shows a line that says no source is available, whose wording is
+/// not specified (`r[env.invocation.rexxc.source]`); the number and the
+/// blanks after `*-*` are specified and stay, and so does the text of a
+/// clause that a string supplies, such as one of an `INTERPRET`.
+fn without_clause_text(line: &str) -> String {
+    let trimmed = line.trim_start_matches(' ');
+    let digits = trimmed.bytes().take_while(u8::is_ascii_digit).count();
+    let Some(rest) = trimmed[digits..].strip_prefix(" *-*") else {
+        return line.to_string();
+    };
+    if digits == 0 {
+        return line.to_string();
+    }
+    let text = rest.trim_start_matches(' ');
+    if fixture_text().contains(text.trim_end()) {
+        return line.to_string();
+    }
+    let keep = line.len() - text.len();
+    format!("{}<no source>", &line[..keep])
+}
+
 /// The three descriptors as the case file records them, with the side's
 /// directory as `DIR`.
 fn render(dir: &Path, stdout: &[u8], stderr: &[u8], status: Option<i32>) -> String {
@@ -183,7 +228,7 @@ fn render(dir: &Path, stdout: &[u8], stderr: &[u8], status: Option<i32>) -> Stri
     };
     for (tag, bytes) in [("out", stdout), ("err", stderr)] {
         for line in escaped(bytes).replace(&dir, "DIR").lines() {
-            rendered.push_str(&format!("{tag}> {line}\n"));
+            rendered.push_str(&format!("{tag}> {}\n", without_clause_text(line)));
         }
     }
     rendered
