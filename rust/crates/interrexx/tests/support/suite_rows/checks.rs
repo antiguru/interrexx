@@ -38,7 +38,39 @@ pub fn check_row(row: &Row, context: &Context) -> Result<(), String> {
             }
         }
         Owner::NotRun => check_not_run(row, &text, context),
+        Owner::Unspecified => check_unspecified(row, context),
     }
+}
+
+/// An Unspecified row's reason cites a rule as `r[ID]`, and the
+/// specification under `spec/src` states that rule.
+fn check_unspecified(row: &Row, context: &Context) -> Result<(), String> {
+    let id = row
+        .reason
+        .split_once("r[")
+        .and_then(|(_, rest)| rest.split_once(']'))
+        .map(|(id, _)| id)
+        .filter(|id| !id.is_empty())
+        .ok_or("the reason cites no rule as `r[ID]`")?;
+    let marker = format!("r[{id}]");
+    let mut pending = vec![context.worktree.join("spec/src")];
+    while let Some(dir) = pending.pop() {
+        let entries =
+            fs::read_dir(&dir).map_err(|e| format!("cannot read {}: {e}", dir.display()))?;
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                pending.push(path);
+            } else if path.extension().is_some_and(|ext| ext == "md")
+                && read_lossy(&path)
+                    .lines()
+                    .any(|line| line.trim_end() == marker)
+            {
+                return Ok(());
+            }
+        }
+    }
+    Err(format!("the specification states no rule {marker}"))
 }
 
 fn check_environment(row: &Row, context: &Context) -> Result<(), String> {

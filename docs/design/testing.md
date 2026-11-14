@@ -58,7 +58,8 @@ fresh copy with its own API service.
 * A group passes when every test in its expected set started and passed, every test that ran is
   expected or listed, and the run ended normally. The expected set is the group's test methods,
   enumerated from source, less its rows in `rust/corpus/suite-licences.txt` (Deviation,
-  environment and known-flaky rows, each with a checked reason) and
+  environment, known-flaky and unspecified rows, each with a checked reason; an unspecified row's
+  test asserts what a cited rule leaves unspecified, such as a message's wording) and
   `rust/corpus/suite-not-run.txt` (tests the framework does not run on this host).
 * A crash, refusal, timeout or memory kill on interrexx renames the last started test out and runs
   the group again, so one failure does not hide the rest.

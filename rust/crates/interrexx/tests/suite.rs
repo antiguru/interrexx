@@ -1361,6 +1361,10 @@ mod row_checks {
         ),
         (
             LICENCES,
+            "base/bif/CHAROUT\tTEST_STDOUT_START\tUnspecified\tasserts a wording, r[conv.error.text]",
+        ),
+        (
+            LICENCES,
             "samples/sfserver\tTEST_04_SFSERVER.REX\tEnvironment\trecord: rust/corpus/suite-oracle-runs/samples-sfserver.txt",
         ),
         (
@@ -1397,6 +1401,14 @@ mod row_checks {
         (
             LICENCES,
             "base/bif/CHAROUT\tTEST_STDOUT_START\tDeviation 5\twithdrawn",
+        ),
+        (
+            LICENCES,
+            "base/bif/CHAROUT\tTEST_STDOUT_START\tUnspecified\tasserts a wording",
+        ),
+        (
+            LICENCES,
+            "base/bif/CHAROUT\tTEST_STDOUT_START\tUnspecified\tr[conv.no.such.rule]",
         ),
         (
             LICENCES,
