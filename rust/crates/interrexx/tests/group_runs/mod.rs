@@ -414,15 +414,6 @@ fn inverted(run: &Run) -> bool {
     String::from_utf8_lossy(&run.stderr).contains(INVERTED_WAIT)
 }
 
-/// The rows whose failure output prints an elapsed time, which differs
-/// between any two runs.
-const PRINTS_ELAPSED: &[&str] = &[
-    "base/bif/TIME.testGroup TEST_4",
-    "base/bif/TIME.testGroup TEST_5",
-    "base/bif/TIME.testGroup TEST_10",
-    "base/bif/TIME.testGroup TEST_11",
-];
-
 /// The rows whose trace output, on stderr, comes from a `REPLY`
 /// continuation and its sender, so the lines interleave differently by
 /// mode. Allowed while both runs end in the same `interrexx: ` refusal, or
@@ -450,15 +441,6 @@ const WALL_CLOCK: &[&str] = &[
     "base/class/Message.testGroup TEST_HALT_START",
     // CALL.testGroup:424-425
     "base/keyword/CALL.testGroup TEST_4",
-    // TIME.testGroup:1840, :1875 and the same midnight assertion in each
-    "base/bif/TIME.testGroup TEST_2",
-    "base/bif/TIME.testGroup TEST_3",
-    "base/bif/TIME.testGroup TEST_4",
-    "base/bif/TIME.testGroup TEST_5",
-    "base/bif/TIME.testGroup TEST_8",
-    "base/bif/TIME.testGroup TEST_9",
-    "base/bif/TIME.testGroup TEST_10",
-    "base/bif/TIME.testGroup TEST_11",
     // Ticker.testGroup:52-55, :76-79, :100-103, :123-126
     "base/class/Ticker.testGroup TEST_TICKER_TWO_ARGS_STRING_CANCEL",
     "base/class/Ticker.testGroup TEST_TICKER_TWO_ARGS_TIMESPAN_CANCEL",
@@ -520,18 +502,6 @@ fn compare_modes(row: &str, normal: &Run, every: &Run) -> (String, bool) {
                 ),
                 true,
             );
-        }
-    }
-    if quiet && PRINTS_ELAPSED.contains(&row) {
-        let timed = |line: &str| {
-            let line = line.trim_start();
-            line.starts_with("[failure]")
-                || line.starts_with("Expected:")
-                || line.starts_with("Actual:")
-                || line.starts_with("Message:")
-        };
-        if without(normal, timed) == without(every, timed) {
-            return ("same apart from elapsed values".to_string(), true);
         }
     }
     let refusal = |run: &Run| {

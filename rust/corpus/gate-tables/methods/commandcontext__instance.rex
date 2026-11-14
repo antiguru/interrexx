@@ -1,11 +1,13 @@
-/* Table C method rows: CommandContext, instance arm. corpus/docs/class-set.txt
-   records this class as `not-covered`, because
-   no construction program is committed; a bare ~new raises 93.901 on the oracle.
-   So ~new raises and no line below it is reached; the row's evidence
-   is that raise, which is what the row set says there is to have.
+/* Table C method rows: CommandContext, instance arm -- one line per method
+   corpus/docs/class-methods.txt documents on this arm, asked of the
+   instance `gatekc()` answers, in the row set's own order. That
+   expression is corpus/docs/class-set.txt's committed construction
+   program for this class, and carrying one is what `covered` claims.
+   `::routine gatekc; .CommandHandler~register('GATEKC', .gatekc~new); address GATEKC 'x'; return .local~gatekc; ::class gatekc subclass CommandHandler; ::method command; use arg , context; .local~gatekc = context; return 0` below the readbacks is that row's `directives` field,
+   which is what the expression reads.
    Derived by crates/interrexx/tests/table_c/probes.rs, which re-derives
    this file on every run and compares it in both directions. */
-o = .CommandContext~new
+o = gatekc()
 say 'instance' o~hasMethod("[ ]")
 say 'instance' o~hasMethod("[ ]=")
 say 'instance' o~hasMethod("dropVar")
@@ -22,3 +24,4 @@ say 'instance' o~hasMethod("raiseError")
 say 'instance' o~hasMethod("raiseFailure")
 say 'instance' o~hasMethod("setVar")
 say 'instance' o~hasMethod("variables")
+::routine gatekc; .CommandHandler~register('GATEKC', .gatekc~new); address GATEKC 'x'; return .local~gatekc; ::class gatekc subclass CommandHandler; ::method command; use arg , context; .local~gatekc = context; return 0

@@ -1,14 +1,6 @@
 base/bif/STREAM.testGroup TEST_QUERYDIR_EXISTS SysSleep
 base/bif/TIME.testGroup TEST_SIMPLE_ELAPSED SysSleep
 base/bif/TIME.testGroup TEST_SIMPLE_RESET SysSleep
-base/bif/TIME.testGroup TEST_2 SysSleep
-base/bif/TIME.testGroup TEST_3 SysSleep
-base/bif/TIME.testGroup TEST_4 SysSleep
-base/bif/TIME.testGroup TEST_5 SysSleep
-base/bif/TIME.testGroup TEST_8 SysSleep
-base/bif/TIME.testGroup TEST_9 SysSleep
-base/bif/TIME.testGroup TEST_10 SysSleep
-base/bif/TIME.testGroup TEST_11 SysSleep
 base/class/Alarm.testGroup TEST_BASE_ALARM Alarm,GUARD,REPLY,SysSleep
 base/class/Alarm.testGroup TEST_ALARM_NO_TIME Alarm
 base/class/Alarm.testGroup TEST_ALARM_NO_TARGET Alarm

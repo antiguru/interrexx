@@ -1350,3 +1350,15 @@ holds; `DO OVER` the list skips that entry. ooRexx counts the empty place as an
 item: `items` stays one higher than the items the Array holds, and `isEmpty`
 answers 0 after its last item is removed. Its `DO OVER` assigns `.nil` for the
 entry.
+
+## 173. IsString answers true for every String
+
+The native API's `IsString` answers true for every instance of String, a number
+that an operator made included, so equal strings get the same answer however
+they were made. ooRexx answers false for a number that an operator made and for
+some numbers written as literals, such as `12`, `'12'` and `10000000000`, whose
+internal form is a number object rather than a string, and true for others,
+such as `3.5` and `'0'`. The same test decides whether its
+`DecodeConditionInfo` reports a condition's description: interrexx reports a
+description that is any instance of String, where ooRexx reports none for a
+description such as `2 + 3`.

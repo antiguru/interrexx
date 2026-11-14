@@ -20,6 +20,14 @@
 
 #[path = "support/group_runner.rs"]
 mod group_runner;
+
+// The C API, compiled in and exported as `rexx` does (`build.rs`), so a test
+// library this process loads binds to this process's interpreter rather than
+// to the oracle's `librexx.so.4` and `librexxapi.so.4`.
+#[path = "../../interrexx-capi/src/exports.rs"]
+mod rexx_exports;
+#[path = "../../interrexx-capi/src/rexxapi_exports.rs"]
+mod rexxapi_exports;
 mod support;
 mod watchdog;
 
@@ -43,7 +51,16 @@ const GROUPS: &[&str] = &["CONVERSION", "FUNCTION", "METHOD"];
 
 /// The tests this crate does not pass, as `GROUP.TEST`; `false` for one that
 /// runs on neither side.
-const RECORDED: &[(&str, bool)] = &[];
+const RECORDED: &[(&str, bool)] = &[
+    // Deviation 173: its second and third assertions expect the oracle's false
+    // from `IsString` for `80+1` and `1+.1`, numbers an operator made.
+    ("CONVERSION.TESTISSTRING", true),
+    // Deviation 173: expects the oracle's false from `IsString` for `1`.
+    ("METHOD.TESTISSTRING01", true),
+    // Deviation 173: expects no description from `DecodeConditionInfo` for
+    // `RAISE ... DESCRIPTION (2 + 3)`, a number an operator made.
+    ("METHOD.TESTDECODECONDITION03", true),
+];
 
 /// The tests whose outcome, assertion count, stderr and exit status agree while
 /// a failure's or an error's detail differs, as `GROUP.TEST`, each recorded as
@@ -326,6 +343,7 @@ fn the_framework_ticker_runs_without_dash_u() {
             args.push("-U");
         }
         fresh_copy(&run, DIR);
+        skip(std::path::Path::new(&shown), "CONVERSION", &left_out());
         private_service();
         runs.push(run_crate(&run, &args, SwitchMode::None));
     }

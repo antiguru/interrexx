@@ -1498,7 +1498,9 @@ fn call_routine_runs_without_a_rexx_caller() {
 /// `DecodeConditionInfo` as the oracle decodes it: only a `SYNTAX` condition has a code, the
 /// `RC` of `ERROR` and `FAILURE` is given where it is a whole number, and the description and
 /// additional information only where they are a string and an array; the condition object has
-/// `RAISE`'s description object as it is. The expected output is the oracle's.
+/// `RAISE`'s description object as it is. The expected output is the oracle's but for the
+/// description `2 + 3`, a string by r[native.calls.isstring], which the oracle does not report
+/// (Deviation 173).
 #[test]
 fn decode_condition_info_gives_what_the_structure_declares() {
     let stdout = run_program(
@@ -1517,7 +1519,7 @@ fn decode_condition_info_gives_what_the_structure_declares() {
          ERROR | 0 | 0 |  | The NIL object | 0\n\
          FAILURE | 0 | -1 |  | The NIL object | 0\n\
          USER BOOM | 0 | 0 |  | array of 2 | 0\n\
-         USER BOOM | 0 | 0 | The NIL object | The NIL object | 0\n\
+         USER BOOM | 0 | 0 | 5 | The NIL object | 0\n\
          USER BOOM | 0 | 0 | The NIL object | The NIL object | 0\n\
          SYNTAX | 41001 | 41 |  | array of 1 | 0\n"
     );

@@ -1,5 +1,5 @@
 # One row per Deviation of spec/src/deviations.md: number, status (active or withdrawn),
-# the model tests whose oracle departures it licenses, and its witnesses in
+# the model tests and gate tables whose oracle departures it licenses, and its witnesses in
 # interrexx/tests/licensed_divergences.rs; lists are comma-separated, `-` for none.
 0	active	-	-
 1	active	-	-
@@ -111,7 +111,7 @@
 107	active	-	-
 108	active	-	-
 109	active	-	-
-110	active	-	-
+110	active	gate_table_c	-
 111	active	-	-
 112	active	-	-
 113	active	-	-
@@ -173,3 +173,4 @@
 170	active	-	-
 171	active	-	-
 172	active	-	-
+173	active	-	-

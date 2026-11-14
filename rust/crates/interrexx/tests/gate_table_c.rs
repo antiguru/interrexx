@@ -12,7 +12,7 @@ use gate_tables::{
     verdict, verdict_is_gated, verdict_label,
 };
 use table_c::checks::{
-    OracleShape, argutil_assertion, check_concept_line_counts, check_documented_edge,
+    OracleShape, Ran, argutil_assertion, check_concept_line_counts, check_documented_edge,
     check_edge_endpoints, check_entry_kinds, check_entry_present, check_interpolated_text,
     check_oracle_shape, check_probe_text, class_probe_shape, probe_set, run_probe,
 };
@@ -36,6 +36,18 @@ struct Concept {
     control: &'static str,
     /// How many lines of `stdout` this section's probe prints on the oracle.
     oracle_lines: usize,
+    /// The Deviation whose behaviour departs from the section's own sentence,
+    /// and what this crate answers under it. See [`concept_licence`].
+    licensed_by: Option<Licence>,
+}
+
+/// A concept row's licence to answer differently from the oracle.
+struct Licence {
+    /// The Deviation, which must be an active row of `deviations.tsv` naming
+    /// this table.
+    deviation: u32,
+    /// The `stdout` the Deviation predicts for the row's probe on this crate.
+    crate_stdout: &'static str,
 }
 
 /// One arm per `provide.xml` section id.
@@ -48,12 +60,18 @@ const CONCEPTS: &[Concept] = &[
                   which an abstract class answers exactly as a plain one does, and abstract \
                   enforcement is `abscla`'s row",
         oracle_lines: 4,
+        licensed_by: None,
     },
     Concept {
         id: "objcla",
-        control: "rebuild an existing instance's method lookup from its class on every \
-                  send, so a method defined after the instance was created answers",
+        control: "copy the class's methods into an instance when it is created, as the \
+                  section says, so a method defined afterwards does not answer: the row \
+                  then agrees with the oracle and its Deviation 110 licence is stale",
         oracle_lines: 3,
+        licensed_by: Some(Licence {
+            deviation: 110,
+            crate_stdout: "before 0\nafter 1\nfresh 1\n",
+        }),
     },
     Concept {
         id: "xmixin",
@@ -61,42 +79,49 @@ const CONCEPTS: &[Concept] = &[
                   first non-mixin superclass, or merge an INHERIT target's methods in front \
                   of the class's own",
         oracle_lines: 4,
+        licensed_by: None,
     },
     Concept {
         id: "abscla",
         control: "drop `checkAbstract` from the `~new` path, so an abstract class \
                   constructs",
         oracle_lines: 1,
+        licensed_by: None,
     },
     Concept {
         id: "xmetac",
         control: "ignore `METACLASS`, so a class declared with one is still an instance of \
                   `.Class`",
         oracle_lines: 3,
+        licensed_by: None,
     },
     Concept {
         id: "xcremet",
         control: "install a quoted `::CLASS` identifier under a different name, or give the \
                   new class a superclass other than Object",
         oracle_lines: 3,
+        licensed_by: None,
     },
     Concept {
         id: "usingcl",
         control: "answer `~subclass` with a class whose superclass is Object rather than the \
                   receiver",
         oracle_lines: 4,
+        licensed_by: None,
     },
     Concept {
         id: "xscope",
         control: "answer `~method` from the flattened all-scopes dictionary, so an inherited \
                   name answers where the oracle raises",
         oracle_lines: 2,
+        licensed_by: None,
     },
     Concept {
         id: "usesem",
         control: "put a `setMethod` definition in the class's dictionary rather than in the \
                   object's own scope, so it reaches the class's other instances",
         oracle_lines: 4,
+        licensed_by: None,
     },
     Concept {
         id: "methna",
@@ -106,17 +131,20 @@ const CONCEPTS: &[Concept] = &[
                   `MethodDict::replace_method`. Either one alone leaves this row `agree` \
                   and the corpus untouched",
         oracle_lines: 4,
+        licensed_by: None,
     },
     Concept {
         id: "xmeths",
         control: "search a superclass before the class's own dictionary, or drop the \
                   `UNKNOWN` step so a miss goes straight to NOMETHOD",
         oracle_lines: 3,
+        licensed_by: None,
     },
     Concept {
         id: "unkno",
         control: "delete the `UNKNOWN` step",
         oracle_lines: 1,
+        licensed_by: None,
     },
     Concept {
         id: "chsrod",
@@ -124,18 +152,21 @@ const CONCEPTS: &[Concept] = &[
                   named scope, which makes `self~type:super` recurse or answer the \
                   subclass's method",
         oracle_lines: 1,
+        licensed_by: None,
     },
     Concept {
         id: "pubpri",
         control: "let a PRIVATE method answer a send from outside the object, so the \
                   outside-send line answers instead of raising 97.2",
         oracle_lines: 2,
+        licensed_by: None,
     },
     Concept {
         id: "creo",
         control: "stop calling `init` after `~new` builds the object, or pass `~new`'s \
                   arguments to the wrong `init`",
         oracle_lines: 3,
+        licensed_by: None,
     },
     Concept {
         id: "obdes",
@@ -143,29 +174,34 @@ const CONCEPTS: &[Concept] = &[
                   reclaimed and no collection ever reaches one. The row reddens on stdout \
                   alone, rc 0 with empty stderr on both sides",
         oracle_lines: 2,
+        licensed_by: None,
     },
     Concept {
         id: "reqstr",
         control: "delete the `makeString` limb, or answer `makeString` with the wrong \
                   string, which reddens the row at rc 0 with empty stderr on both sides",
         oracle_lines: 6,
+        licensed_by: None,
     },
     Concept {
         id: "concurr",
         control: "refuse `REPLY` inside a method body, or stop returning its expression to \
                   the sender",
         oracle_lines: 3,
+        licensed_by: None,
     },
     Concept {
         id: "classmeth",
         control: "drop a class from the registry, so its `~id` line cannot answer",
         oracle_lines: 31,
+        licensed_by: None,
     },
     Concept {
         id: "chi",
         control: "answer `~superClass` with the whole superclass list's last element rather \
                   than the class's direct superclass",
         oracle_lines: 8,
+        licensed_by: None,
     },
     Concept {
         id: "methodsbyclass",
@@ -179,6 +215,7 @@ const CONCEPTS: &[Concept] = &[
                   stack at rc 134, which reads as an infrastructure failure and not as a \
                   reddened row",
         oracle_lines: 5,
+        licensed_by: None,
     },
 ];
 
@@ -238,6 +275,70 @@ struct Measured {
     crate_exit: i32,
     crate_stdout: Vec<u8>,
     crate_stderr: Vec<u8>,
+    /// What keeps the row out of the gate although it may not `agree`: the
+    /// Deviation a concept row is licensed by.
+    licensed: Option<String>,
+}
+
+/// The table's name in `deviations.tsv`'s models column.
+const LICENCE_MODEL: &str = "gate_table_c";
+
+/// Checks a concept row's licence and answers what keeps the row out of the
+/// gate. The licence holds only while its Deviation is an active row of
+/// `deviations.tsv` naming this table and this crate answers exactly what the
+/// licence predicts, on `stdout`, with the oracle's exit status and `stderr`,
+/// neither loud nor refusing. Anything else is a structural failure, so the
+/// licence covers the one departure its Deviation makes and no other: a row
+/// that agrees with the oracle has lost that departure, and one that answers
+/// otherwise has a difference nothing licenses.
+fn concept_licence(
+    concept: &Concept,
+    subject: &str,
+    verdict: Option<Verdict>,
+    ran: &Ran,
+    structural: &mut Vec<Structural>,
+) -> Option<String> {
+    let licence = concept.licensed_by.as_ref()?;
+    let number = licence.deviation;
+    let table = support::deviations::load(&support::deviations::repository());
+    let named = table
+        .get(&number)
+        .is_some_and(|row| row.active && row.models.iter().any(|m| m == LICENCE_MODEL));
+    if !named {
+        structural.push(Structural {
+            subject: subject.to_string(),
+            detail: format!(
+                "is licensed by Deviation {number}, which is not an active row of \
+                 deviations.tsv naming `{LICENCE_MODEL}`"
+            ),
+        });
+    }
+    if verdict == Some(Verdict::Agree) {
+        structural.push(Structural {
+            subject: subject.to_string(),
+            detail: format!(
+                "agrees with the oracle although Deviation {number} licenses it to differ, \
+                 so the departure the licence names has gone and the licence is stale"
+            ),
+        });
+    } else if ran.crate_stdout != licence.crate_stdout.as_bytes()
+        || ran.crate_exit != ran.oracle_exit
+        || ran.crate_stderr != ran.oracle_stderr
+        || ran.crate_loud
+        || ran.crate_refused.is_some()
+    {
+        structural.push(Structural {
+            subject: subject.to_string(),
+            detail: format!(
+                "answers other than Deviation {number} predicts (stdout {:?}, exit {} where \
+                 the oracle's is {}), and the licence covers only that answer",
+                String::from_utf8_lossy(&ran.crate_stdout),
+                ran.crate_exit,
+                ran.oracle_exit,
+            ),
+        });
+    }
+    Some(format!("Deviation {number}"))
 }
 
 /// The concept rows, with [`CONCEPTS`] checked against the committed section
@@ -416,6 +517,8 @@ fn concept_and_class_gate_table() {
             &ran.oracle_stdout,
             &mut structural,
         );
+        let verdict = answered.then(|| verdict(ran.differs));
+        let licensed = concept_licence(concept, &subject, verdict, &ran, &mut structural);
         measured.push(Measured {
             kind: "concept",
             subject: format!("{} {}", section.id, section.title),
@@ -424,7 +527,7 @@ fn concept_and_class_gate_table() {
                 section.depth, section.parent, section.line
             ),
             probe,
-            verdict: answered.then(|| verdict(ran.differs)),
+            verdict,
             loud: ran.crate_loud,
             refused: ran.crate_refused,
             oracle_exit: ran.oracle_exit,
@@ -433,6 +536,7 @@ fn concept_and_class_gate_table() {
             crate_exit: ran.crate_exit,
             crate_stdout: ran.crate_stdout,
             crate_stderr: ran.crate_stderr,
+            licensed,
         });
     }
 
@@ -475,6 +579,7 @@ fn concept_and_class_gate_table() {
             crate_exit: ran.crate_exit,
             crate_stdout: ran.crate_stdout,
             crate_stderr: ran.crate_stderr,
+            licensed: None,
         });
     }
 
@@ -516,6 +621,7 @@ fn concept_and_class_gate_table() {
             crate_exit: ran.crate_exit,
             crate_stdout: ran.crate_stdout,
             crate_stderr: ran.crate_stderr,
+            licensed: None,
         });
     }
 
@@ -737,7 +843,13 @@ fn concept_and_class_gate_table() {
         }
     };
     for row in &measured {
-        record(row.verdict, None, row.loud, &row.refused, &row.probe);
+        record(
+            row.verdict,
+            row.licensed.as_deref(),
+            row.loud,
+            &row.refused,
+            &row.probe,
+        );
     }
     for (index, verdict, loud, refused, waits_on) in &method_measured {
         record(

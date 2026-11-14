@@ -2,6 +2,9 @@
 # rows. One row per test: dir/group, TEST, owner, reason. An Environment
 # row's reason ends `record: PATH`, the committed oracle run naming the test.
 # ootest revision 13347
+API/oo/CONVERSION	TESTISSTRING	Deviation 173	the second and third assertions expect the oracle's false from IsString for 80+1 and 1+.1, numbers an operator made
+API/oo/METHOD	TESTDECODECONDITION03	Deviation 173	the third assertion expects no description from DecodeConditionInfo for 2 + 3, a number an operator made
+API/oo/METHOD	TESTISSTRING01	Deviation 173	the second assertion expects the oracle's false from IsString for 1, a number written as a literal
 base/bif/CHAROUT	TEST_STDOUT_START	Flaky	common.txt: CHAROUT.testGroup/TEST_STDOUT_START
 base/bif/LINEOUT	TEST_BINARY	Deviation 46	the final assertFile expects the oracle's blank records 2 and 4 from a position-only and a closing LINEOUT
 base/bif/LINEOUT	TEST_LINE_TRANSIENT	Flaky	common.txt: LINEOUT.testGroup/TEST_LINE_TRANSIENT
