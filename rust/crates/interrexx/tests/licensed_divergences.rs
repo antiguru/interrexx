@@ -250,11 +250,14 @@ const LICENSED_DIVERGENCES: &[LicensedDivergence] = &[
     LicensedDivergence {
         name: "operand-made-by-an-operation-shows-its-zeros",
         program: "numeric digits 18\nd = 9999E8 + 0\n\
-                  say d (999999999 * d) (999999999 * 999900000000)\n",
+                  say d (999999999 * d) (999999999 * 999900000000)\n\
+                  say (999999999 * -(9999E8)) (999999999 * 9999E8)\n",
         exit_code: 0,
         stderr: "",
-        oracle_stdout: "999900000000 9.998999990001E+20 9.99899999000100000E+20\n",
-        crate_stdout: "999900000000 9.99899999000100000E+20 9.99899999000100000E+20\n",
+        oracle_stdout: "999900000000 9.998999990001E+20 9.99899999000100000E+20\n\
+                        -9.998999990001E+20 9.998999990001E+20\n",
+        crate_stdout: "999900000000 9.99899999000100000E+20 9.99899999000100000E+20\n\
+                       -9.99899999000100000E+20 9.998999990001E+20\n",
     },
     LicensedDivergence {
         name: "lostdigits-counts-an-operation-result-as-shown",

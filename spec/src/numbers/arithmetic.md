@@ -548,18 +548,20 @@ gives for a literal with the same characters as that result, such as
 the same number, such as `9999E8` ([Deviation 174](../deviations.md)). ooRexx
 keeps such a result as its significant digits and an exponent and carries that
 into the next operation, so where the zeros would take part, its answer
-differs: for the first and the last product below it answers
+differs: for the first and the third product below it answers
 `9.998999990001E+20` and `-9.998999990001E+20`, and for the second, with the
-literal, what is shown here.
+literal `999900000000`, and the fourth, with the literal `9999E8`, what is
+shown here.
 
 ```rexx
 numeric digits 18
 d = 9999E8 + 0
-say d (999999999 * d) (999999999 * 999900000000) (999999999 * -(9999E8))
+say d (999999999 * d) (999999999 * 999900000000) (999999999 * -(9999E8)),
+  (999999999 * 9999E8)
 ```
 
 ```output
-999900000000 9.99899999000100000E+20 9.99899999000100000E+20 -9.99899999000100000E+20
+999900000000 9.99899999000100000E+20 9.99899999000100000E+20 -9.99899999000100000E+20 9.998999990001E+20
 ```
 
 r[num.arithmetic.deviation.175]
