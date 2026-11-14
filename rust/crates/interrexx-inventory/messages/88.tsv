@@ -1,6 +1,6 @@
 88	0	Invalid argument.
 88	900	&1.
-88	901	Argument &1 is required.
+88	901	Missing argument &1.
 88	902	Argument &1 must be a number; found "&2".
 88	903	Argument &1 must be a whole number; found "&2".
 88	904	Argument &1 must be zero or a positive whole number; found "&2".
@@ -30,6 +30,6 @@
 88	928	Argument &1 must be a VariableReference; found "&2".
 88	929	Argument &1 must be a VariableReference to a stem variable; found "&2".
 88	930	Argument &1 must be a VariableReference to a simple variable; found "&2".
-88	931	VariableReference expected as argument &1.
+88	931	Missing VariableReference argument &1.
 88	932	Date template &1 must contain only valid patterns; found "&2".
 88	933	Date "&1" does not match template "&2".
