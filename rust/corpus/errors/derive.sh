@@ -2,15 +2,21 @@
 # Usage: derive.sh SCRATCH_ROOT [CORPUS] > NEW_CORPUS
 # Re-derives parse-errors.tsv from the oracle. CORPUS defaults to the
 # parse-errors.tsv beside this script and may be in either column layout.
+# The oracle's secondary message is reduced to the inserts it shows: the
+# oracle's template for the code (read from `$REXX_UPSTREAM`, default the
+# `third_party/ooRexx` submodule) locates them, so the file holds no message
+# text. Builds and runs `interrexx-upstream`, so it needs a Rust toolchain.
 set -u
 
 scratch=${1:?usage: derive.sh SCRATCH_ROOT [CORPUS]}
 here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 corpus=${2:-$here/parse-errors.tsv}
 oracle=$(dirname "$0")/../../../third_party/oracle
+export REXX_UPSTREAM=${REXX_UPSTREAM:-$here/../../../third_party/ooRexx}
 
 # Prints `expect<TAB>line<TAB>message` for one rexxc stderr file, the message
-# escaped as the program field is.
+# escaped as the program field is. The message is the oracle's text: it is
+# reduced to its inserts before anything is written.
 extract='
 undef $/;
 my $e = <STDIN>;
@@ -45,9 +51,9 @@ while IFS= read -r line || [ -n "$line" ]; do
         continue
         ;;
     class$'\t'*)
-        printf 'class\texpect\tline\tmessage\tprogram\n'
+        printf 'class\texpect\tline\tinserts\tprogram\n'
         case $line in
-        *$'\tmessage\t'*) layout=5 ;;
+        *$'\tmessage\t'* | *$'\tinserts\t'*) layout=5 ;;
         *) layout=4 ;;
         esac
         continue
@@ -74,6 +80,12 @@ while IFS= read -r line || [ -n "$line" ]; do
     [ "$rc" = 99 ] && fail "row $row: cannot enter $dir"
     got=$(LC_ALL=C perl -e "$extract" <"$dir/err" || fail "row $row: unreadable or multi-line oracle stderr, see $dir/err") || exit 1
     IFS=$'\t' read -r gexpect gat gmsg <<<"$got"
+    if [ "$gexpect" = ok ]; then
+        ginserts=-
+    else
+        ginserts=$(cargo run -q --manifest-path "$here/../../Cargo.toml" -p interrexx-upstream -- \
+            inserts "$gexpect" <<<"$gmsg") || fail "row $row: cannot take the inserts of $gexpect"
+    fi
 
     if [ "$class" = '?' ]; then
         case $gexpect in
@@ -91,5 +103,5 @@ while IFS= read -r line || [ -n "$line" ]; do
     else
         [ "$rc" != 0 ] || fail "row $row: rejected but rc 0"
     fi
-    printf '%s\t%s\t%s\t%s\t%s\n' "$class" "$expect" "$at" "$gmsg" "$program"
+    printf '%s\t%s\t%s\t%s\t%s\n' "$class" "$expect" "$at" "$ginserts" "$program"
 done <"$corpus"

@@ -15,6 +15,7 @@ mod messages;
 #[path = "support/oracle_runtime.rs"]
 mod oracle_runtime;
 
+use interrexx_inventory::errors::expand;
 use std::ffi::OsString;
 use std::os::unix::ffi::OsStringExt;
 use std::path::{Path, PathBuf};
@@ -272,8 +273,26 @@ struct Row {
     class: String,
     expect: String,
     main_line: String,
-    message: Vec<u8>,
+    /// The inserts the oracle's secondary message showed, by position.
+    inserts: Vec<(usize, Vec<u8>)>,
     program: Vec<u8>,
+}
+
+impl Row {
+    /// This crate's text of the row's code with the recorded inserts filled
+    /// in: the secondary message `rexxc` must print.
+    fn message(&self) -> Vec<u8> {
+        let (major, sub) = self.expect.split_once('.').expect("major.sub");
+        let (major, sub) = (major.parse().expect("a major"), sub.parse().expect("a sub"));
+        let text = interrexx_inventory::errors::lookup(major, sub)
+            .unwrap_or_else(|| panic!("line {}: {major}.{sub} is not a message", self.line))
+            .text;
+        let mut values = vec![Vec::new(); self.inserts.iter().map(|(k, _)| *k).max().unwrap_or(0)];
+        for (k, value) in &self.inserts {
+            values[k - 1] = value.clone();
+        }
+        interrexx_inventory::errors::substitute(text, &values)
+    }
 }
 
 /// A field with the file's escapes decoded: `\\`, `\t`, `\n`, `\r`, `\xNN`.
@@ -318,7 +337,7 @@ fn rows() -> Vec<Row> {
             continue;
         }
         let fields: Vec<&str> = line.splitn(5, '\t').collect();
-        let [class, expect, main_line, message, program] = fields[..] else {
+        let [class, expect, main_line, inserts, program] = fields[..] else {
             panic!("line {}: five fields", index + 1);
         };
         rows.push(Row {
@@ -326,11 +345,8 @@ fn rows() -> Vec<Row> {
             class: class.to_string(),
             expect: expect.to_string(),
             main_line: main_line.to_string(),
-            message: if message == "-" {
-                Vec::new()
-            } else {
-                decode(message)
-            },
+            inserts: interrexx_upstream::corpus::decode_inserts(inserts)
+                .unwrap_or_else(|e| panic!("line {}: {e}", index + 1)),
             program: decode(program),
         });
     }
@@ -403,7 +419,11 @@ fn answer(root: &Path, row: &Row) -> Answer {
     } else {
         let (major, _) = row.expect.split_once('.').expect("major.sub");
         let major: i32 = major.parse().expect("a major number");
-        let secondary = [format!("Error {}:  ", row.expect).as_bytes(), &row.message].concat();
+        let secondary = [
+            format!("Error {}:  ", row.expect).as_bytes(),
+            &row.message(),
+        ]
+        .concat();
         let main = format!(" line {}:  ", row.main_line);
         let stderr = &output.stderr;
         status == Some(256 - major)
@@ -444,9 +464,7 @@ fn rexxc_agrees_with_every_recorded_parse_error_row() {
         "an install row naming REGISTERED is checked"
     );
     assert!(
-        checked
-            .iter()
-            .any(|row| row.message.starts_with(b"Unable to load library")),
+        checked.iter().any(|row| row.expect == "98.903"),
         "the library-binding rows are checked"
     );
     let root = scratch("tsv");
@@ -511,7 +529,7 @@ fn registered_registers_then_fails_to_resolve() {
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert_eq!(output.status.code(), Some(166), "{stderr}");
     assert!(
-        stderr.contains("Error 90.999:  Unable to find external routine \"y\"."),
+        stderr.contains(&expand("Error 90.999:  ⟨90.999¦y⟩")),
         "{stderr}"
     );
 }
@@ -535,12 +553,11 @@ fn the_oracle_refuses_this_crates_images_as_another_versions() {
             .expect("the oracle starts");
         assert_eq!(
             render(&dir, &ran.stdout, &ran.stderr, ran.status.code(), true),
-            format!(
+            expand(&format!(
                 "rc> 253\n\
-                 err> Error 3:  Failure during initialization.\n\
-                 err> Error 3.903:  Program \"DIR/{image}\" cannot be run by this version of \
-                 the REXX interpreter.\n"
-            ),
+                 err> Error 3:  ⟨3⟩\n\
+                 err> Error 3.903:  ⟨3.903¦DIR/{image}⟩\n"
+            )),
             "{image}"
         );
     }

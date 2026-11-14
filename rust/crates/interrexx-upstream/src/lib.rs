@@ -11,10 +11,12 @@
 pub mod brief;
 pub mod builtins;
 pub mod classes;
+pub mod corpus;
 pub mod errors;
 pub mod messages;
 pub mod scan;
 pub mod similarity;
+pub mod template;
 
 /// The first line of every generated table. `sha` is the pinned source
 /// tree's revision, so a revision bump without regeneration fails `check`.

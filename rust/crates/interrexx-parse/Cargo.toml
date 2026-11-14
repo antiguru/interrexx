@@ -28,6 +28,8 @@ interrexx-inventory.workspace = true
 criterion = "0.8.2"
 # The interpreter's own library program: the parse bench's input.
 interrexx-lib.workspace = true
+# The corpus field encoding of `corpus/errors/parse-errors.tsv`.
+interrexx-upstream.workspace = true
 
 [[bench]]
 name = "parse"

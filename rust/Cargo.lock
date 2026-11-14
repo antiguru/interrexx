@@ -458,6 +458,7 @@ dependencies = [
  "interrexx-inventory",
  "interrexx-lib",
  "interrexx-num",
+ "interrexx-upstream",
  "rustc-hash",
 ]
 
