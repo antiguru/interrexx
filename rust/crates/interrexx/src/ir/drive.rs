@@ -3134,8 +3134,10 @@ impl Interp {
         parkable: bool,
     ) -> Result<Driven, Failure> {
         let outer = std::mem::replace(&mut self.activity.driver_pins, self.activity.pin_depth);
+        let root = std::mem::replace(&mut self.activity.root_driver, parkable);
         let driven = self.drive_levels(start, parkable);
         self.activity.driver_pins = outer;
+        self.activity.root_driver = root;
         driven
     }
 

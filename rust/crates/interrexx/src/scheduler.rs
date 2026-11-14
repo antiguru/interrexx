@@ -1717,7 +1717,15 @@ impl Interp {
     /// call and readies that activity, and lends the baton to each thread
     /// that recalls it. What follows a recall goes back to the inbox before
     /// the lend, where a loop the lendee nests can drain it.
-    pub(crate) fn file_completions(&mut self, mut posted: VecDeque<Posted>, at: DrainAt) {
+    pub(crate) fn file_completions(&mut self, posted: VecDeque<Posted>, at: DrainAt) {
+        self.file_posts(posted, at, false);
+    }
+
+    /// [`Interp::file_completions`], where `defers` with a callback through
+    /// an attached thread's context left for the loop the running activity
+    /// yields to, which serves it with that activity unburied: whether one
+    /// was. Only this drain defers, not one a lend it makes nests.
+    fn file_posts(&mut self, mut posted: VecDeque<Posted>, at: DrainAt, defers: bool) -> bool {
         if self.sim.is_some() {
             self.sim_screen_posts(&posted);
         }
@@ -1739,6 +1747,17 @@ impl Interp {
                     } else {
                         self.end_abandoned_call(frame);
                     }
+                }
+                // A callback through an attached thread's context, where the
+                // running activity may yield, waits for the loop it yields to,
+                // which serves it with that activity unburied.
+                Posted::Recall(recall)
+                    if defers
+                        && matches!(recall.by, Recaller::Context(address) if address != 0) =>
+                {
+                    posted.push_front(Posted::Recall(recall));
+                    self.timer.requeue(std::mem::take(&mut posted));
+                    return true;
                 }
                 Posted::Recall(recall) => {
                     self.timer.requeue(std::mem::take(&mut posted));
@@ -1812,6 +1831,7 @@ impl Interp {
                 }
             }
         }
+        false
     }
 
     /// `activity`'s record, running or idle, or `None` for a handle no
@@ -1874,9 +1894,15 @@ impl Interp {
                 .or_else(|| self.file_attached(address)),
         }
         .filter(|activity| *activity != outgoing);
+        // The outgoing activity is buried, as its frames are below on this
+        // stack, unless it owns the innermost loop, unburied: it waits at its
+        // driver's exit with its state all in its record, so the callback's
+        // waits may run it (`r[native.threads.attach]`, Deviation 174).
+        let buried = self.activities.owners.last() != Some(&(outgoing, Below::Free));
         if let Some(activity) = activity {
             self.swap_running(activity, outgoing);
             let below = match at {
+                _ if !buried => Below::Free,
                 DrainAt::MidRun => Below::Interrupted,
                 DrainAt::Stopped => Below::Buried,
             };
@@ -2037,7 +2063,7 @@ impl Interp {
             }
             if !self.activities.vacancies[at].returned {
                 let posted = self.timer.idle();
-                self.file_completions(posted);
+                self.file_completions(posted, DrainAt::Stopped);
             }
         }
         // Readied by the return, where no loop took it.
@@ -2255,7 +2281,7 @@ impl Interp {
     /// [`Interp::run_others`]' loop, the one at `level` of the stack.
     fn run_others_from(&mut self, me: ActivityId, level: usize) -> Result<Waited, Failure> {
         let Some(next) = self.next_runnable(me, level)? else {
-            return Ok(self.blocked(level));
+            return Ok(self.blocked_unless_ended(level));
         };
         if next == me {
             return Ok(Waited::Woken);
@@ -2290,7 +2316,7 @@ impl Interp {
                     self.switch_to(me, ended);
                     return Ok(match woken {
                         Some(_) => Waited::Woken,
-                        None => self.blocked(level),
+                        None => self.blocked_unless_ended(level),
                     });
                 }
             }
@@ -2317,6 +2343,17 @@ impl Interp {
         Waited::Blocked {
             inverted: !table.set_aside.is_empty() || interrupted,
         }
+    }
+
+    /// [`Interp::blocked`], unless the running activity, the loop's own, is
+    /// main whose root driver ended in a loop nested above this one: one a
+    /// callback's wait ran it in, with this loop's activity unburied
+    /// (Deviation 174). Its end is then what this loop answers.
+    fn blocked_unless_ended(&self, level: usize) -> Waited {
+        if self.activity.root_end.is_some() {
+            return Waited::Woken;
+        }
+        self.blocked(level)
     }
 
     /// Whether `activity`, not running, is main whose root driver ended in a
@@ -2785,7 +2822,13 @@ impl Interp {
             self.collect_now();
         }
         if self.timer.requests().pending(crate::timer::INBOX) {
-            self.drain_completions(DrainAt::MidRun);
+            let posted = self.timer.drain();
+            // Only where a slice leaves the driver, which then has nothing
+            // of the activity's on this stack.
+            let defers = yields && self.activity.pin_depth == 0 && self.activity.root_driver;
+            if self.file_posts(posted, DrainAt::MidRun, defers) {
+                return Err(Failure::Slice);
+            }
         }
         if !self.activities.sleepers.is_empty() {
             self.wake_due_sleepers();

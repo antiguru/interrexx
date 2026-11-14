@@ -6,5 +6,6 @@ call AtSlow t
 do while t~started \= 1
   call SysSleep 0.05
 end
+say 'main ends'
 ::requires 'ticks.cls'
 ::requires 'attach' LIBRARY

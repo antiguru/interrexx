@@ -1135,7 +1135,7 @@ fn a_pending_callback_at_end_is_refused() {
         .expect("a live interpreter with a requester builds one");
     let served = pending_callback(&interp, context);
     assert!(interp.terminate().is_empty());
-    interp.drain_completions();
+    interp.drain_completions(crate::scheduler::DrainAt::Stopped);
     assert_eq!(served.join().expect("no panic"), TakeFor::Refused);
     // The refused recall filed no attached activity: serving it as one of a
     // live interpreter would have.
