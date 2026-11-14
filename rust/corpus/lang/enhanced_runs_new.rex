@@ -26,7 +26,7 @@ say 'copy:' c~string c~foo (c~class == .Thing) c~hasMethod('sm')
 signal on syntax
 o~nope
 syntax:
-say condition('O')~message
+say condition('O')~additional~makeString('l', ',')
 e = .directory~new
 e~init = "say 'enh INIT:' self~class~id '|' self~string '|' self~isA(.Thing) arg(); self~init:super"
 o = .Thing~enhanced(e, 'x', 'y')

@@ -23,5 +23,5 @@ try:
   say arg(1) 'ok' x
   return
 syntax:
-  say arg(1) condition('o')~code '|' condition('o')~message
+  say arg(1) condition('o')~code '|' condition('o')~additional~makeString('l', ',')
   return

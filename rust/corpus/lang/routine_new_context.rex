@@ -15,7 +15,7 @@ signal on syntax name bad
 r = .routine~new('f', 'return 1', 'xyz')
 say 'not reached'
 bad:
-say condition('O')~code condition('O')~message
+say condition('O')~code condition('O')~additional~makeString('l', ',')
 exit
 ::routine helper public
   return 'helper found'

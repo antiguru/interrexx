@@ -325,15 +325,15 @@ context.rex
 rc> 0
 out> routine src callerfn
 out> method src 1
-out> trap1 43.1 Could not find routine "CALLERFN".
-out> trap2 98.985 User additions are not allowed to the REXX language classes.
+out> trap1 43.1 CALLERFN
+out> trap2 98.985 
 
 rexx
 method.rex
 ----
 rc> 0
 out> d 0
-out> trap2 43.1 Could not find routine "CALLERFN".
+out> trap2 43.1 CALLERFN
 out> [     1 *-* Method ZZ with scope "K" in package "d" (no source available).]
 out> [     6 *-* say 'method rxo' .k~new~zz]
 

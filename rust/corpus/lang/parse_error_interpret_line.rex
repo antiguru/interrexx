@@ -36,5 +36,5 @@ syntax:
     line = line '['a[i]']'
   end
   say line
-  say '   ' c~message
+  say '   ' c~additional~makeString('l', ',')
   return

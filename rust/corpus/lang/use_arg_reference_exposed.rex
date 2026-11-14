@@ -53,7 +53,7 @@ try: procedure
   say message 'answers' answer
   return
 caught:
-  say message condition('o')~code condition('o')~message
+  say message condition('o')~code condition('o')~additional~makeString('l', ',')
   return
 
 ::class k
@@ -169,7 +169,7 @@ innermost:
   say 'twiceExposed answers' self~bindTwice(>v)
   return
 caught:
-  say 'twiceExposed' condition('o')~code condition('o')~message
+  say 'twiceExposed' condition('o')~code condition('o')~additional~makeString('l', ',')
   return
 ::method bindTwice
   use arg >q

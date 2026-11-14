@@ -13,7 +13,7 @@ exit
 try: procedure
   use arg label, replacement
   mgr = .Mgr~new(replacement)
-  r = .Routine~new("", "signal on syntax; return .Package~new('', '')~loadPackage('smreq.cls')~name~right(9); syntax: return condition('o')~code condition('o')~message")
+  r = .Routine~new("", "signal on syntax; return .Package~new('', '')~loadPackage('smreq.cls')~name~right(9); syntax: return condition('o')~code condition('o')~additional~makeString('l', ',')")
   r~setSecurityManager(mgr)
   say label r~call
   say label "events:" mgr~count

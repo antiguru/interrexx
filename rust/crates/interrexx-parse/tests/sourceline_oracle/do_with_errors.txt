@@ -4,13 +4,13 @@ count 32
    UNTIL beside the supplier. */
 signal on syntax name s1
 do with index i over 5; say i; end
-s1: say 'A' condition('o')~code condition('o')~message
+s1: say 'A' condition('o')~code condition('o')~additional~makeString('l', ',')
 signal on syntax name s2
 do with index i over .x~new; say i; end
-s2: say 'B' condition('o')~code condition('o')~message
+s2: say 'B' condition('o')~code condition('o')~additional~makeString('l', ',')
 signal on syntax name s3
 do with index i over .z~new; say i; end
-s3: say 'C' condition('o')~code condition('o')~message
+s3: say 'C' condition('o')~code condition('o')~additional~makeString('l', ',')
 do counter c with item v over .directory~new; end
 say c
 q = .queue~of('p', 'q')

@@ -29,7 +29,7 @@ write: procedure
 
 show:
   o = condition('o')
-  say o~code o~position changestr(directory() || '/', o~message, '')
+  say o~code o~position changestr(directory() || '/', o~additional~makeString('l', ','), '')
   do f over o~stackframes
     say f~type filespec('name', f~name) f~line
   end

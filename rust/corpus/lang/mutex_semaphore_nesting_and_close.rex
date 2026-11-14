@@ -8,7 +8,7 @@ say 'release' m~release m~release m~release m~release m~release m~release
 signal on syntax name notNumber
 say m~acquire('x')
 notNumber:
-say 'error' condition('o')~code condition('o')~message
+say 'error' condition('o')~code condition('o')~additional~makeString('l', ',')
 say 'held' m~acquire
 m~uninit
 say 'closed' m~release m~acquire(1) m~acquire(0) m~acquire m~release m~release

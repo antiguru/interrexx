@@ -18,7 +18,7 @@ t: procedure
   m = .method~new('m', src)
   say "ok" m~source~items "["m~source[1]"]"
   return
-syntax: say 'err' condition('o')~code condition('o')~message
+syntax: say 'err' condition('o')~code condition('o')~additional~makeString('l', ',')
   return
 ::class a subclass array
 ::class bn

@@ -28,7 +28,7 @@ try:
   say '[' || arg(1) || '] init' s~state
   return
 refused:
-  say '[' || arg(1) || ']' condition('o')~code condition('o')~message
+  say '[' || arg(1) || ']' condition('o')~code condition('o')~additional~makeString('l', ',')
   return
 
 badopen:

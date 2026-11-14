@@ -38,7 +38,7 @@ end
 signal next
 
 trapped:
-say n 'raised' rc'.'condition('E') condition('O')~message
+say n 'raised' rc'.'condition('E') condition('O')~additional~makeString('l', ',')
 signal on syntax name trapped
 signal next
 

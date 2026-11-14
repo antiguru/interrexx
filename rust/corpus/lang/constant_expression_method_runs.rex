@@ -4,10 +4,10 @@ e = .c~e
 .c~define('ZZ', e)
 signal on syntax name s1
 say .c~new~zz
-s1: say condition('o')~code condition('o')~message
+s1: say condition('o')~code condition('o')~additional~makeString('l', ',')
 signal on syntax name s2
 say .object~new~run(e)
-s2: say condition('o')~code condition('o')~message
+s2: say condition('o')~code condition('o')~additional~makeString('l', ',')
 .c~new~zz
 say 'instruction' var('result')
 ::class c

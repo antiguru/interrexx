@@ -95,7 +95,7 @@ try:
   return
 refused:
   c = condition('o')
-  say '  ' arg(1) '->' c~code c~errortext c~message
+  say '  ' arg(1) '->' c~code c~additional~makeString('l', ',')
   return
 
 ::routine calc

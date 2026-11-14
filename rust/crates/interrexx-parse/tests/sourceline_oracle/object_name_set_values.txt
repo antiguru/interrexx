@@ -32,7 +32,7 @@ x = .array~new
 x~objectName = 'named arr'
 say x~nosuch
 syntax:
-say condition('O')~message
+say condition('O')~additional~makeString('l', ',')
 exit
 ra: procedure; use arg b; say b~objectName; return
 rs: procedure; use arg z.; say z.~objectName; return

@@ -16,7 +16,7 @@ t:
   return
 err:
   c = condition('o')
-  say arg(1) '->' c~code c~message
+  say arg(1) '->' c~code c~additional~makeString('l', ',')
   return
 ::class sub subclass alarm
 ::method init

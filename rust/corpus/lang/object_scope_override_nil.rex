@@ -21,10 +21,10 @@ say 'slot' a[1] .array~of(1, .nil, 3)~toString(, ',')
 say 'compare' (.nil == 'zz') ('zz' == .nil) (.nil = 'zz')
 signal on syntax name s1
 z = .nil + 1
-s1: say 'operator' condition('O')~message
+s1: say 'operator' condition('O')~additional~makeString('l', ',')
 signal on syntax name s2
 .nil~frob
-s2: say 'unknown' condition('O')~message
+s2: say 'unknown' condition('O')~additional~makeString('l', ',')
 e = .Message~new(.nil, .array~of('COPY', .Object))~send
 say 'later copy' e e~objectName
 .Message~new(c, .array~of('OBJECTNAME=', .Object), 'I', 'cc')~send

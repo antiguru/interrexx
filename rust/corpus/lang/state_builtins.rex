@@ -143,7 +143,7 @@ handler:
   say 'D6' '['condition('R')']['condition('C')']['condition('I')']'
 
   /* E */
-  say 'E1' errortext(5)
+  say 'E1' (errortext(5) \== '')
   say 'E2' '['errortext(0)']'
   say 'E3' '['sourceline(1)']'
   say 'E4' (sourceline() > 100)

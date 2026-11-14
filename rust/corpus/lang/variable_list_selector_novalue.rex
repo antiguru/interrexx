@@ -21,7 +21,7 @@ try: procedure
   say message 'answers' o~send(message)
   return
 caught:
-  say message condition('o')~code condition('o')~message
+  say message condition('o')~code condition('o')~additional~makeString('l', ',')
   return
 
 ::class k

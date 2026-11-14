@@ -27,7 +27,7 @@ c3: procedure
   signal on syntax name e3
   use arg >s.
   return
-e3: say 'e3' condition('o')~message; return
+e3: say 'e3' condition('o')~additional~makeString('l', ','); return
 t: procedure
   use arg o, msg, x
   say msg':' o~send(msg, x)
@@ -55,7 +55,7 @@ t: procedure
   signal on syntax name e2
   use arg >s.
   return
-e2: say 'e2' condition('o')~message; return
+e2: say 'e2' condition('o')~additional~makeString('l', ','); return
 ::method m3
   trace r
   use arg >r

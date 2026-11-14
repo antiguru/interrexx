@@ -39,31 +39,31 @@ say .km~loadExternalMethod('x', 'LIBRARY REXX file_separator')~class~id
 say .kr~loadExternalRoutine('y', 'LIBRARY nosuchlib zz')
 signal on syntax name e1
 call (r)
-e1: say 'e1' condition('O')~code condition('O')~message
+e1: say 'e1' condition('O')~code condition('O')~additional~makeString('l', ',')
 signal on syntax name e2
 .zz~define('Q', m)
-e2: say 'e2' condition('O')~code condition('O')~message
+e2: say 'e2' condition('O')~code condition('O')~additional~makeString('l', ',')
 signal on syntax name e3
 say .hm~new~try(m)
-e3: say 'e3' condition('O')~code condition('O')~message
+e3: say 'e3' condition('O')~code condition('O')~additional~makeString('l', ',')
 signal on syntax name e4
 say .hm~new~go(.km~new('g', 'return 1'))
-e4: say 'e4' condition('O')~code condition('O')~message
+e4: say 'e4' condition('O')~code condition('O')~additional~makeString('l', ',')
 signal on syntax name e5
 x = .km~new('m')
-e5: say 'e5' condition('O')~code condition('O')~message
+e5: say 'e5' condition('O')~code condition('O')~additional~makeString('l', ',')
 signal on syntax name e6
 x = .km~new('m', 'return 1', 'bogus')
-e6: say 'e6' condition('O')~code condition('O')~message
+e6: say 'e6' condition('O')~code condition('O')~additional~makeString('l', ',')
 signal on syntax name e7
 x = .ka~new('a', 'return 1')
-e7: say 'e7' condition('O')~code condition('O')~message
+e7: say 'e7' condition('O')~code condition('O')~additional~makeString('l', ',')
 signal on syntax name e8
 x = .method~new('test', 'nop', 'programscope', '')
-e8: say 'e8' condition('O')~code condition('O')~message
+e8: say 'e8' condition('O')~code condition('O')~additional~makeString('l', ',')
 signal on syntax name e9
 x = .routine~new('test', 'nop', 'programscope', '')
-e9: say 'e9' condition('O')~code condition('O')~message
+e9: say 'e9' condition('O')~code condition('O')~additional~makeString('l', ',')
 exit
 ::class km subclass method
 ::class kr subclass routine

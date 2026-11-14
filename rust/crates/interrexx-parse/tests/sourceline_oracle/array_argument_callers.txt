@@ -23,7 +23,7 @@ t:
   interpret arg(1)
   return
 syntax:
-  say condition('O')['CODE'] condition('O')['MESSAGE']
+  say condition('O')['CODE'] condition('O')['ADDITIONAL']~makeString('l', ',')
   return
 ::class kk
 ::method makearray; return .array~of(7)

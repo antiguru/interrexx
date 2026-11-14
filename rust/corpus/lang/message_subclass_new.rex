@@ -15,7 +15,7 @@ say mm~objectName mm~string
 mm9 = .kx~new('hello', 'upper'); say mm9~send mm9~v
 signal on syntax name e1
 x = .kmsg~new('abc')
-e1: say 'e1' condition('O')~code condition('O')~message
+e1: say 'e1' condition('O')~code condition('O')~additional~makeString('l', ',')
 exit
 ::class kmsg subclass message
 ::method init

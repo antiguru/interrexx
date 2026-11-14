@@ -95,5 +95,5 @@ t: procedure
   return
 bad:
   c = condition('O')
-  say 'error' translate(code, '?', '00'x) '|' c~code translate(c~message, '?', '00'x)
+  say 'error' translate(code, '?', '00'x) '|' c~code translate(c~additional~makeString('l', ','), '?', '00'x)
   return

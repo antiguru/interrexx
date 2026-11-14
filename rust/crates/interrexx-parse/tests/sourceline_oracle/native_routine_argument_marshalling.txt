@@ -36,7 +36,7 @@ try:
   return
 syntax:
   c = condition('o')
-  say arg(1) '->' c~code c~message
+  say arg(1) '->' c~code c~additional~makeString('l', ',')
   return
 
 ::class k

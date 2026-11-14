@@ -4,16 +4,16 @@ count 25
    condition keeps the value. */
 signal on syntax name s1
 raise syntax 40.1 additional('abc')
-s1: c = condition('O'); say c~additional~class c~additional~items '['c~additional[1]']' c~message
+s1: c = condition('O'); say c~additional~class c~additional~items '['c~additional[1]']' c~additional~makeString('l', ',')
 signal on syntax name s2
 raise syntax 93.900 additional('one' || '0a'x || 'two')
-s2: c = condition('O'); say c~additional~class c~additional~items '['c~additional[1]']' c~message
+s2: c = condition('O'); say c~additional~class c~additional~items '['c~additional[1]']' c~additional~makeString('l', ',')
 signal on syntax name s3
 raise syntax 93.900 additional(12)
-s3: c = condition('O'); say c~additional~class c~additional~items '['c~additional[1]']' c~message
+s3: c = condition('O'); say c~additional~class c~additional~items '['c~additional[1]']' c~additional~makeString('l', ',')
 signal on syntax name s4
 raise syntax 93.900 additional('')
-s4: c = condition('O'); say c~additional~class c~additional~items c~message
+s4: c = condition('O'); say c~additional~class c~additional~items c~additional~makeString('l', ',')
 signal on syntax name s5
 interpret 'raise syntax 40.1 additional("abcdefghij")'
 s5: say condition('O')~additional[1]

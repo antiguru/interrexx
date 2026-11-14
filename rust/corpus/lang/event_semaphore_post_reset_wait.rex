@@ -12,11 +12,11 @@ say 'reset' e~isPosted e~wait(0)
 signal on syntax name notNumber
 say e~wait('abc')
 notNumber:
-say 'error' condition('o')~code condition('o')~message
+say 'error' condition('o')~code condition('o')~additional~makeString('l', ',')
 signal on syntax name nilTimeout
 say e~wait(.nil)
 nilTimeout:
-say 'error' condition('o')~code condition('o')~message
+say 'error' condition('o')~code condition('o')~additional~makeString('l', ',')
 e~post
 e~uninit
 say 'after uninit' e~isPosted e~wait(0)

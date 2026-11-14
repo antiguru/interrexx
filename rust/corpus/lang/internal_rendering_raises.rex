@@ -11,7 +11,7 @@ joined:
   say 'joined not reached'
   return
 joinedCaught:
-  say 'joined' condition('o')~code condition('o')~message
+  say 'joined' condition('o')~code condition('o')~additional~makeString('l', ',')
   return
 
 traced:
@@ -24,7 +24,7 @@ traced:
   return
 tracedCaught:
   trace off
-  say 'traced' condition('o')~code condition('o')~message
+  say 'traced' condition('o')~code condition('o')~additional~makeString('l', ',')
   return
 
 inserted:
@@ -34,7 +34,7 @@ inserted:
   say 'inserted not reached'
   return
 insertedCaught:
-  say 'inserted' condition('o')~code condition('o')~message
+  say 'inserted' condition('o')~code condition('o')~additional~makeString('l', ',')
   return
 
 answered:
@@ -46,7 +46,7 @@ answered:
   o~nosuch
   return
 answeredCaught:
-  say 'answered' condition('o')~code condition('o')~message
+  say 'answered' condition('o')~code condition('o')~additional~makeString('l', ',')
   return
 
 ::class bad

@@ -11,6 +11,6 @@ try: procedure
   c = o~copy
   say 'copied' c~class~id
   return
-refused: say condition('O')~code condition('O')~message
+refused: say condition('O')~code condition('O')~additional~makeString('l', ',')
   return
 ::class zz

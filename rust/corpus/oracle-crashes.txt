@@ -140,8 +140,8 @@ expression's *value* and not the `WHEN` form that blocks; and `guard on` and
 
 **The `expose v` line is load-bearing in the repro and dropping it does not
 block.** Measured: the same method without it, `guard on when 1 = 0`, is a
-clean `Error 99.913 GUARD instruction did not include references to exposed
-variables.` at rc 157 in 0.00 s, three runs of three. What that check tests is
+clean Error 99.913 (the GUARD names no exposed
+variable) at rc 157 in 0.00 s, three runs of three. What that check tests is
 which names the expression mentions, and nothing about whether the expression
 can ever change: the parser records a variable only
 when it is an exposed object variable, and the
@@ -191,7 +191,7 @@ a string reaches a class field write.
 The neighbour that bounds it: the same metaclass whose `NEW` forwards
 (`forward class (super)`) answers rc 0 and builds the class, and the same
 `::METHOD new CLASS` reached *directly* -- `.MyMeta~new("k")~id` -- is a clean
-`Error 97.1: Object "x" does not understand message "ID".` at rc 159. So it is
+Error 97.1 (object "x" does not understand message "ID") at rc 159. So it is
 the cast inside `subclass`, not the overridden `NEW` itself, and a reader
 shortening this program to the direct send measures the wrong thing.
 
@@ -247,7 +247,7 @@ The oracle's answer to this shape is a signal and not a behaviour. This crate
 sends with the forwarding activation still on the stack, so its own
 `MAX_ACTIVATION_DEPTH` guard counts the recursion: measured on the crate alone,
 both engines, the program above is **rc 245**, stdout empty, stderr ending
-`Error 11.1:  Insufficient control stack space; cannot continue execution.` --
+Error 11.1 (the control stack is full) --
 the clean answer the oracle itself gives `forward continue`. Matching an oracle crash is not a target.
 
 **With a `REPLY` before the FORWARD, this crate does not terminate**, and that
@@ -325,8 +325,8 @@ stderr both empty.
 The family is exactly six, and the boundary is sharp. All six of `<<`, `<<=`,
 `>>`, `>>=`, `\<<` and `\>>` crash this way. The other twelve comparison
 operators sent identically -- `=`, `==`, `<`, `<=`, `>`, `>=`, `<>`, `><`,
-`\=`, `\==`, `\<`, `\>` -- are a clean `Error 93.903: Missing argument in
-method; argument 1 is required.` at rc 163. **Strict equality is clean and
+`\=`, `\==`, `\<`, `\>` -- are a clean Error 93.903 (argument 1 is
+required) at rc 163. **Strict equality is clean and
 strict ordering is not**, so "strict" is not the axis.
 
 It is the receiver's class and not the operator. `1~"<<"` is the same clean

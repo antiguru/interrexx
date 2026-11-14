@@ -4,7 +4,7 @@ count 10
  * converts fine (its default is "1") and the division's own zero check is
  * what raises -- the divisor is `0`, not an overflow -- past that
  * conversion. Measured, rc 214, stderr opening
- * `       *-* Compiled method "/" with scope "String".`.
+ * the frame of method "/" with scope String (101.20).
  */
 
 s. = 1
