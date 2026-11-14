@@ -490,7 +490,8 @@ A rule that says something "raises `SYNTAX m.n`" means that the builtin
 returns no value and the SYNTAX condition is raised with error number `m`
 and subcode `n`. A trap for it sees `condition('C')` as `SYNTAX`,
 `condition('O')~code` as the string `m.n`, and the variable `RC` set to
-`m`. This book does not state the error message.
+`m`. The error number and the subcode are both part of what such a rule
+states. This book does not state the error message.
 
 ```rexx
 signal on syntax name e
@@ -512,9 +513,8 @@ the notice and the error lines of interactive tracing, the text of a trace
 line that names a library method, the answers of SysGetMessage for the
 interpreter's own catalog and of SysGeterrnomsg, the C API's functions that
 answer the text of an error, the usage texts of the commands, and the messages
-of the utility programs. What is specified is the code, the number and the
-order of the inserts that `ADDITIONAL` holds, the values they hold, and for the
-report the frame that names the error number, the program and the line (`Error
+of the utility programs. What is specified is the code, and for the report
+the frame that names the error number, the program and the line (`Error
 N running F line L:`, or `Error N.M:` where no line applies). A message exists
 for a number or it does not, as the [ERRORTEXT rules](r:bif.errortext.result)
 say, and an example in this book shows a message only by whether it is the
@@ -526,12 +526,29 @@ that stay as they are, not wording that is free.
 signal on syntax name e
 x = substr('abc', 0)
 e: o = condition('o')
-say (errortext(93) \== '') (o~errortext == errortext(93)) (o~message \== ''),
-    o~additional~items
+say (errortext(93) \== '') (o~errortext == errortext(93)) (o~message \== '')
 ```
 
 ```output
-1 1 1 1
+1 1 1
+```
+
+r[conv.error.additional]
+For an error the interpreter raises, the `ADDITIONAL` entry of the condition
+object is an Array, and the number, order and values of its items are
+unspecified, except where a rule states an item. A rule that states one says
+which item it is and what it holds. An error that `RAISE` gives rise to is
+such an error; the objects the clause supplied are governed by the [RAISE
+rules](r:instr.raise.untrapped).
+
+```rexx
+signal on syntax name e
+x = substr('abc', 0)
+e: say condition('o')~additional~isA(.array)
+```
+
+```output
+1
 ```
 
 r[conv.returns]
