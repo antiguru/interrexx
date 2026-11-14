@@ -2809,7 +2809,7 @@ say datatype('1e18', 'N') abs('1e999999999')
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="arithmetic"><a class="header" href="#arithmetic">Arithmetic</a></h1>
 <p class="references">ANSI: 7.4.2, 7.4.3, 7.4.4, 7.4.5, 7.4.10; rexxref: Numbers and Arithmetic &gt; Arithmetic</p>
-<p class="deviations">Deviations: D53, D102</p>
+<p class="deviations">Deviations: D53, D102, D174, D175</p>
 <p>The arithmetic operators are the infix <code>+</code>, <code>-</code>, <code>*</code>, <code>/</code>, <code>%</code>, <code>//</code> and <code>**</code>,
 and the prefix <code>+</code> and <code>-</code>. Each reads its operands as numbers, works to the
 precision that NUMERIC DIGITS sets, and answers a new number. This page says
@@ -3252,6 +3252,47 @@ b: say condition('c')
 <pre><code class="language-output">LOSTDIGITS
 LOSTDIGITS
 </code></pre>
+<div class="rule" id="r-num.arithmetic.deviation.174"><a href="numbers/arithmetic.html#r-num.arithmetic.deviation.174">[num.arithmetic.deviation.174]</a></div>
+<p>An operand that an earlier operation produced takes part with the digits of
+the number it is written as (<a href="numbers/formats.html#r-num.formats.result">the result rule</a>), as any
+other operand does (<a href="numbers/arithmetic.html#r-num.arithmetic.digits">the digits rule</a>): a trailing
+zero it shows is a digit like any other. The operation therefore gives what it
+gives for a literal with the same characters as that result, such as
+<code>999900000000</code> for <code>9999E8 + 0</code>, and not what it gives for another spelling of
+the same number, such as <code>9999E8</code> (<a href="numbers/../deviations.html">Deviation 174</a>). ooRexx
+keeps such a result as its significant digits and an exponent and carries that
+into the next operation, so where the zeros would take part, its answer
+differs: for the first and the third product below it answers
+<code>9.998999990001E+20</code> and <code>-9.998999990001E+20</code>, and for the second, with the
+literal <code>999900000000</code>, and the fourth, with the literal <code>9999E8</code>, what is
+shown here.</p>
+<pre><code class="language-rexx">numeric digits 18
+d = 9999E8 + 0
+say d (999999999 * d) (999999999 * 999900000000) (999999999 * -(9999E8)),
+  (999999999 * 9999E8)
+</code></pre>
+<pre><code class="language-output">999900000000 9.99899999000100000E+20 9.99899999000100000E+20 -9.99899999000100000E+20 9.998999990001E+20
+</code></pre>
+<div class="rule" id="r-num.arithmetic.deviation.175"><a href="numbers/arithmetic.html#r-num.arithmetic.deviation.175">[num.arithmetic.deviation.175]</a></div>
+<p>The digits that <a href="numbers/arithmetic.html#r-num.arithmetic.lostdigits">the lost digits rule</a> counts in
+an operand that an earlier operation produced are those of the number it is
+written as, its trailing zeros included, as for any other operand (<a href="numbers/../deviations.html">Deviation
+175</a>); <a href="numbers/comparison.html#r-num.comparison.deviation.175">the comparison rule</a>
+counts them the same way. A whole number made at a higher NUMERIC DIGITS and
+used at a lower one can therefore raise LOSTDIGITS. ooRexx counts the
+significant digits of the form it keeps, so <code>'1E3' + 0</code> made under NUMERIC
+DIGITS 20 is one digit to it and raises nothing under NUMERIC DIGITS 3, where
+its operations answer <code>1E+3</code>.</p>
+<pre><code class="language-rexx">signal on lostdigits
+numeric digits 20
+v = '1E3' + 0
+numeric digits 3
+say v (v + 0)
+exit
+lostdigits: say 'LOSTDIGITS' condition('D')
+</code></pre>
+<pre><code class="language-output">LOSTDIGITS 1000
+</code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="numeric-settings"><a class="header" href="#numeric-settings">Numeric settings</a></h1>
 <p class="references">ANSI: 8.3.15; rexxref: Numbers and Arithmetic &gt; Arithmetic &gt; Precision</p>
 <p>Three settings steer every numeric operation: NUMERIC DIGITS, NUMERIC FUZZ and
@@ -3479,7 +3520,7 @@ passed: procedure
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="numeric-comparison"><a class="header" href="#numeric-comparison">Numeric comparison</a></h1>
 <p class="references">ANSI: 7.4.7, 7.4.10; rexxref: Numbers and Arithmetic &gt; Numeric Comparisons</p>
-<p class="deviations">Deviations: D53</p>
+<p class="deviations">Deviations: D53, D175</p>
 <p>A comparison operator compares two values, and the language has two ways to do
 it: as numbers or as text. This page says when the operator compares numbers,
 how two numbers compare under NUMERIC DIGITS and NUMERIC FUZZ, and which
@@ -3607,6 +3648,28 @@ b: say condition('d')
 </code></pre>
 <pre><code class="language-output">123
 123
+</code></pre>
+<div class="rule" id="r-num.comparison.deviation.175"><a href="numbers/comparison.html#r-num.comparison.deviation.175">[num.comparison.deviation.175]</a></div>
+<p>A numeric comparison counts the digits of an operand that an earlier operation
+produced as <a href="numbers/arithmetic.html#r-num.arithmetic.deviation.175">the arithmetic rule</a> does: those
+of the number it is written as, its trailing zeros included (<a href="numbers/../deviations.html">Deviation
+175</a>). ooRexx counts the significant digits of the form it
+keeps, so below it answers <code>1</code> to both comparisons. A strict comparison
+compares the strings and counts no digits, on both.</p>
+<pre><code class="language-rexx">numeric digits 20
+v = '1E3' + 0
+numeric digits 3
+signal on lostdigits name a
+say v &gt; 5
+a: say 'LOSTDIGITS' condition('D')
+signal on lostdigits name b
+say v = 1E3
+b: say 'LOSTDIGITS' condition('D')
+say v &gt;&gt; 5
+</code></pre>
+<pre><code class="language-output">LOSTDIGITS 1000
+LOSTDIGITS 1000
+0
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="expressions"><a class="header" href="#expressions">Expressions</a></h1>
 <p class="references">ANSI: 7.4, 7.4.1, 7.4.9; rexxref: General Concepts &gt; Terms, Expressions, and Operators</p>
@@ -129099,6 +129162,23 @@ such as <code>3.5</code> and <code>'0'</code>. The same test decides whether its
 <code>DecodeConditionInfo</code> reports a condition's description: interrexx reports a
 description that is any instance of String, where ooRexx reports none for a
 description such as <code>2 + 3</code>.</p>
+<h2 id="174-an-operand-made-by-an-operation-takes-part-with-the-digits-it-shows"><a class="header" href="#174-an-operand-made-by-an-operation-takes-part-with-the-digits-it-shows">174. An operand made by an operation takes part with the digits it shows</a></h2>
+<p>An operand that an earlier arithmetic operation produced takes part in the next
+one with the digits of the number it is written as, trailing zeros included, as
+a literal with the same characters does. ooRexx keeps such a result as its
+significant digits and an exponent and carries that form into the next
+operation, so a product or a sum rounded at NUMERIC DIGITS can differ: under
+NUMERIC DIGITS 18, <code>999999999 * (9999E8 + 0)</code> is <code>9.99899999000100000E+20</code>
+here, as <code>999999999 * 999900000000</code> is, and <code>9.998999990001E+20</code> on ooRexx.
+Ruled by the owner on 2026-11-14 (#522).</p>
+<h2 id="175-lostdigits-counts-the-digits-an-operand-made-by-an-operation-shows"><a class="header" href="#175-lostdigits-counts-the-digits-an-operand-made-by-an-operation-shows">175. LOSTDIGITS counts the digits an operand made by an operation shows</a></h2>
+<p>The digits that LOSTDIGITS counts in an operand that an earlier arithmetic
+operation produced, in an arithmetic operation or a numeric comparison, are
+those of the number it is written as, trailing zeros included. ooRexx counts the
+significant digits of the form it keeps, so <code>'1E3' + 0</code> made under NUMERIC
+DIGITS 20, written <code>1000</code>, raises LOSTDIGITS as an operand under NUMERIC DIGITS
+3 here, in <code>v + 0</code> and in <code>v &gt; 5</code> alike, and raises nothing on ooRexx. Ruled by
+the owner on 2026-11-14 (#554).</p>
 
                     </main>
 

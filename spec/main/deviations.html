@@ -1182,6 +1182,23 @@ such as <code>3.5</code> and <code>'0'</code>. The same test decides whether its
 <code>DecodeConditionInfo</code> reports a condition's description: interrexx reports a
 description that is any instance of String, where ooRexx reports none for a
 description such as <code>2 + 3</code>.</p>
+<h2 id="174-an-operand-made-by-an-operation-takes-part-with-the-digits-it-shows"><a class="header" href="#174-an-operand-made-by-an-operation-takes-part-with-the-digits-it-shows">174. An operand made by an operation takes part with the digits it shows</a></h2>
+<p>An operand that an earlier arithmetic operation produced takes part in the next
+one with the digits of the number it is written as, trailing zeros included, as
+a literal with the same characters does. ooRexx keeps such a result as its
+significant digits and an exponent and carries that form into the next
+operation, so a product or a sum rounded at NUMERIC DIGITS can differ: under
+NUMERIC DIGITS 18, <code>999999999 * (9999E8 + 0)</code> is <code>9.99899999000100000E+20</code>
+here, as <code>999999999 * 999900000000</code> is, and <code>9.998999990001E+20</code> on ooRexx.
+Ruled by the owner on 2026-11-14 (#522).</p>
+<h2 id="175-lostdigits-counts-the-digits-an-operand-made-by-an-operation-shows"><a class="header" href="#175-lostdigits-counts-the-digits-an-operand-made-by-an-operation-shows">175. LOSTDIGITS counts the digits an operand made by an operation shows</a></h2>
+<p>The digits that LOSTDIGITS counts in an operand that an earlier arithmetic
+operation produced, in an arithmetic operation or a numeric comparison, are
+those of the number it is written as, trailing zeros included. ooRexx counts the
+significant digits of the form it keeps, so <code>'1E3' + 0</code> made under NUMERIC
+DIGITS 20, written <code>1000</code>, raises LOSTDIGITS as an operand under NUMERIC DIGITS
+3 here, in <code>v + 0</code> and in <code>v &gt; 5</code> alike, and raises nothing on ooRexx. Ruled by
+the owner on 2026-11-14 (#554).</p>
 
                     </main>
 

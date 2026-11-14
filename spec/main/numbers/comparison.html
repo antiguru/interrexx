@@ -175,7 +175,7 @@
                     <main>
                         <h1 id="numeric-comparison"><a class="header" href="#numeric-comparison">Numeric comparison</a></h1>
 <p class="references">ANSI: 7.4.7, 7.4.10; rexxref: Numbers and Arithmetic &gt; Numeric Comparisons</p>
-<p class="deviations">Deviations: D53</p>
+<p class="deviations">Deviations: D53, D175</p>
 <p>A comparison operator compares two values, and the language has two ways to do
 it: as numbers or as text. This page says when the operator compares numbers,
 how two numbers compare under NUMERIC DIGITS and NUMERIC FUZZ, and which
@@ -303,6 +303,28 @@ b: say condition('d')
 </code></pre>
 <pre><code class="language-output">123
 123
+</code></pre>
+<div class="rule" id="r-num.comparison.deviation.175"><a href="#r-num.comparison.deviation.175">[num.comparison.deviation.175]</a></div>
+<p>A numeric comparison counts the digits of an operand that an earlier operation
+produced as <a href="arithmetic.html#r-num.arithmetic.deviation.175">the arithmetic rule</a> does: those
+of the number it is written as, its trailing zeros included (<a href="../deviations.html">Deviation
+175</a>). ooRexx counts the significant digits of the form it
+keeps, so below it answers <code>1</code> to both comparisons. A strict comparison
+compares the strings and counts no digits, on both.</p>
+<pre><code class="language-rexx">numeric digits 20
+v = '1E3' + 0
+numeric digits 3
+signal on lostdigits name a
+say v &gt; 5
+a: say 'LOSTDIGITS' condition('D')
+signal on lostdigits name b
+say v = 1E3
+b: say 'LOSTDIGITS' condition('D')
+say v &gt;&gt; 5
+</code></pre>
+<pre><code class="language-output">LOSTDIGITS 1000
+LOSTDIGITS 1000
+0
 </code></pre>
 
                     </main>
