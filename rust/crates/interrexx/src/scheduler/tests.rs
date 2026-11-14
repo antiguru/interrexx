@@ -372,6 +372,103 @@ fn the_switch_stays_off_after_a_classic_load_and_drop() {
     assert!(!interp.refuses_unending_waits());
 }
 
+/// A run of `source` with `build/lib` on the library path, bounded by a
+/// deadline, with `library` (a `::REQUIRES` directive or nothing) after it.
+fn run_loading(source: &str, library: &str) -> Outcome {
+    run_with(
+        &format!("{source}{library}"),
+        Invocation::none()
+            .with_environment(vec![(
+                b"LD_LIBRARY_PATH".to_vec(),
+                build_libraries().into_os_string().into_encoded_bytes(),
+            )])
+            .with_deadline(std::time::Duration::from_secs(10)),
+    )
+}
+
+/// The `::REQUIRES` of an external native library, and none.
+const LOADED_OR_NOT: [&str; 2] = ["::requires 'orxmethod' LIBRARY\n", ""];
+
+/// A wait, with `result` or `wait`, for a message whose send the waiting
+/// activity itself runs and has not replied to is refused, rc 120, whether or
+/// not an external native library has loaded (Deviation 20): the message
+/// completes only when its method returns, and its method is what waits.
+#[test]
+fn a_wait_on_the_activitys_own_unreplied_message_is_refused_whatever_was_loaded() {
+    for source in [
+        "m = .message~new(.k~new, 'run')\n.environment~mm = m\nm~send\nsay 'not reached'\n\
+         ::class k\n::method run\n  say 'in run'\n  say .environment~mm~result\n",
+        "m = .message~new(.k~new, 'run')\n.environment~mm = m\nm~send\nsay 'not reached'\n\
+         ::class k\n::method run\n  say 'in run'\n  .environment~mm~wait\n",
+        "m = .message~new(.k~new, 'run')\n.environment~mm = m\nm~start\nsay 'main ends'\n\
+         ::class k\n::method run\n  say 'in run'\n  say .environment~mm~result\n",
+    ] {
+        for library in LOADED_OR_NOT {
+            let outcome = run_loading(source, library);
+            assert_eq!(
+                (outcome.exit_code, stderr(&outcome).as_str()),
+                (
+                    120,
+                    "interrexx: a wait that nothing left to run can end is not implemented\n"
+                ),
+                "{source}{library}"
+            );
+            assert!(
+                stdout(&outcome).contains("in run\n") && !stdout(&outcome).contains("not reached"),
+                "{source}{library}: {}",
+                stdout(&outcome)
+            );
+        }
+    }
+}
+
+/// Once its method has replied, a message's `result` and `wait` from that
+/// method's continuation answer at once: the reply settled the result.
+#[test]
+fn a_wait_on_the_activitys_own_replied_message_answers() {
+    let source = ".environment~done = .eventsemaphore~new\n\
+                  m = .message~new(.k~new, 'run')\n.environment~mm = m\nr = m~send\n\
+                  .environment~done~wait\nsay 'sent' r\n\
+                  ::class k\n::method run\n  reply 'r'\n  say 'result' .environment~mm~result\n\
+                  .environment~mm~wait\n  say 'waited'\n  .environment~done~post\n";
+    for library in LOADED_OR_NOT {
+        let outcome = run_loading(source, library);
+        assert_eq!(
+            (outcome.exit_code, stdout(&outcome), stderr(&outcome)),
+            (0, "result r\nwaited\nsent r\n".to_owned(), String::new()),
+            "{library}"
+        );
+    }
+}
+
+/// A ring of two activities, each waiting for the result of the message the
+/// other runs, raises 98.905 in the one whose wait closes it, also after an
+/// external native library has loaded, where a wait nothing can end is no
+/// longer refused (`r[conc.locks.deadlock]`).
+#[test]
+fn a_ring_of_message_waits_raises_after_a_library_loaded() {
+    let source = ".environment~ma = .message~new(.k~new, 'waitfor', 'i', 'MB')\n\
+                  .environment~mb = .message~new(.k~new, 'waitfor', 'i', 'MA')\n\
+                  .environment~ma~start\n.environment~mb~start\ncall SysSleep 1\n\
+                  say 'a' .environment~ma~completed .environment~ma~hasError\n\
+                  say 'b' .environment~mb~completed .environment~mb~hasError\n\
+                  ::class k\n::method waitfor\n  use arg other\n  call SysSleep 0.1\n\
+                  return .environment~entry(other)~result\n";
+    let outcome = run_loading(source, LOADED_OR_NOT[0]);
+    assert_eq!(
+        (outcome.exit_code, stdout(&outcome)),
+        (0, "a 1 1\nb 1 1\n".to_owned()),
+        "{}",
+        stderr(&outcome)
+    );
+    assert_eq!(
+        stderr(&outcome).matches("Error 98.905:").count(),
+        2,
+        "{}",
+        stderr(&outcome)
+    );
+}
+
 /// A library a host registers with the interpreter counts as an external one
 /// loaded: waits are no longer refused as unending (Deviation 20). The
 /// instance's own root library does not count.

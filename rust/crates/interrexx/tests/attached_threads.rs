@@ -1026,6 +1026,18 @@ fn a_deadlock_with_only_builtin_libraries_is_refused() {
     );
 }
 
+/// After the extension's library loaded, a method that has replied waits with `result` and `wait`
+/// on the message whose send ran it: the reply settled the result, so both answer at once. The
+/// oracle agrees under the gate.
+// spec: conc.activities.deviation.20
+#[test]
+fn a_replied_methods_wait_on_its_own_message_answers() {
+    assert_eq!(
+        run("attach-replied", "replied.rex"),
+        ("result r\nwaited\nsent r\n".to_owned(), String::new(), 0)
+    );
+}
+
 /// The main program waits on an event semaphore before the thread that posts it has attached:
 /// after the extension's library loaded, the wait is not refused, and it ends once the thread's
 /// message posts.
