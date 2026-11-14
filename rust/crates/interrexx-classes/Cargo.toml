@@ -12,5 +12,9 @@ description = "Class and method-dictionary model for interrexx"
 # heap, `Object` or dispatch, only the identity type a class is keyed by.
 interrexx-core.workspace = true
 
+[build-dependencies]
+# Reads `data/classes.tsv`.
+interrexx-upstream.workspace = true
+
 [lints]
 workspace = true

@@ -20,6 +20,7 @@ interrexx-num = { path = "crates/interrexx-num", version = "0.1.0" }
 interrexx-oracle = { path = "crates/interrexx-oracle", version = "0.1.0" }
 interrexx-parse = { path = "crates/interrexx-parse", version = "0.1.0" }
 interrexx-rxapi = { path = "crates/interrexx-rxapi", version = "0.1.0" }
+interrexx-upstream = { path = "crates/interrexx-upstream", version = "0.1.0" }
 
 [workspace.lints.rust]
 # `deny` and not `forbid`.

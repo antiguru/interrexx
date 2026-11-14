@@ -44,7 +44,7 @@ pub mod arity;
 
 /// The oracle's per-scope native method tables, joined onto the oracle's own scope
 /// answer by both `collection_scopes.rs` and `introspection_scopes.rs`.
-pub mod setup_cpp;
+pub mod native_table;
 
 /// Running a program through the oracle and comparing the three
 /// observable channels. Its own module doc carries the memory limit, the

@@ -743,13 +743,13 @@ pub fn rows_missing_arguments(layout: &Layout) -> Vec<String> {
         &[IMPLIED_ARM]
     };
     let scopes: HashMap<(String, String, String), (String, String)> =
-        read_table(&corpus_root().join(layout.scopes), 7)
+        read_table(&corpus_root().join(layout.scopes), 6)
             .into_iter()
             .filter(|row| arms.contains(&row[2].as_str()))
             .map(|row| {
                 (
                     (row[0].clone(), row[1].clone(), row[2].clone()),
-                    (row[4].clone(), row[6].clone()),
+                    (row[4].clone(), row[5].clone()),
                 )
             })
             .collect();

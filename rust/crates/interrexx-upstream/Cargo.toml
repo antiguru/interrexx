@@ -1,0 +1,12 @@
+[package]
+name = "interrexx-upstream"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Regenerates and checks the interface tables derived from the pinned ooRexx sources"
+publish = false
+
+[lints]
+workspace = true

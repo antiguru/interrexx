@@ -358,6 +358,7 @@ dependencies = [
  "interrexx-parse",
  "interrexx-rxapi",
  "interrexx-spec",
+ "interrexx-upstream",
  "libc",
  "loom",
  "nix",
@@ -407,6 +408,7 @@ name = "interrexx-classes"
 version = "0.1.0"
 dependencies = [
  "interrexx-core",
+ "interrexx-upstream",
 ]
 
 [[package]]
@@ -475,6 +477,10 @@ version = "0.1.0"
 dependencies = [
  "serde_json",
 ]
+
+[[package]]
+name = "interrexx-upstream"
+version = "0.1.0"
 
 [[package]]
 name = "itertools"

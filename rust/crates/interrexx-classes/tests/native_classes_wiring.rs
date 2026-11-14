@@ -154,31 +154,17 @@ fn a_class_subclassing_class_itself_can_inherit_a_mixinclass_class_mixin() {
 }
 
 // ---------------------------------------------------------------------
-// Which checklist entries are native -- derived, not hand-maintained
-// (Minor #10): `setup_class_names()` minus `deferred_classes()`, mapped to
+// Which created classes are native -- derived, not hand-maintained
+// (Minor #10): `setup_class_names()` minus `deferred_classes()`, resolved to
 // block names via `id_string`'s own inverse (every registered name is a
 // block name), so lifting a deferral cannot leave this list stale.
 // ---------------------------------------------------------------------
-
-/// Checklist token -> block name, for the entries `native_classes.rs`'s
-/// own doc comment names as irregular (the class, integer, string and
-/// object classes) -- every other checklist token is its own
-/// block name with a trailing `Class` stripped, or already identical.
-fn block_name_for(token: &str) -> &str {
-    match token {
-        "RexxClass" => "Class",
-        "RexxInteger" => "Integer",
-        "RexxString" => "String",
-        "RexxObject" => "Object",
-        other => other.strip_suffix("Class").unwrap_or(other),
-    }
-}
 
 /// Every checklist entry not in the deferral table, resolved to its
 /// `ClassRegistry` identity. Panics (failing the test that calls it) if a
 /// name claims to be native but is registered in neither directory, or vice
 /// versa -- which is also exactly what
-/// `every_checklist_entry_is_registered_in_the_directory_setup_cpp_names`
+/// `every_created_class_is_registered_in_the_directory_its_closing_form_names`
 /// (`native_classes.rs`'s own internal test) checks from the other side.
 fn native_class_ids(r: &ClassRegistry) -> Vec<(&'static str, ObjRef)> {
     let deferred = deferred_classes();
@@ -186,16 +172,12 @@ fn native_class_ids(r: &ClassRegistry) -> Vec<(&'static str, ObjRef)> {
         .iter()
         .filter(|token| !deferred.iter().any(|d| d.setup_class == **token))
         .map(|&token| {
-            let block_name = block_name_for(token);
-            let upper = block_name.to_ascii_uppercase();
+            let upper = token.to_ascii_uppercase();
             let id = r
                 .lookup(&upper)
                 .or_else(|| r.system_lookup(&upper))
-                .unwrap_or_else(|| panic!("{token} (block {block_name:?}) should be native"));
-            // `block_name` borrows from `token`, which borrows from the
-            // `'static` `SETUP_CLASSES`/`CHECKLIST_TO_DEFINITION` tables, so
-            // this is safe to widen back to `'static`.
-            (block_name, id)
+                .unwrap_or_else(|| panic!("{token} should be native"));
+            (token, id)
         })
         .collect()
 }
@@ -1745,7 +1727,7 @@ fn suppliers_flattened_set_lacks_suppliermixins_donated_methods() {
 /// real artifact -- this test cannot verify that a citation is genuine, so
 /// it does not claim to. `native_classes.rs`'s own internal unit tests
 /// check the stronger, implementation-visible version of the
-/// native-or-deferred property (the checklist-token-to-block-name mapping
+/// native-or-deferred property (the creation-list-to-block correspondence
 /// and the registration itself); this is the public-API shape of the same
 /// guarantee.
 #[test]
@@ -1788,11 +1770,10 @@ fn every_setup_class_is_native_or_deferred_with_a_reason() {
                 // directory or the other. Which of the two is
                 // `native_classes.rs`'s own internal test, since it is the
                 // side that can read the native bootstrap's closing form.
-                let block_name = block_name_for(token);
-                let upper = block_name.to_ascii_uppercase();
+                let upper = token.to_ascii_uppercase();
                 assert!(
                     r.lookup(&upper).is_some() || r.system_lookup(&upper).is_some(),
-                    "{token:?} is neither deferred nor registered as {block_name:?}"
+                    "{token:?} is neither deferred nor registered"
                 );
             }
         }

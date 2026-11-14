@@ -1,6 +1,6 @@
 //! `corpus/introspection-scopes.tsv`: which scope defines each documented
-//! introspection method, whether that scope's body is C++ or Rexx, and for a
-//! C++ body the native-table token and arity operand.
+//! introspection method, whether that scope's body is native or Rexx, and for a
+//! native body the native-table arity operand.
 
 #![expect(
     clippy::disallowed_methods,
@@ -10,7 +10,7 @@
 mod support;
 
 use support::arity::{self, Receiver};
-use support::setup_cpp::setup_tables;
+use support::native_table::native_arities;
 
 use std::collections::HashMap;
 use std::fs;
@@ -51,15 +51,14 @@ struct Scoped {
     arm: String,
     scope: String,
     kind: String,
-    token: String,
     arity: String,
 }
 
 impl Scoped {
     fn line(&self) -> String {
         format!(
-            "{}\t{}\t{}\t{}\t{}\t{}\t{}",
-            self.class, self.method, self.arm, self.scope, self.kind, self.token, self.arity
+            "{}\t{}\t{}\t{}\t{}\t{}",
+            self.class, self.method, self.arm, self.scope, self.kind, self.arity
         )
     }
 }
@@ -200,7 +199,7 @@ fn tempdir() -> PathBuf {
 fn derived() -> Vec<Scoped> {
     let rows = documented();
     let scopes = oracle_scopes(&rows);
-    let (instance, class) = setup_tables();
+    let (instance, class) = native_arities();
     let mut out = Vec::new();
     for (class_name, method, arm) in rows {
         let key = (class_name.clone(), method.clone(), arm.clone());
@@ -212,9 +211,9 @@ fn derived() -> Vec<Scoped> {
         let native = tables
             .get(&scope)
             .and_then(|table| table.get(&method.to_uppercase()));
-        let (kind, token, arity) = match native {
-            Some((token, arity)) => ("native", token.clone(), arity.clone()),
-            None => ("rexx", NO_EVIDENCE.to_string(), NO_EVIDENCE.to_string()),
+        let (kind, arity) = match native {
+            Some(arity) => ("native", arity.clone()),
+            None => ("rexx", NO_EVIDENCE.to_string()),
         };
         out.push(Scoped {
             class: class_name,
@@ -222,7 +221,6 @@ fn derived() -> Vec<Scoped> {
             arm,
             scope,
             kind: kind.to_string(),
-            token,
             arity,
         });
     }
@@ -235,7 +233,7 @@ fn committed() -> Vec<Scoped> {
     if !path.exists() {
         return Vec::new();
     }
-    let mut rows: Vec<Scoped> = arity::read_table(&path, 7)
+    let mut rows: Vec<Scoped> = arity::read_table(&path, 6)
         .into_iter()
         .map(|row| Scoped {
             class: row[0].clone(),
@@ -243,8 +241,7 @@ fn committed() -> Vec<Scoped> {
             arm: row[2].clone(),
             scope: row[3].clone(),
             kind: row[4].clone(),
-            token: row[5].clone(),
-            arity: row[6].clone(),
+            arity: row[5].clone(),
         })
         .collect();
     rows.sort();
@@ -253,23 +250,20 @@ fn committed() -> Vec<Scoped> {
 
 const HEADER: &str = "\
 # Which scope defines each documented introspection method, and whether that
-# scope's body is C++ or Rexx. Derived by
+# scope's body is native or Rexx. Derived by
 # crates/interrexx/tests/introspection_scopes.rs, which re-derives it on every
 # run; edit that, never this.
 #
-# class<TAB>method<TAB>arm<TAB>scope<TAB>kind<TAB>token<TAB>arity
+# class<TAB>method<TAB>arm<TAB>scope<TAB>kind<TAB>arity
 #
 # `scope` is the oracle's own answer to `receiver~instanceMethod(NAME)~scope~id`
 # -- the behaviour after every InheritInstanceMethods copy, RemoveMethod and
 # HideMethod, which is why no file scan can produce this column. The receivers
 # are corpus/introspection-receivers.tsv, one probe program per (class, arm).
 #
-# `token` IS A CITATION, NOT A BODY IDENTITY, in both directions: two tokens
-# can name one C++ function and one token can reach several behaviours. Count
-# tokens for an upper bound on bodies; never for a count of behaviours.
-#
-# `arity` is Setup.cpp's third operand verbatim: a literal is a MAXIMUM,
-# A_COUNT is Arity::Counted.
+# `arity` is the native method table's argument operand
+# (crates/interrexx-classes/data/classes.tsv): a number is a MAXIMUM, `any`
+# stands for a counted argument list with no maximum in the table.
 #
 # Pointer's and Buffer's INSTANCE arm is deliberately absent: class-set.txt
 # gives them no construction expression, because the reference says instances
@@ -338,8 +332,7 @@ fn every_documented_row_resolves_to_a_scope() {
     );
 }
 
-/// Every native row cites a native-table arity operand, and every Rexx row
-/// cites neither token nor arity.
+/// Every native row cites a native-table arity, and every Rexx row cites none.
 #[test]
 fn the_kind_column_agrees_with_the_two_it_governs() {
     let committed = committed();
@@ -352,14 +345,14 @@ fn the_kind_column_agrees_with_the_two_it_governs() {
     for row in committed {
         match row.kind.as_str() {
             "native" => assert!(
-                row.token != NO_EVIDENCE && row.arity != NO_EVIDENCE,
-                "{}~{} is native and cites no token or arity",
+                row.arity != NO_EVIDENCE,
+                "{}~{} is native and cites no arity",
                 row.class,
                 row.method
             ),
             "rexx" => assert!(
-                row.token == NO_EVIDENCE && row.arity == NO_EVIDENCE,
-                "{}~{} is a Rexx body and cites a C++ token",
+                row.arity == NO_EVIDENCE,
+                "{}~{} is a Rexx body and cites an arity",
                 row.class,
                 row.method
             ),

@@ -9,66 +9,30 @@ include!(concat!(env!("OUT_DIR"), "/setup_classes.rs"));
 
 /// One checklist entry this module declines to build natively.
 pub struct Deferral {
-    /// The `SETUP_CLASSES` (checklist) token, the native type name.
+    /// The deferred class's block name, as in `SETUP_CLASSES`.
     pub setup_class: &'static str,
     /// What would have to exist for this task to build it instead.
     pub reason: &'static str,
 }
 
-/// Checklist token -> `CLASS_DEFINITIONS` block name, for every checklist
-/// entry -- see the module doc comment for why this is hand-carried
-/// rather than derived.
-const CHECKLIST_TO_DEFINITION: &[(&str, &str)] = &[
-    ("RexxClass", "Class"),
-    ("RexxInteger", "Integer"),
-    ("RexxString", "String"),
-    ("RexxObject", "Object"),
-    ("PointerClass", "Pointer"),
-    ("BufferClass", "Buffer"),
-    ("ArrayClass", "Array"),
-    ("TableClass", "Table"),
-    ("IdentityTable", "IdentityTable"),
-    ("RelationClass", "Relation"),
-    ("StringTable", "StringTable"),
-    ("DirectoryClass", "Directory"),
-    ("SetClass", "Set"),
-    ("BagClass", "Bag"),
-    ("ListClass", "List"),
-    ("QueueClass", "Queue"),
-    ("NumberString", "NumberString"),
-    ("MethodClass", "Method"),
-    ("RoutineClass", "Routine"),
-    ("PackageClass", "Package"),
-    ("RexxContext", "RexxContext"),
-    ("StemClass", "Stem"),
-    ("SupplierClass", "Supplier"),
-    ("MessageClass", "Message"),
-    ("MutableBuffer", "MutableBuffer"),
-    ("WeakReference", "WeakReference"),
-    ("StackFrameClass", "StackFrame"),
-    ("RexxInfo", "RexxInfo"),
-    ("VariableReference", "VariableReference"),
-    ("EventSemaphoreClass", "EventSemaphore"),
-    ("MutexSemaphoreClass", "MutexSemaphore"),
-];
-
 /// The deferral table -- see the module doc comment for each reason in full.
 const DEFERRALS: &[Deferral] = &[
     Deferral {
-        setup_class: "RexxInteger",
-        reason: "CLASS_CREATE_SPECIAL(Integer, \"String\", RexxIntegerClass): an Integer \
-                 value's ~class answers \"String\", not \"Integer\" (measured, 12345~class~id). \
-                 Needs a per-value class-identity override this registry does not build.",
+        setup_class: "Integer",
+        reason: "the bootstrap creates the Integer class under the id string \"String\": an \
+                 Integer value's ~class answers \"String\", not \"Integer\" (measured, \
+                 12345~class~id). Needs a per-value class-identity override this registry \
+                 does not build.",
     },
     Deferral {
         setup_class: "NumberString",
-        reason: "CLASS_CREATE_SPECIAL(NumberString, \"String\", RexxClass), same masquerade \
-                 (measured, (1.5)~class~id answers \"String\"); own C++ comment: \"the number \
-                 string class lies about its identity\". Same missing mechanism as RexxInteger.",
+        reason: "the bootstrap creates the NumberString class under the id string \"String\", \
+                 the same masquerade (measured, (1.5)~class~id answers \"String\"). Same \
+                 missing mechanism as Integer.",
     },
 ];
 
-/// The checklist, unfiltered -- `SETUP_CLASSES`, `build.rs`-derived.
+/// The creation list, unfiltered -- `SETUP_CLASSES`, derived by `build.rs` from `data/classes.tsv`.
 pub fn setup_class_names() -> &'static [&'static str] {
     SETUP_CLASSES
 }
@@ -157,7 +121,7 @@ fn replay(
     registry.define_instance_methods_in_turn(class, &pending);
 }
 
-/// Build the native class registry: every checklist entry not in
+/// Build the native class registry: every created class not in
 /// [`deferred_classes`], wired as the bootstrap wires it.
 pub fn native_classes(mint: &mut dyn FnMut() -> ObjRef) -> ClassRegistry {
     build(false, mint)
@@ -219,25 +183,15 @@ fn build(keep_setup_methods: bool, mint: &mut dyn FnMut() -> ObjRef) -> ClassReg
 
     // `CLASS_DEFINITIONS` is in the bootstrap's own file order, which is a real
     // dependency order (a donor's class block precedes every recipient that inherits
-    // instance methods from it) and *differs* from the checklist's creation order
+    // instance methods from it) and *differs* from the creation order
     // (`TableClass` precedes `IdentityTable` there, but `IdentityTable`'s block
-    // precedes `Table`'s -- `Table` donates from it). Replaying in checklist order
+    // precedes `Table`'s -- `Table` donates from it). Replaying in creation order
     // instead would call `donate_instance_methods` against a donor not yet built.
     for def in CLASS_DEFINITIONS {
         if def.name == "Object" || def.name == "Class" {
             continue; // already bootstrapped above
         }
-        let setup_class = CHECKLIST_TO_DEFINITION
-            .iter()
-            .find(|(_, block_name)| *block_name == def.name)
-            .unwrap_or_else(|| {
-                panic!(
-                    "CLASS_DEFINITIONS block {:?} has no checklist entry",
-                    def.name
-                )
-            })
-            .0;
-        if DEFERRALS.iter().any(|d| d.setup_class == setup_class) {
+        if DEFERRALS.iter().any(|d| d.setup_class == def.name) {
             continue;
         }
         // `def.system_only` is which closing form the bootstrap used, and it decides
@@ -317,53 +271,42 @@ pub fn remove_setup_methods(registry: &mut ClassRegistry) {
 mod tests {
     use super::*;
 
-    /// The deferral table as a test over the derived list, verbatim (the brief's own
-    /// done-when condition): every `SETUP_CLASSES` checklist entry is in
-    /// [`CHECKLIST_TO_DEFINITION`] exactly once, and every one of those is *either* built
-    /// by [`native_classes`] *or* named in [`DEFERRALS`] -- never both, never neither. A
-    /// change to the bootstrap that adds, renames, or removes a class fails this test
-    /// rather than silently landing outside both sets.
+    /// The deferral table as a test over the derived list: every `SETUP_CLASSES` entry
+    /// names a `CLASS_DEFINITIONS` block exactly once, every block is created, and
+    /// every created class is *either* built by [`native_classes`] *or* named in
+    /// [`DEFERRALS`] -- never both, never neither. A change to the bootstrap that adds,
+    /// renames, or removes a class fails this test rather than silently landing outside
+    /// both sets.
     #[test]
-    fn every_checklist_entry_is_mapped_and_either_built_or_deferred() {
-        for &checklist_name in SETUP_CLASSES {
-            let mapped: Vec<_> = CHECKLIST_TO_DEFINITION
-                .iter()
-                .filter(|(token, _)| *token == checklist_name)
-                .collect();
+    fn every_created_class_has_a_block_and_is_either_built_or_deferred() {
+        for &name in SETUP_CLASSES {
+            let blocks = CLASS_DEFINITIONS.iter().filter(|d| d.name == name).count();
             assert_eq!(
-                mapped.len(),
-                1,
-                "{checklist_name:?} must appear in CHECKLIST_TO_DEFINITION exactly once, found {}",
-                mapped.len()
+                blocks, 1,
+                "{name:?} must name exactly one CLASS_DEFINITIONS block, found {blocks}"
             );
-            let block_name = mapped[0].1;
-            assert!(
-                CLASS_DEFINITIONS.iter().any(|d| d.name == block_name),
-                "{checklist_name:?} maps to block {block_name:?}, which CLASS_DEFINITIONS does not have"
-            );
+            let creations = SETUP_CLASSES.iter().filter(|&&other| other == name).count();
+            assert_eq!(creations, 1, "{name:?} is created {creations} times");
 
-            let deferral_count = DEFERRALS
-                .iter()
-                .filter(|d| d.setup_class == checklist_name)
-                .count();
+            let deferral_count = DEFERRALS.iter().filter(|d| d.setup_class == name).count();
             assert!(
                 deferral_count <= 1,
-                "{checklist_name:?} appears in DEFERRALS {deferral_count} times, want at most 1"
+                "{name:?} appears in DEFERRALS {deferral_count} times, want at most 1"
             );
         }
-        // Every CHECKLIST_TO_DEFINITION entry corresponds to a real checklist name --
-        // catches a stale mapping entry after a rename in the bootstrap.
-        for (token, _) in CHECKLIST_TO_DEFINITION {
+        // Every block is created, so no block is silently skipped by `build`.
+        for def in CLASS_DEFINITIONS {
             assert!(
-                SETUP_CLASSES.contains(token),
-                "{token:?} is in CHECKLIST_TO_DEFINITION but not in the derived checklist"
+                SETUP_CLASSES.contains(&def.name),
+                "CLASS_DEFINITIONS block {:?} is not in the creation list",
+                def.name
             );
         }
-        // Every DEFERRALS entry names a real checklist token.
+        // Every DEFERRALS entry names a created class.
         for d in DEFERRALS {
             assert!(
                 SETUP_CLASSES.contains(&d.setup_class),
-                "deferral {:?} names a token the derived checklist does not have",
+                "deferral {:?} names a class the creation list does not have",
                 d.setup_class
             );
             assert!(
@@ -373,27 +316,27 @@ mod tests {
             );
         }
         assert_eq!(
-            CHECKLIST_TO_DEFINITION.len(),
+            CLASS_DEFINITIONS.len(),
             SETUP_CLASSES.len(),
-            "CHECKLIST_TO_DEFINITION must cover the whole checklist, one entry each"
+            "the creation list and the blocks are one entry each"
         );
     }
 
-    /// `native_classes()` actually builds exactly the checklist entries this
+    /// `native_classes()` actually builds exactly the created classes this
     /// module claims to build, **in the directory its closing form puts each
     /// in** -- not the deferred ones, and nothing extra.
     #[test]
-    fn every_checklist_entry_is_registered_in_the_directory_setup_cpp_names() {
+    fn every_created_class_is_registered_in_the_directory_its_closing_form_names() {
         let mut next: u32 = 1;
         let registry = native_classes(&mut || {
             next += 1;
             ObjRef::heap(next, 0)
         });
-        for (token, block_name) in CHECKLIST_TO_DEFINITION {
+        for &block_name in SETUP_CLASSES {
             let upper = block_name.to_ascii_uppercase();
             let environment = registry.lookup(&upper).is_some();
             let system = registry.system_lookup(&upper).is_some();
-            let want = if DEFERRALS.iter().any(|d| d.setup_class == *token) {
+            let want = if DEFERRALS.iter().any(|d| d.setup_class == block_name) {
                 (false, false)
             } else if definition_for(block_name).system_only {
                 (false, true)
@@ -403,7 +346,7 @@ mod tests {
             assert_eq!(
                 (environment, system),
                 want,
-                "{token:?} (block {block_name:?}) is in the wrong directory: \
+                "{block_name:?} is in the wrong directory: \
                  (environment, system) reads {:?}",
                 (environment, system)
             );
@@ -412,17 +355,17 @@ mod tests {
 
     /// The three-state test above is only as good as `system_only` telling
     /// blocks apart, so this is the discriminator's own witness: a class
-    /// closed by `EndSpecialClassDefinition` and one closed by
-    /// `EndClassDefinition`, read off the derived table.
+    /// closed by the special closing form and one closed by the ordinary
+    /// form, read off the derived table.
     #[test]
-    fn system_only_separates_the_two_closing_macros() {
+    fn system_only_separates_the_two_closing_forms() {
         assert!(
             definition_for("RexxInfo").system_only,
-            "Setup.cpp:1285 closes the RexxInfo block with EndSpecialClassDefinition"
+            "the RexxInfo block is closed by the special closing form"
         );
         assert!(
             !definition_for("StackFrame").system_only,
-            "Setup.cpp closes the StackFrame block with EndClassDefinition"
+            "the StackFrame block is closed by the ordinary closing form"
         );
     }
 }
