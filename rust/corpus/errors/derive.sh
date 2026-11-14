@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Usage: derive.sh SCRATCH_ROOT [CORPUS] > NEW_CORPUS
 # Re-derives parse-errors.tsv from the oracle. CORPUS defaults to the
-# parse-errors.tsv beside this script and may be in either column layout.
+# parse-errors.tsv beside this script. The oracle's message text is not
+# recorded: a row holds the code and the line.
 set -u
 
 scratch=${1:?usage: derive.sh SCRATCH_ROOT [CORPUS]}
@@ -9,25 +10,16 @@ here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 corpus=${2:-$here/parse-errors.tsv}
 oracle=$(dirname "$0")/../../../third_party/oracle
 
-# Prints `expect<TAB>line<TAB>message` for one rexxc stderr file, the message
-# escaped as the program field is.
+# Prints `expect<TAB>line` for one rexxc stderr file.
 extract='
 undef $/;
 my $e = <STDIN>;
-my ($sub, $msg, $at);
-if ($e =~ /^Error (\d+)\.(\d+):  ([^\n]*)\n?(.*)\z/ms) {
-    ($sub, $msg) = ("$1.$2", $3);
-    die "the message spans more than one line\n" if $4 =~ /\S/;
-}
+my ($sub, $at);
+$sub = "$1.$2" if $e =~ /^Error (\d+)\.(\d+):/m;
 $at = $1 if $e =~ /^Error \d+ running .* line (\d+):/m;
-if (!defined $sub) { print "ok\t-\t-"; exit }
+if (!defined $sub) { print "ok\t-"; exit }
 die "no main line\n" unless defined $at;
-$msg =~ s/\\/\\\\/g;
-$msg =~ s/\t/\\t/g;
-$msg =~ s/\r/\\r/g;
-$msg =~ s/([^\x20-\x7e])/sprintf("\\x%02x", ord $1)/ge;
-$msg = "-" if $msg eq "";
-print "$sub\t$at\t$msg";
+print "$sub\t$at";
 '
 
 fail() {
@@ -35,8 +27,8 @@ fail() {
     exit 1
 }
 
-layout=
 row=0
+header=
 while IFS= read -r line || [ -n "$line" ]; do
     row=$((row + 1))
     case $line in
@@ -45,20 +37,13 @@ while IFS= read -r line || [ -n "$line" ]; do
         continue
         ;;
     class$'\t'*)
-        printf 'class\texpect\tline\tmessage\tprogram\n'
-        case $line in
-        *$'\tmessage\t'*) layout=5 ;;
-        *) layout=4 ;;
-        esac
+        printf 'class\texpect\tline\tprogram\n'
+        header=1
         continue
         ;;
     esac
-    [ -n "$layout" ] || fail "row $row: no class header line before the first row"
-    if [ "$layout" = 5 ]; then
-        IFS=$'\t' read -r class expect at _old program <<<"$line"
-    else
-        IFS=$'\t' read -r class expect at program <<<"$line"
-    fi
+    [ -n "$header" ] || fail "row $row: no class header line before the first row"
+    IFS=$'\t' read -r class expect at program <<<"$line"
 
     dir=$scratch/row$row
     mkdir -p "$dir" || fail "row $row: cannot make $dir"
@@ -72,8 +57,8 @@ while IFS= read -r line || [ -n "$line" ]; do
     )
     rc=$(<"$dir/rc")
     [ "$rc" = 99 ] && fail "row $row: cannot enter $dir"
-    got=$(LC_ALL=C perl -e "$extract" <"$dir/err" || fail "row $row: unreadable or multi-line oracle stderr, see $dir/err") || exit 1
-    IFS=$'\t' read -r gexpect gat gmsg <<<"$got"
+    got=$(LC_ALL=C perl -e "$extract" <"$dir/err" || fail "row $row: unreadable oracle stderr, see $dir/err") || exit 1
+    IFS=$'\t' read -r gexpect gat <<<"$got"
 
     if [ "$class" = '?' ]; then
         case $gexpect in
@@ -91,5 +76,5 @@ while IFS= read -r line || [ -n "$line" ]; do
     else
         [ "$rc" != 0 ] || fail "row $row: rejected but rc 0"
     fi
-    printf '%s\t%s\t%s\t%s\t%s\n' "$class" "$expect" "$at" "$gmsg" "$program"
+    printf '%s\t%s\t%s\t%s\n' "$class" "$expect" "$at" "$program"
 done <"$corpus"

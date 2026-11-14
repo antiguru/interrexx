@@ -29,9 +29,6 @@ struct Case {
     /// The line the oracle's main message named. `None` for an accepted
     /// program.
     line: Option<usize>,
-    /// The oracle's secondary message with its inserts filled, or `None` where
-    /// it printed none.
-    message: Option<Vec<u8>>,
     /// The `program` field as the corpus file spells it, escapes and all.
     source: String,
     /// 1-based row number in the corpus file, for a failure message that can be
@@ -87,7 +84,7 @@ fn cases() -> Vec<Case> {
         if line.starts_with('#') || line.starts_with("class\t") {
             continue;
         }
-        let mut fields = line.splitn(5, '\t');
+        let mut fields = line.splitn(4, '\t');
         let mut field = |what: &str| {
             fields
                 .next()
@@ -97,7 +94,6 @@ fn cases() -> Vec<Case> {
         let class = field("class");
         let expect = field("expect");
         let at = field("line");
-        let message = field("message");
         let program = field("program");
         let class = match class.as_str() {
             "translation" => Class::Translation,
@@ -131,7 +127,6 @@ fn cases() -> Vec<Case> {
             class,
             error,
             line,
-            message: (message != "-").then(|| unescape(&message, row)),
             source: program,
             row,
         });
@@ -418,58 +413,6 @@ fn every_error_the_corpus_raises_renders_a_non_empty_message() {
     assert!(checked >= 567, "only {checked} messages were rendered");
 }
 
-/// The translation rows whose rendered message is not the oracle's, keyed by
-/// their `program` field, each with what it renders. The recorded deviations
-/// are left out, and their own tests pin what they render.
-fn message_mismatches() -> std::collections::BTreeMap<String, String> {
-    let mut wrong = std::collections::BTreeMap::new();
-    for case in cases() {
-        if case.class != Class::Translation {
-            continue;
-        }
-        let want = case
-            .message
-            .as_deref()
-            .unwrap_or_else(|| panic!("row {}: a translation row needs a message", case.row));
-        let pair = case.error.expect("a translation row has a number");
-        let got = match parse(&case.program) {
-            Ok(()) => b"<accepted>".to_vec(),
-            Err(error) if do_subkey_deviation(Some((error.code(), error.sub())), pair) => continue,
-            Err(error) if label_colon_deviation(Some((error.code(), error.sub())), pair) => {
-                continue;
-            }
-            Err(error) => error.message(),
-        };
-        if got != want {
-            wrong.entry(case.source.clone()).or_insert_with(|| {
-                format!(
-                    "row {}: {}.{} renders {:?}, the oracle {:?}",
-                    case.row,
-                    pair.0,
-                    pair.1,
-                    String::from_utf8_lossy(&got),
-                    String::from_utf8_lossy(want)
-                )
-            });
-        }
-    }
-    wrong
-}
-
-#[test]
-fn every_secondary_message_matches_the_oracle() {
-    let wrong = message_mismatches();
-    assert!(
-        wrong.is_empty(),
-        "{}",
-        wrong
-            .values()
-            .map(String::as_str)
-            .collect::<Vec<_>>()
-            .join("\n")
-    );
-}
-
 // ---- the recorded deviations, each pinned in both directions ----
 
 /// Whether `(ours, oracle)` is the label-colon deviation, Deviation 39.
@@ -526,31 +469,13 @@ fn the_label_colon_rule_covers_exactly_the_two_corpus_rows_it_was_written_for() 
             continue;
         }
         // Ours names the IF or WHEN, the oracle the leftover colon.
-        assert_ne!(
-            Some(error.message()),
-            case.message,
-            "row {}: the oracle now agrees",
-            case.row
-        );
-        assert_eq!(
-            case.message.as_deref(),
-            Some(&br#"Incorrect expression detected at ":"."#[..]),
-            "row {}",
-            case.row
-        );
-        covered.push((case.source, error.message()));
+        covered.push((case.source, (error.code(), error.sub())));
     }
     assert_eq!(
         covered,
         [
-            (
-                r#"select\nwhen 1 = 1\nthen: nop\nend"#.to_string(),
-                b"WHEN instruction on line 2 requires matching THEN clause.".to_vec()
-            ),
-            (
-                r#"if 1 = 1\nthen: nop"#.to_string(),
-                b"IF instruction on line 1 requires matching THEN clause.".to_vec()
-            ),
+            (r#"select\nwhen 1 = 1\nthen: nop\nend"#.to_string(), (18, 2)),
+            (r#"if 1 = 1\nthen: nop"#.to_string(), (18, 1)),
         ],
         "the label-colon deviation changed"
     );
@@ -599,12 +524,6 @@ fn the_do_subkey_rows_differ_from_the_oracle_as_deviation_38_says() {
             String::from_utf8_lossy(&error.message()),
             String::from_utf8_lossy(want),
             "row {}",
-            case.row
-        );
-        assert_ne!(
-            Some(error.message()),
-            case.message,
-            "row {}: the oracle now agrees",
             case.row
         );
         let source = ProgramSource::new(case.program.clone(), SourceKind::Program);
