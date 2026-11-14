@@ -1404,18 +1404,26 @@ ooRexx aborts the process in both cases.
 
 While a message that a thread attached to the interpreter sends runs, the
 activity that was running when it arrived, the main program or another, makes
-no progress in Rexx clauses. The message does not wait for that activity: it
-runs at the activity's next clause boundary, or during a wait of the activity,
-such as `SysSleep`, a semaphore's `wait`, a guard or a message's `result`, or
-during a call it makes into a native library that is not built into the
-interpreter. The activity goes on only once the message has finished, even
-where its wait or its call ended first. Messages are served one at a time: one
-that arrives while another runs or waits runs on top of it, and the earlier one
-goes on only once the later has finished. A message that waits for a guard lock
-an activity it stopped holds, or for the completion of a message whose send
-such an activity runs, directly or through a chain of such waits, never gets
-it, and the wait is refused at once as [Deviation
+no progress in Rexx clauses. The message runs at that activity's next clause
+boundary, or during a wait of the activity, such as `SysSleep`, a semaphore's
+`wait`, a guard or a message's `result`, or during a call it makes into a
+native library that is not built into the interpreter. The activity goes on
+only once the message has finished, even where its wait or its call ended
+first. A message that arrives while another runs is held until that one has
+returned, waits or calls into such a library, the earliest held first; one
+that arrives while another waits runs on top of it, and the earlier goes on
+only once the later has finished. A message whose method needs a guard lock
+that a stopped activity holds waits for the lock before it runs anything, as
+in ooRexx. Once a message has begun, though, a wait of it for something only a
+stopped activity can give never ends. Where it waits for a guard lock that
+such an activity holds and no other message does, or for the completion of a
+message whose send such an activity runs, directly or through a chain of such
+waits, the wait is refused at once as [Deviation
 14](#14-a-nested-wait-only-a-buried-activity-can-end) refuses an inverted wait:
 the thread's send answers nothing, and the program, which runs on to its end,
-ends with exit code 120. ooRexx runs each attached thread's messages on that
-thread, alongside the other activities. Issue #681 tracks doing the same.
+ends with exit code 120. Any other such wait, such as a `GUARD WHEN`, a
+semaphore's `wait` with no timeout, or a wait for a guard lock another message
+holds, goes on for ever, and after five seconds a line on stderr says so; a
+loop that polls for such a change runs for ever, and nothing is said. ooRexx
+runs each attached thread's messages on that thread, alongside the other
+activities, and each such program completes. Issue #681 tracks doing the same.

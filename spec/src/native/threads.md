@@ -56,10 +56,15 @@ running when it arrived makes no progress in Rexx clauses ([Deviation
 The message runs at that activity's next clause boundary, or during its wait
 or its call into a native library that is not built in, and the activity goes
 on only once the message has finished. A message that arrives while another
-runs or waits runs on top of it, and the earlier goes on only once the later
-has finished. A message that waits, directly or through a chain of waits, for
-a guard lock a stopped activity holds or for the completion of a message whose
-send it runs is refused at once, and the program ends with exit code 120. In
+runs is held until that one returns, waits or calls into such a library, the
+earliest first; one that arrives while another waits runs on top of it, and the
+earlier goes on only once the later has finished. A message whose method needs
+a guard lock a stopped activity holds waits for it before it runs anything.
+Once a message has begun, a wait of it for something only a stopped activity
+can give never ends: a wait for a guard lock such an activity holds and no
+other message does, or for the completion of a message whose send it runs, is
+refused at once, and the program ends with exit code 120; any other, such as a
+`GUARD WHEN`, goes on for ever, with a line on stderr after five seconds. In
 ooRexx the thread's messages run alongside the other activities. The tests of
 this rule need an extension of their own that sends messages by name, so they
 run outside this page.
