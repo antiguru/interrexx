@@ -2476,12 +2476,7 @@ impl Interp {
             && self.activity.attached
             && self.activity.native_handles.len() == 1
         {
-            self.keep_late_failure(
-                Loud {
-                    message: loud.message.clone(),
-                }
-                .into(),
-            );
+            self.keep_late_failure(Failure::Loud(loud.clone()));
         }
         let levels = self.take_failure_levels();
         let frame = self

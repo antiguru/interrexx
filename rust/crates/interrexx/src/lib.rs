@@ -426,7 +426,7 @@ impl StackSpan {
 
 /// A construct this crate does not implement, on its way to becoming an exit
 /// code and a line on stderr.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 struct Loud {
     message: String,
 }

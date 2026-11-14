@@ -53,6 +53,7 @@ operator_operand	GUARD	every dyadic and prefix operator on nine left operands, r
 parse_trigger_operand	GUARD	parser guarantee: a PARSE trigger that needs an operand carries one (census d-guard)
 receiver_class	DEVIATION	oracle-crashes.txt entry 8 and Deviation 28: a metaclass NEW answering something that is not a class, which ~subclass casts unchecked; a written .ROUTINES entry that is not a routine, which the oracle casts unchecked (not run on the oracle)
 register_not_logical	GUARD	compiler invariant: a branch reads a register holding a logical (census d-guard)
+retried_send	GUARD	the send answers no one: the thread's SendMessage member runs it again once the guard lock is free (crates/interrexx/tests/attached_threads.rs a_callback_waiting_for_a_guard_the_main_program_holds_runs_after_it, a_callback_that_runs_again_for_a_guard_is_traced_once)
 scheduler_inconsistency	GUARD	scheduler invariant (refusal-sites.tsv: guarded_getter_waits_for_reply.rex agrees)
 select_op_off_its_node	GUARD	compiler invariant: a SELECT op names its own SELECT (census d-guard)
 setup_method	GUARD	b_define_class_method_setup, b_inherit_instance_methods are 97.1 on both engines
