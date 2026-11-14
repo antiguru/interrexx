@@ -1127,7 +1127,7 @@ impl Interp {
         if let Some(sim) = self.sim.as_deref_mut() {
             sim.clock.advance_to(due);
         }
-        self.drain_completions();
+        self.drain_completions(crate::scheduler::DrainAt::Stopped);
         self.sim_breached()
     }
 

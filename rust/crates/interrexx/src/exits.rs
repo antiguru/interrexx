@@ -295,7 +295,7 @@ impl Interp {
             self.boundary_posts = None;
             self.clause_exits =
                 self.exit_installed(exit_code::HLT) || self.exit_installed(exit_code::TRC);
-            self.drain_completions();
+            self.drain_completions(crate::scheduler::DrainAt::MidRun);
         }
         if !self.exit_installed(exit_code::HLT) && !self.exit_installed(exit_code::TRC) {
             return Ok(());

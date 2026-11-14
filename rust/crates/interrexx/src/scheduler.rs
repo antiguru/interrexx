@@ -280,10 +280,10 @@ pub(crate) struct Activities {
     sleepers: BinaryHeap<Reverse<(Instant, u64, ActivityId)>>,
     /// The order the next sleeper parks in.
     next_sleeper: u64,
-    /// The activities whose loops of [`Interp::run_others`] are on the Rust
-    /// stack, outermost first, each with whether it is buried: whether it
-    /// entered its loop from Rust frames that stay live below it.
-    owners: Vec<(ActivityId, bool)>,
+    /// The activities whose loops of [`Interp::run_others`], or whose runs
+    /// under a recall [`Interp::serve_recall`] serves, are on the Rust stack,
+    /// outermost first, each with how its frames lie below the loops above.
+    owners: Vec<(ActivityId, Below)>,
     /// Ready owners a loop could not run, each with the index in `owners` of
     /// the loop that set it aside; it goes back to the ready queue when that
     /// loop returns.
@@ -530,12 +530,37 @@ impl Activities {
     }
 }
 
+/// How an owner's frames lie below the loops above it.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Below {
+    /// Its state is all in its record: a loop above may run it.
+    Free,
+    /// It waits from Rust frames that stay live below the loops above.
+    Buried,
+    /// Buried in the middle of a run, which a recall served at one of its
+    /// clause boundaries interrupted: it runs on once that recall's lend
+    /// returns, parked on nothing.
+    Interrupted,
+}
+
+/// Where a drain of the inbox finds the running activity.
+#[derive(Clone, Copy)]
+pub(crate) enum DrainAt {
+    /// At a clause boundary in the middle of its run, which goes on once the
+    /// drain returns.
+    MidRun,
+    /// Stopped: a loop's own activity, parked, or one a loop ran that has
+    /// parked, ended or come to its slice's end.
+    Stopped,
+}
+
 /// How a loop of [`Interp::run_others`] ended.
 enum Waited {
     /// The activity it set aside is ready.
     Woken,
     /// Nothing it can run is ready; `inverted` where an activity is ready
-    /// that only a loop below it can run.
+    /// that only a loop below it can run, or a recall below it interrupted
+    /// one.
     Blocked { inverted: bool },
 }
 
@@ -1600,21 +1625,21 @@ impl Interp {
         }
         while self.activities.in_flight() {
             let posted = self.timer.idle();
-            self.file_completions(posted);
+            self.file_completions(posted, DrainAt::Stopped);
         }
     }
 
     /// Files the completions posted since the last drain.
-    pub(crate) fn drain_completions(&mut self) {
+    pub(crate) fn drain_completions(&mut self, at: DrainAt) {
         let posted = self.timer.drain();
-        self.file_completions(posted);
+        self.file_completions(posted, at);
     }
 
     /// Hands each completion of `posted` to the parked activity that made its
     /// call and readies that activity, and lends the baton to each thread
     /// that recalls it. What follows a recall goes back to the inbox before
     /// the lend, where a loop the lendee nests can drain it.
-    pub(crate) fn file_completions(&mut self, mut posted: VecDeque<Posted>) {
+    pub(crate) fn file_completions(&mut self, mut posted: VecDeque<Posted>, at: DrainAt) {
         if self.sim.is_some() {
             self.sim_screen_posts(&posted);
         }
@@ -1639,7 +1664,7 @@ impl Interp {
                 }
                 Posted::Recall(recall) => {
                     self.timer.requeue(std::mem::take(&mut posted));
-                    self.serve_recall(recall);
+                    self.serve_recall(recall, at);
                     posted = self.timer.drain();
                     if self.sim.is_some() {
                         self.sim_screen_posts(&posted);
@@ -1727,8 +1752,9 @@ impl Interp {
     /// measured from that thread's: the callback or the call's end runs above
     /// the activity that ran last, whose frames stay below. A thread running
     /// no native call of this interpreter's gets no stack to run Rexx code
-    /// on.
-    fn serve_recall(&mut self, recall: Recall) {
+    /// on. `at` says whether the activity that ran last is in the middle of
+    /// its run.
+    fn serve_recall(&mut self, recall: Recall, at: DrainAt) {
         let Recall {
             by,
             thread,
@@ -1750,7 +1776,11 @@ impl Interp {
         .filter(|activity| *activity != outgoing);
         if let Some(activity) = activity {
             self.swap_running(activity, outgoing);
-            self.activities.owners.push((outgoing, true));
+            let below = match at {
+                DrainAt::MidRun => Below::Interrupted,
+                DrainAt::Stopped => Below::Buried,
+            };
+            self.activities.owners.push((outgoing, below));
         }
         pin_enter!(self, crate::pinning::PinKind::NativeApiCallback);
         self.activities.runs_below += 1;
@@ -1917,7 +1947,8 @@ impl Interp {
             self.activities.ready.retain(|ready| *ready != me);
             return Err(Raised::insufficient_stack().into());
         }
-        self.activities.owners.push((me, buried));
+        let below = if buried { Below::Buried } else { Below::Free };
+        self.activities.owners.push((me, below));
         let waited = self.run_others_from(me, level);
         let table = &mut self.activities;
         let mine = table
@@ -1936,7 +1967,7 @@ impl Interp {
     /// [`Interp::run_others`]' loop, the one at `level` of the stack.
     fn run_others_from(&mut self, me: ActivityId, level: usize) -> Result<Waited, Failure> {
         let Some(next) = self.next_runnable(me, level)? else {
-            return Ok(self.blocked());
+            return Ok(self.blocked(level));
         };
         if next == me {
             return Ok(Waited::Woken);
@@ -1971,19 +2002,24 @@ impl Interp {
                     self.switch_to(me, ended);
                     return Ok(match woken {
                         Some(_) => Waited::Woken,
-                        None => self.blocked(),
+                        None => self.blocked(level),
                     });
                 }
             }
         }
     }
 
-    /// A loop has nothing to run: inverted where some activity is ready
-    /// whose frames lie below a loop on the stack, which only that loop can
-    /// run.
-    fn blocked(&self) -> Waited {
+    /// The loop at `level` has nothing to run: inverted where some activity
+    /// is ready whose frames lie below a loop on the stack, which only that
+    /// loop can run, or where a recall below this loop interrupted an
+    /// activity, which runs on only once that recall's lend returns.
+    fn blocked(&self, level: usize) -> Waited {
+        let table = &self.activities;
+        let interrupted = table.owners[..level]
+            .iter()
+            .any(|&(_, below)| below == Below::Interrupted);
         Waited::Blocked {
-            inverted: !self.activities.set_aside.is_empty(),
+            inverted: !table.set_aside.is_empty() || interrupted,
         }
     }
 
@@ -2006,7 +2042,7 @@ impl Interp {
         level: usize,
     ) -> Result<Option<ActivityId>, Failure> {
         if self.timer.requests().pending(crate::timer::INBOX) {
-            self.drain_completions();
+            self.drain_completions(DrainAt::Stopped);
         }
         loop {
             if !self.activities.sleepers.is_empty() {
@@ -2032,7 +2068,7 @@ impl Interp {
                 .activities
                 .owners
                 .iter()
-                .any(|&(owner, buried)| owner == ready && buried);
+                .any(|&(owner, below)| owner == ready && below != Below::Free);
             if ready == me || !buried {
                 return Ok(Some(ready));
             }
@@ -2435,7 +2471,7 @@ impl Interp {
             self.collect_now();
         }
         if self.timer.requests().pending(crate::timer::INBOX) {
-            self.drain_completions();
+            self.drain_completions(DrainAt::MidRun);
         }
         if !self.activities.sleepers.is_empty() {
             self.wake_due_sleepers();

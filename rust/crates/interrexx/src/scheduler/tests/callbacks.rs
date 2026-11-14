@@ -306,6 +306,77 @@ fn two_activities_in_native_calls_with_interleaved_callbacks() {
     );
 }
 
+/// A recall that arrives while another call's callback runs, and that a
+/// clause boundary of that callback serves, runs on top of it, and its own
+/// callback's wait for the one it interrupted is refused as an inverted wait.
+/// B waits in `AWAITSENDTWICE` for the file that A's first callback writes
+/// before it busy-waits, so B's recall lands in that busy-wait. This is a
+/// refusal pending the scheduling question of #694.
+#[test]
+fn a_wait_for_a_callback_a_boundary_recall_interrupted_is_refused_as_inverted() {
+    let path = std::env::temp_dir().join(format!("rexx-boundary-recall-{}", std::process::id()));
+    let _ = std::fs::remove_file(&path);
+    let ran = run(&format!(
+        "m = .meet~new\nb = .t~new~start('waits', .side~new(m, 'B'))\ncall SysSleep 0.1\n\
+         a = .t~new~start('sends', .side~new(m, 'A'))\nsay a~result b~result\n\
+         ::requires 'callbacktest' LIBRARY\n\
+         ::class t\n::method sends\n  use arg side\n  return SENDTWICE(side, 'FIRST', 'SECOND')\n\
+         ::method waits\n  use arg side\n  \
+         return AWAITSENDTWICE('{path}', side, 'FIRST', 'SECOND')\n\
+         ::class side\n::method init\n  expose m who\n  use arg m, who\n\
+         ::method first\n  expose m who\n  if who == 'A' then do\n    \
+         call lineout '{path}', 'go'\n    call lineout '{path}'\n    call time 'R'\n    \
+         do while time('E') < 0.3\n    end\n  end\n  m~arrive\n  return who'1'\n\
+         ::method second\n  expose who\n  return who'2'\n\
+         ::class meet\n::method init\n  expose n\n  n = 0\n\
+         ::method arrive\n  expose n\n  n += 1\n  guard on when n >= 2\n",
+        path = path.display()
+    ));
+    let _ = std::fs::remove_file(&path);
+    assert_eq!(ran.outcome.exit_code, 120, "{}", ran.stderr());
+    assert_eq!(ran.stdout(), "");
+    assert_eq!(
+        ran.stderr(),
+        "interrexx: a pinned wait for a guard's WHEN that only an activity pinned below it \
+         can end is not implemented\n"
+    );
+}
+
+/// A recall served while the activity that ran last is parked in its own
+/// wait leaves that activity parked, not runnable, below the callback: a wait
+/// of the callback's that nothing can end is refused as such, not as an
+/// inverted wait. A's first callback writes the file B waits for in
+/// `AWAITSENDTWICE` and parks in its `GUARD ON WHEN`, where its loop serves
+/// B's recall; B's callback waits for a message nothing sends.
+#[test]
+fn a_wait_above_a_recall_served_to_a_parked_callback_is_refused_as_unending() {
+    let path = std::env::temp_dir().join(format!("rexx-parked-recall-{}", std::process::id()));
+    let _ = std::fs::remove_file(&path);
+    let ran = run(&format!(
+        "m = .meet~new\nb = .t~new~start('waits', .side~new(m, 'B'))\ncall SysSleep 0.1\n\
+         a = .t~new~start('sends', .side~new(m, 'A'))\nsay a~result b~result\n\
+         ::requires 'callbacktest' LIBRARY\n\
+         ::class t\n::method sends\n  use arg side\n  return SENDTWICE(side, 'FIRST', 'SECOND')\n\
+         ::method waits\n  use arg side\n  \
+         return AWAITSENDTWICE('{path}', side, 'FIRST', 'SECOND')\n\
+         ::class side\n::method init\n  expose m who\n  use arg m, who\n\
+         ::method first\n  expose m who\n  if who == 'B' then\n    \
+         return .message~new('abc', 'length')~result\n  \
+         call lineout '{path}', 'go'\n  call lineout '{path}'\n  m~arrive\n  return who'1'\n\
+         ::method second\n  expose who\n  return who'2'\n\
+         ::class meet\n::method init\n  expose n\n  n = 0\n\
+         ::method arrive\n  expose n\n  n += 1\n  guard on when n >= 2\n",
+        path = path.display()
+    ));
+    let _ = std::fs::remove_file(&path);
+    assert_eq!(ran.outcome.exit_code, 120, "{}", ran.stderr());
+    assert_eq!(ran.stdout(), "");
+    assert_eq!(
+        ran.stderr(),
+        "interrexx: a wait that nothing left to run can end is not implemented\n"
+    );
+}
+
 /// A callback that sends to a guarded method another activity holds waits,
 /// pinned, on the callback's thread, whose nested loop runs the holder until
 /// it releases the guard.
