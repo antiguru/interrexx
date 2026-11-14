@@ -95,6 +95,15 @@ impl<'b> Lent<'b> {
         }
     }
 
+    /// [`Lent::wait`], or `None` once the interpreter is gone and nothing
+    /// will lend the baton ([`Closing`]).
+    pub(crate) fn wait_unless_closed(baton: &'b InterpBaton) -> Option<Lent<'b>> {
+        Some(Lent {
+            island: baton.await_lend_unless_closed()?,
+            baton,
+        })
+    }
+
     /// The interpreter, for as long as this lend.
     pub(crate) fn interp(&mut self) -> &mut Interp {
         // SAFETY: the lender derived the pointer from its own `&mut Interp`
@@ -114,6 +123,17 @@ impl Drop for Lent<'_> {
         if !std::thread::panicking() {
             self.baton.give_back();
         }
+    }
+}
+
+/// Closes the baton it holds when it drops, as the interpreter holding it
+/// does: a thread still waiting for a lend, a callback whose recall nothing
+/// served, wakes and is refused.
+pub(crate) struct Closing(pub(crate) crate::sync::Arc<InterpBaton>);
+
+impl Drop for Closing {
+    fn drop(&mut self) {
+        self.0.close();
     }
 }
 

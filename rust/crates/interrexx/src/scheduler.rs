@@ -1811,6 +1811,16 @@ impl Interp {
             base,
             room,
         } = recall;
+        // Once the interpreter has terminated, a callback is refused
+        // (`r[native.threads.end]`): its thread is lent the baton only to
+        // find that out and give it straight back.
+        if matches!(by, Recaller::Context(address) if address != 0)
+            && self.timer.inbox().is_closed()
+        {
+            let baton = crate::sync::Arc::clone(&self.baton);
+            baton.lend(thread, crate::island::Island::of(self));
+            return;
+        }
         let outgoing = self.activities.running;
         let activity = match by {
             Recaller::Call { activity, frame } => self
@@ -1896,18 +1906,19 @@ impl Interp {
 
     /// The last `DetachThread` of the attached activity whose thread context
     /// is at `context`, idle: its base frame's references are released, and
-    /// its handle and number are freed. The context, which the thread holds
-    /// the address of, is kept, as `AttachThread` built it.
+    /// its handle and number are freed, and the answer is true. The context,
+    /// which the thread holds the address of, is kept, as `AttachThread`
+    /// built it, and this interpreter holds no clone of it afterwards.
     /// Anything else, an activity running or not attached, is left as it is.
-    pub(crate) fn detach_activity(&mut self, context: usize) {
+    pub(crate) fn detach_activity(&mut self, context: usize) -> bool {
         let Some(id) = self.context_owner(context) else {
-            return;
+            return false;
         };
         let attached = self.activities.idle[id.index()]
             .as_ref()
             .is_some_and(|idle| idle.activity.attached);
         if !attached {
-            return;
+            return false;
         }
         self.with_idle_activity(id, Interp::pop_attached_frame);
         let table = &mut self.activities;
@@ -1920,6 +1931,7 @@ impl Interp {
             table.pooled.push_back(idle.activity.number);
         }
         table.attached -= 1;
+        true
     }
 
     /// The idle activity whose thread context is at `address`.

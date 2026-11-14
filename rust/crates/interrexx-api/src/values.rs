@@ -422,9 +422,22 @@ impl CStringPool {
         self.writable.clear();
     }
 
-    /// Makes `length` zero bytes the extension writes `string`'s value into.
+    /// Makes `length` zero bytes the extension writes `string`'s value into,
+    /// in place of any `string` had.
     pub fn writable(&mut self, string: ObjRef, length: usize) {
+        // A string with an area here already is gone and its object reused:
+        // the lookups below answer the first area for an object.
+        self.writable.retain(|(key, _)| *key != string);
         self.writable.push((string, vec![0; length]));
+    }
+
+    /// Drops the copies and the writable area made for `object`, whose
+    /// reference the extension released: an address it read for the object
+    /// is no longer valid, and a later object at the same reference gets
+    /// areas of its own.
+    pub fn forget(&mut self, object: ObjRef) {
+        self.entries.retain(|(key, _)| *key != Some(object));
+        self.writable.retain(|(key, _)| *key != object);
     }
 
     /// The length [`CStringPool::writable`] made `string`'s bytes at.
@@ -700,14 +713,20 @@ pub trait Baton {
 
     /// [`Baton::take_unless_held`] for a thread running no native call of
     /// the host's, with the activity whose thread context is at `context`
-    /// running while this thread holds it.
-    fn take_for(&self, context: usize) -> bool {
+    /// running while this thread holds it. [`TakeFor::Refused`] where the
+    /// host has ended, or ends while this thread waits: nothing is taken.
+    fn take_for(&self, context: usize) -> TakeFor {
         let _ = context;
-        self.take_unless_held()
+        if self.take_unless_held() {
+            TakeFor::Taken
+        } else {
+            TakeFor::Held
+        }
     }
 
-    /// Whether the host has ended, so a request posted to it
-    /// ([`Baton::post_halt`], [`Baton::post_trace`]) would reach nothing.
+    /// Whether the host has ended, so a callback from a thread running none
+    /// of its native calls is refused, a thread attaches to nothing, and a
+    /// request ([`Baton::post_halt`], [`Baton::post_trace`]) is not posted.
     fn ended(&self) -> bool {
         false
     }
@@ -719,9 +738,11 @@ pub trait Baton {
     }
 
     /// The last `DetachThread` of the attached activity whose thread context
-    /// is at `context`: the host ends that activity.
-    fn detach_activity(&self, context: usize) {
+    /// is at `context`: the host ends that activity, answering whether it
+    /// did. A host that has ended, or files no such activity, ends nothing.
+    fn detach_activity(&self, context: usize) -> bool {
         let _ = context;
+        false
     }
 
     /// Asks every activity of the host to halt (`r[native.threads.halt]`),
@@ -735,6 +756,17 @@ pub trait Baton {
     fn post_trace(&self, on: bool) {
         let _ = on;
     }
+}
+
+/// What [`Baton::take_for`] did.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TakeFor {
+    /// This thread took the baton, and gives it up with [`Baton::release`].
+    Taken,
+    /// This thread held it already.
+    Held,
+    /// The host has ended: nothing was taken, and the callback does nothing.
+    Refused,
 }
 
 pub use crate::ffi::HostRef;
@@ -783,10 +815,15 @@ impl<'a> BatonHold<'a> {
         BatonHold { _taken: None }
     }
 
-    /// [`Baton::take_for`] `context`, given up when the answer drops.
-    pub(crate) fn take_for(baton: &'a dyn Baton, context: usize) -> BatonHold<'a> {
-        BatonHold {
-            _taken: baton.take_for(context).then(|| Taken(baton)),
+    /// [`Baton::take_for`] `context`, given up when the answer drops, or
+    /// `None` where the host refused it.
+    pub(crate) fn take_for(baton: &'a dyn Baton, context: usize) -> Option<BatonHold<'a>> {
+        match baton.take_for(context) {
+            TakeFor::Taken => Some(BatonHold {
+                _taken: Some(Taken(baton)),
+            }),
+            TakeFor::Held => Some(BatonHold::none()),
+            TakeFor::Refused => None,
         }
     }
 }

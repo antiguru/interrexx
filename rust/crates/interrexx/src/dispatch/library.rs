@@ -14,7 +14,7 @@ use interrexx_api::load::{CommandHandler, HeldMethod, HeldRoutine, Hook, Library
 use interrexx_api::redirect::Redirector;
 use interrexx_api::values::{
     Activation, CStringPool, Class, Constants, Conversion, Failure as Refused, Host, HostRef,
-    Numeric, Raised as Condition,
+    Numeric, Raised as Condition, TakeFor,
 };
 use interrexx_core::{BehaviourId, Body, Decoded, ObjRef};
 use interrexx_num::{DIGITS64, Number};
@@ -1654,26 +1654,45 @@ impl Requester {
 
 impl interrexx_api::values::Baton for Requester {
     fn take_unless_held(&self) -> bool {
-        self.take_for(0)
-    }
-
-    fn take_for(&self, context: usize) -> bool {
         if self.baton.held_here() {
             return false;
         }
         #[cfg(test)]
         self.baton.count_take();
-        // A thread attached to an embedding instance runs Rexx code on its
-        // own stack, as far as the part of it below a quarter's reserve.
-        let stack = interrexx_api::ffi::attached_stack();
-        self.inbox.post(Posted::Recall(Recall {
-            by: Recaller::Context(context),
-            thread: std::thread::current().id(),
-            base: stack.map(|(top, _)| top),
-            room: stack.map(|(_, size)| size - size / 4),
-        }));
+        self.inbox.post(self.recall(0));
         std::mem::forget(Lent::wait(&self.baton));
         true
+    }
+
+    /// Refused where the interpreter has terminated: the inbox is closed, so
+    /// nothing is posted, or it closed before the recall was served, so the
+    /// baton lent for it is given straight back, or the interpreter was
+    /// dropped with the recall unserved, so nothing will lend the baton
+    /// (`r[native.threads.end]`).
+    fn take_for(&self, context: usize) -> TakeFor {
+        if self.baton.held_here() {
+            return TakeFor::Held;
+        }
+        #[cfg(test)]
+        self.baton.count_take();
+        if !self.inbox.post_unless_closed(self.recall(context)) {
+            return TakeFor::Refused;
+        }
+        let Some(lent) = Lent::wait_unless_closed(&self.baton) else {
+            return TakeFor::Refused;
+        };
+        // The holder closes the inbox, and it lends nothing while it does, so
+        // this reads what it was when the lend was made.
+        if self.inbox.is_closed() {
+            drop(lent);
+            return TakeFor::Refused;
+        }
+        std::mem::forget(lent);
+        TakeFor::Taken
+    }
+
+    fn ended(&self) -> bool {
+        self.inbox.is_closed()
     }
 
     fn release(&self) {
@@ -1699,11 +1718,6 @@ impl interrexx_api::values::Baton for Requester {
         true
     }
 
-    /// Once the interpreter has terminated, whose inbox nothing reads from then on.
-    fn ended(&self) -> bool {
-        self.inbox.is_closed()
-    }
-
     fn post_halt(&self) {
         self.inbox.post_halt();
     }
@@ -1714,14 +1728,27 @@ impl interrexx_api::values::Baton for Requester {
 
     /// Recalls the baton as a callback does, with the running activity left
     /// as it is, and ends the attached activity under the lend.
-    fn detach_activity(&self, context: usize) {
-        if let Some(mut lent) = self.lend_here() {
-            lent.interp().detach_activity(context);
-        }
+    fn detach_activity(&self, context: usize) -> bool {
+        self.lend_here()
+            .is_some_and(|mut lent| lent.interp().detach_activity(context))
     }
 }
 
 impl Requester {
+    /// The recall a callback through the context at `context` posts, `0`
+    /// for one that leaves the running activity as it is. A thread attached
+    /// to an embedding instance runs Rexx code on its own stack, as far as
+    /// the part of it below a quarter's reserve.
+    fn recall(&self, context: usize) -> Posted {
+        let stack = interrexx_api::ffi::attached_stack();
+        Posted::Recall(Recall {
+            by: Recaller::Context(context),
+            thread: std::thread::current().id(),
+            base: stack.map(|(top, _)| top),
+            room: stack.map(|(_, size)| size - size / 4),
+        })
+    }
+
     /// The baton, recalled from its holder and lent to this thread with the
     /// running activity left as it is, until the answer drops. `None` where
     /// this thread holds it already, or the interpreter has terminated, so
@@ -1736,7 +1763,12 @@ impl Requester {
             base: None,
             room: None,
         }));
-        posted.then(|| Lent::wait(&self.baton))
+        if !posted {
+            return None;
+        }
+        // Posted just before the interpreter closed its inbox, and dropped
+        // with it unserved: nothing lends the baton.
+        Lent::wait_unless_closed(&self.baton)
     }
 }
 
@@ -1868,13 +1900,7 @@ impl Host for Interp {
     }
 
     fn constants(&mut self) -> Constants<ObjRef> {
-        Constants {
-            nil: ObjRef::NIL,
-            // #599, ruling D15: the handles of `.true` and `.false`.
-            true_object: crate::eval::LOGICAL_TRUE,
-            false_object: crate::eval::LOGICAL_FALSE,
-            null_string: self.text(b""),
-        }
+        constant_objects()
     }
 
     fn set_object_variable(&mut self, name: &[u8], value: Option<ObjRef>) {
@@ -2513,4 +2539,17 @@ fn terminated(bytes: &[u8]) -> Box<[u8]> {
 /// under.
 fn pinned_copy_key(copy: ObjRef) -> String {
     format!("a Routine copy a call site keeps, {}", copy.bits())
+}
+
+/// The interpreter's constants a thread table's data members carry: `.nil`,
+/// `.true`, `.false` and the null string, each an immediate, so the same for
+/// every interpreter and from its start.
+pub(crate) fn constant_objects() -> Constants<ObjRef> {
+    Constants {
+        nil: ObjRef::NIL,
+        // #599, ruling D15: the handles of `.true` and `.false`.
+        true_object: crate::eval::LOGICAL_TRUE,
+        false_object: crate::eval::LOGICAL_FALSE,
+        null_string: ObjRef::inline_text(b"").expect("the null string is inline"),
+    }
 }

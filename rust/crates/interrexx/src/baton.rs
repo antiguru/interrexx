@@ -20,6 +20,8 @@ struct State<L> {
     holder: Option<thread::ThreadId>,
     /// The lends in force, innermost last.
     lends: Vec<Lend<L>>,
+    /// Nothing will lend it again ([`Baton::close`]).
+    closed: bool,
 }
 
 struct Lend<L> {
@@ -35,6 +37,7 @@ impl<L: Copy> Baton<L> {
             state: Mutex::new(State {
                 holder: None,
                 lends: Vec::new(),
+                closed: false,
             }),
             changed: Condvar::new(),
             #[cfg(all(test, not(loom)))]
@@ -150,6 +153,34 @@ impl<L: Copy> Baton<L> {
             }
             state = wait(&self.changed, state);
         }
+    }
+
+    /// [`Baton::await_lend`], or `None` once the baton is closed
+    /// ([`Baton::close`]) with no lend to this thread: what this thread
+    /// waits for will never come.
+    pub(crate) fn await_lend_unless_closed(&self) -> Option<L> {
+        let me = thread::current().id();
+        let mut state = lock(&self.state);
+        loop {
+            if state.holder == Some(me)
+                && let Some(lend) = state.lends.last()
+                && lend.lendee == me
+            {
+                return Some(lend.lent);
+            }
+            if state.closed {
+                return None;
+            }
+            state = wait(&self.changed, state);
+        }
+    }
+
+    /// Wakes every thread in [`Baton::await_lend_unless_closed`], and every
+    /// later one, with `None`: the state the baton guards is gone, and no
+    /// holder is left to lend it.
+    pub(crate) fn close(&self) {
+        lock(&self.state).closed = true;
+        self.changed.notify_all();
     }
 
     /// What was lent with the baton, where this thread holds it by the

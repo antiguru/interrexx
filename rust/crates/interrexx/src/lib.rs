@@ -1308,6 +1308,9 @@ struct Interp {
     timer: crate::timer::Registration,
     /// The right to touch this interpreter's state.
     baton: crate::sync::Arc<crate::island::InterpBaton>,
+    /// Closes `baton` when the interpreter is dropped, waking a callback
+    /// whose recall nothing served (`r[native.threads.end]`).
+    _closing: crate::island::Closing,
     /// The deterministic switch mode, where a test set one.
     switch: Option<crate::scheduler::Switch>,
     /// The simulation mode's state, where the switch mode is `Sim`.
@@ -2316,8 +2319,17 @@ impl Interp {
         baton.acquire();
         let timer = crate::timer::Registration::new();
         let requester = crate::dispatch::library::Requester::new(&baton, timer.inbox());
-        let thread_table =
-            interrexx_api::ffi::ThreadTable::requesting(crate::sync::Arc::new(requester));
+        let constants = crate::dispatch::library::constant_objects();
+        let handle = interrexx_api::handles::handle_of;
+        let thread_table = interrexx_api::ffi::ThreadTable::requesting(
+            crate::sync::Arc::new(requester),
+            interrexx_api::values::Constants {
+                nil: handle(constants.nil),
+                true_object: handle(constants.true_object),
+                false_object: handle(constants.false_object),
+                null_string: handle(constants.null_string),
+            },
+        );
         Interp {
             heap: Heap::new(),
             roots: RootSet::new(),
@@ -2355,6 +2367,7 @@ impl Interp {
             stack_base: 0,
             stack_room: usize::MAX,
             timer,
+            _closing: crate::island::Closing(crate::sync::Arc::clone(&baton)),
             baton,
             switch: None,
             sim: None,
@@ -3440,6 +3453,8 @@ impl Interp {
             stack_room: _,
             timer: _,
             baton: _,
+            // The baton again, which it closes when dropped.
+            _closing: _,
             pool: _,
             switch: _,
             sim: _,

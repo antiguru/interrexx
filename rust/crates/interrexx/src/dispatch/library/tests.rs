@@ -1097,3 +1097,55 @@ fn a_native_buffers_bytes_are_charged_and_held() {
         "held_bytes reports the buffer's {N} bytes, got {held}"
     );
 }
+
+/// A callback from a thread running no native call, through `context`, on a
+/// thread of its own, which has posted its recall once this returns.
+fn pending_callback(
+    interp: &Interp,
+    context: usize,
+) -> std::thread::JoinHandle<interrexx_api::values::TakeFor> {
+    use interrexx_api::values::Baton as _;
+    let requester = super::Requester::new(&interp.baton, interp.timer.inbox());
+    let inbox = interp.timer.inbox();
+    let waiting = std::thread::spawn(move || requester.take_for(context));
+    while !inbox.requests().pending(crate::timer::INBOX) {
+        std::thread::yield_now();
+    }
+    waiting
+}
+
+/// **A callback whose recall is posted and waiting for the baton when the
+/// interpreter ends is woken and refused** (`r[native.threads.end]`), in both
+/// ways the end can find it: the interpreter terminates and is dropped with
+/// the recall unserved, or it serves the recall after it terminated.
+#[test]
+fn a_pending_callback_at_end_is_refused() {
+    use interrexx_api::values::TakeFor;
+    let mut interp = Interp::new();
+    let unserved = pending_callback(&interp, 1);
+    assert!(interp.terminate().is_empty());
+    drop(interp);
+    assert_eq!(unserved.join().expect("no panic"), TakeFor::Refused);
+
+    let mut interp = Interp::new();
+    let served = pending_callback(&interp, 1);
+    assert!(interp.terminate().is_empty());
+    interp.drain_completions();
+    assert_eq!(served.join().expect("no panic"), TakeFor::Refused);
+    // One posted after the end is refused without a wait.
+    let late = pending_callback_unposted(&interp, 1);
+    assert_eq!(late, TakeFor::Refused);
+}
+
+/// [`pending_callback`]'s callback made on this thread after the
+/// interpreter has terminated, when nothing is posted.
+fn pending_callback_unposted(interp: &Interp, context: usize) -> interrexx_api::values::TakeFor {
+    use interrexx_api::values::Baton as _;
+    let requester = super::Requester::new(&interp.baton, interp.timer.inbox());
+    std::thread::scope(|scope| {
+        scope
+            .spawn(|| requester.take_for(context))
+            .join()
+            .expect("no panic")
+    })
+}
