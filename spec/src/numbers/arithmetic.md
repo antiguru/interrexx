@@ -365,26 +365,32 @@ say (10 ** 999999999) (2e333333333 ** 3) (3e-333333333 ** 3)
 ```
 
 r[num.arithmetic.power.message]
-The message of the `SYNTAX 42.1` error names the base and the exponent as the
-program wrote them, not as the numbers they denote, with `**` between them.
+The `ADDITIONAL` array of the `SYNTAX 42.1` error holds three items, the base
+and the exponent as the program wrote them, not as the numbers they denote, with
+the string `**` between them.
 
 ```rexx
 signal on syntax name a
 say 1e3 ** 999999999
-a: say condition('o')~message
+a: call show
 signal on syntax name b
 say ' 100 ' ** '999999999'
-b: say condition('o')~message
+b: call show
 x = 1e3
 signal on syntax name c
 say x ** 99999999e1
-c: say condition('o')~message
+c: call show
+exit
+show: l = ''
+do v over condition('o')~additional; l = l'['v']'; end
+say l
+return
 ```
 
 ```output
-Arithmetic overflow detected at:  "1E3**999999999".
-Arithmetic overflow detected at:  " 100 **999999999".
-Arithmetic overflow detected at:  "1E3**99999999E1".
+[1E3][**][999999999]
+[ 100 ][**][999999999]
+[1E3][**][99999999E1]
 ```
 
 ## Errors in the multiplicative and additive operators

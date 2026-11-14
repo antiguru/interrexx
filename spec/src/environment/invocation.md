@@ -33,7 +33,8 @@ r[env.invocation.forms]
 A command with no words, or whose words end before a program name or a string
 is found, runs nothing: it writes a usage text, a blank line and then three
 lines, to its standard error stream, and ends with the status 255. The text
-names the three forms. The words that lead up to the end are the option words
+names the three forms; its wording is not specified, as [the rule on error
+messages](r:conv.error.text) says. The words that lead up to the end are the option words
 of the next rule, so `rexx -x`, `rexx -e`, `rexx -o` and `rexx -o` with its
 string and nothing more all give the usage text.
 
@@ -387,7 +388,7 @@ errors, and so is a name after the first flag, as in `rexxc a.rex -s b.rxo`.
 The command then writes a line that says its parameters are incorrect and the
 usage text, to its standard output stream, and ends with the status 255,
 before it looks for the program. With no words at all it writes the usage text
-alone, with the same status.
+alone, with the same status. The wording of both is not specified.
 
 r[env.invocation.rexxc.check]
 Without an output name `rexxc` only translates the program and keeps nothing
@@ -405,9 +406,8 @@ states.
 
 r[env.invocation.rexxc.names]
 When the output name and the program name are the same string of bytes, the
-command ends with the status 254 and the line `Output file name must be
-different from input file name.` on its standard output stream, before it
-looks for the program, so that it ends so even when no such program exists.
+command ends with the status 254 and a line that says the two names must
+differ, on its standard output stream, before it looks for the program, so that it ends so even when no such program exists.
 Words that are in error ([the words rule](r:env.invocation.rexxc.words)) are
 reported before this check, so that `rexxc a a -x` ends with 255. The check
 compares the two words and not the files they name: for it `a` and `a.rex`, or

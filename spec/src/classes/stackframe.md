@@ -290,11 +290,11 @@ number of its line in six columns, `*-*` and the clause, indented as [the
 indentation rule](r:instr.trace.indent) says, which counts one level for each
 active internal call. [Deviation 0](r:class.stackframe.deviation.0) covers the
 indentation that a program reads back. The string of a built-in method's frame
-is seven blanks, `*-*`, a blank and `Compiled method "NAME" with scope
-"Class".`, with the method's name in upper case and the id of the class that
-defines it.
-The number in the line of a method of the class library, and its
-indentation, are not specified, as [the library rule](r:cond.information.library)
+is seven blanks, `*-*`, a blank and a text that names the method; the text is not
+specified,
+as [the rule on error messages](r:conv.error.text) says for text that the
+interpreter writes. The number in the line of a method of the class library, and
+its indentation, are not specified, as [the library rule](r:cond.information.library)
 says.
 
 ```rexx
@@ -330,13 +330,14 @@ show:
 exit
 ::class o
 ::method m
-  say '['.context~stackFrames[2]~traceLine']'
+  t = .context~stackFrames[2]~traceLine
+  say (t~word(1) == '*-*') (t~words > 1)
 ```
 
 ```output
-[       *-* Compiled method "SEND" with scope "Object".]
-[       *-* Compiled method "SENDWITH" with scope "Object".]
-[       *-* Compiled method "SEND" with scope "Message".]
+1 1
+1 1
+1 1
 ```
 
 r[class.stackframe.arguments]

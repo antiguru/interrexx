@@ -85,17 +85,19 @@ t: parse arg expr
   interpret 'v =' expr
   say expr '=>' v
   return
-e: say expr '=>' condition('o')~code condition('o')~message
+e: l = ''
+  do v over condition('o')~additional; l = l'['v']'; end
+  say expr '=>' condition('o')~code l
   return
 ::requires 'specfixture' LIBRARY
 ```
 
 ```output
-fxadd(1) => 88.901 Missing argument; argument 2 is required.
-fxadd(, 1) => 88.901 Missing argument; argument 1 is required.
-fxadd(1, 2, 3) => 88.922 Too many arguments in invocation; 2 expected.
+fxadd(1) => 88.901 [2]
+fxadd(, 1) => 88.901 [1]
+fxadd(1, 2, 3) => 88.922 [2]
 fxoptional() fxoptional(,) fxoptional(3) => omitted omitted 3
-fxoptional('x') => 88.907 Argument 1 must be in the range -2147483648 to 2147483647; found "x".
+fxoptional('x') => 88.907 [1][-2147483648][2147483647][x]
 ```
 
 r[native.calls.arglist]
@@ -165,8 +167,9 @@ LIT
 r[native.calls.raise]
 A routine or method may raise a `SYNTAX` error with a number and its
 substitutions. The code goes on running after it has raised the error, and the
-error is raised in the caller when the call returns, with the message that
-`RAISE SYNTAX` with that number and those substitutions would give; the
+error is raised in the caller when the call returns, with the substitutions
+that `RAISE SYNTAX` with that number and those substitutions would give in
+`ADDITIONAL`; the
 result of the call is not delivered. The fixture's routine raises `40.900` and
 then sets a variable of the caller, which shows that it ran on; its method
 raises `93.900`. An error that nothing traps ends the program as any `SYNTAX`
@@ -176,19 +179,19 @@ error does, and the traceback names the routine.
 after = 'unset'
 signal on syntax name s
 say fxraise('boom')
-s: say condition('o')~code '['condition('o')~message']' after symbol('RESULT')
+s: say condition('o')~code '['condition('o')~additional[1]']' after symbol('RESULT')
 o = .n2zqk~new
 signal on syntax name m
 say o~bad('bad thing')
-m: say condition('o')~code '['condition('o')~message']'
+m: say condition('o')~code '['condition('o')~additional[1]']'
 ::requires 'specfixture' LIBRARY
 ::class n2zqk
 ::method bad external "LIBRARY specfixture FxMethodRaise"
 ```
 
 ```output
-40.900 [boom.] ran on LIT
-93.900 [bad thing.]
+40.900 [boom] ran on LIT
+93.900 [bad thing]
 ```
 
 ```rexx

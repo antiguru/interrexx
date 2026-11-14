@@ -503,6 +503,37 @@ e: say condition('c') condition('o')~code rc
 SYNTAX 93.924 93
 ```
 
+r[conv.error.text]
+The wording of a message is unspecified wherever it reaches a program: the
+result of the ERRORTEXT builtin, the `ERRORTEXT` and `MESSAGE` entries of a
+condition object and the text that `CONDITION('D')` carries where it holds a
+message, the report that an error writes to the error stream after its frame,
+the notice and the error lines of interactive tracing, the text of a trace
+line that names a library method, the answers of SysGetMessage for the
+interpreter's own catalog and of SysGeterrnomsg, the C API's functions that
+answer the text of an error, the usage texts of the commands, and the messages
+of the utility programs. What is specified is the code, the number and the
+order of the inserts that `ADDITIONAL` holds, the values they hold, and for the
+report the frame that names the error number, the program and the line (`Error
+N running F line L:`, or `Error N.M:` where no line applies). A message exists
+for a number or it does not, as the [ERRORTEXT rules](r:bif.errortext.result)
+say, and an example in this book shows a message only by whether it is the
+null string or equals another message, never by its words. The words `Error`,
+`running` and `line` of the frame and the names of the months are short names
+that stay as they are, not wording that is free.
+
+```rexx
+signal on syntax name e
+x = substr('abc', 0)
+e: o = condition('o')
+say (errortext(93) \== '') (o~errortext == errortext(93)) (o~message \== ''),
+    o~additional~items
+```
+
+```output
+1 1 1 1
+```
+
 r[conv.returns]
 A rule that says a builtin "returns" a string means that the function
 call's value is exactly that string: the same characters in the same order,
@@ -586,7 +617,7 @@ u: say condition('o')~code rc
 r[conv.string.builtin-argument]
 Where the `STRING` method of a builtin's argument answers an object with no
 string value, and the builtin reads that argument as a string, the builtin
-raises `SYNTAX 88.909`, "Argument N must have a string value", as the method
+raises `SYNTAX 88.909`, as the method
 the builtin stands for does. `N` is the position of the argument among the
 arguments of that method, which does not count the receiver, the string the
 builtin works on. So `CHANGESTR(needle, haystack, new)` numbers the needle 1

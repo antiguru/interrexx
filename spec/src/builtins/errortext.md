@@ -8,8 +8,11 @@ rexxref: "Functions > Built-in Functions > ERRORTEXT"
 
 # ERRORTEXT
 
-ERRORTEXT answers the message that goes with an error number: the sentence
-that names the kind of error, without the number, the program or the line.
+ERRORTEXT answers the message that goes with an error number: the text that
+names the kind of error, without the number, the program or the line. What
+the text says is not part of the book (see [the rule on error
+messages](r:conv.error.name)), so the examples of this page look at whether a
+message exists and at which numbers share one, never at its words.
 
 ## Arguments
 
@@ -55,8 +58,8 @@ is both out of range and not whole, such as 100.5, raises `SYNTAX 40.12`.
 
 ```rexx
 numeric digits 1
-say errortext(26) '/' errortext(26.0) '/' errortext(' 26 ') '/' errortext('026'),
-    '/' errortext(2.6e1) '/' errortext(99)
+say (errortext(26) \== '') (errortext(26.0) == errortext(26)) (errortext(' 26 ') == errortext(26)),
+    (errortext('026') == errortext(26)) (errortext(2.6e1) == errortext(26)) (errortext(99) \== '')
 say '['errortext('-0')']'
 signal on syntax name a
 say errortext(100)
@@ -82,7 +85,7 @@ g: say condition('o')~code
 ```
 
 ```output
-Invalid whole number. / Invalid whole number. / Invalid whole number. / Invalid whole number. / Invalid whole number. / Translation error.
+1 1 1 1 1 1
 []
 40.903
 40.903
@@ -97,73 +100,73 @@ Invalid whole number. / Invalid whole number. / Invalid whole number. / Invalid 
 
 r[bif.errortext.result]
 For an error number `n` that has a message, ERRORTEXT returns the text of the
-message: a sentence that ends in a period, with no error number, no subcode
-and no values filled in. Error numbers are the major numbers of the
+message, which is not the null string, with no error number and no subcode.
+Its wording is unspecified. Error numbers are the major numbers of the
 `SYNTAX` conditions, and a subcode is not an argument: `ERRORTEXT(40)` is the
 text for every error `40.n`. The numbers 3 to 11, 13 to 31, 33 to 49, 88 to 93
-and 97 to 99 have a message, and the following lists them all.
+and 97 to 99 have a message, and the example lists them all.
 
 ```rexx
 do i = 0 to 99
-  if errortext(i) \== '' then say i errortext(i)
+  if errortext(i) \== '' then say i
 end
 ```
 
 ```output
-3 Failure during initialization.
-4 Program interrupted.
-5 System resources exhausted.
-6 Unmatched "/*" or quote.
-7 WHEN or OTHERWISE expected.
-8 Unexpected THEN or ELSE.
-9 Unexpected WHEN or OTHERWISE.
-10 Unexpected or unmatched END.
-11 Control stack full.
-13 Invalid character in program.
-14 Incomplete DO/LOOP/SELECT/IF.
-15 Invalid hexadecimal or binary string.
-16 Label not found.
-17 Unexpected PROCEDURE.
-18 THEN expected.
-19 String or symbol expected.
-20 Symbol expected.
-21 Invalid data on end of clause.
-22 Invalid character string.
-23 Invalid data string.
-24 Invalid TRACE request.
-25 Invalid subkeyword found.
-26 Invalid whole number.
-27 Invalid DO or LOOP syntax.
-28 Invalid LEAVE or ITERATE.
-29 Environment name too long.
-30 Name or symbol too long.
-31 Name starts with number or ".".
-33 Invalid expression result.
-34 Logical value not 0 or 1.
-35 Invalid expression.
-36 Unmatched "(" or "[" in expression.
-37 Unexpected ",", ")", or "]".
-38 Invalid template or pattern.
-39 Evaluation stack overflow.
-40 Incorrect call to routine.
-41 Bad arithmetic conversion.
-42 Arithmetic overflow/underflow.
-43 Routine not found.
-44 Function or message did not return data.
-45 No data specified on function RETURN.
-46 Invalid variable reference.
-47 Unexpected label.
-48 Failure in system service.
-49 Interpretation error.
-88 Invalid argument.
-89 Variable or message term expected.
-90 External name not found.
-91 No result object.
-92 OLE error.
-93 Incorrect call to method.
-97 Object method not found.
-98 Execution error.
-99 Translation error.
+3
+4
+5
+6
+7
+8
+9
+10
+11
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+88
+89
+90
+91
+92
+93
+97
+98
+99
 ```
 
 r[bif.errortext.undefined]
@@ -195,14 +198,14 @@ signal on syntax name h
 x = 1 + 'a'
 h:
 c = condition('o')
-say c~rc errortext(c~rc) (errortext(c~rc) == c~errortext)
+say c~rc (errortext(c~rc) \== '') (errortext(c~rc) == c~errortext)
 ```
 
 ```output
-41 Bad arithmetic conversion. 1
+41 1 1
 ```
 
 > **Note.** The ANSI draft (9.5.5) gives ERRORTEXT a second argument, `S`,
 > that selects the standard English text. ooRexx takes one argument only, and
 > so does interrexx: a second argument raises `SYNTAX 40.4`. The texts are
-> those of ooRexx's message catalogue, in English.
+> interrexx's own and are not specified.
