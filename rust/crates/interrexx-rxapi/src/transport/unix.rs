@@ -65,11 +65,14 @@ pub fn service_dir() -> PathBuf {
     dir
 }
 
-/// Whether a socket in `dir` has a path the platform can bind.
+/// Whether a socket in `dir` has a path the service can bind and a client can connect to. The
+/// check is the one `UnixListener::bind` and `UnixStream::connect` make, which leaves room for
+/// the terminating NUL in `sun_path`: a path that fills `sun_path` exactly is refused there, so
+/// it is refused here.
 fn socket_fits(dir: &Path) -> bool {
     let socket = socket_path(dir, PROTOCOL_VERSION);
     let socket = std::path::absolute(&socket).unwrap_or(socket);
-    rustix::net::SocketAddrUnix::new(socket.as_path()).is_ok()
+    std::os::unix::net::SocketAddr::from_pathname(&socket).is_ok()
 }
 
 /// The directory, and `REXX_API_DIR`'s value where it was set and passed over.
@@ -484,6 +487,31 @@ mod tests {
         );
         let fits = format!("/{}", "d".repeat(80));
         assert_eq!(chosen(Some(&fits), None), (PathBuf::from(&fits), None));
+    }
+
+    /// A directory is taken exactly when its socket can be bound, on both sides of the
+    /// platform's limit, including a path that fills `sun_path` with no room for the NUL.
+    #[test]
+    fn a_directory_is_taken_exactly_when_its_socket_binds() {
+        let root = std::env::temp_dir().join(format!("rxapi-fit-{}", std::process::id()));
+        let (mut taken, mut passed) = (0, 0);
+        for length in 96..=116 {
+            let base = root.join(length.to_string());
+            let socket_len = |dir: &Path| socket_path(dir, PROTOCOL_VERSION).as_os_str().len();
+            let pad = length - socket_len(&base.join("p")) + 1;
+            let dir = base.join("p".repeat(pad));
+            assert_eq!(socket_len(&dir), length);
+            fs::create_dir_all(&dir).expect("a directory");
+            let binds =
+                std::os::unix::net::UnixListener::bind(socket_path(&dir, PROTOCOL_VERSION)).is_ok();
+            assert_eq!(socket_fits(&dir), binds, "a socket path of {length} bytes");
+            if binds { taken += 1 } else { passed += 1 }
+        }
+        let _ = fs::remove_dir_all(&root);
+        assert!(
+            taken > 0 && passed > 0,
+            "the lengths cross the limit: {taken} {passed}"
+        );
     }
 
     /// A listener in a private directory, which `uid` here is never the owner of.
