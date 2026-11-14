@@ -2186,6 +2186,22 @@ impl Interp {
         }
     }
 
+    /// Marks the running activity as a callback that runs, as a lend to it
+    /// does, where `running`, and ends that where not.
+    #[cfg(test)]
+    pub(crate) fn pretend_callback_runs(&mut self, running: bool) {
+        if running {
+            let activity = self.activities.running;
+            self.activities.lends.push(Lend {
+                lender: activity,
+                lendee: activity,
+                waiting: false,
+            });
+        } else {
+            self.activities.lends.pop();
+        }
+    }
+
     /// The address of a context `AttachThread` would have built for a foreign
     /// thread, pending until a callback through it files it.
     #[cfg(test)]
@@ -2485,8 +2501,10 @@ impl Interp {
             if !others {
                 return Ok(());
             }
+            // A held callback can run, so it keeps the end from refusing.
             if table.ready.is_empty()
                 && table.sleepers.is_empty()
+                && table.held.is_empty()
                 && table.in_flight == table.runs_below
             {
                 if self.sim.is_some() {
@@ -2638,7 +2656,9 @@ impl Interp {
             let Some(ready) = next else {
                 let stall = self.activities.stall.map(|stall| stall.due);
                 let Some(Reverse((due, _, _))) = self.activities.sleepers.peek().copied() else {
-                    if self.activities.in_flight == self.activities.runs_below {
+                    if self.activities.in_flight == self.activities.runs_below
+                        && self.activities.held.is_empty()
+                    {
                         return Ok(None);
                     }
                     match stall {

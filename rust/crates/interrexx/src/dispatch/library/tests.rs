@@ -1157,3 +1157,48 @@ fn pending_callback_unposted(interp: &Interp, context: usize) -> interrexx_api::
             .expect("no panic")
     })
 }
+
+/// **A callback that arrives while another runs is held, and the held ones
+/// are served first come, first served, once it has stopped running**
+/// (`r[native.threads.attach.deviation.174]`). Three threads attached to
+/// contexts of their own post their recalls one after another while the
+/// running activity is marked as a callback that runs: draining serves none.
+/// Once it no longer runs, one drain serves all three in the order they
+/// arrived.
+#[test]
+fn callbacks_held_while_one_runs_are_served_in_arrival_order() {
+    use interrexx_api::values::{Baton as _, TakeFor};
+    let mut interp = Interp::new();
+    interp.pretend_callback_runs(true);
+    let served = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+    let inbox = interp.timer.inbox();
+    let mut threads = Vec::new();
+    for arrival in 0..3 {
+        let context = interp
+            .pending_attached_context()
+            .expect("a live interpreter with a requester builds one");
+        let requester = super::Requester::new(&interp.baton, interp.timer.inbox());
+        let served = std::sync::Arc::clone(&served);
+        threads.push(std::thread::spawn(move || {
+            let taken = requester.take_for(context);
+            if taken == TakeFor::Taken {
+                served.lock().expect("no panic").push(arrival);
+                requester.release();
+            }
+            taken
+        }));
+        while !inbox.requests().pending(crate::timer::INBOX) {
+            std::thread::yield_now();
+        }
+        interp.drain_completions();
+        assert_eq!(interp.activities.held.len(), arrival + 1);
+    }
+    assert!(served.lock().expect("no panic").is_empty());
+    interp.pretend_callback_runs(false);
+    interp.drain_completions();
+    for thread in threads {
+        assert_eq!(thread.join().expect("no panic"), TakeFor::Taken);
+    }
+    assert_eq!(*served.lock().expect("no panic"), [0, 1, 2]);
+    assert!(interp.activities.held.is_empty());
+}
