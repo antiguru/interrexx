@@ -438,6 +438,7 @@ mod tests {
     use super::super::dispatch;
     use crate::error::Failure;
     use crate::{Interp, Invocation, run_program};
+    use interrexx_inventory::errors::expand;
 
     /// Runs `source` as a whole program and hands back the stdout it
     /// produced, having first insisted the run ended cleanly.
@@ -583,7 +584,7 @@ mod tests {
     fn errortext_answers_the_major_message_and_refuses_the_range_ends() {
         assert_eq!(
             output(b"say errortext(5)\nsay '['errortext(0)']'\nsay errortext(99)\n"),
-            "System resources exhausted.\n[]\nTranslation error.\n"
+            expand("⟨5⟩\n[]\n⟨99⟩\n")
         );
         assert_eq!(
             raised(b"ERRORTEXT", &[b"-1"]),
@@ -618,11 +619,11 @@ mod tests {
             failure(b"say sourceline(0)\n"),
             (
                 216,
-                concat!(
+                expand(concat!(
                     "     1 *-* say sourceline(0)\n",
-                    "Error 40 running /t.rex line 1:  Incorrect call to routine.\n",
-                    "Error 40.14:  SOURCELINE argument 1 must be positive; found \"0\".\n",
-                )
+                    "Error 40 running /t.rex line 1:  ⟨40⟩\n",
+                    "Error 40.14:  ⟨40.14¦SOURCELINE¦1¦0⟩\n",
+                ))
                 .to_string()
             )
         );
@@ -630,11 +631,11 @@ mod tests {
             failure(b"say sourceline(99)\n"),
             (
                 216,
-                concat!(
+                expand(concat!(
                     "     1 *-* say sourceline(99)\n",
-                    "Error 40 running /t.rex line 1:  Incorrect call to routine.\n",
-                    "Error 40.34:  SOURCELINE argument 1 (\"99\") must be less than or equal to the number of lines in the program (1).\n",
-                )
+                    "Error 40 running /t.rex line 1:  ⟨40⟩\n",
+                    "Error 40.34:  ⟨40.34¦99¦1⟩\n",
+                ))
                 .to_string()
             )
         );
@@ -801,16 +802,13 @@ mod tests {
         let (code, stderr) = failure(b"say sourceline(1e1)\n");
         assert_eq!(code, 216, "{stderr}");
         assert!(
-            stderr.contains(
-                "Error 40.34:  SOURCELINE argument 1 (\"10\") must be less than or \
-                             equal to the number of lines in the program (1)."
-            ),
+            stderr.contains(&expand("Error 40.34:  ⟨40.34¦10¦1⟩")),
             "{stderr}"
         );
         let (code, stderr) = failure(b"say sourceline(0.0)\n");
         assert_eq!(code, 216, "{stderr}");
         assert!(
-            stderr.contains("Error 40.14:  SOURCELINE argument 1 must be positive; found \"0\"."),
+            stderr.contains(&expand("Error 40.14:  ⟨40.14¦SOURCELINE¦1¦0⟩")),
             "{stderr}"
         );
     }
@@ -822,33 +820,32 @@ mod tests {
         for (source, expected) in [
             (
                 b"numeric digits 3; say errortext(999999+1)\n".as_slice(),
-                "Error 40.903:  ERRORTEXT argument 1 must be in the range 0-99; found \"1000000\".",
+                "Error 40.903:  ⟨40.903¦ERRORTEXT¦1¦1000000⟩",
             ),
             (
                 b"numeric digits 3; z = 999999+1; numeric digits 9; say errortext(z)\n".as_slice(),
-                "Error 40.903:  ERRORTEXT argument 1 must be in the range 0-99; found \"1000000\".",
+                "Error 40.903:  ⟨40.903¦ERRORTEXT¦1¦1000000⟩",
             ),
             (
                 b"numeric digits 3; say arg(-(999999+1))\n".as_slice(),
-                "Error 40.14:  ARG argument 1 must be positive; found \"-1000000\".",
+                "Error 40.14:  ⟨40.14¦ARG¦1¦-1000000⟩",
             ),
             (
                 b"numeric digits 3; say sourceline(999999+1)\n".as_slice(),
-                "Error 40.34:  SOURCELINE argument 1 (\"1000000\") must be less than or equal to \
-                 the number of lines in the program (1).",
+                "Error 40.34:  ⟨40.34¦1000000¦1⟩",
             ),
             // And the 40.12 half under the same crossing, which does read
             // the captured rendering: `1/3` at `DIGITS 3` is `0.333`, and
             // stays `0.333` after `DIGITS 9`.
             (
                 b"numeric digits 3; z = 1/3; numeric digits 9; say errortext(z)\n".as_slice(),
-                "Error 40.12:  ERRORTEXT argument 1 must be a whole number; found \"0.333\".",
+                "Error 40.12:  ⟨40.12¦ERRORTEXT¦1¦0.333⟩",
             ),
         ] {
             let (code, stderr) = failure(source);
             assert_eq!(code, 216, "{stderr}");
             assert!(
-                stderr.contains(expected),
+                stderr.contains(&expand(expected)),
                 "expected {expected:?} in:\n{stderr}"
             );
         }
@@ -861,10 +858,7 @@ mod tests {
         let (code, stderr) = failure(b"say trace('5')\n");
         assert_eq!(code, 232, "{stderr}");
         assert!(
-            stderr.contains(
-                "Error 24.1:  TRACE request letter must be one of \"ACEFILNOR\"; \
-                             found \"5\"."
-            ),
+            stderr.contains(&expand("Error 24.1:  ⟨24.1¦5⟩")),
             "{stderr}"
         );
         let (code, stderr) = failure(b"trace value 5\n");
@@ -960,11 +954,11 @@ mod tests {
             let echo = String::from_utf8_lossy(&source[..source.len() - 1]).into_owned();
             assert_eq!(
                 stderr,
-                format!(
+                expand(&format!(
                     "     1 *-* {echo}\n\
-                     Error 40 running /t.rex line 1:  Incorrect call to routine.\n\
-                     Error 40.904:  CONDITION argument 1 must be one of ACDEIORS; found \"{found}\".\n"
-                )
+                     Error 40 running /t.rex line 1:  ⟨40⟩\n\
+                     Error 40.904:  ⟨40.904¦CONDITION¦1¦ACDEIORS¦{found}⟩\n"
+                ))
             );
         }
     }

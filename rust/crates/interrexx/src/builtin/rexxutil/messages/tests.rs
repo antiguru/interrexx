@@ -135,11 +135,16 @@ fn the_search_path_expands_each_element() {
 
 #[test]
 fn rexx_messages_are_found_by_message_number() {
-    assert_eq!(rexx_message(5), Some("System resources exhausted."));
-    assert_eq!(
-        rexx_message(678),
-        Some("Argument &1 must be in the range &2 to &3; found \"&4\".")
-    );
+    // The answer is the catalogue's own template, inserts still marked.
+    let template = |major, sub| {
+        Some(
+            interrexx_inventory::errors::lookup(major, sub)
+                .unwrap()
+                .text,
+        )
+    };
+    assert_eq!(rexx_message(5), template(5, 0));
+    assert_eq!(rexx_message(678), template(88, 907));
     assert_eq!(rexx_message(0), None);
     assert_eq!(rexx_message(-1), None);
 }

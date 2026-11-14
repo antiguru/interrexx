@@ -1,5 +1,6 @@
 use super::*;
 use crate::{Invocation, run_program};
+use interrexx_inventory::errors::expand;
 
 /// Runs `source` as a whole program and hands back the stdout it
 /// produced, having first insisted the run ended cleanly.
@@ -279,9 +280,7 @@ fn an_interior_option2_omission_with_osep_supplied_defaults_style2_to_n() {
     let (code, stderr) = failure(b"say date('S','20070922',,'-')\n");
     assert_eq!(code, 216, "{stderr}");
     assert!(
-        stderr.contains(
-            "DATE argument 2, \"20070922\", is not in the format described by argument 3, \"N\"."
-        ),
+        stderr.contains(&expand("⟨40.19¦DATE¦20070922¦N⟩")),
         "{stderr}"
     );
 }
@@ -320,18 +319,16 @@ fn date_day_of_year_zero_is_40_19() {
 /// separately and correctly instead of assuming one answer here.
 #[test]
 fn date_conversion_errors_are_40_19() {
-    for (source, expected_style) in [
-        (&b"call date , '', 'f'\n"[..], "F"),
-        (b"call date 'D', '367', 'D'\n", "D"),
-        (b"call date 'B', '3652059', 'B'\n", "B"),
-        (b"call date 'B', 'not a number', 'B'\n", "B"),
+    for (source, value, expected_style) in [
+        (&b"call date , '', 'f'\n"[..], "", "F"),
+        (b"call date 'D', '367', 'D'\n", "367", "D"),
+        (b"call date 'B', '3652059', 'B'\n", "3652059", "B"),
+        (b"call date 'B', 'not a number', 'B'\n", "not a number", "B"),
     ] {
         let (code, stderr) = failure(source);
         assert_eq!(code, 216, "{stderr}");
         assert!(
-            stderr.contains(&format!(
-                "is not in the format described by argument 3, \"{expected_style}\""
-            )),
+            stderr.contains(&expand(&format!("⟨40.19¦DATE¦{value}¦{expected_style}⟩"))),
             "{stderr}"
         );
     }
@@ -365,10 +362,7 @@ fn date_366_is_valid_only_in_a_leap_year() {
     } else {
         let (code, stderr) = failure(b"say date('D','366','D')\n");
         assert_eq!(code, 216, "{stderr}");
-        assert!(
-            stderr.contains("is not in the format described by argument 3, \"D\"."),
-            "{stderr}"
-        );
+        assert!(stderr.contains(&expand("⟨40.19¦DATE¦366¦D⟩")), "{stderr}");
     }
 }
 
@@ -381,13 +375,13 @@ fn date_and_times_option_lists_match_the_oracles_own_error_insert() {
     let (code, stderr) = failure(b"say date('J')\n");
     assert_eq!(code, 216, "{stderr}");
     assert!(
-        stderr.contains("DATE argument 1 must be one of BDEFILMNOSTUW; found \"J\"."),
+        stderr.contains(&expand("⟨40.904¦DATE¦1¦BDEFILMNOSTUW¦J⟩")),
         "{stderr}"
     );
     let (code, stderr) = failure(b"say time('Z')\n");
     assert_eq!(code, 216, "{stderr}");
     assert!(
-        stderr.contains("TIME argument 1 must be one of CEFHLMNORST; found \"Z\"."),
+        stderr.contains(&expand("⟨40.904¦TIME¦1¦CEFHLMNORST¦Z⟩")),
         "{stderr}"
     );
 }
@@ -440,13 +434,13 @@ fn the_empty_option_renders_as_the_empty_string_not_a_placeholder() {
     let (code, stderr) = failure(b"say date('')\n");
     assert_eq!(code, 216, "{stderr}");
     assert!(
-        stderr.contains("DATE argument 1 must be one of BDEFILMNOSTUW; found \"\"."),
+        stderr.contains(&expand("⟨40.904¦DATE¦1¦BDEFILMNOSTUW¦⟩")),
         "{stderr}"
     );
     let (code, stderr) = failure(b"say time('')\n");
     assert_eq!(code, 216, "{stderr}");
     assert!(
-        stderr.contains("TIME argument 1 must be one of CEFHLMNORST; found \"\"."),
+        stderr.contains(&expand("⟨40.904¦TIME¦1¦CEFHLMNORST¦⟩")),
         "{stderr}"
     );
 }
@@ -566,12 +560,7 @@ fn letters_from_other_dialects_are_rejected_here_too() {
 fn time_conversion_errors_are_40_19() {
     let (code, stderr) = failure(b"call time , '99', 'h'\n");
     assert_eq!(code, 216, "{stderr}");
-    assert!(
-        stderr.contains(
-            "TIME argument 2, \"99\", is not in the format described by argument 3, \"H\"."
-        ),
-        "{stderr}"
-    );
+    assert!(stderr.contains(&expand("⟨40.19¦TIME¦99¦H⟩")), "{stderr}");
 }
 
 /// Supplying an `intime` while asking for the elapsed-time output
@@ -581,16 +570,10 @@ fn time_conversion_errors_are_40_19() {
 fn time_r_or_e_with_an_intime_is_refused_up_front() {
     let (code, stderr) = failure(b"call time 'r', '12:00:00'\n");
     assert_eq!(code, 216, "{stderr}");
-    assert!(
-        stderr.contains("TIME conversion to format \"R\" is not allowed."),
-        "{stderr}"
-    );
+    assert!(stderr.contains(&expand("⟨40.29¦TIME¦R⟩")), "{stderr}");
     let (code, stderr) = failure(b"call time 'e', '12:00:00'\n");
     assert_eq!(code, 216, "{stderr}");
-    assert!(
-        stderr.contains("TIME conversion to format \"E\" is not allowed."),
-        "{stderr}"
-    );
+    assert!(stderr.contains(&expand("⟨40.29¦TIME¦E⟩")), "{stderr}");
 }
 
 /// `option2` present without `intime` is 40.5 naming argument 2, the
@@ -600,10 +583,7 @@ fn time_r_or_e_with_an_intime_is_refused_up_front() {
 fn times_option2_requires_intime() {
     let (code, stderr) = failure(b"call time , , 'n'\n");
     assert_eq!(code, 216, "{stderr}");
-    assert!(
-        stderr.contains("Missing argument in invocation of TIME; argument 2 is required."),
-        "{stderr}"
-    );
+    assert!(stderr.contains(&expand("⟨40.5¦TIME¦2⟩")), "{stderr}");
     assert_eq!(output(b"say time('S', '00:00:01', 'N')\n"), "1\n");
 }
 
@@ -619,10 +599,7 @@ fn times_option2_requires_intime() {
 fn dates_option2_without_indate_is_missing_not_omitted() {
     let (code, stderr) = failure(b"call date 'S', , 'S'\n");
     assert_eq!(code, 216, "{stderr}");
-    assert!(
-        stderr.contains("Missing argument in invocation of DATE; argument 2 is required."),
-        "{stderr}"
-    );
+    assert!(stderr.contains(&expand("⟨40.5¦DATE¦2⟩")), "{stderr}");
     // `.ends_with('\n')` alone is vacuous here -- `SAY` always appends
     // one, so the whole check would be carried by `output()`'s own
     // exit-0 assertion. The normal-format day is 1 or 2 digits, so
@@ -651,20 +628,10 @@ fn dates_option2_without_indate_is_missing_not_omitted() {
 fn separator_errors_are_40_43_and_40_44() {
     let (code, stderr) = failure(b"call date , , , 'a'\n");
     assert_eq!(code, 216, "{stderr}");
-    assert!(
-        stderr.contains(
-            "DATE argument 4 must be a single non-alphanumeric character or the null string; found \"a\"."
-        ),
-        "{stderr}"
-    );
+    assert!(stderr.contains(&expand("⟨40.43¦DATE¦4¦a⟩")), "{stderr}");
     let (code, stderr) = failure(b"call date 'b', , , ''\n");
     assert_eq!(code, 216, "{stderr}");
-    assert!(
-        stderr.contains(
-            "DATE argument 1, \"B\", is a format incompatible with the separator specified in argument 4."
-        ),
-        "{stderr}"
-    );
+    assert!(stderr.contains(&expand("⟨40.44¦DATE¦1¦B¦4⟩")), "{stderr}");
 }
 
 /// A `0x00` byte is a separator, and as an option letter or a format letter it
@@ -681,16 +648,11 @@ fn a_nul_byte_separates_and_is_an_invalid_letter() {
     );
     let (code, stderr) = failure(b"call date '00'x,,,'-'\n");
     assert_eq!(code, 216, "{stderr}");
-    assert!(
-        stderr.contains(
-            "DATE argument 1, \"?\", is a format incompatible with the separator specified in argument 4."
-        ),
-        "{stderr}"
-    );
+    assert!(stderr.contains(&expand("⟨40.44¦DATE¦1¦?¦4⟩")), "{stderr}");
     let (code, stderr) = failure(b"call date , '20070922', '00'x, , '-'\n");
     assert_eq!(code, 216, "{stderr}");
     assert!(
-        stderr.contains("DATE argument 3 must be one of BDEFINOSTU; found \"?\"."),
+        stderr.contains(&expand("⟨40.904¦DATE¦3¦BDEFINOSTU¦?⟩")),
         "{stderr}"
     );
 }
@@ -703,12 +665,7 @@ fn a_nul_byte_separates_and_is_an_invalid_letter() {
 fn an_input_separator_incompatible_with_the_input_style_is_40_44() {
     let (code, stderr) = failure(b"call date , '20070922', 'w', , '-'\n");
     assert_eq!(code, 216, "{stderr}");
-    assert!(
-        stderr.contains(
-            "DATE argument 3, \"W\", is a format incompatible with the separator specified in argument 5."
-        ),
-        "{stderr}"
-    );
+    assert!(stderr.contains(&expand("⟨40.44¦DATE¦3¦W¦5⟩")), "{stderr}");
 }
 
 /// A parse failure with an input separator supplied reports the
@@ -721,9 +678,7 @@ fn a_parse_failure_with_an_input_separator_is_40_44_not_40_19() {
     let (code, stderr) = failure(b"call date , '1 May 2022', , , '-'\n");
     assert_eq!(code, 216, "{stderr}");
     assert!(
-        stderr.contains(
-            "DATE argument 2, \"1 May 2022\", is a format incompatible with the separator specified in argument 5."
-        ),
+        stderr.contains(&expand("⟨40.44¦DATE¦2¦1 May 2022¦5⟩")),
         "{stderr}"
     );
     // The adjacent success is not that same input again: `'1 May
@@ -737,7 +692,7 @@ fn a_parse_failure_with_an_input_separator_is_40_44_not_40_19() {
     let (code, stderr) = failure(b"call date , '1 Zzz 2022'\n");
     assert_eq!(code, 216, "{stderr}");
     assert!(
-        stderr.contains("is not in the format described by argument 3, \"N\"."),
+        stderr.contains(&expand("⟨40.19¦DATE¦1 Zzz 2022¦N⟩")),
         "{stderr}"
     );
 }

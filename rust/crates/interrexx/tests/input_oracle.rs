@@ -8,6 +8,7 @@
 
 mod support;
 
+use interrexx_inventory::errors::expand;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
@@ -855,7 +856,7 @@ fn the_first_seek_of_an_unopened_transient_stream_is_refused() {
     );
     let stderr = String::from_utf8_lossy(&rust.stderr);
     assert!(
-        stderr.ends_with("Error 93.958:  Positioning of transient streams is not valid.\n"),
+        stderr.ends_with(&expand("Error 93.958:  ⟨93.958⟩\n")),
         "{stderr}"
     );
 }

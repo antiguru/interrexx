@@ -1,4 +1,5 @@
 use crate::{Interp, Invocation, Outcome, SwitchMode, run_program};
+use interrexx_inventory::errors::expand;
 use interrexx_parse::parse_program;
 
 /// A bound on every run here: a program end waits for an activity nothing
@@ -496,7 +497,7 @@ fn message_halt_in_the_shape_of_test_halt_start() {
     );
     assert_eq!(
         stderr(&outcome)
-            .matches("Error 4.1:  Program interrupted with HALT condition.")
+            .matches(&expand("Error 4.1:  ⟨4.1¦HALT⟩"))
             .count(),
         2,
         "{}",
@@ -879,10 +880,7 @@ fn nested_pinned_waits_are_bounded_by_the_stack_remaining() {
     );
     assert_eq!(outcome.exit_code, 245, "{}", stderr(&outcome));
     assert_eq!(stdout(&outcome), "");
-    assert!(
-        stderr(&outcome)
-            .contains("Error 11.1:  Insufficient control stack space; cannot continue execution.")
-    );
+    assert!(stderr(&outcome).contains(&expand("Error 11.1:  ⟨11.1⟩")));
 }
 
 /// One activity's recursion through `INTERPRET` stops at the stack remaining

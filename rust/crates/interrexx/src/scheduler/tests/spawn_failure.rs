@@ -1,5 +1,6 @@
 use super::pool::{SHAPE, Shape, run_shaped};
 use crate::test_process::isolated;
+use interrexx_inventory::errors::expand;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 static BODIES: AtomicUsize = AtomicUsize::new(0);
@@ -47,7 +48,7 @@ fn native_spawn_failure_reaches_main_and_started_handlers() {
     assert_eq!(ran.outcome.exit_code, 0, "{}", ran.stderr());
     assert_eq!(
         ran.stdout(),
-        "48.1 Failure in system service: ERROR CREATING THREAD.\n48.1 Failure in system service: ERROR CREATING THREAD.\n48.1 Failure in system service: ERROR CREATING THREAD.\n"
+        expand(&"48.1 ⟨48.1¦ERROR CREATING THREAD⟩\n".repeat(3))
     );
     assert_eq!(BODIES.load(Ordering::SeqCst), 0);
     assert_eq!(ran.exits, 0);

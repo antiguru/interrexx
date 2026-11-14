@@ -1,4 +1,5 @@
 use super::{Interp, ProgramId, form_name, run_program};
+use interrexx_inventory::errors::expand;
 use interrexx_parse::parse_program;
 use interrexx_parse::{DirectiveKind, Expr, ExprKind, Operator, PrefixOp, Program};
 use std::rc::Rc;
@@ -284,15 +285,15 @@ fn a_raise_inside_a_fragment_reports_both_clauses() {
     assert_eq!(outcome.stdout, b"");
     assert_eq!(
         String::from_utf8(outcome.stderr).unwrap(),
-        format!(
+        expand(&format!(
             concat!(
                 "     3 *-*       say 2 & 1;\n",
                 "     3 *-*     interpret \"do jj = 1 to 1; say 2 & 1; end\"\n",
-                "Error 34 running {path} line 3:  Logical value not 0 or 1.\n",
-                "Error 34.901:  Logical value must be exactly \"0\" or \"1\"; found \"2\".\n",
+                "Error 34 running {path} line 3:  ⟨34⟩\n",
+                "Error 34.901:  ⟨34.901¦2⟩\n",
             ),
             path = TEST_PATH
-        )
+        ))
     );
 }
 
@@ -310,8 +311,8 @@ fn a_fragments_activation_base_survives_every_indent_writer_inside_it() {
                 "     2 *-*   say 1/0\n",
                 "     2 *-*   interpret \"select; when 1 = 0 then nop; otherwise nop; \
                  end; say 1/0\"\n",
-                "Error 42 running {path} line 2:  Arithmetic overflow/underflow.\n",
-                "Error 42.3:  Arithmetic overflow; divisor must not be zero.\n",
+                "Error 42 running {path} line 2:  ⟨42⟩\n",
+                "Error 42.3:  ⟨42.3⟩\n",
             ),
         ),
         (
@@ -321,9 +322,8 @@ fn a_fragments_activation_base_survives_every_indent_writer_inside_it() {
             concat!(
                 "     2 *-*   leave zz;\n",
                 "     2 *-*   interpret \"do jj = 1 to 1; leave zz; end\"\n",
-                "Error 28 running {path} line 2:  Invalid LEAVE or ITERATE.\n",
-                "Error 28.3:  Symbol following LEAVE (\"ZZ\") must either match the \
-                 label of a current loop or block instruction.\n",
+                "Error 28 running {path} line 2:  ⟨28⟩\n",
+                "Error 28.3:  ⟨28.3¦ZZ⟩\n",
             ),
         ),
         (
@@ -337,8 +337,8 @@ fn a_fragments_activation_base_survives_every_indent_writer_inside_it() {
             concat!(
                 "     5 *-*             say 1/0;\n",
                 "     5 *-*           interpret \"do jj = 1 to 1; say 1/0; end\"\n",
-                "Error 42 running {path} line 5:  Arithmetic overflow/underflow.\n",
-                "Error 42.3:  Arithmetic overflow; divisor must not be zero.\n",
+                "Error 42 running {path} line 5:  ⟨42⟩\n",
+                "Error 42.3:  ⟨42.3⟩\n",
             ),
         ),
     ];
@@ -350,7 +350,7 @@ fn a_fragments_activation_base_survives_every_indent_writer_inside_it() {
         );
         assert_eq!(
             String::from_utf8(outcome.stderr).unwrap(),
-            expected.replace("{path}", TEST_PATH),
+            expand(&expected.replace("{path}", TEST_PATH)),
             "row {index}"
         );
     }
@@ -400,16 +400,15 @@ fn a_fragment_that_does_not_parse_raises_the_oracles_condition() {
     assert_eq!(outcome.stdout, b"1\n");
     assert_eq!(
         String::from_utf8(outcome.stderr).unwrap(),
-        format!(
+        expand(&format!(
             concat!(
                 "     2 *-* do forever then\n",
                 "     2 *-* interpret \"do forever then\"\n",
-                "Error 27 running {path} line 2:  Invalid DO or LOOP syntax.\n",
-                "Error 27.901:  Incorrect data following FOREVER keyword on the loop; \
-                 found \"THEN\".\n",
+                "Error 27 running {path} line 2:  ⟨27⟩\n",
+                "Error 27.901:  ⟨27.901¦THEN⟩\n",
             ),
             path = TEST_PATH
-        )
+        ))
     );
 
     let outcome = run_program(
@@ -1380,8 +1379,7 @@ fn a_constant_expression_holds_its_classs_guard() {
     assert_eq!(outcome.exit_code, 158);
     assert!(outcome.stdout.is_empty());
     assert!(
-        String::from_utf8_lossy(&outcome.stderr)
-            .ends_with("Error 98.905:  Deadlock detected on a guarded method.\n")
+        String::from_utf8_lossy(&outcome.stderr).ends_with(&expand("Error 98.905:  ⟨98.905⟩\n"))
     );
 }
 
@@ -1441,12 +1439,14 @@ fn a_condition_raised_again_in_a_constant_expression_keeps_its_position() {
     assert_eq!(outcome.exit_code, 214);
     assert_eq!(
         String::from_utf8_lossy(&outcome.stderr),
-        "     9 *-* return 1/0\n\
-         Error 42 running /w/g.rex line 9:  Arithmetic overflow/underflow.\n\
-         Error 42.3:  Arithmetic overflow; divisor must not be zero.\n\
+        expand(
+            "     9 *-* return 1/0\n\
+         Error 42 running /w/g.rex line 9:  ⟨42⟩\n\
+         Error 42.3:  ⟨42.3⟩\n\
          \x20    9 *-* return 1/0\n\
-         Error 42 running /w/g.rex line 7:  Arithmetic overflow/underflow.\n\
-         Error 42.3:  Arithmetic overflow; divisor must not be zero.\n"
+         Error 42 running /w/g.rex line 7:  ⟨42⟩\n\
+         Error 42.3:  ⟨42.3⟩\n"
+        )
     );
 }
 
@@ -1834,8 +1834,7 @@ fn a_references_nostring_syntax_names_its_values_string() {
     );
     assert_eq!(outcome.exit_code, 158);
     assert!(
-        String::from_utf8_lossy(&outcome.stderr)
-            .contains("Error 98.973:  Object \"nstr\" does not have a string representation."),
+        String::from_utf8_lossy(&outcome.stderr).contains(&expand("Error 98.973:  ⟨98.973¦nstr⟩")),
         "{}",
         String::from_utf8_lossy(&outcome.stderr)
     );

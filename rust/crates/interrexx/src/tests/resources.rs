@@ -1,4 +1,5 @@
 use super::run_program;
+use interrexx_inventory::errors::expand;
 
 /// A chain of `Stem` subclass instances, each the next one's default, is
 /// converted and rendered in one walk, and a message it forwards walks it
@@ -87,9 +88,7 @@ fn a_join_rendering_itself_through_defaultname_runs_out_of_stack() {
     assert_eq!(outcome.exit_code, 245);
     assert!(outcome.stdout.is_empty());
     assert!(
-        String::from_utf8_lossy(&outcome.stderr).ends_with(
-            "Error 11.1:  Insufficient control stack space; cannot continue execution.\n"
-        ),
+        String::from_utf8_lossy(&outcome.stderr).ends_with(&expand("Error 11.1:  ⟨11.1⟩\n")),
         "{}",
         String::from_utf8_lossy(&outcome.stderr)
     );

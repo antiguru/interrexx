@@ -1,4 +1,5 @@
 use crate::{Invocation, run_program};
+use interrexx_inventory::errors::expand;
 
 /// Runs `source` and hands back `(exit code, stdout, stderr)`.
 fn run_source(source: &[u8]) -> (i32, String, String) {
@@ -29,13 +30,13 @@ fn an_operator_sent_to_an_array_or_a_native_object_is_a_message() {
             b"say (.Object~superClasses + 1)\n",
             159,
             "",
-            "Object \"an Array\" does not understand message \"+\".",
+            "⟨97.1¦an Array¦+⟩",
         ),
         (
             b"say (.Object~superClasses & 1)\n",
             159,
             "",
-            "Object \"an Array\" does not understand message \"&\".",
+            "⟨97.1¦an Array¦&⟩",
         ),
         // **A build converting through the array's string value answers
         // `1`**: `.Object`'s superclass list holds nothing, so its items
@@ -44,30 +45,15 @@ fn an_operator_sent_to_an_array_or_a_native_object_is_a_message() {
         (b"say (.Object~superClasses == '')\n", 0, "0\n", ""),
         // An array whose joined items *are* a number: identity, not a
         // comparison of `1` against `1`.
-        (
-            b"a = (1,)\nsay (a + 1)\n",
-            159,
-            "",
-            "Object \"an Array\" does not understand message \"+\".",
-        ),
+        (b"a = (1,)\nsay (a + 1)\n", 159, "", "⟨97.1¦an Array¦+⟩"),
         (b"a = (1,)\nsay (a = 1)\n", 0, "0\n", ""),
-        (
-            b"a = (1,)\nsay (a & 1)\n",
-            159,
-            "",
-            "Object \"an Array\" does not understand message \"&\".",
-        ),
-        (
-            b"a = (1,)\nsay \\a\n",
-            159,
-            "",
-            "Object \"an Array\" does not understand message \"\\\".",
-        ),
+        (b"a = (1,)\nsay (a & 1)\n", 159, "", "⟨97.1¦an Array¦&⟩"),
+        (b"a = (1,)\nsay \\a\n", 159, "", "⟨97.1¦an Array¦\\⟩"),
         (
             b"say (.Array~package + 1)\n",
             159,
             "",
-            "Object \"The REXX Package\" does not understand message \"+\".",
+            "⟨97.1¦The REXX Package¦+⟩",
         ),
         // One package object.
         (b"say (.Array~package == .String~package)\n", 0, "1\n", ""),
@@ -80,7 +66,10 @@ fn an_operator_sent_to_an_array_or_a_native_object_is_a_message() {
             (*code, *stdout),
             "{shown:?}"
         );
-        assert!(got_stderr.contains(raised), "{shown:?}: {got_stderr:?}");
+        assert!(
+            got_stderr.contains(&expand(raised)),
+            "{shown:?}: {got_stderr:?}"
+        );
         assert_eq!(got_stderr.is_empty(), raised.is_empty(), "{shown:?}");
     }
 }
@@ -142,10 +131,9 @@ fn a_class_objects_operators_are_sent_as_messages() {
             String::from_utf8_lossy(source)
         );
         assert!(
-            stderr.contains(&format!(
-                "Error 97.1:  Object \"The Array class\" does not understand message \
-                 \"{message}\"."
-            )),
+            stderr.contains(&expand(&format!(
+                "Error 97.1:  ⟨97.1¦The Array class¦{message}⟩"
+            ))),
             "{:?} reported {stderr:?}",
             String::from_utf8_lossy(source)
         );
@@ -171,9 +159,7 @@ fn an_object_in_a_do_headers_numeric_position_is_sent_plus() {
             String::from_utf8_lossy(source)
         );
         assert!(
-            stderr.contains(&format!(
-                "Error 97.1:  Object \"{object}\" does not understand message \"+\"."
-            )),
+            stderr.contains(&expand(&format!("Error 97.1:  ⟨97.1¦{object}¦+⟩"))),
             "{:?} reported {stderr:?}",
             String::from_utf8_lossy(source)
         );
@@ -183,8 +169,7 @@ fn an_object_in_a_do_headers_numeric_position_is_sent_plus() {
     let (code, stdout, stderr) = run_source(b"do i = .environment to 5\nend\n");
     assert_eq!((code, stdout.as_str()), (159, ""), "reported {stderr:?}");
     assert!(
-        stderr
-            .contains("Error 97.1:  Object \"The NIL object\" does not understand message \">\"."),
+        stderr.contains(&expand("Error 97.1:  ⟨97.1¦The NIL object¦>⟩")),
         "reported {stderr:?}"
     );
 }
@@ -232,10 +217,7 @@ fn an_object_as_a_do_over_target_is_array_requested() {
     let (code, stdout, stderr) = run_source(b"do e over .array\nsay e\nend\n");
     assert_eq!((code, stdout.as_str()), (158, ""));
     assert!(
-        stderr.contains(
-            "Error 98.913:  Unable to convert object \"The Array class\" to a \
-             single-dimensional array value."
-        ),
+        stderr.contains(&expand("Error 98.913:  ⟨98.913¦The Array class⟩")),
         "a class object must raise the oracle's own noarray, got {stderr:?}"
     );
 
@@ -276,10 +258,9 @@ fn an_object_reached_through_a_stem_default_answers_as_the_object() {
         );
         if let Some(message) = message {
             assert!(
-                stderr.contains(&format!(
-                    "Error 97.1:  Object \"The Array class\" does not understand message \
-                     \"{message}\"."
-                )),
+                stderr.contains(&expand(&format!(
+                    "Error 97.1:  ⟨97.1¦The Array class¦{message}⟩"
+                ))),
                 "{:?} reported {stderr:?}",
                 String::from_utf8_lossy(source)
             );
@@ -291,8 +272,7 @@ fn an_object_reached_through_a_stem_default_answers_as_the_object() {
     let (code, stdout, stderr) = run_source(b"a. = .array\ndo i = 1 to a.\nend\n");
     assert_eq!((code, stdout.as_str()), (159, ""), "reported {stderr:?}");
     assert!(
-        stderr
-            .contains("Error 97.1:  Object \"The Array class\" does not understand message \"+\"."),
+        stderr.contains(&expand("Error 97.1:  ⟨97.1¦The Array class¦+⟩")),
         "reported {stderr:?}"
     );
 }
@@ -309,8 +289,7 @@ fn an_object_assigned_to_a_control_variable_is_sent_plus_at_the_increment() {
         "reported {stderr:?}"
     );
     assert!(
-        stderr
-            .contains("Error 97.1:  Object \"The Array class\" does not understand message \"+\"."),
+        stderr.contains(&expand("Error 97.1:  ⟨97.1¦The Array class¦+⟩")),
         "reported {stderr:?}"
     );
 }
@@ -325,13 +304,12 @@ fn an_object_as_a_raise_syntax_substitution_is_array_requested() {
         (
             &b"raise syntax 40.1 additional (.array)\n"[..],
             158,
-            "Error 98.939:  Additional information for SYNTAX errors must be a \
-             single-dimensional array of values.",
+            "Error 98.939:  ⟨98.939⟩",
         ),
         (
             b"raise syntax 40.1 additional (.environment)\n",
             216,
-            "External routine \"INPUTOUTPUTSTREAM\" failed.",
+            "⟨40.1¦INPUTOUTPUTSTREAM⟩",
         ),
     ] {
         let (code, stdout, stderr) = run_source(source);
@@ -342,7 +320,7 @@ fn an_object_as_a_raise_syntax_substitution_is_array_requested() {
             String::from_utf8_lossy(source)
         );
         assert!(
-            stderr.contains(expected_in_stderr),
+            stderr.contains(&expand(expected_in_stderr)),
             "{:?} reported {stderr:?}",
             String::from_utf8_lossy(source)
         );
@@ -359,17 +337,17 @@ fn a_raise_the_oracle_does_not_array_convert_still_answers() {
         (
             b"raise syntax 40.1 array (.array)\n",
             216,
-            "External routine \"The Array class\" failed.",
+            "⟨40.1¦The Array class⟩",
         ),
         (
             b"raise syntax 40.1 array (.environment)\n",
             216,
-            "External routine \"The Environment Directory\" failed.",
+            "⟨40.1¦The Environment Directory⟩",
         ),
         (
             b"raise syntax 40.1 array (.array, 'b')\n",
             216,
-            "External routine \"The Array class\" failed.",
+            "⟨40.1¦The Array class⟩",
         ),
         // Not a SYNTAX condition, so `requestArray` is never reached.
         (
@@ -381,7 +359,7 @@ fn a_raise_the_oracle_does_not_array_convert_still_answers() {
         (
             b"raise syntax 40.1 description (.array)\n",
             216,
-            "External routine \"&1\" failed.",
+            "⟨40.1¦&1⟩",
         ),
     ];
     for (source, expected_code, expected_in_stderr) in cases {
@@ -393,7 +371,7 @@ fn a_raise_the_oracle_does_not_array_convert_still_answers() {
             String::from_utf8_lossy(source)
         );
         assert!(
-            stderr.contains(expected_in_stderr),
+            stderr.contains(&expand(expected_in_stderr)),
             "{:?} must still answer the oracle's own bytes, got {stderr:?}",
             String::from_utf8_lossy(source)
         );
@@ -471,7 +449,7 @@ fn a_nil_defaulted_stem_carries_no_operator_frame() {
     let (code, stdout, stderr) = run_source(b"s. = .nil\nsay s. + 1\n");
     assert_eq!(code, 159, "{stderr:?}");
     assert!(
-        stderr.contains(r#"Error 97.1:  Object "The NIL object" does not understand message "+"."#),
+        stderr.contains(&expand("Error 97.1:  ⟨97.1¦The NIL object¦+⟩")),
         "{stderr:?}"
     );
     assert_eq!(stdout, "");
@@ -517,9 +495,7 @@ fn an_operator_on_an_instance_is_the_send_the_oracle_makes() {
         assert_eq!(code, 159, "{expression}: {stderr:?}");
         assert_eq!(stdout, "", "{expression}");
         assert!(
-            stderr.contains(&format!(
-                "Object \"1\" does not understand message \"{spelling}\"."
-            )),
+            stderr.contains(&expand(&format!("⟨97.1¦1¦{spelling}⟩"))),
             "{expression} reported {stderr:?}"
         );
     }

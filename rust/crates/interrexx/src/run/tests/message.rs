@@ -1,4 +1,5 @@
 use super::*;
+use interrexx_inventory::errors::expand;
 
 /// A bound on every run here: some start activities, and a program end
 /// waits for an activity nothing can wake.
@@ -97,12 +98,12 @@ fn a_message_sends_two_indents_are_the_oracles_own_and_normalisation_cannot_see_
     );
     assert_eq!(
         String::from_utf8(outcome.stderr).expect("the report is UTF-8"),
-        concat!(
-            "       *-* Compiled method \"LENGTH\" with scope \"String\".\n",
+        expand(concat!(
+            "⟨101.20¦LENGTH¦String⟩\n",
             "     3 *-*     say 'abc'~length(1)\n",
-            "Error 93 running /abs/nested.rex line 3:  Incorrect call to method.\n",
-            "Error 93.902:  Too many arguments in invocation of method; 0 expected.\n",
-        )
+            "Error 93 running /abs/nested.rex line 3:  ⟨93⟩\n",
+            "Error 93.902:  ⟨93.902¦0⟩\n",
+        ))
     );
 }
 
@@ -125,7 +126,7 @@ fn assert_stderr(path: &str, source: &str, expected: &str) {
     );
     assert_eq!(
         String::from_utf8(outcome.stderr).expect("the trace is UTF-8"),
-        expected,
+        expand(expected),
         "the compiled stream"
     );
 }
@@ -142,7 +143,7 @@ fn a_method_activations_trace_indents_are_the_oracles_own_and_normalisation_cann
             "       >E>   .K => \"The K class\"\n",
             "       >L>   \"3\"\n",
             "       >A>   \"3\"\n",
-            "       >I> Method \"M\" with scope \"K\" in package \"/abs/method_trace_invocation.rex\".\n",
+            "       >I> ⟨101.19¦M¦K¦/abs/method_trace_invocation.rex⟩\n",
             "     9 *-* use arg n\n",
             "       >>>   \"3\"\n",
             "       >=>   N <= \"3\"\n",
@@ -151,7 +152,7 @@ fn a_method_activations_trace_indents_are_the_oracles_own_and_normalisation_cann
             "       >L>   \"1\"\n",
             "       >O>   \"+\" => \"4\"\n",
             "       >>>   \"4\"\n",
-            "       <I< Method \"M\" with scope \"K\" in package \"/abs/method_trace_invocation.rex\".\n",
+            "       <I< ⟨101.19¦M¦K¦/abs/method_trace_invocation.rex⟩\n",
             "       >M>   \"M\" => \"4\"\n",
             "       >>>   \"4\"\n",
             "     3 *-* say 'after'\n",
@@ -171,17 +172,17 @@ fn a_method_activations_trace_indents_are_the_oracles_own_and_normalisation_cann
             "       >=>   I <= \"1\"\n",
             "     3 *-*   say .K~outer\n",
             "       >E>     .K => \"The K class\"\n",
-            "       >I> Method \"OUTER\" with scope \"K\" in package \"/abs/method_trace_nested.rex\".\n",
+            "       >I> ⟨101.19¦OUTER¦K¦/abs/method_trace_nested.rex⟩\n",
             "    10 *-* return .K~inner\n",
             "       >E>   .K => \"The K class\"\n",
-            "       >I> Method \"INNER\" with scope \"K\" in package \"/abs/method_trace_nested.rex\".\n",
+            "       >I> ⟨101.19¦INNER¦K¦/abs/method_trace_nested.rex⟩\n",
             "    14 *-* return 'deep'\n",
             "       >L>   \"deep\"\n",
             "       >>>   \"deep\"\n",
-            "       <I< Method \"INNER\" with scope \"K\" in package \"/abs/method_trace_nested.rex\".\n",
+            "       <I< ⟨101.19¦INNER¦K¦/abs/method_trace_nested.rex⟩\n",
             "       >M>   \"INNER\" => \"deep\"\n",
             "       >>>   \"deep\"\n",
-            "       <I< Method \"OUTER\" with scope \"K\" in package \"/abs/method_trace_nested.rex\".\n",
+            "       <I< ⟨101.19¦OUTER¦K¦/abs/method_trace_nested.rex⟩\n",
             "       >M>     \"OUTER\" => \"deep\"\n",
             "       >>>     \"deep\"\n",
             "     4 *-* end\n",
@@ -204,9 +205,8 @@ fn a_condition_inside_a_method_body_echoes_the_body_and_then_the_send() {
         concat!(
             "     9 *-* say 1/0\n",
             "     4 *-* say .K~boom\n",
-            "Error 42 running /abs/method_body_raises.rex line 9:  \
-             Arithmetic overflow/underflow.\n",
-            "Error 42.3:  Arithmetic overflow; divisor must not be zero.\n",
+            "Error 42 running /abs/method_body_raises.rex line 9:  ⟨42⟩\n",
+            "Error 42.3:  ⟨42.3⟩\n",
         ),
     );
 }
@@ -260,8 +260,8 @@ fn a_value_returned_after_a_reply_reports_the_oracles_own_98_936() {
         corpus_source!("lang/method_reply.rex"),
         concat!(
             "    15 *-* return 'returned'\n",
-            "Error 98 running /abs/method_reply.rex line 15:  Execution error.\n",
-            "Error 98.936:  RETURN cannot return a value after a REPLY.\n",
+            "Error 98 running /abs/method_reply.rex line 15:  ⟨98⟩\n",
+            "Error 98.936:  ⟨98.936⟩\n",
         ),
     );
 
@@ -272,8 +272,8 @@ fn a_value_returned_after_a_reply_reports_the_oracles_own_98_936() {
         corpus_source!("lang/method_reply_exit_status.rex"),
         concat!(
             "    13 *-* return 'boom'\n",
-            "Error 98 running /abs/method_reply_exit_status.rex line 13:  Execution error.\n",
-            "Error 98.936:  RETURN cannot return a value after a REPLY.\n",
+            "Error 98 running /abs/method_reply_exit_status.rex line 13:  ⟨98⟩\n",
+            "Error 98.936:  ⟨98.936⟩\n",
         ),
     );
     let outcome = crate::run_program(
@@ -308,8 +308,8 @@ fn a_second_reply_reports_the_oracles_own_98_935() {
         corpus_source!("lang/method_reply_twice.rex"),
         concat!(
             "    14 *-* reply 'two'\n",
-            "Error 98 running /abs/method_reply_twice.rex line 14:  Execution error.\n",
-            "Error 98.935:  REPLY can be issued only once per method invocation.\n",
+            "Error 98 running /abs/method_reply_twice.rex line 14:  ⟨98⟩\n",
+            "Error 98.935:  ⟨98.935⟩\n",
         ),
     );
 }
@@ -338,7 +338,7 @@ fn the_guard_instructions_answers_and_their_refusals() {
             source: "say 'before'\nguard on\n",
             stdout: b"before\n",
             exit_code: 157,
-            stderr_contains: "GUARD can only be issued in an object method invocation.",
+            stderr_contains: "⟨99.911⟩",
         },
         Row {
             name: "a WHEN whose value is neither 0 nor 1, GUARD's own 34.902",
@@ -371,7 +371,7 @@ fn the_guard_instructions_answers_and_their_refusals() {
             assert_eq!(stderr, "", "{}", row.name);
         } else {
             assert!(
-                stderr.contains(row.stderr_contains),
+                stderr.contains(&expand(row.stderr_contains)),
                 "{}: stderr was {stderr:?}",
                 row.name
             );
@@ -406,13 +406,13 @@ fn a_started_method_that_raises_has_an_error_and_reraises_at_result() {
     );
     assert_eq!(
         String::from_utf8_lossy(&outcome.stderr),
-        format!(
+        expand(&format!(
             "\x20    9 *-* return 1/0\n\
-             Error 42 running {PATH} line 9:  Arithmetic overflow/underflow.\n\
-             Error 42.3:  Arithmetic overflow; divisor must not be zero.\n\
+             Error 42 running {PATH} line 9:  ⟨42⟩\n\
+             Error 42.3:  ⟨42.3⟩\n\
              \x20    9 *-* return 1/0\n\
-             Error 42 running {PATH} line 5:  Arithmetic overflow/underflow.\n\
-             Error 42.3:  Arithmetic overflow; divisor must not be zero.\n"
-        )
+             Error 42 running {PATH} line 5:  ⟨42⟩\n\
+             Error 42.3:  ⟨42.3⟩\n"
+        ))
     );
 }

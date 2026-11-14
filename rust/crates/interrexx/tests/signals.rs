@@ -20,6 +20,7 @@
 
 mod support;
 
+use interrexx_inventory::errors::expand;
 use std::io::Read;
 use std::os::unix::process::CommandExt;
 use std::path::PathBuf;
@@ -278,10 +279,12 @@ fn sleep_halted() -> Ended {
     Ended {
         code: Some(252),
         stdout: "before\n".to_string(),
-        stderr: "     2 *-* rc = SysSleep(5)\n\
-                 Error 4 running PROGRAM line 2:  Program interrupted.\n\
-                 Error 4.1:  Program interrupted with HALT condition.\n"
-            .to_string(),
+        stderr: expand(
+            "     2 *-* rc = SysSleep(5)\n\
+                 Error 4 running PROGRAM line 2:  ⟨4⟩\n\
+                 Error 4.1:  ⟨4.1¦HALT⟩\n",
+        )
+        .to_string(),
     }
 }
 
@@ -399,10 +402,12 @@ fn sigint_halts_a_busy_loop() {
         &Ended {
             code: Some(252),
             stdout: "ready\n".to_string(),
-            stderr: "     3 *-*   end\n\
-                     Error 4 running PROGRAM line 3:  Program interrupted.\n\
-                     Error 4.1:  Program interrupted with HALT condition.\n"
-                .to_string(),
+            stderr: expand(
+                "     3 *-*   end\n\
+                     Error 4 running PROGRAM line 3:  ⟨4⟩\n\
+                     Error 4.1:  ⟨4.1¦HALT⟩\n",
+            )
+            .to_string(),
         },
     );
 }
@@ -425,13 +430,15 @@ fn sigint_reaches_a_parked_guard_when() {
         &Ended {
             code: Some(252),
             stdout: "w parks\nmain sleeping\n".to_string(),
-            stderr: "     5 *-* rc = SysSleep(5)\n\
-                     Error 4 running PROGRAM line 5:  Program interrupted.\n\
-                     Error 4.1:  Program interrupted with HALT condition.\n\
+            stderr: expand(
+                "     5 *-* rc = SysSleep(5)\n\
+                     Error 4 running PROGRAM line 5:  ⟨4⟩\n\
+                     Error 4.1:  ⟨4.1¦HALT⟩\n\
                      \x20   13 *-* guard on when flag\n\
-                     Error 4 running PROGRAM line 13:  Program interrupted.\n\
-                     Error 4.1:  Program interrupted with HALT condition.\n"
-                .to_string(),
+                     Error 4 running PROGRAM line 13:  ⟨4⟩\n\
+                     Error 4.1:  ⟨4.1¦HALT⟩\n",
+            )
+            .to_string(),
         },
     );
 }
@@ -468,13 +475,15 @@ fn sigint_ends_a_program_waiting_on_a_guard_when_and_a_sleep() {
         &Ended {
             code: Some(0),
             stdout: "main done\n".to_string(),
-            stderr: "    11 *-* guard on when flag\n\
-                     Error 4 running PROGRAM line 11:  Program interrupted.\n\
-                     Error 4.1:  Program interrupted with HALT condition.\n\
+            stderr: expand(
+                "    11 *-* guard on when flag\n\
+                     Error 4 running PROGRAM line 11:  ⟨4⟩\n\
+                     Error 4.1:  ⟨4.1¦HALT⟩\n\
                      \x20   13 *-* call SysSleep 30\n\
-                     Error 4 running PROGRAM line 13:  Program interrupted.\n\
-                     Error 4.1:  Program interrupted with HALT condition.\n"
-                .to_string(),
+                     Error 4 running PROGRAM line 13:  ⟨4⟩\n\
+                     Error 4.1:  ⟨4.1¦HALT⟩\n",
+            )
+            .to_string(),
         },
     );
 }
@@ -526,10 +535,12 @@ fn sigint_ends_a_command_wait() {
         &Ended {
             code: Some(252),
             stdout: "a\n".to_string(),
-            stderr: "     2 *-* address system 'sleep 5'\n\
-                     Error 4 running PROGRAM line 2:  Program interrupted.\n\
-                     Error 4.1:  Program interrupted with HALT condition.\n"
-                .to_string(),
+            stderr: expand(
+                "     2 *-* address system 'sleep 5'\n\
+                     Error 4 running PROGRAM line 2:  ⟨4⟩\n\
+                     Error 4.1:  ⟨4.1¦HALT⟩\n",
+            )
+            .to_string(),
         },
     );
 }
@@ -557,10 +568,12 @@ fn sigint_ends_a_socket_accept() {
         &Ended {
             code: Some(252),
             stdout: "ready\n".to_string(),
-            stderr: "     7 *-* c = SockAccept(s)\n\
-                     Error 4 running PROGRAM line 7:  Program interrupted.\n\
-                     Error 4.1:  Program interrupted with HALT condition.\n"
-                .to_string(),
+            stderr: expand(
+                "     7 *-* c = SockAccept(s)\n\
+                     Error 4 running PROGRAM line 7:  ⟨4⟩\n\
+                     Error 4.1:  ⟨4.1¦HALT⟩\n",
+            )
+            .to_string(),
         },
     );
 }
@@ -582,10 +595,12 @@ fn sigint_ends_a_socket_receive() {
         &Ended {
             code: Some(252),
             stdout: "ready\n".to_string(),
-            stderr: "     9 *-* r = SockRecv(c, 'd', 10)\n\
-                     Error 4 running PROGRAM line 9:  Program interrupted.\n\
-                     Error 4.1:  Program interrupted with HALT condition.\n"
-                .to_string(),
+            stderr: expand(
+                "     9 *-* r = SockRecv(c, 'd', 10)\n\
+                     Error 4 running PROGRAM line 9:  ⟨4⟩\n\
+                     Error 4.1:  ⟨4.1¦HALT⟩\n",
+            )
+            .to_string(),
         },
     );
 }
@@ -603,10 +618,12 @@ fn ctrl_c_halts_a_script_running_commands() {
         &Ended {
             code: Some(252),
             stdout: "a\n".to_string(),
-            stderr: "     2 *-* address system 'sleep 2'\n\
-                     Error 4 running PROGRAM line 2:  Program interrupted.\n\
-                     Error 4.1:  Program interrupted with HALT condition.\n"
-                .to_string(),
+            stderr: expand(
+                "     2 *-* address system 'sleep 2'\n\
+                     Error 4 running PROGRAM line 2:  ⟨4⟩\n\
+                     Error 4.1:  ⟨4.1¦HALT⟩\n",
+            )
+            .to_string(),
         },
     );
 }
@@ -623,10 +640,12 @@ fn sigint_halts_a_last_clause_command() {
         &Ended {
             code: Some(252),
             stdout: "a\n".to_string(),
-            stderr: "     2 *-* address system 'sleep 5'\n\
-                     Error 4 running PROGRAM line 2:  Program interrupted.\n\
-                     Error 4.1:  Program interrupted with HALT condition.\n"
-                .to_string(),
+            stderr: expand(
+                "     2 *-* address system 'sleep 5'\n\
+                     Error 4 running PROGRAM line 2:  ⟨4⟩\n\
+                     Error 4.1:  ⟨4.1¦HALT⟩\n",
+            )
+            .to_string(),
         },
     );
 }
@@ -667,10 +686,12 @@ fn sigint_pending_at_a_syntax_trap_is_raised_at_the_label() {
         &Ended {
             code: Some(252),
             stdout: "ready\n".to_string(),
-            stderr: "     4 *-* raised:\n\
-                     Error 4 running PROGRAM line 4:  Program interrupted.\n\
-                     Error 4.1:  Program interrupted with HALT condition.\n"
-                .to_string(),
+            stderr: expand(
+                "     4 *-* raised:\n\
+                     Error 4 running PROGRAM line 4:  ⟨4⟩\n\
+                     Error 4.1:  ⟨4.1¦HALT⟩\n",
+            )
+            .to_string(),
         },
     );
     halts(
@@ -701,10 +722,12 @@ fn sigint_halts_after_a_long_builtin() {
         &Ended {
             code: Some(252),
             stdout: String::new(),
-            stderr: "     2 *-*   n = countstr('ab', copies('ab', 30000000))\n\
-                     Error 4 running PROGRAM line 2:  Program interrupted.\n\
-                     Error 4.1:  Program interrupted with HALT condition.\n"
-                .to_string(),
+            stderr: expand(
+                "     2 *-*   n = countstr('ab', copies('ab', 30000000))\n\
+                     Error 4 running PROGRAM line 2:  ⟨4⟩\n\
+                     Error 4.1:  ⟨4.1¦HALT⟩\n",
+            )
+            .to_string(),
         },
     );
 }
@@ -715,13 +738,12 @@ fn monitor_halted(clause: &str) -> Ended {
     Ended {
         code: Some(252),
         stdout: "ready\n".to_string(),
-        stderr: format!(
-            "     N *-* Method UNKNOWN with scope \"Monitor\" in package \"REXX\" \
-             (no source available).\n\
+        stderr: expand(&format!(
+            "     N *-* ⟨101.24¦UNKNOWN¦Monitor¦REXX⟩\n\
              \x20    2 *-* {clause}\n\
-             Error 4 running REXX line N:  Program interrupted.\n\
-             Error 4.1:  Program interrupted with HALT condition.\n"
-        ),
+             Error 4 running REXX line N:  ⟨4⟩\n\
+             Error 4.1:  ⟨4.1¦HALT⟩\n"
+        )),
     }
 }
 
@@ -773,10 +795,12 @@ fn sigint_ends_a_stdin_linein() {
         &Ended {
             code: Some(252),
             stdout: "ready\n".to_string(),
-            stderr: "     2 *-* v = .stdin~linein\n\
-                     Error 4 running PROGRAM line 2:  Program interrupted.\n\
-                     Error 4.1:  Program interrupted with HALT condition.\n"
-                .to_string(),
+            stderr: expand(
+                "     2 *-* v = .stdin~linein\n\
+                     Error 4 running PROGRAM line 2:  ⟨4⟩\n\
+                     Error 4.1:  ⟨4.1¦HALT⟩\n",
+            )
+            .to_string(),
         },
     );
 }
@@ -816,13 +840,15 @@ fn sigint_ends_a_semaphore_wait() {
         &Ended {
             code: Some(252),
             stdout: "ready\n".to_string(),
-            stderr: "     5 *-* rc = SysWaitEventSem(h)\n\
-                     Error 4 running PROGRAM line 5:  Program interrupted.\n\
-                     Error 4.1:  Program interrupted with HALT condition.\n\
+            stderr: expand(
+                "     5 *-* rc = SysWaitEventSem(h)\n\
+                     Error 4 running PROGRAM line 5:  ⟨4⟩\n\
+                     Error 4.1:  ⟨4.1¦HALT⟩\n\
                      \x20   10 *-* call SysSleep 10\n\
-                     Error 4 running PROGRAM line 10:  Program interrupted.\n\
-                     Error 4.1:  Program interrupted with HALT condition.\n"
-                .to_string(),
+                     Error 4 running PROGRAM line 10:  ⟨4⟩\n\
+                     Error 4.1:  ⟨4.1¦HALT⟩\n",
+            )
+            .to_string(),
         },
     );
 }
@@ -842,10 +868,12 @@ fn ctrl_c_halts_a_redirected_command() {
         &Ended {
             code: Some(252),
             stdout: "a\n".to_string(),
-            stderr: "     2 *-* address system 'sleep 2' with output stem o.\n\
-                     Error 4 running PROGRAM line 2:  Program interrupted.\n\
-                     Error 4.1:  Program interrupted with HALT condition.\n"
-                .to_string(),
+            stderr: expand(
+                "     2 *-* address system 'sleep 2' with output stem o.\n\
+                     Error 4 running PROGRAM line 2:  ⟨4⟩\n\
+                     Error 4.1:  ⟨4.1¦HALT⟩\n",
+            )
+            .to_string(),
         },
     );
 }
@@ -916,10 +944,10 @@ fn sigint_at_a_nested_redirected_command_is_raised_at_the_outer_clause() {
         &Ended {
             code: Some(252),
             stdout: "O:b inner rc RC\n".to_string(),
-            stderr: "     7 *-*     address system 'sleep 3; echo n' with output stem q.\n\
+            stderr: expand("     7 *-*     address system 'sleep 3; echo n' with output stem q.\n\
                      \x20    1 *-* address system 'echo a; sleep 1.5; echo b' with output using (.Sl~new)\n\
-                     Error 4 running PROGRAM line 1:  Program interrupted.\n\
-                     Error 4.1:  Program interrupted with HALT condition.\n"
+                     Error 4 running PROGRAM line 1:  ⟨4⟩\n\
+                     Error 4.1:  ⟨4.1¦HALT⟩\n")
                 .to_string(),
         },
     );
@@ -941,10 +969,12 @@ fn call_on_halt_sees_a_withdrawn_semaphore_wait() {
         &Ended {
             code: Some(0),
             stdout: "ready\nafter 0\nhalted 7\n".to_string(),
-            stderr: "    12 *-* call SysSleep 3\n\
-                     Error 4 running PROGRAM line 12:  Program interrupted.\n\
-                     Error 4.1:  Program interrupted with HALT condition.\n"
-                .to_string(),
+            stderr: expand(
+                "    12 *-* call SysSleep 3\n\
+                     Error 4 running PROGRAM line 12:  ⟨4⟩\n\
+                     Error 4.1:  ⟨4.1¦HALT⟩\n",
+            )
+            .to_string(),
         },
     );
 }
@@ -1029,10 +1059,12 @@ fn sigint_halts_after_a_long_method() {
         &Ended {
             code: Some(252),
             stdout: String::new(),
-            stderr: "     2 *-*   n = 'ab'~copies(30000000)~countStr('ab')\n\
-                     Error 4 running PROGRAM line 2:  Program interrupted.\n\
-                     Error 4.1:  Program interrupted with HALT condition.\n"
-                .to_string(),
+            stderr: expand(
+                "     2 *-*   n = 'ab'~copies(30000000)~countStr('ab')\n\
+                     Error 4 running PROGRAM line 2:  ⟨4⟩\n\
+                     Error 4.1:  ⟨4.1¦HALT⟩\n",
+            )
+            .to_string(),
         },
     );
 }
