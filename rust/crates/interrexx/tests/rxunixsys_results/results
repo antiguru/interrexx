@@ -54,12 +54,12 @@ SysGeterrnomsg('0x1')
 SysGeterrnomsg(.nil)
 SysGeterrnomsg(.object~new)
 SysGeterrnomsg(.array~new)
-SysGeterrnomsg(' 12 ')
-SysGeterrnomsg('1e1')
-SysGeterrnomsg('1.0')
-SysGeterrnomsg('+5')
+(SysGeterrnomsg(' 12 ') \= '')
+(SysGeterrnomsg('1e1') \= '')
+(SysGeterrnomsg('1.0') \= '')
+(SysGeterrnomsg('+5') \= '')
 SysGeterrnomsg('-0')
-SysGeterrnomsg(.array~of(5))
+(SysGeterrnomsg(.array~of(5)) \= '')
 SysGetpwuid('', 'n')
 SysStat(.nil, 'p')
 SysStat('/dev/null', .object~new)
@@ -87,12 +87,12 @@ ERR 88.907 Argument 1 must be in the range -2147483648 to 2147483647; found "0x1
 ERR 88.907 Argument 1 must be in the range -2147483648 to 2147483647; found "The NIL object".
 ERR 88.907 Argument 1 must be in the range -2147483648 to 2147483647; found "an Object".
 ERR 88.907 Argument 1 must be in the range -2147483648 to 2147483647; found "an Array".
-"Out of memory"
-"No child processes"
-"Operation not permitted"
-"I/O error"
+"1"
+"1"
+"1"
+"1"
 "Ok"
-"I/O error"
+"1"
 ERR 88.907 Argument 1 must be in the range -2147483648 to 2147483647; found "".
 ERR 88.909 Argument 1 must have a string value.
 ERR 88.909 Argument 2 must have a string value.
@@ -103,283 +103,37 @@ ERR 40.1 External routine "SYSSTAT" failed.
 "Linux"
 "Permission denied"
 
-# SysGeterrnomsg's whole table, and what lies outside it.
+# SysGeterrnomsg: 0 is Ok, and a literal -2147483647 is out of range once its sign is computed.
 eval
-SysGeterrnomsg(-1)
 SysGeterrnomsg(-2147483647)
-SysGeterrnomsg(2147483647)
 SysGeterrnomsg(0)
-SysGeterrnomsg(1)
-SysGeterrnomsg(2)
-SysGeterrnomsg(3)
-SysGeterrnomsg(4)
-SysGeterrnomsg(5)
-SysGeterrnomsg(6)
-SysGeterrnomsg(7)
-SysGeterrnomsg(8)
-SysGeterrnomsg(9)
-SysGeterrnomsg(10)
-SysGeterrnomsg(11)
-SysGeterrnomsg(12)
-SysGeterrnomsg(13)
-SysGeterrnomsg(14)
-SysGeterrnomsg(15)
-SysGeterrnomsg(16)
-SysGeterrnomsg(17)
-SysGeterrnomsg(18)
-SysGeterrnomsg(19)
-SysGeterrnomsg(20)
-SysGeterrnomsg(21)
-SysGeterrnomsg(22)
-SysGeterrnomsg(23)
-SysGeterrnomsg(24)
-SysGeterrnomsg(25)
-SysGeterrnomsg(26)
-SysGeterrnomsg(27)
-SysGeterrnomsg(28)
-SysGeterrnomsg(29)
-SysGeterrnomsg(30)
-SysGeterrnomsg(31)
-SysGeterrnomsg(32)
-SysGeterrnomsg(33)
-SysGeterrnomsg(34)
-SysGeterrnomsg(35)
-SysGeterrnomsg(36)
-SysGeterrnomsg(37)
-SysGeterrnomsg(38)
-SysGeterrnomsg(39)
-SysGeterrnomsg(40)
-SysGeterrnomsg(41)
-SysGeterrnomsg(42)
-SysGeterrnomsg(43)
-SysGeterrnomsg(44)
-SysGeterrnomsg(45)
-SysGeterrnomsg(46)
-SysGeterrnomsg(47)
-SysGeterrnomsg(48)
-SysGeterrnomsg(49)
-SysGeterrnomsg(50)
-SysGeterrnomsg(51)
-SysGeterrnomsg(52)
-SysGeterrnomsg(53)
-SysGeterrnomsg(54)
-SysGeterrnomsg(55)
-SysGeterrnomsg(56)
-SysGeterrnomsg(57)
-SysGeterrnomsg(58)
-SysGeterrnomsg(59)
-SysGeterrnomsg(60)
-SysGeterrnomsg(61)
-SysGeterrnomsg(62)
-SysGeterrnomsg(63)
-SysGeterrnomsg(64)
-SysGeterrnomsg(65)
-SysGeterrnomsg(66)
-SysGeterrnomsg(67)
-SysGeterrnomsg(68)
-SysGeterrnomsg(69)
-SysGeterrnomsg(70)
-SysGeterrnomsg(71)
-SysGeterrnomsg(72)
-SysGeterrnomsg(73)
-SysGeterrnomsg(74)
-SysGeterrnomsg(75)
-SysGeterrnomsg(76)
-SysGeterrnomsg(77)
-SysGeterrnomsg(78)
-SysGeterrnomsg(79)
-SysGeterrnomsg(80)
-SysGeterrnomsg(81)
-SysGeterrnomsg(82)
-SysGeterrnomsg(83)
-SysGeterrnomsg(84)
-SysGeterrnomsg(85)
-SysGeterrnomsg(86)
-SysGeterrnomsg(87)
-SysGeterrnomsg(88)
-SysGeterrnomsg(89)
-SysGeterrnomsg(90)
-SysGeterrnomsg(91)
-SysGeterrnomsg(92)
-SysGeterrnomsg(93)
-SysGeterrnomsg(94)
-SysGeterrnomsg(95)
-SysGeterrnomsg(96)
-SysGeterrnomsg(97)
-SysGeterrnomsg(98)
-SysGeterrnomsg(99)
-SysGeterrnomsg(100)
-SysGeterrnomsg(101)
-SysGeterrnomsg(102)
-SysGeterrnomsg(103)
-SysGeterrnomsg(104)
-SysGeterrnomsg(105)
-SysGeterrnomsg(106)
-SysGeterrnomsg(107)
-SysGeterrnomsg(108)
-SysGeterrnomsg(109)
-SysGeterrnomsg(110)
-SysGeterrnomsg(111)
-SysGeterrnomsg(112)
-SysGeterrnomsg(113)
-SysGeterrnomsg(114)
-SysGeterrnomsg(115)
-SysGeterrnomsg(116)
-SysGeterrnomsg(117)
-SysGeterrnomsg(118)
-SysGeterrnomsg(119)
-SysGeterrnomsg(120)
-SysGeterrnomsg(121)
-SysGeterrnomsg(122)
-SysGeterrnomsg(123)
-SysGeterrnomsg(124)
-SysGeterrnomsg(125)
-SysGeterrnomsg(126)
-SysGeterrnomsg(127)
-SysGeterrnomsg(128)
-SysGeterrnomsg(129)
-SysGeterrnomsg(130)
-SysGeterrnomsg(131)
-SysGeterrnomsg(132)
-SysGeterrnomsg(133)
 ----
-"Unknown"
 ERR 88.907 Argument 1 must be in the range -2147483648 to 2147483647; found "-2.14748365E+9".
-"Unknown"
 "Ok"
-"Operation not permitted"
-"No such file or directory"
-"No such process"
-"Interrupted system call"
-"I/O error"
-"No such device or address"
-"Argument list too long"
-"Exec format error"
-"Bad file number"
-"No child processes"
-"Try again"
-"Out of memory"
-"Permission denied"
-"Bad address"
-"Block device required"
-"Device or resource busy"
-"File exists"
-"Cross-device link"
-"No such device"
-"Not a directory"
-"Is a directory"
-"Invalid argument"
-"File table overflow"
-"Too many open files"
-"Not a typewriter"
-"Text file busy"
-"File too large"
-"No space left on device"
-"Illegal seek"
-"Read-only file system"
-"Too many links"
-"Broken pipe"
-"Math argument out of domain of func"
-"Math result not representable"
-"Resource deadlock would occur"
-"File name too long"
-"No record locks available"
-"Function not implemented"
-"Directory not empty"
-"Too many symbolic links encountered"
-"Operation would block"
-"No message of desired type"
-"Identifier removed"
-"Channel number out of range"
-"Level 2 not synchronized"
-"Level 3 halted"
-"Level 3 reset"
-"Link number out of range"
-"Protocol driver not attached"
-"No CSI structure available"
-"Level 2 halted"
-"Invalid exchange"
-"Invalid request descriptor"
-"Exchange full"
-"No anode"
-"Invalid request code"
-"Invalid slot"
-"Deadlock"
-"Bad font file format"
-"Device not a stream"
-"No data available"
-"Timer expired"
-"Out of streams resources"
-"Machine is not on the network"
-"Package not installed"
-"Object is remote"
-"Link has been severed"
-"Advertise error"
-"Srmount error"
-"Communication error on send"
-"Protocol error"
-"Multihop attempted"
-"RFS specific error"
-"Not a data message"
-"Value too large for defined data type"
-"Name not unique on network"
-"File descriptor in bad state"
-"Remote address changed"
-"Can not access a needed shared library"
-"Accessing a corrupted shared library"
-".lib section in a.out corrupted"
-"Attempting to link in too many shared libraries"
-"Cannot exec a shared library directly"
-"Illegal byte sequence"
-"Interrupted system call should be restarted"
-"Streams pipe error"
-"Too many users"
-"Socket operation on non-socket"
-"Destination address required"
-"Message too long"
-"Protocol wrong type for socket"
-"Protocol not available"
-"Protocol not supported"
-"Socket type not supported"
-"Operation not supported on transport endpoint"
-"Protocol family not supported"
-"Address family not supported by protocol"
-"Address already in use"
-"Cannot assign requested address"
-"Network is down"
-"Network is unreachable"
-"Network dropped connection because of reset"
-"Software caused connection abort"
-"Connection reset by peer"
-"No buffer space available"
-"Transport endpoint is already connected"
-"Transport endpoint is not connected"
-"Cannot send after transport endpoint shutdown"
-"Too many references: cannot splice"
-"Connection timed out"
-"Connection refused"
-"Host is down"
-"No route to host"
-"Operation already in progress"
-"Operation now in progress"
-"Stale NFS file handle"
-"Structure needs cleaning"
-"Not a XENIX named type file"
-"No XENIX semaphores available"
-"Is a named type file"
-"Remote I/O error"
-"Quota exceeded"
-"No medium found"
-"Wrong medium type"
-"Operation Canceled"
-"Required key not available"
-"Key has expired"
-"Key has been revoked"
-"Key was rejected by service"
-"Owner died"
-"State not recoverable"
-"Operation not possible due to RF-kill"
-"Unknown"
+
+# SysGeterrnomsg answers the platform's text for every number but 0, never
+# the null string (`r[rxunixsys.index.errno]`); the oracle answers from a table of its own, and
+# `Unknown` for a number outside it. The texts of the numbers below are those
+# every platform words alike.
+ruled
+say SysGeterrnomsg(0)
+say SysGeterrnomsg(1) '|' SysGeterrnomsg(2) '|' SysGeterrnomsg(13) '|' SysGeterrnomsg(17)
+say SysGeterrnomsg(20) '|' SysGeterrnomsg(21) '|' SysGeterrnomsg(22) '|' SysGeterrnomsg(39)
+empty = ''
+do n = -1 to 140
+  if SysGeterrnomsg(n) == '' then empty = empty n
+end
+if SysGeterrnomsg(2147483647) == '' then empty = empty 2147483647
+say 'null strings:'||empty
+::requires 'rxunixsys' LIBRARY
+----
+rc 0
+[stdout]
+Ok
+Operation not permitted | No such file or directory | Permission denied | File exists
+Not a directory | Is a directory | Invalid argument | Directory not empty
+null strings:
+[stderr]
 
 # Constant and option-driven results.
 eval

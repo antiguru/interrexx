@@ -97,7 +97,7 @@ and `SysGeterrno`/`SysGeterrnomsg`.
 * `SysChmod` takes exactly a 9-character `rwx` string with `s`/`S`/`t`/`T`; `SysStat`'s `P` option
   answers an `ls -l` style string; times are local `YYYY-MM-DD HH:MM:SS`.
 * `SysGettid` answers the `pthread_self()` value, not the kernel thread id.
-* `SysGeterrnomsg` uses a fixed table of messages for 0 to 132 and `Unknown` otherwise.
+* `SysGeterrnomsg` answers `Ok` for 0 and the platform's `strerror` text otherwise, read at run time.
 * `SysSignal` with SIGCHLD ignored makes a command's return code −10.
 * `SysWordexp` is registered and refused: every call raises 40.1 (a Deviation).
 * `SysCrypt` is absent, as on the ooRexx build it is compared with.

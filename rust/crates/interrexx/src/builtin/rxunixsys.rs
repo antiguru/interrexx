@@ -10,7 +10,6 @@
 //! path is the interpreter's own directory's, not the process's. `SysCrypt` is
 //! not provided (Rulings).
 
-mod messages;
 mod tzname;
 
 use interrexx_core::{BehaviourId, Body, Decoded, ObjRef};
@@ -977,16 +976,17 @@ pub(crate) fn geterrno(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<O
     Ok(number(interp, errno))
 }
 
-/// `SysGeterrnomsg(n)`: the message for `n`, `Unknown` outside the table.
+/// `SysGeterrnomsg(n)`: `Ok` for 0, else the platform's text for error number
+/// `n` (`r[rxunixsys.index.errno]`), never the null string.
 pub(crate) fn geterrnomsg(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<ObjRef> {
     check_arity(args, 1)?;
     let errno = int(interp, args, 1)?;
-    let message = usize::try_from(errno)
-        .ok()
-        .and_then(|index| messages::MESSAGES.get(index))
-        .copied()
-        .unwrap_or("Unknown");
-    Ok(string(interp, message.as_bytes()))
+    if errno == 0 {
+        return Ok(string(interp, b"Ok"));
+    }
+    // The platform words every other number, read at run time.
+    let message = super::rexxutil::messages::strerror(errno);
+    Ok(string(interp, &message))
 }
 
 #[cfg(test)]

@@ -86,7 +86,7 @@ pub(crate) fn error_text(
 
 /// glibc's `strerror` text for `number`, as the standard library's error
 /// display renders it before its own ` (os error N)` suffix.
-fn strerror(number: i32) -> Vec<u8> {
+pub(crate) fn strerror(number: i32) -> Vec<u8> {
     let rendered = std::io::Error::from_raw_os_error(number).to_string();
     let suffix = format!(" (os error {number})");
     rendered

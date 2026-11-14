@@ -184,9 +184,9 @@ call try "SysGeterrnomsg('+2')"
 call try "SysGeterrnomsg('1E0')"
 call try "SysGeterrnomsg(2*3)"
 call try "SysGeterrnomsg(1.5)"
-call try "SysGeterrnomsg(2147483647)"
-call try "SysGeterrnomsg('-2147483647')"
-call try "SysGeterrnomsg('-2147483648')"
+call try "(SysGeterrnomsg(2147483647) \= '')"
+call try "(SysGeterrnomsg('-2147483647') \= '')"
+call try "(SysGeterrnomsg('-2147483648') \= '')"
 call try "SysGeterrnomsg('2147483648')"
 call try "SysGeterrnomsg('-2147483649')"
 call try "SysGeterrnomsg('')"
@@ -216,9 +216,9 @@ SysGeterrnomsg('+2') => No such file or directory
 SysGeterrnomsg('1E0') => Operation not permitted
 SysGeterrnomsg(2*3) => No such device or address
 SysGeterrnomsg(1.5) -> 88.907
-SysGeterrnomsg(2147483647) => Unknown
-SysGeterrnomsg('-2147483647') => Unknown
-SysGeterrnomsg('-2147483648') => Unknown
+(SysGeterrnomsg(2147483647) \= '') => 1
+(SysGeterrnomsg('-2147483647') \= '') => 1
+(SysGeterrnomsg('-2147483648') \= '') => 1
 SysGeterrnomsg('2147483648') -> 88.907
 SysGeterrnomsg('-2147483649') -> 88.907
 SysGeterrnomsg('') -> 88.907
@@ -339,9 +339,12 @@ clause, after the failed call and after nothing else that fails, as in the
 examples; what a later clause finds, and what another activity does to it, is
 the subject of [Deviation 164](r:rxunixsys.index.deviation.164).
 `SysGeterrnomsg` answers
-`Ok` for `0` and `Unknown` for a number without a text. It takes the number as
-a [whole number](r:rxunixsys.index.whole), and the numbers of the table that
-the examples show are fixed: the text of another number is that of the system.
+`Ok` for `0` and, for every other number, the text that the platform gives that
+error number, as C's `strerror` words it at run time, so that the wording
+differs between platforms. The answer is never the null string, also for a
+number that is no error number of the platform, or is negative. It takes the
+number as a [whole number](r:rxunixsys.index.whole). The examples show the
+texts that Linux gives.
 
 ```rexx
 say SysUnlink('c1zqnone') SysGeterrno()
@@ -354,7 +357,7 @@ say SysMkdirUnix('c1zqf1', 493) SysGeterrno() SysRmdirUnix('c1zqf1') SysGeterrno
 call SysFileDelete 'c1zqf1'
 say SysGeterrnomsg(0) '|' SysGeterrnomsg(1) '|' SysGeterrnomsg(2) '|' SysGeterrnomsg(13)
 say SysGeterrnomsg(17) '|' SysGeterrnomsg(20) '|' SysGeterrnomsg(21) '|' SysGeterrnomsg(22)
-say SysGeterrnomsg(39) '|' SysGeterrnomsg(2147483647) '|' SysGeterrnomsg(1000)
+say SysGeterrnomsg(39) '|' (SysGeterrnomsg(2147483647) \= '') '|' (SysGeterrnomsg(1000) \= '') '|' (SysGeterrnomsg(-1) \= '')
 ::requires 'rxunixsys' library
 ```
 
@@ -366,7 +369,7 @@ say SysGeterrnomsg(39) '|' SysGeterrnomsg(2147483647) '|' SysGeterrnomsg(1000)
 -1 17 -1 20
 Ok | Operation not permitted | No such file or directory | Permission denied
 File exists | Not a directory | Is a directory | Invalid argument
-Directory not empty | Unknown | Unknown
+Directory not empty | 1 | 1 | 1
 ```
 
 ## Deviations
