@@ -1,0 +1,5 @@
+47	0	Unexpected label.
+47	1	Labels must not be used in INTERPRET data; found "&1".
+47	2	Labels must not be used in a DO or LOOP block; found "&1".
+47	3	Labels must not be used in an IF instruction; found "&1".
+47	4	Labels must not be used in a SELECT block; found "&1".

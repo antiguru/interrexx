@@ -1,0 +1,4 @@
+49	0	Interpretation error.
+49	1	The interpreter failed to initialize.
+49	2	Interpretation error; no branch for &1 &2.
+49	900	&1.

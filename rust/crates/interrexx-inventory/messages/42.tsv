@@ -1,0 +1,8 @@
+42	0	Arithmetic overflow/underflow.
+42	1	Arithmetic overflow in "&1 &2 &3".
+42	2	Arithmetic underflow in "&1 &2 &3".
+42	3	Arithmetic overflow; divisor must not be zero.
+42	900	&1.
+42	901	Arithmetic overflow; exponent of result ("&1") requires more than &2 digits.
+42	902	Arithmetic underflow; exponent of result ("&1") requires more than &2 digits.
+42	903	Zero must not be raised to a negative power.

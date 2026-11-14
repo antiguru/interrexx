@@ -1,0 +1,5 @@
+46	0	Invalid variable reference.
+46	1	")" expected after variable reference list; found "&1".
+46	900	&1.
+46	901	Unmatched "(" in variable reference.
+46	902	"," or end of instruction expected after USE ARG variable reference; found "&1".
