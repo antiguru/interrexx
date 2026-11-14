@@ -1436,6 +1436,12 @@ impl NativeInFlight {
         matches!(self.stage, Stage::Prepared | Stage::SpawnFailed(_))
     }
 
+    /// Whether the call has left its driver and its completion is not yet
+    /// drained.
+    pub(crate) fn left(&self) -> bool {
+        matches!(self.stage, Stage::Left)
+    }
+
     /// Whether the call waits for its driver exit.
     pub(crate) fn awaits_exit(&self) -> bool {
         matches!(self.stage, Stage::Prepared)

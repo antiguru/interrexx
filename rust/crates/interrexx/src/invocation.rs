@@ -94,7 +94,6 @@ pub struct Invocation {
     classic_thread: Option<usize>,
     /// Whether a host outside the interpreter runs the program through the API, which turns off
     /// the refusal of unending waits (Deviation 20).
-    // The host's native code may end a wait nothing in the program can.
     hosted: bool,
 }
 

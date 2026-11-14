@@ -1236,7 +1236,13 @@ impl Interp {
         // what waits, so no thread that attaches later can end the wait. A
         // send whose method has replied has its result already, and its
         // `result` and `wait` answer without a wait.
-        (self.activities.guards.waiters()).any(|waiter| self.waited_on(waiter) == Some(waiter))
+        (self.activities.guards.waiters()).any(|waiter| self.waits_on_a_message_it_runs(waiter))
+    }
+
+    /// Whether `at` waits for the result or the completion of a message
+    /// whose send it runs itself and has not replied from.
+    fn waits_on_a_message_it_runs(&self, at: ActivityId) -> bool {
+        self.waited_on(at) == Some(at)
     }
 
     /// The activity `at` waits on, as [`Interp::waits_on`] names it.
@@ -2274,14 +2280,17 @@ impl Interp {
     /// Whether the call `by` recalls the baton for counts in flight
     /// ([`Activities::in_flight`]), so that a lend for its callback counts it
     /// as run below ([`Activities::runs_below`]): a pool thread's call, which
-    /// counts from its exit, or a vacated call while a thread serves its
-    /// vacancy. An attached thread's callback recalls for no call.
+    /// counts from its exit, a vacated call while a thread serves its
+    /// vacancy, or the call in flight of the activity whose thread context a
+    /// thread calls back through, as the thread that created an embedding
+    /// instance does for the root's call. An attached thread's
+    /// callback recalls for no call.
     fn recalled_call_in_flight(&self, by: &Recaller) -> bool {
         // A lend that counted a call below which is not in flight would hide
         // an unrelated call in flight from the tests that compare the two,
         // and a wait that call may end would be refused.
-        match by {
-            &Recaller::Call { activity, frame } => {
+        match *by {
+            Recaller::Call { activity, frame } => {
                 let record = if activity == self.activities.running {
                     Some(&self.activity)
                 } else {
@@ -2297,7 +2306,22 @@ impl Interp {
                         vacancy.activity == activity && vacancy.frame == frame && vacancy.served
                     })
             }
-            Recaller::Context(_) => false,
+            // The callback runs as the activity whose call is out, so that
+            // call's completion can resume nothing before the callback has
+            // returned.
+            Recaller::Context(address) => {
+                let record = match self.context_owner(address) {
+                    Some(owner) => (self.activities.idle.get(owner.0 as usize))
+                        .and_then(Option::as_ref)
+                        .map(|idle| &idle.activity),
+                    None => (self.activity.thread.as_ref())
+                        .is_some_and(|thread| thread.address() == address)
+                        .then_some(&self.activity),
+                };
+                record.is_some_and(|record| {
+                    (record.native_call.as_ref()).is_some_and(|call| call.left())
+                })
+            }
         }
     }
 
@@ -2740,7 +2764,8 @@ impl Interp {
     /// The loop at `level` has nothing to run: inverted where some activity
     /// is ready whose frames lie below a loop on the stack, which only that
     /// loop can run, or where a recall below this loop interrupted an
-    /// activity, which runs on only once that recall's lend returns.
+    /// activity, which runs on only once that recall's lend returns, and the
+    /// running activity does not wait on a message it runs itself.
     ///
     /// Both are a best guess at what the blocked wait is for: neither asks
     /// whether the activity below could end it. Any interrupted owner below
@@ -2754,8 +2779,12 @@ impl Interp {
         let interrupted = table.owners[..level]
             .iter()
             .any(|&(_, below)| below == Below::Interrupted);
+        // An activity set aside or interrupted cannot end a wait on a message
+        // the running activity runs itself either, so that wait is not
+        // inverted.
         Waited::Blocked {
-            inverted: !table.set_aside.is_empty() || interrupted,
+            inverted: (!table.set_aside.is_empty() || interrupted)
+                && !self.waits_on_a_message_it_runs(table.running),
         }
     }
 
@@ -2847,11 +2876,15 @@ impl Interp {
                 // may end a wait, so a loop with nothing else to run or wait
                 // for idles for posts instead of refusing the wait
                 // (`r[native.threads.attach.deviation.176]`).
+                // No callback can end this loop's own wait on a message its
+                // activity runs, so that wait is refused even inside a
+                // callback, a host's call included (Deviation 20).
                 if sleeper.is_none()
                     && self.activities.in_flight == self.activities.runs_below
                     && self.activities.held.is_empty()
-                    && self.activities.callbacks_lent == 0
-                    && !self.waits_for_attaching_threads(level)
+                    && (self.waits_on_a_message_it_runs(me)
+                        || (self.activities.callbacks_lent == 0
+                            && !self.waits_for_attaching_threads(level)))
                 {
                     return Ok(None);
                 }

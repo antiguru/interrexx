@@ -4485,6 +4485,7 @@ fn execute_kept(
     let _classic = parts.classic_thread.map(|caller| {
         embedding::ClassicRun::register([caller, signal::current_thread()], interp.timer.inbox())
     });
+    // The host's native code may end a wait nothing in the program can.
     if parts.hosted {
         interp.note_outside_host();
     }

@@ -852,8 +852,11 @@ activity itself runs, and has not yet replied from, is refused whatever was
 loaded, since the message completes only when that method returns. The other
 activities run on while it waits, and the refusal comes once nothing else can
 run, during the main program or at its end, so their output and their errors
-come first. It then ends the run even where native code could still end
-another activity's wait. The refusal claims only that the wait can never be
+come first. Inside a message that an attached thread sends, or a routine that
+an embedding host calls, it comes there too, where another wait goes on for a
+later message. It then ends the run even where native code could still end
+another activity's wait. A host's call answers with a condition pending, and
+the refusal is reported when the host terminates the instance. The refusal claims only that the wait can never be
 satisfied. After a `reply` the result is settled, and the method's own
 `result` and `wait` answer at once.
 A wait that would close a ring of waits between activities raises `SYNTAX

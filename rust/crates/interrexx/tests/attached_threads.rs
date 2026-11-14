@@ -1136,6 +1136,42 @@ fn a_wait_on_the_activitys_own_message_is_refused_under_a_host() {
     );
 }
 
+/// An embedding host calls a routine on an instance it created, and the routine sends a message
+/// whose method waits for that message's own result before it replies: the wait is refused, the
+/// call answers no result with a condition pending, and the refusal is reported once the host
+/// calls `Terminate`.
+// spec: conc.activities.deviation.20
+#[test]
+fn a_wait_on_the_activitys_own_message_in_a_hosts_call_is_refused() {
+    // The call runs as a callback of the host's thread, and no later callback can end this wait.
+    assert_eq!(
+        run_driver("hostwait", &["self"]),
+        (
+            "in run\nroutine (none) condition 1\nterminated\n".to_owned(),
+            UNENDING_WAIT.to_owned(),
+            0
+        )
+    );
+}
+
+/// After the extension's library loaded, an attached thread sends `SEND` to a message whose method
+/// waits for that message's own result before it replies, while the main program waits for the
+/// thread a while: the main program runs to its end, and the wait is refused, rc 120. Under the
+/// gate the oracle prints the same and waits for ever.
+// spec: conc.activities.deviation.20
+#[test]
+fn a_wait_on_the_activitys_own_message_in_an_attached_callback_is_refused() {
+    // The wait runs in the attached thread's callback, and no later callback can end it.
+    assert_eq!(
+        run_up_to_refusal("attach-selfsend", "selfsend.rex"),
+        (
+            "in run\nmain done\n".to_owned(),
+            UNENDING_WAIT.to_owned(),
+            120
+        )
+    );
+}
+
 /// After the extension's library loaded, a method that has replied waits with `result` and `wait`
 /// on the message whose send ran it: the reply settled the result, so both answer at once. The
 /// oracle agrees under the gate.

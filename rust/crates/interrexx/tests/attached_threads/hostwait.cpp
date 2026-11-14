@@ -1,12 +1,15 @@
 // An embedding host whose program waits on something only the host can end.
 //
-// Usage: hostwait instance | hostwait terminate | hostwait start <program>.
+// Usage: hostwait instance | hostwait terminate | hostwait self | hostwait start <program>.
 //
 // * `instance`: the host creates an instance, makes an event semaphore in it, and starts a thread
 //   that waits a while, attaches and posts the semaphore. The creating thread meanwhile calls a
 //   routine that waits on the semaphore, and prints what the routine answered.
 // * `terminate`: the host creates an instance, calls a routine that starts an activity waiting on
 //   an event semaphore nothing posts, prints what the routine answered, and calls `Terminate`.
+// * `self`: the host creates an instance and calls a routine that sends a message whose method
+//   waits for that message's own result before it replies. It prints what the routine answered
+//   and whether the call left a condition, and calls `Terminate`.
 // * `start`: the host starts a thread that waits a while and halts the thread `RexxStart` runs
 //   `<program>` on, then runs it there and prints what it answered.
 #include <chrono>
@@ -72,6 +75,32 @@ static int terminate_wait()
     return 0;
 }
 
+static int self_wait()
+{
+    RexxInstance *instance = NULL;
+    RexxThreadContext *context = NULL;
+    if (RexxCreateInterpreter(&instance, &context, NULL) != 1)
+    {
+        return 1;
+    }
+    const char *source = "m = .message~new(.k~new, 'RUN')\n"
+                         ".environment~mm = m\n"
+                         "return m~send\n"
+                         "::class k\n"
+                         "::method run\n"
+                         "  say 'in run'\n"
+                         "  return .environment~mm~result\n";
+    RexxRoutineObject routine = context->NewRoutine("SELFWAIT", source, strlen(source));
+    RexxObjectPtr result = context->CallRoutine(routine, context->NewArray(0));
+    printf("routine %s condition %d\n", result == NULLOBJECT ? "(none)" : context->CString(result),
+           context->CheckCondition() ? 1 : 0);
+    fflush(stdout);
+    instance->Terminate();
+    printf("terminated\n");
+    fflush(stdout);
+    return 0;
+}
+
 static void halt_later(pthread_t thread)
 {
     std::this_thread::sleep_for(std::chrono::milliseconds(300));
@@ -100,6 +129,10 @@ int main(int argc, char **argv)
     if (argc >= 2 && strcmp(argv[1], "terminate") == 0)
     {
         return terminate_wait();
+    }
+    if (argc >= 2 && strcmp(argv[1], "self") == 0)
+    {
+        return self_wait();
     }
     if (argc >= 3 && strcmp(argv[1], "start") == 0)
     {

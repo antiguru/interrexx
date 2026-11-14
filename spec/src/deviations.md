@@ -163,8 +163,9 @@ runs a program with no host. A wait for the result or the completion of a
 message whose method the waiting activity itself runs, and has not yet
 replied from, is refused whatever was loaded: the message completes only when
 that method returns, and the method is what waits. The refusal comes once
-nothing else can run, after the other activities' output and errors. ooRexx
-blocks for ever there too.
+nothing else can run, after the other activities' output and errors, also
+inside a message an attached thread sends or a routine an embedding host
+calls. ooRexx blocks for ever there too.
 
 ## 21. Activities at program end
 
