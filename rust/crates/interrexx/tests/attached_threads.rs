@@ -285,7 +285,24 @@ fn two_attached_threads_call_back_concurrently() {
 // spec: native.threads.attach
 #[test]
 fn two_attached_threads_call_back_concurrently_every_time() {
-    for run in 0..10 {
+    call_back_concurrently(10);
+}
+
+/// [`two_attached_threads_call_back_concurrently_every_time`] with two hundred runs. The
+/// simulation mode refuses a callback from a thread running none of the interpreter's native
+/// calls, so it cannot vary how the two threads' messages meet, and this many real runs stand in
+/// for its seeds. CI runs it in a job of its own.
+// spec: native.threads.attach
+#[test]
+#[ignore = "two hundred runs of a minute in all; CI runs it with --run-ignored ignored-only"]
+fn two_attached_threads_call_back_concurrently_two_hundred_times() {
+    call_back_concurrently(200);
+}
+
+/// Runs [`two_attached_threads_call_back_concurrently`]'s program `runs` times in a row, each
+/// expected to tick ten times.
+fn call_back_concurrently(runs: usize) {
+    for run in 0..runs {
         assert_eq!(
             run_ours("attach-two-stress", "two.rex"),
             ("ticked 10\n".to_owned(), String::new(), 0),
