@@ -85,8 +85,8 @@ From `rust/`, under the memory cap:
 * `REXX_SPEC_ORACLE=1 cargo test -p interrexx --test spec` after changing `spec/`.
   `REXX_SPEC_ONLY=native/` runs only the examples of the pages under that path of `spec/src`;
   the other checks still cover every page. The native chapter's examples load fixture libraries
-  that `scripts/build-spec-fixture.sh` compiles from `spec/fixture/` against the ooRexx API
-  headers; without the headers those examples are skipped and listed on standard error.
+  that `scripts/build-spec-fixture.sh` compiles from `spec/fixture/` against `include/`, so no
+  example is skipped.
 * ThreadSanitizer runs take `TSAN_OPTIONS=suppressions=rust/tsan.supp`, which hides the dynamic
   linker's `dl_close` race that two interpreters in one process show.
 * Mutation runs build with `--profile mutation`, so a mutant never overwrites the release binary.

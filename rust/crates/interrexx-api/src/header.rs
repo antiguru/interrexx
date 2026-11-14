@@ -585,9 +585,15 @@ fn error_codes(errors: &[ErrorRow<'_>]) -> String {
 
 /// The handle types: in C a pointer to an incomplete struct; in C++ a pointer
 /// to an empty struct derived from the struct of the handle it converts to.
+///
+/// The C++ structs sit outside the file's `extern "C"` block: an empty struct is
+/// size 0 in C and size 1 in C++, which clang's `-Wextern-c-compat` rejects
+/// under `-Werror` inside a C-linkage block. The structs have no linkage of
+/// their own, so closing the block changes no symbol.
 fn handles() -> String {
     let mut out = String::new();
     out.push_str("#ifdef __cplusplus\n");
+    out.push_str("}\n");
     for (at, (handle, base)) in HANDLES.iter().enumerate() {
         match base {
             None => writeln!(out, "struct _{handle} {{}};").unwrap(),
@@ -603,6 +609,7 @@ fn handles() -> String {
     for (handle, _) in HANDLES {
         writeln!(out, "typedef _{handle} *{handle};").unwrap();
     }
+    out.push_str("extern \"C\" {\n");
     out.push_str("#else\n");
     for (handle, _) in HANDLES {
         writeln!(out, "typedef struct _{handle} *{handle};").unwrap();

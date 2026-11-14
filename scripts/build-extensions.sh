@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Compiles ooRexx's hostemu and orxncurses extensions, unmodified, against this workspace's
-# librexx.so.4 and librexxapi.so.4, never the oracle's.
+# librexx.so.4 and librexxapi.so.4, never the oracle's, and against this repository's include/.
 #
 #   build-extensions.sh [--libs DIR] [--out DIR] [--check-only]
 #
@@ -32,7 +32,8 @@ while [ $# -gt 0 ]; do
 done
 
 src=$root/third_party/ooRexx/extensions
-api=$root/third_party/ooRexx/api
+api=$root/include
+. "$root/scripts/api-flags.sh"
 
 build() {
     if [ -z "$libs" ]; then
@@ -47,7 +48,7 @@ build() {
 
     # --no-as-needed keeps both libraries recorded although a product may call into only one,
     # so the check below always has both to look at.
-    local flags=(-w -I"$api" -I"$api/platform/unix" -fPIC -shared -L"$out"
+    local flags=(-w "${api_flags[@]}" -shared -L"$out"
         -Wl,--disable-new-dtags -Wl,-rpath,"$out" -Wl,--no-as-needed)
 
     c++ -o "$out/libhostemu.so" "$src/hostemu/platform/unix/hostemu.cpp" \
@@ -72,8 +73,9 @@ stamp=
 if [ -n "$libs" ] && [ -z "$check_only" ]; then
     exec 9>"$out.lock"
     flock 9
-    stamp=$(stat -c '%n %s %.9Y' "$libs/librexx.so" "$libs/librexxapi.so" "$0"
-        git -C "$root/third_party/ooRexx" rev-parse HEAD
+    stamp=$(stat -c '%n %s %.9Y' "$libs/librexx.so" "$libs/librexxapi.so" "$0" "$root/scripts/api-flags.sh"
+        api_stamp
+        find "$src" -type f -print0 | LC_ALL=C sort -z | xargs -0 stat -c '%n %s %.9Y'
         c++ --version | head -n 1)
     if [ -f "$out/.stamp" ] && [ "$(cat "$out/.stamp")" = "$stamp" ]; then
         echo "build-extensions.sh: $out is up to date"

@@ -21,7 +21,7 @@ while [ $# -gt 0 ]; do
 done
 
 src=$root/spec/fixture/specfixture.cpp
-api=$root/third_party/ooRexx/api
+api=$root/include
 . "$root/scripts/api-flags.sh"
 
 mkdir -p "$out"
@@ -32,7 +32,7 @@ out=$(cd "$out" && pwd)
 exec 9>"$out.lock"
 flock 9
 stamp=$(stat -c '%n %s %.9Y' "$src" "$0" "$root/scripts/api-flags.sh"
-    git -C "$root/third_party/ooRexx" rev-parse HEAD
+    api_stamp
     "$api_cxx" --version | head -n 1)
 if [ -f "$out/.stamp" ] && [ "$(cat "$out/.stamp")" = "$stamp" ]; then
     echo "build-spec-fixture.sh: $out is up to date"

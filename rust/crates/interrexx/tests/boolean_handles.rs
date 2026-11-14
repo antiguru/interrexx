@@ -29,9 +29,16 @@ fn probes() -> PathBuf {
 }
 
 fn build_library(source: &Path, library: &Path) {
-    let api = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../third_party/ooRexx/api");
+    let api = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../include");
     let built = Command::new("c++")
-        .args(["-shared", "-fPIC", "-O1", "-static-libstdc++"])
+        .args([
+            "-shared",
+            "-fPIC",
+            "-O1",
+            "-Wall",
+            "-Werror",
+            "-static-libstdc++",
+        ])
         .arg(format!("-I{}", api.display()))
         .arg(format!("-I{}", api.join("platform/unix").display()))
         .arg(source)

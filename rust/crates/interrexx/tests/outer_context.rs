@@ -1,6 +1,6 @@
 //! The context-variable members reached through a call context kept from an
 //! enclosing native call, against the oracle. No extension the oracle builds
-//! keeps a context, so the forged `outer_context/outer9b.cpp` is compiled against this worktree's `api/` into the target
+//! keeps a context, so the forged `outer_context/outer9b.cpp` is compiled against this worktree's `include/` into the target
 //! directory; it NEEDs nothing, which is asserted before it is loaded.
 //! `o9b.rex` reads, sets and drops bound simple, stem and compound variables
 //! through the kept context and must match on all three descriptors, run
@@ -43,9 +43,16 @@ fn build_forge(dir: &Path) {
 /// Builds the extension `source` as `library` and checks it NEEDs no
 /// interpreter.
 fn build_library(source: &Path, library: &Path) {
-    let api = worktree().join("third_party/ooRexx/api");
+    let api = worktree().join("include");
     let built = Command::new("g++")
-        .args(["-shared", "-fPIC", "-O1", "-static-libstdc++"])
+        .args([
+            "-shared",
+            "-fPIC",
+            "-O1",
+            "-Wall",
+            "-Werror",
+            "-static-libstdc++",
+        ])
         .arg(format!("-I{}", api.display()))
         .arg(format!("-I{}", api.join("platform/unix").display()))
         .arg(source)
