@@ -660,7 +660,8 @@ at a time.</p>
 returns no value and the SYNTAX condition is raised with error number <code>m</code>
 and subcode <code>n</code>. A trap for it sees <code>condition('C')</code> as <code>SYNTAX</code>,
 <code>condition('O')~code</code> as the string <code>m.n</code>, and the variable <code>RC</code> set to
-<code>m</code>. This book does not state the error message.</p>
+<code>m</code>. The error number and the subcode are both part of what such a rule
+states. This book does not state the error message.</p>
 <pre><code class="language-rexx">signal on syntax name e
 x = substr('abc', 0)
 say 'not reached'
@@ -677,9 +678,8 @@ the notice and the error lines of interactive tracing, the text of a trace
 line that names a library method, the answers of SysGetMessage for the
 interpreter's own catalog and of SysGeterrnomsg, the C API's functions that
 answer the text of an error, the usage texts of the commands, and the messages
-of the utility programs. What is specified is the code, the number and the
-order of the inserts that <code>ADDITIONAL</code> holds, the values they hold, and for the
-report the frame that names the error number, the program and the line (<code>Error N running F line L:</code>, or <code>Error N.M:</code> where no line applies). A message exists
+of the utility programs. What is specified is the code, and for the report
+the frame that names the error number, the program and the line (<code>Error N running F line L:</code>, or <code>Error N.M:</code> where no line applies). A message exists
 for a number or it does not, as the <a href="builtins/errortext.html#r-bif.errortext.result">ERRORTEXT rules</a>
 say, and an example in this book shows a message only by whether it is the
 null string or equals another message, never by its words. The words <code>Error</code>,
@@ -688,10 +688,22 @@ that stay as they are, not wording that is free.</p>
 <pre><code class="language-rexx">signal on syntax name e
 x = substr('abc', 0)
 e: o = condition('o')
-say (errortext(93) \== '') (o~errortext == errortext(93)) (o~message \== ''),
-    o~additional~items
+say (errortext(93) \== '') (o~errortext == errortext(93)) (o~message \== '')
 </code></pre>
-<pre><code class="language-output">1 1 1 1
+<pre><code class="language-output">1 1 1
+</code></pre>
+<div class="rule" id="r-conv.error.additional"><a href="conventions.html#r-conv.error.additional">[conv.error.additional]</a></div>
+<p>For an error the interpreter raises, the <code>ADDITIONAL</code> entry of the condition
+object is an Array, and the number, order and values of its items are
+unspecified, except where a rule states an item. A rule that states one says
+which item it is and what it holds. An error that <code>RAISE</code> gives rise to is
+such an error; the objects the clause supplied are governed by the <a href="instructions/raise.html#r-instr.raise.untrapped">RAISE
+rules</a>.</p>
+<pre><code class="language-rexx">signal on syntax name e
+x = substr('abc', 0)
+e: say condition('o')~additional~isA(.array)
+</code></pre>
+<pre><code class="language-output">1
 </code></pre>
 <div class="rule" id="r-conv.returns"><a href="conventions.html#r-conv.returns">[conv.returns]</a></div>
 <p>A rule that says a builtin "returns" a string means that the function
