@@ -7,10 +7,10 @@
 #
 # Not flagged:
 #   * names of files this repository tracks itself (its own C++ probe sources);
-#   * the files in ALLOW below. They read ooRexx's sources while building or
-#     testing, hold oracle output verbatim, or carry a literal string the code
-#     compares. Issue #388 replaces the build-time readers; shrink the list as
-#     that happens and do not add to it.
+#   * the files in ALLOW below. They read ooRexx's sources in the upstream
+#     tier of the tests or in `interrexx-upstream`, or carry a file name as a
+#     literal string or in recorded or derived data. No build script reads an
+#     ooRexx source any more (#388). Do not add to the list.
 #
 # The patterns are plain regular expressions over file contents. Submodules are
 # not searched.

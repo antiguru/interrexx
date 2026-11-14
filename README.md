@@ -9,12 +9,12 @@ This is an independent project, not affiliated with the Rexx Language Associatio
 ## Building
 
 ```sh
-git clone --recurse-submodules https://github.com/antiguru/interrexx
+git clone https://github.com/antiguru/interrexx
 cd interrexx/rust
 cargo build --release
 ```
 
-The build reads ooRexx sources from the `third_party/ooRexx` submodule. Binaries are `rexx` and `rexxc`.
+The build reads only files of this repository, so it needs no submodule. Binaries are `rexx` and `rexxc`.
 
 ### Debian package
 
@@ -31,7 +31,20 @@ The package installs `rexx`, `rexxc`, `rexx-ir`, `rxapi`, `rxqueue` and `rxsubco
 
 ## Testing
 
-Tests compare against an ooRexx build and run ooTest:
+The regular tests need no ooRexx build and no submodule, only the ooTest and ooRexx documentation
+checkouts. The preflight script lists the checkouts that are missing and prints the commands that
+fetch them:
+
+```sh
+python3 rust/scripts/test_preflight.py --standalone
+cd rust
+cargo nextest run --workspace --profile standalone
+cargo test --workspace --doc
+```
+
+The upstream tests and the comparisons against an ooRexx build need the pinned `third_party/ooRexx`
+submodule and its build, which `scripts/setup-third-party.sh` makes. They run in the `ci` profile
+together with the regular tests:
 
 ```sh
 scripts/setup-third-party.sh

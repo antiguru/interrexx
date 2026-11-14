@@ -5,15 +5,22 @@ and the reasons for them are in `docs/design/decisions.md`; read it before propo
 
 ## Setup
 
-`scripts/setup-third-party.sh` checks out the pinned `third_party/ooRexx` submodule, builds it as
-`third_party/oracle` (CMake `Release`), and checks out ooTest (`ootest/`) and the ooRexx
-documentation (`oodocs/`) at a fixed revision. Then `python3 rust/scripts/test_preflight.py` lists
-anything the tests still need; `test_preflight.py -- COMMAND` runs the command only if nothing is
-missing.
+A regular build and test run need no submodule and no ooRexx build. `cargo build` and
+`cargo nextest run --workspace --profile standalone` read only files of this repository, plus the
+ooTest (`ootest/`) and ooRexx documentation (`oodocs/`) checkouts. `python3 rust/scripts/test_preflight.py
+--standalone` lists whichever of those is missing and prints the `svn checkout` commands that fetch
+them; `test_preflight.py --standalone -- COMMAND` runs the command only if nothing is missing.
+
+The submodule and the oracle are needed only for the upstream tier of the tests and for the oracle
+comparisons (`docs/design/testing.md`). `scripts/setup-third-party.sh` checks out the pinned
+`third_party/ooRexx` submodule, builds it as `third_party/oracle` (CMake `Release`), and checks out
+ooTest and the documentation at a fixed revision. Then `python3 rust/scripts/test_preflight.py`
+lists anything the upstream tier still needs; `test_preflight.py -- COMMAND` runs the command only
+if nothing is missing.
 
 Three tables are generated from the pinned sources and checked in: `classes.tsv`, `errors.tsv`
 and `builtins.txt`, in the `data/` directories of `interrexx-classes` and `interrexx-inventory`.
-After bumping the `third_party/ooRexx` submodule, regenerate them and commit the result:
+A regular build reads these files, never the pinned sources. After bumping the `third_party/ooRexx` submodule, regenerate them and commit the result:
 
 ```sh
 REXX_UPSTREAM=$PWD/third_party/ooRexx cargo run -p interrexx-upstream -- write
@@ -46,8 +53,37 @@ service, `rxqueue`, `rxsubcom`, `librexxapi` and the extension libraries are wri
 behaviour descriptions, public headers (`api/`), `oodocs`, ooTest and running ooRexx, never from
 reading ooRexx's `rexxapi/`, `utilities/` or `extensions/` sources, and ooRexx is never traced or
 disassembled. Nothing in interrexx copies ooRexx source or documentation text. Error message texts
-are interrexx's own data: a message that states a fact mechanically, or that comes from the ANSI
-standard, may keep its wording, and distinctive prose is written fresh.
+are interrexx's own data, written to the rules of `STYLE.md`: a text keeps ooRexx's wording only
+where it is ANSI's, one of the canonical phrases with names filled in, or a plain statement of the
+code's meaning, and every other text is written fresh.
+
+No text under ooRexx's licence enters the repository, recorded runs included: a recorded oracle
+run keeps the code of an error line, not the text after it. No tool in the repository compares
+texts with ooRexx's. The check was run once, by hand, with a throwaway script, and the method is
+recorded here for whoever repeats it. The script read ooRexx's message catalogue (each text, explanation
+and user action, with the inserts as `&k`) and the comments of the pinned `api/` headers, normalised
+whitespace, case, quote glyphs and comment markers so that hard-wrapped prose rejoins, and searched
+every tracked file outside `third_party/`, `ootest/` and `oodocs/`, fixtures and recorded runs
+included. A catalogue text was found by each literal piece of 12 or more characters and by its whole
+template with the inserts as wildcards; a header comment was found by sentence. Catalogue texts
+identical to our own were skipped, and every hit outside the message files was read by hand,
+because short pieces match generic phrases. The limit: a text with no literal piece of 12
+characters cannot be found, and neither can a text that was reworded, or quoted in fragments
+shorter than that. The scan did not read oodocs prose, so sentences quoted from the documentation
+were found by reading. To repeat it, write the script again against the catalogue of the pinned
+revision.
+
+`include/` is not hand-maintained where it is generated. After a change to the Rust definitions
+in `interrexx-api` (`layout.rs`, `constants.rs`, `exports.rs`), rewrite the generated sections of
+the headers and read the diff:
+
+```sh
+REXX_HEADERS_REFRESH=1 cargo test -p interrexx-api --test headers
+```
+
+Without the switch the same test fails when a header differs from what the definitions render. The
+`standalone` CI job also compiles `rexx.h` and `oorexxapi.h` with clang as C and as C++ under
+`-Wall -Wextra -Werror -Wextern-c-compat`.
 
 ## What correct means
 
@@ -92,6 +128,16 @@ allocate than ooRexx.
 From `rust/`, under the memory cap:
 
 * `cargo fmt --all --check` and `cargo clippy --workspace --all-targets -- -D warnings`.
+* `cargo nextest run --workspace --profile standalone` runs the regular tier, the tests that need
+  nothing of `third_party/`. The profile's `default-filter` in `rust/.config/nextest.toml` holds
+  the upstream tier out, and the comments above the profile give each entry's tier and the path it
+  needs. A test that needs `third_party/` fails loudly when the tree is absent and does not skip
+  itself; the filter keeps it out of this profile. A new test that reads the submodule or runs the
+  oracle is added to the filter with its tier and reason. The `build` CI job checks every name in
+  the filter against the test archive (`rust/scripts/check_standalone_filter.py`), so a renamed
+  test cannot leave the filter unnoticed. The `standalone` CI job runs this profile, `cargo build`,
+  clippy and the doc tests on a checkout with no submodule, no `third_party/` directory, no `build`
+  link and no cargo cache, so a build script or test that reads the tree fails there.
 * `cargo nextest run --workspace --profile ci`, then `cargo test --workspace --doc` (nextest does
   not run doc tests). Install nextest with `cargo install cargo-nextest --locked`. Run the gate
   with `REXX_CORPUS_GATE=1 cargo test --workspace --no-fail-fast` in a debug build, not under

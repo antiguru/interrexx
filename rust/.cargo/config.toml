@@ -1,4 +1,6 @@
-# Unmodified third-party trees. `setup-third-party.sh` populates them.
+# Unmodified third-party trees, which `setup-third-party.sh` populates. Only the upstream tier of
+# the tests and the oracle comparisons read them; a regular build and the `standalone` nextest
+# profile run with both absent, so these variables may name paths that do not exist.
 [env]
 REXX_UPSTREAM = { value = "../third_party/ooRexx", relative = true }
 REXX_ORACLE_ROOT = { value = "../third_party/oracle", relative = true }
