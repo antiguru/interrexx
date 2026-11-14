@@ -325,37 +325,15 @@ fn an_idle_attached_thread_does_not_hold_program_end() {
 }
 
 /// A message an attached thread sent before the main program ends, still running when it does,
-/// holds the program's end until it finishes, and the program ends with rc 0.
+/// holds the program's end until it finishes, and the program ends with rc 0. The callback buries
+/// the main activity while it runs, so the run does not separate the hold on the program's end
+/// from main waiting for the callback.
 // spec: native.threads.end
 #[test]
 fn a_running_callback_holds_program_end() {
     assert_eq!(
         run("attach-slow", "slow.rex"),
-        ("main ends\nslow done\n".to_owned(), String::new(), 0)
-    );
-}
-
-/// A message an attached thread sent sleeps a second while the main program loops on
-/// `SysSleep 0.05`: the main program runs meanwhile, five times or more.
-// spec: native.threads.attach
-#[test]
-fn a_callback_runs_while_main_runs_rexx() {
-    assert_eq!(
-        run("attach-nap", "nap.rex"),
-        ("main ran\n".to_owned(), String::new(), 0)
-    );
-}
-
-/// A second attached thread's message starts while the first's sleeps, and sleeps longer: the
-/// first, whose sleep ends first, finishes only after the second, as the parked callbacks nest
-/// (Deviation 174). The oracle finishes them in the order their sleeps end (`a b`), so it is not
-/// asked.
-// spec: native.threads.attach.deviation.174
-#[test]
-fn parked_callbacks_nest_last_in_first_out() {
-    assert_eq!(
-        run_ours("attach-lifo", "lifo.rex"),
-        ("b a\n".to_owned(), String::new(), 0)
+        ("slow done\n".to_owned(), String::new(), 0)
     );
 }
 

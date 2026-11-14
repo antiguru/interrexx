@@ -36,7 +36,6 @@
 //   as it should.
 // * `AtTickJoin(target)` starts a thread that attaches, sends `TICK` to `target` and detaches, and
 //   joins it before it returns: the message runs while the call blocks.
-// * `AtSend(target, name)` sends the message `name`, with no arguments.
 // * `AtSendJoin(target)` sends `JOIN`, whose method calls `AtTickJoin` from inside the attached
 //   thread's message, so the call that joins is made while a callback runs.
 #include <atomic>
@@ -60,8 +59,7 @@ enum Job
     LATE,
     BUFFERS,
     INNER,
-    JOIN,
-    NAMED
+    JOIN
 };
 
 struct Thread
@@ -70,8 +68,6 @@ struct Thread
     RexxObjectPtr target;
     Job job;
     size_t count;
-    // The message `NAMED` sends.
-    char name[32];
 };
 
 static std::atomic<int> finished(0);
@@ -135,9 +131,6 @@ static void run(RexxThreadContext *thread, Thread *self)
             break;
         case JOIN:
             thread->SendMessage0(self->target, "JOIN");
-            break;
-        case NAMED:
-            thread->SendMessage0(self->target, self->name);
             break;
         case BUFFERS:
         {
@@ -282,17 +275,15 @@ static void *body(void *argument)
     return NULL;
 }
 
-// Starts a detached thread running `entry` for `job`, which sends `name` where it names a message,
-// and answers 1 where it started.
+// Starts a detached thread running `entry` for `job`, and answers 1 where it started.
 static logical_t start_with(RexxCallContext *context, RexxObjectPtr target, Job job, size_t count,
-                            void *(*entry)(void *), const char *name = "")
+                            void *(*entry)(void *))
 {
     Thread *self = new Thread;
     self->instance = context->threadContext->instance;
     self->target = context->RequestGlobalReference(target);
     self->job = job;
     self->count = count;
-    snprintf(self->name, sizeof self->name, "%s", name);
     pthread_t thread;
     pthread_attr_t attributes;
     pthread_attr_init(&attributes);
@@ -385,11 +376,6 @@ RexxRoutine1(logical_t, AtInner, RexxObjectPtr, target)
     return start(context, target, INNER, 0);
 }
 
-RexxRoutine2(logical_t, AtSend, RexxObjectPtr, target, CSTRING, name)
-{
-    return start_with(context, target, NAMED, 0, body, name);
-}
-
 RexxRoutine1(logical_t, AtSendJoin, RexxObjectPtr, target)
 {
     return start(context, target, JOIN, 0);
@@ -475,7 +461,6 @@ static RexxRoutineEntry routines[] = {
     REXX_TYPED_ROUTINE(AtBuffers, AtBuffers),
     REXX_TYPED_ROUTINE(AtInner, AtInner),
     REXX_TYPED_ROUTINE(AtDetachHere, AtDetachHere),
-    REXX_TYPED_ROUTINE(AtSend, AtSend),
     REXX_TYPED_ROUTINE(AtSendJoin, AtSendJoin),
     REXX_TYPED_ROUTINE(AtTickJoin, AtTickJoin),
     REXX_TYPED_ROUTINE(AtDone, AtDone),

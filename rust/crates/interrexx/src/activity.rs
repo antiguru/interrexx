@@ -329,9 +329,6 @@ pub(crate) struct Activity {
     pub(crate) pin_depth: u32,
     /// The pin depth where the innermost running driver was entered.
     pub(crate) driver_pins: u32,
-    /// Whether the innermost running driver is the activity's root driver,
-    /// which a slice may leave.
-    pub(crate) root_driver: bool,
     /// The park a primitive method answered, from its answer until the
     /// activity wakes.
     pub(crate) native_park: Option<Box<crate::dispatch::NativePark>>,
@@ -626,7 +623,6 @@ impl Activity {
             requires_installing: Vec::new(),
             pin_depth: 0,
             driver_pins: 0,
-            root_driver: false,
             native_park: None,
             native_call: None,
             blocked: crate::command::Blocks::default(),
@@ -814,7 +810,6 @@ impl Activity {
             requires_installing: _,
             pin_depth: _,
             driver_pins: _,
-            root_driver: _,
             native_park,
             native_call,
             blocked,

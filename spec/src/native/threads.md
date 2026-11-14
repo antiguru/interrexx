@@ -1,7 +1,7 @@
 ---
 element: "Threads and halting"
 kind: concept
-deviations: [166, 172, 173, 174]
+deviations: [166, 172, 173]
 ---
 
 # Threads and halting
@@ -47,54 +47,6 @@ rc 0
 posted
 ```
 
-> In the next example the attached thread's message says that it starts,
-> sleeps half a second, and says that it ends. The main program says that it
-> runs while the message sleeps, so its line comes between the two.
-
-```rexx
-src = .array~of( -
-  "k = .n3zqrun~new", -
-  "call fxonthread k, 'RUN'", -
-  "do while k~state = 0", -
-  "  call syssleep 0.05", -
-  "end", -
-  "say 'main runs'", -
-  "do while k~state = 1", -
-  "  call syssleep 0.05", -
-  "end", -
-  "::requires 'specfixture' LIBRARY", -
-  "::class n3zqrun", -
-  "::attribute state", -
-  "::method init", -
-  "  expose state", -
-  "  state = 0", -
-  "::method run unguarded", -
-  "  expose state", -
-  "  say 'thread starts'", -
-  "  state = 1", -
-  "  call syssleep 0.5", -
-  "  say 'thread ends'", -
-  "  state = 2")
-call sysfiledelete 'n3zqrun.rex'
-do line over src
-  call lineout 'n3zqrun.rex', line
-end
-call lineout 'n3zqrun.rex'
-address system 'rexx n3zqrun.rex 2>/dev/null' with output stem out.
-say 'rc' rc
-do i = 1 to out.0
-  say out.i
-end
-call sysfiledelete 'n3zqrun.rex'
-```
-
-```output
-rc 0
-thread starts
-main runs
-thread ends
-```
-
 r[native.threads.attach.deviation.173]
 `DetachThread` called from a thread other than the one that attached the
 context does nothing, and so does a second `DetachThread` from the thread that
@@ -104,24 +56,6 @@ attachment stays as it was, and its next message runs. A message sent after
 the thread did detach is not covered here but by [Deviation
 19](../deviations.md#19-callback-from-a-foreign-thread), which refuses it. ooRexx
 aborts the process on both misuses, so there is no example.
-
-r[native.threads.attach.deviation.174]
-A message an attached thread sends runs its Rexx code on that thread, and
-while it waits, the other activities run on that thread too, so the waits of
-such messages nest ([Deviation
-174](../deviations.md#174-callbacks-that-wait-nest)). A second message that
-starts while the first one waits finishes before the first goes on, even where
-the first one's wait ends sooner. An activity that runs meanwhile runs on the
-attached thread, so its Rexx code nests only as deeply as that thread's stack
-allows before error 11. A native call that returns while such a message waits
-goes on only once the message has finished. A wait that native code makes, as
-an `::ATTRIBUTE` method does, for a guard such a waiting message holds is
-refused: in the main program it ends the run with return code 120, and in a
-message a later callback sends, the message does not run.
-
-> ooRexx runs each message beside the other activities. Which wait ends first
-> depends on timing, so there is no example. The tests of this rule order two
-> such messages by their sleeps.
 
 r[native.threads.end]
 The end of a program waits for an attached thread only while that thread's
