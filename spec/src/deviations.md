@@ -139,6 +139,11 @@ A callback into the interpreter from a thread that runs no native call waits
 for a native call that holds the interpreter; if that call joins the thread,
 the program hangs. ooRexx aborts. Both fail.
 
+A callback through the context of an attached thread, made after that thread
+detached from it, does not wait: it is refused at once and answers the failure
+value of the member, without running anything. ooRexx aborts the process in
+that case too.
+
 ## 20. A wait nothing can end
 
 A wait that no other activity, timer or call can end, such as the result of
@@ -1379,3 +1384,18 @@ significant digits of the form it keeps, so `'1E3' + 0` made under NUMERIC
 DIGITS 20, written `1000`, raises LOSTDIGITS as an operand under NUMERIC DIGITS
 3 here, in `v + 0` and in `v > 5` alike, and raises nothing on ooRexx. Ruled by
 the owner on 2026-11-14 (#554).
+
+## 167. A callback after the embedding ends the interpreter
+
+A thread that stays attached after the embedding calls `Terminate` can still
+make callbacks through its context, and each one is refused: it answers the
+failure value of the member, runs nothing, and does not wait. The interpreter
+no longer exists once `Terminate` returns. ooRexx runs such a callback and
+answers its result.
+
+## 168. DetachThread from the wrong thread or twice
+
+`DetachThread` called from a thread other than the one that attached the
+context does nothing, and so does a second `DetachThread` from the thread that
+attached it. The attachment stays as the first detach left it, or as it was.
+ooRexx aborts the process in both cases.

@@ -1,7 +1,7 @@
 ---
 element: "Threads and halting"
 kind: concept
-deviations: [166]
+deviations: [166, 167, 168]
 ---
 
 # Threads and halting
@@ -46,6 +46,16 @@ rc 0
 1
 posted
 ```
+
+r[native.threads.attach.deviation.168]
+`DetachThread` called from a thread other than the one that attached the
+context does nothing, and so does a second `DetachThread` from the thread that
+attached it ([Deviation
+168](../deviations.md#168-detachthread-from-the-wrong-thread-or-twice)): the
+attachment stays as it was, and its next message runs. A message sent after
+the thread did detach is not covered here but by [Deviation
+19](../deviations.md#19-callback-from-a-foreign-thread), which refuses it. ooRexx
+aborts the process on both misuses, so there is no example.
 
 r[native.threads.end]
 The end of a program waits for an attached thread only while that thread's
@@ -117,6 +127,16 @@ call sysfiledelete 'n3zqidle.rex'
 rc 0 waited 0
 main ends
 ```
+
+r[native.threads.end.deviation.167]
+A thread that is still attached when the embedding calls `Terminate` can send
+no message afterwards: each send through its context is refused, answers the
+failure value of the member and runs nothing, and `DetachThread` from that
+thread returns ([Deviation
+167](../deviations.md#167-a-callback-after-the-embedding-ends-the-interpreter)).
+ooRexx runs the message and answers its result. The example needs an
+embedding that calls `Terminate`, which the `rexx` command does not, so the
+tests of this rule run one instead.
 
 r[native.threads.instance]
 Every activity of one interpreter is given the same interpreter instance by
