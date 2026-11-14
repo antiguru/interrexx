@@ -92,6 +92,9 @@ pub struct Invocation {
     /// The thread an embedding's `RexxStart` was called on, which `RexxSetHalt` and
     /// `RexxSetTrace` name to reach this run.
     classic_thread: Option<usize>,
+    /// Whether a host outside the interpreter runs the program through the API, so that its
+    /// native code may end a wait nothing in the program can (Deviation 20).
+    hosted: bool,
 }
 
 /// How an embedding calls a program (`RXCOMMAND`, `RXSUBROUTINE`,
@@ -185,6 +188,7 @@ impl Invocation {
             address: None,
             exits: Vec::new(),
             classic_thread: None,
+            hosted: false,
         }
     }
 
@@ -220,6 +224,15 @@ impl Invocation {
     pub fn with_classic_thread(self, thread: usize) -> Invocation {
         Invocation {
             classic_thread: Some(thread),
+            ..self
+        }
+    }
+
+    /// The same invocation, run for a host outside the interpreter that calls it through the
+    /// API: waits are not refused as unending (Deviation 20).
+    pub fn with_outside_host(self) -> Invocation {
+        Invocation {
+            hosted: true,
             ..self
         }
     }
@@ -350,6 +363,7 @@ impl Invocation {
             address: self.address,
             exits: self.exits,
             classic_thread: self.classic_thread,
+            hosted: self.hosted,
         }
     }
 }
@@ -372,6 +386,7 @@ pub(crate) struct InvocationParts {
     pub(crate) address: Option<Vec<u8>>,
     pub(crate) exits: Vec<(std::ffi::c_int, Vec<u8>)>,
     pub(crate) classic_thread: Option<usize>,
+    pub(crate) hosted: bool,
     pub(crate) frame_block: FrameBlock,
     pub(crate) switch_mode: Option<SwitchMode>,
 }

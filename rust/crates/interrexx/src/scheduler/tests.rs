@@ -372,6 +372,29 @@ fn the_switch_stays_off_after_a_classic_load_and_drop() {
     assert!(!interp.refuses_unending_waits());
 }
 
+/// A library a host registers with the interpreter counts as an external one
+/// loaded: waits are no longer refused as unending (Deviation 20). The
+/// instance's own root library does not count.
+#[test]
+fn a_library_a_host_registers_turns_the_switch_off() {
+    use interrexx_api::callbacks::Surface as _;
+    fn nothing(_: usize) {}
+    let mut interp = Interp::new();
+    assert!(interp.register_library(
+        crate::INSTANCE_LIBRARY,
+        Ok(Some(interrexx_api::load::embedding_library(nothing)))
+    ));
+    assert!(
+        interp.refuses_unending_waits(),
+        "the instance's root library counted"
+    );
+    assert!(interp.register_library(
+        b"HOSTLIB",
+        Ok(Some(interrexx_api::load::embedding_library(nothing)))
+    ));
+    assert!(!interp.refuses_unending_waits());
+}
+
 /// An ended activity's thread context stays with the interpreter, so an
 /// address an extension took from it during a native call stays valid; a
 /// native call on a started activity reads the instance through it.

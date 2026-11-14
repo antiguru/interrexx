@@ -766,6 +766,12 @@ impl Surface for Interp {
         if self.libraries.get(name).is_some() {
             return false;
         }
+        // A library a host registers is native code from outside that may start threads that
+        // attach later, as a loaded one may (Deviation 20). The instance's own root library is
+        // the interpreter's.
+        if !matches!(library, Ok(None)) && name != crate::INSTANCE_LIBRARY {
+            self.note_external_library();
+        }
         match self.settle_library(name, library) {
             crate::LibraryLoad::Loaded(_) => true,
             crate::LibraryLoad::Missing => false,

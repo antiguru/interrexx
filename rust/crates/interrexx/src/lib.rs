@@ -1501,9 +1501,11 @@ struct Interp {
     /// load and asked for again; a library whose version check refused is,
     /// because that check raises between the `put` and the `remove`.
     libraries: Libraries,
-    /// Whether an external native library has been loaded in this run, which
-    /// [`Interp::refuses_unending_waits`] answers the opposite of. Never reset.
-    external_library_loaded: bool,
+    /// Whether native code from outside the interpreter may run in this run:
+    /// an external native library has loaded, or a host outside the
+    /// interpreter runs it. [`Interp::refuses_unending_waits`] answers the
+    /// opposite. Never reset.
+    external_native_code: bool,
     /// The thread context [`Interp::terminate`] ran on, which an extension
     /// may have kept. Declared after `libraries`, so a library's destructor
     /// run when they drop still finds it allocated.
@@ -2429,7 +2431,7 @@ impl Interp {
             native_externals: FxHashMap::default(),
             guarded_externals: rustc_hash::FxHashSet::default(),
             libraries: Libraries::new(),
-            external_library_loaded: false,
+            external_native_code: false,
             termination_thread: None,
             #[cfg(test)]
             library_open_attempts: 0,
@@ -3559,7 +3561,7 @@ impl Interp {
             guarded_externals: _,
             // Library handles and procedure names, no `ObjRef` in either.
             libraries: _,
-            external_library_loaded: _,
+            external_native_code: _,
             termination_thread: _,
             #[cfg(test)]
                 library_open_attempts: _,
@@ -4483,6 +4485,9 @@ fn execute_kept(
     let _classic = parts.classic_thread.map(|caller| {
         embedding::ClassicRun::register([caller, signal::current_thread()], interp.timer.inbox())
     });
+    if parts.hosted {
+        interp.note_outside_host();
+    }
     interp.input = Input::new(parts.input);
     interp.standard_transient = parts.standard_transient;
     if let Some(sinks) = &parts.sinks {
@@ -4767,6 +4772,9 @@ pub(crate) fn run_instance(
     ))
     .unwrap_or_else(|_| panic!("the instance's root program parses"));
     let mut interp = Interp::new();
+    // Only `RexxCreateInterpreter` creates an instance, for a host that holds
+    // it and may attach a thread at any time (Deviation 20).
+    interp.note_outside_host();
     interp.measure_stack(base, INTERPRETER_STACK_BYTES);
     interp.program_path = b"RexxCreateInterpreter".to_vec();
     interp.activity.call_context.name = Rc::from(&b"RexxCreateInterpreter"[..]);

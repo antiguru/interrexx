@@ -222,10 +222,15 @@ fn build_driver(name: &str) -> (PathBuf, PathBuf) {
 /// Runs the embedding driver `name` with `arguments`, memory-capped and limited in time as
 /// [`run`] is, answering its stdout, stderr and exit status.
 fn run_driver(name: &str, arguments: &[&str]) -> Answer {
+    run_driver_for(name, arguments, SECONDS)
+}
+
+/// [`run_driver`], killed after `seconds` rather than [`SECONDS`]: the driver waits for ever.
+fn run_driver_for(name: &str, arguments: &[&str], seconds: &str) -> Answer {
     let (dir, binary) = build_driver(name);
     let output = Command::new("memcap")
         .arg(MEMORY)
-        .args(["timeout", "-s", "KILL", SECONDS])
+        .args(["timeout", "-s", "KILL", seconds])
         .arg(&binary)
         .args(arguments)
         .current_dir(&dir)
@@ -966,6 +971,42 @@ fn a_callback_after_terminate_is_refused() {
             String::new(),
             0
         )
+    );
+}
+
+/// An embedding host's program waits on an event semaphore that only a thread of the host posts,
+/// after it attaches: the host holds the instance, so the wait is not refused, and the routine
+/// answers once the thread has posted.
+// spec: conc.activities.deviation.20
+#[test]
+fn a_wait_an_embedding_hosts_thread_ends_is_not_refused() {
+    assert_eq!(
+        run_driver("hostwait", &["instance"]),
+        ("routine posted\n".to_owned(), String::new(), 0)
+    );
+}
+
+/// An embedding host's routine starts an activity that waits on an event semaphore nothing posts,
+/// and the host calls `Terminate`: the end of the run is not refused, as the host may still end
+/// the wait, and it waits for the activity for ever, as the oracle's does. The run is killed.
+// spec: conc.activities.deviation.20
+#[test]
+fn an_embedding_hosts_terminate_waits_for_a_wait_nothing_ends() {
+    let (stdout, stderr, status) = run_driver_for("hostwait", &["terminate"], "3");
+    assert_eq!((stdout.as_str(), status), ("routine started\n", 137), "{stderr}");
+    assert!(!stderr.contains(UNENDING_WAIT), "{stderr}");
+}
+
+/// A program `RexxStart` runs waits on an event semaphore nothing in it posts: the wait is not
+/// refused, as the host may still end it, and the halt the host sends later ends it.
+// spec: conc.activities.deviation.20
+#[test]
+fn a_wait_in_a_program_rexx_start_runs_is_not_refused() {
+    let program = fixture("hostwait.rex");
+    let program = program.to_str().expect("the fixture's path is UTF-8");
+    assert_eq!(
+        run_driver("hostwait", &["start", program]),
+        ("rc 0 result halted\n".to_owned(), String::new(), 0)
     );
 }
 

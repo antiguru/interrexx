@@ -2754,21 +2754,30 @@ impl Interp {
     }
 
     /// Whether waits are refused where nothing left to run can end them
-    /// (Deviation 20): until an external native library has loaded, and
-    /// never again in the run once one has, also after it is dropped.
-    /// Libraries built into the interpreter do not count.
+    /// (Deviation 20): while no external native library has loaded and no
+    /// host outside the interpreter runs the program, and never again in the
+    /// run once either holds, also after the library is dropped. Libraries
+    /// built into the interpreter do not count.
     pub(crate) fn refuses_unending_waits(&self) -> bool {
-        // Only an external library can start a thread that attaches later
-        // and ends the wait, and dropping the library does not end the
+        // Only native code from outside can start a thread that attaches
+        // later and ends the wait, and dropping a library does not end the
         // threads it started.
-        !self.external_library_loaded
+        !self.external_native_code
     }
 
     /// Notes that an external native library has loaded, through
-    /// `::REQUIRES ... LIBRARY`, an `EXTERNAL` directive, `RxFuncAdd` or a
-    /// classic registration: waits are no longer refused as unending.
+    /// `::REQUIRES ... LIBRARY`, an `EXTERNAL` directive, `RxFuncAdd`, a
+    /// classic registration or a library a host registers: waits are no
+    /// longer refused as unending.
     pub(crate) fn note_external_library(&mut self) {
-        self.external_library_loaded = true;
+        self.external_native_code = true;
+    }
+
+    /// Notes that a host outside the interpreter runs the program through
+    /// the API, `RexxStart` or `RexxCreateInterpreter`: waits are not refused
+    /// as unending.
+    pub(crate) fn note_outside_host(&mut self) {
+        self.external_native_code = true;
     }
 
     /// Whether the loop at `level`, with nothing to run and nothing in
