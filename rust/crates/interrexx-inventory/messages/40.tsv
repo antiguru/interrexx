@@ -17,7 +17,7 @@
 40	27	&1 argument 1 must be a valid stream name; found "&2".
 40	28	&1 argument &2 must be a character class name or a single character; found "&3".
 40	29	&1 must not be used for conversion to format "&2".
-40	32	RANDOM the difference between argument 1 ("&1") and argument 2 ("&2") must not exceed 999,999,999.
+40	32	RANDOM argument 2 ("&2") must not exceed argument 1 ("&1") by more than 999,999,999.
 40	33	RANDOM argument 1 ("&1") must be less than or equal to argument 2 ("&2").
 40	34	SOURCELINE argument 1 ("&1") must be less than or equal to the number of lines in the program (&2).
 40	35	X2D argument 1 cannot be expressed as a whole number; found "&1".
